@@ -1,0 +1,4 @@
+sphinx-autodoc-annotation
+sphinx-autodoc-typehints
+sphinx-paramlinks
+sphinx_rtd_theme
