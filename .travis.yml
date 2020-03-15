@@ -1,0 +1,13 @@
+language: python
+python:
+    - "3.6"
+    - "3.7"
+    - "3.8"
+install:
+    - pip3 install -r requirements.txt
+    - pip3 install .
+script:
+    - python3 tests/kernels_test.py
+    - python3 tests/lineage_test.py
+    - python3 tests/pipeline_test.py
+    - python3 tests/markov_chain_test.py
