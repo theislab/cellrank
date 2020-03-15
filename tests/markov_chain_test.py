@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import unittest
 import numpy as np
 import cellrank as cr
@@ -24,10 +25,14 @@ class MarkovChainTestCase(unittest.TestCase):
         mc_fwd.compute_eig()
         mc_fwd.compute_approx_rcs(use=3)
 
-        arcs = ['0', '2']
-        arc_colors = [c
-                      for arc, c in zip(mc_fwd._approx_rcs.cat.categories, mc_fwd._approx_rcs_colors)
-                      if arc in arcs]
+        arcs = ["0", "2"]
+        arc_colors = [
+            c
+            for arc, c in zip(
+                mc_fwd._approx_rcs.cat.categories, mc_fwd._approx_rcs_colors
+            )
+            if arc in arcs
+        ]
 
         mc_fwd.compute_lin_probs(keys=arcs)
         lin_colors = mc_fwd.lineage_probabilities.colors
@@ -35,5 +40,5 @@ class MarkovChainTestCase(unittest.TestCase):
         np.testing.assert_array_equal(arc_colors, lin_colors)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

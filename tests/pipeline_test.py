@@ -2,7 +2,8 @@
 import unittest
 import cellrank as cr
 import matplotlib
-matplotlib.use('Agg')
+
+matplotlib.use("Agg")
 
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
 from _helpers import create_dummy_adata
