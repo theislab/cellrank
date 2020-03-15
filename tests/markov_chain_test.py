@@ -1,11 +1,13 @@
 import unittest
+import numpy as np
 import cellrank as cr
 
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
-from _test_helper import create_dummy_adata
+from _helpers import create_dummy_adata
 
 
-_adata = create_dummy_adata(50)
+np.random.seed(42)
+_adata = create_dummy_adata(200)
 
 
 class MarkovChainTestCase(unittest.TestCase):
@@ -20,10 +22,17 @@ class MarkovChainTestCase(unittest.TestCase):
         mc_fwd.compute_partition()
 
         mc_fwd.compute_eig()
-        mc_fwd.compute_approx_rcs(use=1)
-        print(adata)
+        mc_fwd.compute_approx_rcs(use=3)
 
-        mc_fwd.compute_lin_probs()
+        arcs = ['0', '2']
+        arc_colors = [c
+                      for arc, c in zip(mc_fwd._approx_rcs.cat.categories, mc_fwd._approx_rcs_colors)
+                      if arc in arcs]
+
+        mc_fwd.compute_lin_probs(keys=arcs)
+        lin_colors = mc_fwd.lineage_probabilities.colors
+
+        np.testing.assert_array_equal(arc_colors, lin_colors)
 
 
 if __name__ == '__main__':
