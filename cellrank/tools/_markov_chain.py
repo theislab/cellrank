@@ -682,9 +682,9 @@ class MarkovChain:
 
         # check whether the length of the color array matches the number of clusters
         color_key = _colors(self._rc_key)
-        if color_key in self._adata.uns and len(
-            self._adata.uns[color_key]
-        ) != len(self._approx_rcs.cat.categories):
+        if color_key in self._adata.uns and len(self._adata.uns[color_key]) != len(
+            self._approx_rcs.cat.categories
+        ):
             del self._adata.uns[color_key]
             self._approx_rcs_colors = None
 
@@ -829,9 +829,7 @@ class MarkovChain:
 
         self._dp = entropy(abs_classes.T)
         self._lin_probs = Lineage(
-            abs_classes,
-            names=self._lin_probs.names,
-            colors=self._lin_probs.colors
+            abs_classes, names=self._lin_probs.names, colors=self._lin_probs.colors
         )
 
         self._adata.obsm[self._lin_key] = self._lin_probs
