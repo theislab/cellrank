@@ -6,7 +6,7 @@ from cellrank.tools._constants import Direction, _transition
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel, PalantirKernel
 from cellrank.tools.kernels._kernel import Constant, KernelAdd, KernelMul, _is_bin_mult
 from cellrank.tools._utils import _normalize
-from _test_helper import (
+from _helpers import (
     transition_matrix,
     bias_knn,
     density_normalization,
