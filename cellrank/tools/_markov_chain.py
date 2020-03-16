@@ -49,7 +49,7 @@ class MarkovChain:
     This is one of the two main classes of CellRank. We model cellular development as a Markov Chain (MC), where each
     measured cell is represented by a state in the MC. We assume that transition probabilities between these states
     have already been computed using either the :class:`cellrank.tl.kernels.Kernel` class directly or the
-    :meth:`cellrank.tl.transition_matrix` high level function.
+    :func:`cellrank.tl.transition_matrix` high level function.
 
     The MC is time-homogeneous, i.e. the transition probabilities don't change over time. Further, it's
     discrete, as every state in the MC is given by a measured cell state. The state space is finite, as is the number
