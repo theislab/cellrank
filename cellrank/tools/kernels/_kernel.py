@@ -486,7 +486,7 @@ class Kernel(UnaryKernelExpression, ABC):
     backward
         Direction of the process.
     kwargs
-        Keyword arguments.
+        Keyword arguments which can specify key to be read from :paramref:`adata` object.
     """
 
     def __init__(self, adata: AnnData, backward: bool = False, **kwargs):
@@ -495,7 +495,7 @@ class Kernel(UnaryKernelExpression, ABC):
 
 class Constant(Kernel):
     """
-    Class representint multiplication by a constant number.
+    Class representing a multiplication by a constant number.
     """
 
     def __init__(
@@ -588,10 +588,11 @@ class VelocityKernel(Kernel):
     """
     Implements a kernel class which computes a transition matrix based on velocity correlations.
 
-    This borrows ideas from both [Manno18]_ and [Bergen19]_. In short, for each cell i, we compute transition
-    probabilities p_{i, j} to each cell j in the neighborhood of i. The transition probabilities are computed as a
-    multinominal logistic regression where the weights w_j (for all j) are given by the vector that connects cell i
-    with cell j in gene expression space, and the features x_i are given by the velocity vector v_i of cell i.
+    This borrows ideas from both [Manno18]_ and [Bergen19]_. In short, for each cell *i*, we compute transition
+    probabilities :math:`p_{i, j}` to each cell *j* ( in the neighborhood of *i*. The transition probabilities are
+    computed as a multinominal logistic regression where the weights :math:`w_j` (for all *j*) are given by the vector
+    that connects cell *i* with cell *j* in gene expression space, and the features :math:`x_i` are given
+    by the velocity vector :math:`v_i` of cell *i*.
 
     Optionally, we apply a density correction as described in [Coifman05]_, where we use the implementation of
     [Haghverdi16]_.
