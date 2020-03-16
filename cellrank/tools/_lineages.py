@@ -75,6 +75,6 @@ def lineages(
     # compute the absoprtion probabilities
     mc.compute_lin_probs(keys=keys)
 
-    logg.info(f"Added key `{lin_key!r}` to `adata.obsm`\n" f"    Finish", time=start)
+    logg.info(f"Added key `{lin_key!r}` to `adata.obsm`\n    Finish", time=start)
 
     return adata if copy else None

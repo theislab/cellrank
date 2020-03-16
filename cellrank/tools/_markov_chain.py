@@ -634,7 +634,6 @@ class MarkovChain:
             self._approx_rcs_colors = _create_categorical_colors(
                 len(rc_labels.cat.categories)
             )
-        self._adata.uns[_colors(self._rc_key)] = self._approx_rcs_colors
 
         # detect cell cycle stages
         self._detect_cc_stages(rc_labels, p_thresh=p_thresh)
@@ -644,6 +643,7 @@ class MarkovChain:
             logg.debug("DEBUG: Overwriting `.approx_rcs`")
         self._approx_rcs = rc_labels
         self._adata.obs[self._rc_key] = self._approx_rcs
+        self._adata.uns[_colors(self._rc_key)] = self._approx_rcs_colors
 
         logg.info(
             f"Adding `adata.uns[{_colors(self._rc_key)!r}]`\n"
@@ -681,14 +681,18 @@ class MarkovChain:
         self._adata.obs[self._rc_key] = self._approx_rcs
 
         # check whether the length of the color array matches the number of clusters
-        if _colors(self._rc_key) in self._adata.uns.keys() and len(
-            self._adata.uns[_colors(self._rc_key)]
-        ) != len(self._approx_rcs.cat.categories):
-            del self._adata.uns[_colors(self._rc_key)]
+        color_key = _colors(self._rc_key)
+        if color_key in self._adata.uns and len(self._adata.uns[color_key]) != len(
+            self._approx_rcs.cat.categories
+        ):
+            del self._adata.uns[color_key]
             self._approx_rcs_colors = None
 
         color = self._rc_key if cluster_key is None else [cluster_key, self._rc_key]
         scv.pl.scatter(self._adata, color=color, **kwargs)
+
+        if color_key in self._adata.uns:
+            self._approx_rcs_colors = self._adata.uns[color_key]
 
     def compute_lin_probs(
         self,
@@ -722,7 +726,8 @@ class MarkovChain:
             raise RuntimeError(
                 "Compute approximate recurrent classes first as `.compute_approx_rcs()`"
             )
-
+        if keys is not None:
+            keys = sorted(set(keys))
         # Note: There are three relevant data structures here
         # - self.approx_rcs: pd.Series which contains annotations for approx rcs. Associated colors in
         #   self.approx_rcs_colors
@@ -750,12 +755,12 @@ class MarkovChain:
             self._approx_rcs_colors = _create_categorical_colors(n_cats)
             self._adata.uns[_colors(self._rc_key)] = self._approx_rcs_colors
 
-        # initialise empty lineage object with names and colors from recurrent classes
+        # initialize empty lineage object with names and colors from recurrent classes
         if self._lin_probs is not None:
             logg.debug("DEBUG: Overwriting `.lin_probs`")
         rc_names = list(self._approx_rcs.cat.categories)
         self._lin_probs = Lineage(
-            np.zeros((1, len(rc_names))), names=rc_names, colors=self._approx_rcs_colors
+            np.empty((1, len(rc_names))), names=rc_names, colors=self._approx_rcs_colors
         )
 
         # if keys are given, remove some rc's and combine others
@@ -763,11 +768,12 @@ class MarkovChain:
             approx_rcs_ = self._approx_rcs
         else:
             logg.debug(
-                "DEBUG: Combining recurrent classes according to argument `keys`"
+                f"DEBUG: Combining recurrent classes according to argument `{keys}`."
             )
             approx_rcs_ = self._prep_rc_classes(keys)
+        keys = list(approx_rcs_.cat.categories)
 
-        if len(approx_rcs_.cat.categories) == 1:
+        if len(keys) == 1:
             logg.warning(
                 "There is only one recurrent class, all cells will have probability 1 of going there"
             )
@@ -802,14 +808,14 @@ class MarkovChain:
         _abs_classes = np.concatenate(
             [
                 np.sum(abs_states[:, rec_classes_red[key]], axis=1)[:, None]
-                for key in rec_classes_red.keys()
+                for key in approx_rc_red.cat.categories
             ],
             axis=1,
         )
 
         if norm_by_frequ:
             logg.debug("DEBUG: Normalizing by frequency")
-            _abs_classes /= [len(value) for _, value in rec_classes_red.items()]
+            _abs_classes /= [len(value) for value in rec_classes_red.values()]
         _abs_classes = _normalize(_abs_classes)
 
         # add one-hot for recurrent states
@@ -817,15 +823,13 @@ class MarkovChain:
         rec_classes_full = {
             cl: np.where(approx_rcs_ == cl) for cl in approx_rcs_.cat.categories
         }
-        for col, (cl_key, cl_indices) in enumerate(rec_classes_full.items()):
+        for col, cl_indices in enumerate(rec_classes_full.values()):
             abs_classes[trans_indices, col] = _abs_classes[:, col]
             abs_classes[cl_indices, col] = 1
 
         self._dp = entropy(abs_classes.T)
         self._lin_probs = Lineage(
-            abs_classes,
-            names=list(self._lin_probs.names),
-            colors=list(self._lin_probs.colors),
+            abs_classes, names=self._lin_probs.names, colors=self._lin_probs.colors
         )
 
         self._adata.obsm[self._lin_key] = self._lin_probs
@@ -873,7 +877,7 @@ class MarkovChain:
                 "Compute lineage probabilities as `.compute_lin_probs()`."
             )
 
-        A = self._lin_probs
+        A = self._lin_probs.X
 
         if mode == "time":
             if time_key not in self._adata.obs.keys():
@@ -1146,7 +1150,7 @@ class MarkovChain:
         Params
         ------
         keys
-            ist of strings that defines how absorption probabilities should be computed.
+            Sequence of strings that defines how absorption probabilities should be computed.
 
         Returns
         -------
@@ -1159,7 +1163,7 @@ class MarkovChain:
                 "Compute approximate recurrent classes first as `.compute_approx_rcs()`"
             )
 
-        # initialse a copy of the approx_rcs Series
+        # initialize a copy of the approx_rcs Series
         approx_rcs_temp = self._approx_rcs.copy()
 
         # define a set of keys
@@ -1174,7 +1178,6 @@ class MarkovChain:
 
         # loop over all indiv. or combined rc's
         for cat in keys_:
-
             # if there are more than two keys in this category, combine them
             if len(cat) > 1:
                 new_cat_name = "_or_".join(cat)
@@ -1182,6 +1185,7 @@ class MarkovChain:
                 for key in cat:
                     mask = np.logical_or(mask, approx_rcs_temp == key)
                 approx_rcs_temp.cat.add_categories(new_cat_name, inplace=True)
+                remaining_cat.append(new_cat_name)
                 approx_rcs_temp[mask] = new_cat_name
 
                 # apply the same to the colors array. We just append new colors at the end
@@ -1195,8 +1199,9 @@ class MarkovChain:
         cat_mask = np.in1d(old_cat, approx_rcs_temp.cat.categories)
 
         lin_colors = list(np.array(lin_colors)[cat_mask])
+        approx_rcs_temp.cat.reorder_categories(remaining_cat, inplace=True)
         self._lin_probs = Lineage(
-            np.zeros((1, len(lin_colors))),
+            np.empty((1, len(lin_colors))),
             names=approx_rcs_temp.cat.categories,
             colors=lin_colors,
         )
