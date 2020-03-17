@@ -261,7 +261,7 @@ class MarkovChain:
             )
         else:
             logg.warning(
-                "The transition matrix is irreducible\n" "    Finish", time=start
+                "The transition matrix is irreducible - cannot further partition it\n" "    Finish", time=start
             )
 
     def compute_eig(self, k: int = 15, which: str = "LR", alpha: float = 1) -> None:
