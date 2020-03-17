@@ -319,12 +319,13 @@ def partition(
     conn: Union[nx.DiGraph, np.ndarray, spmatrix], sort: bool = True
 ) -> Tuple[List[List[Any]], List[List[Any]]]:
     """
-    Partition a directed graph into its transient and recurrent classes
+    Partition a directed graph into its transient and recurrent classes.
 
-    In a directed graph G, node j is accessible from node i if there exists a path from i to j. If i is accessible from j
-    and the converse holds as well, then i and j communicate. Communication forms and equivalence relation on directed
-    graphs, so every directed graph can be uniquely partitioned into its communication classes (also called strongly
-    connected components). If G describes the state space of a Markov Chain, then communication classes are often
+    In a directed graph *G*, node *j* is accessible from node *i* if there exists a path from *i* to *j*.
+    If *i* is accessible from *j* and the converse holds as well, then *i* and *j* communicate.
+    Communication forms and equivalence relation on directed graphs, so every directed graph can be uniquely partitioned
+    into its communication classes (also called strongly  connected components).
+    If *G* describes the state space of a Markov chain, then communication classes are often
     characterized as either recurrent or transient. Intuitively, once the process enters a recurrent class, it will
     never leave it again. See [Tolver16]_ for a more formal definition.
 
@@ -597,7 +598,7 @@ def _maybe_create_dir(dirpath: Union[str, os.PathLike]) -> None:
 
 
 def save_fig(
-    fig, path: Union[str, os.PathLike], make_dir: bool = True, ext: str = "pdf"
+    fig, path: Union[str, os.PathLike], make_dir: bool = True, ext: str = "png"
 ) -> None:
     """
     Save a plot.

@@ -168,7 +168,7 @@ class Lineage(np.ndarray):
 
     @property
     def colors(self) -> np.ndarray:
-        """Lineage colors"""
+        """Lineage colors."""
         return self._colors
 
     @colors.setter
