@@ -60,9 +60,9 @@ def exact_mc_perm_test(
     adata : :class:`anndata.AnnData`
         Annotated data object.
     cluster1
-        Name tag of the first cluster to compare.
+        Name of the first cluster to compare.
     cluster2
-        Name tag of the second cluster to compare.
+        Name of the second cluster to compare.
     distr_measure : :class:`Callable`
         Distance measure to use.
     cluster_key

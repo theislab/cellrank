@@ -12,7 +12,7 @@ def root_final(
     adata: AnnData,
     final: bool = True,
     cluster_key: Optional[str] = None,
-    weight_connectivities: float = 0.0,
+    weight_connectivities: float = 0.2,
     percentile: int = 98,
     n_start_end: Optional[int] = None,
     show_plots=False,

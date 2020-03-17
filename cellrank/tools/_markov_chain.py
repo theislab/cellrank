@@ -44,9 +44,9 @@ from cellrank.tools._utils import (
 
 class MarkovChain:
     """
-    Class modelling cellular development as a Markov Chain.
+    Class modelling cellular development as a Markov chain.
 
-    This is one of the two main classes of CellRank. We model cellular development as a Markov Chain (MC), where each
+    This is one of the two main classes of CellRank. We model cellular development as a Markov chain (MC), where each
     measured cell is represented by a state in the MC. We assume that transition probabilities between these states
     have already been computed using either the :class:`cellrank.tl.kernels.Kernel` class directly or the
     :func:`cellrank.tl.transition_matrix` high level function.
@@ -261,7 +261,9 @@ class MarkovChain:
             )
         else:
             logg.warning(
-                "The transition matrix is irreducible - cannot further partition it\n" "    Finish", time=start
+                "The transition matrix is irreducible - cannot further partition it\n"
+                "    Finish",
+                time=start,
             )
 
     def compute_eig(self, k: int = 15, which: str = "LR", alpha: float = 1) -> None:
