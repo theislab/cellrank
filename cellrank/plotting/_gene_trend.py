@@ -28,7 +28,7 @@ def gene_trends(
     adata: AnnData,
     model: _model_type,
     genes: Union[str, Sequence[str]],
-    lineage_names: Optional[Union[str, Sequence[str]]] = None,
+    lineages: Optional[Union[str, Sequence[str]]] = None,
     data_key: str = "X",
     final: bool = True,
     start_clusters: Union[str, Optional[Sequence[str]]] = None,
@@ -53,18 +53,22 @@ def gene_trends(
     ncols: int = 2,
     n_jobs: Optional[int] = -1,
     backend: str = "multiprocessing",
-    ext: str = "pdf",
+    ext: str = "png",
     suptitle: Optional[str] = None,
     save: Optional[str] = None,
     dirname: Optional[str] = None,
     **kwargs,
 ) -> None:
     """
-    Plot gene expression trends along lineages
+    Plot gene expression trends along lineages.
 
     Each lineage is defined via it's lineage weights which we compute using :func:`cellrank.tl.lineages`. This
     function accepts any sklearn model to fit gene expression, where we take the linage weights into account in the loss
     function.
+
+    .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/gene_trends.png
+       :width: 400px
+       :align: center
 
     Params
     ------
@@ -193,26 +197,26 @@ def gene_trends(
                 os.makedirs(dirname, exist_ok=True)
         elif not os.path.isdir(os.path.join(figdir, dirname)):
             os.makedirs(os.path.join(figdir, dirname), exist_ok=True)
+    elif save is not None:
+        logg.warning("No directory specified for saving. Ignoring `save` argument")
 
     ln_key = str(LinKey.FORWARD if final else LinKey.BACKWARD)
     if ln_key not in adata.obsm:
         raise KeyError(f"Lineages key `{ln_key!r}` not found in `adata.obsm`.")
 
-    if lineage_names is None:
-        lineage_names = adata.obsm[ln_key].names
-    elif isinstance(lineage_names, str):
-        lineage_names = [lineage_names]
-    elif all(
-        map(lambda ln: ln is None, lineage_names)
-    ):  # no lineage, all the weights are 1
-        lineage_names = [None]
+    if lineages is None:
+        lineages = adata.obsm[ln_key].names
+    elif isinstance(lineages, str):
+        lineages = [lineages]
+    elif all(map(lambda ln: ln is None, lineages)):  # no lineage, all the weights are 1
+        lineages = [None]
         show_cbar = False
         logg.debug("DEBUG: All lineages are `None`, setting weights to be `1`")
-    lineage_names = _make_unique(lineage_names)
+    lineages = _make_unique(lineages)
 
-    for ln in filter(lambda ln: ln is not None, lineage_names):
+    for ln in filter(lambda ln: ln is not None, lineages):
         _ = adata.obsm[ln_key][ln]
-    n_lineages = len(lineage_names)
+    n_lineages = len(lineages)
 
     if isinstance(start_clusters, (str, type(None))):
         start_clusters = [start_clusters] * n_lineages
@@ -230,7 +234,7 @@ def gene_trends(
             f"({n_lineages}), found `{len(start_clusters)}`."
         )
 
-    kwargs["models"] = _create_models(model, genes, lineage_names)
+    kwargs["models"] = _create_models(model, genes, lineages)
     kwargs["data_key"] = data_key
     kwargs["final"] = final
     kwargs["conf_int"] = conf_int
@@ -251,7 +255,7 @@ def gene_trends(
         backend=backend,
         n_jobs=n_jobs,
         extractor=lambda modelss: {k: v for m in modelss for k, v in m.items()},
-    )(lineage_names, start_clusters, end_clusters, **kwargs)
+    )(lineages, start_clusters, end_clusters, **kwargs)
     logg.info("    Finish", time=start)
 
     logg.debug("DEBUG: Plotting trends")
@@ -265,7 +269,7 @@ def gene_trends(
             adata,
             models,
             gene=gene,
-            lineage_names=lineage_names,
+            lineage_names=lineages,
             ln_key=ln_key,
             same_plot=same_plot,
             hide_cells=hide_cells,

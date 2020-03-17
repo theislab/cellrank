@@ -26,7 +26,7 @@ def heatmap(
     genes: Sequence[str],
     final: bool = True,
     kind: str = "lineages",
-    lineage_names: Optional[Union[str, Sequence[str]]] = None,
+    lineages: Optional[Union[str, Sequence[str]]] = None,
     start_clusters: Optional[Union[str, Sequence[str]]] = None,
     end_clusters: Optional[Union[str, Sequence[str]]] = None,
     lineage_height: float = 0.1,
@@ -37,11 +37,16 @@ def heatmap(
     backend: str = "multiprocessing",
     hspace: float = 0.25,
     figsize: Optional[Tuple[float, float]] = None,
+    dpi: Optional[int] = None,
     save: Optional[str] = None,
     **kwargs,
 ) -> None:
     """
-    Plot a heatmap of smoothed gene expression across specified lineages.
+    Plot a heatmap of smoothed gene expression along specified lineages.
+
+    .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/heatmap.png
+       :width: 400px
+       :align: center
 
     Params
     ------
@@ -81,6 +86,8 @@ def heatmap(
     figsize
         Size of the figure.
         If `None`, it will be set to (15, len(:paramref:`genes`) + len(:paramref:`lineage_names`)).
+    dpi
+        Dots per inch.
     save
         Filename where to save the plot.
         If `None`, just shows the plot.
@@ -107,9 +114,8 @@ def heatmap(
 
         fig, axes = plt.subplots(
             nrows=len(genes),
-            figsize=(15, len(genes) + len(lineage_names))
-            if figsize is None
-            else figsize,
+            figsize=(15, len(genes) + len(lineages)) if figsize is None else figsize,
+            dpi=dpi,
         )
 
         if not isinstance(axes, Iterable):
@@ -131,7 +137,7 @@ def heatmap(
                 ys.append(ix)
 
             ax.set_yticks(np.array(ys) + lineage_height / 2)
-            ax.set_yticklabels(lineage_names)
+            ax.set_yticklabels(lineages)
             ax.set_title(gene)
             ax.set_ylabel("Lineage")
 
@@ -173,8 +179,9 @@ def heatmap(
         fig, ax = None, None
         if not cluster_genes:
             fig, axes = plt.subplots(
-                nrows=len(lineage_names),
+                nrows=len(lineages),
                 figsize=(15, 5 + len(genes)) if figsize is None else figsize,
+                dpi=dpi,
             )
             fig.subplots_adjust(hspace=hspace, bottom=0)
 
@@ -225,10 +232,10 @@ def heatmap(
     if lineage_key not in adata.obsm:
         raise KeyError(f"Lineages key `{lineage_key!r}` not found in `adata.obsm`.")
 
-    if lineage_names is None:
-        lineage_names = adata.obsm[lineage_key].names
+    if lineages is None:
+        lineages = adata.obsm[lineage_key].names
 
-    for lineage_name in lineage_names:
+    for lineage_name in lineages:
         _ = adata.obsm[lineage_key][lineage_name]
 
     if isinstance(genes, str):
@@ -236,19 +243,19 @@ def heatmap(
     check_collection(adata, genes, "var_names")
 
     if isinstance(start_clusters, (str, type(None))):
-        start_clusters = [start_clusters] * len(lineage_names)
+        start_clusters = [start_clusters] * len(lineages)
     if isinstance(end_clusters, (str, type(None))):
-        end_clusters = [end_clusters] * len(lineage_names)
+        end_clusters = [end_clusters] * len(lineages)
 
     _ = kwargs.pop("start_cluster", None)
     _ = kwargs.pop("end_cluster", None)
 
     for typp, clusters in zip(["Starting", "Ending"], [start_clusters, end_clusters]):
         for cl in filter(lambda c: c is not None, clusters):
-            if cl not in lineage_names:
+            if cl not in lineages:
                 raise ValueError(f"{typp} cluster `{cl!r}` not found in lineage names.")
 
-    kwargs["models"] = _create_models(model, genes, lineage_names)
+    kwargs["models"] = _create_models(model, genes, lineages)
     if _is_any_gam_mgcv(kwargs["models"]):
         logg.debug(
             "DEBUG: Setting backend to multiprocessing because model is `GamMGCV`"
@@ -264,7 +271,7 @@ def heatmap(
         backend=backend,
         n_jobs=n_jobs,
         extractor=lambda data: {k: v for d in data for k, v in d.items()},
-    )(lineage_names, start_clusters, end_clusters, **kwargs)
+    )(lineages, start_clusters, end_clusters, **kwargs)
     logg.info("    Finish", time=start)
     logg.debug(f"DEBUG: Plotting {kind} heatmap")
 

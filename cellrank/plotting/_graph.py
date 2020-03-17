@@ -58,11 +58,16 @@ def graph(
     layout_kwargs: Dict = MappingProxyType({}),
 ) -> None:
     """
-    Plot a graph, visualizing incoming and outgoing edges or self-transitions
+    Plot a graph, visualizing incoming and outgoing edges or self-transitions.
 
     This is a utility function to look in more detail at the transition matrix in areas of interest, e.g. around an
-    endpoint of development. This function is meant to visualise a small subset of nodes (~20-40) and the most likely
-    transitions between them.
+    endpoint of development. This function is meant to visualise a small subset of nodes (~100-500) and the most likely
+    transitions between them. Note that limiting edges visualized using :paramref:`top_n_edges` will speed things up,
+    as well as reduce the visual clutter.
+
+    .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/graph.png
+       :width: 400px
+       :align: center
 
     Params
     ------
