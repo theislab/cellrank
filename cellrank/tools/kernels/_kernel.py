@@ -669,6 +669,11 @@ class VelocityKernel(Kernel):
         else:
             correlations = self.velo_corr
 
+        # set the scaling parameter for the softmax
+        med_corr = np.median(np.abs(correlations.data))
+        if sigma_corr is None:
+            sigma_corr = 2/med_corr
+
         params = dict(
             dnorm=density_normalize,
             bwd_mode=backward_mode if self._direction == Direction.BACKWARD else None,
@@ -684,12 +689,8 @@ class VelocityKernel(Kernel):
         self._params = params
 
         # compute directed graph --> multi class log reg
-        med_corr = np.median(np.abs(correlations.data))
-        if sigma_corr is None:
-            sigma_corr = med_corr
         velo_graph = correlations.copy()
-        velo_graph.data = np.exp(velo_graph.data / sigma_corr)
-        logg.debug(f'Using sigma_corr={sigma_corr}')
+        velo_graph.data = np.exp(velo_graph.data * sigma_corr)
 
         # normalize
         if density_normalize:
