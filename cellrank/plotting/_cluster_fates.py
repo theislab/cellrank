@@ -27,16 +27,16 @@ def cluster_fates(
     adata: AnnData,
     cluster_key: str = "louvain",
     clusters: Optional[Union[str, Sequence[str]]] = None,
-    endpoints: Optional[Union[str, Sequence[str]]] = None,
+    lineages: Optional[Union[str, Sequence[str]]] = None,
     mode: str = "bar",
-    dpi: Optional[int] = None,
     final: bool = True,
     show_cbar: bool = True,
     ncols: int = 3,
     sharey: bool = False,
-    figsize: Optional[Tuple[float, float]] = None,
     save: Optional[str] = None,
     legend_kwargs: Mapping[str, Any] = MappingProxyType({"loc": "best"}),
+    figsize: Optional[Tuple[float, float]] = None,
+    dpi: Optional[int] = None,
     **kwargs,
 ) -> None:
     """
@@ -44,6 +44,10 @@ def cluster_fates(
 
     This can be used to investigate how likely a certain cluster is to go to one of the endpoints, or in turn to have
     descendet from one of the starting points. For mode `paga` and `paga_pie`, we use PAGA, see [Wolf19]_.
+
+    .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/cluster_fates.png
+       :width: 400px
+       :align: center
 
     Params
     ------
@@ -84,9 +88,13 @@ def cluster_fates(
         If `None`, just shows the plot.
     legend_kwargs
         Keyword arguments for :func:`matplotlib.axes.Axes.legend`, such as `'loc'` for legend position.
+    figsize
+        Size of the figure. If `None`, it will be set automatically.
+    dpi
+        Dots per inch.
     kwargs
         Keyword arguments for :func:`scanpy.pl.paga`, :func:`scanpy.pl.violin` or :func:`matplotlib.pyplot.bar`,
-        depending on :paramref:`model`.
+        depending on :paramref:`mode`.
 
     Returns
     -------
@@ -300,18 +308,19 @@ def cluster_fates(
     if lk not in adata.obsm:
         raise KeyError(f"Lineages key `{lk!r}` not found in `adata.obsm`.")
 
-    # must be list for sc.pl.violin, else cats str
-    lin_names = list(adata.obsm[lk].names)
-    if endpoints is not None:
-        if isinstance(endpoints, str):
-            endpoints = [endpoints]
-        endpoints = _make_unique(endpoints)
-        for ep in endpoints:
+    if lineages is not None:
+        if isinstance(lineages, str):
+            lineages = [lineages]
+        lineages = _make_unique(lineages)
+        for ep in lineages:
             if ep not in lin_names:
                 raise ValueError(
                     f"Endpoint `{ep!r}` not found in `adata.obsm[{lk!r}].names`."
                 )
-        lin_names = endpoints
+        lin_names = lineages
+    else:
+        # must be list for sc.pl.violin, else cats str
+        lin_names = list(adata.obsm[lk].names)
 
     if mode == "violin":
         adata = adata[np.isin(adata.obs[cluster_key], clusters)].copy()
@@ -355,7 +364,7 @@ def cluster_fates(
 
 def similarity_plot(
     adata: AnnData,
-    cluster_key: str = None,
+    cluster_key: str,
     clusters: Optional[List[str]] = None,
     n_samples: int = 1000,
     cmap: mpl.colors.ListedColormap = cm.viridis,
@@ -366,11 +375,15 @@ def similarity_plot(
     save: Optional[str] = None,
 ) -> None:
     """
-    Compare clusters with respect to their absorption probabilities in a heatmap
+    Compare clusters with respect to their absorption probabilities in a heatmap.
 
     For each cluster, we compute how likely an 'average cell' is to go to each endpoint or to come from each
-    starting point. We then compare these averaged probabilities using Cramér's V statistic, see:
-    https://en.wikipedia.org/wiki/Cram%C3%A9r%27s_V. The similarity is defined as 1 - Cramér's V.
+    starting point. We then compare these averaged probabilities using Cramér's V statistic, see
+    `here <https://en.wikipedia.org/wiki/Cram%C3%A9r%27s_V>`_. The similarity is defined as :math:`1 - Cramér's V`.
+
+    .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/similarity_plot.png
+       :width: 400px
+       :align: center
 
     Params
     ------

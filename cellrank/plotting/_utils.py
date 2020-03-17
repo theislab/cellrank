@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from typing import Sequence, Dict, Optional, Tuple, Any, Union
+from typing import Sequence, Dict, Optional, Tuple, Any, Union, Iterable
 from collections import defaultdict
 from copy import copy
 
@@ -25,6 +25,7 @@ _ERROR_INCOMPLETE_SPEC = (
 
 def lineages(
     adata: AnnData,
+    lineages: Optional[Union[str, Iterable[str]]] = None,
     final: bool = True,
     cluster_key: Optional[str] = None,
     mode: str = "embedding",
@@ -33,18 +34,24 @@ def lineages(
     **kwargs,
 ) -> None:
     """
-    Plot lineages uncovered using :func:`cellrank.tl.lineages`.
+    Plot lineages that were uncovered using :func:`cellrank.tl.lineages`.
 
     For each lineage, we show all cells in an embedding (default is UMAP but can be any) and color them by their
     probability of belonging to this lineage. For cells that are already committed, this probability will be one for
     their respective lineage and zero otherwise. For naive cells, these probabilities will be more balanced, reflecting
     the fact that naive cells have the potential to develop towards multiple endpoints.
 
+    .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/lineages.png
+       :width: 400px
+       :align: center
+
     Params
     ------
 
     adata : :class:`adata.AnnData`
         Annotated data object.
+    lineages
+        Only show these lineages. If `None`, plot all lineages.
     final
         Whether to consider cells going to final states or vice versa.
     cluster_key
@@ -78,6 +85,7 @@ def lineages(
 
     # plot using the MC object
     mc.plot_lin_probs(
+        lineages=lineages,
         cluster_key=cluster_key,
         mode=mode,
         time_key=time_key,
@@ -95,8 +103,7 @@ def curved_edges(
     polarity: str = "directed",
 ) -> np.ndarray:
     """
-    Create curved edges from a graph. Modified from:
-    https://github.com/beyondbeneath/bezier-curved-edges-networkx
+    Create curved edges from a graph. Modified from: https://github.com/beyondbeneath/bezier-curved-edges-networkx.
 
     Params
     ------
@@ -207,7 +214,7 @@ def curved_edges(
     for i in range(len(edges)):
         nodes = node_matrix[:, i, :].T
         curveplots.append(
-            bezier.Curve(nodes, degree=2)
+            bezier.Curve(nodes, degree=3)
             .evaluate_multi(np.linspace(0, 1, bezier_precision))
             .T
         )
@@ -222,12 +229,17 @@ def curved_edges(
 
 def composition(
     adata: AnnData,
-    key: str = "clusters",
+    key,
     figsize: Optional[Tuple[float, float]] = None,
+    dpi: Optional[float] = None,
     save: Optional[str] = None,
 ) -> None:
     """
     Utility function to plot pie chart for categorical annotation
+
+    .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/composition.png
+       :width: 400px
+       :align: center
 
     Params
     ------
@@ -237,6 +249,8 @@ def composition(
         Key in :paramref:`adata` `.obs` containing categorical observation.
     figsize
         Size of the figure.
+    dpi
+        Dots per inch.
     save
         Filename where to save the plots.
         If `None`, just shows the plot.
@@ -254,17 +268,20 @@ def composition(
         raise TypeError(f"Observation `adata.obs[{key!r}]` is not categorical.")
 
     cats = adata.obs[key].cat.categories
+    colors = adata.uns.get(f"{key}_colors", None)
     x = [np.sum(adata.obs[key] == cl) for cl in cats]
     cats_frac = x / np.sum(x)
 
     # plot these fractions in a pie plot
-    fig, ax = plt.subplots(figsize=figsize)
-    ax.pie(x=cats_frac, labels=cats)
-    plt.title(f"Composition by {key}")
-    plt.plot()
+    fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
+
+    ax.pie(x=cats_frac, labels=cats, colors=colors)
+    ax.set_title(f"Composition by {key}")
 
     if save is not None:
-        save_fig(ax, save)
+        save_fig(fig, save)
+
+    fig.show()
 
 
 def _is_any_gam_mgcv(models: Dict[str, Dict[str, Model]]) -> bool:

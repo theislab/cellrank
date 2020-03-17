@@ -647,8 +647,8 @@ class MarkovChain:
 
         logg.info(
             f"Adding `adata.uns[{_colors(self._rc_key)!r}]`\n"
-            f"       `adata.obs[{self._rc_key!r}]`\n"
             f"       `adata.obs[{_probs(self._rc_key)!r}]`\n"
+            f"       `adata.obs[{self._rc_key!r}]`\n"
             f"       `.approx_rcs_colors`\n"
             f"       `.approx_rcs_probs`\n"
             f"       `.approx_rcs`\n"

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from collections import Iterable
 from types import MappingProxyType
-from typing import Sequence, Dict, Optional
+from typing import Sequence, Dict, Optional, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -70,7 +70,7 @@ def cluster_lineage(
     adata: AnnData,
     model: _model_type,
     genes: Sequence[str],
-    lineage_name: str,
+    lineage: str,
     final: bool = True,
     clusters: Optional[Sequence[str]] = None,
     n_points: int = 200,
@@ -87,14 +87,20 @@ def cluster_lineage(
     louvain_kwargs: Dict = MappingProxyType({}),
     key_added: Optional[str] = None,
     save: Optional[str] = None,
+    figsize: Optional[Tuple[float, float]] = None,
+    dpi: Optional[int] = None,
     **kwargs,
 ) -> None:
     """
-    Cluster gene expression trends within a lineage and plot the clusters
+    Cluster gene expression trends within a lineage and plot the clusters.
 
     This function is based on Palantir, see [Setty19]_. It can be used to discover modules of genes that drive
     development along a given lineage. Consider running this function on a subset of genes which are potential lineage
     drivers, identified e.g. by running :func:`cellrank.tl.gene_importance`.
+
+    .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/cluster_lineages.png
+       :width: 400px
+       :align: center
 
     Params
     ------
@@ -142,6 +148,10 @@ def cluster_lineage(
     save
         Filename where to save the plot.
         If `None`, just shows the plot.
+    figsize
+        Size of the figure. If `None`, it will be set automatically.
+    dpi
+        Dots per inch.
     kwargs:
         Keyword arguments for :func:`cellrank.utils.models.Model.prepare`.
 
@@ -162,11 +172,11 @@ def cluster_lineage(
     if lineage_key not in adata.obsm:
         raise KeyError(f"Lineages key `{lineage_key!r}` not found in `adata.obsm`.")
 
-    _ = adata.obsm[lineage_key][lineage_name]
+    _ = adata.obsm[lineage_key][lineage]
 
     check_collection(adata, genes, "var_names")
 
-    key_to_add = f"lineage_{lineage_name}_trend"
+    key_to_add = f"lineage_{lineage}_trend"
     if key_added is not None:
         logg.debug(f"DEBUG: Adding key `{key_added!r}`")
         key_to_add += f"_{key_added}"
@@ -176,7 +186,7 @@ def cluster_lineage(
         kwargs["n_test_points"] = n_points
         kwargs["final"] = final
 
-        models = _create_models(model, genes, [lineage_name])
+        models = _create_models(model, genes, [lineage])
         if _is_any_gam_mgcv(models):
             backend = "multiprocessing"
 
@@ -190,7 +200,7 @@ def cluster_lineage(
             unit="gene",
             n_jobs=n_jobs,
             backend=backend,
-        )(models, lineage_name, norm, **kwargs)
+        )(models, lineage, norm, **kwargs)
         logg.info("    Finish", time=start)
 
         trends = AnnData(np.vstack(trends))
@@ -230,7 +240,11 @@ def cluster_lineage(
 
     nrows = int(np.ceil(len(clusters) / ncols))
     fig, axes = plt.subplots(
-        nrows, ncols, figsize=(ncols * 10, nrows * 10), sharey=sharey
+        nrows,
+        ncols,
+        figsize=(ncols * 10, nrows * 10) if figsize is None else figsize,
+        sharey=sharey,
+        dpi=dpi,
     )
 
     if not isinstance(axes, Iterable):
