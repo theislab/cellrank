@@ -20,7 +20,7 @@ def lineages(
 
     For each cell i in {1, ..., N} and start/endpoint j in {1, ..., M}, the probability is computed that cell i
     is either going to j (end point) or coming from j (start point). Mathematically, this computes absorption
-    probabilities to approximate recurrent classes using an RNA velocity based Markov Chain.
+    probabilities to approximate recurrent classes using an RNA velocity based Markov chain.
 
     Note that absorption probabilities have been used in the single cell context to infer lineage probabilities e.g.
     in [Setty19]_ or [Weinreb18]_ and we took inspiration from there.
@@ -75,6 +75,6 @@ def lineages(
     # compute the absoprtion probabilities
     mc.compute_lin_probs(keys=keys)
 
-    logg.info(f"Added key `{lin_key!r}` to `adata.obsm`\n    Finish", time=start)
+    logg.info(f"Added key `{lin_key!r}` to `adata.obsm`    Finish", time=start)
 
     return adata if copy else None
