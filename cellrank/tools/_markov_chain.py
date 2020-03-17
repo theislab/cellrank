@@ -8,6 +8,7 @@ import scvelo as scv
 
 from anndata import AnnData
 from pandas import Series, DataFrame, to_numeric
+from pandas.api.types import is_categorical_dtype
 from scanpy import logging as logg
 from scipy.linalg import solve
 from scipy.sparse import issparse
@@ -37,6 +38,7 @@ from cellrank.tools._utils import (
     _vec_mat_corr,
     _create_categorical_colors,
     _compute_mean_color,
+    _convert_to_categorical_series,
     partition,
     save_fig,
 )
@@ -458,6 +460,65 @@ class MarkovChain:
             **kwargs,
         )
 
+    def set_approx_rcs(
+        self,
+        rc_labels: Union[Series, Dict[Any, Any]],
+        cluster_key: Optional[str] = None,
+        en_cutoff: Optional[float] = None,
+        p_thresh: Optional[float] = None,
+    ):
+        """
+        Set the approximate recurrent classes, if they are known a priori.
+
+        Params
+        ------
+        cluster_key
+            If a key to cluster labels is given, `approx_rcs` will ge associated with these for naming and colors.
+        en_cutoff
+            If :paramref:`cluster_key` is given, this parameter determines when an approximate recurrent class will
+            be labelled as *'Unknown'*, based on the entropy of the distribution of cells over transcriptomic clusters.
+        p_thresh
+            If cell cycle scores were provided, a *Wilcoxon rank-sum test* is conducted to identify cell-cycle driven
+            start- or endpoints.
+            If the test returns a positive statistic and a p-value smaler than :paramref:`p_thresh`, a warning will be issued.
+
+        Returns
+        -------
+        None
+            Nothing, but updates the following fields: :paramref:`approx_recurrent_classes`.
+        """
+
+        if isinstance(rc_labels, dict):
+            rc_labels = _convert_to_categorical_series(
+                rc_labels, list(self.adata.obs_names)
+            )
+        if not is_categorical_dtype(rc_labels):
+            raise TypeError(
+                f"Approximate recurrent classes must be `categorical`, found `{type(rc_labels).__name__}`."
+            )
+
+        if cluster_key is not None:
+            logg.debug(f"DEBUG: Creating colors based on `{cluster_key}`")
+            approx_rcs_names, self._approx_rcs_colors = self._get_lin_names_colors(
+                rc_labels, cluster_key, en_cutoff
+            )
+            rc_labels.cat.categories = approx_rcs_names
+        else:
+            self._approx_rcs_colors = _create_categorical_colors(
+                len(rc_labels.cat.categories)
+            )
+
+        if p_thresh is not None:
+            self._detect_cc_stages(rc_labels, p_thresh=p_thresh)
+
+        # write to class and adata
+        if self._approx_rcs is not None:
+            logg.debug("DEBUG: Overwriting `.approx_rcs`")
+
+        self._approx_rcs = rc_labels
+        self._adata.obs[self._rc_key] = self._approx_rcs
+        self._adata.uns[_colors(self._rc_key)] = self._approx_rcs_colors
+
     def compute_approx_rcs(
         self,
         use: Optional[Union[int, Tuple[int], List[int], range]] = None,
@@ -519,9 +580,9 @@ class MarkovChain:
             If :paramref:`cluster_key` is given, this parameter determines when an approximate recurrent class will
             be labelled as *'Unknown'*, based on the entropy of the distribution of cells over transcriptomic clusters.
         p_thresh
-            If cell cycle scores were provided, a wilcoxon rank-sum test is conducted to identify cell-cycle driven
-            start or endpoints. If the test returns a positive statistic and a p-value smaler than :paramref`p_thresh`,
-            a warning will be issued.
+            If cell cycle scores were provided, a *Wilcoxon rank-sum test* is conducted to identify cell-cycle driven
+            start- or endpoints.
+            If the test returns a positive statistic and a p-value smaler than :paramref:`p_thresh`, a warning will be issued.
 
         Returns
         -------
@@ -624,27 +685,9 @@ class MarkovChain:
                 distances, rc_labels=rc_labels, n_matches_min=n_matches_min
             )
 
-        # associate labels with ts-clusters
-        if cluster_key is not None:
-            logg.debug(f"DEBUG: Creating colors based on `{cluster_key}`")
-            approx_rcs_names, self._approx_rcs_colors = self._get_lin_names_colors(
-                rc_labels, cluster_key, en_cutoff
-            )
-            rc_labels.cat.categories = approx_rcs_names
-        else:
-            self._approx_rcs_colors = _create_categorical_colors(
-                len(rc_labels.cat.categories)
-            )
-
-        # detect cell cycle stages
-        self._detect_cc_stages(rc_labels, p_thresh=p_thresh)
-
-        # write to class and adata
-        if self._approx_rcs is not None:
-            logg.debug("DEBUG: Overwriting `.approx_rcs`")
-        self._approx_rcs = rc_labels
-        self._adata.obs[self._rc_key] = self._approx_rcs
-        self._adata.uns[_colors(self._rc_key)] = self._approx_rcs_colors
+        self.set_approx_rcs(
+            rc_labels, cluster_key=cluster_key, en_cutoff=en_cutoff, p_thresh=p_thresh
+        )
 
         logg.info(
             f"Adding `adata.uns[{_colors(self._rc_key)!r}]`\n"
@@ -1069,9 +1112,9 @@ class MarkovChain:
         rc_labels
             Raw labels for the approx_rcs. These are labels like [0, 1, 2, 3]. This function is meant to associate
             these uninformative labels with pre-computed clusters based on transcriptomic similarities, using e.g.
-            louvain, leiden or k-Means clustering.
+            louvain, leiden or k-means clustering.
         cluster_key
-            String to a key from :paramref`adata` `.obs`. This is how the pre-computed cluster labels are accessed.
+            String to a key from :paramref:`adata` `.obs`. This is how the pre-computed cluster labels are accessed.
         en_cutoff
             Threshold for defining when to associate an approximate rc with a pre-computed cluster. Imagine a
             very fine pre-computed louvain clustering and an approximate rc spanning two louvain clusters, with approx.
@@ -1081,7 +1124,7 @@ class MarkovChain:
 
         Returns
         -------
-        :class:`pandas.Series` or :class:`list`
+        :class:`pandas.Series`, :class:`list`
             Array-like names and colors for the approximate RC's.
             These link back to the underlying pre-computed clusters.
         """

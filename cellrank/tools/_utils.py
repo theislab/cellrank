@@ -6,7 +6,7 @@ Utility functions for the cellrank tools
 from scipy.sparse.linalg import norm as s_norm
 from numpy.linalg import norm as d_norm
 from itertools import product, tee
-from typing import Optional, Any, Union, Tuple, List, Sequence
+from typing import Optional, Any, Union, Tuple, List, Sequence, Dict, Iterable, Set
 
 import os
 import warnings
@@ -718,3 +718,47 @@ def _create_categorical_colors(n_categories: int):
     colors += [cm.Paired(i) for i in range(cm.Paired.N)][: n_categories - len(colors)]
 
     return _convert_to_hex_colors(colors)
+
+
+def _convert_to_categorical_series(
+    rc_classes: Dict[Union[int, str], Iterable[Union[int, str]]], cell_names: List[str]
+) -> Series:
+    """
+    Convert a mapping of recurrent classes to cells to a :class:`pandas.Series`.
+
+    Params
+    ------
+    data
+        Recurrent classes in the following format: `{'rc_0': ['cell_0', 'cell_1', ...], ...}`.
+    cell_names
+        List of valid cell names, usually taken from `adata.obs_names`.
+
+    Returns
+    -------
+    :class:`pandas.Series`
+        Categorical series where `NaN` mark cells which do not belong to any recurrent class.
+    """
+
+    cnames = set(cell_names)
+    mapper, expected_size = {}, 0
+    for rc, cells in rc_classes.items():
+        if not cells:
+            continue
+        cells = [c if isinstance(c, str) else cell_names[c] for c in cells]
+        rest = set(cells) - cnames
+        if rest:
+            raise ValueError(f"Invalid cell names: `{list(rest)}`.")
+        mapper[str(rc)] = cells
+        expected_size += 1
+
+    if len(mapper) != expected_size:
+        raise ValueError(
+            "All recurrent class labels are being converted to strings, ensure "
+            "that there are no conflicting keys, such as `0` and `'0'`."
+        )
+
+    rc_labels = Series([np.nan] * len(cell_names), index=cell_names)
+    for rc, cells in mapper.items():
+        rc_labels[cells] = rc
+
+    return rc_labels.astype("category")
