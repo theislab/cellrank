@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from cellrank.tools.kernels._kernel import KernelExpression
-from typing import Optional, Tuple, Sequence, List, Any, Union, Dict
+from typing import Optional, Tuple, Sequence, List, Any, Union, Dict, Iterable
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -261,8 +261,7 @@ class MarkovChain:
             )
         else:
             logg.warning(
-                "The transition matrix is irreducible - cannot further partition it\n"
-                "    Finish",
+                "The transition matrix is irreducible - cannot further partition it\n    Finish",
                 time=start,
             )
 
@@ -687,7 +686,7 @@ class MarkovChain:
         if color_key in self._adata.uns and len(self._adata.uns[color_key]) != len(
             self._approx_rcs.cat.categories
         ):
-            del self._adata.uns[color_key]
+            del self._adata.uns[_colors(self._rc_key)]
             self._approx_rcs_colors = None
 
         color = self._rc_key if cluster_key is None else [cluster_key, self._rc_key]
@@ -730,6 +729,7 @@ class MarkovChain:
             )
         if keys is not None:
             keys = sorted(set(keys))
+
         # Note: There are three relevant data structures here
         # - self.approx_rcs: pd.Series which contains annotations for approx rcs. Associated colors in
         #   self.approx_rcs_colors
@@ -769,9 +769,7 @@ class MarkovChain:
         if keys is None:
             approx_rcs_ = self._approx_rcs
         else:
-            logg.debug(
-                f"DEBUG: Combining recurrent classes according to argument `{keys}`."
-            )
+            logg.debug(f"DEBUG: Combining recurrent classes according to `{keys}`")
             approx_rcs_ = self._prep_rc_classes(keys)
         keys = list(approx_rcs_.cat.categories)
 
@@ -831,7 +829,9 @@ class MarkovChain:
 
         self._dp = entropy(abs_classes.T)
         self._lin_probs = Lineage(
-            abs_classes, names=self._lin_probs.names, colors=self._lin_probs.colors
+            abs_classes,
+            names=list(self._lin_probs.names),
+            colors=list(self._lin_probs.colors),
         )
 
         self._adata.obsm[self._lin_key] = self._lin_probs
@@ -843,6 +843,7 @@ class MarkovChain:
 
     def plot_lin_probs(
         self,
+        lineages: Optional[Union[str, Iterable[str]]] = None,
         cluster_key: Optional[str] = None,
         mode: str = "embedding",
         time_key: str = "latent_time",
@@ -854,6 +855,8 @@ class MarkovChain:
 
         Params
         ------
+        lineages
+            Only show these lineages. If `None`, plot all lineages.
         cluster_key
             Key from :paramref`adata: `.obs` for plotting cluster labels.
         mode
@@ -876,10 +879,21 @@ class MarkovChain:
 
         if self._lin_probs is None:
             raise RuntimeError(
-                "Compute lineage probabilities as `.compute_lin_probs()`."
+                "Compute lineage probabilities first as `.compute_lin_probs()`."
             )
+        if isinstance(lineages, str):
+            lineages = [lineages]
 
-        A = self._lin_probs.X
+        if lineages is None:
+            lineages = self._lin_probs.names
+            A = self._lin_probs.X
+        else:
+            for lineage in lineages:
+                if lineage not in self._lin_probs.names:
+                    raise ValueError(
+                        f"Invalid lineage name `{lineages!r}`. Valid options are `{list(self._lin_probs.names)}`."
+                    )
+            A = self._lin_probs[lineages].X
 
         if mode == "time":
             if time_key not in self._adata.obs.keys():
@@ -887,7 +901,7 @@ class MarkovChain:
             t = self._adata.obs[time_key]
             cluster_key = None
 
-        rc_titles = [f"{self._prefix} {rc}" for rc in self._lin_probs.names] + [
+        rc_titles = [f"{self._prefix} {rc}" for rc in lineages] + [
             "Differentiation Potential"
         ]
 
@@ -967,7 +981,7 @@ class MarkovChain:
         # check that lineage probs have been computed
         if self._lin_probs is None:
             raise RuntimeError(
-                "Compute lineage probabilities as `.compute_lin_probs()`."
+                "Compute lineage probabilities first as `.compute_lin_probs()`."
             )
 
         # check all lin_keys exist in self.lin_names
