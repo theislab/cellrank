@@ -84,7 +84,7 @@ def exact_mc_perm_test(
 
     Returns
     -------
-    :class:`list`, :class:`float`
+    :class:`list`, :class:`float`, :class:`float`
         List containing the distance value between average of the probability distributions of both clusters,
         the observed distance and the corresponding p-value.
     """
@@ -221,9 +221,8 @@ def _counts(
             else 0
             for ind in index
         ]
-        freq = [l.count(i) for i in np.arange(5)]
-        freq = [i if i > 0 else i + 1e-5 for i in freq]
-        d[name] = freq
+        freq = (l.count(i) for i in range(dim))
+        d[name] = [i if i > 0 else 1e-5 for i in freq]
 
     return d
 
@@ -231,10 +230,8 @@ def _counts(
 def _cramers_v(x: List[float], y: List[float]) -> float:
     """
     Calculates Cramer's V statistic for categorical-categorical association.
-
     Uses correction from **Bergsma and Wicher, Journal of the Korean Statistical Society 42 (2013): 323-328**.
-
-    This is a symmetric coefficient: `V(x,y) = V(y,x)`.
+    This is a symmetric coefficient: :math:`V(x,y) = V(y,x)`.
 
     Params
     ------
