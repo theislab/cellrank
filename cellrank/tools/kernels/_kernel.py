@@ -689,6 +689,7 @@ class VelocityKernel(Kernel):
             sigma_corr = med_corr
         velo_graph = correlations.copy()
         velo_graph.data = np.exp(velo_graph.data / sigma_corr)
+        logg.debug(f'Using sigma_corr={sigma_corr}')
 
         # normalize
         if density_normalize:
