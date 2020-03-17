@@ -222,7 +222,7 @@ def _counts(
             for ind in index
         ]
         freq = (l.count(i) for i in range(dim))
-        d[name] = [i if i > 0 else i + 1e-5 for i in freq]
+        d[name] = [i if i > 0 else 1e-5 for i in freq]
 
     return d
 
