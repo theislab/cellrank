@@ -1,3 +1,4 @@
+-r ../requirements.txt
 sphinx-autodoc-annotation
 sphinx-autodoc-typehints
 sphinx-paramlinks
