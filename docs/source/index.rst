@@ -14,7 +14,7 @@ CellRank - Probabilistic Trajectory Inference based on RNA Velocity
    :align: center
 
 **CellRank** is a toolkit to uncover cellular development based on scRNA-seq
-data and RNA Velocity, see [Manno18]_ and [Bergen19]_.
+data with RNA Velocity annotation, see [Manno18]_ and [Bergen19]_.
 
 CellRank utilises the time derivative of gene expression given by RNA Velocity
 to construct a Markov Chain. The information given by RNA Velocity is combined
