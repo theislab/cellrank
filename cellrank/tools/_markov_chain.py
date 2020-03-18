@@ -1245,7 +1245,7 @@ class MarkovChain:
         original_len = len(original_colors)
 
         # loop over all indiv. or combined rc's
-        lin_colors = []
+        lin_colors = {}
         for cat in keys_:
             # if there are more than two keys in this category, combine them
             if len(cat) > 1:
@@ -1261,9 +1261,9 @@ class MarkovChain:
                 # apply the same to the colors array. We just append new colors at the end
                 color_mask = np.in1d(approx_rcs_temp.cat.categories[:original_len], cat)
                 colors_merge = np.array(original_colors)[:original_len][color_mask]
-                lin_colors.append(_compute_mean_color(colors_merge))
+                lin_colors[new_cat_name] = _compute_mean_color(colors_merge)
             else:
-                lin_colors.append(self._lin_probs[cat[0]].colors[0])
+                lin_colors[cat[0]] = self._lin_probs[cat].colors[0]
 
         # Since we have just appended colors at the end, we must now delete the unused ones
         approx_rcs_temp.cat.remove_unused_categories(inplace=True)
@@ -1272,7 +1272,7 @@ class MarkovChain:
         self._lin_probs = Lineage(
             np.empty((1, len(lin_colors))),
             names=approx_rcs_temp.cat.categories,
-            colors=lin_colors,
+            colors=[lin_colors[c] for c in approx_rcs_temp.cat.categories],
         )
 
         return approx_rcs_temp
