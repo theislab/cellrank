@@ -7,6 +7,7 @@ import numpy as np
 import scvelo as scv
 
 from anndata import AnnData
+from itertools import combinations
 from pandas import Series, DataFrame, to_numeric
 from pandas.api.types import is_categorical_dtype
 from scanpy import logging as logg
@@ -1228,6 +1229,12 @@ class MarkovChain:
         # define a set of keys
         keys_ = {tuple((key.strip() for key in rc.split(","))) for rc in keys}
 
+        overlap = [set(ks) for ks in keys_]
+        for c1, c2 in combinations(overlap, 2):
+            overlap = c1 & c2
+            if overlap:
+                raise ValueError(f"Found overlapping keys: `{list(overlap)}`.")
+
         # remove the unused categories, both in approx_rcs_temp as well as in the lineage object
         remaining_cat = [b for a in keys_ for b in a]
         removed_cat = list(set(approx_rcs_temp.cat.categories) - set(remaining_cat))
@@ -1239,7 +1246,7 @@ class MarkovChain:
         for cat in keys_:
             # if there are more than two keys in this category, combine them
             if len(cat) > 1:
-                new_cat_name = "_or_".join(cat)
+                new_cat_name = " or ".join(cat)
                 mask = np.repeat(False, len(approx_rcs_temp))
                 for key in cat:
                     mask = np.logical_or(mask, approx_rcs_temp == key)
