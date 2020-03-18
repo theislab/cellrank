@@ -672,7 +672,7 @@ class VelocityKernel(Kernel):
         # set the scaling parameter for the softmax
         med_corr = np.median(np.abs(correlations.data))
         if sigma_corr is None:
-            sigma_corr = 2/med_corr
+            sigma_corr = 2 / med_corr
 
         params = dict(
             dnorm=density_normalize,
@@ -777,8 +777,8 @@ class PalantirKernel(Kernel):
 
     Palantir computes a KNN graph in gene expression space and a pseudotime, which it then uses to direct the edges of
     the KNN graph, such that they are more likely to point into the direction of increasing pseudotime. To avoid
-    disconnecting the graph, it does not remove all edges that point into the direction of decreasing pseudotime but keeps the ones that point
-    to nodes inside a close radius. This radius is chosen according to the local density.
+    disconnecting the graph, it does not remove all edges that point into the direction of decreasing pseudotime
+    but keeps the ones that point to nodes inside a close radius. This radius is chosen according to the local density.
 
     The implementation presented here won't exactly reproduce the original Palantir algorithm (see below) but the results
     are qualitatively very similar.

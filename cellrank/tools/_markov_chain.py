@@ -7,6 +7,7 @@ import numpy as np
 import scvelo as scv
 
 from anndata import AnnData
+from itertools import combinations
 from pandas import Series, DataFrame, to_numeric
 from pandas.api.types import is_categorical_dtype
 from scanpy import logging as logg
@@ -1226,43 +1227,52 @@ class MarkovChain:
         approx_rcs_temp = self._approx_rcs.copy()
 
         # define a set of keys
-        keys_ = [[key.strip() for key in rc.split(",")] for rc in keys]
+        keys_ = {
+            tuple((key.strip() for key in rc.strip(" ,").split(","))) for rc in keys
+        }
+
+        overlap = [set(ks) for ks in keys_]
+        for c1, c2 in combinations(overlap, 2):
+            overlap = c1 & c2
+            if overlap:
+                raise ValueError(f"Found overlapping keys: `{list(overlap)}`.")
 
         # remove the unused categories, both in approx_rcs_temp as well as in the lineage object
         remaining_cat = [b for a in keys_ for b in a]
         removed_cat = list(set(approx_rcs_temp.cat.categories) - set(remaining_cat))
         approx_rcs_temp.cat.remove_categories(removed_cat, inplace=True)
-        lin_colors = list(self._lin_probs[remaining_cat].colors)
-        original_len = len(lin_colors)
+        original_colors = list(self._lin_probs[remaining_cat].colors)
+        original_len = len(original_colors)
 
         # loop over all indiv. or combined rc's
+        lin_colors = {}
         for cat in keys_:
             # if there are more than two keys in this category, combine them
             if len(cat) > 1:
-                new_cat_name = "_or_".join(cat)
+                new_cat_name = " or ".join(cat)
                 mask = np.repeat(False, len(approx_rcs_temp))
                 for key in cat:
                     mask = np.logical_or(mask, approx_rcs_temp == key)
+                    remaining_cat.remove(key)
                 approx_rcs_temp.cat.add_categories(new_cat_name, inplace=True)
                 remaining_cat.append(new_cat_name)
                 approx_rcs_temp[mask] = new_cat_name
 
                 # apply the same to the colors array. We just append new colors at the end
                 color_mask = np.in1d(approx_rcs_temp.cat.categories[:original_len], cat)
-                colors_merge = np.array(lin_colors)[:original_len][color_mask]
-                lin_colors.append(_compute_mean_color(colors_merge))
+                colors_merge = np.array(original_colors)[:original_len][color_mask]
+                lin_colors[new_cat_name] = _compute_mean_color(colors_merge)
+            else:
+                lin_colors[cat[0]] = self._lin_probs[cat].colors[0]
 
         # Since we have just appended colors at the end, we must now delete the unused ones
-        old_cat = approx_rcs_temp.cat.categories
         approx_rcs_temp.cat.remove_unused_categories(inplace=True)
-        cat_mask = np.in1d(old_cat, approx_rcs_temp.cat.categories)
-
-        lin_colors = list(np.array(lin_colors)[cat_mask])
         approx_rcs_temp.cat.reorder_categories(remaining_cat, inplace=True)
+
         self._lin_probs = Lineage(
             np.empty((1, len(lin_colors))),
             names=approx_rcs_temp.cat.categories,
-            colors=lin_colors,
+            colors=[lin_colors[c] for c in approx_rcs_temp.cat.categories],
         )
 
         return approx_rcs_temp
