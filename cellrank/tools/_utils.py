@@ -286,10 +286,9 @@ def _compute_mean_color(color_list: List[str]) -> str:
     if not all(map(lambda c: mcolors.is_color_like(c), color_list)):
         raise ValueError("Not all values are valid colors.")
 
-    color_list = [mcolors.to_rgb(c) for c in color_list]
-    all_colors = np.zeros((len(color_list), 3))
+    color_list = np.array([mcolors.to_rgb(c) for c in color_list])
 
-    return mcolors.to_hex(np.mean(all_colors, axis=0).astype(np.int))
+    return mcolors.to_hex(np.mean(color_list, axis=0))
 
 
 def _eigengap(evals: np.ndarray, alpha: float) -> int:
