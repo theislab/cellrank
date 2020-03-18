@@ -1226,7 +1226,7 @@ class MarkovChain:
         approx_rcs_temp = self._approx_rcs.copy()
 
         # define a set of keys
-        keys_ = [[key.strip() for key in rc.split(",")] for rc in keys]
+        keys_ = {tuple((key.strip() for key in rc.split(","))) for rc in keys}
 
         # remove the unused categories, both in approx_rcs_temp as well as in the lineage object
         remaining_cat = [b for a in keys_ for b in a]
