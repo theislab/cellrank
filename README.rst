@@ -4,7 +4,7 @@
 CellRank - Probabilistic Trajectory Inference based on RNA Velocity
 ===================================================================
 
-.. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/endpoint_fig.png
+.. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/index.png
    :width: 600px
    :align: center
 
@@ -31,5 +31,14 @@ CellRank requires Python3 version >= 3.6 and can be installed via::
 
     pip install git+https://github.com/theislab/cellrank
 
-See the documentation at `<https://cellrank-notebooks.readthedocs.io/>`_, which
+See the documentation at `<https://cellrank.readthedocs.io>`_, which
 includes tutorial notebooks and a description of our complete API.
+
+.. |PyPI| image:: https://img.shields.io/pypi/v/cellrank.svg
+    :target: https://img.shields.io/pypi/v/cellrank
+
+.. |Travis| image:: https://travis-ci.com/theislab/cellrank.svg?token=UqaQZpSKCK4qZNfu1sqq&branch=master
+    :target: https://travis-ci.org/theislab/cellrank
+
+.. |License| image:: https://img.shields.io/pypi/v/cellrank.svg
+    :target: https://img.shields.io/github/license/theislab/cellrank
