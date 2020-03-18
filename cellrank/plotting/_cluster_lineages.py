@@ -98,7 +98,7 @@ def cluster_lineage(
     development along a given lineage. Consider running this function on a subset of genes which are potential lineage
     drivers, identified e.g. by running :func:`cellrank.tl.gene_importance`.
 
-    .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/cluster_lineages.png
+    .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/cluster_lineage.png
        :width: 400px
        :align: center
 
