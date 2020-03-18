@@ -9,6 +9,10 @@
 CellRank - Probabilistic Trajectory Inference based on RNA Velocity
 ===================================================================
 
+.. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/index_figure.png
+   :width: 600px
+   :align: center
+
 **CellRank** is a toolkit to uncover cellular development based on scRNA-seq
 data and RNA Velocity, see [Manno18]_ and [Bergen19]_.
 
