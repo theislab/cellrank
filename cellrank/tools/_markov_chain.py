@@ -1243,6 +1243,7 @@ class MarkovChain:
                 mask = np.repeat(False, len(approx_rcs_temp))
                 for key in cat:
                     mask = np.logical_or(mask, approx_rcs_temp == key)
+                    remaining_cat.remove(key)
                 approx_rcs_temp.cat.add_categories(new_cat_name, inplace=True)
                 remaining_cat.append(new_cat_name)
                 approx_rcs_temp[mask] = new_cat_name
