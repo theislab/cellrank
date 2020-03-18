@@ -1266,11 +1266,9 @@ class MarkovChain:
                 lin_colors.append(self._lin_probs[cat[0]].colors[0])
 
         # Since we have just appended colors at the end, we must now delete the unused ones
-        old_cat = approx_rcs_temp.cat.categories
         approx_rcs_temp.cat.remove_unused_categories(inplace=True)
-        cat_mask = np.in1d(old_cat, approx_rcs_temp.cat.categories)
-
         approx_rcs_temp.cat.reorder_categories(remaining_cat, inplace=True)
+
         self._lin_probs = Lineage(
             np.empty((1, len(lin_colors))),
             names=approx_rcs_temp.cat.categories,
