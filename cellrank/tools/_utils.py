@@ -630,7 +630,7 @@ def save_fig(
 
     logg.debug(f"Saving figure to `{path!r}`")
 
-    fig.savefig(path, bbox_inches="tight")
+    fig.savefig(path, bbox_inches="tight", transparent=True)
 
 
 def _create_colors(
