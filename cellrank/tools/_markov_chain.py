@@ -473,6 +473,10 @@ class MarkovChain:
 
         Params
         ------
+        rc_labels
+            Either a categorical :class:`pandas.Series` with index as cell names, where `NaN` marks marks a cell
+            belonging to a transient state or a :class:`dict`, where each key is the name of the recurrent class and
+            values are list of cell names.
         cluster_key
             If a key to cluster labels is given, `approx_rcs` will ge associated with these for naming and colors.
         en_cutoff

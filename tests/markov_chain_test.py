@@ -36,7 +36,7 @@ class MarkovChainTestCase(unittest.TestCase):
         ]
 
         mc_fwd.compute_lin_probs(keys=arcs)
-        lin_colors = mc_fwd.lineage_probabilities.colors
+        lin_colors = mc_fwd.lineage_probabilities[arcs].colors
 
         np.testing.assert_array_equal(arc_colors, lin_colors)
 

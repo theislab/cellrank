@@ -3,7 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-|PyPI| |Travis| |License|
+|Travis| |License|
 
 
 CellRank - Probabilistic Trajectory Inference based on RNA Velocity
@@ -34,20 +34,24 @@ and `scvelo <https://scvelo.readthedocs.io/>`_.
 Report issues and see the code on `GitHub <https://github.com/theislab/cellrank>`__.
 
 .. toctree::
+    :caption: General
     :maxdepth: 2
     :hidden:
 
     installation
-    tutorial
     api
     classes
     references
 
-.. |PyPI| image:: https://img.shields.io/pypi/v/cellrank.svg
-    :target: https://img.shields.io/pypi/v/cellrank
+.. toctree::
+   :caption: Tutorials
+   :maxdepth: 2
+   :hidden:
 
-.. |Travis| image:: https://travis-ci.com/theislab/cellrank.svg?token=UqaQZpSKCK4qZNfu1sqq&branch=master
+   Pancreas <https://cellrank-notebooks.readthedocs.io/en/latest/pancreas_basic.html>
+
+
+.. |Travis| image:: https://travis-ci.org/theislab/cellrank.svg?branch=master
     :target: https://travis-ci.org/theislab/cellrank
 
-.. |License| image:: https://img.shields.io/pypi/v/cellrank.svg
-    :target: https://img.shields.io/github/license/theislab/cellrank
+.. |License| image:: https://img.shields.io/github/license/theislab/cellrank
