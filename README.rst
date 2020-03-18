@@ -9,7 +9,8 @@ CellRank - Probabilistic Trajectory Inference based on RNA Velocity
    :align: center
 
 **CellRank** is a toolkit to uncover cellular development based on scRNA-seq
-data and RNA Velocity, see [Manno18]_ and [Bergen19]_.
+data with RNA Velocity annotation, see `La Manno et al. (2018) <https://doi.org/10.1038/s41586-018-0414-6>`_
+and `Bergen et al. (2019) <https://doi.org/10.1101/820936>`_.
 
 CellRank utilises the time derivative of gene expression given by RNA Velocity
 to construct a Markov Chain. The information given by RNA Velocity is combined
@@ -25,3 +26,10 @@ lineage.
 
 CellRank is fully compatible with `scanpy <https://scanpy.readthedocs.io/en/latest/>`_
 and `scvelo <https://scvelo.readthedocs.io/>`_.
+
+CellRank requires Python3 version >= 3.6 and can be installed via::
+
+    pip install git+https://github.com/theislab/cellrank
+
+See the documentation at `<https://cellrank-notebooks.readthedocs.io/>`_, which
+includes tutorial notebooks and a description of our complete API.
