@@ -1,9 +1,4 @@
-.. Cellrank documentation master file, created by
-   sphinx-quickstart on Sun Dec  1 21:13:53 2019.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
-|Travis| |License|
+|PyPI| |Travis| |License|
 
 
 CellRank - Probabilistic Trajectory Inference based on RNA Velocity
@@ -14,7 +9,8 @@ CellRank - Probabilistic Trajectory Inference based on RNA Velocity
    :align: center
 
 **CellRank** is a toolkit to uncover cellular development based on scRNA-seq
-data with RNA Velocity annotation, see [Manno18]_ and [Bergen19]_.
+data with RNA Velocity annotation, see `La Manno et al. (2018) <https://doi.org/10.1038/s41586-018-0414-6>`_
+and `Bergen et al. (2019) <https://doi.org/10.1101/820936>`_.
 
 CellRank utilises the time derivative of gene expression given by RNA Velocity
 to construct a Markov Chain. The information given by RNA Velocity is combined
@@ -31,27 +27,9 @@ lineage.
 CellRank is fully compatible with `scanpy <https://scanpy.readthedocs.io/en/latest/>`_
 and `scvelo <https://scvelo.readthedocs.io/>`_.
 
-Report issues and see the code on `GitHub <https://github.com/theislab/cellrank>`__.
+CellRank requires Python3 version >= 3.6 and can be installed via::
 
-.. toctree::
-    :caption: General
-    :maxdepth: 2
-    :hidden:
+    pip install git+https://github.com/theislab/cellrank
 
-    installation
-    api
-    classes
-    references
-
-.. toctree::
-   :caption: Tutorials
-   :maxdepth: 2
-   :hidden:
-
-   Pancreas <https://cellrank-notebooks.readthedocs.io/en/latest/pancreas_basic.html>
-
-
-.. |Travis| image:: https://travis-ci.org/theislab/cellrank.svg?branch=master
-    :target: https://travis-ci.org/theislab/cellrank
-
-.. |License| image:: https://img.shields.io/github/license/theislab/cellrank
+See the documentation at `<https://cellrank-notebooks.readthedocs.io/>`_, which
+includes tutorial notebooks and a description of our complete API.
