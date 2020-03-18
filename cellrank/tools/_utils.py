@@ -90,7 +90,7 @@ def _vec_mat_corr(X: Union[np.ndarray, spmatrix], y: np.ndarray) -> np.ndarray:
 
     if np.sum(nom == 0) > 0:
         logg.warning(
-            f"No variation found in {np.sum(nom==0)} genes. Setting correlation for these to `NaN`"
+            f"No variation found in `{np.sum(nom==0)}` genes. Setting correlation for these to `NaN`"
         )
 
     return denom / nom
@@ -103,8 +103,7 @@ def cyto_trace(
     Re-implementation of the CytoTrace algorithm by Gulati et al. to infer cell plasticity.
 
     Finds the top 200 genes correlated with #genes/cell and computes their (imputed) mean or median expression.
-    See the authors' paper in Science: https://science.sciencemag.org/content/367/6476/405
-    or website: https://cytotrace.stanford.edu/.
+    For more references, see [Cyto20]_.
 
     Workflow
     In *scanpy*, take your raw :paramref:`adata` object and run :func:`scvelo.pp.moments` on it. Then run this function.
@@ -116,7 +115,7 @@ def cyto_trace(
     copy
         Whether to write directly to :paramref:`adata` or to a copy.
     use_median
-        If `True`, use median, otherwise mean.
+        If `True`, use *median*, otherwise *mean*.
 
     Returns
     -------
@@ -286,10 +285,9 @@ def _compute_mean_color(color_list: List[str]) -> str:
     if not all(map(lambda c: mcolors.is_color_like(c), color_list)):
         raise ValueError("Not all values are valid colors.")
 
-    color_list = [mcolors.to_rgb(c) for c in color_list]
-    all_colors = np.zeros((len(color_list), 3))
+    color_list = np.array([mcolors.to_rgb(c) for c in color_list])
 
-    return mcolors.to_hex(np.mean(all_colors, axis=0).astype(np.int))
+    return mcolors.to_hex(np.mean(color_list, axis=0))
 
 
 def _eigengap(evals: np.ndarray, alpha: float) -> int:
