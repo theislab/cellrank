@@ -1227,7 +1227,9 @@ class MarkovChain:
         approx_rcs_temp = self._approx_rcs.copy()
 
         # define a set of keys
-        keys_ = {tuple((key.strip() for key in rc.split(","))) for rc in keys}
+        keys_ = {
+            tuple((key.strip() for key in rc.strip(" ,").split(","))) for rc in keys
+        }
 
         overlap = [set(ks) for ks in keys_]
         for c1, c2 in combinations(overlap, 2):
