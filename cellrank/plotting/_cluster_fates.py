@@ -31,7 +31,7 @@ def cluster_fates(
     mode: str = "bar",
     final: bool = True,
     show_cbar: bool = True,
-    ncols: int = 3,
+    ncols: Optional[int] = None,
     sharey: bool = False,
     save: Optional[str] = None,
     legend_kwargs: Mapping[str, Any] = MappingProxyType({"loc": "best"}),
@@ -104,13 +104,14 @@ def cluster_fates(
     """
 
     def plot_bar():
-        n_rows = ceil(len(clusters) / ncols)
+        cols = 4 if ncols is None else ncols
+        n_rows = ceil(len(clusters) / cols)
         fig = plt.figure(
-            None, (3.5 * ncols, 5 * n_rows) if figsize is None else figsize, dpi=dpi
+            None, (3.5 * cols, 5 * n_rows) if figsize is None else figsize, dpi=dpi
         )
         fig.tight_layout()
 
-        gs = plt.GridSpec(n_rows, ncols, figure=fig, wspace=0.7, hspace=0.9)
+        gs = plt.GridSpec(n_rows, cols, figure=fig, wspace=0.7, hspace=0.9)
 
         ax = None
         colors = list(adata.obsm[lk][:, lin_names].colors)
@@ -143,11 +144,12 @@ def cluster_fates(
         if "cmap" not in kwargs:
             kwargs["cmap"] = cm.viridis
 
-        nrows = ceil(len(lin_names) / ncols)
+        cols = len(lin_names) if ncols is None else ncols
+        nrows = ceil(len(lin_names) / cols)
         fig, axes = plt.subplots(
             nrows,
-            ncols,
-            figsize=(6 * ncols, 4 * nrows) if figsize is None else figsize,
+            cols,
+            figsize=(6 * cols, 4 * nrows) if figsize is None else figsize,
             constrained_layout=True,
             dpi=dpi,
         )
@@ -209,8 +211,6 @@ def cluster_fates(
         kwargs.pop("keys", None)
         kwargs.pop("save", None)  # we will handle saving
         kwargs["groupby"] = cluster_key
-        if kwargs.get("ncols", None) is None:
-            kwargs["ncols"] = len(lin_names)
         if kwargs.get("rotation", None) is None:
             kwargs["rotation"] = 90
 
@@ -224,11 +224,12 @@ def cluster_fates(
                     data[:, name]
                 )  # TODO: better approach - dummy adata
 
-        nrows = ceil(len(lin_names) / ncols)
+        cols = len(lin_names) if ncols is None else ncols
+        nrows = ceil(len(lin_names) / cols)
         fig, axes = plt.subplots(
             nrows,
-            ncols,
-            figsize=(6 * ncols, 4 * nrows) if figsize is None else figsize,
+            cols,
+            figsize=(6 * cols, 4 * nrows) if figsize is None else figsize,
             dpi=dpi,
         )
         if not isinstance(axes, np.ndarray):
@@ -313,11 +314,11 @@ def cluster_fates(
             lineages = [lineages]
         lineages = _make_unique(lineages)
         for ep in lineages:
-            if ep not in lin_names:
+            if ep not in adata.obsm[lk].names:
                 raise ValueError(
                     f"Endpoint `{ep!r}` not found in `adata.obsm[{lk!r}].names`."
                 )
-        lin_names = lineages
+        lin_names = list(lineages)
     else:
         # must be list for sc.pl.violin, else cats str
         lin_names = list(adata.obsm[lk].names)
@@ -332,8 +333,8 @@ def cluster_fates(
             if name == "All"
             else (adata.obs[cluster_key] == name).values
         )
-        mask = np.array(mask, dtype=np.bool)
-        data = np.array(adata.obsm[lk][mask, :][:, lin_names])
+        mask = list(np.array(mask, dtype=np.bool))
+        data = adata.obsm[lk][mask, lin_names].X
         mean = np.nanmean(data, axis=0)
         std = np.nanstd(data, axis=0) / np.sqrt(data.shape[0])
         d[name] = [mean, std]
@@ -343,11 +344,11 @@ def cluster_fates(
         fig = plot_bar()
     elif mode == "paga":
         if "paga" not in adata.uns:
-            raise KeyError("Please compute PAGA first as `scanpy.tl.paga`.")
+            raise KeyError("Compute PAGA first as `scanpy.tl.paga()`.")
         fig = plot_paga()
     elif mode == "paga_pie":
         if "paga" not in adata.uns:
-            raise KeyError("Please compute PAGA first as `scanpy.tl.paga`.")
+            raise KeyError("Compute PAGA first as `scanpy.tl.paga()`.")
         fig = plot_paga_pie()
     elif mode == "violin":
         fig = plot_violin_no_cluster_key() if cluster_key is None else plot_violin()
