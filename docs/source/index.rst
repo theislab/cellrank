@@ -3,7 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-|Travis| |License|
+|Travis| |Docs| |License|
 
 
 CellRank - Probabilistic Trajectory Inference based on RNA Velocity
@@ -53,5 +53,7 @@ Report issues and see the code on `GitHub <https://github.com/theislab/cellrank>
 
 .. |Travis| image:: https://travis-ci.org/theislab/cellrank.svg?branch=master
     :target: https://travis-ci.org/theislab/cellrank
+
+.. |Docs| image:: https://img.shields.io/readthedocs/cellrank
 
 .. |License| image:: https://img.shields.io/github/license/theislab/cellrank
