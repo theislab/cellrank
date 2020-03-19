@@ -313,11 +313,11 @@ def cluster_fates(
             lineages = [lineages]
         lineages = _make_unique(lineages)
         for ep in lineages:
-            if ep not in lin_names:
+            if ep not in adata.obsm[lk].names:
                 raise ValueError(
                     f"Endpoint `{ep!r}` not found in `adata.obsm[{lk!r}].names`."
                 )
-        lin_names = lineages
+        lin_names = list(lineages)
     else:
         # must be list for sc.pl.violin, else cats str
         lin_names = list(adata.obsm[lk].names)
@@ -332,8 +332,8 @@ def cluster_fates(
             if name == "All"
             else (adata.obs[cluster_key] == name).values
         )
-        mask = np.array(mask, dtype=np.bool)
-        data = np.array(adata.obsm[lk][mask, :][:, lin_names])
+        mask = list(np.array(mask, dtype=np.bool))
+        data = adata.obsm[lk][mask, lin_names].X
         mean = np.nanmean(data, axis=0)
         std = np.nanstd(data, axis=0) / np.sqrt(data.shape[0])
         d[name] = [mean, std]
@@ -343,11 +343,11 @@ def cluster_fates(
         fig = plot_bar()
     elif mode == "paga":
         if "paga" not in adata.uns:
-            raise KeyError("Please compute PAGA first as `scanpy.tl.paga`.")
+            raise KeyError("Compute PAGA first as `scanpy.tl.paga()`.")
         fig = plot_paga()
     elif mode == "paga_pie":
         if "paga" not in adata.uns:
-            raise KeyError("Please compute PAGA first as `scanpy.tl.paga`.")
+            raise KeyError("Compute PAGA first as `scanpy.tl.paga()`.")
         fig = plot_paga_pie()
     elif mode == "violin":
         fig = plot_violin_no_cluster_key() if cluster_key is None else plot_violin()
