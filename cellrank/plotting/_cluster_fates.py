@@ -31,7 +31,7 @@ def cluster_fates(
     mode: str = "bar",
     final: bool = True,
     show_cbar: bool = True,
-    ncols: int = 3,
+    ncols: Optional[int] = None,
     sharey: bool = False,
     save: Optional[str] = None,
     legend_kwargs: Mapping[str, Any] = MappingProxyType({"loc": "best"}),
@@ -104,13 +104,14 @@ def cluster_fates(
     """
 
     def plot_bar():
-        n_rows = ceil(len(clusters) / ncols)
+        cols = 4 if ncols is None else ncols
+        n_rows = ceil(len(clusters) / cols)
         fig = plt.figure(
-            None, (3.5 * ncols, 5 * n_rows) if figsize is None else figsize, dpi=dpi
+            None, (3.5 * cols, 5 * n_rows) if figsize is None else figsize, dpi=dpi
         )
         fig.tight_layout()
 
-        gs = plt.GridSpec(n_rows, ncols, figure=fig, wspace=0.7, hspace=0.9)
+        gs = plt.GridSpec(n_rows, cols, figure=fig, wspace=0.7, hspace=0.9)
 
         ax = None
         colors = list(adata.obsm[lk][:, lin_names].colors)
@@ -143,11 +144,12 @@ def cluster_fates(
         if "cmap" not in kwargs:
             kwargs["cmap"] = cm.viridis
 
-        nrows = ceil(len(lin_names) / ncols)
+        cols = len(lin_names) if ncols is None else ncols
+        nrows = ceil(len(lin_names) / cols)
         fig, axes = plt.subplots(
             nrows,
-            ncols,
-            figsize=(6 * ncols, 4 * nrows) if figsize is None else figsize,
+            cols,
+            figsize=(6 * cols, 4 * nrows) if figsize is None else figsize,
             constrained_layout=True,
             dpi=dpi,
         )
@@ -209,8 +211,6 @@ def cluster_fates(
         kwargs.pop("keys", None)
         kwargs.pop("save", None)  # we will handle saving
         kwargs["groupby"] = cluster_key
-        if kwargs.get("ncols", None) is None:
-            kwargs["ncols"] = len(lin_names)
         if kwargs.get("rotation", None) is None:
             kwargs["rotation"] = 90
 
@@ -224,11 +224,12 @@ def cluster_fates(
                     data[:, name]
                 )  # TODO: better approach - dummy adata
 
-        nrows = ceil(len(lin_names) / ncols)
+        cols = len(lin_names) if ncols is None else ncols
+        nrows = ceil(len(lin_names) / cols)
         fig, axes = plt.subplots(
             nrows,
-            ncols,
-            figsize=(6 * ncols, 4 * nrows) if figsize is None else figsize,
+            cols,
+            figsize=(6 * cols, 4 * nrows) if figsize is None else figsize,
             dpi=dpi,
         )
         if not isinstance(axes, np.ndarray):
