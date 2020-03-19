@@ -349,9 +349,9 @@ class LineageAccessorTestCase(unittest.TestCase):
 
         mask = np.ones((x.shape[0]), dtype=np.bool)
         mask[5:] = False
-        y = l[mask, "baz"]
+        y = l[mask, ["baz", "bar"]]
 
-        np.testing.assert_array_equal(x[mask, :][:, [2]], np.array(y))
+        np.testing.assert_array_equal(x[mask, :][:, [2, 1]], np.array(y))
 
     def test_reordering(self):
         x = np.random.random((10, 3))
