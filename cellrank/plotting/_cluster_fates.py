@@ -19,13 +19,14 @@ from cellrank.tools._cluster_fates import _cramers_v, _counts
 from cellrank.tools._constants import LinKey
 from cellrank.tools._utils import save_fig
 from cellrank.utils._utils import _make_unique
+from cellrank.tools._lineage import Lineage
 
 _cluster_fates_modes = ("bar", "paga", "paga_pie", "violin")
 
 
 def cluster_fates(
     adata: AnnData,
-    cluster_key: str = "louvain",
+    cluster_key: Optional[str] = "louvain",
     clusters: Optional[Union[str, Sequence[str]]] = None,
     lineages: Optional[Union[str, Sequence[str]]] = None,
     mode: str = "bar",
@@ -291,9 +292,9 @@ def cluster_fates(
             clusters = _make_unique(clusters)
             if mode in ("paga", "paga_pie"):
                 logg.debug(
-                    f"DEBUG: Setting `clusters` to all available because of `mode={mode!r}`"
+                    f"DEBUG: Setting `clusters` to all available ones because of `mode={mode!r}`"
                 )
-                clusters = adata.obs[cluster_key].cat.categories
+                clusters = list(adata.obs[cluster_key].cat.categories)
             else:
                 for cname in clusters:
                     if cname not in adata.obs[cluster_key].cat.categories:
@@ -301,7 +302,7 @@ def cluster_fates(
                             f"Cluster `{cname!r}` not found in `adata.obs[{cluster_key!r}]`"
                         )
         else:
-            clusters = adata.obs[cluster_key].cat.categories
+            clusters = list(adata.obs[cluster_key].cat.categories)
     else:
         clusters = ["All"]
 
@@ -323,8 +324,11 @@ def cluster_fates(
         # must be list for sc.pl.violin, else cats str
         lin_names = list(adata.obsm[lk].names)
 
-    if mode == "violin":
+    if mode == "violin" and clusters != ["All"]:
+        # TODO: temporary fix, until subclassing is made ready
+        names, colors = adata.obsm[lk].names, adata.obsm[lk].colors
         adata = adata[np.isin(adata.obs[cluster_key], clusters)].copy()
+        adata.obsm[lk] = Lineage(adata.obsm[lk], names=names, colors=colors)
 
     d = odict()
     for name in clusters:
