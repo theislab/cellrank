@@ -167,6 +167,7 @@ class MarkovChain:
                 names=[f"Lineage {i + 1}" for i in lineages],
                 colors=colors,
             )
+            self._adata.obsm[self._lin_key] = self._lin_probs
         else:
             logg.debug(
                 f"DEBUG: `{self._lin_key}` not found in `adata.obsm`. Setting `.lin_probs` to `None`"
@@ -208,6 +209,7 @@ class MarkovChain:
                     names=self._adata.uns[_lin_names(self._lin_key)],
                     colors=self._lin_probs.colors,
                 )
+                self._adata.obsm[self._lin_key] = self._lin_probs
             else:
                 logg.debug(
                     f"DEBUG: `{_lin_names(self._lin_key)}` not found in `adata.uns`. "
@@ -220,6 +222,7 @@ class MarkovChain:
                     names=self._lin_probs.names,
                     colors=self._adata.uns[_colors(self._lin_key)],
                 )
+                self._adata.obsm[self._lin_key] = self._lin_probs
             else:
                 logg.debug(
                     f"DEBUG: `{_colors(self._lin_key)}` not found in `adata.uns`. "
