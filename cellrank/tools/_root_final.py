@@ -8,6 +8,7 @@ from cellrank.tools._constants import RcKey
 from cellrank.tools._transition_matrix import transition_matrix
 from cellrank.utils._docs import inject_docs
 
+
 _find_docs = """\
 Computes {cells} cells based on RNA velocity, see [Manno18]_. The tool models dynamic cellular
 processes as a Markov chain, where the transition matrix is computed based on the velocity vectors of each
