@@ -6,9 +6,50 @@ from scanpy import logging as logg
 from cellrank.tools._markov_chain import MarkovChain
 from cellrank.tools._constants import RcKey
 from cellrank.tools._transition_matrix import transition_matrix
+from cellrank.utils._docs import inject_docs
 
 
-def root_final(
+_find_docs = """\
+Computes {cells} cells based on RNA velocity, see [Manno18]_. The tool models dynamic cellular
+processes as a Markov chain, where the transition matrix is computed based on the velocity vectors of each
+individual cell. The spectrum of the transition matrix can be used to query approximate recurrent classes of the
+Markov chain, which represent groups of {cells} cells.
+
+Cells are filtered into transient/recurrent cells using the left eigenvectors of the transition matrix and clustered
+into distinct groups of {cells} cells using the right eigenvectors of the transition matrix of the Markov chain.
+
+Params
+------
+adata : :class:`adata.AnnData`
+    Annotated data object.
+cluster_key
+    The tool can match computed {direction}points against pre-computed clusters to annotate the {direction}points.
+    For this, provide a key from :paramref:`adata` `.obs` where cluster labels have been computed.
+weight_connectivities
+    Weight given to a transition matrix computed on the basis of the KNN connectivities. Should be in `[0, 1]`. This
+    can help in situations where we have noisy velocities and want to give some weight to transcriptomic similarity.
+percentile
+    When making a distinction between transient and recurrent cells, a percentile is used for filtering. Choose
+    this value according to the percentage of transient cells you expect to see in your data.
+    E.g. :paramref:`percentile` `=98` means you are expecting 98% of your cells to be transient
+    and 2% to be recurrent {direction}points.
+n_start_end
+    If you know how many {direction}points you are expecting, you can provide this number.
+    Otherwise, an eigen-gap heuristic is used.
+show_plots
+    Whether to show plots of the spectrum and eigenvectors in the embedding.
+copy
+    Whether to update the existing :paramref:`adata` object or to return a copy.
+
+Returns
+-------
+:class:`anndata.AnnData` or :class:`NoneType`
+    Depending on :paramref:`copy`, either updates the existing :paramref:`adata` object or returns a copy.
+    Marked cells can be found in :paramref:`adata` `.obs` under `{key_added!r}`.
+"""
+
+
+def _root_final(
     adata: AnnData,
     final: bool = True,
     cluster_key: Optional[str] = None,
@@ -18,49 +59,6 @@ def root_final(
     show_plots=False,
     copy: bool = False,
 ) -> Optional[AnnData]:
-    """
-    Root cells and final cells of a dynamic process in single cells.
-
-    Computes root and final cells based on RNA velocity, see [Manno18]_. The tool models dynamic cellular
-    processes as a Markov chain, where the transition matrix is computed based on the velocity vectors of each
-    individual cell. The spectrum of the transition matrix can be used to query approximate recurrent classes of the
-    Markov chain, which represent groups of root- or final cells.
-
-    Cells are filtered into transient/recurrent cells using the left eigenvectors of the transition matrix and clustered
-    into distinct groups of root or final cells using the right eigenvectors of the transition matrix of the Markov
-    Chain.
-
-    Params
-    ------
-    adata : :class:`adata.AnnData`
-        Annotated data object.
-    final
-        If true, computes final cells, i.e. end points. Otherwise, computes root cells, i.e. starting points.
-    cluster_key
-        The tool can match computed start/end-points against pre-computed clusters to annotate the start/end-points.
-        For this, provide a key from :paramref:`adata` `.obs` where cluster labels have been computed.
-    weight_connectivities
-        Weight given to a transition matrix computed on the basis of the KNN connectivities. Should be in `[0, 1]`. This
-        can help in situations where we have noisy velocities and want to give some weight to transcriptomic similarity.
-    percentile
-        When making a distinction between transient and recurrent cells, a percentile is used for filtering. Choose
-        this value according to the percentage of transient cells you expect to see in your data.
-        E.g. :paramref:`percentile` `=98` means you are expecting 98% of your cells to be transient
-        and 2% to be recurrent (start/end-points).
-    n_start_end
-        If you know how many start/end-points you are expecting, you can provide this number.
-        Otherwise, an eigen-gap heuristic is used.
-    show_plots
-        Whether to show plots of the spectrum and eigenvectors in the embedding.
-    copy
-        Whether to update the existing :paramref:`adata` object or to return a copy.
-
-    Returns
-    -------
-    :class:`anndata.AnnData` or :class:`NoneType`
-        Depending on :paramref:`copy`, either updates the existing :paramref:`adata` object or returns a copy.
-        Root or final cells can be found in :paramref:`adata` `.obs` under either `['root_cells']` or `['final_cells']`.
-    """
 
     key = RcKey.FORWARD if final else RcKey.BACKWARD
     start = logg.info(f"Computing `{key}`")
@@ -88,6 +86,66 @@ def root_final(
         mc.plot_eig_embedding(abs_value=True, perc=[0, 98], use=n_start_end)
         mc.plot_eig_embedding(left=False, use=n_start_end)
 
-    logg.info(f"Added key `{key!r}` to `adata.obs`" f"    Finish", time=start)
+    logg.info(f"Added key `{key!r}` to `adata.obs`\n    Finish", time=start)
 
     return adata if copy else None
+
+
+@inject_docs(
+    root=_find_docs.format(cells="root", direction="start", key_added="root_cells")
+)
+def find_root(
+    adata: AnnData,
+    cluster_key: Optional[str] = None,
+    weight_connectivities: float = None,
+    percentile: int = 98,
+    n_start_end: Optional[int] = None,
+    show_plots=False,
+    copy: bool = False,
+) -> Optional[AnnData]:
+    """
+    Root cells of a dynamic process in single cells.
+
+    {root}
+    """
+
+    return _root_final(
+        adata,
+        final=False,
+        cluster_key=cluster_key,
+        weight_connectivities=weight_connectivities,
+        percentile=percentile,
+        n_start_end=n_start_end,
+        show_plots=show_plots,
+        copy=copy,
+    )
+
+
+@inject_docs(
+    final=_find_docs.format(cells="final", direction="end", key_added="final_cells")
+)
+def find_final(
+    adata: AnnData,
+    cluster_key: Optional[str] = None,
+    weight_connectivities: float = None,
+    percentile: int = 98,
+    n_start_end: Optional[int] = None,
+    show_plots=False,
+    copy: bool = False,
+) -> Optional[AnnData]:
+    """
+    Final cells of a dynamic process in single cells.
+
+    {final}
+    """
+
+    return _root_final(
+        adata,
+        final=True,
+        cluster_key=cluster_key,
+        weight_connectivities=weight_connectivities,
+        percentile=percentile,
+        n_start_end=n_start_end,
+        show_plots=show_plots,
+        copy=copy,
+    )
