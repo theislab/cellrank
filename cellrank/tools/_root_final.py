@@ -8,7 +8,7 @@ from cellrank.tools._constants import RcKey
 from cellrank.tools._transition_matrix import transition_matrix
 
 
-def root_final(
+def _root_final(
     adata: AnnData,
     final: bool = True,
     cluster_key: Optional[str] = None,
@@ -27,8 +27,7 @@ def root_final(
     Markov chain, which represent groups of root- or final cells.
 
     Cells are filtered into transient/recurrent cells using the left eigenvectors of the transition matrix and clustered
-    into distinct groups of root or final cells using the right eigenvectors of the transition matrix of the Markov
-    Chain.
+    into distinct groups of root or final cells using the right eigenvectors of the transition matrix of the Markov chain.
 
     Params
     ------
@@ -91,3 +90,45 @@ def root_final(
     logg.info(f"Added key `{key!r}` to `adata.obs`" f"    Finish", time=start)
 
     return adata if copy else None
+
+
+def find_root(
+    adata: AnnData,
+    cluster_key: Optional[str] = None,
+    weight_connectivities: float = None,
+    percentile: int = 98,
+    n_start_end: Optional[int] = None,
+    show_plots=False,
+    copy: bool = False,
+) -> Optional[AnnData]:
+    return _root_final(
+        adata,
+        final=False,
+        cluster_key=cluster_key,
+        weight_connectivities=weight_connectivities,
+        percentile=percentile,
+        n_start_end=n_start_end,
+        show_plots=show_plots,
+        copy=copy,
+    )
+
+
+def find_final(
+    adata: AnnData,
+    cluster_key: Optional[str] = None,
+    weight_connectivities: float = None,
+    percentile: int = 98,
+    n_start_end: Optional[int] = None,
+    show_plots=False,
+    copy: bool = False,
+) -> Optional[AnnData]:
+    return _root_final(
+        adata,
+        final=True,
+        cluster_key=cluster_key,
+        weight_connectivities=weight_connectivities,
+        percentile=percentile,
+        n_start_end=n_start_end,
+        show_plots=show_plots,
+        copy=copy,
+    )
