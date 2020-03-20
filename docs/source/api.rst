@@ -25,7 +25,8 @@ Tools
 
     tl.MarkovChain
     tl.partition
-    tl.root_final
+    tl.find_root
+    tl.find_final
     tl.lineages
     tl.gene_importance
     tl.transition_matrix
