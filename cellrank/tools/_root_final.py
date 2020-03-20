@@ -85,7 +85,7 @@ def _root_final(
         mc.plot_eig_embedding(abs_value=True, perc=[0, 98], use=n_start_end)
         mc.plot_eig_embedding(left=False, use=n_start_end)
 
-    logg.info(f"Added key `{key!r}` to `adata.obs`" f"    Finish", time=start)
+    logg.info(f"Added key `{key!r}` to `adata.obs`\n    Finish", time=start)
 
     return adata if copy else None
 
