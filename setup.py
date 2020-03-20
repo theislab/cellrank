@@ -5,7 +5,7 @@ import os
 
 setup(
     name="cellrank",
-    version="1.0.1",
+    version="1.1.0",
     description="Probabilistic Trajectory Inference using RNA Velocity.",
     url="https://github.com/theislab/cellrank",
     install_requires=list(
