@@ -53,13 +53,15 @@ def parallelize(
 
     try:
         from tqdm import tqdm_notebook as tqdm
+        import ipywidgets
     except ImportError:
         global _msg_shown
         tqdm = None
 
         if not _msg_shown:
             print(
-                "Unable to create the progress bar. Consider installing `tqdm` as `pip install tqdm`."
+                "Unable to create progress bar. Consider installing `tqdm` as `pip install tqdm` "
+                "and `ipywidgets` as `pip install ipywidgets`."
             )
             _msg_shown = True
 

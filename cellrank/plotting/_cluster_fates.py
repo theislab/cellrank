@@ -44,7 +44,7 @@ def cluster_fates(
     Produces plots that aggregate lineage probabilities to a cluster level.
 
     This can be used to investigate how likely a certain cluster is to go to one of the endpoints, or in turn to have
-    descendet from one of the starting points. For mode `paga` and `paga_pie`, we use PAGA, see [Wolf19]_.
+    descended from one of the starting points. For mode `paga` and `paga_pie`, we use PAGA, see [Wolf19]_.
 
     .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/cluster_fates.png
        :width: 400px
@@ -59,9 +59,9 @@ def cluster_fates(
     clusters
         Clusters to visualize.
         If `None`, all clusters will be plotted.
-    endpoints
-        Endpoints for which to visualize absorption probabilities.
-        If `None`, use all available endpoints.
+    lineages
+        Lineages for which to visualize absorption probabilities.
+        If `None`, use all available lineages.
     mode
         Type of plot to show.
 
@@ -134,7 +134,7 @@ def cluster_fates(
             current_ax.set_xticks(np.arange(len(lin_names)))
             current_ax.set_xticklabels(lin_names, rotation="vertical")
             current_ax.set_title(k)
-            current_ax.set_xlabel("Endpoints")
+            current_ax.set_xlabel("Endpoints" if final else "Startpoints")
             current_ax.set_ylabel("Absorption probability")
 
         return fig
@@ -249,21 +249,22 @@ def cluster_fates(
         return fig
 
     def plot_violin_no_cluster_key():
+        key = "Endpoints" if final else "Startpoints"
         kwargs["show"] = False
         kwargs.pop("ax", None)
         kwargs.pop("keys", None)  # don't care
         kwargs.pop("save", None)
-        kwargs["groupby"] = "Endpoints"
+        kwargs["groupby"] = key
 
         data = np.ravel(np.array(adata.obsm[lk]).T)[..., np.newaxis]
         dadata = AnnData(np.zeros_like(data))
         dadata.obs["Absorption probability"] = data
-        dadata.obs["Endpoints"] = (
+        dadata.obs[key] = (
             pd.Series(np.ravel([[n] * adata.n_obs for n in adata.obsm[lk].names]))
             .astype("category")
             .values
         )
-        dadata.uns["Endpoints_colors"] = adata.obsm[lk].colors
+        dadata.uns[f"{key}_colors"] = adata.obsm[lk].colors
 
         fig, ax = plt.subplots(
             figsize=figsize if figsize is not None else (8, 6), dpi=dpi

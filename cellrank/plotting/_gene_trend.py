@@ -51,7 +51,7 @@ def gene_trends(
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
     ncols: int = 2,
-    n_jobs: Optional[int] = -1,
+    n_jobs: Optional[int] = 1,
     backend: str = "multiprocessing",
     ext: str = "png",
     suptitle: Optional[str] = None,
@@ -139,7 +139,7 @@ def gene_trends(
         Suptitle of the figure.
         Only used when :paramref:`same_plot` `=True`.
     n_jobs
-        Number of parallel jobs. If `None` or `1`, the execution is sequential.
+        Number of parallel jobs. If `-1`, use all available cores. If `None` or `1`, the execution is sequential.
     backend
         Which backend to use for multiprocessing.
         See :class:`joblib.Parallel` for valid options.
