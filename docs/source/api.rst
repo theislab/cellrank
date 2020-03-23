@@ -3,8 +3,9 @@ API
 CellRank offers two possibilities to interact with its core functionality: either
 directly through the :class:`cellrank.tl.MarkovChain`
 and :class:`cellrank.tl.kernels.Kernel` classes, or through the high
-level functions :func:`cellrank.tl.root_final` and :func:`cellrank.tl.lineages`.
-The former option offers full control whereas the latter is simpler to handle for new users.
+level functions :func:`cellrank.tl.find_final`, :func:`cellrank.tl.find_root`
+and :func:`cellrank.tl.lineages`. The former option offers full control whereas
+the latter is simpler to handle for new users.
 
 Additionally, there is a set of plotting functions which can be used, no matter
 which interface was chosen to uncover the start-/endpoints and lineages. See our
