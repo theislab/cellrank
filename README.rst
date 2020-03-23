@@ -4,7 +4,7 @@
 CellRank - Probabilistic Trajectory Inference based on RNA Velocity
 ===================================================================
 
-.. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/index_figure_ends.png
+.. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/index_figure_endpoints.png
    :width: 600px
    :align: center
 
