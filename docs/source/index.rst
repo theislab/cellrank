@@ -9,7 +9,7 @@
 CellRank - Probabilistic Trajectory Inference based on RNA Velocity
 ===================================================================
 
-.. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/index_figure_ends.png
+.. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/index_figure_endpoints.png
    :width: 600px
    :align: center
 
@@ -48,7 +48,8 @@ Report issues and see the code on `GitHub <https://github.com/theislab/cellrank>
    :maxdepth: 2
    :hidden:
 
-   Pancreas <https://cellrank-notebooks.readthedocs.io/en/latest/pancreas_basic.html>
+   Pancreas Basic <https://cellrank-notebooks.readthedocs.io/en/latest/pancreas_basic.html>
+   Pancreas Advanced <https://cellrank-notebooks.readthedocs.io/en/latest/pancreas_advanced.html>
 
 
 .. |Travis| image:: https://travis-ci.org/theislab/cellrank.svg?branch=master
