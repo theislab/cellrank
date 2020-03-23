@@ -390,7 +390,7 @@ def _fit(
     queue
         Signalling queue in the parent process/thread used to update the progress bar.
     kwargs
-        Keyword arguments for `cellrank.utils.models.Model`.
+        Keyword arguments for :func:`cellrank.utils.models.Model.prepare`.
 
     Returns
     -------

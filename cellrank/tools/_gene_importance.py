@@ -86,7 +86,7 @@ def _gi_process(
     queue
         Signalling queue in the parent process/thread used to update the progress bar.
     kwargs
-        Keyword arguments for :func:`cellrank.ul.models.Model.prepare`.
+        Keyword arguments for :meth:`cellrank.ul.models.Model.prepare`.
 
     Returns
     -------
@@ -124,7 +124,7 @@ def gene_importance(
     n_perms: int = 1000,
     fdr_correction: str = "fdr_bh",
     alpha: float = 0.05,
-    n_jobs: Optional[int] = -1,
+    n_jobs: Optional[int] = 1,
     seed: Optional[int] = None,
     return_model: bool = False,
     backend: str = "multiprocessing",
@@ -134,9 +134,9 @@ def gene_importance(
     """
     Calculate gene importance within a lineage according to [SCORPIUS16]_.
 
-    SCORPIUS detects potential lineage drivers by using Random Forests to predict the pseudotemporal ordering of cells
+    SCORPIUS detects potential lineage drivers by using `Random Forests` to predict the pseudotemporal ordering of cells
     given the gene expression data. We can asses how important each gene is for this prediction, which we define as the
-    'importance' of this gene. p values are computed via a permutation test and q values are computed via an FDR
+    'importance' of this gene. p-values are computed via a permutation test and q-values are computed via an FDR
     correction.
 
     We adapted SCORPIUS to work with soft lineage assignenments given by our lineage probabilities computed using
@@ -171,7 +171,7 @@ def gene_importance(
     alpha
         Family-wise error rate for FDR correction.
     n_jobs
-        Number of parallel jobs. If `-1` or `None`, uses all cores.
+        Number of parallel jobs. If `-1`, use all available cores. If `None` or `1`, the execution is sequential.
     seed
         Seed for :class:`sklearn.ensemble.RandomForestRegressor` and the permutations.
     return_model
@@ -182,7 +182,7 @@ def gene_importance(
     rf_kwargs
         Keyword arguments for :class:`sklearn.ensemble.RandomForestRegressor`.
     **kwargs:
-        Keyword arguments for :func:`cellrank.utils.models.Model.prepare`.
+        Keyword arguments for :meth:`cellrank.ul.models.Model.prepare`.
 
     Returns
     -------
