@@ -66,3 +66,15 @@ Utilities
 
     ul.models.SKLearnModel
     ul.models.GamMGCVModel
+
+Datasets
+~~~~~~~~
+
+.. module:: cellrank.datasets
+.. currentmodule:: cellrank
+
+.. autosummary::
+
+    :toctree: api/datasets
+
+    datasets.pancreas
