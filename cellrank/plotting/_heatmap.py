@@ -33,7 +33,7 @@ def heatmap(
     cluster_genes: bool = False,
     xlabel: str = "Pseudotime",
     cmap: colors.ListedColormap = cm.Spectral_r,
-    n_jobs: Optional[int] = -1,
+    n_jobs: Optional[int] = 1,
     backend: str = "multiprocessing",
     hspace: float = 0.25,
     figsize: Optional[Tuple[float, float]] = None,
@@ -79,7 +79,7 @@ def heatmap(
     cmap
         Colormap to use when visualizing the smoothed expression.
     n_jobs
-        Number of parallel jobs. If `None` or `1`, the execution is sequential.
+        Number of parallel jobs. If `-1`, use all available cores. If `None` or `1`, the execution is sequential.
     backend
         Which backend to use for multiprocessing.
         See :class:`joblib.Parallel` for valid options.
