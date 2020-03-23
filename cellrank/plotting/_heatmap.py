@@ -92,7 +92,7 @@ def heatmap(
         Filename where to save the plot.
         If `None`, just shows the plot.
     **kwargs
-        Keyword arguments for :func:`cellrank.utils.models.Model.prepare`.
+        Keyword arguments for :meth:`cellrank.ul.models.Model.prepare`.
 
     Returns
     -------

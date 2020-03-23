@@ -34,10 +34,10 @@ def transition_matrix(
     backward
         Direction of the process.
     weight_connectivities
-        Weight given to transcriptomic similarites as opposed to velocities. Must be in `[0, 1]`.
+        Weight given to transcriptomic similarities as opposed to velocities. Must be in `[0, 1]`.
     density_normalize
-        Whether to use density correction when computing the transition probabilities. Density correction is done
-        according to Haghverdi et al., Nature Methods 2016
+        Whether to use density correction when computing the transition probabilities.
+        Density correction is done [Haghverdi16]_.
 
     Returns
     -------
@@ -67,7 +67,7 @@ def transition_matrix(
             ).compute_transition_matrix(density_normalize=density_normalize)
         else:
             raise ValueError(
-                "The parameter `weight_connectivities` must be in range `[0, 1]`."
+                f"The parameter `weight_connectivities` must be in range `[0, 1]`, found `{weight_connectivities}`."
             )
     else:
         final = vk

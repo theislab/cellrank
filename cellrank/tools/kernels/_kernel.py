@@ -65,7 +65,10 @@ class KernelExpression(ABC):
     @abstractmethod
     def adata(self) -> AnnData:
         """
+        Get the annotated data object.
+
         Returns
+        -------
         :class:`anndata.AnnData`
             The underlying :paramref:`.adata` object.
         """
@@ -709,7 +712,7 @@ class ConnectivityKernel(Kernel):
     As a measure for transcriptomic similarity, we use the weighted KNN graph computed using `scanpy.pp.neighbors`, see
     [Wolf18]_. By definition, the resulting transition matrix is symmetric and cannot be used to learn about the direction of
     the developmental process under consideration. However, the velocity-derived transition matrix can be combined with
-    the similarity-based transition matrix as a means of regularisation.
+    the similarity-based transition matrix as a means of regularization.
 
     Optionally, we apply a density correction as described in [Coifman05]_, where we use the implementation of
     [Haghverdi16]_.
@@ -735,7 +738,7 @@ class ConnectivityKernel(Kernel):
         Compute transition matrix based on transcriptomic similarity.
 
         Uses symmetric, weighted KNN graph to compute symmetric transition matrix. The connectivities are computed
-        using scanpy.pp.neighbors. Depending on the parameters used there, they can be UMAP connectivities or
+        using :func:`scanpy.pp.neighbors`. Depending on the parameters used there, they can be UMAP connectivities or
         gaussian-kernel-based connectivities with adaptive kernel width.
 
         Params
@@ -780,8 +783,8 @@ class PalantirKernel(Kernel):
     disconnecting the graph, it does not remove all edges that point into the direction of decreasing pseudotime
     but keeps the ones that point to nodes inside a close radius. This radius is chosen according to the local density.
 
-    The implementation presented here won't exactly reproduce the original Palantir algorithm (see below) but the results
-    are qualitatively very similar.
+    The implementation presented here won't exactly reproduce the original Palantir algorithm (see below)
+    but the results are qualitatively very similar.
 
     Optionally, we apply a density correction as described in [Coifman05]_, where we use the implementation of
     [Haghverdi16]_.
@@ -995,7 +998,7 @@ def _get_expr_and_constant(k: KernelMul) -> Tuple[KernelExpression, Union[int, f
 
     Returns
     -------
-    :class:`KernelExpression`, Union[int, float]
+    :class:`KernelExpression` or Union[int, float]
         The expression which is being multiplied and the value of the constant.
     """
 

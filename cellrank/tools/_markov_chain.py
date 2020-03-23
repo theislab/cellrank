@@ -70,9 +70,9 @@ class MarkovChain:
     read_from_adata
         Whether to read available attributes in :paramref:`adata`, if present.
     g2m_key
-        Key from :paramref:`adata` `.obs`. Can be used to detect cell-cycle driven start/end-points.
+        Key from :paramref:`adata` `.obs`. Can be used to detect cell-cycle driven start- or endpoints.
     s_key
-        Key from :paramref:`adata` `.obs`. Can be used to detect cell-cycle driven start/end-points.
+        Key from :paramref:`adata` `.obs`. Can be used to detect cell-cycle driven start- or endpoints.
     key_added
         Key in :paramref:`adata` where to store the final transition matrix.
     """
@@ -488,7 +488,7 @@ class MarkovChain:
         p_thresh
             If cell cycle scores were provided, a *Wilcoxon rank-sum test* is conducted to identify cell-cycle driven
             start- or endpoints.
-            If the test returns a positive statistic and a p-value smaler than :paramref:`p_thresh`, a warning will be issued.
+            If the test returns a positive statistic and a p-value smaller than :paramref:`p_thresh`, a warning will be issued.
 
         Returns
         -------
@@ -590,7 +590,7 @@ class MarkovChain:
         p_thresh
             If cell cycle scores were provided, a *Wilcoxon rank-sum test* is conducted to identify cell-cycle driven
             start- or endpoints.
-            If the test returns a positive statistic and a p-value smaler than :paramref:`p_thresh`, a warning will be issued.
+            If the test returns a positive statistic and a p-value smaller than :paramref:`p_thresh`, a warning will be issued.
 
         Returns
         -------
@@ -1000,8 +1000,7 @@ class MarkovChain:
         Compute driver genes per lineage.
 
         Correlates gene expression with lineage probabilities, for a given lineage and set of clusters.
-        Often, it makes sense to restrict this to a set of clusters which are relevant
-        for the lineage under consideration.
+        Often, it makes sense to restrict this to a set of clusters which are relevant for the lineage under consideration.
 
         Params
         --------
@@ -1021,12 +1020,12 @@ class MarkovChain:
 
         Returns
         --------
-        :class:`pandas.DataFrame` or None
+        :class:`pandas.DataFrame` or :class:`NoneType`
             Writes to :paramref:`adata` `.var` or :paramref:`adata` `.raw.var`,
             depending on the value of :paramref:`use_raw`.
             For each lineage specified, a key is added to `.var` and correlations are saved there.
 
-            Return None if :paramref:`inplace` `=True`, otherwise a dataframe.
+            Returns `None` if :paramref:`inplace` `=True`, otherwise a dataframe.
         """
 
         # check that lineage probs have been computed
@@ -1225,6 +1224,7 @@ class MarkovChain:
             Categorical updated annotation. Each cell is assigned to either `NaN`
             or one of updated approximate recurrent classes.
         """
+
         if self._approx_rcs is None:
             raise RuntimeError(
                 "Compute approximate recurrent classes first as `.compute_approx_rcs()`"
