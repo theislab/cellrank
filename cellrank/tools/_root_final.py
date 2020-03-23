@@ -33,6 +33,9 @@ percentile
     this value according to the percentage of transient cells you expect to see in your data.
     E.g. :paramref:`percentile` `=98` means you are expecting 98% of your cells to be transient
     and 2% to be recurrent {direction}points.
+n_matches_min
+    Parameter used to remove some noise. If `n_matches_min = L`, required that at least L of the nearest neighbors of
+    cells i belong to the same start or endpoint, otherwise, i is not considered a start/endpoint itself.
 n_start_end
     If you know how many {direction}points you are expecting, you can provide this number.
     Otherwise, an eigen-gap heuristic is used.
@@ -55,6 +58,7 @@ def _root_final(
     cluster_key: Optional[str] = None,
     weight_connectivities: float = None,
     percentile: int = 98,
+    n_matches_min: Optional[int] = 1,
     n_start_end: Optional[int] = None,
     show_plots=False,
     copy: bool = False,
@@ -76,6 +80,7 @@ def _root_final(
     mc.compute_eig()
     mc.compute_approx_rcs(
         percentile=percentile,
+        n_matches_min=n_matches_min,
         use=n_start_end,
         n_clusters_kmeans=n_start_end,
         cluster_key=cluster_key,
