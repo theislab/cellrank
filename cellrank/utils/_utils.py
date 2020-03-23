@@ -24,7 +24,7 @@ def check_collection(
     Params
     ------
     adata: :class:`anndata.AnnData`
-        Annotated data objec.t
+        Annotated data object.
     needles
         Keys to check.
     attr_name

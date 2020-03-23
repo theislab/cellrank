@@ -224,7 +224,7 @@ def heatmap(
                 )
 
         if not cluster_genes:
-            ax.set_xlabel("Pseudotime")
+            ax.set_xlabel(xlabel)
 
             return fig
 
