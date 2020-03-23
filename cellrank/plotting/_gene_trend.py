@@ -63,8 +63,8 @@ def gene_trends(
     Plot gene expression trends along lineages.
 
     Each lineage is defined via it's lineage weights which we compute using :func:`cellrank.tl.lineages`. This
-    function accepts any sklearn model to fit gene expression, where we take the linage weights into account in the loss
-    function.
+    function accepts any `scikit-learn` model wrapped in :class:`cellrank.ul.models.SKLearnModel`
+    to fit gene expression, where we take the lineage weights into account in the loss function.
 
     .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/gene_trends.png
        :width: 400px
@@ -155,7 +155,7 @@ def gene_trends(
         Only used when :paramref:`same_plot` `=False`.
         The figures will be saved as :paramref:`dirname` /`{gene}`. :paramref:`ext`.
     kwargs
-        Keyword arguments for :func:`cellrank.utils.models.Model.prepare`.
+        Keyword arguments for :meth:`cellrank.ul.models.Model.prepare`.
 
     Returns
     -------

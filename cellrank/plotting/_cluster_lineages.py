@@ -42,7 +42,7 @@ def _cl_process(
     queue
         Signalling queue in the parent process/thread used to update the progress bar.
     kwargs
-        Keyword arguments for :func:`cellrank.utils.Model.prepare`.
+        Keyword arguments for :meth:`cellrank.ul.models.Model.prepare`.
 
     Returns
     -------
@@ -153,7 +153,7 @@ def cluster_lineage(
     dpi
         Dots per inch.
     kwargs:
-        Keyword arguments for :func:`cellrank.utils.models.Model.prepare`.
+        Keyword arguments for :meth:`cellrank.ul.models.Model.prepare`.
 
     Returns
     -------
