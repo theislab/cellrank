@@ -45,3 +45,7 @@ References
 .. [Cyto20] Gulati *et al.* (2020),
    *Single-cell transcriptional diversity is a hallmark of developmental potential*,
    `Science  <https://doi.org/10.1126/science.aax0249>`__.
+
+.. [Panc19] Bastidas-Ponce *et al.* (2019),
+   *Comprehensive single cell mRNA profiling reveals a detailed roadmap for pancreatic endocrinogenesis*,
+   `Development <https://doi.org/10.1242/dev.173849>`__.
