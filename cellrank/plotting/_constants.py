@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from cellrank.utils.models._models import Model
+from cellrank.utils.models import Model
 from typing import Union, Mapping
 
 

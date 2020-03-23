@@ -77,6 +77,7 @@ def _vec_mat_corr(X: Union[np.ndarray, spmatrix], y: np.ndarray) -> np.ndarray:
 
     Returns
     -------
+    :class:`numpy.ndarray`
         The computed correlation.
     """
 
@@ -100,7 +101,7 @@ def cyto_trace(
     adata: AnnData, layer: str = "Ms", copy: bool = False, use_median: bool = False
 ) -> Optional[AnnData]:
     """
-    Re-implementation of the CytoTrace algorithm by Gulati et al. to infer cell plasticity.
+    Re-implementation of the CytoTrace algorithm by *Gulati et al.* to infer cell plasticity.
 
     Finds the top 200 genes correlated with #genes/cell and computes their (imputed) mean or median expression.
     For more references, see [Cyto20]_.
@@ -119,6 +120,7 @@ def cyto_trace(
 
     Returns
     -------
+    :class:`anndata.AnnData` or :class:`NoneType`
         Depending on :paramref:`copy`, either updates :paramref:`adata` or returns a copy.
     """
 
@@ -253,7 +255,7 @@ def _cluster_X(
 
     if method == "kmeans":
         if n_clusters_kmeans is None:
-            if percentile is not None:  # TODO: @Marius, is this correct?
+            if percentile is not None:
                 n_clusters_kmeans = len(use)
             else:
                 n_clusters_kmeans = len(use) + 1
@@ -322,10 +324,11 @@ def partition(
     In a directed graph *G*, node *j* is accessible from node *i* if there exists a path from *i* to *j*.
     If *i* is accessible from *j* and the converse holds as well, then *i* and *j* communicate.
     Communication forms and equivalence relation on directed graphs, so every directed graph can be uniquely partitioned
-    into its communication classes (also called strongly  connected components).
+    into its communication classes (also called strongly connected components).
+
     If *G* describes the state space of a Markov chain, then communication classes are often
     characterized as either recurrent or transient. Intuitively, once the process enters a recurrent class, it will
-    never leave it again. See [Tolver16]_ for a more formal definition.
+    never leave it again. See [Tolver16]_ for more formal definition.
 
     Params
     ------
@@ -408,7 +411,7 @@ def _subsample_embedding(
     n_dim:
         Number of dimensions in the embedding to use for subsampling.
     n_grid_points_total
-        Determines how many gridpoint to use in total.
+        Determines how many gridpoints to use in total.
     n_grid_points_dim
         Determines how many gridpoints to use in each dimension.
         Only one of :paramref:`n_grid_points_total` and :paramref:`n_grid_points_dim` can be specified.

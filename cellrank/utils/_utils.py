@@ -24,7 +24,7 @@ def check_collection(
     Params
     ------
     adata: :class:`anndata.AnnData`
-        Annotated data objec.t
+        Annotated data object.
     needles
         Keys to check.
     attr_name
@@ -41,12 +41,21 @@ def check_collection(
             raise KeyError(f"{key_name} `{needle}` not found in `adata.{attr_name}`.")
 
 
-def _get_n_cores(n_cores: Optional[int], n_genes: int):
+def _get_n_cores(n_cores: Optional[int], n_genes: int) -> int:
     """
+    Make number of cores a positive integer.
+
+    Params
+    ------
     n_cores
         Number of cores to use.
     n_genes.
         Number of genes.
+
+    Returns
+    -------
+    int
+        Positive integer corresponding to how many cores to use.
     """
 
     if n_cores == 0:

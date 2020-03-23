@@ -35,7 +35,7 @@ percentile
     and 2% to be recurrent {direction}points.
 n_matches_min
     Parameter used to remove some noise. If `n_matches_min = L`, required that at least L of the nearest neighbors of
-    cells i belong to the same start or endpoint, otherwise, i is not considered a start/endpoint itself.
+    cells *i* belong to the same {direction}point, otherwise, *i* is not considered a {direction}point itself.
 n_start_end
     If you know how many {direction}points you are expecting, you can provide this number.
     Otherwise, an eigen-gap heuristic is used.
