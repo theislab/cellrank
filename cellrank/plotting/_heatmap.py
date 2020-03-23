@@ -14,6 +14,7 @@ import seaborn as sns
 from anndata import AnnData
 from matplotlib.ticker import FormatStrFormatter
 
+from cellrank.plotting._constants import _model_type
 from cellrank.plotting._utils import _create_models, _fit, _is_any_gam_mgcv
 from cellrank.tools._constants import LinKey
 from cellrank.utils._parallelize import parallelize
@@ -22,7 +23,7 @@ from cellrank.utils._utils import _get_n_cores, save_fig, check_collection
 
 def heatmap(
     adata: AnnData,
-    model,
+    model: _model_type,
     genes: Sequence[str],
     final: bool = True,
     kind: str = "lineages",

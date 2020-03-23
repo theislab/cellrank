@@ -100,7 +100,7 @@ def cluster_fates(
     Returns
     -------
     None
-        Nothing, just plots the fates for specified :paramref:`clusters` and :paramref:`endpoints`.
+        Nothing, just plots the fates for specified :paramref:`clusters` and :paramref:`lineages`.
         Optionally saves the figure based on :paramref:`save`.
     """
 
