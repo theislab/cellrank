@@ -80,7 +80,7 @@ def cluster_lineage(
     recompute: bool = False,
     ncols: int = 3,
     sharey: bool = False,
-    n_jobs: Optional[int] = -1,
+    n_jobs: Optional[int] = 1,
     backend: str = "multiprocessing",
     pca_kwargs: Dict = MappingProxyType({"svd_solver": "arpack"}),
     neighbors_kwargs: Dict = MappingProxyType({"use_rep": "X"}),
@@ -135,7 +135,7 @@ def cluster_lineage(
     sharey
         Whether to share y-axis across multiple plots.
     n_jobs
-        Number of parallel jobs. If `None` or `1`, the execution is sequential.
+        Number of parallel jobs. If `-1`, use all available cores. If `None` or `1`, the execution is sequential.
     backend
         Which backend to use for multiprocessing.
         See :class:`joblib.Parallel` for valid options.
