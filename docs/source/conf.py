@@ -21,7 +21,7 @@ import cellrank  # noqa
 # import os
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
-
+needs_sphinx = "2.0"
 
 # -- Project information -----------------------------------------------------
 
@@ -61,13 +61,14 @@ intersphinx_mapping = dict(
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
+source_suffix = ".rst"
+master_doc = "index"
+pygments_style = "sphinx"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
-
-master_doc = "index"
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -86,7 +87,6 @@ napoleon_include_init_with_doc = False
 napoleon_use_rtype = True
 napoleon_use_param = True
 napoleon_custom_sections = [("Params", "Parameters")]
-pygments_style = "sphinx"
 todo_include_todos = False
 
 
@@ -103,7 +103,7 @@ html_context = dict(
     github_version="master",  # Version
     conf_py_path="/docs/source/",
 )  # Path in the checkout to the docs root
-# html_show_sphinx = False
+html_show_sphinx = False
 
 
 def setup(app):
