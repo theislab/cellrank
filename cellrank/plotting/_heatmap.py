@@ -14,8 +14,7 @@ import seaborn as sns
 from anndata import AnnData
 from matplotlib.ticker import FormatStrFormatter
 
-from cellrank.plotting._constants import _model_type
-from cellrank.plotting._utils import _create_models, _fit, _is_any_gam_mgcv
+from cellrank.plotting._utils import _create_models, _fit, _is_any_gam_mgcv, _model_type
 from cellrank.tools._constants import LinKey
 from cellrank.tools._utils import save_fig
 from cellrank.utils._parallelize import parallelize
@@ -41,6 +40,7 @@ def heatmap(
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
     save: Optional[str] = None,
+    show_progress_bar: bool = True,
     **kwargs,
 ) -> None:
     """
@@ -93,6 +93,8 @@ def heatmap(
     save
         Filename where to save the plot.
         If `None`, just shows the plot.
+    show_progress_bar
+        Whether to show a progress bar tracking models fitted.
     **kwargs
         Keyword arguments for :meth:`cellrank.ul.models.Model.prepare`.
 
@@ -273,6 +275,7 @@ def heatmap(
         backend=backend,
         n_jobs=n_jobs,
         extractor=lambda data: {k: v for d in data for k, v in d.items()},
+        show_progress_bar=show_progress_bar,
     )(lineages, start_clusters, end_clusters, **kwargs)
     logg.info("    Finish", time=start)
     logg.debug(f"DEBUG: Plotting {kind} heatmap")

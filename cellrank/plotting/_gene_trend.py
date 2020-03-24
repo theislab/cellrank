@@ -60,6 +60,7 @@ def gene_trends(
     save: Optional[str] = None,
     dirname: Optional[str] = None,
     plot_kwargs: Mapping = MappingProxyType({}),
+    show_progres_bar: bool = True,
     **kwargs,
 ) -> None:
     """
@@ -260,6 +261,7 @@ def gene_trends(
         backend=backend,
         n_jobs=n_jobs,
         extractor=lambda modelss: {k: v for m in modelss for k, v in m.items()},
+        show_progress_bar=show_progres_bar,
     )(lineages, start_clusters, end_clusters, **kwargs)
     logg.info("    Finish", time=start)
 
