@@ -31,16 +31,6 @@ class Prefix(PrettyEnum):
     BACKWARD = "from"
 
 
-class Models(PrettyEnum):
-    GAM = "gam"
-    GAM_MGCV = "gam_mgcv"
-    KRR = "krr"
-    GP = "gp"
-    SPLINE = "spline"
-    DEFAULT = GAM_MGCV
-    FALLBACK = GAM
-
-
 def _transition(d: Union[str, Direction]) -> str:
     return f"T_{d}"
 
