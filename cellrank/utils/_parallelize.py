@@ -21,6 +21,7 @@ def parallelize(
     use_ixs: bool = False,
     backend: str = "multiprocessing",
     extractor: Optional[Callable[[Any], Any]] = None,
+    show_progress_bar: bool = True,
 ) -> Union[np.ndarray, Any]:
     """
     Params
@@ -45,25 +46,31 @@ def parallelize(
         See :class:`joblib.Parallel` for valid options.
     extractor
         Function to apply to the result after all jobs have finished.
+    show_progress_bar
+        Whether to show a progress bar.
 
     Returns
     -------
         Result depending on :paramref:`extractor` and :paramref:`as_array`.
     """
 
-    try:
-        from tqdm import tqdm_notebook as tqdm
-        import ipywidgets
-    except ImportError:
-        global _msg_shown
-        tqdm = None
+    if show_progress_bar:
+        try:
+            from tqdm import tqdm_notebook as tqdm
+            import ipywidgets
+        except ImportError:
+            global _msg_shown
+            tqdm = None
 
-        if not _msg_shown:
-            print(
-                "Unable to create progress bar. Consider installing `tqdm` as `pip install tqdm` "
-                "and `ipywidgets` as `pip install ipywidgets`."
-            )
-            _msg_shown = True
+            if not _msg_shown:
+                print(
+                    "Unable to create progress bar. Consider installing `tqdm` as `pip install tqdm` "
+                    "and `ipywidgets` as `pip install ipywidgets`.\n"
+                    "Optionally, you can disable the progress bar using `show_progress_bar=False`."
+                )
+                _msg_shown = True
+    else:
+        tqdm = None
 
     def update(pbar, queue, n_total):
         n_finished = 0
