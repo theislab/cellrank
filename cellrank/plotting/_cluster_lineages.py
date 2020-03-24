@@ -10,8 +10,7 @@ import scanpy as sc
 from anndata import AnnData
 from scanpy import logging as logg
 
-from cellrank.plotting._constants import _model_type
-from cellrank.plotting._utils import _is_any_gam_mgcv, _create_models
+from cellrank.plotting._utils import _is_any_gam_mgcv, _create_models, _model_type
 from cellrank.tools._constants import LinKey
 from cellrank.tools._utils import save_fig
 from cellrank.utils._parallelize import parallelize
@@ -90,6 +89,7 @@ def cluster_lineage(
     save: Optional[str] = None,
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
+    show_progress_bar: bool = True,
     **kwargs,
 ) -> None:
     """
@@ -153,6 +153,8 @@ def cluster_lineage(
         Size of the figure. If `None`, it will be set automatically.
     dpi
         Dots per inch.
+    show_progress_bar
+        Whether to show a progress bar tracking models fitted.
     kwargs:
         Keyword arguments for :meth:`cellrank.ul.models.Model.prepare`.
 
@@ -201,6 +203,7 @@ def cluster_lineage(
             unit="gene",
             n_jobs=n_jobs,
             backend=backend,
+            show_progress_bar=show_progress_bar,
         )(models, lineage, norm, **kwargs)
         logg.info("    Finish", time=start)
 

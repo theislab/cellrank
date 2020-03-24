@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from typing import Sequence, Dict, Optional, Tuple, Any, Union, Iterable
+from typing import Sequence, Dict, Optional, Tuple, Any, Union, Iterable, Mapping
 from collections import defaultdict
 from copy import copy
 
@@ -13,7 +13,6 @@ from scipy.sparse import csr_matrix
 from anndata import AnnData
 from pandas.core.dtypes.common import is_categorical_dtype
 
-from cellrank.plotting._constants import _model_type
 from cellrank.utils.models import Model, GamMGCVModel
 from cellrank.tools._utils import save_fig
 from cellrank.tools.kernels import VelocityKernel
@@ -25,6 +24,7 @@ _ERROR_INCOMPLETE_SPEC = (
     "No options were specified for{}`{!r}`. "
     "Consider specifying a fallback model using '*'."
 )
+_model_type = Union[Model, Mapping[str, Mapping[str, Model]]]
 
 
 def lineages(
