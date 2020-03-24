@@ -21,8 +21,9 @@ from cellrank.plotting._utils import (
     _model_type,
 )
 from cellrank.tools._constants import LinKey
+from cellrank.tools._utils import save_fig
 from cellrank.utils._parallelize import parallelize
-from cellrank.utils._utils import check_collection, _make_unique, _get_n_cores, save_fig
+from cellrank.utils._utils import check_collection, _make_unique, _get_n_cores
 
 
 def gene_trends(

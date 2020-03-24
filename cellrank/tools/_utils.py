@@ -25,7 +25,7 @@ from scipy.sparse import issparse
 from sklearn.cluster import KMeans
 from sklearn.neighbors import NearestNeighbors
 
-from cellrank.utils._utils import has_neighs, get_neighs, get_neighs_params
+from cellrank.utils._utils import has_neighs, get_neighs
 
 
 def bias_knn(conn, pseudotime, n_neighbors, k=3):

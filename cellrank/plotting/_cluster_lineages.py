@@ -13,8 +13,9 @@ from scanpy import logging as logg
 from cellrank.plotting._constants import _model_type
 from cellrank.plotting._utils import _is_any_gam_mgcv, _create_models
 from cellrank.tools._constants import LinKey
+from cellrank.tools._utils import save_fig
 from cellrank.utils._parallelize import parallelize
-from cellrank.utils._utils import check_collection, _get_n_cores, save_fig
+from cellrank.utils._utils import check_collection, _get_n_cores
 from cellrank.utils.models._models import Model
 
 
