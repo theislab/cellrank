@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 from cellrank.tools._constants import LinKey
-from cellrank.utils._utils import save_fig, _minmax
+from cellrank.utils._utils import _minmax
+from cellrank.tools._utils import save_fig
 
 from abc import ABC, abstractmethod
-from typing import Optional, Iterable, Tuple, Any, List, Union
+from typing import Optional, Iterable, Tuple, Any
 from inspect import signature
 from scipy.sparse import issparse
 from copy import copy

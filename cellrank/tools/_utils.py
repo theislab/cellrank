@@ -6,7 +6,7 @@ Utility functions for the cellrank tools
 from scipy.sparse.linalg import norm as s_norm
 from numpy.linalg import norm as d_norm
 from itertools import product, tee
-from typing import Optional, Any, Union, Tuple, List, Sequence, Dict, Iterable, Set
+from typing import Optional, Any, Union, Tuple, List, Sequence, Dict, Iterable
 
 import os
 import warnings
@@ -24,6 +24,8 @@ from scipy.sparse import csr_matrix, spmatrix
 from scipy.sparse import issparse
 from sklearn.cluster import KMeans
 from sklearn.neighbors import NearestNeighbors
+
+from cellrank.utils._utils import has_neighs, get_neighs
 
 
 def bias_knn(conn, pseudotime, n_neighbors, k=3):
@@ -264,8 +266,7 @@ def _cluster_X(
     elif method == "louvain":
         if len(use) <= 1:
             raise ValueError(
-                f"Number of eigenvector must be larger than `1` "
-                f"for method `{method!r}`, found `{len(use)}`."
+                f"Number of eigenvector must be larger than `1` for method `{method!r}`, found `{len(use)}`."
             )
         adata_dummy = sc.AnnData(X=X)
         sc.pp.neighbors(adata_dummy, use_rep="X", n_neighbors=n_neighbors_louvain)
@@ -455,7 +456,7 @@ def _subsample_embedding(
     meshes_tuple = np.meshgrid(*grs)
     gridpoints_coordinates = np.vstack([i.flat for i in meshes_tuple]).T
 
-    # fit neares neighbors classifier to embedding and determine nearest neighbors of each grid point
+    # fit nearest neighbors classifier to embedding and determine nearest neighbors of each grid point
     nn = NearestNeighbors()
     nn.fit(X_em)
     dist, ixs = nn.kneighbors(gridpoints_coordinates, 1)
@@ -519,11 +520,11 @@ def _get_connectivities(
     adata: AnnData, mode: str = "connectivities", n_neighbors: Optional[int] = None
 ) -> Optional[spmatrix]:
     # utility function, copied from scvelo
-    if "neighbors" in adata.uns.keys():
-        C = adata.uns["neighbors"][mode]
+    if has_neighs(adata):
+        C = get_neighs(adata, mode)
         if (
             n_neighbors is not None
-            and n_neighbors <= adata.uns["neighbors"]["params"]["n_neighbors"]
+            and n_neighbors <= get_neighs_params(adata)["n_neighbors"]
         ):
             C = (
                 _select_connectivities(C, n_neighbors)

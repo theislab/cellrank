@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-from cellrank.tools._utils import *  # this prevents the circular imports
-
 from multiprocessing import cpu_count
-from typing import Iterable, Hashable
+from typing import Iterable, Hashable, Dict, Optional, Tuple, List, Union, Any
 
+from scipy.sparse import spmatrix
 import anndata
+import numpy as np
 
 
 def check_collection(
@@ -110,3 +110,21 @@ def _make_unique(collection: Iterable[Hashable]) -> List[Hashable]:
             res.append(item)
 
     return res
+
+
+def has_neighs(adata: anndata.AnnData) -> bool:
+    return "neighbors" in adata.uns.keys()
+
+
+def get_neighs(
+    adata: anndata.AnnData, mode: str = "distances"
+) -> Union[np.ndarray, spmatrix]:
+    return (
+        adata.obsp[mode]
+        if hasattr(adata, "obsp") and mode in adata.obsp.keys()
+        else adata.uns["neighbors"][mode]
+    )
+
+
+def get_neighs_params(adata: anndata.AnnData) -> Dict[str, Any]:
+    return adata.uns["neighbors"]["params"]

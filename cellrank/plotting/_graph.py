@@ -17,7 +17,7 @@ from matplotlib.patches import FancyArrowPatch, ArrowStyle
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from pandas.api.types import is_categorical_dtype
 from scanpy import logging as logg
-from scipy.sparse import issparse
+from scipy.sparse import issparse, spmatrix
 
 from cellrank.tools._constants import _colors
 from cellrank.tools._utils import save_fig
@@ -28,8 +28,8 @@ _msg_shown = False
 
 
 def graph(
-    adata: AnnData,
-    graph_key: str,
+    data: Union[AnnData, np.ndarray, spmatrix],
+    graph_key: Optional[str],
     ixs: Optional[np.array] = None,
     layout: Union[str, Dict, Callable] = nx.kamada_kawai_layout,
     keys: Sequence[KEYS] = ("incoming",),
@@ -71,10 +71,11 @@ def graph(
 
     Params
     ------
-    adata : :class:`anndata.AnnData`
-        Annotated data object.
+    data :
+        The graph data, stored either in `.uns` [ :paramref:`graph_key` ], or as a sparse or a dense matrix.
     graph_key
         Key in :paramref:`adata` `.uns` where the graph is stored.
+        Only used when :paramref:`adata` is :class:`Anndata` object.
     ixs
         Subset of indices of the graph to visualize.
     layout
@@ -296,15 +297,32 @@ def graph(
     if len(labels) != len(keys):
         raise ValueError(f"`Keys` and `labels` must be of the same shape.")
 
-    gdata = adata.uns[graph_key]["T"]
-    gdata = gdata.todense() if issparse(gdata) else gdata
+    if isinstance(data, AnnData):
+        if graph_key is None:
+            raise ValueError(
+                f"Argument `graph_key` cannot be `None` when `adata` is `anndata.Anndata` object."
+            )
+        gdata = data.uns[graph_key]["T"]
+    elif isinstance(data, (np.ndarray, spmatrix)):
+        gdata = data
+    else:
+        raise TypeError(
+            f"Expected argument `adata` to be one of `AnnData`, `numpy.ndarray`, `scipy.spmatrix`, "
+            f"found `{type(data).__name__}`"
+        )
+    is_sparse = issparse(gdata)
+
     if ixs is not None:
         gdata = gdata[ixs, :][:, ixs]
     else:
         ixs = list(range(len(gdata)))
 
     start = logg.info("Creating graph")
-    G = nx.from_numpy_array(gdata, create_using=nx.DiGraph)
+    G = (
+        nx.from_scipy_sparse_matrix(gdata, create_using=nx.DiGraph)
+        if is_sparse
+        else nx.from_numpy_array(gdata, create_using=nx.DiGraph)
+    )
 
     remove_low_weight_edges()
     remove_top_n_edges()
@@ -321,14 +339,14 @@ def graph(
     axes = np.ravel(axes)
 
     if isinstance(layout, str):
-        if f"X_{layout}" not in adata.obsm:
+        if f"X_{layout}" not in data.obsm:
             raise KeyError(f"Unable to find embedding `'X_{layout}'` in `adata.obsm`.")
         components = layout_kwargs.get("components", [0, 1])
         if len(components) != 2:
             raise ValueError(
                 f"Components in `layout_kwargs` must be of length `2`, found `{len(components)}`."
             )
-        emb = adata.obsm[f"X_{layout}"][:, components]
+        emb = data.obsm[f"X_{layout}"][:, components]
         pos = {i: emb[ix, :] for i, ix in enumerate(ixs)}
         logg.info(f"Embedding graph using `{layout!r}` layout")
     elif isinstance(layout, dict):
@@ -388,10 +406,10 @@ def graph(
             if key in ("incoming", "outgoing"):
                 vals = np.array(er(gdata, axis=int(key == "outgoing"))).flatten()
             else:
-                vals = np.diag(gdata)
+                vals = gdata.diagonal() if issparse else np.diag(gdata)
             node_v = dict(zip(pos.keys(), vals))
         else:
-            label_col = getattr(adata, keyloc)
+            label_col = getattr(data, keyloc)
             if key in label_col:
                 node_v = dict(zip(pos.keys(), label_col[key]))
             else:
@@ -439,8 +457,8 @@ def graph(
                 values = values[ixs]
             categories = values.cat.categories
             color_key = _colors(key)
-            if color_key in adata.uns:
-                mapper = dict(zip(categories, adata.uns[color_key]))
+            if color_key in data.uns:
+                mapper = dict(zip(categories, data.uns[color_key]))
             else:
                 mapper = dict(
                     zip(categories, map(cat_cmap.get, range(len(categories))))
