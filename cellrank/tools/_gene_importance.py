@@ -27,7 +27,7 @@ def _gi_permute(
     **kwargs,
 ) -> List[np.ndarray]:
     """
-    Permutes the features and calculate importances using RandomForestRegressor.
+    Permutes the features and calculate importances using :class:`sklearn.ensemble.RandomForestRegressor`.
 
     Params
     ------
@@ -128,6 +128,7 @@ def gene_importance(
     seed: Optional[int] = None,
     return_model: bool = False,
     backend: str = "multiprocessing",
+    show_progress_bar: bool = True,
     rf_kwargs: Mapping[str, Any] = MappingProxyType({"criterion": "mse"}),
     **kwargs,
 ) -> Union[pd.DataFrame, Tuple[RandomForestRegressor, pd.DataFrame]]:
@@ -179,6 +180,8 @@ def gene_importance(
     backend
         Which backend to use for multiprocessing.
         See :class:`joblib.Parallel` for valid options.
+    show_progress_bar
+        Whether to show a progress bar tracking models fitted.
     rf_kwargs
         Keyword arguments for :class:`sklearn.ensemble.RandomForestRegressor`.
     **kwargs:
@@ -187,10 +190,10 @@ def gene_importance(
     Returns
     -------
     :class:`pandas.DataFrame`
-        Dataframe with `importance` column which contains genes' importances.
+        Dataframe with `'importance'` column which contains genes' importances.
 
-        - If :paramref:`n_perm` `!=None`, it also contains `pval` columns with calculated `p-values`.
-        - If :paramref:`fdr_correction` `!= None`, it also contains `qval` column, containing the
+        - If :paramref:`n_perm` `!=None`, it also contains `'pval'` columns with calculated `p-values`.
+        - If :paramref:`fdr_correction` `!= None`, it also contains `'qval'` column, containing the
           corrected `p-values`.
     (:class:`sklearn.ensemble.RandomForestRegressor`, :class:`pandas.DataFrame`)
         Same as above, but also returns the fitted model.
@@ -231,6 +234,7 @@ def gene_importance(
         as_array=False,
         extractor=np.hstack,
         backend=backend,
+        show_progress_bar=show_progress_bar,
     )(models, lineage_name, norm, **kwargs).T
     logg.info("    Finish", time=start)
 
@@ -268,6 +272,7 @@ def gene_importance(
         backend=backend,
         extractor=np.vstack,
         use_ixs=True,
+        show_progress_bar=show_progress_bar,
     )(x, y, seed, **rf_kwargs)
     if perms.shape != (n_perms, len(genes)):
         raise RuntimeError("Sanity check failed: the number of permutations differ.")
