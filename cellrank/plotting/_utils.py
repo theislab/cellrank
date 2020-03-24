@@ -239,7 +239,7 @@ def composition(
     save: Optional[str] = None,
 ) -> None:
     """
-    Utility function to plot pie chart for categorical annotation
+    Utility function to plot pie chart for categorical annotation.
 
     .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/composition.png
        :width: 400px
