@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-from cellrank.tools._utils import *  # this prevents the circular imports
-
 from multiprocessing import cpu_count
-from typing import Iterable, Hashable, Dict
+from typing import Iterable, Hashable, Dict, Optional, Tuple, List, Union, Any
 
+from scipy.sparse import spmatrix
 import anndata
+import numpy as np
 
 
 def check_collection(
