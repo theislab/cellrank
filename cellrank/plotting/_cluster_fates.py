@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import scanpy as sc
+import scvelo as scv
 
 from anndata import AnnData
 from scanpy import logging as logg
@@ -31,6 +32,7 @@ def cluster_fates(
     lineages: Optional[Union[str, Sequence[str]]] = None,
     mode: str = "bar",
     final: bool = True,
+    basis: Optional[str] = None,
     show_cbar: bool = True,
     ncols: Optional[int] = None,
     sharey: bool = False,
@@ -76,6 +78,8 @@ def cluster_fates(
         Dots per inch.
     final
         Whether to consider cells going to final states or vice versa.
+    basis
+        Basis for scatterplot to use when :paramref:`mode` `='paga_pie'`. If `None`, don't show the scatterplot.
     show_cbar
         Whether to show colorbar when :paramref:`mode` is `'paga_pie'`.
     ncols
@@ -94,7 +98,7 @@ def cluster_fates(
     dpi
         Dots per inch.
     kwargs
-        Keyword arguments for :func:`scanpy.pl.paga`, :func:`scanpy.pl.violin` or :func:`matplotlib.pyplot.bar`,
+        Keyword arguments for :func:`scvelo.pl.paga`, :func:`scanpy.pl.violin` or :func:`matplotlib.pyplot.bar`,
         depending on :paramref:`mode`.
 
     Returns
@@ -193,16 +197,28 @@ def cluster_fates(
         kwargs["colors"] = colors
         kwargs.pop("save", None)  # we will handle saving
 
-        sc.pl.paga(adata, **kwargs)
+        kwargs["transitions"] = kwargs.get("transitions", None)
+        kwargs["legend_loc"] = kwargs.get("legend_loc", None) or "on data"
+
+        if basis is not None:
+            kwargs["basis"] = basis
+            kwargs["scatter_flag"] = True
+            kwargs["color"] = cluster_key
+            kwargs["node_colors"] = kwargs.pop("colors")
+
+        scv.pl.paga(adata, **kwargs)
         dummy_pos = adata.uns["paga"]["pos"][0]
 
         if legend_kwargs.get("loc", None) is not None:
+            # we need to use these, because scvelo can have its own handles and
+            # they would be plotted here
+            handles = []
             for lineage_name, color in zip(lin_names, colors[0].keys()):
-                ax.plot(*dummy_pos, label=lineage_name, color=color)
+                handles += ax.plot(*dummy_pos, label=lineage_name, color=color)
             if len(colors[0].keys()) != len(adata.obsm[lk].names):
-                ax.plot(*dummy_pos, label="Rest", color="grey")
+                handles += ax.plot(*dummy_pos, label="Rest", color="grey")
 
-            ax.legend(**legend_kwargs)
+            ax.legend(**legend_kwargs, handles=handles)
 
         return fig
 
