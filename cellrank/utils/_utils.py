@@ -2,14 +2,9 @@
 from cellrank.tools._utils import *  # this prevents the circular imports
 
 from multiprocessing import cpu_count
-from typing import Iterable, Hashable, Dict
+from typing import Iterable, Hashable
 
 import anndata
-import matplotlib as mpl
-import matplotlib.cm as cm
-import matplotlib.pyplot as plt
-
-from cellrank.tools._constants import _colors
 
 
 def check_collection(

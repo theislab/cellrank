@@ -4,18 +4,22 @@ from collections import defaultdict
 from copy import copy
 
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+import matplotlib as mpl
 import networkx as nx
 import numpy as np
-from scipy.sparse import csr_matrix
 
+from scipy.sparse import csr_matrix
 from anndata import AnnData
 from pandas.core.dtypes.common import is_categorical_dtype
 
-from cellrank.tools._markov_chain import MarkovChain
 from cellrank.plotting._constants import _model_type
 from cellrank.utils.models import Model, GamMGCVModel
 from cellrank.tools._utils import save_fig
 from cellrank.tools.kernels import VelocityKernel
+from cellrank.tools._constants import _colors
+from cellrank.tools._markov_chain import MarkovChain
+
 
 _ERROR_INCOMPLETE_SPEC = (
     "No options were specified for{}`{!r}`. "
@@ -421,7 +425,7 @@ def _fit(
 
 
 def _trends_helper(
-    adata: anndata.AnnData,
+    adata: AnnData,
     models: Dict[str, Dict[str, Any]],
     gene: str,
     ln_key: str,
