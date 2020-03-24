@@ -139,7 +139,7 @@ def gene_importance(
     'importance' of this gene. p-values are computed via a permutation test and q-values are computed via an FDR
     correction.
 
-    We adapted SCORPIUS to work with soft lineage assignenments given by our lineage probabilities computed using
+    We adapted SCORPIUS to work with soft lineage assignments given by our lineage probabilities computed using
     :func:`cellrank.tl.lineages`.
 
     Params
