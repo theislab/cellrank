@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-from typing import Sequence, Optional, Tuple, Union
+from typing import Sequence, Optional, Tuple, Union, Mapping
+from types import MappingProxyType
 
 import os
 import matplotlib
@@ -57,6 +58,7 @@ def gene_trends(
     suptitle: Optional[str] = None,
     save: Optional[str] = None,
     dirname: Optional[str] = None,
+    plot_kwargs: Mapping = MappingProxyType({}),
     **kwargs,
 ) -> None:
     """
@@ -154,6 +156,8 @@ def gene_trends(
         If `None`, just show the plots.
         Only used when :paramref:`same_plot` `=False`.
         The figures will be saved as :paramref:`dirname` /`{gene}`. :paramref:`ext`.
+    plot_kwargs:
+        Keyword arguments for :meth:`cellrank.ul.models.Model.plot`.
     kwargs
         Keyword arguments for :meth:`cellrank.ul.models.Model.prepare`.
 
@@ -290,6 +294,7 @@ def gene_trends(
             fig=fig,
             ax=ax,
             save=f,
+            **plot_kwargs,
         )
 
     if same_plot:

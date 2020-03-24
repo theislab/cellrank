@@ -151,7 +151,7 @@ def _trends_helper(
         Filename where to save the plot.
         If `None`, just shows the plots.
     **kwargs
-        Keyword arguments for :function:`cellrank.ul.models.Model.plot`.
+        Keyword arguments for :meth:`cellrank.ul.models.Model.plot`.
 
     Returns
     -------
