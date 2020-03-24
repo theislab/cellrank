@@ -95,9 +95,7 @@ class MarkovChain:
 
         if kernel.backward:
             self._direction: Direction = Direction.BACKWARD
-            self._rc_key: str = str(
-                RcKey.BACKWARD
-            )  # keep them as string, since they are used as keys
+            self._rc_key: str = str(RcKey.BACKWARD)
             self._lin_key: str = str(LinKey.BACKWARD)
             self._prefix: str = str(Prefix.BACKWARD)
         else:
