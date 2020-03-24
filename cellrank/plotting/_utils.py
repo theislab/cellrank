@@ -4,18 +4,22 @@ from collections import defaultdict
 from copy import copy
 
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+import matplotlib as mpl
 import networkx as nx
 import numpy as np
-from scipy.sparse import csr_matrix
 
+from scipy.sparse import csr_matrix
 from anndata import AnnData
 from pandas.core.dtypes.common import is_categorical_dtype
 
-from cellrank.tools._markov_chain import MarkovChain
 from cellrank.plotting._constants import _model_type
 from cellrank.utils.models import Model, GamMGCVModel
 from cellrank.tools._utils import save_fig
 from cellrank.tools.kernels import VelocityKernel
+from cellrank.tools._constants import _colors
+from cellrank.tools._markov_chain import MarkovChain
+
 
 _ERROR_INCOMPLETE_SPEC = (
     "No options were specified for{}`{!r}`. "
@@ -235,7 +239,7 @@ def composition(
     save: Optional[str] = None,
 ) -> None:
     """
-    Utility function to plot pie chart for categorical annotation
+    Utility function to plot pie chart for categorical annotation.
 
     .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/composition.png
        :width: 400px
@@ -418,3 +422,113 @@ def _fit(
     queue.put(None)
 
     return res
+
+
+def _trends_helper(
+    adata: AnnData,
+    models: Dict[str, Dict[str, Any]],
+    gene: str,
+    ln_key: str,
+    lineage_names: Optional[Sequence[str]] = None,
+    same_plot: bool = False,
+    sharey: bool = True,
+    cmap=None,
+    fig: mpl.figure.Figure = None,
+    ax: mpl.axes.Axes = None,
+    save: Optional[str] = None,
+    **kwargs,
+) -> None:
+    """
+    Plot an expression gene for some lineages.
+
+    Params
+    ------
+    adata: :class:`anndata.AnnData`
+        Annotated data object.
+    models
+        Gene and lineage specific models can be specified. Use `'*'` to indicate
+        all genes or lineages, for example `{'Map2': {'*': ...}, 'Dcx': {'Alpha': ..., '*': ...}}`.
+    gene
+        Name of the gene in `adata.var_names`.
+    fig
+        Figure to use, if `None`, create a new one.
+    ax
+        Ax to use, if `None`, create a new one.
+    save
+        Filename where to save the plot.
+        If `None`, just shows the plots.
+    **kwargs
+        Keyword arguments for :meth:`cellrank.ul.models.Model.plot`.
+
+    Returns
+    -------
+    None
+        Nothing, just plots the trends.
+        Optionally saves the figure based on :paramref:`save`.
+    """
+
+    n_lineages = len(lineage_names)
+    if same_plot:
+        if fig is None and ax is None:
+            fig, ax = plt.subplots(
+                1,
+                figsize=kwargs.get("figsize", None) or (15, 10),
+                constrained_layout=True,
+            )
+        axes = [ax] * len(lineage_names)
+    else:
+        fig, axes = plt.subplots(
+            ncols=n_lineages,
+            figsize=kwargs.get("figsize", None) or (6 * n_lineages, 6),
+            sharey=sharey,
+            constrained_layout=True,
+        )
+    axes = np.ravel(axes)
+    percs = kwargs.pop("perc", None)
+    if percs is None or not isinstance(percs[0], (tuple, list)):
+        percs = [percs]
+
+    same_perc = False  # we need to show colorbar always if percs differ
+    if len(percs) != n_lineages or n_lineages == 1:
+        if len(percs) != 1:
+            raise ValueError(
+                f"Percentile must be a collection of size `1` or `{n_lineages}`, got `{len(percs)}`."
+            )
+        same_perc = True
+        percs = percs * n_lineages
+
+    hide_cells = kwargs.pop("hide_cells", False)
+    show_cbar = kwargs.pop("show_cbar", True)
+    lineage_color = kwargs.pop("color", "black")
+
+    lc = (
+        cmap.colors
+        if cmap is not None and hasattr(cmap, "colors")
+        else adata.uns.get(f"{_colors(ln_key)}", cm.Set1.colors)
+    )
+
+    for i, (name, ax, perc) in enumerate(zip(lineage_names, axes, percs)):
+        title = name if name is not None else "No lineage"
+        models[gene][name].plot(
+            ax=ax,
+            fig=fig,
+            perc=perc,
+            show_cbar=True
+            if not same_perc
+            else False
+            if not show_cbar
+            else (i == n_lineages - 1),
+            title=title,
+            hide_cells=hide_cells or (same_plot and i != n_lineages - 1),
+            same_plot=same_plot,
+            color=lc[i] if same_plot and name is not None else lineage_color,
+            ylabel=gene if not same_plot or name is None else "Expression",
+            **kwargs,
+        )
+
+    if same_plot and lineage_names != [None]:
+        ax.set_title(gene)
+        ax.legend()
+
+    if save is not None:
+        save_fig(fig, save)
