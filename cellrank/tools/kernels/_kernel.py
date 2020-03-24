@@ -1,7 +1,14 @@
 # -*- coding: utf-8 -*-
 from abc import ABC, abstractmethod
 from cellrank.tools._constants import Direction, _transition
-from cellrank.tools._utils import _normalize, is_connected, is_symmetric, bias_knn
+from cellrank.tools._utils import (
+    _normalize,
+    is_connected,
+    is_symmetric,
+    bias_knn,
+    has_neighs,
+    get_neighs,
+)
 
 from typing import Optional, Union, Callable, List, Iterable, Tuple, Type, Any, Dict
 from anndata import AnnData
@@ -334,21 +341,17 @@ class UnaryKernelExpression(KernelExpression, ABC):
         Import the base-KNN graph and check for symmetry and connectivity.
         """
 
-        if "neighbors" not in self.adata.uns:
-            raise KeyError("Compute KNN graph first using `scanpy.pp.neighbors`.")
+        if not has_neighs(self.adata):
+            raise KeyError("Compute KNN graph first as `scanpy.pp.neighbors()`.")
 
-        self.neighbors = self.adata.uns["neighbors"]
-        self.neighbors["connectivities"] = self.neighbors["connectivities"].astype(
-            _dtype
-        )
-        conn = self.neighbors["connectivities"]
+        self._conn = get_neighs(self.adata, "connectivities").astype(_dtype)
 
         start = logg.debug("Checking the KNN graph for connectedness")
-        if not is_connected(conn):
+        if not is_connected(self._conn):
             logg.warning("KNN graph is not connected", time=start)
 
         start = logg.debug("Checking the KNN graph for symmetry")
-        if not is_symmetric(conn):
+        if not is_symmetric(self._conn):
             logg.warning("KNN graph is not symmetric", time=start)
 
         variance_key = kwargs.pop("variance_key", None)
@@ -382,8 +385,9 @@ class UnaryKernelExpression(KernelExpression, ABC):
         """
 
         logg.debug("DEBUG: Density-normalizing the transition matrix")
-        conn = self.neighbors["connectivities"]
-        q = np.asarray(conn.sum(axis=0))
+
+        q = np.asarray(self._conn.sum(axis=0))
+
         if not issparse(other):
             Q = np.diag(1.0 / q)
         else:
@@ -548,10 +552,10 @@ class ConstantMatrix(Kernel):
         backward: bool = False,
     ):
         super().__init__(adata, backward=backward)
-        if variances.shape != self.neighbors["connectivities"].shape:
+        conn_shape = self._conn.shape
+        if variances.shape != conn_shape:
             raise ValueError(
-                f'Expected variances of shape `{self.neighbors["connectivities"].shape}`, '
-                f"found `{variances.shape}`."
+                f"Expected variances of shape `{conn_shape}`, found `{variances.shape}`."
             )
         if not isinstance(value, (int, float)):
             raise TypeError(
@@ -709,10 +713,10 @@ class ConnectivityKernel(Kernel):
     """
     Implements a kernel class which computes transition probabilities based on transcriptomic similarities.
 
-    As a measure for transcriptomic similarity, we use the weighted KNN graph computed using `scanpy.pp.neighbors`, see
-    [Wolf18]_. By definition, the resulting transition matrix is symmetric and cannot be used to learn about the direction of
-    the developmental process under consideration. However, the velocity-derived transition matrix can be combined with
-    the similarity-based transition matrix as a means of regularization.
+    As a measure for transcriptomic similarity, we use the weighted KNN graph computed using :func:`scanpy.pp.neighbors`,
+    see [Wolf18]_. By definition, the resulting transition matrix is symmetric and cannot be used to learn about
+    the direction of the developmental process under consideration. However, the velocity-derived transition matrix can
+    be combined with the similarity-based transition matrix as a means of regularization.
 
     Optionally, we apply a density correction as described in [Coifman05]_, where we use the implementation of
     [Haghverdi16]_.
@@ -760,10 +764,9 @@ class ConnectivityKernel(Kernel):
             logg.debug(_LOG_USING_CACHE)
             logg.info("    Finish`", time=start)
             return self
-        self._params = params
 
-        # get connectivities, potentially density normalize them and write to self
-        conn = self.neighbors["connectivities"].copy()
+        self._params = params
+        conn = self._conn.copy()
 
         if density_normalize:
             conn = self.density_normalize(conn)
@@ -776,17 +779,17 @@ class ConnectivityKernel(Kernel):
 
 class PalantirKernel(Kernel):
     """
-    Implements a kernel class which computes transition probabilities in a similar way to Palantir, see [Setty19]_
+    Implements a kernel class which computes transition probabilities in a similar way to *Palantir*, see [Setty19]_
 
-    Palantir computes a KNN graph in gene expression space and a pseudotime, which it then uses to direct the edges of
+    *Palantir* computes a KNN graph in gene expression space and a pseudotime, which it then uses to direct the edges of
     the KNN graph, such that they are more likely to point into the direction of increasing pseudotime. To avoid
     disconnecting the graph, it does not remove all edges that point into the direction of decreasing pseudotime
     but keeps the ones that point to nodes inside a close radius. This radius is chosen according to the local density.
 
-    The implementation presented here won't exactly reproduce the original Palantir algorithm (see below)
+    The implementation presented here won't exactly reproduce the original *Palantir* algorithm (see below)
     but the results are qualitatively very similar.
 
-    Optionally, we apply a density correction as described in [Coifman05]_, where we use the implementation of
+    Optionally, we apply a density correction as described in [Coifman05]_,where we use the implementation of
     [Haghverdi16]_.
 
     Params
@@ -847,14 +850,17 @@ class PalantirKernel(Kernel):
         start = logg.info("Computing transition matrix based on Palantir-like kernel")
 
         # get the connectivities and number of neighbors
-        conn = self.neighbors["connectivities"].copy()
-        if "n_neighbors" in self.neighbors["params"].keys():
-            n_neighbors = self.neighbors["params"]["n_neighbors"]
+        if (
+            "neighbors" in self.adata.uns.keys()
+            and "params" in self.adata.uns["neighbors"]
+            and "n_neighbors" in self.adata.uns["neighbors"]["params"].keys()
+        ):
+            n_neighbors = self.adata.uns["neighbors"]["params"]["n_neighbors"]
         else:
             logg.warning(
-                f"Could not find 'n_neighbors' in `adata.uns['neighbors']`. Using an estimate"
+                f"Could not find 'n_neighbors' in `adata.uns['neighbors']['params']`. Using an estimate"
             )
-            n_neighbors = np.min(conn.sum(1))
+            n_neighbors = np.min(self._conn.sum(1))
 
         params = dict(k=k, dnorm=density_normalize, n_neighs=n_neighbors)
         if params == self._params:
@@ -872,7 +878,7 @@ class PalantirKernel(Kernel):
             else self.pseudotime
         )
         biased_conn = bias_knn(
-            conn=conn, pseudotime=pseudotime, n_neighbors=n_neighbors, k=k
+            conn=self._conn, pseudotime=pseudotime, n_neighbors=n_neighbors, k=k
         ).astype(_dtype)
 
         # make sure the biased graph is still connected
@@ -910,7 +916,7 @@ class SimpleNaryExpression(NaryKernelExpression):
                 if isinstance(kexpr, Kernel):
                     raise RuntimeError(
                         f"Kernel `{kexpr}` is uninitialized. "
-                        f"Please run `.compute_transition_matrix()` first."
+                        f"Compute its transition matrix as `.compute_transition_matrix()`."
                     )
                 kexpr.compute_transition_matrix()
             elif isinstance(kexpr, Kernel):
