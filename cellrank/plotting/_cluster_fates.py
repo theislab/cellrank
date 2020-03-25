@@ -209,7 +209,10 @@ def cluster_fates(
         dummy_pos = adata.uns["paga"]["pos"][0]
 
         if kwargs["legend_loc"] not in ("none", "on data"):
-            first_legend = ax.legend(loc=kwargs["legend_loc"])
+            first_legend = ax.legend(
+                loc=kwargs["legend_loc"],
+                **{k: v for k, v in legend_kwargs.items() if k != "loc"},
+            )
             fig.add_artist(first_legend)
 
         if legend_kwargs.get("loc", None) is not None:
