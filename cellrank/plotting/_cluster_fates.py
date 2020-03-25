@@ -194,7 +194,7 @@ def cluster_fates(
         kwargs["show"] = False
         kwargs["colorbar"] = False  # has to be disabled
 
-        kwargs["colors"] = colors
+        kwargs["node_colors"] = colors
         kwargs.pop("save", None)  # we will handle saving
 
         kwargs["transitions"] = kwargs.get("transitions", None)
@@ -204,10 +204,13 @@ def cluster_fates(
             kwargs["basis"] = basis
             kwargs["scatter_flag"] = True
             kwargs["color"] = cluster_key
-            kwargs["node_colors"] = kwargs.pop("colors")
 
         scv.pl.paga(adata, **kwargs)
         dummy_pos = adata.uns["paga"]["pos"][0]
+
+        if kwargs["legend_loc"] not in ("none", "on data"):
+            first_legend = ax.legend(loc=kwargs["legend_loc"])
+            fig.add_artist(first_legend)
 
         if legend_kwargs.get("loc", None) is not None:
             # we need to use these, because scvelo can have its own handles and
