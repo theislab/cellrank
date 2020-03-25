@@ -245,6 +245,10 @@ def gene_trends(
     kwargs["final"] = final
     kwargs["conf_int"] = conf_int
 
+    plot_kwargs = dict(plot_kwargs)
+    if plot_kwargs.get("xlabel", None) is None:
+        plot_kwargs["xlabel"] = kwargs.get("time_key", None)
+
     if _is_any_gam_mgcv(kwargs["models"]):
         logg.debug(
             "DEBUG: Setting backend to multiprocessing because model is `GamMGCV`"
