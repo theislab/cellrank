@@ -29,7 +29,7 @@ _msg_shown = False
 
 def graph(
     data: Union[AnnData, np.ndarray, spmatrix],
-    graph_key: Optional[str],
+    graph_key: Optional[str] = None,
     ixs: Optional[np.array] = None,
     layout: Union[str, Dict, Callable] = nx.kamada_kawai_layout,
     keys: Sequence[KEYS] = ("incoming",),
