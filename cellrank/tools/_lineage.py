@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-from typing import Optional, Iterable, Callable, TypeVar, List, Union, Tuple
+from typing import Optional, Iterable, Callable, TypeVar, List, Union
+from cellrank.tools._utils import _create_categorical_colors
 import matplotlib.colors as c
 import numpy as np
 
@@ -32,7 +33,7 @@ class Lineage(np.ndarray):
         input_array: np.ndarray,
         *,
         names: Iterable[str],
-        colors: Iterable[ColorLike],
+        colors: Optional[Iterable[ColorLike]] = None,
     ) -> "Lineage":
         if not isinstance(input_array, np.ndarray):
             raise TypeError(
@@ -172,8 +173,10 @@ class Lineage(np.ndarray):
         return self._colors
 
     @colors.setter
-    def colors(self, value: Iterable[ColorLike]):
-        if not isinstance(value, Iterable):
+    def colors(self, value: Optional[Iterable[ColorLike]]):
+        if value is None:
+            value = _create_categorical_colors(self._n_lineages)
+        elif not isinstance(value, Iterable):
             raise TypeError(_ERROR_NOT_ITERABLE.format("colors", type(value).__name__))
 
         value = self._check_shape(value, _ERROR_WRONG_SIZE.format("colors"))
