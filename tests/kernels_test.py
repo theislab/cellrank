@@ -6,6 +6,7 @@ from cellrank.tools._constants import Direction, _transition
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel, PalantirKernel
 from cellrank.tools.kernels._kernel import Constant, KernelAdd, KernelMul, _is_bin_mult
 from cellrank.tools._utils import _normalize
+from cellrank.utils._utils import get_neighs, get_neighs_params
 from _helpers import (
     transition_matrix,
     bias_knn,
@@ -454,8 +455,8 @@ class KernelTestCase(unittest.TestCase):
 
     def test_palantir(self):
         adata = _adata.copy()
-        conn = adata.uns["neighbors"]["connectivities"]
-        n_neighbors = adata.uns["neighbors"]["params"]["n_neighbors"]
+        conn = get_neighs(adata, "connectivities")
+        n_neighbors = get_neighs_params(adata)["n_neighbors"]
         pseudotime = adata.obs["latent_time"]
 
         conn_biased = bias_knn(conn, pseudotime, n_neighbors)
@@ -470,8 +471,8 @@ class KernelTestCase(unittest.TestCase):
 
     def test_palantir_dense_norm(self):
         adata = _adata.copy()
-        conn = adata.uns["neighbors"]["connectivities"]
-        n_neighbors = adata.uns["neighbors"]["params"]["n_neighbors"]
+        conn = get_neighs(adata, "connectivities")
+        n_neighbors = get_neighs_params(adata)["n_neighbors"]
         pseudotime = adata.obs["latent_time"]
 
         conn_biased = bias_knn(conn, pseudotime, n_neighbors)
@@ -487,8 +488,8 @@ class KernelTestCase(unittest.TestCase):
 
     def test_palantir_differ_dense_norm(self):
         adata = _adata.copy()
-        conn = adata.uns["neighbors"]["connectivities"]
-        n_neighbors = adata.uns["neighbors"]["params"]["n_neighbors"]
+        conn = get_neighs(adata, "connectivities")
+        n_neighbors = get_neighs_params(adata)["n_neighbors"]
         pseudotime = adata.obs["latent_time"]
 
         conn_biased = bias_knn(conn, pseudotime, n_neighbors)
@@ -640,7 +641,7 @@ class PreviousImplTestCase(unittest.TestCase):
 
         comb = 0.8 * vk + 0.2 * ck
         T_1 = comb.transition_matrix
-        conn = adata.uns["neighbors"]["connectivities"]
+        conn = get_neighs(adata, "connectivities")
         T_1 = density_normalization(T_1, conn)
         T_1 = _normalize(T_1)
 
@@ -689,7 +690,7 @@ class PreviousImplTestCase(unittest.TestCase):
         # combine the kernels
         comb = 0.8 * vk + 0.2 * ck
         T_1 = comb.transition_matrix
-        conn = adata.uns["neighbors"]["connectivities"]
+        conn = get_neighs(adata, "connectivities")
         T_1 = density_normalization(T_1, conn)
         T_1 = _normalize(T_1)
 
@@ -713,7 +714,7 @@ class AdditionTestCase(unittest.TestCase):
         expected = np.eye(_adata.n_obs) * 0.75 + np.eye(_adata.n_obs, k=1) * 0.25
         expected[-1, -1] = 1
 
-        np.testing.assert_allclose(k.transition_matrix.A, expected)
+        np.testing.assert_allclose(k.transition_matrix, expected)
 
     def test_addtion_with_constant(self):
         vk, ck = create_kernels(_adata)  # diagonal + upper diag
@@ -726,7 +727,7 @@ class AdditionTestCase(unittest.TestCase):
         )
         expected[-1, -1] = 1
 
-        np.testing.assert_allclose(k.transition_matrix.A, expected)
+        np.testing.assert_allclose(k.transition_matrix, expected)
 
     def test_addition_3_kernels(self):
         adata = _adata.copy()
@@ -747,7 +748,7 @@ class AdditionTestCase(unittest.TestCase):
         expected[0, 0] = expected[-1, -1] = 2 / 3 + 1 / 3 * 0.5
         expected[0, 1] = expected[-1, -2] = 1 - expected[0, 0]
 
-        np.testing.assert_allclose(k.transition_matrix.A, expected)
+        np.testing.assert_allclose(k.transition_matrix, expected)
 
     def test_addition_adaptive(self):
         adata = _adata.copy()
@@ -764,7 +765,7 @@ class AdditionTestCase(unittest.TestCase):
             0.5 * vv * vk.transition_matrix + 0.5 * cv * ck.transition_matrix
         )
 
-        np.testing.assert_allclose(k.transition_matrix.A, expected)
+        np.testing.assert_allclose(k.transition_matrix, expected)
 
     def test_addition_adataptive_constants(self):
         adata = _adata.copy()
@@ -783,7 +784,7 @@ class AdditionTestCase(unittest.TestCase):
             a / s * vv * vk.transition_matrix + b / s * cv * ck.transition_matrix
         )
 
-        np.testing.assert_allclose(k.transition_matrix.A, expected)
+        np.testing.assert_allclose(k.transition_matrix, expected)
 
     def test_addition_adaptive_wrong_variances(self):
         adata = _adata.copy()
@@ -802,7 +803,7 @@ class AdditionTestCase(unittest.TestCase):
             a / s * vk.transition_matrix + b / s * ck.transition_matrix
         )
 
-        self.assertFalse(np.allclose(k.transition_matrix.A, expected))
+        self.assertFalse(np.allclose(k.transition_matrix, expected))
 
     def test_addition_adaptive_4_kernels(self):
         adata = _adata.copy()
@@ -825,7 +826,7 @@ class AdditionTestCase(unittest.TestCase):
             + d / s * cv * ck1.transition_matrix
         )
 
-        np.testing.assert_allclose(k.transition_matrix.A, expected)
+        np.testing.assert_allclose(k.transition_matrix, expected)
 
 
 if __name__ == "__main__":

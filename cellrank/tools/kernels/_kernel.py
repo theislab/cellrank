@@ -623,7 +623,7 @@ class VelocityKernel(Kernel):
             vkey + "_graph_neg" not in self.adata.uns.keys()
         ):
             raise ValueError(
-                "You need to run `scvelo.tl.velocity_graph` first to compute cosine correlations."
+                "Compute cosine correlations first as `scvelo.tl.velocity_graph()`."
             )
 
         velo_corr_pos, velo_corr_neg = (
@@ -922,17 +922,7 @@ class SimpleNaryExpression(NaryKernelExpression):
             elif isinstance(kexpr, Kernel):
                 logg.debug(_LOG_USING_CACHE)
 
-        # this doesn't work correctly on non-sparse matrices
-        self.transition_matrix = self._fn(
-            [
-                kexpr.transition_matrix.A
-                if issparse(kexpr.transition_matrix)
-                else kexpr.transition_matrix
-                for kexpr in self
-            ]
-        )
-        # re-sparsify again
-        self.transition_matrix = csr_matrix(self.transition_matrix)
+        self.transition_matrix = self._fn([kexpr.transition_matrix for kexpr in self])
 
         return self
 
