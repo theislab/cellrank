@@ -355,7 +355,7 @@ class MarkovChain:
         # plot the top eigenvalues
         fig, ax = plt.subplots(nrows=1, ncols=1, dpi=dpi, figsize=figsize)
 
-        ax.plot(D, "o", label="Eiganvalue")
+        ax.plot(D, "o", label="Eigenvalue")
         ax.axvline(self._eig["eigengap"], label="Eigengap", ls="--")
 
         ax.set_xticks(range(len(D)))
