@@ -307,7 +307,7 @@ def graph(
         gdata = data
     else:
         raise TypeError(
-            f"Expected argument `adata` to be one of `AnnData`, `numpy.ndarray`, `scipy.spmatrix`, "
+            f"Expected argument `data` to be one of `AnnData`, `numpy.ndarray`, `scipy.sparse.spmatrix`, "
             f"found `{type(data).__name__}`"
         )
     is_sparse = issparse(gdata)
