@@ -1,4 +1,4 @@
-|Travis| |Docs| |License|
+|Travis| |Docs| |Codecov| |License|
 
 
 CellRank - Probabilistic Trajectory Inference based on RNA Velocity
@@ -39,5 +39,8 @@ includes tutorial notebooks and a description of our complete API.
     :target: https://travis-ci.org/theislab/cellrank
 
 .. |Docs|  image:: https://img.shields.io/readthedocs/cellrank
+
+.. |Codecov| image:: https://codecov.io/gh/theislab/cellrank/branch/master/graph/badge.svg
+    :target: https://codecov.io/gh/theislab/cellrank
 
 .. |License| image:: https://img.shields.io/github/license/theislab/cellrank
