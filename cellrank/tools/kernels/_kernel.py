@@ -922,17 +922,8 @@ class SimpleNaryExpression(NaryKernelExpression):
             elif isinstance(kexpr, Kernel):
                 logg.debug(_LOG_USING_CACHE)
 
-        # this doesn't work correctly on non-sparse matrices
-        self.transition_matrix = self._fn(
-            [
-                kexpr.transition_matrix.A
-                if issparse(kexpr.transition_matrix)
-                else kexpr.transition_matrix
-                for kexpr in self
-            ]
-        )
-        # re-sparsify again
-        self.transition_matrix = csr_matrix(self.transition_matrix)
+        # preemptively sparsify
+        self.transition_matrix = self._fn([kexpr.transition_matrix for kexpr in self])
 
         return self
 
