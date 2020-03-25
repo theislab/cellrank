@@ -406,7 +406,7 @@ def graph(
             if key in ("incoming", "outgoing"):
                 vals = np.array(er(gdata, axis=int(key == "outgoing"))).flatten()
             else:
-                vals = gdata.diagonal() if issparse else np.diag(gdata)
+                vals = gdata.diagonal() if is_sparse else np.diag(gdata)
             node_v = dict(zip(pos.keys(), vals))
         else:
             label_col = getattr(data, keyloc)
