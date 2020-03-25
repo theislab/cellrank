@@ -690,7 +690,7 @@ class VelocityKernel(Kernel):
         if params == self._params:
             assert self.transition_matrix is not None, _ERROR_EMPTY_CACHE_MSG
             logg.debug(_LOG_USING_CACHE, time=start)
-            logg.info("    Finish`", time=start)
+            logg.info("     Finish", time=start)
             return self
 
         self._params = params
@@ -702,7 +702,7 @@ class VelocityKernel(Kernel):
         # normalize
         if density_normalize:
             velo_graph = self.density_normalize(velo_graph)
-        logg.info("    Finish`", time=start)
+        logg.info("    Finish", time=start)
 
         self.transition_matrix = velo_graph
 
@@ -762,7 +762,7 @@ class ConnectivityKernel(Kernel):
         if params == self._params:
             assert self.transition_matrix is not None, _ERROR_EMPTY_CACHE_MSG
             logg.debug(_LOG_USING_CACHE)
-            logg.info("    Finish`", time=start)
+            logg.info("    Finish", time=start)
             return self
 
         self._params = params
@@ -770,7 +770,7 @@ class ConnectivityKernel(Kernel):
 
         if density_normalize:
             conn = self.density_normalize(conn)
-        logg.info("    Finish`", time=start)
+        logg.info("    Finish", time=start)
 
         self.transition_matrix = conn
 
