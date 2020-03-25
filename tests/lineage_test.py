@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 from cellrank.tools import Lineage
+from cellrank.tools._utils import _create_categorical_colors
 
 import unittest
 import numpy as np
+import matplotlib.colors as colors
 
 
 class LineageCreationTestCase(unittest.TestCase):
@@ -407,3 +409,11 @@ class LineageAccessorTestCase(unittest.TestCase):
         np.testing.assert_array_equal(x[:, [4, 3]], y)
         np.testing.assert_array_equal(y.names, ["wex", "quux"])
         np.testing.assert_array_equal(y.colors, ["#bbbbbb", "#aaaaaa"])
+
+    def test_automatic_color_assignment(self):
+        x = np.random.random((10, 3))
+        l = Lineage(x, names=["foo", "bar", "baz"])
+
+        gt_colors = [colors.to_hex(c) for c in _create_categorical_colors(3)]
+
+        np.testing.assert_array_equal(l.colors, gt_colors)
