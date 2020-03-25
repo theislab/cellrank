@@ -2,6 +2,7 @@
 from cellrank.tools._utils import _normalize
 from cellrank.tools._constants import _transition, Direction
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
+from cellrank.utils._utils import get_neighs_params, get_neighs
 
 from scipy.sparse import csr_matrix, issparse, spdiags
 from scipy.sparse.linalg import norm
@@ -154,12 +155,12 @@ def transition_matrix(
 
     # should I row-_normalize the transcriptomic connectivities?
     if diff_kernel is not None or density_normalize:
-        params = adata.uns["neighbors"]["params"]
+        params = get_neighs_params(adata)
         logg.debug(
             f'DEBUG: Using KNN graph computed in basis {params.get("use_rep", "Unknown")!r} '
             'with {params["n_neighbors"]} neighbors'
         )
-        trans_graph = adata.uns["neighbors"]["connectivities"]
+        trans_graph = get_neighs(adata, "connectivities")
         dev = norm((trans_graph - trans_graph.T), ord="fro")
         if dev > 1e-4:
             logg.warning("KNN base graph not symmetric, `dev={dev}`")
