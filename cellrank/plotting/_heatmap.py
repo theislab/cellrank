@@ -78,6 +78,8 @@ def heatmap(
         Height of a bar when :paramref:`kind` ='lineages'.
     xlabel
         Label on the x-axis. If `None`, it is determined based on :paramref:`time_key`.
+    cluster_genes
+        Whether to use :func:`seaborn.clustermap` when :paramref:`kind` `='lineages'`.
     cmap
         Colormap to use when visualizing the smoothed expression.
     n_jobs
