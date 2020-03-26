@@ -208,7 +208,7 @@ def cluster_fates(
         scv.pl.paga(adata, **kwargs)
         dummy_pos = adata.uns["paga"]["pos"][0]
 
-        if kwargs["legend_loc"] not in ("none", "on data"):
+        if basis is not None and kwargs["legend_loc"] not in ("none", "on data"):
             first_legend = ax.legend(
                 loc=kwargs["legend_loc"],
                 **{k: v for k, v in legend_kwargs.items() if k != "loc"},
