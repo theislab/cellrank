@@ -359,7 +359,10 @@ class UnaryKernelExpression(KernelExpression, ABC):
             logg.debug(f"DEBUG: Loading variances from `adata.uns[{variance_key!r}]`")
             variance_key = f"{variance_key}_variances"
             if variance_key in self.adata.uns.keys():
-                self._variances = self.adata.uns[variance_key].astype(_dtype)
+                # keep it sparse
+                self._variances = csr_matrix(
+                    self.adata.uns[variance_key].astype(_dtype)
+                )
             else:
                 self._variances = None
                 logg.debug(
@@ -565,7 +568,9 @@ class ConstantMatrix(Kernel):
             raise ValueError(f"Expected the constant to be positive, found `{value}`.")
 
         self._value = value
-        self._variances = variances
+        self._variances = (
+            csr_matrix(variances) if not issparse(variances) else variances
+        )
         self._recalculate(value)
 
     def _recalculate(self, value):
@@ -704,7 +709,7 @@ class VelocityKernel(Kernel):
             velo_graph = self.density_normalize(velo_graph)
         logg.info("    Finish", time=start)
 
-        self.transition_matrix = velo_graph
+        self.transition_matrix = csr_matrix(velo_graph)
 
         return self
 
@@ -772,7 +777,7 @@ class ConnectivityKernel(Kernel):
             conn = self.density_normalize(conn)
         logg.info("    Finish", time=start)
 
-        self.transition_matrix = conn
+        self.transition_matrix = csr_matrix(conn)
 
         return self
 
@@ -890,7 +895,7 @@ class PalantirKernel(Kernel):
             biased_conn = self.density_normalize(biased_conn)
         logg.info("    Finish", time=start)
 
-        self.transition_matrix = biased_conn
+        self.transition_matrix = csr_matrix(biased_conn)
 
         return self
 
@@ -922,7 +927,9 @@ class SimpleNaryExpression(NaryKernelExpression):
             elif isinstance(kexpr, Kernel):
                 logg.debug(_LOG_USING_CACHE)
 
-        self.transition_matrix = self._fn([kexpr.transition_matrix for kexpr in self])
+        self.transition_matrix = csr_matrix(
+            self._fn([kexpr.transition_matrix for kexpr in self])
+        )
 
         return self
 
