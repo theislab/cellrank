@@ -220,9 +220,9 @@ def cluster_fates(
             # they would be plotted here
             handles = []
             for lineage_name, color in zip(lin_names, colors[0].keys()):
-                handles += ax.plot(*dummy_pos, label=lineage_name, color=color)
+                handles += [ax.scatter(*dummy_pos, label=lineage_name, color=color)]
             if len(colors[0].keys()) != len(adata.obsm[lk].names):
-                handles += ax.plot(*dummy_pos, label="Rest", color="grey")
+                handles += [ax.scatter(*dummy_pos, label="Rest", color="grey")]
 
             ax.legend(**legend_kwargs, handles=handles)
 
