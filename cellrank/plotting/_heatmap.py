@@ -32,6 +32,7 @@ def heatmap(
     end_clusters: Optional[Union[str, Sequence[str]]] = None,
     lineage_height: float = 0.1,
     cluster_genes: bool = False,
+    xlabel: Optional[str] = None,
     cmap: colors.ListedColormap = cm.Spectral_r,
     n_jobs: Optional[int] = 1,
     backend: str = "multiprocessing",
@@ -75,6 +76,10 @@ def heatmap(
         Clusters from which to select cells with highest pseudotime as endpoints.
     lineage_height
         Height of a bar when :paramref:`kind` ='lineages'.
+    xlabel
+        Label on the x-axis. If `None`, it is determined based on :paramref:`time_key`.
+    cluster_genes
+        Whether to use :func:`seaborn.clustermap` when :paramref:`kind` `='lineages'`.
     cmap
         Colormap to use when visualizing the smoothed expression.
     n_jobs
@@ -248,7 +253,7 @@ def heatmap(
     if isinstance(end_clusters, (str, type(None))):
         end_clusters = [end_clusters] * len(lineages)
 
-    xlabel = kwargs.get("time_key", None)
+    xlabel = kwargs.get("time_key", None) if xlabel is None else xlabel
 
     _ = kwargs.pop("start_cluster", None)
     _ = kwargs.pop("end_cluster", None)
