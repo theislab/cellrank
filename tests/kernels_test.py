@@ -714,7 +714,7 @@ class AdditionTestCase(unittest.TestCase):
         expected = np.eye(_adata.n_obs) * 0.75 + np.eye(_adata.n_obs, k=1) * 0.25
         expected[-1, -1] = 1
 
-        np.testing.assert_allclose(k.transition_matrix, expected)
+        np.testing.assert_allclose(k.transition_matrix.A, expected)
 
     def test_addtion_with_constant(self):
         vk, ck = create_kernels(_adata)  # diagonal + upper diag
@@ -727,7 +727,7 @@ class AdditionTestCase(unittest.TestCase):
         )
         expected[-1, -1] = 1
 
-        np.testing.assert_allclose(k.transition_matrix, expected)
+        np.testing.assert_allclose(k.transition_matrix.A, expected)
 
     def test_addition_3_kernels(self):
         adata = _adata.copy()
@@ -748,7 +748,7 @@ class AdditionTestCase(unittest.TestCase):
         expected[0, 0] = expected[-1, -1] = 2 / 3 + 1 / 3 * 0.5
         expected[0, 1] = expected[-1, -2] = 1 - expected[0, 0]
 
-        np.testing.assert_allclose(k.transition_matrix, expected)
+        np.testing.assert_allclose(k.transition_matrix.A, expected)
 
     def test_addition_adaptive(self):
         adata = _adata.copy()
@@ -765,9 +765,9 @@ class AdditionTestCase(unittest.TestCase):
             0.5 * vv * vk.transition_matrix + 0.5 * cv * ck.transition_matrix
         )
 
-        np.testing.assert_allclose(k.transition_matrix, expected)
+        np.testing.assert_allclose(k.transition_matrix.A, expected)
 
-    def test_addition_adataptive_constants(self):
+    def test_addition_adaptive_constants(self):
         adata = _adata.copy()
         a, b = np.random.uniform(0, 10, 2)
         s = a + b
@@ -784,16 +784,16 @@ class AdditionTestCase(unittest.TestCase):
             a / s * vv * vk.transition_matrix + b / s * cv * ck.transition_matrix
         )
 
-        np.testing.assert_allclose(k.transition_matrix, expected)
+        np.testing.assert_allclose(k.transition_matrix.A, expected)
 
     def test_addition_adaptive_wrong_variances(self):
         adata = _adata.copy()
         a, b = np.random.uniform(0, 10, 2)
         s = a + b
-        adata.uns["velocity_variances"] = vv = np.random.random(
+        adata.uns["velocity_variances"] = np.random.random(
             size=(adata.n_obs, adata.n_obs)
         )
-        adata.uns["connectivity_variances"] = cv = np.random.random(
+        adata.uns["connectivity_variances"] = np.random.random(
             size=(adata.n_obs, adata.n_obs)
         )
         vk, ck = create_kernels(adata)
@@ -803,7 +803,7 @@ class AdditionTestCase(unittest.TestCase):
             a / s * vk.transition_matrix + b / s * ck.transition_matrix
         )
 
-        self.assertFalse(np.allclose(k.transition_matrix, expected))
+        self.assertFalse(np.allclose(k.transition_matrix.A, expected.A))
 
     def test_addition_adaptive_4_kernels(self):
         adata = _adata.copy()
@@ -826,7 +826,7 @@ class AdditionTestCase(unittest.TestCase):
             + d / s * cv * ck1.transition_matrix
         )
 
-        np.testing.assert_allclose(k.transition_matrix, expected)
+        np.testing.assert_allclose(k.transition_matrix.A, expected)
 
 
 if __name__ == "__main__":
