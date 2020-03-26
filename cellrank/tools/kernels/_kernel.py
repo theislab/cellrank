@@ -679,7 +679,7 @@ class VelocityKernel(Kernel):
         # set the scaling parameter for the softmax
         med_corr = np.median(np.abs(correlations.data))
         if sigma_corr is None:
-            sigma_corr = 2 / med_corr
+            sigma_corr = 1 / med_corr
 
         params = dict(
             dnorm=density_normalize,

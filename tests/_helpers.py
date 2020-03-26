@@ -149,7 +149,7 @@ def transition_matrix(
     # compute the raw transition matrix. At the moment, this is just an exponential kernel
     logg.debug("DEBUG: Computing the raw transition matrix")
     if sigma_corr is None:
-        sigma_corr = 2 / med_corr
+        sigma_corr = 1 / med_corr
     velo_graph = velo_corr_comb.copy()
     velo_graph.data = np.exp(velo_graph.data * sigma_corr)
 
