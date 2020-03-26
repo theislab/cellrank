@@ -283,9 +283,13 @@ def create_kernels(adata):
     adata = adata.copy()
     vk = VelocityKernel(adata)
     ck = ConnectivityKernel(adata)
-    vk._transition_matrix = np.eye(adata.n_obs)
+    vk._transition_matrix = csr_matrix(np.eye(adata.n_obs))
     ck._transition_matrix = np.eye(adata.n_obs, k=1) / 2 + np.eye(adata.n_obs) / 2
     ck._transition_matrix[-1, -1] = 1
-    np.testing.assert_allclose(np.sum(ck._transition_matrix, axis=1), 1)  # sanity check
+    ck._transition_matrix = csr_matrix(ck._transition_matrix)
+
+    np.testing.assert_allclose(
+        np.sum(ck._transition_matrix.A, axis=1), 1
+    )  # sanity check
 
     return vk, ck
