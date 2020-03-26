@@ -57,6 +57,7 @@ intersphinx_mapping = dict(
     matplotlib=("https://matplotlib.org/", None),
     joblib=("https://joblib.readthedocs.io/en/latest/", None),
     sklearn=("https://scikit-learn.org/stable/", None),
+    seaborn=("https://seaborn.pydata.org/", None),
 )
 
 # Add any paths that contain templates here, relative to this directory.

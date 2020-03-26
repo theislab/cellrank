@@ -137,9 +137,9 @@ def cluster_fates(
 
             current_ax.set_xticks(np.arange(len(lin_names)))
             current_ax.set_xticklabels(lin_names, rotation="vertical")
-            current_ax.set_title(k)
             current_ax.set_xlabel("Endpoints" if final else "Startpoints")
             current_ax.set_ylabel("Absorption probability")
+            current_ax.set_title(k)
 
         return fig
 
