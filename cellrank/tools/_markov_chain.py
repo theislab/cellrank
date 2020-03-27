@@ -269,7 +269,7 @@ class MarkovChain:
                 time=start,
             )
 
-    def compute_eig(self, k: int = 15, which: str = "LR", alpha: float = 1) -> None:
+    def compute_eig(self, k: int = 20, which: str = "LM", alpha: float = 1) -> None:
         """
         Compute eigendecomposition of transition matrix.
 
@@ -307,9 +307,8 @@ class MarkovChain:
         # Sort the eigenvalues and eigenvectors and take the real part
         logg.debug("DEBUG: Sorting eigenvalues and taking real part")
         p = np.flip(np.argsort(D.real))
-        D = D.real[p]
-        V_l, V_r = V_l.real[:, p], V_r.real[:, p]
-        e_gap = _eigengap(D, alpha)
+        D, V_l, V_r = D[p], V_l[:, p], V_r[:, p]
+        e_gap = _eigengap(D.real, alpha)
 
         # write to class and AnnData object
         if self._eig is not None:
@@ -317,9 +316,83 @@ class MarkovChain:
         else:
             logg.debug(f"DEBUG: Adding `.eig` and `adata.uns['eig_{self._direction}']`")
 
-        eig_dict = {"D": D, "V_l": V_l, "V_r": V_r, "eigengap": e_gap}
+        eig_dict = {
+            "D": D,
+            "V_l": V_l,
+            "V_r": V_r,
+            "eigengap": e_gap,
+            "params": {"which": which, "k": k, "alpha": alpha},
+        }
         self._eig = eig_dict
         self._adata.uns[f"eig_{self._direction}"] = eig_dict
+
+    def plot_eig(
+        self,
+        dpi: int = 100,
+        figsize: Optional[Tuple[float, float]] = (5, 5),
+        save: Optional[str] = None,
+    ) -> None:
+        """
+        Plot the top eigenvalues in complex plane.
+
+        Params
+        ------
+        dpi
+            Dots per inch.
+        figsize
+            Size of the figure.
+        save
+            Filename where to save the plots. If `None`, just shows the plot.
+
+        Returns
+        -------
+        None
+            Nothing, just plots the spectrum in complex plane.
+        """
+
+        if self._eig is None:
+            logg.warning(
+                "No eigendecomposition found, computing with default parameters"
+            )
+            self.compute_eig()
+        D = self._eig["D"]
+
+        # create fiture and axes
+        fig, ax = plt.subplots(nrows=1, ncols=1, dpi=dpi, figsize=figsize)
+
+        # get the original data ranges
+        lam_x, lam_y = D.real, D.imag
+        x_min, x_max = np.min(lam_x), np.max(lam_x)
+        y_min, y_max = np.min(lam_y), np.max(lam_y)
+        x_range, y_range = x_max - x_min, y_max - y_min
+        final_range = np.max([x_range, y_range]) + 0.05
+
+        # define a function to make the data limits rectangular
+        adapt_range = lambda min_, max_, range_: (
+            min_ + (max_ - min_) / 2 - range_ / 2,
+            min_ + (max_ - min_) / 2 + range_ / 2,
+        )
+        x_min_, x_max_ = adapt_range(x_min, x_max, final_range)
+        y_min_, y_max_ = adapt_range(y_min, y_max, final_range)
+
+        # plot the data and the unit circle
+        ax.scatter(D.real, D.imag, marker=".", label="Eigenvalue")
+        t = np.linspace(0, 2 * np.pi, 500)
+        x_circle, y_circle = np.sin(t), np.cos(t)
+        ax.plot(x_circle, y_circle, "k-", label="Unit circle")
+
+        # set labels, ranges and legend
+        ax.set_xlabel("Im($\lambda$)")
+        ax.set_ylabel("Re($\lambda$)")
+        ax.set_xlim(x_min_, x_max_)
+        ax.set_ylim(y_min_, y_max_)
+        ax.set_title(f"Top {k} eigenvalues in {which}")
+        fig.legend()
+
+        if save is not None:
+            save_fig(fig, save)
+
+        fig.show()
 
     def plot_real_spectrum(
         self,
