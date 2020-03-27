@@ -53,25 +53,25 @@ CellRank was developed as a collaboration between `Theislab`_ and `Peerlab`_.
 
 .. |License| image:: https://img.shields.io/github/license/theislab/cellrank
 
-.. _La Manno et al. (2018): <https://doi.org/10.1038/s41586-018-0414-6>:
+.. _La Manno et al. (2018): https://doi.org/10.1038/s41586-018-0414-6
 
-.. _Bergen et al. (2019): <https://doi.org/10.1101/820936>:
+.. _Bergen et al. (2019): https://doi.org/10.1101/820936
 
-.. _pancreatic endocrinogenesis: <https://doi.org/10.1242/dev.173849>:
+.. _pancreatic endocrinogenesis: https://doi.org/10.1242/dev.173849
 
-.. _tutorial: <https://cellrank-notebooks.readthedocs.io/en/latest/pancreas_basic.html>:
+.. _tutorial: https://cellrank-notebooks.readthedocs.io/en/latest/pancreas_basic.html
 
-.. _PageRank: <http://infolab.stanford.edu/~backrub/google.html>:
+.. _PageRank: http://infolab.stanford.edu/~backrub/google.html
 
-.. _scanpy: <https://scanpy.readthedocs.io/en/latest/>:
+.. _scanpy: https://scanpy.readthedocs.io/en/latest/
 
-.. _scvelo: <https://scvelo.readthedocs.io/>:
+.. _scvelo: https://scvelo.readthedocs.io/
 
-.. _documentation: <https://cellrank.readthedocs.io>:
+.. _documentation: https://cellrank.readthedocs.io
 
-.. _Theislab: <https://www.helmholtz-muenchen.de/icb/research/groups/theis-lab/overview/index.html>:
+.. _Theislab: https://www.helmholtz-muenchen.de/icb/research/groups/theis-lab/overview/index.html
 
-.. _Peerlab: <https://www.mskcc.org/research/ski/labs/dana-pe-er>:
+.. _Peerlab: https://www.mskcc.org/research/ski/labs/dana-pe-er
 
 .. |br| raw:: html
 
