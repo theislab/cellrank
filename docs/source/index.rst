@@ -65,19 +65,19 @@ and was developed as a collaboration between `Theislab`_ and `Peerlab`_.
 
 .. |License| image:: https://img.shields.io/github/license/theislab/cellrank
 
-.. _tutorial: <https://cellrank-notebooks.readthedocs.io/en/latest/pancreas_basic.html>:
+.. _tutorial: https://cellrank-notebooks.readthedocs.io/en/latest/pancreas_basic.html
 
-.. _PageRank: <http://infolab.stanford.edu/~backrub/google.html>:
+.. _PageRank: http://infolab.stanford.edu/~backrub/google.html
 
-.. _documentation: <https://cellrank.readthedocs.io>:
+.. _documentation: https://cellrank.readthedocs.io
 
-.. _scanpy: <https://scanpy.readthedocs.io/en/latest/>:
+.. _scanpy: https://scanpy.readthedocs.io/en/latest/
 
-.. _scvelo: <https://scvelo.readthedocs.io/>:
+.. _scvelo: https://scvelo.readthedocs.io/
 
-.. _Theislab: <https://www.helmholtz-muenchen.de/icb/research/groups/theis-lab/overview/index.html>:
+.. _Theislab: https://www.helmholtz-muenchen.de/icb/research/groups/theis-lab/overview/index.html
 
-.. _Peerlab: <https://www.mskcc.org/research/ski/labs/dana-pe-er>:
+.. _Peerlab: https://www.mskcc.org/research/ski/labs/dana-pe-er
 
 .. |br| raw:: html
 
