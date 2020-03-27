@@ -138,7 +138,7 @@ def cluster_fates(
 
             current_ax.set_xticks(np.arange(len(lin_names)))
             current_ax.set_xticklabels(lin_names, rotation="vertical")
-            current_ax.set_xlabel("Endpoints" if final else "Startpoints")
+            current_ax.set_xlabel(points)
             current_ax.set_ylabel("Absorption probability")
             current_ax.set_title(k)
 
@@ -213,6 +213,7 @@ def cluster_fates(
                 ax,
                 legend_loc=kwargs["legend_loc"],
                 **{k: v for k, v in legend_kwargs.items() if k != "loc"},
+                title=cluster_key,
             )
             fig.add_artist(first_legend)
 
@@ -225,7 +226,7 @@ def cluster_fates(
             if len(colors[0].keys()) != len(adata.obsm[lk].names):
                 handles += [ax.scatter([], [], label="Rest", c="grey")]
 
-            ax.legend(**legend_kwargs, handles=handles)
+            ax.legend(**legend_kwargs, handles=handles, title=points)
 
         return fig
 
@@ -272,22 +273,21 @@ def cluster_fates(
         return fig
 
     def plot_violin_no_cluster_key():
-        key = "Endpoints" if final else "Startpoints"
         kwargs["show"] = False
         kwargs.pop("ax", None)
         kwargs.pop("keys", None)  # don't care
         kwargs.pop("save", None)
-        kwargs["groupby"] = key
+        kwargs["groupby"] = points
 
         data = np.ravel(np.array(adata.obsm[lk]).T)[..., np.newaxis]
         dadata = AnnData(np.zeros_like(data))
         dadata.obs["Absorption probability"] = data
-        dadata.obs[key] = (
+        dadata.obs[points] = (
             pd.Series(np.ravel([[n] * adata.n_obs for n in adata.obsm[lk].names]))
             .astype("category")
             .values
         )
-        dadata.uns[f"{key}_colors"] = adata.obsm[lk].colors
+        dadata.uns[f"{points}_colors"] = adata.obsm[lk].colors
 
         fig, ax = plt.subplots(
             figsize=figsize if figsize is not None else (8, 6), dpi=dpi
@@ -331,6 +331,7 @@ def cluster_fates(
         clusters = ["All"]
 
     lk = str(LinKey.FORWARD if final else LinKey.BACKWARD)
+    points = "Endpoints" if final else "Startpoints"
     if lk not in adata.obsm:
         raise KeyError(f"Lineages key `{lk!r}` not found in `adata.obsm`.")
 
