@@ -269,7 +269,7 @@ class MarkovChain:
                 time=start,
             )
 
-    def compute_eig(self, k: int = 20, which: str = "LM", alpha: float = 1) -> None:
+    def compute_eig(self, k: int = 20, which: str = "LR", alpha: float = 1) -> None:
         """
         Compute eigendecomposition of transition matrix.
 
@@ -305,7 +305,7 @@ class MarkovChain:
             _, V_r = np.linalg.eig(self._T)
 
         # Sort the eigenvalues and eigenvectors and take the real part
-        logg.debug("DEBUG: Sorting eigenvalues and taking real part")
+        logg.debug("DEBUG: Sorting eigenvalues by their real part")
         p = np.flip(np.argsort(D.real))
         D, V_l, V_r = D[p], V_l[:, p], V_r[:, p]
         e_gap = _eigengap(D.real, alpha)
@@ -330,6 +330,7 @@ class MarkovChain:
         self,
         dpi: int = 100,
         figsize: Optional[Tuple[float, float]] = (5, 5),
+        legend_loc: Optional[str] = None,
         save: Optional[str] = None,
     ) -> None:
         """
@@ -356,6 +357,7 @@ class MarkovChain:
             )
             self.compute_eig()
         D = self._eig["D"]
+        params = self._eig["params"]
 
         # create fiture and axes
         fig, ax = plt.subplots(nrows=1, ncols=1, dpi=dpi, figsize=figsize)
@@ -386,8 +388,9 @@ class MarkovChain:
         ax.set_ylabel("Re($\lambda$)")
         ax.set_xlim(x_min_, x_max_)
         ax.set_ylim(y_min_, y_max_)
-        ax.set_title(f"Top {k} eigenvalues in {which}")
-        fig.legend()
+        key = "real part" if params["which"] == "LR" else "magnitude"
+        ax.set_title(f"Top {params['k']} eigenvalues according to their {key}")
+        ax.legend(loc=legend_loc)
 
         if save is not None:
             save_fig(fig, save)
@@ -398,6 +401,7 @@ class MarkovChain:
         self,
         dpi: int = 100,
         figsize: Optional[Tuple[float, float]] = None,
+        legend_loc: Optional[str] = None,
         save: Optional[str] = None,
     ) -> None:
         """
@@ -424,11 +428,16 @@ class MarkovChain:
             )
             self.compute_eig()
         D = self._eig["D"]
+        D_real, D_imag = D.real, D.imag
+        ixs = np.arange(len(D))
+        mask = D_imag == 0
 
         # plot the top eigenvalues
         fig, ax = plt.subplots(nrows=1, ncols=1, dpi=dpi, figsize=figsize)
 
-        ax.plot(D, "o", label="Eigenvalue")
+        ax.scatter(ixs[mask], D_real[mask], marker="o", label="Real eigenvalue")
+        ax.scatter(ixs[~mask], D_real[~mask], marker="o", label="Complex eigenvalue")
+
         ax.axvline(self._eig["eigengap"], label="Eigengap", ls="--")
 
         ax.set_xticks(range(len(D)))
@@ -437,7 +446,7 @@ class MarkovChain:
         ax.set_ylabel("Re($\lambda_i$)")
         ax.set_title("Real part top eigenvalues")
 
-        fig.legend()
+        ax.legend(loc=legend_loc)
 
         if save is not None:
             save_fig(fig, save)
@@ -449,6 +458,7 @@ class MarkovChain:
         left: bool = True,
         use: Optional[Union[int, tuple, list]] = None,
         abs_value: bool = False,
+        use_imag: bool = False,
         cluster_key: Optional[str] = None,
         **kwargs,
     ) -> None:
@@ -460,9 +470,11 @@ class MarkovChain:
         left
             Whether to use left or right eigenvectors.
         use
-            Which or how many first eigenvectors to be plotted. If None, it will be chosen by `eigengap`.
+            Which or how many eigenvectors to be plotted. If None, it will be chosen by `eigengap`.
         abs_value
             Whether to take the absolute value before plotting.
+        use_imag
+            Whether to show real or imaginary part for complex eigenvectors
         cluster_key
             Key from :paramref:`adata` `.obs` to plot cluster annotations.
 
@@ -516,15 +528,25 @@ class MarkovChain:
             )
 
         D, V = D[use], V[:, use]
+        complex_mask = np.sum(V.imag != 0, axis=0) > 0
+        complex_ixs = np.array(use)[np.where(complex_mask)[0]]
+        complex_key = "imaginary" if use_imag else "real"
+        if len(complex_ixs) > 0:
+            logg.warning(
+                f"The eigenvectors with indices {complex_ixs} have an imaginary part. Showing their {complex_key} part."
+            )
+        V_ = V.real
+        if use_imag:
+            V_[:, complex_mask] = V.imag[:, complex_mask]
 
         # take absolute value
         if abs_value:
-            V = np.abs(V)
+            V_ = np.abs(V_)
 
         if cluster_key is not None:
-            color = [cluster_key] + [v for v in V.T]
+            color = [cluster_key] + [v for v in V_.T]
         else:
-            color = [v for v in V.T]
+            color = [v for v in V_.T]
 
         # actual plotting with scvelo
         logg.debug(f"DEBUG: Showing `{use}` {side} eigenvectors")
@@ -702,7 +724,7 @@ class MarkovChain:
             )
 
         logg.debug("DEBUG: Retrieving eigendecomposition")
-        V_l, V_r = self._eig["V_l"][:, use], self._eig["V_r"][:, use]
+        V_l, V_r = self._eig["V_l"].real[:, use], self._eig["V_r"].real[:, use]
 
         # compute a rc probability
         logg.debug("DEBUG: Computing probabilities of approximate recurrent classes")
