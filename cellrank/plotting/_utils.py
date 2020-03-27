@@ -532,3 +532,17 @@ def _trends_helper(
 
     if save is not None:
         save_fig(fig, save)
+
+
+# modified from scVelo
+def _position_legend(ax: mpl.axes.Axes, legend_loc: str, **kwargs):
+    if legend_loc == "upper right":
+        return ax.legend(loc="upper left", bbox_to_anchor=(1, 1), **kwargs)
+    if legend_loc == "lower right":
+        return ax.legend(loc="lower left", bbox_to_anchor=(1, 0), **kwargs)
+    if "right" in legend_loc:  # 'right', 'center right', 'right margin'
+        return ax.legend(loc="center left", bbox_to_anchor=(1, 0.5), **kwargs)
+    if legend_loc != "none":
+        return ax.legend(loc=legend_loc, **kwargs)
+
+    raise ValueError(f"Invalid legend location `{legend_loc}`.")
