@@ -427,25 +427,27 @@ class MarkovChain:
                 "No eigendecomposition found, computing with default parameters"
             )
             self.compute_eig()
-        D = self._eig["D"]
+
+        # Obtain the eigendecomposition, create the color code
+        D, params = self._eig["D"], self._eig["params"]
         D_real, D_imag = D.real, D.imag
         ixs = np.arange(len(D))
         mask = D_imag == 0
 
         # plot the top eigenvalues
         fig, ax = plt.subplots(nrows=1, ncols=1, dpi=dpi, figsize=figsize)
-
         ax.scatter(ixs[mask], D_real[mask], marker="o", label="Real eigenvalue")
         ax.scatter(ixs[~mask], D_real[~mask], marker="o", label="Complex eigenvalue")
 
+        # add dashed line for the eigengap, ticks, labels, title and legend
         ax.axvline(self._eig["eigengap"], label="Eigengap", ls="--")
-
         ax.set_xticks(range(len(D)))
         ax.set_xlabel("index")
-
         ax.set_ylabel("Re($\lambda_i$)")
-        ax.set_title("Real part top eigenvalues")
-
+        key = "real part" if params["which"] == "LR" else "magnitude"
+        ax.set_title(
+            f"Real part of top {params['k']} eigenvalues according to their {key}"
+        )
         ax.legend(loc=legend_loc)
 
         if save is not None:
