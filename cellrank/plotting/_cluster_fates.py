@@ -18,6 +18,7 @@ from scanpy import logging as logg
 
 from cellrank.tools._cluster_fates import _cramers_v, _counts
 from cellrank.tools._constants import LinKey
+from cellrank.plotting._utils import _position_legend
 from cellrank.tools._utils import save_fig
 from cellrank.utils._utils import _make_unique
 from cellrank.tools._lineage import Lineage
@@ -206,11 +207,11 @@ def cluster_fates(
             kwargs["color"] = cluster_key
 
         scv.pl.paga(adata, **kwargs)
-        dummy_pos = adata.uns["paga"]["pos"][0]
 
         if basis is not None and kwargs["legend_loc"] not in ("none", "on data"):
-            first_legend = ax.legend(
-                loc=kwargs["legend_loc"],
+            first_legend = _position_legend(
+                ax,
+                legend_loc=kwargs["legend_loc"],
                 **{k: v for k, v in legend_kwargs.items() if k != "loc"},
             )
             fig.add_artist(first_legend)
@@ -220,13 +221,9 @@ def cluster_fates(
             # they would be plotted here
             handles = []
             for lineage_name, color in zip(lin_names, colors[0].keys()):
-                handles += [
-                    ax.scatter(*dummy_pos, label=lineage_name, color=color, zorder=-1)
-                ]
+                handles += [ax.scatter([], [], label=lineage_name, c=color)]
             if len(colors[0].keys()) != len(adata.obsm[lk].names):
-                handles += [
-                    ax.scatter(*dummy_pos, label="Rest", color="grey", zorder=-1)
-                ]
+                handles += [ax.scatter([], [], label="Rest", c="grey")]
 
             ax.legend(**legend_kwargs, handles=handles)
 
