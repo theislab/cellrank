@@ -7,8 +7,8 @@ import cellrank.datasets
 from scanpy import settings
 
 
-__author__ = "".join([])
-__email__ = "".join([])
+__author__ = ", ".join(["Marius Lange", "Michal Klein", "Juan Luis Restrepo Lopez"])
+__email__ = ", ".join(["info@cellrank.org"])
 
 try:
     from setuptools_scm import get_version
