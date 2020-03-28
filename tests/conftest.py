@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
+from matplotlib.testing.compare import compare_images
+from pathlib import Path
+from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
+
 import pytest
+import cellrank as cr
 import scvelo as scv
 import numpy as np
 import matplotlib
@@ -23,6 +28,26 @@ def _create_dummy_adata(n_obs: int):
     return adata
 
 
+def _create_cellrank_adata(n_obs: int, *, backward: bool = False):
+    adata = _create_dummy_adata(n_obs)
+    try:
+        vk = VelocityKernel(adata, backward=backward).compute_transition_matrix()
+        ck = ConnectivityKernel(adata, backward=backward).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.MarkovChain(final_kernel)
+
+        mc.compute_partition()
+        mc.compute_eig()
+        mc.compute_approx_rcs(use=2)
+        mc.compute_lin_probs()
+        mc.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
+    except:  # let the tests fail
+        mc = None
+
+    return adata, mc
+
+
 @pytest.fixture
 def adata(adata=_create_dummy_adata(50)):
     return adata.copy()
@@ -31,3 +56,13 @@ def adata(adata=_create_dummy_adata(50)):
 @pytest.fixture
 def adata_large(adata=_create_dummy_adata(200)):
     return adata.copy()
+
+
+@pytest.fixture
+def adata_mc_fwd(adata_mc=_create_cellrank_adata(100, backward=False)):
+    return adata_mc
+
+
+@pytest.fixture
+def adata_mc_bwd(adata_mc=_create_cellrank_adata(100, backward=True)):
+    return adata_mc
