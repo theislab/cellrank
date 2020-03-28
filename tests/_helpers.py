@@ -266,22 +266,7 @@ def _is_connected(c):
     return nx.is_connected(G)
 
 
-def create_dummy_adata(n_obs: int = 50):
-    adata = scv.datasets.toy_data(n_obs=n_obs)
-    scv.pp.filter_and_normalize(adata, min_shared_counts=20, n_top_genes=1000)
-    scv.pp.moments(adata, n_pcs=30, n_neighbors=30)
-    scv.tl.recover_dynamics(adata)
-    scv.tl.velocity(adata, mode="dynamical")
-    scv.tl.velocity_graph(adata)
-    scv.tl.latent_time(adata)
-    adata.uns["connectivity_variances"] = np.ones((50, 50), dtype=np.float64)
-    adata.uns["velocity_variances"] = np.ones((50, 50), dtype=np.float64)
-
-    return adata
-
-
 def create_kernels(adata):
-    adata = adata.copy()
     vk = VelocityKernel(adata)
     ck = ConnectivityKernel(adata)
     vk._transition_matrix = csr_matrix(np.eye(adata.n_obs))

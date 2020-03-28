@@ -7,22 +7,13 @@ from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel, PalantirK
 from cellrank.tools.kernels._kernel import Constant, KernelAdd, KernelMul, _is_bin_mult
 from cellrank.tools._utils import _normalize
 from cellrank.utils._utils import get_neighs, get_neighs_params
-from _helpers import (
-    transition_matrix,
-    bias_knn,
-    density_normalization,
-    create_dummy_adata,
-    create_kernels,
-)
+from _helpers import transition_matrix, bias_knn, density_normalization, create_kernels
 
-np.random.seed(42)
-_adata = create_dummy_adata(50)
 _rtol = 1e-14
 
 
 class TestInitializeKernel:
-    def test_none_transition_matrix(self):
-        adata = _adata.copy()
+    def test_none_transition_matrix(self, adata):
         vk = VelocityKernel(adata)
         ck = ConnectivityKernel(adata)
         pk = PalantirKernel(adata, time_key="latent_time")
@@ -31,8 +22,7 @@ class TestInitializeKernel:
         assert ck._transition_matrix is None
         assert pk._transition_matrix is None
 
-    def test_not_none_transition_matrix_compute(self):
-        adata = _adata.copy()
+    def test_not_none_transition_matrix_compute(self, adata):
         vk = VelocityKernel(adata).compute_transition_matrix()
         ck = ConnectivityKernel(adata).compute_transition_matrix()
         pk = PalantirKernel(adata, time_key="latent_time").compute_transition_matrix()
@@ -41,8 +31,7 @@ class TestInitializeKernel:
         assert ck.transition_matrix is not None
         assert pk.transition_matrix is not None
 
-    def test_not_none_transition_matrix_accessor(self):
-        adata = _adata.copy()
+    def test_not_none_transition_matrix_accessor(self, adata):
         vk = VelocityKernel(adata)
         ck = ConnectivityKernel(adata)
         pk = PalantirKernel(adata, time_key="latent_time")
@@ -51,8 +40,7 @@ class TestInitializeKernel:
         assert ck.transition_matrix is not None
         assert pk.transition_matrix is not None
 
-    def test_adding_hidden_constants(self):
-        adata = _adata.copy()
+    def test_adding_hidden_constants(self, adata):
         k: KernelAdd = VelocityKernel(adata) + ConnectivityKernel(adata)
 
         assert _is_bin_mult(k[0])
@@ -67,20 +55,17 @@ class TestInitializeKernel:
         assert isinstance(k[1][1], ConnectivityKernel)
         assert k[1][0].transition_matrix == 1.0
 
-    def test_length(self):
-        adata = _adata.copy()
+    def test_length(self, adata):
         k: KernelAdd = VelocityKernel(adata) + ConnectivityKernel(adata)
         assert len(k) == 2
 
-    def test_accessor_out_of_range(self):
-        adata = _adata.copy()
+    def test_accessor_out_of_range(self, adata):
         k: KernelAdd = VelocityKernel(adata) + ConnectivityKernel(adata)
 
         with pytest.raises(IndexError):
             _ = k[2]
 
-    def test_parent(self):
-        adata = _adata.copy()
+    def test_parent(self, adata):
         vk = VelocityKernel(adata)
         ck = ConnectivityKernel(adata)
         k = vk + ck
@@ -89,15 +74,13 @@ class TestInitializeKernel:
         assert ck._parent._parent is k
         assert k._parent is None
 
-    def test_uninitialized_both(self):
-        adata = _adata.copy()
+    def test_uninitialized_both(self, adata):
         k = VelocityKernel(adata) + ConnectivityKernel(adata)
 
         with pytest.raises(RuntimeError):
             k.compute_transition_matrix()
 
-    def test_uninitialized_one(self):
-        adata = _adata.copy()
+    def test_uninitialized_one(self, adata):
         k = (
             VelocityKernel(adata)
             + ConnectivityKernel(adata).compute_transition_matrix()
@@ -106,8 +89,7 @@ class TestInitializeKernel:
         with pytest.raises(RuntimeError):
             k.compute_transition_matrix()
 
-    def test_initialized(self):
-        adata = _adata.copy()
+    def test_initialized(self, adata):
         k = (
             VelocityKernel(adata).compute_transition_matrix()
             + ConnectivityKernel(adata).compute_transition_matrix()
@@ -116,40 +98,33 @@ class TestInitializeKernel:
 
         assert k.transition_matrix is not None
 
-    def test_invalida_type(self):
-        adata = _adata.copy()
-
+    def test_invalida_type(self, adata):
         with pytest.raises(TypeError):
             _ = None * VelocityKernel(adata)
 
-    def test_negative_constant(self):
-        adata = _adata.copy()
-
+    def test_negative_constant(self, adata):
         with pytest.raises(ValueError):
             _ = -1 * VelocityKernel(adata)
 
-    def test_invalid_constant(self):
+    def test_invalid_constant(self, adata):
         with pytest.raises(TypeError):
             _ = Constant(None, None)
 
-    def test_inversion(self):
-        adata = _adata.copy()
+    def test_inversion(self, adata):
         c = ConnectivityKernel(adata, backward=False)
         assert not c.backward
 
         nc = ~c
         assert nc.backward
 
-    def test_inversion_inplace(self):
-        adata = _adata.copy()
+    def test_inversion_inplace(self, adata):
         c = ConnectivityKernel(adata, backward=False)
 
         assert not c.backward
         _ = ~c
         assert c.backward
 
-    def test_inversion_propagation(self):
-        adata = _adata.copy()
+    def test_inversion_propagation(self, adata):
         c = ConnectivityKernel(adata, backward=False)
         v = VelocityKernel(adata, backward=False)
         k = ~(c + v)
@@ -158,15 +133,13 @@ class TestInitializeKernel:
         assert v.backward
         assert k.backward
 
-    def test_inversion_recalculation(self):
-        adata = _adata.copy()
+    def test_inversion_recalculation(self, adata):
         c = ConnectivityKernel(adata).compute_transition_matrix()
         z = ~(c + c)
         with pytest.raises(RuntimeError):
             z.compute_transition_matrix()
 
-    def test_inversion_preservation_of_constants(self):
-        adata = _adata.copy()
+    def test_inversion_preservation_of_constants(self, adata):
         c = ConnectivityKernel(adata).compute_transition_matrix()
         a = (3 * c + 1 * c).compute_transition_matrix()
         b = ~a
@@ -177,37 +150,32 @@ class TestInitializeKernel:
         assert a[1][0].transition_matrix == 1 / 4
         assert b[1][0].transition_matrix == 1 / 4
 
-    def test_addition_simple(self):
-        adata = _adata.copy()
+    def test_addition_simple(self, adata):
         k = VelocityKernel(adata) + ConnectivityKernel(adata)
 
         assert isinstance(k, KernelAdd)
 
-    def test_multiplication_simple(self):
-        adata = _adata.copy()
+    def test_multiplication_simple(self, adata):
         k = 10 * VelocityKernel(adata)
         c = _is_bin_mult(k)
 
         assert isinstance(c, Constant)
         assert c.transition_matrix == 10
 
-    def test_multiplication_simple_normalization(self):
-        adata = _adata.copy()
+    def test_multiplication_simple_normalization(self, adata):
         k = 10 * VelocityKernel(adata).compute_transition_matrix()
         c = _is_bin_mult(k)
 
         assert c.transition_matrix == 10
 
-    def test_constant(self):
-        adata = _adata.copy()
+    def test_constant(self, adata):
         k = 9 * VelocityKernel(adata) + 1 * ConnectivityKernel(adata)
         c1, c2 = _is_bin_mult(k[0]), _is_bin_mult(k[1])
 
         assert c1.transition_matrix == 9
         assert c2.transition_matrix == 1
 
-    def test_constant_normalize_2(self):
-        adata = _adata.copy()
+    def test_constant_normalize_2(self, adata):
         k = (
             9 * VelocityKernel(adata).compute_transition_matrix()
             + 1 * ConnectivityKernel(adata).compute_transition_matrix()
@@ -218,8 +186,7 @@ class TestInitializeKernel:
         assert c1.transition_matrix == 9 / 10
         assert c2.transition_matrix == 1 / 10
 
-    def test_constant_normalize_3(self):
-        adata = _adata.copy()
+    def test_constant_normalize_3(self, adata):
         k = (
             VelocityKernel(adata).compute_transition_matrix()
             + ConnectivityKernel(adata).compute_transition_matrix()
@@ -232,8 +199,7 @@ class TestInitializeKernel:
         assert c2.transition_matrix == 1 / 3
         assert c3.transition_matrix == 1 / 3
 
-    def test_constant_wrong_parentheses(self):
-        adata = _adata.copy()
+    def test_constant_wrong_parentheses(self, adata):
         k = VelocityKernel(adata).compute_transition_matrix() + (
             ConnectivityKernel(adata).compute_transition_matrix()
             + ConnectivityKernel(adata).compute_transition_matrix()
@@ -245,8 +211,7 @@ class TestInitializeKernel:
         assert c2.transition_matrix == 1 / 3
         assert c3.transition_matrix == 1 / 3
 
-    def test_constant_correct_parentheses(self):
-        adata = _adata.copy()
+    def test_constant_correct_parentheses(self, adata):
         k = 1 * VelocityKernel(adata).compute_transition_matrix() + 1 * (
             ConnectivityKernel(adata).compute_transition_matrix()
             + ConnectivityKernel(adata).compute_transition_matrix()
@@ -262,8 +227,7 @@ class TestInitializeKernel:
         assert c2.transition_matrix == 1 / 2
         assert c3.transition_matrix == 1 / 2
 
-    def test_adaptive_kernel_constants(self):
-        adata = _adata.copy()
+    def test_adaptive_kernel_constants(self, adata):
         k = (3 * ConnectivityKernel(adata).compute_transition_matrix()) ^ (
             1 * ConnectivityKernel(adata).compute_transition_matrix()
         )
@@ -272,8 +236,7 @@ class TestInitializeKernel:
         assert k[0][0]._value == 3 / 4
         assert k[1][0]._value == 1 / 4
 
-    def test_adaptive_kernel_complex(self):
-        adata = _adata.copy()
+    def test_adaptive_kernel_complex(self, adata):
         k = (
             4
             * (
@@ -291,24 +254,21 @@ class TestInitializeKernel:
 
 
 class TestKernel:
-    def test_row_normalized(self):
-        adata = _adata.copy()
+    def test_row_normalized(self, adata):
         vk = VelocityKernel(adata)
 
         vk.compute_transition_matrix(density_normalize=False)
         T = vk.transition_matrix
         np.testing.assert_allclose(T.sum(1), 1, rtol=_rtol)
 
-    def test_row_normalized_dense_norm(self):
-        adata = _adata.copy()
+    def test_row_normalized_dense_norm(self, adata):
         vk = VelocityKernel(adata)
         vk.compute_transition_matrix(density_normalize=True)
         T = vk.transition_matrix
 
         np.testing.assert_allclose(T.sum(1), 1, rtol=_rtol)
 
-    def test_transition_forward(self):
-        adata = _adata.copy()
+    def test_transition_forward(self, adata):
         backward = False
 
         vk = VelocityKernel(adata, backward=backward).compute_transition_matrix(
@@ -321,8 +281,7 @@ class TestKernel:
 
         np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
 
-    def test_transition_forward_dense_norm(self):
-        adata = _adata.copy()
+    def test_transition_forward_dense_norm(self, adata):
         backward = False
 
         vk = VelocityKernel(adata, backward=backward).compute_transition_matrix(
@@ -335,8 +294,7 @@ class TestKernel:
 
         np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
 
-    def test_transition_forward_differ_dense_norm(self):
-        adata = _adata.copy()
+    def test_transition_forward_differ_dense_norm(self, adata):
         backward = False
 
         vk = VelocityKernel(adata, backward=backward).compute_transition_matrix(
@@ -349,8 +307,7 @@ class TestKernel:
 
         assert not (np.allclose(T_1.A, T_2.A, rtol=_rtol))
 
-    def test_transition_backward(self):
-        adata = _adata.copy()
+    def test_transition_backward(self, adata):
         backward = True
 
         vk = VelocityKernel(adata, backward=backward).compute_transition_matrix(
@@ -363,8 +320,7 @@ class TestKernel:
 
         np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
 
-    def test_transition_backward_dense_norm(self):
-        adata = _adata.copy()
+    def test_transition_backward_dense_norm(self, adata):
         backward = True
 
         vk = VelocityKernel(adata, backward=backward).compute_transition_matrix(
@@ -377,8 +333,7 @@ class TestKernel:
 
         np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
 
-    def test_transition_backward_differ_dense_norm(self):
-        adata = _adata.copy()
+    def test_transition_backward_differ_dense_norm(self, adata):
         backward = True
 
         vk = VelocityKernel(adata, backward=backward).compute_transition_matrix(
@@ -391,8 +346,7 @@ class TestKernel:
 
         assert not np.allclose(T_1.A, T_2.A, rtol=_rtol)
 
-    def test_backward_negate(self):
-        adata = _adata.copy()
+    def test_backward_negate(self, adata):
         backward = True
         dense_norm = False
         backward_mode = "negate"
@@ -412,8 +366,7 @@ class TestKernel:
 
         np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
 
-    def test_backward_negate_dense_norm(self):
-        adata = _adata.copy()
+    def test_backward_negate_dense_norm(self, adata):
         backward = True
         dense_norm = True
         backward_mode = "negate"
@@ -433,8 +386,7 @@ class TestKernel:
 
         np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
 
-    def test_backward_negate_differ(self):
-        adata = _adata.copy()
+    def test_backward_negate_differ(self, adata):
         backward = True
         backward_mode = "negate"
         vk = VelocityKernel(adata, backward=backward)
@@ -453,8 +405,7 @@ class TestKernel:
 
         assert not np.allclose(T_1.A, T_2.A, rtol=_rtol)
 
-    def test_palantir(self):
-        adata = _adata.copy()
+    def test_palantir(self, adata):
         conn = get_neighs(adata, "connectivities")
         n_neighbors = get_neighs_params(adata)["n_neighbors"]
         pseudotime = adata.obs["latent_time"]
@@ -469,8 +420,7 @@ class TestKernel:
 
         np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
 
-    def test_palantir_dense_norm(self):
-        adata = _adata.copy()
+    def test_palantir_dense_norm(self, adata):
         conn = get_neighs(adata, "connectivities")
         n_neighbors = get_neighs_params(adata)["n_neighbors"]
         pseudotime = adata.obs["latent_time"]
@@ -486,8 +436,7 @@ class TestKernel:
 
         np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
 
-    def test_palantir_differ_dense_norm(self):
-        adata = _adata.copy()
+    def test_palantir_differ_dense_norm(self, adata):
         conn = get_neighs(adata, "connectivities")
         n_neighbors = get_neighs_params(adata)["n_neighbors"]
         pseudotime = adata.obs["latent_time"]
@@ -503,8 +452,7 @@ class TestKernel:
 
         assert not np.allclose(T_1.A, T_2.A, rtol=_rtol)
 
-    def test_manual_combination(self):
-        adata = _adata.copy()
+    def test_manual_combination(self, adata):
         density_normalize = False
 
         vk = VelocityKernel(adata).compute_transition_matrix(
@@ -523,8 +471,7 @@ class TestKernel:
 
         np.testing.assert_allclose(T_comb_kernel.A, T_comb_manual.A, rtol=_rtol)
 
-    def test_manual_combination_dense_norm(self):
-        adata = _adata.copy()
+    def test_manual_combination_dense_norm(self, adata):
         density_normalize = True
 
         vk = VelocityKernel(adata).compute_transition_matrix(
@@ -543,8 +490,7 @@ class TestKernel:
 
         np.testing.assert_allclose(T_comb_kernel.A, T_comb_manual.A, rtol=_rtol)
 
-    def test_manual_combination_no_precomputed(self):
-        adata = _adata.copy()
+    def test_manual_combination_no_precomputed(self, adata):
         density_normalize = False
 
         vk = VelocityKernel(adata).compute_transition_matrix(
@@ -570,8 +516,7 @@ class TestKernel:
 
         np.testing.assert_allclose(T_comb_manual.A, T_comb_kernel.A, rtol=_rtol)
 
-    def test_manual_combination_backward(self):
-        adata = _adata.copy()
+    def test_manual_combination_backward(self, adata):
         backward, density_normalize = True, False
 
         vk = VelocityKernel(adata, backward=backward).compute_transition_matrix(
@@ -590,8 +535,7 @@ class TestKernel:
 
         np.testing.assert_allclose(T_comb_manual.A, T_comb_kernel.A, rtol=_rtol)
 
-    def test_manual_combination_backward_dense_norm(self):
-        adata = _adata.copy()
+    def test_manual_combination_backward_dense_norm(self, adata):
         backward, density_normalize = True, True
 
         vk = VelocityKernel(adata, backward=backward).compute_transition_matrix(
@@ -612,8 +556,7 @@ class TestKernel:
 
 
 class TestPreviousImplementation:
-    def test_foward(self):
-        adata = _adata.copy()
+    def test_foward(self, adata):
         density_normalize = False
         vk = VelocityKernel(adata).compute_transition_matrix(
             density_normalize=density_normalize
@@ -632,8 +575,7 @@ class TestPreviousImplementation:
 
         np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
 
-    def test_forward_manual_dense_norm(self):
-        adata = _adata.copy()
+    def test_forward_manual_dense_norm(self, adata):
         vk = VelocityKernel(adata).compute_transition_matrix(density_normalize=False)
         ck = ConnectivityKernel(adata).compute_transition_matrix(
             density_normalize=False
@@ -652,8 +594,7 @@ class TestPreviousImplementation:
 
         np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
 
-    def test_backward(self):
-        adata = _adata.copy()
+    def test_backward(self, adata):
         density_norm, backward = False, True
         vk = VelocityKernel(adata, backward=backward).compute_transition_matrix(
             density_normalize=density_norm
@@ -677,8 +618,7 @@ class TestPreviousImplementation:
 
         np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
 
-    def test_backward_manual_dense_norm(self):
-        adata = _adata.copy()
+    def test_backward_manual_dense_norm(self, adata):
         backward = True
         vk = VelocityKernel(adata, backward=backward).compute_transition_matrix(
             density_normalize=False
@@ -707,30 +647,29 @@ class TestPreviousImplementation:
 
 
 class TestKernelAddition:
-    def test_simple_addition(self):
-        vk, ck = create_kernels(_adata)  # diagonal + upper diag
+    def test_simple_addition(self, adata):
+        vk, ck = create_kernels(adata)  # diagonal + upper diag
 
         k = (vk + ck).compute_transition_matrix()
-        expected = np.eye(_adata.n_obs) * 0.75 + np.eye(_adata.n_obs, k=1) * 0.25
+        expected = np.eye(adata.n_obs) * 0.75 + np.eye(adata.n_obs, k=1) * 0.25
         expected[-1, -1] = 1
 
         np.testing.assert_allclose(k.transition_matrix.A, expected)
 
-    def test_addtion_with_constant(self):
-        vk, ck = create_kernels(_adata)  # diagonal + upper diag
+    def test_addtion_with_constant(self, adata):
+        vk, ck = create_kernels(adata)  # diagonal + upper diag
 
         k = (2 * vk + 3 * ck).compute_transition_matrix()
         expected = (
-            np.eye(_adata.n_obs) * (2 / 5)
-            + np.eye(_adata.n_obs) * (3 / 5) * 0.5
-            + np.eye(_adata.n_obs, k=1) * (3 / 5) * 0.5
+            np.eye(adata.n_obs) * (2 / 5)
+            + np.eye(adata.n_obs) * (3 / 5) * 0.5
+            + np.eye(adata.n_obs, k=1) * (3 / 5) * 0.5
         )
         expected[-1, -1] = 1
 
         np.testing.assert_allclose(k.transition_matrix.A, expected)
 
-    def test_addition_3_kernels(self):
-        adata = _adata.copy()
+    def test_addition_3_kernels(self, adata):
         vk, ck = create_kernels(adata)  # diagonal + upper diag
         vk1 = VelocityKernel(adata)
         vk1._transition_matrix = np.eye(adata.n_obs, k=-1) / 2 + np.eye(adata.n_obs) / 2
@@ -750,8 +689,7 @@ class TestKernelAddition:
 
         np.testing.assert_allclose(k.transition_matrix.A, expected)
 
-    def test_addition_adaptive(self):
-        adata = _adata.copy()
+    def test_addition_adaptive(self, adata):
         adata.uns["velocity_variances"] = vv = np.random.random(
             size=(adata.n_obs, adata.n_obs)
         )
@@ -767,8 +705,7 @@ class TestKernelAddition:
 
         np.testing.assert_allclose(k.transition_matrix.A, expected)
 
-    def test_addition_adaptive_constants(self):
-        adata = _adata.copy()
+    def test_addition_adaptive_constants(self, adata):
         a, b = np.random.uniform(0, 10, 2)
         s = a + b
         adata.uns["velocity_variances"] = vv = np.random.random(
@@ -786,8 +723,7 @@ class TestKernelAddition:
 
         np.testing.assert_allclose(k.transition_matrix.A, expected)
 
-    def test_addition_adaptive_wrong_variances(self):
-        adata = _adata.copy()
+    def test_addition_adaptive_wrong_variances(self, adata):
         a, b = np.random.uniform(0, 10, 2)
         s = a + b
         adata.uns["velocity_variances"] = np.random.random(
@@ -805,8 +741,7 @@ class TestKernelAddition:
 
         assert not np.allclose(k.transition_matrix.A, expected.A)
 
-    def test_addition_adaptive_4_kernels(self):
-        adata = _adata.copy()
+    def test_addition_adaptive_4_kernels(self, adata):
         a, b, c, d = np.random.uniform(0, 10, 4)
         s = a + b + c + d
         adata.uns["velocity_variances"] = vv = np.random.random(

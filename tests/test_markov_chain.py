@@ -4,16 +4,11 @@ import pandas as pd
 import cellrank as cr
 
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
-from _helpers import create_dummy_adata
-
-
-np.random.seed(42)
-_adata = create_dummy_adata(200)
 
 
 class TestMarkovChain:
-    def test_compute_lin_probs_keys_colors(self):
-        adata = _adata.copy()
+    def test_compute_lin_probs_keys_colors(self, adata_large):
+        adata = adata_large
         vk = VelocityKernel(adata).compute_transition_matrix()
         ck = ConnectivityKernel(adata).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
@@ -39,8 +34,8 @@ class TestMarkovChain:
 
         np.testing.assert_array_equal(arc_colors, lin_colors)
 
-    def test_manual_approx_rc_set(self):
-        adata = _adata.copy()
+    def test_manual_approx_rc_set(self, adata_large):
+        adata = adata_large
         vk = VelocityKernel(adata).compute_transition_matrix()
         ck = ConnectivityKernel(adata).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
