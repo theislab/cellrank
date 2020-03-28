@@ -2,18 +2,12 @@
 import cellrank as cr
 import matplotlib
 
-matplotlib.use("Agg")
 
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
-from _helpers import create_dummy_adata
-
-
-_adata = create_dummy_adata(50)
 
 
 class TestSimplePipeline:
-    def test_default_fwd_pipelne(self):
-        adata = _adata.copy()
+    def test_default_fwd_pipelne(self, adata):
         vk = VelocityKernel(adata).compute_transition_matrix()
         ck = ConnectivityKernel(adata).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
@@ -35,8 +29,7 @@ class TestSimplePipeline:
 
         mc_fwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
 
-    def test_default_bwd_pipelne(self):
-        adata = _adata.copy()
+    def test_default_bwd_pipelne(self, adata):
         vk = VelocityKernel(adata, backward=True).compute_transition_matrix()
         ck = ConnectivityKernel(adata, backward=True).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
