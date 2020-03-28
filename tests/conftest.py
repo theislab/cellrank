@@ -17,8 +17,8 @@ def _create_dummy_adata(n_obs: int):
     scv.tl.velocity(adata, mode="dynamical")
     scv.tl.velocity_graph(adata)
     scv.tl.latent_time(adata)
-    adata.uns["connectivity_variances"] = np.ones((50, 50), dtype=np.float64)
-    adata.uns["velocity_variances"] = np.ones((50, 50), dtype=np.float64)
+    adata.uns["connectivity_variances"] = np.ones((n_obs, n_obs), dtype=np.float64)
+    adata.uns["velocity_variances"] = np.ones((n_obs, n_obs), dtype=np.float64)
 
     return adata
 
