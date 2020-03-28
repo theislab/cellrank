@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import cellrank as cr
-import matplotlib
 
 
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
