@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import unittest
+import pytest
 import numpy as np
 
 from cellrank.tools._constants import Direction, _transition
@@ -20,16 +20,16 @@ _adata = create_dummy_adata(50)
 _rtol = 1e-14
 
 
-class KernelInitializeTestCase(unittest.TestCase):
+class TestInitializeKernel:
     def test_none_transition_matrix(self):
         adata = _adata.copy()
         vk = VelocityKernel(adata)
         ck = ConnectivityKernel(adata)
         pk = PalantirKernel(adata, time_key="latent_time")
 
-        self.assertIsNone(vk._transition_matrix)
-        self.assertIsNone(ck._transition_matrix)
-        self.assertIsNone(pk._transition_matrix)
+        assert vk._transition_matrix is None
+        assert ck._transition_matrix is None
+        assert pk._transition_matrix is None
 
     def test_not_none_transition_matrix_compute(self):
         adata = _adata.copy()
@@ -37,9 +37,9 @@ class KernelInitializeTestCase(unittest.TestCase):
         ck = ConnectivityKernel(adata).compute_transition_matrix()
         pk = PalantirKernel(adata, time_key="latent_time").compute_transition_matrix()
 
-        self.assertIsNotNone(vk._transition_matrix)
-        self.assertIsNotNone(ck._transition_matrix)
-        self.assertIsNotNone(pk._transition_matrix)
+        assert vk.transition_matrix is not None  #
+        assert ck.transition_matrix is not None
+        assert pk.transition_matrix is not None
 
     def test_not_none_transition_matrix_accessor(self):
         adata = _adata.copy()
@@ -47,36 +47,36 @@ class KernelInitializeTestCase(unittest.TestCase):
         ck = ConnectivityKernel(adata)
         pk = PalantirKernel(adata, time_key="latent_time")
 
-        self.assertIsNotNone(vk.transition_matrix)
-        self.assertIsNotNone(ck.transition_matrix)
-        self.assertIsNotNone(pk.transition_matrix)
+        assert vk.transition_matrix is not None
+        assert ck.transition_matrix is not None
+        assert pk.transition_matrix is not None
 
     def test_adding_hidden_constants(self):
         adata = _adata.copy()
         k: KernelAdd = VelocityKernel(adata) + ConnectivityKernel(adata)
 
-        self.assertTrue(_is_bin_mult(k[0]))
-        self.assertIsInstance(k[0], KernelMul)
-        self.assertIsInstance(k[0][0], Constant)
-        self.assertIsInstance(k[0][1], VelocityKernel)
-        self.assertEqual(k[0][0].transition_matrix, 1.0)
+        assert _is_bin_mult(k[0])
+        assert isinstance(k[0], KernelMul)
+        assert isinstance(k[0][0], Constant)
+        assert isinstance(k[0][1], VelocityKernel)
+        assert k[0][0].transition_matrix == 1.0
 
-        self.assertTrue(_is_bin_mult(k[1]))
-        self.assertIsInstance(k[1], KernelMul)
-        self.assertIsInstance(k[1][0], Constant)
-        self.assertIsInstance(k[1][1], ConnectivityKernel)
-        self.assertEqual(k[1][0].transition_matrix, 1.0)
+        assert _is_bin_mult(k[1])
+        assert isinstance(k[1], KernelMul)
+        assert isinstance(k[1][0], Constant)
+        assert isinstance(k[1][1], ConnectivityKernel)
+        assert k[1][0].transition_matrix == 1.0
 
     def test_length(self):
         adata = _adata.copy()
         k: KernelAdd = VelocityKernel(adata) + ConnectivityKernel(adata)
-        self.assertTrue(len(k) == 2)
+        assert len(k) == 2
 
     def test_accessor_out_of_range(self):
         adata = _adata.copy()
         k: KernelAdd = VelocityKernel(adata) + ConnectivityKernel(adata)
 
-        with self.assertRaises(IndexError):
+        with pytest.raises(IndexError):
             _ = k[2]
 
     def test_parent(self):
@@ -85,15 +85,15 @@ class KernelInitializeTestCase(unittest.TestCase):
         ck = ConnectivityKernel(adata)
         k = vk + ck
 
-        self.assertIs(vk._parent._parent, k)  # invisible constants
-        self.assertIs(ck._parent._parent, k)
-        self.assertIs(k._parent, None)
+        assert vk._parent._parent is k  # invisible constants
+        assert ck._parent._parent is k
+        assert k._parent is None
 
     def test_uninitialized_both(self):
         adata = _adata.copy()
         k = VelocityKernel(adata) + ConnectivityKernel(adata)
 
-        with self.assertRaises(RuntimeError):
+        with pytest.raises(RuntimeError):
             k.compute_transition_matrix()
 
     def test_uninitialized_one(self):
@@ -103,7 +103,7 @@ class KernelInitializeTestCase(unittest.TestCase):
             + ConnectivityKernel(adata).compute_transition_matrix()
         )
 
-        with self.assertRaises(RuntimeError):
+        with pytest.raises(RuntimeError):
             k.compute_transition_matrix()
 
     def test_initialized(self):
@@ -114,39 +114,39 @@ class KernelInitializeTestCase(unittest.TestCase):
         )
         k.compute_transition_matrix()
 
-        self.assertIsNotNone(k.transition_matrix)
+        assert k.transition_matrix is not None
 
     def test_invalida_type(self):
         adata = _adata.copy()
 
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             _ = None * VelocityKernel(adata)
 
     def test_negative_constant(self):
         adata = _adata.copy()
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             _ = -1 * VelocityKernel(adata)
 
     def test_invalid_constant(self):
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             _ = Constant(None, None)
 
     def test_inversion(self):
         adata = _adata.copy()
         c = ConnectivityKernel(adata, backward=False)
-        self.assertFalse(c.backward)
+        assert not c.backward
 
         nc = ~c
-        self.assertTrue(nc.backward)
+        assert nc.backward
 
     def test_inversion_inplace(self):
         adata = _adata.copy()
         c = ConnectivityKernel(adata, backward=False)
 
-        self.assertFalse(c.backward)
+        assert not c.backward
         _ = ~c
-        self.assertTrue(c.backward)
+        assert c.backward
 
     def test_inversion_propagation(self):
         adata = _adata.copy()
@@ -154,15 +154,15 @@ class KernelInitializeTestCase(unittest.TestCase):
         v = VelocityKernel(adata, backward=False)
         k = ~(c + v)
 
-        self.assertTrue(c.backward)
-        self.assertTrue(v.backward)
-        self.assertTrue(k.backward)
+        assert c.backward
+        assert v.backward
+        assert k.backward
 
     def test_inversion_recalculation(self):
         adata = _adata.copy()
         c = ConnectivityKernel(adata).compute_transition_matrix()
         z = ~(c + c)
-        with self.assertRaises(RuntimeError):
+        with pytest.raises(RuntimeError):
             z.compute_transition_matrix()
 
     def test_inversion_preservation_of_constants(self):
@@ -172,39 +172,39 @@ class KernelInitializeTestCase(unittest.TestCase):
         b = ~a
         c.compute_transition_matrix()
 
-        self.assertEqual(a[0][0].transition_matrix, 3 / 4)
-        self.assertEqual(b[0][0].transition_matrix, 3 / 4)
-        self.assertEqual(a[1][0].transition_matrix, 1 / 4)
-        self.assertEqual(b[1][0].transition_matrix, 1 / 4)
+        assert a[0][0].transition_matrix == 3 / 4
+        assert b[0][0].transition_matrix == 3 / 4
+        assert a[1][0].transition_matrix == 1 / 4
+        assert b[1][0].transition_matrix == 1 / 4
 
     def test_addition_simple(self):
         adata = _adata.copy()
         k = VelocityKernel(adata) + ConnectivityKernel(adata)
 
-        self.assertIsInstance(k, KernelAdd)
+        assert isinstance(k, KernelAdd)
 
     def test_multiplication_simple(self):
         adata = _adata.copy()
         k = 10 * VelocityKernel(adata)
         c = _is_bin_mult(k)
 
-        self.assertIsInstance(c, Constant)
-        self.assertEqual(c.transition_matrix, 10)
+        assert isinstance(c, Constant)
+        assert c.transition_matrix == 10
 
     def test_multiplication_simple_normalization(self):
         adata = _adata.copy()
         k = 10 * VelocityKernel(adata).compute_transition_matrix()
         c = _is_bin_mult(k)
 
-        self.assertEqual(c.transition_matrix, 10)
+        assert c.transition_matrix == 10
 
     def test_constant(self):
         adata = _adata.copy()
         k = 9 * VelocityKernel(adata) + 1 * ConnectivityKernel(adata)
         c1, c2 = _is_bin_mult(k[0]), _is_bin_mult(k[1])
 
-        self.assertEqual(c1.transition_matrix, 9)
-        self.assertEqual(c2.transition_matrix, 1)
+        assert c1.transition_matrix == 9
+        assert c2.transition_matrix == 1
 
     def test_constant_normalize_2(self):
         adata = _adata.copy()
@@ -215,8 +215,8 @@ class KernelInitializeTestCase(unittest.TestCase):
         k.compute_transition_matrix()
         c1, c2 = _is_bin_mult(k[0]), _is_bin_mult(k[1])
 
-        self.assertEqual(c1.transition_matrix, 9 / 10)
-        self.assertEqual(c2.transition_matrix, 1 / 10)
+        assert c1.transition_matrix == 9 / 10
+        assert c2.transition_matrix == 1 / 10
 
     def test_constant_normalize_3(self):
         adata = _adata.copy()
@@ -228,9 +228,9 @@ class KernelInitializeTestCase(unittest.TestCase):
         k.compute_transition_matrix()
         c1, c2, c3 = _is_bin_mult(k[0]), _is_bin_mult(k[1]), _is_bin_mult(k[2])
 
-        self.assertEqual(c1.transition_matrix, 1 / 3)
-        self.assertEqual(c2.transition_matrix, 1 / 3)
-        self.assertEqual(c3.transition_matrix, 1 / 3)
+        assert c1.transition_matrix == 1 / 3
+        assert c2.transition_matrix == 1 / 3
+        assert c3.transition_matrix == 1 / 3
 
     def test_constant_wrong_parentheses(self):
         adata = _adata.copy()
@@ -241,9 +241,9 @@ class KernelInitializeTestCase(unittest.TestCase):
         k.compute_transition_matrix()
         c1, c2, c3 = _is_bin_mult(k[0]), _is_bin_mult(k[1]), _is_bin_mult(k[2])
 
-        self.assertEqual(c1.transition_matrix, 1 / 3)
-        self.assertEqual(c2.transition_matrix, 1 / 3)
-        self.assertEqual(c3.transition_matrix, 1 / 3)
+        assert c1.transition_matrix == 1 / 3
+        assert c2.transition_matrix == 1 / 3
+        assert c3.transition_matrix == 1 / 3
 
     def test_constant_correct_parentheses(self):
         adata = _adata.copy()
@@ -258,9 +258,9 @@ class KernelInitializeTestCase(unittest.TestCase):
             _is_bin_mult(k[1][1][1]),
         )
 
-        self.assertEqual(c1.transition_matrix, 1 / 2)
-        self.assertEqual(c2.transition_matrix, 1 / 2)
-        self.assertEqual(c3.transition_matrix, 1 / 2)
+        assert c1.transition_matrix == 1 / 2
+        assert c2.transition_matrix == 1 / 2
+        assert c3.transition_matrix == 1 / 2
 
     def test_adaptive_kernel_constants(self):
         adata = _adata.copy()
@@ -269,8 +269,8 @@ class KernelInitializeTestCase(unittest.TestCase):
         )
         k.compute_transition_matrix()
 
-        self.assertEqual(k[0][0]._value, 3 / 4)
-        self.assertEqual(k[1][0]._value, 1 / 4)
+        assert k[0][0]._value == 3 / 4
+        assert k[1][0]._value == 1 / 4
 
     def test_adaptive_kernel_complex(self):
         adata = _adata.copy()
@@ -284,13 +284,13 @@ class KernelInitializeTestCase(unittest.TestCase):
         )
         k.compute_transition_matrix()
 
-        self.assertEqual(k[0][0].transition_matrix, 4 / 6)
-        self.assertEqual(k[1][0].transition_matrix, 2 / 6)
-        self.assertEqual(k[0][1][0][0]._value, 3 / 4)
-        self.assertEqual(k[0][1][1][0]._value, 1 / 4)
+        assert k[0][0].transition_matrix == 4 / 6
+        assert k[1][0].transition_matrix == 2 / 6
+        assert k[0][1][0][0]._value == 3 / 4
+        assert k[0][1][1][0]._value == 1 / 4
 
 
-class KernelTestCase(unittest.TestCase):
+class TestKernel:
     def test_row_normalized(self):
         adata = _adata.copy()
         vk = VelocityKernel(adata)
@@ -347,7 +347,7 @@ class KernelTestCase(unittest.TestCase):
         transition_matrix(adata, density_normalize=False, backward=backward)
         T_2 = adata.uns[_transition(Direction.FORWARD)]["T"]
 
-        self.assertFalse(np.allclose(T_1.A, T_2.A, rtol=_rtol))
+        assert not (np.allclose(T_1.A, T_2.A, rtol=_rtol))
 
     def test_transition_backward(self):
         adata = _adata.copy()
@@ -389,7 +389,7 @@ class KernelTestCase(unittest.TestCase):
         transition_matrix(adata, density_normalize=False, backward=backward)
         T_2 = adata.uns[_transition(Direction.BACKWARD)]["T"]
 
-        self.assertFalse(np.allclose(T_1.A, T_2.A, rtol=_rtol))
+        assert not np.allclose(T_1.A, T_2.A, rtol=_rtol)
 
     def test_backward_negate(self):
         adata = _adata.copy()
@@ -451,7 +451,7 @@ class KernelTestCase(unittest.TestCase):
         )
         T_2 = adata.uns["T_bwd"]["T"]
 
-        self.assertFalse(np.allclose(T_1.A, T_2.A, rtol=_rtol))
+        assert not np.allclose(T_1.A, T_2.A, rtol=_rtol)
 
     def test_palantir(self):
         adata = _adata.copy()
@@ -501,7 +501,7 @@ class KernelTestCase(unittest.TestCase):
         )
         T_2 = pk.transition_matrix
 
-        self.assertFalse(np.allclose(T_1.A, T_2.A, rtol=_rtol))
+        assert not np.allclose(T_1.A, T_2.A, rtol=_rtol)
 
     def test_manual_combination(self):
         adata = _adata.copy()
@@ -611,7 +611,7 @@ class KernelTestCase(unittest.TestCase):
         np.testing.assert_allclose(T_comb_manual.A, T_comb_kernel.A, rtol=_rtol)
 
 
-class PreviousImplTestCase(unittest.TestCase):
+class TestPreviousImplementation:
     def test_foward(self):
         adata = _adata.copy()
         density_normalize = False
@@ -706,7 +706,7 @@ class PreviousImplTestCase(unittest.TestCase):
         np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
 
 
-class AdditionTestCase(unittest.TestCase):
+class TestKernelAddition:
     def test_simple_addition(self):
         vk, ck = create_kernels(_adata)  # diagonal + upper diag
 
@@ -803,7 +803,7 @@ class AdditionTestCase(unittest.TestCase):
             a / s * vk.transition_matrix + b / s * ck.transition_matrix
         )
 
-        self.assertFalse(np.allclose(k.transition_matrix.A, expected.A))
+        assert not np.allclose(k.transition_matrix.A, expected.A)
 
     def test_addition_adaptive_4_kernels(self):
         adata = _adata.copy()
@@ -827,7 +827,3 @@ class AdditionTestCase(unittest.TestCase):
         )
 
         np.testing.assert_allclose(k.transition_matrix.A, expected)
-
-
-if __name__ == "__main__":
-    unittest.main()
