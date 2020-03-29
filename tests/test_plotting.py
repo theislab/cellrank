@@ -3,9 +3,11 @@ from matplotlib.testing import setup
 from matplotlib.testing.compare import compare_images
 from pathlib import Path
 from anndata import AnnData
-from _helpes import create_model
+
+from _helpers import create_model
 
 import cellrank as cr
+import matplotlib.cm as cm
 
 setup()
 
@@ -18,7 +20,7 @@ TOL = 50
 cr.settings.figdir = FIGS
 
 
-def compare(*, kind: str = "adata", tol: int = TOL):
+def compare(*, kind: str = "adata", backward: bool = False, tol: int = TOL):
     def compare_fwd(
         func
     ):  # mustn't use functools.wraps - it think's `adata` is fixture
@@ -43,14 +45,14 @@ def compare(*, kind: str = "adata", tol: int = TOL):
 
         return decorator
 
-    if kind in ("adata", "mc_fwd"):
-        return compare_fwd
-    elif kind == "mc_bwd":
-        return compare_bwd
-    else:
+    if kind not in ("adata", "mc"):
         raise ValueError(
-            f"Invalid kind `{kind}`. Valid options are `'adata`, `'mc_fwd'`, `'mc_bwd'`."
+            f"Invalid kind `{kind!r}`. Valid options are `'adata'`, `'mc'`."
         )
+
+    if backward:
+        return compare_bwd
+    return compare_fwd
 
 
 class TestClusterFates:
@@ -141,7 +143,7 @@ class TestClusterLineages:
 
 class TestGeneTrend:
     @compare()
-    def test_gene_trend(self, adata: AnnData, fpath: Path):
+    def gene_trend(self, adata: AnnData, fpath: Path):
         model = create_model(adata)
         cr.pl.gene_trends(
             adata,
@@ -149,5 +151,96 @@ class TestGeneTrend:
             adata.var_names[:3],
             time_key="latent_time",
             data_key="Ms",
+            save=fpath,
+        )
+
+
+class TestHeatmap:
+    @compare()
+    def test_heatmap_lineages(self, adata: AnnData, fpath: Path):
+        model = create_model(adata)
+        cr.pl.heatmap(
+            adata,
+            model,
+            adata.var_names[:10],
+            kind="lineages",
+            time_key="latent_time",
+            save=fpath,
+        )
+
+    @compare()
+    def test_heatmap_genes(self, adata: AnnData, fpath: Path):
+        model = create_model(adata)
+        cr.pl.heatmap(
+            adata,
+            model,
+            adata.var_names[:10],
+            kind="genes",
+            time_key="latent_time",
+            save=fpath,
+        )
+
+    @compare(backward=True)
+    def test_heatmap_backward(self, adata: AnnData, fpath: Path):
+        model = create_model(adata)
+        cr.pl.heatmap(
+            adata,
+            model,
+            adata.var_names[:10],
+            kind="genes",
+            time_key="latent_time",
+            save=fpath,
+        )
+
+    @compare()
+    def test_heatmap_cluster_genes(self, adata: AnnData, fpath: Path):
+        model = create_model(adata)
+        cr.pl.heatmap(
+            adata,
+            model,
+            adata.var_names[:10],
+            kind="lineages",
+            time_key="latent_time",
+            cluster_genes=True,
+            save=fpath,
+        )
+
+    @compare()
+    def test_heatmap_lineage_height(self, adata: AnnData, fpath: Path):
+        model = create_model(adata)
+        cr.pl.heatmap(
+            adata,
+            model,
+            adata.var_names[:10],
+            kind="lineages",
+            time_key="latent_time",
+            lineage_height=0.2,
+            save=fpath,
+        )
+
+    @compare()
+    def test_heatmap_start_end_clusters(self, adata: AnnData, fpath: Path):
+        model = create_model(adata)
+        cr.pl.heatmap(
+            adata,
+            model,
+            adata.var_names[:10],
+            kind="lineages",
+            time_key="latent_time",
+            start_clusters="0",
+            end_clusters="1",
+            save=fpath,
+        )
+
+    @compare()
+    def test_heatmap_cmap(self, adata: AnnData, fpath: Path):
+        model = create_model(adata)
+        cr.pl.heatmap(
+            adata,
+            model,
+            adata.var_names[:5],
+            kind="genes",
+            time_key="latent_time",
+            cmap=cm.viridis,
             save=fpath,
         )
