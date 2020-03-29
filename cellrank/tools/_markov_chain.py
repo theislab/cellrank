@@ -648,7 +648,6 @@ class MarkovChain:
         Find approximate recurrent classes in the Markov chain.
 
         Filter to obtain recurrent states in left eigenvectors.
-
         Cluster to obtain approximate recurrent classes in right eigenvectors.
 
         Params
@@ -751,7 +750,9 @@ class MarkovChain:
         if percentile is not None:
             logg.debug("DEBUG: Filtering out cells according to percentile")
             if percentile < 0 or percentile > 100:
-                raise ValueError("Percentile must be in interval `[0, 100]`.")
+                raise ValueError(
+                    f"Percentile must be in interval `[0, 100]`, found `{percentile}`."
+                )
             cutoffs = np.percentile(np.abs(V_l), percentile, axis=0)
             ixs = np.sum(np.abs(V_l) < cutoffs, axis=1) < V_l.shape[1]
             X = X[ixs, :]
