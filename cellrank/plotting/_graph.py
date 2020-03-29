@@ -316,7 +316,7 @@ def graph(
     if ixs is not None:
         gdata = gdata[ixs, :][:, ixs]
     else:
-        ixs = list(range(len(gdata)))
+        ixs = list(range(gdata.shape[0]))
 
     start = logg.info("Creating graph")
     G = (
