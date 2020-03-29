@@ -998,7 +998,7 @@ class MarkovChain:
         cluster_key: Optional[str] = None,
         mode: str = "embedding",
         time_key: str = "latent_time",
-        cmap: Union[str, matplotlib.colors.ListedColorMap] = cm.viridis,
+        cmap: Union[str, matplotlib.colors.ListedColormap] = cm.viridis,
         **kwargs,
     ) -> None:
         """
