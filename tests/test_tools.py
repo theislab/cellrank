@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 
 from anndata import AnnData
-from cellrank.tools.kernels._kernel import KernelAdd
+from cellrank.tools.kernels import Kernel
 from _helpers import create_model
 
 
@@ -63,7 +63,7 @@ class TestLineages:
 
 class TextExcatMCTest:
     def test_invalid_cluster_obs(self, adata_cr: AnnData):
-        with pytest.raises(ValueError):
+        with pytest.raises(KeyError):
             cr.tl.exact_mc_perm_test(adata_cr, "foo", "bar", "baz")
 
     def test_invalid_clusters(self, adata_cr: AnnData):
@@ -131,10 +131,10 @@ class TestTransitionMatrix:
             cr.tl.transition_matrix(adata, vkey="foo")
 
     def test_invalid_weight(self, adata: AnnData):
-        with pytest.raises(KeyError):
+        with pytest.raises(ValueError):
             cr.tl.transition_matrix(adata, weight_connectivities=-1)
 
     def test_backward(self, adata: AnnData):
         kernel_add = cr.tl.transition_matrix(adata, backward=True)
 
-        assert isinstance(kernel_add, KernelAdd)
+        assert isinstance(kernel_add, Kernel)

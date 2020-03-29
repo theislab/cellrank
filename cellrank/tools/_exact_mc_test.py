@@ -42,7 +42,7 @@ def exact_mc_perm_test(
     cluster_key: str,
     cluster1: str,
     cluster2: str,
-    dist_measure: Callable[[Sequence[float], Sequence[float], ...], float] = euclidean,
+    dist_measure: Callable[[Sequence[float], Sequence[float]], float] = euclidean,
     n_perms: int = 1000,
     use_counts: bool = False,
     n_counts: int = 1000,
