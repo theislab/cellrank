@@ -627,7 +627,7 @@ class VelocityKernel(Kernel):
         if (vkey + "_graph" not in self.adata.uns.keys()) or (
             vkey + "_graph_neg" not in self.adata.uns.keys()
         ):
-            raise ValueError(
+            raise KeyError(
                 "Compute cosine correlations first as `scvelo.tl.velocity_graph()`."
             )
 
