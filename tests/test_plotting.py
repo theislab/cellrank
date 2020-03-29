@@ -3,6 +3,7 @@ from matplotlib.testing import setup
 from matplotlib.testing.compare import compare_images
 from pathlib import Path
 from anndata import AnnData
+from cellrank.tools import MarkovChain
 
 from _helpers import create_model
 
@@ -27,6 +28,8 @@ def compare(*, kind: str = "adata", backward: bool = False, tol: int = TOL):
         def decorator(self, adata_mc_fwd):
             adata, mc = adata_mc_fwd
             fpath = f"{func.__name__.replace('test_', '')}.png"
+            if fpath.startswith("scvelo_"):
+                fpath = fpath[7:]
             func(self, adata if kind == "adata" else mc, fpath)
 
             res = compare_images(ROOT / fpath, FIGS / fpath, tol=tol)
@@ -38,6 +41,8 @@ def compare(*, kind: str = "adata", backward: bool = False, tol: int = TOL):
         def decorator(self, adata_mc_bwd):
             adata, mc = adata_mc_bwd
             fpath = f"{func.__name__.replace('test_', '')}.png"
+            if fpath.startswith("scvelo_"):
+                fpath = fpath[7:]
             func(self, adata if kind == "adata" else mc, fpath)
 
             res = compare_images(ROOT / fpath, FIGS / fpath, tol=tol)
@@ -110,7 +115,13 @@ class TestClusterLineages:
     def test_cluster_lineage(self, adata: AnnData, fpath: Path):
         model = create_model(adata)
         cr.pl.cluster_lineage(
-            adata, model, adata.var_names[:10], "0", time_key="latent_time", save=fpath
+            adata,
+            model,
+            adata.var_names[:10],
+            "0",
+            time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
         )
 
     @compare()
@@ -123,6 +134,7 @@ class TestClusterLineages:
             "0",
             time_key="latent_time",
             norm=False,
+            dpi=DPI,
             save=fpath,
         )
 
@@ -135,9 +147,10 @@ class TestClusterLineages:
             adata.var_names[:10],
             "0",
             time_key="latent_time",
-            norm=False,
-            save=fpath,
             data_key="Ms",
+            norm=False,
+            dpi=DPI,
+            save=fpath,
         )
 
 
@@ -151,6 +164,7 @@ class TestGeneTrend:
             adata.var_names[:3],
             time_key="latent_time",
             data_key="Ms",
+            dpi=DPI,
             save=fpath,
         )
 
@@ -165,6 +179,7 @@ class TestHeatmap:
             adata.var_names[:10],
             kind="lineages",
             time_key="latent_time",
+            dpi=DPI,
             save=fpath,
         )
 
@@ -177,6 +192,7 @@ class TestHeatmap:
             adata.var_names[:10],
             kind="genes",
             time_key="latent_time",
+            dpi=DPI,
             save=fpath,
         )
 
@@ -189,6 +205,7 @@ class TestHeatmap:
             adata.var_names[:10],
             kind="genes",
             time_key="latent_time",
+            dpi=DPI,
             save=fpath,
         )
 
@@ -202,6 +219,7 @@ class TestHeatmap:
             kind="lineages",
             time_key="latent_time",
             cluster_genes=True,
+            dpi=DPI,
             save=fpath,
         )
 
@@ -215,6 +233,7 @@ class TestHeatmap:
             kind="lineages",
             time_key="latent_time",
             lineage_height=0.2,
+            dpi=DPI,
             save=fpath,
         )
 
@@ -229,6 +248,7 @@ class TestHeatmap:
             time_key="latent_time",
             start_clusters="0",
             end_clusters="1",
+            dpi=DPI,
             save=fpath,
         )
 
@@ -242,6 +262,7 @@ class TestHeatmap:
             kind="genes",
             time_key="latent_time",
             cmap=cm.viridis,
+            dpi=DPI,
             save=fpath,
         )
 
@@ -249,21 +270,28 @@ class TestHeatmap:
 class TestGraph:
     @compare()
     def test_graph(self, adata: AnnData, fpath: Path):
-        cr.pl.graph(adata, "T_fwd", ixs=range(10), save=fpath)
+        cr.pl.graph(adata, "T_fwd", ixs=range(10), dpi=DPI, save=fpath)
 
     @compare()
     def test_graph_layout(self, adata: AnnData, fpath: Path):
-        cr.pl.graph(adata, "T_fwd", ixs=range(10), layout="umap", save=fpath)
+        cr.pl.graph(adata, "T_fwd", ixs=range(10), layout="umap", dpi=DPI, save=fpath)
 
     @compare()
     def test_graph_keys(self, adata: AnnData, fpath: Path):
         cr.pl.graph(
-            adata, "T_fwd", ixs=range(10), keys=("outgoing", "self_loops"), save=fpath
+            adata,
+            "T_fwd",
+            ixs=range(10),
+            keys=("outgoing", "self_loops"),
+            dpi=DPI,
+            save=fpath,
         )
 
     @compare()
     def test_graph_edge_weight_scale(self, adata: AnnData, fpath: Path):
-        cr.pl.graph(adata, "T_fwd", ixs=range(10), edge_weight_scale=100, save=fpath)
+        cr.pl.graph(
+            adata, "T_fwd", ixs=range(10), edge_weight_scale=100, dpi=DPI, save=fpath
+        )
 
     @compare()
     def test_graph_show_arrows(self, adata: AnnData, fpath: Path):
@@ -273,20 +301,27 @@ class TestGraph:
             ixs=range(15),
             show_arrows=False,
             edge_weight_scale=100,
+            dpi=DPI,
             save=fpath,
         )
 
     @compare()
     def test_graph_curved_edges(self, adata: AnnData, fpath: Path):
-        cr.pl.graph(adata, "T_fwd", ixs=range(10), edge_use_curved=False, save=fpath)
+        cr.pl.graph(
+            adata, "T_fwd", ixs=range(10), edge_use_curved=False, dpi=DPI, save=fpath
+        )
 
     @compare()
     def test_graph_labels(self, adata: AnnData, fpath: Path):
-        cr.pl.graph(adata, "T_fwd", ixs=range(10), labels=range(10), save=fpath)
+        cr.pl.graph(
+            adata, "T_fwd", ixs=range(10), labels=range(10), dpi=DPI, save=fpath
+        )
 
     @compare()
     def test_graph_cmap(self, adata: AnnData, fpath: Path):
-        cr.pl.graph(adata, "T_fwd", ixs=range(10), cont_cmap=cm.inferno, save=fpath)
+        cr.pl.graph(
+            adata, "T_fwd", ixs=range(10), cont_cmap=cm.inferno, dpi=DPI, save=fpath
+        )
 
     @compare()
     def test_graph_top_n_edges_incoming(self, adata: AnnData, fpath: Path):
@@ -296,6 +331,7 @@ class TestGraph:
             ixs=range(10),
             top_n_edges=(2, True, "incoming"),
             edge_weight_scale=100,
+            dpi=DPI,
             save=fpath,
         )
 
@@ -307,12 +343,15 @@ class TestGraph:
             ixs=range(10),
             top_n_edges=(2, False, "outgoing"),
             edge_weight_scale=100,
+            dpi=DPI,
             save=fpath,
         )
 
     @compare()
     def test_graph_edge_normalize(self, adata: AnnData, fpath: Path):
-        cr.pl.graph(adata, "T_fwd", ixs=range(10), edge_normalize=True, save=fpath)
+        cr.pl.graph(
+            adata, "T_fwd", ixs=range(10), edge_normalize=True, dpi=DPI, save=fpath
+        )
 
     @compare()
     def test_graph_categorical_key(self, adata: AnnData, fpath: Path):
@@ -322,5 +361,60 @@ class TestGraph:
             ixs=range(10),
             keys=["clusters"],
             keylocs=["obs"],
+            dpi=DPI,
             save=fpath,
         )
+
+
+class TestMarkovChain:
+    @compare(kind="mc_fwd")
+    def test_mc_fwd_eig(self, mc_fwd: MarkovChain, fpath: Path):
+        mc_fwd.plot_eig(dpi=DPI, save=fpath)
+
+    @compare(kind="mc_fwd")
+    def test_mc_fwd_real_spectrum(self, mc_fwd: MarkovChain, fpath: Path):
+        mc_fwd.plot_real_spectrum(dpi=DPI, save=fpath)
+
+    @compare(kind="mc_fwd")
+    def test_scvelo_eig_embedding_clusters(self, mc_fwd: MarkovChain, fpath: Path):
+        mc_fwd.plot_eig_embedding(cluster_key="clusters", dpi=DPI, save=fpath)
+
+    @compare(kind="mc_fwd")
+    def test_scvelo_eig_embedding_left(self, mc_fwd: MarkovChain, fpath: Path):
+        mc_fwd.plot_eig_embedding(dpi=DPI, save=fpath)
+
+    @compare(kind="mc_fwd")
+    def test_scvelo_eig_embedding_right(self, mc_fwd: MarkovChain, fpath: Path):
+        mc_fwd.plot_eig_embedding(left=False, dpi=DPI, save=fpath)
+
+    @compare(kind="mc_fwd")
+    def test_scvelo_eig_embedding_use_2(self, mc_fwd: MarkovChain, fpath: Path):
+        mc_fwd.plot_eig_embedding(use=2, dpi=DPI, save=fpath)
+
+    @compare(kind="mc_fwd")
+    def test_scvelo_approx_rcs(self, mc_fwd: MarkovChain, fpath: Path):
+        mc_fwd.plot_approx_rcs(dpi=DPI, save=fpath)
+
+    @compare(kind="mc_fwd")
+    def test_scvelo_approx_rcs_clusters(self, mc_fwd: MarkovChain, fpath: Path):
+        mc_fwd.plot_approx_rcs(cluster_key="clusters", dpi=DPI, save=fpath)
+
+    @compare(kind="mc_fwd")
+    def test_scvelo_lin_probs(self, mc_fwd: MarkovChain, fpath: Path):
+        mc_fwd.plot_lin_probs(dpi=DPI, save=fpath)
+
+    @compare(kind="mc_fwd")
+    def test_scvelo_lin_probs_clusters(self, mc_fwd: MarkovChain, fpath: Path):
+        mc_fwd.plot_lin_probs(cluster_key="clusters", dpi=DPI, save=fpath)
+
+    @compare(kind="mc_fwd")
+    def test_scvelo_lin_probs_cmap(self, mc_fwd: MarkovChain, fpath: Path):
+        mc_fwd.plot_lin_probs(cmap=cm.inferno, dpi=DPI, save=fpath)
+
+    @compare(kind="mc_fwd")
+    def test_scvelo_lin_probs_lineages(self, mc_fwd: MarkovChain, fpath: Path):
+        mc_fwd.plot_lin_probs(lineages=["0"], dpi=DPI, save=fpath)
+
+    @compare(kind="mc_fwd")
+    def test_scvelo_lin_probs_time(self, mc_fwd: MarkovChain, fpath: Path):
+        mc_fwd.plot_lin_probs(mode="time", dpi=DPI, save=fpath)

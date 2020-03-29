@@ -16,6 +16,7 @@ class TestSimplePipeline:
         mc_fwd.compute_partition()
 
         mc_fwd.compute_eig()
+        mc_fwd.plot_eig()
         mc_fwd.plot_real_spectrum()
         mc_fwd.plot_eig_embedding()
         mc_fwd.plot_eig_embedding(left=False)
@@ -38,6 +39,8 @@ class TestSimplePipeline:
         mc_bwd.compute_partition()
 
         mc_bwd.compute_eig()
+        mc_bwd.plot_eig()
+        mc_bwd.plot_real_spectrum()
         mc_bwd.plot_eig_embedding()
         mc_bwd.plot_eig_embedding(left=False)
 

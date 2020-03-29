@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 from cellrank.tools.kernels._kernel import KernelExpression
 from typing import Optional, Tuple, Sequence, List, Any, Union, Dict, Iterable
+from pathlib import Path
 
+import matplotlib
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 import numpy as np
 import scvelo as scv
 
@@ -331,7 +334,7 @@ class MarkovChain:
         dpi: int = 100,
         figsize: Optional[Tuple[float, float]] = (5, 5),
         legend_loc: Optional[str] = None,
-        save: Optional[str] = None,
+        save: Optional[Union[str, Path]] = None,
     ) -> None:
         """
         Plot the top eigenvalues in complex plane.
@@ -402,7 +405,7 @@ class MarkovChain:
         dpi: int = 100,
         figsize: Optional[Tuple[float, float]] = None,
         legend_loc: Optional[str] = None,
-        save: Optional[str] = None,
+        save: Optional[Union[str, Path]] = None,
     ) -> None:
         """
         Plot the real part of the top eigenvalues.
@@ -479,6 +482,8 @@ class MarkovChain:
             Whether to show real or imaginary part for complex eigenvectors
         cluster_key
             Key from :paramref:`adata` `.obs` to plot cluster annotations.
+        kwargs
+            Keyword arguments for :func:`scvelo.pl.scatter`.
 
         Returns
         -------
@@ -993,7 +998,7 @@ class MarkovChain:
         cluster_key: Optional[str] = None,
         mode: str = "embedding",
         time_key: str = "latent_time",
-        color_map: str = "viridis",
+        cmap: Union[str, matplotlib.colors.ListedColorMap] = cm.viridis,
         **kwargs,
     ) -> None:
         """
@@ -1008,12 +1013,12 @@ class MarkovChain:
         mode
             Can be either `'embedding'` or `'time'`.
 
-            - If `'embedding'`, plots the embedding while coloring in the absorption probabilities.
-            - If `'time'`, plots the pseudotime on x-axis and the absorption probabilities on y-axis.
+            - If `'embedding'`, plot the embedding while coloring in the absorption probabilities.
+            - If `'time'`, plos the pseudotime on x-axis and the absorption probabilities on y-axis.
         time_key
             Key from `adata.obs` to use as a pseudotime ordering of the cells.
-        color_map
-            Colormap to use
+        cmap
+            Colormap to use.
         kwargs
             Keyword arguments for :func:`scvelo.pl.scatter`.
 
@@ -1060,7 +1065,7 @@ class MarkovChain:
 
         if mode == "embedding":
             scv.pl.scatter(
-                self._adata, color=color, title=titles, color_map=color_map, **kwargs
+                self._adata, color=color, title=titles, color_map=cmap, **kwargs
             )
         elif mode == "time":
             xlabel, ylabel = (
@@ -1070,7 +1075,7 @@ class MarkovChain:
             scv.pl.scatter(
                 self._adata,
                 x=t,
-                color_map=color_map,
+                color_map=cmap,
                 y=[a for a in A.T] + [self._dp],
                 title=titles,
                 xlabel=time_key,
