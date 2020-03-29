@@ -404,7 +404,7 @@ def similarity_plot(
     figsize: Tuple[float, float] = (12, 10),
     dpi: Optional[int] = None,
     final: bool = True,
-    save: Optional[str] = None,
+    save: Optional[Union[str, Path]] = None,
 ) -> None:
     """
     Compare clusters with respect to their absorption probabilities in a heatmap.

@@ -730,7 +730,7 @@ def _convert_to_categorical_series(
 
     Params
     ------
-    data
+    rc_classes
         Recurrent classes in the following format: `{'rc_0': ['cell_0', 'cell_1', ...], ...}`.
     cell_names
         List of valid cell names, usually taken from `adata.obs_names`.
