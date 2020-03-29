@@ -161,7 +161,7 @@ class Model(ABC):
         lineage_name: str,
         data_key: str = "X",
         final: bool = True,
-        time_key: str = "dpt_pseudotime",
+        time_key: str = "latent_time",
         start_cluster: Optional[str] = None,
         end_cluster: Optional[str] = None,
         threshold: float = 0.7,

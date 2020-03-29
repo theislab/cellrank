@@ -75,7 +75,7 @@ def cluster_lineage(
     final: bool = True,
     clusters: Optional[Sequence[str]] = None,
     n_points: int = 200,
-    time_key: str = "dpt_pseudotime",
+    time_key: str = "latent_time",
     cluster_key: str = "louvain",
     norm: bool = True,
     recompute: bool = False,
