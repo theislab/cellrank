@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 from matplotlib.testing import setup
 from matplotlib.testing.compare import compare_images
+from typing import Union
 from pathlib import Path
 from anndata import AnnData
 from cellrank.tools import MarkovChain
 
 from _helpers import create_model
 
+import os
 import cellrank as cr
 import matplotlib.cm as cm
 
@@ -21,7 +23,13 @@ TOL = 50
 cr.settings.figdir = FIGS
 
 
-def compare(*, kind: str = "adata", backward: bool = False, tol: int = TOL):
+def compare(
+    *,
+    kind: str = "adata",
+    backward: bool = False,
+    dirname: Union[str, Path] = None,
+    tol: int = TOL,
+):
     def compare_fwd(
         func
     ):  # mustn't use functools.wraps - it think's `adata` is fixture
@@ -32,8 +40,15 @@ def compare(*, kind: str = "adata", backward: bool = False, tol: int = TOL):
                 fpath = fpath[7:]
             func(self, adata if kind == "adata" else mc, fpath)
 
-            res = compare_images(ROOT / fpath, FIGS / fpath, tol=tol)
-            assert res is None, res
+            if dirname is not None:
+                for file in os.listdir(dirname):
+                    res = compare_images(
+                        ROOT / dirname / file, FIGS / dirname / file, tol=tol
+                    )
+                    assert res is None, res
+            else:
+                res = compare_images(ROOT / fpath, FIGS / fpath, tol=tol)
+                assert res is None, res
 
         return decorator
 
@@ -45,8 +60,15 @@ def compare(*, kind: str = "adata", backward: bool = False, tol: int = TOL):
                 fpath = fpath[7:]
             func(self, adata if kind == "adata" else mc, fpath)
 
-            res = compare_images(ROOT / fpath, FIGS / fpath, tol=tol)
-            assert res is None, res
+            if dirname is not None:
+                for file in os.listdir(dirname):
+                    res = compare_images(
+                        ROOT / dirname / file, FIGS / dirname / file, tol=tol
+                    )
+                    assert res is None, res
+            else:
+                res = compare_images(ROOT / fpath, FIGS / fpath, tol=tol)
+                assert res is None, res
 
         return decorator
 
@@ -154,21 +176,6 @@ class TestClusterLineages:
         )
 
 
-class TestGeneTrend:
-    @compare()
-    def gene_trend(self, adata: AnnData, fpath: Path):
-        model = create_model(adata)
-        cr.pl.gene_trends(
-            adata,
-            model,
-            adata.var_names[:3],
-            time_key="latent_time",
-            data_key="Ms",
-            dpi=DPI,
-            save=fpath,
-        )
-
-
 class TestHeatmap:
     @compare()
     def test_heatmap_lineages(self, adata: AnnData, fpath: Path):
@@ -263,6 +270,99 @@ class TestHeatmap:
             time_key="latent_time",
             cmap=cm.viridis,
             dpi=DPI,
+            save=fpath,
+        )
+
+
+class TestGeneTrend:
+    @compare(dirname="trends")
+    def test_trends(self, adata: AnnData, _: Path):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata, model, adata.var_names[:3], data_key="Ms", dirname="trends_simple"
+        )
+
+    @compare()
+    def test_trends_same_plot(self, adata: AnnData, fpath: Path):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata, model, adata.var_names[:3], data_key="Ms", same_plot=True, save=fpath
+        )
+
+    @compare()
+    def test_trends_hide_cells(self, adata: AnnData, fpath: Path):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            adata.var_names[0],
+            data_key="Ms",
+            same_plot=True,
+            hide_cells=True,
+            save=fpath,
+        )
+
+    @compare()
+    def test_trends_conf_int(self, adata: AnnData, fpath: Path):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            adata.var_names[0],
+            data_key="Ms",
+            same_plot=True,
+            conf_int=False,
+            save=fpath,
+        )
+
+    @compare(dirname="trends_sharey")
+    def test_trends_sharey(self, adata: AnnData, _: Path):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            adata.var_names[:3],
+            data_key="Ms",
+            sharey=False,
+            dirname="trends_sharey",
+        )
+
+    @compare()
+    def test_trends_cbar(self, adata: AnnData, fpath: Path):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            adata.var_names[0],
+            data_key="Ms",
+            same_plot=True,
+            show_cbar=False,
+            save=fpath,
+        )
+
+    @compare()
+    def test_trends_lineage_cmap(self, adata: AnnData, fpath: Path):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            adata.var_names[0],
+            data_key="Ms",
+            same_plot=True,
+            lineage_cmap=cm.Set2,
+            save=fpath,
+        )
+
+    @compare()
+    def test_trends_lineage_cell_color(self, adata: AnnData, fpath: Path):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            adata.var_names[0],
+            data_key="Ms",
+            same_plot=True,
+            cell_color="red",
             save=fpath,
         )
 
