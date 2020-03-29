@@ -56,7 +56,10 @@ def parallelize(
 
     if show_progress_bar:
         try:
-            from tqdm import tqdm_notebook as tqdm
+            try:
+                from tqdm.notebook import tqdm
+            except ImportError:
+                from tqdm import tqdm_notebook as tqdm
             import ipywidgets
         except ImportError:
             global _msg_shown
