@@ -60,7 +60,7 @@ def _root_final(
     percentile: int = 98,
     n_matches_min: Optional[int] = 1,
     n_start_end: Optional[int] = None,
-    show_plots=False,
+    show_plots: bool = False,
     copy: bool = False,
 ) -> Optional[AnnData]:
 
@@ -103,7 +103,7 @@ def find_root(
     weight_connectivities: float = None,
     percentile: int = 98,
     n_start_end: Optional[int] = None,
-    show_plots=False,
+    show_plots: bool = False,
     copy: bool = False,
 ) -> Optional[AnnData]:
     """
@@ -133,7 +133,7 @@ def find_final(
     weight_connectivities: float = None,
     percentile: int = 98,
     n_start_end: Optional[int] = None,
-    show_plots=False,
+    show_plots: bool = False,
     copy: bool = False,
 ) -> Optional[AnnData]:
     """
