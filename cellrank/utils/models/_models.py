@@ -240,14 +240,13 @@ class Model(ABC):
 
         if start_cluster is not None:
             assert start_cluster in self.adata.obsm[lineage_key].names, (
-                f"Start cluster `{start_cluster!r}` "
-                f"not found in "
-                f"`adata.obsm[{lineage_key!r}]`.names."
+                f"Start cluster `{start_cluster!r}` not found in "
+                f"`adata.obsm[{lineage_key!r}].names`."
             )
         if end_cluster is not None:
             assert end_cluster in self.adata.obsm[lineage_key].names, (
                 f"End cluster `{end_cluster!r}` not found in "
-                f"`adata.obsm[{lineage_key!r}]`.names."
+                f"`adata.obsm[{lineage_key!r}].names`."
             )
 
         x = np.array(self.adata.obs[time_key]).astype(np.float64)

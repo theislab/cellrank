@@ -93,7 +93,7 @@ def gene_trends(
     final
         Whether to consider cells going to final states or vice versa.
     start_clusters:
-        Name of a cluster where the start cell is. If specified, the trends start at the earlies
+        Name of a cluster where the start cell is. If specified, the trends start at the earliest
         pseudotime point within that cluster, otherwise they start from time `0`.
     end_clusters:
         Name of a cluster where the end cell is. If `None`, determine automatically.

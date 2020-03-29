@@ -366,6 +366,19 @@ class TestGeneTrend:
             save=fpath,
         )
 
+    @compare()
+    def test_trend_lw(self, adata: AnnData, fpath: Path):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            adata.var_names[0],
+            data_key="Ms",
+            same_plot=True,
+            lw=10,
+            save=fpath,
+        )
+
 
 class TestGraph:
     @compare()
@@ -462,6 +475,58 @@ class TestGraph:
             keys=["clusters"],
             keylocs=["obs"],
             dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_trends_size(self, adata: AnnData, fpath: Path):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            adata.var_names[0],
+            data_key="Ms",
+            same_plot=True,
+            size=30,
+            save=fpath,
+        )
+
+    @compare()
+    def test_trends_margins(self, adata: AnnData, fpath: Path):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            adata.var_names[0],
+            data_key="Ms",
+            same_plot=True,
+            margins=0.2,
+            save=fpath,
+        )
+
+    @compare()
+    def test_trends_cell_alpha(self, adata: AnnData, fpath: Path):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            adata.var_names[0],
+            data_key="Ms",
+            same_plot=True,
+            cell_alpha=0,
+            save=fpath,
+        )
+
+    @compare()
+    def test_trends_lineage_alpha(self, adata: AnnData, fpath: Path):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            adata.var_names[0],
+            data_key="Ms",
+            same_plot=True,
+            lineage_alpha=1,
             save=fpath,
         )
 
