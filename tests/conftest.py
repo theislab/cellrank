@@ -21,6 +21,8 @@ def _create_dummy_adata(n_obs: int):
     scv.tl.velocity(adata, mode="dynamical")
     scv.tl.velocity_graph(adata)
     scv.tl.latent_time(adata)
+    adata.uns["iroot"] = 0
+    sc.tl.dpt(adata)
     adata.uns["connectivity_variances"] = np.ones((n_obs, n_obs), dtype=np.float64)
     adata.uns["velocity_variances"] = np.ones((n_obs, n_obs), dtype=np.float64)
 
@@ -48,23 +50,17 @@ def _create_cellrank_adata(n_obs: int, *, backward: bool = False):
     return adata, mc
 
 
-# @pytest.fixture
+@pytest.fixture
 def adata(adata=_create_dummy_adata(50)):
     return adata.copy()
 
 
-# @pytest.fixture
+@pytest.fixture
 def adata_large(adata=_create_dummy_adata(200)):
     return adata.copy()
 
 
 @pytest.fixture
 def adata_mc_fwd(adata_mc=_create_cellrank_adata(100, backward=False)):
-    adata, mc = adata_mc
-    return adata.copy(), mc
-
-
-# @pytest.fixture
-def adata_mc_bwd(adata_mc=_create_cellrank_adata(100, backward=True)):
     adata, mc = adata_mc
     return adata.copy(), mc
