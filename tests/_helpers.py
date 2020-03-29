@@ -6,13 +6,13 @@ from cellrank.utils._utils import get_neighs_params, get_neighs
 
 from scipy.sparse import csr_matrix, issparse, spdiags
 from scipy.sparse.linalg import norm
-from typing import Optional
+from typing import Optional, Tuple
 from anndata import AnnData
 from scanpy import logging as logg
+from sklearn.svm import SVR
 
-import pytest
 import numpy as np
-import scvelo as scv
+import cellrank as cr
 
 
 def bias_knn(conn, pseudotime, n_neighbors, k=3):
@@ -257,7 +257,7 @@ def density_normalization(velo_graph, trans_graph):
     return velo_graph
 
 
-def _is_connected(c):
+def _is_connected(c) -> bool:
     from scipy.sparse import issparse
     import networkx as nx
 
@@ -266,7 +266,7 @@ def _is_connected(c):
     return nx.is_connected(G)
 
 
-def create_kernels(adata):
+def create_kernels(adata: AnnData) -> Tuple[VelocityKernel, ConnectivityKernel]:
     vk = VelocityKernel(adata)
     ck = ConnectivityKernel(adata)
     vk._transition_matrix = csr_matrix(np.eye(adata.n_obs))
@@ -279,3 +279,7 @@ def create_kernels(adata):
     )  # sanity check
 
     return vk, ck
+
+
+def create_model(adata: AnnData) -> cr.ul.models.SKLearnModel:
+    return cr.ul.models.SKLearnModel(adata, SVR(kernel="rbf"))
