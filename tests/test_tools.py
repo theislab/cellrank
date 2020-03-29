@@ -1,15 +1,11 @@
 # -*- coding: utf-8 -*-
-from typing import Tuple
-
 import cellrank as cr
 import pandas as pd
 import pytest
 
 from anndata import AnnData
-from scipy.spatial.distance import euclidean
+from cellrank.tools.kernels._kernel import KernelAdd
 from _helpers import create_model
-
-from cellrank.tools import MarkovChain
 
 
 class TestGeneImportance:
@@ -130,4 +126,15 @@ class TestRootFinal:
 
 
 class TestTransitionMatrix:
-    pass
+    def test_invalid_velocity_key(self, adata: AnnData):
+        with pytest.raises(KeyError):
+            cr.tl.transition_matrix(adata, vkey="foo")
+
+    def test_invalid_weight(self, adata: AnnData):
+        with pytest.raises(KeyError):
+            cr.tl.transition_matrix(adata, weight_connectivities=-1)
+
+    def test_backward(self, adata: AnnData):
+        kernel_add = cr.tl.transition_matrix(adata, backward=True)
+
+        assert isinstance(kernel_add, KernelAdd)
