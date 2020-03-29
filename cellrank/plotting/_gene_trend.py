@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from typing import Sequence, Optional, Tuple, Union, Mapping
 from types import MappingProxyType
+from pathlib import Path
 
 import os
 import matplotlib
@@ -57,7 +58,7 @@ def gene_trends(
     backend: str = "multiprocessing",
     ext: str = "png",
     suptitle: Optional[str] = None,
-    save: Optional[str] = None,
+    save: Optional[Union[str, Path]] = None,
     dirname: Optional[str] = None,
     plot_kwargs: Mapping = MappingProxyType({}),
     show_progres_bar: bool = True,

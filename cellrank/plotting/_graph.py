@@ -2,6 +2,7 @@
 from copy import deepcopy
 from types import MappingProxyType
 from typing import Optional, Union, Dict, Tuple, Callable, Sequence
+from pathlib import Path
 
 import matplotlib
 import matplotlib as mpl
@@ -54,7 +55,7 @@ def graph(
     legend_loc: Optional[str] = "best",
     figsize: Tuple[float, float] = (15, 10),
     dpi: Optional[int] = None,
-    save: Optional[str] = None,
+    save: Optional[Union[str, Path]] = None,
     layout_kwargs: Dict = MappingProxyType({}),
 ) -> None:
     """

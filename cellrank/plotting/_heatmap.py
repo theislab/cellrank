@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from collections import Iterable, defaultdict
 from typing import Optional, Union, Sequence, Tuple
+from pathlib import Path
 
 import matplotlib as mpl
 import matplotlib.cm as cm
@@ -39,7 +40,7 @@ def heatmap(
     hspace: float = 0.25,
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
-    save: Optional[str] = None,
+    save: Optional[Union[str, Path]] = None,
     show_progress_bar: bool = True,
     **kwargs,
 ) -> None:
