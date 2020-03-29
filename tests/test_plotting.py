@@ -33,8 +33,8 @@ def compare(
     def compare_fwd(
         func
     ):  # mustn't use functools.wraps - it think's `adata` is fixture
-        def decorator(self, adata_mc_fwd):
-            adata, mc = adata_mc_fwd
+        def decorator(self, adata_mc):
+            adata, mc = adata_mc
             fpath = f"{func.__name__.replace('test_', '')}.png"
             if fpath.startswith("scvelo_"):
                 fpath = fpath[7:]
@@ -532,54 +532,54 @@ class TestGraph:
 
 
 class TestMarkovChain:
-    @compare(kind="mc_fwd")
-    def test_mc_fwd_eig(self, mc_fwd: MarkovChain, fpath: Path):
-        mc_fwd.plot_eig(dpi=DPI, save=fpath)
+    @compare(kind="mc")
+    def test_mc_eig(self, mc: MarkovChain, fpath: Path):
+        mc.plot_eig(dpi=DPI, save=fpath)
 
-    @compare(kind="mc_fwd")
-    def test_mc_fwd_real_spectrum(self, mc_fwd: MarkovChain, fpath: Path):
-        mc_fwd.plot_real_spectrum(dpi=DPI, save=fpath)
+    @compare(kind="mc")
+    def test_mc_real_spectrum(self, mc: MarkovChain, fpath: Path):
+        mc.plot_real_spectrum(dpi=DPI, save=fpath)
 
-    @compare(kind="mc_fwd")
-    def test_scvelo_eig_embedding_clusters(self, mc_fwd: MarkovChain, fpath: Path):
-        mc_fwd.plot_eig_embedding(cluster_key="clusters", dpi=DPI, save=fpath)
+    @compare(kind="mc")
+    def test_scvelo_eig_embedding_clusters(self, mc: MarkovChain, fpath: Path):
+        mc.plot_eig_embedding(cluster_key="clusters", dpi=DPI, save=fpath)
 
-    @compare(kind="mc_fwd")
-    def test_scvelo_eig_embedding_left(self, mc_fwd: MarkovChain, fpath: Path):
-        mc_fwd.plot_eig_embedding(dpi=DPI, save=fpath)
+    @compare(kind="mc")
+    def test_scvelo_eig_embedding_left(self, mc: MarkovChain, fpath: Path):
+        mc.plot_eig_embedding(dpi=DPI, save=fpath)
 
-    @compare(kind="mc_fwd")
-    def test_scvelo_eig_embedding_right(self, mc_fwd: MarkovChain, fpath: Path):
-        mc_fwd.plot_eig_embedding(left=False, dpi=DPI, save=fpath)
+    @compare(kind="mc")
+    def test_scvelo_eig_embedding_right(self, mc: MarkovChain, fpath: Path):
+        mc.plot_eig_embedding(left=False, dpi=DPI, save=fpath)
 
-    @compare(kind="mc_fwd")
-    def test_scvelo_eig_embedding_use_2(self, mc_fwd: MarkovChain, fpath: Path):
-        mc_fwd.plot_eig_embedding(use=2, dpi=DPI, save=fpath)
+    @compare(kind="mc")
+    def test_scvelo_eig_embedding_use_2(self, mc: MarkovChain, fpath: Path):
+        mc.plot_eig_embedding(use=2, dpi=DPI, save=fpath)
 
-    @compare(kind="mc_fwd")
-    def test_scvelo_approx_rcs(self, mc_fwd: MarkovChain, fpath: Path):
-        mc_fwd.plot_approx_rcs(dpi=DPI, save=fpath)
+    @compare(kind="mc")
+    def test_scvelo_approx_rcs(self, mc: MarkovChain, fpath: Path):
+        mc.plot_approx_rcs(dpi=DPI, save=fpath)
 
-    @compare(kind="mc_fwd")
-    def test_scvelo_approx_rcs_clusters(self, mc_fwd: MarkovChain, fpath: Path):
-        mc_fwd.plot_approx_rcs(cluster_key="clusters", dpi=DPI, save=fpath)
+    @compare(kind="mc")
+    def test_scvelo_approx_rcs_clusters(self, mc: MarkovChain, fpath: Path):
+        mc.plot_approx_rcs(cluster_key="clusters", dpi=DPI, save=fpath)
 
-    @compare(kind="mc_fwd")
-    def test_scvelo_lin_probs(self, mc_fwd: MarkovChain, fpath: Path):
-        mc_fwd.plot_lin_probs(dpi=DPI, save=fpath)
+    @compare(kind="mc")
+    def test_scvelo_lin_probs(self, mc: MarkovChain, fpath: Path):
+        mc.plot_lin_probs(dpi=DPI, save=fpath)
 
-    @compare(kind="mc_fwd")
-    def test_scvelo_lin_probs_clusters(self, mc_fwd: MarkovChain, fpath: Path):
-        mc_fwd.plot_lin_probs(cluster_key="clusters", dpi=DPI, save=fpath)
+    @compare(kind="mc")
+    def test_scvelo_lin_probs_clusters(self, mc: MarkovChain, fpath: Path):
+        mc.plot_lin_probs(cluster_key="clusters", dpi=DPI, save=fpath)
 
-    @compare(kind="mc_fwd")
-    def test_scvelo_lin_probs_cmap(self, mc_fwd: MarkovChain, fpath: Path):
-        mc_fwd.plot_lin_probs(cmap=cm.inferno, dpi=DPI, save=fpath)
+    @compare(kind="mc")
+    def test_scvelo_lin_probs_cmap(self, mc: MarkovChain, fpath: Path):
+        mc.plot_lin_probs(cmap=cm.inferno, dpi=DPI, save=fpath)
 
-    @compare(kind="mc_fwd")
-    def test_scvelo_lin_probs_lineages(self, mc_fwd: MarkovChain, fpath: Path):
-        mc_fwd.plot_lin_probs(lineages=["0"], dpi=DPI, save=fpath)
+    @compare(kind="mc")
+    def test_scvelo_lin_probs_lineages(self, mc: MarkovChain, fpath: Path):
+        mc.plot_lin_probs(lineages=["0"], dpi=DPI, save=fpath)
 
-    @compare(kind="mc_fwd")
-    def test_scvelo_lin_probs_time(self, mc_fwd: MarkovChain, fpath: Path):
-        mc_fwd.plot_lin_probs(mode="time", dpi=DPI, save=fpath)
+    @compare(kind="mc")
+    def test_scvelo_lin_probs_time(self, mc: MarkovChain, fpath: Path):
+        mc.plot_lin_probs(mode="time", dpi=DPI, save=fpath)
