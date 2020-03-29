@@ -244,3 +244,83 @@ class TestHeatmap:
             cmap=cm.viridis,
             save=fpath,
         )
+
+
+class TestGraph:
+    @compare()
+    def test_graph(self, adata: AnnData, fpath: Path):
+        cr.pl.graph(adata, "T_fwd", ixs=range(10), save=fpath)
+
+    @compare()
+    def test_graph_layout(self, adata: AnnData, fpath: Path):
+        cr.pl.graph(adata, "T_fwd", ixs=range(10), layout="umap", save=fpath)
+
+    @compare()
+    def test_graph_keys(self, adata: AnnData, fpath: Path):
+        cr.pl.graph(
+            adata, "T_fwd", ixs=range(10), keys=("outgoing", "self_loops"), save=fpath
+        )
+
+    @compare()
+    def test_graph_edge_weight_scale(self, adata: AnnData, fpath: Path):
+        cr.pl.graph(adata, "T_fwd", ixs=range(10), edge_weight_scale=100, save=fpath)
+
+    @compare()
+    def test_graph_show_arrows(self, adata: AnnData, fpath: Path):
+        cr.pl.graph(
+            adata,
+            "T_fwd",
+            ixs=range(15),
+            show_arrows=False,
+            edge_weight_scale=100,
+            save=fpath,
+        )
+
+    @compare()
+    def test_graph_curved_edges(self, adata: AnnData, fpath: Path):
+        cr.pl.graph(adata, "T_fwd", ixs=range(10), edge_use_curved=False, save=fpath)
+
+    @compare()
+    def test_graph_labels(self, adata: AnnData, fpath: Path):
+        cr.pl.graph(adata, "T_fwd", ixs=range(10), labels=range(10), save=fpath)
+
+    @compare()
+    def test_graph_cmap(self, adata: AnnData, fpath: Path):
+        cr.pl.graph(adata, "T_fwd", ixs=range(10), cont_cmap=cm.inferno, save=fpath)
+
+    @compare()
+    def test_graph_top_n_edges_incoming(self, adata: AnnData, fpath: Path):
+        cr.pl.graph(
+            adata,
+            "T_fwd",
+            ixs=range(10),
+            top_n_edges=(2, True, "incoming"),
+            edge_weight_scale=100,
+            save=fpath,
+        )
+
+    @compare()
+    def test_graph_top_n_edges_outgoing(self, adata: AnnData, fpath: Path):
+        cr.pl.graph(
+            adata,
+            "T_fwd",
+            ixs=range(10),
+            top_n_edges=(2, False, "outgoing"),
+            edge_weight_scale=100,
+            save=fpath,
+        )
+
+    @compare()
+    def test_graph_edge_normalize(self, adata: AnnData, fpath: Path):
+        cr.pl.graph(adata, "T_fwd", ixs=range(10), edge_normalize=True, save=fpath)
+
+    @compare()
+    def test_graph_categorical_key(self, adata: AnnData, fpath: Path):
+        cr.pl.graph(
+            adata,
+            "T_fwd",
+            ixs=range(10),
+            keys=["clusters"],
+            keylocs=["obs"],
+            save=fpath,
+        )
