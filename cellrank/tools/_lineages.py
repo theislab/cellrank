@@ -67,7 +67,6 @@ def lineages(
     start = logg.info(f"Computing lineage probabilities towards `{rc_key}`")
 
     # get the transition matrix from the AnnData object and initialise MC object
-    # TODO: should kernel object read the transition matrix from AnnData?
     vk = VelocityKernel(adata, backward=not final)
     vk.transition_matrix = adata.uns[transition_key]["T"]
     mc = MarkovChain(vk)

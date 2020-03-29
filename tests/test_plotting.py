@@ -609,3 +609,25 @@ class TestMarkovChain:
     @compare(kind="mc")
     def test_scvelo_lin_probs_time(self, mc: MarkovChain, fpath: Path):
         mc.plot_lin_probs(mode="time", dpi=DPI, save=fpath)
+
+
+class TestLineages:
+    @compare()
+    def test_scvelo_lineages(self, adata: AnnData, fpath: Path):
+        cr.pl.lineages(adata, dpi=DPI, save=fpath)
+
+    @compare()
+    def test_scvelo_lineages_subset(self, adata: AnnData, fpath: Path):
+        cr.pl.lineages(adata, lineages=["1"], dpi=DPI, save=fpath)
+
+    @compare()
+    def test_scvelo_lineages_time(self, adata: AnnData, fpath: Path):
+        cr.pl.lineages(adata, mode="time", dpi=DPI, save=fpath)
+
+    @compare()
+    def test_scvelo_lineages_cmap(self, adata: AnnData, fpath: Path):
+        cr.pl.lineages(adata, cmap=cm.inferno, dpi=DPI, save=fpath)
+
+    @compare()
+    def test_scvelo_lineages_subset(self, adata: AnnData, fpath: Path):
+        cr.pl.lineages(adata, cluster_key="clusters", dpi=DPI, save=fpath)

@@ -34,7 +34,7 @@ def lineages(
     cluster_key: Optional[str] = None,
     mode: str = "embedding",
     time_key: str = "latent_time",
-    color_map: str = "viridis",
+    cmap: Union[str, mpl.colors.ListedColormap] = cm.viridis,
     **kwargs,
 ) -> None:
     """
@@ -67,7 +67,7 @@ def lineages(
         - If `'time'`, plots the pseudotime on x-axis and the absorption probabilities on y-axis.
     time_key
         Key from `adata.obs` to use as a pseudotime ordering of the cells.
-    color_map
+    cmap
         Colormap to use.
     kwargs
         Keyword arguments for :func:`scvelo.pl.scatter`.
@@ -93,7 +93,7 @@ def lineages(
         cluster_key=cluster_key,
         mode=mode,
         time_key=time_key,
-        cmap=color_map,
+        cmap=cmap,
         **kwargs,
     )
 
