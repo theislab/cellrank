@@ -17,7 +17,7 @@ import pytest
 setup()
 
 HERE: Path = Path(__file__).parent
-ROOT = HERE / "expected_images"
+GT_FIGS = HERE / "_ground_truth_figures"
 FIGS = HERE / "figures"
 DPI = 40
 TOL = 50
@@ -57,11 +57,11 @@ def compare(
             if dirname is not None:
                 for file in os.listdir(FIGS / dirname):
                     res = compare_images(
-                        ROOT / dirname / file, FIGS / dirname / file, tol=tol
+                        GT_FIGS / dirname / file, FIGS / dirname / file, tol=tol
                     )
                     assert res is None, res
             else:
-                res = compare_images(ROOT / fpath, FIGS / fpath, tol=tol)
+                res = compare_images(GT_FIGS / fpath, FIGS / fpath, tol=tol)
                 assert res is None, res
 
         return decorator
@@ -76,11 +76,11 @@ def compare(
             if dirname is not None:
                 for file in os.listdir(FIGS / dirname):
                     res = compare_images(
-                        ROOT / dirname / file, FIGS / dirname / file, tol=tol
+                        GT_FIGS / dirname / file, FIGS / dirname / file, tol=tol
                     )
                     assert res is None, res
             else:
-                res = compare_images(ROOT / fpath, FIGS / fpath, tol=tol)
+                res = compare_images(GT_FIGS / fpath, FIGS / fpath, tol=tol)
                 assert res is None, res
 
         return decorator
