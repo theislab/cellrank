@@ -3,6 +3,7 @@ from matplotlib.testing import setup
 from matplotlib.testing.compare import compare_images
 from pathlib import Path
 from anndata import AnnData
+from _helpes import create_model
 
 import cellrank as cr
 
@@ -17,18 +18,14 @@ TOL = 50
 cr.settings.figdir = FIGS
 
 
-def compare(*, kind: str = "adata", use_model: bool = False, tol: int = TOL):
+def compare(*, kind: str = "adata", tol: int = TOL):
     def compare_fwd(
         func
     ):  # mustn't use functools.wraps - it think's `adata` is fixture
-        def decorator(self, adata_mc_fwd, model):
+        def decorator(self, adata_mc_fwd):
             adata, mc = adata_mc_fwd
-            data = adata if kind == "adata" else mc
             fpath = f"{func.__name__.replace('test_', '')}.png"
-            if use_model:
-                func(self, data, fpath)
-            else:
-                func(self, data, fpath, model)
+            func(self, adata if kind == "adata" else mc, fpath)
 
             res = compare_images(ROOT / fpath, FIGS / fpath, tol=tol)
             assert res is None, res
@@ -36,14 +33,10 @@ def compare(*, kind: str = "adata", use_model: bool = False, tol: int = TOL):
         return decorator
 
     def compare_bwd(func):
-        def decorator(self, adata_mc_bwd, model):
+        def decorator(self, adata_mc_bwd):
             adata, mc = adata_mc_bwd
-            data = adata if kind == "adata" else mc
             fpath = f"{func.__name__.replace('test_', '')}.png"
-            if use_model:
-                func(self, data, fpath)
-            else:
-                func(self, data, fpath, model)
+            func(self, adata if kind == "adata" else mc, fpath)
 
             res = compare_images(ROOT / fpath, FIGS / fpath, tol=tol)
             assert res is None, res
@@ -85,7 +78,7 @@ class TestClusterFates:
             adata, "clusters", mode="paga_pie", basis="umap", dpi=DPI, save=fpath
         )
 
-    @compare(tol=100)
+    @compare()
     def test_paga(self, adata: AnnData, fpath: Path):
         cr.pl.cluster_fates(adata, "clusters", mode="paga", dpi=DPI, save=fpath)
 
@@ -111,4 +104,50 @@ class TestClusterFates:
 
 
 class TestClusterLineages:
-    pass
+    @compare()
+    def test_cluster_lineage(self, adata: AnnData, fpath: Path):
+        model = create_model(adata)
+        cr.pl.cluster_lineage(
+            adata, model, adata.var_names[:10], "0", time_key="latent_time", save=fpath
+        )
+
+    @compare()
+    def test_cluster_lineage_no_norm(self, adata: AnnData, fpath: Path):
+        model = create_model(adata)
+        cr.pl.cluster_lineage(
+            adata,
+            model,
+            adata.var_names[:10],
+            "0",
+            time_key="latent_time",
+            norm=False,
+            save=fpath,
+        )
+
+    @compare()
+    def test_cluster_lineage_data_key(self, adata: AnnData, fpath: Path):
+        model = create_model(adata)
+        cr.pl.cluster_lineage(
+            adata,
+            model,
+            adata.var_names[:10],
+            "0",
+            time_key="latent_time",
+            norm=False,
+            save=fpath,
+            data_key="Ms",
+        )
+
+
+class TestGeneTrend:
+    @compare()
+    def test_gene_trend(self, adata: AnnData, fpath: Path):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            adata.var_names[:3],
+            time_key="latent_time",
+            data_key="Ms",
+            save=fpath,
+        )
