@@ -93,7 +93,7 @@ def lineages(
         cluster_key=cluster_key,
         mode=mode,
         time_key=time_key,
-        color_map=color_map,
+        cmap=color_map,
         **kwargs,
     )
 
