@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from collections import OrderedDict as odict
 from math import ceil
+from pathlib import Path
 from types import MappingProxyType
 from typing import Optional, Sequence, Tuple, List, Mapping, Any, Union
 
@@ -37,7 +38,7 @@ def cluster_fates(
     show_cbar: bool = True,
     ncols: Optional[int] = None,
     sharey: bool = False,
-    save: Optional[str] = None,
+    save: Optional[Union[str, Path]] = None,
     legend_kwargs: Mapping[str, Any] = MappingProxyType({"loc": "best"}),
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
