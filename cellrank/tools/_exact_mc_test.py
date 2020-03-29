@@ -108,7 +108,7 @@ def exact_mc_perm_test(
     start = logg.info("Starting exact permutation test")
     np.random.seed(seed)
 
-    # Consider the two possible directions
+    # consider the two possible directions
     lin_key = str(LinKey.FORWARD if final else LinKey.BACKWARD)
 
     xs = adata[adata.obs[cluster_key] == cluster1].obsm[lin_key]
@@ -147,7 +147,7 @@ def exact_mc_perm_test(
 
         diff.append(dist)  # calculate distance
 
-    # Plot a histogram of the distances and the CDF
+    # plot a histogram of the distances and the CDF
     gs = plt.GridSpec(nrows=1, ncols=2, figure=plt.figure(None, (10, 5)))
 
     plt.subplot(gs[0])
@@ -158,9 +158,7 @@ def exact_mc_perm_test(
     cum = plt.hist(diff, density=True, bins=n_bins, cumulative=True)
     plt.title("CDF")
 
-    # print(f'The observed difference is: {diff[0]}.')
-
-    # Calculate the pvalue
+    # calculate the pvalue
     thr = [n for n, i in enumerate(cum[1]) if i >= diff[0]][0]
     p_value = 1 - cum[0][thr - 1]
     logg.info("    Finish", time=start)
@@ -210,6 +208,9 @@ def _counts(
         cluster_names = clusters
     else:
         cluster_names = adata.obs[cluster_key].cat.categories
+
+    if n_samples <= 0:
+        raise ValueError(f"Number of samples must be positive, found `{n_samples}`.")
 
     # Consider the two possible directions
     lin_key = str(LinKey.FORWARD if final else LinKey.BACKWARD)
