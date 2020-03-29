@@ -73,3 +73,8 @@ def adata_mc_fwd(
 ) -> Tuple[AnnData, MarkovChain]:
     adata, mc = adata_mc
     return adata.copy(), mc
+
+
+@pytest.fixture
+def adata_cr(adata_mc=_create_cellrank_adata(100, backward=False)) -> AnnData:
+    return adata_mc[0].copy()

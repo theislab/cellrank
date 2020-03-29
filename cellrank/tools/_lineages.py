@@ -32,8 +32,7 @@ def lineages(
     adata : :class:`anndata.AnnData`
         Annotated data object
     final
-        If `True`, computes final cells, i.e. end points.
-        Otherwise, computes root cells, i.e. starting points.
+        If `True`, computes final cells, i.e. end points. Otherwise, computes root cells, i.e. starting points.
     keys
         Determines which end/start-points to use by passing their names. Further, start/end-points can be combined.
         If e.g. the endpoints are ['Neuronal_1', 'Neuronal_1', 'Astrocytes', 'OPC'], then passing

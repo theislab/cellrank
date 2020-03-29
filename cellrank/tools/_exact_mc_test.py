@@ -2,6 +2,7 @@
 from typing import List, Callable, Dict, Optional, Sequence, Union, Tuple
 from anndata import AnnData
 from scanpy import logging as logg
+from scipy.spatial.distance import euclidean
 
 from cellrank.tools._constants import LinKey
 
@@ -38,10 +39,10 @@ def _get_counts(pd: Union[np.ndarray, List[float]], n: int) -> List[float]:
 
 def exact_mc_perm_test(
     adata: AnnData,
+    cluster_key: str,
     cluster1: str,
     cluster2: str,
-    dist_measure: Callable[[Sequence[float], Sequence[float]], float],
-    cluster_key: str,
+    dist_measure: Callable[[Sequence[float], Sequence[float], ...], float] = euclidean,
     n_perms: int = 1000,
     use_counts: bool = False,
     n_counts: int = 1000,
@@ -59,14 +60,14 @@ def exact_mc_perm_test(
     ------
     adata : :class:`anndata.AnnData`
         Annotated data object.
+    cluster_key
+        Key in :paramref:`adata` `.obs` that contains the clusters.
     cluster1
         Name of the first cluster to compare.
     cluster2
         Name of the second cluster to compare.
-    distr_measure : :class:`Callable`
+    dist_measure : :class:`Callable`
         Distance measure to use.
-    cluster_key
-        Key in :paramref:`adata` `.obs` that contains the clusters.
     n_perms
         Number of permutations to perform.
     use_counts
@@ -78,7 +79,7 @@ def exact_mc_perm_test(
     seed
         Random seed.
     final
-        Whether the evolution is calculated towards the endpoints or towards the startpoints.
+        If `True`, computes final cells, i.e. end points. Otherwise, computes root cells, i.e. starting points.
     kwargs
         Keyword arguments for :paramref:`dist_measure`.
 
@@ -89,9 +90,6 @@ def exact_mc_perm_test(
         the observed distance and the corresponding p-value.
     """
 
-    start = logg.info("Starting exact permutation test")
-    np.random.seed(seed)
-
     if cluster_key not in adata.obs:
         raise ValueError(f"Cluster key `{cluster_key!r}` not found in `adata.obs`.")
 
@@ -100,6 +98,15 @@ def exact_mc_perm_test(
 
     if cluster2 not in adata.obs[cluster_key].cat.categories:
         raise ValueError(f"Cluster `{cluster2!r}` is not a valid cluster.")
+
+    if n_perms <= 0:
+        raise ValueError(f"Argument `n_perms` must be positive, found `{n_perms}`.")
+
+    if n_counts <= 0:
+        raise ValueError(f"Argument `n_counts` must be positive, found `{n_counts}`.")
+
+    start = logg.info("Starting exact permutation test")
+    np.random.seed(seed)
 
     # Consider the two possible directions
     lin_key = str(LinKey.FORWARD if final else LinKey.BACKWARD)
@@ -171,7 +178,7 @@ def _counts(
     """
     Calculates the counts for each endpoint per cluster.
 
-    Randomly chooses with replacement `n` cells in each cluster and for each choice samples one point using its
+    Randomly chooses with replacement *n* cells in each cluster and for each choice samples one point using its
     probability distribution. Then counts the occurrences per each point.
 
     Params
@@ -185,7 +192,7 @@ def _counts(
     n_samples
         Number of cells to sample from per cluster.
     final
-        Whether the evolution is calculated towards endpoints or towards startpoints.
+        Whether the evolution is calculated towards end points or towards starting points.
 
     Returns
     -------
