@@ -62,7 +62,9 @@ def lineages(
 
     transition_key = _transition(direction)
     if transition_key not in adata.uns.keys():
-        raise ValueError("Please run `cellrank.tl.root_final` first.")
+        raise ValueError(
+            f"Compute {'final' if final else 'root'} cells first as `cellrank.tl.find_{'final' if final else 'root'}`."
+        )
 
     start = logg.info(f"Computing lineage probabilities towards `{rc_key}`")
 
@@ -71,7 +73,7 @@ def lineages(
     vk.transition_matrix = adata.uns[transition_key]["T"]
     mc = MarkovChain(vk)
 
-    # compute the absoprtion probabilities
+    # compute the absorption probabilities
     mc.compute_lin_probs(keys=keys)
 
     logg.info(f"Added key `{lin_key!r}` to `adata.obsm`\n    Finish", time=start)
