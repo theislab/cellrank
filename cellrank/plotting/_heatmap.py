@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from collections import Iterable, defaultdict
 from typing import Optional, Union, Sequence, Tuple
+from pathlib import Path
 
 import matplotlib as mpl
 import matplotlib.cm as cm
@@ -39,7 +40,7 @@ def heatmap(
     hspace: float = 0.25,
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
-    save: Optional[str] = None,
+    save: Optional[Union[str, Path]] = None,
     show_progress_bar: bool = True,
     **kwargs,
 ) -> None:
@@ -210,6 +211,7 @@ def heatmap(
                     col_cluster=False,
                 )
                 g.ax_heatmap.set_title(lname)
+                fig = g.fig
             else:
                 xs = np.array([m.x_test for m in models.values()])
                 x_min, x_max = np.nanmin(xs), np.nanmax(xs)
@@ -232,7 +234,7 @@ def heatmap(
         if not cluster_genes:
             ax.set_xlabel(xlabel)
 
-            return fig
+        return fig
 
     lineage_key = str(LinKey.FORWARD if final else LinKey.BACKWARD)
     if lineage_key not in adata.obsm:

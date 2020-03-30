@@ -2,6 +2,7 @@
 from copy import deepcopy
 from types import MappingProxyType
 from typing import Optional, Union, Dict, Tuple, Callable, Sequence
+from pathlib import Path
 
 import matplotlib
 import matplotlib as mpl
@@ -54,7 +55,7 @@ def graph(
     legend_loc: Optional[str] = "best",
     figsize: Tuple[float, float] = (15, 10),
     dpi: Optional[int] = None,
-    save: Optional[str] = None,
+    save: Optional[Union[str, Path]] = None,
     layout_kwargs: Dict = MappingProxyType({}),
 ) -> None:
     """
@@ -315,7 +316,7 @@ def graph(
     if ixs is not None:
         gdata = gdata[ixs, :][:, ixs]
     else:
-        ixs = list(range(len(gdata)))
+        ixs = list(range(gdata.shape[0]))
 
     start = logg.info("Creating graph")
     G = (

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from typing import Sequence, Optional, Tuple, Union, Mapping
 from types import MappingProxyType
+from pathlib import Path
 
 import os
 import matplotlib
@@ -33,8 +34,8 @@ def gene_trends(
     lineages: Optional[Union[str, Sequence[str]]] = None,
     data_key: str = "X",
     final: bool = True,
-    start_clusters: Union[str, Optional[Sequence[str]]] = None,
-    end_clusters: Union[str, Optional[Sequence[str]]] = None,
+    start_clusters: Optional[Union[str, Sequence[str]]] = None,
+    end_clusters: Optional[Union[str, Sequence[str]]] = None,
     conf_int: bool = True,
     same_plot: bool = False,
     hide_cells: bool = False,
@@ -57,7 +58,7 @@ def gene_trends(
     backend: str = "multiprocessing",
     ext: str = "png",
     suptitle: Optional[str] = None,
-    save: Optional[str] = None,
+    save: Optional[Union[str, Path]] = None,
     dirname: Optional[str] = None,
     plot_kwargs: Mapping = MappingProxyType({}),
     show_progres_bar: bool = True,
@@ -92,7 +93,7 @@ def gene_trends(
     final
         Whether to consider cells going to final states or vice versa.
     start_clusters:
-        Name of a cluster where the start cell is. If specified, the trends start at the earlies
+        Name of a cluster where the start cell is. If specified, the trends start at the earliest
         pseudotime point within that cluster, otherwise they start from time `0`.
     end_clusters:
         Name of a cluster where the end cell is. If `None`, determine automatically.

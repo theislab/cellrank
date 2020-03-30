@@ -2,6 +2,7 @@
 from cellrank.tools._constants import LinKey
 from cellrank.utils._utils import _minmax
 from cellrank.tools._utils import save_fig
+from cellrank.tools._lineage import Lineage
 
 from abc import ABC, abstractmethod
 from typing import Optional, Iterable, Tuple, Any
@@ -161,7 +162,7 @@ class Model(ABC):
         lineage_name: str,
         data_key: str = "X",
         final: bool = True,
-        time_key: str = "dpt_pseudotime",
+        time_key: str = "latent_time",
         start_cluster: Optional[str] = None,
         end_cluster: Optional[str] = None,
         threshold: float = 0.7,
@@ -212,43 +213,41 @@ class Model(ABC):
             - :paramref:`x_test`
         """
 
-        assert data_key in ["X", "obs"] + list(
-            self.adata.layers.keys()
-        ), f"Data key must be a key of `adata.layers`: `{list(self.adata.layers.keys())}`, '`obs`' or `'X'`."
-        assert (
-            time_key in self.adata.obs
-        ), f"Time key `{time_key!r}` not found in `adata.obs`."
+        if data_key not in ["X", "obs"] + list(self.adata.layers.keys()):
+            raise KeyError(
+                f"Data key must be a key of `adata.layers`: `{list(self.adata.layers.keys())}`, '`obs`' or `'X'`."
+            )
+        if time_key not in self.adata.obs:
+            raise KeyError(f"Time key `{time_key!r}` not found in `adata.obs`.")
 
         if data_key != "obs":
-            assert (
-                gene in self.adata.var_names
-            ), f"Gene `{gene!r}` not found in `adata.var_names`."
+            if gene not in self.adata.var_names:
+                raise KeyError(f"Gene `{gene!r}` not found in `adata.var_names`.")
         else:
-            assert (
-                gene in self.adata.obs
-            ), f"Unable to find key `{gene!r}` in `adata.obs`."
+            if gene not in self.adata.obs:
+                raise KeyError(f"Unable to find key `{gene!r}` in `adata.obs`.")
 
         lineage_key = str(LinKey.FORWARD if final else LinKey.BACKWARD)
-        assert (
-            lineage_key in self.adata.obsm
-        ), f"Lineages key `{lineage_key!r}` not found in `adata.obsm`."
+        if lineage_key not in self.adata.obsm:
+            raise KeyError(f"Lineage key `{lineage_key!r}` not found in `adata.obsm`.")
+        if not isinstance(self.adata.obsm[lineage_key], Lineage):
+            raise TypeError(
+                f"Expected `adata.obsm[{lineage_key}]` to be of type `cellrank.tl.Lineage`, found `{type(self.adata.obsm[lineage_key]).__name__}`."
+            )
 
         if lineage_name is not None:
-            assert (
-                lineage_name in self.adata.obsm[lineage_key].names
-            ), f"Lineage name `{lineage_name!r}` not found in `adata.obsm[{lineage_key!r}].names`."
+            _ = self.adata.obsm[lineage_key][lineage_name]
 
         if start_cluster is not None:
-            assert start_cluster in self.adata.obsm[lineage_key].names, (
-                f"Start cluster `{start_cluster!r}` "
-                f"not found in "
-                f"`adata.obsm[{lineage_key!r}]`.names."
-            )
+            if start_cluster not in self.adata.obsm[lineage_key].names:
+                raise KeyError(
+                    f"Start cluster `{start_cluster!r}` not found in `adata.obsm[{lineage_key!r}].names`."
+                )
         if end_cluster is not None:
-            assert end_cluster in self.adata.obsm[lineage_key].names, (
-                f"End cluster `{end_cluster!r}` not found in "
-                f"`adata.obsm[{lineage_key!r}]`.names."
-            )
+            if end_cluster not in self.adata.obsm[lineage_key].names:
+                raise KeyError(
+                    f"End cluster `{end_cluster!r}` not found in `adata.obsm[{lineage_key!r}].names`."
+                )
 
         x = np.array(self.adata.obs[time_key]).astype(np.float64)
         gene_ix = np.where(self.adata.var_names == gene)[0]
@@ -338,8 +337,12 @@ class Model(ABC):
         if attr_name is None:
             return
         if value is None:  # already called prepare
-            assert getattr(self, attr_name) is not None
-            assert getattr(self, attr_name).ndim == ndim
+            if not hasattr(self, attr_name):
+                raise AttributeError(f"No attribute `{attr_name!r}` found.")
+            if getattr(self, attr_name).ndim != ndim:
+                raise ValueError(
+                    f"Expected attribute `{attr_name!r}` to have `{ndim}` dimensions, found `{getattr(self, attr_name).ndim}` dimensions."
+                )
         else:
             setattr(self, attr_name, self._convert(value))
             if attr_name.startswith("_"):
@@ -372,7 +375,7 @@ class Model(ABC):
         w
             Weights of :paramref:`x`.
         kwargs
-            Keyword arguments
+            Keyword arguments.
 
         Returns
         -------
@@ -384,8 +387,14 @@ class Model(ABC):
         self._check("_y", y)
         self._check("_w", w, ndim=1)
 
-        assert self._x.shape == self._y.shape
-        assert self._y.shape[0] == self._w.shape[0]
+        if self._x.shape != self._y.shape:
+            raise ValueError(
+                f"Inputs and targets differ in shape: `{self._x.shape}` vs. `{self._y.shape}`."
+            )
+        if self._y.shape[0] != self._w.shape[0]:
+            raise ValueError(
+                f"Inputs and weights differ in shape: `{self._y.shape[0]}` vs. `{self._w.shape[0]}`."
+            )
 
         return self
 
@@ -685,7 +694,7 @@ class SKLearnModel(Model):
         if use_default:
             return default
         raise RuntimeError(
-            f"Unable to find function and no default specified, tried searching `{func_names}`."
+            f"Unable to find function and no default specified, tried searching `{list(func_names)}`."
         )
 
     def _find_weight_param(self, param_names: Iterable[str]) -> Optional[str]:
@@ -761,7 +770,7 @@ class GamMGCVModel(Model):
             import rpy2
         except ImportError:
             raise ImportError(
-                "Unable to import `rpy2`. Please install it as `pip install rpy2`."
+                "Unable to import `rpy2`, install it first as `pip install rpy2`."
             )
 
     def fit(
@@ -791,12 +800,10 @@ class GamMGCVModel(Model):
         df = pandas2ri.py2rpy(
             pd.DataFrame(np.c_[self.x, self.y][use_ixs, :], columns=["x", "y"])
         )
-        H = np.matrix(np.eye(n_splines)) / 100
         self._model = mgcv.gam(
             Formula(f'y ~ s(x, k={n_splines}, bs="cr")'),
             data=df,
             sp=self._sp,
-            # H=H,
             family=robjects.r.gaussian,
             weights=pd.Series(self.w[use_ixs]),
         )
@@ -811,9 +818,10 @@ class GamMGCVModel(Model):
         from rpy2 import robjects
         from rpy2.robjects import pandas2ri
 
-        assert (
-            self.model is not None
-        ), f"Trying to call an uninitialized model. Please call the `fit` function first."
+        if self.model is None:
+            raise RuntimeError(
+                f"Trying to call an uninitialized model. To initialize it, run `.fit()` first."
+            )
         self._check(key_added, x_test)
 
         pandas2ri.activate()

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from typing import Sequence, Dict, Optional, Tuple, Any, Union, Iterable, Mapping
 from collections import defaultdict
+from pathlib import Path
 from copy import copy
 
 import matplotlib.pyplot as plt
@@ -34,7 +35,7 @@ def lineages(
     cluster_key: Optional[str] = None,
     mode: str = "embedding",
     time_key: str = "latent_time",
-    color_map: str = "viridis",
+    cmap: Union[str, mpl.colors.ListedColormap] = cm.viridis,
     **kwargs,
 ) -> None:
     """
@@ -67,7 +68,7 @@ def lineages(
         - If `'time'`, plots the pseudotime on x-axis and the absorption probabilities on y-axis.
     time_key
         Key from `adata.obs` to use as a pseudotime ordering of the cells.
-    color_map
+    cmap
         Colormap to use.
     kwargs
         Keyword arguments for :func:`scvelo.pl.scatter`.
@@ -93,7 +94,7 @@ def lineages(
         cluster_key=cluster_key,
         mode=mode,
         time_key=time_key,
-        color_map=color_map,
+        cmap=cmap,
         **kwargs,
     )
 
@@ -236,7 +237,7 @@ def composition(
     key,
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[float] = None,
-    save: Optional[str] = None,
+    save: Optional[Union[str, Path]] = None,
 ) -> None:
     """
     Utility function to plot pie chart for categorical annotation.
@@ -435,7 +436,7 @@ def _trends_helper(
     cmap=None,
     fig: mpl.figure.Figure = None,
     ax: mpl.axes.Axes = None,
-    save: Optional[str] = None,
+    save: Optional[Union[str, Path]] = None,
     **kwargs,
 ) -> None:
     """
@@ -534,8 +535,8 @@ def _trends_helper(
         save_fig(fig, save)
 
 
-# modified from scVelo
 def _position_legend(ax: mpl.axes.Axes, legend_loc: str, **kwargs):
+    # modified from scVelo
     if legend_loc == "upper right":
         return ax.legend(loc="upper left", bbox_to_anchor=(1, 1), **kwargs)
     if legend_loc == "lower right":
@@ -545,4 +546,4 @@ def _position_legend(ax: mpl.axes.Axes, legend_loc: str, **kwargs):
     if legend_loc != "none":
         return ax.legend(loc=legend_loc, **kwargs)
 
-    raise ValueError(f"Invalid legend location `{legend_loc}`.")
+    raise ValueError(f"Invalid legend location `{legend_loc!r}`.")

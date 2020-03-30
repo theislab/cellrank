@@ -23,7 +23,7 @@ def transition_matrix(
 
     To learn more about the way in which the transition matrices are computed, see
     :class:`cellrank.tl.kernels.VelocityKernel` for the velocity-based transition matrix and
-    :class:`cellrank.tl.kernels.ConnectivityKernel` for the transcritomic-similarity-based transition matrix.
+    :class:`cellrank.tl.kernels.ConnectivityKernel` for the transcriptomic-similarity-based transition matrix.
 
     Params
     ------
@@ -37,12 +37,12 @@ def transition_matrix(
         Weight given to transcriptomic similarities as opposed to velocities. Must be in `[0, 1]`.
     density_normalize
         Whether to use density correction when computing the transition probabilities.
-        Density correction is done [Haghverdi16]_.
+        Density correction is done as by [Haghverdi16]_.
 
     Returns
     -------
     :class:`cellrank.tl.KernelExpression`
-        A kernel object.
+        A kernel expression object.
     """
 
     # initialise the kernel objects

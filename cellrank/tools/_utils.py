@@ -129,7 +129,7 @@ def cyto_trace(
     # check use_raw and copy
     adata_comp = adata.copy() if copy else adata
     if layer not in adata_comp.layers:
-        raise ValueError(f"Compute layer {layer} first")
+        raise KeyError(f"Compute layer `{layer!r}` first")
 
     start = logg.info(f"Computing CytoTrace score with `{adata.n_vars}` genes")
     if adata_comp.n_vars < 10000:
@@ -730,7 +730,7 @@ def _convert_to_categorical_series(
 
     Params
     ------
-    data
+    rc_classes
         Recurrent classes in the following format: `{'rc_0': ['cell_0', 'cell_1', ...], ...}`.
     cell_names
         List of valid cell names, usually taken from `adata.obs_names`.
