@@ -2,7 +2,7 @@
 from cellrank.tools._constants import LinKey
 from cellrank.utils._utils import _minmax
 from cellrank.tools._utils import save_fig
-from cellrank.tools import Lineage
+from cellrank.tools._lineage import Lineage
 
 from abc import ABC, abstractmethod
 from typing import Optional, Iterable, Tuple, Any
@@ -236,7 +236,7 @@ class Model(ABC):
             )
 
         if lineage_name is not None:
-            _ = self.adata.obs[lineage_key][:, lineage_name]
+            _ = self.adata.obsm[lineage_key][lineage_name]
 
         if start_cluster is not None:
             if start_cluster not in self.adata.obsm[lineage_key].names:
@@ -770,7 +770,7 @@ class GamMGCVModel(Model):
             import rpy2
         except ImportError:
             raise ImportError(
-                "Unable to import `rpy2`. Please install it as `pip install rpy2`."
+                "Unable to import `rpy2`, install it first as `pip install rpy2`."
             )
 
     def fit(
@@ -800,12 +800,10 @@ class GamMGCVModel(Model):
         df = pandas2ri.py2rpy(
             pd.DataFrame(np.c_[self.x, self.y][use_ixs, :], columns=["x", "y"])
         )
-        H = np.matrix(np.eye(n_splines)) / 100
         self._model = mgcv.gam(
             Formula(f'y ~ s(x, k={n_splines}, bs="cr")'),
             data=df,
             sp=self._sp,
-            # H=H,
             family=robjects.r.gaussian,
             weights=pd.Series(self.w[use_ixs]),
         )
