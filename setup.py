@@ -7,7 +7,7 @@ import os
 try:
     from cellrank import __author__, __email__, __version__
 except ImportError:
-    __author__ = "Marius Lange, Michal Kleni, Juan Luis Restrepo Lopez"
+    __author__ = "Marius Lange, Michal Klein, Juan Luis Restrepo Lopez"
     __email__ = "info@cellrank.org"
     __version__ = "1.1.0"
 
