@@ -18,13 +18,13 @@ from pandas.api.types import is_categorical_dtype
 
 
 def _assert_has_all_keys(adata: AnnData, direction: Direction):
-    assert _transition(direction) is adata.uns.keys()
+    assert _transition(direction) in adata.uns.keys()
 
     if direction == Direction.FORWARD:
         assert str(LinKey.FORWARD) in adata.obsm
         assert isinstance(adata.obsm[str(LinKey.FORWARD)], cr.tl.Lineage)
 
-        assert _colors(LinKey.FORWARD) is adata.uns.keys()
+        assert _colors(LinKey.FORWARD) in adata.uns.keys()
         assert _lin_names(LinKey.FORWARD) in adata.uns.keys()
 
         assert str(RcKey.FORWARD) in adata.obs
@@ -35,7 +35,7 @@ def _assert_has_all_keys(adata: AnnData, direction: Direction):
         assert str(LinKey.BACKWARD) in adata.obsm
         assert isinstance(adata.obsm[str(LinKey.BACKWARD)], cr.tl.Lineage)
 
-        assert _colors(LinKey.BACKWARD) is adata.uns.keys()
+        assert _colors(LinKey.BACKWARD) in adata.uns.keys()
         assert _lin_names(LinKey.BACKWARD) in adata.uns.keys()
 
         assert str(RcKey.BACKWARD) in adata.obs
@@ -54,8 +54,8 @@ class TestHighLevelPipeline:
 
     def test_bwd_pipeline(self, adata):
         cr.tl.find_root(adata, cluster_key="clusters")
-        cr.tl.lineages(adata)
-        cr.pl.lineages(adata)
+        cr.tl.lineages(adata, final=False)
+        cr.pl.lineages(adata, final=False)
 
         _assert_has_all_keys(adata, Direction.BACKWARD)
 
