@@ -8,7 +8,7 @@ CellRank - Continuous Lineage Decisions Uncovered by RNA Velocity
    :width: 600px
    :align: center
 
-CellRank is a toolkit to uncover cellular development based on scRNA-seq data with RNA velocity annotation,
+**CellRank** is a toolkit to uncover cellular development based on scRNA-seq data with RNA velocity annotation,
 see `La Manno et al. (2018)`_ and `Bergen et al. (2019)`_.
 |br|
 In the figure above, we show the main features of CellRank applied to `pancreatic endocrinogenesis`_ -
@@ -34,7 +34,7 @@ CellRank requires Python3 version >= 3.6 and can be installed via::
 
 See the `documentation`_, which includes tutorial notebooks and a description of our complete API.
 
-CellRank is fully compatible with `scanpy`_ and `scvelo` and was developed in collaboration
+CellRank is fully compatible with `scanpy`_ and `scvelo`_ and was developed in collaboration
 between the `Theislab`_ and the `Peerlab`_.
 
 
