@@ -20,9 +20,10 @@ HERE: Path = Path(__file__).parent
 GT_FIGS = HERE / "_ground_truth_figures"
 FIGS = HERE / "figures"
 DPI = 40
-TOL = 200
+TOL = 150
 
 cr.settings.figdir = FIGS
+scv.settings.figdir = FIGS
 
 from packaging import version
 
