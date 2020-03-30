@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from setuptools import setup, find_namespace_packages
+from setuptools import setup, find_packages
 from pathlib import Path
 
 import os
@@ -28,8 +28,9 @@ setup(
     install_requires=list(
         map(str.strip, open(os.path.abspath("requirements.txt"), "r").read().split())
     ),
+    extra_requires=dict(test=["python-igprah", "louvain>=0.6"]),
     zip_safe=False,
-    packages=find_namespace_packages(),
+    packages=find_packages(),
     python_required=">=3.6",
     platforms=[],
     kewords=[],
