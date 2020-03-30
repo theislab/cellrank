@@ -166,10 +166,10 @@ class KernelExpression(ABC):
 
         logg.debug(f"DEBUG: Added `{key!r}` to `adata.uns`")
 
-    def __xor__(self, other) -> "KernelExpression":
+    def __xor__(self, other: "KernelExpression") -> "KernelExpression":
         return self.__rxor__(other)
 
-    def __rxor__(self, other) -> "KernelExpression":
+    def __rxor__(self, other: "KernelExpression") -> "KernelExpression":
         def convert(obj):
             if isinstance(obj, _adaptive_add_type):
                 if obj._variances is None:
@@ -230,10 +230,10 @@ class KernelExpression(ABC):
 
         return KernelAdaptiveAdd([s, o])
 
-    def __add__(self, other) -> "KernelExpression":
+    def __add__(self, other: "KernelExpression") -> "KernelExpression":
         return self.__radd__(other)
 
-    def __radd__(self, other) -> "KernelExpression":
+    def __radd__(self, other: "KernelExpression") -> "KernelExpression":
         if not isinstance(other, KernelExpression):
             raise TypeError(
                 f"Expected type `KernelExpression`, found `{other.__class__.__name__}`."
@@ -266,10 +266,14 @@ class KernelExpression(ABC):
 
         return KernelSimpleAdd([ss, oo])
 
-    def __rmul__(self, other) -> "KernelExpression":
+    def __rmul__(
+        self, other: Union[int, float, "KernelExpression"]
+    ) -> "KernelExpression":
         return self.__mul__(other)
 
-    def __mul__(self, other) -> "KernelExpression":
+    def __mul__(
+        self, other: Union[float, int, "KernelExpression"]
+    ) -> "KernelExpression":
         if isinstance(other, (int, float)):
             other = Constant(self.adata, other, backward=self.backward)
 
@@ -311,7 +315,7 @@ class KernelExpression(ABC):
 
         return KernelMul([s, o])
 
-    def __invert__(self) -> "KernelExpression":
+    def __invert__(self: "KernelExpression") -> "KernelExpression":
         # mustn't return a copy because transition matrix
         self._transition_matrix = None
         self._params = dict()
@@ -627,7 +631,7 @@ class VelocityKernel(Kernel):
         if (vkey + "_graph" not in self.adata.uns.keys()) or (
             vkey + "_graph_neg" not in self.adata.uns.keys()
         ):
-            raise ValueError(
+            raise KeyError(
                 "Compute cosine correlations first as `scvelo.tl.velocity_graph()`."
             )
 

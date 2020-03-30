@@ -114,4 +114,6 @@ docs/build
 # custom folders
 /local_resources
 tests/data
+tests/figures
+figures
 data

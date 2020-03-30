@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from collections import OrderedDict as odict
 from math import ceil
+from pathlib import Path
 from types import MappingProxyType
 from typing import Optional, Sequence, Tuple, List, Mapping, Any, Union
 
@@ -16,7 +17,7 @@ import scvelo as scv
 from anndata import AnnData
 from scanpy import logging as logg
 
-from cellrank.tools._cluster_fates import _cramers_v, _counts
+from cellrank.tools._exact_mc_test import _cramers_v, _counts
 from cellrank.tools._constants import LinKey
 from cellrank.plotting._utils import _position_legend
 from cellrank.tools._utils import save_fig
@@ -37,7 +38,7 @@ def cluster_fates(
     show_cbar: bool = True,
     ncols: Optional[int] = None,
     sharey: bool = False,
-    save: Optional[str] = None,
+    save: Optional[Union[str, Path]] = None,
     legend_kwargs: Mapping[str, Any] = MappingProxyType({"loc": "best"}),
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
@@ -401,8 +402,9 @@ def similarity_plot(
     fontsize: float = 14,
     rotation: float = 45,
     figsize: Tuple[float, float] = (12, 10),
+    dpi: Optional[int] = None,
     final: bool = True,
-    save: Optional[str] = None,
+    save: Optional[Union[str, Path]] = None,
 ) -> None:
     """
     Compare clusters with respect to their absorption probabilities in a heatmap.
@@ -434,6 +436,8 @@ def similarity_plot(
         Rotation of labels on x-axis.
     figsize
         Size of the figure.
+    dpi
+        Dots per inch.
     final
         Whether to consider cells going to final states or vice versa.
     save
@@ -464,7 +468,7 @@ def similarity_plot(
     ]
 
     # Plotting function
-    fig, ax = plt.subplots(figsize=figsize)
+    fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
 
     im = ax.imshow(sim, cmap=cmap)
 

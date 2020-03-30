@@ -39,9 +39,9 @@ def _lin_names(k: Union[str, LinKey]) -> str:
     return f"{k}_names"
 
 
-def _colors(k: str) -> str:
+def _colors(k: Union[str, LinKey]) -> str:
     return f"{k}_colors"
 
 
-def _probs(k: str) -> str:
+def _probs(k: Union[str, RcKey]) -> str:
     return f"{k}_probs"

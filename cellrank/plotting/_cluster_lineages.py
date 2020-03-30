@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 from collections import Iterable
 from types import MappingProxyType
-from typing import Sequence, Dict, Optional, Tuple
+from pathlib import Path
+from typing import Sequence, Dict, Optional, Tuple, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -74,7 +75,7 @@ def cluster_lineage(
     final: bool = True,
     clusters: Optional[Sequence[str]] = None,
     n_points: int = 200,
-    time_key: str = "dpt_pseudotime",
+    time_key: str = "latent_time",
     cluster_key: str = "louvain",
     norm: bool = True,
     recompute: bool = False,
@@ -86,7 +87,7 @@ def cluster_lineage(
     neighbors_kwargs: Dict = MappingProxyType({"use_rep": "X"}),
     louvain_kwargs: Dict = MappingProxyType({}),
     key_added: Optional[str] = None,
-    save: Optional[str] = None,
+    save: Optional[Union[str, Path]] = None,
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
     show_progress_bar: bool = True,

@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 from cellrank.tools.kernels._kernel import KernelExpression
 from typing import Optional, Tuple, Sequence, List, Any, Union, Dict, Iterable
+from pathlib import Path
 
+import matplotlib
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 import numpy as np
 import scvelo as scv
 
@@ -253,8 +256,8 @@ class MarkovChain:
             self._rec_classes = _make_cat(
                 rec_classes, self._n_states, self._adata.obs_names
             )
-            self._adata.obs[f"{self._rc_key}_trans_classes"] = self._trans_classes
             self._adata.obs[f"{self._rc_key}_rec_classes"] = self._rec_classes
+            self._adata.obs[f"{self._rc_key}_trans_classes"] = self._trans_classes
             logg.info(
                 f"Found `{(len(rec_classes))}` recurrent and `{len(trans_classes)}` transient classes\n"
                 f"Adding `.recurrent_classes`\n"
@@ -331,7 +334,7 @@ class MarkovChain:
         dpi: int = 100,
         figsize: Optional[Tuple[float, float]] = (5, 5),
         legend_loc: Optional[str] = None,
-        save: Optional[str] = None,
+        save: Optional[Union[str, Path]] = None,
     ) -> None:
         """
         Plot the top eigenvalues in complex plane.
@@ -402,7 +405,7 @@ class MarkovChain:
         dpi: int = 100,
         figsize: Optional[Tuple[float, float]] = None,
         legend_loc: Optional[str] = None,
-        save: Optional[str] = None,
+        save: Optional[Union[str, Path]] = None,
     ) -> None:
         """
         Plot the real part of the top eigenvalues.
@@ -479,6 +482,8 @@ class MarkovChain:
             Whether to show real or imaginary part for complex eigenvectors
         cluster_key
             Key from :paramref:`adata` `.obs` to plot cluster annotations.
+        kwargs
+            Keyword arguments for :func:`scvelo.pl.scatter`.
 
         Returns
         -------
@@ -643,7 +648,6 @@ class MarkovChain:
         Find approximate recurrent classes in the Markov chain.
 
         Filter to obtain recurrent states in left eigenvectors.
-
         Cluster to obtain approximate recurrent classes in right eigenvectors.
 
         Params
@@ -746,7 +750,9 @@ class MarkovChain:
         if percentile is not None:
             logg.debug("DEBUG: Filtering out cells according to percentile")
             if percentile < 0 or percentile > 100:
-                raise ValueError("Percentile must be in interval `[0, 100]`.")
+                raise ValueError(
+                    f"Percentile must be in interval `[0, 100]`, found `{percentile}`."
+                )
             cutoffs = np.percentile(np.abs(V_l), percentile, axis=0)
             ixs = np.sum(np.abs(V_l) < cutoffs, axis=1) < V_l.shape[1]
             X = X[ixs, :]
@@ -796,9 +802,8 @@ class MarkovChain:
             f"Adding `adata.uns[{_colors(self._rc_key)!r}]`\n"
             f"       `adata.obs[{_probs(self._rc_key)!r}]`\n"
             f"       `adata.obs[{self._rc_key!r}]`\n"
-            f"       `.approx_rcs_colors`\n"
-            f"       `.approx_rcs_probs`\n"
-            f"       `.approx_rcs`\n"
+            f"       `.approx_recurrent_classes_probabilities`\n"
+            f"       `.approx_recurrent_classes`\n"
             f"    Finish",
             time=start,
         )
@@ -993,7 +998,7 @@ class MarkovChain:
         cluster_key: Optional[str] = None,
         mode: str = "embedding",
         time_key: str = "latent_time",
-        color_map: str = "viridis",
+        cmap: Union[str, matplotlib.colors.ListedColormap] = cm.viridis,
         **kwargs,
     ) -> None:
         """
@@ -1008,12 +1013,12 @@ class MarkovChain:
         mode
             Can be either `'embedding'` or `'time'`.
 
-            - If `'embedding'`, plots the embedding while coloring in the absorption probabilities.
-            - If `'time'`, plots the pseudotime on x-axis and the absorption probabilities on y-axis.
+            - If `'embedding'`, plot the embedding while coloring in the absorption probabilities.
+            - If `'time'`, plos the pseudotime on x-axis and the absorption probabilities on y-axis.
         time_key
             Key from `adata.obs` to use as a pseudotime ordering of the cells.
-        color_map
-            Colormap to use
+        cmap
+            Colormap to use.
         kwargs
             Keyword arguments for :func:`scvelo.pl.scatter`.
 
@@ -1060,7 +1065,7 @@ class MarkovChain:
 
         if mode == "embedding":
             scv.pl.scatter(
-                self._adata, color=color, title=titles, color_map=color_map, **kwargs
+                self._adata, color=color, title=titles, color_map=cmap, **kwargs
             )
         elif mode == "time":
             xlabel, ylabel = (
@@ -1070,7 +1075,7 @@ class MarkovChain:
             scv.pl.scatter(
                 self._adata,
                 x=t,
-                color_map=color_map,
+                color_map=cmap,
                 y=[a for a in A.T] + [self._dp],
                 title=titles,
                 xlabel=time_key,
@@ -1084,7 +1089,7 @@ class MarkovChain:
 
     def compute_lineage_drivers(
         self,
-        lin_keys: Optional[Sequence] = None,
+        lin_names: Optional[Sequence] = None,
         cluster_key: Optional[str] = "louvain",
         clusters: Optional[Sequence] = None,
         layer: str = "X",
@@ -1130,28 +1135,21 @@ class MarkovChain:
             )
 
         # check all lin_keys exist in self.lin_names
-        if lin_keys is not None:
-            name_mask = np.array(
-                [name not in self._lin_probs.names for name in lin_keys]
-            )
-            if any(name_mask):
-                lin_keys = np.array(lin_keys)
-                raise ValueError(
-                    f"`Lineage keys `{list(lin_keys[name_mask])}` not found in `.lin_probs.names`."
-                )
+        if lin_names is not None:
+            _ = self._lin_probs[lin_names]
         else:
-            lin_keys = self._lin_probs.names
+            lin_names = self._lin_probs.names
 
         # check the cluster key exists in adata.obs and check that all clusters exist
         if cluster_key is not None and cluster_key not in self._adata.obs.keys():
-            raise ValueError(f"Key `{cluster_key!r}` not found in `adata.obs`.")
+            raise KeyError(f"Key `{cluster_key!r}` not found in `adata.obs`.")
 
         if clusters is not None:
             all_clusters = np.array(self._adata.obs[cluster_key].cat.categories)
             cluster_mask = np.array([name not in all_clusters for name in clusters])
             if any(cluster_mask):
-                raise ValueError(
-                    f"Clusters `{list(all_clusters[cluster_mask])}` not found in "
+                raise KeyError(
+                    f"Clusters `{list(np.array(clusters)[cluster_mask])}` not found in "
                     f"`adata.obs[{cluster_key!r}]`."
                 )
 
@@ -1177,13 +1175,13 @@ class MarkovChain:
             var_names = adata_comp.raw.var_names if use_raw else adata_comp.var_names
 
         start = logg.info(
-            f"Computing correlations for lineages `{lin_keys}` restricted to clusters `{clusters}` in "
+            f"Computing correlations for lineages `{lin_names}` restricted to clusters `{clusters}` in "
             f"layer `{layer}` with `use_raw={use_raw}`"
         )
 
         # loop over lineages
         lin_corrs = {}
-        for lineage in lin_keys:
+        for lineage in lin_names:
             y = lin_probs[:, lineage].X.squeeze()
             correlations = _vec_mat_corr(data, y)
 
@@ -1200,7 +1198,7 @@ class MarkovChain:
 
         field = "raw.var" if use_raw else "var"
         logg.info(
-            f"Adding gene correlations to `.adata.{field}`\n" f"    Finish", time=start
+            f"Adding gene correlations to `.adata.{field}`\n    Finish", time=start
         )
 
     def _get_lin_names_colors(

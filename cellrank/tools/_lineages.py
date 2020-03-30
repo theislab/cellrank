@@ -32,8 +32,7 @@ def lineages(
     adata : :class:`anndata.AnnData`
         Annotated data object
     final
-        If `True`, computes final cells, i.e. end points.
-        Otherwise, computes root cells, i.e. starting points.
+        If `True`, computes final cells, i.e. end points. Otherwise, computes root cells, i.e. starting points.
     keys
         Determines which end/start-points to use by passing their names. Further, start/end-points can be combined.
         If e.g. the endpoints are ['Neuronal_1', 'Neuronal_1', 'Astrocytes', 'OPC'], then passing
@@ -62,17 +61,18 @@ def lineages(
 
     transition_key = _transition(direction)
     if transition_key not in adata.uns.keys():
-        raise ValueError("Please run `cellrank.tl.root_final` first.")
+        raise ValueError(
+            f"Compute {'final' if final else 'root'} cells first as `cellrank.tl.find_{'final' if final else 'root'}`."
+        )
 
     start = logg.info(f"Computing lineage probabilities towards `{rc_key}`")
 
     # get the transition matrix from the AnnData object and initialise MC object
-    # TODO: should kernel object read the transition matrix from AnnData?
     vk = VelocityKernel(adata, backward=not final)
     vk.transition_matrix = adata.uns[transition_key]["T"]
     mc = MarkovChain(vk)
 
-    # compute the absoprtion probabilities
+    # compute the absorption probabilities
     mc.compute_lin_probs(keys=keys)
 
     logg.info(f"Added key `{lin_key!r}` to `adata.obsm`\n    Finish", time=start)

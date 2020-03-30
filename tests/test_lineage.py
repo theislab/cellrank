@@ -2,12 +2,12 @@
 from cellrank.tools import Lineage
 from cellrank.tools._utils import _create_categorical_colors
 
-import unittest
+import pytest
 import numpy as np
 import matplotlib.colors as colors
 
 
-class LineageCreationTestCase(unittest.TestCase):
+class TestLineageCreation:
     def test_creation(self):
         x = np.random.random((10, 3))
         names = ["foo", "bar", "baz"]
@@ -19,7 +19,7 @@ class LineageCreationTestCase(unittest.TestCase):
         np.testing.assert_array_equal(l.colors, np.array(colors))
 
     def test_wrong_number_of_dimensions(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             _ = Lineage(
                 np.random.random((10, 3, 1)),
                 names=["foo", "bar", "baz"],
@@ -27,7 +27,7 @@ class LineageCreationTestCase(unittest.TestCase):
             )
 
     def test_names_length_mismatch(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             _ = Lineage(
                 np.random.random((10, 3)),
                 names=["foo", "bar"],
@@ -35,7 +35,7 @@ class LineageCreationTestCase(unittest.TestCase):
             )
 
     def test_colors_length_mismatch(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             _ = Lineage(
                 np.random.random((10, 3)),
                 names=["foo", "bar", "baz"],
@@ -43,7 +43,7 @@ class LineageCreationTestCase(unittest.TestCase):
             )
 
     def test_wrong_colors(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             _ = Lineage(
                 np.random.random((10, 3)),
                 names=["foo", "bar", "baz"],
@@ -69,7 +69,7 @@ class LineageCreationTestCase(unittest.TestCase):
             colors=[(0, 0, 0), (0.5, 0.5, 0.5), (1, 1, 1)],
         )
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             l.colors = ["#ffffff", "#ffffff", "foo"]
 
     def test_names_setter(self):
@@ -91,7 +91,7 @@ class LineageCreationTestCase(unittest.TestCase):
             colors=[(0, 0, 0), (0.5, 0.5, 0.5), (1, 1, 1)],
         )
 
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             l.names = ["foo1", "bar1", 3]
 
     def test_names_setter_wrong_size(self):
@@ -101,7 +101,7 @@ class LineageCreationTestCase(unittest.TestCase):
             colors=[(0, 0, 0), (0.5, 0.5, 0.5), (1, 1, 1)],
         )
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             l.names = ["foo1", "bar1"]
 
     def test_names_setter_non_unique(self):
@@ -111,11 +111,11 @@ class LineageCreationTestCase(unittest.TestCase):
             colors=[(0, 0, 0), (0.5, 0.5, 0.5), (1, 1, 1)],
         )
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             l.names = ["foo1", "bar1", "bar1"]
 
     def test_non_unique_names(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             _ = Lineage(
                 np.random.random((10, 3, 1)),
                 names=["foo", "bar", "baz"],
@@ -123,7 +123,7 @@ class LineageCreationTestCase(unittest.TestCase):
             )
 
 
-class LineageAccessorTestCase(unittest.TestCase):
+class TestLineageAccessor:
     def test_subset_same_instance(self):
         x = np.random.random((10, 3))
         l = Lineage(
@@ -134,7 +134,7 @@ class LineageAccessorTestCase(unittest.TestCase):
 
         y = l[0, 0]
 
-        self.assertIsInstance(y, Lineage)
+        assert isinstance(y, Lineage)
 
     def test_singleton_column(self):
         x = np.random.random((10, 3))
@@ -183,9 +183,9 @@ class LineageAccessorTestCase(unittest.TestCase):
 
         y = l[0, "foo"]
 
-        self.assertIsInstance(l, Lineage)
-        self.assertEqual(y.shape, (1, 1))
-        self.assertEqual(x[0, 0], y[0, 0])
+        assert isinstance(l, Lineage)
+        assert y.shape == (1, 1)
+        assert x[0, 0] == y[0, 0]
 
     def test_mixed_columns(self):
         x = np.random.random((10, 3))
@@ -207,7 +207,7 @@ class LineageAccessorTestCase(unittest.TestCase):
             colors=[(0, 0, 0), (0.5, 0.5, 0.5), (1, 1, 1)],
         )
 
-        with self.assertRaises(KeyError):
+        with pytest.raises(KeyError):
             y = l["quux"]
 
     def test_row_subset_with_ints(self):
