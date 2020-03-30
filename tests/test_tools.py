@@ -138,3 +138,25 @@ class TestTransitionMatrix:
         kernel_add = cr.tl.transition_matrix(adata, backward=True)
 
         assert isinstance(kernel_add, Kernel)
+
+
+class TestCytoTrace:
+    def test_wrong_layer(self, adata: AnnData):
+        with pytest.raises(KeyError):
+            cr.tl.cyto_trace(adata, layer="foo")
+
+    def test_normal_run(self, adata: AnnData):
+        cr.tl.cyto_trace(adata)
+
+        assert "gcs" in adata.obs.keys()
+        assert "gene_corr" in adata.var.keys()
+        assert "correlates" in adata.var.keys()
+        assert adata.var["correlates"].sum() == 200
+
+    def test_normal_run_copy(self, adata: AnnData):
+        adata = cr.tl.cyto_trace(adata, copy=True)
+
+        assert "gcs" in adata.obs.keys()
+        assert "gene_corr" in adata.var.keys()
+        assert "correlates" in adata.var.keys()
+        assert adata.var["correlates"].sum() == 200

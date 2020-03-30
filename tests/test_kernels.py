@@ -27,7 +27,7 @@ class TestInitializeKernel:
         ck = ConnectivityKernel(adata).compute_transition_matrix()
         pk = PalantirKernel(adata, time_key="latent_time").compute_transition_matrix()
 
-        assert vk.transition_matrix is not None  #
+        assert vk.transition_matrix is not None
         assert ck.transition_matrix is not None
         assert pk.transition_matrix is not None
 

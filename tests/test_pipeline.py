@@ -5,7 +5,11 @@ import cellrank as cr
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
 
 
-class TestSimplePipeline:
+class TestHighLevelPipeline:
+    pass
+
+
+class TestLowLevelPipeline:
     def test_default_fwd_pipelne(self, adata):
         vk = VelocityKernel(adata).compute_transition_matrix()
         ck = ConnectivityKernel(adata).compute_transition_matrix()
