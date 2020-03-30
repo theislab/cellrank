@@ -256,8 +256,8 @@ class MarkovChain:
             self._rec_classes = _make_cat(
                 rec_classes, self._n_states, self._adata.obs_names
             )
-            self._adata.obs[f"{self._rc_key}_trans_classes"] = self._trans_classes
             self._adata.obs[f"{self._rc_key}_rec_classes"] = self._rec_classes
+            self._adata.obs[f"{self._rc_key}_trans_classes"] = self._trans_classes
             logg.info(
                 f"Found `{(len(rec_classes))}` recurrent and `{len(trans_classes)}` transient classes\n"
                 f"Adding `.recurrent_classes`\n"
@@ -802,9 +802,8 @@ class MarkovChain:
             f"Adding `adata.uns[{_colors(self._rc_key)!r}]`\n"
             f"       `adata.obs[{_probs(self._rc_key)!r}]`\n"
             f"       `adata.obs[{self._rc_key!r}]`\n"
-            f"       `.approx_rcs_colors`\n"
-            f"       `.approx_rcs_probs`\n"
-            f"       `.approx_rcs`\n"
+            f"       `.approx_recurrent_classes_probabilities`\n"
+            f"       `.approx_recurrent_classes`\n"
             f"    Finish",
             time=start,
         )
@@ -1090,7 +1089,7 @@ class MarkovChain:
 
     def compute_lineage_drivers(
         self,
-        lin_keys: Optional[Sequence] = None,
+        lin_names: Optional[Sequence] = None,
         cluster_key: Optional[str] = "louvain",
         clusters: Optional[Sequence] = None,
         layer: str = "X",
@@ -1136,28 +1135,21 @@ class MarkovChain:
             )
 
         # check all lin_keys exist in self.lin_names
-        if lin_keys is not None:
-            name_mask = np.array(
-                [name not in self._lin_probs.names for name in lin_keys]
-            )
-            if any(name_mask):
-                lin_keys = np.array(lin_keys)
-                raise ValueError(
-                    f"`Lineage keys `{list(lin_keys[name_mask])}` not found in `.lin_probs.names`."
-                )
+        if lin_names is not None:
+            _ = self._lin_probs[lin_names]
         else:
-            lin_keys = self._lin_probs.names
+            lin_names = self._lin_probs.names
 
         # check the cluster key exists in adata.obs and check that all clusters exist
         if cluster_key is not None and cluster_key not in self._adata.obs.keys():
-            raise ValueError(f"Key `{cluster_key!r}` not found in `adata.obs`.")
+            raise KeyError(f"Key `{cluster_key!r}` not found in `adata.obs`.")
 
         if clusters is not None:
             all_clusters = np.array(self._adata.obs[cluster_key].cat.categories)
             cluster_mask = np.array([name not in all_clusters for name in clusters])
             if any(cluster_mask):
-                raise ValueError(
-                    f"Clusters `{list(all_clusters[cluster_mask])}` not found in "
+                raise KeyError(
+                    f"Clusters `{list(np.array(clusters)[cluster_mask])}` not found in "
                     f"`adata.obs[{cluster_key!r}]`."
                 )
 
@@ -1183,13 +1175,13 @@ class MarkovChain:
             var_names = adata_comp.raw.var_names if use_raw else adata_comp.var_names
 
         start = logg.info(
-            f"Computing correlations for lineages `{lin_keys}` restricted to clusters `{clusters}` in "
+            f"Computing correlations for lineages `{lin_names}` restricted to clusters `{clusters}` in "
             f"layer `{layer}` with `use_raw={use_raw}`"
         )
 
         # loop over lineages
         lin_corrs = {}
-        for lineage in lin_keys:
+        for lineage in lin_names:
             y = lin_probs[:, lineage].X.squeeze()
             correlations = _vec_mat_corr(data, y)
 
@@ -1206,7 +1198,7 @@ class MarkovChain:
 
         field = "raw.var" if use_raw else "var"
         logg.info(
-            f"Adding gene correlations to `.adata.{field}`\n" f"    Finish", time=start
+            f"Adding gene correlations to `.adata.{field}`\n    Finish", time=start
         )
 
     def _get_lin_names_colors(
