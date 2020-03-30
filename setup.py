@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from setuptools import setup, find_namespace_packages
+from setuptools import setup, find_packages
 from pathlib import Path
 
 import os
@@ -7,9 +7,9 @@ import os
 try:
     from cellrank import __author__, __email__, __version__
 except ImportError:
-    __author__ = ""
-    __email__ = ""
-    __version__ = ""
+    __author__ = "Marius Lange, Michal Klein, Juan Luis Restrepo Lopez"
+    __email__ = "info@cellrank.org"
+    __version__ = "1.1.0"
 
 setup(
     name="cellrank",
@@ -20,7 +20,7 @@ setup(
     maintainer=__author__,
     maintainer_email=__email__,
     version=__version__,
-    description="Probabilistic Trajectory Inference using RNA Velocity.",
+    description="Continuous Lineage Decisions Uncovered by RNA Velocity",
     long_description=Path("README.rst").read_text("utf-8"),
     url="https://github.com/theislab/cellrank",
     download_url="https://github.com/theislab/cellrank",
@@ -28,8 +28,9 @@ setup(
     install_requires=list(
         map(str.strip, open(os.path.abspath("requirements.txt"), "r").read().split())
     ),
+    extras_require=dict(test=["python-igraph", "louvain>=0.6", "Pillow"]),
     zip_safe=False,
-    packages=find_namespace_packages(),
+    packages=find_packages(),
     python_required=">=3.6",
     platforms=[],
     kewords=[],

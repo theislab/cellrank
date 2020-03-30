@@ -6,7 +6,6 @@ python:
 env:
     - MPLBACKEND=Agg
 install:
-    - pip3 install -r requirements.txt
-    - pip3 install .
+    - pip install -e .[test]
 script:
-    - pytest
+    - pytest --ignore tests/_ground_truth_figures

@@ -4,13 +4,16 @@ from cellrank.tools._constants import _transition, Direction
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.utils._utils import get_neighs_params, get_neighs
 
+from pathlib import Path
+from PIL import Image
 from scipy.sparse import csr_matrix, issparse, spdiags
 from scipy.sparse.linalg import norm
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 from anndata import AnnData
 from scanpy import logging as logg
 from sklearn.svm import SVR
 
+import os
 import numpy as np
 import cellrank as cr
 
@@ -283,3 +286,25 @@ def create_kernels(adata: AnnData) -> Tuple[VelocityKernel, ConnectivityKernel]:
 
 def create_model(adata: AnnData) -> cr.ul.models.SKLearnModel:
     return cr.ul.models.SKLearnModel(adata, SVR(kernel="rbf"))
+
+
+def resize_images_to_same_sizes(
+    expected_image_path: Union[str, Path],
+    actual_image_path: Union[str, Path],
+    kind: str = "actual_to_expected",
+) -> None:
+    if not os.path.isfile(actual_image_path):
+        raise OSError(f"Actual image path `{actual_image_path!r}` does not exist.")
+    if not os.path.isfile(expected_image_path):
+        raise OSError(f"Expected image path `{expected_image_path!r}` does not exist.")
+    expected_image = Image.open(expected_image_path)
+    actual_image = Image.open(actual_image_path)
+    if expected_image.size != actual_image.size:
+        if kind == "actual_to_expected":
+            actual_image.resize(expected_image.size).save(actual_image_path)
+        elif kind == "expected_to_actual":
+            expected_image.resize(actual_image.size).save(expected_image)
+        else:
+            raise ValueError(
+                f"Invalid kind of conversion `{kind!r}`. Valid options are `'actual_to_expected'`, `'expected_to_actual'`."
+            )
