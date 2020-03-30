@@ -9,9 +9,9 @@ CellRank - Continuous Lineage Decisions Uncovered by RNA Velocity
    :align: center
 
 **CellRank** is a toolkit to uncover cellular development based on scRNA-seq data with RNA velocity annotation,
-see `[Manno18]`_ and `[Bergen19]`_.
+see [Manno18]_ and [Bergen19]_.
 |br|
-In the figure above, we show the main features of CellRank applied to `[Panc19]`_ -
+In the figure above, we show the main features of CellRank applied to [Panc19]_ -
 starting from RNA velocities **(a)**, we infer root cells **(b)** and final cells **(c)**, and we compute
 how likely each cell is to develop towards each of the identified groups of final cells **(d)**.
 See our `tutorial`_ to learn how to apply CellRank to your own data.
