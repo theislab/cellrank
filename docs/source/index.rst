@@ -14,6 +14,7 @@ see [Manno18]_ and [Bergen19]_.
 In the figure above, we show the main features of CellRank applied to [Panc19]_ -
 starting from RNA velocities **(a)**, we infer root cells **(b)** and final cells **(c)**, and we compute
 how likely each cell is to develop towards each of the identified groups of final cells **(d)**.
+|br|
 See our `tutorial`_ to learn how to apply CellRank to your own data.
 
 CellRank utilizes the time derivative of gene expression given by RNA velocity to construct a Markov chain.
