@@ -20,7 +20,7 @@ HERE: Path = Path(__file__).parent
 GT_FIGS = HERE / "_ground_truth_figures"
 FIGS = HERE / "figures"
 DPI = 40
-TOL = 100
+TOL = 200
 
 cr.settings.figdir = FIGS
 
@@ -122,11 +122,11 @@ class TestClusterFates:
             adata, "clusters", mode="paga_pie", basis="umap", dpi=DPI, save=fpath
         )
 
-    @compare(tol=100)
+    @compare()
     def test_paga(self, adata: AnnData, fpath: Path):
         cr.pl.cluster_fates(adata, "clusters", mode="paga", dpi=DPI, save=fpath)
 
-    @compare(tol=100)
+    @compare()
     def test_paga_lineage_subset(self, adata: AnnData, fpath: Path):
         cr.pl.cluster_fates(
             adata, "clusters", mode="paga", lineages=["0"], dpi=DPI, save=fpath
