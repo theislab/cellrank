@@ -28,7 +28,7 @@ setup(
     install_requires=list(
         map(str.strip, open(os.path.abspath("requirements.txt"), "r").read().split())
     ),
-    extra_requires=dict(test=["python-igprah", "louvain>=0.6", "Pillow"]),
+    extras_require=dict(test=["python-igraph", "louvain>=0.6", "Pillow"]),
     zip_safe=False,
     packages=find_packages(),
     python_required=">=3.6",
