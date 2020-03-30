@@ -30,7 +30,7 @@ class TestGeneImportance:
     def test_perms_no_fdr_correction(self, adata_cr: AnnData):
         model = create_model(adata_cr)
         res = cr.tl.gene_importance(
-            adata_cr, model, adata_cr.var_names, "0", n_perms=50, fdr_correction=None
+            adata_cr, model, adata_cr.var_names, "0", n_perms=10, fdr_correction=None
         )
 
         assert "pval" in res.columns
@@ -39,7 +39,7 @@ class TestGeneImportance:
     def test_perms_fdr_correction(self, adata_cr: AnnData):
         model = create_model(adata_cr)
         res = cr.tl.gene_importance(
-            adata_cr, model, adata_cr.var_names, "0", n_perms=50
+            adata_cr, model, adata_cr.var_names, "0", n_perms=10
         )
 
         assert "pval" in res.columns
@@ -96,8 +96,8 @@ class TextExcatMCTest:
             "clusters",
             adata_cr.obs["clusters"].cat.categories[0],
             adata_cr.obs["clusters"].cat.categories[1],
-            n_perms=50,
-            n_counts=50,
+            n_perms=10,
+            n_counts=10,
         )
 
         assert isinstance(dist, list)
@@ -113,7 +113,7 @@ class TestRootFinal:
         cr.tl.find_final(adata)
 
     def test_invalid_cluster_key(self, adata: AnnData):
-        with pytest.raises(ValueError):
+        with pytest.raises(KeyError):
             cr.tl.find_root(adata, cluster_key="foo")
 
     def test_invalid_weight(self, adata: AnnData):
@@ -151,7 +151,6 @@ class TestCytoTrace:
         assert "gcs" in adata.obs.keys()
         assert "gene_corr" in adata.var.keys()
         assert "correlates" in adata.var.keys()
-        assert adata.var["correlates"].sum() == 200
 
     def test_normal_run_copy(self, adata: AnnData):
         adata = cr.tl.cyto_trace(adata, copy=True)
@@ -159,4 +158,3 @@ class TestCytoTrace:
         assert "gcs" in adata.obs.keys()
         assert "gene_corr" in adata.var.keys()
         assert "correlates" in adata.var.keys()
-        assert adata.var["correlates"].sum() == 200
