@@ -5,6 +5,7 @@ networkx>=2.2
 numpy>=1.16.4
 pandas>=0.23.4
 python-igraph>=0.8.0
+python-louvain>=0.13.0
 scanpy>=1.4.3
 scikit_learn>=0.21.3
 scipy>=1.2.0
