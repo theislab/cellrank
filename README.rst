@@ -10,7 +10,6 @@ CellRank - Continuous Lineage Decisions Uncovered by RNA Velocity
 
 **CellRank** is a toolkit to uncover cellular development based on scRNA-seq data with RNA velocity annotation,
 see `La Manno et al. (2018)`_ and `Bergen et al. (2019)`_.
-|br|
 In the figure above, we show the main features of CellRank applied to `pancreatic endocrinogenesis`_ -
 starting from RNA velocities **(a)**, we infer root cells **(b)** and final cells **(c)**, and we compute
 how likely each cell is to develop towards each of the identified groups of final cells **(d)**.
@@ -19,7 +18,6 @@ See our `tutorial`_ to learn how to apply CellRank to your own data.
 CellRank utilizes the time derivative of gene expression given by RNA velocity to construct a Markov chain.
 The information given by RNA velocity is combined with transcriptomic similarity and density corrected to yield
 a robust estimate of cellular development directly in high dimensional gene expression space.
-|br|
 CellRank obtained its name due to conceptual similarities with `PageRank`_, Google’s original algorithm
 for ranking web pages. Both algorithms construct a Markov Chain and use spectral methods to study its
 long term evolution. Based on the Markov Chain, we infer root and final cells of development as well
@@ -67,7 +65,3 @@ between the `Theislab`_ and the `Peerlab`_.
 .. _Theislab: https://www.helmholtz-muenchen.de/icb/research/groups/theis-lab/overview/index.html
 
 .. _Peerlab: https://www.mskcc.org/research/ski/labs/dana-pe-er
-
-.. |br| raw:: html
-
-  <br/>
