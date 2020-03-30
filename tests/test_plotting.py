@@ -6,7 +6,7 @@ from pathlib import Path
 from anndata import AnnData
 from cellrank.tools import MarkovChain
 
-from _helpers import create_model
+from _helpers import create_model, resize_images_to_same_sizes
 
 import os
 import cellrank as cr
@@ -46,6 +46,11 @@ def compare(
     dirname: Union[str, Path] = None,
     tol: int = TOL,
 ):
+    def _compare_images(expected_path: Union[str, Path], actual_path: Union[str, Path]):
+        resize_images_to_same_sizes(expected_path, actual_path)
+        res = compare_images(expected_path, actual_path, tol=tol)
+        assert res is None, res
+
     def compare_fwd(
         func
     ):  # mustn't use functools.wraps - it think's `adata` is fixture
@@ -57,13 +62,9 @@ def compare(
 
             if dirname is not None:
                 for file in os.listdir(FIGS / dirname):
-                    res = compare_images(
-                        GT_FIGS / dirname / file, FIGS / dirname / file, tol=tol
-                    )
-                    assert res is None, res
+                    _compare_images(GT_FIGS / dirname / file, FIGS / dirname / file)
             else:
-                res = compare_images(GT_FIGS / fpath, FIGS / fpath, tol=tol)
-                assert res is None, res
+                _compare_images(GT_FIGS / fpath, FIGS / fpath)
 
         return decorator
 
@@ -76,13 +77,9 @@ def compare(
 
             if dirname is not None:
                 for file in os.listdir(FIGS / dirname):
-                    res = compare_images(
-                        GT_FIGS / dirname / file, FIGS / dirname / file, tol=tol
-                    )
-                    assert res is None, res
+                    _compare_images(GT_FIGS / dirname / file, FIGS / dirname / file)
             else:
-                res = compare_images(GT_FIGS / fpath, FIGS / fpath, tol=tol)
-                assert res is None, res
+                _compare_images(GT_FIGS / fpath, FIGS / fpath)
 
         return decorator
 
@@ -111,7 +108,6 @@ class TestClusterFates:
     def test_bar_lineage_subset(self, adata: AnnData, fpath: Path):
         cr.pl.cluster_fates(adata, "clusters", lineages=["0"], dpi=DPI, save=fpath)
 
-    @pytest.mark.skip(reason="there's a small size mismatch of 2-3 pixels")
     @compare()
     def test_paga_pie(self, adata: AnnData, fpath: Path):
         cr.pl.cluster_fates(adata, "clusters", mode="paga_pie", dpi=DPI, save=fpath)
@@ -262,7 +258,6 @@ class TestHeatmap:
             save=fpath,
         )
 
-    @pytest.mark.skip(reason="there's a small size mismatch of 2-4 pixels")
     @compare()
     def test_heatmap_cmap(self, adata: AnnData, fpath: Path):
         model = create_model(adata)
