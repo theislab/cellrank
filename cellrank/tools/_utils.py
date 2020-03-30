@@ -129,7 +129,7 @@ def cyto_trace(
     # check use_raw and copy
     adata_comp = adata.copy() if copy else adata
     if layer not in adata_comp.layers:
-        raise ValueError(f"Compute layer {layer} first")
+        raise KeyError(f"Compute layer `{layer!r}` first")
 
     start = logg.info(f"Computing CytoTrace score with `{adata.n_vars}` genes")
     if adata_comp.n_vars < 10000:
