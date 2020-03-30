@@ -108,7 +108,7 @@ class TestClusterFates:
     def test_bar_lineage_subset(self, adata: AnnData, fpath: Path):
         cr.pl.cluster_fates(adata, "clusters", lineages=["0"], dpi=DPI, save=fpath)
 
-    @compare()
+    @compare(tol=250)
     def test_paga_pie(self, adata: AnnData, fpath: Path):
         cr.pl.cluster_fates(adata, "clusters", mode="paga_pie", dpi=DPI, save=fpath)
 
@@ -258,7 +258,7 @@ class TestHeatmap:
             save=fpath,
         )
 
-    @compare()
+    @compare(tol=250)
     def test_heatmap_cmap(self, adata: AnnData, fpath: Path):
         model = create_model(adata)
         cr.pl.heatmap(
