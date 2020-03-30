@@ -299,7 +299,7 @@ def resize_images_to_same_sizes(
         raise OSError(f"Expected image path `{expected_image_path!r}` does not exist.")
     expected_image = Image.open(expected_image_path)
     actual_image = Image.open(actual_image_path)
-    if expected_image.size != actual_image_path.size:
+    if expected_image.size != actual_image.size:
         if kind == "actual_to_expected":
             actual_image.resize(expected_image.size).save(actual_image_path)
         elif kind == "expected_to_actual":
