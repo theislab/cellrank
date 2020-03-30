@@ -20,7 +20,7 @@ HERE: Path = Path(__file__).parent
 GT_FIGS = HERE / "_ground_truth_figures"
 FIGS = HERE / "figures"
 DPI = 40
-TOL = 50
+TOL = 100
 
 cr.settings.figdir = FIGS
 
