@@ -1161,7 +1161,7 @@ class MarkovChain:
             lin_probs = self._lin_probs
 
         # check that the layer exists, and that use raw is only used with layer X
-        if layer is not "X":
+        if layer != "X":
             if layer not in self._adata.layers:
                 raise KeyError(f"Layer `{layer!r}` not found in `adata.layers`.")
             if use_raw:
