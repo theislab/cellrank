@@ -163,8 +163,8 @@ class Model(ABC):
         data_key: str = "X",
         final: bool = True,
         time_key: str = "latent_time",
-        start_cluster: Optional[str] = None,
-        end_cluster: Optional[str] = None,
+        start_lineage: Optional[str] = None,
+        end_lineage: Optional[str] = None,
         threshold: float = 0.7,
         weight_threshold: float = 0.01,
         weight_scale: float = 1,
@@ -186,10 +186,14 @@ class Model(ABC):
             Whether to consider cells going to final states or vice versa.
         time_key
             Key in :paramref:`adata` `.obs` where the pseudotime is stored.
-        start_cluster
-            Cluster from which to select the cell with lowest pseudotime as a starting point.
-        end_cluster
-            Cluster from which to select the cell with highest pseudotime as an end point.
+        start_lineage
+            Lineage from which to select cells with lowest pseudotime as starting points.
+            If specified, the trends start at the earliest pseudotime within that lineage,
+            otherwise they start from time `0`.
+        end_lineage
+            Lineage from which to select cells with highest pseudotime as endpoints.
+            If specified, the trends end at the latest pseudotime within that lineage,
+            otherwise, it is determined automatically.
         threshold
             Consider only cells with :paramref:`weights` > :paramref:`threshold` when estimating the testing endpoint.
         weight_threshold
@@ -238,15 +242,15 @@ class Model(ABC):
         if lineage_name is not None:
             _ = self.adata.obsm[lineage_key][lineage_name]
 
-        if start_cluster is not None:
-            if start_cluster not in self.adata.obsm[lineage_key].names:
+        if start_lineage is not None:
+            if start_lineage not in self.adata.obsm[lineage_key].names:
                 raise KeyError(
-                    f"Start cluster `{start_cluster!r}` not found in `adata.obsm[{lineage_key!r}].names`."
+                    f"Start lineage `{start_lineage!r}` not found in `adata.obsm[{lineage_key!r}].names`."
                 )
-        if end_cluster is not None:
-            if end_cluster not in self.adata.obsm[lineage_key].names:
+        if end_lineage is not None:
+            if end_lineage not in self.adata.obsm[lineage_key].names:
                 raise KeyError(
-                    f"End cluster `{end_cluster!r}` not found in `adata.obsm[{lineage_key!r}].names`."
+                    f"End lineage `{end_lineage!r}` not found in `adata.obsm[{lineage_key!r}].names`."
                 )
 
         x = np.array(self.adata.obs[time_key]).astype(np.float64)
@@ -284,15 +288,15 @@ class Model(ABC):
         ixs = np.argsort(x)
         x, y, w = x[ixs], y[ixs], w[ixs]
 
-        if start_cluster is None or (start_cluster == lineage_name):
+        if start_lineage is None or (start_lineage == lineage_name):
             val_start = np.min(self.adata.obs[time_key])
         else:
             from_key = "_".join(lineage_key.split("_")[1:])
             val_start = np.nanmin(
-                self.adata.obs[time_key][self.adata.obs[from_key] == start_cluster]
+                self.adata.obs[time_key][self.adata.obs[from_key] == start_lineage]
             )
 
-        if end_cluster is None or (end_cluster == lineage_name):
+        if end_lineage is None or (end_lineage == lineage_name):
             end_filter = np.arange(len(w))
             ixs = np.argsort(w[(x <= end_filter) & (w > threshold)])
             x_test = x[(x <= end_filter) & (w > threshold)][ixs]
@@ -301,7 +305,7 @@ class Model(ABC):
         else:
             to_key = "_".join(lineage_key.split("_")[1:])
             val_end = np.nanmax(
-                self.adata.obs[time_key][self.adata.obs[to_key] == end_cluster]
+                self.adata.obs[time_key][self.adata.obs[to_key] == end_lineage]
             )
 
         if val_start > val_end:
