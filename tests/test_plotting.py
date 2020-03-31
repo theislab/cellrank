@@ -252,8 +252,8 @@ class TestHeatmap:
             adata.var_names[:10],
             kind="lineages",
             time_key="latent_time",
-            start_clusters="0",
-            end_clusters="1",
+            start_lineage="0",
+            end_lineage="1",
             dpi=DPI,
             save=fpath,
         )
