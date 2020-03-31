@@ -374,8 +374,8 @@ def _create_models(
 def _fit(
     genes: Sequence[str],
     lineage_names: Sequence[Optional[str]],
-    start_clusters: Sequence[Optional[str]],
-    end_clusters: Sequence[Optional[str]],
+    start_lineages: Sequence[Optional[str]],
+    end_lineages: Sequence[Optional[str]],
     queue,
     **kwargs,
 ) -> Dict[str, Dict[str, Any]]:
@@ -388,9 +388,9 @@ def _fit(
         Genes for which to fit the models.
     lineage_names
         Lineages for which to fit the models.
-    start_clusters
+    start_lineages
         Start clusters for given :paramref:`lineage_names`.
-    end_clusters
+    end_lineages
         End clusters for given :paramref:`lineage_names`.
     queue
         Signalling queue in the parent process/thread used to update the progress bar.
@@ -408,10 +408,10 @@ def _fit(
 
     for gene in genes:
         res[gene] = {}
-        for ln, sc, ec in zip(lineage_names, start_clusters, end_clusters):
+        for ln, sc, ec in zip(lineage_names, start_lineages, end_lineages):
             model = (
                 models[gene][ln]
-                .prepare(gene, ln, start_cluster=sc, end_cluster=ec, **kwargs)
+                .prepare(gene, ln, start_lineage=sc, end_lineage=ec, **kwargs)
                 .fit()
             )
             model.predict()

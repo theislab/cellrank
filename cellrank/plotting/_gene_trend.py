@@ -34,8 +34,8 @@ def gene_trends(
     lineages: Optional[Union[str, Sequence[str]]] = None,
     data_key: str = "X",
     final: bool = True,
-    start_clusters: Optional[Union[str, Sequence[str]]] = None,
-    end_clusters: Optional[Union[str, Sequence[str]]] = None,
+    start_lineage: Optional[Union[str, Sequence[str]]] = None,
+    end_lineage: Optional[Union[str, Sequence[str]]] = None,
     conf_int: bool = True,
     same_plot: bool = False,
     hide_cells: bool = False,
@@ -92,11 +92,14 @@ def gene_trends(
         Key in :paramref:`adata` `.layers` or `'X'` for :paramref:`adata` `.X` where the data is stored.
     final
         Whether to consider cells going to final states or vice versa.
-    start_clusters:
-        Name of a cluster where the start cell is. If specified, the trends start at the earliest
-        pseudotime point within that cluster, otherwise they start from time `0`.
-    end_clusters:
-        Name of a cluster where the end cell is. If `None`, determine automatically.
+    start_lineage
+        Lineage from which to select cells with lowest pseudotime as starting points.
+        If specified, the trends start at the earliest pseudotime within that lineage,
+        otherwise they start from time `0`.
+    end_lineage
+        Lineage from which to select cells with highest pseudotime as endpoints.
+        If specified, the trends end at the latest pseudotime within that lineage,
+        otherwise, it is determined automatically.
     conf_int
         Whether to compute and show confidence intervals.
     same_plot
@@ -225,20 +228,20 @@ def gene_trends(
         _ = adata.obsm[ln_key][ln]
     n_lineages = len(lineages)
 
-    if isinstance(start_clusters, (str, type(None))):
-        start_clusters = [start_clusters] * n_lineages
-    if isinstance(end_clusters, (str, type(None))):
-        end_clusters = [end_clusters] * n_lineages
+    if isinstance(start_lineage, (str, type(None))):
+        start_lineage = [start_lineage] * n_lineages
+    if isinstance(end_lineage, (str, type(None))):
+        end_lineage = [end_lineage] * n_lineages
 
-    if len(start_clusters) != n_lineages:
+    if len(start_lineage) != n_lineages:
         raise ValueError(
-            f"Expected the number of startpoint clusters to be the same as number of lineages "
-            f"({n_lineages}), found `{len(start_clusters)}`."
+            f"Expected the number of start lineages to be the same as number of lineages "
+            f"({n_lineages}), found `{len(start_lineage)}`."
         )
-    if len(end_clusters) != n_lineages:
+    if len(end_lineage) != n_lineages:
         raise ValueError(
-            f"Expected the number of endpoint clusters to be the same as number of lineages "
-            f"({n_lineages}), found `{len(start_clusters)}`."
+            f"Expected the number of end lineages to be the same as number of lineages "
+            f"({n_lineages}), found `{len(start_lineage)}`."
         )
 
     kwargs["models"] = _create_models(model, genes, lineages)
@@ -267,7 +270,7 @@ def gene_trends(
         n_jobs=n_jobs,
         extractor=lambda modelss: {k: v for m in modelss for k, v in m.items()},
         show_progress_bar=show_progres_bar,
-    )(lineages, start_clusters, end_clusters, **kwargs)
+    )(lineages, start_lineage, end_lineage, **kwargs)
     logg.info("    Finish", time=start)
 
     logg.debug("DEBUG: Plotting trends")

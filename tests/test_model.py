@@ -37,12 +37,12 @@ class TestModel:
     def test_prepare_invalid_start_cluster(self, adata_cr: AnnData):
         model = create_model(adata_cr)
         with pytest.raises(KeyError):
-            model.prepare(adata_cr.var_names[0], "0", start_cluster="foo")
+            model.prepare(adata_cr.var_names[0], "0", start_lineage="foo")
 
     def test_prepare_invalid_end_cluster(self, adata_cr: AnnData):
         model = create_model(adata_cr)
         with pytest.raises(KeyError):
-            model.prepare(adata_cr.var_names[0], "0", end_cluster="foo")
+            model.prepare(adata_cr.var_names[0], "0", end_lineage="foo")
 
     def test_prepare_normal_run(self, adata_cr: AnnData):
         model = create_model(adata_cr)
