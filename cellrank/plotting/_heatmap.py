@@ -29,8 +29,8 @@ def heatmap(
     final: bool = True,
     kind: str = "lineages",
     lineages: Optional[Union[str, Sequence[str]]] = None,
-    start_clusters: Optional[Union[str, Sequence[str]]] = None,
-    end_clusters: Optional[Union[str, Sequence[str]]] = None,
+    start_lineage: Optional[Union[str, Sequence[str]]] = None,
+    end_lineage: Optional[Union[str, Sequence[str]]] = None,
     lineage_height: float = 0.1,
     cluster_genes: bool = False,
     xlabel: Optional[str] = None,
@@ -71,10 +71,14 @@ def heatmap(
         - If `'lineages'`, group by :paramref:`lineage_names` for each gene in :paramref:`genes`.
     lineage_names
         Names of the lineages for which to plot.
-    start_cluster
-        Clusters from which to select cells with lowest pseudotime as starting points.
-    end_clusters
-        Clusters from which to select cells with highest pseudotime as endpoints.
+    start_lineage
+        Lineage from which to select cells with lowest pseudotime as starting points.
+        If specified, the trends start at the earliest pseudotime point within that lineage,
+        otherwise they start from time `0`.
+    end_lineage
+        Lineage from which to select cells with highest pseudotime as endpoints.
+        If specified, the trends end at the latest pseudotime point within that lineage,
+        otherwise, it is determined automatically.
     lineage_height
         Height of a bar when :paramref:`kind` ='lineages'.
     xlabel
@@ -250,20 +254,20 @@ def heatmap(
         genes = [genes]
     check_collection(adata, genes, "var_names")
 
-    if isinstance(start_clusters, (str, type(None))):
-        start_clusters = [start_clusters] * len(lineages)
-    if isinstance(end_clusters, (str, type(None))):
-        end_clusters = [end_clusters] * len(lineages)
+    if isinstance(start_lineage, (str, type(None))):
+        start_lineage = [start_lineage] * len(lineages)
+    if isinstance(end_lineage, (str, type(None))):
+        end_lineage = [end_lineage] * len(lineages)
 
     xlabel = kwargs.get("time_key", None) if xlabel is None else xlabel
 
-    _ = kwargs.pop("start_cluster", None)
-    _ = kwargs.pop("end_cluster", None)
+    _ = kwargs.pop("start_lineage", None)
+    _ = kwargs.pop("end_lineage", None)
 
-    for typp, clusters in zip(["Starting", "Ending"], [start_clusters, end_clusters]):
+    for typp, clusters in zip(["Start", "End"], [start_lineage, end_lineage]):
         for cl in filter(lambda c: c is not None, clusters):
             if cl not in lineages:
-                raise ValueError(f"{typp} cluster `{cl!r}` not found in lineage names.")
+                raise ValueError(f"{typp} lineage `{cl!r}` not found in lineage names.")
 
     kwargs["models"] = _create_models(model, genes, lineages)
     if _is_any_gam_mgcv(kwargs["models"]):
@@ -282,7 +286,7 @@ def heatmap(
         n_jobs=n_jobs,
         extractor=lambda data: {k: v for d in data for k, v in d.items()},
         show_progress_bar=show_progress_bar,
-    )(lineages, start_clusters, end_clusters, **kwargs)
+    )(lineages, start_lineage, end_lineage, **kwargs)
     logg.info("    Finish", time=start)
     logg.debug(f"DEBUG: Plotting {kind} heatmap")
 
