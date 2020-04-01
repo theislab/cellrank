@@ -28,6 +28,40 @@ from sklearn.neighbors import NearestNeighbors
 from cellrank.utils._utils import has_neighs, get_neighs, get_neighs_params
 
 
+def _complex_warning(
+    X: np.array, use: Union[list, int, tuple, range], use_imag: bool = False
+):
+    """
+    Check for imaginary components in columns of X specified by `use`
+
+    Params
+    --------
+    X
+        Matrix containing the eigenvectors
+    use
+        Selection of columns of `X`
+    use_imag
+        For eigenvectors that are complex, use real or imaginary part
+
+    Returns
+    --------
+    X_
+        np.array
+    """
+    complex_mask = np.sum(X.imag != 0, axis=0) > 0
+    complex_ixs = np.array(use)[np.where(complex_mask)[0]]
+    complex_key = "imaginary" if use_imag else "real"
+    if len(complex_ixs) > 0:
+        logg.warning(
+            f"The eigenvectors with indices {complex_ixs} have an imaginary part. Showing their {complex_key} part."
+        )
+    X_ = X.real
+    if use_imag:
+        X_[:, complex_mask] = X.imag[:, complex_mask]
+
+    return X_
+
+
 def bias_knn(conn, pseudotime, n_neighbors, k=3):
     """
     Utility function for the Palantir Kernel.
