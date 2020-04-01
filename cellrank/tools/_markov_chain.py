@@ -31,6 +31,7 @@ from cellrank.tools._constants import (
     _lin_names,
 )
 from cellrank.tools._utils import (
+    _complex_warning,
     _cluster_X,
     _get_connectivities,
     _normalize,
@@ -534,17 +535,9 @@ class MarkovChain:
                 f"Use `.compute_eig(k={muse})` to recompute the eigendecomposition."
             )
 
+        # retrieve the eigendecomposition, check for imaginary values and issue warnings
         D, V = D[use], V[:, use]
-        complex_mask = np.sum(V.imag != 0, axis=0) > 0
-        complex_ixs = np.array(use)[np.where(complex_mask)[0]]
-        complex_key = "imaginary" if use_imag else "real"
-        if len(complex_ixs) > 0:
-            logg.warning(
-                f"The eigenvectors with indices {complex_ixs} have an imaginary part. Showing their {complex_key} part."
-            )
-        V_ = V.real
-        if use_imag:
-            V_[:, complex_mask] = V.imag[:, complex_mask]
+        V_ = _complex_warning(V, use, use_imag=use_imag)
 
         # take absolute value
         if abs_value:
@@ -730,7 +723,10 @@ class MarkovChain:
             )
 
         logg.debug("DEBUG: Retrieving eigendecomposition")
-        V_l, V_r = self._eig["V_l"].real[:, use], self._eig["V_r"].real[:, use]
+        # we check for complex values only in the left, that's okay because the complex pattern
+        # will be identical for left and right
+        V_l, V_r = self._eig["V_l"][:, use], self._eig["V_r"].real[:, use]
+        V_l = _complex_warning(V_l, use, use_imag=False)
 
         # compute a rc probability
         logg.debug("DEBUG: Computing probabilities of approximate recurrent classes")
@@ -1411,7 +1407,7 @@ class MarkovChain:
             raise RuntimeError("Compute eigendecomposition first as `.compute_eig()`")
 
         # get the truncated eigendecomposition
-        V, evals = self._eig["V_l"][:, use], self._eig["D"][use]
+        V, evals = self._eig["V_l"].real[:, use], self._eig["D"].real[use]
 
         # shift and scale
         V_pos = np.abs(V)
