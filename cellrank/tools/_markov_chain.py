@@ -314,6 +314,10 @@ class MarkovChain:
         D, V_l, V_r = D[p], V_l[:, p], V_r[:, p]
         e_gap = _eigengap(D.real, alpha)
 
+        # compute the stationary distribution
+        pi = np.abs(V_l[:, 0].real)
+        pi /= np.sum(pi)
+
         # write to class and AnnData object
         if self._eig is not None:
             logg.debug("DEBUG: Overwriting `.eig`")
@@ -322,6 +326,7 @@ class MarkovChain:
 
         eig_dict = {
             "D": D,
+            "stationary_dist": pi,
             "V_l": V_l,
             "V_r": V_r,
             "eigengap": e_gap,
@@ -623,6 +628,7 @@ class MarkovChain:
     def compute_approx_rcs(
         self,
         use: Optional[Union[int, Tuple[int], List[int], range]] = None,
+        n_cells: int = 10,
         percentile: Optional[int] = 98,
         method: str = "kmeans",
         cluster_key: Optional[str] = None,
@@ -648,12 +654,14 @@ class MarkovChain:
         use
             Which or how many first eigenvectors to use as features for clustering/filtering.
             If `None`, use `eigengap` statistic.
+        n_cells
+            How many cells to return for each endpoint
         percentile
             Threshold used for filtering out cells which are most likely transient states.
             Cells which are in the lower :paramref:`percentile` percent
             of each eigenvector will be removed from the data matrix.
         method
-            Method to be used for clustering. Must be one of `['louvain', 'kmeans']`.
+            Method to be used for clustering. Must be one of `['louvain', 'kmeans', 'pcca']`.
         cluster_key
             If a key to cluster labels is given, `approx_rcs` will ge associated with these for naming and colors.
         n_clusters_kmeans
@@ -695,9 +703,9 @@ class MarkovChain:
 
         start = logg.info("Computing approximate recurrent classes")
 
-        if method not in ["kmeans", "louvain"]:
+        if method not in ["kmeans", "louvain", "pcca"]:
             raise ValueError(
-                f"Invalid method `{method!r}`. Valid options are `'kmeans', 'louvain'`."
+                f"Invalid method `{method!r}`. Valid options are `'kmeans', 'louvain', 'pcca'`."
             )
 
         if use is None:
@@ -732,63 +740,79 @@ class MarkovChain:
         logg.debug("DEBUG: Computing probabilities of approximate recurrent classes")
         self._compute_approx_rcs_prob(use)
 
-        # retrieve embedding and concatenate
-        if basis is not None:
-            if f"X_{basis}" not in self._adata.obsm.keys():
-                raise KeyError(f"Compute basis `{basis!r}` first.")
-            X_em = self._adata.obsm[f"X_{basis}"][:, :n_comps]
-            X = np.concatenate([V_r, X_em], axis=1)
-        else:
-            logg.debug("DEBUG: Basis is `None`. Setting X equal to right eigenvectors")
-            X = V_r
-
-        # filter out cells which are in the lowest q percentile in abs value in each eigenvector
-        if percentile is not None:
-            logg.debug("DEBUG: Filtering out cells according to percentile")
-            if percentile < 0 or percentile > 100:
-                raise ValueError(
-                    f"Percentile must be in interval `[0, 100]`, found `{percentile}`."
+        if method != "pcca":
+            # retrieve embedding and concatenate
+            if basis is not None:
+                if f"X_{basis}" not in self._adata.obsm.keys():
+                    raise KeyError(f"Compute basis `{basis!r}` first.")
+                X_em = self._adata.obsm[f"X_{basis}"][:, :n_comps]
+                X = np.concatenate([V_r, X_em], axis=1)
+            else:
+                logg.debug(
+                    "DEBUG: Basis is `None`. Setting X equal to right eigenvectors"
                 )
-            cutoffs = np.percentile(np.abs(V_l), percentile, axis=0)
-            ixs = np.sum(np.abs(V_l) < cutoffs, axis=1) < V_l.shape[1]
-            X = X[ixs, :]
+                X = V_r
 
-        # scale
-        if scale:
-            X = zscore(X, axis=0)
+            # filter out cells which are in the lowest q percentile in abs value in each eigenvector
+            if percentile is not None:
+                logg.debug("DEBUG: Filtering out cells according to percentile")
+                if percentile < 0 or percentile > 100:
+                    raise ValueError(
+                        f"Percentile must be in interval `[0, 100]`, found `{percentile}`."
+                    )
+                cutoffs = np.percentile(np.abs(V_l), percentile, axis=0)
+                ixs = np.sum(np.abs(V_l) < cutoffs, axis=1) < V_l.shape[1]
+                X = X[ixs, :]
 
-        # cluster X
-        logg.debug(
-            f"DEBUG: Using `{use}` eigenvectors, basis `{basis!r}` and method `{method!r}` for clustering"
-        )
-        labels = _cluster_X(
-            X,
-            method=method,
-            n_clusters_kmeans=n_clusters_kmeans,
-            percentile=percentile,
-            use=use,
-            n_neighbors_louvain=n_neighbors_louvain,
-            resolution_louvain=resolution_louvain,
-        )
+            # scale
+            if scale:
+                X = zscore(X, axis=0)
 
-        # fill in the labels in case we filtered out cells before
-        if percentile is not None:
-            rc_labels = np.repeat(None, self._adata.n_obs)
-            rc_labels[ixs] = labels
+            # cluster X
+            logg.debug(
+                f"DEBUG: Using `{use}` eigenvectors, basis `{basis!r}` and method `{method!r}` for clustering"
+            )
+            labels = _cluster_X(
+                X,
+                method=method,
+                n_clusters_kmeans=n_clusters_kmeans,
+                percentile=percentile,
+                use=use,
+                n_neighbors_louvain=n_neighbors_louvain,
+                resolution_louvain=resolution_louvain,
+            )
+
+            # fill in the labels in case we filtered out cells before
+            if percentile is not None:
+                rc_labels = np.repeat(None, self._adata.n_obs)
+                rc_labels[ixs] = labels
+            else:
+                rc_labels = labels
+            rc_labels = Series(rc_labels, index=self._adata.obs_names, dtype="category")
+            rc_labels.cat.categories = list(rc_labels.cat.categories.astype("str"))
+
+            # filtering to get rid of some of the left over transient states
+            if n_matches_min > 0:
+                logg.debug("DEBUG: Filtering according to `n_matches_min`")
+                distances = _get_connectivities(
+                    self._adata, mode="distances", n_neighbors=n_neighbors_filtering
+                )
+                rc_labels = _filter_cells(
+                    distances, rc_labels=rc_labels, n_matches_min=n_matches_min
+                )
         else:
-            rc_labels = labels
-        rc_labels = Series(rc_labels, index=self._adata.obs_names, dtype="category")
-        rc_labels.cat.categories = list(rc_labels.cat.categories.astype("str"))
+            from msmtools.analysis.dense.pcca import pcca
 
-        # filtering to get rid of some of the left over transient states
-        if n_matches_min > 0:
-            logg.debug("DEBUG: Filtering according to `n_matches_min`")
-            distances = _get_connectivities(
-                self._adata, mode="distances", n_neighbors=n_neighbors_filtering
-            )
-            rc_labels = _filter_cells(
-                distances, rc_labels=rc_labels, n_matches_min=n_matches_min
-            )
+            if len(use) == 1:
+                m = self.eigendecomposition["stationary_dist"][:, None]
+            else:
+                m = pcca(self.kernel.transition_matrix, len(use))
+            self.eigendecomposition["pcca_membership"] = m
+            rc_labels = Series(index=self._adata.obs_names, dtype="category")
+            for i, col in enumerate(m.T):
+                p = np.flip(np.argsort(col))[:n_cells]
+                rc_labels.cat.add_categories(str(i), inplace=True)
+                rc_labels.iloc[p] = str(i)
 
         self.set_approx_rcs(
             rc_labels, cluster_key=cluster_key, en_cutoff=en_cutoff, p_thresh=p_thresh
