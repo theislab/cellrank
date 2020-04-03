@@ -965,14 +965,14 @@ class MarkovChain:
             _abs_classes /= [len(value) for value in rec_classes_red.values()]
         _abs_classes = _normalize(_abs_classes)
 
-        # add one-hot for recurrent states
+        # for recurrent states, take the maximum prob among all transient states
         abs_classes = np.zeros((self._n_states, len(rec_classes_red)))
         rec_classes_full = {
             cl: np.where(approx_rcs_ == cl) for cl in approx_rcs_.cat.categories
         }
         for col, cl_indices in enumerate(rec_classes_full.values()):
             abs_classes[trans_indices, col] = _abs_classes[:, col]
-            abs_classes[cl_indices, col] = 1
+            abs_classes[cl_indices, col] = np.max(_abs_classes[:, col])
 
         self._dp = entropy(abs_classes.T)
         self._lin_probs = Lineage(
