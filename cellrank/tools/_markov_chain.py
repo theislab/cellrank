@@ -809,8 +809,24 @@ class MarkovChain:
                 m = pcca(self.kernel.transition_matrix, len(use))
             self.eigendecomposition["pcca_membership"] = m
             rc_labels = Series(index=self._adata.obs_names, dtype="category")
+            overlaps = {}
             for i, col in enumerate(m.T):
                 p = np.flip(np.argsort(col))[:n_cells]
+
+                # handle the case of overlapping cells (fuzzy clustering)
+                if len(rc_labels.cat.categories) > 0:
+                    current_labels = rc_labels.iloc[p]
+                    overlap = {
+                        cl: np.sum(current_labels == cl)
+                        for cl in current_labels.cat.categories
+                        if np.sum(current_labels == cl) > 0
+                    }
+                    overlaps[i] = overlap
+                    if any(np.fromiter(overlap.values(), dtype=float) / n_cells > 0.8):
+                        logg.warning("Found overlapping clusters. Skipping.")
+                        continue
+
+                self.eigendecomposition["pcca_overlap"] = overlaps
                 rc_labels.cat.add_categories(str(i), inplace=True)
                 rc_labels.iloc[p] = str(i)
 
