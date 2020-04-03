@@ -165,8 +165,8 @@ class Model(ABC):
         time_key: str = "latent_time",
         start_lineage: Optional[str] = None,
         end_lineage: Optional[str] = None,
-        threshold: float = 0.7,
-        weight_threshold: float = 0.01,
+        threshold: Optional[float] = None,
+        weight_threshold: float = 0.02,
         weight_scale: float = 1,
         filter_data: float = False,
         n_test_points: int = 200,
@@ -196,6 +196,7 @@ class Model(ABC):
             otherwise, it is determined automatically.
         threshold
             Consider only cells with :paramref:`weights` > :paramref:`threshold` when estimating the testing endpoint.
+            If `None`, use median of :paramref:`w`.
         weight_threshold
             Set all weights below this to :paramref:`weight_scale` * :paramref:`weight_threshold`.
         weight_scale
@@ -297,11 +298,11 @@ class Model(ABC):
             )
 
         if end_lineage is None or (end_lineage == lineage_name):
-            end_filter = np.arange(len(w))
-            ixs = np.argsort(w[(x <= end_filter) & (w > threshold)])
-            x_test = x[(x <= end_filter) & (w > threshold)][ixs]
-            tmp = np.convolve(x_test, np.ones(8) / 8, mode="same")
-            val_end = x_test[np.argmax(tmp)]
+            if threshold is None:
+                threshold = np.nanmedian(w)
+            w_test = w[w > threshold]
+            tmp = np.convolve(w_test, np.ones(8) / 8, mode="same")
+            val_end = x[w > threshold][np.nanargmax(tmp)]
         else:
             to_key = "_".join(lineage_key.split("_")[1:])
             val_end = np.nanmax(
