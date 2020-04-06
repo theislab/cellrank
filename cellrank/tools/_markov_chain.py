@@ -994,7 +994,7 @@ class MarkovChain:
         cluster_key: Optional[str] = None,
         mode: str = "embedding",
         time_key: str = "latent_time",
-        cmap: Union[str, matplotlib.colors.ListedColormap] = cm.viridis,
+        color_map: Union[str, matplotlib.colors.ListedColormap] = cm.viridis,
         **kwargs,
     ) -> None:
         """
@@ -1013,7 +1013,7 @@ class MarkovChain:
             - If `'time'`, plos the pseudotime on x-axis and the absorption probabilities on y-axis.
         time_key
             Key from `adata.obs` to use as a pseudotime ordering of the cells.
-        cmap
+        color_map
             Colormap to use.
         kwargs
             Keyword arguments for :func:`scvelo.pl.scatter`.
@@ -1031,6 +1031,7 @@ class MarkovChain:
         if isinstance(lineages, str):
             lineages = [lineages]
 
+        # retrieve the lineage data
         if lineages is None:
             lineages = self._lin_probs.names
             A = self._lin_probs.X
@@ -1041,6 +1042,12 @@ class MarkovChain:
                         f"Invalid lineage name `{lineages!r}`. Valid options are `{list(self._lin_probs.names)}`."
                     )
             A = self._lin_probs[lineages].X
+
+        # change the maximum value - the 1 is artificial and obscures the color scaling
+        for col in A.T:
+            mask = col != 1
+            max_not_one = np.max(col[mask])
+            col[~mask] = max_not_one
 
         if mode == "time":
             if time_key not in self._adata.obs.keys():
@@ -1061,7 +1068,7 @@ class MarkovChain:
 
         if mode == "embedding":
             scv.pl.scatter(
-                self._adata, color=color, title=titles, color_map=cmap, **kwargs
+                self._adata, color=color, title=titles, color_map=color_map, **kwargs
             )
         elif mode == "time":
             xlabel, ylabel = (
@@ -1071,7 +1078,7 @@ class MarkovChain:
             scv.pl.scatter(
                 self._adata,
                 x=t,
-                color_map=cmap,
+                color_map=color_map,
                 y=[a for a in A.T] + [self._dp],
                 title=titles,
                 xlabel=time_key,
