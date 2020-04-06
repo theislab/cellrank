@@ -147,6 +147,10 @@ def heatmap(
                 ix += lineage_height
                 ys.append(ix)
 
+            xs = np.array([m.x_test for m in models.values()])
+            x_min, x_max = np.nanmin(xs), np.nanmax(xs)
+            ax.set_xticks(np.linspace(x_min, x_max, 11))
+
             ax.set_yticks(np.array(ys) + lineage_height / 2)
             ax.set_yticklabels(lineages)
             ax.set_title(gene)
@@ -158,7 +162,6 @@ def heatmap(
             cax, _ = mpl.colorbar.make_axes(ax)
             _ = mpl.colorbar.ColorbarBase(cax, norm=norm, cmap=cmap, label="Expression")
 
-            ax.set_xticks(np.linspace(0, 1, 11))
             ax.tick_params(
                 top=False,
                 bottom=False,

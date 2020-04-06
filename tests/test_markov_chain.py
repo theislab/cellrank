@@ -140,6 +140,7 @@ class TestMarkovChain:
         np.testing.assert_array_equal(
             mc.lineage_probabilities.colors, mc.adata.uns[_colors(LinKey.FORWARD)]
         )
+        np.testing.assert_allclose(mc.lineage_probabilities.X.sum(1), 1)
 
     def test_compute_lineage_drivers_no_lineages(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
