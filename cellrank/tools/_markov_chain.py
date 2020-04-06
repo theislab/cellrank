@@ -834,6 +834,19 @@ class MarkovChain:
             rc_labels, cluster_key=cluster_key, en_cutoff=en_cutoff, p_thresh=p_thresh
         )
 
+        # if mode pcca, also set lineage probs
+        if method == "pcca":
+            logg.debug(
+                "DEBUG: Setting lineage probabilities based on PCCA membership vectors"
+            )
+            rc_names = list(self._approx_rcs.cat.categories)
+            self._lin_probs = Lineage(m, names=rc_names, colors=self._approx_rcs_colors)
+            self._dp = entropy(m.T)
+            self._adata.obsm[self._lin_key] = self._lin_probs
+            self._adata.obs[f"{self._lin_key}_dp"] = self._dp
+            self._adata.uns[_lin_names(self._lin_key)] = self._lin_probs.names
+            self._adata.uns[_colors(self._lin_key)] = self._lin_probs.colors
+
         logg.info(
             f"Adding `adata.uns[{_colors(self._rc_key)!r}]`\n"
             f"       `adata.obs[{_probs(self._rc_key)!r}]`\n"
