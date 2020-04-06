@@ -1099,8 +1099,9 @@ class MarkovChain:
         # change the maximum value - the 1 is artificial and obscures the color scaling
         for col in A.T:
             mask = col != 1
-            max_not_one = np.max(col[mask])
-            col[~mask] = max_not_one
+            if np.sum(mask) > 0:
+                max_not_one = np.max(col[mask])
+                col[~mask] = max_not_one
 
         if mode == "time":
             if time_key not in self._adata.obs.keys():
