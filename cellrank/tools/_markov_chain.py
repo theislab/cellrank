@@ -840,8 +840,31 @@ class MarkovChain:
                 "DEBUG: Setting lineage probabilities based on PCCA membership vectors"
             )
             rc_names = list(self._approx_rcs.cat.categories)
-            self._lin_probs = Lineage(m, names=rc_names, colors=self._approx_rcs_colors)
+            pcca_memberships = Lineage(
+                m, names=rc_names, colors=self._approx_rcs_colors
+            )
+            self._lin_probs = pcca_memberships
             self._dp = entropy(m.T)
+
+            # cosine correlation with the summed left eigenvectors
+            def softmax(x, alpha=1):
+                x = np.array(x)
+                return np.exp(alpha * x) / np.sum(np.exp(alpha * x))
+
+            corr = []
+            rc_prob = self._approx_rcs_probs
+            rc_prob /= np.sum(rc_prob)
+            for lin_name in pcca_memberships.names:
+                data = pcca_memberships[lin_name].copy()
+                data_norm = data / np.sum(data)
+                corr.append(np.dot(rc_prob, data_norm.X.flatten()))
+            probs = dict(zip(pcca_memberships.names, softmax(corr, 1e4)))
+            logg.info(
+                f"Probability of each metastable state to represent groups of {self._rc_key}:"
+            )
+            [logg.info(f"{key}: {value:.2f}") for key, value in probs.items()]
+
+            # add to AnnData
             self._adata.obsm[self._lin_key] = self._lin_probs
             self._adata.obs[f"{self._lin_key}_dp"] = self._dp
             self._adata.uns[_lin_names(self._lin_key)] = self._lin_probs.names
