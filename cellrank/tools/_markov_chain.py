@@ -661,7 +661,7 @@ class MarkovChain:
             Cells which are in the lower :paramref:`percentile` percent
             of each eigenvector will be removed from the data matrix.
         method
-            Method to be used for clustering. Must be one of `['louvain', 'kmeans', 'pcca']`.
+            Method to be used for clustering. Must be one of `['louvain', 'kmeans', 'pcca', 'gpcca']`.
         cluster_key
             If a key to cluster labels is given, `approx_rcs` will ge associated with these for naming and colors.
         n_clusters_kmeans
@@ -703,9 +703,9 @@ class MarkovChain:
 
         start = logg.info("Computing approximate recurrent classes")
 
-        if method not in ["kmeans", "louvain", "pcca"]:
+        if method not in ["kmeans", "louvain", "pcca", "gpcca"]:
             raise ValueError(
-                f"Invalid method `{method!r}`. Valid options are `'kmeans', 'louvain', 'pcca'`."
+                f"Invalid method `{method!r}`. Valid options are `'kmeans', 'louvain', 'pcca', 'gpcca'`."
             )
 
         if use is None:
@@ -740,7 +740,7 @@ class MarkovChain:
         logg.debug("DEBUG: Computing probabilities of approximate recurrent classes")
         self._compute_approx_rcs_prob(use)
 
-        if method != "pcca":
+        if method in ["louvain", "kmeans"]:
             # retrieve embedding and concatenate
             if basis is not None:
                 if f"X_{basis}" not in self._adata.obsm.keys():
@@ -801,13 +801,20 @@ class MarkovChain:
                     distances, rc_labels=rc_labels, n_matches_min=n_matches_min
                 )
         else:
-            from msmtools.analysis.dense.pcca import pcca
+            # if we're only looking for one state, use the stationary dist.
 
             if len(use) == 1:
                 m = self.eigendecomposition["stationary_dist"][:, None]
-            else:
+            elif method == "pcca":
+                from msmtools.analysis.dense.pcca import pcca
+
                 m = pcca(self.kernel.transition_matrix, len(use))
-            self.eigendecomposition["pcca_membership"] = m
+            elif method == "gpcca":
+                from msmtools.analysis.dense.gpcca import gpcca
+
+                m = gpcca(self.kernel.transition_matrix, len(use))
+
+            self.eigendecomposition["(g)pcca_membership"] = m
             rc_labels = Series(index=self._adata.obs_names, dtype="category")
             overlaps = {}
             for i, col in enumerate(m.T):
@@ -826,7 +833,7 @@ class MarkovChain:
                         logg.warning("Found overlapping clusters. Skipping.")
                         continue
 
-                self.eigendecomposition["pcca_overlap"] = overlaps
+                self.eigendecomposition["(g)pcca_overlap"] = overlaps
                 rc_labels.cat.add_categories(str(i), inplace=True)
                 rc_labels.iloc[p] = str(i)
 
@@ -835,15 +842,13 @@ class MarkovChain:
         )
 
         # if mode pcca, also set lineage probs
-        if method == "pcca":
+        if method in ["pcca", "gpcca"]:
             logg.debug(
-                "DEBUG: Setting lineage probabilities based on PCCA membership vectors"
+                "DEBUG: Setting lineage probabilities based on (g)PCCA membership vectors"
             )
             rc_names = list(self._approx_rcs.cat.categories)
-            pcca_memberships = Lineage(
-                m, names=rc_names, colors=self._approx_rcs_colors
-            )
-            self._lin_probs = pcca_memberships
+            chi = Lineage(m, names=rc_names, colors=self._approx_rcs_colors)
+            self._lin_probs = chi
             self._dp = entropy(m.T)
 
             # cosine correlation with the summed left eigenvectors
@@ -854,11 +859,11 @@ class MarkovChain:
             corr = []
             rc_prob = self._approx_rcs_probs
             rc_prob /= np.sum(rc_prob)
-            for lin_name in pcca_memberships.names:
-                data = pcca_memberships[lin_name].copy()
+            for lin_name in chi.names:
+                data = chi[lin_name].copy()
                 data_norm = data / np.sum(data)
                 corr.append(np.dot(rc_prob, data_norm.X.flatten()))
-            probs = dict(zip(pcca_memberships.names, softmax(corr, 1e4)))
+            probs = dict(zip(chi.names, softmax(corr, 1e4)))
             logg.info(
                 f"Probability of each metastable state to represent groups of {self._rc_key}:"
             )
