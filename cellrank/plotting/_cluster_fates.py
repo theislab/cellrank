@@ -332,9 +332,9 @@ def cluster_fates(
         clusters = ["All"]
 
     lk = str(LinKey.FORWARD if final else LinKey.BACKWARD)
-    points = "Endpoints" if final else "Startpoints"
+    points = "final groups" if final else "root groups"
     if lk not in adata.obsm:
-        raise KeyError(f"Lineages key `{lk!r}` not found in `adata.obsm`.")
+        raise KeyError(f"Lineage key `{lk!r}` not found in `adata.obsm`.")
 
     if lineages is not None:
         if isinstance(lineages, str):
