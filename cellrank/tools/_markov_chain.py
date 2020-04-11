@@ -817,6 +817,7 @@ class MarkovChain:
             self.eigendecomposition["(g)pcca_membership"] = m
             rc_labels = Series(index=self._adata.obs_names, dtype="category")
             overlaps = {}
+            cols = []
             for i, col in enumerate(m.T):
                 p = np.flip(np.argsort(col))[:n_cells]
 
@@ -836,6 +837,10 @@ class MarkovChain:
                 self.eigendecomposition["(g)pcca_overlap"] = overlaps
                 rc_labels.cat.add_categories(str(i), inplace=True)
                 rc_labels.iloc[p] = str(i)
+                cols.append(col[:, None])
+
+            # aggregate the non-overlapping columns together
+            m_reduced = np.concatenate(cols, axis=1)
 
         self.set_approx_rcs(
             rc_labels, cluster_key=cluster_key, en_cutoff=en_cutoff, p_thresh=p_thresh
@@ -847,9 +852,9 @@ class MarkovChain:
                 "DEBUG: Setting lineage probabilities based on (g)PCCA membership vectors"
             )
             rc_names = list(self._approx_rcs.cat.categories)
-            chi = Lineage(m, names=rc_names, colors=self._approx_rcs_colors)
+            chi = Lineage(m_reduced, names=rc_names, colors=self._approx_rcs_colors)
             self._lin_probs = chi
-            self._dp = entropy(m.T)
+            self._dp = entropy(chi.T)
 
             # cosine correlation with the summed left eigenvectors
             def softmax(x, alpha=1):
