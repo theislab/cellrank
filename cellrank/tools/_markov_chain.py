@@ -630,7 +630,7 @@ class MarkovChain:
 
         # write to class and adata
         if self._approx_rcs is not None:
-            logg.debug("DEBUG: Overwriting `.approx_rcs`")
+            logg.debug("DEBUG: Overwriting `.approximate_recurrent_classes`")
 
         self._approx_rcs = rc_labels
         self._adata.obs[self._rc_key] = self._approx_rcs
@@ -1500,7 +1500,7 @@ class MarkovChain:
         return self._dp
 
     @property
-    def approx_recurrent_classes(self) -> DataFrame:
+    def approx_recurrent_classes(self) -> Series:
         """
         The approximate recurrent classes, where `NaN` marks cells which are transient.
         """
