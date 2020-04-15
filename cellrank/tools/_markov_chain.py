@@ -12,7 +12,7 @@ import scvelo as scv
 from anndata import AnnData
 from itertools import combinations
 from pandas import Series, DataFrame, to_numeric
-from pandas.api.types import is_categorical_dtype
+from pandas.api.types import is_categorical_dtype, infer_dtype
 from scanpy import logging as logg
 from scipy.linalg import solve
 from scipy.sparse import issparse
@@ -602,7 +602,7 @@ class MarkovChain:
             )
         if not is_categorical_dtype(rc_labels):
             raise TypeError(
-                f"Approximate recurrent classes must be `categorical`, found `{type(rc_labels).__name__}`."
+                f"Approximate recurrent classes must be `categorical`, found `{infer_dtype(rc_labels)}`."
             )
 
         if add_to_existing:
