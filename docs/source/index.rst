@@ -1,7 +1,7 @@
 |Travis| |Docs| |Codecov| |License|
 
 
-CellRank - Continuous Lineage Decisions Uncovered by RNA Velocity
+CellRank - Probabilistic Lineage Assignment using RNA Velocity
 ===================================================================
 
 .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/index_figure_endpoints.png
