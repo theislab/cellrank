@@ -10,6 +10,7 @@ from typing import Optional, Any, Union, Tuple, List, Sequence, Dict, Iterable
 
 import os
 import warnings
+import pandas as pd
 import matplotlib.colors as mcolors
 import matplotlib.cm as cm
 import networkx as nx
@@ -18,7 +19,7 @@ import scanpy as sc
 
 from anndata import AnnData
 from pandas import Series
-from pandas.api.types import is_categorical_dtype
+from pandas.api.types import is_categorical_dtype, infer_dtype
 from scanpy import logging as logg
 from scipy.sparse import csr_matrix, spmatrix
 from scipy.sparse import issparse
@@ -798,3 +799,56 @@ def _convert_to_categorical_series(
         rc_labels[cells] = rc
 
     return rc_labels.astype("category")
+
+
+def _merge_approx_rcs(
+    rc_old: pd.Series, rc_new: pd.Series, inplace: bool = False
+) -> Optional[pd.Series]:
+    """
+    Update approximate recurrent classes with new information. It **can never remove** old categories, only
+    add to the existing ones.
+
+    Params
+    ------
+    rc_old
+        Old approximate recurrent classes.
+    rc_new
+        New approximate recurrent classes.
+    inplace
+        Whether to update :paramref:`rc_old` or create a copy.
+
+    Returns
+    -------
+    :class:`pd.Series`
+        If paramref:`inplace` is `False`, returns the modified approximate recurrent classes.
+    """
+
+    if not is_categorical_dtype(rc_old):
+        raise TypeError(
+            f"Expected old approx. recurrent classes to be categorical, found "
+            f"`{infer_dtype(rc_old)}`."
+        )
+
+    if not is_categorical_dtype(rc_new):
+        raise TypeError(
+            f"Expected new approx. recurrent classes to be categorical, found "
+            f"`{infer_dtype(rc_new)}`."
+        )
+
+    if (rc_old.index != rc_new.index).any():
+        raise ValueError(f"Index for old and new approx. recurrent classes differ.")
+
+    if not inplace:
+        rc_old = rc_old.copy()
+
+    mask = ~rc_new.isna()
+    old_cats = rc_old.cat.categories
+    cats_to_add = (
+        pd.CategoricalIndex(rc_new[mask]).remove_unused_categories().categories
+    )
+
+    rc_old.cat.set_categories(old_cats | cats_to_add, inplace=True)
+
+    rc_old.loc[mask] = rc_new.loc[mask]
+
+    return rc_old if not inplace else None
