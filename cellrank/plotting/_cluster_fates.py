@@ -139,8 +139,9 @@ def cluster_fates(
 
             current_ax.set_xticks(np.arange(len(lin_names)))
             current_ax.set_xticklabels(lin_names, rotation="vertical")
-            current_ax.set_xlabel(points)
-            current_ax.set_ylabel("Absorption probability")
+            if not is_all:
+                current_ax.set_xlabel(points)
+            current_ax.set_ylabel("Absorption Probability")
             current_ax.set_title(k)
 
         return fig
@@ -170,7 +171,7 @@ def cluster_fates(
             vmin, vmax = np.nanmin(colors + [vmin]), np.nanmax(colors + [vmax])
             kwargs["ax"] = ax
             kwargs["colors"] = tuple(colors)
-            kwargs["title"] = lineage_name
+            kwargs["title"] = f"{dir_prefix} {lineage_name}"
 
             sc.pl.paga(adata, **kwargs)
 
@@ -178,7 +179,7 @@ def cluster_fates(
             norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
             cax, _ = mpl.colorbar.make_axes(ax, aspect=100)  # new matplotlib feature
             _ = mpl.colorbar.ColorbarBase(
-                cax, norm=norm, cmap=kwargs["cmap"], label="Absorption probability"
+                cax, norm=norm, cmap=kwargs["cmap"], label="Absorption Probability"
             )
 
         for ax in axes[i + 1 :]:
@@ -244,9 +245,11 @@ def cluster_fates(
         to_clean = []
 
         for i, name in enumerate(lin_names):
-            if name not in adata.obs_keys():
-                to_clean.append(name)
-                adata.obs[name] = np.array(
+            # TODO: once ylabel is implemented, the prefix isn't necessary
+            key = f"{dir_prefix} {name}"
+            if key not in adata.obs_keys():
+                to_clean.append(key)
+                adata.obs[key] = np.array(
                     data[:, name]
                 )  # TODO: better approach - dummy adata
 
@@ -264,8 +267,9 @@ def cluster_fates(
 
         i = 0
         for i, (name, ax) in enumerate(zip(lin_names, axes)):
-            ax.set_title(name)  # ylabel not yet supported
-            sc.pl.violin(adata, keys=[name], ax=ax, **kwargs)
+            key = f"{dir_prefix} {name}"
+            ax.set_title(key)
+            sc.pl.violin(adata, keys=key, ax=ax, **kwargs)
         for ax in axes[i + 1 :]:
             ax.remove()
         for name in to_clean:
@@ -279,12 +283,17 @@ def cluster_fates(
         kwargs.pop("keys", None)  # don't care
         kwargs.pop("save", None)
         kwargs["groupby"] = points
+        kwargs["xlabel"] = None
 
         data = np.ravel(np.array(adata.obsm[lk]).T)[..., np.newaxis]
         dadata = AnnData(np.zeros_like(data))
-        dadata.obs["Absorption probability"] = data
+        dadata.obs["Absorption Probability"] = data
         dadata.obs[points] = (
-            pd.Series(np.ravel([[n] * adata.n_obs for n in adata.obsm[lk].names]))
+            pd.Series(
+                np.ravel(
+                    [[f"{dir_prefix} {n}"] * adata.n_obs for n in adata.obsm[lk].names]
+                )
+            )
             .astype("category")
             .values
         )
@@ -293,8 +302,8 @@ def cluster_fates(
         fig, ax = plt.subplots(
             figsize=figsize if figsize is not None else (8, 6), dpi=dpi
         )
-        ax.set_title("All Clusters")
-        sc.pl.violin(dadata, keys=["Absorption probability"], ax=ax, **kwargs)
+        ax.set_title(points)
+        sc.pl.violin(dadata, keys=["Absorption Probability"], ax=ax, **kwargs)
 
         return fig
 
@@ -307,10 +316,15 @@ def cluster_fates(
             raise KeyError(f"Key `{cluster_key!r}` not found in `adata.obs`.")
     elif mode not in ("bar", "violin"):
         raise ValueError(
-            f"Not specifying cluster key is only available for modes `'bar'` and `'violin'`."
+            f"Not specifying cluster key is only available for modes `'bar'` and `'violin'`, found `mode={mode!r}`."
         )
 
+    lk = str(LinKey.FORWARD if final else LinKey.BACKWARD)
+    points = "To Final Cells" if final else "From Root Cells"
+    dir_prefix = "To" if final else "From"
+
     if cluster_key is not None:
+        is_all = False
         if clusters is not None:
             if isinstance(clusters, str):
                 clusters = [clusters]
@@ -329,10 +343,9 @@ def cluster_fates(
         else:
             clusters = list(adata.obs[cluster_key].cat.categories)
     else:
-        clusters = ["All"]
+        is_all = True
+        clusters = [points]
 
-    lk = str(LinKey.FORWARD if final else LinKey.BACKWARD)
-    points = "final groups" if final else "root groups"
     if lk not in adata.obsm:
         raise KeyError(f"Lineage key `{lk!r}` not found in `adata.obsm`.")
 
@@ -350,7 +363,7 @@ def cluster_fates(
         # must be list for sc.pl.violin, else cats str
         lin_names = list(adata.obsm[lk].names)
 
-    if mode == "violin" and clusters != ["All"]:
+    if mode == "violin" and not is_all:
         # TODO: temporary fix, until subclassing is made ready
         names, colors = adata.obsm[lk].names, adata.obsm[lk].colors
         adata = adata[np.isin(adata.obs[cluster_key], clusters)].copy()
@@ -360,7 +373,7 @@ def cluster_fates(
     for name in clusters:
         mask = (
             np.ones((adata.n_obs,), dtype=np.bool)
-            if name == "All"
+            if is_all
             else (adata.obs[cluster_key] == name).values
         )
         mask = list(np.array(mask, dtype=np.bool))

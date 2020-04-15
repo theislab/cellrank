@@ -9,7 +9,7 @@ from cellrank.tools._utils import _normalize
 from cellrank.utils._utils import get_neighs, get_neighs_params
 from _helpers import transition_matrix, bias_knn, density_normalization, create_kernels
 
-_rtol = 1e-14
+_rtol = 1e-6
 
 
 class TestInitializeKernel:
