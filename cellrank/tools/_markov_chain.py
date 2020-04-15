@@ -12,7 +12,7 @@ import scvelo as scv
 from anndata import AnnData
 from itertools import combinations
 from pandas import Series, DataFrame, to_numeric
-from pandas.api.types import is_categorical_dtype
+from pandas.api.types import is_categorical_dtype, infer_dtype
 from scanpy import logging as logg
 from scipy.linalg import solve
 from scipy.sparse import issparse
@@ -44,6 +44,7 @@ from cellrank.tools._utils import (
     _create_categorical_colors,
     _compute_mean_color,
     _convert_to_categorical_series,
+    _merge_approx_rcs,
     partition,
     save_fig,
 )
@@ -563,6 +564,7 @@ class MarkovChain:
         cluster_key: Optional[str] = None,
         en_cutoff: Optional[float] = None,
         p_thresh: Optional[float] = None,
+        add_to_existing: bool = False,
     ):
         """
         Set the approximate recurrent classes, if they are known a priori.
@@ -581,7 +583,12 @@ class MarkovChain:
         p_thresh
             If cell cycle scores were provided, a *Wilcoxon rank-sum test* is conducted to identify cell-cycle driven
             start- or endpoints.
-            If the test returns a positive statistic and a p-value smaller than :paramref:`p_thresh`, a warning will be issued.
+            If the test returns a positive statistic and a p-value smaller than :paramref:`p_thresh`,
+            a warning will be issued.
+        add_to_existing
+            Whether to add thses categories to existing ones. Cells already belonging to recurrent classes will be
+            updated if there's an overlap.
+            Throws an error if previous approximate recurrent classes have not been calculated.
 
         Returns
         -------
@@ -595,7 +602,16 @@ class MarkovChain:
             )
         if not is_categorical_dtype(rc_labels):
             raise TypeError(
-                f"Approximate recurrent classes must be `categorical`, found `{type(rc_labels).__name__}`."
+                f"Approximate recurrent classes must be `categorical`, found `{infer_dtype(rc_labels)}`."
+            )
+
+        if add_to_existing:
+            if self.approx_recurrent_classes is None:
+                raise RuntimeError(
+                    "Compute approximate recurrent classes first as `.compute_approx_rcs()`"
+                )
+            rc_labels = _merge_approx_rcs(
+                self.approx_recurrent_classes, rc_labels, inplace=False
             )
 
         if cluster_key is not None:
@@ -614,7 +630,7 @@ class MarkovChain:
 
         # write to class and adata
         if self._approx_rcs is not None:
-            logg.debug("DEBUG: Overwriting `.approx_rcs`")
+            logg.debug("DEBUG: Overwriting `.approximate_recurrent_classes`")
 
         self._approx_rcs = rc_labels
         self._adata.obs[self._rc_key] = self._approx_rcs
@@ -1484,7 +1500,7 @@ class MarkovChain:
         return self._dp
 
     @property
-    def approx_recurrent_classes(self) -> DataFrame:
+    def approx_recurrent_classes(self) -> Series:
         """
         The approximate recurrent classes, where `NaN` marks cells which are transient.
         """
