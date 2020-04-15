@@ -842,6 +842,10 @@ def _merge_approx_rcs(
         rc_old = rc_old.copy()
 
     mask = ~rc_new.isna()
+
+    if np.sum(mask) == 0:
+        return rc_old if not inplace else None
+
     old_cats = rc_old.cat.categories
     cats_to_add = (
         pd.CategoricalIndex(rc_new.loc[mask]).remove_unused_categories().categories
