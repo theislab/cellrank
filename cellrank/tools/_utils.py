@@ -848,6 +848,7 @@ def _merge_approx_rcs(
     )
 
     rc_old.cat.set_categories(old_cats | cats_to_add, inplace=True)
+    rc_new.cat.set_categories(old_cats | cats_to_add, inplace=True)
 
     rc_old.loc[mask] = rc_new.loc[mask]
 
