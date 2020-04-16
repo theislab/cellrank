@@ -39,3 +39,13 @@ class TestToolsUtils:
 
         assert _ is None
         np.testing.assert_array_equal(x.values, expected.values)
+
+    def test_merge_rcs_normal_run_completely_different_categories(self):
+        x = pd.Series(["a", "a", "a"]).astype("category")
+        y = pd.Series(["b", "b", "b"]).astype("category")
+        expected = pd.Series(["b", "b", "b"]).astype("category")
+
+        res = _merge_approx_rcs(x, y, inplace=False)
+
+        np.testing.assert_array_equal(res.values, expected.values)
+        np.testing.assert_array_equal(res.cat.categories.values, ["b"])
