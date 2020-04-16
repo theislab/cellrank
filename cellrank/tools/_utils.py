@@ -847,6 +847,7 @@ def _merge_approx_rcs(
         return rc_old if not inplace else None
 
     old_cats = rc_old.cat.categories
+    new_cats = rc_new.cat.categories
     cats_to_add = (
         pd.CategoricalIndex(rc_new.loc[mask]).remove_unused_categories().categories
     )
@@ -855,5 +856,8 @@ def _merge_approx_rcs(
     rc_new.cat.set_categories(old_cats | cats_to_add, inplace=True)
 
     rc_old.loc[mask] = rc_new.loc[mask]
+    rc_old.cat.remove_unused_categories(inplace=True)
+
+    rc_new.cat.set_categories(new_cats, inplace=True)  # return to previous state
 
     return rc_old if not inplace else None
