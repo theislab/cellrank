@@ -28,6 +28,7 @@ _ERROR_CONF_ADAPT = (
     "Confidence adaptive operator is only supported for kernels, found type `{}`."
 )
 _ERROR_VAR_NOT_FOUND = "Variances not found in kernel `{}`."
+_ERROR_COPY_HAS_PARENT = "Copying is supported only for top-level kernel expressions."
 
 _LOG_USING_CACHE = "DEBUG: Using cached transition matrix"
 
@@ -165,6 +166,12 @@ class KernelExpression(ABC):
         self.adata.uns[key]["T"] = self.transition_matrix
 
         logg.debug(f"DEBUG: Added `{key!r}` to `adata.uns`")
+
+    @abstractmethod
+    def copy(self) -> "KernelExpression":
+        """Return a copy of itself. Only available to a top-level expression."""
+        if self._parent is not None:
+            raise RuntimeError(_ERROR_COPY_HAS_PARENT)
 
     def __xor__(self, other: "KernelExpression") -> "KernelExpression":
         return self.__rxor__(other)
@@ -322,6 +329,9 @@ class KernelExpression(ABC):
         self._direction = Direction.FORWARD if self.backward else Direction.BACKWARD
 
         return self
+
+    def __copy__(self) -> "KernelExpression":
+        return self.copy()
 
 
 class UnaryKernelExpression(KernelExpression, ABC):
@@ -534,6 +544,14 @@ class Constant(Kernel):
     def compute_transition_matrix(self, *args, **kwargs) -> "Constant":
         return self
 
+    def copy(self) -> "Constant":
+        _ = super().copy()
+        return Constant(
+            self.adata.copy() if self._parent is None else self.adata,
+            self.transition_matrix,
+            self.backward,
+        )
+
     def __invert__(self) -> "Constant":
         # do not call parent's invert, since it removes the transition matrix
         self._direction = Direction.FORWARD if self.backward else Direction.BACKWARD
@@ -576,6 +594,15 @@ class ConstantMatrix(Kernel):
             csr_matrix(variances) if not issparse(variances) else variances
         )
         self._recalculate(value)
+
+    def copy(self) -> "ConstantMatrix":
+        _ = super().copy()
+        return ConstantMatrix(
+            self.adata.copy() if self._parent is None else self.adata,
+            self._value,
+            copy(self._variances),
+            self.backward,
+        )
 
     def _recalculate(self, value):
         self._value = value
@@ -625,6 +652,7 @@ class VelocityKernel(Kernel):
 
     def __init__(self, adata: AnnData, backward: bool = False, vkey: str = "velocity"):
         super().__init__(adata, backward=backward, vkey=vkey)
+        self._vkey = vkey  # for copy
 
     def _read_from_adata(self, vkey: str, **kwargs):
         super()._read_from_adata(variance_key="velocity", **kwargs)
@@ -717,6 +745,18 @@ class VelocityKernel(Kernel):
 
         return self
 
+    def copy(self) -> "VelocityKernel":
+        _ = super().copy()
+        vk = VelocityKernel(
+            self.adata.copy() if self._parent is None else self.adata,
+            backward=self.backward,
+            vkey=self._vkey,
+        )
+        vk._params = copy(self.params)
+        vk._transition_matrix = copy(self._transition_matrix)
+
+        return vk
+
 
 class ConnectivityKernel(Kernel):
     """
@@ -768,7 +808,7 @@ class ConnectivityKernel(Kernel):
         start = logg.info("Computing transition matrix based on connectivities")
 
         params = dict(dnorm=density_normalize)
-        if params == self._params:
+        if params == self.params:
             assert self.transition_matrix is not None, _ERROR_EMPTY_CACHE_MSG
             logg.debug(_LOG_USING_CACHE)
             logg.info("    Finish", time=start)
@@ -784,6 +824,16 @@ class ConnectivityKernel(Kernel):
         self.transition_matrix = csr_matrix(conn)
 
         return self
+
+    def copy(self) -> "ConnectivityKernel":
+        _ = super().copy()
+        ck = ConnectivityKernel(
+            self.adata.copy() if self._parent is None else self.adata, self.backward
+        )
+        ck._params = copy(self.params)
+        ck._transition_matrix = copy(self._transition_matrix)
+
+        return ck
 
 
 class PalantirKernel(Kernel):
@@ -815,6 +865,7 @@ class PalantirKernel(Kernel):
         self, adata: AnnData, backward: bool = False, time_key: str = "dpt_pseudotime"
     ):
         super().__init__(adata, backward=backward, time_key=time_key)
+        self._time_key = time_key
 
     def _read_from_adata(self, time_key: str, **kwargs):
         super()._read_from_adata(variance_key="palantir", **kwargs)
@@ -903,6 +954,18 @@ class PalantirKernel(Kernel):
 
         return self
 
+    def copy(self) -> "PalantirKernel":
+        _ = super.copy()
+        pk = PalantirKernel(
+            self.data.copy() if self._parent is None else self.adata,
+            backward=self.backward,
+            time_key=self._time_key,
+        )
+        pk._params = copy(self._params)
+        pk._transition_matrix = copy(self._transition_matrix)
+
+        return pk
+
 
 class SimpleNaryExpression(NaryKernelExpression):
     """
@@ -937,6 +1000,21 @@ class SimpleNaryExpression(NaryKernelExpression):
 
         return self
 
+    def copy(self) -> "SimpleNaryExpression":
+        _ = super().copy()
+        for kexpr in self:
+            kexpr._parent = None
+
+        sne = SimpleNaryExpression(
+            [k.copy() for k in self], op_name=self._op_name, fn=self._fn
+        )
+        sne._transition_matrix = copy(self._transition_matrix)
+
+        for kexpr in self:
+            kexpr._parent = self
+
+        return sne
+
 
 class KernelAdd(SimpleNaryExpression):
     def __init__(self, kexprs: List[KernelExpression], op_name: str):
@@ -945,7 +1023,7 @@ class KernelAdd(SimpleNaryExpression):
 
 class KernelSimpleAdd(KernelAdd):
     """
-    Addition between two kernel expressions.
+    Addition between multiple kernel expressions.
     """
 
     def __init__(self, kexprs: List[KernelExpression]):
@@ -954,7 +1032,7 @@ class KernelSimpleAdd(KernelAdd):
 
 class KernelAdaptiveAdd(KernelAdd):
     """
-    Adaptive addition between two kernels.
+    Adaptive addition between multiple kernel expressions.
     """
 
     def __init__(self, kexprs: List[KernelExpression]):
@@ -963,7 +1041,7 @@ class KernelAdaptiveAdd(KernelAdd):
 
 class KernelMul(SimpleNaryExpression):
     """
-    Multiplication between two kernel expressions.
+    Multiplication between kernel expressions.
     """
 
     def __init__(self, kexprs: List[KernelExpression]):
