@@ -1468,8 +1468,8 @@ class MarkovChain:
 
         kernel = copy(self.kernel)  # also copies the adata object
         mc = MarkovChain(
-            kernel, inplace=False, read_from_adata=False
-        )  # read not necessary
+            kernel, self.adata.copy(), inplace=False, read_from_adata=False
+        )
 
         mc._is_irreducible = self.irreducible
         mc._rec_classes = copy(self._rec_classes)
