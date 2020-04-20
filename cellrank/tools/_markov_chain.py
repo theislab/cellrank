@@ -1452,6 +1452,10 @@ class MarkovChain:
         self._approx_rcs_probs = c
         self._adata.obs[_probs(self._rc_key)] = c
 
+    def copy(self) -> "MarkovChain":
+        mc = MarkovChain(self.kernel.copy(), self.adata, inplace=False)
+        pass
+
     @property
     def irreducible(self) -> Optional[bool]:
         """
@@ -1529,6 +1533,9 @@ class MarkovChain:
         The underlying kernel expression.
         """
         return self._kernel
+
+    def __copy__(self) -> "MarkovChain":
+        return self.copy()
 
     def __len__(self) -> int:
         return self._n_states
