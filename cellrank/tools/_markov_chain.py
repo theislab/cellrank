@@ -341,6 +341,7 @@ class MarkovChain:
         dpi: int = 100,
         figsize: Optional[Tuple[float, float]] = (5, 5),
         legend_loc: Optional[str] = None,
+        title: Optional[str] = None,
         save: Optional[Union[str, Path]] = None,
     ) -> None:
         """
@@ -399,7 +400,11 @@ class MarkovChain:
         ax.set_xlim(x_min_, x_max_)
         ax.set_ylim(y_min_, y_max_)
         key = "real part" if params["which"] == "LR" else "magnitude"
-        ax.set_title(f"Top {params['k']} eigenvalues according to their {key}")
+        if title is None:
+            title_str = f"top {params['k']} eigenvalues according to their {key}"
+        else:
+            title_str = title
+        ax.set_title(title_str)
         ax.legend(loc=legend_loc)
 
         if save is not None:
@@ -970,6 +975,7 @@ class MarkovChain:
         keys: Optional[Sequence[str]] = None,
         check_irred: bool = False,
         norm_by_frequ: bool = False,
+        return_temp_labels: bool = False,
     ) -> None:
         """
         Compute absorption probabilities for a Markov chain.
@@ -986,6 +992,8 @@ class MarkovChain:
             Check whether the matrix restricted to the given transient states is irreducible.
         norm_by_frequ
             Divide absorption probabilities for `rc_i` by `|rc_i|`.
+        return_temp_labels
+            Whether to return temporary annotations that have been processed according to `keys`
 
         Returns
         -------
@@ -1110,6 +1118,9 @@ class MarkovChain:
         self._adata.uns[_colors(self._lin_key)] = self._lin_probs.colors
 
         logg.info("    Finish", time=start)
+
+        if return_temp_labels:
+            return approx_rcs_
 
     def plot_lin_probs(
         self,
