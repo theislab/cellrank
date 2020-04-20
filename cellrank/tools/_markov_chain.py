@@ -644,9 +644,9 @@ class MarkovChain:
     def compute_approx_rcs(
         self,
         use: Optional[Union[int, Tuple[int], List[int], range]] = None,
-        n_cells: int = 10,
+        n_cells: Optional[int] = None,
         percentile: Optional[int] = 98,
-        method: str = "kmeans",
+        method: str = "gpcca",
         cluster_key: Optional[str] = None,
         n_clusters_kmeans: Optional[int] = None,
         n_neighbors_louvain: int = 20,
@@ -658,6 +658,7 @@ class MarkovChain:
         scale: bool = False,
         en_cutoff: Optional[float] = 0.7,
         p_thresh: float = 1e-15,
+        return_gpcca: bool = False,
     ) -> None:
         """
         Find approximate recurrent classes in the Markov chain.
@@ -677,7 +678,7 @@ class MarkovChain:
             Cells which are in the lower :paramref:`percentile` percent
             of each eigenvector will be removed from the data matrix.
         method
-            Method to be used for clustering. Must be one of `['louvain', 'kmeans', 'pcca', 'gpcca']`.
+            Method to be used for clustering. Must be one of `['louvain', 'kmeans', 'gpcca']`.
         cluster_key
             If a key to cluster labels is given, `approx_rcs` will ge associated with these for naming and colors.
         n_clusters_kmeans
@@ -707,6 +708,8 @@ class MarkovChain:
             If cell cycle scores were provided, a *Wilcoxon rank-sum test* is conducted to identify cell-cycle driven
             start- or endpoints.
             If the test returns a positive statistic and a p-value smaller than :paramref:`p_thresh`, a warning will be issued.
+        return gpcca
+            Whether to return the fitted gpcca object
 
         Returns
         -------
@@ -821,51 +824,66 @@ class MarkovChain:
 
             if len(use) == 1:
                 m = self.eigendecomposition["stationary_dist"][:, None]
-            elif method == "pcca":
-                from msmtools.analysis.dense.pcca import pcca
+            else:
+                from msmtools.analysis.dense.gpcca import GPCCA
 
-                m = pcca(self.kernel.transition_matrix, len(use))
-            elif method == "gpcca":
-                from msmtools.analysis.dense.gpcca import gpcca
+                # set transition matrix, inner product and number of macrostates
+                P = self.kernel.transition_matrix.toarray()
+                eta = np.repeat(1 / P.shape[0], P.shape[0])
+                m = len(use)
 
-                m = gpcca(self.kernel.transition_matrix, len(use))
+                # instanciate the object, get the membership vectors
+                gpcca = GPCCA(P, eta, m)
+                m = gpcca.memberships
 
-            self.eigendecomposition["(g)pcca_membership"] = m
-            rc_labels = Series(index=self._adata.obs_names, dtype="category")
-            overlaps = {}
-            cols = []
-            for i, col in enumerate(m.T):
-                p = np.flip(np.argsort(col))[:n_cells]
+            self.eigendecomposition["gpcca_membership"] = m
 
-                # handle the case of overlapping cells (fuzzy clustering)
-                if len(rc_labels.cat.categories) > 0:
-                    current_labels = rc_labels.iloc[p]
-                    overlap = {
-                        cl: np.sum(current_labels == cl)
-                        for cl in current_labels.cat.categories
-                        if np.sum(current_labels == cl) > 0
-                    }
-                    overlaps[i] = overlap
-                    if any(np.fromiter(overlap.values(), dtype=float) / n_cells > 0.8):
-                        logg.warning("Found overlapping clusters. Skipping.")
-                        continue
+            if n_cells is None:
+                rc_labels = Series(
+                    index=self._adata.obs_names,
+                    data=gpcca.metastable_assignment,
+                    dtype="category",
+                )
+                m_reduced = m
+            else:
+                # in this case, we need to be a bit careful because fuzzy clusters can largely overlap
+                rc_labels = Series(index=self._adata.obs_names, dtype="category")
+                overlaps = {}
+                cols = []
+                for i, col in enumerate(m.T):
+                    p = np.flip(np.argsort(col))[:n_cells]
 
-                self.eigendecomposition["(g)pcca_overlap"] = overlaps
-                rc_labels.cat.add_categories(str(i), inplace=True)
-                rc_labels.iloc[p] = str(i)
-                cols.append(col[:, None])
+                    # handle the case of overlapping cells (fuzzy clustering)
+                    if len(rc_labels.cat.categories) > 0:
+                        current_labels = rc_labels.iloc[p]
+                        overlap = {
+                            cl: np.sum(current_labels == cl)
+                            for cl in current_labels.cat.categories
+                            if np.sum(current_labels == cl) > 0
+                        }
+                        overlaps[i] = overlap
+                        if any(
+                            np.fromiter(overlap.values(), dtype=float) / n_cells > 0.8
+                        ):
+                            logg.warning("Found overlapping clusters. Skipping.")
+                            continue
 
-            # aggregate the non-overlapping columns together
-            m_reduced = np.concatenate(cols, axis=1)
+                    self.eigendecomposition["gpcca_overlap"] = overlaps
+                    rc_labels.cat.add_categories(str(i), inplace=True)
+                    rc_labels.iloc[p] = str(i)
+                    cols.append(col[:, None])
+
+                # aggregate the non-overlapping columns together
+                m_reduced = np.concatenate(cols, axis=1)
 
         self.set_approx_rcs(
             rc_labels, cluster_key=cluster_key, en_cutoff=en_cutoff, p_thresh=p_thresh
         )
 
         # if mode pcca, also set lineage probs
-        if method in ["pcca", "gpcca"]:
+        if method == "gpcca":
             logg.debug(
-                "DEBUG: Setting lineage probabilities based on (g)PCCA membership vectors"
+                "DEBUG: Setting lineage probabilities based on GPCCA membership vectors"
             )
             rc_names = list(self._approx_rcs.cat.categories)
             chi = Lineage(m_reduced, names=rc_names, colors=self._approx_rcs_colors)
@@ -905,6 +923,9 @@ class MarkovChain:
             f"    Finish",
             time=start,
         )
+
+        if return_gpcca:
+            return gpcca
 
     def plot_approx_rcs(self, cluster_key: Optional[str] = None, **kwargs) -> None:
         """
