@@ -28,7 +28,6 @@ _ERROR_CONF_ADAPT = (
     "Confidence adaptive operator is only supported for kernels, found type `{}`."
 )
 _ERROR_VAR_NOT_FOUND = "Variances not found in kernel `{}`."
-_ERROR_COPY_HAS_PARENT = "Copying is supported only for top-level kernel expressions."
 
 _LOG_USING_CACHE = "DEBUG: Using cached transition matrix"
 
@@ -169,9 +168,8 @@ class KernelExpression(ABC):
 
     @abstractmethod
     def copy(self) -> "KernelExpression":
-        """Return a copy of itself. Only available to a top-level expression."""
-        if self._parent is not None:
-            raise RuntimeError(_ERROR_COPY_HAS_PARENT)
+        """Return a copy of itself. Note that the underlying :paramref:`adata` object is not copied."""
+        pass
 
     def __xor__(self, other: "KernelExpression") -> "KernelExpression":
         return self.__rxor__(other)
@@ -545,12 +543,7 @@ class Constant(Kernel):
         return self
 
     def copy(self) -> "Constant":
-        _ = super().copy()
-        return Constant(
-            self.adata.copy() if self._parent is None else self.adata,
-            self.transition_matrix,
-            self.backward,
-        )
+        return Constant(self.adata, self.transition_matrix, self.backward)
 
     def __invert__(self) -> "Constant":
         # do not call parent's invert, since it removes the transition matrix
@@ -596,12 +589,8 @@ class ConstantMatrix(Kernel):
         self._recalculate(value)
 
     def copy(self) -> "ConstantMatrix":
-        _ = super().copy()
         return ConstantMatrix(
-            self.adata.copy() if self._parent is None else self.adata,
-            self._value,
-            copy(self._variances),
-            self.backward,
+            self.adata, self._value, copy(self._variances), self.backward
         )
 
     def _recalculate(self, value):
@@ -746,12 +735,7 @@ class VelocityKernel(Kernel):
         return self
 
     def copy(self) -> "VelocityKernel":
-        _ = super().copy()
-        vk = VelocityKernel(
-            self.adata.copy() if self._parent is None else self.adata,
-            backward=self.backward,
-            vkey=self._vkey,
-        )
+        vk = VelocityKernel(self.adata, backward=self.backward, vkey=self._vkey)
         vk._params = copy(self.params)
         vk._transition_matrix = copy(self._transition_matrix)
 
@@ -826,10 +810,7 @@ class ConnectivityKernel(Kernel):
         return self
 
     def copy(self) -> "ConnectivityKernel":
-        _ = super().copy()
-        ck = ConnectivityKernel(
-            self.adata.copy() if self._parent is None else self.adata, self.backward
-        )
+        ck = ConnectivityKernel(self.adata, backward=self.backward)
         ck._params = copy(self.params)
         ck._transition_matrix = copy(self._transition_matrix)
 
@@ -955,12 +936,7 @@ class PalantirKernel(Kernel):
         return self
 
     def copy(self) -> "PalantirKernel":
-        _ = super.copy()
-        pk = PalantirKernel(
-            self.data.copy() if self._parent is None else self.adata,
-            backward=self.backward,
-            time_key=self._time_key,
-        )
+        pk = PalantirKernel(self.adata, backward=self.backward, time_key=self._time_key)
         pk._params = copy(self._params)
         pk._transition_matrix = copy(self._transition_matrix)
 
@@ -1001,17 +977,10 @@ class SimpleNaryExpression(NaryKernelExpression):
         return self
 
     def copy(self) -> "SimpleNaryExpression":
-        _ = super().copy()
-        for kexpr in self:
-            kexpr._parent = None
-
         sne = SimpleNaryExpression(
             [k.copy() for k in self], op_name=self._op_name, fn=self._fn
         )
         sne._transition_matrix = copy(self._transition_matrix)
-
-        for kexpr in self:
-            kexpr._parent = self
 
         return sne
 

@@ -1466,7 +1466,7 @@ class MarkovChain:
         Return a copy of itself.
         """
 
-        kernel = copy(self.kernel)  # also copies the adata object
+        kernel = copy(self.kernel)  # doesn't copy the adata object
         mc = MarkovChain(
             kernel, self.adata.copy(), inplace=False, read_from_adata=False
         )
