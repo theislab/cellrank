@@ -56,7 +56,7 @@ def _create_cellrank_adata(
         if backward:
             assert "from_root_cells" in adata.obsm
         else:
-            assert "from_root_cells" in adata.obsm
+            assert "to_final_cells" in adata.obsm
     except:
         mc = None
 
