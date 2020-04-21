@@ -762,3 +762,7 @@ class TestKernelAddition:
         )
 
         np.testing.assert_allclose(k.transition_matrix.A, expected)
+
+
+class TestKernelCopy:
+    pass

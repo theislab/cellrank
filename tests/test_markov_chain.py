@@ -237,3 +237,7 @@ class TestMarkovChain:
 
         assert (adata.obs["final_cells"][zero_mask] == "foo").all()
         assert pd.isna(adata.obs["final_cells"][~zero_mask]).all()
+
+
+class TestMarkovChainCopy:
+    pass
