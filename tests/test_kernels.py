@@ -281,9 +281,11 @@ class TestInitializeKernel:
         assert string == "<Conn[dnorm=True]>"
 
     def test_str_inv(self, adata):
-        string = str(ConnectivityKernel(adata, backward=True).compute_transition_matrix())
+        string = str(
+            ConnectivityKernel(adata, backward=True).compute_transition_matrix()
+        )
 
-        assert string == '~<Conn[dnorm=True]>'
+        assert string == "~<Conn[dnorm=True]>"
 
 
 class TestKernel:
