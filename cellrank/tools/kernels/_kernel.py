@@ -415,10 +415,13 @@ class UnaryKernelExpression(KernelExpression, ABC):
         return self._adata
 
     def __repr__(self):
-        return f"<{self.__class__.__name__[:4]}>"
+        return f"{'~' if self.backward and self._parent is None else ''}<{self.__class__.__name__[:4]}>"
 
     def __str__(self):
-        return f"<{self.__class__.__name__[:4]}[{self._format_params()}]>"
+        params_fmt = self._format_params()
+        if params_fmt:
+            return f"{'~' if self.backward and self._parent is None else ''}<{self.__class__.__name__[:4]}[{params_fmt}]>"
+        return repr(self)
 
 
 class NaryKernelExpression(KernelExpression, ABC):
@@ -478,14 +481,14 @@ class NaryKernelExpression(KernelExpression, ABC):
 
     def __repr__(self) -> str:
         return (
-            "("
+            f"{'~' if self.backward and self._parent is None else ''}("
             + f" {self._op_name} ".join((repr(kexpr) for kexpr in self._kexprs))
             + ")"
         )
 
     def __str__(self) -> str:
         return (
-            "("
+            f"{'~' if self.backward and self._parent is None else ''}("
             + f" {self._op_name} ".join((str(kexpr) for kexpr in self._kexprs))
             + ")"
         )
