@@ -320,7 +320,7 @@ def cluster_fates(
         )
 
     lk = str(LinKey.FORWARD if final else LinKey.BACKWARD)
-    points = "To Final Cells" if final else "From Root Cells"
+    points = "final states" if final else "root states"
     dir_prefix = "To" if final else "From"
 
     if cluster_key is not None:
