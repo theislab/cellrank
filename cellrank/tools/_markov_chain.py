@@ -1433,11 +1433,11 @@ class MarkovChain:
 
     def _compute_approx_rcs_prob(self, use: Union[Tuple[int], List[int], range]):
         """
-        Utility function which computes a global score of being an approximate recurrent class
+        Utility function which computes a global score of being an approximate recurrent class.
         """
 
         if self._eig is None:
-            raise RuntimeError("Compute eigendecomposition first as `.compute_eig()`")
+            raise RuntimeError("Compute eigendecomposition first as `.compute_eig()`.")
 
         # get the truncated eigendecomposition
         V, evals = self._eig["V_l"].real[:, use], self._eig["D"].real[use]
@@ -1448,8 +1448,8 @@ class MarkovChain:
         V_scaled = V_shifted / np.max(V_shifted, axis=0)
 
         # check the ranges are correct
-        assert np.allclose(np.min(V_scaled, axis=0), 0), "Lower limit it not zero"
-        assert np.allclose(np.max(V_scaled, axis=0), 1), "Upper limit is not one"
+        assert np.allclose(np.min(V_scaled, axis=0), 0), "Lower limit it not zero."
+        assert np.allclose(np.max(V_scaled, axis=0), 1), "Upper limit is not one."
 
         # further scale by the eigenvalues
         V_eigs = V_scaled / evals
@@ -1549,10 +1549,7 @@ class MarkovChain:
     @property
     def adata(self) -> AnnData:
         """
-        Returns
-        -------
-        :class:`anndata.AnnData`
-            The underlying annotated data object.
+        The underlying annotated data object.
         """
         return self._adata
 
