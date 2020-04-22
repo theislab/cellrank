@@ -48,10 +48,16 @@ def _create_cellrank_adata(
 
         mc.compute_partition()
         mc.compute_eig()
-        mc.compute_approx_rcs(use=2)
+        mc.compute_approx_rcs(use=2)  # can fail for small #cells
         mc.compute_lin_probs()
         mc.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
-    except:  # let the tests fail if there's a pipeline failure
+
+        assert adata is mc.adata
+        if backward:
+            assert "from_root_cells" in adata.obsm
+        else:
+            assert "to_final_cells" in adata.obsm
+    except:
         mc = None
 
     return adata, mc
