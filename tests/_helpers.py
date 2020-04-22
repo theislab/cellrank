@@ -15,6 +15,7 @@ from sklearn.svm import SVR
 
 import os
 import numpy as np
+import pandas as pd
 import cellrank as cr
 
 
@@ -308,3 +309,12 @@ def resize_images_to_same_sizes(
             raise ValueError(
                 f"Invalid kind of conversion `{kind!r}`. Valid options are `'actual_to_expected'`, `'expected_to_actual'`."
             )
+
+
+def assert_array_nan_equal(
+    arr1: Union[np.ndarray, pd.Series], arr2: Union[np.ndarray, pd.Series]
+):
+    mask1 = ~(pd.isnull(arr1) if isinstance(arr1, pd.Series) else np.isnan(arr1))
+    mask2 = ~(pd.isnull(arr2) if isinstance(arr2, pd.Series) else np.isnan(arr2))
+    np.testing.assert_array_equal(np.where(mask1), np.where(mask2))
+    np.testing.assert_array_equal(arr1[mask1], arr2[mask2])

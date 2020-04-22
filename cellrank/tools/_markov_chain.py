@@ -11,6 +11,7 @@ import scvelo as scv
 
 from anndata import AnnData
 from itertools import combinations
+from copy import copy, deepcopy
 from pandas import Series, DataFrame, to_numeric
 from pandas.api.types import is_categorical_dtype, infer_dtype
 from scanpy import logging as logg
@@ -120,11 +121,19 @@ class MarkovChain:
         self._is_sparse = issparse(self._T)
         self._n_states = self._T.shape[0]
         if self._n_states != self._adata.n_obs:
-            raise ValueError("Number of states and number of cells differ.")
+            raise ValueError(
+                f"Expected `{self._n_states}` (based on transition matrix), "
+                f"found `{self._adata.n_obs}` (based on `adata` object)."
+            )
 
         self._is_irreducible = None
         self._rec_classes = None
         self._trans_classes = None
+
+        # for copy
+        self._g2m_key = g2m_key
+        self._s_key = s_key
+        self._key_added = key_added
 
         # read eig, approx_rcs and lin_probs from adata if present
         self._eig, self._approx_rcs, self._approx_rcs_colors, self._lin_probs, self._dp, self._G2M_score, self._S_score, self._approx_rcs_probs = (
@@ -1338,9 +1347,9 @@ class MarkovChain:
         en_cutoff
             Threshold for defining when to associate an approximate rc with a pre-computed cluster. Imagine a
             very fine pre-computed louvain clustering and an approximate rc spanning two louvain clusters, with approx.
-            50% of the cells coming from either cluster. What name should this approx. rc get? I thins case, we
+            50% of the cells coming from either cluster. What name should this approx. rc get? I this case, we
             should call it 'Unknown', since we don't know. The entropy threshold decides when we call an approximate rc
-            'Unknown'
+            'Unknown'.
 
         Returns
         -------
@@ -1524,11 +1533,11 @@ class MarkovChain:
 
     def _compute_approx_rcs_prob(self, use: Union[Tuple[int], List[int], range]):
         """
-        Utility function which computes a global score of being an approximate recurrent class
+        Utility function which computes a global score of being an approximate recurrent class.
         """
 
         if self._eig is None:
-            raise RuntimeError("Compute eigendecomposition first as `.compute_eig()`")
+            raise RuntimeError("Compute eigendecomposition first as `.compute_eig()`.")
 
         # get the truncated eigendecomposition
         V, evals = self._eig["V_l"].real[:, use], self._eig["D"].real[use]
@@ -1539,8 +1548,8 @@ class MarkovChain:
         V_scaled = V_shifted / np.max(V_shifted, axis=0)
 
         # check the ranges are correct
-        assert np.allclose(np.min(V_scaled, axis=0), 0), "Lower limit it not zero"
-        assert np.allclose(np.max(V_scaled, axis=0), 1), "Upper limit is not one"
+        assert np.allclose(np.min(V_scaled, axis=0), 0), "Lower limit it not zero."
+        assert np.allclose(np.max(V_scaled, axis=0), 1), "Upper limit is not one."
 
         # further scale by the eigenvalues
         V_eigs = V_scaled / evals
@@ -1551,6 +1560,30 @@ class MarkovChain:
 
         self._approx_rcs_probs = c
         self._adata.obs[_probs(self._rc_key)] = c
+
+    def copy(self) -> "MarkovChain":
+        """
+        Return a copy of itself.
+        """
+
+        kernel = copy(self.kernel)  # doesn't copy the adata object
+        mc = MarkovChain(
+            kernel, self.adata.copy(), inplace=False, read_from_adata=False
+        )
+
+        mc._is_irreducible = self.irreducible
+        mc._rec_classes = copy(self._rec_classes)
+        mc._trans_classes = copy(self._trans_classes)
+        mc._eig = deepcopy(self.eigendecomposition)
+        mc._lin_probs = copy(self.lineage_probabilities)
+        mc._dp = copy(self.diff_potential)
+        mc._approx_rcs = copy(self.approx_recurrent_classes)
+        mc._approx_rcs_probs = copy(self.approx_recurrent_classes_probabilities)
+        mc._approx_rcs_colors = copy(self._approx_rcs_colors)
+        mc._G2M_score = copy(self._G2M_score)
+        mc._S_score = copy(self._S_score)
+
+        return mc
 
     @property
     def irreducible(self) -> Optional[bool]:
@@ -1616,10 +1649,7 @@ class MarkovChain:
     @property
     def adata(self) -> AnnData:
         """
-        Returns
-        -------
-        :class:`anndata.AnnData`
-            The underlying annotated data object.
+        The underlying annotated data object.
         """
         return self._adata
 
@@ -1629,6 +1659,9 @@ class MarkovChain:
         The underlying kernel expression.
         """
         return self._kernel
+
+    def __copy__(self) -> "MarkovChain":
+        return self.copy()
 
     def __len__(self) -> int:
         return self._n_states

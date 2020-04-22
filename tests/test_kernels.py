@@ -252,6 +252,41 @@ class TestInitializeKernel:
         assert k[0][1][0][0]._value == 3 / 4
         assert k[0][1][1][0]._value == 1 / 4
 
+    def test_repr(self, adata):
+        rpr = repr(VelocityKernel(adata))
+
+        assert rpr == "<Velo>"
+
+    def test_repr_inv(self, adata):
+        rpr = repr(~VelocityKernel(adata))
+
+        assert rpr == "~<Velo>"
+
+    def test_repr_inv_comb(self, adata):
+        rpr = repr(~(VelocityKernel(adata) + ConnectivityKernel(adata)))
+
+        assert rpr == "~((1 * <Velo>) + (1 * <Conn>))"
+
+    def test_str_repr_equiv_no_transition_matrix(self, adata):
+        vk = VelocityKernel(adata)
+        string = str(vk)
+        rpr = repr(vk)
+
+        assert string == rpr
+        assert string == "<Velo>"
+
+    def test_str(self, adata):
+        string = str(ConnectivityKernel(adata).compute_transition_matrix())
+
+        assert string == "<Conn[dnorm=True]>"
+
+    def test_str_inv(self, adata):
+        string = str(
+            ConnectivityKernel(adata, backward=True).compute_transition_matrix()
+        )
+
+        assert string == "~<Conn[dnorm=True]>"
+
 
 class TestKernel:
     def test_row_normalized(self, adata):
@@ -762,3 +797,64 @@ class TestKernelAddition:
         )
 
         np.testing.assert_allclose(k.transition_matrix.A, expected)
+
+
+class TestKernelCopy:
+    def test_copy_simple(self, adata):
+        vk1 = VelocityKernel(adata)
+        vk2 = vk1.copy()
+
+        assert vk1 is not vk2
+
+    def test_copy_no_adata_copy(self, adata):
+        vk1 = VelocityKernel(adata)
+        vk2 = vk1.copy()
+
+        assert vk1.adata is adata
+        assert vk2.adata is adata
+
+    def test_copy_transition_matrix(self, adata):
+        vk1 = VelocityKernel(adata).compute_transition_matrix()
+        vk2 = vk1.copy()
+
+        np.testing.assert_array_equal(vk1.transition_matrix.A, vk2.transition_matrix.A)
+
+    def test_copy_params(self, adata):
+        vk1 = VelocityKernel(adata).compute_transition_matrix()
+        vk2 = vk1.copy()
+
+        assert vk1.params == vk2.params
+
+    def test_copy_velocity_kernel(self, adata):
+        vk1 = VelocityKernel(adata).compute_transition_matrix()
+        vk2 = vk1.copy()
+
+        np.testing.assert_array_equal(vk1.transition_matrix.A, vk2.transition_matrix.A)
+        assert vk1.params == vk2.params
+        assert vk1.backward == vk2.backward
+
+    def test_copy_connectivity_kernel(self, adata):
+        ck1 = ConnectivityKernel(adata).compute_transition_matrix()
+        ck2 = ck1.copy()
+
+        np.testing.assert_array_equal(ck1.transition_matrix.A, ck2.transition_matrix.A)
+        assert ck1.params == ck2.params
+        assert ck1.backward == ck2.backward
+
+    def test_copy_palantir_kernel(self, adata):
+        pk1 = PalantirKernel(adata).compute_transition_matrix()
+        pk2 = pk1.copy()
+
+        np.testing.assert_array_equal(pk1.transition_matrix.A, pk2.transition_matrix.A)
+        assert pk1.params == pk2.params
+        assert pk1.backward == pk2.backward
+
+    def test_copy_works(self, adata):
+        ck1 = ConnectivityKernel(adata)
+        ck2 = ck1.copy()
+        ck1.compute_transition_matrix()
+
+        assert (
+            ck1._transition_matrix is not None
+        )  # calling the property would trigger the calculation
+        assert ck2._transition_matrix is None
