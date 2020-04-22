@@ -16,6 +16,7 @@ from cellrank.tools._constants import (
     _lin_names,
 )
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
+from _helpers import assert_array_nan_equal
 
 
 class TestMarkovChain:
@@ -237,3 +238,66 @@ class TestMarkovChain:
 
         assert (adata.obs["final_cells"][zero_mask] == "foo").all()
         assert pd.isna(adata.obs["final_cells"][~zero_mask]).all()
+
+
+class TestMarkovChainCopy:
+    def test_copy_simple(self, adata_mc_fwd):
+        _, mc1 = adata_mc_fwd
+        mc2 = mc1.copy()
+
+        assert mc1 is not mc2
+        assert mc1.adata is not mc2.adata
+        assert mc1.kernel is not mc2.kernel
+
+    def test_copy_deep(self, adata_mc_fwd):
+        _, mc1 = adata_mc_fwd
+        mc2 = mc1.copy()
+
+        assert mc1.irreducible == mc2.irreducible
+        np.testing.assert_array_equal(mc1.recurrent_classes, mc2.recurrent_classes)
+        np.testing.assert_array_equal(mc1.transient_classes, mc2.transient_classes)
+        for k, v in mc1.eigendecomposition.items():
+            if isinstance(v, np.ndarray):
+                assert_array_nan_equal(v, mc2.eigendecomposition[k])
+            else:
+                assert v == mc2.eigendecomposition[k]
+        np.testing.assert_array_equal(
+            mc1.lineage_probabilities, mc2.lineage_probabilities
+        )
+        np.testing.assert_array_equal(mc1.diff_potential, mc2.diff_potential)
+        assert_array_nan_equal(
+            mc1.approx_recurrent_classes, mc2.approx_recurrent_classes
+        )
+        np.testing.assert_array_equal(
+            mc1.approx_recurrent_classes_probabilities,
+            mc2.approx_recurrent_classes_probabilities,
+        )
+        np.testing.assert_array_equal(mc1._approx_rcs_colors, mc2._approx_rcs_colors)
+        assert mc1._G2M_score == mc2._G2M_score
+        assert mc1._S_score == mc2._S_score
+
+    def test_copy_works(self, adata_mc_fwd):
+        _, mc1 = adata_mc_fwd
+        mc2 = mc1.copy()
+
+        mc1._is_irreducible = not mc2.irreducible
+        mc1.eigendecomposition["foo"] = "bar"
+        mc1._rec_classes = "foo"
+        mc1._trans_classes = "bar"
+        mc1._G2M_score = "foo"
+        mc1._S_score = "bar"
+
+        assert mc1.irreducible != mc2.irreducible
+        assert mc1.recurrent_classes is not mc2.recurrent_classes
+        assert mc1.transient_classes is not mc2.transient_classes
+        assert mc1.eigendecomposition != mc2.eigendecomposition
+        assert mc1.lineage_probabilities is not mc2.lineage_probabilities
+        assert mc1.diff_potential is not mc2.diff_potential
+        assert mc1.approx_recurrent_classes is not mc2.approx_recurrent_classes
+        assert (
+            mc1.approx_recurrent_classes_probabilities
+            is not mc2.approx_recurrent_classes_probabilities
+        )
+        assert mc1._approx_rcs_colors is not mc2._approx_rcs_colors
+        assert mc1._G2M_score != mc2._G2M_score
+        assert mc1._S_score != mc2._S_score
