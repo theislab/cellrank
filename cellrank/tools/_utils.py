@@ -28,6 +28,107 @@ from sklearn.neighbors import NearestNeighbors
 
 from cellrank.utils._utils import has_neighs, get_neighs, get_neighs_params
 
+from typing import List, Optional
+from itertools import combinations
+
+
+def _process_series(series: pd.Series, keys: List, colors: Optional[np.array] = None):
+    """
+    Utility function to process pd.Series categorical objects
+
+    Categories in `series` are combined/removed according to `keys`,
+    the same transformation is applied to the corresponding colors.
+
+    Parameters
+    --------
+    series
+        Input data, must be a pd.series of categorical type
+    keys
+        Keys could be e.g. ['cat_1, cat_2', 'cat_4']. If originally,
+        there were 4 categories in `series`, then this would combine the first
+        and the second and remove the third. The same would be done to `colors`,
+        i.e. the first and second color would be merged (average color), while
+        the third would be removed.
+    colors
+        List of colors which aligns with the order of the categories
+
+    Returns
+    --------
+    :class:`pandas.Series`
+        Categorical updated annotation. Each cell is assigned to either `NaN`
+        or one of updated approximate recurrent classes.
+    list
+        Color list processed according to keys
+    """
+
+    if colors is not None:
+        process_colors = True
+    else:
+        process_colors = False
+
+    # TODO: assert the dytpe of the series
+
+    # initialize a copy of the series object
+    series_in = series.copy()
+    if process_colors:
+        colors_in = np.array(colors.copy())
+        assert len(colors_in) == len(
+            series_in.cat.categories
+        ), "Length of colors does not match length of categories"
+
+    # define a set of keys
+    keys_ = {tuple((key.strip() for key in rc.strip(" ,").split(","))) for rc in keys}
+
+    # check the `keys` are unique
+    overlap = [set(ks) for ks in keys_]
+    for c1, c2 in combinations(overlap, 2):
+        overlap = c1 & c2
+        if overlap:
+            raise ValueError(f"Found overlapping keys: `{list(overlap)}`.")
+
+    # remove cats and colors according to `keys`
+    remaining_cat = [b for a in keys_ for b in a]
+    n_remaining = len(remaining_cat)
+    removed_cat = list(set(series_in.cat.categories) - set(remaining_cat))
+    if process_colors:
+        mask = np.in1d(series_in.cat.categories, remaining_cat)
+        colors_temp = colors_in[mask].copy()
+    series_temp = series_in.cat.remove_categories(removed_cat)
+
+    # loop over all indiv. or combined rc's
+    colors_mod = {}
+    for cat in keys_:
+
+        # if there are more than two keys in this category, combine them
+        if len(cat) > 1:
+            new_cat_name = " or ".join(cat)
+            mask = np.repeat(False, len(series_temp))
+            for key in cat:
+                mask = np.logical_or(mask, series_temp == key)
+                remaining_cat.remove(key)
+            series_temp.cat.add_categories(new_cat_name, inplace=True)
+            remaining_cat.append(new_cat_name)
+            series_temp[mask] = new_cat_name
+
+            if process_colors:
+                # apply the same to the colors array. We just append new colors at the end
+                color_mask = np.in1d(series_temp.cat.categories[:n_remaining], cat)
+                colors_merge = np.array(colors_temp)[:n_remaining][color_mask]
+                colors_mod[new_cat_name] = _compute_mean_color(colors_merge)
+        elif process_colors:
+            color_mask = np.in1d(series_temp.cat.categories[:n_remaining], cat[0])
+            colors_mod[cat[0]] = np.array(colors_temp)[:n_remaining][color_mask][0]
+
+    # Since we have just appended colors at the end, we must now delete the unused ones
+    series_temp.cat.remove_unused_categories(inplace=True)
+    series_temp.cat.reorder_categories(remaining_cat, inplace=True)
+
+    if process_colors:
+        colors_temp = [colors_mod[c] for c in series_temp.cat.categories]
+        return series_temp, colors_temp
+    else:
+        return series_temp
+
 
 def _complex_warning(
     X: np.array, use: Union[list, int, tuple, range], use_imag: bool = False
