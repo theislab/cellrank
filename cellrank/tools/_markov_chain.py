@@ -32,6 +32,7 @@ from cellrank.tools._constants import (
     _lin_names,
 )
 from cellrank.tools._utils import (
+    _process_series,
     _complex_warning,
     _cluster_X,
     _get_connectivities,
@@ -942,7 +943,17 @@ class MarkovChain:
             approx_rcs_ = self._approx_rcs
         else:
             logg.debug(f"DEBUG: Combining recurrent classes according to `{keys}`")
-            approx_rcs_ = self._prep_rc_classes(keys)
+
+            # approx_rcs_ = self._prep_rc_classes(keys)
+            approx_rcs_, colors_ = _process_series(
+                series=self._approx_rcs, keys=keys, colors=self._approx_rcs_colors
+            )
+            self._lin_probs = Lineage(
+                np.empty((1, len(colors_))),
+                names=approx_rcs_.cat.categories,
+                colors=colors_,
+            )
+
         keys = list(approx_rcs_.cat.categories)
 
         if len(keys) == 1:
