@@ -930,15 +930,6 @@ class MarkovChain:
             self._approx_rcs_colors = _create_categorical_colors(n_cats)
             self._adata.uns[_colors(self._rc_key)] = self._approx_rcs_colors
 
-        # initialize empty lineage object with names and colors from recurrent classes
-        # if self._lin_probs is not None:
-        #     logg.debug("DEBUG: Overwriting `.lin_probs`")
-        # rc_names = list(self._approx_rcs.cat.categories)
-        #
-        # self._lin_probs = Lineage(
-        #     np.empty((1, len(rc_names))), names=rc_names, colors=self._approx_rcs_colors
-        # )
-
         # process the current annotations according to `keys`
         approx_rcs_, colors_ = _process_series(
             series=self._approx_rcs, keys=keys, colors=self._approx_rcs_colors
@@ -959,22 +950,6 @@ class MarkovChain:
             logg.warning(
                 "There is only one recurrent class, all cells will have probability 1 of going there"
             )
-
-        # # if keys are given, remove some rc's and combine others
-        # if keys is None:
-        #     approx_rcs_ = self._approx_rcs
-        # else:
-        #     logg.debug(f"DEBUG: Combining recurrent classes according to `{keys}`")
-        #
-        #     # approx_rcs_ = self._prep_rc_classes(keys)
-        #     approx_rcs_, colors_ = _process_series(
-        #         series=self._approx_rcs, keys=keys, colors=self._approx_rcs_colors
-        #     )
-        #     self._lin_probs = Lineage(
-        #         np.empty((1, len(colors_))),
-        #         names=approx_rcs_.cat.categories,
-        #         colors=colors_,
-        #     )
 
         # create arrays of all recurrent and transient indices
         mask = np.repeat(False, len(approx_rcs_))
@@ -1351,86 +1326,6 @@ class MarkovChain:
                 )
 
         return rc_df["name"], list(rc_df["color"])
-
-    def _prep_rc_classes(self, keys: Sequence[str]) -> Tuple[Series, np.ndarray]:
-        """
-        Utility function to remove and combine rcs.
-
-        This function takes a list of strings, like ['endpt_1, endpt_2', 'endpt_3'], and compares this with the
-        names of the approximate recurrent classes to figure out which ones to leave out and which ones to combine. If
-        e.g. the approx rcs had names ['endpt_1', 'endpt_2, 'endpt_3', 'endpt_4'], then this function would combine
-        endpoints 1 and 2 and kick out 4.
-
-        Params
-        ------
-        keys
-            Sequence of strings that defines how absorption probabilities should be computed.
-
-        Returns
-        -------
-        :class:`pandas.Series`
-            Categorical updated annotation. Each cell is assigned to either `NaN`
-            or one of updated approximate recurrent classes.
-        """
-
-        if self._approx_rcs is None:
-            raise RuntimeError(
-                "Compute approximate recurrent classes first as `.compute_approx_rcs()`"
-            )
-
-        # initialize a copy of the approx_rcs Series
-        approx_rcs_temp = self._approx_rcs.copy()
-
-        # define a set of keys
-        keys_ = {
-            tuple((key.strip() for key in rc.strip(" ,").split(","))) for rc in keys
-        }
-
-        overlap = [set(ks) for ks in keys_]
-        for c1, c2 in combinations(overlap, 2):
-            overlap = c1 & c2
-            if overlap:
-                raise ValueError(f"Found overlapping keys: `{list(overlap)}`.")
-
-        # remove the unused categories, both in approx_rcs_temp as well as in the lineage object
-        remaining_cat = [b for a in keys_ for b in a]
-        removed_cat = list(set(approx_rcs_temp.cat.categories) - set(remaining_cat))
-        approx_rcs_temp.cat.remove_categories(removed_cat, inplace=True)
-        original_colors = list(self._lin_probs[remaining_cat].colors)
-        original_len = len(original_colors)
-
-        # loop over all indiv. or combined rc's
-        lin_colors = {}
-        for cat in keys_:
-            # if there are more than two keys in this category, combine them
-            if len(cat) > 1:
-                new_cat_name = " or ".join(cat)
-                mask = np.repeat(False, len(approx_rcs_temp))
-                for key in cat:
-                    mask = np.logical_or(mask, approx_rcs_temp == key)
-                    remaining_cat.remove(key)
-                approx_rcs_temp.cat.add_categories(new_cat_name, inplace=True)
-                remaining_cat.append(new_cat_name)
-                approx_rcs_temp[mask] = new_cat_name
-
-                # apply the same to the colors array. We just append new colors at the end
-                color_mask = np.in1d(approx_rcs_temp.cat.categories[:original_len], cat)
-                colors_merge = np.array(original_colors)[:original_len][color_mask]
-                lin_colors[new_cat_name] = _compute_mean_color(colors_merge)
-            else:
-                lin_colors[cat[0]] = self._lin_probs[cat].colors[0]
-
-        # Since we have just appended colors at the end, we must now delete the unused ones
-        approx_rcs_temp.cat.remove_unused_categories(inplace=True)
-        approx_rcs_temp.cat.reorder_categories(remaining_cat, inplace=True)
-
-        self._lin_probs = Lineage(
-            np.empty((1, len(lin_colors))),
-            names=approx_rcs_temp.cat.categories,
-            colors=[lin_colors[c] for c in approx_rcs_temp.cat.categories],
-        )
-
-        return approx_rcs_temp
 
     def _detect_cc_stages(self, rc_labels: Series, p_thresh: float = 1e-15) -> None:
         """
