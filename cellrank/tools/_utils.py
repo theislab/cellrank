@@ -18,10 +18,11 @@ import numpy as np
 import scanpy as sc
 
 from anndata import AnnData
-from pandas import Series
+from pandas import Series, DataFrame, to_numeric
 from pandas.api.types import is_categorical_dtype, infer_dtype
 from scanpy import logging as logg
 from scipy.sparse import csr_matrix, spmatrix
+from scipy.stats import entropy
 from scipy.sparse import issparse
 from sklearn.cluster import KMeans
 from sklearn.neighbors import NearestNeighbors
@@ -30,6 +31,98 @@ from cellrank.utils._utils import has_neighs, get_neighs, get_neighs_params
 
 from typing import List, Optional
 from itertools import combinations
+
+
+def _map_names_and_colors(
+    series_reference: Series,
+    series_query: Series,
+    colors_reference: Optional[np.array] = None,
+    en_cutoff: Optional[float] = None,
+) -> Tuple[Series, List[Any]]:
+    """
+    Utility function to map annotations and colors from one series to another
+
+    Params
+    ------
+    series_reference
+        Series object with categorical annotations
+    series_query
+        Series for which we would like to query the category names
+    colors_reference
+        If given, colors for the query categories are pulled from this color array.
+    en_cutoff
+        In case of a non-perfect overlap between categories of the two series, this decides when to label a categoy in
+        the query as 'Unknown'
+
+    Returns
+    -------
+    :class:`pandas.Series`, :class:`list`
+        Series with updated category names and a corresponding array of colors
+    """
+
+    # create dataframe to store approx_rc associtation with ts_clusters
+    approx_rc_clusters = series_query.cat.categories
+    ts_clusters = series_reference.cat.categories
+    rc_df = DataFrame(None, index=approx_rc_clusters, columns=ts_clusters)
+
+    # populate the df - compute the overlap
+    for cl in approx_rc_clusters:
+        row = [
+            np.sum(series_reference.loc[np.array(series_query == cl)] == key)
+            for key in ts_clusters
+        ]
+        rc_df.loc[cl] = row
+    rc_df = rc_df.apply(to_numeric)
+
+    # label endpoints and add uncertainty through entropy
+    rc_df["entropy"] = entropy(rc_df.T)
+    rc_df["name"] = rc_df.T.idxmax()
+
+    # add cluster colors
+    # clusters_colors = self.lin_probs.colors  # _convert_to_hex_colors(self._adata.uns[_colors(cluster_key)])
+    clusters_colors = _convert_to_hex_colors(colors_reference)
+    names = rc_df["name"]
+    lin_colors = []
+    for name in names:
+        mask = ts_clusters == name
+        color = np.array(clusters_colors)[mask][0]
+        lin_colors.append(color)
+    rc_df["color"] = lin_colors
+
+    # make series_query unique
+    names = Series(rc_df["name"], dtype="category")
+    lin_colors = Series(lin_colors, dtype="category")  # colors must be hex
+    frequ = {key: np.sum(names == key) for key in names.cat.categories}
+
+    # Create unique names by adding suffixes "..._1, ..._2" etc and unique colors by shifting the original color
+    names_new = np.array(names.copy())
+    lin_colors_new = np.array(lin_colors.copy())
+
+    for key, value in frequ.items():
+        if value == 1:
+            continue  # already unique, skip
+
+        # deal with non-unique names
+        suffix = list(np.arange(1, value + 1).astype("str"))
+        unique_names = [f"{key}_{rep}" for rep in suffix]
+        names_new[names == key] = unique_names
+
+        color = rc_df[rc_df["name"] == key]["color"].values[0]
+        shifted_colors = _create_colors(color, value, saturation_range=None)
+        lin_colors_new[lin_colors == color] = shifted_colors
+
+    rc_df["name"] = names_new
+    rc_df["color"] = lin_colors_new
+
+    # issue a warning for rcs with high entropy
+    if en_cutoff is not None:
+        critical_rcs = list(rc_df.loc[rc_df["entropy"] > en_cutoff, "name"].values)
+        if len(critical_rcs) > 0:
+            logg.warning(
+                f"The following groups could not be mapped uniquely: `{critical_rcs}`"
+            )
+
+    return rc_df["name"], list(rc_df["color"])
 
 
 def _process_series(series: pd.Series, keys: List, colors: Optional[np.array] = None):

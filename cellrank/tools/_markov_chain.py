@@ -10,7 +10,6 @@ import numpy as np
 import scvelo as scv
 
 from anndata import AnnData
-from itertools import combinations
 from copy import copy, deepcopy
 from pandas import Series, DataFrame, to_numeric
 from pandas.api.types import is_categorical_dtype, infer_dtype
@@ -44,7 +43,6 @@ from cellrank.tools._utils import (
     _convert_to_hex_colors,
     _vec_mat_corr,
     _create_categorical_colors,
-    _compute_mean_color,
     _convert_to_categorical_series,
     _merge_approx_rcs,
     partition,
