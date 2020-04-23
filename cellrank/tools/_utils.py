@@ -60,43 +60,44 @@ def _map_names_and_colors(
         Series with updated category names and a corresponding array of colors
     """
 
-    # create dataframe to store approx_rc associtation with ts_clusters
-    approx_rc_clusters = series_query.cat.categories
-    ts_clusters = series_reference.cat.categories
-    rc_df = DataFrame(None, index=approx_rc_clusters, columns=ts_clusters)
+    # create dataframe to store the associations between reference and query
+    cats_query = series_query.cat.categories
+    cats_reference = series_reference.cat.categories
+    association_df = DataFrame(None, index=cats_query, columns=cats_reference)
 
-    # populate the df - compute the overlap
-    for cl in approx_rc_clusters:
+    # populate the dataframe - compute the overlap
+    for cl in cats_query:
         row = [
             np.sum(series_reference.loc[np.array(series_query == cl)] == key)
-            for key in ts_clusters
+            for key in cats_reference
         ]
-        rc_df.loc[cl] = row
-    rc_df = rc_df.apply(to_numeric)
+        association_df.loc[cl] = row
+    association_df = association_df.apply(to_numeric)
 
-    # label endpoints and add uncertainty through entropy
-    rc_df["entropy"] = entropy(rc_df.T)
-    rc_df["name"] = rc_df.T.idxmax()
+    # find the mapping which maximizes overlap and compute entropy
+    association_df["entropy"] = entropy(association_df.T)
+    association_df["name"] = association_df.T.idxmax()
 
-    # add cluster colors
-    # clusters_colors = self.lin_probs.colors  # _convert_to_hex_colors(self._adata.uns[_colors(cluster_key)])
-    clusters_colors = _convert_to_hex_colors(colors_reference)
-    names = rc_df["name"]
-    lin_colors = []
+    # apply the same to the colors array
+    colors_reference = _convert_to_hex_colors(colors_reference)
+    names = association_df["name"]
+    colors_query_list = []
     for name in names:
-        mask = ts_clusters == name
-        color = np.array(clusters_colors)[mask][0]
-        lin_colors.append(color)
-    rc_df["color"] = lin_colors
+        mask = cats_reference == name
+        color = np.array(colors_reference)[mask][0]
+        colors_query_list.append(color)
+    association_df["color"] = colors_query_list
 
     # make series_query unique
-    names = Series(rc_df["name"], dtype="category")
-    lin_colors = Series(lin_colors, dtype="category")  # colors must be hex
+    names = Series(association_df["name"], dtype="category")
+    colors_query_list = Series(
+        colors_query_list, dtype="category"
+    )  # colors must be hex
     frequ = {key: np.sum(names == key) for key in names.cat.categories}
 
     # Create unique names by adding suffixes "..._1, ..._2" etc and unique colors by shifting the original color
     names_new = np.array(names.copy())
-    lin_colors_new = np.array(lin_colors.copy())
+    colors_query_list_new = np.array(colors_query_list.copy())
 
     for key, value in frequ.items():
         if value == 1:
@@ -107,22 +108,24 @@ def _map_names_and_colors(
         unique_names = [f"{key}_{rep}" for rep in suffix]
         names_new[names == key] = unique_names
 
-        color = rc_df[rc_df["name"] == key]["color"].values[0]
+        color = association_df[association_df["name"] == key]["color"].values[0]
         shifted_colors = _create_colors(color, value, saturation_range=None)
-        lin_colors_new[lin_colors == color] = shifted_colors
+        colors_query_list_new[colors_query_list == color] = shifted_colors
 
-    rc_df["name"] = names_new
-    rc_df["color"] = lin_colors_new
+    association_df["name"] = names_new
+    association_df["color"] = colors_query_list_new
 
-    # issue a warning for rcs with high entropy
+    # issue a warning for mapping with high entropy
     if en_cutoff is not None:
-        critical_rcs = list(rc_df.loc[rc_df["entropy"] > en_cutoff, "name"].values)
-        if len(critical_rcs) > 0:
+        critical_cats = list(
+            association_df.loc[association_df["entropy"] > en_cutoff, "name"].values
+        )
+        if len(critical_cats) > 0:
             logg.warning(
-                f"The following groups could not be mapped uniquely: `{critical_rcs}`"
+                f"The following groups could not be mapped uniquely: `{critical_cats}`"
             )
 
-    return rc_df["name"], list(rc_df["color"])
+    return association_df["name"], list(association_df["color"])
 
 
 def _process_series(series: pd.Series, keys: List, colors: Optional[np.array] = None):
@@ -167,7 +170,8 @@ def _process_series(series: pd.Series, keys: List, colors: Optional[np.array] = 
             return series
 
     # assert dtype of the series
-    assert series.dtype.name == "category", "Type of the series is not categorical"
+    if not is_categorical_dtype(series):
+        raise TypeError(f"Series must be `categorical`, found `{infer_dtype(series)}`.")
 
     # initialize a copy of the series object
     series_in = series.copy()

@@ -31,6 +31,7 @@ from cellrank.tools._constants import (
     _lin_names,
 )
 from cellrank.tools._utils import (
+    _map_names_and_colors,
     _process_series,
     _complex_warning,
     _cluster_X,
@@ -624,8 +625,29 @@ class MarkovChain:
 
         if cluster_key is not None:
             logg.debug(f"DEBUG: Creating colors based on `{cluster_key}`")
-            approx_rcs_names, self._approx_rcs_colors = self._get_lin_names_colors(
-                rc_labels, cluster_key, en_cutoff
+
+            # check that we can load the reference series from adata
+            if cluster_key not in self._adata.obs:
+                raise KeyError(
+                    f"Cluster key `{cluster_key!r}` not found in `.adata.obs`."
+                )
+            series_query, series_reference = rc_labels, self._adata.obs[cluster_key]
+
+            # load the reference colors if they exist
+            if _colors(cluster_key) in self._adata.uns.keys:
+                colors_reference = _convert_to_hex_colors(
+                    self._adata.uns[_colors(cluster_key)]
+                )
+            else:
+                colors_reference = _create_categorical_colors(
+                    len(series_reference.cat.categories)
+                )
+
+            # approx_rcs_names, self._approx_rcs_colors = self._get_lin_names_colors(
+            #     rc_labels, cluster_key, en_cutoff
+
+            approx_rcs_names, self._approx_rcs_colors = _map_names_and_colors(
+                series_query, series_reference, colors_reference, en_cutoff
             )
             rc_labels.cat.categories = approx_rcs_names
         else:
@@ -913,20 +935,7 @@ class MarkovChain:
         t = self._T.A if self._is_sparse else self._T
 
         # colors are created in `compute_approx_rcs`, this is just in case
-        n_cats = len(self._approx_rcs.cat.categories)
-        if self._approx_rcs_colors is None:
-            color_key = _colors(self._rc_key)
-            if color_key in self._adata.uns and n_cats == len(
-                self._adata.uns[color_key]
-            ):
-                logg.debug("DEBUG: Loading colors from `.adata` object")
-                self._approx_rcs_colors = self._adata.uns[color_key]
-            else:
-                self._approx_rcs_colors = _create_categorical_colors(n_cats)
-                self._adata.uns[_colors(self._rc_key)] = self._approx_rcs_colors
-        elif len(self._approx_rcs_colors) != n_cats:
-            self._approx_rcs_colors = _create_categorical_colors(n_cats)
-            self._adata.uns[_colors(self._rc_key)] = self._approx_rcs_colors
+        self._check_and_create_colors()
 
         # process the current annotations according to `keys`
         approx_rcs_, colors_ = _process_series(
@@ -1379,6 +1388,24 @@ class MarkovChain:
 
         self._approx_rcs_probs = c
         self._adata.obs[_probs(self._rc_key)] = c
+
+    def _check_and_create_colors(self):
+        n_cats = len(self._approx_rcs.cat.categories)
+        if self._approx_rcs_colors is None:
+            color_key = _colors(self._rc_key)
+            if color_key in self._adata.uns and n_cats == len(
+                self._adata.uns[color_key]
+            ):
+                logg.debug("DEBUG: Loading colors from `.adata` object")
+                self._approx_rcs_colors = _convert_to_hex_colors(
+                    self._adata.uns[color_key]
+                )
+            else:
+                self._approx_rcs_colors = _create_categorical_colors(n_cats)
+                self._adata.uns[_colors(self._rc_key)] = self._approx_rcs_colors
+        elif len(self._approx_rcs_colors) != n_cats:
+            self._approx_rcs_colors = _create_categorical_colors(n_cats)
+            self._adata.uns[_colors(self._rc_key)] = self._approx_rcs_colors
 
     def copy(self) -> "MarkovChain":
         """
