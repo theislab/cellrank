@@ -79,7 +79,6 @@ def _map_names_and_colors(
     association_df["name"] = association_df.T.idxmax()
 
     # apply the same to the colors array
-    colors_reference = _convert_to_hex_colors(colors_reference)
     names = association_df["name"]
     colors_query_list = []
     for name in names:
