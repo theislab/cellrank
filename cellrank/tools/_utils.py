@@ -66,7 +66,15 @@ def _process_series(series: pd.Series, keys: List, colors: Optional[np.array] = 
     else:
         process_colors = False
 
-    # TODO: assert the dytpe of the series
+    # if keys is None, just return
+    if keys is None:
+        if process_colors:
+            return series, colors
+        else:
+            return series
+
+    # assert dtype of the series
+    assert series.dtype.name == "category", "Type of the series is not categorical"
 
     # initialize a copy of the series object
     series_in = series.copy()
@@ -86,8 +94,13 @@ def _process_series(series: pd.Series, keys: List, colors: Optional[np.array] = 
         if overlap:
             raise ValueError(f"Found overlapping keys: `{list(overlap)}`.")
 
-    # remove cats and colors according to `keys`
+    # check the `keys` are all proper categories
     remaining_cat = [b for a in keys_ for b in a]
+    assert all(np.in1d(remaining_cat, series_in.cat.categories)), (
+        "Not all keys are proper categories. " "Check for spelling mistakes in `keys`."
+    )
+
+    # remove cats and colors according to `keys`
     n_remaining = len(remaining_cat)
     removed_cat = list(set(series_in.cat.categories) - set(remaining_cat))
     if process_colors:
