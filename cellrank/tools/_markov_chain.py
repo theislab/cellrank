@@ -634,7 +634,7 @@ class MarkovChain:
             series_query, series_reference = rc_labels, self._adata.obs[cluster_key]
 
             # load the reference colors if they exist
-            if _colors(cluster_key) in self._adata.uns.keys:
+            if _colors(cluster_key) in self._adata.uns.keys():
                 colors_reference = _convert_to_hex_colors(
                     self._adata.uns[_colors(cluster_key)]
                 )
@@ -647,7 +647,10 @@ class MarkovChain:
             #     rc_labels, cluster_key, en_cutoff
 
             approx_rcs_names, self._approx_rcs_colors = _map_names_and_colors(
-                series_query, series_reference, colors_reference, en_cutoff
+                series_reference=series_reference,
+                series_query=series_query,
+                colors_reference=colors_reference,
+                en_cutoff=en_cutoff,
             )
             rc_labels.cat.categories = approx_rcs_names
         else:
