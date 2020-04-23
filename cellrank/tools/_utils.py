@@ -60,6 +60,26 @@ def _map_names_and_colors(
         Series with updated category names and a corresponding array of colors
     """
 
+    # checks: dtypes, matching indices, make sure colors match the categories
+    if not is_categorical_dtype(series_reference):
+        raise TypeError(
+            f"Reference series must be `categorical`, found `{infer_dtype(series_reference)}`."
+        )
+    if not is_categorical_dtype(series_query):
+        raise TypeError(
+            f"Query series must be `categorical`, found `{infer_dtype(series_query)}`."
+        )
+    index_query, index_reference = series_query.index, series_reference.index
+    assert all(
+        index_reference == index_query
+    ), "Series indices do not match, cannot map names/colors"
+
+    process_colors = colors_reference is not None
+    if process_colors:
+        assert len(series_reference.cat.categories) == len(colors_reference), (
+            "Length of reference colors does not " "match length of reference series. "
+        )
+
     # create dataframe to store the associations between reference and query
     cats_query = series_query.cat.categories
     cats_reference = series_reference.cat.categories
@@ -75,29 +95,31 @@ def _map_names_and_colors(
     association_df = association_df.apply(to_numeric)
 
     # find the mapping which maximizes overlap and compute entropy
+    names_query = association_df.T.idxmax()
     association_df["entropy"] = entropy(association_df.T)
-    association_df["name"] = association_df.T.idxmax()
+    association_df["name"] = names_query
 
-    # apply the same to the colors array
-    names = association_df["name"]
-    colors_query_list = []
-    for name in names:
-        mask = cats_reference == name
-        color = np.array(colors_reference)[mask][0]
-        colors_query_list.append(color)
-    association_df["color"] = colors_query_list
+    # assign query colors
+    if process_colors:
+        colors_query = []
+        for name in names_query:
+            mask = cats_reference == name
+            color = np.array(colors_reference)[mask][0]
+            colors_query.append(color)
+        association_df["color"] = colors_query
 
-    # make series_query unique
-    names = Series(association_df["name"], dtype="category")
-    colors_query_list = Series(
-        colors_query_list, dtype="category"
-    )  # colors must be hex
-    frequ = {key: np.sum(names == key) for key in names.cat.categories}
+    # next, we need to make sure that we have unique names and colors. In a first step, compute how many repetitions
+    # we have
+    names_query_series = Series(names_query, dtype="category")
+    frequ = {
+        key: np.sum(names_query == key) for key in names_query_series.cat.categories
+    }
+
+    names_query_new = np.array(names_query.copy())
+    if process_colors:
+        colors_query_new = np.array(colors_query.copy())
 
     # Create unique names by adding suffixes "..._1, ..._2" etc and unique colors by shifting the original color
-    names_new = np.array(names.copy())
-    colors_query_list_new = np.array(colors_query_list.copy())
-
     for key, value in frequ.items():
         if value == 1:
             continue  # already unique, skip
@@ -105,14 +127,15 @@ def _map_names_and_colors(
         # deal with non-unique names
         suffix = list(np.arange(1, value + 1).astype("str"))
         unique_names = [f"{key}_{rep}" for rep in suffix]
-        names_new[names == key] = unique_names
+        names_query_new[names_query_series == key] = unique_names
+        if process_colors:
+            color = association_df[association_df["name"] == key]["color"].values[0]
+            shifted_colors = _create_colors(color, value, saturation_range=None)
+            colors_query_new[np.array(colors_query) == color] = shifted_colors
 
-        color = association_df[association_df["name"] == key]["color"].values[0]
-        shifted_colors = _create_colors(color, value, saturation_range=None)
-        colors_query_list_new[colors_query_list == color] = shifted_colors
-
-    association_df["name"] = names_new
-    association_df["color"] = colors_query_list_new
+    association_df["name"] = names_query_new
+    if process_colors:
+        association_df["color"] = colors_query_new
 
     # issue a warning for mapping with high entropy
     if en_cutoff is not None:
@@ -123,8 +146,10 @@ def _map_names_and_colors(
             logg.warning(
                 f"The following groups could not be mapped uniquely: `{critical_cats}`"
             )
-
-    return association_df["name"], list(association_df["color"])
+    if process_colors:
+        return association_df["name"], list(association_df["color"])
+    else:
+        return association_df["name"]
 
 
 def _process_series(series: pd.Series, keys: List, colors: Optional[np.array] = None):
@@ -156,10 +181,8 @@ def _process_series(series: pd.Series, keys: List, colors: Optional[np.array] = 
         Color list processed according to keys
     """
 
-    if colors is not None:
-        process_colors = True
-    else:
-        process_colors = False
+    # determine whether we want to process colors as well
+    process_colors = colors is not None
 
     # if keys is None, just return
     if keys is None:

@@ -643,9 +643,6 @@ class MarkovChain:
                     len(series_reference.cat.categories)
                 )
 
-            # approx_rcs_names, self._approx_rcs_colors = self._get_lin_names_colors(
-            #     rc_labels, cluster_key, en_cutoff
-
             approx_rcs_names, self._approx_rcs_colors = _map_names_and_colors(
                 series_reference=series_reference,
                 series_query=series_query,
