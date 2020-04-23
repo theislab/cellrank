@@ -931,35 +931,50 @@ class MarkovChain:
             self._adata.uns[_colors(self._rc_key)] = self._approx_rcs_colors
 
         # initialize empty lineage object with names and colors from recurrent classes
-        if self._lin_probs is not None:
-            logg.debug("DEBUG: Overwriting `.lin_probs`")
-        rc_names = list(self._approx_rcs.cat.categories)
-        self._lin_probs = Lineage(
-            np.empty((1, len(rc_names))), names=rc_names, colors=self._approx_rcs_colors
+        # if self._lin_probs is not None:
+        #     logg.debug("DEBUG: Overwriting `.lin_probs`")
+        # rc_names = list(self._approx_rcs.cat.categories)
+        #
+        # self._lin_probs = Lineage(
+        #     np.empty((1, len(rc_names))), names=rc_names, colors=self._approx_rcs_colors
+        # )
+
+        # process the current annotations according to `keys`
+        approx_rcs_, colors_ = _process_series(
+            series=self._approx_rcs, keys=keys, colors=self._approx_rcs_colors
         )
 
-        # if keys are given, remove some rc's and combine others
-        if keys is None:
-            approx_rcs_ = self._approx_rcs
-        else:
-            logg.debug(f"DEBUG: Combining recurrent classes according to `{keys}`")
+        #  create empty lineage object
+        if self._lin_probs is not None:
+            logg.debug("DEBUG: Overwriting `.lin_probs`")
+        self._lin_probs = Lineage(
+            np.empty((1, len(colors_))),
+            names=approx_rcs_.cat.categories,
+            colors=colors_,
+        )
 
-            # approx_rcs_ = self._prep_rc_classes(keys)
-            approx_rcs_, colors_ = _process_series(
-                series=self._approx_rcs, keys=keys, colors=self._approx_rcs_colors
-            )
-            self._lin_probs = Lineage(
-                np.empty((1, len(colors_))),
-                names=approx_rcs_.cat.categories,
-                colors=colors_,
-            )
-
+        # warn in case only one state is left
         keys = list(approx_rcs_.cat.categories)
-
         if len(keys) == 1:
             logg.warning(
                 "There is only one recurrent class, all cells will have probability 1 of going there"
             )
+
+        # # if keys are given, remove some rc's and combine others
+        # if keys is None:
+        #     approx_rcs_ = self._approx_rcs
+        # else:
+        #     logg.debug(f"DEBUG: Combining recurrent classes according to `{keys}`")
+        #
+        #     # approx_rcs_ = self._prep_rc_classes(keys)
+        #     approx_rcs_, colors_ = _process_series(
+        #         series=self._approx_rcs, keys=keys, colors=self._approx_rcs_colors
+        #     )
+        #     self._lin_probs = Lineage(
+        #         np.empty((1, len(colors_))),
+        #         names=approx_rcs_.cat.categories,
+        #         colors=colors_,
+        #     )
 
         # create arrays of all recurrent and transient indices
         mask = np.repeat(False, len(approx_rcs_))
