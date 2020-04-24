@@ -1101,7 +1101,7 @@ def _merge_categorical_series(
             )
 
         if isinstance(colors, dict):
-            if not set(series.cat.categories) != set(colors.keys()):
+            if set(series.cat.categories) != set(colors.keys()):
                 raise ValueError(
                     f"Color mapper and series' categories don't share the keys."
                 )
