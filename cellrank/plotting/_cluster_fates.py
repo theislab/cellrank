@@ -141,7 +141,7 @@ def cluster_fates(
             current_ax.set_xticklabels(lin_names, rotation="vertical")
             if not is_all:
                 current_ax.set_xlabel(points)
-            current_ax.set_ylabel("Absorption Probability")
+            current_ax.set_ylabel("probability")
             current_ax.set_title(k)
 
         return fig
@@ -179,7 +179,7 @@ def cluster_fates(
             norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
             cax, _ = mpl.colorbar.make_axes(ax, aspect=100)  # new matplotlib feature
             _ = mpl.colorbar.ColorbarBase(
-                cax, norm=norm, cmap=kwargs["cmap"], label="Absorption Probability"
+                cax, norm=norm, cmap=kwargs["cmap"], label="probability"
             )
 
         for ax in axes[i + 1 :]:
@@ -287,7 +287,7 @@ def cluster_fates(
 
         data = np.ravel(np.array(adata.obsm[lk]).T)[..., np.newaxis]
         dadata = AnnData(np.zeros_like(data))
-        dadata.obs["Absorption Probability"] = data
+        dadata.obs["probability"] = data
         dadata.obs[points] = (
             pd.Series(
                 np.ravel(
@@ -303,7 +303,7 @@ def cluster_fates(
             figsize=figsize if figsize is not None else (8, 6), dpi=dpi
         )
         ax.set_title(points)
-        sc.pl.violin(dadata, keys=["Absorption Probability"], ax=ax, **kwargs)
+        sc.pl.violin(dadata, keys=["probability"], ax=ax, **kwargs)
 
         return fig
 
