@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from matplotlib.testing import setup
 from matplotlib.testing.compare import compare_images
-from typing import Union
+from typing import Union, Tuple
 from pathlib import Path
 from anndata import AnnData
 from cellrank.tools import MarkovChain
@@ -32,9 +32,10 @@ try:
 except ImportError:
     from importlib.metadata import version as get_version
 
-scvelo_version = pytest.mark.skipif(
-    version.parse(get_version(scv.__name__)) < version.parse("0.1.26"),
-    reason="scVelo <= 0.1.25 doesn't support node_color for PAGA",
+scvelo_paga_pie_node_colors_version = pytest.mark.skipif(
+    version.parse(get_version(scv.__name__)) < version.parse("0.1.26.dev73+g4ae3110"),
+    reason="scVelo < `0.1.26.dev73+g4ae3110` doesn't support node_color for PAGA and additional "
+    "keyword arguments.",
 )
 del version, get_version
 
@@ -112,7 +113,7 @@ class TestClusterFates:
     def test_paga_pie(self, adata: AnnData, fpath: Path):
         cr.pl.cluster_fates(adata, "clusters", mode="paga_pie", dpi=DPI, save=fpath)
 
-    @scvelo_version
+    @scvelo_paga_pie_node_colors_version
     @compare()
     def test_paga_pie_embedding(self, adata: AnnData, fpath: Path):
         cr.pl.cluster_fates(
@@ -142,6 +143,135 @@ class TestClusterFates:
         cr.pl.cluster_fates(
             adata, "clusters", mode="violin", lineages=["1"], dpi=DPI, save=fpath
         )
+
+    @compare()
+    def test_violin_lineage_subset(self, adata: AnnData, fpath: Path):
+        cr.pl.cluster_fates(
+            adata, "clusters", mode="violin", lineages=["1"], dpi=DPI, save=fpath
+        )
+
+    @compare()
+    def test_paga_pie_legend_simple(self, adata: AnnData, fpath: Path):
+        cr.pl.cluster_fates(
+            adata,
+            cluster_key="clusters",
+            mode="paga_pie",
+            save=fpath,
+            legend_kwargs=(dict(loc="top")),
+        )
+
+    @scvelo_paga_pie_node_colors_version
+    @compare()
+    def test_paga_pie_legend_position(self, adata: AnnData, fpath: Path):
+        cr.pl.cluster_fates(
+            adata,
+            cluster_key="clusters",
+            mode="paga_pie",
+            basis="umap",
+            save=fpath,
+            legend_kwargs=(dict(loc="lower")),
+            legend_loc="upper",
+        )
+
+    @scvelo_paga_pie_node_colors_version
+    @compare()
+    def test_paga_pie_no_legend(self, adata: AnnData, fpath: Path):
+        cr.pl.cluster_fates(
+            adata,
+            cluster_key="clusters",
+            mode="paga_pie",
+            basis="umap",
+            save=fpath,
+            legend_kwargs=(dict(loc=None)),
+            legend_loc=None,
+        )
+
+    @scvelo_paga_pie_node_colors_version
+    @compare()
+    def test_paga_pie_only_abs_prob(self, adata: AnnData, fpath: Path):
+        cr.pl.cluster_fates(
+            adata,
+            cluster_key="clusters",
+            mode="paga_pie",
+            basis="umap",
+            save=fpath,
+            legend_kwargs=(dict(loc="center")),
+            legend_loc=None,
+        )
+
+    @scvelo_paga_pie_node_colors_version
+    @compare()
+    def test_paga_pie_only_clusters(self, adata: AnnData, fpath: Path):
+        cr.pl.cluster_fates(
+            adata,
+            cluster_key="clusters",
+            mode="paga_pie",
+            basis="umap",
+            save=fpath,
+            legend_kwargs=(dict(loc=None)),
+            legend_loc="on data",
+        )
+
+    @scvelo_paga_pie_node_colors_version
+    @compare()
+    def test_paga_pie_legend_position_out(self, adata: AnnData, fpath: Path):
+        cr.pl.cluster_fates(
+            adata,
+            cluster_key="clusters",
+            mode="paga_pie",
+            basis="umap",
+            save=fpath,
+            legend_kwargs=(dict(loc="lower left out")),
+            legend_loc="center right out",
+        )
+
+    def test_paga_pie_wrong_legend_kind_1(
+        self, adata_mc_fwd: Tuple[AnnData, MarkovChain]
+    ):
+        adata, _ = adata_mc_fwd
+        with pytest.raises(ValueError):
+            cr.pl.cluster_fates(
+                adata,
+                cluster_key="clusters",
+                mode="paga_pie",
+                legend_kwargs=(dict(loc="foo")),
+            )
+
+    def test_paga_pie_wrong_legend_kind_2(
+        self, adata_mc_fwd: Tuple[AnnData, MarkovChain]
+    ):
+        adata, _ = adata_mc_fwd
+        with pytest.raises(ValueError):
+            cr.pl.cluster_fates(
+                adata,
+                cluster_key="clusters",
+                mode="paga_pie",
+                legend_kwargs=(dict(loc="lower foo")),
+            )
+
+    def test_paga_pie_wrong_legend_kind_3(
+        self, adata_mc_fwd: Tuple[AnnData, MarkovChain]
+    ):
+        adata, _ = adata_mc_fwd
+        with pytest.raises(ValueError):
+            cr.pl.cluster_fates(
+                adata,
+                cluster_key="clusters",
+                mode="paga_pie",
+                legend_kwargs=(dict(loc="lower left bar")),
+            )
+
+    def test_paga_pie_wrong_legend_kind_4(
+        self, adata_mc_fwd: Tuple[AnnData, MarkovChain]
+    ):
+        adata, _ = adata_mc_fwd
+        with pytest.raises(ValueError):
+            cr.pl.cluster_fates(
+                adata,
+                cluster_key="clusters",
+                mode="paga_pie",
+                legend_kwargs=(dict(loc="lower left foo bar")),
+            )
 
 
 class TestClusterLineages:

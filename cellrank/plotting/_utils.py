@@ -535,9 +535,32 @@ def _trends_helper(
         save_fig(fig, save)
 
 
-def _position_legend(ax: mpl.axes.Axes, legend_loc: str, **kwargs):
+def _position_legend(ax: mpl.axes.Axes, legend_loc: str, **kwargs) -> mpl.legend.Legend:
+    """
+    Position legend in- or outside the figure.
+
+    Params
+    ------
+    ax
+        Ax where to position the legend.
+    legend_loc
+        Position of legend.
+    **kwargs
+        Keyword arguments for :func:`matplotlib.pyplot.legend`.
+
+    Returns
+    -------
+    :class: `matplotlib.legend.Legend`
+        The created legend.
+    """
+
     if legend_loc == "center center out":
-        raise ValueError("Invalid option: `'center center out'`.")
+        raise ValueError(
+            "Invalid option: `'center center out'`. Doesn't really make sense, does it?"
+        )
+    if legend_loc == "best":
+        return ax.legend(loc="best", **kwargs)
+
     tmp, loc = legend_loc.split(" "), ""
 
     if len(tmp) == 1:
