@@ -203,8 +203,13 @@ def cluster_fates(
         kwargs.pop("save", None)  # we will handle saving
 
         kwargs["transitions"] = kwargs.get("transitions", None)
-        if "legend_loc" not in kwargs:
-            kwargs["legend_loc"] = kwargs.get("legend_loc", None) or "on data"
+        if "legend_loc" in kwargs:
+            orig_ll = kwargs["legend_loc"]
+            if orig_ll != "on data":
+                kwargs["legend_loc"] = "none"  # we will handle legend
+        else:
+            orig_ll = None
+            kwargs["legend_loc"] = "on data"
 
         if basis is not None:
             kwargs["basis"] = basis
@@ -213,7 +218,7 @@ def cluster_fates(
 
         ax = scv.pl.paga(adata, **kwargs)
 
-        if basis is not None and kwargs["legend_loc"] not in ("none", "on data", None):
+        if basis is not None and orig_ll not in ("none", "on data", None):
             handles = []
             for cluster_name, color in zip(
                 adata.obs[f"{cluster_key}"].cat.categories,
@@ -222,7 +227,7 @@ def cluster_fates(
                 handles += [ax.scatter([], [], label=cluster_name, c=color)]
             first_legend = _position_legend(
                 ax,
-                legend_loc=kwargs["legend_loc"],
+                legend_loc=orig_ll,
                 handles=handles,
                 **{k: v for k, v in legend_kwargs.items() if k != "loc"},
                 title=cluster_key,

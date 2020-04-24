@@ -536,20 +536,59 @@ def _trends_helper(
 
 
 def _position_legend(ax: mpl.axes.Axes, legend_loc: str, **kwargs):
-    # modified from scVelo
-    if legend_loc == "upper right":
-        return ax.legend(loc="upper left", bbox_to_anchor=(1, 1), **kwargs)
-    if legend_loc == "upper left out":
-        return ax.legend(loc="upper right", bbox_to_anchor=(-0.05, 1), **kwargs)
+    if legend_loc == "center center out":
+        raise ValueError("Invalid option: `'center center out'`.")
+    tmp, loc = legend_loc.split(" "), ""
 
-    if legend_loc == "lower right":
-        return ax.legend(loc="lower left", bbox_to_anchor=(1, 0), **kwargs)
-    if legend_loc == "lower left out":
-        return ax.legend(loc="lower right", bbox_to_anchor=(-0.05, 0), **kwargs)
+    if len(tmp) == 1:
+        height, rest = tmp[0], []
+        width = "right" if height in ("upper", "top", "center") else "left"
+    else:
+        height, width, *rest = legend_loc.split(" ")
+        if rest:
+            if len(rest) != 1:
+                raise ValueError(
+                    f"Expected only 1 additional modifier ('in' or 'out'), found `{list(rest)}`."
+                )
+            elif rest[0] not in ("in", "out"):
+                raise ValueError(
+                    f"Invalid modifier `{rest[0]!r}`. Valid options are: `'in', 'out'`."
+                )
+            if rest[0] == "in":  # ignore in, it's default
+                rest = []
 
-    if "right" in legend_loc:  # 'right', 'center right', 'right margin'
-        return ax.legend(loc="center left", bbox_to_anchor=(1, 0.5), **kwargs)
-    if legend_loc != "none":
-        return ax.legend(loc=legend_loc, **kwargs)
+    if height in ("upper", "top"):
+        y = 1.55 if width == "center" else 1.025
+        loc += "upper"
+    elif height == "center":
+        y = 0.5
+        loc += "center"
+    elif height in ("lower", "bottom"):
+        y = -0.55 if width == "center" else -0.025
+        loc += "lower"
+    else:
+        raise ValueError(
+            f"Invalid legend position on y-axis: `{height!r}`. "
+            f"Valid options are: `'upper', 'top', 'center', 'lower', 'bottom'`."
+        )
 
-    raise ValueError(f"Invalid legend location `{legend_loc!r}`.")
+    if width == "left":
+        x = -0.05
+        loc += " right" if rest else " left"
+    elif width == "center":
+        x = 0.5
+        if height != "center":  # causes to be like top center
+            loc += " center"
+    elif width == "right":
+        x = 1.05
+        loc += " left" if rest else " right"
+    else:
+        raise ValueError(
+            f"Invalid legend position on x-axis: `{width!r}`. "
+            f"Valid options are: `'left', 'center', 'right'`."
+        )
+
+    if rest:
+        kwargs["bbox_to_anchor"] = (x, y)
+
+    return ax.legend(loc=loc, **kwargs)
