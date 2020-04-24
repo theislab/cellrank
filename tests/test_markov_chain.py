@@ -239,6 +239,31 @@ class TestMarkovChain:
         assert (adata.obs["final_cells"][zero_mask] == "foo").all()
         assert pd.isna(adata.obs["final_cells"][~zero_mask]).all()
 
+    def test_check_and_create_colors(self, adata_large):
+        adata = adata_large
+        vk = VelocityKernel(adata).compute_transition_matrix()
+        ck = ConnectivityKernel(adata).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+
+        mc_fwd = cr.tl.MarkovChain(final_kernel)
+        mc_fwd.compute_partition()
+        mc_fwd.compute_eig()
+
+        mc_fwd.compute_approx_rcs(use=3)
+
+        del mc_fwd._approx_rcs_colors
+        del mc_fwd.uns["to_final_cells_colors"]
+
+        mc_fwd._check_and_create_colors()
+
+        assert "to_final_cells_colors" in mc_fwd.adata.uns
+        np.testing.assert_array_equal(
+            mc_fwd.adata.uns["fo_final_cells_colors"], _create_categorical_colors(3)
+        )
+        np.testing.assert_array_equal(
+            mc_fwd.adata.uns["fo_final_cells_colors"], mc_fwd._approx_rcs_colors
+        )
+
 
 class TestMarkovChainCopy:
     def test_copy_simple(self, adata_mc_fwd):
