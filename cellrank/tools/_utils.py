@@ -986,6 +986,7 @@ def _create_categorical_colors(n_categories: Optional[int] = None):
         n_categories = 51
     if n_categories > 51:
         raise ValueError(f"Maximum number of colors (51) exceeded: `{n_categories}`.")
+
     colors = [cm.Set1(i) for i in range(cm.Set1.N)][:n_categories]
     colors += [cm.Set2(i) for i in range(cm.Set2.N)][: n_categories - len(colors)]
     colors += [cm.Set3(i) for i in range(cm.Set3.N)][: n_categories - len(colors)]
@@ -1000,8 +1001,9 @@ def _insert_categorical_colors(seen_colors: Union[np.ndarray, List], n_categorie
     candidates = list(
         filter(lambda c: c not in seen_colors, _create_categorical_colors())
     )[:n_categories]
+
     if len(candidates) != n_categories:
-        raise RuntimeError(f"Unable to create additional categorical colors")
+        raise RuntimeError(f"Unable to create `{n_categories}` categorical colors.")
 
     return candidates
 
@@ -1056,6 +1058,7 @@ def _merge_categorical_series(
     colors_old: Union[List[ColorLike], np.ndarray, Dict[Any, ColorLike]] = None,
     colors_new: Union[List[ColorLike], np.ndarray, Dict[Any, ColorLike]] = None,
     inplace: bool = False,
+    color_overwrite: bool = False,
 ) -> Optional[Union[pd.Series, np.ndarray, Tuple[pd.Series, np.ndarray]]]:
     """
     Update categorical :class:`pandas.Series.` with new information. It **can never remove** old categories,
@@ -1071,6 +1074,8 @@ def _merge_categorical_series(
         Colors associated with old categories.
     colors_new
         Colors associated with new categories.
+    color_overwrite
+        If `True`, overwrite the old colors with new ones for overlapping categories.
     inplace
         Whether to update :paramref:`old` or create a copy.
 
@@ -1141,7 +1146,7 @@ def _merge_categorical_series(
     if not colors_old and colors_new:
         colors_old = _insert_categorical_colors(
             list(colors_new.values()) if isinstance(colors_new, dict) else colors_new,
-            len(new_cats),
+            len(old_cats),
         )
     if not colors_new and colors_old:
         colors_new = _insert_categorical_colors(
@@ -1165,10 +1170,11 @@ def _merge_categorical_series(
     if not colors_old and not colors_new:
         return old if not inplace else None
 
-    colors_merged = {
-        **colors_new,
-        **colors_old,
-    }  # old last, overwriting the colors if keys are the same
+    colors_merged = (
+        {**colors_old, **colors_new}
+        if color_overwrite
+        else {**colors_new, **colors_old}
+    )
     colors_merged = np.array([colors_merged[c] for c in old.cat.categories])
 
     return (old, colors_merged) if not inplace else colors_merged
