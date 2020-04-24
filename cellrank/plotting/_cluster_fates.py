@@ -95,6 +95,7 @@ def cluster_fates(
         If `None`, just shows the plot.
     legend_kwargs
         Keyword arguments for :func:`matplotlib.axes.Axes.legend`, such as `'loc'` for legend position.
+        For `mode='paga_pie'` and `basis='...'`, this controls the placement of the absorption probabilities legend.
     figsize
         Size of the figure. If `None`, it will be set automatically.
     dpi
@@ -196,30 +197,44 @@ def cluster_fates(
         kwargs["ax"] = ax
         kwargs["show"] = False
         kwargs["colorbar"] = False  # has to be disabled
+        kwargs["show"] = False
 
         kwargs["node_colors"] = colors
         kwargs.pop("save", None)  # we will handle saving
 
         kwargs["transitions"] = kwargs.get("transitions", None)
-        kwargs["legend_loc"] = kwargs.get("legend_loc", None) or "on data"
+        if "legend_loc" in kwargs:
+            orig_ll = kwargs["legend_loc"]
+            if orig_ll != "on data":
+                kwargs["legend_loc"] = "none"  # we will handle legend
+        else:
+            orig_ll = None
+            kwargs["legend_loc"] = "on data"
 
         if basis is not None:
             kwargs["basis"] = basis
             kwargs["scatter_flag"] = True
             kwargs["color"] = cluster_key
 
-        scv.pl.paga(adata, **kwargs)
+        ax = scv.pl.paga(adata, **kwargs)
 
-        if basis is not None and kwargs["legend_loc"] not in ("none", "on data"):
+        if basis is not None and orig_ll not in ("none", "on data", None):
+            handles = []
+            for cluster_name, color in zip(
+                adata.obs[f"{cluster_key}"].cat.categories,
+                adata.uns[f"{cluster_key}_colors"],
+            ):
+                handles += [ax.scatter([], [], label=cluster_name, c=color)]
             first_legend = _position_legend(
                 ax,
-                legend_loc=kwargs["legend_loc"],
+                legend_loc=orig_ll,
+                handles=handles,
                 **{k: v for k, v in legend_kwargs.items() if k != "loc"},
                 title=cluster_key,
             )
             fig.add_artist(first_legend)
 
-        if legend_kwargs.get("loc", None) is not None:
+        if legend_kwargs.get("loc", None) not in ("none", "on data", None):
             # we need to use these, because scvelo can have its own handles and
             # they would be plotted here
             handles = []
@@ -228,7 +243,14 @@ def cluster_fates(
             if len(colors[0].keys()) != len(adata.obsm[lk].names):
                 handles += [ax.scatter([], [], label="Rest", c="grey")]
 
-            ax.legend(**legend_kwargs, handles=handles, title=points)
+            second_legend = _position_legend(
+                ax,
+                legend_loc=legend_kwargs["loc"],
+                handles=handles,
+                **{k: v for k, v in legend_kwargs.items() if k != "loc"},
+                title=points,
+            )
+            fig.add_artist(second_legend)
 
         return fig
 
