@@ -539,8 +539,14 @@ def _position_legend(ax: mpl.axes.Axes, legend_loc: str, **kwargs):
     # modified from scVelo
     if legend_loc == "upper right":
         return ax.legend(loc="upper left", bbox_to_anchor=(1, 1), **kwargs)
+    if legend_loc == "upper left out":
+        return ax.legend(loc="upper right", bbox_to_anchor=(-0.05, 1), **kwargs)
+
     if legend_loc == "lower right":
         return ax.legend(loc="lower left", bbox_to_anchor=(1, 0), **kwargs)
+    if legend_loc == "lower left out":
+        return ax.legend(loc="lower right", bbox_to_anchor=(-0.05, 0), **kwargs)
+
     if "right" in legend_loc:  # 'right', 'center right', 'right margin'
         return ax.legend(loc="center left", bbox_to_anchor=(1, 0.5), **kwargs)
     if legend_loc != "none":

@@ -223,12 +223,13 @@ def cluster_fates(
             first_legend = _position_legend(
                 ax,
                 legend_loc=kwargs["legend_loc"],
+                handles=handles,
                 **{k: v for k, v in legend_kwargs.items() if k != "loc"},
                 title=cluster_key,
             )
             fig.add_artist(first_legend)
 
-        if legend_kwargs.get("loc", None) not in (None, "none", "on data"):
+        if legend_kwargs.get("loc", None) not in ("none", "on data", None):
             # we need to use these, because scvelo can have its own handles and
             # they would be plotted here
             handles = []
@@ -237,7 +238,14 @@ def cluster_fates(
             if len(colors[0].keys()) != len(adata.obsm[lk].names):
                 handles += [ax.scatter([], [], label="Rest", c="grey")]
 
-            ax.legend(**legend_kwargs, handles=handles, title=points)
+            second_legend = _position_legend(
+                ax,
+                legend_loc=legend_kwargs["loc"],
+                handles=handles,
+                **{k: v for k, v in legend_kwargs.items() if k != "loc"},
+                title=points,
+            )
+            fig.add_artist(second_legend)
 
         return fig
 
