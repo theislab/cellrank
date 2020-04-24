@@ -38,26 +38,26 @@ def _map_names_and_colors(
     series_query: Series,
     colors_reference: Optional[np.array] = None,
     en_cutoff: Optional[float] = None,
-) -> Tuple[Series, List[Any]]:
+) -> Union[Series, Tuple[Series, List[Any]]]:
     """
-    Utility function to map annotations and colors from one series to another
+    Utility function to map annotations and colors from one series to another.
 
     Params
     ------
     series_reference
-        Series object with categorical annotations
+        Series object with categorical annotations.
     series_query
-        Series for which we would like to query the category names
+        Series for which we would like to query the category names.
     colors_reference
         If given, colors for the query categories are pulled from this color array.
     en_cutoff
-        In case of a non-perfect overlap between categories of the two series, this decides when to label a categoy in
-        the query as 'Unknown'
+        In case of a non-perfect overlap between categories of the two series,
+        this decides when to label a category in the query as 'Unknown'.
 
     Returns
     -------
     :class:`pandas.Series`, :class:`list`
-        Series with updated category names and a corresponding array of colors
+        Series with updated category names and a corresponding array of colors.
     """
 
     # checks: dtypes, matching indices, make sure colors match the categories
@@ -70,15 +70,16 @@ def _map_names_and_colors(
             f"Query series must be `categorical`, found `{infer_dtype(series_query)}`."
         )
     index_query, index_reference = series_query.index, series_reference.index
-    assert all(
-        index_reference == index_query
-    ), "Series indices do not match, cannot map names/colors"
+    if not np.all(index_reference == index_query):
+        raise ValueError("Series indices do not match, cannot map names/colors.")
 
     process_colors = colors_reference is not None
-    if process_colors:
-        assert len(series_reference.cat.categories) == len(colors_reference), (
-            "Length of reference colors does not " "match length of reference series. "
+    if process_colors and len(series_reference.cat.categories) != len(colors_reference):
+        raise ValueError(
+            "Length of reference colors does not match length of reference series."
         )
+    if not all((mcolors.is_color_like(c) for c in colors_reference)):
+        raise ValueError("Not all colors are color-like.")
 
     # create dataframe to store the associations between reference and query
     cats_query = series_query.cat.categories
@@ -135,7 +136,9 @@ def _map_names_and_colors(
 
     association_df["name"] = names_query_new
     if process_colors:
-        association_df["color"] = colors_query_new
+        association_df["color"] = _convert_to_hex_colors(
+            colors_query_new
+        )  # original colors can be still there, convert to hex
 
     # issue a warning for mapping with high entropy
     if en_cutoff is not None:
@@ -144,12 +147,13 @@ def _map_names_and_colors(
         )
         if len(critical_cats) > 0:
             logg.warning(
-                f"The following groups could not be mapped uniquely: `{critical_cats}`"
+                f"The following groups could not be mapped uniquely: `{', '.join(map(str, critical_cats))}`"
             )
-    if process_colors:
-        return association_df["name"], list(association_df["color"])
-    else:
-        return association_df["name"]
+
+    return (
+        association_df["name"],
+        list(association_df["color"]) if process_colors else association_df["name"],
+    )
 
 
 def _process_series(series: pd.Series, keys: List, colors: Optional[np.array] = None):
