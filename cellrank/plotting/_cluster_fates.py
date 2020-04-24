@@ -95,6 +95,7 @@ def cluster_fates(
         If `None`, just shows the plot.
     legend_kwargs
         Keyword arguments for :func:`matplotlib.axes.Axes.legend`, such as `'loc'` for legend position.
+        For `mode='paga_pie'` and `basis='...'`, this controls the placement of the absorption probabilities legend.
     figsize
         Size of the figure. If `None`, it will be set automatically.
     dpi
@@ -196,21 +197,29 @@ def cluster_fates(
         kwargs["ax"] = ax
         kwargs["show"] = False
         kwargs["colorbar"] = False  # has to be disabled
+        kwargs["show"] = False
 
         kwargs["node_colors"] = colors
         kwargs.pop("save", None)  # we will handle saving
 
         kwargs["transitions"] = kwargs.get("transitions", None)
-        kwargs["legend_loc"] = kwargs.get("legend_loc", None) or "on data"
+        if "legend_loc" not in kwargs:
+            kwargs["legend_loc"] = kwargs.get("legend_loc", None) or "on data"
 
         if basis is not None:
             kwargs["basis"] = basis
             kwargs["scatter_flag"] = True
             kwargs["color"] = cluster_key
 
-        scv.pl.paga(adata, **kwargs)
+        ax = scv.pl.paga(adata, **kwargs)
 
-        if basis is not None and kwargs["legend_loc"] not in ("none", "on data"):
+        if basis is not None and kwargs["legend_loc"] not in ("none", "on data", None):
+            handles = []
+            for cluster_name, color in zip(
+                adata.obs[f"{cluster_key}"].cat.categories,
+                adata.uns[f"{cluster_key}_colors"],
+            ):
+                handles += [ax.scatter([], [], label=cluster_name, c=color)]
             first_legend = _position_legend(
                 ax,
                 legend_loc=kwargs["legend_loc"],
@@ -219,7 +228,7 @@ def cluster_fates(
             )
             fig.add_artist(first_legend)
 
-        if legend_kwargs.get("loc", None) is not None:
+        if legend_kwargs.get("loc", None) not in (None, "none", "on data"):
             # we need to use these, because scvelo can have its own handles and
             # they would be plotted here
             handles = []
