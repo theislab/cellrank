@@ -18,7 +18,7 @@ from cellrank.utils.models import Model, GamMGCVModel
 from cellrank.tools._utils import save_fig
 from cellrank.tools.kernels import VelocityKernel
 from cellrank.tools._constants import _colors
-from cellrank.tools._markov_chain import MarkovChain
+from cellrank.tools._estimators._markov_chain import MarkovChain
 
 
 _ERROR_INCOMPLETE_SPEC = (
