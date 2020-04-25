@@ -157,7 +157,7 @@ def _map_names_and_colors(
 
 
 def _process_series(
-    series: pd.Series, keys: List, colors: Optional[np.array] = None
+    series: pd.Series, keys: Optional[List[str]], colors: Optional[np.array] = None
 ) -> Union[pd.Series, Tuple[pd.Series, List[str]]]:
     """
     Utility function to process :class:`pandas.Series` categorical objects.
@@ -208,9 +208,14 @@ def _process_series(
             raise ValueError(
                 f"Length of colors ({len(colors_in)}) does not match length of categories ({len(series_in.cat.categories)})."
             )
+        if not all((mcolors.is_color_like(c) for c in colors_in)):
+            raise ValueError("Not all colors are color-like.")
 
     # define a set of keys
-    keys_ = {tuple((key.strip() for key in rc.strip(" ,").split(","))) for rc in keys}
+    keys_ = {
+        tuple(sorted({key.strip(" ") for key in rc.strip(" ,").split(",")}))
+        for rc in keys
+    }
 
     # check the `keys` are unique
     overlap = [set(ks) for ks in keys_]

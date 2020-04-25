@@ -312,9 +312,27 @@ def resize_images_to_same_sizes(
 
 
 def assert_array_nan_equal(
-    arr1: Union[np.ndarray, pd.Series], arr2: Union[np.ndarray, pd.Series]
-):
-    mask1 = ~(pd.isnull(arr1) if isinstance(arr1, pd.Series) else np.isnan(arr1))
-    mask2 = ~(pd.isnull(arr2) if isinstance(arr2, pd.Series) else np.isnan(arr2))
+    actual: Union[np.ndarray, pd.Series], expected: Union[np.ndarray, pd.Series]
+) -> None:
+    """
+    Test is 2 arrays or :class:`pandas.Series` are equal.
+
+    Params
+    ------
+    actual
+        The actual data.
+    expected
+        The expected result.
+
+    Returns
+    -------
+    None
+        Nothing, but raises an exception if arrays are not equal, including the locations of NaN values.
+    """
+
+    mask1 = ~(pd.isnull(actual) if isinstance(actual, pd.Series) else np.isnan(actual))
+    mask2 = ~(
+        pd.isnull(expected) if isinstance(expected, pd.Series) else np.isnan(expected)
+    )
     np.testing.assert_array_equal(np.where(mask1), np.where(mask2))
-    np.testing.assert_array_equal(arr1[mask1], arr2[mask2])
+    np.testing.assert_array_equal(actual[mask1], expected[mask2])
