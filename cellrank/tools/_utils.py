@@ -156,33 +156,35 @@ def _map_names_and_colors(
     )
 
 
-def _process_series(series: pd.Series, keys: List, colors: Optional[np.array] = None):
+def _process_series(
+    series: pd.Series, keys: List, colors: Optional[np.array] = None
+) -> Union[pd.Series, Tuple[pd.Series, List[str]]]:
     """
-    Utility function to process pd.Series categorical objects
+    Utility function to process :class:`pandas.Series` categorical objects.
 
-    Categories in `series` are combined/removed according to `keys`,
+    Categories in :paramref:`series` are combined/removed according to :paramref:`keys`,
     the same transformation is applied to the corresponding colors.
 
-    Parameters
-    --------
+    Params
+    ------
     series
-        Input data, must be a pd.series of categorical type
+        Input data, must be a pd.series of categorical type.
     keys
-        Keys could be e.g. ['cat_1, cat_2', 'cat_4']. If originally,
+        Keys could be e.g. `['cat_1, cat_2', 'cat_4']`. If originally,
         there were 4 categories in `series`, then this would combine the first
         and the second and remove the third. The same would be done to `colors`,
         i.e. the first and second color would be merged (average color), while
         the third would be removed.
     colors
-        List of colors which aligns with the order of the categories
+        List of colors which aligns with the order of the categories.
 
     Returns
-    --------
+    -------
     :class:`pandas.Series`
         Categorical updated annotation. Each cell is assigned to either `NaN`
         or one of updated approximate recurrent classes.
     list
-        Color list processed according to keys
+        Color list processed according to keys.
     """
 
     # determine whether we want to process colors as well
@@ -192,8 +194,7 @@ def _process_series(series: pd.Series, keys: List, colors: Optional[np.array] = 
     if keys is None:
         if process_colors:
             return series, colors
-        else:
-            return series
+        return series
 
     # assert dtype of the series
     if not is_categorical_dtype(series):
@@ -203,9 +204,10 @@ def _process_series(series: pd.Series, keys: List, colors: Optional[np.array] = 
     series_in = series.copy()
     if process_colors:
         colors_in = np.array(colors.copy())
-        assert len(colors_in) == len(
-            series_in.cat.categories
-        ), "Length of colors does not match length of categories"
+        if len(colors_in) != len(series_in.cat.categories):
+            raise ValueError(
+                f"Length of colors ({len(colors_in)}) does not match length of categories ({len(series_in.cat.categories)})."
+            )
 
     # define a set of keys
     keys_ = {tuple((key.strip() for key in rc.strip(" ,").split(","))) for rc in keys}
@@ -219,9 +221,10 @@ def _process_series(series: pd.Series, keys: List, colors: Optional[np.array] = 
 
     # check the `keys` are all proper categories
     remaining_cat = [b for a in keys_ for b in a]
-    assert all(np.in1d(remaining_cat, series_in.cat.categories)), (
-        "Not all keys are proper categories. " "Check for spelling mistakes in `keys`."
-    )
+    if not np.all(np.in1d(remaining_cat, series_in.cat.categories)):
+        raise ValueError(
+            "Not all keys are proper categories. Check for spelling mistakes in `keys`."
+        )
 
     # remove cats and colors according to `keys`
     n_remaining = len(remaining_cat)
@@ -234,7 +237,6 @@ def _process_series(series: pd.Series, keys: List, colors: Optional[np.array] = 
     # loop over all indiv. or combined rc's
     colors_mod = {}
     for cat in keys_:
-
         # if there are more than two keys in this category, combine them
         if len(cat) > 1:
             new_cat_name = " or ".join(cat)
@@ -262,8 +264,8 @@ def _process_series(series: pd.Series, keys: List, colors: Optional[np.array] = 
     if process_colors:
         colors_temp = [colors_mod[c] for c in series_temp.cat.categories]
         return series_temp, colors_temp
-    else:
-        return series_temp
+
+    return series_temp
 
 
 def _complex_warning(
