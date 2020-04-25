@@ -152,8 +152,9 @@ def _map_names_and_colors(
             )
 
     return (
-        association_df["name"],
-        list(association_df["color"]) if process_colors else association_df["name"],
+        (association_df["name"], list(association_df["color"]))
+        if process_colors
+        else association_df["name"]
     )
 
 

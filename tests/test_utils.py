@@ -105,7 +105,7 @@ class TestMapNamesAndColors:
         x = pd.Series(["a", "b", np.nan, "b", np.nan]).astype("category")
         y = pd.Series(["b", np.nan, np.nan, "d", "a"]).astype("category")
 
-        res, colors = _map_names_and_colors(x, y)
+        res, colors = _map_names_and_colors(x, y, colors_reference=["red", "green"])
 
         assert isinstance(res, pd.Series)
         assert isinstance(colors, list)
