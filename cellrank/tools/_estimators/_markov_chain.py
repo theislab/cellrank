@@ -15,22 +15,12 @@ from pandas import Series, DataFrame
 from pandas.api.types import is_categorical_dtype, infer_dtype
 from scanpy import logging as logg
 from scipy.linalg import solve
-from scipy.sparse import issparse
-from scipy.sparse.linalg import eigs
 from scipy.stats import zscore, entropy, ranksums
 
 
 from cellrank.tools._estimators._base_estimator import BaseEstimator
 from cellrank.tools._lineage import Lineage
-from cellrank.tools._constants import (
-    Direction,
-    RcKey,
-    LinKey,
-    Prefix,
-    _probs,
-    _colors,
-    _lin_names,
-)
+from cellrank.tools._constants import _probs, _colors, _lin_names
 from cellrank.tools._utils import (
     _map_names_and_colors,
     _process_series,
@@ -38,7 +28,6 @@ from cellrank.tools._utils import (
     _cluster_X,
     _get_connectivities,
     _normalize,
-    _eigengap,
     _filter_cells,
     _make_cat,
     _convert_to_hex_colors,
@@ -47,7 +36,6 @@ from cellrank.tools._utils import (
     _convert_to_categorical_series,
     _merge_approx_rcs,
     partition,
-    save_fig,
 )
 
 
@@ -273,135 +261,6 @@ class MarkovChain(BaseEstimator):
         """
 
         self._compute_eig(k, which=which, alpha=alpha, only_evals=False)
-
-    def plot_eig(
-        self,
-        dpi: int = 100,
-        figsize: Optional[Tuple[float, float]] = (5, 5),
-        legend_loc: Optional[str] = None,
-        save: Optional[Union[str, Path]] = None,
-    ) -> None:
-        """
-        Plot the top eigenvalues in complex plane.
-
-        Params
-        ------
-        dpi
-            Dots per inch.
-        figsize
-            Size of the figure.
-        save
-            Filename where to save the plots. If `None`, just shows the plot.
-
-        Returns
-        -------
-        None
-            Nothing, just plots the spectrum in complex plane.
-        """
-
-        if self._eig is None:
-            logg.warning(
-                "No eigendecomposition found, computing with default parameters"
-            )
-            self.compute_eig()
-        D = self._eig["D"]
-        params = self._eig["params"]
-
-        # create fiture and axes
-        fig, ax = plt.subplots(nrows=1, ncols=1, dpi=dpi, figsize=figsize)
-
-        # get the original data ranges
-        lam_x, lam_y = D.real, D.imag
-        x_min, x_max = np.min(lam_x), np.max(lam_x)
-        y_min, y_max = np.min(lam_y), np.max(lam_y)
-        x_range, y_range = x_max - x_min, y_max - y_min
-        final_range = np.max([x_range, y_range]) + 0.05
-
-        # define a function to make the data limits rectangular
-        adapt_range = lambda min_, max_, range_: (
-            min_ + (max_ - min_) / 2 - range_ / 2,
-            min_ + (max_ - min_) / 2 + range_ / 2,
-        )
-        x_min_, x_max_ = adapt_range(x_min, x_max, final_range)
-        y_min_, y_max_ = adapt_range(y_min, y_max, final_range)
-
-        # plot the data and the unit circle
-        ax.scatter(D.real, D.imag, marker=".", label="Eigenvalue")
-        t = np.linspace(0, 2 * np.pi, 500)
-        x_circle, y_circle = np.sin(t), np.cos(t)
-        ax.plot(x_circle, y_circle, "k-", label="Unit circle")
-
-        # set labels, ranges and legend
-        ax.set_xlabel("Im($\lambda$)")
-        ax.set_ylabel("Re($\lambda$)")
-        ax.set_xlim(x_min_, x_max_)
-        ax.set_ylim(y_min_, y_max_)
-        key = "real part" if params["which"] == "LR" else "magnitude"
-        ax.set_title(f"Top {params['k']} eigenvalues according to their {key}")
-        ax.legend(loc=legend_loc)
-
-        if save is not None:
-            save_fig(fig, save)
-
-        fig.show()
-
-    def plot_real_spectrum(
-        self,
-        dpi: int = 100,
-        figsize: Optional[Tuple[float, float]] = None,
-        legend_loc: Optional[str] = None,
-        save: Optional[Union[str, Path]] = None,
-    ) -> None:
-        """
-        Plot the real part of the top eigenvalues.
-
-        Params
-        ------
-        dpi
-            Dots per inch.
-        figsize
-            Size of the figure.
-        save
-            Filename where to save the plots. If `None`, just shows the plot.
-
-        Returns
-        -------
-        None
-            Nothing, just plots the spectrum.
-        """
-
-        if self._eig is None:
-            logg.warning(
-                "No eigendecomposition found, computing with default parameters"
-            )
-            self.compute_eig()
-
-        # Obtain the eigendecomposition, create the color code
-        D, params = self._eig["D"], self._eig["params"]
-        D_real, D_imag = D.real, D.imag
-        ixs = np.arange(len(D))
-        mask = D_imag == 0
-
-        # plot the top eigenvalues
-        fig, ax = plt.subplots(nrows=1, ncols=1, dpi=dpi, figsize=figsize)
-        ax.scatter(ixs[mask], D_real[mask], marker="o", label="Real eigenvalue")
-        ax.scatter(ixs[~mask], D_real[~mask], marker="o", label="Complex eigenvalue")
-
-        # add dashed line for the eigengap, ticks, labels, title and legend
-        ax.axvline(self._eig["eigengap"], label="Eigengap", ls="--")
-        ax.set_xticks(range(len(D)))
-        ax.set_xlabel("index")
-        ax.set_ylabel("Re($\lambda_i$)")
-        key = "real part" if params["which"] == "LR" else "magnitude"
-        ax.set_title(
-            f"Real part of top {params['k']} eigenvalues according to their {key}"
-        )
-        ax.legend(loc=legend_loc)
-
-        if save is not None:
-            save_fig(fig, save)
-
-        fig.show()
 
     def plot_eig_embedding(
         self,

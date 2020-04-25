@@ -687,7 +687,7 @@ class TestGraph:
 class TestMarkovChain:
     @compare(kind="mc")
     def test_mc_eig(self, mc: MarkovChain, fpath: Path):
-        mc.plot_eig(dpi=DPI, save=fpath)
+        mc.plot_spectrum(dpi=DPI, save=fpath)
 
     @compare(kind="mc")
     def test_mc_real_spectrum(self, mc: MarkovChain, fpath: Path):
