@@ -272,39 +272,7 @@ class MarkovChain(BaseEstimator):
             Nothing, but updates the following fields: :paramref:`eigendecomposition`.
         """
 
-        logg.info("Computing eigendecomposition of transition matrix")
-        if self._is_sparse:
-            logg.debug(f"DEBUG: Computing top `{k}` eigenvalues for sparse matrix")
-            D, V_l = eigs(self._T.T, k=k, which=which)
-            _, V_r = eigs(self._T, k=k, which=which)
-        else:
-            logg.warning(
-                "This transition matrix is not sparse, computing full eigendecomposition"
-            )
-            D, V_l = np.linalg.eig(self._T.T)
-            _, V_r = np.linalg.eig(self._T)
-
-        # Sort the eigenvalues and eigenvectors and take the real part
-        logg.debug("DEBUG: Sorting eigenvalues by their real part")
-        p = np.flip(np.argsort(D.real))
-        D, V_l, V_r = D[p], V_l[:, p], V_r[:, p]
-        e_gap = _eigengap(D.real, alpha)
-
-        # write to class and AnnData object
-        if self._eig is not None:
-            logg.debug("DEBUG: Overwriting `.eig`")
-        else:
-            logg.debug(f"DEBUG: Adding `.eig` and `adata.uns['eig_{self._direction}']`")
-
-        eig_dict = {
-            "D": D,
-            "V_l": V_l,
-            "V_r": V_r,
-            "eigengap": e_gap,
-            "params": {"which": which, "k": k, "alpha": alpha},
-        }
-        self._eig = eig_dict
-        self._adata.uns[f"eig_{self._direction}"] = eig_dict
+        self._compute_eig(k, which=which, alpha=alpha, only_evals=False)
 
     def plot_eig(
         self,
