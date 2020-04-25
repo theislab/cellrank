@@ -72,7 +72,7 @@ class TestMapNamesAndColors:
             ["b", np.nan, np.nan, "d", "a"], index=["foo", "bar", "baz", "quux", "quas"]
         )
 
-        with pytest.raises(ValueError):
+        with pytest.raises(TypeError):
             _ = _map_names_and_colors(x, y)
 
     def test_simple_not_color_like(self):
@@ -137,13 +137,7 @@ class TestProcessSeries:
         with pytest.raises(ValueError):
             _ = _process_series(x, ["foo"])
 
-    def test_keys_overlap_simple(self):
-        x = pd.Series(["a", "b", np.nan, "b", np.nan]).astype("category")
-
-        with pytest.raises(ValueError):
-            _ = _process_series(x, ["a", "a"])
-
-    def test_keys_overlap_complex(self):
+    def test_keys_overlap(self):
         x = pd.Series(["a", "b", np.nan, "b", np.nan]).astype("category")
 
         with pytest.raises(ValueError):
