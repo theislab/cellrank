@@ -10,17 +10,7 @@ from scanpy import logging as logg
 from scipy.sparse import issparse
 
 
-from cellrank.tools._lineage import Lineage
-from cellrank.tools._constants import (
-    Direction,
-    RcKey,
-    LinKey,
-    Prefix,
-    _probs,
-    _colors,
-    _lin_names,
-)
-from cellrank.tools._utils import _create_categorical_colors
+from cellrank.tools._constants import Direction, RcKey, LinKey, Prefix
 
 
 class BaseEstimator(ABC):
