@@ -15,6 +15,7 @@ from cellrank.tools._constants import (
     LinKey,
     _lin_names,
 )
+from cellrank.tools._utils import _create_categorical_colors
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
 from _helpers import assert_array_nan_equal
 
@@ -251,17 +252,17 @@ class TestMarkovChain:
 
         mc_fwd.compute_approx_rcs(use=3)
 
-        del mc_fwd._approx_rcs_colors
-        del mc_fwd.uns["to_final_cells_colors"]
+        mc_fwd._approx_rcs_colors = None
+        del mc_fwd.adata.uns["final_cells_colors"]
 
         mc_fwd._check_and_create_colors()
 
-        assert "to_final_cells_colors" in mc_fwd.adata.uns
+        assert "final_cells_colors" in mc_fwd.adata.uns
         np.testing.assert_array_equal(
-            mc_fwd.adata.uns["fo_final_cells_colors"], _create_categorical_colors(3)
+            mc_fwd.adata.uns["final_cells_colors"], _create_categorical_colors(3)
         )
         np.testing.assert_array_equal(
-            mc_fwd.adata.uns["fo_final_cells_colors"], mc_fwd._approx_rcs_colors
+            mc_fwd.adata.uns["final_cells_colors"], mc_fwd._approx_rcs_colors
         )
 
 

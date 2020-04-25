@@ -74,12 +74,13 @@ def _map_names_and_colors(
         raise ValueError("Series indices do not match, cannot map names/colors.")
 
     process_colors = colors_reference is not None
-    if process_colors and len(series_reference.cat.categories) != len(colors_reference):
-        raise ValueError(
-            "Length of reference colors does not match length of reference series."
-        )
-    if not all((mcolors.is_color_like(c) for c in colors_reference)):
-        raise ValueError("Not all colors are color-like.")
+    if process_colors:
+        if len(series_reference.cat.categories) != len(colors_reference):
+            raise ValueError(
+                "Length of reference colors does not match length of reference series."
+            )
+        if not all((mcolors.is_color_like(c) for c in colors_reference)):
+            raise ValueError("Not all colors are color-like.")
 
     # create dataframe to store the associations between reference and query
     cats_query = series_query.cat.categories
@@ -267,7 +268,10 @@ def _process_series(
     series_temp.cat.reorder_categories(remaining_cat, inplace=True)
 
     if process_colors:
-        colors_temp = [colors_mod[c] for c in series_temp.cat.categories]
+        # original colors can still be present, convert to hex
+        colors_temp = _convert_to_hex_colors(
+            [colors_mod[c] for c in series_temp.cat.categories]
+        )
         return series_temp, colors_temp
 
     return series_temp
