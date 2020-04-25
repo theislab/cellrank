@@ -3,7 +3,7 @@ from anndata import AnnData
 from typing import Optional
 from scanpy import logging as logg
 
-from cellrank.tools._markov_chain import MarkovChain
+from cellrank.tools._estimators._markov_chain import MarkovChain
 from cellrank.tools._constants import RcKey
 from cellrank.tools._transition_matrix import transition_matrix
 from cellrank.utils._docs import inject_docs

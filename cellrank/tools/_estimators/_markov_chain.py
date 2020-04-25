@@ -11,7 +11,7 @@ import scvelo as scv
 
 from anndata import AnnData
 from copy import copy, deepcopy
-from pandas import Series, DataFrame, to_numeric
+from pandas import Series, DataFrame
 from pandas.api.types import is_categorical_dtype, infer_dtype
 from scanpy import logging as logg
 from scipy.linalg import solve
@@ -20,6 +20,7 @@ from scipy.sparse.linalg import eigs
 from scipy.stats import zscore, entropy, ranksums
 
 
+from cellrank.tools._estimators._base_estimator import BaseEstimator
 from cellrank.tools._lineage import Lineage
 from cellrank.tools._constants import (
     Direction,
@@ -50,7 +51,7 @@ from cellrank.tools._utils import (
 )
 
 
-class MarkovChain:
+class MarkovChain(BaseEstimator):
     """
     Class modelling cellular development as a Markov chain.
 
