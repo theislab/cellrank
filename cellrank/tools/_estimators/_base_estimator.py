@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 from cellrank.tools.kernels._kernel import KernelExpression
-from typing import Optional
+from typing import Optional, Dict
 
-from abc import ABC
+from abc import ABC, abstractmethod
 import numpy as np
 
 from anndata import AnnData
@@ -181,3 +181,45 @@ class BaseEstimator(ABC):
                     f"DEBUG: `{_colors(self._lin_key)}` not found in `adata.uns`. "
                     f"Using default colors"
                 )
+
+    @property
+    def eigendecomposition(self) -> Optional[Dict[str, np.ndarray]]:
+        """
+        A dictionary with following fields:
+
+        - `'D'` eigenvalues of left eigenvectors
+        - `'V_l'` left eigenvectors
+        - `'V_r'` right eigenvectors
+        """
+        return self._eig
+
+    @property
+    def diff_potential(self) -> np.ndarray:
+        """
+        Differentiation potential for each lineage.
+        """
+        return self._dp
+
+    @property
+    def adata(self) -> AnnData:
+        """
+        The underlying annotated data object.
+        """
+        return self._adata
+
+    @property
+    def kernel(self) -> KernelExpression:
+        """
+        The underlying kernel expression.
+        """
+        return self._kernel
+
+    @abstractmethod
+    def copy(self) -> "BaseEstimator":
+        pass
+
+    def __copy__(self) -> "MarkovChain":
+        return self.copy()
+
+    def __len__(self) -> int:
+        return self._n_states

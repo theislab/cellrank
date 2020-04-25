@@ -1219,30 +1219,12 @@ class MarkovChain(BaseEstimator):
         return self._trans_classes
 
     @property
-    def eigendecomposition(self) -> Optional[Dict[str, np.ndarray]]:
-        """
-        A dictionary with following fields:
-
-        - `'D'` eigenvalues of left eigenvectors
-        - `'V_l'` left eigenvectors
-        - `'V_r'` right eigenvectors
-        """
-        return self._eig
-
-    @property
     def lineage_probabilities(self) -> Lineage:
         """
         A `numpy`-like array with names and colors, where
         each column represents one lineage.
         """
         return self._lin_probs
-
-    @property
-    def diff_potential(self) -> np.ndarray:
-        """
-        Differentiation potential for each lineage.
-        """
-        return self._dp
 
     @property
     def approx_recurrent_classes(self) -> Series:
@@ -1257,26 +1239,6 @@ class MarkovChain(BaseEstimator):
         Probabilities of cells belonging to the approximate recurrent classes.
         """
         return self._approx_rcs_probs
-
-    @property
-    def adata(self) -> AnnData:
-        """
-        The underlying annotated data object.
-        """
-        return self._adata
-
-    @property
-    def kernel(self) -> KernelExpression:
-        """
-        The underlying kernel expression.
-        """
-        return self._kernel
-
-    def __copy__(self) -> "MarkovChain":
-        return self.copy()
-
-    def __len__(self) -> int:
-        return self._n_states
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}[n={len(self)}, kernel={repr(self._kernel)}]"
