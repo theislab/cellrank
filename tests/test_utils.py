@@ -109,7 +109,7 @@ class TestMapNamesAndColors:
 
         assert isinstance(res, pd.Series)
         assert isinstance(colors, list)
-        np.testing.assert_array_equal(res, ["#bb2200", "#ee6655", "#008000"])
+        np.testing.assert_array_equal(colors, ["#bb2200", "#ee6655", "#008000"])
 
 
 class TestProcessSeries:
@@ -208,4 +208,4 @@ class TestProcessSeries:
         assert isinstance(colors, list)
 
         np.testing.assert_array_equal(res.values, expected.values)
-        np.testing.assert_array_equal(colors, ["#804000", "#8080ff"])
+        assert set(colors) == {"#804000", "#8080ff"}
