@@ -328,7 +328,7 @@ class BaseEstimator(ABC):
         if use is None:
             use = list(range(is_schur, vectors.shape[1] + is_schur - 1))
         elif isinstance(use, int):
-            use = list(range(use))
+            use = list(range(is_schur, use + is_schur))
         elif not isinstance(use, (tuple, list, range)):
             raise TypeError(
                 f"Argument `use` must be either `int`, `tuple`, `list` or `range`,"
@@ -338,6 +338,8 @@ class BaseEstimator(ABC):
             if not all(map(lambda u: isinstance(u, int), use)):
                 raise TypeError("Not all values in `use` argument are integers.")
         use = list(use)
+        if not use:
+            raise ValueError("No vectors to plot.")
 
         muse = max(use)
         if muse >= vectors.shape[1]:
