@@ -4,17 +4,19 @@ from scipy.sparse.linalg import eigs
 from pathlib import Path
 from cellrank.tools._utils import _eigengap, save_fig
 from cellrank.tools.kernels._kernel import KernelExpression
-from typing import Optional, Dict, Union, Tuple
+from typing import Optional, Dict, Union, Tuple, List
 from abc import ABC, abstractmethod
 
 import numpy as np
 import matplotlib.pyplot as plt
+import scvelo as scv
 
 from anndata import AnnData
 from scanpy import logging as logg
 from scipy.sparse import issparse
 
 from cellrank.tools._constants import Direction, RcKey, LinKey, Prefix
+from cellrank.tools._utils import _complex_warning
 
 
 class BaseEstimator(ABC):
@@ -301,6 +303,67 @@ class BaseEstimator(ABC):
             save_fig(fig, save)
 
         fig.show()
+
+    def _plot_vectors(
+        self,
+        vectors: np.ndarray,
+        kind: str,
+        abs_value: bool = False,
+        cluster_key: Optional[str] = None,
+        use: Optional[Union[int, Tuple[int], List[int]]] = None,
+        **kwargs,
+    ):
+        if kind not in ("eigen", "schur"):
+            raise ValueError(
+                f"Invalid kind `{kind!r}`. Valid options are `'eigen', 'schur'`."
+            )
+        is_schur = kind == "schur"
+
+        # check whether dimensions are consistent
+        if self.adata.n_obs != vectors.shape[0]:
+            raise ValueError(
+                f"Number of cells ({self.adata.n_obs}) is inconsistent with the 1. dimensions of vectors ({vectors.shape[0]})."
+            )
+
+        if use is None:
+            use = list(range(is_schur, vectors.shape[1] + is_schur))
+        elif isinstance(use, int):
+            use = list(range(use))
+        elif not isinstance(use, (tuple, list, range)):
+            raise TypeError(
+                f"Argument `use` must be either `int`, `tuple`, `list` or `range`,"
+                f"found `{type(use).__name__}`."
+            )
+        else:
+            if not all(map(lambda u: isinstance(u, int), use)):
+                raise TypeError("Not all values in `use` argument are integers.")
+        use = list(use)
+
+        muse = max(use)
+        if muse >= vectors.shape[1]:
+            vec = "Schur " if is_schur else "eigen"
+            raise ValueError(
+                f"Maximum specified {vec}vector ({muse}) is larger "
+                f"than the number of computed {vec}vectors ({vectors.shape[1]})."
+            )
+        V_ = vectors[:, use]
+        if is_schur:
+            title = [f"Schur Vector {i}" for i in use]
+        else:
+            D = kwargs.pop("D")
+            V_ = _complex_warning(V_, use, use_imag=kwargs.pop("use_imag", False))
+            title = [f"$\lambda_{i}$={d:.02f}" for i, d in zip(use, D[use])]
+
+        if abs_value:
+            V_ = np.abs(V_)
+
+        color = [v for v in V_.T]
+        if cluster_key is not None:
+            color = [cluster_key] + color
+
+        # actual plotting with scvelo
+        logg.debug(f"DEBUG: Showing `{use}` Schur vectors")
+        scv.pl.scatter(self._adata, color=color, title=title, **kwargs)
 
     @abstractmethod
     def _read_from_adata(
