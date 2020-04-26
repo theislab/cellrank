@@ -62,7 +62,7 @@ class GPCCA(BaseEstimator):
     def _read_from_adata(
         self, g2m_key: Optional[str] = None, s_key: Optional[str] = None, **kwargs
     ) -> None:
-        raise NotImplementedError()
+        pass
 
     def plot_schur_embedding(
         self,
@@ -154,7 +154,7 @@ class GPCCA(BaseEstimator):
         self._gpcca.optimize(m=n_states)
         self._schur_vectors = self._gpcca.schur_vectors
 
-        logg.info("Adding `...`\n" "    Finish", start=start)
+        logg.info("Adding `...`\n" "    Finish", time=start)
 
     def plot_metastable_states(
         self, n_cells: Optional[int] = None, same_plot: bool = True, **kwargs
