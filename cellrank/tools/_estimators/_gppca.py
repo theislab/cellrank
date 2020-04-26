@@ -286,7 +286,7 @@ class GPCCA(BaseEstimator):
             1 + show_initial_dist + (show_cbar * 2),
             height_ratios=hrs,
             width_ratios=wrs,
-            wspace=0.15,
+            wspace=0.10,
             hspace=0.05,
         )
 
