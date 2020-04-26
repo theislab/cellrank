@@ -326,7 +326,7 @@ class BaseEstimator(ABC):
             )
 
         if use is None:
-            use = list(range(is_schur, vectors.shape[1] + is_schur))
+            use = list(range(is_schur, vectors.shape[1] + is_schur - 1))
         elif isinstance(use, int):
             use = list(range(use))
         elif not isinstance(use, (tuple, list, range)):
