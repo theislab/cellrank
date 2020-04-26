@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
 from cellrank.tools.kernels._kernel import KernelExpression
 from typing import Optional, Tuple, Sequence, List, Any, Union, Dict, Iterable
-from pathlib import Path
 
 import matplotlib
-import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import numpy as np
 import scvelo as scv
@@ -265,7 +263,7 @@ class MarkovChain(BaseEstimator):
     def plot_eig_embedding(
         self,
         left: bool = True,
-        use: Optional[Union[int, tuple, list]] = None,
+        use: Optional[Union[int, Tuple[int], List[int]]] = None,
         abs_value: bool = False,
         use_imag: bool = False,
         cluster_key: Optional[str] = None,
@@ -279,7 +277,7 @@ class MarkovChain(BaseEstimator):
         left
             Whether to use left or right eigenvectors.
         use
-            Which or how many eigenvectors to be plotted. If None, it will be chosen by `eigengap`.
+            Which or how many eigenvectors to be plotted. If `None`, it will be chosen by `eigengap`.
         abs_value
             Whether to take the absolute value before plotting.
         use_imag
@@ -298,65 +296,21 @@ class MarkovChain(BaseEstimator):
         if self._eig is None:
             raise RuntimeError("Compute eigendecomposition first as `.compute_eig()`")
 
-        # set the direction
+        # set the direction and get the vectors
         side = "left" if left else "right"
-
-        # get the eigendecomposition
         D, V = self._eig["D"], self._eig[f"V_{side[0]}"]
 
-        # check whether dimensions are consistent
-        if self._adata.n_obs != V.shape[0]:
-            raise ValueError(
-                "Cell number inconsistent with dimensions of eigendecomposition."
-            )
-
-        # subset eigenvectors
         if use is None:
             use = self._eig["eigengap"] + 1  # add one because first e-vec has index 0
-        if isinstance(use, int):
-            if use > 15:
-                logg.warning(
-                    f"Too many eigenvectors ({use}) at once. Showing the first `15`"
-                )
-                use = 15
-            use = list(range(use))
-        elif not isinstance(use, (tuple, list, range)):
-            raise TypeError(
-                f"Argument `use` must be either `int`, `tuple`, `list` or `range`,"
-                f"found `{type(use).__name__}`."
-            )
-        else:
-            if not all(map(lambda u: isinstance(u, int), use)):
-                raise TypeError("Not all values in `use` argument are integers.")
-        use = list(use)
 
-        muse = max(use)
-        if muse >= self._eig["V_l"].shape[1] or muse >= self._eig["V_r"].shape[1]:
-            raise ValueError(
-                f"Maximum specified eigenvector ({muse}) is larger "
-                f'than the number of computed eigenvectors ({self._eig["V_l"].shape[1]}). '
-                f"Use `.compute_eig(k={muse})` to recompute the eigendecomposition."
-            )
-
-        # retrieve the eigendecomposition, check for imaginary values and issue warnings
-        D, V = D[use], V[:, use]
-        V_ = _complex_warning(V, use, use_imag=use_imag)
-
-        # take absolute value
-        if abs_value:
-            V_ = np.abs(V_)
-
-        if cluster_key is not None:
-            color = [cluster_key] + [v for v in V_.T]
-        else:
-            color = [v for v in V_.T]
-
-        # actual plotting with scvelo
-        logg.debug(f"DEBUG: Showing `{use}` {side} eigenvectors")
-        scv.pl.scatter(
-            self._adata,
-            color=color,
-            title=[f"$\lambda_{i}$={d:.02f}" for i, d in zip(use, D)],
+        self._plot_vectors(
+            V,
+            "eigen",
+            abs_value=abs_value,
+            cluster_key=cluster_key,
+            use=use,
+            use_imag=use_imag,
+            D=D,
             **kwargs,
         )
 
