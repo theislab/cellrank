@@ -44,7 +44,7 @@ from cellrank.tools._utils import (
     _vec_mat_corr,
     _create_categorical_colors,
     _convert_to_categorical_series,
-    _merge_approx_rcs,
+    _merge_categorical_series,
     partition,
     save_fig,
 )
@@ -623,7 +623,7 @@ class MarkovChain:
                 raise RuntimeError(
                     "Compute approximate recurrent classes first as `.compute_approx_rcs()`"
                 )
-            rc_labels = _merge_approx_rcs(
+            rc_labels = _merge_categorical_series(
                 self.approx_recurrent_classes, rc_labels, inplace=False
             )
 
