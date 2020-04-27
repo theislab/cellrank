@@ -2,9 +2,17 @@
 from scipy.sparse.linalg import eigs
 
 from pathlib import Path
-from cellrank.tools._utils import _eigengap, save_fig
+from cellrank.tools._utils import (
+    _eigengap,
+    _map_names_and_colors,
+    _create_categorical_colors,
+    _convert_to_hex_colors,
+    _merge_approx_rcs,
+    _convert_to_categorical_series,
+    save_fig,
+)
 from cellrank.tools.kernels._kernel import KernelExpression
-from typing import Optional, Dict, Union, Tuple, List
+from typing import Optional, Dict, Union, Tuple, List, Any
 from abc import ABC, abstractmethod
 
 import numpy as np
@@ -14,8 +22,10 @@ import scvelo as scv
 from anndata import AnnData
 from scanpy import logging as logg
 from scipy.sparse import issparse
+from pandas import Series
+from pandas.api.types import is_categorical_dtype, infer_dtype
 
-from cellrank.tools._constants import Direction, RcKey, LinKey, Prefix
+from cellrank.tools._constants import Direction, RcKey, LinKey, Prefix, _colors
 from cellrank.tools._utils import _complex_warning
 
 
@@ -304,6 +314,80 @@ class BaseEstimator(ABC):
 
         fig.show()
 
+    def _set_categorical_labels(
+        self,
+        attr_key: str,
+        pretty_attr_key: str,
+        cat_key: str,
+        add_to_existing_error_msg: str,
+        categories: Union[Series, Dict[Any, Any]],
+        cluster_key: Optional[str] = None,
+        en_cutoff: Optional[float] = None,
+        p_thresh: Optional[float] = None,
+        add_to_existing: bool = False,
+    ):
+        if isinstance(categories, dict):
+            categories = _convert_to_categorical_series(
+                categories, list(self.adata.obs_names)
+            )
+        if not is_categorical_dtype(categories):
+            raise TypeError(
+                f"Object must be `categorical`, found `{infer_dtype(categories)}`."
+            )
+
+        if add_to_existing:
+            if getattr(self, attr_key) is None:
+                raise RuntimeError(add_to_existing_error_msg)
+            categories = _merge_approx_rcs(
+                getattr(self, attr_key), categories, inplace=False
+            )
+
+        if cluster_key is not None:
+            logg.debug(f"DEBUG: Creating colors based on `{cluster_key}`")
+
+            # check that we can load the reference series from adata
+            if cluster_key not in self._adata.obs:
+                raise KeyError(
+                    f"Cluster key `{cluster_key!r}` not found in `.adata.obs`."
+                )
+            series_query, series_reference = categories, self._adata.obs[cluster_key]
+
+            # load the reference colors if they exist
+            if _colors(cluster_key) in self._adata.uns.keys():
+                colors_reference = _convert_to_hex_colors(
+                    self._adata.uns[_colors(cluster_key)]
+                )
+            else:
+                colors_reference = _create_categorical_colors(
+                    len(series_reference.cat.categories)
+                )
+
+            approx_rcs_names, colors = _map_names_and_colors(
+                series_reference=series_reference,
+                series_query=series_query,
+                colors_reference=colors_reference,
+                en_cutoff=en_cutoff,
+            )
+            setattr(self, f"{attr_key}_colors", colors)
+            categories.cat.categories = approx_rcs_names
+        else:
+            setattr(
+                self,
+                f"{attr_key}_colors",
+                _create_categorical_colors(len(categories.cat.categories)),
+            )
+
+        if p_thresh is not None:
+            self._detect_cc_stages(categories, p_thresh=p_thresh)
+
+        # write to class and adata
+        if getattr(self, attr_key) is not None:
+            logg.debug(f"DEBUG: Overwriting `.{pretty_attr_key}`")
+
+        setattr(self, attr_key, categories)
+        self._adata.obs[cat_key] = categories
+        self._adata.uns[_colors(cat_key)] = getattr(self, f"{attr_key}_colors")
+
     def _plot_vectors(
         self,
         vectors: np.ndarray,
@@ -372,6 +456,31 @@ class BaseEstimator(ABC):
         self, g2m_key: Optional[str] = None, s_key: Optional[str] = None, **kwargs
     ) -> None:
         pass
+
+    def _detect_cc_stages(self, rc_labels: Series, p_thresh: float = 1e-15) -> None:
+        """
+        Utility function to detect cell-cycle driven start or endpoints.
+        """
+
+        # initialise the groups (start or end clusters) and scores
+        groups = rc_labels.cat.categories
+        scores = []
+        if self._G2M_score is not None:
+            scores.append(self._G2M_score)
+        if self._S_score is not None:
+            scores.append(self._S_score)
+
+        # loop over groups and scores
+        for group in groups:
+            flag = False
+            mask = rc_labels == group
+            for score in scores:
+                a, b = score[mask], score[~mask]
+                result = ranksums(a, b)
+                if result.statistic > 0 and result.pvalue < p_thresh:
+                    flag = True
+            if flag:
+                logg.warning(f"Group `{group}` appears to be cell-cycle driven")
 
     @abstractmethod
     def copy(self) -> "BaseEstimator":
