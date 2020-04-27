@@ -255,13 +255,13 @@ def cluster_fates(
         return fig
 
     def plot_violin():
-        kwargs["show"] = False
         kwargs.pop("ax", None)
         kwargs.pop("keys", None)
         kwargs.pop("save", None)  # we will handle saving
+
+        kwargs["show"] = False
         kwargs["groupby"] = cluster_key
-        if kwargs.get("rotation", None) is None:
-            kwargs["rotation"] = 90
+        kwargs["rotation"] = kwargs.get("rotation", 45)
 
         data = adata.obsm[lk]
         to_clean = []
@@ -281,6 +281,7 @@ def cluster_fates(
             nrows,
             cols,
             figsize=(6 * cols, 4 * nrows) if figsize is None else figsize,
+            sharey=sharey,
             dpi=dpi,
         )
         if not isinstance(axes, np.ndarray):
@@ -291,7 +292,9 @@ def cluster_fates(
         for i, (name, ax) in enumerate(zip(lin_names, axes)):
             key = f"{dir_prefix} {name}"
             ax.set_title(key)
-            sc.pl.violin(adata, keys=key, ax=ax, **kwargs)
+            sc.pl.violin(
+                adata, ylabel="" if i else "probability", keys=key, ax=ax, **kwargs
+            )
         for ax in axes[i + 1 :]:
             ax.remove()
         for name in to_clean:
@@ -300,12 +303,14 @@ def cluster_fates(
         return fig
 
     def plot_violin_no_cluster_key():
-        kwargs["show"] = False
         kwargs.pop("ax", None)
         kwargs.pop("keys", None)  # don't care
         kwargs.pop("save", None)
+
+        kwargs["show"] = False
         kwargs["groupby"] = points
         kwargs["xlabel"] = None
+        kwargs["rotation"] = kwargs.get("rotation", 45)
 
         data = np.ravel(np.array(adata.obsm[lk]).T)[..., np.newaxis]
         dadata = AnnData(np.zeros_like(data))
