@@ -40,7 +40,6 @@ from cellrank.tools._utils import (
     _eigengap,
     _filter_cells,
     _make_cat,
-    _create_colors,
     _convert_to_hex_colors,
     _vec_mat_corr,
     _create_categorical_colors,
