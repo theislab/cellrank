@@ -379,6 +379,7 @@ def cluster_fates(
         mask = list(np.array(mask, dtype=np.bool))
         data = adata.obsm[lk][mask, lin_names].X
         mean = np.nanmean(data, axis=0)
+        # take the standard error on the mean
         std = np.nanstd(data, axis=0) / np.sqrt(data.shape[0])
         d[name] = [mean, std]
 
