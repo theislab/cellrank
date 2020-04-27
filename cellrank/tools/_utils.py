@@ -497,7 +497,7 @@ def _filter_cells(distances: np.ndarray, rc_labels: Series, n_matches_min: int):
     """
 
     if not is_categorical_dtype(rc_labels):
-        raise TypeError("`rc_labels` must be a categorical variable.")
+        raise TypeError("`categories` must be a categorical variable.")
 
     # retrieve knn graph
     rows, cols = distances.nonzero()

@@ -327,7 +327,7 @@ class MarkovChain(BaseEstimator):
 
         Params
         ------
-        rc_labels
+        categories
             Either a categorical :class:`pandas.Series` with index as cell names, where `NaN` marks marks a cell
             belonging to a transient state or a :class:`dict`, where each key is the name of the recurrent class and
             values are list of cell names.
@@ -352,66 +352,17 @@ class MarkovChain(BaseEstimator):
             Nothing, but updates the following fields: :paramref:`approx_recurrent_classes`.
         """
 
-        if isinstance(rc_labels, dict):
-            rc_labels = _convert_to_categorical_series(
-                rc_labels, list(self.adata.obs_names)
-            )
-        if not is_categorical_dtype(rc_labels):
-            raise TypeError(
-                f"Approximate recurrent classes must be `categorical`, found `{infer_dtype(rc_labels)}`."
-            )
-
-        if add_to_existing:
-            if self.approx_recurrent_classes is None:
-                raise RuntimeError(
-                    "Compute approximate recurrent classes first as `.compute_approx_rcs()`"
-                )
-            rc_labels = _merge_approx_rcs(
-                self.approx_recurrent_classes, rc_labels, inplace=False
-            )
-
-        if cluster_key is not None:
-            logg.debug(f"DEBUG: Creating colors based on `{cluster_key}`")
-
-            # check that we can load the reference series from adata
-            if cluster_key not in self._adata.obs:
-                raise KeyError(
-                    f"Cluster key `{cluster_key!r}` not found in `.adata.obs`."
-                )
-            series_query, series_reference = rc_labels, self._adata.obs[cluster_key]
-
-            # load the reference colors if they exist
-            if _colors(cluster_key) in self._adata.uns.keys():
-                colors_reference = _convert_to_hex_colors(
-                    self._adata.uns[_colors(cluster_key)]
-                )
-            else:
-                colors_reference = _create_categorical_colors(
-                    len(series_reference.cat.categories)
-                )
-
-            approx_rcs_names, self._approx_rcs_colors = _map_names_and_colors(
-                series_reference=series_reference,
-                series_query=series_query,
-                colors_reference=colors_reference,
-                en_cutoff=en_cutoff,
-            )
-            rc_labels.cat.categories = approx_rcs_names
-        else:
-            self._approx_rcs_colors = _create_categorical_colors(
-                len(rc_labels.cat.categories)
-            )
-
-        if p_thresh is not None:
-            self._detect_cc_stages(rc_labels, p_thresh=p_thresh)
-
-        # write to class and adata
-        if self._approx_rcs is not None:
-            logg.debug("DEBUG: Overwriting `.approximate_recurrent_classes`")
-
-        self._approx_rcs = rc_labels
-        self._adata.obs[self._rc_key] = self._approx_rcs
-        self._adata.uns[_colors(self._rc_key)] = self._approx_rcs_colors
+        self._set_categorical_labels(
+            attr_key="_approx_rcs",
+            pretty_attr_key="approx_recurrent_classes",
+            cat_key=self._rc_key,
+            add_to_existing_error_msg="Compute approximate recurrent classes first as `.compute_approx_rcs()`.",
+            categories=rc_labels,
+            cluster_key=cluster_key,
+            en_cutoff=en_cutoff,
+            p_thresh=p_thresh,
+            add_to_existing=add_to_existing,
+        )
 
     def compute_approx_rcs(
         self,
@@ -523,7 +474,9 @@ class MarkovChain(BaseEstimator):
 
         # compute a rc probability
         logg.debug("DEBUG: Computing probabilities of approximate recurrent classes")
-        self._compute_approx_rcs_prob(use)
+        probs = self._compute_approx_rcs_prob(use)
+        self._approx_rcs_probs = probs
+        self._adata.obs[_probs(self._rc_key)] = probs
 
         # retrieve embedding and concatenate
         if basis is not None:
@@ -584,7 +537,11 @@ class MarkovChain(BaseEstimator):
             )
 
         self.set_approx_rcs(
-            rc_labels, cluster_key=cluster_key, en_cutoff=en_cutoff, p_thresh=p_thresh
+            rc_labels=rc_labels,
+            cluster_key=cluster_key,
+            en_cutoff=en_cutoff,
+            p_thresh=p_thresh,
+            add_to_existing=False,
         )
 
         logg.info(
@@ -985,32 +942,9 @@ class MarkovChain(BaseEstimator):
             f"Adding gene correlations to `.adata.{field}`\n    Finish", time=start
         )
 
-    def _detect_cc_stages(self, rc_labels: Series, p_thresh: float = 1e-15) -> None:
-        """
-        Utility function to detect cell-cycle driven start or endpoints.
-        """
-
-        # initialise the groups (start or end clusters) and scores
-        groups = rc_labels.cat.categories
-        scores = []
-        if self._G2M_score is not None:
-            scores.append(self._G2M_score)
-        if self._S_score is not None:
-            scores.append(self._S_score)
-
-        # loop over groups and scores
-        for group in groups:
-            flag = False
-            mask = rc_labels == group
-            for score in scores:
-                a, b = score[mask], score[~mask]
-                result = ranksums(a, b)
-                if result.statistic > 0 and result.pvalue < p_thresh:
-                    flag = True
-            if flag:
-                logg.warning(f"Group `{group}` appears to be cell-cycle driven")
-
-    def _compute_approx_rcs_prob(self, use: Union[Tuple[int], List[int], range]):
+    def _compute_approx_rcs_prob(
+        self, use: Union[Tuple[int], List[int], range]
+    ) -> np.ndarray:
         """
         Utility function which computes a global score of being an approximate recurrent class.
         """
@@ -1037,8 +971,7 @@ class MarkovChain(BaseEstimator):
         c_ = np.sum(V_eigs, axis=1)
         c = c_ / np.max(c_)
 
-        self._approx_rcs_probs = c
-        self._adata.obs[_probs(self._rc_key)] = c
+        return c
 
     def _check_and_create_colors(self):
         n_cats = len(self._approx_rcs.cat.categories)

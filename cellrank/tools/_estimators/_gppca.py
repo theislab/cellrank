@@ -4,6 +4,7 @@ from anndata import AnnData
 from msmtools.analysis.dense.gpcca import GPCCA as _GPPCA
 from scanpy import logging as logg
 
+from cellrank.tools._constants import RcKey
 from cellrank.tools._estimators._base_estimator import BaseEstimator
 from cellrank.tools._utils import save_fig
 from cellrank.tools.kernels._kernel import KernelExpression
@@ -36,6 +37,11 @@ class GPCCA(BaseEstimator):
             s_key=s_key,
             key_added=key_added,
         )
+        if kernel.backward:
+            self._ms_key = str(RcKey.BACKWARD)
+        else:
+            self._ms_key = str(RcKey.FORWARD)
+
         self._gpcca = None
         self._schur_vectors = None
         self._coarse_T = None
