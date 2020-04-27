@@ -148,8 +148,9 @@ class GPCCA(BaseEstimator):
                 )
 
             minn, maxx = (
-                n_states["n_min"],
-                n_states["n_max"] if isinstance(n_states, dict) else n_states,
+                (n_states["n_min"], n_states["n_max"])
+                if isinstance(n_states, dict)
+                else n_states
             )
             logg.debug(f"DEBUG: Calculating min Chi in interval [{minn}, {maxx}]")
             n_states = np.arange(minn, maxx)[np.argmax(self._gpcca.minChi(minn, maxx))]
@@ -206,7 +207,9 @@ class GPCCA(BaseEstimator):
         None
         """
 
-        def stylize_dist(ax, data: np.ndarray, xticks_labels: Tuple[str] = ()):
+        def stylize_dist(
+            ax, data: np.ndarray, xticks_labels: Union[List[str], Tuple[str]] = ()
+        ):
             _ = ax.imshow(data, aspect="auto", cmap=cmap)
             for spine in ax.spines.values():
                 spine.set_visible(False)
