@@ -1037,6 +1037,7 @@ class MarkovChain:
         cluster_key: Optional[str] = None,
         mode: str = "embedding",
         time_key: str = "latent_time",
+        title: Optional[Iterable[str]] = None,
         color_map: Union[str, matplotlib.colors.ListedColormap] = cm.viridis,
         **kwargs,
     ) -> None:
@@ -1056,6 +1057,9 @@ class MarkovChain:
             - If `'time'`, plos the pseudotime on x-axis and the absorption probabilities on y-axis.
         time_key
             Key from `adata.obs` to use as a pseudotime ordering of the cells.
+        title
+            Either None, in which case titles are "to/from final/root state X", or an array of titles, one per panel
+            (per lineage)
         color_map
             Colormap to use.
         kwargs
@@ -1099,15 +1103,16 @@ class MarkovChain:
             t = self._adata.obs[time_key]
             cluster_key = None
 
-        rc_titles = [f"{self._prefix} {rc}" for rc in lineages] + [
-            "Differentiation Potential"
-        ]
+        if title is None:
+            rc_titles = [f"{self._prefix} {rc}" for rc in lineages]
+        else:
+            rc_titles = title
 
         if cluster_key is not None:
-            color = [cluster_key] + [a for a in A.T] + [self._dp]
+            color = [cluster_key] + [a for a in A.T]
             titles = [cluster_key] + rc_titles
         else:
-            color = [a for a in A.T] + [self._dp]
+            color = [a for a in A.T]
             titles = rc_titles
 
         if mode == "embedding":
@@ -1117,13 +1122,13 @@ class MarkovChain:
         elif mode == "time":
             xlabel, ylabel = (
                 list(np.repeat(time_key, len(titles))),
-                list(np.repeat("probability", len(titles) - 1)) + ["entropy"],
+                list(np.repeat("probability", len(titles))),
             )
             scv.pl.scatter(
                 self._adata,
                 x=t,
                 color_map=color_map,
-                y=[a for a in A.T] + [self._dp],
+                y=[a for a in A.T],
                 title=titles,
                 xlabel=time_key,
                 ylabel=ylabel,
