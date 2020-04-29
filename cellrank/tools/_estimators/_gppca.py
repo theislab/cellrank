@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-from typing import Optional, List, Tuple, Dict, Union
+from typing import Optional, List, Tuple, Dict, Union, Mapping, Any
+from types import MappingProxyType
 from anndata import AnnData
 from msmtools.analysis.dense.gpcca import GPCCA as _GPPCA
 from scanpy import logging as logg
@@ -190,27 +191,42 @@ class GPCCA(BaseEstimator):
         figsize: Tuple[float, float] = (8, 8),
         dpi: float = 80,
         save: Optional[Union[os.PathLike, str]] = None,
+        text_kwargs: Mapping[str, Any] = MappingProxyType({}),
         **kwargs,
     ) -> None:
         """
-        TODO
+        Plot the coarse-grained transition matrix between metastable states.
 
         Params
         ------
         show_stationary_dist
+            Whether to show the stationary distribution, if present.
         show_initial_dist
+            Whether to show the initial distribution.
         cmap
+            Colormap to use.
         xtick_rotation
+            Rotation of ticks on the x-axis.
         annotate
+            Whether to display the text on each cell.
         show_cbar
+            Whether to show colorbar.
         figsize
+            Size of the figure.
         dpi
+            Dots per inch.
         save
+            Filename where to save the plots.
+            If `None`, just show the plots.
+        text_kwargs
+            Keyword arguments for `text`.
         kwargs
+            Keyword arguments for `imshow`.
 
         Returns
         -------
         None
+            Nothings just plots and optionally saves the plots.
         """
 
         def stylize_dist(
@@ -241,7 +257,6 @@ class GPCCA(BaseEstimator):
             valfmt: str = "{x:.2f}",
             textcolors: Tuple[str, str] = ("black", "white"),
             threshold: Optional[float] = None,
-            **textkw,
         ):
             # modified from matplotlib's site
 
@@ -251,7 +266,7 @@ class GPCCA(BaseEstimator):
                 im.norm(np.median(data)) if threshold is None else im.norm(threshold)
             )
             kw = dict(horizontalalignment="center", verticalalignment="center")
-            kw.update(textkw)
+            kw.update(**text_kwargs)
 
             # Get the formatter in case a string is supplied
             if isinstance(valfmt, str):
