@@ -10,7 +10,6 @@ import numpy as np
 import scvelo as scv
 
 from anndata import AnnData
-from itertools import combinations
 from copy import copy, deepcopy
 from pandas import Series, DataFrame, to_numeric
 from pandas.api.types import is_categorical_dtype, infer_dtype
@@ -32,6 +31,8 @@ from cellrank.tools._constants import (
     _lin_names,
 )
 from cellrank.tools._utils import (
+    _map_names_and_colors,
+    _process_series,
     _complex_warning,
     _cluster_X,
     _get_connectivities,
@@ -39,13 +40,11 @@ from cellrank.tools._utils import (
     _eigengap,
     _filter_cells,
     _make_cat,
-    _create_colors,
     _convert_to_hex_colors,
     _vec_mat_corr,
     _create_categorical_colors,
-    _compute_mean_color,
     _convert_to_categorical_series,
-    _merge_approx_rcs,
+    _merge_categorical_series,
     partition,
     save_fig,
 )
@@ -629,14 +628,35 @@ class MarkovChain:
                 raise RuntimeError(
                     "Compute approximate recurrent classes first as `.compute_approx_rcs()`"
                 )
-            rc_labels = _merge_approx_rcs(
+            rc_labels = _merge_categorical_series(
                 self.approx_recurrent_classes, rc_labels, inplace=False
             )
 
         if cluster_key is not None:
             logg.debug(f"DEBUG: Creating colors based on `{cluster_key}`")
-            approx_rcs_names, self._approx_rcs_colors = self._get_lin_names_colors(
-                rc_labels, cluster_key, en_cutoff
+
+            # check that we can load the reference series from adata
+            if cluster_key not in self._adata.obs:
+                raise KeyError(
+                    f"Cluster key `{cluster_key!r}` not found in `.adata.obs`."
+                )
+            series_query, series_reference = rc_labels, self._adata.obs[cluster_key]
+
+            # load the reference colors if they exist
+            if _colors(cluster_key) in self._adata.uns.keys():
+                colors_reference = _convert_to_hex_colors(
+                    self._adata.uns[_colors(cluster_key)]
+                )
+            else:
+                colors_reference = _create_categorical_colors(
+                    len(series_reference.cat.categories)
+                )
+
+            approx_rcs_names, self._approx_rcs_colors = _map_names_and_colors(
+                series_reference=series_reference,
+                series_query=series_query,
+                colors_reference=colors_reference,
+                en_cutoff=en_cutoff,
             )
             rc_labels.cat.categories = approx_rcs_names
         else:
@@ -1011,37 +1031,24 @@ class MarkovChain:
         t = self._T.A if self._is_sparse else self._T
 
         # colors are created in `compute_approx_rcs`, this is just in case
-        n_cats = len(self._approx_rcs.cat.categories)
-        if self._approx_rcs_colors is None:
-            color_key = _colors(self._rc_key)
-            if color_key in self._adata.uns and n_cats == len(
-                self._adata.uns[color_key]
-            ):
-                logg.debug("DEBUG: Loading colors from `.adata` object")
-                self._approx_rcs_colors = self._adata.uns[color_key]
-            else:
-                self._approx_rcs_colors = _create_categorical_colors(n_cats)
-                self._adata.uns[_colors(self._rc_key)] = self._approx_rcs_colors
-        elif len(self._approx_rcs_colors) != n_cats:
-            self._approx_rcs_colors = _create_categorical_colors(n_cats)
-            self._adata.uns[_colors(self._rc_key)] = self._approx_rcs_colors
+        self._check_and_create_colors()
 
-        # initialize empty lineage object with names and colors from recurrent classes
-        if self._lin_probs is not None:
-            logg.debug("DEBUG: Overwriting `.lin_probs`")
-        rc_names = list(self._approx_rcs.cat.categories)
-        self._lin_probs = Lineage(
-            np.empty((1, len(rc_names))), names=rc_names, colors=self._approx_rcs_colors
+        # process the current annotations according to `keys`
+        approx_rcs_, colors_ = _process_series(
+            series=self._approx_rcs, keys=keys, colors=self._approx_rcs_colors
         )
 
-        # if keys are given, remove some rc's and combine others
-        if keys is None:
-            approx_rcs_ = self._approx_rcs
-        else:
-            logg.debug(f"DEBUG: Combining recurrent classes according to `{keys}`")
-            approx_rcs_ = self._prep_rc_classes(keys)
-        keys = list(approx_rcs_.cat.categories)
+        #  create empty lineage object
+        if self._lin_probs is not None:
+            logg.debug("DEBUG: Overwriting `.lin_probs`")
+        self._lin_probs = Lineage(
+            np.empty((1, len(colors_))),
+            names=approx_rcs_.cat.categories,
+            colors=colors_,
+        )
 
+        # warn in case only one state is left
+        keys = list(approx_rcs_.cat.categories)
         if len(keys) == 1:
             logg.warning(
                 "There is only one recurrent class, all cells will have probability 1 of going there"
@@ -1330,182 +1337,6 @@ class MarkovChain:
             f"Adding gene correlations to `.adata.{field}`\n    Finish", time=start
         )
 
-    def _get_lin_names_colors(
-        self, rc_labels: Series, cluster_key: str, en_cutoff: Optional[float]
-    ) -> Tuple[Series, List[Any]]:
-        """
-        Utility function to map approx_rcs to ts_clusters.
-
-        Params
-        ------
-        rc_labels
-            Raw labels for the approx_rcs. These are labels like [0, 1, 2, 3]. This function is meant to associate
-            these uninformative labels with pre-computed clusters based on transcriptomic similarities, using e.g.
-            louvain, leiden or k-means clustering.
-        cluster_key
-            String to a key from :paramref:`adata` `.obs`. This is how the pre-computed cluster labels are accessed.
-        en_cutoff
-            Threshold for defining when to associate an approximate rc with a pre-computed cluster. Imagine a
-            very fine pre-computed louvain clustering and an approximate rc spanning two louvain clusters, with approx.
-            50% of the cells coming from either cluster. What name should this approx. rc get? I this case, we
-            should call it 'Unknown', since we don't know. The entropy threshold decides when we call an approximate rc
-            'Unknown'.
-
-        Returns
-        -------
-        :class:`pandas.Series`, :class:`list`
-            Array-like names and colors for the approximate RC's.
-            These link back to the underlying pre-computed clusters.
-        """
-
-        if cluster_key not in self._adata.obs:
-            raise KeyError(f"Cluster key `{cluster_key!r}` not found in `.adata.obs`.")
-
-        # create dataframe to store approx_rc associtation with ts_clusters
-        ts_labels = self._adata.obs[cluster_key]
-        approx_rc_clusters = rc_labels.cat.categories
-        ts_clusters = ts_labels.cat.categories
-        rc_df = DataFrame(None, index=approx_rc_clusters, columns=ts_clusters)
-
-        # populate the df - compute the overlap
-        for cl in approx_rc_clusters:
-            row = [
-                np.sum(ts_labels.loc[np.array(rc_labels == cl)] == key)
-                for key in ts_clusters
-            ]
-            rc_df.loc[cl] = row
-        rc_df = rc_df.apply(to_numeric)
-
-        # label endpoints and add uncertainty through entropy
-        rc_df["entropy"] = entropy(rc_df.T)
-        rc_df["name"] = rc_df.T.idxmax()
-
-        # add cluster colors
-        # clusters_colors = self.lin_probs.colors  # _convert_to_hex_colors(self._adata.uns[_colors(cluster_key)])
-        clusters_colors = _convert_to_hex_colors(self._adata.uns[_colors(cluster_key)])
-        names = rc_df["name"]
-        lin_colors = []
-        for name in names:
-            mask = ts_clusters == name
-            color = np.array(clusters_colors)[mask][0]
-            lin_colors.append(color)
-        rc_df["color"] = lin_colors
-
-        # make rc_labels unique
-        names = Series(rc_df["name"], dtype="category")
-        lin_colors = Series(lin_colors, dtype="category")  # colors must be hex
-        frequ = {key: np.sum(names == key) for key in names.cat.categories}
-
-        # Create unique names by adding suffixes "..._1, ..._2" etc and unique colors by shifting the original color
-        names_new = np.array(names.copy())
-        lin_colors_new = np.array(lin_colors.copy())
-
-        for key, value in frequ.items():
-            if value == 1:
-                continue  # already unique, skip
-
-            # deal with non-unique names
-            suffix = list(np.arange(1, value + 1).astype("str"))
-            unique_names = [f"{key}_{rep}" for rep in suffix]
-            names_new[names == key] = unique_names
-
-            color = rc_df[rc_df["name"] == key]["color"].values[0]
-            shifted_colors = _create_colors(color, value, saturation_range=None)
-            lin_colors_new[lin_colors == color] = shifted_colors
-
-        rc_df["name"] = names_new
-        rc_df["color"] = lin_colors_new
-
-        # issue a warning for rcs with high entropy
-        if en_cutoff is not None:
-            critical_rcs = list(rc_df.loc[rc_df["entropy"] > en_cutoff, "name"].values)
-            if len(critical_rcs) > 0:
-                logg.warning(
-                    f"The following groups of {self._rc_key} contain many different cell types: `{critical_rcs}`"
-                )
-
-        return rc_df["name"], list(rc_df["color"])
-
-    def _prep_rc_classes(self, keys: Sequence[str]) -> Tuple[Series, np.ndarray]:
-        """
-        Utility function to remove and combine rcs.
-
-        This function takes a list of strings, like ['endpt_1, endpt_2', 'endpt_3'], and compares this with the
-        names of the approximate recurrent classes to figure out which ones to leave out and which ones to combine. If
-        e.g. the approx rcs had names ['endpt_1', 'endpt_2, 'endpt_3', 'endpt_4'], then this function would combine
-        endpoints 1 and 2 and kick out 4.
-
-        Params
-        ------
-        keys
-            Sequence of strings that defines how absorption probabilities should be computed.
-
-        Returns
-        -------
-        :class:`pandas.Series`
-            Categorical updated annotation. Each cell is assigned to either `NaN`
-            or one of updated approximate recurrent classes.
-        """
-
-        if self._approx_rcs is None:
-            raise RuntimeError(
-                "Compute approximate recurrent classes first as `.compute_approx_rcs()`"
-            )
-
-        # initialize a copy of the approx_rcs Series
-        approx_rcs_temp = self._approx_rcs.copy()
-
-        # define a set of keys
-        keys_ = {
-            tuple((key.strip() for key in rc.strip(" ,").split(","))) for rc in keys
-        }
-
-        overlap = [set(ks) for ks in keys_]
-        for c1, c2 in combinations(overlap, 2):
-            overlap = c1 & c2
-            if overlap:
-                raise ValueError(f"Found overlapping keys: `{list(overlap)}`.")
-
-        # remove the unused categories, both in approx_rcs_temp as well as in the lineage object
-        remaining_cat = [b for a in keys_ for b in a]
-        removed_cat = list(set(approx_rcs_temp.cat.categories) - set(remaining_cat))
-        approx_rcs_temp.cat.remove_categories(removed_cat, inplace=True)
-        original_colors = list(self._lin_probs[remaining_cat].colors)
-        original_len = len(original_colors)
-
-        # loop over all indiv. or combined rc's
-        lin_colors = {}
-        for cat in keys_:
-            # if there are more than two keys in this category, combine them
-            if len(cat) > 1:
-                new_cat_name = " or ".join(cat)
-                mask = np.repeat(False, len(approx_rcs_temp))
-                for key in cat:
-                    mask = np.logical_or(mask, approx_rcs_temp == key)
-                    remaining_cat.remove(key)
-                approx_rcs_temp.cat.add_categories(new_cat_name, inplace=True)
-                remaining_cat.append(new_cat_name)
-                approx_rcs_temp[mask] = new_cat_name
-
-                # apply the same to the colors array. We just append new colors at the end
-                color_mask = np.in1d(approx_rcs_temp.cat.categories[:original_len], cat)
-                colors_merge = np.array(original_colors)[:original_len][color_mask]
-                lin_colors[new_cat_name] = _compute_mean_color(colors_merge)
-            else:
-                lin_colors[cat[0]] = self._lin_probs[cat].colors[0]
-
-        # Since we have just appended colors at the end, we must now delete the unused ones
-        approx_rcs_temp.cat.remove_unused_categories(inplace=True)
-        approx_rcs_temp.cat.reorder_categories(remaining_cat, inplace=True)
-
-        self._lin_probs = Lineage(
-            np.empty((1, len(lin_colors))),
-            names=approx_rcs_temp.cat.categories,
-            colors=[lin_colors[c] for c in approx_rcs_temp.cat.categories],
-        )
-
-        return approx_rcs_temp
-
     def _detect_cc_stages(self, rc_labels: Series, p_thresh: float = 1e-15) -> None:
         """
         Utility function to detect cell-cycle driven start or endpoints.
@@ -1560,6 +1391,24 @@ class MarkovChain:
 
         self._approx_rcs_probs = c
         self._adata.obs[_probs(self._rc_key)] = c
+
+    def _check_and_create_colors(self):
+        n_cats = len(self._approx_rcs.cat.categories)
+        if self._approx_rcs_colors is None:
+            color_key = _colors(self._rc_key)
+            if color_key in self._adata.uns and n_cats == len(
+                self._adata.uns[color_key]
+            ):
+                logg.debug("DEBUG: Loading colors from `.adata` object")
+                self._approx_rcs_colors = _convert_to_hex_colors(
+                    self._adata.uns[color_key]
+                )
+            else:
+                self._approx_rcs_colors = _create_categorical_colors(n_cats)
+                self._adata.uns[_colors(self._rc_key)] = self._approx_rcs_colors
+        elif len(self._approx_rcs_colors) != n_cats:
+            self._approx_rcs_colors = _create_categorical_colors(n_cats)
+            self._adata.uns[_colors(self._rc_key)] = self._approx_rcs_colors
 
     def copy(self) -> "MarkovChain":
         """

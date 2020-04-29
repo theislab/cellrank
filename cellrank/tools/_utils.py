@@ -6,7 +6,7 @@ Utility functions for the cellrank tools
 from scipy.sparse.linalg import norm as s_norm
 from numpy.linalg import norm as d_norm
 from itertools import product, tee
-from typing import Optional, Any, Union, Tuple, List, Sequence, Dict, Iterable
+from typing import Any, Union, Tuple, Sequence, Dict, Iterable, TypeVar
 
 import os
 import warnings
@@ -18,15 +18,267 @@ import numpy as np
 import scanpy as sc
 
 from anndata import AnnData
-from pandas import Series
+from pandas import Series, DataFrame, to_numeric
 from pandas.api.types import is_categorical_dtype, infer_dtype
 from scanpy import logging as logg
 from scipy.sparse import csr_matrix, spmatrix
+from scipy.stats import entropy
 from scipy.sparse import issparse
 from sklearn.cluster import KMeans
 from sklearn.neighbors import NearestNeighbors
 
 from cellrank.utils._utils import has_neighs, get_neighs, get_neighs_params
+
+from typing import List, Optional
+from itertools import combinations
+
+
+ColorLike = TypeVar("ColorLike")
+
+
+def _map_names_and_colors(
+    series_reference: Series,
+    series_query: Series,
+    colors_reference: Optional[np.array] = None,
+    en_cutoff: Optional[float] = None,
+) -> Union[Series, Tuple[Series, List[Any]]]:
+    """
+    Utility function to map annotations and colors from one series to another.
+
+    Params
+    ------
+    series_reference
+        Series object with categorical annotations.
+    series_query
+        Series for which we would like to query the category names.
+    colors_reference
+        If given, colors for the query categories are pulled from this color array.
+    en_cutoff
+        In case of a non-perfect overlap between categories of the two series,
+        this decides when to label a category in the query as 'Unknown'.
+
+    Returns
+    -------
+    :class:`pandas.Series`, :class:`list`
+        Series with updated category names and a corresponding array of colors.
+    """
+
+    # checks: dtypes, matching indices, make sure colors match the categories
+    if not is_categorical_dtype(series_reference):
+        raise TypeError(
+            f"Reference series must be `categorical`, found `{infer_dtype(series_reference)}`."
+        )
+    if not is_categorical_dtype(series_query):
+        raise TypeError(
+            f"Query series must be `categorical`, found `{infer_dtype(series_query)}`."
+        )
+    index_query, index_reference = series_query.index, series_reference.index
+    if not np.all(index_reference == index_query):
+        raise ValueError("Series indices do not match, cannot map names/colors.")
+
+    process_colors = colors_reference is not None
+    if process_colors:
+        if len(series_reference.cat.categories) != len(colors_reference):
+            raise ValueError(
+                "Length of reference colors does not match length of reference series."
+            )
+        if not all((mcolors.is_color_like(c) for c in colors_reference)):
+            raise ValueError("Not all colors are color-like.")
+
+    # create dataframe to store the associations between reference and query
+    cats_query = series_query.cat.categories
+    cats_reference = series_reference.cat.categories
+    association_df = DataFrame(None, index=cats_query, columns=cats_reference)
+
+    # populate the dataframe - compute the overlap
+    for cl in cats_query:
+        row = [
+            np.sum(series_reference.loc[np.array(series_query == cl)] == key)
+            for key in cats_reference
+        ]
+        association_df.loc[cl] = row
+    association_df = association_df.apply(to_numeric)
+
+    # find the mapping which maximizes overlap and compute entropy
+    names_query = association_df.T.idxmax()
+    association_df["entropy"] = entropy(association_df.T)
+    association_df["name"] = names_query
+
+    # assign query colors
+    if process_colors:
+        colors_query = []
+        for name in names_query:
+            mask = cats_reference == name
+            color = np.array(colors_reference)[mask][0]
+            colors_query.append(color)
+        association_df["color"] = colors_query
+
+    # next, we need to make sure that we have unique names and colors. In a first step, compute how many repetitions
+    # we have
+    names_query_series = Series(names_query, dtype="category")
+    frequ = {
+        key: np.sum(names_query == key) for key in names_query_series.cat.categories
+    }
+
+    names_query_new = np.array(names_query.copy())
+    if process_colors:
+        colors_query_new = np.array(colors_query.copy())
+
+    # Create unique names by adding suffixes "..._1, ..._2" etc and unique colors by shifting the original color
+    for key, value in frequ.items():
+        if value == 1:
+            continue  # already unique, skip
+
+        # deal with non-unique names
+        suffix = list(np.arange(1, value + 1).astype("str"))
+        unique_names = [f"{key}_{rep}" for rep in suffix]
+        names_query_new[names_query_series == key] = unique_names
+        if process_colors:
+            color = association_df[association_df["name"] == key]["color"].values[0]
+            shifted_colors = _create_colors(color, value, saturation_range=None)
+            colors_query_new[np.array(colors_query) == color] = shifted_colors
+
+    association_df["name"] = names_query_new
+    if process_colors:
+        association_df["color"] = _convert_to_hex_colors(
+            colors_query_new
+        )  # original colors can be still there, convert to hex
+
+    # issue a warning for mapping with high entropy
+    if en_cutoff is not None:
+        critical_cats = list(
+            association_df.loc[association_df["entropy"] > en_cutoff, "name"].values
+        )
+        if len(critical_cats) > 0:
+            logg.warning(
+                f"The following groups could not be mapped uniquely: `{', '.join(map(str, critical_cats))}`"
+            )
+
+    return (
+        (association_df["name"], list(association_df["color"]))
+        if process_colors
+        else association_df["name"]
+    )
+
+
+def _process_series(
+    series: pd.Series, keys: Optional[List[str]], colors: Optional[np.array] = None
+) -> Union[pd.Series, Tuple[pd.Series, List[str]]]:
+    """
+    Utility function to process :class:`pandas.Series` categorical objects.
+
+    Categories in :paramref:`series` are combined/removed according to :paramref:`keys`,
+    the same transformation is applied to the corresponding colors.
+
+    Params
+    ------
+    series
+        Input data, must be a pd.series of categorical type.
+    keys
+        Keys could be e.g. `['cat_1, cat_2', 'cat_4']`. If originally,
+        there were 4 categories in `series`, then this would combine the first
+        and the second and remove the third. The same would be done to `colors`,
+        i.e. the first and second color would be merged (average color), while
+        the third would be removed.
+    colors
+        List of colors which aligns with the order of the categories.
+
+    Returns
+    -------
+    :class:`pandas.Series`
+        Categorical updated annotation. Each cell is assigned to either `NaN`
+        or one of updated approximate recurrent classes.
+    list
+        Color list processed according to keys.
+    """
+
+    # determine whether we want to process colors as well
+    process_colors = colors is not None
+
+    # if keys is None, just return
+    if keys is None:
+        if process_colors:
+            return series, colors
+        return series
+
+    # assert dtype of the series
+    if not is_categorical_dtype(series):
+        raise TypeError(f"Series must be `categorical`, found `{infer_dtype(series)}`.")
+
+    # initialize a copy of the series object
+    series_in = series.copy()
+    if process_colors:
+        colors_in = np.array(colors.copy())
+        if len(colors_in) != len(series_in.cat.categories):
+            raise ValueError(
+                f"Length of colors ({len(colors_in)}) does not match length of categories ({len(series_in.cat.categories)})."
+            )
+        if not all((mcolors.is_color_like(c) for c in colors_in)):
+            raise ValueError("Not all colors are color-like.")
+
+    # define a set of keys
+    keys_ = {
+        tuple(sorted({key.strip(" ") for key in rc.strip(" ,").split(",")}))
+        for rc in keys
+    }
+
+    # check the `keys` are unique
+    overlap = [set(ks) for ks in keys_]
+    for c1, c2 in combinations(overlap, 2):
+        overlap = c1 & c2
+        if overlap:
+            raise ValueError(f"Found overlapping keys: `{list(overlap)}`.")
+
+    # check the `keys` are all proper categories
+    remaining_cat = [b for a in keys_ for b in a]
+    if not np.all(np.in1d(remaining_cat, series_in.cat.categories)):
+        raise ValueError(
+            "Not all keys are proper categories. Check for spelling mistakes in `keys`."
+        )
+
+    # remove cats and colors according to `keys`
+    n_remaining = len(remaining_cat)
+    removed_cat = list(set(series_in.cat.categories) - set(remaining_cat))
+    if process_colors:
+        mask = np.in1d(series_in.cat.categories, remaining_cat)
+        colors_temp = colors_in[mask].copy()
+    series_temp = series_in.cat.remove_categories(removed_cat)
+
+    # loop over all indiv. or combined rc's
+    colors_mod = {}
+    for cat in keys_:
+        # if there are more than two keys in this category, combine them
+        if len(cat) > 1:
+            new_cat_name = " or ".join(cat)
+            mask = np.repeat(False, len(series_temp))
+            for key in cat:
+                mask = np.logical_or(mask, series_temp == key)
+                remaining_cat.remove(key)
+            series_temp.cat.add_categories(new_cat_name, inplace=True)
+            remaining_cat.append(new_cat_name)
+            series_temp[mask] = new_cat_name
+
+            if process_colors:
+                # apply the same to the colors array. We just append new colors at the end
+                color_mask = np.in1d(series_temp.cat.categories[:n_remaining], cat)
+                colors_merge = np.array(colors_temp)[:n_remaining][color_mask]
+                colors_mod[new_cat_name] = _compute_mean_color(colors_merge)
+        elif process_colors:
+            color_mask = np.in1d(series_temp.cat.categories[:n_remaining], cat[0])
+            colors_mod[cat[0]] = np.array(colors_temp)[:n_remaining][color_mask][0]
+
+    # Since we have just appended colors at the end, we must now delete the unused ones
+    series_temp.cat.remove_unused_categories(inplace=True)
+    series_temp.cat.reorder_categories(remaining_cat, inplace=True)
+
+    if process_colors:
+        # original colors can still be present, convert to hex
+        colors_temp = _convert_to_hex_colors(
+            [colors_mod[c] for c in series_temp.cat.categories]
+        )
+        return series_temp, colors_temp
+
+    return series_temp
 
 
 def _complex_warning(
@@ -745,9 +997,12 @@ def _convert_to_hex_colors(colors: Sequence[Any]) -> List[str]:
     return [mcolors.to_hex(c) for c in colors]
 
 
-def _create_categorical_colors(n_categories: int):
+def _create_categorical_colors(n_categories: Optional[int] = None):
+    if n_categories is None:
+        n_categories = 51
     if n_categories > 51:
         raise ValueError(f"Maximum number of colors (51) exceeded: `{n_categories}`.")
+
     colors = [cm.Set1(i) for i in range(cm.Set1.N)][:n_categories]
     colors += [cm.Set2(i) for i in range(cm.Set2.N)][: n_categories - len(colors)]
     colors += [cm.Set3(i) for i in range(cm.Set3.N)][: n_categories - len(colors)]
@@ -755,6 +1010,18 @@ def _create_categorical_colors(n_categories: int):
     colors += [cm.Paired(i) for i in range(cm.Paired.N)][: n_categories - len(colors)]
 
     return _convert_to_hex_colors(colors)
+
+
+def _insert_categorical_colors(seen_colors: Union[np.ndarray, List], n_categories: int):
+    seen_colors = set(_convert_to_hex_colors(seen_colors))
+    candidates = list(
+        filter(lambda c: c not in seen_colors, _create_categorical_colors())
+    )[:n_categories]
+
+    if len(candidates) != n_categories:
+        raise RuntimeError(f"Unable to create `{n_categories}` categorical colors.")
+
+    return candidates
 
 
 def _convert_to_categorical_series(
@@ -801,63 +1068,129 @@ def _convert_to_categorical_series(
     return rc_labels.astype("category")
 
 
-def _merge_approx_rcs(
-    rc_old: pd.Series, rc_new: pd.Series, inplace: bool = False
-) -> Optional[pd.Series]:
+def _merge_categorical_series(
+    old: pd.Series,
+    new: pd.Series,
+    colors_old: Union[List[ColorLike], np.ndarray, Dict[Any, ColorLike]] = None,
+    colors_new: Union[List[ColorLike], np.ndarray, Dict[Any, ColorLike]] = None,
+    inplace: bool = False,
+    color_overwrite: bool = False,
+) -> Optional[Union[pd.Series, np.ndarray, Tuple[pd.Series, np.ndarray]]]:
     """
-    Update approximate recurrent classes with new information. It **can never remove** old categories, only
-    add to the existing ones.
+    Update categorical :class:`pandas.Series.` with new information. It **can never remove** old categories,
+    only add to the existing ones. Optionally, new colors can be created or merged.
 
     Params
     ------
-    rc_old
-        Old approximate recurrent classes.
-    rc_new
-        New approximate recurrent classes.
+    old
+        Old categories to be updated.
+    new
+        New categories used to update the old ones.
+    colors_old
+        Colors associated with old categories.
+    colors_new
+        Colors associated with new categories.
+    color_overwrite
+        If `True`, overwrite the old colors with new ones for overlapping categories.
     inplace
-        Whether to update :paramref:`rc_old` or create a copy.
+        Whether to update :paramref:`old` or create a copy.
 
     Returns
     -------
-    :class:`pd.Series`
-        If paramref:`inplace` is `False`, returns the modified approximate recurrent classes.
+    :class:`pandas.Series`
+        If paramref:`inplace` is `False`, returns the modified approximate recurrent classes and if
+        :paramref:`colors_old` and :paramref:`colors_new` are both `None`.
+    :class:`numpy.ndarray`
+        If :paramref:`inplace` is `True` and any of :paramref:`colors_old`, :paramref:`colors_new`
+        containing the new colors.
+    :class:`pandas.Series`, :class:`numpy.ndarray`
+        The same as above, but with :paremref:`inplace` is `False`.
     """
 
-    if not is_categorical_dtype(rc_old):
+    def get_color_mapper(
+        series: pd.Series,
+        colors: Union[List[ColorLike], np.ndarray, Dict[Any, ColorLike]],
+    ):
+        if len(series.cat.categories) != len(colors):
+            raise ValueError(
+                f"Series ({len(series.cat.categories)}) and colors ({len(colors_new)}) differ in length."
+            )
+
+        if isinstance(colors, dict):
+            if set(series.cat.categories) != set(colors.keys()):
+                raise ValueError(
+                    f"Color mapper and series' categories don't share the keys."
+                )
+        else:
+            colors = dict(zip(series.cat.categories, colors))
+
+        for color in colors.values():
+            if not mcolors.is_color_like(color):
+                raise ValueError(f"Color `{color}` is not color-like.")
+
+        return colors
+
+    if not is_categorical_dtype(old):
         raise TypeError(
             f"Expected old approx. recurrent classes to be categorical, found "
-            f"`{infer_dtype(rc_old)}`."
+            f"`{infer_dtype(old)}`."
         )
 
-    if not is_categorical_dtype(rc_new):
+    if not is_categorical_dtype(new):
         raise TypeError(
             f"Expected new approx. recurrent classes to be categorical, found "
-            f"`{infer_dtype(rc_new)}`."
+            f"`{infer_dtype(new)}`."
         )
 
-    if (rc_old.index != rc_new.index).any():
+    if (old.index != new.index).any():
         raise ValueError(f"Index for old and new approx. recurrent classes differ.")
 
     if not inplace:
-        rc_old = rc_old.copy()
+        old = old.copy()
 
-    mask = ~rc_new.isna()
+    mask = ~new.isna()
 
     if np.sum(mask) == 0:
-        return rc_old if not inplace else None
+        return old if not inplace else None
 
-    old_cats = rc_old.cat.categories
-    new_cats = rc_new.cat.categories
+    old_cats = old.cat.categories
+    new_cats = new.cat.categories
     cats_to_add = (
-        pd.CategoricalIndex(rc_new.loc[mask]).remove_unused_categories().categories
+        pd.CategoricalIndex(new.loc[mask]).remove_unused_categories().categories
     )
 
-    rc_old.cat.set_categories(old_cats | cats_to_add, inplace=True)
-    rc_new.cat.set_categories(old_cats | cats_to_add, inplace=True)
+    if not colors_old and colors_new:
+        colors_old = _insert_categorical_colors(
+            list(colors_new.values()) if isinstance(colors_new, dict) else colors_new,
+            len(old_cats),
+        )
+    if not colors_new and colors_old:
+        colors_new = _insert_categorical_colors(
+            list(colors_old.values()) if isinstance(colors_old, dict) else colors_old,
+            len(new_cats),
+        )
 
-    rc_old.loc[mask] = rc_new.loc[mask]
-    rc_old.cat.remove_unused_categories(inplace=True)
+    if colors_old:
+        colors_old = get_color_mapper(old, colors_old)
+    if colors_new:
+        colors_new = get_color_mapper(new, colors_new)
 
-    rc_new.cat.set_categories(new_cats, inplace=True)  # return to previous state
+    old.cat.set_categories(old_cats | cats_to_add, inplace=True)
+    new.cat.set_categories(old_cats | cats_to_add, inplace=True)
 
-    return rc_old if not inplace else None
+    old.loc[mask] = new.loc[mask]
+    old.cat.remove_unused_categories(inplace=True)
+
+    new.cat.set_categories(new_cats, inplace=True)  # return to previous state
+
+    if not colors_old and not colors_new:
+        return old if not inplace else None
+
+    colors_merged = (
+        {**colors_old, **colors_new}
+        if color_overwrite
+        else {**colors_new, **colors_old}
+    )
+    colors_merged = np.array([colors_merged[c] for c in old.cat.categories])
+
+    return (old, colors_merged) if not inplace else colors_merged
