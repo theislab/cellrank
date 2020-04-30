@@ -80,6 +80,16 @@ class Lineage(np.ndarray):
         )
 
     def _mixer(self, rows, mixtures):
+        def update_entries(key):
+            if key:
+                res.append(self[rows, key].X.sum(1))
+                names.append(" or ".join(self.names[key]))
+                colors.append(_compute_mean_color(self.colors[key]))
+
+        n_ellipses = len([_ for _ in mixtures if _ is Ellipsis])
+        if n_ellipses > 1:
+            raise ValueError(f"`...` is allowed only once in the expression.")
+
         keys = [
             tuple(
                 self._maybe_convert_names(
@@ -89,6 +99,7 @@ class Lineage(np.ndarray):
             if isinstance(mixture, str)
             else (mixture,)
             for mixture in mixtures
+            if not mixture is Ellipsis
         ]
         keys = unique_order_preserving(keys)
 
@@ -101,11 +112,14 @@ class Lineage(np.ndarray):
                     f"Found overlapping keys: `{self.names[list(overlap)]}`."
                 )
 
+        seen = set()
         names, colors, res = [], [], []
         for key in map(list, keys):
-            res.append(self[rows, key].X.sum(1))
-            names.append(" or ".join(self.names[key]))
-            colors.append(_compute_mean_color(self.colors[key]))
+            seen.update(self.names[key])
+            update_entries(key)
+
+        if n_ellipses == 1:
+            update_entries([i for i, n in enumerate(self.names) if n not in seen])
 
         res = np.stack(res, axis=-1)
 
