@@ -1,6 +1,13 @@
 # -*- coding: utf-8 -*-
+from cellrank.tools._utils import (
+    _create_categorical_colors,
+    unique_order_preserving,
+    _compute_mean_color,
+)
+
 from typing import Optional, Iterable, Callable, TypeVar, List, Union
-from cellrank.tools._utils import _create_categorical_colors
+from itertools import combinations
+
 import matplotlib.colors as c
 import numpy as np
 
@@ -72,24 +79,64 @@ class Lineage(np.ndarray):
             else {name: ix for ix, name in enumerate(self.names)},
         )
 
+    def _mixer(self, rows, mixtures):
+        keys = [
+            tuple(
+                self._maybe_convert_names(
+                    sorted({key.strip(" ") for key in mixture.strip(" ,").split(",")})
+                )
+            )
+            if isinstance(mixture, str)
+            else (mixture,)
+            for mixture in mixtures
+        ]
+        keys = unique_order_preserving(keys)
+
+        # check the `keys` are unique
+        overlap = [set(ks) for ks in keys]
+        for c1, c2 in combinations(overlap, 2):
+            overlap = c1 & c2
+            if overlap:
+                raise ValueError(
+                    f"Found overlapping keys: `{self.names[list(overlap)]}`."
+                )
+
+        names, colors, res = [], [], []
+        for key in map(list, keys):
+            res.append(self[rows, key].X.sum(1))
+            names.append(" or ".join(self.names[key]))
+            colors.append(_compute_mean_color(self.colors[key]))
+
+        res = np.stack(res, axis=-1)
+
+        return Lineage(res, names=names, colors=colors)
+
     def __getitem__(self, item) -> "Lineage":
-        is_tuple_len_2 = isinstance(item, tuple) and len(item) == 2
+        is_tuple_len_2 = (
+            isinstance(item, tuple)
+            and len(item) == 2
+            and isinstance(item[0], (int, range, slice, tuple, list, np.ndarray))
+        )
         if is_tuple_len_2:
-            _, col = item
+            rows, col = item
 
             if isinstance(col, (int, str)):
                 col = [col]
 
             if isinstance(col, (list, tuple)):
+                if any(map(lambda i: isinstance(i, str) and "," in i, col)):
+                    return self._mixer(rows, col)
                 col = self._maybe_convert_names(col)
-                item = _, col
+                item = rows, col
         else:
             if isinstance(item, (int, str)):
                 item = [item]
 
             col = range(len(self.names))
             if isinstance(item, (tuple, list)):
-                if any(map(lambda i: isinstance(i, str), item)):
+                if any(map(lambda i: isinstance(i, str) and "," in i, item)):
+                    return self._mixer(slice(None, None, None), item)
+                elif any(map(lambda i: isinstance(i, str), item)):
                     item = (slice(None, None, None), self._maybe_convert_names(item))
                     col = item[1]
 
@@ -200,6 +247,8 @@ class Lineage(np.ndarray):
                     )
                 name = self._names_to_ixs[name]
             res.append(name)
+
+        res = unique_order_preserving(res)
 
         return res[0] if is_singleton else res
 
