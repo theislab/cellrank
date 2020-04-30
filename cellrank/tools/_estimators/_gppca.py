@@ -4,14 +4,17 @@ from types import MappingProxyType
 from anndata import AnnData
 from msmtools.analysis.dense.gpcca import GPCCA as _GPPCA
 from scanpy import logging as logg
+from scipy.stats import entropy
 
-from cellrank.tools._constants import RcKey
+from cellrank.tools._lineage import Lineage
+from cellrank.tools._constants import RcKey, _colors, _lin_names
 from cellrank.tools._estimators._base_estimator import BaseEstimator
 from cellrank.tools._utils import save_fig
 from cellrank.tools.kernels._kernel import KernelExpression
 
 import os
 import numpy as np
+import pandas as pd
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
@@ -49,12 +52,14 @@ class GPCCA(BaseEstimator):
         self._coarse_init_dist = None
         self._coarse_stat_dist = None
 
+        self._main_states = None
+        self._main_states_colors = None
+
     def compute_eig(self, k: int = 20, which: str = "LR", alpha: float = 1) -> None:
         """
-        Compute eigendecomposition of transition matrix.
+        Compute eigendecomposition of the transition matrix.
 
-        Uses a sparse implementation, if possible, and only computes the top k eigenvectors
-        to speed up the computation. Computes both left and right eigenvectors.
+        Uses a sparse implementation, if possible, and only computes the top k eigenvalues.
 
         Params
         ------
@@ -86,7 +91,7 @@ class GPCCA(BaseEstimator):
         **kwargs,
     ) -> None:
         """
-        Plt Schur vectors in an embedding.
+        Plot Schur vectors in an embedding.
 
         Params
         ------
@@ -104,7 +109,9 @@ class GPCCA(BaseEstimator):
         """
 
         if self.schur_vectors is None:
-            raise RuntimeError("Compute Schur vectors as `.metastable_state()` first.")
+            raise RuntimeError(
+                "Compute Schur vectors as `.compute_metastable_states()` first."
+            )
 
         self._plot_vectors(
             self.schur_vectors,
@@ -115,14 +122,17 @@ class GPCCA(BaseEstimator):
             **kwargs,
         )
 
-    def metastable_states(
+    def compute_metastable_states(
         self,
         n_states: Union[int, Tuple[int, int], List[int], Dict[str, int]],
         initial_distribution: Optional[np.ndarray] = None,
         use_min_chi: bool = False,
         method: str = "krylov",
         which: str = "LM",
-        cluster_key: Optional[str] = "louvain",
+        n_cells: Optional[int] = None,
+        cluster_key: str = "louvain",
+        en_cutoff: Optional[float] = 0.7,
+        p_thresh: float = 1e-15,
     ):
         """
         Params
@@ -134,17 +144,16 @@ class GPCCA(BaseEstimator):
         which
             Eigenvalues are in general complex. `'LR'` - largest real part, `'LM'` - largest magnitude.
         cluster_key
+        en_cutoff
+        p_thresh
 
         Returns
         -------
         None
             Nothings, but updates the following fields:
-
-            - TODO
         """
-        if (
-            use_min_chi
-        ):  # TODO: @Marius - this is the cleanest option I could thought of
+
+        if use_min_chi:
             if not isinstance(n_states, (dict, tuple, list)):
                 raise TypeError(
                     f"Expected `n_states` to be either `dict`, `tuple` or a `list`, found `{type(n_states).__name__}`."
@@ -159,7 +168,16 @@ class GPCCA(BaseEstimator):
                 if isinstance(n_states, dict)
                 else n_states
             )
-            logg.debug(f"DEBUG: Calculating min Chi in interval [{minn}, {maxx}]")
+            if minn <= 1:
+                raise ValueError(f"Minimum value must be > 1, found `{minn}`.")
+            elif minn == 2:
+                logg.warning(
+                    "In most cases, 2 clusters will always be optimal. "
+                    "If you really expect 2 clusters, use `n_clusters=2`.\nSetting minimum to 3"
+                )
+                minn = 3
+
+            logg.debug(f"DEBUG: Calculating minChi within interval [{minn}, {maxx}]")
             n_states = np.arange(minn, maxx)[np.argmax(self._gpcca.minChi(minn, maxx))]
 
         start = logg.info("Computing metastable states")
@@ -173,12 +191,114 @@ class GPCCA(BaseEstimator):
         self._coarse_init_dist = self._gpcca.coarse_grained_input_distribution
         self._coarse_stat_dist = self._gpcca.coarse_grained_stationary_probability
 
-        logg.info("Adding `...`\n" "    Finish", time=start)
+        self._assign_main_states(
+            self._gpcca.memberships,
+            n_cells,
+            cluster_key=cluster_key,
+            p_thresh=p_thresh,
+            en_cutoff=en_cutoff,
+        )
+
+        logg.info(
+            f"Adding `adata.obs[{self._rc_key!r}]`\n"
+            f"       `.main_states`\n"
+            f"       `.coarse_transition_matrix`\n"
+            f"    Finish",
+            time=start,
+        )
+
+    def _assign_main_states(
+        self, memberships, n_cells: Optional[int], cluster_key: str, p_thresh, en_cutoff
+    ):
+        if n_cells is None:
+            logg.debug("DEBUG: Setting the main states using metastable assignment")
+            main_states = pd.Series(
+                index=self._adata.obs_names,
+                data=map(str, self._gpcca.metastable_assignment),
+                dtype="category",
+            )
+        else:
+            logg.debug("DEBUG: Setting the main states using metastable memberships")
+            # in this case, we need to be a bit careful because fuzzy clusters can largely overlap
+            main_states = pd.Series(index=self.adata.obs_names, dtype="category")
+            overlaps, cols = {}, []
+
+            for i, col in enumerate(memberships.T):
+                p = np.flip(np.argsort(col))[:n_cells]
+
+                # handle the case of overlapping cells (fuzzy clustering)
+                i = str(i)
+                if len(main_states.cat.categories) > 0:
+                    current_labels = main_states.iloc[p]
+                    overlap = {
+                        cl: np.sum(current_labels == cl)
+                        for cl in current_labels.cat.categories
+                        if np.sum(current_labels == cl) > 0
+                    }
+                    overlaps[i] = overlap
+                    if any(np.fromiter(overlap.values(), dtype=float) / n_cells > 0.8):
+                        logg.warning(
+                            "Found overlapping clusters with overlap > 80%. Skipping"
+                        )
+                        continue
+
+                self.eigendecomposition["gpcca_overlap"] = overlaps
+
+                main_states.cat.add_categories(i, inplace=True)
+                main_states.iloc[p] = i
+                cols.append(col[:, None])
+
+            # aggregate the non-overlapping columns together
+            _memberships = np.concatenate(cols, axis=1)
+
+        self.set_main_states(
+            main_states,
+            cluster_key=cluster_key,
+            en_cutoff=en_cutoff,
+            p_thresh=p_thresh,
+            add_to_existing=False,
+        )
+
+        logg.debug(
+            "DEBUG: Setting lineage probabilities based on GPCCA membership vectors"
+        )
+        self._lin_probs = Lineage(
+            memberships,
+            names=list(self._main_states.cat.categories),
+            colors=self._main_states_colors,
+        )
+        self._dp = entropy(self._lin_probs.T)
+
+        self._adata.obsm[self._lin_key] = self._lin_probs
+        self._adata.obs[f"{self._lin_key}_dp"] = self._dp
+        self._adata.uns[_lin_names(self._lin_key)] = self._lin_probs.names
+        self._adata.uns[_colors(self._lin_key)] = self._lin_probs.colors
+
+    def set_main_states(
+        self,
+        states: Union[pd.Series, Dict[Any, Any]],
+        cluster_key: Optional[str] = None,
+        en_cutoff: Optional[float] = None,
+        p_thresh: Optional[float] = None,
+        add_to_existing: bool = False,
+    ):
+        self._set_categorical_labels(
+            attr_key="_main_states",
+            pretty_attr_key="main_states",
+            cat_key=self._rc_key,
+            add_to_existing_error_msg="Compute main states first as `.compute_metastable_states()`.",
+            categories=states,
+            cluster_key=cluster_key,
+            en_cutoff=en_cutoff,
+            p_thresh=p_thresh,
+            add_to_existing=add_to_existing,
+        )
 
     def plot_metastable_states(
         self, n_cells: Optional[int] = None, same_plot: bool = True, **kwargs
     ):
-        raise NotImplementedError()
+        if self.schur_vectors is None:
+            raise RuntimeError("Compute Schur vectors as `.metastable_state()` first.")
 
     def plot_coarse_T(
         self,
@@ -277,17 +397,16 @@ class GPCCA(BaseEstimator):
             texts = []
             for i in range(data.shape[0]):
                 for j in range(data.shape[1]):
-                    # TODO: @Marius do we want to change the color based on thresh?
                     kw.update(color=textcolors[int(im.norm(data[i, j]) > threshold)])
                     text = im.axes.text(j, i, valfmt(data[i, j], None), **kw)
                     texts.append(text)
 
         if self.coarse_T is None:
             raise RuntimeError(
-                f"Compute coarse transition matrix first as `.metastable_states()`."
+                f"Compute coarse transition matrix first as `.compute_metastable_states()`."
             )
 
-        if show_stationary_dist and self.coarse_stat_dist is None:
+        if show_stationary_dist and self.coarse_stationary_distribution is None:
             logg.warning("Coarse stationary distribution is `None`, not plotting")
             show_stationary_dist = False
         if show_initial_dist and self._coarse_init_dist is None:
@@ -317,17 +436,17 @@ class GPCCA(BaseEstimator):
         ax = fig.add_subplot(gs[0, 0])
         cax = fig.add_subplot(gs[:1, -1])
 
-        labels = [
-            str(i) for i in range(self.coarse_T.shape[0])
-        ]  # TODO: names of metastable states
+        labels = list(self._lin_probs.names)
         tmp = self.coarse_T
 
         if show_stationary_dist:
             stat_ax = fig.add_subplot(gs[1, 0])
-            tmp = np.c_[tmp, self.coarse_stat_dist]
+            tmp = np.c_[tmp, self.coarse_stationary_distribution]
 
             stylize_dist(
-                stat_ax, self.coarse_stat_dist.reshape(1, -1), xticks_labels=labels
+                stat_ax,
+                self.coarse_stationary_distribution.reshape(1, -1),
+                xticks_labels=labels,
             )
             stat_ax.set_xlabel("Stationary Distribution")
         if show_initial_dist:
@@ -384,9 +503,6 @@ class GPCCA(BaseEstimator):
 
         fig.show()
 
-    def set_main_states(self, keys: Optional[List[str]] = None, **kwargs):
-        raise NotImplementedError()
-
     def copy(self) -> "GPCCA":
         raise NotImplementedError()
 
@@ -399,5 +515,9 @@ class GPCCA(BaseEstimator):
         return self._coarse_T
 
     @property
-    def coarse_stat_dist(self):
+    def coarse_stationary_distribution(self):
         return self._coarse_stat_dist
+
+    @property
+    def main_states(self):
+        return self._main_states
