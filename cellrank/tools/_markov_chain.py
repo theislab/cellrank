@@ -11,7 +11,7 @@ import scvelo as scv
 
 from anndata import AnnData
 from copy import copy, deepcopy
-from pandas import Series, DataFrame, to_numeric
+from pandas import Series, DataFrame
 from pandas.api.types import is_categorical_dtype, infer_dtype
 from scanpy import logging as logg
 from scipy.linalg import solve
