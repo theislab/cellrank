@@ -6,7 +6,7 @@ Utility functions for the cellrank tools
 from scipy.sparse.linalg import norm as s_norm
 from numpy.linalg import norm as d_norm
 from itertools import product, tee
-from typing import Any, Union, Tuple, Sequence, Dict, Iterable, TypeVar
+from typing import Any, Union, Tuple, Sequence, Dict, Iterable, TypeVar, Hashable
 
 import os
 import warnings
@@ -1194,3 +1194,8 @@ def _merge_categorical_series(
     colors_merged = np.array([colors_merged[c] for c in old.cat.categories])
 
     return (old, colors_merged) if not inplace else colors_merged
+
+
+def unique_order_preserving(iterable: Iterable[Hashable]):
+    seen = set()
+    return [i for i in iterable if i not in seen and not seen.add(i)]
