@@ -78,6 +78,8 @@ def read(
             adata.obsm[lin_key] = Lineage(
                 adata.obsm[lin_key], names=names, colors=colors
             )
+            adata.uns[colors_key] = colors
+            adata.uns[names_key] = names
         else:
             logg.debug(
                 f"DEBUG: Unable to load {'forward' if direction == Direction.FORWARD else 'backward'} `Lineage` from `adata.obsm[{lin_key!r}]`"
