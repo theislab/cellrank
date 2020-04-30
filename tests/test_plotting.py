@@ -54,7 +54,7 @@ def compare(
 
     def compare_fwd(
         func
-    ):  # mustn't use functools.wraps - it think's `adata` is fixture
+    ):  # mustn't use functools.wraps - it think's the fact that `adata` is fixture
         def decorator(self, adata_mc_fwd):
             adata, mc = adata_mc_fwd
             fpath = f"{func.__name__.replace('test_', '')}.png"
