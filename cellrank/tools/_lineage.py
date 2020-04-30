@@ -142,8 +142,9 @@ class Lineage(np.ndarray):
             if isinstance(col, (list, tuple)):
                 if any(
                     map(
-                        lambda i: (isinstance(i, str) and "," in i)
-                        or i in (Ellipsis, None),
+                        lambda i: i is Ellipsis
+                        or i is None
+                        or (isinstance(i, str) and "," in i),
                         col,
                     )
                 ):
@@ -158,8 +159,9 @@ class Lineage(np.ndarray):
             if isinstance(item, (tuple, list)):
                 if any(
                     map(
-                        lambda i: (isinstance(i, str) and "," in i)
-                        or i in (Ellipsis, None),
+                        lambda i: i is Ellipsis
+                        or i is None
+                        or (isinstance(i, str) and "," in i),
                         item,
                     )
                 ):
