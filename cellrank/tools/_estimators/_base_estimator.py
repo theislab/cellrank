@@ -11,12 +11,15 @@ from cellrank.tools._utils import (
     _convert_to_categorical_series,
     save_fig,
 )
+from cellrank.tools._lineage import Lineage
 from cellrank.tools.kernels._kernel import KernelExpression
-from typing import Optional, Dict, Union, Tuple, List, Any
+from typing import Optional, Dict, Union, Tuple, List, Any, Iterable
 from abc import ABC, abstractmethod
 
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 import scvelo as scv
 
 from anndata import AnnData
@@ -66,12 +69,15 @@ class BaseEstimator(ABC):
         self._kernel = kernel
         self._T = kernel.transition_matrix
         self._is_sparse = issparse(self._T)
+
         self._n_states = self._T.shape[0]
         if self._n_states != self._adata.n_obs:
             raise ValueError(
                 f"Expected `{self._n_states}` (based on transition matrix), "
                 f"found `{self._adata.n_obs}` (based on `adata` object)."
             )
+
+        self._lin_probs = None
 
         # for copy
         self._g2m_key = g2m_key
@@ -80,11 +86,11 @@ class BaseEstimator(ABC):
 
         self._eig = None  # stores eigendecomposition
         self._dp = None  # stores differentiation potential
+        self._G2M_score = None  # cell-cycle
+        self._S_score = None
 
         if read_from_adata:
-            logg.debug(
-                "DEBUG: Reading `eig`, `approx_rcs` and `lin_probs` from `adata` object"
-            )
+            logg.debug("DEBUG: Reading data from `adata` object")
             self._read_from_adata(g2m_key, s_key)
 
     def _compute_eig(
@@ -165,9 +171,13 @@ class BaseEstimator(ABC):
         D, V_l, V_r = D[p], V_l[:, p], V_r[:, p]
         e_gap = _eigengap(D.real, alpha)
 
+        pi = np.abs(V_l[:, 0].real)
+        pi /= np.sum(pi)
+
         write_result(
             {
                 "D": D,
+                "stationary_dist": pi,
                 "V_l": V_l,
                 "V_r": V_r,
                 "eigengap": e_gap,
@@ -348,7 +358,7 @@ class BaseEstimator(ABC):
             # check that we can load the reference series from adata
             if cluster_key not in self._adata.obs:
                 raise KeyError(
-                    f"Cluster key `{cluster_key!r}` not found in `.adata.obs`."
+                    f"Cluster key `{cluster_key!r}` not found in `adata.obs`."
                 )
             series_query, series_reference = categories, self._adata.obs[cluster_key]
 
@@ -482,6 +492,109 @@ class BaseEstimator(ABC):
             if flag:
                 logg.warning(f"Group `{group}` appears to be cell-cycle driven")
 
+    def plot_lin_probs(
+        self,
+        lineages: Optional[Union[str, Iterable[str]]] = None,
+        cluster_key: Optional[str] = None,
+        mode: str = "embedding",
+        time_key: str = "latent_time",
+        color_map: Union[str, matplotlib.colors.ListedColormap] = cm.viridis,
+        **kwargs,
+    ) -> None:
+        """
+        Plots the absorption probabilities in the given embedding.
+
+        Params
+        ------
+        lineages
+            Only show these lineages. If `None`, plot all lineages.
+        cluster_key
+            Key from :paramref`adata: `.obs` for plotting cluster labels.
+        mode
+            Can be either `'embedding'` or `'time'`.
+
+            - If `'embedding'`, plot the embedding while coloring in the absorption probabilities.
+            - If `'time'`, plos the pseudotime on x-axis and the absorption probabilities on y-axis.
+        time_key
+            Key from `adata.obs` to use as a pseudotime ordering of the cells.
+        color_map
+            Colormap to use.
+        kwargs
+            Keyword arguments for :func:`scvelo.pl.scatter`.
+
+        Returns
+        -------
+        None
+            Nothing, just plots the absorption probabilities.
+        """
+
+        if self._lin_probs is None:
+            raise RuntimeError(
+                "Compute lineage probabilities first as `.compute_lin_probs()`."
+            )
+        if isinstance(lineages, str):
+            lineages = [lineages]
+
+        # retrieve the lineage data
+        if lineages is None:
+            lineages = self._lin_probs.names
+            A = self._lin_probs.X
+        else:
+            for lineage in lineages:
+                if lineage not in self._lin_probs.names:
+                    raise ValueError(
+                        f"Invalid lineage name `{lineages!r}`. Valid options are `{list(self._lin_probs.names)}`."
+                    )
+            A = self._lin_probs[lineages].X
+
+        # change the maximum value - the 1 is artificial and obscures the color scaling
+        for col in A.T:
+            mask = col != 1
+            if np.sum(mask) > 0:
+                max_not_one = np.max(col[mask])
+                col[~mask] = max_not_one
+
+        if mode == "time":
+            if time_key not in self._adata.obs.keys():
+                raise KeyError(f"Time key `{time_key}` not in `adata.obs`.")
+            t = self._adata.obs[time_key]
+            cluster_key = None
+
+        rc_titles = [f"{self._prefix} {rc}" for rc in lineages] + [
+            "Differentiation Potential"
+        ]
+
+        if cluster_key is not None:
+            color = [cluster_key] + [a for a in A.T] + [self._dp]
+            titles = [cluster_key] + rc_titles
+        else:
+            color = [a for a in A.T] + [self._dp]
+            titles = rc_titles
+
+        if mode == "embedding":
+            scv.pl.scatter(
+                self._adata, color=color, title=titles, color_map=color_map, **kwargs
+            )
+        elif mode == "time":
+            xlabel, ylabel = (
+                list(np.repeat(time_key, len(titles))),
+                list(np.repeat("probability", len(titles) - 1)) + ["entropy"],
+            )
+            scv.pl.scatter(
+                self._adata,
+                x=t,
+                color_map=color_map,
+                y=[a for a in A.T] + [self._dp],
+                title=titles,
+                xlabel=time_key,
+                ylabel=ylabel,
+                **kwargs,
+            )
+        else:
+            raise ValueError(
+                f"Invalid mode `{mode!r}`. Valid options are: `'embedding', 'time'`."
+            )
+
     @abstractmethod
     def copy(self) -> "BaseEstimator":
         # TODO: add copy of eig etc.
@@ -504,6 +617,14 @@ class BaseEstimator(ABC):
         Differentiation potential for each lineage.
         """
         return self._dp
+
+    @property
+    def lineage_probabilities(self) -> Lineage:
+        """
+        A `numpy`-like array with names and colors, where
+        each column represents one lineage.
+        """
+        return self._lin_probs
 
     @property
     def adata(self) -> AnnData:
