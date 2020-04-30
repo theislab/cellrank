@@ -195,9 +195,21 @@ class TestLineageAccessor:
             colors=[(0, 0, 0), (0.5, 0.5, 0.5), (1, 1, 1)],
         )
 
-        y = l[0, ["foo", 2, "bar", 0]]
+        y = l[0, ["foo", 2, "bar"]]
 
-        np.testing.assert_array_equal(x[[[0]], [0, 2, 1, 0]], np.array(y))
+        np.testing.assert_array_equal(x[[[0]], [0, 2, 1]], np.array(y))
+
+    def test_remove_duplicates(self):
+        x = np.random.random((10, 3))
+        l = Lineage(
+            x,
+            names=["foo", "bar", "baz"],
+            colors=[(0, 0, 0), (0.5, 0.5, 0.5), (1, 1, 1)],
+        )
+
+        y = l[0, ["foo", 2, "bar", 0, 0, "foo"]]
+
+        np.testing.assert_array_equal(x[[[0]], [0, 2, 1]], np.array(y))
 
     def test_column_invalid_name(self):
         x = np.random.random((10, 3))
