@@ -7,6 +7,7 @@ from cellrank.tools._lineage import Lineage
 import cellrank as cr
 import scanpy as sc
 import numpy as np
+import pytest
 
 from pathlib import Path
 from anndata import AnnData
@@ -93,22 +94,13 @@ class TestRead:
         np.testing.assert_array_equal(lins.names, adata_new.uns[names_key])
 
     @test_fwd()
-    def test_not_unique_names(
-        self, adata: AnnData, path: Path, lin_key: str, n_lins: int
-    ):
+    def test_non_unique_names(self, adata: AnnData, path: Path, lin_key: str, _: int):
         names_key = _lin_names(lin_key)
-        adata.uns[names_key] = list(adata.uns[names_key])
-        adata.uns[names_key] += [adata.uns[names_key][0]]
+        adata.uns[names_key][0] = adata.uns[names_key][1]
 
         sc.write(path, adata)
-        adata_new = cr.read(path)
-        lins = adata_new.obsm[lin_key]
-
-        assert isinstance(lins, Lineage)
-        np.testing.assert_array_equal(
-            lins.names, [f"Lineage {i}" for i in range(n_lins)]
-        )
-        np.testing.assert_array_equal(lins.names, adata_new.uns[names_key])
+        with pytest.raises(ValueError):
+            _ = cr.read(path)
 
     @test_fwd()
     def test_wrong_colors_length(
@@ -140,3 +132,18 @@ class TestRead:
         assert isinstance(lins, Lineage)
         np.testing.assert_array_equal(lins.colors, _create_categorical_colors(n_lins))
         np.testing.assert_array_equal(lins.colors, adata_new.uns[colors_key])
+
+    @test_fwd()
+    def test_normal_run(self, adata: AnnData, path: Path, lin_key: str, n_lins: int):
+        colors = _create_categorical_colors(10)[-n_lins:]
+        names = [f"foo {i}" for i in range(n_lins)]
+
+        adata.uns[_colors(lin_key)] = colors
+        adata.uns[_lin_names(lin_key)] = names
+
+        sc.write(path, adata)
+        adata_new = cr.read(path)
+        lins_new = adata_new.obsm[lin_key]
+
+        np.testing.assert_array_equal(lins_new.colors, colors)
+        np.testing.assert_array_equal(lins_new.names, names)
