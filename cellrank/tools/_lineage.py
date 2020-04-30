@@ -86,9 +86,9 @@ class Lineage(np.ndarray):
                 names.append(" or ".join(self.names[key]))
                 colors.append(_compute_mean_color(self.colors[key]))
 
-        n_ellipses = len([_ for _ in mixtures if _ is Ellipsis])
-        if n_ellipses > 1:
-            raise ValueError(f"`...` is allowed only once in the expression.")
+        n_ellipses_or_none = len([_ for _ in mixtures if _ is Ellipsis or _ is None])
+        if n_ellipses_or_none > 1:
+            raise ValueError(f"`None` or `...` is allowed only once in the expression.")
 
         keys = [
             tuple(
@@ -99,7 +99,7 @@ class Lineage(np.ndarray):
             if isinstance(mixture, str)
             else (mixture,)
             for mixture in mixtures
-            if not mixture is Ellipsis
+            if mixture is not Ellipsis and mixture is not None
         ]
         keys = unique_order_preserving(keys)
 
@@ -118,8 +118,10 @@ class Lineage(np.ndarray):
             seen.update(self.names[key])
             update_entries(key)
 
-        if n_ellipses == 1:
+        if n_ellipses_or_none == 1:
             update_entries([i for i, n in enumerate(self.names) if n not in seen])
+            if None in mixtures:
+                names[-1] = "rest"
 
         res = np.stack(res, axis=-1)
 
@@ -138,7 +140,13 @@ class Lineage(np.ndarray):
                 col = [col]
 
             if isinstance(col, (list, tuple)):
-                if any(map(lambda i: isinstance(i, str) and "," in i, col)):
+                if any(
+                    map(
+                        lambda i: (isinstance(i, str) and "," in i)
+                        or i in (Ellipsis, None),
+                        col,
+                    )
+                ):
                     return self._mixer(rows, col)
                 col = self._maybe_convert_names(col)
                 item = rows, col
@@ -148,7 +156,13 @@ class Lineage(np.ndarray):
 
             col = range(len(self.names))
             if isinstance(item, (tuple, list)):
-                if any(map(lambda i: isinstance(i, str) and "," in i, item)):
+                if any(
+                    map(
+                        lambda i: (isinstance(i, str) and "," in i)
+                        or i in (Ellipsis, None),
+                        item,
+                    )
+                ):
                     return self._mixer(slice(None, None, None), item)
                 elif any(map(lambda i: isinstance(i, str), item)):
                     item = (slice(None, None, None), self._maybe_convert_names(item))
