@@ -50,9 +50,9 @@ def read(
                     f"Lineage names not found in `adata.uns[{names_key!r}]`, creating dummy names"
                 )
                 names = [f"Lineage {i}" for i in range(n_lineages)]
-            elif len(set(adata.uns[names_key])) != n_lineages:
+            elif len(adata.uns[names_key]) != n_lineages:
                 logg.warning(
-                    f"Lineage names are don't have reuquired length ({n_lineages}), creating dummy names"
+                    f"Lineage names are don't have the required length ({n_lineages}), creating dummy names"
                 )
                 names = [f"Lineage {i}" for i in range(n_lineages)]
             else:
@@ -68,7 +68,7 @@ def read(
                 map(lambda c: is_color_like(c), adata.uns[colors_key])
             ):
                 logg.warning(
-                    f"Lineage colors don't have required length ({n_lineages}) or are not color-like, creating new colors"
+                    f"Lineage colors don't have the required length ({n_lineages}) or are not color-like, creating new colors"
                 )
                 colors = _create_categorical_colors(n_lineages)
             else:

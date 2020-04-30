@@ -13,26 +13,30 @@ from anndata import AnnData
 from typing import Callable, Tuple
 
 
-def test_fwd(func: Callable) -> Callable:
-    def decorator(adata_mc_fwd: Tuple[AnnData, MarkovChain], tmpdir):
-        adata, _ = adata_mc_fwd
-        adata = adata.copy()
+def test_fwd():
+    def wrapper(func: Callable) -> Callable:
+        def decorator(self, adata_mc_fwd: Tuple[AnnData, MarkovChain], tmpdir):
+            adata, _ = adata_mc_fwd
+            adata = adata.copy()
 
-        dirname = func.__name__
-        tmpdir.mkdir(dirname)
+            dirname = func.__name__
+            path = tmpdir.mkdir(dirname).join("tmp.h5ad")
 
-        return func(
-            adata,
-            Path(tmpdir.dirname) / dirname / "tmp.h5ad",
-            str(LinKey.FORWARD),
-            adata.obsm[str(LinKey.FORWARD)].shape[1],
-        )
+            return func(
+                self,
+                adata,
+                path,
+                str(LinKey.FORWARD),
+                adata.obsm[str(LinKey.FORWARD)].shape[1],
+            )
 
-    return decorator
+        return decorator
+
+    return wrapper
 
 
 class TestRead:
-    @test_fwd
+    @test_fwd()
     def test_no_lineage(self, adata: AnnData, path: Path, lin_key: str, _: int):
         del adata.obsm[lin_key]
 
@@ -42,7 +46,7 @@ class TestRead:
         assert adata_new is not adata  # sanity check
         assert lin_key not in adata_new.obsm.keys()
 
-    @test_fwd
+    @test_fwd()
     def test_no_names(self, adata: AnnData, path: Path, lin_key: str, n_lins: int):
         names_key = _lin_names(lin_key)
         del adata.uns[names_key]
@@ -55,9 +59,9 @@ class TestRead:
         np.testing.assert_array_equal(
             lins.names, [f"Lineage {i}" for i in range(n_lins)]
         )
-        np.testing.assert_array_equal(lins.names, adata_new[names_key])
+        np.testing.assert_array_equal(lins.names, adata_new.uns[names_key])
 
-    @test_fwd
+    @test_fwd()
     def test_no_colors(self, adata: AnnData, path: Path, lin_key: str, n_lins: int):
         colors_key = _colors(lin_key)
         del adata.uns[colors_key]
@@ -68,13 +72,14 @@ class TestRead:
 
         assert isinstance(lins, Lineage)
         np.testing.assert_array_equal(lins.colors, _create_categorical_colors(n_lins))
-        np.testing.assert_array_equal(lins.colors, adata_new[colors_key])
+        np.testing.assert_array_equal(lins.colors, adata_new.uns[colors_key])
 
-    @test_fwd
+    @test_fwd()
     def test_wrong_names_length(
         self, adata: AnnData, path: Path, lin_key: str, n_lins: int
     ):
         names_key = _lin_names(lin_key)
+        adata.uns[names_key] = list(adata.uns[names_key])
         adata.uns[names_key] += ["foo", "bar", "baz"]
 
         sc.write(path, adata)
@@ -85,13 +90,14 @@ class TestRead:
         np.testing.assert_array_equal(
             lins.names, [f"Lineage {i}" for i in range(n_lins)]
         )
-        np.testing.assert_array_equal(lins.names, adata_new[names_key])
+        np.testing.assert_array_equal(lins.names, adata_new.uns[names_key])
 
-    @test_fwd
+    @test_fwd()
     def test_not_unique_names(
         self, adata: AnnData, path: Path, lin_key: str, n_lins: int
     ):
         names_key = _lin_names(lin_key)
+        adata.uns[names_key] = list(adata.uns[names_key])
         adata.uns[names_key] += [adata.uns[names_key][0]]
 
         sc.write(path, adata)
@@ -102,13 +108,14 @@ class TestRead:
         np.testing.assert_array_equal(
             lins.names, [f"Lineage {i}" for i in range(n_lins)]
         )
-        np.testing.assert_array_equal(lins.names, adata_new[names_key])
+        np.testing.assert_array_equal(lins.names, adata_new.uns[names_key])
 
-    @test_fwd
+    @test_fwd()
     def test_wrong_colors_length(
         self, adata: AnnData, path: Path, lin_key: str, n_lins: int
     ):
         colors_key = _colors(lin_key)
+        adata.uns[colors_key] = list(adata.uns[colors_key])
         adata.uns[colors_key] += [adata.uns[colors_key][0]]
 
         sc.write(path, adata)
@@ -117,9 +124,9 @@ class TestRead:
 
         assert isinstance(lins, Lineage)
         np.testing.assert_array_equal(lins.colors, _create_categorical_colors(n_lins))
-        np.testing.assert_array_equal(lins.colors, adata_new[colors_key])
+        np.testing.assert_array_equal(lins.colors, adata_new.uns[colors_key])
 
-    @test_fwd
+    @test_fwd()
     def test_colors_not_colorlike(
         self, adata: AnnData, path: Path, lin_key: str, n_lins: int
     ):
@@ -132,4 +139,4 @@ class TestRead:
 
         assert isinstance(lins, Lineage)
         np.testing.assert_array_equal(lins.colors, _create_categorical_colors(n_lins))
-        np.testing.assert_array_equal(lins.colors, adata_new[colors_key])
+        np.testing.assert_array_equal(lins.colors, adata_new.uns[colors_key])
