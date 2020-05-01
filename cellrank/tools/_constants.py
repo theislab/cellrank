@@ -11,6 +11,12 @@ class PrettyEnum(Enum):
         return str(self.value)
 
 
+class Lin(PrettyEnum):
+    JOIN = "join"
+    REST = "rest"
+    NORM = "norm"
+
+
 class Direction(PrettyEnum):
     FORWARD = "fwd"
     BACKWARD = "bwd"

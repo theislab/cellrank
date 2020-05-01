@@ -7,9 +7,9 @@ from scanpy import logging as logg
 from scipy.stats import entropy
 
 from cellrank.tools._lineage import Lineage
-from cellrank.tools._constants import RcKey, _colors, _lin_names
+from cellrank.tools._constants import Lin, RcKey, _colors, _lin_names
 from cellrank.tools._estimators._base_estimator import BaseEstimator
-from cellrank.tools._utils import save_fig
+from cellrank.tools._utils import save_fig, _eigengap
 from cellrank.tools.kernels._kernel import KernelExpression
 
 import os
@@ -52,8 +52,11 @@ class GPCCA(BaseEstimator):
         self._coarse_init_dist = None
         self._coarse_stat_dist = None
 
+        self._meta_states = None
+        self._meta_states_colors = None
+        self._meta_lin_probs = None
+
         self._main_states = None
-        self._main_states_colors = None
 
     def compute_eig(self, k: int = 20, which: str = "LR", alpha: float = 1) -> None:
         """
@@ -186,12 +189,7 @@ class GPCCA(BaseEstimator):
             self._T, eta=initial_distribution, z=which, method=method
         ).optimize(m=n_states)
 
-        self._schur_vectors = self._gpcca.schur_vectors
-        self._coarse_T = self._gpcca.coarse_grained_transition_matrix
-        self._coarse_init_dist = self._gpcca.coarse_grained_input_distribution
-        self._coarse_stat_dist = self._gpcca.coarse_grained_stationary_probability
-
-        self._assign_main_states(
+        self._assign_metastable_states(
             self._gpcca.memberships,
             n_cells,
             cluster_key=cluster_key,
@@ -199,28 +197,119 @@ class GPCCA(BaseEstimator):
             en_cutoff=en_cutoff,
         )
 
+        self._schur_vectors = self._gpcca.schur_vectors
+        self._coarse_T = pd.DataFrame(
+            self._gpcca.coarse_grained_transition_matrix,
+            index=self._meta_lin_probs.names,
+            columns=self._meta_lin_probs.names,
+        )
+        self._coarse_init_dist = pd.Series(
+            self._gpcca.coarse_grained_input_distribution,
+            index=self._meta_lin_probs.names,
+        )
+        self._coarse_stat_dist = pd.Series(
+            self._gpcca.coarse_grained_stationary_probability,
+            index=self._meta_lin_probs.names,
+        )
+
         logg.info(
-            f"Adding `adata.obs[{self._rc_key!r}]`\n"
-            f"       `.main_states`\n"
+            f"Adding `.metastable_states`\n"
             f"       `.coarse_transition_matrix`\n"
             f"    Finish",
             time=start,
         )
 
-    def _assign_main_states(
+    def _create_lin_probs(self, names: np.ndarray, mode: str):
+        names = list(names)
+        if mode == "normalize":
+            names += [Lin.NORM]
+        elif mode == "rest":
+            names += [Lin.REST]
+        else:
+            raise ValueError(
+                f"Invalid mode `{mode!r}`. Valid options are `'normalize', 'rest'`."
+            )
+        self._lin_probs = self._meta_lin_probs[names]
+        self._dp = entropy(self._lin_probs.X.T)
+        # TODO: write to adata
+
+    def set_main_states(
+        self, states: Union[List[str], np.ndarray], mode: str = "normalize"
+    ):
+        self._create_lin_probs(states, mode)
+
+    def compute_main_states(
+        self,
+        method: str = "eigengap",
+        mode: str = "normalize",
+        alpha: Optional[float] = 1,
+        min_self_prob: Optional[float] = None,
+        n_main_states: Optional[int] = None,
+    ):
+
+        if method == "eigengap":
+            if self.eigendecomposition is None:
+                raise RuntimeError(
+                    "Compute eigendecomposition first as `.compute_eig()`."
+                )
+            n_main_states = _eigengap(self.eigendecomposition["D"], alpha=alpha)
+        elif method == "eigengap_coarse":
+            if self._coarse_T is None:
+                raise RuntimeError(
+                    "Compute metastable states first as `.compute_metastable_states()`."
+                )
+            n_main_states = _eigengap(
+                np.sort(np.diag(self._coarse_T)[::-1]), alpha=alpha
+            )
+        elif method == "top_k":
+            if n_main_states is None:
+                raise ValueError(
+                    "Argument `n_main_states` must not be `None` for `method='top_k'`."
+                )
+            elif n_main_states <= 0:
+                raise ValueError(
+                    f"Expected `n_main_states` to be positive, found `{n_main_states}`."
+                )
+        elif method == "min_self_prob":
+            if min_self_prob is None:
+                raise ValueError(
+                    "Argument `min_self_prob` must not be `None` for `method='min_self_prob'`."
+                )
+            self_probs = pd.Series(
+                np.diag(self._coarse_T), index=self._coarse_T.columns
+            )
+            names = self_probs[self_probs.values >= min_self_prob].index
+            self._create_lin_probs(names)
+            return
+        else:
+            raise ValueError(
+                f"Invalid method `{method!r}`. Valid options are `'eigengap', 'eigengap_coarse', 'top_k' and 'min_self_prob'`."
+            )
+
+        names = self._coarse_T.columns[np.argsort(np.diag(self._coarse_T))][
+            -n_main_states:
+        ]
+        self._create_lin_probs(names, mode)
+
+    def _assign_metastable_states(
         self, memberships, n_cells: Optional[int], cluster_key: str, p_thresh, en_cutoff
     ):
         if n_cells is None:
-            logg.debug("DEBUG: Setting the main states using metastable assignment")
-            main_states = pd.Series(
+            logg.debug(
+                "DEBUG: Setting the metastable states using metastable assignment"
+            )
+            metastable_states = pd.Series(
                 index=self._adata.obs_names,
                 data=map(str, self._gpcca.metastable_assignment),
                 dtype="category",
             )
+            _memberships = memberships
         else:
-            logg.debug("DEBUG: Setting the main states using metastable memberships")
+            logg.debug(
+                "DEBUG: Setting the metastable states using metastable memberships"
+            )
             # in this case, we need to be a bit careful because fuzzy clusters can largely overlap
-            main_states = pd.Series(index=self.adata.obs_names, dtype="category")
+            metastable_states = pd.Series(index=self.adata.obs_names, dtype="category")
             overlaps, cols = {}, []
 
             for i, col in enumerate(memberships.T):
@@ -228,8 +317,8 @@ class GPCCA(BaseEstimator):
 
                 # handle the case of overlapping cells (fuzzy clustering)
                 i = str(i)
-                if len(main_states.cat.categories) > 0:
-                    current_labels = main_states.iloc[p]
+                if len(metastable_states.cat.categories) > 0:
+                    current_labels = metastable_states.iloc[p]
                     overlap = {
                         cl: np.sum(current_labels == cl)
                         for cl in current_labels.cat.categories
@@ -242,17 +331,22 @@ class GPCCA(BaseEstimator):
                         )
                         continue
 
-                self.eigendecomposition["gpcca_overlap"] = overlaps
+                # TODO: what if ED is not calculated?
+                # self.eigendecomposition["gpcca_overlap"] = overlaps
 
-                main_states.cat.add_categories(i, inplace=True)
-                main_states.iloc[p] = i
+                metastable_states.cat.add_categories(i, inplace=True)
+                metastable_states.iloc[p] = i
                 cols.append(col[:, None])
 
             # aggregate the non-overlapping columns together
             _memberships = np.concatenate(cols, axis=1)
 
-        self.set_main_states(
-            main_states,
+        self._set_categorical_labels(
+            attr_key="_meta_states",
+            pretty_attr_key="metastable_states",
+            cat_key=self._rc_key,
+            add_to_existing_error_msg="Compute metastable states first as `.compute_metastable_states()`.",
+            categories=metastable_states,
             cluster_key=cluster_key,
             en_cutoff=en_cutoff,
             p_thresh=p_thresh,
@@ -260,53 +354,26 @@ class GPCCA(BaseEstimator):
         )
 
         logg.debug(
-            "DEBUG: Setting lineage probabilities based on GPCCA membership vectors"
+            "DEBUG: Setting metastable lineage probabilities based on GPCCA membership vectors"
         )
-        self._lin_probs = Lineage(
-            memberships,
-            names=list(self._main_states.cat.categories),
-            colors=self._main_states_colors,
-        )
-        self._dp = entropy(self._lin_probs.T)
-
-        self._adata.obsm[self._lin_key] = self._lin_probs
-        self._adata.obs[f"{self._lin_key}_dp"] = self._dp
-        self._adata.uns[_lin_names(self._lin_key)] = self._lin_probs.names
-        self._adata.uns[_colors(self._lin_key)] = self._lin_probs.colors
-
-    def set_main_states(
-        self,
-        states: Union[pd.Series, Dict[Any, Any]],
-        cluster_key: Optional[str] = None,
-        en_cutoff: Optional[float] = None,
-        p_thresh: Optional[float] = None,
-        add_to_existing: bool = False,
-    ):
-        self._set_categorical_labels(
-            attr_key="_main_states",
-            pretty_attr_key="main_states",
-            cat_key=self._rc_key,
-            add_to_existing_error_msg="Compute main states first as `.compute_metastable_states()`.",
-            categories=states,
-            cluster_key=cluster_key,
-            en_cutoff=en_cutoff,
-            p_thresh=p_thresh,
-            add_to_existing=add_to_existing,
+        self._meta_lin_probs = Lineage(
+            _memberships,
+            names=list(self._meta_states.cat.categories),
+            colors=self._meta_states_colors,
         )
 
-    def plot_metastable_states(
+    def plot_main_states(
         self, n_cells: Optional[int] = None, same_plot: bool = True, **kwargs
     ):
-        if self.schur_vectors is None:
-            raise RuntimeError("Compute Schur vectors as `.metastable_state()` first.")
+        raise NotImplementedError()
 
     def plot_coarse_T(
         self,
         show_stationary_dist: bool = True,
-        show_initial_dist: bool = False,  # TODO @Marius: do we even want this?
+        show_initial_dist: bool = False,
         cmap: mcolors.ListedColormap = cm.viridis,
         xtick_rotation: float = 45,
-        annotate: bool = False,
+        annotate: bool = True,
         show_cbar: bool = True,
         figsize: Tuple[float, float] = (8, 8),
         dpi: float = 80,
@@ -436,7 +503,7 @@ class GPCCA(BaseEstimator):
         ax = fig.add_subplot(gs[0, 0])
         cax = fig.add_subplot(gs[:1, -1])
 
-        labels = list(self._lin_probs.names)
+        labels = list(self._coarse_T.columns)
         tmp = self.coarse_T
 
         if show_stationary_dist:
@@ -445,7 +512,7 @@ class GPCCA(BaseEstimator):
 
             stylize_dist(
                 stat_ax,
-                self.coarse_stationary_distribution.reshape(1, -1),
+                np.array(self.coarse_stationary_distribution).reshape(1, -1),
                 xticks_labels=labels,
             )
             stat_ax.set_xlabel("Stationary Distribution")
@@ -453,7 +520,7 @@ class GPCCA(BaseEstimator):
             init_ax = fig.add_subplot(gs[0, 1])
             tmp = np.c_[tmp, self._coarse_init_dist]
 
-            stylize_dist(init_ax, self._coarse_init_dist.reshape(-1, 1))
+            stylize_dist(init_ax, np.array(self._coarse_init_dist).reshape(-1, 1))
             init_ax.yaxis.set_label_position("right")
             init_ax.set_ylabel("Initial Distribution", rotation=-90, va="bottom")
 
@@ -507,17 +574,21 @@ class GPCCA(BaseEstimator):
         raise NotImplementedError()
 
     @property
-    def schur_vectors(self):
+    def schur_vectors(self) -> np.ndarray:
         return self._schur_vectors
 
     @property
-    def coarse_T(self):
+    def coarse_T(self) -> pd.DataFrame:
         return self._coarse_T
 
     @property
-    def coarse_stationary_distribution(self):
+    def metastable_states(self) -> pd.Series:
+        return self._meta_states
+
+    @property
+    def coarse_stationary_distribution(self) -> pd.Series:
         return self._coarse_stat_dist
 
     @property
-    def main_states(self):
+    def main_states(self) -> np.ndarray:
         return self._main_states

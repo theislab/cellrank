@@ -4,6 +4,7 @@ import cellrank.plotting as pl
 import cellrank.utils as ul
 import cellrank.datasets
 
+from cellrank.tools._constants import Lin
 from cellrank.tools._read import read
 from scanpy import settings
 

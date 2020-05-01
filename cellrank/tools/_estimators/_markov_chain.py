@@ -9,10 +9,11 @@ from typing import Optional, Tuple, Sequence, List, Any, Union, Dict, Iterable
 import numpy as np
 import scvelo as scv
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 
 from anndata import AnnData
 from copy import copy, deepcopy
-from pandas import Series, DataFrame
+from pandas import Series
 from scanpy import logging as logg
 from scipy.linalg import solve
 from scipy.stats import zscore, entropy
@@ -30,7 +31,6 @@ from cellrank.tools._utils import (
     _filter_cells,
     _make_cat,
     _convert_to_hex_colors,
-    _vec_mat_corr,
     _create_categorical_colors,
     partition,
     save_fig,
@@ -966,120 +966,6 @@ class MarkovChain(BaseEstimator):
             raise ValueError(
                 f"Invalid mode `{mode!r}`. Valid options are: `'embedding', 'time'`."
             )
-
-    def compute_lineage_drivers(
-        self,
-        lin_names: Optional[Sequence] = None,
-        cluster_key: Optional[str] = "louvain",
-        clusters: Optional[Sequence] = None,
-        layer: str = "X",
-        use_raw: bool = True,
-        inplace: bool = True,
-    ):
-        """
-        Compute driver genes per lineage.
-
-        Correlates gene expression with lineage probabilities, for a given lineage and set of clusters.
-        Often, it makes sense to restrict this to a set of clusters which are relevant for the lineage under consideration.
-
-        Params
-        --------
-        lin_keys
-            Either a set of lineage names from :paramref:`lineage_probabilities` `.names` or None,
-            in which case all lineages are considered.
-        cluster_key
-            Key from :paramref:`adata` `.obs` to obtain cluster annotations.
-            These are considered for :paramref:`clusters`.
-        clusters
-            Restrict the correlations to these clusters.
-        layer
-            Key from :paramref:`adata` `.layers`.
-        use_raw
-            Whether or not to use :paramref:`adata` `.raw` to correlate gene expression.
-            If using a layer other than `.X`, this must be set to `False`.
-
-        Returns
-        --------
-        :class:`pandas.DataFrame` or :class:`NoneType`
-            Writes to :paramref:`adata` `.var` or :paramref:`adata` `.raw.var`,
-            depending on the value of :paramref:`use_raw`.
-            For each lineage specified, a key is added to `.var` and correlations are saved there.
-
-            Returns `None` if :paramref:`inplace` `=True`, otherwise a dataframe.
-        """
-
-        # check that lineage probs have been computed
-        if self._lin_probs is None:
-            raise RuntimeError(
-                "Compute lineage probabilities first as `.compute_lin_probs()`."
-            )
-
-        # check all lin_keys exist in self.lin_names
-        if lin_names is not None:
-            _ = self._lin_probs[lin_names]
-        else:
-            lin_names = self._lin_probs.names
-
-        # check the cluster key exists in adata.obs and check that all clusters exist
-        if cluster_key is not None and cluster_key not in self._adata.obs.keys():
-            raise KeyError(f"Key `{cluster_key!r}` not found in `adata.obs`.")
-
-        if clusters is not None:
-            all_clusters = np.array(self._adata.obs[cluster_key].cat.categories)
-            cluster_mask = np.array([name not in all_clusters for name in clusters])
-            if any(cluster_mask):
-                raise KeyError(
-                    f"Clusters `{list(np.array(clusters)[cluster_mask])}` not found in "
-                    f"`adata.obs[{cluster_key!r}]`."
-                )
-
-            subset_mask = np.in1d(self._adata.obs[cluster_key], clusters)
-            adata_comp = self._adata[subset_mask].copy()
-            lin_probs = self._lin_probs[subset_mask, :]
-        else:
-            adata_comp = self._adata.copy()
-            lin_probs = self._lin_probs
-
-        # check that the layer exists, and that use raw is only used with layer X
-        if layer != "X":
-            if layer not in self._adata.layers:
-                raise KeyError(f"Layer `{layer!r}` not found in `adata.layers`.")
-            if use_raw:
-                raise ValueError("For `use_raw=True`, layer must be 'X'.")
-            data = adata_comp.layers[layer]
-            var_names = adata_comp.var_names
-        else:
-            if use_raw and self._adata.raw is None:
-                raise AttributeError("No raw attribute set")
-            data = adata_comp.raw.X if use_raw else adata_comp.X
-            var_names = adata_comp.raw.var_names if use_raw else adata_comp.var_names
-
-        start = logg.info(
-            f"Computing correlations for lineages `{lin_names}` restricted to clusters `{clusters}` in "
-            f"layer `{layer}` with `use_raw={use_raw}`"
-        )
-
-        # loop over lineages
-        lin_corrs = {}
-        for lineage in lin_names:
-            y = lin_probs[:, lineage].X.squeeze()
-            correlations = _vec_mat_corr(data, y)
-
-            if inplace:
-                if use_raw:
-                    self._adata.raw.var[f"{self._prefix} {lineage} corr"] = correlations
-                else:
-                    self._adata.var[f"{self._prefix} {lineage} corr"] = correlations
-            else:
-                lin_corrs[lineage] = correlations
-
-        if not inplace:
-            return DataFrame(lin_corrs, index=var_names)
-
-        field = "raw.var" if use_raw else "var"
-        logg.info(
-            f"Adding gene correlations to `.adata.{field}`\n    Finish", time=start
-        )
 
     def _compute_approx_rcs_prob(
         self, use: Union[Tuple[int], List[int], range]
