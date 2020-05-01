@@ -1,9 +1,14 @@
 # -*- coding: utf-8 -*-
+from pathlib import Path
+
+import matplotlib
+
 from cellrank.tools.kernels._kernel import KernelExpression
-from typing import Optional, Tuple, Sequence, List, Any, Union, Dict
+from typing import Optional, Tuple, Sequence, List, Any, Union, Dict, Iterable
 
 import numpy as np
 import scvelo as scv
+import matplotlib.pyplot as plt
 
 from anndata import AnnData
 from copy import copy, deepcopy
@@ -28,6 +33,7 @@ from cellrank.tools._utils import (
     _vec_mat_corr,
     _create_categorical_colors,
     partition,
+    save_fig,
 )
 
 
@@ -254,6 +260,140 @@ class MarkovChain(BaseEstimator):
         """
 
         self._compute_eig(k, which=which, alpha=alpha, only_evals=False)
+
+    def plot_eig(
+        self,
+        dpi: int = 100,
+        figsize: Optional[Tuple[float, float]] = (5, 5),
+        legend_loc: Optional[str] = None,
+        title: Optional[str] = None,
+        save: Optional[Union[str, Path]] = None,
+    ) -> None:
+        """
+        Plot the top eigenvalues in complex plane.
+
+        Params
+        ------
+        dpi
+            Dots per inch.
+        figsize
+            Size of the figure.
+        save
+            Filename where to save the plots. If `None`, just shows the plot.
+
+        Returns
+        -------
+        None
+            Nothing, just plots the spectrum in complex plane.
+        """
+
+        if self._eig is None:
+            logg.warning(
+                "No eigendecomposition found, computing with default parameters"
+            )
+            self.compute_eig()
+        D = self._eig["D"]
+        params = self._eig["params"]
+
+        # create fiture and axes
+        fig, ax = plt.subplots(nrows=1, ncols=1, dpi=dpi, figsize=figsize)
+
+        # get the original data ranges
+        lam_x, lam_y = D.real, D.imag
+        x_min, x_max = np.min(lam_x), np.max(lam_x)
+        y_min, y_max = np.min(lam_y), np.max(lam_y)
+        x_range, y_range = x_max - x_min, y_max - y_min
+        final_range = np.max([x_range, y_range]) + 0.05
+
+        # define a function to make the data limits rectangular
+        adapt_range = lambda min_, max_, range_: (
+            min_ + (max_ - min_) / 2 - range_ / 2,
+            min_ + (max_ - min_) / 2 + range_ / 2,
+        )
+        x_min_, x_max_ = adapt_range(x_min, x_max, final_range)
+        y_min_, y_max_ = adapt_range(y_min, y_max, final_range)
+
+        # plot the data and the unit circle
+        ax.scatter(D.real, D.imag, marker=".", label="Eigenvalue")
+        t = np.linspace(0, 2 * np.pi, 500)
+        x_circle, y_circle = np.sin(t), np.cos(t)
+        ax.plot(x_circle, y_circle, "k-", label="Unit circle")
+
+        # set labels, ranges and legend
+        ax.set_xlabel("Im($\lambda$)")
+        ax.set_ylabel("Re($\lambda$)")
+        ax.set_xlim(x_min_, x_max_)
+        ax.set_ylim(y_min_, y_max_)
+        key = "real part" if params["which"] == "LR" else "magnitude"
+        if title is None:
+            title_str = f"top {params['k']} eigenvalues according to their {key}"
+        else:
+            title_str = title
+        ax.set_title(title_str)
+        ax.legend(loc=legend_loc)
+
+        if save is not None:
+            save_fig(fig, save)
+
+        fig.show()
+
+    def plot_real_spectrum(
+        self,
+        dpi: int = 100,
+        figsize: Optional[Tuple[float, float]] = None,
+        legend_loc: Optional[str] = None,
+        save: Optional[Union[str, Path]] = None,
+    ) -> None:
+        """
+        Plot the real part of the top eigenvalues.
+
+        Params
+        ------
+        dpi
+            Dots per inch.
+        figsize
+            Size of the figure.
+        save
+            Filename where to save the plots. If `None`, just shows the plot.
+
+        Returns
+        -------
+        None
+            Nothing, just plots the spectrum.
+        """
+
+        if self._eig is None:
+            logg.warning(
+                "No eigendecomposition found, computing with default parameters"
+            )
+            self.compute_eig()
+
+        # Obtain the eigendecomposition, create the color code
+        D, params = self._eig["D"], self._eig["params"]
+        D_real, D_imag = D.real, D.imag
+        ixs = np.arange(len(D))
+        mask = D_imag == 0
+
+        # plot the top eigenvalues
+        fig, ax = plt.subplots(nrows=1, ncols=1, dpi=dpi, figsize=figsize)
+        ax.scatter(ixs[mask], D_real[mask], marker="o", label="Real eigenvalue")
+        ax.scatter(ixs[~mask], D_real[~mask], marker="o", label="Complex eigenvalue")
+
+        # add dashed line for the eigengap, ticks, labels, title and legend
+        ax.axvline(self._eig["eigengap"], label="Eigengap", ls="--")
+        ax.set_xticks(range(len(D)))
+        ax.set_xlabel("index")
+        ax.set_ylabel("Re($\lambda_i$)")
+        key = "real part" if params["which"] == "LR" else "magnitude"
+        ax.set_title(
+            f"Real part of top {params['k']} eigenvalues according to their {key}"
+        )
+        ax.legend(loc=legend_loc)
+
+        if save is not None:
+            save_fig(fig, save)
+
+        fig.show()
 
     def plot_eig_embedding(
         self,
@@ -718,6 +858,114 @@ class MarkovChain(BaseEstimator):
         self._adata.uns[_colors(self._lin_key)] = self._lin_probs.colors
 
         logg.info("    Finish", time=start)
+
+    def plot_lin_probs(
+        self,
+        lineages: Optional[Union[str, Iterable[str]]] = None,
+        cluster_key: Optional[str] = None,
+        mode: str = "embedding",
+        time_key: str = "latent_time",
+        title: Optional[Iterable[str]] = None,
+        color_map: Union[str, matplotlib.colors.ListedColormap] = cm.viridis,
+        **kwargs,
+    ) -> None:
+        """
+        Plots the absorption probabilities in the given embedding.
+
+        Params
+        ------
+        lineages
+            Only show these lineages. If `None`, plot all lineages.
+        cluster_key
+            Key from :paramref`adata: `.obs` for plotting cluster labels.
+        mode
+            Can be either `'embedding'` or `'time'`.
+
+            - If `'embedding'`, plot the embedding while coloring in the absorption probabilities.
+            - If `'time'`, plos the pseudotime on x-axis and the absorption probabilities on y-axis.
+        time_key
+            Key from `adata.obs` to use as a pseudotime ordering of the cells.
+        title
+            Either None, in which case titles are "to/from final/root state X", or an array of titles, one per panel
+            (per lineage)
+        color_map
+            Colormap to use.
+        kwargs
+            Keyword arguments for :func:`scvelo.pl.scatter`.
+
+        Returns
+        -------
+        None
+            Nothing, just plots the absorption probabilities.
+        """
+
+        if self._lin_probs is None:
+            raise RuntimeError(
+                "Compute lineage probabilities first as `.compute_lin_probs()`."
+            )
+        if isinstance(lineages, str):
+            lineages = [lineages]
+
+        # retrieve the lineage data
+        if lineages is None:
+            lineages = self._lin_probs.names
+            A = self._lin_probs.X
+        else:
+            for lineage in lineages:
+                if lineage not in self._lin_probs.names:
+                    raise ValueError(
+                        f"Invalid lineage name `{lineages!r}`. Valid options are `{list(self._lin_probs.names)}`."
+                    )
+            A = self._lin_probs[lineages].X
+
+        # change the maximum value - the 1 is artificial and obscures the color scaling
+        for col in A.T:
+            mask = col != 1
+            if np.sum(mask) > 0:
+                max_not_one = np.max(col[mask])
+                col[~mask] = max_not_one
+
+        if mode == "time":
+            if time_key not in self._adata.obs.keys():
+                raise KeyError(f"Time key `{time_key}` not in `adata.obs`.")
+            t = self._adata.obs[time_key]
+            cluster_key = None
+
+        if title is None:
+            rc_titles = [f"{self._prefix} {rc}" for rc in lineages]
+        else:
+            rc_titles = title
+
+        if cluster_key is not None:
+            color = [cluster_key] + [a for a in A.T]
+            titles = [cluster_key] + rc_titles
+        else:
+            color = [a for a in A.T]
+            titles = rc_titles
+
+        if mode == "embedding":
+            scv.pl.scatter(
+                self._adata, color=color, title=titles, color_map=color_map, **kwargs
+            )
+        elif mode == "time":
+            xlabel, ylabel = (
+                list(np.repeat(time_key, len(titles))),
+                list(np.repeat("probability", len(titles))),
+            )
+            scv.pl.scatter(
+                self._adata,
+                x=t,
+                color_map=color_map,
+                y=[a for a in A.T],
+                title=titles,
+                xlabel=time_key,
+                ylabel=ylabel,
+                **kwargs,
+            )
+        else:
+            raise ValueError(
+                f"Invalid mode `{mode!r}`. Valid options are: `'embedding', 'time'`."
+            )
 
     def compute_lineage_drivers(
         self,
