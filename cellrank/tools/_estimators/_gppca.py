@@ -231,6 +231,7 @@ class GPCCA(BaseEstimator):
             )
         self._lin_probs = self._meta_lin_probs[names]
         self._dp = entropy(self._lin_probs.X.T)
+        # self.adata.uns[_colors(self.rc)]
         # TODO: write to adata
 
     def set_main_states(
