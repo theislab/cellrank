@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from cellrank.tools import Lineage
-from cellrank.tools._utils import _create_categorical_colors
+from cellrank.tools._utils import _create_categorical_colors, _compute_mean_color
 
 import pytest
 import numpy as np
@@ -195,9 +195,21 @@ class TestLineageAccessor:
             colors=[(0, 0, 0), (0.5, 0.5, 0.5), (1, 1, 1)],
         )
 
-        y = l[0, ["foo", 2, "bar", 0]]
+        y = l[0, ["foo", 2, "bar"]]
 
-        np.testing.assert_array_equal(x[[[0]], [0, 2, 1, 0]], np.array(y))
+        np.testing.assert_array_equal(x[[[0]], [0, 2, 1]], np.array(y))
+
+    def test_remove_duplicates(self):
+        x = np.random.random((10, 3))
+        l = Lineage(
+            x,
+            names=["foo", "bar", "baz"],
+            colors=[(0, 0, 0), (0.5, 0.5, 0.5), (1, 1, 1)],
+        )
+
+        y = l[0, ["foo", 2, "bar", 0, 0, "foo"]]
+
+        np.testing.assert_array_equal(x[[[0]], [0, 2, 1]], np.array(y))
 
     def test_column_invalid_name(self):
         x = np.random.random((10, 3))
@@ -376,11 +388,11 @@ class TestLineageAccessor:
         mask[5:] = False
         y = l[mask, :][:, ["baz", "bar", "foo"]]
 
-        np.testing.assert_array_equal(x[:, ::1], y)
+        np.testing.assert_array_equal(y, x[mask, :][:, ::-1])
         np.testing.assert_array_equal(y.names, ["baz", "bar", "foo"])
-        np.testing.assert_array_equal(y.names, ["#0000ff", "#00ff00", "#ff0000"])
+        np.testing.assert_array_equal(y.colors, ["#0000ff", "#00ff00", "#ff0000"])
 
-    def test_non_trivial_subset(self):
+    def test_non_trivial_subset_2(self):
         x = np.random.random((10, 3))
         l = Lineage(
             x, names=["foo", "bar", "baz"], colors=["#ff0000", "#00ff00", "#0000ff"]
@@ -417,3 +429,102 @@ class TestLineageAccessor:
         gt_colors = [colors.to_hex(c) for c in _create_categorical_colors(3)]
 
         np.testing.assert_array_equal(l.colors, gt_colors)
+
+
+class TestLineageMixing:
+    def test_overlap(self):
+        x = Lineage(np.random.random((10, 4)), names=["foo", "bar", "baz", "quux"])
+
+        with pytest.raises(ValueError):
+            _ = x[["foo, bar", "foo"]]
+
+    def test_overlap_mix(self):
+        x = Lineage(np.random.random((10, 4)), names=["foo", "bar", "baz", "quux"])
+
+        with pytest.raises(ValueError):
+            _ = x[["foo, bar", 0]]
+
+    def test_ellipsis_and_none(self):
+        x = Lineage(np.random.random((10, 4)), names=["foo", "bar", "baz", "quux"])
+
+        with pytest.raises(ValueError):
+            _ = x[["foo, bar", None, ...]]
+
+    def test_ellipsis(self):
+        x = Lineage(np.random.random((10, 4)), names=["foo", "bar", "baz", "quux"])
+        y = x[["foo, bar", ...]]
+
+        expected = np.c_[np.sum(x.X[:, [0, 1]], axis=1), np.sum(x.X[:, [2, 3]], axis=1)]
+
+        assert y.shape == (10, 2)
+        np.testing.assert_array_equal(y.X, expected)
+        np.testing.assert_array_equal(y.names, ["bar or foo", "baz or quux"])
+        np.testing.assert_array_equal(
+            y.colors,
+            [_compute_mean_color(x.colors[:2]), _compute_mean_color(x.colors[2:])],
+        )
+
+    def test_none(self):
+        x = Lineage(np.random.random((10, 4)), names=["foo", "bar", "baz", "quux"])
+        y = x[["foo, bar", None]]
+
+        expected = np.c_[np.sum(x.X[:, [0, 1]], axis=1), np.sum(x.X[:, [2, 3]], axis=1)]
+
+        assert y.shape == (10, 2)
+        np.testing.assert_array_equal(y.X, expected)
+        np.testing.assert_array_equal(y.names, ["bar or foo", "rest"])
+        np.testing.assert_array_equal(
+            y.colors,
+            [_compute_mean_color(x.colors[:2]), _compute_mean_color(x.colors[2:])],
+        )
+
+    def test_no_mixing(self):
+        x = Lineage(np.random.random((10, 4)), names=["foo", "bar", "baz", "quux"])
+        y = x[["foo", None]]
+
+        expected = np.c_[np.sum(x.X[:, [0]], axis=1), np.sum(x.X[:, [1, 2, 3]], axis=1)]
+
+        assert y.shape == (10, 2)
+        np.testing.assert_array_equal(y.X, expected)
+        np.testing.assert_array_equal(y.names, ["foo", "rest"])
+        np.testing.assert_array_equal(
+            y.colors, [x.colors[0], _compute_mean_color(x.colors[1:])]
+        )
+
+    def test_no_rest_or_none(self):
+        x = Lineage(np.random.random((10, 4)), names=["foo", "bar", "baz", "quux"])
+        y = x[["foo, bar"]]
+
+        expected = np.sum(x.X[:, [0, 1]], axis=1)[..., np.newaxis]
+
+        assert y.shape == (10, 1)
+        np.testing.assert_array_equal(y.X, expected)
+        np.testing.assert_array_equal(y.names, ["bar or foo"])
+        np.testing.assert_array_equal(y.colors, [_compute_mean_color(x.colors[:2])])
+
+    def test_ellipsis_all(self):
+        x = Lineage(np.random.random((10, 4)), names=["foo", "bar", "baz", "quux"])
+        y = x[[...]]
+
+        assert y.shape == (10, 1)
+        np.testing.assert_array_equal(y.X[:, 0], np.sum(x.X, axis=1))
+        np.testing.assert_array_equal(y.names, [" or ".join(x.names)])
+
+    def test_none_all(self):
+        x = Lineage(np.random.random((10, 4)), names=["foo", "bar", "baz", "quux"])
+        y = x[[None]]
+
+        assert y.shape == (10, 1)
+        np.testing.assert_array_equal(y.X[:, 0], np.sum(x.X, axis=1))
+        np.testing.assert_array_equal(y.names, ["rest"])
+
+    def test_row_subset(self):
+        x = Lineage(np.random.random((10, 4)), names=["foo", "bar", "baz", "quux"])
+        y = x[:5, ["foo, bar"]]
+
+        expected = np.sum(x.X[:5, [0, 1]], axis=1)[..., np.newaxis]
+
+        assert y.shape == (5, 1)
+        np.testing.assert_array_equal(y.X, expected)
+        np.testing.assert_array_equal(y.names, ["bar or foo"])
+        np.testing.assert_array_equal(y.colors, [_compute_mean_color(x.colors[:2])])
