@@ -498,6 +498,7 @@ class BaseEstimator(ABC):
         cluster_key: Optional[str] = None,
         mode: str = "embedding",
         time_key: str = "latent_time",
+        same_plot: bool = False,
         color_map: Union[str, matplotlib.colors.ListedColormap] = cm.viridis,
         **kwargs,
     ) -> None:
@@ -517,6 +518,8 @@ class BaseEstimator(ABC):
             - If `'time'`, plos the pseudotime on x-axis and the absorption probabilities on y-axis.
         time_key
             Key from `adata.obs` to use as a pseudotime ordering of the cells.
+        same_plot
+            Whether to plot the lineages on the same plot using color gradients when :paramref:`mode='embedding'`.
         color_map
             Colormap to use.
         kwargs
@@ -538,14 +541,14 @@ class BaseEstimator(ABC):
         # retrieve the lineage data
         if lineages is None:
             lineages = self._lin_probs.names
-            A = self._lin_probs.X
+            A = self._lin_probs
         else:
             for lineage in lineages:
                 if lineage not in self._lin_probs.names:
                     raise ValueError(
                         f"Invalid lineage name `{lineages!r}`. Valid options are `{list(self._lin_probs.names)}`."
                     )
-            A = self._lin_probs[lineages].X
+            A = self._lin_probs[lineages]
 
         # change the maximum value - the 1 is artificial and obscures the color scaling
         for col in A.T:
@@ -572,14 +575,26 @@ class BaseEstimator(ABC):
             titles = rc_titles
 
         if mode == "embedding":
-            scv.pl.scatter(
-                self._adata, color=color, title=titles, color_map=color_map, **kwargs
-            )
+            if same_plot:
+                scv.pl.scatter(
+                    self.adata,
+                    title="From Root Cells"
+                    if self.kernel.backward
+                    else "To Final Cells",
+                    color_gradients=A,
+                    color_map=color_map,
+                    **kwargs,
+                )
+            else:
+                scv.pl.scatter(
+                    self._adata,
+                    color=color,
+                    title=titles,
+                    color_map=color_map,
+                    **kwargs,
+                )
         elif mode == "time":
-            xlabel, ylabel = (
-                list(np.repeat(time_key, len(titles))),
-                list(np.repeat("probability", len(titles) - 1)) + ["entropy"],
-            )
+            xlabel, ylabel = [time_key] * len(titles), ["probability"] * len(titles)
             scv.pl.scatter(
                 self._adata,
                 x=t,
