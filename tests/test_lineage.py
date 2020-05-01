@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from cellrank.tools import Lineage
+from cellrank.tools._constants import Lin
 from cellrank.tools._utils import _create_categorical_colors, _compute_mean_color
 
 import pytest
@@ -448,11 +449,11 @@ class TestLineageMixing:
         x = Lineage(np.random.random((10, 4)), names=["foo", "bar", "baz", "quux"])
 
         with pytest.raises(ValueError):
-            _ = x[["foo, bar", None, ...]]
+            _ = x[["foo, bar", Lin.REST, Lin.JOIN]]
 
     def test_ellipsis(self):
         x = Lineage(np.random.random((10, 4)), names=["foo", "bar", "baz", "quux"])
-        y = x[["foo, bar", ...]]
+        y = x[["foo, bar", Lin.JOIN]]
 
         expected = np.c_[np.sum(x.X[:, [0, 1]], axis=1), np.sum(x.X[:, [2, 3]], axis=1)]
 
@@ -466,7 +467,7 @@ class TestLineageMixing:
 
     def test_none(self):
         x = Lineage(np.random.random((10, 4)), names=["foo", "bar", "baz", "quux"])
-        y = x[["foo, bar", None]]
+        y = x[["foo, bar", Lin.REST]]
 
         expected = np.c_[np.sum(x.X[:, [0, 1]], axis=1), np.sum(x.X[:, [2, 3]], axis=1)]
 
@@ -480,7 +481,7 @@ class TestLineageMixing:
 
     def test_no_mixing(self):
         x = Lineage(np.random.random((10, 4)), names=["foo", "bar", "baz", "quux"])
-        y = x[["foo", None]]
+        y = x[["foo", Lin.REST]]
 
         expected = np.c_[np.sum(x.X[:, [0]], axis=1), np.sum(x.X[:, [1, 2, 3]], axis=1)]
 
@@ -504,7 +505,7 @@ class TestLineageMixing:
 
     def test_ellipsis_all(self):
         x = Lineage(np.random.random((10, 4)), names=["foo", "bar", "baz", "quux"])
-        y = x[[...]]
+        y = x[[Lin.JOIN]]
 
         assert y.shape == (10, 1)
         np.testing.assert_array_equal(y.X[:, 0], np.sum(x.X, axis=1))
@@ -512,7 +513,7 @@ class TestLineageMixing:
 
     def test_none_all(self):
         x = Lineage(np.random.random((10, 4)), names=["foo", "bar", "baz", "quux"])
-        y = x[[None]]
+        y = x[[Lin.REST]]
 
         assert y.shape == (10, 1)
         np.testing.assert_array_equal(y.X[:, 0], np.sum(x.X, axis=1))
@@ -528,3 +529,50 @@ class TestLineageMixing:
         np.testing.assert_array_equal(y.X, expected)
         np.testing.assert_array_equal(y.names, ["bar or foo"])
         np.testing.assert_array_equal(y.colors, [_compute_mean_color(x.colors[:2])])
+
+    def test_normalize(self):
+        x = Lineage(np.random.random((10, 4)), names=["foo", "bar", "baz", "quux"])
+
+        y = x[["foo, bar", "baz", Lin.NORM]]
+
+        assert y.shape == (10, 2)
+        assert np.all(np.sum(y.X, axis=1), 1)
+
+    def test_normalize_zeros(self):
+        x = Lineage(np.zeros((10, 1)), names=["foo"])
+
+        y = x[[Lin.NORM]]
+
+        assert y.shape == (10, 1)
+        np.testing.assert_array_equal(x.X, np.ones_like(x.X))
+
+    def test_rest_no_effect(self):
+        names = ["foo", "bar", "baz", "quux"]
+        x = Lineage(np.random.random((10, 4)), names=names)
+
+        y = x[names + [Lin.REST]]
+
+        np.testing.assert_array_equal(x.X, y.X)
+        np.testing.assert_array_equal(x.names, y.names)
+        np.testing.assert_array_equal(x.colors, y.colors)
+
+    def test_join_no_effect(self):
+        names = ["foo", "bar", "baz", "quux"]
+        x = Lineage(np.random.random((10, 4)), names=names)
+
+        y = x[names + [Lin.JOIN]]
+
+        np.testing.assert_array_equal(x.X, y.X)
+        np.testing.assert_array_equal(x.names, y.names)
+        np.testing.assert_array_equal(x.colors, y.colors)
+
+    def test_normalize_no_effect(self):
+        names = ["foo", "bar", "baz", "quux"]
+        x = Lineage(np.random.random((10, 4)), names=names)
+
+        y = x[names + [Lin.NORM]]  # this will still normalize the array
+
+        assert not np.all(np.isclose(x, y))
+        assert np.allclose(np.sum(y.X, axis=1), 1)
+        np.testing.assert_array_equal(x.names, y.names)
+        np.testing.assert_array_equal(x.colors, y.colors)

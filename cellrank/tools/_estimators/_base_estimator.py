@@ -7,16 +7,18 @@ from cellrank.tools._utils import (
     _map_names_and_colors,
     _create_categorical_colors,
     _convert_to_hex_colors,
-    _merge_approx_rcs,
+    _merge_categorical_series,
     _convert_to_categorical_series,
+    _vec_mat_corr,
     save_fig,
 )
 from cellrank.tools._lineage import Lineage
 from cellrank.tools.kernels._kernel import KernelExpression
-from typing import Optional, Dict, Union, Tuple, List, Any, Iterable
+from typing import Optional, Dict, Union, Tuple, List, Any, Iterable, Sequence
 from abc import ABC, abstractmethod
 
 import numpy as np
+import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
@@ -119,9 +121,7 @@ class BaseEstimator(ABC):
         """
 
         def get_top_k_evals():
-            return D[np.flip(np.argsort(D.real))][
-                :k
-            ]  # TODO: @Marius - I think for non-sparse matrices [:k] is necessary
+            return D[np.flip(np.argsort(D.real))][:k]
 
         def write_result(eig):
             # write to class and AnnData object
@@ -348,7 +348,7 @@ class BaseEstimator(ABC):
         if add_to_existing:
             if getattr(self, attr_key) is None:
                 raise RuntimeError(add_to_existing_error_msg)
-            categories = _merge_approx_rcs(
+            categories = _merge_categorical_series(
                 getattr(self, attr_key), categories, inplace=False
             )
 
@@ -594,6 +594,120 @@ class BaseEstimator(ABC):
             raise ValueError(
                 f"Invalid mode `{mode!r}`. Valid options are: `'embedding', 'time'`."
             )
+
+    def compute_lineage_drivers(
+        self,
+        lin_names: Optional[Sequence] = None,
+        cluster_key: Optional[str] = "louvain",
+        clusters: Optional[Sequence] = None,
+        layer: str = "X",
+        use_raw: bool = True,
+        inplace: bool = True,
+    ):
+        """
+        Compute driver genes per lineage.
+
+        Correlates gene expression with lineage probabilities, for a given lineage and set of clusters.
+        Often, it makes sense to restrict this to a set of clusters which are relevant for the lineage under consideration.
+
+        Params
+        --------
+        lin_keys
+            Either a set of lineage names from :paramref:`lineage_probabilities` `.names` or None,
+            in which case all lineages are considered.
+        cluster_key
+            Key from :paramref:`adata` `.obs` to obtain cluster annotations.
+            These are considered for :paramref:`clusters`.
+        clusters
+            Restrict the correlations to these clusters.
+        layer
+            Key from :paramref:`adata` `.layers`.
+        use_raw
+            Whether or not to use :paramref:`adata` `.raw` to correlate gene expression.
+            If using a layer other than `.X`, this must be set to `False`.
+
+        Returns
+        --------
+        :class:`pandas.DataFrame` or :class:`NoneType`
+            Writes to :paramref:`adata` `.var` or :paramref:`adata` `.raw.var`,
+            depending on the value of :paramref:`use_raw`.
+            For each lineage specified, a key is added to `.var` and correlations are saved there.
+
+            Returns `None` if :paramref:`inplace` `=True`, otherwise a dataframe.
+        """
+
+        # check that lineage probs have been computed
+        if self._lin_probs is None:
+            raise RuntimeError(
+                "Compute lineage probabilities first as `.compute_lin_probs()`."
+            )
+
+        # check all lin_keys exist in self.lin_names
+        if lin_names is not None:
+            _ = self._lin_probs[lin_names]
+        else:
+            lin_names = self._lin_probs.names
+
+        # check the cluster key exists in adata.obs and check that all clusters exist
+        if cluster_key is not None and cluster_key not in self._adata.obs.keys():
+            raise KeyError(f"Key `{cluster_key!r}` not found in `adata.obs`.")
+
+        if clusters is not None:
+            all_clusters = np.array(self._adata.obs[cluster_key].cat.categories)
+            cluster_mask = np.array([name not in all_clusters for name in clusters])
+            if any(cluster_mask):
+                raise KeyError(
+                    f"Clusters `{list(np.array(clusters)[cluster_mask])}` not found in "
+                    f"`adata.obs[{cluster_key!r}]`."
+                )
+
+            subset_mask = np.in1d(self._adata.obs[cluster_key], clusters)
+            adata_comp = self._adata[subset_mask].copy()
+            lin_probs = self._lin_probs[subset_mask, :]
+        else:
+            adata_comp = self._adata.copy()
+            lin_probs = self._lin_probs
+
+        # check that the layer exists, and that use raw is only used with layer X
+        if layer != "X":
+            if layer not in self._adata.layers:
+                raise KeyError(f"Layer `{layer!r}` not found in `adata.layers`.")
+            if use_raw:
+                raise ValueError("For `use_raw=True`, layer must be 'X'.")
+            data = adata_comp.layers[layer]
+            var_names = adata_comp.var_names
+        else:
+            if use_raw and self._adata.raw is None:
+                raise AttributeError("No raw attribute set")
+            data = adata_comp.raw.X if use_raw else adata_comp.X
+            var_names = adata_comp.raw.var_names if use_raw else adata_comp.var_names
+
+        start = logg.info(
+            f"Computing correlations for lineages `{lin_names}` restricted to clusters `{clusters}` in "
+            f"layer `{layer}` with `use_raw={use_raw}`"
+        )
+
+        # loop over lineages
+        lin_corrs = {}
+        for lineage in lin_names:
+            y = lin_probs[:, lineage].X.squeeze()
+            correlations = _vec_mat_corr(data, y)
+
+            if inplace:
+                if use_raw:
+                    self._adata.raw.var[f"{self._prefix} {lineage} corr"] = correlations
+                else:
+                    self._adata.var[f"{self._prefix} {lineage} corr"] = correlations
+            else:
+                lin_corrs[lineage] = correlations
+
+        if not inplace:
+            return pd.DataFrame(lin_corrs, index=var_names)
+
+        field = "raw.var" if use_raw else "var"
+        logg.info(
+            f"Adding gene correlations to `.adata.{field}`\n    Finish", time=start
+        )
 
     @abstractmethod
     def copy(self) -> "BaseEstimator":

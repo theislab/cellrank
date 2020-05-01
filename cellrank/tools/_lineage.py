@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 from cellrank.tools._utils import (
-    _create_categorical_colors,
     unique_order_preserving,
+    _create_categorical_colors,
     _compute_mean_color,
+    _normalize,
 )
+from cellrank.tools._constants import Lin
 
 from typing import Optional, Iterable, Callable, TypeVar, List, Union
 from itertools import combinations
+from scanpy import logging as logg
 
 import matplotlib.colors as c
 import numpy as np
@@ -86,8 +89,8 @@ class Lineage(np.ndarray):
                 names.append(" or ".join(self.names[key]))
                 colors.append(_compute_mean_color(self.colors[key]))
 
-        n_ellipses_or_none = len([_ for _ in mixtures if _ is Ellipsis or _ is None])
-        if n_ellipses_or_none > 1:
+        lin_kind = [_ for _ in mixtures if isinstance(_, Lin)]
+        if len(lin_kind) > 1:
             raise ValueError(f"`None` or `...` is allowed only once in the expression.")
 
         keys = [
@@ -99,7 +102,7 @@ class Lineage(np.ndarray):
             if isinstance(mixture, str)
             else (mixture,)
             for mixture in mixtures
-            if mixture is not Ellipsis and mixture is not None
+            if not (isinstance(mixture, Lin))
         ]
         keys = unique_order_preserving(keys)
 
@@ -118,12 +121,34 @@ class Lineage(np.ndarray):
             seen.update(self.names[key])
             update_entries(key)
 
-        if n_ellipses_or_none == 1:
-            update_entries([i for i, n in enumerate(self.names) if n not in seen])
-            if None in mixtures:
-                names[-1] = "rest"
+        if len(lin_kind) == 1:
+            lin_kind = lin_kind[0]
+            if lin_kind == Lin.NORM:
+                if res:  # only 1 lineage
+                    res = np.stack(res, axis=-1)
+                else:
+                    res, names, colors = self.X, self.names, self.colors
 
-        res = np.stack(res, axis=-1)
+                res = _normalize(res)
+                nan_mask = np.isnan(res).all(
+                    axis=1
+                )  # some entries can be NaN, use uniform
+
+                if nan_mask.any():
+                    logg.warning(
+                        f"Unable to row-normalize `{np.sum(nan_mask)}` row(s), setting the probabilities to uniform"
+                    )
+                    res[nan_mask] = 1.0 / res.shape[1]
+                if np.isnan(res).any():  # maybe there are still some values left
+                    raise RuntimeError(
+                        "Unable to normalize, some values still remain NaN."
+                    )
+            else:
+                keys = [i for i, n in enumerate(self.names) if n not in seen]
+                update_entries(keys)
+                if keys and lin_kind == Lin.REST:
+                    names[-1] = str(lin_kind)
+                res = np.stack(res, axis=-1)
 
         return Lineage(res, names=names, colors=colors)
 
@@ -142,8 +167,7 @@ class Lineage(np.ndarray):
             if isinstance(col, (list, tuple)):
                 if any(
                     map(
-                        lambda i: i is Ellipsis
-                        or i is None
+                        lambda i: isinstance(i, Lin)
                         or (isinstance(i, str) and "," in i),
                         col,
                     )
@@ -159,8 +183,7 @@ class Lineage(np.ndarray):
             if isinstance(item, (tuple, list)):
                 if any(
                     map(
-                        lambda i: i is Ellipsis
-                        or i is None
+                        lambda i: isinstance(i, Lin)
                         or (isinstance(i, str) and "," in i),
                         item,
                     )
