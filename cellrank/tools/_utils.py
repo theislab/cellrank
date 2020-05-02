@@ -1199,3 +1199,22 @@ def _merge_categorical_series(
 def unique_order_preserving(iterable: Iterable[Hashable]):
     seen = set()
     return [i for i in iterable if i not in seen and not seen.add(i)]
+
+
+def generate_random_keys(adata: AnnData, where: str, n: Optional[int] = None):
+    def generator():
+        return f"CELLRANK_RANDOM_COL_{np.random.randint(2**16)}"
+
+    if n is None:
+        n = 1
+
+    where = getattr(adata, where)
+    names, seen = [], set(where.keys())
+
+    while len(names) != n:
+        name = generator()
+        if name not in seen:
+            seen.add(name)
+            names.append(name)
+
+    return names[0] if n == 1 else names

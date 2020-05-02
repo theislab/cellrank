@@ -8,8 +8,8 @@ from scipy.stats import entropy
 
 from cellrank.tools._lineage import Lineage
 from cellrank.tools._constants import Lin, RcKey, _colors, _lin_names
-from cellrank.tools._estimators._base_estimator import BaseEstimator
-from cellrank.tools._utils import save_fig, _eigengap
+from cellrank.tools.estimators._base_estimator import BaseEstimator
+from cellrank.tools._utils import save_fig, _eigengap, generate_random_keys
 from cellrank.tools.kernels._kernel import KernelExpression
 
 import os
@@ -383,6 +383,17 @@ class GPCCA(BaseEstimator):
         )
 
     def plot_main_states(self, n_cells: int, same_plot: bool = True, **kwargs):
+        def cleanup():
+            for key in to_clean:
+                try:
+                    del self.adata.obs[key]
+                except KeyError:
+                    pass
+                try:
+                    del self.adata.uns[f"{key}_colors"]
+                except KeyError:
+                    pass
+
         if self._lin_probs is None:
             raise RuntimeError(
                 "Compute main states as `.compute_main_states()` or set them manually."
@@ -402,29 +413,39 @@ class GPCCA(BaseEstimator):
                 f"exceeds the total number of cells ({self.adata.n_obs})."
             )
 
-        adata_tmp = self.adata.copy()
+        to_clean = []
+        try:
+            if same_plot:
+                key = generate_random_keys(self.adata, "obs")
+                self.adata.obs[key] = self._main_states
+                self.adata.uns[f"{key}_colors"] = self._lin_probs.colors
+                to_clean = [key]
 
-        if same_plot:
-            adata_tmp.obs["main_states"] = self._main_states
-            adata_tmp.uns["main_states_colors"] = self._lin_probs.colors
-            title = "from root cells" if self.kernel.backward else "to final cells"
-            scv.pl.scatter(adata_tmp, title=title, color="main_states", **kwargs)
-        else:
-            prefix = "from" if self.kernel.backward else "to"
-            keys = []
+                title = "from root cells" if self.kernel.backward else "to final cells"
+                scv.pl.scatter(self.adata, title=title, color=key, **kwargs)
+            else:
+                prefix = "from" if self.kernel.backward else "to"
+                titles = []
+                keys = generate_random_keys(
+                    self.adata, "obs", len(self._main_states.cat.categories)
+                )
+                to_clean = keys
 
-            for cat in self._main_states.cat.categories:
-                d = self._main_states.copy()
-                d[self._main_states != cat] = None
-                d.cat.set_categories([cat], inplace=True)
+                for key, cat in zip(keys, self._main_states.cat.categories):
+                    d = self._main_states.copy()
+                    d[self._main_states != cat] = None
+                    d.cat.set_categories([cat], inplace=True)
 
-                key = f"{prefix} {cat}"
-                keys.append(key)
+                    titles.append(f"{prefix} {cat}")
 
-                adata_tmp.obs[key] = d
-                adata_tmp.uns[f"{key}_colors"] = self._lin_probs[cat].colors
+                    self.adata.obs[key] = d
+                    self.adata.uns[f"{key}_colors"] = self._lin_probs[cat].colors
 
-            scv.pl.scatter(adata_tmp, color=keys, **kwargs)
+                scv.pl.scatter(self.adata, color=keys, title=titles, **kwargs)
+        except Exception as e:
+            raise e
+        finally:
+            cleanup()
 
     def plot_coarse_T(
         self,
