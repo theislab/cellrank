@@ -52,6 +52,7 @@ class GPCCA(BaseEstimator):
         self._coarse_T = None
         self._coarse_init_dist = None
         self._coarse_stat_dist = None
+        self._gppca_overlap = None
 
         self._meta_states = None
         self._meta_states_colors = None
@@ -327,8 +328,7 @@ class GPCCA(BaseEstimator):
                     )
                     continue
 
-            # TODO: what if ED is not calculated?
-            # self.eigendecomposition["gpcca_overlap"] = overlaps
+            self._gppca_overlap = overlaps
 
             metastable_states.cat.add_categories(name, inplace=True)
             metastable_states.iloc[p] = name
@@ -402,11 +402,14 @@ class GPCCA(BaseEstimator):
                 f"exceeds the total number of cells ({self.adata.n_obs})."
             )
 
+        adata_tmp = self.adata.copy()
+
         if same_plot:
+            adata_tmp.obs["main_states"] = self._main_states
+            adata_tmp.uns["main_states_colors"] = self._lin_probs.colors
             title = "from root cells" if self.kernel.backward else "to final cells"
-            scv.pl.scatter(self.adata, title=title, color=self._main_states, **kwargs)
+            scv.pl.scatter(adata_tmp, title=title, color="main_states", **kwargs)
         else:
-            adata_tmp = self.adata.copy()
             prefix = "from" if self.kernel.backward else "to"
             keys = []
 
