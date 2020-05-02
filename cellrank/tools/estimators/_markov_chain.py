@@ -19,7 +19,7 @@ from scipy.linalg import solve
 from scipy.stats import zscore, entropy
 
 
-from cellrank.tools._estimators._base_estimator import BaseEstimator
+from cellrank.tools.estimators._base_estimator import BaseEstimator
 from cellrank.tools._lineage import Lineage
 from cellrank.tools._constants import _probs, _colors, _lin_names
 from cellrank.tools._utils import (
