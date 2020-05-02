@@ -15,6 +15,7 @@ from cellrank.tools.kernels._kernel import KernelExpression
 import os
 import numpy as np
 import pandas as pd
+import scvelo as scv
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
@@ -280,7 +281,7 @@ class GPCCA(BaseEstimator):
                 np.diag(self._coarse_T), index=self._coarse_T.columns
             )
             names = self_probs[self_probs.values >= min_self_prob].index
-            self._create_lin_probs(names)
+            self._create_lin_probs(names, mode)
             return
         else:
             raise ValueError(
@@ -292,6 +293,49 @@ class GPCCA(BaseEstimator):
         ]
         self._create_lin_probs(names, mode)
 
+    def _select_cells(
+        self, n_cells: int, memberships: Union[np.ndarray, Lineage]
+    ) -> Tuple[pd.Series, Union[np.ndarray, Lineage]]:
+        # in this case, we need to be a bit careful because fuzzy clusters can largely overlap
+        metastable_states = pd.Series(index=self.adata.obs_names, dtype="category")
+        overlaps, cols = {}, []
+        if isinstance(memberships, Lineage):
+            names = memberships.names
+            memberships = memberships.X  # we always retain the same, causes probles
+        else:
+            names = map(str, range(memberships.shape[1]))
+
+        for name, col in zip(names, memberships.T):
+            # TODO: handle "or"
+            p = np.argsort(col)[-n_cells:]
+
+            # handle the case of overlapping cells (fuzzy clustering)
+            if len(metastable_states.cat.categories) > 0:
+                current_labels = metastable_states.iloc[p]
+                overlap = {
+                    cl: np.sum(current_labels == cl)
+                    for cl in current_labels.cat.categories
+                    if np.sum(current_labels == cl) > 0
+                }
+                overlaps[name] = overlap
+                if any(np.fromiter(overlap.values(), dtype=float) / n_cells > 0.8):
+                    logg.warning(
+                        "Found overlapping clusters with overlap > 80%. Skipping"
+                    )
+                    continue
+
+            # TODO: what if ED is not calculated?
+            # self.eigendecomposition["gpcca_overlap"] = overlaps
+
+            metastable_states.cat.add_categories(name, inplace=True)
+            metastable_states.iloc[p] = name
+            cols.append(col[:, None])
+
+        # aggregate the non-overlapping columns together
+        _memberships = np.concatenate(cols, axis=1)
+
+        return metastable_states, _memberships
+
     def _assign_metastable_states(
         self, memberships, n_cells: Optional[int], cluster_key: str, p_thresh, en_cutoff
     ):
@@ -299,6 +343,9 @@ class GPCCA(BaseEstimator):
             logg.debug(
                 "DEBUG: Setting the metastable states using metastable assignment"
             )
+            # TODO: @Marius
+            # sometimes, this assignment has the following categories: Index(['0', '1', '2', '4', '5'], dtype='object')
+            # the 3 is missing - what do to next?
             metastable_states = pd.Series(
                 index=self._adata.obs_names,
                 data=map(str, self._gpcca.metastable_assignment),
@@ -309,38 +356,7 @@ class GPCCA(BaseEstimator):
             logg.debug(
                 "DEBUG: Setting the metastable states using metastable memberships"
             )
-            # in this case, we need to be a bit careful because fuzzy clusters can largely overlap
-            metastable_states = pd.Series(index=self.adata.obs_names, dtype="category")
-            overlaps, cols = {}, []
-
-            for i, col in enumerate(memberships.T):
-                p = np.flip(np.argsort(col))[:n_cells]
-
-                # handle the case of overlapping cells (fuzzy clustering)
-                i = str(i)
-                if len(metastable_states.cat.categories) > 0:
-                    current_labels = metastable_states.iloc[p]
-                    overlap = {
-                        cl: np.sum(current_labels == cl)
-                        for cl in current_labels.cat.categories
-                        if np.sum(current_labels == cl) > 0
-                    }
-                    overlaps[i] = overlap
-                    if any(np.fromiter(overlap.values(), dtype=float) / n_cells > 0.8):
-                        logg.warning(
-                            "Found overlapping clusters with overlap > 80%. Skipping"
-                        )
-                        continue
-
-                # TODO: what if ED is not calculated?
-                # self.eigendecomposition["gpcca_overlap"] = overlaps
-
-                metastable_states.cat.add_categories(i, inplace=True)
-                metastable_states.iloc[p] = i
-                cols.append(col[:, None])
-
-            # aggregate the non-overlapping columns together
-            _memberships = np.concatenate(cols, axis=1)
+            metastable_states, _memberships = self._select_cells(n_cells, memberships)
 
         self._set_categorical_labels(
             attr_key="_meta_states",
@@ -363,10 +379,35 @@ class GPCCA(BaseEstimator):
             colors=self._meta_states_colors,
         )
 
-    def plot_main_states(
-        self, n_cells: Optional[int] = None, same_plot: bool = True, **kwargs
-    ):
-        raise NotImplementedError()
+    def plot_main_states(self, n_cells: int, same_plot: bool = True, **kwargs):
+        if self._lin_probs is None:
+            raise RuntimeError(
+                "Compute main states as `.compute_main_states()` or set them manually."
+            )
+
+        # TODO: cache or not to cache? that is the question
+        self._main_states, _ = self._select_cells(n_cells, self._lin_probs)
+
+        if same_plot:
+            title = "from root cells" if self.kernel.backward else "to final cells"
+            scv.pl.scatter(self.adata, title=title, color=self._main_states, **kwargs)
+        else:
+            adata_tmp = self.adata.copy()
+            prefix = "from" if self.kernel.backward else "to"
+            keys = []
+
+            for cat in self._main_states.cat.categories:
+                d = self._main_states.copy()
+                d[self._main_states != cat] = None
+                d.cat.set_categories([cat], inplace=True)
+
+                key = f"{prefix} {cat}"
+                keys.append(key)
+
+                adata_tmp.obs[key] = d
+                adata_tmp.uns[f"{key}_colors"] = self._lin_probs[cat].colors
+
+            scv.pl.scatter(adata_tmp, color=keys, **kwargs)
 
     def plot_coarse_T(
         self,
