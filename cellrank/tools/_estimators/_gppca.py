@@ -307,7 +307,11 @@ class GPCCA(BaseEstimator):
 
         for name, col in zip(names, memberships.T):
             # TODO: handle "or"
-            p = np.argsort(col)[-n_cells:]
+            if " or " in name:
+                raise NotImplementedError()
+            else:
+                # TODO: argpartition is O(n) vs O(n log n)
+                p = np.argsort(col)[-n_cells:]
 
             # handle the case of overlapping cells (fuzzy clustering)
             if len(metastable_states.cat.categories) > 0:
