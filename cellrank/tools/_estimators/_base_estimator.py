@@ -578,9 +578,9 @@ class BaseEstimator(ABC):
             if same_plot:
                 scv.pl.scatter(
                     self.adata,
-                    title="From Root Cells"
+                    title="from root cells"
                     if self.kernel.backward
-                    else "To Final Cells",
+                    else "to final cells",
                     color_gradients=A,
                     color_map=color_map,
                     **kwargs,
