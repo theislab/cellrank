@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from typing import Optional, List, Tuple, Dict, Union, Mapping, Any
+from typing import Optional, List, Tuple, Dict, Union, Mapping, Any, Iterable
 from types import MappingProxyType
 from anndata import AnnData
 from msmtools.analysis.dense.gpcca import GPCCA as _GPPCA
@@ -58,6 +58,7 @@ class GPCCA(BaseEstimator):
         self._meta_lin_probs = None
 
         self._main_states = None
+        self._n_cells = None  # serves as a cache for plotting
 
     def compute_eig(self, k: int = 20, which: str = "LR", alpha: float = 1) -> None:
         """
@@ -197,6 +198,7 @@ class GPCCA(BaseEstimator):
             p_thresh=p_thresh,
             en_cutoff=en_cutoff,
         )
+        self._lin_probs = None
 
         self._schur_vectors = self._gpcca.schur_vectors
         self._coarse_T = pd.DataFrame(
@@ -220,7 +222,7 @@ class GPCCA(BaseEstimator):
             time=start,
         )
 
-    def _create_lin_probs(self, names: np.ndarray, mode: str):
+    def set_main_states(self, names: Iterable[str], mode: str = "normalize"):
         names = list(names)
         if mode == "normalize":
             names += [Lin.NORM]
@@ -230,15 +232,15 @@ class GPCCA(BaseEstimator):
             raise ValueError(
                 f"Invalid mode `{mode!r}`. Valid options are `'normalize', 'rest'`."
             )
+
+        self._n_cells = None  # invalidate cache
         self._lin_probs = self._meta_lin_probs[names]
         self._dp = entropy(self._lin_probs.X.T)
-        # self.adata.uns[_colors(self.rc)]
-        # TODO: write to adata
 
-    def set_main_states(
-        self, states: Union[List[str], np.ndarray], mode: str = "normalize"
-    ):
-        self._create_lin_probs(states, mode)
+        # write to adata
+        self.adata.obs[f"{self._lin_key}_dp"] = self._dp
+        self.adata.uns[_lin_names(self._lin_key)] = self._lin_probs.names
+        self.adata.uns[_colors(self._lin_key)] = self._lin_probs.colors
 
     def compute_main_states(
         self,
@@ -281,7 +283,7 @@ class GPCCA(BaseEstimator):
                 np.diag(self._coarse_T), index=self._coarse_T.columns
             )
             names = self_probs[self_probs.values >= min_self_prob].index
-            self._create_lin_probs(names, mode)
+            self.set_main_states(names, mode)
             return
         else:
             raise ValueError(
@@ -291,7 +293,7 @@ class GPCCA(BaseEstimator):
         names = self._coarse_T.columns[np.argsort(np.diag(self._coarse_T))][
             -n_main_states:
         ]
-        self._create_lin_probs(names, mode)
+        self.set_main_states(names, mode)
 
     def _select_cells(
         self, n_cells: int, memberships: Union[np.ndarray, Lineage]
@@ -301,17 +303,14 @@ class GPCCA(BaseEstimator):
         overlaps, cols = {}, []
         if isinstance(memberships, Lineage):
             names = memberships.names
-            memberships = memberships.X  # we always retain the same, causes probles
+            memberships = (
+                memberships.X
+            )  # we always retain the same shape, causes problems
         else:
             names = map(str, range(memberships.shape[1]))
 
         for name, col in zip(names, memberships.T):
-            # TODO: handle "or"
-            if " or " in name:
-                raise NotImplementedError()
-            else:
-                # TODO: argpartition is O(n) vs O(n log n)
-                p = np.argsort(col)[-n_cells:]
+            p = np.argpartition(col, -n_cells)[-n_cells:]
 
             # handle the case of overlapping cells (fuzzy clustering)
             if len(metastable_states.cat.categories) > 0:
@@ -348,7 +347,7 @@ class GPCCA(BaseEstimator):
                 "DEBUG: Setting the metastable states using metastable assignment"
             )
             # TODO: @Marius
-            # sometimes, this assignment has the following categories: Index(['0', '1', '2', '4', '5'], dtype='object')
+            # sometimes, the assignment has the following categories: Index(['0', '1', '2', '4', '5'], dtype='object')
             # the 3 is missing - what do to next?
             metastable_states = pd.Series(
                 index=self._adata.obs_names,
@@ -388,9 +387,20 @@ class GPCCA(BaseEstimator):
             raise RuntimeError(
                 "Compute main states as `.compute_main_states()` or set them manually."
             )
+        if n_cells <= 0:
+            raise ValueError(f"Expected `n_cells` to be positive, found `{n_cells}`.")
 
-        # TODO: cache or not to cache? that is the question
-        self._main_states, _ = self._select_cells(n_cells, self._lin_probs)
+        if n_cells != self._n_cells:
+            self._main_states, _ = self._select_cells(n_cells, self._lin_probs)
+            self._n_cells = n_cells
+        else:
+            logg.debug("DEBUG: Using cached main states")
+
+        if n_cells * len(self._main_states.cat.categories) > self.adata.n_obs:
+            raise ValueError(
+                f"Total number of requested cells ({n_cells * len(self._main_states.cat.categories)}) "
+                f"exceeds the total number of cells ({self.adata.n_obs})."
+            )
 
         if same_plot:
             title = "from root cells" if self.kernel.backward else "to final cells"
