@@ -418,13 +418,14 @@ class GPCCA(BaseEstimator):
             logg.debug(
                 "DEBUG: Setting the metastable states using metastable assignment"
             )
-            # TODO: @Marius
-            # sometimes, the assignment has the following categories: Index(['0', '1', '2', '4', '5'], dtype='object')
-            # the 3 is missing - what do to next?
             metastable_states = pd.Series(
                 index=self._adata.obs_names,
                 data=map(str, metastable_assignment),
                 dtype="category",
+            )
+            # sometimes, the assignment can have a missing category and the Lineage creation therefore fails
+            metastable_states.cat.set_categories(
+                map(str, range(memberships.shape[1])), inplace=True
             )
             _memberships = memberships
         else:
