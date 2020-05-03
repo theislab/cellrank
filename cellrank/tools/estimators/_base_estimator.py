@@ -769,7 +769,7 @@ class BaseEstimator(ABC):
         """
         return self._kernel
 
-    def __copy__(self) -> "MarkovChain":
+    def __copy__(self) -> "BaseEstimator":
         return self.copy()
 
     def __len__(self) -> int:

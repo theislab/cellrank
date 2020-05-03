@@ -5,6 +5,7 @@ from anndata import AnnData
 from msmtools.analysis.dense.gpcca import GPCCA as _GPPCA
 from scanpy import logging as logg
 from scipy.stats import entropy
+from copy import copy, deepcopy
 
 from cellrank.tools._lineage import Lineage
 from cellrank.tools._constants import Lin, RcKey, _colors, _lin_names
@@ -47,7 +48,6 @@ class GPCCA(BaseEstimator):
         else:
             self._ms_key = str(RcKey.FORWARD)
 
-        self._gpcca = None
         self._schur_vectors = None
         self._coarse_T = None
         self._coarse_init_dist = None
@@ -159,6 +159,8 @@ class GPCCA(BaseEstimator):
             Nothings, but updates the following fields:
         """
 
+        gppca = _GPPCA(self._T, eta=initial_distribution, z=which, method=method)
+
         if use_min_chi:
             if not isinstance(n_states, (dict, tuple, list)):
                 raise TypeError(
@@ -184,16 +186,17 @@ class GPCCA(BaseEstimator):
                 minn = 3
 
             logg.debug(f"DEBUG: Calculating minChi within interval [{minn}, {maxx}]")
-            n_states = np.arange(minn, maxx)[np.argmax(self._gpcca.minChi(minn, maxx))]
+            n_states = np.arange(minn, maxx)[np.argmax(gpcca.minChi(minn, maxx))]
 
         start = logg.info("Computing metastable states")
 
-        self._gpcca: _GPPCA = _GPPCA(
+        gpcca: _GPPCA = _GPPCA(
             self._T, eta=initial_distribution, z=which, method=method
         ).optimize(m=n_states)
 
         self._assign_metastable_states(
-            self._gpcca.memberships,
+            gpcca.memberships,
+            gpcca.metastable_assignment,
             n_cells,
             cluster_key=cluster_key,
             p_thresh=p_thresh,
@@ -201,29 +204,37 @@ class GPCCA(BaseEstimator):
         )
         self._lin_probs = None
 
-        self._schur_vectors = self._gpcca.schur_vectors
+        self._schur_vectors = gpcca.schur_vectors
         self._coarse_T = pd.DataFrame(
-            self._gpcca.coarse_grained_transition_matrix,
+            gpcca.coarse_grained_transition_matrix,
             index=self._meta_lin_probs.names,
             columns=self._meta_lin_probs.names,
         )
         self._coarse_init_dist = pd.Series(
-            self._gpcca.coarse_grained_input_distribution,
-            index=self._meta_lin_probs.names,
+            gpcca.coarse_grained_input_distribution, index=self._meta_lin_probs.names
         )
         self._coarse_stat_dist = pd.Series(
-            self._gpcca.coarse_grained_stationary_probability,
+            gpcca.coarse_grained_stationary_probability,
             index=self._meta_lin_probs.names,
         )
 
         logg.info(
-            f"Adding `.metastable_states`\n"
-            f"       `.coarse_transition_matrix`\n"
-            f"    Finish",
+            "Adding `.schur_vectors`\n"
+            "       `.metastable_states`\n"
+            "       `.coarse_transition_matrix`\n"
+            "       `.coarse_stationary_distribution`\n"
+            "    Finish",
             time=start,
         )
 
     def set_main_states(self, names: Iterable[str], mode: str = "normalize"):
+        """
+        Params
+        ------
+        Returns
+        -------
+        Nothing, but updates the following fields:
+        """
         names = list(names)
         if mode == "normalize":
             names += [Lin.NORM]
@@ -243,6 +254,10 @@ class GPCCA(BaseEstimator):
         self.adata.uns[_lin_names(self._lin_key)] = self._lin_probs.names
         self.adata.uns[_colors(self._lin_key)] = self._lin_probs.colors
 
+        logg.info(
+            "Adding `.lineage_probabilities" "       `.diff_potential``" "    Finish"
+        )
+
     def compute_main_states(
         self,
         method: str = "eigengap",
@@ -251,6 +266,8 @@ class GPCCA(BaseEstimator):
         min_self_prob: Optional[float] = None,
         n_main_states: Optional[int] = None,
     ):
+        """
+        """
 
         if method == "eigengap":
             if self.eigendecomposition is None:
@@ -340,7 +357,13 @@ class GPCCA(BaseEstimator):
         return metastable_states, _memberships
 
     def _assign_metastable_states(
-        self, memberships, n_cells: Optional[int], cluster_key: str, p_thresh, en_cutoff
+        self,
+        memberships: np.ndarray,
+        metastable_assignment: np.ndarray,
+        n_cells: Optional[int],
+        cluster_key: str,
+        p_thresh,
+        en_cutoff,
     ):
         if n_cells is None:
             logg.debug(
@@ -351,7 +374,7 @@ class GPCCA(BaseEstimator):
             # the 3 is missing - what do to next?
             metastable_states = pd.Series(
                 index=self._adata.obs_names,
-                data=map(str, self._gpcca.metastable_assignment),
+                data=map(str, metastable_assignment),
                 dtype="category",
             )
             _memberships = memberships
@@ -651,7 +674,42 @@ class GPCCA(BaseEstimator):
         fig.show()
 
     def copy(self) -> "GPCCA":
-        raise NotImplementedError()
+        """
+        Return a copy of itself.
+        """
+
+        kernel = copy(self.kernel)  # doesn't copy the adata object
+        g = GPCCA(kernel, self.adata.copy(), inplace=False, read_from_adata=False)
+
+        g._eig = deepcopy(self.eigendecomposition)
+
+        g._lin_probs = copy(self.lineage_probabilities)
+        g._dp = copy(self.diff_potential)
+
+        g._schur_vectors = copy(self.schur_vectors)
+        g._coarse_T = copy(self.coarse_T)
+
+        self._gppca_overlap = deepcopy(self._gppca_overlap)
+
+        g._meta_states = copy(self._meta_states)
+        g._meta_states_colors = copy(self._meta_states_colors)
+        g._meta_lin_probs = copy(self._meta_lin_probs)
+
+        g._main_states = copy(self.main_states)
+
+        g._n_cells = self._n_cells
+
+        g._coarse_stat_dist = copy(self.coarse_stationary_distribution)
+        g._coarse_init_dist = copy(self._coarse_init_dist)
+
+        g._G2M_score = copy(self._G2M_score)
+        g._S_score = copy(self._S_score)
+
+        g._g2m_key = self._g2m_key
+        g._s_key = self._s_key
+        g._key_added = self._key_added
+
+        return g
 
     @property
     def schur_vectors(self) -> np.ndarray:

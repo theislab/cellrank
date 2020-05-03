@@ -1,15 +1,12 @@
 # -*- coding: utf-8 -*-
 from pathlib import Path
 
-import matplotlib
-
 from cellrank.tools.kernels._kernel import KernelExpression
-from typing import Optional, Tuple, Sequence, List, Any, Union, Dict, Iterable
+from typing import Optional, Tuple, Sequence, List, Any, Union, Dict
 
 import numpy as np
 import scvelo as scv
 import matplotlib.pyplot as plt
-import matplotlib.cm as cm
 
 from anndata import AnnData
 from copy import copy, deepcopy
@@ -921,14 +918,21 @@ class MarkovChain(BaseEstimator):
         mc._is_irreducible = self.irreducible
         mc._rec_classes = copy(self._rec_classes)
         mc._trans_classes = copy(self._trans_classes)
+
         mc._eig = deepcopy(self.eigendecomposition)
         mc._lin_probs = copy(self.lineage_probabilities)
         mc._dp = copy(self.diff_potential)
+
         mc._approx_rcs = copy(self.approx_recurrent_classes)
         mc._approx_rcs_probs = copy(self.approx_recurrent_classes_probabilities)
         mc._approx_rcs_colors = copy(self._approx_rcs_colors)
+
         mc._G2M_score = copy(self._G2M_score)
         mc._S_score = copy(self._S_score)
+
+        mc._g2m_key = self._g2m_key
+        mc._s_key = self._s_key
+        mc._key_added = self._key_added
 
         return mc
 
