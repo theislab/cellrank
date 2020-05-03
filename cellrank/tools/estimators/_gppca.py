@@ -135,8 +135,8 @@ class GPCCA(BaseEstimator):
         use_min_chi: bool = False,
         method: str = "krylov",
         which: str = "LM",
-        n_cells: Optional[int] = None,
-        cluster_key: str = "louvain",
+        n_cells: Optional[int] = 30,
+        cluster_key: str = None,
         en_cutoff: Optional[float] = 0.7,
         p_thresh: float = 1e-15,
     ):
