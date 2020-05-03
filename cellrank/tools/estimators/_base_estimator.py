@@ -2,6 +2,9 @@
 from scipy.sparse.linalg import eigs
 
 from pathlib import Path
+
+from scipy.stats import ranksums
+
 from cellrank.tools._utils import (
     _eigengap,
     _map_names_and_colors,
@@ -492,8 +495,10 @@ class BaseEstimator(ABC):
             if flag:
                 logg.warning(f"Group `{group}` appears to be cell-cycle driven")
 
-    def plot_lin_probs(
+    def _plot_probabilities(
         self,
+        attr: str,
+        error_msg: str,
         lineages: Optional[Union[str, Iterable[str]]] = None,
         cluster_key: Optional[str] = None,
         mode: str = "embedding",
@@ -502,53 +507,24 @@ class BaseEstimator(ABC):
         color_map: Union[str, matplotlib.colors.ListedColormap] = cm.viridis,
         **kwargs,
     ) -> None:
-        """
-        Plots the absorption probabilities in the given embedding.
+        probs: Optional[Lineage] = getattr(self, attr)
 
-        Params
-        ------
-        lineages
-            Only show these lineages. If `None`, plot all lineages.
-        cluster_key
-            Key from :paramref`adata: `.obs` for plotting cluster labels.
-        mode
-            Can be either `'embedding'` or `'time'`.
-
-            - If `'embedding'`, plot the embedding while coloring in the absorption probabilities.
-            - If `'time'`, plos the pseudotime on x-axis and the absorption probabilities on y-axis.
-        time_key
-            Key from `adata.obs` to use as a pseudotime ordering of the cells.
-        same_plot
-            Whether to plot the lineages on the same plot using color gradients when :paramref:`mode='embedding'`.
-        color_map
-            Colormap to use.
-        kwargs
-            Keyword arguments for :func:`scvelo.pl.scatter`.
-
-        Returns
-        -------
-        None
-            Nothing, just plots the absorption probabilities.
-        """
-
-        if self._lin_probs is None:
-            raise RuntimeError(
-                "Compute lineage probabilities first as `.compute_lin_probs()`."
-            )
+        if probs is None:
+            raise RuntimeError(error_msg)
         if isinstance(lineages, str):
             lineages = [lineages]
 
         # retrieve the lineage data
         if lineages is None:
-            lineages = self._lin_probs.names
-            A = self._lin_probs
+            lineages = lineages.names
+            A = probs
         else:
             for lineage in lineages:
-                if lineage not in self._lin_probs.names:
+                if lineage not in probs.names:
                     raise ValueError(
-                        f"Invalid lineage name `{lineages!r}`. Valid options are `{list(self._lin_probs.names)}`."
+                        f"Invalid lineage name `{lineages!r}`. Valid options are `{list(probs.names)}`."
                     )
-            A = self._lin_probs[lineages]
+            A = probs[lineages]
 
         # change the maximum value - the 1 is artificial and obscures the color scaling
         for col in A.T:
@@ -609,6 +585,57 @@ class BaseEstimator(ABC):
             raise ValueError(
                 f"Invalid mode `{mode!r}`. Valid options are: `'embedding', 'time'`."
             )
+
+    def plot_lin_probs(
+        self,
+        lineages: Optional[Union[str, Iterable[str]]] = None,
+        cluster_key: Optional[str] = None,
+        mode: str = "embedding",
+        time_key: str = "latent_time",
+        same_plot: bool = False,
+        color_map: Union[str, matplotlib.colors.ListedColormap] = cm.viridis,
+        **kwargs,
+    ) -> None:
+        """
+        Plots the absorption probabilities in the given embedding.
+
+        Params
+        ------
+        lineages
+            Only show these lineages. If `None`, plot all lineages.
+        cluster_key
+            Key from :paramref`adata: `.obs` for plotting cluster labels.
+        mode
+            Can be either `'embedding'` or `'time'`.
+
+            - If `'embedding'`, plot the embedding while coloring in the absorption probabilities.
+            - If `'time'`, plos the pseudotime on x-axis and the absorption probabilities on y-axis.
+        time_key
+            Key from `adata.obs` to use as a pseudotime ordering of the cells.
+        same_plot
+            Whether to plot the lineages on the same plot using color gradients when :paramref:`mode='embedding'`.
+        color_map
+            Colormap to use.
+        kwargs
+            Keyword arguments for :func:`scvelo.pl.scatter`.
+
+        Returns
+        -------
+        None
+            Nothing, just plots the absorption probabilities.
+        """
+
+        self._plot_probabilities(
+            attr="_lin_probs",
+            error_msg="Compute lineage probabilities first as `.compute_lin_probs()`.",
+            lineages=lineages,
+            cluster_key=cluster_key,
+            mode=mode,
+            time_key=time_key,
+            same_plot=same_plot,
+            color_map=color_map,
+            **kwargs,
+        )
 
     def compute_lineage_drivers(
         self,
