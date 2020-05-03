@@ -774,3 +774,9 @@ class BaseEstimator(ABC):
 
     def __len__(self) -> int:
         return self._n_states
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}[n={len(self)}, kernel={repr(self._kernel)}]"
+
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__}[n={len(self)}, kernel={str(self._kernel)}]"
