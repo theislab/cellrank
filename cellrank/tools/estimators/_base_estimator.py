@@ -1,10 +1,4 @@
 # -*- coding: utf-8 -*-
-from scipy.sparse.linalg import eigs
-
-from pathlib import Path
-
-from scipy.stats import ranksums
-
 from cellrank.tools._utils import (
     _eigengap,
     _map_names_and_colors,
@@ -22,7 +16,7 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 import pandas as pd
-import matplotlib
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import scvelo as scv
@@ -32,6 +26,9 @@ from scanpy import logging as logg
 from scipy.sparse import issparse
 from pandas import Series
 from pandas.api.types import is_categorical_dtype, infer_dtype
+from scipy.sparse.linalg import eigs
+from scipy.stats import ranksums
+from pathlib import Path
 
 from cellrank.tools._constants import Direction, RcKey, LinKey, Prefix, _colors
 from cellrank.tools._utils import _complex_warning
@@ -504,7 +501,7 @@ class BaseEstimator(ABC):
         mode: str = "embedding",
         time_key: str = "latent_time",
         same_plot: bool = False,
-        color_map: Union[str, matplotlib.colors.ListedColormap] = cm.viridis,
+        color_map: Union[str, mpl.colors.ListedColormap] = cm.viridis,
         **kwargs,
     ) -> None:
         probs: Optional[Lineage] = getattr(self, attr)
@@ -516,7 +513,7 @@ class BaseEstimator(ABC):
 
         # retrieve the lineage data
         if lineages is None:
-            lineages = lineages.names
+            lineages = probs.names
             A = probs
         else:
             for lineage in lineages:
@@ -544,10 +541,14 @@ class BaseEstimator(ABC):
         ]
 
         if cluster_key is not None:
-            color = [cluster_key] + [a for a in A.T] + [self._dp]
+            color = (
+                [cluster_key]
+                + [a for a in A.T]
+                + ([self._dp] if self._dp is not None else [])
+            )
             titles = [cluster_key] + rc_titles
         else:
-            color = [a for a in A.T] + [self._dp]
+            color = [a for a in A.T] + ([self._dp] if self._dp is not None else [])
             titles = rc_titles
 
         if mode == "embedding":
@@ -593,7 +594,7 @@ class BaseEstimator(ABC):
         mode: str = "embedding",
         time_key: str = "latent_time",
         same_plot: bool = False,
-        color_map: Union[str, matplotlib.colors.ListedColormap] = cm.viridis,
+        color_map: Union[str, mpl.colors.ListedColormap] = cm.viridis,
         **kwargs,
     ) -> None:
         """

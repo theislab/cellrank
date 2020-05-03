@@ -159,7 +159,7 @@ class GPCCA(BaseEstimator):
             Nothings, but updates the following fields:
         """
 
-        gppca = _GPPCA(self._T, eta=initial_distribution, z=which, method=method)
+        gpcca = _GPPCA(self._T, eta=initial_distribution, z=which, method=method)
 
         if use_min_chi:
             if not isinstance(n_states, (dict, tuple, list)):
@@ -190,9 +190,7 @@ class GPCCA(BaseEstimator):
 
         start = logg.info("Computing metastable states")
 
-        gpcca: _GPPCA = _GPPCA(
-            self._T, eta=initial_distribution, z=which, method=method
-        ).optimize(m=n_states)
+        gpcca = gpcca.optimize(m=n_states)
 
         self._assign_metastable_states(
             gpcca.memberships,
@@ -225,6 +223,57 @@ class GPCCA(BaseEstimator):
             "       `.coarse_stationary_distribution`\n"
             "    Finish",
             time=start,
+        )
+
+    def plot_meta_lin_probs(
+        self,
+        lineages: Optional[Union[str, Iterable[str]]] = None,
+        cluster_key: Optional[str] = None,
+        mode: str = "embedding",
+        time_key: str = "latent_time",
+        same_plot: bool = False,
+        color_map: Union[str, mpl.colors.ListedColormap] = cm.viridis,
+        **kwargs,
+    ) -> None:
+        """
+        Plots the absorption probabilities of metastable states in the given embedding.
+
+        Params
+        ------
+        lineages
+            Only show these lineages. If `None`, plot all lineages.
+        cluster_key
+            Key from :paramref`adata: `.obs` for plotting cluster labels.
+        mode
+            Can be either `'embedding'` or `'time'`.
+
+            - If `'embedding'`, plot the embedding while coloring in the absorption probabilities.
+            - If `'time'`, plos the pseudotime on x-axis and the absorption probabilities on y-axis.
+        time_key
+            Key from `adata.obs` to use as a pseudotime ordering of the cells.
+        same_plot
+            Whether to plot the lineages on the same plot using color gradients when :paramref:`mode='embedding'`.
+        color_map
+            Colormap to use.
+        kwargs
+            Keyword arguments for :func:`scvelo.pl.scatter`.
+
+        Returns
+        -------
+        None
+            Nothing, just plots the absorption probabilities.
+        """
+
+        self._plot_probabilities(
+            attr="_meta_lin_probs",
+            error_msg="Compute metastable lineage probabilities first as `.compute_metastable_states()`.",
+            lineages=lineages,
+            cluster_key=cluster_key,
+            mode=mode,
+            time_key=time_key,
+            same_plot=same_plot,
+            color_map=color_map,
+            **kwargs,
         )
 
     def set_main_states(self, names: Iterable[str], mode: str = "normalize"):
