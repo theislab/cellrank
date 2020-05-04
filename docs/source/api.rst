@@ -25,6 +25,7 @@ Tools
     :toctree: api/tl
 
     tl.MarkovChain
+    tl.GPCCA
     tl.partition
     tl.find_root
     tl.find_final

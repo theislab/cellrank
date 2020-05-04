@@ -24,6 +24,28 @@ import matplotlib.colors as mcolors
 
 
 class GPCCA(BaseEstimator):
+    """
+    Generalized Perron Cluster Cluster Analysis.
+
+    Params
+    ------
+    kernel
+        Kernel object that stores a transition matrix.
+    adata : :class:`anndata.AnnData`
+        Optional annotated data object. If given, pre-computed lineages can be read in from this.
+        Otherwise, read the object from the specified :paramref:`kernel`.
+    inplace
+        Whether to modify :paramref:`adata` object inplace or make a copy.
+    read_from_adata
+        Whether to read available attributes in :paramref:`adata`, if present.
+    g2m_key
+        Key from :paramref:`adata` `.obs`. Can be used to detect cell-cycle driven start- or endpoints.
+    s_key
+        Key from :paramref:`adata` `.obs`. Can be used to detect cell-cycle driven start- or endpoints.
+    key_added
+        Key in :paramref:`adata` where to store the final transition matrix.
+    """
+
     def __init__(
         self,
         kernel: KernelExpression,
@@ -74,13 +96,13 @@ class GPCCA(BaseEstimator):
         which
             Eigenvalues are in general complex. `'LR'` - largest real part, `'LM'` - largest magnitude.
         alpha
-            Used to compute the `eigengap`. gref:`alpha` is the weight given
+            Used to compute the `eigengap`. paramref:`alpha` is the weight given
             to the deviation of an eigenvalue from one.
 
         Returns
         -------
         None
-            Nothing, but updates the following fields: gref:`eigendecomposition`.
+            Nothing, but updates the following fields: paramref:`eigendecomposition`.
         """
         self._compute_eig(k=k, which=which, alpha=alpha, only_evals=True)
 
@@ -151,11 +173,11 @@ class GPCCA(BaseEstimator):
             Input probability distribution over all cells. If `None`, uniform is chosen.
         use_min_chi
             Whether to use :meth:`msmtools.analysis.dense.gpcca.GPCCA.minChi` to calculate the number of metastable states.
-            If `True`, :paramref:`n_states` corresponds to an interval `[min, max]` where the potentially optimal number
-            of metastable states is searched.
+            If `True`, :paramref:`n_states` corresponds to an interval `[min, max]` inside of which
+            the potentially optimal number of metastable states is searched.
         method
             Method for calculating the Schur vectors. Valid options are: `'krylov'`, `'brandts'` and `'scipy'`.
-            For benefits of each method, see :class:`msmtoos.analysis.dense.gpcca.GPCCA`.
+            For benefits of each method, see :class:`msmtoots.analysis.dense.gpcca.GPCCA`.
         which
             Eigenvalues are in general complex. `'LR'` - largest real part, `'LM'` - largest magnitude.
         cluster_key
@@ -175,7 +197,7 @@ class GPCCA(BaseEstimator):
             Nothings, but updates the following fields:
 
                 - :paramref:`schur_vectors`
-                - :paramref:`coarse_transition_matrix`
+                - :paramref:`coarse_T`
                 - :paramref:`coarse_stationary_distribution`
         """
 
@@ -243,7 +265,7 @@ class GPCCA(BaseEstimator):
         logg.info(
             "Adding `.schur_vectors`\n"
             "       `.metastable_states`\n"
-            "       `.coarse_transition_matrix`\n"
+            "       `.coarse_T`\n"
             "       `.coarse_stationary_distribution`\n"
             "    Finish",
             time=start,
@@ -307,7 +329,7 @@ class GPCCA(BaseEstimator):
         Params
         ------
         names
-            Names of the main states. Multiple states can be combined using `,`, such as `['Alpha, Beta', 'Epsilon']`.
+            Names of the main states. Multiple states can be combined using `','`, such as `['Alpha, Beta', 'Epsilon']`.
         mode
             How to handle the states that have not been selected.
             Valid options are:
@@ -378,16 +400,17 @@ class GPCCA(BaseEstimator):
         alpha
             Used when :paramref:`method` `='eigengap'` or `='eigengap_coarse`.
         min_self_prob
-            Used when :paremref:`method` `='min_self_prob'`.
+            Used when :paramref:`method` `='min_self_prob'`.
         n_main_states
-            Used when :paramref:`method` `='n_main_states'.
+            Used when :paramref:`method` `='n_main_states'`.
 
         Returns
         -------
-        Nothings, just updates the following fields:
+        None
+            Nothings, just updates the following fields:
 
-                - :paramref:`lineage_probabilities`
-                - :paramref:`diff_potential`
+                    - :paramref:`lineage_probabilities`
+                    - :paramref:`diff_potential`
         """
 
         if method == "eigengap":
@@ -815,7 +838,10 @@ class GPCCA(BaseEstimator):
 
     def copy(self) -> "GPCCA":
         """
-        Return a copy of itself.
+        Returns
+        -------
+        :class:`cellrank.tl.GPCCA`
+            A copy of itself.
         """
 
         kernel = copy(self.kernel)  # doesn't copy the adata object
@@ -853,20 +879,40 @@ class GPCCA(BaseEstimator):
 
     @property
     def schur_vectors(self) -> np.ndarray:
+        """Schur vectors."""
         return self._schur_vectors
 
     @property
     def coarse_T(self) -> pd.DataFrame:
+        """
+        Returns
+        -------
+        :class:`pandas.DataFrame`
+            Coarse-grained transition matrix between metastable states.
+        """
         return self._coarse_T
 
     @property
     def metastable_states(self) -> pd.Series:
+        """
+        Returns
+        -------
+        :class:`pandas.Series`
+            Metastable states
+        """
         return self._meta_states
 
     @property
     def coarse_stationary_distribution(self) -> pd.Series:
+        """
+        Returns
+        -------
+        :class:`pandas.Series`
+            Coarse-grained stationary distribution of metastable states
+        """
         return self._coarse_stat_dist
 
     @property
     def main_states(self) -> np.ndarray:
+        """Subset and/or combination of metstable states."""
         return self._main_states
