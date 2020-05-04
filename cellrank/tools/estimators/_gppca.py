@@ -141,22 +141,42 @@ class GPCCA(BaseEstimator):
         p_thresh: float = 1e-15,
     ):
         """
+        Calculate the metastable states.
+
         Params
         ------
-        n_states:
+        n_states
+            Number of metastable states.
         initial_distribution
+            Input probability distribution over all cells. If `None`, uniform is chosen.
         use_min_chi
+            Whether to use :meth:`msmtools.analysis.dense.gpcca.GPCCA.minChi` to calculate the number of metastable states.
+            If `True`, :paramref:`n_states` corresponds to an interval `[min, max]` where the potentially optimal number
+            of metastable states is searched.
         method
+            Method for calculating the Schur vectors. Valid options are: `'krylov'`, `'brandts'` and `'scipy'`.
+            For benefits of each method, see :class:`msmtoos.analysis.dense.gpcca.GPCCA`.
         which
             Eigenvalues are in general complex. `'LR'` - largest real part, `'LM'` - largest magnitude.
         cluster_key
+            If a key to cluster labels is given, `approx_rcs` will ge associated with these for naming and colors.
         en_cutoff
+            If :paramref:`cluster_key` is given, this parameter determines when an approximate recurrent class will
+            be labelled as *'Unknown'*, based on the entropy of the distribution of cells over transcriptomic clusters.
         p_thresh
+            If cell cycle scores were provided, a *Wilcoxon rank-sum test* is conducted to identify cell-cycle driven
+            start- or endpoints.
+            If the test returns a positive statistic and a p-value smaller than :paramref:`p_thresh`,
+            a warning will be issued.
 
         Returns
         -------
         None
             Nothings, but updates the following fields:
+
+                - :paramref:`schur_vectors`
+                - :paramref:`coarse_transition_matrix`
+                - :paramref:`coarse_stationary_distribution`
         """
 
         gpcca = _GPPCA(self._T, eta=initial_distribution, z=which, method=method)
@@ -172,7 +192,7 @@ class GPCCA(BaseEstimator):
                 )
 
             minn, maxx = (
-                (n_states["n_min"], n_states["n_max"])
+                (n_states["min"], n_states["max"])
                 if isinstance(n_states, dict)
                 else n_states
             )
@@ -181,12 +201,16 @@ class GPCCA(BaseEstimator):
             elif minn == 2:
                 logg.warning(
                     "In most cases, 2 clusters will always be optimal. "
-                    "If you really expect 2 clusters, use `n_clusters=2`.\nSetting minimum to 3"
+                    "If you really expect 2 clusters, use `n_states=2`.\nSetting the minimum to 3"
                 )
                 minn = 3
 
             logg.debug(f"DEBUG: Calculating minChi within interval [{minn}, {maxx}]")
             n_states = np.arange(minn, maxx)[np.argmax(gpcca.minChi(minn, maxx))]
+        elif not isinstance(n_states, int):
+            raise ValueError(
+                f"Expected `n_states` to be integer when `use_min_chi=False`, found `{type(n_states).__name__}`."
+            )
 
         start = logg.info("Computing metastable states")
 
@@ -278,12 +302,28 @@ class GPCCA(BaseEstimator):
 
     def set_main_states(self, names: Iterable[str], mode: str = "normalize"):
         """
+        Manually select the main states from the metastable states.
+
         Params
         ------
+        names
+            Names of the main states. Multiple states can be combined using `,`, such as `['Alpha, Beta', 'Epsilon']`.
+        mode
+            How to handle the states that have not been selected.
+            Valid options are:
+
+                - `'normalize'` - renormalize the distribution to again sum to `1`
+                - `'rest'` - merge the unselected states to a new state called `'rest'`
+
         Returns
         -------
-        Nothing, but updates the following fields:
+        None
+            Nothing, but updates the following fields:
+
+                - :paramref:`lineage_probabilities`
+                - :paramref:`diff_potential`
         """
+
         names = list(names)
         if mode == "normalize":
             names += [Lin.NORM]
@@ -304,7 +344,9 @@ class GPCCA(BaseEstimator):
         self.adata.uns[_colors(self._lin_key)] = self._lin_probs.colors
 
         logg.info(
-            "Adding `.lineage_probabilities" "       `.diff_potential``" "    Finish"
+            "Adding `.lineage_probabilities\n"
+            "       ``.diff_potential`\n"
+            "    Finish"
         )
 
     def compute_main_states(
@@ -316,6 +358,36 @@ class GPCCA(BaseEstimator):
         n_main_states: Optional[int] = None,
     ):
         """
+        Automatically select the main states from metastable states.
+
+        Params
+        ------
+        method
+            One of the following:
+
+            - `'eigengap'` - select the number of states based on the eigengap of the transition matrix
+            - `'eigengap_coarse'`- select the number of states based on the eigengap of the diagonal of the coarse-grained transition matrix
+            - `'min_self_prob'`- select states which have the given minimum probability on the diagonal of coarse-grained transition matrix
+            - `'n_main_states'`- select top :paramref:`n_main_states` based on the probability on the diagonal of coarse-grained transition matrix
+        mode
+            How to handle the states that have not been selected.
+            Valid options are:
+
+                - `'normalize'` - renormalize the distribution to again sum to `1`
+                - `'rest'` - merge the unselected states to a new state called `'rest'`
+        alpha
+            Used when :paramref:`method` `='eigengap'` or `='eigengap_coarse`.
+        min_self_prob
+            Used when :paremref:`method` `='min_self_prob'`.
+        n_main_states
+            Used when :paramref:`method` `='n_main_states'.
+
+        Returns
+        -------
+        Nothings, just updates the following fields:
+
+                - :paramref:`lineage_probabilities`
+                - :paramref:`diff_potential`
         """
 
         if method == "eigengap":
@@ -456,6 +528,24 @@ class GPCCA(BaseEstimator):
         )
 
     def plot_main_states(self, n_cells: int, same_plot: bool = True, **kwargs):
+        """
+        Plot the main states for each uncovered lineage.
+
+        Params
+        ------
+        n_cells
+            Number of most likely cells per lineage.
+        same_plot
+            Whether to plot the lineages on the same plot or separately.
+        kwargs
+            Keyword arguments for :func:`scvelo.pl.scatter`.
+
+        Returns
+        -------
+        None
+            Nothings, just plots the main states.
+        """
+
         def cleanup():
             for key in to_clean:
                 try:
@@ -535,7 +625,7 @@ class GPCCA(BaseEstimator):
         **kwargs,
     ) -> None:
         """
-        Plot the coarse-grained transition matrix between metastable states.
+        Plot the coarse-grained transition matrix of the metastable states.
 
         Params
         ------
@@ -559,14 +649,14 @@ class GPCCA(BaseEstimator):
             Filename where to save the plots.
             If `None`, just show the plots.
         text_kwargs
-            Keyword arguments for `text`.
+            Keyword arguments for :func:`matplotlib.pyplot.text`.
         kwargs
-            Keyword arguments for `imshow`.
+            Keyword arguments for :func:`matplotlib.pyplot.imshow`.
 
         Returns
         -------
         None
-            Nothings just plots and optionally saves the plots.
+            Nothings just plots and optionally saves the plot.
         """
 
         def stylize_dist(
