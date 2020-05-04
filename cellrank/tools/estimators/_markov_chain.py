@@ -907,7 +907,10 @@ class MarkovChain(BaseEstimator):
 
     def copy(self) -> "MarkovChain":
         """
-        Return a copy of itself.
+        Returns
+        -------
+        :class:`cellrank.tl.MarkovChain`
+            A copy of itself.
         """
 
         kernel = copy(self.kernel)  # doesn't copy the adata object
@@ -960,13 +963,19 @@ class MarkovChain(BaseEstimator):
     @property
     def approx_recurrent_classes(self) -> Series:
         """
-        The approximate recurrent classes, where `NaN` marks cells which are transient.
+        Returns
+        -------
+        :class:`pandas.Series`
+            The approximate recurrent classes, where `NaN` marks cells which are transient.
         """
         return self._approx_rcs
 
     @property
-    def approx_recurrent_classes_probabilities(self):
+    def approx_recurrent_classes_probabilities(self) -> Series:
         """
-        Probabilities of cells belonging to the approximate recurrent classes.
+        Returns
+        -------
+        :class:`pandas.Series`
+            Probabilities of cells belonging to the approximate recurrent classes.
         """
         return self._approx_rcs_probs
