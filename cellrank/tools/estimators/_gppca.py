@@ -676,7 +676,6 @@ class GPCCA(BaseEstimator):
                 self._main_states = _main_states
                 self._n_cells = n_cells
         else:
-            print("x")
             _main_states = self._main_states
             logg.debug("DEBUG: Using cached main states")
 
