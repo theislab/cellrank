@@ -91,7 +91,9 @@ class Lineage(np.ndarray):
 
         lin_kind = [_ for _ in mixtures if isinstance(_, Lin)]
         if len(lin_kind) > 1:
-            raise ValueError(f"`None` or `...` is allowed only once in the expression.")
+            raise ValueError(
+                f"`Lin` enum is allowed only once in the expression, fount `{lin_kind}`."
+            )
 
         keys = [
             tuple(
