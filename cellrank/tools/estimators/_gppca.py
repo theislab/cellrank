@@ -271,8 +271,9 @@ class GPCCA(BaseEstimator):
             time=start,
         )
 
-    def plot_meta_lin_probs(
+    def plot_metastable_states(
         self,
+        n_cells: Optional[int] = None,
         lineages: Optional[Union[str, Iterable[str]]] = None,
         cluster_key: Optional[str] = None,
         mode: str = "embedding",
@@ -286,6 +287,8 @@ class GPCCA(BaseEstimator):
 
         Params
         ------
+        n_cells
+            Number of cells to sample from the distribution. If `None`, don't sample, justs plot the distribution.
         lineages
             Only show these lineages. If `None`, plot all lineages.
         cluster_key
@@ -310,17 +313,94 @@ class GPCCA(BaseEstimator):
             Nothing, just plots the absorption probabilities.
         """
 
-        self._plot_probabilities(
-            attr="_meta_lin_probs",
-            error_msg="Compute metastable lineage probabilities first as `.compute_metastable_states()`.",
-            lineages=lineages,
-            cluster_key=cluster_key,
-            mode=mode,
-            time_key=time_key,
-            same_plot=same_plot,
-            color_map=color_map,
-            **kwargs,
-        )
+        attr = "_meta_lin_probs"
+        error_msg = "Compute metastable lineage probabilities first as `.compute_metastable_states()`."
+
+        if n_cells is None:
+            self._plot_probabilities(
+                attr=attr,
+                error_msg=error_msg,
+                lineages=lineages,
+                cluster_key=cluster_key,
+                mode=mode,
+                time_key=time_key,
+                same_plot=same_plot,
+                color_map=color_map,
+                **kwargs,
+            )
+        else:
+            self._plot_states(
+                attr=attr,
+                error_msg=error_msg,
+                n_cells=n_cells,
+                same_plot=same_plot,
+                **kwargs,
+            )
+
+    def plot_lin_probs(
+        self,
+        n_cells: Optional[int] = None,
+        lineages: Optional[Union[str, Iterable[str]]] = None,
+        cluster_key: Optional[str] = None,
+        mode: str = "embedding",
+        time_key: str = "latent_time",
+        same_plot: bool = False,
+        color_map: Union[str, mpl.colors.ListedColormap] = cm.viridis,
+        **kwargs,
+    ) -> None:
+        """
+        Plots the absorption probabilities in the given embedding.
+
+        Params
+        ------
+        n_cells
+            Number of cells to sample from the distribution. If `None`, don't sample, just plots the distribution.
+        lineages
+            Only show these lineages. If `None`, plot all lineages.
+        cluster_key
+            Key from :paramref`adata: `.obs` for plotting cluster labels.
+        mode
+            Can be either `'embedding'` or `'time'`.
+
+            - If `'embedding'`, plot the embedding while coloring in the absorption probabilities.
+            - If `'time'`, plos the pseudotime on x-axis and the absorption probabilities on y-axis.
+        time_key
+            Key from `adata.obs` to use as a pseudotime ordering of the cells.
+        same_plot
+            Whether to plot the lineages on the same plot using color gradients when :paramref:`mode='embedding'`.
+        color_map
+            Colormap to use.
+        kwargs
+            Keyword arguments for :func:`scvelo.pl.scatter`.
+
+        Returns
+        -------
+        None
+            Nothing, just plots the absorption probabilities.
+        """
+        attr = "_lin_probs"
+        error_msg = "Compute lineage probabilities first as `.compute_main_states()` or set them manually as `.set_main_states()`."
+
+        if n_cells is None:
+            self._plot_probabilities(
+                attr=attr,
+                error_msg=error_msg,
+                lineages=lineages,
+                cluster_key=cluster_key,
+                mode=mode,
+                time_key=time_key,
+                same_plot=same_plot,
+                color_map=color_map,
+                **kwargs,
+            )
+        else:
+            self._plot_states(
+                attr=attr,
+                error_msg=error_msg,
+                n_cells=n_cells,
+                same_plot=same_plot,
+                **kwargs,
+            )
 
     def set_main_states(self, names: Iterable[str], mode: str = "normalize"):
         """
@@ -357,6 +437,7 @@ class GPCCA(BaseEstimator):
             )
 
         self._n_cells = None  # invalidate cache
+        self._main_states = None
         self._lin_probs = self._meta_lin_probs[names]
         self._dp = entropy(self._lin_probs.X.T)
 
@@ -365,11 +446,7 @@ class GPCCA(BaseEstimator):
         self.adata.uns[_lin_names(self._lin_key)] = self._lin_probs.names
         self.adata.uns[_colors(self._lin_key)] = self._lin_probs.colors
 
-        logg.info(
-            "Adding `.lineage_probabilities\n"
-            "       ``.diff_potential`\n"
-            "    Finish"
-        )
+        logg.info("Adding `.lineage_probabilities\n" "       `.diff_potential`")
 
     def compute_main_states(
         self,
@@ -389,8 +466,8 @@ class GPCCA(BaseEstimator):
 
             - `'eigengap'` - select the number of states based on the eigengap of the transition matrix
             - `'eigengap_coarse'`- select the number of states based on the eigengap of the diagonal of the coarse-grained transition matrix
-            - `'min_self_prob'`- select states which have the given minimum probability on the diagonal of coarse-grained transition matrix
-            - `'n_main_states'`- select top :paramref:`n_main_states` based on the probability on the diagonal of coarse-grained transition matrix
+            - `'min_self_prob'`- select states which have the given minimum probability on the diagonal of the coarse-grained transition matrix
+            - `'top_n'`- select top :paramref:`n_main_states` based on the probability on the diagonal of the coarse-grained transition matrix
         mode
             How to handle the states that have not been selected.
             Valid options are:
@@ -402,15 +479,15 @@ class GPCCA(BaseEstimator):
         min_self_prob
             Used when :paramref:`method` `='min_self_prob'`.
         n_main_states
-            Used when :paramref:`method` `='n_main_states'`.
+            Used when :paramref:`method` `='top_n'`.
 
         Returns
         -------
         None
             Nothings, just updates the following fields:
 
-                    - :paramref:`lineage_probabilities`
-                    - :paramref:`diff_potential`
+                - :paramref:`lineage_probabilities`
+                - :paramref:`diff_potential`
         """
 
         if method == "eigengap":
@@ -427,10 +504,10 @@ class GPCCA(BaseEstimator):
             n_main_states = _eigengap(
                 np.sort(np.diag(self._coarse_T)[::-1]), alpha=alpha
             )
-        elif method == "top_k":
+        elif method == "top_n":
             if n_main_states is None:
                 raise ValueError(
-                    "Argument `n_main_states` must not be `None` for `method='top_k'`."
+                    "Argument `n_main_states` must not be `None` for `method='top_n'`."
                 )
             elif n_main_states <= 0:
                 raise ValueError(
@@ -449,7 +526,7 @@ class GPCCA(BaseEstimator):
             return
         else:
             raise ValueError(
-                f"Invalid method `{method!r}`. Valid options are `'eigengap', 'eigengap_coarse', 'top_k' and 'min_self_prob'`."
+                f"Invalid method `{method!r}`. Valid options are `'eigengap', 'eigengap_coarse', 'top_n' and 'min_self_prob'`."
             )
 
         names = self._coarse_T.columns[np.argsort(np.diag(self._coarse_T))][
@@ -550,7 +627,9 @@ class GPCCA(BaseEstimator):
             colors=self._meta_states_colors,
         )
 
-    def plot_main_states(self, n_cells: int, same_plot: bool = True, **kwargs):
+    def _plot_states(
+        self, attr: str, error_msg: str, n_cells: int, same_plot: bool = True, **kwargs
+    ):
         """
         Plot the main states for each uncovered lineage.
 
@@ -580,22 +659,30 @@ class GPCCA(BaseEstimator):
                 except KeyError:
                     pass
 
-        if self._lin_probs is None:
-            raise RuntimeError(
-                "Compute main states as `.compute_main_states()` or set them manually."
-            )
+        probs = getattr(self, attr)
+
+        if probs is None:
+            raise RuntimeError(error_msg)
         if n_cells <= 0:
             raise ValueError(f"Expected `n_cells` to be positive, found `{n_cells}`.")
 
-        if n_cells != self._n_cells:
-            self._main_states, _ = self._select_cells(n_cells, self._lin_probs)
-            self._n_cells = n_cells
+        if (
+            attr != "_lin_probs"
+            or n_cells != self._n_cells
+            or self._main_states is None
+        ):
+            _main_states, _ = self._select_cells(n_cells, probs)
+            if attr == "_lin_probs":
+                self._main_states = _main_states
+                self._n_cells = n_cells
         else:
+            print("x")
+            _main_states = self._main_states
             logg.debug("DEBUG: Using cached main states")
 
-        if n_cells * len(self._main_states.cat.categories) > self.adata.n_obs:
+        if n_cells * len(_main_states.cat.categories) > self.adata.n_obs:
             raise ValueError(
-                f"Total number of requested cells ({n_cells * len(self._main_states.cat.categories)}) "
+                f"Total number of requested cells ({n_cells * len(_main_states.cat.categories)}) "
                 f"exceeds the total number of cells ({self.adata.n_obs})."
             )
 
@@ -603,8 +690,8 @@ class GPCCA(BaseEstimator):
         try:
             if same_plot:
                 key = generate_random_keys(self.adata, "obs")
-                self.adata.obs[key] = self._main_states
-                self.adata.uns[f"{key}_colors"] = self._lin_probs.colors
+                self.adata.obs[key] = _main_states
+                self.adata.uns[f"{key}_colors"] = probs.colors
                 to_clean = [key]
 
                 title = "from root cells" if self.kernel.backward else "to final cells"
@@ -613,19 +700,19 @@ class GPCCA(BaseEstimator):
                 prefix = "from" if self.kernel.backward else "to"
                 titles = []
                 keys = generate_random_keys(
-                    self.adata, "obs", len(self._main_states.cat.categories)
+                    self.adata, "obs", len(_main_states.cat.categories)
                 )
                 to_clean = keys
 
-                for key, cat in zip(keys, self._main_states.cat.categories):
-                    d = self._main_states.copy()
-                    d[self._main_states != cat] = None
+                for key, cat in zip(keys, _main_states.cat.categories):
+                    d = _main_states.copy()
+                    d[_main_states != cat] = None
                     d.cat.set_categories([cat], inplace=True)
 
                     titles.append(f"{prefix} {cat}")
 
                     self.adata.obs[key] = d
-                    self.adata.uns[f"{key}_colors"] = self._lin_probs[cat].colors
+                    self.adata.uns[f"{key}_colors"] = probs[cat].colors
 
                 scv.pl.scatter(self.adata, color=keys, title=titles, **kwargs)
         except Exception as e:
