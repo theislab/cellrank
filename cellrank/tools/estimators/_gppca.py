@@ -451,7 +451,7 @@ class GPCCA(BaseEstimator):
     def compute_main_states(
         self,
         method: str = "eigengap",
-        mode: str = "normalize",
+        mode: str = "rest",
         alpha: Optional[float] = 1,
         min_self_prob: Optional[float] = None,
         n_main_states: Optional[int] = None,
