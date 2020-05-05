@@ -279,7 +279,7 @@ class GPCCA(BaseEstimator):
         mode: str = "embedding",
         time_key: str = "latent_time",
         show_dp: bool = True,
-        same_plot: bool = False,
+        same_plot: bool = True,
         color_map: Union[str, mpl.colors.ListedColormap] = cm.viridis,
         **kwargs,
     ) -> None:
@@ -302,7 +302,7 @@ class GPCCA(BaseEstimator):
         time_key
             Key from `adata.obs` to use as a pseudotime ordering of the cells.
         show_dp
-            Whether to show differentiation potential when :paramref:`mode` `='embedding'.
+            Whether to show differentiation potential when :paramref:`mode` `='embedding'`.
         same_plot
             Whether to plot the lineages on the same plot using color gradients when :paramref:`mode='embedding'`.
         color_map
@@ -455,7 +455,7 @@ class GPCCA(BaseEstimator):
     def compute_main_states(
         self,
         method: str = "eigengap",
-        mode: str = "normalize",
+        mode: str = "rest",
         alpha: Optional[float] = 1,
         min_self_prob: Optional[float] = None,
         n_main_states: Optional[int] = None,
@@ -499,7 +499,7 @@ class GPCCA(BaseEstimator):
                 raise RuntimeError(
                     "Compute eigendecomposition first as `.compute_eig()`."
                 )
-            n_main_states = _eigengap(self.eigendecomposition["D"], alpha=alpha)
+            n_main_states = _eigengap(self.eigendecomposition["D"], alpha=alpha) + 1
         elif method == "eigengap_coarse":
             if self._coarse_T is None:
                 raise RuntimeError(
