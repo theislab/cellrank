@@ -2,10 +2,12 @@
 from pathlib import Path
 
 from cellrank.tools.kernels._kernel import KernelExpression
-from typing import Optional, Tuple, Sequence, List, Any, Union, Dict
+from typing import Optional, Tuple, Sequence, List, Any, Union, Dict, Iterable
 
 import numpy as np
 import scvelo as scv
+import matplotlib as mpl
+import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 
 from anndata import AnnData
@@ -327,64 +329,6 @@ class MarkovChain(BaseEstimator):
         else:
             title_str = title
         ax.set_title(title_str)
-        ax.legend(loc=legend_loc)
-
-        if save is not None:
-            save_fig(fig, save)
-
-        fig.show()
-
-    def plot_real_spectrum(
-        self,
-        dpi: int = 100,
-        figsize: Optional[Tuple[float, float]] = None,
-        legend_loc: Optional[str] = None,
-        save: Optional[Union[str, Path]] = None,
-    ) -> None:
-        """
-        Plot the real part of the top eigenvalues.
-
-        Params
-        ------
-        dpi
-            Dots per inch.
-        figsize
-            Size of the figure.
-        save
-            Filename where to save the plots. If `None`, just shows the plot.
-
-        Returns
-        -------
-        None
-            Nothing, just plots the spectrum.
-        """
-
-        if self._eig is None:
-            logg.warning(
-                "No eigendecomposition found, computing with default parameters"
-            )
-            self.compute_eig()
-
-        # Obtain the eigendecomposition, create the color code
-        D, params = self._eig["D"], self._eig["params"]
-        D_real, D_imag = D.real, D.imag
-        ixs = np.arange(len(D))
-        mask = D_imag == 0
-
-        # plot the top eigenvalues
-        fig, ax = plt.subplots(nrows=1, ncols=1, dpi=dpi, figsize=figsize)
-        ax.scatter(ixs[mask], D_real[mask], marker="o", label="Real eigenvalue")
-        ax.scatter(ixs[~mask], D_real[~mask], marker="o", label="Complex eigenvalue")
-
-        # add dashed line for the eigengap, ticks, labels, title and legend
-        ax.axvline(self._eig["eigengap"], label="Eigengap", ls="--")
-        ax.set_xticks(range(len(D)))
-        ax.set_xlabel("index")
-        ax.set_ylabel("Re($\lambda_i$)")
-        key = "real part" if params["which"] == "LR" else "magnitude"
-        ax.set_title(
-            f"Real part of top {params['k']} eigenvalues according to their {key}"
-        )
         ax.legend(loc=legend_loc)
 
         if save is not None:
@@ -855,6 +799,57 @@ class MarkovChain(BaseEstimator):
         self._adata.uns[_colors(self._lin_key)] = self._lin_probs.colors
 
         logg.info("    Finish", time=start)
+
+    def plot_lin_probs(
+        self,
+        lineages: Optional[Union[str, Iterable[str]]] = None,
+        cluster_key: Optional[str] = None,
+        mode: str = "embedding",
+        time_key: str = "latent_time",
+        same_plot: bool = False,
+        color_map: Union[str, mpl.colors.ListedColormap] = cm.viridis,
+        **kwargs,
+    ) -> None:
+        """
+        Plots the absorption probabilities in the given embedding.
+
+        Params
+        ------
+        lineages
+            Only show these lineages. If `None`, plot all lineages.
+        cluster_key
+            Key from :paramref`adata: `.obs` for plotting cluster labels.
+        mode
+            Can be either `'embedding'` or `'time'`.
+
+            - If `'embedding'`, plot the embedding while coloring in the absorption probabilities.
+            - If `'time'`, plos the pseudotime on x-axis and the absorption probabilities on y-axis.
+        time_key
+            Key from `adata.obs` to use as a pseudotime ordering of the cells.
+        same_plot
+            Whether to plot the lineages on the same plot using color gradients when :paramref:`mode='embedding'`.
+        color_map
+            Colormap to use.
+        kwargs
+            Keyword arguments for :func:`scvelo.pl.scatter`.
+
+        Returns
+        -------
+        None
+            Nothing, just plots the absorption probabilities.
+        """
+
+        self._plot_probabilities(
+            attr="_lin_probs",
+            error_msg="Compute lineage probabilities first as `.compute_lin_probs()`.",
+            lineages=lineages,
+            cluster_key=cluster_key,
+            mode=mode,
+            time_key=time_key,
+            same_plot=same_plot,
+            color_map=color_map,
+            **kwargs,
+        )
 
     def _compute_approx_rcs_prob(
         self, use: Union[Tuple[int], List[int], range]

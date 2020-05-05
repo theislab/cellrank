@@ -278,6 +278,7 @@ class GPCCA(BaseEstimator):
         cluster_key: Optional[str] = None,
         mode: str = "embedding",
         time_key: str = "latent_time",
+        show_dp: bool = True,
         same_plot: bool = False,
         color_map: Union[str, mpl.colors.ListedColormap] = cm.viridis,
         **kwargs,
@@ -300,6 +301,8 @@ class GPCCA(BaseEstimator):
             - If `'time'`, plos the pseudotime on x-axis and the absorption probabilities on y-axis.
         time_key
             Key from `adata.obs` to use as a pseudotime ordering of the cells.
+        show_dp
+            Whether to show differentiation potential when :paramref:`mode` `='embedding'.
         same_plot
             Whether to plot the lineages on the same plot using color gradients when :paramref:`mode='embedding'`.
         color_map
@@ -314,7 +317,7 @@ class GPCCA(BaseEstimator):
         """
 
         attr = "_meta_lin_probs"
-        error_msg = "Compute metastable lineage probabilities first as `.compute_metastable_states()`."
+        error_msg = "Compute metastable states first as `.compute_metastable_states()`."
 
         if n_cells is None:
             self._plot_probabilities(
@@ -324,6 +327,7 @@ class GPCCA(BaseEstimator):
                 cluster_key=cluster_key,
                 mode=mode,
                 time_key=time_key,
+                show_dp=show_dp,
                 same_plot=same_plot,
                 color_map=color_map,
                 **kwargs,
@@ -337,7 +341,7 @@ class GPCCA(BaseEstimator):
                 **kwargs,
             )
 
-    def plot_lin_probs(
+    def plot_main_states(
         self,
         n_cells: Optional[int] = None,
         lineages: Optional[Union[str, Iterable[str]]] = None,
@@ -379,7 +383,7 @@ class GPCCA(BaseEstimator):
             Nothing, just plots the absorption probabilities.
         """
         attr = "_lin_probs"
-        error_msg = "Compute lineage probabilities first as `.compute_main_states()` or set them manually as `.set_main_states()`."
+        error_msg = "Compute main states first as `.compute_main_states()` or set them manually as `.set_main_states()`."
 
         if n_cells is None:
             self._plot_probabilities(
@@ -628,7 +632,13 @@ class GPCCA(BaseEstimator):
         )
 
     def _plot_states(
-        self, attr: str, error_msg: str, n_cells: int, same_plot: bool = True, **kwargs
+        self,
+        attr: str,
+        error_msg: str,
+        n_cells: int,
+        same_plot: bool = True,
+        title: Optional[Union[str, List[str]]] = None,
+        **kwargs,
     ):
         """
         Plot the main states for each uncovered lineage.
@@ -639,6 +649,8 @@ class GPCCA(BaseEstimator):
             Number of most likely cells per lineage.
         same_plot
             Whether to plot the lineages on the same plot or separately.
+        title
+            The title of the plot.
         kwargs
             Keyword arguments for :func:`scvelo.pl.scatter`.
 
@@ -693,7 +705,10 @@ class GPCCA(BaseEstimator):
                 self.adata.uns[f"{key}_colors"] = probs.colors
                 to_clean = [key]
 
-                title = "from root cells" if self.kernel.backward else "to final cells"
+                if title is None:
+                    title = (
+                        "from root cells" if self.kernel.backward else "to final cells"
+                    )
                 scv.pl.scatter(self.adata, title=title, color=key, **kwargs)
             else:
                 prefix = "from" if self.kernel.backward else "to"
@@ -713,7 +728,12 @@ class GPCCA(BaseEstimator):
                     self.adata.obs[key] = d
                     self.adata.uns[f"{key}_colors"] = probs[cat].colors
 
-                scv.pl.scatter(self.adata, color=keys, title=titles, **kwargs)
+                scv.pl.scatter(
+                    self.adata,
+                    color=keys,
+                    title=titles if title is None else title,
+                    **kwargs,
+                )
         except Exception as e:
             raise e
         finally:
@@ -727,6 +747,7 @@ class GPCCA(BaseEstimator):
         xtick_rotation: float = 45,
         annotate: bool = True,
         show_cbar: bool = True,
+        title: Optional[str] = None,
         figsize: Tuple[float, float] = (8, 8),
         dpi: float = 80,
         save: Optional[Union[os.PathLike, str]] = None,
@@ -750,6 +771,8 @@ class GPCCA(BaseEstimator):
             Whether to display the text on each cell.
         show_cbar
             Whether to show colorbar.
+        title
+            Title of the figure.
         figsize
             Size of the figure.
         dpi
@@ -877,7 +900,7 @@ class GPCCA(BaseEstimator):
             init_ax.set_ylabel("Initial Distribution", rotation=-90, va="bottom")
 
         im = ax.imshow(self.coarse_T, aspect="auto", cmap=cmap, **kwargs)
-        ax.set_title("Coarse-grained Transition Matrix")
+        ax.set_title("coarse-grained transition matrix" if title is None else title)
 
         if show_cbar:
             norm = mpl.colors.Normalize(vmin=np.nanmin(tmp), vmax=np.nanmax(tmp))
