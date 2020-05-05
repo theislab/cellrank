@@ -10,7 +10,12 @@ from copy import copy, deepcopy
 from cellrank.tools._lineage import Lineage
 from cellrank.tools._constants import Lin, RcKey, _colors, _lin_names
 from cellrank.tools.estimators._base_estimator import BaseEstimator
-from cellrank.tools._utils import save_fig, _eigengap, generate_random_keys
+from cellrank.tools._utils import (
+    save_fig,
+    _eigengap,
+    _get_black_or_white,
+    generate_random_keys,
+)
 from cellrank.tools.kernels._kernel import KernelExpression
 
 import os
@@ -743,7 +748,7 @@ class GPCCA(BaseEstimator):
         self,
         show_stationary_dist: bool = True,
         show_initial_dist: bool = False,
-        cmap: mcolors.ListedColormap = cm.viridis,
+        cmap: Union[str, mcolors.ListedColormap] = "viridis",
         xtick_rotation: float = 45,
         annotate: bool = True,
         show_cbar: bool = True,
@@ -794,7 +799,7 @@ class GPCCA(BaseEstimator):
         def stylize_dist(
             ax, data: np.ndarray, xticks_labels: Union[List[str], Tuple[str]] = ()
         ):
-            _ = ax.imshow(data, aspect="auto", cmap=cmap)
+            _ = ax.imshow(data, aspect="auto", cmap=cmap, norm=norm)
             for spine in ax.spines.values():
                 spine.set_visible(False)
 
@@ -814,20 +819,11 @@ class GPCCA(BaseEstimator):
 
             ax.set_yticks([])
 
-        def annotate_heatmap(
-            im,
-            valfmt: str = "{x:.2f}",
-            textcolors: Tuple[str, str] = ("black", "white"),
-            threshold: Optional[float] = None,
-        ):
+        def annotate_heatmap(im, valfmt: str = "{x:.2f}"):
             # modified from matplotlib's site
 
             data = im.get_array()
-            # Normalize the threshold to the images color range.
-            threshold = (
-                im.norm(np.median(data)) if threshold is None else im.norm(threshold)
-            )
-            kw = dict(horizontalalignment="center", verticalalignment="center")
+            kw = dict(ha="center", va="center")
             kw.update(**text_kwargs)
 
             # Get the formatter in case a string is supplied
@@ -839,9 +835,32 @@ class GPCCA(BaseEstimator):
             texts = []
             for i in range(data.shape[0]):
                 for j in range(data.shape[1]):
-                    kw.update(color=textcolors[int(im.norm(data[i, j]) > threshold)])
+                    kw.update(color=_get_black_or_white(im.norm(data[i, j]), cmap))
                     text = im.axes.text(j, i, valfmt(data[i, j], None), **kw)
                     texts.append(text)
+
+        def annotate_dist_ax(
+            ax, data: np.ndarray, is_vertical: bool, valfmt: str = "{x:.2f}"
+        ):
+            if ax is None:
+                return
+
+            if isinstance(valfmt, str):
+                valfmt = mpl.ticker.StrMethodFormatter(valfmt)
+
+            kw = dict(ha="center", va="center")
+            kw.update(**text_kwargs)
+            if is_vertical:
+                kw["rotation"] = -90
+
+            for i, val in enumerate(data):
+                kw.update(color=_get_black_or_white(im.norm(val), cmap))
+                ax.text(
+                    0 if is_vertical else i,
+                    i if is_vertical else 0,
+                    valfmt(val, None),
+                    **kw,
+                )
 
         if self.coarse_T is None:
             raise RuntimeError(
@@ -874,36 +893,42 @@ class GPCCA(BaseEstimator):
             wspace=0.10,
             hspace=0.05,
         )
+        if isinstance(cmap, str):
+            cmap = plt.get_cmap(cmap)
 
         ax = fig.add_subplot(gs[0, 0])
         cax = fig.add_subplot(gs[:1, -1])
+        init_ax, stat_ax = None, None
 
         labels = list(self._coarse_T.columns)
+
         tmp = self.coarse_T
+        if show_initial_dist:
+            tmp = np.c_[tmp, self.coarse_stationary_distribution]
+        if show_initial_dist:
+            tmp = np.c_[tmp, self._coarse_init_dist]
+        norm = mpl.colors.Normalize(vmin=np.nanmin(tmp), vmax=np.nanmax(tmp))
 
         if show_stationary_dist:
             stat_ax = fig.add_subplot(gs[1, 0])
-            tmp = np.c_[tmp, self.coarse_stationary_distribution]
-
             stylize_dist(
                 stat_ax,
                 np.array(self.coarse_stationary_distribution).reshape(1, -1),
                 xticks_labels=labels,
             )
-            stat_ax.set_xlabel("Stationary Distribution")
+            stat_ax.set_xlabel("Stationary distribution")
+
         if show_initial_dist:
             init_ax = fig.add_subplot(gs[0, 1])
-            tmp = np.c_[tmp, self._coarse_init_dist]
-
             stylize_dist(init_ax, np.array(self._coarse_init_dist).reshape(-1, 1))
+
             init_ax.yaxis.set_label_position("right")
-            init_ax.set_ylabel("Initial Distribution", rotation=-90, va="bottom")
+            init_ax.set_ylabel("Initial distribution", rotation=-90, va="bottom")
 
         im = ax.imshow(self.coarse_T, aspect="auto", cmap=cmap, **kwargs)
         ax.set_title("coarse-grained transition matrix" if title is None else title)
 
         if show_cbar:
-            norm = mpl.colors.Normalize(vmin=np.nanmin(tmp), vmax=np.nanmax(tmp))
             _ = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm)
             cax.set_ylabel("Value", rotation=-90, va="bottom")
 
@@ -939,6 +964,10 @@ class GPCCA(BaseEstimator):
 
         if annotate:
             annotate_heatmap(im)
+            annotate_dist_ax(
+                stat_ax, self.coarse_stationary_distribution.values, is_vertical=False
+            )
+            annotate_dist_ax(init_ax, self._coarse_init_dist, is_vertical=True)
 
         if save:
             save_fig(fig, save)
