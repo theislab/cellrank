@@ -278,7 +278,7 @@ class GPCCA(BaseEstimator):
         cluster_key: Optional[str] = None,
         mode: str = "embedding",
         time_key: str = "latent_time",
-        same_plot: bool = False,
+        same_plot: bool = True,
         color_map: Union[str, mpl.colors.ListedColormap] = cm.viridis,
         **kwargs,
     ) -> None:
