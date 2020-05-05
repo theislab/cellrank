@@ -191,6 +191,7 @@ class BaseEstimator(ABC):
 
     def plot_spectrum(
         self,
+        real_only: bool = False,
         dpi: int = 100,
         figsize: Optional[Tuple[float, float]] = (5, 5),
         legend_loc: Optional[str] = None,
@@ -201,6 +202,7 @@ class BaseEstimator(ABC):
 
         Params
         ------
+            Whether to plot only the real part of the spectrum.
         dpi
             Dots per inch.
         figsize
@@ -219,6 +221,13 @@ class BaseEstimator(ABC):
                 "No eigendecomposition found, computing with default parameters"
             )
             self.compute_eig()
+
+        if real_only:
+            self._plot_real_spectrum(
+                dpi=dpi, figsize=figsize, legend_loc=legend_loc, save=save
+            )
+            return
+
         D = self._eig["D"]
         params = self._eig["params"]
 
@@ -255,7 +264,7 @@ class BaseEstimator(ABC):
 
         key = "real part" if params["which"] == "LR" else "magnitude"
 
-        ax.set_title(f"Top {params['k']} eigenvalues according to their {key}")
+        ax.set_title(f"top {params['k']} eigenvalues according to their {key}")
         ax.legend(loc=legend_loc)
 
         if save is not None:
@@ -263,7 +272,7 @@ class BaseEstimator(ABC):
 
         fig.show()
 
-    def plot_real_spectrum(
+    def _plot_real_spectrum(
         self,
         dpi: int = 100,
         figsize: Optional[Tuple[float, float]] = None,
@@ -314,7 +323,7 @@ class BaseEstimator(ABC):
         ax.set_ylabel("Re($\lambda_i$)")
         key = "real part" if params["which"] == "LR" else "magnitude"
         ax.set_title(
-            f"Real part of top {params['k']} eigenvalues according to their {key}"
+            f"peal part of top {params['k']} eigenvalues according to their {key}"
         )
 
         ax.legend(loc=legend_loc)
@@ -500,6 +509,7 @@ class BaseEstimator(ABC):
         cluster_key: Optional[str] = None,
         mode: str = "embedding",
         time_key: str = "latent_time",
+        show_dp: bool = True,
         same_plot: bool = False,
         color_map: Union[str, mpl.colors.ListedColormap] = cm.viridis,
         **kwargs,
@@ -523,6 +533,7 @@ class BaseEstimator(ABC):
                     )
             A = probs[lineages]
 
+        show_dp = show_dp and self._dp is not None
         # change the maximum value - the 1 is artificial and obscures the color scaling
         for col in A.T:
             mask = col != 1
@@ -536,19 +547,15 @@ class BaseEstimator(ABC):
             t = self._adata.obs[time_key]
             cluster_key = None
 
-        rc_titles = [f"{self._prefix} {rc}" for rc in lineages] + [
-            "Differentiation Potential"
-        ]
+        rc_titles = [f"{self._prefix} {rc}" for rc in lineages] + (
+            ["differentiation potential"] if show_dp else []
+        )
 
         if cluster_key is not None:
-            color = (
-                [cluster_key]
-                + [a for a in A.T]
-                + ([self._dp] if self._dp is not None else [])
-            )
+            color = [cluster_key] + [a for a in A.T] + ([self._dp] if show_dp else [])
             titles = [cluster_key] + rc_titles
         else:
-            color = [a for a in A.T] + ([self._dp] if self._dp is not None else [])
+            color = [a for a in A.T] + ([self._dp] if show_dp else [])
             titles = rc_titles
 
         if mode == "embedding":
@@ -586,57 +593,6 @@ class BaseEstimator(ABC):
             raise ValueError(
                 f"Invalid mode `{mode!r}`. Valid options are: `'embedding', 'time'`."
             )
-
-    def plot_lin_probs(
-        self,
-        lineages: Optional[Union[str, Iterable[str]]] = None,
-        cluster_key: Optional[str] = None,
-        mode: str = "embedding",
-        time_key: str = "latent_time",
-        same_plot: bool = False,
-        color_map: Union[str, mpl.colors.ListedColormap] = cm.viridis,
-        **kwargs,
-    ) -> None:
-        """
-        Plots the absorption probabilities in the given embedding.
-
-        Params
-        ------
-        lineages
-            Only show these lineages. If `None`, plot all lineages.
-        cluster_key
-            Key from :paramref`adata: `.obs` for plotting cluster labels.
-        mode
-            Can be either `'embedding'` or `'time'`.
-
-            - If `'embedding'`, plot the embedding while coloring in the absorption probabilities.
-            - If `'time'`, plos the pseudotime on x-axis and the absorption probabilities on y-axis.
-        time_key
-            Key from `adata.obs` to use as a pseudotime ordering of the cells.
-        same_plot
-            Whether to plot the lineages on the same plot using color gradients when :paramref:`mode='embedding'`.
-        color_map
-            Colormap to use.
-        kwargs
-            Keyword arguments for :func:`scvelo.pl.scatter`.
-
-        Returns
-        -------
-        None
-            Nothing, just plots the absorption probabilities.
-        """
-
-        self._plot_probabilities(
-            attr="_lin_probs",
-            error_msg="Compute lineage probabilities first as `.compute_lin_probs()`.",
-            lineages=lineages,
-            cluster_key=cluster_key,
-            mode=mode,
-            time_key=time_key,
-            same_plot=same_plot,
-            color_map=color_map,
-            **kwargs,
-        )
 
     def compute_lineage_drivers(
         self,
