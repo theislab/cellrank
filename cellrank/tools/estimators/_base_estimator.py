@@ -453,7 +453,7 @@ class BaseEstimator(ABC):
             )
         V_ = vectors[:, use]
         if is_schur:
-            title = [f"Schur Vector {i}" for i in use]
+            title = [f"Schur vector {i}" for i in use]
         else:
             D = kwargs.pop("D")
             V_ = _complex_warning(V_, use, use_imag=kwargs.pop("use_imag", False))
