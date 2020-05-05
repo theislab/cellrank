@@ -495,7 +495,7 @@ class GPCCA(BaseEstimator):
                 raise RuntimeError(
                     "Compute eigendecomposition first as `.compute_eig()`."
                 )
-            n_main_states = _eigengap(self.eigendecomposition["D"], alpha=alpha)
+            n_main_states = _eigengap(self.eigendecomposition["D"], alpha=alpha) + 1
         elif method == "eigengap_coarse":
             if self._coarse_T is None:
                 raise RuntimeError(
