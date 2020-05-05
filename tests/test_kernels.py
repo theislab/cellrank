@@ -873,7 +873,7 @@ class TestGeneral:
         v = vk + ck
 
         assert len(v.kernels) == 2
-        assert v.kernels == [v, c]
+        assert v.kernels == [vk, ck]
 
     def test_kernels_multiple_constant(self, adata):
         vk = VelocityKernel(adata)
@@ -881,7 +881,7 @@ class TestGeneral:
         v = 100 * vk + 42 * ck
 
         assert len(v.kernels) == 2
-        assert v.kernels == [v, c]
+        assert v.kernels == [vk, ck]
 
     def test_no_comp_cond_num(self, adata):
         vk = VelocityKernel(adata).compute_transition_matrix()
