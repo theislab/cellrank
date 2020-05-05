@@ -1218,3 +1218,11 @@ def generate_random_keys(adata: AnnData, where: str, n: Optional[int] = None):
             names.append(name)
 
     return names[0] if n == 1 else names
+
+
+def _get_black_or_white(value: float, cmap):
+    if not (0.0 <= value <= 1.0):
+        raise ValueError(f"Value must be in range `[0, 1]`, found `{value}`.")
+
+    r, g, b, *_ = [int(c * 255) for c in cmap(value)]
+    return "#000000" if r * 0.299 + g * 0.587 + b * 0.114 > 186 else "#ffffff"
