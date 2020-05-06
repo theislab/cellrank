@@ -323,7 +323,7 @@ class BaseEstimator(ABC):
         ax.set_ylabel("Re($\lambda_i$)")
         key = "real part" if params["which"] == "LR" else "magnitude"
         ax.set_title(
-            f"peal part of top {params['k']} eigenvalues according to their {key}"
+            f"real part of top {params['k']} eigenvalues according to their {key}"
         )
 
         ax.legend(loc=legend_loc)
