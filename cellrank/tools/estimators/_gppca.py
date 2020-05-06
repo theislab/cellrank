@@ -243,7 +243,8 @@ class GPCCA(BaseEstimator):
 
         gpcca = gpcca.optimize(m=n_states)
 
-        self._assign_metastable_states(
+        # when `n_cells!=None` and the overlap is high, we're skipping some metastable states
+        valid_ixs = self._assign_metastable_states(
             gpcca.memberships,
             gpcca.metastable_assignment,
             n_cells,
@@ -251,20 +252,24 @@ class GPCCA(BaseEstimator):
             p_thresh=p_thresh,
             en_cutoff=en_cutoff,
         )
-        self._lin_probs = None
+        logg.debug(
+            f"Selected `{len(valid_ixs)}` out of `{n_states}` due to an overlapp caused by `n_cells={n_cells}`"
+        )
 
+        self._lin_probs = None
         self._schur_vectors = gpcca.schur_vectors
+
+        names = self._meta_lin_probs.names
         self._coarse_T = pd.DataFrame(
-            gpcca.coarse_grained_transition_matrix,
-            index=self._meta_lin_probs.names,
-            columns=self._meta_lin_probs.names,
+            gpcca.coarse_grained_transition_matrix[valid_ixs, :][:, valid_ixs],
+            index=names,
+            columns=names,
         )
         self._coarse_init_dist = pd.Series(
-            gpcca.coarse_grained_input_distribution, index=self._meta_lin_probs.names
+            gpcca.coarse_grained_input_distribution[valid_ixs], index=names
         )
         self._coarse_stat_dist = pd.Series(
-            gpcca.coarse_grained_stationary_probability,
-            index=self._meta_lin_probs.names,
+            gpcca.coarse_grained_stationary_probability[valid_ixs], index=names
         )
 
         logg.info(
@@ -411,7 +416,7 @@ class GPCCA(BaseEstimator):
                 **kwargs,
             )
 
-    def set_main_states(self, names: Iterable[str], mode: str = "normalize"):
+    def set_main_states(self, names: Iterable[str], mode: str = "rest"):
         """
         Manually select the main states from the metastable states.
 
@@ -424,7 +429,8 @@ class GPCCA(BaseEstimator):
             Valid options are:
 
                 - `'normalize'` - renormalize the distribution to again sum to `1`
-                - `'rest'` - merge the unselected states to a new state called `'rest'`
+                - `'join'` - merge the unselected states to a new state such as `'Alpha' or 'Beta'`
+                - `'rest'` - same as `'join``, but call the newly state 'rest'`
 
         Returns
         -------
@@ -438,6 +444,8 @@ class GPCCA(BaseEstimator):
         names = list(names)
         if mode == "normalize":
             names += [Lin.NORM]
+        elif mode == "join":
+            names += [Lin.JOIN]
         elif mode == "rest":
             names += [Lin.REST]
         else:
@@ -545,19 +553,19 @@ class GPCCA(BaseEstimator):
 
     def _select_cells(
         self, n_cells: int, memberships: Union[np.ndarray, Lineage]
-    ) -> Tuple[pd.Series, Union[np.ndarray, Lineage]]:
+    ) -> Tuple[pd.Series, Union[np.ndarray, Lineage], List[int]]:
         # in this case, we need to be a bit careful because fuzzy clusters can largely overlap
         metastable_states = pd.Series(index=self.adata.obs_names, dtype="category")
-        overlaps, cols = {}, []
+        overlaps, cols, valid_ixs = {}, [], []
+
         if isinstance(memberships, Lineage):
             names = memberships.names
-            memberships = (
-                memberships.X
-            )  # we always retain the same shape, causes problems
+            # we always retain the same shape, causes problems
+            memberships = memberships.X
         else:
-            names = map(str, range(memberships.shape[1]))
+            names = list(map(str, range(memberships.shape[1])))
 
-        for name, col in zip(names, memberships.T):
+        for ix, (name, col) in enumerate(zip(names, memberships.T)):
             p = np.argpartition(col, -n_cells)[-n_cells:]
 
             # handle the case of overlapping cells (fuzzy clustering)
@@ -579,12 +587,14 @@ class GPCCA(BaseEstimator):
 
             metastable_states.cat.add_categories(name, inplace=True)
             metastable_states.iloc[p] = name
+
             cols.append(col[:, None])
+            valid_ixs.append(ix)
 
         # aggregate the non-overlapping columns together
         _memberships = np.concatenate(cols, axis=1)
 
-        return metastable_states, _memberships
+        return metastable_states, _memberships, valid_ixs
 
     def _assign_metastable_states(
         self,
@@ -594,7 +604,7 @@ class GPCCA(BaseEstimator):
         cluster_key: str,
         p_thresh,
         en_cutoff,
-    ):
+    ) -> List[int]:
         if n_cells is None:
             logg.debug(
                 "DEBUG: Setting the metastable states using metastable assignment"
@@ -609,11 +619,17 @@ class GPCCA(BaseEstimator):
                 map(str, range(memberships.shape[1])), inplace=True
             )
             _memberships = memberships
+            valid_ixs = (
+                metastable_states.cat.categories,
+                list(range(memberships.shape[1])),
+            )
         else:
             logg.debug(
                 "DEBUG: Setting the metastable states using metastable memberships"
             )
-            metastable_states, _memberships = self._select_cells(n_cells, memberships)
+            metastable_states, _memberships, valid_ixs = self._select_cells(
+                n_cells, memberships
+            )
 
         self._set_categorical_labels(
             attr_key="_meta_states",
@@ -635,6 +651,8 @@ class GPCCA(BaseEstimator):
             names=list(self._meta_states.cat.categories),
             colors=self._meta_states_colors,
         )
+
+        return valid_ixs
 
     def _plot_states(
         self,
@@ -688,9 +706,13 @@ class GPCCA(BaseEstimator):
             or n_cells != self._n_cells
             or self._main_states is None
         ):
-            _main_states, _ = self._select_cells(n_cells, probs)
+            _main_states, *_ = self._select_cells(n_cells, probs)
             if attr == "_lin_probs":
                 self._main_states = _main_states
+                meta_key = f"metastable_states_{self._direction}"
+
+                self.adata.obs[meta_key] = _main_states
+                self.adata.uns[_colors(meta_key)] = probs.colors
                 self._n_cells = n_cells
         else:
             _main_states = self._main_states
