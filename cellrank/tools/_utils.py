@@ -28,12 +28,91 @@ from sklearn.cluster import KMeans
 from sklearn.neighbors import NearestNeighbors
 
 from cellrank.utils._utils import has_neighs, get_neighs, get_neighs_params
+from cellrank.tools import GPCCA
 
 from typing import List, Optional
 from itertools import combinations
 
 
 ColorLike = TypeVar("ColorLike")
+
+
+def _get_restriction_to_main(estimator: GPCCA):
+    """
+    Restrict the categorical of metastable states to the main states
+
+    Parameters
+    --------
+    estimator
+        GPCCA object
+
+    Returns
+    --------
+    cats_main, colors_main
+        The restricted categorical annotations and matching colors
+    """
+
+    # get the names of the main states, remove 'rest' if present
+    main_names = estimator.lineage_probabilities.names
+    main_names = main_names[main_names != "rest"]
+
+    # get the metastable annotations & colors
+    cats_main = estimator.metastable_states.copy()
+    colors_main = np.array(estimator._meta_states_colors.copy())
+
+    # restrict both colors and categories
+    mask = np.in1d(cats_main.cat.categories, main_names)
+    colors_main = colors_main[mask]
+    cats_main.cat.remove_categories(cats_main.cat.categories[~mask], inplace=True)
+
+    return cats_main, colors_main
+
+
+def _create_root_final_annotations(
+    adata: AnnData,
+    fwd: GPCCA,
+    bwd: GPCCA,
+    final_pref: Optional[str] = "final",
+    root_pref: Optional[str] = "root",
+    key_added: Optional[str] = "root_final",
+):
+    """
+    Create categorical annotations of both root and final states
+
+    Parameters
+    --------
+    adata
+        AnnData object to write to (`.obs[key_added]`)
+    fwd, bwd
+        GPCCA objects modelling forward and backward processes, respectively
+    final_pref, root_pref
+        Prefis used in the annotations
+    key_added
+        key added to `adata.obs`
+
+    Returns
+        Nothing, just writes to AnnData
+    """
+
+    # get restricted categories and colors
+    cats_final, colors_final = _get_restriction_to_main(fwd)
+    cats_root, colors_root = _get_restriction_to_main(bwd)
+
+    # merge
+    cats_merged, colors_merged = _merge_categorical_series(
+        cats_final, cats_root, list(colors_final), list(colors_root)
+    )
+
+    # adjust the names
+    final_names, root_names = cats_final.cat.categories, cats_final.cat.categories
+    final_labels = [
+        f"{final_pref if key in final_names else root_pref}: {key}"
+        for key in cats_merged.cat.categories
+    ]
+    cats_merged.cat.rename_categories(final_labels, inplace=True)
+
+    # write to AnnData
+    adata.obs[key_added], adata.uns[f"{key_added}_colors"] = cats_merged, colors_merged
 
 
 def _map_names_and_colors(
