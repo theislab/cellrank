@@ -195,6 +195,7 @@ class BaseEstimator(ABC):
         dpi: int = 100,
         figsize: Optional[Tuple[float, float]] = (5, 5),
         legend_loc: Optional[str] = None,
+        title: Optional[str] = None,
         save: Optional[Union[str, Path]] = None,
     ) -> None:
         """
@@ -202,11 +203,16 @@ class BaseEstimator(ABC):
 
         Params
         ------
+        real_only
             Whether to plot only the real part of the spectrum.
         dpi
             Dots per inch.
         figsize
             Size of the figure.
+        legend_loc
+            Location parameter for the legend
+        title
+            Figure title
         save
             Filename where to save the plots. If `None`, just shows the plot.
 
@@ -224,7 +230,7 @@ class BaseEstimator(ABC):
 
         if real_only:
             self._plot_real_spectrum(
-                dpi=dpi, figsize=figsize, legend_loc=legend_loc, save=save
+                dpi=dpi, figsize=figsize, legend_loc=legend_loc, save=save, title=title
             )
             return
 
@@ -258,13 +264,18 @@ class BaseEstimator(ABC):
         # set labels, ranges and legend
         ax.set_xlabel("Im($\lambda$)")
         ax.set_xlim(x_min_, x_max_)
-
         ax.set_ylabel("Re($\lambda$)")
         ax.set_ylim(y_min_, y_max_)
-
         key = "real part" if params["which"] == "LR" else "magnitude"
 
-        ax.set_title(f"top {params['k']} eigenvalues according to their {key}")
+        # set the figure title
+        if title is None:
+            fig_title = f"top {params['k']} eigenvalues according to their {key}"
+        else:
+            fig_title = title
+        ax.set_title(fig_title)
+
+        # set legend location
         ax.legend(loc=legend_loc)
 
         if save is not None:
@@ -277,6 +288,7 @@ class BaseEstimator(ABC):
         dpi: int = 100,
         figsize: Optional[Tuple[float, float]] = None,
         legend_loc: Optional[str] = None,
+        title: Optional[str] = None,
         save: Optional[Union[str, Path]] = None,
     ) -> None:
         """
@@ -288,6 +300,10 @@ class BaseEstimator(ABC):
             Dots per inch.
         figsize
             Size of the figure.
+        legend_loc
+            Location parameter for the legend
+        title
+            Figure title
         save
             Filename where to save the plots. If `None`, just shows the plot.
 
@@ -322,9 +338,16 @@ class BaseEstimator(ABC):
 
         ax.set_ylabel("Re($\lambda_i$)")
         key = "real part" if params["which"] == "LR" else "magnitude"
-        ax.set_title(
-            f"real part of top {params['k']} eigenvalues according to their {key}"
-        )
+
+        # set the title
+        if title is None:
+            fig_title = (
+                f"real part of top {params['k']} eigenvalues according to their {key}"
+            )
+        else:
+            fig_title = title
+
+        ax.set_title(fig_title)
 
         ax.legend(loc=legend_loc)
 
