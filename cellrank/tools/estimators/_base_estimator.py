@@ -143,7 +143,7 @@ class BaseEstimator(ABC):
                 write_result(
                     {
                         "D": get_top_k_evals(),
-                        "eigengap": _eigengap(D.real, alpha),
+                        "eigengap": _eigengap(get_top_k_evals().real, alpha),
                         "params": {"which": which, "k": k, "alpha": alpha},
                     }
                 )
