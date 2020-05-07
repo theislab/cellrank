@@ -5,8 +5,19 @@ Utility functions for the cellrank tools
 
 from scipy.sparse.linalg import norm as s_norm
 from numpy.linalg import norm as d_norm
-from itertools import product, tee
-from typing import Any, Union, Tuple, Sequence, Dict, Iterable, TypeVar, Hashable
+from itertools import product, tee, combinations
+from typing import (
+    Any,
+    Union,
+    Tuple,
+    Sequence,
+    Dict,
+    Iterable,
+    TypeVar,
+    Hashable,
+    List,
+    Optional,
+)
 
 import os
 import warnings
@@ -28,13 +39,10 @@ from sklearn.cluster import KMeans
 from sklearn.neighbors import NearestNeighbors
 
 from cellrank.utils._utils import has_neighs, get_neighs, get_neighs_params
-from cellrank.tools import GPCCA
-
-from typing import List, Optional
-from itertools import combinations
 
 
 ColorLike = TypeVar("ColorLike")
+GPCCA = TypeVar("GPCCA")
 
 
 def _get_restriction_to_main(estimator: GPCCA):
