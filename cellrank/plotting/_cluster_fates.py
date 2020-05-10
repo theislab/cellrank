@@ -3,6 +3,7 @@ from collections import OrderedDict as odict
 from math import ceil
 from pathlib import Path
 from types import MappingProxyType
+from seaborn import heatmap, clustermap
 from typing import Optional, Sequence, Tuple, List, Mapping, Any, Union
 
 import matplotlib as mpl
@@ -24,7 +25,7 @@ from cellrank.tools._utils import save_fig
 from cellrank.utils._utils import _make_unique
 from cellrank.tools._lineage import Lineage
 
-_cluster_fates_modes = ("bar", "paga", "paga_pie", "violin")
+_cluster_fates_modes = ("bar", "paga", "paga_pie", "violin", "heatmap", "clustermap")
 
 
 def cluster_fates(
@@ -139,7 +140,9 @@ def cluster_fates(
                 ax = current_ax
 
             current_ax.set_xticks(np.arange(len(lin_names)))
-            current_ax.set_xticklabels(lin_names, rotation="vertical")
+            current_ax.set_xticklabels(
+                lin_names, rotation=xrot if has_xrot else "vertical"
+            )
             if not is_all:
                 current_ax.set_xlabel(points)
             current_ax.set_ylabel("probability")
@@ -261,7 +264,7 @@ def cluster_fates(
 
         kwargs["show"] = False
         kwargs["groupby"] = cluster_key
-        kwargs["rotation"] = kwargs.get("rotation", 45)
+        kwargs["rotation"] = xrot
 
         data = adata.obsm[lk]
         to_clean = []
@@ -310,7 +313,7 @@ def cluster_fates(
         kwargs["show"] = False
         kwargs["groupby"] = points
         kwargs["xlabel"] = None
-        kwargs["rotation"] = kwargs.get("rotation", 45)
+        kwargs["rotation"] = xrot
 
         data = np.ravel(np.array(adata.obsm[lk]).T)[..., np.newaxis]
         dadata = AnnData(np.zeros_like(data))
@@ -331,6 +334,60 @@ def cluster_fates(
         )
         ax.set_title(points)
         sc.pl.violin(dadata, keys=["probability"], ax=ax, **kwargs)
+
+        return fig
+
+    def plot_heatmap():
+        title = kwargs.pop("title", None)
+        if not title:
+            title = "Average cluster fates"
+        data = pd.DataFrame(
+            [d[k][0] for k in sorted(d.keys())], columns=lin_names, index=clusters
+        ).T
+
+        if "cmap" not in kwargs:
+            kwargs["cmap"] = "viridis"
+
+        if use_clustermap:
+            kwargs["cbar_pos"] = (0, 0.9, 0.025, 0.15) if show_cbar else None
+            max_size = float(max(data.shape))
+
+            g = clustermap(
+                data,
+                robust=True,
+                annot=True,
+                fmt=".2f",
+                vmin=0,
+                vmax=1,
+                row_colors=adata.obsm[lk][lin_names].colors,
+                dendrogram_ratio=(
+                    0.15 * data.shape[0] / max_size,
+                    0.15 * data.shape[1] / max_size,
+                ),
+                figsize=figsize,
+                **kwargs,
+            )
+            g.ax_col_dendrogram.set_title(title)
+
+            fig = g.fig
+            g = g.ax_heatmap
+        else:
+            fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
+            g = heatmap(
+                data,
+                robust=True,
+                annot=True,
+                fmt=".2f",
+                vmin=0,
+                vmax=1,
+                cbar=show_cbar,
+                ax=ax,
+                **kwargs,
+            )
+            ax.set_title(title)
+
+        g.set_xticklabels(g.get_xticklabels(), rotation=xrot)
+        g.set_yticklabels(g.get_yticklabels(), rotation=0)
 
         return fig
 
@@ -409,7 +466,15 @@ def cluster_fates(
         std = np.nanstd(data, axis=0) / np.sqrt(data.shape[0])
         d[name] = [mean, std]
 
+    has_xrot = "xticks_rotation" in kwargs
+    xrot = kwargs.pop("xticks_rotation", 45)
+
     logg.debug(f"DEBUG: Using mode: `{mode!r}`")
+
+    use_clustermap = mode == "clustermap"
+    if use_clustermap:
+        mode = "heatmap"
+
     if mode == "bar":
         fig = plot_bar()
     elif mode == "paga":
@@ -422,6 +487,8 @@ def cluster_fates(
         fig = plot_paga_pie()
     elif mode == "violin":
         fig = plot_violin_no_cluster_key() if cluster_key is None else plot_violin()
+    elif mode == "heatmap":
+        fig = plot_heatmap()
     else:
         raise ValueError(
             f"Invalid mode `{mode!r}`. Valid options are: `{_cluster_fates_modes}`."
