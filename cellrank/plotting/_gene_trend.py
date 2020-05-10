@@ -199,9 +199,8 @@ def gene_trends(
         if figdir is None:
             raise RuntimeError(
                 f"Invalid combination: figures directory `cellrank.settings.figdir` is `None`, "
-                f"but dirname was specified to `{dirname}`."
+                f"but `dirname={dirname}`."
             )
-
         if os.path.isabs(dirname):
             if not os.path.isdir(dirname):
                 os.makedirs(dirname, exist_ok=True)
