@@ -47,17 +47,17 @@ GPCCA = TypeVar("GPCCA")
 
 def _get_restriction_to_main(estimator: GPCCA):
     """
-    Restrict the categorical of metastable states to the main states
+    Restrict the categorical of metastable states to the main states.
 
     Parameters
     --------
     estimator
-        GPCCA object
+        GPCCA object.
 
     Returns
     --------
     cats_main, colors_main
-        The restricted categorical annotations and matching colors
+        The restricted categorical annotations and matching colors.
     """
 
     # get the names of the main states, remove 'rest' if present

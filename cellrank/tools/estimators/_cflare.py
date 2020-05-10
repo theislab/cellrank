@@ -735,7 +735,7 @@ class CFLARE(BaseEstimator):
         cluster_key: Optional[str] = None,
         mode: str = "embedding",
         time_key: str = "latent_time",
-        show_dp: bool = True,
+        show_dp: bool = False,
         same_plot: bool = False,
         title: Optional[str] = None,
         cmap: Union[str, mpl.colors.ListedColormap] = cm.viridis,
