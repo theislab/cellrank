@@ -32,6 +32,11 @@ class LinKey(PrettyEnum):
     BACKWARD = "from_root_cells"
 
 
+class MetaKey(PrettyEnum):
+    FORWARD = "metastable_states_fwd"
+    BACKWARD = "metastable_states_bwd"
+
+
 class Prefix(PrettyEnum):
     FORWARD = "to"
     BACKWARD = "from"

@@ -572,8 +572,8 @@ class BaseEstimator(ABC):
             cluster_key = None
 
         rc_titles = (
-            [f"{self._prefix} {rc}" for rc in lineages]
-            + (["differentiation potential"] if show_dp else [])
+            [f"{self._prefix.capitalize()} {rc}" for rc in lineages]
+            + (["Differentiation potential"] if show_dp else [])
             if title is None
             else title
         )

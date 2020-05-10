@@ -8,13 +8,13 @@ from scipy.stats import entropy
 from copy import copy, deepcopy
 
 from cellrank.tools._lineage import Lineage
-from cellrank.tools._constants import Lin, RcKey, _colors, _lin_names, _dp
+from cellrank.tools._constants import Lin, RcKey, MetaKey, _colors, _lin_names, _dp
 from cellrank.tools.estimators._base_estimator import BaseEstimator
 from cellrank.tools._utils import (
-    save_fig,
     _eigengap,
     _get_black_or_white,
     generate_random_keys,
+    save_fig,
 )
 from cellrank.tools.kernels._kernel import KernelExpression
 
@@ -71,9 +71,9 @@ class GPCCA(BaseEstimator):
             key_added=key_added,
         )
         if kernel.backward:
-            self._ms_key = str(RcKey.BACKWARD)
+            self._meta_key = str(MetaKey.BACKWARD)
         else:
-            self._ms_key = str(RcKey.FORWARD)
+            self._meta_key = str(MetaKey.FORWARD)
 
         self._schur_vectors = None
         self._coarse_T = None
@@ -444,7 +444,7 @@ class GPCCA(BaseEstimator):
 
                 - `'normalize'` - renormalize the distribution to again sum to `1`
                 - `'join'` - merge the unselected states to a new state such as `'Alpha' or 'Beta'`
-                - `'rest'` - same as `'join``, but call the newly state 'rest'`
+                - `'rest'` - same as `'join``, but call the newly created state 'rest'`
 
         Returns
         -------
@@ -464,7 +464,7 @@ class GPCCA(BaseEstimator):
             names += [Lin.REST]
         else:
             raise ValueError(
-                f"Invalid mode `{mode!r}`. Valid options are `'normalize', 'rest'`."
+                f"Invalid mode `{mode!r}`. Valid options are `'normalize', 'join' or 'rest'`."
             )
 
         self._n_cells = None  # invalidate cache
@@ -477,7 +477,7 @@ class GPCCA(BaseEstimator):
         self.adata.uns[_lin_names(self._lin_key)] = self._lin_probs.names
         self.adata.uns[_colors(self._lin_key)] = self._lin_probs.colors
 
-        logg.info("Adding `.lineage_probabilities\n" "       `.diff_potential`")
+        logg.info("Adding `.lineage_probabilities\n       `.diff_potential`")
 
     def compute_main_states(
         self,
@@ -648,7 +648,7 @@ class GPCCA(BaseEstimator):
         self._set_categorical_labels(
             attr_key="_meta_states",
             pretty_attr_key="metastable_states",
-            cat_key=self._rc_key,
+            cat_key=self._meta_key,
             add_to_existing_error_msg="Compute metastable states first as `.compute_metastable_states()`.",
             categories=metastable_states,
             cluster_key=cluster_key,
