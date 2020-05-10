@@ -220,6 +220,7 @@ def cluster_fates(
             kwargs["color"] = cluster_key
 
         ax = scv.pl.paga(adata, **kwargs)
+        ax.set_title(cluster_key.capitalize())
 
         if basis is not None and orig_ll not in ("none", "on data", None):
             handles = []
@@ -321,7 +322,10 @@ def cluster_fates(
         dadata.obs[points] = (
             pd.Series(
                 np.ravel(
-                    [[f"{dir_prefix} {n}"] * adata.n_obs for n in adata.obsm[lk].names]
+                    [
+                        [f"{dir_prefix.lower()} {n}"] * adata.n_obs
+                        for n in adata.obsm[lk].names
+                    ]
                 )
             )
             .astype("category")
@@ -332,7 +336,7 @@ def cluster_fates(
         fig, ax = plt.subplots(
             figsize=figsize if figsize is not None else (8, 6), dpi=dpi
         )
-        ax.set_title(points)
+        ax.set_title(points.capitalize())
         sc.pl.violin(dadata, keys=["probability"], ax=ax, **kwargs)
 
         return fig
@@ -342,7 +346,7 @@ def cluster_fates(
         if not title:
             title = "Average cluster fates"
         data = pd.DataFrame(
-            [d[k][0] for k in sorted(d.keys())], columns=lin_names, index=clusters
+            [mean for mean, _ in d.values()], columns=lin_names, index=clusters
         ).T
 
         if "cmap" not in kwargs:
@@ -508,6 +512,7 @@ def similarity_plot(
     cmap: mpl.colors.ListedColormap = cm.viridis,
     fontsize: float = 14,
     rotation: float = 45,
+    title: Optional[str] = "Similarity",
     figsize: Tuple[float, float] = (12, 10),
     dpi: Optional[int] = None,
     final: bool = True,
@@ -543,6 +548,8 @@ def similarity_plot(
         Rotation of labels on x-axis.
     figsize
         Size of the figure.
+    title
+        Title of the figure.
     dpi
         Dots per inch.
     final
@@ -557,6 +564,7 @@ def similarity_plot(
         Nothing, just plots the similarity matrix.
         Optionally saves the figure based on :paramref:`save`.
     """
+    # TODO: use seaborn's heatmap/clustermap
 
     logg.debug("DEBUG: Getting the counts")
     data = _counts(
@@ -585,11 +593,11 @@ def similarity_plot(
     ax.set_xticklabels(cluster_names, fontsize=fontsize, rotation=rotation)
     ax.set_yticklabels(cluster_names, fontsize=fontsize)
 
-    ax.tick_params(top=True, bottom=False, labeltop=True, labelbottom=False)
+    ax.set_title(title)
+    ax.tick_params(top=False, bottom=True, labeltop=False, labelbottom=True)
 
     cbar = ax.figure.colorbar(im, ax=ax, norm=mpl.colors.Normalize(vmin=0, vmax=1))
     cbar.set_ticks(np.linspace(0, 1, 10))
-    cbar.set_label("Similarity", rotation=90, va="top")
 
     if save is not None:
         save_fig(fig, save)

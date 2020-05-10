@@ -518,8 +518,8 @@ class Model(ABC):
         lw: float = 2,
         show_cbar: bool = True,
         margins: float = 0.015,
-        xlabel: str = "Pseudotime",
-        ylabel: str = "Expression",
+        xlabel: str = "pseudotime",
+        ylabel: str = "expression",
         show_conf_int: bool = True,
         dpi: int = None,
         fig: mpl.figure.Figure = None,
@@ -606,9 +606,12 @@ class Model(ABC):
             )
 
         ax.plot(self.x_test, self.y_test, color=color, lw=lw, label=title)
+
         ax.set_title(title)
+
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
+
         ax.margins(margins)
 
         if show_conf_int and self.conf_int is not None:
