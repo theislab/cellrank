@@ -362,7 +362,7 @@ class GPCCA(BaseEstimator):
         mode: str = "embedding",
         time_key: str = "latent_time",
         same_plot: bool = False,
-        show_dp: bool = True,
+        show_dp: bool = False,
         title: Optional[str] = None,
         cmap: Union[str, mpl.colors.ListedColormap] = cm.viridis,
         **kwargs,
@@ -474,6 +474,7 @@ class GPCCA(BaseEstimator):
 
         # write to adata
         self.adata.obs[_dp(self._lin_key)] = self._dp
+        self.adata.obsm[self._lin_key] = self._lin_probs
         self.adata.uns[_lin_names(self._lin_key)] = self._lin_probs.names
         self.adata.uns[_colors(self._lin_key)] = self._lin_probs.colors
 
@@ -709,6 +710,7 @@ class GPCCA(BaseEstimator):
                     pass
 
         probs = getattr(self, attr)
+        probs = probs[[n for n in probs.names if n != "rest"]]
 
         if probs is None:
             raise RuntimeError(error_msg)
@@ -747,13 +749,9 @@ class GPCCA(BaseEstimator):
                 to_clean = [key]
 
                 if title is None:
-                    title = (
-                        "From root cells" if self.kernel.backward else "To final cells"
-                    )
+                    title = "Root cells" if self.kernel.backward else "Final cells"
                 scv.pl.scatter(self.adata, title=title, color=key, **kwargs)
             else:
-                prefix = self._prefix.capitalize()
-                titles = []
                 keys = generate_random_keys(
                     self.adata, "obs", len(_main_states.cat.categories)
                 )
@@ -764,15 +762,13 @@ class GPCCA(BaseEstimator):
                     d[_main_states != cat] = None
                     d.cat.set_categories([cat], inplace=True)
 
-                    titles.append(f"{prefix} {cat}")
-
                     self.adata.obs[key] = d
                     self.adata.uns[f"{key}_colors"] = probs[cat].colors
 
                 scv.pl.scatter(
                     self.adata,
                     color=keys,
-                    title=titles if title is None else title,
+                    title=list(_main_states.cat.categories) if title is None else title,
                     **kwargs,
                 )
         except Exception as e:
@@ -952,7 +948,7 @@ class GPCCA(BaseEstimator):
                 np.array(self.coarse_stationary_distribution).reshape(1, -1),
                 xticks_labels=labels,
             )
-            stat_ax.set_xlabel("stationary distribution")
+            stat_ax.set_xlabel("stationary distribution")  # , ha="right", x=1)
 
         if show_initial_dist:
             init_ax = fig.add_subplot(gs[0, 1])
