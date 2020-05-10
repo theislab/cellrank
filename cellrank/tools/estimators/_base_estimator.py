@@ -533,6 +533,7 @@ class BaseEstimator(ABC):
         mode: str = "embedding",
         time_key: str = "latent_time",
         show_dp: bool = True,
+        title: Optional[str] = None,
         same_plot: bool = False,
         color_map: Union[str, mpl.colors.ListedColormap] = cm.viridis,
         **kwargs,
@@ -570,8 +571,11 @@ class BaseEstimator(ABC):
             t = self._adata.obs[time_key]
             cluster_key = None
 
-        rc_titles = [f"{self._prefix} {rc}" for rc in lineages] + (
-            ["differentiation potential"] if show_dp else []
+        rc_titles = (
+            [f"{self._prefix} {rc}" for rc in lineages]
+            + (["differentiation potential"] if show_dp else [])
+            if title is None
+            else title
         )
 
         if cluster_key is not None:
