@@ -265,6 +265,49 @@ class TestClusterFates:
                 legend_kwargs=(dict(loc="lower left foo bar")),
             )
 
+    @compare()
+    def test_mode_heatmap(self, adata: AnnData, fpath: Path):
+        cr.pl.cluster_fates(adata, "clusters", mode="heatmap", dpi=DPI, save=fpath)
+
+    @compare()
+    def test_mode_heatmap_title(self, adata: AnnData, fpath: Path):
+        cr.pl.cluster_fates(
+            adata, "clusters", mode="heatmap", title="foo", dpi=DPI, save=fpath
+        )
+
+    @compare()
+    def test_mode_heatmap_cmap(self, adata: AnnData, fpath: Path):
+        cr.pl.cluster_fates(
+            adata, "clusters", mode="heatmap", cmap="inferno", dpi=DPI, save=fpath
+        )
+
+    @compare()
+    def test_mode_heatmap_xticks_rotation(self, adata: AnnData, fpath: Path):
+        cr.pl.cluster_fates(
+            adata, "clusters", mode="heatmap", xticks_rotation=90, dpi=DPI, save=fpath
+        )
+
+    @compare()
+    def test_mode_heatmap_clusters(self, adata: AnnData, fpath: Path):
+        cr.pl.cluster_fates(
+            adata,
+            "clusters",
+            mode="heatmap",
+            clusters=["Astrocytes", "GABA"],
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_mode_heatmap_lineages(self, adata: AnnData, fpath: Path):
+        cr.pl.cluster_fates(
+            adata, "clusters", mode="heatmap", lineages=["0"], dpi=DPI, save=fpath
+        )
+
+    @compare()
+    def test_mode_clustermap(self, adata: AnnData, fpath: Path):
+        cr.pl.cluster_fates(adata, "clusters", mode="clustermap", dpi=DPI, save=fpath)
+
 
 class TestClusterLineages:
     @compare()

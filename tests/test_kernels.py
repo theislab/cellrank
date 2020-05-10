@@ -858,3 +858,48 @@ class TestKernelCopy:
             ck1._transition_matrix is not None
         )  # calling the property would trigger the calculation
         assert ck2._transition_matrix is None
+
+
+class TestGeneral:
+    def test_kernels(self, adata):
+        vk = VelocityKernel(adata)
+
+        assert len(vk.kernels) == 1
+        assert vk.kernels[0] is vk
+
+    def test_kernels_multiple(self, adata):
+        vk = VelocityKernel(adata)
+        ck = ConnectivityKernel(adata)
+        v = vk + ck
+
+        assert len(v.kernels) == 2
+        assert v.kernels == [vk, ck]
+
+    def test_kernels_multiple_constant(self, adata):
+        vk = VelocityKernel(adata)
+        ck = ConnectivityKernel(adata)
+        v = 100 * vk + 42 * ck
+
+        assert len(v.kernels) == 2
+        assert v.kernels == [vk, ck]
+
+    def test_no_comp_cond_num(self, adata):
+        vk = VelocityKernel(adata).compute_transition_matrix()
+
+        assert vk.condition_number is None
+
+    def test_comp_cond_num(self, adata):
+        vk = VelocityKernel(adata, compute_cond_num=True).compute_transition_matrix()
+
+        assert isinstance(vk.condition_number, float)
+
+    def test_comp_cond_num_or_policy(self, adata):
+        vk = VelocityKernel(adata, compute_cond_num=True).compute_transition_matrix()
+        ck = ConnectivityKernel(
+            adata, compute_cond_num=False
+        ).compute_transition_matrix()
+        v = (vk + ck).compute_transition_matrix()
+
+        assert isinstance(vk.condition_number, float)
+        assert ck.condition_number is None
+        assert isinstance(v.condition_number, float)

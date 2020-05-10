@@ -154,7 +154,7 @@ def heatmap(
             ax.set_yticks(np.array(ys) + lineage_height / 2)
             ax.set_yticklabels(lineages)
             ax.set_title(gene)
-            ax.set_ylabel("Lineage")
+            ax.set_ylabel("lineage")
 
             for pos in ["top", "bottom", "left", "right"]:
                 ax.spines[pos].set_visible(False)
