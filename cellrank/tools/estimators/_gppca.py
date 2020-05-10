@@ -716,18 +716,11 @@ class GPCCA(BaseEstimator):
             raise ValueError(f"Expected `n_cells` to be positive, found `{n_cells}`.")
 
         if (
-            attr != "_lin_probs"
+            attr != "_lin_probs"  # it's the non-reduced states that we don't save
             or n_cells != self._n_cells
             or self._main_states is None
         ):
             _main_states, *_ = self._select_cells(n_cells, probs)
-            if attr == "_lin_probs":
-                self._main_states = _main_states
-                meta_key = f"metastable_states_{self._direction}"
-
-                self.adata.obs[meta_key] = _main_states
-                self.adata.uns[_colors(meta_key)] = probs.colors
-                self._n_cells = n_cells
         else:
             _main_states = self._main_states
             logg.debug("DEBUG: Using cached main states")
@@ -737,6 +730,13 @@ class GPCCA(BaseEstimator):
                 f"Total number of requested cells ({n_cells * len(_main_states.cat.categories)}) "
                 f"exceeds the total number of cells ({self.adata.n_obs})."
             )
+
+        if attr == "_lin_probs":
+            self._main_states = _main_states
+
+            self.adata.obs[self._rc_key] = _main_states
+            self.adata.uns[_colors(self._rc_key)] = probs.colors
+            self._n_cells = n_cells
 
         to_clean = []
         try:
@@ -748,11 +748,11 @@ class GPCCA(BaseEstimator):
 
                 if title is None:
                     title = (
-                        "from root cells" if self.kernel.backward else "to final cells"
+                        "From root cells" if self.kernel.backward else "To final cells"
                     )
                 scv.pl.scatter(self.adata, title=title, color=key, **kwargs)
             else:
-                prefix = "from" if self.kernel.backward else "to"
+                prefix = self._prefix.capitalize()
                 titles = []
                 keys = generate_random_keys(
                     self.adata, "obs", len(_main_states.cat.categories)
