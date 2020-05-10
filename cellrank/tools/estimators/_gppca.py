@@ -952,21 +952,20 @@ class GPCCA(BaseEstimator):
                 np.array(self.coarse_stationary_distribution).reshape(1, -1),
                 xticks_labels=labels,
             )
-            stat_ax.set_xlabel("Stationary distribution")
+            stat_ax.set_xlabel("stationary distribution")
 
         if show_initial_dist:
             init_ax = fig.add_subplot(gs[0, 1])
             stylize_dist(init_ax, np.array(self._coarse_init_dist).reshape(-1, 1))
 
             init_ax.yaxis.set_label_position("right")
-            init_ax.set_ylabel("Initial distribution", rotation=-90, va="bottom")
+            init_ax.set_ylabel("initial distribution", rotation=-90, va="bottom")
 
         im = ax.imshow(self.coarse_T, aspect="auto", cmap=cmap, **kwargs)
-        ax.set_title("coarse-grained transition matrix" if title is None else title)
+        ax.set_title("Coarse-grained transition matrix" if title is None else title)
 
         if show_cbar:
             _ = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm)
-            cax.set_ylabel("Value", rotation=-90, va="bottom")
 
         ax.set_yticks(np.arange(self.coarse_T.shape[0]))
         ax.set_yticklabels(labels)
