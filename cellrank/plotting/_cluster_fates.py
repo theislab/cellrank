@@ -3,6 +3,7 @@ from collections import OrderedDict as odict
 from math import ceil
 from pathlib import Path
 from types import MappingProxyType
+from seaborn import heatmap, clustermap
 from typing import Optional, Sequence, Tuple, List, Mapping, Any, Union
 
 import matplotlib as mpl
@@ -24,7 +25,7 @@ from cellrank.tools._utils import save_fig
 from cellrank.utils._utils import _make_unique
 from cellrank.tools._lineage import Lineage
 
-_cluster_fates_modes = ("bar", "paga", "paga_pie", "violin")
+_cluster_fates_modes = ("bar", "paga", "paga_pie", "violin", "heatmap", "clustermap")
 
 
 def cluster_fates(
@@ -139,7 +140,9 @@ def cluster_fates(
                 ax = current_ax
 
             current_ax.set_xticks(np.arange(len(lin_names)))
-            current_ax.set_xticklabels(lin_names, rotation="vertical")
+            current_ax.set_xticklabels(
+                lin_names, rotation=xrot if has_xrot else "vertical"
+            )
             if not is_all:
                 current_ax.set_xlabel(points)
             current_ax.set_ylabel("probability")
@@ -217,6 +220,7 @@ def cluster_fates(
             kwargs["color"] = cluster_key
 
         ax = scv.pl.paga(adata, **kwargs)
+        ax.set_title(cluster_key.capitalize())
 
         if basis is not None and orig_ll not in ("none", "on data", None):
             handles = []
@@ -261,7 +265,7 @@ def cluster_fates(
 
         kwargs["show"] = False
         kwargs["groupby"] = cluster_key
-        kwargs["rotation"] = kwargs.get("rotation", 45)
+        kwargs["rotation"] = xrot
 
         data = adata.obsm[lk]
         to_clean = []
@@ -310,7 +314,7 @@ def cluster_fates(
         kwargs["show"] = False
         kwargs["groupby"] = points
         kwargs["xlabel"] = None
-        kwargs["rotation"] = kwargs.get("rotation", 45)
+        kwargs["rotation"] = xrot
 
         data = np.ravel(np.array(adata.obsm[lk]).T)[..., np.newaxis]
         dadata = AnnData(np.zeros_like(data))
@@ -318,7 +322,10 @@ def cluster_fates(
         dadata.obs[points] = (
             pd.Series(
                 np.ravel(
-                    [[f"{dir_prefix} {n}"] * adata.n_obs for n in adata.obsm[lk].names]
+                    [
+                        [f"{dir_prefix.lower()} {n}"] * adata.n_obs
+                        for n in adata.obsm[lk].names
+                    ]
                 )
             )
             .astype("category")
@@ -329,8 +336,62 @@ def cluster_fates(
         fig, ax = plt.subplots(
             figsize=figsize if figsize is not None else (8, 6), dpi=dpi
         )
-        ax.set_title(points)
+        ax.set_title(points.capitalize())
         sc.pl.violin(dadata, keys=["probability"], ax=ax, **kwargs)
+
+        return fig
+
+    def plot_heatmap():
+        title = kwargs.pop("title", None)
+        if not title:
+            title = "Average cluster fates"
+        data = pd.DataFrame(
+            [mean for mean, _ in d.values()], columns=lin_names, index=clusters
+        ).T
+
+        if "cmap" not in kwargs:
+            kwargs["cmap"] = "viridis"
+
+        if use_clustermap:
+            kwargs["cbar_pos"] = (0, 0.9, 0.025, 0.15) if show_cbar else None
+            max_size = float(max(data.shape))
+
+            g = clustermap(
+                data,
+                robust=True,
+                annot=True,
+                fmt=".2f",
+                vmin=0,
+                vmax=1,
+                row_colors=adata.obsm[lk][lin_names].colors,
+                dendrogram_ratio=(
+                    0.15 * data.shape[0] / max_size,
+                    0.15 * data.shape[1] / max_size,
+                ),
+                figsize=figsize,
+                **kwargs,
+            )
+            g.ax_col_dendrogram.set_title(title)
+
+            fig = g.fig
+            g = g.ax_heatmap
+        else:
+            fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
+            g = heatmap(
+                data,
+                robust=True,
+                annot=True,
+                fmt=".2f",
+                vmin=0,
+                vmax=1,
+                cbar=show_cbar,
+                ax=ax,
+                **kwargs,
+            )
+            ax.set_title(title)
+
+        g.set_xticklabels(g.get_xticklabels(), rotation=xrot)
+        g.set_yticklabels(g.get_yticklabels(), rotation=0)
 
         return fig
 
@@ -409,7 +470,15 @@ def cluster_fates(
         std = np.nanstd(data, axis=0) / np.sqrt(data.shape[0])
         d[name] = [mean, std]
 
+    has_xrot = "xticks_rotation" in kwargs
+    xrot = kwargs.pop("xticks_rotation", 45)
+
     logg.debug(f"DEBUG: Using mode: `{mode!r}`")
+
+    use_clustermap = mode == "clustermap"
+    if use_clustermap:
+        mode = "heatmap"
+
     if mode == "bar":
         fig = plot_bar()
     elif mode == "paga":
@@ -422,6 +491,8 @@ def cluster_fates(
         fig = plot_paga_pie()
     elif mode == "violin":
         fig = plot_violin_no_cluster_key() if cluster_key is None else plot_violin()
+    elif mode == "heatmap":
+        fig = plot_heatmap()
     else:
         raise ValueError(
             f"Invalid mode `{mode!r}`. Valid options are: `{_cluster_fates_modes}`."
@@ -441,6 +512,7 @@ def similarity_plot(
     cmap: mpl.colors.ListedColormap = cm.viridis,
     fontsize: float = 14,
     rotation: float = 45,
+    title: Optional[str] = "Similarity",
     figsize: Tuple[float, float] = (12, 10),
     dpi: Optional[int] = None,
     final: bool = True,
@@ -476,6 +548,8 @@ def similarity_plot(
         Rotation of labels on x-axis.
     figsize
         Size of the figure.
+    title
+        Title of the figure.
     dpi
         Dots per inch.
     final
@@ -490,6 +564,7 @@ def similarity_plot(
         Nothing, just plots the similarity matrix.
         Optionally saves the figure based on :paramref:`save`.
     """
+    # TODO: use seaborn's heatmap/clustermap
 
     logg.debug("DEBUG: Getting the counts")
     data = _counts(
@@ -518,11 +593,11 @@ def similarity_plot(
     ax.set_xticklabels(cluster_names, fontsize=fontsize, rotation=rotation)
     ax.set_yticklabels(cluster_names, fontsize=fontsize)
 
-    ax.tick_params(top=True, bottom=False, labeltop=True, labelbottom=False)
+    ax.set_title(title)
+    ax.tick_params(top=False, bottom=True, labeltop=False, labelbottom=True)
 
     cbar = ax.figure.colorbar(im, ax=ax, norm=mpl.colors.Normalize(vmin=0, vmax=1))
     cbar.set_ticks(np.linspace(0, 1, 10))
-    cbar.set_label("Similarity", rotation=90, va="top")
 
     if save is not None:
         save_fig(fig, save)

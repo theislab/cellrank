@@ -13,7 +13,6 @@ from cellrank.tools._utils import (
 from typing import Optional, Union, Callable, List, Iterable, Tuple, Type, Any, Dict
 from anndata import AnnData
 from scanpy import logging as logg
-from numpy import ndarray
 from scipy.sparse import issparse, spdiags, csr_matrix, spmatrix
 from functools import wraps, reduce
 from copy import copy
@@ -33,6 +32,7 @@ _LOG_USING_CACHE = "DEBUG: Using cached transition matrix"
 
 _n_dec = 2
 _dtype = np.float64
+_cond_num_tolerance = 1e-15
 
 
 class KernelExpression(ABC):
@@ -40,19 +40,31 @@ class KernelExpression(ABC):
     Base class for all kernels and kernel expressions.
     """
 
-    def __init__(self, op_name: Optional[str] = None, backward: bool = False):
+    def __init__(
+        self,
+        op_name: Optional[str] = None,
+        backward: bool = False,
+        compute_cond_num: bool = False,
+    ):
         self._op_name = op_name
         self._transition_matrix = None
         self._direction = Direction.BACKWARD if backward else Direction.FORWARD
+        self._compute_cond_num = compute_cond_num
+        self._cond_num = None
         self._params = dict()
         self._normalize = True
         self._parent = None
 
     @property
+    def condition_number(self):
+        """Condition number of the transition matrix"""
+        return self._cond_num
+
+    @property
     def transition_matrix(self) -> Union[np.ndarray, spmatrix]:
         """
-        Returns row-normalized transition matrix, if present, or tries computing it, if all underlying
-        kernels have been initialized.
+        Return row-normalized transition matrix, if present, or tries computing it,
+        if all underlying kernels have been initialized.
         """
 
         if self._parent is None and self._transition_matrix is None:
@@ -63,7 +75,7 @@ class KernelExpression(ABC):
     @property
     def backward(self) -> bool:
         """
-        Return `True` if the direction of the process is backwards, otherwise `False`.
+        `True` if the direction of the process is backwards, otherwise `False`.
         """
         # to do proper error checking, we need to propagate this kind information
         return self._direction == Direction.BACKWARD
@@ -72,7 +84,7 @@ class KernelExpression(ABC):
     @abstractmethod
     def adata(self) -> AnnData:
         """
-        Get the annotated data object.
+        The annotated data object.
 
         Returns
         -------
@@ -170,6 +182,30 @@ class KernelExpression(ABC):
     def copy(self) -> "KernelExpression":
         """Return a copy of itself. Note that the underlying :paramref:`adata` object is not copied."""
         pass
+
+    def _maybe_compute_cond_num(self):
+        if self._compute_cond_num and self._cond_num is None:
+            logg.debug(f"Computing condition number of `{repr(self)}`")
+            self._cond_num = np.linalg.cond(
+                self._transition_matrix.toarray()
+                if issparse(self._transition_matrix)
+                else self._transition_matrix
+            )
+            if self._cond_num > _cond_num_tolerance:
+                logg.warning(
+                    f"`{repr(self)}` may be ill-conditioned, its condition number is `{self._cond_num:.2e}`"
+                )
+
+    @abstractmethod
+    def _get_kernels(self) -> Iterable["Kernel"]:
+        pass
+
+    @property
+    def kernels(self) -> List["Kernel"]:
+        """
+        Get the kernels of the kernel expression, except for constants.
+        """
+        return list(self._get_kernels())
 
     def __xor__(self, other: "KernelExpression") -> "KernelExpression":
         return self.__rxor__(other)
@@ -338,9 +374,14 @@ class UnaryKernelExpression(KernelExpression, ABC):
     """
 
     def __init__(
-        self, adata, backward: bool = False, op_name: Optional[str] = None, **kwargs
+        self,
+        adata,
+        backward: bool = False,
+        op_name: Optional[str] = None,
+        compute_cond_num: bool = False,
+        **kwargs,
     ):
-        super().__init__(op_name, backward=backward)
+        super().__init__(op_name, backward=backward, compute_cond_num=compute_cond_num)
         assert (
             op_name is None
         ), "Unary kernel does not support any kind operation associated with it."
@@ -384,8 +425,8 @@ class UnaryKernelExpression(KernelExpression, ABC):
             logg.debug("DEBUG: No variance key specified")
 
     def density_normalize(
-        self, other: Union[ndarray, spmatrix]
-    ) -> Union[ndarray, spmatrix]:
+        self, other: Union[np.ndarray, spmatrix]
+    ) -> Union[np.ndarray, spmatrix]:
         """
         Density normalization by the underlying KNN graph.
 
@@ -431,9 +472,16 @@ class NaryKernelExpression(KernelExpression, ABC):
 
     def __init__(self, kexprs: List[KernelExpression], op_name: Optional[str] = None):
         assert len(kexprs), "No kernel expressions specified."
+
         backward = kexprs[0].backward
         assert all((k.backward == backward for k in kexprs)), _ERROR_DIRECTION_MSG
-        super().__init__(op_name, backward=backward)
+
+        # use OR instead of AND
+        super().__init__(
+            op_name,
+            backward=backward,
+            compute_cond_num=any((k._compute_cond_num for k in kexprs)),
+        )
 
         # copies of constants are necessary because of the recalculation
         self._kexprs = [copy(k) if isinstance(k, Constant) else k for k in kexprs]
@@ -462,6 +510,13 @@ class NaryKernelExpression(KernelExpression, ABC):
 
             for kexpr in self._kexprs:  # don't normalize  (c * x)
                 kexpr._normalize = False
+
+    def _get_kernels(self) -> Iterable["Kernel"]:
+        for k in self:
+            if isinstance(k, Kernel) and not isinstance(k, (Constant, ConstantMatrix)):
+                yield k
+            elif isinstance(k, NaryKernelExpression):
+                yield from k._get_kernels()
 
     @property
     def adata(self):
@@ -514,8 +569,19 @@ class Kernel(UnaryKernelExpression, ABC):
         Keyword arguments which can specify key to be read from :paramref:`adata` object.
     """
 
-    def __init__(self, adata: AnnData, backward: bool = False, **kwargs):
-        super().__init__(adata, backward, op_name=None, **kwargs)
+    def __init__(
+        self,
+        adata: AnnData,
+        backward: bool = False,
+        compute_cond_num: bool = False,
+        **kwargs,
+    ):
+        super().__init__(
+            adata, backward, op_name=None, compute_cond_num=compute_cond_num, **kwargs
+        )
+
+    def _get_kernels(self) -> Iterable["Kernel"]:
+        yield self
 
 
 class Constant(Kernel):
@@ -640,10 +706,21 @@ class VelocityKernel(Kernel):
         Direction of the process.
     vkey
         Key in :paramref:`adata` `.uns` where the velocities are stored.
+    compute_cond_num
+        Whether to compute condition number of the transition matrix. Note that this might be costly,
+        since it does not use sparse implementation.
     """
 
-    def __init__(self, adata: AnnData, backward: bool = False, vkey: str = "velocity"):
-        super().__init__(adata, backward=backward, vkey=vkey)
+    def __init__(
+        self,
+        adata: AnnData,
+        backward: bool = False,
+        vkey: str = "velocity",
+        compute_cond_num: bool = False,
+    ):
+        super().__init__(
+            adata, backward=backward, vkey=vkey, compute_cond_num=compute_cond_num
+        )
         self._vkey = vkey  # for copy
 
     def _read_from_adata(self, vkey: str, **kwargs):
@@ -708,7 +785,7 @@ class VelocityKernel(Kernel):
         # set the scaling parameter for the softmax
         med_corr = np.median(np.abs(correlations.data))
         if sigma_corr is None:
-            sigma_corr = 1 / med_corr
+            sigma_corr = 1.0 / med_corr
 
         params = dict(
             dnorm=density_normalize,
@@ -731,9 +808,11 @@ class VelocityKernel(Kernel):
         # normalize
         if density_normalize:
             velo_graph = self.density_normalize(velo_graph)
-        logg.info("    Finish", time=start)
 
         self.transition_matrix = csr_matrix(velo_graph)
+        self._maybe_compute_cond_num()
+
+        logg.info("    Finish", time=start)
 
         return self
 
@@ -763,10 +842,15 @@ class ConnectivityKernel(Kernel):
         Annotated data object.
     backward
         Direction of the process.
+    compute_cond_num
+        Whether to compute condition number of the transition matrix. Note that this might be costly,
+        since it does not use sparse implementation.
     """
 
-    def __init__(self, adata: AnnData, backward: bool = False):
-        super().__init__(adata, backward=backward)
+    def __init__(
+        self, adata: AnnData, backward: bool = False, compute_cond_num: bool = False
+    ):
+        super().__init__(adata, backward=backward, compute_cond_num=compute_cond_num)
 
     def _read_from_adata(self, **kwargs):
         super()._read_from_adata(variance_key="connectivity", **kwargs)
@@ -806,9 +890,11 @@ class ConnectivityKernel(Kernel):
 
         if density_normalize:
             conn = self.density_normalize(conn)
-        logg.info("    Finish", time=start)
 
         self.transition_matrix = csr_matrix(conn)
+        self._maybe_compute_cond_num()
+
+        logg.info("    Finish", time=start)
 
         return self
 
@@ -843,12 +929,24 @@ class PalantirKernel(Kernel):
         Direction of the process.
     time_key
         Key in :paramref:`adata` `.obs` where the pseudotime is stored.
+    compute_cond_num
+        Whether to compute condition number of the transition matrix. Note that this might be costly,
+        since it does not use sparse implementation.
     """
 
     def __init__(
-        self, adata: AnnData, backward: bool = False, time_key: str = "dpt_pseudotime"
+        self,
+        adata: AnnData,
+        backward: bool = False,
+        time_key: str = "dpt_pseudotime",
+        compute_cond_num: bool = False,
     ):
-        super().__init__(adata, backward=backward, time_key=time_key)
+        super().__init__(
+            adata,
+            backward=backward,
+            time_key=time_key,
+            compute_cond_num=compute_cond_num,
+        )
         self._time_key = time_key
 
     def _read_from_adata(self, time_key: str, **kwargs):
@@ -932,9 +1030,11 @@ class PalantirKernel(Kernel):
         # normalize
         if density_normalize:
             biased_conn = self.density_normalize(biased_conn)
-        logg.info("    Finish", time=start)
 
         self.transition_matrix = csr_matrix(biased_conn)
+        self._maybe_compute_cond_num()
+
+        logg.info("    Finish", time=start)
 
         return self
 
@@ -956,7 +1056,7 @@ class SimpleNaryExpression(NaryKernelExpression):
         self._fn = fn
 
     def compute_transition_matrix(self, *args, **kwargs) -> "SimpleNaryExpression":
-        # must be done before, because the underlying expression dont' have to be normed
+        # must be done before, because the underlying expression don't have to be normed
         if isinstance(self, KernelSimpleAdd):
             self._maybe_recalculate_constants(Constant)
         elif isinstance(self, KernelAdaptiveAdd):
@@ -976,6 +1076,10 @@ class SimpleNaryExpression(NaryKernelExpression):
         self.transition_matrix = csr_matrix(
             self._fn([kexpr.transition_matrix for kexpr in self])
         )
+
+        # only the top level expression and kernels will have condition number computed
+        if self._parent is None:
+            self._maybe_compute_cond_num()
 
         return self
 

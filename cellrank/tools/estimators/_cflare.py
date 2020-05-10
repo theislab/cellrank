@@ -323,12 +323,14 @@ class CFLARE(BaseEstimator):
         ax.set_ylabel("Re($\lambda$)")
         ax.set_xlim(x_min_, x_max_)
         ax.set_ylim(y_min_, y_max_)
+
         key = "real part" if params["which"] == "LR" else "magnitude"
-        if title is None:
-            title_str = f"top {params['k']} eigenvalues according to their {key}"
-        else:
-            title_str = title
-        ax.set_title(title_str)
+        ax.set_title(
+            f"Top {params['k']} eigenvalues according to their {key}"
+            if title is None
+            else title
+        )
+
         ax.legend(loc=legend_loc)
 
         if save is not None:
@@ -828,6 +830,9 @@ class CFLARE(BaseEstimator):
             Key from `adata.obs` to use as a pseudotime ordering of the cells.
         same_plot
             Whether to plot the lineages on the same plot using color gradients when :paramref:`mode='embedding'`.
+        title
+            Either `None`, in which case titles are "to/from final/root state X",
+            or an array of titles, one per per lineage.
         color_map
             Colormap to use.
         kwargs
@@ -909,28 +914,28 @@ class CFLARE(BaseEstimator):
         """
 
         kernel = copy(self.kernel)  # doesn't copy the adata object
-        mc = CFLARE(kernel, self.adata.copy(), inplace=False, read_from_adata=False)
+        c = CFLARE(kernel, self.adata.copy(), inplace=False, read_from_adata=False)
 
-        mc._is_irreducible = self.irreducible
-        mc._rec_classes = copy(self._rec_classes)
-        mc._trans_classes = copy(self._trans_classes)
+        c._is_irreducible = self.irreducible
+        c._rec_classes = copy(self._rec_classes)
+        c._trans_classes = copy(self._trans_classes)
 
-        mc._eig = deepcopy(self.eigendecomposition)
-        mc._lin_probs = copy(self.lineage_probabilities)
-        mc._dp = copy(self.diff_potential)
+        c._eig = deepcopy(self.eigendecomposition)
+        c._lin_probs = copy(self.lineage_probabilities)
+        c._dp = copy(self.diff_potential)
 
-        mc._approx_rcs = copy(self.approx_recurrent_classes)
-        mc._approx_rcs_probs = copy(self.approx_recurrent_classes_probabilities)
-        mc._approx_rcs_colors = copy(self._approx_rcs_colors)
+        c._approx_rcs = copy(self.approx_recurrent_classes)
+        c._approx_rcs_probs = copy(self.approx_recurrent_classes_probabilities)
+        c._approx_rcs_colors = copy(self._approx_rcs_colors)
 
-        mc._G2M_score = copy(self._G2M_score)
-        mc._S_score = copy(self._S_score)
+        c._G2M_score = copy(self._G2M_score)
+        c._S_score = copy(self._S_score)
 
-        mc._g2m_key = self._g2m_key
-        mc._s_key = self._s_key
-        mc._key_added = self._key_added
+        c._g2m_key = self._g2m_key
+        c._s_key = self._s_key
+        c._key_added = self._key_added
 
-        return mc
+        return c
 
     @property
     def irreducible(self) -> Optional[bool]:

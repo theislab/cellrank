@@ -491,7 +491,7 @@ def graph(
 
         nx.draw_networkx_nodes(G, pos, node_size=node_size, ax=ax, **nodes_kwargs)
 
-        ax.set_title(key.capitalize())
+        ax.set_title(key)
         ax.axis("off")
 
     if save is not None:
