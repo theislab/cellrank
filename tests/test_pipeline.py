@@ -66,7 +66,7 @@ class TestLowLevelPipeline:
         ck = ConnectivityKernel(adata).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc_fwd = cr.tl.MarkovChain(final_kernel)
+        mc_fwd = cr.tl.CFLARE(final_kernel)
 
         mc_fwd.compute_partition()
 
@@ -91,7 +91,7 @@ class TestLowLevelPipeline:
         ck = ConnectivityKernel(adata, backward=True).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc_bwd = cr.tl.MarkovChain(final_kernel)
+        mc_bwd = cr.tl.CFLARE(final_kernel)
 
         mc_bwd.compute_partition()
 
