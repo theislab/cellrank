@@ -4,7 +4,7 @@ from matplotlib.testing.compare import compare_images
 from typing import Union, Tuple
 from pathlib import Path
 from anndata import AnnData
-from cellrank.tools import MarkovChain
+from cellrank.tools import CFLARE
 
 from _helpers import create_model, resize_images_to_same_sizes
 
@@ -225,9 +225,7 @@ class TestClusterFates:
             legend_loc="center right out",
         )
 
-    def test_paga_pie_wrong_legend_kind_1(
-        self, adata_mc_fwd: Tuple[AnnData, MarkovChain]
-    ):
+    def test_paga_pie_wrong_legend_kind_1(self, adata_mc_fwd: Tuple[AnnData, CFLARE]):
         adata, _ = adata_mc_fwd
         with pytest.raises(ValueError):
             cr.pl.cluster_fates(
@@ -237,9 +235,7 @@ class TestClusterFates:
                 legend_kwargs=(dict(loc="foo")),
             )
 
-    def test_paga_pie_wrong_legend_kind_2(
-        self, adata_mc_fwd: Tuple[AnnData, MarkovChain]
-    ):
+    def test_paga_pie_wrong_legend_kind_2(self, adata_mc_fwd: Tuple[AnnData, CFLARE]):
         adata, _ = adata_mc_fwd
         with pytest.raises(ValueError):
             cr.pl.cluster_fates(
@@ -249,9 +245,7 @@ class TestClusterFates:
                 legend_kwargs=(dict(loc="lower foo")),
             )
 
-    def test_paga_pie_wrong_legend_kind_3(
-        self, adata_mc_fwd: Tuple[AnnData, MarkovChain]
-    ):
+    def test_paga_pie_wrong_legend_kind_3(self, adata_mc_fwd: Tuple[AnnData, CFLARE]):
         adata, _ = adata_mc_fwd
         with pytest.raises(ValueError):
             cr.pl.cluster_fates(
@@ -261,9 +255,7 @@ class TestClusterFates:
                 legend_kwargs=(dict(loc="lower left bar")),
             )
 
-    def test_paga_pie_wrong_legend_kind_4(
-        self, adata_mc_fwd: Tuple[AnnData, MarkovChain]
-    ):
+    def test_paga_pie_wrong_legend_kind_4(self, adata_mc_fwd: Tuple[AnnData, CFLARE]):
         adata, _ = adata_mc_fwd
         with pytest.raises(ValueError):
             cr.pl.cluster_fates(
@@ -686,55 +678,55 @@ class TestGraph:
 
 class TestMarkovChain:
     @compare(kind="mc")
-    def test_mc_eig(self, mc: MarkovChain, fpath: Path):
+    def test_mc_eig(self, mc: CFLARE, fpath: Path):
         mc.plot_spectrum(dpi=DPI, save=fpath)
 
     @compare(kind="mc")
-    def test_mc_real_spectrum(self, mc: MarkovChain, fpath: Path):
+    def test_mc_real_spectrum(self, mc: CFLARE, fpath: Path):
         mc.plot_real_spectrum(dpi=DPI, save=fpath)
 
     @compare(kind="mc")
-    def test_scvelo_eig_embedding_clusters(self, mc: MarkovChain, fpath: Path):
+    def test_scvelo_eig_embedding_clusters(self, mc: CFLARE, fpath: Path):
         mc.plot_eig_embedding(cluster_key="clusters", dpi=DPI, save=str(fpath))
 
     @compare(kind="mc")
-    def test_scvelo_eig_embedding_left(self, mc: MarkovChain, fpath: Path):
+    def test_scvelo_eig_embedding_left(self, mc: CFLARE, fpath: Path):
         mc.plot_eig_embedding(dpi=DPI, save=str(fpath))
 
     @compare(kind="mc")
-    def test_scvelo_eig_embedding_right(self, mc: MarkovChain, fpath: Path):
+    def test_scvelo_eig_embedding_right(self, mc: CFLARE, fpath: Path):
         mc.plot_eig_embedding(left=False, dpi=DPI, save=str(fpath))
 
     @compare(kind="mc")
-    def test_scvelo_eig_embedding_use_2(self, mc: MarkovChain, fpath: Path):
+    def test_scvelo_eig_embedding_use_2(self, mc: CFLARE, fpath: Path):
         mc.plot_eig_embedding(use=2, dpi=DPI, save=str(fpath))
 
     @compare(kind="mc")
-    def test_scvelo_approx_rcs(self, mc: MarkovChain, fpath: Path):
+    def test_scvelo_approx_rcs(self, mc: CFLARE, fpath: Path):
         mc.plot_approx_rcs(dpi=DPI, save=str(fpath))
 
     @compare(kind="mc")
-    def test_scvelo_approx_rcs_clusters(self, mc: MarkovChain, fpath: Path):
+    def test_scvelo_approx_rcs_clusters(self, mc: CFLARE, fpath: Path):
         mc.plot_approx_rcs(cluster_key="clusters", dpi=DPI, save=str(fpath))
 
     @compare(kind="mc")
-    def test_scvelo_lin_probs(self, mc: MarkovChain, fpath: Path):
+    def test_scvelo_lin_probs(self, mc: CFLARE, fpath: Path):
         mc.plot_lin_probs(dpi=DPI, save=str(fpath))
 
     @compare(kind="mc")
-    def test_scvelo_lin_probs_clusters(self, mc: MarkovChain, fpath: Path):
+    def test_scvelo_lin_probs_clusters(self, mc: CFLARE, fpath: Path):
         mc.plot_lin_probs(cluster_key="clusters", dpi=DPI, save=str(fpath))
 
     @compare(kind="mc")
-    def test_scvelo_lin_probs_cmap(self, mc: MarkovChain, fpath: Path):
+    def test_scvelo_lin_probs_cmap(self, mc: CFLARE, fpath: Path):
         mc.plot_lin_probs(cmap=cm.inferno, dpi=DPI, save=str(fpath))
 
     @compare(kind="mc")
-    def test_scvelo_lin_probs_lineages(self, mc: MarkovChain, fpath: Path):
+    def test_scvelo_lin_probs_lineages(self, mc: CFLARE, fpath: Path):
         mc.plot_lin_probs(lineages=["0"], dpi=DPI, save=str(fpath))
 
     @compare(kind="mc")
-    def test_scvelo_lin_probs_time(self, mc: MarkovChain, fpath: Path):
+    def test_scvelo_lin_probs_time(self, mc: CFLARE, fpath: Path):
         mc.plot_lin_probs(mode="time", dpi=DPI, save=str(fpath))
 
 

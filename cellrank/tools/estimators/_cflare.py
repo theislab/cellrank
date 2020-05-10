@@ -36,9 +36,9 @@ from cellrank.tools._utils import (
 )
 
 
-class MarkovChain(BaseEstimator):
+class CFLARE(BaseEstimator):
     """
-    Class modelling cellular development as a Markov chain.
+    **C**lustering and **F**iltering of **L**eft **a**nd **R**ight **E**igenvectors based on Markov chains.
 
     This is one of the two main classes of CellRank. We model cellular development as a Markov chain (MC), where each
     measured cell is represented by a state in the MC. We assume that transition probabilities between these states
@@ -900,18 +900,16 @@ class MarkovChain(BaseEstimator):
             self._approx_rcs_colors = _create_categorical_colors(n_cats)
             self._adata.uns[_colors(self._rc_key)] = self._approx_rcs_colors
 
-    def copy(self) -> "MarkovChain":
+    def copy(self) -> "CFLARE":
         """
         Returns
         -------
-        :class:`cellrank.tl.MarkovChain`
+        :class:`cellrank.tl.CFLARE`
             A copy of itself.
         """
 
         kernel = copy(self.kernel)  # doesn't copy the adata object
-        mc = MarkovChain(
-            kernel, self.adata.copy(), inplace=False, read_from_adata=False
-        )
+        mc = CFLARE(kernel, self.adata.copy(), inplace=False, read_from_adata=False)
 
         mc._is_irreducible = self.irreducible
         mc._rec_classes = copy(self._rec_classes)

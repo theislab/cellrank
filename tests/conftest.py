@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from cellrank.tools import MarkovChain
+from cellrank.tools import CFLARE
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
 from typing import Tuple
 from anndata import AnnData
@@ -36,7 +36,7 @@ def _create_dummy_adata(n_obs: int) -> AnnData:
 
 def _create_cellrank_adata(
     n_obs: int, *, backward: bool = False
-) -> Tuple[AnnData, MarkovChain]:
+) -> Tuple[AnnData, CFLARE]:
     adata = _create_dummy_adata(n_obs)
     sc.tl.paga(adata, groups="clusters")
     try:
@@ -44,7 +44,7 @@ def _create_cellrank_adata(
         ck = ConnectivityKernel(adata, backward=backward).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.MarkovChain(final_kernel)
+        mc = cr.tl.CFLARE(final_kernel)
 
         mc.compute_partition()
         mc.compute_eig()
@@ -76,7 +76,7 @@ def adata_large(adata=_create_dummy_adata(200)) -> AnnData:
 @pytest.fixture
 def adata_mc_fwd(
     adata_mc=_create_cellrank_adata(100, backward=False)
-) -> Tuple[AnnData, MarkovChain]:
+) -> Tuple[AnnData, CFLARE]:
     adata, mc = adata_mc
     return adata.copy(), mc
 

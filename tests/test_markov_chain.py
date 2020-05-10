@@ -26,7 +26,7 @@ class TestMarkovChain:
         ck = ConnectivityKernel(adata).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc_fwd = cr.tl.MarkovChain(final_kernel)
+        mc_fwd = cr.tl.CFLARE(final_kernel)
 
         mc_fwd.compute_lin_probs()
 
@@ -37,7 +37,7 @@ class TestMarkovChain:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.MarkovChain(final_kernel)
+        mc = cr.tl.CFLARE(final_kernel)
         mc.compute_partition()
 
         assert isinstance(mc.irreducible, bool)
@@ -55,7 +55,7 @@ class TestMarkovChain:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.MarkovChain(final_kernel)
+        mc = cr.tl.CFLARE(final_kernel)
         mc.compute_eig(k=2)
 
         assert isinstance(mc.eigendecomposition, dict)
@@ -73,7 +73,7 @@ class TestMarkovChain:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.MarkovChain(final_kernel)
+        mc = cr.tl.CFLARE(final_kernel)
         with pytest.raises(RuntimeError):
             mc.compute_approx_rcs(use=2)
 
@@ -82,7 +82,7 @@ class TestMarkovChain:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.MarkovChain(final_kernel)
+        mc = cr.tl.CFLARE(final_kernel)
         mc.compute_eig(k=2)
         with pytest.raises(ValueError):
             mc.compute_approx_rcs(use=1000)
@@ -92,7 +92,7 @@ class TestMarkovChain:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.MarkovChain(final_kernel)
+        mc = cr.tl.CFLARE(final_kernel)
         mc.compute_eig(k=5)
         mc.compute_approx_rcs(use=2)
 
@@ -106,7 +106,7 @@ class TestMarkovChain:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.MarkovChain(final_kernel)
+        mc = cr.tl.CFLARE(final_kernel)
         with pytest.raises(RuntimeError):
             mc.compute_lin_probs()
 
@@ -115,7 +115,7 @@ class TestMarkovChain:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.MarkovChain(final_kernel)
+        mc = cr.tl.CFLARE(final_kernel)
         mc.compute_eig(k=5)
         mc.compute_approx_rcs(use=2)
         mc.compute_lin_probs()
@@ -149,7 +149,7 @@ class TestMarkovChain:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.MarkovChain(final_kernel)
+        mc = cr.tl.CFLARE(final_kernel)
         mc.compute_eig(k=5)
         mc.compute_approx_rcs(use=2)
         with pytest.raises(RuntimeError):
@@ -160,7 +160,7 @@ class TestMarkovChain:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.MarkovChain(final_kernel)
+        mc = cr.tl.CFLARE(final_kernel)
         mc.compute_eig(k=5)
         mc.compute_approx_rcs(use=2)
         mc.compute_lin_probs()
@@ -172,7 +172,7 @@ class TestMarkovChain:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.MarkovChain(final_kernel)
+        mc = cr.tl.CFLARE(final_kernel)
         mc.compute_eig(k=5)
         mc.compute_approx_rcs(use=2)
         mc.compute_lin_probs()
@@ -186,7 +186,7 @@ class TestMarkovChain:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.MarkovChain(final_kernel)
+        mc = cr.tl.CFLARE(final_kernel)
         mc.compute_eig(k=5)
         mc.compute_approx_rcs(use=2)
         mc.compute_lin_probs()
@@ -201,7 +201,7 @@ class TestMarkovChain:
         ck = ConnectivityKernel(adata).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc_fwd = cr.tl.MarkovChain(final_kernel)
+        mc_fwd = cr.tl.CFLARE(final_kernel)
         mc_fwd.compute_partition()
         mc_fwd.compute_eig()
         mc_fwd.compute_approx_rcs(use=3)
@@ -226,7 +226,7 @@ class TestMarkovChain:
         ck = ConnectivityKernel(adata).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc_fwd = cr.tl.MarkovChain(final_kernel)
+        mc_fwd = cr.tl.CFLARE(final_kernel)
         mc_fwd.compute_partition()
         mc_fwd.compute_eig()
 
@@ -246,7 +246,7 @@ class TestMarkovChain:
         ck = ConnectivityKernel(adata).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc_fwd = cr.tl.MarkovChain(final_kernel)
+        mc_fwd = cr.tl.CFLARE(final_kernel)
         mc_fwd.compute_partition()
         mc_fwd.compute_eig()
 
