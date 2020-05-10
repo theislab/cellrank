@@ -8,7 +8,7 @@ from scipy.stats import entropy
 from copy import copy, deepcopy
 
 from cellrank.tools._lineage import Lineage
-from cellrank.tools._constants import Lin, RcKey, _colors, _lin_names
+from cellrank.tools._constants import Lin, RcKey, _colors, _lin_names, _dp
 from cellrank.tools.estimators._base_estimator import BaseEstimator
 from cellrank.tools._utils import (
     save_fig,
@@ -288,9 +288,9 @@ class GPCCA(BaseEstimator):
         cluster_key: Optional[str] = None,
         mode: str = "embedding",
         time_key: str = "latent_time",
-        show_dp: bool = True,
         same_plot: bool = True,
-        color_map: Union[str, mpl.colors.ListedColormap] = cm.viridis,
+        cmap: Union[str, mpl.colors.ListedColormap] = cm.viridis,
+        title: Optional[str] = None,
         **kwargs,
     ) -> None:
         """
@@ -311,19 +311,20 @@ class GPCCA(BaseEstimator):
             - If `'time'`, plos the pseudotime on x-axis and the absorption probabilities on y-axis.
         time_key
             Key from `adata.obs` to use as a pseudotime ordering of the cells.
-        show_dp
-            Whether to show differentiation potential when :paramref:`mode` `='embedding'`.
         same_plot
             Whether to plot the lineages on the same plot using color gradients when :paramref:`mode='embedding'`.
-        color_map
+        cmap
             Colormap to use.
+        title
+            Either `None`, in which case titles are "to/from final/root state X",
+            or an array of titles, one per per lineage.
         kwargs
             Keyword arguments for :func:`scvelo.pl.scatter`.
 
         Returns
         -------
         None
-            Nothing, just plots the absorption probabilities.
+            Nothing, just plots the metastable states.
         """
 
         attr = "_meta_lin_probs"
@@ -337,9 +338,10 @@ class GPCCA(BaseEstimator):
                 cluster_key=cluster_key,
                 mode=mode,
                 time_key=time_key,
-                show_dp=show_dp,
+                show_dp=False,
+                title=title,
                 same_plot=same_plot,
-                color_map=color_map,
+                color_map=cmap,
                 **kwargs,
             )
         else:
@@ -348,6 +350,7 @@ class GPCCA(BaseEstimator):
                 error_msg=error_msg,
                 n_cells=n_cells,
                 same_plot=same_plot,
+                title=title,
                 **kwargs,
             )
 
@@ -359,7 +362,9 @@ class GPCCA(BaseEstimator):
         mode: str = "embedding",
         time_key: str = "latent_time",
         same_plot: bool = False,
-        color_map: Union[str, mpl.colors.ListedColormap] = cm.viridis,
+        show_dp: bool = True,
+        title: Optional[str] = None,
+        cmap: Union[str, mpl.colors.ListedColormap] = cm.viridis,
         **kwargs,
     ) -> None:
         """
@@ -382,7 +387,12 @@ class GPCCA(BaseEstimator):
             Key from `adata.obs` to use as a pseudotime ordering of the cells.
         same_plot
             Whether to plot the lineages on the same plot using color gradients when :paramref:`mode='embedding'`.
-        color_map
+        show_dp
+            Whether to show :paramref:`diff_potential` when :paramref:`n_cells` `=None`.
+        title
+            Either `None`, in which case titles are "to/from final/root state X",
+            or an array of titles, one per per lineage.
+        cmap
             Colormap to use.
         kwargs
             Keyword arguments for :func:`scvelo.pl.scatter`.
@@ -390,8 +400,9 @@ class GPCCA(BaseEstimator):
         Returns
         -------
         None
-            Nothing, just plots the absorption probabilities.
+            Nothing, just plots the main states.
         """
+
         attr = "_lin_probs"
         error_msg = "Compute main states first as `.compute_main_states()` or set them manually as `.set_main_states()`."
 
@@ -403,8 +414,10 @@ class GPCCA(BaseEstimator):
                 cluster_key=cluster_key,
                 mode=mode,
                 time_key=time_key,
+                show_dp=show_dp,
+                title=title,
                 same_plot=same_plot,
-                color_map=color_map,
+                color_map=cmap,
                 **kwargs,
             )
         else:
@@ -413,6 +426,7 @@ class GPCCA(BaseEstimator):
                 error_msg=error_msg,
                 n_cells=n_cells,
                 same_plot=same_plot,
+                title=title,
                 **kwargs,
             )
 
@@ -459,7 +473,7 @@ class GPCCA(BaseEstimator):
         self._dp = entropy(self._lin_probs.X.T)
 
         # write to adata
-        self.adata.obs[f"{self._lin_key}_dp"] = self._dp
+        self.adata.obs[_dp(self._lin_key)] = self._dp
         self.adata.uns[_lin_names(self._lin_key)] = self._lin_probs.names
         self.adata.uns[_colors(self._lin_key)] = self._lin_probs.colors
 

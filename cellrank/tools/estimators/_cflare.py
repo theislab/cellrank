@@ -20,7 +20,7 @@ from scipy.stats import zscore, entropy
 
 from cellrank.tools.estimators._base_estimator import BaseEstimator
 from cellrank.tools._lineage import Lineage
-from cellrank.tools._constants import _probs, _colors, _lin_names
+from cellrank.tools._constants import _probs, _colors, _lin_names, _dp
 from cellrank.tools._utils import (
     _process_series,
     _complex_warning,
@@ -137,11 +137,11 @@ class CFLARE(BaseEstimator):
                 f"DEBUG: `{self._lin_key}` not found in `adata.obsm`. Setting `.lin_probs` to `None`"
             )
 
-        if f"{self._lin_key}_dp" in self._adata.obs.keys():
-            self._dp = self._adata.obs[f"{self._lin_key}_dp"]
+        if _dp(self._lin_key) in self._adata.obs.keys():
+            self._dp = self._adata.obs[_dp(self._lin_key)]
         else:
             logg.debug(
-                f"DEBUG: `{self._lin_key}_dp` not found in `adata.obs`. Setting `.dp` to `None`"
+                f"DEBUG: `{_dp(self._lin_key)}` not found in `adata.obs`. Setting `.diff_potential` to `None`"
             )
 
         if g2m_key and g2m_key in self._adata.obs.keys():
@@ -796,7 +796,7 @@ class CFLARE(BaseEstimator):
         )
 
         self._adata.obsm[self._lin_key] = self._lin_probs
-        self._adata.obs[f"{self._lin_key}_dp"] = self._dp
+        self._adata.obs[_dp(self._lin_key)] = self._dp
         self._adata.uns[_lin_names(self._lin_key)] = self._lin_probs.names
         self._adata.uns[_colors(self._lin_key)] = self._lin_probs.colors
 
@@ -808,8 +808,10 @@ class CFLARE(BaseEstimator):
         cluster_key: Optional[str] = None,
         mode: str = "embedding",
         time_key: str = "latent_time",
+        show_dp: bool = True,
         same_plot: bool = False,
-        color_map: Union[str, mpl.colors.ListedColormap] = cm.viridis,
+        title: Optional[str] = None,
+        cmap: Union[str, mpl.colors.ListedColormap] = cm.viridis,
         **kwargs,
     ) -> None:
         """
@@ -828,12 +830,14 @@ class CFLARE(BaseEstimator):
             - If `'time'`, plos the pseudotime on x-axis and the absorption probabilities on y-axis.
         time_key
             Key from `adata.obs` to use as a pseudotime ordering of the cells.
+        show_dp
+            Whether to show differentiation potential if present.
         same_plot
             Whether to plot the lineages on the same plot using color gradients when :paramref:`mode='embedding'`.
         title
             Either `None`, in which case titles are "to/from final/root state X",
             or an array of titles, one per per lineage.
-        color_map
+        cmap
             Colormap to use.
         kwargs
             Keyword arguments for :func:`scvelo.pl.scatter`.
@@ -851,8 +855,10 @@ class CFLARE(BaseEstimator):
             cluster_key=cluster_key,
             mode=mode,
             time_key=time_key,
+            show_dp=show_dp,
+            title=title,
             same_plot=same_plot,
-            color_map=color_map,
+            color_map=cmap,
             **kwargs,
         )
 
