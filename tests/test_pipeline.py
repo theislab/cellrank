@@ -72,7 +72,7 @@ class TestLowLevelPipeline:
 
         mc_fwd.compute_eig()
         mc_fwd.plot_spectrum()
-        mc_fwd.plot_real_spectrum()
+        mc_fwd.plot_spectrum(real_only=True)
         mc_fwd.plot_eig_embedding()
         mc_fwd.plot_eig_embedding(left=False)
 
@@ -97,7 +97,7 @@ class TestLowLevelPipeline:
 
         mc_bwd.compute_eig()
         mc_bwd.plot_spectrum()
-        mc_bwd.plot_real_spectrum()
+        mc_fwd.plot_spectrum(real_only=True)
         mc_bwd.plot_eig_embedding()
         mc_bwd.plot_eig_embedding(left=False)
 

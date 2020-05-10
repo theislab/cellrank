@@ -726,7 +726,7 @@ class TestMarkovChain:
 
     @compare(kind="mc")
     def test_mc_real_spectrum(self, mc: CFLARE, fpath: Path):
-        mc.plot_real_spectrum(dpi=DPI, save=fpath)
+        mc.plot_spectrum(dpi=DPI, real_only=True, save=fpath)
 
     @compare(kind="mc")
     def test_scvelo_eig_embedding_clusters(self, mc: CFLARE, fpath: Path):

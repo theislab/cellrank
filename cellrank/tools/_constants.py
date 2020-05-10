@@ -23,8 +23,8 @@ class Direction(PrettyEnum):
 
 
 class RcKey(PrettyEnum):
-    FORWARD = "final_cells"
-    BACKWARD = "root_cells"
+    FORWARD = "final_states"
+    BACKWARD = "root_states"
 
 
 class LinKey(PrettyEnum):
@@ -45,9 +45,9 @@ def _lin_names(k: Union[str, LinKey]) -> str:
     return f"{k}_names"
 
 
-def _colors(k: Union[str, LinKey]) -> str:
+def _colors(k: Union[str, LinKey, RcKey]) -> str:
     return f"{k}_colors"
 
 
 def _probs(k: Union[str, RcKey]) -> str:
-    return f"{k}_probs"
+    return f"{k}_cont"
