@@ -82,7 +82,7 @@ class CFLARE(BaseEstimator):
         self._rec_classes = None
         self._trans_classes = None
 
-        self._approx_rcs, self._approx_rcs_colors, self._approx_rcs_probs = (
+        self._metastable_states, self._metastable_states_colors, self._metastable_states_probs = (
             None,
             None,
             None,
@@ -109,18 +109,18 @@ class CFLARE(BaseEstimator):
             )
 
         if self._rc_key in self._adata.obs.keys():
-            self._approx_rcs = self._adata.obs[self._rc_key]
+            self._metastable_states = self._adata.obs[self._rc_key]
         else:
             logg.debug(
-                f"DEBUG: `{self._rc_key}` not found in `adata.obs`. Setting `.approx_rcs` to `None`"
+                f"DEBUG: `{self._rc_key}` not found in `adata.obs`. Setting `.metastable_states` to `None`"
             )
 
         if _colors(self._rc_key) in self._adata.uns.keys():
-            self._approx_rcs_colors = self._adata.uns[_colors(self._rc_key)]
+            self._metastable_states_colors = self._adata.uns[_colors(self._rc_key)]
         else:
             logg.debug(
                 f"DEBUG: `{_colors(self._rc_key)}` not found in `adata.uns`. "
-                f"Setting `.approx_rcs_colors`to `None`"
+                f"Setting `.metastable_states_colors`to `None`"
             )
 
         if self._lin_key in self._adata.obsm.keys():
@@ -159,11 +159,11 @@ class CFLARE(BaseEstimator):
             )
 
         if _probs(self._rc_key) in self._adata.obs.keys():
-            self._approx_rcs_probs = self._adata.obs[_probs(self._rc_key)]
+            self._metastable_states_probs = self._adata.obs[_probs(self._rc_key)]
         else:
             logg.debug(
                 f"DEBUG: `{_probs(self._rc_key)}` not found in `adata.obs`. "
-                f"Setting `.approx_rcs_probs` to `None`"
+                f"Setting `.metastable_states_probs` to `None`"
             )
 
         if self._lin_probs is not None:
@@ -260,84 +260,6 @@ class CFLARE(BaseEstimator):
 
         self._compute_eig(k, which=which, alpha=alpha, only_evals=False)
 
-    def plot_eig(
-        self,
-        dpi: int = 100,
-        figsize: Optional[Tuple[float, float]] = (5, 5),
-        legend_loc: Optional[str] = None,
-        title: Optional[str] = None,
-        save: Optional[Union[str, Path]] = None,
-    ) -> None:
-        """
-        Plot the top eigenvalues in complex plane.
-
-        Params
-        ------
-        dpi
-            Dots per inch.
-        figsize
-            Size of the figure.
-        save
-            Filename where to save the plots. If `None`, just shows the plot.
-
-        Returns
-        -------
-        None
-            Nothing, just plots the spectrum in complex plane.
-        """
-
-        if self._eig is None:
-            logg.warning(
-                "No eigendecomposition found, computing with default parameters"
-            )
-            self.compute_eig()
-        D = self._eig["D"]
-        params = self._eig["params"]
-
-        # create fiture and axes
-        fig, ax = plt.subplots(nrows=1, ncols=1, dpi=dpi, figsize=figsize)
-
-        # get the original data ranges
-        lam_x, lam_y = D.real, D.imag
-        x_min, x_max = np.min(lam_x), np.max(lam_x)
-        y_min, y_max = np.min(lam_y), np.max(lam_y)
-        x_range, y_range = x_max - x_min, y_max - y_min
-        final_range = np.max([x_range, y_range]) + 0.05
-
-        # define a function to make the data limits rectangular
-        adapt_range = lambda min_, max_, range_: (
-            min_ + (max_ - min_) / 2 - range_ / 2,
-            min_ + (max_ - min_) / 2 + range_ / 2,
-        )
-        x_min_, x_max_ = adapt_range(x_min, x_max, final_range)
-        y_min_, y_max_ = adapt_range(y_min, y_max, final_range)
-
-        # plot the data and the unit circle
-        ax.scatter(D.real, D.imag, marker=".", label="Eigenvalue")
-        t = np.linspace(0, 2 * np.pi, 500)
-        x_circle, y_circle = np.sin(t), np.cos(t)
-        ax.plot(x_circle, y_circle, "k-", label="Unit circle")
-
-        # set labels, ranges and legend
-        ax.set_xlabel("Im($\lambda$)")
-        ax.set_ylabel("Re($\lambda$)")
-        ax.set_xlim(x_min_, x_max_)
-        ax.set_ylim(y_min_, y_max_)
-
-        key = "real part" if params["which"] == "LR" else "magnitude"
-        ax.set_title(
-            f"Top {params['k']} eigenvalues according to their {key}"
-            if title is None
-            else title
-        )
-
-        ax.legend(loc=legend_loc)
-
-        if save is not None:
-            save_fig(fig, save)
-
-        fig.show()
-
     def plot_eig_embedding(
         self,
         left: bool = True,
@@ -392,9 +314,9 @@ class CFLARE(BaseEstimator):
             **kwargs,
         )
 
-    def set_approx_rcs(
+    def set_metastable_states(
         self,
-        rc_labels: Union[Series, Dict[Any, Any]],
+        labels: Union[Series, Dict[Any, Any]],
         cluster_key: Optional[str] = None,
         en_cutoff: Optional[float] = None,
         p_thresh: Optional[float] = None,
@@ -410,7 +332,7 @@ class CFLARE(BaseEstimator):
             belonging to a transient state or a :class:`dict`, where each key is the name of the recurrent class and
             values are list of cell names.
         cluster_key
-            If a key to cluster labels is given, `approx_rcs` will ge associated with these for naming and colors.
+            If a key to cluster labels is given, `metastable_states` will ge associated with these for naming and colors.
         en_cutoff
             If :paramref:`cluster_key` is given, this parameter determines when an approximate recurrent class will
             be labelled as *'Unknown'*, based on the entropy of the distribution of cells over transcriptomic clusters.
@@ -431,18 +353,18 @@ class CFLARE(BaseEstimator):
         """
 
         self._set_categorical_labels(
-            attr_key="_approx_rcs",
+            attr_key="_metastable_states",
             pretty_attr_key="approx_recurrent_classes",
             cat_key=self._rc_key,
-            add_to_existing_error_msg="Compute approximate recurrent classes first as `.compute_approx_rcs()`.",
-            categories=rc_labels,
+            add_to_existing_error_msg="Compute approximate recurrent classes first as `.compute_metastable_states()`.",
+            categories=labels,
             cluster_key=cluster_key,
             en_cutoff=en_cutoff,
             p_thresh=p_thresh,
             add_to_existing=add_to_existing,
         )
 
-    def compute_approx_rcs(
+    def compute_metastable_states(
         self,
         use: Optional[Union[int, Tuple[int], List[int], range]] = None,
         percentile: Optional[int] = 98,
@@ -477,7 +399,7 @@ class CFLARE(BaseEstimator):
         method
             Method to be used for clustering. Must be one of `['louvain', 'kmeans']`.
         cluster_key
-            If a key to cluster labels is given, `approx_rcs` will ge associated with these for naming and colors.
+            If a key to cluster labels is given, `metastable_states` will ge associated with these for naming and colors.
         n_clusters_kmeans
             If `None`, this is set to :paramref:`use` `+ 1`.
         n_neighbors_louvain
@@ -552,8 +474,8 @@ class CFLARE(BaseEstimator):
 
         # compute a rc probability
         logg.debug("DEBUG: Computing probabilities of approximate recurrent classes")
-        probs = self._compute_approx_rcs_prob(use)
-        self._approx_rcs_probs = probs
+        probs = self._compute_metastable_states_prob(use)
+        self._metastable_states_probs = probs
         self._adata.obs[_probs(self._rc_key)] = probs
 
         # retrieve embedding and concatenate
@@ -614,8 +536,8 @@ class CFLARE(BaseEstimator):
                 distances, rc_labels=rc_labels, n_matches_min=n_matches_min
             )
 
-        self.set_approx_rcs(
-            rc_labels=rc_labels,
+        self.set_metastable_states(
+            labels=rc_labels,
             cluster_key=cluster_key,
             en_cutoff=en_cutoff,
             p_thresh=p_thresh,
@@ -631,7 +553,9 @@ class CFLARE(BaseEstimator):
             time=start,
         )
 
-    def plot_approx_rcs(self, cluster_key: Optional[str] = None, **kwargs) -> None:
+    def plot_metastable_states(
+        self, cluster_key: Optional[str] = None, **kwargs
+    ) -> None:
         """
         Plots the approximate recurrent classes in a given embedding.
 
@@ -648,26 +572,26 @@ class CFLARE(BaseEstimator):
             Nothing, just plots the approximate recurrent classes.
         """
 
-        if self._approx_rcs is None:
+        if self._metastable_states is None:
             raise RuntimeError(
-                "Compute approximate recurrent classes first as `.compute_approx_rcs()`"
+                "Compute approximate recurrent classes first as `.compute_metastable_states()`"
             )
 
-        self._adata.obs[self._rc_key] = self._approx_rcs
+        self._adata.obs[self._rc_key] = self._metastable_states
 
         # check whether the length of the color array matches the number of clusters
         color_key = _colors(self._rc_key)
         if color_key in self._adata.uns and len(self._adata.uns[color_key]) != len(
-            self._approx_rcs.cat.categories
+            self._metastable_states.cat.categories
         ):
             del self._adata.uns[_colors(self._rc_key)]
-            self._approx_rcs_colors = None
+            self._metastable_states_colors = None
 
         color = self._rc_key if cluster_key is None else [cluster_key, self._rc_key]
         scv.pl.scatter(self._adata, color=color, **kwargs)
 
         if color_key in self._adata.uns:
-            self._approx_rcs_colors = self._adata.uns[color_key]
+            self._metastable_states_colors = self._adata.uns[color_key]
 
     def compute_lin_probs(
         self,
@@ -697,30 +621,32 @@ class CFLARE(BaseEstimator):
             Nothing, but updates the following fields: :paramref:`lineage_probabilities`, :paramref:`diff_potential`.
         """
 
-        if self._approx_rcs is None:
+        if self._metastable_states is None:
             raise RuntimeError(
-                "Compute approximate recurrent classes first as `.compute_approx_rcs()`"
+                "Compute approximate recurrent classes first as `.compute_metastable_states()`"
             )
         if keys is not None:
             keys = sorted(set(keys))
 
         # Note: There are three relevant data structures here
-        # - self.approx_rcs: pd.Series which contains annotations for approx rcs. Associated colors in
-        #   self.approx_rcs_colors
+        # - self.metastable_states: pd.Series which contains annotations for approx rcs. Associated colors in
+        #   self.metastable_states_colors
         # - self.lin_probs: Linage object which contains the lineage probabilities with associated names and colors
-        # - _approx_rcs: pd.Series, temporary copy of self.approx rcs used in the context of this function. In this
-        #   copy, some approx_rcs may be removed or combined with others
+        # - _metastable_states: pd.Series, temporary copy of self.approx rcs used in the context of this function. In this
+        #   copy, some metastable_states may be removed or combined with others
         start = logg.info("Computing absorption probabilities")
 
         # we don't expect the abs. probs. to be sparse, therefore, make T dense. See scipy docs about sparse lin solve.
         t = self._T.A if self._is_sparse else self._T
 
-        # colors are created in `compute_approx_rcs`, this is just in case
+        # colors are created in `compute_metastable_states`, this is just in case
         self._check_and_create_colors()
 
         # process the current annotations according to `keys`
-        approx_rcs_, colors_ = _process_series(
-            series=self._approx_rcs, keys=keys, colors=self._approx_rcs_colors
+        metastable_states_, colors_ = _process_series(
+            series=self._metastable_states,
+            keys=keys,
+            colors=self._metastable_states_colors,
         )
 
         #  create empty lineage object
@@ -728,21 +654,21 @@ class CFLARE(BaseEstimator):
             logg.debug("DEBUG: Overwriting `.lin_probs`")
         self._lin_probs = Lineage(
             np.empty((1, len(colors_))),
-            names=approx_rcs_.cat.categories,
+            names=metastable_states_.cat.categories,
             colors=colors_,
         )
 
         # warn in case only one state is left
-        keys = list(approx_rcs_.cat.categories)
+        keys = list(metastable_states_.cat.categories)
         if len(keys) == 1:
             logg.warning(
                 "There is only one recurrent class, all cells will have probability 1 of going there"
             )
 
         # create arrays of all recurrent and transient indices
-        mask = np.repeat(False, len(approx_rcs_))
-        for cat in approx_rcs_.cat.categories:
-            mask = np.logical_or(mask, approx_rcs_ == cat)
+        mask = np.repeat(False, len(metastable_states_))
+        for cat in metastable_states_.cat.categories:
+            mask = np.logical_or(mask, metastable_states_ == cat)
         rec_indices, trans_indices = np.where(mask)[0], np.where(~mask)[0]
 
         # create Q (restriction transient-transient), S (restriction transient-recurrent) and I (Q-sized identity)
@@ -760,8 +686,8 @@ class CFLARE(BaseEstimator):
         logg.debug("DEBUG: Solving the linear system to find absorption probabilities")
         abs_states = solve(eye - q, s)
 
-        # aggregate to class level by summing over columns belonging to the same approx_rcs
-        approx_rc_red = approx_rcs_[mask]
+        # aggregate to class level by summing over columns belonging to the same metastable_states
+        approx_rc_red = metastable_states_[mask]
         rec_classes_red = {
             key: np.where(approx_rc_red == key)[0]
             for key in approx_rc_red.cat.categories
@@ -782,7 +708,8 @@ class CFLARE(BaseEstimator):
         # for recurrent states, set their self-absorption probability to one
         abs_classes = np.zeros((self._n_states, len(rec_classes_red)))
         rec_classes_full = {
-            cl: np.where(approx_rcs_ == cl) for cl in approx_rcs_.cat.categories
+            cl: np.where(metastable_states_ == cl)
+            for cl in metastable_states_.cat.categories
         }
         for col, cl_indices in enumerate(rec_classes_full.values()):
             abs_classes[trans_indices, col] = _abs_classes[:, col]
@@ -836,7 +763,7 @@ class CFLARE(BaseEstimator):
             Whether to plot the lineages on the same plot using color gradients when :paramref:`mode='embedding'`.
         title
             Either `None`, in which case titles are "to/from final/root state X",
-            or an array of titles, one per per lineage.
+            or an array of titles, one per lineage.
         cmap
             Colormap to use.
         kwargs
@@ -862,7 +789,7 @@ class CFLARE(BaseEstimator):
             **kwargs,
         )
 
-    def _compute_approx_rcs_prob(
+    def _compute_metastable_states_prob(
         self, use: Union[Tuple[int], List[int], range]
     ) -> np.ndarray:
         """
@@ -894,23 +821,23 @@ class CFLARE(BaseEstimator):
         return c
 
     def _check_and_create_colors(self):
-        n_cats = len(self._approx_rcs.cat.categories)
+        n_cats = len(self._metastable_states.cat.categories)
         color_key = _colors(self._rc_key)
 
-        if self._approx_rcs_colors is None:
+        if self._metastable_states_colors is None:
             if color_key in self._adata.uns and n_cats == len(
                 self._adata.uns[color_key]
             ):
                 logg.debug("DEBUG: Loading colors from `.adata` object")
-                self._approx_rcs_colors = _convert_to_hex_colors(
+                self._metastable_states_colors = _convert_to_hex_colors(
                     self._adata.uns[color_key]
                 )
             else:
-                self._approx_rcs_colors = _create_categorical_colors(n_cats)
-                self._adata.uns[color_key] = self._approx_rcs_colors
-        elif len(self._approx_rcs_colors) != n_cats:
-            self._approx_rcs_colors = _create_categorical_colors(n_cats)
-            self._adata.uns[color_key] = self._approx_rcs_colors
+                self._metastable_states_colors = _create_categorical_colors(n_cats)
+                self._adata.uns[color_key] = self._metastable_states_colors
+        elif len(self._metastable_states_colors) != n_cats:
+            self._metastable_states_colors = _create_categorical_colors(n_cats)
+            self._adata.uns[color_key] = self._metastable_states_colors
 
     def copy(self) -> "CFLARE":
         """
@@ -931,9 +858,9 @@ class CFLARE(BaseEstimator):
         c._lin_probs = copy(self.lineage_probabilities)
         c._dp = copy(self.diff_potential)
 
-        c._approx_rcs = copy(self.approx_recurrent_classes)
-        c._approx_rcs_probs = copy(self.approx_recurrent_classes_probabilities)
-        c._approx_rcs_colors = copy(self._approx_rcs_colors)
+        c._metastable_states = copy(self.metastable_states)
+        c._metastable_states_probs = copy(self.metastable_states_probabilities)
+        c._metastable_states_colors = copy(self._metastable_states_colors)
 
         c._G2M_score = copy(self._G2M_score)
         c._S_score = copy(self._S_score)
@@ -966,21 +893,21 @@ class CFLARE(BaseEstimator):
         return self._trans_classes
 
     @property
-    def approx_recurrent_classes(self) -> Series:
+    def metastable_states(self) -> Series:
         """
         Returns
         -------
         :class:`pandas.Series`
             The approximate recurrent classes, where `NaN` marks cells which are transient.
         """
-        return self._approx_rcs
+        return self._metastable_states
 
     @property
-    def approx_recurrent_classes_probabilities(self) -> Series:
+    def metastable_states_probabilities(self) -> Series:
         """
         Returns
         -------
         :class:`pandas.Series`
             Probabilities of cells belonging to the approximate recurrent classes.
         """
-        return self._approx_rcs_probs
+        return self._metastable_states_probs
