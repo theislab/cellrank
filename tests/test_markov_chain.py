@@ -85,8 +85,8 @@ class TestMarkovChain:
         mc.compute_eig(k=5)
         mc.compute_approx_rcs(use=2)
 
-        assert is_categorical_dtype(mc.approx_recurrent_classes)
-        assert mc.approx_recurrent_classes_probabilities is not None
+        assert is_categorical_dtype(mc.metastable_states)
+        assert mc.metastable_states_probabilities is not None
         assert _colors(RcKey.FORWARD) in mc.adata.uns.keys()
         assert _probs(RcKey.FORWARD) in mc.adata.obs.keys()
 
@@ -280,12 +280,9 @@ class TestMarkovChainCopy:
             mc1.lineage_probabilities, mc2.lineage_probabilities
         )
         np.testing.assert_array_equal(mc1.diff_potential, mc2.diff_potential)
-        assert_array_nan_equal(
-            mc1.approx_recurrent_classes, mc2.approx_recurrent_classes
-        )
+        assert_array_nan_equal(mc1.metastable_states, mc2.metastable_states)
         np.testing.assert_array_equal(
-            mc1.approx_recurrent_classes_probabilities,
-            mc2.approx_recurrent_classes_probabilities,
+            mc1.metastable_states_probabilities, mc2.metastable_states_probabilities
         )
         np.testing.assert_array_equal(mc1._approx_rcs_colors, mc2._approx_rcs_colors)
         assert mc1._G2M_score == mc2._G2M_score
@@ -308,10 +305,10 @@ class TestMarkovChainCopy:
         assert mc1.eigendecomposition != mc2.eigendecomposition
         assert mc1.lineage_probabilities is not mc2.lineage_probabilities
         assert mc1.diff_potential is not mc2.diff_potential
-        assert mc1.approx_recurrent_classes is not mc2.approx_recurrent_classes
+        assert mc1.metastable_states is not mc2.metastable_states
         assert (
-            mc1.approx_recurrent_classes_probabilities
-            is not mc2.approx_recurrent_classes_probabilities
+            mc1.metastable_states_probabilities
+            is not mc2.metastable_states_probabilities
         )
         assert mc1._approx_rcs_colors is not mc2._approx_rcs_colors
         assert mc1._G2M_score != mc2._G2M_score

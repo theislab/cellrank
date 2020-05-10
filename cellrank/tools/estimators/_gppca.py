@@ -317,7 +317,7 @@ class GPCCA(BaseEstimator):
             Colormap to use.
         title
             Either `None`, in which case titles are "to/from final/root state X",
-            or an array of titles, one per per lineage.
+            or an array of titles, one per lineage.
         kwargs
             Keyword arguments for :func:`scvelo.pl.scatter`.
 
@@ -391,7 +391,7 @@ class GPCCA(BaseEstimator):
             Whether to show :paramref:`diff_potential` when :paramref:`n_cells` `=None`.
         title
             Either `None`, in which case titles are "to/from final/root state X",
-            or an array of titles, one per per lineage.
+            or an array of titles, one per lineage.
         cmap
             Colormap to use.
         kwargs
