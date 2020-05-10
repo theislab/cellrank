@@ -402,12 +402,14 @@ class MarkovChain:
         ax.set_ylabel("Re($\lambda$)")
         ax.set_xlim(x_min_, x_max_)
         ax.set_ylim(y_min_, y_max_)
+
         key = "real part" if params["which"] == "LR" else "magnitude"
-        if title is None:
-            title_str = f"top {params['k']} eigenvalues according to their {key}"
-        else:
-            title_str = title
-        ax.set_title(title_str)
+        ax.set_title(
+            f"Top {params['k']} eigenvalues according to their {key}"
+            if title is None
+            else title
+        )
+
         ax.legend(loc=legend_loc)
 
         if save is not None:
@@ -1058,8 +1060,8 @@ class MarkovChain:
         time_key
             Key from `adata.obs` to use as a pseudotime ordering of the cells.
         title
-            Either None, in which case titles are "to/from final/root state X", or an array of titles, one per panel
-            (per lineage)
+            Either `None`, in which case titles are "to/from final/root state X",
+            or an array of titles, one per per lineage.
         color_map
             Colormap to use.
         kwargs
@@ -1103,10 +1105,9 @@ class MarkovChain:
             t = self._adata.obs[time_key]
             cluster_key = None
 
-        if title is None:
-            rc_titles = [f"{self._prefix} {rc}" for rc in lineages]
-        else:
-            rc_titles = title
+        rc_titles = (
+            [f"{self._prefix} {rc}" for rc in lineages] if title is None else title
+        )
 
         if cluster_key is not None:
             color = [cluster_key] + [a for a in A.T]

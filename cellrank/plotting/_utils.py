@@ -523,7 +523,7 @@ def _trends_helper(
             hide_cells=hide_cells or (same_plot and i != n_lineages - 1),
             same_plot=same_plot,
             color=lc[i] if same_plot and name is not None else lineage_color,
-            ylabel=gene if not same_plot or name is None else "Expression",
+            ylabel=gene if not same_plot or name is None else "expression",
             **kwargs,
         )
 
