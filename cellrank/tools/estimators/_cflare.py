@@ -758,7 +758,7 @@ class CFLARE(BaseEstimator):
         time_key
             Key from `adata.obs` to use as a pseudotime ordering of the cells.
         show_dp
-            Whether to show differentiation potential if present.
+            Whether to show :paramref:`diff_potential` if present.
         same_plot
             Whether to plot the lineages on the same plot using color gradients when :paramref:`mode='embedding'`.
         title

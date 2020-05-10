@@ -371,6 +371,8 @@ def cluster_fates(
                 figsize=figsize,
                 **kwargs,
             )
+            g.ax_heatmap.set_xlabel(cluster_key)
+            g.ax_heatmap.set_ylabel("lineage")
             g.ax_col_dendrogram.set_title(title)
 
             fig = g.fig
@@ -389,6 +391,8 @@ def cluster_fates(
                 **kwargs,
             )
             ax.set_title(title)
+            ax.set_xlabel(cluster_key)
+            ax.set_ylabel("lineage")
 
         g.set_xticklabels(g.get_xticklabels(), rotation=xrot)
         g.set_yticklabels(g.get_yticklabels(), rotation=0)
