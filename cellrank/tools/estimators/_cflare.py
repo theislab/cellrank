@@ -889,8 +889,9 @@ class CFLARE(BaseEstimator):
 
     def _check_and_create_colors(self):
         n_cats = len(self._approx_rcs.cat.categories)
+        color_key = _colors(self._rc_key)
+
         if self._approx_rcs_colors is None:
-            color_key = _colors(self._rc_key)
             if color_key in self._adata.uns and n_cats == len(
                 self._adata.uns[color_key]
             ):
@@ -900,10 +901,10 @@ class CFLARE(BaseEstimator):
                 )
             else:
                 self._approx_rcs_colors = _create_categorical_colors(n_cats)
-                self._adata.uns[_colors(self._rc_key)] = self._approx_rcs_colors
+                self._adata.uns[color_key] = self._approx_rcs_colors
         elif len(self._approx_rcs_colors) != n_cats:
             self._approx_rcs_colors = _create_categorical_colors(n_cats)
-            self._adata.uns[_colors(self._rc_key)] = self._approx_rcs_colors
+            self._adata.uns[color_key] = self._approx_rcs_colors
 
     def copy(self) -> "CFLARE":
         """

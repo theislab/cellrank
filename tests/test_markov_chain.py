@@ -21,17 +21,6 @@ from _helpers import assert_array_nan_equal
 
 
 class TestMarkovChain:
-    def foo(self, adata):
-        vk = VelocityKernel(adata).compute_transition_matrix()
-        ck = ConnectivityKernel(adata).compute_transition_matrix()
-        final_kernel = 0.8 * vk + 0.2 * ck
-
-        mc_fwd = cr.tl.CFLARE(final_kernel)
-
-        mc_fwd.compute_lin_probs()
-
-        mc_fwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
-
     def test_compute_partition(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
