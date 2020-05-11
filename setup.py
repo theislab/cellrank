@@ -11,6 +11,7 @@ except ImportError:
     __email__ = "info@cellrank.org"
     __version__ = "1.1.0"
 
+
 if __name__ == "__main__":
     setup(
         name="cellrank",
@@ -38,15 +39,23 @@ if __name__ == "__main__":
                 )
             )
             + [
-                "msmtools @ git+git://github.com/Marius1311/msmtools@krylov_schur#egg=msmtools"
+                "msmtools @ git+git://github.com/msmdev/msmtools@krylov_schur#egg=msmtools"
             ]
         ),
-        extras_require=dict(test=["python-igraph", "louvain>=0.6", "Pillow"]),
+        extras_require=dict(
+            test=["pytest>=4.4", "python-igraph", "louvain>=0.6,!=0.6.2", "Pillow"]
+        ),
         zip_safe=False,
         packages=find_packages(),
         python_required=">=3.6",
-        platforms=[],
-        kewords=[],
+        platforms=["Linux", "MacOs", "Windows"],
+        keywords=[
+            "bio-informatics",
+            "single-cell",
+            "RNA velocity",
+            "Markov chain",
+            "GPCCA",
+        ],
         classifiers=[
             "Development Status :: 4 - Beta",
             "Intended Audience :: Developers",
