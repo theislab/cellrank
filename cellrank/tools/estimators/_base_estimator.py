@@ -590,7 +590,9 @@ class BaseEstimator(ABC):
                 scv.pl.scatter(
                     self.adata,
                     title=(
-                        "From root cells" if self.kernel.backward else "To final cells"
+                        "From root states"
+                        if self.kernel.backward
+                        else "To final states"
                     )
                     if title is None
                     else title,
