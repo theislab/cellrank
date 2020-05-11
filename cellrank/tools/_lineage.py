@@ -357,7 +357,7 @@ class Lineage(np.ndarray):
 
     def reduce(
         self,
-        keys: Union[List[str], Tuple[str], np.ndarray],
+        keys: Optional[Union[List[str], Tuple[str], np.ndarray]] = None,
         mode: str = "dist",
         dist_measure: str = "mutual_info",
         normalize_weights: str = "softmax",
@@ -402,8 +402,14 @@ class Lineage(np.ndarray):
             The weights used for the projection of shape `(n_query x n_reference)`.
         """
 
-        if not len(keys):
-            raise ValueError("No keys specified.")
+        if keys is None or len(keys) == 0:
+            logg.debug("No keys specified, searching for `'rest'` lineage")
+            if "rest" not in self.names:
+                raise ValueError(
+                    "Unable to find `'rest'` lineage, please specify `keys=...`."
+                )
+            keys = [n for n in self.names if n != "rest"]
+
         if set(keys) == set(self.names):
             logg.warning(
                 "Argument `keys` specifies all lineages, no reduction possible"
