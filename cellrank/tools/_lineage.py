@@ -7,12 +7,13 @@ from cellrank.tools._utils import (
 )
 from cellrank.tools._constants import Lin
 
-from typing import Optional, Iterable, Callable, TypeVar, List, Union
+from typing import Optional, Iterable, Callable, TypeVar, List, Union, Tuple
 from itertools import combinations
 from scanpy import logging as logg
 
 import matplotlib.colors as c
 import numpy as np
+import pandas as pd
 
 
 ColorLike = TypeVar("ColorLike")
@@ -374,6 +375,150 @@ class Lineage(np.ndarray):
             colors=np.array(self.colors, copy=True, order=order),
         )
 
+    def reduce(
+        self,
+        keys: Iterable[str],
+        mode: str = "dist",
+        dist_measure: str = "mutual_info",
+        normalize_weights: str = "softmax",
+        softmax_beta: float = 1,
+        return_weights: bool = False,
+    ) -> Union["Lineage", Tuple["Lineage", Optional[pd.DataFrame]]]:
+        """
+        Reduce metastable states to final/root states.
+
+        Params
+        ------
+        keys
+            List of keys that define the final/root states. The lineage will be reduced
+            to these states by projecting the other states.
+        mode
+            Whether to use a distance measure to compute weights ('dist', or just rescale ('scale').
+            Scaling is baseline for benchmarking.
+        dist_measure
+            Used to quentify similarity between query and reference states. Options are:
+
+            - 'cosine_sim'
+            - 'wasserstein_dist'
+            - 'kl_div'
+            - 'js_div'
+            - 'mutual_inf'
+            - 'equal'
+        normalize_weights
+            How to normalize the weights. Options are:
+
+            - 'scale': divide by the sum (per row)
+            - 'softmax': use a softmax with \beta = 1
+        softmax_beta
+            Scaling factor in the softmax, used for normalizing the weights to sum to 1.
+        return_weights
+            If `True`, a :class:`pandas.DataFrame` of the weights used for the projection is returned.
+
+        Returns
+        -------
+        :class:`cellrank.tl.Lineage`
+            Lineage object, reduced to the final/root states.
+        :class:`pandas.DataFrame`
+            The weights used for the projection of shape `(n_query x n_reference)`.
+        """
+
+        # check input parameters
+        if mode == "scale" and return_weights:
+            logg.warning(
+                "If `mode=='scale'`, no weights are computed. Returning `None`"
+            )
+
+        # check the lineage object
+        if not np.allclose(np.sum(self, axis=1), 1.0):
+            raise ValueError("Memberships do not sum to one row-wise.")
+
+        # check the keys are all in L.names
+        key_mask = np.array([key in self.names for key in keys])
+        if not key_mask.all():
+            raise ValueError(
+                f"Invalid lineage names `{list(np.array(keys)[~key_mask])}`."
+            )
+
+        # get query and reference
+        mask = np.in1d(self.names, keys)
+        reference = self[:, mask]
+        query = self[:, ~mask]
+
+        if mode == "dist":
+            # compute a set of weights of shape (n_query x n_reference)
+            if dist_measure == "cosine_sim":
+                weights = _cosine_sim(reference.copy(), query.copy())
+            elif dist_measure == "wasserstein_dist":
+                weights = _wasserstein_dist(reference.copy(), query.copy())
+            elif dist_measure == "kl_div":
+                weights = _kl_div(reference.copy(), query.copy())
+            elif dist_measure == "js_div":
+                weights = _js_div(reference.copy(), query.copy())
+            elif dist_measure == "mutual_info":
+                weights = _mutual_info(reference.copy(), query.copy())
+            elif dist_measure == "equal":
+                weights = np.ones((query.shape[1], reference.shape[1]))
+                weights = _row_normalize(weights)
+            else:
+                raise ValueError(f"Distance measure `{dist_measure!r}` not found.")
+
+            # make some checks on the weights
+            if weights.shape != (query.shape[1], reference.shape[1]):
+                raise ValueError(
+                    f"Expected weight matrix to be of shape `({query.shape[1]}, {reference.shape[1]})`, found `{weights.shape}`."
+                )
+            if not np.isfinite(weights).all():
+                raise ValueError(
+                    "Weights matrix contains elements that are not finite."
+                )
+            if (weights < 0).any():
+                raise ValueError("Weights matrix contains negative elements.")
+
+            if (weights == 0).any():
+                logg.warning("Weights matrix contains exact zeros.")
+
+            # normalize the weights to row-sum to one
+            if normalize_weights == "scale":
+                weights_n = _row_normalize(weights)
+            elif normalize_weights == "softmax":
+                weights_n = _softmax(_row_normalize(weights), softmax_beta)
+            else:
+                raise ValueError(
+                    f"Normalization method `{normalize_weights!r}` not found. Valid options are: `'scale', 'softmax'`."
+                )
+
+            # check that the weights row-sum to one now
+            if not np.allclose(weights_n.sum(1), 1.0):
+                raise ValueError("Weights do not sum to 1 row-wise.")
+
+            # use the weights to re-distribute probability mass form query to reference
+            for i, w in enumerate(weights_n):
+                reference += np.dot(query[:, i].X, w[None, :])
+
+        elif mode == "scale":
+            reference = _row_normalize(reference)
+        else:
+            raise ValueError(
+                f"Invalid mode `{mode!r}`. Valid options are: `'dist', 'scale'`."
+            )
+
+        # check that the lineages row-sum to one now
+        if not np.allclose(reference.sum(1), 1.0):
+            raise ValueError("Reduced lineage rows do not sum to 1.")
+
+        # potentially create a weights-df and return everything
+        if return_weights:
+            if mode == "dist":
+                return (
+                    reference,
+                    pd.DataFrame(
+                        data=weights_n, columns=reference.names, index=query.names
+                    ),
+                )
+            return reference, None
+
+        return reference
+
 
 class LineageView(Lineage):
     def copy(self, order="C") -> Lineage:
@@ -382,3 +527,93 @@ class LineageView(Lineage):
             names=np.array(self.names, copy=True, order=order),
             colors=np.array(self.colors, copy=True, order=order),
         )
+
+
+def _remove_zero_rows(a: Lineage, b: Lineage) -> Tuple[Lineage, Lineage]:
+    if a.shape[0] != b.shape[0]:
+        raise ValueError("Lineage objects have unequal cell numbers")
+
+    bool_a = (a.X == 0).any(axis=1)
+    bool_b = (b.X == 0).any(axis=1)
+    mask = ~np.logical_or(bool_a, bool_b)
+
+    logg.warning(
+        f"Removed {a.shape[0] - np.sum(mask)} rows because they contained zeros"
+    )
+
+    return a[mask, :], b[mask, :]
+
+
+def _softmax(X, beta: float = 1):
+    return np.exp(X * beta) / np.sum(np.exp(X * beta), axis=1)[:, None]
+
+
+def _row_normalize(X):
+    return X / X.sum(1)[:, None]
+
+
+def _col_normalize(X, norm_ord=2):
+    from numpy.linalg import norm
+
+    return X / norm(X, ord=norm_ord, axis=0)
+
+
+def _cosine_sim(reference, query):
+    # the cosine similarity is symmetric
+
+    # normalize these to have 2-norm 1
+    reference_n, query_n = _col_normalize(reference, 2), _col_normalize(query, 2)
+
+    return (reference_n.X.T @ query_n.X).T
+
+
+def _point_wise_distance(reference, query, distance):
+    # utility function for all point-wise distances/divergences
+    # take care of rows that contain zeros
+    reference_no_zero, query_no_zero = _remove_zero_rows(reference, query)
+
+    # normalize these to be valid probability distributions (column-wise)
+    reference_n, query_n = (
+        _col_normalize(reference_no_zero, 1),
+        _col_normalize(query_no_zero, 1),
+    )
+
+    # loop over query and reference columns and compute pairwise wasserstein distances
+    weights = np.zeros((query.shape[1], reference.shape[1]))
+    for i, q_d in enumerate(query_n.T.X):
+        for j, r_d in enumerate(reference_n.T.X):
+            weights[i, j] = 1.0 / distance(q_d, r_d)
+
+    return weights
+
+
+def _wasserstein_dist(reference, query):
+    # the wasserstein distance is symmetric
+    from scipy.stats import wasserstein_distance
+
+    return _point_wise_distance(reference, query, wasserstein_distance)
+
+
+def _kl_div(reference, query):
+    # the KL divergence is not symmetric
+    from scipy.stats import entropy
+
+    return _point_wise_distance(reference, query, entropy)
+
+
+def _js_div(reference, query):
+    # the js divergence is symmetric
+    from scipy.spatial.distance import jensenshannon
+
+    return _point_wise_distance(reference, query, jensenshannon)
+
+
+def _mutual_info(reference, query):
+    # mutual information is not symmetric. We don't need to normalise the vectors, it's invariant under scaling.
+    from sklearn.feature_selection import mutual_info_regression
+
+    weights = np.zeros((query.shape[1], reference.shape[1]))
+    for i, target in enumerate(query.X.T):
+        weights[i, :] = mutual_info_regression(reference.X, target)
+
+    return weights
