@@ -14,7 +14,6 @@ class PrettyEnum(Enum):
 class Lin(PrettyEnum):
     JOIN = "join"
     REST = "rest"
-    NORM = "norm"
 
 
 class Direction(PrettyEnum):

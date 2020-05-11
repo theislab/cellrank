@@ -442,7 +442,6 @@ class GPCCA(BaseEstimator):
             How to handle the states that have not been selected.
             Valid options are:
 
-                - `'normalize'` - renormalize the distribution to again sum to `1`
                 - `'join'` - merge the unselected states to a new state such as `'Alpha' or 'Beta'`
                 - `'rest'` - same as `'join``, but call the newly created state 'rest'`
 
@@ -456,15 +455,13 @@ class GPCCA(BaseEstimator):
         """
 
         names = list(names)
-        if mode == "normalize":
-            names += [Lin.NORM]
-        elif mode == "join":
+        if mode == "join":
             names += [Lin.JOIN]
         elif mode == "rest":
             names += [Lin.REST]
         else:
             raise ValueError(
-                f"Invalid mode `{mode!r}`. Valid options are `'normalize', 'join' or 'rest'`."
+                f"Invalid mode `{mode!r}`. Valid options are `'join' or 'rest'`."
             )
         self._n_cells = None  # invalidate cache
         self._main_states = None

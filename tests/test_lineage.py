@@ -530,22 +530,6 @@ class TestLineageMixing:
         np.testing.assert_array_equal(y.names, ["bar or foo"])
         np.testing.assert_array_equal(y.colors, [_compute_mean_color(x.colors[:2])])
 
-    def test_normalize(self):
-        x = Lineage(np.random.random((10, 4)), names=["foo", "bar", "baz", "quux"])
-
-        y = x[["foo, bar", "baz", Lin.NORM]]
-
-        assert y.shape == (10, 2)
-        assert np.all(np.sum(y.X, axis=1), 1)
-
-    def test_normalize_zeros(self):
-        x = Lineage(np.zeros((10, 1)), names=["foo"])
-
-        y = x[[Lin.NORM]]
-
-        assert y.shape == (10, 1)
-        np.testing.assert_array_equal(x.X, np.ones_like(x.X))
-
     def test_rest_no_effect(self):
         names = ["foo", "bar", "baz", "quux"]
         x = Lineage(np.random.random((10, 4)), names=names)
@@ -563,16 +547,5 @@ class TestLineageMixing:
         y = x[names + [Lin.JOIN]]
 
         np.testing.assert_array_equal(x.X, y.X)
-        np.testing.assert_array_equal(x.names, y.names)
-        np.testing.assert_array_equal(x.colors, y.colors)
-
-    def test_normalize_no_effect(self):
-        names = ["foo", "bar", "baz", "quux"]
-        x = Lineage(np.random.random((10, 4)), names=names)
-
-        y = x[names + [Lin.NORM]]  # this will still normalize the array
-
-        assert not np.all(np.isclose(x, y))
-        assert np.allclose(np.sum(y.X, axis=1), 1)
         np.testing.assert_array_equal(x.names, y.names)
         np.testing.assert_array_equal(x.colors, y.colors)
