@@ -376,7 +376,7 @@ class Lineage(np.ndarray):
             Whether to use a distance measure to compute weights ('dist', or just rescale ('scale').
             Scaling is baseline for benchmarking.
         dist_measure
-            Used to quentify similarity between query and reference states. Options are:
+            Used to quantify similarity between query and reference states. Valid options are:
 
             - 'cosine_sim'
             - 'wasserstein_dist'
@@ -385,7 +385,7 @@ class Lineage(np.ndarray):
             - 'mutual_inf'
             - 'equal'
         normalize_weights
-            How to normalize the weights. Options are:
+            How to normalize the weights. Valid options are:
 
             - 'scale': divide by the sum (per row)
             - 'softmax': use a softmax with \beta = 1
@@ -444,7 +444,7 @@ class Lineage(np.ndarray):
                 weights = np.ones((query.shape[1], reference.shape[1]))
                 weights = _row_normalize(weights)
             else:
-                raise ValueError(f"Distance measure `{dist_measure!r}` not found.")
+                raise ValueError(f"Invalid distance measure `{dist_measure!r}`.")
 
             # make some checks on the weights
             if weights.shape != (query.shape[1], reference.shape[1]):
