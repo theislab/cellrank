@@ -161,7 +161,7 @@ def cluster_fates(
         fig, axes = plt.subplots(
             nrows,
             cols,
-            figsize=(6 * cols, 4 * nrows) if figsize is None else figsize,
+            figsize=(7 * cols, 4 * nrows) if figsize is None else figsize,
             constrained_layout=True,
             dpi=dpi,
         )
@@ -170,14 +170,18 @@ def cluster_fates(
         axes = [axes] if not isinstance(axes, np.ndarray) else np.ravel(axes)
         vmin, vmax = np.inf, -np.inf
 
+        if basis is not None:
+            kwargs["basis"] = basis
+            kwargs["scatter_flag"] = True
+            kwargs["color"] = cluster_key
+
         for i, (ax, lineage_name) in enumerate(zip(axes, lin_names)):
             colors = [v[0][i] for v in d.values()]
-            vmin, vmax = np.nanmin(colors + [vmin]), np.nanmax(colors + [vmax])
             kwargs["ax"] = ax
             kwargs["colors"] = tuple(colors)
             kwargs["title"] = f"{dir_prefix} {lineage_name}"
 
-            sc.pl.paga(adata, **kwargs)
+            scv.pl.paga(adata, **kwargs)
 
         if show_cbar:
             norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
