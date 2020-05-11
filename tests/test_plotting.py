@@ -32,10 +32,9 @@ try:
 except ImportError:
     from importlib.metadata import version as get_version
 
-scvelo_paga_pie_node_colors_version = pytest.mark.skipif(
-    version.parse(get_version(scv.__name__)) < version.parse("0.1.26.dev73+g4ae3110"),
-    reason="scVelo < `0.1.26.dev73+g4ae3110` doesn't support node_color for PAGA and additional "
-    "keyword arguments.",
+scvelo_paga_skip = pytest.mark.skipif(
+    version.parse(get_version(scv.__name__)) < version.parse("0.1.26.dev189+gc441c72"),
+    reason="scVelo < `0.1.26.dev189+gc441c72` supports new PAGA, including node colors and confidence",
 )
 del version, get_version
 
@@ -113,17 +112,19 @@ class TestClusterFates:
     def test_paga_pie(self, adata: AnnData, fpath: Path):
         cr.pl.cluster_fates(adata, "clusters", mode="paga_pie", dpi=DPI, save=fpath)
 
-    @scvelo_paga_pie_node_colors_version
+    @scvelo_paga_skip
     @compare()
     def test_paga_pie_embedding(self, adata: AnnData, fpath: Path):
         cr.pl.cluster_fates(
             adata, "clusters", mode="paga_pie", basis="umap", dpi=DPI, save=fpath
         )
 
+    @scvelo_paga_skip
     @compare()
     def test_paga(self, adata: AnnData, fpath: Path):
         cr.pl.cluster_fates(adata, "clusters", mode="paga", dpi=DPI, save=fpath)
 
+    @scvelo_paga_skip
     @compare()
     def test_paga_lineage_subset(self, adata: AnnData, fpath: Path):
         cr.pl.cluster_fates(
@@ -160,7 +161,7 @@ class TestClusterFates:
             legend_kwargs=(dict(loc="top")),
         )
 
-    @scvelo_paga_pie_node_colors_version
+    @scvelo_paga_skip
     @compare()
     def test_paga_pie_legend_position(self, adata: AnnData, fpath: Path):
         cr.pl.cluster_fates(
@@ -173,7 +174,7 @@ class TestClusterFates:
             legend_loc="upper",
         )
 
-    @scvelo_paga_pie_node_colors_version
+    @scvelo_paga_skip
     @compare()
     def test_paga_pie_no_legend(self, adata: AnnData, fpath: Path):
         cr.pl.cluster_fates(
@@ -186,7 +187,7 @@ class TestClusterFates:
             legend_loc=None,
         )
 
-    @scvelo_paga_pie_node_colors_version
+    @scvelo_paga_skip
     @compare()
     def test_paga_pie_only_abs_prob(self, adata: AnnData, fpath: Path):
         cr.pl.cluster_fates(
@@ -199,7 +200,7 @@ class TestClusterFates:
             legend_loc=None,
         )
 
-    @scvelo_paga_pie_node_colors_version
+    @scvelo_paga_skip
     @compare()
     def test_paga_pie_only_clusters(self, adata: AnnData, fpath: Path):
         cr.pl.cluster_fates(
@@ -212,7 +213,7 @@ class TestClusterFates:
             legend_loc="on data",
         )
 
-    @scvelo_paga_pie_node_colors_version
+    @scvelo_paga_skip
     @compare()
     def test_paga_pie_legend_position_out(self, adata: AnnData, fpath: Path):
         cr.pl.cluster_fates(
