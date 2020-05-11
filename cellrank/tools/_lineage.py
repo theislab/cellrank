@@ -126,32 +126,12 @@ class Lineage(np.ndarray):
 
         if len(lin_kind) == 1:
             lin_kind = lin_kind[0]
-            if lin_kind == Lin.NORM:
-                if res:  # only 1 lineage
-                    res = np.stack(res, axis=-1)
-                else:
-                    res, names, colors = self.X, self.names, self.colors
+            keys = [i for i, n in enumerate(self.names) if n not in seen]
+            update_entries(keys)
+            if keys and lin_kind == Lin.REST:
+                names[-1] = str(lin_kind)
 
-                res = _normalize(res)
-                nan_mask = np.isnan(res).all(
-                    axis=1
-                )  # some entries can be NaN, use uniform
-
-                if nan_mask.any():
-                    logg.warning(
-                        f"Unable to row-normalize `{np.sum(nan_mask)}` row(s), setting the probabilities to uniform"
-                    )
-                    res[nan_mask] = 1.0 / res.shape[1]
-                if np.isnan(res).any():  # maybe there are still some values left
-                    raise RuntimeError(
-                        "Unable to normalize, some values still remain NaN."
-                    )
-            else:
-                keys = [i for i, n in enumerate(self.names) if n not in seen]
-                update_entries(keys)
-                if keys and lin_kind == Lin.REST:
-                    names[-1] = str(lin_kind)
-                res = np.stack(res, axis=-1)
+        res = np.stack(res, axis=-1)
 
         return Lineage(res, names=names, colors=colors)
 
@@ -247,6 +227,9 @@ class Lineage(np.ndarray):
                 obj._colors = obj._colors[col_order]
 
         return obj
+
+    def __invert__(self):
+        return self
 
     @property
     def names(self) -> np.ndarray:
@@ -421,6 +404,10 @@ class Lineage(np.ndarray):
         :class:`pandas.DataFrame`
             The weights used for the projection of shape `(n_query x n_reference)`.
         """
+        if not keys:
+            raise ValueError("No keys specified.")
+        if set(keys) == set(self.names):
+            raise ValueError("All lineage names specified.")
 
         # check input parameters
         if mode == "scale" and return_weights:
