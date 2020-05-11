@@ -430,7 +430,7 @@ class Lineage(np.ndarray):
         key_mask = np.array([key in self.names for key in keys])
         if not key_mask.all():
             raise ValueError(
-                f"Invalid lineage names `{list(np.array(keys)[~key_mask])}`."
+                f"Invalid lineage names `{list(np.array(keys)[~key_mask])}`. Valid names are: `{list(self.names)}`."
             )
 
         # get query and reference
