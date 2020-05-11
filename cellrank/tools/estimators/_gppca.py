@@ -749,7 +749,11 @@ class GPCCA(BaseEstimator):
                 to_clean = [key]
 
                 if title is None:
-                    title = "Root cells" if self.kernel.backward else "Final cells"
+                    title = (
+                        "metastable states (backward)"
+                        if self.kernel.backward
+                        else "metastable states (forward)"
+                    )
                 scv.pl.scatter(self.adata, title=title, color=key, **kwargs)
             else:
                 keys = generate_random_keys(
