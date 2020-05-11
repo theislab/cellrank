@@ -228,9 +228,6 @@ class Lineage(np.ndarray):
 
         return obj
 
-    def __invert__(self):
-        return self
-
     @property
     def names(self) -> np.ndarray:
         """Lineage names. Must be unique."""
