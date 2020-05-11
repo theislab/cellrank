@@ -466,7 +466,6 @@ class GPCCA(BaseEstimator):
             raise ValueError(
                 f"Invalid mode `{mode!r}`. Valid options are `'normalize', 'join' or 'rest'`."
             )
-
         self._n_cells = None  # invalidate cache
         self._main_states = None
         self._lin_probs = self._meta_lin_probs[names]
