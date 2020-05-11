@@ -590,9 +590,9 @@ class BaseEstimator(ABC):
                 scv.pl.scatter(
                     self.adata,
                     title=(
-                        "metastable states (forwards)"
+                        "metastable states (backward)"
                         if self.kernel.backward
-                        else "metastable states (backwards)"
+                        else "metastable states (forward)"
                     )
                     if title is None
                     else title,
