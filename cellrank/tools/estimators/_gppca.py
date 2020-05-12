@@ -740,10 +740,10 @@ class GPCCA(BaseEstimator):
         to_clean = []
         try:
             if same_plot:
-                key = generate_random_keys(self.adata, "obs")
+                key = generate_random_keys(self.adata, "obs")[0]
+                to_clean = [key]
                 self.adata.obs[key] = _main_states
                 self.adata.uns[f"{key}_colors"] = probs.colors
-                to_clean = [key]
 
                 if title is None:
                     title = (
@@ -756,6 +756,7 @@ class GPCCA(BaseEstimator):
                 keys = generate_random_keys(
                     self.adata, "obs", len(_main_states.cat.categories)
                 )
+
                 to_clean = keys
 
                 for key, cat in zip(keys, _main_states.cat.categories):
