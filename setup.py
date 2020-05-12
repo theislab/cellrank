@@ -43,7 +43,7 @@ if __name__ == "__main__":
             ]
         ),
         extras_require=dict(
-            test=["pytest>=4.4", "python-igraph", "louvain>=0.6,!=0.6.2", "Pillow"]
+            test=["pytest>=4.4", "python-igraph", "louvain==0.6.1", "Pillow"]
         ),
         zip_safe=False,
         packages=find_packages(),
