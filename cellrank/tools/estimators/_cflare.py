@@ -628,8 +628,8 @@ class CFLARE(BaseEstimator):
         # - self.metastable_states: pd.Series which contains annotations for approx rcs. Associated colors in
         #   self.metastable_states_colors
         # - self.lin_probs: Linage object which contains the lineage probabilities with associated names and colors
-        # - _metastable_states: pd.Series, temporary copy of self.approx rcs used in the context of this function. In this
-        #   copy, some metastable_states may be removed or combined with others
+        # -_metastable_states: pd.Series, temporary copy of self.approx rcs used in the context of this function.
+        #   In this copy, some metastable_states may be removed or combined with others
         start = logg.info("Computing absorption probabilities")
 
         # we don't expect the abs. probs. to be sparse, therefore, make T dense. See scipy docs about sparse lin solve.
