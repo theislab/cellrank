@@ -449,23 +449,9 @@ class TestLineageMixing:
         x = Lineage(np.random.random((10, 4)), names=["foo", "bar", "baz", "quux"])
 
         with pytest.raises(ValueError):
-            _ = x[["foo, bar", Lin.REST, Lin.JOIN]]
+            _ = x[["foo, bar", Lin.REST, Lin.REST]]
 
-    def test_ellipsis(self):
-        x = Lineage(np.random.random((10, 4)), names=["foo", "bar", "baz", "quux"])
-        y = x[["foo, bar", Lin.JOIN]]
-
-        expected = np.c_[np.sum(x.X[:, [0, 1]], axis=1), np.sum(x.X[:, [2, 3]], axis=1)]
-
-        assert y.shape == (10, 2)
-        np.testing.assert_array_equal(y.X, expected)
-        np.testing.assert_array_equal(y.names, ["bar or foo", "baz or quux"])
-        np.testing.assert_array_equal(
-            y.colors,
-            [_compute_mean_color(x.colors[:2]), _compute_mean_color(x.colors[2:])],
-        )
-
-    def test_none(self):
+    def test_rest(self):
         x = Lineage(np.random.random((10, 4)), names=["foo", "bar", "baz", "quux"])
         y = x[["foo, bar", Lin.REST]]
 
@@ -503,15 +489,7 @@ class TestLineageMixing:
         np.testing.assert_array_equal(y.names, ["bar or foo"])
         np.testing.assert_array_equal(y.colors, [_compute_mean_color(x.colors[:2])])
 
-    def test_ellipsis_all(self):
-        x = Lineage(np.random.random((10, 4)), names=["foo", "bar", "baz", "quux"])
-        y = x[[Lin.JOIN]]
-
-        assert y.shape == (10, 1)
-        np.testing.assert_array_equal(y.X[:, 0], np.sum(x.X, axis=1))
-        np.testing.assert_array_equal(y.names, [" or ".join(x.names)])
-
-    def test_none_all(self):
+    def test_rest_all(self):
         x = Lineage(np.random.random((10, 4)), names=["foo", "bar", "baz", "quux"])
         y = x[[Lin.REST]]
 
@@ -535,16 +513,6 @@ class TestLineageMixing:
         x = Lineage(np.random.random((10, 4)), names=names)
 
         y = x[names + [Lin.REST]]
-
-        np.testing.assert_array_equal(x.X, y.X)
-        np.testing.assert_array_equal(x.names, y.names)
-        np.testing.assert_array_equal(x.colors, y.colors)
-
-    def test_join_no_effect(self):
-        names = ["foo", "bar", "baz", "quux"]
-        x = Lineage(np.random.random((10, 4)), names=names)
-
-        y = x[names + [Lin.JOIN]]
 
         np.testing.assert_array_equal(x.X, y.X)
         np.testing.assert_array_equal(x.names, y.names)
