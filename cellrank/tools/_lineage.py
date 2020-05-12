@@ -72,16 +72,16 @@ class Lineage(np.ndarray):
         if obj is None:
             return
 
-        self._names = getattr(obj, "names", None)
+        _names = getattr(obj, "_names", None)
+        if _names is not None:
+            self._n_lineages = len(_names)
+            self.names = _names
+        else:
+            self._names = None
+            self._names_to_ixs = None
+
         self._colors = getattr(obj, "colors", None)
         self._n_lineages = getattr(obj, "_n_lineages", 0)
-        self._names_to_ixs = getattr(
-            "obj",
-            "_names_to_ixs",
-            None
-            if self.names is None
-            else {name: ix for ix, name in enumerate(self.names)},
-        )
 
     def _mixer(self, rows, mixtures):
         def update_entries(key):
@@ -232,6 +232,7 @@ class Lineage(np.ndarray):
             if col_order is not None:
                 obj._names = obj._names[col_order]
                 obj._colors = obj._colors[col_order]
+            obj._names_to_ixs = {name: i for i, name in enumerate(obj._names)}
 
         return obj
 
