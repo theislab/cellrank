@@ -70,13 +70,12 @@ def cluster_fates(
     mode
         Type of plot to show.
 
-        - If `'bar'`, plot barplots for specified :paramref:`clusters` and :paramref:`lineages`.
-        - If `'paga'`, plot `N` :func:`scanpy.pl.paga` plots, one for each endpoint in :paramref:`lineages`.
-        - If `'paga_pie'`, visualize absorption probabilities as a pie chart for each cluster
-          for the given :paramref:`lineages`.
-        - If `'violin'`, group the data by lineages and plot the fate distribution per cluster.
-
-        Best for looking at the distribution of fates within one cluster.
+        - `'bar'`: barplot, one panel per cluster
+        - `'paga'`: scanpy's PAGA, one per root/final state, colored in by fate
+        - `'paga_pie'`: scanpy's PAGA with pie charts indicating aggregated fates
+        - `'violin'`: violin plots, one per root/final state
+        - `'heatmap'`: seaborn heatmap, showing average fates per cluster
+        - `'clustermap'`: same as heatmap, but with dendrogram
     dpi
         Dots per inch.
     final
