@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from cellrank.tools._constants import _lin_names, _colors, LinKey
 from cellrank.tools._utils import _create_categorical_colors
-from cellrank.tools._markov_chain import MarkovChain
+from cellrank.tools.estimators._cflare import CFLARE
 from cellrank.tools._lineage import Lineage
 
 import cellrank as cr
@@ -16,7 +16,7 @@ from typing import Callable, Tuple
 
 def test_fwd():
     def wrapper(func: Callable) -> Callable:
-        def decorator(self, adata_mc_fwd: Tuple[AnnData, MarkovChain], tmpdir):
+        def decorator(self, adata_mc_fwd: Tuple[AnnData, CFLARE], tmpdir):
             adata, _ = adata_mc_fwd
             adata = adata.copy()
 

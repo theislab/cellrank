@@ -8,4 +8,4 @@ env:
 install:
     - pip install -e .[test]
 script:
-    - pytest --ignore tests/_ground_truth_figures
+    - pytest

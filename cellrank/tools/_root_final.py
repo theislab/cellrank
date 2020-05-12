@@ -3,7 +3,7 @@ from anndata import AnnData
 from typing import Optional
 from scanpy import logging as logg
 
-from cellrank.tools._markov_chain import MarkovChain
+from cellrank.tools.estimators._cflare import CFLARE
 from cellrank.tools._constants import RcKey
 from cellrank.tools._transition_matrix import transition_matrix
 from cellrank.utils._docs import inject_docs
@@ -74,11 +74,11 @@ def _root_final(
     )
 
     # create MarkovChain object
-    mc = MarkovChain(kernel)
+    mc = CFLARE(kernel)
 
     # run the computation
     mc.compute_eig()
-    mc.compute_approx_rcs(
+    mc.compute_metastable_states(
         percentile=percentile,
         n_matches_min=n_matches_min,
         use=n_start_end,
@@ -87,7 +87,7 @@ def _root_final(
     )
 
     if show_plots:
-        mc.plot_real_spectrum()
+        mc.plot_spectrum(real_only=True)
         mc.plot_eig_embedding(abs_value=True, perc=[0, 98], use=n_start_end)
         mc.plot_eig_embedding(left=False, use=n_start_end)
 
