@@ -13,6 +13,7 @@ from cellrank.tools.estimators._base_estimator import BaseEstimator
 from cellrank.tools._utils import (
     _eigengap,
     _get_black_or_white,
+    _convert_lineage_name,
     generate_random_keys,
     save_fig,
 )
@@ -308,7 +309,7 @@ class GPCCA(BaseEstimator):
             Can be either `'embedding'` or `'time'`.
 
             - If `'embedding'`, plot the embedding while coloring in the absorption probabilities.
-            - If `'time'`, plos the pseudotime on x-axis and the absorption probabilities on y-axis.
+            - If `'time'`, plot the pseudotime on x-axis and the absorption probabilities on y-axis.
         time_key
             Key from `adata.obs` to use as a pseudotime ordering of the cells.
         same_plot
@@ -386,7 +387,7 @@ class GPCCA(BaseEstimator):
         time_key
             Key from `adata.obs` to use as a pseudotime ordering of the cells.
         same_plot
-            Whether to plot the lineages on the same plot using color gradients when :paramref:`mode='embedding'`.
+            Whether to plot the lineages on the same plot using color gradients when :paramref:`method='embedding'`.
         show_dp
             Whether to show :paramref:`diff_potential` when :paramref:`n_cells` `=None`.
         title
@@ -430,7 +431,9 @@ class GPCCA(BaseEstimator):
                 **kwargs,
             )
 
-    def set_main_states(self, names: Iterable[str], mode: str = "rest"):
+    def set_main_states(
+        self, names: Iterable[str], redistribute: bool = True, **kwargs
+    ):
         """
         Manually select the main states from the metastable states.
 
@@ -438,12 +441,10 @@ class GPCCA(BaseEstimator):
         ------
         names
             Names of the main states. Multiple states can be combined using `','`, such as `['Alpha, Beta', 'Epsilon']`.
-        mode
-            How to handle the states that have not been selected.
-            Valid options are:
-
-                - `'join'` - merge the unselected states to a new state such as `'Alpha' or 'Beta'`
-                - `'rest'` - same as `'join``, but call the newly created state 'rest'`
+        redistribute
+            Whether to redistribute the probability mass of unselected lineages or create a `'rest'` lineage.
+        kwargs
+            Keyword arguments for :meth:`cellrank.tl.Lineage.reduce` when redistributing the mass.
 
         Returns
         -------
@@ -455,17 +456,18 @@ class GPCCA(BaseEstimator):
         """
 
         names = list(names)
-        if mode == "join":
-            names += [Lin.JOIN]
-        elif mode == "rest":
-            names += [Lin.REST]
-        else:
-            raise ValueError(
-                f"Invalid mode `{mode!r}`. Valid options are `'join' or 'rest'`."
+        kwargs["return_weights"] = False
+
+        if redistribute:
+            self._lin_probs = self._meta_lin_probs[names + [Lin.OTHERS]]
+            self._lin_probs = self._lin_probs.reduce(
+                [" or ".join(_convert_lineage_name(name)) for name in names], **kwargs
             )
+        else:
+            self._lin_probs = self._meta_lin_probs[names + [Lin.REST]]
+
         self._n_cells = None  # invalidate cache
         self._main_states = None
-        self._lin_probs = self._meta_lin_probs[names]
         self._dp = entropy(self._lin_probs.X.T)
 
         # write to adata
@@ -479,10 +481,11 @@ class GPCCA(BaseEstimator):
     def compute_main_states(
         self,
         method: str = "eigengap",
-        mode: str = "rest",
+        redistribute: bool = False,
         alpha: Optional[float] = 1,
         min_self_prob: Optional[float] = None,
         n_main_states: Optional[int] = None,
+        **kwargs,
     ):
         """
         Automatically select the main states from metastable states.
@@ -496,18 +499,16 @@ class GPCCA(BaseEstimator):
             - `'eigengap_coarse'`- select the number of states based on the eigengap of the diagonal of the coarse-grained transition matrix
             - `'min_self_prob'`- select states which have the given minimum probability on the diagonal of the coarse-grained transition matrix
             - `'top_n'`- select top :paramref:`n_main_states` based on the probability on the diagonal of the coarse-grained transition matrix
-        mode
-            How to handle the states that have not been selected.
-            Valid options are:
-
-                - `'normalize'` - renormalize the distribution to again sum to `1`
-                - `'rest'` - merge the unselected states to a new state called `'rest'`
+        redistribute
+            Whether to redistribute the probability mass of unselected lineages or create a `'rest'` lineage.
         alpha
             Used when :paramref:`method` `='eigengap'` or `='eigengap_coarse`.
         min_self_prob
             Used when :paramref:`method` `='min_self_prob'`.
         n_main_states
             Used when :paramref:`method` `='top_n'`.
+        kwargs
+            Keyword arguments for :meth:`cellrank.tl.Lineage.reduce` when redistributing the mass.
 
         Returns
         -------
@@ -550,7 +551,7 @@ class GPCCA(BaseEstimator):
                 np.diag(self._coarse_T), index=self._coarse_T.columns
             )
             names = self_probs[self_probs.values >= min_self_prob].index
-            self.set_main_states(names, mode)
+            self.set_main_states(names, redistribute=redistribute, **kwargs)
             return
         else:
             raise ValueError(
@@ -560,7 +561,7 @@ class GPCCA(BaseEstimator):
         names = self._coarse_T.columns[np.argsort(np.diag(self._coarse_T))][
             -n_main_states:
         ]
-        self.set_main_states(names, mode)
+        self.set_main_states(names, redistribute=redistribute, **kwargs)
 
     def _select_cells(
         self, n_cells: int, memberships: Union[np.ndarray, Lineage]

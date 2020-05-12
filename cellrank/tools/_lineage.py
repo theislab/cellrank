@@ -3,7 +3,7 @@ from cellrank.tools._utils import (
     unique_order_preserving,
     _create_categorical_colors,
     _compute_mean_color,
-    _normalize,
+    _convert_lineage_name,
 )
 from cellrank.tools._constants import Lin
 
@@ -32,11 +32,11 @@ class Lineage(np.ndarray):
     Params
     ------
     input_array
-        Input array containing lineage probabilities as columns.
+        Input array containing lineage probabilities, each lineage being stored in a column.
     names
         Names of the lineages.
     colors
-        Colors of the lineages
+        Colors of the lineages.
     """
 
     def __new__(
@@ -93,13 +93,13 @@ class Lineage(np.ndarray):
         lin_kind = [_ for _ in mixtures if isinstance(_, Lin)]
         if len(lin_kind) > 1:
             raise ValueError(
-                f"`Lin` enum is allowed only once in the expression, fount `{lin_kind}`."
+                f"`Lin` enum is allowed only once in the expression, found `{lin_kind}`."
             )
 
         keys = [
             tuple(
                 self._maybe_convert_names(
-                    sorted({key.strip(" ") for key in mixture.strip(" ,").split(",")})
+                    _convert_lineage_name(mixture), default=mixture
                 )
             )
             if isinstance(mixture, str)
@@ -127,9 +127,16 @@ class Lineage(np.ndarray):
         if len(lin_kind) == 1:
             lin_kind = lin_kind[0]
             keys = [i for i, n in enumerate(self.names) if n not in seen]
-            update_entries(keys)
-            if keys and lin_kind == Lin.REST:
-                names[-1] = str(lin_kind)
+
+            if lin_kind == Lin.OTHERS:
+                for key in keys:
+                    update_entries([key])
+            elif lin_kind == Lin.REST:
+                update_entries(keys)
+                if keys:
+                    names[-1] = str(lin_kind)
+            else:
+                raise ValueError(f"Invalid `Lin` enum `{lin_kind}`.")
 
         res = np.stack(res, axis=-1)
 
@@ -151,7 +158,7 @@ class Lineage(np.ndarray):
                 if any(
                     map(
                         lambda i: isinstance(i, Lin)
-                        or (isinstance(i, str) and "," in i),
+                        or (isinstance(i, str) and ("," in i or "or" in i)),
                         col,
                     )
                 ):
@@ -167,7 +174,7 @@ class Lineage(np.ndarray):
                 if any(
                     map(
                         lambda i: isinstance(i, Lin)
-                        or (isinstance(i, str) and "," in i),
+                        or (isinstance(i, str) and ("," in i or "or" in i)),
                         item,
                     )
                 ):
@@ -271,17 +278,32 @@ class Lineage(np.ndarray):
         )
 
     def _maybe_convert_names(
-        self, names: Iterable[Union[int, str]], is_singleton: bool = False
+        self,
+        names: Iterable[Union[int, str]],
+        is_singleton: bool = False,
+        default: Optional[Union[int, str]] = None,
     ) -> Union[int, List[int]]:
         res = []
         for name in names:
             if isinstance(name, str):
-                if name not in self._names_to_ixs:
+                if name in self._names_to_ixs:
+                    name = self._names_to_ixs[name]
+                elif default is not None:
+                    if isinstance(default, str):
+                        if default not in self._names_to_ixs:
+                            # TODO: names_to_ixs is not being properly updated
+                            raise KeyError(
+                                f"Invalid lineage name: `{name}`. "
+                                f"Valid names are: `{list(self.names)}`."
+                            )
+                        name = self._names_to_ixs[default]
+                    else:
+                        name = default
+                else:
                     raise KeyError(
                         f"Invalid lineage name `{name}`. "
-                        f"Valid names are: `{list(self._names_to_ixs.keys())}`."
+                        f"Valid names are: `{list(self.names)}`."
                     )
-                name = self._names_to_ixs[name]
             res.append(name)
 
         res = unique_order_preserving(res)
@@ -357,7 +379,7 @@ class Lineage(np.ndarray):
 
     def reduce(
         self,
-        keys: Optional[Union[List[str], Tuple[str], np.ndarray]] = None,
+        keys: Union[List[str], Tuple[str], np.ndarray],
         mode: str = "dist",
         dist_measure: str = "mutual_info",
         normalize_weights: str = "softmax",
@@ -402,22 +424,17 @@ class Lineage(np.ndarray):
             The weights used for the projection of shape `(n_query x n_reference)`.
         """
 
-        if keys is None or len(keys) == 0:
-            logg.debug("No keys specified, searching for `'rest'` lineage")
-            if "rest" not in self.names:
-                raise ValueError(
-                    "Unable to find `'rest'` lineage, please specify `keys=...`."
-                )
-            keys = [n for n in self.names if n != "rest"]
+        if not len(keys):
+            raise ValueError(f"Unable to perform the reduction, no keys specified.")
 
         if set(keys) == set(self.names):
             logg.warning(
-                "Argument `keys` specifies all lineages, no reduction possible"
+                "Unable to perform the reduction, `keys` specifies all lineages. Returning self"
             )
             return (self, None) if return_weights else self
 
         # check input parameters
-        if mode == "scale" and return_weights:
+        if return_weights and mode == "scale":
             logg.warning(
                 "If `mode=='scale'`, no weights are computed. Returning `None`"
             )
