@@ -70,13 +70,12 @@ def cluster_fates(
     mode
         Type of plot to show.
 
-        - If `'bar'`, plot barplots for specified :paramref:`clusters` and :paramref:`lineages`.
-        - If `'paga'`, plot `N` :func:`scanpy.pl.paga` plots, one for each endpoint in :paramref:`lineages`.
-        - If `'paga_pie'`, visualize absorption probabilities as a pie chart for each cluster
-          for the given :paramref:`lineages`.
-        - If `'violin'`, group the data by lineages and plot the fate distribution per cluster.
-
-        Best for looking at the distribution of fates within one cluster.
+        - `'bar'`: barplot, one panel per cluster
+        - `'paga'`: scanpy's PAGA, one per root/final state, colored in by fate
+        - `'paga_pie'`: scanpy's PAGA with pie charts indicating aggregated fates
+        - `'violin'`: violin plots, one per root/final state
+        - `'heatmap'`: seaborn heatmap, showing average fates per cluster
+        - `'clustermap'`: same as heatmap, but with dendrogram
     dpi
         Dots per inch.
     final
@@ -348,7 +347,7 @@ def cluster_fates(
     def plot_heatmap():
         title = kwargs.pop("title", None)
         if not title:
-            title = "Average cluster fates"
+            title = "average fate per cluster"
         data = pd.DataFrame(
             [mean for mean, _ in d.values()], columns=lin_names, index=clusters
         ).T
@@ -365,8 +364,6 @@ def cluster_fates(
                 robust=True,
                 annot=True,
                 fmt=".2f",
-                vmin=0,
-                vmax=1,
                 row_colors=adata.obsm[lk][lin_names].colors,
                 dendrogram_ratio=(
                     0.15 * data.shape[0] / max_size,
@@ -375,6 +372,8 @@ def cluster_fates(
                 figsize=figsize,
                 **kwargs,
             )
+            g.ax_heatmap.set_xlabel(cluster_key)
+            g.ax_heatmap.set_ylabel("lineage")
             g.ax_col_dendrogram.set_title(title)
 
             fig = g.fig
@@ -386,13 +385,13 @@ def cluster_fates(
                 robust=True,
                 annot=True,
                 fmt=".2f",
-                vmin=0,
-                vmax=1,
                 cbar=show_cbar,
                 ax=ax,
                 **kwargs,
             )
             ax.set_title(title)
+            ax.set_xlabel(cluster_key)
+            ax.set_ylabel("lineage")
 
         g.set_xticklabels(g.get_xticklabels(), rotation=xrot)
         g.set_yticklabels(g.get_yticklabels(), rotation=0)

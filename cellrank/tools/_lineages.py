@@ -4,7 +4,7 @@ from typing import Optional, Sequence
 from anndata import AnnData
 from scanpy import logging as logg
 
-from cellrank.tools import MarkovChain
+from cellrank.tools import CFLARE
 from cellrank.tools._constants import LinKey, RcKey, _transition, Direction
 from cellrank.tools.kernels import VelocityKernel
 
@@ -70,7 +70,7 @@ def lineages(
     # get the transition matrix from the AnnData object and initialise MC object
     vk = VelocityKernel(adata, backward=not final)
     vk.transition_matrix = adata.uns[transition_key]["T"]
-    mc = MarkovChain(vk)
+    mc = CFLARE(vk)
 
     # compute the absorption probabilities
     mc.compute_lin_probs(keys=keys)

@@ -5,8 +5,19 @@ Utility functions for the cellrank tools
 
 from scipy.sparse.linalg import norm as s_norm
 from numpy.linalg import norm as d_norm
-from itertools import product, tee
-from typing import Any, Union, Tuple, Sequence, Dict, Iterable, TypeVar, Hashable
+from itertools import product, tee, combinations
+from typing import (
+    Any,
+    Union,
+    Tuple,
+    Sequence,
+    Dict,
+    Iterable,
+    TypeVar,
+    Hashable,
+    List,
+    Optional,
+)
 
 import os
 import warnings
@@ -29,11 +40,88 @@ from sklearn.neighbors import NearestNeighbors
 
 from cellrank.utils._utils import has_neighs, get_neighs, get_neighs_params
 
-from typing import List, Optional
-from itertools import combinations
-
 
 ColorLike = TypeVar("ColorLike")
+GPCCA = TypeVar("GPCCA")
+Lineage = TypeVar("Lineage")
+
+
+def _get_restriction_to_main(estimator: GPCCA):
+    """
+    Restrict the categorical of metastable states to the main states.
+
+    Parameters
+    --------
+    estimator
+        GPCCA object.
+
+    Returns
+    --------
+    cats_main, colors_main
+        The restricted categorical annotations and matching colors.
+    """
+
+    # get the names of the main states, remove 'rest' if present
+    main_names = estimator.lineage_probabilities.names
+    main_names = main_names[main_names != "rest"]
+
+    # get the metastable annotations & colors
+    cats_main = estimator.metastable_states.copy()
+    colors_main = np.array(estimator._meta_states_colors.copy())
+
+    # restrict both colors and categories
+    mask = np.in1d(cats_main.cat.categories, main_names)
+    colors_main = colors_main[mask]
+    cats_main.cat.remove_categories(cats_main.cat.categories[~mask], inplace=True)
+
+    return cats_main, colors_main
+
+
+def _create_root_final_annotations(
+    adata: AnnData,
+    fwd: GPCCA,
+    bwd: GPCCA,
+    final_pref: Optional[str] = "final",
+    root_pref: Optional[str] = "root",
+    key_added: Optional[str] = "root_final",
+):
+    """
+    Create categorical annotations of both root and final states
+
+    Parameters
+    --------
+    adata
+        AnnData object to write to (`.obs[key_added]`)
+    fwd, bwd
+        GPCCA objects modelling forward and backward processes, respectively
+    final_pref, root_pref
+        Prefis used in the annotations
+    key_added
+        key added to `adata.obs`
+
+    Returns
+        Nothing, just writes to AnnData
+    """
+
+    # get restricted categories and colors
+    cats_final, colors_final = _get_restriction_to_main(fwd)
+    cats_root, colors_root = _get_restriction_to_main(bwd)
+
+    # merge
+    cats_merged, colors_merged = _merge_categorical_series(
+        cats_final, cats_root, list(colors_final), list(colors_root)
+    )
+
+    # adjust the names
+    final_names, root_names = cats_final.cat.categories, cats_final.cat.categories
+    final_labels = [
+        f"{final_pref if key in final_names else root_pref}: {key}"
+        for key in cats_merged.cat.categories
+    ]
+    cats_merged.cat.rename_categories(final_labels, inplace=True)
+
+    # write to AnnData
+    adata.obs[key_added], adata.uns[f"{key_added}_colors"] = cats_merged, colors_merged
 
 
 def _map_names_and_colors(
@@ -500,7 +588,7 @@ def _filter_cells(distances: np.ndarray, rc_labels: Series, n_matches_min: int):
     """
 
     if not is_categorical_dtype(rc_labels):
-        raise TypeError("`rc_labels` must be a categorical variable.")
+        raise TypeError("`categories` must be a categorical variable.")
 
     # retrieve knn graph
     rows, cols = distances.nonzero()
@@ -573,7 +661,7 @@ def _compute_mean_color(color_list: List[str]) -> str:
     """
 
     if not all(map(lambda c: mcolors.is_color_like(c), color_list)):
-        raise ValueError("Not all values are valid colors.")
+        raise ValueError(f"Not all values are valid colors `{color_list}`.")
 
     color_list = np.array([mcolors.to_rgb(c) for c in color_list])
 
@@ -1199,3 +1287,37 @@ def _merge_categorical_series(
 def unique_order_preserving(iterable: Iterable[Hashable]):
     seen = set()
     return [i for i in iterable if i not in seen and not seen.add(i)]
+
+
+def generate_random_keys(adata: AnnData, where: str, n: Optional[int] = None):
+    def generator():
+        return f"CELLRANK_RANDOM_COL_{np.random.randint(2**16)}"
+
+    if n is None:
+        n = 1
+
+    where = getattr(adata, where)
+    names, seen = [], set(where.keys())
+
+    while len(names) != n:
+        name = generator()
+        if name not in seen:
+            seen.add(name)
+            names.append(name)
+
+    return names
+
+
+def _get_black_or_white(value: float, cmap):
+    if not (0.0 <= value <= 1.0):
+        raise ValueError(f"Value must be in range `[0, 1]`, found `{value}`.")
+
+    r, g, b, *_ = [int(c * 255) for c in cmap(value)]
+    return "#000000" if r * 0.299 + g * 0.587 + b * 0.114 > 186 else "#ffffff"
+
+
+def _convert_lineage_name(names: str) -> Tuple[str, ...]:
+    sep = "or" if "or" in names else ","
+    return tuple(
+        sorted({name.strip(" ") for name in names.strip(f" {sep}").split(sep)})
+    )

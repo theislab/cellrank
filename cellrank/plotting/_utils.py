@@ -18,7 +18,7 @@ from cellrank.utils.models import Model, GamMGCVModel
 from cellrank.tools._utils import save_fig
 from cellrank.tools.kernels import VelocityKernel
 from cellrank.tools._constants import _colors
-from cellrank.tools._markov_chain import MarkovChain
+from cellrank.tools.estimators._cflare import CFLARE
 
 
 _ERROR_INCOMPLETE_SPEC = (
@@ -86,7 +86,7 @@ def lineages(
     vk.transition_matrix = csr_matrix((adata_dummy.n_obs, adata_dummy.n_obs))
 
     # use this to initialize an MC object
-    mc = MarkovChain(vk)
+    mc = CFLARE(vk)
 
     # plot using the MC object
     mc.plot_lin_probs(

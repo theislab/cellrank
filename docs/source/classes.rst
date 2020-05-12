@@ -7,6 +7,10 @@ MarkovChain
 .. autoclass:: cellrank.tl.MarkovChain
     :members:
 
+GPCCA
+~~~~~
+.. autoclass:: cellrank.tl.GPCCA
+    :members:
 
 Models
 ~~~~~~
