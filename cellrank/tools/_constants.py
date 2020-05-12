@@ -26,9 +26,10 @@ class RcKey(PrettyEnum):
     BACKWARD = "root_states"
 
 
+# RcKey and LinKey must have the same suffix `_..._states` because of model.prepare
 class LinKey(PrettyEnum):
-    FORWARD = "to_final_cells"
-    BACKWARD = "from_root_cells"
+    FORWARD = "to_final_states"
+    BACKWARD = "from_root_states"
 
 
 class MetaKey(PrettyEnum):

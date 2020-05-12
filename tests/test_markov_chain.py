@@ -10,9 +10,9 @@ from cellrank.tools._constants import (
     Prefix,
     RcKey,
     Direction,
+    LinKey,
     _colors,
     _probs,
-    LinKey,
     _lin_names,
 )
 from cellrank.tools._utils import _create_categorical_colors
@@ -54,19 +54,20 @@ class TestMarkovChain:
             "V_r",
             "eigengap",
             "params",
+            "stationary_dist",
         }
         assert f"eig_{Direction.FORWARD}" in mc.adata.uns.keys()
 
-    def test_compute_approx_rcs_no_eig(self, adata_large: AnnData):
+    def test_compute_metastable_states_no_eig(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.CFLARE(final_kernel)
         with pytest.raises(RuntimeError):
-            mc.compute_approx_rcs(use=2)
+            mc.compute_metastable_states(use=2)
 
-    def test_compute_approx_rcs_too_large_use(self, adata_large: AnnData):
+    def test_compute_metastable_states_too_large_use(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
@@ -74,7 +75,7 @@ class TestMarkovChain:
         mc = cr.tl.CFLARE(final_kernel)
         mc.compute_eig(k=2)
         with pytest.raises(ValueError):
-            mc.compute_approx_rcs(use=1000)
+            mc.compute_metastable_states(use=1000)
 
     def test_compute_approx_normal_run(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
@@ -83,7 +84,7 @@ class TestMarkovChain:
 
         mc = cr.tl.CFLARE(final_kernel)
         mc.compute_eig(k=5)
-        mc.compute_approx_rcs(use=2)
+        mc.compute_metastable_states(use=2)
 
         assert is_categorical_dtype(mc.metastable_states)
         assert mc.metastable_states_probabilities is not None
@@ -106,7 +107,7 @@ class TestMarkovChain:
 
         mc = cr.tl.CFLARE(final_kernel)
         mc.compute_eig(k=5)
-        mc.compute_approx_rcs(use=2)
+        mc.compute_metastable_states(use=2)
         mc.compute_lin_probs()
 
         assert isinstance(mc.diff_potential, np.ndarray)
@@ -140,7 +141,7 @@ class TestMarkovChain:
 
         mc = cr.tl.CFLARE(final_kernel)
         mc.compute_eig(k=5)
-        mc.compute_approx_rcs(use=2)
+        mc.compute_metastable_states(use=2)
         with pytest.raises(RuntimeError):
             mc.compute_lineage_drivers()
 
@@ -151,7 +152,7 @@ class TestMarkovChain:
 
         mc = cr.tl.CFLARE(final_kernel)
         mc.compute_eig(k=5)
-        mc.compute_approx_rcs(use=2)
+        mc.compute_metastable_states(use=2)
         mc.compute_lin_probs()
         with pytest.raises(KeyError):
             mc.compute_lineage_drivers(use_raw=False, lin_names=["foo"])
@@ -163,7 +164,7 @@ class TestMarkovChain:
 
         mc = cr.tl.CFLARE(final_kernel)
         mc.compute_eig(k=5)
-        mc.compute_approx_rcs(use=2)
+        mc.compute_metastable_states(use=2)
         mc.compute_lin_probs()
         with pytest.raises(KeyError):
             mc.compute_lineage_drivers(
@@ -177,7 +178,7 @@ class TestMarkovChain:
 
         mc = cr.tl.CFLARE(final_kernel)
         mc.compute_eig(k=5)
-        mc.compute_approx_rcs(use=2)
+        mc.compute_metastable_states(use=2)
         mc.compute_lin_probs()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
@@ -193,13 +194,14 @@ class TestMarkovChain:
         mc_fwd = cr.tl.CFLARE(final_kernel)
         mc_fwd.compute_partition()
         mc_fwd.compute_eig()
-        mc_fwd.compute_approx_rcs(use=3)
+        mc_fwd.compute_metastable_states(use=3)
 
         arcs = ["0", "2"]
         arc_colors = [
             c
             for arc, c in zip(
-                mc_fwd._approx_rcs.cat.categories, mc_fwd._approx_rcs_colors
+                mc_fwd.metastable_states.cat.categories,
+                mc_fwd._metastable_states_colors,
             )
             if arc in arcs
         ]
@@ -219,15 +221,15 @@ class TestMarkovChain:
         mc_fwd.compute_partition()
         mc_fwd.compute_eig()
 
-        mc_fwd.compute_approx_rcs(use=3)
-        original = np.array(adata.obs["final_cells"].copy())
+        mc_fwd.compute_metastable_states(use=3)
+        original = np.array(adata.obs[f"{RcKey.FORWARD}"].copy())
         zero_mask = original == "0"
 
         cells = list(adata[zero_mask].obs_names)
-        mc_fwd.set_approx_rcs({"foo": cells})
+        mc_fwd.set_metastable_states({"foo": cells})
 
-        assert (adata.obs["final_cells"][zero_mask] == "foo").all()
-        assert pd.isna(adata.obs["final_cells"][~zero_mask]).all()
+        assert (adata.obs[f"{RcKey.FORWARD}"][zero_mask] == "foo").all()
+        assert pd.isna(adata.obs[f"{RcKey.FORWARD}"][~zero_mask]).all()
 
     def test_check_and_create_colors(self, adata_large):
         adata = adata_large
@@ -239,19 +241,19 @@ class TestMarkovChain:
         mc_fwd.compute_partition()
         mc_fwd.compute_eig()
 
-        mc_fwd.compute_approx_rcs(use=3)
+        mc_fwd.compute_metastable_states(use=3)
 
-        mc_fwd._approx_rcs_colors = None
-        del mc_fwd.adata.uns["final_cells_colors"]
+        mc_fwd._metastable_states_colors = None
+        del mc_fwd.adata.uns[_colors(RcKey.FORWARD)]
 
         mc_fwd._check_and_create_colors()
 
-        assert "final_cells_colors" in mc_fwd.adata.uns
+        assert _colors(RcKey.FORWARD) in mc_fwd.adata.uns
         np.testing.assert_array_equal(
-            mc_fwd.adata.uns["final_cells_colors"], _create_categorical_colors(3)
+            mc_fwd.adata.uns[_colors(RcKey.FORWARD)], _create_categorical_colors(3)
         )
         np.testing.assert_array_equal(
-            mc_fwd.adata.uns["final_cells_colors"], mc_fwd._approx_rcs_colors
+            mc_fwd.adata.uns[_colors(RcKey.FORWARD)], mc_fwd._metastable_states_colors
         )
 
 
@@ -284,7 +286,9 @@ class TestMarkovChainCopy:
         np.testing.assert_array_equal(
             mc1.metastable_states_probabilities, mc2.metastable_states_probabilities
         )
-        np.testing.assert_array_equal(mc1._approx_rcs_colors, mc2._approx_rcs_colors)
+        np.testing.assert_array_equal(
+            mc1._metastable_states_colors, mc2._metastable_states_colors
+        )
         assert mc1._G2M_score == mc2._G2M_score
         assert mc1._S_score == mc2._S_score
 
@@ -310,6 +314,6 @@ class TestMarkovChainCopy:
             mc1.metastable_states_probabilities
             is not mc2.metastable_states_probabilities
         )
-        assert mc1._approx_rcs_colors is not mc2._approx_rcs_colors
+        assert mc1._metastable_states_colors is not mc2._metastable_states_colors
         assert mc1._G2M_score != mc2._G2M_score
         assert mc1._S_score != mc2._S_score

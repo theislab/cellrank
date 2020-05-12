@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from cellrank.tools import CFLARE
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
+from cellrank.tools._constants import LinKey
+
 from typing import Tuple
 from anndata import AnnData
 
@@ -48,15 +50,15 @@ def _create_cellrank_adata(
 
         mc.compute_partition()
         mc.compute_eig()
-        mc.compute_approx_rcs(use=2)  # can fail for small #cells
+        mc.compute_metastable_states(use=2)  # can fail for small #cells
         mc.compute_lin_probs()
         mc.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
 
         assert adata is mc.adata
         if backward:
-            assert "from_root_cells" in adata.obsm
+            assert str(LinKey.BACKWARD) in adata.obsm
         else:
-            assert "to_final_cells" in adata.obsm
+            assert str(LinKey.FORWARD) in adata.obsm
     except:
         mc = None
 

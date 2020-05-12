@@ -746,12 +746,12 @@ class TestMarkovChain:
         mc.plot_eig_embedding(use=2, dpi=DPI, save=str(fpath))
 
     @compare(kind="mc")
-    def test_scvelo_approx_rcs(self, mc: CFLARE, fpath: Path):
-        mc.plot_approx_rcs(dpi=DPI, save=str(fpath))
+    def test_scvelo_meta_states(self, mc: CFLARE, fpath: Path):
+        mc.plot_metastable_states(dpi=DPI, save=str(fpath))
 
     @compare(kind="mc")
-    def test_scvelo_approx_rcs_clusters(self, mc: CFLARE, fpath: Path):
-        mc.plot_approx_rcs(cluster_key="clusters", dpi=DPI, save=str(fpath))
+    def test_scvelo_meta_states(self, mc: CFLARE, fpath: Path):
+        mc.plot_metastable_states(cluster_key="clusters", dpi=DPI, save=str(fpath))
 
     @compare(kind="mc")
     def test_scvelo_lin_probs(self, mc: CFLARE, fpath: Path):
