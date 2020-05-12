@@ -38,7 +38,7 @@ References
    `Genome Biology <https://doi.org/10.1186/s13059-017-1382-0>`__.
 
 .. [Wolf19] Wolf *et al.* (2019),
-  *PAGA: Graph abstraction reconciles clustering with trajectory inference through a topology preserving map of single cells.*
+   *PAGA: Graph abstraction reconciles clustering with trajectory inference through a topology preserving map of single cells*,
    `Genome Biology <https://doi.org/10.1186/s13059-019-1663-x>`__,
    `bioRxiv <https://doi.org/10.1101/208819>`__.
 
@@ -49,3 +49,7 @@ References
 .. [Panc19] Bastidas-Ponce *et al.* (2019),
    *Comprehensive single cell mRNA profiling reveals a detailed roadmap for pancreatic endocrinogenesis*,
    `Development <https://doi.org/10.1242/dev.173849>`__.
+
+.. [GPCCA18] Reuter, B. *et al.* (2018),
+   *Generalized Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on Amyloid β Conformational Dynamics Driven by an Oscillating Electric Field.*
+   `Journal of Chemical Theory and Computation <https://doi.org/10.1021/acs.jctc.8b00079>`__.
