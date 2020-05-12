@@ -1305,7 +1305,7 @@ def generate_random_keys(adata: AnnData, where: str, n: Optional[int] = None):
             seen.add(name)
             names.append(name)
 
-    return names[0] if n == 1 else names
+    return names
 
 
 def _get_black_or_white(value: float, cmap):
