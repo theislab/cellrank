@@ -18,6 +18,8 @@ def read(
     path: Union[Path, str], read_callback: Callable = scv.read, **kwargs
 ) -> anndata.AnnData:
     """
+    Read file and return :class:`anndata.AnnData` object.
+
     Params
     ------
     path

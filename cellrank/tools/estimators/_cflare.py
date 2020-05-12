@@ -34,7 +34,7 @@ from cellrank.tools._utils import (
 
 class CFLARE(BaseEstimator):
     """
-    **C**lustering and **F**iltering of **L**eft **a**nd **R**ight **E**igenvectors based on Markov chains.
+    Clustering and Filtering of Left and Right Eigenvectors based on Markov chains.
 
     This is one of the two main classes of CellRank. We model cellular development as a Markov chain (MC), where each
     measured cell is represented by a state in the MC. We assume that transition probabilities between these states

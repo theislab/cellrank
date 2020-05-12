@@ -24,7 +24,7 @@ Tools
 
     :toctree: api/tl
 
-    tl.MarkovChain
+    tl.CFLARE
     tl.GPCCA
     tl.partition
     tl.find_root
@@ -67,6 +67,17 @@ Utilities
 
     ul.models.SKLearnModel
     ul.models.GamMGCVModel
+
+Reading
+~~~~~~~
+.. module:: cellrank
+.. currentmodule:: cellrank
+
+.. autosummary::
+
+    :toctree: api
+
+    read
 
 Datasets
 ~~~~~~~~

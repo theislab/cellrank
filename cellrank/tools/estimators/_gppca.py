@@ -31,7 +31,7 @@ import matplotlib.colors as mcolors
 
 class GPCCA(BaseEstimator):
     """
-    Generalized Perron Cluster Cluster Analysis.
+    Generalized Perron Cluster Cluster Analysis [GPCCA18]_.
 
     Params
     ------
