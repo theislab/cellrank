@@ -1,10 +1,10 @@
 Classes
 =======
 
-MarkovChain
-~~~~~~~~~~~
+CFLARE
+~~~~~~
 
-.. autoclass:: cellrank.tl.MarkovChain
+.. autoclass:: cellrank.tl.CFLARE
     :members:
 
 GPCCA
