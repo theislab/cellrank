@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-from pathlib import Path
-
 from cellrank.tools.kernels._kernel import KernelExpression
 from typing import Optional, Tuple, Sequence, List, Any, Union, Dict, Iterable
 
@@ -8,7 +6,6 @@ import numpy as np
 import scvelo as scv
 import matplotlib as mpl
 import matplotlib.cm as cm
-import matplotlib.pyplot as plt
 
 from anndata import AnnData
 from copy import copy, deepcopy
@@ -32,7 +29,6 @@ from cellrank.tools._utils import (
     _convert_to_hex_colors,
     _create_categorical_colors,
     partition,
-    save_fig,
 )
 
 
