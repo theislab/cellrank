@@ -484,16 +484,20 @@ class GPCCA(BaseEstimator):
                 - :paramref:`diff_potential`
         """
 
-        kwargs["return_weights"] = False
         if names is None:
-            self._lin_probs = self._meta_lin_probs.copy()
-        elif redistribute:
-            self._lin_probs = self._meta_lin_probs[list(names) + [Lin.OTHERS]]
+            names = self._meta_lin_probs.names
+            redistribute = False
+
+        names = list(names)
+        kwargs["return_weights"] = False
+
+        if redistribute:
+            self._lin_probs = self._meta_lin_probs[names + [Lin.OTHERS]]
             self._lin_probs = self._lin_probs.reduce(
                 [" or ".join(_convert_lineage_name(name)) for name in names], **kwargs
             )
         else:
-            self._lin_probs = self._meta_lin_probs[list(names) + [Lin.REST]]
+            self._lin_probs = self._meta_lin_probs[names + [Lin.REST]]
 
         self._set_main_states(n_cells)
         self._dp = entropy(self._lin_probs.X.T)
