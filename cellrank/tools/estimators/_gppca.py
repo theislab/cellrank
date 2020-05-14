@@ -8,7 +8,7 @@ from scipy.stats import entropy
 from copy import copy, deepcopy
 
 from cellrank.tools._lineage import Lineage
-from cellrank.tools._constants import Lin, RcKey, MetaKey, _colors, _lin_names, _dp
+from cellrank.tools._constants import Lin, MetaKey, _colors, _lin_names, _dp, _probs
 from cellrank.tools.estimators._base_estimator import BaseEstimator
 from cellrank.tools._utils import (
     _eigengap,
@@ -456,7 +456,7 @@ class GPCCA(BaseEstimator):
 
     def set_main_states(
         self,
-        names: Iterable[str],
+        names: Optional[Iterable[str]] = None,
         n_cells: Optional[int] = 30,
         redistribute: bool = True,
         **kwargs,
@@ -484,22 +484,25 @@ class GPCCA(BaseEstimator):
                 - :paramref:`diff_potential`
         """
 
-        names = list(names)
         kwargs["return_weights"] = False
-
-        if redistribute:
-            self._lin_probs = self._meta_lin_probs[names + [Lin.OTHERS]]
+        if names is None:
+            self._lin_probs = self._meta_lin_probs.copy()
+        elif redistribute:
+            self._lin_probs = self._meta_lin_probs[list(names) + [Lin.OTHERS]]
             self._lin_probs = self._lin_probs.reduce(
                 [" or ".join(_convert_lineage_name(name)) for name in names], **kwargs
             )
         else:
-            self._lin_probs = self._meta_lin_probs[names + [Lin.REST]]
+            self._lin_probs = self._meta_lin_probs[list(names) + [Lin.REST]]
 
         self._set_main_states(n_cells)
         self._dp = entropy(self._lin_probs.X.T)
 
         # write to adata
         self.adata.obs[_dp(self._lin_key)] = self._dp
+        self.adata.obs[_probs(self._rc_key)] = self._lin_probs[
+            [n for n in self._lin_probs.names if n != "rest"]
+        ].X.max(axis=1)
         self.adata.obsm[self._lin_key] = self._lin_probs
         self.adata.uns[_lin_names(self._lin_key)] = self._lin_probs.names
         self.adata.uns[_colors(self._lin_key)] = self._lin_probs.colors
