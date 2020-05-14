@@ -741,20 +741,22 @@ class BaseEstimator(ABC):
         )
 
     def compute_gdpt(self, n_comps: int = 10, sorting: str = "LM"):
-        """Compute generalized DPT making use of the real Schur decomposition
+        """
+        Compute generalized DPT making use of the real Schur decomposition.
 
         Params
-        --------
+        ------
         iroot
-            Root cell. Can be inferred automatically using the backward process
+            Root cell. Can be inferred automatically using the backward process.
         n_schur_vectors
-            Number of real schur vectors to consider
+            Number of real schur vectors to consider.
         sorting
-            How to sort the schur vectors. Options are 'LM' for largest magnitude and 'LR' for largest real part
+            How to sort the schur vectors. Options are 'LM' for largest magnitude and 'LR' for largest real part.
 
         Returns
-        --------
-        Noting, just updates `self._adata.obs['gdpt_pseudotime']` with the computed pseudotime.
+        -------
+        None
+            Nothing, just updates :paramref:`adata` `.obs['gdpt_pseudotime']` with the computed pseudotime.
         """
 
         def _get_dpt_row(e_vals, e_vecs, i):
@@ -774,8 +776,8 @@ class BaseEstimator(ABC):
 
         if "iroot" not in self._adata.uns.keys():
             raise ValueError('No field `"iroot"` found in `adata.uns`')
-        else:
-            iroot = self._adata.uns["iroot"]
+        
+        iroot = self._adata.uns["iroot"]
 
         start = logg.info(
             f"Computing Generalized Diffusion Pseudotime using n_comps = {n_comps}"
@@ -792,7 +794,7 @@ class BaseEstimator(ABC):
         pseudotime = D / np.max(D[D < np.inf])
         self._adata.obs["gdpt_pseudotime"] = pseudotime
 
-        logg.info(f'Adding `"gdpt_pseudotime"` to `adata.obs`\n   Finish', time=start)
+        logg.info(f'Adding `"gdpt_pseudotime"` to `adata.obs`\n    Finish', time=start)
 
     @abstractmethod
     def copy(self) -> "BaseEstimator":
