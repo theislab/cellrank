@@ -432,7 +432,9 @@ class GPCCA(BaseEstimator):
                 **kwargs,
             )
 
-    def _set_main_states(self, n_cells: Optional[int]) -> None:
+    def _set_main_states(
+        self, n_cells: Optional[int], write_to_adata: bool = True
+    ) -> None:
         self._n_cells = n_cells
 
         if n_cells is None:
@@ -449,10 +451,11 @@ class GPCCA(BaseEstimator):
         self._n_cells = n_cells
         self._main_states, _, _ = self._select_cells(n_cells, memberships=probs)
 
-        self.adata.obs[self._rc_key] = self._main_states
-        self.adata.uns[_colors(self._rc_key)] = probs[
-            list(self._main_states.cat.categories)
-        ].colors
+        if write_to_adata:
+            self.adata.obs[self._rc_key] = self._main_states
+            self.adata.uns[_colors(self._rc_key)] = probs[
+                list(self._main_states.cat.categories)
+            ].colors
 
     def set_main_states(
         self,
@@ -763,7 +766,7 @@ class GPCCA(BaseEstimator):
             if n_cells == self._n_cells:
                 logg.debug("DEBUG: Using cached main states")
             else:
-                self._set_main_states(n_cells)
+                self._set_main_states(n_cells, write_to_adata=False)
             _main_states = self._main_states
         else:
             raise RuntimeError(f"Invalid attribute name: `{attr!r}`.")
