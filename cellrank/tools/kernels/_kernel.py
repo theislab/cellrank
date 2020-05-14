@@ -706,6 +706,8 @@ class VelocityKernel(Kernel):
         Direction of the process.
     vkey
         Key in :paramref:`adata` `.uns` where the velocities are stored.
+    use_negative_cosines
+        Whether to use correlations with cells that have an angle > 90 degree with v_i
     compute_cond_num
         Whether to compute condition number of the transition matrix. Note that this might be costly,
         since it does not use sparse implementation.
@@ -716,14 +718,20 @@ class VelocityKernel(Kernel):
         adata: AnnData,
         backward: bool = False,
         vkey: str = "velocity",
+        use_negative_cosines: bool = True,
         compute_cond_num: bool = False,
     ):
         super().__init__(
-            adata, backward=backward, vkey=vkey, compute_cond_num=compute_cond_num
+            adata,
+            backward=backward,
+            vkey=vkey,
+            use_negative_cosines=use_negative_cosines,
+            compute_cond_num=compute_cond_num,
         )
         self._vkey = vkey  # for copy
+        self._use_negative_cosines = use_negative_cosines
 
-    def _read_from_adata(self, vkey: str, **kwargs):
+    def _read_from_adata(self, vkey: str, use_negative_cosines: bool, **kwargs):
         super()._read_from_adata(variance_key="velocity", **kwargs)
         if (vkey + "_graph" not in self.adata.uns.keys()) or (
             vkey + "_graph_neg" not in self.adata.uns.keys()
@@ -738,7 +746,10 @@ class VelocityKernel(Kernel):
         )
         logg.debug("Adding `.velo_corr`, the velocity correlations")
 
-        self.velo_corr = (velo_corr_pos + velo_corr_neg).astype(_dtype)
+        if use_negative_cosines:
+            self.velo_corr = (velo_corr_pos + velo_corr_neg).astype(_dtype)
+        else:
+            self.velo_corr = velo_corr_pos.astype(_dtype)
 
     def compute_transition_matrix(
         self,
@@ -817,7 +828,12 @@ class VelocityKernel(Kernel):
         return self
 
     def copy(self) -> "VelocityKernel":
-        vk = VelocityKernel(self.adata, backward=self.backward, vkey=self._vkey)
+        vk = VelocityKernel(
+            self.adata,
+            backward=self.backward,
+            vkey=self._vkey,
+            use_negative_cosines=self._use_negative_cosines,
+        )
         vk._params = copy(self.params)
         vk._transition_matrix = copy(self._transition_matrix)
 
