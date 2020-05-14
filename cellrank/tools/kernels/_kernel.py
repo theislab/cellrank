@@ -389,7 +389,7 @@ class UnaryKernelExpression(KernelExpression, ABC):
         self._read_from_adata(**kwargs)
 
     @abstractmethod
-    def _read_from_adata(self, **kwargs):
+    def _read_from_adata(self, var_key: Optional[str] = None, **kwargs):
         """
         Import the base-KNN graph and check for symmetry and connectivity.
         """
@@ -398,6 +398,7 @@ class UnaryKernelExpression(KernelExpression, ABC):
             raise KeyError("Compute KNN graph first as `scanpy.pp.neighbors()`.")
 
         self._conn = get_neighs(self.adata, "connectivities").astype(_dtype)
+        self._variances = None
 
         start = logg.debug("Checking the KNN graph for connectedness")
         if not is_connected(self._conn):
@@ -407,19 +408,14 @@ class UnaryKernelExpression(KernelExpression, ABC):
         if not is_symmetric(self._conn):
             logg.warning("KNN graph is not symmetric", time=start)
 
-        variance_key = kwargs.pop("variance_key", None)
-        if variance_key is not None:
-            logg.debug(f"DEBUG: Loading variances from `adata.uns[{variance_key!r}]`")
-            variance_key = f"{variance_key}_variances"
-            if variance_key in self.adata.uns.keys():
+        if var_key is not None:
+            if var_key in self.adata.uns.keys():
+                logg.debug(f"DEBUG: Loading variances from `adata.uns[{var_key!r}]`")
                 # keep it sparse
-                self._variances = csr_matrix(
-                    self.adata.uns[variance_key].astype(_dtype)
-                )
+                self._variances = csr_matrix(self.adata.uns[var_key].astype(_dtype))
             else:
-                self._variances = None
                 logg.debug(
-                    f"DEBUG: Unable to load variances`{variance_key}` from `adata.uns`"
+                    f"DEBUG: Unable to load variances from `adata.uns[{var_key!r}]`"
                 )
         else:
             logg.debug("DEBUG: No variance key specified")
@@ -706,6 +702,8 @@ class VelocityKernel(Kernel):
         Direction of the process.
     vkey
         Key in :paramref:`adata` `.uns` where the velocities are stored.
+    var_key
+        Key in :paramref:`adata` `.uns` where the velocity variances are stored.
     compute_cond_num
         Whether to compute condition number of the transition matrix. Note that this might be costly,
         since it does not use sparse implementation.
@@ -716,15 +714,21 @@ class VelocityKernel(Kernel):
         adata: AnnData,
         backward: bool = False,
         vkey: str = "velocity",
+        var_key: Optional[str] = None,
         compute_cond_num: bool = False,
     ):
         super().__init__(
-            adata, backward=backward, vkey=vkey, compute_cond_num=compute_cond_num
+            adata,
+            backward=backward,
+            vkey=vkey,
+            var_key=var_key,
+            compute_cond_num=compute_cond_num,
         )
         self._vkey = vkey  # for copy
+        self._var_key = var_key
 
-    def _read_from_adata(self, vkey: str, **kwargs):
-        super()._read_from_adata(variance_key="velocity", **kwargs)
+    def _read_from_adata(self, vkey: str, var_key: Optional[str] = None, **kwargs):
+        super()._read_from_adata(var_key=var_key, **kwargs)
         if (vkey + "_graph" not in self.adata.uns.keys()) or (
             vkey + "_graph_neg" not in self.adata.uns.keys()
         ):
@@ -817,7 +821,9 @@ class VelocityKernel(Kernel):
         return self
 
     def copy(self) -> "VelocityKernel":
-        vk = VelocityKernel(self.adata, backward=self.backward, vkey=self._vkey)
+        vk = VelocityKernel(
+            self.adata, backward=self.backward, vkey=self._vkey, var_key=self._var_key
+        )
         vk._params = copy(self.params)
         vk._transition_matrix = copy(self._transition_matrix)
 
@@ -842,18 +848,27 @@ class ConnectivityKernel(Kernel):
         Annotated data object.
     backward
         Direction of the process.
+    var_key
+        Key in :paramref:`adata` `.uns` where the velocity variances are stored.
     compute_cond_num
         Whether to compute condition number of the transition matrix. Note that this might be costly,
         since it does not use sparse implementation.
     """
 
     def __init__(
-        self, adata: AnnData, backward: bool = False, compute_cond_num: bool = False
+        self,
+        adata: AnnData,
+        backward: bool = False,
+        var_key: Optional[str] = None,
+        compute_cond_num: bool = False,
     ):
-        super().__init__(adata, backward=backward, compute_cond_num=compute_cond_num)
+        super().__init__(
+            adata, backward=backward, var_key=var_key, compute_cond_num=compute_cond_num
+        )
+        self._var_key = var_key
 
-    def _read_from_adata(self, **kwargs):
-        super()._read_from_adata(variance_key="connectivity", **kwargs)
+    def _read_from_adata(self, var_key: Optional[str] = None, **kwargs):
+        super()._read_from_adata(var_key=var_key, **kwargs)
 
     def compute_transition_matrix(
         self, density_normalize: bool = True, **kwargs
@@ -899,7 +914,9 @@ class ConnectivityKernel(Kernel):
         return self
 
     def copy(self) -> "ConnectivityKernel":
-        ck = ConnectivityKernel(self.adata, backward=self.backward)
+        ck = ConnectivityKernel(
+            self.adata, backward=self.backward, var_key=self._var_key
+        )
         ck._params = copy(self.params)
         ck._transition_matrix = copy(self._transition_matrix)
 
@@ -929,6 +946,8 @@ class PalantirKernel(Kernel):
         Direction of the process.
     time_key
         Key in :paramref:`adata` `.obs` where the pseudotime is stored.
+    var_key
+        Key in :paramref:`adata` `.uns` where the velocity variances are stored.
     compute_cond_num
         Whether to compute condition number of the transition matrix. Note that this might be costly,
         since it does not use sparse implementation.
@@ -939,20 +958,23 @@ class PalantirKernel(Kernel):
         adata: AnnData,
         backward: bool = False,
         time_key: str = "dpt_pseudotime",
+        var_key: Optional[str] = None,
         compute_cond_num: bool = False,
     ):
         super().__init__(
             adata,
             backward=backward,
             time_key=time_key,
+            var_key=var_key,
             compute_cond_num=compute_cond_num,
         )
         self._time_key = time_key
+        self._var_key = var_key
 
-    def _read_from_adata(self, time_key: str, **kwargs):
-        super()._read_from_adata(variance_key="palantir", **kwargs)
+    def _read_from_adata(self, time_key: str, var_key: Optional[str] = None, **kwargs):
+        super()._read_from_adata(var_key=var_key, **kwargs)
         if time_key not in self.adata.obs.keys():
-            raise KeyError(f"Could not find time key `{time_key!r}` in `adata.obs`.")
+            raise KeyError(f"Could not find time key in `adata.obs[{time_key!r}]`.")
         logg.debug("Adding `.pseudotime`")
 
         self.pseudotime = np.array(self.adata.obs[time_key]).astype(_dtype)
@@ -1039,7 +1061,12 @@ class PalantirKernel(Kernel):
         return self
 
     def copy(self) -> "PalantirKernel":
-        pk = PalantirKernel(self.adata, backward=self.backward, time_key=self._time_key)
+        pk = PalantirKernel(
+            self.adata,
+            backward=self.backward,
+            time_key=self._time_key,
+            var_key=self._var_key,
+        )
         pk._params = copy(self._params)
         pk._transition_matrix = copy(self._transition_matrix)
 
