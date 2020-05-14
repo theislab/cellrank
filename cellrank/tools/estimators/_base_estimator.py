@@ -26,6 +26,7 @@ from scanpy import logging as logg
 from scipy.sparse import issparse
 from pandas import Series
 from pandas.api.types import is_categorical_dtype, infer_dtype
+from msmtools.util.sorted_schur import sorted_krylov_schur
 from scipy.sparse.linalg import eigs
 from scipy.stats import ranksums
 from pathlib import Path
@@ -738,6 +739,60 @@ class BaseEstimator(ABC):
         logg.info(
             f"Adding gene correlations to `.adata.{field}`\n    Finish", time=start
         )
+
+    def compute_gdpt(self, n_comps: int = 10, sorting: str = "LM"):
+        """Compute generalized DPT making use of the real Schur decomposition
+
+        Params
+        --------
+        iroot
+            Root cell. Can be inferred automatically using the backward process
+        n_schur_vectors
+            Number of real schur vectors to consider
+        sorting
+            How to sort the schur vectors. Options are 'LM' for largest magnitude and 'LR' for largest real part
+
+        Returns
+        --------
+        Noting, just updates `self._adata.obs['gdpt_pseudotime']` with the computed pseudotime.
+        """
+
+        def _get_dpt_row(e_vals, e_vecs, i):
+            row = sum(
+                (
+                    np.abs(e_vals[l])
+                    / (1 - np.abs(e_vals[l]))
+                    * (e_vecs[i, l] - e_vecs[:, l])
+                )
+                ** 2
+                # account for float32 precision
+                for l in range(0, e_vals.size)
+                if np.abs(e_vals[l]) < 0.9994
+            )
+
+            return np.sqrt(row)
+
+        if "iroot" not in self._adata.uns.keys():
+            raise ValueError('No field `"iroot"` found in `adata.uns`')
+        else:
+            iroot = self._adata.uns["iroot"]
+
+        start = logg.info(
+            f"Computing Generalized Diffusion Pseudotime using n_comps = {n_comps}"
+        )
+
+        # comptue invariant, real subspace of self._T using the schur decomp.
+        try:
+            evecs, evals, _ = sorted_krylov_schur(self._T, m=n_comps, z=sorting)
+        except ValueError:
+            n_comps += 1
+            evecs, evals, _ = sorted_krylov_schur(self._T, m=n_comps, z=sorting)
+
+        D = _get_dpt_row(evals, evecs, i=iroot)
+        pseudotime = D / np.max(D[D < np.inf])
+        self._adata.obs["gdpt_pseudotime"] = pseudotime
+
+        logg.info(f'Adding `"gdpt_pseudotime"` to `adata.obs`\n   Finish', time=start)
 
     @abstractmethod
     def copy(self) -> "BaseEstimator":
