@@ -432,8 +432,34 @@ class GPCCA(BaseEstimator):
                 **kwargs,
             )
 
+    def _set_main_states(self, n_cells: Optional[int]) -> None:
+        self._n_cells = n_cells
+
+        if n_cells is None:
+            return None
+
+        probs = self._lin_probs[[n for n in self._lin_probs.names if n != "rest"]]
+        max_avail_cells = n_cells * probs.shape[1]
+        if max_avail_cells > self.adata.n_obs:
+            raise ValueError(
+                f"Total number of requested cells ({max_avail_cells}) "
+                f"exceeds the total number of cells ({self.adata.n_obs})."
+            )
+
+        self._n_cells = n_cells
+        self._main_states, _, _ = self._select_cells(n_cells, memberships=probs)
+
+        self.adata.obs[self._rc_key] = self._main_states
+        self.adata.uns[_colors(self._rc_key)] = probs[
+            list(self._main_states.cat.categories)
+        ].colors
+
     def set_main_states(
-        self, names: Iterable[str], redistribute: bool = True, **kwargs
+        self,
+        names: Iterable[str],
+        n_cells: Optional[int] = 30,
+        redistribute: bool = True,
+        **kwargs,
     ):
         """
         Manually select the main states from the metastable states.
@@ -442,6 +468,8 @@ class GPCCA(BaseEstimator):
         ------
         names
             Names of the main states. Multiple states can be combined using `','`, such as `['Alpha, Beta', 'Epsilon']`.
+        n_cells
+            Number of most likely cells from each main state to select.
         redistribute
             Whether to redistribute the probability mass of unselected lineages or create a `'rest'` lineage.
         kwargs
@@ -467,8 +495,7 @@ class GPCCA(BaseEstimator):
         else:
             self._lin_probs = self._meta_lin_probs[names + [Lin.REST]]
 
-        self._n_cells = None  # invalidate cache
-        self._main_states = None
+        self._set_main_states(n_cells)
         self._dp = entropy(self._lin_probs.X.T)
 
         # write to adata
@@ -486,6 +513,7 @@ class GPCCA(BaseEstimator):
         alpha: Optional[float] = 1,
         min_self_prob: Optional[float] = None,
         n_main_states: Optional[int] = None,
+        n_cells: Optional[int] = 30,
         **kwargs,
     ):
         """
@@ -508,6 +536,8 @@ class GPCCA(BaseEstimator):
             Used when :paramref:`method` `='min_self_prob'`.
         n_main_states
             Used when :paramref:`method` `='top_n'`.
+        n_cells
+            Number of most likely cells from each main state to select.
         kwargs
             Keyword arguments for :meth:`cellrank.tl.Lineage.reduce` when redistributing the mass.
 
@@ -552,7 +582,9 @@ class GPCCA(BaseEstimator):
                 np.diag(self._coarse_T), index=self._coarse_T.columns
             )
             names = self_probs[self_probs.values >= min_self_prob].index
-            self.set_main_states(names, redistribute=redistribute, **kwargs)
+            self.set_main_states(
+                names, redistribute=redistribute, n_cells=n_cells, **kwargs
+            )
             return
         else:
             raise ValueError(
@@ -562,7 +594,9 @@ class GPCCA(BaseEstimator):
         names = self._coarse_T.columns[np.argsort(np.diag(self._coarse_T))][
             -n_main_states:
         ]
-        self.set_main_states(names, redistribute=redistribute, **kwargs)
+        self.set_main_states(
+            names, redistribute=redistribute, n_cells=n_cells, **kwargs
+        )
 
     def _select_cells(
         self, n_cells: int, memberships: Union[np.ndarray, Lineage]
@@ -707,36 +741,25 @@ class GPCCA(BaseEstimator):
                 except KeyError:
                     pass
 
-        probs = getattr(self, attr)
-        probs = probs[[n for n in probs.names if n != "rest"]]
-
+        probs = getattr(self, attr, None)
         if probs is None:
             raise RuntimeError(error_msg)
+
+        probs = probs[[n for n in probs.names if n != "rest"]]
+
         if n_cells <= 0:
             raise ValueError(f"Expected `n_cells` to be positive, found `{n_cells}`.")
 
-        if (
-            attr != "_lin_probs"  # it's the non-reduced states that we don't save
-            or n_cells != self._n_cells
-            or self._main_states is None
-        ):
+        if attr == "_meta_lin_probs":  # plotting meta_lin_probs
             _main_states, *_ = self._select_cells(n_cells, probs)
-        else:
+        elif attr == "_lin_probs":
+            if n_cells == self._n_cells:
+                logg.debug("DEBUG: Using cached main states")
+            else:
+                self._set_main_states(n_cells)
             _main_states = self._main_states
-            logg.debug("DEBUG: Using cached main states")
-
-        if n_cells * len(_main_states.cat.categories) > self.adata.n_obs:
-            raise ValueError(
-                f"Total number of requested cells ({n_cells * len(_main_states.cat.categories)}) "
-                f"exceeds the total number of cells ({self.adata.n_obs})."
-            )
-
-        if attr == "_lin_probs":
-            self._main_states = _main_states
-
-            self.adata.obs[self._rc_key] = _main_states
-            self.adata.uns[_colors(self._rc_key)] = probs.colors
-            self._n_cells = n_cells
+        else:
+            raise RuntimeError(f"Invalid attribute name: `{attr!r}`.")
 
         to_clean = []
         try:
@@ -1091,5 +1114,10 @@ class GPCCA(BaseEstimator):
 
     @property
     def main_states_probabilities(self) -> pd.Series:
-        """Upper bound of of becoming a main states"""
+        """
+        Returns
+        -------
+        :class:`pandas.Series`
+            Upper bound of of becoming a main states.
+        """
         return self._main_states_probabilities
