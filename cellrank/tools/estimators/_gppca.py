@@ -31,7 +31,7 @@ import matplotlib.colors as mcolors
 
 class GPCCA(BaseEstimator):
     """
-    Generalized Perron Cluster Cluster Analysis [GPCCA18]_.
+    Generalized Perron Cluster Cluster Analysis [GPCCA18]/.
 
     Params
     ------
@@ -87,6 +87,7 @@ class GPCCA(BaseEstimator):
         self._meta_lin_probs = None
 
         self._main_states = None
+        self._main_states_probabilities = None
         self._n_cells = None  # serves as a cache for plotting
 
     def compute_eig(self, k: int = 20, which: str = "LR", alpha: float = 1) -> None:
@@ -1084,6 +1085,11 @@ class GPCCA(BaseEstimator):
         return self._coarse_stat_dist
 
     @property
-    def main_states(self) -> np.ndarray:
-        """Subset and/or combination of metstable states."""
+    def main_states(self) -> pd.Series:
+        """Subset and/or combination of main states."""
         return self._main_states
+
+    @property
+    def main_states_probabilities(self) -> pd.Series:
+        """Upper bound of of becoming a main states"""
+        return self._main_states_probabilities
