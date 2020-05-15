@@ -208,80 +208,108 @@ class GPCCA(BaseEstimator):
                 - :paramref:`coarse_stationary_distribution`
         """
 
-        gpcca = _GPPCA(self._T, eta=initial_distribution, z=which, method=method)
+        if n_states > 1:
 
-        if use_min_chi:
-            if not isinstance(n_states, (dict, tuple, list)):
-                raise TypeError(
-                    f"Expected `n_states` to be either `dict`, `tuple` or a `list`, found `{type(n_states).__name__}`."
+            gpcca = _GPPCA(self._T, eta=initial_distribution, z=which, method=method)
+
+            if use_min_chi:
+                if not isinstance(n_states, (dict, tuple, list)):
+                    raise TypeError(
+                        f"Expected `n_states` to be either `dict`, `tuple` or a `list`, found `{type(n_states).__name__}`."
+                    )
+                if len(n_states) != 2:
+                    raise ValueError(
+                        f"Expected `n_states` to be of size `2`, found `{len(n_states)}`."
+                    )
+
+                minn, maxx = (
+                    (n_states["min"], n_states["max"])
+                    if isinstance(n_states, dict)
+                    else n_states
                 )
-            if len(n_states) != 2:
+                if minn <= 1:
+                    raise ValueError(f"Minimum value must be > 1, found `{minn}`.")
+                elif minn == 2:
+                    logg.warning(
+                        "In most cases, 2 clusters will always be optimal. "
+                        "If you really expect 2 clusters, use `n_states=2`.\nSetting the minimum to 3"
+                    )
+                    minn = 3
+
+                logg.debug(
+                    f"DEBUG: Calculating minChi within interval [{minn}, {maxx}]"
+                )
+                n_states = np.arange(minn, maxx)[np.argmax(gpcca.minChi(minn, maxx))]
+            elif not isinstance(n_states, int):
                 raise ValueError(
-                    f"Expected `n_states` to be of size `2`, found `{len(n_states)}`."
+                    f"Expected `n_states` to be integer when `use_min_chi=False`, found `{type(n_states).__name__}`."
                 )
 
-            minn, maxx = (
-                (n_states["min"], n_states["max"])
-                if isinstance(n_states, dict)
-                else n_states
-            )
-            if minn <= 1:
-                raise ValueError(f"Minimum value must be > 1, found `{minn}`.")
-            elif minn == 2:
-                logg.warning(
-                    "In most cases, 2 clusters will always be optimal. "
-                    "If you really expect 2 clusters, use `n_states=2`.\nSetting the minimum to 3"
-                )
-                minn = 3
+            start = logg.info("Computing metastable states")
 
-            logg.debug(f"DEBUG: Calculating minChi within interval [{minn}, {maxx}]")
-            n_states = np.arange(minn, maxx)[np.argmax(gpcca.minChi(minn, maxx))]
-        elif not isinstance(n_states, int):
-            raise ValueError(
-                f"Expected `n_states` to be integer when `use_min_chi=False`, found `{type(n_states).__name__}`."
+            gpcca = gpcca.optimize(m=n_states)
+
+            # when `n_cells!=None` and the overlap is high, we're skipping some metastable states
+            valid_ixs = self._assign_metastable_states(
+                gpcca.memberships,
+                gpcca.metastable_assignment,
+                n_cells,
+                cluster_key=cluster_key,
+                p_thresh=p_thresh,
+                en_cutoff=en_cutoff,
+            )
+            logg.debug(
+                f"Selected `{len(valid_ixs)}` out of `{n_states}` due to an overlapp caused by `n_cells={n_cells}`"
             )
 
-        start = logg.info("Computing metastable states")
+            self._lin_probs = None
+            self._schur_vectors = gpcca.schur_vectors
 
-        gpcca = gpcca.optimize(m=n_states)
+            names = self._meta_lin_probs.names
+            self._coarse_T = pd.DataFrame(
+                gpcca.coarse_grained_transition_matrix[valid_ixs, :][:, valid_ixs],
+                index=names,
+                columns=names,
+            )
+            self._coarse_init_dist = pd.Series(
+                gpcca.coarse_grained_input_distribution[valid_ixs], index=names
+            )
+            self._coarse_stat_dist = pd.Series(
+                gpcca.coarse_grained_stationary_probability[valid_ixs], index=names
+            )
 
-        # when `n_cells!=None` and the overlap is high, we're skipping some metastable states
-        valid_ixs = self._assign_metastable_states(
-            gpcca.memberships,
-            gpcca.metastable_assignment,
-            n_cells,
-            cluster_key=cluster_key,
-            p_thresh=p_thresh,
-            en_cutoff=en_cutoff,
-        )
-        logg.debug(
-            f"Selected `{len(valid_ixs)}` out of `{n_states}` due to an overlapp caused by `n_cells={n_cells}`"
-        )
+            logg.info(
+                "Adding `.schur_vectors`\n"
+                "       `.metastable_states`\n"
+                "       `.coarse_T`\n"
+                "       `.coarse_stationary_distribution`\n"
+                "    Finish",
+                time=start,
+            )
 
-        self._lin_probs = None
-        self._schur_vectors = gpcca.schur_vectors
+        elif n_states == 1:
+            start = logg.info("Computing metastable states")
+            logg.warning("For `n_states=1`, we compute the stationary distribution")
+            self._compute_eig(k=6, which="LM", alpha=1, only_evals=False)
+            stationary_dist = self.eigendecomposition["stationary_dist"]
 
-        names = self._meta_lin_probs.names
-        self._coarse_T = pd.DataFrame(
-            gpcca.coarse_grained_transition_matrix[valid_ixs, :][:, valid_ixs],
-            index=names,
-            columns=names,
-        )
-        self._coarse_init_dist = pd.Series(
-            gpcca.coarse_grained_input_distribution[valid_ixs], index=names
-        )
-        self._coarse_stat_dist = pd.Series(
-            gpcca.coarse_grained_stationary_probability[valid_ixs], index=names
-        )
+            valid_ixs = self._assign_metastable_states(
+                stationary_dist[:, None],
+                np.zeros_like(stationary_dist),
+                n_cells,
+                cluster_key=cluster_key,
+                p_thresh=p_thresh,
+                en_cutoff=en_cutoff,
+            )
 
-        logg.info(
-            "Adding `.schur_vectors`\n"
-            "       `.metastable_states`\n"
-            "       `.coarse_T`\n"
-            "       `.coarse_stationary_distribution`\n"
-            "    Finish",
-            time=start,
-        )
+            self._lin_probs, self._schur_vectors, self._coarse_T, self._coarse_init_dist, self._coarse_stat_dist = (
+                [None] * 5
+            )
+
+            logg.info("Adding `.metastable_states`\n" "    Finish", time=start)
+
+        else:
+            raise ValueError("`n_states` must be >= 1")
 
     def plot_metastable_states(
         self,
