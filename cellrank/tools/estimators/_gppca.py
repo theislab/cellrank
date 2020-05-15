@@ -666,10 +666,13 @@ class GPCCA(BaseEstimator):
                 }
                 overlaps[name] = overlap
                 if any(np.fromiter(overlap.values(), dtype=float) / n_cells > 0.8):
-                    logg.warning(
-                        "Found overlapping clusters with overlap > 80%. Skipping"
+                    # logg.warning(
+                    #     "Found overlapping clusters with overlap > 80%. Skipping"
+                    # )
+                    raise ValueError(
+                        "Found overlapping clusters with overlap > 80%. Try again with one more state. "
                     )
-                    continue
+                    # continue
 
             self._gppca_overlap = overlaps
 
