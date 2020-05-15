@@ -208,7 +208,32 @@ class GPCCA(BaseEstimator):
                 - :paramref:`coarse_stationary_distribution`
         """
 
-        if n_states > 1:
+        if isinstance(n_states, int) and n_states == 1:
+
+            start = logg.info("Computing metastable states")
+            logg.warning("For `n_states=1`, we compute the stationary distribution")
+            k = self.eigendecomposition["params"]["k"]
+            which = self.eigendecomposition["params"]["which"]
+            alpha = self.eigendecomposition["params"]["alpha"]
+            self._compute_eig(k=k, which=which, alpha=alpha, only_evals=False)
+            stationary_dist = self.eigendecomposition["stationary_dist"]
+
+            valid_ixs = self._assign_metastable_states(
+                stationary_dist[:, None],
+                np.zeros_like(stationary_dist),
+                n_cells,
+                cluster_key=cluster_key,
+                p_thresh=p_thresh,
+                en_cutoff=en_cutoff,
+            )
+
+            self._lin_probs, self._schur_vectors, self._coarse_T, self._coarse_init_dist, self._coarse_stat_dist = (
+                [None] * 5
+            )
+
+            logg.info("Adding `.metastable_states`\n" "    Finish", time=start)
+
+        else:
 
             gpcca = _GPPCA(self._T, eta=initial_distribution, z=which, method=method)
 
@@ -286,33 +311,6 @@ class GPCCA(BaseEstimator):
                 "    Finish",
                 time=start,
             )
-
-        elif n_states == 1:
-            start = logg.info("Computing metastable states")
-            logg.warning("For `n_states=1`, we compute the stationary distribution")
-            k = self.eigendecomposition["params"]["k"]
-            which = self.eigendecomposition["params"]["which"]
-            alpha = self.eigendecomposition["params"]["alpha"]
-            self._compute_eig(k=k, which=which, alpha=alpha, only_evals=False)
-            stationary_dist = self.eigendecomposition["stationary_dist"]
-
-            valid_ixs = self._assign_metastable_states(
-                stationary_dist[:, None],
-                np.zeros_like(stationary_dist),
-                n_cells,
-                cluster_key=cluster_key,
-                p_thresh=p_thresh,
-                en_cutoff=en_cutoff,
-            )
-
-            self._lin_probs, self._schur_vectors, self._coarse_T, self._coarse_init_dist, self._coarse_stat_dist = (
-                [None] * 5
-            )
-
-            logg.info("Adding `.metastable_states`\n" "    Finish", time=start)
-
-        else:
-            raise ValueError("`n_states` must be >= 1")
 
     def plot_metastable_states(
         self,
