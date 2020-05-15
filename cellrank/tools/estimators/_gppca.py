@@ -290,7 +290,10 @@ class GPCCA(BaseEstimator):
         elif n_states == 1:
             start = logg.info("Computing metastable states")
             logg.warning("For `n_states=1`, we compute the stationary distribution")
-            self._compute_eig(k=6, which="LM", alpha=1, only_evals=False)
+            k = self.eigendecomposition["params"]["k"]
+            which = self.eigendecomposition["params"]["which"]
+            alpha = self.eigendecomposition["params"]["alpha"]
+            self._compute_eig(k=k, which=which, alpha=alpha, only_evals=False)
             stationary_dist = self.eigendecomposition["stationary_dist"]
 
             valid_ixs = self._assign_metastable_states(
