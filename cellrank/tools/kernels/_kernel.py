@@ -413,10 +413,12 @@ class UnaryKernelExpression(KernelExpression, ABC):
                 logg.debug(f"DEBUG: Loading variances from `adata.uns[{var_key!r}]`")
                 # keep it sparse
                 self._variances = csr_matrix(self.adata.uns[var_key].astype(_dtype))
+                if self._conn.shape != self._variances.shape:
+                    raise ValueError(
+                        f"Expected variances' shape `{self._variances.shape}` to be equal to `{self._conn.shape}`."
+                    )
             else:
-                logg.debug(
-                    f"DEBUG: Unable to load variances from `adata.uns[{var_key!r}]`"
-                )
+                logg.warning(f"Unable to load variances from `adata.uns[{var_key!r}]`")
         else:
             logg.debug("DEBUG: No variance key specified")
 
@@ -742,7 +744,7 @@ class VelocityKernel(Kernel):
         )
         logg.debug("Adding `.velo_corr`, the velocity correlations")
 
-        self.velo_corr = (velo_corr_pos + velo_corr_neg).astype(_dtype)
+        self._velo_corr = (velo_corr_pos + velo_corr_neg).astype(_dtype)
 
     def compute_transition_matrix(
         self,
@@ -778,13 +780,13 @@ class VelocityKernel(Kernel):
         # get the correlations, handle backwards case
         if self._direction == Direction.BACKWARD:
             if backward_mode == "negate":
-                correlations = self.velo_corr.multiply(-1)
+                correlations = self._velo_corr.multiply(-1)
             elif backward_mode == "transpose":
-                correlations = self.velo_corr.T
+                correlations = self._velo_corr.T
             else:
                 raise ValueError(f"Unknown backward mode `{backward_mode!r}`.")
         else:
-            correlations = self.velo_corr
+            correlations = self._velo_corr
 
         # set the scaling parameter for the softmax
         med_corr = np.median(np.abs(correlations.data))
@@ -979,8 +981,8 @@ class PalantirKernel(Kernel):
 
         self.pseudotime = np.array(self.adata.obs[time_key]).astype(_dtype)
 
-        if np.min(self.pseudotime) < 0:
-            raise ValueError(f"Pseudotime must be positive")
+        if np.nanmin(self.pseudotime) < 0:
+            raise ValueError(f"Pseudotime must be positive.")
 
     def compute_transition_matrix(
         self, k: int = 3, density_normalize: bool = True, **kwargs
