@@ -235,7 +235,7 @@ class GPCCA(BaseEstimator):
                 minn = 3
 
             logg.debug(f"DEBUG: Calculating minChi within interval [{minn}, {maxx}]")
-            n_states = np.arange(minn, maxx)[np.argmax(gpcca.minChi(minn, maxx))]
+            n_states = int(np.arange(minn, maxx)[np.argmax(gpcca.minChi(minn, maxx))])
         elif not isinstance(n_states, int):
             raise ValueError(
                 f"Expected `n_states` to be integer when `use_min_chi=False`, found `{type(n_states).__name__}`."
