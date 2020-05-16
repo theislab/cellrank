@@ -581,6 +581,25 @@ class Kernel(UnaryKernelExpression, ABC):
     def _get_kernels(self) -> Iterable["Kernel"]:
         yield self
 
+    def _compute_transition_matrix(
+        self, matrix: spmatrix, sigma_corr: Optional[float], density_normalize: bool
+    ):
+        # compute directed graph --> multi class log reg
+        if self._variances is not None:
+            logg.DEBUG("DEBUG: Scaling by variances")
+            ixs = matrix.nonzero()
+            matrix[ixs] = matrix[ixs] / self._variances[ixs]
+        elif sigma_corr is not None:
+            logg.DEBUG("DEBUG: Scaling sigma correlation")
+            matrix.data = np.exp(matrix.data * sigma_corr)
+
+        # normalize
+        if density_normalize:
+            matrix = self.density_normalize(matrix)
+
+        self.transition_matrix = csr_matrix(matrix)
+        self._maybe_compute_cond_num()
+
 
 class Constant(Kernel):
     """
@@ -757,7 +776,7 @@ class VelocityKernel(Kernel):
         Compute transition matrix based on velocity correlations.
 
         For each cell, infer transition probabilities based on the correlation of the cell's
-        velocity-extrapolated cell state with cell states of its K nearest neighbors.
+        velocity-extrapolated cell state with cell states of its `K` nearest neighbors.
 
         Params
         ------
@@ -802,21 +821,13 @@ class VelocityKernel(Kernel):
         if params == self._params:
             assert self.transition_matrix is not None, _ERROR_EMPTY_CACHE_MSG
             logg.debug(_LOG_USING_CACHE, time=start)
-            logg.info("     Finish", time=start)
+            logg.info("    Finish", time=start)
             return self
 
         self._params = params
-
-        # compute directed graph --> multi class log reg
-        velo_graph = correlations.copy()
-        velo_graph.data = np.exp(velo_graph.data * sigma_corr)
-
-        # normalize
-        if density_normalize:
-            velo_graph = self.density_normalize(velo_graph)
-
-        self.transition_matrix = csr_matrix(velo_graph)
-        self._maybe_compute_cond_num()
+        self._compute_transition_matrix(
+            correlations.copy(), sigma_corr, density_normalize
+        )
 
         logg.info("    Finish", time=start)
 
@@ -903,13 +914,7 @@ class ConnectivityKernel(Kernel):
             return self
 
         self._params = params
-        conn = self._conn.copy()
-
-        if density_normalize:
-            conn = self.density_normalize(conn)
-
-        self.transition_matrix = csr_matrix(conn)
-        self._maybe_compute_cond_num()
+        self._compute_transition_matrix(self._conn.copy(), None, density_normalize)
 
         logg.info("    Finish", time=start)
 
@@ -1046,17 +1051,11 @@ class PalantirKernel(Kernel):
         biased_conn = bias_knn(
             conn=self._conn, pseudotime=pseudotime, n_neighbors=n_neighbors, k=k
         ).astype(_dtype)
-
         # make sure the biased graph is still connected
         if not is_connected(biased_conn):
             logg.warning("Biased KNN graph is disconnected")
 
-        # normalize
-        if density_normalize:
-            biased_conn = self.density_normalize(biased_conn)
-
-        self.transition_matrix = csr_matrix(biased_conn)
-        self._maybe_compute_cond_num()
+        self._compute_transition_matrix(biased_conn, None, density_normalize)
 
         logg.info("    Finish", time=start)
 
