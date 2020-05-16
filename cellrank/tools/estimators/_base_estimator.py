@@ -302,9 +302,9 @@ class BaseEstimator(ABC):
         figsize
             Size of the figure.
         legend_loc
-            Location parameter for the legend
+            Location parameter for the legend.
         title
-            Figure title
+            Figure title.
         save
             Filename where to save the plots. If `None`, just shows the plot.
 
@@ -776,7 +776,7 @@ class BaseEstimator(ABC):
 
         if "iroot" not in self._adata.uns.keys():
             raise ValueError('No field `"iroot"` found in `adata.uns`')
-        
+
         iroot = self._adata.uns["iroot"]
 
         start = logg.info(
