@@ -167,7 +167,7 @@ class GPCCA(BaseEstimator):
         title: Optional[str] = "schur matrix",
         cmap: str = "viridis",
         upper_triangular_only: bool = True,
-        figsize: Tuple[float, float] = (6, 6),
+        figsize: Optional[Tuple[float, float]] = None,
         dpi: Optional[float] = 80,
         save: Optional[Union[str, Path]] = None,
         **kwargs,
@@ -200,7 +200,9 @@ class GPCCA(BaseEstimator):
                 "Compute Schur matrix as `.compute_metastable_states()` first."
             )
 
-        fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
+        fig, ax = plt.subplots(
+            figsize=self._schur_matrix.shape if figsize is None else figsize, dpi=dpi
+        )
 
         divider = make_axes_locatable(ax)  # square=True make the colorbar a bit bigger
         cbar_ax = divider.append_axes("right", size="2.5%", pad=0.05)
