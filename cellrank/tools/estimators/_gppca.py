@@ -6,6 +6,8 @@ from msmtools.analysis.dense.gpcca import GPCCA as _GPPCA
 from scanpy import logging as logg
 from scipy.stats import entropy
 from copy import copy, deepcopy
+from pathlib import Path
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from cellrank.tools._lineage import Lineage
 from cellrank.tools._constants import Lin, MetaKey, _colors, _lin_names, _dp, _probs
@@ -23,6 +25,7 @@ import os
 import numpy as np
 import pandas as pd
 import scvelo as scv
+import seaborn as sns
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
@@ -90,7 +93,13 @@ class GPCCA(BaseEstimator):
         self._main_states_probabilities = None
         self._n_cells = None  # serves as a cache for plotting
 
-    def compute_eig(self, k: int = 20, which: str = "LR", alpha: float = 1) -> None:
+    def compute_eig(
+        self,
+        k: int = 20,
+        which: str = "LR",
+        alpha: float = 1,
+        ncv: Optional[int] = None,
+    ) -> None:
         """
         Compute eigendecomposition of the transition matrix.
 
@@ -105,13 +114,15 @@ class GPCCA(BaseEstimator):
         alpha
             Used to compute the `eigengap`. paramref:`alpha` is the weight given
             to the deviation of an eigenvalue from one.
+        ncv
+            Number of Lanczos vectors generated
 
         Returns
         -------
         None
             Nothing, but updates the following fields: paramref:`eigendecomposition`.
         """
-        self._compute_eig(k=k, which=which, alpha=alpha, only_evals=True)
+        self._compute_eig(k=k, which=which, alpha=alpha, only_evals=True, ncv=ncv)
 
     def _read_from_adata(
         self, g2m_key: Optional[str] = None, s_key: Optional[str] = None, **kwargs
@@ -136,6 +147,8 @@ class GPCCA(BaseEstimator):
             Whether to take the absolute value before plotting.
         cluster_key
             Key from :paramref:`adata` `.obs` to plot cluster annotations.
+        kwargs
+            Keyword arguments for :func:`scvelo.pl.scatter`.
 
         Returns
         -------
@@ -156,6 +169,89 @@ class GPCCA(BaseEstimator):
             cluster_key=cluster_key,
             **kwargs,
         )
+
+    def plot_schur_matrix(
+        self,
+        title: Optional[str] = "schur matrix",
+        cmap: str = "viridis",
+        upper_triangular_only: bool = True,
+        figsize: Optional[Tuple[float, float]] = None,
+        dpi: Optional[float] = 80,
+        save: Optional[Union[str, Path]] = None,
+        **kwargs,
+    ):
+        """
+        Plot the Schur matrix.
+
+        title
+            Title of the figure.
+        cmap
+            Colormap to use.
+        upper_triangular_only
+            Whether to show only the upper triangular matrix, including diagonal. Schur matrix should be an
+            upper triangular matrix, but there can be small numerical imprecision.
+        figsize
+            Size of the figure.
+        dpi
+            Dots per inch.
+        save
+            Filename where to save the plots. If `None`, just shows the plot.
+
+        Returns
+        -------
+        None
+            Nothing, just plots the Schur matrix.
+        """
+
+        if self._schur_matrix is None:
+            raise RuntimeError(
+                "Compute Schur matrix as `.compute_metastable_states()` first."
+            )
+
+        fig, ax = plt.subplots(
+            figsize=self._schur_matrix.shape if figsize is None else figsize, dpi=dpi
+        )
+
+        divider = make_axes_locatable(ax)  # square=True make the colorbar a bit bigger
+        cbar_ax = divider.append_axes("right", size="2.5%", pad=0.05)
+
+        if upper_triangular_only:
+            mask = np.zeros_like(self._schur_matrix, dtype=np.bool)
+            mask[np.tril_indices_from(mask, k=-1)] = True
+            if not np.allclose(self._schur_matrix[mask], 0.0):
+                logg.warning(
+                    "Elements of the lower triangular matrix are not close to `0`. "
+                    "Consider visualizing the deviance `upper_triangular_only=False`."
+                )
+
+            vmin, vmax = (
+                np.min(self._schur_matrix[~mask]),
+                np.max(self._schur_matrix[~mask]),
+            )
+        else:
+            mask = None
+            vmin, vmax = np.min(self._schur_matrix), np.max(self._schur_matrix)
+
+        kwargs["fmt"] = kwargs.get("fmt", "0.2f")
+        sns.heatmap(
+            self._schur_matrix,
+            cmap=cmap,
+            square=True,
+            annot=True,
+            vmin=vmin,
+            vmax=vmax,
+            cbar_ax=cbar_ax,
+            mask=mask,
+            xticklabels=[],
+            yticklabels=[],
+            ax=ax,
+            **kwargs,
+        )
+
+        ax.set_title(title)
+
+        if save is not None:
+            save_fig(fig, path=save)
 
     def compute_metastable_states(
         self,
@@ -227,8 +323,8 @@ class GPCCA(BaseEstimator):
                 en_cutoff=en_cutoff,
             )
 
-            self._lin_probs, self._schur_vectors, self._coarse_T, self._coarse_init_dist, self._coarse_stat_dist = (
-                [None] * 5
+            self._lin_probs, self._schur_vectors, self._coarse_T, self._coarse_init_dist, self._coarse_stat_dist, self._schur_matrix = (
+                [None] * 6
             )
 
             logg.info("Adding `.metastable_states`\n" "    Finish", time=start)
@@ -291,6 +387,7 @@ class GPCCA(BaseEstimator):
 
             self._lin_probs = None
             self._schur_vectors = gpcca.schur_vectors
+            self._schur_matrix = gpcca.R  # gpcca.schur_matrix
 
             names = self._meta_lin_probs.names
             self._coarse_T = pd.DataFrame(
