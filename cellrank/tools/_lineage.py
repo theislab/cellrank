@@ -380,7 +380,7 @@ class Lineage(np.ndarray):
 
     def reduce(
         self,
-        keys: Union[List[str], Tuple[str], np.ndarray],
+        keys: Union[str, List[str], Tuple[str], np.ndarray],
         mode: str = "dist",
         dist_measure: str = "mutual_info",
         normalize_weights: str = "softmax",
@@ -411,7 +411,7 @@ class Lineage(np.ndarray):
             How to normalize the weights. Valid options are:
 
             - 'scale': divide by the sum (per row)
-            - 'softmax': use a softmax with \beta = 1
+            - 'softmax': use a softmax with beta = 1
         softmax_beta
             Scaling factor in the softmax, used for normalizing the weights to sum to 1.
         return_weights
@@ -424,6 +424,9 @@ class Lineage(np.ndarray):
         :class:`pandas.DataFrame`
             The weights used for the projection of shape `(n_query x n_reference)`.
         """
+
+        if isinstance(keys, str):
+            keys = [keys]
 
         if not len(keys):
             raise ValueError(f"Unable to perform the reduction, no keys specified.")
@@ -561,7 +564,7 @@ def _softmax(X, beta: float = 1):
 
 
 def _row_normalize(X):
-    return X / X.sum(1)[:, None]
+    return X / np.expand_dims(X.sum(1), -1)
 
 
 def _col_normalize(X, norm_ord=2):
