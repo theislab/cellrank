@@ -97,7 +97,12 @@ class BaseEstimator(ABC):
             self._read_from_adata(g2m_key, s_key)
 
     def _compute_eig(
-        self, k: int = 20, which: str = "LR", alpha: float = 1, only_evals: bool = False
+        self,
+        k: int = 20,
+        which: str = "LR",
+        alpha: float = 1,
+        only_evals: bool = False,
+        ncv: Optional[int] = None,
     ) -> None:
         """
         Compute eigendecomposition of transition matrix.
@@ -114,6 +119,10 @@ class BaseEstimator(ABC):
         alpha
             Used to compute the `eigengap`. :paramref:`alpha` is the weight given
             to the deviation of an eigenvalue from one.
+        only_evals
+            Return only eigenvalues
+        ncv
+            Number of Lanczos vectors generated
 
         Returns
         -------
@@ -139,7 +148,7 @@ class BaseEstimator(ABC):
         logg.info("Computing eigendecomposition of transition matrix")
         if self._is_sparse:
             logg.debug(f"DEBUG: Computing top `{k}` eigenvalues for sparse matrix")
-            D, V_l = eigs(self._T.T, k=k, which=which)
+            D, V_l = eigs(self._T.T, k=k, which=which, ncv=ncv)
             if only_evals:
                 write_result(
                     {
@@ -149,7 +158,7 @@ class BaseEstimator(ABC):
                     }
                 )
                 return
-            _, V_r = eigs(self._T, k=k, which=which)
+            _, V_r = eigs(self._T, k=k, which=which, ncv=ncv)
         else:
             logg.warning(
                 "This transition matrix is not sparse, computing full eigendecomposition"
