@@ -93,7 +93,13 @@ class GPCCA(BaseEstimator):
         self._main_states_probabilities = None
         self._n_cells = None  # serves as a cache for plotting
 
-    def compute_eig(self, k: int = 20, which: str = "LR", alpha: float = 1) -> None:
+    def compute_eig(
+        self,
+        k: int = 20,
+        which: str = "LR",
+        alpha: float = 1,
+        ncv: Optional[int] = None,
+    ) -> None:
         """
         Compute eigendecomposition of the transition matrix.
 
@@ -108,13 +114,15 @@ class GPCCA(BaseEstimator):
         alpha
             Used to compute the `eigengap`. paramref:`alpha` is the weight given
             to the deviation of an eigenvalue from one.
+        ncv
+            Number of Lanczos vectors generated
 
         Returns
         -------
         None
             Nothing, but updates the following fields: paramref:`eigendecomposition`.
         """
-        self._compute_eig(k=k, which=which, alpha=alpha, only_evals=True)
+        self._compute_eig(k=k, which=which, alpha=alpha, only_evals=True, ncv=ncv)
 
     def _read_from_adata(
         self, g2m_key: Optional[str] = None, s_key: Optional[str] = None, **kwargs
