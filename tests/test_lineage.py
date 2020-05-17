@@ -431,6 +431,14 @@ class TestLineageAccessor:
 
         np.testing.assert_array_equal(l.colors, gt_colors)
 
+    def test_correct_names_to_ixs(self):
+        x = np.random.random((10, 3))
+        l = Lineage(x, names=["foo", "bar", "baz"])
+
+        y = l[["baz", "bar"]]
+
+        assert l._names_to_ixs == {"baz": 0, "bar": 1}
+
 
 class TestLineageMixing:
     def test_overlap(self):
@@ -517,3 +525,38 @@ class TestLineageMixing:
         np.testing.assert_array_equal(x.X, y.X)
         np.testing.assert_array_equal(x.names, y.names)
         np.testing.assert_array_equal(x.colors, y.colors)
+
+    def test_others_all(self):
+        names = ["foo", "bar", "baz", "quux"]
+        x = Lineage(np.random.random((10, 4)), names=names)
+
+        y = x[[Lin.OTHERS]]
+
+        np.testing.assert_array_equal(x.X, y.X)
+        np.testing.assert_array_equal(x.names, y.names)
+        np.testing.assert_array_equal(x.colors, y.colors)
+
+    def test_others(self):
+        names = ["foo", "bar", "baz", "quux"]
+        x = Lineage(np.random.random((10, 4)), names=names)
+
+        y = x[["foo, baz"] + [Lin.OTHERS]]
+        expected = x[["foo, baz", "bar", "quux"]]
+
+        np.testing.assert_array_equal(y.X, expected.X)
+        np.testing.assert_array_equal(y.names, expected.names)
+        np.testing.assert_array_equal(y.colors, expected.colors)
+
+    def test_others_no_effect(self):
+        names = ["foo", "bar", "baz", "quux"]
+        x = Lineage(np.random.random((10, 4)), names=names)
+
+        y = x[names + [Lin.OTHERS]]
+
+        np.testing.assert_array_equal(x.X, y.X)
+        np.testing.assert_array_equal(x.names, y.names)
+        np.testing.assert_array_equal(x.colors, y.colors)
+
+
+class TestLineageNormalization:
+    pass
