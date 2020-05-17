@@ -28,6 +28,7 @@ def _create_dummy_adata(n_obs: int) -> AnnData:
     scv.tl.latent_time(adata)
 
     adata.uns["iroot"] = 0
+    sc.pp.neighbors(adata, n_pcs=15)
     sc.tl.dpt(adata)
 
     adata.uns["connectivity_variances"] = np.ones((n_obs, n_obs), dtype=np.float64)
