@@ -15,6 +15,7 @@ def transition_matrix(
     vkey: str = "velocity",
     backward: bool = False,
     weight_connectivities: Optional[float] = None,
+    sigma_corr: Optional[float] = None,
     density_normalize: bool = True,
 ) -> KernelExpression:
     """
@@ -35,6 +36,9 @@ def transition_matrix(
         Direction of the process.
     weight_connectivities
         Weight given to transcriptomic similarities as opposed to velocities. Must be in `[0, 1]`.
+    sigma_corr
+        Scaling parameter for the softmax. Larger values will lead to a more concentrated distribution (more peaked).
+        Default is to use 1/median_velocity_correlation
     density_normalize
         Whether to use density correction when computing the transition probabilities.
         Density correction is done as by [Haghverdi16]_.
@@ -47,7 +51,7 @@ def transition_matrix(
 
     # initialise the kernel objects
     vk = VelocityKernel(adata, backward=backward, vkey=vkey).compute_transition_matrix(
-        density_normalize=density_normalize
+        density_normalize=density_normalize, sigma_corr=sigma_corr
     )
 
     if weight_connectivities is not None:
