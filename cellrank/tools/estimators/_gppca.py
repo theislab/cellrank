@@ -158,7 +158,7 @@ class GPCCA(BaseEstimator):
 
         if self.schur_vectors is None:
             raise RuntimeError(
-                "Compute Schur vectors as `.compute_metastable_states()` first."
+                "Compute Schur vectors as `.compute_metastable_states()` with `n_states` > 1 first."
             )
 
         self._plot_vectors(
@@ -205,7 +205,7 @@ class GPCCA(BaseEstimator):
 
         if self._schur_matrix is None:
             raise RuntimeError(
-                "Compute Schur matrix as `.compute_metastable_states()` first."
+                "Compute Schur matrix as `.compute_metastable_states()` with `n_states` > 1 first."
             )
 
         fig, ax = plt.subplots(
@@ -687,6 +687,12 @@ class GPCCA(BaseEstimator):
                 - :paramref:`lineage_probabilities`
                 - :paramref:`diff_potential`
         """
+        if len(self.metastable_states.cat.categories) == 1:
+            logg.warning(
+                "Found only one metastable state. Making it the single main state. "
+            )
+            self.set_main_states(None, redistribute=False, n_cells=n_cells, **kwargs)
+            return
 
         if method == "eigengap":
             if self.eigendecomposition is None:
@@ -763,13 +769,10 @@ class GPCCA(BaseEstimator):
                 }
                 overlaps[name] = overlap
                 if any(np.fromiter(overlap.values(), dtype=float) / n_cells > 0.8):
-                    # logg.warning(
-                    #     "Found overlapping clusters with overlap > 80%. Skipping"
-                    # )
-                    raise ValueError(
-                        "Found overlapping clusters with overlap > 80%. Try again with one more state. "
+                    logg.warning(
+                        "Found overlapping clusters with overlap > 80%. Skipping"
                     )
-                    # continue
+                    continue
 
             self._gppca_overlap = overlaps
 
@@ -1063,7 +1066,7 @@ class GPCCA(BaseEstimator):
 
         if self.coarse_T is None:
             raise RuntimeError(
-                f"Compute coarse transition matrix first as `.compute_metastable_states()`."
+                f"Compute coarse transition matrix first as `.compute_metastable_states()` with `n_states` > 1."
             )
 
         if show_stationary_dist and self.coarse_stationary_distribution is None:
