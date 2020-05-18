@@ -195,6 +195,8 @@ class KernelExpression(ABC):
                 logg.warning(
                     f"`{repr(self)}` may be ill-conditioned, its condition number is `{self._cond_num:.2e}`"
                 )
+            else:
+                logg.info(f"Condition number is `{self._cond_num:.2e}`")
 
     @abstractmethod
     def _get_kernels(self) -> Iterable["Kernel"]:
