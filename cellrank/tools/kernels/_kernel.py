@@ -827,7 +827,8 @@ class VelocityKernel(Kernel):
         problematic_indices = np.where(np.array(velo_graph.sum(1)).flatten() == 0)[0]
         if len(problematic_indices) != 0:
             logg.warning(
-                f"Detected {len(problematic_indices)} absorbing states in the transition matrix"
+                f"Detected {len(problematic_indices)} absorbing states in the transition matrix. "
+                f"This matrix won't be reducible, consider setting `use_negative_cosines` to `True`"
             )
             for ix in problematic_indices:
                 velo_graph[ix, ix] = 1.0
