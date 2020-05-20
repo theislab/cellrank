@@ -823,6 +823,15 @@ class VelocityKernel(Kernel):
         if density_normalize:
             velo_graph = self.density_normalize(velo_graph)
 
+        # check for zero-rows (can happen if we don't use neg. cosines)
+        problematic_indices = np.where(np.array(velo_graph.sum(1)).flatten() == 0)[0]
+        if len(problematic_indices) != 0:
+            logg.warning(
+                f"Detected {len(problematic_indices)} absorbing states in the transition matrix"
+            )
+            for ix in problematic_indices:
+                velo_graph[ix, ix] = 1.0
+
         self.transition_matrix = csr_matrix(velo_graph)
         self._maybe_compute_cond_num()
 
