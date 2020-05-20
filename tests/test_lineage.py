@@ -3,7 +3,12 @@ from cellrank.tools import Lineage
 from cellrank.tools._constants import Lin
 from cellrank.tools._utils import _create_categorical_colors, _compute_mean_color
 
+import cellrank.tools._lineage as mocker
+
+from pandas import DataFrame
+
 import pytest
+import mock
 import numpy as np
 import matplotlib.colors as colors
 
@@ -431,6 +436,14 @@ class TestLineageAccessor:
 
         np.testing.assert_array_equal(l.colors, gt_colors)
 
+    def test_correct_names_to_ixs(self):
+        x = np.random.random((10, 3))
+        l = Lineage(x, names=["foo", "bar", "baz"])
+
+        y = l[["baz", "bar"]]
+
+        assert y._names_to_ixs == {"baz": 0, "bar": 1}
+
 
 class TestLineageMixing:
     def test_overlap(self):
@@ -517,3 +530,168 @@ class TestLineageMixing:
         np.testing.assert_array_equal(x.X, y.X)
         np.testing.assert_array_equal(x.names, y.names)
         np.testing.assert_array_equal(x.colors, y.colors)
+
+    def test_others_all(self):
+        names = ["foo", "bar", "baz", "quux"]
+        x = Lineage(np.random.random((10, 4)), names=names)
+
+        y = x[[Lin.OTHERS]]
+
+        np.testing.assert_array_equal(x.X, y.X)
+        np.testing.assert_array_equal(x.names, y.names)
+        np.testing.assert_array_equal(x.colors, y.colors)
+
+    def test_others(self):
+        names = ["foo", "bar", "baz", "quux"]
+        x = Lineage(np.random.random((10, 4)), names=names)
+
+        y = x[["foo, baz"] + [Lin.OTHERS]]
+        expected = x[["foo, baz", "bar", "quux"]]
+
+        np.testing.assert_array_equal(y.X, expected.X)
+        np.testing.assert_array_equal(y.names, expected.names)
+        np.testing.assert_array_equal(y.colors, expected.colors)
+
+    def test_others_no_effect(self):
+        names = ["foo", "bar", "baz", "quux"]
+        x = Lineage(np.random.random((10, 4)), names=names)
+
+        y = x[names + [Lin.OTHERS]]
+
+        np.testing.assert_array_equal(x.X, y.X)
+        np.testing.assert_array_equal(x.names, y.names)
+        np.testing.assert_array_equal(x.colors, y.colors)
+
+
+class TestLineageNormalization:
+    def test_empty_keys(self, lineage: Lineage):
+        with pytest.raises(ValueError):
+            lineage.reduce([])
+
+    def test_not_summing_to_1(self, lineage: Lineage):
+        lineage[0, 0] = 0
+        with pytest.raises(ValueError):
+            lineage.reduce(["foo"])
+
+    def test_invalid_key(self, lineage: Lineage):
+        with pytest.raises(ValueError):
+            lineage.reduce(keys=["non_existent"])
+
+    def test_all_names(self, lineage: Lineage):
+        lin = lineage.reduce(lineage.names)
+        np.testing.assert_array_equal(lin.X, lineage.X)
+
+    def test_invalid_mode(self, lineage: Lineage):
+        with pytest.raises(ValueError):
+            lineage.reduce(["foo", "bar"], mode="foo")
+
+    def test_invalid_dist_measure(self, lineage: Lineage):
+        with pytest.raises(ValueError):
+            lineage.reduce(["foo", "bar"], dist_measure="foo")
+
+    def test_invalid_weight_normalize(self, lineage: Lineage):
+        with pytest.raises(ValueError):
+            lineage.reduce(["foo", "bar"], normalize_weights="foo")
+
+    def test_return_weights_mode_scale(self, lineage: Lineage):
+        lin, weights = lineage.reduce(["foo", "bar"], mode="scale", return_weights=True)
+
+        assert isinstance(lin, Lineage)
+        assert weights is None
+
+    def test_return_weights_mode_dist(self, lineage: Lineage):
+        lin, weights = lineage.reduce(["foo", "bar"], mode="dist", return_weights=True)
+
+        assert isinstance(lin, Lineage)
+        assert isinstance(weights, DataFrame)
+
+    def test_normal_only_1(self, lineage: Lineage):
+        lin = lineage.reduce("foo")
+
+        assert lin.shape == (10, 1)
+        np.testing.assert_allclose(np.sum(lin, axis=1), 1.0)
+        np.testing.assert_array_equal(lin.names, ["foo"])
+        np.testing.assert_array_equal(lin.colors, lineage[["foo"]].colors)
+
+    def test_normal_run(self, lineage: Lineage):
+        lin = lineage.reduce(["foo", "bar"])
+
+        assert lin.shape == (10, 2)
+        np.testing.assert_allclose(np.sum(lin, axis=1), 1.0)
+        np.testing.assert_array_equal(lin.names, ["foo", "bar"])
+        np.testing.assert_array_equal(lin.colors, lineage[["foo", "bar"]].colors)
+
+    @mock.patch("cellrank.tools._lineage._cosine_sim")
+    def test_cosine(self, mocker, lineage: Lineage):
+        try:
+            _ = lineage.reduce(["foo", "bar"], dist_measure="cosine_sim", mode="dist")
+        except ValueError:
+            pass
+        finally:
+            mocker.assert_called_once()
+
+    @mock.patch("cellrank.tools._lineage._wasserstein_dist")
+    def test_wasserstein(self, mocker, lineage: Lineage):
+        try:
+            _ = lineage.reduce(
+                ["foo", "bar"], dist_measure="wasserstein_dist", mode="dist"
+            )
+        except ValueError:
+            pass
+        finally:
+            mocker.assert_called_once()
+
+    @mock.patch("cellrank.tools._lineage._kl_div")
+    def test_kl_div(self, mocker, lineage: Lineage):
+        try:
+            _ = lineage.reduce(["foo", "bar"], dist_measure="kl_div", mode="dist")
+        except ValueError:
+            pass
+        finally:
+            mocker.assert_called_once()
+
+    @mock.patch("cellrank.tools._lineage._js_div")
+    def test_js_div(self, mocker, lineage: Lineage):
+        try:
+            _ = lineage.reduce(["foo", "bar"], dist_measure="js_div", mode="dist")
+        except ValueError:
+            pass
+        finally:
+            mocker.assert_called_once()
+
+    @mock.patch("cellrank.tools._lineage._mutual_info")
+    def test_mutual_info(self, mocker, lineage: Lineage):
+        try:
+            _ = lineage.reduce(["foo", "bar"], dist_measure="mutual_info", mode="dist")
+        except ValueError:
+            pass
+        finally:
+            mocker.assert_called_once()
+
+    @mock.patch("cellrank.tools._lineage._row_normalize")
+    def test_equal(self, mocker, lineage: Lineage):
+        try:
+            _ = lineage.reduce(["foo", "bar"], dist_measure="equal", mode="dist")
+        except ValueError:
+            pass
+        finally:
+            # should be twice, but we have extra check inside and we're mocking that does nothing
+            mocker.assert_called_once()
+
+    @mock.patch("cellrank.tools._lineage._row_normalize")
+    def test_row_normalize(self, mocker, lineage: Lineage):
+        try:
+            _ = lineage.reduce(["foo", "bar"], mode="scale")
+        except ValueError:
+            pass
+        finally:
+            mocker.assert_called_once()
+
+    @mock.patch("cellrank.tools._lineage._softmax")
+    def test_softmax(self, mocker, lineage: Lineage):
+        try:
+            _ = lineage.reduce(["foo", "bar"], normalize_weights="softmax", mode="dist")
+        except ValueError:
+            pass
+        finally:
+            mocker.assert_called_once()

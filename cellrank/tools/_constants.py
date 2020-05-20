@@ -55,7 +55,7 @@ def _colors(k: Union[str, LinKey, RcKey]) -> str:
 
 
 def _probs(k: Union[str, RcKey]) -> str:
-    return f"{k}_cont"
+    return f"{k}_probs"
 
 
 def _dp(k: Union[str, LinKey]) -> str:
