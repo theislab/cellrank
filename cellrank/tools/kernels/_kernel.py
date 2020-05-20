@@ -804,6 +804,7 @@ class VelocityKernel(Kernel):
             dnorm=density_normalize,
             bwd_mode=backward_mode if self._direction == Direction.BACKWARD else None,
             sigma_corr=sigma_corr,
+            use_negative_cosines=self._use_negative_cosines,
         )
 
         if params == self._params:
