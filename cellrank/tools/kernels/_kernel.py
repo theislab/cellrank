@@ -758,6 +758,7 @@ class VelocityKernel(Kernel):
         density_normalize: bool = True,
         backward_mode: str = "transpose",
         sigma_corr: Optional[float] = None,
+        self_transitions: bool = False,
         **kwargs,
     ) -> "VelocityKernel":
         """
@@ -775,6 +776,8 @@ class VelocityKernel(Kernel):
         sigma_corr
             Kernel width for exp kernel to be used to compute transition probabilities
             from the velocity graph. If `None`, the median cosine correlation in absolute value is used.
+        self_transitions
+            Assigns elements to the diagonal of the velocity-graph based on a confidence measure
 
         Returns
         -------
@@ -805,6 +808,7 @@ class VelocityKernel(Kernel):
             bwd_mode=backward_mode if self._direction == Direction.BACKWARD else None,
             sigma_corr=sigma_corr,
             use_negative_cosines=self._use_negative_cosines,
+            self_transitions=self_transitions,
         )
 
         if params == self._params:
@@ -814,6 +818,13 @@ class VelocityKernel(Kernel):
             return self
 
         self._params = params
+
+        # copied form scvelo, assign self-loops based on confidence heuristic
+        if self_transitions:
+            confidence = correlations.max(1).A.flatten()
+            ub = np.percentile(confidence, 98)
+            self_prob = np.clip(ub - confidence, 0, 1)
+            correlations.setdiag(self_prob)
 
         # compute directed graph --> multi class log reg
         velo_graph = correlations.copy()
