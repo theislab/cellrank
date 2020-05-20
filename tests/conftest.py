@@ -28,6 +28,7 @@ def _create_dummy_adata(n_obs: int) -> AnnData:
     scv.tl.latent_time(adata)
 
     adata.uns["iroot"] = 0
+    sc.pp.neighbors(adata, n_pcs=15)
     sc.tl.dpt(adata)
 
     adata.uns["connectivity_variances"] = np.ones((n_obs, n_obs), dtype=np.float64)
@@ -86,3 +87,24 @@ def adata_mc_fwd(
 @pytest.fixture
 def adata_cr(adata_mc=_create_cellrank_adata(100, backward=False)) -> AnnData:
     return adata_mc[0].copy()
+
+
+@pytest.fixture
+def lineage():
+    return cr.tl.Lineage(
+        np.array(
+            [
+                [1.23459664e-01, 1.29965675e-01, -1.92828002e-01, 9.39402664e-01],
+                [1.05635239e00, -4.45833459e-01, 2.29080759e00, -1.90132652e00],
+                [6.77880737e-02, -4.97556864e-02, 1.18428661e00, -2.02318999e-01],
+                [-4.87500398e-01, 1.00657498e00, -2.20834882e-02, 5.03008905e-01],
+                [-6.27190917e00, -7.27864781e00, -1.03978903e00, 1.55903460e01],
+                [3.85149269e-01, 3.54765380e-01, 1.77871487e-01, 8.22138648e-02],
+                [7.06618729e00, -1.33133671e01, 1.44904591e00, 5.79813391e00],
+                [-8.18005744e-02, 5.36844933e-01, -1.86646162e00, 2.41141727e00],
+                [1.44892035e-01, 2.34036215e-01, 6.32392890e-01, -1.13211403e-02],
+                [2.44926466e-01, 2.50293183e-01, 1.77540208e-01, 3.27240144e-01],
+            ]
+        ),
+        names=["foo", "bar", "baz", "quux"],
+    )
