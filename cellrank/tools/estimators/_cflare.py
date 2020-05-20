@@ -74,9 +74,6 @@ class CFLARE(BaseEstimator):
         s_key: Optional[str] = "S_score",
         key_added: Optional[str] = None,
     ):
-        self._is_irreducible = None
-        self._rec_classes = None
-        self._trans_classes = None
 
         self._metastable_states, self._metastable_states_colors, self._metastable_states_probs = (
             None,
@@ -188,48 +185,6 @@ class CFLARE(BaseEstimator):
                     f"DEBUG: `{_colors(self._lin_key)}` not found in `adata.uns`. "
                     f"Using default colors"
                 )
-
-    def compute_partition(self) -> None:
-        """
-        Computes communication classes for the Markov chain.
-
-        Returns
-        -------
-        None
-            Nothing, but updates the following fields:
-                - :paramref:`recurrent_classes`
-                - :paramref:`transient_classes`
-                - :paramref:`irreducible`
-        """
-
-        start = logg.info("Computing communication classes")
-
-        rec_classes, trans_classes = partition(self._T)
-
-        self._is_irreducible = len(rec_classes) == 1 and len(trans_classes) == 0
-
-        if not self._is_irreducible:
-            self._trans_classes = _make_cat(
-                trans_classes, self._n_states, self._adata.obs_names
-            )
-            self._rec_classes = _make_cat(
-                rec_classes, self._n_states, self._adata.obs_names
-            )
-            self._adata.obs[f"{self._rc_key}_rec_classes"] = self._rec_classes
-            self._adata.obs[f"{self._rc_key}_trans_classes"] = self._trans_classes
-            logg.info(
-                f"Found `{(len(rec_classes))}` recurrent and `{len(trans_classes)}` transient classes\n"
-                f"Adding `.recurrent_classes`\n"
-                f"       `.transient_classes`\n"
-                f"       `.irreducible`\n"
-                f"    Finish",
-                time=start,
-            )
-        else:
-            logg.warning(
-                "The transition matrix is irreducible - cannot further partition it\n    Finish",
-                time=start,
-            )
 
     def compute_eig(self, k: int = 20, which: str = "LR", alpha: float = 1) -> None:
         """
