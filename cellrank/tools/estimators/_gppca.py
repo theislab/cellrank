@@ -1218,6 +1218,10 @@ class GPCCA(BaseEstimator):
         g._s_key = self._s_key
         g._key_added = self._key_added
 
+        g._is_irreducible = self.irreducible
+        g._rec_classes = copy(self._rec_classes)
+        g._trans_classes = copy(self._trans_classes)
+
         return g
 
     @property
