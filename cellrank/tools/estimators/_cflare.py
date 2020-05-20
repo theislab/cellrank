@@ -823,27 +823,6 @@ class CFLARE(BaseEstimator):
         return c
 
     @property
-    def irreducible(self) -> Optional[bool]:
-        """
-        Whether the Markov chain is irreducible or not.
-        """
-        return self._is_irreducible
-
-    @property
-    def recurrent_classes(self) -> Optional[List[List[Any]]]:
-        """
-        The recurrent classes of the Markov chain.
-        """
-        return self._rec_classes
-
-    @property
-    def transient_classes(self) -> Optional[List[List[Any]]]:
-        """
-        The recurrent classes of the Markov chain.
-        """
-        return self._trans_classes
-
-    @property
     def metastable_states(self) -> Series:
         """
         Returns
