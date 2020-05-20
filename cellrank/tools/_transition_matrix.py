@@ -14,8 +14,8 @@ def transition_matrix(
     adata: AnnData,
     vkey: str = "velocity",
     backward: bool = False,
-    weight_connectivities: Optional[float] = None,
-    sigma_corr: Optional[float] = None,
+    weight_connectivities: Optional[float] = 0.5,
+    sigma_corr: Optional[float] = 30,
     density_normalize: bool = True,
 ) -> KernelExpression:
     """
