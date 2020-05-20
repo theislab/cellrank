@@ -633,11 +633,15 @@ class GPCCA(BaseEstimator):
         self._set_main_states(n_cells)
         self._dp = entropy(self._lin_probs.X.T)
 
-        # write to adata
-        self.adata.obs[_dp(self._lin_key)] = self._dp
-        self.adata.obs[_probs(self._rc_key)] = self._lin_probs[
+        # compute the aggregated probability of being a final state (no matter which)
+        aggregated_state_probability = self._lin_probs[
             [n for n in self._lin_probs.names if n != "rest"]
         ].X.max(axis=1)
+        aggregated_state_probability /= np.max(aggregated_state_probability)
+
+        # write to adata
+        self.adata.obs[_dp(self._lin_key)] = self._dp
+        self.adata.obs[_probs(self._rc_key)] = aggregated_state_probability
         self.adata.obsm[self._lin_key] = self._lin_probs
         self.adata.uns[_lin_names(self._lin_key)] = self._lin_probs.names
         self.adata.uns[_colors(self._lin_key)] = self._lin_probs.colors
