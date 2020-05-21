@@ -266,10 +266,10 @@ class BaseEstimator(ABC):
         y_min_, y_max_ = adapt_range(y_min, y_max, final_range)
 
         # plot the data and the unit circle
-        ax.scatter(D.real, D.imag, marker=".", label="Eigenvalue")
+        ax.scatter(D.real, D.imag, marker=".", label="eigenvalue")
         t = np.linspace(0, 2 * np.pi, 500)
         x_circle, y_circle = np.sin(t), np.cos(t)
-        ax.plot(x_circle, y_circle, "k-", label="Unit circle")
+        ax.plot(x_circle, y_circle, "k-", label="unit circle")
 
         # set labels, ranges and legend
         ax.set_xlabel("Im($\lambda$)")
@@ -337,11 +337,11 @@ class BaseEstimator(ABC):
 
         # plot the top eigenvalues
         fig, ax = plt.subplots(nrows=1, ncols=1, dpi=dpi, figsize=figsize)
-        ax.scatter(ixs[mask], D_real[mask], marker="o", label="Real eigenvalue")
-        ax.scatter(ixs[~mask], D_real[~mask], marker="o", label="Complex eigenvalue")
+        ax.scatter(ixs[mask], D_real[mask], marker="o", label="real eigenvalue")
+        ax.scatter(ixs[~mask], D_real[~mask], marker="o", label="complex eigenvalue")
 
         # add dashed line for the eigengap, ticks, labels, title and legend
-        ax.axvline(self._eig["eigengap"], label="Eigengap", ls="--")
+        ax.axvline(self._eig["eigengap"], label="eigengap", ls="--")
 
         ax.set_xlabel("index")
         ax.set_xticks(range(len(D)))
