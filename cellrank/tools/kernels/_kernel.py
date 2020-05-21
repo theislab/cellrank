@@ -759,6 +759,8 @@ class VelocityKernel(Kernel):
         backward_mode: str = "transpose",
         sigma_corr: Optional[float] = None,
         self_transitions: bool = False,
+        perc: Optional[float] = None,
+        threshold: Optional[float] = None,
         **kwargs,
     ) -> "VelocityKernel":
         """
@@ -778,6 +780,11 @@ class VelocityKernel(Kernel):
             from the velocity graph. If `None`, the median cosine correlation in absolute value is used.
         self_transitions
             Assigns elements to the diagonal of the velocity-graph based on a confidence measure
+        perc
+            Quantile of the distribution of exponentiated velocity correlations. This is used as a threshold to set
+            smaller values to zero
+        threshold
+            Set a threshold to remove exponentiated velocity correlations smaller than `threshold`
 
         Returns
         -------
@@ -809,6 +816,8 @@ class VelocityKernel(Kernel):
             sigma_corr=sigma_corr,
             use_negative_cosines=self._use_negative_cosines,
             self_transitions=self_transitions,
+            perc=perc,
+            threshold=threshold,
         )
 
         if params == self._params:
@@ -829,6 +838,13 @@ class VelocityKernel(Kernel):
         # compute directed graph --> multi class log reg
         velo_graph = correlations.copy()
         velo_graph.data = np.exp(velo_graph.data * sigma_corr)
+
+        # copied from scvelo, threshold the unnormalized probabilities
+        if perc is not None or threshold is not None:
+            if threshold is None:
+                threshold = np.percentile(velo_graph.data, perc)
+            velo_graph.data[velo_graph.data < threshold] = 0
+            velo_graph.eliminate_zeros()
 
         # normalize
         if density_normalize:
