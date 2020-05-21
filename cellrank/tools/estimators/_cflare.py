@@ -860,9 +860,13 @@ class CFLARE(BaseEstimator):
         c._lin_probs = copy(self.lineage_probabilities)
         c._dp = copy(self.diff_potential)
 
-        c._metastable_states = copy(self.metastable_states)
-        c._metastable_states_probs = copy(self.metastable_states_probabilities)
-        c._metastable_states_colors = copy(self._meta_states_colors)
+        # c._metastable_states = copy(self.metastable_states)
+        # c._metastable_states_probs = copy(self.metastable_states_probabilities)
+        # c._metastable_states_colors = copy(self._meta_states_colors)
+
+        c._meta_states = copy(self._meta_states)
+        c._meta_states_probs = copy(self._meta_states_probs)
+        c._meta_states_colors = copy(self._meta_states_colors)
 
         c._G2M_score = copy(self._G2M_score)
         c._S_score = copy(self._S_score)
