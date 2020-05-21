@@ -357,7 +357,7 @@ class CFLARE(BaseEstimator):
         """
 
         self._set_categorical_labels(
-            attr_key="_metastable_states",
+            attr_key="_meta_states",
             pretty_attr_key="approx_recurrent_classes",
             cat_key=self._rc_key,
             add_to_existing_error_msg="Compute approximate recurrent classes first as `.compute_metastable_states()`.",
