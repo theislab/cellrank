@@ -31,6 +31,8 @@ from cellrank.tools._utils import (
     partition,
 )
 
+EPS = np.finfo(np.float64).eps
+
 
 class CFLARE(BaseEstimator):
     """
@@ -295,6 +297,12 @@ class CFLARE(BaseEstimator):
         # set the direction and get the vectors
         side = "left" if left else "right"
         D, V = self._eig["D"], self._eig[f"V_{side[0]}"]
+
+        # if irreducible, first rigth e-vec should be const.
+        if side == "right":
+            # quick check for irreducibility:
+            if np.sum(np.isclose(D, 1, rtol=1e2 * EPS, atol=1e2 * EPS)) == 1:
+                V[:, 0] = 1.0
 
         if use is None:
             use = self._eig["eigengap"] + 1  # add one because first e-vec has index 0
