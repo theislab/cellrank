@@ -708,6 +708,8 @@ class VelocityKernel(Kernel):
         Direction of the process.
     vkey
         Key in :paramref:`adata` `.uns` where the velocities are stored.
+    use_negative_cosines
+        Whether to use correlations with cells that have an angle > 90 degree with v_i
     compute_cond_num
         Whether to compute condition number of the transition matrix. Note that this might be costly,
         since it does not use sparse implementation.
@@ -718,14 +720,20 @@ class VelocityKernel(Kernel):
         adata: AnnData,
         backward: bool = False,
         vkey: str = "velocity",
+        use_negative_cosines: bool = True,
         compute_cond_num: bool = False,
     ):
         super().__init__(
-            adata, backward=backward, vkey=vkey, compute_cond_num=compute_cond_num
+            adata,
+            backward=backward,
+            vkey=vkey,
+            use_negative_cosines=use_negative_cosines,
+            compute_cond_num=compute_cond_num,
         )
         self._vkey = vkey  # for copy
+        self._use_negative_cosines = use_negative_cosines
 
-    def _read_from_adata(self, vkey: str, **kwargs):
+    def _read_from_adata(self, vkey: str, use_negative_cosines: bool, **kwargs):
         super()._read_from_adata(variance_key="velocity", **kwargs)
         if (vkey + "_graph" not in self.adata.uns.keys()) or (
             vkey + "_graph_neg" not in self.adata.uns.keys()
@@ -740,13 +748,19 @@ class VelocityKernel(Kernel):
         )
         logg.debug("Adding `.velo_corr`, the velocity correlations")
 
-        self.velo_corr = (velo_corr_pos + velo_corr_neg).astype(_dtype)
+        if use_negative_cosines:
+            self.velo_corr = (velo_corr_pos + velo_corr_neg).astype(_dtype)
+        else:
+            self.velo_corr = velo_corr_pos.astype(_dtype)
 
     def compute_transition_matrix(
         self,
         density_normalize: bool = True,
         backward_mode: str = "transpose",
         sigma_corr: Optional[float] = None,
+        self_transitions: bool = False,
+        perc: Optional[float] = None,
+        threshold: Optional[float] = None,
         **kwargs,
     ) -> "VelocityKernel":
         """
@@ -764,6 +778,13 @@ class VelocityKernel(Kernel):
         sigma_corr
             Kernel width for exp kernel to be used to compute transition probabilities
             from the velocity graph. If `None`, the median cosine correlation in absolute value is used.
+        self_transitions
+            Assigns elements to the diagonal of the velocity-graph based on a confidence measure
+        perc
+            Quantile of the distribution of exponentiated velocity correlations. This is used as a threshold to set
+            smaller values to zero
+        threshold
+            Set a threshold to remove exponentiated velocity correlations smaller than `threshold`
 
         Returns
         -------
@@ -793,6 +814,10 @@ class VelocityKernel(Kernel):
             dnorm=density_normalize,
             bwd_mode=backward_mode if self._direction == Direction.BACKWARD else None,
             sigma_corr=sigma_corr,
+            use_negative_cosines=self._use_negative_cosines,
+            self_transitions=self_transitions,
+            perc=perc,
+            threshold=threshold,
         )
 
         if params == self._params:
@@ -803,13 +828,37 @@ class VelocityKernel(Kernel):
 
         self._params = params
 
+        # copied form scvelo, assign self-loops based on confidence heuristic
+        if self_transitions:
+            confidence = correlations.max(1).A.flatten()
+            ub = np.percentile(confidence, 98)
+            self_prob = np.clip(ub - confidence, 0, 1)
+            correlations.setdiag(self_prob)
+
         # compute directed graph --> multi class log reg
         velo_graph = correlations.copy()
         velo_graph.data = np.exp(velo_graph.data * sigma_corr)
 
+        # copied from scvelo, threshold the unnormalized probabilities
+        if perc is not None or threshold is not None:
+            if threshold is None:
+                threshold = np.percentile(velo_graph.data, perc)
+            velo_graph.data[velo_graph.data < threshold] = 0
+            velo_graph.eliminate_zeros()
+
         # normalize
         if density_normalize:
             velo_graph = self.density_normalize(velo_graph)
+
+        # check for zero-rows (can happen if we don't use neg. cosines)
+        problematic_indices = np.where(np.array(velo_graph.sum(1)).flatten() == 0)[0]
+        if len(problematic_indices) != 0:
+            logg.warning(
+                f"Detected {len(problematic_indices)} absorbing states in the transition matrix. "
+                f"This matrix won't be reducible, consider setting `use_negative_cosines` to `True`"
+            )
+            for ix in problematic_indices:
+                velo_graph[ix, ix] = 1.0
 
         self.transition_matrix = csr_matrix(velo_graph)
         self._maybe_compute_cond_num()
@@ -819,7 +868,12 @@ class VelocityKernel(Kernel):
         return self
 
     def copy(self) -> "VelocityKernel":
-        vk = VelocityKernel(self.adata, backward=self.backward, vkey=self._vkey)
+        vk = VelocityKernel(
+            self.adata,
+            backward=self.backward,
+            vkey=self._vkey,
+            use_negative_cosines=self._use_negative_cosines,
+        )
         vk._params = copy(self.params)
         vk._transition_matrix = copy(self._transition_matrix)
 
