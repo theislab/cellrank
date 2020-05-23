@@ -195,6 +195,8 @@ class KernelExpression(ABC):
                 logg.warning(
                     f"`{repr(self)}` may be ill-conditioned, its condition number is `{self._cond_num:.2e}`"
                 )
+            else:
+                logg.info(f"Condition number is `{self._cond_num:.2e}`")
 
     @abstractmethod
     def _get_kernels(self) -> Iterable["Kernel"]:
@@ -582,20 +584,74 @@ class Kernel(UnaryKernelExpression, ABC):
         yield self
 
     def _compute_transition_matrix(
-        self, matrix: spmatrix, sigma_corr: Optional[float], density_normalize: bool
+        self,
+        matrix: spmatrix,
+        self_transitions: bool = False,
+        exp: bool = False,
+        scale_by_variances: bool = False,
+        var_min: float = 0.1,
+        sigma_corr: Optional[float] = None,
+        perc: Optional[float] = None,
+        threshold: Optional[float] = None,
+        density_normalize: bool = True,
     ):
-        # compute directed graph --> multi class log reg
-        if self._variances is not None:
-            logg.DEBUG("DEBUG: Scaling by variances")
-            ixs = matrix.nonzero()
-            matrix[ixs] = matrix[ixs] / self._variances[ixs]
+
+        # copied form scvelo, assign self-loops based on confidence heuristic
+        if self_transitions:
+            confidence = matrix.max(1).A.flatten()
+            ub = np.percentile(confidence, 98)
+            self_prob = np.clip(ub - confidence, 0, 1)
+            matrix.setdiag(self_prob)
+
+        # Scale weights either by variances or by constant value
+        if scale_by_variances:
+            if self._variances is None:
+                logg.warning("No variances found, skipping the scaling")
+            else:
+                logg.DEBUG("DEBUG: Scaling by variances")
+                variances = self._variances.copy()
+
+                # check that for zero weight, there is also zero variance
+                ixs_check = matrix == 0
+                if np.sum(variances[ixs_check] != 0) > 0:
+                    logg.warning(
+                        f"There were {np.sum(variances[ixs_check] != 0)} edges with zero weight but non-zero variance"
+                    )
+
+                # for non-zero edge-weights, clip var's to a_min and scale the edge weights by these vars
+                ixs = matrix.nonzero()
+                variances[ixs] = np.array(
+                    np.clip(variances[ixs], a_min=var_min, a_max=None)
+                ).flatten()
+                matrix[ixs] = matrix[ixs] / variances[ixs]
         elif sigma_corr is not None:
             logg.DEBUG("DEBUG: Scaling sigma correlation")
-            matrix.data = np.exp(matrix.data * sigma_corr)
+            matrix.data = matrix.data * sigma_corr
 
-        # normalize
+        # use softmax
+        if exp:
+            matrix.data = np.exp(matrix.data)
+
+        # copied from scvelo, threshold the unnormalized probabilities
+        if perc is not None or threshold is not None:
+            if threshold is None:
+                threshold = np.percentile(matrix.data, perc)
+            matrix.data[matrix.data < threshold] = 0
+            matrix.eliminate_zeros()
+
+        # density correction based on node degrees in the KNN grpah
         if density_normalize:
             matrix = self.density_normalize(matrix)
+
+        # check for zero-rows (can happen if we don't use neg. cosines for the velo graph)
+        problematic_indices = np.where(np.array(matrix.sum(1)).flatten() == 0)[0]
+        if len(problematic_indices) != 0:
+            logg.warning(
+                f"Detected {len(problematic_indices)} absorbing states in the transition matrix. "
+                f"This matrix won't be reducible, consider setting `use_negative_cosines` to `True`"
+            )
+            for ix in problematic_indices:
+                matrix[ix, ix] = 1.0
 
         self.transition_matrix = csr_matrix(matrix)
         self._maybe_compute_cond_num()
@@ -725,6 +781,8 @@ class VelocityKernel(Kernel):
         Key in :paramref:`adata` `.uns` where the velocities are stored.
     var_key
         Key in :paramref:`adata` `.uns` where the velocity variances are stored.
+    use_negative_cosines
+        Whether to use correlations with cells that have an angle > 90 degree with v_i
     compute_cond_num
         Whether to compute condition number of the transition matrix. Note that this might be costly,
         since it does not use sparse implementation.
@@ -736,6 +794,7 @@ class VelocityKernel(Kernel):
         backward: bool = False,
         vkey: str = "velocity",
         var_key: Optional[str] = None,
+        use_negative_cosines: bool = True,
         compute_cond_num: bool = False,
     ):
         super().__init__(
@@ -743,12 +802,20 @@ class VelocityKernel(Kernel):
             backward=backward,
             vkey=vkey,
             var_key=var_key,
+            use_negative_cosines=use_negative_cosines,
             compute_cond_num=compute_cond_num,
         )
         self._vkey = vkey  # for copy
         self._var_key = var_key
+        self._use_negative_cosines = use_negative_cosines
 
-    def _read_from_adata(self, vkey: str, var_key: Optional[str] = None, **kwargs):
+    def _read_from_adata(
+        self,
+        vkey: str,
+        var_key: Optional[str] = None,
+        use_negative_cosines: bool = True,
+        **kwargs,
+    ):
         super()._read_from_adata(var_key=var_key, **kwargs)
         if (vkey + "_graph" not in self.adata.uns.keys()) or (
             vkey + "_graph_neg" not in self.adata.uns.keys()
@@ -763,13 +830,21 @@ class VelocityKernel(Kernel):
         )
         logg.debug("Adding `.velo_corr`, the velocity correlations")
 
-        self._velo_corr = (velo_corr_pos + velo_corr_neg).astype(_dtype)
+        if use_negative_cosines:
+            self._velo_corr = (velo_corr_pos + velo_corr_neg).astype(_dtype)
+        else:
+            self._velo_corr = velo_corr_pos.astype(_dtype)
 
     def compute_transition_matrix(
         self,
         density_normalize: bool = True,
         backward_mode: str = "transpose",
         sigma_corr: Optional[float] = None,
+        scale_by_variances: bool = False,
+        var_min: float = 0.1,
+        self_transitions: bool = False,
+        perc: Optional[float] = None,
+        threshold: Optional[float] = None,
         **kwargs,
     ) -> "VelocityKernel":
         """
@@ -787,6 +862,19 @@ class VelocityKernel(Kernel):
         sigma_corr
             Kernel width for exp kernel to be used to compute transition probabilities
             from the velocity graph. If `None`, the median cosine correlation in absolute value is used.
+        scale_by_variances
+            If variances for the velocity correlations were computed, use these as scaling factor in softmax
+        var_min
+            Variances are clipped at the lower end to this value
+        self_transitions
+            Assigns elements to the diagonal of the velocity-graph based on a confidence measure
+        perc
+            Quantile of the distribution of exponentiated velocity correlations. This is used as a threshold to set
+            smaller values to zero
+        threshold
+            Set a threshold to remove exponentiated velocity correlations smaller than `threshold`
+        a_min
+
 
         Returns
         -------
@@ -816,6 +904,12 @@ class VelocityKernel(Kernel):
             dnorm=density_normalize,
             bwd_mode=backward_mode if self._direction == Direction.BACKWARD else None,
             sigma_corr=sigma_corr,
+            use_negative_cosines=self._use_negative_cosines,
+            self_transitions=self_transitions,
+            perc=perc,
+            threshold=threshold,
+            scale_by_variances=scale_by_variances,
+            var_min=var_min,
         )
 
         if params == self._params:
@@ -826,7 +920,15 @@ class VelocityKernel(Kernel):
 
         self._params = params
         self._compute_transition_matrix(
-            correlations.copy(), sigma_corr, density_normalize
+            matrix=correlations.copy(),
+            scale_by_variances=scale_by_variances,
+            self_transitions=self_transitions,
+            exp=True,
+            var_min=var_min,
+            sigma_corr=sigma_corr,
+            perc=perc,
+            threshold=threshold,
+            density_normalize=density_normalize,
         )
 
         logg.info("    Finish", time=start)
@@ -835,7 +937,11 @@ class VelocityKernel(Kernel):
 
     def copy(self) -> "VelocityKernel":
         vk = VelocityKernel(
-            self.adata, backward=self.backward, vkey=self._vkey, var_key=self._var_key
+            self.adata,
+            backward=self.backward,
+            vkey=self._vkey,
+            var_key=self._var_key,
+            use_negative_cosines=self._use_negative_cosines,
         )
         vk._params = copy(self.params)
         vk._transition_matrix = copy(self._transition_matrix)
@@ -914,7 +1020,9 @@ class ConnectivityKernel(Kernel):
             return self
 
         self._params = params
-        self._compute_transition_matrix(self._conn.copy(), None, density_normalize)
+        self._compute_transition_matrix(
+            matrix=self._conn.copy(), density_normalize=density_normalize
+        )
 
         logg.info("    Finish", time=start)
 
@@ -1055,7 +1163,9 @@ class PalantirKernel(Kernel):
         if not is_connected(biased_conn):
             logg.warning("Biased KNN graph is disconnected")
 
-        self._compute_transition_matrix(biased_conn, None, density_normalize)
+        self._compute_transition_matrix(
+            matrix=biased_conn, density_normalize=density_normalize
+        )
 
         logg.info("    Finish", time=start)
 
