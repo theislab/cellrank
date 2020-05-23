@@ -31,6 +31,8 @@ from cellrank.tools._utils import (
     partition,
 )
 
+EPS = np.finfo(np.float64).eps
+
 
 class CFLARE(BaseEstimator):
     """
@@ -74,11 +76,8 @@ class CFLARE(BaseEstimator):
         s_key: Optional[str] = "S_score",
         key_added: Optional[str] = None,
     ):
-        self._is_irreducible = None
-        self._rec_classes = None
-        self._trans_classes = None
 
-        self._metastable_states, self._metastable_states_colors, self._metastable_states_probs = (
+        self._meta_states, self._meta_states_colors, self._meta_states_probs = (
             None,
             None,
             None,
@@ -105,14 +104,14 @@ class CFLARE(BaseEstimator):
             )
 
         if self._rc_key in self._adata.obs.keys():
-            self._metastable_states = self._adata.obs[self._rc_key]
+            self._meta_states = self._adata.obs[self._rc_key]
         else:
             logg.debug(
                 f"DEBUG: `{self._rc_key}` not found in `adata.obs`. Setting `.metastable_states` to `None`"
             )
 
         if _colors(self._rc_key) in self._adata.uns.keys():
-            self._metastable_states_colors = self._adata.uns[_colors(self._rc_key)]
+            self._meta_states_colors = self._adata.uns[_colors(self._rc_key)]
         else:
             logg.debug(
                 f"DEBUG: `{_colors(self._rc_key)}` not found in `adata.uns`. "
@@ -155,7 +154,7 @@ class CFLARE(BaseEstimator):
             )
 
         if _probs(self._rc_key) in self._adata.obs.keys():
-            self._metastable_states_probs = self._adata.obs[_probs(self._rc_key)]
+            self._meta_states_probs = self._adata.obs[_probs(self._rc_key)]
         else:
             logg.debug(
                 f"DEBUG: `{_probs(self._rc_key)}` not found in `adata.obs`. "
@@ -188,48 +187,6 @@ class CFLARE(BaseEstimator):
                     f"DEBUG: `{_colors(self._lin_key)}` not found in `adata.uns`. "
                     f"Using default colors"
                 )
-
-    def compute_partition(self) -> None:
-        """
-        Computes communication classes for the Markov chain.
-
-        Returns
-        -------
-        None
-            Nothing, but updates the following fields:
-                - :paramref:`recurrent_classes`
-                - :paramref:`transient_classes`
-                - :paramref:`irreducible`
-        """
-
-        start = logg.info("Computing communication classes")
-
-        rec_classes, trans_classes = partition(self._T)
-
-        self._is_irreducible = len(rec_classes) == 1 and len(trans_classes) == 0
-
-        if not self._is_irreducible:
-            self._trans_classes = _make_cat(
-                trans_classes, self._n_states, self._adata.obs_names
-            )
-            self._rec_classes = _make_cat(
-                rec_classes, self._n_states, self._adata.obs_names
-            )
-            self._adata.obs[f"{self._rc_key}_rec_classes"] = self._rec_classes
-            self._adata.obs[f"{self._rc_key}_trans_classes"] = self._trans_classes
-            logg.info(
-                f"Found `{(len(rec_classes))}` recurrent and `{len(trans_classes)}` transient classes\n"
-                f"Adding `.recurrent_classes`\n"
-                f"       `.transient_classes`\n"
-                f"       `.irreducible`\n"
-                f"    Finish",
-                time=start,
-            )
-        else:
-            logg.warning(
-                "The transition matrix is irreducible - cannot further partition it\n    Finish",
-                time=start,
-            )
 
     def compute_eig(self, k: int = 20, which: str = "LR", alpha: float = 1) -> None:
         """
@@ -296,6 +253,12 @@ class CFLARE(BaseEstimator):
         side = "left" if left else "right"
         D, V = self._eig["D"], self._eig[f"V_{side[0]}"]
 
+        # if irreducible, first rigth e-vec should be const.
+        if side == "right":
+            # quick check for irreducibility:
+            if np.sum(np.isclose(D, 1, rtol=1e2 * EPS, atol=1e2 * EPS)) == 1:
+                V[:, 0] = 1.0
+
         if use is None:
             use = self._eig["eigengap"] + 1  # add one because first e-vec has index 0
 
@@ -349,7 +312,7 @@ class CFLARE(BaseEstimator):
         """
 
         self._set_categorical_labels(
-            attr_key="_metastable_states",
+            attr_key="_meta_states",
             pretty_attr_key="approx_recurrent_classes",
             cat_key=self._rc_key,
             add_to_existing_error_msg="Compute approximate recurrent classes first as `.compute_metastable_states()`.",
@@ -471,7 +434,7 @@ class CFLARE(BaseEstimator):
         # compute a rc probability
         logg.debug("DEBUG: Computing probabilities of approximate recurrent classes")
         probs = self._compute_metastable_states_prob(use)
-        self._metastable_states_probs = probs
+        self._meta_states_probs = probs
         self._adata.obs[_probs(self._rc_key)] = probs
 
         # retrieve embedding and concatenate
@@ -568,26 +531,26 @@ class CFLARE(BaseEstimator):
             Nothing, just plots the approximate recurrent classes.
         """
 
-        if self._metastable_states is None:
+        if self._meta_states is None:
             raise RuntimeError(
                 "Compute approximate recurrent classes first as `.compute_metastable_states()`"
             )
 
-        self._adata.obs[self._rc_key] = self._metastable_states
+        self._adata.obs[self._rc_key] = self._meta_states
 
         # check whether the length of the color array matches the number of clusters
         color_key = _colors(self._rc_key)
         if color_key in self._adata.uns and len(self._adata.uns[color_key]) != len(
-            self._metastable_states.cat.categories
+            self._meta_states.cat.categories
         ):
             del self._adata.uns[_colors(self._rc_key)]
-            self._metastable_states_colors = None
+            self._meta_states_colors = None
 
         color = self._rc_key if cluster_key is None else [cluster_key, self._rc_key]
         scv.pl.scatter(self._adata, color=color, **kwargs)
 
         if color_key in self._adata.uns:
-            self._metastable_states_colors = self._adata.uns[color_key]
+            self._meta_states_colors = self._adata.uns[color_key]
 
     def compute_lin_probs(
         self,
@@ -617,7 +580,7 @@ class CFLARE(BaseEstimator):
             Nothing, but updates the following fields: :paramref:`lineage_probabilities`, :paramref:`diff_potential`.
         """
 
-        if self._metastable_states is None:
+        if self._meta_states is None:
             raise RuntimeError(
                 "Compute approximate recurrent classes first as `.compute_metastable_states()`"
             )
@@ -640,9 +603,7 @@ class CFLARE(BaseEstimator):
 
         # process the current annotations according to `keys`
         metastable_states_, colors_ = _process_series(
-            series=self._metastable_states,
-            keys=keys,
-            colors=self._metastable_states_colors,
+            series=self._meta_states, keys=keys, colors=self._meta_states_colors
         )
 
         #  create empty lineage object
@@ -817,23 +778,23 @@ class CFLARE(BaseEstimator):
         return c
 
     def _check_and_create_colors(self):
-        n_cats = len(self._metastable_states.cat.categories)
+        n_cats = len(self._meta_states.cat.categories)
         color_key = _colors(self._rc_key)
 
-        if self._metastable_states_colors is None:
+        if self._meta_states_colors is None:
             if color_key in self._adata.uns and n_cats == len(
                 self._adata.uns[color_key]
             ):
                 logg.debug("DEBUG: Loading colors from `.adata` object")
-                self._metastable_states_colors = _convert_to_hex_colors(
+                self._meta_states_colors = _convert_to_hex_colors(
                     self._adata.uns[color_key]
                 )
             else:
-                self._metastable_states_colors = _create_categorical_colors(n_cats)
-                self._adata.uns[color_key] = self._metastable_states_colors
-        elif len(self._metastable_states_colors) != n_cats:
-            self._metastable_states_colors = _create_categorical_colors(n_cats)
-            self._adata.uns[color_key] = self._metastable_states_colors
+                self._meta_states_colors = _create_categorical_colors(n_cats)
+                self._adata.uns[color_key] = self._meta_states_colors
+        elif len(self._meta_states_colors) != n_cats:
+            self._meta_states_colors = _create_categorical_colors(n_cats)
+            self._adata.uns[color_key] = self._meta_states_colors
 
     def copy(self) -> "CFLARE":
         """
@@ -854,9 +815,13 @@ class CFLARE(BaseEstimator):
         c._lin_probs = copy(self.lineage_probabilities)
         c._dp = copy(self.diff_potential)
 
-        c._metastable_states = copy(self.metastable_states)
-        c._metastable_states_probs = copy(self.metastable_states_probabilities)
-        c._metastable_states_colors = copy(self._metastable_states_colors)
+        # c._metastable_states = copy(self.metastable_states)
+        # c._metastable_states_probs = copy(self.metastable_states_probabilities)
+        # c._metastable_states_colors = copy(self._meta_states_colors)
+
+        c._meta_states = copy(self._meta_states)
+        c._meta_states_probs = copy(self._meta_states_probs)
+        c._meta_states_colors = copy(self._meta_states_colors)
 
         c._G2M_score = copy(self._G2M_score)
         c._S_score = copy(self._S_score)
@@ -868,27 +833,6 @@ class CFLARE(BaseEstimator):
         return c
 
     @property
-    def irreducible(self) -> Optional[bool]:
-        """
-        Whether the Markov chain is irreducible or not.
-        """
-        return self._is_irreducible
-
-    @property
-    def recurrent_classes(self) -> Optional[List[List[Any]]]:
-        """
-        The recurrent classes of the Markov chain.
-        """
-        return self._rec_classes
-
-    @property
-    def transient_classes(self) -> Optional[List[List[Any]]]:
-        """
-        The recurrent classes of the Markov chain.
-        """
-        return self._trans_classes
-
-    @property
     def metastable_states(self) -> Series:
         """
         Returns
@@ -896,7 +840,7 @@ class CFLARE(BaseEstimator):
         :class:`pandas.Series`
             The approximate recurrent classes, where `NaN` marks cells which are transient.
         """
-        return self._metastable_states
+        return self._meta_states
 
     @property
     def metastable_states_probabilities(self) -> Series:
@@ -906,4 +850,4 @@ class CFLARE(BaseEstimator):
         :class:`pandas.Series`
             Probabilities of cells belonging to the approximate recurrent classes.
         """
-        return self._metastable_states_probs
+        return self._meta_states_probs

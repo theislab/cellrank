@@ -158,7 +158,7 @@ class GPCCA(BaseEstimator):
 
         if self.schur_vectors is None:
             raise RuntimeError(
-                "Compute Schur vectors as `.compute_metastable_states()` first."
+                "Compute Schur vectors as `.compute_metastable_states()` with `n_states` > 1 first."
             )
 
         self._plot_vectors(
@@ -205,7 +205,7 @@ class GPCCA(BaseEstimator):
 
         if self._schur_matrix is None:
             raise RuntimeError(
-                "Compute Schur matrix as `.compute_metastable_states()` first."
+                "Compute Schur matrix as `.compute_metastable_states()` with `n_states` > 1 first."
             )
 
         fig, ax = plt.subplots(
@@ -304,81 +304,112 @@ class GPCCA(BaseEstimator):
                 - :paramref:`coarse_stationary_distribution`
         """
 
-        gpcca = _GPPCA(self._T, eta=initial_distribution, z=which, method=method)
+        if isinstance(n_states, int) and n_states == 1:
 
-        if use_min_chi:
-            if not isinstance(n_states, (dict, tuple, list)):
-                raise TypeError(
-                    f"Expected `n_states` to be either `dict`, `tuple` or a `list`, found `{type(n_states).__name__}`."
+            start = logg.info("Computing metastable states")
+            logg.warning("For `n_states=1`, we compute the stationary distribution")
+            k = self.eigendecomposition["params"]["k"]
+            which = self.eigendecomposition["params"]["which"]
+            alpha = self.eigendecomposition["params"]["alpha"]
+            self._compute_eig(k=k, which=which, alpha=alpha, only_evals=False)
+            stationary_dist = self.eigendecomposition["stationary_dist"]
+
+            valid_ixs = self._assign_metastable_states(
+                stationary_dist[:, None],
+                np.zeros_like(stationary_dist),
+                n_cells,
+                cluster_key=cluster_key,
+                p_thresh=p_thresh,
+                en_cutoff=en_cutoff,
+            )
+
+            self._lin_probs, self._schur_vectors, self._coarse_T, self._coarse_init_dist, self._coarse_stat_dist, self._schur_matrix = (
+                [None] * 6
+            )
+
+            logg.info("Adding `.metastable_states`\n" "    Finish", time=start)
+
+        else:
+
+            gpcca = _GPPCA(self._T, eta=initial_distribution, z=which, method=method)
+
+            if use_min_chi:
+                if not isinstance(n_states, (dict, tuple, list)):
+                    raise TypeError(
+                        f"Expected `n_states` to be either `dict`, `tuple` or a `list`, found `{type(n_states).__name__}`."
+                    )
+                if len(n_states) != 2:
+                    raise ValueError(
+                        f"Expected `n_states` to be of size `2`, found `{len(n_states)}`."
+                    )
+
+                minn, maxx = (
+                    (n_states["min"], n_states["max"])
+                    if isinstance(n_states, dict)
+                    else n_states
                 )
-            if len(n_states) != 2:
+                if minn <= 1:
+                    raise ValueError(f"Minimum value must be > 1, found `{minn}`.")
+                elif minn == 2:
+                    logg.warning(
+                        "In most cases, 2 clusters will always be optimal. "
+                        "If you really expect 2 clusters, use `n_states=2`.\nSetting the minimum to 3"
+                    )
+                    minn = 3
+
+                logg.debug(
+                    f"DEBUG: Calculating minChi within interval [{minn}, {maxx}]"
+                )
+                n_states = int(
+                    np.arange(minn, maxx)[np.argmax(gpcca.minChi(minn, maxx))]
+                )
+            elif not isinstance(n_states, int):
                 raise ValueError(
-                    f"Expected `n_states` to be of size `2`, found `{len(n_states)}`."
+                    f"Expected `n_states` to be integer when `use_min_chi=False`, found `{type(n_states).__name__}`."
                 )
 
-            minn, maxx = (
-                (n_states["min"], n_states["max"])
-                if isinstance(n_states, dict)
-                else n_states
-            )
-            if minn <= 1:
-                raise ValueError(f"Minimum value must be > 1, found `{minn}`.")
-            elif minn == 2:
-                logg.warning(
-                    "In most cases, 2 clusters will always be optimal. "
-                    "If you really expect 2 clusters, use `n_states=2`.\nSetting the minimum to 3"
-                )
-                minn = 3
+            start = logg.info("Computing metastable states")
 
-            logg.debug(f"DEBUG: Calculating minChi within interval [{minn}, {maxx}]")
-            n_states = int(np.arange(minn, maxx)[np.argmax(gpcca.minChi(minn, maxx))])
-        elif not isinstance(n_states, int):
-            raise ValueError(
-                f"Expected `n_states` to be integer when `use_min_chi=False`, found `{type(n_states).__name__}`."
+            gpcca = gpcca.optimize(m=n_states)
+
+            # when `n_cells!=None` and the overlap is high, we're skipping some metastable states
+            valid_ixs = self._assign_metastable_states(
+                gpcca.memberships,
+                gpcca.metastable_assignment,
+                n_cells,
+                cluster_key=cluster_key,
+                p_thresh=p_thresh,
+                en_cutoff=en_cutoff,
+            )
+            logg.debug(
+                f"Selected `{len(valid_ixs)}` out of `{n_states}` due to an overlapp caused by `n_cells={n_cells}`"
             )
 
-        start = logg.info("Computing metastable states")
+            self._lin_probs = None
+            self._schur_vectors = gpcca.schur_vectors
+            self._schur_matrix = gpcca.R  # gpcca.schur_matrix
 
-        gpcca = gpcca.optimize(m=n_states)
+            names = self._meta_lin_probs.names
+            self._coarse_T = pd.DataFrame(
+                gpcca.coarse_grained_transition_matrix[valid_ixs, :][:, valid_ixs],
+                index=names,
+                columns=names,
+            )
+            self._coarse_init_dist = pd.Series(
+                gpcca.coarse_grained_input_distribution[valid_ixs], index=names
+            )
+            self._coarse_stat_dist = pd.Series(
+                gpcca.coarse_grained_stationary_probability[valid_ixs], index=names
+            )
 
-        # when `n_cells!=None` and the overlap is high, we're skipping some metastable states
-        valid_ixs = self._assign_metastable_states(
-            gpcca.memberships,
-            gpcca.metastable_assignment,
-            n_cells,
-            cluster_key=cluster_key,
-            p_thresh=p_thresh,
-            en_cutoff=en_cutoff,
-        )
-        logg.debug(
-            f"Selected `{len(valid_ixs)}` out of `{n_states}` due to an overlapp caused by `n_cells={n_cells}`"
-        )
-
-        self._lin_probs = None
-        self._schur_vectors = gpcca.schur_vectors
-        self._schur_matrix = gpcca.R  # gpcca.schur_matrix
-
-        names = self._meta_lin_probs.names
-        self._coarse_T = pd.DataFrame(
-            gpcca.coarse_grained_transition_matrix[valid_ixs, :][:, valid_ixs],
-            index=names,
-            columns=names,
-        )
-        self._coarse_init_dist = pd.Series(
-            gpcca.coarse_grained_input_distribution[valid_ixs], index=names
-        )
-        self._coarse_stat_dist = pd.Series(
-            gpcca.coarse_grained_stationary_probability[valid_ixs], index=names
-        )
-
-        logg.info(
-            "Adding `.schur_vectors`\n"
-            "       `.metastable_states`\n"
-            "       `.coarse_T`\n"
-            "       `.coarse_stationary_distribution`\n"
-            "    Finish",
-            time=start,
-        )
+            logg.info(
+                "Adding `.schur_vectors`\n"
+                "       `.metastable_states`\n"
+                "       `.coarse_T`\n"
+                "       `.coarse_stationary_distribution`\n"
+                "    Finish",
+                time=start,
+            )
 
     def plot_metastable_states(
         self,
@@ -602,11 +633,15 @@ class GPCCA(BaseEstimator):
         self._set_main_states(n_cells)
         self._dp = entropy(self._lin_probs.X.T)
 
-        # write to adata
-        self.adata.obs[_dp(self._lin_key)] = self._dp
-        self.adata.obs[_probs(self._rc_key)] = self._lin_probs[
+        # compute the aggregated probability of being a final state (no matter which)
+        aggregated_state_probability = self._lin_probs[
             [n for n in self._lin_probs.names if n != "rest"]
         ].X.max(axis=1)
+        aggregated_state_probability /= np.max(aggregated_state_probability)
+
+        # write to adata
+        self.adata.obs[_dp(self._lin_key)] = self._dp
+        self.adata.obs[_probs(self._rc_key)] = aggregated_state_probability
         self.adata.obsm[self._lin_key] = self._lin_probs
         self.adata.uns[_lin_names(self._lin_key)] = self._lin_probs.names
         self.adata.uns[_colors(self._lin_key)] = self._lin_probs.colors
@@ -656,6 +691,12 @@ class GPCCA(BaseEstimator):
                 - :paramref:`lineage_probabilities`
                 - :paramref:`diff_potential`
         """
+        if len(self.metastable_states.cat.categories) == 1:
+            logg.warning(
+                "Found only one metastable state. Making it the single main state. "
+            )
+            self.set_main_states(None, redistribute=False, n_cells=n_cells, **kwargs)
+            return
 
         if method == "eigengap":
             if self.eigendecomposition is None:
@@ -1029,7 +1070,7 @@ class GPCCA(BaseEstimator):
 
         if self.coarse_T is None:
             raise RuntimeError(
-                f"Compute coarse transition matrix first as `.compute_metastable_states()`."
+                f"Compute coarse transition matrix first as `.compute_metastable_states()` with `n_states` > 1."
             )
 
         if show_stationary_dist and self.coarse_stationary_distribution is None:
@@ -1176,6 +1217,10 @@ class GPCCA(BaseEstimator):
         g._g2m_key = self._g2m_key
         g._s_key = self._s_key
         g._key_added = self._key_added
+
+        g._is_irreducible = self.irreducible
+        g._rec_classes = copy(self._rec_classes)
+        g._trans_classes = copy(self._trans_classes)
 
         return g
 
