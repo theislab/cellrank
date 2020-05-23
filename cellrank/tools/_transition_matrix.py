@@ -16,6 +16,10 @@ def transition_matrix(
     backward: bool = False,
     weight_connectivities: Optional[float] = None,
     sigma_corr: Optional[float] = None,
+    use_negative_cosines: bool = True,
+    self_transitions: bool = False,
+    perc: Optional[float] = None,
+    threshold: Optional[float] = None,
     density_normalize: bool = True,
 ) -> KernelExpression:
     """
@@ -36,9 +40,18 @@ def transition_matrix(
         Direction of the process.
     weight_connectivities
         Weight given to transcriptomic similarities as opposed to velocities. Must be in `[0, 1]`.
+    use_negative_cosines
+        Whether to use correlations with cells that have an angle > 90 degree with v_i
     sigma_corr
         Scaling parameter for the softmax. Larger values will lead to a more concentrated distribution (more peaked).
         Default is to use 1/median_velocity_correlation
+    self_transitions
+        Assigns elements to the diagonal of the velocity-graph based on a confidence measure
+    perc
+        Quantile of the distribution of exponentiated velocity correlations. This is used as a threshold to set
+        smaller values to zero
+    threshold
+        Set a threshold to remove exponentiated velocity correlations smaller than `threshold`
     density_normalize
         Whether to use density correction when computing the transition probabilities.
         Density correction is done as by [Haghverdi16]_.
@@ -49,9 +62,16 @@ def transition_matrix(
         A kernel expression object.
     """
 
-    # initialise the kernel objects
-    vk = VelocityKernel(adata, backward=backward, vkey=vkey).compute_transition_matrix(
-        density_normalize=density_normalize, sigma_corr=sigma_corr
+    # initialise the velocity kernel and compute transition matrix
+    vk = VelocityKernel(
+        adata, backward=backward, vkey=vkey, use_negative_cosines=use_negative_cosines
+    )
+    vk.compute_transition_matrix(
+        sigma_corr=sigma_corr,
+        self_transitions=self_transitions,
+        perc=perc,
+        threshold=threshold,
+        density_normalize=density_normalize,
     )
 
     if weight_connectivities is not None:
