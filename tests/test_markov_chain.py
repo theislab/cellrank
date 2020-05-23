@@ -200,8 +200,7 @@ class TestMarkovChain:
         arc_colors = [
             c
             for arc, c in zip(
-                mc_fwd.metastable_states.cat.categories,
-                mc_fwd._metastable_states_colors,
+                mc_fwd.metastable_states.cat.categories, mc_fwd._meta_states_colors
             )
             if arc in arcs
         ]
@@ -243,7 +242,7 @@ class TestMarkovChain:
 
         mc_fwd.compute_metastable_states(use=3)
 
-        mc_fwd._metastable_states_colors = None
+        mc_fwd._meta_states_colors = None
         del mc_fwd.adata.uns[_colors(RcKey.FORWARD)]
 
         mc_fwd._check_and_create_colors()
@@ -253,7 +252,7 @@ class TestMarkovChain:
             mc_fwd.adata.uns[_colors(RcKey.FORWARD)], _create_categorical_colors(3)
         )
         np.testing.assert_array_equal(
-            mc_fwd.adata.uns[_colors(RcKey.FORWARD)], mc_fwd._metastable_states_colors
+            mc_fwd.adata.uns[_colors(RcKey.FORWARD)], mc_fwd._meta_states_colors
         )
 
 
@@ -286,9 +285,7 @@ class TestMarkovChainCopy:
         np.testing.assert_array_equal(
             mc1.metastable_states_probabilities, mc2.metastable_states_probabilities
         )
-        np.testing.assert_array_equal(
-            mc1._metastable_states_colors, mc2._metastable_states_colors
-        )
+        np.testing.assert_array_equal(mc1._meta_states_colors, mc2._meta_states_colors)
         assert mc1._G2M_score == mc2._G2M_score
         assert mc1._S_score == mc2._S_score
 
@@ -314,6 +311,6 @@ class TestMarkovChainCopy:
             mc1.metastable_states_probabilities
             is not mc2.metastable_states_probabilities
         )
-        assert mc1._metastable_states_colors is not mc2._metastable_states_colors
+        assert mc1._meta_states_colors is not mc2._meta_states_colors
         assert mc1._G2M_score != mc2._G2M_score
         assert mc1._S_score != mc2._S_score
