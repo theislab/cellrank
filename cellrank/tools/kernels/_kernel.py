@@ -608,7 +608,7 @@ class Kernel(UnaryKernelExpression, ABC):
             if self._variances is None:
                 logg.warning("No variances found, skipping the scaling")
             else:
-                logg.DEBUG("DEBUG: Scaling by variances")
+                logg.debug("DEBUG: Scaling by variances")
                 variances = self._variances.copy()
 
                 # check that for zero weight, there is also zero variance
@@ -625,7 +625,7 @@ class Kernel(UnaryKernelExpression, ABC):
                 ).flatten()
                 matrix[ixs] = matrix[ixs] / variances[ixs]
         elif sigma_corr is not None:
-            logg.DEBUG("DEBUG: Scaling sigma correlation")
+            logg.debug("DEBUG: Scaling sigma correlation")
             matrix.data = matrix.data * sigma_corr
 
         # use softmax
