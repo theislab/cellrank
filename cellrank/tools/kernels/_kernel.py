@@ -411,7 +411,7 @@ class UnaryKernelExpression(KernelExpression, ABC):
             logg.warning("KNN graph is not symmetric", time=start)
 
         if var_key is not None:
-            if var_key in self.adata.uns.keys():
+            if var_key in self.adata.obsp.keys():
                 logg.debug(f"DEBUG: Loading variances from `adata.obsp[{var_key!r}]`")
                 # keep it sparse
                 self._variances = csr_matrix(self.adata.obsp[var_key].astype(_dtype))
@@ -623,7 +623,7 @@ class Kernel(UnaryKernelExpression, ABC):
                 variances[ixs] = np.array(
                     np.clip(variances[ixs], a_min=var_min, a_max=None)
                 ).flatten()
-                matrix[ixs] = matrix[ixs] / variances[ixs]
+                matrix[ixs] = np.array(matrix[ixs] / variances[ixs]).flatten()
         elif sigma_corr is not None:
             logg.debug("DEBUG: Scaling sigma correlation")
             matrix.data = matrix.data * sigma_corr
