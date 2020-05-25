@@ -279,8 +279,10 @@ class GPCCA(BaseEstimator):
             If `True`, :paramref:`n_states` corresponds to an interval `[min, max]` inside of which
             the potentially optimal number of metastable states is searched.
         method
-            Method for calculating the Schur vectors. Valid options are: `'krylov'`, `'brandts'` and `'scipy'`.
-            For benefits of each method, see :class:`msmtoots.analysis.dense.gpcca.GPCCA`.
+            Method for calculating the Schur vectors. Valid options are: `'krylov'` or `'brandts'`.
+            For benefits of each method, see :class:`msmtoots.analysis.dense.gpcca.GPCCA`. The former is
+            an iterative procedure that computes a partial, sorted schur decomposition for large, sparse
+            matrices whereas the latter computes a full sorted schur decomposition of a dense matrix.
         which
             Eigenvalues are in general complex. `'LR'` - largest real part, `'LM'` - largest magnitude.
         cluster_key
