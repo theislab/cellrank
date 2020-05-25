@@ -780,7 +780,7 @@ class VelocityKernel(Kernel):
     vkey
         Key in :paramref:`adata` `.uns` where the velocities are stored.
     var_key
-        Key in :paramref:`adata` `.uns` where the velocity variances are stored.
+        Key in :paramref:`adata` `.obsp` where the velocity variances are stored.
     use_negative_cosines
         Whether to use correlations with cells that have an angle > 90 degree with v_i
     compute_cond_num
@@ -793,7 +793,7 @@ class VelocityKernel(Kernel):
         adata: AnnData,
         backward: bool = False,
         vkey: str = "velocity",
-        var_key: Optional[str] = None,
+        var_key: Optional[str] = "velocity_graph_uncertainties",
         use_negative_cosines: bool = True,
         compute_cond_num: bool = False,
     ):
