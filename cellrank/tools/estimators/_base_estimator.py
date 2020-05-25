@@ -801,9 +801,7 @@ class BaseEstimator(ABC):
 
         Params
         ------
-        iroot
-            Root cell. Can be inferred automatically using the backward process.
-        n_schur_vectors
+        n_comps
             Number of real schur vectors to consider.
         sorting
             How to sort the schur vectors. Options are 'LM' for largest magnitude and 'LR' for largest real part.
@@ -817,22 +815,24 @@ class BaseEstimator(ABC):
         def _get_dpt_row(e_vals, e_vecs, i):
             row = sum(
                 (
-                    np.abs(e_vals[l])
-                    / (1 - np.abs(e_vals[l]))
-                    * (e_vecs[i, l] - e_vecs[:, l])
+                    np.abs(e_vals[eval_ix])
+                    / (1 - np.abs(e_vals[eval_ix]))
+                    * (e_vecs[i, eval_ix] - e_vecs[:, eval_ix])
                 )
                 ** 2
                 # account for float32 precision
-                for l in range(0, e_vals.size)
-                if np.abs(e_vals[l]) < 0.9994
+                for eval_ix in range(0, e_vals.size)
+                if np.abs(e_vals[eval_ix]) < 0.9994
             )
 
             return np.sqrt(row)
 
         if "iroot" not in self._adata.uns.keys():
             raise ValueError('No field `"iroot"` found in `adata.uns`')
-
         iroot = self._adata.uns["iroot"]
+
+        if n_comps < 2:
+            raise ValueError("Please use at least `2` components. ")
 
         start = logg.info(
             f"Computing Generalized Diffusion Pseudotime using n_comps = {n_comps}"
@@ -844,6 +844,9 @@ class BaseEstimator(ABC):
         except ValueError:
             n_comps += 1
             evecs, evals, _ = sorted_krylov_schur(self._T, m=n_comps, z=sorting)
+
+        # may have to remove some values if too many converged
+        evecs, evals = evecs[:, :n_comps], evals[:n_comps]
 
         D = _get_dpt_row(evals, evecs, i=iroot)
         pseudotime = D / np.max(D[D < np.inf])

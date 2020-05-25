@@ -748,6 +748,8 @@ class VelocityKernel(Kernel):
         )
         logg.debug("Adding `.velo_corr`, the velocity correlations")
 
+        # TODO check how the velocity graph has been computed, urge user to use 'connectivities' and no rec. neigh.
+
         if use_negative_cosines:
             self.velo_corr = (velo_corr_pos + velo_corr_neg).astype(_dtype)
         else:
