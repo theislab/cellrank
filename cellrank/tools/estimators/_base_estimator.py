@@ -318,9 +318,9 @@ class BaseEstimator(ABC):
         ax.plot(x_circle, y_circle, "k-", label="unit circle")
 
         # set labels, ranges and legend
-        ax.set_xlabel("Im($\lambda$)")
+        ax.set_xlabel("Re($\lambda$)")
         ax.set_xlim(x_min_, x_max_)
-        ax.set_ylabel("Re($\lambda$)")
+        ax.set_ylabel("Im($\lambda$)")
         ax.set_ylim(y_min_, y_max_)
         key = "real part" if params["which"] == "LR" else "magnitude"
 
