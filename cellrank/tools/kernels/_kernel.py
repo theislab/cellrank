@@ -411,16 +411,16 @@ class UnaryKernelExpression(KernelExpression, ABC):
             logg.warning("KNN graph is not symmetric", time=start)
 
         if var_key is not None:
-            if var_key in self.adata.obsp.keys():
-                logg.debug(f"DEBUG: Loading variances from `adata.obsp[{var_key!r}]`")
+            if var_key in self.adata.uns.keys():
+                logg.debug(f"DEBUG: Loading variances from `adata.uns[{var_key!r}]`")
                 # keep it sparse
-                self._variances = csr_matrix(self.adata.obsp[var_key].astype(_dtype))
+                self._variances = csr_matrix(self.adata.uns[var_key].astype(_dtype))
                 if self._conn.shape != self._variances.shape:
                     raise ValueError(
                         f"Expected variances' shape `{self._variances.shape}` to be equal to `{self._conn.shape}`."
                     )
             else:
-                logg.warning(f"Unable to load variances from `adata.obsp[{var_key!r}]`")
+                logg.warning(f"Unable to load variances from `adata.uns[{var_key!r}]`")
         else:
             logg.debug("DEBUG: No variance key specified")
 
