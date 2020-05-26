@@ -812,7 +812,7 @@ class VelocityKernel(Kernel):
     def _read_from_adata(
         self,
         vkey: str,
-        var_key: Optional[str] = None,
+        var_key: Optional[str] = "velocity_graph_uncertainties",
         use_negative_cosines: bool = True,
         **kwargs,
     ):
