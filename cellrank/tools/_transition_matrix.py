@@ -18,6 +18,7 @@ def transition_matrix(
     sigma_corr: Optional[float] = None,
     scale_by_variances: bool = False,
     var_key: Optional[str] = "velocity_graph_uncertainties",
+    var_min: float = 0.1,
     use_negative_cosines: bool = True,
     self_transitions: bool = False,
     perc: Optional[float] = None,
@@ -51,6 +52,8 @@ def transition_matrix(
         Use velocity variances to scale the softmax
     var_key
         Key from `adata.uns` to acess velocity variances
+    var_min
+        Variances are clipped to this value at the lower end
     self_transitions
         Assigns elements to the diagonal of the velocity-graph based on a confidence measure
     perc
@@ -79,6 +82,7 @@ def transition_matrix(
     vk.compute_transition_matrix(
         sigma_corr=sigma_corr,
         scale_by_variances=scale_by_variances,
+        var_min=var_min,
         self_transitions=self_transitions,
         perc=perc,
         threshold=threshold,
