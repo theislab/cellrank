@@ -46,6 +46,96 @@ GPCCA = TypeVar("GPCCA")
 Lineage = TypeVar("Lineage")
 
 
+def _read_graph_data(adata: AnnData, key: str, default_location: str = "obsp"):
+    """Utility function to read graph data from AnnData
+
+    AnnData >=0.7 stores (n_obs x n_obs) matrices in .obsp rather than .uns. This is for
+    backward compatibility
+
+    Params
+    --------
+    adata
+        Annotated Data matrix
+    key
+        key from either `.uns` or `.obsp`
+    default_location
+        preferred location to search for `key`. Options are `.obsp` or `.uns`
+
+    Returns
+    --------
+    data
+        Graph data
+    read_from
+        Location where the data was accessed (`obsp` or `uns`)
+    """
+
+    if default_location == "obsp":
+        if adata.obsp is not None and key in adata.obsp.keys():
+            data = adata.obsp[key]
+            read_from = "obsp"
+        elif key in adata.uns.keys():
+            data = adata.uns[key]
+            read_from = "uns"
+        else:
+            raise ValueError(f"Key {key} neither found in `.obsp` nor in `.uns`")
+    elif default_location == "uns":
+        if key in adata.uns.keys():
+            data = adata.uns[key]
+            read_from = "uns"
+        elif adata.obsp is not None and key in adata.obsp.keys():
+            data = adata.obsp[key]
+            read_from = "obsp"
+        else:
+            raise ValueError(f"Key {key} neither found in `.uns` nor `.obsp`")
+    else:
+        raise NotImplementedError(f"Location {default_location} does not exist")
+
+    logg.info(f"Reading graph data {key} from {read_from}")
+
+    return data, read_from
+
+
+def _write_graph_data(
+    data: Union[spmatrix, np.ndarray, csr_matrix],
+    adata: AnnData,
+    key: str,
+    default_location: str = "obsp",
+):
+    """Utility function to write graph data to AnnData
+
+    AnnData >=0.7 stores (n_obs x n_obs) matrices in .obsp rather than .uns. This is for
+    backward compatibility
+
+    Params
+    --------
+    data
+        The graph data we want to write
+    adata
+        Annotated Data matrix
+    key
+        key from either `.uns` or `.obsp`
+    default_location
+        preferred location to search for `key`. Options are `.obsp` or `.uns`
+
+    Returns
+    --------
+    Nothing, just writes
+    """
+
+    if default_location == "obsp":
+        try:
+            adata.obsp[key] = data
+            write_to = "obsp"
+        except AttributeError:
+            adata.uns[key] = data
+            write_to = "uns"
+    elif default_location == "uns":
+        adata.uns[key] = data
+        write_to = "uns"
+
+    logg.info(f"Wrote graph data {key} to `{write_to}`")
+
+
 def _get_restriction_to_main(estimator: GPCCA):
     """
     Restrict the categorical of metastable states to the main states.
