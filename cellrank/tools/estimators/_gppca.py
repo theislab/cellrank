@@ -398,9 +398,13 @@ class GPCCA(BaseEstimator):
             self._coarse_init_dist = pd.Series(
                 gpcca.coarse_grained_input_distribution[valid_ixs], index=names
             )
-            self._coarse_stat_dist = pd.Series(
-                gpcca.coarse_grained_stationary_probability[valid_ixs], index=names
-            )
+            # careful here, in case computing the stat. dist failed
+            try:
+                self._coarse_stat_dist = pd.Series(
+                    gpcca.coarse_grained_stationary_probability[valid_ixs], index=names
+                )
+            except AttributeError as arr:
+                logg.warning("No stationary distribution found in GPCCA object")
 
             logg.info(
                 "Adding `.schur_vectors`\n"
