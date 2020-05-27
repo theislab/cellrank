@@ -742,6 +742,20 @@ class VelocityKernel(Kernel):
                 "Compute cosine correlations first as `scvelo.tl.velocity_graph()`."
             )
 
+        # check the velocity parameters
+        if vkey + "_params" in self.adata.uns.keys():
+            velocity_params = self.adata.uns[vkey + "_params"]
+            if velocity_params["mode_neighbors"] != "connectivities":
+                logg.warning(
+                    'Please re-compute the scvelo velocity graph using `mode_neighbors="connectivities"`'
+                )
+            if velocity_params["n_recurse_neighbors"] not in [0, 1]:
+                logg.warning(
+                    "Please re-compute the scvelo velocity graph using `n_recurse_neighbors=0`"
+                )
+        else:
+            logg.debug("Unable to check velocity graph parameters")
+
         velo_corr_pos, velo_corr_neg = (
             csr_matrix(self.adata.uns[vkey + "_graph"]).copy(),
             csr_matrix(self.adata.uns[vkey + "_graph_neg"]).copy(),
