@@ -822,12 +822,12 @@ class VelocityKernel(Kernel):
         self,
         vkey: str,
         var_key: Optional[str] = "velocity_graph_uncertainties",
-        use_negative_cosines: bool = True,
-        check_connectivity: bool = False,
+        # use_negative_cosines: bool = True,
+        # check_connectivity: bool = False,
         **kwargs,
     ):
         super()._read_from_adata(
-            var_key=var_key, check_connectivity=check_connectivity, **kwargs
+            var_key=var_key, **kwargs  # check_connectivity=check_connectivity,
         )
 
         if (vkey + "_graph" not in self.adata.uns.keys()) or (
@@ -857,8 +857,7 @@ class VelocityKernel(Kernel):
         )
         logg.debug("Adding `.velo_corr`, the velocity correlations")
 
-        # TODO check how the velocity graph has been computed, urge user to use 'connectivities' and no rec. neigh.
-
+        use_negative_cosines = kwargs.pop("use_negative_cosines", True)
         if use_negative_cosines:
             self._velo_corr = (velo_corr_pos + velo_corr_neg).astype(_dtype)
         else:
@@ -925,7 +924,7 @@ class VelocityKernel(Kernel):
             elif backward_mode == "transpose":
                 correlations = self._velo_corr.T
                 if self._variances is not None and scale_by_variances:
-                    variances = self._variances.T
+                    variances = self._variances.T.copy()
                 else:
                     variances = None
             else:
@@ -933,7 +932,7 @@ class VelocityKernel(Kernel):
         else:
             correlations = self._velo_corr
             if self._variances is not None and scale_by_variances:
-                variances = self._variances
+                variances = self._variances.copy()
             else:
                 variances = None
 
@@ -963,7 +962,7 @@ class VelocityKernel(Kernel):
         self._params = params
         self._compute_transition_matrix(
             matrix=correlations.copy(),
-            variances=variances.copy(),
+            variances=variances,
             self_transitions=self_transitions,
             exp=True,
             var_min=var_min,
@@ -1014,6 +1013,8 @@ class ConnectivityKernel(Kernel):
     compute_cond_num
         Whether to compute condition number of the transition matrix. Note that this might be costly,
         since it does not use sparse implementation.
+    check_connectivity
+        Check whether the underlying KNN graph is connected
     """
 
     def __init__(
@@ -1022,9 +1023,14 @@ class ConnectivityKernel(Kernel):
         backward: bool = False,
         var_key: Optional[str] = None,
         compute_cond_num: bool = False,
+        check_connectivity: bool = False,
     ):
         super().__init__(
-            adata, backward=backward, var_key=var_key, compute_cond_num=compute_cond_num
+            adata,
+            backward=backward,
+            var_key=var_key,
+            compute_cond_num=compute_cond_num,
+            check_connectivity=check_connectivity,
         )
         self._var_key = var_key
 
