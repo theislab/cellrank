@@ -593,9 +593,9 @@ class Kernel(UnaryKernelExpression, ABC):
     def _compute_transition_matrix(
         self,
         matrix: spmatrix,
+        variances: Optional[spmatrix] = None,
         self_transitions: bool = False,
         exp: bool = False,
-        scale_by_variances: bool = False,
         var_min: float = 0.1,
         sigma_corr: Optional[float] = None,
         perc: Optional[float] = None,
@@ -611,32 +611,24 @@ class Kernel(UnaryKernelExpression, ABC):
             matrix.setdiag(self_prob)
 
         # Scale weights either by variances or by constant value
-        if scale_by_variances:
-            if self._variances is None:
-                logg.warning("No variances found, skipping the scaling")
-            else:
-                logg.debug("DEBUG: Scaling by variances")
-                variances = self._variances.copy()
+        if variances is not None:
+            logg.debug("DEBUG: Scaling by variances")
 
-                # check that both have been computed on the same elements
-                if not all(
-                    [
-                        (var_ixs == mat_ixs).all()
-                        for var_ixs, mat_ixs in zip(
-                            variances.nonzero(), matrix.nonzero()
-                        )
-                    ]
-                ):
-                    logg.warning(
-                        "Uncertainty indices do not match velocity graph indices"
-                    )
+            # check that both have been computed on the same elements
+            if not all(
+                [
+                    (var_ixs == mat_ixs).all()
+                    for var_ixs, mat_ixs in zip(variances.nonzero(), matrix.nonzero())
+                ]
+            ):
+                logg.warning("Uncertainty indices do not match velocity graph indices")
 
-                # for non-zero edge-weights, clip var's to a_min and scale the edge weights by these vars
-                ixs = matrix.nonzero()
-                variances[ixs] = np.array(
-                    np.clip(variances[ixs], a_min=var_min, a_max=None)
-                ).flatten()
-                matrix[ixs] = np.array(matrix[ixs] / variances[ixs]).flatten()
+            # for non-zero edge-weights, clip var's to a_min and scale the edge weights by these vars
+            ixs = matrix.nonzero()
+            variances[ixs] = np.array(
+                np.clip(variances[ixs], a_min=var_min, a_max=None)
+            ).flatten()
+            matrix[ixs] = np.array(matrix[ixs] / variances[ixs]).flatten()
         elif sigma_corr is not None:
             logg.debug("DEBUG: Scaling sigma correlation")
             matrix.data = matrix.data * sigma_corr
@@ -799,6 +791,8 @@ class VelocityKernel(Kernel):
     compute_cond_num
         Whether to compute condition number of the transition matrix. Note that this might be costly,
         since it does not use sparse implementation.
+    check_connectivity
+        Check whether the underlying KNN graph is connected
     """
 
     def __init__(
@@ -923,12 +917,25 @@ class VelocityKernel(Kernel):
         if self._direction == Direction.BACKWARD:
             if backward_mode == "negate":
                 correlations = self._velo_corr.multiply(-1)
+                if scale_by_variances:
+                    logg.warning(
+                        'Scaling by variances is not implemented for `backward_mode="negate". Skipping'
+                    )
+                variances = None
             elif backward_mode == "transpose":
                 correlations = self._velo_corr.T
+                if self._variances is not None and scale_by_variances:
+                    variances = self._variances.T
+                else:
+                    variances = None
             else:
                 raise ValueError(f"Unknown backward mode `{backward_mode!r}`.")
         else:
             correlations = self._velo_corr
+            if self._variances is not None and scale_by_variances:
+                variances = self._variances
+            else:
+                variances = None
 
         # set the scaling parameter for the softmax
         med_corr = np.median(np.abs(correlations.data))
@@ -956,7 +963,7 @@ class VelocityKernel(Kernel):
         self._params = params
         self._compute_transition_matrix(
             matrix=correlations.copy(),
-            scale_by_variances=scale_by_variances,
+            variances=variances.copy(),
             self_transitions=self_transitions,
             exp=True,
             var_min=var_min,
