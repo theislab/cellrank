@@ -381,6 +381,7 @@ class UnaryKernelExpression(KernelExpression, ABC):
         backward: bool = False,
         op_name: Optional[str] = None,
         compute_cond_num: bool = False,
+        check_connectivity: bool = False,
         **kwargs,
     ):
         super().__init__(op_name, backward=backward, compute_cond_num=compute_cond_num)
@@ -388,7 +389,7 @@ class UnaryKernelExpression(KernelExpression, ABC):
             op_name is None
         ), "Unary kernel does not support any kind operation associated with it."
         self._adata = adata
-        self._read_from_adata(**kwargs)
+        self._read_from_adata(check_connectivity=check_connectivity, **kwargs)
 
     @abstractmethod
     def _read_from_adata(self, **kwargs):
@@ -401,13 +402,19 @@ class UnaryKernelExpression(KernelExpression, ABC):
 
         self._conn = get_neighs(self.adata, "connectivities").astype(_dtype)
 
-        start = logg.debug("Checking the KNN graph for connectedness")
-        if not is_connected(self._conn):
-            logg.warning("KNN graph is not connected", time=start)
+        check_connectivity = kwargs.pop("check_connectivity", False)
+        if check_connectivity:
+            start = logg.debug("Checking the KNN graph for connectedness")
+            if not is_connected(self._conn):
+                logg.warning("KNN graph is not connected", time=start)
+            else:
+                logg.debug("Knn graph is connected", time=start)
 
         start = logg.debug("Checking the KNN graph for symmetry")
         if not is_symmetric(self._conn):
             logg.warning("KNN graph is not symmetric", time=start)
+        else:
+            logg.debug("KNN graph is symmetric", time=start)
 
         variance_key = kwargs.pop("variance_key", None)
         if variance_key is not None:
@@ -722,6 +729,7 @@ class VelocityKernel(Kernel):
         vkey: str = "velocity",
         use_negative_cosines: bool = True,
         compute_cond_num: bool = False,
+        check_connectivity: bool = False,
     ):
         super().__init__(
             adata,
@@ -729,12 +737,17 @@ class VelocityKernel(Kernel):
             vkey=vkey,
             use_negative_cosines=use_negative_cosines,
             compute_cond_num=compute_cond_num,
+            check_connectivity=check_connectivity,
         )
         self._vkey = vkey  # for copy
         self._use_negative_cosines = use_negative_cosines
 
-    def _read_from_adata(self, vkey: str, use_negative_cosines: bool, **kwargs):
-        super()._read_from_adata(variance_key="velocity", **kwargs)
+    def _read_from_adata(
+        self, vkey: str, use_negative_cosines: bool, check_connectivity: bool, **kwargs
+    ):
+        super()._read_from_adata(
+            variance_key="velocity", check_connectivity=check_connectivity, **kwargs
+        )
         if (vkey + "_graph" not in self.adata.uns.keys()) or (
             vkey + "_graph_neg" not in self.adata.uns.keys()
         ):
