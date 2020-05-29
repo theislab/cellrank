@@ -1115,6 +1115,7 @@ class PalantirKernel(Kernel):
         time_key: str = "dpt_pseudotime",
         var_key: Optional[str] = None,
         compute_cond_num: bool = False,
+        check_connectivity: bool = False,
     ):
         super().__init__(
             adata,
@@ -1122,6 +1123,7 @@ class PalantirKernel(Kernel):
             time_key=time_key,
             var_key=var_key,
             compute_cond_num=compute_cond_num,
+            check_connectivity=check_connectivity,
         )
         self._time_key = time_key
         self._var_key = var_key
