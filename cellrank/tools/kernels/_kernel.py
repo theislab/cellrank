@@ -618,11 +618,17 @@ class Kernel(UnaryKernelExpression, ABC):
                 logg.debug("DEBUG: Scaling by variances")
                 variances = self._variances.copy()
 
-                # check that for zero weight, there is also zero variance
-                ixs_check = matrix == 0
-                if np.sum(variances[ixs_check] != 0) > 0:
+                # check that both have been computed on the same elements
+                if not all(
+                    [
+                        (var_ixs == mat_ixs).all()
+                        for var_ixs, mat_ixs in zip(
+                            variances.nonzero(), matrix.nonzero()
+                        )
+                    ]
+                ):
                     logg.warning(
-                        f"There were {np.sum(variances[ixs_check] != 0)} edges with zero weight but non-zero variance"
+                        "Uncertainty indices do not match velocity graph indices"
                     )
 
                 # for non-zero edge-weights, clip var's to a_min and scale the edge weights by these vars
