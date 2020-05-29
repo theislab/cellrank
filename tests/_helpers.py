@@ -270,9 +270,13 @@ def _is_connected(c) -> bool:
     return nx.is_connected(G)
 
 
-def create_kernels(adata: AnnData) -> Tuple[VelocityKernel, ConnectivityKernel]:
-    vk = VelocityKernel(adata)
-    ck = ConnectivityKernel(adata)
+def create_kernels(
+    adata: AnnData,
+    var_key_connectivities: str = "connectivity_variances",
+    var_key_velocities: str = "velocity_variances",
+) -> Tuple[VelocityKernel, ConnectivityKernel]:
+    vk = VelocityKernel(adata, var_key=var_key_velocities)
+    ck = ConnectivityKernel(adata, var_key=var_key_connectivities)
     vk._transition_matrix = csr_matrix(np.eye(adata.n_obs))
     ck._transition_matrix = np.eye(adata.n_obs, k=1) / 2 + np.eye(adata.n_obs) / 2
     ck._transition_matrix[-1, -1] = 1
