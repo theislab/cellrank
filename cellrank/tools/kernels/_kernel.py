@@ -819,9 +819,7 @@ class VelocityKernel(Kernel):
         self._use_negative_cosines = use_negative_cosines
 
     def _read_from_adata(self, var_key: Optional[str] = None, **kwargs):
-        super()._read_from_adata(
-            var_key=var_key, **kwargs  # check_connectivity=check_connectivity,
-        )
+        super()._read_from_adata(var_key=var_key, **kwargs)
 
         vkey = kwargs.pop("vkey", "velocity")
         if (vkey + "_graph" not in self.adata.uns.keys()) or (
