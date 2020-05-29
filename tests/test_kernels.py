@@ -228,8 +228,16 @@ class TestInitializeKernel:
         assert c3.transition_matrix == 1 / 2
 
     def test_adaptive_kernel_constants(self, adata):
-        k = (3 * ConnectivityKernel(adata).compute_transition_matrix()) ^ (
-            1 * ConnectivityKernel(adata).compute_transition_matrix()
+        k = (
+            3
+            * ConnectivityKernel(
+                adata, var_key="velocity_variances"
+            ).compute_transition_matrix()
+        ) ^ (
+            1
+            * ConnectivityKernel(
+                adata, var_key="connectivity_variances"
+            ).compute_transition_matrix()
         )
         k.compute_transition_matrix()
 
