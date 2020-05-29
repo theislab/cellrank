@@ -381,6 +381,7 @@ class UnaryKernelExpression(KernelExpression, ABC):
         backward: bool = False,
         op_name: Optional[str] = None,
         compute_cond_num: bool = False,
+        check_connectivity: bool = False,
         **kwargs,
     ):
         super().__init__(op_name, backward=backward, compute_cond_num=compute_cond_num)
@@ -388,7 +389,7 @@ class UnaryKernelExpression(KernelExpression, ABC):
             op_name is None
         ), "Unary kernel does not support any kind operation associated with it."
         self._adata = adata
-        self._read_from_adata(**kwargs)
+        self._read_from_adata(check_connectivity=check_connectivity, **kwargs)
 
     @abstractmethod
     def _read_from_adata(self, var_key: Optional[str] = None, **kwargs):
@@ -402,13 +403,19 @@ class UnaryKernelExpression(KernelExpression, ABC):
         self._conn = get_neighs(self.adata, "connectivities").astype(_dtype)
         self._variances = None
 
-        start = logg.debug("Checking the KNN graph for connectedness")
-        if not is_connected(self._conn):
-            logg.warning("KNN graph is not connected", time=start)
+        check_connectivity = kwargs.pop("check_connectivity", False)
+        if check_connectivity:
+            start = logg.debug("Checking the KNN graph for connectedness")
+            if not is_connected(self._conn):
+                logg.warning("KNN graph is not connected", time=start)
+            else:
+                logg.debug("Knn graph is connected", time=start)
 
         start = logg.debug("Checking the KNN graph for symmetry")
         if not is_symmetric(self._conn):
             logg.warning("KNN graph is not symmetric", time=start)
+        else:
+            logg.debug("KNN graph is symmetric", time=start)
 
         if var_key is not None:
             if var_key in self.adata.uns.keys():
@@ -796,6 +803,7 @@ class VelocityKernel(Kernel):
         var_key: Optional[str] = "velocity_graph_uncertainties",
         use_negative_cosines: bool = True,
         compute_cond_num: bool = False,
+        check_connectivity: bool = False,
     ):
         super().__init__(
             adata,
@@ -804,6 +812,7 @@ class VelocityKernel(Kernel):
             var_key=var_key,
             use_negative_cosines=use_negative_cosines,
             compute_cond_num=compute_cond_num,
+            check_connectivity=check_connectivity,
         )
         self._vkey = vkey  # for copy
         self._var_key = var_key
@@ -814,9 +823,13 @@ class VelocityKernel(Kernel):
         vkey: str,
         var_key: Optional[str] = "velocity_graph_uncertainties",
         use_negative_cosines: bool = True,
+        check_connectivity: bool = False,
         **kwargs,
     ):
-        super()._read_from_adata(var_key=var_key, **kwargs)
+        super()._read_from_adata(
+            var_key=var_key, check_connectivity=check_connectivity, **kwargs
+        )
+
         if (vkey + "_graph" not in self.adata.uns.keys()) or (
             vkey + "_graph_neg" not in self.adata.uns.keys()
         ):
@@ -824,11 +837,27 @@ class VelocityKernel(Kernel):
                 "Compute cosine correlations first as `scvelo.tl.velocity_graph()`."
             )
 
+        # check the velocity parameters
+        if vkey + "_params" in self.adata.uns.keys():
+            velocity_params = self.adata.uns[vkey + "_params"]
+            if velocity_params["mode_neighbors"] != "connectivities":
+                logg.warning(
+                    'Please re-compute the scvelo velocity graph using `mode_neighbors="connectivities"`'
+                )
+            if velocity_params["n_recurse_neighbors"] not in [0, 1]:
+                logg.warning(
+                    "Please re-compute the scvelo velocity graph using `n_recurse_neighbors=0`"
+                )
+        else:
+            logg.debug("Unable to check velocity graph parameters")
+
         velo_corr_pos, velo_corr_neg = (
             csr_matrix(self.adata.uns[vkey + "_graph"]).copy(),
             csr_matrix(self.adata.uns[vkey + "_graph_neg"]).copy(),
         )
         logg.debug("Adding `.velo_corr`, the velocity correlations")
+
+        # TODO check how the velocity graph has been computed, urge user to use 'connectivities' and no rec. neigh.
 
         if use_negative_cosines:
             self._velo_corr = (velo_corr_pos + velo_corr_neg).astype(_dtype)
