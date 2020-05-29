@@ -231,7 +231,7 @@ class TestInitializeKernel:
         k = (
             3
             * ConnectivityKernel(
-                adata, var_key="velocity_variances"
+                adata, var_key="connectivity_variances"
             ).compute_transition_matrix()
         ) ^ (
             1
@@ -248,8 +248,18 @@ class TestInitializeKernel:
         k = (
             4
             * (
-                (3 * ConnectivityKernel(adata).compute_transition_matrix())
-                ^ (1 * ConnectivityKernel(adata).compute_transition_matrix())
+                (
+                    3
+                    * ConnectivityKernel(
+                        adata, var_key="connectivity_variances"
+                    ).compute_transition_matrix()
+                )
+                ^ (
+                    1
+                    * ConnectivityKernel(
+                        adata, var_key="connectivity_variances"
+                    ).compute_transition_matrix()
+                )
             )
             + 2 * ConnectivityKernel(adata).compute_transition_matrix()
         )
