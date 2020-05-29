@@ -1128,8 +1128,10 @@ class PalantirKernel(Kernel):
         self._time_key = time_key
         self._var_key = var_key
 
-    def _read_from_adata(self, time_key: str, var_key: Optional[str] = None, **kwargs):
+    def _read_from_adata(self, var_key: Optional[str] = None, **kwargs):
         super()._read_from_adata(var_key=var_key, **kwargs)
+
+        time_key = kwargs.pop("time_key", "dpt_pseudotime")
         if time_key not in self.adata.obs.keys():
             raise KeyError(f"Could not find time key in `adata.obs[{time_key!r}]`.")
         logg.debug("Adding `.pseudotime`")
