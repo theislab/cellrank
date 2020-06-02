@@ -208,7 +208,7 @@ class GPCCA(BaseEstimator):
 
         if self._schur_matrix is None:
             raise RuntimeError(
-                "Compute Schur matrix first as `compute_schur()` or `.compute_metastable_states()` with `n_states` > 1."
+                "Compute Schur matrix first as `.compute_schur()` or `.compute_metastable_states()` with `n_states` > 1."
             )
 
         fig, ax = plt.subplots(
