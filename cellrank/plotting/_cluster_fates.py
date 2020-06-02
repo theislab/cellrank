@@ -456,10 +456,7 @@ def cluster_fates(
         lin_names = list(adata.obsm[lk].names)
 
     if mode == "violin" and not is_all:
-        # TODO: temporary fix, until subclassing is made ready
-        names, colors = adata.obsm[lk].names, adata.obsm[lk].colors
         adata = adata[np.isin(adata.obs[cluster_key], clusters)].copy()
-        adata.obsm[lk] = Lineage(adata.obsm[lk], names=names, colors=colors)
 
     d = odict()
     for name in clusters:
