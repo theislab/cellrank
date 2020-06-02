@@ -161,7 +161,7 @@ class GPCCA(BaseEstimator):
 
         if self.schur_vectors is None:
             raise RuntimeError(
-                "Compute Schur vectors as `.compute_metastable_states()` with `n_states` > 1 first."
+                "Compute Schur vectors as `.compute_schur()` or `.compute_metastable_states()` with `n_states` > 1."
             )
 
         self._plot_vectors(
@@ -208,7 +208,7 @@ class GPCCA(BaseEstimator):
 
         if self._schur_matrix is None:
             raise RuntimeError(
-                "Compute Schur matrix as `.compute_metastable_states()` with `n_states` > 1 first."
+                "Compute Schur matrix first as `compute_schur()` or `.compute_metastable_states()` with `n_states` > 1."
             )
 
         fig, ax = plt.subplots(
@@ -283,6 +283,9 @@ class GPCCA(BaseEstimator):
         Returns
         -------
         None
+            Nothings, but updates the following fields:
+
+                - :paramref:`schur_vectors`
         """
 
         if n_vectors < 2:
