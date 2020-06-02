@@ -20,6 +20,7 @@ np.random.seed(42)
 
 
 def _create_dummy_adata(n_obs: int) -> AnnData:
+    np.random.seed(42)
     adata = scv.datasets.toy_data(n_obs=n_obs)
     scv.pp.filter_and_normalize(adata, min_shared_counts=20, n_top_genes=1000)
     scv.pp.moments(adata, n_pcs=30, n_neighbors=30)
