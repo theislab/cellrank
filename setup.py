@@ -45,6 +45,7 @@ if __name__ == "__main__":
         extras_require=dict(
             test=[
                 "pytest>=4.4",
+                "mock>=4.0.2",
                 "pytest-mock>=3.1.0",
                 "python-igraph",
                 "louvain==0.6.1",
