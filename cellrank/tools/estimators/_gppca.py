@@ -81,6 +81,7 @@ class GPCCA(BaseEstimator):
         else:
             self._meta_key = str(MetaKey.FORWARD)
 
+        self._gpcca: GPCCA = None
         self._schur_vectors = None
         self._coarse_T = None
         self._coarse_init_dist = None
@@ -268,7 +269,7 @@ class GPCCA(BaseEstimator):
         p_thresh: float = 1e-15,
     ):
         """
-        Calculate the metastable states.
+        Compute the metastable states.
 
         Params
         ------
@@ -282,9 +283,9 @@ class GPCCA(BaseEstimator):
             the potentially optimal number of metastable states is searched.
         method
             Method for calculating the Schur vectors. Valid options are: `'krylov'` or `'brandts'`.
-            For benefits of each method, see :class:`msmtoots.analysis.dense.gpcca.GPCCA`. The former is
-            an iterative procedure that computes a partial, sorted schur decomposition for large, sparse
-            matrices whereas the latter computes a full sorted schur decomposition of a dense matrix.
+            For benefits of each method, see :class:`msmtools.analysis.dense.gpcca.GPCCA`. The former is
+            an iterative procedure that computes a partial, sorted Schur decomposition for large, sparse
+            matrices whereas the latter computes a full sorted Schur decomposition of a dense matrix.
         which
             Eigenvalues are in general complex. `'LR'` - largest real part, `'LM'` - largest magnitude.
         cluster_key
@@ -309,16 +310,17 @@ class GPCCA(BaseEstimator):
         """
 
         if isinstance(n_states, int) and n_states == 1:
-
             start = logg.info("Computing metastable states")
             logg.warning("For `n_states=1`, we compute the stationary distribution")
+
             k = self.eigendecomposition["params"]["k"]
             which = self.eigendecomposition["params"]["which"]
             alpha = self.eigendecomposition["params"]["alpha"]
+
             self._compute_eig(k=k, which=which, alpha=alpha, only_evals=False)
             stationary_dist = self.eigendecomposition["stationary_dist"]
 
-            valid_ixs = self._assign_metastable_states(
+            _ = self._assign_metastable_states(
                 stationary_dist[:, None],
                 np.zeros_like(stationary_dist),
                 n_cells,
@@ -336,11 +338,27 @@ class GPCCA(BaseEstimator):
                 self._schur_matrix,
             ) = [None] * 6
 
-            logg.info("Adding `.metastable_states`\n" "    Finish", time=start)
-
+            logg.info("Adding `.metastable_states`\n    Finish", time=start)
         else:
+            if initial_distribution is None:
+                initial_distribution = np.true_divide(
+                    np.ones(self._T.shape[0]), self._T.shape[0]
+                )
 
-            gpcca = _GPPCA(self._T, eta=initial_distribution, z=which, method=method)
+            if (
+                self._gpcca is None
+                or not np.allclose(self._gpcca.eta, initial_distribution)
+                or self._gpcca.z != which
+            ):
+                self._gpcca = _GPPCA(
+                    self._T, eta=initial_distribution, z=which, method=method
+                )
+            else:
+                # we have already precomputed the Schur decomposition, possibly usable
+                # reuse only if `which` and `eta` are the same, method can differ (currently, `'krylov'` doesn't return
+                # R, but will be soon fixed)
+                self._gpcca.method = method
+                logg.debug("Possibly using cached Schur decomposition")
 
             if use_min_chi:
                 if not isinstance(n_states, (dict, tuple, list)):
@@ -370,21 +388,21 @@ class GPCCA(BaseEstimator):
                     f"DEBUG: Calculating minChi within interval [{minn}, {maxx}]"
                 )
                 n_states = int(
-                    np.arange(minn, maxx)[np.argmax(gpcca.minChi(minn, maxx))]
+                    np.arange(minn, maxx)[np.argmax(self._gpcca.minChi(minn, maxx))]
                 )
             elif not isinstance(n_states, int):
                 raise ValueError(
-                    f"Expected `n_states` to be integer when `use_min_chi=False`, found `{type(n_states).__name__}`."
+                    f"Expected `n_states` to be an integer when `use_min_chi=False`, found `{type(n_states).__name__}`."
                 )
 
             start = logg.info("Computing metastable states")
 
-            gpcca = gpcca.optimize(m=n_states)
+            self._gpcca = self._gpcca.optimize(m=n_states)
 
             # when `n_cells!=None` and the overlap is high, we're skipping some metastable states
             valid_ixs = self._assign_metastable_states(
-                gpcca.memberships,
-                gpcca.metastable_assignment,
+                self._gpcca.memberships,
+                self._gpcca.metastable_assignment,
                 n_cells,
                 cluster_key=cluster_key,
                 p_thresh=p_thresh,
@@ -395,24 +413,27 @@ class GPCCA(BaseEstimator):
             )
 
             self._lin_probs = None
-            self._schur_vectors = gpcca.schur_vectors
-            self._schur_matrix = gpcca.R  # gpcca.schur_matrix
+            self._schur_vectors = self._gpcca.schur_vectors
+            self._schur_matrix = self._gpcca.R  # gpcca.schur_matrix
 
             names = self._meta_lin_probs.names
             self._coarse_T = pd.DataFrame(
-                gpcca.coarse_grained_transition_matrix[valid_ixs, :][:, valid_ixs],
+                self._gpcca.coarse_grained_transition_matrix[valid_ixs, :][
+                    :, valid_ixs
+                ],
                 index=names,
                 columns=names,
             )
             self._coarse_init_dist = pd.Series(
-                gpcca.coarse_grained_input_distribution[valid_ixs], index=names
+                self._gpcca.coarse_grained_input_distribution[valid_ixs], index=names
             )
             # careful here, in case computing the stat. dist failed
-            try:
+            if self._gpcca.coarse_grained_stationary_probability is not None:
                 self._coarse_stat_dist = pd.Series(
-                    gpcca.coarse_grained_stationary_probability[valid_ixs], index=names
+                    self._gpcca.coarse_grained_stationary_probability[valid_ixs],
+                    index=names,
                 )
-            except AttributeError as arr:
+            else:
                 logg.warning("No stationary distribution found in GPCCA object")
 
             logg.info(
