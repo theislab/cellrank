@@ -1,23 +1,24 @@
 # -*- coding: utf-8 -*-
 from abc import ABC, abstractmethod
-from cellrank.tools._constants import Direction, _transition
-from cellrank.tools._utils import (
-    _normalize,
-    is_connected,
-    is_symmetric,
-    bias_knn,
-    has_neighs,
-    get_neighs,
-)
-
-from typing import Optional, Union, Callable, List, Iterable, Tuple, Type, Any, Dict
-from anndata import AnnData
-from scanpy import logging as logg
-from scipy.sparse import issparse, spdiags, csr_matrix, spmatrix
-from functools import wraps, reduce
 from copy import copy
+from typing import Any, Dict, List, Type, Tuple, Union, Callable, Iterable, Optional
+from functools import wraps, reduce
 
 import numpy as np
+from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix
+
+from scanpy import logging as logg
+from anndata import AnnData
+
+from cellrank.tools._utils import (
+    bias_knn,
+    _normalize,
+    get_neighs,
+    has_neighs,
+    is_connected,
+    is_symmetric,
+)
+from cellrank.tools._constants import Direction, _transition
 
 _ERROR_DIRECTION_MSG = "Can only combine kernels that have the same direction."
 _ERROR_EMPTY_CACHE_MSG = (

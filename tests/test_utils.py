@@ -1,16 +1,12 @@
 # -*- coding: utf-8 -*-
-from cellrank.tools._utils import (
-    _merge_categorical_series,
-    _map_names_and_colors,
-    _process_series,
-)
-from _helpers import assert_array_nan_equal
-
+import numpy as np
+import pandas as pd
+import pytest
 from pandas.api.types import is_categorical_dtype
 
-import pytest
-import pandas as pd
-import numpy as np
+from _helpers import assert_array_nan_equal
+from cellrank.tools._utils import _process_series, _merge_categorical_series
+from cellrank.tools._colors import _map_names_and_colors
 
 
 class TestToolsUtils:

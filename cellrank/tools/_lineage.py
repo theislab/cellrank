@@ -1,20 +1,21 @@
 # -*- coding: utf-8 -*-
-from cellrank.tools._utils import (
-    unique_order_preserving,
-    _create_categorical_colors,
-    _compute_mean_color,
-    _convert_lineage_name,
-)
-from cellrank.tools._constants import Lin
-
-from typing import Optional, Iterable, Callable, TypeVar, List, Union, Tuple
+from typing import List, Tuple, Union, TypeVar, Callable, Iterable, Optional
 from itertools import combinations
-from scanpy import logging as logg
 
-import matplotlib.colors as c
 import numpy as np
 import pandas as pd
 
+import matplotlib.colors as c
+
+from scanpy import logging as logg
+
+from cellrank.tools._utils import (
+    _compute_mean_color,
+    _convert_lineage_name,
+    unique_order_preserving,
+)
+from cellrank.tools._colors import _create_categorical_colors
+from cellrank.tools._constants import Lin
 
 ColorLike = TypeVar("ColorLike")
 _ERROR_NOT_ITERABLE = "Expected `{}` to be iterable, found type `{}`."

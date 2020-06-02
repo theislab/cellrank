@@ -1,18 +1,19 @@
 # -*- coding: utf-8 -*-
+from typing import Tuple
+
+import numpy as np
+import pytest
+
+import matplotlib
+
+import scanpy as sc
+import scvelo as scv
+from anndata import AnnData
+
+import cellrank as cr
 from cellrank.tools import CFLARE
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tools._constants import LinKey
-
-from typing import Tuple
-from anndata import AnnData
-
-import pytest
-import scanpy as sc
-import scvelo as scv
-import cellrank as cr
-import numpy as np
-import matplotlib
-
 
 matplotlib.use("Agg")
 np.random.seed(42)
