@@ -25,6 +25,19 @@ FIGS = HERE / "figures"
 DPI = 40
 TOL = 300
 
+GENES = [
+    "Tcea1",
+    "Tmeff2",
+    "Ndufb3",
+    "Rpl37a",
+    "Arpc2",
+    "Ptma",
+    "Cntnap5b",
+    "Cntnap5a",
+    "Mpc2",
+    "2010300C02Rik",
+]
+
 cr.settings.figdir = FIGS
 scv.settings.figdir = str(FIGS)
 
@@ -92,6 +105,7 @@ def compare(
 
     if backward:
         return compare_bwd
+
     return compare_fwd
 
 
@@ -323,13 +337,7 @@ class TestClusterLineages:
     def test_cluster_lineage(self, adata: AnnData, fpath: Path):
         model = create_model(adata)
         cr.pl.cluster_lineage(
-            adata,
-            model,
-            adata.var_names[:10],
-            "0",
-            time_key="latent_time",
-            dpi=DPI,
-            save=fpath,
+            adata, model, GENES[:10], "0", time_key="latent_time", dpi=DPI, save=fpath,
         )
 
     @compare()
@@ -338,7 +346,7 @@ class TestClusterLineages:
         cr.pl.cluster_lineage(
             adata,
             model,
-            adata.var_names[:10],
+            GENES[:10],
             "0",
             time_key="latent_time",
             norm=False,
@@ -352,7 +360,7 @@ class TestClusterLineages:
         cr.pl.cluster_lineage(
             adata,
             model,
-            adata.var_names[:10],
+            GENES[:10],
             "0",
             time_key="latent_time",
             data_key="Ms",
@@ -369,7 +377,7 @@ class TestHeatmap:
         cr.pl.heatmap(
             adata,
             model,
-            adata.var_names[:10],
+            GENES[:10],
             kind="lineages",
             time_key="latent_time",
             dpi=DPI,
@@ -382,7 +390,7 @@ class TestHeatmap:
         cr.pl.heatmap(
             adata,
             model,
-            adata.var_names[:10],
+            GENES[:10],
             kind="genes",
             time_key="latent_time",
             dpi=DPI,
@@ -395,7 +403,7 @@ class TestHeatmap:
         cr.pl.heatmap(
             adata,
             model,
-            adata.var_names[:10],
+            GENES[:10],
             kind="lineages",
             time_key="latent_time",
             cluster_genes=True,
@@ -409,7 +417,7 @@ class TestHeatmap:
         cr.pl.heatmap(
             adata,
             model,
-            adata.var_names[:10],
+            GENES[:10],
             kind="lineages",
             time_key="latent_time",
             lineage_height=0.2,
@@ -423,7 +431,7 @@ class TestHeatmap:
         cr.pl.heatmap(
             adata,
             model,
-            adata.var_names[:10],
+            GENES[:10],
             kind="lineages",
             time_key="latent_time",
             start_lineage="0",
@@ -438,7 +446,7 @@ class TestHeatmap:
         cr.pl.heatmap(
             adata,
             model,
-            adata.var_names[:5],
+            GENES[:5],
             kind="genes",
             time_key="latent_time",
             cmap=cm.viridis,
@@ -454,7 +462,7 @@ class TestGeneTrend:
         cr.pl.gene_trends(
             adata,
             model,
-            adata.var_names[:3],
+            GENES[:3],
             data_key="Ms",
             dirname="trends_simple",
             dpi=DPI,
@@ -465,13 +473,7 @@ class TestGeneTrend:
     def test_trends_same_plot(self, adata: AnnData, fpath: Path):
         model = create_model(adata)
         cr.pl.gene_trends(
-            adata,
-            model,
-            adata.var_names[:3],
-            data_key="Ms",
-            same_plot=True,
-            dpi=DPI,
-            save=fpath,
+            adata, model, GENES[:3], data_key="Ms", same_plot=True, dpi=DPI, save=fpath,
         )
 
     @compare()
@@ -480,7 +482,7 @@ class TestGeneTrend:
         cr.pl.gene_trends(
             adata,
             model,
-            adata.var_names[0],
+            GENES[0],
             data_key="Ms",
             same_plot=True,
             hide_cells=True,
@@ -494,7 +496,7 @@ class TestGeneTrend:
         cr.pl.gene_trends(
             adata,
             model,
-            adata.var_names[0],
+            GENES[0],
             data_key="Ms",
             same_plot=True,
             conf_int=False,
@@ -508,7 +510,7 @@ class TestGeneTrend:
         cr.pl.gene_trends(
             adata,
             model,
-            adata.var_names[:3],
+            GENES[:3],
             data_key="Ms",
             sharey=False,
             dirname="trends_sharey",
@@ -522,7 +524,7 @@ class TestGeneTrend:
         cr.pl.gene_trends(
             adata,
             model,
-            adata.var_names[0],
+            GENES[0],
             data_key="Ms",
             same_plot=True,
             show_cbar=False,
@@ -536,7 +538,7 @@ class TestGeneTrend:
         cr.pl.gene_trends(
             adata,
             model,
-            adata.var_names[0],
+            GENES[0],
             data_key="Ms",
             same_plot=True,
             lineage_cmap=cm.Set2,
@@ -550,7 +552,7 @@ class TestGeneTrend:
         cr.pl.gene_trends(
             adata,
             model,
-            adata.var_names[0],
+            GENES[0],
             data_key="Ms",
             same_plot=True,
             cell_color="red",
@@ -564,7 +566,7 @@ class TestGeneTrend:
         cr.pl.gene_trends(
             adata,
             model,
-            adata.var_names[0],
+            GENES[0],
             data_key="Ms",
             same_plot=True,
             lw=10,
@@ -677,7 +679,7 @@ class TestGraph:
         cr.pl.gene_trends(
             adata,
             model,
-            adata.var_names[0],
+            GENES[0],
             data_key="Ms",
             same_plot=True,
             size=30,
@@ -691,7 +693,7 @@ class TestGraph:
         cr.pl.gene_trends(
             adata,
             model,
-            adata.var_names[0],
+            GENES[0],
             data_key="Ms",
             same_plot=True,
             margins=0.2,
@@ -705,7 +707,7 @@ class TestGraph:
         cr.pl.gene_trends(
             adata,
             model,
-            adata.var_names[0],
+            GENES[0],
             data_key="Ms",
             same_plot=True,
             cell_alpha=0,
@@ -719,7 +721,7 @@ class TestGraph:
         cr.pl.gene_trends(
             adata,
             model,
-            adata.var_names[0],
+            GENES[0],
             data_key="Ms",
             same_plot=True,
             lineage_alpha=1,
