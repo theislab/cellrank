@@ -45,26 +45,26 @@ Lineage = TypeVar("Lineage")
 
 
 def _read_graph_data(adata: AnnData, key: str, default_location: str = "obsp"):
-    """Utility function to read graph data from AnnData
+    """
+    Utility function to read graph data from AnnData.
 
-    AnnData >=0.7 stores (n_obs x n_obs) matrices in .obsp rather than .uns. This is for
-    backward compatibility
+    AnnData >=0.7 stores (n_obs x n_obs) matrices in `.obsp` rather than .uns. This is for backwards compatibility.
 
     Params
-    --------
+    ------
     adata
-        Annotated Data matrix
+        Annotated data object.
     key
-        key from either `.uns` or `.obsp`
+        Key from either `.uns` or `.obsp`.
     default_location
-        preferred location to search for `key`. Options are `.obsp` or `.uns`
+        preferred location to search for :paramref:`key`. Options are `'obsp'` or `'uns'`.
 
     Returns
-    --------
+    -------
     data
-        Graph data
+        Graph data.
     read_from
-        Location where the data was accessed (`obsp` or `uns`)
+        Location where the data was accessed (`obsp` or `uns`).
     """
 
     if default_location == "obsp":
@@ -75,7 +75,9 @@ def _read_graph_data(adata: AnnData, key: str, default_location: str = "obsp"):
             data = adata.uns[key]
             read_from = "uns"
         else:
-            raise ValueError(f"Key {key} neither found in `.obsp` nor in `.uns`")
+            raise KeyError(
+                f"Key `{key!r}` not found in `adata.obsp` nor in `adata.uns`"
+            )
     elif default_location == "uns":
         if key in adata.uns.keys():
             data = adata.uns[key]
@@ -84,11 +86,13 @@ def _read_graph_data(adata: AnnData, key: str, default_location: str = "obsp"):
             data = adata.obsp[key]
             read_from = "obsp"
         else:
-            raise ValueError(f"Key {key} neither found in `.uns` nor `.obsp`")
+            raise KeyError(
+                f"Key `{key!r}` not found in `adata.obsp` nor in `adata.uns`"
+            )
     else:
-        raise NotImplementedError(f"Location {default_location} does not exist")
+        raise NotImplementedError(f"Location `{default_location!r}` does not exist.")
 
-    logg.info(f"Reading graph data {key} from {read_from}")
+    logg.debug(f"Read graph data `{key!r}` from `{read_from!r}`")
 
     return data, read_from
 
@@ -99,26 +103,33 @@ def _write_graph_data(
     key: str,
     default_location: str = "obsp",
 ):
-    """Utility function to write graph data to AnnData
+    """
+    Utility function to write graph data to AnnData.
 
     AnnData >=0.7 stores (n_obs x n_obs) matrices in .obsp rather than .uns. This is for
-    backward compatibility
+    backward compatibility.
 
     Params
     --------
     data
-        The graph data we want to write
+        The graph data we want to write.
     adata
-        Annotated Data matrix
+        Annotated data object.
     key
-        key from either `.uns` or `.obsp`
+        Key from either `.uns` or `.obsp`.
     default_location
-        preferred location to search for `key`. Options are `.obsp` or `.uns`
+        preferred location to search for `key`. Options are `'obsp'` or `'uns'`.
 
     Returns
     --------
-    Nothing, just writes
+    None
+        Nothing, just writes
     """
+
+    if data.ndim != 2:
+        raise ValueError(f"Expected data to have 2 dimensions, found `{data.ndim}`.")
+    if data.shape[0] != data.shape[1]:
+        raise ValueError("Matrix is not square.")
 
     if default_location == "obsp":
         try:
@@ -130,8 +141,10 @@ def _write_graph_data(
     elif default_location == "uns":
         adata.uns[key] = data
         write_to = "uns"
+    else:
+        raise NotImplementedError(f"Location `{default_location!r}` does not exist.")
 
-    logg.info(f"Wrote graph data {key} to `{write_to}`")
+    logg.info(f"Write graph data `{key!r}` to `{write_to!r}`")
 
 
 def _get_restriction_to_main(estimator: GPCCA):
