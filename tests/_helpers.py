@@ -1,22 +1,23 @@
 # -*- coding: utf-8 -*-
-from cellrank.tools._utils import _normalize
-from cellrank.tools._constants import _transition, Direction
-from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
-from cellrank.utils._utils import get_neighs_params, get_neighs
-
-from pathlib import Path
-from PIL import Image
-from scipy.sparse import csr_matrix, issparse, spdiags
-from scipy.sparse.linalg import norm
-from typing import Optional, Tuple, Union
-from anndata import AnnData
-from scanpy import logging as logg
-from sklearn.svm import SVR
-
 import os
+from typing import Tuple, Union, Optional
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
+from PIL import Image
+from sklearn.svm import SVR
+from scipy.sparse import spdiags, issparse, csr_matrix
+from scipy.sparse.linalg import norm
+
+from scanpy import logging as logg
+from anndata import AnnData
+
 import cellrank as cr
+from cellrank.tools._utils import _normalize
+from cellrank.utils._utils import get_neighs, get_neighs_params
+from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
+from cellrank.tools._constants import Direction, _transition
 
 
 def bias_knn(conn, pseudotime, n_neighbors, k=3):

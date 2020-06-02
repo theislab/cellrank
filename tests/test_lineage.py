@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
-from cellrank.tools import Lineage
-from cellrank.tools._constants import Lin
-from cellrank.tools._utils import _create_categorical_colors, _compute_mean_color
-
-import cellrank.tools._lineage as mocker
-
-from pandas import DataFrame
-
-import pytest
 import mock
 import numpy as np
+import pytest
+from pandas import DataFrame
+
 import matplotlib.colors as colors
+
+import cellrank.tools._lineage as mocker
+from cellrank.tools import Lineage
+from cellrank.tools._utils import _compute_mean_color
+from cellrank.tools._colors import _create_categorical_colors
+from cellrank.tools._constants import Lin
 
 
 class TestLineageCreation:

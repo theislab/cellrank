@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
+from typing import Any, Dict, List, Tuple, Union, Hashable, Iterable, Optional
 from multiprocessing import cpu_count
-from typing import Iterable, Hashable, Dict, Optional, Tuple, List, Union, Any
 
-from scipy.sparse import spmatrix
-import anndata
 import numpy as np
+from scipy.sparse import spmatrix
+
+import anndata
 
 
 def check_collection(

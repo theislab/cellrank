@@ -1,21 +1,22 @@
 # -*- coding: utf-8 -*-
-from collections import Iterable
 from types import MappingProxyType
+from typing import Dict, Tuple, Union, Optional, Sequence
 from pathlib import Path
-from typing import Sequence, Dict, Optional, Tuple, Union
+from collections import Iterable
+
+import numpy as np
 
 import matplotlib.pyplot as plt
-import numpy as np
+
 import scanpy as sc
-
-from anndata import AnnData
 from scanpy import logging as logg
+from anndata import AnnData
 
-from cellrank.plotting._utils import _is_any_gam_mgcv, _create_models, _model_type
-from cellrank.tools._constants import LinKey
 from cellrank.tools._utils import save_fig
+from cellrank.utils._utils import _get_n_cores, check_collection
+from cellrank.plotting._utils import _model_type, _create_models, _is_any_gam_mgcv
+from cellrank.tools._constants import LinKey
 from cellrank.utils._parallelize import parallelize
-from cellrank.utils._utils import check_collection, _get_n_cores
 from cellrank.utils.models._models import Model
 
 

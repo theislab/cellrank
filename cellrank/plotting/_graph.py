@@ -1,27 +1,28 @@
 # -*- coding: utf-8 -*-
 from copy import deepcopy
 from types import MappingProxyType
-from typing import Optional, Union, Dict, Tuple, Callable, Sequence
+from typing import Dict, Tuple, Union, Callable, Optional, Sequence
 from pathlib import Path
 
-import matplotlib
+import numpy as np
+import pandas as pd
+import networkx as nx
+from scipy.sparse import issparse, spmatrix
+from pandas.api.types import is_categorical_dtype
+
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
-import networkx as nx
-import numpy as np
-import pandas as pd
-
-from anndata import AnnData
+from matplotlib.colors import ListedColormap
+from matplotlib.patches import ArrowStyle, FancyArrowPatch
 from matplotlib.collections import LineCollection
-from matplotlib.patches import FancyArrowPatch, ArrowStyle
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from pandas.api.types import is_categorical_dtype
-from scanpy import logging as logg
-from scipy.sparse import issparse, spmatrix
 
-from cellrank.tools._constants import _colors
+from scanpy import logging as logg
+from anndata import AnnData
+
 from cellrank.tools._utils import save_fig
+from cellrank.tools._constants import _colors
 
 KEYLOCS = str
 KEYS = str
@@ -50,8 +51,8 @@ def graph(
     show_arrows: bool = True,
     font_size: int = 12,
     font_color: str = "black",
-    cat_cmap: matplotlib.colors.ListedColormap = cm.Set3,
-    cont_cmap: matplotlib.colors.ListedColormap = cm.viridis,
+    cat_cmap: ListedColormap = cm.Set3,
+    cont_cmap: ListedColormap = cm.viridis,
     legend_loc: Optional[str] = "best",
     figsize: Tuple[float, float] = (15, 10),
     dpi: Optional[int] = None,

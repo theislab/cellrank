@@ -1,24 +1,26 @@
 # -*- coding: utf-8 -*-
-from cellrank.tools._constants import LinKey
-from cellrank.utils._utils import _minmax
-from cellrank.tools._utils import save_fig
-from cellrank.tools._lineage import Lineage
-
-from abc import ABC, abstractmethod
-from typing import Optional, Iterable, Tuple, Any
-from inspect import signature
-from scipy.sparse import issparse
-from copy import copy
-
 import re
-import anndata
+from abc import ABC, abstractmethod
+from copy import copy
+from typing import Any, Tuple, Iterable, Optional
+from inspect import signature
+
 import numpy as np
 import pandas as pd
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
-import matplotlib.cm as cm
 import sklearn
+from scipy.sparse import issparse
+
+import matplotlib as mpl
+import matplotlib.cm as cm
+import matplotlib.colors as mcolors
+import matplotlib.pyplot as plt
+
+import anndata
+
+from cellrank.tools._utils import save_fig
+from cellrank.utils._utils import _minmax
+from cellrank.tools._lineage import Lineage
+from cellrank.tools._constants import LinKey
 
 _dup_spaces = re.compile(r" +")
 

@@ -1,25 +1,25 @@
 # -*- coding: utf-8 -*-
-from typing import Sequence, Dict, Optional, Tuple, Any, Union, Iterable, Mapping
-from collections import defaultdict
-from pathlib import Path
 from copy import copy
+from typing import Any, Dict, Tuple, Union, Mapping, Iterable, Optional, Sequence
+from pathlib import Path
+from collections import defaultdict
 
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
-import matplotlib as mpl
-import networkx as nx
 import numpy as np
-
+import networkx as nx
 from scipy.sparse import csr_matrix
-from anndata import AnnData
 from pandas.core.dtypes.common import is_categorical_dtype
 
-from cellrank.utils.models import Model, GamMGCVModel
+import matplotlib as mpl
+import matplotlib.cm as cm
+import matplotlib.pyplot as plt
+
+from anndata import AnnData
+
 from cellrank.tools._utils import save_fig
+from cellrank.utils.models import Model, GamMGCVModel
 from cellrank.tools.kernels import VelocityKernel
 from cellrank.tools._constants import _colors
 from cellrank.tools.estimators._cflare import CFLARE
-
 
 _ERROR_INCOMPLETE_SPEC = (
     "No options were specified for{}`{!r}`. "
