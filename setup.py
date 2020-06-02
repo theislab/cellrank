@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-from setuptools import setup, find_packages
+import os
 from pathlib import Path
 
-import os
+from setuptools import setup, find_packages
 
 try:
     from cellrank import __author__, __email__, __version__
@@ -45,6 +45,7 @@ if __name__ == "__main__":
         extras_require=dict(
             test=[
                 "pytest>=4.4",
+                "mock>=4.0.2",
                 "pytest-mock>=3.1.0",
                 "python-igraph",
                 "louvain==0.6.1",

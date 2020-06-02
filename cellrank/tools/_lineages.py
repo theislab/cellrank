@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 from typing import Optional, Sequence
 
-from anndata import AnnData
 from scanpy import logging as logg
+from anndata import AnnData
 
-from cellrank.tools import CFLARE
-from cellrank.tools._constants import LinKey, RcKey, _transition, Direction
 from cellrank.tools.kernels import VelocityKernel
+from cellrank.tools._constants import RcKey, LinKey, Direction, _transition
+from cellrank.tools.estimators import CFLARE
 
 
 def lineages(

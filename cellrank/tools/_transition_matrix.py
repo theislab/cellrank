@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 from typing import Optional
-from anndata import AnnData
+
 from scanpy import logging as logg
+from anndata import AnnData
 
 from cellrank.tools.kernels._kernel import (
-    KernelExpression,
     VelocityKernel,
+    KernelExpression,
     ConnectivityKernel,
 )
 
@@ -16,6 +17,9 @@ def transition_matrix(
     backward: bool = False,
     weight_connectivities: Optional[float] = None,
     sigma_corr: Optional[float] = None,
+    scale_by_variances: bool = False,
+    var_key: Optional[str] = "velocity_graph_uncertainties",
+    var_min: float = 0.1,
     use_negative_cosines: bool = True,
     self_transitions: bool = False,
     perc: Optional[float] = None,
@@ -45,6 +49,12 @@ def transition_matrix(
     sigma_corr
         Scaling parameter for the softmax. Larger values will lead to a more concentrated distribution (more peaked).
         Default is to use 1/median_velocity_correlation
+    scale_by_variances
+        Use velocity variances to scale the softmax
+    var_key
+        Key from `adata.uns` to acess velocity variances
+    var_min
+        Variances are clipped to this value at the lower end
     self_transitions
         Assigns elements to the diagonal of the velocity-graph based on a confidence measure
     perc
@@ -64,10 +74,16 @@ def transition_matrix(
 
     # initialise the velocity kernel and compute transition matrix
     vk = VelocityKernel(
-        adata, backward=backward, vkey=vkey, use_negative_cosines=use_negative_cosines
+        adata,
+        backward=backward,
+        vkey=vkey,
+        use_negative_cosines=use_negative_cosines,
+        var_key=var_key,
     )
     vk.compute_transition_matrix(
         sigma_corr=sigma_corr,
+        scale_by_variances=scale_by_variances,
+        var_min=var_min,
         self_transitions=self_transitions,
         perc=perc,
         threshold=threshold,

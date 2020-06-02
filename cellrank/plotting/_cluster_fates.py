@@ -1,29 +1,30 @@
 # -*- coding: utf-8 -*-
-from collections import OrderedDict as odict
 from math import ceil
-from pathlib import Path
 from types import MappingProxyType
-from seaborn import heatmap, clustermap
-from typing import Optional, Sequence, Tuple, List, Mapping, Any, Union
+from typing import Any, List, Tuple, Union, Mapping, Optional, Sequence
+from pathlib import Path
+from collections import OrderedDict as odict
+
+import numpy as np
+import pandas as pd
 
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.colors
 import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
+from seaborn import heatmap, clustermap
+
 import scanpy as sc
 import scvelo as scv
-
-from anndata import AnnData
 from scanpy import logging as logg
+from anndata import AnnData
 
-from cellrank.tools._exact_mc_test import _cramers_v, _counts
-from cellrank.tools._constants import LinKey
-from cellrank.plotting._utils import _position_legend
 from cellrank.tools._utils import save_fig
 from cellrank.utils._utils import _make_unique
 from cellrank.tools._lineage import Lineage
+from cellrank.plotting._utils import _position_legend
+from cellrank.tools._constants import LinKey
+from cellrank.tools._exact_mc_test import _counts, _cramers_v
 
 _cluster_fates_modes = ("bar", "paga", "paga_pie", "violin", "heatmap", "clustermap")
 
@@ -223,7 +224,7 @@ def cluster_fates(
             kwargs["color"] = cluster_key
 
         ax = scv.pl.paga(adata, **kwargs)
-        ax.set_title(cluster_key.capitalize())
+        ax.set_title(kwargs.get("title", cluster_key))
 
         if basis is not None and orig_ll not in ("none", "on data", None):
             handles = []
@@ -455,10 +456,7 @@ def cluster_fates(
         lin_names = list(adata.obsm[lk].names)
 
     if mode == "violin" and not is_all:
-        # TODO: temporary fix, until subclassing is made ready
-        names, colors = adata.obsm[lk].names, adata.obsm[lk].colors
         adata = adata[np.isin(adata.obs[cluster_key], clusters)].copy()
-        adata.obsm[lk] = Lineage(adata.obsm[lk], names=names, colors=colors)
 
     d = odict()
     for name in clusters:

@@ -1,35 +1,32 @@
 # -*- coding: utf-8 -*-
-from cellrank.tools.kernels._kernel import KernelExpression
-from typing import Optional, Tuple, Sequence, List, Any, Union, Dict, Iterable
+from copy import copy, deepcopy
+from typing import Any, Dict, List, Tuple, Union, Iterable, Optional, Sequence
 
 import numpy as np
-import scvelo as scv
+from pandas import Series
+from scipy.stats import zscore, entropy
+from scipy.linalg import solve
+
 import matplotlib as mpl
 import matplotlib.cm as cm
 
-from anndata import AnnData
-from copy import copy, deepcopy
-from pandas import Series
+import scvelo as scv
 from scanpy import logging as logg
-from scipy.linalg import solve
-from scipy.stats import zscore, entropy
+from anndata import AnnData
 
-
-from cellrank.tools.estimators._base_estimator import BaseEstimator
-from cellrank.tools._lineage import Lineage
-from cellrank.tools._constants import _probs, _colors, _lin_names, _dp
 from cellrank.tools._utils import (
-    _process_series,
-    _complex_warning,
     _cluster_X,
-    _get_connectivities,
     _normalize,
     _filter_cells,
-    _make_cat,
-    _convert_to_hex_colors,
-    _create_categorical_colors,
-    partition,
+    _process_series,
+    _complex_warning,
+    _get_connectivities,
 )
+from cellrank.tools._colors import _convert_to_hex_colors, _create_categorical_colors
+from cellrank.tools._lineage import Lineage
+from cellrank.tools._constants import _dp, _probs, _colors, _lin_names
+from cellrank.tools.kernels._kernel import KernelExpression
+from cellrank.tools.estimators._base_estimator import BaseEstimator
 
 EPS = np.finfo(np.float64).eps
 

@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
-import pytest
 import numpy as np
+import pytest
 
-from cellrank.tools._constants import Direction, _transition
-from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel, PalantirKernel
-from cellrank.tools.kernels._kernel import Constant, KernelAdd, KernelMul, _is_bin_mult
+from _helpers import bias_knn, create_kernels, transition_matrix, density_normalization
 from cellrank.tools._utils import _normalize
 from cellrank.utils._utils import get_neighs, get_neighs_params
-from _helpers import transition_matrix, bias_knn, density_normalization, create_kernels
+from cellrank.tools.kernels import PalantirKernel, VelocityKernel, ConnectivityKernel
+from cellrank.tools._constants import Direction, _transition
+from cellrank.tools.kernels._kernel import Constant, KernelAdd, KernelMul, _is_bin_mult
 
 _rtol = 1e-6
 
@@ -228,8 +228,16 @@ class TestInitializeKernel:
         assert c3.transition_matrix == 1 / 2
 
     def test_adaptive_kernel_constants(self, adata):
-        k = (3 * ConnectivityKernel(adata).compute_transition_matrix()) ^ (
-            1 * ConnectivityKernel(adata).compute_transition_matrix()
+        k = (
+            3
+            * ConnectivityKernel(
+                adata, var_key="connectivity_variances"
+            ).compute_transition_matrix()
+        ) ^ (
+            1
+            * ConnectivityKernel(
+                adata, var_key="connectivity_variances"
+            ).compute_transition_matrix()
         )
         k.compute_transition_matrix()
 
@@ -240,8 +248,18 @@ class TestInitializeKernel:
         k = (
             4
             * (
-                (3 * ConnectivityKernel(adata).compute_transition_matrix())
-                ^ (1 * ConnectivityKernel(adata).compute_transition_matrix())
+                (
+                    3
+                    * ConnectivityKernel(
+                        adata, var_key="connectivity_variances"
+                    ).compute_transition_matrix()
+                )
+                ^ (
+                    1
+                    * ConnectivityKernel(
+                        adata, var_key="connectivity_variances"
+                    ).compute_transition_matrix()
+                )
             )
             + 2 * ConnectivityKernel(adata).compute_transition_matrix()
         )

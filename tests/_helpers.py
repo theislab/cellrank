@@ -1,22 +1,23 @@
 # -*- coding: utf-8 -*-
-from cellrank.tools._utils import _normalize
-from cellrank.tools._constants import _transition, Direction
-from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
-from cellrank.utils._utils import get_neighs_params, get_neighs
-
-from pathlib import Path
-from PIL import Image
-from scipy.sparse import csr_matrix, issparse, spdiags
-from scipy.sparse.linalg import norm
-from typing import Optional, Tuple, Union
-from anndata import AnnData
-from scanpy import logging as logg
-from sklearn.svm import SVR
-
 import os
+from typing import Tuple, Union, Optional
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
+from PIL import Image
+from sklearn.svm import SVR
+from scipy.sparse import spdiags, issparse, csr_matrix
+from scipy.sparse.linalg import norm
+
+from scanpy import logging as logg
+from anndata import AnnData
+
 import cellrank as cr
+from cellrank.tools._utils import _normalize
+from cellrank.utils._utils import get_neighs, get_neighs_params
+from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
+from cellrank.tools._constants import Direction, _transition
 
 
 def bias_knn(conn, pseudotime, n_neighbors, k=3):
@@ -270,9 +271,13 @@ def _is_connected(c) -> bool:
     return nx.is_connected(G)
 
 
-def create_kernels(adata: AnnData) -> Tuple[VelocityKernel, ConnectivityKernel]:
-    vk = VelocityKernel(adata)
-    ck = ConnectivityKernel(adata)
+def create_kernels(
+    adata: AnnData,
+    var_key_connectivities: str = "connectivity_variances",
+    var_key_velocities: str = "velocity_variances",
+) -> Tuple[VelocityKernel, ConnectivityKernel]:
+    vk = VelocityKernel(adata, var_key=var_key_velocities)
+    ck = ConnectivityKernel(adata, var_key=var_key_connectivities)
     vk._transition_matrix = csr_matrix(np.eye(adata.n_obs))
     ck._transition_matrix = np.eye(adata.n_obs, k=1) / 2 + np.eye(adata.n_obs) / 2
     ck._transition_matrix[-1, -1] = 1

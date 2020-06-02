@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
 
-import cellrank as cr
+from pandas.api.types import is_categorical_dtype
 
-from cellrank.tools._constants import (
-    Direction,
-    RcKey,
-    LinKey,
-    _transition,
-    _colors,
-    _lin_names,
-    _probs,
-)
-from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
 from anndata import AnnData
 
-from pandas.api.types import is_categorical_dtype
+import cellrank as cr
+from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
+from cellrank.tools._constants import (
+    RcKey,
+    LinKey,
+    Direction,
+    _probs,
+    _colors,
+    _lin_names,
+    _transition,
+)
 
 
 def _assert_has_all_keys(adata: AnnData, direction: Direction):

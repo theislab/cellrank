@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
 from types import MappingProxyType
-from typing import Sequence, Optional, Any, Union, Tuple, List, Mapping, Dict
+from typing import Any, Dict, List, Tuple, Union, Mapping, Optional, Sequence
 
 import numpy as np
 import pandas as pd
-
-from anndata import AnnData
-from scanpy import logging as logg
 from sklearn.ensemble import RandomForestRegressor
 from statsmodels.stats.multitest import multipletests
 
+from scanpy import logging as logg
+from anndata import AnnData
+
+from cellrank.utils._utils import _get_n_cores, check_collection
 from cellrank.utils.models import Model
-from cellrank.plotting._utils import _is_any_gam_mgcv, _create_models, _model_type
+from cellrank.plotting._utils import _model_type, _create_models, _is_any_gam_mgcv
 from cellrank.tools._constants import LinKey
 from cellrank.utils._parallelize import parallelize
-from cellrank.utils._utils import check_collection, _get_n_cores
 
 
 def _gi_permute(

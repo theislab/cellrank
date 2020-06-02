@@ -1,17 +1,16 @@
 # -*- coding: utf-8 -*-
+from typing import Union, Callable
+from pathlib import Path
+
 from matplotlib.colors import is_color_like
 
-from cellrank.tools._constants import _lin_names, _colors, Direction, LinKey
-from cellrank.tools._lineage import Lineage
-
-from scanpy import logging as logg
-from pathlib import Path
-from typing import Callable, Union
-
-import anndata
 import scvelo as scv
+import anndata
+from scanpy import logging as logg
 
-from cellrank.tools._utils import _create_categorical_colors
+from cellrank.tools._colors import _create_categorical_colors
+from cellrank.tools._lineage import Lineage
+from cellrank.tools._constants import LinKey, Direction, _colors, _lin_names
 
 
 def read(

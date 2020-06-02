@@ -1,18 +1,21 @@
 # -*- coding: utf-8 -*-
+import os
+from typing import Tuple, Union
+from pathlib import Path
+
+import pytest
+from packaging import version
+
+import matplotlib.cm as cm
 from matplotlib.testing import setup
 from matplotlib.testing.compare import compare_images
-from typing import Union, Tuple
-from pathlib import Path
-from anndata import AnnData
-from cellrank.tools import CFLARE
 
-from _helpers import create_model, resize_images_to_same_sizes
-
-import os
-import cellrank as cr
 import scvelo as scv
-import matplotlib.cm as cm
-import pytest
+from anndata import AnnData
+
+import cellrank as cr
+from _helpers import create_model, resize_images_to_same_sizes
+from cellrank.tools import CFLARE
 
 setup()
 
@@ -25,7 +28,6 @@ TOL = 300
 cr.settings.figdir = FIGS
 scv.settings.figdir = str(FIGS)
 
-from packaging import version
 
 try:
     from importlib_metadata import version as get_version
@@ -52,7 +54,7 @@ def compare(
         assert res is None, res
 
     def compare_fwd(
-        func
+        func,
     ):  # mustn't use functools.wraps - it think's the fact that `adata` is fixture
         def decorator(self, adata_mc_fwd):
             adata, mc = adata_mc_fwd
@@ -111,6 +113,12 @@ class TestClusterFates:
     @compare(tol=250)
     def test_paga_pie(self, adata: AnnData, fpath: Path):
         cr.pl.cluster_fates(adata, "clusters", mode="paga_pie", dpi=DPI, save=fpath)
+
+    @compare(tol=250)
+    def test_paga_pie_title(self, adata: AnnData, fpath: Path):
+        cr.pl.cluster_fates(
+            adata, "clusters", mode="paga_pie", title="foo bar baz", dpi=DPI, save=fpath
+        )
 
     @scvelo_paga_skip
     @compare()

@@ -1,38 +1,43 @@
 # -*- coding: utf-8 -*-
-from cellrank.tools._utils import (
-    _eigengap,
-    _map_names_and_colors,
-    _create_categorical_colors,
-    _convert_to_hex_colors,
-    _merge_categorical_series,
-    _convert_to_categorical_series,
-    _vec_mat_corr,
-    save_fig,
-)
-from cellrank.tools._lineage import Lineage
-from cellrank.tools.kernels._kernel import KernelExpression
-from typing import Optional, Dict, Union, Tuple, List, Any, Iterable, Sequence
 from abc import ABC, abstractmethod
+from typing import Any, Dict, List, Tuple, Union, Iterable, Optional, Sequence
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
-import scvelo as scv
-
-from anndata import AnnData
-from scanpy import logging as logg
-from scipy.sparse import issparse
 from pandas import Series
-from pandas.api.types import is_categorical_dtype, infer_dtype
-from msmtools.util.sorted_schur import sorted_krylov_schur
-from scipy.sparse.linalg import eigs
 from scipy.stats import ranksums
-from pathlib import Path
+from scipy.sparse import issparse
+from pandas.api.types import infer_dtype, is_categorical_dtype
+from scipy.sparse.linalg import eigs
 
-from cellrank.tools._constants import Direction, RcKey, LinKey, Prefix, _colors
-from cellrank.tools._utils import _complex_warning, _make_cat, partition
+import matplotlib as mpl
+import matplotlib.cm as cm
+import matplotlib.pyplot as plt
+
+import scvelo as scv
+from scanpy import logging as logg
+from anndata import AnnData
+
+from cellrank.tools._utils import (
+    save_fig,
+    _eigengap,
+    _make_cat,
+    partition,
+    _vec_mat_corr,
+    _complex_warning,
+    _merge_categorical_series,
+    _convert_to_categorical_series,
+)
+from cellrank.tools._colors import (
+    _map_names_and_colors,
+    _convert_to_hex_colors,
+    _create_categorical_colors,
+)
+from cellrank.tools._lineage import Lineage
+from cellrank.tools._constants import RcKey, LinKey, Prefix, Direction, _colors
+from msmtools.util.sorted_schur import sorted_krylov_schur
+from cellrank.tools.kernels._kernel import KernelExpression
 
 
 class BaseEstimator(ABC):
@@ -683,9 +688,9 @@ class BaseEstimator(ABC):
 
     def compute_lineage_drivers(
         self,
-        lin_names: Optional[Sequence] = None,
-        cluster_key: Optional[str] = "louvain",
-        clusters: Optional[Sequence] = None,
+        lin_names: Optional[Union[Sequence, str]] = None,
+        cluster_key: Optional[str] = None,
+        clusters: Optional[Union[Sequence, str]] = None,
         layer: str = "X",
         use_raw: bool = True,
         inplace: bool = True,
@@ -698,12 +703,12 @@ class BaseEstimator(ABC):
 
         Params
         --------
-        lin_keys
+        lin_names
             Either a set of lineage names from :paramref:`lineage_probabilities` `.names` or None,
             in which case all lineages are considered.
         cluster_key
             Key from :paramref:`adata` `.obs` to obtain cluster annotations.
-            These are considered for :paramref:`clusters`.
+            These are considered for :paramref:`clusters`. Default is `"clusters"` if a list of `clusters` is given.
         clusters
             Restrict the correlations to these clusters.
         layer
@@ -725,20 +730,25 @@ class BaseEstimator(ABC):
         # check that lineage probs have been computed
         if self._lin_probs is None:
             raise RuntimeError(
-                "Compute lineage probabilities first as `.compute_lin_probs()`."
+                "Compute lineage probabilities first as `.compute_lin_probs()` or `.set_main_states`."
             )
 
         # check all lin_keys exist in self.lin_names
+        if isinstance(lin_names, str):
+            lin_names = [lin_names]
         if lin_names is not None:
             _ = self._lin_probs[lin_names]
         else:
             lin_names = self._lin_probs.names
 
-        # check the cluster key exists in adata.obs and check that all clusters exist
-        if cluster_key is not None and cluster_key not in self._adata.obs.keys():
-            raise KeyError(f"Key `{cluster_key!r}` not found in `adata.obs`.")
-
+        # use `cluster_key` and clusters to subset the data
         if clusters is not None:
+            if cluster_key is None:
+                cluster_key = "clusters"
+            if cluster_key not in self._adata.obs.keys():
+                raise KeyError(f"Key `{cluster_key!r}` not found in `adata.obs`.")
+            if isinstance(clusters, str):
+                clusters = [clusters]
             all_clusters = np.array(self._adata.obs[cluster_key].cat.categories)
             cluster_mask = np.array([name not in all_clusters for name in clusters])
             if any(cluster_mask):
@@ -746,7 +756,6 @@ class BaseEstimator(ABC):
                     f"Clusters `{list(np.array(clusters)[cluster_mask])}` not found in "
                     f"`adata.obs[{cluster_key!r}]`."
                 )
-
             subset_mask = np.in1d(self._adata.obs[cluster_key], clusters)
             adata_comp = self._adata[subset_mask].copy()
             lin_probs = self._lin_probs[subset_mask, :]
@@ -764,7 +773,8 @@ class BaseEstimator(ABC):
             var_names = adata_comp.var_names
         else:
             if use_raw and self._adata.raw is None:
-                raise AttributeError("No raw attribute set")
+                logg.warning("No raw attribute set. Using `.X` instead")
+                use_raw = False
             data = adata_comp.raw.X if use_raw else adata_comp.X
             var_names = adata_comp.raw.var_names if use_raw else adata_comp.var_names
 

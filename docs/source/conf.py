@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-from pathlib import Path
 import sys
+from pathlib import Path
+
+import cellrank  # noqa
 
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE.parent.parent))
-import cellrank  # noqa
 
 # Configuration file for the Sphinx documentation builder.
 #

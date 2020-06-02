@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-import pytest
 import numpy as np
+import pytest
+from sklearn.svm._classes import SVR
 
 from anndata import AnnData
-from _helpers import create_model
 
-from sklearn.svm._classes import SVR
+from _helpers import create_model
 
 
 class TestModel:
