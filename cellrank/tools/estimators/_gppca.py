@@ -1,35 +1,37 @@
 # -*- coding: utf-8 -*-
-from typing import Optional, List, Tuple, Dict, Union, Mapping, Any, Iterable
-from types import MappingProxyType
-from anndata import AnnData
-from msmtools.analysis.dense.gpcca import GPCCA as _GPPCA
-from scanpy import logging as logg
-from scipy.stats import entropy
-from copy import copy, deepcopy
-from pathlib import Path
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-
-from cellrank.tools._lineage import Lineage
-from cellrank.tools._constants import Lin, MetaKey, _colors, _lin_names, _dp, _probs
-from cellrank.tools.estimators._base_estimator import BaseEstimator
-from cellrank.tools._utils import (
-    _eigengap,
-    _get_black_or_white,
-    _convert_lineage_name,
-    generate_random_keys,
-    save_fig,
-)
-from cellrank.tools.kernels._kernel import KernelExpression
-
 import os
+from copy import copy, deepcopy
+from types import MappingProxyType
+from typing import Any, Dict, List, Tuple, Union, Mapping, Iterable, Optional
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-import scvelo as scv
+from scipy.stats import entropy
+
 import seaborn as sns
 import matplotlib as mpl
 import matplotlib.cm as cm
-import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
+import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+import scvelo as scv
+from scanpy import logging as logg
+from anndata import AnnData
+
+from cellrank.tools._utils import (
+    save_fig,
+    _eigengap,
+    _convert_lineage_name,
+    _generate_random_keys,
+)
+from cellrank.tools._colors import _get_black_or_white
+from cellrank.tools._lineage import Lineage
+from cellrank.tools._constants import Lin, MetaKey, _dp, _probs, _colors, _lin_names
+from msmtools.analysis.dense.gpcca import GPCCA as _GPPCA
+from cellrank.tools.kernels._kernel import KernelExpression
+from cellrank.tools.estimators._base_estimator import BaseEstimator
 
 
 class GPCCA(BaseEstimator):
@@ -325,9 +327,14 @@ class GPCCA(BaseEstimator):
                 en_cutoff=en_cutoff,
             )
 
-            self._lin_probs, self._schur_vectors, self._coarse_T, self._coarse_init_dist, self._coarse_stat_dist, self._schur_matrix = (
-                [None] * 6
-            )
+            (
+                self._lin_probs,
+                self._schur_vectors,
+                self._coarse_T,
+                self._coarse_init_dist,
+                self._coarse_stat_dist,
+                self._schur_matrix,
+            ) = [None] * 6
 
             logg.info("Adding `.metastable_states`\n" "    Finish", time=start)
 
@@ -918,7 +925,7 @@ class GPCCA(BaseEstimator):
         to_clean = []
         try:
             if same_plot:
-                key = generate_random_keys(self.adata, "obs")[0]
+                key = _generate_random_keys(self.adata, "obs")[0]
                 to_clean = [key]
                 self.adata.obs[key] = _main_states
                 self.adata.uns[f"{key}_colors"] = probs.colors
@@ -931,7 +938,7 @@ class GPCCA(BaseEstimator):
                     )
                 scv.pl.scatter(self.adata, title=title, color=key, **kwargs)
             else:
-                keys = generate_random_keys(
+                keys = _generate_random_keys(
                     self.adata, "obs", len(_main_states.cat.categories)
                 )
 

@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 from typing import Optional
-from anndata import AnnData
+
 from scanpy import logging as logg
+from anndata import AnnData
 
 from cellrank.tools.kernels._kernel import (
-    KernelExpression,
     VelocityKernel,
+    KernelExpression,
     ConnectivityKernel,
 )
 

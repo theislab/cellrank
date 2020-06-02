@@ -1,30 +1,31 @@
 # -*- coding: utf-8 -*-
-from typing import Sequence, Optional, Tuple, Union, Mapping
+import os
 from types import MappingProxyType
+from typing import Tuple, Union, Mapping, Optional, Sequence
 from pathlib import Path
 
-import os
+import numpy as np
+
 import matplotlib
 import matplotlib.cm as cm
 import matplotlib.colors as colors
 import matplotlib.pyplot as plt
-import numpy as np
+
 import scanpy as sc
-
-from anndata import AnnData
 from scanpy import logging as logg
+from anndata import AnnData
 
+from cellrank.tools._utils import save_fig
+from cellrank.utils._utils import _get_n_cores, _make_unique, check_collection
 from cellrank.plotting._utils import (
+    _fit,
+    _model_type,
+    _create_models,
     _trends_helper,
     _is_any_gam_mgcv,
-    _fit,
-    _create_models,
-    _model_type,
 )
 from cellrank.tools._constants import LinKey
-from cellrank.tools._utils import save_fig
 from cellrank.utils._parallelize import parallelize
-from cellrank.utils._utils import check_collection, _make_unique, _get_n_cores
 
 
 def gene_trends(

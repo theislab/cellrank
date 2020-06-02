@@ -1,25 +1,26 @@
 # -*- coding: utf-8 -*-
-from collections import Iterable, defaultdict
-from typing import Optional, Union, Sequence, Tuple
+from typing import Tuple, Union, Optional, Sequence
 from pathlib import Path
+from collections import Iterable, defaultdict
 
+import numpy as np
+import pandas as pd
+
+import seaborn as sns
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.colors as colors
 import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-import scanpy.logging as logg
-import seaborn as sns
-
-from anndata import AnnData
 from matplotlib.ticker import FormatStrFormatter
 
-from cellrank.plotting._utils import _create_models, _fit, _is_any_gam_mgcv, _model_type
-from cellrank.tools._constants import LinKey
+import scanpy.logging as logg
+from anndata import AnnData
+
 from cellrank.tools._utils import save_fig
-from cellrank.utils._parallelize import parallelize
 from cellrank.utils._utils import _get_n_cores, check_collection
+from cellrank.plotting._utils import _fit, _model_type, _create_models, _is_any_gam_mgcv
+from cellrank.tools._constants import LinKey
+from cellrank.utils._parallelize import parallelize
 
 
 def heatmap(

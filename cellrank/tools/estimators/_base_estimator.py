@@ -1,38 +1,43 @@
 # -*- coding: utf-8 -*-
-from cellrank.tools._utils import (
-    _eigengap,
-    _map_names_and_colors,
-    _create_categorical_colors,
-    _convert_to_hex_colors,
-    _merge_categorical_series,
-    _convert_to_categorical_series,
-    _vec_mat_corr,
-    save_fig,
-)
-from cellrank.tools._lineage import Lineage
-from cellrank.tools.kernels._kernel import KernelExpression
-from typing import Optional, Dict, Union, Tuple, List, Any, Iterable, Sequence
 from abc import ABC, abstractmethod
+from typing import Any, Dict, List, Tuple, Union, Iterable, Optional, Sequence
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
-import scvelo as scv
-
-from anndata import AnnData
-from scanpy import logging as logg
-from scipy.sparse import issparse
 from pandas import Series
-from pandas.api.types import is_categorical_dtype, infer_dtype
-from msmtools.util.sorted_schur import sorted_krylov_schur
-from scipy.sparse.linalg import eigs
 from scipy.stats import ranksums
-from pathlib import Path
+from scipy.sparse import issparse
+from pandas.api.types import infer_dtype, is_categorical_dtype
+from scipy.sparse.linalg import eigs
 
-from cellrank.tools._constants import Direction, RcKey, LinKey, Prefix, _colors
-from cellrank.tools._utils import _complex_warning, _make_cat, partition
+import matplotlib as mpl
+import matplotlib.cm as cm
+import matplotlib.pyplot as plt
+
+import scvelo as scv
+from scanpy import logging as logg
+from anndata import AnnData
+
+from cellrank.tools._utils import (
+    save_fig,
+    _eigengap,
+    _make_cat,
+    partition,
+    _vec_mat_corr,
+    _complex_warning,
+    _merge_categorical_series,
+    _convert_to_categorical_series,
+)
+from cellrank.tools._colors import (
+    _map_names_and_colors,
+    _convert_to_hex_colors,
+    _create_categorical_colors,
+)
+from cellrank.tools._lineage import Lineage
+from cellrank.tools._constants import RcKey, LinKey, Prefix, Direction, _colors
+from msmtools.util.sorted_schur import sorted_krylov_schur
+from cellrank.tools.kernels._kernel import KernelExpression
 
 
 class BaseEstimator(ABC):
