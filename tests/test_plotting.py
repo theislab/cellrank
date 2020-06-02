@@ -112,6 +112,12 @@ class TestClusterFates:
     def test_paga_pie(self, adata: AnnData, fpath: Path):
         cr.pl.cluster_fates(adata, "clusters", mode="paga_pie", dpi=DPI, save=fpath)
 
+    @compare(tol=250)
+    def test_paga_pie_title(self, adata: AnnData, fpath: Path):
+        cr.pl.cluster_fates(
+            adata, "clusters", mode="paga_pie", title="foo bar baz", dpi=DPI, save=fpath
+        )
+
     @scvelo_paga_skip
     @compare()
     def test_paga_pie_embedding(self, adata: AnnData, fpath: Path):
