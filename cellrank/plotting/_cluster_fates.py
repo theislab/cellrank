@@ -223,7 +223,7 @@ def cluster_fates(
             kwargs["color"] = cluster_key
 
         ax = scv.pl.paga(adata, **kwargs)
-        ax.set_title(cluster_key.capitalize())
+        ax.set_title(kwargs.get("title", cluster_key))
 
         if basis is not None and orig_ll not in ("none", "on data", None):
             handles = []
