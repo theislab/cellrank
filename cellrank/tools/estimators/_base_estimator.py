@@ -685,7 +685,7 @@ class BaseEstimator(ABC):
         self,
         lin_names: Optional[Union[Sequence, str]] = None,
         cluster_key: Optional[str] = None,
-        clusters: Optional[Sequence] = None,
+        clusters: Optional[Union[Sequence, str]] = None,
         layer: str = "X",
         use_raw: bool = True,
         inplace: bool = True,
@@ -730,7 +730,7 @@ class BaseEstimator(ABC):
 
         # check all lin_keys exist in self.lin_names
         if isinstance(lin_names, str):
-            lin_names = list(lin_names)
+            lin_names = [lin_names]
         if lin_names is not None:
             _ = self._lin_probs[lin_names]
         else:
@@ -742,6 +742,8 @@ class BaseEstimator(ABC):
                 cluster_key = "clusters"
             if cluster_key not in self._adata.obs.keys():
                 raise KeyError(f"Key `{cluster_key!r}` not found in `adata.obs`.")
+            if isinstance(clusters, str):
+                clusters = [clusters]
             all_clusters = np.array(self._adata.obs[cluster_key].cat.categories)
             cluster_mask = np.array([name not in all_clusters for name in clusters])
             if any(cluster_mask):
