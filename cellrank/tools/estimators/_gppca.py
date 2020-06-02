@@ -118,7 +118,7 @@ class GPCCA(BaseEstimator):
             Used to compute the `eigengap`. paramref:`alpha` is the weight given
             to the deviation of an eigenvalue from one.
         ncv
-            Number of Lanczos vectors generated
+            Number of Lanczos vectors generated.
 
         Returns
         -------
@@ -256,13 +256,49 @@ class GPCCA(BaseEstimator):
         if save is not None:
             save_fig(fig, path=save)
 
+    def compute_schur(
+        self,
+        n_vectors: int,
+        initial_distribution: Optional[np.ndarray] = None,
+        method: str = "krylov",
+        which: str = "LM",
+    ):
+        """
+        Compute the Schur decomposition.
+
+        Params
+        ------
+        n_states
+            Number of vectors to compute.
+        initial_distribution
+            Input probability distribution over all cells. If `None`, uniform is chosen.
+        method
+            Method for calculating the Schur vectors. Valid options are: `'krylov'` or `'brandts'`.
+            For benefits of each method, see :class:`msmtools.analysis.dense.gpcca.GPCCA`. The former is
+            an iterative procedure that computes a partial, sorted Schur decomposition for large, sparse
+            matrices whereas the latter computes a full sorted Schur decomposition of a dense matrix.
+        which
+            Eigenvalues are in general complex. `'LR'` - largest real part, `'LM'` - largest magnitude.
+
+        Returns
+        -------
+        None
+        """
+
+        if n_vectors < 2:
+            raise ValueError(f"Number of vectors must be `>=2`, found `{n_vectors}`.")
+
+        self._gpcca = _GPPCA(self._T, eta=initial_distribution, z=which, method=method)
+        self._gpcca._do_schur_helper(n_vectors)
+
+        # make it available for plotting
+        self._schur_vectors = self._gpcca.X
+        self._schur_matrix = self._gpcca.R
+
     def compute_metastable_states(
         self,
         n_states: Union[int, Tuple[int, int], List[int], Dict[str, int]],
-        initial_distribution: Optional[np.ndarray] = None,
         use_min_chi: bool = False,
-        method: str = "krylov",
-        which: str = "LM",
         n_cells: Optional[int] = 30,
         cluster_key: str = None,
         en_cutoff: Optional[float] = 0.7,
@@ -275,19 +311,10 @@ class GPCCA(BaseEstimator):
         ------
         n_states
             Number of metastable states.
-        initial_distribution
-            Input probability distribution over all cells. If `None`, uniform is chosen.
         use_min_chi
             Whether to use :meth:`msmtools.analysis.dense.gpcca.GPCCA.minChi` to calculate the number of metastable states.
             If `True`, :paramref:`n_states` corresponds to an interval `[min, max]` inside of which
             the potentially optimal number of metastable states is searched.
-        method
-            Method for calculating the Schur vectors. Valid options are: `'krylov'` or `'brandts'`.
-            For benefits of each method, see :class:`msmtools.analysis.dense.gpcca.GPCCA`. The former is
-            an iterative procedure that computes a partial, sorted Schur decomposition for large, sparse
-            matrices whereas the latter computes a full sorted Schur decomposition of a dense matrix.
-        which
-            Eigenvalues are in general complex. `'LR'` - largest real part, `'LM'` - largest magnitude.
         cluster_key
             If a key to cluster labels is given, `approx_rcs` will ge associated with these for naming and colors.
         en_cutoff
@@ -309,9 +336,14 @@ class GPCCA(BaseEstimator):
                 - :paramref:`coarse_stationary_distribution`
         """
 
-        if isinstance(n_states, int) and n_states == 1:
+        if n_states == 1:
+            if self.eigendecomposition is None:
+                raise RuntimeError(
+                    "Compute eigendecomposition first as `.compute_eig()`."
+                )
+
             start = logg.info("Computing metastable states")
-            logg.warning("For `n_states=1`, we compute the stationary distribution")
+            logg.warning("For `n_states=1`, stationary distribution is computed")
 
             k = self.eigendecomposition["params"]["k"]
             which = self.eigendecomposition["params"]["which"]
@@ -340,25 +372,10 @@ class GPCCA(BaseEstimator):
 
             logg.info("Adding `.metastable_states`\n    Finish", time=start)
         else:
-            if initial_distribution is None:
-                initial_distribution = np.true_divide(
-                    np.ones(self._T.shape[0]), self._T.shape[0]
+            if self._gpcca is None:
+                raise RuntimeError(
+                    "Compute Schur decomposition first as `.compute_schur()`."
                 )
-
-            if (
-                self._gpcca is None
-                or not np.allclose(self._gpcca.eta, initial_distribution)
-                or self._gpcca.z != which
-            ):
-                self._gpcca = _GPPCA(
-                    self._T, eta=initial_distribution, z=which, method=method
-                )
-            else:
-                # we have already precomputed the Schur decomposition, possibly usable
-                # reuse only if `which` and `eta` are the same, method can differ (currently, `'krylov'` doesn't return
-                # R, but will be soon fixed)
-                self._gpcca.method = method
-                logg.debug("Possibly using cached Schur decomposition")
 
             if use_min_chi:
                 if not isinstance(n_states, (dict, tuple, list)):
@@ -395,11 +412,16 @@ class GPCCA(BaseEstimator):
                     f"Expected `n_states` to be an integer when `use_min_chi=False`, found `{type(n_states).__name__}`."
                 )
 
+            if self._gpcca.X.shape[1] < n_states:
+                logg.warning(
+                    f"Requested more metastable states ({n_states}) than available Schur vectors ({self._gpcca.X.shape[1]}). Recomputing the decomposition"
+                )
+
             start = logg.info("Computing metastable states")
 
             self._gpcca = self._gpcca.optimize(m=n_states)
 
-            # when `n_cells!=None` and the overlap is high, we're skipping some metastable states
+            # when `n_cells != None` and the overlap is high, we're skipping some metastable states
             valid_ixs = self._assign_metastable_states(
                 self._gpcca.memberships,
                 self._gpcca.metastable_assignment,
