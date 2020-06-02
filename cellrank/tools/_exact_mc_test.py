@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
-from typing import List, Callable, Dict, Optional, Sequence, Union, Tuple
-from anndata import AnnData
-from scanpy import logging as logg
-from scipy.spatial.distance import euclidean
-
-from cellrank.tools._constants import LinKey
+from typing import Dict, List, Tuple, Union, Callable, Optional, Sequence
 
 import numpy as np
 import scipy.stats as ss
+from scipy.spatial.distance import euclidean
+
 import matplotlib.pyplot as plt
+
+from scanpy import logging as logg
+from anndata import AnnData
+
+from cellrank.tools._constants import LinKey
 
 
 def _get_counts(pd: Union[np.ndarray, List[float]], n: int) -> List[float]:

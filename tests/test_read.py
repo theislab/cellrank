@@ -1,17 +1,18 @@
 # -*- coding: utf-8 -*-
-from cellrank.tools._constants import _lin_names, _colors, LinKey
-from cellrank.tools._utils import _create_categorical_colors
-from cellrank.tools.estimators._cflare import CFLARE
-from cellrank.tools._lineage import Lineage
+from typing import Tuple, Callable
+from pathlib import Path
 
-import cellrank as cr
-import scanpy as sc
 import numpy as np
 import pytest
 
-from pathlib import Path
+import scanpy as sc
 from anndata import AnnData
-from typing import Callable, Tuple
+
+import cellrank as cr
+from cellrank.tools._colors import _create_categorical_colors
+from cellrank.tools._lineage import Lineage
+from cellrank.tools._constants import LinKey, _colors, _lin_names
+from cellrank.tools.estimators._cflare import CFLARE
 
 
 def test_fwd():

@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-from multiprocessing import Manager
+from typing import Any, Union, Callable, Optional, Sequence
 from threading import Thread
-from typing import Any, Union, Sequence, Callable, Optional
+from multiprocessing import Manager
 
-import joblib as jl
 import numpy as np
+import joblib as jl
 
 from cellrank.utils._utils import _get_n_cores
 

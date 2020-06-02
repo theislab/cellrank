@@ -2,22 +2,23 @@
 import numpy as np
 import pandas as pd
 import pytest
-import cellrank as cr
+from pandas.api.types import is_categorical_dtype
 
 from anndata import AnnData
-from pandas.api.types import is_categorical_dtype
+
+import cellrank as cr
+from _helpers import assert_array_nan_equal
+from cellrank.tools._colors import _create_categorical_colors
+from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tools._constants import (
-    Prefix,
     RcKey,
-    Direction,
     LinKey,
-    _colors,
+    Prefix,
+    Direction,
     _probs,
+    _colors,
     _lin_names,
 )
-from cellrank.tools._utils import _create_categorical_colors
-from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
-from _helpers import assert_array_nan_equal
 
 
 class TestMarkovChain:

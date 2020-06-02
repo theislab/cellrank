@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
-from anndata import AnnData
 from typing import Optional
-from scanpy import logging as logg
 
-from cellrank.tools.estimators._cflare import CFLARE
+from scanpy import logging as logg
+from anndata import AnnData
+
+from cellrank.utils._docs import inject_docs
 from cellrank.tools._constants import RcKey
 from cellrank.tools._transition_matrix import transition_matrix
-from cellrank.utils._docs import inject_docs
-
+from cellrank.tools.estimators._cflare import CFLARE
 
 _find_docs = """\
 Computes {cells} cells based on RNA velocity, see [Manno18]_. The tool models dynamic cellular

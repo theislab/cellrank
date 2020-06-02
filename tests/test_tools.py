@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
-import cellrank as cr
 import pandas as pd
 import pytest
 
 from anndata import AnnData
-from cellrank.tools.kernels import Kernel
+
+import cellrank as cr
 from _helpers import create_model
+from cellrank.tools.kernels import Kernel
 
 
 class TestGeneImportance:
