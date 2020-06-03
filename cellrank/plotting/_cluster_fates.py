@@ -513,7 +513,7 @@ def similarity_plot(
     cmap: mpl.colors.ListedColormap = cm.viridis,
     fontsize: float = 14,
     rotation: float = 45,
-    title: Optional[str] = "Similarity",
+    title: Optional[str] = "similarity",
     figsize: Tuple[float, float] = (12, 10),
     dpi: Optional[int] = None,
     final: bool = True,
