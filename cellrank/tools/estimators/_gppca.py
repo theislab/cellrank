@@ -177,7 +177,6 @@ class GPCCA(BaseEstimator):
         self,
         title: Optional[str] = "schur matrix",
         cmap: str = "viridis",
-        upper_triangular_only: bool = True,
         figsize: Optional[Tuple[float, float]] = None,
         dpi: Optional[float] = 80,
         save: Optional[Union[str, Path]] = None,
@@ -190,9 +189,6 @@ class GPCCA(BaseEstimator):
             Title of the figure.
         cmap
             Colormap to use.
-        upper_triangular_only
-            Whether to show only the upper triangular matrix, including diagonal. Schur matrix should be an
-            upper triangular matrix, but there can be small numerical imprecision.
         figsize
             Size of the figure.
         dpi
@@ -218,22 +214,14 @@ class GPCCA(BaseEstimator):
         divider = make_axes_locatable(ax)  # square=True make the colorbar a bit bigger
         cbar_ax = divider.append_axes("right", size="2.5%", pad=0.05)
 
-        if upper_triangular_only:
-            mask = np.zeros_like(self._schur_matrix, dtype=np.bool)
-            mask[np.tril_indices_from(mask, k=-1)] = True
-            if not np.allclose(self._schur_matrix[mask], 0.0):
-                logg.warning(
-                    "Elements of the lower triangular matrix are not close to `0`. "
-                    "Consider visualizing the deviance `upper_triangular_only=False`."
-                )
+        mask = np.zeros_like(self._schur_matrix, dtype=np.bool)
+        mask[np.tril_indices_from(mask, k=-1)] = True
+        mask[~np.isclose(self._schur_matrix, 0.0)] = False
 
-            vmin, vmax = (
-                np.min(self._schur_matrix[~mask]),
-                np.max(self._schur_matrix[~mask]),
-            )
-        else:
-            mask = None
-            vmin, vmax = np.min(self._schur_matrix), np.max(self._schur_matrix)
+        vmin, vmax = (
+            np.min(self._schur_matrix[~mask]),
+            np.max(self._schur_matrix[~mask]),
+        )
 
         kwargs["fmt"] = kwargs.get("fmt", "0.2f")
         sns.heatmap(
@@ -283,7 +271,7 @@ class GPCCA(BaseEstimator):
         Returns
         -------
         None
-            Nothings, but updates the following fields:
+            Nothing, but updates the following fields:
 
                 - :paramref:`schur_vectors`
         """
@@ -296,13 +284,12 @@ class GPCCA(BaseEstimator):
         self._gpcca = _GPPCA(self._T, eta=initial_distribution, z=which, method=method)
         try:
             self._gpcca._do_schur_helper(n_components)
-        except ValueError as err:
+        except ValueError:
             logg.warning(
                 f"Using {n_components} components would split a block of complex conjugates. "
-                f"Therefore, increasing `n_components` to {n_components+1}"
+                f"Increasing `n_components` to {n_components + 1}"
             )
-            n_components += 1
-            self._gpcca._do_schur_helper(n_components)
+            self._gpcca._do_schur_helper(n_components + 1)
 
         # make it available for plotting
         self._schur_vectors = self._gpcca.X
