@@ -1088,3 +1088,67 @@ def _convert_lineage_name(names: str) -> Tuple[str, ...]:
     return tuple(
         sorted({name.strip(" ") for name in names.strip(f" {sep}").split(sep)})
     )
+
+
+def _long_form_frequencies(
+    adata: AnnData,
+    query_var: str = "clusters",
+    query_var_groups: Optional[Union[Iterable, str]] = None,
+    groupby: str = "identifier",
+    x_label: Optional[str] = None,
+):
+    """Utility function to compute frequencies of a `query_var` over groups defined by `groupby`
+
+    Params
+    --------
+    adata
+        Annotated Data Matrix
+    query_var
+        Key from `adata.obs` to a categorical variable whose frequencies with respect to groups defined by `groupby`
+        we want to compute
+    query_var_groups
+        Subset of the categories from `query_var`. These are the categories whose frequencies we are intersted in
+    groupby
+        Key from `adata.obs`. This defined the categorical variable with respect to which we are computing frequencies
+    x_label
+        Optional annotation from `adata.obs` that's mapped to `groupby`. Mapping must be unique.
+
+    Returns
+    --------
+    sub_frequs
+        Long-form pandas DataFrame that's convenient for plotting with seaborn
+    """
+
+    # input checks
+    if query_var not in adata.obs.keys():
+        raise ValueError(f"`{query_var}` not found in `adata.obs`")
+    if groupby not in adata.obs.keys():
+        raise ValueError(f"`{groupby}` not found in `adata.obs`")
+    if x_label is None:
+        x_label = groupby
+    else:
+        if x_label not in adata.obs.keys():
+            raise ValueError(f"{x_label} not in `adata.obs.keys`")
+    if isinstance(query_var_groups, str):
+        query_var_groups = [query_var_groups]
+
+    # compute frequencies, and get unique annotations
+    frequs = adata.obs.groupby([groupby, query_var]).size()
+    samples = adata.obs[groupby].cat.categories.to_numpy()
+    ind = adata.obs[query_var].cat.categories.to_numpy()
+
+    # compute relative frequencies (for all categories in query_var)
+    rel_frequs = [frequs[ident] / np.sum(frequs[ident]) for ident in samples]
+    rel_frequs = pd.DataFrame(rel_frequs, columns=ind, index=samples).fillna(0)
+    rel_frequs["x_label"] = np.array(
+        [
+            np.unique(adata.obs[adata.obs[groupby] == sample][x_label].to_numpy())[0]
+            for sample in rel_frequs.index
+        ],
+        dtype="int",
+    )
+
+    # subset to groups of interest and bring into long-form
+    sub_frequs = rel_frequs.loc[:, query_var_groups + ["x_label"]]
+
+    return pd.melt(sub_frequs, id_vars="x_label")
