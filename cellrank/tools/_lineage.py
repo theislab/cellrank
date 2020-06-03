@@ -2,12 +2,13 @@
 from typing import List, Tuple, Union, TypeVar, Callable, Iterable, Optional
 from itertools import combinations
 
+import numpy as np
+import pandas as pd
+
 import matplotlib.colors as c
 
 from scanpy import logging as logg
 
-import numpy as np
-import pandas as pd
 from cellrank.tools._utils import (
     _compute_mean_color,
     _convert_lineage_name,
@@ -157,16 +158,17 @@ class Lineage(np.ndarray):
                 col = [col]
 
             try:
+                # slicing an array where row/col are like 2D indices
                 if (
                     len(col) > 1
                     and len(rows) == self.shape[0]
                     and len(rows) == len(col)
                 ):
-                    col = self._maybe_convert_names(col)
+                    col = self._maybe_convert_names(col, make_unique=False)
                     return Lineage(
                         self.X[rows, col], names=["mixture"], colors=["#000000"]
                     )
-            except TypeError:
+            except TypeError:  # because of range
                 pass
 
             if isinstance(col, (list, tuple)):
@@ -299,6 +301,7 @@ class Lineage(np.ndarray):
         names: Iterable[Union[int, str]],
         is_singleton: bool = False,
         default: Optional[Union[int, str]] = None,
+        make_unique: bool = True,
     ) -> Union[int, List[int]]:
         res = []
         for name in names:
@@ -323,7 +326,8 @@ class Lineage(np.ndarray):
                     )
             res.append(name)
 
-        res = unique_order_preserving(res)
+        if make_unique:
+            res = unique_order_preserving(res)
 
         return res[0] if is_singleton else res
 

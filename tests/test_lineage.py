@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-import mock
 import numpy as np
 import pytest
 from pandas import DataFrame
 
 import matplotlib.colors as colors
 
+import mock
 import cellrank.tools._lineage as mocker
 from cellrank.tools import Lineage
 from cellrank.tools._utils import _compute_mean_color
@@ -695,3 +695,28 @@ class TestLineageNormalization:
             pass
         finally:
             mocker.assert_called_once()
+
+
+class TestLineageSameLengthIndexing:
+    def test_same_names(self):
+        x = Lineage(np.random.random((10, 4)), names=["foo", "bar", "baz", "quux"])
+        y = x[np.arange(len(x)), ["foo"] * len(x)]
+
+        expected = x["foo"]
+
+        assert y.shape == (10, 1)
+        np.testing.assert_array_equal(y.X, expected.X)
+        np.testing.assert_array_equal(y.names, ["mixture"])
+        np.testing.assert_array_equal(y.colors, ["#000000"])
+
+    def test_same_indices(self):
+        x = Lineage(np.random.random((10, 4)), names=["foo", "bar", "baz", "quux"])
+        half = len(x) // 2
+        y = x[[0] * len(x), ["foo"] * half + ["bar"] * half]
+
+        expected = np.array([x[0, "foo"].X[0, 0]] * half + [x[0, "bar"].X[0, 0]] * half)
+
+        assert y.shape == (10, 1)
+        np.testing.assert_array_equal(y.X.squeeze(), expected)
+        np.testing.assert_array_equal(y.names, ["mixture"])
+        np.testing.assert_array_equal(y.colors, ["#000000"])
