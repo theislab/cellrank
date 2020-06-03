@@ -258,7 +258,7 @@ class GPCCA(BaseEstimator):
 
     def compute_schur(
         self,
-        n_vectors: int,
+        n_vectors: int = 10,
         initial_distribution: Optional[np.ndarray] = None,
         method: str = "krylov",
         which: str = "LM",
