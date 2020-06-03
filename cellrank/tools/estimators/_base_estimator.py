@@ -36,7 +36,7 @@ from cellrank.tools._colors import (
 )
 from cellrank.tools._lineage import Lineage
 from cellrank.tools._constants import RcKey, LinKey, Prefix, Direction, _colors
-from msmtools.util.sorted_schur import sorted_krylov_schur
+from msmtools.util.sorted_schur import sorted_schur
 from cellrank.tools.kernels._kernel import KernelExpression
 
 
@@ -805,7 +805,9 @@ class BaseEstimator(ABC):
             f"Adding gene correlations to `.adata.{field}`\n    Finish", time=start
         )
 
-    def compute_gdpt(self, n_comps: int = 10, sorting: str = "LM"):
+    def compute_gdpt(
+        self, n_components: int = 10, sorting: str = "LM", method="krylov"
+    ):
         """
         Compute generalized DPT making use of the real Schur decomposition.
 
@@ -815,6 +817,8 @@ class BaseEstimator(ABC):
             Number of real schur vectors to consider.
         sorting
             How to sort the schur vectors. Options are 'LM' for largest magnitude and 'LR' for largest real part.
+        method
+            Method to compute the schur decompositions. Options are `krylov` or `brandts`.
 
         Returns
         -------
@@ -841,24 +845,33 @@ class BaseEstimator(ABC):
             raise ValueError('No field `"iroot"` found in `adata.uns`')
         iroot = self._adata.uns["iroot"]
 
-        if n_comps < 2:
+        if n_components < 2:
             raise ValueError("Please use at least `2` components. ")
 
         start = logg.info(
-            f"Computing Generalized Diffusion Pseudotime using n_comps = {n_comps}"
+            f"Computing Generalized Diffusion Pseudotime using n_components = {n_components}"
         )
 
         # comptue invariant, real subspace of self._T using the schur decomp.
+        # TODO This will fail unless sorted_schur returns eigenvalues, see my PR on msmtools
         try:
-            evecs, evals, _ = sorted_krylov_schur(self._T, m=n_comps, z=sorting)
-        except ValueError:
-            n_comps += 1
-            evecs, evals, _ = sorted_krylov_schur(self._T, m=n_comps, z=sorting)
+            R, Q, eigenvalues = sorted_schur(
+                self._T, m=n_components, z=sorting, method=method
+            )
+        except ValueError as err:
+            logg.warning(
+                f"Using {n_components} components would split a block of complex conjugates. "
+                f"Increasing `n_components` to {n_components+1}"
+            )
+            n_components += 1
+            R, Q, eigenvalues = sorted_schur(
+                self._T, m=n_components, z=sorting, method=method
+            )
 
         # may have to remove some values if too many converged
-        evecs, evals = evecs[:, :n_comps], evals[:n_comps]
+        Q, eigenvalues = Q[:, :n_components], eigenvalues[:n_components]
 
-        D = _get_dpt_row(evals, evecs, i=iroot)
+        D = _get_dpt_row(eigenvalues, Q, i=iroot)
         pseudotime = D / np.max(D[D < np.inf])
         self._adata.obs["gdpt_pseudotime"] = pseudotime
 
