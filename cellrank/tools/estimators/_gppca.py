@@ -5,6 +5,11 @@ from types import MappingProxyType
 from typing import Any, Dict, List, Tuple, Union, Mapping, Iterable, Optional
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
+from scipy.stats import entropy
+from pandas.api.types import is_categorical_dtype
+
 import seaborn as sns
 import matplotlib as mpl
 import matplotlib.cm as cm
@@ -16,10 +21,6 @@ import scvelo as scv
 from scanpy import logging as logg
 from anndata import AnnData
 
-import numpy as np
-import pandas as pd
-from scipy.stats import entropy
-from pandas.api.types import is_categorical_dtype
 from cellrank.tools._utils import (
     save_fig,
     _eigengap,
@@ -618,13 +619,6 @@ class GPCCA(BaseEstimator):
             return None
 
         probs = self._lin_probs[[n for n in self._lin_probs.names if n != "rest"]]
-        max_avail_cells = n_cells * probs.shape[1]
-        if max_avail_cells > self.adata.n_obs:
-            raise ValueError(
-                f"Total number of requested cells ({max_avail_cells}) "
-                f"exceeds the total number of cells ({self.adata.n_obs})."
-            )
-
         self._n_cells = n_cells
         self._main_states = self._select_cells(n_cells, memberships=probs)
 
@@ -666,6 +660,12 @@ class GPCCA(BaseEstimator):
 
         if names is None:
             names = self._meta_lin_probs.names
+            redistribute = False
+
+        if len(names) == 1 and redistribute:
+            logg.warning(
+                "Redistributing the mass only to 1 state will create a constant vector of 1s. Not redistributing"
+            )
             redistribute = False
 
         names = list(names)
@@ -815,24 +815,29 @@ class GPCCA(BaseEstimator):
 
             return res
 
-        # squeeze because Lineage preserves the shape
-        membership_assigments = np.array(
-            memberships[
-                np.arange(memberships.shape[0]), list(self._meta_assignment.values)
-            ]
-        ).squeeze()
+        if isinstance(memberships, Lineage):
+            # same is in msmtools
+            self._meta_assignment = pd.Series(
+                memberships.names[np.argmax(memberships.X, axis=1)], dtype="category"
+            )
+
+        membership_assignments = np.array(
+            memberships[np.arange(memberships.shape[0]), self._meta_assignment.values]
+        ).squeeze()  # squeeze because of Lineage
 
         meta_assignment = pd.DataFrame(
-            {"assignment": self._meta_assignment, "values": membership_assigments}
+            {"assignment": self._meta_assignment, "values": membership_assignments}
         )
         meta_assignment["assignment"] = (
             meta_assignment["assignment"].astype(str).astype("category")
         )
 
         metastable_states = meta_assignment.groupby("assignment").apply(set_categories)
-        metastable_states = (
-            metastable_states.droplevel(0).sort_index().astype("category")
-        )
+        if memberships.shape[1] == 1:
+            metastable_states = metastable_states.T.iloc[:, 0]
+        else:
+            metastable_states = metastable_states.droplevel(0)
+        metastable_states = metastable_states.sort_index().astype("category")
         metastable_states.index = self.adata.obs.index
 
         return metastable_states
