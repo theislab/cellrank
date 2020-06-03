@@ -258,7 +258,7 @@ class GPCCA(BaseEstimator):
 
     def compute_schur(
         self,
-        n_vectors: int = 10,
+        n_components: int = 10,
         initial_distribution: Optional[np.ndarray] = None,
         method: str = "krylov",
         which: str = "LM",
@@ -268,7 +268,7 @@ class GPCCA(BaseEstimator):
 
         Params
         ------
-        n_vectors
+        n_components
             Number of vectors to compute.
         initial_distribution
             Input probability distribution over all cells. If `None`, uniform is chosen.
@@ -288,11 +288,21 @@ class GPCCA(BaseEstimator):
                 - :paramref:`schur_vectors`
         """
 
-        if n_vectors < 2:
-            raise ValueError(f"Number of vectors must be `>=2`, found `{n_vectors}`.")
+        if n_components < 2:
+            raise ValueError(
+                f"Number of components must be `>=2`, found `{n_components}`."
+            )
 
         self._gpcca = _GPPCA(self._T, eta=initial_distribution, z=which, method=method)
-        self._gpcca._do_schur_helper(n_vectors)
+        try:
+            self._gpcca._do_schur_helper(n_components)
+        except ValueError as err:
+            logg.warning(
+                f"Using {n_components} components would split a block of complex conjugates. "
+                f"Therefore, increasing `n_components` to {n_components+1}"
+            )
+            n_components += 1
+            self._gpcca._do_schur_helper(n_components)
 
         # make it available for plotting
         self._schur_vectors = self._gpcca.X
