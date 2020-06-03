@@ -630,7 +630,7 @@ class GPCCA(BaseEstimator):
 
     def set_main_states(
         self,
-        names: Optional[Iterable[str]] = None,
+        names: Optional[Union[Iterable[str], str]] = None,
         n_cells: Optional[int] = 30,
         redistribute: bool = True,
         **kwargs,
@@ -661,6 +661,9 @@ class GPCCA(BaseEstimator):
         if names is None:
             names = self._meta_lin_probs.names
             redistribute = False
+
+        if isinstance(names, str):
+            names = [names]
 
         if len(names) == 1 and redistribute:
             logg.warning(
@@ -700,7 +703,7 @@ class GPCCA(BaseEstimator):
     def compute_main_states(
         self,
         method: str = "eigengap",
-        redistribute: bool = False,
+        redistribute: bool = True,
         alpha: Optional[float] = 1,
         min_self_prob: Optional[float] = None,
         n_main_states: Optional[int] = None,
@@ -816,9 +819,11 @@ class GPCCA(BaseEstimator):
             return res
 
         if isinstance(memberships, Lineage):
-            # same is in msmtools
+            # same is in msmtools, just update it
             self._meta_assignment = pd.Series(
-                memberships.names[np.argmax(memberships.X, axis=1)], dtype="category"
+                memberships.names[np.argmax(memberships.X, axis=1)],
+                dtype="category",
+                index=self.adata.obs_names,
             )
 
         membership_assignments = np.array(
@@ -833,10 +838,12 @@ class GPCCA(BaseEstimator):
         )
 
         metastable_states = meta_assignment.groupby("assignment").apply(set_categories)
-        if memberships.shape[1] == 1:
-            metastable_states = metastable_states.T.iloc[:, 0]
-        else:
-            metastable_states = metastable_states.droplevel(0)
+        # when there's only 1 state, we get back strange DataFrame
+        metastable_states = (
+            metastable_states.T.iloc[:, 0]
+            if memberships.shape[1] == 1
+            else metastable_states.droplevel(0)
+        )
         metastable_states = metastable_states.sort_index().astype("category")
         metastable_states.index = self.adata.obs.index
 
