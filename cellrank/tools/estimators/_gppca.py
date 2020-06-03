@@ -268,7 +268,7 @@ class GPCCA(BaseEstimator):
 
         Params
         ------
-        n_states
+        n_vectors
             Number of vectors to compute.
         initial_distribution
             Input probability distribution over all cells. If `None`, uniform is chosen.
