@@ -2,13 +2,12 @@
 from typing import List, Tuple, Union, TypeVar, Callable, Iterable, Optional
 from itertools import combinations
 
-import numpy as np
-import pandas as pd
-
 import matplotlib.colors as c
 
 from scanpy import logging as logg
 
+import numpy as np
+import pandas as pd
 from cellrank.tools._utils import (
     _compute_mean_color,
     _convert_lineage_name,
@@ -147,13 +146,28 @@ class Lineage(np.ndarray):
         is_tuple_len_2 = (
             isinstance(item, tuple)
             and len(item) == 2
-            and isinstance(item[0], (int, range, slice, tuple, list, np.ndarray))
+            and isinstance(
+                item[0], (int, np.integer, range, slice, tuple, list, np.ndarray)
+            )
         )
         if is_tuple_len_2:
             rows, col = item
 
-            if isinstance(col, (int, str)):
+            if isinstance(col, (int, np.integer, str)):
                 col = [col]
+
+            try:
+                if (
+                    len(col) > 1
+                    and len(rows) == self.shape[0]
+                    and len(rows) == len(col)
+                ):
+                    col = self._maybe_convert_names(col)
+                    return Lineage(
+                        self.X[rows, col], names=["mixture"], colors=["#000000"]
+                    )
+            except TypeError:
+                pass
 
             if isinstance(col, (list, tuple)):
                 if any(
@@ -166,8 +180,9 @@ class Lineage(np.ndarray):
                     return self._mixer(rows, col)
                 col = self._maybe_convert_names(col)
                 item = rows, col
+
         else:
-            if isinstance(item, (int, str)):
+            if isinstance(item, (int, np.integer, str)):
                 item = [item]
 
             col = range(len(self.names))

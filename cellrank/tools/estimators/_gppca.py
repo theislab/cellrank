@@ -352,7 +352,7 @@ class GPCCA(BaseEstimator):
             self._compute_eig(k=k, which=which, alpha=alpha, only_evals=False)
             stationary_dist = self.eigendecomposition["stationary_dist"]
 
-            _ = self._assign_metastable_states(
+            self._assign_metastable_states(
                 stationary_dist[:, None],
                 np.zeros_like(stationary_dist),
                 n_cells,
@@ -626,10 +626,10 @@ class GPCCA(BaseEstimator):
             )
 
         self._n_cells = n_cells
-        self._main_states, _, _ = self._select_cells(n_cells, memberships=probs)
+        self._main_states = self._select_cells(n_cells, memberships=probs)
 
         if write_to_adata:
-            self.adata.obs[self._rc_key] = self._main_state
+            self.adata.obs[self._rc_key] = self._main_states
             self.adata.uns[_colors(self._rc_key)] = probs[
                 list(self._main_states.cat.categories)
             ].colors
@@ -796,7 +796,7 @@ class GPCCA(BaseEstimator):
         )
 
     def _select_cells(
-        self, n_cells: int, metastable_assignment: pd.DataFrame,
+        self, n_cells: int, memberships: Union[np.ndarray, Lineage],
     ) -> Tuple[pd.Series, Union[np.ndarray, Lineage], List[int]]:
         def set_categories(group):
             category = group["assignment"].iloc[0]
@@ -815,9 +815,21 @@ class GPCCA(BaseEstimator):
 
             return res
 
-        metastable_states = metastable_assignment.groupby("assignment").apply(
-            set_categories
+        # squeeze because Lineage preserves the shape
+        membership_assigments = np.array(
+            memberships[
+                np.arange(memberships.shape[0]), list(self._meta_assignment.values)
+            ]
+        ).squeeze()
+
+        meta_assignment = pd.DataFrame(
+            {"assignment": self._meta_assignment, "values": membership_assigments}
         )
+        meta_assignment["assignment"] = (
+            meta_assignment["assignment"].astype(str).astype("category")
+        )
+
+        metastable_states = meta_assignment.groupby("assignment").apply(set_categories)
         metastable_states = (
             metastable_states.droplevel(0).sort_index().astype("category")
         )
@@ -825,88 +837,36 @@ class GPCCA(BaseEstimator):
 
         return metastable_states
 
-        # in this case, we need to be a bit careful because fuzzy clusters can largely overlap
-        metastable_states = pd.Series(index=self.adata.obs_names, dtype="category")
-        overlaps, cols, valid_ixs = {}, [], []
-
-        if isinstance(memberships, Lineage):
-            names = memberships.names
-            # we always retain the same shape, causes problems
-            memberships = memberships.X
-        else:
-            names = list(map(str, range(memberships.shape[1])))
-
-        for ix, (name, col) in enumerate(zip(names, memberships.T)):
-            p = np.argpartition(col, -n_cells)[-n_cells:]
-
-            # handle the case of overlapping cells (fuzzy clustering)
-            if len(metastable_states.cat.categories) > 0:
-                current_labels = metastable_states.iloc[p]
-                overlap = {
-                    cl: np.sum(current_labels == cl)
-                    for cl in current_labels.cat.categories
-                    if np.sum(current_labels == cl) > 0
-                }
-                overlaps[name] = overlap
-                if any(np.fromiter(overlap.values(), dtype=float) / n_cells > 0.8):
-                    logg.warning(
-                        "Found overlapping clusters with overlap > 80%. Skipping"
-                    )
-                    continue
-
-            self._gppca_overlap = overlaps
-
-            metastable_states.cat.add_categories(name, inplace=True)
-            metastable_states.iloc[p] = name
-
-            cols.append(col[:, None])
-            valid_ixs.append(ix)
-
-        # aggregate the non-overlapping columns together
-        _memberships = np.concatenate(cols, axis=1)
-
-        return metastable_states, _memberships, valid_ixs
-
     def _assign_metastable_states(
         self,
         memberships: np.ndarray,
-        metastable_assignment: pd.DataFrame,
+        metastable_assignment: np.ndarray,
         n_cells: Optional[int],
         cluster_key: str,
         p_thresh,
         en_cutoff,
     ) -> None:
+        # keep it as int for indexing when `n_cells!=None`
+        self._meta_assignment = pd.Series(
+            index=self.adata.obs_names, data=metastable_assignment, dtype="category",
+        )
+        # sometimes, the assignment can have a missing category and the Lineage creation therefore fails
+        self._meta_assignment.cat.set_categories(
+            range(memberships.shape[1]), inplace=True
+        )
 
         if n_cells is None:
             logg.debug(
                 "DEBUG: Setting the metastable states using metastable assignment"
             )
-
-            metastable_states = pd.Series(
-                index=self._adata.obs_names,
-                data=map(str, metastable_assignment),
-                dtype="category",
+            metastable_states = (
+                self._meta_assignment.astype(str).astype("category").copy()
             )
         else:
             logg.debug(
                 "DEBUG: Setting the metastable states using metastable memberships"
             )
-            membership_assigments = memberships[
-                np.arange(memberships.shape[0]), metastable_assignment
-            ]
-            meta_assignment = pd.DataFrame(
-                {"assignment": metastable_assignment, "values": membership_assigments}
-            )
-            meta_assignment["assignment"] = (
-                meta_assignment["assignment"].astype(str).astype("category")
-            )
-
-            metastable_states = self._select_cells(n_cells, meta_assignment,)
-
-        # sometimes, the assignment can have a missing category and the Lineage creation therefore fails
-        metastable_states.cat.set_categories(
-            map(str, range(memberships.shape[1])), inplace=True
-        )
+            metastable_states = self._select_cells(n_cells, memberships)
 
         self._set_categorical_labels(
             attr_key="_meta_states",
@@ -918,6 +878,11 @@ class GPCCA(BaseEstimator):
             en_cutoff=en_cutoff,
             p_thresh=p_thresh,
             add_to_existing=False,
+        )
+
+        # this makes indexing easier for Lineage class
+        self._meta_assignment.cat.rename_categories(
+            metastable_states.cat.categories, inplace=True
         )
 
         logg.debug(
@@ -979,7 +944,7 @@ class GPCCA(BaseEstimator):
             raise ValueError(f"Expected `n_cells` to be positive, found `{n_cells}`.")
 
         if attr == "_meta_lin_probs":  # plotting meta_lin_probs
-            _main_states, *_ = self._select_cells(n_cells, probs)
+            _main_states = self._select_cells(n_cells, memberships=probs)
         elif attr == "_lin_probs":
             if n_cells == self._n_cells:
                 logg.debug("DEBUG: Using cached main states")
