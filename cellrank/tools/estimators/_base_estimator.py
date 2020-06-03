@@ -853,6 +853,7 @@ class BaseEstimator(ABC):
         )
 
         # comptue invariant, real subspace of self._T using the schur decomp.
+        # TODO This will fail unless sorted_schur returns eigenvalues, see my PR on msmtools
         try:
             R, Q, eigenvalues = sorted_schur(
                 self._T, m=n_components, z=sorting, method=method
