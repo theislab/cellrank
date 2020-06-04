@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Lineage class."""
+"""Lineage class module."""
 
 from typing import List, Tuple, Union, TypeVar, Callable, Iterable, Optional
 from itertools import combinations
