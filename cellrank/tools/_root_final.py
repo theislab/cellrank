@@ -90,7 +90,7 @@ def _root_final(
 
     elif isinstance(mc, GPCCA):
         if n_states is not None and n_states > 1:
-            mc.compute_schur(n_states)
+            mc.compute_schur(n_states + 1)
         mc.compute_metastable_states(n_states=n_states, **kwargs)
         mc.set_main_states()  # write to adata
 
