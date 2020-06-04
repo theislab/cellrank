@@ -8,8 +8,9 @@ from anndata import AnnData
 
 from cellrank.utils._docs import inject_docs
 from cellrank.tools._constants import StateKey
+from cellrank.tools.estimators import GPCCA, CFLARE
 from cellrank.tools._transition_matrix import transition_matrix
-from cellrank.tools.estimators._cflare import CFLARE
+from cellrank.tools.estimators._base_estimator import BaseEstimator
 
 _find_docs = """\
 Compute {cells} cells based on RNA velocity, see [Manno18]_.The tool models dynamic cellular
@@ -24,6 +25,8 @@ Params
 ------
 adata : :class:`adata.AnnData`
     Annotated data object.
+estimator
+    Estimator to use to compute the lineage probabilities.
 cluster_key
     The tool can match computed {direction}points against pre-computed clusters to annotate the {direction}points.
     For this, provide a key from :paramref:`adata` `.obs` where cluster labels have been computed.
@@ -56,6 +59,7 @@ Returns
 
 def _root_final(
     adata: AnnData,
+    estimator: type(BaseEstimator) = GPCCA,
     final: bool = True,
     cluster_key: Optional[str] = None,
     weight_connectivities: float = None,
@@ -76,22 +80,30 @@ def _root_final(
     )
 
     # create MarkovChain object
-    mc = CFLARE(kernel)
+    mc = estimator(kernel)
 
     # run the computation
     mc.compute_eig()
-    mc.compute_metastable_states(
-        percentile=percentile,
-        n_matches_min=n_matches_min,
-        use=n_start_end,
-        n_clusters_kmeans=n_start_end,
-        cluster_key=cluster_key,
-    )
+    if isinstance(mc, CFLARE):
+        mc.compute_metastable_states(
+            percentile=percentile,
+            n_matches_min=n_matches_min,
+            use=n_start_end,
+            n_clusters_kmeans=n_start_end,
+            cluster_key=cluster_key,
+        )
 
-    if show_plots:
-        mc.plot_spectrum(real_only=True)
-        mc.plot_eig_embedding(abs_value=True, perc=[0, 98], use=n_start_end)
-        mc.plot_eig_embedding(left=False, use=n_start_end)
+        if show_plots:
+            mc.plot_spectrum(real_only=True)
+            mc.plot_eig_embedding(abs_value=True, perc=[0, 98], use=n_start_end)
+            mc.plot_eig_embedding(left=False, use=n_start_end)
+    elif isinstance(mc, GPCCA):
+        mc.compute_metastable_states()  # TODO
+        mc.set_main_states()
+    else:
+        raise NotImplementedError(
+            f"Pipeline not implemented for `{type(bytes).__name__}`"
+        )
 
     return adata if copy else None
 
@@ -101,6 +113,7 @@ def _root_final(
 )
 def find_root(
     adata: AnnData,
+    estimator: type(BaseEstimator) = GPCCA,
     cluster_key: Optional[str] = None,
     weight_connectivities: float = None,
     percentile: int = 98,
@@ -116,6 +129,7 @@ def find_root(
 
     return _root_final(
         adata,
+        estimator=estimator,
         final=False,
         cluster_key=cluster_key,
         weight_connectivities=weight_connectivities,
@@ -131,6 +145,7 @@ def find_root(
 )
 def find_final(
     adata: AnnData,
+    estimator: type(BaseEstimator) = GPCCA,
     cluster_key: Optional[str] = None,
     weight_connectivities: float = None,
     percentile: int = 98,
@@ -146,6 +161,7 @@ def find_final(
 
     return _root_final(
         adata,
+        estimator=estimator,
         final=True,
         cluster_key=cluster_key,
         weight_connectivities=weight_connectivities,
