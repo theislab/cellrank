@@ -7,6 +7,7 @@ from scanpy import logging as logg
 from anndata import AnnData
 
 from cellrank.utils._docs import inject_docs
+from cellrank.tools._utils import _info_if_obs_keys_categorical_present
 from cellrank.tools._constants import StateKey
 from cellrank.tools.estimators import GPCCA, CFLARE
 from cellrank.tools._transition_matrix import transition_matrix
@@ -78,8 +79,15 @@ def _root_final(
     # create MarkovChain object
     mc = estimator(kernel, read_from_adata=False)
 
-    # run the computation
+    if cluster_key is None:
+        _info_if_obs_keys_categorical_present(
+            adata,
+            keys=["louvain", "clusters"],
+            msg_fmt="Found categorical observation in `adata.obs[{!r}]`. "
+            "Consider specifying it as `cluster_key`.",
+        )
 
+    # run the computation
     if isinstance(mc, CFLARE):
         kwargs["use"] = n_states
 
