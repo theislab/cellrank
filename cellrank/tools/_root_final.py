@@ -92,7 +92,7 @@ def _root_final(
         if n_states is not None and n_states > 1:
             mc.compute_schur(n_states)
         mc.compute_metastable_states(n_states=n_states, **kwargs)
-        mc.set_main_states()
+        mc.set_main_states()  # write to adata
 
         if show_plots:
             mc.plot_spectrum(real_only=True)
