@@ -114,7 +114,7 @@ def lineages(
         if n_lineages == 1:
             mc.compute_eig()
         elif n_lineages is not None:
-            mc.compute_schur(n_components=n_lineages, method=method)
+            mc.compute_schur(n_components=n_lineages + 1, method=method)
         mc.compute_metastable_states(
             n_states=n_lineages, cluster_key=cluster_key, **kwargs
         )
