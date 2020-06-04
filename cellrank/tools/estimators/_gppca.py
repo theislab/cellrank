@@ -455,7 +455,9 @@ class GPCCA(BaseEstimator):
             start = logg.info("Computing metastable states")
             try:
                 self._gpcca = self._gpcca.optimize(m=n_states)
-            except ValueError:
+            except ValueError as e:
+                if n_states != self._schur_vectors.shape[1]:
+                    raise e
                 logg.warning(
                     f"Unable to perform the optimization using `{self._schur_vectors.shape[1]}` Schur vectors. "
                     f"Recomputing the decomposition"
