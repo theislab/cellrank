@@ -331,7 +331,7 @@ class CFLARE(BaseEstimator):
         n_clusters_kmeans: Optional[int] = None,
         n_neighbors_louvain: int = 20,
         resolution_louvain: float = 0.1,
-        n_matches_min: Optional[int] = 0,
+        n_matches_min: Optional[int] = 1,
         n_neighbors_filtering: int = 15,
         basis: Optional[str] = None,
         n_comps: int = 5,
@@ -367,7 +367,7 @@ class CFLARE(BaseEstimator):
         resolution_louvain
             Resolution parameter from the `louvain` algorithm. Should be chosen relatively small.
         n_matches_min
-            Filters out cells which don't have at leas n_matches_min neighbors from the same class.
+            Filters out cells which don't have at least n_matches_min neighbors from the same class.
             This filters out some cells which are transient but have been misassigned.
         n_neighbors_filtering
             Parameter for filtering cells. Cells are filtered out if they don't have at

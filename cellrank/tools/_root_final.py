@@ -27,23 +27,12 @@ adata : :class:`adata.AnnData`
     Annotated data object.
 estimator
     Estimator to use to compute the lineage probabilities.
-cluster_key
-    The tool can match computed {direction}points against pre-computed clusters to annotate the {direction}points.
-    For this, provide a key from :paramref:`adata` `.obs` where cluster labels have been computed.
+n_states
+    If you know how many {direction}points you are expecting, you can provide this number.
+    Otherwise, an eigen-gap heuristic is used for :class:`cellrank.tl.CFLARE`.
 weight_connectivities
     Weight given to a transition matrix computed on the basis of the KNN connectivities. Should be in `[0, 1]`. This
     can help in situations where we have noisy velocities and want to give some weight to transcriptomic similarity.
-percentile
-    When making a distinction between transient and recurrent cells, a percentile is used for filtering. Choose
-    this value according to the percentage of transient cells you expect to see in your data.
-    E.g. :paramref:`percentile` `=98` means you are expecting 98% of your cells to be transient
-    and 2% to be recurrent {direction}points.
-n_matches_min
-    Parameter used to remove some noise. If `n_matches_min = L`, required that at least L of the nearest neighbors of
-    cells *i* belong to the same {direction}point, otherwise, *i* is not considered a {direction}point itself.
-n_start_end
-    If you know how many {direction}points you are expecting, you can provide this number.
-    Otherwise, an eigen-gap heuristic is used.
 show_plots
     Whether to show plots of the spectrum and eigenvectors in the embedding.
 copy
@@ -65,13 +54,10 @@ Returns
 
 def _root_final(
     adata: AnnData,
-    estimator: type(BaseEstimator) = GPCCA,
+    estimator: type(BaseEstimator) = CFLARE,
     final: bool = True,
-    cluster_key: Optional[str] = None,
+    n_states: Optional[int] = None,
     weight_connectivities: float = None,
-    percentile: int = 98,
-    n_matches_min: Optional[int] = 1,
-    n_start_end: Optional[int] = None,
     show_plots: bool = False,
     copy: bool = False,
     return_estimator: bool = False,
@@ -94,24 +80,27 @@ def _root_final(
     mc.compute_eig()
 
     if isinstance(mc, CFLARE):
-        mc.compute_metastable_states(
-            percentile=percentile,
-            n_matches_min=n_matches_min,
-            use=n_start_end,
-            n_clusters_kmeans=n_start_end,
-            cluster_key=cluster_key,
-        )
+        kwargs["use"] = n_states
+
+        mc.compute_metastable_states(**kwargs)
 
         if show_plots:
             mc.plot_spectrum(real_only=True)
-            mc.plot_eig_embedding(abs_value=True, perc=[0, 98], use=n_start_end)
-            mc.plot_eig_embedding(left=False, use=n_start_end)
-    elif isinstance(mc, GPCCA):
-        mc.compute_metastable_states(**kwargs)
-        mc.set_main_states()
+            mc.plot_eig_embedding(abs_value=True, perc=[0, 98], use=n_states)
+            mc.plot_eig_embedding(left=False, use=n_states)
 
+    elif isinstance(mc, GPCCA):
+        if n_states is None:
+            raise ValueError("Argument `n_states` can't be none for `GPCCA` estimator.")
+
+        mc.compute_schur(n_states)
+        mc.compute_metastable_states(n_states=n_states, **kwargs)
+
+        # TODO: @Marius - do you agree with this?
         if show_plots:
-            pass
+            mc.plot_schur_embedding()
+            mc.plot_metastable_states()
+            mc.plot_coarse_T()
     else:
         raise NotImplementedError(
             f"Pipeline not implemented for `{type(bytes).__name__}`"
@@ -125,11 +114,9 @@ def _root_final(
 )
 def find_root(
     adata: AnnData,
-    estimator: type(BaseEstimator) = GPCCA,
-    cluster_key: Optional[str] = None,
+    estimator: type(BaseEstimator) = CFLARE,
+    n_states: Optional[int] = None,
     weight_connectivities: float = None,
-    percentile: int = 98,
-    n_start_end: Optional[int] = None,
     show_plots: bool = False,
     copy: bool = False,
     return_estimator: bool = False,
@@ -145,13 +132,12 @@ def find_root(
         adata,
         estimator=estimator,
         final=False,
-        cluster_key=cluster_key,
+        n_states=n_states,
         weight_connectivities=weight_connectivities,
-        percentile=percentile,
-        n_start_end=n_start_end,
         show_plots=show_plots,
         copy=copy,
         return_estimator=return_estimator,
+        **kwargs,
     )
 
 
@@ -160,11 +146,9 @@ def find_root(
 )
 def find_final(
     adata: AnnData,
-    estimator: type(BaseEstimator) = GPCCA,
-    cluster_key: Optional[str] = None,
+    estimator: type(BaseEstimator) = CFLARE,
+    n_states: Optional[int] = None,
     weight_connectivities: float = None,
-    percentile: int = 98,
-    n_start_end: Optional[int] = None,
     show_plots: bool = False,
     copy: bool = False,
     return_estimator: bool = False,
@@ -180,11 +164,10 @@ def find_final(
         adata,
         estimator=estimator,
         final=True,
-        cluster_key=cluster_key,
+        n_states=n_states,
         weight_connectivities=weight_connectivities,
-        percentile=percentile,
-        n_start_end=n_start_end,
         show_plots=show_plots,
         copy=copy,
         return_estimator=return_estimator,
+        **kwargs,
     )
