@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+"""General utility functions module."""
+
 from typing import Any, Dict, List, Tuple, Union, Hashable, Iterable, Optional
 from multiprocessing import cpu_count
 
@@ -113,11 +115,11 @@ def _make_unique(collection: Iterable[Hashable]) -> List[Hashable]:
     return res
 
 
-def has_neighs(adata: anndata.AnnData) -> bool:
+def _has_neighs(adata: anndata.AnnData) -> bool:
     return "neighbors" in adata.uns.keys()
 
 
-def get_neighs(
+def _get_neighs(
     adata: anndata.AnnData, mode: str = "distances"
 ) -> Union[np.ndarray, spmatrix]:
     return (
@@ -127,5 +129,5 @@ def get_neighs(
     )
 
 
-def get_neighs_params(adata: anndata.AnnData) -> Dict[str, Any]:
+def _get_neighs_params(adata: anndata.AnnData) -> Dict[str, Any]:
     return adata.uns["neighbors"]["params"]

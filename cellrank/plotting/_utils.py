@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+"""Utility functions for CellRank plotting."""
+
 from copy import copy
 from typing import Any, Dict, Tuple, Union, Mapping, Iterable, Optional, Sequence
 from pathlib import Path
@@ -139,14 +141,14 @@ def curved_edges(
 
     # Get nodes into np array
     edges = np.array(G.edges())
-    l = edges.shape[0]
+    n_edges = edges.shape[0]
 
     self_loop_mask = edges[:, 0] == edges[:, 1]
     pos_sl = {edge[0]: pos[edge[0]] for edge in edges[self_loop_mask, ...]}
 
     if polarity == "random":
         # Random polarity of curve
-        rnd = np.where(np.random.randint(2, size=l) == 0, -1, 1)
+        rnd = np.where(np.random.randint(2, size=n_edges) == 0, -1, 1)
     elif polarity == "directed":
         rnd = np.where(edges[:, 0] > edges[:, 1], -1, 1)
     elif polarity == "fixed":
@@ -185,13 +187,13 @@ def curved_edges(
 
     # Gradients of line connecting node & perpendicular
     m1 = (coords_node2[:, 1] - coords_node1[:, 1]) / (
-        (coords_node2[:, 0] - coords_node1[:, 0])
+        coords_node2[:, 0] - coords_node1[:, 0]
     )
     m2 = -1 / m1
 
     # Temporary points along the line which connects two nodes
     t1 = dist / np.sqrt(1 + m1 ** 2)
-    v1 = np.array([np.ones(l), m1])
+    v1 = np.array([np.ones(n_edges), m1])
     coords_node1_displace = coords_node1 + (v1 * t1).T
     coords_node2_displace = coords_node2 - (v1 * t1).T
 
@@ -240,7 +242,7 @@ def composition(
     save: Optional[Union[str, Path]] = None,
 ) -> None:
     """
-    Utility function to plot pie chart for categorical annotation.
+    Plot pie chart for categorical annotation.
 
     .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/composition.png
        :width: 400px
@@ -345,7 +347,7 @@ def _create_models(
             raise RuntimeError(_ERROR_INCOMPLETE_SPEC.format(" lineage ", obs_name))
 
     if isinstance(model, Model):
-        return {o: {l: copy(model) for l in lineages} for o in obs}
+        return {o: {lin: copy(model) for lin in lineages} for o in obs}
 
     lineages, obs = set(lineages), set(obs)
     models = defaultdict(dict)

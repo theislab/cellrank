@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+"""Gene trend module."""
+
 import os
 from types import MappingProxyType
 from typing import Tuple, Union, Mapping, Optional, Sequence
@@ -8,7 +10,6 @@ import numpy as np
 
 import matplotlib
 import matplotlib.cm as cm
-import matplotlib.colors as colors
 import matplotlib.pyplot as plt
 
 import scanpy as sc
@@ -274,7 +275,7 @@ def gene_trends(
     logg.info("    Finish", time=start)
 
     logg.debug("DEBUG: Plotting trends")
-    for i, (gene, ax) in enumerate(zip(genes, axes)):
+    for gene, ax in zip(genes, axes):
         f = (
             None
             if (same_plot or dirname is None)

@@ -11,9 +11,9 @@ from _helpers import assert_array_nan_equal
 from cellrank.tools._colors import _create_categorical_colors
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tools._constants import (
-    RcKey,
     LinKey,
     Prefix,
+    StateKey,
     Direction,
     _probs,
     _colors,
@@ -34,8 +34,8 @@ class TestMarkovChain:
         if not mc.irreducible:
             assert isinstance(mc.recurrent_classes, list)
             assert isinstance(mc.transient_classes, list)
-            assert f"{RcKey.FORWARD}_rec_classes" in mc.adata.obs
-            assert f"{RcKey.FORWARD}_trans_classes" in mc.adata.obs
+            assert f"{StateKey.FORWARD}_rec_classes" in mc.adata.obs
+            assert f"{StateKey.FORWARD}_trans_classes" in mc.adata.obs
         else:
             assert mc.recurrent_classes is None
             assert mc.transient_classes is None
@@ -89,8 +89,8 @@ class TestMarkovChain:
 
         assert is_categorical_dtype(mc.metastable_states)
         assert mc.metastable_states_probabilities is not None
-        assert _colors(RcKey.FORWARD) in mc.adata.uns.keys()
-        assert _probs(RcKey.FORWARD) in mc.adata.obs.keys()
+        assert _colors(StateKey.FORWARD) in mc.adata.uns.keys()
+        assert _probs(StateKey.FORWARD) in mc.adata.obs.keys()
 
     def test_compute_lin_probs_no_arcs(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
@@ -222,14 +222,14 @@ class TestMarkovChain:
         mc_fwd.compute_eig()
 
         mc_fwd.compute_metastable_states(use=3)
-        original = np.array(adata.obs[f"{RcKey.FORWARD}"].copy())
+        original = np.array(adata.obs[f"{StateKey.FORWARD}"].copy())
         zero_mask = original == "0"
 
         cells = list(adata[zero_mask].obs_names)
         mc_fwd.set_metastable_states({"foo": cells})
 
-        assert (adata.obs[f"{RcKey.FORWARD}"][zero_mask] == "foo").all()
-        assert pd.isna(adata.obs[f"{RcKey.FORWARD}"][~zero_mask]).all()
+        assert (adata.obs[f"{StateKey.FORWARD}"][zero_mask] == "foo").all()
+        assert pd.isna(adata.obs[f"{StateKey.FORWARD}"][~zero_mask]).all()
 
     def test_check_and_create_colors(self, adata_large):
         adata = adata_large
@@ -244,16 +244,16 @@ class TestMarkovChain:
         mc_fwd.compute_metastable_states(use=3)
 
         mc_fwd._meta_states_colors = None
-        del mc_fwd.adata.uns[_colors(RcKey.FORWARD)]
+        del mc_fwd.adata.uns[_colors(StateKey.FORWARD)]
 
         mc_fwd._check_and_create_colors()
 
-        assert _colors(RcKey.FORWARD) in mc_fwd.adata.uns
+        assert _colors(StateKey.FORWARD) in mc_fwd.adata.uns
         np.testing.assert_array_equal(
-            mc_fwd.adata.uns[_colors(RcKey.FORWARD)], _create_categorical_colors(3)
+            mc_fwd.adata.uns[_colors(StateKey.FORWARD)], _create_categorical_colors(3)
         )
         np.testing.assert_array_equal(
-            mc_fwd.adata.uns[_colors(RcKey.FORWARD)], mc_fwd._meta_states_colors
+            mc_fwd.adata.uns[_colors(StateKey.FORWARD)], mc_fwd._meta_states_colors
         )
 
 

@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+"""Gene importance module."""
+
 from types import MappingProxyType
 from typing import Any, Dict, List, Tuple, Union, Mapping, Optional, Sequence
 
@@ -74,6 +76,7 @@ def _gi_process(
     **kwargs,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
+    Calculate the smoothed gene expression which will be used to get the gene importances.
 
     Params
     ------
@@ -90,6 +93,8 @@ def _gi_process(
 
     Returns
     -------
+    :class:`numpy.ndarray`, :class:`numpy.ndarray`
+        The independent variables and the optionally normalized smoothed expression.
     """
 
     res = []

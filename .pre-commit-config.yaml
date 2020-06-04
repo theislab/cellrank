@@ -25,3 +25,12 @@ repos:
     hooks:
     - id: isort
       additional_dependencies: ["toml"]
+-   repo: https://gitlab.com/pycqa/flake8
+    rev: 3.8.2
+    hooks:
+    - id: flake8
+      additional_dependencies: ["flake8-docstrings", "flake8-comprehensions", "flake8-bugbear"]
+-   repo: https://github.com/asottile/pyupgrade
+    rev: v2.4.4
+    hooks:
+    -   id: pyupgrade
