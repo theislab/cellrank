@@ -103,6 +103,7 @@ def lineages(
 
     # compute the absorption probabilities
     if isinstance(mc, CFLARE):
+        mc.compute_eig()
         mc.compute_metastable_states(**kwargs)
         mc.compute_lin_probs(keys=keys)
     elif isinstance(mc, GPCCA):
