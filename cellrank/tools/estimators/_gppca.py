@@ -21,6 +21,7 @@ from anndata import AnnData
 import numpy as np
 import pandas as pd
 from scipy.stats import entropy
+from pandas.api.types import is_categorical_dtype
 from cellrank.tools._utils import (
     save_fig,
     _eigengap,
@@ -77,10 +78,9 @@ class GPCCA(BaseEstimator):
             s_key=s_key,
             key_added=key_added,
         )
-        if kernel.backward:
-            self._meta_key = str(MetaKey.BACKWARD)
-        else:
-            self._meta_key = str(MetaKey.FORWARD)
+        self._meta_key = (
+            str(MetaKey.BACKWARD) if kernel.backward else str(MetaKey.FORWARD)
+        )
 
         self._gpcca: GPCCA = None
         self._schur_vectors = None
@@ -453,7 +453,21 @@ class GPCCA(BaseEstimator):
                 )
 
             start = logg.info("Computing metastable states")
-            self._gpcca = self._gpcca.optimize(m=n_states)
+            try:
+                self._gpcca = self._gpcca.optimize(m=n_states)
+            except ValueError:
+                logg.warning(
+                    f"Unable to perform the optimization using `{self._schur_vectors.shape[1]}` Schur vectors. "
+                    f"Recomputing the decomposition"
+                )
+                self.compute_schur(
+                    n_states + 1,
+                    initial_distribution=self._gpcca.eta,
+                    method=self._gpcca.method,
+                    which=self._gpcca.z,
+                    alpha=self.eigendecomposition["params"]["alpha"],
+                )
+                self._gpcca = self._gpcca.optimize(m=n_states)
 
             self._assign_metastable_states(
                 self._gpcca.memberships,
@@ -574,7 +588,7 @@ class GPCCA(BaseEstimator):
         cluster_key: Optional[str] = None,
         mode: str = "embedding",
         time_key: str = "latent_time",
-        same_plot: bool = False,
+        same_plot: bool = True,
         show_dp: bool = False,
         title: Optional[str] = None,
         cmap: Union[str, mpl.colors.ListedColormap] = cm.viridis,
@@ -655,7 +669,6 @@ class GPCCA(BaseEstimator):
             return None
 
         probs = self._lin_probs[[n for n in self._lin_probs.names if n != "rest"]]
-        self._n_cells = n_cells
         self._main_states = self._select_cells(n_cells, memberships=probs)
 
         if write_to_adata:
@@ -703,7 +716,7 @@ class GPCCA(BaseEstimator):
 
         if len(names) == 1 and redistribute:
             logg.warning(
-                "Redistributing the mass only to 1 state will create a constant vector of 1s. Not redistributing"
+                "Redistributing the mass only to 1 state will create a constant vector of ones. Not redistributing"
             )
             redistribute = False
 
@@ -730,9 +743,9 @@ class GPCCA(BaseEstimator):
         # write to adata
         self.adata.obs[_dp(self._lin_key)] = self._dp
         self.adata.obs[_probs(self._rc_key)] = aggregated_state_probability
-        self.adata.obsm[self._lin_key] = self._lin_probs
         self.adata.uns[_lin_names(self._lin_key)] = self._lin_probs.names
         self.adata.uns[_colors(self._lin_key)] = self._lin_probs.colors
+        self.adata.obsm[self._lin_key] = self._lin_probs
 
         logg.info("Adding `.lineage_probabilities\n       `.diff_potential`")
 
@@ -839,7 +852,10 @@ class GPCCA(BaseEstimator):
         )
 
     def _select_cells(
-        self, n_cells: int, memberships: Union[np.ndarray, Lineage],
+        self,
+        n_cells: int,
+        memberships: Union[np.ndarray, Lineage],
+        meta_assignment: Optional[pd.Series] = None,
     ) -> Tuple[pd.Series, Union[np.ndarray, Lineage], List[int]]:
         def set_categories(group):
             category = group["assignment"].iloc[0]
@@ -849,7 +865,7 @@ class GPCCA(BaseEstimator):
                     f"Number of requested cells ({n_cells}) exceeds the number of available cells ({len(group)}) "
                     f"for cluster `{category}`. Selecting all cells"
                 )
-                return pd.Series(group["assignment"])
+                return pd.Series(group["assignment"], dtype="category")
 
             ixs = np.argpartition(group["values"], -n_cells)[-n_cells:]
 
@@ -859,20 +875,36 @@ class GPCCA(BaseEstimator):
 
             return res
 
-        if isinstance(memberships, Lineage):
-            # same is in msmtools, just update it
-            self._meta_assignment = pd.Series(
-                memberships.names[np.argmax(memberships.X, axis=1)],
-                dtype="category",
-                index=self.adata.obs_names,
-            )
+        if meta_assignment is None:
+            if isinstance(memberships, Lineage):
+                # use the names, in principle, does not matter
+                _meta_assignment = pd.Series(
+                    memberships.names[np.argmax(memberships.X, axis=1)],
+                    dtype="category",
+                    index=self.adata.obs_names,
+                )
+            else:
+                # this shouldn't happen - `meta_assignment` should be not `None` when calling `compute_metastable...``
+                _meta_assignment = pd.Series(
+                    np.argmax(memberships, axis=1),
+                    dtype="category",
+                    index=self.adata.obs_names,
+                )
+        else:
+            _meta_assignment = meta_assignment
+        orig_cats = list(map(str, _meta_assignment.cat.categories))
 
-        membership_assignments = np.array(
-            memberships[np.arange(memberships.shape[0]), self._meta_assignment.values]
+        assert isinstance(_meta_assignment, pd.Series) and is_categorical_dtype(
+            _meta_assignment
+        ), "Metastable assignment is not a categorical series."
+
+        # should work for Lineage if _meta_assignment are strings or ints
+        membership_probs = np.array(
+            memberships[np.arange(memberships.shape[0]), _meta_assignment.values]
         ).squeeze()  # squeeze because of Lineage
 
         meta_assignment = pd.DataFrame(
-            {"assignment": self._meta_assignment, "values": membership_assignments}
+            {"assignment": _meta_assignment, "values": membership_probs}
         )
         meta_assignment["assignment"] = (
             meta_assignment["assignment"].astype(str).astype("category")
@@ -881,16 +913,26 @@ class GPCCA(BaseEstimator):
         metastable_states = meta_assignment.groupby("assignment", sort=False).apply(
             set_categories
         )
+
         # when there's only 1 state, we get back strange DataFrame
         metastable_states = (
             metastable_states.T.iloc[:, 0]
             if memberships.shape[1] == 1
             else metastable_states.droplevel(0)
         )
+
         metastable_states = metastable_states.sort_index().astype("category")
-        if isinstance(memberships, Lineage):  # set the order to have correct colors
-            metastable_states.cat.reorder_categories(memberships.names, inplace=True)
         metastable_states.index = self.adata.obs.index
+        if isinstance(memberships, Lineage):  # set the order to have correct colors
+            # it can happen that `metastable_states` doesn't have the category (Lineage will always have it)
+            # therefore use `set_categories`
+            metastable_states.cat.set_categories(memberships.names, inplace=True)
+        else:
+            # this should be the case when `meta_assignment` is not None
+            # same as above, it's just converted to string (in `_assign_metastable_states` we set the categories
+            # from 0...n-1, even though the membership assignment can be missing in the data)
+            assert meta_assignment is not None, "This shouldn't have happened."
+            metastable_states.cat.set_categories(orig_cats, inplace=True)
 
         return metastable_states
 
@@ -900,30 +942,30 @@ class GPCCA(BaseEstimator):
         metastable_assignment: np.ndarray,
         n_cells: Optional[int],
         cluster_key: str,
-        p_thresh,
-        en_cutoff,
+        p_thresh: float,
+        en_cutoff: float,
     ) -> None:
-        # keep it as int for indexing when `n_cells!=None`
-        self._meta_assignment = pd.Series(
-            index=self.adata.obs_names, data=metastable_assignment, dtype="category",
+        _meta_assignment = pd.Series(
+            index=self.adata.obs_names, data=metastable_assignment, dtype="category"
         )
         # sometimes, the assignment can have a missing category and the Lineage creation therefore fails
-        self._meta_assignment.cat.set_categories(
-            range(memberships.shape[1]), inplace=True
+        # keep it as ints when `n_cells != None`
+        _meta_assignment.cat.set_categories(
+            list(range(memberships.shape[1])), inplace=True
         )
 
         if n_cells is None:
             logg.debug(
                 "DEBUG: Setting the metastable states using metastable assignment"
             )
-            metastable_states = (
-                self._meta_assignment.astype(str).astype("category").copy()
-            )
+            metastable_states = _meta_assignment.astype(str).astype("category").copy()
         else:
             logg.debug(
                 "DEBUG: Setting the metastable states using metastable memberships"
             )
-            metastable_states = self._select_cells(n_cells, memberships)
+            metastable_states = self._select_cells(
+                n_cells, memberships=memberships, meta_assignment=_meta_assignment
+            )
 
         self._set_categorical_labels(
             attr_key="_meta_states",
@@ -935,11 +977,6 @@ class GPCCA(BaseEstimator):
             en_cutoff=en_cutoff,
             p_thresh=p_thresh,
             add_to_existing=False,
-        )
-
-        # this makes indexing easier for Lineage class
-        self._meta_assignment.cat.rename_categories(
-            metastable_states.cat.categories, inplace=True
         )
 
         logg.debug(
@@ -1006,7 +1043,9 @@ class GPCCA(BaseEstimator):
             if n_cells == self._n_cells:
                 logg.debug("DEBUG: Using cached main states")
             else:
-                self._set_main_states(n_cells, write_to_adata=False)
+                self._set_main_states(
+                    n_cells, write_to_adata=False
+                )  # plotting shouldn't overwrite main_states
             _main_states = self._main_states
         else:
             raise RuntimeError(f"Invalid attribute name: `{attr!r}`.")
