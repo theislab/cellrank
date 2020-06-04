@@ -8,11 +8,13 @@ from anndata import AnnData
 
 from cellrank.tools.kernels import VelocityKernel
 from cellrank.tools._constants import LinKey, StateKey, Direction, _transition
-from cellrank.tools.estimators import CFLARE
+from cellrank.tools.estimators import GPCCA, CFLARE
+from cellrank.tools.estimators._base_estimator import BaseEstimator
 
 
 def lineages(
     adata: AnnData,
+    estimator: type(BaseEstimator) = GPCCA,
     final: bool = True,
     keys: Optional[Sequence[str]] = None,
     copy: bool = False,
@@ -33,6 +35,8 @@ def lineages(
     --------
     adata : :class:`anndata.AnnData`
         Annotated data object
+    estimator
+        Estimator to use to compute the lineage probabilities.
     final
         If `True`, computes final cells, i.e. end points. Otherwise, computes root cells, i.e. starting points.
     keys
@@ -49,6 +53,16 @@ def lineages(
         Depending on :paramref:`copy`, either updates the existing :paramref:`adata` object or returns a copy.
     """
 
+    if not isinstance(estimator, type):
+        raise TypeError(
+            f"Expected estimator to be a class, found `{type(estimator).__name__}`."
+        )
+
+    if not issubclass(estimator, BaseEstimator):
+        raise TypeError(
+            f"Expected estimator to be a subclass of `BaseEstimator`, found `{type(estimator).__name__}`"
+        )
+
     # Set the keys and print info
     adata = adata.copy() if copy else adata
 
@@ -63,19 +77,25 @@ def lineages(
 
     transition_key = _transition(direction)
     if transition_key not in adata.uns.keys():
-        raise ValueError(
-            f"Compute {'final' if final else 'root'} cells first as `cellrank.tl.find_{'final' if final else 'root'}`."
-        )
+        key = "final" if final else "root"
+        raise ValueError(f"Compute {key} cells first as `cellrank.tl.find_{key}`.")
 
     start = logg.info(f"Computing lineage probabilities towards `{rc_key}`")
 
     # get the transition matrix from the AnnData object and initialise MC object
     vk = VelocityKernel(adata, backward=not final)
     vk.transition_matrix = adata.uns[transition_key]["T"]
-    mc = CFLARE(vk)
+    mc = estimator(vk)
 
     # compute the absorption probabilities
-    mc.compute_lin_probs(keys=keys)
+    if isinstance(mc, CFLARE):
+        mc.compute_lin_probs(keys=keys)
+    elif isinstance(mc, GPCCA):
+        mc.compute_metastable_states()  # TODO
+    else:
+        raise NotImplementedError(
+            f"Pipeline not implemented for `{type(bytes).__name__}`"
+        )
 
     logg.info(f"Added key `{lin_key!r}` to `adata.obsm`\n    Finish", time=start)
 
