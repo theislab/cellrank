@@ -418,7 +418,7 @@ class GPCCA(BaseEstimator):
 
             if self._gpcca.X.shape[1] < n_states:
                 logg.warning(
-                    f"Requested more metastable states ({n_states}) than available"
+                    f"Requested more metastable states ({n_states}) than available "
                     f"Schur vectors ({self._gpcca.X.shape[1]}). "
                     f"Recomputing the decomposition"
                 )
