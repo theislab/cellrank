@@ -331,7 +331,7 @@ class CFLARE(BaseEstimator):
         n_clusters_kmeans: Optional[int] = None,
         n_neighbors_louvain: int = 20,
         resolution_louvain: float = 0.1,
-        n_matches_min: Optional[int] = 1,
+        n_matches_min: Optional[int] = 0,
         n_neighbors_filtering: int = 15,
         basis: Optional[str] = None,
         n_comps: int = 5,
