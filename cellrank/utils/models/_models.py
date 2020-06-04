@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+"""Models module."""
+
 import re
 from abc import ABC, abstractmethod
 from copy import copy
@@ -65,93 +67,67 @@ class Model(ABC):
 
     @property
     def adata(self) -> anndata.AnnData:
-        """
-        Annotated data object.
-        """
+        """Annotated data object."""
         return self._adata
 
     @property
     def model(self) -> Any:
-        """
-        The underlying model.
-        """
+        """Underlying model."""
         return self._model
 
     @property
     def x_all(self) -> np.ndarray:
-        """
-        Original independent variables.
-        """
+        """Original independent variables."""
         return self._x_all
 
     @property
     def y_all(self) -> np.ndarray:
-        """
-        Original dependent variables.
-        """
+        """Original dependent variables."""
         return self._y_all
 
     @property
     def w_all(self) -> np.ndarray:
-        """
-        Original weights.
-        """
+        """Original weights."""
         return self._w_all
 
     @property
     def x(self) -> np.ndarray:
-        """
-        Independent variables used for model fitting.
-        """
+        """Independent variables used for model fitting."""
         return self._x
 
     @property
     def y(self) -> np.ndarray:
-        """
-        Dependent variables used for model fitting.
-        """
+        """Dependent variables used for model fitting."""
         return self._y
 
     @property
     def w(self) -> np.ndarray:
-        """
-        Weights of independet variables used for model fitting.
-        """
+        """Weights of independent variables used for model fitting."""
         return self._w
 
     @property
     def x_test(self) -> np.ndarray:
-        """
-        Independent variables used for prediction.
-        """
+        """Independent variables used for prediction."""
         return self._x_test
 
     @property
     def y_test(self) -> np.ndarray:
-        """
-        Predicted values.
-        """
+        """Predicted values."""
         return self._y_test
 
     @property
     def x_hat(self) -> np.ndarray:
-        """
-        Independent variables used when calculating default confidence interval.
-        """
+        """Independent variables used when calculating default confidence interval."""
         return self._x_hat
 
     @property
     def y_hat(self) -> np.ndarray:
-        """
-        Dependent variables used when calculating default confidence interval.
-        """
+        """Dependent variables used when calculating default confidence interval."""
         return self._y_hat
 
     @property
     def conf_int(self) -> np.ndarray:
-        """
-        Confidence interval.
-        """
+        """Confidence interval."""
         return self._conf_int
 
     @abstractmethod
@@ -239,7 +215,8 @@ class Model(ABC):
             raise KeyError(f"Lineage key `{lineage_key!r}` not found in `adata.obsm`.")
         if not isinstance(self.adata.obsm[lineage_key], Lineage):
             raise TypeError(
-                f"Expected `adata.obsm[{lineage_key}]` to be of type `cellrank.tl.Lineage`, found `{type(self.adata.obsm[lineage_key]).__name__}`."
+                f"Expected `adata.obsm[{lineage_key!r}]` to be of type `cellrank.tl.Lineage`, "
+                f"found `{type(self.adata.obsm[lineage_key]).__name__}`."
             )
 
         if lineage_name is not None:
@@ -266,7 +243,9 @@ class Model(ABC):
         elif data_key in self.adata.layers:
             y = self.adata.layers[data_key][:, gene_ix]
         else:
-            raise NotImplemented(f"Data key `{data_key!r}` is not yet implemented.")
+            raise NotImplementedError(
+                f"Data key `{data_key!r}` is not yet implemented."
+            )
 
         if issparse(y):
             y = np.asarray(y.todense())
@@ -348,7 +327,8 @@ class Model(ABC):
                 raise AttributeError(f"No attribute `{attr_name!r}` found.")
             if getattr(self, attr_name).ndim != ndim:
                 raise ValueError(
-                    f"Expected attribute `{attr_name!r}` to have `{ndim}` dimensions, found `{getattr(self, attr_name).ndim}` dimensions."
+                    f"Expected attribute `{attr_name!r}` to have `{ndim}` dimensions, "
+                    f"found `{getattr(self, attr_name).ndim}` dimensions."
                 )
         else:
             setattr(self, attr_name, self._convert(value))
@@ -419,6 +399,12 @@ class Model(ABC):
         ------
         x_test
             Features used for prediction.
+        key_added
+            Attribute name where to save the independent variables.
+            If `None`, don't save them.
+        kwargs
+            Keyword arguments.
+
         Returns
         -------
         :class:`numpy.ndarray`
@@ -489,6 +475,8 @@ class Model(ABC):
         """
         Calculate a confidence interval.
 
+        Use the default method if underlying model has not method for CI calculation.
+
         Params
         ------
         x_test
@@ -530,7 +518,7 @@ class Model(ABC):
         save: Optional[str] = None,
     ) -> Optional[mpl.figure.Figure]:
         """
-        Plots the smoothed gene expression.
+        Plot the smoothed gene expression.
 
         Params
         ------
@@ -690,6 +678,7 @@ class SKLearnModel(Model):
 
     @property
     def model(self) -> sklearn.base.BaseEstimator:
+        """Underlying model."""
         return self._model
 
     def _find_func(
@@ -720,6 +709,26 @@ class SKLearnModel(Model):
         w: Optional[np.ndarray] = None,
         **kwargs,
     ) -> "SKLearnModel":
+        """
+        Fit the model.
+
+        Params
+        ------
+        x
+            Independent variables.
+        y
+            Dependent variables.
+        w
+            Weights of :paramref:`x`.
+        kwargs
+            Keyword arguments.
+
+        Returns
+        -------
+        :class:`cellrank.ul.models.SKLearnModel`
+            Return fitted self.
+        """
+
         super().fit(x, y, w, **kwargs)
 
         if self._weight_name is not None:
@@ -733,6 +742,25 @@ class SKLearnModel(Model):
     def predict(
         self, x_test: Optional[np.ndarray] = None, key_added: str = "_x_test", **kwargs
     ) -> np.ndarray:
+        """
+        Run the prediction.
+
+        Params
+        ------
+        x_test
+            Features used for prediction.
+        key_added
+            Attribute name where to save the independent variables.
+            If `None`, don't save them.
+        kwargs
+            Keyword arguments.
+
+        Returns
+        -------
+        :class:`numpy.ndarray`
+            The predicted values.
+        """
+
         self._check(key_added, x_test)
 
         pred_fn = getattr(self.model, self._predict_name)
@@ -744,6 +772,24 @@ class SKLearnModel(Model):
     def confidence_interval(
         self, x_test: Optional[np.ndarray] = None, **kwargs
     ) -> np.ndarray:
+        """
+        Calculate a confidence interval.
+
+        Use the default method if underlying model has not method for CI calculation.
+
+        Params
+        ------
+        x_test
+            Points for which to calculate the confidence interval.
+        kwargs
+            Keyword arguments.
+
+        Returns
+        -------
+        :class:`numpy.ndarray`
+            The confidence interval.
+        """
+
         if self._ci_name is None:
             return self.default_conf_int(x_test=x_test, **kwargs)
 
@@ -777,7 +823,7 @@ class GamMGCVModel(Model):
         self._n_splines = n_splines
         self._sp = sp
         try:
-            import rpy2
+            import rpy2  # noqa
         except ImportError:
             raise ImportError(
                 "Unable to import `rpy2`, install it first as `pip install rpy2`."
@@ -790,6 +836,25 @@ class GamMGCVModel(Model):
         w: Optional[np.ndarray] = None,
         **kwargs,
     ) -> "GamMGCVModel":
+        """
+        Fit the model.
+
+        Params
+        ------
+        x
+            Independent variables.
+        y
+            Dependent variables.
+        w
+            Weights of :paramref:`x`.
+        kwargs
+            Keyword arguments.
+
+        Returns
+        -------
+        :class:`cellrank.ul.models.GamMGCVModel`
+            Return fitted self.
+        """
 
         from rpy2 import robjects
         from rpy2.robjects import pandas2ri, Formula
@@ -825,12 +890,31 @@ class GamMGCVModel(Model):
     def predict(
         self, x_test: Optional[np.ndarray] = None, key_added: str = "_x_test", **kwargs
     ) -> np.ndarray:
+        """
+        Run the prediction.
+
+        Params
+        ------
+        x_test
+            Features used for prediction.
+        key_added
+            Attribute name where to save the independent variables.
+            If `None`, don't save them.
+        kwargs
+            Keyword arguments.
+
+        Returns
+        -------
+        :class:`numpy.ndarray`
+            The predicted values.
+        """
+
         from rpy2 import robjects
         from rpy2.robjects import pandas2ri
 
         if self.model is None:
             raise RuntimeError(
-                f"Trying to call an uninitialized model. To initialize it, run `.fit()` first."
+                "Trying to call an uninitialized model. To initialize it, run `.fit()` first."
             )
         self._check(key_added, x_test)
 
@@ -852,6 +936,21 @@ class GamMGCVModel(Model):
     def confidence_interval(
         self, x_test: Optional[np.ndarray] = None, **kwargs
     ) -> np.ndarray:
+        """
+        Calculate a confidence interval using the default method.
+
+        Params
+        ------
+        x_test
+            Points for which to calculate the confidence interval.
+        kwargs
+            Keyword arguments.
+
+        Returns
+        -------
+        :class:`numpy.ndarray`
+            The confidence interval.
+        """
         return self.default_conf_int(x_test=x_test, **kwargs)
 
     def __copy__(self) -> "GamMGCVModel":
