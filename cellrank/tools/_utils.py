@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Utility functions for the cellrank tools."""
+"""Utility functions for CellRank tools."""
 
 import os
 import warnings

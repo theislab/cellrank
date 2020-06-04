@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+"""Kernel module."""
+
 from abc import ABC, abstractmethod
 from copy import copy
 from typing import Any, Dict, List, Type, Tuple, Union, Callable, Iterable, Optional
@@ -37,9 +39,7 @@ _cond_num_tolerance = 1e-15
 
 
 class KernelExpression(ABC):
-    """
-    Base class for all kernels and kernel expressions.
-    """
+    """Base class for all kernels and kernel expressions."""
 
     def __init__(
         self,
@@ -52,20 +52,21 @@ class KernelExpression(ABC):
         self._direction = Direction.BACKWARD if backward else Direction.FORWARD
         self._compute_cond_num = compute_cond_num
         self._cond_num = None
-        self._params = dict()
+        self._params = {}
         self._normalize = True
         self._parent = None
 
     @property
     def condition_number(self):
-        """Condition number of the transition matrix"""
+        """Condition number of the transition matrix."""
         return self._cond_num
 
     @property
     def transition_matrix(self) -> Union[np.ndarray, spmatrix]:
         """
-        Return row-normalized transition matrix, if present, or tries computing it,
-        if all underlying kernels have been initialized.
+        Return row-normalized transition matrix.
+
+        If not present, try computing it, if all the underlying kernels have been initialized.
         """
 
         if self._parent is None and self._transition_matrix is None:
@@ -75,10 +76,7 @@ class KernelExpression(ABC):
 
     @property
     def backward(self) -> bool:
-        """
-        `True` if the direction of the process is backwards, otherwise `False`.
-        """
-        # to do proper error checking, we need to propagate this kind information
+        """Direction of the process."""
         return self._direction == Direction.BACKWARD
 
     @property
@@ -91,7 +89,7 @@ class KernelExpression(ABC):
         -------
         :class:`anndata.AnnData`
             The underlying :paramref:`.adata` object.
-        """
+        """  # noqa
         pass
 
     @property
@@ -173,7 +171,7 @@ class KernelExpression(ABC):
         if self.adata.uns.get(key, None) is not None:
             logg.debug(f"DEBUG: Overwriting key `{key!r}` in `adata.uns`")
 
-        self.adata.uns[key] = dict()
+        self.adata.uns[key] = {}
         self.adata.uns[key]["params"] = str(self)
         self.adata.uns[key]["T"] = self.transition_matrix
 
@@ -205,9 +203,7 @@ class KernelExpression(ABC):
 
     @property
     def kernels(self) -> List["Kernel"]:
-        """
-        Get the kernels of the kernel expression, except for constants.
-        """
+        """Get the kernels of the kernel expression, except for constants."""
         return list(self._get_kernels())
 
     def __xor__(self, other: "KernelExpression") -> "KernelExpression":
@@ -257,19 +253,15 @@ class KernelExpression(ABC):
         o = convert(other)
 
         if isinstance(s, KernelAdaptiveAdd):
-            exprs = [k for k in s] + (
-                [k for k in o] if isinstance(o, KernelAdaptiveAdd) else [o]
-            )
+            exprs = list(s) + (list(o) if isinstance(o, KernelAdaptiveAdd) else [o])
             # (c1 * x + c2 * y + ...) + (c3 * z) => (c1 * x + c2 * y + c3 + ... + * z)
-            if all((_is_bin_mult(k, ConstantMatrix) for k in exprs)):
+            if all(_is_bin_mult(k, ConstantMatrix) for k in exprs):
                 return KernelAdaptiveAdd(exprs)
 
         # same but reverse
         if isinstance(o, KernelAdaptiveAdd):
-            exprs = ([k for k in s] if isinstance(s, KernelAdaptiveAdd) else [s]) + [
-                k for k in o
-            ]
-            if all((_is_bin_mult(k, ConstantMatrix) for k in exprs)):
+            exprs = (list(s) if isinstance(s, KernelAdaptiveAdd) else [s]) + list(o)
+            if all(_is_bin_mult(k, ConstantMatrix) for k in exprs):
                 return KernelAdaptiveAdd(exprs)
 
         return KernelAdaptiveAdd([s, o])
@@ -287,15 +279,15 @@ class KernelExpression(ABC):
         o = other * 1 if isinstance(other, Kernel) else other
 
         if isinstance(s, KernelSimpleAdd):
-            exprs = [k for k in s] + [o]
+            exprs = list(s) + [o]
             # (c1 * x + c2 * y + ...) + (c3 * z) => (c1 * x + c2 * y + c3 + ... + * z)
-            if all((_is_bin_mult(k) for k in exprs)):
+            if all(_is_bin_mult(k) for k in exprs):
                 return KernelSimpleAdd(exprs)
 
         # same but reverse
         if isinstance(o, KernelSimpleAdd):
-            exprs = [s] + [k for k in o]
-            if all((_is_bin_mult(k) for k in exprs)):
+            exprs = [s] + list(o)
+            if all(_is_bin_mult(k) for k in exprs):
                 return KernelSimpleAdd(exprs)
 
         # (c1 + c2) => c3
@@ -362,7 +354,7 @@ class KernelExpression(ABC):
     def __invert__(self: "KernelExpression") -> "KernelExpression":
         # mustn't return a copy because transition matrix
         self._transition_matrix = None
-        self._params = dict()
+        self._params = {}
         self._direction = Direction.FORWARD if self.backward else Direction.BACKWARD
 
         return self
@@ -372,9 +364,7 @@ class KernelExpression(ABC):
 
 
 class UnaryKernelExpression(KernelExpression, ABC):
-    """
-    Base class for unary kernel expressions, such as kernels or constants.
-    """
+    """Base class for unary kernel expressions, such as kernels or constants."""
 
     def __init__(
         self,
@@ -394,9 +384,7 @@ class UnaryKernelExpression(KernelExpression, ABC):
 
     @abstractmethod
     def _read_from_adata(self, var_key: Optional[str] = None, **kwargs):
-        """
-        Import the base-KNN graph and check for symmetry and connectivity.
-        """
+        """Import the base-KNN graph and optionally check for symmetry and connectivity."""
 
         if not has_neighs(self.adata):
             raise KeyError("Compute KNN graph first as `scanpy.pp.neighbors()`.")
@@ -460,7 +448,8 @@ class UnaryKernelExpression(KernelExpression, ABC):
         return Q @ other @ Q
 
     @property
-    def adata(self):
+    def adata(self) -> AnnData:
+        """The annotated data object."""  # noqa
         return self._adata
 
     def __repr__(self):
@@ -469,26 +458,27 @@ class UnaryKernelExpression(KernelExpression, ABC):
     def __str__(self):
         params_fmt = self._format_params()
         if params_fmt:
-            return f"{'~' if self.backward and self._parent is None else ''}<{self.__class__.__name__[:4]}[{params_fmt}]>"
+            return (
+                f"{'~' if self.backward and self._parent is None else ''}"
+                f"<{self.__class__.__name__[:4]}[{params_fmt}]>"
+            )
         return repr(self)
 
 
 class NaryKernelExpression(KernelExpression, ABC):
-    """
-    Base class for n-ary kernel expressions.
-    """
+    """Base class for n-ary kernel expressions."""
 
     def __init__(self, kexprs: List[KernelExpression], op_name: Optional[str] = None):
         assert len(kexprs), "No kernel expressions specified."
 
         backward = kexprs[0].backward
-        assert all((k.backward == backward for k in kexprs)), _ERROR_DIRECTION_MSG
+        assert all(k.backward == backward for k in kexprs), _ERROR_DIRECTION_MSG
 
         # use OR instead of AND
         super().__init__(
             op_name,
             backward=backward,
-            compute_cond_num=any((k._compute_cond_num for k in kexprs)),
+            compute_cond_num=any(k._compute_cond_num for k in kexprs),
         )
 
         # copies of constants are necessary because of the recalculation
@@ -508,11 +498,11 @@ class NaryKernelExpression(KernelExpression, ABC):
             )
 
         constants = [_is_bin_mult(k, typp) for k in self]
-        if all((c is not None for c in constants)):
+        if all(c is not None for c in constants):
             assert all(
-                (isinstance(getattr(c, accessor), (int, float)) for c in constants)
+                isinstance(getattr(c, accessor), (int, float)) for c in constants
             )
-            total = sum((getattr(c, accessor) for c in constants)) + 0.0
+            total = sum(getattr(c, accessor) for c in constants) + 0.0
             for c in constants:
                 c._recalculate(getattr(c, accessor) / total)
 
@@ -528,6 +518,7 @@ class NaryKernelExpression(KernelExpression, ABC):
 
     @property
     def adata(self):
+        """Annotated data object."""  # noqa
         # we can do this because Constant requires adata as well
         return self._kexprs[0].adata
 
@@ -545,14 +536,14 @@ class NaryKernelExpression(KernelExpression, ABC):
     def __repr__(self) -> str:
         return (
             f"{'~' if self.backward and self._parent is None else ''}("
-            + f" {self._op_name} ".join((repr(kexpr) for kexpr in self._kexprs))
+            + f" {self._op_name} ".join(repr(kexpr) for kexpr in self._kexprs)
             + ")"
         )
 
     def __str__(self) -> str:
         return (
             f"{'~' if self.backward and self._parent is None else ''}("
-            + f" {self._op_name} ".join((str(kexpr) for kexpr in self._kexprs))
+            + f" {self._op_name} ".join(str(kexpr) for kexpr in self._kexprs)
             + ")"
         )
 
@@ -617,10 +608,10 @@ class Kernel(UnaryKernelExpression, ABC):
 
             # check that both have been computed on the same elements
             if not all(
-                [
+                (
                     (var_ixs == mat_ixs).all()
                     for var_ixs, mat_ixs in zip(variances.nonzero(), matrix.nonzero())
-                ]
+                )
             ):
                 logg.warning("Uncertainty indices do not match velocity graph indices")
 
@@ -664,9 +655,7 @@ class Kernel(UnaryKernelExpression, ABC):
 
 
 class Constant(Kernel):
-    """
-    Class representing a multiplication by a constant number.
-    """
+    """Class representing a multiplication by a constant number."""
 
     def __init__(
         self, adata: AnnData, value: Union[int, float], backward: bool = False
@@ -682,15 +671,17 @@ class Constant(Kernel):
 
     def _recalculate(self, value):
         self._transition_matrix = value
-        self._params = dict(value=value)
+        self._params = {"value": value}
 
     def _read_from_adata(self, **kwargs):
         pass
 
     def compute_transition_matrix(self, *args, **kwargs) -> "Constant":
+        """Return self."""
         return self
 
     def copy(self) -> "Constant":
+        """Return a copy of self."""
         return Constant(self.adata, self.transition_matrix, self.backward)
 
     def __invert__(self) -> "Constant":
@@ -706,9 +697,7 @@ class Constant(Kernel):
 
 
 class ConstantMatrix(Kernel):
-    """
-    Class representing multiplication by a constant matrix.
-    """
+    """Class representing multiplication by a constant matrix."""
 
     def __init__(
         self,
@@ -737,19 +726,21 @@ class ConstantMatrix(Kernel):
         self._recalculate(value)
 
     def copy(self) -> "ConstantMatrix":
+        """Return a copy of self."""
         return ConstantMatrix(
             self.adata, self._value, copy(self._variances), self.backward
         )
 
     def _recalculate(self, value):
         self._value = value
-        self._params = dict(value=value)
+        self._params = {"value": value}
         self._transition_matrix = value * self._variances
 
     def _read_from_adata(self, **kwargs):
         super()._read_from_adata(**kwargs)  # we need the shape info from neighbors
 
     def compute_transition_matrix(self, *args, **kwargs) -> "KernelExpression":
+        """Return self."""
         return self
 
     def __invert__(self) -> "ConstantMatrix":
@@ -766,7 +757,7 @@ class ConstantMatrix(Kernel):
 
 class VelocityKernel(Kernel):
     """
-    Implements a kernel class which computes a transition matrix based on velocity correlations.
+    Kernel class which computes a transition matrix based on velocity correlations.
 
     This borrows ideas from both [Manno18]_ and [Bergen19]_. In short, for each cell *i*, we compute transition
     probabilities :math:`p_{i, j}` to each cell *j* ( in the neighborhood of *i*. The transition probabilities are
@@ -934,7 +925,7 @@ class VelocityKernel(Kernel):
         if sigma_corr is None:
             sigma_corr = 1.0 / med_corr
 
-        params = dict(
+        params = dict(  # noqa
             dnorm=density_normalize,
             bwd_mode=backward_mode if self._direction == Direction.BACKWARD else None,
             sigma_corr=sigma_corr,
@@ -970,6 +961,7 @@ class VelocityKernel(Kernel):
         return self
 
     def copy(self) -> "VelocityKernel":
+        """Return a copy of self."""
         vk = VelocityKernel(
             self.adata,
             backward=self.backward,
@@ -985,12 +977,14 @@ class VelocityKernel(Kernel):
 
 class ConnectivityKernel(Kernel):
     """
-    Implements a kernel class which computes transition probabilities based on transcriptomic similarities.
+    Kernel class which computes transition probabilities based on transcriptomic similarities.
 
-    As a measure for transcriptomic similarity, we use the weighted KNN graph computed using :func:`scanpy.pp.neighbors`,
-    see [Wolf18]_. By definition, the resulting transition matrix is symmetric and cannot be used to learn about
-    the direction of the developmental process under consideration. However, the velocity-derived transition matrix can
-    be combined with the similarity-based transition matrix as a means of regularization.
+    As a measure for transcriptomic similarity, we use the weighted KNN graph computed using
+    :func:`scanpy.pp.neighbors`,see [Wolf18]_.
+    By definition, the resulting transition matrix is symmetric and cannot be used to learn about the direction of the
+    developmental process under consideration.
+    However, the velocity-derived transition matrix can be combined with the similarity-based transition matrix as
+    a means of regularization.
 
     Optionally, we apply a density correction as described in [Coifman05]_, where we use the implementation of
     [Haghverdi16]_.
@@ -1053,7 +1047,7 @@ class ConnectivityKernel(Kernel):
 
         start = logg.info("Computing transition matrix based on connectivities")
 
-        params = dict(dnorm=density_normalize)
+        params = {"dnorm": density_normalize}
         if params == self.params:
             assert self.transition_matrix is not None, _ERROR_EMPTY_CACHE_MSG
             logg.debug(_LOG_USING_CACHE)
@@ -1070,6 +1064,7 @@ class ConnectivityKernel(Kernel):
         return self
 
     def copy(self) -> "ConnectivityKernel":
+        """Return a copy of self."""
         ck = ConnectivityKernel(
             self.adata, backward=self.backward, var_key=self._var_key
         )
@@ -1081,7 +1076,7 @@ class ConnectivityKernel(Kernel):
 
 class PalantirKernel(Kernel):
     """
-    Implements a kernel class which computes transition probabilities in a similar way to *Palantir*, see [Setty19]_
+    Kernel class which computes transition probabilities in a similar way to *Palantir*, see [Setty19]_.
 
     *Palantir* computes a KNN graph in gene expression space and a pseudotime, which it then uses to direct the edges of
     the KNN graph, such that they are more likely to point into the direction of increasing pseudotime. To avoid
@@ -1140,7 +1135,9 @@ class PalantirKernel(Kernel):
         self.pseudotime = np.array(self.adata.obs[time_key]).astype(_dtype)
 
         if np.nanmin(self.pseudotime) < 0:
-            raise ValueError(f"Pseudotime must be positive.")
+            raise ValueError(
+                f"Minimum pseudotime must be non-negative, found {np.nanmin(self.pseudotime)}."
+            )
 
     def compute_transition_matrix(
         self, k: int = 3, density_normalize: bool = True, **kwargs
@@ -1182,11 +1179,11 @@ class PalantirKernel(Kernel):
             n_neighbors = self.adata.uns["neighbors"]["params"]["n_neighbors"]
         else:
             logg.warning(
-                f"Could not find 'n_neighbors' in `adata.uns['neighbors']['params']`. Using an estimate"
+                "Could not find 'n_neighbors' in `adata.uns['neighbors']['params']`. Using an estimate"
             )
             n_neighbors = np.min(self._conn.sum(1))
 
-        params = dict(k=k, dnorm=density_normalize, n_neighs=n_neighbors)
+        params = dict(k=k, dnorm=density_normalize, n_neighs=n_neighbors)  # noqa
         if params == self._params:
             assert self.transition_matrix is not None, _ERROR_EMPTY_CACHE_MSG
             logg.debug(_LOG_USING_CACHE)
@@ -1217,6 +1214,7 @@ class PalantirKernel(Kernel):
         return self
 
     def copy(self) -> "PalantirKernel":
+        """Return a copy of self."""
         pk = PalantirKernel(
             self.adata,
             backward=self.backward,
@@ -1230,15 +1228,14 @@ class PalantirKernel(Kernel):
 
 
 class SimpleNaryExpression(NaryKernelExpression):
-    """
-    Base class for n-ary operations.
-    """
+    """Base class for n-ary operations."""
 
     def __init__(self, kexprs: List[KernelExpression], op_name: str, fn: Callable):
         super().__init__(kexprs, op_name=op_name)
         self._fn = fn
 
     def compute_transition_matrix(self, *args, **kwargs) -> "SimpleNaryExpression":
+        """Compute and combine the transition matrices."""
         # must be done before, because the underlying expression don't have to be normed
         if isinstance(self, KernelSimpleAdd):
             self._maybe_recalculate_constants(Constant)
@@ -1267,6 +1264,7 @@ class SimpleNaryExpression(NaryKernelExpression):
         return self
 
     def copy(self) -> "SimpleNaryExpression":
+        """Return a copy of self."""
         sne = SimpleNaryExpression(
             [k.copy() for k in self], op_name=self._op_name, fn=self._fn
         )
@@ -1276,32 +1274,28 @@ class SimpleNaryExpression(NaryKernelExpression):
 
 
 class KernelAdd(SimpleNaryExpression):
+    """Base class that represents the addition of :class:`KernelExpression`."""
+
     def __init__(self, kexprs: List[KernelExpression], op_name: str):
         super().__init__(kexprs, op_name=op_name, fn=_reduce(np.add, 0))
 
 
 class KernelSimpleAdd(KernelAdd):
-    """
-    Addition between multiple kernel expressions.
-    """
+    """Addition of :class:`KernelExpression`."""
 
     def __init__(self, kexprs: List[KernelExpression]):
         super().__init__(kexprs, op_name="+")
 
 
 class KernelAdaptiveAdd(KernelAdd):
-    """
-    Adaptive addition between multiple kernel expressions.
-    """
+    """Adaptive addition of :class:`KernelExpression`."""
 
     def __init__(self, kexprs: List[KernelExpression]):
         super().__init__(kexprs, op_name="^")
 
 
 class KernelMul(SimpleNaryExpression):
-    """
-    Multiplication between kernel expressions.
-    """
+    """Multiplication of :class:`KernelExpression`."""
 
     def __init__(self, kexprs: List[KernelExpression]):
         super().__init__(kexprs, op_name="*", fn=_reduce(np.multiply, 1))
