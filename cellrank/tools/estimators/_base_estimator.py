@@ -37,7 +37,7 @@ from cellrank.tools._colors import (
     _create_categorical_colors,
 )
 from cellrank.tools._lineage import Lineage
-from cellrank.tools._constants import RcKey, LinKey, Prefix, Direction, _colors
+from cellrank.tools._constants import LinKey, Prefix, StateKey, Direction, _colors
 from msmtools.util.sorted_schur import sorted_schur
 from cellrank.tools.kernels._kernel import KernelExpression
 
@@ -67,12 +67,12 @@ class BaseEstimator(ABC):
 
         if kernel.backward:
             self._direction: Direction = Direction.BACKWARD
-            self._rc_key: str = str(RcKey.BACKWARD)
+            self._rc_key: str = str(StateKey.BACKWARD)
             self._lin_key: str = str(LinKey.BACKWARD)
             self._prefix: str = str(Prefix.BACKWARD)
         else:
             self._direction: Direction = Direction.FORWARD
-            self._rc_key: str = str(RcKey.FORWARD)
+            self._rc_key: str = str(StateKey.FORWARD)
             self._lin_key: str = str(LinKey.FORWARD)
             self._prefix: str = str(Prefix.FORWARD)
 
