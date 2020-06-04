@@ -99,7 +99,7 @@ def _root_final(
         # TODO: @Marius - do you agree with this?
         if show_plots:
             mc.plot_schur_embedding()
-            mc.plot_metastable_states()
+            mc.plot_metastable_states(same_plot=False)
             mc.plot_coarse_T()
     else:
         raise NotImplementedError(
