@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+"""Lineage class."""
+
 from typing import List, Tuple, Union, TypeVar, Callable, Iterable, Optional
 from itertools import combinations
 
@@ -12,7 +14,7 @@ from scanpy import logging as logg
 from cellrank.tools._utils import (
     _compute_mean_color,
     _convert_lineage_name,
-    unique_order_preserving,
+    _unique_order_preserving,
 )
 from cellrank.tools._colors import _create_categorical_colors
 from cellrank.tools._constants import Lin
@@ -47,6 +49,8 @@ class Lineage(np.ndarray):
         names: Iterable[str],
         colors: Optional[Iterable[ColorLike]] = None,
     ) -> "Lineage":
+        """Create and return a new object."""
+
         if not isinstance(input_array, np.ndarray):
             raise TypeError(
                 f"Input array must be of type `numpy.ndarray`, found `{type(input_array).__name__!r}`"
@@ -66,7 +70,8 @@ class Lineage(np.ndarray):
 
         return obj
 
-    def view(self, dtype=None, type=None):
+    def view(self, dtype=None, type=None) -> "LineageView":
+        """Return a view of self."""
         return LineageView(self, names=self.names, colors=self.colors)
 
     def __array_finalize__(self, obj) -> None:
@@ -108,7 +113,7 @@ class Lineage(np.ndarray):
             for mixture in mixtures
             if not (isinstance(mixture, Lin))
         ]
-        keys = unique_order_preserving(keys)
+        keys = _unique_order_preserving(keys)
 
         # check the `keys` are unique
         overlap = [set(ks) for ks in keys]
@@ -308,7 +313,7 @@ class Lineage(np.ndarray):
                     )
             res.append(name)
 
-        res = unique_order_preserving(res)
+        res = _unique_order_preserving(res)
 
         return res[0] if is_singleton else res
 
@@ -373,6 +378,7 @@ class Lineage(np.ndarray):
         return tuple(res)
 
     def copy(self, order="C") -> "Lineage":
+        """Return a copy of itself."""
         return Lineage(
             np.array(self, copy=True, order=order),
             names=np.array(self.names, copy=True, order=order),
@@ -430,7 +436,7 @@ class Lineage(np.ndarray):
             keys = [keys]
 
         if not len(keys):
-            raise ValueError(f"Unable to perform the reduction, no keys specified.")
+            raise ValueError("Unable to perform the reduction, no keys specified.")
 
         if set(keys) == set(self.names):
             logg.warning(
@@ -481,7 +487,8 @@ class Lineage(np.ndarray):
             # make some checks on the weights
             if weights.shape != (query.shape[1], reference.shape[1]):
                 raise ValueError(
-                    f"Expected weight matrix to be of shape `({query.shape[1]}, {reference.shape[1]})`, found `{weights.shape}`."
+                    f"Expected weight matrix to be of shape `({query.shape[1]}, {reference.shape[1]})`, "
+                    f"found `{weights.shape}`."
                 )
             if not np.isfinite(weights).all():
                 raise ValueError(
@@ -537,7 +544,10 @@ class Lineage(np.ndarray):
 
 
 class LineageView(Lineage):
+    """Simple view of :class:`cellrank.tools.Lineage`."""
+
     def copy(self, order="C") -> Lineage:
+        """Return a copy of itself."""
         return Lineage(
             np.array(self, copy=True, order=order),
             names=np.array(self.names, copy=True, order=order),
