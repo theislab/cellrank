@@ -26,10 +26,10 @@ Params
 adata : :class:`adata.AnnData`
     Annotated data object.
 estimator
-    Estimator to use to compute the lineage probabilities.
+    Estimator to use to compute the {cells} cells.
 n_states
     If you know how many {direction}points you are expecting, you can provide this number.
-    Otherwise, an eigen-gap heuristic is used for :class:`cellrank.tl.CFLARE`.
+    Otherwise, an `eigen-gap` heuristic is used for :class:`cellrank.tl.CFLARE`.
 weight_connectivities
     Weight given to a transition matrix computed on the basis of the KNN connectivities. Should be in `[0, 1]`. This
     can help in situations where we have noisy velocities and want to give some weight to transcriptomic similarity.
