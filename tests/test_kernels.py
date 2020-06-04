@@ -4,7 +4,7 @@ import pytest
 
 from _helpers import bias_knn, create_kernels, transition_matrix, density_normalization
 from cellrank.tools._utils import _normalize
-from cellrank.utils._utils import get_neighs, get_neighs_params
+from cellrank.utils._utils import _get_neighs, _get_neighs_params
 from cellrank.tools.kernels import PalantirKernel, VelocityKernel, ConnectivityKernel
 from cellrank.tools._constants import Direction, _transition
 from cellrank.tools.kernels._kernel import Constant, KernelAdd, KernelMul, _is_bin_mult
@@ -459,8 +459,8 @@ class TestKernel:
         assert not np.allclose(T_1.A, T_2.A, rtol=_rtol)
 
     def test_palantir(self, adata):
-        conn = get_neighs(adata, "connectivities")
-        n_neighbors = get_neighs_params(adata)["n_neighbors"]
+        conn = _get_neighs(adata, "connectivities")
+        n_neighbors = _get_neighs_params(adata)["n_neighbors"]
         pseudotime = adata.obs["latent_time"]
 
         conn_biased = bias_knn(conn, pseudotime, n_neighbors)
@@ -474,8 +474,8 @@ class TestKernel:
         np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
 
     def test_palantir_dense_norm(self, adata):
-        conn = get_neighs(adata, "connectivities")
-        n_neighbors = get_neighs_params(adata)["n_neighbors"]
+        conn = _get_neighs(adata, "connectivities")
+        n_neighbors = _get_neighs_params(adata)["n_neighbors"]
         pseudotime = adata.obs["latent_time"]
 
         conn_biased = bias_knn(conn, pseudotime, n_neighbors)
@@ -490,8 +490,8 @@ class TestKernel:
         np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
 
     def test_palantir_differ_dense_norm(self, adata):
-        conn = get_neighs(adata, "connectivities")
-        n_neighbors = get_neighs_params(adata)["n_neighbors"]
+        conn = _get_neighs(adata, "connectivities")
+        n_neighbors = _get_neighs_params(adata)["n_neighbors"]
         pseudotime = adata.obs["latent_time"]
 
         conn_biased = bias_knn(conn, pseudotime, n_neighbors)
@@ -636,7 +636,7 @@ class TestPreviousImplementation:
 
         comb = 0.8 * vk + 0.2 * ck
         T_1 = comb.transition_matrix
-        conn = get_neighs(adata, "connectivities")
+        conn = _get_neighs(adata, "connectivities")
         T_1 = density_normalization(T_1, conn)
         T_1 = _normalize(T_1)
 
@@ -683,7 +683,7 @@ class TestPreviousImplementation:
         # combine the kernels
         comb = 0.8 * vk + 0.2 * ck
         T_1 = comb.transition_matrix
-        conn = get_neighs(adata, "connectivities")
+        conn = _get_neighs(adata, "connectivities")
         T_1 = density_normalization(T_1, conn)
         T_1 = _normalize(T_1)
 

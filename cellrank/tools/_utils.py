@@ -34,7 +34,7 @@ import scanpy as sc
 from scanpy import logging as logg
 from anndata import AnnData
 
-from cellrank.utils._utils import get_neighs, has_neighs, get_neighs_params
+from cellrank.utils._utils import _get_neighs, _has_neighs, _get_neighs_params
 from cellrank.tools._colors import _convert_to_hex_colors, _insert_categorical_colors
 
 ColorLike = TypeVar("ColorLike")
@@ -731,11 +731,11 @@ def _get_connectivities(
     adata: AnnData, mode: str = "connectivities", n_neighbors: Optional[int] = None
 ) -> Optional[spmatrix]:
     # utility function, copied from scvelo
-    if has_neighs(adata):
-        C = get_neighs(adata, mode)
+    if _has_neighs(adata):
+        C = _get_neighs(adata, mode)
         if (
             n_neighbors is not None
-            and n_neighbors <= get_neighs_params(adata)["n_neighbors"]
+            and n_neighbors <= _get_neighs_params(adata)["n_neighbors"]
         ):
             C = (
                 _select_connectivities(C, n_neighbors)
