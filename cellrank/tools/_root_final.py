@@ -72,7 +72,6 @@ def _root_final(
     kernel = transition_matrix(
         adata, backward=not final, weight_connectivities=weight_connectivities
     )
-
     # create MarkovChain object
     mc = estimator(kernel, read_from_adata=False)
 
@@ -90,14 +89,11 @@ def _root_final(
             mc.plot_eig_embedding(left=False, use=n_states)
 
     elif isinstance(mc, GPCCA):
-        if n_states is None:
-            raise ValueError("Argument `n_states` can't be none for `GPCCA` estimator.")
-
-        if n_states > 1:
+        if n_states is not None and n_states > 1:
             mc.compute_schur(n_states)
         mc.compute_metastable_states(n_states=n_states, **kwargs)
+        mc.set_main_states()
 
-        # TODO: @Marius - do you agree with this?
         if show_plots:
             mc.plot_spectrum(real_only=True)
             if n_states > 1:

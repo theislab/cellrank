@@ -16,6 +16,7 @@ def lineages(
     adata: AnnData,
     estimator: type(BaseEstimator) = CFLARE,
     final: bool = True,
+    cluster_key: Optional[str] = None,
     keys: Optional[Sequence[str]] = None,
     n_lineages: Optional[int] = None,
     method: str = "krylov",
@@ -50,7 +51,7 @@ def lineages(
         keys=['Neuronal_1, Neuronal_2', 'OPC'] means that the two neuronal endpoints are treated as one and
         Astrocytes are excluded.
     n_lineages
-        Number of lineages when :paramref:`estimator` `=GPCCA`.
+        Number of lineages when :paramref:`estimator` `=GPCCA`. If `None`, it will be based on `eigengap`.
     method
         Method to compute Schur vectors when :paramref:`estimator` is :class:`cellrank.tl.GPCCA`.
     copy
@@ -104,20 +105,16 @@ def lineages(
     # compute the absorption probabilities
     if isinstance(mc, CFLARE):
         mc.compute_eig()
-        mc.compute_metastable_states(**kwargs)
+        mc.compute_metastable_states(cluster_key=cluster_key, **kwargs)
         mc.compute_lin_probs(keys=keys)
     elif isinstance(mc, GPCCA):
-        if n_lineages is None:
-            raise ValueError(
-                "Argument `n_lineages` can't be none for `GPCCA` estimator."
-            )
-
         if n_lineages == 1:
             mc.compute_eig()
-            # TODO: get evals from GPCCA object when calculating the Schur
-        else:
+        elif n_lineages is not None:
             mc.compute_schur(n_components=n_lineages, method=method)
-        mc.compute_metastable_states(n_states=n_lineages, **kwargs)
+        mc.compute_metastable_states(
+            n_states=n_lineages, cluster_key=cluster_key, **kwargs
+        )
         mc.set_main_states(names=keys)
     else:
         raise NotImplementedError(

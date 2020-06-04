@@ -355,12 +355,15 @@ class GPCCA(BaseEstimator):
                 - :paramref:`coarse_stationary_distribution`
         """
 
-        if n_states == 1:
+        if n_states is None:
             if self.eigendecomposition is None:
                 raise RuntimeError(
                     "Compute eigendecomposition first as `.compute_eig()`."
                 )
+            n_states = self.eigendecomposition["eigengap"] + 1
+            logg.info(f"Using `{n_states}` based on eigengap")
 
+        if n_states == 1:
             start = logg.info("Computing metastable states")
             logg.warning("For `n_states=1`, stationary distribution is computed")
 
@@ -431,10 +434,6 @@ class GPCCA(BaseEstimator):
                 raise ValueError(
                     f"Expected `n_states` to be an integer when `use_min_chi=False`, found `{type(n_states).__name__}`."
                 )
-
-            if n_states is None:
-                n_states = self.eigendecomposition["eigengap"] + 1
-                logg.info(f"Using `{n_states}` based on eigengap")
 
             if self._gpcca.X.shape[1] < n_states:
                 logg.warning(
