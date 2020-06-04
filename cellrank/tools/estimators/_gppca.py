@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Generalized Perron Cluster Cluster Analysis."""
+"""Generalized Perron Cluster Cluster Analysis (GPCCA) module."""
 
 import os
 from copy import copy, deepcopy
@@ -38,7 +38,7 @@ from cellrank.tools.estimators._base_estimator import BaseEstimator
 
 class GPCCA(BaseEstimator):
     """
-    Generalized Perron Cluster Cluster Analysis [GPCCA18]/.
+    Generalized Perron Cluster Cluster Analysis [GPCCA18]_.
 
     Params
     ------
