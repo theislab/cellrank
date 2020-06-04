@@ -49,7 +49,8 @@ def _create_colors(
 
     Returns
     -------
-        List of colors, either as a hex string or an array.
+    :class:`list`
+        List of colors, either as a hex string or an RGB array.
     """
 
     if not mcolors.is_color_like(base_color):
