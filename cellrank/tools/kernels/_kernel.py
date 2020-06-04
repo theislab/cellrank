@@ -15,8 +15,8 @@ from anndata import AnnData
 from cellrank.tools._utils import (
     bias_knn,
     _normalize,
-    get_neighs,
-    has_neighs,
+    _get_neighs,
+    _has_neighs,
     is_connected,
     is_symmetric,
 )
@@ -386,10 +386,10 @@ class UnaryKernelExpression(KernelExpression, ABC):
     def _read_from_adata(self, var_key: Optional[str] = None, **kwargs):
         """Import the base-KNN graph and optionally check for symmetry and connectivity."""
 
-        if not has_neighs(self.adata):
+        if not _has_neighs(self.adata):
             raise KeyError("Compute KNN graph first as `scanpy.pp.neighbors()`.")
 
-        self._conn = get_neighs(self.adata, "connectivities").astype(_dtype)
+        self._conn = _get_neighs(self.adata, "connectivities").astype(_dtype)
         self._variances = None
 
         check_connectivity = kwargs.pop("check_connectivity", False)
