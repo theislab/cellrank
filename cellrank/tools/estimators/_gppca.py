@@ -45,7 +45,7 @@ class GPCCA(BaseEstimator):
     kernel
         Kernel object that stores a transition matrix.
     adata : :class:`anndata.AnnData`
-        Optional annotated data object. If given, pre-computed lineages can be read in from this.
+        Optional annotated data object. If given, precomputed lineages can be read in from this.
         Otherwise, read the object from the specified :paramref:`kernel`.
     inplace
         Whether to modify :paramref:`adata` object inplace or make a copy.
@@ -97,6 +97,7 @@ class GPCCA(BaseEstimator):
         self._main_states = None
         self._main_states_probabilities = None
         self._n_cells = None  # serves as a cache for plotting
+        self._which = None  # in Schur decomp
 
     def compute_eig(
         self,
@@ -297,6 +298,7 @@ class GPCCA(BaseEstimator):
         # make it available for plotting
         self._schur_vectors = self._gpcca.X
         self._schur_matrix = self._gpcca.R
+        self._which = which  # for params of ED
 
     def compute_metastable_states(
         self,
@@ -306,6 +308,7 @@ class GPCCA(BaseEstimator):
         cluster_key: str = None,
         en_cutoff: Optional[float] = 0.7,
         p_thresh: float = 1e-15,
+        alpha: float = 1,
     ):
         """
         Compute the metastable states.
@@ -328,6 +331,9 @@ class GPCCA(BaseEstimator):
             start- or endpoints.
             If the test returns a positive statistic and a p-value smaller than :paramref:`p_thresh`,
             a warning will be issued.
+        alpha
+            Used to compute the `eigengap`. paramref:`alpha` is the weight given
+            to the deviation of an eigenvalue from one.
 
         Returns
         -------
@@ -418,7 +424,7 @@ class GPCCA(BaseEstimator):
 
             if self._gpcca.X.shape[1] < n_states:
                 logg.warning(
-                    f"Requested more metastable states ({n_states}) than available"
+                    f"Requested more metastable states ({n_states}) than available "
                     f"Schur vectors ({self._gpcca.X.shape[1]}). "
                     f"Recomputing the decomposition"
                 )
@@ -426,6 +432,17 @@ class GPCCA(BaseEstimator):
             start = logg.info("Computing metastable states")
 
             self._gpcca = self._gpcca.optimize(m=n_states)
+            self._write_eig_to_adata(
+                {
+                    "D": self._gpcca.eigenvalues,
+                    "eigengap": _eigengap(self._gpcca.eigenvalues, alpha),
+                    "params": {
+                        "which": self._which,
+                        "k": len(self._gpcca.eigenvalues),
+                        "alpha": alpha,
+                    },
+                }
+            )
 
             # when `n_cells != None` and the overlap is high, we're skipping some metastable states
             valid_ixs = self._assign_metastable_states(
