@@ -332,7 +332,7 @@ class Lineage(np.ndarray):
             res.append(name)
 
         if make_unique:
-            res = unique_order_preserving(res)
+            res = _unique_order_preserving(res)
 
         return res[0] if is_singleton else res
 
