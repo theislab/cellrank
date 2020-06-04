@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+"""Transition matrix module."""
+
 from typing import Optional
 
 from scanpy import logging as logg
@@ -27,8 +29,7 @@ def transition_matrix(
     density_normalize: bool = True,
 ) -> KernelExpression:
     """
-    High level function to compute a transition matrix based on a combination
-    of RNA Velocity and transcriptomic similarity.
+    Compute a transition matrix based on a combination of RNA Velocity and transcriptomic similarity.
 
     To learn more about the way in which the transition matrices are computed, see
     :class:`cellrank.tl.kernels.VelocityKernel` for the velocity-based transition matrix and
@@ -45,23 +46,23 @@ def transition_matrix(
     weight_connectivities
         Weight given to transcriptomic similarities as opposed to velocities. Must be in `[0, 1]`.
     use_negative_cosines
-        Whether to use correlations with cells that have an angle > 90 degree with v_i
+        Whether to use correlations with cells that have an angle > 90 degree with :math:`v_i`.
     sigma_corr
         Scaling parameter for the softmax. Larger values will lead to a more concentrated distribution (more peaked).
-        Default is to use 1/median_velocity_correlation
+        Default is to use 1 / median_velocity_correlation.
     scale_by_variances
-        Use velocity variances to scale the softmax
+        Use velocity variances to scale the softmax.
     var_key
-        Key from `adata.uns` to acess velocity variances
+        Key from `adata.uns` to acess velocity variances.
     var_min
-        Variances are clipped to this value at the lower end
+        Variances are clipped to this value at the lower end.
     self_transitions
         Assigns elements to the diagonal of the velocity-graph based on a confidence measure
     perc
         Quantile of the distribution of exponentiated velocity correlations. This is used as a threshold to set
-        smaller values to zero
+        smaller values to zero.
     threshold
-        Set a threshold to remove exponentiated velocity correlations smaller than `threshold`
+        Set a threshold to remove exponentiated velocity correlations smaller than :paramref:`threshold`.
     density_normalize
         Whether to use density correction when computing the transition probabilities.
         Density correction is done as by [Haghverdi16]_.

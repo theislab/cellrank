@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-Utility functions for the cellrank tools
-"""
+"""Utility functions for CellRank tools."""
 
 import os
 import warnings
@@ -36,43 +34,12 @@ import scanpy as sc
 from scanpy import logging as logg
 from anndata import AnnData
 
-from cellrank.utils._utils import get_neighs, has_neighs, get_neighs_params
+from cellrank.utils._utils import _get_neighs, _has_neighs, _get_neighs_params
 from cellrank.tools._colors import _convert_to_hex_colors, _insert_categorical_colors
 
 ColorLike = TypeVar("ColorLike")
 GPCCA = TypeVar("GPCCA")
 Lineage = TypeVar("Lineage")
-
-
-def _get_restriction_to_main(estimator: GPCCA):
-    """
-    Restrict the categorical of metastable states to the main states.
-
-    Parameters
-    --------
-    estimator
-        GPCCA object.
-
-    Returns
-    --------
-    cats_main, colors_main
-        The restricted categorical annotations and matching colors.
-    """
-
-    # get the names of the main states, remove 'rest' if present
-    main_names = estimator.lineage_probabilities.names
-    main_names = main_names[main_names != "rest"]
-
-    # get the metastable annotations & colors
-    cats_main = estimator.metastable_states.copy()
-    colors_main = np.array(estimator._meta_states_colors.copy())
-
-    # restrict both colors and categories
-    mask = np.in1d(cats_main.cat.categories, main_names)
-    colors_main = colors_main[mask]
-    cats_main.cat.remove_categories(cats_main.cat.categories[~mask], inplace=True)
-
-    return cats_main, colors_main
 
 
 def _create_root_final_annotations(
@@ -84,26 +51,33 @@ def _create_root_final_annotations(
     key_added: Optional[str] = "root_final",
 ):
     """
-    Create categorical annotations of both root and final states
+    Create categorical annotations of both root and final states.
 
-    Parameters
-    --------
+    Params
+    ------
     adata
         AnnData object to write to (`.obs[key_added]`)
-    fwd, bwd
-        GPCCA objects modelling forward and backward processes, respectively
+    fwd
+        GPCCA objects modelling forward process.
+    bwd
+        GPCCA objects modelling forward backward.
     final_pref, root_pref
-        Prefis used in the annotations
+        Prefix used in the annotations.
     key_added
-        key added to `adata.obs`
+        Key added to `adata.obs`.
 
     Returns
-        Nothing, just writes to AnnData
+    -------
+    None
+        Nothing, just writes to AnnData.
     """
 
+    assert not fwd.backward, "Forward GPCCA object is in fact bacward."
+    assert bwd.backawrd, "Backward GPCCA object is in fact forward."
+
     # get restricted categories and colors
-    cats_final, colors_final = _get_restriction_to_main(fwd)
-    cats_root, colors_root = _get_restriction_to_main(bwd)
+    cats_final, colors_final = fwd._get_restrictions_to_main()
+    cats_root, colors_root = bwd._get_restrictions_to_main()
 
     # merge
     cats_merged, colors_merged = _merge_categorical_series(
@@ -111,7 +85,7 @@ def _create_root_final_annotations(
     )
 
     # adjust the names
-    final_names, root_names = cats_final.cat.categories, cats_final.cat.categories
+    final_names = cats_final.cat.categories
     final_labels = [
         f"{final_pref if key in final_names else root_pref}: {key}"
         for key in cats_merged.cat.categories
@@ -126,7 +100,7 @@ def _process_series(
     series: pd.Series, keys: Optional[List[str]], colors: Optional[np.array] = None
 ) -> Union[pd.Series, Tuple[pd.Series, List[str]]]:
     """
-    Utility function to process :class:`pandas.Series` categorical objects.
+    Process :class:`pandas.Series` categorical objects.
 
     Categories in :paramref:`series` are combined/removed according to :paramref:`keys`,
     the same transformation is applied to the corresponding colors.
@@ -172,9 +146,10 @@ def _process_series(
         colors_in = np.array(colors.copy())
         if len(colors_in) != len(series_in.cat.categories):
             raise ValueError(
-                f"Length of colors ({len(colors_in)}) does not match length of categories ({len(series_in.cat.categories)})."
+                f"Length of colors ({len(colors_in)}) does not match length of "
+                f"categories ({len(series_in.cat.categories)})."
             )
-        if not all((mcolors.is_color_like(c) for c in colors_in)):
+        if not all(mcolors.is_color_like(c) for c in colors_in):
             raise ValueError("Not all colors are color-like.")
 
     # define a set of keys
@@ -244,12 +219,12 @@ def _process_series(
 
 def _complex_warning(
     X: np.array, use: Union[list, int, tuple, range], use_imag: bool = False
-):
+) -> np.ndarray:
     """
-    Check for imaginary components in columns of X specified by `use`
+    Check for imaginary components in columns of X specified by `use`.
 
     Params
-    --------
+    ------
     X
         Matrix containing the eigenvectors
     use
@@ -258,10 +233,11 @@ def _complex_warning(
         For eigenvectors that are complex, use real or imaginary part
 
     Returns
-    --------
-    X_
-        np.array
+    -------
+    class:`numpy.ndarray`
+        X_
     """
+
     complex_mask = np.sum(X.imag != 0, axis=0) > 0
     complex_ixs = np.array(use)[np.where(complex_mask)[0]]
     complex_key = "imaginary" if use_imag else "real"
@@ -278,7 +254,7 @@ def _complex_warning(
 
 def bias_knn(conn, pseudotime, n_neighbors, k=3):
     """
-    Utility function for the Palantir Kernel.
+    Palantir Kernel utility function.
 
     This function takes in symmetric connectivities and a pseudotime and removes edges that point "against" pseudotime,
     in this way creating a directed graph. For each node, it always keeps the closest neighbors, making sure the graph
@@ -314,9 +290,9 @@ def bias_knn(conn, pseudotime, n_neighbors, k=3):
 
 def _vec_mat_corr(X: Union[np.ndarray, spmatrix], y: np.ndarray) -> np.ndarray:
     """
-    Computes the correlation between columns in matrix X and a vector y
+    Compute the correlation between columns in matrix X and a vector y.
 
-    Returns NaN for genes which don't vary across cells
+    Return NaN for genes which don't vary across cells.
 
     Params
     ------
@@ -420,9 +396,7 @@ def cyto_trace(
 def _make_cat(
     labels: List[List[Any]], n_states: int, state_names: Sequence[str]
 ) -> Series:
-    """
-    Get categorical from list of lists.
-    """
+    """Get categorical from list of lists."""
 
     labels_new = np.repeat(np.nan, n_states)
     for i, c in enumerate(labels):
@@ -436,9 +410,7 @@ def _make_cat(
 def _compute_comm_classes(
     A: Union[np.ndarray, spmatrix]
 ) -> Tuple[List[List[Any]], bool]:
-    """
-    Utility function to compute communication classes for a graph given by A.
-    """
+    """Compute communication classes for a graph given by A."""
 
     di_graph = (
         nx.from_scipy_sparse_matrix(A, create_using=nx.DiGraph)
@@ -456,9 +428,7 @@ def _compute_comm_classes(
 
 
 def _filter_cells(distances: np.ndarray, rc_labels: Series, n_matches_min: int):
-    """
-    Utility function which filters out some cells that look like transient states based on their neighbors.
-    """
+    """Filter out some cells that look like transient states based on their neighbors."""
 
     if not is_categorical_dtype(rc_labels):
         raise TypeError("`categories` must be a categorical variable.")
@@ -499,9 +469,7 @@ def _cluster_X(
     n_neighbors_louvain: int,
     resolution_louvain: float,
 ) -> List[Any]:
-    """
-    Utility function which clusters the rows of the matrix X.
-    """
+    """Cluster the rows of the matrix X."""
 
     if method == "kmeans":
         if n_clusters_kmeans is None:
@@ -529,9 +497,7 @@ def _cluster_X(
 
 
 def _compute_mean_color(color_list: List[str]) -> str:
-    """
-    Utility function to compute the mean color.
-    """
+    """Compute the mean color."""
 
     if not all(map(lambda c: mcolors.is_color_like(c), color_list)):
         raise ValueError(f"Not all values are valid colors `{color_list}`.")
@@ -621,9 +587,7 @@ def partition(
 
 
 def is_connected(c):
-    """
-    Utility function to check whether the undirected graph encoded by c is connected.
-    """
+    """Check whether the undirected graph encoded by c is connected."""
 
     G = nx.from_scipy_sparse_matrix(c) if issparse(c) else nx.from_numpy_array(c)
 
@@ -631,9 +595,7 @@ def is_connected(c):
 
 
 def is_symmetric(c: Union[spmatrix, np.ndarray], ord: str = "fro", eps: float = 1e-4):
-    """
-    Utility function to check whether the graph encoded by c is symmetric.
-    """
+    """Check whether the graph encoded by c is symmetric."""
 
     dev = s_norm((c - c.T), ord=ord) if issparse(c) else d_norm((c - c.T), ord=ord)
     return dev < eps
@@ -648,6 +610,7 @@ def _subsample_embedding(
 ) -> Tuple[np.ndarray, float]:
     """
     Subsample cells to uniformly cover an embedding.
+
     If using default parameter settings, this will get very slow for more than 4 embedding dimensions.
 
     Params
@@ -724,9 +687,7 @@ def _subsample_embedding(
 def _gaussian_kernel(
     X: Union[np.ndarray, spmatrix], mu: float = 0, sigma: float = 1
 ) -> np.ndarray:
-    """
-    Computes a gaussian kernel.
-    """
+    """Compute a Gaussian kernel."""
 
     if issparse(X):
         G = X.copy()
@@ -770,11 +731,11 @@ def _get_connectivities(
     adata: AnnData, mode: str = "connectivities", n_neighbors: Optional[int] = None
 ) -> Optional[spmatrix]:
     # utility function, copied from scvelo
-    if has_neighs(adata):
-        C = get_neighs(adata, mode)
+    if _has_neighs(adata):
+        C = _get_neighs(adata, mode)
         if (
             n_neighbors is not None
-            and n_neighbors <= get_neighs_params(adata)["n_neighbors"]
+            and n_neighbors <= _get_neighs_params(adata)["n_neighbors"]
         ):
             C = (
                 _select_connectivities(C, n_neighbors)
@@ -940,8 +901,10 @@ def _merge_categorical_series(
     color_overwrite: bool = False,
 ) -> Optional[Union[pd.Series, np.ndarray, Tuple[pd.Series, np.ndarray]]]:
     """
-    Update categorical :class:`pandas.Series.` with new information. It **can never remove** old categories,
-    only add to the existing ones. Optionally, new colors can be created or merged.
+    Update categorical :class:`pandas.Series.` with new information.
+
+    It **can never remove** old categories, only add to the existing ones.
+    Optionally, new colors can be created or merged.
 
     Params
     ------
@@ -982,7 +945,7 @@ def _merge_categorical_series(
         if isinstance(colors, dict):
             if set(series.cat.categories) != set(colors.keys()):
                 raise ValueError(
-                    f"Color mapper and series' categories don't share the keys."
+                    "Color mapper and series' categories don't share the keys."
                 )
         else:
             colors = dict(zip(series.cat.categories, colors))
@@ -1006,7 +969,7 @@ def _merge_categorical_series(
         )
 
     if (old.index != new.index).any():
-        raise ValueError(f"Index for old and new approx. recurrent classes differ.")
+        raise ValueError("Index for old and new approx. recurrent classes differ.")
 
     if not inplace:
         old = old.copy()
@@ -1059,7 +1022,8 @@ def _merge_categorical_series(
     return (old, colors_merged) if not inplace else colors_merged
 
 
-def unique_order_preserving(iterable: Iterable[Hashable]):
+def _unique_order_preserving(iterable: Iterable[Hashable]) -> List[Hashable]:
+    """Remove items from an iterable while preserving the order."""
     seen = set()
     return [i for i in iterable if i not in seen and not seen.add(i)]
 

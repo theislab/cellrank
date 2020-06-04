@@ -15,7 +15,7 @@ from anndata import AnnData
 
 import cellrank as cr
 from cellrank.tools._utils import _normalize
-from cellrank.utils._utils import get_neighs, get_neighs_params
+from cellrank.utils._utils import _get_neighs, _get_neighs_params
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tools._constants import Direction, _transition
 
@@ -147,12 +147,12 @@ def transition_matrix(
 
     # should I row-_normalize the transcriptomic connectivities?
     if diff_kernel is not None or density_normalize:
-        params = get_neighs_params(adata)
+        params = _get_neighs_params(adata)
         logg.debug(
             f'DEBUG: Using KNN graph computed in basis {params.get("use_rep", "Unknown")!r} '
             'with {params["n_neighbors"]} neighbors'
         )
-        trans_graph = get_neighs(adata, "connectivities")
+        trans_graph = _get_neighs(adata, "connectivities")
         dev = norm((trans_graph - trans_graph.T), ord="fro")
         if dev > 1e-4:
             logg.warning("KNN base graph not symmetric, `dev={dev}`")
