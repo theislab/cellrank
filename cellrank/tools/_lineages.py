@@ -117,7 +117,7 @@ def lineages(
         else:
             mc.compute_schur(n_components=n_lineages, method=method)
         mc.compute_metastable_states(n_states=n_lineages, **kwargs)
-        mc.set_main_states()  # TODO: @Marius - do you agree with this?
+        mc.set_main_states(names=keys)
     else:
         raise NotImplementedError(
             f"Pipeline not implemented for `{type(bytes).__name__}`"
