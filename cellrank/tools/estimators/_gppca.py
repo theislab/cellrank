@@ -363,7 +363,7 @@ class GPCCA(BaseEstimator):
                 )
             was_from_eigengap = True
             n_states = self.eigendecomposition["eigengap"] + 1
-            logg.info(f"Using `{n_states}` based on eigengap")
+            logg.info(f"Using `{n_states}` states based on eigengap")
 
         if n_states == 1:
             start = logg.info("Computing metastable states")

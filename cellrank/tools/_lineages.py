@@ -6,6 +6,7 @@ from typing import Optional, Sequence
 from scanpy import logging as logg
 from anndata import AnnData
 
+from cellrank.tools._utils import _info_if_obs_keys_categorical_present
 from cellrank.tools.kernels import VelocityKernel
 from cellrank.tools._constants import LinKey, StateKey, Direction, _transition
 from cellrank.tools.estimators import GPCCA, CFLARE
@@ -19,7 +20,6 @@ def lineages(
     cluster_key: Optional[str] = None,
     keys: Optional[Sequence[str]] = None,
     n_lineages: Optional[int] = None,
-    method: str = "krylov",
     copy: bool = False,
     return_estimator: bool = False,
     **kwargs,
@@ -55,8 +55,6 @@ def lineages(
         Astrocytes are excluded.
     n_lineages
         Number of lineages when :paramref:`estimator` `=GPCCA`. If `None`, it will be based on `eigengap`.
-    method
-        Method to compute Schur vectors when :paramref:`estimator` is :class:`cellrank.tl.GPCCA`.
     copy
         Whether to update the existing AnnData object or to return a copy.
     return_estimator
@@ -104,6 +102,14 @@ def lineages(
     vk = VelocityKernel(adata, backward=not final)
     vk.transition_matrix = adata.uns[transition_key]["T"]
     mc = estimator(vk, read_from_adata=False)
+
+    if cluster_key is None:
+        _info_if_obs_keys_categorical_present(
+            adata,
+            keys=["louvain", "clusters"],
+            msg_fmt="Found categorical observation in `adata.obs[{!r}]`. "
+            "Consider specifying it as `cluster_key`.",
+        )
 
     # compute the absorption probabilities
     if isinstance(mc, CFLARE):
