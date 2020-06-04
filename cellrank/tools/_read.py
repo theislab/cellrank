@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+"""IO module."""
+
 from typing import Union, Callable
 from pathlib import Path
 
@@ -69,7 +71,8 @@ def read(
                 map(lambda c: is_color_like(c), adata.uns[colors_key])
             ):
                 logg.warning(
-                    f"Lineage colors don't have the required length ({n_lineages}) or are not color-like, creating new colors"
+                    f"Lineage colors don't have the required length ({n_lineages}) "
+                    f"or are not color-like, creating new colors"
                 )
                 colors = _create_categorical_colors(n_lineages)
             else:
@@ -83,7 +86,8 @@ def read(
             adata.uns[names_key] = names
         else:
             logg.debug(
-                f"DEBUG: Unable to load {'forward' if direction == Direction.FORWARD else 'backward'} `Lineage` from `adata.obsm[{lin_key!r}]`"
+                f"DEBUG: Unable to load {'forward' if direction == Direction.FORWARD else 'backward'} "
+                f"`Lineage` from `adata.obsm[{lin_key!r}]`"
             )
 
     adata = read_callback(path, **kwargs)
