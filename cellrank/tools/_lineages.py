@@ -6,16 +6,23 @@ from typing import Optional, Sequence
 from scanpy import logging as logg
 from anndata import AnnData
 
+from cellrank.tools._utils import _info_if_obs_keys_categorical_present
 from cellrank.tools.kernels import VelocityKernel
 from cellrank.tools._constants import LinKey, StateKey, Direction, _transition
-from cellrank.tools.estimators import CFLARE
+from cellrank.tools.estimators import GPCCA, CFLARE
+from cellrank.tools.estimators._base_estimator import BaseEstimator
 
 
 def lineages(
     adata: AnnData,
+    estimator: type(BaseEstimator) = CFLARE,
     final: bool = True,
+    cluster_key: Optional[str] = None,
     keys: Optional[Sequence[str]] = None,
+    n_lineages: Optional[int] = None,
     copy: bool = False,
+    return_estimator: bool = False,
+    **kwargs,
 ) -> Optional[AnnData]:
     """
     Compute probabilistic lineage assignment using RNA velocity.
@@ -27,27 +34,50 @@ def lineages(
     Note that absorption probabilities have been used in the single cell context to infer lineage probabilities e.g.
     in [Setty19]_ or [Weinreb18]_ and we took inspiration from there.
 
-    Before running this function, compute start/endpoints using :func:`cellrank.tl.root_final`.
+    Before running this function, compute start/endpoints using :func:`cellrank.tl.find_root` or
+    :func:`cellrank.tl.find_final`, respectively.
 
     Parameters
     --------
     adata : :class:`anndata.AnnData`
         Annotated data object
+    estimator
+        Estimator to use to compute the lineage probabilities.
     final
         If `True`, computes final cells, i.e. end points. Otherwise, computes root cells, i.e. starting points.
+    cluster_key
+        Match computed {direction}points against pre-computed clusters to annotate the {direction}points.
+        For this, provide a key from :paramref:`adata` `.obs` where cluster labels have been computed.
     keys
         Determines which end/start-points to use by passing their names. Further, start/end-points can be combined.
         If e.g. the endpoints are ['Neuronal_1', 'Neuronal_1', 'Astrocytes', 'OPC'], then passing
         keys=['Neuronal_1, Neuronal_2', 'OPC'] means that the two neuronal endpoints are treated as one and
         Astrocytes are excluded.
+    n_lineages
+        Number of lineages when :paramref:`estimator` `=GPCCA`. If `None`, it will be based on `eigengap`.
     copy
         Whether to update the existing AnnData object or to return a copy.
+    return_estimator
+        Whether to return the estimator. Only available when :paramref:`copy=False`.
+    kwargs
+        Keyword arguments for :meth:`cellrank.tl.estimators.BaseEstimator.compute_metastable_states`.
 
     Returns
     --------
-    :class:`anndata.AnnData` or :class:`NoneType`
-        Depending on :paramref:`copy`, either updates the existing :paramref:`adata` object or returns a copy.
+    :class:`anndata.AnnData`, :class:`cellrank.tools.estimators.BaseEstimator` or :class:`NoneType`
+        Depending on :paramref:`copy`, either updates the existing :paramref:`adata` object or returns a copy or
+        returns the estimator.
     """
+
+    if not isinstance(estimator, type):
+        raise TypeError(
+            f"Expected estimator to be a class, found `{type(estimator).__name__}`."
+        )
+
+    if not issubclass(estimator, BaseEstimator):
+        raise TypeError(
+            f"Expected estimator to be a subclass of `BaseEstimator`, found `{type(estimator).__name__}`"
+        )
 
     # Set the keys and print info
     adata = adata.copy() if copy else adata
@@ -63,20 +93,54 @@ def lineages(
 
     transition_key = _transition(direction)
     if transition_key not in adata.uns.keys():
-        raise ValueError(
-            f"Compute {'final' if final else 'root'} cells first as `cellrank.tl.find_{'final' if final else 'root'}`."
-        )
+        key = "final" if final else "root"
+        raise ValueError(f"Compute {key} cells first as `cellrank.tl.find_{key}`.")
 
     start = logg.info(f"Computing lineage probabilities towards `{rc_key}`")
 
     # get the transition matrix from the AnnData object and initialise MC object
     vk = VelocityKernel(adata, backward=not final)
     vk.transition_matrix = adata.uns[transition_key]["T"]
-    mc = CFLARE(vk)
+    mc = estimator(vk, read_from_adata=False)
+
+    if cluster_key is None:
+        _info_if_obs_keys_categorical_present(
+            adata,
+            keys=["louvain", "clusters"],
+            msg_fmt="Found categorical observation in `adata.obs[{!r}]`. "
+            "Consider specifying it as `cluster_key`.",
+        )
 
     # compute the absorption probabilities
-    mc.compute_lin_probs(keys=keys)
+    if isinstance(mc, CFLARE):
+        mc.compute_eig()
+        mc.compute_metastable_states(cluster_key=cluster_key, **kwargs)
+        mc.compute_lin_probs(keys=keys)
+    elif isinstance(mc, GPCCA):
+        if n_lineages is None or n_lineages == 1:
+            mc.compute_eig()
+        else:
+            mc.compute_schur(n_lineages + 1)
+
+        try:
+            mc.compute_metastable_states(
+                n_states=n_lineages, cluster_key=cluster_key, **kwargs
+            )
+        except ValueError:
+            logg.warning(
+                f"Computing {n_lineages} metastable states cuts through a block of complex conjugates. "
+                f"Increasing `n_lineages` to {n_lineages + 1}"
+            )
+            n_lineages += 1
+            mc.compute_metastable_states(
+                n_states=n_lineages, cluster_key=cluster_key, **kwargs
+            )
+        mc.set_main_states(names=keys)
+    else:
+        raise NotImplementedError(
+            f"Pipeline not implemented for `{type(bytes).__name__}`"
+        )
 
     logg.info(f"Added key `{lin_key!r}` to `adata.obsm`\n    Finish", time=start)
 
-    return adata if copy else None
+    return adata if copy else mc if return_estimator else None
