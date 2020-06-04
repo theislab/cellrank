@@ -76,11 +76,11 @@ def _root_final(
     mc = estimator(kernel, read_from_adata=False)
 
     # run the computation
-    mc.compute_eig()
 
     if isinstance(mc, CFLARE):
         kwargs["use"] = n_states
 
+        mc.compute_eig()
         mc.compute_metastable_states(**kwargs)
 
         if show_plots:
@@ -89,7 +89,9 @@ def _root_final(
             mc.plot_eig_embedding(left=False, use=n_states)
 
     elif isinstance(mc, GPCCA):
-        if n_states is not None and n_states > 1:
+        if n_states == 1:
+            mc.compute_eig()
+        elif n_states is not None:
             mc.compute_schur(n_states + 1)
         mc.compute_metastable_states(n_states=n_states, **kwargs)
         mc.set_main_states()  # write to adata
