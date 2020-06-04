@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+"""Heatmap module."""
+
 from typing import Tuple, Union, Optional, Sequence
 from pathlib import Path
 from collections import Iterable, defaultdict
