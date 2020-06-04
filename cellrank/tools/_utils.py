@@ -1022,7 +1022,7 @@ def _merge_categorical_series(
     return (old, colors_merged) if not inplace else colors_merged
 
 
-def unique_order_preserving(iterable: Iterable[Hashable]) -> List[Hashable]:
+def _unique_order_preserving(iterable: Iterable[Hashable]) -> List[Hashable]:
     """Remove items from an iterable while preserving the order."""
     seen = set()
     return [i for i in iterable if i not in seen and not seen.add(i)]
