@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+"""Color handling module."""
+
 from typing import Any, List, Tuple, Union, Optional, Sequence
 
 import numpy as np
@@ -47,11 +49,12 @@ def _create_colors(
 
     Returns
     -------
-        List of colors, either as a hex string or an array.
+    :class:`list`
+        List of colors, either as a hex string or an RGB array.
     """
 
     if not mcolors.is_color_like(base_color):
-        raise ValueError(f"Base color is not color-like.")
+        raise ValueError("Base color is not color-like.")
     if n <= 0:
         raise ValueError(f"Number of colors must be > 0, found `{n}`.")
 
@@ -128,7 +131,7 @@ def _map_names_and_colors(
     en_cutoff: Optional[float] = None,
 ) -> Union[Series, Tuple[Series, List[Any]]]:
     """
-    Utility function to map annotations and colors from one series to another.
+    Map annotations and colors from one series to another.
 
     Params
     ------
@@ -167,7 +170,7 @@ def _map_names_and_colors(
             raise ValueError(
                 "Length of reference colors does not match length of reference series."
             )
-        if not all((mcolors.is_color_like(c) for c in colors_reference)):
+        if not all(mcolors.is_color_like(c) for c in colors_reference):
             raise ValueError("Not all colors are color-like.")
 
     # create dataframe to store the associations between reference and query

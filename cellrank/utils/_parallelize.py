@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+"""Module used to parallelize model fitting."""
+
 from typing import Any, Union, Callable, Optional, Sequence
 from threading import Thread
 from multiprocessing import Manager
@@ -24,6 +26,8 @@ def parallelize(
     show_progress_bar: bool = True,
 ) -> Union[np.ndarray, Any]:
     """
+    Parallelize function call over a collection of elements.
+
     Params
     ------
     callback
@@ -51,6 +55,7 @@ def parallelize(
 
     Returns
     -------
+    :class:`numpy.ndarray`:w
         Result depending on :paramref:`extractor` and :paramref:`as_array`.
     """
 
@@ -60,7 +65,7 @@ def parallelize(
                 from tqdm.notebook import tqdm
             except ImportError:
                 from tqdm import tqdm_notebook as tqdm
-            import ipywidgets
+            import ipywidgets  # noqa
         except ImportError:
             global _msg_shown
             tqdm = None

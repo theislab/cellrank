@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+"""Generalized Perron Cluster Cluster Analysis (GPCCA) module."""
+
 import os
 from copy import copy, deepcopy
 from types import MappingProxyType
@@ -37,7 +39,7 @@ from cellrank.tools.estimators._base_estimator import BaseEstimator
 
 class GPCCA(BaseEstimator):
     """
-    Generalized Perron Cluster Cluster Analysis [GPCCA18]/.
+    Generalized Perron Cluster Cluster Analysis [GPCCA18]_.
 
     Params
     ------
@@ -205,7 +207,8 @@ class GPCCA(BaseEstimator):
 
         if self._schur_matrix is None:
             raise RuntimeError(
-                "Compute Schur matrix first as `.compute_schur()` or `.compute_metastable_states()` with `n_states` > 1."
+                "Compute Schur matrix first as `.compute_schur()` or "
+                "`.compute_metastable_states()` with `n_states` > 1."
             )
 
         fig, ax = plt.subplots(
@@ -313,8 +316,8 @@ class GPCCA(BaseEstimator):
         n_states
             Number of metastable states.
         use_min_chi
-            Whether to use :meth:`msmtools.analysis.dense.gpcca.GPCCA.minChi` to calculate the number of metastable states.
-            If `True`, :paramref:`n_states` corresponds to an interval `[min, max]` inside of which
+            Whether to use :meth:`msmtools.analysis.dense.gpcca.GPCCA.minChi` to calculate the number of metastable
+            states. If `True`, :paramref:`n_states` corresponds to an interval `[min, max]` inside of which
             the potentially optimal number of metastable states is searched.
         cluster_key
             If a key to cluster labels is given, `approx_rcs` will ge associated with these for naming and colors.
@@ -381,7 +384,8 @@ class GPCCA(BaseEstimator):
             if use_min_chi:
                 if not isinstance(n_states, (dict, tuple, list)):
                     raise TypeError(
-                        f"Expected `n_states` to be either `dict`, `tuple` or a `list`, found `{type(n_states).__name__}`."
+                        f"Expected `n_states` to be either `dict`, `tuple` or a `list`, "
+                        f"found `{type(n_states).__name__}`."
                     )
                 if len(n_states) != 2:
                     raise ValueError(
@@ -415,7 +419,9 @@ class GPCCA(BaseEstimator):
 
             if self._gpcca.X.shape[1] < n_states:
                 logg.warning(
-                    f"Requested more metastable states ({n_states}) than available Schur vectors ({self._gpcca.X.shape[1]}). Recomputing the decomposition"
+                    f"Requested more metastable states ({n_states}) than available"
+                    f"Schur vectors ({self._gpcca.X.shape[1]}). "
+                    f"Recomputing the decomposition"
                 )
 
             start = logg.info("Computing metastable states")
@@ -474,7 +480,7 @@ class GPCCA(BaseEstimator):
         **kwargs,
     ) -> None:
         """
-        Plots the absorption probabilities of metastable states in the given embedding.
+        Plot the absorption probabilities of metastable states in the given embedding.
 
         Params
         ------
@@ -548,7 +554,7 @@ class GPCCA(BaseEstimator):
         **kwargs,
     ) -> None:
         """
-        Plots the absorption probabilities in the given embedding.
+        Plot the absorption probabilities in the given embedding.
 
         Params
         ------
@@ -584,7 +590,10 @@ class GPCCA(BaseEstimator):
         """
 
         attr = "_lin_probs"
-        error_msg = "Compute main states first as `.compute_main_states()` or set them manually as `.set_main_states()`."
+        error_msg = (
+            "Compute main states first as `.compute_main_states()` "
+            "or set them manually as `.set_main_states()`."
+        )
 
         if n_cells is None:
             self._plot_probabilities(
@@ -719,9 +728,12 @@ class GPCCA(BaseEstimator):
             One of the following:
 
             - `'eigengap'` - select the number of states based on the eigengap of the transition matrix
-            - `'eigengap_coarse'`- select the number of states based on the eigengap of the diagonal of the coarse-grained transition matrix
-            - `'min_self_prob'`- select states which have the given minimum probability on the diagonal of the coarse-grained transition matrix
-            - `'top_n'`- select top :paramref:`n_main_states` based on the probability on the diagonal of the coarse-grained transition matrix
+            - `'eigengap_coarse'`- select the number of states based on the eigengap of the diagonal
+                of the coarse-grained transition matrix
+            - `'min_self_prob'`- select states which have the given minimum probability on the diagonal
+                of the coarse-grained transition matrix
+            - `'top_n'`- select top :paramref:`n_main_states` based on the probability on the diagonal
+                of the coarse-grained transition matrix
         redistribute
             Whether to redistribute the probability mass of unselected lineages or create a `'rest'` lineage.
         alpha
@@ -788,7 +800,8 @@ class GPCCA(BaseEstimator):
             return
         else:
             raise ValueError(
-                f"Invalid method `{method!r}`. Valid options are `'eigengap', 'eigengap_coarse', 'top_n' and 'min_self_prob'`."
+                f"Invalid method `{method!r}`. Valid options are `'eigengap', 'eigengap_coarse', "
+                f"'top_n' and 'min_self_prob'`."
             )
 
         names = self._coarse_T.columns[np.argsort(np.diag(self._coarse_T))][
@@ -1086,7 +1099,7 @@ class GPCCA(BaseEstimator):
             # modified from matplotlib's site
 
             data = im.get_array()
-            kw = dict(ha="center", va="center")
+            kw = {"ha": "center", "va": "center"}
             kw.update(**text_kwargs)
 
             # Get the formatter in case a string is supplied
@@ -1111,7 +1124,7 @@ class GPCCA(BaseEstimator):
             if isinstance(valfmt, str):
                 valfmt = mpl.ticker.StrMethodFormatter(valfmt)
 
-            kw = dict(ha="center", va="center")
+            kw = {"ha": "center", "va": "center"}
             kw.update(**text_kwargs)
             if is_vertical:
                 kw["rotation"] = -90
@@ -1127,7 +1140,7 @@ class GPCCA(BaseEstimator):
 
         if self.coarse_T is None:
             raise RuntimeError(
-                f"Compute coarse transition matrix first as `.compute_metastable_states()` with `n_states` > 1."
+                "Compute coarse transition matrix first as `.compute_metastable_states()` with `n_states` > 1."
             )
 
         if show_stationary_dist and self.coarse_stationary_distribution is None:
@@ -1236,8 +1249,35 @@ class GPCCA(BaseEstimator):
 
         fig.show()
 
+    def _get_restriction_to_main(self) -> Tuple[pd.Series, np.ndarray]:
+        """
+        Restrict the categorical of metastable states to the main states.
+
+        Returns
+        -------
+        :class:`pandas.Series`, :class:`numpy.ndararay`
+            The restricted categorical annotations and matching colors.
+        """
+
+        # get the names of the main states, remove 'rest' if present
+        main_names = self.lineage_probabilities.names
+        main_names = main_names[main_names != "rest"]
+
+        # get the metastable annotations & colors
+        cats_main = self.metastable_states.copy()
+        colors_main = np.array(self._meta_states_colors.copy())
+
+        # restrict both colors and categories
+        mask = np.in1d(cats_main.cat.categories, main_names)
+        colors_main = colors_main[mask]
+        cats_main.cat.remove_categories(cats_main.cat.categories[~mask], inplace=True)
+
+        return cats_main, colors_main
+
     def copy(self) -> "GPCCA":
         """
+        Return a copy of itself.
+
         Returns
         -------
         :class:`cellrank.tl.GPCCA`
@@ -1288,32 +1328,17 @@ class GPCCA(BaseEstimator):
 
     @property
     def coarse_T(self) -> pd.DataFrame:
-        """
-        Returns
-        -------
-        :class:`pandas.DataFrame`
-            Coarse-grained transition matrix between metastable states.
-        """
+        """Coarse-grained transition matrix between metastable states."""
         return self._coarse_T
 
     @property
     def metastable_states(self) -> pd.Series:
-        """
-        Returns
-        -------
-        :class:`pandas.Series`
-            Metastable states
-        """
+        """Metastable states."""
         return self._meta_states
 
     @property
     def coarse_stationary_distribution(self) -> pd.Series:
-        """
-        Returns
-        -------
-        :class:`pandas.Series`
-            Coarse-grained stationary distribution of metastable states
-        """
+        """Coarse-grained stationary distribution of metastable states."""
         return self._coarse_stat_dist
 
     @property
@@ -1323,10 +1348,5 @@ class GPCCA(BaseEstimator):
 
     @property
     def main_states_probabilities(self) -> pd.Series:
-        """
-        Returns
-        -------
-        :class:`pandas.Series`
-            Upper bound of of becoming a main states.
-        """
+        """Upper bound of of becoming a main states."""
         return self._main_states_probabilities

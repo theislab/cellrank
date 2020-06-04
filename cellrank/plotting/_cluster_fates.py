@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+"""Cluster fatess and similarity module."""
+
 from math import ceil
 from types import MappingProxyType
 from typing import Any, List, Tuple, Union, Mapping, Optional, Sequence
@@ -21,7 +23,6 @@ from anndata import AnnData
 
 from cellrank.tools._utils import save_fig
 from cellrank.utils._utils import _make_unique
-from cellrank.tools._lineage import Lineage
 from cellrank.plotting._utils import _position_legend
 from cellrank.tools._constants import LinKey
 from cellrank.tools._exact_mc_test import _counts, _cramers_v
@@ -47,7 +48,7 @@ def cluster_fates(
     **kwargs,
 ) -> None:
     """
-    Produces plots that aggregate lineage probabilities to a cluster level.
+    Plot aggregate lineage probabilities at a cluster level.
 
     This can be used to investigate how likely a certain cluster is to go to the final cells, or in turn to have
     descended from the root cells. For mode `'paga'` and `'paga_pie'`, we use *PAGA*, see [Wolf19]_.
@@ -190,7 +191,7 @@ def cluster_fates(
                 cax, norm=norm, cmap=kwargs["cmap"], label="probability"
             )
 
-        for ax in axes[i + 1 :]:
+        for ax in axes[i + 1 :]:  # noqa
             ax.remove()
 
         return fig
@@ -274,7 +275,7 @@ def cluster_fates(
         data = adata.obsm[lk]
         to_clean = []
 
-        for i, name in enumerate(lin_names):
+        for name in lin_names:
             # TODO: once ylabel is implemented, the prefix isn't necessary
             key = f"{dir_prefix} {name}"
             if key not in adata.obs_keys():
@@ -303,7 +304,7 @@ def cluster_fates(
             sc.pl.violin(
                 adata, ylabel="" if i else "probability", keys=key, ax=ax, **kwargs
             )
-        for ax in axes[i + 1 :]:
+        for ax in axes[i + 1 :]:  # noqa
             ax.remove()
         for name in to_clean:
             del adata.obs[name]
@@ -522,7 +523,7 @@ def similarity_plot(
     """
     Compare clusters with respect to their absorption probabilities in a heatmap.
 
-    For each cluster, we compute how likely an 'average cell' is to go to the final cells or to come from the root cells.
+    For each cluster, we compute how likely an 'average cell' is going to the final cells or coming from the root cells.
     We then compare these averaged probabilities using Cramér's V statistic, see
     `here <https://en.wikipedia.org/wiki/Cram%C3%A9r%27s_V>`_. The similarity is defined as :math:`1 - Cramér's V`.
 
@@ -565,7 +566,6 @@ def similarity_plot(
         Nothing, just plots the similarity matrix.
         Optionally saves the figure based on :paramref:`save`.
     """
-    # TODO: use seaborn's heatmap/clustermap
 
     logg.debug("DEBUG: Getting the counts")
     data = _counts(

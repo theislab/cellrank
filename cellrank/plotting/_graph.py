@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+"""Graph plotting module."""
+
 from copy import deepcopy
 from types import MappingProxyType
 from typing import Dict, Tuple, Union, Callable, Optional, Sequence
@@ -171,7 +173,7 @@ def graph(
                 X, Y = X[::-1], Y[::-1]
 
             mid = len(X) // 2
-            posA, posB = zip(X[mid : mid + 2], Y[mid : mid + 2])
+            posA, posB = zip(X[mid : mid + 2], Y[mid : mid + 2])  # noqa
 
             arrow = FancyArrowPatch(
                 posA=posA,
@@ -215,7 +217,7 @@ def graph(
 
         if group_by not in ("incoming", "outgoing"):
             raise ValueError(
-                f"Argument `groupby` in `top_n_edges` must be either `'incoming`' or `'outgoing'`."
+                "Argument `groupby` in `top_n_edges` must be either `'incoming`' or `'outgoing'`."
             )
 
         source, target = zip(*G.edges)
@@ -293,16 +295,14 @@ def graph(
         labels = [None] * len(keys)
     elif not isinstance(labels[0], (tuple, list)):
         labels = [labels] * len(keys)
-    elif len(labels) != len(keys):
-        raise ValueError(f"`Keys` and `labels` must be of the same shape.")
 
     if len(labels) != len(keys):
-        raise ValueError(f"`Keys` and `labels` must be of the same shape.")
+        raise ValueError("`Keys` and `labels` must be of the same shape.")
 
     if isinstance(data, AnnData):
         if graph_key is None:
             raise ValueError(
-                f"Argument `graph_key` cannot be `None` when `adata` is `anndata.Anndata` object."
+                "Argument `graph_key` cannot be `None` when `adata` is `anndata.Anndata` object."
             )
         gdata = data.uns[graph_key]["T"]
     elif isinstance(data, (np.ndarray, spmatrix)):
@@ -402,7 +402,7 @@ def graph(
                 _msg_shown = True
 
     for ax, keyloc, key, labs, er in zip(axes, keylocs, keys, labels, edge_reductions):
-        label_col = dict()  # dummy value
+        label_col = {}  # dummy value
 
         if key in ("incoming", "outgoing", "self_loops"):
             if key in ("incoming", "outgoing"):
@@ -473,7 +473,7 @@ def graph(
                 colors.append(mapper[v])
                 seen.add(v)
 
-            nodes_kwargs = dict(cmap=cat_cmap, node_color=colors)
+            nodes_kwargs = dict(cmap=cat_cmap, node_color=colors)  # noqa
             if legend_loc is not None:
                 x, y = pos[0]
                 for label in sorted(seen):
@@ -482,7 +482,9 @@ def graph(
         else:
             values = list(node_v.values())
             vmin, vmax = np.min(values), np.max(values)
-            nodes_kwargs = dict(cmap=cont_cmap, node_color=values, vmin=vmin, vmax=vmax)
+            nodes_kwargs = dict(  # noqa
+                cmap=cont_cmap, node_color=values, vmin=vmin, vmax=vmax
+            )
 
             divider = make_axes_locatable(ax)
             cax = divider.append_axes("right", size="1.5%", pad=0.05)
