@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Module used to find root and final states."""
+"""Module used for finding root and final states."""
 
 from typing import Optional
 
