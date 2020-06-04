@@ -115,9 +115,19 @@ def lineages(
             mc.compute_eig()
         elif n_lineages is not None:
             mc.compute_schur(n_components=n_lineages + 1, method=method)
-        mc.compute_metastable_states(
-            n_states=n_lineages, cluster_key=cluster_key, **kwargs
-        )
+        try:
+            mc.compute_metastable_states(
+                n_states=n_lineages, cluster_key=cluster_key, **kwargs
+            )
+        except ValueError:
+            logg.warning(
+                f"Computing {n_lineages} metastable states cuts through a block of complex conjugates. "
+                f"Increasing `n_lineages` to {n_lineages + 1}"
+            )
+            n_lineages += 1
+            mc.compute_metastable_states(
+                n_states=n_lineages, cluster_key=cluster_key, **kwargs
+            )
         mc.set_main_states(names=keys)
     else:
         raise NotImplementedError(
