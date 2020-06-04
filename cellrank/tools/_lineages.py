@@ -45,6 +45,9 @@ def lineages(
         Estimator to use to compute the lineage probabilities.
     final
         If `True`, computes final cells, i.e. end points. Otherwise, computes root cells, i.e. starting points.
+    cluster_key
+        Match computed {direction}points against pre-computed clusters to annotate the {direction}points.
+        For this, provide a key from :paramref:`adata` `.obs` where cluster labels have been computed.
     keys
         Determines which end/start-points to use by passing their names. Further, start/end-points can be combined.
         If e.g. the endpoints are ['Neuronal_1', 'Neuronal_1', 'Astrocytes', 'OPC'], then passing

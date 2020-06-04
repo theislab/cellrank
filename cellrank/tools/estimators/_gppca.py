@@ -355,11 +355,13 @@ class GPCCA(BaseEstimator):
                 - :paramref:`coarse_stationary_distribution`
         """
 
+        was_from_eigengap = False
         if n_states is None:
             if self.eigendecomposition is None:
                 raise RuntimeError(
-                    "Compute eigendecomposition first as `.compute_eig()`."
+                    "Compute eigendecomposition first as `.compute_eig()` or `.compute_schur()`."
                 )
+            was_from_eigengap = True
             n_states = self.eigendecomposition["eigengap"] + 1
             logg.info(f"Using `{n_states}` based on eigengap")
 
@@ -395,9 +397,17 @@ class GPCCA(BaseEstimator):
             logg.info("Adding `.metastable_states`\n    Finish", time=start)
         else:
             if self._gpcca is None:
-                raise RuntimeError(
-                    "Compute Schur decomposition first as `.compute_schur()`."
-                )
+                if was_from_eigengap:
+                    logg.warning(
+                        f"Number of states ({n_states}) was automatically determined by `eigengap` "
+                        "but no Schur decomposition was found. Computing Schur decomposition "
+                        "with default parameters"
+                    )
+                    self.compute_schur(n_states + 1)
+                else:
+                    raise RuntimeError(
+                        "Compute Schur decomposition first as `.compute_schur()`."
+                    )
 
             if use_min_chi:
                 if not isinstance(n_states, (dict, tuple, list)):
