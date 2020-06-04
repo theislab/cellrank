@@ -1201,7 +1201,7 @@ class GPCCA(BaseEstimator):
             init_ax.set_ylabel("initial distribution", rotation=-90, va="bottom")
 
         im = ax.imshow(self.coarse_T, aspect="auto", cmap=cmap, **kwargs)
-        ax.set_title("Coarse-grained transition matrix" if title is None else title)
+        ax.set_title("coarse-grained transition matrix" if title is None else title)
 
         if show_cbar:
             _ = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm)
