@@ -106,11 +106,16 @@ def lineages(
         mc.compute_metastable_states(**kwargs)
         mc.compute_lin_probs(keys=keys)
     elif isinstance(mc, GPCCA):
-        if (
-            n_lineages == 1
-        ):  # TODO: get evals from GPCCA object when calculating the Schur
+        if n_lineages is None:
+            raise ValueError(
+                "Argument `n_lineages` can't be none for `GPCCA` estimator."
+            )
+
+        if n_lineages == 1:
             mc.compute_eig()
-        mc.compute_schur(n_components=n_lineages, method=method)
+            # TODO: get evals from GPCCA object when calculating the Schur
+        else:
+            mc.compute_schur(n_components=n_lineages, method=method)
         mc.compute_metastable_states(n_states=n_lineages, **kwargs)
         mc.set_main_states()  # TODO: @Marius - do you agree with this?
     else:

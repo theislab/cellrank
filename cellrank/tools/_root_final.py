@@ -93,14 +93,18 @@ def _root_final(
         if n_states is None:
             raise ValueError("Argument `n_states` can't be none for `GPCCA` estimator.")
 
-        mc.compute_schur(n_states)
+        if n_states > 1:
+            mc.compute_schur(n_states)
         mc.compute_metastable_states(n_states=n_states, **kwargs)
 
         # TODO: @Marius - do you agree with this?
         if show_plots:
-            mc.plot_schur_embedding()
+            mc.plot_spectrum(real_only=True)
+            if n_states > 1:
+                mc.plot_schur_embedding()
             mc.plot_metastable_states(same_plot=False)
-            mc.plot_coarse_T()
+            if n_states > 1:
+                mc.plot_coarse_T()
     else:
         raise NotImplementedError(
             f"Pipeline not implemented for `{type(bytes).__name__}`"
