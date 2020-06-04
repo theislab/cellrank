@@ -83,6 +83,7 @@ class GPCCA(BaseEstimator):
             self._meta_key = str(MetaKey.FORWARD)
 
         self._gpcca: GPCCA = None
+        self._schur_matrix = None
         self._schur_vectors = None
         self._coarse_T = None
         self._coarse_init_dist = None
@@ -1275,6 +1276,82 @@ class GPCCA(BaseEstimator):
             save_fig(fig, save)
 
         fig.show()
+
+    def compute_gdpt(self, n_components: int = 10):
+        """
+        Compute generalized DPT making use of the real Schur decomposition.
+
+        Params
+        ------
+        n_components
+            Number of real Schur vectors to consider.
+
+        Returns
+        -------
+        None
+            Nothing, just updates :paramref:`adata` `.obs['gdpt_pseudotime']` with the computed pseudotime.
+        """
+
+        def _get_dpt_row(e_vals, e_vecs, i):
+            row = sum(
+                (
+                    np.abs(e_vals[eval_ix])
+                    / (1 - np.abs(e_vals[eval_ix]))
+                    * (e_vecs[i, eval_ix] - e_vecs[:, eval_ix])
+                )
+                ** 2
+                # account for float32 precision
+                for eval_ix in range(0, e_vals.size)
+                if np.abs(e_vals[eval_ix]) < 0.9994
+            )
+
+            return np.sqrt(row)
+
+        if "iroot" not in self.adata.uns.keys():
+            raise KeyError("Key `'iroot'` not found in `adata.uns`.")
+
+        iroot = self.adata.uns["iroot"]
+        if isinstance(iroot, str):
+            iroot = np.where(self.adata.obs_names == iroot)[0]
+            if not iroot:
+                raise ValueError(
+                    f"Unable to find cell with name `{self.adata.uns['iroot']!r}`."
+                )
+            iroot = iroot[0]
+
+        if n_components < 2:
+            raise ValueError(
+                f"Expected number of components >= 2, found `{n_components}`."
+            )
+
+        if self._schur_vectors is None:
+            logg.warning("No Schur decomposition found. Computing using default values")
+            self.compute_schur(n_components)
+        elif self._schur_matrix.shape[1] < n_components:
+            logg.warning(
+                f"Requested `{n_components}` components, but only `{self._schur_matrix.shape[1]}` were found. "
+                f"Recomputing using default values"
+            )
+            self.compute_schur(n_components)
+        else:
+            logg.debug("DEBUG: Using cached Schur decomposition")
+
+        start = logg.info(
+            f"Computing Generalized Diffusion Pseudotime using n_components = {n_components}"
+        )
+
+        Q, eigenvalues = (
+            self._schur_vectors,
+            self.eigendecomposition["D"],
+        )
+        # may have to remove some values if too many converged
+        Q, eigenvalues = Q[:, :n_components], eigenvalues[:n_components]
+
+        D = _get_dpt_row(eigenvalues, Q, i=iroot)
+        pseudotime = D / np.max(D[np.isfinite(D)])
+        self.adata.obs["gdpt_pseudotime"] = pseudotime
+
+        logg.info('Adding `"gdpt_pseudotime"` to `adata.obs`\n    Finish', time=start)
 
     def _get_restriction_to_main(self) -> Tuple[pd.Series, np.ndarray]:
         """
