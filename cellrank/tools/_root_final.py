@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Module used for finding root and final states."""
 
-from typing import Optional
+from typing import Union, Optional
 
 from scanpy import logging as logg
 from anndata import AnnData
@@ -48,11 +48,17 @@ show_plots
     Whether to show plots of the spectrum and eigenvectors in the embedding.
 copy
     Whether to update the existing :paramref:`adata` object or to return a copy.
+return_estimator
+    Whether to return the estimator. Only available when :paramref:`copy=False`.
+kwargs
+    Keyword arguments for :meth:`cellrank.tl.estimators.BaseEstimator.compute_metastable_states`.
 
 Returns
 -------
-:class:`anndata.AnnData` or :class:`NoneType`
-    Depending on :paramref:`copy`, either updates the existing :paramref:`adata` object or returns a copy.
+
+:class:`anndata.AnnData`, :class:`cellrank.tools.estimators.BaseEstimator` or :class:`NoneType`
+    Depending on :paramref:`copy`, either updates the existing :paramref:`adata` object or returns a copy or
+    returns the estimator.
     Marked cells can be found in :paramref:`adata` `.obs` under `{key_added!r}`.
 """
 
@@ -68,7 +74,9 @@ def _root_final(
     n_start_end: Optional[int] = None,
     show_plots: bool = False,
     copy: bool = False,
-) -> Optional[AnnData]:
+    return_estimator: bool = False,
+    **kwargs,
+) -> Optional[Union[AnnData, BaseEstimator]]:
 
     key = StateKey.FORWARD if final else StateKey.BACKWARD
     logg.info(f"Computing `{key}`")
@@ -80,10 +88,11 @@ def _root_final(
     )
 
     # create MarkovChain object
-    mc = estimator(kernel)
+    mc = estimator(kernel, read_from_adata=False)
 
     # run the computation
     mc.compute_eig()
+
     if isinstance(mc, CFLARE):
         mc.compute_metastable_states(
             percentile=percentile,
@@ -98,14 +107,17 @@ def _root_final(
             mc.plot_eig_embedding(abs_value=True, perc=[0, 98], use=n_start_end)
             mc.plot_eig_embedding(left=False, use=n_start_end)
     elif isinstance(mc, GPCCA):
-        mc.compute_metastable_states()  # TODO
+        mc.compute_metastable_states(**kwargs)
         mc.set_main_states()
+
+        if show_plots:
+            pass
     else:
         raise NotImplementedError(
             f"Pipeline not implemented for `{type(bytes).__name__}`"
         )
 
-    return adata if copy else None
+    return adata if copy else mc if return_estimator else None
 
 
 @inject_docs(
@@ -120,6 +132,8 @@ def find_root(
     n_start_end: Optional[int] = None,
     show_plots: bool = False,
     copy: bool = False,
+    return_estimator: bool = False,
+    **kwargs,
 ) -> Optional[AnnData]:
     """
     Find root cells of a dynamic process in single cells.
@@ -137,6 +151,7 @@ def find_root(
         n_start_end=n_start_end,
         show_plots=show_plots,
         copy=copy,
+        return_estimator=return_estimator,
     )
 
 
@@ -152,6 +167,8 @@ def find_final(
     n_start_end: Optional[int] = None,
     show_plots: bool = False,
     copy: bool = False,
+    return_estimator: bool = False,
+    **kwargs,
 ) -> Optional[AnnData]:
     """
     Find final cells of a dynamic process in single cells.
@@ -169,4 +186,5 @@ def find_final(
         n_start_end=n_start_end,
         show_plots=show_plots,
         copy=copy,
+        return_estimator=return_estimator,
     )
