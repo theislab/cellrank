@@ -1,16 +1,18 @@
 # -*- coding: utf-8 -*-
+"""Module used to find root and final states."""
+
 from typing import Optional
 
 from scanpy import logging as logg
 from anndata import AnnData
 
 from cellrank.utils._docs import inject_docs
-from cellrank.tools._constants import RcKey
+from cellrank.tools._constants import StateKey
 from cellrank.tools._transition_matrix import transition_matrix
 from cellrank.tools.estimators._cflare import CFLARE
 
 _find_docs = """\
-Computes {cells} cells based on RNA velocity, see [Manno18]_. The tool models dynamic cellular
+Compute {cells} cells based on RNA velocity, see [Manno18]_.The tool models dynamic cellular
 processes as a Markov chain, where the transition matrix is computed based on the velocity vectors of each
 individual cell. The spectrum of the transition matrix can be used to query approximate recurrent classes of the
 Markov chain, which represent groups of {cells} cells.
@@ -64,7 +66,7 @@ def _root_final(
     copy: bool = False,
 ) -> Optional[AnnData]:
 
-    key = RcKey.FORWARD if final else RcKey.BACKWARD
+    key = StateKey.FORWARD if final else StateKey.BACKWARD
     logg.info(f"Computing `{key}`")
     adata = adata.copy() if copy else adata
 
@@ -107,7 +109,7 @@ def find_root(
     copy: bool = False,
 ) -> Optional[AnnData]:
     """
-    Root cells of a dynamic process in single cells.
+    Find root cells of a dynamic process in single cells.
 
     {root}
     """
@@ -137,7 +139,7 @@ def find_final(
     copy: bool = False,
 ) -> Optional[AnnData]:
     """
-    Final cells of a dynamic process in single cells.
+    Find final cells of a dynamic process in single cells.
 
     {final}
     """

@@ -7,8 +7,8 @@ from anndata import AnnData
 import cellrank as cr
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tools._constants import (
-    RcKey,
     LinKey,
+    StateKey,
     Direction,
     _probs,
     _colors,
@@ -27,10 +27,10 @@ def _assert_has_all_keys(adata: AnnData, direction: Direction):
         assert _colors(LinKey.FORWARD) in adata.uns.keys()
         assert _lin_names(LinKey.FORWARD) in adata.uns.keys()
 
-        assert str(RcKey.FORWARD) in adata.obs
-        assert is_categorical_dtype(adata.obs[str(RcKey.FORWARD)])
+        assert str(StateKey.FORWARD) in adata.obs
+        assert is_categorical_dtype(adata.obs[str(StateKey.FORWARD)])
 
-        assert _probs(RcKey.FORWARD) in adata.obs
+        assert _probs(StateKey.FORWARD) in adata.obs
     else:
         assert str(LinKey.BACKWARD) in adata.obsm
         assert isinstance(adata.obsm[str(LinKey.BACKWARD)], cr.tl.Lineage)
@@ -38,10 +38,10 @@ def _assert_has_all_keys(adata: AnnData, direction: Direction):
         assert _colors(LinKey.BACKWARD) in adata.uns.keys()
         assert _lin_names(LinKey.BACKWARD) in adata.uns.keys()
 
-        assert str(RcKey.BACKWARD) in adata.obs
-        assert is_categorical_dtype(adata.obs[str(RcKey.BACKWARD)])
+        assert str(StateKey.BACKWARD) in adata.obs
+        assert is_categorical_dtype(adata.obs[str(StateKey.BACKWARD)])
 
-        assert _probs(RcKey.BACKWARD) in adata.obs
+        assert _probs(StateKey.BACKWARD) in adata.obs
 
 
 class TestHighLevelPipeline:
