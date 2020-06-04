@@ -5,6 +5,14 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Tuple, Union, Iterable, Optional, Sequence
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
+from pandas import Series
+from scipy.stats import ranksums
+from scipy.sparse import issparse
+from pandas.api.types import infer_dtype, is_categorical_dtype
+from scipy.sparse.linalg import eigs
+
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
@@ -13,13 +21,6 @@ import scvelo as scv
 from scanpy import logging as logg
 from anndata import AnnData
 
-import numpy as np
-import pandas as pd
-from pandas import Series
-from scipy.stats import ranksums
-from scipy.sparse import issparse
-from pandas.api.types import infer_dtype, is_categorical_dtype
-from scipy.sparse.linalg import eigs
 from cellrank.tools._utils import (
     save_fig,
     _eigengap,
@@ -665,12 +666,12 @@ class BaseEstimator(ABC):
 
         if mode == "time":
             if time_key not in self._adata.obs.keys():
-                raise KeyError(f"Time key `{time_key}` not in `adata.obs`.")
-            t = self._adata.obs[time_key]
+                raise KeyError(f"Time key `{time_key!r}` not found in `adata.obs`.")
+            t = self.adata.obs[time_key]
             cluster_key = None
 
         rc_titles = (
-            [f"{self._prefix.capitalize()} {rc}" for rc in lineages]
+            [f"{self._prefix} {rc}" for rc in lineages]
             + (["Differentiation potential"] if show_dp else [])
             if title is None
             else title
@@ -700,7 +701,7 @@ class BaseEstimator(ABC):
                 )
             else:
                 scv.pl.scatter(
-                    self._adata,
+                    self.adata,
                     color=color,
                     title=titles,
                     color_map=color_map,

@@ -10,7 +10,6 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from scipy.stats import entropy
-from pandas.api.types import is_categorical_dtype
 
 import seaborn as sns
 import matplotlib as mpl
@@ -819,7 +818,8 @@ class GPCCA(BaseEstimator):
 
             if n_cells > len(group):
                 logg.warning(
-                    f"Number of requested cells ({n_cells}) exceeds the number of available cells ({len(group)}) for cluster `{category}`. Selecting all cells"
+                    f"Number of requested cells ({n_cells}) exceeds the number of available cells ({len(group)}) "
+                    f"for cluster `{category}`. Selecting all cells"
                 )
                 return pd.Series(group["assignment"])
 
@@ -850,7 +850,9 @@ class GPCCA(BaseEstimator):
             meta_assignment["assignment"].astype(str).astype("category")
         )
 
-        metastable_states = meta_assignment.groupby("assignment").apply(set_categories)
+        metastable_states = meta_assignment.groupby("assignment", sort=False).apply(
+            set_categories
+        )
         # when there's only 1 state, we get back strange DataFrame
         metastable_states = (
             metastable_states.T.iloc[:, 0]
@@ -858,6 +860,8 @@ class GPCCA(BaseEstimator):
             else metastable_states.droplevel(0)
         )
         metastable_states = metastable_states.sort_index().astype("category")
+        if isinstance(memberships, Lineage):  # set the order to have correct colors
+            metastable_states.cat.reorder_categories(memberships.names, inplace=True)
         metastable_states.index = self.adata.obs.index
 
         return metastable_states
