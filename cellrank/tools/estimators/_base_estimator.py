@@ -146,24 +146,12 @@ class BaseEstimator(ABC):
         def get_top_k_evals():
             return D[np.flip(np.argsort(D.real))][:k]
 
-        def write_result(eig):
-            # write to class and AnnData object
-            if self._eig is not None:
-                logg.debug("DEBUG: Overwriting `.eig`")
-            else:
-                logg.debug(
-                    f"DEBUG: Adding `.eig` and `adata.uns['eig_{self._direction}']`"
-                )
-
-            self._eig = eig
-            self._adata.uns[f"eig_{self._direction}"] = eig
-
         logg.info("Computing eigendecomposition of transition matrix")
         if self._is_sparse:
             logg.debug(f"DEBUG: Computing top `{k}` eigenvalues for sparse matrix")
             D, V_l = eigs(self._T.T, k=k, which=which, ncv=ncv)
             if only_evals:
-                write_result(
+                self._write_eig_to_adata(
                     {
                         "D": get_top_k_evals(),
                         "eigengap": _eigengap(get_top_k_evals().real, alpha),
@@ -178,7 +166,7 @@ class BaseEstimator(ABC):
             )
             D, V_l = np.linalg.eig(self._T.T)
             if only_evals:
-                write_result(
+                self._write_eig_to_adata(
                     {
                         "D": get_top_k_evals(),
                         "eigengap": _eigengap(D.real, alpha),
@@ -197,7 +185,7 @@ class BaseEstimator(ABC):
         pi = np.abs(V_l[:, 0].real)
         pi /= np.sum(pi)
 
-        write_result(
+        self._write_eig_to_adata(
             {
                 "D": D,
                 "stationary_dist": pi,
@@ -915,6 +903,16 @@ class BaseEstimator(ABC):
         self._adata.obs["gdpt_pseudotime"] = pseudotime
 
         logg.info('Adding `"gdpt_pseudotime"` to `adata.obs`\n    Finish', time=start)
+
+    def _write_eig_to_adata(self, eig):
+        # write to class and AnnData object
+        if self._eig is not None:
+            logg.debug("DEBUG: Overwriting `.eig`")
+        else:
+            logg.debug(f"DEBUG: Adding `.eig` and `adata.uns['eig_{self._direction}']`")
+
+        self._eig = eig
+        self._adata.uns[f"eig_{self._direction}"] = eig
 
     @abstractmethod
     def copy(self) -> "BaseEstimator":
