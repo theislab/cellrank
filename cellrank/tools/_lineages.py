@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
+"""Lineages module."""
+
 from typing import Optional, Sequence
 
 from scanpy import logging as logg
 from anndata import AnnData
 
 from cellrank.tools.kernels import VelocityKernel
-from cellrank.tools._constants import RcKey, LinKey, Direction, _transition
+from cellrank.tools._constants import LinKey, StateKey, Direction, _transition
 from cellrank.tools.estimators import CFLARE
 
 
@@ -16,7 +18,7 @@ def lineages(
     copy: bool = False,
 ) -> Optional[AnnData]:
     """
-    Computes probabilistic lineage assignment using RNA velocity.
+    Compute probabilistic lineage assignment using RNA velocity.
 
     For each cell i in {1, ..., N} and start/endpoint j in {1, ..., M}, the probability is computed that cell i
     is either going to j (end point) or coming from j (start point). Mathematically, this computes absorption
@@ -53,11 +55,11 @@ def lineages(
     if final:
         direction = Direction.FORWARD
         lin_key = LinKey.FORWARD
-        rc_key = RcKey.FORWARD
+        rc_key = StateKey.FORWARD
     else:
         direction = Direction.BACKWARD
         lin_key = LinKey.BACKWARD
-        rc_key = RcKey.BACKWARD
+        rc_key = StateKey.BACKWARD
 
     transition_key = _transition(direction)
     if transition_key not in adata.uns.keys():

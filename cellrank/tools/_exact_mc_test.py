@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+"""Exact permutation test for Markov chains."""
+
 from typing import Dict, List, Tuple, Union, Callable, Optional, Sequence
 
 import numpy as np
@@ -30,8 +32,8 @@ def _get_counts(pd: Union[np.ndarray, List[float]], n: int) -> List[float]:
         The counts.
     """
 
-    l = list(np.random.choice(np.arange(len(pd)), n, p=pd))
-    freq = [l.count(i) for i in np.arange(len(pd))]  # list of counts
+    lst = list(np.random.choice(np.arange(len(pd)), n, p=pd))
+    freq = [lst.count(i) for i in np.arange(len(pd))]  # list of counts
     freq = [
         i if i > 0 else i + 1e-5 for i in freq
     ]  # replace end points with zero counts by a small number
@@ -55,6 +57,7 @@ def exact_mc_perm_test(
 ) -> Tuple[List[float], float, float]:
     """
     Permutation test implemented for both probability distributions and count distributions.
+
     Get as input two clusters, then calculate its average probability distribution and calculate the distance
     between both averages. Then permute the elements on the clusters and repeat the process.
 
@@ -117,7 +120,7 @@ def exact_mc_perm_test(
     ys = adata[adata.obs[cluster_key] == cluster2].obsm[lin_key]
 
     diff = []  # list of distances
-    n, k = len(xs), 0
+    n = len(xs)
     xs_av = np.nanmean(xs, axis=0)  # average of both distributions ignoring nan values
     ys_av = np.nanmean(ys, axis=0)
 
@@ -135,7 +138,7 @@ def exact_mc_perm_test(
         (xs, ys), axis=0
     )  # create a extended list with all the distributions
 
-    for j in range(n_perms):
+    for _ in range(n_perms):
         np.random.shuffle(zs)  # randomly permute the clusters
         xs_sh = np.nanmean(zs[:n], axis=0)  # cluster 1
         ys_sh = np.nanmean(zs[n:], axis=0)  # cluster 2
@@ -176,7 +179,7 @@ def _counts(
     final: bool = True,
 ) -> Dict[str, List[float]]:
     """
-    Calculates the counts for each endpoint per cluster.
+    Calculate the counts for each endpoint per cluster.
 
     Randomly chooses with replacement *n* cells in each cluster and for each choice samples one point using its
     probability distribution. Then counts the occurrences per each point.
@@ -225,13 +228,13 @@ def _counts(
         data = adata[adata.obs[cluster_key] == name].obsm[lin_key].X
         dim = data.shape[1]
         index = np.random.randint(data.shape[0], size=n_samples)
-        l = [
+        lst = [
             np.random.choice(np.arange(dim), 1, p=np.atleast_1d(data[ind]))[0]
             if ~np.isnan(data[ind]).any()
             else 0
             for ind in index
         ]
-        freq = (l.count(i) for i in range(dim))
+        freq = (lst.count(i) for i in range(dim))
         d[name] = [i if i > 0 else 1e-5 for i in freq]
 
     return d
@@ -239,7 +242,8 @@ def _counts(
 
 def _cramers_v(x: List[float], y: List[float]) -> float:
     """
-    Calculates Cramer's V statistic for categorical-categorical association.
+    Calculate Cramer's V statistic for categorical-categorical association.
+
     Uses correction from **Bergsma and Wicher, Journal of the Korean Statistical Society 42 (2013): 323-328**.
     This is a symmetric coefficient: :math:`V(x,y) = V(y,x)`.
 

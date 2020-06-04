@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+"""Estimator module."""
+
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Tuple, Union, Iterable, Optional, Sequence
 from pathlib import Path
@@ -34,12 +36,14 @@ from cellrank.tools._colors import (
     _create_categorical_colors,
 )
 from cellrank.tools._lineage import Lineage
-from cellrank.tools._constants import RcKey, LinKey, Prefix, Direction, _colors
-from msmtools.util.sorted_schur import sorted_krylov_schur
+from cellrank.tools._constants import LinKey, Prefix, StateKey, Direction, _colors
+from msmtools.util.sorted_schur import sorted_schur
 from cellrank.tools.kernels._kernel import KernelExpression
 
 
 class BaseEstimator(ABC):
+    """Base class for all lineage probabilities estimators."""
+
     def __init__(
         self,
         kernel: KernelExpression,
@@ -62,12 +66,12 @@ class BaseEstimator(ABC):
 
         if kernel.backward:
             self._direction: Direction = Direction.BACKWARD
-            self._rc_key: str = str(RcKey.BACKWARD)
+            self._rc_key: str = str(StateKey.BACKWARD)
             self._lin_key: str = str(LinKey.BACKWARD)
             self._prefix: str = str(Prefix.BACKWARD)
         else:
             self._direction: Direction = Direction.FORWARD
-            self._rc_key: str = str(RcKey.FORWARD)
+            self._rc_key: str = str(StateKey.FORWARD)
             self._lin_key: str = str(LinKey.FORWARD)
             self._prefix: str = str(Prefix.FORWARD)
 
@@ -205,11 +209,33 @@ class BaseEstimator(ABC):
 
     @abstractmethod
     def compute_eig(self, k: int = 20, which: str = "LR", alpha: float = 1) -> None:
+        """
+        Compute eigendecomposition of the transition matrix.
+
+        Uses a sparse implementation, if possible, and only computes the top k eigenvalues.
+
+        Params
+        ------
+        k
+            Number of eigenvalues/vectors to compute.
+        which
+            Eigenvalues are in general complex. `'LR'` - largest real part, `'LM'` - largest magnitude.
+        alpha
+            Used to compute the `eigengap`. paramref:`alpha` is the weight given
+            to the deviation of an eigenvalue from one.
+        ncv
+            Number of Lanczos vectors generated.
+
+        Returns
+        -------
+        None
+            Nothing, but updates the following fields: paramref:`eigendecomposition`.
+        """
         pass
 
     def compute_partition(self) -> None:
         """
-        Computes communication classes for the Markov chain.
+        Compute communication classes for the Markov chain.
 
         Returns
         -------
@@ -282,6 +308,13 @@ class BaseEstimator(ABC):
             Nothing, just plots the spectrum in complex plane.
         """
 
+        # define a function to make the data limits rectangular
+        def adapt_range(min_, max_, range_):
+            return (
+                min_ + (max_ - min_) / 2 - range_ / 2,
+                min_ + (max_ - min_) / 2 + range_ / 2,
+            )
+
         if self._eig is None:
             logg.warning(
                 "No eigendecomposition found, computing with default parameters"
@@ -307,11 +340,6 @@ class BaseEstimator(ABC):
         x_range, y_range = x_max - x_min, y_max - y_min
         final_range = np.max([x_range, y_range]) + 0.05
 
-        # define a function to make the data limits rectangular
-        adapt_range = lambda min_, max_, range_: (
-            min_ + (max_ - min_) / 2 - range_ / 2,
-            min_ + (max_ - min_) / 2 + range_ / 2,
-        )
         x_min_, x_max_ = adapt_range(x_min, x_max, final_range)
         y_min_, y_max_ = adapt_range(y_min, y_max, final_range)
 
@@ -322,9 +350,9 @@ class BaseEstimator(ABC):
         ax.plot(x_circle, y_circle, "k-", label="unit circle")
 
         # set labels, ranges and legend
-        ax.set_xlabel("Re($\lambda$)")
+        ax.set_xlabel(r"Re($\lambda$)")
         ax.set_xlim(x_min_, x_max_)
-        ax.set_ylabel("Im($\lambda$)")
+        ax.set_ylabel(r"Im($\lambda$)")
         ax.set_ylim(y_min_, y_max_)
         key = "real part" if params["which"] == "LR" else "magnitude"
 
@@ -396,7 +424,7 @@ class BaseEstimator(ABC):
         ax.set_xlabel("index")
         ax.set_xticks(range(len(D)))
 
-        ax.set_ylabel("Re($\lambda_i$)")
+        ax.set_ylabel(r"Re($\lambda_i$)")
         key = "real part" if params["which"] == "LR" else "magnitude"
 
         # set the title
@@ -508,7 +536,8 @@ class BaseEstimator(ABC):
         # check whether dimensions are consistent
         if self.adata.n_obs != vectors.shape[0]:
             raise ValueError(
-                f"Number of cells ({self.adata.n_obs}) is inconsistent with the 1. dimensions of vectors ({vectors.shape[0]})."
+                f"Number of cells ({self.adata.n_obs}) is inconsistent with the 1."
+                f"dimensions of vectors ({vectors.shape[0]})."
             )
 
         if use is None:
@@ -540,12 +569,12 @@ class BaseEstimator(ABC):
         else:
             D = kwargs.pop("D")
             V_ = _complex_warning(V_, use, use_imag=kwargs.pop("use_imag", False))
-            title = [f"$\lambda_{i}$={d:.02f}" for i, d in zip(use, D[use])]
+            title = [fr"$\lambda_{i}$={d:.02f}" for i, d in zip(use, D[use])]
 
         if abs_value:
             V_ = np.abs(V_)
 
-        color = [v for v in V_.T]
+        color = list(V_.T)
         if cluster_key is not None:
             color = [cluster_key] + color
 
@@ -561,7 +590,18 @@ class BaseEstimator(ABC):
 
     def _detect_cc_stages(self, rc_labels: Series, p_thresh: float = 1e-15) -> None:
         """
-        Utility function to detect cell-cycle driven start or endpoints.
+        Detect cell-cycle driven start or endpoints.
+
+        Params
+        ------
+        rc_labels
+            Approximate recurrent classes.
+        p_thresh
+            P-value threshold for the rank-sum test for the group to be considered cell-cycle driven.
+        Returns
+        -------
+        None
+            Nothing, but warns if a group is cell-cycle driven.
         """
 
         # initialise the groups (start or end clusters) and scores
@@ -574,15 +614,13 @@ class BaseEstimator(ABC):
 
         # loop over groups and scores
         for group in groups:
-            flag = False
             mask = rc_labels == group
             for score in scores:
                 a, b = score[mask], score[~mask]
                 result = ranksums(a, b)
                 if result.statistic > 0 and result.pvalue < p_thresh:
-                    flag = True
-            if flag:
-                logg.warning(f"Group `{group}` appears to be cell-cycle driven")
+                    logg.warning(f"Group `{group}` appears to be cell-cycle driven")
+                    break
 
     def _plot_probabilities(
         self,
@@ -639,10 +677,10 @@ class BaseEstimator(ABC):
         )
 
         if cluster_key is not None:
-            color = [cluster_key] + [a for a in A.T] + ([self._dp] if show_dp else [])
+            color = [cluster_key] + list(A.T) + ([self._dp] if show_dp else [])
             titles = [cluster_key] + rc_titles
         else:
-            color = [a for a in A.T] + ([self._dp] if show_dp else [])
+            color = list(A.T) + ([self._dp] if show_dp else [])
             titles = rc_titles
 
         if mode == "embedding":
@@ -674,9 +712,9 @@ class BaseEstimator(ABC):
                 self._adata,
                 x=t,
                 color_map=color_map,
-                y=[a for a in A.T] + [self._dp],
+                y=list(A.T) + [self._dp],
                 title=titles,
-                xlabel=time_key,
+                xlabel=xlabel,
                 ylabel=ylabel,
                 **kwargs,
             )
@@ -698,10 +736,11 @@ class BaseEstimator(ABC):
         Compute driver genes per lineage.
 
         Correlates gene expression with lineage probabilities, for a given lineage and set of clusters.
-        Often, it makes sense to restrict this to a set of clusters which are relevant for the lineage under consideration.
+        Often, it makes sense to restrict this to a set of clusters which are relevant
+        for the lineage under consideration.
 
         Params
-        --------
+        ------
         lin_names
             Either a set of lineage names from :paramref:`lineage_probabilities` `.names` or None,
             in which case all lineages are considered.
@@ -717,13 +756,13 @@ class BaseEstimator(ABC):
             If using a layer other than `.X`, this must be set to `False`.
 
         Returns
-        --------
-        :class:`pandas.DataFrame` or :class:`NoneType`
+        -------
+        :class:`pandas.DataFrame`, :class:`NoneType`
             Writes to :paramref:`adata` `.var` or :paramref:`adata` `.raw.var`,
             depending on the value of :paramref:`use_raw`.
             For each lineage specified, a key is added to `.var` and correlations are saved there.
 
-            Returns `None` if :paramref:`inplace` `=True`, otherwise a dataframe.
+            Returns `None` if :paramref:`inplace` `=True`, otherwise a :class:`pandas.DataFrame`.
         """
 
         # check that lineage probs have been computed
@@ -804,7 +843,9 @@ class BaseEstimator(ABC):
             f"Adding gene correlations to `.adata.{field}`\n    Finish", time=start
         )
 
-    def compute_gdpt(self, n_comps: int = 10, sorting: str = "LM"):
+    def compute_gdpt(
+        self, n_components: int = 10, sorting: str = "LM", method="krylov"
+    ):
         """
         Compute generalized DPT making use of the real Schur decomposition.
 
@@ -814,6 +855,8 @@ class BaseEstimator(ABC):
             Number of real schur vectors to consider.
         sorting
             How to sort the schur vectors. Options are 'LM' for largest magnitude and 'LR' for largest real part.
+        method
+            Method to compute the schur decompositions. Options are `krylov` or `brandts`.
 
         Returns
         -------
@@ -840,93 +883,87 @@ class BaseEstimator(ABC):
             raise ValueError('No field `"iroot"` found in `adata.uns`')
         iroot = self._adata.uns["iroot"]
 
-        if n_comps < 2:
+        if n_components < 2:
             raise ValueError("Please use at least `2` components. ")
 
         start = logg.info(
-            f"Computing Generalized Diffusion Pseudotime using n_comps = {n_comps}"
+            f"Computing Generalized Diffusion Pseudotime using n_components = {n_components}"
         )
 
         # comptue invariant, real subspace of self._T using the schur decomp.
+        # TODO This will fail unless sorted_schur returns eigenvalues, see my PR on msmtools
         try:
-            evecs, evals, _ = sorted_krylov_schur(self._T, m=n_comps, z=sorting)
+            R, Q, eigenvalues = sorted_schur(
+                self._T, m=n_components, z=sorting, method=method
+            )
         except ValueError:
-            n_comps += 1
-            evecs, evals, _ = sorted_krylov_schur(self._T, m=n_comps, z=sorting)
+            logg.warning(
+                f"Using {n_components} components would split a block of complex conjugates. "
+                f"Increasing `n_components` to {n_components+1}"
+            )
+            n_components += 1
+            R, Q, eigenvalues = sorted_schur(
+                self._T, m=n_components, z=sorting, method=method
+            )
 
         # may have to remove some values if too many converged
-        evecs, evals = evecs[:, :n_comps], evals[:n_comps]
+        Q, eigenvalues = Q[:, :n_components], eigenvalues[:n_components]
 
-        D = _get_dpt_row(evals, evecs, i=iroot)
+        D = _get_dpt_row(eigenvalues, Q, i=iroot)
         pseudotime = D / np.max(D[D < np.inf])
         self._adata.obs["gdpt_pseudotime"] = pseudotime
 
-        logg.info(f'Adding `"gdpt_pseudotime"` to `adata.obs`\n    Finish', time=start)
+        logg.info('Adding `"gdpt_pseudotime"` to `adata.obs`\n    Finish', time=start)
 
     @abstractmethod
     def copy(self) -> "BaseEstimator":
-        # TODO: add copy of eig etc.
+        """Return a copy of self."""
         pass
 
     @property
     def irreducible(self) -> Optional[bool]:
-        """
-        Whether the Markov chain is irreducible or not.
-        """
+        """Whether the Markov chain is irreducible or not."""
         return self._is_irreducible
 
     @property
     def recurrent_classes(self) -> Optional[List[List[Any]]]:
-        """
-        The recurrent classes of the Markov chain.
-        """
+        """The recurrent classes of the Markov chain."""  # noqa
         return self._rec_classes
 
     @property
     def transient_classes(self) -> Optional[List[List[Any]]]:
-        """
-        The recurrent classes of the Markov chain.
-        """
+        """The recurrent classes of the Markov chain."""  # noqa
         return self._trans_classes
 
     @property
     def eigendecomposition(self) -> Optional[Dict[str, np.ndarray]]:
         """
-        A dictionary with following fields:
+        A dictionary with the following fields:
 
         - `'D'` eigenvalues of left eigenvectors
         - `'V_l'` left eigenvectors
         - `'V_r'` right eigenvectors
-        """
+        """  # noqa
         return self._eig
 
     @property
     def diff_potential(self) -> np.ndarray:
-        """
-        Differentiation potential for each lineage.
-        """
+        """Differentiation potential for each lineage."""  # noqa
         return self._dp
 
     @property
     def lineage_probabilities(self) -> Lineage:
-        """
-        A `numpy`-like array with names and colors, where
-        each column represents one lineage.
-        """
+        """An array with names and colors, where each column represents one lineage."""  # noqa
         return self._lin_probs
 
     @property
     def adata(self) -> AnnData:
-        """
-        The underlying annotated data object.
-        """
+        """The underlying annotated data object."""  # noqa
         return self._adata
 
     @property
     def kernel(self) -> KernelExpression:
-        """
-        The underlying kernel expression.
-        """
+        """The underlying kernel expression."""  # noqa
         return self._kernel
 
     def __copy__(self) -> "BaseEstimator":

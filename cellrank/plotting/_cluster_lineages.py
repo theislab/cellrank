@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+"""Cluster lineages module."""
+
 from types import MappingProxyType
 from typing import Dict, Tuple, Union, Optional, Sequence
 from pathlib import Path
@@ -27,9 +29,9 @@ def _cl_process(
     norm: str,
     queue,
     **kwargs,
-):
+) -> np.ndarray:
     """
-    Fit models to genes in a given lineages. Used by :func:`cellrank.pl.cluster_lineage`.
+    Fit models to genes in given lineages. Used by :func:`cellrank.pl.cluster_lineage`.
 
     Params
     ------
@@ -48,6 +50,8 @@ def _cl_process(
 
     Returns
     -------
+    :class:`numpy.ndarray`
+        The model predictions, optionally normed.
     """
 
     res = []
@@ -258,7 +262,7 @@ def cluster_lineage(
     axes = np.ravel(axes)
 
     j = 0
-    for j, (ax, c) in enumerate(zip(axes, clusters)):
+    for j, (ax, c) in enumerate(zip(axes, clusters)):  # noqa
         data = trends[trends.obs[cluster_key] == c].X
         mean, sd = np.mean(data, axis=0), np.var(data, axis=0)
         sd = np.sqrt(sd)
