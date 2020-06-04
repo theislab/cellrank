@@ -427,10 +427,14 @@ class GPCCA(BaseEstimator):
                 n_states = int(
                     np.arange(minn, maxx)[np.argmax(self._gpcca.minChi(minn, maxx))]
                 )
-            elif not isinstance(n_states, int):
+            elif not isinstance(n_states, (int, type(None))):
                 raise ValueError(
                     f"Expected `n_states` to be an integer when `use_min_chi=False`, found `{type(n_states).__name__}`."
                 )
+
+            if n_states is None:
+                n_states = self.eigendecomposition["eigengap"] + 1
+                logg.info(f"Using `{n_states}` based on eigengap")
 
             if self._gpcca.X.shape[1] < n_states:
                 logg.warning(
@@ -440,7 +444,6 @@ class GPCCA(BaseEstimator):
                 )
 
             start = logg.info("Computing metastable states")
-
             self._gpcca = self._gpcca.optimize(m=n_states)
 
             # when `n_cells != None` and the overlap is high, we're skipping some metastable states
