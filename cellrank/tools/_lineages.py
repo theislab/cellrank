@@ -17,8 +17,10 @@ def lineages(
     estimator: type(BaseEstimator) = GPCCA,
     final: bool = True,
     keys: Optional[Sequence[str]] = None,
-    copy: bool = False,
+    n_lineages: Optional[int] = None,
     method: str = "krylov",
+    copy: bool = False,
+    return_estimator: bool = False,
     **kwargs,
 ) -> Optional[AnnData]:
     """
@@ -46,17 +48,22 @@ def lineages(
         If e.g. the endpoints are ['Neuronal_1', 'Neuronal_1', 'Astrocytes', 'OPC'], then passing
         keys=['Neuronal_1, Neuronal_2', 'OPC'] means that the two neuronal endpoints are treated as one and
         Astrocytes are excluded.
+    n_lineages
+        Number of lineages when :paramref:`estimator` `=GPCCA`.
     method
         Method to compute Schur vectors when :paramref:`estimator` is :class:`cellrank.tl.GPCCA`.
     copy
         Whether to update the existing AnnData object or to return a copy.
+    return_estimator
+        Whether to return the estimator. Only available when :paramref:`copy=False`.
     kwargs
         Keyword arguments for :meth:`cellrank.tl.estimators.BaseEstimator.compute_metastable_states`.
 
     Returns
     --------
-    :class:`anndata.AnnData` or :class:`NoneType`
-        Depending on :paramref:`copy`, either updates the existing :paramref:`adata` object or returns a copy.
+    :class:`anndata.AnnData`, :class:`cellrank.tools.estimators.BaseEstimator` or :class:`NoneType`
+        Depending on :paramref:`copy`, either updates the existing :paramref:`adata` object or returns a copy or
+        returns the estimator.
     """
 
     if not isinstance(estimator, type):
@@ -98,11 +105,10 @@ def lineages(
         mc.compute_metastable_states(**kwargs)
         mc.compute_lin_probs(keys=keys)
     elif isinstance(mc, GPCCA):
-        n_states = kwargs["n_states"]
-        if n_states == 1:
+        if n_lineages == 1:
             mc.compute_eig()
-        mc.compute_schur(n_components=n_states, method=method)
-        mc.compute_metastable_states(**kwargs)
+        mc.compute_schur(n_components=n_lineages, method=method)
+        mc.compute_metastable_states(n_states=n_lineages, **kwargs)
         mc.set_main_states()
     else:
         raise NotImplementedError(
@@ -111,4 +117,4 @@ def lineages(
 
     logg.info(f"Added key `{lin_key!r}` to `adata.obsm`\n    Finish", time=start)
 
-    return adata if copy else None
+    return adata if copy else mc if return_estimator else None
