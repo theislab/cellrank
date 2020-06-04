@@ -14,7 +14,7 @@ from cellrank.tools.estimators._base_estimator import BaseEstimator
 
 def lineages(
     adata: AnnData,
-    estimator: type(BaseEstimator) = GPCCA,
+    estimator: type(BaseEstimator) = CFLARE,
     final: bool = True,
     keys: Optional[Sequence[str]] = None,
     n_lineages: Optional[int] = None,
@@ -33,7 +33,8 @@ def lineages(
     Note that absorption probabilities have been used in the single cell context to infer lineage probabilities e.g.
     in [Setty19]_ or [Weinreb18]_ and we took inspiration from there.
 
-    Before running this function, compute start/endpoints using :func:`cellrank.tl.root_final`.
+    Before running this function, compute start/endpoints using :func:`cellrank.tl.find_root` or
+    :func:`cellrank.tl.find_final`, respectively.
 
     Parameters
     --------
@@ -105,11 +106,13 @@ def lineages(
         mc.compute_metastable_states(**kwargs)
         mc.compute_lin_probs(keys=keys)
     elif isinstance(mc, GPCCA):
-        if n_lineages == 1:
+        if (
+            n_lineages == 1
+        ):  # TODO: get evals from GPCCA object when calculating the Schur
             mc.compute_eig()
         mc.compute_schur(n_components=n_lineages, method=method)
         mc.compute_metastable_states(n_states=n_lineages, **kwargs)
-        mc.set_main_states()
+        mc.set_main_states()  # TODO: @Marius - do you agree with this?
     else:
         raise NotImplementedError(
             f"Pipeline not implemented for `{type(bytes).__name__}`"
