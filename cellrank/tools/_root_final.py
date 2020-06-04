@@ -28,8 +28,10 @@ adata : :class:`adata.AnnData`
 estimator
     Estimator to use to compute the {cells} cells.
 n_states
-    If you know how many {direction}points you are expecting, you can provide this number.
+    If you know how many {direction} states you are expecting, you can provide this number.
     Otherwise, an `eigen-gap` heuristic is used for :class:`cellrank.tl.CFLARE`.
+cluster_key
+    Key from `adata.obs` where cluster annotations are stored. These are used to give names to the {direction} states.
 weight_connectivities
     Weight given to a transition matrix computed on the basis of the KNN connectivities. Should be in `[0, 1]`. This
     can help in situations where we have noisy velocities and want to give some weight to transcriptomic similarity.
@@ -57,6 +59,7 @@ def _root_final(
     estimator: type(BaseEstimator) = CFLARE,
     final: bool = True,
     n_states: Optional[int] = None,
+    cluster_key: Optional[str] = None,
     weight_connectivities: float = None,
     show_plots: bool = False,
     copy: bool = False,
@@ -81,7 +84,7 @@ def _root_final(
         kwargs["use"] = n_states
 
         mc.compute_eig()
-        mc.compute_metastable_states(**kwargs)
+        mc.compute_metastable_states(cluster_key=cluster_key, **kwargs)
 
         if show_plots:
             mc.plot_spectrum(real_only=True)
@@ -93,7 +96,9 @@ def _root_final(
             mc.compute_eig()
         elif n_states is not None:
             mc.compute_schur(n_states + 1)
-        mc.compute_metastable_states(n_states=n_states, **kwargs)
+        mc.compute_metastable_states(
+            n_states=n_states, cluster_key=cluster_key, **kwargs
+        )
         mc.set_main_states()  # write to adata
 
         if show_plots:
