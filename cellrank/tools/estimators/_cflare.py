@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""Clustering Left and Right Eigenvectors (CFLARE) module."""
 from copy import copy, deepcopy
 from typing import Any, Dict, List, Tuple, Union, Iterable, Optional, Sequence
 
@@ -288,7 +289,8 @@ class CFLARE(BaseEstimator):
             belonging to a transient state or a :class:`dict`, where each key is the name of the recurrent class and
             values are list of cell names.
         cluster_key
-            If a key to cluster labels is given, `metastable_states` will ge associated with these for naming and colors.
+            If a key to cluster labels is given, :paramref"`metastable_states` will ge associated
+            with these for naming and colors.
         en_cutoff
             If :paramref:`cluster_key` is given, this parameter determines when an approximate recurrent class will
             be labelled as *'Unknown'*, based on the entropy of the distribution of cells over transcriptomic clusters.
@@ -355,7 +357,8 @@ class CFLARE(BaseEstimator):
         method
             Method to be used for clustering. Must be one of `['louvain', 'kmeans']`.
         cluster_key
-            If a key to cluster labels is given, `metastable_states` will ge associated with these for naming and colors.
+            If a key to cluster labels is given, :paramref:`metastable_states` will ge associated
+            with these for naming and colors.
         n_clusters_kmeans
             If `None`, this is set to :paramref:`use` `+ 1`.
         n_neighbors_louvain
@@ -382,7 +385,8 @@ class CFLARE(BaseEstimator):
         p_thresh
             If cell cycle scores were provided, a *Wilcoxon rank-sum test* is conducted to identify cell-cycle driven
             start- or endpoints.
-            If the test returns a positive statistic and a p-value smaller than :paramref:`p_thresh`, a warning will be issued.
+            If the test returns a positive statistic and a p-value smaller than :paramref:`p_thresh`,
+            a warning will be issued.
 
         Returns
         -------
@@ -513,7 +517,7 @@ class CFLARE(BaseEstimator):
         self, cluster_key: Optional[str] = None, **kwargs
     ) -> None:
         """
-        Plots the approximate recurrent classes in a given embedding.
+        Plot the approximate recurrent classes in a given embedding.
 
         Params
         ------
@@ -696,7 +700,7 @@ class CFLARE(BaseEstimator):
         **kwargs,
     ) -> None:
         """
-        Plots the absorption probabilities in the given embedding.
+        Plot the absorption probabilities in the given embedding.
 
         Params
         ------
@@ -746,9 +750,7 @@ class CFLARE(BaseEstimator):
     def _compute_metastable_states_prob(
         self, use: Union[Tuple[int], List[int], range]
     ) -> np.ndarray:
-        """
-        Utility function which computes a global score of being an approximate recurrent class.
-        """
+        """Compute a global score of being an approximate recurrent class."""
 
         if self._eig is None:
             raise RuntimeError("Compute eigendecomposition first as `.compute_eig()`.")
@@ -799,7 +801,7 @@ class CFLARE(BaseEstimator):
         -------
         :class:`cellrank.tl.CFLARE`
             A copy of itself.
-        """
+        """  # noqa
 
         kernel = copy(self.kernel)  # doesn't copy the adata object
         c = CFLARE(kernel, self.adata.copy(), inplace=False, read_from_adata=False)
@@ -836,7 +838,7 @@ class CFLARE(BaseEstimator):
         -------
         :class:`pandas.Series`
             The approximate recurrent classes, where `NaN` marks cells which are transient.
-        """
+        """  # noqa
         return self._meta_states
 
     @property
@@ -846,5 +848,5 @@ class CFLARE(BaseEstimator):
         -------
         :class:`pandas.Series`
             Probabilities of cells belonging to the approximate recurrent classes.
-        """
+        """  # noqa
         return self._meta_states_probs
