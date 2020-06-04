@@ -18,6 +18,8 @@ def lineages(
     final: bool = True,
     keys: Optional[Sequence[str]] = None,
     copy: bool = False,
+    method: str = "krylov",
+    **kwargs,
 ) -> Optional[AnnData]:
     """
     Compute probabilistic lineage assignment using RNA velocity.
@@ -44,8 +46,12 @@ def lineages(
         If e.g. the endpoints are ['Neuronal_1', 'Neuronal_1', 'Astrocytes', 'OPC'], then passing
         keys=['Neuronal_1, Neuronal_2', 'OPC'] means that the two neuronal endpoints are treated as one and
         Astrocytes are excluded.
+    method
+        Method to compute Schur vectors when :paramref:`estimator` is :class:`cellrank.tl.GPCCA`.
     copy
         Whether to update the existing AnnData object or to return a copy.
+    kwargs
+        Keyword arguments for :meth:`cellrank.tl.estimators.BaseEstimator.compute_metastable_states`.
 
     Returns
     --------
@@ -85,13 +91,19 @@ def lineages(
     # get the transition matrix from the AnnData object and initialise MC object
     vk = VelocityKernel(adata, backward=not final)
     vk.transition_matrix = adata.uns[transition_key]["T"]
-    mc = estimator(vk)
+    mc = estimator(vk, read_from_adata=False)
 
     # compute the absorption probabilities
     if isinstance(mc, CFLARE):
+        mc.compute_metastable_states(**kwargs)
         mc.compute_lin_probs(keys=keys)
     elif isinstance(mc, GPCCA):
-        mc.compute_metastable_states()  # TODO
+        n_states = kwargs["n_states"]
+        if n_states == 1:
+            mc.compute_eig()
+        mc.compute_schur(n_components=n_states, method=method)
+        mc.compute_metastable_states(**kwargs)
+        mc.set_main_states()
     else:
         raise NotImplementedError(
             f"Pipeline not implemented for `{type(bytes).__name__}`"
