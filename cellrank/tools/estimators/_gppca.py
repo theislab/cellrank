@@ -7,10 +7,6 @@ from types import MappingProxyType
 from typing import Any, Dict, List, Tuple, Union, Mapping, Iterable, Optional
 from pathlib import Path
 
-import numpy as np
-import pandas as pd
-from scipy.stats import entropy
-
 import seaborn as sns
 import matplotlib as mpl
 import matplotlib.cm as cm
@@ -22,6 +18,9 @@ import scvelo as scv
 from scanpy import logging as logg
 from anndata import AnnData
 
+import numpy as np
+import pandas as pd
+from scipy.stats import entropy
 from cellrank.tools._utils import (
     save_fig,
     _eigengap,
@@ -97,7 +96,6 @@ class GPCCA(BaseEstimator):
         self._main_states = None
         self._main_states_probabilities = None
         self._n_cells = None  # serves as a cache for plotting
-        self._which = None  # in Schur decomp
 
     def compute_eig(
         self,
@@ -254,6 +252,7 @@ class GPCCA(BaseEstimator):
         initial_distribution: Optional[np.ndarray] = None,
         method: str = "krylov",
         which: str = "LM",
+        alpha: float = 1,
     ):
         """
         Compute the Schur decomposition.
@@ -271,6 +270,9 @@ class GPCCA(BaseEstimator):
             matrices whereas the latter computes a full sorted Schur decomposition of a dense matrix.
         which
             Eigenvalues are in general complex. `'LR'` - largest real part, `'LM'` - largest magnitude.
+        alpha
+            Used to compute the `eigengap`. paramref:`alpha` is the weight given
+            to the deviation of an eigenvalue from one.
 
         Returns
         -------
@@ -295,20 +297,31 @@ class GPCCA(BaseEstimator):
             )
             self._gpcca._do_schur_helper(n_components + 1)
 
+        self._write_eig_to_adata(
+            {
+                "D": self._gpcca.eigenvalues,
+                "eigengap": _eigengap(self._gpcca.eigenvalues, alpha),
+                "params": {
+                    "which": which,
+                    "k": len(self._gpcca.eigenvalues),
+                    "alpha": alpha,
+                },
+            }
+        )
         # make it available for plotting
         self._schur_vectors = self._gpcca.X
         self._schur_matrix = self._gpcca.R
-        self._which = which  # for params of ED
 
     def compute_metastable_states(
         self,
-        n_states: Union[int, Tuple[int, int], List[int], Dict[str, int]],
+        n_states: Optional[
+            Union[int, Tuple[int, int], List[int], Dict[str, int]]
+        ] = None,
         use_min_chi: bool = False,
         n_cells: Optional[int] = 30,
         cluster_key: str = None,
         en_cutoff: Optional[float] = 0.7,
         p_thresh: float = 1e-15,
-        alpha: float = 1,
     ):
         """
         Compute the metastable states.
@@ -316,7 +329,7 @@ class GPCCA(BaseEstimator):
         Params
         ------
         n_states
-            Number of metastable states.
+            Number of metastable states. If `None`, use the `eigengap` heuristic.
         use_min_chi
             Whether to use :meth:`msmtools.analysis.dense.gpcca.GPCCA.minChi` to calculate the number of metastable
             states. If `True`, :paramref:`n_states` corresponds to an interval `[min, max]` inside of which
@@ -331,9 +344,6 @@ class GPCCA(BaseEstimator):
             start- or endpoints.
             If the test returns a positive statistic and a p-value smaller than :paramref:`p_thresh`,
             a warning will be issued.
-        alpha
-            Used to compute the `eigengap`. paramref:`alpha` is the weight given
-            to the deviation of an eigenvalue from one.
 
         Returns
         -------
@@ -432,17 +442,6 @@ class GPCCA(BaseEstimator):
             start = logg.info("Computing metastable states")
 
             self._gpcca = self._gpcca.optimize(m=n_states)
-            self._write_eig_to_adata(
-                {
-                    "D": self._gpcca.eigenvalues,
-                    "eigengap": _eigengap(self._gpcca.eigenvalues, alpha),
-                    "params": {
-                        "which": self._which,
-                        "k": len(self._gpcca.eigenvalues),
-                        "alpha": alpha,
-                    },
-                }
-            )
 
             # when `n_cells != None` and the overlap is high, we're skipping some metastable states
             valid_ixs = self._assign_metastable_states(
