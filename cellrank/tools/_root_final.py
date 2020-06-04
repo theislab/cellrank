@@ -92,10 +92,11 @@ def _root_final(
             mc.plot_eig_embedding(left=False, use=n_states)
 
     elif isinstance(mc, GPCCA):
-        if n_states == 1:
+        if n_states is None or n_states == 1:
             mc.compute_eig()
-        elif n_states is not None:
+        else:
             mc.compute_schur(n_states + 1)
+
         try:
             mc.compute_metastable_states(
                 n_states=n_states, cluster_key=cluster_key, **kwargs
