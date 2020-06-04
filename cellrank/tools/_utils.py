@@ -17,6 +17,12 @@ from typing import (
 )
 from itertools import tee, product, combinations
 
+import matplotlib.colors as mcolors
+
+import scanpy as sc
+from scanpy import logging as logg
+from anndata import AnnData
+
 import numpy as np
 import pandas as pd
 import networkx as nx
@@ -27,13 +33,6 @@ from sklearn.cluster import KMeans
 from pandas.api.types import infer_dtype, is_categorical_dtype
 from sklearn.neighbors import NearestNeighbors
 from scipy.sparse.linalg import norm as s_norm
-
-import matplotlib.colors as mcolors
-
-import scanpy as sc
-from scanpy import logging as logg
-from anndata import AnnData
-
 from cellrank.utils._utils import _get_neighs, _has_neighs, _get_neighs_params
 from cellrank.tools._colors import _convert_to_hex_colors, _insert_categorical_colors
 
@@ -1061,7 +1060,8 @@ def _long_form_frequencies(
     groupby: str = "identifier",
     x_label: Optional[str] = None,
 ):
-    """Compute frequencies of a `query_var` over groups defined by `groupby`.
+    """
+    Compute frequencies of a `query_var` over groups defined by `groupby`.
 
     Params
     --------
@@ -1116,3 +1116,22 @@ def _long_form_frequencies(
     sub_frequs = rel_frequs.loc[:, query_var_groups + ["x_label"]]
 
     return pd.melt(sub_frequs, id_vars="x_label")
+
+
+def _info_if_obs_key_categorical_present(
+    adata: AnnData, key: str, msg_fmt: str
+) -> bool:
+    if key in adata.obs.keys() and is_categorical_dtype(adata.obs[key]):
+        logg.info(msg_fmt.format(key))
+        return True
+
+
+def _info_if_obs_keys_categorical_present(
+    adata: AnnData, keys: Iterable[str], msg_fmt: str, warn_once: bool = True
+) -> None:
+    for key in keys:
+        if (
+            _info_if_obs_key_categorical_present(adata, key, msg_fmt=msg_fmt)
+            and warn_once
+        ):
+            break

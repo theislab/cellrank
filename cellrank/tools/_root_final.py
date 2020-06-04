@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
 """Module used for finding root and final states."""
 
-from typing import Optional
+from typing import Union, Optional
 
 from scanpy import logging as logg
 from anndata import AnnData
 
 from cellrank.utils._docs import inject_docs
+from cellrank.tools._utils import _info_if_obs_keys_categorical_present
 from cellrank.tools._constants import StateKey
+from cellrank.tools.estimators import GPCCA, CFLARE
 from cellrank.tools._transition_matrix import transition_matrix
-from cellrank.tools.estimators._cflare import CFLARE
+from cellrank.tools.estimators._base_estimator import BaseEstimator
 
 _find_docs = """\
 Compute {cells} cells based on RNA velocity, see [Manno18]_.The tool models dynamic cellular
@@ -24,47 +26,47 @@ Params
 ------
 adata : :class:`adata.AnnData`
     Annotated data object.
+estimator
+    Estimator to use to compute the {cells} cells.
+n_states
+    If you know how many {direction} states you are expecting, you can provide this number.
+    Otherwise, an `eigen-gap` heuristic is used for :class:`cellrank.tl.CFLARE`.
 cluster_key
-    The tool can match computed {direction}points against pre-computed clusters to annotate the {direction}points.
-    For this, provide a key from :paramref:`adata` `.obs` where cluster labels have been computed.
+    Key from `adata.obs` where cluster annotations are stored. These are used to give names to the {direction} states.
 weight_connectivities
     Weight given to a transition matrix computed on the basis of the KNN connectivities. Should be in `[0, 1]`. This
     can help in situations where we have noisy velocities and want to give some weight to transcriptomic similarity.
-percentile
-    When making a distinction between transient and recurrent cells, a percentile is used for filtering. Choose
-    this value according to the percentage of transient cells you expect to see in your data.
-    E.g. :paramref:`percentile` `=98` means you are expecting 98% of your cells to be transient
-    and 2% to be recurrent {direction}points.
-n_matches_min
-    Parameter used to remove some noise. If `n_matches_min = L`, required that at least L of the nearest neighbors of
-    cells *i* belong to the same {direction}point, otherwise, *i* is not considered a {direction}point itself.
-n_start_end
-    If you know how many {direction}points you are expecting, you can provide this number.
-    Otherwise, an eigen-gap heuristic is used.
 show_plots
     Whether to show plots of the spectrum and eigenvectors in the embedding.
 copy
     Whether to update the existing :paramref:`adata` object or to return a copy.
+return_estimator
+    Whether to return the estimator. Only available when :paramref:`copy=False`.
+kwargs
+    Keyword arguments for :meth:`cellrank.tl.estimators.BaseEstimator.compute_metastable_states`.
 
 Returns
 -------
-:class:`anndata.AnnData` or :class:`NoneType`
-    Depending on :paramref:`copy`, either updates the existing :paramref:`adata` object or returns a copy.
+
+:class:`anndata.AnnData`, :class:`cellrank.tools.estimators.BaseEstimator` or :class:`NoneType`
+    Depending on :paramref:`copy`, either updates the existing :paramref:`adata` object or returns a copy or
+    returns the estimator.
     Marked cells can be found in :paramref:`adata` `.obs` under `{key_added!r}`.
 """
 
 
 def _root_final(
     adata: AnnData,
+    estimator: type(BaseEstimator) = CFLARE,
     final: bool = True,
+    n_states: Optional[int] = None,
     cluster_key: Optional[str] = None,
     weight_connectivities: float = None,
-    percentile: int = 98,
-    n_matches_min: Optional[int] = 1,
-    n_start_end: Optional[int] = None,
     show_plots: bool = False,
     copy: bool = False,
-) -> Optional[AnnData]:
+    return_estimator: bool = False,
+    **kwargs,
+) -> Optional[Union[AnnData, BaseEstimator]]:
 
     key = StateKey.FORWARD if final else StateKey.BACKWARD
     logg.info(f"Computing `{key}`")
@@ -74,26 +76,63 @@ def _root_final(
     kernel = transition_matrix(
         adata, backward=not final, weight_connectivities=weight_connectivities
     )
-
     # create MarkovChain object
-    mc = CFLARE(kernel)
+    mc = estimator(kernel, read_from_adata=False)
+
+    if cluster_key is None:
+        _info_if_obs_keys_categorical_present(
+            adata,
+            keys=["louvain", "clusters"],
+            msg_fmt="Found categorical observation in `adata.obs[{!r}]`. "
+            "Consider specifying it as `cluster_key`.",
+        )
 
     # run the computation
-    mc.compute_eig()
-    mc.compute_metastable_states(
-        percentile=percentile,
-        n_matches_min=n_matches_min,
-        use=n_start_end,
-        n_clusters_kmeans=n_start_end,
-        cluster_key=cluster_key,
-    )
+    if isinstance(mc, CFLARE):
+        kwargs["use"] = n_states
 
-    if show_plots:
-        mc.plot_spectrum(real_only=True)
-        mc.plot_eig_embedding(abs_value=True, perc=[0, 98], use=n_start_end)
-        mc.plot_eig_embedding(left=False, use=n_start_end)
+        mc.compute_eig()
+        mc.compute_metastable_states(cluster_key=cluster_key, **kwargs)
 
-    return adata if copy else None
+        if show_plots:
+            mc.plot_spectrum(real_only=True)
+            mc.plot_eig_embedding(abs_value=True, perc=[0, 98], use=n_states)
+            mc.plot_eig_embedding(left=False, use=n_states)
+
+    elif isinstance(mc, GPCCA):
+        if n_states is None or n_states == 1:
+            mc.compute_eig()
+        else:
+            mc.compute_schur(n_states + 1)
+
+        try:
+            mc.compute_metastable_states(
+                n_states=n_states, cluster_key=cluster_key, **kwargs
+            )
+        except ValueError:
+            logg.warning(
+                f"Computing {n_states} metastable states cuts through a block of complex conjugates. "
+                f"Increasing `n_states` to {n_states+1}"
+            )
+            n_states += 1
+            mc.compute_metastable_states(
+                n_states=n_states, cluster_key=cluster_key, **kwargs
+            )
+        mc.set_main_states()  # write to adata
+
+        if show_plots:
+            mc.plot_spectrum(real_only=True)
+            if n_states > 1:
+                mc.plot_schur_embedding()
+            mc.plot_metastable_states(same_plot=False)
+            if n_states > 1:
+                mc.plot_coarse_T()
+    else:
+        raise NotImplementedError(
+            f"Pipeline not implemented for `{type(bytes).__name__}`"
+        )
+
+    return adata if copy else mc if return_estimator else None
 
 
 @inject_docs(
@@ -101,12 +140,13 @@ def _root_final(
 )
 def find_root(
     adata: AnnData,
-    cluster_key: Optional[str] = None,
+    estimator: type(BaseEstimator) = CFLARE,
+    n_states: Optional[int] = None,
     weight_connectivities: float = None,
-    percentile: int = 98,
-    n_start_end: Optional[int] = None,
     show_plots: bool = False,
     copy: bool = False,
+    return_estimator: bool = False,
+    **kwargs,
 ) -> Optional[AnnData]:
     """
     Find root cells of a dynamic process in single cells.
@@ -116,13 +156,14 @@ def find_root(
 
     return _root_final(
         adata,
+        estimator=estimator,
         final=False,
-        cluster_key=cluster_key,
+        n_states=n_states,
         weight_connectivities=weight_connectivities,
-        percentile=percentile,
-        n_start_end=n_start_end,
         show_plots=show_plots,
         copy=copy,
+        return_estimator=return_estimator,
+        **kwargs,
     )
 
 
@@ -131,12 +172,13 @@ def find_root(
 )
 def find_final(
     adata: AnnData,
-    cluster_key: Optional[str] = None,
+    estimator: type(BaseEstimator) = CFLARE,
+    n_states: Optional[int] = None,
     weight_connectivities: float = None,
-    percentile: int = 98,
-    n_start_end: Optional[int] = None,
     show_plots: bool = False,
     copy: bool = False,
+    return_estimator: bool = False,
+    **kwargs,
 ) -> Optional[AnnData]:
     """
     Find final cells of a dynamic process in single cells.
@@ -146,11 +188,12 @@ def find_final(
 
     return _root_final(
         adata,
+        estimator=estimator,
         final=True,
-        cluster_key=cluster_key,
+        n_states=n_states,
         weight_connectivities=weight_connectivities,
-        percentile=percentile,
-        n_start_end=n_start_end,
         show_plots=show_plots,
         copy=copy,
+        return_estimator=return_estimator,
+        **kwargs,
     )

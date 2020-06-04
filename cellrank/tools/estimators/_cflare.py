@@ -367,7 +367,7 @@ class CFLARE(BaseEstimator):
         resolution_louvain
             Resolution parameter from the `louvain` algorithm. Should be chosen relatively small.
         n_matches_min
-            Filters out cells which don't have at leas n_matches_min neighbors from the same class.
+            Filters out cells which don't have at least n_matches_min neighbors from the same class.
             This filters out some cells which are transient but have been misassigned.
         n_neighbors_filtering
             Parameter for filtering cells. Cells are filtered out if they don't have at
