@@ -27,14 +27,19 @@ def lineages(
     """
     Compute probabilistic lineage assignment using RNA velocity.
 
-    For each cell i in {1, ..., N} and start/endpoint j in {1, ..., M}, the probability is computed that cell i
-    is either going to j (end point) or coming from j (start point). Mathematically, this computes absorption
-    probabilities to approximate recurrent classes using an RNA velocity based Markov chain.
+    For each cell i in {1, ..., N} and root/final state j in {1, ..., M}, the probability is computed that cell i
+    is either going to final state j (`final=True`) or coming from root state j (`final=False`). We provide two
+    estimators for computing these probabilities:
 
-    Note that absorption probabilities have been used in the single cell context to infer lineage probabilities e.g.
-    in [Setty19]_ or [Weinreb18]_ and we took inspiration from there.
+    For the estimator GPCCA, we perform Generalized Perron Cluster Cluster Analysis [GPCCA18]_.  Cells are mapped to a
+    simplex where each corner represents a final/root state, and the position of a cell in the simplex determines its
+    probability of going to a final states/coming from a root state.
 
-    Before running this function, compute start/endpoints using :func:`cellrank.tl.find_root` or
+    For the estimator CFLARE, we compute absorption probabilities towards the root/final states of the Markov chain.
+    For related approaches in the single cell context that utilise absorption probabilities to map cells to lineages,
+    see [Setty19]_ or [Weinreb18]_.
+
+    Before running this function, compute root/final states using :func:`cellrank.tl.find_root` or
     :func:`cellrank.tl.find_final`, respectively.
 
     Parameters
@@ -44,15 +49,15 @@ def lineages(
     estimator
         Estimator to use to compute the lineage probabilities.
     final
-        If `True`, computes final states, i.e. end points. Otherwise, computes root states, i.e. starting points.
+        If `True`, computes final states. Otherwise, computes root states.
     cluster_key
-        Match computed {direction}points against pre-computed clusters to annotate the {direction}points.
+        Match computed {direction} states against pre-computed clusters to annotate the {direction} states.
         For this, provide a key from :paramref:`adata` `.obs` where cluster labels have been computed.
     keys
-        Determines which end/start-points to use by passing their names. Further, start/end-points can be combined.
-        If e.g. the endpoints are ['Neuronal_1', 'Neuronal_1', 'Astrocytes', 'OPC'], then passing
-        keys=['Neuronal_1, Neuronal_2', 'OPC'] means that the two neuronal endpoints are treated as one and
-        Astrocytes are excluded.
+        Determines which root/final states to use by passing their names. Further, root/final states can be combined.
+        If e.g. the final states are ['Neuronal_1', 'Neuronal_1', 'Astrocytes', 'OPC'], then passing
+        keys=['Neuronal_1, Neuronal_2', 'OPC'] means that the two neuronal final states are treated as one and the
+        Astrocyte state is excluded.
     n_lineages
         Number of lineages when :paramref:`estimator` `=GPCCA`. If `None`, it will be based on `eigengap`.
     copy
