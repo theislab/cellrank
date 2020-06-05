@@ -144,7 +144,7 @@ def _root_final(
 @inject_docs(
     root=_find_docs.format(cells="root", direction="start", key_added="root_states")
 )
-def find_root(
+def root_states(
     adata: AnnData,
     estimator: type(BaseEstimator) = GPCCA,
     n_states: Optional[int] = None,
@@ -176,7 +176,7 @@ def find_root(
 @inject_docs(
     final=_find_docs.format(cells="final", direction="end", key_added="final_states")
 )
-def find_final(
+def final_states(
     adata: AnnData,
     estimator: type(BaseEstimator) = GPCCA,
     n_states: Optional[int] = None,
