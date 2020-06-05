@@ -44,7 +44,7 @@ def lineages(
     estimator
         Estimator to use to compute the lineage probabilities.
     final
-        If `True`, computes final cells, i.e. end points. Otherwise, computes root cells, i.e. starting points.
+        If `True`, computes final states, i.e. end points. Otherwise, computes root states, i.e. starting points.
     cluster_key
         Match computed {direction}points against pre-computed clusters to annotate the {direction}points.
         For this, provide a key from :paramref:`adata` `.obs` where cluster labels have been computed.
@@ -94,7 +94,7 @@ def lineages(
     transition_key = _transition(direction)
     if transition_key not in adata.uns.keys():
         key = "final" if final else "root"
-        raise ValueError(f"Compute {key} cells first as `cellrank.tl.find_{key}`.")
+        raise ValueError(f"Compute {key} states first as `cellrank.tl.find_{key}`.")
 
     start = logg.info(f"Computing lineage probabilities towards `{rc_key}`")
 
