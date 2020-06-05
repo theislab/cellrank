@@ -11,8 +11,8 @@ CellRank - Probabilistic Lineage Assignment using RNA Velocity
 **CellRank** is a toolkit to uncover cellular development based on scRNA-seq data with RNA velocity annotation,
 see [Manno18]_ and [Bergen19]_.
 In the figure above, we show the main features of CellRank applied to [Panc19]_ -
-starting from RNA velocities **(a)**, we infer root cells **(b)** and final cells **(c)**, and we compute
-how likely each cell is to develop towards each of the identified groups of final cells **(d)**.
+starting from RNA velocities **(a)**, we infer root states **(b)** and final states **(c)**, and we compute
+how likely each cell is to develop towards each of the identified groups of final states **(d)**.
 See our `tutorial`_ to learn how to apply CellRank to your own data.
 
 CellRank utilizes the time derivative of gene expression given by RNA velocity to construct a Markov chain.
@@ -20,9 +20,9 @@ The information given by RNA velocity is combined with transcriptomic similarity
 a robust estimate of cellular development directly in high dimensional gene expression space.
 CellRank obtained its name due to conceptual similarities with `PageRank`_, Google’s original algorithm
 for ranking web pages. Both algorithms construct a Markov Chain and use spectral methods to study its
-long term evolution. Based on the Markov Chain, we infer root and final cells of development as well
+long term evolution. Based on the Markov Chain, we infer root and final states of development as well
 as lineage probabilities, i.e. for each cell, the probability of it reaching any of the inferred
-root and final cells of development. CellRank offers many possibilities to utilize these
+root and final states of development. CellRank offers many possibilities to utilize these
 lineage probabilities in downstream analysis, e.g. to investigate the fate of early cell clusters
 or to plot gene expression trends along a given lineage.
 
