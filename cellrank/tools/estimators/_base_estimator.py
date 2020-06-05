@@ -5,14 +5,6 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Tuple, Union, Iterable, Optional, Sequence
 from pathlib import Path
 
-import numpy as np
-import pandas as pd
-from pandas import Series
-from scipy.stats import ranksums
-from scipy.sparse import issparse
-from pandas.api.types import infer_dtype, is_categorical_dtype
-from scipy.sparse.linalg import eigs
-
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
@@ -21,6 +13,13 @@ import scvelo as scv
 from scanpy import logging as logg
 from anndata import AnnData
 
+import numpy as np
+import pandas as pd
+from pandas import Series
+from scipy.stats import ranksums
+from scipy.sparse import issparse
+from pandas.api.types import infer_dtype, is_categorical_dtype
+from scipy.sparse.linalg import eigs
 from cellrank.tools._utils import (
     save_fig,
     _eigengap,
@@ -38,7 +37,6 @@ from cellrank.tools._colors import (
 )
 from cellrank.tools._lineage import Lineage
 from cellrank.tools._constants import LinKey, Prefix, StateKey, Direction, _colors
-from msmtools.util.sorted_schur import sorted_schur
 from cellrank.tools.kernels._kernel import KernelExpression
 
 
@@ -832,84 +830,14 @@ class BaseEstimator(ABC):
             f"Adding gene correlations to `.adata.{field}`\n    Finish", time=start
         )
 
-    def compute_gdpt(
-        self, n_components: int = 10, sorting: str = "LM", method="krylov"
-    ):
-        """
-        Compute generalized DPT making use of the real Schur decomposition.
-
-        Params
-        ------
-        n_comps
-            Number of real schur vectors to consider.
-        sorting
-            How to sort the schur vectors. Options are 'LM' for largest magnitude and 'LR' for largest real part.
-        method
-            Method to compute the schur decompositions. Options are `krylov` or `brandts`.
-
-        Returns
-        -------
-        None
-            Nothing, just updates :paramref:`adata` `.obs['gdpt_pseudotime']` with the computed pseudotime.
-        """
-
-        def _get_dpt_row(e_vals, e_vecs, i):
-            row = sum(
-                (
-                    np.abs(e_vals[eval_ix])
-                    / (1 - np.abs(e_vals[eval_ix]))
-                    * (e_vecs[i, eval_ix] - e_vecs[:, eval_ix])
-                )
-                ** 2
-                # account for float32 precision
-                for eval_ix in range(0, e_vals.size)
-                if np.abs(e_vals[eval_ix]) < 0.9994
-            )
-
-            return np.sqrt(row)
-
-        if "iroot" not in self._adata.uns.keys():
-            raise ValueError('No field `"iroot"` found in `adata.uns`')
-        iroot = self._adata.uns["iroot"]
-
-        if n_components < 2:
-            raise ValueError("Please use at least `2` components. ")
-
-        start = logg.info(
-            f"Computing Generalized Diffusion Pseudotime using n_components = {n_components}"
-        )
-
-        # comptue invariant, real subspace of self._T using the schur decomp.
-        # TODO This will fail unless sorted_schur returns eigenvalues, see my PR on msmtools
-        try:
-            R, Q, eigenvalues = sorted_schur(
-                self._T, m=n_components, z=sorting, method=method
-            )
-        except ValueError:
-            logg.warning(
-                f"Using {n_components} components would split a block of complex conjugates. "
-                f"Increasing `n_components` to {n_components+1}"
-            )
-            n_components += 1
-            R, Q, eigenvalues = sorted_schur(
-                self._T, m=n_components, z=sorting, method=method
-            )
-
-        # may have to remove some values if too many converged
-        Q, eigenvalues = Q[:, :n_components], eigenvalues[:n_components]
-
-        D = _get_dpt_row(eigenvalues, Q, i=iroot)
-        pseudotime = D / np.max(D[D < np.inf])
-        self._adata.obs["gdpt_pseudotime"] = pseudotime
-
-        logg.info('Adding `"gdpt_pseudotime"` to `adata.obs`\n    Finish', time=start)
-
     def _write_eig_to_adata(self, eig):
         # write to class and AnnData object
         if self._eig is not None:
-            logg.debug("DEBUG: Overwriting `.eig`")
+            logg.debug("DEBUG: Overwriting `.eigendecomposition`")
         else:
-            logg.debug(f"DEBUG: Adding `.eig` and `adata.uns['eig_{self._direction}']`")
+            logg.debug(
+                f"DEBUG: Adding `.eigendecomposition` and `adata.uns['eig_{self._direction}']`"
+            )
 
         self._eig = eig
         self._adata.uns[f"eig_{self._direction}"] = eig
