@@ -21,6 +21,7 @@ from anndata import AnnData
 import numpy as np
 import pandas as pd
 from scipy.stats import entropy
+from pandas.api.types import is_categorical_dtype
 from cellrank.tools._utils import (
     save_fig,
     _eigengap,
@@ -77,14 +78,13 @@ class GPCCA(BaseEstimator):
             s_key=s_key,
             key_added=key_added,
         )
-        if kernel.backward:
-            self._meta_key = str(MetaKey.BACKWARD)
-        else:
-            self._meta_key = str(MetaKey.FORWARD)
+        self._meta_key = (
+            str(MetaKey.BACKWARD) if kernel.backward else str(MetaKey.FORWARD)
+        )
 
-        self._gpcca: GPCCA = None
-        self._schur_matrix = None
+        self._gpcca: Optional[GPCCA] = None
         self._schur_vectors = None
+        self._schur_matrix = None
         self._coarse_T = None
         self._coarse_init_dist = None
         self._coarse_stat_dist = None
@@ -377,7 +377,7 @@ class GPCCA(BaseEstimator):
             self._compute_eig(k=k, which=which, alpha=alpha, only_evals=False)
             stationary_dist = self.eigendecomposition["stationary_dist"]
 
-            _ = self._assign_metastable_states(
+            self._assign_metastable_states(
                 stationary_dist[:, None],
                 np.zeros_like(stationary_dist),
                 n_cells,
@@ -454,19 +454,31 @@ class GPCCA(BaseEstimator):
                 )
 
             start = logg.info("Computing metastable states")
-            self._gpcca = self._gpcca.optimize(m=n_states)
+            try:
+                self._gpcca = self._gpcca.optimize(m=n_states)
+            except ValueError as e:
+                if n_states != self._schur_vectors.shape[1]:
+                    raise e
+                logg.warning(
+                    f"Unable to perform the optimization using `{self._schur_vectors.shape[1]}` Schur vectors. "
+                    f"Recomputing the decomposition"
+                )
+                self.compute_schur(
+                    n_states + 1,
+                    initial_distribution=self._gpcca.eta,
+                    method=self._gpcca.method,
+                    which=self._gpcca.z,
+                    alpha=self.eigendecomposition["params"]["alpha"],
+                )
+                self._gpcca = self._gpcca.optimize(m=n_states)
 
-            # when `n_cells != None` and the overlap is high, we're skipping some metastable states
-            valid_ixs = self._assign_metastable_states(
+            self._assign_metastable_states(
                 self._gpcca.memberships,
                 self._gpcca.metastable_assignment,
                 n_cells,
                 cluster_key=cluster_key,
                 p_thresh=p_thresh,
                 en_cutoff=en_cutoff,
-            )
-            logg.debug(
-                f"Selected `{len(valid_ixs)}` out of `{n_states}` due to an overlapp caused by `n_cells={n_cells}`"
             )
 
             self._lin_probs = None
@@ -475,20 +487,17 @@ class GPCCA(BaseEstimator):
 
             names = self._meta_lin_probs.names
             self._coarse_T = pd.DataFrame(
-                self._gpcca.coarse_grained_transition_matrix[valid_ixs, :][
-                    :, valid_ixs
-                ],
+                self._gpcca.coarse_grained_transition_matrix,
                 index=names,
                 columns=names,
             )
             self._coarse_init_dist = pd.Series(
-                self._gpcca.coarse_grained_input_distribution[valid_ixs], index=names
+                self._gpcca.coarse_grained_input_distribution, index=names
             )
             # careful here, in case computing the stat. dist failed
             if self._gpcca.coarse_grained_stationary_probability is not None:
                 self._coarse_stat_dist = pd.Series(
-                    self._gpcca.coarse_grained_stationary_probability[valid_ixs],
-                    index=names,
+                    self._gpcca.coarse_grained_stationary_probability, index=names,
                 )
             else:
                 logg.warning("No stationary distribution found in GPCCA object")
@@ -582,7 +591,7 @@ class GPCCA(BaseEstimator):
         cluster_key: Optional[str] = None,
         mode: str = "embedding",
         time_key: str = "latent_time",
-        same_plot: bool = False,
+        same_plot: bool = True,
         show_dp: bool = False,
         title: Optional[str] = None,
         cmap: Union[str, mpl.colors.ListedColormap] = cm.viridis,
@@ -663,15 +672,7 @@ class GPCCA(BaseEstimator):
             return None
 
         probs = self._lin_probs[[n for n in self._lin_probs.names if n != "rest"]]
-        max_avail_cells = n_cells * probs.shape[1]
-        if max_avail_cells > self.adata.n_obs:
-            raise ValueError(
-                f"Total number of requested cells ({max_avail_cells}) "
-                f"exceeds the total number of cells ({self.adata.n_obs})."
-            )
-
-        self._n_cells = n_cells
-        self._main_states, _, _ = self._select_cells(n_cells, memberships=probs)
+        self._main_states = self._select_cells(n_cells, memberships=probs)
 
         if write_to_adata:
             self.adata.obs[self._rc_key] = self._main_states
@@ -681,7 +682,7 @@ class GPCCA(BaseEstimator):
 
     def set_main_states(
         self,
-        names: Optional[Iterable[str]] = None,
+        names: Optional[Union[Iterable[str], str]] = None,
         n_cells: Optional[int] = 30,
         redistribute: bool = True,
         **kwargs,
@@ -713,6 +714,15 @@ class GPCCA(BaseEstimator):
             names = self._meta_lin_probs.names
             redistribute = False
 
+        if isinstance(names, str):
+            names = [names]
+
+        if len(names) == 1 and redistribute:
+            logg.warning(
+                "Redistributing the mass only to 1 state will create a constant vector of ones. Not redistributing"
+            )
+            redistribute = False
+
         names = list(names)
         kwargs["return_weights"] = False
 
@@ -736,16 +746,16 @@ class GPCCA(BaseEstimator):
         # write to adata
         self.adata.obs[_dp(self._lin_key)] = self._dp
         self.adata.obs[_probs(self._rc_key)] = aggregated_state_probability
-        self.adata.obsm[self._lin_key] = self._lin_probs
         self.adata.uns[_lin_names(self._lin_key)] = self._lin_probs.names
         self.adata.uns[_colors(self._lin_key)] = self._lin_probs.colors
+        self.adata.obsm[self._lin_key] = self._lin_probs
 
         logg.info("Adding `.lineage_probabilities\n       `.diff_potential`")
 
     def compute_main_states(
         self,
         method: str = "eigengap",
-        redistribute: bool = False,
+        redistribute: bool = True,
         alpha: Optional[float] = 1,
         min_self_prob: Optional[float] = None,
         n_main_states: Optional[int] = None,
@@ -845,49 +855,98 @@ class GPCCA(BaseEstimator):
         )
 
     def _select_cells(
-        self, n_cells: int, memberships: Union[np.ndarray, Lineage]
-    ) -> Tuple[pd.Series, Union[np.ndarray, Lineage], List[int]]:
-        # in this case, we need to be a bit careful because fuzzy clusters can largely overlap
-        metastable_states = pd.Series(index=self.adata.obs_names, dtype="category")
-        overlaps, cols, valid_ixs = {}, [], []
+        self,
+        n_cells: int,
+        memberships: Union[np.ndarray, Lineage],
+        meta_assignment: Optional[pd.Series] = None,
+        warn: bool = True,
+    ) -> Tuple[pd.Series, Union[List[str], List[int]]]:
+        def set_categories(group):
+            category = group["assignment"].iloc[0]
 
-        if isinstance(memberships, Lineage):
-            names = memberships.names
-            # we always retain the same shape, causes problems
-            memberships = memberships.X
+            if n_cells > len(group):
+                groups_with_insufficient_cells.append(category)
+                return pd.Series(group["assignment"], dtype="category")
+
+            ixs = np.argpartition(group["values"], -n_cells)[-n_cells:]
+
+            res = pd.Series([np.nan] * len(group), dtype="category", index=group.index)
+            res.cat.add_categories(category, inplace=True)
+            res.iloc[ixs.values] = category
+
+            return res
+
+        groups_with_insufficient_cells = []
+
+        if meta_assignment is None:
+            if isinstance(memberships, Lineage):
+                # use the names, in principle, does not matter
+                _meta_assignment = pd.Series(
+                    memberships.names[np.argmax(memberships.X, axis=1)],
+                    dtype="category",
+                    index=self.adata.obs_names,
+                )
+            else:
+                # this shouldn't happen - `meta_assignment` should be not `None` when calling `compute_metastable...``
+                _meta_assignment = pd.Series(
+                    np.argmax(memberships, axis=1),
+                    dtype="category",
+                    index=self.adata.obs_names,
+                )
         else:
-            names = list(map(str, range(memberships.shape[1])))
+            _meta_assignment = meta_assignment
+        orig_cats = list(map(str, _meta_assignment.cat.categories))
 
-        for ix, (name, col) in enumerate(zip(names, memberships.T)):
-            p = np.argpartition(col, -n_cells)[-n_cells:]
+        assert isinstance(_meta_assignment, pd.Series) and is_categorical_dtype(
+            _meta_assignment
+        ), "Metastable assignment is not a categorical series."
 
-            # handle the case of overlapping cells (fuzzy clustering)
-            if len(metastable_states.cat.categories) > 0:
-                current_labels = metastable_states.iloc[p]
-                overlap = {
-                    cl: np.sum(current_labels == cl)
-                    for cl in current_labels.cat.categories
-                    if np.sum(current_labels == cl) > 0
-                }
-                overlaps[name] = overlap
-                if any(np.fromiter(overlap.values(), dtype=float) / n_cells > 0.8):
-                    logg.warning(
-                        "Found overlapping clusters with overlap > 80%. Skipping"
-                    )
-                    continue
+        # should work for Lineage if _meta_assignment are strings or ints
+        membership_probs = np.array(
+            memberships[np.arange(memberships.shape[0]), _meta_assignment.values]
+        ).squeeze()  # squeeze because of Lineage
 
-            self._gppca_overlap = overlaps
+        meta_assignment = pd.DataFrame(
+            {"assignment": _meta_assignment, "values": membership_probs}
+        )
+        meta_assignment["assignment"] = (
+            meta_assignment["assignment"].astype(str).astype("category")
+        )
 
-            metastable_states.cat.add_categories(name, inplace=True)
-            metastable_states.iloc[p] = name
+        metastable_states = meta_assignment.groupby("assignment", sort=False).apply(
+            set_categories
+        )
 
-            cols.append(col[:, None])
-            valid_ixs.append(ix)
+        # when there's only 1 state, we get back strange DataFrame
+        metastable_states = (
+            metastable_states.T.iloc[:, 0]
+            if memberships.shape[1] == 1
+            else metastable_states.droplevel(0)
+        )
 
-        # aggregate the non-overlapping columns together
-        _memberships = np.concatenate(cols, axis=1)
+        metastable_states = metastable_states.sort_index().astype("category")
+        metastable_states.index = self.adata.obs.index
 
-        return metastable_states, _memberships, valid_ixs
+        # postpone warning after we optionally match the names using `cluster_key`
+        if warn:
+            _warn_insufficient_number_of_cells(groups_with_insufficient_cells, n_cells)
+
+        if isinstance(memberships, Lineage):  # set the order to have correct colors
+            # it can happen that `metastable_states` doesn't have the category (Lineage will always have it)
+            # therefore use `set_categories`
+            metastable_states.cat.set_categories(memberships.names, inplace=True)
+        else:
+            # this should be the case when `meta_assignment` is not None
+            # same as above, it's just converted to string (in `_assign_metastable_states` we set the categories
+            # from 0...n-1, even though the membership assignment can be missing in the data)
+            assert meta_assignment is not None, "This shouldn't have happened."
+            metastable_states.cat.set_categories(orig_cats, inplace=True)
+
+        return (
+            (metastable_states, groups_with_insufficient_cells)
+            if not warn
+            else metastable_states
+        )
 
     def _assign_metastable_states(
         self,
@@ -895,35 +954,37 @@ class GPCCA(BaseEstimator):
         metastable_assignment: np.ndarray,
         n_cells: Optional[int],
         cluster_key: str,
-        p_thresh,
-        en_cutoff,
-    ) -> List[int]:
+        p_thresh: float,
+        en_cutoff: float,
+    ) -> None:
+        _meta_assignment = pd.Series(
+            index=self.adata.obs_names, data=metastable_assignment, dtype="category"
+        )
+        # sometimes, the assignment can have a missing category and the Lineage creation therefore fails
+        # keep it as ints when `n_cells != None`
+        _meta_assignment.cat.set_categories(
+            list(range(memberships.shape[1])), inplace=True
+        )
+
         if n_cells is None:
             logg.debug(
                 "DEBUG: Setting the metastable states using metastable assignment"
             )
-            metastable_states = pd.Series(
-                index=self._adata.obs_names,
-                data=map(str, metastable_assignment),
-                dtype="category",
-            )
-            # sometimes, the assignment can have a missing category and the Lineage creation therefore fails
-            metastable_states.cat.set_categories(
-                map(str, range(memberships.shape[1])), inplace=True
-            )
-            _memberships = memberships
-            valid_ixs = (
-                metastable_states.cat.categories,
-                list(range(memberships.shape[1])),
-            )
+            metastable_states = _meta_assignment.astype(str).astype("category").copy()
+            not_enough_cells = []
         else:
             logg.debug(
                 "DEBUG: Setting the metastable states using metastable memberships"
             )
-            metastable_states, _memberships, valid_ixs = self._select_cells(
-                n_cells, memberships
+            metastable_states, not_enough_cells = self._select_cells(
+                n_cells,
+                memberships=memberships,
+                meta_assignment=_meta_assignment,
+                warn=False,
             )
 
+        # _set_categorical_labels creates the names, we still need to remap the group names
+        orig_cats = metastable_states.cat.categories
         self._set_categorical_labels(
             attr_key="_meta_states",
             pretty_attr_key="metastable_states",
@@ -935,17 +996,19 @@ class GPCCA(BaseEstimator):
             p_thresh=p_thresh,
             add_to_existing=False,
         )
+        name_mapper = dict(zip(orig_cats, self.metastable_states.cat.categories))
+        _warn_insufficient_number_of_cells(
+            [name_mapper.get(n, n) for n in not_enough_cells], n_cells
+        )
 
         logg.debug(
             "DEBUG: Setting metastable lineage probabilities based on GPCCA membership vectors"
         )
         self._meta_lin_probs = Lineage(
-            _memberships,
-            names=list(self._meta_states.cat.categories),
+            memberships,
+            names=list(metastable_states.cat.categories),
             colors=self._meta_states_colors,
         )
-
-        return valid_ixs
 
     def _plot_states(
         self,
@@ -997,12 +1060,14 @@ class GPCCA(BaseEstimator):
             raise ValueError(f"Expected `n_cells` to be positive, found `{n_cells}`.")
 
         if attr == "_meta_lin_probs":  # plotting meta_lin_probs
-            _main_states, *_ = self._select_cells(n_cells, probs)
+            _main_states = self._select_cells(n_cells, memberships=probs)
         elif attr == "_lin_probs":
             if n_cells == self._n_cells:
                 logg.debug("DEBUG: Using cached main states")
             else:
-                self._set_main_states(n_cells, write_to_adata=False)
+                self._set_main_states(
+                    n_cells, write_to_adata=False
+                )  # plotting shouldn't overwrite main_states
             _main_states = self._main_states
         else:
             raise RuntimeError(f"Invalid attribute name: `{attr!r}`.")
@@ -1454,3 +1519,11 @@ class GPCCA(BaseEstimator):
     def main_states_probabilities(self) -> pd.Series:
         """Upper bound of of becoming a main states."""
         return self._main_states_probabilities
+
+
+def _warn_insufficient_number_of_cells(groups: Iterable[Any], n_cells: int):
+    if groups:
+        logg.warning(
+            f"The following groups have less than requested number of cells ({n_cells}): "
+            f"`{', '.join(sorted(map(str, groups)))}`"
+        )

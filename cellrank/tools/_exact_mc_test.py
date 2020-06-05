@@ -225,7 +225,7 @@ def _counts(
     logg.debug("Calculating counts distribution of endpoint per cluster")
     d = {}
     for name in cluster_names:
-        data = adata[adata.obs[cluster_key] == name].obsm[lin_key]
+        data = adata[adata.obs[cluster_key] == name].obsm[lin_key].X
         dim = data.shape[1]
         index = np.random.randint(data.shape[0], size=n_samples)
         lst = [
