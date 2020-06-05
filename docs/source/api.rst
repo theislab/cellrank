@@ -1,9 +1,9 @@
 API
 ===
 CellRank offers two possibilities to interact with its core functionality: either
-directly through the :class:`cellrank.tl.MarkovChain`
+directly through the :class:`cellrank.tl.GPCCA` or :class:`cellrank.tl.CFLARE`
 and :class:`cellrank.tl.kernels.Kernel` classes, or through the high
-level functions :func:`cellrank.tl.find_final`, :func:`cellrank.tl.find_root`
+level functions :func:`cellrank.tl.final_states`, :func:`cellrank.tl.root_states`
 and :func:`cellrank.tl.lineages`. The former option offers full control whereas
 the latter is simpler to handle for new users.
 
@@ -27,8 +27,8 @@ Tools
     tl.CFLARE
     tl.GPCCA
     tl.partition
-    tl.find_root
-    tl.find_final
+    tl.root_states
+    tl.final_states
     tl.lineages
     tl.gene_importance
     tl.transition_matrix
