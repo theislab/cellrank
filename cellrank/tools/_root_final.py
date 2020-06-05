@@ -30,7 +30,7 @@ estimator
     Estimator to use to compute the {cells} cells.
 n_states
     If you know how many {direction} states you are expecting, you can provide this number.
-    Otherwise, an `eigen-gap` heuristic is used for :class:`cellrank.tl.CFLARE`.
+    Otherwise, an `eigen-gap` heuristic is used.
 cluster_key
     Key from `adata.obs` where cluster annotations are stored. These are used to give names to the {direction} states.
 weight_connectivities
@@ -57,7 +57,7 @@ Returns
 
 def _root_final(
     adata: AnnData,
-    estimator: type(BaseEstimator) = CFLARE,
+    estimator: type(BaseEstimator) = GPCCA,
     final: bool = True,
     n_states: Optional[int] = None,
     cluster_key: Optional[str] = None,
@@ -140,7 +140,7 @@ def _root_final(
 )
 def find_root(
     adata: AnnData,
-    estimator: type(BaseEstimator) = CFLARE,
+    estimator: type(BaseEstimator) = GPCCA,
     n_states: Optional[int] = None,
     weight_connectivities: float = None,
     show_plots: bool = False,
@@ -172,7 +172,7 @@ def find_root(
 )
 def find_final(
     adata: AnnData,
-    estimator: type(BaseEstimator) = CFLARE,
+    estimator: type(BaseEstimator) = GPCCA,
     n_states: Optional[int] = None,
     weight_connectivities: float = None,
     show_plots: bool = False,
