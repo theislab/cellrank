@@ -50,7 +50,7 @@ def cluster_fates(
     """
     Plot aggregate lineage probabilities at a cluster level.
 
-    This can be used to investigate how likely a certain cluster is to go to the final cells, or in turn to have
+    This can be used to investigate how likely a certain cluster is to go to the final states, or in turn to have
     descended from the root cells. For mode `'paga'` and `'paga_pie'`, we use *PAGA*, see [Wolf19]_.
 
     .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/cluster_fates.png
@@ -508,7 +508,7 @@ def cluster_fates(
 
 def similarity_plot(
     adata: AnnData,
-    cluster_key: str,
+    cluster_key: str = "clusters",
     clusters: Optional[List[str]] = None,
     n_samples: int = 1000,
     cmap: mpl.colors.ListedColormap = cm.viridis,
@@ -521,10 +521,10 @@ def similarity_plot(
     save: Optional[Union[str, Path]] = None,
 ) -> None:
     """
-    Compare clusters with respect to their absorption probabilities in a heatmap.
+    Compare clusters with respect to their root/final probabilities.
 
-    For each cluster, we compute how likely an 'average cell' is going to the final cells or coming from the root cells.
-    We then compare these averaged probabilities using Cramér's V statistic, see
+    For each cluster, we compute how likely an 'average cell' is to go towards to final states/come from the root
+    states. We then compare these averaged probabilities using Cramér's V statistic, see
     `here <https://en.wikipedia.org/wiki/Cram%C3%A9r%27s_V>`_. The similarity is defined as :math:`1 - Cramér's V`.
 
     .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/similarity_plot.png
