@@ -851,7 +851,7 @@ class VelocityKernel(Kernel):
             )
         else:
             logg.debug(
-                "Sparisty pattern in the velocity graph is symmetric", time=start
+                "Sparsity pattern in the velocity graph is symmetric", time=start
             )
 
         use_negative_cosines = kwargs.pop("use_negative_cosines", True)
