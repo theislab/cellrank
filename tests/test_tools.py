@@ -108,22 +108,22 @@ class TextExcatMCTest:
 
 class TestRootFinal:
     def test_find_root(self, adata: AnnData):
-        cr.tl.find_root(adata)
+        cr.tl.root_states(adata)
 
     def test_find_final(self, adata: AnnData):
-        cr.tl.find_final(adata)
+        cr.tl.final_states(adata)
 
     def test_invalid_cluster_key(self, adata: AnnData):
         with pytest.raises(KeyError):
-            cr.tl.find_root(adata, cluster_key="foo")
+            cr.tl.root_states(adata, cluster_key="foo")
 
     def test_invalid_weight(self, adata: AnnData):
         with pytest.raises(ValueError):
-            cr.tl.find_root(adata, weight_connectivities=10)
+            cr.tl.root_states(adata, weight_connectivities=10)
 
     def test_invalid_percentile(self, adata: AnnData):
         with pytest.raises(ValueError):
-            cr.tl.find_root(adata, percentile=110)
+            cr.tl.root_states(adata, percentile=110)
 
 
 class TestTransitionMatrix:

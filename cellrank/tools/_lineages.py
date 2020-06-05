@@ -39,8 +39,8 @@ def lineages(
     For related approaches in the single cell context that utilise absorption probabilities to map cells to lineages,
     see [Setty19]_ or [Weinreb18]_.
 
-    Before running this function, compute root/final states using :func:`cellrank.tl.find_root` or
-    :func:`cellrank.tl.find_final`, respectively.
+    Before running this function, compute root/final states using :func:`cellrank.tl.root_states` or
+    :func:`cellrank.tl.final_states`, respectively.
 
     Parameters
     --------
