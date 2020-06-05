@@ -123,7 +123,9 @@ class TestRootFinal:
 
     def test_invalid_percentile(self, adata: AnnData):
         with pytest.raises(ValueError):
-            cr.tl.root_states(adata, percentile=110)
+            from cellrank.tools import CFLARE
+
+            cr.tl.root_states(adata, percentile=110, estimator=CFLARE)
 
 
 class TestTransitionMatrix:
