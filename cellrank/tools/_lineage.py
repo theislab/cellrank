@@ -152,13 +152,29 @@ class Lineage(np.ndarray):
         is_tuple_len_2 = (
             isinstance(item, tuple)
             and len(item) == 2
-            and isinstance(item[0], (int, range, slice, tuple, list, np.ndarray))
+            and isinstance(
+                item[0], (int, np.integer, range, slice, tuple, list, np.ndarray)
+            )
         )
         if is_tuple_len_2:
             rows, col = item
 
-            if isinstance(col, (int, str)):
+            if isinstance(col, (int, np.integer, str)):
                 col = [col]
+
+            try:
+                # slicing an array where row/col are like 2D indices
+                if (
+                    len(col) > 1
+                    and len(rows) == self.shape[0]
+                    and len(rows) == len(col)
+                ):
+                    col = self._maybe_convert_names(col, make_unique=False)
+                    return Lineage(
+                        self.X[rows, col], names=["mixture"], colors=["#000000"]
+                    )
+            except TypeError:  # because of range
+                pass
 
             if isinstance(col, (list, tuple)):
                 if any(
@@ -171,8 +187,9 @@ class Lineage(np.ndarray):
                     return self._mixer(rows, col)
                 col = self._maybe_convert_names(col)
                 item = rows, col
+
         else:
-            if isinstance(item, (int, str)):
+            if isinstance(item, (int, np.integer, str)):
                 item = [item]
 
             col = range(len(self.names))
@@ -289,6 +306,7 @@ class Lineage(np.ndarray):
         names: Iterable[Union[int, str]],
         is_singleton: bool = False,
         default: Optional[Union[int, str]] = None,
+        make_unique: bool = True,
     ) -> Union[int, List[int]]:
         res = []
         for name in names:
@@ -313,7 +331,8 @@ class Lineage(np.ndarray):
                     )
             res.append(name)
 
-        res = _unique_order_preserving(res)
+        if make_unique:
+            res = _unique_order_preserving(res)
 
         return res[0] if is_singleton else res
 

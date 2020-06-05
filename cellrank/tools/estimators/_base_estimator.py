@@ -502,7 +502,7 @@ class BaseEstimator(ABC):
             logg.debug(f"DEBUG: Overwriting `.{pretty_attr_key}`")
 
         setattr(self, attr_key, categories)
-        self._adata.obs[cat_key] = categories
+        self._adata.obs[cat_key] = categories.values
         self._adata.uns[_colors(cat_key)] = getattr(self, f"{attr_key}_colors")
 
     def _plot_vectors(
@@ -652,12 +652,12 @@ class BaseEstimator(ABC):
 
         if mode == "time":
             if time_key not in self._adata.obs.keys():
-                raise KeyError(f"Time key `{time_key}` not in `adata.obs`.")
-            t = self._adata.obs[time_key]
+                raise KeyError(f"Time key `{time_key!r}` not found in `adata.obs`.")
+            t = self.adata.obs[time_key]
             cluster_key = None
 
         rc_titles = (
-            [f"{self._prefix.capitalize()} {rc}" for rc in lineages]
+            [f"{self._prefix} {rc}" for rc in lineages]
             + (["Differentiation potential"] if show_dp else [])
             if title is None
             else title
@@ -687,7 +687,7 @@ class BaseEstimator(ABC):
                 )
             else:
                 scv.pl.scatter(
-                    self._adata,
+                    self.adata,
                     color=color,
                     title=titles,
                     color_map=color_map,

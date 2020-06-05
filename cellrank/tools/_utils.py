@@ -71,12 +71,12 @@ def _create_root_final_annotations(
         Nothing, just writes to AnnData.
     """
 
-    assert not fwd.backward, "Forward GPCCA object is in fact bacward."
-    assert bwd.backawrd, "Backward GPCCA object is in fact forward."
+    assert not fwd.kernel.backward, "Forward GPCCA object is in fact bacward."
+    assert bwd.kernel.backward, "Backward GPCCA object is in fact forward."
 
     # get restricted categories and colors
-    cats_final, colors_final = fwd._get_restrictions_to_main()
-    cats_root, colors_root = bwd._get_restrictions_to_main()
+    cats_final, colors_final = fwd._get_restriction_to_main()
+    cats_root, colors_root = bwd._get_restriction_to_main()
 
     # merge
     cats_merged, colors_merged = _merge_categorical_series(
