@@ -841,6 +841,19 @@ class VelocityKernel(Kernel):
         )
         logg.debug("Adding `.velo_corr`, the velocity correlations")
 
+        # check for a symmetric sparsity pattern in the velocity graph
+        start = logg.debug("Checking the velocity graph for symmetric sparsity pattern")
+        if not is_symmetric(
+            velo_corr_pos + velo_corr_neg, only_check_sparsity_pattern=True
+        ):
+            logg.warning(
+                "Sparsity pattern in the velocity graph is not symmetric", time=start
+            )
+        else:
+            logg.debug(
+                "Sparisty pattern in the velocity graph is symmetric", time=start
+            )
+
         use_negative_cosines = kwargs.pop("use_negative_cosines", True)
         if use_negative_cosines:
             self._velo_corr = (velo_corr_pos + velo_corr_neg).astype(_dtype)
