@@ -82,8 +82,9 @@ class GPCCA(BaseEstimator):
             str(MetaKey.BACKWARD) if kernel.backward else str(MetaKey.FORWARD)
         )
 
-        self._gpcca: GPCCA = None
+        self._gpcca: Optional[GPCCA] = None
         self._schur_vectors = None
+        self._schur_matrix = None
         self._coarse_T = None
         self._coarse_init_dist = None
         self._coarse_stat_dist = None
@@ -858,15 +859,13 @@ class GPCCA(BaseEstimator):
         n_cells: int,
         memberships: Union[np.ndarray, Lineage],
         meta_assignment: Optional[pd.Series] = None,
-    ) -> Tuple[pd.Series, Union[np.ndarray, Lineage], List[int]]:
+        warn: bool = True,
+    ) -> Tuple[pd.Series, Union[List[str], List[int]]]:
         def set_categories(group):
             category = group["assignment"].iloc[0]
 
             if n_cells > len(group):
-                logg.warning(
-                    f"Number of requested cells ({n_cells}) exceeds the number of available cells ({len(group)}) "
-                    f"for cluster `{category}`. Selecting all cells"
-                )
+                groups_with_insufficient_cells.append(category)
                 return pd.Series(group["assignment"], dtype="category")
 
             ixs = np.argpartition(group["values"], -n_cells)[-n_cells:]
@@ -876,6 +875,8 @@ class GPCCA(BaseEstimator):
             res.iloc[ixs.values] = category
 
             return res
+
+        groups_with_insufficient_cells = []
 
         if meta_assignment is None:
             if isinstance(memberships, Lineage):
@@ -925,6 +926,11 @@ class GPCCA(BaseEstimator):
 
         metastable_states = metastable_states.sort_index().astype("category")
         metastable_states.index = self.adata.obs.index
+
+        # postpone warning after we optionally match the names using `cluster_key`
+        if warn:
+            _warn_insufficient_number_of_cells(groups_with_insufficient_cells, n_cells)
+
         if isinstance(memberships, Lineage):  # set the order to have correct colors
             # it can happen that `metastable_states` doesn't have the category (Lineage will always have it)
             # therefore use `set_categories`
@@ -936,7 +942,11 @@ class GPCCA(BaseEstimator):
             assert meta_assignment is not None, "This shouldn't have happened."
             metastable_states.cat.set_categories(orig_cats, inplace=True)
 
-        return metastable_states
+        return (
+            (metastable_states, groups_with_insufficient_cells)
+            if not warn
+            else metastable_states
+        )
 
     def _assign_metastable_states(
         self,
@@ -961,14 +971,20 @@ class GPCCA(BaseEstimator):
                 "DEBUG: Setting the metastable states using metastable assignment"
             )
             metastable_states = _meta_assignment.astype(str).astype("category").copy()
+            not_enough_cells = []
         else:
             logg.debug(
                 "DEBUG: Setting the metastable states using metastable memberships"
             )
-            metastable_states = self._select_cells(
-                n_cells, memberships=memberships, meta_assignment=_meta_assignment
+            metastable_states, not_enough_cells = self._select_cells(
+                n_cells,
+                memberships=memberships,
+                meta_assignment=_meta_assignment,
+                warn=False,
             )
 
+        # _set_categorical_labels creates the names, we still need to remap the group names
+        orig_cats = metastable_states.cat.categories
         self._set_categorical_labels(
             attr_key="_meta_states",
             pretty_attr_key="metastable_states",
@@ -979,6 +995,10 @@ class GPCCA(BaseEstimator):
             en_cutoff=en_cutoff,
             p_thresh=p_thresh,
             add_to_existing=False,
+        )
+        name_mapper = dict(zip(orig_cats, self.metastable_states.cat.categories))
+        _warn_insufficient_number_of_cells(
+            [name_mapper.get(n, n) for n in not_enough_cells], n_cells
         )
 
         logg.debug(
@@ -1423,3 +1443,11 @@ class GPCCA(BaseEstimator):
     def main_states_probabilities(self) -> pd.Series:
         """Upper bound of of becoming a main states."""
         return self._main_states_probabilities
+
+
+def _warn_insufficient_number_of_cells(groups: Iterable[Any], n_cells: int):
+    if groups:
+        logg.warning(
+            f"The following groups have less than requested number of cells ({n_cells}): "
+            f"`{', '.join(sorted(map(str, groups)))}`"
+        )
