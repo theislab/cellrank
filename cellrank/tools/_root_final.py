@@ -14,23 +14,29 @@ from cellrank.tools._transition_matrix import transition_matrix
 from cellrank.tools.estimators._base_estimator import BaseEstimator
 
 _find_docs = """\
-Compute {cells} cells based on RNA velocity, see [Manno18]_.The tool models dynamic cellular
+Compute {cells} states based on RNA velocity, see [Manno18]_.The tool models dynamic cellular
 processes as a Markov chain, where the transition matrix is computed based on the velocity vectors of each
-individual cell. The spectrum of the transition matrix can be used to query approximate recurrent classes of the
-Markov chain, which represent groups of {cells} cells.
+individual cell. Based on this Markov chain, we provide two estimators to compute {cells} states, both of which
+are based on spectral methods.
 
-Cells are filtered into transient/recurrent cells using the left eigenvectors of the transition matrix and clustered
-into distinct groups of {cells} cells using the right eigenvectors of the transition matrix of the Markov chain.
+For the estimator GPCCA, cells are fuzzily clustered into metastable states, using Generalized Perron Cluster Cluster
+Analysis [GPCCA18]_. In short, this coarse-grains the Markov chain into a set of macrostates representing the slow
+time-scale dynamics, i.e. transitions between these macrostates are rare. The most stable ones of these will represent
+{cells}, while the others will represent transient, metastable states.
+
+For the estimator CFLARE, cells are filtered into transient/recurrent cells using the left eigenvectors of the
+transition matrix and clustered into distinct groups of {cells} states using the right eigenvectors of the transition
+matrix of the Markov chain.
 
 Params
 ------
 adata : :class:`adata.AnnData`
     Annotated data object.
 estimator
-    Estimator to use to compute the {cells} cells.
+    Estimator to use to compute the {cells} states.
 n_states
     If you know how many {direction} states you are expecting, you can provide this number.
-    Otherwise, an `eigen-gap` heuristic is used for :class:`cellrank.tl.CFLARE`.
+    Otherwise, an `eigen-gap` heuristic is used.
 cluster_key
     Key from `adata.obs` where cluster annotations are stored. These are used to give names to the {direction} states.
 weight_connectivities
@@ -57,7 +63,7 @@ Returns
 
 def _root_final(
     adata: AnnData,
-    estimator: type(BaseEstimator) = CFLARE,
+    estimator: type(BaseEstimator) = GPCCA,
     final: bool = True,
     n_states: Optional[int] = None,
     cluster_key: Optional[str] = None,
@@ -67,6 +73,7 @@ def _root_final(
     return_estimator: bool = False,
     **kwargs,
 ) -> Optional[Union[AnnData, BaseEstimator]]:
+    """Compute root or final states of  Markov Chain."""
 
     key = StateKey.FORWARD if final else StateKey.BACKWARD
     logg.info(f"Computing `{key}`")
@@ -136,11 +143,11 @@ def _root_final(
 
 
 @inject_docs(
-    root=_find_docs.format(cells="root", direction="start", key_added="root_cells")
+    root=_find_docs.format(cells="root", direction="start", key_added="root_states")
 )
-def find_root(
+def root_states(
     adata: AnnData,
-    estimator: type(BaseEstimator) = CFLARE,
+    estimator: type(BaseEstimator) = GPCCA,
     n_states: Optional[int] = None,
     weight_connectivities: float = None,
     show_plots: bool = False,
@@ -149,7 +156,7 @@ def find_root(
     **kwargs,
 ) -> Optional[AnnData]:
     """
-    Find root cells of a dynamic process in single cells.
+    Find root states of a dynamic process of single cells.
 
     {root}
     """
@@ -168,11 +175,11 @@ def find_root(
 
 
 @inject_docs(
-    final=_find_docs.format(cells="final", direction="end", key_added="final_cells")
+    final=_find_docs.format(cells="final", direction="end", key_added="final_states")
 )
-def find_final(
+def final_states(
     adata: AnnData,
-    estimator: type(BaseEstimator) = CFLARE,
+    estimator: type(BaseEstimator) = GPCCA,
     n_states: Optional[int] = None,
     weight_connectivities: float = None,
     show_plots: bool = False,
@@ -181,7 +188,7 @@ def find_final(
     **kwargs,
 ) -> Optional[AnnData]:
     """
-    Find final cells of a dynamic process in single cells.
+    Find final states of a dynamic process of single cells.
 
     {final}
     """

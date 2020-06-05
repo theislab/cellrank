@@ -46,14 +46,14 @@ def _assert_has_all_keys(adata: AnnData, direction: Direction):
 
 class TestHighLevelPipeline:
     def test_fwd_pipeline(self, adata):
-        cr.tl.find_final(adata, cluster_key="clusters")
+        cr.tl.final_states(adata, cluster_key="clusters")
         cr.tl.lineages(adata)
         cr.pl.lineages(adata)
 
         _assert_has_all_keys(adata, Direction.FORWARD)
 
     def test_bwd_pipeline(self, adata):
-        cr.tl.find_root(adata, cluster_key="clusters")
+        cr.tl.root_states(adata, cluster_key="clusters")
         cr.tl.lineages(adata, final=False)
         cr.pl.lineages(adata, final=False)
 
