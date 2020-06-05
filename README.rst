@@ -11,7 +11,7 @@ CellRank - Probabilistic Lineage Assignment using RNA Velocity
 **CellRank** is a toolkit to uncover cellular development based on scRNA-seq data with RNA velocity annotation,
 see `La Manno et al. (2018)`_ and `Bergen et al. (2019)`_.
 In the figure above, we show the main features of CellRank applied to `pancreatic endocrinogenesis`_ -
-starting from RNA velocities **(a)**, we infer root cells **(b)** and final states **(c)**, and we compute
+starting from RNA velocities **(a)**, we infer root states **(b)** and final states **(c)**, and we compute
 how likely each cell is to develop towards each of the identified groups of final states **(d)**.
 See our `tutorial`_ to learn how to apply CellRank to your own data.
 

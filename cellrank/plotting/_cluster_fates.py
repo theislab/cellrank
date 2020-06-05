@@ -51,7 +51,7 @@ def cluster_fates(
     Plot aggregate lineage probabilities at a cluster level.
 
     This can be used to investigate how likely a certain cluster is to go to the final states, or in turn to have
-    descended from the root cells. For mode `'paga'` and `'paga_pie'`, we use *PAGA*, see [Wolf19]_.
+    descended from the root states. For mode `'paga'` and `'paga_pie'`, we use *PAGA*, see [Wolf19]_.
 
     .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/cluster_fates.png
        :width: 400px
