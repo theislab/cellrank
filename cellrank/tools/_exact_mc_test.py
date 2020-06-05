@@ -84,7 +84,7 @@ def exact_mc_perm_test(
     seed
         Random seed.
     final
-        If `True`, computes final cells, i.e. end points. Otherwise, computes root cells, i.e. starting points.
+        If `True`, computes final states, i.e. end points. Otherwise, computes root cells, i.e. starting points.
     kwargs
         Keyword arguments for :paramref:`dist_measure`.
 
