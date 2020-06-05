@@ -16,8 +16,8 @@ from cellrank.tools.estimators._base_estimator import BaseEstimator
 _find_docs = """\
 Compute {cells} states based on RNA velocity, see [Manno18]_.The tool models dynamic cellular
 processes as a Markov chain, where the transition matrix is computed based on the velocity vectors of each
-individual cell. The spectrum of the transition matrix can be used to query approximate recurrent classes of the
-Markov chain, which represent {cells} states.
+individual cell. Based on this Markov chain, we provide two estimators to compute {cells} states, both of which
+are based on spectral methods.
 
 For the estimator GPCCA, cells are fuzzily clustered into metastable states, using Generalized Perron Cluster Cluster
 Analysis [GPCCA18]_. In short, this coarse-grains the Markov chain into a set of macrostates representing the slow
