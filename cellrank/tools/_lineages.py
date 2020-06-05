@@ -15,7 +15,7 @@ from cellrank.tools.estimators._base_estimator import BaseEstimator
 
 def lineages(
     adata: AnnData,
-    estimator: type(BaseEstimator) = CFLARE,
+    estimator: type(BaseEstimator) = GPCCA,
     final: bool = True,
     cluster_key: Optional[str] = None,
     keys: Optional[Sequence[str]] = None,
