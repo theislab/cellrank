@@ -17,12 +17,6 @@ from typing import (
 )
 from itertools import tee, product, combinations
 
-import matplotlib.colors as mcolors
-
-import scanpy as sc
-from scanpy import logging as logg
-from anndata import AnnData
-
 import numpy as np
 import pandas as pd
 import networkx as nx
@@ -33,6 +27,13 @@ from sklearn.cluster import KMeans
 from pandas.api.types import infer_dtype, is_categorical_dtype
 from sklearn.neighbors import NearestNeighbors
 from scipy.sparse.linalg import norm as s_norm
+
+import matplotlib.colors as mcolors
+
+import scanpy as sc
+from scanpy import logging as logg
+from anndata import AnnData
+
 from cellrank.utils._utils import _get_neighs, _has_neighs, _get_neighs_params
 from cellrank.tools._colors import _convert_to_hex_colors, _insert_categorical_colors
 
@@ -593,11 +594,25 @@ def is_connected(c):
     return nx.is_connected(G)
 
 
-def is_symmetric(c: Union[spmatrix, np.ndarray], ord: str = "fro", eps: float = 1e-4):
-    """Check whether the graph encoded by c is symmetric."""
+def is_symmetric(
+    matrix: Union[spmatrix, np.ndarray],
+    ord: str = "fro",
+    eps: float = 1e-4,
+    only_check_sparsity_pattern: bool = False,
+):
+    """Check whether the graph encoded by `matrix` is symmetric."""
+    if only_check_sparsity_pattern:
+        if issparse(matrix):
+            is_sym = len(((matrix != 0) - (matrix != 0).T).data) == 0
+        else:
+            is_sym = ((matrix != 0) == (matrix != 0).T).all()
+    else:
+        if issparse(matrix):
+            is_sym = s_norm((matrix - matrix.T), ord=ord) < eps
+        else:
+            is_sym = d_norm((matrix - matrix.T), ord=ord) < eps
 
-    dev = s_norm((c - c.T), ord=ord) if issparse(c) else d_norm((c - c.T), ord=ord)
-    return dev < eps
+    return is_sym
 
 
 def _subsample_embedding(
