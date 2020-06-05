@@ -73,6 +73,7 @@ def _root_final(
     return_estimator: bool = False,
     **kwargs,
 ) -> Optional[Union[AnnData, BaseEstimator]]:
+    """Compute root or final states of  Markov Chain."""
 
     key = StateKey.FORWARD if final else StateKey.BACKWARD
     logg.info(f"Computing `{key}`")
