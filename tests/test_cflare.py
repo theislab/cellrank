@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
-from anndata import AnnData
-
 import numpy as np
 import pandas as pd
 import pytest
+from pandas.api.types import is_categorical_dtype
+
+from anndata import AnnData
+
 import cellrank as cr
 from _helpers import assert_array_nan_equal
-from pandas.api.types import is_categorical_dtype
 from cellrank.tools._colors import _create_categorical_colors
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tools._constants import (
