@@ -6,6 +6,11 @@ from types import MappingProxyType
 from typing import Any, Dict, List, Tuple, Union, Mapping, Iterable, Optional
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
+from scipy.stats import entropy
+from pandas.api.types import is_categorical_dtype
+
 import seaborn as sns
 import matplotlib as mpl
 import matplotlib.cm as cm
@@ -17,10 +22,6 @@ import scvelo as scv
 from scanpy import logging as logg
 from anndata import AnnData
 
-import numpy as np
-import pandas as pd
-from scipy.stats import entropy
-from pandas.api.types import is_categorical_dtype
 from cellrank.tools._utils import (
     save_fig,
     _eigengap,
@@ -99,7 +100,7 @@ class GPCCA(BaseEstimator):
     def compute_eig(
         self,
         k: int = 20,
-        which: str = "LR",
+        which: str = "LM",
         alpha: float = 1,
         ncv: Optional[int] = None,
     ) -> None:
