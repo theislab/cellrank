@@ -258,16 +258,16 @@ class TestMarkovChain:
 
 
 class TestMarkovChainCopy:
-    def test_copy_simple(self, adata_mc_fwd):
-        _, mc1 = adata_mc_fwd
+    def test_copy_simple(self, adata_cflare_fwd):
+        _, mc1 = adata_cflare_fwd
         mc2 = mc1.copy()
 
         assert mc1 is not mc2
         assert mc1.adata is not mc2.adata
         assert mc1.kernel is not mc2.kernel
 
-    def test_copy_deep(self, adata_mc_fwd):
-        _, mc1 = adata_mc_fwd
+    def test_copy_deep(self, adata_cflare_fwd):
+        _, mc1 = adata_cflare_fwd
         mc2 = mc1.copy()
 
         assert mc1.irreducible == mc2.irreducible
@@ -290,8 +290,8 @@ class TestMarkovChainCopy:
         assert mc1._G2M_score == mc2._G2M_score
         assert mc1._S_score == mc2._S_score
 
-    def test_copy_works(self, adata_mc_fwd):
-        _, mc1 = adata_mc_fwd
+    def test_copy_works(self, adata_cflare_fwd):
+        _, mc1 = adata_cflare_fwd
         mc2 = mc1.copy()
 
         mc1._is_irreducible = not mc2.irreducible

@@ -46,8 +46,10 @@ def _assert_has_all_keys(adata: AnnData, direction: Direction):
 
 class TestHighLevelPipeline:
     def test_fwd_pipeline_cflare(self, adata):
-        cr.tl.final_states(adata, estimator=cr.tl.CFLARE, cluster_key="clusters")
-        cr.tl.lineages(adata)
+        cr.tl.final_states(
+            adata, estimator=cr.tl.CFLARE, cluster_key="clusters", method="brandts"
+        )
+        cr.tl.lineages(adata, method="brandts")
         cr.pl.lineages(adata)
 
         _assert_has_all_keys(adata, Direction.FORWARD)
@@ -60,8 +62,10 @@ class TestHighLevelPipeline:
         _assert_has_all_keys(adata, Direction.BACKWARD)
 
     def test_fwd_pipeline_gpcca(self, adata):
-        cr.tl.final_states(adata, estimator=cr.tl.GPCCA, cluster_key="clusters")
-        cr.tl.lineages(adata)
+        cr.tl.final_states(
+            adata, estimator=cr.tl.GPCCA, cluster_key="clusters", method="brandts"
+        )
+        cr.tl.lineages(adata, method="brandts")
         cr.pl.lineages(adata)
 
         _assert_has_all_keys(adata, Direction.FORWARD)
@@ -138,7 +142,7 @@ class TestLowLevelPipeline:
         mc_fwd.plot_spectrum()
         mc_fwd.plot_spectrum(real_only=True)
 
-        mc_fwd.compute_schur(5)
+        mc_fwd.compute_schur(5, method="brandts")
         mc_fwd.plot_schur_embedding()
 
         mc_fwd.compute_metastable_states(2)
@@ -164,7 +168,7 @@ class TestLowLevelPipeline:
         mc_bwd.plot_spectrum()
         mc_bwd.plot_spectrum(real_only=True)
 
-        mc_bwd.compute_schur(5)
+        mc_bwd.compute_schur(5, method="brandts")
         mc_bwd.plot_schur_embedding()
 
         mc_bwd.compute_metastable_states(2)

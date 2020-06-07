@@ -39,9 +39,7 @@ def _create_dummy_adata(n_obs: int) -> AnnData:
     return adata
 
 
-def _create_cellrank_adata(
-    n_obs: int, *, backward: bool = False
-) -> Tuple[AnnData, CFLARE]:
+def _create_cflare(n_obs: int, *, backward: bool = False) -> Tuple[AnnData, CFLARE]:
     adata = _create_dummy_adata(n_obs)
     sc.tl.paga(adata, groups="clusters")
     try:
@@ -68,6 +66,31 @@ def _create_cellrank_adata(
     return adata, mc
 
 
+def _create_gpcca(n_obs: int, *, backward: bool = False) -> Tuple[AnnData, CFLARE]:
+    adata = _create_dummy_adata(n_obs)
+    sc.tl.paga(adata, groups="clusters")
+    vk = VelocityKernel(adata, backward=backward).compute_transition_matrix()
+    ck = ConnectivityKernel(adata, backward=backward).compute_transition_matrix()
+    final_kernel = 0.8 * vk + 0.2 * ck
+
+    mc = cr.tl.GPCCA(final_kernel)
+
+    mc.compute_partition()
+    mc.compute_eig()
+    mc.compute_schur(method="brandts")
+    mc.compute_metastable_states(n_states=2)
+    mc.set_main_states()
+    mc.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
+
+    assert adata is mc.adata
+    if backward:
+        assert str(LinKey.BACKWARD) in adata.obsm
+    else:
+        assert str(LinKey.FORWARD) in adata.obsm
+
+    return adata, mc
+
+
 @pytest.fixture
 def adata(adata=_create_dummy_adata(50)) -> AnnData:
     return adata.copy()
@@ -79,16 +102,24 @@ def adata_large(adata=_create_dummy_adata(200)) -> AnnData:
 
 
 @pytest.fixture
-def adata_mc_fwd(
-    adata_mc=_create_cellrank_adata(100, backward=False)
+def adata_cflare_fwd(
+    adata_cflare=_create_cflare(100, backward=False)
 ) -> Tuple[AnnData, CFLARE]:
-    adata, mc = adata_mc
-    return adata.copy(), mc
+    adata, cflare = adata_cflare
+    return adata.copy(), cflare
 
 
 @pytest.fixture
-def adata_cr(adata_mc=_create_cellrank_adata(100, backward=False)) -> AnnData:
-    return adata_mc[0].copy()
+def adata_gpcca_fwd(
+    adata_gpcca=_create_gpcca(100, backward=False)
+) -> Tuple[AnnData, CFLARE]:
+    adata, gpcca = adata_gpcca
+    return adata.copy(), gpcca
+
+
+@pytest.fixture
+def adata_cflare(adata_cflare=_create_cflare(100, backward=False)) -> AnnData:
+    return adata_cflare[0].copy()
 
 
 @pytest.fixture
