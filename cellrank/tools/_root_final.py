@@ -42,6 +42,10 @@ cluster_key
 weight_connectivities
     Weight given to a transition matrix computed on the basis of the KNN connectivities. Should be in `[0, 1]`. This
     can help in situations where we have noisy velocities and want to give some weight to transcriptomic similarity.
+method
+    Method to use when computing the Schur decomposition. Only needed when :paramref:`estimator`
+    is :class`:cellrank.tl.GPCCA:.
+    Valid options are: `'krylov'`, `'brandts'`.
 show_plots
     Whether to show plots of the spectrum and eigenvectors in the embedding.
 copy
@@ -68,6 +72,7 @@ def _root_final(
     n_states: Optional[int] = None,
     cluster_key: Optional[str] = None,
     weight_connectivities: float = None,
+    method: str = "krylov",
     show_plots: bool = False,
     copy: bool = False,
     return_estimator: bool = False,
@@ -110,7 +115,7 @@ def _root_final(
         if n_states is None or n_states == 1:
             mc.compute_eig()
         else:
-            mc.compute_schur(n_states + 1)
+            mc.compute_schur(n_states + 1, method=method)
 
         try:
             mc.compute_metastable_states(
@@ -150,6 +155,7 @@ def root_states(
     estimator: type(BaseEstimator) = GPCCA,
     n_states: Optional[int] = None,
     weight_connectivities: float = None,
+    method: str = "krylov",
     show_plots: bool = False,
     copy: bool = False,
     return_estimator: bool = False,
@@ -167,6 +173,7 @@ def root_states(
         final=False,
         n_states=n_states,
         weight_connectivities=weight_connectivities,
+        method=method,
         show_plots=show_plots,
         copy=copy,
         return_estimator=return_estimator,
@@ -182,6 +189,7 @@ def final_states(
     estimator: type(BaseEstimator) = GPCCA,
     n_states: Optional[int] = None,
     weight_connectivities: float = None,
+    method: str = "krylov",
     show_plots: bool = False,
     copy: bool = False,
     return_estimator: bool = False,
@@ -199,6 +207,7 @@ def final_states(
         final=True,
         n_states=n_states,
         weight_connectivities=weight_connectivities,
+        method=method,
         show_plots=show_plots,
         copy=copy,
         return_estimator=return_estimator,

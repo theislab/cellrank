@@ -20,6 +20,7 @@ def lineages(
     cluster_key: Optional[str] = None,
     keys: Optional[Sequence[str]] = None,
     n_lineages: Optional[int] = None,
+    method: str = "krylov",
     copy: bool = False,
     return_estimator: bool = False,
     **kwargs,
@@ -60,6 +61,10 @@ def lineages(
         Astrocyte state is excluded.
     n_lineages
         Number of lineages when :paramref:`estimator` `=GPCCA`. If `None`, it will be based on `eigengap`.
+    method
+        Method to use when computing the Schur decomposition. Only needed when :paramref:`estimator`
+        is :class`:cellrank.tl.GPCCA:.
+        Valid options are: `'krylov'`, `'brandts'`.
     copy
         Whether to update the existing AnnData object or to return a copy.
     return_estimator
@@ -125,7 +130,7 @@ def lineages(
         if n_lineages is None or n_lineages == 1:
             mc.compute_eig()
         else:
-            mc.compute_schur(n_lineages + 1)
+            mc.compute_schur(n_lineages + 1, method=method)
 
         try:
             mc.compute_metastable_states(
