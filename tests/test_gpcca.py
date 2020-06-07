@@ -133,7 +133,7 @@ class TestCGPCCA:
 
         mc = cr.tl.GPCCA(final_kernel)
         with pytest.raises(ValueError):
-            mc.compute_schur(n_components=1)
+            mc.compute_schur(n_components=1, method="brandts")
 
     def test_compute_schur_invalid_method(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
@@ -151,7 +151,7 @@ class TestCGPCCA:
 
         mc = cr.tl.GPCCA(final_kernel)
         with pytest.raises(ValueError):
-            mc.compute_schur(which="foobar")
+            mc.compute_schur(which="foobar", method="brandts")
 
     def test_compute_schur_write_eigvals(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
@@ -171,7 +171,7 @@ class TestCGPCCA:
         final_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.GPCCA(final_kernel)
-        mc.compute_eig(k=11)
+        mc.compute_eig(k=10)
 
         _check_eigdecomposition(mc)
         orig_ed = deepcopy(mc.eigendecomposition)
@@ -184,10 +184,12 @@ class TestCGPCCA:
 
         assert orig_ed.keys() == schur_ed.keys()
         assert orig_ed["eigengap"] == schur_ed["eigengap"]
-        assert orig_ed["params"] == schur_ed["params"]
-        np.testing.assert_array_almost_equal(orig_ed["D"].real, schur_ed["D"].real)
+        n = min(orig_ed["params"]["k"], schur_ed["params"]["k"])
         np.testing.assert_array_almost_equal(
-            np.abs(orig_ed["D"].imag), np.abs(schur_ed["D"].imag)
+            orig_ed["D"].real[:n], schur_ed["D"].real[:n]
+        )
+        np.testing.assert_array_almost_equal(
+            np.abs(orig_ed["D"].imag[:n]), np.abs(schur_ed["D"].imag[:n])
         )  # complex conj.
 
     def test_compute_metastable_states_no_eig(self, adata_large: AnnData):
@@ -224,7 +226,7 @@ class TestCGPCCA:
         final_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.GPCCA(final_kernel)
-        mc.compute_schur(n_components=10)
+        mc.compute_schur(n_components=10, method="brandts")
         mc.compute_metastable_states(n_states=2)
 
         _check_compute_meta(mc)
@@ -235,7 +237,7 @@ class TestCGPCCA:
         final_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.GPCCA(final_kernel)
-        mc.compute_schur(n_components=10)
+        mc.compute_schur(n_components=10, method="brandts")
         with pytest.raises(KeyError):
             mc.compute_metastable_states(n_states=2, cluster_key="foobar")
 
@@ -245,7 +247,7 @@ class TestCGPCCA:
         final_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.GPCCA(final_kernel)
-        mc.compute_schur(n_components=10)
+        mc.compute_schur(n_components=10, method="brandts")
 
         mc.compute_metastable_states(n_states=2)
 
@@ -258,7 +260,7 @@ class TestCGPCCA:
         final_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.GPCCA(final_kernel)
-        mc.compute_schur(n_components=10)
+        mc.compute_schur(n_components=10, method="brandts")
 
         mc.compute_metastable_states(n_states=2, n_cells=5)
         mc.set_main_states()
@@ -271,7 +273,7 @@ class TestCGPCCA:
         final_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.GPCCA(final_kernel)
-        mc.compute_schur(n_components=10)
+        mc.compute_schur(n_components=10, method="brandts")
 
         mc.compute_metastable_states(n_states=2, n_cells=None)
         mc.set_main_states()
@@ -284,7 +286,7 @@ class TestCGPCCA:
         final_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.GPCCA(final_kernel)
-        mc.compute_schur(n_components=10)
+        mc.compute_schur(n_components=10, method="brandts")
 
         mc.compute_metastable_states(n_states=2)
         with pytest.raises(KeyError):
@@ -296,7 +298,7 @@ class TestCGPCCA:
         final_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.GPCCA(final_kernel)
-        mc.compute_schur(n_components=10)
+        mc.compute_schur(n_components=10, method="brandts")
 
         mc.compute_metastable_states(n_states=2)
         with pytest.raises(ValueError):
@@ -308,7 +310,7 @@ class TestCGPCCA:
         final_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.GPCCA(final_kernel)
-        mc.compute_schur(n_components=10)
+        mc.compute_schur(n_components=10, method="brandts")
 
         mc.compute_metastable_states(n_states=2)
         mc.compute_main_states(n_cells=None)
@@ -321,7 +323,7 @@ class TestCGPCCA:
         final_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.GPCCA(final_kernel)
-        mc.compute_schur(n_components=10)
+        mc.compute_schur(n_components=10, method="brandts")
 
         mc.compute_metastable_states(n_states=2)
         mc.compute_main_states(n_cells=5, method="eigengap")
@@ -334,7 +336,7 @@ class TestCGPCCA:
         final_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.GPCCA(final_kernel)
-        mc.compute_schur(n_components=10)
+        mc.compute_schur(n_components=10, method="brandts")
 
         mc.compute_metastable_states(n_states=2)
         mc.compute_main_states(n_cells=5, method="top_n", n_main_states=1)
@@ -347,7 +349,7 @@ class TestCGPCCA:
         final_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.GPCCA(final_kernel)
-        mc.compute_schur(n_components=10)
+        mc.compute_schur(n_components=10, method="brandts")
 
         mc.compute_metastable_states(n_states=2)
         mc.compute_main_states(n_cells=5, method="min_self_prob", min_self_prob=0.5)
@@ -360,7 +362,7 @@ class TestCGPCCA:
         final_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.GPCCA(final_kernel)
-        mc.compute_schur(n_components=10)
+        mc.compute_schur(n_components=10, method="brandts")
 
         mc.compute_metastable_states(n_states=2)
         mc.compute_main_states(n_cells=5)
@@ -405,7 +407,7 @@ class TestCGPCCA:
         final_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.GPCCA(final_kernel)
-        mc.compute_schur()
+        mc.compute_schur(n_components=10, method="brandts")
 
         mc.compute_gdpt(key_added="foobar")
 
@@ -429,7 +431,7 @@ class TestCGPCCA:
         final_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.GPCCA(final_kernel)
-        mc.compute_schur()
+        mc.compute_schur(n_components=10, method="brandts")
         mc.compute_metastable_states(n_states=2)
 
         with pytest.raises(RuntimeError):
@@ -441,7 +443,7 @@ class TestCGPCCA:
         final_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.GPCCA(final_kernel)
-        mc.compute_schur()
+        mc.compute_schur(n_components=10, method="brandts")
         mc.compute_metastable_states(n_states=2)
         mc.set_main_states()
 
@@ -454,7 +456,7 @@ class TestCGPCCA:
         final_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.GPCCA(final_kernel)
-        mc.compute_schur()
+        mc.compute_schur(n_components=10, method="brandts")
         mc.compute_metastable_states(n_states=2)
         mc.set_main_states()
 
@@ -469,7 +471,7 @@ class TestCGPCCA:
         final_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.GPCCA(final_kernel)
-        mc.compute_schur()
+        mc.compute_schur(n_components=10, method="brandts")
         mc.compute_metastable_states(n_states=2)
         mc.set_main_states()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
