@@ -2,11 +2,11 @@
 
 from copy import deepcopy
 
-import numpy as np
-import pytest
-
 from anndata import AnnData
 
+import numpy as np
+import pandas as pd
+import pytest
 import cellrank as cr
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tools._constants import StateKey, Direction
@@ -24,6 +24,17 @@ def _check_eigdecomposition(mc: cr.tl.GPCCA):
     assert "stationary_dist" not in mc.eigendecomposition
 
     assert f"eig_{Direction.FORWARD}" in mc.adata.uns.keys()
+
+
+def _check_compute_schur(mc: cr.tl.GPCCA):
+    assert isinstance(mc.metastable_states, pd.Series)
+    assert mc.coarse_stationary_distribution is None or isinstance(
+        mc.coarse_stationary_distribution, pd.Series
+    )
+    assert isinstance(mc._coarse_init_dist, pd.Series)
+    assert isinstance(mc.coarse_T, pd.DataFrame)
+    assert isinstance(mc._schur_matrix, np.ndarray)
+    assert isinstance(mc.schur_vectors, np.ndarray)
 
 
 class TestCGPCCA:
@@ -121,11 +132,42 @@ class TestCGPCCA:
             np.abs(orig_ed["D"].imag), np.abs(schur_ed["D"].imag)
         )  # complex conj.
 
-    def test_compute_metastable_states_no_schur(self, adata_large: AnnData):
+    def test_compute_metastable_states_no_eig(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.GPCCA(final_kernel)
         with pytest.raises(RuntimeError):
-            mc.compute_metastable_states(n_states=3)
+            mc.compute_metastable_states(n_states=None)
+
+    def test_compute_metastable_states_1_state_no_eig(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.GPCCA(final_kernel)
+        with pytest.raises(RuntimeError):
+            mc.compute_metastable_states(n_states=1)
+
+    def test_compute_metastable_states_eig(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.GPCCA(final_kernel)
+        mc.compute_eig()
+        mc.compute_metastable_states(n_states=None)
+
+        _check_compute_schur(mc)
+
+    def test_compute_metastable_states_schur(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.GPCCA(final_kernel)
+        mc.compute_schur(n_components=10)
+        mc.compute_metastable_states(n_states=2)
+
+        _check_compute_schur(mc)
