@@ -248,8 +248,8 @@ class TestClusterFates:
             legend_loc="center right out",
         )
 
-    def test_paga_pie_wrong_legend_kind_1(self, adata_mc_fwd: Tuple[AnnData, CFLARE]):
-        adata, _ = adata_mc_fwd
+    def test_paga_pie_wrong_legend_kind_1(self, adata_cflare_fwd):
+        adata, _ = adata_cflare_fwd
         with pytest.raises(ValueError):
             cr.pl.cluster_fates(
                 adata,
@@ -258,8 +258,8 @@ class TestClusterFates:
                 legend_kwargs=(dict(loc="foo")),
             )
 
-    def test_paga_pie_wrong_legend_kind_2(self, adata_mc_fwd: Tuple[AnnData, CFLARE]):
-        adata, _ = adata_mc_fwd
+    def test_paga_pie_wrong_legend_kind_2(self, adata_cflare_fwd):
+        adata, _ = adata_cflare_fwd
         with pytest.raises(ValueError):
             cr.pl.cluster_fates(
                 adata,
@@ -268,8 +268,8 @@ class TestClusterFates:
                 legend_kwargs=(dict(loc="lower foo")),
             )
 
-    def test_paga_pie_wrong_legend_kind_3(self, adata_mc_fwd: Tuple[AnnData, CFLARE]):
-        adata, _ = adata_mc_fwd
+    def test_paga_pie_wrong_legend_kind_3(self, adata_cflare_fwd):
+        adata, _ = adata_cflare_fwd
         with pytest.raises(ValueError):
             cr.pl.cluster_fates(
                 adata,
@@ -278,8 +278,8 @@ class TestClusterFates:
                 legend_kwargs=(dict(loc="lower left bar")),
             )
 
-    def test_paga_pie_wrong_legend_kind_4(self, adata_mc_fwd: Tuple[AnnData, CFLARE]):
-        adata, _ = adata_mc_fwd
+    def test_paga_pie_wrong_legend_kind_4(self, adata_cflare_fwd):
+        adata, _ = adata_cflare_fwd
         with pytest.raises(ValueError):
             cr.pl.cluster_fates(
                 adata,
