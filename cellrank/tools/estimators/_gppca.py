@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Generalized Perron Cluster Cluster Analysis (GPCCA) module."""
 
-import os
 from copy import copy, deepcopy
 from types import MappingProxyType
 from typing import Any, Dict, List, Tuple, Union, Mapping, Iterable, Optional
@@ -88,7 +87,6 @@ class GPCCA(BaseEstimator):
         self._coarse_T = None
         self._coarse_init_dist = None
         self._coarse_stat_dist = None
-        self._gppca_overlap = None
 
         self._meta_states = None
         self._meta_states_colors = None
@@ -1124,7 +1122,7 @@ class GPCCA(BaseEstimator):
         title: Optional[str] = None,
         figsize: Tuple[float, float] = (8, 8),
         dpi: float = 80,
-        save: Optional[Union[os.PathLike, str]] = None,
+        save: Optional[Union[Path, str]] = None,
         text_kwargs: Mapping[str, Any] = MappingProxyType({}),
         **kwargs,
     ) -> None:
@@ -1162,7 +1160,7 @@ class GPCCA(BaseEstimator):
         Returns
         -------
         None
-            Nothings just plots and optionally saves the plot.
+            Nothing, just plots and optionally saves the plot.
         """
 
         def stylize_dist(
@@ -1461,16 +1459,18 @@ class GPCCA(BaseEstimator):
         g._lin_probs = copy(self.lineage_probabilities)
         g._dp = copy(self.diff_potential)
 
-        g._schur_vectors = copy(self.schur_vectors)
-        g._coarse_T = copy(self.coarse_T)
+        g._gpcca = deepcopy(self._gpcca)
 
-        self._gppca_overlap = deepcopy(self._gppca_overlap)
+        g._schur_vectors = copy(self.schur_vectors)
+        g._schur_matrix = copy(self._schur_matrix)
+        g._coarse_T = copy(self.coarse_T)
 
         g._meta_states = copy(self._meta_states)
         g._meta_states_colors = copy(self._meta_states_colors)
         g._meta_lin_probs = copy(self._meta_lin_probs)
 
         g._main_states = copy(self.main_states)
+        g._main_states_probabilities = copy(self._main_states_probabilities)
 
         g._n_cells = self._n_cells
 
