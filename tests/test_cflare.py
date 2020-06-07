@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from typing import Tuple
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -258,7 +260,7 @@ class TestCFLARE:
 
 
 class TestCFLARECopy:
-    def test_copy_simple(self, adata_cflare_fwd):
+    def test_copy_simple(self, adata_cflare_fwd: Tuple[AnnData, cr.tl.CFLARE]):
         _, mc1 = adata_cflare_fwd
         mc2 = mc1.copy()
 
@@ -266,7 +268,7 @@ class TestCFLARECopy:
         assert mc1.adata is not mc2.adata
         assert mc1.kernel is not mc2.kernel
 
-    def test_copy_deep(self, adata_cflare_fwd):
+    def test_copy_deep(self, adata_cflare_fwd: Tuple[AnnData, cr.tl.CFLARE]):
         _, mc1 = adata_cflare_fwd
         mc2 = mc1.copy()
 
@@ -289,8 +291,11 @@ class TestCFLARECopy:
         np.testing.assert_array_equal(mc1._meta_states_colors, mc2._meta_states_colors)
         assert mc1._G2M_score == mc2._G2M_score
         assert mc1._S_score == mc2._S_score
+        assert mc1._g2m_key == mc2._g2m_key
+        assert mc1._s_key == mc2._s_key
+        assert mc1._is_sparse == mc2._is_sparse
 
-    def test_copy_works(self, adata_cflare_fwd):
+    def test_copy_works(self, adata_cflare_fwd: Tuple[AnnData, cr.tl.CFLARE]):
         _, mc1 = adata_cflare_fwd
         mc2 = mc1.copy()
 

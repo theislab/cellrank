@@ -89,8 +89,6 @@ class GPCCA(BaseEstimator):
         self._coarse_init_dist = None
         self._coarse_stat_dist = None
 
-        self._aggregated_state_probability = None
-
         self._meta_states = None
         self._meta_states_colors = None
         self._meta_lin_probs = None
@@ -761,13 +759,13 @@ class GPCCA(BaseEstimator):
         aggregated_state_probability = self._lin_probs[
             [n for n in self._lin_probs.names if n != "rest"]
         ].X.max(axis=1)
-        self._aggregated_state_probability = aggregated_state_probability / np.max(
+        self._main_states_probabilities = aggregated_state_probability / np.max(
             aggregated_state_probability
         )
 
         # write to adata
         self.adata.obs[_dp(self._lin_key)] = self._dp
-        self.adata.obs[_probs(self._rc_key)] = self._aggregated_state_probability
+        self.adata.obs[_probs(self._rc_key)] = self._main_states_probabilities
 
         self.adata.uns[_lin_names(self._lin_key)] = self._lin_probs.names
         self.adata.uns[_colors(self._lin_key)] = self._lin_probs.colors
@@ -1501,7 +1499,6 @@ class GPCCA(BaseEstimator):
         g._main_states_probabilities = copy(self._main_states_probabilities)
 
         g._n_cells = self._n_cells
-        g._aggregated_state_probability = copy(self._aggregated_state_probability)
 
         g._coarse_stat_dist = copy(self.coarse_stationary_distribution)
         g._coarse_init_dist = copy(self._coarse_init_dist)
