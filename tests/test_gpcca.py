@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from copy import deepcopy
+from typing import Tuple
 
 import numpy as np
 import pandas as pd
@@ -90,7 +91,7 @@ def _check_main_states(mc: cr.tl.GPCCA, has_main_states: bool = True):
 
     np.testing.assert_array_equal(mc.adata.obs[_dp(LinKey.FORWARD)], mc.diff_potential)
     np.testing.assert_array_equal(
-        mc.adata.obs[_probs(StateKey.FORWARD)], mc._aggregated_state_probability
+        mc.adata.obs[_probs(StateKey.FORWARD)], mc.main_states_probabilities
     )
 
 
@@ -475,3 +476,84 @@ class TestCGPCCA:
 
         for lineage in ["0", "1"]:
             assert f"{Prefix.FORWARD} {lineage} corr" in mc.adata.var.keys()
+
+
+class TestGPCCACopy:
+    def test_copy_simple(self, adata_gpcca_fwd: Tuple[AnnData, cr.tl.GPCCA]):
+        _, mc1 = adata_gpcca_fwd
+        mc2 = mc1.copy()
+
+        assert mc1 is not mc2
+        assert mc1.adata is not mc2.adata
+        assert mc1.kernel is not mc2.kernel
+
+    def test_copy_deep(self, adata_gpcca_fwd: Tuple[AnnData, cr.tl.GPCCA]):
+        _, mc1 = adata_gpcca_fwd
+        mc2 = mc1.copy()
+
+        assert mc1.irreducible == mc2.irreducible
+        np.testing.assert_array_equal(mc1.recurrent_classes, mc2.recurrent_classes)
+        np.testing.assert_array_equal(mc1.transient_classes, mc2.transient_classes)
+
+        for k, v in mc1.eigendecomposition.items():
+            if isinstance(v, np.ndarray):
+                assert_array_nan_equal(v, mc2.eigendecomposition[k])
+            else:
+                assert v == mc2.eigendecomposition[k]
+
+        assert mc1._gpcca is not mc2._gpcca
+
+        np.testing.assert_array_equal(mc1.schur_vectors, mc2.schur_vectors)
+        assert mc1.schur_vectors is not mc2.schur_vectors
+
+        np.testing.assert_array_equal(mc1._schur_matrix, mc2._schur_matrix)
+        assert mc1._schur_matrix is not mc2._schur_matrix
+
+        np.testing.assert_array_equal(mc1.coarse_T.values, mc2.coarse_T.values)
+        assert mc1.coarse_T is not mc2.coarse_T
+
+        np.testing.assert_array_equal(
+            mc1._coarse_init_dist.values, mc2._coarse_init_dist.values
+        )
+        assert mc1._coarse_init_dist is not mc2._coarse_init_dist
+
+        np.testing.assert_array_equal(
+            mc1.coarse_stationary_distribution.values,
+            mc2.coarse_stationary_distribution.values,
+        )
+        assert (
+            mc1.coarse_stationary_distribution is not mc2.coarse_stationary_distribution
+        )
+
+        assert_array_nan_equal(mc1.metastable_states, mc2.metastable_states)
+        assert mc1.metastable_states is not mc2.metastable_states
+
+        np.testing.assert_array_equal(mc1._meta_states_colors, mc2._meta_states_colors)
+        assert mc1._meta_states_colors is not mc2._meta_states_colors
+
+        np.testing.assert_array_equal(mc1._meta_lin_probs, mc2._meta_lin_probs)
+        assert mc1._meta_lin_probs is not mc2._meta_lin_probs
+
+        assert_array_nan_equal(mc1.main_states, mc2.main_states)
+        assert mc1.main_states is not mc2.main_states
+
+        np.testing.assert_array_equal(
+            mc1.main_states_probabilities, mc2.main_states_probabilities
+        )
+        assert mc1.main_states_probabilities is not mc2.main_states_probabilities
+
+        np.testing.assert_array_equal(
+            mc1.lineage_probabilities, mc2.lineage_probabilities
+        )
+        assert mc1.lineage_probabilities is not mc2.lineage_probabilities
+
+        np.testing.assert_array_equal(mc1.diff_potential, mc2.diff_potential)
+        assert mc1.diff_potential is not mc2.diff_potential
+
+        assert mc1._G2M_score == mc2._G2M_score
+        assert mc1._S_score == mc2._S_score
+        assert mc1._g2m_key == mc2._g2m_key
+        assert mc1._s_key == mc2._s_key
+        assert mc1._n_cells == mc2._n_cells
+        assert mc1._key_added == mc2._key_added
+        assert mc1._is_sparse == mc2._is_sparse
