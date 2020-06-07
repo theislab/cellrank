@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
+from anndata import AnnData
+
 import numpy as np
 import pandas as pd
 import pytest
-from pandas.api.types import is_categorical_dtype
-
-from anndata import AnnData
-
 import cellrank as cr
 from _helpers import assert_array_nan_equal
+from pandas.api.types import is_categorical_dtype
 from cellrank.tools._colors import _create_categorical_colors
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tools._constants import (
@@ -21,7 +20,7 @@ from cellrank.tools._constants import (
 )
 
 
-class TestMarkovChain:
+class TestCFLARE:
     def test_compute_partition(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
@@ -257,7 +256,7 @@ class TestMarkovChain:
         )
 
 
-class TestMarkovChainCopy:
+class TestCFLARECopy:
     def test_copy_simple(self, adata_cflare_fwd):
         _, mc1 = adata_cflare_fwd
         mc2 = mc1.copy()
