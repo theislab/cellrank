@@ -3,9 +3,6 @@ import os
 from typing import Tuple, Union
 from pathlib import Path
 
-import pytest
-from packaging import version
-
 import matplotlib.cm as cm
 from matplotlib.testing import setup
 from matplotlib.testing.compare import compare_images
@@ -13,8 +10,10 @@ from matplotlib.testing.compare import compare_images
 import scvelo as scv
 from anndata import AnnData
 
+import pytest
 import cellrank as cr
 from _helpers import create_model, resize_images_to_same_sizes
+from packaging import version
 from cellrank.tools import CFLARE
 
 setup()
@@ -55,22 +54,18 @@ del version, get_version
 
 
 def compare(
-    *,
-    kind: str = "adata",
-    backward: bool = False,
-    dirname: Union[str, Path] = None,
-    tol: int = TOL,
+    *, kind: str = "adata", dirname: Union[str, Path] = None, tol: int = TOL,
 ):
     def _compare_images(expected_path: Union[str, Path], actual_path: Union[str, Path]):
         resize_images_to_same_sizes(expected_path, actual_path)
         res = compare_images(expected_path, actual_path, tol=tol)
         assert res is None, res
 
-    def compare_fwd(
+    def compare_cflare_fwd(
         func,
     ):  # mustn't use functools.wraps - it think's the fact that `adata` is fixture
-        def decorator(self, adata_mc_fwd):
-            adata, mc = adata_mc_fwd
+        def decorator(self, adata_cflare_fwd):
+            adata, mc = adata_cflare_fwd
             fpath = f"{func.__name__.replace('test_', '')}.png"
             path = fpath[7:] if fpath.startswith("scvelo_") else fpath
             func(self, adata if kind == "adata" else mc, path)
@@ -83,12 +78,14 @@ def compare(
 
         return decorator
 
-    def compare_bwd(func):
-        def decorator(self, adata_mc_bwd):
-            adata, mc = adata_mc_bwd
+    def compare_gpcca_fwd(
+        func,
+    ):  # mustn't use functools.wraps - it think's the fact that `adata` is fixture
+        def decorator(self, adata_gpcca_fwd):
+            _, gpcca = adata_gpcca_fwd
             fpath = f"{func.__name__.replace('test_', '')}.png"
             path = fpath[7:] if fpath.startswith("scvelo_") else fpath
-            func(self, adata if kind == "adata" else mc, path)
+            func(self, gpcca, path)
 
             if dirname is not None:
                 for file in os.listdir(FIGS / dirname):
@@ -96,17 +93,21 @@ def compare(
             else:
                 _compare_images(GT_FIGS / fpath, FIGS / fpath)
 
+        assert (
+            kind == "gpcca"
+        ), "Function `compare_gpcca_fwd` only supports `kind='gpcca'`."
+
         return decorator
 
-    if kind not in ("adata", "mc"):
+    if kind not in ("adata", "cflare", "gpcca"):
         raise ValueError(
-            f"Invalid kind `{kind!r}`. Valid options are `'adata'`, `'mc'`."
+            f"Invalid kind `{kind!r}`. Valid options are `'adata'`, `'cflare'` and `'gpcca'`."
         )
 
-    if backward:
-        return compare_bwd
+    if kind == "gpcca":
+        return compare_gpcca_fwd
 
-    return compare_fwd
+    return compare_cflare_fwd  # here we hand `kind='adata'`
 
 
 class TestClusterFates:
@@ -730,58 +731,62 @@ class TestGraph:
         )
 
 
-class TestMarkovChain:
-    @compare(kind="mc")
+class TestCFLARE:
+    @compare(kind="cflare")
     def test_mc_eig(self, mc: CFLARE, fpath: Path):
         mc.plot_spectrum(dpi=DPI, save=fpath)
 
-    @compare(kind="mc")
+    @compare(kind="cflare")
     def test_mc_real_spectrum(self, mc: CFLARE, fpath: Path):
         mc.plot_spectrum(dpi=DPI, real_only=True, save=fpath)
 
-    @compare(kind="mc")
+    @compare(kind="cflare")
     def test_scvelo_eig_embedding_clusters(self, mc: CFLARE, fpath: Path):
         mc.plot_eig_embedding(cluster_key="clusters", dpi=DPI, save=str(fpath))
 
-    @compare(kind="mc")
+    @compare(kind="cflare")
     def test_scvelo_eig_embedding_left(self, mc: CFLARE, fpath: Path):
         mc.plot_eig_embedding(dpi=DPI, save=str(fpath))
 
-    @compare(kind="mc")
+    @compare(kind="cflare")
     def test_scvelo_eig_embedding_right(self, mc: CFLARE, fpath: Path):
         mc.plot_eig_embedding(left=False, dpi=DPI, save=str(fpath))
 
-    @compare(kind="mc")
+    @compare(kind="cflare")
     def test_scvelo_eig_embedding_use_2(self, mc: CFLARE, fpath: Path):
         mc.plot_eig_embedding(use=2, dpi=DPI, save=str(fpath))
 
-    @compare(kind="mc")
+    @compare(kind="cflare")
     def test_scvelo_meta_states(self, mc: CFLARE, fpath: Path):
         mc.plot_metastable_states(dpi=DPI, save=str(fpath))
 
-    @compare(kind="mc")
+    @compare(kind="cflare")
     def test_scvelo_meta_states(self, mc: CFLARE, fpath: Path):
         mc.plot_metastable_states(cluster_key="clusters", dpi=DPI, save=str(fpath))
 
-    @compare(kind="mc")
+    @compare(kind="cflare")
     def test_scvelo_lin_probs(self, mc: CFLARE, fpath: Path):
         mc.plot_lin_probs(dpi=DPI, save=str(fpath))
 
-    @compare(kind="mc")
+    @compare(kind="cflare")
     def test_scvelo_lin_probs_clusters(self, mc: CFLARE, fpath: Path):
         mc.plot_lin_probs(cluster_key="clusters", dpi=DPI, save=str(fpath))
 
-    @compare(kind="mc")
+    @compare(kind="cflare")
     def test_scvelo_lin_probs_cmap(self, mc: CFLARE, fpath: Path):
         mc.plot_lin_probs(cmap=cm.inferno, dpi=DPI, save=str(fpath))
 
-    @compare(kind="mc")
+    @compare(kind="cflare")
     def test_scvelo_lin_probs_lineages(self, mc: CFLARE, fpath: Path):
         mc.plot_lin_probs(lineages=["0"], dpi=DPI, save=str(fpath))
 
-    @compare(kind="mc")
+    @compare(kind="cflare")
     def test_scvelo_lin_probs_time(self, mc: CFLARE, fpath: Path):
         mc.plot_lin_probs(mode="time", dpi=DPI, save=str(fpath))
+
+
+class TestGPCCA:
+    pass
 
 
 class TestLineages:
