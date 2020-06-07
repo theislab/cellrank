@@ -45,15 +45,29 @@ def _assert_has_all_keys(adata: AnnData, direction: Direction):
 
 
 class TestHighLevelPipeline:
-    def test_fwd_pipeline(self, adata):
-        cr.tl.final_states(adata, cluster_key="clusters")
+    def test_fwd_pipeline_cflare(self, adata):
+        cr.tl.final_states(adata, estimator=cr.tl.CFLARE, cluster_key="clusters")
         cr.tl.lineages(adata)
         cr.pl.lineages(adata)
 
         _assert_has_all_keys(adata, Direction.FORWARD)
 
-    def test_bwd_pipeline(self, adata):
-        cr.tl.root_states(adata, cluster_key="clusters")
+    def test_bwd_pipeline_cflare(self, adata):
+        cr.tl.root_states(adata, estimator=cr.tl.CFLARE, cluster_key="clusters")
+        cr.tl.lineages(adata, final=False)
+        cr.pl.lineages(adata, final=False)
+
+        _assert_has_all_keys(adata, Direction.BACKWARD)
+
+    def test_fwd_pipeline_gpcca(self, adata):
+        cr.tl.final_states(adata, estimator=cr.tl.GPCCA, cluster_key="clusters")
+        cr.tl.lineages(adata)
+        cr.pl.lineages(adata)
+
+        _assert_has_all_keys(adata, Direction.FORWARD)
+
+    def test_bwd_pipeline_gpcca(self, adata):
+        cr.tl.root_states(adata, estimator=cr.tl.GPCCA, cluster_key="clusters")
         cr.tl.lineages(adata, final=False)
         cr.pl.lineages(adata, final=False)
 
@@ -61,7 +75,7 @@ class TestHighLevelPipeline:
 
 
 class TestLowLevelPipeline:
-    def test_fwd_pipelne(self, adata):
+    def test_fwd_pipelne_cflare(self, adata):
         vk = VelocityKernel(adata).compute_transition_matrix()
         ck = ConnectivityKernel(adata).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
@@ -86,7 +100,7 @@ class TestLowLevelPipeline:
 
         _assert_has_all_keys(adata, Direction.FORWARD)
 
-    def test_bwd_pipelne(self, adata):
+    def test_bwd_pipelne_cflare(self, adata):
         vk = VelocityKernel(adata, backward=True).compute_transition_matrix()
         ck = ConnectivityKernel(adata, backward=True).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
@@ -106,6 +120,60 @@ class TestLowLevelPipeline:
 
         mc_bwd.compute_lin_probs()
         mc_bwd.plot_lin_probs()
+
+        mc_bwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
+
+        _assert_has_all_keys(adata, Direction.BACKWARD)
+
+    def test_fwd_pipelne_gpcca(self, adata):
+        vk = VelocityKernel(adata).compute_transition_matrix()
+        ck = ConnectivityKernel(adata).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+
+        mc_fwd = cr.tl.GPCCA(final_kernel)
+
+        mc_fwd.compute_partition()
+
+        mc_fwd.compute_eig()
+        mc_fwd.plot_spectrum()
+        mc_fwd.plot_spectrum(real_only=True)
+
+        mc_fwd.compute_schur(5)
+        mc_fwd.plot_schur_embedding()
+
+        mc_fwd.compute_metastable_states(2)
+        mc_fwd.plot_metastable_states()
+        mc_fwd.plot_coarse_T(show_initial_dist=True, show_stationary_dist=True)
+        mc_fwd.plot_schur_matrix()
+
+        mc_fwd.set_main_states()
+        mc_fwd.plot_main_states()
+
+        mc_fwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
+
+        _assert_has_all_keys(adata, Direction.FORWARD)
+
+    def test_bwd_pipelne_gpcca(self, adata):
+        vk = VelocityKernel(adata, backward=True).compute_transition_matrix()
+        ck = ConnectivityKernel(adata, backward=True).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+
+        mc_bwd = cr.tl.GPCCA(final_kernel)
+
+        mc_bwd.compute_eig()
+        mc_bwd.plot_spectrum()
+        mc_bwd.plot_spectrum(real_only=True)
+
+        mc_bwd.compute_schur(5)
+        mc_bwd.plot_schur_embedding()
+
+        mc_bwd.compute_metastable_states(2)
+        mc_bwd.plot_metastable_states()
+        mc_bwd.plot_coarse_T(show_initial_dist=True, show_stationary_dist=True)
+        mc_bwd.plot_schur_matrix()
+
+        mc_bwd.set_main_states()
+        mc_bwd.plot_main_states()
 
         mc_bwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
 
