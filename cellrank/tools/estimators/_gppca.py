@@ -6,6 +6,11 @@ from types import MappingProxyType
 from typing import Any, Dict, List, Tuple, Union, Mapping, Iterable, Optional
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
+from scipy.stats import entropy
+from pandas.api.types import is_categorical_dtype
+
 import seaborn as sns
 import matplotlib as mpl
 import matplotlib.cm as cm
@@ -17,10 +22,6 @@ import scvelo as scv
 from scanpy import logging as logg
 from anndata import AnnData
 
-import numpy as np
-import pandas as pd
-from scipy.stats import entropy
-from pandas.api.types import is_categorical_dtype
 from cellrank.tools._utils import (
     save_fig,
     _eigengap,
@@ -315,21 +316,16 @@ class GPCCA(BaseEstimator):
         self,
         n_cells: int,
         cluster_key: Optional[str],
+        en_cutoff: Optional[float],
         p_thresh: float,
-        en_cutoff: float,
+        **kwargs,
     ) -> None:
-        if self.eigendecomposition is None:
-            raise RuntimeError(
-                "Compute eigendecomposition first as `.compute_eig()` or `.compute_schur()`."
-            )
         start = logg.info("Computing metastable states")
         logg.warning("For `n_states=1`, stationary distribution is computed")
 
-        k = self.eigendecomposition["params"]["k"]
-        which = self.eigendecomposition["params"]["which"]
-        alpha = self.eigendecomposition["params"]["alpha"]
-
-        self._compute_eig(k=k, which=which, alpha=alpha, only_evals=False)
+        if not kwargs:
+            logg.warning("Computing eigendecomposition with default values")
+        self._compute_eig(only_evals=False, **kwargs)
         stationary_dist = self.eigendecomposition["stationary_dist"]
 
         self._assign_metastable_states(
@@ -392,6 +388,7 @@ class GPCCA(BaseEstimator):
         cluster_key: str = None,
         en_cutoff: Optional[float] = 0.7,
         p_thresh: float = 1e-15,
+        **kwargs,
     ):
         """
         Compute the metastable states.
@@ -414,6 +411,8 @@ class GPCCA(BaseEstimator):
             start- or endpoints.
             If the test returns a positive statistic and a p-value smaller than :paramref:`p_thresh`,
             a warning will be issued.
+        kwargs
+            Keyword arguments for :meth:`compute_eig` if `n_states=1`.
 
         Returns
         -------
@@ -441,6 +440,7 @@ class GPCCA(BaseEstimator):
                 cluster_key=cluster_key,
                 p_thresh=p_thresh,
                 en_cutoff=en_cutoff,
+                **kwargs,
             )
             return
 
@@ -448,8 +448,7 @@ class GPCCA(BaseEstimator):
             if was_from_eigengap:
                 logg.warning(
                     f"Number of states ({n_states}) was automatically determined by `eigengap` "
-                    "but no Schur decomposition was found. Computing Schur decomposition "
-                    "with default parameters"
+                    "but no Schur decomposition was found. Computing with default parameters"
                 )
                 self.compute_schur(n_states + 1)
             else:
