@@ -3,12 +3,11 @@
 from copy import deepcopy
 from typing import Tuple
 
+from anndata import AnnData
+
 import numpy as np
 import pandas as pd
 import pytest
-
-from anndata import AnnData
-
 import cellrank as cr
 from _helpers import assert_array_nan_equal
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
@@ -376,7 +375,7 @@ class TestCGPCCA:
 
         mc = cr.tl.GPCCA(final_kernel)
 
-        mc.compute_gdpt()
+        mc.compute_gdpt(method="brandts")
 
         assert "gdpt_pseudotime" in mc.adata.obs
 
