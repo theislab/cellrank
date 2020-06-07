@@ -6,11 +6,6 @@ from types import MappingProxyType
 from typing import Any, Dict, List, Tuple, Union, Mapping, Iterable, Optional
 from pathlib import Path
 
-import numpy as np
-import pandas as pd
-from scipy.stats import entropy
-from pandas.api.types import is_categorical_dtype
-
 import seaborn as sns
 import matplotlib as mpl
 import matplotlib.cm as cm
@@ -22,6 +17,10 @@ import scvelo as scv
 from scanpy import logging as logg
 from anndata import AnnData
 
+import numpy as np
+import pandas as pd
+from scipy.stats import entropy
+from pandas.api.types import is_categorical_dtype
 from cellrank.tools._utils import (
     save_fig,
     _eigengap,
@@ -1364,7 +1363,9 @@ class GPCCA(BaseEstimator):
 
         fig.show()
 
-    def compute_gdpt(self, n_components: int = 10, key_added: str = "gdpt_pseudotime"):
+    def compute_gdpt(
+        self, n_components: int = 10, key_added: str = "gdpt_pseudotime", **kwargs
+    ):
         """
         Compute generalized DPT making use of the real Schur decomposition.
 
@@ -1374,6 +1375,8 @@ class GPCCA(BaseEstimator):
             Number of real Schur vectors to consider.
         key_added
             Key in :paramref:`adata` `.obs` where to save the pseudotime.
+        kwargs
+            Keyword arguments for :math:`compute_schur` if Schur decomposition if not found.
 
         Returns
         -------
@@ -1414,8 +1417,8 @@ class GPCCA(BaseEstimator):
             )
 
         if self._schur_vectors is None:
-            logg.warning("No Schur decomposition found. Computing using default values")
-            self.compute_schur(n_components)
+            logg.warning("No Schur decomposition found. Computing")
+            self.compute_schur(n_components, **kwargs)
         elif self._schur_matrix.shape[1] < n_components:
             logg.warning(
                 f"Requested `{n_components}` components, but only `{self._schur_matrix.shape[1]}` were found. "
