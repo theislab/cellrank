@@ -416,7 +416,7 @@ class UnaryKernelExpression(KernelExpression, ABC):
                         f"Expected variances' shape `{self._variances.shape}` to be equal to `{self._conn.shape}`."
                     )
             else:
-                logg.warning(f"Unable to load variances from `adata.uns[{var_key!r}]`")
+                logg.debug(f"Unable to load variances from `adata.uns[{var_key!r}]`")
         else:
             logg.debug("DEBUG: No variance key specified")
 
