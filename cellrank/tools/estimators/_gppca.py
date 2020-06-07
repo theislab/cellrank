@@ -499,8 +499,10 @@ class GPCCA(BaseEstimator):
         )
 
         self._lin_probs = None
-        self._schur_vectors = self._gpcca.schur_vectors
-        self._schur_matrix = self._gpcca.R  # gpcca.schur_matrix
+
+        # cache the results and make sure we don't overwrite
+        self._schur_vectors = self._gpcca.X
+        self._schur_matrix = self._gpcca.R
 
         names = self._meta_lin_probs.names
         self._coarse_T = pd.DataFrame(
@@ -808,7 +810,7 @@ class GPCCA(BaseEstimator):
         Returns
         -------
         None
-            Nothings, just updates the following fields:
+            Nothing, just updates the following fields:
 
                 - :paramref:`lineage_probabilities`
                 - :paramref:`diff_potential`
@@ -1051,7 +1053,7 @@ class GPCCA(BaseEstimator):
         Returns
         -------
         None
-            Nothings, just plots the main states.
+            Nothing, just plots the main states.
         """
 
         def cleanup():
