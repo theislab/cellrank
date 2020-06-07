@@ -416,7 +416,7 @@ class UnaryKernelExpression(KernelExpression, ABC):
                         f"Expected variances' shape `{self._variances.shape}` to be equal to `{self._conn.shape}`."
                     )
             else:
-                logg.warning(f"Unable to load variances from `adata.uns[{var_key!r}]`")
+                logg.debug(f"Unable to load variances from `adata.uns[{var_key!r}]`")
         else:
             logg.debug("DEBUG: No variance key specified")
 
@@ -908,6 +908,13 @@ class VelocityKernel(Kernel):
         """
 
         start = logg.info("Computing transition matrix based on velocity correlations")
+
+        if self._variances is None and scale_by_variances:
+            logg.warning(
+                "No velocity uncertainties found. Try re-running `scv.tl.velocity_graph()` and make sure you "
+                "set `compute_uncertainties=True`. Further, make sure that you pass the correct `var_key` "
+                "when you create the VelocityKernel object. "
+            )
 
         # get the correlations, handle backwards case
         if self._direction == Direction.BACKWARD:
