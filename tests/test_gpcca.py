@@ -13,6 +13,7 @@ from _helpers import assert_array_nan_equal
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tools._constants import (
     LinKey,
+    Prefix,
     MetaKey,
     StateKey,
     Direction,
@@ -300,6 +301,58 @@ class TestCGPCCA:
         with pytest.raises(ValueError):
             mc.compute_main_states(method="foobar")
 
+    def test_compute_main_states_no_cells(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.GPCCA(final_kernel)
+        mc.compute_schur(n_components=10)
+
+        mc.compute_metastable_states(n_states=2)
+        mc.compute_main_states(n_cells=None)
+
+        _check_main_states(mc, has_main_states=False)
+
+    def test_compute_main_states_eigengap(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.GPCCA(final_kernel)
+        mc.compute_schur(n_components=10)
+
+        mc.compute_metastable_states(n_states=2)
+        mc.compute_main_states(n_cells=5, method="eigengap")
+
+        _check_main_states(mc)
+
+    def test_compute_main_states_n_main_states(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.GPCCA(final_kernel)
+        mc.compute_schur(n_components=10)
+
+        mc.compute_metastable_states(n_states=2)
+        mc.compute_main_states(n_cells=5, method="top_n", n_main_states=1)
+
+        _check_main_states(mc)
+
+    def test_compute_main_states_min_self_prob(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.GPCCA(final_kernel)
+        mc.compute_schur(n_components=10)
+
+        mc.compute_metastable_states(n_states=2)
+        mc.compute_main_states(n_cells=5, method="min_self_prob", min_self_prob=0.5)
+
+        _check_main_states(mc)
+
     def test_compute_main_states(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
@@ -312,3 +365,113 @@ class TestCGPCCA:
         mc.compute_main_states(n_cells=5)
 
         _check_main_states(mc)
+
+    def test_compute_gdpt_no_schur(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.GPCCA(final_kernel)
+
+        mc.compute_gdpt()
+
+        assert "gdpt_pseudotime" in mc.adata.obs
+
+    def test_compute_gdpt_no_iroot(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.GPCCA(final_kernel)
+        mc.adata.uns.pop("iroot", None)
+
+        with pytest.raises(KeyError):
+            mc.compute_gdpt()
+
+    def test_compute_gdpt_invalid_n_comps(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.GPCCA(final_kernel)
+
+        with pytest.raises(ValueError):
+            mc.compute_gdpt(n_components=1)
+
+    def test_compute_gdpt_cellname_key_added(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.GPCCA(final_kernel)
+        mc.compute_schur()
+
+        mc.compute_gdpt(key_added="foobar")
+
+        assert "foobar" in mc.adata.obs
+
+    def test_compute_gdpt_cellname_iroot(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.GPCCA(final_kernel)
+        mc.adata.uns["iroot"] = mc.adata.obs_names[0]
+
+        mc.compute_gdpt()
+
+        assert "gdpt_pseudotime" in mc.adata.obs
+
+    def test_compute_lineage_drivers_no_lineages(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.GPCCA(final_kernel)
+        mc.compute_schur()
+        mc.compute_metastable_states(n_states=2)
+
+        with pytest.raises(RuntimeError):
+            mc.compute_lineage_drivers()
+
+    def test_compute_lineage_drivers_invalid_lineages(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.GPCCA(final_kernel)
+        mc.compute_schur()
+        mc.compute_metastable_states(n_states=2)
+        mc.set_main_states()
+
+        with pytest.raises(KeyError):
+            mc.compute_lineage_drivers(use_raw=False, lin_names=["foo"])
+
+    def test_compute_lineage_drivers_invalid_clusters(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.GPCCA(final_kernel)
+        mc.compute_schur()
+        mc.compute_metastable_states(n_states=2)
+        mc.set_main_states()
+
+        with pytest.raises(KeyError):
+            mc.compute_lineage_drivers(
+                use_raw=False, cluster_key="clusters", clusters=["foo"]
+            )
+
+    def test_compute_lineage_drivers_normal_run(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.GPCCA(final_kernel)
+        mc.compute_schur()
+        mc.compute_metastable_states(n_states=2)
+        mc.set_main_states()
+        mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
+
+        for lineage in ["0", "1"]:
+            assert f"{Prefix.FORWARD} {lineage} corr" in mc.adata.var.keys()
