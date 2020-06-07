@@ -9,8 +9,18 @@ import pytest
 from anndata import AnnData
 
 import cellrank as cr
+from _helpers import assert_array_nan_equal
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
-from cellrank.tools._constants import StateKey, Direction
+from cellrank.tools._constants import (
+    LinKey,
+    MetaKey,
+    StateKey,
+    Direction,
+    _dp,
+    _probs,
+    _colors,
+    _lin_names,
+)
 
 
 def _check_eigdecomposition(mc: cr.tl.GPCCA) -> None:
@@ -27,8 +37,18 @@ def _check_eigdecomposition(mc: cr.tl.GPCCA) -> None:
     assert f"eig_{Direction.FORWARD}" in mc.adata.uns.keys()
 
 
-def _check_compute_schur(mc: cr.tl.GPCCA) -> None:
+def _check_compute_meta(mc: cr.tl.GPCCA) -> None:
+    assert mc.lineage_probabilities is None
+    assert isinstance(mc._meta_lin_probs, cr.tl.Lineage)
+
     assert isinstance(mc.metastable_states, pd.Series)
+    assert_array_nan_equal(mc.metastable_states, mc.adata.obs[str(MetaKey.FORWARD)])
+
+    np.testing.assert_array_equal(mc._meta_states_colors, mc._meta_lin_probs.colors)
+    np.testing.assert_array_equal(
+        mc._meta_states_colors, mc.adata.uns[_colors(str(MetaKey.FORWARD))]
+    )
+
     if "stationary_dist" in mc.eigendecomposition:
         assert mc._coarse_init_dist is None
         assert mc._schur_matrix is None
@@ -43,6 +63,34 @@ def _check_compute_schur(mc: cr.tl.GPCCA) -> None:
         )
         assert isinstance(mc.coarse_T, pd.DataFrame)
         assert isinstance(mc.schur_vectors, np.ndarray)
+
+
+def _check_main_states(mc: cr.tl.GPCCA, has_main_states: bool = True):
+    if has_main_states:
+        assert isinstance(mc.main_states, pd.Series)
+        assert_array_nan_equal(mc.adata.obs[str(StateKey.FORWARD)], mc.main_states)
+        np.testing.assert_array_equal(
+            mc.adata.uns[_colors(StateKey.FORWARD)],
+            mc.lineage_probabilities[list(mc.main_states.cat.categories)].colors,
+        )
+
+    assert isinstance(mc.diff_potential, np.ndarray)
+    assert isinstance(mc.lineage_probabilities, cr.tl.Lineage)
+
+    np.testing.assert_array_equal(
+        mc.adata.obsm[str(LinKey.FORWARD)], mc.lineage_probabilities.X
+    )
+    np.testing.assert_array_equal(
+        mc.adata.uns[_lin_names(LinKey.FORWARD)], mc.lineage_probabilities.names
+    )
+    np.testing.assert_array_equal(
+        mc.adata.uns[_colors(LinKey.FORWARD)], mc.lineage_probabilities.colors
+    )
+
+    np.testing.assert_array_equal(mc.adata.obs[_dp(LinKey.FORWARD)], mc.diff_potential)
+    np.testing.assert_array_equal(
+        mc.adata.obs[_probs(StateKey.FORWARD)], mc._aggregated_state_probability
+    )
 
 
 class TestCGPCCA:
@@ -166,7 +214,7 @@ class TestCGPCCA:
         mc.compute_eig()
         mc.compute_metastable_states(n_states=None)
 
-        _check_compute_schur(mc)
+        _check_compute_meta(mc)
 
     def test_compute_metastable_states_schur(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
@@ -177,7 +225,7 @@ class TestCGPCCA:
         mc.compute_schur(n_components=10)
         mc.compute_metastable_states(n_states=2)
 
-        _check_compute_schur(mc)
+        _check_compute_meta(mc)
 
     def test_compute_metastable_invalid_cluster_key(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
@@ -188,3 +236,79 @@ class TestCGPCCA:
         mc.compute_schur(n_components=10)
         with pytest.raises(KeyError):
             mc.compute_metastable_states(n_states=2, cluster_key="foobar")
+
+    def test_compute_metastable_cache(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.GPCCA(final_kernel)
+        mc.compute_schur(n_components=10)
+
+        mc.compute_metastable_states(n_states=2)
+
+        assert mc.schur_vectors.shape[1] == 10
+        assert mc._schur_matrix.shape == (10, 10)
+
+    def test_set_main_states(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.GPCCA(final_kernel)
+        mc.compute_schur(n_components=10)
+
+        mc.compute_metastable_states(n_states=2, n_cells=5)
+        mc.set_main_states()
+
+        _check_main_states(mc)
+
+    def test_set_main_states_no_cells(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.GPCCA(final_kernel)
+        mc.compute_schur(n_components=10)
+
+        mc.compute_metastable_states(n_states=2, n_cells=None)
+        mc.set_main_states()
+
+        _check_main_states(mc, has_main_states=False)
+
+    def test_set_main_states_invalid_name(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.GPCCA(final_kernel)
+        mc.compute_schur(n_components=10)
+
+        mc.compute_metastable_states(n_states=2)
+        with pytest.raises(KeyError):
+            mc.set_main_states(names=["foobar"])
+
+    def test_compute_main_states_invalid_method(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.GPCCA(final_kernel)
+        mc.compute_schur(n_components=10)
+
+        mc.compute_metastable_states(n_states=2)
+        with pytest.raises(ValueError):
+            mc.compute_main_states(method="foobar")
+
+    def test_compute_main_states(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.GPCCA(final_kernel)
+        mc.compute_schur(n_components=10)
+
+        mc.compute_metastable_states(n_states=2)
+        mc.compute_main_states(n_cells=5)
+
+        _check_main_states(mc)
