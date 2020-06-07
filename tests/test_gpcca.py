@@ -2,17 +2,18 @@
 
 from copy import deepcopy
 
-from anndata import AnnData
-
 import numpy as np
 import pandas as pd
 import pytest
+
+from anndata import AnnData
+
 import cellrank as cr
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tools._constants import StateKey, Direction
 
 
-def _check_eigdecomposition(mc: cr.tl.GPCCA):
+def _check_eigdecomposition(mc: cr.tl.GPCCA) -> None:
     assert isinstance(mc.eigendecomposition, dict)
     assert set(mc.eigendecomposition.keys()) == {
         "D",
@@ -26,15 +27,22 @@ def _check_eigdecomposition(mc: cr.tl.GPCCA):
     assert f"eig_{Direction.FORWARD}" in mc.adata.uns.keys()
 
 
-def _check_compute_schur(mc: cr.tl.GPCCA):
+def _check_compute_schur(mc: cr.tl.GPCCA) -> None:
     assert isinstance(mc.metastable_states, pd.Series)
-    assert mc.coarse_stationary_distribution is None or isinstance(
-        mc.coarse_stationary_distribution, pd.Series
-    )
-    assert isinstance(mc._coarse_init_dist, pd.Series)
-    assert isinstance(mc.coarse_T, pd.DataFrame)
-    assert isinstance(mc._schur_matrix, np.ndarray)
-    assert isinstance(mc.schur_vectors, np.ndarray)
+    if "stationary_dist" in mc.eigendecomposition:
+        assert mc._coarse_init_dist is None
+        assert mc._schur_matrix is None
+        assert mc.coarse_stationary_distribution is None
+        assert mc.coarse_T is None
+        assert mc.schur_vectors is None
+    else:
+        assert isinstance(mc._coarse_init_dist, pd.Series)
+        assert isinstance(mc._schur_matrix, np.ndarray)
+        assert mc.coarse_stationary_distribution is None or isinstance(
+            mc.coarse_stationary_distribution, pd.Series
+        )
+        assert isinstance(mc.coarse_T, pd.DataFrame)
+        assert isinstance(mc.schur_vectors, np.ndarray)
 
 
 class TestCGPCCA:
@@ -147,10 +155,9 @@ class TestCGPCCA:
         final_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.GPCCA(final_kernel)
-        with pytest.raises(RuntimeError):
-            mc.compute_metastable_states(n_states=1)
+        mc.compute_metastable_states(n_states=1)
 
-    def test_compute_metastable_states_eig(self, adata_large: AnnData):
+    def test_compute_metastable_none_states(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
@@ -171,3 +178,13 @@ class TestCGPCCA:
         mc.compute_metastable_states(n_states=2)
 
         _check_compute_schur(mc)
+
+    def test_compute_metastable_invalid_cluster_key(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.GPCCA(final_kernel)
+        mc.compute_schur(n_components=10)
+        with pytest.raises(KeyError):
+            mc.compute_metastable_states(n_states=2, cluster_key="foobar")
