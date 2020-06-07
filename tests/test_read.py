@@ -2,12 +2,11 @@
 from typing import Tuple, Callable
 from pathlib import Path
 
-import numpy as np
-import pytest
-
 import scanpy as sc
 from anndata import AnnData
 
+import numpy as np
+import pytest
 import cellrank as cr
 from cellrank.tools._colors import _create_categorical_colors
 from cellrank.tools._lineage import Lineage
@@ -17,8 +16,8 @@ from cellrank.tools.estimators._cflare import CFLARE
 
 def test_fwd():
     def wrapper(func: Callable) -> Callable:
-        def decorator(self, adata_mc_fwd: Tuple[AnnData, CFLARE], tmpdir):
-            adata, _ = adata_mc_fwd
+        def decorator(self, adata_cflare_fwd: Tuple[AnnData, CFLARE], tmpdir):
+            adata, _ = adata_cflare_fwd
             adata = adata.copy()
 
             dirname = func.__name__

@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Generalized Perron Cluster Cluster Analysis (GPCCA) module."""
 
-import os
 from copy import copy, deepcopy
 from types import MappingProxyType
 from typing import Any, Dict, List, Tuple, Union, Mapping, Iterable, Optional
@@ -88,7 +87,6 @@ class GPCCA(BaseEstimator):
         self._coarse_T = None
         self._coarse_init_dist = None
         self._coarse_stat_dist = None
-        self._gppca_overlap = None
 
         self._meta_states = None
         self._meta_states_colors = None
@@ -101,7 +99,7 @@ class GPCCA(BaseEstimator):
     def compute_eig(
         self,
         k: int = 20,
-        which: str = "LR",
+        which: str = "LM",
         alpha: float = 1,
         ncv: Optional[int] = None,
     ) -> None:
@@ -313,6 +311,72 @@ class GPCCA(BaseEstimator):
         self._schur_vectors = self._gpcca.X
         self._schur_matrix = self._gpcca.R
 
+    def _compute_meta_states_1_state(
+        self,
+        n_cells: int,
+        cluster_key: Optional[str],
+        en_cutoff: Optional[float],
+        p_thresh: float,
+        **kwargs,
+    ) -> None:
+        start = logg.info("Computing metastable states")
+        logg.warning("For `n_states=1`, stationary distribution is computed")
+
+        if not kwargs:
+            logg.warning("Computing eigendecomposition with default values")
+        self._compute_eig(only_evals=False, **kwargs)
+        stationary_dist = self.eigendecomposition["stationary_dist"]
+
+        self._assign_metastable_states(
+            stationary_dist[:, None],
+            np.zeros_like(stationary_dist),
+            n_cells,
+            cluster_key=cluster_key,
+            p_thresh=p_thresh,
+            en_cutoff=en_cutoff,
+        )
+
+        (
+            self._lin_probs,
+            self._schur_vectors,
+            self._coarse_T,
+            self._coarse_init_dist,
+            self._coarse_stat_dist,
+            self._schur_matrix,
+        ) = [None] * 6
+
+        logg.info("Adding `.metastable_states`\n    Finish", time=start)
+
+    def _get_n_states_from_minchi(
+        self, n_states: Union[Tuple[int, int], List[int], Dict[str, int]]
+    ) -> int:
+        if not isinstance(n_states, (dict, tuple, list)):
+            raise TypeError(
+                f"Expected `n_states` to be either `dict`, `tuple` or a `list`, "
+                f"found `{type(n_states).__name__}`."
+            )
+        if len(n_states) != 2:
+            raise ValueError(
+                f"Expected `n_states` to be of size `2`, found `{len(n_states)}`."
+            )
+
+        minn, maxx = (
+            (n_states["min"], n_states["max"])
+            if isinstance(n_states, dict)
+            else n_states
+        )
+        if minn <= 1:
+            raise ValueError(f"Minimum value must be > 1, found `{minn}`.")
+        elif minn == 2:
+            logg.warning(
+                "In most cases, 2 clusters will always be optimal. "
+                "If you really expect 2 clusters, use `n_states=2`.\nSetting the minimum to 3"
+            )
+            minn = 3
+
+        logg.debug(f"DEBUG: Calculating minChi within interval [{minn}, {maxx}]")
+        return int(np.arange(minn, maxx)[np.argmax(self._gpcca.minChi(minn, maxx))])
+
     def compute_metastable_states(
         self,
         n_states: Optional[
@@ -323,6 +387,7 @@ class GPCCA(BaseEstimator):
         cluster_key: str = None,
         en_cutoff: Optional[float] = 0.7,
         p_thresh: float = 1e-15,
+        **kwargs,
     ):
         """
         Compute the metastable states.
@@ -345,11 +410,13 @@ class GPCCA(BaseEstimator):
             start- or endpoints.
             If the test returns a positive statistic and a p-value smaller than :paramref:`p_thresh`,
             a warning will be issued.
+        kwargs
+            Keyword arguments for :meth:`compute_eig` if `n_states=1`.
 
         Returns
         -------
         None
-            Nothings, but updates the following fields:
+            Nothing, but updates the following fields:
 
                 - :paramref:`schur_vectors`
                 - :paramref:`coarse_T`
@@ -367,149 +434,98 @@ class GPCCA(BaseEstimator):
             logg.info(f"Using `{n_states}` states based on eigengap")
 
         if n_states == 1:
-            start = logg.info("Computing metastable states")
-            logg.warning("For `n_states=1`, stationary distribution is computed")
-
-            k = self.eigendecomposition["params"]["k"]
-            which = self.eigendecomposition["params"]["which"]
-            alpha = self.eigendecomposition["params"]["alpha"]
-
-            self._compute_eig(k=k, which=which, alpha=alpha, only_evals=False)
-            stationary_dist = self.eigendecomposition["stationary_dist"]
-
-            self._assign_metastable_states(
-                stationary_dist[:, None],
-                np.zeros_like(stationary_dist),
-                n_cells,
+            self._compute_meta_states_1_state(
+                n_cells=n_cells,
                 cluster_key=cluster_key,
                 p_thresh=p_thresh,
                 en_cutoff=en_cutoff,
+                **kwargs,
             )
+            return
 
-            (
-                self._lin_probs,
-                self._schur_vectors,
-                self._coarse_T,
-                self._coarse_init_dist,
-                self._coarse_stat_dist,
-                self._schur_matrix,
-            ) = [None] * 6
-
-            logg.info("Adding `.metastable_states`\n    Finish", time=start)
-        else:
-            if self._gpcca is None:
-                if was_from_eigengap:
-                    logg.warning(
-                        f"Number of states ({n_states}) was automatically determined by `eigengap` "
-                        "but no Schur decomposition was found. Computing Schur decomposition "
-                        "with default parameters"
-                    )
-                    self.compute_schur(n_states + 1)
-                else:
-                    raise RuntimeError(
-                        "Compute Schur decomposition first as `.compute_schur()`."
-                    )
-
-            if use_min_chi:
-                if not isinstance(n_states, (dict, tuple, list)):
-                    raise TypeError(
-                        f"Expected `n_states` to be either `dict`, `tuple` or a `list`, "
-                        f"found `{type(n_states).__name__}`."
-                    )
-                if len(n_states) != 2:
-                    raise ValueError(
-                        f"Expected `n_states` to be of size `2`, found `{len(n_states)}`."
-                    )
-
-                minn, maxx = (
-                    (n_states["min"], n_states["max"])
-                    if isinstance(n_states, dict)
-                    else n_states
-                )
-                if minn <= 1:
-                    raise ValueError(f"Minimum value must be > 1, found `{minn}`.")
-                elif minn == 2:
-                    logg.warning(
-                        "In most cases, 2 clusters will always be optimal. "
-                        "If you really expect 2 clusters, use `n_states=2`.\nSetting the minimum to 3"
-                    )
-                    minn = 3
-
-                logg.debug(
-                    f"DEBUG: Calculating minChi within interval [{minn}, {maxx}]"
-                )
-                n_states = int(
-                    np.arange(minn, maxx)[np.argmax(self._gpcca.minChi(minn, maxx))]
-                )
-            elif not isinstance(n_states, (int, type(None))):
-                raise ValueError(
-                    f"Expected `n_states` to be an integer when `use_min_chi=False`, found `{type(n_states).__name__}`."
-                )
-
-            if self._gpcca.X.shape[1] < n_states:
+        if self._gpcca is None:
+            if was_from_eigengap:
                 logg.warning(
-                    f"Requested more metastable states ({n_states}) than available "
-                    f"Schur vectors ({self._gpcca.X.shape[1]}). "
-                    f"Recomputing the decomposition"
+                    f"Number of states ({n_states}) was automatically determined by `eigengap` "
+                    "but no Schur decomposition was found. Computing with default parameters"
                 )
-
-            start = logg.info("Computing metastable states")
-            try:
-                self._gpcca = self._gpcca.optimize(m=n_states)
-            except ValueError as e:
-                if n_states != self._schur_vectors.shape[1]:
-                    raise e
-                logg.warning(
-                    f"Unable to perform the optimization using `{self._schur_vectors.shape[1]}` Schur vectors. "
-                    f"Recomputing the decomposition"
-                )
-                self.compute_schur(
-                    n_states + 1,
-                    initial_distribution=self._gpcca.eta,
-                    method=self._gpcca.method,
-                    which=self._gpcca.z,
-                    alpha=self.eigendecomposition["params"]["alpha"],
-                )
-                self._gpcca = self._gpcca.optimize(m=n_states)
-
-            self._assign_metastable_states(
-                self._gpcca.memberships,
-                self._gpcca.metastable_assignment,
-                n_cells,
-                cluster_key=cluster_key,
-                p_thresh=p_thresh,
-                en_cutoff=en_cutoff,
-            )
-
-            self._lin_probs = None
-            self._schur_vectors = self._gpcca.schur_vectors
-            self._schur_matrix = self._gpcca.R  # gpcca.schur_matrix
-
-            names = self._meta_lin_probs.names
-            self._coarse_T = pd.DataFrame(
-                self._gpcca.coarse_grained_transition_matrix,
-                index=names,
-                columns=names,
-            )
-            self._coarse_init_dist = pd.Series(
-                self._gpcca.coarse_grained_input_distribution, index=names
-            )
-            # careful here, in case computing the stat. dist failed
-            if self._gpcca.coarse_grained_stationary_probability is not None:
-                self._coarse_stat_dist = pd.Series(
-                    self._gpcca.coarse_grained_stationary_probability, index=names,
-                )
+                self.compute_schur(n_states + 1)
             else:
-                logg.warning("No stationary distribution found in GPCCA object")
+                raise RuntimeError(
+                    "Compute Schur decomposition first as `.compute_schur()`."
+                )
 
-            logg.info(
-                "Adding `.schur_vectors`\n"
-                "       `.metastable_states`\n"
-                "       `.coarse_T`\n"
-                "       `.coarse_stationary_distribution`\n"
-                "    Finish",
-                time=start,
+        if use_min_chi:
+            n_states = self._get_n_states_from_minchi(n_states)
+        elif not isinstance(n_states, int):
+            raise ValueError(
+                f"Expected `n_states` to be an integer when `use_min_chi=False`, found `{type(n_states).__name__}`."
             )
+
+        if self._gpcca.X.shape[1] < n_states:
+            logg.warning(
+                f"Requested more metastable states ({n_states}) than available "
+                f"Schur vectors ({self._gpcca.X.shape[1]}). "
+                f"Recomputing the decomposition"
+            )
+
+        start = logg.info("Computing metastable states")
+        try:
+            self._gpcca = self._gpcca.optimize(m=n_states)
+        except ValueError as e:
+            if n_states != self._schur_vectors.shape[1]:
+                raise e
+            logg.warning(
+                f"Unable to perform the optimization using `{self._schur_vectors.shape[1]}` Schur vectors. "
+                f"Recomputing the decomposition"
+            )
+            self.compute_schur(
+                n_states + 1,
+                initial_distribution=self._gpcca.eta,
+                method=self._gpcca.method,
+                which=self._gpcca.z,
+                alpha=self.eigendecomposition["params"]["alpha"],
+            )
+            self._gpcca = self._gpcca.optimize(m=n_states)
+
+        self._assign_metastable_states(
+            self._gpcca.memberships,
+            self._gpcca.metastable_assignment,
+            n_cells,
+            cluster_key=cluster_key,
+            p_thresh=p_thresh,
+            en_cutoff=en_cutoff,
+        )
+
+        self._lin_probs = None
+
+        # cache the results and make sure we don't overwrite
+        self._schur_vectors = self._gpcca.X
+        self._schur_matrix = self._gpcca.R
+
+        names = self._meta_lin_probs.names
+        self._coarse_T = pd.DataFrame(
+            self._gpcca.coarse_grained_transition_matrix, index=names, columns=names,
+        )
+        self._coarse_init_dist = pd.Series(
+            self._gpcca.coarse_grained_input_distribution, index=names
+        )
+        # careful here, in case computing the stat. dist failed
+        if self._gpcca.coarse_grained_stationary_probability is not None:
+            self._coarse_stat_dist = pd.Series(
+                self._gpcca.coarse_grained_stationary_probability, index=names,
+            )
+        else:
+            logg.warning("No stationary distribution found in GPCCA object")
+
+        logg.info(
+            "Adding `.schur_vectors`\n"
+            "       `.metastable_states`\n"
+            "       `.coarse_T`\n"
+            "       `.coarse_stationary_distribution`\n"
+            "    Finish",
+            time=start,
+        )
 
     def plot_metastable_states(
         self,
@@ -695,11 +711,12 @@ class GPCCA(BaseEstimator):
         names
             Names of the main states. Multiple states can be combined using `','`, such as `['Alpha, Beta', 'Epsilon']`.
         n_cells
-            Number of most likely cells from each main state to select.
+            Number of most likely cells from each main state to select. If `None`, on main states will be selected,
+            only the lineage probabilities may be redistributed.
         redistribute
             Whether to redistribute the probability mass of unselected lineages or create a `'rest'` lineage.
         kwargs
-            Keyword arguments for :meth:`cellrank.tl.Lineage.reduce` when redistributing the mass.
+            Keyword arguments for :meth:`cellrank.tl.Lineage.reduce` when redistributing the probability mass.
 
         Returns
         -------
@@ -741,13 +758,17 @@ class GPCCA(BaseEstimator):
         aggregated_state_probability = self._lin_probs[
             [n for n in self._lin_probs.names if n != "rest"]
         ].X.max(axis=1)
-        aggregated_state_probability /= np.max(aggregated_state_probability)
+        self._main_states_probabilities = aggregated_state_probability / np.max(
+            aggregated_state_probability
+        )
 
         # write to adata
         self.adata.obs[_dp(self._lin_key)] = self._dp
-        self.adata.obs[_probs(self._rc_key)] = aggregated_state_probability
+        self.adata.obs[_probs(self._rc_key)] = self._main_states_probabilities
+
         self.adata.uns[_lin_names(self._lin_key)] = self._lin_probs.names
         self.adata.uns[_colors(self._lin_key)] = self._lin_probs.colors
+
         self.adata.obsm[self._lin_key] = self._lin_probs
 
         logg.info("Adding `.lineage_probabilities\n       `.diff_potential`")
@@ -793,7 +814,7 @@ class GPCCA(BaseEstimator):
         Returns
         -------
         None
-            Nothings, just updates the following fields:
+            Nothing, just updates the following fields:
 
                 - :paramref:`lineage_probabilities`
                 - :paramref:`diff_potential`
@@ -1036,7 +1057,7 @@ class GPCCA(BaseEstimator):
         Returns
         -------
         None
-            Nothings, just plots the main states.
+            Nothing, just plots the main states.
         """
 
         def cleanup():
@@ -1124,7 +1145,7 @@ class GPCCA(BaseEstimator):
         title: Optional[str] = None,
         figsize: Tuple[float, float] = (8, 8),
         dpi: float = 80,
-        save: Optional[Union[os.PathLike, str]] = None,
+        save: Optional[Union[Path, str]] = None,
         text_kwargs: Mapping[str, Any] = MappingProxyType({}),
         **kwargs,
     ) -> None:
@@ -1162,7 +1183,7 @@ class GPCCA(BaseEstimator):
         Returns
         -------
         None
-            Nothings just plots and optionally saves the plot.
+            Nothing, just plots and optionally saves the plot.
         """
 
         def stylize_dist(
@@ -1342,7 +1363,9 @@ class GPCCA(BaseEstimator):
 
         fig.show()
 
-    def compute_gdpt(self, n_components: int = 10):
+    def compute_gdpt(
+        self, n_components: int = 10, key_added: str = "gdpt_pseudotime", **kwargs
+    ):
         """
         Compute generalized DPT making use of the real Schur decomposition.
 
@@ -1350,14 +1373,18 @@ class GPCCA(BaseEstimator):
         ------
         n_components
             Number of real Schur vectors to consider.
+        key_added
+            Key in :paramref:`adata` `.obs` where to save the pseudotime.
+        kwargs
+            Keyword arguments for :math:`compute_schur` if Schur decomposition if not found.
 
         Returns
         -------
         None
-            Nothing, just updates :paramref:`adata` `.obs['gdpt_pseudotime']` with the computed pseudotime.
+            Nothing, just updates :paramref:`adata` .obs[:paramref:`key_added`] with the computed pseudotime.
         """
 
-        def _get_dpt_row(e_vals, e_vecs, i):
+        def _get_dpt_row(e_vals: np.ndarray, e_vecs: np.ndarray, i: int):
             row = sum(
                 (
                     np.abs(e_vals[eval_ix])
@@ -1378,9 +1405,9 @@ class GPCCA(BaseEstimator):
         iroot = self.adata.uns["iroot"]
         if isinstance(iroot, str):
             iroot = np.where(self.adata.obs_names == iroot)[0]
-            if not iroot:
+            if not len(iroot):
                 raise ValueError(
-                    f"Unable to find cell with name `{self.adata.uns['iroot']!r}`."
+                    f"Unable to find cell with name `{self.adata.uns['iroot']!r}` in `adata.obs_names`."
                 )
             iroot = iroot[0]
 
@@ -1390,8 +1417,8 @@ class GPCCA(BaseEstimator):
             )
 
         if self._schur_vectors is None:
-            logg.warning("No Schur decomposition found. Computing using default values")
-            self.compute_schur(n_components)
+            logg.warning("No Schur decomposition found. Computing")
+            self.compute_schur(n_components, **kwargs)
         elif self._schur_matrix.shape[1] < n_components:
             logg.warning(
                 f"Requested `{n_components}` components, but only `{self._schur_matrix.shape[1]}` were found. "
@@ -1414,9 +1441,9 @@ class GPCCA(BaseEstimator):
 
         D = _get_dpt_row(eigenvalues, Q, i=iroot)
         pseudotime = D / np.max(D[np.isfinite(D)])
-        self.adata.obs["gdpt_pseudotime"] = pseudotime
+        self.adata.obs[key_added] = pseudotime
 
-        logg.info('Adding `"gdpt_pseudotime"` to `adata.obs`\n    Finish', time=start)
+        logg.info(f"Adding `{key_added!r}` to `adata.obs`\n    Finish", time=start)
 
     def _get_restriction_to_main(self) -> Tuple[pd.Series, np.ndarray]:
         """
@@ -1461,16 +1488,18 @@ class GPCCA(BaseEstimator):
         g._lin_probs = copy(self.lineage_probabilities)
         g._dp = copy(self.diff_potential)
 
-        g._schur_vectors = copy(self.schur_vectors)
-        g._coarse_T = copy(self.coarse_T)
+        g._gpcca = deepcopy(self._gpcca)
 
-        self._gppca_overlap = deepcopy(self._gppca_overlap)
+        g._schur_vectors = copy(self.schur_vectors)
+        g._schur_matrix = copy(self._schur_matrix)
+        g._coarse_T = copy(self.coarse_T)
 
         g._meta_states = copy(self._meta_states)
         g._meta_states_colors = copy(self._meta_states_colors)
         g._meta_lin_probs = copy(self._meta_lin_probs)
 
         g._main_states = copy(self.main_states)
+        g._main_states_probabilities = copy(self._main_states_probabilities)
 
         g._n_cells = self._n_cells
 

@@ -142,7 +142,7 @@ class KernelExpression(ABC):
         """
         pass
 
-    def write_to_adata(self, key_added: Optional[str] = None):
+    def write_to_adata(self, key_added: Optional[str] = None) -> None:
         """
         Write the parameters and transition matrix to the underlying adata object.
 
