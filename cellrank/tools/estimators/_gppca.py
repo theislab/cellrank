@@ -768,8 +768,10 @@ class GPCCA(BaseEstimator):
         # write to adata
         self.adata.obs[_dp(self._lin_key)] = self._dp
         self.adata.obs[_probs(self._rc_key)] = self._aggregated_state_probability
+
         self.adata.uns[_lin_names(self._lin_key)] = self._lin_probs.names
         self.adata.uns[_colors(self._lin_key)] = self._lin_probs.colors
+
         self.adata.obsm[self._lin_key] = self._lin_probs
 
         logg.info("Adding `.lineage_probabilities\n       `.diff_potential`")
@@ -1364,7 +1366,7 @@ class GPCCA(BaseEstimator):
 
         fig.show()
 
-    def compute_gdpt(self, n_components: int = 10):
+    def compute_gdpt(self, n_components: int = 10, key_added: str = "gdpt_pseudotime"):
         """
         Compute generalized DPT making use of the real Schur decomposition.
 
@@ -1372,14 +1374,16 @@ class GPCCA(BaseEstimator):
         ------
         n_components
             Number of real Schur vectors to consider.
+        key_added
+            Key in :paramref:`adata` `.obs` where to save the pseudotime.
 
         Returns
         -------
         None
-            Nothing, just updates :paramref:`adata` `.obs['gdpt_pseudotime']` with the computed pseudotime.
+            Nothing, just updates :paramref:`adata` .obs[:paramref:`key_added`] with the computed pseudotime.
         """
 
-        def _get_dpt_row(e_vals, e_vecs, i):
+        def _get_dpt_row(e_vals: np.ndarray, e_vecs: np.ndarray, i: int):
             row = sum(
                 (
                     np.abs(e_vals[eval_ix])
@@ -1400,9 +1404,9 @@ class GPCCA(BaseEstimator):
         iroot = self.adata.uns["iroot"]
         if isinstance(iroot, str):
             iroot = np.where(self.adata.obs_names == iroot)[0]
-            if not iroot:
+            if not len(iroot):
                 raise ValueError(
-                    f"Unable to find cell with name `{self.adata.uns['iroot']!r}`."
+                    f"Unable to find cell with name `{self.adata.uns['iroot']!r}` in `adata.obs_names`."
                 )
             iroot = iroot[0]
 
@@ -1436,9 +1440,9 @@ class GPCCA(BaseEstimator):
 
         D = _get_dpt_row(eigenvalues, Q, i=iroot)
         pseudotime = D / np.max(D[np.isfinite(D)])
-        self.adata.obs["gdpt_pseudotime"] = pseudotime
+        self.adata.obs[key_added] = pseudotime
 
-        logg.info('Adding `"gdpt_pseudotime"` to `adata.obs`\n    Finish', time=start)
+        logg.info(f"Adding `{key_added!r}` to `adata.obs`\n    Finish", time=start)
 
     def _get_restriction_to_main(self) -> Tuple[pd.Series, np.ndarray]:
         """
