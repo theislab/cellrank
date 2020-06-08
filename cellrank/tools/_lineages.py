@@ -129,11 +129,11 @@ def lineages(
     elif isinstance(mc, GPCCA):
         if n_lineages is None or n_lineages == 1:
             mc.compute_eig()
-        else:
-            mc.compute_schur(n_lineages + 1, method=method)
+            if n_lineages is None:
+                n_lineages = mc.eigendecomposition["eigengap"]
 
-        if n_lineages is None:
-            n_lineages = mc.eigendecomposition["eigengap"]
+        if n_lineages > 1:
+            mc.compute_schur(n_lineages + 1, method=method)
 
         try:
             mc.compute_metastable_states(
@@ -144,9 +144,8 @@ def lineages(
                 f"Computing {n_lineages} metastable states cuts through a block of complex conjugates. "
                 f"Increasing `n_lineages` to {n_lineages + 1}"
             )
-            n_lineages += 1
             mc.compute_metastable_states(
-                n_states=n_lineages, cluster_key=cluster_key, **kwargs
+                n_states=n_lineages + 1, cluster_key=cluster_key, **kwargs
             )
         mc.set_main_states(names=keys)
     else:
