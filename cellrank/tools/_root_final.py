@@ -114,11 +114,10 @@ def _root_final(
     elif isinstance(mc, GPCCA):
         if n_states is None or n_states == 1:
             mc.compute_eig()
-        else:
+            if n_states is None:
+                n_states = mc.eigendecomposition["eigengap"]
+        if n_states > 1:
             mc.compute_schur(n_states + 1, method=method)
-
-        if n_states is None:
-            n_states = mc.eigendecomposition["eigengap"]
 
         try:
             mc.compute_metastable_states(
@@ -127,11 +126,10 @@ def _root_final(
         except ValueError:
             logg.warning(
                 f"Computing {n_states} metastable states cuts through a block of complex conjugates. "
-                f"Increasing `n_states` to {n_states+1}"
+                f"Increasing `n_states` to {n_states + 1}"
             )
-            n_states += 1
             mc.compute_metastable_states(
-                n_states=n_states, cluster_key=cluster_key, **kwargs
+                n_states=n_states + 1, cluster_key=cluster_key, **kwargs
             )
         mc.set_main_states()  # write to adata
 
