@@ -132,6 +132,9 @@ def lineages(
         else:
             mc.compute_schur(n_lineages + 1, method=method)
 
+        if n_lineages is None:
+            n_lineages = mc.eigendecomposition["eigengap"]
+
         try:
             mc.compute_metastable_states(
                 n_states=n_lineages, cluster_key=cluster_key, **kwargs
