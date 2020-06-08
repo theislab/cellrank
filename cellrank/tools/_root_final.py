@@ -117,6 +117,9 @@ def _root_final(
         else:
             mc.compute_schur(n_states + 1, method=method)
 
+        if n_states is None:
+            n_states = mc.eigendecomposition["eigengap"]
+
         try:
             mc.compute_metastable_states(
                 n_states=n_states, cluster_key=cluster_key, **kwargs
