@@ -945,8 +945,12 @@ class GPCCA(BaseEstimator):
             else metastable_states.droplevel(0)
         )
 
-        metastable_states = metastable_states.sort_index().astype("category")
-        metastable_states.index = self.adata.obs.index
+        metastable_states = metastable_states.astype("category")
+        metastable_states = metastable_states[self.adata.obs_names]
+
+        assert np.all(
+            metastable_states.index == self.adata.obs_names
+        ), "Index mismatch."
 
         # postpone warning after we optionally match the names using `cluster_key`
         if warn:
