@@ -883,7 +883,11 @@ class GPCCA(BaseEstimator):
         warn: bool = True,
     ) -> Tuple[pd.Series, Union[List[str], List[int]]]:
         def set_categories(group):
+            if not len(group):
+                return group
+
             category = group["assignment"].iloc[0]
+            seen_cats.add(category)
 
             if n_cells > len(group):
                 groups_with_insufficient_cells.append(category)
@@ -897,6 +901,7 @@ class GPCCA(BaseEstimator):
 
             return res
 
+        seen_cats = set()  # if there's some empty category
         groups_with_insufficient_cells = []
 
         if meta_assignment is None:
@@ -933,15 +938,19 @@ class GPCCA(BaseEstimator):
         meta_assignment["assignment"] = (
             meta_assignment["assignment"].astype(str).astype("category")
         )
+        meta_assignment["assignment"].cat.set_categories(["0", "1", "2"], inplace=True)
 
         metastable_states = meta_assignment.groupby("assignment", sort=False).apply(
             set_categories
         )
+        groups_with_insufficient_cells.extend(
+            set(orig_cats) - seen_cats
+        )  # add empty cats
 
         # when there's only 1 state, we get back strange DataFrame
         metastable_states = (
             metastable_states.T.iloc[:, 0]
-            if memberships.shape[1] == 1
+            if isinstance(metastable_states, pd.DataFrame)
             else metastable_states.droplevel(0)
         )
 
