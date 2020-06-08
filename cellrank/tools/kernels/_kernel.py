@@ -6,12 +6,11 @@ from copy import copy
 from typing import Any, Dict, List, Type, Tuple, Union, Callable, Iterable, Optional
 from functools import wraps, reduce
 
-import numpy as np
-from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix
-
 from scanpy import logging as logg
 from anndata import AnnData
 
+import numpy as np
+from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix
 from cellrank.tools._utils import (
     bias_knn,
     _normalize,
@@ -853,6 +852,14 @@ class VelocityKernel(Kernel):
             logg.debug(
                 "Sparsity pattern in the velocity graph is symmetric", time=start
             )
+
+        # recurse neighbors and the mode_neighbors can have an effect on the effective number of neighbors considered
+        n_neighbors_effective = np.median(
+            np.array((velo_corr_pos + velo_corr_neg != 0).sum(1)).flatten()
+        )
+        logg.debug(
+            f"The median effective number of neighbors for the velocity graph is {n_neighbors_effective}"
+        )
 
         use_negative_cosines = kwargs.pop("use_negative_cosines", True)
         if use_negative_cosines:
