@@ -130,7 +130,7 @@ def lineages(
         if n_lineages is None or n_lineages == 1:
             mc.compute_eig()
             if n_lineages is None:
-                n_lineages = mc.eigendecomposition["eigengap"]
+                n_lineages = mc.eigendecomposition["eigengap"] + 1
 
         if n_lineages > 1:
             mc.compute_schur(n_lineages + 1, method=method)
