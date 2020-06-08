@@ -115,7 +115,7 @@ def _root_final(
         if n_states is None or n_states == 1:
             mc.compute_eig()
             if n_states is None:
-                n_states = mc.eigendecomposition["eigengap"]
+                n_states = mc.eigendecomposition["eigengap"] + 1
         if n_states > 1:
             mc.compute_schur(n_states + 1, method=method)
 
