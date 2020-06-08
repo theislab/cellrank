@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 
-from pandas.api.types import is_categorical_dtype
-
 from anndata import AnnData
 
 import cellrank as cr
+from pandas.api.types import is_categorical_dtype
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tools._constants import (
     LinKey,
@@ -47,7 +46,11 @@ def _assert_has_all_keys(adata: AnnData, direction: Direction):
 class TestHighLevelPipeline:
     def test_fwd_pipeline_cflare(self, adata):
         cr.tl.final_states(
-            adata, estimator=cr.tl.CFLARE, cluster_key="clusters", method="brandts"
+            adata,
+            estimator=cr.tl.CFLARE,
+            cluster_key="clusters",
+            method="brandts",
+            show_plots=True,
         )
         cr.tl.lineages(adata, method="brandts")
         cr.pl.lineages(adata)
@@ -55,7 +58,13 @@ class TestHighLevelPipeline:
         _assert_has_all_keys(adata, Direction.FORWARD)
 
     def test_bwd_pipeline_cflare(self, adata):
-        cr.tl.root_states(adata, estimator=cr.tl.CFLARE, cluster_key="clusters")
+        cr.tl.root_states(
+            adata,
+            estimator=cr.tl.CFLARE,
+            cluster_key="clusters",
+            method="brandts",
+            show_plots=True,
+        )
         cr.tl.lineages(adata, final=False)
         cr.pl.lineages(adata, final=False)
 
@@ -63,7 +72,11 @@ class TestHighLevelPipeline:
 
     def test_fwd_pipeline_gpcca(self, adata):
         cr.tl.final_states(
-            adata, estimator=cr.tl.GPCCA, cluster_key="clusters", method="brandts"
+            adata,
+            estimator=cr.tl.GPCCA,
+            cluster_key="clusters",
+            method="brandts",
+            show_plots=True,
         )
         cr.tl.lineages(adata, method="brandts")
         cr.pl.lineages(adata)
@@ -71,7 +84,13 @@ class TestHighLevelPipeline:
         _assert_has_all_keys(adata, Direction.FORWARD)
 
     def test_bwd_pipeline_gpcca(self, adata):
-        cr.tl.root_states(adata, estimator=cr.tl.GPCCA, cluster_key="clusters")
+        cr.tl.root_states(
+            adata,
+            estimator=cr.tl.GPCCA,
+            cluster_key="clusters",
+            method="brandts",
+            show_plots=True,
+        )
         cr.tl.lineages(adata, final=False)
         cr.pl.lineages(adata, final=False)
 
