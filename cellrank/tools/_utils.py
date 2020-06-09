@@ -17,6 +17,12 @@ from typing import (
 )
 from itertools import tee, product, combinations
 
+import matplotlib.colors as mcolors
+
+import scanpy as sc
+from scanpy import logging as logg
+from anndata import AnnData
+
 import numpy as np
 import pandas as pd
 import networkx as nx
@@ -27,13 +33,6 @@ from sklearn.cluster import KMeans
 from pandas.api.types import infer_dtype, is_categorical_dtype
 from sklearn.neighbors import NearestNeighbors
 from scipy.sparse.linalg import norm as s_norm
-
-import matplotlib.colors as mcolors
-
-import scanpy as sc
-from scanpy import logging as logg
-from anndata import AnnData
-
 from cellrank.utils._utils import _get_neighs, _has_neighs, _get_neighs_params
 from cellrank.tools._colors import _convert_to_hex_colors, _insert_categorical_colors
 
@@ -1153,8 +1152,9 @@ def _info_if_obs_keys_categorical_present(
             break
 
 
-def _one_hot(n, cat: Optional[int] = None):
-    """One-hot encode cat to a vector of length n.
+def _one_hot(n, cat: Optional[int] = None) -> np.ndarray:
+    """
+    One-hot encode cat to a vector of length n.
 
     If cat is None, return a vector of zeros.
     """
@@ -1172,9 +1172,10 @@ def _fuzzy_to_discrete(
     a_fuzzy: np.array,
     n_most_likely: Optional[int] = None,
     remove_overlap: bool = True,
-    raise_threshhold: Optional[float] = 0.2,
-):
-    """Map fuzzy clustering to discrete clustering.
+    raise_threshold: Optional[float] = 0.2,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Map fuzzy clustering to discrete clustering.
 
     Given a fuzzy clustering of `n_samples` samples represented by a matrix `a_fuzzy` of shape
     `(n_samples x n_clusters)` where rows sum to one and indicate cluster membership to each of
@@ -1192,13 +1193,12 @@ def _fuzzy_to_discrete(
     to clusters (most entries in `a_discrete` will be 0) - this is meant to only assign a small
     subset of the samples, which we are most confident in.
 
-    Parameters
-    --------
+    Params
+    ------
     a_fuzzy
-        Numpy array of shape (`n_samples x n_clusters`) representing a fuzzy clustering. Rows must
-        sum to one.
+        Numpy array of shape (`n_samples x n_clusters`) representing a fuzzy clustering. Rows must sum to one.
     n_most_likely
-        Number of samples we want to assign to each cluster
+        Number of samples we want to assign to each cluster.
     remove_overlap
         If `True`, remove ambigious samples. Otherwise, assign them to the most likely cluster.
     raise_threshold
@@ -1207,27 +1207,25 @@ def _fuzzy_to_discrete(
         some clusters empty.
 
     Returns
-    --------
+    -------
     a_discrete
-        Boolean matrix of the same shape as `a_fuzzy`, assigning a subset of the samples to
-        clusters.
+        Boolean matrix of the same shape as `a_fuzzy`, assigning a subset of the samples to clusters.
     critical_clusters
-        Array of clusters with less than `n_most_likely` samples assigned
+        Array of clusters with less than `n_most_likely` samples assigned.
     """
 
     # check the inputs
-    if not type(a_fuzzy) == np.ndarray:
-        raise ValueError(
-            f"Expected `a_fuzzy` to be of type `numpy.ndarray`, got {type(a_fuzzy)}"
+    if not isinstance(a_fuzzy, np.ndarray):
+        raise TypeError(
+            f"Expected `a_fuzzy` to be of type `numpy.ndarray`, got `{type(a_fuzzy).__name__!r}`."
         )
-    assert np.allclose(
-        a_fuzzy.sum(1), 1, rtol=1e3 * EPS, atol=1e3 * EPS
-    ), "Rows in `a_fuzzy` do not sum to one. "
+    if not np.allclose(a_fuzzy.sum(1), 1, rtol=1e3 * EPS, atol=1e3 * EPS):
+        raise ValueError("Rows in `a_fuzzy` do not sum to one.")
 
     # initialise
     n_clusters = a_fuzzy.shape[1]
-    if raise_threshhold is not None:
-        n_raise = int(raise_threshhold * n_most_likely)
+    if raise_threshold is not None:
+        n_raise = int(raise_threshold * n_most_likely)
 
     # create argmax assignment as a lookup table
     max_assignment = a_fuzzy.argmax(axis=1)
@@ -1253,11 +1251,11 @@ def _fuzzy_to_discrete(
 
     # check how many samples this left for each cluster
     n_samples_per_cluster = a_discrete.sum(0)
-    if raise_threshhold is not None:
+    if raise_threshold is not None:
         if (n_samples_per_cluster < n_raise).any():
             raise ValueError(
                 f"Discretizing leads to a cluster with less than {n_raise} samples. "
-                f"Consider recomputing the fuzzy clustering. "
+                f"Consider recomputing the fuzzy clustering."
             )
     critical_clusters = np.where(n_samples_per_cluster < n_most_likely)[0]
 
@@ -1266,32 +1264,35 @@ def _fuzzy_to_discrete(
 
 def _series_from_one_hot_matrix(
     a: np.array, index: Optional[Iterable] = None, names: Optional[Iterable] = None
-):
-    """Create a pandas Series based on a one-hot encoded matrix.
+) -> pd.Series:
+    """
+    Create a pandas Series based on a one-hot encoded matrix.
 
-    Parameters
-    --------
+    Params
+    ------
     a
         One-hot encoded membership matrix, of shape (`n_samples x n_clusters`) i.e. a `1` in position `i, j`
-        signifies that sample `i` belongs to cluster `j`
+        signifies that sample `i` belongs to cluster `j`.
     index
-        Index for the Series. Careful, if this is not given, categories are removed when writing to AnnData
+        Index for the Series. Careful, if this is not given, categories are removed when writing to AnnData.
 
     Returns
-    ---------
+    -------
     cluster_series
         Pandas Series, indicating cluster membership for each sample. The dtype of the categories is `str`
-        and samples that belong to no cluster are assigned `NaN`
+        and samples that belong to no cluster are assigned `NaN`.
     """
     n_clusters, n_samples = a.shape[1], a.shape[0]
     if not type(a) == np.ndarray:
-        raise ValueError(f"Expected `a` to be of type `numpy.ndarray`, got {type(a)}")
+        raise TypeError(
+            f"Expected `a` to be of type `numpy.ndarray`, got `{type(a).__name__!r}`."
+        )
     if index is None:
         index = range(n_samples)
     if names is not None:
         if len(names) != n_clusters:
             raise ValueError(
-                f"Shape mistmatch. `len(names)` is {len(names)}, but `n_clusters` = {n_clusters}"
+                f"Shape mismatch, length of `names` is `{len(names)}`, but `n_clusters` = {n_clusters}."
             )
     else:
         names = np.arange(n_clusters).astype("str")
