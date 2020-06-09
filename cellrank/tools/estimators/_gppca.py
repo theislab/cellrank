@@ -938,7 +938,6 @@ class GPCCA(BaseEstimator):
         meta_assignment["assignment"] = (
             meta_assignment["assignment"].astype(str).astype("category")
         )
-        meta_assignment["assignment"].cat.set_categories(["0", "1", "2"], inplace=True)
 
         metastable_states = meta_assignment.groupby("assignment", sort=False).apply(
             set_categories
