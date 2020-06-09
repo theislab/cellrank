@@ -1264,7 +1264,9 @@ def _fuzzy_to_discrete(
     return a_discrete, critical_clusters
 
 
-def _series_from_one_hot_matrix(a: np.array, index: Optional[Iterable] = None):
+def _series_from_one_hot_matrix(
+    a: np.array, index: Optional[Iterable] = None, names: Optional[Iterable] = None
+):
     """Create a pandas Series based on a one-hot encoded matrix.
 
     Parameters
@@ -1281,28 +1283,21 @@ def _series_from_one_hot_matrix(a: np.array, index: Optional[Iterable] = None):
         Pandas Series, indicating cluster membership for each sample. The dtype of the categories is `str`
         and samples that belong to no cluster are assigned `NaN`
     """
+    n_clusters, n_samples = a.shape[1], a.shape[0]
     if not type(a) == np.ndarray:
         raise ValueError(f"Expected `a` to be of type `numpy.ndarray`, got {type(a)}")
+    if index is None:
+        index = range(n_samples)
+    if names is not None:
+        if len(names) != n_clusters:
+            raise ValueError(
+                f"Shape mistmatch. `len(names)` is {len(names)}, but `n_clusters` = {n_clusters}"
+            )
+    else:
+        names = np.arange(n_clusters).astype("str")
 
-    # create array of assignments, turn it into a Series
-    n_clusters = a.shape[1]
-    cluster_series = (
-        np.concatenate(
-            [
-                np.where(bool_vec, val, 0)[:, None]
-                for bool_vec, val in zip(a.T, range(1, n_clusters + 1))
-            ],
-            1,
-        ).sum(1)
-        - 1
-    ).flatten()
+    target_series = pd.Series(index=index)
+    for (vec, name) in zip(a.T, names):
+        target_series[np.where(vec)[0]] = name
 
-    cluster_series = Series(cluster_series, index=index, dtype="category")
-
-    # remove the dummy '-1' category and change the dtype of the categories to be `str`
-    cluster_series.cat.remove_categories(-1, inplace=True)
-    cluster_series.cat.rename_categories(
-        cluster_series.cat.categories.astype("str"), inplace=True
-    )
-
-    return cluster_series
+    return target_series.astype("category")
