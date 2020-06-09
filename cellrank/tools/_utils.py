@@ -1233,7 +1233,7 @@ def _fuzzy_to_discrete(
 
     # initially select `n_most_likely` samples per cluster
     sample_assignment = {
-        cl: fuzzy_assignment.argsort()[::-1][:n_most_likely]
+        cl: fuzzy_assignment.argpartition(n_most_likely)[:n_most_likely]
         for cl, fuzzy_assignment in enumerate(a_fuzzy.T)
     }
 
