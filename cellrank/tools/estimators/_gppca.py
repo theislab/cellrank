@@ -691,13 +691,13 @@ class GPCCA(BaseEstimator):
 
         probs = self._lin_probs[[n for n in self._lin_probs.names if n != "rest"]]
         a_discrete, _ = _fuzzy_to_discrete(
-            a_fuzzy=probs,
+            a_fuzzy=probs.X,
             n_most_likely=n_cells,
             remove_overlap=False,
             raise_threshhold=0.2,
         )
         self._main_states = _series_from_one_hot_matrix(
-            a=a_discrete, index=self.adata.obs_names
+            a=a_discrete, index=self.adata.obs_names, names=probs.names
         )
 
         if write_to_adata:
@@ -1004,13 +1004,13 @@ class GPCCA(BaseEstimator):
 
         if attr == "_meta_lin_probs":  # plotting meta_lin_probs
             a_discrete, _ = _fuzzy_to_discrete(
-                a_fuzzy=probs,
+                a_fuzzy=probs.X,
                 n_most_likely=n_cells,
                 remove_overlap=False,
                 raise_threshhold=0.2,
             )
             _main_states = _series_from_one_hot_matrix(
-                a=a_discrete, index=self.adata.obs_names
+                a=a_discrete, index=self.adata.obs_names, names=probs.names
             )
 
         elif attr == "_lin_probs":
