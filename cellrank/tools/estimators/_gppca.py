@@ -6,6 +6,10 @@ from types import MappingProxyType
 from typing import Any, Dict, List, Tuple, Union, Mapping, Iterable, Optional
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
+from scipy.stats import entropy
+
 import seaborn as sns
 import matplotlib as mpl
 import matplotlib.cm as cm
@@ -17,9 +21,6 @@ import scvelo as scv
 from scanpy import logging as logg
 from anndata import AnnData
 
-import numpy as np
-import pandas as pd
-from scipy.stats import entropy
 from cellrank.tools._utils import (
     save_fig,
     _eigengap,
