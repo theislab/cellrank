@@ -239,7 +239,7 @@ def _map_names_and_colors(
         )
         if len(critical_cats) > 0:
             logg.warning(
-                f"The following groups could not be mapped uniquely: `{', '.join(map(str, critical_cats))}`"
+                f"The following states could not be mapped uniquely: `{', '.join(map(str, critical_cats))}`"
             )
 
     return (
