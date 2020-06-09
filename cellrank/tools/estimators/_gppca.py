@@ -6,10 +6,6 @@ from types import MappingProxyType
 from typing import Any, Dict, List, Tuple, Union, Mapping, Iterable, Optional
 from pathlib import Path
 
-import numpy as np
-import pandas as pd
-from scipy.stats import entropy
-
 import seaborn as sns
 import matplotlib as mpl
 import matplotlib.cm as cm
@@ -21,6 +17,9 @@ import scvelo as scv
 from scanpy import logging as logg
 from anndata import AnnData
 
+import numpy as np
+import pandas as pd
+from scipy.stats import entropy
 from cellrank.tools._utils import (
     save_fig,
     _eigengap,
@@ -694,7 +693,7 @@ class GPCCA(BaseEstimator):
             a_fuzzy=probs.X,
             n_most_likely=n_cells,
             remove_overlap=False,
-            raise_threshhold=0.2,
+            raise_threshold=0.2,
         )
         self._main_states = _series_from_one_hot_matrix(
             a=a_discrete, index=self.adata.obs_names, names=probs.names
@@ -919,7 +918,7 @@ class GPCCA(BaseEstimator):
                 a_fuzzy=memberships,
                 n_most_likely=n_cells,
                 remove_overlap=False,
-                raise_threshhold=0.2,
+                raise_threshold=0.2,
             )
             metastable_states = _series_from_one_hot_matrix(
                 a=a_discrete, index=self.adata.obs_names
@@ -1007,7 +1006,7 @@ class GPCCA(BaseEstimator):
                 a_fuzzy=probs.X,
                 n_most_likely=n_cells,
                 remove_overlap=False,
-                raise_threshhold=0.2,
+                raise_threshold=0.2,
             )
             _main_states = _series_from_one_hot_matrix(
                 a=a_discrete, index=self.adata.obs_names, names=probs.names
