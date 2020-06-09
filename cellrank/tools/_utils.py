@@ -1296,8 +1296,9 @@ def _series_from_one_hot_matrix(
     else:
         names = np.arange(n_clusters).astype("str")
 
-    target_series = pd.Series(index=index)
+    target_series = pd.Series(index=index, dtype="category")
     for (vec, name) in zip(a.T, names):
+        target_series.cat.add_categories(name, inplace=True)
         target_series[np.where(vec)[0]] = name
 
-    return target_series.astype("category")
+    return target_series
