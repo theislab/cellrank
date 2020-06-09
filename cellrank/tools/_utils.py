@@ -40,6 +40,7 @@ from cellrank.tools._colors import _convert_to_hex_colors, _insert_categorical_c
 ColorLike = TypeVar("ColorLike")
 GPCCA = TypeVar("GPCCA")
 Lineage = TypeVar("Lineage")
+EPS = np.finfo(np.float64).eps
 
 
 def _create_root_final_annotations(
@@ -1150,3 +1151,151 @@ def _info_if_obs_keys_categorical_present(
             and warn_once
         ):
             break
+
+
+def _one_hot(n, cat: Optional[int] = None):
+    """One-hot encode cat to a vector of length n.
+
+    If cat is None, return a vector of zeros.
+    """
+    if cat is not None and cat >= n:
+        raise ValueError(f"Can't one-hot encode {cat} with a vector of length only {n}")
+
+    out = np.zeros(n)
+    if cat is not None:
+        out[cat] = 1
+
+    return out
+
+
+def _fuzzy_to_discrete_simplified(
+    a_fuzzy: np.array,
+    n_most_likely: Optional[int] = None,
+    remove_overlap: bool = True,
+    raise_threshhold: Optional[float] = 0.2,
+):
+    """Map fuzzy clustering to discrete clustering.
+
+    Given a fuzzy clustering of `n_samples` samples represented by a matrix `a_fuzzy` of shape
+    `(n_samples x n_clusters)` where rows sum to one and indicate cluster membership to each of
+    the `c_clusters` clusters, we compute an assignment of a subset of samples to clusters such
+    that each cluster is represented by its `n_most_likely` most likely samples. In case a sample
+    is assigned more than once, it can either be removed (`remove_overlap = True`) or it can be
+    assigned to the cluster it most likely belongs to (`remove_overlap = False`). In case this
+    leaves a cluster with less than `raise_threshold x n_most_likely` samples, we raise an exception.
+    In case this leaves clusters c_1, ..., c_m with less than `n_most_likely` samples, but more than
+    `raise_threshold x n_most_likely` samples, we append c_1, ..., c_m to a list `critical_clusters`,
+    which we return.
+
+    We return a boolean matrix `a_discrete` of the same shape as `a_fuzzy`, where 1 in position
+    `i, j` indicates that sample `i` is assigned to cluster `j`. Note that we don't assign all samples
+    to clusters (most entries in `a_discrete` will be 0) - this is meant to only assign a small
+    subset of the samples, which we are most confident in.
+
+    Parameters
+    --------
+    a_fuzzy
+        Numpy array of shape (`n_samples x n_clusters`) representing a fuzzy clustering. Rows must
+        sum to one.
+    n_most_likely
+        Number of samples we want to assign to each cluster
+    remove_overlap
+        If `True`, remove ambigious samples. Otherwise, assign them to the most likely cluster.
+    raise_threshold
+        If a cluster is assigned less than `raise_threshold x n_most_likely` samples, raise an
+        exception. Set to `None` if you never want to raise an exception, even if this leaves
+        some clusters empty.
+
+    Returns
+    --------
+    a_discrete
+        Boolean matrix of the same shape as `a_fuzzy`, assigning a subset of the samples to
+        clusters.
+    critical_clusters
+        Array of clusters with less than `n_most_likely` samples assigned
+    """
+
+    # check the inputs
+    assert np.allclose(
+        a_fuzzy.sum(1), 1, rtol=1e3 * EPS, atol=1e3 * EPS
+    ), "Rows in `a_fuzzy` do not sum to one. "
+
+    # initialise
+    n_clusters = a_fuzzy.shape[1]
+    if raise_threshhold is not None:
+        n_raise = int(raise_threshhold * n_most_likely)
+
+    # create argmax assignment as a lookup table
+    max_assignment = a_fuzzy.argmax(axis=1)
+
+    # initially select `n_most_likely` samples per cluster
+    sample_assignment = {
+        cl: fuzzy_assignment.argsort()[::-1][:n_most_likely]
+        for cl, fuzzy_assignment in enumerate(a_fuzzy.T)
+    }
+
+    # create the one-hot encoded discrete clustering
+    a_discrete = np.zeros_like(a_fuzzy)
+    for ix in range(n_clusters):
+        a_discrete[sample_assignment[ix], ix] = 1
+
+    # handle samples assigned to more than one cluster
+    critical_samples = np.where(a_discrete.sum(1) > 1)[0]
+    for sample_ix in critical_samples:
+        if remove_overlap:
+            a_discrete[sample_ix, :] = _one_hot(n_clusters)
+        else:
+            a_discrete[sample_ix, :] = _one_hot(n_clusters, max_assignment[sample_ix])
+
+    # check how many samples this left for each cluster
+    n_samples_per_cluster = a_discrete.sum(0)
+    if raise_threshhold is not None:
+        if (n_samples_per_cluster < n_raise).any():
+            raise ValueError(
+                f"Discretizing leads to a cluster with less than {n_raise} samples. "
+                f"Consider recomputing the fuzzy clustering. "
+            )
+    critical_clusters = np.where(n_samples_per_cluster < n_most_likely)[0]
+
+    return a_discrete, critical_clusters
+
+
+def _series_from_one_hot_matrix(a: np.array, index: Optional[Iterable] = None):
+    """Create a pandas Series based on a one-hot encoded matrix.
+
+    Parameters
+    --------
+    a
+        One-hot encoded membership matrix, of shape (`n_samples x n_clusters`) i.e. a `1` in position `i, j`
+        signifies that sample `i` belongs to cluster `j`
+    index
+        Index for the Series. Careful, if this is not given, categories are removed when writing to AnnData
+
+    Returns
+    ---------
+    cluster_series
+        Pandas Series, indicating cluster membership for each sample. The dtype of the categories is `str`
+        and samples that belong to no cluster are assigned `NaN`
+    """
+
+    # create array of assignments, turn it into a Series
+    n_clusters = a.shape[1]
+    cluster_series = (
+        np.concatenate(
+            [
+                np.where(bool_vec, val, 0)[:, None]
+                for bool_vec, val in zip(a.T, range(1, n_clusters + 1))
+            ],
+            1,
+        ).sum(1)
+        - 1
+    )
+    cluster_series = Series(cluster_series, index=index, dtype="category")
+
+    # remove the dummy '-1' category and change the dtype of the categories to be `str`
+    cluster_series.cat.remove_categories(-1, inplace=True)
+    cluster_series.cat.rename_categories(
+        cluster_series.cat.categories.astype("str"), inplace=True
+    )
+
+    return cluster_series
