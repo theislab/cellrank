@@ -17,6 +17,12 @@ from typing import (
 )
 from itertools import tee, product, combinations
 
+import matplotlib.colors as mcolors
+
+import scanpy as sc
+from scanpy import logging as logg
+from anndata import AnnData
+
 import numpy as np
 import pandas as pd
 import networkx as nx
@@ -27,13 +33,6 @@ from sklearn.cluster import KMeans
 from pandas.api.types import infer_dtype, is_categorical_dtype
 from sklearn.neighbors import NearestNeighbors
 from scipy.sparse.linalg import norm as s_norm
-
-import matplotlib.colors as mcolors
-
-import scanpy as sc
-from scanpy import logging as logg
-from anndata import AnnData
-
 from cellrank.utils._utils import _get_neighs, _has_neighs, _get_neighs_params
 from cellrank.tools._colors import _convert_to_hex_colors, _insert_categorical_colors
 
@@ -1233,7 +1232,7 @@ def _fuzzy_to_discrete(
 
     # initially select `n_most_likely` samples per cluster
     sample_assignment = {
-        cl: fuzzy_assignment.argpartition(n_most_likely)[:n_most_likely]
+        cl: fuzzy_assignment.argpartition(-n_most_likely)[-n_most_likely:]
         for cl, fuzzy_assignment in enumerate(a_fuzzy.T)
     }
 
