@@ -940,7 +940,7 @@ class GPCCA(BaseEstimator):
             add_to_existing=False,
         )
         name_mapper = dict(zip(orig_cats, self.metastable_states.cat.categories))
-        _warn_insufficient_number_of_cells(
+        _print_insufficient_number_of_cells(
             [name_mapper.get(n, n) for n in not_enough_cells], n_cells
         )
 
@@ -1481,9 +1481,9 @@ class GPCCA(BaseEstimator):
         return self._main_states_probabilities
 
 
-def _warn_insufficient_number_of_cells(groups: Iterable[Any], n_cells: int):
+def _print_insufficient_number_of_cells(groups: Iterable[Any], n_cells: int):
     if groups:
-        logg.warning(
-            f"The following groups have less than requested number of cells ({n_cells}): "
+        logg.debug(
+            f"DEBUG: The following groups have less than requested number of cells ({n_cells}): "
             f"`{', '.join(sorted(map(str, groups)))}`"
         )
