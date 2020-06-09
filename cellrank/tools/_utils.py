@@ -1214,15 +1214,17 @@ def _fuzzy_to_discrete(
     """
 
     # check the inputs
+    n_clusters = a_fuzzy.shape[1]
     if not isinstance(a_fuzzy, np.ndarray):
         raise TypeError(
             f"Expected `a_fuzzy` to be of type `numpy.ndarray`, got `{type(a_fuzzy).__name__!r}`."
         )
-    if not np.allclose(a_fuzzy.sum(1), 1, rtol=1e3 * EPS, atol=1e3 * EPS):
+    if n_clusters != 1 and not np.allclose(
+        a_fuzzy.sum(1), 1, rtol=1e3 * EPS, atol=1e3 * EPS
+    ):
         raise ValueError("Rows in `a_fuzzy` do not sum to one.")
 
     # initialise
-    n_clusters = a_fuzzy.shape[1]
     if raise_threshold is not None:
         n_raise = int(raise_threshold * n_most_likely)
 
