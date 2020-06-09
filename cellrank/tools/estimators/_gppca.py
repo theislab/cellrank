@@ -36,6 +36,9 @@ from msmtools.analysis.dense.gpcca import GPCCA as _GPPCA
 from cellrank.tools.kernels._kernel import KernelExpression
 from cellrank.tools.estimators._base_estimator import BaseEstimator
 
+# whether to remove overlapping cells from both states, or assign them to the most likely clusters
+REMOVE_OVERLAP = False
+
 
 class GPCCA(BaseEstimator):
     """
@@ -693,7 +696,7 @@ class GPCCA(BaseEstimator):
         a_discrete, _ = _fuzzy_to_discrete(
             a_fuzzy=probs.X,
             n_most_likely=n_cells,
-            remove_overlap=False,
+            remove_overlap=REMOVE_OVERLAP,
             raise_threshold=0.2,
         )
         self._main_states = _series_from_one_hot_matrix(
@@ -918,7 +921,7 @@ class GPCCA(BaseEstimator):
             a_discrete, not_enough_cells = _fuzzy_to_discrete(
                 a_fuzzy=memberships,
                 n_most_likely=n_cells,
-                remove_overlap=False,
+                remove_overlap=REMOVE_OVERLAP,
                 raise_threshold=0.2,
             )
             metastable_states = _series_from_one_hot_matrix(
@@ -1006,7 +1009,7 @@ class GPCCA(BaseEstimator):
             a_discrete, _ = _fuzzy_to_discrete(
                 a_fuzzy=probs.X,
                 n_most_likely=n_cells,
-                remove_overlap=False,
+                remove_overlap=REMOVE_OVERLAP,
                 raise_threshold=0.2,
             )
             _main_states = _series_from_one_hot_matrix(

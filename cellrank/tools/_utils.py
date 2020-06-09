@@ -1232,9 +1232,6 @@ def _fuzzy_to_discrete(
     if raise_threshold is not None:
         n_raise = int(raise_threshold * n_most_likely)
 
-    # create argmax assignment as a lookup table
-    max_assignment = a_fuzzy.argmax(axis=1)
-
     # initially select `n_most_likely` samples per cluster
     sample_assignment = {
         cl: fuzzy_assignment.argpartition(-n_most_likely)[-n_most_likely:]
@@ -1252,7 +1249,11 @@ def _fuzzy_to_discrete(
         if remove_overlap:
             a_discrete[sample_ix, :] = _one_hot(n_clusters)
         else:
-            a_discrete[sample_ix, :] = _one_hot(n_clusters, max_assignment[sample_ix])
+            candidate_ixs = np.where(a_discrete[sample_ix, :])[0]
+            most_likely_ix = candidate_ixs[
+                np.argmax(a_fuzzy[sample_ix, a_discrete[sample_ix, :]])
+            ]
+            a_discrete[sample_ix, :] = _one_hot(n_clusters, most_likely_ix)
 
     # check how many samples this left for each cluster
     n_samples_per_cluster = a_discrete.sum(0)
@@ -1262,6 +1263,8 @@ def _fuzzy_to_discrete(
                 f"Discretizing leads to a cluster with less than {n_raise} samples. "
                 f"Consider recomputing the fuzzy clustering."
             )
+    if (n_samples_per_cluster > n_most_likely).any():
+        raise ValueError("Assigned more samples than requested. ")
     critical_clusters = np.where(n_samples_per_cluster < n_most_likely)[0]
 
     return a_discrete, critical_clusters
