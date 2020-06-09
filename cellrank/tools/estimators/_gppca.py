@@ -6,6 +6,11 @@ from types import MappingProxyType
 from typing import Any, Dict, List, Tuple, Union, Mapping, Iterable, Optional
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
+from scipy.stats import entropy
+from pandas.api.types import is_categorical_dtype
+
 import seaborn as sns
 import matplotlib as mpl
 import matplotlib.cm as cm
@@ -17,10 +22,6 @@ import scvelo as scv
 from scanpy import logging as logg
 from anndata import AnnData
 
-import numpy as np
-import pandas as pd
-from scipy.stats import entropy
-from pandas.api.types import is_categorical_dtype
 from cellrank.tools._utils import (
     save_fig,
     _eigengap,
@@ -1010,12 +1011,12 @@ class GPCCA(BaseEstimator):
             logg.debug(
                 "DEBUG: Setting the metastable states using metastable memberships"
             )
-            metastable_states, not_enough_cells = self._select_cells(
-                n_cells,
-                memberships=memberships,
-                meta_assignment=_meta_assignment,
-                warn=False,
-            )
+            # metastable_states, not_enough_cells = self._select_cells(
+            #     n_cells,
+            #     memberships=memberships,
+            #     meta_assignment=_meta_assignment,
+            #     warn=False,
+            # )
 
         # _set_categorical_labels creates the names, we still need to remap the group names
         orig_cats = metastable_states.cat.categories
