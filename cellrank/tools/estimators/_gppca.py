@@ -25,8 +25,10 @@ from anndata import AnnData
 from cellrank.tools._utils import (
     save_fig,
     _eigengap,
+    _fuzzy_to_discrete,
     _convert_lineage_name,
     _generate_random_keys,
+    _series_from_one_hot_matrix,
 )
 from cellrank.tools._colors import _get_black_or_white
 from cellrank.tools._lineage import Lineage
@@ -1011,12 +1013,18 @@ class GPCCA(BaseEstimator):
             logg.debug(
                 "DEBUG: Setting the metastable states using metastable memberships"
             )
-            # metastable_states, not_enough_cells = self._select_cells(
-            #     n_cells,
-            #     memberships=memberships,
-            #     meta_assignment=_meta_assignment,
-            #     warn=False,
-            # )
+
+            # select the most likely cells from each metastable state
+            a_discrete, not_enough_cells = _fuzzy_to_discrete(
+                a_fuzzy=memberships,
+                n_most_likely=n_cells,
+                remove_overlap=False,
+                raise_threshhold=0.2,
+            )
+            metastable_states = _series_from_one_hot_matrix(
+                a=a_discrete, index=self.adata.obs_names
+            )
+            not_enough_cells = not_enough_cells.astype("str")
 
         # _set_categorical_labels creates the names, we still need to remap the group names
         orig_cats = metastable_states.cat.categories

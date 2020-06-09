@@ -1168,7 +1168,7 @@ def _one_hot(n, cat: Optional[int] = None):
     return out
 
 
-def _fuzzy_to_discrete_simplified(
+def _fuzzy_to_discrete(
     a_fuzzy: np.array,
     n_most_likely: Optional[int] = None,
     remove_overlap: bool = True,
