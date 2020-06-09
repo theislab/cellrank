@@ -17,12 +17,6 @@ from typing import (
 )
 from itertools import tee, product, combinations
 
-import matplotlib.colors as mcolors
-
-import scanpy as sc
-from scanpy import logging as logg
-from anndata import AnnData
-
 import numpy as np
 import pandas as pd
 import networkx as nx
@@ -33,6 +27,13 @@ from sklearn.cluster import KMeans
 from pandas.api.types import infer_dtype, is_categorical_dtype
 from sklearn.neighbors import NearestNeighbors
 from scipy.sparse.linalg import norm as s_norm
+
+import matplotlib.colors as mcolors
+
+import scanpy as sc
+from scanpy import logging as logg
+from anndata import AnnData
+
 from cellrank.utils._utils import _get_neighs, _has_neighs, _get_neighs_params
 from cellrank.tools._colors import _convert_to_hex_colors, _insert_categorical_colors
 
@@ -1213,7 +1214,7 @@ def _fuzzy_to_discrete(
     """
 
     # check the inputs
-    n_clusters = a_fuzzy.shape[1]
+    n_clusters, n_samples = a_fuzzy.shape[1], a_fuzzy.shape[0]
     if not isinstance(a_fuzzy, np.ndarray):
         raise TypeError(
             f"Expected `a_fuzzy` to be of type `numpy.ndarray`, got `{type(a_fuzzy).__name__!r}`."
@@ -1222,6 +1223,10 @@ def _fuzzy_to_discrete(
         a_fuzzy.sum(1), 1, rtol=1e3 * EPS, atol=1e3 * EPS
     ):
         raise ValueError("Rows in `a_fuzzy` do not sum to one.")
+    if n_most_likely > int(n_samples / n_clusters):
+        raise ValueError(
+            "Please select fewer cells. For most datasets, reasonable values are in the range [10, 100]. "
+        )
 
     # initialise
     if raise_threshold is not None:
