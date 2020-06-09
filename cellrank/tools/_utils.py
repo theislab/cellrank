@@ -17,12 +17,6 @@ from typing import (
 )
 from itertools import tee, product, combinations
 
-import matplotlib.colors as mcolors
-
-import scanpy as sc
-from scanpy import logging as logg
-from anndata import AnnData
-
 import numpy as np
 import pandas as pd
 import networkx as nx
@@ -33,6 +27,13 @@ from sklearn.cluster import KMeans
 from pandas.api.types import infer_dtype, is_categorical_dtype
 from sklearn.neighbors import NearestNeighbors
 from scipy.sparse.linalg import norm as s_norm
+
+import matplotlib.colors as mcolors
+
+import scanpy as sc
+from scanpy import logging as logg
+from anndata import AnnData
+
 from cellrank.utils._utils import _get_neighs, _has_neighs, _get_neighs_params
 from cellrank.tools._colors import _convert_to_hex_colors, _insert_categorical_colors
 
@@ -1158,12 +1159,10 @@ def _one_hot(n, cat: Optional[int] = None) -> np.ndarray:
 
     If cat is None, return a vector of zeros.
     """
-    if cat is not None and cat >= n:
-        raise ValueError(f"Can't one-hot encode {cat} with a vector of length only {n}")
 
-    out = np.zeros(n)
+    out = np.zeros(n, dtype="bool")
     if cat is not None:
-        out[cat] = 1
+        out[cat] = True
 
     return out
 
@@ -1237,9 +1236,9 @@ def _fuzzy_to_discrete(
     }
 
     # create the one-hot encoded discrete clustering
-    a_discrete = np.zeros_like(a_fuzzy)
+    a_discrete = np.zeros_like(a_fuzzy, dtype="bool")
     for ix in range(n_clusters):
-        a_discrete[sample_assignment[ix], ix] = 1
+        a_discrete[sample_assignment[ix], ix] = True
 
     # handle samples assigned to more than one cluster
     critical_samples = np.where(a_discrete.sum(1) > 1)[0]
