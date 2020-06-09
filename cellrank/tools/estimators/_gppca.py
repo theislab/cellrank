@@ -1012,6 +1012,7 @@ class GPCCA(BaseEstimator):
             _main_states = _series_from_one_hot_matrix(
                 a=a_discrete, index=self.adata.obs_names
             )
+
         elif attr == "_lin_probs":
             if n_cells == self._n_cells:
                 logg.debug("DEBUG: Using cached main states")
