@@ -1216,6 +1216,10 @@ def _fuzzy_to_discrete(
     """
 
     # check the inputs
+    if not type(a_fuzzy) == np.ndarray:
+        raise ValueError(
+            f"Expected `a_fuzzy` to be of type `numpy.ndarray`, got {type(a_fuzzy)}"
+        )
     assert np.allclose(
         a_fuzzy.sum(1), 1, rtol=1e3 * EPS, atol=1e3 * EPS
     ), "Rows in `a_fuzzy` do not sum to one. "
@@ -1277,6 +1281,8 @@ def _series_from_one_hot_matrix(a: np.array, index: Optional[Iterable] = None):
         Pandas Series, indicating cluster membership for each sample. The dtype of the categories is `str`
         and samples that belong to no cluster are assigned `NaN`
     """
+    if not type(a) == np.ndarray:
+        raise ValueError(f"Expected `a` to be of type `numpy.ndarray`, got {type(a)}")
 
     # create array of assignments, turn it into a Series
     n_clusters = a.shape[1]
@@ -1289,7 +1295,8 @@ def _series_from_one_hot_matrix(a: np.array, index: Optional[Iterable] = None):
             1,
         ).sum(1)
         - 1
-    )
+    ).flatten()
+
     cluster_series = Series(cluster_series, index=index, dtype="category")
 
     # remove the dummy '-1' category and change the dtype of the categories to be `str`
