@@ -1159,7 +1159,7 @@ def _one_hot(n, cat: Optional[int] = None) -> np.ndarray:
     If cat is None, return a vector of zeros.
     """
 
-    out = np.zeros(n, dtype="bool")
+    out = np.zeros(n, dtype=np.bool)
     if cat is not None:
         out[cat] = True
 
@@ -1211,7 +1211,7 @@ def _fuzzy_to_discrete(
         Array of clusters with less than `n_most_likely` samples assigned.
     """
     # check the inputs
-    n_samples, n_clusters = a_fuzzy.shape[0], a_fuzzy.shape[1]
+    n_samples, n_clusters = a_fuzzy.shape
     if not isinstance(a_fuzzy, np.ndarray):
         raise TypeError(
             f"Expected `a_fuzzy` to be of type `numpy.ndarray`, got `{type(a_fuzzy).__name__!r}`."
@@ -1297,11 +1297,16 @@ def _series_from_one_hot_matrix(
         Pandas Series, indicating cluster membership for each sample. The dtype of the categories is `str`
         and samples that belong to no cluster are assigned `NaN`.
     """
-    n_clusters, n_samples = a.shape[1], a.shape[0]
+    n_samples, n_clusters = a.shape
     if not isinstance(a, np.ndarray):
         raise TypeError(
-            f"Expected `a` to be of type `numpy.ndarray`, got `{type(a).__name__!r}`."
+            f"Expected `a` to be of type `numpy.ndarray`, found `{type(a).__name__!r}`."
         )
+    if a.dtype != np.bool:
+        raise TypeError(
+            f"Expected `a`'s elements to be boolean, found `{a.dtype.name}`."
+        )
+
     if index is None:
         index = range(n_samples)
     if names is not None:
