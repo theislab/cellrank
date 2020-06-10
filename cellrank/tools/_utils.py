@@ -1225,7 +1225,8 @@ def _fuzzy_to_discrete(
         raise ValueError("Rows in `a_fuzzy` do not sum to one.")
     if n_most_likely > int(n_samples / n_clusters):
         raise ValueError(
-            "Please select fewer cells. For most datasets, reasonable values are in the range [10, 100]. "
+            f"You selected {n_most_likely} cells, please decrease this to at most {int(n_samples / n_clusters)} cells "
+            f"for your dataset. "
         )
 
     # initialise
