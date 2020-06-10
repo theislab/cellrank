@@ -5,7 +5,7 @@ import pytest
 from pandas.api.types import is_categorical_dtype
 
 from _helpers import assert_array_nan_equal
-from cellrank.tools._utils import _process_series, _merge_categorical_series
+from cellrank.tools._utils import _one_hot, _process_series, _merge_categorical_series
 from cellrank.tools._colors import _map_names_and_colors
 
 
@@ -293,3 +293,25 @@ class TestProcessSeries:
 
         np.testing.assert_array_equal(res.values, expected.values)
         assert set(colors) == {"#804000", "#8080ff"}
+
+
+class TestOneHot:
+    def test_normal_run(self):
+        _one_hot(n=10, cat=5)
+        _one_hot(n=10, cat=None)
+
+    def test_return_vector(self):
+        a = _one_hot(n=10, cat=None)
+        b = _one_hot(n=10, cat=5)
+
+        b_check = np.zeros(10)
+        b_check[5] = True
+
+        assert a.dtype == "bool"
+        assert b.dtype == "bool"
+        assert (a == np.zeros(10)).all()
+        assert (b == b_check).all()
+
+    def test_index_error(self):
+        with pytest.raises(IndexError):
+            _ = _one_hot(10, 10)
