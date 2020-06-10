@@ -323,7 +323,7 @@ class TestOneHot:
             _ = _one_hot(10, 10)
 
 
-class FuzzyToDiscrete:
+class TestFuzzyToDiscrete:
     def test_normal_run(self):
         # create random data that sums to one row-wise
         a_fuzzy = np.random.standard_normal((100, 3))
