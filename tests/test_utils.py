@@ -11,6 +11,7 @@ from cellrank.tools._utils import (
     _process_series,
     _fuzzy_to_discrete,
     _merge_categorical_series,
+    _series_from_one_hot_matrix,
 )
 from cellrank.tools._colors import _map_names_and_colors
 
@@ -442,3 +443,60 @@ class TestFuzzyToDiscrete:
         assert (b_np == b_l).all()
         assert len(c_np) == 0
         assert len(c_l) == 0
+
+
+class TestSeriesFromOneHotMatrix:
+    def test_normal_run(self):
+        a = np.array(
+            [[0, 0, 1], [0, 0, 1], [0, 0, 0], [1, 0, 0], [1, 0, 0], [0, 1, 0]],
+            dtype="bool",
+        )
+        _series_from_one_hot_matrix(a)
+
+    test_normal_run()
+
+    def test_name_mismatch(self):
+        a = np.array(
+            [[0, 0, 1], [0, 0, 1], [0, 0, 0], [1, 0, 0], [1, 0, 0], [0, 1, 0]],
+            dtype="bool",
+        )
+        names = ["0", "1"]
+
+        with pytest.raises(ValueError):
+            _series_from_one_hot_matrix(a, names=names)
+
+    def test_dtype(self):
+        a = np.array(
+            [[0, 0, 1], [0, 0, 2], [0, 0, 0], [1, 0, 0], [1, 0, 0], [0, 1, 0]],
+            dtype="int8",
+        )
+
+        with pytest.raises(TypeError):
+            _series_from_one_hot_matrix(a)
+
+    def test_empty_categories(self):
+        a = np.array(
+            [[0, 0, 1], [0, 0, 1], [0, 0, 0], [0, 1, 0], [0, 0, 0], [0, 1, 0]],
+            dtype="bool",
+        )
+
+        with pytest.raises(ValueError):
+            _series_from_one_hot_matrix(a)
+
+    def test_normal_return(self):
+        a = np.array(
+            [[0, 0, 1], [0, 0, 1], [0, 0, 0], [1, 0, 0], [1, 0, 0], [0, 1, 0]],
+            dtype="bool",
+        )
+        actual_series = _series_from_one_hot_matrix(a)
+
+        expected_series = pd.Series(index=range(6), dtype="category")
+        expected_series.cat.add_categories(["0", "1", "2"], inplace=True)
+        expected_series[0] = "2"
+        expected_series[1] = "2"
+        expected_series[3] = "0"
+        expected_series[4] = "0"
+        expected_series[5] = "1"
+
+        assert actual_series.equals(expected_series)
+        assert (actual_series.cat.categories == expected_series.cat.categories).all()
