@@ -1216,7 +1216,7 @@ def _fuzzy_to_discrete(
         raise TypeError(
             f"Expected `a_fuzzy` to be of type `numpy.ndarray`, got `{type(a_fuzzy).__name__!r}`."
         )
-    a_fuzzy = np.array(a_fuzzy)  # convert to array from lineage classs
+    a_fuzzy = np.asarray(a_fuzzy)  # convert to array from lineage classs, don't copy
     if n_clusters != 1 and not np.allclose(
         a_fuzzy.sum(1), 1, rtol=1e3 * EPS, atol=1e3 * EPS
     ):
