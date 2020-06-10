@@ -451,7 +451,13 @@ class TestSeriesFromOneHotMatrix:
             [[0, 0, 1], [0, 0, 1], [0, 0, 0], [1, 0, 0], [1, 0, 0], [0, 1, 0]],
             dtype="bool",
         )
-        _series_from_one_hot_matrix(a)
+        res = _series_from_one_hot_matrix(a)
+
+        assert_array_nan_equal(
+            np.array(res).astype(np.float32),
+            np.array([2, 2, np.nan, 0, 0, 1], dtype=np.float32),
+        )
+        np.testing.assert_array_equal(res.cat.categories, ["0", "1", "2"])
 
     def test_name_mismatch(self):
         a = np.array(
@@ -470,15 +476,6 @@ class TestSeriesFromOneHotMatrix:
         )
 
         with pytest.raises(TypeError):
-            _series_from_one_hot_matrix(a)
-
-    def test_empty_categories(self):
-        a = np.array(
-            [[0, 0, 1], [0, 0, 1], [0, 0, 0], [0, 1, 0], [0, 0, 0], [0, 1, 0]],
-            dtype="bool",
-        )
-
-        with pytest.raises(ValueError):
             _series_from_one_hot_matrix(a)
 
     def test_normal_return(self):
