@@ -210,10 +210,6 @@ class Lineage(np.ndarray):
             is_tuple_len_2
             and not isinstance(item[0], slice)
             and not isinstance(item[1], slice)
-            and hasattr(item[0], "__len__")
-            and len(item[0])
-            and hasattr(item[1], "__len__")
-            and len(item[1])
         ):
             item_0 = (
                 np.array(item[0]) if not isinstance(item[0], np.ndarray) else item[0]
