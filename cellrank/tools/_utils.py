@@ -1169,7 +1169,7 @@ def _one_hot(n, cat: Optional[int] = None) -> np.ndarray:
 
 def _fuzzy_to_discrete(
     a_fuzzy: np.array,
-    n_most_likely: Optional[int] = None,
+    n_most_likely: int = 10,
     remove_overlap: bool = True,
     raise_threshold: Optional[float] = 0.2,
 ) -> Tuple[np.ndarray, np.ndarray]:
@@ -1202,8 +1202,7 @@ def _fuzzy_to_discrete(
         If `True`, remove ambigious samples. Otherwise, assign them to the most likely cluster.
     raise_threshold
         If a cluster is assigned less than `raise_threshold x n_most_likely` samples, raise an
-        exception. Set to `None` if you never want to raise an exception, even if this leaves
-        some clusters empty.
+        exception. Set to `None` if you only want to raise if there is an empty cluster.
 
     Returns
     -------
@@ -1226,12 +1225,15 @@ def _fuzzy_to_discrete(
     if n_most_likely > int(n_samples / n_clusters):
         raise ValueError(
             f"You selected {n_most_likely} cells, please decrease this to at most {int(n_samples / n_clusters)} cells "
-            f"for your dataset of {n_samples} cells. "
+            f"for your dataset. "
         )
 
     # initialise
     if raise_threshold is not None:
-        n_raise = int(raise_threshold * n_most_likely)
+        n_raise = np.max([int(raise_threshold * n_most_likely), 1])
+    else:
+        n_raise = 1
+    logg.debug(f"DEBUG: Raising if there are less than {n_raise} cells. ")
 
     # initially select `n_most_likely` samples per cluster
     sample_assignment = {

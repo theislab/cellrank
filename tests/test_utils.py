@@ -5,7 +5,12 @@ import pytest
 from pandas.api.types import is_categorical_dtype
 
 from _helpers import assert_array_nan_equal
-from cellrank.tools._utils import _one_hot, _process_series, _merge_categorical_series
+from cellrank.tools._utils import (
+    _one_hot,
+    _process_series,
+    _fuzzy_to_discrete,
+    _merge_categorical_series,
+)
 from cellrank.tools._colors import _map_names_and_colors
 
 
@@ -315,3 +320,91 @@ class TestOneHot:
     def test_index_error(self):
         with pytest.raises(IndexError):
             _ = _one_hot(10, 10)
+
+
+class FuzzyToDiscrete:
+    def test_normal_run(self):
+        # create random data that sums to one row-wise
+        a_fuzzy = np.random.standard_normal((100, 3))
+        a_fuzzy = np.exp(a_fuzzy) / np.sum(np.exp(a_fuzzy), 1)[:, None]
+
+        # check with both overlap handlings
+        _fuzzy_to_discrete(a_fuzzy=a_fuzzy)
+        _fuzzy_to_discrete(a_fuzzy=a_fuzzy, n_most_likely=30, remove_overlap=True)
+        _fuzzy_to_discrete(a_fuzzy=a_fuzzy, n_most_likely=30, remove_overlap=False)
+
+    def test_one_state(self):
+        # create random data that sums to one row-wise
+        a_fuzzy = np.random.standard_normal((100, 1))
+        a_fuzzy = np.exp(a_fuzzy) / np.sum(np.exp(a_fuzzy), 1)[:, None]
+
+        # check with both overlap handlings
+        _fuzzy_to_discrete(a_fuzzy=a_fuzzy)
+
+    def test_normalization(self):
+        a_fuzzy = np.random.standard_normal((100, 3))
+        with pytest.raises(ValueError):
+            _fuzzy_to_discrete(a_fuzzy=a_fuzzy)
+
+    def test_too_many_cells(self):
+        a_fuzzy = np.random.standard_normal((100, 3))
+        a_fuzzy = np.exp(a_fuzzy) / np.sum(np.exp(a_fuzzy), 1)[:, None]
+        with pytest.raises(ValueError):
+            _fuzzy_to_discrete(a_fuzzy=a_fuzzy, n_most_likely=50)
+
+    def test_raise_threshold(self):
+        a_fuzzy = np.repeat(np.array([0.9, 0.1])[None, :], 10, 0)
+        with pytest.raises(ValueError):
+            _fuzzy_to_discrete(a_fuzzy, n_most_likely=3, remove_overlap=True)
+        with pytest.raises(ValueError):
+            _fuzzy_to_discrete(a_fuzzy, n_most_likely=3, remove_overlap=False)
+
+    def test_normal_output(self):
+        a_fuzzy = np.array(
+            [
+                [0.3, 0.7, 0],
+                [0.2, 0.5, 0.3],
+                [0.1, 0.8, 0.1],
+                [0.4, 0.4, 0.2],
+                [0.5, 0.3, 0.2],
+                [0.6, 0.3, 0.1],
+                [0.3, 0.3, 0.4],
+                [0.2, 0.2, 0.6],
+            ]
+        )
+        a_actual, _ = _fuzzy_to_discrete(a_fuzzy, n_most_likely=2, remove_overlap=True)
+        a_expected = np.array(
+            [
+                [False, True, False],
+                [False, False, False],
+                [False, True, False],
+                [False, False, False],
+                [True, False, False],
+                [True, False, False],
+                [False, False, True],
+                [False, False, True],
+            ]
+        )
+
+        assert (a_actual == a_expected).all()
+
+    def test_critical_samples(self):
+        a_fuzzy = np.array(
+            [
+                [0.3, 0.7, 0],
+                [0.3, 0.6, 0.1],
+                [0.0, 0.7, 0.3],
+                [0.1, 0.9, 0],
+                [0.4, 0.4, 0.2],
+                [0.5, 0.3, 0.2],
+                [0.6, 0.3, 0.1],
+                [0.3, 0.3, 0.4],
+                [0.2, 0.2, 0.6],
+            ]
+        )
+
+        _, c_1 = _fuzzy_to_discrete(a_fuzzy, n_most_likely=3, remove_overlap=False)
+        _, c_2 = _fuzzy_to_discrete(a_fuzzy, n_most_likely=3, remove_overlap=True)
+
+        assert c_1 == np.array(2)
+        assert (c_2 == np.array([1, 2])).all()
