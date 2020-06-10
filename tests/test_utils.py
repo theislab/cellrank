@@ -5,6 +5,7 @@ import pytest
 from pandas.api.types import is_categorical_dtype
 
 from _helpers import assert_array_nan_equal
+from cellrank.tools import Lineage
 from cellrank.tools._utils import (
     _one_hot,
     _process_series,
@@ -419,3 +420,25 @@ class FuzzyToDiscrete:
 
         assert c_1 == np.array(2)
         assert (c_2 == np.array([1, 2])).all()
+
+    def test_passing_lineage_object(self):
+        a_fuzzy = np.array(
+            [
+                [0.3, 0.7, 0],
+                [0.2, 0.5, 0.3],
+                [0.1, 0.8, 0.1],
+                [0.4, 0.4, 0.2],
+                [0.5, 0.3, 0.2],
+                [0.6, 0.3, 0.1],
+                [0.3, 0.3, 0.4],
+                [0.2, 0.2, 0.6],
+            ]
+        )
+        a_fuzzy_lin = Lineage(a_fuzzy, names=["0", "1", "2"])
+
+        b_np, c_np = _fuzzy_to_discrete(a_fuzzy=a_fuzzy, n_most_likely=2)
+        b_l, c_l = _fuzzy_to_discrete(a_fuzzy=a_fuzzy_lin, n_most_likely=2)
+
+        assert (b_np == b_l).all()
+        assert len(c_np) == 0
+        assert len(c_l) == 0
