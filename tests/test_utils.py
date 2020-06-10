@@ -372,7 +372,15 @@ class FuzzyToDiscrete:
                 [0.2, 0.2, 0.6],
             ]
         )
-        a_actual, _ = _fuzzy_to_discrete(a_fuzzy, n_most_likely=2, remove_overlap=True)
+
+        # note: removing the overlap should have no effect in this case since there is none.
+        # there should also be no critical clusters in this case
+        a_actual_1, c_1 = _fuzzy_to_discrete(
+            a_fuzzy, n_most_likely=2, remove_overlap=True
+        )
+        a_actual_2, c_2 = _fuzzy_to_discrete(
+            a_fuzzy, n_most_likely=2, remove_overlap=False
+        )
         a_expected = np.array(
             [
                 [False, True, False],
@@ -386,7 +394,10 @@ class FuzzyToDiscrete:
             ]
         )
 
-        assert (a_actual == a_expected).all()
+        assert (a_actual_1 == a_expected).all()
+        assert (a_actual_2 == a_expected).all()
+        assert len(c_1) == 0
+        assert len(c_2) == 0
 
     def test_critical_samples(self):
         a_fuzzy = np.array(
