@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 
+from pandas.api.types import is_categorical_dtype
+
 from anndata import AnnData
 
 import cellrank as cr
-from pandas.api.types import is_categorical_dtype
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tools._constants import (
     LinKey,
@@ -164,7 +165,7 @@ class TestLowLevelPipeline:
         mc_fwd.compute_schur(5, method="brandts")
         mc_fwd.plot_schur_embedding()
 
-        mc_fwd.compute_metastable_states(2)
+        mc_fwd.compute_metastable_states(2, n_cells=25)
         mc_fwd.plot_metastable_states()
         mc_fwd.plot_coarse_T(show_initial_dist=True, show_stationary_dist=True)
         mc_fwd.plot_schur_matrix()
@@ -190,7 +191,7 @@ class TestLowLevelPipeline:
         mc_bwd.compute_schur(5, method="brandts")
         mc_bwd.plot_schur_embedding()
 
-        mc_bwd.compute_metastable_states(2)
+        mc_bwd.compute_metastable_states(2, n_cells=25)
         mc_bwd.plot_metastable_states()
         mc_bwd.plot_coarse_T(show_initial_dist=True, show_stationary_dist=True)
         mc_bwd.plot_schur_matrix()
