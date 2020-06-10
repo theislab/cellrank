@@ -170,7 +170,7 @@ class TestLowLevelPipeline:
         mc_fwd.plot_coarse_T(show_initial_dist=True, show_stationary_dist=True)
         mc_fwd.plot_schur_matrix()
 
-        mc_fwd.set_main_states()
+        mc_fwd.set_main_states(n_cells=25)
         mc_fwd.plot_main_states()
 
         mc_fwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
@@ -196,7 +196,7 @@ class TestLowLevelPipeline:
         mc_bwd.plot_coarse_T(show_initial_dist=True, show_stationary_dist=True)
         mc_bwd.plot_schur_matrix()
 
-        mc_bwd.set_main_states()
+        mc_bwd.set_main_states(n_cells=25)
         mc_bwd.plot_main_states()
 
         mc_bwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
