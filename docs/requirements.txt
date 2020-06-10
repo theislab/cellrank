@@ -2,5 +2,5 @@
 sphinx-autodoc-annotation
 sphinx-autodoc-typehints>=1.10.3
 sphinx-paramlinks
-sphinx>=2
+sphinx>=3
 sphinx_rtd_theme
