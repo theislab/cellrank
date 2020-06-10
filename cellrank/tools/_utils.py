@@ -1307,6 +1307,9 @@ def _series_from_one_hot_matrix(
             f"Expected `a`'s elements to be boolean, found `{a.dtype.name}`."
         )
 
+    if not np.all(a.sum(axis=1) <= 1):
+        raise ValueError("At most 1 category can be one-hot encoded.")
+
     if index is None:
         index = range(n_samples)
     if names is not None:

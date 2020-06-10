@@ -478,6 +478,15 @@ class TestSeriesFromOneHotMatrix:
         with pytest.raises(TypeError):
             _series_from_one_hot_matrix(a)
 
+    def test_not_one_hot(self):
+        a = np.array(
+            [[1, 0, 1], [0, 0, 1], [0, 0, 0], [1, 0, 0], [1, 0, 0], [0, 1, 0]],
+            dtype="bool",
+        )
+
+        with pytest.raises(ValueError):
+            _series_from_one_hot_matrix(a)
+
     def test_normal_return(self):
         a = np.array(
             [[0, 0, 1], [0, 0, 1], [0, 0, 0], [1, 0, 0], [1, 0, 0], [0, 1, 0]],
