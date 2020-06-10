@@ -9,6 +9,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from scipy.stats import entropy
+from msmtools.analysis.dense.gpcca import GPCCA as _GPPCA
 
 import seaborn as sns
 import matplotlib as mpl
@@ -32,7 +33,6 @@ from cellrank.tools._utils import (
 from cellrank.tools._colors import _get_black_or_white
 from cellrank.tools._lineage import Lineage
 from cellrank.tools._constants import Lin, MetaKey, _dp, _probs, _colors, _lin_names
-from msmtools.analysis.dense.gpcca import GPCCA as _GPPCA
 from cellrank.tools.kernels._kernel import KernelExpression
 from cellrank.tools.estimators._base_estimator import BaseEstimator
 
@@ -694,7 +694,7 @@ class GPCCA(BaseEstimator):
 
         probs = self._lin_probs[[n for n in self._lin_probs.names if n != "rest"]]
         a_discrete, _ = _fuzzy_to_discrete(
-            a_fuzzy=probs.X,
+            a_fuzzy=probs,
             n_most_likely=n_cells,
             remove_overlap=REMOVE_OVERLAP,
             raise_threshold=0.2,
@@ -1007,7 +1007,7 @@ class GPCCA(BaseEstimator):
 
         if attr == "_meta_lin_probs":  # plotting meta_lin_probs
             a_discrete, _ = _fuzzy_to_discrete(
-                a_fuzzy=probs.X,
+                a_fuzzy=probs,
                 n_most_likely=n_cells,
                 remove_overlap=REMOVE_OVERLAP,
                 raise_threshold=0.2,
