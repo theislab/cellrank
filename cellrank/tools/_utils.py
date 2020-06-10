@@ -17,6 +17,12 @@ from typing import (
 )
 from itertools import tee, product, combinations
 
+import matplotlib.colors as mcolors
+
+import scanpy as sc
+from scanpy import logging as logg
+from anndata import AnnData
+
 import numpy as np
 import pandas as pd
 import networkx as nx
@@ -27,13 +33,6 @@ from sklearn.cluster import KMeans
 from pandas.api.types import infer_dtype, is_categorical_dtype
 from sklearn.neighbors import NearestNeighbors
 from scipy.sparse.linalg import norm as s_norm
-
-import matplotlib.colors as mcolors
-
-import scanpy as sc
-from scanpy import logging as logg
-from anndata import AnnData
-
 from cellrank.utils._utils import _get_neighs, _has_neighs, _get_neighs_params
 from cellrank.tools._colors import _convert_to_hex_colors, _insert_categorical_colors
 
@@ -1308,7 +1307,7 @@ def _series_from_one_hot_matrix(
         )
 
     if not np.all(a.sum(axis=1) <= 1):
-        raise ValueError("At most 1 category can be one-hot encoded.")
+        raise ValueError("Not all items are one-hot encoded or empty.")
 
     if index is None:
         index = range(n_samples)
