@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
+import mock
 import numpy as np
 import pytest
 from pandas import DataFrame
 
 import matplotlib.colors as colors
 
-import mock
 import cellrank.tools._lineage as mocker
 from cellrank.tools import Lineage
 from cellrank.tools._utils import _compute_mean_color
@@ -239,6 +239,29 @@ class TestLineageAccessor:
         y = l[[1, 2, 3], :]
 
         np.testing.assert_array_equal(x[[1, 2, 3], :], np.array(y))
+
+    def test_column_subset_boolean(self):
+        x = np.random.random((10, 3))
+        l = Lineage(
+            x,
+            names=["foo", "bar", "baz"],
+            colors=[(0, 0, 0), (0.5, 0.5, 0.5), (1, 1, 1)],
+        )
+
+        y = l[:, [False, False, True]]
+
+        np.testing.assert_array_equal(x[:, -1], y.X.squeeze())
+
+    def test_column_subset_boolean_invalid_dim(self):
+        x = np.random.random((10, 3))
+        l = Lineage(
+            x,
+            names=["foo", "bar", "baz"],
+            colors=[(0, 0, 0), (0.5, 0.5, 0.5), (1, 1, 1)],
+        )
+
+        with pytest.raises(IndexError):
+            y = l[:, [True]]
 
     def test_row_subset_with_mask(self):
         x = np.random.random((10, 3))

@@ -1210,13 +1210,13 @@ def _fuzzy_to_discrete(
     critical_clusters
         Array of clusters with less than `n_most_likely` samples assigned.
     """
-
     # check the inputs
-    n_clusters, n_samples = a_fuzzy.shape[1], a_fuzzy.shape[0]
+    n_samples, n_clusters = a_fuzzy.shape[0], a_fuzzy.shape[1]
     if not isinstance(a_fuzzy, np.ndarray):
         raise TypeError(
             f"Expected `a_fuzzy` to be of type `numpy.ndarray`, got `{type(a_fuzzy).__name__!r}`."
         )
+    a_fuzzy = np.array(a_fuzzy)  # convert to array from lineage classs
     if n_clusters != 1 and not np.allclose(
         a_fuzzy.sum(1), 1, rtol=1e3 * EPS, atol=1e3 * EPS
     ):
@@ -1244,7 +1244,9 @@ def _fuzzy_to_discrete(
     }
 
     # create the one-hot encoded discrete clustering
-    a_discrete = np.zeros_like(a_fuzzy, dtype="bool")
+    a_discrete = np.zeros(
+        a_fuzzy.shape, dtype=np.bool
+    )  # don't use `zeros_like` - it also copies the dtype
     for ix in range(n_clusters):
         a_discrete[sample_assignment[ix], ix] = True
 
@@ -1256,7 +1258,7 @@ def _fuzzy_to_discrete(
         else:
             candidate_ixs = np.where(a_discrete[sample_ix, :])[0]
             most_likely_ix = candidate_ixs[
-                np.argmax(a_fuzzy[sample_ix, a_discrete[sample_ix, :]])
+                np.argmax(a_fuzzy[sample_ix, list(a_discrete[sample_ix, :])])
             ]
             a_discrete[sample_ix, :] = _one_hot(n_clusters, most_likely_ix)
 
