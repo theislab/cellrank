@@ -1,6 +1,6 @@
 -r ../requirements.txt
+sphinx==3.0.4
 sphinx-autodoc-annotation
 sphinx-autodoc-typehints>=1.10.3
 sphinx-paramlinks
-sphinx>=3
 sphinx_rtd_theme
