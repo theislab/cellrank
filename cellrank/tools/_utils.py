@@ -39,7 +39,6 @@ from cellrank.tools._colors import _convert_to_hex_colors, _insert_categorical_c
 
 ColorLike = TypeVar("ColorLike")
 GPCCA = TypeVar("GPCCA")
-Lineage = TypeVar("Lineage")
 EPS = np.finfo(np.float64).eps
 
 
@@ -1224,16 +1223,19 @@ def _fuzzy_to_discrete(
         raise ValueError("Rows in `a_fuzzy` do not sum to one.")
     if n_most_likely > int(n_samples / n_clusters):
         raise ValueError(
-            f"You selected {n_most_likely} cells, please decrease this to at most {int(n_samples / n_clusters)} cells "
-            f"for your dataset. "
+            f"You've selected {n_most_likely} cells, please decrease this to at most "
+            f"{int(n_samples / n_clusters)} cells for your dataset."
         )
 
     # initialise
-    if raise_threshold is not None:
-        n_raise = np.max([int(raise_threshold * n_most_likely), 1])
-    else:
-        n_raise = 1
-    logg.debug(f"DEBUG: Raising if there are less than {n_raise} cells. ")
+    n_raise = (
+        1
+        if raise_threshold is None
+        else np.max([int(raise_threshold * n_most_likely), 1])
+    )
+    logg.debug(
+        f"DEBUG: Raising an exception if if there are less than `{n_raise}` cells."
+    )
 
     # initially select `n_most_likely` samples per cluster
     sample_assignment = {
@@ -1263,11 +1265,11 @@ def _fuzzy_to_discrete(
     if raise_threshold is not None:
         if (n_samples_per_cluster < n_raise).any():
             raise ValueError(
-                f"Discretizing leads to a cluster with less than {n_raise} samples. "
+                f"Discretizing leads to a cluster with less than `{n_raise}` samples. "
                 f"Consider recomputing the fuzzy clustering."
             )
     if (n_samples_per_cluster > n_most_likely).any():
-        raise ValueError("Assigned more samples than requested. ")
+        raise ValueError("Assigned more samples than requested.")
     critical_clusters = np.where(n_samples_per_cluster < n_most_likely)[0]
 
     return a_discrete, critical_clusters
@@ -1294,7 +1296,7 @@ def _series_from_one_hot_matrix(
         and samples that belong to no cluster are assigned `NaN`.
     """
     n_clusters, n_samples = a.shape[1], a.shape[0]
-    if not type(a) == np.ndarray:
+    if not isinstance(a, np.ndarray):
         raise TypeError(
             f"Expected `a` to be of type `numpy.ndarray`, got `{type(a).__name__!r}`."
         )

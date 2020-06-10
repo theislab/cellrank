@@ -396,8 +396,8 @@ class TestFuzzyToDiscrete:
             ]
         )
 
-        assert (a_actual_1 == a_expected).all()
-        assert (a_actual_2 == a_expected).all()
+        np.testing.assert_array_equal(a_actual_1, a_expected)
+        np.testing.assert_array_equal(a_actual_2, a_expected)
         assert len(c_1) == 0
         assert len(c_2) == 0
 
@@ -420,7 +420,7 @@ class TestFuzzyToDiscrete:
         _, c_2 = _fuzzy_to_discrete(a_fuzzy, n_most_likely=3, remove_overlap=True)
 
         assert c_1 == np.array(2)
-        assert (c_2 == np.array([1, 2])).all()
+        np.testing.assert_array_equal(c_2, np.array([1, 2]))
 
     def test_passing_lineage_object(self):
         a_fuzzy = np.array(
@@ -440,7 +440,7 @@ class TestFuzzyToDiscrete:
         b_np, c_np = _fuzzy_to_discrete(a_fuzzy=a_fuzzy, n_most_likely=2)
         b_l, c_l = _fuzzy_to_discrete(a_fuzzy=a_fuzzy_lin, n_most_likely=2)
 
-        assert (b_np == b_l).all()
+        np.testing.assert_array_equal(b_np, b_l)
         assert len(c_np) == 0
         assert len(c_l) == 0
 
@@ -452,8 +452,6 @@ class TestSeriesFromOneHotMatrix:
             dtype="bool",
         )
         _series_from_one_hot_matrix(a)
-
-    test_normal_run()
 
     def test_name_mismatch(self):
         a = np.array(
