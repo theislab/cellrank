@@ -1226,7 +1226,7 @@ def _fuzzy_to_discrete(
     if n_most_likely > int(n_samples / n_clusters):
         raise ValueError(
             f"You selected {n_most_likely} cells, please decrease this to at most {int(n_samples / n_clusters)} cells "
-            f"for your dataset. "
+            f"for your dataset of {n_samples} cells. "
         )
 
     # initialise
