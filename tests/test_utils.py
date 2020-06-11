@@ -5,7 +5,14 @@ import pytest
 from pandas.api.types import is_categorical_dtype
 
 from _helpers import assert_array_nan_equal
-from cellrank.tools._utils import _process_series, _merge_categorical_series
+from cellrank.tools import Lineage
+from cellrank.tools._utils import (
+    _one_hot,
+    _process_series,
+    _fuzzy_to_discrete,
+    _merge_categorical_series,
+    _series_from_one_hot_matrix,
+)
 from cellrank.tools._colors import _map_names_and_colors
 
 
@@ -293,3 +300,207 @@ class TestProcessSeries:
 
         np.testing.assert_array_equal(res.values, expected.values)
         assert set(colors) == {"#804000", "#8080ff"}
+
+
+class TestOneHot:
+    def test_normal_run(self):
+        _one_hot(n=10, cat=5)
+        _one_hot(n=10, cat=None)
+
+    def test_return_vector(self):
+        a = _one_hot(n=10, cat=None)
+        b = _one_hot(n=10, cat=5)
+
+        b_check = np.zeros(10)
+        b_check[5] = True
+
+        assert a.dtype == "bool"
+        assert b.dtype == "bool"
+        assert (a == np.zeros(10)).all()
+        assert (b == b_check).all()
+
+    def test_index_error(self):
+        with pytest.raises(IndexError):
+            _ = _one_hot(10, 10)
+
+
+class TestFuzzyToDiscrete:
+    def test_normal_run(self):
+        # create random data that sums to one row-wise
+        a_fuzzy = np.random.standard_normal((100, 3))
+        a_fuzzy = np.exp(a_fuzzy) / np.sum(np.exp(a_fuzzy), 1)[:, None]
+
+        # check with both overlap handlings
+        _fuzzy_to_discrete(a_fuzzy=a_fuzzy)
+        _fuzzy_to_discrete(a_fuzzy=a_fuzzy, n_most_likely=30, remove_overlap=True)
+        _fuzzy_to_discrete(a_fuzzy=a_fuzzy, n_most_likely=30, remove_overlap=False)
+
+    def test_one_state(self):
+        # create random data that sums to one row-wise
+        a_fuzzy = np.random.standard_normal((100, 1))
+        a_fuzzy = np.exp(a_fuzzy) / np.sum(np.exp(a_fuzzy), 1)[:, None]
+
+        # check with both overlap handlings
+        _fuzzy_to_discrete(a_fuzzy=a_fuzzy)
+
+    def test_normalization(self):
+        a_fuzzy = np.random.standard_normal((100, 3))
+        with pytest.raises(ValueError):
+            _fuzzy_to_discrete(a_fuzzy=a_fuzzy)
+
+    def test_too_many_cells(self):
+        a_fuzzy = np.random.standard_normal((100, 3))
+        a_fuzzy = np.exp(a_fuzzy) / np.sum(np.exp(a_fuzzy), 1)[:, None]
+        with pytest.raises(ValueError):
+            _fuzzy_to_discrete(a_fuzzy=a_fuzzy, n_most_likely=50)
+
+    def test_raise_threshold(self):
+        a_fuzzy = np.repeat(np.array([0.9, 0.1])[None, :], 10, 0)
+        with pytest.raises(ValueError):
+            _fuzzy_to_discrete(a_fuzzy, n_most_likely=3, remove_overlap=True)
+        with pytest.raises(ValueError):
+            _fuzzy_to_discrete(a_fuzzy, n_most_likely=3, remove_overlap=False)
+
+    def test_normal_output(self):
+        a_fuzzy = np.array(
+            [
+                [0.3, 0.7, 0],
+                [0.2, 0.5, 0.3],
+                [0.1, 0.8, 0.1],
+                [0.4, 0.4, 0.2],
+                [0.5, 0.3, 0.2],
+                [0.6, 0.3, 0.1],
+                [0.3, 0.3, 0.4],
+                [0.2, 0.2, 0.6],
+            ]
+        )
+
+        # note: removing the overlap should have no effect in this case since there is none.
+        # there should also be no critical clusters in this case
+        a_actual_1, c_1 = _fuzzy_to_discrete(
+            a_fuzzy, n_most_likely=2, remove_overlap=True
+        )
+        a_actual_2, c_2 = _fuzzy_to_discrete(
+            a_fuzzy, n_most_likely=2, remove_overlap=False
+        )
+        a_expected = np.array(
+            [
+                [False, True, False],
+                [False, False, False],
+                [False, True, False],
+                [False, False, False],
+                [True, False, False],
+                [True, False, False],
+                [False, False, True],
+                [False, False, True],
+            ]
+        )
+
+        np.testing.assert_array_equal(a_actual_1, a_expected)
+        np.testing.assert_array_equal(a_actual_2, a_expected)
+        assert len(c_1) == 0
+        assert len(c_2) == 0
+
+    def test_critical_samples(self):
+        a_fuzzy = np.array(
+            [
+                [0.3, 0.7, 0],
+                [0.3, 0.6, 0.1],
+                [0.0, 0.7, 0.3],
+                [0.1, 0.9, 0],
+                [0.4, 0.4, 0.2],
+                [0.5, 0.3, 0.2],
+                [0.6, 0.3, 0.1],
+                [0.3, 0.3, 0.4],
+                [0.2, 0.2, 0.6],
+            ]
+        )
+
+        _, c_1 = _fuzzy_to_discrete(a_fuzzy, n_most_likely=3, remove_overlap=False)
+        _, c_2 = _fuzzy_to_discrete(a_fuzzy, n_most_likely=3, remove_overlap=True)
+
+        assert c_1 == np.array(2)
+        np.testing.assert_array_equal(c_2, np.array([1, 2]))
+
+    def test_passing_lineage_object(self):
+        a_fuzzy = np.array(
+            [
+                [0.3, 0.7, 0],
+                [0.2, 0.5, 0.3],
+                [0.1, 0.8, 0.1],
+                [0.4, 0.4, 0.2],
+                [0.5, 0.3, 0.2],
+                [0.6, 0.3, 0.1],
+                [0.3, 0.3, 0.4],
+                [0.2, 0.2, 0.6],
+            ]
+        )
+        a_fuzzy_lin = Lineage(a_fuzzy, names=["0", "1", "2"])
+
+        b_np, c_np = _fuzzy_to_discrete(a_fuzzy=a_fuzzy, n_most_likely=2)
+        b_l, c_l = _fuzzy_to_discrete(a_fuzzy=a_fuzzy_lin, n_most_likely=2)
+
+        np.testing.assert_array_equal(b_np, b_l)
+        assert len(c_np) == 0
+        assert len(c_l) == 0
+
+
+class TestSeriesFromOneHotMatrix:
+    def test_normal_run(self):
+        a = np.array(
+            [[0, 0, 1], [0, 0, 1], [0, 0, 0], [1, 0, 0], [1, 0, 0], [0, 1, 0]],
+            dtype="bool",
+        )
+        res = _series_from_one_hot_matrix(a)
+
+        assert_array_nan_equal(
+            np.array(res).astype(np.float32),
+            np.array([2, 2, np.nan, 0, 0, 1], dtype=np.float32),
+        )
+        np.testing.assert_array_equal(res.cat.categories, ["0", "1", "2"])
+
+    def test_name_mismatch(self):
+        a = np.array(
+            [[0, 0, 1], [0, 0, 1], [0, 0, 0], [1, 0, 0], [1, 0, 0], [0, 1, 0]],
+            dtype="bool",
+        )
+        names = ["0", "1"]
+
+        with pytest.raises(ValueError):
+            _series_from_one_hot_matrix(a, names=names)
+
+    def test_dtype(self):
+        a = np.array(
+            [[0, 0, 1], [0, 0, 2], [0, 0, 0], [1, 0, 0], [1, 0, 0], [0, 1, 0]],
+            dtype="int8",
+        )
+
+        with pytest.raises(TypeError):
+            _series_from_one_hot_matrix(a)
+
+    def test_not_one_hot(self):
+        a = np.array(
+            [[1, 0, 1], [0, 0, 1], [0, 0, 0], [1, 0, 0], [1, 0, 0], [0, 1, 0]],
+            dtype="bool",
+        )
+
+        with pytest.raises(ValueError):
+            _series_from_one_hot_matrix(a)
+
+    def test_normal_return(self):
+        a = np.array(
+            [[0, 0, 1], [0, 0, 1], [0, 0, 0], [1, 0, 0], [1, 0, 0], [0, 1, 0]],
+            dtype="bool",
+        )
+        actual_series = _series_from_one_hot_matrix(a)
+
+        expected_series = pd.Series(index=range(6), dtype="category")
+        expected_series.cat.add_categories(["0", "1", "2"], inplace=True)
+        expected_series[0] = "2"
+        expected_series[1] = "2"
+        expected_series[3] = "0"
+        expected_series[4] = "0"
+        expected_series[5] = "1"
+
+        assert actual_series.equals(expected_series)
+        assert (actual_series.cat.categories == expected_series.cat.categories).all()

@@ -187,7 +187,6 @@ class Lineage(np.ndarray):
                     return self._mixer(rows, col)
                 col = self._maybe_convert_names(col)
                 item = rows, col
-
         else:
             if isinstance(item, (int, np.integer, str)):
                 item = [item]
@@ -303,11 +302,13 @@ class Lineage(np.ndarray):
 
     def _maybe_convert_names(
         self,
-        names: Iterable[Union[int, str]],
+        names: Iterable[Union[int, str, bool]],
         is_singleton: bool = False,
         default: Optional[Union[int, str]] = None,
         make_unique: bool = True,
-    ) -> Union[int, List[int]]:
+    ) -> Union[int, List[int], List[bool]]:
+        if all(map(lambda n: isinstance(n, (bool, np.bool_)), names)):
+            return list(names)
         res = []
         for name in names:
             if isinstance(name, str):
