@@ -17,12 +17,6 @@ from typing import (
 )
 from itertools import tee, product, combinations
 
-import matplotlib.colors as mcolors
-
-import scanpy as sc
-from scanpy import logging as logg
-from anndata import AnnData
-
 import numpy as np
 import pandas as pd
 import networkx as nx
@@ -33,6 +27,13 @@ from sklearn.cluster import KMeans
 from pandas.api.types import infer_dtype, is_categorical_dtype
 from sklearn.neighbors import NearestNeighbors
 from scipy.sparse.linalg import norm as s_norm
+
+import matplotlib.colors as mcolors
+
+import scanpy as sc
+from scanpy import logging as logg
+from anndata import AnnData
+
 from cellrank.utils._utils import _get_neighs, _has_neighs, _get_neighs_params
 from cellrank.tools._colors import _convert_to_hex_colors, _insert_categorical_colors
 
@@ -1301,6 +1302,7 @@ def _series_from_one_hot_matrix(
         raise TypeError(
             f"Expected `a` to be of type `numpy.ndarray`, found `{type(a).__name__!r}`."
         )
+    a = np.asarray(a)  # change the type in case a lineage object was passed.
     if a.dtype != np.bool:
         raise TypeError(
             f"Expected `a`'s elements to be boolean, found `{a.dtype.name}`."
