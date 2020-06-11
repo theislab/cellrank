@@ -1310,6 +1310,8 @@ def _series_from_one_hot_matrix(
 
     if not np.all(a.sum(axis=1) <= 1):
         raise ValueError("Not all items are one-hot encoded or empty.")
+    if (a.sum(0) == 0).any():
+        logg.warning(f"Detected {np.sum((a.sum(0) == 0))} empty categorie(s) ")
 
     if index is None:
         index = range(n_samples)
