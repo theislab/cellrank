@@ -17,7 +17,7 @@ to each metastable state, i.e. we compute a fate map on the single cell level. W
 map in the figure above, which has been computed using the data of [Panc19]_.
 
 CellRank scales to large cell numbers, is fully compatible with `scanpy`_ and `scvelo`_ and is easy
-to use. For **installation instructions**, **documentation** and **tutorials**, visit `<cellrank.org>`_.
+to use. For **installation instructions**, **documentation** and **tutorials**, visit `<http://cellrank.org>`_.
 
 CellRank's key applications
 ^^^^^^^^^^^^^^^^^^^^^^^^^
