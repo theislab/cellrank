@@ -1,39 +1,39 @@
 |Travis| |Docs| |Binder| |Codecov|
 
 
-CellRank - Probabilistic Lineage Assignment using RNA Velocity
+CellRank - Probabilistic Fate Mapping using RNA Velocity
 ===================================================================
 
-.. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/index_figure_endpoints.png
+.. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/cellrank_fate_map.png
    :width: 600px
    :align: center
 
-**CellRank** is a toolkit to uncover cellular development based on scRNA-seq data with RNA velocity annotation,
-see `La Manno et al. (2018)`_ and `Bergen et al. (2019)`_.
-In the figure above, we show the main features of CellRank applied to `pancreatic endocrinogenesis`_ -
-starting from RNA velocities **(a)**, we infer root states **(b)** and final states **(c)**, and we compute
-how likely each cell is to develop towards each of the identified groups of final states **(d)**.
-See our `tutorial`_ to learn how to apply CellRank to your own data.
+**CellRank** is a toolkit to uncover cellular dynamics based on scRNA-seq data with RNA velocity annotation,
+see [Manno18]_ and [Bergen19]_. CellRank models cellular dynamics as a Markov chain, where transition
+probabilities are computed based on RNA velocity and transcriptomic similarity, taking into account uncertainty
+in the velocities. The Markov chain is coarse grained into a set of metastable states which represent root &
+final states as well as transient intermediate states. For each cell, we obtain the probability of it belonging
+to each metastable state, i.e. we compute a fate map on the single cell level. We show an example of such a fate
+map in the figure above, which has been computed using the data of [Panc19]_.
 
-CellRank utilizes the time derivative of gene expression given by RNA velocity to construct a Markov chain.
-The information given by RNA velocity is combined with transcriptomic similarity and density corrected to yield
-a robust estimate of cellular development directly in high dimensional gene expression space.
-CellRank obtained its name due to conceptual similarities with `PageRank`_, Google’s original algorithm
-for ranking web pages. Both algorithms construct a Markov Chain and use spectral methods to study its
-long term evolution. Based on the Markov Chain, we infer root and final states of development as well
-as lineage probabilities, i.e. for each cell, the probability of it reaching any of the inferred
-root and final states of development. CellRank offers many possibilities to utilize these
-lineage probabilities in downstream analysis, e.g. to investigate the fate of early cell clusters
-or to plot gene expression trends along a given lineage.
+CellRank scales to large cell numbers, is fully compatible with `scanpy`_ and `scvelo`_ and is easy
+to use. For **installation instructions**, **documentation** and **tutorials**, visit `cellrank.org`_
 
-CellRank requires Python3 version >= 3.6 and can be installed via::
+CellRank's key applications
+^^^^^^^^^^^^^^^^^^^^^^^^^
+- compute root & final as well as intermediate metastable states of your developmental/dynamical process
+- infer fate probabilities towards these states for each single cell
+- visualise gene expression trends towards/from specific states
+- identify potential driver genes for each state
 
-    pip install git+https://github.com/theislab/cellrank
+Support
+^^^^^^^^^^^^^^^^^^^^^^^^^
+We welcome your feedback! Feel free to open an `issue <https://github.com/theislab/cellrank/issues/new>`_
+or send us an `email <mailto:info@cellrank.org>`_ if you encounter a bug, need our help or just want to make a
+comment/suggestion.
 
-See the `documentation`_, which includes tutorial notebooks and a description of our complete API.
+CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab`_.
 
-CellRank is fully compatible with `scanpy`_ and `scvelo`_ and was developed in collaboration
-between the `Theislab`_ and the `Peerlab`_.
 
 
 .. |Travis| image:: https://travis-ci.org/theislab/cellrank.svg?branch=master
@@ -60,6 +60,8 @@ between the `Theislab`_ and the `Peerlab`_.
 .. _scanpy: https://scanpy.readthedocs.io/en/latest/
 
 .. _scvelo: https://scvelo.readthedocs.io/
+
+.. _`cellrank.org`: cellrank.org
 
 .. _documentation: https://cellrank.readthedocs.io
 
