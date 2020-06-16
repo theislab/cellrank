@@ -41,11 +41,18 @@ sometimes be a bit tricky to install. On Ubuntu 18.04, try the following::
 During installation of petsc, petsc4py, selpc, and slepc4py the following
 error might appear several times::
 
-ERROR: Failed building wheel for [insert package name here]
+    ERROR: Failed building wheel for [insert package name here]
 
 but this doesn't matter if the installer finally tells you::
 
-Successfully installed [insert package name here]
+    Successfully installed [insert package name here]
+
+On Mac OS, install `MPICH`_ as a message passing interface and then proceed as above, using either pip or the
+installation instructions given on the `PETSC`_ and `SLEPSc`_ websites. The `SLEPSc`_ homepage even offers a video tutorial
+explaining the installation.
+
+Note that this is only relevant for the :class:`cellrank.tl.GPCCA` estimator and only for large cell numbers. For small cell numbers (<10k), you can
+use `methods='brandts'` when computing the schur decomposition.
 
 Jupyter Notebook
 ^^^^^^^^^^^^^^^^
@@ -68,3 +75,5 @@ If you run into issues, feel free to open a `GitHub issue`_ or send us an `email
 .. _`Github issue`: https://github.com/theislab/cellrank/issues/new
 .. _`binder`: https://mybinder.org/
 .. _`SLEPSc`: https://slepc.upv.es/
+.. _`PETSc`: https://www.mcs.anl.gov/petsc/
+.. _`MPICH`: https://www.mpich.org/
