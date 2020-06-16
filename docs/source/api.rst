@@ -1,15 +1,17 @@
 API
 ===
-CellRank offers two possibilities to interact with its core functionality: either
-directly through the :class:`cellrank.tl.GPCCA` or :class:`cellrank.tl.CFLARE`
-and :class:`cellrank.tl.kernels.Kernel` classes, or through the high
-level functions :func:`cellrank.tl.final_states`, :func:`cellrank.tl.root_states`
-and :func:`cellrank.tl.lineages`. The former option offers full control whereas
-the latter is simpler to handle for new users.
 
-Additionally, there is a set of plotting functions which can be used, no matter
-which interface was chosen to uncover the start-/endpoints and lineages. See our
-tutorials to learn more.
+Import CellRank as::
+
+    import cellrank as cr
+
+Once velocities and the velocity graph have been computed using either `scvelo`_ or `velocyto`_,
+CellRank offers two modes to interact with its core functionality:
+
+ - high level mode, essentially calling :func:`cellrank.tl.final_states`, :func:`cellrank.tl.root_states` and :func:`cellrank.tl.lineages`. See our `high level tutorial <https://cellrank-notebooks.readthedocs.io/en/latest/pancreas_basic.html>`_
+ - low level mode, interacting directly with the kernels defined in :class:`cellrank.tl.kernels.Kernel` and the estimators :class:`cellrank.tl.GPCCA` or :class:`cellrank.tl.CFLARE`. The division into kernels and estimators ensures that CellRank in broadly applicable, no matter how you have computed your transition matrix.  See our `low level tutorial <https://cellrank-notebooks.readthedocs.io/en/latest/pancreas_advanced.html>`_.
+
+Additionally, there is a set of plotting functions which can be used downstream of either analysis mode.
 
 The utilities are mainly for fitting continuous models to gene expression data
 and are utilised in some of the plotting functions, like :func:`cellrank.pl.gene_trends`.
@@ -90,3 +92,7 @@ Datasets
     :toctree: api/datasets
 
     datasets.pancreas
+
+
+.. _scvelo: https://scvelo.readthedocs.io/
+.. _velocyto: http://velocyto.org/
