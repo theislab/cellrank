@@ -19,7 +19,7 @@ To stay up-to-date with the newest version, run::
 when you pull new changes from github.
 
 Dependencies
-^^^^^^^^^^^^
+~~~~~~~~~~~~
 To efficiently compute the schur decomposition for large cell numbers, we rely on `SLEPSc`_ wich can
 sometimes be a bit tricky to install. On Ubuntu 18.04, try the following::
 
@@ -55,7 +55,7 @@ Note that this is only relevant for the :class:`cellrank.tl.GPCCA` estimator and
 use `methods='brandts'` when computing the schur decomposition.
 
 Jupyter Notebook
-^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~
 
 To run the tutorials in a notebook locally, please install::
 
