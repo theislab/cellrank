@@ -21,7 +21,7 @@ to use. To get started, see our `tutorial`_.
 
 CellRank's key applications
 ^^^^^^^^^^^^^^^^^^^^^^^^^
-- compute root & final as well as intermediate metastable states
+- compute root & final as well as intermediate metastable states of your developmental/dynamical process
 - infer fate probabilities towards these states for each single cell
 - visualise gene expression trends towards/from specific states
 - identify potential driver genes for each state
@@ -29,7 +29,7 @@ CellRank's key applications
 Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 We welcome your feedback! Feel free to open an `issue <https://github.com/theislab/cellrank/issues/new>`_
-or send us an `email <mailto:mail@cellrank.org>`_ if you encounter a bug, need our help or just want to make a
+or send us an `email <mailto:info@cellrank.org>`_ if you encounter a bug, need our help or just want to make a
 comment/suggestion.
 
 CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab`_.
