@@ -20,6 +20,7 @@ jobs:
         python-version: 3.8
     - name: Generate coverage
       run: |
+        pip install .
         pip install pytest
         pip install pytest-cov
         pytest --cov=./ --cov-report=xml
