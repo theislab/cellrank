@@ -49,8 +49,8 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
    :maxdepth: 2
    :hidden:
 
-   Pancreas Basic <https://cellrank-notebooks.readthedocs.io/en/latest/pancreas_basic.html>
-   Pancreas Advanced <https://cellrank-notebooks.readthedocs.io/en/latest/pancreas_advanced.html>
+   pancreas_basic
+   pancreas_advanced
 
 
 .. |Travis| image:: https://travis-ci.org/theislab/cellrank.svg?branch=master
@@ -64,7 +64,7 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
 .. |Codecov| image:: https://codecov.io/gh/theislab/cellrank/branch/master/graph/badge.svg
     :target: https://codecov.io/gh/theislab/cellrank
 
-.. _tutorial: https://cellrank-notebooks.readthedocs.io/en/latest/pancreas_basic.html
+.. _tutorial: https://cellrank.readthedocs.io/en/latest/pancreas_basic.html
 
 .. _PageRank: http://infolab.stanford.edu/~backrub/google.html
 
