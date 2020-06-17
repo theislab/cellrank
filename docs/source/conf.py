@@ -57,6 +57,8 @@ extensions = [
     "sphinx_paramlinks",
     "sphinx.ext.autosummary",
     "nbsphinx",
+    "sphinx_copybutton",
+    "sphinx_last_updated_by_git",
     "edit_on_github",
 ]
 
@@ -79,15 +81,31 @@ intersphinx_mapping = dict(
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
-source_suffix = ".rst"
+source_suffix = [".rst", ".ipynb"]
 master_doc = "index"
 pygments_style = "sphinx"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = []
+exclude_patterns = ["**.ipynb_checkpoints"]
 
+
+# -- Notebooks
+nbsphinx_execute_arguments = [
+    "--InlineBackend.figure_formats={'svg', 'pdf'}",
+    "--InlineBackend.rc={'figure.dpi': 96}",
+]
+
+nbsphinx_prolog = r"""
+{% set docname = 'docs/source/' + env.doc2path(env.docname, base=None) %}
+.. raw:: html
+
+    <div class="note">
+      Interactive version
+      <a href="https://mybinder.org/v2/gh/theislab/cellrank_notebooks/{{ env.config.release|e }}?filepath={{ docname|e }}"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>
+    </div>
+"""
 
 # -- Options for HTML output -------------------------------------------------
 
