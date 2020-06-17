@@ -1,11 +1,16 @@
 # -*- coding: utf-8 -*-
 import sys
+import logging
 from pathlib import Path
+from urllib.parse import urljoin
+from urllib.request import urlretrieve
 
 import cellrank  # noqa
 
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE.parent.parent))
+
+logger = logging.getLogger(__name__)
 
 # Configuration file for the Sphinx documentation builder.
 #
@@ -19,10 +24,16 @@ sys.path.insert(0, str(HERE.parent.parent))
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
-needs_sphinx = "2.0"
+needs_sphinx = "3.0"
+
+notebooks_url = "https://github.com/theislab/cellrank_notebooks/raw/master/tutorials/"
+for nb in ["pancreas_basic.ipynb", "pancreas_advanced.ipynb"]:
+    try:
+        url = urljoin(notebooks_url, nb)
+        urlretrieve(url, nb)
+    except Exception as e:
+        logger.error(f"Unable to retrieve notebook: `{url}`. Reason: `{e}`.")
+
 
 # -- Project information -----------------------------------------------------
 
@@ -43,6 +54,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx_paramlinks",
     "sphinx.ext.autosummary",
+    "nbsphinx",
 ]
 
 intersphinx_mapping = dict(
