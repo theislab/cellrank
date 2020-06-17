@@ -70,3 +70,8 @@
 .rst-content dl.field-list dl > dt { font-weight: unset }
 /* Add colon between return tuple element name and type */
 .rst-content dl:not(.docutils) dl > dt .classifier::before { content: ' : ' }
+
+/* prolog bg */
+.rst-content .note {
+    background: #FFC76E;
+}
