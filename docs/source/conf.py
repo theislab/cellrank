@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import os
 import sys
 import logging
 from pathlib import Path
@@ -9,6 +10,7 @@ import cellrank  # noqa
 
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE.parent.parent))
+sys.path.insert(0, os.path.abspath("_ext"))
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +57,7 @@ extensions = [
     "sphinx_paramlinks",
     "sphinx.ext.autosummary",
     "nbsphinx",
+    "edit_on_github",
 ]
 
 intersphinx_mapping = dict(
@@ -111,13 +114,8 @@ todo_include_todos = False
 html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
 html_theme_options = dict(navigation_depth=4, logo_only=True)
-html_context = dict(
-    display_github=True,  # Integrate GitHub
-    github_user="theislab",  # Username
-    github_repo="cellrank",  # Repo name
-    github_version="master",  # Version
-    conf_py_path="/docs/source/",
-)  # Path in the checkout to the docs root
+github_repo = "cellrank"  # sets the html_context
+github_nb_repo = "cellrank_notebooks"
 html_show_sphinx = False
 
 
