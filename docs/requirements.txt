@@ -4,4 +4,6 @@ sphinx==3.0.4
 sphinx-autodoc-annotation
 sphinx-autodoc-typehints>=1.10.3
 sphinx-paramlinks
+sphinx_copybutton
+sphinx_last_updated_by_git
 sphinx_rtd_theme

@@ -20,14 +20,14 @@ CellRank scales to large cell numbers, is fully compatible with `scanpy`_ and `s
 to use. To get started, see our `tutorial`_.
 
 CellRank's key applications
-^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 - compute root & final as well as intermediate metastable states of your developmental/dynamical process
 - infer fate probabilities towards these states for each single cell
 - visualise gene expression trends towards/from specific states
 - identify potential driver genes for each state
 
 Support
-^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^
 We welcome your feedback! Feel free to open an `issue <https://github.com/theislab/cellrank/issues/new>`_
 or send us an `email <mailto:info@cellrank.org>`_ if you encounter a bug, need our help or just want to make a
 comment/suggestion.
