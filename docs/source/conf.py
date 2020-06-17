@@ -98,7 +98,7 @@ nbsphinx_execute_arguments = [
 ]
 
 nbsphinx_prolog = r"""
-{% set docname = 'docs/source/' + env.doc2path(env.docname, base=None) %}
+{% set docname = 'tutorials/' + env.doc2path(env.docname, base=None) %}
 .. raw:: html
 
     <div class="note">
