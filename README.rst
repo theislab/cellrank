@@ -2,7 +2,7 @@
 
 
 CellRank - Probabilistic Fate Mapping using RNA Velocity
-===================================================================
+========================================================
 
 .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/cellrank_fate_map.png
    :width: 600px
@@ -20,14 +20,14 @@ CellRank scales to large cell numbers, is fully compatible with `scanpy`_ and `s
 to use. For **installation instructions**, **documentation** and **tutorials**, visit `<http://cellrank.org>`_.
 
 CellRank's key applications
-^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 - compute root & final as well as intermediate metastable states of your developmental/dynamical process
 - infer fate probabilities towards these states for each single cell
 - visualise gene expression trends towards/from specific states
 - identify potential driver genes for each state
 
 Support
-^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^
 We welcome your feedback! Feel free to open an `issue <https://github.com/theislab/cellrank/issues/new>`_
 or send us an `email <mailto:info@cellrank.org>`_ if you encounter a bug, need our help or just want to make a
 comment/suggestion.
@@ -53,7 +53,7 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
 
 .. _pancreatic endocrinogenesis: https://doi.org/10.1242/dev.173849
 
-.. _tutorial: https://cellrank-notebooks.readthedocs.io/en/latest/pancreas_basic.html
+.. _tutorial: https://cellrank.readthedocs.io/en/latest/pancreas_basic.html
 
 .. _PageRank: http://infolab.stanford.edu/~backrub/google.html
 
