@@ -9,7 +9,6 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from scipy.stats import entropy
-from msmtools.analysis.dense.gpcca import GPCCA as _GPPCA
 
 import seaborn as sns
 import matplotlib as mpl
@@ -33,6 +32,7 @@ from cellrank.tools._utils import (
 from cellrank.tools._colors import _get_black_or_white
 from cellrank.tools._lineage import Lineage
 from cellrank.tools._constants import Lin, MetaKey, _dp, _probs, _colors, _lin_names
+from msmtools.analysis.dense.gpcca import GPCCA as _GPPCA
 from cellrank.tools.kernels._kernel import KernelExpression
 from cellrank.tools.estimators._base_estimator import BaseEstimator
 
@@ -322,14 +322,11 @@ class GPCCA(BaseEstimator):
         cluster_key: Optional[str],
         en_cutoff: Optional[float],
         p_thresh: float,
-        **kwargs,
     ) -> None:
         start = logg.info("Computing metastable states")
         logg.warning("For `n_states=1`, stationary distribution is computed")
 
-        if not kwargs:
-            logg.warning("Computing eigendecomposition with default values")
-        self._compute_eig(only_evals=False, **kwargs)
+        self._compute_eig(only_evals=False, which="LM")
         stationary_dist = self.eigendecomposition["stationary_dist"]
 
         self._assign_metastable_states(
