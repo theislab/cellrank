@@ -1217,7 +1217,7 @@ def _fuzzy_to_discrete(
             f"Expected `a_fuzzy` to be of type `numpy.ndarray`, got `{type(a_fuzzy).__name__!r}`."
         )
     a_fuzzy = np.asarray(a_fuzzy)  # convert to array from lineage classs, don't copy
-    if n_clusters != 1 and not np.allclose(a_fuzzy.sum(1), 1, rtol=1e5, atol=1e5):
+    if n_clusters != 1 and not np.allclose(a_fuzzy.sum(1), 1, rtol=1e-5, atol=1e-5):
         raise ValueError("Rows in `a_fuzzy` do not sum to one.")
     if n_most_likely > int(n_samples / n_clusters):
         raise ValueError(
