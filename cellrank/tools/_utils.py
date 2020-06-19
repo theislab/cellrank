@@ -1271,9 +1271,10 @@ def _fuzzy_to_discrete(
     n_samples_per_cluster = a_discrete.sum(0)
     if raise_threshold is not None:
         if (n_samples_per_cluster < n_raise).any():
+            min_samples = np.min(n_samples_per_cluster)
             raise ValueError(
-                f"Discretizing leads to a cluster with less than `{n_raise}` samples. "
-                f"Consider recomputing the fuzzy clustering."
+                f"Discretizing leads to a cluster with `{min_samples}` samples, less than the threshold which is "
+                f"`{n_raise}` samples. Consider recomputing the fuzzy clustering."
             )
     if (n_samples_per_cluster > n_most_likely).any():
         raise ValueError("Assigned more samples than requested.")
