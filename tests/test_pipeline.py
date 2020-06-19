@@ -227,4 +227,4 @@ class TestLowLevelPipeline:
 
         estimator_bwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
 
-        _assert_has_all_keys(adata, Direction.FORWARD)
+        _assert_has_all_keys(adata, Direction.BACKWARD)
