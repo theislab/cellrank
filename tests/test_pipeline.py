@@ -165,12 +165,25 @@ class TestLowLevelPipeline:
         mc_fwd.compute_schur(5, method="brandts")
         mc_fwd.plot_schur_embedding()
 
-        mc_fwd.compute_metastable_states(2, n_cells=25)
+        mc_fwd.compute_metastable_states(3, n_cells=25)
         mc_fwd.plot_metastable_states()
         mc_fwd.plot_coarse_T(show_initial_dist=True, show_stationary_dist=True)
         mc_fwd.plot_schur_matrix()
 
+        # select all states
         mc_fwd.set_main_states(n_cells=25)
+        mc_fwd.plot_main_states()
+
+        mc_fwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
+
+        _assert_has_all_keys(adata, Direction.FORWARD)
+
+        # select a subset of states
+        mc_fwd.set_main_states(
+            n_cells=25,
+            names=self.metastable_states.cat.categories[:2],
+            redistribute=False,
+        )
         mc_fwd.plot_main_states()
 
         mc_fwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
@@ -191,14 +204,27 @@ class TestLowLevelPipeline:
         mc_bwd.compute_schur(5, method="brandts")
         mc_bwd.plot_schur_embedding()
 
-        mc_bwd.compute_metastable_states(2, n_cells=25)
+        mc_bwd.compute_metastable_states(3, n_cells=25)
         mc_bwd.plot_metastable_states()
         mc_bwd.plot_coarse_T(show_initial_dist=True, show_stationary_dist=True)
         mc_bwd.plot_schur_matrix()
 
+        # select all cells
         mc_bwd.set_main_states(n_cells=25)
         mc_bwd.plot_main_states()
 
         mc_bwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
 
         _assert_has_all_keys(adata, Direction.BACKWARD)
+
+        # select a subset of states
+        mc_bwd.set_main_states(
+            n_cells=25,
+            names=self.metastable_states.cat.categories[:2],
+            redistribute=False,
+        )
+        mc_bwd.plot_main_states()
+
+        mc_bwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
+
+        _assert_has_all_keys(adata, Direction.FORWARD)
