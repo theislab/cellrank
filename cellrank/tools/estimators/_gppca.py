@@ -691,6 +691,7 @@ class GPCCA(BaseEstimator):
             n_most_likely=n_cells,
             remove_overlap=REMOVE_OVERLAP,
             raise_threshold=0.2,
+            check_row_sums=False,
         )
         self._main_states = _series_from_one_hot_matrix(
             a=a_discrete, index=self.adata.obs_names, names=probs.names
