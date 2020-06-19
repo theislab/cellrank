@@ -1,11 +1,18 @@
 # -*- coding: utf-8 -*-
+import os
 import sys
+import logging
 from pathlib import Path
+from urllib.parse import urljoin
+from urllib.request import urlretrieve
 
 import cellrank  # noqa
 
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE.parent.parent))
+sys.path.insert(0, os.path.abspath("_ext"))
+
+logger = logging.getLogger(__name__)
 
 # Configuration file for the Sphinx documentation builder.
 #
@@ -19,10 +26,16 @@ sys.path.insert(0, str(HERE.parent.parent))
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
-needs_sphinx = "2.0"
+needs_sphinx = "3.0"
+
+notebooks_url = "https://github.com/theislab/cellrank_notebooks/raw/master/tutorials/"
+for nb in ["pancreas_basic.ipynb", "pancreas_advanced.ipynb"]:
+    try:
+        url = urljoin(notebooks_url, nb)
+        urlretrieve(url, nb)
+    except Exception as e:
+        logger.error(f"Unable to retrieve notebook: `{url}`. Reason: `{e}`.")
+
 
 # -- Project information -----------------------------------------------------
 
@@ -43,6 +56,10 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx_paramlinks",
     "sphinx.ext.autosummary",
+    "nbsphinx",
+    "sphinx_copybutton",
+    "sphinx_last_updated_by_git",
+    "edit_on_github",
 ]
 
 intersphinx_mapping = dict(
@@ -64,14 +81,33 @@ intersphinx_mapping = dict(
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
-source_suffix = ".rst"
+source_suffix = [".rst", ".ipynb"]
 master_doc = "index"
 pygments_style = "sphinx"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = []
+exclude_patterns = ["**.ipynb_checkpoints"]
+
+
+# -- Notebooks
+nbsphinx_execute_arguments = [
+    "--InlineBackend.figure_formats={'svg', 'pdf'}",
+    "--InlineBackend.rc={'figure.dpi': 96}",
+]
+
+nbsphinx_prolog = r"""
+{% set docname = 'tutorials/' + env.doc2path(env.docname, base=None) %}
+.. raw:: html
+
+    <div class="note">
+      Interactive version
+      <a href="https://mybinder.org/v2/gh/theislab/cellrank_notebooks/{{ env.config.release|e }}?filepath={{ docname|e }}"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>
+    </div>
+"""
+
+release = "master"
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -99,13 +135,8 @@ todo_include_todos = False
 html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
 html_theme_options = dict(navigation_depth=4, logo_only=True)
-html_context = dict(
-    display_github=True,  # Integrate GitHub
-    github_user="theislab",  # Username
-    github_repo="cellrank",  # Repo name
-    github_version="master",  # Version
-    conf_py_path="/docs/source/",
-)  # Path in the checkout to the docs root
+github_repo = "cellrank"  # sets the html_context
+github_nb_repo = "cellrank_notebooks"
 html_show_sphinx = False
 
 
