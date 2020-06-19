@@ -761,13 +761,12 @@ class GPCCA(BaseEstimator):
         self._set_main_states(n_cells)
         self._dp = entropy(self._lin_probs.X.T)
 
-        # compute the aggregated probability of being a final state (no matter which)
-        aggregated_state_probability = self._lin_probs[
+        # compute the aggregated probability of being a root/final state (no matter which)
+        scaled_probs = self._lin_probs[
             [n for n in self._lin_probs.names if n != "rest"]
-        ].X.max(axis=1)
-        self._main_states_probabilities = aggregated_state_probability / np.max(
-            aggregated_state_probability
-        )
+        ].X
+        scaled_probs /= scaled_probs.max(0)
+        self._main_states_probabilities = scaled_probs.max(1)
 
         # write to adata
         self.adata.obs[_dp(self._lin_key)] = self._dp
