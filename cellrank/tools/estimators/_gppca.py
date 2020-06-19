@@ -389,7 +389,6 @@ class GPCCA(BaseEstimator):
         cluster_key: str = None,
         en_cutoff: Optional[float] = 0.7,
         p_thresh: float = 1e-15,
-        **kwargs,
     ):
         """
         Compute the metastable states.
@@ -412,8 +411,6 @@ class GPCCA(BaseEstimator):
             start- or endpoints.
             If the test returns a positive statistic and a p-value smaller than :paramref:`p_thresh`,
             a warning will be issued.
-        kwargs
-            Keyword arguments for :meth:`compute_eig` if `n_states=1`.
 
         Returns
         -------
@@ -441,7 +438,6 @@ class GPCCA(BaseEstimator):
                 cluster_key=cluster_key,
                 p_thresh=p_thresh,
                 en_cutoff=en_cutoff,
-                **kwargs,
             )
             return
 
