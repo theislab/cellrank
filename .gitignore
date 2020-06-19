@@ -118,3 +118,4 @@ tests/data
 tests/figures
 figures
 data
+**/*.ipynb
