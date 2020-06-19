@@ -1171,6 +1171,7 @@ def _fuzzy_to_discrete(
     n_most_likely: int = 10,
     remove_overlap: bool = True,
     raise_threshold: Optional[float] = 0.2,
+    check_row_sums: bool = True,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Map fuzzy clustering to discrete clustering.
@@ -1202,6 +1203,9 @@ def _fuzzy_to_discrete(
     raise_threshold
         If a cluster is assigned less than `raise_threshold x n_most_likely` samples, raise an
         exception. Set to `None` if you only want to raise if there is an empty cluster.
+    check_row_sums
+        Check whether rows in `a_fuzzy` sum to one. The one situation where we don't do this is when
+        we have selected a couple of main states and we don't want to re-distribute probability mass
 
     Returns
     -------
@@ -1217,10 +1221,11 @@ def _fuzzy_to_discrete(
             f"Expected `a_fuzzy` to be of type `numpy.ndarray`, got `{type(a_fuzzy).__name__!r}`."
         )
     a_fuzzy = np.asarray(a_fuzzy)  # convert to array from lineage classs, don't copy
-    if n_clusters != 1 and not np.allclose(
-        a_fuzzy.sum(1), 1, rtol=1e3 * EPS, atol=1e3 * EPS
-    ):
-        raise ValueError("Rows in `a_fuzzy` do not sum to one.")
+    if check_row_sums:
+        if n_clusters != 1 and not np.allclose(
+            a_fuzzy.sum(1), 1, rtol=1e6 * EPS, atol=1e6 * EPS
+        ):
+            raise ValueError("Rows in `a_fuzzy` do not sum to one.")
     if n_most_likely > int(n_samples / n_clusters):
         raise ValueError(
             f"You've selected {n_most_likely} cells, please decrease this to at most "
@@ -1266,9 +1271,10 @@ def _fuzzy_to_discrete(
     n_samples_per_cluster = a_discrete.sum(0)
     if raise_threshold is not None:
         if (n_samples_per_cluster < n_raise).any():
+            min_samples = np.min(n_samples_per_cluster)
             raise ValueError(
-                f"Discretizing leads to a cluster with less than `{n_raise}` samples. "
-                f"Consider recomputing the fuzzy clustering."
+                f"Discretizing leads to a cluster with `{min_samples}` samples, less than the threshold which is "
+                f"`{n_raise}` samples. Consider recomputing the fuzzy clustering."
             )
     if (n_samples_per_cluster > n_most_likely).any():
         raise ValueError("Assigned more samples than requested.")

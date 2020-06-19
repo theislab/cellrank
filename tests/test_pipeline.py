@@ -104,23 +104,23 @@ class TestLowLevelPipeline:
         ck = ConnectivityKernel(adata).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc_fwd = cr.tl.CFLARE(final_kernel)
+        estimator_fwd = cr.tl.CFLARE(final_kernel)
 
-        mc_fwd.compute_partition()
+        estimator_fwd.compute_partition()
 
-        mc_fwd.compute_eig()
-        mc_fwd.plot_spectrum()
-        mc_fwd.plot_spectrum(real_only=True)
-        mc_fwd.plot_eig_embedding()
-        mc_fwd.plot_eig_embedding(left=False)
+        estimator_fwd.compute_eig()
+        estimator_fwd.plot_spectrum()
+        estimator_fwd.plot_spectrum(real_only=True)
+        estimator_fwd.plot_eig_embedding()
+        estimator_fwd.plot_eig_embedding(left=False)
 
-        mc_fwd.compute_metastable_states(use=1)
-        mc_fwd.plot_metastable_states()
+        estimator_fwd.compute_metastable_states(use=1)
+        estimator_fwd.plot_metastable_states()
 
-        mc_fwd.compute_lin_probs()
-        mc_fwd.plot_lin_probs()
+        estimator_fwd.compute_lin_probs()
+        estimator_fwd.plot_lin_probs()
 
-        mc_fwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
+        estimator_fwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
 
         _assert_has_all_keys(adata, Direction.FORWARD)
 
@@ -129,23 +129,23 @@ class TestLowLevelPipeline:
         ck = ConnectivityKernel(adata, backward=True).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc_bwd = cr.tl.CFLARE(final_kernel)
+        estimator_bwd = cr.tl.CFLARE(final_kernel)
 
-        mc_bwd.compute_partition()
+        estimator_bwd.compute_partition()
 
-        mc_bwd.compute_eig()
-        mc_bwd.plot_spectrum()
-        mc_bwd.plot_spectrum(real_only=True)
-        mc_bwd.plot_eig_embedding()
-        mc_bwd.plot_eig_embedding(left=False)
+        estimator_bwd.compute_eig()
+        estimator_bwd.plot_spectrum()
+        estimator_bwd.plot_spectrum(real_only=True)
+        estimator_bwd.plot_eig_embedding()
+        estimator_bwd.plot_eig_embedding(left=False)
 
-        mc_bwd.compute_metastable_states(use=1)
-        mc_bwd.plot_metastable_states()
+        estimator_bwd.compute_metastable_states(use=1)
+        estimator_bwd.plot_metastable_states()
 
-        mc_bwd.compute_lin_probs()
-        mc_bwd.plot_lin_probs()
+        estimator_bwd.compute_lin_probs()
+        estimator_bwd.plot_lin_probs()
 
-        mc_bwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
+        estimator_bwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
 
         _assert_has_all_keys(adata, Direction.BACKWARD)
 
@@ -154,26 +154,39 @@ class TestLowLevelPipeline:
         ck = ConnectivityKernel(adata).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc_fwd = cr.tl.GPCCA(final_kernel)
+        estimator_fwd = cr.tl.GPCCA(final_kernel)
 
-        mc_fwd.compute_partition()
+        estimator_fwd.compute_partition()
 
-        mc_fwd.compute_eig()
-        mc_fwd.plot_spectrum()
-        mc_fwd.plot_spectrum(real_only=True)
+        estimator_fwd.compute_eig()
+        estimator_fwd.plot_spectrum()
+        estimator_fwd.plot_spectrum(real_only=True)
 
-        mc_fwd.compute_schur(5, method="brandts")
-        mc_fwd.plot_schur_embedding()
+        estimator_fwd.compute_schur(5, method="brandts")
+        estimator_fwd.plot_schur_embedding()
 
-        mc_fwd.compute_metastable_states(2, n_cells=25)
-        mc_fwd.plot_metastable_states()
-        mc_fwd.plot_coarse_T(show_initial_dist=True, show_stationary_dist=True)
-        mc_fwd.plot_schur_matrix()
+        estimator_fwd.compute_metastable_states(3, n_cells=16)
+        estimator_fwd.plot_metastable_states()
+        estimator_fwd.plot_coarse_T(show_initial_dist=True, show_stationary_dist=True)
+        estimator_fwd.plot_schur_matrix()
 
-        mc_fwd.set_main_states(n_cells=25)
-        mc_fwd.plot_main_states()
+        # select all states
+        estimator_fwd.set_main_states(n_cells=16)
+        estimator_fwd.plot_main_states()
 
-        mc_fwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
+        estimator_fwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
+
+        _assert_has_all_keys(adata, Direction.FORWARD)
+
+        # select a subset of states
+        estimator_fwd.set_main_states(
+            n_cells=16,
+            names=estimator_fwd.metastable_states.cat.categories[:2],
+            redistribute=False,
+        )
+        estimator_fwd.plot_main_states()
+
+        estimator_fwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
 
         _assert_has_all_keys(adata, Direction.FORWARD)
 
@@ -182,23 +195,36 @@ class TestLowLevelPipeline:
         ck = ConnectivityKernel(adata, backward=True).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc_bwd = cr.tl.GPCCA(final_kernel)
+        estimator_bwd = cr.tl.GPCCA(final_kernel)
 
-        mc_bwd.compute_eig()
-        mc_bwd.plot_spectrum()
-        mc_bwd.plot_spectrum(real_only=True)
+        estimator_bwd.compute_eig()
+        estimator_bwd.plot_spectrum()
+        estimator_bwd.plot_spectrum(real_only=True)
 
-        mc_bwd.compute_schur(5, method="brandts")
-        mc_bwd.plot_schur_embedding()
+        estimator_bwd.compute_schur(5, method="brandts")
+        estimator_bwd.plot_schur_embedding()
 
-        mc_bwd.compute_metastable_states(2, n_cells=25)
-        mc_bwd.plot_metastable_states()
-        mc_bwd.plot_coarse_T(show_initial_dist=True, show_stationary_dist=True)
-        mc_bwd.plot_schur_matrix()
+        estimator_bwd.compute_metastable_states(3, n_cells=16)
+        estimator_bwd.plot_metastable_states()
+        estimator_bwd.plot_coarse_T(show_initial_dist=True, show_stationary_dist=True)
+        estimator_bwd.plot_schur_matrix()
 
-        mc_bwd.set_main_states(n_cells=25)
-        mc_bwd.plot_main_states()
+        # select all cells
+        estimator_bwd.set_main_states(n_cells=16)
+        estimator_bwd.plot_main_states()
 
-        mc_bwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
+        estimator_bwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
+
+        _assert_has_all_keys(adata, Direction.BACKWARD)
+
+        # select a subset of states
+        estimator_bwd.set_main_states(
+            n_cells=16,
+            names=estimator_bwd.metastable_states.cat.categories[:2],
+            redistribute=False,
+        )
+        estimator_bwd.plot_main_states()
+
+        estimator_bwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
 
         _assert_has_all_keys(adata, Direction.BACKWARD)

@@ -9,7 +9,6 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from scipy.stats import entropy
-from msmtools.analysis.dense.gpcca import GPCCA as _GPPCA
 
 import seaborn as sns
 import matplotlib as mpl
@@ -33,6 +32,7 @@ from cellrank.tools._utils import (
 from cellrank.tools._colors import _get_black_or_white
 from cellrank.tools._lineage import Lineage
 from cellrank.tools._constants import Lin, MetaKey, _dp, _probs, _colors, _lin_names
+from msmtools.analysis.dense.gpcca import GPCCA as _GPPCA
 from cellrank.tools.kernels._kernel import KernelExpression
 from cellrank.tools.estimators._base_estimator import BaseEstimator
 
@@ -322,14 +322,11 @@ class GPCCA(BaseEstimator):
         cluster_key: Optional[str],
         en_cutoff: Optional[float],
         p_thresh: float,
-        **kwargs,
     ) -> None:
         start = logg.info("Computing metastable states")
         logg.warning("For `n_states=1`, stationary distribution is computed")
 
-        if not kwargs:
-            logg.warning("Computing eigendecomposition with default values")
-        self._compute_eig(only_evals=False, **kwargs)
+        self._compute_eig(only_evals=False, which="LM")
         stationary_dist = self.eigendecomposition["stationary_dist"]
 
         self._assign_metastable_states(
@@ -392,7 +389,6 @@ class GPCCA(BaseEstimator):
         cluster_key: str = None,
         en_cutoff: Optional[float] = 0.7,
         p_thresh: float = 1e-15,
-        **kwargs,
     ):
         """
         Compute the metastable states.
@@ -415,8 +411,6 @@ class GPCCA(BaseEstimator):
             start- or endpoints.
             If the test returns a positive statistic and a p-value smaller than :paramref:`p_thresh`,
             a warning will be issued.
-        kwargs
-            Keyword arguments for :meth:`compute_eig` if `n_states=1`.
 
         Returns
         -------
@@ -444,7 +438,6 @@ class GPCCA(BaseEstimator):
                 cluster_key=cluster_key,
                 p_thresh=p_thresh,
                 en_cutoff=en_cutoff,
-                **kwargs,
             )
             return
 
@@ -698,6 +691,7 @@ class GPCCA(BaseEstimator):
             n_most_likely=n_cells,
             remove_overlap=REMOVE_OVERLAP,
             raise_threshold=0.2,
+            check_row_sums=False,
         )
         self._main_states = _series_from_one_hot_matrix(
             a=a_discrete, index=self.adata.obs_names, names=probs.names
