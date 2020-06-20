@@ -21,8 +21,7 @@ jobs:
     - name: Generate coverage
       run: |
         pip install .
-        pip install pytest
-        pip install pytest-cov
+        pip install pytest-cov python-igraph louvain==0.6.1
         pytest --cov=./ --cov-report=xml
     - name: Upload coverage
       uses: codecov/codecov-action@v1.0.7
@@ -31,4 +30,4 @@ jobs:
         flags: unittests
         env_vars: OS,PYTHON
         name: codecov-umbrella
-        fail_ci_if_error: false
+        fail_ci_if_error: true
