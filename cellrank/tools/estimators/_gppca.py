@@ -9,7 +9,6 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from scipy.stats import entropy
-from msmtools.analysis.dense.gpcca import GPCCA as _GPPCA
 
 import seaborn as sns
 import matplotlib as mpl
@@ -33,6 +32,7 @@ from cellrank.tools._utils import (
 from cellrank.tools._colors import _get_black_or_white
 from cellrank.tools._lineage import Lineage
 from cellrank.tools._constants import Lin, MetaKey, _dp, _probs, _colors, _lin_names
+from msmtools.analysis.dense.gpcca import GPCCA as _GPPCA
 from cellrank.tools.kernels._kernel import KernelExpression
 from cellrank.tools.estimators._base_estimator import BaseEstimator
 
@@ -322,14 +322,11 @@ class GPCCA(BaseEstimator):
         cluster_key: Optional[str],
         en_cutoff: Optional[float],
         p_thresh: float,
-        **kwargs,
     ) -> None:
         start = logg.info("Computing metastable states")
         logg.warning("For `n_states=1`, stationary distribution is computed")
 
-        if not kwargs:
-            logg.warning("Computing eigendecomposition with default values")
-        self._compute_eig(only_evals=False, **kwargs)
+        self._compute_eig(only_evals=False, which="LM")
         stationary_dist = self.eigendecomposition["stationary_dist"]
 
         self._assign_metastable_states(
@@ -392,7 +389,6 @@ class GPCCA(BaseEstimator):
         cluster_key: str = None,
         en_cutoff: Optional[float] = 0.7,
         p_thresh: float = 1e-15,
-        **kwargs,
     ):
         """
         Compute the metastable states.
@@ -415,8 +411,6 @@ class GPCCA(BaseEstimator):
             start- or endpoints.
             If the test returns a positive statistic and a p-value smaller than :paramref:`p_thresh`,
             a warning will be issued.
-        kwargs
-            Keyword arguments for :meth:`compute_eig` if `n_states=1`.
 
         Returns
         -------
@@ -444,7 +438,6 @@ class GPCCA(BaseEstimator):
                 cluster_key=cluster_key,
                 p_thresh=p_thresh,
                 en_cutoff=en_cutoff,
-                **kwargs,
             )
             return
 
@@ -698,6 +691,7 @@ class GPCCA(BaseEstimator):
             n_most_likely=n_cells,
             remove_overlap=REMOVE_OVERLAP,
             raise_threshold=0.2,
+            check_row_sums=False,
         )
         self._main_states = _series_from_one_hot_matrix(
             a=a_discrete, index=self.adata.obs_names, names=probs.names
@@ -767,13 +761,12 @@ class GPCCA(BaseEstimator):
         self._set_main_states(n_cells)
         self._dp = entropy(self._lin_probs.X.T)
 
-        # compute the aggregated probability of being a final state (no matter which)
-        aggregated_state_probability = self._lin_probs[
+        # compute the aggregated probability of being a root/final state (no matter which)
+        scaled_probs = self._lin_probs[
             [n for n in self._lin_probs.names if n != "rest"]
-        ].X.max(axis=1)
-        self._main_states_probabilities = aggregated_state_probability / np.max(
-            aggregated_state_probability
-        )
+        ].X
+        scaled_probs /= scaled_probs.max(0)
+        self._main_states_probabilities = scaled_probs.max(1)
 
         # write to adata
         self.adata.obs[_dp(self._lin_key)] = self._dp
@@ -1378,31 +1371,6 @@ class GPCCA(BaseEstimator):
         self.adata.obs[key_added] = pseudotime
 
         logg.info(f"Adding `{key_added!r}` to `adata.obs`\n    Finish", time=start)
-
-    def _get_restriction_to_main(self) -> Tuple[pd.Series, np.ndarray]:
-        """
-        Restrict the categorical of metastable states to the main states.
-
-        Returns
-        -------
-        :class:`pandas.Series`, :class:`numpy.ndararay`
-            The restricted categorical annotations and matching colors.
-        """
-
-        # get the names of the main states, remove 'rest' if present
-        main_names = self.lineage_probabilities.names
-        main_names = main_names[main_names != "rest"]
-
-        # get the metastable annotations & colors
-        cats_main = self.metastable_states.copy()
-        colors_main = np.array(self._meta_states_colors.copy())
-
-        # restrict both colors and categories
-        mask = np.in1d(cats_main.cat.categories, main_names)
-        colors_main = colors_main[mask]
-        cats_main.cat.remove_categories(cats_main.cat.categories[~mask], inplace=True)
-
-        return cats_main, colors_main
 
     def copy(self) -> "GPCCA":
         """
