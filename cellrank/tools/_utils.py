@@ -39,13 +39,14 @@ from cellrank.tools._colors import _convert_to_hex_colors, _insert_categorical_c
 
 ColorLike = TypeVar("ColorLike")
 GPCCA = TypeVar("GPCCA")
+CFLARE = TypeVar("CFLARE")
 EPS = np.finfo(np.float64).eps
 
 
 def _create_root_final_annotations(
     adata: AnnData,
-    fwd: GPCCA,
-    bwd: GPCCA,
+    fwd: Union[GPCCA, CFLARE],
+    bwd: Union[GPCCA, CFLARE],
     final_pref: Optional[str] = "final",
     root_pref: Optional[str] = "root",
     key_added: Optional[str] = "root_final",
@@ -58,9 +59,9 @@ def _create_root_final_annotations(
     adata
         AnnData object to write to (`.obs[key_added]`)
     fwd
-        GPCCA objects modelling forward process.
+        Estimator object modelling forward process.
     bwd
-        GPCCA objects modelling forward backward.
+        Estimator object modelling backward process.
     final_pref, root_pref
         Prefix used in the annotations.
     key_added
@@ -72,12 +73,18 @@ def _create_root_final_annotations(
         Nothing, just writes to AnnData.
     """
 
-    assert not fwd.kernel.backward, "Forward GPCCA object is in fact bacward."
-    assert bwd.kernel.backward, "Backward GPCCA object is in fact forward."
+    assert not fwd.kernel.backward, "Forward estimator object is in fact backward."
+    assert bwd.kernel.backward, "Backward estimator object is in fact forward."
 
     # get restricted categories and colors
-    cats_final, colors_final = fwd._get_restriction_to_main()
-    cats_root, colors_root = bwd._get_restriction_to_main()
+    try:
+        # this will work for GPCCA
+        cats_final, colors_final = fwd.main_states, fwd.lineage_probabilities.colors
+        cats_root, colors_root = bwd.main_states, bwd.lineage_probabilities.colors
+    except AttributeError:
+        # this works for CFLARE
+        cats_final, colors_final = fwd._get_restriction_to_main()
+        cats_root, colors_root = bwd._get_restriction_to_main()
 
     # merge
     cats_merged, colors_merged = _merge_categorical_series(
