@@ -795,6 +795,37 @@ class CFLARE(BaseEstimator):
             self._meta_states_colors = _create_categorical_colors(n_cats)
             self._adata.uns[color_key] = self._meta_states_colors
 
+    def _get_restriction_to_main(self) -> Tuple[Series, np.ndarray]:
+        """
+        Restrict the categorical of metastable states.
+
+        This restricts the categorical Series object where we store metastable states to the set of those states
+        that we computed lineage probabilities for. This is a utility function - it is needed because in CFLARE,
+        we currently have no possibility to conveniently restrict the metastable states to a core set of main states,
+        other than by computing lineage probabilities
+        #TODO this won't be able to deal with combined states
+
+        Returns
+        -------
+        :class:`pandas.Series`, :class:`numpy.ndararay`
+            The restricted categorical annotations and matching colors.
+        """
+
+        # get the names of the main states, remove 'rest' if present
+        main_names = self.lineage_probabilities.names
+        main_names = main_names[main_names != "rest"]
+
+        # get the metastable annotations & colors
+        cats_main = self.metastable_states.copy()
+        colors_main = np.array(self._meta_states_colors.copy())
+
+        # restrict both colors and categories
+        mask = np.in1d(cats_main.cat.categories, main_names)
+        colors_main = colors_main[mask]
+        cats_main.cat.remove_categories(cats_main.cat.categories[~mask], inplace=True)
+
+        return cats_main, colors_main
+
     def copy(self) -> "CFLARE":
         """
         Returns
