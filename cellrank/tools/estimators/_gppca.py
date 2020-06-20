@@ -1372,31 +1372,6 @@ class GPCCA(BaseEstimator):
 
         logg.info(f"Adding `{key_added!r}` to `adata.obs`\n    Finish", time=start)
 
-    def _get_restriction_to_main(self) -> Tuple[pd.Series, np.ndarray]:
-        """
-        Restrict the categorical of metastable states to the main states.
-
-        Returns
-        -------
-        :class:`pandas.Series`, :class:`numpy.ndararay`
-            The restricted categorical annotations and matching colors.
-        """
-
-        # get the names of the main states, remove 'rest' if present
-        main_names = self.lineage_probabilities.names
-        main_names = main_names[main_names != "rest"]
-
-        # get the metastable annotations & colors
-        cats_main = self.metastable_states.copy()
-        colors_main = np.array(self._meta_states_colors.copy())
-
-        # restrict both colors and categories
-        mask = np.in1d(cats_main.cat.categories, main_names)
-        colors_main = colors_main[mask]
-        cats_main.cat.remove_categories(cats_main.cat.categories[~mask], inplace=True)
-
-        return cats_main, colors_main
-
     def copy(self) -> "GPCCA":
         """
         Return a copy of itself.
