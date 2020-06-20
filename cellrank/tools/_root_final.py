@@ -45,7 +45,7 @@ weight_connectivities
 use_velocity_uncertainty
     Whether to use velocity uncertainty. Uncertainties are computed independently per gene using the neighborhood graph.
     They are then propagated into cosine similarities and finally used as a scaling factor in the softmax which
-    transforms cosine similarities to probabilities, i.e. transitions we are uncertain about are donw-weighted.
+    transforms cosine similarities to probabilities, i.e. transitions we are uncertain about are down-weighted.
 method
     Method to use when computing the Schur decomposition. Only needed when :paramref:`estimator`
     is :class`:cellrank.tl.GPCCA:.
