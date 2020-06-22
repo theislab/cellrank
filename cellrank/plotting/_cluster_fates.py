@@ -449,7 +449,7 @@ def cluster_fates(
         for ep in lineages:
             if ep not in adata.obsm[lk].names:
                 raise ValueError(
-                    f"Endpoint `{ep!r}` not found in `adata.obsm[{lk!r}].names`."
+                    f"State `{ep!r}` not found in `adata.obsm[{lk!r}].names`."
                 )
         lin_names = list(lineages)
     else:
