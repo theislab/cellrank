@@ -1342,3 +1342,49 @@ def _series_from_one_hot_matrix(
         target_series[np.where(vec)[0]] = name
 
     return target_series
+
+
+def _colors_in_order(
+    adata: AnnData,
+    clusters: Optional[Iterable[str]] = None,
+    cluster_key: str = "clusters",
+):
+    """Get list of colors from AnnData in defined order.
+
+    This will extract a list of colors from `adata.uns[cluster_key]` corresponding to the `clusters`, in the
+    order defined by the `clusters`
+
+    Parameters
+    --------
+    adata
+        Annotated data matrix
+    clusters
+        Subset of the clusters we want the color for. Must be a subset of `adata.obs[cluster_key].cat.categories`
+    cluster_key
+        Key from `adata.obs`
+
+    Returns
+    --------
+    color_list
+        List of colors in order defined by `clusters`
+    """
+    assert (
+        cluster_key in adata.obs.keys()
+    ), f"Could not find {cluster_key} in `adata.obs`"
+    assert np.in1d(
+        clusters, adata.obs[cluster_key].cat.categories
+    ).all(), "Not all `clusters` found"
+    assert (
+        f"{cluster_key}_colors" in adata.uns.keys()
+    ), f"No colors associated to {cluster_key} in `adata.uns`"
+
+    if clusters is None:
+        clusters = adata.obs[cluster_key].cat.categories
+
+    color_list = []
+    all_clusters = adata.obs[cluster_key].cat.categories
+    for cl in clusters:
+        mask = np.in1d(all_clusters, cl)
+        color_list.append(adata.uns[f"{cluster_key}_colors"][mask][0])
+
+    return color_list
