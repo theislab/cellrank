@@ -467,6 +467,27 @@ class TestLineageAccessor:
 
         assert y._names_to_ixs == {"baz": 0, "bar": 1}
 
+    def test_correct_order(self):
+        x = np.random.random((10, 3))
+        l = Lineage(x, names=["foo", "bar", "baz"])
+
+        np.testing.assert_array_equal(l[["foo", "baz"]].X, l[["baz", "foo"]].X[:, ::-1])
+
+    def test_mask_x_full_names_y(self):
+        x = np.random.random((10, 3))
+        l = Lineage(x, names=["Beta", "Epsilon", "Alpha"])
+        cmapper = dict(zip(l.names, l.colors))
+        mask = np.zeros(l.shape[0], dtype=np.bool)
+        mask[0] = True
+        mask[-1] = True
+
+        y = l[mask, ["Epsilon", "Alpha", "Beta"]]
+
+        assert y.shape == (2, 3)
+        np.testing.assert_array_equal(y.names, ["Epsilon", "Alpha", "Beta"])
+        np.testing.assert_array_equal(y.colors, [cmapper[n] for n in y.names])
+        np.testing.assert_array_equal(y.X, x[[0, -1], :][:, [1, 2, 0]])
+
 
 class TestLineageMixing:
     def test_overlap(self):
