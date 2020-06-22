@@ -223,7 +223,11 @@ class Lineage(np.ndarray):
                 if item_0.dtype != np.bool:
                     if not issubclass(item_0.dtype.type, np.integer):
                         raise TypeError(f"Invalid type `{item_0.dtype.type}`.")
-                    row_order = np.argsort(item_0[:, 0])
+                    row_order = (
+                        item_0[:, 0]
+                        if item_0.shape[0] == self.shape[0]
+                        else np.argsort(item_0[:, 0])
+                    )
                     item_0 = _at_least_2d(np.isin(np.arange(self.shape[0]), item_0), -1)
                 item = item_0 * item_1
                 shape = np.max(np.sum(item, axis=0)), np.max(np.sum(item, axis=1))
@@ -232,7 +236,11 @@ class Lineage(np.ndarray):
                 if item_1.dtype != np.bool:
                     if not issubclass(item_1.dtype.type, np.integer):
                         raise TypeError(f"Invalid type `{item_1.dtype.type}`.")
-                    col_order = np.argsort(item_1[0, :])
+                    col_order = (
+                        item_1[0, :]
+                        if item_1.shape[1] == self.shape[1]
+                        else np.argsort(item_1[0, :])
+                    )
                     item_1 = _at_least_2d(np.isin(np.arange(self.shape[1]), item_1), 0)
                 item = item_0 * item_1
                 shape = np.max(np.sum(item, axis=0)), np.max(np.sum(item, axis=1))
