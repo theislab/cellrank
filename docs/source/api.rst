@@ -8,8 +8,8 @@ Import CellRank as::
 Once velocities and the velocity graph have been computed using either `scvelo`_ or `velocyto`_,
 CellRank offers two modes to interact with its core functionality:
 
- - high level mode, essentially calling :func:`cellrank.tl.final_states`, :func:`cellrank.tl.root_states` and :func:`cellrank.tl.lineages`. See our `high level tutorial <https://cellrank-notebooks.readthedocs.io/en/latest/pancreas_basic.html>`_
- - low level mode, interacting directly with the kernels defined in :class:`cellrank.tl.kernels.Kernel` and the estimators :class:`cellrank.tl.GPCCA` or :class:`cellrank.tl.CFLARE`. The division into kernels and estimators ensures that CellRank in broadly applicable, no matter how you have computed your transition matrix.  See our `low level tutorial <https://cellrank-notebooks.readthedocs.io/en/latest/pancreas_advanced.html>`_.
+ - high level mode, essentially calling :func:`cellrank.tl.final_states`, :func:`cellrank.tl.root_states` and :func:`cellrank.tl.lineages`. See our `high level tutorial <https://cellrank.readthedocs.io/en/latest/pancreas_basic.html>`_
+ - low level mode, interacting directly with the kernels defined in :class:`cellrank.tl.kernels.Kernel` and the estimators :class:`cellrank.tl.GPCCA` or :class:`cellrank.tl.CFLARE`. The division into kernels and estimators ensures that CellRank in broadly applicable, no matter how you have computed your transition matrix.  See our `low level tutorial <https://cellrank.readthedocs.io/en/latest/pancreas_advanced.html>`_.
 
 Additionally, there is a set of plotting functions which can be used downstream of either analysis mode.
 
