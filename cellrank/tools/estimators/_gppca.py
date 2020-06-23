@@ -330,9 +330,8 @@ class GPCCA(BaseEstimator):
         stationary_dist = self.eigendecomposition["stationary_dist"]
 
         self._assign_metastable_states(
-            stationary_dist[:, None],
-            np.zeros_like(stationary_dist),
-            n_cells,
+            memberships=stationary_dist[:, None],
+            n_cells=n_cells,
             cluster_key=cluster_key,
             p_thresh=p_thresh,
             en_cutoff=en_cutoff,
@@ -487,9 +486,8 @@ class GPCCA(BaseEstimator):
             self._gpcca = self._gpcca.optimize(m=n_states)
 
         self._assign_metastable_states(
-            self._gpcca.memberships,
-            self._gpcca.metastable_assignment,
-            n_cells,
+            memberships=self._gpcca.memberships,
+            n_cells=n_cells,
             cluster_key=cluster_key,
             p_thresh=p_thresh,
             en_cutoff=en_cutoff,
@@ -884,22 +882,52 @@ class GPCCA(BaseEstimator):
     def _assign_metastable_states(
         self,
         memberships: np.ndarray,
-        metastable_assignment: np.ndarray,
-        n_cells: Optional[int],
-        cluster_key: str,
-        p_thresh: float,
-        en_cutoff: float,
+        n_cells: Optional[int] = 30,
+        cluster_key: str = "clusters",
+        en_cutoff: Optional[float] = 0.7,
+        p_thresh: float = 1e-15,
+        check_row_sums: bool = True,
     ) -> None:
-        _meta_assignment = pd.Series(
-            index=self.adata.obs_names, data=metastable_assignment, dtype="category"
-        )
-        # sometimes, the assignment can have a missing category and the Lineage creation therefore fails
-        # keep it as ints when `n_cells != None`
-        _meta_assignment.cat.set_categories(
-            list(range(memberships.shape[1])), inplace=True
-        )
+        """Map a fuzzy clustering to pre-computed annotations to get names and colors.
+
+        Given the fuzzy clustering we have computed, we would like to select the most likely cells from each state
+        and use these to give each state a name and a color by comparing with pre-computed, categorical cluster
+        annotations.
+
+        Params
+        --------
+        memberships
+            Fuzzy clustering
+        n_cells
+            Number of cells to be used to represent each state
+        cluster_key
+            Key from `adata.obs` to get reference cluster annotations
+        en_cutoff
+            Threshold to decide when we we want to warn the user about an uncertain name mapping. This happens when
+            one fuzzy state overlaps with several reference clusters, and the most likely cells are distributed almost
+            evenly across the reference clusters.
+        p_thresh
+            Only used to detect cell cycle stages. These have to be present in `adata.obs` as `G2M_score` and `S_score`
+        check_row_sums
+            Check whether rows in `memberships` sum to 1. They should.
+
+        Returns
+        --------
+        Writes a lineage object which mapped names and colors. Also creates a categorical Series
+        `self.metastable_states`, where the top `n_cells` cells represent each fuzzy state
+        """
 
         if n_cells is None:
+            max_assignment = np.argmax(memberships, axis=1)
+            _meta_assignment = pd.Series(
+                index=self.adata.obs_names, data=max_assignment, dtype="category"
+            )
+            # sometimes, the assignment can have a missing category and the Lineage creation therefore fails
+            # keep it as ints when `n_cells != None`
+            _meta_assignment.cat.set_categories(
+                list(range(memberships.shape[1])), inplace=True
+            )
+
             logg.debug(
                 "DEBUG: Setting the metastable states using metastable assignment"
             )
@@ -916,6 +944,7 @@ class GPCCA(BaseEstimator):
                 n_most_likely=n_cells,
                 remove_overlap=REMOVE_OVERLAP,
                 raise_threshold=0.2,
+                check_row_sums=check_row_sums,
             )
             metastable_states = _series_from_one_hot_matrix(
                 a=a_discrete, index=self.adata.obs_names
