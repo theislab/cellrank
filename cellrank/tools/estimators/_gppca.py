@@ -887,6 +887,32 @@ class GPCCA(BaseEstimator):
         en_cutoff: Optional[float] = 0.7,
         p_thresh: float = 1e-15,
     ) -> None:
+        """Map a fuzzy clustering to pre-computed annotations to get names and colors.
+
+        Given the fuzzy clustering we have computed, we would like to select the most likely cells from each state
+        and use these to give each state a name and a color by comparing with pre-computed, categorical cluster
+        annotations.
+
+        Params
+        --------
+        memberships
+            Fuzzy clustering
+        n_cells
+            Number of cells to be used to represent each state
+        cluster_key
+            Key from `adata.obs` to get reference cluster annotations
+        en_cutoff
+            Threshold to decide when we we want to warn the user about an uncertain name mapping. This happens when
+            one fuzzy state overlaps with several reference clusters, and the most likely cells are distributed almost
+            evenly across the reference clusters.
+        p_thresh
+            Only used to detect cell cycle stages. These have to be present in `adata.obs` as `G2M_score` and `S_score`
+
+        Returns
+        --------
+        Writes a lineage object which mapped names and colors. Also creates a categorical Series
+        `self.metastable_states`, where the top `n_cells` cells represent each fuzzy state
+        """
 
         if n_cells is None:
             max_assignment = np.argmax(memberships, axis=1)
