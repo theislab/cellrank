@@ -327,8 +327,8 @@ def lineage_drivers(
     ------
     adata
         Annodated data matrix
-    backward
-        Whether we are considering the forward or backward process
+    final
+        If True, use forward process, else backward
     lin_names
         Either a set of lineage names from :paramref:`lineage_probabilities` `.names` or None,
         in which case all lineages are considered.
