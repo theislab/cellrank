@@ -12,8 +12,10 @@ from statsmodels.stats.multitest import multipletests
 from scanpy import logging as logg
 from anndata import AnnData
 
+from cellrank.tools import GPCCA
 from cellrank.utils._utils import _get_n_cores, check_collection
 from cellrank.utils.models import Model
+from cellrank.tools.kernels import ConnectivityKernel
 from cellrank.plotting._utils import _model_type, _create_models, _is_any_gam_mgcv
 from cellrank.tools._constants import LinKey
 from cellrank.utils._parallelize import parallelize
@@ -302,3 +304,66 @@ def gene_importance(
     )
 
     return (importances, model) if return_model else importances
+
+
+def lineage_drivers(
+    adata: AnnData,
+    final: bool = True,
+    lin_names: Optional[Union[Sequence, str]] = None,
+    cluster_key: Optional[str] = None,
+    clusters: Optional[Union[Sequence, str]] = None,
+    layer: str = "X",
+    use_raw: bool = True,
+    inplace: bool = True,
+):
+    """
+    Compute driver genes per lineage.
+
+    Correlates gene expression with lineage probabilities, for a given lineage and set of clusters.
+    Often, it makes sense to restrict this to a set of clusters which are relevant
+    for the lineage under consideration.
+
+    Params
+    ------
+    adata
+        Annodated data matrix
+    final
+        If True, use forward process, else backward
+    lin_names
+        Either a set of lineage names from :paramref:`lineage_probabilities` `.names` or None,
+        in which case all lineages are considered.
+    cluster_key
+        Key from :paramref:`adata` `.obs` to obtain cluster annotations.
+        These are considered for :paramref:`clusters`. Default is `"clusters"` if a list of `clusters` is given.
+    clusters
+        Restrict the correlations to these clusters.
+    layer
+        Key from :paramref:`adata` `.layers`.
+    use_raw
+        Whether or not to use :paramref:`adata` `.raw` to correlate gene expression.
+        If using a layer other than `.X`, this must be set to `False`.
+
+    Returns
+    -------
+    :class:`pandas.DataFrame`, :class:`NoneType`
+        Writes to :paramref:`adata` `.var` or :paramref:`adata` `.raw.var`,
+        depending on the value of :paramref:`use_raw`.
+        For each lineage specified, a key is added to `.var` and correlations are saved there.
+
+        Returns `None` if :paramref:`inplace` `=True`, otherwise a :class:`pandas.DataFrame`.
+    """
+
+    # create dummy kernel and estimator
+    kernel = ConnectivityKernel(adata, backward=not final)
+    g = GPCCA(kernel)
+    g._lin_probs = adata.obsm[g._lin_key]
+
+    # call the underlying function to compute and store the lineage drivers
+    g.compute_lineage_drivers(
+        lin_names=lin_names,
+        cluster_key=cluster_key,
+        clusters=clusters,
+        layer=layer,
+        use_raw=use_raw,
+        inplace=inplace,
+    )

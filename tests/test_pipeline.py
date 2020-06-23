@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import numpy as np
 from pandas.api.types import is_categorical_dtype
 
 from anndata import AnnData
@@ -8,6 +9,7 @@ import cellrank as cr
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tools._constants import (
     LinKey,
+    Prefix,
     StateKey,
     Direction,
     _probs,
@@ -31,6 +33,14 @@ def _assert_has_all_keys(adata: AnnData, direction: Direction):
         assert is_categorical_dtype(adata.obs[str(StateKey.FORWARD)])
 
         assert _probs(StateKey.FORWARD) in adata.obs
+
+        # check the correlations with all lineages have been computed
+        lin_probs = adata.obsm[str(LinKey.FORWARD)]
+        np.in1d(
+            [f"{str(Prefix.FORWARD)} {key} corr" for key in lin_probs.names],
+            adata.var.keys(),
+        ).all()
+
     else:
         assert str(LinKey.BACKWARD) in adata.obsm
         assert isinstance(adata.obsm[str(LinKey.BACKWARD)], cr.tl.Lineage)
@@ -42,6 +52,13 @@ def _assert_has_all_keys(adata: AnnData, direction: Direction):
         assert is_categorical_dtype(adata.obs[str(StateKey.BACKWARD)])
 
         assert _probs(StateKey.BACKWARD) in adata.obs
+
+        # check the correlations with all lineages have been computed
+        lin_probs = adata.obsm[str(LinKey.BACKWARD)]
+        np.in1d(
+            [f"{str(Prefix.BACKWARD)} {key} corr" for key in lin_probs.names],
+            adata.var.keys(),
+        ).all()
 
 
 class TestHighLevelPipeline:
@@ -55,6 +72,7 @@ class TestHighLevelPipeline:
         )
         cr.tl.lineages(adata, method="brandts")
         cr.pl.lineages(adata)
+        cr.tl.lineage_drivers(adata, use_raw=False)
 
         _assert_has_all_keys(adata, Direction.FORWARD)
 
@@ -68,6 +86,7 @@ class TestHighLevelPipeline:
         )
         cr.tl.lineages(adata, final=False)
         cr.pl.lineages(adata, final=False)
+        cr.tl.lineage_drivers(adata, use_raw=False, final=False)
 
         _assert_has_all_keys(adata, Direction.BACKWARD)
 
@@ -81,6 +100,7 @@ class TestHighLevelPipeline:
         )
         cr.tl.lineages(adata, method="brandts")
         cr.pl.lineages(adata)
+        cr.tl.lineage_drivers(adata, use_raw=False)
 
         _assert_has_all_keys(adata, Direction.FORWARD)
 
@@ -94,6 +114,7 @@ class TestHighLevelPipeline:
         )
         cr.tl.lineages(adata, final=False)
         cr.pl.lineages(adata, final=False)
+        cr.tl.lineage_drivers(adata, use_raw=False, final=False)
 
         _assert_has_all_keys(adata, Direction.BACKWARD)
 
