@@ -330,9 +330,8 @@ class GPCCA(BaseEstimator):
         stationary_dist = self.eigendecomposition["stationary_dist"]
 
         self._assign_metastable_states(
-            stationary_dist[:, None],
-            np.zeros_like(stationary_dist),
-            n_cells,
+            memberships=stationary_dist[:, None],
+            n_cells=n_cells,
             cluster_key=cluster_key,
             p_thresh=p_thresh,
             en_cutoff=en_cutoff,
@@ -487,9 +486,8 @@ class GPCCA(BaseEstimator):
             self._gpcca = self._gpcca.optimize(m=n_states)
 
         self._assign_metastable_states(
-            self._gpcca.memberships,
-            self._gpcca.metastable_assignment,
-            n_cells,
+            memberships=self._gpcca.memberships,
+            n_cells=n_cells,
             cluster_key=cluster_key,
             p_thresh=p_thresh,
             en_cutoff=en_cutoff,
@@ -884,22 +882,23 @@ class GPCCA(BaseEstimator):
     def _assign_metastable_states(
         self,
         memberships: np.ndarray,
-        metastable_assignment: np.ndarray,
         n_cells: Optional[int],
         cluster_key: str,
         p_thresh: float,
         en_cutoff: float,
     ) -> None:
-        _meta_assignment = pd.Series(
-            index=self.adata.obs_names, data=metastable_assignment, dtype="category"
-        )
-        # sometimes, the assignment can have a missing category and the Lineage creation therefore fails
-        # keep it as ints when `n_cells != None`
-        _meta_assignment.cat.set_categories(
-            list(range(memberships.shape[1])), inplace=True
-        )
 
         if n_cells is None:
+            max_assignment = np.argmax(memberships, axis=1)
+            _meta_assignment = pd.Series(
+                index=self.adata.obs_names, data=max_assignment, dtype="category"
+            )
+            # sometimes, the assignment can have a missing category and the Lineage creation therefore fails
+            # keep it as ints when `n_cells != None`
+            _meta_assignment.cat.set_categories(
+                list(range(memberships.shape[1])), inplace=True
+            )
+
             logg.debug(
                 "DEBUG: Setting the metastable states using metastable assignment"
             )
