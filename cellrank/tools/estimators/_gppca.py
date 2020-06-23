@@ -882,8 +882,8 @@ class GPCCA(BaseEstimator):
     def _assign_metastable_states(
         self,
         memberships: np.ndarray,
-        n_cells: Optional[int],
-        cluster_key: str,
+        n_cells: Optional[int] = 30,
+        cluster_key: str = "clusters",
         en_cutoff: Optional[float] = 0.7,
         p_thresh: float = 1e-15,
     ) -> None:
