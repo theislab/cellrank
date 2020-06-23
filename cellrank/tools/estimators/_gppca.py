@@ -886,6 +886,7 @@ class GPCCA(BaseEstimator):
         cluster_key: str = "clusters",
         en_cutoff: Optional[float] = 0.7,
         p_thresh: float = 1e-15,
+        check_row_sums: bool = True,
     ) -> None:
         """Map a fuzzy clustering to pre-computed annotations to get names and colors.
 
@@ -907,6 +908,8 @@ class GPCCA(BaseEstimator):
             evenly across the reference clusters.
         p_thresh
             Only used to detect cell cycle stages. These have to be present in `adata.obs` as `G2M_score` and `S_score`
+        check_row_sums
+            Check whether rows in `memberships` sum to 1. They should.
 
         Returns
         --------
@@ -941,6 +944,7 @@ class GPCCA(BaseEstimator):
                 n_most_likely=n_cells,
                 remove_overlap=REMOVE_OVERLAP,
                 raise_threshold=0.2,
+                check_row_sums=check_row_sums,
             )
             metastable_states = _series_from_one_hot_matrix(
                 a=a_discrete, index=self.adata.obs_names
