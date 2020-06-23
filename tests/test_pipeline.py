@@ -100,6 +100,7 @@ class TestHighLevelPipeline:
         )
         cr.tl.lineages(adata, method="brandts")
         cr.pl.lineages(adata)
+        cr.tl.lineage_drivers(adata, use_raw=False)
 
         _assert_has_all_keys(adata, Direction.FORWARD)
 
@@ -113,6 +114,7 @@ class TestHighLevelPipeline:
         )
         cr.tl.lineages(adata, final=False)
         cr.pl.lineages(adata, final=False)
+        cr.tl.lineage_drivers(adata, use_raw=False, final=False)
 
         _assert_has_all_keys(adata, Direction.BACKWARD)
 
