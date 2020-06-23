@@ -308,7 +308,7 @@ def gene_importance(
 
 def lineage_drivers(
     adata: AnnData,
-    backward: bool = False,
+    final: bool = True,
     lin_names: Optional[Union[Sequence, str]] = None,
     cluster_key: Optional[str] = None,
     clusters: Optional[Union[Sequence, str]] = None,
@@ -354,7 +354,7 @@ def lineage_drivers(
     """
 
     # create dummy kernel and estimator
-    kernel = ConnectivityKernel(adata, backward=backward)
+    kernel = ConnectivityKernel(adata, backward=not final)
     g = GPCCA(kernel)
     g._lin_probs = adata.obsm[g._lin_key]
 
