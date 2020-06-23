@@ -884,8 +884,8 @@ class GPCCA(BaseEstimator):
         memberships: np.ndarray,
         n_cells: Optional[int],
         cluster_key: str,
-        p_thresh: float,
-        en_cutoff: float,
+        en_cutoff: Optional[float] = 0.7,
+        p_thresh: float = 1e-15,
     ) -> None:
 
         if n_cells is None:
