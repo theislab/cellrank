@@ -6,11 +6,12 @@ from copy import copy
 from typing import Any, Dict, List, Type, Tuple, Union, Callable, Iterable, Optional
 from functools import wraps, reduce
 
+import numpy as np
+from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix
+
 from scanpy import logging as logg
 from anndata import AnnData
 
-import numpy as np
-from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix
 from cellrank.tools._utils import (
     bias_knn,
     _normalize,
@@ -918,10 +919,10 @@ class VelocityKernel(Kernel):
 
         if self._variances is None and scale_by_variances:
             logg.warning(
-                "No velocity uncertainties found. Try re-running `scv.tl.velocity_graph()` and make sure you "
-                "set `compute_uncertainties=True`. Further, make sure that you pass the correct `var_key` "
-                "when you create the VelocityKernel object. "
+                "No velocity uncertainties found. Try re-running `scv.tl.velocity_graph()` and set "
+                "`compute_uncertainties=True`. Further, pass the correct `var_key` when you create the VelocityKernel. "
             )
+            scale_by_variances = False
 
         # get the correlations, handle backwards case
         if self._direction == Direction.BACKWARD:
