@@ -9,5 +9,7 @@ jobs:
           echo "Event '${{ github.event.action }}' received from '${{ github.event.client_payload.repository }}'"
       - name: Trigger documentation build on ReadTheDocs
         if: github.event.action == 'build_docs'
+        env:
+          TOKEN: ${{ secrets.RTD_TOKEN }}
         run: |
-          curl -X POST -d "branches=master" -d "token={{ secrets.RTD_TOKEN }}" https://readthedocs.org/api/v2/webhook/cellrank/125510/
+          curl -X POST -d "branches=master" -d "token=$TOKEN" https://readthedocs.org/api/v2/webhook/cellrank/125510/
