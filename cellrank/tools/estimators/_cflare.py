@@ -4,9 +4,12 @@ from copy import copy, deepcopy
 from typing import Any, Dict, List, Tuple, Union, Iterable, Optional, Sequence
 
 import numpy as np
+import scipy
 from pandas import Series
 from scipy.stats import zscore, entropy
-from scipy.linalg import solve
+from scipy.linalg import solve as solve
+from scipy.sparse import issparse
+from scipy.sparse.linalg import spsolve
 
 import matplotlib as mpl
 import matplotlib.cm as cm
@@ -558,6 +561,7 @@ class CFLARE(BaseEstimator):
         keys: Optional[Sequence[str]] = None,
         check_irred: bool = False,
         norm_by_frequ: bool = False,
+        densify: bool = False,
     ) -> None:
         """
         Compute absorption probabilities for a Markov chain.
@@ -597,7 +601,14 @@ class CFLARE(BaseEstimator):
         start = logg.info("Computing absorption probabilities")
 
         # we don't expect the abs. probs. to be sparse, therefore, make T dense. See scipy docs about sparse lin solve.
-        t = self._T.A if self._is_sparse else self._T
+        if densify:
+            logg.warning(
+                "Densifying the transition matrix. This could be faster but will lead to larger memory"
+                "requirement. Consider leaving the matrix sparse for large problems. "
+            )
+            t = self._T.A if self._is_sparse else self._T
+        else:
+            t = self._T
 
         # colors are created in `compute_metastable_states`, this is just in case
         self._check_and_create_colors()
@@ -632,7 +643,11 @@ class CFLARE(BaseEstimator):
         # create Q (restriction transient-transient), S (restriction transient-recurrent) and I (Q-sized identity)
         q = t[trans_indices, :][:, trans_indices]
         s = t[trans_indices, :][:, rec_indices]
-        eye = np.eye(len(trans_indices))
+        eye = (
+            scipy.sparse.eye(len(trans_indices))
+            if issparse(t)
+            else np.eye(len(trans_indices))
+        )
 
         if check_irred:
             if self._is_irreducible is None:
@@ -642,7 +657,7 @@ class CFLARE(BaseEstimator):
 
         # compute abs probs. Since we don't expect sparse solution, dense computation is faster.
         logg.debug("DEBUG: Solving the linear system to find absorption probabilities")
-        abs_states = solve(eye - q, s)
+        abs_states = spsolve(eye - q, s) if issparse(q) else solve(eye - q, s)
 
         # aggregate to class level by summing over columns belonging to the same metastable_states
         approx_rc_red = metastable_states_[mask]
