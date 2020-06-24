@@ -605,7 +605,7 @@ class CFLARE(BaseEstimator):
 
         # we don't expect the abs. probs. to be sparse, therefore, make T dense. See scipy docs about sparse lin solve.
         if densify:
-            logg.warning("Densifying the transition matrix. ")
+            logg.debug("DEBUG: Densifying the transition matrix. ")
             t = self._T.A if self._is_sparse else self._T
         else:
             t = self._T
