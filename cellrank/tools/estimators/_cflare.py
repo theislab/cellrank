@@ -578,6 +578,10 @@ class CFLARE(BaseEstimator):
             Check whether the matrix restricted to the given transient states is irreducible.
         norm_by_frequ
             Divide absorption probabilities for `rc_i` by `|rc_i|`.
+        densify
+            Densify the transition matrix and use a dense linear solver. This can make sense for small problems, as
+            absorption probabilities are in general not sparse, so sparse solver won't be very efficient. However, for
+            large problems, this should be set to `False` to make sure the memory requirement does not explode.
 
         Returns
         -------
