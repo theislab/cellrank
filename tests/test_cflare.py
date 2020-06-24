@@ -22,6 +22,8 @@ from cellrank.tools._constants import (
     _lin_names,
 )
 
+EPS = np.finfo(np.float64).eps
+
 
 class TestCFLARE:
     def test_compute_partition(self, adata_large: AnnData):
@@ -136,6 +138,27 @@ class TestCFLARE:
             mc.lineage_probabilities.colors, mc.adata.uns[_colors(LinKey.FORWARD)]
         )
         np.testing.assert_allclose(mc.lineage_probabilities.X.sum(1), 1)
+
+    def test_compute_lin_probs_sparse(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.CFLARE(final_kernel)
+        mc.compute_eig(k=5)
+        mc.compute_metastable_states(use=2)
+
+        # compute lin probs using dense routine
+        mc.compute_lin_probs(densify=True)
+        l_dense = mc.lineage_probabilities
+
+        # comptue lin probs using sparse routine
+        mc.compute_lin_probs(densify=False)
+        l_sparse = mc.lineage_probabilities
+
+        np.testing.assert_allclose(
+            l_dense.X, l_sparse.X, rtol=1e3 * EPS, atol=1e3 * EPS
+        )
 
     def test_compute_lineage_drivers_no_lineages(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
