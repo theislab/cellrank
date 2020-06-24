@@ -33,6 +33,7 @@ _cluster_fates_modes = ("bar", "paga", "paga_pie", "violin", "heatmap", "cluster
 def cluster_fates(
     adata: AnnData,
     cluster_key: Optional[str] = "louvain",
+    lineage_key: Optional[str] = None,
     clusters: Optional[Union[str, Sequence[str]]] = None,
     lineages: Optional[Union[str, Sequence[str]]] = None,
     mode: str = "bar",
@@ -63,6 +64,8 @@ def cluster_fates(
         Annotated data object.
     cluster_key
         Key in :paramref:`adata` `.obs` containing the clusters.
+    lineage_key
+        Key in :paramref:`adata` `.obsm` containing fate probabilities.
     clusters
         Clusters to visualize.
         If `None`, all clusters will be plotted.
@@ -411,8 +414,10 @@ def cluster_fates(
         raise ValueError(
             f"Not specifying cluster key is only available for modes `'bar'` and `'violin'`, found `mode={mode!r}`."
         )
-
-    lk = str(LinKey.FORWARD if final else LinKey.BACKWARD)
+    if lineage_key is None:
+        lk = str(LinKey.FORWARD if final else LinKey.BACKWARD)
+    else:
+        lk = lineage_key
     points = "final states" if final else "root states"
     dir_prefix = "To" if final else "From"
 
@@ -440,7 +445,7 @@ def cluster_fates(
         clusters = [points]
 
     if lk not in adata.obsm:
-        raise KeyError(f"Lineages key `{lk!r}` not found in `adata.obsm`.")
+        raise KeyError(f"Lineage key `{lk!r}` not found in `adata.obsm`.")
 
     if lineages is not None:
         if isinstance(lineages, str):
