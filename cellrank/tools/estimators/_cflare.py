@@ -561,7 +561,7 @@ class CFLARE(BaseEstimator):
         keys: Optional[Sequence[str]] = None,
         check_irred: bool = False,
         norm_by_frequ: bool = False,
-        densify: bool = False,
+        densify: bool = True,
     ) -> None:
         """
         Compute absorption probabilities for a Markov chain.
@@ -579,9 +579,8 @@ class CFLARE(BaseEstimator):
         norm_by_frequ
             Divide absorption probabilities for `rc_i` by `|rc_i|`.
         densify
-            Densify the transition matrix and use a dense linear solver. This can make sense for small problems, as
-            absorption probabilities are in general not sparse, so sparse solver won't be very efficient. However, for
-            large problems, this should be set to `False` to make sure the memory requirement does not explode.
+            Densify the transition matrix. Usually makes sense, as the output of the linear solve is not expected
+            to be sparse, hence inefficient to use sparse solver.
 
         Returns
         -------
@@ -606,10 +605,7 @@ class CFLARE(BaseEstimator):
 
         # we don't expect the abs. probs. to be sparse, therefore, make T dense. See scipy docs about sparse lin solve.
         if densify:
-            logg.warning(
-                "Densifying the transition matrix. This could be faster but will lead to larger memory"
-                "requirement. Consider leaving the matrix sparse for large problems. "
-            )
+            logg.warning("Densifying the transition matrix. ")
             t = self._T.A if self._is_sparse else self._T
         else:
             t = self._T
@@ -671,7 +667,7 @@ class CFLARE(BaseEstimator):
         }
         _abs_classes = np.concatenate(
             [
-                np.sum(abs_states[:, rec_classes_red[key]], axis=1)[:, None]
+                np.array(abs_states[:, rec_classes_red[key]].sum(1)).flatten()[:, None]
                 for key in approx_rc_red.cat.categories
             ],
             axis=1,
