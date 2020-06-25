@@ -213,7 +213,7 @@ def cluster_fates(
         kwargs["node_colors"] = colors
         kwargs.pop("save", None)  # we will handle saving
 
-        kwargs["transitions"] = kwargs.get("transitions", None)
+        kwargs["transitions"] = kwargs.get("transitions", "transitions_confidence")
         if "legend_loc" in kwargs:
             orig_ll = kwargs["legend_loc"]
             if orig_ll != "on data":
