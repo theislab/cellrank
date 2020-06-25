@@ -29,7 +29,7 @@ sometimes be a bit tricky to install. On Ubuntu 18.04, try the following::
 
     # install a message passing interface and mpi4py
     sudo apt-get install libopenmpi-dev
-    pip install --user mpi4py
+    pip install --user mpi4py # alternatively: conda install -c conda-forge openmpi
 
     # install petsc and and petsc4py
     pip install --user petsc
