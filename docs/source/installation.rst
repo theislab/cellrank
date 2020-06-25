@@ -20,23 +20,26 @@ when you pull new changes from github.
 
 Dependencies
 ~~~~~~~~~~~~
-To efficiently compute the schur decomposition for large cell numbers, we rely on `SLEPSc`_ wich can
+To efficiently compute the schur decomposition for large cell numbers, we rely on `SLEPSc`_ which can
 sometimes be a bit tricky to install. On Ubuntu 18.04, try the following::
+
+    # note: conda alternatives are denoted by alt.
 
     # update
     sudo apt-get update
     sudo apt-get upgrade
 
     # install a message passing interface and mpi4py
-    sudo apt-get install libopenmpi-dev
-    pip install --user mpi4py
+    sudo apt-get install libopenmpi-dev # alt.: conda install -c conda-forge openmpi
+    pip install --user mpi4py # alt.: conda install -c anaconda mpi4py
 
     # install petsc and and petsc4py
-    pip install --user petsc
-    pip install --user petsc4py
+    pip install --user petsc # alt.: conda install -c conda-forge petsc
+    pip install --user petsc4py # alt.: conda install -c conda-forge petsc4py
 
     # install slepsc and slepsc4py
-    pip install --user slepc slepc4py
+    pip install --user slepc # alt.: conda install -c conda-forge slepc
+    pip install --user slepc4py # alt.: conda install -c conda-forge slepc4py
 
 During installation of petsc, petsc4py, selpc, and slepc4py the following
 error might appear several times::
