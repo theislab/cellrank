@@ -2,10 +2,23 @@
 import numpy as np
 import pytest
 
-from _helpers import bias_knn, create_kernels, transition_matrix, density_normalization
+import anndata
+
+from _helpers import (
+    bias_knn,
+    create_kernels,
+    transition_matrix,
+    density_normalization,
+    random_transition_matrix,
+)
 from cellrank.tools._utils import _normalize
 from cellrank.utils._utils import _get_neighs, _get_neighs_params
-from cellrank.tools.kernels import PalantirKernel, VelocityKernel, ConnectivityKernel
+from cellrank.tools.kernels import (
+    PalantirKernel,
+    VelocityKernel,
+    PrecomputedKernel,
+    ConnectivityKernel,
+)
 from cellrank.tools._constants import Direction, _transition
 from cellrank.tools.kernels._kernel import Constant, KernelAdd, KernelMul, _is_bin_mult
 
@@ -307,6 +320,66 @@ class TestInitializeKernel:
 
 
 class TestKernel:
+    def test_precomputed_not_array(self, adata):
+        with pytest.raises(TypeError):
+            _ = PrecomputedKernel([[1, 0], [0, 1]])
+
+    def test_precomputed_not_square(self, adata):
+        with pytest.raises(ValueError):
+            _ = PrecomputedKernel(np.random.normal(size=(10, 9)))
+
+    def test_precomputed_not_a_transition_matrix(self, adata):
+        with pytest.raises(ValueError):
+            mat = random_transition_matrix(adata.n_obs)
+            mat[0, 0] = 0xDEADBEEF
+            _ = PrecomputedKernel(mat)
+
+    def test_precomputed_no_adata(self):
+        pk = PrecomputedKernel(random_transition_matrix(50))
+        pk.write_to_adata()
+
+        assert isinstance(pk.adata, anndata.AnnData)
+        assert pk.adata.shape == (50, 1)
+        assert pk.adata.obs.shape == (50, 0)
+        assert pk.adata.var.shape == (1, 0)
+        assert "params" in pk.adata.uns["T_fwd"]
+        np.testing.assert_array_equal(
+            pk.adata.uns["T_fwd"]["T"].toarray(), pk.transition_matrix.toarray()
+        )
+
+    def test_precomputed_adata(self, adata):
+        pk = PrecomputedKernel(random_transition_matrix(adata.n_obs), adata=adata)
+
+        assert pk.adata is adata
+
+    def test_precomputed_transition_matrix(self, adata):
+        mat = random_transition_matrix(adata.n_obs)
+        pk = PrecomputedKernel(mat)
+
+        np.testing.assert_array_equal(mat, pk.transition_matrix.toarray())
+
+    def test_precomputed_sum(self, adata):
+        mat = random_transition_matrix(adata.n_obs)
+        pk = PrecomputedKernel(mat)
+        vk = VelocityKernel(adata).compute_transition_matrix()
+
+        expected = (0.5 * vk.transition_matrix) + (0.5 * pk.transition_matrix)
+        actual = (pk + vk).compute_transition_matrix()
+
+        np.testing.assert_array_almost_equal(
+            expected.toarray(), actual.transition_matrix.toarray()
+        )
+
+    def test_write_adata(self, adata):
+        vk = VelocityKernel(adata).compute_transition_matrix()
+        vk.write_to_adata()
+
+        assert adata is vk.adata
+        assert "params" in adata.uns["T_fwd"]
+        np.testing.assert_array_equal(
+            adata.uns["T_fwd"]["T"].toarray(), vk.transition_matrix.toarray()
+        )
+
     def test_row_normalized(self, adata):
         vk = VelocityKernel(adata)
 
@@ -842,6 +915,25 @@ class TestKernelCopy:
         vk2 = vk1.copy()
 
         assert vk1.params == vk2.params
+
+    def test_copy_cond_num(self, adata):
+        for KernelClass in [
+            VelocityKernel,
+            ConnectivityKernel,
+            PalantirKernel,
+            PrecomputedKernel,
+        ]:
+            if KernelClass is PrecomputedKernel:
+                k1 = KernelClass(
+                    random_transition_matrix(adata.n_obs), compute_cond_num=True
+                )
+            else:
+                k1 = KernelClass(
+                    adata, compute_cond_num=True
+                ).compute_transition_matrix()
+            k2 = k1.copy()
+
+            assert k1.condition_number == k2.condition_number
 
     def test_copy_velocity_kernel(self, adata):
         vk1 = VelocityKernel(adata).compute_transition_matrix()
