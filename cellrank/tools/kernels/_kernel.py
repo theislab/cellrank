@@ -6,11 +6,12 @@ from copy import copy
 from typing import Any, Dict, List, Type, Tuple, Union, Callable, Iterable, Optional
 from functools import wraps, reduce
 
+import numpy as np
+from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix
+
 from scanpy import logging as logg
 from anndata import AnnData
 
-import numpy as np
-from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix
 from cellrank.tools._utils import (
     bias_knn,
     _normalize,
@@ -65,7 +66,7 @@ class KernelExpression(ABC):
         """
         Return row-normalized transition matrix.
 
-        If not present, try computing it, if all the underlying kernels have been initialized.
+        If not present, compute it, if all the underlying kernels have been initialized.
         """
 
         if self._parent is None and self._transition_matrix is None:
@@ -706,12 +707,11 @@ class ConstantMatrix(Kernel):
         backward: bool = False,
     ):
         super().__init__(adata, backward=backward)
-        if hasattr(self, "_conn"):  # precomputed doesn't read anything from adata
-            conn_shape = self._conn.shape
-            if variances.shape != conn_shape:
-                raise ValueError(
-                    f"Expected variances of shape `{conn_shape}`, found `{variances.shape}`."
-                )
+        conn_shape = self._conn.shape
+        if variances.shape != conn_shape:
+            raise ValueError(
+                f"Expected variances of shape `{conn_shape}`, found `{variances.shape}`."
+            )
         if not isinstance(value, (int, float)):
             raise TypeError(
                 f"Value must be on `float` or `int`, found `{type(value).__name__}`."
@@ -786,7 +786,7 @@ class PrecomputedKernel(Kernel):
             )
 
         super().__init__(adata, backward=backward, compute_cond_num=compute_cond_num)
-        self._transition_matrix = transition_matrix
+        self._transition_matrix = csr_matrix(transition_matrix)
         self._maybe_compute_cond_num()
 
     def _read_from_adata(self, **kwargs):
@@ -813,7 +813,7 @@ class PrecomputedKernel(Kernel):
         return f"{'~' if self.backward and self._parent is None else ''}<Precomputed>"
 
     def __str__(self):
-        repr(self)
+        return repr(self)
 
 
 class VelocityKernel(Kernel):
