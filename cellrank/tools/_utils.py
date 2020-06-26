@@ -471,26 +471,15 @@ def _cluster_X(
     X: Union[np.ndarray, spmatrix],
     method: str,
     n_clusters_kmeans: int,
-    percentile: Optional[float],
-    use: Union[Tuple[int], List[int]],
     n_neighbors_louvain: int,
     resolution_louvain: float,
 ) -> List[Any]:
     """Cluster the rows of the matrix X."""
 
     if method == "kmeans":
-        if n_clusters_kmeans is None:
-            if percentile is not None:
-                n_clusters_kmeans = len(use)
-            else:
-                n_clusters_kmeans = len(use) + 1
         kmeans = KMeans(n_clusters=n_clusters_kmeans).fit(X)
         labels = kmeans.labels_
     elif method == "louvain":
-        if len(use) <= 1:
-            raise ValueError(
-                f"Number of eigenvector must be larger than `1` for method `{method!r}`, found `{len(use)}`."
-            )
         adata_dummy = sc.AnnData(X=X)
         sc.pp.neighbors(adata_dummy, use_rep="X", n_neighbors=n_neighbors_louvain)
         sc.tl.louvain(adata_dummy, resolution=resolution_louvain)
