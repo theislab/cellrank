@@ -66,7 +66,7 @@ class KernelExpression(ABC):
         """
         Return row-normalized transition matrix.
 
-        If not present, try computing it, if all the underlying kernels have been initialized.
+        If not present, compute it, if all the underlying kernels have been initialized.
         """
 
         if self._parent is None and self._transition_matrix is None:
@@ -655,7 +655,7 @@ class Kernel(UnaryKernelExpression, ABC):
 
 
 class Constant(Kernel):
-    """Class representing a multiplication by a constant number."""
+    """Kernel representing a multiplication by a constant number."""
 
     def __init__(
         self, adata: AnnData, value: Union[int, float], backward: bool = False
@@ -697,7 +697,7 @@ class Constant(Kernel):
 
 
 class ConstantMatrix(Kernel):
-    """Class representing multiplication by a constant matrix."""
+    """Kernel representing multiplication by a constant matrix."""
 
     def __init__(
         self,
@@ -731,15 +731,15 @@ class ConstantMatrix(Kernel):
             self.adata, self._value, copy(self._variances), self.backward
         )
 
-    def _recalculate(self, value):
+    def _recalculate(self, value) -> None:
         self._value = value
         self._params = {"value": value}
         self._transition_matrix = value * self._variances
 
-    def _read_from_adata(self, **kwargs):
+    def _read_from_adata(self, **kwargs) -> None:
         super()._read_from_adata(**kwargs)  # we need the shape info from neighbors
 
-    def compute_transition_matrix(self, *args, **kwargs) -> "KernelExpression":
+    def compute_transition_matrix(self, *args, **kwargs) -> "ConstantMatrix":
         """Return self."""
         return self
 
@@ -755,9 +755,70 @@ class ConstantMatrix(Kernel):
         return str(round(self._value, _n_dec))
 
 
+class PrecomputedKernel(Kernel):
+    """Kernel which contains precomputed transition matrix."""
+
+    def __init__(
+        self,
+        transition_matrix: Union[np.ndarray, spmatrix],
+        adata: Optional[AnnData] = None,
+        backward: bool = False,
+        compute_cond_num: bool = False,
+    ):
+        if not isinstance(transition_matrix, (np.ndarray, spmatrix)):
+            raise TypeError(
+                f"Expected transition matrix to be of type `numpy.ndarray` or `scipy.sparse.spmatrix`, "
+                f"found `{type(transition_matrix).__name__}`."
+            )
+
+        if transition_matrix.shape[0] != transition_matrix.shape[1]:
+            raise ValueError(
+                f"Expected transition matrix to be square, found `{transition_matrix.shape}`."
+            )
+
+        if not np.allclose(np.sum(transition_matrix, axis=1), 1.0):
+            raise ValueError("Not a valid transition matrix: not all rows sum to 1.")
+
+        if adata is None:
+            logg.debug("DEBUG: Creating empty dummy AnnData object")
+            adata = AnnData(
+                csr_matrix((transition_matrix.shape[0], 1), dtype=np.float32)
+            )
+
+        super().__init__(adata, backward=backward, compute_cond_num=compute_cond_num)
+        self._transition_matrix = csr_matrix(transition_matrix)
+        self._maybe_compute_cond_num()
+
+    def _read_from_adata(self, **kwargs):
+        pass
+
+    def copy(self) -> "PrecomputedKernel":
+        """Return a copy of self."""
+        pk = PrecomputedKernel(
+            copy(self.transition_matrix), adata=self.adata, backward=self.backward
+        )
+        pk._cond_num = self.condition_number
+        return pk
+
+    def compute_transition_matrix(self, *args, **kwargs) -> "PrecomputedKernel":
+        """Return self."""
+        return self
+
+    def __invert__(self) -> "PrecomputedKernel":
+        # do not call parent's invert, since it removes the transition matrix
+        self._direction = Direction.FORWARD if self.backward else Direction.BACKWARD
+        return self
+
+    def __repr__(self):
+        return f"{'~' if self.backward and self._parent is None else ''}<Precomputed>"
+
+    def __str__(self):
+        return repr(self)
+
+
 class VelocityKernel(Kernel):
     """
-    Kernel class which computes a transition matrix based on velocity correlations.
+    Kernel which computes a transition matrix based on velocity correlations.
 
     This borrows ideas from both [Manno18]_ and [Bergen19]_. In short, for each cell *i*, we compute transition
     probabilities :math:`p_{i, j}` to each cell *j* ( in the neighborhood of *i*. The transition probabilities are
@@ -998,6 +1059,7 @@ class VelocityKernel(Kernel):
             use_negative_cosines=self._use_negative_cosines,
         )
         vk._params = copy(self.params)
+        vk._cond_num = self.condition_number
         vk._transition_matrix = copy(self._transition_matrix)
 
         return vk
@@ -1005,7 +1067,7 @@ class VelocityKernel(Kernel):
 
 class ConnectivityKernel(Kernel):
     """
-    Kernel class which computes transition probabilities based on transcriptomic similarities.
+    Kernel which computes transition probabilities based on transcriptomic similarities.
 
     As a measure for transcriptomic similarity, we use the weighted KNN graph computed using
     :func:`scanpy.pp.neighbors`,see [Wolf18]_.
@@ -1097,6 +1159,7 @@ class ConnectivityKernel(Kernel):
             self.adata, backward=self.backward, var_key=self._var_key
         )
         ck._params = copy(self.params)
+        ck._cond_num = self.condition_number
         ck._transition_matrix = copy(self._transition_matrix)
 
         return ck
@@ -1104,7 +1167,7 @@ class ConnectivityKernel(Kernel):
 
 class PalantirKernel(Kernel):
     """
-    Kernel class which computes transition probabilities in a similar way to *Palantir*, see [Setty19]_.
+    Kernel which computes transition probabilities in a similar way to *Palantir*, see [Setty19]_.
 
     *Palantir* computes a KNN graph in gene expression space and a pseudotime, which it then uses to direct the edges of
     the KNN graph, such that they are more likely to point into the direction of increasing pseudotime. To avoid
@@ -1250,6 +1313,7 @@ class PalantirKernel(Kernel):
             var_key=self._var_key,
         )
         pk._params = copy(self._params)
+        pk._cond_num = self.condition_number
         pk._transition_matrix = copy(self._transition_matrix)
 
         return pk
@@ -1431,4 +1495,9 @@ def _is_bin_mult(
     return None
 
 
-_adaptive_add_type = (ConnectivityKernel, VelocityKernel, PalantirKernel)
+_adaptive_add_type = (
+    ConnectivityKernel,
+    VelocityKernel,
+    PalantirKernel,
+    PrecomputedKernel,
+)
