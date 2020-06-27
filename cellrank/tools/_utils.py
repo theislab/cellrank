@@ -495,6 +495,9 @@ def _cluster_X(
         List of cluster labels of length `n_samples`
 
     """
+    # make sure data is at least 2D
+    if X.ndim == 1:
+        X = X[:, None]
 
     if method == "kmeans":
         kmeans = KMeans(n_clusters=n_clusters).fit(X)
