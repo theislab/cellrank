@@ -3,6 +3,9 @@ import os
 from typing import Union
 from pathlib import Path
 
+import pytest
+from packaging import version
+
 import matplotlib.cm as cm
 from matplotlib.testing import setup
 from matplotlib.testing.compare import compare_images
@@ -10,10 +13,8 @@ from matplotlib.testing.compare import compare_images
 import scvelo as scv
 from anndata import AnnData
 
-import pytest
 import cellrank as cr
 from _helpers import create_model, resize_images_to_same_sizes
-from packaging import version
 from cellrank.tools import GPCCA, CFLARE
 
 setup()
@@ -877,8 +878,8 @@ class TestGPCCA:
         mc.plot_metastable_states(lineages=["0"], dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
-    def test_scvelo_gpcca_meta_states_n_cells(self, mc: GPCCA, fpath: str):
-        mc.plot_metastable_states(n_cells=5, dpi=DPI, save=fpath)
+    def test_scvelo_gpcca_meta_states_discrete(self, mc: GPCCA, fpath: str):
+        mc.plot_metastable_states(discrete=True, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_meta_states_cluster_key(self, mc: GPCCA, fpath: str):
@@ -909,8 +910,8 @@ class TestGPCCA:
         mc.plot_main_states(lineages=["0"], dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
-    def test_scvelo_gpcca_main_states_n_cells(self, mc: GPCCA, fpath: str):
-        mc.plot_main_states(n_cells=5, dpi=DPI, save=fpath)
+    def test_scvelo_gpcca_main_states_discrete(self, mc: GPCCA, fpath: str):
+        mc.plot_main_states(discrete=True, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_main_states_cluster_key(self, mc: GPCCA, fpath: str):
