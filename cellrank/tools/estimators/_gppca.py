@@ -99,7 +99,6 @@ class GPCCA(BaseEstimator):
 
         self._main_states = None
         self._main_states_probabilities = None
-        self._n_cells = None  # serves as a cache for plotting
 
     def compute_eig(
         self,
@@ -525,7 +524,7 @@ class GPCCA(BaseEstimator):
 
     def plot_metastable_states(
         self,
-        n_cells: Optional[int] = None,
+        discrete: bool = False,
         lineages: Optional[Union[str, Iterable[str]]] = None,
         cluster_key: Optional[str] = None,
         mode: str = "embedding",
@@ -540,8 +539,8 @@ class GPCCA(BaseEstimator):
 
         Params
         ------
-        n_cells
-            Number of cells to sample from the distribution. If `None`, don't sample, justs plot the distribution.
+        discrete
+            Whether to plot the top cells from each linages or the probabilities.
         lineages
             Only show these lineages. If `None`, plot all lineages.
         cluster_key
@@ -572,7 +571,7 @@ class GPCCA(BaseEstimator):
         attr = "_meta_lin_probs"
         error_msg = "Compute metastable states first as `.compute_metastable_states()`."
 
-        if n_cells is None:
+        if not discrete:
             self._plot_probabilities(
                 attr=attr,
                 error_msg=error_msg,
@@ -590,7 +589,6 @@ class GPCCA(BaseEstimator):
             self._plot_states(
                 attr=attr,
                 error_msg=error_msg,
-                n_cells=n_cells,
                 same_plot=same_plot,
                 title=title,
                 **kwargs,
@@ -598,7 +596,7 @@ class GPCCA(BaseEstimator):
 
     def plot_main_states(
         self,
-        n_cells: Optional[int] = None,
+        discrete: bool = False,
         lineages: Optional[Union[str, Iterable[str]]] = None,
         cluster_key: Optional[str] = None,
         mode: str = "embedding",
@@ -614,8 +612,8 @@ class GPCCA(BaseEstimator):
 
         Params
         ------
-        n_cells
-            Number of cells to sample from the distribution. If `None`, don't sample, just plots the distribution.
+        discrete
+            Whether to plot the top cells from each linages or the probabilities.
         lineages
             Only show these lineages. If `None`, plot all lineages.
         cluster_key
@@ -651,7 +649,7 @@ class GPCCA(BaseEstimator):
             "or set them manually as `.set_main_states()`."
         )
 
-        if n_cells is None:
+        if not discrete:
             self._plot_probabilities(
                 attr=attr,
                 error_msg=error_msg,
@@ -669,20 +667,12 @@ class GPCCA(BaseEstimator):
             self._plot_states(
                 attr=attr,
                 error_msg=error_msg,
-                n_cells=n_cells,
                 same_plot=same_plot,
                 title=title,
                 **kwargs,
             )
 
-    def _set_main_states(
-        self, n_cells: Optional[int], write_to_adata: bool = True
-    ) -> None:
-        self._n_cells = n_cells
-
-        if n_cells is None:
-            return None
-
+    def _set_main_states(self, n_cells: int, write_to_adata: bool = True) -> None:
         probs = self._lin_probs[[n for n in self._lin_probs.names if n != "rest"]]
         a_discrete, _ = _fuzzy_to_discrete(
             a_fuzzy=probs,
@@ -704,7 +694,7 @@ class GPCCA(BaseEstimator):
     def set_main_states(
         self,
         names: Optional[Union[Iterable[str], str]] = None,
-        n_cells: Optional[int] = 30,
+        n_cells: int = 30,
         redistribute: bool = True,
         **kwargs,
     ):
@@ -731,6 +721,13 @@ class GPCCA(BaseEstimator):
                 - :paramref:`lineage_probabilities`
                 - :paramref:`diff_potential`
         """
+        if not isinstance(n_cells, int):
+            raise TypeError(
+                f"Expected `n_cells` to be of type `int`, found `{type(n_cells).__name__}`."
+            )
+
+        if n_cells <= 0:
+            raise ValueError(f"Expected `n_cells` to be positive, found `{n_cells}`.")
 
         if names is None:
             names = self._meta_lin_probs.names
@@ -741,7 +738,7 @@ class GPCCA(BaseEstimator):
 
         if len(names) == 1 and redistribute:
             logg.warning(
-                "Redistributing the mass only to 1 state will create a constant vector of ones. Not redistributing"
+                "Redistributing the mass to only 1 state will create a constant vector of ones. Not redistributing"
             )
             redistribute = False
 
@@ -784,7 +781,7 @@ class GPCCA(BaseEstimator):
         alpha: Optional[float] = 1,
         min_self_prob: Optional[float] = None,
         n_main_states: Optional[int] = None,
-        n_cells: Optional[int] = 30,
+        n_cells: int = 30,
         **kwargs,
     ):
         """
@@ -888,7 +885,8 @@ class GPCCA(BaseEstimator):
         p_thresh: float = 1e-15,
         check_row_sums: bool = True,
     ) -> None:
-        """Map a fuzzy clustering to pre-computed annotations to get names and colors.
+        """
+        Map a fuzzy clustering to pre-computed annotations to get names and colors.
 
         Given the fuzzy clustering we have computed, we would like to select the most likely cells from each state
         and use these to give each state a name and a color by comparing with pre-computed, categorical cluster
@@ -899,22 +897,23 @@ class GPCCA(BaseEstimator):
         memberships
             Fuzzy clustering
         n_cells
-            Number of cells to be used to represent each state
+            Number of cells to be used to represent each state.
         cluster_key
-            Key from `adata.obs` to get reference cluster annotations
+            Key from `adata.obs` to get reference cluster annotations.
         en_cutoff
             Threshold to decide when we we want to warn the user about an uncertain name mapping. This happens when
             one fuzzy state overlaps with several reference clusters, and the most likely cells are distributed almost
             evenly across the reference clusters.
         p_thresh
-            Only used to detect cell cycle stages. These have to be present in `adata.obs` as `G2M_score` and `S_score`
+            Only used to detect cell cycle stages. These have to be present in `adata.obs` as `G2M_score` and `S_score`.
         check_row_sums
-            Check whether rows in `memberships` sum to 1. They should.
+            Check whether rows in `memberships` sum to 1.
 
         Returns
         --------
-        Writes a lineage object which mapped names and colors. Also creates a categorical Series
-        `self.metastable_states`, where the top `n_cells` cells represent each fuzzy state
+        None
+            Writes a lineage object which mapped names and colors. Also creates a categorical :class:`pandas.Series`
+            `.metastable_states`, where the top `n_cells` cells represent each fuzzy state.
         """
 
         if n_cells is None:
@@ -934,6 +933,11 @@ class GPCCA(BaseEstimator):
             metastable_states = _meta_assignment.astype(str).astype("category").copy()
             not_enough_cells = []
         else:
+            if n_cells <= 0:
+                raise ValueError(
+                    f"Expected `n_cells` to be positive, found `{n_cells}`."
+                )
+
             logg.debug(
                 "DEBUG: Setting the metastable states using metastable memberships"
             )
@@ -982,7 +986,6 @@ class GPCCA(BaseEstimator):
         self,
         attr: str,
         error_msg: str,
-        n_cells: int,
         same_plot: bool = True,
         title: Optional[Union[str, List[str]]] = None,
         **kwargs,
@@ -1004,7 +1007,7 @@ class GPCCA(BaseEstimator):
         Returns
         -------
         None
-            Nothing, just plots the main states.
+            Nothing, just plots the metastable or main states.
         """
 
         def cleanup():
@@ -1024,27 +1027,9 @@ class GPCCA(BaseEstimator):
 
         probs = probs[[n for n in probs.names if n != "rest"]]
 
-        if n_cells <= 0:
-            raise ValueError(f"Expected `n_cells` to be positive, found `{n_cells}`.")
-
-        if attr == "_meta_lin_probs":  # plotting meta_lin_probs
-            a_discrete, _ = _fuzzy_to_discrete(
-                a_fuzzy=probs,
-                n_most_likely=n_cells,
-                remove_overlap=REMOVE_OVERLAP,
-                raise_threshold=0.2,
-            )
-            _main_states = _series_from_one_hot_matrix(
-                a=a_discrete, index=self.adata.obs_names, names=probs.names
-            )
-
+        if attr == "_meta_lin_probs":
+            _main_states = self._meta_states
         elif attr == "_lin_probs":
-            if n_cells == self._n_cells:
-                logg.debug("DEBUG: Using cached main states")
-            else:
-                self._set_main_states(
-                    n_cells, write_to_adata=False
-                )  # plotting shouldn't overwrite main_states
             _main_states = self._main_states
         else:
             raise RuntimeError(f"Invalid attribute name: `{attr!r}`.")
@@ -1431,8 +1416,6 @@ class GPCCA(BaseEstimator):
 
         g._main_states = copy(self.main_states)
         g._main_states_probabilities = copy(self._main_states_probabilities)
-
-        g._n_cells = self._n_cells
 
         g._coarse_stat_dist = copy(self.coarse_stationary_distribution)
         g._coarse_init_dist = copy(self._coarse_init_dist)

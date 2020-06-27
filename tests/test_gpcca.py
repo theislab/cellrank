@@ -3,11 +3,12 @@
 from copy import deepcopy
 from typing import Tuple
 
-from anndata import AnnData
-
 import numpy as np
 import pandas as pd
 import pytest
+
+from anndata import AnnData
+
 import cellrank as cr
 from _helpers import assert_array_nan_equal
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
@@ -275,9 +276,20 @@ class TestCGPCCA:
         mc.compute_schur(n_components=10, method="brandts")
 
         mc.compute_metastable_states(n_states=2, n_cells=None)
-        mc.set_main_states()
+        with pytest.raises(TypeError):
+            mc.set_main_states(n_cells=None)
 
-        _check_main_states(mc, has_main_states=False)
+    def test_set_main_states_non_positive_cells(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.GPCCA(final_kernel)
+        mc.compute_schur(n_components=10, method="brandts")
+
+        mc.compute_metastable_states(n_states=2, n_cells=None)
+        with pytest.raises(ValueError):
+            mc.set_main_states(n_cells=0)
 
     def test_set_main_states_invalid_name(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
@@ -312,9 +324,20 @@ class TestCGPCCA:
         mc.compute_schur(n_components=10, method="brandts")
 
         mc.compute_metastable_states(n_states=2)
-        mc.compute_main_states(n_cells=None)
+        with pytest.raises(TypeError):
+            mc.compute_main_states(n_cells=None)
 
-        _check_main_states(mc, has_main_states=False)
+    def test_compute_main_states_non_positive_cells(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.GPCCA(final_kernel)
+        mc.compute_schur(n_components=10, method="brandts")
+
+        mc.compute_metastable_states(n_states=2)
+        with pytest.raises(ValueError):
+            mc.compute_main_states(n_cells=0)
 
     def test_compute_main_states_eigengap(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
@@ -555,6 +578,5 @@ class TestGPCCACopy:
         assert mc1._S_score == mc2._S_score
         assert mc1._g2m_key == mc2._g2m_key
         assert mc1._s_key == mc2._s_key
-        assert mc1._n_cells == mc2._n_cells
         assert mc1._key_added == mc2._key_added
         assert mc1._is_sparse == mc2._is_sparse
