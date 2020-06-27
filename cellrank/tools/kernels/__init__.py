@@ -4,5 +4,6 @@ from cellrank.tools.kernels._kernel import (
     Constant,
     PalantirKernel,
     VelocityKernel,
+    PrecomputedKernel,
     ConnectivityKernel,
 )
