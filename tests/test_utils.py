@@ -517,14 +517,8 @@ class TestClusterX:
         # kmeans, louvain, leiden
         labels_kmeans = _cluster_X(adata.X, n_clusters=5, method="kmeans")
         labels_louvain = _cluster_X(adata.X, n_clusters=5, method="louvain")
-        labels_leiden = _cluster_X(adata.X, n_clusters=5, method="leiden")
 
-        assert (
-            len(labels_kmeans)
-            == len(labels_louvain)
-            == len(labels_leiden)
-            == len(adata.n_obs)
-        )
+        assert len(labels_kmeans) == len(labels_louvain) == len(adata.n_obs)
 
     def test_one_feature(self):
         # create some data
@@ -533,11 +527,5 @@ class TestClusterX:
         # kmeans, louvain, leiden
         labels_kmeans = _cluster_X(adata.X, n_clusters=5, method="kmeans")
         labels_louvain = _cluster_X(adata.X, n_clusters=5, method="louvain")
-        labels_leiden = _cluster_X(adata.X, n_clusters=5, method="leiden")
 
-        assert (
-            len(labels_kmeans)
-            == len(labels_louvain)
-            == len(labels_leiden)
-            == len(adata.n_obs)
-        )
+        assert len(labels_kmeans) == len(labels_louvain) == len(adata.n_obs)
