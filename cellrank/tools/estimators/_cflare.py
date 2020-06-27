@@ -421,9 +421,9 @@ class CFLARE(BaseEstimator):
                 raise TypeError("Not all values in `use` argument are integers.")
         use = list(use)
 
-        if len(use) <= 1:
+        if len(use) == 0:
             raise ValueError(
-                f"Number of eigenvector must be larger than `1`,  found `{len(use)}`."
+                f"Number of eigenvector must be larger than `0`,  found `{len(use)}`."
             )
 
         muse = max(use)
@@ -491,9 +491,9 @@ class CFLARE(BaseEstimator):
         labels = _cluster_X(
             X,
             method=method,
-            n_clusters_kmeans=n_clusters_kmeans,
-            n_neighbors_louvain=n_neighbors_louvain,
-            resolution_louvain=resolution_louvain,
+            n_clusters=n_clusters_kmeans,
+            n_neighbors=n_neighbors_louvain,
+            resolution=resolution_louvain,
         )
 
         # fill in the labels in case we filtered out cells before
