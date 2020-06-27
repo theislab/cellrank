@@ -6,6 +6,10 @@ from types import MappingProxyType
 from typing import Any, Dict, List, Tuple, Union, Mapping, Iterable, Optional
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
+from scipy.stats import entropy
+
 import seaborn as sns
 import matplotlib as mpl
 import matplotlib.cm as cm
@@ -17,9 +21,6 @@ import scvelo as scv
 from scanpy import logging as logg
 from anndata import AnnData
 
-import numpy as np
-import pandas as pd
-from scipy.stats import entropy
 from cellrank.tools._utils import (
     save_fig,
     _eigengap,
@@ -93,13 +94,11 @@ class GPCCA(BaseEstimator):
         self._coarse_stat_dist = None
 
         self._meta_states = None
-        self._meta_states_plot = None  # top N cells for plotting
         self._meta_states_colors = None
         self._meta_lin_probs = None
 
         self._main_states = None
         self._main_states_probabilities = None
-        self._n_cells = None  # serves as a cache for plotting
 
     def compute_eig(
         self,
@@ -674,8 +673,6 @@ class GPCCA(BaseEstimator):
             )
 
     def _set_main_states(self, n_cells: int, write_to_adata: bool = True) -> None:
-        self._n_cells = n_cells
-
         probs = self._lin_probs[[n for n in self._lin_probs.names if n != "rest"]]
         a_discrete, _ = _fuzzy_to_discrete(
             a_fuzzy=probs,
@@ -985,22 +982,6 @@ class GPCCA(BaseEstimator):
             colors=self._meta_states_colors,
         )
 
-        if n_cells is None:
-            self._meta_states_plot = None
-        else:
-            a_discrete, _ = _fuzzy_to_discrete(
-                a_fuzzy=self._meta_lin_probs,
-                n_most_likely=n_cells,
-                remove_overlap=REMOVE_OVERLAP,
-                raise_threshold=0.2,
-                check_row_sums=check_row_sums,
-            )
-            self._meta_states_plot = _series_from_one_hot_matrix(
-                a=a_discrete,
-                index=self.adata.obs_names,
-                names=self._meta_lin_probs.names,
-            )
-
     def _plot_states(
         self,
         attr: str,
@@ -1047,11 +1028,7 @@ class GPCCA(BaseEstimator):
         probs = probs[[n for n in probs.names if n != "rest"]]
 
         if attr == "_meta_lin_probs":
-            _main_states = self._meta_states_plot
-            if _main_states is None:
-                raise ValueError(
-                    "Compute metastable states as `.compute_metastable_states()` with `n_cells != None`"
-                )
+            _main_states = self._meta_states
         elif attr == "_lin_probs":
             _main_states = self._main_states
         else:
@@ -1439,8 +1416,6 @@ class GPCCA(BaseEstimator):
 
         g._main_states = copy(self.main_states)
         g._main_states_probabilities = copy(self._main_states_probabilities)
-
-        g._n_cells = self._n_cells
 
         g._coarse_stat_dist = copy(self.coarse_stationary_distribution)
         g._coarse_init_dist = copy(self._coarse_init_dist)
