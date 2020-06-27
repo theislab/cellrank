@@ -341,3 +341,21 @@ def assert_array_nan_equal(
     )
     np.testing.assert_array_equal(np.where(mask1), np.where(mask2))
     np.testing.assert_array_equal(actual[mask1], expected[mask2])
+
+
+def random_transition_matrix(n: int) -> np.ndarray:
+    """
+    Parameters
+    ----------
+    n
+        Number of states.
+
+    Returns
+    -------
+    :class:`numpy.ndarray`
+        Row-normalized transition matrix.
+    """
+
+    x = np.abs(np.random.normal(size=(n, n)))
+    rsum = x.sum(axis=1)
+    return x / rsum[:, np.newaxis]
