@@ -9,7 +9,7 @@ from pandas import Series
 from scipy.stats import zscore, entropy
 from scipy.linalg import solve as solve
 from scipy.sparse import issparse
-from scipy.sparse.linalg import gmres, spsolve
+from scipy.sparse.linalg import gmres
 
 import matplotlib as mpl
 import matplotlib.cm as cm
@@ -622,6 +622,10 @@ class CFLARE(BaseEstimator):
         # get the transition matrix
         t = self._T
         n_cells = t.shape[0]
+        if not issparse(t):
+            logg.warning(
+                "Attempting to solve a potentially large linear system with dense transition matrix"
+            )
 
         # colors are created in `compute_metastable_states`, this is just in case
         self._check_and_create_colors()
@@ -666,21 +670,27 @@ class CFLARE(BaseEstimator):
         # determine whether it makes sense you use a iterative solver
         if use_iterative_solver is None:
             if issparse(t) and n_cells > 1e4 and s.shape[1] < 100:
-                use_iterative_solver, densify = True, False
+                use_iterative_solver = True
             elif issparse(t) and n_cells > 5 * 1e5:
-                use_iterative_solver, densify = True, False
+                use_iterative_solver = True
             else:
-                use_iterative_solver, densify = False, True
+                use_iterative_solver = False
+            solver = "an interative" if use_iterative_solver else "a direct"
+            logg.debug(
+                f"DEBUG: Found {n_cells} cells and {s.shape[1]} absorbing states. Using {solver} solver"
+            )
 
-        if densify:
-            logg.debug("DEBUG: Densifying left and right hand sides. ")
+        if not use_iterative_solver:
+            logg.debug("DEBUG: Densifying matrices for direct solver ")
             q = q.toarray() if issparse(q) else q
             s = s.toarray() if issparse(s) else s
-        eye = (
-            scipy.sparse.eye(len(trans_indices))
-            if issparse(q)
-            else np.eye(len(trans_indices))
-        )
+            eye = np.eye(len(trans_indices))
+        else:
+            if not issparse(q):
+                q = scipy.sparsae.csr_matrix(q)
+            if not issparse(s):
+                s = scipy.sparse.csr_matrix(s)
+            eye = scipy.sparse.eye(len(trans_indices))
 
         # compute abs probs. Since we don't expect sparse solution, dense computation is faster.
         if use_iterative_solver:
@@ -695,7 +705,7 @@ class CFLARE(BaseEstimator):
                 logg.warning("Some linear solves did not converge for GMRES")
         else:
             logg.debug("DEBUG: Solving the linear system using direct factorization")
-            abs_states = spsolve(eye - q, s) if issparse(q) else solve(eye - q, s)
+            abs_states = solve(eye - q, s)
 
         # aggregate to class level by summing over columns belonging to the same metastable_states
         approx_rc_red = metastable_states_[mask]
