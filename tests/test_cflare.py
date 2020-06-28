@@ -149,11 +149,11 @@ class TestCFLARE:
         mc.compute_metastable_states(use=2)
 
         # compute lin probs using dense routine
-        mc.compute_lin_probs(densify=True)
+        mc.compute_lin_probs()
         l_dense = mc.lineage_probabilities
 
         # comptue lin probs using sparse routine
-        mc.compute_lin_probs(densify=False)
+        mc.compute_lin_probs()
         l_sparse = mc.lineage_probabilities
 
         np.testing.assert_allclose(
