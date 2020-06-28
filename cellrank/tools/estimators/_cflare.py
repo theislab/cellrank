@@ -619,12 +619,8 @@ class CFLARE(BaseEstimator):
         #   In this copy, some metastable_states may be removed or combined with others
         start = logg.info("Computing absorption probabilities")
 
-        # we don't expect the abs. probs. to be sparse, therefore, make T dense. See scipy docs about sparse lin solve.
-        if densify:
-            logg.debug("DEBUG: Densifying the transition matrix. ")
-            t = self._T.A if self._is_sparse else self._T
-        else:
-            t = self._T
+        # get the transition matrix
+        t = self._T
 
         # colors are created in `compute_metastable_states`, this is just in case
         self._check_and_create_colors()
@@ -659,17 +655,22 @@ class CFLARE(BaseEstimator):
         # create Q (restriction transient-transient), S (restriction transient-recurrent) and I (Q-sized identity)
         q = t[trans_indices, :][:, trans_indices]
         s = t[trans_indices, :][:, rec_indices]
-        eye = (
-            scipy.sparse.eye(len(trans_indices))
-            if issparse(t)
-            else np.eye(len(trans_indices))
-        )
 
         if check_irred:
             if self._is_irreducible is None:
                 self.compute_partition()
             if not self._is_irreducible:
                 logg.warning("Restriction Q is not irreducible")
+
+        if densify:
+            logg.debug("DEBUG: Densifying left and right hand sides. ")
+            q = q.todense() if issparse(q) else q
+            s = s.todense() if issparse(s) else s
+        eye = (
+            scipy.sparse.eye(len(trans_indices))
+            if issparse(q)
+            else np.eye(len(trans_indices))
+        )
 
         # compute abs probs. Since we don't expect sparse solution, dense computation is faster.
         logg.debug("DEBUG: Solving the linear system to find absorption probabilities")
