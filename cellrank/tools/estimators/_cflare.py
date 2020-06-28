@@ -676,9 +676,9 @@ class CFLARE(BaseEstimator):
             else:
                 use_iterative_solver = False
             solver = "an interative" if use_iterative_solver else "a direct"
-            logg.debug(
-                f"DEBUG: Found {n_cells} cells and {s.shape[1]} absorbing states. Using {solver} solver"
-            )
+        logg.debug(
+            f"DEBUG: Found {n_cells} cells and {s.shape[1]} absorbing states. Using {solver} solver"
+        )
 
         if not use_iterative_solver:
             logg.debug("DEBUG: Densifying matrices for direct solver ")
