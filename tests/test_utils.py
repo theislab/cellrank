@@ -4,10 +4,13 @@ import pandas as pd
 import pytest
 from pandas.api.types import is_categorical_dtype
 
+import scanpy as sc
+
 from _helpers import assert_array_nan_equal
 from cellrank.tools import Lineage
 from cellrank.tools._utils import (
     _one_hot,
+    _cluster_X,
     _process_series,
     _fuzzy_to_discrete,
     _merge_categorical_series,
@@ -504,3 +507,25 @@ class TestSeriesFromOneHotMatrix:
 
         assert actual_series.equals(expected_series)
         assert (actual_series.cat.categories == expected_series.cat.categories).all()
+
+
+class TestClusterX:
+    def test_normal_run(self):
+        # create some data
+        adata = sc.datasets.blobs(n_observations=100, n_variables=6)
+
+        # kmeans, louvain, leiden
+        labels_kmeans = _cluster_X(adata.X, n_clusters=5, method="kmeans")
+        labels_louvain = _cluster_X(adata.X, n_clusters=5, method="louvain")
+
+        assert len(labels_kmeans) == len(labels_louvain) == adata.n_obs
+
+    def test_one_feature(self):
+        # create some data
+        adata = sc.datasets.blobs(n_observations=100, n_variables=1)
+
+        # kmeans, louvain, leiden
+        labels_kmeans = _cluster_X(adata.X, n_clusters=5, method="kmeans")
+        labels_louvain = _cluster_X(adata.X, n_clusters=5, method="louvain")
+
+        assert len(labels_kmeans) == len(labels_louvain) == adata.n_obs
