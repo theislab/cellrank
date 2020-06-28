@@ -421,6 +421,11 @@ class CFLARE(BaseEstimator):
                 raise TypeError("Not all values in `use` argument are integers.")
         use = list(use)
 
+        if len(use) == 0:
+            raise ValueError(
+                f"Number of eigenvector must be larger than `0`,  found `{len(use)}`."
+            )
+
         muse = max(use)
         if muse >= self._eig["V_l"].shape[1] or muse >= self._eig["V_r"].shape[1]:
             raise ValueError(
@@ -467,17 +472,28 @@ class CFLARE(BaseEstimator):
             X = zscore(X, axis=0)
 
         # cluster X
+        if method == "kmeans":
+            if n_clusters_kmeans is None:
+                if percentile is not None:
+                    n_clusters_kmeans = len(use)
+                else:
+                    n_clusters_kmeans = len(use) + 1
+
+            if X.shape[0] < n_clusters_kmeans:
+                raise ValueError(
+                    f"Filtering resulted in only {X.shape[0]} cell(s), insufficient to cluster into "
+                    f"{n_clusters_kmeans} clusters. Consider decreasing the value of `percentile`. "
+                )
+
         logg.debug(
             f"DEBUG: Using `{use}` eigenvectors, basis `{basis!r}` and method `{method!r}` for clustering"
         )
         labels = _cluster_X(
             X,
             method=method,
-            n_clusters_kmeans=n_clusters_kmeans,
-            percentile=percentile,
-            use=use,
-            n_neighbors_louvain=n_neighbors_louvain,
-            resolution_louvain=resolution_louvain,
+            n_clusters=n_clusters_kmeans,
+            n_neighbors=n_neighbors_louvain,
+            resolution=resolution_louvain,
         )
 
         # fill in the labels in case we filtered out cells before

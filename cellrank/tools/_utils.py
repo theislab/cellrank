@@ -469,34 +469,49 @@ def _filter_cells(distances: np.ndarray, rc_labels: Series, n_matches_min: int):
 
 def _cluster_X(
     X: Union[np.ndarray, spmatrix],
-    method: str,
-    n_clusters_kmeans: int,
-    percentile: Optional[float],
-    use: Union[Tuple[int], List[int]],
-    n_neighbors_louvain: int,
-    resolution_louvain: float,
+    n_clusters: int,
+    method: str = "kmeans",
+    n_neighbors: int = 15,
+    resolution: float = 1.0,
 ) -> List[Any]:
-    """Cluster the rows of the matrix X."""
+    """Cluster the rows of the matrix X.
+
+    Parameters
+    --------
+    X
+        Data matrix of shape `n_samples x n_features`
+    n_clusters
+        Number of clusters to use
+    method
+        Method to use for clustering. Options are ['kmeans', 'louvain', 'leiden']
+    n_neighbors
+        If using a community-detection based clustering algorithm, number of neighbors for KNN construction
+    resolution
+        Resolution parameter for ['louvain', 'leiden']
+
+    Returns
+    --------
+    labels
+        List of cluster labels of length `n_samples`
+
+    """
+    # make sure data is at least 2D
+    if X.ndim == 1:
+        X = X[:, None]
 
     if method == "kmeans":
-        if n_clusters_kmeans is None:
-            if percentile is not None:
-                n_clusters_kmeans = len(use)
-            else:
-                n_clusters_kmeans = len(use) + 1
-        kmeans = KMeans(n_clusters=n_clusters_kmeans).fit(X)
+        kmeans = KMeans(n_clusters=n_clusters).fit(X)
         labels = kmeans.labels_
-    elif method == "louvain":
-        if len(use) <= 1:
-            raise ValueError(
-                f"Number of eigenvector must be larger than `1` for method `{method!r}`, found `{len(use)}`."
-            )
+    elif method in ["louvain", "leiden"]:
         adata_dummy = sc.AnnData(X=X)
-        sc.pp.neighbors(adata_dummy, use_rep="X", n_neighbors=n_neighbors_louvain)
-        sc.tl.louvain(adata_dummy, resolution=resolution_louvain)
-        labels = adata_dummy.obs["louvain"]
+        sc.pp.neighbors(adata_dummy, use_rep="X", n_neighbors=n_neighbors)
+        if method == "louvain":
+            sc.tl.louvain(adata_dummy, resolution=resolution)
+        elif method == "leiden":
+            sc.tl.leiden(adata_dummy, resolution=resolution)
+        labels = adata_dummy.obs[method]
     else:
-        raise ValueError(
+        raise NotImplementedError(
             f"Invalid method `{method!r}`. Valid options are: `'kmeans', 'louvain'`."
         )
 

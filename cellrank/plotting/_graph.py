@@ -53,6 +53,7 @@ def graph(
     show_arrows: bool = True,
     font_size: int = 12,
     font_color: str = "black",
+    color_nodes: bool = True,
     cat_cmap: ListedColormap = cm.Set3,
     cont_cmap: ListedColormap = cm.viridis,
     legend_loc: Optional[str] = "best",
@@ -131,6 +132,8 @@ def graph(
         Font size for node labels.
     font_color
         Label color of the nodes.
+    color_nodes
+        Whether to color the nodes
     cat_cmap
         Categorical colormap used when :paramref:`keys` contain categorical variables.
     cont_cmap
@@ -491,6 +494,9 @@ def graph(
             _ = mpl.colorbar.ColorbarBase(
                 cax, cmap=cont_cmap, norm=mpl.colors.Normalize(vmin=vmin, vmax=vmax)
             )
+
+        if color_nodes is False:
+            nodes_kwargs = {}
 
         nx.draw_networkx_nodes(G, pos, node_size=node_size, ax=ax, **nodes_kwargs)
 
