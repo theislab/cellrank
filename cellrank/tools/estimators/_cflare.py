@@ -675,7 +675,7 @@ class CFLARE(BaseEstimator):
                 use_iterative_solver = True
             else:
                 use_iterative_solver = False
-            solver = "an interative" if use_iterative_solver else "a direct"
+        solver = "an interative" if use_iterative_solver else "a direct"
         logg.debug(
             f"DEBUG: Found {n_cells} cells and {s.shape[1]} absorbing states. Using {solver} solver"
         )
