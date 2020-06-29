@@ -155,7 +155,7 @@ class TestCFLARE:
 
         # comptue lin probs using iterative solver
         mc.compute_lin_probs(use_iterative_solver=True, tol=tol)
-        l_iterative = mc.lineage_probabilities()
+        l_iterative = mc.lineage_probabilities
 
         np.testing.assert_allclose(l_direct.X, l_iterative.X, rtol=0, atol=tol)
 
