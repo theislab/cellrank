@@ -578,6 +578,7 @@ class CFLARE(BaseEstimator):
         check_irred: bool = False,
         norm_by_frequ: bool = False,
         use_iterative_solver: Optional[bool] = None,
+        tol: float = 1e-5,
     ) -> None:
         """
         Compute absorption probabilities for a Markov chain.
@@ -597,6 +598,8 @@ class CFLARE(BaseEstimator):
         use_iterative_solver
             Whether to use an iterative solver for the linear system. Makes sense for large problems (> 20k cells)
             with few final states (<50)
+        tol
+            Convergence tolerance for the iterative solver
 
         Returns
         -------
@@ -696,7 +699,7 @@ class CFLARE(BaseEstimator):
         if use_iterative_solver:
 
             def flex_solve(M, B, solver):
-                X, info = zip(*(solver(M, b.toarray().flatten()) for b in B.T))
+                X, info = zip(*(solver(M, b.toarray().flatten(), tol=tol) for b in B.T))
                 return np.transpose(X), info
 
             logg.debug("DEBUG: Solving the linear system using GMRES")
