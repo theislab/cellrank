@@ -599,7 +599,8 @@ class CFLARE(BaseEstimator):
             Whether to use an iterative solver for the linear system. Makes sense for large problems (> 20k cells)
             with few final states (<50)
         tol
-            Convergence tolerance for the iterative solver
+            Convergence tolerance for the iterative solver. The default is fine for most cases, only consider
+            decreasing this for severely ill-conditioned matrices.
 
         Returns
         -------
