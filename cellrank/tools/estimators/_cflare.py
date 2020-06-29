@@ -9,7 +9,7 @@ from pandas import Series
 from scipy.stats import zscore, entropy
 from scipy.linalg import solve as solve
 from scipy.sparse import issparse
-from scipy.sparse.linalg import spsolve
+from scipy.sparse.linalg import gmres
 
 import matplotlib as mpl
 import matplotlib.cm as cm
@@ -577,7 +577,8 @@ class CFLARE(BaseEstimator):
         keys: Optional[Sequence[str]] = None,
         check_irred: bool = False,
         norm_by_frequ: bool = False,
-        densify: bool = True,
+        use_iterative_solver: Optional[bool] = None,
+        tol: float = 1e-5,
     ) -> None:
         """
         Compute absorption probabilities for a Markov chain.
@@ -594,9 +595,12 @@ class CFLARE(BaseEstimator):
             Check whether the matrix restricted to the given transient states is irreducible.
         norm_by_frequ
             Divide absorption probabilities for `rc_i` by `|rc_i|`.
-        densify
-            Densify the transition matrix. Usually makes sense, as the output of the linear solve is not expected
-            to be sparse, hence inefficient to use sparse solver.
+        use_iterative_solver
+            Whether to use an iterative solver for the linear system. Makes sense for large problems (> 20k cells)
+            with few final states (<50)
+        tol
+            Convergence tolerance for the iterative solver. The default is fine for most cases, only consider
+            decreasing this for severely ill-conditioned matrices.
 
         Returns
         -------
@@ -619,12 +623,13 @@ class CFLARE(BaseEstimator):
         #   In this copy, some metastable_states may be removed or combined with others
         start = logg.info("Computing absorption probabilities")
 
-        # we don't expect the abs. probs. to be sparse, therefore, make T dense. See scipy docs about sparse lin solve.
-        if densify:
-            logg.debug("DEBUG: Densifying the transition matrix. ")
-            t = self._T.A if self._is_sparse else self._T
-        else:
-            t = self._T
+        # get the transition matrix
+        t = self._T
+        n_cells = t.shape[0]
+        if not issparse(t):
+            logg.warning(
+                "Attempting to solve a potentially large linear system with dense transition matrix"
+            )
 
         # colors are created in `compute_metastable_states`, this is just in case
         self._check_and_create_colors()
@@ -659,11 +664,6 @@ class CFLARE(BaseEstimator):
         # create Q (restriction transient-transient), S (restriction transient-recurrent) and I (Q-sized identity)
         q = t[trans_indices, :][:, trans_indices]
         s = t[trans_indices, :][:, rec_indices]
-        eye = (
-            scipy.sparse.eye(len(trans_indices))
-            if issparse(t)
-            else np.eye(len(trans_indices))
-        )
 
         if check_irred:
             if self._is_irreducible is None:
@@ -671,9 +671,45 @@ class CFLARE(BaseEstimator):
             if not self._is_irreducible:
                 logg.warning("Restriction Q is not irreducible")
 
+        # determine whether it makes sense you use a iterative solver
+        if use_iterative_solver is None:
+            if issparse(t) and n_cells > 1e4 and s.shape[1] < 100:
+                use_iterative_solver = True
+            elif issparse(t) and n_cells > 5 * 1e5:
+                use_iterative_solver = True
+            else:
+                use_iterative_solver = False
+        solver = "an interative" if use_iterative_solver else "a direct"
+        logg.debug(
+            f"DEBUG: Found {n_cells} cells and {s.shape[1]} absorbing states. Using {solver} solver"
+        )
+
+        if not use_iterative_solver:
+            logg.debug("DEBUG: Densifying matrices for direct solver ")
+            q = q.toarray() if issparse(q) else q
+            s = s.toarray() if issparse(s) else s
+            eye = np.eye(len(trans_indices))
+        else:
+            if not issparse(q):
+                q = scipy.sparsae.csr_matrix(q)
+            if not issparse(s):
+                s = scipy.sparse.csr_matrix(s)
+            eye = scipy.sparse.eye(len(trans_indices))
+
         # compute abs probs. Since we don't expect sparse solution, dense computation is faster.
-        logg.debug("DEBUG: Solving the linear system to find absorption probabilities")
-        abs_states = spsolve(eye - q, s) if issparse(q) else solve(eye - q, s)
+        if use_iterative_solver:
+
+            def flex_solve(M, B, solver):
+                X, info = zip(*(solver(M, b.toarray().flatten(), tol=tol) for b in B.T))
+                return np.transpose(X), info
+
+            logg.debug("DEBUG: Solving the linear system using GMRES")
+            abs_states, info = flex_solve(eye - q, s, gmres)
+            if not (all(con == 0 for con in info)):
+                logg.warning("Some linear solves did not converge for GMRES")
+        else:
+            logg.debug("DEBUG: Solving the linear system using direct factorization")
+            abs_states = solve(eye - q, s)
 
         # aggregate to class level by summing over columns belonging to the same metastable_states
         approx_rc_red = metastable_states_[mask]
