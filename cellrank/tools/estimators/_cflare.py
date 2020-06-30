@@ -657,8 +657,10 @@ class CFLARE(BaseEstimator):
 
         # create arrays of all recurrent and transient indices
         mask = np.repeat(False, len(metastable_states_))
+        rec_start_indices = [0]
         for cat in metastable_states_.cat.categories:
             mask = np.logical_or(mask, metastable_states_ == cat)
+            rec_start_indices.append(np.sum(mask))
         rec_indices, trans_indices = np.where(mask)[0], np.where(~mask)[0]
 
         # create Q (restriction transient-transient), S (restriction transient-recurrent) and I (Q-sized identity)
@@ -699,12 +701,22 @@ class CFLARE(BaseEstimator):
         # compute abs probs. Since we don't expect sparse solution, dense computation is faster.
         if use_iterative_solver:
 
-            def flex_solve(M, B, solver):
-                X, info = zip(*(solver(M, b.toarray().flatten(), tol=tol) for b in B.T))
-                return np.transpose(X), info
+            def flex_solve(M, B, solver=scipy.sparse.linalg.gmres, init_indices=None):
+                # solve a series of linear problems with clever initialisation
+                x_list, info_list = [], []
+                x = None
+                for ix, b in enumerate(B.T):
+                    x0 = None if ix in init_indices else x
+                    x, info = solver(M, b.toarray().flatten(), tol=tol, x0=x0)
+                    x_list.append(x[:, None])
+                    info_list.append(info)
+
+                return np.concatenate(x_list, axis=1), info_list
 
             logg.debug("DEBUG: Solving the linear system using GMRES")
-            abs_states, info = flex_solve(eye - q, s, gmres)
+            abs_states, info = flex_solve(
+                eye - q, s, gmres, init_indices=rec_start_indices
+            )
             if not (all(con == 0 for con in info)):
                 logg.warning("Some linear solves did not converge for GMRES")
         else:
