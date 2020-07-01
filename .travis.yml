@@ -6,7 +6,7 @@ python:
 env:
     - MPLBACKEND=Agg
 install:
-    - pip install vendorize
+    - pip install vendorize future_fstrings
     - python-vendorize  # clones msmtools
     - pip install -e .[test]
 script:
