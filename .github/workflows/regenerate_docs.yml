@@ -14,10 +14,10 @@ jobs:
         run: |
           curl -X POST -d "branches=master" -d "token=$TOKEN" https://readthedocs.org/api/v2/webhook/cellrank/125510/
       - name: Report success
-        if: success()
+        if: ${{ success() }}
         run: |
           echo "Succesfully sent the request"
       - name: Report failure
-        if: failure()
+        if: ${{ failure() }}
         run: |
           echo "Failed to send the request"
