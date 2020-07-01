@@ -9,7 +9,7 @@ try:
 except ImportError:
     __author__ = "Marius Lange, Michal Klein, Juan Luis Restrepo Lopez"
     __email__ = "info@cellrank.org"
-    __version__ = "1.1.0"
+    __version__ = "1.2.0"
 
 
 if __name__ == "__main__":
@@ -18,6 +18,7 @@ if __name__ == "__main__":
         use_scm_version=True,
         setup_requires=["setuptools_scm"],
         author=__author__,
+        author_email=__email__,
         email=__email__,
         maintainer=__author__,
         maintainer_email=__email__,
@@ -31,17 +32,15 @@ if __name__ == "__main__":
         },
         download_url="https://github.com/theislab/cellrank",
         license="BSD",
-        install_requires=list(
-            list(
-                map(
-                    str.strip,
-                    open(os.path.abspath("requirements.txt"), "r").read().split(),
-                )
+        requires=["msmtools"],
+        install_requires=[
+            r
+            for r in map(
+                str.strip,
+                open(os.path.abspath("requirements.txt"), "r").read().split(),
             )
-            + [
-                "msmtools @ git+git://github.com/msmdev/msmtools@krylov_schur#egg=msmtools"
-            ]
-        ),
+            if "git+" in r
+        ],
         extras_require=dict(
             test=[
                 "pytest>=4.4",
@@ -71,7 +70,8 @@ if __name__ == "__main__":
             "Framework :: Jupyter",
             "Operating System :: MacOS :: MacOS X",
             "Operating System :: Microsoft :: Windows",
-            "Operating System :: POSIX :: Linux" "Typing :: Typed",
+            "Operating System :: POSIX :: Linux",
+            "Typing :: Typed",
             "Programming Language :: Python :: 3",
             "Programming Language :: Python :: 3.6",
             "Programming Language :: Python :: 3.7",
