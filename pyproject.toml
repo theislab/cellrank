@@ -9,6 +9,24 @@ pytest = { version = "^5.3", python = "^3.6" }
 [tool.black]
 line-length = 88
 target-version = ['py36', 'py37', 'py38']
+exclude = '''
+
+(
+  /(
+      \.eggs
+    | \.git
+    | \.hg
+    | \.mypy_cache
+    | \.tox
+    | \.venv
+    | _build
+    | buck-out
+    | build
+    | dist
+  )/
+
+)
+'''
 
 [tool.isort]
 line_length = 88
