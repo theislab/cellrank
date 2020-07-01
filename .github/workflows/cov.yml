@@ -27,7 +27,6 @@ jobs:
       shell: bash
       if: ${{ success() }}
       run: |
-        bash <(curl -s https://codecov.io/bash) -X search -f "./coverage.xml"
+        GITHUB_ACTION= bash <(curl -s https://codecov.io/bash) -X search -f "./coverage.xml"
       env:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-        GITHUB_ACTION:
