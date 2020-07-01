@@ -3,7 +3,7 @@ requires = ['setuptools', 'setuptools_scm', 'wheel']
 build-backend = 'setuptools.build_meta'
 
 [dev-dependencies]
-black = { version = "^19.10", python = "^3.6" }
+black = { version = "^19.10b0", python = "^3.6" }
 pytest = { version = "^5.3", python = "^3.6" }
 
 [tool.black]

@@ -6,6 +6,8 @@ python:
 env:
     - MPLBACKEND=Agg
 install:
+    - pip install vendorize
+    - python-vendorize  # clones msmtools
     - pip install -e .[test]
 script:
     - pytest
