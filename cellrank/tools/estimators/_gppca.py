@@ -32,9 +32,9 @@ from cellrank.tools._utils import (
 from cellrank.tools._colors import _get_black_or_white
 from cellrank.tools._lineage import Lineage
 from cellrank.tools._constants import Lin, MetaKey, _dp, _probs, _colors, _lin_names
-from msmtools.analysis.dense.gpcca import GPCCA as _GPPCA
 from cellrank.tools.kernels._kernel import KernelExpression
 from cellrank.tools.estimators._base_estimator import BaseEstimator
+from cellrank._vendor.msmtools.analysis.dense.gpcca import GPCCA as _GPPCA
 
 # whether to remove overlapping cells from both states, or assign them to the most likely clusters
 REMOVE_OVERLAP = False
