@@ -24,11 +24,8 @@ jobs:
         pip install pytest-cov
         pytest --cov-config=.coveragerc --cov=./ --cov-report=xml
     - name: Upload coverage
-      uses: codecov/codecov-action@v1.0.7
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        file: ./coverage.xml
-        flags: unittests
-        env_vars: OS,PYTHON
-        name: codecov-umbrella
-        fail_ci_if_error: true
+      shell: bash
+      run: |
+        bash <(curl -s https://codecov.io/bash) -t "$TOKEN"
+      env:
+        TOKEN: ${{ secrets.CODECOV_TOKEN }}
