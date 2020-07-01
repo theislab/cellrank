@@ -32,15 +32,12 @@ if __name__ == "__main__":
         },
         download_url="https://github.com/theislab/cellrank",
         license="BSD",
-        requires=["msmtools"],
-        install_requires=[
-            r
-            for r in map(
+        install_requires=list(
+            map(
                 str.strip,
                 open(os.path.abspath("requirements.txt"), "r").read().split(),
             )
-            if "git+" in r
-        ],
+        ),
         extras_require=dict(
             test=[
                 "pytest>=4.4",

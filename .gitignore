@@ -119,3 +119,6 @@ tests/figures
 figures
 data
 **/*.ipynb
+
+# vendorized msmtools
+cellrank/_vendor
