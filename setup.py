@@ -57,13 +57,7 @@ if __name__ == "__main__":
                 )
                 if "requirements.txt" not in r
             ],
-            dev=[
-                "bump2version",
-                "vendorize",  # for msmtools
-                "flake8",
-                "black",
-                "pre-commit",
-            ],
+            dev=["black==19.10b0", "pre-commit==2.5.1",],
         ),
         zip_safe=False,
         packages=find_packages(),
