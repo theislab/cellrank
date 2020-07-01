@@ -159,6 +159,31 @@ class TestCFLARE:
 
         np.testing.assert_allclose(l_direct.X, l_iterative.X, rtol=0, atol=tol)
 
+    def test_compute_lin_probs_initialization(self, adata_large: AnnData):
+        # check whether changing the initial x0 vector for the iterative solver makes a difference
+        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+        tol = 1e-6
+
+        mc = cr.tl.CFLARE(final_kernel)
+        mc.compute_eig(k=5)
+        mc.compute_metastable_states(use=2)
+
+        # compute lin probs using direct solver
+        mc.compute_lin_probs(
+            use_iterative_solver=True, use_initialization=True, tol=tol
+        )
+        l_0 = mc.lineage_probabilities
+
+        # comptue lin probs using iterative solver
+        mc.compute_lin_probs(
+            use_iterative_solver=True, use_initialization=False, tol=tol
+        )
+        l_1 = mc.lineage_probabilities
+
+        np.testing.assert_allclose(l_0.X, l_1.X, rtol=0, atol=tol)
+
     def test_compute_lineage_drivers_no_lineages(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
