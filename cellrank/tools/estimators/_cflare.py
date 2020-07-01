@@ -579,6 +579,7 @@ class CFLARE(BaseEstimator):
         norm_by_frequ: bool = False,
         use_iterative_solver: Optional[bool] = None,
         tol: float = 1e-5,
+        use_initialization: bool = True,
     ) -> None:
         """
         Compute absorption probabilities for a Markov chain.
@@ -601,6 +602,9 @@ class CFLARE(BaseEstimator):
         tol
             Convergence tolerance for the iterative solver. The default is fine for most cases, only consider
             decreasing this for severely ill-conditioned matrices.
+        use_initialization
+            Only relevant when using an iterative solver. In that case, the solution of absorbing states from the same
+            recurrent class can be used as initialization to the iterative solver.
 
         Returns
         -------
@@ -702,11 +706,15 @@ class CFLARE(BaseEstimator):
         if use_iterative_solver:
 
             def flex_solve(M, B, solver=scipy.sparse.linalg.gmres, init_indices=None):
-                # solve a series of linear problems with clever initialisation
+                # solve a series of linear problems using an iterative solver
                 x_list, info_list = [], []
                 x = None
                 for ix, b in enumerate(B.T):
-                    x0 = None if ix in init_indices else x
+                    # use the previous problem solution as initialisation
+                    if init_indices is not None:
+                        x0 = None if ix in init_indices else x
+                    else:
+                        x0 = None
                     x, info = solver(M, b.toarray().flatten(), tol=tol, x0=x0)
                     x_list.append(x[:, None])
                     info_list.append(info)
@@ -714,9 +722,8 @@ class CFLARE(BaseEstimator):
                 return np.concatenate(x_list, axis=1), info_list
 
             logg.debug("DEBUG: Solving the linear system using GMRES")
-            abs_states, info = flex_solve(
-                eye - q, s, gmres, init_indices=rec_start_indices
-            )
+            init_indices = rec_start_indices if use_initialization else None
+            abs_states, info = flex_solve(eye - q, s, gmres, init_indices=init_indices)
             if not (all(con == 0 for con in info)):
                 logg.warning("Some linear solves did not converge for GMRES")
         else:
