@@ -11,6 +11,8 @@ except ImportError:
     __email__ = "info@cellrank.org"
     __version__ = "1.2.0"
 
+_msmtools_dep = ["vendorize", "future_fstrings"]
+
 
 if __name__ == "__main__":
     setup(
@@ -56,8 +58,9 @@ if __name__ == "__main__":
                     .splitlines(),
                 )
                 if "requirements.txt" not in r
-            ],
-            dev=["black==19.10b0", "pre-commit==2.5.1",],
+            ]
+            + _msmtools_dep,
+            dev=["black==19.10b0", "pre-commit==2.5.1"] + _msmtools_dep,
         ),
         zip_safe=False,
         packages=find_packages(),
