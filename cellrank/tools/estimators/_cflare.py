@@ -598,7 +598,7 @@ class CFLARE(BaseEstimator):
             Divide absorption probabilities for `rc_i` by `|rc_i|`.
         use_iterative_solver
             Whether to use an iterative solver for the linear system. Makes sense for large problems (> 20k cells)
-            with few final states (<50)
+            with few final states (<50).
         tol
             Convergence tolerance for the iterative solver. The default is fine for most cases, only consider
             decreasing this for severely ill-conditioned matrices.
@@ -697,7 +697,7 @@ class CFLARE(BaseEstimator):
             eye = np.eye(len(trans_indices))
         else:
             if not issparse(q):
-                q = scipy.sparsae.csr_matrix(q)
+                q = scipy.sparse.csr_matrix(q)
             if not issparse(s):
                 s = scipy.sparse.csr_matrix(s)
             eye = scipy.sparse.eye(len(trans_indices))
