@@ -25,7 +25,8 @@ jobs:
         pytest --cov-config=.coveragerc --cov=./ --cov-report=xml
     - name: Upload coverage
       shell: bash
+      if: success()
       run: |
         bash <(curl -s https://codecov.io/bash)
       env:
-        CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
