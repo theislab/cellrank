@@ -9,5 +9,5 @@ from cellrank.tools._read import read
 from cellrank.tools._constants import Lin
 
 __author__ = ", ".join(["Marius Lange", "Michal Klein", "Juan Luis Restrepo Lopez"])
-__email__ = ", ".join(["info@cellrank.org"])
+__email__ = "info@cellrank.org"
 __version__ = "1.2.0"
