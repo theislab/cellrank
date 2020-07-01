@@ -35,7 +35,7 @@ if __name__ == "__main__":
         install_requires=list(
             map(
                 str.strip,
-                open(os.path.abspath("requirements.txt"), "r").read().split(),
+                open(os.path.abspath("requirements.txt"), "r").read().splitlines(),
             )
         ),
         extras_require=dict(
@@ -46,7 +46,24 @@ if __name__ == "__main__":
                 "python-igraph",
                 "louvain==0.6.1",
                 "Pillow",
-            ]
+            ],
+            docs=[
+                r
+                for r in map(
+                    str.strip,
+                    open(os.path.abspath("docs/requirements.txt"), "r")
+                    .read()
+                    .splitlines(),
+                )
+                if "requirements.txt" not in r
+            ],
+            dev=[
+                "bump2version",
+                "vendorize",  # for msmtools
+                "flake8",
+                "black",
+                "pre-commit",
+            ],
         ),
         zip_safe=False,
         packages=find_packages(),
