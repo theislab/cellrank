@@ -3,16 +3,16 @@
 
 from typing import Any, List, Tuple, Union, Optional, Sequence
 
+from matplotlib import cm as cm
+from matplotlib import colors as mcolors
+
+from scanpy import logging as logg
+
 import numpy as np
 from pandas import Series, DataFrame, to_numeric
 from scipy.stats import entropy
 from pandas._libs.lib import infer_dtype
 from pandas.core.dtypes.common import is_categorical_dtype
-
-from matplotlib import cm as cm
-from matplotlib import colors as mcolors
-
-from scanpy import logging as logg
 
 
 def _create_colors(
@@ -116,12 +116,34 @@ def _insert_categorical_colors(seen_colors: Union[np.ndarray, List], n_categorie
     return candidates
 
 
-def _get_black_or_white(value: float, cmap):
+def _contrasting_color(r: int, g: int, b: int) -> str:
+    for val in [r, g, b]:
+        assert 0 <= val <= 255
+
+    return "#000000" if r * 0.299 + g * 0.587 + b * 0.114 > 186 else "#ffffff"
+
+
+def _get_black_or_white(value: float, cmap) -> str:
     if not (0.0 <= value <= 1.0):
         raise ValueError(f"Value must be in range `[0, 1]`, found `{value}`.")
 
     r, g, b, *_ = [int(c * 255) for c in cmap(value)]
-    return "#000000" if r * 0.299 + g * 0.587 + b * 0.114 > 186 else "#ffffff"
+    return _contrasting_color(r, g, b)
+
+
+def _get_bg_fg_colors(color, sat_scale: Optional[float] = None) -> Tuple[str, str]:
+    if not mcolors.is_color_like(color):
+        raise ValueError(f"Value `{color}` is not color-like.")
+
+    color = np.squeeze(mcolors.to_rgba_array(color, alpha=1))[:3]
+    if sat_scale is not None:
+        h, s, v = mcolors.rgb_to_hsv(color)
+        color = mcolors.hsv_to_rgb([h, s * sat_scale, v])
+
+    return (
+        mcolors.to_hex(color),
+        _contrasting_color(*np.array(color * 255).astype(np.int)),
+    )
 
 
 def _map_names_and_colors(
