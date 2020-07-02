@@ -4,19 +4,18 @@
 from typing import List, Tuple, Union, TypeVar, Callable, Iterable, Optional
 from itertools import combinations
 
-import numpy as np
-import pandas as pd
-
 import matplotlib.colors as c
 
 from scanpy import logging as logg
 
+import numpy as np
+import pandas as pd
 from cellrank.tools._utils import (
     _compute_mean_color,
     _convert_lineage_name,
     _unique_order_preserving,
 )
-from cellrank.tools._colors import _mellow_colors, _create_categorical_colors
+from cellrank.tools._colors import _get_bg_fg_colors, _create_categorical_colors
 from cellrank.tools._constants import Lin
 
 ColorLike = TypeVar("ColorLike")
@@ -402,7 +401,7 @@ class Lineage(np.ndarray):
         show_n_cells_head_tail = 10
         styles = [
             f"'background-color: {bg}; color: {fg}; text-align: center; word-wrap: break-word; max-width: 100px'"
-            for bg, fg in map(_mellow_colors, self.colors)
+            for bg, fg in map(_get_bg_fg_colors, self.colors)
         ]
         names = "".join(
             f"<th style={style}>{n}</th:w:w>" for n, style in zip(self.names, styles)
