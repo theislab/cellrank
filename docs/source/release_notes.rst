@@ -6,7 +6,7 @@ Release Notes
 Version 1.0
 -----------
 
-1.0.0.a0 :small:`2020-07-02`
+1.0.0-b0 :small:`2020-07-02`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- Initial pre-release
+- Initial beta pre-release.
