@@ -21,6 +21,7 @@ jobs:
     - name: Generate coverage
       run: |
         pip install .[test]
+        python-vendorize
         pip install pytest-cov
         pytest --cov-config=.coveragerc --cov=./ --cov-report=xml
     - name: Upload coverage
