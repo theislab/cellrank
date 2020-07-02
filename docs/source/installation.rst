@@ -43,7 +43,7 @@ sometimes be a bit tricky to install. On Ubuntu 18.04, try the following::
     pip install --user slepc # alt.: conda install -c conda-forge slepc
     pip install --user slepc4py # alt.: conda install -c conda-forge slepc4py
 
-During installation of petsc, petsc4py, selpc, and slepc4py the following
+During installation of petsc, petsc4py, slepc, and slepc4py the following
 error might appear several times::
 
     ERROR: Failed building wheel for [insert package name here]
@@ -56,8 +56,8 @@ On Mac OS, install `MPICH`_ as a message passing interface and then proceed as a
 installation instructions given on the `PETSc`_ and `SLEPc`_ websites. The `SLEPc`_ homepage even offers a video tutorial
 explaining the installation.
 
-Note that this is only relevant for the :class:`cellrank.tl.GPCCA` estimator and only for large cell numbers. For small cell numbers (<10k), you can
-use `method='brandts'` when computing the Schur decomposition.
+Note that this is only relevant for the :class:`cellrank.tl.GPCCA` estimator and only for large cell numbers.
+For small cell numbers (<10k), you can use `method='brandts'` when computing the Schur decomposition.
 
 Jupyter Notebook
 ~~~~~~~~~~~~~~~~
