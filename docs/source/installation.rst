@@ -4,7 +4,7 @@ CellRank requires Python version >= 3.6 to run. We recommend using Miniconda_.
 
 PyPI
 ~~~~~~
-Install CellRank by calling::
+Install CellRank by running::
 
     pip install cellrank
 
