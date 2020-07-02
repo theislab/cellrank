@@ -42,6 +42,7 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
     installation
     api
     classes
+    release_notes
     references
 
 .. toctree::
