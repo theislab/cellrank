@@ -11,7 +11,7 @@ except ImportError:
     __email__ = "info@cellrank.org"
     __version__ = "1.0.0-b.1"
 
-_msmtools_dep = ["vendorize", "future_fstrings"]
+_msmtools_dep = ["vendorize"]
 
 
 if __name__ == "__main__":
