@@ -6,12 +6,11 @@ from copy import copy
 from typing import Any, Dict, List, Type, Tuple, Union, Callable, Iterable, Optional
 from functools import wraps, reduce
 
-import numpy as np
-from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix
-
 from scanpy import logging as logg
 from anndata import AnnData
 
+import numpy as np
+from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix
 from cellrank.tools._utils import (
     bias_knn,
     _normalize,
@@ -430,6 +429,7 @@ class UnaryKernelExpression(KernelExpression, ABC):
         ------
         other:
             Matrix to normalize.
+
         Returns
         -------
         :class:`np.ndarray` or :class:`scipy.sparse.spmatrix`
@@ -1177,7 +1177,7 @@ class PalantirKernel(Kernel):
     The implementation presented here won't exactly reproduce the original *Palantir* algorithm (see below)
     but the results are qualitatively very similar.
 
-    Optionally, we apply a density correction as described in [Coifman05]_,where we use the implementation of
+    Optionally, we apply a density correction as described in [Coifman05]_, where we use the implementation of
     [Haghverdi16]_.
 
     Params
