@@ -156,16 +156,18 @@ def _read_graph_data(adata: AnnData, key: str) -> Union[np.ndarray, spmatrix]:
     """
 
     if hasattr(adata, "obsp") and adata.obsp is not None and key in adata.obsp.keys():
+        logg.debug(f"Read key `{key!r}` from `adata.obsp`")
         return adata.obsp[key]
 
     if key in adata.uns.keys():
+        logg.debug(f"Read key `{key!r}` from `adata.uns`")
         return adata.uns[key]
 
     raise KeyError(f"Unable to find key `{key!r}` in `adata.obsp` or `adata.uns`.")
 
 
 def _write_graph_data(
-    data: Union[np.ndarray, spmatrix], adata: AnnData, key: str,
+    adata: AnnData, data: Union[np.ndarray, spmatrix], key: str,
 ):
     """
     Write graph data to :module:`AnnData`.
@@ -175,10 +177,10 @@ def _write_graph_data(
 
     Params
     ------
-    data
-        The graph data we want to write.
     adata
         Annotated data object.
+    data
+        The graph data we want to write.
     key
         Key from either `.uns` or `.obsp`.
 
@@ -194,11 +196,11 @@ def _write_graph_data(
 
         if data.shape[0] != data.shape[1]:
             logg.warning(
-                f"`.obsp` attribute should only contain square matrices, found shape `{data.shape}`"
+                f"`adata.obsp` attribute should only contain square matrices, found shape `{data.shape}`"
             )
 
     except AttributeError:
         adata.uns[key] = data
         write_to = "uns"
 
-    logg.debug(f"Write graph data {key} to `{write_to}`")
+    logg.debug(f"Write graph data {key!r} to `adata.{write_to}`")
