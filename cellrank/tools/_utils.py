@@ -17,6 +17,12 @@ from typing import (
 )
 from itertools import tee, product, combinations
 
+import matplotlib.colors as mcolors
+
+import scanpy as sc
+from scanpy import logging as logg
+from anndata import AnnData
+
 import numpy as np
 import pandas as pd
 import networkx as nx
@@ -27,13 +33,6 @@ from sklearn.cluster import KMeans
 from pandas.api.types import infer_dtype, is_categorical_dtype
 from sklearn.neighbors import NearestNeighbors
 from scipy.sparse.linalg import norm as s_norm
-
-import matplotlib.colors as mcolors
-
-import scanpy as sc
-from scanpy import logging as logg
-from anndata import AnnData
-
 from cellrank.utils._utils import _get_neighs, _has_neighs, _get_neighs_params
 from cellrank.tools._colors import _convert_to_hex_colors, _insert_categorical_colors
 
@@ -100,7 +99,8 @@ def _create_root_final_annotations(
     cats_merged.cat.rename_categories(final_labels, inplace=True)
 
     # write to AnnData
-    adata.obs[key_added], adata.uns[f"{key_added}_colors"] = cats_merged, colors_merged
+    adata.obs[key_added] = cats_merged
+    adata.uns[f"{key_added}_colors"] = colors_merged
 
 
 def _process_series(

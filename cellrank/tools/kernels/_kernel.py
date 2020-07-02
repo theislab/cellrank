@@ -6,12 +6,11 @@ from copy import copy
 from typing import Any, Dict, List, Type, Tuple, Union, Callable, Iterable, Optional
 from functools import wraps, reduce
 
-import numpy as np
-from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix
-
 from scanpy import logging as logg
 from anndata import AnnData
 
+import numpy as np
+from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix
 from cellrank.tools._utils import (
     bias_knn,
     _normalize,
@@ -20,6 +19,7 @@ from cellrank.tools._utils import (
     is_connected,
     is_symmetric,
 )
+from cellrank.utils._utils import _write_graph_data
 from cellrank.tools._constants import Direction, _transition
 
 _ERROR_DIRECTION_MSG = "Can only combine kernels that have the same direction."
@@ -155,8 +155,8 @@ class KernelExpression(ABC):
         -------
         None
             Updates the underlying :paramref:`.adata` object with the following:
-                - `.uns[:paramref:`T_{fwd, bwd}` _`:paramref:`key_added`]['T']` - transition matrix
-                - `.uns[:paramref:`T_{fwd, bwd}` _`:paramref:`key_added`]['params']` - parameters used for calculation
+                - `.obsp[`'T_{fwd, bwd}'` _`:paramref:`key_added`]` - transition matrix
+                - `.uns[`'T_{fwd, bwd}'` _`:paramref:`key_added` `'_params'`] - parameters used for calculation
         """
 
         if self.transition_matrix is None:
@@ -168,14 +168,8 @@ class KernelExpression(ABC):
         if key_added is not None:
             key += f"_{key_added}"
 
-        if self.adata.uns.get(key, None) is not None:
-            logg.debug(f"DEBUG: Overwriting key `{key!r}` in `adata.uns`")
-
-        self.adata.uns[key] = {}
-        self.adata.uns[key]["params"] = str(self)
-        self.adata.uns[key]["T"] = self.transition_matrix
-
-        logg.debug(f"DEBUG: Added `{key!r}` to `adata.uns`")
+        self.adata.uns[f"{key}_params"] = str(self)
+        _write_graph_data(self.adata, self.transition_matrix, key)
 
     @abstractmethod
     def copy(self) -> "KernelExpression":
@@ -430,6 +424,7 @@ class UnaryKernelExpression(KernelExpression, ABC):
         ------
         other:
             Matrix to normalize.
+
         Returns
         -------
         :class:`np.ndarray` or :class:`scipy.sparse.spmatrix`
@@ -1177,7 +1172,7 @@ class PalantirKernel(Kernel):
     The implementation presented here won't exactly reproduce the original *Palantir* algorithm (see below)
     but the results are qualitatively very similar.
 
-    Optionally, we apply a density correction as described in [Coifman05]_,where we use the implementation of
+    Optionally, we apply a density correction as described in [Coifman05]_, where we use the implementation of
     [Haghverdi16]_.
 
     Params

@@ -20,7 +20,8 @@ from cellrank.tools._constants import (
 
 
 def _assert_has_all_keys(adata: AnnData, direction: Direction):
-    assert _transition(direction) in adata.uns.keys()
+    assert _transition(direction) in adata.obsp.keys()
+    assert f"{_transition(direction)}_params" in adata.uns.keys()
 
     if direction == Direction.FORWARD:
         assert str(LinKey.FORWARD) in adata.obsm
