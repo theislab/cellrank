@@ -9,7 +9,9 @@ try:
 except ImportError:
     __author__ = "Marius Lange, Michal Klein, Juan Luis Restrepo Lopez"
     __email__ = "info@cellrank.org"
-    __version__ = "1.1.0"
+    __version__ = "1.0.0-b.0"
+
+_msmtools_dep = ["vendorize", "future_fstrings"]
 
 
 if __name__ == "__main__":
@@ -18,6 +20,7 @@ if __name__ == "__main__":
         use_scm_version=True,
         setup_requires=["setuptools_scm"],
         author=__author__,
+        author_email=__email__,
         email=__email__,
         maintainer=__author__,
         maintainer_email=__email__,
@@ -32,15 +35,10 @@ if __name__ == "__main__":
         download_url="https://github.com/theislab/cellrank",
         license="BSD",
         install_requires=list(
-            list(
-                map(
-                    str.strip,
-                    open(os.path.abspath("requirements.txt"), "r").read().split(),
-                )
+            map(
+                str.strip,
+                open(os.path.abspath("requirements.txt"), "r").read().splitlines(),
             )
-            + [
-                "msmtools @ git+git://github.com/msmdev/msmtools@krylov_schur#egg=msmtools"
-            ]
         ),
         extras_require=dict(
             test=[
@@ -50,7 +48,19 @@ if __name__ == "__main__":
                 "python-igraph",
                 "louvain==0.6.1",
                 "Pillow",
+            ],
+            docs=[
+                r
+                for r in map(
+                    str.strip,
+                    open(os.path.abspath("docs/requirements.txt"), "r")
+                    .read()
+                    .splitlines(),
+                )
+                if "requirements.txt" not in r
             ]
+            + _msmtools_dep,
+            dev=["black==19.10b0", "pre-commit==2.5.1"] + _msmtools_dep,
         ),
         zip_safe=False,
         packages=find_packages(),
@@ -71,7 +81,8 @@ if __name__ == "__main__":
             "Framework :: Jupyter",
             "Operating System :: MacOS :: MacOS X",
             "Operating System :: Microsoft :: Windows",
-            "Operating System :: POSIX :: Linux" "Typing :: Typed",
+            "Operating System :: POSIX :: Linux",
+            "Typing :: Typed",
             "Programming Language :: Python :: 3",
             "Programming Language :: Python :: 3.6",
             "Programming Language :: Python :: 3.7",
