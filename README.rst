@@ -26,6 +26,12 @@ CellRank's key applications
 - visualise gene expression trends towards/from specific states
 - identify potential driver genes for each state
 
+Installation
+^^^^^^^^^^^^
+Install CellRank by running::
+
+    pip install cellrank
+
 Support
 ^^^^^^^
 We welcome your feedback! Feel free to open an `issue <https://github.com/theislab/cellrank/issues/new>`_
