@@ -9,7 +9,7 @@ try:
 except ImportError:
     __author__ = "Marius Lange, Michal Klein, Juan Luis Restrepo Lopez"
     __email__ = "info@cellrank.org"
-    __version__ = "1.2.1.a0"
+    __version__ = "1.0.0-a.0"
 
 _msmtools_dep = ["vendorize", "future_fstrings"]
 
