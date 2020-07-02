@@ -75,3 +75,8 @@
 .rst-content .note {
     background: #FFC76E;
 }
+
+.rst-content .image-reference img {
+   max-width: unset;
+   width: 100% !important;
+   height: auto !important;

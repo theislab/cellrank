@@ -102,7 +102,7 @@ exclude_patterns = ["**.ipynb_checkpoints"]
 
 # -- Notebooks
 nbsphinx_execute_arguments = [
-    "--InlineBackend.figure_formats={'svg', 'pdf'}",
+    "--InlineBackend.figure_formats={'png', 'pdf'}",  # correct figure resize
     "--InlineBackend.rc={'figure.dpi': 96}",
 ]
 
@@ -123,7 +123,6 @@ release = "master"
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-#
 
 autosummary_generate = True
 autodoc_member_order = "bysource"
