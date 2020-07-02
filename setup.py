@@ -48,7 +48,8 @@ if __name__ == "__main__":
                 "python-igraph",
                 "louvain==0.6.1",
                 "Pillow",
-            ],
+            ]
+            + _msmtools_dep,
             docs=[
                 r
                 for r in map(
