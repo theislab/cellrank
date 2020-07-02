@@ -1,4 +1,4 @@
-|Travis| |Docs| |Binder| |Codecov|
+|PyPI| |Travis| |Docs| |Binder| |Codecov|
 
 
 CellRank - Probabilistic Fate Mapping using RNA Velocity
@@ -40,7 +40,8 @@ comment/suggestion.
 
 CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab`_.
 
-
+.. |PyPI| image:: https://img.shields.io/pypi/v/cellrank.svg
+   :target: https://pypi.org/project/cellrank
 
 .. |Travis| image:: https://travis-ci.org/theislab/cellrank.svg?branch=master
     :target: https://travis-ci.org/theislab/cellrank
