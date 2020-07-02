@@ -579,6 +579,7 @@ class CFLARE(BaseEstimator):
         norm_by_frequ: bool = False,
         use_iterative_solver: Optional[bool] = None,
         tol: float = 1e-5,
+        use_initialization: bool = True,
     ) -> None:
         """
         Compute absorption probabilities for a Markov chain.
@@ -597,10 +598,13 @@ class CFLARE(BaseEstimator):
             Divide absorption probabilities for `rc_i` by `|rc_i|`.
         use_iterative_solver
             Whether to use an iterative solver for the linear system. Makes sense for large problems (> 20k cells)
-            with few final states (<50)
+            with few final states (<50).
         tol
             Convergence tolerance for the iterative solver. The default is fine for most cases, only consider
             decreasing this for severely ill-conditioned matrices.
+        use_initialization
+            Only relevant when using an iterative solver. In that case, the solution of absorbing states from the same
+            recurrent class can be used as initialization to the iterative solver.
 
         Returns
         -------
@@ -657,8 +661,10 @@ class CFLARE(BaseEstimator):
 
         # create arrays of all recurrent and transient indices
         mask = np.repeat(False, len(metastable_states_))
+        rec_start_indices = [0]
         for cat in metastable_states_.cat.categories:
             mask = np.logical_or(mask, metastable_states_ == cat)
+            rec_start_indices.append(np.sum(mask))
         rec_indices, trans_indices = np.where(mask)[0], np.where(~mask)[0]
 
         # create Q (restriction transient-transient), S (restriction transient-recurrent) and I (Q-sized identity)
@@ -691,7 +697,7 @@ class CFLARE(BaseEstimator):
             eye = np.eye(len(trans_indices))
         else:
             if not issparse(q):
-                q = scipy.sparsae.csr_matrix(q)
+                q = scipy.sparse.csr_matrix(q)
             if not issparse(s):
                 s = scipy.sparse.csr_matrix(s)
             eye = scipy.sparse.eye(len(trans_indices))
@@ -699,12 +705,25 @@ class CFLARE(BaseEstimator):
         # compute abs probs. Since we don't expect sparse solution, dense computation is faster.
         if use_iterative_solver:
 
-            def flex_solve(M, B, solver):
-                X, info = zip(*(solver(M, b.toarray().flatten(), tol=tol) for b in B.T))
-                return np.transpose(X), info
+            def flex_solve(M, B, solver=scipy.sparse.linalg.gmres, init_indices=None):
+                # solve a series of linear problems using an iterative solver
+                x_list, info_list = [], []
+                x = None
+                for ix, b in enumerate(B.T):
+                    # use the previous problem solution as initialisation
+                    if init_indices is not None:
+                        x0 = None if ix in init_indices else x
+                    else:
+                        x0 = None
+                    x, info = solver(M, b.toarray().flatten(), tol=tol, x0=x0)
+                    x_list.append(x[:, None])
+                    info_list.append(info)
+
+                return np.concatenate(x_list, axis=1), info_list
 
             logg.debug("DEBUG: Solving the linear system using GMRES")
-            abs_states, info = flex_solve(eye - q, s, gmres)
+            init_indices = rec_start_indices if use_initialization else None
+            abs_states, info = flex_solve(eye - q, s, gmres, init_indices=init_indices)
             if not (all(con == 0 for con in info)):
                 logg.warning("Some linear solves did not converge for GMRES")
         else:
