@@ -2,15 +2,24 @@
 import os
 import sys
 import logging
+import subprocess
 from pathlib import Path
 from urllib.parse import urljoin
 from urllib.request import urlretrieve
 
-import cellrank  # noqa
-
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE.parent.parent))
 sys.path.insert(0, os.path.abspath("_ext"))
+
+# this must be called prior to importing CellRank
+if not os.path.exists(os.path.join(sys.path[1], "cellrank", "_vendor")):
+    config_path = os.path.join(HERE.parent.parent, "vendorize.toml")
+    print(f"Running vendorize using config: {config_path}")
+    subprocess.run(["python-vendorize", config_path])
+
+
+import cellrank  # noqa NOQA
+
 
 logger = logging.getLogger(__name__)
 
@@ -93,7 +102,7 @@ exclude_patterns = ["**.ipynb_checkpoints"]
 
 # -- Notebooks
 nbsphinx_execute_arguments = [
-    "--InlineBackend.figure_formats={'svg', 'pdf'}",
+    "--InlineBackend.figure_formats={'png', 'pdf'}",  # correct figure resize
     "--InlineBackend.rc={'figure.dpi': 96}",
 ]
 
@@ -114,7 +123,6 @@ release = "master"
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-#
 
 autosummary_generate = True
 autodoc_member_order = "bysource"
