@@ -4,19 +4,18 @@
 from typing import List, Tuple, Union, TypeVar, Callable, Iterable, Optional
 from itertools import combinations
 
-import numpy as np
-import pandas as pd
-
 import matplotlib.colors as c
 
 from scanpy import logging as logg
 
+import numpy as np
+import pandas as pd
 from cellrank.tools._utils import (
     _compute_mean_color,
     _convert_lineage_name,
     _unique_order_preserving,
 )
-from cellrank.tools._colors import _create_categorical_colors
+from cellrank.tools._colors import _get_bg_fg_colors, _create_categorical_colors
 from cellrank.tools._constants import Lin
 
 ColorLike = TypeVar("ColorLike")
@@ -176,7 +175,7 @@ class Lineage(np.ndarray):
             except TypeError:  # because of range
                 pass
 
-            if isinstance(col, (list, tuple)):
+            if isinstance(col, (list, tuple, np.ndarray)):
                 if any(
                     map(
                         lambda i: isinstance(i, Lin)
@@ -192,7 +191,7 @@ class Lineage(np.ndarray):
                 item = [item]
 
             col = range(len(self.names))
-            if isinstance(item, (tuple, list)):
+            if isinstance(item, (tuple, list, np.ndarray)):
                 if any(
                     map(
                         lambda i: isinstance(i, Lin)
@@ -382,6 +381,50 @@ class Lineage(np.ndarray):
 
     def __str__(self):
         return f'{super().__str__()}\n names=[{", ".join(self.names)}])'
+
+    def _repr_html_(self) -> str:
+        def format_row(r):
+            cells = "".join(
+                f"<td style='text-align: right;'>"
+                f"{super(type(self), self).__getitem__((r, c)):.06f}"
+                f"</td>"
+                for c in range(self.shape[1])
+            )
+            return f"<tr>{cells}</tr>"
+
+        def dummy_row():
+            values = "".join(
+                "<td style='text-align: right;'>...</td>" for _ in range(self.shape[1])
+            )
+            return f"<tr>{values}</tr>"
+
+        show_n_cells_head_tail = 10
+        styles = [
+            f"'background-color: {bg}; color: {fg}; text-align: center; word-wrap: break-word; max-width: 100px'"
+            for bg, fg in map(_get_bg_fg_colors, self.colors)
+        ]
+        names = "".join(
+            f"<th style={style}>{n}</th:w:w>" for n, style in zip(self.names, styles)
+        )
+        header = f"<tr>{names}</tr>"
+
+        if self.shape[0] > 100:
+            body = "".join(format_row(i) for i in range(show_n_cells_head_tail))
+            body += dummy_row()
+            body += "".join(
+                format_row(i)
+                for i in range(
+                    self.shape[0] - show_n_cells_head_tail - 1, self.shape[0] - 1
+                )
+            )
+        else:
+            body = "".join(format_row(i) for i in range(self.shape[0]))
+
+        cells = "cells" if self.shape[0] > 1 else "cell"
+        lineages = "lineages" if self.shape[1] > 1 else "lineage"
+        metadata = f"<p>{self.shape[0]} {cells} x {self.shape[1]} {lineages}</p>"
+
+        return f"<div style='scoped'><table>{header}{body}</table>{metadata}</div>"
 
     def __setstate__(self, state):
         *state, names, colors = state
