@@ -7,6 +7,7 @@ from scanpy import logging as logg
 from anndata import AnnData
 
 from cellrank.tools._utils import _info_if_obs_keys_categorical_present
+from cellrank.utils._utils import _read_graph_data
 from cellrank.tools.kernels import VelocityKernel
 from cellrank.tools._constants import LinKey, StateKey, Direction, _transition
 from cellrank.tools.estimators import GPCCA, CFLARE
@@ -28,15 +29,16 @@ def lineages(
     """
     Compute probabilistic lineage assignment using RNA velocity.
 
-    For each cell i in {1, ..., N} and root/final state j in {1, ..., M}, the probability is computed that cell i
-    is either going to final state j (`final=True`) or coming from root state j (`final=False`). We provide two
+    For each cell `i` in {1, ..., N} and root/final state j in {1, ..., M}, the probability is computed that cell `i`
+    is either going to final state `j` (`final=True`) or coming from root state `j` (`final=False`). We provide two
     estimators for computing these probabilities:
 
-    For the estimator GPCCA, we perform Generalized Perron Cluster Cluster Analysis [GPCCA18]_.  Cells are mapped to a
-    simplex where each corner represents a final/root state, and the position of a cell in the simplex determines its
-    probability of going to a final states/coming from a root state.
+    For the estimator :classL`cellrank.tl.GPCCA`, we perform Generalized Perron Cluster Cluster Analysis [GPCCA18]_.
+    Cells are mapped to a simplex where each corner represents a final/root state, and the position of a cell in the
+    simplex determines its probability of going to a final states/coming from a root state.
 
-    For the estimator CFLARE, we compute absorption probabilities towards the root/final states of the Markov chain.
+    For the estimator :class:`cellrank.tl.CFLARE`, we compute absorption probabilities towards the root/final states
+    of the Markov chain.
     For related approaches in the single cell context that utilise absorption probabilities to map cells to lineages,
     see [Setty19]_ or [Weinreb18]_.
 
@@ -44,7 +46,7 @@ def lineages(
     :func:`cellrank.tl.final_states`, respectively.
 
     Parameters
-    --------
+    ----------
     adata : :class:`anndata.AnnData`
         Annotated data object
     estimator
@@ -58,7 +60,7 @@ def lineages(
         Determines which root/final states to use by passing their names. Further, root/final states can be combined.
         If e.g. the final states are ['Neuronal_1', 'Neuronal_1', 'Astrocytes', 'OPC'], then passing
         keys=['Neuronal_1, Neuronal_2', 'OPC'] means that the two neuronal final states are treated as one and the
-        Astrocyte state is excluded.
+        'Astrocyte' state is excluded.
     n_lineages
         Number of lineages when :paramref:`estimator` `=GPCCA`. If `None`, it will be based on `eigengap`.
     method
@@ -73,10 +75,10 @@ def lineages(
         Keyword arguments for :meth:`cellrank.tl.estimators.BaseEstimator.compute_metastable_states`.
 
     Returns
-    --------
+    -------
     :class:`anndata.AnnData`, :class:`cellrank.tools.estimators.BaseEstimator` or :class:`NoneType`
-        Depending on :paramref:`copy`, either updates the existing :paramref:`adata` object or returns a copy or
-        returns the estimator.
+        Depending on :paramref:`copy`, either updates the existing :paramref:`adata` object
+        or returns a copy or returns the estimator.
     """
 
     if not isinstance(estimator, type):
@@ -102,15 +104,17 @@ def lineages(
         rc_key = StateKey.BACKWARD
 
     transition_key = _transition(direction)
-    if transition_key not in adata.uns.keys():
+    vk = VelocityKernel(adata, backward=not final)
+
+    try:
+        vk._transition_matrix = _read_graph_data(adata, transition_key)
+    except KeyError as e:
         key = "final" if final else "root"
-        raise ValueError(f"Compute {key} states first as `cellrank.tl.find_{key}`.")
+        raise KeyError(
+            f"Compute {key} states first as `cellrank.tl.find_{key}`."
+        ) from e
 
     start = logg.info(f"Computing lineage probabilities towards `{rc_key}`")
-
-    # get the transition matrix from the AnnData object and initialise MC object
-    vk = VelocityKernel(adata, backward=not final)
-    vk.transition_matrix = adata.uns[transition_key]["T"]
     mc = estimator(vk, read_from_adata=False)
 
     if cluster_key is None:

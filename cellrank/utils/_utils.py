@@ -8,6 +8,8 @@ import numpy as np
 from scipy.sparse import spmatrix
 
 import anndata
+from scanpy import logging as logg
+from anndata import AnnData
 
 
 def check_collection(
@@ -31,6 +33,7 @@ def check_collection(
     Returns
     -------
     None
+        Nothing, but raises and :class:`KeyError` if one of needles is not found.
     """
 
     haystack = getattr(adata, attr_name)
@@ -122,12 +125,82 @@ def _has_neighs(adata: anndata.AnnData) -> bool:
 def _get_neighs(
     adata: anndata.AnnData, mode: str = "distances"
 ) -> Union[np.ndarray, spmatrix]:
-    return (
-        adata.obsp[mode]
-        if hasattr(adata, "obsp") and mode in adata.obsp.keys()
-        else adata.uns["neighbors"][mode]
-    )
+    try:
+        return _read_graph_data(adata, mode)
+    except KeyError:
+        return _read_graph_data(adata, "neighors")[mode]
 
 
 def _get_neighs_params(adata: anndata.AnnData) -> Dict[str, Any]:
     return adata.uns["neighbors"]["params"]
+
+
+def _read_graph_data(adata: AnnData, key: str) -> Union[np.ndarray, spmatrix]:
+    """
+    Read graph data from :module:`anndata`.
+
+    :module`AnnData` `>=0.7` stores (n_obs x n_obs) matrices in `.obsp` rather than `.uns`.
+    This is for backward compatibility.
+
+    Params
+    ------
+    adata
+        Annotated data object.
+    key
+        Key from either `.uns` or `.obsp`.
+
+    Returns
+    -------
+    :class:`numpy.ndarray` or :class:`scipy.sparse.spmatrix`
+        The graph data.
+    """
+
+    if hasattr(adata, "obsp") and adata.obsp is not None and key in adata.obsp.keys():
+        logg.debug(f"Read key `{key!r}` from `adata.obsp`")
+        return adata.obsp[key]
+
+    if key in adata.uns.keys():
+        logg.debug(f"Read key `{key!r}` from `adata.uns`")
+        return adata.uns[key]
+
+    raise KeyError(f"Unable to find key `{key!r}` in `adata.obsp` or `adata.uns`.")
+
+
+def _write_graph_data(
+    adata: AnnData, data: Union[np.ndarray, spmatrix], key: str,
+):
+    """
+    Write graph data to :module:`AnnData`.
+
+    :module`anndata` `>=0.7` stores (n_obs x n_obs) matrices in `.obsp` rather than `.uns`.
+    This is for backward compatibility.
+
+    Params
+    ------
+    adata
+        Annotated data object.
+    data
+        The graph data we want to write.
+    key
+        Key from either `.uns` or `.obsp`.
+
+    Returns
+    --------
+    None
+        Nothing, just writes the data.
+    """
+
+    try:
+        adata.obsp[key] = data
+        write_to = "obsp"
+
+        if data.shape[0] != data.shape[1]:
+            logg.warning(
+                f"`adata.obsp` attribute should only contain square matrices, found shape `{data.shape}`"
+            )
+
+    except AttributeError:
+        adata.uns[key] = data
+        write_to = "uns"
+
+    logg.debug(f"Write graph data {key!r} to `adata.{write_to}`")

@@ -24,6 +24,7 @@ from scanpy import logging as logg
 from anndata import AnnData
 
 from cellrank.tools._utils import save_fig
+from cellrank.utils._utils import _read_graph_data
 from cellrank.tools._constants import _colors
 
 KEYLOCS = str
@@ -307,7 +308,7 @@ def graph(
             raise ValueError(
                 "Argument `graph_key` cannot be `None` when `adata` is `anndata.Anndata` object."
             )
-        gdata = data.uns[graph_key]["T"]
+        gdata = _read_graph_data(data, graph_key)
     elif isinstance(data, (np.ndarray, spmatrix)):
         gdata = data
     else:
