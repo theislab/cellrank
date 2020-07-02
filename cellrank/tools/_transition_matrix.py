@@ -49,11 +49,11 @@ def transition_matrix(
         Whether to use correlations with cells that have an angle > 90 degree with :math:`v_i`.
     sigma_corr
         Scaling parameter for the softmax. Larger values will lead to a more concentrated distribution (more peaked).
-        Default is to use 1 / median_velocity_correlation.
+        Default is to use `1 / median_velocity_correlation`.
     scale_by_variances
         Use velocity variances to scale the softmax.
     var_key
-        Key from `adata.uns` to acess velocity variances.
+        Key from `adata.uns` to access velocity variances.
     var_min
         Variances are clipped to this value at the lower end.
     self_transitions
@@ -108,7 +108,7 @@ def transition_matrix(
             ).compute_transition_matrix(density_normalize=density_normalize)
         else:
             raise ValueError(
-                f"The parameter `weight_connectivities` must be in range `[0, 1]`, found `{weight_connectivities}`."
+                f"Parameter `weight_connectivities` must be in range `[0, 1]`, found `{weight_connectivities}`."
             )
     else:
         final = vk

@@ -4,12 +4,12 @@
 from typing import Any, Dict, List, Tuple, Union, Hashable, Iterable, Optional
 from multiprocessing import cpu_count
 
+import numpy as np
+from scipy.sparse import spmatrix
+
 import anndata
 from scanpy import logging as logg
 from anndata import AnnData
-
-import numpy as np
-from scipy.sparse import spmatrix
 
 
 def check_collection(
@@ -137,7 +137,7 @@ def _get_neighs_params(adata: anndata.AnnData) -> Dict[str, Any]:
 
 def _read_graph_data(adata: AnnData, key: str) -> Union[np.ndarray, spmatrix]:
     """
-    Read graph data from :module:`AnnData`.
+    Read graph data from :module:`anndata`.
 
     :module`AnnData` `>=0.7` stores (n_obs x n_obs) matrices in `.obsp` rather than `.uns`.
     This is for backward compatibility.
@@ -172,7 +172,7 @@ def _write_graph_data(
     """
     Write graph data to :module:`AnnData`.
 
-    :module`AnnData` `>=0.7` stores (n_obs x n_obs) matrices in `.obsp` rather than `.uns`.
+    :module`anndata` `>=0.7` stores (n_obs x n_obs) matrices in `.obsp` rather than `.uns`.
     This is for backward compatibility.
 
     Params

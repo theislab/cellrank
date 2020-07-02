@@ -342,9 +342,9 @@ class TestKernel:
         assert pk.adata.shape == (50, 1)
         assert pk.adata.obs.shape == (50, 0)
         assert pk.adata.var.shape == (1, 0)
-        assert "params" in pk.adata.uns["T_fwd"]
+        assert "T_fwd_params" in pk.adata.uns.keys()
         np.testing.assert_array_equal(
-            pk.adata.uns["T_fwd"]["T"].toarray(), pk.transition_matrix.toarray()
+            pk.adata.obsp["T_fwd"].toarray(), pk.transition_matrix.toarray()
         )
 
     def test_precomputed_adata(self, adata):
@@ -375,9 +375,9 @@ class TestKernel:
         vk.write_to_adata()
 
         assert adata is vk.adata
-        assert "params" in adata.uns["T_fwd"]
+        assert "T_fwd_params" in adata.uns.keys()
         np.testing.assert_array_equal(
-            adata.uns["T_fwd"]["T"].toarray(), vk.transition_matrix.toarray()
+            adata.obsp["T_fwd"].toarray(), vk.transition_matrix.toarray()
         )
 
     def test_row_normalized(self, adata):
