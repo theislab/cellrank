@@ -14,7 +14,6 @@ import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.colors
 import matplotlib.pyplot as plt
-from seaborn import heatmap, clustermap
 
 import scanpy as sc
 import scvelo as scv
@@ -115,6 +114,7 @@ def cluster_fates(
         Nothing, just plots the fates for specified :paramref:`clusters` and :paramref:`lineages`.
         Optionally saves the figure based on :paramref:`save`.
     """
+    from seaborn import heatmap, clustermap
 
     def plot_bar():
         cols = 4 if ncols is None else ncols
