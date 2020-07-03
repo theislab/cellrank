@@ -3,7 +3,7 @@
 
 from copy import deepcopy
 from types import MappingProxyType
-from typing import Dict, Tuple, Union, Callable, Optional, Sequence
+from typing import Dict, Tuple, Union, TypeVar, Callable, Optional, Sequence
 from pathlib import Path
 
 import numpy as np
@@ -19,12 +19,13 @@ from matplotlib.patches import ArrowStyle, FancyArrowPatch
 from matplotlib.collections import LineCollection
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-from scanpy import logging as logg
-from anndata import AnnData
-
+from cellrank import logging as logg
 from cellrank.tools._utils import save_fig
 from cellrank.utils._utils import _read_graph_data
 from cellrank.tools._constants import _colors
+
+AnnData = TypeVar("AnnData")
+
 
 KEYLOCS = str
 KEYS = str

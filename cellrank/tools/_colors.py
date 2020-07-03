@@ -3,16 +3,16 @@
 
 from typing import Any, List, Tuple, Union, Optional, Sequence
 
-from matplotlib import cm as cm
-from matplotlib import colors as mcolors
-
-from scanpy import logging as logg
-
 import numpy as np
 from pandas import Series, DataFrame, to_numeric
 from scipy.stats import entropy
 from pandas._libs.lib import infer_dtype
 from pandas.core.dtypes.common import is_categorical_dtype
+
+from matplotlib import cm as cm
+from matplotlib import colors as mcolors
+
+from cellrank import logging as logg
 
 
 def _create_colors(

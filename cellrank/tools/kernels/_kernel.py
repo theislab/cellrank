@@ -3,14 +3,24 @@
 
 from abc import ABC, abstractmethod
 from copy import copy
-from typing import Any, Dict, List, Type, Tuple, Union, Callable, Iterable, Optional
+from typing import (
+    Any,
+    Dict,
+    List,
+    Type,
+    Tuple,
+    Union,
+    TypeVar,
+    Callable,
+    Iterable,
+    Optional,
+)
 from functools import wraps, reduce
-
-from scanpy import logging as logg
-from anndata import AnnData
 
 import numpy as np
 from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix
+
+from cellrank import logging as logg
 from cellrank.tools._utils import (
     bias_knn,
     _normalize,
@@ -36,6 +46,7 @@ _LOG_USING_CACHE = "DEBUG: Using cached transition matrix"
 _n_dec = 2
 _dtype = np.float64
 _cond_num_tolerance = 1e-15
+AnnData = TypeVar("AnnData")
 
 
 class KernelExpression(ABC):
@@ -760,6 +771,8 @@ class PrecomputedKernel(Kernel):
         backward: bool = False,
         compute_cond_num: bool = False,
     ):
+        from anndata import AnnData as _AnnData
+
         if not isinstance(transition_matrix, (np.ndarray, spmatrix)):
             raise TypeError(
                 f"Expected transition matrix to be of type `numpy.ndarray` or `scipy.sparse.spmatrix`, "
@@ -776,7 +789,7 @@ class PrecomputedKernel(Kernel):
 
         if adata is None:
             logg.debug("DEBUG: Creating empty dummy AnnData object")
-            adata = AnnData(
+            adata = _AnnData(
                 csr_matrix((transition_matrix.shape[0], 1), dtype=np.float32)
             )
 

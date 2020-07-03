@@ -3,7 +3,7 @@
 
 import os
 from types import MappingProxyType
-from typing import Tuple, Union, Mapping, Optional, Sequence
+from typing import Tuple, Union, Mapping, TypeVar, Optional, Sequence
 from pathlib import Path
 
 import numpy as np
@@ -12,9 +12,7 @@ import matplotlib
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 
-from scanpy import logging as logg
-from anndata import AnnData
-
+from cellrank import logging as logg
 from cellrank.tools._utils import save_fig
 from cellrank.utils._utils import _get_n_cores, _make_unique, check_collection
 from cellrank.plotting._utils import (
@@ -26,6 +24,8 @@ from cellrank.plotting._utils import (
 )
 from cellrank.tools._constants import LinKey
 from cellrank.utils._parallelize import parallelize
+
+AnnData = TypeVar("AnnData")
 
 
 def gene_trends(

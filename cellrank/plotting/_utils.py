@@ -2,7 +2,17 @@
 """Utility functions for CellRank plotting."""
 
 from copy import copy
-from typing import Any, Dict, Tuple, Union, Mapping, Iterable, Optional, Sequence
+from typing import (
+    Any,
+    Dict,
+    Tuple,
+    Union,
+    Mapping,
+    TypeVar,
+    Iterable,
+    Optional,
+    Sequence,
+)
 from pathlib import Path
 from collections import defaultdict
 
@@ -14,13 +24,14 @@ import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 
-from anndata import AnnData
-
 from cellrank.tools._utils import save_fig
 from cellrank.utils.models import Model, GamMGCVModel
 from cellrank.tools.kernels import VelocityKernel
 from cellrank.tools._constants import _colors
 from cellrank.tools.estimators._cflare import CFLARE
+
+AnnData = TypeVar("AnnData")
+
 
 _ERROR_INCOMPLETE_SPEC = (
     "No options were specified for{}`{!r}`. "

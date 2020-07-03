@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
 """General utility functions module."""
 
-from typing import Any, Dict, List, Tuple, Union, Hashable, Iterable, Optional
+from typing import Any, Dict, List, Tuple, Union, TypeVar, Hashable, Iterable, Optional
 from multiprocessing import cpu_count
 
 import numpy as np
 from scipy.sparse import spmatrix
 
-from scanpy import logging as logg
-from anndata import AnnData
+from cellrank import logging as logg
+
+AnnData = TypeVar("AnnData")
 
 
 def check_collection(

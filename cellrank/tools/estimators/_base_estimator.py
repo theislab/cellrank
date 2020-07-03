@@ -2,16 +2,8 @@
 """Estimator module."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Tuple, Union, Iterable, Optional, Sequence
+from typing import Any, Dict, List, Tuple, Union, TypeVar, Iterable, Optional, Sequence
 from pathlib import Path
-
-import matplotlib as mpl
-import matplotlib.cm as cm
-import matplotlib.pyplot as plt
-
-import scvelo as scv
-from scanpy import logging as logg
-from anndata import AnnData
 
 import numpy as np
 import pandas as pd
@@ -20,6 +12,14 @@ from scipy.stats import ranksums
 from scipy.sparse import issparse
 from pandas.api.types import infer_dtype, is_categorical_dtype
 from scipy.sparse.linalg import eigs
+
+import matplotlib as mpl
+import matplotlib.cm as cm
+import matplotlib.pyplot as plt
+
+import scvelo as scv
+
+from cellrank import logging as logg
 from cellrank.tools._utils import (
     save_fig,
     _eigengap,
@@ -38,6 +38,8 @@ from cellrank.tools._colors import (
 from cellrank.tools._lineage import Lineage
 from cellrank.tools._constants import LinKey, Prefix, StateKey, Direction, _colors
 from cellrank.tools.kernels._kernel import KernelExpression
+
+AnnData = TypeVar("AnnData")
 
 
 class BaseEstimator(ABC):

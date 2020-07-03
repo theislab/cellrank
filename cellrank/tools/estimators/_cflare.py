@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Clustering Left and Right Eigenvectors (CFLARE) module."""
 from copy import copy, deepcopy
-from typing import Any, Dict, List, Tuple, Union, Iterable, Optional, Sequence
+from typing import Any, Dict, List, Tuple, Union, TypeVar, Iterable, Optional, Sequence
 
 import numpy as np
 import scipy
@@ -15,9 +15,8 @@ import matplotlib as mpl
 import matplotlib.cm as cm
 
 import scvelo as scv
-from scanpy import logging as logg
-from anndata import AnnData
 
+from cellrank import logging as logg
 from cellrank.tools._utils import (
     _cluster_X,
     _normalize,
@@ -31,6 +30,9 @@ from cellrank.tools._lineage import Lineage
 from cellrank.tools._constants import _dp, _probs, _colors, _lin_names
 from cellrank.tools.kernels._kernel import KernelExpression
 from cellrank.tools.estimators._base_estimator import BaseEstimator
+
+AnnData = TypeVar("AnnData")
+
 
 EPS = np.finfo(np.float64).eps
 

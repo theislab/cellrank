@@ -4,12 +4,12 @@
 from typing import List, Tuple, Union, TypeVar, Callable, Iterable, Optional
 from itertools import combinations
 
-import matplotlib.colors as c
-
-from scanpy import logging as logg
-
 import numpy as np
 import pandas as pd
+
+import matplotlib.colors as c
+
+from cellrank import logging as logg
 from cellrank.tools._utils import (
     _compute_mean_color,
     _convert_lineage_name,

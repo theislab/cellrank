@@ -1,21 +1,24 @@
 # -*- coding: utf-8 -*-
 """IO module."""
 
-from typing import Union, Callable
+from typing import Union, TypeVar, Callable
 from pathlib import Path
 
 from matplotlib.colors import is_color_like
 
-from scanpy import logging as logg
-from scvelo import read
-from anndata import AnnData
+from scvelo import read as scv_read
 
+from cellrank import logging as logg
 from cellrank.tools._colors import _create_categorical_colors
 from cellrank.tools._lineage import Lineage
 from cellrank.tools._constants import LinKey, Direction, _colors, _lin_names
 
+AnnData = TypeVar("AnnData")
 
-def read(path: Union[Path, str], read_callback: Callable = read, **kwargs) -> AnnData:
+
+def read(
+    path: Union[Path, str], read_callback: Callable = scv_read, **kwargs
+) -> AnnData:
     """
     Read file and return :class:`anndata.AnnData` object.
 

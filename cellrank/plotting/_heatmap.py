@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Heatmap module."""
 
-from typing import Tuple, Union, Optional, Sequence
+from typing import Tuple, Union, TypeVar, Optional, Sequence
 from pathlib import Path
 from collections import Iterable, defaultdict
 
@@ -14,14 +14,14 @@ import matplotlib.colors as colors
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 
-from scanpy import logging as logg
-from anndata import AnnData
-
+from cellrank import logging as logg
 from cellrank.tools._utils import save_fig
 from cellrank.utils._utils import _get_n_cores, check_collection
 from cellrank.plotting._utils import _fit, _model_type, _create_models, _is_any_gam_mgcv
 from cellrank.tools._constants import LinKey
 from cellrank.utils._parallelize import parallelize
+
+AnnData = TypeVar("AnnData")
 
 
 def heatmap(
