@@ -37,6 +37,7 @@ Tools
     tl.kernels.VelocityKernel
     tl.kernels.ConnectivityKernel
     tl.kernels.PalantirKernel
+    tl.kernels.PrecomputedKernel
 
 Plotting
 ~~~~~~~~
