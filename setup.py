@@ -8,6 +8,7 @@ try:
     from cellrank import __author__, __email__, __version__
 except ImportError:
     __author__ = "Marius Lange, Michal Klein, Juan Luis Restrepo Lopez"
+    __maintainer__ = "Marius Lange, Michal Klein"
     __email__ = "info@cellrank.org"
     __version__ = "1.0.0-b.2"
 
@@ -22,10 +23,10 @@ if __name__ == "__main__":
         author=__author__,
         author_email=__email__,
         email=__email__,
-        maintainer=__author__,
+        maintainer=__maintainer__,
         maintainer_email=__email__,
         version=__version__,
-        description="Continuous Lineage Decisions Uncovered by RNA Velocity",
+        description="CellRank - Probabilistic Fate Mapping using RNA Velocity",
         long_description=Path("README.rst").read_text("utf-8"),
         url="https://github.com/theislab/cellrank",
         project_urls={

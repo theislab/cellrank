@@ -3,7 +3,7 @@ Installation
 CellRank requires Python version >= 3.6 to run. We recommend using Miniconda_.
 
 PyPI
-~~~~~~
+~~~~
 Install CellRank by running::
 
     pip install cellrank
@@ -18,7 +18,9 @@ To stay up-to-date with the newest version, run::
     vendorize
 
 ``-e`` stands for ``--editable`` and makes sure that your environment is updated
-when you pull new changes from GitHub.
+when you pull new changes from GitHub. The ``[dev]`` options installs additional
+development requirements which are needed, because CellRank is bundles with additional
+library.
 
 Dependencies
 ~~~~~~~~~~~~
