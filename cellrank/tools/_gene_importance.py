@@ -227,9 +227,7 @@ def gene_importance(
 
     models = _create_models(model, genes, [lineage_name])
     if _is_any_gam_mgcv(models):
-        logg.debug(
-            "DEBUG: Setting backend to multiprocessing because model is `GamMGCV`"
-        )
+        logg.debug("Setting backend to multiprocessing because model is `GamMGCV`")
         backend = "multiprocessing"
 
     start = logg.info(f"Calculating gene trends using `{n_jobs}` core(s)")
@@ -255,7 +253,7 @@ def gene_importance(
     if rf_kwargs.get("n_jobs", None) is None:
         rf_kwargs["n_jobs"] = n_jobs
 
-    logg.debug("DEBUG: Running random forest")
+    logg.debug("Running random forest")
     model = RandomForestRegressor(random_state=seed, **rf_kwargs).fit(x, y)
 
     importances = pd.DataFrame(

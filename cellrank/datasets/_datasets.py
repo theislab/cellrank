@@ -20,9 +20,9 @@ _datasets = dict(  # noqa
 
 def _load_dataset_from_url(fpath: Union[os.PathLike, str], url: str) -> AnnData:
     if os.path.isfile(fpath):
-        logg.debug(f"DEBUG: Loading dataset from `{fpath!r}`")
+        logg.debug(f"Loading dataset from `{fpath!r}`")
     else:
-        logg.debug(f"DEBUG: Downloading dataset from `{url!r}`")
+        logg.debug(f"Downloading dataset from `{url!r}`")
 
     adata = read(fpath, backup_url=url, sparse=True, cache=True)
     adata.var_names_make_unique()

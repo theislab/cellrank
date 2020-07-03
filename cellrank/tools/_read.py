@@ -87,7 +87,7 @@ def read(
             adata.uns[names_key] = names
         else:
             logg.debug(
-                f"DEBUG: Unable to load {'forward' if direction == Direction.FORWARD else 'backward'} "
+                f"Unable to load {'forward' if direction == Direction.FORWARD else 'backward'} "
                 f"`Lineage` from `adata.obsm[{lin_key!r}]`"
             )
 
