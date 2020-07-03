@@ -125,12 +125,12 @@ def exact_mc_perm_test(
     ys_av = np.nanmean(ys, axis=0)
 
     if use_counts:
-        logg.debug("DEBUG: Using counts distribution")
+        logg.debug("Using counts distribution")
         freq_x = _get_counts(xs_av, n_counts)
         freq_y = _get_counts(ys_av, n_counts)
         dist = dist_measure(freq_x, freq_y, **kwargs)
     else:
-        logg.debug("DEBUG: Using probability distribution")
+        logg.debug("Using probability distribution")
         dist = dist_measure(xs_av, ys_av, **kwargs)  # Distance between both averages
     diff.append(dist)
 

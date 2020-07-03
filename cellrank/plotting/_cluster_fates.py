@@ -430,7 +430,7 @@ def cluster_fates(
             clusters = _make_unique(clusters)
             if mode in ("paga", "paga_pie"):
                 logg.debug(
-                    f"DEBUG: Setting `clusters` to all available ones because of `mode={mode!r}`"
+                    f"Setting `clusters` to all available ones because of `mode={mode!r}`"
                 )
                 clusters = list(adata.obs[cluster_key].cat.categories)
             else:
@@ -481,7 +481,7 @@ def cluster_fates(
     has_xrot = "xticks_rotation" in kwargs
     xrot = kwargs.pop("xticks_rotation", 45)
 
-    logg.debug(f"DEBUG: Using mode: `{mode!r}`")
+    logg.debug(f"Using mode: `{mode!r}`")
 
     use_clustermap = mode == "clustermap"
     if use_clustermap:
@@ -573,7 +573,7 @@ def similarity_plot(
         Optionally saves the figure based on :paramref:`save`.
     """
 
-    logg.debug("DEBUG: Getting the counts")
+    logg.debug("Getting the counts")
     data = _counts(
         adata,
         cluster_key=cluster_key,
@@ -583,7 +583,7 @@ def similarity_plot(
     )
 
     cluster_names = list(data.keys())
-    logg.debug("DEBUG: Calculating Cramer`s V statistic")
+    logg.debug("Calculating Cramer`s V statistic")
     sim = [
         [1 - _cramers_v(data[name2], data[name]) for name in cluster_names]
         for name2 in cluster_names

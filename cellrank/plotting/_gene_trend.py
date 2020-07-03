@@ -196,9 +196,9 @@ def gene_trends(
         )
         axes = np.ravel(axes)
     elif dirname is not None:
-        from scanpy import settings as scsettings
+        from cellrank import settings
 
-        figdir = scsettings.figdir
+        figdir = settings.figdir
 
         if figdir is None:
             raise RuntimeError(
@@ -224,7 +224,7 @@ def gene_trends(
     elif all(map(lambda ln: ln is None, lineages)):  # no lineage, all the weights are 1
         lineages = [None]
         show_cbar = False
-        logg.debug("DEBUG: All lineages are `None`, setting weights to be `1`")
+        logg.debug("All lineages are `None`, setting weights to be `1`")
     lineages = _make_unique(lineages)
 
     for ln in filter(lambda ln: ln is not None, lineages):
@@ -257,9 +257,7 @@ def gene_trends(
         plot_kwargs["xlabel"] = kwargs.get("time_key", None)
 
     if _is_any_gam_mgcv(kwargs["models"]):
-        logg.debug(
-            "DEBUG: Setting backend to multiprocessing because model is `GamMGCV`"
-        )
+        logg.debug("Setting backend to multiprocessing because model is `GamMGCV`")
         backend = "multiprocessing"
 
     n_jobs = _get_n_cores(n_jobs, len(genes))
@@ -276,7 +274,7 @@ def gene_trends(
     )(lineages, start_lineage, end_lineage, **kwargs)
     logg.info("    Finish", time=start)
 
-    logg.debug("DEBUG: Plotting trends")
+    logg.debug("Plotting trends")
     for gene, ax in zip(genes, axes):
         f = (
             None

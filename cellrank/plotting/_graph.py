@@ -158,6 +158,7 @@ def graph(
         Optionally saves the figure based on :paramref:`save`.
     """
 
+    from anndata import AnnData as _AnnData
     import networkx as nx
 
     def plot_arrows(curves, G, pos, ax, edge_weight_scale):
@@ -266,7 +267,7 @@ def graph(
     _min_edge_weight = 0.00001
 
     if edge_width_limit is None:
-        logg.debug("DEBUG: Not limiting width of edges")
+        logg.debug("Not limiting width of edges")
         edge_width_limit = float("inf")
 
     if self_loop_radius_frac is None:
@@ -281,7 +282,7 @@ def graph(
         keylocs = keylocs * 3
     elif all(map(lambda k: k in ("incoming", "outgoing", "self_loops"), keys)):
         # don't care about keylocs since they are irrelevant
-        logg.debug("DEBUG: Ignoring key locations")
+        logg.debug("Ignoring key locations")
         keylocs = [None] * len(keys)
 
     for k in ("obs", "obsm"):
@@ -305,7 +306,7 @@ def graph(
     if len(labels) != len(keys):
         raise ValueError("`Keys` and `labels` must be of the same shape.")
 
-    if isinstance(data, AnnData):
+    if isinstance(data, _AnnData):
         if graph_key is None:
             raise ValueError(
                 "Argument `graph_key` cannot be `None` when `adata` is `anndata.Anndata` object."
@@ -369,7 +370,7 @@ def graph(
                     f"Value in `layout` must be a tuple or list of length 2, found `{v}`."
                 )
         pos = layout
-        logg.debug("DEBUG: Using pre-specified layout")
+        logg.debug("Using pre-specified layout")
     elif callable(layout):
         start = logg.info(f"Embedding graph using `{layout.__name__!r}` layout")
         pos = layout(G, **layout_kwargs)
@@ -385,7 +386,7 @@ def graph(
         try:
             from ._utils import curved_edges
 
-            logg.debug("DEBUG: Creating curved edges")
+            logg.debug("Creating curved edges")
             curves = curved_edges(G, pos, self_loop_radius_frac, polarity="directed")
             lc = LineCollection(
                 curves,

@@ -189,7 +189,7 @@ def cluster_lineage(
 
     key_to_add = f"lineage_{lineage}_trend"
     if key_added is not None:
-        logg.debug(f"DEBUG: Adding key `{key_added!r}`")
+        logg.debug(f"Adding key `{key_added!r}`")
         key_to_add += f"_{key_added}"
 
     if recompute or key_to_add not in adata.uns:

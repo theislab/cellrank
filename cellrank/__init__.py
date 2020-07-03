@@ -9,6 +9,9 @@ import cellrank.plotting as pl
 from cellrank.tools._read import read
 from cellrank.tools._constants import Lin
 
+# settings = object()
+
+
 __author__ = ", ".join(["Marius Lange", "Michal Klein", "Juan Luis Restrepo Lopez"])
 __maintainer__ = ", ".join(["Marius Lange", "Michal Klein"])
 __email__ = "info@cellrank.org"

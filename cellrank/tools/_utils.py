@@ -877,13 +877,13 @@ def save_fig(
     None
         Just saves the plot.
     """
-    from scanpy import settings as scsettings
+    from cellrank import settings
 
     if os.path.splitext(path)[1] == "":
         path = f"{path}.{ext}"
 
     if not os.path.isabs(path):
-        path = os.path.join(scsettings.figdir, path)
+        path = os.path.join(settings.figdir, path)
 
     if make_dir:
         _maybe_create_dir(os.path.split(path)[0])
@@ -1269,9 +1269,7 @@ def _fuzzy_to_discrete(
         if raise_threshold is None
         else np.max([int(raise_threshold * n_most_likely), 1])
     )
-    logg.debug(
-        f"DEBUG: Raising an exception if if there are less than `{n_raise}` cells."
-    )
+    logg.debug(f"Raising an exception if if there are less than `{n_raise}` cells.")
 
     # initially select `n_most_likely` samples per cluster
     sample_assignment = {

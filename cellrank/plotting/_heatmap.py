@@ -278,9 +278,7 @@ def heatmap(
 
     kwargs["models"] = _create_models(model, genes, lineages)
     if _is_any_gam_mgcv(kwargs["models"]):
-        logg.debug(
-            "DEBUG: Setting backend to multiprocessing because model is `GamMGCV`"
-        )
+        logg.debug("Setting backend to multiprocessing because model is `GamMGCV`")
         backend = "multiprocessing"
 
     n_jobs = _get_n_cores(n_jobs, len(genes))
@@ -295,7 +293,7 @@ def heatmap(
         show_progress_bar=show_progress_bar,
     )(lineages, start_lineage, end_lineage, **kwargs)
     logg.info("    Finish", time=start)
-    logg.debug(f"DEBUG: Plotting {kind} heatmap")
+    logg.debug(f"Plotting {kind} heatmap")
 
     if kind == "genes":
         fig = gene_per_lineage()

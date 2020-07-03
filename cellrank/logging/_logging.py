@@ -203,28 +203,31 @@ def error(
 
 
 @_copy_docs_and_signature(error)
-def warning(msg, *, time=None, deep=None, extra=None) -> datetime:  # noqa
+def warning(msg: str, *, time=None, deep=None, extra=None) -> datetime:  # noqa
     from cellrank import settings
 
     return settings._root_logger.warning(msg, time=time, deep=deep, extra=extra)
 
 
 @_copy_docs_and_signature(error)
-def info(msg, *, time=None, deep=None, extra=None) -> datetime:  # noqa
+def info(msg: str, *, time=None, deep=None, extra=None) -> datetime:  # noqa
     from cellrank import settings
 
     return settings._root_logger.info(msg, time=time, deep=deep, extra=extra)
 
 
 @_copy_docs_and_signature(error)
-def hint(msg, *, time=None, deep=None, extra=None) -> datetime:  # noqa
+def hint(msg: str, *, time=None, deep=None, extra=None) -> datetime:  # noqa
     from cellrank import settings
 
     return settings._root_logger.hint(msg, time=time, deep=deep, extra=extra)
 
 
 @_copy_docs_and_signature(error)
-def debug(msg, *, time=None, deep=None, extra=None) -> datetime:  # noqa
+def debug(msg: str, *, time=None, deep=None, extra=None) -> datetime:  # noqa
     from cellrank import settings
+
+    if not msg.startswith("DEBUG: "):
+        msg = "DEBUG: " + msg
 
     return settings._root_logger.debug(msg, time=time, deep=deep, extra=extra)

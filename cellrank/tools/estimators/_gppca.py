@@ -378,7 +378,7 @@ class GPCCA(BaseEstimator):
             )
             minn = 3
 
-        logg.debug(f"DEBUG: Calculating minChi within interval [{minn}, {maxx}]")
+        logg.debug(f"Calculating minChi within interval [{minn}, {maxx}]")
         return int(np.arange(minn, maxx)[np.argmax(self._gpcca.minChi(minn, maxx))])
 
     def compute_metastable_states(
@@ -931,9 +931,7 @@ class GPCCA(BaseEstimator):
                 list(range(memberships.shape[1])), inplace=True
             )
 
-            logg.debug(
-                "DEBUG: Setting the metastable states using metastable assignment"
-            )
+            logg.debug("Setting the metastable states using metastable assignment")
             metastable_states = _meta_assignment.astype(str).astype("category").copy()
             not_enough_cells = []
         else:
@@ -942,9 +940,7 @@ class GPCCA(BaseEstimator):
                     f"Expected `n_cells` to be positive, found `{n_cells}`."
                 )
 
-            logg.debug(
-                "DEBUG: Setting the metastable states using metastable memberships"
-            )
+            logg.debug("Setting the metastable states using metastable memberships")
 
             # select the most likely cells from each metastable state
             a_discrete, not_enough_cells = _fuzzy_to_discrete(
@@ -978,7 +974,7 @@ class GPCCA(BaseEstimator):
         )
 
         logg.debug(
-            "DEBUG: Setting metastable lineage probabilities based on GPCCA membership vectors"
+            "Setting metastable lineage probabilities based on GPCCA membership vectors"
         )
         self._meta_lin_probs = Lineage(
             memberships,
@@ -1371,7 +1367,7 @@ class GPCCA(BaseEstimator):
             )
             self.compute_schur(n_components)
         else:
-            logg.debug("DEBUG: Using cached Schur decomposition")
+            logg.debug("Using cached Schur decomposition")
 
         start = logg.info(
             f"Computing Generalized Diffusion Pseudotime using n_components = {n_components}"
@@ -1471,6 +1467,6 @@ class GPCCA(BaseEstimator):
 def _print_insufficient_number_of_cells(groups: Iterable[Any], n_cells: int):
     if groups:
         logg.debug(
-            f"DEBUG: The following groups have less than requested number of cells ({n_cells}): "
+            f"The following groups have less than requested number of cells ({n_cells}): "
             f"`{', '.join(sorted(map(str, groups)))}`"
         )
