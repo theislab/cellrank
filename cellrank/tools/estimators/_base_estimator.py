@@ -5,6 +5,14 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Tuple, Union, Iterable, Optional, Sequence
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
+from pandas import Series
+from scipy.stats import ranksums
+from scipy.sparse import issparse
+from pandas.api.types import infer_dtype, is_categorical_dtype
+from scipy.sparse.linalg import eigs
+
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
@@ -13,13 +21,6 @@ import scvelo as scv
 from scanpy import logging as logg
 from anndata import AnnData
 
-import numpy as np
-import pandas as pd
-from pandas import Series
-from scipy.stats import ranksums
-from scipy.sparse import issparse
-from pandas.api.types import infer_dtype, is_categorical_dtype
-from scipy.sparse.linalg import eigs
 from cellrank.tools._utils import (
     save_fig,
     _eigengap,
@@ -755,7 +756,7 @@ class BaseEstimator(ABC):
         # check that lineage probs have been computed
         if self._lin_probs is None:
             raise RuntimeError(
-                "Compute lineage probabilities first as `.compute_lin_probs()` or `.set_main_states`."
+                "Compute lineage probabilities first as `.compute_absorption_probabilities()` or `.set_main_states`."
             )
 
         # check all lin_keys exist in self.lin_names
