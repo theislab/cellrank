@@ -96,7 +96,7 @@ class TestToolsUtils:
             x, y, colors_old=colors_x, inplace=True
         )
 
-        np.testing.assert_array_equal(colors_merged, ["red", "blue", "#4daf4a"])
+        np.testing.assert_array_equal(colors_merged, ["red", "blue", "#2ca02c"])
 
     def test_merge_colors_simple_old_no_inplace(self):
         x = pd.Series(["a", "b", np.nan, "b", np.nan]).astype("category")
@@ -109,7 +109,7 @@ class TestToolsUtils:
         )
 
         np.testing.assert_array_equal(merged.values, expected.values)
-        np.testing.assert_array_equal(colors_merged, ["red", "blue", "#4daf4a"])
+        np.testing.assert_array_equal(colors_merged, ["red", "blue", "#2ca02c"])
 
     def test_merge_colors_simple_new(self):
         x = pd.Series(["a", "b", np.nan, "b", np.nan]).astype("category")
@@ -120,7 +120,7 @@ class TestToolsUtils:
             x, y, colors_new=colors_y, inplace=True
         )
 
-        np.testing.assert_array_equal(colors_merged, ["#e41a1c", "#377eb8", "green"])
+        np.testing.assert_array_equal(colors_merged, ["#1f77b4", "#ff7f0e", "green"])
 
     def test_merge_colors_both(self):
         x = pd.Series(["a", "b", np.nan, "b", np.nan]).astype("category")
