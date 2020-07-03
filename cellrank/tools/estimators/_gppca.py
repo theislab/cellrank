@@ -10,7 +10,6 @@ import numpy as np
 import pandas as pd
 from scipy.stats import entropy
 
-import seaborn as sns
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
@@ -206,6 +205,8 @@ class GPCCA(BaseEstimator):
             Nothing, just plots the Schur matrix.
         """
 
+        from seaborn import heatmap
+
         if self._schur_matrix is None:
             raise RuntimeError(
                 "Compute Schur matrix first as `.compute_schur()` or "
@@ -229,7 +230,7 @@ class GPCCA(BaseEstimator):
         )
 
         kwargs["fmt"] = kwargs.get("fmt", "0.2f")
-        sns.heatmap(
+        heatmap(
             self._schur_matrix,
             cmap=cmap,
             square=True,
