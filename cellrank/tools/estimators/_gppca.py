@@ -32,6 +32,7 @@ from cellrank.tools._lineage import Lineage
 from cellrank.tools._constants import Lin, MetaKey, _dp, _probs, _colors, _lin_names
 from cellrank.tools.kernels._kernel import KernelExpression
 from cellrank.tools.estimators._base_estimator import BaseEstimator
+from cellrank._vendor.msmtools.analysis.dense.gpcca import GPCCA as _GPCCA
 
 AnnData = TypeVar("AnnData")
 
@@ -286,8 +287,6 @@ class GPCCA(BaseEstimator):
 
                 - :paramref:`schur_vectors`
         """
-
-        from cellrank._vendor.msmtools.analysis.dense.gpcca import GPCCA as _GPCCA
 
         if n_components < 2:
             raise ValueError(

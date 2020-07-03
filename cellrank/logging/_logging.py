@@ -183,7 +183,7 @@ def error(
     Log message with specific level and return current time.
 
     Params
-    ======
+    ------
     msg
         Message to display.
     time
