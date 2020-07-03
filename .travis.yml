@@ -16,11 +16,13 @@ jobs:
       language: bash
       os: osx
       osx_image: xcode9.4
+      env: PYTHON_VERSION=3.6.5
 
     - name: "Python 3.7.3 on macOS"
       language: bash
       os: osx
       osx_image: xcode10.2
+      env: PYTHON_VERSION=3.7.3
 
 before_install:
   - ./.scripts/travis/before_install.sh
@@ -32,9 +34,7 @@ script:
   - ./.scripts/travis/test.sh
 
 after_success:
-  - if python = "3.8" && os = "linux"
-  - pip install codecov
-  - codecov
+  - ./.scripts/travis/upload_coverage.sh
 
 deploy:
   provider: pypi
