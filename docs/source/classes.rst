@@ -48,6 +48,12 @@ Palantir Kernel
 .. autoclass:: cellrank.tl.kernels.PalantirKernel
     :members:
 
+Precomputed Kernel
+---------------
+
+.. autoclass:: cellrank.tl.kernels.PrecomputedKernel
+    :members:
+
 Base Classes
 ~~~~~~~~~~~~
 
