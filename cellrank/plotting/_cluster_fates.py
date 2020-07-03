@@ -3,7 +3,7 @@
 
 from math import ceil
 from types import MappingProxyType
-from typing import Any, List, Tuple, Union, Mapping, Optional, Sequence
+from typing import Any, List, Tuple, Union, Mapping, TypeVar, Optional, Sequence
 from pathlib import Path
 from collections import OrderedDict as odict
 
@@ -15,14 +15,15 @@ import matplotlib.cm as cm
 import matplotlib.colors
 import matplotlib.pyplot as plt
 
-from scanpy import logging as logg
-from anndata import AnnData
-
+from cellrank import logging as logg
 from cellrank.tools._utils import save_fig
 from cellrank.utils._utils import _make_unique
 from cellrank.plotting._utils import _position_legend
 from cellrank.tools._constants import LinKey
 from cellrank.tools._exact_mc_test import _counts, _cramers_v
+
+AnnData = TypeVar("AnnData")
+
 
 _cluster_fates_modes = ("bar", "paga", "paga_pie", "violin", "heatmap", "clustermap")
 
@@ -313,6 +314,8 @@ def cluster_fates(
         return fig
 
     def plot_violin_no_cluster_key():
+        from anndata import AnnData as _AnnData
+
         kwargs.pop("ax", None)
         kwargs.pop("keys", None)  # don't care
         kwargs.pop("save", None)
@@ -323,7 +326,7 @@ def cluster_fates(
         kwargs["rotation"] = xrot
 
         data = np.ravel(np.array(adata.obsm[lk]).T)[..., np.newaxis]
-        dadata = AnnData(np.zeros_like(data))
+        dadata = _AnnData(np.zeros_like(data))
         dadata.obs["probability"] = data
         dadata.obs[points] = (
             pd.Series(

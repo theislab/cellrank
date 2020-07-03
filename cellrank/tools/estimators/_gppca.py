@@ -3,7 +3,7 @@
 
 from copy import copy, deepcopy
 from types import MappingProxyType
-from typing import Any, Dict, List, Tuple, Union, Mapping, Iterable, Optional
+from typing import Any, Dict, List, Tuple, Union, Mapping, TypeVar, Iterable, Optional
 from pathlib import Path
 
 import numpy as np
@@ -17,9 +17,8 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 import scvelo as scv
-from scanpy import logging as logg
-from anndata import AnnData
 
+from cellrank import logging as logg
 from cellrank.tools._utils import (
     save_fig,
     _eigengap,
@@ -33,7 +32,9 @@ from cellrank.tools._lineage import Lineage
 from cellrank.tools._constants import Lin, MetaKey, _dp, _probs, _colors, _lin_names
 from cellrank.tools.kernels._kernel import KernelExpression
 from cellrank.tools.estimators._base_estimator import BaseEstimator
-from cellrank._vendor.msmtools.analysis.dense.gpcca import GPCCA as _GPPCA
+
+AnnData = TypeVar("AnnData")
+
 
 # whether to remove overlapping cells from both states, or assign them to the most likely clusters
 REMOVE_OVERLAP = False
@@ -286,12 +287,14 @@ class GPCCA(BaseEstimator):
                 - :paramref:`schur_vectors`
         """
 
+        from cellrank._vendor.msmtools.analysis.dense.gpcca import GPCCA as _GPCCA
+
         if n_components < 2:
             raise ValueError(
                 f"Number of components must be `>=2`, found `{n_components}`."
             )
 
-        self._gpcca = _GPPCA(self._T, eta=initial_distribution, z=which, method=method)
+        self._gpcca = _GPCCA(self._T, eta=initial_distribution, z=which, method=method)
         try:
             self._gpcca._do_schur_helper(n_components)
         except ValueError:

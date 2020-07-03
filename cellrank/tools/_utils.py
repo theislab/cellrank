@@ -29,11 +29,12 @@ from scipy.sparse.linalg import norm as s_norm
 
 import matplotlib.colors as mcolors
 
-from scanpy import logging as logg
-from anndata import AnnData
-
+from cellrank import logging as logg
 from cellrank.utils._utils import _get_neighs, _has_neighs, _get_neighs_params
 from cellrank.tools._colors import _convert_to_hex_colors, _insert_categorical_colors
+
+AnnData = TypeVar("AnnData")
+
 
 ColorLike = TypeVar("ColorLike")
 GPCCA = TypeVar("GPCCA")
@@ -506,7 +507,7 @@ def _cluster_X(
         kmeans = KMeans(n_clusters=n_clusters).fit(X)
         labels = kmeans.labels_
     elif method in ["louvain", "leiden"]:
-        adata_dummy = AnnData(X=X)
+        adata_dummy = sc.AnnData(X=X)
         sc.pp.neighbors(adata_dummy, use_rep="X", n_neighbors=n_neighbors)
         if method == "louvain":
             sc.tl.louvain(adata_dummy, resolution=resolution)

@@ -4,7 +4,7 @@
 import re
 from abc import ABC, abstractmethod
 from copy import copy
-from typing import Any, Tuple, Iterable, Optional
+from typing import Any, Tuple, TypeVar, Iterable, Optional
 from inspect import signature
 
 import numpy as np
@@ -17,12 +17,13 @@ import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 
-from anndata import AnnData
-
 from cellrank.tools._utils import save_fig
 from cellrank.utils._utils import _minmax
 from cellrank.tools._lineage import Lineage
 from cellrank.tools._constants import LinKey
+
+AnnData = TypeVar("AnnData")
+
 
 _dup_spaces = re.compile(r" +")
 

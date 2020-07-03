@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Exact permutation test for Markov chains."""
 
-from typing import Dict, List, Tuple, Union, Callable, Optional, Sequence
+from typing import Dict, List, Tuple, Union, TypeVar, Callable, Optional, Sequence
 
 import numpy as np
 from scipy.stats import chi2_contingency
@@ -9,10 +9,10 @@ from scipy.spatial.distance import euclidean
 
 import matplotlib.pyplot as plt
 
-from scanpy import logging as logg
-from anndata import AnnData
-
+from cellrank import logging as logg
 from cellrank.tools._constants import LinKey
+
+AnnData = TypeVar("AnnData")
 
 
 def _get_counts(pd: Union[np.ndarray, List[float]], n: int) -> List[float]:

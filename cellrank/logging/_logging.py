@@ -7,8 +7,6 @@ from logging import INFO, DEBUG, ERROR, WARNING, CRITICAL
 from datetime import datetime, timezone, timedelta
 from functools import partial, update_wrapper
 
-import anndata.logging
-
 HINT = (INFO + DEBUG) // 2
 logging.addLevelName(HINT, "HINT")
 
@@ -28,7 +26,7 @@ class _RootLogger(logging.RootLogger):
         time: datetime = None,
         deep: Optional[str] = None,
     ) -> datetime:
-        from . import settings
+        from cellrank import settings
 
         now = datetime.now(timezone.utc)
         time_passed: timedelta = None if time is None else now - time
@@ -113,22 +111,16 @@ class _LogFormatter(logging.Formatter):
         return result
 
 
-print_memory_usage = anndata.logging.print_memory_usage
-get_memory_usage = anndata.logging.get_memory_usage
-
-
 _DEPENDENCIES_NUMERICS = [
     "scanpy",
     "anndata",  # anndata actually shouldn't, but as long as it's in development
-    "umap",
     "numpy",
     "scipy",
     "pandas",
     ("sklearn", "scikit-learn"),
     "statsmodels",
     ("igraph", "python-igraph"),
-    "louvain",
-    "leidenalg",
+    "scvelo",
 ]
 
 
