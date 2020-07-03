@@ -20,7 +20,7 @@ jobs:
         python-version: 3.7
     - name: Generate coverage
       run: |
-        python-vendorize
+        pip install vendorize && python-vendorize
         pip install .[test]
         pip install pytest-cov
         pytest --cov-config=.coveragerc --cov=./ --cov-report=xml
