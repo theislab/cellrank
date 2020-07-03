@@ -15,8 +15,6 @@ import matplotlib.cm as cm
 import matplotlib.colors
 import matplotlib.pyplot as plt
 
-import scanpy as sc
-import scvelo as scv
 from scanpy import logging as logg
 from anndata import AnnData
 
@@ -115,6 +113,8 @@ def cluster_fates(
         Optionally saves the figure based on :paramref:`save`.
     """
     from seaborn import heatmap, clustermap
+    from scanpy.plotting import violin
+    from scvelo.plotting import paga
 
     def plot_bar():
         cols = 4 if ncols is None else ncols
@@ -185,7 +185,7 @@ def cluster_fates(
             kwargs["colors"] = tuple(colors)
             kwargs["title"] = f"{dir_prefix} {lineage_name}"
 
-            scv.pl.paga(adata, **kwargs)
+            paga(adata, **kwargs)
 
         if show_cbar:
             norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
@@ -227,7 +227,7 @@ def cluster_fates(
             kwargs["scatter_flag"] = True
             kwargs["color"] = cluster_key
 
-        ax = scv.pl.paga(adata, **kwargs)
+        ax = paga(adata, **kwargs)
         ax.set_title(kwargs.get("title", cluster_key))
 
         if basis is not None and orig_ll not in ("none", "on data", None):
@@ -304,9 +304,7 @@ def cluster_fates(
         for i, (name, ax) in enumerate(zip(lin_names, axes)):
             key = f"{dir_prefix} {name}"
             ax.set_title(key)
-            sc.pl.violin(
-                adata, ylabel="" if i else "probability", keys=key, ax=ax, **kwargs
-            )
+            violin(adata, ylabel="" if i else "probability", keys=key, ax=ax, **kwargs)
         for ax in axes[i + 1 :]:  # noqa
             ax.remove()
         for name in to_clean:
@@ -345,7 +343,7 @@ def cluster_fates(
             figsize=figsize if figsize is not None else (8, 6), dpi=dpi
         )
         ax.set_title(points.capitalize())
-        sc.pl.violin(dadata, keys=["probability"], ax=ax, **kwargs)
+        violin(dadata, keys=["probability"], ax=ax, **kwargs)
 
         return fig
 
@@ -458,7 +456,7 @@ def cluster_fates(
                 )
         lin_names = list(lineages)
     else:
-        # must be list for sc.pl.violin, else cats str
+        # must be list for `sc.pl.violin`, else cats str
         lin_names = list(adata.obsm[lk].names)
 
     if mode == "violin" and not is_all:

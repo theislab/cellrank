@@ -14,7 +14,7 @@ import matplotlib.colors as colors
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 
-import scanpy.logging as logg
+from scanpy import logging as logg
 from anndata import AnnData
 
 from cellrank.tools._utils import save_fig

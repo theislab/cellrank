@@ -12,7 +12,6 @@ import matplotlib
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 
-import scanpy as sc
 from scanpy import logging as logg
 from anndata import AnnData
 
@@ -197,7 +196,10 @@ def gene_trends(
         )
         axes = np.ravel(axes)
     elif dirname is not None:
-        figdir = sc.settings.figdir
+        from scanpy import settings as scsettings
+
+        figdir = scsettings.figdir
+
         if figdir is None:
             raise RuntimeError(
                 f"Invalid combination: figures directory `cellrank.settings.figdir` is `None`, "

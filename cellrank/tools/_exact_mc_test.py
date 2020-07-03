@@ -4,7 +4,7 @@
 from typing import Dict, List, Tuple, Union, Callable, Optional, Sequence
 
 import numpy as np
-import scipy.stats as ss
+from scipy.stats import chi2_contingency
 from scipy.spatial.distance import euclidean
 
 import matplotlib.pyplot as plt
@@ -265,7 +265,7 @@ def _cramers_v(x: List[float], y: List[float]) -> float:
     #  Wikipedia: https://en.wikipedia.org/wiki/Cram%C3%A9r%27s_V
 
     confusion_matrix = np.array([x, y])
-    chi2 = ss.chi2_contingency(confusion_matrix)[0]
+    chi2 = chi2_contingency(confusion_matrix)[0]
     n = confusion_matrix.sum().sum()
     phi2 = chi2 / n
     r, k = confusion_matrix.shape

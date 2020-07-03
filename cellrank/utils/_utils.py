@@ -7,16 +7,12 @@ from multiprocessing import cpu_count
 import numpy as np
 from scipy.sparse import spmatrix
 
-import anndata
 from scanpy import logging as logg
 from anndata import AnnData
 
 
 def check_collection(
-    adata: anndata.AnnData,
-    needles: Iterable[str],
-    attr_name: str,
-    key_name: str = "Gene",
+    adata: AnnData, needles: Iterable[str], attr_name: str, key_name: str = "Gene",
 ) -> None:
     """
     Check if given collection contains all the keys.
@@ -118,20 +114,18 @@ def _make_unique(collection: Iterable[Hashable]) -> List[Hashable]:
     return res
 
 
-def _has_neighs(adata: anndata.AnnData) -> bool:
+def _has_neighs(adata: AnnData) -> bool:
     return "neighbors" in adata.uns.keys()
 
 
-def _get_neighs(
-    adata: anndata.AnnData, mode: str = "distances"
-) -> Union[np.ndarray, spmatrix]:
+def _get_neighs(adata: AnnData, mode: str = "distances") -> Union[np.ndarray, spmatrix]:
     try:
         return _read_graph_data(adata, mode)
     except KeyError:
         return _read_graph_data(adata, "neighors")[mode]
 
 
-def _get_neighs_params(adata: anndata.AnnData) -> Dict[str, Any]:
+def _get_neighs_params(adata: AnnData) -> Dict[str, Any]:
     return adata.uns["neighbors"]["params"]
 
 

@@ -10,7 +10,6 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 
-import scanpy as sc
 from scanpy import logging as logg
 from anndata import AnnData
 
@@ -176,6 +175,8 @@ def cluster_lineage(
             - :class:`anndata.AnnData` object of shape `len` (:paramref:`genes`) x :paramref:`n_points`
               containing the clustered genes.
     """
+
+    import scanpy as sc
 
     lineage_key = str(LinKey.FORWARD if final else LinKey.BACKWARD)
     if lineage_key not in adata.obsm:
