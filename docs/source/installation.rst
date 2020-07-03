@@ -18,7 +18,8 @@ To stay up-to-date with the newest version, run::
     vendorize
 
 ``-e`` stands for ``--editable`` and makes sure that your environment is updated
-when you pull new changes from GitHub.
+when you pull new changes from GitHub. The ``[dev]`` options installs requirements
+needed for development, because CellRank is bundled with additional libraries.
 
 Dependencies
 ~~~~~~~~~~~~
