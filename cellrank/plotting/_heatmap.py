@@ -8,7 +8,6 @@ from collections import Iterable, defaultdict
 import numpy as np
 import pandas as pd
 
-import seaborn as sns
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.colors as colors
@@ -114,6 +113,8 @@ def heatmap(
         Nothing, just plots the heatmap variant depending on :paramref:`kind`.
         Optionally saves the figure based on :paramref:`save`.
     """
+
+    import seaborn as sns
 
     def gene_per_lineage():
         def color_fill_rec(ax, x, y1, y2, colors=None, cmap=cmap, **kwargs):

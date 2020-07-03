@@ -8,7 +8,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import networkx as nx
 from scipy.sparse import issparse, spmatrix
 from pandas.api.types import is_categorical_dtype
 
@@ -36,7 +35,7 @@ def graph(
     data: Union[AnnData, np.ndarray, spmatrix],
     graph_key: Optional[str] = None,
     ixs: Optional[np.array] = None,
-    layout: Union[str, Dict, Callable] = nx.kamada_kawai_layout,
+    layout: Union[str, Dict, Callable] = "umap",
     keys: Sequence[KEYS] = ("incoming",),
     keylocs: Union[KEYLOCS, Sequence[KEYLOCS]] = "uns",
     node_size: float = 400,
@@ -157,6 +156,8 @@ def graph(
         Nothing, just plots the graph.
         Optionally saves the figure based on :paramref:`save`.
     """
+
+    import networkx as nx
 
     def plot_arrows(curves, G, pos, ax, edge_weight_scale):
         for line, (edge, val) in zip(curves, G.edges.items()):

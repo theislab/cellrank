@@ -7,7 +7,6 @@ from pathlib import Path
 from collections import defaultdict
 
 import numpy as np
-import networkx as nx
 from scipy.sparse import csr_matrix
 from pandas.core.dtypes.common import is_categorical_dtype
 
@@ -85,7 +84,7 @@ def lineages(
 
     # create a dummy kernel object
     vk = VelocityKernel(adata_dummy, backward=not final)
-    vk.transition_matrix = csr_matrix((adata_dummy.n_obs, adata_dummy.n_obs))
+    vk._transition_matrix = csr_matrix((adata_dummy.n_obs, adata_dummy.n_obs))
 
     # use this to initialize an MC object
     mc = CFLARE(vk)
@@ -102,7 +101,7 @@ def lineages(
 
 
 def curved_edges(
-    G: nx.Graph,
+    G,
     pos,
     radius_fraction: float,
     dist_ratio: float = 0.2,
@@ -114,8 +113,8 @@ def curved_edges(
 
     Params
     ------
-    G: nx.Graph
-        Networkx graph.
+    G: :class:`networkx.Graph`
+        Graph for which to create curved edges.
     pos
         Mapping of nodes to positions.
     radius_fraction
@@ -236,7 +235,7 @@ def curved_edges(
 
 def composition(
     adata: AnnData,
-    key,
+    key: str,
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[float] = None,
     save: Optional[Union[str, Path]] = None,
