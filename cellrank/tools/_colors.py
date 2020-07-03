@@ -3,16 +3,16 @@
 
 from typing import Any, List, Tuple, Union, Optional, Sequence
 
-from matplotlib import cm as cm
-from matplotlib import colors as mcolors
-
-from scanpy import logging as logg
-
 import numpy as np
 from pandas import Series, DataFrame, to_numeric
 from scipy.stats import entropy
 from pandas._libs.lib import infer_dtype
 from pandas.core.dtypes.common import is_categorical_dtype
+
+from matplotlib import cm as cm
+from matplotlib import colors as mcolors
+
+from scanpy import logging as logg
 
 
 def _create_colors(
@@ -90,18 +90,23 @@ def _convert_to_hex_colors(colors: Sequence[Any]) -> List[str]:
 
 
 def _create_categorical_colors(n_categories: Optional[int] = None):
+    cmaps = [cm.tab10, cm.tab20, cm.Paired, cm.Accent, cm.Set1, cm.Set2, cm.Set3]
+    max_cats = sum(c.N for c in cmaps)
+
     if n_categories is None:
-        n_categories = 51
-    if n_categories > 51:
-        raise ValueError(f"Maximum number of colors (51) exceeded: `{n_categories}`.")
+        n_categories = max_cats
+    if n_categories > max_cats:
+        raise ValueError(
+            f"Maximum number of colors ({max_cats}) exceeded: `{n_categories}`."
+        )
 
-    colors = [cm.Set1(i) for i in range(cm.Set1.N)][:n_categories]
-    colors += [cm.Set2(i) for i in range(cm.Set2.N)][: n_categories - len(colors)]
-    colors += [cm.Set3(i) for i in range(cm.Set3.N)][: n_categories - len(colors)]
-    colors += [cm.tab10(i) for i in range(cm.tab10.N)][: n_categories - len(colors)]
-    colors += [cm.Paired(i) for i in range(cm.Paired.N)][: n_categories - len(colors)]
+    colors = []
+    for cmap in cmaps:
+        colors += [cmap(i) for i in range(cmap.N)][: n_categories - len(colors)]
+        if len(colors) == n_categories:
+            return _convert_to_hex_colors(colors)
 
-    return _convert_to_hex_colors(colors)
+    raise RuntimeError(f"Unable to create `{n_categories}` colors.")
 
 
 def _insert_categorical_colors(seen_colors: Union[np.ndarray, List], n_categories: int):
