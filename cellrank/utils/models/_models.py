@@ -9,8 +9,8 @@ from inspect import signature
 
 import numpy as np
 import pandas as pd
-import sklearn
 from scipy.sparse import issparse
+from sklearn.base import BaseEstimator
 
 import matplotlib as mpl
 import matplotlib.cm as cm
@@ -661,7 +661,7 @@ class SKLearnModel(Model):
     def __init__(
         self,
         adata: anndata.AnnData,
-        model: sklearn.base.BaseEstimator,
+        model: BaseEstimator,
         weight_name: Optional[str] = None,
     ):
         super().__init__(adata, model)
@@ -677,7 +677,7 @@ class SKLearnModel(Model):
         )
 
     @property
-    def model(self) -> sklearn.base.BaseEstimator:
+    def model(self) -> BaseEstimator:
         """Underlying model."""
         return self._model
 
