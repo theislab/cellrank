@@ -1,30 +1,47 @@
+language: python
+
+python:
+  - "3.6"
+  - "3.7"
+  - "3.8"
+
+os: linux
+
 jobs:
   allow_failures:
     - os: osx
+
   include:
-    - name: "Python on Linux"
-      os: linux
-      language: python
-      python:
-        - '3.6'
-        - '3.7'
-        - '3.8'
-      install:
-        - pip install pytest-cov
-        - pip install -e .[test]
-        - python-vendorize
-      script:
-        - pytest --cov-config=.coveragerc --cov=./ --cov-report=xml
-      after_success:
-        - if python = "3.8"
-        - pip install codecov
-        - codecov
-      deploy:
-        provider: pypi
-        username: __token__
-        password:
-          secure: nTTuhZ02VsB/VOFHhuWIzzk5kSonUItYeZZpCTyPETUCwBS2jlqV9nOwGMPiHPGTguv8Jh0W5XTDUZpNdC4+IkSaV6e1NxIXMyj1wzfGePXXNejAr3kSBY3LT4PYpsPcLIeuy6hoezZLsLK2qfDqOXfcpNAEm0Uy27sM2iRsV41qxUzHe9sYL5KIxOb+0+n8UwTSlkRvgzm8sRR+Tt9wARTfnEtTZF8/JZHMKI1ly6Umwe0PaNjOh7/xdbWcZrOF+lMKWR+BaciDSg/txO9nUHpCkwnbmuESqO6GtGQblCPJoLMUEIdEU1oengPVk5kKREh4DTBp0e/2bA33DEY5aG7ExVqYlOzAt6905anzS5h02pVrRaalMkX+vecyoy9D/gl3fMTNIGYvuqNZPwVVqafbFsEt4V6RbXwtR8eCesMuj1AxFR8eG0fduYho+Ci7hvg/UkdPDAFKa0nX+5XuS7VexiSu1eU/wIjQbInKSr0W8ZN18xZGoMSn7YCor+aAoCR2p1EEbOiT0SofV2iEY/CNW7SajeDvTkHIR0AePY5uodxITXmzTVaCXSTKphTgNM2ROKVTv7yWmyqzgV47QjVf5AAz5QHpvozYwkXFDCBw9e9zSLOdhY3quXLqk3/t/Ts3eqBg8u2cmYwoEjboQX1uDHYfhfn6JEIGq//lsHA=
-        distributions: "sdist bdist_wheel"
-        skip_existing: true
-        on:
-          tags: true
+    - name: "Python 3.6.5 on macOS"
+      language: bash
+      os: osx
+      osx_image: xcode9.4
+
+    - name: "Python 3.7.3 on macOS"
+      language: bash
+      os: osx
+      osx_image: xcode10.2
+
+before_install:
+  - ./.scripts/travis/before_install.sh
+
+install:
+  - ./.scripts/travis/install.sh
+
+script:
+  - ./.scripts/travis/test.sh
+
+after_success:
+  - if python = "3.8" && os = "linux"
+  - pip install codecov
+  - codecov
+
+deploy:
+  provider: pypi
+  username: __token__
+  password:
+    secure: nTTuhZ02VsB/VOFHhuWIzzk5kSonUItYeZZpCTyPETUCwBS2jlqV9nOwGMPiHPGTguv8Jh0W5XTDUZpNdC4+IkSaV6e1NxIXMyj1wzfGePXXNejAr3kSBY3LT4PYpsPcLIeuy6hoezZLsLK2qfDqOXfcpNAEm0Uy27sM2iRsV41qxUzHe9sYL5KIxOb+0+n8UwTSlkRvgzm8sRR+Tt9wARTfnEtTZF8/JZHMKI1ly6Umwe0PaNjOh7/xdbWcZrOF+lMKWR+BaciDSg/txO9nUHpCkwnbmuESqO6GtGQblCPJoLMUEIdEU1oengPVk5kKREh4DTBp0e/2bA33DEY5aG7ExVqYlOzAt6905anzS5h02pVrRaalMkX+vecyoy9D/gl3fMTNIGYvuqNZPwVVqafbFsEt4V6RbXwtR8eCesMuj1AxFR8eG0fduYho+Ci7hvg/UkdPDAFKa0nX+5XuS7VexiSu1eU/wIjQbInKSr0W8ZN18xZGoMSn7YCor+aAoCR2p1EEbOiT0SofV2iEY/CNW7SajeDvTkHIR0AePY5uodxITXmzTVaCXSTKphTgNM2ROKVTv7yWmyqzgV47QjVf5AAz5QHpvozYwkXFDCBw9e9zSLOdhY3quXLqk3/t/Ts3eqBg8u2cmYwoEjboQX1uDHYfhfn6JEIGq//lsHA=
+  distributions: "sdist bdist_wheel"
+  skip_existing: true
+  on:
+    tags: true
