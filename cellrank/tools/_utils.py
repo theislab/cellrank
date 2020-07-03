@@ -29,7 +29,6 @@ from scipy.sparse.linalg import norm as s_norm
 
 import matplotlib.colors as mcolors
 
-import scanpy as sc
 from scanpy import logging as logg
 from anndata import AnnData
 
@@ -496,8 +495,9 @@ def _cluster_X(
     --------
     labels
         List of cluster labels of length `n_samples`
-
     """
+    import scanpy as sc
+
     # make sure data is at least 2D
     if X.ndim == 1:
         X = X[:, None]
@@ -506,7 +506,7 @@ def _cluster_X(
         kmeans = KMeans(n_clusters=n_clusters).fit(X)
         labels = kmeans.labels_
     elif method in ["louvain", "leiden"]:
-        adata_dummy = sc.AnnData(X=X)
+        adata_dummy = AnnData(X=X)
         sc.pp.neighbors(adata_dummy, use_rep="X", n_neighbors=n_neighbors)
         if method == "louvain":
             sc.tl.louvain(adata_dummy, resolution=resolution)
@@ -876,12 +876,13 @@ def save_fig(
     None
         Just saves the plot.
     """
+    from scanpy import settings as scsettings
 
     if os.path.splitext(path)[1] == "":
         path = f"{path}.{ext}"
 
     if not os.path.isabs(path):
-        path = os.path.join(sc.settings.figdir, path)
+        path = os.path.join(scsettings.figdir, path)
 
     if make_dir:
         _maybe_create_dir(os.path.split(path)[0])
