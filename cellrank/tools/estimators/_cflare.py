@@ -572,7 +572,7 @@ class CFLARE(BaseEstimator):
         if color_key in self._adata.uns:
             self._meta_states_colors = self._adata.uns[color_key]
 
-    def compute_lin_probs(
+    def compute_absorption_probabilities(
         self,
         keys: Optional[Sequence[str]] = None,
         check_irred: bool = False,
@@ -821,7 +821,7 @@ class CFLARE(BaseEstimator):
 
         self._plot_probabilities(
             attr="_lin_probs",
-            error_msg="Compute lineage probabilities first as `.compute_lin_probs()`.",
+            error_msg="Compute lineage probabilities first as `.compute_absorption_probabilities()`.",
             lineages=lineages,
             cluster_key=cluster_key,
             mode=mode,

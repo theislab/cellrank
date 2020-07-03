@@ -129,7 +129,7 @@ def lineages(
     if isinstance(mc, CFLARE):
         mc.compute_eig()
         mc.compute_metastable_states(cluster_key=cluster_key, **kwargs)
-        mc.compute_lin_probs(keys=keys)
+        mc.compute_absorption_probabilities(keys=keys)
     elif isinstance(mc, GPCCA):
         if n_lineages is None or n_lineages == 1:
             mc.compute_eig()

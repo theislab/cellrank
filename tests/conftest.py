@@ -2,7 +2,6 @@
 from typing import Tuple
 
 import numpy as np
-import pytest
 
 import matplotlib
 
@@ -10,6 +9,7 @@ import scanpy as sc
 import scvelo as scv
 from anndata import AnnData
 
+import pytest
 import cellrank as cr
 from cellrank.tools import CFLARE
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
@@ -52,7 +52,7 @@ def _create_cflare(n_obs: int, *, backward: bool = False) -> Tuple[AnnData, CFLA
         mc.compute_partition()
         mc.compute_eig()
         mc.compute_metastable_states(use=2)  # can fail for small #cells
-        mc.compute_lin_probs()
+        mc.compute_absorption_probabilities()
         mc.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
 
         assert adata is mc.adata
