@@ -6,7 +6,10 @@ python:
 env:
     - MPLBACKEND=Agg
 install:
+    - pip install pytest-cov codecov
     - pip install -e .[test]
     - python-vendorize  # clones msmtools
 script:
-    - pytest
+    - pytest --cov-config=.coveragerc --cov=./ --cov-report=xml
+after_success:
+    - codecov
