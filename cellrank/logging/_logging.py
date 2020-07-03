@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Logging and profiling."""
+"""Logging module."""
 
 import logging
 from typing import Optional
@@ -113,7 +113,7 @@ class _LogFormatter(logging.Formatter):
 
 _DEPENDENCIES_NUMERICS = [
     "scanpy",
-    "anndata",  # anndata actually shouldn't, but as long as it's in development
+    "anndata",
     "numpy",
     "scipy",
     "pandas",
@@ -182,8 +182,8 @@ def error(
     """
     Log message with specific level and return current time.
 
-    Parameters
-    ==========
+    Params
+    ======
     msg
         Message to display.
     time
