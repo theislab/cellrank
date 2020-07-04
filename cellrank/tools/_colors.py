@@ -90,16 +90,7 @@ def _convert_to_hex_colors(colors: Sequence[Any]) -> List[str]:
 
 
 def _create_categorical_colors(n_categories: Optional[int] = None):
-    cmaps = [
-        cm.Dark2,
-        cm.tab10,
-        cm.tab20,
-        cm.Paired,
-        cm.Accent,
-        cm.Set1,
-        cm.Set2,
-        cm.Set3,
-    ]
+    cmaps = [cm.tab10, cm.tab20, cm.Paired, cm.Accent, cm.Set1, cm.Set2, cm.Set3]
     max_cats = sum(c.N for c in cmaps)
 
     if n_categories is None:
