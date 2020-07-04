@@ -6,12 +6,14 @@ from typing import Any, Dict, List, Tuple, Union, TypeVar, Iterable, Optional, S
 from pathlib import Path
 
 import numpy as np
+import scipy
 import pandas as pd
 from pandas import Series
-from scipy.stats import ranksums
-from scipy.sparse import issparse
+from scipy.stats import entropy, ranksums
+from scipy.linalg import solve
+from scipy.sparse import issparse, csr_matrix
 from pandas.api.types import infer_dtype, is_categorical_dtype
-from scipy.sparse.linalg import eigs
+from scipy.sparse.linalg import eigs, gmres
 
 import matplotlib as mpl
 import matplotlib.cm as cm
@@ -25,7 +27,9 @@ from cellrank.tools._utils import (
     _eigengap,
     _make_cat,
     partition,
+    _normalize,
     _vec_mat_corr,
+    _process_series,
     _complex_warning,
     _merge_categorical_series,
     _convert_to_categorical_series,
@@ -36,7 +40,15 @@ from cellrank.tools._colors import (
     _create_categorical_colors,
 )
 from cellrank.tools._lineage import Lineage
-from cellrank.tools._constants import LinKey, Prefix, StateKey, Direction, _colors
+from cellrank.tools._constants import (
+    LinKey,
+    Prefix,
+    StateKey,
+    Direction,
+    _dp,
+    _colors,
+    _lin_names,
+)
 from cellrank.tools.kernels._kernel import KernelExpression
 
 AnnData = TypeVar("AnnData")
@@ -263,6 +275,207 @@ class BaseEstimator(ABC):
                 "The transition matrix is irreducible - cannot further partition it\n    Finish",
                 time=start,
             )
+
+    def compute_absorption_probabilities(
+        self,
+        keys: Optional[Sequence[str]] = None,
+        check_irred: bool = False,
+        norm_by_frequ: bool = False,
+        use_iterative_solver: Optional[bool] = None,
+        tol: float = 1e-5,
+        use_initialization: bool = True,
+    ) -> None:
+        """
+        Compute absorption probabilities for a Markov chain.
+
+        For each cell, this computes the probability of it reaching any of the approximate recurrent classes.
+        This also computes the entropy over absorption probabilities, which is a measure of cell plasticity, see
+        [Setty19]_.
+
+        Params
+        ------
+        keys
+            Comma separated sequence of keys defining the recurrent classes.
+        check_irred
+            Check whether the matrix restricted to the given transient states is irreducible.
+        norm_by_frequ
+            Divide absorption probabilities for `rc_i` by `|rc_i|`.
+        use_iterative_solver
+            Whether to use an iterative solver for the linear system. Makes sense for large problems (> 20k cells)
+            with few final states (<50).
+        tol
+            Convergence tolerance for the iterative solver. The default is fine for most cases, only consider
+            decreasing this for severely ill-conditioned matrices.
+        use_initialization
+            Only relevant when using an iterative solver. In that case, the solution of absorbing states from the same
+            recurrent class can be used as initialization to the iterative solver.
+
+        Returns
+        -------
+        None
+            Nothing, but updates the following fields: :paramref:`lineage_probabilities`, :paramref:`diff_potential`.
+        """
+
+        if self._meta_states is None:
+            raise RuntimeError(
+                "Compute approximate recurrent classes first as `.compute_metastable_states()`"
+            )
+        if keys is not None:
+            keys = sorted(set(keys))
+
+        # Note: There are three relevant data structures here
+        # - self.metastable_states: pd.Series which contains annotations for approx rcs. Associated colors in
+        #   self.metastable_states_colors
+        # - self.lin_probs: Linage object which contains the lineage probabilities with associated names and colors
+        # -_metastable_states: pd.Series, temporary copy of self.approx rcs used in the context of this function.
+        #   In this copy, some metastable_states may be removed or combined with others
+        start = logg.info("Computing absorption probabilities")
+
+        # get the transition matrix
+        t = self._T
+        n_cells = t.shape[0]
+        if not issparse(t):
+            logg.warning(
+                "Attempting to solve a potentially large linear system with dense transition matrix"
+            )
+
+        # colors are created in `compute_metastable_states`, this is just in case
+        self._check_and_create_colors()
+
+        # process the current annotations according to `keys`
+        metastable_states_, colors_ = _process_series(
+            series=self._meta_states, keys=keys, colors=self._meta_states_colors
+        )
+
+        #  create empty lineage object
+        if self._lin_probs is not None:
+            logg.debug("DEBUG: Overwriting `.lin_probs`")
+        self._lin_probs = Lineage(
+            np.empty((1, len(colors_))),
+            names=metastable_states_.cat.categories,
+            colors=colors_,
+        )
+
+        # warn in case only one state is left
+        keys = list(metastable_states_.cat.categories)
+        if len(keys) == 1:
+            logg.warning(
+                "There is only one recurrent class, all cells will have probability 1 of going there"
+            )
+
+        # create arrays of all recurrent and transient indices
+        mask = np.repeat(False, len(metastable_states_))
+        rec_start_indices = [0]
+        for cat in metastable_states_.cat.categories:
+            mask = np.logical_or(mask, metastable_states_ == cat)
+            rec_start_indices.append(np.sum(mask))
+        rec_indices, trans_indices = np.where(mask)[0], np.where(~mask)[0]
+
+        # create Q (restriction transient-transient), S (restriction transient-recurrent) and I (Q-sized identity)
+        q = t[trans_indices, :][:, trans_indices]
+        s = t[trans_indices, :][:, rec_indices]
+
+        if check_irred:
+            if self._is_irreducible is None:
+                self.compute_partition()
+            if not self._is_irreducible:
+                logg.warning("Restriction Q is not irreducible")
+
+        # determine whether it makes sense you use a iterative solver
+        if use_iterative_solver is None:
+            if issparse(t) and n_cells > 1e4 and s.shape[1] < 100:
+                use_iterative_solver = True
+            elif issparse(t) and n_cells > 5 * 1e5:
+                use_iterative_solver = True
+            else:
+                use_iterative_solver = False
+        solver = "an interative" if use_iterative_solver else "a direct"
+        logg.debug(
+            f"DEBUG: Found {n_cells} cells and {s.shape[1]} absorbing states. Using {solver} solver"
+        )
+
+        if not use_iterative_solver:
+            logg.debug("DEBUG: Densifying matrices for direct solver ")
+            q = q.toarray() if issparse(q) else q
+            s = s.toarray() if issparse(s) else s
+            eye = np.eye(len(trans_indices))
+        else:
+            if not issparse(q):
+                q = csr_matrix(q)
+            if not issparse(s):
+                s = csr_matrix(s)
+            eye = scipy.sparse.eye(len(trans_indices))
+
+        # compute abs probs. Since we don't expect sparse solution, dense computation is faster.
+        if use_iterative_solver:
+
+            def flex_solve(M, B, solver=gmres, init_indices=None):
+                # solve a series of linear problems using an iterative solver
+                x_list, info_list = [], []
+                x = None
+                for ix, b in enumerate(B.T):
+                    # use the previous problem solution as initialisation
+                    if init_indices is not None:
+                        x0 = None if ix in init_indices else x
+                    else:
+                        x0 = None
+                    x, info = solver(M, b.toarray().flatten(), tol=tol, x0=x0)
+                    x_list.append(x[:, None])
+                    info_list.append(info)
+
+                return np.concatenate(x_list, axis=1), info_list
+
+            logg.debug("DEBUG: Solving the linear system using GMRES")
+            init_indices = rec_start_indices if use_initialization else None
+            abs_states, info = flex_solve(eye - q, s, gmres, init_indices=init_indices)
+            if not (all(con == 0 for con in info)):
+                logg.warning("Some linear solves did not converge for GMRES")
+        else:
+            logg.debug("DEBUG: Solving the linear system using direct factorization")
+            abs_states = solve(eye - q, s)
+
+        # aggregate to class level by summing over columns belonging to the same metastable_states
+        approx_rc_red = metastable_states_[mask]
+        rec_classes_red = {
+            key: np.where(approx_rc_red == key)[0]
+            for key in approx_rc_red.cat.categories
+        }
+        _abs_classes = np.concatenate(
+            [
+                np.array(abs_states[:, rec_classes_red[key]].sum(1)).flatten()[:, None]
+                for key in approx_rc_red.cat.categories
+            ],
+            axis=1,
+        )
+
+        if norm_by_frequ:
+            logg.debug("DEBUG: Normalizing by frequency")
+            _abs_classes /= [len(value) for value in rec_classes_red.values()]
+        _abs_classes = _normalize(_abs_classes)
+
+        # for recurrent states, set their self-absorption probability to one
+        abs_classes = np.zeros((self._n_states, len(rec_classes_red)))
+        rec_classes_full = {
+            cl: np.where(metastable_states_ == cl)
+            for cl in metastable_states_.cat.categories
+        }
+        for col, cl_indices in enumerate(rec_classes_full.values()):
+            abs_classes[trans_indices, col] = _abs_classes[:, col]
+            abs_classes[cl_indices, col] = 1
+
+        self._dp = entropy(abs_classes.T)
+        self._lin_probs = Lineage(
+            abs_classes,
+            names=list(self._lin_probs.names),
+            colors=list(self._lin_probs.colors),
+        )
+
+        self._adata.obsm[self._lin_key] = self._lin_probs
+        self._adata.obs[_dp(self._lin_key)] = self._dp
+        self._adata.uns[_lin_names(self._lin_key)] = self._lin_probs.names
+        self._adata.uns[_colors(self._lin_key)] = self._lin_probs.colors
+
+        logg.info("    Finish", time=start)
 
     def plot_spectrum(
         self,
@@ -757,7 +970,7 @@ class BaseEstimator(ABC):
         # check that lineage probs have been computed
         if self._lin_probs is None:
             raise RuntimeError(
-                "Compute lineage probabilities first as `.compute_lin_probs()` or `.set_main_states`."
+                "Compute lineage probabilities first as `.compute_absorption_probabilities()` or `.set_main_states`."
             )
 
         # check all lin_keys exist in self.lin_names
@@ -831,6 +1044,25 @@ class BaseEstimator(ABC):
         logg.info(
             f"Adding gene correlations to `.adata.{field}`\n    Finish", time=start
         )
+
+    def _check_and_create_colors(self):
+        n_cats = len(self._meta_states.cat.categories)
+        color_key = _colors(self._rc_key)
+
+        if self._meta_states_colors is None:
+            if color_key in self._adata.uns and n_cats == len(
+                self._adata.uns[color_key]
+            ):
+                logg.debug("Loading colors from `.adata` object")
+                self._meta_states_colors = _convert_to_hex_colors(
+                    self._adata.uns[color_key]
+                )
+            else:
+                self._meta_states_colors = _create_categorical_colors(n_cats)
+                self._adata.uns[color_key] = self._meta_states_colors
+        elif len(self._meta_states_colors) != n_cats:
+            self._meta_states_colors = _create_categorical_colors(n_cats)
+            self._adata.uns[color_key] = self._meta_states_colors
 
     def _write_eig_to_adata(self, eig):
         # write to class and AnnData object
