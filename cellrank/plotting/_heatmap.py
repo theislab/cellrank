@@ -1,28 +1,27 @@
 # -*- coding: utf-8 -*-
 """Heatmap module."""
 
-from typing import Tuple, Union, Optional, Sequence
+from typing import Tuple, Union, TypeVar, Optional, Sequence
 from pathlib import Path
 from collections import Iterable, defaultdict
 
 import numpy as np
 import pandas as pd
 
-import seaborn as sns
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.colors as colors
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 
-import scanpy.logging as logg
-from anndata import AnnData
-
+from cellrank import logging as logg
 from cellrank.tools._utils import save_fig
 from cellrank.utils._utils import _get_n_cores, check_collection
 from cellrank.plotting._utils import _fit, _model_type, _create_models, _is_any_gam_mgcv
 from cellrank.tools._constants import LinKey
 from cellrank.utils._parallelize import parallelize
+
+AnnData = TypeVar("AnnData")
 
 
 def heatmap(
@@ -114,6 +113,8 @@ def heatmap(
         Nothing, just plots the heatmap variant depending on :paramref:`kind`.
         Optionally saves the figure based on :paramref:`save`.
     """
+
+    import seaborn as sns
 
     def gene_per_lineage():
         def color_fill_rec(ax, x, y1, y2, colors=None, cmap=cmap, **kwargs):
@@ -277,9 +278,7 @@ def heatmap(
 
     kwargs["models"] = _create_models(model, genes, lineages)
     if _is_any_gam_mgcv(kwargs["models"]):
-        logg.debug(
-            "DEBUG: Setting backend to multiprocessing because model is `GamMGCV`"
-        )
+        logg.debug("Setting backend to multiprocessing because model is `GamMGCV`")
         backend = "multiprocessing"
 
     n_jobs = _get_n_cores(n_jobs, len(genes))
@@ -294,7 +293,7 @@ def heatmap(
         show_progress_bar=show_progress_bar,
     )(lineages, start_lineage, end_lineage, **kwargs)
     logg.info("    Finish", time=start)
-    logg.debug(f"DEBUG: Plotting {kind} heatmap")
+    logg.debug(f"Plotting {kind} heatmap")
 
     if kind == "genes":
         fig = gene_per_lineage()

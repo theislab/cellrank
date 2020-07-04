@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
 """Transition matrix module."""
 
-from typing import Optional
+from typing import TypeVar, Optional
 
-from scanpy import logging as logg
-from anndata import AnnData
-
+from cellrank import logging as logg
 from cellrank.tools.kernels._kernel import (
     VelocityKernel,
     KernelExpression,
     ConnectivityKernel,
 )
+
+AnnData = TypeVar("AnnData")
 
 
 def transition_matrix(

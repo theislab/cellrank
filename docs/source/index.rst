@@ -1,4 +1,4 @@
-|PyPI| |Travis| |Docs| |Binder| |Codecov|
+|PyPI| |Bioconda| |Binder| |Travis| |Notebooks| |Docs| |Codecov|
 
 
 CellRank - Probabilistic Fate Mapping using RNA Velocity
@@ -54,10 +54,18 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
    pancreas_advanced
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/cellrank.svg
-   :target: https://pypi.org/project/cellrank
+    :target: https://pypi.org/project/cellrank
+    :alt: PyPI
+
+.. |Bioconda| image:: https://img.shields.io/conda/vn/bioconda/cellrank
+    :target: https://bioconda.github.io/recipes/cellrank/README.html
+    :alt: Bioconda
 
 .. |Travis| image:: https://travis-ci.org/theislab/cellrank.svg?branch=master
     :target: https://travis-ci.org/theislab/cellrank
+
+.. |Notebooks| image:: https://img.shields.io/travis/com/theislab/cellrank_notebooks?label=notebooks
+    :target: https://github.com/theislab/cellrank_notebooks
 
 .. |Docs|  image:: https://img.shields.io/readthedocs/cellrank
 

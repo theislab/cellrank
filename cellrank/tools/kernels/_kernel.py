@@ -3,14 +3,24 @@
 
 from abc import ABC, abstractmethod
 from copy import copy
-from typing import Any, Dict, List, Type, Tuple, Union, Callable, Iterable, Optional
+from typing import (
+    Any,
+    Dict,
+    List,
+    Type,
+    Tuple,
+    Union,
+    TypeVar,
+    Callable,
+    Iterable,
+    Optional,
+)
 from functools import wraps, reduce
-
-from scanpy import logging as logg
-from anndata import AnnData
 
 import numpy as np
 from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix
+
+from cellrank import logging as logg
 from cellrank.tools._utils import (
     bias_knn,
     _normalize,
@@ -31,11 +41,12 @@ _ERROR_CONF_ADAPT = (
 )
 _ERROR_VAR_NOT_FOUND = "Variances not found in kernel `{}`."
 
-_LOG_USING_CACHE = "DEBUG: Using cached transition matrix"
+_LOG_USING_CACHE = "Using cached transition matrix"
 
 _n_dec = 2
 _dtype = np.float64
 _cond_num_tolerance = 1e-15
+AnnData = TypeVar("AnnData")
 
 
 class KernelExpression(ABC):
@@ -402,7 +413,7 @@ class UnaryKernelExpression(KernelExpression, ABC):
 
         if var_key is not None:
             if var_key in self.adata.uns.keys():
-                logg.debug(f"DEBUG: Loading variances from `adata.uns[{var_key!r}]`")
+                logg.debug(f"Loading variances from `adata.uns[{var_key!r}]`")
                 # keep it sparse
                 self._variances = csr_matrix(self.adata.uns[var_key].astype(_dtype))
                 if self._conn.shape != self._variances.shape:
@@ -412,7 +423,7 @@ class UnaryKernelExpression(KernelExpression, ABC):
             else:
                 logg.debug(f"Unable to load variances from `adata.uns[{var_key!r}]`")
         else:
-            logg.debug("DEBUG: No variance key specified")
+            logg.debug("No variance key specified")
 
     def density_normalize(
         self, other: Union[np.ndarray, spmatrix]
@@ -431,7 +442,7 @@ class UnaryKernelExpression(KernelExpression, ABC):
             Density normalized transition matrix.
         """
 
-        logg.debug("DEBUG: Density-normalizing the transition matrix")
+        logg.debug("Density-normalizing the transition matrix")
 
         q = np.asarray(self._conn.sum(axis=0))
 
@@ -599,7 +610,7 @@ class Kernel(UnaryKernelExpression, ABC):
 
         # Scale weights either by variances or by constant value
         if variances is not None:
-            logg.debug("DEBUG: Scaling by variances")
+            logg.debug("Scaling by variances")
 
             # check that both have been computed on the same elements
             if not all(
@@ -617,7 +628,7 @@ class Kernel(UnaryKernelExpression, ABC):
             ).flatten()
             matrix[ixs] = np.array(matrix[ixs] / variances[ixs]).flatten()
         elif sigma_corr is not None:
-            logg.debug("DEBUG: Scaling sigma correlation")
+            logg.debug("Scaling sigma correlation")
             matrix.data = matrix.data * sigma_corr
 
         # use softmax
@@ -760,6 +771,8 @@ class PrecomputedKernel(Kernel):
         backward: bool = False,
         compute_cond_num: bool = False,
     ):
+        from anndata import AnnData as _AnnData
+
         if not isinstance(transition_matrix, (np.ndarray, spmatrix)):
             raise TypeError(
                 f"Expected transition matrix to be of type `numpy.ndarray` or `scipy.sparse.spmatrix`, "
@@ -775,8 +788,8 @@ class PrecomputedKernel(Kernel):
             raise ValueError("Not a valid transition matrix: not all rows sum to 1.")
 
         if adata is None:
-            logg.debug("DEBUG: Creating empty dummy AnnData object")
-            adata = AnnData(
+            logg.debug("Creating empty dummy AnnData object")
+            adata = _AnnData(
                 csr_matrix((transition_matrix.shape[0], 1), dtype=np.float32)
             )
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Clustering Left and Right Eigenvectors (CFLARE) module."""
 from copy import copy, deepcopy
-from typing import Any, Dict, List, Tuple, Union, Iterable, Optional
+from typing import Any, Dict, List, Tuple, Union, TypeVar, Iterable, Optional
 
 import numpy as np
 from pandas import Series
@@ -11,9 +11,8 @@ import matplotlib as mpl
 import matplotlib.cm as cm
 
 import scvelo as scv
-from scanpy import logging as logg
-from anndata import AnnData
 
+from cellrank import logging as logg
 from cellrank.tools._utils import (
     _cluster_X,
     _filter_cells,
@@ -25,6 +24,9 @@ from cellrank.tools._lineage import Lineage
 from cellrank.tools._constants import _dp, _probs, _colors, _lin_names
 from cellrank.tools.kernels._kernel import KernelExpression
 from cellrank.tools.estimators._base_estimator import BaseEstimator
+
+AnnData = TypeVar("AnnData")
+
 
 EPS = np.finfo(np.float64).eps
 
@@ -94,22 +96,20 @@ class CFLARE(BaseEstimator):
         if f"eig_{self._direction}" in self._adata.uns.keys():
             self._eig = self._adata.uns[f"eig_{self._direction}"]
         else:
-            logg.debug(
-                f"DEBUG: `eig_{self._direction}` not found. Setting `.eig` to `None`"
-            )
+            logg.debug(f"`eig_{self._direction}` not found. Setting `.eig` to `None`")
 
         if self._rc_key in self._adata.obs.keys():
             self._meta_states = self._adata.obs[self._rc_key]
         else:
             logg.debug(
-                f"DEBUG: `{self._rc_key}` not found in `adata.obs`. Setting `.metastable_states` to `None`"
+                f"`{self._rc_key}` not found in `adata.obs`. Setting `.metastable_states` to `None`"
             )
 
         if _colors(self._rc_key) in self._adata.uns.keys():
             self._meta_states_colors = self._adata.uns[_colors(self._rc_key)]
         else:
             logg.debug(
-                f"DEBUG: `{_colors(self._rc_key)}` not found in `adata.uns`. "
+                f"`{_colors(self._rc_key)}` not found in `adata.uns`. "
                 f"Setting `.metastable_states_colors`to `None`"
             )
 
@@ -124,35 +124,35 @@ class CFLARE(BaseEstimator):
             self._adata.obsm[self._lin_key] = self._lin_probs
         else:
             logg.debug(
-                f"DEBUG: `{self._lin_key}` not found in `adata.obsm`. Setting `.lin_probs` to `None`"
+                f"`{self._lin_key}` not found in `adata.obsm`. Setting `.lin_probs` to `None`"
             )
 
         if _dp(self._lin_key) in self._adata.obs.keys():
             self._dp = self._adata.obs[_dp(self._lin_key)]
         else:
             logg.debug(
-                f"DEBUG: `{_dp(self._lin_key)}` not found in `adata.obs`. Setting `.diff_potential` to `None`"
+                f"`{_dp(self._lin_key)}` not found in `adata.obs`. Setting `.diff_potential` to `None`"
             )
 
         if g2m_key and g2m_key in self._adata.obs.keys():
             self._G2M_score = self._adata.obs[g2m_key]
         else:
             logg.debug(
-                f"DEBUG: `{g2m_key}` not found in `adata.obs`. Setting `.G2M_score` to `None`"
+                f"`{g2m_key}` not found in `adata.obs`. Setting `.G2M_score` to `None`"
             )
 
         if s_key and s_key in self._adata.obs.keys():
             self._S_score = self._adata.obs[s_key]
         else:
             logg.debug(
-                f"DEBUG: `{s_key}` not found in `adata.obs`. Setting `.S_score` to `None`"
+                f"`{s_key}` not found in `adata.obs`. Setting `.S_score` to `None`"
             )
 
         if _probs(self._rc_key) in self._adata.obs.keys():
             self._meta_states_probs = self._adata.obs[_probs(self._rc_key)]
         else:
             logg.debug(
-                f"DEBUG: `{_probs(self._rc_key)}` not found in `adata.obs`. "
+                f"`{_probs(self._rc_key)}` not found in `adata.obs`. "
                 f"Setting `.metastable_states_probs` to `None`"
             )
 
@@ -166,7 +166,7 @@ class CFLARE(BaseEstimator):
                 self._adata.obsm[self._lin_key] = self._lin_probs
             else:
                 logg.debug(
-                    f"DEBUG: `{_lin_names(self._lin_key)}` not found in `adata.uns`. "
+                    f"`{_lin_names(self._lin_key)}` not found in `adata.uns`. "
                     f"Using default names"
                 )
 
@@ -179,7 +179,7 @@ class CFLARE(BaseEstimator):
                 self._adata.obsm[self._lin_key] = self._lin_probs
             else:
                 logg.debug(
-                    f"DEBUG: `{_colors(self._lin_key)}` not found in `adata.uns`. "
+                    f"`{_colors(self._lin_key)}` not found in `adata.uns`. "
                     f"Using default colors"
                 )
 
@@ -428,14 +428,14 @@ class CFLARE(BaseEstimator):
                 f"Use `.compute_eig(k={muse})` to recompute the eigendecomposition."
             )
 
-        logg.debug("DEBUG: Retrieving eigendecomposition")
+        logg.debug("Retrieving eigendecomposition")
         # we check for complex values only in the left, that's okay because the complex pattern
         # will be identical for left and right
         V_l, V_r = self._eig["V_l"][:, use], self._eig["V_r"].real[:, use]
         V_l = _complex_warning(V_l, use, use_imag=False)
 
         # compute a rc probability
-        logg.debug("DEBUG: Computing probabilities of approximate recurrent classes")
+        logg.debug("Computing probabilities of approximate recurrent classes")
         probs = self._compute_metastable_states_prob(use)
         self._meta_states_probs = probs
         self._adata.obs[_probs(self._rc_key)] = probs
@@ -447,12 +447,12 @@ class CFLARE(BaseEstimator):
             X_em = self._adata.obsm[f"X_{basis}"][:, :n_comps]
             X = np.concatenate([V_r, X_em], axis=1)
         else:
-            logg.debug("DEBUG: Basis is `None`. Setting X equal to right eigenvectors")
+            logg.debug("Basis is `None`. Setting X equal to right eigenvectors")
             X = V_r
 
         # filter out cells which are in the lowest q percentile in abs value in each eigenvector
         if percentile is not None:
-            logg.debug("DEBUG: Filtering out cells according to percentile")
+            logg.debug("Filtering out cells according to percentile")
             if percentile < 0 or percentile > 100:
                 raise ValueError(
                     f"Percentile must be in interval `[0, 100]`, found `{percentile}`."
@@ -480,7 +480,7 @@ class CFLARE(BaseEstimator):
                 )
 
         logg.debug(
-            f"DEBUG: Using `{use}` eigenvectors, basis `{basis!r}` and method `{method!r}` for clustering"
+            f"Using `{use}` eigenvectors, basis `{basis!r}` and method `{method!r}` for clustering"
         )
         labels = _cluster_X(
             X,
@@ -501,7 +501,7 @@ class CFLARE(BaseEstimator):
 
         # filtering to get rid of some of the left over transient states
         if n_matches_min > 0:
-            logg.debug("DEBUG: Filtering according to `n_matches_min`")
+            logg.debug("Filtering according to `n_matches_min`")
             distances = _get_connectivities(
                 self._adata, mode="distances", n_neighbors=n_neighbors_filtering
             )
@@ -663,7 +663,7 @@ class CFLARE(BaseEstimator):
             if color_key in self._adata.uns and n_cats == len(
                 self._adata.uns[color_key]
             ):
-                logg.debug("DEBUG: Loading colors from `.adata` object")
+                logg.debug("Loading colors from `.adata` object")
                 self._meta_states_colors = _convert_to_hex_colors(
                     self._adata.uns[color_key]
                 )

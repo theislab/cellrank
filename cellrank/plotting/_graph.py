@@ -3,12 +3,11 @@
 
 from copy import deepcopy
 from types import MappingProxyType
-from typing import Dict, Tuple, Union, Callable, Optional, Sequence
+from typing import Dict, Tuple, Union, TypeVar, Callable, Optional, Sequence
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import networkx as nx
 from scipy.sparse import issparse, spmatrix
 from pandas.api.types import is_categorical_dtype
 
@@ -20,12 +19,13 @@ from matplotlib.patches import ArrowStyle, FancyArrowPatch
 from matplotlib.collections import LineCollection
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-from scanpy import logging as logg
-from anndata import AnnData
-
+from cellrank import logging as logg
 from cellrank.tools._utils import save_fig
 from cellrank.utils._utils import _read_graph_data
 from cellrank.tools._constants import _colors
+
+AnnData = TypeVar("AnnData")
+
 
 KEYLOCS = str
 KEYS = str
@@ -36,7 +36,7 @@ def graph(
     data: Union[AnnData, np.ndarray, spmatrix],
     graph_key: Optional[str] = None,
     ixs: Optional[np.array] = None,
-    layout: Union[str, Dict, Callable] = nx.kamada_kawai_layout,
+    layout: Union[str, Dict, Callable] = "umap",
     keys: Sequence[KEYS] = ("incoming",),
     keylocs: Union[KEYLOCS, Sequence[KEYLOCS]] = "uns",
     node_size: float = 400,
@@ -158,6 +158,9 @@ def graph(
         Optionally saves the figure based on :paramref:`save`.
     """
 
+    from anndata import AnnData as _AnnData
+    import networkx as nx
+
     def plot_arrows(curves, G, pos, ax, edge_weight_scale):
         for line, (edge, val) in zip(curves, G.edges.items()):
             if edge[0] == edge[1]:
@@ -264,7 +267,7 @@ def graph(
     _min_edge_weight = 0.00001
 
     if edge_width_limit is None:
-        logg.debug("DEBUG: Not limiting width of edges")
+        logg.debug("Not limiting width of edges")
         edge_width_limit = float("inf")
 
     if self_loop_radius_frac is None:
@@ -279,7 +282,7 @@ def graph(
         keylocs = keylocs * 3
     elif all(map(lambda k: k in ("incoming", "outgoing", "self_loops"), keys)):
         # don't care about keylocs since they are irrelevant
-        logg.debug("DEBUG: Ignoring key locations")
+        logg.debug("Ignoring key locations")
         keylocs = [None] * len(keys)
 
     for k in ("obs", "obsm"):
@@ -303,7 +306,7 @@ def graph(
     if len(labels) != len(keys):
         raise ValueError("`Keys` and `labels` must be of the same shape.")
 
-    if isinstance(data, AnnData):
+    if isinstance(data, _AnnData):
         if graph_key is None:
             raise ValueError(
                 "Argument `graph_key` cannot be `None` when `adata` is `anndata.Anndata` object."
@@ -367,7 +370,7 @@ def graph(
                     f"Value in `layout` must be a tuple or list of length 2, found `{v}`."
                 )
         pos = layout
-        logg.debug("DEBUG: Using pre-specified layout")
+        logg.debug("Using pre-specified layout")
     elif callable(layout):
         start = logg.info(f"Embedding graph using `{layout.__name__!r}` layout")
         pos = layout(G, **layout_kwargs)
@@ -383,7 +386,7 @@ def graph(
         try:
             from ._utils import curved_edges
 
-            logg.debug("DEBUG: Creating curved edges")
+            logg.debug("Creating curved edges")
             curves = curved_edges(G, pos, self_loop_radius_frac, polarity="directed")
             lc = LineCollection(
                 curves,
