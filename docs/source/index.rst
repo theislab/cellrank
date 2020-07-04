@@ -54,7 +54,7 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
    pancreas_advanced
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/cellrank.svg
-   :target: https://pypi.org/project/cellrank
+    :target: https://pypi.org/project/cellrank
     :alt: PyPI
 
 .. |Bioconda| image:: https://img.shields.io/conda/vn/bioconda/cellrank
