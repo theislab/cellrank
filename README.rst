@@ -32,6 +32,10 @@ Install CellRank by running::
 
     pip install cellrank
 
+or via::
+
+    conda install -c conda-forge -c bioconda cellrank
+
 Support
 ^^^^^^^
 We welcome your feedback! Feel free to open an `issue <https://github.com/theislab/cellrank/issues/new>`_
