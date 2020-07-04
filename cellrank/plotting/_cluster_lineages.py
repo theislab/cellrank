@@ -2,7 +2,7 @@
 """Cluster lineages module."""
 
 from types import MappingProxyType
-from typing import Dict, Tuple, Union, Optional, Sequence
+from typing import Dict, Tuple, Union, TypeVar, Optional, Sequence
 from pathlib import Path
 from collections import Iterable
 
@@ -10,16 +10,15 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 
-import scanpy as sc
-from scanpy import logging as logg
-from anndata import AnnData
-
+from cellrank import logging as logg
 from cellrank.tools._utils import save_fig
 from cellrank.utils._utils import _get_n_cores, check_collection
 from cellrank.plotting._utils import _model_type, _create_models, _is_any_gam_mgcv
 from cellrank.tools._constants import LinKey
 from cellrank.utils._parallelize import parallelize
 from cellrank.utils.models._models import Model
+
+AnnData = TypeVar("AnnData")
 
 
 def _cl_process(
@@ -177,6 +176,9 @@ def cluster_lineage(
               containing the clustered genes.
     """
 
+    from anndata import AnnData as _AnnData
+    import scanpy as sc
+
     lineage_key = str(LinKey.FORWARD if final else LinKey.BACKWARD)
     if lineage_key not in adata.obsm:
         raise KeyError(f"Lineages key `{lineage_key!r}` not found in `adata.obsm`.")
@@ -187,7 +189,7 @@ def cluster_lineage(
 
     key_to_add = f"lineage_{lineage}_trend"
     if key_added is not None:
-        logg.debug(f"DEBUG: Adding key `{key_added!r}`")
+        logg.debug(f"Adding key `{key_added!r}`")
         key_to_add += f"_{key_added}"
 
     if recompute or key_to_add not in adata.uns:
@@ -213,7 +215,7 @@ def cluster_lineage(
         )(models, lineage, norm, **kwargs)
         logg.info("    Finish", time=start)
 
-        trends = AnnData(np.vstack(trends))
+        trends = _AnnData(np.vstack(trends))
         trends.obs_names = genes
 
         # sanity check

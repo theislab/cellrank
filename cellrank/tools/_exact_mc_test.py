@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
 """Exact permutation test for Markov chains."""
 
-from typing import Dict, List, Tuple, Union, Callable, Optional, Sequence
+from typing import Dict, List, Tuple, Union, TypeVar, Callable, Optional, Sequence
 
 import numpy as np
-import scipy.stats as ss
+from scipy.stats import chi2_contingency
 from scipy.spatial.distance import euclidean
 
 import matplotlib.pyplot as plt
 
-from scanpy import logging as logg
-from anndata import AnnData
-
+from cellrank import logging as logg
 from cellrank.tools._constants import LinKey
+
+AnnData = TypeVar("AnnData")
 
 
 def _get_counts(pd: Union[np.ndarray, List[float]], n: int) -> List[float]:
@@ -125,12 +125,12 @@ def exact_mc_perm_test(
     ys_av = np.nanmean(ys, axis=0)
 
     if use_counts:
-        logg.debug("DEBUG: Using counts distribution")
+        logg.debug("Using counts distribution")
         freq_x = _get_counts(xs_av, n_counts)
         freq_y = _get_counts(ys_av, n_counts)
         dist = dist_measure(freq_x, freq_y, **kwargs)
     else:
-        logg.debug("DEBUG: Using probability distribution")
+        logg.debug("Using probability distribution")
         dist = dist_measure(xs_av, ys_av, **kwargs)  # Distance between both averages
     diff.append(dist)
 
@@ -265,7 +265,7 @@ def _cramers_v(x: List[float], y: List[float]) -> float:
     #  Wikipedia: https://en.wikipedia.org/wiki/Cram%C3%A9r%27s_V
 
     confusion_matrix = np.array([x, y])
-    chi2 = ss.chi2_contingency(confusion_matrix)[0]
+    chi2 = chi2_contingency(confusion_matrix)[0]
     n = confusion_matrix.sum().sum()
     phi2 = chi2 / n
     r, k = confusion_matrix.shape

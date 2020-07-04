@@ -1,11 +1,16 @@
 # -*- coding: utf-8 -*-
+"""Datasets module."""
+
 import os
-from typing import Union
+from typing import Union, TypeVar
 
 from scanpy import read
-from anndata import AnnData
 
-_datasets = dict(
+from cellrank import logging as logg
+
+AnnData = TypeVar("AnnData")
+
+_datasets = dict(  # noqa
     pancreas=(
         "datasets/pancreas/endocrinogenesis_day15.5.h5ad",
         "https://github.com/theislab/cellrank_notebooks/raw/master/datasets/pancreas/endocrinogenesis_day15.5.h5ad",
@@ -14,6 +19,11 @@ _datasets = dict(
 
 
 def _load_dataset_from_url(fpath: Union[os.PathLike, str], url: str) -> AnnData:
+    if os.path.isfile(fpath):
+        logg.debug(f"Loading dataset from `{fpath!r}`")
+    else:
+        logg.debug(f"Downloading dataset from `{url!r}`")
+
     adata = read(fpath, backup_url=url, sparse=True, cache=True)
     adata.var_names_make_unique()
 

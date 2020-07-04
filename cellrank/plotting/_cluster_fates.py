@@ -3,7 +3,7 @@
 
 from math import ceil
 from types import MappingProxyType
-from typing import Any, List, Tuple, Union, Mapping, Optional, Sequence
+from typing import Any, List, Tuple, Union, Mapping, TypeVar, Optional, Sequence
 from pathlib import Path
 from collections import OrderedDict as odict
 
@@ -14,18 +14,16 @@ import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.colors
 import matplotlib.pyplot as plt
-from seaborn import heatmap, clustermap
 
-import scanpy as sc
-import scvelo as scv
-from scanpy import logging as logg
-from anndata import AnnData
-
+from cellrank import logging as logg
 from cellrank.tools._utils import save_fig
 from cellrank.utils._utils import _make_unique
 from cellrank.plotting._utils import _position_legend
 from cellrank.tools._constants import LinKey
 from cellrank.tools._exact_mc_test import _counts, _cramers_v
+
+AnnData = TypeVar("AnnData")
+
 
 _cluster_fates_modes = ("bar", "paga", "paga_pie", "violin", "heatmap", "clustermap")
 
@@ -115,6 +113,9 @@ def cluster_fates(
         Nothing, just plots the fates for specified :paramref:`clusters` and :paramref:`lineages`.
         Optionally saves the figure based on :paramref:`save`.
     """
+    from seaborn import heatmap, clustermap
+    from scanpy.plotting import violin
+    from scvelo.plotting import paga
 
     def plot_bar():
         cols = 4 if ncols is None else ncols
@@ -185,7 +186,7 @@ def cluster_fates(
             kwargs["colors"] = tuple(colors)
             kwargs["title"] = f"{dir_prefix} {lineage_name}"
 
-            scv.pl.paga(adata, **kwargs)
+            paga(adata, **kwargs)
 
         if show_cbar:
             norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
@@ -227,7 +228,7 @@ def cluster_fates(
             kwargs["scatter_flag"] = True
             kwargs["color"] = cluster_key
 
-        ax = scv.pl.paga(adata, **kwargs)
+        ax = paga(adata, **kwargs)
         ax.set_title(kwargs.get("title", cluster_key))
 
         if basis is not None and orig_ll not in ("none", "on data", None):
@@ -304,9 +305,7 @@ def cluster_fates(
         for i, (name, ax) in enumerate(zip(lin_names, axes)):
             key = f"{dir_prefix} {name}"
             ax.set_title(key)
-            sc.pl.violin(
-                adata, ylabel="" if i else "probability", keys=key, ax=ax, **kwargs
-            )
+            violin(adata, ylabel="" if i else "probability", keys=key, ax=ax, **kwargs)
         for ax in axes[i + 1 :]:  # noqa
             ax.remove()
         for name in to_clean:
@@ -315,6 +314,8 @@ def cluster_fates(
         return fig
 
     def plot_violin_no_cluster_key():
+        from anndata import AnnData as _AnnData
+
         kwargs.pop("ax", None)
         kwargs.pop("keys", None)  # don't care
         kwargs.pop("save", None)
@@ -325,7 +326,7 @@ def cluster_fates(
         kwargs["rotation"] = xrot
 
         data = np.ravel(np.array(adata.obsm[lk]).T)[..., np.newaxis]
-        dadata = AnnData(np.zeros_like(data))
+        dadata = _AnnData(np.zeros_like(data))
         dadata.obs["probability"] = data
         dadata.obs[points] = (
             pd.Series(
@@ -345,7 +346,7 @@ def cluster_fates(
             figsize=figsize if figsize is not None else (8, 6), dpi=dpi
         )
         ax.set_title(points.capitalize())
-        sc.pl.violin(dadata, keys=["probability"], ax=ax, **kwargs)
+        violin(dadata, keys=["probability"], ax=ax, **kwargs)
 
         return fig
 
@@ -429,7 +430,7 @@ def cluster_fates(
             clusters = _make_unique(clusters)
             if mode in ("paga", "paga_pie"):
                 logg.debug(
-                    f"DEBUG: Setting `clusters` to all available ones because of `mode={mode!r}`"
+                    f"Setting `clusters` to all available ones because of `mode={mode!r}`"
                 )
                 clusters = list(adata.obs[cluster_key].cat.categories)
             else:
@@ -458,7 +459,7 @@ def cluster_fates(
                 )
         lin_names = list(lineages)
     else:
-        # must be list for sc.pl.violin, else cats str
+        # must be list for `sc.pl.violin`, else cats str
         lin_names = list(adata.obsm[lk].names)
 
     if mode == "violin" and not is_all:
@@ -480,7 +481,7 @@ def cluster_fates(
     has_xrot = "xticks_rotation" in kwargs
     xrot = kwargs.pop("xticks_rotation", 45)
 
-    logg.debug(f"DEBUG: Using mode: `{mode!r}`")
+    logg.debug(f"Using mode: `{mode!r}`")
 
     use_clustermap = mode == "clustermap"
     if use_clustermap:
@@ -572,7 +573,7 @@ def similarity_plot(
         Optionally saves the figure based on :paramref:`save`.
     """
 
-    logg.debug("DEBUG: Getting the counts")
+    logg.debug("Getting the counts")
     data = _counts(
         adata,
         cluster_key=cluster_key,
@@ -582,7 +583,7 @@ def similarity_plot(
     )
 
     cluster_names = list(data.keys())
-    logg.debug("DEBUG: Calculating Cramer`s V statistic")
+    logg.debug("Calculating Cramer`s V statistic")
     sim = [
         [1 - _cramers_v(data[name2], data[name]) for name in cluster_names]
         for name2 in cluster_names

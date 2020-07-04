@@ -2,16 +2,8 @@
 """Estimator module."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Tuple, Union, Iterable, Optional, Sequence
+from typing import Any, Dict, List, Tuple, Union, TypeVar, Iterable, Optional, Sequence
 from pathlib import Path
-
-import matplotlib as mpl
-import matplotlib.cm as cm
-import matplotlib.pyplot as plt
-
-import scvelo as scv
-from scanpy import logging as logg
-from anndata import AnnData
 
 import numpy as np
 import pandas as pd
@@ -20,6 +12,14 @@ from scipy.stats import ranksums
 from scipy.sparse import issparse
 from pandas.api.types import infer_dtype, is_categorical_dtype
 from scipy.sparse.linalg import eigs
+
+import matplotlib as mpl
+import matplotlib.cm as cm
+import matplotlib.pyplot as plt
+
+import scvelo as scv
+
+from cellrank import logging as logg
 from cellrank.tools._utils import (
     save_fig,
     _eigengap,
@@ -39,6 +39,8 @@ from cellrank.tools._lineage import Lineage
 from cellrank.tools._constants import LinKey, Prefix, StateKey, Direction, _colors
 from cellrank.tools.kernels._kernel import KernelExpression
 
+AnnData = TypeVar("AnnData")
+
 
 class BaseEstimator(ABC):
     """Base class for all lineage probabilities estimators."""
@@ -56,7 +58,7 @@ class BaseEstimator(ABC):
         if adata is not None:
             self._adata = adata if inplace else adata.copy()
         else:
-            logg.debug("DEBUG: Loading `adata` object from kernel.")
+            logg.debug("Loading `adata` object from kernel.")
             self._adata = kernel.adata if inplace else kernel.adata.copy()
 
         self._is_irreducible = None
@@ -76,7 +78,7 @@ class BaseEstimator(ABC):
 
         # import transition matrix and parameters
         if kernel.transition_matrix is None:
-            logg.debug("DEBUG: Computing transition matrix using default parameters.")
+            logg.debug("Computing transition matrix using default parameters.")
             kernel.compute_transition_matrix()
         kernel.write_to_adata(key_added=key_added)
 
@@ -104,7 +106,7 @@ class BaseEstimator(ABC):
         self._S_score = None
 
         if read_from_adata:
-            logg.debug("DEBUG: Reading data from `adata` object")
+            logg.debug("Reading data from `adata` object")
             self._read_from_adata(g2m_key, s_key)
 
     def _compute_eig(
@@ -146,7 +148,7 @@ class BaseEstimator(ABC):
 
         logg.info("Computing eigendecomposition of transition matrix")
         if self._is_sparse:
-            logg.debug(f"DEBUG: Computing top `{k}` eigenvalues for sparse matrix")
+            logg.debug(f"Computing top `{k}` eigenvalues for sparse matrix")
             D, V_l = eigs(self._T.T, k=k, which=which, ncv=ncv)
             if only_evals:
                 self._write_eig_to_adata(
@@ -175,7 +177,7 @@ class BaseEstimator(ABC):
             _, V_r = np.linalg.eig(self._T)
 
         # Sort the eigenvalues and eigenvectors and take the real part
-        logg.debug("DEBUG: Sorting eigenvalues by their real part")
+        logg.debug("Sorting eigenvalues by their real part")
         p = np.flip(np.argsort(D.real))
         D, V_l, V_r = D[p], V_l[:, p], V_r[:, p]
         e_gap = _eigengap(D.real, alpha)
@@ -460,7 +462,7 @@ class BaseEstimator(ABC):
             )
 
         if cluster_key is not None:
-            logg.debug(f"DEBUG: Creating colors based on `{cluster_key}`")
+            logg.debug(f"Creating colors based on `{cluster_key}`")
 
             # check that we can load the reference series from adata
             if cluster_key not in self._adata.obs:
@@ -499,7 +501,7 @@ class BaseEstimator(ABC):
 
         # write to class and adata
         if getattr(self, attr_key) is not None:
-            logg.debug(f"DEBUG: Overwriting `.{pretty_attr_key}`")
+            logg.debug(f"Overwriting `.{pretty_attr_key}`")
 
         setattr(self, attr_key, categories)
         self._adata.obs[cat_key] = categories.values
@@ -566,7 +568,7 @@ class BaseEstimator(ABC):
             color = [cluster_key] + color
 
         # actual plotting with scvelo
-        logg.debug(f"DEBUG: Showing `{use}` Schur vectors")
+        logg.debug(f"Showing `{use}` Schur vectors")
         scv.pl.scatter(self._adata, color=color, title=title, **kwargs)
 
     @abstractmethod
@@ -833,10 +835,10 @@ class BaseEstimator(ABC):
     def _write_eig_to_adata(self, eig):
         # write to class and AnnData object
         if self._eig is not None:
-            logg.debug("DEBUG: Overwriting `.eigendecomposition`")
+            logg.debug("Overwriting `.eigendecomposition`")
         else:
             logg.debug(
-                f"DEBUG: Adding `.eigendecomposition` and `adata.uns['eig_{self._direction}']`"
+                f"Adding `.eigendecomposition` and `adata.uns['eig_{self._direction}']`"
             )
 
         self._eig = eig
