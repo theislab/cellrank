@@ -1,12 +1,18 @@
 Installation
 ============
-CellRank requires Python version >= 3.6 to run. We recommend using Miniconda_.
+CellRank requires Python version >= 3.6 to run. We recommend using Miniconda_ to manage the environment.
 
 PyPI
-~~~~~~
+~~~~
 Install CellRank by running::
 
     pip install cellrank
+
+Anaconda
+~~~~~~~~
+CellRank is also available on Anaconda and can be installed via::
+
+    conda install -c conda-forge -c bioconda cellrank
 
 Development Version
 ~~~~~~~~~~~~~~~~~~~
@@ -77,7 +83,7 @@ binder button at the top of each tutorial.
 If you run into issues, feel free to open a `GitHub issue`_ or send us an `email <mailto:info@cellrank.org>`_ .
 
 
-.. _Miniconda: http://conda.pydata.org/miniconda.html
+.. _`Miniconda`: https://conda.pydata.org/miniconda.html
 .. _`GitHub issue`: https://github.com/theislab/cellrank/issues/new
 .. _`binder`: https://mybinder.org/
 .. _`SLEPc`: https://slepc.upv.es/
