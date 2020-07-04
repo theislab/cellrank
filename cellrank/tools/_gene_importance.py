@@ -2,16 +2,14 @@
 """Gene importance module."""
 
 from types import MappingProxyType
-from typing import Any, Dict, List, Tuple, Union, Mapping, Optional, Sequence
+from typing import Any, Dict, List, Tuple, Union, Mapping, TypeVar, Optional, Sequence
 
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from statsmodels.stats.multitest import multipletests
 
-from scanpy import logging as logg
-from anndata import AnnData
-
+from cellrank import logging as logg
 from cellrank.tools import GPCCA
 from cellrank.utils._utils import _get_n_cores, check_collection
 from cellrank.utils.models import Model
@@ -19,6 +17,8 @@ from cellrank.tools.kernels import ConnectivityKernel
 from cellrank.plotting._utils import _model_type, _create_models, _is_any_gam_mgcv
 from cellrank.tools._constants import LinKey
 from cellrank.utils._parallelize import parallelize
+
+AnnData = TypeVar("AnnData")
 
 
 def _gi_permute(
@@ -227,9 +227,7 @@ def gene_importance(
 
     models = _create_models(model, genes, [lineage_name])
     if _is_any_gam_mgcv(models):
-        logg.debug(
-            "DEBUG: Setting backend to multiprocessing because model is `GamMGCV`"
-        )
+        logg.debug("Setting backend to multiprocessing because model is `GamMGCV`")
         backend = "multiprocessing"
 
     start = logg.info(f"Calculating gene trends using `{n_jobs}` core(s)")
@@ -255,7 +253,7 @@ def gene_importance(
     if rf_kwargs.get("n_jobs", None) is None:
         rf_kwargs["n_jobs"] = n_jobs
 
-    logg.debug("DEBUG: Running random forest")
+    logg.debug("Running random forest")
     model = RandomForestRegressor(random_state=seed, **rf_kwargs).fit(x, y)
 
     importances = pd.DataFrame(

@@ -1,17 +1,18 @@
 # -*- coding: utf-8 -*-
 """Module used for finding root and final states."""
 
-from typing import Union, Optional
+from typing import Union, TypeVar, Optional
 
-from scanpy import logging as logg
-from anndata import AnnData
-
+from cellrank import logging as logg
 from cellrank.utils._docs import inject_docs
 from cellrank.tools._utils import _info_if_obs_keys_categorical_present
 from cellrank.tools._constants import StateKey
 from cellrank.tools.estimators import GPCCA, CFLARE
 from cellrank.tools._transition_matrix import transition_matrix
 from cellrank.tools.estimators._base_estimator import BaseEstimator
+
+AnnData = TypeVar("AnnData")
+
 
 _find_docs = """\
 Compute {cells} states based on RNA velocity, see [Manno18]_.The tool models dynamic cellular

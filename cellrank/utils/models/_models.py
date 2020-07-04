@@ -4,25 +4,26 @@
 import re
 from abc import ABC, abstractmethod
 from copy import copy
-from typing import Any, Tuple, Iterable, Optional
+from typing import Any, Tuple, TypeVar, Iterable, Optional
 from inspect import signature
 
 import numpy as np
 import pandas as pd
-import sklearn
 from scipy.sparse import issparse
+from sklearn.base import BaseEstimator
 
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 
-import anndata
-
 from cellrank.tools._utils import save_fig
 from cellrank.utils._utils import _minmax
 from cellrank.tools._lineage import Lineage
 from cellrank.tools._constants import LinKey
+
+AnnData = TypeVar("AnnData")
+
 
 _dup_spaces = re.compile(r" +")
 
@@ -41,9 +42,7 @@ class Model(ABC):
         Name of the weight argument for :paramref:`model`.
     """
 
-    def __init__(
-        self, adata: anndata.AnnData, model: Any, weight_name: Optional[str] = None
-    ):
+    def __init__(self, adata: AnnData, model: Any, weight_name: Optional[str] = None):
         self._adata = adata
         self._model = model
         self.weight_name = weight_name
@@ -66,7 +65,7 @@ class Model(ABC):
         self._dtype = np.float32
 
     @property
-    def adata(self) -> anndata.AnnData:
+    def adata(self) -> AnnData:
         """Annotated data object."""
         return self._adata
 
@@ -659,10 +658,7 @@ class SKLearnModel(Model):
     _conf_int_names = ("conf_int", "confidence_intervals")
 
     def __init__(
-        self,
-        adata: anndata.AnnData,
-        model: sklearn.base.BaseEstimator,
-        weight_name: Optional[str] = None,
+        self, adata: AnnData, model: BaseEstimator, weight_name: Optional[str] = None,
     ):
         super().__init__(adata, model)
         self._fit_name = self._find_func(self._fit_names)
@@ -677,7 +673,7 @@ class SKLearnModel(Model):
         )
 
     @property
-    def model(self) -> sklearn.base.BaseEstimator:
+    def model(self) -> BaseEstimator:
         """Underlying model."""
         return self._model
 
@@ -818,7 +814,7 @@ class GamMGCVModel(Model):
         Vector of smoothing parameters.
     """
 
-    def __init__(self, adata: anndata.AnnData, n_splines: int = 5, sp: float = 2):
+    def __init__(self, adata: AnnData, n_splines: int = 5, sp: float = 2):
         super().__init__(adata, None)
         self._n_splines = n_splines
         self._sp = sp

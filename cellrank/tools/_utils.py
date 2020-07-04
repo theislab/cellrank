@@ -17,15 +17,8 @@ from typing import (
 )
 from itertools import tee, product, combinations
 
-import matplotlib.colors as mcolors
-
-import scanpy as sc
-from scanpy import logging as logg
-from anndata import AnnData
-
 import numpy as np
 import pandas as pd
-import networkx as nx
 from pandas import Series
 from numpy.linalg import norm as d_norm
 from scipy.sparse import issparse, spmatrix, csr_matrix
@@ -33,12 +26,20 @@ from sklearn.cluster import KMeans
 from pandas.api.types import infer_dtype, is_categorical_dtype
 from sklearn.neighbors import NearestNeighbors
 from scipy.sparse.linalg import norm as s_norm
+
+import matplotlib.colors as mcolors
+
+from cellrank import logging as logg
 from cellrank.utils._utils import _get_neighs, _has_neighs, _get_neighs_params
 from cellrank.tools._colors import _convert_to_hex_colors, _insert_categorical_colors
+
+AnnData = TypeVar("AnnData")
+
 
 ColorLike = TypeVar("ColorLike")
 GPCCA = TypeVar("GPCCA")
 CFLARE = TypeVar("CFLARE")
+DiGraph = TypeVar("DiGraph")
 EPS = np.finfo(np.float64).eps
 
 
@@ -419,6 +420,8 @@ def _compute_comm_classes(
 ) -> Tuple[List[List[Any]], bool]:
     """Compute communication classes for a graph given by A."""
 
+    import networkx as nx
+
     di_graph = (
         nx.from_scipy_sparse_matrix(A, create_using=nx.DiGraph)
         if issparse(A)
@@ -493,8 +496,9 @@ def _cluster_X(
     --------
     labels
         List of cluster labels of length `n_samples`
-
     """
+    import scanpy as sc
+
     # make sure data is at least 2D
     if X.ndim == 1:
         X = X[:, None]
@@ -553,7 +557,7 @@ def _eigengap(evals: np.ndarray, alpha: float) -> int:
 
 
 def partition(
-    conn: Union[nx.DiGraph, np.ndarray, spmatrix], sort: bool = True
+    conn: Union[DiGraph, np.ndarray, spmatrix], sort: bool = True
 ) -> Tuple[List[List[Any]], List[List[Any]]]:
     """
     Partition a directed graph into its transient and recurrent classes.
@@ -577,6 +581,8 @@ def partition(
     (:class:`list`, :class:`list`)
         Recurrent and transient classes respectively.
     """
+
+    import networkx as nx
 
     start = logg.debug("Partitioning the graph into current and transient classes")
 
@@ -610,6 +616,8 @@ def partition(
 
 def is_connected(c):
     """Check whether the undirected graph encoded by c is connected."""
+
+    import networkx as nx
 
     G = nx.from_scipy_sparse_matrix(c) if issparse(c) else nx.from_numpy_array(c)
 
@@ -869,12 +877,13 @@ def save_fig(
     None
         Just saves the plot.
     """
+    from cellrank import settings
 
     if os.path.splitext(path)[1] == "":
         path = f"{path}.{ext}"
 
     if not os.path.isabs(path):
-        path = os.path.join(sc.settings.figdir, path)
+        path = os.path.join(settings.figdir, path)
 
     if make_dir:
         _maybe_create_dir(os.path.split(path)[0])
@@ -1260,9 +1269,7 @@ def _fuzzy_to_discrete(
         if raise_threshold is None
         else np.max([int(raise_threshold * n_most_likely), 1])
     )
-    logg.debug(
-        f"DEBUG: Raising an exception if if there are less than `{n_raise}` cells."
-    )
+    logg.debug(f"Raising an exception if if there are less than `{n_raise}` cells.")
 
     # initially select `n_most_likely` samples per cluster
     sample_assignment = {
