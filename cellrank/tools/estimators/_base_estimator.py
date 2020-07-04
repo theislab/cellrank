@@ -1045,6 +1045,25 @@ class BaseEstimator(ABC):
             f"Adding gene correlations to `.adata.{field}`\n    Finish", time=start
         )
 
+    def _check_and_create_colors(self):
+        n_cats = len(self._meta_states.cat.categories)
+        color_key = _colors(self._rc_key)
+
+        if self._meta_states_colors is None:
+            if color_key in self._adata.uns and n_cats == len(
+                self._adata.uns[color_key]
+            ):
+                logg.debug("Loading colors from `.adata` object")
+                self._meta_states_colors = _convert_to_hex_colors(
+                    self._adata.uns[color_key]
+                )
+            else:
+                self._meta_states_colors = _create_categorical_colors(n_cats)
+                self._adata.uns[color_key] = self._meta_states_colors
+        elif len(self._meta_states_colors) != n_cats:
+            self._meta_states_colors = _create_categorical_colors(n_cats)
+            self._adata.uns[color_key] = self._meta_states_colors
+
     def _write_eig_to_adata(self, eig):
         # write to class and AnnData object
         if self._eig is not None:
