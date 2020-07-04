@@ -139,7 +139,7 @@ class TestLowLevelPipeline:
         estimator_fwd.compute_metastable_states(use=1)
         estimator_fwd.plot_metastable_states()
 
-        estimator_fwd.compute_lin_probs()
+        estimator_fwd.compute_absorption_probabilities()
         estimator_fwd.plot_lin_probs()
 
         estimator_fwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
@@ -164,7 +164,7 @@ class TestLowLevelPipeline:
         estimator_bwd.compute_metastable_states(use=1)
         estimator_bwd.plot_metastable_states()
 
-        estimator_bwd.compute_lin_probs()
+        estimator_bwd.compute_absorption_probabilities()
         estimator_bwd.plot_lin_probs()
 
         estimator_bwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)

@@ -3,11 +3,11 @@ from typing import Tuple
 
 import numpy as np
 import pandas as pd
-import pytest
 from pandas.api.types import is_categorical_dtype
 
 from anndata import AnnData
 
+import pytest
 import cellrank as cr
 from _helpers import assert_array_nan_equal
 from cellrank.tools._colors import _create_categorical_colors
@@ -103,7 +103,7 @@ class TestCFLARE:
 
         mc = cr.tl.CFLARE(final_kernel)
         with pytest.raises(RuntimeError):
-            mc.compute_lin_probs()
+            mc.compute_absorption_probabilities()
 
     def test_compute_lin_probs_normal_run(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
@@ -113,7 +113,7 @@ class TestCFLARE:
         mc = cr.tl.CFLARE(final_kernel)
         mc.compute_eig(k=5)
         mc.compute_metastable_states(use=2)
-        mc.compute_lin_probs()
+        mc.compute_absorption_probabilities()
 
         assert isinstance(mc.diff_potential, np.ndarray)
         assert f"{LinKey.FORWARD}_dp" in mc.adata.obs.keys()
@@ -150,11 +150,11 @@ class TestCFLARE:
         mc.compute_metastable_states(use=2)
 
         # compute lin probs using direct solver
-        mc.compute_lin_probs(use_iterative_solver=False)
+        mc.compute_absorption_probabilities(use_iterative_solver=False)
         l_direct = mc.lineage_probabilities
 
         # comptue lin probs using iterative solver
-        mc.compute_lin_probs(use_iterative_solver=True, tol=tol)
+        mc.compute_absorption_probabilities(use_iterative_solver=True, tol=tol)
         l_iterative = mc.lineage_probabilities
 
         np.testing.assert_allclose(l_direct.X, l_iterative.X, rtol=0, atol=tol)
@@ -171,13 +171,13 @@ class TestCFLARE:
         mc.compute_metastable_states(use=2)
 
         # compute lin probs using direct solver
-        mc.compute_lin_probs(
+        mc.compute_absorption_probabilities(
             use_iterative_solver=True, use_initialization=True, tol=tol
         )
         l_0 = mc.lineage_probabilities
 
         # comptue lin probs using iterative solver
-        mc.compute_lin_probs(
+        mc.compute_absorption_probabilities(
             use_iterative_solver=True, use_initialization=False, tol=tol
         )
         l_1 = mc.lineage_probabilities
@@ -203,7 +203,7 @@ class TestCFLARE:
         mc = cr.tl.CFLARE(final_kernel)
         mc.compute_eig(k=5)
         mc.compute_metastable_states(use=2)
-        mc.compute_lin_probs()
+        mc.compute_absorption_probabilities()
         with pytest.raises(KeyError):
             mc.compute_lineage_drivers(use_raw=False, lin_names=["foo"])
 
@@ -215,7 +215,7 @@ class TestCFLARE:
         mc = cr.tl.CFLARE(final_kernel)
         mc.compute_eig(k=5)
         mc.compute_metastable_states(use=2)
-        mc.compute_lin_probs()
+        mc.compute_absorption_probabilities()
         with pytest.raises(KeyError):
             mc.compute_lineage_drivers(
                 use_raw=False, cluster_key="clusters", clusters=["foo"]
@@ -229,7 +229,7 @@ class TestCFLARE:
         mc = cr.tl.CFLARE(final_kernel)
         mc.compute_eig(k=5)
         mc.compute_metastable_states(use=2)
-        mc.compute_lin_probs()
+        mc.compute_absorption_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
         for lineage in ["0", "1"]:
@@ -255,7 +255,7 @@ class TestCFLARE:
             if arc in arcs
         ]
 
-        mc_fwd.compute_lin_probs(keys=arcs)
+        mc_fwd.compute_absorption_probabilities(keys=arcs)
         lin_colors = mc_fwd.lineage_probabilities[arcs].colors
 
         np.testing.assert_array_equal(arc_colors, lin_colors)
