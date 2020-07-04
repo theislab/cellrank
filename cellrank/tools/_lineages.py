@@ -1,17 +1,17 @@
 # -*- coding: utf-8 -*-
 """Lineages module."""
 
-from typing import Optional, Sequence
+from typing import TypeVar, Optional, Sequence
 
-from scanpy import logging as logg
-from anndata import AnnData
-
+from cellrank import logging as logg
 from cellrank.tools._utils import _info_if_obs_keys_categorical_present
 from cellrank.utils._utils import _read_graph_data
 from cellrank.tools.kernels import VelocityKernel
 from cellrank.tools._constants import LinKey, StateKey, Direction, _transition
 from cellrank.tools.estimators import GPCCA, CFLARE
 from cellrank.tools.estimators._base_estimator import BaseEstimator
+
+AnnData = TypeVar("AnnData")
 
 
 def lineages(

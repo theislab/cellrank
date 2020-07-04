@@ -3,14 +3,13 @@
 
 from copy import copy, deepcopy
 from types import MappingProxyType
-from typing import Any, Dict, List, Tuple, Union, Mapping, Iterable, Optional
+from typing import Any, Dict, List, Tuple, Union, Mapping, TypeVar, Iterable, Optional
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from scipy.stats import entropy
 
-import seaborn as sns
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
@@ -18,9 +17,8 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 import scvelo as scv
-from scanpy import logging as logg
-from anndata import AnnData
 
+from cellrank import logging as logg
 from cellrank.tools._utils import (
     save_fig,
     _eigengap,
@@ -34,7 +32,10 @@ from cellrank.tools._lineage import Lineage
 from cellrank.tools._constants import Lin, MetaKey, _dp, _probs, _colors, _lin_names
 from cellrank.tools.kernels._kernel import KernelExpression
 from cellrank.tools.estimators._base_estimator import BaseEstimator
-from cellrank._vendor.msmtools.analysis.dense.gpcca import GPCCA as _GPPCA
+from cellrank._vendor.msmtools.analysis.dense.gpcca import GPCCA as _GPCCA
+
+AnnData = TypeVar("AnnData")
+
 
 # whether to remove overlapping cells from both states, or assign them to the most likely clusters
 REMOVE_OVERLAP = False
@@ -206,6 +207,8 @@ class GPCCA(BaseEstimator):
             Nothing, just plots the Schur matrix.
         """
 
+        from seaborn import heatmap
+
         if self._schur_matrix is None:
             raise RuntimeError(
                 "Compute Schur matrix first as `.compute_schur()` or "
@@ -229,7 +232,7 @@ class GPCCA(BaseEstimator):
         )
 
         kwargs["fmt"] = kwargs.get("fmt", "0.2f")
-        sns.heatmap(
+        heatmap(
             self._schur_matrix,
             cmap=cmap,
             square=True,
@@ -290,7 +293,7 @@ class GPCCA(BaseEstimator):
                 f"Number of components must be `>=2`, found `{n_components}`."
             )
 
-        self._gpcca = _GPPCA(self._T, eta=initial_distribution, z=which, method=method)
+        self._gpcca = _GPCCA(self._T, eta=initial_distribution, z=which, method=method)
         try:
             self._gpcca._do_schur_helper(n_components)
         except ValueError:
@@ -374,7 +377,7 @@ class GPCCA(BaseEstimator):
             )
             minn = 3
 
-        logg.debug(f"DEBUG: Calculating minChi within interval [{minn}, {maxx}]")
+        logg.debug(f"Calculating minChi within interval [{minn}, {maxx}]")
         return int(np.arange(minn, maxx)[np.argmax(self._gpcca.minChi(minn, maxx))])
 
     def compute_metastable_states(
@@ -927,9 +930,7 @@ class GPCCA(BaseEstimator):
                 list(range(memberships.shape[1])), inplace=True
             )
 
-            logg.debug(
-                "DEBUG: Setting the metastable states using metastable assignment"
-            )
+            logg.debug("Setting the metastable states using metastable assignment")
             metastable_states = _meta_assignment.astype(str).astype("category").copy()
             not_enough_cells = []
         else:
@@ -938,9 +939,7 @@ class GPCCA(BaseEstimator):
                     f"Expected `n_cells` to be positive, found `{n_cells}`."
                 )
 
-            logg.debug(
-                "DEBUG: Setting the metastable states using metastable memberships"
-            )
+            logg.debug("Setting the metastable states using metastable memberships")
 
             # select the most likely cells from each metastable state
             a_discrete, not_enough_cells = _fuzzy_to_discrete(
@@ -974,7 +973,7 @@ class GPCCA(BaseEstimator):
         )
 
         logg.debug(
-            "DEBUG: Setting metastable lineage probabilities based on GPCCA membership vectors"
+            "Setting metastable lineage probabilities based on GPCCA membership vectors"
         )
         self._meta_lin_probs = Lineage(
             memberships,
@@ -1367,7 +1366,7 @@ class GPCCA(BaseEstimator):
             )
             self.compute_schur(n_components)
         else:
-            logg.debug("DEBUG: Using cached Schur decomposition")
+            logg.debug("Using cached Schur decomposition")
 
         start = logg.info(
             f"Computing Generalized Diffusion Pseudotime using n_components = {n_components}"
@@ -1467,6 +1466,6 @@ class GPCCA(BaseEstimator):
 def _print_insufficient_number_of_cells(groups: Iterable[Any], n_cells: int):
     if groups:
         logg.debug(
-            f"DEBUG: The following groups have less than requested number of cells ({n_cells}): "
+            f"The following groups have less than requested number of cells ({n_cells}): "
             f"`{', '.join(sorted(map(str, groups)))}`"
         )

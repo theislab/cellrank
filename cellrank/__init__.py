@@ -3,6 +3,7 @@ from scanpy import settings
 
 import cellrank.tools as tl
 import cellrank.utils as ul
+import cellrank.logging
 import cellrank.datasets
 import cellrank.plotting as pl
 from cellrank.tools._read import read

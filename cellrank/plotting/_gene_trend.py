@@ -3,7 +3,7 @@
 
 import os
 from types import MappingProxyType
-from typing import Tuple, Union, Mapping, Optional, Sequence
+from typing import Tuple, Union, Mapping, TypeVar, Optional, Sequence
 from pathlib import Path
 
 import numpy as np
@@ -12,10 +12,7 @@ import matplotlib
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 
-import scanpy as sc
-from scanpy import logging as logg
-from anndata import AnnData
-
+from cellrank import logging as logg
 from cellrank.tools._utils import save_fig
 from cellrank.utils._utils import _get_n_cores, _make_unique, check_collection
 from cellrank.plotting._utils import (
@@ -27,6 +24,8 @@ from cellrank.plotting._utils import (
 )
 from cellrank.tools._constants import LinKey
 from cellrank.utils._parallelize import parallelize
+
+AnnData = TypeVar("AnnData")
 
 
 def gene_trends(
@@ -197,7 +196,10 @@ def gene_trends(
         )
         axes = np.ravel(axes)
     elif dirname is not None:
-        figdir = sc.settings.figdir
+        from cellrank import settings
+
+        figdir = settings.figdir
+
         if figdir is None:
             raise RuntimeError(
                 f"Invalid combination: figures directory `cellrank.settings.figdir` is `None`, "
@@ -222,7 +224,7 @@ def gene_trends(
     elif all(map(lambda ln: ln is None, lineages)):  # no lineage, all the weights are 1
         lineages = [None]
         show_cbar = False
-        logg.debug("DEBUG: All lineages are `None`, setting weights to be `1`")
+        logg.debug("All lineages are `None`, setting weights to be `1`")
     lineages = _make_unique(lineages)
 
     for ln in filter(lambda ln: ln is not None, lineages):
@@ -255,9 +257,7 @@ def gene_trends(
         plot_kwargs["xlabel"] = kwargs.get("time_key", None)
 
     if _is_any_gam_mgcv(kwargs["models"]):
-        logg.debug(
-            "DEBUG: Setting backend to multiprocessing because model is `GamMGCV`"
-        )
+        logg.debug("Setting backend to multiprocessing because model is `GamMGCV`")
         backend = "multiprocessing"
 
     n_jobs = _get_n_cores(n_jobs, len(genes))
@@ -274,7 +274,7 @@ def gene_trends(
     )(lineages, start_lineage, end_lineage, **kwargs)
     logg.info("    Finish", time=start)
 
-    logg.debug("DEBUG: Plotting trends")
+    logg.debug("Plotting trends")
     for gene, ax in zip(genes, axes):
         f = (
             None

@@ -12,7 +12,7 @@ from pandas.core.dtypes.common import is_categorical_dtype
 from matplotlib import cm as cm
 from matplotlib import colors as mcolors
 
-from scanpy import logging as logg
+from cellrank import logging as logg
 
 
 def _create_colors(

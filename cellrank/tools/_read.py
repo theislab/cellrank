@@ -1,23 +1,24 @@
 # -*- coding: utf-8 -*-
 """IO module."""
 
-from typing import Union, Callable
+from typing import Union, TypeVar, Callable
 from pathlib import Path
 
 from matplotlib.colors import is_color_like
 
-import scvelo as scv
-import anndata
-from scanpy import logging as logg
+from scvelo import read as scv_read
 
+from cellrank import logging as logg
 from cellrank.tools._colors import _create_categorical_colors
 from cellrank.tools._lineage import Lineage
 from cellrank.tools._constants import LinKey, Direction, _colors, _lin_names
 
+AnnData = TypeVar("AnnData")
+
 
 def read(
-    path: Union[Path, str], read_callback: Callable = scv.read, **kwargs
-) -> anndata.AnnData:
+    path: Union[Path, str], read_callback: Callable = scv_read, **kwargs
+) -> AnnData:
     """
     Read file and return :class:`anndata.AnnData` object.
 
@@ -86,7 +87,7 @@ def read(
             adata.uns[names_key] = names
         else:
             logg.debug(
-                f"DEBUG: Unable to load {'forward' if direction == Direction.FORWARD else 'backward'} "
+                f"Unable to load {'forward' if direction == Direction.FORWARD else 'backward'} "
                 f"`Lineage` from `adata.obsm[{lin_key!r}]`"
             )
 
