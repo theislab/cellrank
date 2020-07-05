@@ -32,19 +32,6 @@ jobs:
       env:
         - PYTHON_VERSION=3.7.3 USE_SLEPC=false
 
-if: env(USE_SLEPC) = true
-addons:
-  apt:
-    update: true
-    packages:
-        - gcc
-        - gfortran
-        - libopenmpi-dev
-        - libblas-dev
-        - liblapack-dev
-  homebrew:
-    update: true
-
 before_install:
   - ./.scripts/ci/before_install.sh
 
