@@ -2,19 +2,16 @@
 
 if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
     pip3 install -U pip
-    if [[ "$USE_SLEPC" == "true" ]]; then
-        pip_cmd=pip3
-    fi
 elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
     pip install pytest-cov
     if [[ "$USE_SLEPC" == "true" ]]; then
-	echo "Installing SLEPC and PETSc"
-	pip install mpi4py --user
+        echo "Installing SLEPC and PETSc"
+	      sudo pip install mpi4py
 
-	pip install petsc --user
-	pip install petsc4py --user
+	      sudo pip install petsc
+	      sudo pip install petsc4py
 
-	pip install slepc --user
-        pip install slepc4py --user
+	      sudo pip install slepc
+        sudo pip install slepc4py
     fi
 fi
