@@ -18,9 +18,9 @@ from cellrank.tools._constants import LinKey
 matplotlib.use("Agg")
 np.random.seed(42)
 
-_adata_small = sc.read("_ground_truth_adatas/adata_50.h5ad")
-_adata_medium = sc.read("_ground_truth_adatas/adata_100.h5ad")
-_adata_large = sc.read("_ground_truth_adatas/adata_200.h5ad")
+_adata_small = sc.read("tests/_ground_truth_adatas/adata_50.h5ad")
+_adata_medium = sc.read("tests/_ground_truth_adatas/adata_100.h5ad")
+_adata_large = sc.read("tests/_ground_truth_adatas/adata_200.h5ad")
 
 
 def _create_dummy_adata(n_obs: int) -> AnnData:
