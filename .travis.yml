@@ -14,8 +14,8 @@ env:
   - USE_SLEPC=false
 
 jobs:
-  allow_failures:
-    - env: USE_SLEPC=true
+  #allow_failures:
+  # - env: USE_SLEPC=true
 
   include:
     - name: "Python 3.6.5 on macOS"
