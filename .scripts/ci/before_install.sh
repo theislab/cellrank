@@ -9,15 +9,12 @@ elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
     pip install pytest-cov
     if [[ "$USE_SLEPC" == "true" ]]; then
 	echo "Installing SLEPC and PETSc"
-        apt-get update
-	apt-get install libopenmpi-dev
+	pip install mpi4py --user
 
-	pip install mpi4py
+	pip install petsc --user
+	pip install petsc4py --user
 
-	pip install petsc
-	pip install petsc4py
-
-	pip install slepc
-        pip install slepc4py
+	pip install slepc --user
+        pip install slepc4py --user
     fi
 fi
