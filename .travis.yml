@@ -8,8 +8,8 @@ python:
 os: linux
 
 env:
-  USE_SLEPC=true
-  USE_SLEPC=false
+  - USE_SLEPC=true
+  - USE_SLEPC=false
 
 jobs:
   allow_failures:
