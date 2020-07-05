@@ -5,6 +5,10 @@ if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
 elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
     pip install pytest-cov
     if [[ "$USE_SLEPC" == "true" ]]; then
+        echo "Installing dependencies"
+        sudo apt-get update -y
+        sudo apt-get install gcc gfortran libopenmpi-dev libblas-dev liblapack-dev -y
+
         pip_cmd=$(which pip)
         echo "Installing SLEPC and PETSc"
 
