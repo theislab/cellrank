@@ -28,7 +28,7 @@ CellRank's key applications
 
 Support
 ^^^^^^^
-We welcome your feedback! Feel free to open an `issue <https://github.com/theislab/cellrank/issues/new>`_
+We welcome your feedback! Feel free to open an `issue <https://github.com/theislab/cellrank/issues/new/choose>`_
 or send us an `email <mailto:info@cellrank.org>`_ if you encounter a bug, need our help or just want to make a
 comment/suggestion.
 
