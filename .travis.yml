@@ -7,34 +7,51 @@ python:
 
 os: linux
 
+env:
+  USE_SLEPC=true
+  USE_SLEPC=false
+
 jobs:
   allow_failures:
     - os: osx
+    - env: USE_SLEPC=true
 
   include:
     - name: "Python 3.6.5 on macOS"
       language: bash
       os: osx
       osx_image: xcode9.4
-      env: PYTHON_VERSION=3.6.5
+      env:
+        - PYTHON_VERSION="3.6.5"
+        - USE_SLEPC=false
 
     - name: "Python 3.7.3 on macOS"
       language: bash
       os: osx
       osx_image: xcode10.2
-      env: PYTHON_VERSION=3.7.3
+      env:
+        - PYTHON_VERSION="3.7.3"
+        - USE_SLEPC=false
+
+addons:
+  if: os = linux
+  apt:
+    update: true
+    packages:
+      - libopenmpi-dev
+
 
 before_install:
-  - ./.scripts/travis/before_install.sh
+  - ./.scripts/ci/before_install.sh
 
 install:
-  - ./.scripts/travis/install.sh
+  - ./.scripts/ci/install.sh
 
 script:
-  - ./.scripts/travis/test.sh
+  - ./.scripts/ci/test.sh
 
 after_success:
-  - ./.scripts/travis/upload_coverage.sh
+  - ./.scripts/ci/upload_coverage.sh
 
 deploy:
   provider: pypi

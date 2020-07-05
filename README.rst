@@ -53,10 +53,10 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
     :alt: Bioconda
 
 .. |Travis| image:: https://travis-ci.org/theislab/cellrank.svg?branch=master
-    :target: https://travis-ci.org/theislab/cellrank
+    :target: https://travis-ci.com/github/theislab/cellrank
 
 .. |Notebooks| image:: https://img.shields.io/travis/com/theislab/cellrank_notebooks?label=notebooks
-    :target: https://github.com/theislab/cellrank_notebooks
+    :target: https://travis-ci.com/github/theislab/cellrank_notebooks
 
 .. |Docs|  image:: https://img.shields.io/readthedocs/cellrank
 
