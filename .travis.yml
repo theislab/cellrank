@@ -7,13 +7,14 @@ python:
 
 os: linux
 
+cache: pip
+
 env:
   - USE_SLEPC=true
   - USE_SLEPC=false
 
 jobs:
   allow_failures:
-    - os: osx
     - env: USE_SLEPC=true
 
   include:
@@ -31,16 +32,18 @@ jobs:
       env:
         - PYTHON_VERSION=3.7.3 USE_SLEPC=false
 
+if: env(USE_SLEPC) = true
 addons:
-  if: env(USE_SLEPC) = true
   apt:
     update: true
     packages:
-      - libopenmpi-dev
-      - libblas-dev
-      - liblapack-dev
-      - gcc
-      - gfortran
+        - gcc
+        - gfortran
+        - libopenmpi-dev
+        - libblas-dev
+        - liblapack-dev
+  homebrew:
+    update: true
 
 before_install:
   - ./.scripts/ci/before_install.sh
@@ -49,7 +52,7 @@ install:
   - ./.scripts/ci/install.sh
 
 script:
-  - ./.scripts/ci/test.sh
+  - .travis_wait 15 /.scripts/ci/test.sh
 
 after_success:
   - ./.scripts/ci/upload_coverage.sh
