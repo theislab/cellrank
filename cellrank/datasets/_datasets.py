@@ -12,7 +12,7 @@ AnnData = TypeVar("AnnData")
 
 _datasets = dict(  # noqa
     pancreas=(
-        "datasets/pancreas/endocrinogenesis_day15.5.h5ad",
+        "datasets/endocrinogenesis_day15.5.h5ad",
         "https://github.com/theislab/cellrank_notebooks/raw/master/datasets/pancreas/endocrinogenesis_day15.5.h5ad",
     )
 )
