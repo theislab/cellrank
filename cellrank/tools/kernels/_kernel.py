@@ -613,12 +613,19 @@ class Kernel(UnaryKernelExpression, ABC):
             logg.debug("Scaling by variances")
 
             # check that both have been computed on the same elements
-            if not all(
-                (
-                    (var_ixs == mat_ixs).all()
-                    for var_ixs, mat_ixs in zip(variances.nonzero(), matrix.nonzero())
-                )
-            ):
+            if len(variances.data) == len(matrix.data):
+                if not all(
+                    (
+                        (var_ixs == mat_ixs).all()
+                        for var_ixs, mat_ixs in zip(
+                            variances.nonzero(), matrix.nonzero()
+                        )
+                    )
+                ):
+                    logg.warning(
+                        "Uncertainty indices do not match velocity graph indices"
+                    )
+            else:
                 logg.warning("Uncertainty indices do not match velocity graph indices")
 
             # for non-zero edge-weights, clip var's to a_min and scale the edge weights by these vars
