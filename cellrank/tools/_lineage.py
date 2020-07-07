@@ -8,13 +8,14 @@ from pathlib import Path
 from functools import wraps
 from itertools import combinations
 
+import numpy as np
+import pandas as pd
+from scipy.stats import entropy
+
 import matplotlib.colors as c
 import matplotlib.pyplot as plt
 
-import numpy as np
-import pandas as pd
 from cellrank import logging as logg
-from scipy.stats import entropy
 from cellrank.tools._utils import (
     save_fig,
     _convert_lineage_name,
@@ -703,11 +704,14 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             self = self.T
             was_trasposed = True
         obj = Lineage(
-            np.array(self, copy=True, order=_ORDER),
+            self,
             names=np.array(self.names, copy=True, order=_ORDER),
             colors=np.array(self.colors, copy=True, order=_ORDER),
         )
         return obj.T if was_trasposed else obj
+
+    def __copy__(self):
+        return self.copy()
 
     def plot_pie(
         self,
