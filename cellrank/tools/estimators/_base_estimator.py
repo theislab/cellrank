@@ -857,7 +857,9 @@ class BaseEstimator(ABC):
                     )
             A = probs[lineages]
 
+        A = A.copy()  # the below code modifies stuff inplace
         show_dp = show_dp and self._dp is not None
+
         # change the maximum value - the 1 is artificial and obscures the color scaling
         for col in A.X.T:  # A keeps its dimensions, use .X
             mask = col != 1
