@@ -3,6 +3,7 @@ import os
 from typing import Union
 from pathlib import Path
 
+import numpy as np
 import pytest
 from packaging import version
 
@@ -995,3 +996,25 @@ class TestComposition:
     @compare()
     def test_composition(self, adata: AnnData, fpath: str):
         cr.pl.composition(adata, "clusters", dpi=DPI, save=fpath)
+
+
+class TestLineage:
+    def test_pie_not_callable(self, lineage: cr.tl.Lineage, _: str):
+        with pytest.raises(TypeError):
+            lineage.plot_pie()
+
+    @compare()
+    def test_pie(self, lineage: cr.tl.Lineage, fpath: str):
+        lineage.plot_pie(dpi=DPI, save=fpath)
+
+    @compare()
+    def test_pie_reduction(self, lineage: cr.tl.Lineage, fpath: str):
+        lineage.plot_pie(reduction=np.var, dpi=DPI, save=fpath)
+
+    @compare()
+    def test_pie_title(self, lineage: cr.tl.Lineage, fpath: str):
+        lineage.plot_pie(title="FOOBAR", dpi=DPI, save=fpath)
+
+    @compare()
+    def test_pie_t(self, lineage: cr.tl.Lineage, fpath: str):
+        lineage.T.plot_pie(dpi=DPI, save=fpath)

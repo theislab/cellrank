@@ -772,3 +772,20 @@ class TestTransposition:
 
         assert x.shape == lineage.shape
         np.testing.assert_array_equal(x, lineage)
+
+    def test_copy(self, lineage: Lineage):
+        y = lineage.T.copy()
+        x[0, 0] = -100000
+
+        assert y is not x
+        assert y.shape == lineage.shape[::-1]
+
+        assert y[0, 0] != lineage[0, 0]
+
+    def test_simple_access(self, lineage: Lineage):
+        y = lineage.T["foo"]
+        with pytest.raises(TypeError):
+            lineage.T[:, "foo"]
+
+        assert y.shape == (1, lineage.shape[0])
+        np.testing.assert_array_equal(y.T, lineage["foo"])
