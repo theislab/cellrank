@@ -8,14 +8,13 @@ from pathlib import Path
 from functools import wraps
 from itertools import combinations
 
-import numpy as np
-import pandas as pd
-from scipy.stats import entropy
-
 import matplotlib.colors as c
 import matplotlib.pyplot as plt
 
+import numpy as np
+import pandas as pd
 from cellrank import logging as logg
+from scipy.stats import entropy
 from cellrank.tools._utils import (
     save_fig,
     _convert_lineage_name,
@@ -236,7 +235,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         if input_array.shape[1] == 0:
             raise ValueError("Expected number of lineages to be at least 1, found 0.")
 
-        obj = np.asarray(input_array).view(cls)
+        obj = np.asarray(input_array).copy().view(cls)
         obj._n_lineages = obj.shape[1]
         obj._is_transposed = False
         obj.names = names
