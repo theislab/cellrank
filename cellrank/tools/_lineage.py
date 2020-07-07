@@ -226,14 +226,18 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             )
 
         obj._n_lineages = obj.shape[1]
+        obj._is_transposed = False
         obj.names = names
         obj.colors = colors
 
         return obj
 
     @property
-    def _is_transposed(self):
-        return self.ndim == 2 and self.shape[1] != len(self.names)
+    def T(self):
+        """Transposition of self."""
+        obj = self.transpose()
+        obj._is_transposed = not self._is_transposed
+        return obj
 
     def view(self, dtype=None, type=None) -> "LineageView":
         """Return a view of self."""
@@ -253,6 +257,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
         self._colors = getattr(obj, "colors", None)
         self._n_lineages = getattr(obj, "_n_lineages", 0)
+        self._is_transposed = getattr(obj, "_is_transposed", False)
 
     def _mixer(self, rows, mixtures):
         def update_entries(key):
@@ -670,13 +675,19 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
         return tuple(res)
 
-    def copy(self, _="F") -> "Lineage":
+    def copy(self, _="C") -> "Lineage":
         """Return a copy of itself."""
-        return Lineage(
+
+        was_trasposed = False
+        if self._is_transposed:
+            self = self.T
+            was_trasposed = True
+        obj = Lineage(
             np.array(self, copy=True, order=_ORDER),
             names=np.array(self.names, copy=True, order=_ORDER),
             colors=np.array(self.colors, copy=True, order=_ORDER),
         )
+        return obj.T if was_trasposed else obj
 
     def plot_pie(
         self,
@@ -884,13 +895,19 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 class LineageView(Lineage):
     """Simple view of :class:`cellrank.tools.Lineage`."""
 
-    def copy(self, _="F") -> Lineage:
+    def copy(self, _="C") -> Lineage:
         """Return a copy of itself."""
-        return Lineage(
+        was_trasposed = False
+        if self._is_transposed:
+            self = self.T
+            was_trasposed = True
+
+        obj = Lineage(
             np.array(self, copy=True, order=_ORDER),
             names=np.array(self.names, copy=True, order=_ORDER),
             colors=np.array(self.colors, copy=True, order=_ORDER),
         )
+        return obj.T if was_trasposed else obj
 
 
 def _remove_zero_rows(a: np.ndarray, b: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
