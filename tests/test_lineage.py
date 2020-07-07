@@ -810,6 +810,22 @@ class TestTransposition:
         assert y.shape == (1, 1)
         np.testing.assert_array_equal(y, lineage[0, "bar"])
 
+    def test_double_string(self, lineage: Lineage):
+        x = lineage["baz", "foo"]
+        y = lineage.T["baz", "foo"]
+
+        np.testing.assert_array_equal(x, y.T[:, ::-1])
+
+    def test_boolean_accessor(self, lineage: Lineage):
+        mask = np.zeros(shape=lineage.shape[0], dtype=np.bool)
+        mask[[3, 5]] = True
+
+        y = lineage.T[["baz", "bar"], mask]
+
+        assert y.shape == (2, 2)
+        np.testing.assert_array_equal(y.names, ["baz", "bar"])
+        np.testing.assert_array_equal(y, lineage[[3, 5], ["baz", "bar"]].T)
+
 
 class TestUfuncs:
     def test_shape_preserving(self, lineage: Lineage):
