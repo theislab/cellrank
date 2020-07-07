@@ -1,12 +1,4 @@
----
-name: Pull Request
-about: Create a pull request
-title: ""
-labels:
-reviewers: "michalk8"
----
-
-**IMPORTANT: Please search among the [Pull request](../) before creating one.**
+**IMPORTANT: Please search among the [Pull request](../pulls) before creating one.**
 
 ## Title
 <!--- Provide a general summary of your changes in the Title above -->
