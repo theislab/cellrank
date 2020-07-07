@@ -5,7 +5,7 @@ from types import FunctionType
 from typing import List, Tuple, Union, TypeVar, Callable, Iterable, Optional
 from inspect import signature
 from pathlib import Path
-from functools import wraps, singledispatch
+from functools import wraps
 from itertools import combinations
 
 import numpy as np
@@ -937,18 +937,9 @@ def _softmax(X, beta: float = 1):
     return np.exp(X * beta) / np.expand_dims(np.sum(np.exp(X * beta), axis=1), -1)
 
 
-@singledispatch
 def _row_normalize(X):
-    pass
-
-
-@_row_normalize.register
-def _(X: Lineage):
-    return X / X.sum(1)  # Lineage is shape-preserving
-
-
-@_row_normalize.register
-def _(X: np.ndarray):
+    if isinstance(X, Lineage):
+        return X / X.sum(1)  # Lineage is shape-preserving
     return X / np.expand_dims(X.sum(1), -1)
 
 
