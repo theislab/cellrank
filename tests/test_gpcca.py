@@ -42,7 +42,8 @@ def _check_eigdecomposition(mc: cr.tl.GPCCA) -> None:
 def _check_compute_meta(mc: cr.tl.GPCCA) -> None:
     assert mc.lineage_probabilities is None
     assert isinstance(mc._meta_lin_probs, cr.tl.Lineage)
-    np.testing.assert_array_almost_equal(mc._meta_lin_probs.sum(1), 1.0)
+    if mc._meta_lin_probs.shape[1] > 1:
+        np.testing.assert_array_almost_equal(mc._meta_lin_probs.sum(1), 1.0)
 
     assert isinstance(mc.metastable_states, pd.Series)
     assert_array_nan_equal(mc.metastable_states, mc.adata.obs[str(MetaKey.FORWARD)])

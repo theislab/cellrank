@@ -770,5 +770,5 @@ class TestTransposition:
     def test_double_t(self, lineage: Lineage):
         x = lineage.T.T
 
-        assert y.shape == lineage.shape
-        np.testing.assert_array_equal(x.lineage)
+        assert x.shape == lineage.shape
+        np.testing.assert_array_equal(x, lineage)
