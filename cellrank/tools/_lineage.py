@@ -598,8 +598,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
     @property
     def X(self) -> np.ndarray:
         """Convert self to numpy array, losing names and colors."""
-        # TODO: when copy=True, similaity_plot tests fail - rows dont sum to 1
-        return np.array(self, copy=True)
+        return np.array(self, copy=False)
 
     def __repr__(self) -> str:
         return f'{super().__repr__()[:-1]},\n  names([{", ".join(self.names)}]))'
