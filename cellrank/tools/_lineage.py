@@ -8,13 +8,14 @@ from pathlib import Path
 from functools import wraps
 from itertools import combinations
 
+import numpy as np
+import pandas as pd
+from scipy.stats import entropy
+
 import matplotlib.colors as c
 import matplotlib.pyplot as plt
 
-import numpy as np
-import pandas as pd
 from cellrank import logging as logg
-from scipy.stats import entropy
 from cellrank.tools._utils import (
     save_fig,
     _convert_lineage_name,
@@ -170,10 +171,10 @@ class LineageMeta(type):
     """
     Metaclass for Lineaage.
 
-    Registers functions which are handled by us and overloads common attibutes, such as `.sum` with thse functions.
+    Registers functions which are handled by us and overloads common attibutes, such as `.sum` with these functions.
     """
 
-    _overload = dict(  # noqa
+    __overloaded_functions__ = dict(  # noqa
         sum=np.sum,
         mean=np.mean,
         min=np.min,
@@ -187,7 +188,7 @@ class LineageMeta(type):
 
     def __new__(cls, clsname, superclasses, attributedict):  # noqa
         res = type.__new__(cls, clsname, superclasses, attributedict)
-        for attrname, fn in LineageMeta._overload.items():
+        for attrname, fn in LineageMeta.__overloaded_functions__.items():
             wrapped_fn = _HANDLED_FUNCTIONS.get(fn, None)
             if wrapped_fn:
                 setattr(res, attrname, wrapped_fn)
@@ -235,10 +236,10 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         if input_array.shape[1] == 0:
             raise ValueError("Expected number of lineages to be at least 1, found 0.")
 
-        obj = np.asarray(input_array).copy().view(cls)
+        obj = np.array(input_array, copy=True).view(cls)
         obj._n_lineages = obj.shape[1]
         obj._is_transposed = False
-        obj.names = names
+        obj.names = names  # these always create a copy, which is a good thing
         obj.colors = colors
 
         return obj
@@ -252,7 +253,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
     def view(self, dtype=None, type=None) -> "LineageView":
         """Return a view of self."""
-        return LineageView(self, names=self.names, colors=self.colors)
+        return LineageView(self)
 
     def __array_finalize__(self, obj) -> None:
         if obj is None:
@@ -260,14 +261,17 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
         _names = getattr(obj, "_names", None)
         if _names is not None:
+            self._names = _names
             self._n_lineages = len(_names)
-            self.names = _names
+            self._names_to_ixs = {n: i for i, n in enumerate(self.names)}
         else:
             self._names = None
             self._names_to_ixs = None
+            self._n_lineages = getattr(
+                obj, "_n_lineages", obj.shape[1] if obj.ndim == 2 else 0
+            )
 
         self._colors = getattr(obj, "colors", None)
-        self._n_lineages = getattr(obj, "_n_lineages", 0)
         self._is_transposed = getattr(obj, "_is_transposed", False)
 
     def _mixer(self, rows, mixtures):
@@ -628,6 +632,11 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             values = "".join(_DUMMY_CELL for _ in range(self.shape[1]))
             return f"<tr>{values}</tr>"
 
+        if self.names is None or self.colors is None:
+            raise RuntimeError(
+                f"Name or colors are `None`. This can happen when running `array.view({type(self).__name__}`."
+            )
+
         if self.ndim != 2:
             return repr(self)
 
@@ -911,6 +920,44 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 class LineageView(Lineage):
     """Simple view of :class:`cellrank.tools.Lineage`."""
 
+    def __new__(cls, lineage: Lineage) -> "LineageView":
+        """Create a LineageView."""
+        if not isinstance(lineage, Lineage):
+            raise TypeError(
+                f"Cannot create a `{cls.__name__}` of `{type(lineage).__name__}`."
+            )
+
+        view = np.array(lineage, copy=False).view(cls)
+        view._names = lineage.names
+        view._n_lineages = len(view.names)
+        view._names_to_ixs = lineage._names_to_ixs
+        view._colors = lineage.colors
+        view._is_transposed = lineage._is_transposed
+
+        return view
+
+    @property
+    def names(self) -> np.ndarray:
+        """Lineage names."""
+        return super().names
+
+    @names.setter
+    def names(self, _):
+        raise RuntimeError(f"Unable to set names of `{type(self).__name__}`.")
+
+    @property
+    def colors(self) -> np.ndarray:
+        """Lineage colors."""
+        return super().colors
+
+    @colors.setter
+    def colors(self, _):
+        raise RuntimeError(f"Unable to set colors of `{type(self).__name__}`.")
+
+    def view(self, dtype=None, type=None) -> "LineageView":
+        """Return self."""
+        return self
+
     def copy(self, _="C") -> Lineage:
         """Return a copy of itself."""
         was_trasposed = False
@@ -919,7 +966,7 @@ class LineageView(Lineage):
             was_trasposed = True
 
         obj = Lineage(
-            np.array(self, copy=True, order=_ORDER),
+            self,
             names=np.array(self.names, copy=True, order=_ORDER),
             colors=np.array(self.colors, copy=True, order=_ORDER),
         )
