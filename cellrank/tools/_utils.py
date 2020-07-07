@@ -31,7 +31,11 @@ import matplotlib.colors as mcolors
 
 from cellrank import logging as logg
 from cellrank.utils._utils import _get_neighs, _has_neighs, _get_neighs_params
-from cellrank.tools._colors import _convert_to_hex_colors, _insert_categorical_colors
+from cellrank.tools._colors import (
+    _compute_mean_color,
+    _convert_to_hex_colors,
+    _insert_categorical_colors,
+)
 
 AnnData = TypeVar("AnnData")
 
@@ -520,17 +524,6 @@ def _cluster_X(
         )
 
     return list(labels)
-
-
-def _compute_mean_color(color_list: List[str]) -> str:
-    """Compute the mean color."""
-
-    if not all(map(lambda c: mcolors.is_color_like(c), color_list)):
-        raise ValueError(f"Not all values are valid colors `{color_list}`.")
-
-    color_list = np.array([mcolors.to_rgb(c) for c in color_list])
-
-    return mcolors.to_hex(np.mean(color_list, axis=0))
 
 
 def _eigengap(evals: np.ndarray, alpha: float) -> int:
