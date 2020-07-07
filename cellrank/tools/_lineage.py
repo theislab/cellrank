@@ -4,7 +4,7 @@
 from types import FunctionType
 from typing import List, Tuple, Union, TypeVar, Callable, Iterable, Optional
 from inspect import signature
-from functools import wraps
+from functools import wraps, singledispatch
 from itertools import combinations
 
 import numpy as np
@@ -29,7 +29,7 @@ _ERROR_NOT_ITERABLE = "Expected `{}` to be iterable, found type `{}`."
 _ERROR_WRONG_SIZE = "Expected `{}` to be of size `{{}}`, found `{{}}`."
 _HT_CELLS = 10  # head and tail cells to show
 _DUMMY_CELL = "<td style='text-align: right;'>...</td>"
-_ORDER = "F"
+_ORDER = "C"
 
 
 def _at_least_2d(array: np.ndarray, dim: int):
@@ -149,6 +149,7 @@ def _register_handled_functions():
             except ValueError:
                 pass
 
+    handled_fns.pop(np.expand_dims, None)
     handled_fns[np.allclose] = wrap(np.allclose)
     handled_fns[np.array_repr] = wrap(np.array_repr)
     handled_fns[entropy] = wrap(entropy)
@@ -216,7 +217,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
                 f"Input array must be of type `numpy.ndarray`, found `{type(input_array).__name__!r}`"
             )
 
-        obj = np.asfortranarray(input_array).view(cls)
+        obj = np.asarray(input_array).view(cls)
         if obj.ndim == 1:
             obj = np.expand_dims(obj, -1)
         elif obj.ndim > 2:
@@ -317,15 +318,15 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         was_transposed = False
         if self._is_transposed:
             was_transposed = True
+            self = self.T
             if isinstance(item, tuple):
                 item = item[::-1]
-            self = self.T
 
-        obj = self._getitem(item)
+        obj = self.__getitem(item)
 
         return obj.T if was_transposed else obj
 
-    def _getitem(self, item):
+    def __getitem(self, item):
         if isinstance(item, tuple):
             assert (
                 len(item) <= 2
@@ -359,7 +360,10 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
                 ):
                     col = self._maybe_convert_names(col, make_unique=False)
                     return Lineage(
-                        self.X[rows, col], names=["mixture"], colors=["#000000"]
+                        # never remove this expand_dims - it's critical
+                        np.expand_dims(self.X[rows, col], axis=-1),
+                        names=["mixture"],
+                        colors=["#000000"],
                     )
             except TypeError:  # because of range
                 pass
@@ -575,7 +579,8 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
     @property
     def X(self) -> np.ndarray:
         """Convert self to numpy array, losing names and colors."""
-        return np.array(self, copy=False)
+        # TODO: when copy=True, similaity_plot tests fail - rows dont sum to 1
+        return np.array(self, copy=True)
 
     def __repr__(self) -> str:
         return f'{super().__repr__()[:-1]},\n  names([{", ".join(self.names)}]))'
@@ -803,18 +808,17 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         if mode == "dist":
             # compute a set of weights of shape (n_query x n_reference)
             if dist_measure == "cosine_sim":
-                weights = _cosine_sim(reference.copy(), query.copy())
+                weights = _cosine_sim(reference.X, query.X)
             elif dist_measure == "wasserstein_dist":
-                weights = _wasserstein_dist(reference.copy(), query.copy())
+                weights = _wasserstein_dist(reference.X, query.X)
             elif dist_measure == "kl_div":
-                weights = _kl_div(reference.copy(), query.copy())
+                weights = _kl_div(reference.X, query.X)
             elif dist_measure == "js_div":
-                weights = _js_div(reference.copy(), query.copy())
+                weights = _js_div(reference.X, query.X)
             elif dist_measure == "mutual_info":
-                weights = _mutual_info(reference.copy(), query.copy())
+                weights = _mutual_info(reference.X, query.X)
             elif dist_measure == "equal":
-                weights = np.ones((query.shape[1], reference.shape[1]))
-                weights = _row_normalize(weights)
+                weights = _row_normalize(np.ones((query.shape[1], reference.shape[1])))
             else:
                 raise ValueError(f"Invalid distance measure `{dist_measure!r}`.")
 
@@ -889,12 +893,12 @@ class LineageView(Lineage):
         )
 
 
-def _remove_zero_rows(a: Lineage, b: Lineage) -> Tuple[Lineage, Lineage]:
+def _remove_zero_rows(a: np.ndarray, b: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     if a.shape[0] != b.shape[0]:
         raise ValueError("Lineage objects have unequal cell numbers")
 
-    bool_a = (a.X == 0).any(axis=1)
-    bool_b = (b.X == 0).any(axis=1)
+    bool_a = (a == 0).any(axis=1)
+    bool_b = (b == 0).any(axis=1)
     mask = ~np.logical_or(bool_a, bool_b)
 
     logg.warning(
@@ -905,10 +909,21 @@ def _remove_zero_rows(a: Lineage, b: Lineage) -> Tuple[Lineage, Lineage]:
 
 
 def _softmax(X, beta: float = 1):
-    return np.exp(X * beta) / np.sum(np.exp(X * beta), axis=1)[:, None]
+    return np.exp(X * beta) / np.expand_dims(np.sum(np.exp(X * beta), axis=1), -1)
 
 
+@singledispatch
 def _row_normalize(X):
+    pass
+
+
+@_row_normalize.register
+def _(X: Lineage):
+    return X / X.sum(1)
+
+
+@_row_normalize.register
+def _(X: np.ndarray):
     return X / np.expand_dims(X.sum(1), -1)
 
 
@@ -924,7 +939,7 @@ def _cosine_sim(reference, query):
     # normalize these to have 2-norm 1
     reference_n, query_n = _col_normalize(reference, 2), _col_normalize(query, 2)
 
-    return (reference_n.X.T @ query_n.X).T
+    return (reference_n.T @ query_n).T
 
 
 def _point_wise_distance(reference, query, distance):
@@ -940,8 +955,8 @@ def _point_wise_distance(reference, query, distance):
 
     # loop over query and reference columns and compute pairwise wasserstein distances
     weights = np.zeros((query.shape[1], reference.shape[1]))
-    for i, q_d in enumerate(query_n.T.X):
-        for j, r_d in enumerate(reference_n.T.X):
+    for i, q_d in enumerate(query_n.T):
+        for j, r_d in enumerate(reference_n.T):
             weights[i, j] = 1.0 / distance(q_d, r_d)
 
     return weights
@@ -973,7 +988,7 @@ def _mutual_info(reference, query):
     from sklearn.feature_selection import mutual_info_regression
 
     weights = np.zeros((query.shape[1], reference.shape[1]))
-    for i, target in enumerate(query.X.T):
-        weights[i, :] = mutual_info_regression(reference.X, target)
+    for i, target in enumerate(query.T):
+        weights[i, :] = mutual_info_regression(reference, target)
 
     return weights
