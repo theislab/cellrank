@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 import os
-from typing import Union
+from typing import Tuple, Union, Callable
 from pathlib import Path
 
+import numpy as np
 import pytest
 from packaging import version
 
@@ -56,43 +57,46 @@ del version, get_version
 
 def compare(
     *, kind: str = "adata", dirname: Union[str, Path] = None, tol: int = TOL,
-):
-    def _compare_images(expected_path: Union[str, Path], actual_path: Union[str, Path]):
+) -> Callable:
+    def _compare_images(
+        expected_path: Union[str, Path], actual_path: Union[str, Path]
+    ) -> None:
         resize_images_to_same_sizes(expected_path, actual_path)
         res = compare_images(expected_path, actual_path, tol=tol)
         assert res is None, res
 
+    def _prepare_fname(func: Callable) -> Tuple[str, str]:
+        fpath = f"{func.__name__.replace('test_', '')}.png"
+        return fpath, str(fpath[7:] if fpath.startswith("scvelo_") else fpath)
+
+    def _assert_equal(fpath: str) -> None:
+        if dirname is not None:
+            for file in os.listdir(FIGS / dirname):
+                _compare_images(GT_FIGS / dirname / file, FIGS / dirname / file)
+        else:
+            _compare_images(GT_FIGS / fpath, FIGS / fpath)
+
     def compare_cflare_fwd(
-        func,
-    ):  # mustn't use functools.wraps - it think's the fact that `adata` is fixture
-        def decorator(self, adata_cflare_fwd):
+        func: Callable,
+    ) -> Callable:  # mustn't use functools.wraps - it think's the fact that `adata` is fixture
+        def decorator(self, adata_cflare_fwd) -> None:
             adata, mc = adata_cflare_fwd
-            fpath = f"{func.__name__.replace('test_', '')}.png"
-            path = str(fpath[7:] if fpath.startswith("scvelo_") else fpath)
+            fpath, path = _prepare_fname(func)
+
             func(self, adata if kind == "adata" else mc, path)
 
-            if dirname is not None:
-                for file in os.listdir(FIGS / dirname):
-                    _compare_images(GT_FIGS / dirname / file, FIGS / dirname / file)
-            else:
-                _compare_images(GT_FIGS / fpath, FIGS / fpath)
+            _assert_equal(fpath)
 
         return decorator
 
-    def compare_gpcca_fwd(
-        func,
-    ):  # mustn't use functools.wraps - it think's the fact that `adata` is fixture
-        def decorator(self, adata_gpcca_fwd):
+    def compare_gpcca_fwd(func: Callable) -> Callable:
+        def decorator(self, adata_gpcca_fwd) -> None:
             _, gpcca = adata_gpcca_fwd
-            fpath = f"{func.__name__.replace('test_', '')}.png"
-            path = fpath[7:] if fpath.startswith("scvelo_") else fpath
+            fpath, path = _prepare_fname(func)
+
             func(self, gpcca, path)
 
-            if dirname is not None:
-                for file in os.listdir(FIGS / dirname):
-                    _compare_images(GT_FIGS / dirname / file, FIGS / dirname / file)
-            else:
-                _compare_images(GT_FIGS / fpath, FIGS / fpath)
+            _assert_equal(fpath)
 
         assert (
             kind == "gpcca"
@@ -100,13 +104,29 @@ def compare(
 
         return decorator
 
-    if kind not in ("adata", "cflare", "gpcca"):
+    def compare_lineage(func: Callable):
+        def decorator(self, lineage):
+            path, fpath = _prepare_fname(func)
+
+            func(self, lineage, path)
+
+            _assert_equal(fpath)
+
+        assert (
+            kind == "lineage"
+        ), "Function `compare_lineage` only supports `kind='lineage'`."
+
+        return decorator
+
+    if kind not in ("adata", "cflare", "gpcca", "lineage"):
         raise ValueError(
             f"Invalid kind `{kind!r}`. Valid options are `'adata'`, `'cflare'` and `'gpcca'`."
         )
 
     if kind == "gpcca":
         return compare_gpcca_fwd
+    if kind == "lineage":
+        return compare_lineage
 
     return compare_cflare_fwd  # here we hand `kind='adata'`
 
@@ -995,3 +1015,21 @@ class TestComposition:
     @compare()
     def test_composition(self, adata: AnnData, fpath: str):
         cr.pl.composition(adata, "clusters", dpi=DPI, save=fpath)
+
+
+class TestLineage:
+    @compare(kind="lineage")
+    def test_pie(self, lineage: cr.tl.Lineage, fpath: str):
+        lineage.plot_pie(dpi=DPI, save=fpath)
+
+    @compare(kind="lineage")
+    def test_pie_reduction(self, lineage: cr.tl.Lineage, fpath: str):
+        lineage.plot_pie(reduction=np.var, dpi=DPI, save=fpath)
+
+    @compare(kind="lineage")
+    def test_pie_title(self, lineage: cr.tl.Lineage, fpath: str):
+        lineage.plot_pie(title="FOOBAR", dpi=DPI, save=fpath)
+
+    @compare(kind="lineage")
+    def test_pie_t(self, lineage: cr.tl.Lineage, fpath: str):
+        lineage.T.plot_pie(dpi=DPI, save=fpath)

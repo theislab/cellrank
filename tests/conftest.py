@@ -2,6 +2,7 @@
 from typing import Tuple
 
 import numpy as np
+import pytest
 
 import matplotlib
 
@@ -9,7 +10,6 @@ import scanpy as sc
 import scvelo as scv
 from anndata import AnnData
 
-import pytest
 import cellrank as cr
 from cellrank.tools import GPCCA, CFLARE
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
@@ -66,26 +66,23 @@ def _create_cflare(*, backward: bool = False) -> Tuple[AnnData, CFLARE]:
 
     sc.tl.paga(adata, groups="clusters")
 
-    try:
-        vk = VelocityKernel(adata, backward=backward).compute_transition_matrix()
-        ck = ConnectivityKernel(adata, backward=backward).compute_transition_matrix()
-        final_kernel = 0.8 * vk + 0.2 * ck
+    vk = VelocityKernel(adata, backward=backward).compute_transition_matrix()
+    ck = ConnectivityKernel(adata, backward=backward).compute_transition_matrix()
+    final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.CFLARE(final_kernel)
+    mc = cr.tl.CFLARE(final_kernel)
 
-        mc.compute_partition()
-        mc.compute_eig()
-        mc.compute_metastable_states(use=2)  # can fail for small #cells
-        mc.compute_absorption_probabilities()
-        mc.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
+    mc.compute_partition()
+    mc.compute_eig()
+    mc.compute_metastable_states(use=2)
+    mc.compute_absorption_probabilities()
+    mc.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
 
-        assert adata is mc.adata
-        if backward:
-            assert str(LinKey.BACKWARD) in adata.obsm
-        else:
-            assert str(LinKey.FORWARD) in adata.obsm
-    except:
-        mc = None
+    assert adata is mc.adata
+    if backward:
+        assert str(LinKey.BACKWARD) in adata.obsm
+    else:
+        assert str(LinKey.FORWARD) in adata.obsm
 
     return adata, mc
 

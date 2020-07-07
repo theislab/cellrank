@@ -16,7 +16,7 @@ from cellrank.tools._utils import (
     _merge_categorical_series,
     _series_from_one_hot_matrix,
 )
-from cellrank.tools._colors import _map_names_and_colors
+from cellrank.tools._colors import _compute_mean_color, _map_names_and_colors
 
 
 class TestToolsUtils:
@@ -302,7 +302,10 @@ class TestProcessSeries:
         assert isinstance(colors, list)
 
         np.testing.assert_array_equal(res.values, expected.values)
-        assert set(colors) == {"#804000", "#8080ff"}
+        assert set(colors) == {
+            _compute_mean_color(["red", "green"]),
+            _compute_mean_color(["blue", "white"]),
+        }
 
 
 class TestOneHot:

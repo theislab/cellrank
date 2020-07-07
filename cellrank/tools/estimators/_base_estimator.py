@@ -859,7 +859,7 @@ class BaseEstimator(ABC):
 
         show_dp = show_dp and self._dp is not None
         # change the maximum value - the 1 is artificial and obscures the color scaling
-        for col in A.T:
+        for col in A.X.T:  # A keeps its dimensions, use .X
             mask = col != 1
             if np.sum(mask) > 0:
                 max_not_one = np.max(col[mask])
@@ -873,11 +873,12 @@ class BaseEstimator(ABC):
 
         rc_titles = (
             [f"{self._prefix} {rc}" for rc in lineages]
-            + (["Differentiation potential"] if show_dp else [])
+            + (["differentiation potential"] if show_dp else [])
             if title is None
             else title
         )
 
+        A = A.X
         if cluster_key is not None:
             color = [cluster_key] + list(A.T) + ([self._dp] if show_dp else [])
             titles = [cluster_key] + rc_titles
