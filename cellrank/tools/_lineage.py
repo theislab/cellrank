@@ -4,6 +4,7 @@
 from types import FunctionType
 from typing import List, Tuple, Union, TypeVar, Callable, Iterable, Optional
 from inspect import signature
+from pathlib import Path
 from functools import wraps, singledispatch
 from itertools import combinations
 
@@ -695,7 +696,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         title: Optional[str] = None,
         figsize: Optional[Tuple[float, float]] = None,
         dpi: Optional[float] = None,
-        save: Optional[str] = None,
+        save: Optional[Union[Path, str]] = None,
         **kwargs,
     ) -> None:
         """
@@ -720,6 +721,10 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         None
             Nothing, just plots the pie chart.
         """
+        if not callable(reduction):
+            raise TypeError(
+                f"Expected `reduction` to be callable, found `{type(reduction).__name__}`."
+            )
 
         fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
         title = reduction.__name__ if title is None else title
