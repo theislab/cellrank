@@ -764,3 +764,11 @@ class TestLineageSameLengthIndexing:
         np.testing.assert_array_equal(y.X.squeeze(), expected)
         np.testing.assert_array_equal(y.names, ["mixture"])
         np.testing.assert_array_equal(y.colors, ["#000000"])
+
+
+class TestTransposition:
+    def test_double_t(self, lineage: Lineage):
+        x = lineage.T.T
+
+        assert y.shape == lineage.shape
+        np.testing.assert_array_equal(x.lineage)
