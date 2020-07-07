@@ -2,17 +2,16 @@
 from collections import defaultdict
 from html.parser import HTMLParser
 
+import matplotlib.colors as colors
+
 import mock
 import numpy as np
 import pytest
-from pandas import DataFrame
-
-import matplotlib.colors as colors
-
 import cellrank.tools._lineage as mocker  # noqa
+from pandas import DataFrame
 from cellrank.tools import Lineage
 from cellrank.tools._colors import _compute_mean_color, _create_categorical_colors
-from cellrank.tools._lineage import _HT_CELLS
+from cellrank.tools._lineage import _HT_CELLS, LineageView
 from cellrank.tools._constants import Lin
 
 
@@ -958,3 +957,23 @@ class TestUfuncs:
         y = lineage.sum(axis=None)
 
         np.testing.assert_array_equal(y.names, ["sum"])
+
+
+class TestView:
+    def test_shares_memory(self, lineage: Lineage):
+        x = lineage.view()
+
+        assert x.owner is lineage
+        assert isinstance(x.T, LineageView)
+        assert np.shares_memory(x.X, lineage.X)
+        assert np.shares_memory(x.names, lineage.names)
+        assert np.shares_memory(x.colors, lineage.colors)
+        assert x._names_to_ixs is lineage._names_to_ixs
+
+    def test_unable_to_set_attributes(self, lineage: Lineage):
+        x = lineage.view()
+        with pytest.raises(RuntimeError):
+            x.names = lineage.names[::-1]
+
+        with pytest.raises(RuntimeError):
+            x.colors = lineage.colors[::-1]
