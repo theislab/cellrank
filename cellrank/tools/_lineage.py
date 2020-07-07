@@ -18,17 +18,22 @@ import matplotlib.pyplot as plt
 from cellrank import logging as logg
 from cellrank.tools._utils import (
     save_fig,
-    _compute_mean_color,
     _convert_lineage_name,
     _unique_order_preserving,
 )
-from cellrank.tools._colors import _get_bg_fg_colors, _create_categorical_colors
+from cellrank.tools._colors import (
+    _get_bg_fg_colors,
+    _compute_mean_color,
+    _create_categorical_colors,
+)
 from cellrank.tools._constants import Lin
 
 ColorLike = TypeVar("ColorLike")
 _ERROR_NOT_ITERABLE = "Expected `{}` to be iterable, found type `{}`."
 _ERROR_WRONG_SIZE = "Expected `{}` to be of size `{{}}`, found `{{}}`."
+
 _HT_CELLS = 10  # head and tail cells to show
+_HTML_REPR_THRESH = 100
 _DUMMY_CELL = "<td style='text-align: right;'>...</td>"
 _ORDER = "C"
 
@@ -216,17 +221,22 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
         if not isinstance(input_array, np.ndarray):
             raise TypeError(
-                f"Input array must be of type `numpy.ndarray`, found `{type(input_array).__name__!r}`"
+                f"Input array must be of type `numpy.ndarray`, found `{type(input_array).__name__!r}`."
             )
+
+        if input_array.ndim == 1:
+            input_array = np.expand_dims(input_array, -1)
+        elif input_array.ndim > 2:
+            raise ValueError(
+                f"Input array must be 2-dimensional, found `{input_array.ndim}`."
+            )
+
+        if input_array.shape[0] == 0:
+            raise ValueError("Expected number cells to be at least 1, found 0.")
+        if input_array.shape[1] == 0:
+            raise ValueError("Expected number of lineages to be at least 1, found 0.")
 
         obj = np.asarray(input_array).view(cls)
-        if obj.ndim == 1:
-            obj = np.expand_dims(obj, -1)
-        elif obj.ndim > 2:
-            raise ValueError(
-                f"Input array must be 2-dimensional, found `{obj.ndim}` dimensions."
-            )
-
         obj._n_lineages = obj.shape[1]
         obj._is_transposed = False
         obj.names = names
@@ -602,7 +612,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             rng = (
                 range(self.shape[1])
                 if not self._is_transposed
-                or (self._is_transposed and self.shape[1] <= 100)
+                or (self._is_transposed and self.shape[1] <= _HTML_REPR_THRESH)
                 else list(range(_HT_CELLS))
                 + [...]
                 + list(range(self.shape[1] - _HT_CELLS - 1, self.shape[1] - 1))
@@ -630,7 +640,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         names = [f"<th style={style}>{n}</th>" for n, style in zip(self.names, styles)]
         header = f"<tr>{''.join(names)}</tr>"
 
-        if self.shape[0] > 100:
+        if self.shape[0] > _HTML_REPR_THRESH:
             body = "".join(format_row(i) for i in range(_HT_CELLS))
             body += dummy_row()
             body += "".join(

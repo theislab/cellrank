@@ -274,3 +274,14 @@ def _map_names_and_colors(
         if process_colors
         else association_df["name"]
     )
+
+
+def _compute_mean_color(color_list: List[str]) -> str:
+    """Compute the mean color."""
+
+    if not all(map(lambda c: mcolors.is_color_like(c), color_list)):
+        raise ValueError(f"Not all values are valid colors `{color_list}`.")
+
+    color_list = np.array([mcolors.rgb_to_hsv(mcolors.to_rgb(c)) for c in color_list])
+
+    return mcolors.to_hex(mcolors.hsv_to_rgb(np.mean(color_list, axis=0)))

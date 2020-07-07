@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+from collections import defaultdict
+from html.parser import HTMLParser
+
 import mock
 import numpy as np
 import pytest
@@ -6,11 +9,37 @@ from pandas import DataFrame
 
 import matplotlib.colors as colors
 
-import cellrank.tools._lineage as mocker
+import cellrank.tools._lineage as mocker  # noqa
 from cellrank.tools import Lineage
-from cellrank.tools._utils import _compute_mean_color
-from cellrank.tools._colors import _create_categorical_colors
+from cellrank.tools._colors import _compute_mean_color, _create_categorical_colors
+from cellrank.tools._lineage import _HT_CELLS
 from cellrank.tools._constants import Lin
+
+
+class SimpleHTMLValidator(HTMLParser):
+    _expected_tags = {"table", "div", "tr", "th", "td", "p"}
+
+    def __init__(self, n_expected_rows: int, n_expected_cells: int, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._cnt = defaultdict(int)
+        self._n_rows = 0
+        self._n_cells = 0
+
+        self._n_expected_rows = n_expected_rows
+        self._n_expected_cells = n_expected_cells
+
+    def handle_starttag(self, tag, attrs):
+        self._cnt[tag] += 1
+        self._n_rows += tag == "tr"
+        self._n_cells += tag == "td"
+
+    def handle_endtag(self, tag):
+        self._cnt[tag] -= 1
+
+    def validate(self):
+        assert self._n_cells == self._n_expected_cells
+        assert set(self._cnt.keys()) == self._expected_tags
+        assert set(self._cnt.values()) == {0}
 
 
 class TestLineageCreation:
@@ -23,6 +52,29 @@ class TestLineageCreation:
         np.testing.assert_array_equal(l, x)
         np.testing.assert_array_equal(l.names, np.array(names))
         np.testing.assert_array_equal(l.colors, np.array(colors))
+
+    def test_zero_cells(self):
+        with pytest.raises(ValueError):
+            Lineage(np.zeros((0, 2)), names=["foo", "bar"])
+
+    def test_zero_lineages(self):
+        with pytest.raises(ValueError):
+            Lineage(np.zeros((10, 0)), names=[])
+
+    def test_non_null_1d(self):
+        l = Lineage(np.zeros((10,)), names=["foo"])
+
+        assert isinstance(l, Lineage)
+        assert l.shape == (10, 1)
+        np.testing.assert_array_equal(l, 0)
+
+    def test_from_lineage(self, lineage: Lineage):
+        y = Lineage(lineage, names=lineage.names)
+
+        assert not np.shares_memory(y.X, lineage.X)
+        np.testing.assert_array_equal(y, lineage)
+        np.testing.assert_array_equal(y.names, lineage.names)
+        np.testing.assert_array_equal(y.colors, lineage.colors)
 
     def test_wrong_number_of_dimensions(self):
         with pytest.raises(ValueError):
@@ -825,6 +877,47 @@ class TestTransposition:
         assert y.shape == (2, 2)
         np.testing.assert_array_equal(y.names, ["baz", "bar"])
         np.testing.assert_array_equal(y, lineage[[3, 5], ["baz", "bar"]].T)
+
+
+class TestHTMLRepr:
+    def test_normal_run(self, lineage):
+        p = SimpleHTMLValidator(
+            n_expected_rows=lineage.shape[0] + 1,
+            n_expected_cells=int(np.prod(lineage.shape)),
+        )
+        p.feed(lineage._repr_html_())
+
+        p.validate()
+
+    def test_normal_run_transpose(self, lineage):
+        p = SimpleHTMLValidator(
+            n_expected_rows=lineage.shape[1],
+            n_expected_cells=int(np.prod(lineage.shape)),
+        )
+        p.feed(lineage.T._repr_html_())
+
+        p.validate()
+
+    def test_stripped(self):
+        lineage = Lineage(np.zeros((1000, 4)), names=["foo", "bar", "baz", "quux"])
+        # +2 for header and ...
+        p = SimpleHTMLValidator(
+            n_expected_rows=_HT_CELLS * 2 + 2,
+            n_expected_cells=(_HT_CELLS * 2 + 1) * lineage.shape[1],
+        )
+        p.feed(lineage._repr_html_())
+
+        p.validate()
+
+    def test_stripped_transpose(self):
+        lineage = Lineage(np.zeros((1000, 2)), names=["foo", "bar"])
+        p = SimpleHTMLValidator(
+            n_expected_rows=lineage.shape[1],
+            n_expected_cells=(_HT_CELLS * 2 + 1) * lineage.shape[1],
+        )
+        p.feed(lineage.T._repr_html_())
+
+        p.validate()
 
 
 class TestUfuncs:
