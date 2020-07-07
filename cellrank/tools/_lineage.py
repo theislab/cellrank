@@ -1,16 +1,22 @@
 # -*- coding: utf-8 -*-
 """Lineage class module."""
 
+from types import FunctionType
 from typing import List, Tuple, Union, TypeVar, Callable, Iterable, Optional
+from inspect import signature
+from functools import wraps
 from itertools import combinations
 
 import numpy as np
 import pandas as pd
+from scipy.stats import entropy
 
 import matplotlib.colors as c
+import matplotlib.pyplot as plt
 
 from cellrank import logging as logg
 from cellrank.tools._utils import (
+    save_fig,
     _compute_mean_color,
     _convert_lineage_name,
     _unique_order_preserving,
@@ -21,13 +27,165 @@ from cellrank.tools._constants import Lin
 ColorLike = TypeVar("ColorLike")
 _ERROR_NOT_ITERABLE = "Expected `{}` to be iterable, found type `{}`."
 _ERROR_WRONG_SIZE = "Expected `{}` to be of size `{{}}`, found `{{}}`."
+_HT_CELLS = 10  # head and tail cells to show
+_DUMMY_CELL = "<td style='text-align: right;'>...</td>"
+_ORDER = "F"
 
 
 def _at_least_2d(array: np.ndarray, dim: int):
     return np.expand_dims(array, dim) if array.ndim < 2 else array
 
 
-class Lineage(np.ndarray):
+def wrap(numpy_func: Callable) -> Callable:
+    """
+    Wrap an numpy function.
+
+    Modifies functionality of some function (e.g. ignoring `.squeeze`, retaining dimensions).
+
+    Params
+    ------
+    numpy_func
+        Function to be wrapped.
+
+    Returns
+    -------
+    :class:`Callable`
+        Wrapped function which takes a :class:`cellrank.tl.Lineage` and return :class:`cellrank.tl.Lineage`.
+
+    """
+
+    @wraps(numpy_func)
+    def decorator(array, *args, **kwargs):
+        if not isinstance(array, Lineage):
+            raise TypeError(
+                f"Expected array to be of type `Lineage`, found `{type(array).__name__}`."
+            )
+        if fname == "squeeze":
+            return array
+
+        if "axis" in kwargs:
+            axis = kwargs["axis"]
+        elif axis_ix < len(args):
+            axis = args[axis_ix]
+        else:
+            axis = default_axis
+
+        res = np.array(numpy_func(array.X, *args, **kwargs), copy=False)
+
+        # handle expand_dim
+        if res.ndim > 2:
+            return array
+        if array.ndim < res.ndim:
+            names = (
+                array.names
+                if hasattr(array, "names")
+                and array.names is not None
+                and len(array.names) == res.shape[1]
+                else [f"Lineage {i}" for i in range(res.shape[1])]
+            )
+            return Lineage(res, names=names)
+
+        # handle reductions
+        if not res.shape:
+            return Lineage(np.array([[res]]), names=[fname], colors=["grey"])
+        if res.shape == array.shape:
+            return Lineage(res, names=array.names, colors=array.colors)
+
+        res = np.expand_dims(res, axis)
+
+        is_t = int(array._is_transposed)
+        if is_t:
+            res = res.T
+
+        lin = None
+        if res.shape[0] == array.shape[is_t]:
+            lin = Lineage(
+                res, names=[f"{fname} of {', '.join(array.names)}"], colors=["grey"],
+            )
+
+        if res.shape[1] == array.shape[1 - is_t]:
+            lin = Lineage(res, names=[f"{fname} of {n}" for n in array.names])
+
+        if lin is not None:
+            return lin.T if is_t else lin
+
+        raise RuntimeError(
+            f"Unable to interpret result of function `{fname}` called "
+            f"with args `{args}`, kwargs: `{kwargs}`."
+        )
+
+    params = signature(numpy_func).parameters
+    if "axis" in params:
+        axis_ix = list(params.keys()).index("axis") - 1
+        default_axis = params["axis"].default
+    else:
+        axis_ix = 256
+        default_axis = None
+    assert (
+        axis_ix >= 0
+    ), f"Expected argument `'axis'` not to be first for function `{numpy_func.__name__}`."
+
+    fname = numpy_func.__name__
+    if fname == "amin":
+        fname = "min"
+    elif fname == "amax":
+        fname = "max"
+
+    return decorator
+
+
+def _register_handled_functions():
+    handled_fns = {}
+
+    for attrname in dir(np):
+        fn = getattr(np, attrname)
+        if isinstance(fn, FunctionType):
+            try:
+                sig = signature(fn)
+                if "axis" in sig.parameters.keys():
+                    handled_fns[fn] = wrap(fn)
+            except ValueError:
+                pass
+
+    handled_fns[np.allclose] = wrap(np.allclose)
+    handled_fns[entropy] = wrap(entropy)
+
+    return handled_fns
+
+
+_HANDLED_FUNCTIONS = _register_handled_functions()
+
+
+class LineageMeta(type):
+    """
+    Metaclass for Lineaage.
+
+    Registers functions which are handled by us and overloads common attibutes, such as `.sum` with thse functions.
+    """
+
+    _overload = dict(  # noqa
+        sum=np.sum,
+        mean=np.mean,
+        min=np.min,
+        argmin=np.argmin,
+        max=np.max,
+        argmax=np.argmax,
+        std=np.std,
+        squeeze=np.squeeze,
+        entropy=entropy,
+    )
+
+    def __new__(cls, clsname, superclasses, attributedict):  # noqa
+        res = type.__new__(cls, clsname, superclasses, attributedict)
+        for attrname, fn in LineageMeta._overload.items():
+            wrapped_fn = _HANDLED_FUNCTIONS.get(fn, None)
+            if wrapped_fn:
+                setattr(res, attrname, wrapped_fn)
+
+        return res
+
+
+class Lineage(np.ndarray, metaclass=LineageMeta):
     """
     Lightweight :class:`numpy.ndarray` wrapper that adds names and colors.
 
@@ -55,7 +213,7 @@ class Lineage(np.ndarray):
                 f"Input array must be of type `numpy.ndarray`, found `{type(input_array).__name__!r}`"
             )
 
-        obj = np.asarray(input_array).view(cls)
+        obj = np.asfortranarray(input_array).view(cls)
         if obj.ndim == 1:
             obj = np.expand_dims(obj, -1)
         elif obj.ndim > 2:
@@ -68,6 +226,10 @@ class Lineage(np.ndarray):
         obj.colors = colors
 
         return obj
+
+    @property
+    def _is_transposed(self):
+        return self.ndim == 2 and self.shape[1] != len(self.names)
 
     def view(self, dtype=None, type=None) -> "LineageView":
         """Return a view of self."""
@@ -92,6 +254,8 @@ class Lineage(np.ndarray):
         def update_entries(key):
             if key:
                 res.append(self[rows, key].X.sum(1))
+                # item = (key, rows) if self._is_transposed else (rows, key)
+                # res.append(self[item].X.sum(int(not self._is_transposed)))
                 names.append(" or ".join(self.names[key]))
                 colors.append(_compute_mean_color(self.colors[key]))
 
@@ -144,10 +308,32 @@ class Lineage(np.ndarray):
                 raise ValueError(f"Invalid `Lin` enum `{lin_kind}`.")
 
         res = np.stack(res, axis=-1)
-
         return Lineage(res, names=names, colors=colors)
 
     def __getitem__(self, item) -> "Lineage":
+        was_transposed = False
+        if self._is_transposed:
+            was_transposed = True
+            if isinstance(item, tuple):
+                item = item[::-1]
+            self = self.T
+
+        obj = self._getitem(item)
+
+        return obj.T if was_transposed else obj
+
+    def _getitem(self, item):
+        if isinstance(item, tuple):
+            assert (
+                len(item) <= 2
+            ), f"Expected key to be of length `2`, found `{len(item)}`."
+            item = list(item)
+            if item[0] is Ellipsis or item[0] is None:
+                item[0] = range(self.shape[0])
+            if len(item) == 2 and (item[1] is Ellipsis or item[1] is None):
+                item[1] = range(self.shape[1])
+            item = tuple(item)
+
         is_tuple_len_2 = (
             isinstance(item, tuple)
             and len(item) == 2
@@ -218,6 +404,7 @@ class Lineage(np.ndarray):
             )
             item_0 = _at_least_2d(item_0, -1)
             item_1 = _at_least_2d(item_1, 0)
+
             if item_1.dtype == np.bool:
                 if item_0.dtype != np.bool:
                     if not issubclass(item_0.dtype.type, np.integer):
@@ -241,6 +428,7 @@ class Lineage(np.ndarray):
                         else np.argsort(item_1[0, :])
                     )
                     item_1 = _at_least_2d(np.isin(np.arange(self.shape[1]), item_1), 0)
+
                 item = item_0 * item_1
                 shape = np.max(np.sum(item, axis=0)), np.max(np.sum(item, axis=1))
                 col = np.where(np.all(item_1, axis=0))[0]
@@ -248,6 +436,7 @@ class Lineage(np.ndarray):
                 item = (item_0, item_1)
 
         obj = super().__getitem__(item)
+
         if shape is not None:  # keep the resulting shape
             obj = obj.reshape(shape)
         if row_order is not None:
@@ -264,6 +453,16 @@ class Lineage(np.ndarray):
             obj._names_to_ixs = {name: i for i, name in enumerate(obj._names)}
 
         return obj
+
+    def __array_function__(self, func, types, args, kwargs):
+        if func not in _HANDLED_FUNCTIONS:
+            return NotImplemented
+        # Note: this allows subclasses that don't override
+        # __array_function__ to handle MyArray objects
+        if not all(issubclass(t, type(self)) for t in types):
+            return NotImplemented
+
+        return _HANDLED_FUNCTIONS[func](*args, **kwargs)
 
     @property
     def names(self) -> np.ndarray:
@@ -324,7 +523,6 @@ class Lineage(np.ndarray):
                 elif default is not None:
                     if isinstance(default, str):
                         if default not in self._names_to_ixs:
-                            # TODO: names_to_ixs is not being properly updated
                             raise KeyError(
                                 f"Invalid lineage name: `{name}`. "
                                 f"Valid names are: `{list(self.names)}`."
@@ -374,56 +572,65 @@ class Lineage(np.ndarray):
     @property
     def X(self) -> np.ndarray:
         """Convert self to numpy array, losing names and colors."""
-        return np.array(self)
+        return np.array(self, copy=False)
 
     def __repr__(self) -> str:
         return f'{super().__repr__()[:-1]},\n  names([{", ".join(self.names)}]))'
 
     def __str__(self):
-        return f'{super().__str__()}\n names=[{", ".join(self.names)}])'
+        return f'{super().__str__()}\n names=[{", ".join(self.names)}]'
 
     def _repr_html_(self) -> str:
         def format_row(r):
-            cells = "".join(
-                f"<td style='text-align: right;'>"
-                f"{super(type(self), self).__getitem__((r, c)):.06f}"
-                f"</td>"
-                for c in range(self.shape[1])
+            rng = (
+                range(self.shape[1])
+                if not self._is_transposed
+                or (self._is_transposed and self.shape[1] <= 100)
+                else list(range(_HT_CELLS))
+                + [...]
+                + list(range(self.shape[1] - _HT_CELLS - 1, self.shape[1] - 1))
             )
-            return f"<tr>{cells}</tr>"
+
+            cells = "".join(
+                f"<td style='text-align: right;'>" f"{self.X[r, c]:.06f}" f"</td>"
+                if isinstance(c, int)
+                else _DUMMY_CELL
+                for c in rng
+            )
+            return f"<tr>{(names[r] if self._is_transposed else '') + cells}</tr>"
 
         def dummy_row():
-            values = "".join(
-                "<td style='text-align: right;'>...</td>" for _ in range(self.shape[1])
-            )
+            values = "".join(_DUMMY_CELL for _ in range(self.shape[1]))
             return f"<tr>{values}</tr>"
 
-        show_n_cells_head_tail = 10
+        if self.ndim != 2:
+            return repr(self)
+
         styles = [
             f"'background-color: {bg}; color: {fg}; text-align: center; word-wrap: break-word; max-width: 100px'"
             for bg, fg in map(_get_bg_fg_colors, self.colors)
         ]
-        names = "".join(
-            f"<th style={style}>{n}</th:w:w>" for n, style in zip(self.names, styles)
-        )
-        header = f"<tr>{names}</tr>"
+        names = [f"<th style={style}>{n}</th>" for n, style in zip(self.names, styles)]
+        header = f"<tr>{''.join(names)}</tr>"
 
         if self.shape[0] > 100:
-            body = "".join(format_row(i) for i in range(show_n_cells_head_tail))
+            body = "".join(format_row(i) for i in range(_HT_CELLS))
             body += dummy_row()
             body += "".join(
                 format_row(i)
-                for i in range(
-                    self.shape[0] - show_n_cells_head_tail - 1, self.shape[0] - 1
-                )
+                for i in range(self.shape[0] - _HT_CELLS - 1, self.shape[0] - 1)
             )
         else:
             body = "".join(format_row(i) for i in range(self.shape[0]))
 
         cells = "cells" if self.shape[0] > 1 else "cell"
         lineages = "lineages" if self.shape[1] > 1 else "lineage"
+        if self._is_transposed:
+            cells, lineages = lineages, cells
         metadata = f"<p>{self.shape[0]} {cells} x {self.shape[1]} {lineages}</p>"
 
+        if self._is_transposed:
+            header = ""
         return f"<div style='scoped'><table>{header}{body}</table>{metadata}</div>"
 
     def __setstate__(self, state):
@@ -448,13 +655,57 @@ class Lineage(np.ndarray):
 
         return tuple(res)
 
-    def copy(self, order="C") -> "Lineage":
+    def copy(self, _="F") -> "Lineage":
         """Return a copy of itself."""
         return Lineage(
-            np.array(self, copy=True, order=order),
-            names=np.array(self.names, copy=True, order=order),
-            colors=np.array(self.colors, copy=True, order=order),
+            np.array(self, copy=True, order=_ORDER),
+            names=np.array(self.names, copy=True, order=_ORDER),
+            colors=np.array(self.colors, copy=True, order=_ORDER),
         )
+
+    def plot_pie(
+        self,
+        reduction: Callable = np.mean,
+        title: Optional[str] = None,
+        figsize: Optional[Tuple[float, float]] = None,
+        dpi: Optional[float] = None,
+        save: Optional[str] = None,
+        **kwargs,
+    ) -> None:
+        """
+        Plot a pie chart visualizing the aggregated lineage probabilities.
+
+        Params
+        ------
+        reduction
+            Function that will be applied per lineage.
+        title
+            Title of the figure.
+        figsize
+            Size of the figure.
+        dpi
+            Dots per inch.
+        save
+            Filename where to save the plots.
+            If `None`, just shows the plot.
+
+        Returns
+        -------
+        None
+            Nothing, just plots the pie chart.
+        """
+
+        fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
+        title = reduction.__name__ if title is None else title
+
+        reduction = reduction(self, axis=int(self._is_transposed))
+        ax.pie(reduction.X.squeeze(), labels=self.names, colors=self.colors, **kwargs)
+        ax.set_title(title)
+
+        fig.show()
+
+        if save is not None:
+            save_fig(fig, save)
 
     def reduce(
         self,
@@ -502,6 +753,8 @@ class Lineage(np.ndarray):
         :class:`pandas.DataFrame`
             The weights used for the projection of shape `(n_query x n_reference)`.
         """
+        if self._is_transposed:
+            raise RuntimeError("This matrix seems to be transposed.")
 
         if isinstance(keys, str):
             keys = [keys]
@@ -522,7 +775,7 @@ class Lineage(np.ndarray):
             )
 
         # check the lineage object
-        if not np.allclose(np.sum(self, axis=1), 1.0):
+        if not np.allclose(np.sum(self, axis=1).X, 1.0):
             raise ValueError("Memberships do not sum to one row-wise.")
 
         # check the keys are all in L.names
@@ -617,12 +870,12 @@ class Lineage(np.ndarray):
 class LineageView(Lineage):
     """Simple view of :class:`cellrank.tools.Lineage`."""
 
-    def copy(self, order="C") -> Lineage:
+    def copy(self, _="F") -> Lineage:
         """Return a copy of itself."""
         return Lineage(
-            np.array(self, copy=True, order=order),
-            names=np.array(self.names, copy=True, order=order),
-            colors=np.array(self.colors, copy=True, order=order),
+            np.array(self, copy=True, order=_ORDER),
+            names=np.array(self.names, copy=True, order=_ORDER),
+            colors=np.array(self.colors, copy=True, order=_ORDER),
         )
 
 
