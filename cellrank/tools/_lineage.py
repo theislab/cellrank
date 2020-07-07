@@ -62,6 +62,8 @@ def wrap(numpy_func: Callable) -> Callable:
             )
         if fname == "squeeze":
             return array
+        if fname == "array_repr":
+            return repr(array)
 
         if "axis" in kwargs:
             axis = kwargs["axis"]
@@ -148,6 +150,7 @@ def _register_handled_functions():
                 pass
 
     handled_fns[np.allclose] = wrap(np.allclose)
+    handled_fns[np.array_repr] = wrap(np.array_repr)
     handled_fns[entropy] = wrap(entropy)
 
     return handled_fns
@@ -632,6 +635,13 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         if self._is_transposed:
             header = ""
         return f"<div style='scoped'><table>{header}{body}</table>{metadata}</div>"
+
+    def __format__(self, format_spec):
+        if self.shape == (1, 1):
+            return format_spec.format(self.X[0, 0])
+        if self.shape == (1,):
+            return format_spec.format(self.X[0])
+        return NotImplemented
 
     def __setstate__(self, state):
         *state, names, colors = state
