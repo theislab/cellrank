@@ -11,15 +11,35 @@ from anndata import AnnData
 
 import pytest
 import cellrank as cr
-from cellrank.tools import CFLARE
+from cellrank.tools import GPCCA, CFLARE
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tools._constants import LinKey
 
 matplotlib.use("Agg")
 np.random.seed(42)
 
+_adata_small = sc.read("tests/_ground_truth_adatas/adata_50.h5ad")
+_adata_medium = sc.read("tests/_ground_truth_adatas/adata_100.h5ad")
+_adata_large = sc.read("tests/_ground_truth_adatas/adata_200.h5ad")
+
 
 def _create_dummy_adata(n_obs: int) -> AnnData:
+    """
+    Create a testing :class:`anndata.AnnData` object.
+
+    Call this function to regenerate the above objects.
+
+    Params
+    ------
+    n_obs
+        Number of cells.
+
+    Returns
+    -------
+    :class:`anndata.AnnData`
+        The created adata object.
+    """
+
     np.random.seed(42)
     adata = scv.datasets.toy_data(n_obs=n_obs)
     scv.pp.filter_and_normalize(adata, min_shared_counts=20, n_top_genes=1000)
@@ -36,12 +56,16 @@ def _create_dummy_adata(n_obs: int) -> AnnData:
     adata.uns["connectivity_variances"] = np.ones((n_obs, n_obs), dtype=np.float64)
     adata.uns["velocity_variances"] = np.ones((n_obs, n_obs), dtype=np.float64)
 
+    sc.write(f"_ground_truth_adatas/adata_{n_obs}.h5ad", adata)
+
     return adata
 
 
-def _create_cflare(n_obs: int, *, backward: bool = False) -> Tuple[AnnData, CFLARE]:
-    adata = _create_dummy_adata(n_obs)
+def _create_cflare(*, backward: bool = False) -> Tuple[AnnData, CFLARE]:
+    adata = _adata_medium.copy()
+
     sc.tl.paga(adata, groups="clusters")
+
     try:
         vk = VelocityKernel(adata, backward=backward).compute_transition_matrix()
         ck = ConnectivityKernel(adata, backward=backward).compute_transition_matrix()
@@ -66,9 +90,11 @@ def _create_cflare(n_obs: int, *, backward: bool = False) -> Tuple[AnnData, CFLA
     return adata, mc
 
 
-def _create_gpcca(n_obs: int, *, backward: bool = False) -> Tuple[AnnData, CFLARE]:
-    adata = _create_dummy_adata(n_obs)
+def _create_gpcca(*, backward: bool = False) -> Tuple[AnnData, GPCCA]:
+    adata = _adata_medium.copy()
+
     sc.tl.paga(adata, groups="clusters")
+
     vk = VelocityKernel(adata, backward=backward).compute_transition_matrix()
     ck = ConnectivityKernel(adata, backward=backward).compute_transition_matrix()
     final_kernel = 0.8 * vk + 0.2 * ck
@@ -92,33 +118,31 @@ def _create_gpcca(n_obs: int, *, backward: bool = False) -> Tuple[AnnData, CFLAR
 
 
 @pytest.fixture
-def adata(adata=_create_dummy_adata(50)) -> AnnData:
-    return adata.copy()
+def adata() -> AnnData:
+    return _adata_small.copy()
 
 
 @pytest.fixture
-def adata_large(adata=_create_dummy_adata(200)) -> AnnData:
-    return adata.copy()
+def adata_large() -> AnnData:
+    return _adata_large.copy()
 
 
 @pytest.fixture
 def adata_cflare_fwd(
-    adata_cflare=_create_cflare(100, backward=False)
+    adata_cflare=_create_cflare(backward=False),
 ) -> Tuple[AnnData, CFLARE]:
     adata, cflare = adata_cflare
     return adata.copy(), cflare
 
 
 @pytest.fixture
-def adata_gpcca_fwd(
-    adata_gpcca=_create_gpcca(100, backward=False)
-) -> Tuple[AnnData, CFLARE]:
+def adata_gpcca_fwd(adata_gpcca=_create_gpcca(backward=False)) -> Tuple[AnnData, GPCCA]:
     adata, gpcca = adata_gpcca
     return adata.copy(), gpcca
 
 
 @pytest.fixture
-def adata_cflare(adata_cflare=_create_cflare(100, backward=False)) -> AnnData:
+def adata_cflare(adata_cflare=_create_cflare(backward=False)) -> AnnData:
     return adata_cflare[0].copy()
 
 
