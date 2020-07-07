@@ -151,9 +151,10 @@ def _register_handled_functions():
                 pass
 
     handled_fns.pop(np.expand_dims, None)
+
     handled_fns[np.allclose] = wrap(np.allclose)
     handled_fns[np.array_repr] = wrap(np.array_repr)
-    handled_fns[entropy] = wrap(entropy)
+    handled_fns[entropy] = wrap(entropy)  # qol change
 
     return handled_fns
 
@@ -235,7 +236,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
     @property
     def T(self):
-        """Transposition of self."""
+        """Transpose of self."""
         obj = self.transpose()
         obj._is_transposed = not self._is_transposed
         return obj
@@ -334,9 +335,11 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
     def __getitem(self, item):
         if isinstance(item, tuple):
-            assert (
-                len(item) <= 2
-            ), f"Expected key to be of length `2`, found `{len(item)}`."
+            if len(item) > 2:
+                raise ValueError(
+                    f"Expected key to be of length `2`, found `{len(item)}`."
+                )
+
             item = list(item)
             if item[0] is Ellipsis or item[0] is None:
                 item[0] = range(self.shape[0])
@@ -941,7 +944,7 @@ def _row_normalize(X):
 
 @_row_normalize.register
 def _(X: Lineage):
-    return X / X.sum(1)
+    return X / X.sum(1)  # Lineage is shape-preserving
 
 
 @_row_normalize.register
