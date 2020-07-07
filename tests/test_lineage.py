@@ -130,6 +130,20 @@ class TestLineageCreation:
 
 
 class TestLineageAccessor:
+    def test_too_large_tuple(self, lineage: Lineage):
+        with pytest.raises(ValueError):
+            lineage[0, 0, 0]
+
+    def test_none(self, lineage: Lineage):
+        y = lineage[None, None]
+
+        np.testing.assert_array_equal(y, lineage)
+
+    def test_ellipsis(self, lineage: Lineage):
+        y = lineage[..., ...]
+
+        np.testing.assert_array_equal(y, lineage)
+
     def test_subset_same_instance(self):
         x = np.random.random((10, 3))
         l = Lineage(
@@ -775,9 +789,9 @@ class TestTransposition:
 
     def test_copy(self, lineage: Lineage):
         y = lineage.T.copy()
-        x[0, 0] = -100000
+        lineage[0, 0] = -100000
 
-        assert y is not x
+        assert y is not lineage
         assert y.shape == lineage.shape[::-1]
 
         assert y[0, 0] != lineage[0, 0]
@@ -789,3 +803,49 @@ class TestTransposition:
 
         assert y.shape == (1, lineage.shape[0])
         np.testing.assert_array_equal(y.T, lineage["foo"])
+
+    def test_combined_access(self, lineage: Lineage):
+        y = lineage.T["bar", 0]
+
+        assert y.shape == (1, 1)
+        np.testing.assert_array_equal(y, lineage[0, "bar"])
+
+
+class TestUfuncs:
+    def test_shape_preserving(self, lineage: Lineage):
+        x = np.mean(lineage, axis=0)
+        y = np.mean(lineage, axis=1)
+
+        assert x.shape == (1, x.shape[1])
+        assert y.shape == (y.shape[0], 1)
+
+        np.testing.assert_array_equal(x.X[0, :], np.mean(x.X, axis=0))
+        np.testing.assert_array_equal(y.X[:, 0], np.mean(y.X, axis=1))
+
+    def test_shape_preserving_axis_none(self, lineage: Lineage):
+        y = np.max(lineage, axis=None)
+
+        assert y.shape == (1, 1)
+        assert y.X[0, 0] == np.max(lineage.X)
+
+    def test_expand_dims_not_implemented(self, lineage: Lineage):
+        with pytest.raises(TypeError):
+            np.expand_dims(lineage, -1)
+
+    def test_pretty_naming_axis_0(self, lineage: Lineage):
+        y = lineage.std(axis=0)
+
+        np.testing.assert_array_equal(
+            y.names, ["std of foo", "std of bar", "std of baz", "std of quux"]
+        )
+        np.testing.assert_array_equal(y.colors, lineage.colors)
+
+    def test_pretty_naming_axis_1(self, lineage: Lineage):
+        y = lineage.max(axis=1)
+
+        np.testing.assert_array_equal(y.names, ["max of foo, bar, baz, quux"])
+
+    def test_pretty_naming_axis_None(self, lineage: Lineage):
+        y = lineage.sum(axis=None)
+
+        np.testing.assert_array_equal(y.names, ["sum"])
