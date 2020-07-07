@@ -2,13 +2,14 @@
 from collections import defaultdict
 from html.parser import HTMLParser
 
-import matplotlib.colors as colors
-
 import mock
 import numpy as np
 import pytest
-import cellrank.tools._lineage as mocker  # noqa
 from pandas import DataFrame
+
+import matplotlib.colors as colors
+
+import cellrank.tools._lineage as mocker  # noqa
 from cellrank.tools import Lineage
 from cellrank.tools._colors import _compute_mean_color, _create_categorical_colors
 from cellrank.tools._lineage import _HT_CELLS, LineageView
@@ -977,3 +978,8 @@ class TestView:
 
         with pytest.raises(RuntimeError):
             x.colors = lineage.colors[::-1]
+
+    def test_double_view_owner(self, lineage: Lineage):
+        x = lineage.view().view()
+
+        assert x.owner is lineage
