@@ -8,14 +8,13 @@ from pathlib import Path
 from functools import wraps
 from itertools import combinations
 
-import numpy as np
-import pandas as pd
-from scipy.stats import entropy
-
 import matplotlib.colors as c
 import matplotlib.pyplot as plt
 
+import numpy as np
+import pandas as pd
 from cellrank import logging as logg
+from scipy.stats import entropy
 from cellrank.tools._utils import (
     save_fig,
     _convert_lineage_name,
@@ -928,6 +927,7 @@ class LineageView(Lineage):
             )
 
         view = np.array(lineage, copy=False).view(cls)
+        view._owner = lineage
         view._names = lineage.names
         view._n_lineages = len(view.names)
         view._names_to_ixs = lineage._names_to_ixs
@@ -940,6 +940,11 @@ class LineageView(Lineage):
     def names(self) -> np.ndarray:
         """Lineage names."""
         return super().names
+
+    @property
+    def owner(self) -> Lineage:
+        """Return the lineage associated with this view."""
+        return self._owner
 
     @names.setter
     def names(self, _):
