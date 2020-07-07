@@ -1,3 +1,11 @@
+---
+name: Pull Request
+about: Create a pull request
+title: ""
+labels:
+reviewers: "michalk8"
+---
+
 **IMPORTANT: Please search among the [Pull request](../) before creating one.**
 
 ## Title
