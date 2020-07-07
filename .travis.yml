@@ -10,8 +10,8 @@ os: linux
 cache: pip
 
 env:
-  - USE_SLEPC=true
-  - USE_SLEPC=false
+  - USE_SLEPC=true KRYLOV_EXTRA=false
+  - USE_SLEPC=false KRYLOV_EXTRA=false
 
 jobs:
   #allow_failures:
@@ -31,6 +31,11 @@ jobs:
       osx_image: xcode10.2
       env:
         - PYTHON_VERSION=3.7.3 USE_SLEPC=false
+
+    - name: "Python 3.6 on Linux using extra_requires"
+      python: 3.6
+      env:
+        - KRYLOV_EXTRA=true USE_SLEPC=true
 
 before_install:
   - ./.scripts/ci/before_install.sh
