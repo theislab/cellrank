@@ -3,6 +3,7 @@ import numpy as np
 import pytest
 
 import anndata
+from scanpy import Neighbors
 
 from _helpers import (
     bias_knn,
@@ -679,6 +680,40 @@ class TestKernel:
         T_comb_kernel = comb_kernel.transition_matrix
 
         np.testing.assert_allclose(T_comb_manual.A, T_comb_kernel.A, rtol=_rtol)
+
+    def compare_with_scanpy_density_normalize(self, adata):
+        # check whether cellrank's transition matrix matches scanpy's
+        density_normalize = True
+        ck = ConnectivityKernel(adata).compute_transition_matrix(
+            density_normalize=density_normalize
+        )
+        T_cr = ck.transition_matrix
+
+        neigh = Neighbors(adata)
+        neigh.compute_transitions(density_normalize=density_normalize)
+        T_sc = neigh.transitions
+
+        # check whether these are the same while leaving them sparse
+        assert T_sc.shape == T_cr.shape
+        assert len(T_sc.indices) == len(T_cr.indices)
+        assert np.allclose((T_cr - T_sc).data, 0)
+
+    def compare_with_scanpy(self, adata):
+        # check whether cellrank's transition matrix matches scanpy's
+        density_normalize = False
+        ck = ConnectivityKernel(adata).compute_transition_matrix(
+            density_normalize=density_normalize
+        )
+        T_cr = ck.transition_matrix
+
+        neigh = Neighbors(adata)
+        neigh.compute_transitions(density_normalize=density_normalize)
+        T_sc = neigh.transitions
+
+        # check whether these are the same while leaving them sparse
+        assert T_sc.shape == T_cr.shape
+        assert len(T_sc.indices) == len(T_cr.indices)
+        assert np.allclose((T_cr - T_sc).data, 0)
 
 
 class TestPreviousImplementation:
