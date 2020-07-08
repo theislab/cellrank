@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
     pip3 install -U pip
 elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
@@ -11,7 +13,7 @@ elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
 
         if [[ "$KRYLOV_EXTRA" == "false" ]]; then
             pip_cmd=$(which pip)
-            echo "Installing SLEPC and PETSc"
+            echo "Installing SLEPc and PETSc"
 
             sudo $pip_cmd install mpi4py
 
@@ -20,6 +22,9 @@ elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
 
             sudo $pip_cmd install slepc
             sudo $pip_cmd install slepc4py
+
+            python -c "import slepc; import petsc;"
+            echo "Succesfully installed SLEPc and PETSc"
         fi
     fi
 fi

@@ -38,13 +38,10 @@ jobs:
         - KRYLOV_EXTRA=true USE_SLEPC=true
 
 before_install:
-  - ./.scripts/ci/before_install.sh
+  - ./.scripts/ci/before_install.sh || travis_terminate 1
 
 install:
-  - ./.scripts/ci/install.sh
-
-before_script:
-  - if [[ "$EXTRA_KRYLOV" == "true" ]]; then python -c "import slepc; import petsc" || exit 1; fi
+  - ./.scripts/ci/install.sh || travis_terminate 1
 
 script:
   - travis_wait 15 ./.scripts/ci/test.sh
