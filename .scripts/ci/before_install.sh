@@ -11,7 +11,7 @@ elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
         sudo apt-get update -y
         sudo apt-get install gcc gfortran libopenmpi-dev libblas-dev liblapack-dev -y
 
-        if [[ "$KRYLOV_EXTRA" == "false" ]]; then
+        if [[ "$CACHE_NAME" != "krylov" ]]; then
             pip_cmd=$(which pip)
             echo "Installing SLEPc and PETSc"
 
