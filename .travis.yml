@@ -7,11 +7,12 @@ python:
 
 os: linux
 
-cache: pip
+cache:
+    pip
 
 env:
-  - USE_SLEPC=true KRYLOV_EXTRA=false
-  - USE_SLEPC=false KRYLOV_EXTRA=false
+  - USE_SLEPC=true KRYLOV_EXTRA=false CACHE_NAME=default
+  - USE_SLEPC=false KRYLOV_EXTRA=false CACHE_NAME=default
 
 jobs:
   #allow_failures:
@@ -32,10 +33,10 @@ jobs:
       env:
         - PYTHON_VERSION=3.7.3 USE_SLEPC=false
 
-    - name: "Python 3.6 on Linux using extra_requires"
+    - name: "Python 3.6 on Linux SLEPc using extra_requires"
       python: 3.6
       env:
-        - KRYLOV_EXTRA=true USE_SLEPC=true
+        - KRYLOV_EXTRA=true USE_SLEPC=true CACHE_NAME=krylov
 
 before_install:
   - ./.scripts/ci/before_install.sh || travis_terminate 1
