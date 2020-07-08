@@ -43,6 +43,9 @@ before_install:
 install:
   - ./.scripts/ci/install.sh
 
+before_script:
+  - if [[ "$EXTRA_KRYLOV" == "true" ]]; then python -c "import slepc; import petsc" || exit 1; fi
+
 script:
   - travis_wait 15 ./.scripts/ci/test.sh
 
