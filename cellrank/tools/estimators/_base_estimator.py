@@ -324,6 +324,13 @@ class BaseEstimator(ABC):
         use_initialization
             Only relevant when using an iterative solver. In that case, the solution of absorbing states from the same
             recurrent class can be used as initialization to the iterative solver.
+        n_jobs
+            Number of parallel jobs. If `-1`, use all available cores. If `None` or `1`, the execution is sequential.
+        backend
+            Which backend to use for multiprocessing. Only used when :paramref:`n_jobs` `!=1`.
+            See :class:`joblib.Parallel` for valid options.
+        show_progress_bar
+            Whether to show a progress bar tracking. Only used when :paramref:`n_jobs` `!=1`.
 
         Returns
         -------
