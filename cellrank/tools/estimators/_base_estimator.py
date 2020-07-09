@@ -2,7 +2,18 @@
 """Estimator module."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Tuple, Union, TypeVar, Iterable, Optional, Sequence
+from typing import (
+    Any,
+    Dict,
+    List,
+    Tuple,
+    Union,
+    TypeVar,
+    Callable,
+    Iterable,
+    Optional,
+    Sequence,
+)
 from pathlib import Path
 
 import numpy as np
@@ -11,7 +22,7 @@ import pandas as pd
 from pandas import Series
 from scipy.stats import entropy, ranksums
 from scipy.linalg import solve
-from scipy.sparse import issparse, csr_matrix
+from scipy.sparse import issparse, spmatrix, csr_matrix
 from pandas.api.types import infer_dtype, is_categorical_dtype
 from scipy.sparse.linalg import eigs, gmres
 
@@ -49,6 +60,7 @@ from cellrank.tools._constants import (
     _colors,
     _lin_names,
 )
+from cellrank.utils._parallelize import parallelize
 from cellrank.tools.kernels._kernel import KernelExpression
 
 AnnData = TypeVar("AnnData")
@@ -284,6 +296,9 @@ class BaseEstimator(ABC):
         use_iterative_solver: Optional[bool] = None,
         tol: float = 1e-5,
         use_initialization: bool = True,
+        n_jobs: Optional[int] = 1,
+        backend: str = "multiprocessing",
+        show_progress_bar: bool = True,
     ) -> None:
         """
         Compute absorption probabilities for a Markov chain.
@@ -349,7 +364,7 @@ class BaseEstimator(ABC):
 
         #  create empty lineage object
         if self._lin_probs is not None:
-            logg.debug("DEBUG: Overwriting `.lin_probs`")
+            logg.debug("Overwriting `.lin_probs`")
         self._lin_probs = Lineage(
             np.empty((1, len(colors_))),
             names=metastable_states_.cat.categories,
@@ -391,11 +406,11 @@ class BaseEstimator(ABC):
                 use_iterative_solver = False
         solver = "an interative" if use_iterative_solver else "a direct"
         logg.debug(
-            f"DEBUG: Found {n_cells} cells and {s.shape[1]} absorbing states. Using {solver} solver"
+            f"Found `{n_cells}` cells and `{s.shape[1]}` absorbing states. Using {solver} solver"
         )
 
         if not use_iterative_solver:
-            logg.debug("DEBUG: Densifying matrices for direct solver ")
+            logg.debug("Densifying matrices for direct solver")
             q = q.toarray() if issparse(q) else q
             s = s.toarray() if issparse(s) else s
             eye = np.eye(len(trans_indices))
@@ -416,22 +431,46 @@ class BaseEstimator(ABC):
                 for ix, b in enumerate(B.T):
                     # use the previous problem solution as initialisation
                     if init_indices is not None:
-                        x0 = None if ix in init_indices else x
+                        x0 = (
+                            None
+                            if (init_indices is not None and ix in init_indices)
+                            else x
+                        )
                     else:
                         x0 = None
                     x, info = solver(M, b.toarray().flatten(), tol=tol, x0=x0)
-                    x_list.append(x[:, None])
+                    x_list.append(x)
                     info_list.append(info)
 
-                return np.concatenate(x_list, axis=1), info_list
+                return np.stack(x_list, axis=1), info_list
 
-            logg.debug("DEBUG: Solving the linear system using GMRES")
             init_indices = rec_start_indices if use_initialization else None
-            abs_states, info = flex_solve(eye - q, s, gmres, init_indices=init_indices)
-            if not (all(con == 0 for con in info)):
-                logg.warning("Some linear solves did not converge for GMRES")
+            M = eye - q
+
+            if n_jobs == 1:
+                logg.debug("Solving the linear system using GMRES")
+                abs_states, info = flex_solve(M, s, gmres, init_indices=init_indices)
+            else:
+                logg.debug(f"Solving the linear system using GMRES and `{n_jobs}` core")
+                if use_initialization:
+                    logg.warning(
+                        "Ignoring argument `use_initialization=True` when running in parallel"
+                    )
+                abs_states, info = parallelize(
+                    _flex_solve_parallel,
+                    s.T,
+                    n_jobs=n_jobs,
+                    n_split=s.T.shape[0],
+                    show_progress_bar=show_progress_bar,
+                    as_array=False,
+                    unit="solve",
+                    backend=backend,
+                    extractor=_extractor,
+                )(M=M, solver=gmres, tol=tol)
+            if not all(con == 0 for con in info):
+                logg.warning("Some linear solvers did not converge for GMRES")
         else:
-            logg.debug("DEBUG: Solving the linear system using direct factorization")
+            logg.debug("Solving the linear system using direct factorization")
             abs_states = solve(eye - q, s)
 
         # aggregate to class level by summing over columns belonging to the same metastable_states
@@ -449,7 +488,7 @@ class BaseEstimator(ABC):
         )
 
         if norm_by_frequ:
-            logg.debug("DEBUG: Normalizing by frequency")
+            logg.debug("Normalizing by frequency")
             _abs_classes /= [len(value) for value in rec_classes_red.values()]
         _abs_classes = _normalize(_abs_classes)
 
@@ -1141,3 +1180,14 @@ class BaseEstimator(ABC):
 
     def __str__(self) -> str:
         return f"{self.__class__.__name__}[n={len(self)}, kernel={str(self._kernel)}]"
+
+
+def _flex_solve_parallel(b: spmatrix, M: spmatrix, solver: Callable, tol: float, queue):
+    x, info = solver(M, b.toarray().flatten(), tol=tol)
+    queue.put((1, None))  # 1 - update progress bar, None - signal task is done
+    return x, info
+
+
+def _extractor(x_info: Tuple[np.ndarray, List[int]]):
+    x, info = zip(*x_info)
+    return np.stack(x, axis=1), info
