@@ -91,7 +91,6 @@ def parallelize(
                     raise RuntimeError(
                         f"Received `EOFError`, but only finished `{n_finished} out of `{n_total}` tasks.`"
                     )
-                print("x")
                 break
             assert res in (None, (1, None), 1)  # (None, 1) means only 1 job
             if res == (1, None):
@@ -110,7 +109,7 @@ def parallelize(
         pbar = None if tqdm is None else tqdm(total=col_len, unit=unit)
 
         queue = Manager().Queue()
-        thread = Thread(target=update, args=(pbar, queue, col_len))
+        thread = Thread(target=update, args=(pbar, queue, len(collections)))
         thread.start()
 
         res = jl.Parallel(n_jobs=n_jobs, backend=backend)(
