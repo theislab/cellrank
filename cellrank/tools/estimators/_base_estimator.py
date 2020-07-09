@@ -16,23 +16,22 @@ from typing import (
 )
 from pathlib import Path
 
-import numpy as np
-import scipy
-import pandas as pd
-from pandas import Series
-from scipy.stats import entropy, ranksums
-from scipy.linalg import solve
-from scipy.sparse import issparse, spmatrix, csr_matrix
-from pandas.api.types import infer_dtype, is_categorical_dtype
-from scipy.sparse.linalg import eigs, gmres
-
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 
 import scvelo as scv
 
+import numpy as np
+import scipy
+import pandas as pd
+from pandas import Series
 from cellrank import logging as logg
+from scipy.stats import entropy, ranksums
+from scipy.linalg import solve
+from scipy.sparse import issparse, spmatrix, csr_matrix
+from pandas.api.types import infer_dtype, is_categorical_dtype
+from scipy.sparse.linalg import eigs, gmres
 from cellrank.tools._utils import (
     save_fig,
     _eigengap,
@@ -438,11 +437,7 @@ class BaseEstimator(ABC):
                 for ix, b in enumerate(B.T):
                     # use the previous problem solution as initialisation
                     if init_indices is not None:
-                        x0 = (
-                            None
-                            if (init_indices is not None and ix in init_indices)
-                            else x
-                        )
+                        x0 = None if ix in init_indices else x
                     else:
                         x0 = None
                     x, info = solver(M, b.toarray().flatten(), tol=tol, x0=x0)
