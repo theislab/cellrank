@@ -1403,3 +1403,60 @@ def _colors_in_order(
         color_list.append(adata.uns[f"{cluster_key}_colors"][mask][0])
 
     return color_list
+
+
+def _get_cat_and_null_indices(cat_series: Series):
+    """
+    Given a categorical pandas Series, get the indices corresponding to categories and Nans.
+
+    Parameters
+    --------
+    cat_series
+        Series that contains categorical annotations
+
+    Returns
+    cat_indices
+        numpy array containing the indices of elements corresponding to categories in `cat_series`
+    null_indices
+        numpy array containing the indices of elements corresponding to Nans in `cat_series`
+    lookup_dict
+        dict containing categories of `cat_series` as keys and a numpy array of corresponding indices as values
+    """
+
+    # check the dtype
+    if not (cat_series.dtype == "category"):
+        raise TypeError(
+            f"Expected `cat_series` to be categorical, found {cat_series.dtype}"
+        )
+
+    # define a dict that has category names as keys and arrays of indices as values
+    lookup_dict = {
+        cat: np.where(cat_series == cat)[0] for cat in cat_series.cat.categories
+    }
+    all_indices = np.arange(len(cat_series))
+
+    # collect all category indices
+    cat_indices = np.concatenate(list(lookup_dict.values()))
+
+    # collect all null indices (the ones where we have NaN in `cat_series`)
+    null_indices = np.array([*(set(all_indices) - set(cat_indices))])
+
+    # check that null indices and cat indices are unique
+    assert (
+        np.unique(cat_indices, return_counts=True)[1] == 1
+    ).all(), "Cat indices are not unique"
+    assert (
+        np.unique(null_indices, return_counts=True)[1] == 1
+    ).all(), "Null indices are not unique"
+
+    # check that there is no overlap
+    assert (
+        len(set(cat_indices).intersection(set(null_indices))) == 0
+    ), "Cat and null indices overlap"
+
+    # check that their untion is the set of all indices
+    assert set(cat_indices).union(set(null_indices)) == set(
+        all_indices
+    ), "Some indices got lost on the way"
+
+    return cat_indices, null_indices, lookup_dict
