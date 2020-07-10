@@ -17,19 +17,20 @@ from typing import (
 )
 from itertools import tee, product, combinations
 
+import matplotlib.colors as mcolors
+
 import numpy as np
 import pandas as pd
 from pandas import Series
+from cellrank import logging as logg
 from numpy.linalg import norm as d_norm
-from scipy.sparse import issparse, spmatrix, csr_matrix
+from scipy.linalg import solve
+from scipy.sparse import eye, issparse, spmatrix, csr_matrix
 from sklearn.cluster import KMeans
 from pandas.api.types import infer_dtype, is_categorical_dtype
 from sklearn.neighbors import NearestNeighbors
 from scipy.sparse.linalg import norm as s_norm
-
-import matplotlib.colors as mcolors
-
-from cellrank import logging as logg
+from scipy.sparse.linalg import gmres, lgmres, gcrotmk, bicgstab
 from cellrank.utils._utils import _get_neighs, _has_neighs, _get_neighs_params
 from cellrank.tools._colors import (
     _compute_mean_color,
@@ -44,7 +45,15 @@ ColorLike = TypeVar("ColorLike")
 GPCCA = TypeVar("GPCCA")
 CFLARE = TypeVar("CFLARE")
 DiGraph = TypeVar("DiGraph")
+LinSolver = TypeVar("LinSolver")
 EPS = np.finfo(np.float64).eps
+
+
+def _pairwise(iterable):
+    """Return pairs of elements from an iterable."""
+    a, b = tee(iterable)
+    next(b, None)
+    return zip(a, b)
 
 
 def _create_root_final_annotations(
@@ -1321,8 +1330,8 @@ def _series_from_one_hot_matrix(
 
     Returns
     -------
-    cluster_series
-        Pandas Series, indicating cluster membership for each sample. The dtype of the categories is `str`
+    :class:`pandas.Series`
+        Series, indicating cluster membership for each sample. The data type of the categories is `str`
         and samples that belong to no cluster are assigned `NaN`.
     """
     n_samples, n_clusters = a.shape
@@ -1333,13 +1342,13 @@ def _series_from_one_hot_matrix(
     a = np.asarray(a)  # change the type in case a lineage object was passed.
     if a.dtype != np.bool:
         raise TypeError(
-            f"Expected `a`'s elements to be boolean, found `{a.dtype.name}`."
+            f"Expected `a`'s elements to be boolean, found `{a.dtype.name!r}`."
         )
 
     if not np.all(a.sum(axis=1) <= 1):
         raise ValueError("Not all items are one-hot encoded or empty.")
     if (a.sum(0) == 0).any():
-        logg.warning(f"Detected {np.sum((a.sum(0) == 0))} empty categorie(s) ")
+        logg.warning(f"Detected {np.sum((a.sum(0) == 0))} empty categorie(s)")
 
     if index is None:
         index = range(n_samples)
@@ -1363,32 +1372,33 @@ def _colors_in_order(
     adata: AnnData,
     clusters: Optional[Iterable[str]] = None,
     cluster_key: str = "clusters",
-):
-    """Get list of colors from AnnData in defined order.
+) -> List[Any]:
+    """
+    Get list of colors from AnnData in defined order.
 
     This will extract a list of colors from `adata.uns[cluster_key]` corresponding to the `clusters`, in the
-    order defined by the `clusters`
+    order defined by the `clusters`.
 
-    Parameters
-    --------
+    Params
+    ------
     adata
-        Annotated data matrix
+        Annotated data object.
     clusters
         Subset of the clusters we want the color for. Must be a subset of `adata.obs[cluster_key].cat.categories`
     cluster_key
         Key from `adata.obs`
 
     Returns
-    --------
-    color_list
-        List of colors in order defined by `clusters`
+    -------
+    list
+        List of colors in order defined by `clusters`.
     """
     assert (
         cluster_key in adata.obs.keys()
     ), f"Could not find {cluster_key} in `adata.obs`"
     assert np.in1d(
         clusters, adata.obs[cluster_key].cat.categories
-    ).all(), "Not all `clusters` found"
+    ).all(), "Not all `clusters` found."
     assert (
         f"{cluster_key}_colors" in adata.uns.keys()
     ), f"No colors associated to {cluster_key} in `adata.uns`"
@@ -1403,3 +1413,202 @@ def _colors_in_order(
         color_list.append(adata.uns[f"{cluster_key}_colors"][mask][0])
 
     return color_list
+
+
+def _get_cat_and_null_indices(
+    cat_series: Series,
+) -> Tuple[np.ndarray, np.ndarray, Dict[Any, np.ndarray]]:
+    """
+    Given a categorical :class:`pandas.Series`, get the indices corresponding to categories and NaNs.
+
+    Params
+    ------
+    cat_series
+        Series that contains categorical annotations.
+
+    Returns
+    -------
+    :class: `numpy.ndarray`
+        Array containing the indices of elements corresponding to categories in `cat_series`.
+    :class: `numpy.ndarray`
+        Array containing the indices of elements corresponding to NaNs in `cat_series`.
+    :class:`dict`
+        Dict containing categories of `cat_series` as keys and an array of corresponding indices as values.
+    """
+
+    # check the dtype
+    if cat_series.dtype != "category":
+        raise TypeError(
+            f"Expected `cat_series` to be categorical, found `{cat_series.dtype.name!r}`."
+        )
+
+    # define a dict that has category names as keys and arrays of indices as values
+    lookup_dict = {
+        cat: np.where(cat_series == cat)[0] for cat in cat_series.cat.categories
+    }
+    all_indices = np.arange(len(cat_series))
+
+    # collect all category indices
+    cat_indices = np.concatenate(list(lookup_dict.values()))
+
+    # collect all null indices (the ones where we have NaN in `cat_series`)
+    null_indices = np.array(list(set(all_indices) - set(cat_indices)))
+
+    # check that null indices and cat indices are unique
+    assert (
+        np.unique(cat_indices, return_counts=True)[1] == 1
+    ).all(), "Cat indices are not unique."
+    assert (
+        np.unique(null_indices, return_counts=True)[1] == 1
+    ).all(), "Null indices are not unique."
+
+    # check that there is no overlap
+    assert (
+        len(set(cat_indices).intersection(set(null_indices))) == 0
+    ), "Cat and null indices overlap."
+
+    # check that their untion is the set of all indices
+    assert set(cat_indices).union(set(null_indices)) == set(
+        all_indices
+    ), "Some indices got lost on the way."
+
+    return cat_indices, null_indices, lookup_dict
+
+
+def _solve_lin_system(
+    mat_a: Union[np.ndarray, spmatrix],
+    mat_b: Union[np.ndarray, spmatrix],
+    solver: str = "direct",
+    tol: float = 1e-5,
+    use_eye: bool = False,
+) -> np.ndarray:
+    """
+    Solve `mat_a * x = mat_b` efficiently using either iterative or direct methods.
+
+    This is a utility function which is optimized for the case of `mat_a` and `mat_b` being sparse,
+    and columns in `mat_b` being related. In that case, we can treat each column of `mat_b` as a
+    separate linear problem and solve that efficiently using iterative solvers that exploit sparsity.
+
+    If the columns of `mat_b` are related, we can use the solution of the previous problem as an
+    initial guess for the next problem. Further, we parallelize the individual problems for each
+    column in `mat_b` and solve them on separate kernels.
+
+    In case `mat_a` is either not sparse, or very small, or `mat_b` has very many columns, it makes
+    sense to use a direct solver instead which computes a matrix factorization and thereby solves all
+    subproblems at the same time.
+
+    Params
+    ------
+    mat_a
+        Matrix of shape `n x n`. We make no assumptions on `mat_a` being symmetric or positive definite.
+    mat_b
+        Matrix of shape `n x m`, with m << n.
+    solver
+        Solver to use for the linear problem. Options are `['direct', 'gmres', 'lgmres', 'bicgstab', 'gcrotmk']`.
+        Information on the iterative solvers may be found in :func:`scipy.sparse.linalg`.
+    tol
+        Convergence threshold.
+    use_eye
+        Solve `(I - mat_a) * x = mat_b` instead.
+
+    Returns
+    --------
+    :class:`numpy.ndarray`
+        Matrix of shape `n x m`. Each column corresponds to the solution of one of the subproblems
+        defined via columns in `mat_b`.
+    """
+    # define the set of available solvers
+    available_iterative_solvers = {
+        "gmres": gmres,
+        "lgmres": lgmres,
+        "bicgstab": bicgstab,
+        "gcrotmk": gcrotmk,
+    }
+
+    if solver in available_iterative_solvers.keys():
+        logg.debug(f"Solving the linear system using `{solver}` with `tol={tol}`.")
+
+        # check whether the input is sparse
+        if not issparse(mat_a):
+            logg.warning("Sparsifying `mat_a` for iterative solver.")
+            mat_a = csr_matrix(mat_a)
+        if not issparse(mat_b):
+            logg.warning("Sparsifying `mat_b` for iterative solver.")
+            mat_b = csr_matrix(mat_b)
+
+        if use_eye:
+            mat_a = eye(mat_a.shape[0]) - mat_a
+
+        # call function to solve the linear systems iteratively
+        solver = available_iterative_solvers[solver]
+        mat_x, info = _solve_many_sparse_problems(
+            mat_a=mat_a, mat_b=mat_b, solver=solver, tol=tol,
+        )
+        # check whether all solutions converged
+        if not all(con == 0 for con in info):
+            logg.warning("For some columns in `mat_b`, the solution did not converge.")
+    elif solver == "direct":
+        logg.debug("Solving the linear system using direct matrix factorisation.")
+
+        # check whether the input is dense
+        if issparse(mat_a):
+            logg.warning("Densifying `mat_a` for direct solver.")
+            mat_a = mat_a.toarray()
+        if issparse(mat_b):
+            logg.warning("Densifying `mat_b` for direct solver.")
+            mat_b = mat_b.toarray()
+
+        if use_eye:
+            mat_a = np.eye(mat_a.shape[0]) - mat_a
+
+        # directly solve the linear system
+        mat_x = solve(mat_a, mat_b)
+    else:
+        raise NotImplementedError(f"The solver `{solver}` was not found.")
+
+    return mat_x
+
+
+def _solve_many_sparse_problems(
+    mat_a: spmatrix, mat_b: spmatrix, solver: LinSolver, tol: float = 1e-5,
+) -> Tuple[np.ndarray, List[int]]:
+    """
+    Solve `mat_a * x = mat_b` efficiently using an iterative solver.
+
+    This is a utility function which is optimized for the case of `mat_a` and `mat_b` being sparse,
+    and columns in `mat_b` being related. In that case, we can treat each column of `mat_b` as a
+    separate linear problem and solve that efficiently using iterative solvers that exploit sparsity.
+
+    Params
+    ------
+    mat_a
+        Matrix of shape `n x n`. We make no assumptions on `mat_a` being symmetric or positive definite.
+    mat_b
+        Matrix of shape `n x m`, with m << n.
+    solver
+        Solver to use for the linear problem. Options are `['gmres', 'lgmres', 'bicgstab', 'gcrotmk']`.
+        These can be found in :func:`scipy.sparse.linalg`.
+    tol
+        Convergence threshold.
+
+    Returns
+    -------
+    :class:`numpy.ndarray`
+        Matrix of shape `n x m`. Each column in `mat_x` corresponds to the solution of one of the subproblems
+        defined via columns in `mat_b`.
+    list
+        For each subproblem, the convergence status. 0 stands for successful convergence.
+    """
+
+    # initialise solution list and info list
+    x_list, info_list = [], []
+
+    for b in mat_b.T:
+        # actually call the solver for the current subproblem
+        x, info = solver(mat_a, b.toarray().flatten(), tol=tol, x0=None)
+
+        # append solution and info
+        x_list.append(x)
+        info_list.append(info)
+
+    return np.stack(x_list, axis=1), info_list

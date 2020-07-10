@@ -2,19 +2,16 @@
 """Estimator module."""
 
 from abc import ABC, abstractmethod
-from typing import (
-    Any,
-    Dict,
-    List,
-    Tuple,
-    Union,
-    TypeVar,
-    Callable,
-    Iterable,
-    Optional,
-    Sequence,
-)
+from typing import Any, Dict, List, Tuple, Union, TypeVar, Iterable, Optional, Sequence
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
+from pandas import Series
+from scipy.stats import entropy, ranksums
+from scipy.sparse import issparse
+from pandas.api.types import infer_dtype, is_categorical_dtype
+from scipy.sparse.linalg import eigs
 
 import matplotlib as mpl
 import matplotlib.cm as cm
@@ -22,25 +19,18 @@ import matplotlib.pyplot as plt
 
 import scvelo as scv
 
-import numpy as np
-import scipy
-import pandas as pd
-from pandas import Series
 from cellrank import logging as logg
-from scipy.stats import entropy, ranksums
-from scipy.linalg import solve
-from scipy.sparse import issparse, spmatrix, csr_matrix
-from pandas.api.types import infer_dtype, is_categorical_dtype
-from scipy.sparse.linalg import eigs, gmres
 from cellrank.tools._utils import (
     save_fig,
     _eigengap,
     _make_cat,
+    _pairwise,
     partition,
-    _normalize,
     _vec_mat_corr,
     _process_series,
     _complex_warning,
+    _solve_lin_system,
+    _get_cat_and_null_indices,
     _merge_categorical_series,
     _convert_to_categorical_series,
 )
@@ -59,7 +49,6 @@ from cellrank.tools._constants import (
     _colors,
     _lin_names,
 )
-from cellrank.utils._parallelize import parallelize
 from cellrank.tools.kernels._kernel import KernelExpression
 
 AnnData = TypeVar("AnnData")
@@ -291,13 +280,8 @@ class BaseEstimator(ABC):
         self,
         keys: Optional[Sequence[str]] = None,
         check_irred: bool = False,
-        norm_by_frequ: bool = False,
-        use_iterative_solver: Optional[bool] = None,
+        solver: Optional[str] = None,
         tol: float = 1e-5,
-        use_initialization: bool = True,
-        n_jobs: Optional[int] = 1,
-        backend: str = "multiprocessing",
-        show_progress_bar: bool = True,
     ) -> None:
         """
         Compute absorption probabilities for a Markov chain.
@@ -311,30 +295,22 @@ class BaseEstimator(ABC):
         keys
             Comma separated sequence of keys defining the recurrent classes.
         check_irred
-            Check whether the matrix restricted to the given transient states is irreducible.
-        norm_by_frequ
-            Divide absorption probabilities for `rc_i` by `|rc_i|`.
-        use_iterative_solver
-            Whether to use an iterative solver for the linear system. Makes sense for large problems (> 20k cells)
-            with few final states (<50).
+            Check whether the transition matrix is irreducible.
+        solver
+            Solver to use for the linear problem. Options are `['direct', 'gmres', 'lgmres', 'bicgstab', 'gcrotmk']`.
+            Information on the iterative solvers may be found in :func:`scipy.sparse.linalg`.
+            If is `None`, a solver is chosen automatically, depending on the current problem.
         tol
             Convergence tolerance for the iterative solver. The default is fine for most cases, only consider
             decreasing this for severely ill-conditioned matrices.
-        use_initialization
-            Only relevant when using an iterative solver. In that case, the solution of absorbing states from the same
-            recurrent class can be used as initialization to the iterative solver.
-        n_jobs
-            Number of parallel jobs. If `-1`, use all available cores. If `None` or `1`, the execution is sequential.
-        backend
-            Which backend to use for multiprocessing. Only used when :paramref:`n_jobs` `!=1`.
-            See :class:`joblib.Parallel` for valid options.
-        show_progress_bar
-            Whether to show a progress bar tracking. Only used when :paramref:`n_jobs` `!=1`.
 
         Returns
         -------
         None
-            Nothing, but updates the following fields: :paramref:`lineage_probabilities`, :paramref:`diff_potential`.
+            Nothing, but updates the following fields:
+
+                - :paramref:`lineage_probabilities`
+                - :paramref:`diff_potential`
         """
 
         if self._meta_states is None:
@@ -354,7 +330,6 @@ class BaseEstimator(ABC):
 
         # get the transition matrix
         t = self._T
-        n_cells = t.shape[0]
         if not issparse(t):
             logg.warning(
                 "Attempting to solve a potentially large linear system with dense transition matrix"
@@ -368,9 +343,13 @@ class BaseEstimator(ABC):
             series=self._meta_states, keys=keys, colors=self._meta_states_colors
         )
 
+        # define the dimensions of this problem
+        n_cells = t.shape[0]
+        n_macrostates = len(metastable_states_.cat.categories)
+
         #  create empty lineage object
         if self._lin_probs is not None:
-            logg.debug("Overwriting `.lin_probs`")
+            logg.debug("DEBUG: Overwriting `.lin_probs`")
         self._lin_probs = Lineage(
             np.empty((1, len(colors_))),
             names=metastable_states_.cat.categories,
@@ -384,15 +363,12 @@ class BaseEstimator(ABC):
                 "There is only one recurrent class, all cells will have probability 1 of going there"
             )
 
-        # create arrays of all recurrent and transient indices
-        mask = np.repeat(False, len(metastable_states_))
-        rec_start_indices = [0]
-        for cat in metastable_states_.cat.categories:
-            mask = np.logical_or(mask, metastable_states_ == cat)
-            rec_start_indices.append(np.sum(mask))
-        rec_indices, trans_indices = np.where(mask)[0], np.where(~mask)[0]
+        # get indices corresponding to recurrent and transient states
+        rec_indices, trans_indices, lookup_dict = _get_cat_and_null_indices(
+            metastable_states_
+        )
 
-        # create Q (restriction transient-transient), S (restriction transient-recurrent) and I (Q-sized identity)
+        # create Q (restriction transient-transient), S (restriction transient-recurrent)
         q = t[trans_indices, :][:, trans_indices]
         s = t[trans_indices, :][:, rec_indices]
 
@@ -400,102 +376,40 @@ class BaseEstimator(ABC):
             if self._is_irreducible is None:
                 self.compute_partition()
             if not self._is_irreducible:
-                logg.warning("Restriction Q is not irreducible")
+                logg.warning("The transition matrix is not irreducible")
 
         # determine whether it makes sense you use a iterative solver
-        if use_iterative_solver is None:
+        if solver is None:
             if issparse(t) and n_cells > 1e4 and s.shape[1] < 100:
-                use_iterative_solver = True
+                solver = "gmres"
             elif issparse(t) and n_cells > 5 * 1e5:
-                use_iterative_solver = True
+                solver = "gmres"
             else:
-                use_iterative_solver = False
-        solver = "an interative" if use_iterative_solver else "a direct"
-        logg.debug(
-            f"Found `{n_cells}` cells and `{s.shape[1]}` absorbing states. Using {solver} solver"
-        )
+                solver = "direct"
+        logg.debug(f"Found `{n_cells}` cells and `{s.shape[1]}` absorbing states")
 
-        if not use_iterative_solver:
-            logg.debug("Densifying matrices for direct solver")
-            q = q.toarray() if issparse(q) else q
-            s = s.toarray() if issparse(s) else s
-            eye = np.eye(len(trans_indices))
-        else:
-            if not issparse(q):
-                q = csr_matrix(q)
-            if not issparse(s):
-                s = csr_matrix(s)
-            eye = scipy.sparse.eye(len(trans_indices))
+        # create a list storing information on related subproblems
+        counter = 0
+        macro_ix_helper = [0]
+        class_sizes = [len(indices) for indices in lookup_dict.values()]
+        for c in class_sizes:
+            counter += c
+            macro_ix_helper.append(counter)
 
-        # compute abs probs. Since we don't expect sparse solution, dense computation is faster.
-        if use_iterative_solver:
+        # solve the linear system of equations
+        mat_x = _solve_lin_system(q, s, solver=solver, tol=tol, use_eye=True,)
 
-            def flex_solve(M, B, solver=gmres, init_indices=None):
-                # solve a series of linear problems using an iterative solver
-                x_list, info_list = [], []
-                x = None
-                for ix, b in enumerate(B.T):
-                    # use the previous problem solution as initialisation
-                    if init_indices is not None:
-                        x0 = None if ix in init_indices else x
-                    else:
-                        x0 = None
-                    x, info = solver(M, b.toarray().flatten(), tol=tol, x0=x0)
-                    x_list.append(x)
-                    info_list.append(info)
-
-                return np.stack(x_list, axis=1), info_list
-
-            init_indices = rec_start_indices if use_initialization else None
-            M = eye - q
-
-            if n_jobs == 1:
-                logg.debug("Solving the linear system using GMRES")
-                abs_states, info = flex_solve(M, s, gmres, init_indices=init_indices)
-            else:
-                logg.debug(f"Solving the linear system using GMRES and `{n_jobs}` core")
-                if use_initialization:
-                    logg.warning(
-                        "Ignoring argument `use_initialization=True` when running in parallel"
-                    )
-                abs_states, info = parallelize(
-                    _flex_solve_parallel,
-                    s.T,
-                    n_jobs=n_jobs,
-                    n_split=s.T.shape[0],
-                    show_progress_bar=show_progress_bar,
-                    as_array=False,
-                    unit="solve",
-                    backend=backend,
-                    extractor=_extractor,
-                )(M=M, solver=gmres, tol=tol)
-            if not all(con == 0 for con in info):
-                logg.warning("Some linear solvers did not converge for GMRES")
-        else:
-            logg.debug("Solving the linear system using direct factorization")
-            abs_states = solve(eye - q, s)
-
-        # aggregate to class level by summing over columns belonging to the same metastable_states
-        approx_rc_red = metastable_states_[mask]
-        rec_classes_red = {
-            key: np.where(approx_rc_red == key)[0]
-            for key in approx_rc_red.cat.categories
-        }
+        # take individual solutions and piece them together to get absorption probabilities towards the classes
         _abs_classes = np.concatenate(
             [
-                np.array(abs_states[:, rec_classes_red[key]].sum(1)).flatten()[:, None]
-                for key in approx_rc_red.cat.categories
+                mat_x[:, np.arange(a, b)].sum(1)[:, None]
+                for a, b in _pairwise(macro_ix_helper)
             ],
             axis=1,
         )
 
-        if norm_by_frequ:
-            logg.debug("Normalizing by frequency")
-            _abs_classes /= [len(value) for value in rec_classes_red.values()]
-        _abs_classes = _normalize(_abs_classes)
-
         # for recurrent states, set their self-absorption probability to one
-        abs_classes = np.zeros((self._n_states, len(rec_classes_red)))
+        abs_classes = np.zeros((self._n_states, n_macrostates))
         rec_classes_full = {
             cl: np.where(metastable_states_ == cl)
             for cl in metastable_states_.cat.categories
@@ -506,9 +420,7 @@ class BaseEstimator(ABC):
 
         self._dp = entropy(abs_classes.T)
         self._lin_probs = Lineage(
-            abs_classes,
-            names=list(self._lin_probs.names),
-            colors=list(self._lin_probs.colors),
+            abs_classes, names=self._lin_probs.names, colors=self._lin_probs.colors,
         )
 
         self._adata.obsm[self._lin_key] = self._lin_probs
@@ -1182,14 +1094,3 @@ class BaseEstimator(ABC):
 
     def __str__(self) -> str:
         return f"{self.__class__.__name__}[n={len(self)}, kernel={str(self._kernel)}]"
-
-
-def _flex_solve_parallel(b: spmatrix, M: spmatrix, solver: Callable, tol: float, queue):
-    x, info = solver(M, b.toarray().flatten(), tol=tol)
-    queue.put((1, None))  # 1 - update progress bar, None - signal task is done
-    return x, info
-
-
-def _extractor(x_info: Tuple[np.ndarray, List[int]]):
-    x, info = zip(*x_info)
-    return np.stack(x, axis=1), info
