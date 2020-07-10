@@ -404,13 +404,14 @@ class BaseEstimator(ABC):
 
         # create a list storing information on related subproblems
         counter = 0
-        related_columns_in_b = []
+        macro_ix_helper = [0]
         class_sizes = [len(indices) for indices in lookup_dict.values()]
         for c in class_sizes:
             counter += c
-            related_columns_in_b.append(counter)
+            macro_ix_helper.append(counter)
 
         # solve the linear system of equations
+        related_columns_in_b = macro_ix_helper if use_initialization else None
         mat_x = _solve_lin_system(
             eye - q,
             s,
@@ -423,7 +424,7 @@ class BaseEstimator(ABC):
         _abs_classes = np.concatenate(
             [
                 mat_x[:, np.arange(a, b)].sum(1)[:, None]
-                for a, b in _pairwise(related_columns_in_b)
+                for a, b in _pairwise(macro_ix_helper)
             ],
             axis=1,
         )
