@@ -21,11 +21,13 @@ import numpy as np
 import pandas as pd
 from pandas import Series
 from numpy.linalg import norm as d_norm
+from scipy.linalg import solve
 from scipy.sparse import issparse, spmatrix, csr_matrix
 from sklearn.cluster import KMeans
 from pandas.api.types import infer_dtype, is_categorical_dtype
 from sklearn.neighbors import NearestNeighbors
 from scipy.sparse.linalg import norm as s_norm
+from scipy.sparse.linalg import gmres, lgmres, gcrotmk, bicgstab
 
 import matplotlib.colors as mcolors
 
@@ -44,7 +46,15 @@ ColorLike = TypeVar("ColorLike")
 GPCCA = TypeVar("GPCCA")
 CFLARE = TypeVar("CFLARE")
 DiGraph = TypeVar("DiGraph")
+LinSolver = TypeVar("LinSolver")
 EPS = np.finfo(np.float64).eps
+
+
+def _pairwise(iterable):
+    """Return pairs of elements from an iterable."""
+    a, b = tee(iterable)
+    next(b, None)
+    return zip(a, b)
 
 
 def _create_root_final_annotations(
@@ -1460,3 +1470,179 @@ def _get_cat_and_null_indices(cat_series: Series):
     ), "Some indices got lost on the way"
 
     return cat_indices, null_indices, lookup_dict
+
+
+def _solve_lin_system(
+    mat_a: Union[np.ndarray, spmatrix],
+    mat_b: Union[np.ndarray, spmatrix],
+    solver: str = "direct",
+    tol: float = 1e-5,
+    related_columns_in_b: Optional[Iterable] = None,
+):
+    """
+    Solve `mat_a*x = mat_b` efficiently using either iterative or direct methods.
+
+    This is a utility function which is optimized for the case of `mat_a` and `mat_b` being sparse,
+    and columns in `mat_b` being related. In that case, we can treat each column of `mat_b` as a
+    seperate linear problem and solve that efficiently using iterative solvers that exploit sparsity.
+    If the columsn of `mat_b` are related, we can use the solution of the previous problem as an
+    initial guess for the next problem. Further, we parallelize the individual problems for each
+    column in `mat_b` and solve them on separate kernels.
+
+    In case `mat_a` is either not sparse, or very small, or `mat_b` has very many columns, it makes
+    sense to use a direct solver instead which computes a matrix factorization and thereby solves all
+    subproblems at the same time.
+
+    Parameters
+    --------
+    mat_a
+        Matrix of shape `n x n`. We make no assumptions on `mat_a` being symmetric or positive definite.
+    mat_b
+        Matrix of shape `n x m`, with m << n.
+    solver
+        Solver to use for the linear problem. Options are ['direct', 'gmres', 'lgmres', 'bicgstab', 'gcrotmk'].
+        Information on the iterative solvers may be found in `scipy.sparse.linalg`
+    tol
+        Convergence threshold
+    related_columns_in_b
+        A list specifying columns in `mat_b` that we expect to have similar solutions. As an example, [0, 3, 9]
+        would mean that columns 0, 1, 2 are expected to have similar solutions, then 3, 4, 5, 6, 7, 8, and then
+        all remaining columns starting with 9.
+
+    Returns
+    --------
+    mat_x
+        Matrix of shape `n x m`. Each column in `mat_x` corresponds to the solution of one of the subproblems
+        defined via columns in `mat_b`.
+    """
+    n_problems = mat_b.shape[1]
+
+    # define the set of available solvers
+    available_iterative_solvers = {
+        "gmres": gmres,
+        "lgmres": lgmres,
+        "bicgstab": bicgstab,
+        "gcrotmk": gcrotmk,
+    }
+
+    if solver in available_iterative_solvers.keys():
+        logg.debug(
+            f"DEBUG: Solving the linear system using `{solver}` with `tol = {tol}`. "
+        )
+
+        # check whether the input is sparse
+        if not issparse(mat_a):
+            logg.warning("Sparsifying `mat_a` for iterative solver. ")
+            mat_a = csr_matrix(mat_a)
+        if not issparse(mat_b):
+            logg.warning("Sparsifying `mat_b` for iterative solver. ")
+            mat_b = csr_matrix(mat_b)
+
+        # call function to solve the linear systems iteratively
+        solver = available_iterative_solvers[solver]
+        mat_x, info, used_initialisation = _solve_many_sparse_problems(
+            mat_a=mat_a,
+            mat_b=mat_b,
+            solver=solver,
+            tol=tol,
+            related_columns_in_b=related_columns_in_b,
+        )
+        # check whether all solutions converged
+        if not (all(con == 0 for con in info)):
+            logg.warning("For some columns in `mat_b`, the solution did not converge. ")
+
+        # check how often we used clever initialisation
+        if used_initialisation > 0:
+            logg.debug(
+                f"DEBUG: Used the previous subroblem as initialisation in "
+                f"{used_initialisation}/{n_problems} cases. "
+            )
+
+    elif solver == "direct":
+        logg.debug(
+            "DEBUG: Solving the linear system using direct matrix factorisation. "
+        )
+
+        # check whether the input is dense
+        if issparse(mat_a):
+            logg.warning("Densifying `mat_a` for direct solver. ")
+            mat_a = mat_a.toarray()
+        if issparse(mat_b):
+            logg.warning("Densifying `mat_b` for direct solver. ")
+            mat_b = mat_b.toarray()
+
+        # directly solve the linear system
+        mat_x = solve(mat_a, mat_b)
+
+    else:
+        raise NotImplementedError(f"The solver {solver} was not found. ")
+
+    return mat_x
+
+
+def _solve_many_sparse_problems(
+    mat_a: spmatrix,
+    mat_b: spmatrix,
+    solver: LinSolver,
+    tol: float = 1e-5,
+    related_columns_in_b: Optional[Iterable] = None,
+):
+    """
+    Solve `mat_a*x = mat_b` efficiently using an iterative solver.
+
+    This is a utility function which is optimized for the case of `mat_a` and `mat_b` being sparse,
+    and columns in `mat_b` being related. In that case, we can treat each column of `mat_b` as a
+    seperate linear problem and solve that efficiently using iterative solvers that exploit sparsity.
+    If the columsn of `mat_b` are related, we can use the solution of the previous problem as an
+    initial guess for the next problem. Further, we parallelize the individual problems for each
+    column in `mat_b` and solve them on separate kernels.
+
+
+    Parameters
+    --------
+    mat_a
+        Matrix of shape `n x n`. We make no assumptions on `mat_a` being symmetric or positive definite.
+    mat_b
+        Matrix of shape `n x m`, with m << n.
+    solver
+        Solver to use for the linear problem. Options are [gmres, lgmres, bicgstab, gcrotmk]. These
+        can be found in `scipy.sparse.linalg`.
+    tol
+        Convergence threshold.
+    related_columns_in_b
+        A list specifying columns in `mat_b` that we expect to have similar solutions. As an example, [3, 5, 6]
+        would mean that the first 3 columns in `mat_b` define similar problems, then the next 5, and then the
+        next 6.
+
+    Returns
+    --------
+    mat_x
+        Matrix of shape `n x m`. Each column in `mat_x` corresponds to the solution of one of the subproblems
+        defined via columns in `mat_b`.
+    info_list
+        For each subproblem, the convergence status. 0 stands for sucessful convergence.
+    """
+
+    # initialise solution list and info list
+    x_list, info_list = [], []
+    x, x0 = None, None
+    used_initialisation = 0
+
+    for ix, b in enumerate(mat_b.T):
+
+        # use the previous problem solution as initialisation if we expect these problems to be similar
+        if related_columns_in_b is not None:
+            if ix in related_columns_in_b:
+                x0 = None
+            else:
+                x0 = x
+                used_initialisation += 1
+
+        # actually call the solver for the current subproblem
+        x, info = solver(mat_a, b.toarray().flatten(), tol=tol, x0=x0)
+
+        # append solution and info
+        x_list.append(x[:, None])
+        info_list.append(info)
+
+    return np.concatenate(x_list, axis=1), info_list, used_initialisation

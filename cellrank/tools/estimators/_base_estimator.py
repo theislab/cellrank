@@ -10,10 +10,9 @@ import scipy
 import pandas as pd
 from pandas import Series
 from scipy.stats import entropy, ranksums
-from scipy.linalg import solve
 from scipy.sparse import issparse, csr_matrix
 from pandas.api.types import infer_dtype, is_categorical_dtype
-from scipy.sparse.linalg import eigs, gmres
+from scipy.sparse.linalg import eigs
 
 import matplotlib as mpl
 import matplotlib.cm as cm
@@ -26,11 +25,13 @@ from cellrank.tools._utils import (
     save_fig,
     _eigengap,
     _make_cat,
+    _pairwise,
     partition,
-    _normalize,
     _vec_mat_corr,
     _process_series,
     _complex_warning,
+    _solve_lin_system,
+    _get_cat_and_null_indices,
     _merge_categorical_series,
     _convert_to_categorical_series,
 )
@@ -280,8 +281,7 @@ class BaseEstimator(ABC):
         self,
         keys: Optional[Sequence[str]] = None,
         check_irred: bool = False,
-        norm_by_frequ: bool = False,
-        use_iterative_solver: Optional[bool] = None,
+        solver: Optional[str] = None,
         tol: float = 1e-5,
         use_initialization: bool = True,
     ) -> None:
@@ -297,12 +297,11 @@ class BaseEstimator(ABC):
         keys
             Comma separated sequence of keys defining the recurrent classes.
         check_irred
-            Check whether the matrix restricted to the given transient states is irreducible.
-        norm_by_frequ
-            Divide absorption probabilities for `rc_i` by `|rc_i|`.
-        use_iterative_solver
-            Whether to use an iterative solver for the linear system. Makes sense for large problems (> 20k cells)
-            with few final states (<50).
+            Check whether the transition matrix is irreducible.
+        solver
+            Solver to use for the linear problem. Options are ['direct', 'gmres', 'lgmres', 'bicgstab', 'gcrotmk'].
+            Information on the iterative solvers may be found in `scipy.sparse.linalg`. If is `None`, a solver
+            is chosen automatically, depending on the current problem.
         tol
             Convergence tolerance for the iterative solver. The default is fine for most cases, only consider
             decreasing this for severely ill-conditioned matrices.
@@ -333,7 +332,6 @@ class BaseEstimator(ABC):
 
         # get the transition matrix
         t = self._T
-        n_cells = t.shape[0]
         if not issparse(t):
             logg.warning(
                 "Attempting to solve a potentially large linear system with dense transition matrix"
@@ -346,6 +344,10 @@ class BaseEstimator(ABC):
         metastable_states_, colors_ = _process_series(
             series=self._meta_states, keys=keys, colors=self._meta_states_colors
         )
+
+        # define the dimensions of this problem
+        n_cells = t.shape[0]
+        n_macrostates = len(metastable_states_.cat.categories)
 
         #  create empty lineage object
         if self._lin_probs is not None:
@@ -363,13 +365,10 @@ class BaseEstimator(ABC):
                 "There is only one recurrent class, all cells will have probability 1 of going there"
             )
 
-        # create arrays of all recurrent and transient indices
-        mask = np.repeat(False, len(metastable_states_))
-        rec_start_indices = [0]
-        for cat in metastable_states_.cat.categories:
-            mask = np.logical_or(mask, metastable_states_ == cat)
-            rec_start_indices.append(np.sum(mask))
-        rec_indices, trans_indices = np.where(mask)[0], np.where(~mask)[0]
+        # get indices corresponding to recurrent and transient states
+        rec_indices, trans_indices, lookup_dict = _get_cat_and_null_indices(
+            metastable_states_
+        )
 
         # create Q (restriction transient-transient), S (restriction transient-recurrent) and I (Q-sized identity)
         q = t[trans_indices, :][:, trans_indices]
@@ -379,23 +378,20 @@ class BaseEstimator(ABC):
             if self._is_irreducible is None:
                 self.compute_partition()
             if not self._is_irreducible:
-                logg.warning("Restriction Q is not irreducible")
+                logg.warning("The transition matrix is not irreducible. ")
 
         # determine whether it makes sense you use a iterative solver
-        if use_iterative_solver is None:
+        if solver is None:
             if issparse(t) and n_cells > 1e4 and s.shape[1] < 100:
-                use_iterative_solver = True
+                solver = "gmres"
             elif issparse(t) and n_cells > 5 * 1e5:
-                use_iterative_solver = True
+                solver = "gmres"
             else:
-                use_iterative_solver = False
-        solver = "an interative" if use_iterative_solver else "a direct"
-        logg.debug(
-            f"DEBUG: Found {n_cells} cells and {s.shape[1]} absorbing states. Using {solver} solver"
-        )
+                solver = "direct"
+        logg.debug(f"DEBUG: Found {n_cells} cells and {s.shape[1]} absorbing states. ")
 
-        if not use_iterative_solver:
-            logg.debug("DEBUG: Densifying matrices for direct solver ")
+        if solver == "direct":
+            logg.debug("DEBUG: Densifying matrices for direct solver. ")
             q = q.toarray() if issparse(q) else q
             s = s.toarray() if issparse(s) else s
             eye = np.eye(len(trans_indices))
@@ -406,55 +402,34 @@ class BaseEstimator(ABC):
                 s = csr_matrix(s)
             eye = scipy.sparse.eye(len(trans_indices))
 
-        # compute abs probs. Since we don't expect sparse solution, dense computation is faster.
-        if use_iterative_solver:
+        # create a list storing information on related subproblems
+        counter = 0
+        related_columns_in_b = []
+        class_sizes = [len(indices) for indices in lookup_dict.values()]
+        for c in class_sizes:
+            counter += c
+            related_columns_in_b.append(counter)
 
-            def flex_solve(M, B, solver=gmres, init_indices=None):
-                # solve a series of linear problems using an iterative solver
-                x_list, info_list = [], []
-                x = None
-                for ix, b in enumerate(B.T):
-                    # use the previous problem solution as initialisation
-                    if init_indices is not None:
-                        x0 = None if ix in init_indices else x
-                    else:
-                        x0 = None
-                    x, info = solver(M, b.toarray().flatten(), tol=tol, x0=x0)
-                    x_list.append(x[:, None])
-                    info_list.append(info)
+        # solve the linear system of equations
+        mat_x = _solve_lin_system(
+            eye - q,
+            s,
+            solver=solver,
+            tol=tol,
+            related_columns_in_b=related_columns_in_b,
+        )
 
-                return np.concatenate(x_list, axis=1), info_list
-
-            logg.debug("DEBUG: Solving the linear system using GMRES")
-            init_indices = rec_start_indices if use_initialization else None
-            abs_states, info = flex_solve(eye - q, s, gmres, init_indices=init_indices)
-            if not (all(con == 0 for con in info)):
-                logg.warning("Some linear solves did not converge for GMRES")
-        else:
-            logg.debug("DEBUG: Solving the linear system using direct factorization")
-            abs_states = solve(eye - q, s)
-
-        # aggregate to class level by summing over columns belonging to the same metastable_states
-        approx_rc_red = metastable_states_[mask]
-        rec_classes_red = {
-            key: np.where(approx_rc_red == key)[0]
-            for key in approx_rc_red.cat.categories
-        }
+        # take individual solutions and piece them together to get absorption probabilities towards the calsses
         _abs_classes = np.concatenate(
             [
-                np.array(abs_states[:, rec_classes_red[key]].sum(1)).flatten()[:, None]
-                for key in approx_rc_red.cat.categories
+                mat_x[:, np.arange(a, b)].sum(1)[:, None]
+                for a, b in _pairwise(related_columns_in_b)
             ],
             axis=1,
         )
 
-        if norm_by_frequ:
-            logg.debug("DEBUG: Normalizing by frequency")
-            _abs_classes /= [len(value) for value in rec_classes_red.values()]
-        _abs_classes = _normalize(_abs_classes)
-
         # for recurrent states, set their self-absorption probability to one
-        abs_classes = np.zeros((self._n_states, len(rec_classes_red)))
+        abs_classes = np.zeros((self._n_states, len(n_macrostates)))
         rec_classes_full = {
             cl: np.where(metastable_states_ == cl)
             for cl in metastable_states_.cat.categories
