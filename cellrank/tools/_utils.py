@@ -17,9 +17,12 @@ from typing import (
 )
 from itertools import tee, product, combinations
 
+import matplotlib.colors as mcolors
+
 import numpy as np
 import pandas as pd
 from pandas import Series
+from cellrank import logging as logg
 from numpy.linalg import norm as d_norm
 from scipy.linalg import solve
 from scipy.sparse import eye, issparse, spmatrix, csr_matrix
@@ -28,10 +31,6 @@ from pandas.api.types import infer_dtype, is_categorical_dtype
 from sklearn.neighbors import NearestNeighbors
 from scipy.sparse.linalg import norm as s_norm
 from scipy.sparse.linalg import gmres, lgmres, gcrotmk, bicgstab
-
-import matplotlib.colors as mcolors
-
-from cellrank import logging as logg
 from cellrank.utils._utils import _get_neighs, _has_neighs, _get_neighs_params
 from cellrank.tools._colors import (
     _compute_mean_color,
@@ -1510,7 +1509,7 @@ def _solve_lin_system(
     tol
         Convergence threshold.
     use_eye
-        Solve `(I - may_a) * x = mat_b` instead.
+        Solve `(I - mat_a) * x = mat_b` instead.
 
     Returns
     --------
