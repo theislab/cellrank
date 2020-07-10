@@ -7,6 +7,7 @@ from multiprocessing import Manager
 
 import numpy as np
 import joblib as jl
+from scipy.sparse import issparse, spmatrix
 
 from cellrank.utils._utils import _get_n_cores
 
@@ -15,7 +16,7 @@ _msg_shown = False
 
 def parallelize(
     callback: Callable[[Any], Any],
-    collection: Sequence[Any],
+    collection: Union[spmatrix, Sequence[Any]],
     n_jobs: Optional[int] = None,
     n_split: Optional[int] = None,
     unit: str = "",
@@ -83,7 +84,20 @@ def parallelize(
     def update(pbar, queue, n_total):
         n_finished = 0
         while n_finished < n_total:
-            if queue.get() is None:
+            try:
+                res = queue.get()
+            except EOFError:
+                if not n_finished != n_total:
+                    raise RuntimeError(
+                        f"Received `EOFError`, but only finished `{n_finished} out of `{n_total}` tasks.`"
+                    )
+                break
+            assert res in (None, (1, None), 1)  # (None, 1) means only 1 job
+            if res == (1, None):
+                n_finished += 1
+                if pbar is not None:
+                    pbar.update()
+            elif res is None:
                 n_finished += 1
             elif pbar is not None:
                 pbar.update()
@@ -92,7 +106,7 @@ def parallelize(
             pbar.close()
 
     def wrapper(*args, **kwargs):
-        pbar = None if tqdm is None else tqdm(total=len(collection), unit=unit)
+        pbar = None if tqdm is None else tqdm(total=col_len, unit=unit)
 
         queue = Manager().Queue()
         thread = Thread(target=update, args=(pbar, queue, len(collections)))
@@ -110,9 +124,27 @@ def parallelize(
 
         return res if extractor is None else extractor(res)
 
-    n_jobs = _get_n_cores(n_jobs, len(collection))
+    col_len = collection.shape[0] if issparse(collection) else len(collection)
+    n_jobs = _get_n_cores(n_jobs, col_len)
     if n_split is None:
         n_split = n_jobs
-    collections = list(filter(len, np.array_split(collection, n_split)))
+
+    if issparse(collection):
+        if n_split == collection.shape[0]:
+            collections = [collection[[ix], :] for ix in range(collection.shape[0])]
+        else:
+            step = collection.shape[0] // n_split
+
+            ixs = [
+                np.arange(i * step, min((i + 1) * step, collection.shape[0]))
+                for i in range(n_split)
+            ]
+            ixs[-1] = np.append(
+                ixs[-1], np.arange(ixs[-1][-1] + 1, collection.shape[0])
+            )
+
+            collections = [collection[ix, :] for ix in filter(len, ixs)]
+    else:
+        collections = list(filter(len, np.array_split(collection, n_split)))
 
     return wrapper
