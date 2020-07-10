@@ -25,7 +25,15 @@ from pandas import Series
 from cellrank import logging as logg
 from numpy.linalg import norm as d_norm
 from scipy.linalg import solve
-from scipy.sparse import eye, issparse, spmatrix, csr_matrix
+from scipy.sparse import (
+    eye,
+    issparse,
+    spmatrix,
+    csc_matrix,
+    csr_matrix,
+    isspmatrix_csc,
+    isspmatrix_csr,
+)
 from sklearn.cluster import KMeans
 from pandas.api.types import infer_dtype, is_categorical_dtype
 from sklearn.neighbors import NearestNeighbors
@@ -1526,7 +1534,11 @@ def _solve_lin_system(
         "gcrotmk": gcrotmk,
     }
 
-    if solver in available_iterative_solvers.keys():
+    if solver == "petsc":
+        mat_x = _solve_many_sparse_problems_petsc(
+            eye(mat_a.shape[0]) - csr_matrix(mat_a), csc_matrix(mat_b)
+        )
+    elif solver in available_iterative_solvers.keys():
         logg.debug(f"Solving the linear system using `{solver}` with `tol={tol}`")
 
         # check whether the input is sparse
@@ -1568,6 +1580,36 @@ def _solve_lin_system(
         raise NotImplementedError(f"The solver `{solver}` was not found.")
 
     return mat_x
+
+
+def _solve_many_sparse_problems_petsc(mat_a: spmatrix, mat_b: spmatrix) -> np.ndarray:
+    from petsc4py import PETSc
+
+    if not isspmatrix_csr(mat_a):
+        mat_a = csr_matrix(mat_a)
+    if not isspmatrix_csc(mat_b):
+        mat_b = csc_matrix(mat_b)
+
+    A = PETSc.Mat().create(PETSc.COMM_WORLD)
+    A.createAIJ(size=mat_a.shape, csr=(mat_a.indptr, mat_a.indices, mat_a.data))
+
+    ksp = PETSc.KSP().create()
+    ksp.create(PETSc.COMM_WORLD)
+    ksp.setType("gmres")  # TODO: expose
+    # ksp.getPC().setType("icc")  # TODO: @Marius: expose preconditioner as well
+
+    ksp.setOperators(A)
+
+    x, b = A.getVecs()
+    xs = []
+
+    for b_ in mat_b.T:
+        b.set(0)
+        b.setValues(b_.indices, b_.data)
+        ksp.solve(b, x)
+        xs.append(x.getArray().copy())
+
+    return np.stack(xs, axis=1)
 
 
 def _solve_many_sparse_problems(
