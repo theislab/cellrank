@@ -17,12 +17,9 @@ from typing import (
 )
 from itertools import tee, product, combinations
 
-import matplotlib.colors as mcolors
-
 import numpy as np
 import pandas as pd
 from pandas import Series
-from cellrank import logging as logg
 from numpy.linalg import norm as d_norm
 from scipy.linalg import solve
 from scipy.sparse import eye, issparse, spmatrix, csr_matrix
@@ -31,6 +28,10 @@ from pandas.api.types import infer_dtype, is_categorical_dtype
 from sklearn.neighbors import NearestNeighbors
 from scipy.sparse.linalg import norm as s_norm
 from scipy.sparse.linalg import gmres, lgmres, gcrotmk, bicgstab
+
+import matplotlib.colors as mcolors
+
+from cellrank import logging as logg
 from cellrank.utils._utils import _get_neighs, _has_neighs, _get_neighs_params
 from cellrank.tools._colors import (
     _compute_mean_color,
@@ -1611,4 +1612,4 @@ def _solve_many_sparse_problems(
         x_list.append(x)
         info_list.append(info)
 
-    return np.vstack(x_list), info_list
+    return np.stack(x_list, axis=1), info_list
