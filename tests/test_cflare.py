@@ -3,7 +3,6 @@ from typing import Tuple
 
 import numpy as np
 import pandas as pd
-import pydtmc
 import pytest
 from pandas.api.types import is_categorical_dtype
 
@@ -97,7 +96,7 @@ class TestCFLARE:
         assert _colors(StateKey.FORWARD) in mc.adata.uns.keys()
         assert _probs(StateKey.FORWARD) in mc.adata.obs.keys()
 
-    def test_compute_absorption_probabilities_no_arcs(self, adata_large: AnnData):
+    def test_compute_absorption_probabilities_no_args(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
@@ -263,9 +262,9 @@ class TestCFLARE:
 
         np.testing.assert_array_equal(arc_colors, lin_colors)
 
-    def compare_absorption_probabiliteis_with_reference(self):
+    def compare_absorption_probabilites_with_reference(self):
         # define a reference transition matrix. This is an absorbing MC with 2 absorbing states
-        p = np.array(
+        transition_matrix = np.array(
             [
                 # 0.   1.   2.   3.   4.   5.   6.   7.   8.   9.   10.  11.
                 [0.0, 0.8, 0.2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],  # 0
@@ -283,14 +282,23 @@ class TestCFLARE:
             ]
         )
 
-        # use pydtmc to initialise a Markov chain. This will automatically compute abs probs
-        states = np.arange(p.shape[1]).astype("str")
-        mc = pydtmc.MarkovChain(p, states)
-        absorption_probabilities_reference = mc.absorption_probabilities.T
+        absorption_probabilities_reference = np.array(
+            [
+                [0.5, 0.5],
+                [0.5, 0.5],
+                [0.5, 0.5],
+                [0.5, 0.5],
+                [0.60571429, 0.39428571],
+                [0.39428571, 0.60571429],
+                [0.94047619, 0.05952381],
+                [0.95238095, 0.04761905],
+                [0.05952381, 0.94047619],
+                [0.04761905, 0.95238095],
+            ]
+        )
 
         # initialise a pre-computed kernel and CFLARE estimator object
-        pk = cr.tl.kernels.PrecomputedKernel(p)
-        c = cr.tl.CFLARE(pk)
+        c = cr.tl.CFLARE(cr.tl.kernels.PrecomputedKernel(transition_matrix))
 
         # define the set of metastable states
         state_annotation = pd.Series(index=range(p.shape[0]))
