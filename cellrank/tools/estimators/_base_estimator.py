@@ -6,11 +6,10 @@ from typing import Any, Dict, List, Tuple, Union, TypeVar, Iterable, Optional, S
 from pathlib import Path
 
 import numpy as np
-import scipy
 import pandas as pd
 from pandas import Series
 from scipy.stats import entropy, ranksums
-from scipy.sparse import issparse, csr_matrix
+from scipy.sparse import issparse
 from pandas.api.types import infer_dtype, is_categorical_dtype
 from scipy.sparse.linalg import eigs
 
@@ -299,9 +298,9 @@ class BaseEstimator(ABC):
         check_irred
             Check whether the transition matrix is irreducible.
         solver
-            Solver to use for the linear problem. Options are ['direct', 'gmres', 'lgmres', 'bicgstab', 'gcrotmk'].
-            Information on the iterative solvers may be found in `scipy.sparse.linalg`. If is `None`, a solver
-            is chosen automatically, depending on the current problem.
+            Solver to use for the linear problem. Options are `['direct', 'gmres', 'lgmres', 'bicgstab', 'gcrotmk']`.
+            Information on the iterative solvers may be found in :func:`scipy.sparse.linalg`.
+            If is `None`, a solver is chosen automatically, depending on the current problem.
         tol
             Convergence tolerance for the iterative solver. The default is fine for most cases, only consider
             decreasing this for severely ill-conditioned matrices.
@@ -312,7 +311,10 @@ class BaseEstimator(ABC):
         Returns
         -------
         None
-            Nothing, but updates the following fields: :paramref:`lineage_probabilities`, :paramref:`diff_potential`.
+            Nothing, but updates the following fields:
+
+                - :paramref:`lineage_probabilities`
+                - :paramref:`diff_potential`.
         """
 
         if self._meta_states is None:
@@ -370,7 +372,7 @@ class BaseEstimator(ABC):
             metastable_states_
         )
 
-        # create Q (restriction transient-transient), S (restriction transient-recurrent) and I (Q-sized identity)
+        # create Q (restriction transient-transient), S (restriction transient-recurrent)
         q = t[trans_indices, :][:, trans_indices]
         s = t[trans_indices, :][:, rec_indices]
 
@@ -378,7 +380,7 @@ class BaseEstimator(ABC):
             if self._is_irreducible is None:
                 self.compute_partition()
             if not self._is_irreducible:
-                logg.warning("The transition matrix is not irreducible. ")
+                logg.warning("The transition matrix is not irreducible")
 
         # determine whether it makes sense you use a iterative solver
         if solver is None:
@@ -388,19 +390,7 @@ class BaseEstimator(ABC):
                 solver = "gmres"
             else:
                 solver = "direct"
-        logg.debug(f"DEBUG: Found {n_cells} cells and {s.shape[1]} absorbing states. ")
-
-        if solver == "direct":
-            logg.debug("DEBUG: Densifying matrices for direct solver. ")
-            q = q.toarray() if issparse(q) else q
-            s = s.toarray() if issparse(s) else s
-            eye = np.eye(len(trans_indices))
-        else:
-            if not issparse(q):
-                q = csr_matrix(q)
-            if not issparse(s):
-                s = csr_matrix(s)
-            eye = scipy.sparse.eye(len(trans_indices))
+        logg.debug(f"Found `{n_cells}` cells and `{s.shape[1]}` absorbing states")
 
         # create a list storing information on related subproblems
         counter = 0
@@ -411,16 +401,16 @@ class BaseEstimator(ABC):
             macro_ix_helper.append(counter)
 
         # solve the linear system of equations
-        related_columns_in_b = macro_ix_helper if use_initialization else None
         mat_x = _solve_lin_system(
-            eye - q,
+            q,
             s,
             solver=solver,
             tol=tol,
-            related_columns_in_b=related_columns_in_b,
+            related_columns_in_b=macro_ix_helper if use_initialization else None,
+            use_eye=True,
         )
 
-        # take individual solutions and piece them together to get absorption probabilities towards the calsses
+        # take individual solutions and piece them together to get absorption probabilities towards the classes
         _abs_classes = np.concatenate(
             [
                 mat_x[:, np.arange(a, b)].sum(1)[:, None]
@@ -441,9 +431,7 @@ class BaseEstimator(ABC):
 
         self._dp = entropy(abs_classes.T)
         self._lin_probs = Lineage(
-            abs_classes,
-            names=list(self._lin_probs.names),
-            colors=list(self._lin_probs.colors),
+            abs_classes, names=self._lin_probs.names, colors=self._lin_probs.colors,
         )
 
         self._adata.obsm[self._lin_key] = self._lin_probs
