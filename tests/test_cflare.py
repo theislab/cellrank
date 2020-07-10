@@ -3,6 +3,7 @@ from typing import Tuple
 
 import numpy as np
 import pandas as pd
+import pydtmc
 import pytest
 from pandas.api.types import is_categorical_dtype
 
@@ -96,7 +97,7 @@ class TestCFLARE:
         assert _colors(StateKey.FORWARD) in mc.adata.uns.keys()
         assert _probs(StateKey.FORWARD) in mc.adata.obs.keys()
 
-    def test_compute_lin_probs_no_arcs(self, adata_large: AnnData):
+    def test_compute_absorption_probabilities_no_arcs(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
@@ -105,7 +106,7 @@ class TestCFLARE:
         with pytest.raises(RuntimeError):
             mc.compute_absorption_probabilities()
 
-    def test_compute_lin_probs_normal_run(self, adata_large: AnnData):
+    def test_compute_absorption_probabilities_normal_run(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
@@ -139,7 +140,7 @@ class TestCFLARE:
         )
         np.testing.assert_allclose(mc.lineage_probabilities.X.sum(1), 1)
 
-    def test_compute_lin_probs_solver(self, adata_large: AnnData):
+    def test_compute_absorption_probabilities_solver(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
@@ -159,7 +160,9 @@ class TestCFLARE:
 
         np.testing.assert_allclose(l_direct.X, l_iterative.X, rtol=0, atol=tol)
 
-    def test_compute_lin_probs_initialization(self, adata_large: AnnData):
+    def test_compute_absorption_probabilities_initialization(
+        self, adata_large: AnnData
+    ):
         # check whether changing the initial x0 vector for the iterative solver makes a difference
         vk = VelocityKernel(adata_large).compute_transition_matrix()
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
@@ -235,7 +238,7 @@ class TestCFLARE:
         for lineage in ["0", "1"]:
             assert f"{Prefix.FORWARD} {lineage} corr" in mc.adata.var.keys()
 
-    def test_compute_lin_probs_keys_colors(self, adata_large: AnnData):
+    def test_compute_absorption_probabilities_keys_colors(self, adata_large: AnnData):
         adata = adata_large
         vk = VelocityKernel(adata).compute_transition_matrix()
         ck = ConnectivityKernel(adata).compute_transition_matrix()
@@ -259,6 +262,51 @@ class TestCFLARE:
         lin_colors = mc_fwd.lineage_probabilities[arcs].colors
 
         np.testing.assert_array_equal(arc_colors, lin_colors)
+
+    def compare_absorption_probabiliteis_with_reference(self):
+        # define a reference transition matrix. This is an absorbing MC with 2 absorbing states
+        p = np.array(
+            [
+                # 0.   1.   2.   3.   4.   5.   6.   7.   8.   9.   10.  11.
+                [0.0, 0.8, 0.2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],  # 0
+                [0.2, 0.0, 0.6, 0.2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],  # 1
+                [0.6, 0.2, 0.0, 0.2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],  # 2
+                [0.0, 0.05, 0.05, 0.0, 0.45, 0.45, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],  # 3
+                [0.0, 0.0, 0.0, 0.25, 0.0, 0.25, 0.4, 0.0, 0.0, 0.1, 0.0, 0.0],  # 4
+                [0.0, 0.0, 0.0, 0.25, 0.25, 0.0, 0.1, 0.0, 0.0, 0.4, 0.0, 0.0],  # 5
+                [0.0, 0.0, 0.0, 0.0, 0.05, 0.05, 0.0, 0.7, 0.2, 0.0, 0.0, 0.0],  # 6
+                [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0],  # 7
+                [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.8, 0.2, 0.0, 0.0, 0.0, 0.0],  # 8
+                [0.0, 0.0, 0.0, 0.0, 0.05, 0.05, 0.0, 0.0, 0.0, 0.0, 0.7, 0.2],  # 9
+                [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0],  # 10
+                [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.8, 0.2, 0.0],  # 11
+            ]
+        )
+
+        # use pydtmc to initialise a Markov chain. This will automatically compute abs probs
+        states = np.arange(p.shape[1]).astype("str")
+        mc = pydtmc.MarkovChain(p, states)
+        absorption_probabilities_reference = mc.absorption_probabilities.T
+
+        # initialise a pre-computed kernel and CFLARE estimator object
+        pk = cr.tl.kernels.PrecomputedKernel(p)
+        c = cr.tl.CFLARE(pk)
+
+        # define the set of metastable states
+        state_annotation = pd.Series(index=range(p.shape[0]))
+        state_annotation[7] = "terminal_1"
+        state_annotation[10] = "terminal_2"
+        state_annotation = state_annotation.astype("category")
+        c._meta_states = state_annotation
+
+        # compute absorption probabilities
+        c.compute_absorption_probabilities()
+        absorption_probabilities_query = c.lineage_probabilities[
+            state_annotation.isna()
+        ]
+
+        # check whether these two agree
+        np.allclose(absorption_probabilities_query, absorption_probabilities_reference)
 
     def test_manual_approx_rc_set(self, adata_large):
         adata = adata_large
