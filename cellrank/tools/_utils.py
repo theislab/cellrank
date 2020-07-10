@@ -1535,9 +1535,21 @@ def _solve_lin_system(
     }
 
     if solver == "petsc":
-        mat_x = _solve_many_sparse_problems_petsc(
-            eye(mat_a.shape[0]) - csr_matrix(mat_a), csc_matrix(mat_b)
-        )
+        mat_a = eye(mat_a.shape[0]) - csr_matrix(mat_a)
+        mat_b = csc_matrix(mat_b).T
+        from cellrank.utils._parallelize import parallelize
+
+        # as_array causes an issue, because it's called like this np.array([(NxM), (NxK), ....]
+        # in the end, we want array of shape Nx(M + K + ...) - this is ensured by the extractor
+        # can't pass PETSc matrix - no pickleable
+        # TODO: expose n_jobs and backend, test n_jobs=1
+        mat_x = parallelize(
+            _solve_many_sparse_problems_petsc,
+            mat_b,
+            n_jobs=4,
+            as_array=False,
+            extractor=np.hstack,
+        )(mat_a)
     elif solver in available_iterative_solvers.keys():
         logg.debug(f"Solving the linear system using `{solver}` with `tol={tol}`")
 
@@ -1582,7 +1594,9 @@ def _solve_lin_system(
     return mat_x
 
 
-def _solve_many_sparse_problems_petsc(mat_a: spmatrix, mat_b: spmatrix) -> np.ndarray:
+def _solve_many_sparse_problems_petsc(
+    mat_b: spmatrix, mat_a: spmatrix, queue
+) -> np.ndarray:
     from petsc4py import PETSc
 
     if not isspmatrix_csr(mat_a):
@@ -1590,11 +1604,11 @@ def _solve_many_sparse_problems_petsc(mat_a: spmatrix, mat_b: spmatrix) -> np.nd
     if not isspmatrix_csc(mat_b):
         mat_b = csc_matrix(mat_b)
 
-    A = PETSc.Mat().create(PETSc.COMM_WORLD)
+    A = PETSc.Mat().create()
     A.createAIJ(size=mat_a.shape, csr=(mat_a.indptr, mat_a.indices, mat_a.data))
 
     ksp = PETSc.KSP().create()
-    ksp.create(PETSc.COMM_WORLD)
+    ksp.create()
     ksp.setType("gmres")  # TODO: expose
     # ksp.getPC().setType("icc")  # TODO: @Marius: expose preconditioner as well
 
@@ -1603,11 +1617,15 @@ def _solve_many_sparse_problems_petsc(mat_a: spmatrix, mat_b: spmatrix) -> np.nd
     x, b = A.getVecs()
     xs = []
 
-    for b_ in mat_b.T:
+    for value in mat_b:
+        x.set(1)  # reset the solution
         b.set(0)
-        b.setValues(b_.indices, b_.data)
+        b.setValues(value.indices, value.data)
         ksp.solve(b, x)
-        xs.append(x.getArray().copy())
+        xs.append(x.getArray().copy().squeeze())
+        queue.put(1)
+
+    queue.put(None)
 
     return np.stack(xs, axis=1)
 
