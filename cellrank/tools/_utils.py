@@ -17,9 +17,12 @@ from typing import (
 )
 from itertools import tee, product, combinations
 
+import matplotlib.colors as mcolors
+
 import numpy as np
 import pandas as pd
 from pandas import Series
+from cellrank import logging as logg
 from numpy.linalg import norm as d_norm
 from scipy.linalg import solve
 from scipy.sparse import eye, issparse, spmatrix, csr_matrix
@@ -28,10 +31,6 @@ from pandas.api.types import infer_dtype, is_categorical_dtype
 from sklearn.neighbors import NearestNeighbors
 from scipy.sparse.linalg import norm as s_norm
 from scipy.sparse.linalg import gmres, lgmres, gcrotmk, bicgstab
-
-import matplotlib.colors as mcolors
-
-from cellrank import logging as logg
 from cellrank.utils._utils import _get_neighs, _has_neighs, _get_neighs_params
 from cellrank.tools._colors import (
     _compute_mean_color,
@@ -1481,7 +1480,6 @@ def _solve_lin_system(
     mat_b: Union[np.ndarray, spmatrix],
     solver: str = "direct",
     tol: float = 1e-5,
-    related_columns_in_b: Optional[Iterable] = None,
     use_eye: bool = False,
 ) -> np.ndarray:
     """
@@ -1510,10 +1508,6 @@ def _solve_lin_system(
         Information on the iterative solvers may be found in :func:`scipy.sparse.linalg`.
     tol
         Convergence threshold.
-    related_columns_in_b
-        A list specifying columns in `mat_b` that we expect to have similar solutions. As an example, `[0, 3, 9]`
-        would mean that columns 0, 1, 2 are expected to have similar solutions, then 3, 4, 5, 6, 7, 8, and then
-        all remaining columns starting with 9.
     use_eye
         Solve `(I - may_a) * x = mat_b` instead.
 
@@ -1523,8 +1517,6 @@ def _solve_lin_system(
         Matrix of shape `n x m`. Each column corresponds to the solution of one of the subproblems
         defined via columns in `mat_b`.
     """
-    n_problems = mat_b.shape[1]
-
     # define the set of available solvers
     available_iterative_solvers = {
         "gmres": gmres,
@@ -1549,24 +1541,12 @@ def _solve_lin_system(
 
         # call function to solve the linear systems iteratively
         solver = available_iterative_solvers[solver]
-        mat_x, info, used_initialisation = _solve_many_sparse_problems(
-            mat_a=mat_a,
-            mat_b=mat_b,
-            solver=solver,
-            tol=tol,
-            related_columns_in_b=related_columns_in_b,
+        mat_x, info = _solve_many_sparse_problems(
+            mat_a=mat_a, mat_b=mat_b, solver=solver, tol=tol,
         )
         # check whether all solutions converged
         if not all(con == 0 for con in info):
             logg.warning("For some columns in `mat_b`, the solution did not converge.")
-
-        # check how often we used clever initialisation
-        if used_initialisation > 0:
-            logg.debug(
-                f"Used the previous subroblem as initialisation in "
-                f"{used_initialisation}/{n_problems} cases."
-            )
-
     elif solver == "direct":
         logg.debug("Solving the linear system using direct matrix factorisation.")
 
@@ -1583,7 +1563,6 @@ def _solve_lin_system(
 
         # directly solve the linear system
         mat_x = solve(mat_a, mat_b)
-
     else:
         raise NotImplementedError(f"The solver `{solver}` was not found.")
 
@@ -1591,22 +1570,14 @@ def _solve_lin_system(
 
 
 def _solve_many_sparse_problems(
-    mat_a: spmatrix,
-    mat_b: spmatrix,
-    solver: LinSolver,
-    tol: float = 1e-5,
-    related_columns_in_b: Optional[Iterable] = None,
-) -> Tuple[np.ndarray, List[int], int]:
+    mat_a: spmatrix, mat_b: spmatrix, solver: LinSolver, tol: float = 1e-5,
+) -> Tuple[np.ndarray, List[int]]:
     """
     Solve `mat_a * x = mat_b` efficiently using an iterative solver.
 
     This is a utility function which is optimized for the case of `mat_a` and `mat_b` being sparse,
     and columns in `mat_b` being related. In that case, we can treat each column of `mat_b` as a
     separate linear problem and solve that efficiently using iterative solvers that exploit sparsity.
-
-    If the columns of `mat_b` are related, we can use the solution of the previous problem as an
-    initial guess for the next problem. Further, we parallelize the individual problems for each
-    column in `mat_b` and solve them on separate kernels.
 
     Params
     ------
@@ -1619,10 +1590,6 @@ def _solve_many_sparse_problems(
         These can be found in :func:`scipy.sparse.linalg`.
     tol
         Convergence threshold.
-    related_columns_in_b
-        A list specifying columns in `mat_b` that we expect to have similar solutions. As an example, `[3, 5, 6]`
-        would mean that the first 3 columns in `mat_b` define similar problems, then the next 5, and then the
-        next 6.
 
     Returns
     -------
@@ -1631,30 +1598,17 @@ def _solve_many_sparse_problems(
         defined via columns in `mat_b`.
     list
         For each subproblem, the convergence status. 0 stands for successful convergence.
-    int
-        Number of times initialization was used.
     """
 
     # initialise solution list and info list
     x_list, info_list = [], []
-    x, x0 = None, None
-    used_initialisation = 0
 
-    for ix, b in enumerate(mat_b.T):
-
-        # use the previous problem solution as initialisation if we expect these problems to be similar
-        if related_columns_in_b is not None:
-            if ix in related_columns_in_b:
-                x0 = None
-            else:
-                x0 = x
-                used_initialisation += 1
-
+    for b in mat_b.T:
         # actually call the solver for the current subproblem
-        x, info = solver(mat_a, b.toarray().flatten(), tol=tol, x0=x0)
+        x, info = solver(mat_a, b.toarray().flatten(), tol=tol, x0=None)
 
         # append solution and info
-        x_list.append(x[:, None])
+        x_list.append(x)
         info_list.append(info)
 
-    return np.concatenate(x_list, axis=1), info_list, used_initialisation
+    return np.vstack(x_list), info_list

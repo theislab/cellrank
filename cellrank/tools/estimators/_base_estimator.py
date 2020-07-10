@@ -5,21 +5,20 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Tuple, Union, TypeVar, Iterable, Optional, Sequence
 from pathlib import Path
 
-import numpy as np
-import pandas as pd
-from pandas import Series
-from scipy.stats import entropy, ranksums
-from scipy.sparse import issparse
-from pandas.api.types import infer_dtype, is_categorical_dtype
-from scipy.sparse.linalg import eigs
-
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 
 import scvelo as scv
 
+import numpy as np
+import pandas as pd
+from pandas import Series
 from cellrank import logging as logg
+from scipy.stats import entropy, ranksums
+from scipy.sparse import issparse
+from pandas.api.types import infer_dtype, is_categorical_dtype
+from scipy.sparse.linalg import eigs
 from cellrank.tools._utils import (
     save_fig,
     _eigengap,
@@ -282,7 +281,6 @@ class BaseEstimator(ABC):
         check_irred: bool = False,
         solver: Optional[str] = None,
         tol: float = 1e-5,
-        use_initialization: bool = True,
     ) -> None:
         """
         Compute absorption probabilities for a Markov chain.
@@ -304,9 +302,6 @@ class BaseEstimator(ABC):
         tol
             Convergence tolerance for the iterative solver. The default is fine for most cases, only consider
             decreasing this for severely ill-conditioned matrices.
-        use_initialization
-            Only relevant when using an iterative solver. In that case, the solution of absorbing states from the same
-            recurrent class can be used as initialization to the iterative solver.
 
         Returns
         -------
@@ -314,7 +309,7 @@ class BaseEstimator(ABC):
             Nothing, but updates the following fields:
 
                 - :paramref:`lineage_probabilities`
-                - :paramref:`diff_potential`.
+                - :paramref:`diff_potential`
         """
 
         if self._meta_states is None:
@@ -401,14 +396,7 @@ class BaseEstimator(ABC):
             macro_ix_helper.append(counter)
 
         # solve the linear system of equations
-        mat_x = _solve_lin_system(
-            q,
-            s,
-            solver=solver,
-            tol=tol,
-            related_columns_in_b=macro_ix_helper if use_initialization else None,
-            use_eye=True,
-        )
+        mat_x = _solve_lin_system(q, s, solver=solver, tol=tol, use_eye=True,)
 
         # take individual solutions and piece them together to get absorption probabilities towards the classes
         _abs_classes = np.concatenate(
