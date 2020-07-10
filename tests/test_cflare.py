@@ -3,11 +3,11 @@ from typing import Tuple
 
 import numpy as np
 import pandas as pd
+import pytest
 from pandas.api.types import is_categorical_dtype
 
 from anndata import AnnData
 
-import pytest
 import cellrank as cr
 from _helpers import assert_array_nan_equal
 from cellrank.tools._colors import _create_categorical_colors
@@ -150,11 +150,11 @@ class TestCFLARE:
         mc.compute_metastable_states(use=2)
 
         # compute lin probs using direct solver
-        mc.compute_absorption_probabilities(use_iterative_solver=False)
+        mc.compute_absorption_probabilities(solver="direct")
         l_direct = mc.lineage_probabilities
 
         # comptue lin probs using iterative solver
-        mc.compute_absorption_probabilities(use_iterative_solver=True, tol=tol)
+        mc.compute_absorption_probabilities(solver="gmres", tol=tol)
         l_iterative = mc.lineage_probabilities
 
         np.testing.assert_allclose(l_direct.X, l_iterative.X, rtol=0, atol=tol)
@@ -172,13 +172,13 @@ class TestCFLARE:
 
         # compute lin probs using direct solver
         mc.compute_absorption_probabilities(
-            use_iterative_solver=True, use_initialization=True, tol=tol
+            solver="gmres", use_initialization=True, tol=tol
         )
         l_0 = mc.lineage_probabilities
 
         # comptue lin probs using iterative solver
         mc.compute_absorption_probabilities(
-            use_iterative_solver=True, use_initialization=False, tol=tol
+            solver="gmres", use_initialization=False, tol=tol
         )
         l_1 = mc.lineage_probabilities
 
