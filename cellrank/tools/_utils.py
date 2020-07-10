@@ -17,20 +17,21 @@ from typing import (
 )
 from itertools import tee, product, combinations
 
-import matplotlib.colors as mcolors
-
 import numpy as np
 import pandas as pd
 from pandas import Series
-from cellrank import logging as logg
 from numpy.linalg import norm as d_norm
 from scipy.linalg import solve
-from scipy.sparse import issparse, spmatrix, csr_matrix
+from scipy.sparse import eye, issparse, spmatrix, csr_matrix
 from sklearn.cluster import KMeans
 from pandas.api.types import infer_dtype, is_categorical_dtype
 from sklearn.neighbors import NearestNeighbors
 from scipy.sparse.linalg import norm as s_norm
 from scipy.sparse.linalg import gmres, lgmres, gcrotmk, bicgstab
+
+import matplotlib.colors as mcolors
+
+from cellrank import logging as logg
 from cellrank.utils._utils import _get_neighs, _has_neighs, _get_neighs_params
 from cellrank.tools._colors import (
     _compute_mean_color,
@@ -1481,9 +1482,10 @@ def _solve_lin_system(
     solver: str = "direct",
     tol: float = 1e-5,
     related_columns_in_b: Optional[Iterable] = None,
+    use_eye: bool = False,
 ) -> np.ndarray:
     """
-    Solve `mat_a*x = mat_b` efficiently using either iterative or direct methods.
+    Solve `mat_a * x = mat_b` efficiently using either iterative or direct methods.
 
     This is a utility function which is optimized for the case of `mat_a` and `mat_b` being sparse,
     and columns in `mat_b` being related. In that case, we can treat each column of `mat_b` as a
@@ -1512,6 +1514,8 @@ def _solve_lin_system(
         A list specifying columns in `mat_b` that we expect to have similar solutions. As an example, `[0, 3, 9]`
         would mean that columns 0, 1, 2 are expected to have similar solutions, then 3, 4, 5, 6, 7, 8, and then
         all remaining columns starting with 9.
+    use_eye
+        Solve `(I - may_a) * x = mat_b` instead.
 
     Returns
     --------
@@ -1539,6 +1543,9 @@ def _solve_lin_system(
         if not issparse(mat_b):
             logg.warning("Sparsifying `mat_b` for iterative solver.")
             mat_b = csr_matrix(mat_b)
+
+        if use_eye:
+            mat_a = eye(mat_a.shape[0]) - mat_a
 
         # call function to solve the linear systems iteratively
         solver = available_iterative_solvers[solver]
@@ -1571,6 +1578,9 @@ def _solve_lin_system(
             logg.warning("Densifying `mat_b` for direct solver.")
             mat_b = mat_b.toarray()
 
+        if use_eye:
+            mat_a = np.eye(mat_a.shape[0]) - mat_a
+
         # directly solve the linear system
         mat_x = solve(mat_a, mat_b)
 
@@ -1588,7 +1598,7 @@ def _solve_many_sparse_problems(
     related_columns_in_b: Optional[Iterable] = None,
 ) -> Tuple[np.ndarray, List[int], int]:
     """
-    Solve `mat_a*x = mat_b` efficiently using an iterative solver.
+    Solve `mat_a * x = mat_b` efficiently using an iterative solver.
 
     This is a utility function which is optimized for the case of `mat_a` and `mat_b` being sparse,
     and columns in `mat_b` being related. In that case, we can treat each column of `mat_b` as a
