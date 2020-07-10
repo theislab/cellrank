@@ -430,7 +430,7 @@ class BaseEstimator(ABC):
         )
 
         # for recurrent states, set their self-absorption probability to one
-        abs_classes = np.zeros((self._n_states, len(n_macrostates)))
+        abs_classes = np.zeros((self._n_states, n_macrostates))
         rec_classes_full = {
             cl: np.where(metastable_states_ == cl)
             for cl in metastable_states_.cat.categories
