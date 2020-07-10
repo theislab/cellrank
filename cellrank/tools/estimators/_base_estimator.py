@@ -5,21 +5,20 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Tuple, Union, TypeVar, Iterable, Optional, Sequence
 from pathlib import Path
 
-import numpy as np
-import pandas as pd
-from pandas import Series
-from scipy.stats import entropy, ranksums
-from scipy.sparse import issparse
-from pandas.api.types import infer_dtype, is_categorical_dtype
-from scipy.sparse.linalg import eigs
-
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 
 import scvelo as scv
 
+import numpy as np
+import pandas as pd
+from pandas import Series
 from cellrank import logging as logg
+from scipy.stats import entropy, ranksums
+from scipy.sparse import issparse
+from pandas.api.types import infer_dtype, is_categorical_dtype
+from scipy.sparse.linalg import eigs
 from cellrank.tools._utils import (
     save_fig,
     _eigengap,
@@ -833,12 +832,14 @@ class BaseEstimator(ABC):
             else title
         )
 
-        A = A.X
+        X = (
+            A.X
+        )  # get the array, because list(A.T) behaves differently, since it's Lineage
         if cluster_key is not None:
-            color = [cluster_key] + list(A.T) + ([self._dp] if show_dp else [])
+            color = [cluster_key] + list(X.T) + ([self._dp] if show_dp else [])
             titles = [cluster_key] + rc_titles
         else:
-            color = list(A.T) + ([self._dp] if show_dp else [])
+            color = list(X.T) + ([self._dp] if show_dp else [])
             titles = rc_titles
 
         if mode == "embedding":

@@ -264,7 +264,8 @@ def _complex_warning(
     complex_key = "imaginary" if use_imag else "real"
     if len(complex_ixs) > 0:
         logg.warning(
-            f"The eigenvectors with indices {complex_ixs} have an imaginary part. Showing their {complex_key} part."
+            f"The eigenvectors with indices `{list(complex_ixs)}` have an imaginary part. "
+            f"Showing their {complex_key} part"
         )
     X_ = X.real
     if use_imag:
@@ -378,7 +379,7 @@ def cyto_trace(
 
     start = logg.info(f"Computing CytoTrace score with `{adata.n_vars}` genes")
     if adata_comp.n_vars < 10000:
-        logg.warning("Consider using more genes")
+        logg.warning("Consider using more than `10000` genes")
 
     # compute number of expressed genes per cell
     logg.debug("Computing number of genes expressed per cell")
@@ -1526,14 +1527,14 @@ def _solve_lin_system(
     }
 
     if solver in available_iterative_solvers.keys():
-        logg.debug(f"Solving the linear system using `{solver}` with `tol={tol}`.")
+        logg.debug(f"Solving the linear system using `{solver}` with `tol={tol}`")
 
         # check whether the input is sparse
         if not issparse(mat_a):
-            logg.warning("Sparsifying `mat_a` for iterative solver.")
+            logg.debug("Sparsifying `A` for iterative solver")
             mat_a = csr_matrix(mat_a)
         if not issparse(mat_b):
-            logg.warning("Sparsifying `mat_b` for iterative solver.")
+            logg.debug("Sparsifying `b` for iterative solver")
             mat_b = csr_matrix(mat_b)
 
         if use_eye:
@@ -1546,16 +1547,16 @@ def _solve_lin_system(
         )
         # check whether all solutions converged
         if not all(con == 0 for con in info):
-            logg.warning("For some columns in `mat_b`, the solution did not converge.")
+            logg.warning("For some columns in `mat_b`, the solution did not converge")
     elif solver == "direct":
-        logg.debug("Solving the linear system using direct matrix factorisation.")
+        logg.debug("Solving the linear system using direct matrix factorisation")
 
         # check whether the input is dense
         if issparse(mat_a):
-            logg.warning("Densifying `mat_a` for direct solver.")
+            logg.debug("Densifying `A` for direct solver")
             mat_a = mat_a.toarray()
         if issparse(mat_b):
-            logg.warning("Densifying `mat_b` for direct solver.")
+            logg.debug("Densifying `b` for direct solver")
             mat_b = mat_b.toarray()
 
         if use_eye:
