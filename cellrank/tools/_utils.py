@@ -1566,15 +1566,16 @@ def _solve_lin_system(
         defined via columns in `mat_b`.
     """
 
-    try:
-        from petsc4py import PETSc  # noqa
-    except ImportError:
-        global _PETSC_ERROR_MSG_SHOWN
-        if not _PETSC_ERROR_MSG_SHOWN:
-            _PETSC_ERROR_MSG_SHOWN = True
-            print(_PETSC_ERROR_MSG.format(_DEFAULT_SOLVER))
-        solver = _DEFAULT_SOLVER
-        use_petsc = False
+    if use_petsc:
+        try:
+            from petsc4py import PETSc  # noqa
+        except ImportError:
+            global _PETSC_ERROR_MSG_SHOWN
+            if not _PETSC_ERROR_MSG_SHOWN:
+                _PETSC_ERROR_MSG_SHOWN = True
+                print(_PETSC_ERROR_MSG.format(_DEFAULT_SOLVER))
+            solver = _DEFAULT_SOLVER
+            use_petsc = False
 
     if use_petsc:
         if not isspmatrix_csr(mat_a):
