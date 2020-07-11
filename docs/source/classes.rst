@@ -49,7 +49,7 @@ Palantir Kernel
     :members:
 
 Precomputed Kernel
----------------
+------------------
 
 .. autoclass:: cellrank.tl.kernels.PrecomputedKernel
     :members:
