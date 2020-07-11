@@ -6,10 +6,6 @@ from types import MappingProxyType
 from typing import Any, Dict, List, Tuple, Union, Mapping, TypeVar, Iterable, Optional
 from pathlib import Path
 
-import numpy as np
-import pandas as pd
-from scipy.stats import entropy
-
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
@@ -18,7 +14,10 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 import scvelo as scv
 
+import numpy as np
+import pandas as pd
 from cellrank import logging as logg
+from scipy.stats import entropy
 from cellrank.tools._utils import (
     save_fig,
     _eigengap,
@@ -36,9 +35,8 @@ from cellrank._vendor.msmtools.analysis.dense.gpcca import GPCCA as _GPCCA
 
 AnnData = TypeVar("AnnData")
 
-
 # whether to remove overlapping cells from both states, or assign them to the most likely clusters
-REMOVE_OVERLAP = False
+_REMOVE_OVERLAP = False
 
 
 class GPCCA(BaseEstimator):
@@ -94,8 +92,6 @@ class GPCCA(BaseEstimator):
         self._coarse_init_dist = None
         self._coarse_stat_dist = None
 
-        self._meta_states = None
-        self._meta_states_colors = None
         self._meta_lin_probs = None
 
         self._main_states = None
@@ -680,7 +676,7 @@ class GPCCA(BaseEstimator):
         a_discrete, _ = _fuzzy_to_discrete(
             a_fuzzy=probs,
             n_most_likely=n_cells,
-            remove_overlap=REMOVE_OVERLAP,
+            remove_overlap=_REMOVE_OVERLAP,
             raise_threshold=0.2,
             check_row_sums=False,
         )
@@ -945,7 +941,7 @@ class GPCCA(BaseEstimator):
             a_discrete, not_enough_cells = _fuzzy_to_discrete(
                 a_fuzzy=memberships,
                 n_most_likely=n_cells,
-                remove_overlap=REMOVE_OVERLAP,
+                remove_overlap=_REMOVE_OVERLAP,
                 raise_threshold=0.2,
                 check_row_sums=check_row_sums,
             )

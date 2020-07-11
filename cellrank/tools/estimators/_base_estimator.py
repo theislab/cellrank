@@ -106,6 +106,9 @@ class BaseEstimator(ABC):
 
         self._lin_probs = None
 
+        self._meta_states = None
+        self._meta_states_colors = None
+
         # for copy
         self._g2m_key = g2m_key
         self._s_key = s_key
