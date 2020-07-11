@@ -5,21 +5,20 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Tuple, Union, TypeVar, Iterable, Optional, Sequence
 from pathlib import Path
 
-import numpy as np
-import pandas as pd
-from pandas import Series
-from scipy.stats import entropy, ranksums
-from scipy.sparse import issparse
-from pandas.api.types import infer_dtype, is_categorical_dtype
-from scipy.sparse.linalg import eigs
-
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 
 import scvelo as scv
 
+import numpy as np
+import pandas as pd
+from pandas import Series
 from cellrank import logging as logg
+from scipy.stats import ranksums
+from scipy.sparse import issparse
+from pandas.api.types import infer_dtype, is_categorical_dtype
+from scipy.sparse.linalg import eigs
 from cellrank.tools._utils import (
     save_fig,
     _eigengap,
@@ -281,6 +280,10 @@ class BaseEstimator(ABC):
         keys: Optional[Sequence[str]] = None,
         check_irred: bool = False,
         solver: Optional[str] = None,
+        use_petsc: bool = True,
+        preconditioner: Optional[str] = None,
+        n_jobs: Optional[int] = None,
+        backend: str = "multiprocessing",
         tol: float = 1e-5,
     ) -> None:
         """
@@ -297,9 +300,23 @@ class BaseEstimator(ABC):
         check_irred
             Check whether the transition matrix is irreducible.
         solver
-            Solver to use for the linear problem. Options are `['direct', 'gmres', 'lgmres', 'bicgstab', 'gcrotmk']`.
-            Information on the iterative solvers may be found in :func:`scipy.sparse.linalg`.
+            Solver to use for the linear problem. Options are `['direct', 'gmres', 'lgmres', 'bicgstab', 'gcrotmk']`
+            when :paramref:`use_petsc` or one of `petsc4py.PETSc.KPS.Type` otherwise.
+
+            Information on the :module:`scipy` iterative solvers can be found in :func:`scipy.sparse.linalg` or
+            for the :module:`petsc4py` solver in https://www.mcs.anl.gov/petsc/documentation/linearsolvertable.html.
+
             If is `None`, a solver is chosen automatically, depending on the current problem.
+        use_petsc
+            Whether to use solvers from :module:`petsc4py` instead of :module:`scipy`. Recommended for large problems.
+        preconditioner
+            Preconditioner to use when :paramref:`use_petsc` `=True`.
+            For available preconditioner types, see `petsc4py.PETSc.PC.Type`.
+        n_jobs
+            Number of parallel jobs to use when :paramref:`use_petsc` `=True`. For small, quickly-solvable problems,
+            we recommend high number (>=8) of cores in order to fully saturate them.
+        backend
+            Which backend to use for multiprocessing. See :class:`joblib.Parallel` for valid options.
         tol
             Convergence tolerance for the iterative solver. The default is fine for most cases, only consider
             decreasing this for severely ill-conditioned matrices.
@@ -379,16 +396,18 @@ class BaseEstimator(ABC):
                 logg.warning("The transition matrix is not irreducible")
 
         # determine whether it makes sense you use a iterative solver
-        if solver is None:
+        # TODO: determine petsc solver (default is gmres)
+        if solver is None and not use_petsc:
             if issparse(t) and n_cells > 1e4 and s.shape[1] < 100:
                 solver = "gmres"
             elif issparse(t) and n_cells > 5 * 1e5:
                 solver = "gmres"
             else:
                 solver = "direct"
+
         logg.debug(f"Found `{n_cells}` cells and `{s.shape[1]}` absorbing states")
 
-        # create a list storing information on related subproblems
+        # create a list storing information on related sub-problems
         counter = 0
         macro_ix_helper = [0]
         class_sizes = [len(indices) for indices in lookup_dict.values()]
@@ -397,7 +416,17 @@ class BaseEstimator(ABC):
             macro_ix_helper.append(counter)
 
         # solve the linear system of equations
-        mat_x = _solve_lin_system(q, s, solver=solver, tol=tol, use_eye=True,)
+        mat_x = _solve_lin_system(
+            q,
+            s,
+            solver=solver,
+            use_petsc=use_petsc,
+            preconditioner=preconditioner,
+            n_jobs=n_jobs,
+            backend=backend,
+            tol=tol,
+            use_eye=True,
+        )
 
         # take individual solutions and piece them together to get absorption probabilities towards the classes
         _abs_classes = np.concatenate(
@@ -418,13 +447,14 @@ class BaseEstimator(ABC):
             abs_classes[trans_indices, col] = _abs_classes[:, col]
             abs_classes[cl_indices, col] = 1
 
-        self._dp = entropy(abs_classes.T)
         self._lin_probs = Lineage(
             abs_classes, names=self._lin_probs.names, colors=self._lin_probs.colors,
         )
 
         self._adata.obsm[self._lin_key] = self._lin_probs
-        self._adata.obs[_dp(self._lin_key)] = self._dp
+        self._adata.obs[_dp(self._lin_key)] = self._dp = self._lin_probs.entropy(
+            axis=1
+        ).X.squeeze(axis=1)
         self._adata.uns[_lin_names(self._lin_key)] = self._lin_probs.names
         self._adata.uns[_colors(self._lin_key)] = self._lin_probs.colors
 
