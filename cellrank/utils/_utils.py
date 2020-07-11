@@ -5,9 +5,8 @@ from typing import Any, Dict, List, Tuple, Union, TypeVar, Hashable, Iterable, O
 from multiprocessing import cpu_count
 
 import numpy as np
-from scipy.sparse import spmatrix
-
 from cellrank import logging as logg
+from scipy.sparse import spmatrix
 
 AnnData = TypeVar("AnnData")
 
@@ -39,7 +38,7 @@ def check_collection(
             raise KeyError(f"{key_name} `{needle}` not found in `adata.{attr_name}`.")
 
 
-def _get_n_cores(n_cores: Optional[int], n_genes: int) -> int:
+def _get_n_cores(n_cores: Optional[int], n_jobs: Optional[int]) -> int:
     """
     Make number of cores a positive integer.
 
@@ -58,7 +57,7 @@ def _get_n_cores(n_cores: Optional[int], n_genes: int) -> int:
 
     if n_cores == 0:
         raise ValueError("Number of cores cannot be `0`.")
-    if n_genes == 1 or n_cores is None:
+    if n_jobs == 1 or n_cores is None:
         return 1
     if n_cores < 0:
         return cpu_count() + 1 + n_cores
