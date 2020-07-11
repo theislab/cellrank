@@ -14,4 +14,4 @@ PS1= ./bootstrap.py /tmp/miniconda
 source ~/.config/bioconda/activate
 
 # not including `exclude` causes some issue, just as `no-check-pinnings`
-GITHUB_TOKEN="$BIOCONDA_RECIPES" bioconda-utils autobump recipes/ --packages cellrank --no-check-pinnings --exclude '' --create-pr
+GITHUB_TOKEN="$DEPLOY_TOKEN" bioconda-utils autobump recipes/ --packages cellrank --no-check-pinnings --exclude '' --create-pr

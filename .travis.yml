@@ -33,7 +33,7 @@ jobs:
       python: 3.8
       env:
         - USE_SLEPC=false CACHE_NAME=default
-        - secure: "vtnfOfC1nWYTIdYou8+btuSL4rXlLQlLjLDSa4vcL3vuDyLxFXrrMxVCajkod4hlbrS6otHZiSOlq3DCZ3ToyVMT+Q5flrAUxWkMElK+NyRe8/XDWftPy6/Rwp/VaFBv0yzPRRA39u9z6FPcSF/etH+8SAHSfIjU7HKhou+KSgcp89YzZECTJiXmZKml0X16Kwy9zThm+0broVpRi2hHC+UcvMiAB18AKT7deLefRQR71mCkDX9o685zVNBChsGM3tYwTVm+EnhGqfYzBP4cSRrjZbsNHP9pILxHq8u7PlvAQuSkjlv0CBDHFbMd76vYK2NKbA0ZQr8ZGBBFcHzyVv8xlC9yStfrJ0orapw2jXiNgAKHf8agW10CG50UIxq8kGIdAIhS1oDg3t49DmGoyA4qnnsYBLz/t2JA82MfkkGEUDq7NxnyvdbACRsiRFF6YnOYCsO4ZWLqzcNaYHe6LCBJG3RKAcaw6GJ7hfSQy8W164hkxQGiT/nPsiqW8ndJ2ef43ntpFPfYQmc5/U+zwmqKDZGEbHopvvCLGl1FhGCzzNh+YKaGOXgRuokh5GOmxKYRUKNm+9AgHrNokkdZBdlcoDzrjxqMstRv1HsycFRNdpQ+ThLjbKVaZRhO62XH5g2kjv5A3b7OvIpU2cH1RdTPkmaIVQC1byyRC3RkPqM="
+        - secure: "lTOgoZugqLoYUjtMj7qUro200HfhJBycJ3RVEkyLH/5OrKhf5nTx66AocXfaGsQoXgsghS71s6r6wixd8f6tMBhbq78KksWVkXWWJr8QJ70dU68hx+6T0+rHFtuFNEpiB+BEjAqhBHfwY3p6LHc+hMiw7ej1lfiMQtt/KnSsf7BbJN+4Xre0Q9q1yHojz/Rdp1cvcR6PXJH9o4spL2+kyzQBAtPe22NZICOnfUjquQB5BHfGcipkhxld1sM9iHEljK2OHwJL7GCo8hwyE3c1UtEOIoAz9+pubrrnCSqaeOoLSBTFqh6yUjwfNyYuBJhrQFgwEloa4g4iI4BWwZcKk8ALbRldRdz2Fg1l838f+mVqErrdU04jblhQKlSM50ZDcTv/D+kx7BjHHDVmLUQQGO+Qo87PYMxsFgan0LKkyeyjfSJQjmNHgRZjhXTeoGP9ZxzQzfKuKvgNHmJc51ssGeSb09DJUzeZECNZRlOjeMkhnxHa8XL3GeY+aEZiuIqyGHyVaOlZUFD3Ov5rK0gcmSCFDuQgpcNFGRxeJeYLw0J4BobWHAAVJ2RnCvTjlYIU5hNicVxwfE+xObkGJ0VfAkSQdz3uhjrOZuXHGrKyxInaNc/4OcCQBM9okWIhSail2pdXUvUtu2qbPE9VZExlXwQc75HhmLuppHycU42WxKg="
 
     - name: "Python 3.6 on Linux PETSc/SLEPc using extra_requires"
       python: 3.6
@@ -65,10 +65,10 @@ deploy:
     skip_existing: true
     on:
       tags: true
-      condition: ! -z ${BIOCONDA_RECIPES+x}
+      condition: -n ${DEPLOY_TOKEN+x}
 
   - provider: script
     script: ./.scripts/ci/upload_bioconda.sh
     on:
       tags: true
-      condition: ! -z ${BIOCONDA_RECIPES+x}
+      condition: -n ${DEPLOY_TOKEN+x}
