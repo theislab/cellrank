@@ -454,12 +454,15 @@ class BaseEstimator(ABC):
             abs_classes, names=self._lin_probs.names, colors=self._lin_probs.colors,
         )
 
-        self._adata.obsm[self._lin_key] = self._lin_probs
-        self._adata.obs[_dp(self._lin_key)] = self._dp = self._lin_probs.entropy(
+        self.adata.obsm[self._lin_key] = self._lin_probs
+
+        self.adata.obs[_dp(self._lin_key)] = self._lin_probs.entropy(axis=1).X.squeeze(
             axis=1
-        ).X.squeeze(axis=1)
-        self._adata.uns[_lin_names(self._lin_key)] = self._lin_probs.names
-        self._adata.uns[_colors(self._lin_key)] = self._lin_probs.colors
+        )
+        self._dp = self.adata.obs[_dp(self._lin_key)]  # make it a pd.Series
+
+        self.adata.uns[_lin_names(self._lin_key)] = self._lin_probs.names
+        self.adata.uns[_colors(self._lin_key)] = self._lin_probs.colors
 
         logg.info("    Finish", time=start)
 
@@ -1099,7 +1102,7 @@ class BaseEstimator(ABC):
         return self._eig
 
     @property
-    def diff_potential(self) -> np.ndarray:
+    def diff_potential(self) -> pd.Series:
         """Differentiation potential for each lineage."""  # noqa
         return self._dp
 
