@@ -32,6 +32,11 @@ jobs:
       osx_image: xcode10.2
       env:
         - PYTHON_VERSION=3.7.3 USE_SLEPC=false
+        -
+    - name: "Python 3.8 deployment"
+      python: 3.6
+      env:
+        - USE_SLEPC=false CACHE_NAME=default DEPLOY_BUILD=true
 
     - name: "Python 3.6 on Linux SLEPc using extra_requires"
       python: 3.6
@@ -55,11 +60,18 @@ after_success:
   - ./.scripts/ci/upload_coverage.sh
 
 deploy:
-  provider: pypi
-  username: "__token__"
-  password:
-    secure: "wTD+QMCulMrDEVJ77W03lD+qQFVTFHn00qp99Vb+nA5FMggDC0kTMjPdqsaBAihqygFb/gJwEdbUJzGERcBq4EFwjvc6l1pK7O5G1EfB29BpLIwFTTeZpkizev3RUV6c9KWEBMi9BneqXaECHO7XtTfR+RzbVYD1/cjBoyAGkhl354UVksX+KcRQGECvfLcyPWGt6J/2eb8GAGkTI3gq3DNDh7ehDiFLQVMZoL7Cev/S9UjzU2yDWIvnaNvm0ubZBb/1hY8xqKH/QjaLv7HYYzWnHwy7IWFJrqKGHN8zDDGrda35iOh/1d7tQBOjFaQZwaUiO2Lem2zPaQ0vXsK7TpIxEsa+K+Fqd3S83B+BsQZsg4Sny9cu4lNUHuuHD0a2XOz+aTvDIJ2A0Pd7C6XdYoVky042cRyLEiZ0efIOJowbSyKxIi4b85nEG2yIo2Aq5qHcKuSWDiNTUmwXK+Xfs84LUNig9xQJDv721XBACfeBEZs5Czv0pG8qphmGFrREOaRZ7zsrlQ+ODJvyGDXvj1jUiqFzL9/xvqmr59lhARD50WEbT1QI7KvcLZ6pCUU1zmjViaC1KAGi1f4RHP43Bwu9Zq1l0oMwyq/KdYhWQCHPnfed8vb0v8Y6emA9oenugqbmX+HpBXsh4cD3CoAxG2ULhvcbiVP7bYUEBi9B2gQ="
-  distributions: "sdist bdist_wheel"
-  skip_existing: true
-  on:
-    tags: true
+  - provider: pypi
+    username: "__token__"
+    password:
+      secure: "wTD+QMCulMrDEVJ77W03lD+qQFVTFHn00qp99Vb+nA5FMggDC0kTMjPdqsaBAihqygFb/gJwEdbUJzGERcBq4EFwjvc6l1pK7O5G1EfB29BpLIwFTTeZpkizev3RUV6c9KWEBMi9BneqXaECHO7XtTfR+RzbVYD1/cjBoyAGkhl354UVksX+KcRQGECvfLcyPWGt6J/2eb8GAGkTI3gq3DNDh7ehDiFLQVMZoL7Cev/S9UjzU2yDWIvnaNvm0ubZBb/1hY8xqKH/QjaLv7HYYzWnHwy7IWFJrqKGHN8zDDGrda35iOh/1d7tQBOjFaQZwaUiO2Lem2zPaQ0vXsK7TpIxEsa+K+Fqd3S83B+BsQZsg4Sny9cu4lNUHuuHD0a2XOz+aTvDIJ2A0Pd7C6XdYoVky042cRyLEiZ0efIOJowbSyKxIi4b85nEG2yIo2Aq5qHcKuSWDiNTUmwXK+Xfs84LUNig9xQJDv721XBACfeBEZs5Czv0pG8qphmGFrREOaRZ7zsrlQ+ODJvyGDXvj1jUiqFzL9/xvqmr59lhARD50WEbT1QI7KvcLZ6pCUU1zmjViaC1KAGi1f4RHP43Bwu9Zq1l0oMwyq/KdYhWQCHPnfed8vb0v8Y6emA9oenugqbmX+HpBXsh4cD3CoAxG2ULhvcbiVP7bYUEBi9B2gQ="
+    distributions: "sdist bdist_wheel"
+    skip_existing: true
+    on:
+      tags: true
+      condition: $DEPLOY_BUILD = true
+
+  - provider: script
+    script: ./.scripts/ci/upload_bioconda.sh
+    on:
+      tags: true
+      condition: $DEPLOY_BUILD = true

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
     python3 -m pytest
