@@ -17,12 +17,9 @@ from typing import (
 )
 from itertools import tee, product, combinations
 
-import matplotlib.colors as mcolors
-
 import numpy as np
 import pandas as pd
 from pandas import Series
-from cellrank import logging as logg
 from numpy.linalg import norm as d_norm
 from scipy.linalg import solve
 from scipy.sparse import eye as speye
@@ -39,6 +36,10 @@ from pandas.api.types import infer_dtype, is_categorical_dtype
 from sklearn.neighbors import NearestNeighbors
 from scipy.sparse.linalg import norm as s_norm
 from scipy.sparse.linalg import gmres, lgmres, gcrotmk, bicgstab
+
+import matplotlib.colors as mcolors
+
+from cellrank import logging as logg
 from cellrank.utils._utils import (
     _get_neighs,
     _has_neighs,
@@ -1509,7 +1510,7 @@ def _solve_lin_system(
     mat_a: Union[np.ndarray, spmatrix],
     mat_b: Union[np.ndarray, spmatrix],
     solver: str = _DEFAULT_SOLVER,
-    use_petsc: bool = True,
+    use_petsc: bool = False,
     preconditioner: Optional[str] = None,
     n_jobs: Optional[int] = None,
     backend: str = "multiprocessing",
