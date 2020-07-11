@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+UPSTREAM="https://github.com/bioconda/bioconda-recipes"
+
 git clone https://github.com/michalk8/bioconda-recipes
 cd bioconda-recipes
 
@@ -7,13 +9,9 @@ git remote add upstream "$UPSTREAM"
 git fetch upstream
 git merge upstream/master -m "Merge branch 'master' of $UPSTREAM"
 
-# TODO update version + hash
-
-git add recipes/cellrank/meta.yaml
-git commit -m "Update meta.yaml"
-git push
-
+# unsetting `PS1` because there are some issues
 PS1= ./bootstrap.py /tmp/miniconda
 source ~/.config/bioconda/activate
 
-bioconda-utils autobump recipes/ --packages cellrank --no-check-pinnings --exclude ''
+# not including `exclude` causes some issue, just as `no-check-pinnings`
+GITHUB_TOKEN="$BIOCONDA_RECIPES" bioconda-utils autobump recipes/ --packages cellrank --no-check-pinnings --exclude '' --create-pr
