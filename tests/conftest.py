@@ -75,7 +75,7 @@ def _create_cflare(*, backward: bool = False) -> Tuple[AnnData, CFLARE]:
     mc.compute_partition()
     mc.compute_eig()
     mc.compute_metastable_states(use=2)
-    mc.compute_absorption_probabilities()
+    mc.compute_absorption_probabilities(use_petsc=False)
     mc.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
 
     assert adata is mc.adata
