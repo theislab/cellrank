@@ -10,7 +10,7 @@ except ImportError:
     __author__ = "Marius Lange, Michal Klein, Juan Luis Restrepo Lopez"
     __maintainer__ = "Marius Lange, Michal Klein"
     __email__ = "info@cellrank.org"
-    __version__ = "1.0.0-b.3"
+    __version__ = "1.0.0-b.4"
 
 _msmtools_dep = ["vendorize"]
 
