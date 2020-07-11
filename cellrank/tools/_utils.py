@@ -1574,6 +1574,7 @@ def _solve_lin_system(
             _PETSC_ERROR_MSG_SHOWN = True
             print(_PETSC_ERROR_MSG.format(_DEFAULT_SOLVER))
         solver = _DEFAULT_SOLVER
+        use_petsc = False
 
     if use_petsc:
         if not isspmatrix_csr(mat_a):
@@ -1601,7 +1602,7 @@ def _solve_lin_system(
             backend=backend,
             as_array=False,
             extractor=np.hstack,
-        )(mat_a, solver, preconditioner)
+        )(mat_a, solver=solver, preconditioner=preconditioner, tol=tol)
 
     if solver in _AVAIL_ITER_SOLVERS:
         logg.debug(f"Solving the linear system using `{solver!r}` with `tol={tol}`")
@@ -1656,6 +1657,7 @@ def _solve_many_sparse_problems_petsc(
     mat_a: csc_matrix,
     solver: Optional[str],
     preconditioner: Optional[str],
+    tol: float,
     queue: Queue,
 ) -> np.ndarray:
     """
@@ -1667,12 +1669,14 @@ def _solve_many_sparse_problems_petsc(
         Matrix of shape `n x m`, with m << n.
     mat_a
         Matrix of shape `n x n`. We make no assumptions on `mat_a` being symmetric or positive definite.
-    queue
-        Queue used to signal when a solution has been computed.
     solver
         Solver to use. One of `petsc4py.PETSc.KSP.Type`. By default, use `PETSc.KSP.Type.GMRES`.
     preconditioner
         Rreconditioner to use. If `None`, don't use any.
+    tol
+        Relative tolerance.
+    queue
+        Queue used to signal when a solution has been computed.
 
     Returns
     -------
@@ -1691,6 +1695,7 @@ def _solve_many_sparse_problems_petsc(
     A.createAIJ(size=mat_a.shape, csr=(mat_a.indptr, mat_a.indices, mat_a.data))
 
     ksp = PETSc.KSP().create()
+    ksp.setTolerances(rtol=tol)
     ksp.setType(solver if solver is not None else PETSc.KSP.Type.GMRES)
     if preconditioner is not None:
         ksp.getPC().setType(preconditioner)
@@ -1749,10 +1754,11 @@ def _solve_many_sparse_problems(
 
     # initialise solution list and info list
     x_list, info_list = [], []
+    kwargs = {} if solver is not gmres else {"atol": "legacy"}  # get rid of the warning
 
     for b in mat_b.T:
         # actually call the solver for the current sub-problem
-        x, info = solver(mat_a, b.toarray().flatten(), tol=tol, x0=None)
+        x, info = solver(mat_a, b.toarray().flatten(), tol=tol, x0=None, **kwargs)
 
         # append solution and info
         x_list.append(x)
