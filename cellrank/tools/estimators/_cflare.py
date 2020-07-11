@@ -3,16 +3,15 @@
 from copy import copy, deepcopy
 from typing import Any, Dict, List, Tuple, Union, TypeVar, Iterable, Optional
 
-import numpy as np
-from pandas import Series
-from scipy.stats import zscore
-
 import matplotlib as mpl
 import matplotlib.cm as cm
 
 import scvelo as scv
 
+import numpy as np
+from pandas import Series
 from cellrank import logging as logg
+from scipy.stats import zscore
 from cellrank.tools._utils import (
     _cluster_X,
     _filter_cells,
@@ -73,13 +72,6 @@ class CFLARE(BaseEstimator):
         s_key: Optional[str] = "S_score",
         key_added: Optional[str] = None,
     ):
-
-        self._meta_states, self._meta_states_colors, self._meta_states_probs = (
-            None,
-            None,
-            None,
-        )
-
         super().__init__(
             kernel,
             adata,
@@ -89,6 +81,7 @@ class CFLARE(BaseEstimator):
             s_key=s_key,
             key_added=key_added,
         )
+        self._meta_states_probs = None
 
     def _read_from_adata(
         self, g2m_key: Optional[str] = None, s_key: Optional[str] = None, **kwargs
@@ -304,14 +297,16 @@ class CFLARE(BaseEstimator):
         Returns
         -------
         None
-            Nothing, but updates the following fields: :paramref:`approx_recurrent_classes`.
+            Nothing, but updates the following fields:
+
+                - :paramref:`metastable_states`.
         """
 
         self._set_categorical_labels(
             attr_key="_meta_states",
-            pretty_attr_key="approx_recurrent_classes",
+            pretty_attr_key="metastable_states",
             cat_key=self._rc_key,
-            add_to_existing_error_msg="Compute approximate recurrent classes first as `.compute_metastable_states()`.",
+            add_to_existing_error_msg="Compute metastable classes first as `.compute_metastable_states()`.",
             categories=labels,
             cluster_key=cluster_key,
             en_cutoff=en_cutoff,
@@ -388,7 +383,10 @@ class CFLARE(BaseEstimator):
         Returns
         -------
         None
-            Nothing, but updates the following fields: :paramref:`approx_recurrent_classes`.
+            Nothing, but updates the following fields:
+
+                - :paramref:`metastable_states`.
+                - :paramref:`metastable_states_probabilities`.
         """
 
         if self._eig is None:
@@ -436,13 +434,14 @@ class CFLARE(BaseEstimator):
 
         # compute a rc probability
         logg.debug("Computing probabilities of approximate recurrent classes")
-        probs = self._compute_metastable_states_prob(use)
-        self._meta_states_probs = probs
-        self._adata.obs[_probs(self._rc_key)] = probs
+        self.adata.obs[_probs(self._rc_key)] = self._compute_metastable_states_prob(use)
+        self._meta_states_probs = self.adata.obs[
+            _probs(self._rc_key)
+        ]  # this ensures we get a series
 
         # retrieve embedding and concatenate
         if basis is not None:
-            if f"X_{basis}" not in self._adata.obsm.keys():
+            if f"X_{basis}" not in self.adata.obsm.keys():
                 raise KeyError(f"Compute basis `{basis!r}` first.")
             X_em = self._adata.obsm[f"X_{basis}"][:, :n_comps]
             X = np.concatenate([V_r, X_em], axis=1)
@@ -520,8 +519,8 @@ class CFLARE(BaseEstimator):
         logg.info(
             f"Adding `adata.obs[{_probs(self._rc_key)!r}]`\n"
             f"       `adata.obs[{self._rc_key!r}]`\n"
-            f"       `.approx_recurrent_classes_probabilities`\n"
-            f"       `.approx_recurrent_classes`\n"
+            f"       `.metastable_states_probabilities`\n"
+            f"       `.metastable_states`\n"
             f"    Finish",
             time=start,
         )
@@ -547,7 +546,7 @@ class CFLARE(BaseEstimator):
 
         if self._meta_states is None:
             raise RuntimeError(
-                "Compute approximate recurrent classes first as `.compute_metastable_states()`"
+                "Compute approximate recurrent classes first as `.compute_metastable_states()`."
             )
 
         self._adata.obs[self._rc_key] = self._meta_states
