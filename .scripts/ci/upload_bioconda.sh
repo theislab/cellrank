@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 
+ORIGIN="https://github.com/michalk8/bioconda-recipes"
 UPSTREAM="https://github.com/bioconda/bioconda-recipes"
 
-git clone https://github.com/michalk8/bioconda-recipes
+git clone "$ORIGIN"
 cd bioconda-recipes
 
 git remote add upstream "$UPSTREAM"
@@ -17,4 +18,4 @@ source ~/.config/bioconda/activate
 GITHUB_TOKEN="$DEPLOY_TOKEN" bioconda-utils autobump recipes/ --packages cellrank --no-check-pinnings --exclude '' --create-pr
 
 git add recipes/cellrank/meta.yaml
-git push "https://$DEPLOY_TOKEN@${UPSTREAM:8}" -m "Update CellRank meta.yaml"
+git push "https://$DEPLOY_TOKEN@${ORIGIN:8}" -m "Update CellRank meta.yaml"
