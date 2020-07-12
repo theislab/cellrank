@@ -1,18 +1,27 @@
 Installation
 ============
-CellRank requires Python version >= 3.6 to run. We recommend using Miniconda_ to manage the environment.
+CellRank requires Python version >= 3.6 to run. We recommend using Miniconda_ to manage the environments.
 
 PyPI
 ~~~~
 Install CellRank by running::
 
     pip install cellrank
+    # or with highly optimized libraries
+    pip install cellrank[krylov]
+
+If an error occurs during ``pip install cellrank[krylov]``, please consult the Dependencies_ section below.
 
 Anaconda
 ~~~~~~~~
 CellRank is also available on Anaconda and can be installed via::
 
     conda install -c conda-forge -c bioconda cellrank
+    # or with highly optimized libraries
+    conda install -c conda-forge -c bioconda cellrank-krylov
+
+If an error occurs during ``conda install -c conda-forge -c bioconda cellrank-krylov``, please consult the
+Dependencies_ section below.
 
 Development Version
 ~~~~~~~~~~~~~~~~~~~
@@ -27,9 +36,9 @@ To stay up-to-date with the newest version, run::
 when you pull new changes from GitHub. The ``'[dev]'`` options installs requirements
 needed for development, because CellRank is bundled with additional libraries.
 
-Dependencies
-~~~~~~~~~~~~
-To efficiently compute the Schur decomposition for large cell numbers, we rely on `SLEPc`_ which can
+Dependencies_
+~~~~~~~~~~~~~
+To efficiently compute the Schur decomposition for large cell numbers, we rely on `PETSc`_ and `SLEPc`_ which can
 sometimes be a bit tricky to install. On Ubuntu 18.04, try the following::
 
     # note: conda alternatives are denoted by alt.
@@ -39,16 +48,16 @@ sometimes be a bit tricky to install. On Ubuntu 18.04, try the following::
     sudo apt-get upgrade
 
     # install a message passing interface and mpi4py
-    sudo apt-get install libopenmpi-dev # alt.: conda install -c conda-forge openmpi
-    pip install --user mpi4py # alt.: conda install -c anaconda mpi4py
+    sudo apt-get install libopenmpi-dev  # alt.: conda install -c conda-forge openmpi
+    pip install --user mpi4py  # alt.: conda install -c anaconda mpi4py
 
     # install petsc and and petsc4py
-    pip install --user petsc # alt.: conda install -c conda-forge petsc
-    pip install --user petsc4py # alt.: conda install -c conda-forge petsc4py
+    pip install --user petsc  # alt.: conda install -c conda-forge petsc
+    pip install --user petsc4py  # alt.: conda install -c conda-forge petsc4py
 
     # install slepsc and slepsc4py
-    pip install --user slepc # alt.: conda install -c conda-forge slepc
-    pip install --user slepc4py # alt.: conda install -c conda-forge slepc4py
+    pip install --user slepc  # alt.: conda install -c conda-forge slepc
+    pip install --user slepc4py  # alt.: conda install -c conda-forge slepc4py
 
 During installation of petsc, petsc4py, slepc, and slepc4py the following
 error might appear several times::
