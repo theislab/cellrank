@@ -14,6 +14,10 @@ env:
   - USE_SLEPC=false CACHE_NAME=default
 
 jobs:
+  allow_failures:
+    - name: "Allow failures for deployment"
+      if: env(DEPLOY_TOKEN) != ""
+  fast_finish: true
   include:
     - name: "Python 3.6.5 on macOS"
       language: bash

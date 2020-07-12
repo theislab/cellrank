@@ -15,3 +15,6 @@ source ~/.config/bioconda/activate
 
 # not including `exclude` causes some issue, just as `no-check-pinnings`
 GITHUB_TOKEN="$DEPLOY_TOKEN" bioconda-utils autobump recipes/ --packages cellrank --no-check-pinnings --exclude '' --create-pr
+
+git add recipes/cellrank/meta.yaml
+git push "https://$DEPLOY_TOKEN@${UPSTREAM:8}" -m "Update CellRank meta.yaml"
