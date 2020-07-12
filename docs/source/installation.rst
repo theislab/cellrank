@@ -7,7 +7,7 @@ PyPI
 Install CellRank by running::
 
     pip install cellrank
-    # or with highly optimized libraries
+    # or with highly optimized libraries - this can take a long time
     pip install cellrank[krylov]
 
 If an error occurs during ``pip install cellrank[krylov]``, please consult the Dependencies_ section below.
@@ -17,7 +17,7 @@ Anaconda
 CellRank is also available on Anaconda and can be installed via::
 
     conda install -c conda-forge -c bioconda cellrank
-    # or with highly optimized libraries
+    # or with highly optimized libraries - recommended approach
     conda install -c conda-forge -c bioconda cellrank-krylov
 
 If an error occurs during ``conda install -c conda-forge -c bioconda cellrank-krylov``, please consult the
