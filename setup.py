@@ -10,9 +10,7 @@ except ImportError:
     __author__ = "Marius Lange, Michal Klein, Juan Luis Restrepo Lopez"
     __maintainer__ = "Marius Lange, Michal Klein"
     __email__ = "info@cellrank.org"
-    __version__ = "1.0.0-b.4"
-
-_msmtools_dep = ["vendorize"]
+    __version__ = "1.0.0-b.5"
 
 
 if __name__ == "__main__":
@@ -57,8 +55,7 @@ if __name__ == "__main__":
                 "mock>=4.0.2",
                 "python-igraph",
                 "louvain==0.6.1",
-            ]
-            + _msmtools_dep,
+            ],
             docs=[
                 r
                 for r in map(
@@ -68,9 +65,8 @@ if __name__ == "__main__":
                     .splitlines(),
                 )
                 if "requirements.txt" not in r
-            ]
-            + _msmtools_dep,
-            dev=["black==19.10b0", "pre-commit==2.5.1"] + _msmtools_dep,
+            ],
+            dev=["black==19.10b0", "pre-commit==2.5.1"],
         ),
         zip_safe=False,
         packages=find_packages(),
