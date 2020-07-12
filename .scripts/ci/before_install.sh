@@ -1,4 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
+set -e
 
 if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
     pip3 install -U pip
@@ -9,15 +11,20 @@ elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
         sudo apt-get update -y
         sudo apt-get install gcc gfortran libopenmpi-dev libblas-dev liblapack-dev -y
 
-        pip_cmd=$(which pip)
-        echo "Installing SLEPC and PETSc"
+        if [[ "$CACHE_NAME" != "krylov" ]]; then
+            pip_cmd=$(which pip)
+            echo "Installing SLEPc and PETSc"
 
-        sudo $pip_cmd install mpi4py
+            sudo $pip_cmd install mpi4py
 
-        sudo $pip_cmd install petsc
-        sudo $pip_cmd install petsc4py
+            sudo $pip_cmd install petsc
+            sudo $pip_cmd install petsc4py
 
-        sudo $pip_cmd install slepc
-        sudo $pip_cmd install slepc4py
+            sudo $pip_cmd install slepc
+            sudo $pip_cmd install slepc4py
+
+            python -c "import slepc; import petsc;"
+            echo "Succesfully installed SLEPc and PETSc"
+        fi
     fi
 fi

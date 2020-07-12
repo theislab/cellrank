@@ -10,13 +10,10 @@ os: linux
 cache: pip
 
 env:
-  - USE_SLEPC=true
-  - USE_SLEPC=false
+  - USE_SLEPC=true CACHE_NAME=default
+  - USE_SLEPC=false CACHE_NAME=default
 
 jobs:
-  #allow_failures:
-  # - env: USE_SLEPC=true
-
   include:
     - name: "Python 3.6.5 on macOS"
       language: bash
@@ -32,11 +29,26 @@ jobs:
       env:
         - PYTHON_VERSION=3.7.3 USE_SLEPC=false
 
+    - name: "Python 3.8 deployment"
+      python: 3.8
+      env:
+        - USE_SLEPC=false CACHE_NAME=default
+        - secure: "lTOgoZugqLoYUjtMj7qUro200HfhJBycJ3RVEkyLH/5OrKhf5nTx66AocXfaGsQoXgsghS71s6r6wixd8f6tMBhbq78KksWVkXWWJr8QJ70dU68hx+6T0+rHFtuFNEpiB+BEjAqhBHfwY3p6LHc+hMiw7ej1lfiMQtt/KnSsf7BbJN+4Xre0Q9q1yHojz/Rdp1cvcR6PXJH9o4spL2+kyzQBAtPe22NZICOnfUjquQB5BHfGcipkhxld1sM9iHEljK2OHwJL7GCo8hwyE3c1UtEOIoAz9+pubrrnCSqaeOoLSBTFqh6yUjwfNyYuBJhrQFgwEloa4g4iI4BWwZcKk8ALbRldRdz2Fg1l838f+mVqErrdU04jblhQKlSM50ZDcTv/D+kx7BjHHDVmLUQQGO+Qo87PYMxsFgan0LKkyeyjfSJQjmNHgRZjhXTeoGP9ZxzQzfKuKvgNHmJc51ssGeSb09DJUzeZECNZRlOjeMkhnxHa8XL3GeY+aEZiuIqyGHyVaOlZUFD3Ov5rK0gcmSCFDuQgpcNFGRxeJeYLw0J4BobWHAAVJ2RnCvTjlYIU5hNicVxwfE+xObkGJ0VfAkSQdz3uhjrOZuXHGrKyxInaNc/4OcCQBM9okWIhSail2pdXUvUtu2qbPE9VZExlXwQc75HhmLuppHycU42WxKg="
+
+    - name: "Python 3.6 on Linux PETSc/SLEPc using extra_requires"
+      python: 3.6
+      env:
+        - USE_SLEPC=true CACHE_NAME=krylov
+
+before_cache:
+  # don't use cache in this case, because we're testing whether pip install cellrank[krylov] works
+  - if [[ "$CACHE_NAME" == "krylov" ]]; then sudo rm -rf "$HOME/.cache/pip"; fi
+
 before_install:
-  - ./.scripts/ci/before_install.sh
+  - ./.scripts/ci/before_install.sh || travis_terminate 1
 
 install:
-  - ./.scripts/ci/install.sh
+  - ./.scripts/ci/install.sh || travis_terminate 1
 
 script:
   - travis_wait 15 ./.scripts/ci/test.sh
@@ -45,11 +57,18 @@ after_success:
   - ./.scripts/ci/upload_coverage.sh
 
 deploy:
-  provider: pypi
-  username: "__token__"
-  password:
-    secure: "wTD+QMCulMrDEVJ77W03lD+qQFVTFHn00qp99Vb+nA5FMggDC0kTMjPdqsaBAihqygFb/gJwEdbUJzGERcBq4EFwjvc6l1pK7O5G1EfB29BpLIwFTTeZpkizev3RUV6c9KWEBMi9BneqXaECHO7XtTfR+RzbVYD1/cjBoyAGkhl354UVksX+KcRQGECvfLcyPWGt6J/2eb8GAGkTI3gq3DNDh7ehDiFLQVMZoL7Cev/S9UjzU2yDWIvnaNvm0ubZBb/1hY8xqKH/QjaLv7HYYzWnHwy7IWFJrqKGHN8zDDGrda35iOh/1d7tQBOjFaQZwaUiO2Lem2zPaQ0vXsK7TpIxEsa+K+Fqd3S83B+BsQZsg4Sny9cu4lNUHuuHD0a2XOz+aTvDIJ2A0Pd7C6XdYoVky042cRyLEiZ0efIOJowbSyKxIi4b85nEG2yIo2Aq5qHcKuSWDiNTUmwXK+Xfs84LUNig9xQJDv721XBACfeBEZs5Czv0pG8qphmGFrREOaRZ7zsrlQ+ODJvyGDXvj1jUiqFzL9/xvqmr59lhARD50WEbT1QI7KvcLZ6pCUU1zmjViaC1KAGi1f4RHP43Bwu9Zq1l0oMwyq/KdYhWQCHPnfed8vb0v8Y6emA9oenugqbmX+HpBXsh4cD3CoAxG2ULhvcbiVP7bYUEBi9B2gQ="
-  distributions: "sdist bdist_wheel"
-  skip_existing: true
-  on:
-    tags: true
+  - provider: pypi
+    username: "__token__"
+    password:
+      secure: "wTD+QMCulMrDEVJ77W03lD+qQFVTFHn00qp99Vb+nA5FMggDC0kTMjPdqsaBAihqygFb/gJwEdbUJzGERcBq4EFwjvc6l1pK7O5G1EfB29BpLIwFTTeZpkizev3RUV6c9KWEBMi9BneqXaECHO7XtTfR+RzbVYD1/cjBoyAGkhl354UVksX+KcRQGECvfLcyPWGt6J/2eb8GAGkTI3gq3DNDh7ehDiFLQVMZoL7Cev/S9UjzU2yDWIvnaNvm0ubZBb/1hY8xqKH/QjaLv7HYYzWnHwy7IWFJrqKGHN8zDDGrda35iOh/1d7tQBOjFaQZwaUiO2Lem2zPaQ0vXsK7TpIxEsa+K+Fqd3S83B+BsQZsg4Sny9cu4lNUHuuHD0a2XOz+aTvDIJ2A0Pd7C6XdYoVky042cRyLEiZ0efIOJowbSyKxIi4b85nEG2yIo2Aq5qHcKuSWDiNTUmwXK+Xfs84LUNig9xQJDv721XBACfeBEZs5Czv0pG8qphmGFrREOaRZ7zsrlQ+ODJvyGDXvj1jUiqFzL9/xvqmr59lhARD50WEbT1QI7KvcLZ6pCUU1zmjViaC1KAGi1f4RHP43Bwu9Zq1l0oMwyq/KdYhWQCHPnfed8vb0v8Y6emA9oenugqbmX+HpBXsh4cD3CoAxG2ULhvcbiVP7bYUEBi9B2gQ="
+    distributions: "sdist bdist_wheel"
+    skip_existing: true
+    on:
+      tags: true
+      condition: -n ${DEPLOY_TOKEN+x}
+
+  - provider: script
+    script: ./.scripts/ci/upload_bioconda.sh
+    on:
+      tags: true
+      condition: -n ${DEPLOY_TOKEN+x}
