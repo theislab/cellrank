@@ -56,9 +56,6 @@ script:
 after_success:
   - ./.scripts/ci/upload_coverage.sh
 
-before_deploy:
-  - python-vendorize
-
 deploy:
   - provider: pypi
     username: "__token__"
@@ -66,7 +63,7 @@ deploy:
       secure: "wTD+QMCulMrDEVJ77W03lD+qQFVTFHn00qp99Vb+nA5FMggDC0kTMjPdqsaBAihqygFb/gJwEdbUJzGERcBq4EFwjvc6l1pK7O5G1EfB29BpLIwFTTeZpkizev3RUV6c9KWEBMi9BneqXaECHO7XtTfR+RzbVYD1/cjBoyAGkhl354UVksX+KcRQGECvfLcyPWGt6J/2eb8GAGkTI3gq3DNDh7ehDiFLQVMZoL7Cev/S9UjzU2yDWIvnaNvm0ubZBb/1hY8xqKH/QjaLv7HYYzWnHwy7IWFJrqKGHN8zDDGrda35iOh/1d7tQBOjFaQZwaUiO2Lem2zPaQ0vXsK7TpIxEsa+K+Fqd3S83B+BsQZsg4Sny9cu4lNUHuuHD0a2XOz+aTvDIJ2A0Pd7C6XdYoVky042cRyLEiZ0efIOJowbSyKxIi4b85nEG2yIo2Aq5qHcKuSWDiNTUmwXK+Xfs84LUNig9xQJDv721XBACfeBEZs5Czv0pG8qphmGFrREOaRZ7zsrlQ+ODJvyGDXvj1jUiqFzL9/xvqmr59lhARD50WEbT1QI7KvcLZ6pCUU1zmjViaC1KAGi1f4RHP43Bwu9Zq1l0oMwyq/KdYhWQCHPnfed8vb0v8Y6emA9oenugqbmX+HpBXsh4cD3CoAxG2ULhvcbiVP7bYUEBi9B2gQ="
     distributions: "sdist bdist_wheel"
     skip_existing: true
-    skip_cleanup: true
+    skip_cleanup: true  # necessary for vendorization
     on:
       tags: true
       condition: -n ${DEPLOY_TOKEN+x}
