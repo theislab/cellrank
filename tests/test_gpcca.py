@@ -78,7 +78,7 @@ def _check_main_states(mc: cr.tl.GPCCA, has_main_states: bool = True):
             mc.lineage_probabilities[list(mc.main_states.cat.categories)].colors,
         )
 
-    assert isinstance(mc.diff_potential, np.ndarray)
+    assert isinstance(mc.diff_potential, pd.Series)
     assert isinstance(mc.lineage_probabilities, cr.tl.Lineage)
     np.testing.assert_array_almost_equal(mc.lineage_probabilities.sum(1), 1.0)
 
