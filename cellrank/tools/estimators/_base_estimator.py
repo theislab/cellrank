@@ -284,7 +284,7 @@ class BaseEstimator(ABC):
         keys: Optional[Sequence[str]] = None,
         check_irred: bool = False,
         solver: Optional[str] = None,
-        use_petsc: bool = False,
+        use_petsc: Optional[bool] = None,
         preconditioner: Optional[str] = None,
         n_jobs: Optional[int] = None,
         backend: str = "multiprocessing",
@@ -313,6 +313,7 @@ class BaseEstimator(ABC):
             If is `None`, a solver is chosen automatically, depending on the current problem.
         use_petsc
             Whether to use solvers from :module:`petsc4py` instead of :module:`scipy`. Recommended for large problems.
+            If `None`, it is determined automatically.
         preconditioner
             Preconditioner to use when :paramref:`use_petsc` `=True`.
             For available preconditioner types, see `petsc4py.PETSc.PC.Type`.
@@ -400,14 +401,15 @@ class BaseEstimator(ABC):
                 logg.warning("The transition matrix is not irreducible")
 
         # determine whether it makes sense you use a iterative solver
-        # TODO: determine petsc solver (default is gmres)
-        if solver is None and not use_petsc:
-            if issparse(t) and n_cells > 1e4 and s.shape[1] < 100:
-                solver = "gmres"
-            elif issparse(t) and n_cells > 5 * 1e5:
-                solver = "gmres"
-            else:
-                solver = "direct"
+        if solver is None:
+            solver = (
+                "gmres"
+                if issparse(t)
+                and (n_cells >= 3e5 or (n_cells >= 1e4 and s.shape[1] <= 100))
+                else "direct"
+            )
+        if use_petsc is None:
+            use_petsc = solver != "direct" and n_cells >= 3e5
 
         logg.debug(f"Found `{n_cells}` cells and `{s.shape[1]}` absorbing states")
 
