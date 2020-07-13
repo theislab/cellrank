@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from pandas import Series
-from scipy.stats import entropy, ranksums
+from scipy.stats import ranksums
 from scipy.sparse import issparse
 from pandas.api.types import infer_dtype, is_categorical_dtype
 from scipy.sparse.linalg import eigs
@@ -106,6 +106,9 @@ class BaseEstimator(ABC):
             )
 
         self._lin_probs = None
+
+        self._meta_states = None
+        self._meta_states_colors = None
 
         # for copy
         self._g2m_key = g2m_key
@@ -281,6 +284,10 @@ class BaseEstimator(ABC):
         keys: Optional[Sequence[str]] = None,
         check_irred: bool = False,
         solver: Optional[str] = None,
+        use_petsc: Optional[bool] = None,
+        preconditioner: Optional[str] = None,
+        n_jobs: Optional[int] = None,
+        backend: str = "loky",
         tol: float = 1e-5,
     ) -> None:
         """
@@ -297,9 +304,26 @@ class BaseEstimator(ABC):
         check_irred
             Check whether the transition matrix is irreducible.
         solver
-            Solver to use for the linear problem. Options are `['direct', 'gmres', 'lgmres', 'bicgstab', 'gcrotmk']`.
-            Information on the iterative solvers may be found in :func:`scipy.sparse.linalg`.
-            If is `None`, a solver is chosen automatically, depending on the current problem.
+            Solver to use for the linear problem. Options are `['direct', 'gmres', 'lgmres', 'bicgstab', 'gcrotmk']`
+            when :paramref:`use_petsc` `=False` or one of `petsc4py.PETSc.KPS.Type` otherwise.
+
+            Information on the :module:`scipy` iterative solvers can be found in :func:`scipy.sparse.linalg` or
+            for the :module:`petsc4py` solver in https://www.mcs.anl.gov/petsc/documentation/linearsolvertable.html.
+
+            If is `None`, solver is chosen automatically, depending on the current problem.
+        use_petsc
+            Whether to use solvers from :module:`petsc4py` or :module:`scipy`. Recommended for large problems.
+            If `None`, it is determined automatically. If no installation is found, defaults
+            to :func:`scipy.sparse.linalg.gmres`.
+        preconditioner
+            Preconditioner to use when :paramref:`use_petsc` `=True`.
+            For available preconditioner types, see `petsc4py.PETSc.PC.Type`.
+        n_jobs
+            Number of parallel jobs to use when using an iterative solver.
+            When :paramref:`use_petsc` `=True` or for quickly-solvable problems,
+            we recommend higher number (>=4) of jobs in order to fully saturate the cores.
+        backend
+            Which backend to use for multiprocessing. See :class:`joblib.Parallel` for valid options.
         tol
             Convergence tolerance for the iterative solver. The default is fine for most cases, only consider
             decreasing this for severely ill-conditioned matrices.
@@ -380,15 +404,18 @@ class BaseEstimator(ABC):
 
         # determine whether it makes sense you use a iterative solver
         if solver is None:
-            if issparse(t) and n_cells > 1e4 and s.shape[1] < 100:
-                solver = "gmres"
-            elif issparse(t) and n_cells > 5 * 1e5:
-                solver = "gmres"
-            else:
-                solver = "direct"
+            solver = (
+                "gmres"
+                if issparse(t)
+                and (n_cells >= 3e5 or (n_cells >= 1e4 and s.shape[1] <= 100))
+                else "direct"
+            )
+        if use_petsc is None:
+            use_petsc = solver != "direct" and n_cells >= 3e5
+
         logg.debug(f"Found `{n_cells}` cells and `{s.shape[1]}` absorbing states")
 
-        # create a list storing information on related subproblems
+        # create a list storing information on related sub-problems
         counter = 0
         macro_ix_helper = [0]
         class_sizes = [len(indices) for indices in lookup_dict.values()]
@@ -397,7 +424,17 @@ class BaseEstimator(ABC):
             macro_ix_helper.append(counter)
 
         # solve the linear system of equations
-        mat_x = _solve_lin_system(q, s, solver=solver, tol=tol, use_eye=True,)
+        mat_x = _solve_lin_system(
+            q,
+            s,
+            solver=solver,
+            use_petsc=use_petsc,
+            preconditioner=preconditioner,
+            n_jobs=n_jobs,
+            backend=backend,
+            tol=tol,
+            use_eye=True,
+        )
 
         # take individual solutions and piece them together to get absorption probabilities towards the classes
         _abs_classes = np.concatenate(
@@ -418,15 +455,19 @@ class BaseEstimator(ABC):
             abs_classes[trans_indices, col] = _abs_classes[:, col]
             abs_classes[cl_indices, col] = 1
 
-        self._dp = entropy(abs_classes.T)
         self._lin_probs = Lineage(
             abs_classes, names=self._lin_probs.names, colors=self._lin_probs.colors,
         )
 
-        self._adata.obsm[self._lin_key] = self._lin_probs
-        self._adata.obs[_dp(self._lin_key)] = self._dp
-        self._adata.uns[_lin_names(self._lin_key)] = self._lin_probs.names
-        self._adata.uns[_colors(self._lin_key)] = self._lin_probs.colors
+        self.adata.obsm[self._lin_key] = self._lin_probs
+
+        self.adata.obs[_dp(self._lin_key)] = self._lin_probs.entropy(axis=1).X.squeeze(
+            axis=1
+        )
+        self._dp = self.adata.obs[_dp(self._lin_key)]  # make it a pd.Series
+
+        self.adata.uns[_lin_names(self._lin_key)] = self._lin_probs.names
+        self.adata.uns[_colors(self._lin_key)] = self._lin_probs.colors
 
         logg.info("    Finish", time=start)
 
@@ -928,7 +969,7 @@ class BaseEstimator(ABC):
         # check that lineage probs have been computed
         if self._lin_probs is None:
             raise RuntimeError(
-                "Compute lineage probabilities first as `.compute_absorption_probabilities()` or `.set_main_states`."
+                "Compute lineage probabilities first as `.compute_absorption_probabilities()` or `.set_main_states()`."
             )
 
         # check all lin_keys exist in self.lin_names
@@ -1066,7 +1107,7 @@ class BaseEstimator(ABC):
         return self._eig
 
     @property
-    def diff_potential(self) -> np.ndarray:
+    def diff_potential(self) -> pd.Series:
         """Differentiation potential for each lineage."""  # noqa
         return self._dp
 
