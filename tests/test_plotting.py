@@ -420,7 +420,7 @@ class TestHeatmap:
         )
 
     @compare()
-    def test_heatmap_cluster_genes(self, adata: AnnData, fpath: str):
+    def test_heatmap_no_cluster_genes(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.heatmap(
             adata,
@@ -428,7 +428,7 @@ class TestHeatmap:
             GENES[:10],
             kind="lineages",
             time_key="latent_time",
-            cluster_genes=True,
+            cluster_genes=False,
             dpi=DPI,
             save=fpath,
         )
@@ -472,6 +472,133 @@ class TestHeatmap:
             kind="genes",
             time_key="latent_time",
             cmap=cm.viridis,
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_heatmap_no_cbar_lineages(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.heatmap(
+            adata,
+            model,
+            GENES[:5],
+            kind="lineages",
+            time_key="latent_time",
+            show_cbar=False,
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_heatmap_no_cbar_genes(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.heatmap(
+            adata,
+            model,
+            GENES[:5],
+            kind="genes",
+            time_key="latent_time",
+            show_cbar=False,
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_heatmap_abs_probs_lineages(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.heatmap(
+            adata,
+            model,
+            GENES[:5],
+            kind="lineages",
+            time_key="latent_time",
+            show_absorption_probabilities=True,
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_heatmap_abs_probs_genes(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.heatmap(
+            adata,
+            model,
+            GENES[:5],
+            kind="genes",
+            time_key="latent_time",
+            show_absorption_probabilities=True,
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_heatmap_no_convolve(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.heatmap(
+            adata,
+            model,
+            GENES[:5],
+            kind="lineages",
+            time_key="latent_time",
+            n_convolve=None,
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_heatmap_no_scale_lineages(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.heatmap(
+            adata,
+            model,
+            GENES[:5],
+            kind="lineages",
+            time_key="latent_time",
+            scale=False,
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_heatmap_no_scale_genes(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.heatmap(
+            adata,
+            model,
+            GENES[:5],
+            kind="genes",
+            time_key="latent_time",
+            scale=False,
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_heatmap_cluster_no_scale(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.heatmap(
+            adata,
+            model,
+            GENES[:5],
+            kind="lineages",
+            time_key="latent_time",
+            scale=False,
+            cluster_genes=True,
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_heatmap_no_cluster(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.heatmap(
+            adata,
+            model,
+            GENES[:5],
+            kind="lineages",
+            time_key="latent_time",
+            cluster_genes=False,
             dpi=DPI,
             save=fpath,
         )
