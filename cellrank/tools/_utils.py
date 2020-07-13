@@ -1578,6 +1578,11 @@ def _solve_lin_system(
             use_petsc = False
 
     if use_petsc:
+
+        def extractor(res_converged):
+            res, converged = zip(*res_converged)
+            return np.hstack(res), sum(converged)
+
         if not isspmatrix_csr(mat_a):
             mat_a = csr_matrix(mat_a)
         if use_eye:
@@ -1596,14 +1601,21 @@ def _solve_lin_system(
         )
 
         # can't pass PETSc matrix - not pickleable
-        return parallelize(
+        mat_x, n_converged = parallelize(
             _solve_many_sparse_problems_petsc,
             mat_b,
             n_jobs=n_jobs,
             backend=backend,
             as_array=False,
-            extractor=np.hstack,
+            extractor=extractor,
         )(mat_a, solver=solver, preconditioner=preconditioner, tol=tol)
+
+        if n_converged != mat_b.shape[0]:
+            logg.warning(
+                f"`{mat_b.shape[0] - n_converged}` solution(s) did not converge"
+            )
+
+        return mat_x
 
     if solver in _AVAIL_ITER_SOLVERS:
         logg.debug(f"Solving the linear system using `{solver!r}` with `tol={tol}`")
@@ -1627,9 +1639,7 @@ def _solve_lin_system(
         # check whether all solutions converged
         not_converged = sum(con != 0 for con in info)
         if not_converged:
-            logg.warning(
-                f"For `{not_converged}` columns in `B`, the solution did not converge"
-            )
+            logg.warning(f"`{not_converged}` solution(s) did not converge")
 
         return mat_x
 
@@ -1660,7 +1670,7 @@ def _solve_many_sparse_problems_petsc(
     preconditioner: Optional[str],
     tol: float,
     queue: Queue,
-) -> np.ndarray:
+) -> Tuple[np.ndarray, int]:
     """
     Solver many problems using PETSc solver.
 
@@ -1683,6 +1693,8 @@ def _solve_many_sparse_problems_petsc(
     -------
     :class:`numpy.ndarray`
         Matrix of shape `n x m`. Each column in `mat_x` corresponds to the solution of one of the sub-problems
+    int
+        Number of converged solution.
     """
 
     from petsc4py import PETSc
@@ -1704,7 +1716,7 @@ def _solve_many_sparse_problems_petsc(
     ksp.setOperators(A)
 
     x, b = A.getVecs()
-    xs = []
+    xs, converged = [], 0
 
     for value in mat_b:
         x.set(1)  # reset the solution
@@ -1715,11 +1727,12 @@ def _solve_many_sparse_problems_petsc(
         ksp.solve(b, x)
 
         xs.append(x.getArray().copy().squeeze())
+        converged += ksp.converged
         queue.put(1)
 
     queue.put(None)
 
-    return np.stack(xs, axis=1)
+    return np.stack(xs, axis=1), converged
 
 
 def _solve_many_sparse_problems(
