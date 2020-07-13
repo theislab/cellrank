@@ -8,6 +8,7 @@ from collections import Iterable, defaultdict
 
 import numpy as np
 import pandas as pd
+from pandas.api.types import is_categorical_dtype
 from scipy.ndimage.filters import convolve
 
 import matplotlib as mpl
@@ -18,8 +19,9 @@ from matplotlib.ticker import FormatStrFormatter
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 from cellrank import logging as logg
-from cellrank.tools._utils import save_fig
+from cellrank.tools._utils import save_fig, _unique_order_preserving
 from cellrank.utils._utils import _get_n_cores, check_collection
+from cellrank.tools._colors import _create_categorical_colors
 from cellrank.plotting._utils import _fit, _model_type, _create_models, _is_any_gam_mgcv
 from cellrank.tools._constants import LinKey
 from cellrank.utils._parallelize import parallelize
@@ -40,6 +42,7 @@ def heatmap(
     lineages: Optional[Union[str, Sequence[str]]] = None,
     start_lineage: Optional[Union[str, Sequence[str]]] = None,
     end_lineage: Optional[Union[str, Sequence[str]]] = None,
+    cluster_key: Optional[Union[str, Sequence[str]]] = None,
     show_absorption_probabilities: bool = False,
     cluster_genes: bool = True,
     scale: bool = True,
@@ -91,6 +94,9 @@ def heatmap(
         Lineage from which to select cells with highest pseudotime as endpoints.
         If specified, the trends end at the latest pseudotime point within that lineage,
         otherwise, it is determined automatically.
+    cluster_key
+        Key(s) in :paramref:`adata.obs` containing categorical observations to be plotted on the top
+        of the heatmap. Only available when :paramref:`kind` `='lineages'`.
     show_absorption_probabilities
         Whether to also plot absorption probabilities alongside the smoothed expression.
     cluster_genes
@@ -177,7 +183,39 @@ def heatmap(
         norm = mcolors.Normalize(vmin=np.min(lin), vmax=np.max(lin))
         scalar_map = cm.ScalarMappable(cmap=lineage_cmap, norm=norm)
 
-        return scalar_map.to_rgba(lin), lineage_cmap, norm
+        return (
+            np.array([mcolors.to_hex(c) for c in scalar_map.to_rgba(lin)]),
+            lineage_cmap,
+            norm,
+        )
+
+    def create_col_categorical_color(cluster_key: str, rng: np.ndarray) -> np.ndarray:
+        if not is_categorical_dtype(adata.obs[cluster_key]):
+            raise TypeError(
+                f"Expected `adata.obs[{cluster_key!r}]` to be categorical, "
+                f"found `{adata.obs[cluster_key].dtype.name!r}`."
+            )
+
+        color_key = f"{cluster_key}_colors"
+        if color_key not in adata.uns:
+            logg.warning(
+                f"Color key `{color_key!r}` not found in `adata.uns`. Creating new colors"
+            )
+            colors = _create_categorical_colors(
+                len(adata.obs[cluster_key].cat.categories)
+            )
+            adata.uns[color_key] = colors
+        else:
+            colors = adata.uns[color_key]
+
+        time_series = adata.obs[kwargs.get("time_key", "latent_time")]
+        ixs = find_indices(time_series, rng)
+
+        mapper = dict(zip(adata.obs[cluster_key].cat.categories, colors))
+
+        return np.array(
+            [mcolors.to_hex(mapper[v]) for v in adata[ixs, :].obs[cluster_key].values]
+        )
 
     def create_cbar(ax, x_delta: float, cmap, norm, label=None) -> Ax:
         cax = inset_axes(
@@ -311,18 +349,31 @@ def heatmap(
             df = pd.DataFrame([m.y_test for m in models.values()], index=genes)
             df.index.name = "Genes"
 
-            show_lineage_probs = True
-            if show_lineage_probs:
+            cat_colors = None
+            if cluster_key is not None:
+                cat_colors = np.stack(
+                    [
+                        create_col_categorical_color(
+                            c, np.linspace(x_min, x_max, df.shape[1])
+                        )
+                        for c in cluster_key
+                    ],
+                    axis=0,
+                )
+
+            if show_absorption_probabilities:
                 col_colors, col_cmap, col_norm = create_col_colors(
                     lname, np.linspace(x_min, x_max, df.shape[1])
                 )
+                if cat_colors is not None:
+                    col_colors = np.vstack([cat_colors, col_colors[None, :]])
             else:
-                col_colors, col_cmap, col_norm = None, None, None
+                col_colors, col_cmap, col_norm = cat_colors, None, None
 
             g = sns.clustermap(
                 df,
                 cmap=cmap,
-                figsize=(10, min(len(genes) / 10 + 1, 10))
+                figsize=(10, min(len(genes) / 8 + 1, 10))
                 if figsize is None
                 else figsize,
                 xticklabels=False,
@@ -382,12 +433,19 @@ def heatmap(
         lineages = adata.obsm[lineage_key].names
     elif isinstance(lineages, str):
         lineages = [lineages]
+    lineages = _unique_order_preserving(lineages)
 
     for lineage_name in lineages:
         _ = adata.obsm[lineage_key][lineage_name]
 
+    if cluster_key is not None:
+        if isinstance(cluster_key, str):
+            cluster_key = [cluster_key]
+        cluster_key = _unique_order_preserving(cluster_key)
+
     if isinstance(genes, str):
         genes = [genes]
+    genes = _unique_order_preserving(genes)
     check_collection(adata, genes, "var_names")
 
     if isinstance(start_lineage, (str, type(None))):
