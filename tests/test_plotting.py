@@ -603,6 +603,51 @@ class TestHeatmap:
             save=fpath,
         )
 
+    @compare()
+    def test_heatmap_cluster_key_no_abs_probs(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.heatmap(
+            adata,
+            model,
+            GENES[:5],
+            cluster_key="clusters",
+            show_absorption_probabilities=False,
+            kind="lineages",
+            time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_heatmap_cluster_key_abs_probs(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.heatmap(
+            adata,
+            model,
+            GENES[:5],
+            cluster_key="clusters",
+            show_absorption_probabilities=True,
+            kind="lineages",
+            time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_heatmap_multiplecluster_keys(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.heatmap(
+            adata,
+            model,
+            GENES[:5],
+            cluster_key=["clusters", "clusters_enlarged", "clusters"],
+            show_absorption_probabilities=True,
+            kind="lineages",
+            time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
+        )
+
 
 class TestGeneTrend:
     @compare(dirname="trends_simple")
