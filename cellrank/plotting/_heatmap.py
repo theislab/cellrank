@@ -40,7 +40,7 @@ def heatmap(
     lineages: Optional[Union[str, Sequence[str]]] = None,
     start_lineage: Optional[Union[str, Sequence[str]]] = None,
     end_lineage: Optional[Union[str, Sequence[str]]] = None,
-    show_absorption_probabilities: bool = True,
+    show_absorption_probabilities: bool = False,
     cluster_genes: bool = True,
     scale: bool = True,
     n_convolve: Optional[int] = 5,
