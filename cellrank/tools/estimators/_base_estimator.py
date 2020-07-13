@@ -287,7 +287,7 @@ class BaseEstimator(ABC):
         use_petsc: Optional[bool] = None,
         preconditioner: Optional[str] = None,
         n_jobs: Optional[int] = None,
-        backend: str = "multiprocessing",
+        backend: str = "loky",
         tol: float = 1e-5,
     ) -> None:
         """
@@ -305,21 +305,23 @@ class BaseEstimator(ABC):
             Check whether the transition matrix is irreducible.
         solver
             Solver to use for the linear problem. Options are `['direct', 'gmres', 'lgmres', 'bicgstab', 'gcrotmk']`
-            when :paramref:`use_petsc` or one of `petsc4py.PETSc.KPS.Type` otherwise.
+            when :paramref:`use_petsc` `=False` or one of `petsc4py.PETSc.KPS.Type` otherwise.
 
             Information on the :module:`scipy` iterative solvers can be found in :func:`scipy.sparse.linalg` or
             for the :module:`petsc4py` solver in https://www.mcs.anl.gov/petsc/documentation/linearsolvertable.html.
 
-            If is `None`, a solver is chosen automatically, depending on the current problem.
+            If is `None`, solver is chosen automatically, depending on the current problem.
         use_petsc
-            Whether to use solvers from :module:`petsc4py` instead of :module:`scipy`. Recommended for large problems.
-            If `None`, it is determined automatically.
+            Whether to use solvers from :module:`petsc4py` or :module:`scipy`. Recommended for large problems.
+            If `None`, it is determined automatically. If no installation is found, defaults
+            to :func:`scipy.sparse.linalg.gmres`.
         preconditioner
             Preconditioner to use when :paramref:`use_petsc` `=True`.
             For available preconditioner types, see `petsc4py.PETSc.PC.Type`.
         n_jobs
-            Number of parallel jobs to use when :paramref:`use_petsc` `=True`. For small, quickly-solvable problems,
-            we recommend high number (>=8) of cores in order to fully saturate them.
+            Number of parallel jobs to use when using an iterative solver.
+            When :paramref:`use_petsc` `=True` or for quickly-solvable problems,
+            we recommend higher number (>=4) of jobs in order to fully saturate the cores.
         backend
             Which backend to use for multiprocessing. See :class:`joblib.Parallel` for valid options.
         tol
@@ -967,7 +969,7 @@ class BaseEstimator(ABC):
         # check that lineage probs have been computed
         if self._lin_probs is None:
             raise RuntimeError(
-                "Compute lineage probabilities first as `.compute_absorption_probabilities()` or `.set_main_states`."
+                "Compute lineage probabilities first as `.compute_absorption_probabilities()` or `.set_main_states()`."
             )
 
         # check all lin_keys exist in self.lin_names

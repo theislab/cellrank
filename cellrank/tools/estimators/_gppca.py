@@ -6,6 +6,9 @@ from types import MappingProxyType
 from typing import Any, Dict, List, Tuple, Union, Mapping, TypeVar, Iterable, Optional
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
+
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
@@ -14,10 +17,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 import scvelo as scv
 
-import numpy as np
-import pandas as pd
 from cellrank import logging as logg
-from scipy.stats import entropy
 from cellrank.tools._utils import (
     save_fig,
     _eigengap,
@@ -753,7 +753,6 @@ class GPCCA(BaseEstimator):
             self._lin_probs = self._meta_lin_probs[names + [Lin.REST]]
 
         self._set_main_states(n_cells)
-        self._dp = entropy(self._lin_probs.X.T)
 
         # compute the aggregated probability of being a root/final state (no matter which)
         scaled_probs = self._lin_probs[
@@ -763,7 +762,11 @@ class GPCCA(BaseEstimator):
         self._main_states_probabilities = scaled_probs.max(1)
 
         # write to adata
-        self.adata.obs[_dp(self._lin_key)] = self._dp
+        self.adata.obs[_dp(self._lin_key)] = self._lin_probs.entropy(axis=1).X.squeeze(
+            axis=1
+        )
+        self._dp = self.adata.obs[_dp(self._lin_key)]  # make it a pd.Series
+
         self.adata.obs[_probs(self._rc_key)] = self._main_states_probabilities
 
         self.adata.uns[_lin_names(self._lin_key)] = self._lin_probs.names

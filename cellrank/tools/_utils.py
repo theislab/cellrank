@@ -1566,6 +1566,29 @@ def _solve_lin_system(
         defined via columns in `mat_b`.
     """
 
+    def extractor(
+        res_converged: List[Tuple[np.ndarray, int]]
+    ) -> Tuple[np.ndarray, int]:
+        res, converged = zip(*res_converged)
+        return np.hstack(res), sum(converged)
+
+    if solver == "direct":
+        if issparse(mat_a):
+            logg.debug("Densifying `A` for direct solver")
+            mat_a = mat_a.toarray()
+        if issparse(mat_b):
+            logg.debug("Densifying `B` for direct solver")
+            mat_b = mat_b.toarray()
+
+        if use_eye:
+            mat_a = np.eye(mat_a.shape[0]) - mat_a
+
+        logg.debug("Solving the linear system using direct matrix factorisation")
+
+        return solve(mat_a, mat_b)
+
+    n_jobs = _get_n_cores(n_jobs, n_jobs=None)
+
     if use_petsc:
         try:
             from petsc4py import PETSc  # noqa
@@ -1578,11 +1601,6 @@ def _solve_lin_system(
             use_petsc = False
 
     if use_petsc:
-
-        def extractor(res_converged):
-            res, converged = zip(*res_converged)
-            return np.hstack(res), sum(converged)
-
         if not isspmatrix_csr(mat_a):
             mat_a = csr_matrix(mat_a)
         if use_eye:
@@ -1592,12 +1610,12 @@ def _solve_lin_system(
         if not isspmatrix_csc(mat_b):
             mat_b = csc_matrix(mat_b)
 
-        n_jobs = _get_n_cores(n_jobs, n_jobs=None)
         # as_array causes an issue, because it's called like this np.array([(NxM), (NxK), ....]
         # in the end, we want array of shape Nx(M + K + ...) - this is ensured by the extractor
         logg.debug(
-            f"Solving the linear system using `{('gmres' if solver is None else solver)!r}` "
-            f"on `{n_jobs}` core(s) with {'no' if preconditioner is None else preconditioner} preconditioner"
+            f"Solving the linear system using `PETSc` solver `{('gmres' if solver is None else solver)!r}` "
+            f"on `{n_jobs}` core(s) with {'no' if preconditioner is None else preconditioner} preconditioner and "
+            f"`tol={tol}`"
         )
 
         # can't pass PETSc matrix - not pickleable
@@ -1610,57 +1628,39 @@ def _solve_lin_system(
             extractor=extractor,
         )(mat_a, solver=solver, preconditioner=preconditioner, tol=tol)
 
-        if n_converged != mat_b.shape[0]:
-            logg.warning(
-                f"`{mat_b.shape[0] - n_converged}` solution(s) did not converge"
-            )
-
-        return mat_x
-
-    if solver in _AVAIL_ITER_SOLVERS:
-        logg.debug(f"Solving the linear system using `{solver!r}` with `tol={tol}`")
-
-        # check whether the input is sparse
+    elif solver in _AVAIL_ITER_SOLVERS:
         if not issparse(mat_a):
             logg.debug("Sparsifying `A` for iterative solver")
             mat_a = csr_matrix(mat_a)
-        if not issparse(mat_b):
-            logg.debug("Sparsifying `b` for iterative solver")
-            mat_b = csr_matrix(mat_b)
-
         if use_eye:
             mat_a = speye(mat_a.shape[0]) - mat_a
 
-        # call function to solve the linear systems iteratively
-        solver = _AVAIL_ITER_SOLVERS[solver]
-        mat_x, info = _solve_many_sparse_problems(
-            mat_a=mat_a, mat_b=mat_b, solver=solver, tol=tol,
+        mat_b = mat_b.T
+        if not issparse(mat_b):
+            logg.debug("Sparsifying `B` for iterative solver")
+            mat_b = csr_matrix(mat_b)
+
+        logg.debug(
+            f"Solving the linear system using `scipy` solver `{solver!r}` on `{n_jobs} cores(s)` "
+            f"with `tol={tol}`"
         )
-        # check whether all solutions converged
-        not_converged = sum(con != 0 for con in info)
-        if not_converged:
-            logg.warning(f"`{not_converged}` solution(s) did not converge")
 
-        return mat_x
+        mat_x, n_converged = parallelize(
+            _solve_many_sparse_problems,
+            mat_b,
+            n_jobs=n_jobs,
+            backend=backend,
+            as_array=False,
+            extractor=extractor,
+        )(mat_a, solver=_AVAIL_ITER_SOLVERS[solver], tol=tol)
 
-    if solver == "direct":
-        logg.debug("Solving the linear system using direct matrix factorisation")
+    else:
+        raise NotImplementedError(f"The solver `{solver!r}` was not found.")
 
-        # check whether the input is dense
-        if issparse(mat_a):
-            logg.debug("Densifying `A` for direct solver")
-            mat_a = mat_a.toarray()
-        if issparse(mat_b):
-            logg.debug("Densifying `b` for direct solver")
-            mat_b = mat_b.toarray()
+    if n_converged != mat_b.shape[0]:
+        logg.warning(f"`{mat_b.shape[0] - n_converged}` solution(s) did not converge")
 
-        if use_eye:
-            mat_a = np.eye(mat_a.shape[0]) - mat_a
-
-        # directly solve the linear system
-        return solve(mat_a, mat_b)
-
-    raise NotImplementedError(f"The solver `{solver}` was not found.")
+    return mat_x
 
 
 def _solve_many_sparse_problems_petsc(
@@ -1672,7 +1672,7 @@ def _solve_many_sparse_problems_petsc(
     queue: Queue,
 ) -> Tuple[np.ndarray, int]:
     """
-    Solver many problems using PETSc solver.
+    Solver many problems using :module:`petsc4py` solver.
 
     Params
     ------
@@ -1736,8 +1736,8 @@ def _solve_many_sparse_problems_petsc(
 
 
 def _solve_many_sparse_problems(
-    mat_a: spmatrix, mat_b: spmatrix, solver: LinSolver, tol: float = 1e-5,
-) -> Tuple[np.ndarray, List[int]]:
+    mat_b: spmatrix, mat_a: spmatrix, solver: LinSolver, tol: float, queue: Queue,
+) -> Tuple[np.ndarray, int]:
     """
     Solve `mat_a * x = mat_b` efficiently using an iterative solver.
 
@@ -1747,13 +1747,12 @@ def _solve_many_sparse_problems(
 
     Params
     ------
-    mat_a
-        Matrix of shape `n x n`. We make no assumptions on `mat_a` being symmetric or positive definite.
     mat_b
         Matrix of shape `n x m`, with m << n.
+    mat_a
+        Matrix of shape `n x n`. We make no assumptions on `mat_a` being symmetric or positive definite.
     solver
-        Solver to use for the linear problem. Options are `['gmres', 'lgmres', 'bicgstab', 'gcrotmk']`.
-        These can be found in :func:`scipy.sparse.linalg`.
+        Solver to use for the linear problem. Valid options can be found in :func:`scipy.sparse.linalg`.
     tol
         Convergence threshold.
 
@@ -1762,20 +1761,24 @@ def _solve_many_sparse_problems(
     :class:`numpy.ndarray`
         Matrix of shape `n x m`. Each column in `mat_x` corresponds to the solution of one of the sub-problems
         defined via columns in `mat_b`.
-    list
-        For each sub-problem, the convergence status. 0 stands for successful convergence.
+    int
+        Number of converged solutions.
     """
 
     # initialise solution list and info list
-    x_list, info_list = [], []
+    x_list, n_converged = [], 0
     kwargs = {} if solver is not gmres else {"atol": "legacy"}  # get rid of the warning
 
-    for b in mat_b.T:
+    for b in mat_b:
         # actually call the solver for the current sub-problem
         x, info = solver(mat_a, b.toarray().flatten(), tol=tol, x0=None, **kwargs)
 
         # append solution and info
         x_list.append(x)
-        info_list.append(info)
+        n_converged += info == 0
 
-    return np.stack(x_list, axis=1), info_list
+        queue.put(1)
+
+    queue.put(None)
+
+    return np.stack(x_list, axis=1), n_converged
