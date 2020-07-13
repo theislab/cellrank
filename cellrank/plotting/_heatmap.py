@@ -40,13 +40,13 @@ def heatmap(
     lineages: Optional[Union[str, Sequence[str]]] = None,
     start_lineage: Optional[Union[str, Sequence[str]]] = None,
     end_lineage: Optional[Union[str, Sequence[str]]] = None,
-    lineage_height: float = 0.1,
+    show_absorption_probabilities: bool = True,
     cluster_genes: bool = True,
     scale: bool = True,
-    show_cbar: bool = True,
-    show_absorption_probabilities: bool = True,
-    xlabel: Optional[str] = None,
     n_convolve: Optional[int] = 5,
+    show_cbar: bool = True,
+    lineage_height: float = 0.1,
+    xlabel: Optional[str] = None,
     cmap: mcolors.ListedColormap = cm.viridis,
     n_jobs: Optional[int] = 1,
     backend: str = "multiprocessing",
@@ -82,7 +82,7 @@ def heatmap(
         - If `'genes'`, group by :paramref:`genes` for each lineage in :paramref:`lineage_names`.
         - If `'lineages'`, group by :paramref:`lineage_names` for each gene in :paramref:`genes`.
     lineage_names
-        Names of the lineages for which to plot.
+        Names of the lineages which to plot.
     start_lineage
         Lineage from which to select cells with lowest pseudotime as starting points.
         If specified, the trends start at the earliest pseudotime point within that lineage,
@@ -91,14 +91,20 @@ def heatmap(
         Lineage from which to select cells with highest pseudotime as endpoints.
         If specified, the trends end at the latest pseudotime point within that lineage,
         otherwise, it is determined automatically.
-    lineage_height
-        Height of a bar when :paramref:`kind` ='lineages'.
-    xlabel
-        Label on the x-axis. If `None`, it is determined based on :paramref:`time_key`.
+    show_absorption_probabilities
+        Whether to also plot absorption probabilities alongside the smoothed expression.
     cluster_genes
         Whether to use :func:`seaborn.clustermap` when :paramref:`kind` `='lineages'`.
     scale
         Whether to scale the expression per gene to `0-1` range.
+    n_convolve
+        Convolution window size when smoothing out absorption probabilities.
+    show_cbar
+        Whether to show the colorbar.
+    lineage_height
+        Height of a bar when :paramref:`kind` ='lineages'.
+    xlabel
+        Label on the x-axis. If `None`, it is determined based on :paramref:`time_key`.
     cmap
         Colormap to use when visualizing the smoothed expression.
     n_jobs
