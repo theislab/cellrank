@@ -63,7 +63,7 @@ Queue = TypeVar("Queue")
 
 EPS = np.finfo(np.float64).eps
 
-_DEFAULT_SOLVER = "direct"
+_DEFAULT_SOLVER = "gmres"
 _PETSC_ERROR_MSG_SHOWN = False
 _PETSC_ERROR_MSG = (
     "Unable to import petsc4py. "
@@ -1572,6 +1572,19 @@ def _solve_lin_system(
         res, converged = zip(*res_converged)
         return np.hstack(res), sum(converged)
 
+    n_jobs = _get_n_cores(n_jobs, n_jobs=None)
+
+    if use_petsc:
+        try:
+            from petsc4py import PETSc  # noqa
+        except ImportError:
+            global _PETSC_ERROR_MSG_SHOWN
+            if not _PETSC_ERROR_MSG_SHOWN:
+                _PETSC_ERROR_MSG_SHOWN = True
+                print(_PETSC_ERROR_MSG.format(_DEFAULT_SOLVER))
+            solver = _DEFAULT_SOLVER
+            use_petsc = False
+
     if solver == "direct":
         if issparse(mat_a):
             logg.debug("Densifying `A` for direct solver")
@@ -1586,19 +1599,6 @@ def _solve_lin_system(
         logg.debug("Solving the linear system using direct matrix factorisation")
 
         return solve(mat_a, mat_b)
-
-    n_jobs = _get_n_cores(n_jobs, n_jobs=None)
-
-    if use_petsc:
-        try:
-            from petsc4py import PETSc  # noqa
-        except ImportError:
-            global _PETSC_ERROR_MSG_SHOWN
-            if not _PETSC_ERROR_MSG_SHOWN:
-                _PETSC_ERROR_MSG_SHOWN = True
-                print(_PETSC_ERROR_MSG.format(_DEFAULT_SOLVER))
-            solver = _DEFAULT_SOLVER
-            use_petsc = False
 
     if use_petsc:
         if not isspmatrix_csr(mat_a):
@@ -1627,7 +1627,6 @@ def _solve_lin_system(
             as_array=False,
             extractor=extractor,
         )(mat_a, solver=solver, preconditioner=preconditioner, tol=tol)
-
     elif solver in _AVAIL_ITER_SOLVERS:
         if not issparse(mat_a):
             logg.debug("Sparsifying `A` for iterative solver")
