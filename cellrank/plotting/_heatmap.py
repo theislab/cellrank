@@ -6,11 +6,6 @@ from typing import Any, Tuple, Union, TypeVar, Optional, Sequence
 from pathlib import Path
 from collections import Iterable, defaultdict
 
-import numpy as np
-import pandas as pd
-from pandas.api.types import is_categorical_dtype
-from scipy.ndimage.filters import convolve
-
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
@@ -18,9 +13,13 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
+import numpy as np
+import pandas as pd
 from cellrank import logging as logg
+from pandas.api.types import is_categorical_dtype
 from cellrank.tools._utils import save_fig, _unique_order_preserving
 from cellrank.utils._utils import _get_n_cores, check_collection
+from scipy.ndimage.filters import convolve
 from cellrank.tools._colors import _create_categorical_colors
 from cellrank.plotting._utils import _fit, _model_type, _create_models, _is_any_gam_mgcv
 from cellrank.tools._constants import LinKey
@@ -380,11 +379,20 @@ def heatmap(
                 cbar_kws={"label": "Expression"},
                 row_cluster=cluster_genes and df.shape[0] > 1,
                 col_colors=col_colors,
+                colors_ratio=0.05,
                 col_cluster=False,
                 cbar_pos=None,
                 standard_scale=0 if scale else None,
             )
-            g.ax_heatmap.set_title(lname)
+            g.ax_heatmap.text(
+                x=0.5,
+                y=1 + 0.15 * (len(cluster_key) + show_absorption_probabilities),
+                s=lname,
+                fontsize=16,
+                ha="center",
+                va="bottom",
+                transform=g.ax_heatmap.transAxes,
+            )
 
             if show_cbar:
                 cax = create_cbar(
