@@ -90,7 +90,7 @@ class BaseEstimator(ABC):
 
         # import transition matrix and parameters
         if kernel.transition_matrix is None:
-            logg.debug("Computing transition matrix using default parameters.")
+            logg.debug("Computing transition matrix using default parameters")
             kernel.compute_transition_matrix()
         kernel.write_to_adata(key_added=key_added)
 
@@ -251,6 +251,7 @@ class BaseEstimator(ABC):
         -------
         None
             Nothing, but updates the following fields:
+
                 - :paramref:`recurrent_classes`
                 - :paramref:`transient_classes`
                 - :paramref:`irreducible`
@@ -311,14 +312,14 @@ class BaseEstimator(ABC):
             Check whether the transition matrix is irreducible.
         solver
             Solver to use for the linear problem. Options are `['direct', 'gmres', 'lgmres', 'bicgstab', 'gcrotmk']`
-            when :paramref:`use_petsc` `=False` or one of `petsc4py.PETSc.KPS.Type` otherwise.
+            when :paramref:`use_petsc` `=False` or one of :class:`petsc4py.PETSc.KPS.Type` otherwise.
 
-            Information on the :module:`scipy` iterative solvers can be found in :func:`scipy.sparse.linalg` or
-            for the :module:`petsc4py` solver in https://www.mcs.anl.gov/petsc/documentation/linearsolvertable.html.
+            Information on the :mod:`scipy` iterative solvers can be found in :func:`scipy.sparse.linalg` or for
+            :mod:`petsc4py` solver found `here https://www.mcs.anl.gov/petsc/documentation/linearsolvertable.html`_.
 
-            If is `None`, solver is chosen automatically, depending on the current problem.
+            If is `None`, solver is chosen automatically, depending on the problem.
         use_petsc
-            Whether to use solvers from :module:`petsc4py` or :module:`scipy`. Recommended for large problems.
+            Whether to use solvers from :mod:`petsc4py` or :mod:`scipy`. Recommended for large problems.
             If `None`, it is determined automatically. If no installation is found, defaults
             to :func:`scipy.sparse.linalg.gmres`.
         preconditioner
@@ -379,7 +380,7 @@ class BaseEstimator(ABC):
 
         #  create empty lineage object
         if self._lin_probs is not None:
-            logg.debug("DEBUG: Overwriting `.lin_probs`")
+            logg.debug("DEBUG: Overwriting `.lineage_probabilities`")
         self._lin_probs = Lineage(
             np.empty((1, len(colors_))),
             names=metastable_states_.cat.categories,

@@ -6,11 +6,13 @@ CFLARE
 
 .. autoclass:: cellrank.tl.CFLARE
     :members:
+    :inherited-members:
 
 GPCCA
 ~~~~~
 .. autoclass:: cellrank.tl.GPCCA
     :members:
+    :inherited-members:
 
 Models
 ~~~~~~
