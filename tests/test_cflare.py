@@ -115,7 +115,7 @@ class TestCFLARE:
         mc.compute_metastable_states(use=2)
         mc.compute_absorption_probabilities()
 
-        assert isinstance(mc.diff_potential, np.ndarray)
+        assert isinstance(mc.diff_potential, pd.Series)
         assert f"{LinKey.FORWARD}_dp" in mc.adata.obs.keys()
         np.testing.assert_array_equal(
             mc.diff_potential, mc.adata.obs[f"{LinKey.FORWARD}_dp"]
@@ -151,13 +151,35 @@ class TestCFLARE:
 
         # compute lin probs using direct solver
         mc.compute_absorption_probabilities(solver="direct")
-        l_direct = mc.lineage_probabilities
+        l_direct = mc.lineage_probabilities.copy()
 
-        # comptue lin probs using iterative solver
+        # compute lin probs using iterative solver
         mc.compute_absorption_probabilities(solver="gmres", tol=tol)
-        l_iterative = mc.lineage_probabilities
+        l_iterative = mc.lineage_probabilities.copy()
 
+        assert not np.shares_memory(l_direct.X, l_iterative.X)  # sanity check
         np.testing.assert_allclose(l_direct.X, l_iterative.X, rtol=0, atol=tol)
+
+    def test_compute_absorption_probabilities_solver_petsc(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+        tol = 1e-6
+
+        mc = cr.tl.CFLARE(final_kernel)
+        mc.compute_eig(k=5)
+        mc.compute_metastable_states(use=2)
+
+        # compute lin probs using direct solver
+        mc.compute_absorption_probabilities(solver="gmres", use_petsc=False, tol=tol)
+        l_iter = mc.lineage_probabilities.copy()
+
+        # compute lin probs using petsc iterative solver
+        mc.compute_absorption_probabilities(solver="gmres", use_petsc=True, tol=tol)
+        l_iter_petsc = mc.lineage_probabilities.copy()
+
+        assert not np.shares_memory(l_iter.X, l_iter_petsc.X)  # sanity check
+        np.testing.assert_allclose(l_iter.X, l_iter_petsc.X, rtol=0, atol=tol)
 
     def test_compute_lineage_drivers_no_lineages(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()

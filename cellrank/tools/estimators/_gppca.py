@@ -35,9 +35,8 @@ from cellrank._vendor.msmtools.analysis.dense.gpcca import GPCCA as _GPCCA
 
 AnnData = TypeVar("AnnData")
 
-
 # whether to remove overlapping cells from both states, or assign them to the most likely clusters
-REMOVE_OVERLAP = False
+_REMOVE_OVERLAP = False
 
 
 class GPCCA(BaseEstimator):
@@ -93,8 +92,6 @@ class GPCCA(BaseEstimator):
         self._coarse_init_dist = None
         self._coarse_stat_dist = None
 
-        self._meta_states = None
-        self._meta_states_colors = None
         self._meta_lin_probs = None
 
         self._main_states = None
@@ -681,7 +678,7 @@ class GPCCA(BaseEstimator):
         a_discrete, _ = _fuzzy_to_discrete(
             a_fuzzy=probs,
             n_most_likely=n_cells,
-            remove_overlap=REMOVE_OVERLAP,
+            remove_overlap=_REMOVE_OVERLAP,
             raise_threshold=0.2,
             check_row_sums=False,
         )
@@ -758,7 +755,6 @@ class GPCCA(BaseEstimator):
             self._lin_probs = self._meta_lin_probs[names + [Lin.REST]]
 
         self._set_main_states(n_cells)
-        self._dp = entropy(self._lin_probs.X.T)
 
         # compute the aggregated probability of being a root/final state (no matter which)
         scaled_probs = self._lin_probs[
@@ -768,7 +764,11 @@ class GPCCA(BaseEstimator):
         self._main_states_probabilities = scaled_probs.max(1)
 
         # write to adata
-        self.adata.obs[_dp(self._lin_key)] = self._dp
+        self.adata.obs[_dp(self._lin_key)] = self._lin_probs.entropy(axis=1).X.squeeze(
+            axis=1
+        )
+        self._dp = self.adata.obs[_dp(self._lin_key)]  # make it a pd.Series
+
         self.adata.obs[_probs(self._rc_key)] = self._main_states_probabilities
 
         self.adata.uns[_lin_names(self._lin_key)] = self._lin_probs.names
@@ -946,7 +946,7 @@ class GPCCA(BaseEstimator):
             a_discrete, not_enough_cells = _fuzzy_to_discrete(
                 a_fuzzy=memberships,
                 n_most_likely=n_cells,
-                remove_overlap=REMOVE_OVERLAP,
+                remove_overlap=_REMOVE_OVERLAP,
                 raise_threshold=0.2,
                 check_row_sums=check_row_sums,
             )

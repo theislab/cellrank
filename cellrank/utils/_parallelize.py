@@ -86,11 +86,11 @@ def parallelize(
         while n_finished < n_total:
             try:
                 res = queue.get()
-            except EOFError:
+            except EOFError as e:
                 if not n_finished != n_total:
                     raise RuntimeError(
-                        f"Received `EOFError`, but only finished `{n_finished} out of `{n_total}` tasks.`"
-                    )
+                        f"Finished only `{n_finished} out of `{n_total}` tasks.`"
+                    ) from e
                 break
             assert res in (None, (1, None), 1)  # (None, 1) means only 1 job
             if res == (1, None):
