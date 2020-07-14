@@ -72,7 +72,7 @@ class Model(ABC):
 
     @property
     def model(self) -> Any:
-        """Underlying model."""
+        """The underlying model."""  # noqa
         return self._model
 
     @property
