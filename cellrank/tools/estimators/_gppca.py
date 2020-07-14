@@ -6,6 +6,9 @@ from types import MappingProxyType
 from typing import Any, Dict, List, Tuple, Union, Mapping, TypeVar, Iterable, Optional
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
+
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
@@ -14,10 +17,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 import scvelo as scv
 
-import numpy as np
-import pandas as pd
 from cellrank import logging as logg
-from scipy.stats import entropy
 from cellrank.tools._utils import (
     save_fig,
     _eigengap,
@@ -124,7 +124,7 @@ class GPCCA(BaseEstimator):
         Returns
         -------
         None
-            Nothing, but updates the following fields: paramref:`eigendecomposition`.
+            Nothing, but updates the following fields: :paramref:`eigendecomposition`.
         """
         self._compute_eig(k=k, which=which, alpha=alpha, only_evals=True, ncv=ncv)
 
@@ -269,13 +269,14 @@ class GPCCA(BaseEstimator):
             Input probability distribution over all cells. If `None`, uniform is chosen.
         method
             Method for calculating the Schur vectors. Valid options are: `'krylov'` or `'brandts'`.
+
             For benefits of each method, see :class:`msmtools.analysis.dense.gpcca.GPCCA`. The former is
             an iterative procedure that computes a partial, sorted Schur decomposition for large, sparse
             matrices whereas the latter computes a full sorted Schur decomposition of a dense matrix.
         which
             Eigenvalues are in general complex. `'LR'` - largest real part, `'LM'` - largest magnitude.
         alpha
-            Used to compute the `eigengap`. paramref:`alpha` is the weight given
+            Used to compute the `eigengap`. :paramref:`alpha` is the weight given
             to the deviation of an eigenvalue from one.
 
         Returns
@@ -541,25 +542,25 @@ class GPCCA(BaseEstimator):
         Params
         ------
         discrete
-            Whether to plot the top cells from each linages or the probabilities.
+            Whether to plot the top cells from each lineages or the probabilities.
         lineages
             Only show these lineages. If `None`, plot all lineages.
         cluster_key
-            Key from :paramref`adata: `.obs` for plotting cluster labels.
+            Key from :paramref:`adata` `.obs` for plotting cluster labels.
         mode
-            Can be either `'embedding'` or `'time'`.
+            One of following:
 
-            - If `'embedding'`, plot the embedding while coloring in the absorption probabilities.
-            - If `'time'`, plot the pseudotime on x-axis and the absorption probabilities on y-axis.
+                - `'embedding'` - plot the embedding while coloring in the absorption probabilities.
+                - `'time'` - plot the pseudotime on x-axis and the absorption probabilities on y-axis.
         time_key
-            Key from `adata.obs` to use as a pseudotime ordering of the cells.
+            Key from :paramref:`adata` `.obs` to use as a pseudotime ordering of the cells.
         same_plot
-            Whether to plot the lineages on the same plot using color gradients when :paramref:`mode='embedding'`.
+            Whether to plot the lineages on the same plot using color gradients when :paramref:`mode` `='embedding'`.
         cmap
             Colormap to use.
         title
-            Either `None`, in which case titles are "to/from final/root state X",
-            or an array of titles, one per lineage.
+            Either `None`, in which case titles are `"{to,from} {final,root} {state}"`, or an array of titles,
+            one per lineage.
         kwargs
             Keyword arguments for :func:`scvelo.pl.scatter`.
 
@@ -614,20 +615,20 @@ class GPCCA(BaseEstimator):
         Params
         ------
         discrete
-            Whether to plot the top cells from each linages or the probabilities.
+            Whether to plot the top cells from each lineages or the probabilities.
         lineages
-            Only show these lineages. If `None`, plot all lineages.
+            Only plot these lineages. If `None`, plot all lineages.
         cluster_key
-            Key from :paramref`adata: `.obs` for plotting cluster labels.
+            Key from :paramref:`adata` `.obs` for plotting cluster labels.
         mode
-            Can be either `'embedding'` or `'time'`.
+            One of following:
 
-            - If `'embedding'`, plot the embedding while coloring in the absorption probabilities.
-            - If `'time'`, plos the pseudotime on x-axis and the absorption probabilities on y-axis.
+                - `'embedding'` - plot the embedding while coloring in the absorption probabilities.
+                - `'time'` - plot the pseudotime on x-axis and the absorption probabilities on y-axis.
         time_key
             Key from `adata.obs` to use as a pseudotime ordering of the cells.
         same_plot
-            Whether to plot the lineages on the same plot using color gradients when :paramref:`method='embedding'`.
+            Whether to plot the lineages on the same plot using color gradients when :paramref:`method` `='embedding'`.
         show_dp
             Whether to show :paramref:`diff_potential` when :paramref:`n_cells` `=None`.
         title
@@ -794,15 +795,12 @@ class GPCCA(BaseEstimator):
         Params
         ------
         method
-            One of the following:
+            One of following:
 
-            - `'eigengap'` - select the number of states based on the eigengap of the transition matrix
-            - `'eigengap_coarse'`- select the number of states based on the eigengap of the diagonal
-                of the coarse-grained transition matrix
-            - `'min_self_prob'`- select states which have the given minimum probability on the diagonal
-                of the coarse-grained transition matrix
-            - `'top_n'`- select top :paramref:`n_main_states` based on the probability on the diagonal
-                of the coarse-grained transition matrix
+                - `'eigengap'` - select the number of states based on the eigengap of the transition matrix.
+                - `'eigengap_coarse'` - select the number of states based on the eigengap of the diagonal of the coarse-grained transition matrix.
+                - `'min_self_prob'` - select states which have the given minimum probability on the diagonal of the coarse-grained transition matrix.
+                - `'top_n'` - select top :paramref:`n_main_states` based on the probability on the diagonal of the coarse-grained transition matrix
         redistribute
             Whether to redistribute the probability mass of unselected lineages or create a `'rest'` lineage.
         alpha
@@ -823,7 +821,7 @@ class GPCCA(BaseEstimator):
 
                 - :paramref:`lineage_probabilities`
                 - :paramref:`diff_potential`
-        """
+        """  # noqa
         if len(self.metastable_states.cat.categories) == 1:
             logg.warning(
                 "Found only one metastable state. Making it the single main state. "
@@ -1317,7 +1315,7 @@ class GPCCA(BaseEstimator):
         key_added
             Key in :paramref:`adata` `.obs` where to save the pseudotime.
         kwargs
-            Keyword arguments for :math:`compute_schur` if Schur decomposition if not found.
+            Keyword arguments for :meth:`cellrank.tl.GPCCA.compute_schur` if Schur decomposition is not found.
 
         Returns
         -------
