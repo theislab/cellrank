@@ -626,7 +626,7 @@ class GPCCA(BaseEstimator):
                 - `'embedding'` - plot the embedding while coloring in the absorption probabilities.
                 - `'time'` - plot the pseudotime on x-axis and the absorption probabilities on y-axis.
         time_key
-            Key from `adata.obs` to use as a pseudotime ordering of the cells.
+            Key from :paramref:`adata` `.obs` to use as a pseudotime ordering of the cells.
         same_plot
             Whether to plot the lineages on the same plot using color gradients when :paramref:`method` `='embedding'`.
         show_dp

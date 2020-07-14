@@ -3,15 +3,16 @@
 from copy import copy, deepcopy
 from typing import Any, Dict, List, Tuple, Union, TypeVar, Iterable, Optional
 
+import numpy as np
+from pandas import Series
+from scipy.stats import zscore
+
 import matplotlib as mpl
 import matplotlib.cm as cm
 
 import scvelo as scv
 
-import numpy as np
-from pandas import Series
 from cellrank import logging as logg
-from scipy.stats import zscore
 from cellrank.tools._utils import (
     _cluster_X,
     _filter_cells,
@@ -176,7 +177,13 @@ class CFLARE(BaseEstimator):
                     f"Using default colors"
                 )
 
-    def compute_eig(self, k: int = 20, which: str = "LR", alpha: float = 1) -> None:
+    def compute_eig(
+        self,
+        k: int = 20,
+        which: str = "LR",
+        alpha: float = 1,
+        ncv: Optional[int] = None,
+    ) -> None:
         """
         Compute eigendecomposition of the transition matrix.
 
@@ -192,6 +199,8 @@ class CFLARE(BaseEstimator):
         alpha
             Used to compute the `eigengap`. :paramref:`alpha` is the weight given
             to the deviation of an eigenvalue from one.
+        ncv
+            Number of Lanczos vectors generated.
 
         Returns
         -------
@@ -199,7 +208,7 @@ class CFLARE(BaseEstimator):
             Nothing, but updates the following fields: :paramref:`eigendecomposition`.
         """
 
-        self._compute_eig(k, which=which, alpha=alpha, only_evals=False)
+        self._compute_eig(k, which=which, alpha=alpha, only_evals=False, ncv=ncv)
 
     def plot_eig_embedding(
         self,
@@ -587,12 +596,12 @@ class CFLARE(BaseEstimator):
         cluster_key
             Key from :paramref`adata: `.obs` for plotting cluster labels.
         mode
-            Can be either `'embedding'` or `'time'`.
+            One of following:
 
-            - If `'embedding'`, plot the embedding while coloring in the absorption probabilities.
-            - If `'time'`, plos the pseudotime on x-axis and the absorption probabilities on y-axis.
+                - `'embedding'` - plot the embedding while coloring in the absorption probabilities.
+                - `'time'` - plot the pseudotime on x-axis and the absorption probabilities on y-axis.
         time_key
-            Key from `adata.obs` to use as a pseudotime ordering of the cells.
+            Key from :paramref:`adata` `.obs` to use as a pseudotime ordering of the cells.
         show_dp
             Whether to show :paramref:`diff_potential` if present.
         same_plot
