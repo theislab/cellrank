@@ -18,9 +18,8 @@ from typing import (
 from functools import wraps, reduce
 
 import numpy as np
-from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix
-
 from cellrank import logging as logg
+from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix
 from cellrank.tools._utils import (
     bias_knn,
     _normalize,
@@ -93,14 +92,7 @@ class KernelExpression(ABC):
     @property
     @abstractmethod
     def adata(self) -> AnnData:
-        """
-        The annotated data object.
-
-        Returns
-        -------
-        :class:`anndata.AnnData`
-            The underlying :paramref:`.adata` object.
-        """  # noqa
+        """The annotated data object."""  # noqa
         pass
 
     @property
@@ -122,7 +114,7 @@ class KernelExpression(ABC):
         Params
         ------
         value
-            The new transition matrix.
+            The new transition matrix. If the expression has no parent, the matrix is normalized.
 
         Returns
         -------
@@ -155,19 +147,20 @@ class KernelExpression(ABC):
 
     def write_to_adata(self, key_added: Optional[str] = None) -> None:
         """
-        Write the parameters and transition matrix to the underlying adata object.
+        Write the parameters and transition matrix to the underlying :paramref:`adata` object.
 
         Params
         ------
         key_added
-            Postfix to be added to :paramref`.adata` `.uns.
+            Postfix to be added to :paramref:`adata` `.uns` when writing the parameters.
 
         Returns
         -------
         None
-            Updates the underlying :paramref:`.adata` object with the following:
-                - `.obsp[`'T_{fwd, bwd}'` _`:paramref:`key_added`]` - transition matrix
-                - `.uns[`'T_{fwd, bwd}'` _`:paramref:`key_added` `'_params'`] - parameters used for calculation
+            Updates the underlying :paramref:`.adata` object with the following fields:
+
+                - .obsp[`'T_{fwd,bwd}` _ :paramref:`key_added` '] - transition matrix.
+                - .uns[`'T_{fwd,bwd}` _  :paramref:`key_added` `_params'`] - parameters used.
         """
 
         if self.transition_matrix is None:
@@ -523,8 +516,8 @@ class NaryKernelExpression(KernelExpression, ABC):
                 yield from k._get_kernels()
 
     @property
-    def adata(self):
-        """Annotated data object."""  # noqa
+    def adata(self) -> AnnData:
+        """The annotated data object."""  # noqa
         # we can do this because Constant requires adata as well
         return self._kexprs[0].adata
 
@@ -658,7 +651,7 @@ class Kernel(UnaryKernelExpression, ABC):
         if len(problematic_indices) != 0:
             logg.warning(
                 f"Detected {len(problematic_indices)} absorbing states in the transition matrix. "
-                f"This matrix won't be reducible, consider setting `use_negative_cosines` to `True`"
+                f"This matrix won't be reducible, consider setting `use_negative_cosines=True`"
             )
             for ix in problematic_indices:
                 matrix[ix, ix] = 1.0
@@ -836,7 +829,7 @@ class VelocityKernel(Kernel):
     Kernel which computes a transition matrix based on velocity correlations.
 
     This borrows ideas from both [Manno18]_ and [Bergen19]_. In short, for each cell *i*, we compute transition
-    probabilities :math:`p_{i, j}` to each cell *j* ( in the neighborhood of *i*. The transition probabilities are
+    probabilities :math:`p_{i, j}` to each cell *j* in the neighborhood of *i*. The transition probabilities are
     computed as a multinominal logistic regression where the weights :math:`w_j` (for all *j*) are given by the vector
     that connects cell *i* with cell *j* in gene expression space, and the features :math:`x_i` are given
     by the velocity vector :math:`v_i` of cell *i*.
@@ -855,12 +848,12 @@ class VelocityKernel(Kernel):
     var_key
         Key in :paramref:`adata` `.obsp` where the velocity variances are stored.
     use_negative_cosines
-        Whether to use correlations with cells that have an angle > 90 degree with v_i
+        Whether to use correlations with cells that have an angle > 90 degree with :math:`v_i`.
     compute_cond_num
         Whether to compute condition number of the transition matrix. Note that this might be costly,
         since it does not use sparse implementation.
     check_connectivity
-        Check whether the underlying KNN graph is connected
+        Check whether the underlying KNN graph is connected.
     """
 
     def __init__(
@@ -960,35 +953,33 @@ class VelocityKernel(Kernel):
         Compute transition matrix based on velocity correlations.
 
         For each cell, infer transition probabilities based on the correlation of the cell's
-        velocity-extrapolated cell state with cell states of its `K` nearest neighbors.
+        velocity-extrapolated cell state with cell states of its *K* nearest neighbors.
 
         Params
         ------
         density_normalize
             Whether or not to use the underlying KNN graph for density normalization.
         backward_mode
-            Options are `['transpose', 'negate']`. Only matters if initialised as :paramref:`backward` =`True`.
+            Options are `['transpose', 'negate']`. Only matters if initialized as :paramref:`backward` =`True`.
         sigma_corr
-            Kernel width for exp kernel to be used to compute transition probabilities
+            Kernel width for exp kernel to be used to compute transition probabilities.
             from the velocity graph. If `None`, the median cosine correlation in absolute value is used.
         scale_by_variances
-            If variances for the velocity correlations were computed, use these as scaling factor in softmax
+            If variances for the velocity correlations were computed, use these as scaling factor in softmax.
         var_min
-            Variances are clipped at the lower end to this value
+            Variances are clipped at the lower end to this value.
         self_transitions
-            Assigns elements to the diagonal of the velocity-graph based on a confidence measure
+            Assigns elements to the diagonal of the velocity-graph based on a confidence measure.
         perc
             Quantile of the distribution of exponentiated velocity correlations. This is used as a threshold to set
-            smaller values to zero
+            smaller values to zero.
         threshold
-            Set a threshold to remove exponentiated velocity correlations smaller than `threshold`
-        a_min
-
+            Set a threshold to remove exponentiated velocity correlations smaller than `threshold`.
 
         Returns
         -------
         None
-            Makes :paramref:`transition_matrix` available.
+            Nothing, but makes :paramref:`transition_matrix` available.
         """
 
         start = logg.info("Computing transition matrix based on velocity correlations")
@@ -1147,7 +1138,7 @@ class ConnectivityKernel(Kernel):
         Returns
         -------
         None
-            Makes :paramref:`transition_matrix` available.
+            Nothing, but makes :paramref:`transition_matrix` available.
         """
 
         start = logg.info("Computing transition matrix based on connectivities")
@@ -1192,7 +1183,7 @@ class PalantirKernel(Kernel):
     The implementation presented here won't exactly reproduce the original *Palantir* algorithm (see below)
     but the results are qualitatively very similar.
 
-    Optionally, we apply a density correction as described in [Coifman05]_, where we use the implementation of
+    Optionally, we apply density correction as described in [Coifman05]_, where we use the implementation of
     [Haghverdi16]_.
 
     Params
@@ -1254,10 +1245,10 @@ class PalantirKernel(Kernel):
         This is a re-implementation of the Palantir algorithm by [Setty19]_.
         Note that this won't exactly reproduce the original Palantir results, for three reasons:
 
-        - 1. Palantir computes the KNN graph in a scaled space of diffusion components.
-        - 2. Palantir uses its own pseudotime to bias the KNN graph which is not implemented here
-        - 3. Palantir uses a slightly different mechanism to ensure the graph remains connected when removing edges that
-             point into the "pseudotime past".
+            - 1. Palantir computes the KNN graph in a scaled space of diffusion components.
+            - 2. Palantir uses its own pseudotime to bias the KNN graph which is not implemented here.
+            - 3. Palantir uses a slightly different mechanism to ensure the graph remains connected when removing edges that point into the "pseudotime past".
+
         If you would like to reproduce the original results, please use the original Palantir algorithm.
 
         Params
@@ -1271,16 +1262,16 @@ class PalantirKernel(Kernel):
         Returns
         -------
         None
-            Makes :paramref:`transition_matrix` available.
-        """
+            Nothing, but makes :paramref:`transition_matrix` available.
+        """  # noqa
 
         start = logg.info("Computing transition matrix based on Palantir-like kernel")
 
         # get the connectivities and number of neighbors
         if (
-            "neighbors" in self.adata.uns.keys()
+            "neighbors" in self.adata.uns
             and "params" in self.adata.uns["neighbors"]
-            and "n_neighbors" in self.adata.uns["neighbors"]["params"].keys()
+            and "n_neighbors" in self.adata.uns["neighbors"]["params"]
         ):
             n_neighbors = self.adata.uns["neighbors"]["params"]["n_neighbors"]
         else:

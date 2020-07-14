@@ -5,21 +5,20 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Tuple, Union, TypeVar, Iterable, Optional, Sequence
 from pathlib import Path
 
-import numpy as np
-import pandas as pd
-from pandas import Series
-from scipy.stats import ranksums
-from scipy.sparse import issparse
-from pandas.api.types import infer_dtype, is_categorical_dtype
-from scipy.sparse.linalg import eigs
-
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 
 import scvelo as scv
 
+import numpy as np
+import pandas as pd
+from pandas import Series
 from cellrank import logging as logg
+from scipy.stats import ranksums
+from scipy.sparse import issparse
+from pandas.api.types import infer_dtype, is_categorical_dtype
+from scipy.sparse.linalg import eigs
 from cellrank.tools._utils import (
     save_fig,
     _eigengap,
@@ -55,7 +54,7 @@ AnnData = TypeVar("AnnData")
 
 
 class BaseEstimator(ABC):
-    """Base class for all lineage probabilities estimators."""
+    """Abstract base class for all lineage probabilities estimators."""
 
     def __init__(
         self,
@@ -315,7 +314,7 @@ class BaseEstimator(ABC):
             when :paramref:`use_petsc` `=False` or one of :class:`petsc4py.PETSc.KPS.Type` otherwise.
 
             Information on the :mod:`scipy` iterative solvers can be found in :func:`scipy.sparse.linalg` or for
-            :mod:`petsc4py` solver found `here https://www.mcs.anl.gov/petsc/documentation/linearsolvertable.html`_.
+            :mod:`petsc4py` solver found `here <https://www.mcs.anl.gov/petsc/documentation/linearsolvertable.html/>`_.
 
             If is `None`, solver is chosen automatically, depending on the problem.
         use_petsc
@@ -807,7 +806,7 @@ class BaseEstimator(ABC):
             Nothing, but warns if a group is cell-cycle driven.
         """
 
-        # initialise the groups (start or end clusters) and scores
+        # initialize the groups (start or end clusters) and scores
         groups = rc_labels.cat.categories
         scores = []
         if self._G2M_score is not None:
@@ -1107,15 +1106,15 @@ class BaseEstimator(ABC):
         """
         A dictionary with the following fields:
 
-        - `'D'` eigenvalues of left eigenvectors
-        - `'V_l'` left eigenvectors
-        - `'V_r'` right eigenvectors
+            - `'D'` eigenvalues of left eigenvectors
+            - `'V_l'` left eigenvectors
+            - `'V_r'` right eigenvectors
         """  # noqa
         return self._eig
 
     @property
     def diff_potential(self) -> pd.Series:
-        """Differentiation potential for each lineage."""  # noqa
+        """Differentiation potential of each lineage."""  # noqa
         return self._dp
 
     @property
@@ -1125,7 +1124,7 @@ class BaseEstimator(ABC):
 
     @property
     def adata(self) -> AnnData:
-        """The underlying annotated data object."""  # noqa
+        """The annotated data object."""  # noqa
         return self._adata
 
     @property
