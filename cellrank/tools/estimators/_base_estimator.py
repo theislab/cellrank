@@ -150,7 +150,7 @@ class BaseEstimator(ABC):
         only_evals
             Return only eigenvalues
         ncv
-            Number of Lanczos vectors generated
+            Number of Lanczos vectors generated.
 
         Returns
         -------
@@ -212,7 +212,13 @@ class BaseEstimator(ABC):
         )
 
     @abstractmethod
-    def compute_eig(self, k: int = 20, which: str = "LR", alpha: float = 1) -> None:
+    def compute_eig(
+        self,
+        k: int = 20,
+        which: str = "LR",
+        alpha: float = 1,
+        ncv: Optional[int] = None,
+    ) -> None:
         """
         Compute eigendecomposition of the transition matrix.
 
