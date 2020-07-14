@@ -673,7 +673,7 @@ class TestHeatmap:
             model,
             GENES[:5],
             n_jobs=2,
-            backend="multiprocessing",  # uses pickling of objects, such as Lineage
+            backend="loky",  # uses pickling of objects, such as Lineage
             cluster_key=["clusters", "clusters_enlarged", "clusters"],
             show_absorption_probabilities=True,
             kind="lineages",
