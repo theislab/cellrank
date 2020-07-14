@@ -16,18 +16,17 @@ from typing import (
 from pathlib import Path
 from collections import defaultdict
 
-import numpy as np
-from scipy.sparse import csr_matrix
-from pandas.core.dtypes.common import is_categorical_dtype
-
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 
+import numpy as np
+from scipy.sparse import csr_matrix
 from cellrank.tools._utils import save_fig
 from cellrank.utils.models import Model, GamMGCVModel
 from cellrank.tools.kernels import VelocityKernel
 from cellrank.tools._constants import _colors
+from pandas.core.dtypes.common import is_categorical_dtype
 from cellrank.tools.estimators._cflare import CFLARE
 
 AnnData = TypeVar("AnnData")
@@ -74,10 +73,10 @@ def lineages(
     cluster_key
         If given, plot cluster annotations left of the lineage probabilities.
     mode
-        Can be either `'embedding'` or `'time'`.
+        Can be either `'embedding'` or `'time'`:
 
-        - If `'embedding'`, plots the embedding while coloring in the absorption probabilities.
-        - If `'time'`, plots the pseudotime on x-axis and the absorption probabilities on y-axis.
+            - `'embedding'` - plot the embedding while coloring in the absorption probabilities.
+            - `'time'` - plot the pseudotime on x-axis and the absorption probabilities on y-axis.
     time_key
         Key from `adata.obs` to use as a pseudotime ordering of the cells.
     cmap
@@ -88,7 +87,7 @@ def lineages(
     Returns
     -------
     None
-        Just plots the lineage probabilities.
+        Nothing, Just plots the lineage probabilities.
     """
 
     adata_dummy = adata.copy()
@@ -269,14 +268,12 @@ def composition(
     dpi
         Dots per inch.
     save
-        Filename where to save the plots.
-        If `None`, just shows the plot.
+        Filename where to save the plots. If `None`, just shows the plot.
 
     Returns
     -------
     None
-        Nothing, just plots the similarity matrix.
-        Optionally saves the figure based on :paramref:`save`.
+        Nothing, just plots the similarity matrix. Optionally saves the figure based on :paramref:`save`.
     """
 
     if key not in adata.obs:

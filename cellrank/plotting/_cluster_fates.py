@@ -7,14 +7,13 @@ from typing import Any, List, Tuple, Union, Mapping, TypeVar, Optional, Sequence
 from pathlib import Path
 from collections import OrderedDict as odict
 
-import numpy as np
-import pandas as pd
-
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.colors
 import matplotlib.pyplot as plt
 
+import numpy as np
+import pandas as pd
 from cellrank import logging as logg
 from cellrank.tools._utils import save_fig
 from cellrank.utils._utils import _make_unique
@@ -47,7 +46,7 @@ def cluster_fates(
     **kwargs,
 ) -> None:
     """
-    Plot aggregate lineage probabilities at a cluster level.
+    Plot aggregate lineage probabilities at cluster level.
 
     This can be used to investigate how likely a certain cluster is to go to the final states, or in turn to have
     descended from the root states. For mode `'paga'` and `'paga_pie'`, we use *PAGA*, see [Wolf19]_.
@@ -65,22 +64,18 @@ def cluster_fates(
     lineage_key
         Key in :paramref:`adata` `.obsm` containing fate probabilities.
     clusters
-        Clusters to visualize.
-        If `None`, all clusters will be plotted.
+        Clusters to visualize. If `None`, all clusters will be plotted.
     lineages
-        Lineages for which to visualize absorption probabilities.
-        If `None`, use all available lineages.
+        Lineages for which to visualize absorption probabilities. If `None`, use all available lineages.
     mode
         Type of plot to show.
 
-        - `'bar'`: barplot, one panel per cluster
-        - `'paga'`: scanpy's PAGA, one per root/final state, colored in by fate
-        - `'paga_pie'`: scanpy's PAGA with pie charts indicating aggregated fates
-        - `'violin'`: violin plots, one per root/final state
-        - `'heatmap'`: seaborn heatmap, showing average fates per cluster
-        - `'clustermap'`: same as heatmap, but with dendrogram
-    dpi
-        Dots per inch.
+            - `'bar'` - barplot, one panel per cluster.
+            - `'paga'` - scanpy's PAGA, one per root/final state, colored in by fate.
+            - `'paga_pie'` - scanpy's PAGA with pie charts indicating aggregated fates.
+            - `'violin'` - violin plots, one per root/final state.
+            - `'heatmap'` - seaborn heatmap, showing average fates per cluster.
+            - `'clustermap'` - same as heatmap, but with dendrogram.
     final
         Whether to consider cells going to final states or vice versa.
     basis
@@ -94,8 +89,7 @@ def cluster_fates(
     figsize
         Size of the figure.
     save
-        Filename where to save the plots.
-        If `None`, just shows the plot.
+        Filename where to save the plots. If `None`, just shows the plot.
     legend_kwargs
         Keyword arguments for :func:`matplotlib.axes.Axes.legend`, such as `'loc'` for legend position.
         For `mode='paga_pie'` and `basis='...'`, this controls the placement of the absorption probabilities legend.
@@ -113,6 +107,7 @@ def cluster_fates(
         Nothing, just plots the fates for specified :paramref:`clusters` and :paramref:`lineages`.
         Optionally saves the figure based on :paramref:`save`.
     """
+
     from seaborn import heatmap, clustermap
     from scanpy.plotting import violin
     from scvelo.plotting import paga
