@@ -131,8 +131,12 @@ class Model(ABC):
         return self._conf_int
 
     @abstractmethod
-    def __copy__(self) -> "Model":
+    def copy(self) -> "Model":
+        """Return a copy of self."""
         pass
+
+    def __copy__(self) -> "SKLearnModel":
+        return self.copy()
 
     def prepare(
         self,
@@ -159,7 +163,7 @@ class Model(ABC):
         lineage_name
             Name of a lineage in :paramref:`adata` `.uns`:paramref:`lineage_key`.
         data_key
-            Key in :attr:`paramref.adata` `.layers` or `'X'` for :paramref:`adata` `.X`
+            Key in :attr:`paramref.adata` `.layers` or `'X'` for :paramref:`adata` `.X`.
         final
             Whether to consider cells going to final states or vice versa.
         time_key
@@ -182,18 +186,17 @@ class Model(ABC):
         filter_data
             Use only testing points for fitting.
         n_test_points
-            Number or test points.
-            if `None`, use the original points based on :paramref:`threshold`.
+            Number of testing points. If `None`, use the original points based on :paramref:`threshold`.
 
         Returns
         -------
         None
             Nothing, but updates the following fields:
 
-            - :paramref:`x`
-            - :paramref:`y`
-            - :paramref:`w`
-            - :paramref:`x_test`
+                - :paramref:`x`
+                - :paramref:`y`
+                - :paramref:`w`
+                - :paramref:`x_test`
         """
 
         if data_key not in ["X", "obs"] + list(self.adata.layers.keys()):
@@ -641,14 +644,14 @@ class Model(ABC):
 
 class SKLearnModel(Model):
     """
-    Wrapper around `scikit-learn`-like models.
+    Wrapper around :mod:`sklearn` model.
 
     Params
     ------
     adata : :class:`anndata.AnnData`
         Annotated data object.
     model
-        Underlying `scikit-learn` model.
+        Underlying :mod:`sklearn` model.
     weight_name
         Name of the weight argument for :paramref:`model` `.fit`.
     """
@@ -675,7 +678,7 @@ class SKLearnModel(Model):
 
     @property
     def model(self) -> BaseEstimator:
-        """Underlying model."""
+        """The underlying model."""  # noqa
         return self._model
 
     def _find_func(
@@ -797,13 +800,15 @@ class SKLearnModel(Model):
 
         return self.conf_int
 
-    def __copy__(self) -> "SKLearnModel":
+    def copy(self) -> "SKLearnModel":
+        """Return a copy of self."""
         return type(self)(self.adata, copy(self._model))
 
 
 class GamMGCVModel(Model):
     """
-    Wrapper around R's `mgcv` package for fitting Generalized Additive Models (GAMs).
+    Wrapper around R's `mgcv <https://cran.r-project.org/web/packages/mgcv/>`_ package for \
+    fitting Generalized Additive Models (GAMs).
 
     Params
     ------
@@ -950,5 +955,6 @@ class GamMGCVModel(Model):
         """
         return self.default_conf_int(x_test=x_test, **kwargs)
 
-    def __copy__(self) -> "GamMGCVModel":
+    def copy(self) -> "GamMGCVModel":
+        """Return a copy of self."""
         return type(self)(self.adata, self._n_splines, self._sp)

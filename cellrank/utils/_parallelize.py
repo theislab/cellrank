@@ -47,8 +47,7 @@ def parallelize(
     use_ixs
         Whether to pass indices to the callback.
     backend
-        Which backend to use for multiprocessing.
-        See :class:`joblib.Parallel` for valid options.
+        Which backend to use for multiprocessing. See :class:`joblib.Parallel` for valid options.
     extractor
         Function to apply to the result after all jobs have finished.
     show_progress_bar

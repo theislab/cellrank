@@ -15,19 +15,20 @@ AnnData = TypeVar("AnnData")
 
 
 _find_docs = """\
-Compute {cells} states based on RNA velocity, see [Manno18]_.The tool models dynamic cellular
+Compute {cells} states based on RNA velocity, see [Manno18]_. The tool models dynamic cellular
 processes as a Markov chain, where the transition matrix is computed based on the velocity vectors of each
 individual cell. Based on this Markov chain, we provide two estimators to compute {cells} states, both of which
 are based on spectral methods.
 
-For the estimator GPCCA, cells are fuzzily clustered into metastable states, using Generalized Perron Cluster Cluster
-Analysis [GPCCA18]_. In short, this coarse-grains the Markov chain into a set of macrostates representing the slow
+For the estimator :class:`cellrank.tl.GPCCA`, cells are fuzzily clustered into metastable states,
+using Generalized Perron Cluster Cluster Analysis [GPCCA18]_.
+In short, this coarse-grains the Markov chain into a set of macrostates representing the slow
 time-scale dynamics, i.e. transitions between these macrostates are rare. The most stable ones of these will represent
 {cells}, while the others will represent transient, metastable states.
 
-For the estimator CFLARE, cells are filtered into transient/recurrent cells using the left eigenvectors of the
-transition matrix and clustered into distinct groups of {cells} states using the right eigenvectors of the transition
-matrix of the Markov chain.
+For the estimator :class:`cellrank.tl.CFLARE`, cells are filtered into transient/recurrent cells using the
+left eigenvectors of the transition matrix and clustered into distinct groups of {cells} states using the right
+eigenvectors of the transition matrix of the Markov chain.
 
 Params
 ------
@@ -37,20 +38,21 @@ estimator
     Estimator to use to compute the {cells} states.
 n_states
     If you know how many {direction} states you are expecting, you can provide this number.
-    Otherwise, an `eigen-gap` heuristic is used.
+    Otherwise, an `eigengap` heuristic is used.
 cluster_key
-    Key from `adata.obs` where cluster annotations are stored. These are used to give names to the {direction} states.
+    Key from :paramref:`adata` `.obs` where cluster annotations are stored.
+    These are used to give names to the {direction} states.
 weight_connectivities
-    Weight given to a transition matrix computed on the basis of the KNN connectivities. Should be in `[0, 1]`. This
-    can help in situations where we have noisy velocities and want to give some weight to transcriptomic similarity.
+    Weight given to a transition matrix computed on the basis of the KNN connectivities. Must be in `[0, 1]`.
+    This can help in situations where we have noisy velocities and want to give some weight to
+    transcriptomic similarity.
 use_velocity_uncertainty
     Whether to use velocity uncertainty. Uncertainties are computed independently per gene using the neighborhood graph.
     They are then propagated into cosine similarities and finally used as a scaling factor in the softmax which
     transforms cosine similarities to probabilities, i.e. transitions we are uncertain about are down-weighted.
 method
     Method to use when computing the Schur decomposition. Only needed when :paramref:`estimator`
-    is :class`:cellrank.tl.GPCCA:.
-    Valid options are: `'krylov'`, `'brandts'`.
+    is :class:`cellrank.tl.GPCCA`. Valid options are: `'krylov'` or `'brandts'`.
 show_plots
     Whether to show plots of the spectrum and eigenvectors in the embedding.
 copy
@@ -58,14 +60,14 @@ copy
 return_estimator
     Whether to return the estimator. Only available when :paramref:`copy=False`.
 kwargs
-    Keyword arguments for :meth:`cellrank.tl.estimators.BaseEstimator.compute_metastable_states`.
+    Keyword arguments for :meth:`cellrank.tl.BaseEstimator.compute_metastable_states`.
 
 Returns
 -------
-
 :class:`anndata.AnnData`, :class:`cellrank.tools.estimators.BaseEstimator` or :class:`NoneType`
-    Depending on :paramref:`copy`, either updates the existing :paramref:`adata` object or returns a copy or
+    Depending on :paramref:`copy`, either updates the existing :paramref:`adata` object, returns a copy or
     returns the estimator.
+
     Marked cells can be found in :paramref:`adata` `.obs` under `{key_added!r}`.
 """
 
@@ -158,7 +160,7 @@ def _root_final(
 
 
 @inject_docs(
-    root=_find_docs.format(cells="root", direction="start", key_added="root_states")
+    root=_find_docs.format(cells="root", direction="root", key_added="root_states")
 )
 def root_states(
     adata: AnnData,
@@ -192,7 +194,7 @@ def root_states(
 
 
 @inject_docs(
-    final=_find_docs.format(cells="final", direction="end", key_added="final_states")
+    final=_find_docs.format(cells="final", direction="final", key_added="final_states")
 )
 def final_states(
     adata: AnnData,
