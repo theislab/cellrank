@@ -491,15 +491,12 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
     def names(self, value: Iterable[str]):
         if not isinstance(value, Iterable):
             raise TypeError(_ERROR_NOT_ITERABLE.format("names", type(value).__name__))
-        for v in value:
-            if not isinstance(v, str):
-                raise TypeError(
-                    f"Expected `names` to be strings, found type `{type(v).__name__}`."
-                )
 
+        value = [v if isinstance(v, str) else str(v) for v in value]
         value = self._check_shape(value, _ERROR_WRONG_SIZE.format("names"))
+
         if len(set(value)) != len(value):
-            raise ValueError("Not all lineage names are unique.")
+            raise ValueError(f"Not all lineage names are unique: `{value}`.")
 
         self._names = self._prepare_annotation(value)
         self._names_to_ixs = {name: ix for ix, name in enumerate(self.names)}
