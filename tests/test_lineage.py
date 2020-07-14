@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import pickle
+from io import BytesIO
 from collections import defaultdict
 from html.parser import HTMLParser
 
@@ -983,3 +985,46 @@ class TestView:
         x = lineage.view().view()
 
         assert x.owner is lineage
+
+
+class TestPickling:
+    def test_pickle_normal(self, lineage: Lineage):
+        handle = BytesIO()
+
+        pickle.dump(lineage, handle)
+        handle.flush()
+        handle.seek(0)
+
+        res = pickle.load(handle)
+
+        assert res.shape == lineage.shape
+        assert res.dtype == lineage.dtype
+        assert not np.shares_memory(res.X, lineage.X)
+        np.testing.assert_array_equal(res, lineage)
+        np.testing.assert_array_equal(res.names, lineage.names)
+        np.testing.assert_array_equal(res.names, lineage.names)
+
+        assert res._names_to_ixs == lineage._names_to_ixs
+        assert res._n_lineages == lineage._n_lineages
+        assert res._is_transposed == lineage._is_transposed
+
+    def test_pickle_transposed(self, lineage: Lineage):
+        lineage = lineage.T.copy()
+        handle = BytesIO()
+
+        pickle.dump(lineage, handle)
+        handle.flush()
+        handle.seek(0)
+
+        res = pickle.load(handle)
+
+        assert res.shape == lineage.shape
+        assert res.dtype == lineage.dtype
+        assert not np.shares_memory(res.X, lineage.X)
+        np.testing.assert_array_equal(res.X, lineage.X)
+        np.testing.assert_array_equal(res.names, lineage.names)
+        np.testing.assert_array_equal(res.names, lineage.names)
+
+        assert res._names_to_ixs == lineage._names_to_ixs
+        assert res._n_lineages == lineage._n_lineages
+        assert res._is_transposed == lineage._is_transposed

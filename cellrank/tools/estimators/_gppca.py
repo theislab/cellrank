@@ -6,9 +6,6 @@ from types import MappingProxyType
 from typing import Any, Dict, List, Tuple, Union, Mapping, TypeVar, Iterable, Optional
 from pathlib import Path
 
-import numpy as np
-import pandas as pd
-
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
@@ -17,7 +14,10 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 import scvelo as scv
 
+import numpy as np
+import pandas as pd
 from cellrank import logging as logg
+from scipy.stats import entropy
 from cellrank.tools._utils import (
     save_fig,
     _eigengap,
@@ -186,6 +186,8 @@ class GPCCA(BaseEstimator):
         """
         Plot the Schur matrix.
 
+        Params
+        ------
         title
             Title of the figure.
         cmap
