@@ -6,12 +6,11 @@ from types import MappingProxyType
 from typing import Tuple, Union, Mapping, TypeVar, Optional, Sequence
 from pathlib import Path
 
-import numpy as np
-
 import matplotlib
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 
+import numpy as np
 from cellrank import logging as logg
 from cellrank.tools._utils import save_fig
 from cellrank.utils._utils import _get_n_cores, _make_unique, check_collection
@@ -150,8 +149,7 @@ def gene_trends(
     n_jobs
         Number of parallel jobs. If `-1`, use all available cores. If `None` or `1`, the execution is sequential.
     backend
-        Which backend to use for multiprocessing.
-        See :class:`joblib.Parallel` for valid options.
+        Which backend to use for multiprocessing. See :class:`joblib.Parallel` for valid options.
     ext
         Extension to use when saving files, such as `'pdf'`.
         Only used when :paramref:`same_plot` `=False`.
