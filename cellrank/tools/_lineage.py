@@ -244,17 +244,6 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
         return obj
 
-    @property
-    def T(self):
-        """Transpose of self."""
-        obj = self.transpose()
-        obj._is_transposed = not self._is_transposed
-        return obj
-
-    def view(self, dtype=None, type=None) -> "LineageView":
-        """Return a view of self."""
-        return LineageView(self)
-
     def __array_finalize__(self, obj) -> None:
         if obj is None:
             return
@@ -603,6 +592,17 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         """Convert self to numpy array, losing names and colors."""
         return np.array(self, copy=False)
 
+    @property
+    def T(self):
+        """Transpose of self."""
+        obj = self.transpose()
+        obj._is_transposed = not self._is_transposed
+        return obj
+
+    def view(self, dtype=None, type=None) -> "LineageView":
+        """Return a view of self."""
+        return LineageView(self)
+
     def __repr__(self) -> str:
         return f'{super().__repr__()[:-1]},\n  names([{", ".join(self.names)}]))'
 
@@ -675,9 +675,10 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         return NotImplemented
 
     def __setstate__(self, state):
-        *state, names, colors = state
+        *state, names, colors, is_t = state
         names = names[-1]
         colors = colors[-1]
+
         self._names = np.empty(names[1])
         self._colors = np.empty(colors[1])
 
@@ -685,6 +686,8 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         self._names.__setstate__(tuple(names))
         self._colors.__setstate__(tuple(colors))
 
+        self._is_transposed = is_t
+        self._n_lineages = len(self.names)
         self._names_to_ixs = {name: ix for ix, name in enumerate(self.names)}
 
     def __reduce__(self):
@@ -692,23 +695,18 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
         names = self.names.__reduce__()
         colors = self.colors.__reduce__()
-        res[-1] += (names, colors)
+        res[-1] += (names, colors, self._is_transposed)
 
         return tuple(res)
 
     def copy(self, _="C") -> "Lineage":
         """Return a copy of itself."""
-
-        was_trasposed = False
-        if self._is_transposed:
-            self = self.T
-            was_trasposed = True
         obj = Lineage(
-            self,
+            self.T if self._is_transposed else self,
             names=np.array(self.names, copy=True, order=_ORDER),
             colors=np.array(self.colors, copy=True, order=_ORDER),
         )
-        return obj.T if was_trasposed else obj
+        return obj.T if self._is_transposed else obj
 
     def __copy__(self):
         return self.copy()
