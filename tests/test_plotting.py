@@ -648,6 +648,23 @@ class TestHeatmap:
             save=fpath,
         )
 
+    @compare()
+    def test_heatmap_n_jobs(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.heatmap(
+            adata,
+            model,
+            GENES[:5],
+            n_jobs=2,
+            backend="threading",
+            cluster_key=["clusters", "clusters_enlarged", "clusters"],
+            show_absorption_probabilities=True,
+            kind="lineages",
+            time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
+        )
+
 
 class TestGeneTrend:
     @compare(dirname="trends_simple")
