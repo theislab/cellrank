@@ -154,12 +154,11 @@ def gene_trends(
         Extension to use when saving files, such as `'pdf'`.
         Only used when :paramref:`same_plot` `=False`.
     save
-        Filename where to save the plots.
-        If `None`, just show the plots.
+        Filename where to save the plots. If `None`, just show the plots.
     dirname
-        Directory where to save the plots, one per gene in :paramref:`genes`.
-        If `None`, just show the plots.
+        Directory where to save the plots, one per gene in :paramref:`genes`. If `None`, just show the plots.
         Only used when :paramref:`same_plot` `=False`.
+
         The figures will be saved as :paramref:`dirname` /`{gene}`. :paramref:`ext`.
     plot_kwargs:
         Keyword arguments for :meth:`cellrank.ul.models.Model.plot`.
@@ -169,7 +168,7 @@ def gene_trends(
     Returns
     -------
     None
-        Nothings just plots and optionally saves the plots.
+        Nothing, just plots and optionally saves the plots.
     """
 
     if isinstance(genes, str):

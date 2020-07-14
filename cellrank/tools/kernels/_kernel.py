@@ -1229,7 +1229,7 @@ class PalantirKernel(Kernel):
             raise KeyError(f"Could not find time key in `adata.obs[{time_key!r}]`.")
         logg.debug("Adding `.pseudotime`")
 
-        self.pseudotime = np.array(self.adata.obs[time_key]).astype(_dtype)
+        self._pseudotime = np.array(self.adata.obs[time_key]).astype(_dtype)
 
         if np.nanmin(self.pseudotime) < 0:
             raise ValueError(
@@ -1310,6 +1310,11 @@ class PalantirKernel(Kernel):
 
         return self
 
+    @property
+    def pseudotime(self) -> np.array:
+        """Pseudotemporal ordering of cells."""
+        return self._pseudotime
+
     def copy(self) -> "PalantirKernel":
         """Return a copy of self."""
         pk = PalantirKernel(
@@ -1318,6 +1323,7 @@ class PalantirKernel(Kernel):
             time_key=self._time_key,
             var_key=self._var_key,
         )
+        pk._pseudotime = copy(self.pseudotime)
         pk._params = copy(self._params)
         pk._cond_num = self.condition_number
         pk._transition_matrix = copy(self._transition_matrix)
@@ -1434,7 +1440,7 @@ def _get_expr_and_constant(k: KernelMul) -> Tuple[KernelExpression, Union[int, f
 
     Returns
     -------
-    :class:`KernelExpression` or Union[int, float]
+    :class:`KernelExpression`, Union[int, float]
         The expression which is being multiplied and the value of the constant.
     """
 
