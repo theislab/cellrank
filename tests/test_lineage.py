@@ -151,8 +151,9 @@ class TestLineageCreation:
             colors=[(0, 0, 0), (0.5, 0.5, 0.5), (1, 1, 1)],
         )
 
-        with pytest.raises(TypeError):
-            l.names = ["foo1", "bar1", 3]
+        l.names = ["foo1", "bar1", 3]
+
+        np.testing.assert_array_equal(l.names, np.array(["foo1", "bar1", "3"]))
 
     def test_names_setter_wrong_size(self):
         l = Lineage(
@@ -179,6 +180,14 @@ class TestLineageCreation:
             _ = Lineage(
                 np.random.random((10, 3, 1)),
                 names=["foo", "bar", "baz"],
+                colors=[(0, 0, 0), "#ffffff", "#ff00FF"],
+            )
+
+    def test_non_unique_names_conversion(self):
+        with pytest.raises(ValueError):
+            _ = Lineage(
+                np.random.random((10, 3, 1)),
+                names=["foo", "1", 1],
                 colors=[(0, 0, 0), "#ffffff", "#ff00FF"],
             )
 
