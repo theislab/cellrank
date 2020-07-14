@@ -14,21 +14,6 @@ GPCCA
     :members:
     :inherited-members:
 
-Models
-~~~~~~
-
-SKLearnModel
-------------
-
-.. autoclass:: cellrank.ul.models.SKLearnModel
-    :members:
-
-GamMGCVModel
-------------
-
-.. autoclass:: cellrank.ul.models.GamMGCVModel
-    :members:
-
 Kernels
 ~~~~~~~
 
@@ -56,14 +41,38 @@ Precomputed Kernel
 .. autoclass:: cellrank.tl.kernels.PrecomputedKernel
     :members:
 
+Models
+~~~~~~
+
+SKLearnModel
+------------
+
+.. autoclass:: cellrank.ul.models.SKLearnModel
+    :members:
+    :inherited-members:
+
+GamMGCVModel
+------------
+
+.. autoclass:: cellrank.ul.models.GamMGCVModel
+    :members:
+    :inherited-members:
+
 Base Classes
 ~~~~~~~~~~~~
+
+BaseEstimator
+-------------
+
+.. autoclass:: cellrank.tl.estimators.BaseEstimator
+    :members:
 
 Kernel
 ------
 
 .. autoclass:: cellrank.tl.kernels.Kernel
     :members:
+    :inherited-members:
 
 Model
 -----
