@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 from scipy.sparse import issparse
 from sklearn.base import BaseEstimator
+from scipy.ndimage.filters import convolve
 
 import matplotlib as mpl
 import matplotlib.cm as cm
@@ -281,7 +282,7 @@ class Model(ABC):
             if threshold is None:
                 threshold = np.nanmedian(w)
             w_test = w[w > threshold]
-            tmp = np.convolve(w_test, np.ones(8) / 8, mode="same")
+            tmp = convolve(w_test, np.ones(10) / 10, mode="nearest")
             val_end = x[w > threshold][np.nanargmax(tmp)]
         else:
             to_key = "_".join(lineage_key.split("_")[1:])
