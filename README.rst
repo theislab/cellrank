@@ -30,13 +30,15 @@ Installation
 ^^^^^^^^^^^^
 Install CellRank by running::
 
-    pip install cellrank
-    # or with highly optimized libraries - can take a long time
-    pip install cellrank[krylov]
-
-or via::
-
     conda install -c conda-forge -c bioconda cellrank
+    # or with extra libraries, useful for large datasets
+    conda install -c conda-forge -c bioconda cellrank-krylov
+
+or via PyPI::
+
+    pip install cellrank
+    # or with extra libraries, useful for large datasets
+    pip install 'cellrank[krylov]'
 
 Support
 ^^^^^^^
