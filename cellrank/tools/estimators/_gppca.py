@@ -97,7 +97,9 @@ class GPCCA(BaseEstimator):
         self._coarse_stat_dist = None
 
         self._premeta_lin_probs: Optional[Lineage] = None
+
         self._premeta_states = None
+        self._premeta_states_colors = None
 
     def compute_eig(
         self,
@@ -415,6 +417,7 @@ class GPCCA(BaseEstimator):
         self,
         probs: Union[np.ndarray, Lineage],
         n_cells: int,
+        check_row_sums: bool = False,
         return_not_enough_cells: bool = False,
     ) -> pd.Series:
         if isinstance(probs, Lineage):
@@ -424,7 +427,7 @@ class GPCCA(BaseEstimator):
             n_most_likely=n_cells,
             remove_overlap=False,
             raise_threshold=0.2,
-            check_row_sums=False,
+            check_row_sums=check_row_sums,
         )
 
         states = _series_from_one_hot_matrix(
@@ -757,7 +760,10 @@ class GPCCA(BaseEstimator):
 
             # select the most likely cells from each metastable state
             metastable_states, not_enough_cells = self._create_states(
-                memberships, n_cells=n_cells, return_not_enough_cells=True
+                memberships,
+                n_cells=n_cells,
+                check_row_sums=check_row_sums,
+                return_not_enough_cells=True,
             )
             not_enough_cells = not_enough_cells.astype("str")
 
