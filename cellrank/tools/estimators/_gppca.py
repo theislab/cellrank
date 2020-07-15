@@ -901,6 +901,7 @@ class GPCCA(BaseEstimator):
         Plot Schur vectors in an embedding.
 
         .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/schur_embedding.png
+           :alt: image of schur embedding
            :width: 400px
            :align: center
 
@@ -948,6 +949,7 @@ class GPCCA(BaseEstimator):
         Plot the Schur matrix.
 
         .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/schur_matrix.png
+           :alt: image of schur matrix
            :width: 400px
            :align: center
 
@@ -1031,6 +1033,7 @@ class GPCCA(BaseEstimator):
         Plot the absorption probabilities of metastable states in the given embedding.
 
         .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/gpcca_metastable_states.png
+           :alt: image of metastable states
            :width: 400px
            :align: center
 
@@ -1108,6 +1111,7 @@ class GPCCA(BaseEstimator):
         Plot the absorption probabilities in the given embedding.
 
         .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/main_states.png
+           :alt: image of main states
            :width: 400px
            :align: center
 
@@ -1193,6 +1197,7 @@ class GPCCA(BaseEstimator):
         Plot the coarse-grained transition matrix of the metastable states.
 
         .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/coarse_T.png
+           :alt: image of coarse transition matrix
            :width: 400px
            :align: center
 
