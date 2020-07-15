@@ -37,8 +37,6 @@ Install CellRank by running::
 or via::
 
     conda install -c conda-forge -c bioconda cellrank
-    # or with highly optimized libraries - recommended approach
-    conda install -c conda-forge -c bioconda cellrank-krylov
 
 Support
 ^^^^^^^

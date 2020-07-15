@@ -73,29 +73,31 @@ def heatmap(
     model
         Model to fit.
 
-        - If a :class:`dict`, gene and lineage specific models can be specified. Use `'*'` to indicate
-        all genes or lineages, for example `{'Map2': {'*': ...}, 'Dcx': {'Alpha': ..., '*': ...}}`.
+            - If a :class:`dict`, gene and lineage specific models can be specified. Use `'*'` to indicate all \
+            genes or lineages, for example `{'Map2': {'*': ...}, 'Dcx': {'Alpha': ..., '*': ...}}`.
     genes
         Genes in :paramref:`adata` `.var_names` to plot.
     final
         Whether to consider cells going to final states or vice versa.
     kind
-        Variant of the heatmap.
+        Variant of the heatmap:
 
-        - If `'genes'`, group by :paramref:`genes` for each lineage in :paramref:`lineage_names`.
-        - If `'lineages'`, group by :paramref:`lineage_names` for each gene in :paramref:`genes`.
+            - `'genes'` - group by :paramref:`genes` for each lineage in :paramref:`lineage_names`.
+            - `'lineages'` - group by :paramref:`lineage_names` for each gene in :paramref:`genes`.
     lineage_names
         Names of the lineages which to plot.
     start_lineage
         Lineage from which to select cells with lowest pseudotime as starting points.
-        If specified, the trends start at the earliest pseudotime point within that lineage,
-        otherwise they start from time `0`.
+
+        If specified, the trends start at the earliest pseudotime point within that lineage, otherwise they start
+        from time `0`.
     end_lineage
         Lineage from which to select cells with highest pseudotime as endpoints.
-        If specified, the trends end at the latest pseudotime point within that lineage,
-        otherwise, it is determined automatically.
+
+        If specified, the trends end at the latest pseudotime point within that lineage, otherwise,
+        it is determined automatically.
     cluster_key
-        Key(s) in :paramref:`adata.obs` containing categorical observations to be plotted on the top
+        Key(s) in :paramref:`adata: :.obs` containing categorical observations to be plotted on the top
         of the heatmap. Only available when :paramref:`kind` `='lineages'`.
     show_absorption_probabilities
         Whether to also plot absorption probabilities alongside the smoothed expression.
@@ -104,7 +106,7 @@ def heatmap(
     scale
         Whether to scale the expression per gene to `0-1` range.
     n_convolve
-        Convolution window size when smoothing out absorption probabilities.
+        Size of the convolution window when smoothing out absorption probabilities.
     show_cbar
         Whether to show the colorbar.
     lineage_height
@@ -116,16 +118,13 @@ def heatmap(
     n_jobs
         Number of parallel jobs. If `-1`, use all available cores. If `None` or `1`, the execution is sequential.
     backend
-        Which backend to use for multiprocessing.
-        See :class:`joblib.Parallel` for valid options.
+        Which backend to use for multiprocessing. See :class:`joblib.Parallel` for valid options.
     figsize
-        Size of the figure.
-        If `None`, it will be set to (15, len(:paramref:`genes`) + len(:paramref:`lineage_names`)).
+        Size of the figure. If `None`, it will determined automatically.
     dpi
         Dots per inch.
     save
-        Filename where to save the plot.
-        If `None`, just shows the plot.
+        Filename where to save the plot. If `None`, just shows the plot.
     show_progress_bar
         Whether to show a progress bar tracking models fitted.
     **kwargs
@@ -134,7 +133,7 @@ def heatmap(
     Returns
     -------
     None
-        Nothing, just plots the heatmap variant depending on :paramref:`kind`.
+        Nothing, just plots the heatmap depending on :paramref:`kind`.
         Optionally saves the figure based on :paramref:`save`.
     """
 

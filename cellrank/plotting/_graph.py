@@ -6,11 +6,6 @@ from types import MappingProxyType
 from typing import Dict, Tuple, Union, TypeVar, Callable, Optional, Sequence
 from pathlib import Path
 
-import numpy as np
-import pandas as pd
-from scipy.sparse import issparse, spmatrix
-from pandas.api.types import is_categorical_dtype
-
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
@@ -19,7 +14,11 @@ from matplotlib.patches import ArrowStyle, FancyArrowPatch
 from matplotlib.collections import LineCollection
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+import numpy as np
+import pandas as pd
 from cellrank import logging as logg
+from scipy.sparse import issparse, spmatrix
+from pandas.api.types import is_categorical_dtype
 from cellrank.tools._utils import save_fig
 from cellrank.utils._utils import _read_graph_data
 from cellrank.tools._constants import _colors
@@ -146,16 +145,14 @@ def graph(
     dpi
         Dots per inch.
     save
-        Filename where to save the plots.
-        If `None`, just shows the plot.
+        Filename where to save the plots. If `None`, just shows the plot.
     layout_kwargs
         Additional kwargs for :paramref:`layout`.
 
     Returns
     -------
     None
-        Nothing, just plots the graph.
-        Optionally saves the figure based on :paramref:`save`.
+        Nothing, just plots the graph. Optionally saves the figure based on :paramref:`save`.
     """
 
     from anndata import AnnData as _AnnData

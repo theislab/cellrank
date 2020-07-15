@@ -55,7 +55,7 @@ AnnData = TypeVar("AnnData")
 
 
 class BaseEstimator(ABC):
-    """Base class for all lineage probabilities estimators."""
+    """Abstract base class for all lineage probabilities estimators."""
 
     def __init__(
         self,
@@ -90,7 +90,7 @@ class BaseEstimator(ABC):
 
         # import transition matrix and parameters
         if kernel.transition_matrix is None:
-            logg.debug("Computing transition matrix using default parameters.")
+            logg.debug("Computing transition matrix using default parameters")
             kernel.compute_transition_matrix()
         kernel.write_to_adata(key_added=key_added)
 
@@ -150,7 +150,7 @@ class BaseEstimator(ABC):
         only_evals
             Return only eigenvalues
         ncv
-            Number of Lanczos vectors generated
+            Number of Lanczos vectors generated.
 
         Returns
         -------
@@ -212,7 +212,13 @@ class BaseEstimator(ABC):
         )
 
     @abstractmethod
-    def compute_eig(self, k: int = 20, which: str = "LR", alpha: float = 1) -> None:
+    def compute_eig(
+        self,
+        k: int = 20,
+        which: str = "LR",
+        alpha: float = 1,
+        ncv: Optional[int] = None,
+    ) -> None:
         """
         Compute eigendecomposition of the transition matrix.
 
@@ -245,6 +251,7 @@ class BaseEstimator(ABC):
         -------
         None
             Nothing, but updates the following fields:
+
                 - :paramref:`recurrent_classes`
                 - :paramref:`transient_classes`
                 - :paramref:`irreducible`
@@ -305,14 +312,14 @@ class BaseEstimator(ABC):
             Check whether the transition matrix is irreducible.
         solver
             Solver to use for the linear problem. Options are `['direct', 'gmres', 'lgmres', 'bicgstab', 'gcrotmk']`
-            when :paramref:`use_petsc` `=False` or one of `petsc4py.PETSc.KPS.Type` otherwise.
+            when :paramref:`use_petsc` `=False` or one of :class:`petsc4py.PETSc.KPS.Type` otherwise.
 
-            Information on the :module:`scipy` iterative solvers can be found in :func:`scipy.sparse.linalg` or
-            for the :module:`petsc4py` solver in https://www.mcs.anl.gov/petsc/documentation/linearsolvertable.html.
+            Information on the :mod:`scipy` iterative solvers can be found in :func:`scipy.sparse.linalg` or for
+            :mod:`petsc4py` solver found `here <https://www.mcs.anl.gov/petsc/documentation/linearsolvertable.html/>`_.
 
-            If is `None`, solver is chosen automatically, depending on the current problem.
+            If is `None`, solver is chosen automatically, depending on the problem.
         use_petsc
-            Whether to use solvers from :module:`petsc4py` or :module:`scipy`. Recommended for large problems.
+            Whether to use solvers from :mod:`petsc4py` or :mod:`scipy`. Recommended for large problems.
             If `None`, it is determined automatically. If no installation is found, defaults
             to :func:`scipy.sparse.linalg.gmres`.
         preconditioner
@@ -373,7 +380,7 @@ class BaseEstimator(ABC):
 
         #  create empty lineage object
         if self._lin_probs is not None:
-            logg.debug("DEBUG: Overwriting `.lin_probs`")
+            logg.debug("DEBUG: Overwriting `.lineage_probabilities`")
         self._lin_probs = Lineage(
             np.empty((1, len(colors_))),
             names=metastable_states_.cat.categories,
@@ -482,6 +489,11 @@ class BaseEstimator(ABC):
     ) -> None:
         """
         Plot the top eigenvalues in complex plane.
+
+        .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/real_spectrum.png
+           :alt: image of real spectrum
+           :width: 400px
+           :align: center
 
         Params
         ------
@@ -800,7 +812,7 @@ class BaseEstimator(ABC):
             Nothing, but warns if a group is cell-cycle driven.
         """
 
-        # initialise the groups (start or end clusters) and scores
+        # initialize the groups (start or end clusters) and scores
         groups = rc_labels.cat.categories
         scores = []
         if self._G2M_score is not None:
@@ -1100,15 +1112,15 @@ class BaseEstimator(ABC):
         """
         A dictionary with the following fields:
 
-        - `'D'` eigenvalues of left eigenvectors
-        - `'V_l'` left eigenvectors
-        - `'V_r'` right eigenvectors
+            - `'D'` eigenvalues of left eigenvectors
+            - `'V_l'` left eigenvectors
+            - `'V_r'` right eigenvectors
         """  # noqa
         return self._eig
 
     @property
     def diff_potential(self) -> pd.Series:
-        """Differentiation potential for each lineage."""  # noqa
+        """Differentiation potential of each lineage."""  # noqa
         return self._dp
 
     @property
@@ -1118,7 +1130,7 @@ class BaseEstimator(ABC):
 
     @property
     def adata(self) -> AnnData:
-        """The underlying annotated data object."""  # noqa
+        """The annotated data object."""  # noqa
         return self._adata
 
     @property
