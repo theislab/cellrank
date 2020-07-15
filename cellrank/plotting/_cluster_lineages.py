@@ -115,8 +115,8 @@ def cluster_lineage(
     model
         Model to fit.
 
-        - If a :class:`dict`, gene and lineage specific models can be specified. Use `'*'` to indicate
-        all genes or lineages, for example `{'Map2': {'*': ...}, 'Dcx': {'Alpha': ..., '*': ...}}`.
+            - If a :class:`dict`, gene and lineage specific models can be specified. Use `'*'` to indicate all \
+            genes or lineages, for example `{'Map2': {'*': ...}, 'Dcx': {'Alpha': ..., '*': ...}}`.
     genes
         Genes in :paramref:`adata`.var_names to cluster.
     lineage_name
@@ -143,8 +143,7 @@ def cluster_lineage(
     n_jobs
         Number of parallel jobs. If `-1`, use all available cores. If `None` or `1`, the execution is sequential.
     backend
-        Which backend to use for multiprocessing.
-        See :class:`joblib.Parallel` for valid options.
+        Which backend to use for multiprocessing. See :class:`joblib.Parallel` for valid options.
     pca_kwargs
         Keyword arguments for :func:`scanpy.pp.pca`.
     neighbors_kwargs
@@ -152,8 +151,7 @@ def cluster_lineage(
     louvain_kwargs
         Keyword arguments for :func:`scanpy.tl.louvain`.
     save
-        Filename where to save the plot.
-        If `None`, just shows the plot.
+        Filename where to save the plot. If `None`, just shows the plot.
     figsize
         Size of the figure. If `None`, it will be set automatically.
     dpi
@@ -171,9 +169,9 @@ def cluster_lineage(
 
         Updates :paramref:`adata` `.uns` with the following key:
 
-        lineage_{:paramref:`lineage_name`}_trend_{:paramref:`key_added`}:
-            - :class:`anndata.AnnData` object of shape `len` (:paramref:`genes`) x :paramref:`n_points`
-              containing the clustered genes.
+            - lineage_{:paramref:`lineage_name`}_trend_{:paramref:`key_added`} \
+            :class:`anndata.AnnData` object of shape `len` (:paramref:`genes`) x :paramref:`n_points`
+            containing the clustered genes.
     """
 
     from anndata import AnnData as _AnnData
@@ -242,7 +240,7 @@ def cluster_lineage(
 
         adata.uns[key_to_add] = trends
     else:
-        logg.info(f"Loading data from `adata.uns[{key_to_add}!r]`")
+        logg.info(f"Loading data from `adata.uns[{key_to_add!r}]`")
         trends = adata.uns[key_to_add]
 
     if clusters is None:

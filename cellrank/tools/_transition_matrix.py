@@ -53,14 +53,14 @@ def transition_matrix(
     scale_by_variances
         Use velocity variances to scale the softmax.
     var_key
-        Key from `adata.uns` to access velocity variances.
+        Key from :paramref:`adata` `.uns` to access velocity variances.
     var_min
         Variances are clipped to this value at the lower end.
     self_transitions
-        Assigns elements to the diagonal of the velocity-graph based on a confidence measure
+        Assign elements to the diagonal of the velocity-graph based on a confidence measure.
     perc
-        Quantile of the distribution of exponentiated velocity correlations. This is used as a threshold to set
-        smaller values to zero.
+        Quantile of the distribution of exponentiated velocity correlations.
+        This is used as a threshold to set smaller values to zero.
     threshold
         Set a threshold to remove exponentiated velocity correlations smaller than :paramref:`threshold`.
     density_normalize

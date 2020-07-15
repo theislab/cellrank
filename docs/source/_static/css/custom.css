@@ -60,7 +60,7 @@
     font-size: 105%;
 }
 
-.rst-content dl:not(.docutils) dt {
+html.writer-html5 .rst-content dl[class]:not(.option-list):not(.field-list):not(.footnote):not(.glossary):not(.simple) > dt {
     color: #363636;
     border-top: solid 3px #363636;
     background: #FFC76E;

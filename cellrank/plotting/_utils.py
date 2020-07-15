@@ -74,10 +74,10 @@ def lineages(
     cluster_key
         If given, plot cluster annotations left of the lineage probabilities.
     mode
-        Can be either `'embedding'` or `'time'`.
+        Can be either `'embedding'` or `'time'`:
 
-        - If `'embedding'`, plots the embedding while coloring in the absorption probabilities.
-        - If `'time'`, plots the pseudotime on x-axis and the absorption probabilities on y-axis.
+            - `'embedding'` - plot the embedding while coloring in the absorption probabilities.
+            - `'time'` - plot the pseudotime on x-axis and the absorption probabilities on y-axis.
     time_key
         Key from `adata.obs` to use as a pseudotime ordering of the cells.
     cmap
@@ -88,7 +88,7 @@ def lineages(
     Returns
     -------
     None
-        Just plots the lineage probabilities.
+        Nothing, Just plots the lineage probabilities.
     """
 
     adata_dummy = adata.copy()
@@ -269,14 +269,12 @@ def composition(
     dpi
         Dots per inch.
     save
-        Filename where to save the plots.
-        If `None`, just shows the plot.
+        Filename where to save the plots. If `None`, just shows the plot.
 
     Returns
     -------
     None
-        Nothing, just plots the similarity matrix.
-        Optionally saves the figure based on :paramref:`save`.
+        Nothing, just plots the similarity matrix. Optionally saves the figure based on :paramref:`save`.
     """
 
     if key not in adata.obs:
@@ -293,7 +291,7 @@ def composition(
     fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
 
     ax.pie(x=cats_frac, labels=cats, colors=colors)
-    ax.set_title(f"Composition by {key}")
+    ax.set_title(f"composition by {key}")
 
     if save is not None:
         save_fig(fig, save)

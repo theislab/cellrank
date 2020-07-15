@@ -6,6 +6,9 @@ from types import MappingProxyType
 from typing import Any, Dict, List, Tuple, Union, Mapping, TypeVar, Iterable, Optional
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
+
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
@@ -14,10 +17,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 import scvelo as scv
 
-import numpy as np
-import pandas as pd
 from cellrank import logging as logg
-from scipy.stats import entropy
 from cellrank.tools._utils import (
     save_fig,
     _eigengap,
@@ -124,7 +124,7 @@ class GPCCA(BaseEstimator):
         Returns
         -------
         None
-            Nothing, but updates the following fields: paramref:`eigendecomposition`.
+            Nothing, but updates the following fields: :paramref:`eigendecomposition`.
         """
         self._compute_eig(k=k, which=which, alpha=alpha, only_evals=True, ncv=ncv)
 
@@ -132,123 +132,6 @@ class GPCCA(BaseEstimator):
         self, g2m_key: Optional[str] = None, s_key: Optional[str] = None, **kwargs
     ) -> None:
         pass
-
-    def plot_schur_embedding(
-        self,
-        use: Optional[Union[int, tuple, list]] = None,
-        abs_value: bool = False,
-        cluster_key: Optional[str] = None,
-        **kwargs,
-    ) -> None:
-        """
-        Plot Schur vectors in an embedding.
-
-        Params
-        ------
-        use
-            Which or how many Schur vectors to be plotted. If `None`, all will be chosen.
-        abs_value
-            Whether to take the absolute value before plotting.
-        cluster_key
-            Key from :paramref:`adata` `.obs` to plot cluster annotations.
-        kwargs
-            Keyword arguments for :func:`scvelo.pl.scatter`.
-
-        Returns
-        -------
-        None
-            Nothing, just plots the Schur vectors.
-        """
-
-        if self.schur_vectors is None:
-            raise RuntimeError(
-                "Compute Schur vectors as `.compute_schur()` or `.compute_metastable_states()` with `n_states` > 1."
-            )
-
-        self._plot_vectors(
-            self.schur_vectors,
-            "schur",
-            abs_value=abs_value,
-            use=use,
-            cluster_key=cluster_key,
-            **kwargs,
-        )
-
-    def plot_schur_matrix(
-        self,
-        title: Optional[str] = "schur matrix",
-        cmap: str = "viridis",
-        figsize: Optional[Tuple[float, float]] = None,
-        dpi: Optional[float] = 80,
-        save: Optional[Union[str, Path]] = None,
-        **kwargs,
-    ):
-        """
-        Plot the Schur matrix.
-
-        Params
-        ------
-        title
-            Title of the figure.
-        cmap
-            Colormap to use.
-        figsize
-            Size of the figure.
-        dpi
-            Dots per inch.
-        save
-            Filename where to save the plots. If `None`, just shows the plot.
-
-        Returns
-        -------
-        None
-            Nothing, just plots the Schur matrix.
-        """
-
-        from seaborn import heatmap
-
-        if self._schur_matrix is None:
-            raise RuntimeError(
-                "Compute Schur matrix first as `.compute_schur()` or "
-                "`.compute_metastable_states()` with `n_states` > 1."
-            )
-
-        fig, ax = plt.subplots(
-            figsize=self._schur_matrix.shape if figsize is None else figsize, dpi=dpi
-        )
-
-        divider = make_axes_locatable(ax)  # square=True make the colorbar a bit bigger
-        cbar_ax = divider.append_axes("right", size="2.5%", pad=0.05)
-
-        mask = np.zeros_like(self._schur_matrix, dtype=np.bool)
-        mask[np.tril_indices_from(mask, k=-1)] = True
-        mask[~np.isclose(self._schur_matrix, 0.0)] = False
-
-        vmin, vmax = (
-            np.min(self._schur_matrix[~mask]),
-            np.max(self._schur_matrix[~mask]),
-        )
-
-        kwargs["fmt"] = kwargs.get("fmt", "0.2f")
-        heatmap(
-            self._schur_matrix,
-            cmap=cmap,
-            square=True,
-            annot=True,
-            vmin=vmin,
-            vmax=vmax,
-            cbar_ax=cbar_ax,
-            mask=mask,
-            xticklabels=[],
-            yticklabels=[],
-            ax=ax,
-            **kwargs,
-        )
-
-        ax.set_title(title)
-
-        if save is not None:
-            save_fig(fig, path=save)
 
     def compute_schur(
         self,
@@ -269,13 +152,14 @@ class GPCCA(BaseEstimator):
             Input probability distribution over all cells. If `None`, uniform is chosen.
         method
             Method for calculating the Schur vectors. Valid options are: `'krylov'` or `'brandts'`.
+
             For benefits of each method, see :class:`msmtools.analysis.dense.gpcca.GPCCA`. The former is
             an iterative procedure that computes a partial, sorted Schur decomposition for large, sparse
             matrices whereas the latter computes a full sorted Schur decomposition of a dense matrix.
         which
             Eigenvalues are in general complex. `'LR'` - largest real part, `'LM'` - largest magnitude.
         alpha
-            Used to compute the `eigengap`. paramref:`alpha` is the weight given
+            Used to compute the `eigengap`. :paramref:`alpha` is the weight given
             to the deviation of an eigenvalue from one.
 
         Returns
@@ -375,7 +259,8 @@ class GPCCA(BaseEstimator):
             )
             minn = 3
 
-        logg.debug(f"Calculating minChi within interval [{minn}, {maxx}]")
+        logg.debug(f"Calculating minChi within interval `[{minn}, {maxx}]`")
+
         return int(np.arange(minn, maxx)[np.argmax(self._gpcca.minChi(minn, maxx))])
 
     def compute_metastable_states(
@@ -523,156 +408,6 @@ class GPCCA(BaseEstimator):
             time=start,
         )
 
-    def plot_metastable_states(
-        self,
-        discrete: bool = False,
-        lineages: Optional[Union[str, Iterable[str]]] = None,
-        cluster_key: Optional[str] = None,
-        mode: str = "embedding",
-        time_key: str = "latent_time",
-        same_plot: bool = True,
-        cmap: Union[str, mpl.colors.ListedColormap] = cm.viridis,
-        title: Optional[str] = None,
-        **kwargs,
-    ) -> None:
-        """
-        Plot the absorption probabilities of metastable states in the given embedding.
-
-        Params
-        ------
-        discrete
-            Whether to plot the top cells from each linages or the probabilities.
-        lineages
-            Only show these lineages. If `None`, plot all lineages.
-        cluster_key
-            Key from :paramref`adata: `.obs` for plotting cluster labels.
-        mode
-            Can be either `'embedding'` or `'time'`.
-
-            - If `'embedding'`, plot the embedding while coloring in the absorption probabilities.
-            - If `'time'`, plot the pseudotime on x-axis and the absorption probabilities on y-axis.
-        time_key
-            Key from `adata.obs` to use as a pseudotime ordering of the cells.
-        same_plot
-            Whether to plot the lineages on the same plot using color gradients when :paramref:`mode='embedding'`.
-        cmap
-            Colormap to use.
-        title
-            Either `None`, in which case titles are "to/from final/root state X",
-            or an array of titles, one per lineage.
-        kwargs
-            Keyword arguments for :func:`scvelo.pl.scatter`.
-
-        Returns
-        -------
-        None
-            Nothing, just plots the metastable states.
-        """
-
-        attr = "_meta_lin_probs"
-        error_msg = "Compute metastable states first as `.compute_metastable_states()`."
-
-        if not discrete:
-            self._plot_probabilities(
-                attr=attr,
-                error_msg=error_msg,
-                lineages=lineages,
-                cluster_key=cluster_key,
-                mode=mode,
-                time_key=time_key,
-                show_dp=False,
-                title=title,
-                same_plot=same_plot,
-                color_map=cmap,
-                **kwargs,
-            )
-        else:
-            self._plot_states(
-                attr=attr,
-                error_msg=error_msg,
-                same_plot=same_plot,
-                title=title,
-                **kwargs,
-            )
-
-    def plot_main_states(
-        self,
-        discrete: bool = False,
-        lineages: Optional[Union[str, Iterable[str]]] = None,
-        cluster_key: Optional[str] = None,
-        mode: str = "embedding",
-        time_key: str = "latent_time",
-        same_plot: bool = True,
-        show_dp: bool = False,
-        title: Optional[str] = None,
-        cmap: Union[str, mpl.colors.ListedColormap] = cm.viridis,
-        **kwargs,
-    ) -> None:
-        """
-        Plot the absorption probabilities in the given embedding.
-
-        Params
-        ------
-        discrete
-            Whether to plot the top cells from each linages or the probabilities.
-        lineages
-            Only show these lineages. If `None`, plot all lineages.
-        cluster_key
-            Key from :paramref`adata: `.obs` for plotting cluster labels.
-        mode
-            Can be either `'embedding'` or `'time'`.
-
-            - If `'embedding'`, plot the embedding while coloring in the absorption probabilities.
-            - If `'time'`, plos the pseudotime on x-axis and the absorption probabilities on y-axis.
-        time_key
-            Key from `adata.obs` to use as a pseudotime ordering of the cells.
-        same_plot
-            Whether to plot the lineages on the same plot using color gradients when :paramref:`method='embedding'`.
-        show_dp
-            Whether to show :paramref:`diff_potential` when :paramref:`n_cells` `=None`.
-        title
-            Either `None`, in which case titles are "to/from final/root state X",
-            or an array of titles, one per lineage.
-        cmap
-            Colormap to use.
-        kwargs
-            Keyword arguments for :func:`scvelo.pl.scatter`.
-
-        Returns
-        -------
-        None
-            Nothing, just plots the main states.
-        """
-
-        attr = "_lin_probs"
-        error_msg = (
-            "Compute main states first as `.compute_main_states()` "
-            "or set them manually as `.set_main_states()`."
-        )
-
-        if not discrete:
-            self._plot_probabilities(
-                attr=attr,
-                error_msg=error_msg,
-                lineages=lineages,
-                cluster_key=cluster_key,
-                mode=mode,
-                time_key=time_key,
-                show_dp=show_dp,
-                title=title,
-                same_plot=same_plot,
-                color_map=cmap,
-                **kwargs,
-            )
-        else:
-            self._plot_states(
-                attr=attr,
-                error_msg=error_msg,
-                same_plot=same_plot,
-                title=title,
-                **kwargs,
-            )
-
     def _set_main_states(self, n_cells: int, write_to_adata: bool = True) -> None:
         probs = self._lin_probs[[n for n in self._lin_probs.names if n != "rest"]]
         a_discrete, _ = _fuzzy_to_discrete(
@@ -794,15 +529,12 @@ class GPCCA(BaseEstimator):
         Params
         ------
         method
-            One of the following:
+            One of following:
 
-            - `'eigengap'` - select the number of states based on the eigengap of the transition matrix
-            - `'eigengap_coarse'`- select the number of states based on the eigengap of the diagonal
-                of the coarse-grained transition matrix
-            - `'min_self_prob'`- select states which have the given minimum probability on the diagonal
-                of the coarse-grained transition matrix
-            - `'top_n'`- select top :paramref:`n_main_states` based on the probability on the diagonal
-                of the coarse-grained transition matrix
+                - `'eigengap'` - select the number of states based on the eigengap of the transition matrix.
+                - `'eigengap_coarse'` - select the number of states based on the eigengap of the diagonal of the coarse-grained transition matrix.
+                - `'min_self_prob'` - select states which have the given minimum probability on the diagonal of the coarse-grained transition matrix.
+                - `'top_n'` - select top :paramref:`n_main_states` based on the probability on the diagonal of the coarse-grained transition matrix
         redistribute
             Whether to redistribute the probability mass of unselected lineages or create a `'rest'` lineage.
         alpha
@@ -823,7 +555,7 @@ class GPCCA(BaseEstimator):
 
                 - :paramref:`lineage_probabilities`
                 - :paramref:`diff_potential`
-        """
+        """  # noqa
         if len(self.metastable_states.cat.categories) == 1:
             logg.warning(
                 "Found only one metastable state. Making it the single main state. "
@@ -899,17 +631,18 @@ class GPCCA(BaseEstimator):
         Params
         --------
         memberships
-            Fuzzy clustering
+            Fuzzy clustering.
         n_cells
             Number of cells to be used to represent each state.
         cluster_key
-            Key from `adata.obs` to get reference cluster annotations.
+            Key from :paramref:`adata` `.obs` to get reference cluster annotations.
         en_cutoff
             Threshold to decide when we we want to warn the user about an uncertain name mapping. This happens when
             one fuzzy state overlaps with several reference clusters, and the most likely cells are distributed almost
             evenly across the reference clusters.
         p_thresh
-            Only used to detect cell cycle stages. These have to be present in `adata.obs` as `G2M_score` and `S_score`.
+            Only used to detect cell cycle stages. These have to be present in :paramref:`adata` `.obs`
+            as `G2M_score` and `S_score`.
         check_row_sums
             Check whether rows in `memberships` sum to 1.
 
@@ -981,6 +714,88 @@ class GPCCA(BaseEstimator):
             names=list(metastable_states.cat.categories),
             colors=self._meta_states_colors,
         )
+
+    def compute_gdpt(
+        self, n_components: int = 10, key_added: str = "gdpt_pseudotime", **kwargs
+    ):
+        """
+        Compute generalized DPT making use of the real Schur decomposition.
+
+        Params
+        ------
+        n_components
+            Number of real Schur vectors to consider.
+        key_added
+            Key in :paramref:`adata` `.obs` where to save the pseudotime.
+        kwargs
+            Keyword arguments for :meth:`cellrank.tl.GPCCA.compute_schur` if Schur decomposition is not found.
+
+        Returns
+        -------
+        None
+            Nothing, just updates :paramref:`adata` .obs[:paramref:`key_added`] with the computed pseudotime.
+        """
+
+        def _get_dpt_row(e_vals: np.ndarray, e_vecs: np.ndarray, i: int):
+            row = sum(
+                (
+                    np.abs(e_vals[eval_ix])
+                    / (1 - np.abs(e_vals[eval_ix]))
+                    * (e_vecs[i, eval_ix] - e_vecs[:, eval_ix])
+                )
+                ** 2
+                # account for float32 precision
+                for eval_ix in range(0, e_vals.size)
+                if np.abs(e_vals[eval_ix]) < 0.9994
+            )
+
+            return np.sqrt(row)
+
+        if "iroot" not in self.adata.uns.keys():
+            raise KeyError("Key `'iroot'` not found in `adata.uns`.")
+
+        iroot = self.adata.uns["iroot"]
+        if isinstance(iroot, str):
+            iroot = np.where(self.adata.obs_names == iroot)[0]
+            if not len(iroot):
+                raise ValueError(
+                    f"Unable to find cell with name `{self.adata.uns['iroot']!r}` in `adata.obs_names`."
+                )
+            iroot = iroot[0]
+
+        if n_components < 2:
+            raise ValueError(
+                f"Expected number of components >= 2, found `{n_components}`."
+            )
+
+        if self._schur_vectors is None:
+            logg.warning("No Schur decomposition found. Computing")
+            self.compute_schur(n_components, **kwargs)
+        elif self._schur_matrix.shape[1] < n_components:
+            logg.warning(
+                f"Requested `{n_components}` components, but only `{self._schur_matrix.shape[1]}` were found. "
+                f"Recomputing using default values"
+            )
+            self.compute_schur(n_components)
+        else:
+            logg.debug("Using cached Schur decomposition")
+
+        start = logg.info(
+            f"Computing Generalized Diffusion Pseudotime using n_components = {n_components}"
+        )
+
+        Q, eigenvalues = (
+            self._schur_vectors,
+            self.eigendecomposition["D"],
+        )
+        # may have to remove some values if too many converged
+        Q, eigenvalues = Q[:, :n_components], eigenvalues[:n_components]
+
+        D = _get_dpt_row(eigenvalues, Q, i=iroot)
+        pseudotime = D / np.max(D[np.isfinite(D)])
+        self.adata.obs[key_added] = pseudotime
+
+        logg.info(f"Adding `{key_added!r}` to `adata.obs`\n    Finish", time=start)
 
     def _plot_states(
         self,
@@ -1075,6 +890,294 @@ class GPCCA(BaseEstimator):
         finally:
             cleanup()
 
+    def plot_schur_embedding(
+        self,
+        use: Optional[Union[int, tuple, list]] = None,
+        abs_value: bool = False,
+        cluster_key: Optional[str] = None,
+        **kwargs,
+    ) -> None:
+        """
+        Plot Schur vectors in an embedding.
+
+        .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/schur_embedding.png
+           :alt: image of schur embedding
+           :width: 400px
+           :align: center
+
+        Params
+        ------
+        use
+            Which or how many Schur vectors to be plotted. If `None`, all will be chosen.
+        abs_value
+            Whether to take the absolute value before plotting.
+        cluster_key
+            Key from :paramref:`adata` `.obs` to plot cluster annotations.
+        kwargs
+            Keyword arguments for :func:`scvelo.pl.scatter`.
+
+        Returns
+        -------
+        None
+            Nothing, just plots the Schur vectors.
+        """
+
+        if self.schur_vectors is None:
+            raise RuntimeError(
+                "Compute Schur vectors as `.compute_schur()` or `.compute_metastable_states()` with `n_states` > 1."
+            )
+
+        self._plot_vectors(
+            self.schur_vectors,
+            "schur",
+            abs_value=abs_value,
+            use=use,
+            cluster_key=cluster_key,
+            **kwargs,
+        )
+
+    def plot_schur_matrix(
+        self,
+        title: Optional[str] = "schur matrix",
+        cmap: str = "viridis",
+        figsize: Optional[Tuple[float, float]] = None,
+        dpi: Optional[float] = 80,
+        save: Optional[Union[str, Path]] = None,
+        **kwargs,
+    ):
+        """
+        Plot the Schur matrix.
+
+        .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/schur_matrix.png
+           :alt: image of schur matrix
+           :width: 400px
+           :align: center
+
+        Params
+        ------
+        title
+            Title of the figure.
+        cmap
+            Colormap to use.
+        figsize
+            Size of the figure.
+        dpi
+            Dots per inch.
+        save
+            Filename where to save the plots. If `None`, just shows the plot.
+
+        Returns
+        -------
+        None
+            Nothing, just plots the Schur matrix.
+        """
+
+        from seaborn import heatmap
+
+        if self._schur_matrix is None:
+            raise RuntimeError(
+                "Compute Schur matrix first as `.compute_schur()` or "
+                "`.compute_metastable_states()` with `n_states` > 1."
+            )
+
+        fig, ax = plt.subplots(
+            figsize=self._schur_matrix.shape if figsize is None else figsize, dpi=dpi
+        )
+
+        divider = make_axes_locatable(ax)  # square=True make the colorbar a bit bigger
+        cbar_ax = divider.append_axes("right", size="2.5%", pad=0.05)
+
+        mask = np.zeros_like(self._schur_matrix, dtype=np.bool)
+        mask[np.tril_indices_from(mask, k=-1)] = True
+        mask[~np.isclose(self._schur_matrix, 0.0)] = False
+
+        vmin, vmax = (
+            np.min(self._schur_matrix[~mask]),
+            np.max(self._schur_matrix[~mask]),
+        )
+
+        kwargs["fmt"] = kwargs.get("fmt", "0.2f")
+        heatmap(
+            self._schur_matrix,
+            cmap=cmap,
+            square=True,
+            annot=True,
+            vmin=vmin,
+            vmax=vmax,
+            cbar_ax=cbar_ax,
+            mask=mask,
+            xticklabels=[],
+            yticklabels=[],
+            ax=ax,
+            **kwargs,
+        )
+
+        ax.set_title(title)
+
+        if save is not None:
+            save_fig(fig, path=save)
+
+    def plot_metastable_states(
+        self,
+        discrete: bool = False,
+        lineages: Optional[Union[str, Iterable[str]]] = None,
+        cluster_key: Optional[str] = None,
+        mode: str = "embedding",
+        time_key: str = "latent_time",
+        same_plot: bool = True,
+        cmap: Union[str, mpl.colors.ListedColormap] = cm.viridis,
+        title: Optional[str] = None,
+        **kwargs,
+    ) -> None:
+        """
+        Plot the absorption probabilities of metastable states in the given embedding.
+
+        .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/gpcca_metastable_states.png
+           :alt: image of metastable states
+           :width: 400px
+           :align: center
+
+        Params
+        ------
+        discrete
+            Whether to plot the top cells from each lineages or the probabilities.
+        lineages
+            Only show these lineages. If `None`, plot all lineages.
+        cluster_key
+            Key from :paramref:`adata` `.obs` for plotting cluster labels.
+        mode
+            One of following:
+
+                - `'embedding'` - plot the embedding while coloring in the absorption probabilities.
+                - `'time'` - plot the pseudotime on x-axis and the absorption probabilities on y-axis.
+        time_key
+            Key from :paramref:`adata` `.obs` to use as a pseudotime ordering of the cells.
+        same_plot
+            Whether to plot the lineages on the same plot using color gradients when :paramref:`mode` `='embedding'`.
+        cmap
+            Colormap to use.
+        title
+            Either `None`, in which case titles are `"{to,from} {final,root} {state}"`,
+            or an array of titles, one per lineage.
+        kwargs
+            Keyword arguments for :func:`scvelo.pl.scatter`.
+
+        Returns
+        -------
+        None
+            Nothing, just plots the metastable states.
+        """  # noqa
+
+        attr = "_meta_lin_probs"
+        error_msg = "Compute metastable states first as `.compute_metastable_states()`."
+
+        if not discrete:
+            self._plot_probabilities(
+                attr=attr,
+                error_msg=error_msg,
+                lineages=lineages,
+                cluster_key=cluster_key,
+                mode=mode,
+                time_key=time_key,
+                show_dp=False,
+                title=title,
+                same_plot=same_plot,
+                color_map=cmap,
+                **kwargs,
+            )
+        else:
+            self._plot_states(
+                attr=attr,
+                error_msg=error_msg,
+                same_plot=same_plot,
+                title=title,
+                **kwargs,
+            )
+
+    def plot_main_states(
+        self,
+        discrete: bool = False,
+        lineages: Optional[Union[str, Iterable[str]]] = None,
+        cluster_key: Optional[str] = None,
+        mode: str = "embedding",
+        time_key: str = "latent_time",
+        same_plot: bool = True,
+        show_dp: bool = False,
+        title: Optional[str] = None,
+        cmap: Union[str, mpl.colors.ListedColormap] = cm.viridis,
+        **kwargs,
+    ) -> None:
+        """
+        Plot the absorption probabilities in the given embedding.
+
+        .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/main_states.png
+           :alt: image of main states
+           :width: 400px
+           :align: center
+
+        Params
+        ------
+
+        discrete
+            Whether to plot the top cells from each lineages or the probabilities.
+        lineages
+            Only plot these lineages. if `none`, plot all lineages.
+        cluster_key
+            Key from :paramref:`adata` `.obs` for plotting cluster labels.
+        mode
+            One of following:
+
+                - `'embedding'` - plot the embedding while coloring in the absorption probabilities.
+                - `'time'` - plot the pseudotime on x-axis and the absorption probabilities on y-axis.
+        time_key
+            Key from :paramref:`adata` `.obs` to use as a pseudotime ordering of the cells.
+        same_plot
+            Whether to plot the lineages on the same plot using color gradients when :paramref:`method` `='embedding'`.
+        show_dp
+            Whether to show :paramref:`diff_potential` when :paramref:`n_cells` `=None`.
+        title
+            Either `None`, in which case titles are `"{to,from} {final,root} {state}"`,
+            or an array of titles, one per lineage.
+        cmap
+            Colormap to use.
+        kwargs
+            Keyword arguments for :func:`scvelo.pl.scatter`.
+
+        Returns
+        -------
+        None
+            Nothing, just plots the main states.
+        """
+
+        attr = "_lin_probs"
+        error_msg = (
+            "compute main states first as `.compute_main_states()` "
+            "or set them manually as `.set_main_states()`."
+        )
+
+        if not discrete:
+            self._plot_probabilities(
+                attr=attr,
+                error_msg=error_msg,
+                lineages=lineages,
+                cluster_key=cluster_key,
+                mode=mode,
+                time_key=time_key,
+                show_dp=show_dp,
+                title=title,
+                same_plot=same_plot,
+                color_map=cmap,
+                **kwargs,
+            )
+        else:
+            self._plot_states(
+                attr=attr,
+                error_msg=error_msg,
+                same_plot=same_plot,
+                title=title,
+                **kwargs,
+            )
+
     def plot_coarse_T(
         self,
         show_stationary_dist: bool = True,
@@ -1092,6 +1195,11 @@ class GPCCA(BaseEstimator):
     ) -> None:
         """
         Plot the coarse-grained transition matrix of the metastable states.
+
+        .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/coarse_T.png
+           :alt: image of coarse transition matrix
+           :width: 400px
+           :align: center
 
         Params
         ------
@@ -1303,88 +1411,6 @@ class GPCCA(BaseEstimator):
             save_fig(fig, save)
 
         fig.show()
-
-    def compute_gdpt(
-        self, n_components: int = 10, key_added: str = "gdpt_pseudotime", **kwargs
-    ):
-        """
-        Compute generalized DPT making use of the real Schur decomposition.
-
-        Params
-        ------
-        n_components
-            Number of real Schur vectors to consider.
-        key_added
-            Key in :paramref:`adata` `.obs` where to save the pseudotime.
-        kwargs
-            Keyword arguments for :math:`compute_schur` if Schur decomposition if not found.
-
-        Returns
-        -------
-        None
-            Nothing, just updates :paramref:`adata` .obs[:paramref:`key_added`] with the computed pseudotime.
-        """
-
-        def _get_dpt_row(e_vals: np.ndarray, e_vecs: np.ndarray, i: int):
-            row = sum(
-                (
-                    np.abs(e_vals[eval_ix])
-                    / (1 - np.abs(e_vals[eval_ix]))
-                    * (e_vecs[i, eval_ix] - e_vecs[:, eval_ix])
-                )
-                ** 2
-                # account for float32 precision
-                for eval_ix in range(0, e_vals.size)
-                if np.abs(e_vals[eval_ix]) < 0.9994
-            )
-
-            return np.sqrt(row)
-
-        if "iroot" not in self.adata.uns.keys():
-            raise KeyError("Key `'iroot'` not found in `adata.uns`.")
-
-        iroot = self.adata.uns["iroot"]
-        if isinstance(iroot, str):
-            iroot = np.where(self.adata.obs_names == iroot)[0]
-            if not len(iroot):
-                raise ValueError(
-                    f"Unable to find cell with name `{self.adata.uns['iroot']!r}` in `adata.obs_names`."
-                )
-            iroot = iroot[0]
-
-        if n_components < 2:
-            raise ValueError(
-                f"Expected number of components >= 2, found `{n_components}`."
-            )
-
-        if self._schur_vectors is None:
-            logg.warning("No Schur decomposition found. Computing")
-            self.compute_schur(n_components, **kwargs)
-        elif self._schur_matrix.shape[1] < n_components:
-            logg.warning(
-                f"Requested `{n_components}` components, but only `{self._schur_matrix.shape[1]}` were found. "
-                f"Recomputing using default values"
-            )
-            self.compute_schur(n_components)
-        else:
-            logg.debug("Using cached Schur decomposition")
-
-        start = logg.info(
-            f"Computing Generalized Diffusion Pseudotime using n_components = {n_components}"
-        )
-
-        Q, eigenvalues = (
-            self._schur_vectors,
-            self.eigendecomposition["D"],
-        )
-        # may have to remove some values if too many converged
-        Q, eigenvalues = Q[:, :n_components], eigenvalues[:n_components]
-
-        D = _get_dpt_row(eigenvalues, Q, i=iroot)
-        pseudotime = D / np.max(D[np.isfinite(D)])
-        self.adata.obs[key_added] = pseudotime
-
-        logg.info(f"Adding `{key_added!r}` to `adata.obs`\n    Finish", time=start)
 
     def copy(self) -> "GPCCA":
         """

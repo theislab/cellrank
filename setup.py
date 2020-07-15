@@ -43,8 +43,8 @@ if __name__ == "__main__":
             krylov=[
                 "mpi4py>=3.0.3",
                 "petsc>=3.13.0",
-                "petsc4py>=3.13.0",
                 "slepc>=3.13.0",
+                "petsc4py>=3.13.0",
                 "slepc4py>=3.13.0",
             ],
             test=[
