@@ -45,7 +45,7 @@ jobs:
         - USE_SLEPC=true CACHE_NAME=krylov
 
 before_cache:
-  # don't use cache in this case, because we're testing whether pip install cellrank[krylov] works
+  # don't use cache in this case, because we're testing whether pip install 'cellrank[krylov]' works
   - if [[ "$CACHE_NAME" == "krylov" ]]; then sudo rm -rf "$HOME/.cache/pip"; fi
 
 before_install:
@@ -59,6 +59,7 @@ script:
 
 after_success:
   - ./.scripts/ci/upload_coverage.sh
+  - ./.scripts/ci/update_notebooks_readme.sh
 
 deploy:
   - provider: pypi
