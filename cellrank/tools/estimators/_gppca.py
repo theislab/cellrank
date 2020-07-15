@@ -900,6 +900,10 @@ class GPCCA(BaseEstimator):
         """
         Plot Schur vectors in an embedding.
 
+        .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/schur_embedding.png
+           :width: 400px
+           :align: center
+
         Params
         ------
         use
@@ -942,6 +946,10 @@ class GPCCA(BaseEstimator):
     ):
         """
         Plot the Schur matrix.
+
+        .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/schur_matrix.png
+           :width: 400px
+           :align: center
 
         Params
         ------
@@ -1022,6 +1030,10 @@ class GPCCA(BaseEstimator):
         """
         Plot the absorption probabilities of metastable states in the given embedding.
 
+        .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/gpcca_metastable_states.png
+           :width: 400px
+           :align: center
+
         Params
         ------
         discrete
@@ -1051,7 +1063,7 @@ class GPCCA(BaseEstimator):
         -------
         None
             Nothing, just plots the metastable states.
-        """
+        """  # noqa
 
         attr = "_meta_lin_probs"
         error_msg = "Compute metastable states first as `.compute_metastable_states()`."
@@ -1094,6 +1106,10 @@ class GPCCA(BaseEstimator):
     ) -> None:
         """
         Plot the absorption probabilities in the given embedding.
+
+        .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/main_states.png
+           :width: 400px
+           :align: center
 
         Params
         ------
@@ -1175,6 +1191,10 @@ class GPCCA(BaseEstimator):
     ) -> None:
         """
         Plot the coarse-grained transition matrix of the metastable states.
+
+        .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/coarse_T.png
+           :width: 400px
+           :align: center
 
         Params
         ------

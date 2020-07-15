@@ -7,13 +7,14 @@ from typing import Any, List, Tuple, Union, Mapping, TypeVar, Optional, Sequence
 from pathlib import Path
 from collections import OrderedDict as odict
 
+import numpy as np
+import pandas as pd
+
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.colors
 import matplotlib.pyplot as plt
 
-import numpy as np
-import pandas as pd
 from cellrank import logging as logg
 from cellrank.tools._utils import save_fig
 from cellrank.utils._utils import _make_unique
@@ -486,11 +487,11 @@ def cluster_fates(
         fig = plot_bar()
     elif mode == "paga":
         if "paga" not in adata.uns:
-            raise KeyError("Compute PAGA first as `scanpy.tl.paga()`.")
+            raise KeyError("Compute PAGA first as `scvelo.tl.paga()`.")
         fig = plot_paga()
     elif mode == "paga_pie":
         if "paga" not in adata.uns:
-            raise KeyError("Compute PAGA first as `scanpy.tl.paga()`.")
+            raise KeyError("Compute PAGA first as `scvelo.tl.paga()`.")
         fig = plot_paga_pie()
     elif mode == "violin":
         fig = plot_violin_no_cluster_key() if cluster_key is None else plot_violin()

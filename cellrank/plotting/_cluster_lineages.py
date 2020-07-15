@@ -6,9 +6,10 @@ from typing import Dict, Tuple, Union, TypeVar, Optional, Sequence
 from pathlib import Path
 from collections import Iterable
 
+import numpy as np
+
 import matplotlib.pyplot as plt
 
-import numpy as np
 from cellrank import logging as logg
 from cellrank.tools._utils import save_fig
 from cellrank.utils._utils import _get_n_cores, check_collection
@@ -239,7 +240,7 @@ def cluster_lineage(
 
         adata.uns[key_to_add] = trends
     else:
-        logg.info(f"Loading data from `adata.uns[{key_to_add}!r]`")
+        logg.info(f"Loading data from `adata.uns[{key_to_add!r}]`")
         trends = adata.uns[key_to_add]
 
     if clusters is None:

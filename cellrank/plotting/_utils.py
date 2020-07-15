@@ -16,17 +16,18 @@ from typing import (
 from pathlib import Path
 from collections import defaultdict
 
+import numpy as np
+from scipy.sparse import csr_matrix
+from pandas.core.dtypes.common import is_categorical_dtype
+
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 
-import numpy as np
-from scipy.sparse import csr_matrix
 from cellrank.tools._utils import save_fig
 from cellrank.utils.models import Model, GamMGCVModel
 from cellrank.tools.kernels import VelocityKernel
 from cellrank.tools._constants import _colors
-from pandas.core.dtypes.common import is_categorical_dtype
 from cellrank.tools.estimators._cflare import CFLARE
 
 AnnData = TypeVar("AnnData")
@@ -290,7 +291,7 @@ def composition(
     fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
 
     ax.pie(x=cats_frac, labels=cats, colors=colors)
-    ax.set_title(f"Composition by {key}")
+    ax.set_title(f"composition by {key}")
 
     if save is not None:
         save_fig(fig, save)
