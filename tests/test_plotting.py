@@ -3,10 +3,6 @@ import os
 from typing import Tuple, Union, Callable
 from pathlib import Path
 
-import numpy as np
-import pytest
-from packaging import version
-
 import matplotlib.cm as cm
 from matplotlib.testing import setup
 from matplotlib.testing.compare import compare_images
@@ -14,8 +10,11 @@ from matplotlib.testing.compare import compare_images
 import scvelo as scv
 from anndata import AnnData
 
+import numpy as np
+import pytest
 import cellrank as cr
 from _helpers import create_model, resize_images_to_same_sizes
+from packaging import version
 from cellrank.tools import GPCCA, CFLARE
 
 setup()
@@ -426,9 +425,23 @@ class TestHeatmap:
             adata,
             model,
             GENES[:10],
+            cluster_genes=False,
             kind="lineages",
             time_key="latent_time",
-            cluster_genes=False,
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_heatmap_cluster_genes(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.heatmap(
+            adata,
+            model,
+            GENES[:10],
+            kind="lineages",
+            time_key="latent_time",
+            cluster_genes=True,
             dpi=DPI,
             save=fpath,
         )
@@ -642,6 +655,19 @@ class TestHeatmap:
             GENES[:5],
             cluster_key=["clusters", "clusters_enlarged", "clusters"],
             show_absorption_probabilities=True,
+            kind="lineages",
+            time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_heatmap_multiplecluster_show_all_genes(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.heatmap(
+            adata,
+            model,
+            GENES[:10],
             kind="lineages",
             time_key="latent_time",
             dpi=DPI,
