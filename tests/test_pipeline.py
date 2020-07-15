@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 
-import numpy as np
-from pandas.api.types import is_categorical_dtype
-
 from anndata import AnnData
 
+import numpy as np
 import cellrank as cr
+from pandas.api.types import is_categorical_dtype
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tools._constants import (
     LinKey,
@@ -140,7 +139,7 @@ class TestLowLevelPipeline:
         estimator_fwd.plot_metastable_states()
 
         estimator_fwd.compute_absorption_probabilities()
-        estimator_fwd.plot_lin_probs()
+        estimator_fwd.plot_absorption_probabilities()
 
         estimator_fwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
 
@@ -165,7 +164,7 @@ class TestLowLevelPipeline:
         estimator_bwd.plot_metastable_states()
 
         estimator_bwd.compute_absorption_probabilities()
-        estimator_bwd.plot_lin_probs()
+        estimator_bwd.plot_absorption_probabilities()
 
         estimator_bwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
 

@@ -16,18 +16,17 @@ from typing import (
 from pathlib import Path
 from collections import defaultdict
 
-import numpy as np
-from scipy.sparse import csr_matrix
-from pandas.core.dtypes.common import is_categorical_dtype
-
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 
+import numpy as np
+from scipy.sparse import csr_matrix
 from cellrank.tools._utils import save_fig
 from cellrank.utils.models import Model, GamMGCVModel
 from cellrank.tools.kernels import VelocityKernel
 from cellrank.tools._constants import _colors
+from pandas.core.dtypes.common import is_categorical_dtype
 from cellrank.tools.estimators._cflare import CFLARE
 
 AnnData = TypeVar("AnnData")
@@ -101,7 +100,7 @@ def lineages(
     mc = CFLARE(vk)
 
     # plot using the MC object
-    mc.plot_lin_probs(
+    mc.plot_absorption_probabilities(
         lineages=lineages,
         cluster_key=cluster_key,
         mode=mode,

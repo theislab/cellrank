@@ -3,10 +3,6 @@ import os
 from typing import Tuple, Union, Callable
 from pathlib import Path
 
-import numpy as np
-import pytest
-from packaging import version
-
 import matplotlib.cm as cm
 from matplotlib.testing import setup
 from matplotlib.testing.compare import compare_images
@@ -14,8 +10,11 @@ from matplotlib.testing.compare import compare_images
 import scvelo as scv
 from anndata import AnnData
 
+import numpy as np
+import pytest
 import cellrank as cr
 from _helpers import create_model, resize_images_to_same_sizes
+from packaging import version
 from cellrank.tools import GPCCA, CFLARE
 
 setup()
@@ -1001,23 +1000,23 @@ class TestCFLARE:
 
     @compare(kind="cflare")
     def test_scvelo_lin_probs(self, mc: CFLARE, fpath: str):
-        mc.plot_lin_probs(dpi=DPI, save=fpath)
+        mc.plot_absorption_probabilities(dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
     def test_scvelo_lin_probs_clusters(self, mc: CFLARE, fpath: str):
-        mc.plot_lin_probs(cluster_key="clusters", dpi=DPI, save=fpath)
+        mc.plot_absorption_probabilities(cluster_key="clusters", dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
     def test_scvelo_lin_probs_cmap(self, mc: CFLARE, fpath: str):
-        mc.plot_lin_probs(cmap=cm.inferno, dpi=DPI, save=fpath)
+        mc.plot_absorption_probabilities(cmap=cm.inferno, dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
     def test_scvelo_lin_probs_lineages(self, mc: CFLARE, fpath: str):
-        mc.plot_lin_probs(lineages=["0"], dpi=DPI, save=fpath)
+        mc.plot_absorption_probabilities(lineages=["0"], dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
     def test_scvelo_lin_probs_time(self, mc: CFLARE, fpath: str):
-        mc.plot_lin_probs(mode="time", dpi=DPI, save=fpath)
+        mc.plot_absorption_probabilities(mode="time", dpi=DPI, save=fpath)
 
 
 class TestGPCCA:

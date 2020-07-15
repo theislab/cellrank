@@ -3,12 +3,11 @@
 from copy import deepcopy
 from typing import Tuple
 
+from anndata import AnnData
+
 import numpy as np
 import pandas as pd
 import pytest
-
-from anndata import AnnData
-
 import cellrank as cr
 from _helpers import assert_array_nan_equal
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
@@ -41,16 +40,18 @@ def _check_eigdecomposition(mc: cr.tl.GPCCA) -> None:
 
 def _check_compute_meta(mc: cr.tl.GPCCA) -> None:
     assert mc.lineage_probabilities is None
-    assert isinstance(mc._meta_lin_probs, cr.tl.Lineage)
-    if mc._meta_lin_probs.shape[1] > 1:
-        np.testing.assert_array_almost_equal(mc._meta_lin_probs.sum(1), 1.0)
+    assert isinstance(mc._premeta_lin_probs, cr.tl.Lineage)
+    if mc._premeta_lin_probs.shape[1] > 1:
+        np.testing.assert_array_almost_equal(mc._premeta_lin_probs.sum(1), 1.0)
 
     assert isinstance(mc.metastable_states, pd.Series)
     assert_array_nan_equal(mc.metastable_states, mc.adata.obs[str(MetaKey.FORWARD)])
 
-    np.testing.assert_array_equal(mc._meta_states_colors, mc._meta_lin_probs.colors)
     np.testing.assert_array_equal(
-        mc._meta_states_colors, mc.adata.uns[_colors(str(MetaKey.FORWARD))]
+        mc._premeta_states_colors, mc._premeta_lin_probs.colors
+    )
+    np.testing.assert_array_equal(
+        mc._premeta_states_colors, mc.adata.uns[_colors(str(MetaKey.FORWARD))]
     )
 
     if "stationary_dist" in mc.eigendecomposition:
@@ -555,11 +556,13 @@ class TestGPCCACopy:
         assert_array_nan_equal(mc1.metastable_states, mc2.metastable_states)
         assert mc1.metastable_states is not mc2.metastable_states
 
-        np.testing.assert_array_equal(mc1._meta_states_colors, mc2._meta_states_colors)
-        assert mc1._meta_states_colors is not mc2._meta_states_colors
+        np.testing.assert_array_equal(
+            mc1._premeta_states_colors, mc2._premeta_states_colors
+        )
+        assert mc1._premeta_states_colors is not mc2._premeta_states_colors
 
-        np.testing.assert_array_equal(mc1._meta_lin_probs, mc2._meta_lin_probs)
-        assert mc1._meta_lin_probs is not mc2._meta_lin_probs
+        np.testing.assert_array_equal(mc1._premeta_lin_probs, mc2._premeta_lin_probs)
+        assert mc1._premeta_lin_probs is not mc2._premeta_lin_probs
 
         assert_array_nan_equal(mc1.main_states, mc2.main_states)
         assert mc1.main_states is not mc2.main_states

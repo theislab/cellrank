@@ -5,21 +5,20 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Tuple, Union, TypeVar, Iterable, Optional, Sequence
 from pathlib import Path
 
-import numpy as np
-import pandas as pd
-from pandas import Series
-from scipy.stats import ranksums
-from scipy.sparse import issparse
-from pandas.api.types import infer_dtype, is_categorical_dtype
-from scipy.sparse.linalg import eigs
-
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 
 import scvelo as scv
 
+import numpy as np
+import pandas as pd
+from pandas import Series
 from cellrank import logging as logg
+from scipy.stats import ranksums
+from scipy.sparse import issparse
+from pandas.api.types import infer_dtype, is_categorical_dtype
+from scipy.sparse.linalg import eigs
 from cellrank.tools._utils import (
     save_fig,
     _eigengap,
@@ -30,6 +29,7 @@ from cellrank.tools._utils import (
     _process_series,
     _complex_warning,
     _solve_lin_system,
+    _generate_random_keys,
     _get_cat_and_null_indices,
     _merge_categorical_series,
     _convert_to_categorical_series,
@@ -105,10 +105,13 @@ class BaseEstimator(ABC):
                 f"found `{self._adata.n_obs}` (based on `adata` object)."
             )
 
-        self._lin_probs = None
+        self._abs_probs: Optional[Lineage] = None
+        self._meta_lin_probs: Optional[Lineage] = None
 
         self._meta_states = None
-        self._meta_states_colors = None
+        self._meta_states_probs = None
+
+        self._abs_states = None
 
         # for copy
         self._g2m_key = g2m_key
@@ -286,6 +289,7 @@ class BaseEstimator(ABC):
                 time=start,
             )
 
+    @abstractmethod
     def compute_absorption_probabilities(
         self,
         keys: Optional[Sequence[str]] = None,
@@ -343,10 +347,9 @@ class BaseEstimator(ABC):
                 - :paramref:`lineage_probabilities`
                 - :paramref:`diff_potential`
         """
-
         if self._meta_states is None:
             raise RuntimeError(
-                "Compute approximate recurrent classes first as `.compute_metastable_states()`"
+                "Compute metastable states first as `.compute_metastable_states()`"
             )
         if keys is not None:
             keys = sorted(set(keys))
@@ -371,7 +374,7 @@ class BaseEstimator(ABC):
 
         # process the current annotations according to `keys`
         metastable_states_, colors_ = _process_series(
-            series=self._meta_states, keys=keys, colors=self._meta_states_colors
+            series=self._meta_states, keys=keys, colors=self._premeta_states_colors
         )
 
         # define the dimensions of this problem
@@ -379,9 +382,9 @@ class BaseEstimator(ABC):
         n_macrostates = len(metastable_states_.cat.categories)
 
         #  create empty lineage object
-        if self._lin_probs is not None:
-            logg.debug("DEBUG: Overwriting `.lineage_probabilities`")
-        self._lin_probs = Lineage(
+        if self._abs_probs is not None:
+            logg.debug("DEBUG: Overwriting `.absorption_probabilities`")
+        self._abs_probs = Lineage(
             np.empty((1, len(colors_))),
             names=metastable_states_.cat.categories,
             colors=colors_,
@@ -462,21 +465,27 @@ class BaseEstimator(ABC):
             abs_classes[trans_indices, col] = _abs_classes[:, col]
             abs_classes[cl_indices, col] = 1
 
-        self._lin_probs = Lineage(
-            abs_classes, names=self._lin_probs.names, colors=self._lin_probs.colors,
+        self._abs_probs = Lineage(
+            abs_classes, names=self._abs_probs.names, colors=self._abs_probs.colors,
         )
+        self.adata.obsm[self._lin_key] = self._abs_probs
 
-        self.adata.obsm[self._lin_key] = self._lin_probs
-
-        self.adata.obs[_dp(self._lin_key)] = self._lin_probs.entropy(axis=1).X.squeeze(
+        self.adata.obs[_dp(self._lin_key)] = self._abs_probs.entropy(axis=1).X.squeeze(
             axis=1
         )
         self._dp = self.adata.obs[_dp(self._lin_key)]  # make it a pd.Series
 
-        self.adata.uns[_lin_names(self._lin_key)] = self._lin_probs.names
-        self.adata.uns[_colors(self._lin_key)] = self._lin_probs.colors
+        self.adata.uns[_lin_names(self._lin_key)] = self._abs_probs.names
+        self.adata.uns[_colors(self._lin_key)] = self._abs_probs.colors
 
-        logg.info("    Finish", time=start)
+        self._abs_states = self._meta_states  # CFLARE
+
+        logg.info(
+            "Adding `.absorption_probabilities`\n"
+            "       `.diff_potential`\n"
+            "    Finish",
+            time=start,
+        )
 
     def plot_spectrum(
         self,
@@ -790,6 +799,171 @@ class BaseEstimator(ABC):
         logg.debug(f"Showing `{use}` Schur vectors")
         scv.pl.scatter(self._adata, color=color, title=title, **kwargs)
 
+    def plot_metastable_states(
+        self,
+        discrete: bool = False,
+        lineages: Optional[Union[str, Iterable[str]]] = None,
+        cluster_key: Optional[str] = None,
+        mode: str = "embedding",
+        time_key: str = "latent_time",
+        same_plot: bool = True,
+        cmap: Union[str, mpl.colors.ListedColormap] = cm.viridis,
+        title: Optional[str] = None,
+        **kwargs,
+    ) -> None:
+        """
+        Plot the absorption probabilities of metastable states in the given embedding.
+
+        .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/gpcca_metastable_states.png
+           :alt: image of metastable states
+           :width: 400px
+           :align: center
+
+        Params
+        ------
+        discrete
+            Whether to plot the top cells from each lineages or the probabilities.
+        lineages
+            Only show these lineages. If `None`, plot all lineages.
+        cluster_key
+            Key from :paramref:`adata` `.obs` for plotting cluster labels.
+        mode
+            One of following:
+
+                - `'embedding'` - plot the embedding while coloring in the absorption probabilities.
+                - `'time'` - plot the pseudotime on x-axis and the absorption probabilities on y-axis.
+        time_key
+            Key from :paramref:`adata` `.obs` to use as a pseudotime ordering of the cells.
+        same_plot
+            Whether to plot the lineages on the same plot using color gradients when :paramref:`mode` `='embedding'`.
+        cmap
+            Colormap to use.
+        title
+            Either `None`, in which case titles are `"{to,from} {final,root} {state}"`,
+            or an array of titles, one per lineage.
+        kwargs
+            Keyword arguments for :func:`scvelo.pl.scatter`.
+
+        Returns
+        -------
+        None
+            Nothing, just plots the metastable states.
+        """  # noqa
+        from cellrank.tools import CFLARE
+
+        attr = "_meta_states" if isinstance(self, CFLARE) else "_premeta_lin_probs"
+        error_msg = "Compute metastable states first as `.compute_metastable_states()`."
+
+        if attr == "_meta_states":
+            logg.warning("Plotting in discrete mode")
+            discrete = True
+
+        if not discrete:
+            self._plot_probabilities(
+                attr=attr,
+                error_msg=error_msg,
+                lineages=lineages,
+                cluster_key=cluster_key,
+                mode=mode,
+                time_key=time_key,
+                show_dp=False,
+                title=title,
+                same_plot=same_plot,
+                color_map=cmap,
+                **kwargs,
+            )
+        else:
+            self._plot_states(
+                attr=attr,
+                error_msg=error_msg,
+                same_plot=same_plot,
+                title=title,
+                **kwargs,
+            )
+
+    def plot_absorption_probabilities(
+        self,
+        discrete: bool = False,
+        lineages: Optional[Union[str, Iterable[str]]] = None,
+        cluster_key: Optional[str] = None,
+        mode: str = "embedding",
+        time_key: str = "latent_time",
+        show_dp: bool = False,
+        same_plot: bool = False,
+        title: Optional[str] = None,
+        cmap: Union[str, mpl.colors.ListedColormap] = cm.viridis,
+        **kwargs,
+    ) -> None:
+        """
+        Plot the absorption probabilities in the given embedding.
+
+        .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/absorption_probabilities.png
+           :alt: image of absorption probabilities
+           :width: 400px
+           :align: center
+
+        Params
+        ------
+        lineages
+            Only show these lineages. If `None`, plot all lineages.
+        discrete
+            Whether to plot the top cells from each lineages or the probabilities.
+        cluster_key
+            Key from :paramref`adata: `.obs` for plotting cluster labels.
+        mode
+            One of following:
+
+                - `'embedding'` - plot the embedding while coloring in the absorption probabilities.
+                - `'time'` - plot the pseudotime on x-axis and the absorption probabilities on y-axis.
+        time_key
+            Key from :paramref:`adata` `.obs` to use as a pseudotime ordering of the cells.
+        show_dp
+            Whether to show :paramref:`diff_potential` if present.
+        same_plot
+            Whether to plot the lineages on the same plot using color gradients when :paramref:`mode='embedding'`.
+        title
+            Either `None`, in which case titles are "to/from final/root state X",
+            or an array of titles, one per lineage.
+        cmap
+            Colormap to use.
+        kwargs
+            Keyword arguments for :func:`scvelo.pl.scatter`.
+
+        Returns
+        -------
+        None
+            Nothing, just plots the absorption probabilities.
+        """  # noqa
+
+        attr = "_abs_probs"
+        error_msg = "Compute absorption probabilities first as `.compute_absorption_probabilities()`."
+
+        if same_plot and title is None:
+            title = f"absorption probabilities ({'backward' if self.kernel.backward else 'forward'})"
+
+        if not discrete:
+            self._plot_probabilities(
+                attr=attr,
+                error_msg=error_msg,
+                lineages=lineages,
+                cluster_key=cluster_key,
+                mode=mode,
+                time_key=time_key,
+                show_dp=show_dp,
+                title=title,
+                same_plot=same_plot,
+                color_map=cmap,
+                **kwargs,
+            )
+        else:
+            self._plot_states(
+                attr=attr,
+                error_msg=error_msg,
+                same_plot=same_plot,
+                title=title,
+                **kwargs,
+            )
+
     @abstractmethod
     def _read_from_adata(
         self, g2m_key: Optional[str] = None, s_key: Optional[str] = None, **kwargs
@@ -829,6 +1003,118 @@ class BaseEstimator(ABC):
                 if result.statistic > 0 and result.pvalue < p_thresh:
                     logg.warning(f"Group `{group}` appears to be cell-cycle driven")
                     break
+
+    def _plot_states(
+        self,
+        attr: str,
+        error_msg: str,
+        same_plot: bool = True,
+        title: Optional[Union[str, List[str]]] = None,
+        **kwargs,
+    ):
+        """
+        Plot the states for each uncovered lineage.
+
+        Params
+        ------
+        n_cells
+            Number of most likely cells per lineage.
+        same_plot
+            Whether to plot the lineages on the same plot or separately.
+        title
+            The title of the plot.
+        kwargs
+            Keyword arguments for :func:`scvelo.pl.scatter`.
+
+        Returns
+        -------
+        None
+            Nothing, just plots the metastable or main states.
+        """
+
+        from cellrank.tools import Lineage
+
+        def cleanup():
+            for key in to_clean:
+                try:
+                    del self.adata.obs[key]
+                except KeyError:
+                    pass
+                try:
+                    del self.adata.uns[f"{key}_colors"]
+                except KeyError:
+                    pass
+
+        probs = getattr(
+            self, attr, None
+        )  # _premeta_lib_probs, _meta_lin_probs, _abs_probs or `_meta_states`
+        if probs is None:
+            raise RuntimeError(error_msg)
+
+        if not isinstance(probs, Lineage):
+            _main_states = probs
+            assert is_categorical_dtype(_main_states), "States are not categorical."
+
+            probs = Lineage(
+                np.empty((1, 4)),
+                names=_main_states.cat.categories,
+                colors=self.adata.uns[_colors(self._rc_key)],
+            )
+        else:
+            probs = probs[[n for n in probs.names if n != "rest"]]
+            if attr == "_premeta_lin_probs":  # GPCCA only
+                _main_states = self._premeta_states
+            elif attr == "_meta_lin_probs":
+                _main_states = self._meta_states
+            elif attr == "_abs_probs":
+                _main_states = (
+                    self._abs_states
+                )  # _meta_states for CFLARE, for GPCCA, we compute it
+            else:
+                raise RuntimeError(f"Invalid attribute name: `{attr!r}`.")
+
+        assert isinstance(probs, Lineage), "Not a `cellrank.tl.Lineage` class."
+
+        to_clean = []
+        try:
+            if same_plot:
+                key = _generate_random_keys(self.adata, "obs")[0]
+                to_clean = [key]
+                self.adata.obs[key] = _main_states
+                self.adata.uns[f"{key}_colors"] = probs.colors
+
+                if title is None:
+                    title = (
+                        "metastable states (backward)"
+                        if self.kernel.backward
+                        else "metastable states (forward)"
+                    )
+                scv.pl.scatter(self.adata, title=title, color=key, **kwargs)
+            else:
+                keys = _generate_random_keys(
+                    self.adata, "obs", len(_main_states.cat.categories)
+                )
+
+                to_clean = keys
+
+                for key, cat in zip(keys, _main_states.cat.categories):
+                    d = _main_states.copy()
+                    d[_main_states != cat] = None
+                    d.cat.set_categories([cat], inplace=True)
+
+                    self.adata.obs[key] = d
+                    self.adata.uns[f"{key}_colors"] = probs[cat].colors
+
+                scv.pl.scatter(
+                    self.adata,
+                    color=keys,
+                    title=list(_main_states.cat.categories) if title is None else title,
+                    **kwargs,
+                )
+        except Exception as e:
+            raise e
+        finally:
+            cleanup()
 
     def _plot_probabilities(
         self,
@@ -979,18 +1265,18 @@ class BaseEstimator(ABC):
         """
 
         # check that lineage probs have been computed
-        if self._lin_probs is None:
+        if self._abs_probs is None:
             raise RuntimeError(
-                "Compute lineage probabilities first as `.compute_absorption_probabilities()` or `.set_main_states()`."
+                "Compute lineage probabilities first as `.compute_absorption_probabilities()`."
             )
 
         # check all lin_keys exist in self.lin_names
         if isinstance(lin_names, str):
             lin_names = [lin_names]
         if lin_names is not None:
-            _ = self._lin_probs[lin_names]
+            _ = self._abs_probs[lin_names]
         else:
-            lin_names = self._lin_probs.names
+            lin_names = self._abs_probs.names
 
         # use `cluster_key` and clusters to subset the data
         if clusters is not None:
@@ -1009,10 +1295,10 @@ class BaseEstimator(ABC):
                 )
             subset_mask = np.in1d(self._adata.obs[cluster_key], clusters)
             adata_comp = self._adata[subset_mask].copy()
-            lin_probs = self._lin_probs[subset_mask, :]
+            lin_probs = self._abs_probs[subset_mask, :]
         else:
             adata_comp = self._adata.copy()
-            lin_probs = self._lin_probs
+            lin_probs = self._abs_probs
 
         # check that the layer exists, and that use raw is only used with layer X
         if layer != "X":
@@ -1060,20 +1346,20 @@ class BaseEstimator(ABC):
         n_cats = len(self._meta_states.cat.categories)
         color_key = _colors(self._rc_key)
 
-        if self._meta_states_colors is None:
+        if self._premeta_states_colors is None:
             if color_key in self._adata.uns and n_cats == len(
                 self._adata.uns[color_key]
             ):
                 logg.debug("Loading colors from `.adata` object")
-                self._meta_states_colors = _convert_to_hex_colors(
+                self._premeta_states_colors = _convert_to_hex_colors(
                     self._adata.uns[color_key]
                 )
             else:
-                self._meta_states_colors = _create_categorical_colors(n_cats)
-                self._adata.uns[color_key] = self._meta_states_colors
-        elif len(self._meta_states_colors) != n_cats:
-            self._meta_states_colors = _create_categorical_colors(n_cats)
-            self._adata.uns[color_key] = self._meta_states_colors
+                self._premeta_states_colors = _create_categorical_colors(n_cats)
+                self._adata.uns[color_key] = self._premeta_states_colors
+        elif len(self._premeta_states_colors) != n_cats:
+            self._premeta_states_colors = _create_categorical_colors(n_cats)
+            self._adata.uns[color_key] = self._premeta_states_colors
 
     def _write_eig_to_adata(self, eig):
         # write to class and AnnData object
@@ -1126,7 +1412,9 @@ class BaseEstimator(ABC):
     @property
     def lineage_probabilities(self) -> Lineage:
         """An array with names and colors, where each column represents one lineage."""  # noqa
-        return self._lin_probs
+        return self._abs_probs
+
+    # TODO: once GPCCA is cleaned up, add metastable_steas(_probs) as property
 
     @property
     def adata(self) -> AnnData:
