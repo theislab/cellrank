@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
 from typing import Tuple
 
+from anndata import AnnData
+
 import numpy as np
 import pandas as pd
 import pytest
-from pandas.api.types import is_categorical_dtype
-
-from anndata import AnnData
-
 import cellrank as cr
 from _helpers import assert_array_nan_equal
+from pandas.api.types import is_categorical_dtype
 from cellrank.tools._colors import _create_categorical_colors
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tools._constants import (
@@ -121,23 +120,23 @@ class TestCFLARE:
             mc.diff_potential, mc.adata.obs[f"{LinKey.FORWARD}_dp"]
         )
 
-        assert isinstance(mc.lineage_probabilities, cr.tl.Lineage)
-        assert mc.lineage_probabilities.shape == (mc.adata.n_obs, 2)
+        assert isinstance(mc.absorption_probabilities, cr.tl.Lineage)
+        assert mc.absorption_probabilities.shape == (mc.adata.n_obs, 2)
         assert f"{LinKey.FORWARD}" in mc.adata.obsm.keys()
         np.testing.assert_array_equal(
-            mc.lineage_probabilities.X, mc.adata.obsm[f"{LinKey.FORWARD}"]
+            mc.absorption_probabilities.X, mc.adata.obsm[f"{LinKey.FORWARD}"]
         )
 
         assert _lin_names(LinKey.FORWARD) in mc.adata.uns.keys()
         np.testing.assert_array_equal(
-            mc.lineage_probabilities.names, mc.adata.uns[_lin_names(LinKey.FORWARD)]
+            mc.absorption_probabilities.names, mc.adata.uns[_lin_names(LinKey.FORWARD)]
         )
 
         assert _colors(LinKey.FORWARD) in mc.adata.uns.keys()
         np.testing.assert_array_equal(
-            mc.lineage_probabilities.colors, mc.adata.uns[_colors(LinKey.FORWARD)]
+            mc.absorption_probabilities.colors, mc.adata.uns[_colors(LinKey.FORWARD)]
         )
-        np.testing.assert_allclose(mc.lineage_probabilities.X.sum(1), 1)
+        np.testing.assert_allclose(mc.absorption_probabilities.X.sum(1), 1)
 
     def test_compute_absorption_probabilities_solver(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
@@ -151,11 +150,11 @@ class TestCFLARE:
 
         # compute lin probs using direct solver
         mc.compute_absorption_probabilities(solver="direct")
-        l_direct = mc.lineage_probabilities.copy()
+        l_direct = mc.absorption_probabilities.copy()
 
         # compute lin probs using iterative solver
         mc.compute_absorption_probabilities(solver="gmres", tol=tol)
-        l_iterative = mc.lineage_probabilities.copy()
+        l_iterative = mc.absorption_probabilities.copy()
 
         assert not np.shares_memory(l_direct.X, l_iterative.X)  # sanity check
         np.testing.assert_allclose(l_direct.X, l_iterative.X, rtol=0, atol=tol)
@@ -172,11 +171,11 @@ class TestCFLARE:
 
         # compute lin probs using direct solver
         mc.compute_absorption_probabilities(solver="gmres", use_petsc=False, tol=tol)
-        l_iter = mc.lineage_probabilities.copy()
+        l_iter = mc.absorption_probabilities.copy()
 
         # compute lin probs using petsc iterative solver
         mc.compute_absorption_probabilities(solver="gmres", use_petsc=True, tol=tol)
-        l_iter_petsc = mc.lineage_probabilities.copy()
+        l_iter_petsc = mc.absorption_probabilities.copy()
 
         assert not np.shares_memory(l_iter.X, l_iter_petsc.X)  # sanity check
         np.testing.assert_allclose(l_iter.X, l_iter_petsc.X, rtol=0, atol=tol)
@@ -253,7 +252,7 @@ class TestCFLARE:
         ]
 
         mc_fwd.compute_absorption_probabilities(keys=arcs)
-        lin_colors = mc_fwd.lineage_probabilities[arcs].colors
+        lin_colors = mc_fwd.absorption_probabilities[arcs].colors
 
         np.testing.assert_array_equal(arc_colors, lin_colors)
 
@@ -304,7 +303,7 @@ class TestCFLARE:
 
         # compute absorption probabilities
         c.compute_absorption_probabilities()
-        absorption_probabilities_query = c.lineage_probabilities[
+        absorption_probabilities_query = c.absorption_probabilities[
             state_annotation.isna()
         ]
 
@@ -379,7 +378,7 @@ class TestCFLARECopy:
             else:
                 assert v == mc2.eigendecomposition[k]
         np.testing.assert_array_equal(
-            mc1.lineage_probabilities, mc2.lineage_probabilities
+            mc1.absorption_probabilities, mc2.absorption_probabilities
         )
         np.testing.assert_array_equal(mc1.diff_potential, mc2.diff_potential)
         assert_array_nan_equal(mc1.metastable_states, mc2.metastable_states)
@@ -408,7 +407,7 @@ class TestCFLARECopy:
         assert mc1.recurrent_classes is not mc2.recurrent_classes
         assert mc1.transient_classes is not mc2.transient_classes
         assert mc1.eigendecomposition != mc2.eigendecomposition
-        assert mc1.lineage_probabilities is not mc2.lineage_probabilities
+        assert mc1.absorption_probabilities is not mc2.absorption_probabilities
         assert mc1.diff_potential is not mc2.diff_potential
         assert mc1.metastable_states is not mc2.metastable_states
         assert (

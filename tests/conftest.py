@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
 from typing import Tuple
 
-import numpy as np
-import pytest
-
 import matplotlib
 
 import scanpy as sc
 import scvelo as scv
 from anndata import AnnData
 
+import numpy as np
+import pytest
 import cellrank as cr
 from cellrank.tools import GPCCA, CFLARE
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
@@ -83,7 +82,7 @@ def _create_cflare(*, backward: bool = False) -> Tuple[AnnData, CFLARE]:
         assert str(LinKey.BACKWARD) in adata.obsm
     else:
         assert str(LinKey.FORWARD) in adata.obsm
-    np.testing.assert_array_almost_equal(mc.lineage_probabilities.sum(1), 1)
+    np.testing.assert_array_almost_equal(mc.absorption_probabilities.sum(1), 1)
 
     return adata, mc
 
@@ -111,7 +110,7 @@ def _create_gpcca(*, backward: bool = False) -> Tuple[AnnData, GPCCA]:
         assert str(LinKey.BACKWARD) in adata.obsm
     else:
         assert str(LinKey.FORWARD) in adata.obsm
-    np.testing.assert_array_almost_equal(mc.lineage_probabilities.sum(1), 1)
+    np.testing.assert_array_almost_equal(mc.absorption_probabilities.sum(1), 1)
 
     return adata, mc
 
