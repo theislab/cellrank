@@ -112,6 +112,7 @@ class BaseEstimator(ABC):
         self._meta_states_probs = None
 
         self._abs_states = None
+        # no _abs_states_probs because CFLARE doesn't have it
 
         # for copy
         self._g2m_key = g2m_key
