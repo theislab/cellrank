@@ -223,6 +223,7 @@ class CFLARE(BaseEstimator):
         Plot eigenvectors in an embedding.
 
         .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/eig_embedding.png
+           :alt: image of eigen embedding
            :width: 400px
            :align: center
 
@@ -545,6 +546,7 @@ class CFLARE(BaseEstimator):
         Plot the approximate recurrent classes in a given embedding.
 
         .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/cflare_metastable_states.png
+           :alt: image of metastable states
            :width: 400px
            :align: center
 
@@ -598,6 +600,7 @@ class CFLARE(BaseEstimator):
         Plot the absorption probabilities in the given embedding.
 
         .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/absorption_probabilities.png
+           :alt: image of absorption probabilities
            :width: 400px
            :align: center
 
