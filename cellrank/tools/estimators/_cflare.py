@@ -1,18 +1,12 @@
 # -*- coding: utf-8 -*-
 """Clustering Left and Right Eigenvectors (CFLARE) module."""
 from copy import copy, deepcopy
-from typing import Any, Dict, List, Tuple, Union, TypeVar, Iterable, Optional
+from typing import Any, Dict, List, Tuple, Union, TypeVar, Optional
 
 import numpy as np
 from pandas import Series
-from scipy.stats import zscore
-
-import matplotlib as mpl
-import matplotlib.cm as cm
-
-import scvelo as scv
-
 from cellrank import logging as logg
+from scipy.stats import zscore
 from cellrank.tools._utils import (
     _cluster_X,
     _filter_cells,
@@ -82,7 +76,6 @@ class CFLARE(BaseEstimator):
             s_key=s_key,
             key_added=key_added,
         )
-        self._meta_states_probs = None
 
     def _read_from_adata(
         self, g2m_key: Optional[str] = None, s_key: Optional[str] = None, **kwargs
@@ -537,116 +530,6 @@ class CFLARE(BaseEstimator):
             f"       `.metastable_states`\n"
             f"    Finish",
             time=start,
-        )
-
-    def plot_metastable_states(
-        self, cluster_key: Optional[str] = None, **kwargs
-    ) -> None:
-        """
-        Plot the approximate recurrent classes in a given embedding.
-
-        .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/cflare_metastable_states.png
-           :alt: image of metastable states
-           :width: 400px
-           :align: center
-
-        Params
-        ------
-        cluster_key
-            Key from `.obs` to plot clusters.
-        kwargs
-            Keyword arguments for :func:`scvelo.pl.scatter`.
-
-        Returns
-        -------
-        None
-            Nothing, just plots the approximate recurrent classes.
-        """  # noqa
-
-        if self._meta_states is None:
-            raise RuntimeError(
-                "Compute approximate recurrent classes first as `.compute_metastable_states()`."
-            )
-
-        self._adata.obs[self._rc_key] = self._meta_states
-
-        # check whether the length of the color array matches the number of clusters
-        color_key = _colors(self._rc_key)
-        if color_key in self._adata.uns and len(self._adata.uns[color_key]) != len(
-            self._meta_states.cat.categories
-        ):
-            del self._adata.uns[_colors(self._rc_key)]
-            self._meta_states_colors = None
-
-        color = self._rc_key if cluster_key is None else [cluster_key, self._rc_key]
-        scv.pl.scatter(self._adata, color=color, **kwargs)
-
-        if color_key in self._adata.uns:
-            self._meta_states_colors = self._adata.uns[color_key]
-
-    def plot_lin_probs(
-        self,
-        lineages: Optional[Union[str, Iterable[str]]] = None,
-        cluster_key: Optional[str] = None,
-        mode: str = "embedding",
-        time_key: str = "latent_time",
-        show_dp: bool = False,
-        same_plot: bool = False,
-        title: Optional[str] = None,
-        cmap: Union[str, mpl.colors.ListedColormap] = cm.viridis,
-        **kwargs,
-    ) -> None:
-        """
-        Plot the absorption probabilities in the given embedding.
-
-        .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/absorption_probabilities.png
-           :alt: image of absorption probabilities
-           :width: 400px
-           :align: center
-
-        Params
-        ------
-        lineages
-            Only show these lineages. If `None`, plot all lineages.
-        cluster_key
-            Key from :paramref`adata: `.obs` for plotting cluster labels.
-        mode
-            One of following:
-
-                - `'embedding'` - plot the embedding while coloring in the absorption probabilities.
-                - `'time'` - plot the pseudotime on x-axis and the absorption probabilities on y-axis.
-        time_key
-            Key from :paramref:`adata` `.obs` to use as a pseudotime ordering of the cells.
-        show_dp
-            Whether to show :paramref:`diff_potential` if present.
-        same_plot
-            Whether to plot the lineages on the same plot using color gradients when :paramref:`mode='embedding'`.
-        title
-            Either `None`, in which case titles are "to/from final/root state X",
-            or an array of titles, one per lineage.
-        cmap
-            Colormap to use.
-        kwargs
-            Keyword arguments for :func:`scvelo.pl.scatter`.
-
-        Returns
-        -------
-        None
-            Nothing, just plots the absorption probabilities.
-        """  # noqa
-
-        self._plot_probabilities(
-            attr="_lin_probs",
-            error_msg="Compute lineage probabilities first as `.compute_absorption_probabilities()`.",
-            lineages=lineages,
-            cluster_key=cluster_key,
-            mode=mode,
-            time_key=time_key,
-            show_dp=show_dp,
-            title=title,
-            same_plot=same_plot,
-            color_map=cmap,
-            **kwargs,
         )
 
     def _compute_metastable_states_prob(
