@@ -344,7 +344,7 @@ class BaseEstimator(ABC):
         None
             Nothing, but updates the following fields:
 
-                - :paramref:`lineage_probabilities`
+                - :paramref:`absorption_probabilities`
                 - :paramref:`diff_potential`
         """
         if self._meta_states is None:
@@ -1241,7 +1241,7 @@ class BaseEstimator(ABC):
         Params
         ------
         lin_names
-            Either a set of lineage names from :paramref:`lineage_probabilities` `.names` or None,
+            Either a set of lineage names from :paramref:`absorption_probabilities` `.names` or None,
             in which case all lineages are considered.
         cluster_key
             Key from :paramref:`adata` `.obs` to obtain cluster annotations.
@@ -1410,7 +1410,7 @@ class BaseEstimator(ABC):
         return self._dp
 
     @property
-    def lineage_probabilities(self) -> Lineage:
+    def absorption_probabilities(self) -> Lineage:
         """An array with names and colors, where each column represents one lineage."""  # noqa
         return self._abs_probs
 

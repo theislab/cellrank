@@ -39,7 +39,7 @@ def _check_eigdecomposition(mc: cr.tl.GPCCA) -> None:
 
 
 def _check_compute_meta(mc: cr.tl.GPCCA) -> None:
-    assert mc.lineage_probabilities is None
+    assert mc.absorption_probabilities is None
     assert isinstance(mc._premeta_lin_probs, cr.tl.Lineage)
     if mc._premeta_lin_probs.shape[1] > 1:
         np.testing.assert_array_almost_equal(mc._premeta_lin_probs.sum(1), 1.0)
@@ -76,21 +76,21 @@ def _check_main_states(mc: cr.tl.GPCCA, has_main_states: bool = True):
         assert_array_nan_equal(mc.adata.obs[str(StateKey.FORWARD)], mc.main_states)
         np.testing.assert_array_equal(
             mc.adata.uns[_colors(StateKey.FORWARD)],
-            mc.lineage_probabilities[list(mc.main_states.cat.categories)].colors,
+            mc.absorption_probabilities[list(mc.main_states.cat.categories)].colors,
         )
 
     assert isinstance(mc.diff_potential, pd.Series)
-    assert isinstance(mc.lineage_probabilities, cr.tl.Lineage)
-    np.testing.assert_array_almost_equal(mc.lineage_probabilities.sum(1), 1.0)
+    assert isinstance(mc.absorption_probabilities, cr.tl.Lineage)
+    np.testing.assert_array_almost_equal(mc.absorption_probabilities.sum(1), 1.0)
 
     np.testing.assert_array_equal(
-        mc.adata.obsm[str(LinKey.FORWARD)], mc.lineage_probabilities.X
+        mc.adata.obsm[str(LinKey.FORWARD)], mc.absorption_probabilities.X
     )
     np.testing.assert_array_equal(
-        mc.adata.uns[_lin_names(LinKey.FORWARD)], mc.lineage_probabilities.names
+        mc.adata.uns[_lin_names(LinKey.FORWARD)], mc.absorption_probabilities.names
     )
     np.testing.assert_array_equal(
-        mc.adata.uns[_colors(LinKey.FORWARD)], mc.lineage_probabilities.colors
+        mc.adata.uns[_colors(LinKey.FORWARD)], mc.absorption_probabilities.colors
     )
 
     np.testing.assert_array_equal(mc.adata.obs[_dp(LinKey.FORWARD)], mc.diff_potential)
@@ -573,9 +573,9 @@ class TestGPCCACopy:
         assert mc1.main_states_probabilities is not mc2.main_states_probabilities
 
         np.testing.assert_array_equal(
-            mc1.lineage_probabilities, mc2.lineage_probabilities
+            mc1.absorption_probabilities, mc2.absorption_probabilities
         )
-        assert mc1.lineage_probabilities is not mc2.lineage_probabilities
+        assert mc1.absorption_probabilities is not mc2.absorption_probabilities
 
         np.testing.assert_array_equal(mc1.diff_potential, mc2.diff_potential)
         assert mc1.diff_potential is not mc2.diff_potential

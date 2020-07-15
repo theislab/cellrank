@@ -578,7 +578,7 @@ class CFLARE(BaseEstimator):
         """
 
         # get the names of the main states, remove 'rest' if present
-        main_names = self.lineage_probabilities.names
+        main_names = self.absorption_probabilities.names
         main_names = main_names[main_names != "rest"]
 
         # get the metastable annotations & colors
@@ -608,7 +608,7 @@ class CFLARE(BaseEstimator):
         c._trans_classes = copy(self._trans_classes)
 
         c._eig = deepcopy(self.eigendecomposition)
-        c._lin_probs = copy(self.lineage_probabilities)
+        c._lin_probs = copy(self.absorption_probabilities)
         c._dp = copy(self.diff_potential)
 
         c._meta_states = copy(self._meta_states)

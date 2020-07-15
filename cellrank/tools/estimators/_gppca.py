@@ -557,7 +557,7 @@ class GPCCA(BaseEstimator):
         None
             Nothing, just updates the following fields:
 
-                - :paramref:`lineage_probabilities`
+                - :paramref:`absorption_probabilities`
                 - :paramref:`diff_potential`
         """  # noqa
         if len(self._premeta_states.cat.categories) == 1:
@@ -673,7 +673,7 @@ class GPCCA(BaseEstimator):
         None
             Nothing, but updates the following fields:
 
-                - :paramref:`lineage_probabilities`
+                - :paramref:`absorption_probabilities`
                 - :paramref:`diff_potential`
         """
         super().compute_absorption_probabilities(
@@ -1330,7 +1330,7 @@ class GPCCA(BaseEstimator):
 
         g._eig = deepcopy(self.eigendecomposition)
 
-        g._meta_lin_probs = copy(self.lineage_probabilities)
+        g._meta_lin_probs = copy(self.absorption_probabilities)
         g._dp = copy(self.diff_potential)
 
         g._gpcca = deepcopy(self._gpcca)

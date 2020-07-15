@@ -327,7 +327,7 @@ def lineage_drivers(
     final
         If True, use forward process, else backward
     lin_names
-        Either a set of lineage names from :paramref:`lineage_probabilities` `.names` or None,
+        Either a set of lineage names from :paramref:`absorption_probabilities` `.names` or None,
         in which case all lineages are considered.
     cluster_key
         Key from :paramref:`adata` `.obs` to obtain cluster annotations.
