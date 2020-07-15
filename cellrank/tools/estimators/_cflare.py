@@ -222,6 +222,10 @@ class CFLARE(BaseEstimator):
         """
         Plot eigenvectors in an embedding.
 
+        .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/eig_embedding.png
+           :width: 400px
+           :align: center
+
         Params
         ------
         left
@@ -540,6 +544,10 @@ class CFLARE(BaseEstimator):
         """
         Plot the approximate recurrent classes in a given embedding.
 
+        .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/cflare_metastable_states.png
+           :width: 400px
+           :align: center
+
         Params
         ------
         cluster_key
@@ -551,7 +559,7 @@ class CFLARE(BaseEstimator):
         -------
         None
             Nothing, just plots the approximate recurrent classes.
-        """
+        """  # noqa
 
         if self._meta_states is None:
             raise RuntimeError(
@@ -589,6 +597,10 @@ class CFLARE(BaseEstimator):
         """
         Plot the absorption probabilities in the given embedding.
 
+        .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/absorption_probabilities.png
+           :width: 400px
+           :align: center
+
         Params
         ------
         lineages
@@ -618,7 +630,7 @@ class CFLARE(BaseEstimator):
         -------
         None
             Nothing, just plots the absorption probabilities.
-        """
+        """  # noqa
 
         self._plot_probabilities(
             attr="_lin_probs",

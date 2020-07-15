@@ -135,7 +135,7 @@ class Model(ABC):
         """Return a copy of self."""
         pass
 
-    def __copy__(self) -> "SKLearnModel":
+    def __copy__(self) -> "Model":
         return self.copy()
 
     def prepare(
