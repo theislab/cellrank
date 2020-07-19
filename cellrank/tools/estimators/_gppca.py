@@ -5,13 +5,12 @@ from types import MappingProxyType
 from typing import Any, Dict, List, Tuple, Union, Mapping, Iterable, Optional
 from pathlib import Path
 
-import numpy as np
-import pandas as pd
-
 import matplotlib as mpl
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 
+import numpy as np
+import pandas as pd
 from cellrank import logging as logg
 from cellrank.tools import Lineage
 from cellrank.tools._utils import (
@@ -909,17 +908,3 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         )
 
         return (states, not_enough_cells) if return_not_enough_cells else states
-
-    # TODO: docrep
-    def copy(self) -> "GPCCA":
-        """Return a copy of self."""
-        raise NotImplementedError()
-
-    # TODO: just call super + extra
-    # or save meta states as well (NYI) and handle it here
-    def __getstate__(self):
-        pass
-
-    # TODO: call super + extra
-    def __setstate__(self, state):
-        pass
