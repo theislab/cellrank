@@ -356,10 +356,13 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         if self._get(P.ABS_RPOBS) is not None:
             logg.debug(f"Overwriting `.{P.ABS_RPOBS}`")
 
-        self._absorption_probabilities = Lineage(
-            np.empty((1, len(colors_))),
-            names=metastable_states_.cat.categories,
-            colors=colors_,
+        self._set(
+            A.ABS_RPOBS,
+            Lineage(
+                np.empty((1, len(colors_))),
+                names=metastable_states_.cat.categories,
+                colors=colors_,
+            ),
         )
 
         # warn in case only one state is left
@@ -436,15 +439,15 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             A.ABS_RPOBS,
             Lineage(
                 abs_classes,
-                names=self._absorption_probabilities.names,
-                colors=self._absorption_probabilities.colors,
+                names=self._get(P.ABS_RPOBS).names,
+                colors=self._get(P.ABS_RPOBS).colors,
             ),
         )
 
         self._set(
             A.DIFF_POT,
             pd.Series(
-                self._absorption_probabilities.entropy(axis=1).X.squeeze(axis=1),
+                self._get(P.ABS_RPOBS).entropy(axis=1).X.squeeze(axis=1),
                 index=self.adata.obs.index,
             ),
         )
@@ -495,6 +498,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
         # check that lineage probs have been computed
         abs_probs = self._get(P.ABS_RPOBS)
+        prefix = "from" if self.kernel.backward else "from"
 
         if abs_probs is None:
             raise RuntimeError(
@@ -560,11 +564,10 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             correlations = _vec_mat_corr(data, y)
 
             if inplace:
-                # TODO
                 if use_raw:
-                    self.adata.raw.var[f"{self.prefix} {lineage} corr"] = correlations
+                    self.adata.raw.var[f"{prefix} {lineage} corr"] = correlations
                 else:
-                    self.adata.var[f"{self.prefix} {lineage} corr"] = correlations
+                    self.adata.var[f"{prefix} {lineage} corr"] = correlations
             else:
                 lin_corrs[lineage] = correlations
 
