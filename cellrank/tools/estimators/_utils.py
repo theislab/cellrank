@@ -20,7 +20,7 @@ try:
         ["attr", "prop", "dtype", "default", "doc", "compute_fmt", "plot_fmt"],
         defaults=[None, None, None, None, None, F.COMPUTE, F.PLOT],
     )
-except AttributeError:
+except TypeError:
     # Python < 3.7
     Metadata = namedtuple(
         "Metadata",
