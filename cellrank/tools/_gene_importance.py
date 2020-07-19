@@ -17,6 +17,7 @@ from cellrank.tools.kernels import ConnectivityKernel
 from cellrank.plotting._utils import _model_type, _create_models, _is_any_gam_mgcv
 from cellrank.tools._constants import AbsProbKey
 from cellrank.utils._parallelize import parallelize
+from cellrank.tools.estimators._constants import A
 
 AnnData = TypeVar("AnnData")
 
@@ -324,9 +325,9 @@ def lineage_drivers(
     Params
     ------
     adata
-        Annodated data matrix
+        Annotated data object.
     final
-        If True, use forward process, else backward
+        If `True`, use forward process, otherwise use backward process.
     lin_names
         Either a set of lineage names from :paramref:`absorption_probabilities` `.names` or None,
         in which case all lineages are considered.
@@ -354,7 +355,7 @@ def lineage_drivers(
     # create dummy kernel and estimator
     kernel = ConnectivityKernel(adata, backward=not final)
     g = GPCCA(kernel)
-    g._meta_lin_probs = adata.obsm[g._lin_key]
+    g._set(A.ABS_RPOBS, adata.obsm[g._abs_prob_key])
 
     # call the underlying function to compute and store the lineage drivers
     g.compute_lineage_drivers(
