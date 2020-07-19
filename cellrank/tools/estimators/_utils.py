@@ -2,11 +2,10 @@
 """Utillity functions which deal with delegating methods."""
 import inspect
 from typing import Any, Type, TypeVar, Callable, Iterable, Optional
-from functools import partial
+from functools import partial, singledispatch, update_wrapper
 from collections import namedtuple
 
 import wrapt
-
 import cellrank.logging as logg
 from cellrank.tools._utils import _generate_random_keys
 from cellrank.tools.estimators._constants import F
@@ -15,6 +14,101 @@ from typing import *  # noqa; get rid of flake8 warnings from above star import
 
 
 AnnData = TypeVar("AnnData")
+try:
+    Metadata = namedtuple(
+        "Metadata",
+        ["attr", "prop", "dtype", "default", "doc", "compute_fmt", "plot_fmt"],
+        defaults=[None, None, None, None, None, F.COMPUTE, F.PLOT],
+    )
+except AttributeError:
+    # Python < 3.7
+    Metadata = namedtuple(
+        "Metadata",
+        ["attr", "prop", "dtype", "default", "doc", "compute_fmt", "plot_fmt"],
+    )
+    Metadata.__new__.__defaults__ = defaults = [
+        None,
+        None,
+        None,
+        None,
+        None,
+        F.COMPUTE,
+        F.PLOT,
+    ]
+
+
+class RandomKeys:
+    """
+    Create random keys inside an :class:`anndataAnnData` object.
+
+    Params
+    ------
+    adata
+        Annotated data object.
+    n
+        Number of keys, If `None`, create just 1 keys.
+    where
+        Attribute of :paramref:`adata`. If `'obs'`, also clean up `{key}'_colors'` for each generated key.
+    """
+
+    def __init__(self, adata: AnnData, n: Optional[int] = None, where: str = "obs"):
+        self._adata = adata
+        self._where = where
+        self._n = n
+        self._keys = []
+
+    def __enter__(self):
+        self._keys = _generate_random_keys(self._adata, self._where, self._n)
+        return self._keys
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        for key in self._keys:
+            try:
+                del self._adata.obs[key]
+            except KeyError:
+                pass
+            if self._where == "obs":
+                try:
+                    del self._adata.uns[f"{key}_colors"]
+                except KeyError:
+                    pass
+
+
+# copy of functools.singledispatchmethod (for Python < 3.8)
+class singledispatchmethod:
+    """Single-dispatch generic method descriptor.
+
+    Supports wrapping existing descriptors and handles non-descriptor
+    callables as instance methods.
+    """
+
+    def __init__(self, func):
+        if not callable(func) and not hasattr(func, "__get__"):
+            raise TypeError(f"{func!r} is not callable or a descriptor")
+
+        self.dispatcher = singledispatch(func)
+        self.func = func
+
+    def register(self, cls, method=None):
+        """generic_method.register(cls, func) -> func
+
+        Registers a new implementation for the given *cls* on a *generic_method*.
+        """  # noqa
+        return self.dispatcher.register(cls, func=method)
+
+    def __get__(self, obj, cls=None):
+        def _method(*args, **kwargs):
+            method = self.dispatcher.dispatch(args[0].__class__)
+            return method.__get__(obj, cls)(*args, **kwargs)
+
+        _method.__isabstractmethod__ = self.__isabstractmethod__
+        _method.register = self.register
+        update_wrapper(_method, self.func)
+        return _method
+
+    @property
+    def __isabstractmethod__(self):
+        return getattr(self.func, "__isabstractmethod__", False)
 
 
 def argspec_factory(
@@ -115,47 +209,3 @@ def _print_insufficient_number_of_cells(groups: Iterable[Any], n_cells: int):
             f"The following groups have less than requested number of cells ({n_cells}): "
             f"`{', '.join(sorted(map(str, groups)))}`"
         )
-
-
-class RandomKeys:
-    """
-    Create random keys inside an :class:`anndataAnnData` object.
-
-    Params
-    ------
-    adata
-        Annotated data object.
-    n
-        Number of keys, If `None`, create just 1 keys.
-    where
-        Attribute of :paramref:`adata`. If `'obs'`, also clean up `{key}'_colors'` for each generated key.
-    """
-
-    def __init__(self, adata: AnnData, n: Optional[int] = None, where: str = "obs"):
-        self._adata = adata
-        self._where = where
-        self._n = n
-        self._keys = []
-
-    def __enter__(self):
-        self._keys = _generate_random_keys(self._adata, self._where, self._n)
-        return self._keys
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        for key in self._keys:
-            try:
-                del self._adata.obs[key]
-            except KeyError:
-                pass
-            if self._where == "obs":
-                try:
-                    del self._adata.uns[f"{key}_colors"]
-                except KeyError:
-                    pass
-
-
-Metadata = namedtuple(
-    "Metadata",
-    ["attr", "prop", "dtype", "default", "doc", "compute_fmt", "plot_fmt"],
-    defaults=[None, None, None, None, None, F.COMPUTE, F.PLOT],
-)
