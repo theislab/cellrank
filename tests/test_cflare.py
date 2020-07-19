@@ -1,21 +1,22 @@
 # -*- coding: utf-8 -*-
 from typing import Tuple
 
-from anndata import AnnData
-
 import numpy as np
 import pandas as pd
 import pytest
+from pandas.api.types import is_categorical_dtype
+
+from anndata import AnnData
+
 import cellrank as cr
 from _helpers import assert_array_nan_equal
-from pandas.api.types import is_categorical_dtype
 from cellrank.tools._colors import _create_categorical_colors
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tools._constants import (
-    LinKey,
     Prefix,
-    StateKey,
     Direction,
+    AbsProbKey,
+    FinalStatesKey,
     _probs,
     _colors,
     _lin_names,
@@ -37,8 +38,8 @@ class TestCFLARE:
         if not mc.irreducible:
             assert isinstance(mc.recurrent_classes, list)
             assert isinstance(mc.transient_classes, list)
-            assert f"{StateKey.FORWARD}_rec_classes" in mc.adata.obs
-            assert f"{StateKey.FORWARD}_trans_classes" in mc.adata.obs
+            assert f"{FinalStatesKey.FORWARD}_rec_classes" in mc.adata.obs
+            assert f"{FinalStatesKey.FORWARD}_trans_classes" in mc.adata.obs
         else:
             assert mc.recurrent_classes is None
             assert mc.transient_classes is None
@@ -92,8 +93,8 @@ class TestCFLARE:
 
         assert is_categorical_dtype(mc.metastable_states)
         assert mc.metastable_states_probabilities is not None
-        assert _colors(StateKey.FORWARD) in mc.adata.uns.keys()
-        assert _probs(StateKey.FORWARD) in mc.adata.obs.keys()
+        assert _colors(FinalStatesKey.FORWARD) in mc.adata.uns.keys()
+        assert _probs(FinalStatesKey.FORWARD) in mc.adata.obs.keys()
 
     def test_compute_absorption_probabilities_no_args(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
@@ -115,26 +116,28 @@ class TestCFLARE:
         mc.compute_absorption_probabilities()
 
         assert isinstance(mc.diff_potential, pd.Series)
-        assert f"{LinKey.FORWARD}_dp" in mc.adata.obs.keys()
+        assert f"{AbsProbKey.FORWARD}_dp" in mc.adata.obs.keys()
         np.testing.assert_array_equal(
-            mc.diff_potential, mc.adata.obs[f"{LinKey.FORWARD}_dp"]
+            mc.diff_potential, mc.adata.obs[f"{AbsProbKey.FORWARD}_dp"]
         )
 
         assert isinstance(mc.absorption_probabilities, cr.tl.Lineage)
         assert mc.absorption_probabilities.shape == (mc.adata.n_obs, 2)
-        assert f"{LinKey.FORWARD}" in mc.adata.obsm.keys()
+        assert f"{AbsProbKey.FORWARD}" in mc.adata.obsm.keys()
         np.testing.assert_array_equal(
-            mc.absorption_probabilities.X, mc.adata.obsm[f"{LinKey.FORWARD}"]
+            mc.absorption_probabilities.X, mc.adata.obsm[f"{AbsProbKey.FORWARD}"]
         )
 
-        assert _lin_names(LinKey.FORWARD) in mc.adata.uns.keys()
+        assert _lin_names(AbsProbKey.FORWARD) in mc.adata.uns.keys()
         np.testing.assert_array_equal(
-            mc.absorption_probabilities.names, mc.adata.uns[_lin_names(LinKey.FORWARD)]
+            mc.absorption_probabilities.names,
+            mc.adata.uns[_lin_names(AbsProbKey.FORWARD)],
         )
 
-        assert _colors(LinKey.FORWARD) in mc.adata.uns.keys()
+        assert _colors(AbsProbKey.FORWARD) in mc.adata.uns.keys()
         np.testing.assert_array_equal(
-            mc.absorption_probabilities.colors, mc.adata.uns[_colors(LinKey.FORWARD)]
+            mc.absorption_probabilities.colors,
+            mc.adata.uns[_colors(AbsProbKey.FORWARD)],
         )
         np.testing.assert_allclose(mc.absorption_probabilities.X.sum(1), 1)
 
@@ -321,14 +324,14 @@ class TestCFLARE:
         mc_fwd.compute_eig()
 
         mc_fwd.compute_metastable_states(use=3)
-        original = np.array(adata.obs[f"{StateKey.FORWARD}"].copy())
+        original = np.array(adata.obs[f"{FinalStatesKey.FORWARD}"].copy())
         zero_mask = original == "0"
 
         cells = list(adata[zero_mask].obs_names)
         mc_fwd.set_metastable_states({"foo": cells})
 
-        assert (adata.obs[f"{StateKey.FORWARD}"][zero_mask] == "foo").all()
-        assert pd.isna(adata.obs[f"{StateKey.FORWARD}"][~zero_mask]).all()
+        assert (adata.obs[f"{FinalStatesKey.FORWARD}"][zero_mask] == "foo").all()
+        assert pd.isna(adata.obs[f"{FinalStatesKey.FORWARD}"][~zero_mask]).all()
 
     def test_check_and_create_colors(self, adata_large):
         adata = adata_large
@@ -343,16 +346,18 @@ class TestCFLARE:
         mc_fwd.compute_metastable_states(use=3)
 
         mc_fwd._meta_states_colors = None
-        del mc_fwd.adata.uns[_colors(StateKey.FORWARD)]
+        del mc_fwd.adata.uns[_colors(FinalStatesKey.FORWARD)]
 
         mc_fwd._check_and_create_colors()
 
-        assert _colors(StateKey.FORWARD) in mc_fwd.adata.uns
+        assert _colors(FinalStatesKey.FORWARD) in mc_fwd.adata.uns
         np.testing.assert_array_equal(
-            mc_fwd.adata.uns[_colors(StateKey.FORWARD)], _create_categorical_colors(3)
+            mc_fwd.adata.uns[_colors(FinalStatesKey.FORWARD)],
+            _create_categorical_colors(3),
         )
         np.testing.assert_array_equal(
-            mc_fwd.adata.uns[_colors(StateKey.FORWARD)], mc_fwd._meta_states_colors
+            mc_fwd.adata.uns[_colors(FinalStatesKey.FORWARD)],
+            mc_fwd._meta_states_colors,
         )
 
 

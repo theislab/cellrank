@@ -11,7 +11,7 @@ from scvelo import read as scv_read
 from cellrank import logging as logg
 from cellrank.tools._colors import _create_categorical_colors
 from cellrank.tools._lineage import Lineage
-from cellrank.tools._constants import LinKey, Direction, _colors, _lin_names
+from cellrank.tools._constants import Direction, AbsProbKey, _colors, _lin_names
 
 AnnData = TypeVar("AnnData")
 
@@ -40,7 +40,9 @@ def read(
 
     def maybe_create_lineage(direction: Direction):
         lin_key = str(
-            LinKey.FORWARD if direction == Direction.FORWARD else LinKey.BACKWARD
+            AbsProbKey.FORWARD
+            if direction == Direction.FORWARD
+            else AbsProbKey.BACKWARD
         )
         names_key, colors_key = _lin_names(lin_key), _colors(lin_key)
         if lin_key in adata.obsm.keys():

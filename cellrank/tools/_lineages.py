@@ -7,7 +7,7 @@ from cellrank import logging as logg
 from cellrank.tools._utils import _info_if_obs_keys_categorical_present
 from cellrank.utils._utils import _read_graph_data
 from cellrank.tools.kernels import VelocityKernel
-from cellrank.tools._constants import LinKey, StateKey, Direction, _transition
+from cellrank.tools._constants import Direction, AbsProbKey, FinalStatesKey, _transition
 from cellrank.tools.estimators import GPCCA, CFLARE
 from cellrank.tools.estimators._base_estimator import BaseEstimator
 
@@ -96,12 +96,12 @@ def lineages(
 
     if final:
         direction = Direction.FORWARD
-        lin_key = LinKey.FORWARD
-        rc_key = StateKey.FORWARD
+        lin_key = AbsProbKey.FORWARD
+        rc_key = FinalStatesKey.FORWARD
     else:
         direction = Direction.BACKWARD
-        lin_key = LinKey.BACKWARD
-        rc_key = StateKey.BACKWARD
+        lin_key = AbsProbKey.BACKWARD
+        rc_key = FinalStatesKey.BACKWARD
 
     transition_key = _transition(direction)
     vk = VelocityKernel(adata, backward=not final)

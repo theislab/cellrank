@@ -10,7 +10,7 @@ from scipy.spatial.distance import euclidean
 import matplotlib.pyplot as plt
 
 from cellrank import logging as logg
-from cellrank.tools._constants import LinKey
+from cellrank.tools._constants import AbsProbKey
 
 AnnData = TypeVar("AnnData")
 
@@ -114,7 +114,7 @@ def exact_mc_perm_test(
     np.random.seed(seed)
 
     # consider the two possible directions
-    lin_key = str(LinKey.FORWARD if final else LinKey.BACKWARD)
+    lin_key = str(AbsProbKey.FORWARD if final else AbsProbKey.BACKWARD)
 
     xs = adata[adata.obs[cluster_key] == cluster1].obsm[lin_key]
     ys = adata[adata.obs[cluster_key] == cluster2].obsm[lin_key]
@@ -218,7 +218,7 @@ def _counts(
         raise ValueError(f"Number of samples must be positive, found `{n_samples}`.")
 
     # Consider the two possible directions
-    lin_key = str(LinKey.FORWARD if final else LinKey.BACKWARD)
+    lin_key = str(AbsProbKey.FORWARD if final else AbsProbKey.BACKWARD)
     if lin_key not in adata.obsm:
         raise KeyError(f"Lineages key `{lin_key!r}` not found in `adata.obsm`.")
 

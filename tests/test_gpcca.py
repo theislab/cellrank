@@ -3,20 +3,21 @@
 from copy import deepcopy
 from typing import Tuple
 
-from anndata import AnnData
-
 import numpy as np
 import pandas as pd
 import pytest
+
+from anndata import AnnData
+
 import cellrank as cr
 from _helpers import assert_array_nan_equal
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tools._constants import (
-    LinKey,
     Prefix,
     MetaKey,
-    StateKey,
     Direction,
+    AbsProbKey,
+    FinalStatesKey,
     _dp,
     _probs,
     _colors,
@@ -73,9 +74,11 @@ def _check_compute_meta(mc: cr.tl.GPCCA) -> None:
 def _check_main_states(mc: cr.tl.GPCCA, has_main_states: bool = True):
     if has_main_states:
         assert isinstance(mc.main_states, pd.Series)
-        assert_array_nan_equal(mc.adata.obs[str(StateKey.FORWARD)], mc.main_states)
+        assert_array_nan_equal(
+            mc.adata.obs[str(FinalStatesKey.FORWARD)], mc.main_states
+        )
         np.testing.assert_array_equal(
-            mc.adata.uns[_colors(StateKey.FORWARD)],
+            mc.adata.uns[_colors(FinalStatesKey.FORWARD)],
             mc.absorption_probabilities[list(mc.main_states.cat.categories)].colors,
         )
 
@@ -84,18 +87,20 @@ def _check_main_states(mc: cr.tl.GPCCA, has_main_states: bool = True):
     np.testing.assert_array_almost_equal(mc.absorption_probabilities.sum(1), 1.0)
 
     np.testing.assert_array_equal(
-        mc.adata.obsm[str(LinKey.FORWARD)], mc.absorption_probabilities.X
+        mc.adata.obsm[str(AbsProbKey.FORWARD)], mc.absorption_probabilities.X
     )
     np.testing.assert_array_equal(
-        mc.adata.uns[_lin_names(LinKey.FORWARD)], mc.absorption_probabilities.names
+        mc.adata.uns[_lin_names(AbsProbKey.FORWARD)], mc.absorption_probabilities.names
     )
     np.testing.assert_array_equal(
-        mc.adata.uns[_colors(LinKey.FORWARD)], mc.absorption_probabilities.colors
+        mc.adata.uns[_colors(AbsProbKey.FORWARD)], mc.absorption_probabilities.colors
     )
 
-    np.testing.assert_array_equal(mc.adata.obs[_dp(LinKey.FORWARD)], mc.diff_potential)
     np.testing.assert_array_equal(
-        mc.adata.obs[_probs(StateKey.FORWARD)], mc.main_states_probabilities
+        mc.adata.obs[_dp(AbsProbKey.FORWARD)], mc.diff_potential
+    )
+    np.testing.assert_array_equal(
+        mc.adata.obs[_probs(FinalStatesKey.FORWARD)], mc.main_states_probabilities
     )
 
 
@@ -112,8 +117,8 @@ class TestCGPCCA:
         if not mc.irreducible:
             assert isinstance(mc.recurrent_classes, list)
             assert isinstance(mc.transient_classes, list)
-            assert f"{StateKey.FORWARD}_rec_classes" in mc.adata.obs
-            assert f"{StateKey.FORWARD}_trans_classes" in mc.adata.obs
+            assert f"{FinalStatesKey.FORWARD}_rec_classes" in mc.adata.obs
+            assert f"{FinalStatesKey.FORWARD}_trans_classes" in mc.adata.obs
         else:
             assert mc.recurrent_classes is None
             assert mc.transient_classes is None

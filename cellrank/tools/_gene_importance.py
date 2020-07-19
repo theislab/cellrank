@@ -6,16 +6,17 @@ from typing import Any, Dict, List, Tuple, Union, Mapping, TypeVar, Optional, Se
 
 import numpy as np
 import pandas as pd
+from sklearn.ensemble import RandomForestRegressor
+from statsmodels.stats.multitest import multipletests
+
 from cellrank import logging as logg
 from cellrank.tools import GPCCA
-from sklearn.ensemble import RandomForestRegressor
 from cellrank.utils._utils import _get_n_cores, check_collection
 from cellrank.utils.models import Model
 from cellrank.tools.kernels import ConnectivityKernel
 from cellrank.plotting._utils import _model_type, _create_models, _is_any_gam_mgcv
-from cellrank.tools._constants import LinKey
+from cellrank.tools._constants import AbsProbKey
 from cellrank.utils._parallelize import parallelize
-from statsmodels.stats.multitest import multipletests
 
 AnnData = TypeVar("AnnData")
 
@@ -205,7 +206,7 @@ def gene_importance(
         Same as above, but also returns the fitted model.
     """
 
-    ln_key = str(LinKey.FORWARD if final else LinKey.BACKWARD)
+    ln_key = str(AbsProbKey.FORWARD if final else AbsProbKey.BACKWARD)
     if ln_key not in adata.obsm:
         raise KeyError(f"Lineages key `{ln_key!r}` not found in `adata.obsm`.")
 
