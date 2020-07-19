@@ -268,24 +268,29 @@ class VectorPlottable(KernelHolder, Property):
                 f"Invalid kind `{prop!r}`. Valid options are `{P.EIG!r}`, `{P.SCHUR!r}``."
             )
         if vectors is None:
-            raise RuntimeError(f"Compute `.{prop}` first as `{F.COMPUTE.fmt(prop)}`.")
+            raise RuntimeError(f"Compute `.{prop}` first as `{F.COMPUTE.fmt(prop)}()`.")
 
         if prop == P.SCHUR.s:
             is_schur = True
-            vec = "Schur "
+            name = "Schur "
         else:
             is_schur = False
-            vec = "eigen"
+            name = "eigen"
 
         # check whether dimensions are consistent
         if self.adata.n_obs != vectors.shape[0]:
             raise ValueError(
-                f"Number of cells ({self.adata.n_obs}) is inconsistent with the 1."
-                f"dimensions of vectors ({vectors.shape[0]})."
+                f"Number of cells ({self.adata.n_obs}) is inconsistent with the first"
+                f"dimension of vectors ({vectors.shape[0]})."
             )
 
         if use is None:
-            use = list(range(is_schur, vectors.shape[1] + is_schur - 1))
+            m = (
+                getattr(self, P.EIG.s).get("eigengap", vectors.shape[1]) + 1
+                if hasattr(self, P.EIG.s)
+                else vectors.shape[1]
+            )
+            use = list(range(is_schur, m + is_schur))
         elif isinstance(use, int):
             use = list(range(is_schur, use + is_schur))
         elif not isinstance(use, (tuple, list, range)):
@@ -303,13 +308,13 @@ class VectorPlottable(KernelHolder, Property):
         muse = max(use)
         if muse >= vectors.shape[1]:
             raise ValueError(
-                f"Maximum specified {vec}vector ({muse}) is larger "
-                f"than the number of computed {vec}vectors ({vectors.shape[1]})."
+                f"Maximum specified {name}vector ({muse}) is larger "
+                f"than the number of computed {name}vectors ({vectors.shape[1]})."
             )
         V_ = vectors[:, use]
 
         if is_schur:
-            title = [f"{vec}vector {i}" for i in use]
+            title = [f"{name}vector {i}" for i in use]
         else:
             D = kwargs.pop("D")
             V_ = _complex_warning(V_, use, use_imag=kwargs.pop("use_imag", False))
@@ -322,7 +327,7 @@ class VectorPlottable(KernelHolder, Property):
         if cluster_key is not None:
             color = [cluster_key] + color
 
-        logg.debug(f"Showing `{use}` {vec}vectors")
+        logg.debug(f"Showing `{use}` {name}vectors")
 
         scv.pl.scatter(self.adata, color=color, title=title, **kwargs)
 

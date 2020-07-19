@@ -4,13 +4,12 @@ from abc import ABC, abstractmethod
 from typing import Any, Tuple, Union, Mapping, Optional
 from pathlib import Path
 
-import numpy as np
-from scipy.sparse.linalg import eigs
-
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+import numpy as np
 from cellrank import logging as logg
+from scipy.sparse.linalg import eigs
 from cellrank.utils._docs import inject_docs
 from cellrank.tools._utils import save_fig, _eigengap
 from cellrank.tools.estimators._utils import Metadata, _delegate
@@ -173,9 +172,6 @@ class Eigen(VectorPlottable, EigWritable):
             # quick check for irreducibility:
             if np.sum(np.isclose(D, 1, rtol=1e2 * EPS, atol=1e2 * EPS)) == 1:
                 V[:, 0] = 1.0
-
-        if use is None:
-            use = eig["eigengap"] + 1  # add one because first e-vec has index 0
 
         self._plot_vectors(
             V, P.EIG.s, *args, use=use, D=D, **kwargs,
