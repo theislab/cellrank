@@ -1,22 +1,22 @@
 # -*- coding: utf-8 -*-
 """Abstract base class for all kernel-holding estimators."""
 
-from abc import ABC, abstractmethod
+import pickle
+from abc import ABC
+from copy import deepcopy
 from typing import Any, Dict, Union, Optional, Sequence
 from pathlib import Path
-from functools import partial
+
+from anndata import AnnData
 
 import numpy as np
 import pandas as pd
 from pandas import Series
+from cellrank import logging as logg
 from scipy.stats import ranksums
 from scipy.sparse import spmatrix
-from pandas.api.types import infer_dtype, is_categorical_dtype
-
-from anndata import AnnData
-
-from cellrank import logging as logg
 from cellrank.tools import Lineage
+from pandas.api.types import infer_dtype, is_categorical_dtype
 from cellrank.tools._utils import (
     _pairwise,
     _vec_mat_corr,
@@ -100,15 +100,14 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         self._G2M_score = None
         self._S_score = None
 
-        self._set = partial(
-            lambda o, n, v: setattr(o, n.s if isinstance(n, PrettyEnum) else n, v), self
-        )
-        self._get = partial(
-            lambda o, n: getattr(o, n.s if isinstance(n, PrettyEnum) else n), self
-        )
-
         if read_from_adata:
             self._read_from_adata(*args, **kwargs)
+
+    def _set(self, n, v):
+        setattr(self, n.s if isinstance(n, PrettyEnum) else n, v)
+
+    def _get(self, n) -> Any:
+        return getattr(self, n.s if isinstance(n, PrettyEnum) else n)
 
     # TODO: refactor...
     def _read_from_adata(
@@ -717,23 +716,18 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             time=time,
         )
 
-    @abstractmethod
     def copy(self) -> "BaseEstimator":
         """Return a copy of self."""
-        pass
+
+        res = type(self)(self.kernel, read_from_adata=False)
+        res.__dict__ = deepcopy(self.__dict__)
+
+        return res
 
     def __copy__(self) -> "BaseEstimator":
         return self.copy()
 
-    @abstractmethod
-    def __getstate__(self) -> Dict[str, Any]:
-        pass
-
-    @abstractmethod
-    def __setstate__(self, state: Dict[str, Any]) -> None:
-        pass
-
-    def write(ielf, fname: Union[str, Path]) -> None:
+    def write(self, fname: Union[str, Path]) -> None:
         """
         Serialize self to a file.
 
@@ -745,15 +739,20 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         Returns
         -------
         None
-            Nothing, just saves itself to as file.
+            Nothing, just pickles itself to a file.
         """
 
-        raise NotImplementedError()
+        fname = str(fname)
+        if not fname.endswith(".pickle"):
+            fname += ".pickle"
 
-    @classmethod
-    def read(cls, fname: Union[str, Path]) -> "BaseEstimator":
+        with open(fname, "wb") as fout:
+            pickle.dump(self, fout)
+
+    @staticmethod
+    def read(fname: Union[str, Path]) -> "BaseEstimator":
         """
-        Deserialize self to a file.
+        Deserialize self from a file.
 
         Params
         ------
@@ -765,4 +764,5 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         An estimator.
         """
 
-        raise NotImplementedError()
+        with open(fname, "rb") as fin:
+            return pickle.load(fin)

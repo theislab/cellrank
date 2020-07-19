@@ -306,7 +306,6 @@ class VectorPlottable(KernelHolder, Property):
                 f"Maximum specified {vec}vector ({muse}) is larger "
                 f"than the number of computed {vec}vectors ({vectors.shape[1]})."
             )
-        print(use)
         V_ = vectors[:, use]
 
         if is_schur:

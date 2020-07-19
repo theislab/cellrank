@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 """Clustering and Filtering of Left and Right Eigenvectors based on Markov chains."""
-from typing import Any, Dict, List, Tuple, Union, Optional
+from typing import List, Tuple, Union, Optional
 
 import numpy as np
 from pandas import Series
-from scipy.stats import zscore
-
 from cellrank import logging as logg
+from scipy.stats import zscore
 from cellrank.tools._utils import (
     _cluster_X,
     _filter_cells,
@@ -292,14 +291,3 @@ class CFLARE(BaseEstimator, Eigen):
         cats_main.cat.remove_categories(cats_main.cat.categories[~mask], inplace=True)
 
         return cats_main, colors_main
-
-    # TODO: docrep
-    def copy(self) -> "CFLARE":
-        """Return a copy of self."""
-        raise NotImplementedError()
-
-    def __getstate__(self) -> Dict[str, Any]:
-        return super().__getstate__()
-
-    def __setstate__(self, state: Dict[str, Any]):
-        super().__setstate__(state)
