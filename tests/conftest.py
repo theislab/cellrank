@@ -1,18 +1,19 @@
 # -*- coding: utf-8 -*-
 from typing import Tuple
 
+import numpy as np
+import pytest
+
 import matplotlib
 
 import scanpy as sc
 import scvelo as scv
 from anndata import AnnData
 
-import numpy as np
-import pytest
 import cellrank as cr
 from cellrank.tools import GPCCA, CFLARE
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
-from cellrank.tools._constants import LinKey
+from cellrank.tools._constants import AbsProbKey
 
 matplotlib.use("Agg")
 np.random.seed(42)
@@ -79,9 +80,9 @@ def _create_cflare(*, backward: bool = False) -> Tuple[AnnData, CFLARE]:
 
     assert adata is mc.adata
     if backward:
-        assert str(LinKey.BACKWARD) in adata.obsm
+        assert str(AbsProbKey.BACKWARD) in adata.obsm
     else:
-        assert str(LinKey.FORWARD) in adata.obsm
+        assert str(AbsProbKey.FORWARD) in adata.obsm
     np.testing.assert_array_almost_equal(mc.absorption_probabilities.sum(1), 1)
 
     return adata, mc
@@ -107,9 +108,9 @@ def _create_gpcca(*, backward: bool = False) -> Tuple[AnnData, GPCCA]:
 
     assert adata is mc.adata
     if backward:
-        assert str(LinKey.BACKWARD) in adata.obsm
+        assert str(AbsProbKey.BACKWARD) in adata.obsm
     else:
-        assert str(LinKey.FORWARD) in adata.obsm
+        assert str(AbsProbKey.FORWARD) in adata.obsm
     np.testing.assert_array_almost_equal(mc.absorption_probabilities.sum(1), 1)
 
     return adata, mc

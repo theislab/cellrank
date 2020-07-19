@@ -23,7 +23,7 @@ from cellrank.tools._utils import save_fig, _unique_order_preserving
 from cellrank.utils._utils import _get_n_cores, check_collection
 from cellrank.tools._colors import _create_categorical_colors
 from cellrank.plotting._utils import _fit, _model_type, _create_models, _is_any_gam_mgcv
-from cellrank.tools._constants import LinKey
+from cellrank.tools._constants import AbsProbKey
 from cellrank.utils._parallelize import parallelize
 
 _N_XTICKS = 10
@@ -438,7 +438,7 @@ def heatmap(
 
         return fig
 
-    lineage_key = str(LinKey.FORWARD if final else LinKey.BACKWARD)
+    lineage_key = str(AbsProbKey.FORWARD if final else AbsProbKey.BACKWARD)
     if lineage_key not in adata.obsm:
         raise KeyError(f"Lineages key `{lineage_key!r}` not found in `adata.obsm`.")
 

@@ -2,15 +2,16 @@
 from typing import Tuple, Callable
 from pathlib import Path
 
+import numpy as np
+import pytest
+
 import scanpy as sc
 from anndata import AnnData
 
-import numpy as np
-import pytest
 import cellrank as cr
 from cellrank.tools._colors import _create_categorical_colors
 from cellrank.tools._lineage import Lineage
-from cellrank.tools._constants import LinKey, _colors, _lin_names
+from cellrank.tools._constants import AbsProbKey, _colors, _lin_names
 from cellrank.tools.estimators._cflare import CFLARE
 
 
@@ -27,8 +28,8 @@ def test_fwd():
                 self,
                 adata,
                 path,
-                str(LinKey.FORWARD),
-                adata.obsm[str(LinKey.FORWARD)].shape[1],
+                str(AbsProbKey.FORWARD),
+                adata.obsm[str(AbsProbKey.FORWARD)].shape[1],
             )
 
         return decorator

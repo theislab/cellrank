@@ -19,7 +19,7 @@ from cellrank import logging as logg
 from cellrank.tools._utils import save_fig
 from cellrank.utils._utils import _make_unique
 from cellrank.plotting._utils import _position_legend
-from cellrank.tools._constants import LinKey
+from cellrank.tools._constants import AbsProbKey
 from cellrank.tools._exact_mc_test import _counts, _cramers_v
 
 AnnData = TypeVar("AnnData")
@@ -412,7 +412,7 @@ def cluster_fates(
             f"Not specifying cluster key is only available for modes `'bar'` and `'violin'`, found `mode={mode!r}`."
         )
     if lineage_key is None:
-        lk = str(LinKey.FORWARD if final else LinKey.BACKWARD)
+        lk = str(AbsProbKey.FORWARD if final else AbsProbKey.BACKWARD)
     else:
         lk = lineage_key
     points = "final states" if final else "root states"

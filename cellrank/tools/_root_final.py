@@ -6,7 +6,7 @@ from typing import Union, TypeVar, Optional
 from cellrank import logging as logg
 from cellrank.utils._docs import inject_docs
 from cellrank.tools._utils import _info_if_obs_keys_categorical_present
-from cellrank.tools._constants import StateKey
+from cellrank.tools._constants import FinalStatesKey
 from cellrank.tools.estimators import GPCCA, CFLARE
 from cellrank.tools._transition_matrix import transition_matrix
 from cellrank.tools.estimators._base_estimator import BaseEstimator
@@ -88,7 +88,7 @@ def _root_final(
 ) -> Optional[Union[AnnData, BaseEstimator]]:
     """Compute root or final states of  Markov Chain."""
 
-    key = StateKey.FORWARD if final else StateKey.BACKWARD
+    key = FinalStatesKey.FORWARD if final else FinalStatesKey.BACKWARD
     logg.info(f"Computing `{key}`")
     adata = adata.copy() if copy else adata
 

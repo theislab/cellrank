@@ -1,0 +1,161 @@
+# -*- coding: utf-8 -*-
+"""Utillity functions which deal with delegating methods."""
+import inspect
+from typing import Any, Type, TypeVar, Callable, Iterable, Optional
+from functools import partial
+from collections import namedtuple
+
+import wrapt
+
+import cellrank.logging as logg
+from cellrank.tools._utils import _generate_random_keys
+from cellrank.tools.estimators._constants import F
+
+from typing import *  # noqa; get rid of flake8 warnings from above star import
+
+
+AnnData = TypeVar("AnnData")
+
+
+def argspec_factory(
+    wrapped: Callable,
+    skip: int = 0,
+    return_type: Optional[Type] = None,
+    fn: Optional[Callable] = None,
+) -> Callable:
+    """
+    Create a dummy adapter function with desired signature.
+
+    Params
+    ------
+    wrapped
+        Function being wrapped whose signature we wish to replicate.
+    skip
+        Number of arguments from left to skip.
+    return_type
+        Return type of the function.
+    fn
+        If not `None`, take the signature from this function.
+
+    Returns
+    -------
+    An adapter with the correct signature.
+    """
+    # for locals(), this is a whitelist of types we allow
+    import anndata  # noqa
+    import numpy  # noqa
+    import pandas  # noqa
+
+    NoneType = type(None)
+
+    sig = inspect.signature(wrapped if fn is None else fn)
+    if return_type is not None:
+        sig._return_annotation = return_type
+
+    keys = list(sig.parameters.keys())[skip:]
+    sig = sig.replace(parameters=[sig.parameters[k] for k in keys])
+
+    exec(f"def adapter{sig}: pass", globals(), locals())
+
+    return locals()["adapter"]
+
+
+def _delegate(
+    *, prop_name: Optional[str] = None, return_type: Optional[Type] = None,
+) -> Callable:
+    @wrapt.decorator()
+    def pass_through(wrapped, instance, args, kwargs):
+        return wrapped(*args, **kwargs)
+
+    if prop_name is None:
+        return pass_through
+
+    adapter = wrapt.adapter_factory(
+        partial(argspec_factory, skip=2, return_type=return_type)
+    )
+
+    @wrapt.decorator(adapter=adapter)
+    def wrapper(wrapped, instance, args, kwargs):
+        return wrapped(getattr(instance, prop_name), prop_name, *args, **kwargs)
+
+    return wrapper
+
+
+def _delegate_method_dispatch(fn, attr, prop_name):
+
+    adapter = wrapt.adapter_factory(partial(argspec_factory, fn=fn, skip=2))
+
+    @wrapt.decorator(adapter=adapter)
+    def delegate(wrapped, instance, args, kwargs):
+        return wrapped(getattr(instance, prop_name), prop_name, *args, **kwargs)
+
+    @delegate
+    def wrapper(self, *args, **kwargs):
+        return getattr(self, attr)(*args, **kwargs)
+
+    return wrapper
+
+
+def _create_property(
+    attr_name: str, doc: Optional[str] = None, return_type: Optional[Type] = None
+) -> property:
+    def wrapper(self) -> return_type:
+        return getattr(self, attr_name)
+
+    if not doc:
+        doc = f"Property of {attr_name}."
+    wrapper.__doc__ = doc
+
+    return property(wrapper)
+
+
+def _print_insufficient_number_of_cells(groups: Iterable[Any], n_cells: int):
+    if groups:
+        logg.debug(
+            f"The following groups have less than requested number of cells ({n_cells}): "
+            f"`{', '.join(sorted(map(str, groups)))}`"
+        )
+
+
+class RandomKeys:
+    """
+    Create random keys inside an :class:`anndataAnnData` object.
+
+    Params
+    ------
+    adata
+        Annotated data object.
+    n
+        Number of keys, If `None`, create just 1 keys.
+    where
+        Attribute of :paramref:`adata`. If `'obs'`, also clean up `{key}'_colors'` for each generated key.
+    """
+
+    def __init__(self, adata: AnnData, n: Optional[int] = None, where: str = "obs"):
+        self._adata = adata
+        self._where = where
+        self._n = n
+        self._keys = []
+
+    def __enter__(self):
+        self._keys = _generate_random_keys(self._adata, self._where, self._n)
+        return self._keys
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        for key in self._keys:
+            try:
+                del self._adata.obs[key]
+            except KeyError:
+                pass
+            if self._where == "obs":
+                try:
+                    del self._adata.uns[f"{key}_colors"]
+                except KeyError:
+                    pass
+
+
+Metadata = namedtuple(
+    "Metadata",
+    ["attr", "prop", "dtype", "default", "doc", "compute_fmt", "plot_fmt"],
+    defaults=[None, None, None, None, None, F.COMPUTE, F.PLOT],
+)

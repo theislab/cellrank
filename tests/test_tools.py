@@ -7,7 +7,7 @@ from anndata import AnnData
 import cellrank as cr
 from _helpers import create_model
 from cellrank.tools.kernels import Kernel
-from cellrank.tools._constants import LinKey
+from cellrank.tools._constants import AbsProbKey
 
 
 class TestGeneImportance:
@@ -61,7 +61,7 @@ class TestLineages:
     def test_normal_run(self, adata_cflare):
         cr.tl.lineages(adata_cflare)
 
-        assert str(LinKey.FORWARD) in adata_cflare.obsm.keys()
+        assert str(AbsProbKey.FORWARD) in adata_cflare.obsm.keys()
 
     def test_normal_run_copy(self, adata_cflare):
         adata_cr2 = cr.tl.lineages(adata_cflare, copy=True)
@@ -118,12 +118,12 @@ class TestRootFinal:
     def test_find_root(self, adata: AnnData):
         cr.tl.root_states(adata)
 
-        assert str(LinKey.BACKWARD) in adata.obsm.keys()
+        assert str(AbsProbKey.BACKWARD) in adata.obsm.keys()
 
     def test_find_final(self, adata: AnnData):
         cr.tl.final_states(adata)
 
-        assert str(LinKey.FORWARD) in adata.obsm.keys()
+        assert str(AbsProbKey.FORWARD) in adata.obsm.keys()
 
     def test_invalid_cluster_key(self, adata: AnnData):
         with pytest.raises(KeyError):

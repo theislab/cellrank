@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 from cellrank.tools._utils import save_fig
 from cellrank.utils._utils import _minmax
 from cellrank.tools._lineage import Lineage
-from cellrank.tools._constants import LinKey
+from cellrank.tools._constants import AbsProbKey
 
 AnnData = TypeVar("AnnData")
 
@@ -213,7 +213,7 @@ class Model(ABC):
             if gene not in self.adata.obs:
                 raise KeyError(f"Unable to find key `{gene!r}` in `adata.obs`.")
 
-        lineage_key = str(LinKey.FORWARD if final else LinKey.BACKWARD)
+        lineage_key = str(AbsProbKey.FORWARD if final else AbsProbKey.BACKWARD)
         if lineage_key not in self.adata.obsm:
             raise KeyError(f"Lineage key `{lineage_key!r}` not found in `adata.obsm`.")
         if not isinstance(self.adata.obsm[lineage_key], Lineage):

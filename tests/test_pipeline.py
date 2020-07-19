@@ -1,16 +1,17 @@
 # -*- coding: utf-8 -*-
 
+import numpy as np
+from pandas.api.types import is_categorical_dtype
+
 from anndata import AnnData
 
-import numpy as np
 import cellrank as cr
-from pandas.api.types import is_categorical_dtype
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tools._constants import (
-    LinKey,
     Prefix,
-    StateKey,
     Direction,
+    AbsProbKey,
+    FinalStatesKey,
     _probs,
     _colors,
     _lin_names,
@@ -23,38 +24,38 @@ def _assert_has_all_keys(adata: AnnData, direction: Direction):
     assert f"{_transition(direction)}_params" in adata.uns.keys()
 
     if direction == Direction.FORWARD:
-        assert str(LinKey.FORWARD) in adata.obsm
-        assert isinstance(adata.obsm[str(LinKey.FORWARD)], cr.tl.Lineage)
+        assert str(AbsProbKey.FORWARD) in adata.obsm
+        assert isinstance(adata.obsm[str(AbsProbKey.FORWARD)], cr.tl.Lineage)
 
-        assert _colors(LinKey.FORWARD) in adata.uns.keys()
-        assert _lin_names(LinKey.FORWARD) in adata.uns.keys()
+        assert _colors(AbsProbKey.FORWARD) in adata.uns.keys()
+        assert _lin_names(AbsProbKey.FORWARD) in adata.uns.keys()
 
-        assert str(StateKey.FORWARD) in adata.obs
-        assert is_categorical_dtype(adata.obs[str(StateKey.FORWARD)])
+        assert str(FinalStatesKey.FORWARD) in adata.obs
+        assert is_categorical_dtype(adata.obs[str(FinalStatesKey.FORWARD)])
 
-        assert _probs(StateKey.FORWARD) in adata.obs
+        assert _probs(FinalStatesKey.FORWARD) in adata.obs
 
         # check the correlations with all lineages have been computed
-        lin_probs = adata.obsm[str(LinKey.FORWARD)]
+        lin_probs = adata.obsm[str(AbsProbKey.FORWARD)]
         np.in1d(
             [f"{str(Prefix.FORWARD)} {key} corr" for key in lin_probs.names],
             adata.var.keys(),
         ).all()
 
     else:
-        assert str(LinKey.BACKWARD) in adata.obsm
-        assert isinstance(adata.obsm[str(LinKey.BACKWARD)], cr.tl.Lineage)
+        assert str(AbsProbKey.BACKWARD) in adata.obsm
+        assert isinstance(adata.obsm[str(AbsProbKey.BACKWARD)], cr.tl.Lineage)
 
-        assert _colors(LinKey.BACKWARD) in adata.uns.keys()
-        assert _lin_names(LinKey.BACKWARD) in adata.uns.keys()
+        assert _colors(AbsProbKey.BACKWARD) in adata.uns.keys()
+        assert _lin_names(AbsProbKey.BACKWARD) in adata.uns.keys()
 
-        assert str(StateKey.BACKWARD) in adata.obs
-        assert is_categorical_dtype(adata.obs[str(StateKey.BACKWARD)])
+        assert str(FinalStatesKey.BACKWARD) in adata.obs
+        assert is_categorical_dtype(adata.obs[str(FinalStatesKey.BACKWARD)])
 
-        assert _probs(StateKey.BACKWARD) in adata.obs
+        assert _probs(FinalStatesKey.BACKWARD) in adata.obs
 
         # check the correlations with all lineages have been computed
-        lin_probs = adata.obsm[str(LinKey.BACKWARD)]
+        lin_probs = adata.obsm[str(AbsProbKey.BACKWARD)]
         np.in1d(
             [f"{str(Prefix.BACKWARD)} {key} corr" for key in lin_probs.names],
             adata.var.keys(),

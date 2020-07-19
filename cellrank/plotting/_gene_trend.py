@@ -6,11 +6,12 @@ from types import MappingProxyType
 from typing import Tuple, Union, Mapping, TypeVar, Optional, Sequence
 from pathlib import Path
 
+import numpy as np
+
 import matplotlib
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 
-import numpy as np
 from cellrank import logging as logg
 from cellrank.tools._utils import save_fig
 from cellrank.utils._utils import _get_n_cores, _make_unique, check_collection
@@ -21,7 +22,7 @@ from cellrank.plotting._utils import (
     _trends_helper,
     _is_any_gam_mgcv,
 )
-from cellrank.tools._constants import LinKey
+from cellrank.tools._constants import AbsProbKey
 from cellrank.utils._parallelize import parallelize
 
 AnnData = TypeVar("AnnData")
@@ -210,7 +211,7 @@ def gene_trends(
     elif save is not None:
         logg.warning("No directory specified for saving. Ignoring `save` argument")
 
-    ln_key = str(LinKey.FORWARD if final else LinKey.BACKWARD)
+    ln_key = str(AbsProbKey.FORWARD if final else AbsProbKey.BACKWARD)
     if ln_key not in adata.obsm:
         raise KeyError(f"Lineages key `{ln_key!r}` not found in `adata.obsm`.")
 

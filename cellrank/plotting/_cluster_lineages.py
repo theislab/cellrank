@@ -14,7 +14,7 @@ from cellrank import logging as logg
 from cellrank.tools._utils import save_fig
 from cellrank.utils._utils import _get_n_cores, check_collection
 from cellrank.plotting._utils import _model_type, _create_models, _is_any_gam_mgcv
-from cellrank.tools._constants import LinKey
+from cellrank.tools._constants import AbsProbKey
 from cellrank.utils._parallelize import parallelize
 from cellrank.utils.models._models import Model
 
@@ -177,7 +177,7 @@ def cluster_lineage(
     from anndata import AnnData as _AnnData
     import scanpy as sc
 
-    lineage_key = str(LinKey.FORWARD if final else LinKey.BACKWARD)
+    lineage_key = str(AbsProbKey.FORWARD if final else AbsProbKey.BACKWARD)
     if lineage_key not in adata.obsm:
         raise KeyError(f"Lineages key `{lineage_key!r}` not found in `adata.obsm`.")
 
