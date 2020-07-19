@@ -4,12 +4,6 @@ import sys
 from abc import ABC, ABCMeta, abstractmethod
 from typing import Any, Dict, List, Tuple, Union, Iterable, Optional
 from inspect import isabstract
-from functools import singledispatchmethod
-
-import numpy as np
-import pandas as pd
-from scipy.sparse import issparse, spmatrix
-from pandas.api.types import is_categorical_dtype
 
 import matplotlib as mpl
 from matplotlib import cm
@@ -17,8 +11,12 @@ from matplotlib import cm
 import scvelo as scv
 from anndata import AnnData
 
+import numpy as np
+import pandas as pd
 import cellrank.logging as logg
+from scipy.sparse import issparse, spmatrix
 from cellrank.tools import Lineage
+from pandas.api.types import is_categorical_dtype
 from cellrank.tools._utils import _make_cat, partition, _complex_warning
 from cellrank.tools._constants import Prefix, Direction, DirectionPlot
 from cellrank.tools.kernels._kernel import KernelExpression, PrecomputedKernel
@@ -26,6 +24,7 @@ from cellrank.tools.estimators._utils import (
     Metadata,
     RandomKeys,
     _create_property,
+    singledispatchmethod,
     _delegate_method_dispatch,
 )
 from cellrank.tools.estimators._constants import META_KEY, A, F, P
@@ -166,7 +165,7 @@ class PropertyMeta(ABCMeta, type):
         res = super().__new__(cls, clsname, superclasses, attributedict)
 
         if not ignore_first and Plottable in res.mro():
-            # _this works for singledispatchmethod
+            # _this is intended singledispatchmethod
             # unfortunately, `_plot` is not always in attributedict, so we can't just check for it
             # and res._plot is just a regular function
             # if this gets buggy in the future, consider switching from singlemethoddispatch
