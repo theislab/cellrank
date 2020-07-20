@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
 from typing import Tuple
 
+from anndata import AnnData
+
 import numpy as np
 import pandas as pd
 import pytest
-from pandas.api.types import is_categorical_dtype
-
-from anndata import AnnData
-
 import cellrank as cr
 from _helpers import assert_array_nan_equal
+from pandas.api.types import is_categorical_dtype
 from cellrank.tools._colors import _create_categorical_colors
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tools._constants import (
@@ -204,7 +203,7 @@ class TestCFLARE:
         mc.compute_metastable_states(use=2)
         mc.compute_absorption_probabilities()
         with pytest.raises(KeyError):
-            mc.compute_lineage_drivers(use_raw=False, lin_names=["foo"])
+            mc.compute_lineage_drivers(use_raw=False, lineages=["foo"])
 
     def test_compute_lineage_drivers_invalid_clusters(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()

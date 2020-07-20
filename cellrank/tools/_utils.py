@@ -17,9 +17,12 @@ from typing import (
 )
 from itertools import tee, product, combinations
 
+import matplotlib.colors as mcolors
+
 import numpy as np
 import pandas as pd
 from pandas import Series
+from cellrank import logging as logg
 from numpy.linalg import norm as d_norm
 from scipy.linalg import solve
 from scipy.sparse import eye as speye
@@ -36,10 +39,6 @@ from pandas.api.types import infer_dtype, is_categorical_dtype
 from sklearn.neighbors import NearestNeighbors
 from scipy.sparse.linalg import norm as s_norm
 from scipy.sparse.linalg import gmres, lgmres, gcrotmk, bicgstab
-
-import matplotlib.colors as mcolors
-
-from cellrank import logging as logg
 from cellrank.utils._utils import (
     _get_neighs,
     _has_neighs,
@@ -97,8 +96,8 @@ def _create_root_final_annotations(
     """
     Create categorical annotations of both root and final states.
 
-    Params
-    ------
+    Parameters
+    ----------
     adata
         AnnData object to write to (`.obs[key_added]`)
     fwd
@@ -156,8 +155,8 @@ def _process_series(
     Categories in :paramref:`series` are combined/removed according to :paramref:`keys`,
     the same transformation is applied to the corresponding colors.
 
-    Params
-    ------
+    Parameters
+    ----------
     series
         Input data, must be a pd.series of categorical type.
     keys
@@ -274,8 +273,8 @@ def _complex_warning(
     """
     Check for imaginary components in columns of X specified by `use`.
 
-    Params
-    ------
+    Parameters
+    ----------
     X
         Matrix containing the eigenvectors
     use
@@ -346,8 +345,8 @@ def _vec_mat_corr(X: Union[np.ndarray, spmatrix], y: np.ndarray) -> np.ndarray:
 
     Return NaN for genes which don't vary across cells.
 
-    Params
-    ------
+    Parameters
+    ----------
     X
         Matrix of `NxM` elements.
     y:
@@ -387,8 +386,8 @@ def cyto_trace(
     Workflow
     In *scanpy*, take your raw :paramref:`adata` object and run :func:`scvelo.pp.moments` on it. Then run this function.
 
-    Params
-    ------
+    Parameters
+    ----------
     adata : :class:`anndata.AnnData`
         Annotated data object.
     copy
@@ -570,8 +569,8 @@ def _eigengap(evals: np.ndarray, alpha: float) -> int:
     """
     Compute the eigengap among the top eigenvalues of a matrix.
 
-    Params
-    ------
+    Parameters
+    ----------
     evals
         Must be real numbers.
     alpha
@@ -604,8 +603,8 @@ def partition(
     characterized as either recurrent or transient. Intuitively, once the process enters a recurrent class, it will
     never leave it again. See [Tolver16]_ for more formal definition.
 
-    Params
-    ------
+    Parameters
+    ----------
     conn
         Directed graph to partition.
 
@@ -690,8 +689,8 @@ def _subsample_embedding(
 
     If using default parameter settings, this will get very slow for more than 4 embedding dimensions.
 
-    Params
-    ------
+    Parameters
+    ----------
     data
         Either the embedding or an annotated data object containing an embedding.
     basis
@@ -783,8 +782,8 @@ def _normalize(X: Union[np.ndarray, spmatrix]) -> Union[np.ndarray, spmatrix]:
     """
     Row-normalizes an array to sum to 1.
 
-    Params
-    ------
+    Parameters
+    ----------
     X
         Array to be normalized.
 
@@ -869,8 +868,8 @@ def _maybe_create_dir(dirpath: Union[str, os.PathLike]) -> None:
     """
     Try creating a directory if it does not already exist.
 
-    Params
-    ------
+    Parameters
+    ----------
     dirpath
         Path of the directory to create.
 
@@ -893,8 +892,8 @@ def save_fig(
     """
     Save a plot.
 
-    Params
-    ------
+    Parameters
+    ----------
     fig: :class:`matplotlib.figure.Figure`
         Figure to save.
     path:
@@ -932,8 +931,8 @@ def _convert_to_categorical_series(
     """
     Convert a mapping of recurrent classes to cells to a :class:`pandas.Series`.
 
-    Params
-    ------
+    Parameters
+    ----------
     rc_classes
         Recurrent classes in the following format: `{'rc_0': ['cell_0', 'cell_1', ...], ...}`.
     cell_names
@@ -984,8 +983,8 @@ def _merge_categorical_series(
     It **can never remove** old categories, only add to the existing ones.
     Optionally, new colors can be created or merged.
 
-    Params
-    ------
+    Parameters
+    ----------
     old
         Old categories to be updated.
     new
@@ -1142,7 +1141,7 @@ def _long_form_frequencies(
     """
     Compute frequencies of a `query_var` over groups defined by `groupby`.
 
-    Params
+    Parameters
     --------
     adata
         Annotated Data Matrix
@@ -1256,8 +1255,8 @@ def _fuzzy_to_discrete(
     to clusters (most entries in `a_discrete` will be 0) - this is meant to only assign a small
     subset of the samples, which we are most confident in.
 
-    Params
-    ------
+    Parameters
+    ----------
     a_fuzzy
         Numpy array of shape (`n_samples x n_clusters`) representing a fuzzy clustering. Rows must sum to one.
     n_most_likely
@@ -1351,8 +1350,8 @@ def _series_from_one_hot_matrix(
     """
     Create a pandas Series based on a one-hot encoded matrix.
 
-    Params
-    ------
+    Parameters
+    ----------
     a
         One-hot encoded membership matrix, of shape (`n_samples x n_clusters`) i.e. a `1` in position `i, j`
         signifies that sample `i` belongs to cluster `j`.
@@ -1410,8 +1409,8 @@ def _colors_in_order(
     This will extract a list of colors from `adata.uns[cluster_key]` corresponding to the `clusters`, in the
     order defined by the `clusters`.
 
-    Params
-    ------
+    Parameters
+    ----------
     adata
         Annotated data object.
     clusters
@@ -1452,8 +1451,8 @@ def _get_cat_and_null_indices(
     """
     Given a categorical :class:`pandas.Series`, get the indices corresponding to categories and NaNs.
 
-    Params
-    ------
+    Parameters
+    ----------
     cat_series
         Series that contains categorical annotations.
 
@@ -1532,8 +1531,8 @@ def _solve_lin_system(
     sense to use a direct solver instead which computes a matrix factorization and thereby solves all
     sub-problems at the same time.
 
-    Params
-    ------
+    Parameters
+    ----------
     mat_a
         Matrix of shape `n x n`. We make no assumptions on `mat_a` being symmetric or positive definite.
     mat_b
@@ -1673,8 +1672,8 @@ def _solve_many_sparse_problems_petsc(
     """
     Solver many problems using :module:`petsc4py` solver.
 
-    Params
-    ------
+    Parameters
+    ----------
     mat_b
         Matrix of shape `n x m`, with m << n.
     mat_a
@@ -1744,8 +1743,8 @@ def _solve_many_sparse_problems(
     and columns in `mat_b` being related. In that case, we can treat each column of `mat_b` as a
     separate linear problem and solve that efficiently using iterative solvers that exploit sparsity.
 
-    Params
-    ------
+    Parameters
+    ----------
     mat_b
         Matrix of shape `n x m`, with m << n.
     mat_a
@@ -1754,6 +1753,8 @@ def _solve_many_sparse_problems(
         Solver to use for the linear problem. Valid options can be found in :func:`scipy.sparse.linalg`.
     tol
         Convergence threshold.
+    queue
+        Queue used to signal when a solution has been computed.
 
     Returns
     -------

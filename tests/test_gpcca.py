@@ -3,12 +3,11 @@
 from copy import deepcopy
 from typing import Tuple
 
+from anndata import AnnData
+
 import numpy as np
 import pandas as pd
 import pytest
-
-from anndata import AnnData
-
 import cellrank as cr
 from _helpers import assert_array_nan_equal
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
@@ -479,7 +478,7 @@ class TestCGPCCA:
         mc.set_main_states()
 
         with pytest.raises(KeyError):
-            mc.compute_lineage_drivers(use_raw=False, lin_names=["foo"])
+            mc.compute_lineage_drivers(use_raw=False, lineages=["foo"])
 
     def test_compute_lineage_drivers_invalid_clusters(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()

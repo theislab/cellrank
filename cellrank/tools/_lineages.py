@@ -4,16 +4,20 @@
 from typing import TypeVar, Optional, Sequence
 
 from cellrank import logging as logg
+from cellrank.utils._docs import d, inject_docs
 from cellrank.tools._utils import _info_if_obs_keys_categorical_present
 from cellrank.utils._utils import _read_graph_data
 from cellrank.tools.kernels import VelocityKernel
 from cellrank.tools._constants import Direction, AbsProbKey, FinalStatesKey, _transition
 from cellrank.tools.estimators import GPCCA, CFLARE
+from cellrank.tools.estimators._constants import F, P
 from cellrank.tools.estimators._base_estimator import BaseEstimator
 
 AnnData = TypeVar("AnnData")
 
 
+@d.dedent
+@inject_docs(compute_meta=F.COMPUTE.fmt(P.META))
 def lineages(
     adata: AnnData,
     estimator: type(BaseEstimator) = GPCCA,
@@ -29,9 +33,9 @@ def lineages(
     """
     Compute probabilistic lineage assignment using RNA velocity.
 
-    For each cell `i` in {1, ..., N} and root/final state j in {1, ..., M}, the probability is computed that cell `i`
-    is either going to final state `j` (`final=True`) or coming from root state `j` (`final=False`). We provide two
-    estimators for computing these probabilities:
+    For each cell `i` in {{1, ..., N}} and root/final state j in {{1, ..., M}}, the probability is computed that cell
+    `i` is either going to final state `j` (`final=True`) or coming from root state `j` (`final=False`).
+    We provide two estimators for computing these probabilities:
 
     For the estimator :classL`cellrank.tl.GPCCA`, we perform Generalized Perron Cluster Cluster Analysis [GPCCA18]_.
     Cells are mapped to a simplex where each corner represents a final/root state, and the position of a cell in the
@@ -47,14 +51,12 @@ def lineages(
 
     Parameters
     ----------
-    adata : :class:`anndata.AnnData`
-        Annotated data object
+    %(adata)s
     estimator
         Estimator to use to compute the lineage probabilities.
-    final
-        If `True`, computes final states. Otherwise, computes root states.
+    %(final)s
     cluster_key
-        Match computed {direction} states against pre-computed clusters to annotate the {direction} states.
+        Match computed states against pre-computed clusters to annotate the states.
         For this, provide a key from :paramref:`adata` `.obs` where cluster labels have been computed.
     keys
         Determines which root/final states to use by passing their names. Further, root/final states can be combined.
@@ -72,7 +74,7 @@ def lineages(
     return_estimator
         Whether to return the estimator. Only available when :paramref:`copy=False`.
     kwargs
-        Keyword arguments for :meth:`cellrank.tl.estimators.BaseEstimator.compute_metastable_states`.
+        Keyword arguments for :meth:`cellrank.tl.estimators.BaseEstimator.{compute_meta}`.
 
     Returns
     -------

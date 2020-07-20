@@ -22,8 +22,8 @@ def read(
     """
     Read file and return :class:`anndata.AnnData` object.
 
-    Params
-    ------
+    Parameters
+    ----------
     path
         Path to the annotated data object.
     read_callback
