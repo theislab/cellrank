@@ -48,7 +48,7 @@ def exact_mc_perm_test(
     cluster_key: str,
     cluster1: str,
     cluster2: str,
-    final: bool = True,
+    backward: bool = False,
     dist_measure: Callable[[Sequence[float], Sequence[float]], float] = euclidean,
     n_perms: int = 1000,
     use_counts: bool = False,
@@ -72,9 +72,9 @@ def exact_mc_perm_test(
         Name of the first cluster to compare.
     cluster2
         Name of the second cluster to compare.
-    %(final)s
+    %(backward)s
     dist_measure : :class:`Callable`
-        Distance measure to use.
+        Distance measure to use. Default is `'euclidean'`.
     n_perms
         Number of permutations to perform.
     use_counts
@@ -120,7 +120,7 @@ def exact_mc_perm_test(
     np.random.seed(seed)
 
     # consider the two possible directions
-    lin_key = str(AbsProbKey.FORWARD if final else AbsProbKey.BACKWARD)
+    lin_key = str(AbsProbKey.BACKWARD if backward else AbsProbKey.FORWARD)
 
     xs = adata[adata.obs[cluster_key] == cluster1].obsm[lin_key]
     ys = adata[adata.obs[cluster_key] == cluster2].obsm[lin_key]
@@ -177,12 +177,13 @@ def exact_mc_perm_test(
     return diff[1:], diff[0], p_value
 
 
+@d.dedent
 def _counts(
     adata: AnnData,
     cluster_key: str,
     clusters: Optional[List[str]] = None,
     n_samples: int = 1000,
-    final: bool = True,
+    backward: bool = False,
 ) -> Dict[str, List[float]]:
     """
     Calculate the counts for each endpoint per cluster.
@@ -200,8 +201,7 @@ def _counts(
         List of clusters to consider. If `None`, all cluster are considered.
     n_samples
         Number of cells to sample from per cluster.
-    final
-        Whether the evolution is calculated towards end points or towards starting points.
+    %(backward)s
 
     Returns
     -------
@@ -224,7 +224,7 @@ def _counts(
         raise ValueError(f"Number of samples must be positive, found `{n_samples}`.")
 
     # Consider the two possible directions
-    lin_key = str(AbsProbKey.FORWARD if final else AbsProbKey.BACKWARD)
+    lin_key = str(AbsProbKey.BACKWARD if backward else AbsProbKey.FORWARD)
     if lin_key not in adata.obsm:
         raise KeyError(f"Lineages key `{lin_key!r}` not found in `adata.obsm`.")
 

@@ -77,7 +77,7 @@ def cluster_lineage(
     model: _model_type,
     genes: Sequence[str],
     lineage: str,
-    final: bool = True,
+    backward: bool = False,
     clusters: Optional[Sequence[str]] = None,
     n_points: int = 200,
     time_key: str = "latent_time",
@@ -117,7 +117,7 @@ def cluster_lineage(
         Genes in :paramref:`adata`.var_names to cluster.
     lineage_name
         Name of the lineage along which to cluster the genes.
-    %(final)s
+    %(backward)s
     clusters
         Cluster identifiers to plot. If `None`, all clusters will be considered.
         Useful when plotting previously computed clusters.
@@ -162,7 +162,7 @@ def cluster_lineage(
     from anndata import AnnData as _AnnData
     import scanpy as sc
 
-    lineage_key = str(AbsProbKey.FORWARD if final else AbsProbKey.BACKWARD)
+    lineage_key = str(AbsProbKey.BACKWARD if backward else AbsProbKey.FORWARD)
     if lineage_key not in adata.obsm:
         raise KeyError(f"Lineages key `{lineage_key!r}` not found in `adata.obsm`.")
 
@@ -178,7 +178,7 @@ def cluster_lineage(
     if recompute or key_to_add not in adata.uns:
         kwargs["time_key"] = time_key  # kwargs for the model.prepare
         kwargs["n_test_points"] = n_points
-        kwargs["final"] = final
+        kwargs["backward"] = backward
 
         models = _create_models(model, genes, [lineage])
         if _is_any_gam_mgcv(models):

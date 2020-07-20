@@ -750,6 +750,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         if save is not None:
             save_fig(fig, save)
 
+    @d.dedent
     def reduce(
         self,
         keys: Union[str, List[str], Tuple[str], np.ndarray],
@@ -760,12 +761,12 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         return_weights: bool = False,
     ) -> Union["Lineage", Tuple["Lineage", Optional[pd.DataFrame]]]:
         """
-        Reduce metastable states to final/root states.
+        Reduce metastable states to %(root_or_final)s states.
 
         Params
         ------
         keys
-            List of keys that define the final/root states. The lineage will be reduced
+            List of keys that define the %(root_or_final)s states. The lineage will be reduced
             to these states by projecting the other states.
         mode
             Whether to use a distance measure to compute weights ('dist', or just rescale ('scale').
@@ -792,7 +793,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         Returns
         -------
         :class:`cellrank.tl.Lineage`
-            Lineage object, reduced to the final/root states.
+            Lineage object, reduced to the %(root_or_final)s states. If a reduction is not possible, return a copy.
         :class:`pandas.DataFrame`
             The weights used for the projection of shape `(n_query x n_reference)`.
         """

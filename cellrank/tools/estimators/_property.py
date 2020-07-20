@@ -18,7 +18,7 @@ from scipy.sparse import issparse, spmatrix
 from cellrank.tools import Lineage
 from pandas.api.types import is_categorical_dtype
 from cellrank.tools._utils import _make_cat, partition, _complex_warning
-from cellrank.tools._constants import Prefix, Direction, DirectionPlot
+from cellrank.tools._constants import Direction, DirPrefix, DirectionPlot
 from cellrank.tools.kernels._kernel import KernelExpression, PrecomputedKernel
 from cellrank.tools.estimators._utils import (
     Metadata,
@@ -445,7 +445,7 @@ class Plottable(KernelHolder, Property):
         else:
             A = probs[lineages]
 
-        prefix = Prefix.BACKWARD if self.kernel.backward else Prefix.FORWARD
+        prefix = DirPrefix.BACKWARD if self.kernel.backward else DirPrefix.FORWARD
         diff_potential = (
             [diff_potential]
             if show_dp

@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.sparse import csr_matrix
 from cellrank.utils._docs import d
-from cellrank.tools._utils import save_fig
+from cellrank.tools._utils import save_fig, _unique_order_preserving
 from cellrank.utils.models import Model, GamMGCVModel
 from cellrank.tools.kernels import VelocityKernel
 from cellrank.tools._constants import _colors
@@ -44,7 +44,7 @@ _model_type = Union[Model, Mapping[str, Mapping[str, Model]]]
 def lineages(
     adata: AnnData,
     lineages: Optional[Union[str, Iterable[str]]] = None,
-    final: bool = True,
+    backward: bool = False,
     cluster_key: Optional[str] = None,
     mode: str = "embedding",
     time_key: str = "latent_time",
@@ -68,7 +68,7 @@ def lineages(
     %s(adata)s
     lineages
         Only show these lineages. If `None`, plot all lineages.
-    %(final)s
+    %(backward)s
     cluster_key
         If given, plot cluster annotations left of the lineage probabilities.
     mode
@@ -91,7 +91,7 @@ def lineages(
     adata_dummy = adata.copy()
 
     # create a dummy kernel object
-    vk = VelocityKernel(adata_dummy, backward=not final)
+    vk = VelocityKernel(adata_dummy, backward=backward)
     vk._transition_matrix = csr_matrix((adata_dummy.n_obs, adata_dummy.n_obs))
 
     # use this to initialize an MC object
@@ -348,7 +348,7 @@ def _create_models(
     if isinstance(model, Model):
         return {o: {lin: copy(model) for lin in lineages} for o in obs}
 
-    lineages, obs = set(lineages), set(obs)
+    lineages, obs = _unique_order_preserving(lineages), _unique_order_preserving(obs)
     models = defaultdict(dict)
 
     if isinstance(model, Model):
@@ -426,6 +426,7 @@ def _fit(
     return res
 
 
+@d.dedent
 def _trends_helper(
     adata: AnnData,
     models: Dict[str, Dict[str, Any]],
@@ -445,11 +446,8 @@ def _trends_helper(
 
     Parameters
     ----------
-    adata: :class:`anndata.AnnData`
-        Annotated data object.
-    models
-        Gene and lineage specific models can be specified. Use `'*'` to indicate
-        all genes or lineages, for example `{'Map2': {'*': ...}, 'Dcx': {'Alpha': ..., '*': ...}}`.
+    %(adata)s
+    %(model)s
     gene
         Name of the gene in `adata.var_names`.
     fig
@@ -464,9 +462,7 @@ def _trends_helper(
 
     Returns
     -------
-    None
-        Nothing, just plots the trends.
-        Optionally saves the figure based on :paramref:`save`.
+    %(just_plots)s
     """
 
     n_lineages = len(lineage_names)

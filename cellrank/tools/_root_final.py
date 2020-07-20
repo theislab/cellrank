@@ -4,7 +4,7 @@
 from typing import Union, TypeVar, Optional
 
 from cellrank import logging as logg
-from cellrank.utils._docs import d, inject_docs
+from cellrank.utils._docs import d, _root, _final, inject_docs
 from cellrank.tools._utils import _info_if_obs_keys_categorical_present
 from cellrank.tools._constants import FinalStatesKey
 from cellrank.tools.estimators import GPCCA, CFLARE
@@ -16,26 +16,26 @@ AnnData = TypeVar("AnnData")
 
 
 _find_docs = """\
-Compute {cells} states based on RNA velocity, see [Manno18]_. The tool models dynamic cellular
+Compute {direction} states based on RNA velocity, see [Manno18]_. The tool models dynamic cellular
 processes as a Markov chain, where the transition matrix is computed based on the velocity vectors of each
-individual cell. Based on this Markov chain, we provide two estimators to compute {cells} states, both of which
+individual cell. Based on this Markov chain, we provide two estimators to compute {direction} states, both of which
 are based on spectral methods.
 
 For the estimator :class:`cellrank.tl.GPCCA`, cells are fuzzily clustered into metastable states,
 using Generalized Perron Cluster Cluster Analysis [GPCCA18]_.
 In short, this coarse-grains the Markov chain into a set of macrostates representing the slow
 time-scale dynamics, i.e. transitions between these macrostates are rare. The most stable ones of these will represent
-{cells}, while the others will represent transient, metastable states.
+{direction}, while the others will represent transient, metastable states.
 
 For the estimator :class:`cellrank.tl.CFLARE`, cells are filtered into transient/recurrent cells using the
-left eigenvectors of the transition matrix and clustered into distinct groups of {cells} states using the right
+left eigenvectors of the transition matrix and clustered into distinct groups of {direction} states using the right
 eigenvectors of the transition matrix of the Markov chain.
 
 Parameters
 ----------
 %(adata)s
 estimator
-    Estimator to use to compute the {cells} states.
+    Estimator to use to compute the {direction} states.
 n_states
     If you know how many {direction} states you are expecting, you can provide this number.
     Otherwise, an `eigengap` heuristic is used.
@@ -75,7 +75,7 @@ Returns
 def _root_final(
     adata: AnnData,
     estimator: type(BaseEstimator) = GPCCA,
-    final: bool = True,
+    backward: bool = False,
     n_states: Optional[int] = None,
     cluster_key: Optional[str] = None,
     weight_connectivities: float = None,
@@ -86,16 +86,15 @@ def _root_final(
     return_estimator: bool = False,
     **kwargs,
 ) -> Optional[Union[AnnData, BaseEstimator]]:
-    """Compute root or final states of  Markov Chain."""
-
-    key = FinalStatesKey.FORWARD if final else FinalStatesKey.BACKWARD
+    key = FinalStatesKey.BACKWARD.s if backward else FinalStatesKey.FORWARD.s
     logg.info(f"Computing `{key}`")
+
     adata = adata.copy() if copy else adata
 
     # compute kernel object
     kernel = transition_matrix(
         adata,
-        backward=not final,
+        backward=backward,
         weight_connectivities=weight_connectivities,
         scale_by_variances=use_velocity_uncertainty,
     )
@@ -162,9 +161,8 @@ def _root_final(
 @d.dedent
 @inject_docs(
     root=_find_docs.format(
-        cells="root",
-        direction="root",
-        key_added="root_states",
+        direction=_root,
+        key_added=f"{_root}_states",
         compute_meta=F.COMPUTE.fmt(P.META),
     )
 )
@@ -180,7 +178,7 @@ def root_states(
     **kwargs,
 ) -> Optional[AnnData]:
     """
-    Find root states of a dynamic process of single cells.
+    Find %(root)s states of a dynamic process of single cells.
 
     {root}
     """
@@ -188,7 +186,7 @@ def root_states(
     return _root_final(
         adata,
         estimator=estimator,
-        final=False,
+        backward=True,
         n_states=n_states,
         weight_connectivities=weight_connectivities,
         method=method,
@@ -202,9 +200,8 @@ def root_states(
 @d.dedent
 @inject_docs(
     final=_find_docs.format(
-        cells="final",
-        direction="final",
-        key_added="final_states",
+        direction=_final,
+        key_added=f"{_final}_states",
         compute_meta=F.COMPUTE.fmt(P.META),
     )
 )
@@ -220,7 +217,7 @@ def final_states(
     **kwargs,
 ) -> Optional[AnnData]:
     """
-    Find final states of a dynamic process of single cells.
+    Find %(final)s states of a dynamic process of single cells.
 
     {final}
     """
@@ -228,7 +225,7 @@ def final_states(
     return _root_final(
         adata,
         estimator=estimator,
-        final=True,
+        backward=False,
         n_states=n_states,
         weight_connectivities=weight_connectivities,
         method=method,

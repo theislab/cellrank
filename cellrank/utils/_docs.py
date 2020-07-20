@@ -31,14 +31,11 @@ model
 _just_plots = """\
 None
     Nothing, just plots the figure. Optionally saves it based on :paramref:`save`."""
-_final = """\
-final
-    Whether to consider cells going to final states or vice versa."""
-_kernel = """\
-adata : :class:`anndata.AnnData`
-    Annotated data object.
+_backward = """\
 backward
     Direction of the process."""
+_root = "root"
+_final = "final"
 
 
 def inject_docs(**kwargs):
@@ -57,6 +54,8 @@ d = DocstringProcessor(
     model=_model,
     adata=_adata,
     just_plots=_just_plots,
+    backward=_backward,
+    root=_root,
     final=_final,
-    kernel=_kernel,
+    root_or_final=f"{_root} or {_final}",
 )

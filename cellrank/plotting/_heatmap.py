@@ -38,7 +38,7 @@ def heatmap(
     adata: AnnData,
     model: _model_type,
     genes: Sequence[str],
-    final: bool = True,
+    backward: bool = False,
     kind: str = "lineages",
     lineages: Optional[Union[str, Sequence[str]]] = None,
     start_lineage: Optional[Union[str, Sequence[str]]] = None,
@@ -73,7 +73,7 @@ def heatmap(
     %(model)s
     genes
         Genes in :paramref:`adata` `.var_names` to plot.
-    %(final)s
+    %(backward)s
     kind
         Variant of the heatmap:
 
@@ -421,7 +421,7 @@ def heatmap(
 
         return fig
 
-    lineage_key = str(AbsProbKey.FORWARD if final else AbsProbKey.BACKWARD)
+    lineage_key = str(AbsProbKey.BACKWARD if backward else AbsProbKey.FORWARD)
     if lineage_key not in adata.obsm:
         raise KeyError(f"Lineages key `{lineage_key!r}` not found in `adata.obsm`.")
 
@@ -431,8 +431,7 @@ def heatmap(
         lineages = [lineages]
     lineages = _unique_order_preserving(lineages)
 
-    for lineage_name in lineages:
-        _ = adata.obsm[lineage_key][lineage_name]
+    _ = adata.obsm[lineage_key][lineages]
 
     if cluster_key is not None:
         if isinstance(cluster_key, str):
