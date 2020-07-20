@@ -79,7 +79,7 @@ def heatmap(
 
             - `'genes'` - group by :paramref:`genes` for each lineage in :paramref:`lineage_names`.
             - `'lineages'` - group by :paramref:`lineage_names` for each gene in :paramref:`genes`.
-    lineage_names
+    lineages
         Names of the lineages which to plot.
     start_lineage
         Lineage from which to select cells with lowest pseudotime as starting points.
