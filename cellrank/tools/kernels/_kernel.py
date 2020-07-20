@@ -562,7 +562,10 @@ class Kernel(UnaryKernelExpression, ABC):
 
     Parameters
     ----------
-    %(kernel)s
+    %(adata)s
+    %(backward)s
+    compute_cond_num
+        Whether to compute the condition number of the transition matrix. For large matrices, this can be very slow.
     kwargs
         Keyword arguments which can specify key to be read from :paramref:`adata` object.
     """
@@ -667,9 +670,10 @@ class Constant(Kernel):
 
     Parameters
     ----------
-    %(kernel)s
+    %(adata)s
     value
         Constant value by which to multiply Must be a positive number.
+    %(backward)s
     """
 
     def __init__(
@@ -779,7 +783,8 @@ class PrecomputedKernel(Kernel):
     ----------
     transition_matrix
         Row-normalized transition matrix.
-    %(kernel)s
+    %(adata)s
+    %(backward)s
     """
 
     def __init__(
@@ -858,7 +863,8 @@ class VelocityKernel(Kernel):
 
     Parameters
     ----------
-    %(kernel)s
+    %(adata)s
+    %(backward)s
     vkey
         Key in :paramref:`adata` `.uns` where the velocities are stored.
     var_key
@@ -1104,7 +1110,8 @@ class ConnectivityKernel(Kernel):
 
     Parameters
     ----------
-    %(kernel)s
+    %(adata)s
+    %(backward)s
     var_key
         Key in :paramref:`adata` `.uns` where the velocity variances are stored.
     compute_cond_num
@@ -1203,7 +1210,8 @@ class PalantirKernel(Kernel):
 
     Parameters
     ----------
-    %(kernel)s
+    %(adata)s
+    %(backward)s
     time_key
         Key in :paramref:`adata` `.obs` where the pseudotime is stored.
     var_key
