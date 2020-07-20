@@ -455,7 +455,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
     def compute_lineage_drivers(
         self,
-        lin_names: Optional[Union[Sequence, str]] = None,
+        lineages: Optional[Union[Sequence, str]] = None,
         cluster_key: Optional[str] = None,
         clusters: Optional[Union[Sequence, str]] = None,
         layer: str = "X",
@@ -505,12 +505,12 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             )
 
         # check all lin_keys exist in self.lin_names
-        if isinstance(lin_names, str):
-            lin_names = [lin_names]
-        if lin_names is not None:
-            _ = abs_probs[lin_names]
+        if isinstance(lineages, str):
+            lineages = [lineages]
+        if lineages is not None:
+            _ = abs_probs[lineages]
         else:
-            lin_names = abs_probs.names
+            lineages = abs_probs.names
 
         # use `cluster_key` and clusters to subset the data
         if clusters is not None:
@@ -552,13 +552,13 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             var_names = adata_comp.raw.var_names if use_raw else adata_comp.var_names
 
         start = logg.info(
-            f"Computing correlations for lineages `{lin_names}` restricted to clusters `{clusters}` in "
+            f"Computing correlations for lineages `{lineages}` restricted to clusters `{clusters}` in "
             f"layer `{layer}` with `use_raw={use_raw}`"
         )
 
         # loop over lineages
         lin_corrs = {}
-        for lineage in lin_names:
+        for lineage in lineages:
             y = lin_probs[:, lineage].X.squeeze()
             correlations = _vec_mat_corr(data, y)
 

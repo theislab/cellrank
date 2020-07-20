@@ -8,14 +8,14 @@ from pathlib import Path
 from functools import wraps
 from itertools import combinations
 
-import numpy as np
-import pandas as pd
-from scipy.stats import entropy
-
 import matplotlib.colors as c
 import matplotlib.pyplot as plt
 
+import numpy as np
+import pandas as pd
 from cellrank import logging as logg
+from scipy.stats import entropy
+from cellrank.utils._docs import d
 from cellrank.tools._utils import (
     save_fig,
     _convert_lineage_name,
@@ -708,6 +708,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
     def __copy__(self):
         return self.copy()
 
+    @d.dedent
     def plot_pie(
         self,
         reduction: Callable = np.mean,
@@ -726,18 +727,11 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             Function that will be applied per lineage.
         title
             Title of the figure.
-        figsize
-            Size of the figure.
-        dpi
-            Dots per inch.
-        save
-            Filename where to save the plots.
-            If `None`, just shows the plot.
+        $(plotting)s
 
         Returns
         -------
-        None
-            Nothing, just plots the pie chart.
+        %(just_plots)s
         """
         if not callable(reduction):
             raise TypeError(
@@ -779,12 +773,12 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         dist_measure
             Used to quantify similarity between query and reference states. Valid options are:
 
-            - 'cosine_sim'
-            - 'wasserstein_dist'
-            - 'kl_div'
-            - 'js_div'
-            - 'mutual_inf'
-            - 'equal'
+                - 'cosine_sim'
+                - 'wasserstein_dist'
+                - 'kl_div'
+                - 'js_div'
+                - 'mutual_inf'
+                - 'equal'
         normalize_weights
             How to normalize the weights. Valid options are:
 
@@ -803,7 +797,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             The weights used for the projection of shape `(n_query x n_reference)`.
         """
         if self._is_transposed:
-            raise RuntimeError("This matrix seems to be transposed.")
+            raise RuntimeError("This method works only on non-transposed matrices.")
 
         if isinstance(keys, str):
             keys = [keys]
@@ -813,9 +807,9 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
         if set(keys) == set(self.names):
             logg.warning(
-                "Unable to perform the reduction, `keys` specifies all lineages. Returning self"
+                "Unable to perform the reduction, `keys` specifies all lineages. Returning a copy self"
             )
-            return (self, None) if return_weights else self
+            return (self.copy(), None) if return_weights else self.copy()
 
         # check input parameters
         if return_weights and mode == "scale":

@@ -3,16 +3,15 @@
 
 from typing import Any, List, Tuple, Union, Optional, Sequence
 
-import numpy as np
-from pandas import Series, DataFrame, to_numeric
-from scipy.stats import entropy
-from pandas._libs.lib import infer_dtype
-from pandas.core.dtypes.common import is_categorical_dtype
-
 from matplotlib import cm as cm
 from matplotlib import colors as mcolors
 
+import numpy as np
+from pandas import Series, DataFrame, to_numeric
 from cellrank import logging as logg
+from scipy.stats import entropy
+from pandas._libs.lib import infer_dtype
+from pandas.core.dtypes.common import is_categorical_dtype
 
 
 def _create_colors(
@@ -27,8 +26,8 @@ def _create_colors(
     """
     Create variations of colors from base color.
 
-    Params
-    ------
+    Parameters
+    ----------
     base_color
         Base color which serves as a starting point.
     n
@@ -160,8 +159,8 @@ def _map_names_and_colors(
     """
     Map annotations and colors from one series to another.
 
-    Params
-    ------
+    Parameters
+    ----------
     series_reference
         Series object with categorical annotations.
     series_query

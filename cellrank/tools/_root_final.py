@@ -4,11 +4,12 @@
 from typing import Union, TypeVar, Optional
 
 from cellrank import logging as logg
-from cellrank.utils._docs import inject_docs
+from cellrank.utils._docs import d, inject_docs
 from cellrank.tools._utils import _info_if_obs_keys_categorical_present
 from cellrank.tools._constants import FinalStatesKey
 from cellrank.tools.estimators import GPCCA, CFLARE
 from cellrank.tools._transition_matrix import transition_matrix
+from cellrank.tools.estimators._constants import F, P
 from cellrank.tools.estimators._base_estimator import BaseEstimator
 
 AnnData = TypeVar("AnnData")
@@ -30,10 +31,9 @@ For the estimator :class:`cellrank.tl.CFLARE`, cells are filtered into transient
 left eigenvectors of the transition matrix and clustered into distinct groups of {cells} states using the right
 eigenvectors of the transition matrix of the Markov chain.
 
-Params
-------
-adata : :class:`adata.AnnData`
-    Annotated data object.
+Parameters
+----------
+%(adata)s
 estimator
     Estimator to use to compute the {cells} states.
 n_states
@@ -52,7 +52,7 @@ use_velocity_uncertainty
     transforms cosine similarities to probabilities, i.e. transitions we are uncertain about are down-weighted.
 method
     Method to use when computing the Schur decomposition. Only needed when :paramref:`estimator`
-    is :class:`cellrank.tl.GPCCA`. Valid options are: `'krylov'` or `'brandts'`.
+    is :class:`cellrank.tl.GPCCA`. Valid options are: `'krylov'`, `'brandts'`.
 show_plots
     Whether to show plots of the spectrum and eigenvectors in the embedding.
 copy
@@ -60,7 +60,7 @@ copy
 return_estimator
     Whether to return the estimator. Only available when :paramref:`copy=False`.
 kwargs
-    Keyword arguments for :meth:`cellrank.tl.BaseEstimator.compute_metastable_states`.
+    Keyword arguments for :meth:`cellrank.tl.BaseEstimator.{compute_meta}`.
 
 Returns
 -------
@@ -159,8 +159,14 @@ def _root_final(
     return adata if copy else mc if return_estimator else None
 
 
+@d.dedent
 @inject_docs(
-    root=_find_docs.format(cells="root", direction="root", key_added="root_states")
+    root=_find_docs.format(
+        cells="root",
+        direction="root",
+        key_added="root_states",
+        compute_meta=F.COMPUTE.fmt(P.META),
+    )
 )
 def root_states(
     adata: AnnData,
@@ -193,8 +199,14 @@ def root_states(
     )
 
 
+@d.dedent
 @inject_docs(
-    final=_find_docs.format(cells="final", direction="final", key_added="final_states")
+    final=_find_docs.format(
+        cells="final",
+        direction="final",
+        key_added="final_states",
+        compute_meta=F.COMPUTE.fmt(P.META),
+    )
 )
 def final_states(
     adata: AnnData,
