@@ -34,6 +34,11 @@ None
 _final = """\
 final
     Whether to consider cells going to final states or vice versa."""
+_kernel = """\
+adata : :class:`anndata.AnnData`
+    Annotated data object.
+backward
+    Direction of the process."""
 
 
 def inject_docs(**kwargs):
@@ -53,4 +58,5 @@ d = DocstringProcessor(
     adata=_adata,
     just_plots=_just_plots,
     final=_final,
+    kernel=_kernel,
 )

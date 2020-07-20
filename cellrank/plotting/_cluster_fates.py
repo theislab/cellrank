@@ -495,9 +495,11 @@ def cluster_fates(
     fig.show()
 
 
+@d.dedent
 def similarity_plot(
     adata: AnnData,
-    cluster_key: str = "clusters",
+    cluster_key: str,
+    final: bool = True,
     clusters: Optional[List[str]] = None,
     n_samples: int = 1000,
     cmap: mpl.colors.ListedColormap = cm.viridis,
@@ -506,7 +508,6 @@ def similarity_plot(
     title: Optional[str] = "similarity",
     figsize: Tuple[float, float] = (12, 10),
     dpi: Optional[int] = None,
-    final: bool = True,
     save: Optional[Union[str, Path]] = None,
 ) -> None:
     """
@@ -522,10 +523,10 @@ def similarity_plot(
 
     Parameters
     ----------
-    adata: :class:`anndata.AnnData`
-        Annotated data object.
+    %(adata)s
     cluster_key
         Key in :paramref:`adata` `.obs` corresponding the the clustering.
+    %(final)s
     clusters
         Clusters in :paramref:`adata` `.obs` to consider.
         If `None`, all cluster will be considered.
@@ -537,23 +538,13 @@ def similarity_plot(
         Font size of the labels.
     rotation
         Rotation of labels on x-axis.
-    figsize
-        Size of the figure.
     title
         Title of the figure.
-    dpi
-        Dots per inch.
-    final
-        Whether to consider cells going to final states or vice versa.
-    save
-        Filename where to save the plot.
-        If `None`, just shows the plot.
+    %(plotting)s
 
     Returns
     -------
-    None
-        Nothing, just plots the similarity matrix.
-        Optionally saves the figure based on :paramref:`save`.
+    %(just_plots)s
     """
 
     logg.debug("Getting the counts")

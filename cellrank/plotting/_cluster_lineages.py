@@ -150,9 +150,7 @@ def cluster_lineage(
 
     Returns
     -------
-    None
-        Plots the clusters of :paramref:`genes` for the given :paramref:`lineage_name`.
-        Optionally saves the figure based on :paramref:`save`.
+    %(just_plots)s
 
         Updates :paramref:`adata` `.uns` with the following key:
 
