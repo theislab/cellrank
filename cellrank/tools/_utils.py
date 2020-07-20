@@ -85,6 +85,7 @@ def _pairwise(iterable):
     return zip(a, b)
 
 
+# TODO: set the {root,final}_pref
 def _create_root_final_annotations(
     adata: AnnData,
     fwd: Union[GPCCA, CFLARE],
@@ -92,7 +93,7 @@ def _create_root_final_annotations(
     final_pref: Optional[str] = "final",
     root_pref: Optional[str] = "root",
     key_added: Optional[str] = "root_final",
-):
+) -> None:
     """
     Create categorical annotations of both root and final states.
 
@@ -105,7 +106,7 @@ def _create_root_final_annotations(
     bwd
         Estimator object modelling backward process.
     final_pref, root_pref
-        Prefix used in the annotations.
+        DirPrefix used in the annotations.
     key_added
         Key added to `adata.obs`.
 
@@ -276,11 +277,11 @@ def _complex_warning(
     Parameters
     ----------
     X
-        Matrix containing the eigenvectors
+        Matrix containing the eigenvectors.
     use
-        Selection of columns of `X`
+        Selection of columns of `X`.
     use_imag
-        For eigenvectors that are complex, use real or imaginary part
+        For eigenvectors that are complex, use real or imaginary part.
 
     Returns
     -------
@@ -383,8 +384,9 @@ def cyto_trace(
     Finds the top 200 genes correlated with #genes/cell and computes their (imputed) mean or median expression.
     For more references, see [Cyto20]_.
 
-    Workflow
-    In *scanpy*, take your raw :paramref:`adata` object and run :func:`scvelo.pp.moments` on it. Then run this function.
+    Workflow:
+    In *scanpy*, take your raw :paramref:`adata` object and run :func:`scvelo.pp.moments` on it.
+    Then run this function.
 
     Parameters
     ----------
@@ -1142,23 +1144,23 @@ def _long_form_frequencies(
     Compute frequencies of a `query_var` over groups defined by `groupby`.
 
     Parameters
-    --------
+    ----------
     adata
-        Annotated Data Matrix
+        Annotated data object.
     query_var
         Key from `adata.obs` to a categorical variable whose frequencies with respect to groups defined by `groupby`
-        we want to compute
+        we want to compute.
     query_var_groups
-        Subset of the categories from `query_var`. These are the categories whose frequencies we are intersted in
+        Subset of the categories from `query_var`. These are the categories whose frequencies we are intersted in.
     groupby
-        Key from `adata.obs`. This defined the categorical variable with respect to which we are computing frequencies
+        Key from `adata.obs`. This defined the categorical variable with respect to which we are computing frequencies.
     x_label
         Optional annotation from `adata.obs` that's mapped to `groupby`. Mapping must be unique.
 
     Returns
-    --------
-    sub_frequs
-        Long-form pandas DataFrame that's convenient for plotting with seaborn
+    -------
+    :class:`pandas.DataFrame`
+        Long-form pandas DataFrame that's convenient for plotting with seaborn.
     """
 
     # input checks
@@ -1268,7 +1270,7 @@ def _fuzzy_to_discrete(
         exception. Set to `None` if you only want to raise if there is an empty cluster.
     check_row_sums
         Check whether rows in `a_fuzzy` sum to one. The one situation where we don't do this is when
-        we have selected a couple of main states and we don't want to re-distribute probability mass
+        we have selected a couple of main states and we don't want to re-distribute probability mass.
 
     Returns
     -------
@@ -1414,9 +1416,9 @@ def _colors_in_order(
     adata
         Annotated data object.
     clusters
-        Subset of the clusters we want the color for. Must be a subset of `adata.obs[cluster_key].cat.categories`
+        Subset of the clusters we want the color for. Must be a subset of `adata.obs[cluster_key].cat.categories`.
     cluster_key
-        Key from `adata.obs`
+        Key from `adata.obs`.
 
     Returns
     -------

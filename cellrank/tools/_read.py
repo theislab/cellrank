@@ -11,7 +11,13 @@ from scvelo import read as scv_read
 from cellrank import logging as logg
 from cellrank.tools._colors import _create_categorical_colors
 from cellrank.tools._lineage import Lineage
-from cellrank.tools._constants import Direction, AbsProbKey, _colors, _lin_names
+from cellrank.tools._constants import (
+    Direction,
+    AbsProbKey,
+    DirectionPlot,
+    _colors,
+    _lin_names,
+)
 
 AnnData = TypeVar("AnnData")
 
@@ -48,7 +54,8 @@ def read(
         if lin_key in adata.obsm.keys():
             n_cells, n_lineages = adata.obsm[lin_key].shape
             logg.info(
-                f"Creating {'forward' if direction == Direction.FORWARD else 'backward'} `Lineage` object"
+                f"Creating {Direction.FORWARD if direction == Direction.FORWARD else DirectionPlot.BACKWARD} "
+                f"`Lineage` object"
             )
 
             if names_key not in adata.uns.keys():
@@ -62,7 +69,7 @@ def read(
                 )
                 names = [f"Lineage {i}" for i in range(n_lineages)]
             else:
-                logg.info("Succesfully loaded names")
+                logg.info("Successfully loaded names")
                 names = adata.uns[names_key]
 
             if colors_key not in adata.uns.keys():
@@ -79,7 +86,7 @@ def read(
                 )
                 colors = _create_categorical_colors(n_lineages)
             else:
-                logg.info("Succesfully loaded colors")
+                logg.info("Successfully loaded colors")
                 colors = adata.uns[colors_key]
 
             adata.obsm[lin_key] = Lineage(
@@ -89,7 +96,7 @@ def read(
             adata.uns[names_key] = names
         else:
             logg.debug(
-                f"Unable to load {'forward' if direction == Direction.FORWARD else 'backward'} "
+                f"Unable to load {DirectionPlot.FORWARD if direction == Direction.FORWARD else DirectionPlot.BACKWARD} "
                 f"`Lineage` from `adata.obsm[{lin_key!r}]`"
             )
 

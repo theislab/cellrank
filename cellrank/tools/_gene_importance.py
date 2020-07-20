@@ -126,7 +126,7 @@ def gene_importance(
     model: _model_type,
     genes: Sequence[str],
     lineage: str,
-    final: bool = True,
+    backward: bool = False,
     n_points: int = 200,
     time_key: str = "latent_time",
     norm: bool = True,
@@ -159,7 +159,7 @@ def gene_importance(
         Genes in :paramref:`adata` `.var_names`.
     lineage
         Name of the lineage for which to calculate gene importance.
-    %(final)s
+    %(backward)s
     n_points
         Number of points used for prediction.
 
@@ -200,7 +200,7 @@ def gene_importance(
         Same as above, but also returns the fitted model.
     """
 
-    ln_key = str(AbsProbKey.FORWARD if final else AbsProbKey.BACKWARD)
+    ln_key = str(AbsProbKey.BACKWARD if backward else AbsProbKey.FORWARD)
     if ln_key not in adata.obsm:
         raise KeyError(f"Lineages key `{ln_key!r}` not found in `adata.obsm`.")
 
@@ -215,7 +215,7 @@ def gene_importance(
 
     n_jobs = _get_n_cores(n_jobs, len(genes))
 
-    kwargs["final"] = final
+    kwargs["backward"] = backward
     kwargs["time_key"] = time_key
     kwargs["n_test_points"] = n_points
 
@@ -301,7 +301,7 @@ def gene_importance(
 @d.dedent
 def lineage_drivers(
     adata: AnnData,
-    final: bool = True,
+    backward: bool = False,
     lineages: Optional[Union[Sequence, str]] = None,
     cluster_key: Optional[str] = None,
     clusters: Optional[Union[Sequence, str]] = None,
@@ -319,13 +319,12 @@ def lineage_drivers(
     Parameters
     ----------
     %(adata)s
-    %(final)s
+    %(backward)s
     lineages
-        Either a set of lineage names from :paramref:`absorption_probabilities` `.names` or None,
-        in which case all lineages are considered.
+        Either a set of lineage names or `None`, in which case all lineages are considered.
     cluster_key
         Key from :paramref:`adata` `.obs` to obtain cluster annotations.
-        These are considered for :paramref:`clusters`. Default is `"clusters"` if a list of `clusters` is given.
+        These are considered for :paramref:`clusters`.
     clusters
         Restrict the correlations to these clusters.
     layer
@@ -333,19 +332,21 @@ def lineage_drivers(
     use_raw
         Whether or not to use :paramref:`adata` `.raw` to correlate gene expression.
         If using a layer other than `.X`, this must be set to `False`.
+    inplace
+        Whether to write to :paramref:`adata` or return a :class:`pandas.DataFrame` object.
 
     Returns
     -------
-    :class:`pandas.DataFrame`, :class:`NoneType`
-        Writes to :paramref:`adata` `.var` or :paramref:`adata` `.raw.var`,
-        depending on the value of :paramref:`use_raw`.
-        For each lineage specified, a key is added to `.var` and correlations are saved there.
+    :class:`pandas.DataFrame` or :class:`NoneType`
+        Writes to :paramref:`adata` `.var` or :paramref:`adata` `.raw.var`, depending on the value of
+        :paramref:`use_raw`. For each lineage specified, a key is added to :paramref:`adata` `.var`
+        and correlations are saved there.
 
         Returns `None` if :paramref:`inplace` `=True`, otherwise a :class:`pandas.DataFrame`.
     """
 
     # create dummy kernel and estimator
-    kernel = ConnectivityKernel(adata, backward=not final)
+    kernel = ConnectivityKernel(adata, backward=backward)
     g = GPCCA(kernel)
     g._set(A.ABS_RPOBS, adata.obsm[g._abs_prob_key])
 

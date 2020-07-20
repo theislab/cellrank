@@ -19,7 +19,7 @@ from cellrank.utils._docs import d
 from cellrank.tools._utils import save_fig
 from cellrank.utils._utils import _make_unique
 from cellrank.plotting._utils import _position_legend
-from cellrank.tools._constants import AbsProbKey
+from cellrank.tools._constants import DirPrefix, AbsProbKey, FinalStatesPlot
 from cellrank.tools._exact_mc_test import _counts, _cramers_v
 
 AnnData = TypeVar("AnnData")
@@ -32,7 +32,7 @@ _cluster_fates_modes = ("bar", "paga", "paga_pie", "violin", "heatmap", "cluster
 def cluster_fates(
     adata: AnnData,
     cluster_key: Optional[str] = "louvain",
-    final: bool = True,
+    backward: bool = False,
     clusters: Optional[Union[str, Sequence[str]]] = None,
     lineages: Optional[Union[str, Sequence[str]]] = None,
     mode: str = "bar",
@@ -49,8 +49,8 @@ def cluster_fates(
     """
     Plot aggregate lineage probabilities at cluster level.
 
-    This can be used to investigate how likely a certain cluster is to go to the final states, or in turn to have
-    descended from the root states. For mode `'paga'` and `'paga_pie'`, we use *PAGA*, see [Wolf19]_.
+    This can be used to investigate how likely a certain cluster is to go to the %(final)s states, or in turn to have
+    descended from the %(root)s states. For mode `'paga'` and `'paga_pie'`, we use *PAGA*, see [Wolf19]_.
 
     .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/cluster_fates.png
        :width: 400px
@@ -61,7 +61,7 @@ def cluster_fates(
     %(adata)s
     cluster_key
         Key in :paramref:`adata` `.obs` containing the clusters.
-    %(final)s
+    %(backward)s
     clusters
         Clusters to visualize. If `None`, all clusters will be plotted.
     lineages
@@ -69,12 +69,12 @@ def cluster_fates(
     mode
         Type of plot to show.
 
-            - `'bar'` - barplot, one panel per cluster.
-            - `'paga'` - scanpy's PAGA, one per root/final state, colored in by fate.
-            - `'paga_pie'` - scanpy's PAGA with pie charts indicating aggregated fates.
-            - `'violin'` - violin plots, one per root/final state.
-            - `'heatmap'` - seaborn heatmap, showing average fates per cluster.
-            - `'clustermap'` - same as heatmap, but with dendrogram.
+            - `'bar'` - barplot, one panel per cluster
+            - `'paga'` - scanpy's PAGA, one per %(root_or_final)s state, colored in by fate
+            - `'paga_pie'` - scanpy's PAGA with pie charts indicating aggregated fates
+            - `'violin'` - violin plots, one per %(root_or_final)s state
+            - `'heatmap'` - seaborn heatmap, showing average fates per cluster
+            - `'clustermap'` - same as heatmap, but with dendrogram
     basis
         Basis for scatterplot to use when :paramref:`mode` `='paga_pie'`. If `None`, don't show the scatterplot.
     show_cbar
@@ -401,9 +401,14 @@ def cluster_fates(
             f"Not specifying cluster key is only available for modes `'bar'` and `'violin'`, found `mode={mode!r}`."
         )
 
-    lk = str(AbsProbKey.FORWARD if final else AbsProbKey.BACKWARD)
-    points = "final states" if final else "root states"
-    dir_prefix = "to" if final else "from"  # TODO: ssot
+    if backward:
+        lk = AbsProbKey.BACKWARD.s
+        points = FinalStatesPlot.BACKWARD.s
+        dir_prefix = DirPrefix.BACKWARD.s
+    else:
+        lk = AbsProbKey.FORWARD.s
+        points = FinalStatesPlot.FORWARD.s
+        dir_prefix = DirPrefix.FORWARD.s
 
     if cluster_key is not None:
         is_all = False
@@ -499,7 +504,7 @@ def cluster_fates(
 def similarity_plot(
     adata: AnnData,
     cluster_key: str,
-    final: bool = True,
+    backward: bool = False,
     clusters: Optional[List[str]] = None,
     n_samples: int = 1000,
     cmap: mpl.colors.ListedColormap = cm.viridis,
@@ -511,10 +516,10 @@ def similarity_plot(
     save: Optional[Union[str, Path]] = None,
 ) -> None:
     """
-    Compare clusters with respect to their root/final probabilities.
+    Compare clusters with respect to their %(root_or_final)s probabilities.
 
-    For each cluster, we compute how likely an 'average cell' is to go towards to final states/come from the root
-    states. We then compare these averaged probabilities using Cramér's V statistic, see
+    For each cluster, we compute how likely an 'average cell' goes towards the %(final)s states or comes
+     from the %(root)s states. We then compare these averaged probabilities using Cramér's V statistic, see
     `here <https://en.wikipedia.org/wiki/Cram%C3%A9r%27s_V>`_. The similarity is defined as :math:`1 - Cramér's V`.
 
     .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/similarity_plot.png
@@ -526,7 +531,7 @@ def similarity_plot(
     %(adata)s
     cluster_key
         Key in :paramref:`adata` `.obs` corresponding the the clustering.
-    %(final)s
+    %(backward)s
     clusters
         Clusters in :paramref:`adata` `.obs` to consider.
         If `None`, all cluster will be considered.
@@ -553,7 +558,7 @@ def similarity_plot(
         cluster_key=cluster_key,
         clusters=clusters,
         n_samples=n_samples,
-        final=final,
+        backward=backward,
     )
 
     cluster_names = list(data.keys())

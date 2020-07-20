@@ -58,6 +58,13 @@ class FinalStatesKey(PrettyEnum):
     BACKWARD = "root_states"
 
 
+class FinalStatesPlot(PrettyEnum):
+    """Pretty state names for plotting."""
+
+    FORWARD = "final states"
+    BACKWARD = "root states"
+
+
 # FinalStatesKey and AbsProbKey must have the same suffix `_..._states` because of model.prepare
 class AbsProbKey(PrettyEnum):
     """Lineage key in `adata.obsm`."""
@@ -73,7 +80,7 @@ class MetaKey(PrettyEnum):
     BACKWARD = "metastable_states_bwd"
 
 
-class Prefix(PrettyEnum):
+class DirPrefix(PrettyEnum):
     """Direction prefix."""
 
     FORWARD = "to"

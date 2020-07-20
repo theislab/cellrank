@@ -12,8 +12,8 @@ from pandas.api.types import is_categorical_dtype
 from cellrank.tools._colors import _create_categorical_colors
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tools._constants import (
-    Prefix,
     Direction,
+    DirPrefix,
     AbsProbKey,
     FinalStatesKey,
     _probs,
@@ -231,7 +231,7 @@ class TestCFLARE:
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
         for lineage in ["0", "1"]:
-            assert f"{Prefix.FORWARD} {lineage} corr" in mc.adata.var.keys()
+            assert f"{DirPrefix.FORWARD} {lineage} corr" in mc.adata.var.keys()
 
     def test_compute_absorption_probabilities_keys_colors(self, adata_large: AnnData):
         adata = adata_large

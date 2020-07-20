@@ -17,14 +17,16 @@ def check_collection(
     """
     Check if given collection contains all the keys.
 
-    Params
-    ------
+    Parameters
+    ----------
     adata: :class:`anndata.AnnData`
         Annotated data object.
     needles
         Keys to check.
     attr_name
         Attribute of :paramref:`adata` where the needles are stored.
+    key_name
+        Pretty name of the key which will be displayed when error is found.
 
     Returns
     -------
@@ -42,8 +44,8 @@ def _get_n_cores(n_cores: Optional[int], n_jobs: Optional[int]) -> int:
     """
     Make number of cores a positive integer.
 
-    Params
-    ------
+    Parameters
+    ----------
     n_cores
         Number of cores to use.
     n_genes.
@@ -71,8 +73,8 @@ def _minmax(
     """
     Return minimum and maximum value of the data.
 
-    Params
-    ------
+    Parameters
+    ----------
     data
         Values for which to return the minimum and maximum.
     perc
@@ -94,8 +96,8 @@ def _make_unique(collection: Iterable[Hashable]) -> List[Hashable]:
     """
     Make a collection unique while maintaining the order.
 
-    Params
-    ------
+    Parameters
+    ----------
     collection
         Values to make unique.
 
@@ -136,8 +138,8 @@ def _read_graph_data(adata: AnnData, key: str) -> Union[np.ndarray, spmatrix]:
     :module`AnnData` `>=0.7` stores (n_obs x n_obs) matrices in `.obsp` rather than `.uns`.
     This is for backward compatibility.
 
-    Params
-    ------
+    Parameters
+    ----------
     adata
         Annotated data object.
     key
@@ -169,8 +171,8 @@ def _write_graph_data(
     :module`anndata` `>=0.7` stores (n_obs x n_obs) matrices in `.obsp` rather than `.uns`.
     This is for backward compatibility.
 
-    Params
-    ------
+    Parameters
+    ----------
     adata
         Annotated data object.
     data

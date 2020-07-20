@@ -12,9 +12,9 @@ import cellrank as cr
 from _helpers import assert_array_nan_equal
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tools._constants import (
-    Prefix,
     MetaKey,
     Direction,
+    DirPrefix,
     AbsProbKey,
     FinalStatesKey,
     _dp,
@@ -507,7 +507,7 @@ class TestCGPCCA:
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
         for lineage in ["0", "1"]:
-            assert f"{Prefix.FORWARD} {lineage} corr" in mc.adata.var.keys()
+            assert f"{DirPrefix.FORWARD} {lineage} corr" in mc.adata.var.keys()
 
 
 class TestGPCCACopy:
