@@ -22,6 +22,7 @@ import matplotlib.pyplot as plt
 
 import numpy as np
 from scipy.sparse import csr_matrix
+from cellrank.utils._docs import d
 from cellrank.tools._utils import save_fig
 from cellrank.utils.models import Model, GamMGCVModel
 from cellrank.tools.kernels import VelocityKernel
@@ -39,6 +40,7 @@ _ERROR_INCOMPLETE_SPEC = (
 _model_type = Union[Model, Mapping[str, Mapping[str, Model]]]
 
 
+@d.dedent
 def lineages(
     adata: AnnData,
     lineages: Optional[Union[str, Iterable[str]]] = None,
@@ -61,15 +63,12 @@ def lineages(
        :width: 400px
        :align: center
 
-    Params
-    ------
-
-    adata : :class:`adata.AnnData`
-        Annotated data object.
+    Parameters
+    ----------
+    %s(adata)s
     lineages
         Only show these lineages. If `None`, plot all lineages.
-    final
-        Whether to consider cells going to final states or vice versa.
+    %(final)s
     cluster_key
         If given, plot cluster annotations left of the lineage probabilities.
     mode
@@ -86,8 +85,7 @@ def lineages(
 
     Returns
     -------
-    None
-        Nothing, Just plots the lineage probabilities.
+    %s(just_plots)s
     """
 
     adata_dummy = adata.copy()
@@ -121,8 +119,8 @@ def curved_edges(
     """
     Create curved edges from a graph. Modified from: https://github.com/beyondbeneath/bezier-curved-edges-networkx.
 
-    Params
-    ------
+    Parameters
+    ----------
     G: :class:`networkx.Graph`
         Graph for which to create curved edges.
     pos
@@ -243,6 +241,7 @@ def curved_edges(
     return curves
 
 
+@d.dedent
 def composition(
     adata: AnnData,
     key: str,
@@ -257,23 +256,16 @@ def composition(
        :width: 400px
        :align: center
 
-    Params
-    ------
-    adata
-        Annotated data object.
+    Parameters
+    ----------
+    %(adata)s
     key
         Key in :paramref:`adata` `.obs` containing categorical observation.
-    figsize
-        Size of the figure.
-    dpi
-        Dots per inch.
-    save
-        Filename where to save the plots. If `None`, just shows the plot.
+    %s(plotting)s
 
     Returns
     -------
-    None
-        Nothing, just plots the similarity matrix. Optionally saves the figure based on :paramref:`save`.
+    %s(just_plots)s
     """
 
     if key not in adata.obs:
@@ -302,8 +294,8 @@ def _is_any_gam_mgcv(models: Dict[str, Dict[str, Model]]) -> bool:
     """
     Return whether any models to be fit are from R's mgcv package.
 
-    Params
-    ------
+    Parameters
+    ----------
     models
         Models used for fitting.
 
@@ -323,8 +315,8 @@ def _create_models(
     """
     Create models for each gene and lineage.
 
-    Params
-    ------
+    Parameters
+    ----------
     obs
         Sequence of observations, such as genes.
     lineages
@@ -391,8 +383,8 @@ def _fit(
     """
     Fit model for given genes and lineages.
 
-    Params
-    ------
+    Parameters
+    ----------
     genes
         Genes for which to fit the models.
     lineage_names
@@ -451,8 +443,8 @@ def _trends_helper(
     """
     Plot an expression gene for some lineages.
 
-    Params
-    ------
+    Parameters
+    ----------
     adata: :class:`anndata.AnnData`
         Annotated data object.
     models
@@ -548,8 +540,8 @@ def _position_legend(ax: mpl.axes.Axes, legend_loc: str, **kwargs) -> mpl.legend
     """
     Position legend in- or outside the figure.
 
-    Params
-    ------
+    Parameters
+    ----------
     ax
         Ax where to position the legend.
     legend_loc

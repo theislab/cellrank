@@ -246,6 +246,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         None
             Nothing, just sets the final states.
         """
+        # TODO: no normalization beforehand
 
         if not isinstance(n_cells, int):
             raise TypeError(

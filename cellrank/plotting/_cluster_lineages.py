@@ -6,11 +6,11 @@ from typing import Dict, Tuple, Union, TypeVar, Optional, Sequence
 from pathlib import Path
 from collections import Iterable
 
-import numpy as np
-
 import matplotlib.pyplot as plt
 
+import numpy as np
 from cellrank import logging as logg
+from cellrank.utils._docs import d
 from cellrank.tools._utils import save_fig
 from cellrank.utils._utils import _get_n_cores, check_collection
 from cellrank.plotting._utils import _model_type, _create_models, _is_any_gam_mgcv
@@ -32,8 +32,8 @@ def _cl_process(
     """
     Fit models to genes in given lineages. Used by :func:`cellrank.pl.cluster_lineage`.
 
-    Params
-    ------
+    Parameters
+    ----------
     genes
         Genes or observations for which to fit the models.
     models
@@ -71,6 +71,7 @@ def _cl_process(
     return (res - mean) / sd
 
 
+@d.dedent
 def cluster_lineage(
     adata: AnnData,
     model: _model_type,
@@ -85,16 +86,16 @@ def cluster_lineage(
     recompute: bool = False,
     ncols: int = 3,
     sharey: bool = False,
+    key_added: Optional[str] = None,
+    show_progress_bar: bool = True,
     n_jobs: Optional[int] = 1,
     backend: str = "multiprocessing",
+    figsize: Optional[Tuple[float, float]] = None,
+    dpi: Optional[int] = None,
+    save: Optional[Union[str, Path]] = None,
     pca_kwargs: Dict = MappingProxyType({"svd_solver": "arpack"}),
     neighbors_kwargs: Dict = MappingProxyType({"use_rep": "X"}),
     louvain_kwargs: Dict = MappingProxyType({}),
-    key_added: Optional[str] = None,
-    save: Optional[Union[str, Path]] = None,
-    figsize: Optional[Tuple[float, float]] = None,
-    dpi: Optional[int] = None,
-    show_progress_bar: bool = True,
     **kwargs,
 ) -> None:
     """
@@ -108,21 +109,15 @@ def cluster_lineage(
        :width: 400px
        :align: center
 
-    Params
-    ------
-    adata : :class:`anndata.AnnData`
-        Annotated data object.
-    model
-        Model to fit.
-
-            - If a :class:`dict`, gene and lineage specific models can be specified. Use `'*'` to indicate all \
-            genes or lineages, for example `{'Map2': {'*': ...}, 'Dcx': {'Alpha': ..., '*': ...}}`.
+    Parameters
+    ----------
+    %(adata)s
+    %(model)s
     genes
         Genes in :paramref:`adata`.var_names to cluster.
     lineage_name
         Name of the lineage along which to cluster the genes.
-    final
-        Whether to consider cells going to final states or vice versa.
+    %(final)s
     clusters
         Cluster identifiers to plot. If `None`, all clusters will be considered.
         Useful when plotting previously computed clusters.
@@ -140,24 +135,16 @@ def cluster_lineage(
         Number of columns for the plot.
     sharey
         Whether to share y-axis across multiple plots.
-    n_jobs
-        Number of parallel jobs. If `-1`, use all available cores. If `None` or `1`, the execution is sequential.
-    backend
-        Which backend to use for multiprocessing. See :class:`joblib.Parallel` for valid options.
+    key_added
+        Postfix to add when saving the results to :paramref:`adata` `.uns`.
+    %(parallel)s
+    %(plotting)s
     pca_kwargs
         Keyword arguments for :func:`scanpy.pp.pca`.
     neighbors_kwargs
         Keyword arguments for :func:`scanpy.pp.neighbors`.
     louvain_kwargs
         Keyword arguments for :func:`scanpy.tl.louvain`.
-    save
-        Filename where to save the plot. If `None`, just shows the plot.
-    figsize
-        Size of the figure. If `None`, it will be set automatically.
-    dpi
-        Dots per inch.
-    show_progress_bar
-        Whether to show a progress bar tracking models fitted.
     kwargs:
         Keyword arguments for :meth:`cellrank.ul.models.Model.prepare`.
 
