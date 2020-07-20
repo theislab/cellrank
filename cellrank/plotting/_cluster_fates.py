@@ -7,15 +7,15 @@ from typing import Any, List, Tuple, Union, Mapping, TypeVar, Optional, Sequence
 from pathlib import Path
 from collections import OrderedDict as odict
 
-import numpy as np
-import pandas as pd
-
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.colors
 import matplotlib.pyplot as plt
 
+import numpy as np
+import pandas as pd
 from cellrank import logging as logg
+from cellrank.utils._docs import d
 from cellrank.tools._utils import save_fig
 from cellrank.utils._utils import _make_unique
 from cellrank.plotting._utils import _position_legend
@@ -28,22 +28,22 @@ AnnData = TypeVar("AnnData")
 _cluster_fates_modes = ("bar", "paga", "paga_pie", "violin", "heatmap", "clustermap")
 
 
+@d.dedent
 def cluster_fates(
     adata: AnnData,
     cluster_key: Optional[str] = "louvain",
-    lineage_key: Optional[str] = None,
+    final: bool = True,
     clusters: Optional[Union[str, Sequence[str]]] = None,
     lineages: Optional[Union[str, Sequence[str]]] = None,
     mode: str = "bar",
-    final: bool = True,
     basis: Optional[str] = None,
     show_cbar: bool = True,
     ncols: Optional[int] = None,
     sharey: bool = False,
-    save: Optional[Union[str, Path]] = None,
     legend_kwargs: Mapping[str, Any] = MappingProxyType({"loc": "best"}),
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
+    save: Optional[Union[str, Path]] = None,
     **kwargs,
 ) -> None:
     """
@@ -56,14 +56,12 @@ def cluster_fates(
        :width: 400px
        :align: center
 
-    Params
-    ------
-    adata : :class:`anndata.AnnData`
-        Annotated data object.
+    Parameters
+    ----------
+    %(adata)s
     cluster_key
         Key in :paramref:`adata` `.obs` containing the clusters.
-    lineage_key
-        Key in :paramref:`adata` `.obsm` containing fate probabilities.
+    %(final)s
     clusters
         Clusters to visualize. If `None`, all clusters will be plotted.
     lineages
@@ -77,8 +75,6 @@ def cluster_fates(
             - `'violin'` - violin plots, one per root/final state.
             - `'heatmap'` - seaborn heatmap, showing average fates per cluster.
             - `'clustermap'` - same as heatmap, but with dendrogram.
-    final
-        Whether to consider cells going to final states or vice versa.
     basis
         Basis for scatterplot to use when :paramref:`mode` `='paga_pie'`. If `None`, don't show the scatterplot.
     show_cbar
@@ -89,24 +85,17 @@ def cluster_fates(
         Whether to share y-axis when :paramref:`mode` is `'bar'`.
     figsize
         Size of the figure.
-    save
-        Filename where to save the plots. If `None`, just shows the plot.
     legend_kwargs
         Keyword arguments for :func:`matplotlib.axes.Axes.legend`, such as `'loc'` for legend position.
         For `mode='paga_pie'` and `basis='...'`, this controls the placement of the absorption probabilities legend.
-    figsize
-        Size of the figure. If `None`, it will be set automatically.
-    dpi
-        Dots per inch.
+    %(plotting)s
     kwargs
         Keyword arguments for :func:`scvelo.pl.paga`, :func:`scanpy.pl.violin` or :func:`matplotlib.pyplot.bar`,
         depending on :paramref:`mode`.
 
     Returns
     -------
-    None
-        Nothing, just plots the fates for specified :paramref:`clusters` and :paramref:`lineages`.
-        Optionally saves the figure based on :paramref:`save`.
+    %(just_plots)s
     """
 
     from seaborn import heatmap, clustermap
@@ -411,12 +400,10 @@ def cluster_fates(
         raise ValueError(
             f"Not specifying cluster key is only available for modes `'bar'` and `'violin'`, found `mode={mode!r}`."
         )
-    if lineage_key is None:
-        lk = str(AbsProbKey.FORWARD if final else AbsProbKey.BACKWARD)
-    else:
-        lk = lineage_key
+
+    lk = str(AbsProbKey.FORWARD if final else AbsProbKey.BACKWARD)
     points = "final states" if final else "root states"
-    dir_prefix = "To" if final else "From"
+    dir_prefix = "to" if final else "from"  # TODO: ssot
 
     if cluster_key is not None:
         is_all = False
@@ -533,8 +520,8 @@ def similarity_plot(
        :width: 400px
        :align: center
 
-    Params
-    ------
+    Parameters
+    ----------
     adata: :class:`anndata.AnnData`
         Annotated data object.
     cluster_key
