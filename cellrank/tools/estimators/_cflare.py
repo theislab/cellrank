@@ -303,7 +303,7 @@ class CFLARE(BaseEstimator, Eigen):
         n_lineages: Optional[int],
         keys: Optional[Sequence[str]] = None,
         cluster_key: Optional[str] = None,
-        **_,
+        **kwargs,
     ):
         """
         Run the pipeline, computing the absorption probabilities.
@@ -324,8 +324,14 @@ class CFLARE(BaseEstimator, Eigen):
             Nothing, just computes the absorption probabilities.
         """
 
+        comp_abs_probs = kwargs.pop("compute_absorption_probabilities", True)
+
         self.compute_eigendecomposition(k=20 if n_lineages is None else n_lineages + 1)
         self.compute_final_states(
-            cluster_key=cluster_key, n_clusters_kmeans=n_lineages, method="kmeans"
+            use=n_lineages,
+            cluster_key=cluster_key,
+            n_clusters_kmeans=n_lineages,
+            method="kmeans",
         )
-        self.compute_absorption_probabilities(keys=keys)
+        if comp_abs_probs:
+            self.compute_absorption_probabilities(keys=keys)
