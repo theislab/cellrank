@@ -377,6 +377,7 @@ class Plottable(KernelHolder, Property):
         self,
         data: pd.Series,
         prop: str,
+        cluster_key: Optional[str] = None,
         same_plot: bool = True,
         title: Optional[Union[str, List[str]]] = None,
         **kwargs,
@@ -386,6 +387,8 @@ class Plottable(KernelHolder, Property):
 
         Parameters
         ----------
+        cluster_key
+            Key from :paramref:`adata` `.obs` for plotting cluster labels.
         same_plot
             Whether to plot the lineages on the same plot or separately.
         title
@@ -415,6 +418,13 @@ class Plottable(KernelHolder, Property):
                 f"Unable to determine plotting conditions for property `.{prop}`."
             )
 
+        if cluster_key is None:
+            cluster_key = []
+        elif isinstance(cluster_key, str):
+            cluster_key = [cluster_key]
+        if not isinstance(cluster_key, list):
+            cluster_key = list(cluster_key)
+
         with RandomKeys(
             self.adata, None if same_plot else len(data.cat.categories), where="obs"
         ) as keys:
@@ -428,7 +438,15 @@ class Plottable(KernelHolder, Property):
                         f"{prop.replace('_', ' ')} "
                         f"({Direction.BACKWARD if self.kernel.backward else Direction.FORWARD})"
                     )
-                scv.pl.scatter(self.adata, title=title, color=key, **kwargs)
+                if isinstance(title, str):
+                    title = [title]
+
+                scv.pl.scatter(
+                    self.adata,
+                    title=cluster_key + title,
+                    color=cluster_key + keys,
+                    **kwargs,
+                )
             else:
                 for i, (key, cat) in enumerate(zip(keys, data.cat.categories)):
                     d = data.copy()
@@ -436,12 +454,14 @@ class Plottable(KernelHolder, Property):
                     d.cat.set_categories([cat], inplace=True)
 
                     self.adata.obs[key] = d
-                    self.adata.uns[f"{key}_colors"] = colors[i]
+                    self.adata.uns[f"{key}_colors"] = [colors[i]]
 
                 scv.pl.scatter(
                     self.adata,
-                    color=keys,
-                    title=list(data.cat.categories) if title is None else title,
+                    color=cluster_key + keys,
+                    title=(cluster_key + list(data.cat.categories))
+                    if title is None
+                    else title,
                     **kwargs,
                 )
 
@@ -546,10 +566,10 @@ class Plottable(KernelHolder, Property):
         color = list(X.T) + diff_potential
         if title is None:
             if same_plot:
-                title = (
+                title = [
                     f"{prop.replace('_', ' ')} "
                     f"({DirectionPlot.BACKARD if self.kernel.backward else Direction.FORWARD})"
-                )
+                ]
             else:
                 title = [f"{prefix} {lin}" for lin in lineages] + (
                     ["differentiation potential"] if diff_potential else []
@@ -557,9 +577,16 @@ class Plottable(KernelHolder, Property):
         elif isinstance(title, str):
             title = [title]
 
-        if cluster_key is not None:
-            color = [cluster_key] + color
-            title = [cluster_key] + title
+        if isinstance(cluster_key, str):
+            cluster_key = [cluster_key]
+        elif cluster_key is None:
+            cluster_key = []
+        if not isinstance(cluster_key, list):
+            cluster_key = list(cluster_key)
+
+        if not same_plot:
+            color = cluster_key + color
+            title = cluster_key + title
 
         if mode == "embedding":
             if same_plot:
