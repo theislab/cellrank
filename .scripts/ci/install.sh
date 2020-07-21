@@ -3,7 +3,7 @@
 set -e
 
 if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-    pip3 install -e".[test]"
+    pip3 install -e".[test]" --user
 elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
     if [[ "$CACHE_NAME" == "krylov" ]]; then
         pip install -e.[krylov,test]
