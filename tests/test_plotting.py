@@ -1023,7 +1023,7 @@ class TestCFLARE:
         mc.plot_final_states(dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
-    def test_scvelo_final_states(self, mc: CFLARE, fpath: str):
+    def test_scvelo_final_states_clusters(self, mc: CFLARE, fpath: str):
         mc.plot_final_states(cluster_key="clusters", dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
@@ -1185,6 +1185,36 @@ class TestGPCCA:
     @compare(kind="gpcca")
     def test_scvelo_gpcca_final_states_time(self, mc: GPCCA, fpath: str):
         mc.plot_final_states(mode="time", dpi=DPI, save=fpath)
+
+    @compare(kind="gpcca")
+    def test_scvelo_gpcca_abs_probs_disc_same(self, mc: GPCCA, fpath: str):
+        mc.plot_absorption_probabilities(
+            cluster_key="clusters", discrete=True, same_plot=True, dpi=DPI, save=fpath
+        )
+
+    @compare(kind="gpcca")
+    def test_scvelo_gpcca_abs_probs_disc_not_same(self, mc: GPCCA, fpath: str):
+        mc.plot_absorption_probabilities(
+            cluster_key="clusters", discrete=True, same_plot=False, dpi=DPI, save=fpath
+        )
+
+    @compare(kind="gpcca")
+    def test_scvelo_gpcca_abs_probs_cont_same_no_clusters(self, mc: GPCCA, fpath: str):
+        mc.plot_absorption_probabilities(
+            discrete=False, same_plot=True, dpi=DPI, save=fpath
+        )
+
+    @compare(kind="gpcca")
+    def test_scvelo_gpcca_abs_probs_cont_same_clusters(self, mc: GPCCA, fpath: str):
+        mc.plot_absorption_probabilities(
+            cluster_key="clusters", discrete=False, same_plot=True, dpi=DPI, save=fpath
+        )
+
+    @compare(kind="gpcca")
+    def test_scvelo_gpcca_abs_probs_cont_not_same(self, mc: GPCCA, fpath: str):
+        mc.plot_absorption_probabilities(
+            cluster_key="clusters", discrete=False, same_plot=False, dpi=DPI, save=fpath
+        )
 
 
 class TestLineages:
