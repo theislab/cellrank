@@ -148,7 +148,7 @@ def adata_cflare(adata_cflare=_create_cflare(backward=False)) -> AnnData:
 
 @pytest.fixture
 def lineage():
-    return cr.tl.Lineage(
+    x = cr.tl.Lineage(
         np.array(
             [
                 [1.23459664e-01, 1.29965675e-01, 1.92828002e-01, 9.39402664e-01],
@@ -165,3 +165,4 @@ def lineage():
         ),
         names=["foo", "bar", "baz", "quux"],
     )
+    return x / x.sum(1)

@@ -109,7 +109,20 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
                 )
             was_from_eigengap = True
             n_states = self._get(P.EIG)["eigengap"] + 1
-            logg.info(f"Using `{n_states}` states based on eigengap")
+            logg.info(f"oUsing `{n_states}` states based on eigengap")
+
+        if n_states <= 0:
+            raise ValueError(
+                f"Expected `n_states` to be positive or `None`, found `{n_states}`."
+            )
+
+        if self._invalid_n_states is not None and n_states in self._invalid_n_states:
+            logg.warning(
+                f"Unable to compute metastable states with `n_states={n_states}` because it will "
+                f"split conjugate eigenvalues. Increasing `n_states` to `{n_states + 1}`"
+            )
+            n_states += 1  # cannot force recomputation of Schur decomposition
+            assert n_states not in self._invalid_n_states, "Sanity check failed."
 
         if n_states == 1:
             self._compute_meta_for_one_state(
@@ -121,22 +134,24 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             return
 
         if self._gpcca is None:
-            if was_from_eigengap:
-                logg.warning(
-                    f"Number of states ({n_states}) was automatically determined by `eigengap` "
-                    "but no Schur decomposition was found. Computing with default parameters"
-                )
-                self.compute_schur(n_states + 1)
-            else:
+            if not was_from_eigengap:
                 raise RuntimeError(
                     "Compute Schur decomposition first as `.compute_schur()`."
                 )
+
+            logg.warning(
+                f"Number of states ({n_states}) was automatically determined by `eigengap` "
+                "but no Schur decomposition was found. Computing with default parameters"
+            )
+            # this cannot fail if splitting occurrs
+            # if it were to split, it's automatically increased in `compute_schur`
+            self.compute_schur(n_states + 1)
 
         if use_min_chi:
             n_states = self._get_n_states_from_minchi(n_states)
         elif not isinstance(n_states, int):
             raise ValueError(
-                f"Expected `n_states` to be an integer when `use_min_chi=False`, found `{type(n_states).__name__}`."
+                f"Expected `n_states` to be an integer when `use_min_chi=False`, found `{type(n_states).__name__!r}`."
             )
 
         if self._gpcca.X.shape[1] < n_states:
@@ -150,20 +165,11 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         try:
             self._gpcca = self._gpcca.optimize(m=n_states)
         except ValueError as e:
-            if n_states != self._get(P.SCHUR).shape[1]:
-                raise e
-            logg.warning(
-                f"Unable to perform the optimization using `{self._get(P.SCHUR).shape[1]}` Schur vectors. "
-                f"Recomputing the decomposition"
-            )
-
-            self.compute_schur(
-                n_states + 1,
-                initial_distribution=self._gpcca.eta,
-                method=self._gpcca.method,
-                which=self._gpcca.z,
-                alpha=self._get(P.EIG)["params"]["alpha"],
-            )
+            # this is the following cage - we have 4 Schur vectors, user requests 5 states, but it splits the conj. ev.
+            # in the try block, schur decomposition with 5 vectors is computed, but it fails (no way of knowing)
+            # so in this case, we increate it by 1
+            n_states += 1
+            logg.warning(f"{e}\nIncreasing `n_states` to `{n_states}`")
             self._gpcca = self._gpcca.optimize(m=n_states)
 
         self._set_meta_states(

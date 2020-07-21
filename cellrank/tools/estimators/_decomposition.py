@@ -4,12 +4,13 @@ from abc import ABC
 from typing import Any, Tuple, Union, Mapping, Optional
 from pathlib import Path
 
+import numpy as np
+from scipy.sparse.linalg import eigs
+
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-import numpy as np
 from cellrank import logging as logg
-from scipy.sparse.linalg import eigs
 from cellrank.utils._docs import d, inject_docs
 from cellrank.tools._utils import save_fig, _eigengap
 from cellrank.tools.estimators._utils import Metadata, _delegate
@@ -318,6 +319,7 @@ class Schur(VectorPlottable, Decomposable):
         Metadata(attr=A.SCHUR, prop=P.SCHUR, dtype=np.ndarray, compute_fmt=F.NO_FUNC),
         Metadata(attr=A.SCHUR_MAT, prop=P.SCHUR_MAT, dtype=np.ndarray),
         Metadata(attr=A.EIG, prop=P.EIG, dtype=Mapping[str, Any]),
+        Metadata(attr="_invalid_n_states", prop=P.NO_PROPERTY, dtype=np.ndarray),
         Metadata(attr="_gpcca", prop=P.NO_PROPERTY),
     ]
 
@@ -379,6 +381,11 @@ class Schur(VectorPlottable, Decomposable):
         # make it available for plotting
         setattr(self, A.SCHUR.s, self._gpcca.X)
         setattr(self, A.SCHUR_MAT.s, self._gpcca.R)
+
+        self._invalid_n_states = np.where(self._gpcca.eigenvalues.imag < 0)[0]
+        logg.info(
+            f"When computing metastable states, choose a number of states NOT in `{list(self._invalid_n_states)}`"
+        )
 
         self._write_eig_to_adata(
             {
