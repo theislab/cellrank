@@ -2,7 +2,7 @@ anndata>=0.7.2
 docrep>=0.2.7
 future_fstrings
 joblib>=0.13.1
-matplotlib>=3.0.3
+matplotlib>=3.3.0
 networkx>=2.2
 numpy>=1.16.4
 pandas>=0.23.4

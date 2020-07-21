@@ -6,6 +6,11 @@ from typing import Any, Tuple, Union, TypeVar, Optional, Sequence
 from pathlib import Path
 from collections import Iterable, defaultdict
 
+import numpy as np
+import pandas as pd
+from pandas.api.types import is_categorical_dtype
+from scipy.ndimage.filters import convolve
+
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
@@ -13,14 +18,10 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
-import numpy as np
-import pandas as pd
 from cellrank import logging as logg
-from pandas.api.types import is_categorical_dtype
 from cellrank.utils._docs import d
 from cellrank.tools._utils import save_fig, _unique_order_preserving
 from cellrank.utils._utils import _get_n_cores, check_collection
-from scipy.ndimage.filters import convolve
 from cellrank.tools._colors import _create_categorical_colors
 from cellrank.plotting._utils import _fit, _model_type, _create_models, _is_any_gam_mgcv
 from cellrank.tools._constants import AbsProbKey
@@ -282,7 +283,11 @@ def heatmap(
             ax.set_xticks(np.linspace(x_min, x_max, _N_XTICKS))
 
             ax.set_yticks(np.array(ys) + lineage_height / 2)
-            ax.set_yticklabels(lineages)
+            ax.set_yticklabels(
+                list(lineages) + ["absorption probabilty"]
+                if show_absorption_probabilities
+                else []
+            )
             ax.set_title(gene)
             ax.set_ylabel("Lineage")
 
