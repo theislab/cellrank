@@ -2,7 +2,7 @@
 """Generalized Perron Cluster Cluster Analysis [GPCCA18]_."""
 
 from types import MappingProxyType
-from typing import Any, Dict, List, Tuple, Union, Mapping, Iterable, Optional
+from typing import Any, Dict, List, Tuple, Union, Mapping, Iterable, Optional, Sequence
 from pathlib import Path
 
 import matplotlib as mpl
@@ -57,8 +57,8 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         n_states: Optional[
             Union[int, Tuple[int, int], List[int], Dict[str, int]]
         ] = None,
-        use_min_chi: bool = False,
         n_cells: Optional[int] = 30,
+        use_min_chi: bool = False,
         cluster_key: str = None,
         en_cutoff: Optional[float] = 0.7,
         p_thresh: float = 1e-15,
@@ -70,11 +70,11 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         ----------
         n_states
             Number of metastable states. If `None`, use the `eigengap` heuristic.
+        %(n_cells)s
         use_min_chi
             Whether to use :meth:`msmtools.analysis.dense.gpcca.GPCCA.minChi` to calculate the number of metastable
             states. If `True`, :paramref:`n_states` corresponds to an interval `[min, max]` inside of which
             the potentially optimal number of metastable states is searched.
-        %(n_cells)s
         cluster_key
             If a key to cluster labels is given, `approx_rcs` will ge associated with these for naming and colors.
         en_cutoff
@@ -100,8 +100,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         if n_states is None:
             if self._get(P.EIG) is None:
                 raise RuntimeError(
-                    f"Compute eigendecomposition first as `.{F.COMPUTE.fmt(P.EIG)}()` "
-                    f"or `.{F.COMPUTE.fmt(P.SCHUR)}()`."
+                    "Compute eigendecomposition first as `.compute_eigendecomposition()` or `.compute_schur()`."
                 )
             was_from_eigengap = True
             n_states = self._get(P.EIG)["eigengap"] + 1
@@ -122,7 +121,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
                     f"Number of states ({n_states}) was automatically determined by `eigengap` "
                     "but no Schur decomposition was found. Computing with default parameters"
                 )
-                self._get(F.COMPUTE.fmt(P.SCHUR))(n_states + 1)
+                self.compute_schur(n_states + 1)
             else:
                 raise RuntimeError(
                     "Compute Schur decomposition first as `.compute_schur()`."
@@ -153,7 +152,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
                 f"Recomputing the decomposition"
             )
 
-            self._get(F.COMPUTE.fmt(P.SCHUR))(
+            self.compute_schur(
                 n_states + 1,
                 initial_distribution=self._gpcca.eta,
                 method=self._gpcca.method,
@@ -197,16 +196,19 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
                     self._gpcca.coarse_grained_stationary_probability, index=names,
                 ),
             )
+            logg.info(
+                f"Adding `.{P.SCHUR}`\n"
+                f"       `.{P.COARSE_T}`\n"
+                f"       `.{P.COARSE_STAT_D}`\n"
+                f"    Finish",
+                time=start,
+            )
         else:
             logg.warning("No stationary distribution found in GPCCA object")
-
-        logg.info(
-            f"Adding `.{P.SCHUR}`\n"
-            f"       `.{P.COARSE_T}`\n"
-            f"       `.{P.COARSE_STAT_D}`\n"
-            f"    Finish",
-            time=start,
-        )
+            logg.info(
+                f"Adding `.{P.SCHUR}`\n" f"       `.{P.COARSE_T}`\n" f"    Finish",
+                time=start,
+            )
 
     @d.dedent
     def set_final_states_from_metastable_states(
@@ -237,6 +239,12 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
 
         probs = self._get(P.META_PROBS)
 
+        if probs is None:
+            raise RuntimeError(
+                "Compute metastable_states first as `.compute_metastable_states()` with "
+                "`n_states > 1`."
+            )
+
         if names is None:
             names = probs.names
 
@@ -264,6 +272,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
 
         self._write_final_states()
 
+    @inject_docs(fin_states=P.FIN, fin_states_probs=P.FIN_PROBS)
     def compute_final_states(
         self,
         method: str = "eigengap",
@@ -300,8 +309,8 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         None
             Nothing, just updates the following fields:
 
-                - :paramref:`final_states_probabilities`
-                - :paramref:`final_states`
+                - :paramref:`{fin_states_probs}`
+                - :paramref:`{fin_states}`
         """  # noqa
         if len(self._get(P.META).cat.categories) == 1:
             logg.warning(
@@ -315,19 +324,19 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         if method == "eigengap":
             if self._get(P.EIG) is None:
                 raise RuntimeError(
-                    "Compute eigendecomposition first as `.compute_eig()`."
+                    "Compute eigendecomposition first as `.compute_eigendecomposition()`."
                 )
             n_main_states = _eigengap(self._get(P.EIG)["D"], alpha=alpha) + 1
         elif method == "eigengap_coarse":
             if coarse_T is None:
                 raise RuntimeError(
-                    f"Compute metastable states first as `.{F.COMPUTE.fmt(P.META)}()`."
+                    "Compute metastable states first as `.compute_metastable_states()`."
                 )
             n_main_states = _eigengap(np.sort(np.diag(coarse_T)[::-1]), alpha=alpha)
         elif method == "top_n":
             if n_main_states is None:
                 raise ValueError(
-                    "Argument `n_main_states` must not be `None` for `method='top_n'`."
+                    "Argument `n_main_states` must != `None` for `method='top_n'`."
                 )
             elif n_main_states <= 0:
                 raise ValueError(
@@ -336,7 +345,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         elif method == "min_self_prob":
             if min_self_prob is None:
                 raise ValueError(
-                    "Argument `min_self_prob` must not be `None` for `method='min_self_prob'`."
+                    "Argument `min_self_prob` must != `None` for `method='min_self_prob'`."
                 )
             self_probs = pd.Series(np.diag(coarse_T), index=coarse_T.columns)
             names = self_probs[self_probs.values >= min_self_prob].index
@@ -406,13 +415,13 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
 
         if self._get(P.SCHUR) is None:
             logg.warning("No Schur decomposition found. Computing")
-            self._get(F.COMPUTE.fmt(P.SCHUR))(n_components, **kwargs)
+            self.compute_schur(n_components, **kwargs)
         elif self._get(P.SCHUR_MAT).shape[1] < n_components:
             logg.warning(
                 f"Requested `{n_components}` components, but only `{self._get(P.SCHUR_MAT).shape[1]}` were found. "
                 f"Recomputing using default values"
             )
-            self._get(F.COMPUTE.fmt(P.SCHUR))(n_components)
+            self.compute_schur(n_components)
         else:
             logg.debug("Using cached Schur decomposition")
 
@@ -473,7 +482,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             Whether to show colorbar.
         title
             Title of the figure.
-        %s(plotting)s
+        %(plotting)s
         text_kwargs
             Keyword arguments for :func:`matplotlib.pyplot.text`.
         **kwargs
@@ -556,7 +565,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
 
         if coarse_T is None:
             raise RuntimeError(
-                f"Compute coarse-grained transition matrix first as `.{F.COMPUTE.fmt(P.META)}()` with `n_states` > 1."
+                "Compute coarse-grained transition matrix first as `.compute_metastable_states()` with `n_states > 1`."
             )
 
         if show_stationary_dist and coarse_stat_d is None:
@@ -671,7 +680,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         start = logg.info("Computing metastable states")
         logg.warning("For `n_states=1`, stationary distribution is computed")
 
-        self._get(F.COMPUTE.fmt(P.EIG))(only_evals=False, which="LM")
+        self.compute_eigendecomposition(only_evals=False, which="LM")
         stationary_dist = self._get(P.EIG)["stationary_dist"]
 
         self._set_meta_states(
@@ -801,7 +810,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             attr_key=A.META.v,
             color_key=A.META_COLORS.v,
             pretty_attr_key=P.META.v,
-            add_to_existing_error_msg=f"Compute metastable states first as `.{F.COMPUTE.fmt(P.META)}()`.",
+            add_to_existing_error_msg="Compute metastable states first as `.compute_metastable_states()`.",
             categories=metastable_states,
             cluster_key=cluster_key,
             en_cutoff=en_cutoff,
@@ -855,3 +864,73 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         )
 
         return (states, not_enough_cells) if return_not_enough_cells else states
+
+    @d.get_sectionsf("gpcca_fit")
+    @d.dedent
+    def fit(
+        self,
+        n_lineages: Optional[int] = None,
+        cluster_key: Optional[str] = None,
+        keys: Optional[Sequence[str]] = None,
+        method: str = "krylov",
+        **kwargs,
+    ):
+        """
+        Run the pipeline, computing the metastable states and absorption probabilities.
+
+        It is equivalent to running::
+
+            compute_eigendecomposition(...)  # optional
+            compute_schur(...)
+            compute_metastable_states(...)
+
+            compute_final_states(...)   # if `n_lineages=None`
+            set_final_states_from_metastable_states(...)   # otherwise
+
+            compute_absorption_probabilities(...)
+
+        Parameters
+        ----------
+        %(fit)s
+        method
+            Method to use when computing the Schur decomposition. Valid options are: `'krylov'`, `'brandts'`.
+        **kwargs
+            Keyword arguments for :meth:`cellrank.tl.GPCCA.compute_metastable_states`.
+
+        Returns
+        -------
+        None
+            Nothing, just computes the absorption probabilities.
+        """
+
+        if n_lineages is None or n_lineages == 1:
+            self.compute_eigendecomposition()
+            if n_lineages is None:
+                n_lineages = self.eigendecomposition["eigengap"] + 1
+
+        if n_lineages > 1:
+            self.compute_schur(n_lineages + 1, method=method)
+
+        try:
+            self.compute_metastable_states(
+                n_states=n_lineages, cluster_key=cluster_key, **kwargs
+            )
+        except ValueError:
+            logg.warning(
+                f"Computing `{n_lineages}` metastable states cuts through a block of complex conjugates. "
+                f"Increasing `n_lineages` to {n_lineages + 1}"
+            )
+            self.compute_metastable_states(
+                n_states=n_lineages + 1, cluster_key=cluster_key, **kwargs
+            )
+
+        if len(self._get(P.META).cat.categories) == 1:
+            # stationary distribution
+            self._set(A.FIN, self._get(P.META))
+            self._set(A.FIN_COLORS, self._get(A.META_COLORS))
+        elif n_lineages is None:
+            self.compute_final_states(method="eigengap")
+        else:
+            self.set_final_states_from_metastable_states()
+
+        self.compute_absorption_probabilities(keys=keys)

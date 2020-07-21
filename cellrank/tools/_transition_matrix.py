@@ -17,8 +17,8 @@ AnnData = TypeVar("AnnData")
 @d.dedent
 def transition_matrix(
     adata: AnnData,
-    vkey: str = "velocity",
     backward: bool = False,
+    vkey: str = "velocity",
     weight_connectivities: Optional[float] = None,
     sigma_corr: Optional[float] = None,
     scale_by_variances: bool = False,
@@ -40,10 +40,9 @@ def transition_matrix(
     Parameters
     ----------
     %(adata)s
+    %(backward)s
     vkey
         Key from :paramref:`adata` `.layers` to access the velocities.
-    backward
-        Direction of the process.
     weight_connectivities
         Weight given to transcriptomic similarities as opposed to velocities. Must be in `[0, 1]`.
     use_negative_cosines

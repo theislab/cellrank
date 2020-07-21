@@ -2,7 +2,7 @@
 """Abstract base class for all kernel-holding estimators."""
 
 import pickle
-from abc import ABC
+from abc import ABC, abstractmethod
 from copy import deepcopy
 from typing import Any, Dict, Union, TypeVar, Optional, Sequence
 from pathlib import Path
@@ -34,6 +34,7 @@ from cellrank.tools._colors import (
 )
 from cellrank.tools._constants import (
     Direction,
+    DirPrefix,
     AbsProbKey,
     PrettyEnum,
     FinalStatesKey,
@@ -44,7 +45,7 @@ from cellrank.tools._constants import (
 )
 from cellrank.tools.kernels._kernel import KernelExpression
 from cellrank.tools.estimators._property import Partitioner, LineageEstimatorMixin
-from cellrank.tools.estimators._constants import A, F, P
+from cellrank.tools.estimators._constants import A, P
 
 AnnData = TypeVar("AnnData")
 
@@ -191,7 +192,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             attr_key=A.FIN.v,
             color_key=A.FIN_COLORS.v,
             pretty_attr_key=P.FIN.v,
-            add_to_existing_error_msg=f"Compute final states first as `.{F.COMPUTE.fmt(P.FIN)}()`.",
+            add_to_existing_error_msg="Compute final states first as `.compute_final_states()`.",
             categories=labels,
             cluster_key=cluster_key,
             en_cutoff=en_cutoff,
@@ -260,8 +261,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         """
         if self._get(P.FIN) is None:
             raise RuntimeError(
-                f"Compute final states first as `.{F.COMPUTE.fmt(P.FIN)}()` or set them manually as "
-                f"`.set_final_states()`."
+                "Compute final states first as `.compute_final_states()` or set them manually as "
+                "`.set_final_states()`."
             )
         if keys is not None:
             keys = sorted(set(keys))
@@ -434,11 +435,11 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
         # check that lineage probs have been computed
         abs_probs = self._get(P.ABS_PROBS)
-        prefix = "from" if self.kernel.backward else "from"
+        prefix = DirPrefix.BACKWARD if self.kernel.backward else DirPrefix.FORWARD
 
         if abs_probs is None:
             raise RuntimeError(
-                f"Compute absorption probabilities first as `.{F.COMPUTE.fmt(P.ABS_PROBS)}()`."
+                "Compute absorption probabilities first as `.compute_absorption_probabilities()`."
             )
 
         # check all lin_keys exist in self.lin_names
@@ -636,6 +637,11 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             time=time,
         )
 
+    @abstractmethod
+    def fit(self, *args, **kwargs):
+        """Fit the estimator."""
+        pass
+
     def _write_absorption_probabilities(self, time: float) -> None:
         self.adata.obsm[self._abs_prob_key] = self._get(P.ABS_PROBS)
 
@@ -654,10 +660,10 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             time=time,
         )
 
-    def _set(self, n, v) -> None:
+    def _set(self, n: Union[str, PrettyEnum], v: Any) -> None:
         setattr(self, n.s if isinstance(n, PrettyEnum) else n, v)
 
-    def _get(self, n) -> Any:
+    def _get(self, n: Union[str, PrettyEnum]) -> Any:
         return getattr(self, n.s if isinstance(n, PrettyEnum) else n)
 
     def _set_or_debug(

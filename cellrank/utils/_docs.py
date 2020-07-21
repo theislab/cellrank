@@ -43,6 +43,18 @@ alpha
 _n_cells = """\
 n_cells
     Number of most likely cells from each main to select."""
+_fit = """\
+n_lineages
+    Number of lineages. If `None`, it will be determined automatically.
+cluster_key
+    Match computed states against pre-computed clusters to annotate the states.
+    For this, provide a key from :paramref:`adata` `.obs` where cluster labels have been computed.
+keys
+    Determines which %(root_or_final) states to use by passing their names.
+    Further, %(root_or_final)s states can be combined. If e.g. the %(final)s states are
+    ['Neuronal_1', 'Neuronal_1', 'Astrocytes', 'OPC'], then passing keys=['Neuronal_1, Neuronal_2', 'OPC']
+    means that the two neuronal %(final)s states are treated as one and the 'Astrocyte' state is excluded.
+"""
 _root = "root"
 _final = "final"
 
@@ -69,4 +81,5 @@ d = DocstringProcessor(
     eigen=_eigen,
     root_or_final=f"{_root} or {_final}",
     n_cells=_n_cells,
+    fit=_fit,
 )
