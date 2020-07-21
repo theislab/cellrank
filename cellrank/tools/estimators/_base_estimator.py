@@ -660,13 +660,15 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
     def _get(self, n) -> Any:
         return getattr(self, n.s if isinstance(n, PrettyEnum) else n)
 
-    def _set_or_debug(self, needle: str, haystack, attr: Optional[str] = None):
+    def _set_or_debug(
+        self, needle: str, haystack, attr: Optional[str] = None
+    ) -> Optional[Any]:
         if needle in haystack:
             if attr is None:
                 return haystack[needle]
             setattr(self, attr, haystack[needle])
-        else:
-            logg.debug("")
+        elif attr is not None:
+            logg.debug(f"Unable to set attribute `.{attr}`. Skipping")
 
     def copy(self) -> "BaseEstimator":
         """Return a copy of self."""
