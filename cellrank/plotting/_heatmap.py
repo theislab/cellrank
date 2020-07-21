@@ -45,9 +45,10 @@ def heatmap(
     end_lineage: Optional[Union[str, Sequence[str]]] = None,
     cluster_key: Optional[Union[str, Sequence[str]]] = None,
     show_absorption_probabilities: bool = False,
-    cluster_genes: bool = True,
+    cluster_genes: bool = False,
     scale: bool = True,
     n_convolve: Optional[int] = 5,
+    show_all_genes: bool = False,
     show_cbar: bool = True,
     lineage_height: float = 0.1,
     xlabel: Optional[str] = None,
@@ -102,6 +103,8 @@ def heatmap(
         Whether to scale the expression per gene to `0-1` range.
     n_convolve
         Size of the convolution window when smoothing out absorption probabilities.
+    show_all_genes
+        Whether to show all genes on y-axis.
     show_cbar
         Whether to show the colorbar.
     lineage_height
@@ -202,7 +205,7 @@ def heatmap(
     def create_cbar(ax, x_delta: float, cmap, norm, label=None) -> Ax:
         cax = inset_axes(
             ax,
-            width="2%",
+            width="1%",
             height="100%",
             loc="lower right",
             bbox_to_anchor=(x_delta, 0, 1, 1),
@@ -331,6 +334,12 @@ def heatmap(
             df = pd.DataFrame([m.y_test for m in models.values()], index=genes)
             df.index.name = "Genes"
 
+            if not cluster_genes:
+                max_sort = np.argsort(
+                    np.argmax(df.apply(min_max_scale, axis=1).values, axis=1)
+                )
+                df = df.iloc[max_sort, :]
+
             cat_colors = None
             if cluster_key is not None:
                 cat_colors = np.stack(
@@ -365,6 +374,7 @@ def heatmap(
                 colors_ratio=0.05,
                 col_cluster=False,
                 cbar_pos=None,
+                yticklabels=show_all_genes or "auto",
                 standard_scale=0 if scale else None,
             )
             g.ax_heatmap.text(

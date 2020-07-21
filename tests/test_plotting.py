@@ -425,9 +425,23 @@ class TestHeatmap:
             adata,
             model,
             GENES[:10],
+            cluster_genes=False,
             kind="lineages",
             time_key="latent_time",
-            cluster_genes=False,
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_heatmap_cluster_genes(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.heatmap(
+            adata,
+            model,
+            GENES[:10],
+            kind="lineages",
+            time_key="latent_time",
+            cluster_genes=True,
             dpi=DPI,
             save=fpath,
         )
@@ -641,6 +655,19 @@ class TestHeatmap:
             GENES[:5],
             cluster_key=["clusters", "clusters_enlarged", "clusters"],
             show_absorption_probabilities=True,
+            kind="lineages",
+            time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_heatmap_multiplecluster_show_all_genes(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.heatmap(
+            adata,
+            model,
+            GENES[:10],
             kind="lineages",
             time_key="latent_time",
             dpi=DPI,
