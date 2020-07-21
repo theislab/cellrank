@@ -7,6 +7,8 @@ from copy import deepcopy
 from typing import Any, Dict, Union, TypeVar, Optional, Sequence
 from pathlib import Path
 
+from matplotlib.colors import is_color_like
+
 import numpy as np
 import pandas as pd
 from pandas import Series
@@ -69,8 +71,6 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         Key from :paramref:`adata` `.obs`. Can be used to detect cell-cycle driven start- or endpoints.
     key_added
         Key in :paramref:`adata` where to store the final transition matrix.
-    **kwargs
-        Keyword arguments for :meth:`cellrank.tl.BaseEstimator.read_from_adata`.
     """
 
     def __init__(
@@ -82,7 +82,6 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         g2m_key: Optional[str] = "G2M_score",
         s_key: Optional[str] = "S_score",
         key_added: Optional[str] = None,
-        **kwargs,
     ):
         from anndata import AnnData
 
@@ -106,109 +105,44 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         self._S_score = None
 
         if read_from_adata:
-            self._read_from_adata(**kwargs)
+            self._read_from_adata()
 
-    def _set(self, n, v) -> None:
-        setattr(self, n.s if isinstance(n, PrettyEnum) else n, v)
+    def _read_from_adata(self) -> None:
+        self._set_or_debug(f"eig_{self._direction}", self.adata.uns, "_eig")
 
-    def _get(self, n) -> Any:
-        return getattr(self, n.s if isinstance(n, PrettyEnum) else n)
+        self._set_or_debug(self._g2m_key, self.adata.obs, "_G2M_score")
+        self._set_or_debug(self._s_key, self.adata.obs, "_S_score")
 
-    # TODO: refactor...
-    def _read_from_adata(
-        self, g2m_key: Optional[str] = None, s_key: Optional[str] = None, **kwargs
-    ) -> None:
-        raise NotImplementedError()
+        self._set_or_debug(self._fs_key, self.adata.obs, A.FIN.s)
+        self._set_or_debug(_probs(self._fs_key), self.adata.obs, A.FIN_PROBS.s)
+        self._set_or_debug(_colors(self._fs_key), self.adata.uns, A.FIN_COLORS.s)
 
-        if f"eig_{self._direction}" in self._adata.uns.keys():
-            self._eig = self._adata.uns[f"eig_{self._direction}"]
-        else:
-            logg.debug(f"`eig_{self._direction}` not found. Setting `.eig` to `None`")
+        self._set_or_debug(self._abs_prob_key, self.adata.obsm, A.ABS_RPOBS.s)
+        self._set_or_debug(_dp(self._abs_prob_key), self.adata.obs, A.DIFF_POT.s)
+        names = self._set_or_debug(_lin_names(self._abs_prob_key), self.adata.uns)
+        colors = self._set_or_debug(_colors(self._abs_prob_key), self.adata.uns)
 
-        if self._rc_key in self._adata.obs.keys():
-            self._meta_states = self._adata.obs[self._rc_key]
-        else:
-            logg.debug(
-                f"`{self._rc_key}` not found in `adata.obs`. Setting `.metastable_states` to `None`"
-            )
-
-        if _colors(self._rc_key) in self._adata.uns.keys():
-            self._meta_states_colors = self._adata.uns[_colors(self._rc_key)]
-        else:
-            logg.debug(
-                f"`{_colors(self._rc_key)}` not found in `adata.uns`. "
-                f"Setting `.metastable_states_colors`to `None`"
-            )
-
-        if self._lin_key in self._adata.obsm.keys():
-            lineages = range(self._adata.obsm[self._lin_key].shape[1])
-            colors = _create_categorical_colors(len(lineages))
-            self._lin_probs = Lineage(
-                self._adata.obsm[self._lin_key],
-                names=[f"Lineage {i + 1}" for i in lineages],
-                colors=colors,
-            )
-            self._adata.obsm[self._lin_key] = self._lin_probs
-        else:
-            logg.debug(
-                f"`{self._lin_key}` not found in `adata.obsm`. Setting `.lin_probs` to `None`"
-            )
-
-        if _dp(self._lin_key) in self._adata.obs.keys():
-            self._dp = self._adata.obs[_dp(self._lin_key)]
-        else:
-            logg.debug(
-                f"`{_dp(self._lin_key)}` not found in `adata.obs`. Setting `.diff_potential` to `None`"
-            )
-
-        if g2m_key and g2m_key in self._adata.obs.keys():
-            self._G2M_score = self._adata.obs[g2m_key]
-        else:
-            logg.debug(
-                f"`{g2m_key}` not found in `adata.obs`. Setting `.G2M_score` to `None`"
-            )
-
-        if s_key and s_key in self._adata.obs.keys():
-            self._S_score = self._adata.obs[s_key]
-        else:
-            logg.debug(
-                f"`{s_key}` not found in `adata.obs`. Setting `.S_score` to `None`"
-            )
-
-        if _probs(self._rc_key) in self._adata.obs.keys():
-            self._meta_states_probs = self._adata.obs[_probs(self._rc_key)]
-        else:
-            logg.debug(
-                f"`{_probs(self._rc_key)}` not found in `adata.obs`. "
-                f"Setting `.metastable_states_probs` to `None`"
-            )
-
-        if self._lin_probs is not None:
-            if _lin_names(self._lin_key) in self._adata.uns.keys():
-                self._lin_probs = Lineage(
-                    np.array(self._lin_probs),
-                    names=self._adata.uns[_lin_names(self._lin_key)],
-                    colors=self._lin_probs.colors,
-                )
-                self._adata.obsm[self._lin_key] = self._lin_probs
-            else:
+        abs_probs = self._get(P.ABS_PROBS)
+        if abs_probs is not None:
+            if len(names) != abs_probs.shape[1]:
                 logg.debug(
-                    f"`{_lin_names(self._lin_key)}` not found in `adata.uns`. "
-                    f"Using default names"
+                    f"Expected lineage names to be of length `{abs_probs.shape[1]}`, found `{len(names)}`. "
+                    f"Creating new names"
                 )
-
-            if _colors(self._lin_key) in self._adata.uns.keys():
-                self._lin_probs = Lineage(
-                    np.array(self._lin_probs),
-                    names=self._lin_probs.names,
-                    colors=self._adata.uns[_colors(self._lin_key)],
-                )
-                self._adata.obsm[self._lin_key] = self._lin_probs
-            else:
+                names = [f"Lineage {i}" for i in range(abs_probs.shape[1])]
+            if len(colors) != abs_probs.shape[1] or not all(
+                map(lambda c: isinstance(c, str) and is_color_like(c), colors)
+            ):
                 logg.debug(
-                    f"`{_colors(self._lin_key)}` not found in `adata.uns`. "
-                    f"Using default colors"
+                    f"Expected lineage colors to be of length `{abs_probs.shape[1]}`, found `{len(names)}`. "
+                    f"Creating new colors"
                 )
+                colors = _create_categorical_colors(abs_probs.shape[1])
+            self._set(A.ABS_RPOBS, Lineage(abs_probs, names=names, colors=colors))
+
+            self.adata.obsm[self._abs_prob_key] = self._get(P.ABS_PROBS)
+            self.adata.uns[_lin_names(self._abs_prob_key)] = names
+            self.adata.uns[_colors(self._abs_prob_key)] = colors
 
     @inject_docs(fin_states=P.FIN.s)
     def set_final_states(
@@ -703,22 +637,36 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         )
 
     def _write_absorption_probabilities(self, time: float) -> None:
-        self.adata.obsm[self._abs_prob_key] = self._get(P.DIFF_POT)
+        self.adata.obsm[self._abs_prob_key] = self._get(P.ABS_PROBS)
 
         abs_prob = self._get(P.ABS_PROBS)
-        self.adata.obs[_dp(self._abs_prob_key)] = abs_prob
+        self.adata.obs[_dp(self._abs_prob_key)] = self._get(P.DIFF_POT)
 
         self.adata.uns[_lin_names(self._abs_prob_key)] = abs_prob.names
         self.adata.uns[_colors(self._abs_prob_key)] = abs_prob.colors
 
         logg.info(
-            f"Adding `adata.obs[{self._abs_prob_key!r}]`\n"
-            f"       `adata.obs[{_probs(self._abs_prob_key)!r}]`\n"
+            f"Adding `adata.obsm[{self._abs_prob_key!r}]`\n"
+            f"       `adata.obs[{_dp(self._abs_prob_key)!r}]`\n"
             f"       `.{P.ABS_PROBS}`\n"
             f"       `.{P.DIFF_POT}`\n"
             "    Finish",
             time=time,
         )
+
+    def _set(self, n, v) -> None:
+        setattr(self, n.s if isinstance(n, PrettyEnum) else n, v)
+
+    def _get(self, n) -> Any:
+        return getattr(self, n.s if isinstance(n, PrettyEnum) else n)
+
+    def _set_or_debug(self, needle: str, haystack, attr: Optional[str] = None):
+        if needle in haystack:
+            if attr is None:
+                return haystack[needle]
+            setattr(self, attr, haystack[needle])
+        else:
+            logg.debug("")
 
     def copy(self) -> "BaseEstimator":
         """Return a copy of self."""
