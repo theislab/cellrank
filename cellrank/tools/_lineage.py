@@ -8,13 +8,14 @@ from pathlib import Path
 from functools import wraps
 from itertools import combinations
 
+import numpy as np
+import pandas as pd
+from scipy.stats import entropy
+
 import matplotlib.colors as c
 import matplotlib.pyplot as plt
 
-import numpy as np
-import pandas as pd
 from cellrank import logging as logg
-from scipy.stats import entropy
 from cellrank.utils._docs import d
 from cellrank.tools._utils import (
     save_fig,
@@ -607,6 +608,12 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
     def __str__(self):
         return f'{super().__str__()}\n names=[{", ".join(self.names)}]'
 
+    @property
+    def _fmt(self) -> Callable:
+        if np.issubdtype(self.dtype, np.float):
+            return "{:.06f}".format
+        return "{}".format
+
     def _repr_html_(self) -> str:
         def format_row(r):
             rng = (
@@ -619,7 +626,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             )
 
             cells = "".join(
-                f"<td style='text-align: right;'>" f"{self.X[r, c]:.06f}" f"</td>"
+                f"<td style='text-align: right;'>" f"{self._fmt(self.X[r, c])}" f"</td>"
                 if isinstance(c, int)
                 else _DUMMY_CELL
                 for c in rng
