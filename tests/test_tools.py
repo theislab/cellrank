@@ -7,7 +7,7 @@ from anndata import AnnData
 import cellrank as cr
 from _helpers import create_model
 from cellrank.tools.kernels import Kernel
-from cellrank.tools._constants import AbsProbKey
+from cellrank.tools._constants import AbsProbKey, FinalStatesKey, _probs
 
 
 class TestGeneImportance:
@@ -118,12 +118,14 @@ class TestRootFinal:
     def test_find_root(self, adata: AnnData):
         cr.tl.root_states(adata)
 
-        assert str(AbsProbKey.BACKWARD) in adata.obsm.keys()
+        assert str(FinalStatesKey.BACKWARD) in adata.obs.keys()
+        assert _probs(FinalStatesKey.BACKWARD) in adata.obs.keys()
 
     def test_find_final(self, adata: AnnData):
         cr.tl.final_states(adata)
 
-        assert str(AbsProbKey.FORWARD) in adata.obsm.keys()
+        assert str(FinalStatesKey.FORWARD) in adata.obs.keys()
+        assert _probs(FinalStatesKey.FORWARD) in adata.obs.keys()
 
     def test_invalid_cluster_key(self, adata: AnnData):
         with pytest.raises(KeyError):
@@ -132,12 +134,6 @@ class TestRootFinal:
     def test_invalid_weight(self, adata: AnnData):
         with pytest.raises(ValueError):
             cr.tl.root_states(adata, weight_connectivities=10)
-
-    def test_invalid_percentile(self, adata: AnnData):
-        with pytest.raises(ValueError):
-            from cellrank.tools import CFLARE
-
-            cr.tl.root_states(adata, percentile=110, estimator=CFLARE)
 
 
 class TestTransitionMatrix:

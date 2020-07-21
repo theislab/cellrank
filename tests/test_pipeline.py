@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 
+import numpy as np
+from pandas.api.types import is_categorical_dtype
+
 from anndata import AnnData
 
-import numpy as np
 import cellrank as cr
-from pandas.api.types import is_categorical_dtype
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tools._constants import (
     Direction,
@@ -84,9 +85,9 @@ class TestHighLevelPipeline:
             method="brandts",
             show_plots=True,
         )
-        cr.tl.lineages(adata, backward=False)
-        cr.pl.lineages(adata, backward=False)
-        cr.tl.lineage_drivers(adata, use_raw=False, backward=False)
+        cr.tl.lineages(adata, backward=True)
+        cr.pl.lineages(adata, backward=True)
+        cr.tl.lineage_drivers(adata, use_raw=False, backward=True)
 
         _assert_has_all_keys(adata, Direction.BACKWARD)
 
@@ -112,9 +113,9 @@ class TestHighLevelPipeline:
             method="brandts",
             show_plots=True,
         )
-        cr.tl.lineages(adata, backward=False)
-        cr.pl.lineages(adata, backward=False)
-        cr.tl.lineage_drivers(adata, use_raw=False, backward=False)
+        cr.tl.lineages(adata, backward=True)
+        cr.pl.lineages(adata, backward=True)
+        cr.tl.lineage_drivers(adata, use_raw=False, backward=True)
 
         _assert_has_all_keys(adata, Direction.BACKWARD)
 
@@ -129,14 +130,14 @@ class TestLowLevelPipeline:
 
         estimator_fwd.compute_partition()
 
-        estimator_fwd.compute_eig()
+        estimator_fwd.compute_eigendecomposition()
         estimator_fwd.plot_spectrum()
         estimator_fwd.plot_spectrum(real_only=True)
-        estimator_fwd.plot_eig_embedding()
-        estimator_fwd.plot_eig_embedding(left=False)
+        estimator_fwd.plot_eigendecomposition()
+        estimator_fwd.plot_eigendecomposition(left=False)
 
-        estimator_fwd.compute_metastable_states(use=1)
-        estimator_fwd.plot_metastable_states()
+        estimator_fwd.compute_final_states(use=1)
+        estimator_fwd.plot_final_states()
 
         estimator_fwd.compute_absorption_probabilities()
         estimator_fwd.plot_absorption_probabilities()
@@ -154,14 +155,14 @@ class TestLowLevelPipeline:
 
         estimator_bwd.compute_partition()
 
-        estimator_bwd.compute_eig()
+        estimator_bwd.compute_eigendecomposition()
         estimator_bwd.plot_spectrum()
         estimator_bwd.plot_spectrum(real_only=True)
-        estimator_bwd.plot_eig_embedding()
-        estimator_bwd.plot_eig_embedding(left=False)
+        estimator_bwd.plot_eigendecomposition()
+        estimator_bwd.plot_eigendecomposition(left=False)
 
-        estimator_bwd.compute_metastable_states(use=1)
-        estimator_bwd.plot_metastable_states()
+        estimator_bwd.compute_final_states(use=1)
+        estimator_bwd.plot_final_states()
 
         estimator_bwd.compute_absorption_probabilities()
         estimator_bwd.plot_absorption_probabilities()
@@ -179,12 +180,12 @@ class TestLowLevelPipeline:
 
         estimator_fwd.compute_partition()
 
-        estimator_fwd.compute_eig()
+        estimator_fwd.compute_eigendecomposition()
         estimator_fwd.plot_spectrum()
         estimator_fwd.plot_spectrum(real_only=True)
 
         estimator_fwd.compute_schur(5, method="brandts")
-        estimator_fwd.plot_schur_embedding()
+        estimator_fwd.plot_schur()
 
         estimator_fwd.compute_metastable_states(3, n_cells=16)
         estimator_fwd.plot_metastable_states()
@@ -192,21 +193,21 @@ class TestLowLevelPipeline:
         estimator_fwd.plot_schur_matrix()
 
         # select all states
-        estimator_fwd.set_main_states(n_cells=16)
-        estimator_fwd.plot_main_states()
+        estimator_fwd.set_final_states_from_metastable_states(n_cells=16)
+        estimator_fwd.plot_final_states()
 
+        estimator_fwd.compute_absorption_probabilities()
         estimator_fwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
 
         _assert_has_all_keys(adata, Direction.FORWARD)
 
         # select a subset of states
-        estimator_fwd.set_main_states(
-            n_cells=16,
-            names=estimator_fwd.metastable_states.cat.categories[:2],
-            redistribute=False,
+        estimator_fwd.set_final_states_from_metastable_states(
+            n_cells=16, names=estimator_fwd.metastable_states.cat.categories[:2],
         )
-        estimator_fwd.plot_main_states()
+        estimator_fwd.plot_final_states()
 
+        estimator_fwd.compute_absorption_probabilities()
         estimator_fwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
 
         _assert_has_all_keys(adata, Direction.FORWARD)
@@ -218,12 +219,12 @@ class TestLowLevelPipeline:
 
         estimator_bwd = cr.tl.GPCCA(final_kernel)
 
-        estimator_bwd.compute_eig()
+        estimator_bwd.compute_eigendecomposition()
         estimator_bwd.plot_spectrum()
         estimator_bwd.plot_spectrum(real_only=True)
 
         estimator_bwd.compute_schur(5, method="brandts")
-        estimator_bwd.plot_schur_embedding()
+        estimator_bwd.plot_schur()
 
         estimator_bwd.compute_metastable_states(3, n_cells=16)
         estimator_bwd.plot_metastable_states()
@@ -231,21 +232,21 @@ class TestLowLevelPipeline:
         estimator_bwd.plot_schur_matrix()
 
         # select all cells
-        estimator_bwd.set_main_states(n_cells=16)
-        estimator_bwd.plot_main_states()
+        estimator_bwd.set_final_states_from_metastable_states(n_cells=16)
+        estimator_bwd.plot_final_states()
 
+        estimator_bwd.compute_absorption_probabilities()
         estimator_bwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
 
         _assert_has_all_keys(adata, Direction.BACKWARD)
 
         # select a subset of states
-        estimator_bwd.set_main_states(
-            n_cells=16,
-            names=estimator_bwd.metastable_states.cat.categories[:2],
-            redistribute=False,
+        estimator_bwd.set_final_states_from_metastable_states(
+            n_cells=16, names=estimator_bwd.metastable_states.cat.categories[:2],
         )
-        estimator_bwd.plot_main_states()
+        estimator_bwd.plot_final_states()
 
+        estimator_bwd.compute_absorption_probabilities()
         estimator_bwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
 
         _assert_has_all_keys(adata, Direction.BACKWARD)

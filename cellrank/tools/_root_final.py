@@ -10,6 +10,7 @@ from cellrank.tools._utils import (
 )
 from cellrank.tools.estimators import GPCCA, CFLARE
 from cellrank.tools._transition_matrix import transition_matrix
+from cellrank.tools.estimators._constants import P
 from cellrank.tools.estimators._base_estimator import BaseEstimator
 
 AnnData = TypeVar("AnnData")
@@ -110,11 +111,12 @@ def _root_final(
     if show_plots:
         mc.plot_spectrum(real_only=True)
         if isinstance(mc, CFLARE):
-            mc.plot_eig_embedding(abs_value=True, perc=[0, 98], use=n_states)
+            mc.plot_eigendecomposition(abs_value=True, perc=[0, 98], use=n_states)
             mc.plot_final_states(discrete=True, same_plot=False)
         elif isinstance(mc, GPCCA):
+            n_states = len(mc._get(P.META).cat.categories)
             if n_states > 1:
-                mc.plot_schur_embedding()
+                mc.plot_schur()
             mc.plot_final_states(discrete=True, same_plot=False)
             if n_states > 1:
                 mc.plot_coarse_T()
