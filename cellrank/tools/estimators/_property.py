@@ -5,18 +5,19 @@ from abc import ABC, ABCMeta, abstractmethod
 from typing import Any, Dict, List, Tuple, Union, Iterable, Optional
 from inspect import isabstract
 
+import numpy as np
+import pandas as pd
+from scipy.sparse import issparse, spmatrix
+from pandas.api.types import is_categorical_dtype
+
 import matplotlib as mpl
 from matplotlib import cm
 
 import scvelo as scv
 from anndata import AnnData
 
-import numpy as np
-import pandas as pd
 import cellrank.logging as logg
-from scipy.sparse import issparse, spmatrix
 from cellrank.tools import Lineage
-from pandas.api.types import is_categorical_dtype
 from cellrank.utils._docs import d
 from cellrank.tools._utils import _make_cat, partition, _complex_warning
 from cellrank.tools._constants import Direction, DirPrefix, DirectionPlot
@@ -216,6 +217,7 @@ class KernelHolder(ABC):
 
         self.kernel.write_to_adata(key_added=key_added)
 
+    @property
     def _direction(self):
         return Direction.BACKWARD if self.kernel.backward else Direction.FORWARD
 

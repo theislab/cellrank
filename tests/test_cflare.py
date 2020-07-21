@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
 from typing import Tuple
 
-from anndata import AnnData
-
 import numpy as np
 import pandas as pd
 import pytest
+from pandas.api.types import is_categorical_dtype
+
+from anndata import AnnData
+
 import cellrank as cr
 from _helpers import assert_array_nan_equal
-from pandas.api.types import is_categorical_dtype
 from cellrank.tools._colors import _create_categorical_colors
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tools._constants import (
@@ -20,6 +21,7 @@ from cellrank.tools._constants import (
     _colors,
     _lin_names,
 )
+from cellrank.tools.estimators._constants import A, P
 
 EPS = np.finfo(np.float64).eps
 
@@ -33,8 +35,8 @@ class TestCFLARE:
         mc = cr.tl.CFLARE(final_kernel)
         mc.compute_partition()
 
-        assert isinstance(mc.irreducible, bool)
-        if not mc.irreducible:
+        assert isinstance(mc.is_irreducible, bool)
+        if not mc.is_irreducible:
             assert isinstance(mc.recurrent_classes, list)
             assert isinstance(mc.transient_classes, list)
             assert f"{FinalStatesKey.FORWARD}_rec_classes" in mc.adata.obs
@@ -43,16 +45,16 @@ class TestCFLARE:
             assert mc.recurrent_classes is None
             assert mc.transient_classes is None
 
-    def test_compute_eig(self, adata_large: AnnData):
+    def test_compute_eigendecomposition(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.CFLARE(final_kernel)
-        mc.compute_eig(k=2)
+        mc.compute_eigendecomposition(k=2)
 
         assert isinstance(mc.eigendecomposition, dict)
-        assert set(mc.eigendecomposition.keys()) == {
+        assert set(mc._get(P.EIG).keys()) == {
             "D",
             "V_l",
             "V_r",
@@ -62,24 +64,24 @@ class TestCFLARE:
         }
         assert f"eig_{Direction.FORWARD}" in mc.adata.uns.keys()
 
-    def test_compute_metastable_states_no_eig(self, adata_large: AnnData):
+    def test_compute_final_states_no_eig(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.CFLARE(final_kernel)
         with pytest.raises(RuntimeError):
-            mc.compute_metastable_states(use=2)
+            mc.compute_final_states(use=2)
 
-    def test_compute_metastable_states_too_large_use(self, adata_large: AnnData):
+    def test_compute_final_states_too_large_use(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.CFLARE(final_kernel)
-        mc.compute_eig(k=2)
+        mc.compute_eigendecomposition(k=2)
         with pytest.raises(ValueError):
-            mc.compute_metastable_states(use=1000)
+            mc.compute_final_states(use=1000)
 
     def test_compute_approx_normal_run(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
@@ -87,13 +89,15 @@ class TestCFLARE:
         final_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.CFLARE(final_kernel)
-        mc.compute_eig(k=5)
-        mc.compute_metastable_states(use=2)
+        mc.compute_eigendecomposition(k=5)
+        mc.compute_final_states(use=2)
 
-        assert is_categorical_dtype(mc.metastable_states)
-        assert mc.metastable_states_probabilities is not None
-        assert _colors(FinalStatesKey.FORWARD) in mc.adata.uns.keys()
+        assert is_categorical_dtype(mc._get(P.FIN))
+        assert mc._get(P.FIN_PROBS) is not None
+
+        assert FinalStatesKey.FORWARD.s in mc.adata.obs.keys()
         assert _probs(FinalStatesKey.FORWARD) in mc.adata.obs.keys()
+        assert _colors(FinalStatesKey.FORWARD) in mc.adata.uns.keys()
 
     def test_compute_absorption_probabilities_no_args(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
@@ -110,35 +114,33 @@ class TestCFLARE:
         final_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.CFLARE(final_kernel)
-        mc.compute_eig(k=5)
-        mc.compute_metastable_states(use=2)
+        mc.compute_eigendecomposition(k=5)
+        mc.compute_final_states(use=2)
         mc.compute_absorption_probabilities()
 
-        assert isinstance(mc.diff_potential, pd.Series)
+        assert isinstance(mc._get(P.DIFF_POT), pd.Series)
         assert f"{AbsProbKey.FORWARD}_dp" in mc.adata.obs.keys()
         np.testing.assert_array_equal(
-            mc.diff_potential, mc.adata.obs[f"{AbsProbKey.FORWARD}_dp"]
+            mc._get(P.DIFF_POT), mc.adata.obs[f"{AbsProbKey.FORWARD}_dp"]
         )
 
-        assert isinstance(mc.absorption_probabilities, cr.tl.Lineage)
-        assert mc.absorption_probabilities.shape == (mc.adata.n_obs, 2)
+        assert isinstance(mc._get(P.ABS_PROBS), cr.tl.Lineage)
+        assert mc._get(P.ABS_PROBS).shape == (mc.adata.n_obs, 2)
         assert f"{AbsProbKey.FORWARD}" in mc.adata.obsm.keys()
         np.testing.assert_array_equal(
-            mc.absorption_probabilities.X, mc.adata.obsm[f"{AbsProbKey.FORWARD}"]
+            mc._get(P.ABS_PROBS).X, mc.adata.obsm[f"{AbsProbKey.FORWARD}"]
         )
 
         assert _lin_names(AbsProbKey.FORWARD) in mc.adata.uns.keys()
         np.testing.assert_array_equal(
-            mc.absorption_probabilities.names,
-            mc.adata.uns[_lin_names(AbsProbKey.FORWARD)],
+            mc._get(P.ABS_PROBS).names, mc.adata.uns[_lin_names(AbsProbKey.FORWARD)],
         )
 
         assert _colors(AbsProbKey.FORWARD) in mc.adata.uns.keys()
         np.testing.assert_array_equal(
-            mc.absorption_probabilities.colors,
-            mc.adata.uns[_colors(AbsProbKey.FORWARD)],
+            mc._get(P.ABS_PROBS).colors, mc.adata.uns[_colors(AbsProbKey.FORWARD)],
         )
-        np.testing.assert_allclose(mc.absorption_probabilities.X.sum(1), 1)
+        np.testing.assert_allclose(mc._get(P.ABS_PROBS).X.sum(1), 1)
 
     def test_compute_absorption_probabilities_solver(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
@@ -147,16 +149,16 @@ class TestCFLARE:
         tol = 1e-6
 
         mc = cr.tl.CFLARE(final_kernel)
-        mc.compute_eig(k=5)
-        mc.compute_metastable_states(use=2)
+        mc.compute_eigendecomposition(k=5)
+        mc.compute_final_states(use=2)
 
         # compute lin probs using direct solver
         mc.compute_absorption_probabilities(solver="direct")
-        l_direct = mc.absorption_probabilities.copy()
+        l_direct = mc._get(P.ABS_PROBS).copy()
 
         # compute lin probs using iterative solver
         mc.compute_absorption_probabilities(solver="gmres", tol=tol)
-        l_iterative = mc.absorption_probabilities.copy()
+        l_iterative = mc._get(P.ABS_PROBS).copy()
 
         assert not np.shares_memory(l_direct.X, l_iterative.X)  # sanity check
         np.testing.assert_allclose(l_direct.X, l_iterative.X, rtol=0, atol=tol)
@@ -168,16 +170,16 @@ class TestCFLARE:
         tol = 1e-6
 
         mc = cr.tl.CFLARE(final_kernel)
-        mc.compute_eig(k=5)
-        mc.compute_metastable_states(use=2)
+        mc.compute_eigendecomposition(k=5)
+        mc.compute_final_states(use=2)
 
         # compute lin probs using direct solver
         mc.compute_absorption_probabilities(solver="gmres", use_petsc=False, tol=tol)
-        l_iter = mc.absorption_probabilities.copy()
+        l_iter = mc._get(P.ABS_PROBS).copy()
 
         # compute lin probs using petsc iterative solver
         mc.compute_absorption_probabilities(solver="gmres", use_petsc=True, tol=tol)
-        l_iter_petsc = mc.absorption_probabilities.copy()
+        l_iter_petsc = mc._get(P.ABS_PROBS).copy()
 
         assert not np.shares_memory(l_iter.X, l_iter_petsc.X)  # sanity check
         np.testing.assert_allclose(l_iter.X, l_iter_petsc.X, rtol=0, atol=tol)
@@ -188,8 +190,8 @@ class TestCFLARE:
         final_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.CFLARE(final_kernel)
-        mc.compute_eig(k=5)
-        mc.compute_metastable_states(use=2)
+        mc.compute_eigendecomposition(k=5)
+        mc.compute_final_states(use=2)
         with pytest.raises(RuntimeError):
             mc.compute_lineage_drivers()
 
@@ -199,8 +201,8 @@ class TestCFLARE:
         final_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.CFLARE(final_kernel)
-        mc.compute_eig(k=5)
-        mc.compute_metastable_states(use=2)
+        mc.compute_eigendecomposition(k=5)
+        mc.compute_final_states(use=2)
         mc.compute_absorption_probabilities()
         with pytest.raises(KeyError):
             mc.compute_lineage_drivers(use_raw=False, lineages=["foo"])
@@ -211,8 +213,8 @@ class TestCFLARE:
         final_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.CFLARE(final_kernel)
-        mc.compute_eig(k=5)
-        mc.compute_metastable_states(use=2)
+        mc.compute_eigendecomposition(k=5)
+        mc.compute_final_states(use=2)
         mc.compute_absorption_probabilities()
         with pytest.raises(KeyError):
             mc.compute_lineage_drivers(
@@ -225,8 +227,8 @@ class TestCFLARE:
         final_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.CFLARE(final_kernel)
-        mc.compute_eig(k=5)
-        mc.compute_metastable_states(use=2)
+        mc.compute_eigendecomposition(k=5)
+        mc.compute_final_states(use=2)
         mc.compute_absorption_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
@@ -241,20 +243,20 @@ class TestCFLARE:
 
         mc_fwd = cr.tl.CFLARE(final_kernel)
         mc_fwd.compute_partition()
-        mc_fwd.compute_eig()
-        mc_fwd.compute_metastable_states(use=3)
+        mc_fwd.compute_eigendecomposition()
+        mc_fwd.compute_final_states(use=3)
 
         arcs = ["0", "2"]
         arc_colors = [
             c
             for arc, c in zip(
-                mc_fwd.metastable_states.cat.categories, mc_fwd._meta_states_colors
+                mc_fwd._get(P.FIN).cat.categories, mc_fwd._get(A.FIN_COLORS)
             )
             if arc in arcs
         ]
 
         mc_fwd.compute_absorption_probabilities(keys=arcs)
-        lin_colors = mc_fwd.absorption_probabilities[arcs].colors
+        lin_colors = mc_fwd._get(P.ABS_PROBS)[arcs].colors
 
         np.testing.assert_array_equal(arc_colors, lin_colors)
 
@@ -301,13 +303,11 @@ class TestCFLARE:
         state_annotation[7] = "terminal_1"
         state_annotation[10] = "terminal_2"
         state_annotation = state_annotation.astype("category")
-        c._meta_states = state_annotation
+        c._set(A.FIN, state_annotation)
 
         # compute absorption probabilities
         c.compute_absorption_probabilities()
-        absorption_probabilities_query = c.absorption_probabilities[
-            state_annotation.isna()
-        ]
+        absorption_probabilities_query = c.get(P.ABS_PROBS)[state_annotation.isna()]
 
         # check whether these two agree
         np.allclose(absorption_probabilities_query, absorption_probabilities_reference)
@@ -320,44 +320,17 @@ class TestCFLARE:
 
         mc_fwd = cr.tl.CFLARE(final_kernel)
         mc_fwd.compute_partition()
-        mc_fwd.compute_eig()
+        mc_fwd.compute_eigendecomposition()
 
-        mc_fwd.compute_metastable_states(use=3)
+        mc_fwd.compute_final_states(use=3)
         original = np.array(adata.obs[f"{FinalStatesKey.FORWARD}"].copy())
         zero_mask = original == "0"
 
         cells = list(adata[zero_mask].obs_names)
-        mc_fwd.set_metastable_states({"foo": cells})
+        mc_fwd.set_final_states({"foo": cells})
 
         assert (adata.obs[f"{FinalStatesKey.FORWARD}"][zero_mask] == "foo").all()
         assert pd.isna(adata.obs[f"{FinalStatesKey.FORWARD}"][~zero_mask]).all()
-
-    def test_check_and_create_colors(self, adata_large):
-        adata = adata_large
-        vk = VelocityKernel(adata).compute_transition_matrix()
-        ck = ConnectivityKernel(adata).compute_transition_matrix()
-        final_kernel = 0.8 * vk + 0.2 * ck
-
-        mc_fwd = cr.tl.CFLARE(final_kernel)
-        mc_fwd.compute_partition()
-        mc_fwd.compute_eig()
-
-        mc_fwd.compute_metastable_states(use=3)
-
-        mc_fwd._meta_states_colors = None
-        del mc_fwd.adata.uns[_colors(FinalStatesKey.FORWARD)]
-
-        mc_fwd._check_and_create_colors()
-
-        assert _colors(FinalStatesKey.FORWARD) in mc_fwd.adata.uns
-        np.testing.assert_array_equal(
-            mc_fwd.adata.uns[_colors(FinalStatesKey.FORWARD)],
-            _create_categorical_colors(3),
-        )
-        np.testing.assert_array_equal(
-            mc_fwd.adata.uns[_colors(FinalStatesKey.FORWARD)],
-            mc_fwd._meta_states_colors,
-        )
 
 
 class TestCFLARECopy:
@@ -369,55 +342,4 @@ class TestCFLARECopy:
         assert mc1.adata is not mc2.adata
         assert mc1.kernel is not mc2.kernel
 
-    def test_copy_deep(self, adata_cflare_fwd: Tuple[AnnData, cr.tl.CFLARE]):
-        _, mc1 = adata_cflare_fwd
-        mc2 = mc1.copy()
-
-        assert mc1.irreducible == mc2.irreducible
-        np.testing.assert_array_equal(mc1.recurrent_classes, mc2.recurrent_classes)
-        np.testing.assert_array_equal(mc1.transient_classes, mc2.transient_classes)
-        for k, v in mc1.eigendecomposition.items():
-            if isinstance(v, np.ndarray):
-                assert_array_nan_equal(v, mc2.eigendecomposition[k])
-            else:
-                assert v == mc2.eigendecomposition[k]
-        np.testing.assert_array_equal(
-            mc1.absorption_probabilities, mc2.absorption_probabilities
-        )
-        np.testing.assert_array_equal(mc1.diff_potential, mc2.diff_potential)
-        assert_array_nan_equal(mc1.metastable_states, mc2.metastable_states)
-        np.testing.assert_array_equal(
-            mc1.metastable_states_probabilities, mc2.metastable_states_probabilities
-        )
-        np.testing.assert_array_equal(mc1._meta_states_colors, mc2._meta_states_colors)
-        assert mc1._G2M_score == mc2._G2M_score
-        assert mc1._S_score == mc2._S_score
-        assert mc1._g2m_key == mc2._g2m_key
-        assert mc1._s_key == mc2._s_key
-        assert mc1._is_sparse == mc2._is_sparse
-
-    def test_copy_works(self, adata_cflare_fwd: Tuple[AnnData, cr.tl.CFLARE]):
-        _, mc1 = adata_cflare_fwd
-        mc2 = mc1.copy()
-
-        mc1._is_irreducible = not mc2.irreducible
-        mc1.eigendecomposition["foo"] = "bar"
-        mc1._rec_classes = "foo"
-        mc1._trans_classes = "bar"
-        mc1._G2M_score = "foo"
-        mc1._S_score = "bar"
-
-        assert mc1.irreducible != mc2.irreducible
-        assert mc1.recurrent_classes is not mc2.recurrent_classes
-        assert mc1.transient_classes is not mc2.transient_classes
-        assert mc1.eigendecomposition != mc2.eigendecomposition
-        assert mc1.absorption_probabilities is not mc2.absorption_probabilities
-        assert mc1.diff_potential is not mc2.diff_potential
-        assert mc1.metastable_states is not mc2.metastable_states
-        assert (
-            mc1.metastable_states_probabilities
-            is not mc2.metastable_states_probabilities
-        )
-        assert mc1._meta_states_colors is not mc2._meta_states_colors
-        assert mc1._G2M_score != mc2._G2M_score
-        assert mc1._S_score != mc2._S_score
+    # TODO - copy tests, saving tests, fit tests
