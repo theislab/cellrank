@@ -26,7 +26,7 @@ except TypeError:
         "Metadata",
         ["attr", "prop", "dtype", "default", "doc", "compute_fmt", "plot_fmt"],
     )
-    Metadata.__new__.__defaults__ = defaults = [
+    Metadata.__new__.__defaults__ = defaults = (
         None,
         None,
         None,
@@ -34,7 +34,7 @@ except TypeError:
         None,
         F.COMPUTE,
         F.PLOT,
-    ]
+    )
 
 
 class RandomKeys:
