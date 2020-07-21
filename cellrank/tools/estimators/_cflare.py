@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Clustering and Filtering of Left and Right Eigenvectors based on Markov chains."""
-from typing import List, Tuple, Union, Optional
+from typing import List, Tuple, Union, Optional, Sequence
 
 import numpy as np
 from pandas import Series
@@ -13,7 +13,7 @@ from cellrank.tools._utils import (
     _complex_warning,
     _get_connectivities,
 )
-from cellrank.tools.estimators._constants import A, F, P
+from cellrank.tools.estimators._constants import A, P
 from cellrank.tools.estimators._decomposition import Eigen
 from cellrank.tools.estimators._base_estimator import BaseEstimator
 
@@ -167,7 +167,7 @@ class CFLARE(BaseEstimator, Eigen):
                 raise ValueError(
                     f"Maximum specified eigenvector ({muse}) is larger "
                     f'than the number of computed eigenvectors ({eig["V_l"].shape[1]}). '
-                    f"Use `.{F.COMPUTE.fmt(P.EIG)}(k={muse})` to recompute the eigendecomposition."
+                    f"Use `.compute_eigendecomposition(k={muse})` to recompute the eigendecomposition."
                 )
 
             return use
@@ -175,7 +175,7 @@ class CFLARE(BaseEstimator, Eigen):
         eig = self._get(P.EIG)
         if eig is None:
             raise RuntimeError(
-                f"Compute eigendecomposition first as `.{F.COMPUTE.fmt(P.EIG)}()`"
+                "Compute eigendecomposition first as `.compute_eigendecomposition()`."
             )
         use = check_use(use)
 
@@ -296,3 +296,36 @@ class CFLARE(BaseEstimator, Eigen):
         cats_main.cat.remove_categories(cats_main.cat.categories[~mask], inplace=True)
 
         return cats_main, colors_main
+
+    @d.dedent
+    def fit(
+        self,
+        n_lineages: Optional[int],
+        keys: Optional[Sequence[str]] = None,
+        cluster_key: Optional[str] = None,
+        **_,
+    ):
+        """
+        Run the pipeline, computing the absorption probabilities.
+
+        It is equivalent to running::
+
+            compute_eigendecomposition(...)
+            compute_final_states(...)
+            compute_absorption_probabilities(...)
+
+        Parameters
+        ----------
+        %(fit)s
+
+        Returns
+        -------
+        None
+            Nothing, just computes the absorption probabilities.
+        """
+
+        self.compute_eigendecomposition(k=20 if n_lineages is None else n_lineages + 1)
+        self.compute_final_states(
+            cluster_key=cluster_key, n_clusters_kmeans=n_lineages, method="kmeans"
+        )
+        self.compute_absorption_probabilities(keys=keys)

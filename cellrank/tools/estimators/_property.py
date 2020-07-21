@@ -143,30 +143,30 @@ class PropertyMeta(ABCMeta, type):
             ]
 
         prop_name = PropertyMeta.update_attributes(compute_md, attributedict)
-        ignore_first = compute_md.compute_fmt == F.NO_FUNC
         plot_name = str(compute_md.plot_fmt).format(prop_name)
 
-        if not ignore_first:
+        if compute_md.compute_fmt != F.NO_FUNC:
             if "_compute" in attributedict:
                 attributedict[
                     str(compute_md.compute_fmt).format(prop_name)
                 ] = attributedict["_compute"]
 
-            if (
-                VectorPlottable in superclasses
-                and plot_name not in attributedict
-                and not is_abstract(clsname)
-            ):
-                raise TypeError(
-                    f"Method `{plot_name}` is not implemented for class `{clsname}`."
-                )
+        if (
+            compute_md.plot_fmt != F.NO_FUNC
+            and VectorPlottable in superclasses
+            and plot_name not in attributedict
+            and not is_abstract(clsname)
+        ):
+            raise TypeError(
+                f"Method `{plot_name}` is not implemented for class `{clsname}`."
+            )
 
         for md in metadata:
             PropertyMeta.update_attributes(md, attributedict)
 
         res = super().__new__(cls, clsname, superclasses, attributedict)
 
-        if not ignore_first and Plottable in res.mro():
+        if compute_md.plot_fmt != F.NO_FUNC and Plottable in res.mro():
             # _this is intended singledispatchmethod
             # unfortunately, `_plot` is not always in attributedict, so we can't just check for it
             # and res._plot is just a regular function
@@ -521,12 +521,19 @@ class Plottable(KernelHolder, Property):
         A = A.copy()  # the below code modifies stuff inplace
         X = A.X  # list(A.T) behaves differently, because it's Lineage
 
-        for col in X.T:
-            mask = col != 1
-            # change the maximum value - the 1 is artificial and obscures the color scaling
-            if np.sum(mask) > 0:
-                max_not_one = np.max(col[mask])
-                col[~mask] = max_not_one
+        if X.shape[1] == 1:
+            # this is the case for only 1 recurrent class - all cells have prob. 1 of going there
+            # however, scvelo's plotting really picks up the slightest differences in the colormap, here we set
+            # everything to one, if applicable
+            if np.allclose(X, 1.0):
+                X = np.ones_like(X)
+        else:
+            for col in X.T:
+                mask = col != 1
+                # change the maximum value - the 1 is artificial and obscures the color scaling
+                if np.sum(mask) > 0:
+                    max_not_one = np.max(col[mask])
+                    col[~mask] = max_not_one
 
         if mode == "time":
             if time_key not in self.adata.obs.keys():

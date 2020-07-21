@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Matrix decomposition module."""
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import Any, Tuple, Union, Mapping, Optional
 from pathlib import Path
 
@@ -20,15 +20,7 @@ from cellrank._vendor.msmtools.analysis.dense.gpcca import GPCCA as _GPCCA
 EPS = np.finfo(np.float64).eps
 
 
-class Decomposable(KernelHolder, Property):
-    """Abstract base class handling decomposition of transition matrix."""
-
-    @abstractmethod
-    def _compute(self, *args, **kwargs):
-        pass
-
-
-class EigWritable(Decomposable, ABC):
+class Decomposable(KernelHolder, Property, ABC):
     """Helper class exposes writing the eigendecomposition to :class:`anndata.AnnData` object."""
 
     def _write_eig_to_adata(self, eig: Mapping[str, Any]):
@@ -38,14 +30,16 @@ class EigWritable(Decomposable, ABC):
         logg.debug(f"Adding `.{P.EIG}`" f"       `adata.uns['eig_{self._direction}']`")
 
 
-class Eigen(VectorPlottable, EigWritable):
+class Eigen(VectorPlottable, Decomposable):
     """Class computing the eigendecomposition."""
 
-    __prop_metadata__ = [Metadata(attr=A.EIG, prop=P.EIG, dtype=Mapping[str, Any])]
+    __prop_metadata__ = [
+        Metadata(attr=A.EIG, prop=P.EIG, dtype=Mapping[str, Any], compute_fmt=F.NO_FUNC)
+    ]
 
     @d.dedent
     @inject_docs(prop=P.EIG)
-    def _compute(
+    def compute_eigendecomposition(
         self,
         k: int = 20,
         which: str = "LR",
@@ -317,11 +311,11 @@ class Eigen(VectorPlottable, EigWritable):
         return fig
 
 
-class Schur(VectorPlottable, EigWritable):
+class Schur(VectorPlottable, Decomposable):
     """Class computing the Schur decomposition."""
 
     __prop_metadata__ = [
-        Metadata(attr=A.SCHUR, prop=P.SCHUR, dtype=np.ndarray),
+        Metadata(attr=A.SCHUR, prop=P.SCHUR, dtype=np.ndarray, compute_fmt=F.NO_FUNC),
         Metadata(attr=A.SCHUR_MAT, prop=P.SCHUR_MAT, dtype=np.ndarray),
         Metadata(attr=A.EIG, prop=P.EIG, dtype=Mapping[str, Any]),
         Metadata(attr="_gpcca", prop=P.NO_PROPERTY),
@@ -329,7 +323,7 @@ class Schur(VectorPlottable, EigWritable):
 
     @d.dedent
     @inject_docs(schur_vectors=P.SCHUR, schur_matrix=P.SCHUR_MAT, eigendec=P.EIG)
-    def _compute(
+    def compute_schur(
         self,
         n_components: int = 10,
         initial_distribution: Optional[np.ndarray] = None,
