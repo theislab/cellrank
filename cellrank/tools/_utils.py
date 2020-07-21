@@ -1784,3 +1784,17 @@ def _solve_many_sparse_problems(
     queue.put(None)
 
     return np.stack(x_list, axis=1), n_converged
+
+
+def _check_estimator_type(estimator: Any) -> None:
+    from cellrank.tools.estimators._base_estimator import BaseEstimator
+
+    if not isinstance(estimator, type):
+        raise TypeError(
+            f"Expected estimator to be a class, found `{type(estimator).__name__!r}`."
+        )
+
+    if not issubclass(estimator, BaseEstimator):
+        raise TypeError(
+            f"Expected estimator to be a subclass of `BaseEstimator`, found `{type(estimator).__name__!r}`."
+        )

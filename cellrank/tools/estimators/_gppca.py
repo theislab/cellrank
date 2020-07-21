@@ -903,6 +903,8 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             Nothing, just computes the absorption probabilities.
         """
 
+        comp_abs_probs = kwargs.pop("compute_absorption_probabilities", True)
+
         if n_lineages is None or n_lineages == 1:
             self.compute_eigendecomposition()
             if n_lineages is None:
@@ -933,4 +935,5 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         else:
             self.set_final_states_from_metastable_states()
 
-        self.compute_absorption_probabilities(keys=keys)
+        if comp_abs_probs:
+            self.compute_absorption_probabilities(keys=keys)

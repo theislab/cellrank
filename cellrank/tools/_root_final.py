@@ -3,13 +3,13 @@
 
 from typing import Union, TypeVar, Optional
 
-from cellrank import logging as logg
 from cellrank.utils._docs import d, _root, _final, inject_docs
-from cellrank.tools._utils import _info_if_obs_keys_categorical_present
-from cellrank.tools._constants import FinalStatesKey
+from cellrank.tools._utils import (
+    _check_estimator_type,
+    _info_if_obs_keys_categorical_present,
+)
 from cellrank.tools.estimators import GPCCA, CFLARE
 from cellrank.tools._transition_matrix import transition_matrix
-from cellrank.tools.estimators._constants import F, P
 from cellrank.tools.estimators._base_estimator import BaseEstimator
 
 AnnData = TypeVar("AnnData")
@@ -50,9 +50,6 @@ use_velocity_uncertainty
     Whether to use velocity uncertainty. Uncertainties are computed independently per gene using the neighborhood graph.
     They are then propagated into cosine similarities and finally used as a scaling factor in the softmax which
     transforms cosine similarities to probabilities, i.e. transitions we are uncertain about are down-weighted.
-method
-    Method to use when computing the Schur decomposition. Only needed when :paramref:`estimator`
-    is :class:`cellrank.tl.GPCCA`. Valid options are: `'krylov'`, `'brandts'`.
 show_plots
     Whether to show plots of the spectrum and eigenvectors in the embedding.
 copy
@@ -60,7 +57,7 @@ copy
 return_estimator
     Whether to return the estimator. Only available when :paramref:`copy=False`.
 **kwargs
-    Keyword arguments for :meth:`cellrank.tl.BaseEstimator.{compute_meta}`.
+    Keyword arguments for :meth:`cellrank.tl.BaseEstimator.fit`.
 
 Returns
 -------
@@ -80,15 +77,13 @@ def _root_final(
     cluster_key: Optional[str] = None,
     weight_connectivities: float = None,
     use_velocity_uncertainty: bool = False,
-    method: str = "krylov",
     show_plots: bool = False,
     copy: bool = False,
     return_estimator: bool = False,
     **kwargs,
 ) -> Optional[Union[AnnData, BaseEstimator]]:
-    key = FinalStatesKey.BACKWARD.s if backward else FinalStatesKey.FORWARD.s
-    logg.info(f"Computing `{key}`")
 
+    _check_estimator_type(estimator)
     adata = adata.copy() if copy else adata
 
     # compute kernel object
@@ -109,69 +104,35 @@ def _root_final(
             "Consider specifying it as `cluster_key`.",
         )
 
-    # run the computation
-    if isinstance(mc, CFLARE):
-        kwargs["use"] = n_states
+    kwargs["compute_absorption_probabilities"] = False
+    mc.fit(n_lineages=n_states, cluster_key=cluster_key, **kwargs)
 
-        mc.compute_eig()
-        mc.compute_metastable_states(cluster_key=cluster_key, **kwargs)
-
-        if show_plots:
-            mc.plot_spectrum(real_only=True)
+    if show_plots:
+        mc.plot_spectrum(real_only=True)
+        if isinstance(mc, CFLARE):
             mc.plot_eig_embedding(abs_value=True, perc=[0, 98], use=n_states)
-            mc.plot_eig_embedding(left=False, use=n_states)
-
-    elif isinstance(mc, GPCCA):
-        if n_states is None or n_states == 1:
-            mc.compute_eig()
-            if n_states is None:
-                n_states = mc.eigendecomposition["eigengap"] + 1
-        if n_states > 1:
-            mc.compute_schur(n_states + 1, method=method)
-
-        try:
-            mc.compute_metastable_states(
-                n_states=n_states, cluster_key=cluster_key, **kwargs
-            )
-        except ValueError:
-            logg.warning(
-                f"Computing {n_states} metastable states cuts through a block of complex conjugates. "
-                f"Increasing `n_states` to {n_states + 1}"
-            )
-            mc.compute_metastable_states(
-                n_states=n_states + 1, cluster_key=cluster_key, **kwargs
-            )
-        mc.set_main_states()  # write to adata
-
-        if show_plots:
-            mc.plot_spectrum(real_only=True)
+            mc.plot_final_states(discrete=True, same_plot=False)
+        elif isinstance(mc, GPCCA):
             if n_states > 1:
                 mc.plot_schur_embedding()
-            mc.plot_metastable_states(same_plot=False)
+            mc.plot_final_states(discrete=True, same_plot=False)
             if n_states > 1:
                 mc.plot_coarse_T()
-    else:
-        raise NotImplementedError(
-            f"Pipeline not implemented for `{type(bytes).__name__}`"
-        )
+        else:
+            raise NotImplementedError(
+                f"Pipeline not implemented for `{type(mc).__name__!r}.`"
+            )
 
     return adata if copy else mc if return_estimator else None
 
 
 @d.dedent
-@inject_docs(
-    root=_find_docs.format(
-        direction=_root,
-        key_added=f"{_root}_states",
-        compute_meta=F.COMPUTE.fmt(P.META),
-    )
-)
+@inject_docs(root=_find_docs.format(direction=_root, key_added=f"{_root}_states",))
 def root_states(
     adata: AnnData,
     estimator: type(BaseEstimator) = GPCCA,
     n_states: Optional[int] = None,
     weight_connectivities: float = None,
-    method: str = "krylov",
     show_plots: bool = False,
     copy: bool = False,
     return_estimator: bool = False,
@@ -189,7 +150,6 @@ def root_states(
         backward=True,
         n_states=n_states,
         weight_connectivities=weight_connectivities,
-        method=method,
         show_plots=show_plots,
         copy=copy,
         return_estimator=return_estimator,
@@ -198,19 +158,12 @@ def root_states(
 
 
 @d.dedent
-@inject_docs(
-    final=_find_docs.format(
-        direction=_final,
-        key_added=f"{_final}_states",
-        compute_meta=F.COMPUTE.fmt(P.META),
-    )
-)
+@inject_docs(final=_find_docs.format(direction=_final, key_added=f"{_final}_states",))
 def final_states(
     adata: AnnData,
     estimator: type(BaseEstimator) = GPCCA,
     n_states: Optional[int] = None,
     weight_connectivities: float = None,
-    method: str = "krylov",
     show_plots: bool = False,
     copy: bool = False,
     return_estimator: bool = False,
@@ -228,7 +181,6 @@ def final_states(
         backward=False,
         n_states=n_states,
         weight_connectivities=weight_connectivities,
-        method=method,
         show_plots=show_plots,
         copy=copy,
         return_estimator=return_estimator,

@@ -5,9 +5,12 @@ from typing import TypeVar, Optional
 
 from cellrank import logging as logg
 from cellrank.utils._docs import d
-from cellrank.tools._utils import _info_if_obs_keys_categorical_present
+from cellrank.tools._utils import (
+    _check_estimator_type,
+    _info_if_obs_keys_categorical_present,
+)
 from cellrank.utils._utils import _read_graph_data
-from cellrank.tools.kernels import VelocityKernel
+from cellrank.tools.kernels import PrecomputedKernel
 from cellrank.tools._constants import Direction, AbsProbKey, FinalStatesKey, _transition
 from cellrank.tools.estimators import GPCCA
 from cellrank.tools.estimators._base_estimator import BaseEstimator
@@ -67,17 +70,7 @@ def lineages(
         or returns a copy or returns the estimator.
     """
 
-    if not isinstance(estimator, type):
-        raise TypeError(
-            f"Expected estimator to be a class, found `{type(estimator).__name__!r}`."
-        )
-
-    if not issubclass(estimator, BaseEstimator):
-        raise TypeError(
-            f"Expected estimator to be a subclass of `BaseEstimator`, found `{type(estimator).__name__!r}`."
-        )
-
-    # Set the keys and print info
+    _check_estimator_type(estimator)
     adata = adata.copy() if copy else adata
 
     if backward:
@@ -89,11 +82,11 @@ def lineages(
         lin_key = AbsProbKey.FORWARD
         rc_key = FinalStatesKey.FORWARD
 
-    transition_key = _transition(direction)
-    vk = VelocityKernel(adata, backward=backward)
-
     try:
-        vk._transition_matrix = _read_graph_data(adata, transition_key)
+        transition_key = _transition(direction)
+        vk = PrecomputedKernel(
+            _read_graph_data(adata, transition_key), adata, backward=backward
+        )
     except KeyError as e:
         raise KeyError(
             f"Compute the states first as `cellrank.tl.find_{'root' if backward else 'final'}`."
@@ -110,6 +103,7 @@ def lineages(
             "Consider specifying it as `cluster_key=...`.",
         )
     # compute the absorption probabilities
+    kwargs["compute_absorption_probabilities"] = True  # better safe than sorry
     mc.fit(cluster_key=cluster_key, **kwargs)
 
     logg.info(f"Adding lineages to `adata.obsm[{lin_key!r}]`\n    Finish", time=start)
