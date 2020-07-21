@@ -10,7 +10,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
 from cellrank import logging as logg
 from scipy.sparse.linalg import eigs
-from cellrank.utils._docs import inject_docs
+from cellrank.utils._docs import d, inject_docs
 from cellrank.tools._utils import save_fig, _eigengap
 from cellrank.tools.estimators._utils import Metadata, _delegate
 from cellrank.tools.estimators._property import Property, KernelHolder, VectorPlottable
@@ -43,7 +43,8 @@ class Eigen(VectorPlottable, EigWritable):
 
     __prop_metadata__ = [Metadata(attr=A.EIG, prop=P.EIG, dtype=Mapping[str, Any])]
 
-    @inject_docs(prop=P.EIG)  # TODO: docrep
+    @d.dedent
+    @inject_docs(prop=P.EIG)
     def _compute(
         self,
         k: int = 20,
@@ -58,17 +59,13 @@ class Eigen(VectorPlottable, EigWritable):
         Uses a sparse implementation, if possible, and only computes the top :math:`k` eigenvectors
         to speed up the computation. Computes both left and right eigenvectors.
 
-        Params
-        ------
+        Parameters
+        ----------
         k
             Number of eigenvalues/vectors to compute.
-        which
-            Eigenvalues are in general complex. `'LR'` - largest real part, `'LM'` - largest magnitude.
-        alpha
-            Used to compute the `eigengap`. :paramref:`alpha` is the weight given
-            to the deviation of an eigenvalue from one.
+        %(eigen)s
         only_evals
-            Return only eigenvalues.
+            Compute only eigenvalues.
         ncv
             Number of Lanczos vectors generated.
 
@@ -134,23 +131,22 @@ class Eigen(VectorPlottable, EigWritable):
             }
         )
 
-    # TODO: use docrep
-    def plot_eigendecomposition(
-        self, left: bool = False, use: Optional[int] = None, *args, **kwargs
-    ):
+    @d.dedent
+    def plot_eigendecomposition(self, left: bool = False, *args, **kwargs):
         """
-        Plot the eigenvectors in an embedding.
+        Plot eigenvectors in an embedding.
 
         Parameters
         ----------
         left
-        use
+            Whether to plot left or right eigenvectors.
+        %(plot_vectors.parameters)s
 
         Returns
         -------
-        None
-            Nothing, just plots the eigenvectors.
+        %(plot_vectors.returns)s
         """
+
         eig = getattr(self, P.EIG.s)
 
         if eig is None:
@@ -174,16 +170,17 @@ class Eigen(VectorPlottable, EigWritable):
                 V[:, 0] = 1.0
 
         self._plot_vectors(
-            V, P.EIG.s, *args, use=use, D=D, **kwargs,
+            V, P.EIG.s, *args, D=D, **kwargs,
         )
 
+    @d.dedent
     def plot_spectrum(
         self,
         real_only: bool = False,
-        dpi: int = 100,
-        figsize: Optional[Tuple[float, float]] = (5, 5),
         legend_loc: Optional[str] = None,
         title: Optional[str] = None,
+        figsize: Optional[Tuple[float, float]] = (5, 5),
+        dpi: int = 100,
         save: Optional[Union[str, Path]] = None,
     ) -> None:
         """
@@ -194,25 +191,19 @@ class Eigen(VectorPlottable, EigWritable):
            :width: 400px
            :align: center
 
-        Params
-        ------
+        Parameters
+        ----------
         real_only
             Whether to plot only the real part of the spectrum.
-        dpi
-            Dots per inch.
-        figsize
-            Size of the figure.
         legend_loc
             Location parameter for the legend.
         title
             Title of the figure.
-        save
-            Filename where to save the plots. If `None`, just shows the plot.
+        %(plotting)s
 
         Returns
         -------
-        None
-            Nothing, just plots the spectrum in real or complex plane.
+        %(just_plots)s
         """
 
         eig = getattr(self, P.EIG.s)
@@ -336,7 +327,7 @@ class Schur(VectorPlottable, EigWritable):
         Metadata(attr="_gpcca", prop=P.NO_PROPERTY),
     ]
 
-    # TODO: docrep
+    @d.dedent
     @inject_docs(schur_vectors=P.SCHUR, schur_matrix=P.SCHUR_MAT, eigendec=P.EIG)
     def _compute(
         self,
@@ -349,8 +340,8 @@ class Schur(VectorPlottable, EigWritable):
         """
         Compute the Schur decomposition.
 
-        Params
-        ------
+        Parameters
+        ----------
         n_components
             Number of vectors to compute.
         initial_distribution
@@ -361,11 +352,7 @@ class Schur(VectorPlottable, EigWritable):
             For benefits of each method, see :class:`msmtools.analysis.dense.gpcca.GPCCA`. The former is
             an iterative procedure that computes a partial, sorted Schur decomposition for large, sparse
             matrices whereas the latter computes a full sorted Schur decomposition of a dense matrix.
-        which
-            Eigenvalues are in general complex. `'LR'` - largest real part, `'LM'` - largest magnitude.
-        alpha
-            Used to compute the `eigengap`. :paramref:`alpha` is the weight given
-            to the deviation of an eigenvalue from one.
+        %(eigen)s
 
         Returns
         -------
@@ -413,6 +400,7 @@ class Schur(VectorPlottable, EigWritable):
 
     plot_schur = _delegate(prop_name=P.SCHUR.s)(VectorPlottable._plot_vectors)
 
+    @d.dedent
     def plot_schur_matrix(
         self,
         title: Optional[str] = "schur matrix",
@@ -430,23 +418,19 @@ class Schur(VectorPlottable, EigWritable):
            :width: 400px
            :align: center
 
-        Params
-        ------
+        Parameters
+        ----------
         title
             Title of the figure.
         cmap
             Colormap to use.
-        figsize
-            Size of the figure.
-        dpi
-            Dots per inch.
-        save
-            Filename where to save the plots. If `None`, just shows the plot.
+        %(plotting)s
+        **kwargs
+            Keyword arguments for :func:`seaborn.heatmap`.
 
         Returns
         -------
-        None
-            Nothing, just plots the Schur matrix.
+        %(just_plots)s
         """
 
         from seaborn import heatmap

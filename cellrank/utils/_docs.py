@@ -34,6 +34,15 @@ None
 _backward = """\
 backward
     Direction of the process."""
+_eigen = """\
+which
+    Eigenvalues are in general complex. `'LR'` - largest real part, `'LM'` - largest magnitude.
+alpha
+    Used to compute the `eigengap`. :paramref:`alpha` is the weight given
+    to the deviation of an eigenvalue from one."""
+_n_cells = """\
+n_cells
+    Number of most likely cells from each main to select."""
 _root = "root"
 _final = "final"
 
@@ -57,5 +66,7 @@ d = DocstringProcessor(
     backward=_backward,
     root=_root,
     final=_final,
+    eigen=_eigen,
     root_or_final=f"{_root} or {_final}",
+    n_cells=_n_cells,
 )

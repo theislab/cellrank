@@ -73,7 +73,7 @@ def lineages(
         Whether to update the existing AnnData object or to return a copy.
     return_estimator
         Whether to return the estimator. Only available when :paramref:`copy=False`.
-    kwargs
+    **kwargs
         Keyword arguments for :meth:`cellrank.tl.estimators.BaseEstimator.{compute_meta}`.
 
     Returns

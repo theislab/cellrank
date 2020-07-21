@@ -54,7 +54,7 @@ def lineages(
     """
     Plot lineages that were uncovered using :func:`cellrank.tl.lineages`.
 
-    For each lineage, we show all cells in an embedding (default is UMAP but can be any) and color them by their
+    For each lineage, we show all cells in an embedding (default is UMAP, but can be any) and color them by their
     probability of belonging to this lineage. For cells that are already committed, this probability will be one for
     their respective lineage and zero otherwise. For naive cells, these probabilities will be more balanced, reflecting
     the fact that naive cells have the potential to develop towards multiple endpoints.
@@ -67,7 +67,7 @@ def lineages(
     ----------
     %s(adata)s
     lineages
-        Only show these lineages. If `None`, plot all lineages.
+        Plot only these lineages. If `None`, plot all lineages.
     %(backward)s
     cluster_key
         If given, plot cluster annotations left of the lineage probabilities.
@@ -80,7 +80,7 @@ def lineages(
         Key from `adata.obs` to use as a pseudotime ordering of the cells.
     cmap
         Colormap to use.
-    kwargs
+    **kwargs
         Keyword arguments for :func:`scvelo.pl.scatter`.
 
     Returns

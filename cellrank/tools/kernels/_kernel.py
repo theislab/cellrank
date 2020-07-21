@@ -682,7 +682,7 @@ class Constant(Kernel):
         super().__init__(adata, backward=backward)
         if not isinstance(value, (int, float)):
             raise TypeError(
-                f"Value must be on `float` or `int`, found `{type(value).__name__}`."
+                f"Value must be a `float` or `int`, found `{type(value).__name__}`."
             )
         if value <= 0:
             raise ValueError(f"Expected the constant to be positive, found `{value}`.")

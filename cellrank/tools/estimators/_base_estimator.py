@@ -4,10 +4,8 @@
 import pickle
 from abc import ABC
 from copy import deepcopy
-from typing import Any, Dict, Union, Optional, Sequence
+from typing import Any, Dict, Union, TypeVar, Optional, Sequence
 from pathlib import Path
-
-from anndata import AnnData
 
 import numpy as np
 import pandas as pd
@@ -17,6 +15,7 @@ from scipy.stats import ranksums
 from scipy.sparse import spmatrix
 from cellrank.tools import Lineage
 from pandas.api.types import infer_dtype, is_categorical_dtype
+from cellrank.utils._docs import d, inject_docs
 from cellrank.tools._utils import (
     _pairwise,
     _vec_mat_corr,
@@ -45,45 +44,51 @@ from cellrank.tools.kernels._kernel import KernelExpression
 from cellrank.tools.estimators._property import Partitioner, LineageEstimatorMixin
 from cellrank.tools.estimators._constants import A, F, P
 
+AnnData = TypeVar("AnnData")
 
+
+@d.get_sectionsf("base_estimator", sections=["Parameters"])
 class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
     """
     Base class for all estimators.
 
-    Params
-    ------
-    kernel
-        Kernel object that stores a transition matrix.
-    adata : :class:`anndata.AnnData`
-        Optional annotated data object. If given, pre-computed lineages can be read in from this.
-        Otherwise, read the object from the specified :paramref:`kernel`.
+    Parameters
+    ----------
+    obj
+        Either a :class:`cellrank.tl.Kernel` object, an :class:`anndata.AnnData` object which
+        stores the transition matrix in `.obsp` attribute or :mod:`numpy` or :mod:`scipy` array.
     inplace
         Whether to modify :paramref:`adata` object inplace or make a copy.
     read_from_adata
         Whether to read available attributes in :paramref:`adata`, if present.
+    obsp_key
+        Key in :paramref:`obj` `.obsp` when :paramref:`obj` is an :class:`anndata.AnnData` object.
     g2m_key
         Key from :paramref:`adata` `.obs`. Can be used to detect cell-cycle driven start- or endpoints.
     s_key
         Key from :paramref:`adata` `.obs`. Can be used to detect cell-cycle driven start- or endpoints.
     key_added
         Key in :paramref:`adata` where to store the final transition matrix.
+    **kwargs
+        Keyword arguments for :meth:`cellrank.tl.BaseEstimator.read_from_adata`.
     """
 
     def __init__(
         self,
-        kernel: Union[KernelExpression, AnnData, spmatrix, np.ndarray],
+        obj: Union[KernelExpression, AnnData, spmatrix, np.ndarray],
         inplace: bool = True,
         read_from_adata: bool = False,
         obsp_key: Optional[str] = None,
         g2m_key: Optional[str] = "G2M_score",
         s_key: Optional[str] = "S_score",
         key_added: Optional[str] = None,
-        *args,
         **kwargs,
     ):
-        super().__init__(kernel, obsp_key=obsp_key, key_added=key_added)
+        from anndata import AnnData
 
-        if isinstance(kernel, KernelExpression) and not inplace:
+        super().__init__(obj, obsp_key=obsp_key, key_added=key_added)
+
+        if isinstance(obj, (KernelExpression, AnnData)) and not inplace:
             self.kernel._adata = self.adata.copy()
 
         if self._direction == Direction.BACKWARD:
@@ -101,9 +106,9 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         self._S_score = None
 
         if read_from_adata:
-            self._read_from_adata(*args, **kwargs)
+            self._read_from_adata(**kwargs)
 
-    def _set(self, n, v):
+    def _set(self, n, v) -> None:
         setattr(self, n.s if isinstance(n, PrettyEnum) else n, v)
 
     def _get(self, n) -> Any:
@@ -205,6 +210,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                     f"Using default colors"
                 )
 
+    @inject_docs(fin_states=P.FIN.s)
     def set_final_states(
         self,
         labels: Union[Series, Dict[Any, Any]],
@@ -213,13 +219,13 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         p_thresh: Optional[float] = None,
         add_to_existing: bool = False,
         **kwargs,
-    ):
+    ) -> None:
         """
         Set the approximate recurrent classes, if they are known a priori.
 
-        Params
-        ------
-        categories
+        Parameters
+        ----------
+        labels
             Either a categorical :class:`pandas.Series` with index as cell names, where `NaN` marks marks a cell
             belonging to a transient state or a :class:`dict`, where each key is the name of the recurrent class and
             values are list of cell names.
@@ -244,7 +250,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         None
             Nothing, but updates the following fields:
 
-                - :paramref:`final_states`.
+                - :paramref:`{fin_states}`.
         """
 
         self._set_categorical_labels(
@@ -260,6 +266,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         )
         self._write_final_states(time=kwargs.get("time", None))
 
+    @inject_docs(abs_prob=P.ABS_PROBS, diff_pot=P.DIFF_POT)
     def compute_absorption_probabilities(
         self,
         keys: Optional[Sequence[str]] = None,
@@ -272,18 +279,16 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         tol: float = 1e-5,
     ) -> None:
         """
-        Compute absorption probabilities for a Markov chain.
+        Compute absorption probabilities of a Markov chain.
 
         For each cell, this computes the probability of it reaching any of the approximate recurrent classes.
         This also computes the entropy over absorption probabilities, which is a measure of cell plasticity, see
         [Setty19]_.
 
-        Params
-        ------
+        Parameters
+        ----------
         keys
             Comma separated sequence of keys defining the recurrent classes.
-        n_cells
-            TODO
         check_irred
             Check whether the transition matrix is irreducible.
         solver
@@ -316,9 +321,9 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         None
             Nothing, but updates the following fields:
 
-                - :paramref:`absorption_probabilities`
-                - :paramref:`diff_potential`
-        """  # TODO: SSoT - docs edition
+                - :paramref:`{abs_prob}`
+                - :paramref:`{diff_pot}`
+        """
         if self._get(P.FIN) is None:
             raise RuntimeError(
                 f"Compute final states first as `.{F.COMPUTE.fmt(P.FIN)}()` or set them manually as "
@@ -327,12 +332,6 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         if keys is not None:
             keys = sorted(set(keys))
 
-        # Note: There are three relevant data structures here
-        # - self.metastable_states: pd.Series which contains annotations for approx rcs. Associated colors in
-        #   self.metastable_states_colors
-        # - self.lin_probs: Linage object which contains the lineage probabilities with associated names and colors
-        # -_metastable_states: pd.Series, temporary copy of self.approx rcs used in the context of this function.
-        #   In this copy, some metastable_states may be removed or combined with others
         start = logg.info("Computing absorption probabilities")
 
         # get the transition matrix
@@ -352,8 +351,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         n_macrostates = len(metastable_states_.cat.categories)
 
         #  create empty lineage object
-        if self._get(P.ABS_RPOBS) is not None:
-            logg.debug(f"Overwriting `.{P.ABS_RPOBS}`")
+        if self._get(P.ABS_PROBS) is not None:
+            logg.debug(f"Overwriting `.{P.ABS_PROBS}`")
 
         self._set(
             A.ABS_RPOBS,
@@ -438,21 +437,23 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             A.ABS_RPOBS,
             Lineage(
                 abs_classes,
-                names=self._get(P.ABS_RPOBS).names,
-                colors=self._get(P.ABS_RPOBS).colors,
+                names=self._get(P.ABS_PROBS).names,
+                colors=self._get(P.ABS_PROBS).colors,
             ),
         )
 
         self._set(
             A.DIFF_POT,
             pd.Series(
-                self._get(P.ABS_RPOBS).entropy(axis=1).X.squeeze(axis=1),
+                self._get(P.ABS_PROBS).entropy(axis=1).X.squeeze(axis=1),
                 index=self.adata.obs.index,
             ),
         )
 
         self._write_absorption_probabilities(time=start)
 
+    @d.get_sectionsf("lineage_drivers", sections=["Parameters", "Returns"])
+    @d.get_full_descriptionf("lineage_drivers")
     def compute_lineage_drivers(
         self,
         lineages: Optional[Union[Sequence, str]] = None,
@@ -469,9 +470,9 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         Often, it makes sense to restrict this to a set of clusters which are relevant
         for the lineage under consideration.
 
-        Params
-        ------
-        lin_names
+        Parameters
+        ----------
+        lineages
             Either a set of lineage names from :paramref:`absorption_probabilities` `.names` or None,
             in which case all lineages are considered.
         cluster_key
@@ -484,6 +485,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         use_raw
             Whether or not to use :paramref:`adata` `.raw` to correlate gene expression.
             If using a layer other than `.X`, this must be set to `False`.
+        inplace
+            Whether to write to :paramref:`adata` or return a :class:`pandas.DataFrame` object.
 
         Returns
         -------
@@ -496,12 +499,12 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         """
 
         # check that lineage probs have been computed
-        abs_probs = self._get(P.ABS_RPOBS)
+        abs_probs = self._get(P.ABS_PROBS)
         prefix = "from" if self.kernel.backward else "from"
 
         if abs_probs is None:
             raise RuntimeError(
-                f"Compute absorption probabilities first as `.{F.COMPUTE.fmt(P.ABS_RPOBS)}()`."
+                f"Compute absorption probabilities first as `.{F.COMPUTE.fmt(P.ABS_PROBS)}()`."
             )
 
         # check all lin_keys exist in self.lin_names
@@ -582,12 +585,13 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         """
         Detect cell-cycle driven start or endpoints.
 
-        Params
-        ------
+        Parameters
+        ----------
         rc_labels
             Approximate recurrent classes.
         p_thresh
             P-value threshold for the rank-sum test for the group to be considered cell-cycle driven.
+
         Returns
         -------
         None
@@ -623,7 +627,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         en_cutoff: Optional[float] = None,
         p_thresh: Optional[float] = None,
         add_to_existing: bool = False,
-    ):
+    ) -> None:
         if isinstance(categories, dict):
             categories = _convert_to_categorical_series(
                 categories, list(self.adata.obs_names)
@@ -684,7 +688,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
         setattr(self, attr_key, categories)
 
-    def _write_final_states(self, time=None):
+    def _write_final_states(self, time=None) -> None:
         self.adata.obs[self._fs_key] = self._get(P.FIN)
         self.adata.obs[_probs(self._fs_key)] = self._get(P.FIN_PROBS)
 
@@ -698,10 +702,10 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             time=time,
         )
 
-    def _write_absorption_probabilities(self, time):
+    def _write_absorption_probabilities(self, time: float) -> None:
         self.adata.obsm[self._abs_prob_key] = self._get(P.DIFF_POT)
 
-        abs_prob = self._get(P.ABS_RPOBS)
+        abs_prob = self._get(P.ABS_PROBS)
         self.adata.obs[_dp(self._abs_prob_key)] = abs_prob
 
         self.adata.uns[_lin_names(self._abs_prob_key)] = abs_prob.names
@@ -710,7 +714,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         logg.info(
             f"Adding `adata.obs[{self._abs_prob_key!r}]`\n"
             f"       `adata.obs[{_probs(self._abs_prob_key)!r}]`\n"
-            f"       `.{P.ABS_RPOBS}`\n"
+            f"       `.{P.ABS_PROBS}`\n"
             f"       `.{P.DIFF_POT}`\n"
             "    Finish",
             time=time,
@@ -731,8 +735,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         """
         Serialize self to a file.
 
-        Params
-        ------
+        Parameters
+        ----------
         fname
             Filename where to save the object.
 
@@ -754,14 +758,15 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         """
         Deserialize self from a file.
 
-        Params
-        ------
+        Parameters
+        ----------
         fname
             Filename from which to read the object.
 
         Returns
         -------
-        An estimator.
+        :class:`cellrank.tl.estimators._base_estimator.BaseEstimator`
+            An estimator.
         """
 
         with open(fname, "rb") as fin:

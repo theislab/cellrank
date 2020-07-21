@@ -35,7 +35,7 @@ def read(
     read_callback
         Function that actually reads the :class:`anndata.AnnData` object, such as
         :func:`scvelo.read` (default) or :func:`scanpy.read`.
-    kwargs
+    **kwargs
         Keyword arguments for :paramref:`read_callback`.
 
     Returns

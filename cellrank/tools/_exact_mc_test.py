@@ -85,7 +85,7 @@ def exact_mc_perm_test(
         Number of bins for the histogram.
     seed
         Random seed.
-    kwargs
+    **kwargs
         Keyword arguments for :paramref:`dist_measure`.
 
     Returns

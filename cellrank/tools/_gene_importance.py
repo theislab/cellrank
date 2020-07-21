@@ -185,7 +185,7 @@ def gene_importance(
     %(parallel)s
     rf_kwargs
         Keyword arguments for :class:`sklearn.ensemble.RandomForestRegressor`.
-    **kwargs:
+    **kwargs
         Keyword arguments for :meth:`cellrank.ul.models.Model.prepare`.
 
     Returns
@@ -308,41 +308,19 @@ def lineage_drivers(
     layer: str = "X",
     use_raw: bool = True,
     inplace: bool = True,
-):
+) -> Optional[pd.DataFrame]:  # noqa
     """
-    Compute driver genes per lineage.
-
-    Correlates gene expression with lineage probabilities, for a given lineage and set of clusters.
-    Often, it makes sense to restrict this to a set of clusters which are relevant
-    for the lineage under consideration.
+    %(lineage_drivers.full_desc)s
 
     Parameters
     ----------
     %(adata)s
     %(backward)s
-    lineages
-        Either a set of lineage names or `None`, in which case all lineages are considered.
-    cluster_key
-        Key from :paramref:`adata` `.obs` to obtain cluster annotations.
-        These are considered for :paramref:`clusters`.
-    clusters
-        Restrict the correlations to these clusters.
-    layer
-        Key from :paramref:`adata` `.layers`.
-    use_raw
-        Whether or not to use :paramref:`adata` `.raw` to correlate gene expression.
-        If using a layer other than `.X`, this must be set to `False`.
-    inplace
-        Whether to write to :paramref:`adata` or return a :class:`pandas.DataFrame` object.
+    %(lineage_drivers.parameters)s
 
     Returns
     -------
-    :class:`pandas.DataFrame` or :class:`NoneType`
-        Writes to :paramref:`adata` `.var` or :paramref:`adata` `.raw.var`, depending on the value of
-        :paramref:`use_raw`. For each lineage specified, a key is added to :paramref:`adata` `.var`
-        and correlations are saved there.
-
-        Returns `None` if :paramref:`inplace` `=True`, otherwise a :class:`pandas.DataFrame`.
+    %(lineage_drivers.returns)s
     """
 
     # create dummy kernel and estimator
@@ -351,7 +329,7 @@ def lineage_drivers(
     g._set(A.ABS_RPOBS, adata.obsm[g._abs_prob_key])
 
     # call the underlying function to compute and store the lineage drivers
-    g.compute_lineage_drivers(
+    return g.compute_lineage_drivers(
         lineages=lineages,
         cluster_key=cluster_key,
         clusters=clusters,

@@ -59,7 +59,7 @@ copy
     Whether to update the existing :paramref:`adata` object or to return a copy.
 return_estimator
     Whether to return the estimator. Only available when :paramref:`copy=False`.
-kwargs
+**kwargs
     Keyword arguments for :meth:`cellrank.tl.BaseEstimator.{compute_meta}`.
 
 Returns

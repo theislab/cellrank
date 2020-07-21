@@ -171,7 +171,7 @@ class LineageMeta(type):
     """
     Metaclass for Lineaage.
 
-    Registers functions which are handled by us and overloads common attibutes, such as `.sum` with these functions.
+    Registers functions which are handled by us and overloads common attributes, such as `.sum` with these functions.
     """
 
     __overloaded_functions__ = dict(  # noqa
@@ -182,6 +182,7 @@ class LineageMeta(type):
         max=np.max,
         argmax=np.argmax,
         std=np.std,
+        sort=np.sort,
         squeeze=np.squeeze,
         entropy=entropy,
     )
