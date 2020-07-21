@@ -5,12 +5,13 @@ from types import MappingProxyType
 from typing import Any, Dict, List, Tuple, Union, Mapping, Iterable, Optional, Sequence
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
+
 import matplotlib as mpl
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 
-import numpy as np
-import pandas as pd
 from cellrank import logging as logg
 from cellrank.tools import Lineage
 from cellrank.utils._docs import d, inject_docs
@@ -43,7 +44,11 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
 
     __prop_metadata__ = [
         Metadata(
-            attr=A.COARSE_T, prop=P.COARSE_T, compute_fmt=F.NO_FUNC, dtype=pd.DataFrame
+            attr=A.COARSE_T,
+            prop=P.COARSE_T,
+            compute_fmt=F.NO_FUNC,
+            plot_fmt=F.NO_FUNC,
+            dtype=pd.DataFrame,
         ),
         Metadata(attr=A.FIN_ABS_PROBS, prop=P.NO_PROPERTY, dtype=Lineage),
         Metadata(attr=A.COARSE_INIT_D, prop=P.COARSE_INIT_D, dtype=pd.Series),
@@ -929,7 +934,9 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         if len(self._get(P.META).cat.categories) == 1:
             # stationary distribution
             self._set(A.FIN, self._get(P.META))
+            self._set(A.FIN_PROBS, self._get(P.META_PROBS))
             self._set(A.FIN_COLORS, self._get(A.META_COLORS))
+            self._write_final_states()
         elif n_lineages is None:
             self.compute_final_states(method="eigengap")
         else:

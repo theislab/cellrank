@@ -16,18 +16,19 @@ from typing import (
 from pathlib import Path
 from collections import defaultdict
 
+import numpy as np
+from scipy.sparse import csr_matrix
+from pandas.core.dtypes.common import is_categorical_dtype
+
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 
-import numpy as np
-from scipy.sparse import csr_matrix
 from cellrank.utils._docs import d
 from cellrank.tools._utils import save_fig, _unique_order_preserving
 from cellrank.utils.models import Model, GamMGCVModel
 from cellrank.tools.kernels import VelocityKernel
 from cellrank.tools._constants import _colors
-from pandas.core.dtypes.common import is_categorical_dtype
 from cellrank.tools.estimators._cflare import CFLARE
 
 AnnData = TypeVar("AnnData")
@@ -95,7 +96,7 @@ def lineages(
     vk._transition_matrix = csr_matrix((adata_dummy.n_obs, adata_dummy.n_obs))
 
     # use this to initialize an MC object
-    mc = CFLARE(vk)
+    mc = CFLARE(vk, read_from_adata=True)
 
     # plot using the MC object
     mc.plot_absorption_probabilities(
