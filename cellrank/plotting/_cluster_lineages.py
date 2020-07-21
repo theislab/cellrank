@@ -145,7 +145,7 @@ def cluster_lineage(
         Keyword arguments for :func:`scanpy.pp.neighbors`.
     louvain_kwargs
         Keyword arguments for :func:`scanpy.tl.louvain`.
-    kwargs:
+    **kwargs:
         Keyword arguments for :meth:`cellrank.ul.models.Model.prepare`.
 
     Returns

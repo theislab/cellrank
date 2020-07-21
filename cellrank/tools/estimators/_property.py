@@ -17,6 +17,7 @@ import cellrank.logging as logg
 from scipy.sparse import issparse, spmatrix
 from cellrank.tools import Lineage
 from pandas.api.types import is_categorical_dtype
+from cellrank.utils._docs import d
 from cellrank.tools._utils import _make_cat, partition, _complex_warning
 from cellrank.tools._constants import Direction, DirPrefix, DirectionPlot
 from cellrank.tools.kernels._kernel import KernelExpression, PrecomputedKernel
@@ -35,8 +36,8 @@ def is_abstract(classname: str) -> bool:  # TODO: determine the necessity of thi
     """
     Check whether class with a given name inside this module is abstract.
 
-    Params
-    ------
+    Parameters
+    ----------
     classname
         Name of the class.
 
@@ -59,8 +60,8 @@ class PropertyMeta(ABCMeta, type):
         """
         Update :paramref:`attributedict` with new attribute and property.
 
-        Params
-        ------
+        Parameters
+        ----------
         md
             Metadata object, containing attribute name, property names, etc.
         attributedict
@@ -68,7 +69,8 @@ class PropertyMeta(ABCMeta, type):
 
         Returns
         -------
-        Old property name, if found, otherwise a newly constructed one, or `None` if no property is desired.
+        str or None
+            Old property name, if found, otherwise a newly constructed one, or `None` if no property is desired.
         """
 
         # TODO: determine whether supporting strings is a good idea
@@ -111,8 +113,8 @@ class PropertyMeta(ABCMeta, type):
         """
         Create a new instance.
 
-        Params
-        ------
+        Parameters
+        ----------
         clsname
             Name of class to be constructed.
         superclasses
@@ -170,7 +172,9 @@ class PropertyMeta(ABCMeta, type):
             # and res._plot is just a regular function
             # if this gets buggy in the future, consider switching from singlemethoddispatch
             setattr(
-                res, plot_name, _delegate_method_dispatch(res._plot, "_plot", prop_name)
+                res,
+                plot_name,
+                _delegate_method_dispatch(res._plot, "_plot", prop_name, skip=2),
             )
 
         return res
@@ -197,12 +201,14 @@ class KernelHolder(ABC):
             self._kernel = PrecomputedKernel(obj)
         elif isinstance(obj, AnnData):
             if obsp_key is None:
-                raise ValueError()
+                raise ValueError(
+                    "Please specify `obsp_key=...` when supplying AnnData object."
+                )
             elif obsp_key not in obj.obsp.keys():
-                raise KeyError()
+                raise KeyError(f"Key `{obsp_key!r}` not found in `adata.obsp`.")
             self._kernel = PrecomputedKernel(obj.obsp[obsp_key])
         else:
-            raise TypeError()
+            raise TypeError(f"Unsupported type: `{type(obj).__name__}`.")
 
         if self.kernel.transition_matrix is None:
             logg.debug("Computing transition matrix using default parameters")
@@ -249,10 +255,12 @@ class VectorPlottable(KernelHolder, Property):
 
     To be used in conjunction with:
 
-        - :class:`cellrank.tool.estimators._decomposition.Eig`.
-        - :class:`cellrank.tool.estimators._decomposition.Schur`.
+        - :class:`cellrank.tool.estimators._decomposition.Eig`
+        - :class:`cellrank.tool.estimators._decomposition.Schur`
     """
 
+    @d.get_sectionsf("plot_vectors")
+    @d.dedent
     def _plot_vectors(
         self,
         vectors: Optional[np.ndarray],
@@ -261,8 +269,26 @@ class VectorPlottable(KernelHolder, Property):
         abs_value: bool = False,
         cluster_key: Optional[str] = None,
         **kwargs,
-    ):
-        # TODO: SSoT
+    ) -> None:
+        """
+        Plot vectors in an embedding.
+
+        Parameters
+        ----------
+        use
+            Which or how many Schur vectors to be plotted. If `None`, all will be chosen.
+        abs_value
+            Whether to take the absolute value before plotting.
+        cluster_key
+            Key from :paramref:`adata` `.obs` to plot cluster annotations.
+        **kwargs
+            Keyword arguments for :func:`scvelo.pl.scatter`.
+
+        Returns
+        -------
+        %(just_plots)s
+        """
+
         if prop not in (P.EIG.v, P.SCHUR.v):
             raise ValueError(
                 f"Invalid kind `{prop!r}`. Valid options are `{P.EIG!r}`, `{P.SCHUR!r}``."
@@ -338,11 +364,13 @@ class Plottable(KernelHolder, Property):
 
     To be used in conjunction with:
 
-        - :class:`cellrank.tool.estimators._property.MetaStates`.
-        - :class:`cellrank.tool.estimators._property.FinStates`.
-        - :class:`cellrank.tool.estimators._property.AbsProbs`.
+        - :class:`cellrank.tool.estimators._property.MetaStates`
+        - :class:`cellrank.tool.estimators._property.FinStates`
+        - :class:`cellrank.tool.estimators._property.AbsProbs`
     """
 
+    @d.get_sectionsf("plot_discrete")
+    @d.dedent
     def _plot_discrete(
         self,
         data: pd.Series,
@@ -350,23 +378,22 @@ class Plottable(KernelHolder, Property):
         same_plot: bool = True,
         title: Optional[Union[str, List[str]]] = None,
         **kwargs,
-    ):
+    ) -> None:
         """
         Plot the states for each uncovered lineage.
 
-        Params
-        ------
+        Parameters
+        ----------
         same_plot
             Whether to plot the lineages on the same plot or separately.
         title
             The title of the plot.
-        kwargs
+        **kwargs
             Keyword arguments for :func:`scvelo.pl.scatter`.
 
         Returns
         -------
-        None
-            Nothing, just plots the categorical states.
+        %(just_plots)s
         """
 
         if data is None:
@@ -377,7 +404,7 @@ class Plottable(KernelHolder, Property):
             raise TypeError(
                 f"Expected property `.{prop}` to be categorical, found `{type(data).__name__!r}`."
             )
-        if prop in (P.ABS_RPOBS.s, P.FIN.s):
+        if prop in (P.ABS_PROBS.s, P.FIN.s):
             colors = getattr(self, A.FIN_COLORS.v, None)
         elif prop == P.META.v:
             colors = getattr(self, A.META_COLORS.v, None)
@@ -416,6 +443,8 @@ class Plottable(KernelHolder, Property):
                     **kwargs,
                 )
 
+    @d.get_sectionsf("plot_continuous")
+    @d.dedent
     def _plot_continuous(
         self,
         probs: Optional[Lineage],
@@ -428,9 +457,40 @@ class Plottable(KernelHolder, Property):
         show_dp: bool = True,
         title: Optional[str] = None,
         same_plot: bool = False,
-        color_map: Union[str, mpl.colors.ListedColormap] = cm.viridis,
+        cmap: Optional[Union[str, mpl.colors.ListedColormap]] = cm.viridis,
         **kwargs,
     ) -> None:
+        """
+        Plot continuous observations, such as lineages, in an embedding.
+
+        Parameters
+        ----------
+        lineages
+            Plot only these lineages. If `None`, plot all lineages.
+        cluster_key
+            Key from :paramref:`adata` `.obs` for plotting cluster labels.
+        mode
+            One of following:
+
+                - `'embedding'` - plot the embedding while coloring in the absorption probabilities
+                - `'time'` - plot the pseudotime on x-axis and the absorption probabilities on y-axis
+        time_key
+            Key from :paramref:`adata` `.obs` to use as a pseudotime ordering of the cells.
+        title
+            Either `None`, in which case titles are `"{to,from} {final,root} {state}"`,
+            or an array of titles, one per lineage.
+        same_plot
+            Whether to plot the lineages on the same plot using color gradients when :paramref:`mode` `='embedding'`.
+        cmap
+            Colormap to use.
+        **kwargs
+            Keyword arguments for :func:`scvelo.pl.scatter`.
+
+        Returns
+        -------
+        %(just_plots)s
+        """
+
         if probs is None:
             raise RuntimeError(
                 f"Compute `.{prop}` first as `.{F.COMPUTE.fmt(prop)}()`."
@@ -444,6 +504,9 @@ class Plottable(KernelHolder, Property):
             A = probs
         else:
             A = probs[lineages]
+
+        if cmap is None:
+            cmap = cm.viridis
 
         prefix = DirPrefix.BACKWARD if self.kernel.backward else DirPrefix.FORWARD
         diff_potential = (
@@ -495,18 +558,18 @@ class Plottable(KernelHolder, Property):
                     self.adata,
                     title=title,
                     color_gradients=A,
-                    color_map=color_map,
+                    color_map=cmap,
                     **kwargs,
                 )
             else:
                 scv.pl.scatter(
-                    self.adata, color=color, title=title, color_map=color_map, **kwargs
+                    self.adata, color=color, title=title, color_map=cmap, **kwargs
                 )
         elif mode == "time":
             scv.pl.scatter(
                 self.adata,
                 x=time,
-                color_map=color_map,
+                color_map=cmap,
                 y=color,
                 title=title,
                 xlabel=[time_key] * len(title),
@@ -518,43 +581,70 @@ class Plottable(KernelHolder, Property):
                 f"Invalid mode `{mode!r}`. Valid options are: `'embedding'` and `'time'`."
             )
 
-    # TODO: docrep - this is where the wrapper gets its doc, but document `plot_discrete` and `plot_continous` instead
     @singledispatchmethod
-    def _plot(self, data, prop: str, discrete: bool = False, *args, **kwargs):
+    @d.dedent
+    def _plot(
+        self,
+        data,
+        prop: str,
+        discrete: bool = False,
+        lineages: Optional[Union[str, Iterable[str]]] = None,
+        cluster_key: Optional[str] = None,
+        mode: str = "embedding",
+        time_key: str = "latent_time",
+        show_dp: bool = True,
+        title: Optional[str] = None,
+        same_plot: bool = False,
+        cmap: Optional[Union[str, mpl.colors.ListedColormap]] = None,
+        **kwargs,
+    ) -> None:
+        """
+        Plot discrete states or probabilities in an embedding.
+
+        Parameters
+        ----------
+        discrete
+            Whether to plot in discrete or continuous mode.
+        %(plot_continuous.parameters)s
+
+        Returns
+        -------
+        %(just_plots)s
+        """
+        # we keep all the arguments because from this function, we get the docs + signature
         raise RuntimeError(f"Compute `.{prop}` first as `.{F.COMPUTE.fmt(prop)}()`.")
 
     @_plot.register(pd.Series)
-    def _(self, data: pd.Series, prop: str, discrete: bool = False, *args, **kwargs):
+    def _(self, data: pd.Series, prop: str, discrete: bool = False, **kwargs) -> None:
         if discrete:
-            self._plot_discrete(data, prop, *args, **kwargs)
+            self._plot_discrete(data, prop, **kwargs)
         elif prop == P.META.v:  # GPCCA
             prop = P.META_PROBS.v
-            self._plot_continuous(
-                getattr(self, prop, None), prop, None, *args, **kwargs
-            )
+            self._plot_continuous(getattr(self, prop, None), prop, None, **kwargs)
         elif prop == P.FIN.v:
             probs = getattr(self, A.FIN_ABS_PROBS.s, None)
+            # we have this only in GPCCA
             if isinstance(probs, Lineage):
-                # TODO: logg
-                self._plot_continuous(probs, prop, *args, **kwargs)
+                self._plot_continuous(probs, prop, **kwargs)
             else:
                 logg.warning(
                     f"Unable to plot continuous observations for `{prop!r}`, plotting in discrete mode"
                 )
-                self._plot_discrete(data, prop, *args, **kwargs)
+                self._plot_discrete(data, prop, **kwargs)
         else:
             raise NotImplementedError(
                 f"Unable to plot property `.{prop}` in discrete mode."
             )
 
     @_plot.register(Lineage)
-    def _(self, data: Lineage, prop: str, discrete: bool = False, *args, **kwargs):
+    def _(self, data: Lineage, prop: str, discrete: bool = False, **kwargs) -> None:
         if not discrete:
-            diff_potential = getattr(self, P.DIFF_POT.v)
-            self._plot_continuous(data, prop, diff_potential, *args, **kwargs)
-        elif prop == P.ABS_RPOBS.v:
+            diff_potential = getattr(self, P.DIFF_POT.v, None)
+            self._plot_continuous(data, prop, diff_potential, **kwargs)
+        elif prop == P.ABS_PROBS.v:
+            # for discrete and abs. probs, plot the final states
             prop = P.FIN.v
-            self._plot_discrete(getattr(self, prop, None), prop, *args, **kwargs)
+            self._plot_discrete(getattr(self, prop, None), prop, **kwargs)
         else:
             raise NotImplementedError(
                 f"Unable to plot property `.{prop}` in continuous mode."
@@ -565,8 +655,13 @@ class MetaStates(Plottable):
     """Class dealing with metastable states."""
 
     __prop_metadata__ = [
-        Metadata(attr=A.META, prop=P.META, dtype=pd.Series),
-        Metadata(attr=A.META_PROBS, prop=P.META_PROBS, dtype=Lineage,),
+        Metadata(attr=A.META, prop=P.META, dtype=pd.Series, doc="Metastable states."),
+        Metadata(
+            attr=A.META_PROBS,
+            prop=P.META_PROBS,
+            dtype=Lineage,
+            doc="Metastable states probabilities.",
+        ),
         Metadata(attr=A.META_COLORS, prop=P.NO_PROPERTY, dtype=np.ndarray),
     ]
 
@@ -579,8 +674,13 @@ class FinalStates(Plottable):
     """Class dealing with final states."""
 
     __prop_metadata__ = [
-        Metadata(attr=A.FIN, prop=P.FIN, dtype=pd.Series),
-        Metadata(attr=A.FIN_PROBS, prop=P.FIN_PROBS, dtype=pd.Series,),
+        Metadata(attr=A.FIN, prop=P.FIN, dtype=pd.Series, doc="Final states."),
+        Metadata(
+            attr=A.FIN_PROBS,
+            prop=P.FIN_PROBS,
+            dtype=pd.Series,
+            doc="Final states probabilities.",
+        ),
         Metadata(attr=A.FIN_COLORS, prop=P.NO_PROPERTY, dtype=np.ndarray),
     ]
 
@@ -601,8 +701,18 @@ class AbsProbs(Plottable):
     """Class dealing with absorption probabilities."""
 
     __prop_metadata__ = [
-        Metadata(attr=A.ABS_RPOBS, prop=P.ABS_RPOBS, dtype=Lineage),
-        Metadata(attr=A.DIFF_POT, prop=P.DIFF_POT, dtype=pd.Series),
+        Metadata(
+            attr=A.ABS_RPOBS,
+            prop=P.ABS_PROBS,
+            dtype=Lineage,
+            doc="Absorption probabilities.",
+        ),
+        Metadata(
+            attr=A.DIFF_POT,
+            prop=P.DIFF_POT,
+            dtype=pd.Series,
+            doc="Differentiation potential.",
+        ),
     ]
 
     @abstractmethod

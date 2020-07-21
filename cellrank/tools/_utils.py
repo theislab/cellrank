@@ -1683,7 +1683,7 @@ def _solve_many_sparse_problems_petsc(
     solver
         Solver to use. One of `petsc4py.PETSc.KSP.Type`. By default, use `PETSc.KSP.Type.GMRES`.
     preconditioner
-        Rreconditioner to use. If `None`, don't use any.
+        Preconditioner to use. If `None`, don't use any.
     tol
         Relative tolerance.
     queue

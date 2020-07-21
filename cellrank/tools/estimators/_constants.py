@@ -39,7 +39,7 @@ class P(PrettyEnum):
     META_PROBS = "metastable_states_probabilities"
     FIN = "final_states"
     FIN_PROBS = "final_states_probabilities"
-    ABS_RPOBS = "absorption_probabilities"
+    ABS_PROBS = "absorption_probabilities"
     DIFF_POT = "diff_potential"
     COARSE_T = "coarse_T"
     COARSE_INIT_D = "coarse_initial_distribution"

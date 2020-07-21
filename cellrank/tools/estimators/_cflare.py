@@ -6,6 +6,7 @@ import numpy as np
 from pandas import Series
 from cellrank import logging as logg
 from scipy.stats import zscore
+from cellrank.utils._docs import d, inject_docs
 from cellrank.tools._utils import (
     _cluster_X,
     _filter_cells,
@@ -17,6 +18,7 @@ from cellrank.tools.estimators._decomposition import Eigen
 from cellrank.tools.estimators._base_estimator import BaseEstimator
 
 
+@d.dedent
 class CFLARE(BaseEstimator, Eigen):
     """
     Clustering and Filtering of Left and Right Eigenvectors based on Markov chains.
@@ -29,9 +31,13 @@ class CFLARE(BaseEstimator, Eigen):
     The MC is time-homogeneous, i.e. the transition probabilities don't change over time. Further, it's
     discrete, as every state in the MC is given by a measured cell state. The state space is finite, as is the number
     of measured cells and we consider discrete time-increments.
+
+    Parameters
+    ----------
+    %(base_estimator.parameters)s
     """
 
-    # TODO: docrep __init__ with set_final_states + inject docs
+    @inject_docs(fin_states=P.FIN, fin_states_probs=P.FIN_PROBS)
     def compute_final_states(
         self,
         use: Optional[Union[int, Tuple[int], List[int], range]] = None,
@@ -55,8 +61,8 @@ class CFLARE(BaseEstimator, Eigen):
         Filter to obtain recurrent states in left eigenvectors.
         Cluster to obtain approximate recurrent classes in right eigenvectors.
 
-        Params
-        ------
+        Parameters
+        ----------
         use
             Which or how many first eigenvectors to use as features for clustering/filtering.
             If `None`, use `eigengap` statistic.
@@ -103,10 +109,9 @@ class CFLARE(BaseEstimator, Eigen):
         None
             Nothing, but updates the following fields:
 
-                - :paramref:`final_states`
-                - :paramref:`final_states_probabilities`
+                - :paramref:`{fin_states}`
+                - :paramref:`{fin_states_probs}`
         """
-        # TODO: SSoT
 
         def compute_metastable_states_prob() -> Series:
             """Compute a global score of being an approximate recurrent class."""
@@ -278,7 +283,7 @@ class CFLARE(BaseEstimator, Eigen):
         """
 
         # get the names of the main states, remove 'rest' if present
-        main_names = self._get(P.ABS_RPOBS).names
+        main_names = self._get(P.ABS_PROBS).names
         main_names = main_names[main_names != "rest"]
 
         # get the metastable annotations & colors

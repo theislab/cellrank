@@ -41,8 +41,8 @@ class RandomKeys:
     """
     Create random keys inside an :class:`anndataAnnData` object.
 
-    Params
-    ------
+    Parameters
+    ----------
     adata
         Annotated data object.
     n
@@ -76,10 +76,10 @@ class RandomKeys:
 
 # copy of functools.singledispatchmethod (for Python < 3.8)
 class singledispatchmethod:
-    """Single-dispatch generic method descriptor.
+    """
+    Single-dispatch generic method descriptor.
 
-    Supports wrapping existing descriptors and handles non-descriptor
-    callables as instance methods.
+    Supports wrapping existing descriptors and handles non-descriptor callables as instance methods.
     """
 
     def __init__(self, func):
@@ -90,7 +90,8 @@ class singledispatchmethod:
         self.func = func
 
     def register(self, cls, method=None):
-        """generic_method.register(cls, func) -> func
+        """
+        Generic_method.register(cls, func) -> func
 
         Registers a new implementation for the given *cls* on a *generic_method*.
         """  # noqa
@@ -120,8 +121,8 @@ def argspec_factory(
     """
     Create a dummy adapter function with desired signature.
 
-    Params
-    ------
+    Parameters
+    ----------
     wrapped
         Function being wrapped whose signature we wish to replicate.
     skip
@@ -133,12 +134,14 @@ def argspec_factory(
 
     Returns
     -------
-    An adapter with the correct signature.
+    :class:`Callable`
+        An adapter with the correct signature.
     """
     # for locals(), this is a whitelist of types we allow
     import anndata  # noqa
     import numpy  # noqa
     import pandas  # noqa
+    import matplotlib  # noqa
 
     NoneType = type(None)
 
@@ -155,7 +158,10 @@ def argspec_factory(
 
 
 def _delegate(
-    *, prop_name: Optional[str] = None, return_type: Optional[Type] = None,
+    *,
+    prop_name: Optional[str] = None,
+    return_type: Optional[Type] = None,
+    skip: int = 2,
 ) -> Callable:
     @wrapt.decorator()
     def pass_through(wrapped, instance, args, kwargs):
@@ -165,7 +171,7 @@ def _delegate(
         return pass_through
 
     adapter = wrapt.adapter_factory(
-        partial(argspec_factory, skip=2, return_type=return_type)
+        partial(argspec_factory, skip=skip, return_type=return_type)
     )
 
     @wrapt.decorator(adapter=adapter)
@@ -175,19 +181,19 @@ def _delegate(
     return wrapper
 
 
-def _delegate_method_dispatch(fn, attr, prop_name):
+def _delegate_method_dispatch(fn: Callable, attr: str, prop_name: str, skip: int = 2):
 
-    adapter = wrapt.adapter_factory(partial(argspec_factory, fn=fn, skip=2))
+    adapter = wrapt.adapter_factory(partial(argspec_factory, fn=fn, skip=skip))
 
     @wrapt.decorator(adapter=adapter)
     def delegate(wrapped, instance, args, kwargs):
-        return wrapped(getattr(instance, prop_name), prop_name, *args, **kwargs)
+        # first, get the correct method based on the dispatcher (can't use wrapped.dispatch..., since it's a function)
+        # then, call the actual function
+        return getattr(instance, attr)(
+            getattr(instance, prop_name), prop_name, *args, **kwargs
+        )
 
-    @delegate
-    def wrapper(self, *args, **kwargs):
-        return getattr(self, attr)(*args, **kwargs)
-
-    return wrapper
+    return delegate(fn)
 
 
 def _create_property(

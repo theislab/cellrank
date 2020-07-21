@@ -106,8 +106,7 @@ def gene_trends(
         Percentile for colors. Valid values are in range `[0, 100]`.
         This can improve visualization. Can be specified separately for each lineage separately.
     lineage_cmap
-        Colormap to use when coloring in the lineages.
-        Only used when :paramref:`same_plot` `=True`.
+        Colormap to use when coloring in the lineages. Only used when :paramref:`same_plot` `=True`.
     abs_prob_cmap
         Colormap to use when visualizing the absorption probabilities for each lineage.
         Only used when :paramref:`same_plot` `=False`.
@@ -130,15 +129,13 @@ def gene_trends(
     margins
         Margins around the plot.
     sharey
-        Whether to share y-axis.
-        Only used when :paramref:`same_plot` `=False`.
+        Whether to share y-axis. Only used when :paramref:`same_plot` `=False`.
     ncols
         Number of columns of the plot when plotting multiple genes.
         Only used when :paramref:`same_plot` `=True`.
     %(parallel)s
     suptitle
-        Suptitle of the figure.
-        Only used when :paramref:`same_plot` `=True`.
+        Suptitle of the figure. Only used when :paramref:`same_plot` `=True`.
     ext
         Extension to use when saving files, such as `'pdf'`.
         Only used when :paramref:`same_plot` `=False`.
@@ -148,9 +145,9 @@ def gene_trends(
 
         The figures will be saved as :paramref:`dirname` /`{gene}`. :paramref:`ext`.
     %(plotting)s
-    plot_kwargs:
+    plot_kwargs
         Keyword arguments for :meth:`cellrank.ul.models.Model.plot`.
-    kwargs
+    **kwargs
         Keyword arguments for :meth:`cellrank.ul.models.Model.prepare`.
 
     Returns

@@ -13,15 +13,14 @@ import numpy as np
 import pandas as pd
 from cellrank import logging as logg
 from cellrank.tools import Lineage
+from cellrank.utils._docs import d, inject_docs
 from cellrank.tools._utils import (
     save_fig,
     _eigengap,
     _fuzzy_to_discrete,
-    _convert_lineage_name,
     _series_from_one_hot_matrix,
 )
 from cellrank.tools._colors import _get_black_or_white
-from cellrank.tools._constants import Lin
 from cellrank.tools.estimators._utils import (
     Metadata,
     _print_insufficient_number_of_cells,
@@ -32,27 +31,14 @@ from cellrank.tools.estimators._decomposition import Eigen, Schur
 from cellrank.tools.estimators._base_estimator import BaseEstimator
 
 
+@d.dedent
 class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
     """
     Generalized Perron Cluster Cluster Analysis [GPCCA18]_.
 
-    Params
-    ------
-    kernel
-        Kernel object that stores a transition matrix.
-    adata : :class:`anndata.AnnData`
-        Optional annotated data object. If given, precomputed lineages can be read in from this.
-        Otherwise, read the object from the specified :paramref:`kernel`.
-    inplace
-        Whether to modify :paramref:`adata` object inplace or make a copy.
-    read_from_adata
-        Whether to read available attributes in :paramref:`adata`, if present.
-    g2m_key
-        Key from :paramref:`adata` `.obs`. Can be used to detect cell-cycle driven start- or endpoints.
-    s_key
-        Key from :paramref:`adata` `.obs`. Can be used to detect cell-cycle driven start- or endpoints.
-    key_added
-        Key in :paramref:`adata` where to store the final transition matrix.
+    Parameters
+    ----------
+    %(base_estimator.parameters)s
     """
 
     __prop_metadata__ = [
@@ -64,6 +50,8 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         Metadata(attr=A.COARSE_STAT_D, prop=P.COARSE_STAT_D, dtype=pd.Series),
     ]
 
+    @inject_docs(schur=P.SCHUR.s, coarse_T=P.COARSE_T, coarse_stat=P.COARSE_STAT_D)
+    @d.dedent
     def compute_metastable_states(
         self,
         n_states: Optional[
@@ -78,14 +66,15 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         """
         Compute the metastable states.
 
-        Params
-        ------
+        Parameters
+        ----------
         n_states
             Number of metastable states. If `None`, use the `eigengap` heuristic.
         use_min_chi
             Whether to use :meth:`msmtools.analysis.dense.gpcca.GPCCA.minChi` to calculate the number of metastable
             states. If `True`, :paramref:`n_states` corresponds to an interval `[min, max]` inside of which
             the potentially optimal number of metastable states is searched.
+        %(n_cells)s
         cluster_key
             If a key to cluster labels is given, `approx_rcs` will ge associated with these for naming and colors.
         en_cutoff
@@ -102,9 +91,9 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         None
             Nothing, but updates the following fields:
 
-                - :paramref:`schur_vectors`
-                - :paramref:`coarse_T`
-                - :paramref:`coarse_stationary_distribution`
+                - :paramref:`{schur}`
+                - :paramref:`{coarse_T}`
+                - :paramref:`{coarse_stat}`
         """
 
         was_from_eigengap = False
@@ -219,34 +208,24 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             time=start,
         )
 
+    @d.dedent
     def set_final_states_from_metastable_states(
-        self,
-        names: Optional[Union[Iterable[str], str]] = None,
-        redistribute: bool = True,
-        n_cells: int = 30,
-        **kwargs,
+        self, names: Optional[Union[Iterable[str], str]] = None, n_cells: int = 30,
     ):
         """
         Manually select the main states from the metastable states.
 
-        Params
-        ------
+        Parameters
+        ----------
         names
             Names of the main states. Multiple states can be combined using `','`, such as `['Alpha, Beta', 'Epsilon']`.
-        redistribute
-            Whether to redistribute the probability mass of unselected lineages or create a `'rest'` lineage.
-        n_cells
-            Number of most likely cells from each main state to select. If `None`, on main states will be selected,
-            only the lineage probabilities may be redistributed.
-        kwargs
-            Keyword arguments for :meth:`cellrank.tl.Lineage.reduce` when redistributing the probability mass.
+        %(n_cells)s
 
         Returns
         -------
         None
             Nothing, just sets the final states.
         """
-        # TODO: no normalization beforehand
 
         if not isinstance(n_cells, int):
             raise TypeError(
@@ -260,27 +239,11 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
 
         if names is None:
             names = probs.names
-            redistribute = False
 
         if isinstance(names, str):
             names = [names]
 
-        if len(names) == 1 and redistribute:
-            logg.warning(
-                "Redistributing the mass to only 1 state will create a constant vector of ones. Not redistributing"
-            )
-            redistribute = False
-
-        names = list(names)
-        kwargs["return_weights"] = False
-
-        if redistribute:
-            meta_states_probs = probs[names + [Lin.OTHERS]]
-            meta_states_probs = meta_states_probs.reduce(
-                [" or ".join(_convert_lineage_name(name)) for name in names], **kwargs
-            )
-        else:
-            meta_states_probs = probs[names + [Lin.REST]]
+        meta_states_probs = probs[list(names)]
 
         # compute the aggregated probability of being a root/final state (no matter which)
         scaled_probs = meta_states_probs[
@@ -297,7 +260,6 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             meta_states_probs[list(self._get(P.FIN).cat.categories)].colors,
         )
 
-        # TODO: do we even want this?
         self._set(A.FIN_ABS_PROBS, meta_states_probs)
 
         self._write_final_states()
@@ -305,37 +267,33 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
     def compute_final_states(
         self,
         method: str = "eigengap",
-        redistribute: bool = True,
+        n_cells: int = 30,
         alpha: Optional[float] = 1,
         min_self_prob: Optional[float] = None,
         n_main_states: Optional[int] = None,
-        n_cells: int = 30,
-        **kwargs,
     ):
         """
         Automatically select the main states from metastable states.
 
-        Params
-        ------
+        Parameters
+        ----------
         method
             One of following:
 
                 - `'eigengap'` - select the number of states based on the eigengap of the transition matrix
-                - `'eigengap_coarse'` - select the number of states based on the eigengap of the diagonal of the coarse-grained transition matrix
-                - `'min_self_prob'` - select states which have the given minimum probability on the diagonal of the coarse-grained transition matrix
-                - `'top_n'` - select top :paramref:`n_main_states` based on the probability on the diagonal of the coarse-grained transition matrix
-        redistribute
-            Whether to redistribute the probability mass of unselected lineages or create a `'rest'` lineage.
+                - `'eigengap_coarse'` - select the number of states based on the eigengap of the diagonal \
+                    of the coarse-grained transition matrix
+                - `'top_n'` - select top :paramref:`n_main_states` based on the probability of the diagonal \
+                    of the coarse-grained transition matrix
+                - `'min_self_prob'` - select states which have the given minimum probability of the diagonal \
+                    of the coarse-grained transition matrix
+        %(n_cells)s
         alpha
             Used when :paramref:`method` `='eigengap'` or `='eigengap_coarse`.
         min_self_prob
             Used when :paramref:`method` `='min_self_prob'`.
         n_main_states
             Used when :paramref:`method` `='top_n'`.
-        n_cells
-            Number of most likely cells from each main state to select.
-        kwargs
-            Keyword arguments for :meth:`cellrank.tl.Lineage.reduce` when redistributing the mass.
 
         Returns
         -------
@@ -349,9 +307,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             logg.warning(
                 "Found only one metastable state. Making it the single main state. "
             )
-            self.set_final_states_from_metastable_states(
-                None, redistribute=False, n_cells=n_cells, **kwargs
-            )
+            self.set_final_states_from_metastable_states(None, n_cells=n_cells)
             return
 
         coarse_T = self._get(P.COARSE_T)
@@ -365,7 +321,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         elif method == "eigengap_coarse":
             if coarse_T is None:
                 raise RuntimeError(
-                    "Compute metastable states first as `.compute_metastable_states()`."
+                    f"Compute metastable states first as `.{F.COMPUTE.fmt(P.META)}()`."
                 )
             n_main_states = _eigengap(np.sort(np.diag(coarse_T)[::-1]), alpha=alpha)
         elif method == "top_n":
@@ -384,9 +340,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
                 )
             self_probs = pd.Series(np.diag(coarse_T), index=coarse_T.columns)
             names = self_probs[self_probs.values >= min_self_prob].index
-            self.set_final_states_from_metastable_states(
-                names, redistribute=redistribute, n_cells=n_cells, **kwargs
-            )
+            self.set_final_states_from_metastable_states(names, n_cells=n_cells)
             return
         else:
             raise ValueError(
@@ -395,9 +349,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             )
 
         names = coarse_T.columns[np.argsort(np.diag(coarse_T))][-n_main_states:]
-        self.set_final_states_from_metastable_states(
-            names, redistribute=redistribute, n_cells=n_cells, **kwargs
-        )
+        self.set_final_states_from_metastable_states(names, n_cells=n_cells)
 
     def compute_gdpt(
         self, n_components: int = 10, key_added: str = "gdpt_pseudotime", **kwargs
@@ -405,13 +357,13 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         """
         Compute generalized DPT making use of the real Schur decomposition.
 
-        Params
-        ------
+        Parameters
+        ----------
         n_components
             Number of real Schur vectors to consider.
         key_added
             Key in :paramref:`adata` `.obs` where to save the pseudotime.
-        kwargs
+        **kwargs
             Keyword arguments for :meth:`cellrank.tl.GPCCA.compute_schur` if Schur decomposition is not found.
 
         Returns
@@ -481,6 +433,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
 
         logg.info(f"Adding `{key_added!r}` to `adata.obs`\n    Finish", time=start)
 
+    @d.dedent
     def plot_coarse_T(
         self,
         show_stationary_dist: bool = True,
@@ -504,8 +457,8 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
            :width: 400px
            :align: center
 
-        Params
-        ------
+        Parameters
+        ----------
         show_stationary_dist
             Whether to show the stationary distribution, if present.
         show_initial_dist
@@ -520,22 +473,15 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             Whether to show colorbar.
         title
             Title of the figure.
-        figsize
-            Size of the figure.
-        dpi
-            Dots per inch.
-        save
-            Filename where to save the plots.
-            If `None`, just show the plots.
+        %s(plotting)s
         text_kwargs
             Keyword arguments for :func:`matplotlib.pyplot.text`.
-        kwargs
+        **kwargs
             Keyword arguments for :func:`matplotlib.pyplot.imshow`.
 
         Returns
         -------
-        None
-            Nothing, just plots and optionally saves the plot.
+        %(just_plots)s
         """
 
         def stylize_dist(
@@ -781,6 +727,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
 
         return int(np.arange(minn, maxx)[np.argmax(self._gpcca.minChi(minn, maxx))])
 
+    @d.dedent
     def _set_meta_states(
         self,
         memberships: np.ndarray,
@@ -797,12 +744,11 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         and use these to give each state a name and a color by comparing with pre-computed, categorical cluster
         annotations.
 
-        Params
+        Parameters
         --------
         memberships
             Fuzzy clustering.
-        n_cells
-            Number of cells to be used to represent each state.
+        %(n_cells)s
         cluster_key
             Key from :paramref:`adata` `.obs` to get reference cluster annotations.
         en_cutoff

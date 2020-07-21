@@ -89,7 +89,7 @@ def cluster_fates(
         Keyword arguments for :func:`matplotlib.axes.Axes.legend`, such as `'loc'` for legend position.
         For `mode='paga_pie'` and `basis='...'`, this controls the placement of the absorption probabilities legend.
     %(plotting)s
-    kwargs
+    **kwargs
         Keyword arguments for :func:`scvelo.pl.paga`, :func:`scanpy.pl.violin` or :func:`matplotlib.pyplot.bar`,
         depending on :paramref:`mode`.
 
