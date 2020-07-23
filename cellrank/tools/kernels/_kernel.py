@@ -867,7 +867,8 @@ class VelocityKernel(Kernel):
         if vkey + "_params" in self.adata.uns.keys():
             velocity_params = self.adata.uns[vkey + "_params"]
         else:
-            logg.debug("Unable to check velocity graph parameters")
+            velocity_params = None
+            logg.debug("Unable to load velocity parameters. ")
 
         # add to self
         self._velocity = V
@@ -885,15 +886,12 @@ class VelocityKernel(Kernel):
         density_normalize: bool = True,
         backward_mode: str = "transpose",
         sigma_corr: Optional[float] = None,
-        scale_by_variances: bool = False,
-        var_min: float = 0.1,
-        self_transitions: bool = False,
-        perc: Optional[float] = None,
-        threshold: Optional[float] = None,
+        mode: str = "stochastic",
+        use_negative_correlations: bool = True,
         **kwargs,
     ) -> "VelocityKernel":
         """
-        Compute transition matrix based on velocity correlations.
+        Compute transition matrix based on velocity directions on the local manifold.
 
         For each cell, infer transition probabilities based on the correlation of the cell's
         velocity-extrapolated cell state with cell states of its *K* nearest neighbors.
@@ -907,17 +905,9 @@ class VelocityKernel(Kernel):
         sigma_corr
             Kernel width for exp kernel to be used to compute transition probabilities.
             from the velocity graph. If `None`, the median cosine correlation in absolute value is used.
-        scale_by_variances
-            If variances for the velocity correlations were computed, use these as scaling factor in softmax.
-        var_min
-            Variances are clipped at the lower end to this value.
-        self_transitions
-            Assigns elements to the diagonal of the velocity-graph based on a confidence measure.
-        perc
-            Quantile of the distribution of exponentiated velocity correlations. This is used as a threshold to set
-            smaller values to zero.
-        threshold
-            Set a threshold to remove exponentiated velocity correlations smaller than `threshold`.
+        mode
+            How to compute transition probabilities. Options are "stochastic" (propagate uncertainty analytically),
+            "deterministic" (don't propagate uncertainty) and "sampling" (sample from velocity distribution)
 
         Returns
         -------
@@ -927,54 +917,15 @@ class VelocityKernel(Kernel):
 
         start = logg.info("Computing transition matrix based on velocity correlations")
 
-        if self._variances is None and scale_by_variances:
-            logg.warning(
-                "No velocity uncertainties found. Try re-running `scv.tl.velocity_graph()` and set "
-                "`compute_uncertainties=True`. Further, pass the correct `var_key` when you create the VelocityKernel. "
-            )
-            scale_by_variances = False
-
-        # get the correlations, handle backwards case
-        if self._direction == Direction.BACKWARD:
-            if backward_mode == "negate":
-                correlations = self._velo_corr.multiply(-1)
-                if scale_by_variances:
-                    logg.warning(
-                        'Scaling by variances is not implemented for `backward_mode="negate". Skipping'
-                    )
-                variances = None
-            elif backward_mode == "transpose":
-                correlations = self._velo_corr.T
-                if self._variances is not None and scale_by_variances:
-                    variances = self._variances.T.copy()
-                else:
-                    variances = None
-            else:
-                raise ValueError(f"Unknown backward mode `{backward_mode!r}`.")
-        else:
-            correlations = self._velo_corr
-            if self._variances is not None and scale_by_variances:
-                variances = self._variances.copy()
-            else:
-                variances = None
-
-        # set the scaling parameter for the softmax
-        med_corr = np.median(np.abs(correlations.data))
-        if sigma_corr is None:
-            sigma_corr = 1.0 / med_corr
-
         params = dict(  # noqa
             dnorm=density_normalize,
             bwd_mode=backward_mode if self._direction == Direction.BACKWARD else None,
             sigma_corr=sigma_corr,
-            use_negative_cosines=self._use_negative_cosines,
-            self_transitions=self_transitions,
-            perc=perc,
-            threshold=threshold,
-            scale_by_variances=scale_by_variances,
-            var_min=var_min,
+            use_negative_correlations=use_negative_correlations,
+            mode=mode,
         )
 
+        # check whether we already computed such a transition matrix. If yes, load from cache
         if params == self._params:
             assert self.transition_matrix is not None, _ERROR_EMPTY_CACHE_MSG
             logg.debug(_LOG_USING_CACHE, time=start)
@@ -983,54 +934,9 @@ class VelocityKernel(Kernel):
 
         self._params = params
 
-        # copied form scvelo, assign self-loops based on confidence heuristic
-        if self_transitions:
-            confidence = correlations.max(1).A.flatten()
-            ub = np.percentile(confidence, 98)
-            self_prob = np.clip(ub - confidence, 0, 1)
-            correlations.setdiag(self_prob)
+        # transition matrix computation goes here
 
-        # Scale weights either by variances or by constant value
-        if variances is not None:
-            logg.debug("Scaling by variances")
-
-            # check that both have been computed on the same elements
-            if len(variances.data) == len(correlations.data):
-                if not all(
-                    (
-                        (var_ixs == mat_ixs).all()
-                        for var_ixs, mat_ixs in zip(
-                            variances.nonzero(), correlations.nonzero()
-                        )
-                    )
-                ):
-                    logg.warning(
-                        "Uncertainty indices do not match velocity graph indices"
-                    )
-            else:
-                logg.warning("Uncertainty indices do not match velocity graph indices")
-
-            # for non-zero edge-weights, clip var's to a_min and scale the edge weights by these vars
-            ixs = correlations.nonzero()
-            variances[ixs] = np.array(
-                np.clip(variances[ixs], a_min=var_min, a_max=None)
-            ).flatten()
-            correlations[ixs] = np.array(correlations[ixs] / variances[ixs]).flatten()
-        elif sigma_corr is not None:
-            logg.debug("Scaling sigma correlation")
-            correlations.data = correlations.data * sigma_corr
-
-        # use softmax
-        correlations.data = np.exp(correlations.data)
-
-        # copied from scvelo, threshold the unnormalized probabilities
-        if perc is not None or threshold is not None:
-            if threshold is None:
-                threshold = np.percentile(correlations.data, perc)
-            correlations.data[correlations.data < threshold] = 0
-            correlations.eliminate_zeros()
-
-        self._compute_transition_matrix(density_normalize=density_normalize,)
+        self._compute_transition_matrix(density_normalize=False)
 
         logg.info("    Finish", time=start)
 
@@ -1042,8 +948,8 @@ class VelocityKernel(Kernel):
             self.adata,
             backward=self.backward,
             vkey=self._vkey,
-            var_key=self._var_key,
-            use_negative_cosines=self._use_negative_cosines,
+            xkey=self._xkey,
+            gene_subset=self._gene_subset,
         )
         vk._params = copy(self.params)
         vk._cond_num = self.condition_number
