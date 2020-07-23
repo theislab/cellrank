@@ -874,9 +874,9 @@ class VelocityKernel(Kernel):
 
     def compute_transition_matrix(
         self,
-        density_normalize: bool = True,
+        density_normalize: bool = False,
         backward_mode: str = "transpose",
-        sigma_corr: Optional[float] = None,
+        sigma_corr: float = 1.0,
         mode: str = "stochastic",
         use_negative_correlations: bool = True,
         **kwargs,
@@ -943,7 +943,8 @@ class VelocityKernel(Kernel):
 
         # loop over all cells
         vals, rows, cols, n_obs = [], [], [], self._gene_expression.shape[0]
-        for i in range(n_obs):
+        for i in range(10):
+            print(f"i = {i}/{n_obs}")
 
             # get the neighbors
             nbhs_ixs = self._conn[i, :].indices
@@ -988,7 +989,7 @@ class VelocityKernel(Kernel):
 
         matrix = _vals_to_csr(vals, rows, cols, shape=(n_obs, n_obs))
 
-        self._compute_transition_matrix(matrix, density_normalize=False)
+        self._compute_transition_matrix(matrix, density_normalize=density_normalize)
 
         logg.info("    Finish", time=start)
 
