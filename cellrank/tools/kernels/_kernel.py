@@ -20,12 +20,18 @@ from functools import wraps, reduce
 import numpy as np
 from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix
 
+from scvelo.preprocessing.moments import get_moments
+
+import jax.numpy as jnp
+from jax import jacfwd, jacrev
 from cellrank import logging as logg
 from cellrank.tools._utils import (
     bias_knn,
     _normalize,
     _get_neighs,
     _has_neighs,
+    _predict_fwd,
+    _vals_to_csr,
     is_connected,
     is_symmetric,
 )
@@ -382,14 +388,13 @@ class UnaryKernelExpression(KernelExpression, ABC):
         self._read_from_adata(check_connectivity=check_connectivity, **kwargs)
 
     @abstractmethod
-    def _read_from_adata(self, var_key: Optional[str] = None, **kwargs):
+    def _read_from_adata(self, **kwargs):
         """Import the base-KNN graph and optionally check for symmetry and connectivity."""
 
         if not _has_neighs(self.adata):
             raise KeyError("Compute KNN graph first as `scanpy.pp.neighbors()`.")
 
         self._conn = _get_neighs(self.adata, "connectivities").astype(_dtype)
-        self._variances = None
 
         check_connectivity = kwargs.pop("check_connectivity", False)
         if check_connectivity:
@@ -404,20 +409,6 @@ class UnaryKernelExpression(KernelExpression, ABC):
             logg.warning("KNN graph is not symmetric", time=start)
         else:
             logg.debug("KNN graph is symmetric", time=start)
-
-        if var_key is not None:
-            if var_key in self.adata.uns.keys():
-                logg.debug(f"Loading variances from `adata.uns[{var_key!r}]`")
-                # keep it sparse
-                self._variances = csr_matrix(self.adata.uns[var_key].astype(_dtype))
-                if self._conn.shape != self._variances.shape:
-                    raise ValueError(
-                        f"Expected variances' shape `{self._variances.shape}` to be equal to `{self._conn.shape}`."
-                    )
-            else:
-                logg.debug(f"Unable to load variances from `adata.uns[{var_key!r}]`")
-        else:
-            logg.debug("No variance key specified")
 
     def density_normalize(
         self, other: Union[np.ndarray, spmatrix]
@@ -915,6 +906,9 @@ class VelocityKernel(Kernel):
             Nothing, but makes :paramref:`transition_matrix` available.
         """
 
+        if mode not in ["stochastic", "deterministic", "sampling"]:
+            raise NotImplementedError(f"Mode `{mode}` is not implemented. ")
+
         start = logg.info("Computing transition matrix based on velocity correlations")
 
         params = dict(  # noqa
@@ -934,9 +928,67 @@ class VelocityKernel(Kernel):
 
         self._params = params
 
-        # transition matrix computation goes here
+        # compute moments and define a function which returns hessian matrices
+        if mode in ["stochastic", "sampling"]:
+            velocity_expectation = get_moments(
+                self.adata, self._velocity, second_order=False
+            )
+            velocity_variance = get_moments(
+                self.adata, self._velocity, second_order=True
+            )
 
-        self._compute_transition_matrix(density_normalize=False)
+        # define a function to compute hessian matrices
+        def get_hessian_fwd(x, W, sigma):
+            return jacfwd(jacrev(_predict_fwd, 0), 0)(x, W, sigma)
+
+        # loop over all cells
+        vals, rows, cols, n_obs = [], [], [], self._gene_expression.shape[0]
+        for i in range(n_obs):
+
+            # get the neighbors
+            nbhs_ixs = self._conn[i, :].indices
+            W = self._gene_expression[nbhs_ixs, :] - self._gene_expression[nbhs_ixs, :]
+
+            if mode == "deterministic":
+
+                # evaluate the prediction at the actual velocity vector
+                v_i = self._velocity[i, :]
+                p = _predict_fwd(v_i, W, sigma=sigma_corr)
+
+            elif mode == "stochastic":
+
+                # get the expectation and variance
+                v_i = velocity_expectation[i, :]
+                variances = velocity_variance[i, :]
+
+                # compute the Hessian tensor, and turn it into a matrix that has the diagonal elements in its rows
+                H = get_hessian_fwd(v_i, W, sigma_corr)
+                H_diag = jnp.concatenate([jnp.diag(h)[None, :] for h in H])
+
+                # compute zero order term
+                p_0 = _predict_fwd(v_i, W, sigma=sigma_corr)
+
+                # compute second order term (note that the first order term cancels)
+                p_2 = 0.5 * jnp.dot(H_diag, variances)
+
+                # combine both to give the second order Taylor approximation
+                p = p_0 + p_2
+
+            elif mode == "sampling":
+                pass
+
+            # add the computed transition matrices to a list
+            vals.extend(p)
+            rows.extend(np.ones(len(nbhs_ixs)) * i)
+            cols.extend(nbhs_ixs)
+
+        # collect everything in a single transition matrix
+        vals = np.hstack(vals)
+        vals[np.isnan(vals)] = 0
+
+        matrix = _vals_to_csr(vals, rows, cols, shape=(n_obs, n_obs))
+
+        self._compute_transition_matrix(matrix, density_normalize=False)
 
         logg.info("    Finish", time=start)
 
