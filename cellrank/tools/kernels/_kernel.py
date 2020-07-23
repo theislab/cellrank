@@ -18,8 +18,9 @@ from typing import (
 from functools import wraps, reduce
 
 import numpy as np
-from cellrank import logging as logg
 from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix
+
+from cellrank import logging as logg
 from cellrank.tools._utils import (
     bias_knn,
     _normalize,
@@ -582,71 +583,14 @@ class Kernel(UnaryKernelExpression, ABC):
         yield self
 
     def _compute_transition_matrix(
-        self,
-        matrix: spmatrix,
-        variances: Optional[spmatrix] = None,
-        self_transitions: bool = False,
-        exp: bool = False,
-        var_min: float = 0.1,
-        sigma_corr: Optional[float] = None,
-        perc: Optional[float] = None,
-        threshold: Optional[float] = None,
-        density_normalize: bool = True,
+        self, matrix: spmatrix, density_normalize: bool = True,
     ):
-
-        # copied form scvelo, assign self-loops based on confidence heuristic
-        if self_transitions:
-            confidence = matrix.max(1).A.flatten()
-            ub = np.percentile(confidence, 98)
-            self_prob = np.clip(ub - confidence, 0, 1)
-            matrix.setdiag(self_prob)
-
-        # Scale weights either by variances or by constant value
-        if variances is not None:
-            logg.debug("Scaling by variances")
-
-            # check that both have been computed on the same elements
-            if len(variances.data) == len(matrix.data):
-                if not all(
-                    (
-                        (var_ixs == mat_ixs).all()
-                        for var_ixs, mat_ixs in zip(
-                            variances.nonzero(), matrix.nonzero()
-                        )
-                    )
-                ):
-                    logg.warning(
-                        "Uncertainty indices do not match velocity graph indices"
-                    )
-            else:
-                logg.warning("Uncertainty indices do not match velocity graph indices")
-
-            # for non-zero edge-weights, clip var's to a_min and scale the edge weights by these vars
-            ixs = matrix.nonzero()
-            variances[ixs] = np.array(
-                np.clip(variances[ixs], a_min=var_min, a_max=None)
-            ).flatten()
-            matrix[ixs] = np.array(matrix[ixs] / variances[ixs]).flatten()
-        elif sigma_corr is not None:
-            logg.debug("Scaling sigma correlation")
-            matrix.data = matrix.data * sigma_corr
-
-        # use softmax
-        if exp:
-            matrix.data = np.exp(matrix.data)
-
-        # copied from scvelo, threshold the unnormalized probabilities
-        if perc is not None or threshold is not None:
-            if threshold is None:
-                threshold = np.percentile(matrix.data, perc)
-            matrix.data[matrix.data < threshold] = 0
-            matrix.eliminate_zeros()
 
         # density correction based on node degrees in the KNN grpah
         if density_normalize:
             matrix = self.density_normalize(matrix)
 
-        # check for zero-rows (can happen if we don't use neg. cosines for the velo graph)
+        # check for zero-rows
         problematic_indices = np.where(np.array(matrix.sum(1)).flatten() == 0)[0]
         if len(problematic_indices) != 0:
             logg.warning(
@@ -656,6 +600,7 @@ class Kernel(UnaryKernelExpression, ABC):
             for ix in problematic_indices:
                 matrix[ix, ix] = 1.0
 
+        # setting this property automatically row-normalizes
         self.transition_matrix = csr_matrix(matrix)
         self._maybe_compute_cond_num()
 
@@ -1039,17 +984,55 @@ class VelocityKernel(Kernel):
             return self
 
         self._params = params
-        self._compute_transition_matrix(
-            matrix=correlations.copy(),
-            variances=variances,
-            self_transitions=self_transitions,
-            exp=True,
-            var_min=var_min,
-            sigma_corr=sigma_corr,
-            perc=perc,
-            threshold=threshold,
-            density_normalize=density_normalize,
-        )
+
+        # copied form scvelo, assign self-loops based on confidence heuristic
+        if self_transitions:
+            confidence = correlations.max(1).A.flatten()
+            ub = np.percentile(confidence, 98)
+            self_prob = np.clip(ub - confidence, 0, 1)
+            correlations.setdiag(self_prob)
+
+        # Scale weights either by variances or by constant value
+        if variances is not None:
+            logg.debug("Scaling by variances")
+
+            # check that both have been computed on the same elements
+            if len(variances.data) == len(correlations.data):
+                if not all(
+                    (
+                        (var_ixs == mat_ixs).all()
+                        for var_ixs, mat_ixs in zip(
+                            variances.nonzero(), correlations.nonzero()
+                        )
+                    )
+                ):
+                    logg.warning(
+                        "Uncertainty indices do not match velocity graph indices"
+                    )
+            else:
+                logg.warning("Uncertainty indices do not match velocity graph indices")
+
+            # for non-zero edge-weights, clip var's to a_min and scale the edge weights by these vars
+            ixs = correlations.nonzero()
+            variances[ixs] = np.array(
+                np.clip(variances[ixs], a_min=var_min, a_max=None)
+            ).flatten()
+            correlations[ixs] = np.array(correlations[ixs] / variances[ixs]).flatten()
+        elif sigma_corr is not None:
+            logg.debug("Scaling sigma correlation")
+            correlations.data = correlations.data * sigma_corr
+
+        # use softmax
+        correlations.data = np.exp(correlations.data)
+
+        # copied from scvelo, threshold the unnormalized probabilities
+        if perc is not None or threshold is not None:
+            if threshold is None:
+                threshold = np.percentile(correlations.data, perc)
+            correlations.data[correlations.data < threshold] = 0
+            correlations.eliminate_zeros()
+
+        self._compute_transition_matrix(density_normalize=density_normalize,)
 
         logg.info("    Finish", time=start)
 
