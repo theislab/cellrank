@@ -806,8 +806,8 @@ class VelocityKernel(Kernel):
         adata: AnnData,
         backward: bool = False,
         vkey: str = "velocity",
-        var_key: Optional[str] = "velocity_graph_uncertainties",
-        use_negative_cosines: bool = True,
+        xkey: str = "Ms",
+        gene_subset: Optional[Iterable] = None,
         compute_cond_num: bool = False,
         check_connectivity: bool = False,
     ):
@@ -815,72 +815,70 @@ class VelocityKernel(Kernel):
             adata,
             backward=backward,
             vkey=vkey,
-            var_key=var_key,
-            use_negative_cosines=use_negative_cosines,
+            xkey=xkey,
+            gene_subset=gene_subset,
             compute_cond_num=compute_cond_num,
             check_connectivity=check_connectivity,
         )
         self._vkey = vkey  # for copy
-        self._var_key = var_key
-        self._use_negative_cosines = use_negative_cosines
+        self._xkey = xkey
+        self._gene_subset = gene_subset
 
-    def _read_from_adata(self, var_key: Optional[str] = None, **kwargs):
-        super()._read_from_adata(var_key=var_key, **kwargs)
+    def _read_from_adata(self, **kwargs):
+        super()._read_from_adata(**kwargs)
 
+        # check whether velocities have been computed
         vkey = kwargs.pop("vkey", "velocity")
-        if (vkey + "_graph" not in self.adata.uns.keys()) or (
-            vkey + "_graph_neg" not in self.adata.uns.keys()
-        ):
-            raise KeyError(
-                "Compute cosine correlations first as `scvelo.tl.velocity_graph()`."
-            )
+        if vkey not in self.adata.layers.keys():
+            raise KeyError("Compute RNA velocity first as `scv.tl.velocity()`.")
+
+        # restrict genes to a subset, i.e. velocity genes or user provided list
+        gene_subset = kwargs.pop("gene_subset", None)
+        subset = np.ones(self.adata.n_vars, bool)
+        if gene_subset is not None:
+            var_names_subset = self.adata.var_names.isin(gene_subset)
+            subset &= var_names_subset if len(var_names_subset) > 0 else gene_subset
+        elif f"{vkey}_genes" in self.adata.var.keys():
+            subset &= np.array(self.adata.var[f"{vkey}_genes"].values, dtype=bool)
+
+        # chose data representation to use for transcriptomic displacements
+        xkey = kwargs.pop("xkey", "Ms")
+        xkey = xkey if xkey in self.adata.layers.keys() else "spliced"
+
+        # filter both the velocities and the gene expression profiles to the gene subset. Densify the matrices.
+        X = np.array(
+            self.adata.layers[xkey].A[:, subset]
+            if issparse(self.adata.layers[xkey])
+            else self.adata.layers[xkey][:, subset]
+        )
+        V = np.array(
+            self.adata.layers[vkey].A[:, subset]
+            if issparse(self.adata.layers[vkey])
+            else self.adata.layers[vkey][:, subset]
+        )
+
+        # remove genes that have any Nan values (in both X and V)
+        nans = np.isnan(np.sum(V, axis=0))
+        if np.any(nans):
+            X = X[:, ~nans]
+            V = V[:, ~nans]
 
         # check the velocity parameters
         if vkey + "_params" in self.adata.uns.keys():
             velocity_params = self.adata.uns[vkey + "_params"]
-            if velocity_params["mode_neighbors"] != "connectivities":
-                logg.warning(
-                    'Please re-compute the scvelo velocity graph using `mode_neighbors="connectivities"`'
-                )
-            if velocity_params["n_recurse_neighbors"] not in [0, 1]:
-                logg.warning(
-                    "Please re-compute the scvelo velocity graph using `n_recurse_neighbors=0`"
-                )
         else:
             logg.debug("Unable to check velocity graph parameters")
 
-        velo_corr_pos, velo_corr_neg = (
-            csr_matrix(self.adata.uns[vkey + "_graph"]).copy(),
-            csr_matrix(self.adata.uns[vkey + "_graph_neg"]).copy(),
-        )
-        logg.debug("Adding `.velo_corr`, the velocity correlations")
+        # add to self
+        self._velocity = V
+        self._gene_expression = X
+        self._velocity_params = velocity_params
 
-        # check for a symmetric sparsity pattern in the velocity graph
-        start = logg.debug("Checking the velocity graph for symmetric sparsity pattern")
-        if not is_symmetric(
-            velo_corr_pos + velo_corr_neg, only_check_sparsity_pattern=True
-        ):
-            logg.warning(
-                "Sparsity pattern in the velocity graph is not symmetric", time=start
-            )
-        else:
-            logg.debug(
-                "Sparsity pattern in the velocity graph is symmetric", time=start
-            )
-
-        # recurse neighbors and the mode_neighbors can have an effect on the effective number of neighbors considered
-        n_neighbors_effective = np.median(
-            np.array((velo_corr_pos + velo_corr_neg != 0).sum(1)).flatten()
-        )
         logg.debug(
-            f"The median effective number of neighbors for the velocity graph is {n_neighbors_effective}"
+            "Adding `._velocity`, the gene-wise velocities. "
+            "Adding `._gene_expression`, the gene expression values. "
+            "Adding `._velocity_params`, the velocity parameters. "
         )
-
-        use_negative_cosines = kwargs.pop("use_negative_cosines", True)
-        if use_negative_cosines:
-            self._velo_corr = (velo_corr_pos + velo_corr_neg).astype(_dtype)
-        else:
-            self._velo_corr = velo_corr_pos.astype(_dtype)
 
     def compute_transition_matrix(
         self,
