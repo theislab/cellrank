@@ -39,6 +39,7 @@ from scipy.sparse.linalg import gmres, lgmres, gcrotmk, bicgstab
 
 import matplotlib.colors as mcolors
 
+import jax.numpy as jnp
 from cellrank import logging as logg
 from cellrank.utils._utils import (
     _get_neighs,
@@ -1781,3 +1782,59 @@ def _solve_many_sparse_problems(
     queue.put(None)
 
     return np.stack(x_list, axis=1), n_converged
+
+
+def pearson_corr(X: np.ndarray, y: np.ndarray) -> np.ndarray:
+    """
+    Compute the pearson correlation between rows in matrix X and a vector y.
+
+    Assumes you have samples in the rows and features in the columns.
+
+    Params
+    ------
+    X
+        Matrix of `NxM` elements.
+    y:
+        Vector of `M` elements.
+
+    Returns
+    -------
+    :class:`numpy.ndarray`
+        The computed pearson correlation.
+    """
+
+    X -= X.mean(axis=1)[:, None]
+    y -= y.mean()
+
+    return cosine_corr(X, y)
+
+
+def cosine_corr(X: np.ndarray, y: np.ndarray) -> np.ndarray:
+    """
+    Compute the cosine correlation between rows in matrix A and a vector y.
+
+    Assumes you have samples in the rows and features in the columns.
+
+    Params
+    ------
+    X
+        Matrix of `NxM` elements.
+    y:
+        Vector of `M` elements.
+
+    Returns
+    -------
+    :class:`numpy.ndarray`
+        The computed cosine correlation.
+    """
+
+    y_norm = jnp.linalg.norm(y)
+    X_norm = jnp.linalg.norm(X, axis=1)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        if y_norm == 0:
+            result = jnp.zeros(X.shape[0])
+        else:
+            result = jnp.einsum("ij, j", X, y) / (X_norm * y_norm)
+    return result
