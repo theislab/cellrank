@@ -26,6 +26,7 @@ from scipy.sparse import eye as speye
 from scipy.sparse import (
     issparse,
     spmatrix,
+    coo_matrix,
     csc_matrix,
     csr_matrix,
     isspmatrix_csc,
@@ -61,6 +62,7 @@ CFLARE = TypeVar("CFLARE")
 DiGraph = TypeVar("DiGraph")
 LinSolver = TypeVar("LinSolver")
 Queue = TypeVar("Queue")
+KernelDirection = TypeVar("KernelDirection")
 
 EPS = np.finfo(np.float64).eps
 
@@ -1784,7 +1786,7 @@ def _solve_many_sparse_problems(
     return np.stack(x_list, axis=1), n_converged
 
 
-def pearson_corr(X: np.ndarray, y: np.ndarray) -> np.ndarray:
+def _pearson_corr(X: np.ndarray, y: np.ndarray) -> np.ndarray:
     """
     Compute the pearson correlation between rows in matrix X and a vector y.
 
@@ -1806,10 +1808,10 @@ def pearson_corr(X: np.ndarray, y: np.ndarray) -> np.ndarray:
     X -= X.mean(axis=1)[:, None]
     y -= y.mean()
 
-    return cosine_corr(X, y)
+    return _cosine_corr(X, y)
 
 
-def cosine_corr(X: np.ndarray, y: np.ndarray) -> np.ndarray:
+def _cosine_corr(X: np.ndarray, y: np.ndarray) -> np.ndarray:
     """
     Compute the cosine correlation between rows in matrix A and a vector y.
 
@@ -1838,3 +1840,39 @@ def cosine_corr(X: np.ndarray, y: np.ndarray) -> np.ndarray:
         else:
             result = jnp.einsum("ij, j", X, y) / (X_norm * y_norm)
     return result
+
+
+def _softmax(x, sigma):
+    """Compute softmax over input vector using JAX."""
+    return jnp.exp(x * sigma) / jnp.sum(jnp.exp(x * sigma))
+
+
+def _predict_fwd(x: np.ndarray, W: np.ndarray, sigma: float = 1,) -> np.ndarray:
+    """
+    Compute a categorical distribution based on correlation between rows in `W` and vector `x`.
+
+    We usually identify `x` with a velocity vector and `W` as the matrix storing transcriptomic
+    displacements of the current reference cell to its nearest neighbors.
+
+    Params
+    ---------
+    x
+        Feature representation of the sample of length `n_features`
+    W
+        Weight matrix of shape `n_samples x n_features`
+    sigma
+        Scaling factor for softmax activation function.
+
+    Returns
+    np.ndarray
+        Vector of probabilities.
+    """
+
+    u = _pearson_corr(W, x)
+    return _softmax(u, sigma)
+
+
+def _vals_to_csr(vals, rows, cols, shape):
+    graph = coo_matrix((vals, (rows, cols)), shape=shape)
+
+    return graph.tocsr()
