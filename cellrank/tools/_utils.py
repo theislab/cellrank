@@ -1836,6 +1836,7 @@ def _cosine_corr(X: np.ndarray, y: np.ndarray) -> np.ndarray:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         if y_norm == 0:
+            print("encountered a zero vector")
             result = jnp.zeros(X.shape[0])
         else:
             result = jnp.einsum("ij, j", X, y) / (X_norm * y_norm)
@@ -1873,6 +1874,6 @@ def _predict_fwd(x: np.ndarray, W: np.ndarray, sigma: float = 1,) -> np.ndarray:
 
 
 def _vals_to_csr(vals, rows, cols, shape):
-    graph = coo_matrix((vals, (rows, cols)), shape=shape)
+    graph = coo_matrix((vals, (rows, cols)), shape=shape, dtype=np.float64)
 
     return graph.tocsr()
