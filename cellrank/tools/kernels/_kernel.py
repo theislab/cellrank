@@ -942,12 +942,16 @@ class VelocityKernel(Kernel):
 
         # loop over all cells
         vals, rows, cols, n_obs = [], [], [], self._gene_expression.shape[0]
-        for i in range(10):
-            print(f"i = {i}/{n_obs}")
+        for i in range(n_obs):
+            # if i % 100 == 0: print(f"i = {i}/{n_obs}")
+            # print(f"i = {i}/{n_obs}")
 
             # get the neighbors
             nbhs_ixs = self._conn[i, :].indices
-            W = self._gene_expression[nbhs_ixs, :] - self._gene_expression[nbhs_ixs, :]
+
+            # get the displacement matrix. Changing dimensions b/c varying numbers of neighbors slow down autograd
+            W = self._gene_expression[nbhs_ixs, :] - self._gene_expression[i, :]
+            assert W.shape == (len(nbhs_ixs), self._velocity.shape[1])
 
             if mode == "deterministic":
 
