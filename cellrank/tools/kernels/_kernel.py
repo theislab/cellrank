@@ -938,8 +938,7 @@ class VelocityKernel(Kernel):
             )
 
         # define a function to compute hessian matrices
-        def get_hessian_fwd(x, W, sigma):
-            return jacfwd(jacrev(_predict_fwd, 0), 0)(x, W, sigma)
+        get_hessian_fwd = jacfwd(jacrev(_predict_fwd))
 
         # loop over all cells
         vals, rows, cols, n_obs = [], [], [], self._gene_expression.shape[0]
