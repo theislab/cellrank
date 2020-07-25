@@ -978,8 +978,9 @@ class VelocityKernel(Kernel):
                 # compute second order term (note that the first order term cancels)
                 p_2 = 0.5 * jnp.dot(H_diag, variances)
 
-                # combine both to give the second order Taylor approximation
-                p = p_0 + p_2
+                # combine both to give the second order Taylor approximation. Can sometimes be negative because we
+                # neglected higher order terms, so force it to be non-negative
+                p = np.where((p_0 + p_2) >= 0, p_0 + p_2, 0)
 
             elif mode == "sampling":
                 pass
