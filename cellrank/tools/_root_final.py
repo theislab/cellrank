@@ -105,8 +105,12 @@ def _root_final(
             "Consider specifying it as `cluster_key`.",
         )
 
-    kwargs["compute_absorption_probabilities"] = False
-    mc.fit(n_lineages=n_states, cluster_key=cluster_key, **kwargs)
+    mc.fit(
+        n_lineages=n_states,
+        cluster_key=cluster_key,
+        compute_absorption_probabilities=False,
+        **kwargs,
+    )
 
     if show_plots:
         mc.plot_spectrum(real_only=True)

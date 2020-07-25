@@ -71,7 +71,7 @@ class TestHighLevelPipeline:
             method="brandts",
             show_plots=True,
         )
-        cr.tl.lineages(adata, method="brandts")
+        cr.tl.lineages(adata)
         cr.pl.lineages(adata)
         cr.tl.lineage_drivers(adata, use_raw=False)
 
@@ -99,7 +99,7 @@ class TestHighLevelPipeline:
             method="brandts",
             show_plots=True,
         )
-        cr.tl.lineages(adata, method="brandts")
+        cr.tl.lineages(adata)
         cr.pl.lineages(adata)
         cr.tl.lineage_drivers(adata, use_raw=False)
 

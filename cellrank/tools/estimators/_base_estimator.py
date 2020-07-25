@@ -638,9 +638,44 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         )
 
     @abstractmethod
-    def fit(self, *args, **kwargs):
-        """Fit the estimator."""
+    def _fit_final_states(self, *args, **kwargs):
         pass
+
+    @inject_docs(fs=P.FIN, fsp=P.FIN_PROBS, ap=P.ABS_PROBS, dp=P.DIFF_POT)
+    def fit(
+        self,
+        *args,
+        keys: Optional[Sequence] = None,
+        compute_absorption_probabilities: bool = True,
+        **kwargs,
+    ) -> None:
+        """
+        Run the pipeline.
+
+        Parameters
+        ----------
+        args
+            Positional arguments.
+        keys
+            Names of final states for which to compute absorption probabilities.
+        compute_absorption_probabilities
+            Whether to compute absorption probabilities or just final states.
+        kwargs
+            Keyword arguments.
+
+        Returns
+        -------
+        None
+            Nothing, just makes available the following fields:
+
+                - :paramref:`{fs}`
+                - :paramref:`{fsp}`
+                - :paramref:`{ap}`
+                - :paramref:`{dp}`
+        """
+        self._fit_final_states(*args, **kwargs)
+        if compute_absorption_probabilities:
+            self.compute_absorption_probabilities(keys=keys)
 
     def _write_absorption_probabilities(self, time: float) -> None:
         self.adata.obsm[self._abs_prob_key] = self._get(P.ABS_PROBS)

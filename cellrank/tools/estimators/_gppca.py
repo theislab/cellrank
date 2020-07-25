@@ -222,6 +222,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             )
 
     @d.dedent
+    @inject_docs(fs=P.FIN)
     def set_final_states_from_metastable_states(
         self, names: Optional[Union[Iterable[str], str]] = None, n_cells: int = 30,
     ):
@@ -237,7 +238,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         Returns
         -------
         None
-            Nothing, just sets the final states.
+            Nothing, just sets `.{fs}`.
         """
 
         if not isinstance(n_cells, int):
@@ -876,46 +877,13 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
 
         return (states, not_enough_cells) if return_not_enough_cells else states
 
-    @d.get_sectionsf("gpcca_fit")
-    @d.dedent
-    def fit(
+    def _fit_final_states(
         self,
         n_lineages: Optional[int] = None,
         cluster_key: Optional[str] = None,
-        keys: Optional[Sequence[str]] = None,
         method: str = "krylov",
         **kwargs,
-    ):
-        """
-        Run the pipeline, computing the metastable states and absorption probabilities.
-
-        It is equivalent to running::
-
-            compute_eigendecomposition(...)  # optional
-            compute_schur(...)
-            compute_metastable_states(...)
-
-            compute_final_states(...)   # if `n_lineages=None`
-            set_final_states_from_metastable_states(...)   # otherwise
-
-            compute_absorption_probabilities(...)
-
-        Parameters
-        ----------
-        %(fit)s
-        method
-            Method to use when computing the Schur decomposition. Valid options are: `'krylov'`, `'brandts'`.
-        **kwargs
-            Keyword arguments for :meth:`cellrank.tl.GPCCA.compute_metastable_states`.
-
-        Returns
-        -------
-        None
-            Nothing, just computes the absorption probabilities.
-        """
-
-        comp_abs_probs = kwargs.pop("compute_absorption_probabilities", True)
-
+    ) -> None:
         if n_lineages is None or n_lineages == 1:
             self.compute_eigendecomposition()
             if n_lineages is None:
@@ -948,5 +916,67 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         else:
             self.set_final_states_from_metastable_states()
 
-        if comp_abs_probs:
-            self.compute_absorption_probabilities(keys=keys)
+    @d.get_sectionsf("gpcca_fit")
+    @d.dedent
+    @inject_docs(
+        ms=P.META,
+        msp=P.META_PROBS,
+        fs=P.FIN,
+        fsp=P.FIN_PROBS,
+        ap=P.ABS_PROBS,
+        dp=P.DIFF_POT,
+    )
+    def fit(
+        self,
+        n_lineages: Optional[int] = None,
+        cluster_key: Optional[str] = None,
+        keys: Optional[Sequence[str]] = None,
+        method: str = "krylov",
+        compute_absorption_probabilities: bool = True,
+        **kwargs,
+    ):
+        """
+        Run the pipeline, computing the metastable states, %(final)s states and optionally the absorption probabilities.
+
+        It is equivalent to running::
+
+            compute_eigendecomposition(...)  # if needed
+            compute_schur(...)
+            compute_metastable_states(...)
+
+            compute_final_states(...)   # if `n_lineages=None`
+            set_final_states_from_metastable_states(...)   # otherwise
+
+            compute_absorption_probabilities(...)  # optional
+
+        Parameters
+        ----------
+        %(fit)s
+        method
+            Method to use when computing the Schur decomposition. Valid options are: `'krylov'`, `'brandts'`.
+        compute_absorption_probabilities
+            Whether to compute absorption probabilities or only final states.
+        **kwargs
+            Keyword arguments for :meth:`cellrank.tl.GPCCA.compute_metastable_states`.
+
+        Returns
+        -------
+        None
+            Nothing, just makes available the following fields:
+
+                - :paramref:`{ms}`
+                - :paramref:`{msp}`
+                - :paramref:`{fs}`
+                - :paramref:`{fsp}`
+                - :paramref:`{ap}`
+                - :paramref:`{dp}`
+        """
+
+        super().fit(
+            n_lineages=n_lineages,
+            cluster_key=cluster_key,
+            keys=keys,
+            method=method,
+            compute_absorption_probabilities=compute_absorption_probabilities,
+            *kwargs,
+        )

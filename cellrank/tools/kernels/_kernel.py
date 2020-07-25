@@ -18,8 +18,9 @@ from typing import (
 from functools import wraps, reduce
 
 import numpy as np
-from cellrank import logging as logg
 from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix
+
+from cellrank import logging as logg
 from cellrank.utils._docs import d
 from cellrank.tools._utils import (
     bias_knn,
@@ -29,7 +30,7 @@ from cellrank.tools._utils import (
     is_connected,
     is_symmetric,
 )
-from cellrank.utils._utils import _write_graph_data
+from cellrank.utils._utils import _read_graph_data, _write_graph_data
 from cellrank.tools._constants import Direction, _transition
 
 _ERROR_DIRECTION_MSG = "Can only combine kernels that have the same direction."
@@ -782,24 +783,31 @@ class PrecomputedKernel(Kernel):
     Parameters
     ----------
     transition_matrix
-        Row-normalized transition matrix.
+        Row-normalized transition matrix or a key in :paramref:`adata` `.obsp`.
     %(adata)s
     %(backward)s
     """
 
     def __init__(
         self,
-        transition_matrix: Union[np.ndarray, spmatrix],
+        transition_matrix: Union[np.ndarray, spmatrix, str],
         adata: Optional[AnnData] = None,
         backward: bool = False,
         compute_cond_num: bool = False,
     ):
         from anndata import AnnData as _AnnData
 
+        if isinstance(transition_matrix, str):
+            if adata is None:
+                raise ValueError(
+                    "When `transition_matrix` specifies a key to `adata.obsp`, `adata` cannot be None."
+                )
+            transition_matrix = _read_graph_data(adata, transition_matrix)
+
         if not isinstance(transition_matrix, (np.ndarray, spmatrix)):
             raise TypeError(
                 f"Expected transition matrix to be of type `numpy.ndarray` or `scipy.sparse.spmatrix`, "
-                f"found `{type(transition_matrix).__name__}`."
+                f"found `{type(transition_matrix).__name__!r}`."
             )
 
         if transition_matrix.shape[0] != transition_matrix.shape[1]:
