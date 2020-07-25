@@ -916,7 +916,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         else:
             self.set_final_states_from_metastable_states()
 
-    @d.get_sectionsf("gpcca_fit")
+    @d.dedent  # because of fit
     @d.dedent
     @inject_docs(
         ms=P.META,

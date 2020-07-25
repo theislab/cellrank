@@ -314,6 +314,7 @@ class CFLARE(BaseEstimator, Eigen):
             method="kmeans",
         )
 
+    @d.dedent  # because of fit
     @d.dedent
     @inject_docs(fs=P.FIN, fsp=P.FIN_PROBS, ap=P.ABS_PROBS, dp=P.DIFF_POT)
     def fit(
