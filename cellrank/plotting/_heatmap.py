@@ -376,7 +376,7 @@ def heatmap(
                 cbar_kws={"label": "Expression"},
                 row_cluster=cluster_genes and df.shape[0] > 1,
                 col_colors=col_colors,
-                colors_ratio=0.05,
+                colors_ratio=0.02,
                 col_cluster=False,
                 cbar_pos=None,
                 yticklabels=show_all_genes or "auto",
@@ -384,8 +384,8 @@ def heatmap(
             )
             g.ax_heatmap.text(
                 x=0.5,
-                y=1.05
-                + 0.15
+                y=1.025
+                + 0.025
                 * (
                     (0 if cluster_key is None else len(cluster_key))
                     + show_absorption_probabilities
