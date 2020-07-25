@@ -4,8 +4,9 @@ from typing import List, Tuple, Union, Optional, Sequence
 
 import numpy as np
 from pandas import Series
-from cellrank import logging as logg
 from scipy.stats import zscore
+
+from cellrank import logging as logg
 from cellrank.utils._docs import d, inject_docs
 from cellrank.tools._utils import (
     _cluster_X,
@@ -297,16 +298,34 @@ class CFLARE(BaseEstimator, Eigen):
 
         return cats_main, colors_main
 
+    def _fit_final_states(
+        self,
+        n_lineages: Optional[int],
+        keys: Optional[Sequence[str]] = None,
+        cluster_key: Optional[str] = None,
+        compute_absorption_probabilities: bool = True,
+        **kwargs,
+    ) -> None:
+        self.compute_eigendecomposition(k=20 if n_lineages is None else n_lineages + 1)
+        self.compute_final_states(
+            use=n_lineages,
+            cluster_key=cluster_key,
+            n_clusters_kmeans=n_lineages,
+            method="kmeans",
+        )
+
     @d.dedent
+    @inject_docs(fs=P.FIN, fsp=P.FIN_PROBS, ap=P.ABS_PROBS, dp=P.DIFF_POT)
     def fit(
         self,
         n_lineages: Optional[int],
         keys: Optional[Sequence[str]] = None,
         cluster_key: Optional[str] = None,
+        compute_absorption_probabilities: bool = True,
         **kwargs,
     ):
         """
-        Run the pipeline, computing the absorption probabilities.
+        Run the pipeline, computing the %(final)s states and optionally, the absorption probabilities.
 
         It is equivalent to running::
 
@@ -321,17 +340,17 @@ class CFLARE(BaseEstimator, Eigen):
         Returns
         -------
         None
-            Nothing, just computes the absorption probabilities.
+            Nothing, just makes available the following fields:
+
+                - :paramref:`{fs}`
+                - :paramref:`{fsp}`
+                - :paramref:`{ap}`
+                - :paramref:`{dp}`
         """
-
-        comp_abs_probs = kwargs.pop("compute_absorption_probabilities", True)
-
-        self.compute_eigendecomposition(k=20 if n_lineages is None else n_lineages + 1)
-        self.compute_final_states(
-            use=n_lineages,
+        super().fit(
+            n_lineages=n_lineages,
+            keys=keys,
             cluster_key=cluster_key,
-            n_clusters_kmeans=n_lineages,
-            method="kmeans",
+            compute_absorption_probabilities=compute_absorption_probabilities,
+            **kwargs,
         )
-        if comp_abs_probs:
-            self.compute_absorption_probabilities(keys=keys)

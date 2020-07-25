@@ -5,11 +5,7 @@ from typing import TypeVar, Optional
 
 from cellrank import logging as logg
 from cellrank.utils._docs import d
-from cellrank.tools._utils import (
-    _check_estimator_type,
-    _info_if_obs_keys_categorical_present,
-)
-from cellrank.utils._utils import _read_graph_data
+from cellrank.tools._utils import _check_estimator_type
 from cellrank.tools.kernels import PrecomputedKernel
 from cellrank.tools._constants import Direction, AbsProbKey, FinalStatesKey, _transition
 from cellrank.tools.estimators import GPCCA
@@ -17,15 +13,12 @@ from cellrank.tools.estimators._base_estimator import BaseEstimator
 
 AnnData = TypeVar("AnnData")
 
-d.delete_kwargs("gpcca_fit")
-
 
 @d.dedent
 def lineages(
     adata: AnnData,
     estimator: type(BaseEstimator) = GPCCA,
     backward: bool = False,
-    cluster_key: Optional[str] = None,
     copy: bool = False,
     return_estimator: bool = False,
     **kwargs,
@@ -55,13 +48,12 @@ def lineages(
     estimator
         Estimator to use to compute the lineage probabilities.
     %(backward)s
-    %(gpcca_fit.parameters)s
     copy
         Whether to update the existing AnnData object or to return a copy.
     return_estimator
         Whether to return the estimator. Only available when :paramref:`copy=False`.
     **kwargs
-        Keyword arguments for :meth:`cellrank.tl.estimators.BaseEstimator.fit`.
+        Keyword arguments for :meth:`cellrank.tl.estimators.BaseEstimator.compute_absorption_probabilities`.
 
     Returns
     -------
@@ -83,28 +75,17 @@ def lineages(
         rc_key = FinalStatesKey.FORWARD
 
     try:
-        transition_key = _transition(direction)
-        vk = PrecomputedKernel(
-            _read_graph_data(adata, transition_key), adata, backward=backward
-        )
+        vk = PrecomputedKernel(_transition(direction), adata, backward=backward)
     except KeyError as e:
         raise KeyError(
             f"Compute the states first as `cellrank.tl.find_{'root' if backward else 'final'}`."
         ) from e
 
     start = logg.info(f"Computing lineage probabilities towards `{rc_key}`")
-    mc = estimator(vk, read_from_adata=False)
+    mc = estimator(vk, read_from_adata=True)
 
-    if cluster_key is None:
-        _info_if_obs_keys_categorical_present(
-            adata,
-            keys=["louvain", "clusters"],
-            msg_fmt="Found categorical observation in `adata.obs[{!r}]`. "
-            "Consider specifying it as `cluster_key=...`.",
-        )
     # compute the absorption probabilities
-    kwargs["compute_absorption_probabilities"] = True  # better safe than sorry
-    mc.fit(cluster_key=cluster_key, **kwargs)
+    mc.compute_absorption_probabilities(**kwargs)
 
     logg.info(f"Adding lineages to `adata.obsm[{lin_key!r}]`\n    Finish", time=start)
 
