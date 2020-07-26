@@ -19,6 +19,7 @@ from itertools import tee, product, combinations
 
 import numpy as np
 import pandas as pd
+import jax.numpy as jnp
 from pandas import Series
 from numpy.linalg import norm as d_norm
 from scipy.linalg import solve
@@ -40,7 +41,6 @@ from scipy.sparse.linalg import gmres, lgmres, gcrotmk, bicgstab
 
 import matplotlib.colors as mcolors
 
-import jax.numpy as jnp
 from cellrank import logging as logg
 from cellrank.utils._utils import (
     _get_neighs,
@@ -1839,7 +1839,7 @@ def _cosine_corr(X: np.ndarray, y: np.ndarray) -> np.ndarray:
             print("encountered a zero vector")
             result = jnp.zeros(X.shape[0])
         else:
-            result = jnp.einsum("ij, j", X, y) / (X_norm * y_norm)
+            result = X.dot(y) / (X_norm * y_norm)
     return result
 
 
