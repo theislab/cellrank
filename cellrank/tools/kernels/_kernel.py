@@ -18,12 +18,12 @@ from typing import (
 from functools import wraps, reduce
 
 import numpy as np
+import jax.numpy as jnp
+from jax import jit, jacfwd, jacrev
 from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix
 
 from scvelo.preprocessing.moments import get_moments
 
-import jax.numpy as jnp
-from jax import jacfwd, jacrev
 from cellrank import logging as logg
 from cellrank.tools._utils import (
     bias_knn,
@@ -938,7 +938,7 @@ class VelocityKernel(Kernel):
             )
 
         # define a function to compute hessian matrices
-        get_hessian_fwd = jacfwd(jacrev(_predict_fwd))
+        get_hessian_fwd = jit(jacfwd(jacrev(_predict_fwd)))
 
         # loop over all cells
         vals, rows, cols, n_obs = [], [], [], self._gene_expression.shape[0]
