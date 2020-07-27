@@ -1786,7 +1786,7 @@ def _solve_many_sparse_problems(
     return np.stack(x_list, axis=1), n_converged
 
 
-def _pearson_corr(X: np.ndarray, y: np.ndarray) -> np.ndarray:
+def _pearson_corr(X: np.ndarray, y: np.ndarray, use_jax: bool = True) -> np.ndarray:
     """
     Compute the pearson correlation between rows in matrix X and a vector y.
 
@@ -1808,10 +1808,10 @@ def _pearson_corr(X: np.ndarray, y: np.ndarray) -> np.ndarray:
     X -= X.mean(axis=1)[:, None]
     y -= y.mean()
 
-    return _cosine_corr(X, y)
+    return _cosine_corr(X, y, use_jax=use_jax)
 
 
-def _cosine_corr(X: np.ndarray, y: np.ndarray) -> np.ndarray:
+def _cosine_corr(X: np.ndarray, y: np.ndarray, use_jax: bool = True) -> np.ndarray:
     """
     Compute the cosine correlation between rows in matrix A and a vector y.
 
@@ -1829,9 +1829,12 @@ def _cosine_corr(X: np.ndarray, y: np.ndarray) -> np.ndarray:
     :class:`numpy.ndarray`
         The computed cosine correlation.
     """
-
-    y_norm = jnp.linalg.norm(y)
-    X_norm = jnp.linalg.norm(X, axis=1)
+    if use_jax:
+        y_norm = jnp.linalg.norm(y)
+        X_norm = jnp.linalg.norm(X, axis=1)
+    else:
+        y_norm = np.linalg.norm(y)
+        X_norm = np.linalg.norm(X, axis=1)
 
     result = X.dot(y) / (X_norm * y_norm)
 
@@ -1845,12 +1848,19 @@ def _cosine_corr(X: np.ndarray, y: np.ndarray) -> np.ndarray:
     return result
 
 
-def _softmax(x, sigma):
-    """Compute softmax over input vector using JAX."""
-    return jnp.exp(x * sigma) / jnp.sum(jnp.exp(x * sigma))
+def _softmax(x, sigma, use_jax: bool = True):
+    """Compute softmax over input vector."""
+    if use_jax:
+        y = jnp.exp(x * sigma) / jnp.sum(jnp.exp(x * sigma))
+    else:
+        y = np.exp(x * sigma) / np.sum(np.exp(x * sigma))
+
+    return y
 
 
-def _predict_fwd(x: np.ndarray, W: np.ndarray, sigma: float = 1,) -> np.ndarray:
+def _predict_fwd(
+    x: np.ndarray, W: np.ndarray, sigma: float = 1, use_jax: bool = True
+) -> np.ndarray:
     """
     Compute a categorical distribution based on correlation between rows in `W` and vector `x`.
 
@@ -1860,19 +1870,22 @@ def _predict_fwd(x: np.ndarray, W: np.ndarray, sigma: float = 1,) -> np.ndarray:
     Params
     ---------
     x
-        Feature representation of the sample of length `n_features`
+        Feature representation of the sample of length `n_features`.
     W
-        Weight matrix of shape `n_samples x n_features`
+        Weight matrix of shape `n_samples x n_features`.
     sigma
         Scaling factor for softmax activation function.
+    use_jax
+        Whether to use Jax. Jax enables automatic differentiation and is therefore required in stochastic mode. In
+        deterministic mode, it can slow down things so we have the option to turn it off.
 
     Returns
     np.ndarray
         Vector of probabilities.
     """
 
-    u = _pearson_corr(W, x)
-    return _softmax(u, sigma)
+    u = _pearson_corr(W, x, use_jax=use_jax)
+    return _softmax(u, sigma, use_jax=use_jax)
 
 
 def _vals_to_csr(vals, rows, cols, shape):

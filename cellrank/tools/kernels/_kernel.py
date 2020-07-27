@@ -18,7 +18,6 @@ from typing import (
 from functools import wraps, reduce
 
 import numpy as np
-import jax.numpy as jnp
 from jax import jit, jacfwd, jacrev
 from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix
 
@@ -946,41 +945,38 @@ class VelocityKernel(Kernel):
 
         # loop over all cells
         vals, rows, cols, n_obs = [], [], [], self._gene_expression.shape[0]
-        for i in cell_ix:
-            if i % 100 == 0:
-                print(f"i = {i}/{n_obs}")
-            # print(f"i = {i}/{n_obs}")
+        for iter, cell_ix in enumerate(cell_ix):
 
             # get the neighbors
-            nbhs_ixs = self._conn[i, :].indices
+            nbhs_ixs = self._conn[cell_ix, :].indices
 
             # get the displacement matrix. Changing dimensions b/c varying numbers of neighbors slow down autograd
-            W = jnp.array(
-                self._gene_expression[nbhs_ixs, :] - self._gene_expression[i, :]
-            )
+            W = self._gene_expression[nbhs_ixs, :] - self._gene_expression[cell_ix, :]
             assert W.shape == (len(nbhs_ixs), self._velocity.shape[1])
 
             if mode == "deterministic":
 
                 # evaluate the prediction at the actual velocity vector
-                v_i = jnp.array(self._velocity[i, :])
-                p = _predict_fwd(v_i, W, sigma=sigma_corr)
+                v_i = self._velocity[cell_ix, :]
+                p = _predict_fwd(v_i, W, sigma=sigma_corr, use_jax=False)
 
             elif mode == "stochastic":
+                if iter % 100 == 0:
+                    print(f"i = {iter}/{n_obs}")
 
                 # get the expectation and variance
-                v_i = velocity_expectation[i, :]
-                variances = velocity_variance[i, :]
+                v_i = velocity_expectation[cell_ix, :]
+                variances = velocity_variance[cell_ix, :]
 
                 # compute the Hessian tensor, and turn it into a matrix that has the diagonal elements in its rows
                 H = get_hessian_fwd(v_i, W, sigma_corr)
-                H_diag = jnp.concatenate([jnp.diag(h)[None, :] for h in H])
+                H_diag = np.concatenate([np.diag(h)[None, :] for h in H])
 
                 # compute zero order term
                 p_0 = _predict_fwd(v_i, W, sigma=sigma_corr)
 
                 # compute second order term (note that the first order term cancels)
-                p_2 = 0.5 * jnp.dot(H_diag, variances)
+                p_2 = 0.5 * H_diag.dot(variances)
 
                 # combine both to give the second order Taylor approximation. Can sometimes be negative because we
                 # neglected higher order terms, so force it to be non-negative
@@ -991,7 +987,7 @@ class VelocityKernel(Kernel):
 
             # add the computed transition matrices to a list
             vals.extend(p)
-            rows.extend(np.ones(len(nbhs_ixs)) * i)
+            rows.extend(np.ones(len(nbhs_ixs)) * cell_ix)
             cols.extend(nbhs_ixs)
 
         # collect everything in a single transition matrix
