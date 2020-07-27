@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Transition matrix module."""
 
-from typing import TypeVar, Optional
+from typing import TypeVar, Iterable, Optional
 
 from cellrank import logging as logg
 from cellrank.tools.kernels._kernel import (
@@ -15,17 +15,14 @@ AnnData = TypeVar("AnnData")
 
 def transition_matrix(
     adata: AnnData,
-    vkey: str = "velocity",
     backward: bool = False,
+    vkey: str = "velocity",
+    xkey: str = "Ms",
+    gene_subset: Optional[Iterable] = None,
+    mode: str = "deterministic",
+    random_state: int = 0,
+    sigma_corr: int = 4.0,
     weight_connectivities: Optional[float] = None,
-    sigma_corr: Optional[float] = None,
-    scale_by_variances: bool = False,
-    var_key: Optional[str] = "velocity_graph_uncertainties",
-    var_min: float = 0.1,
-    use_negative_cosines: bool = True,
-    self_transitions: bool = False,
-    perc: Optional[float] = None,
-    threshold: Optional[float] = None,
     density_normalize: bool = True,
 ) -> KernelExpression:
     """
@@ -39,32 +36,26 @@ def transition_matrix(
     ------
     adata: :class:`anndata.AnnData`
         Annotated data object.
-    vkey
-        Key from :paramref:`adata` `.layers` to access the velocities.
     backward
         Direction of the process.
+    vkey
+        Key from :paramref:`adata` `.layers` to access the velocities.
+    xkey
+        Key in :paramref:`adata` `.layers` where expected gene expression counts are stored.
+    gene_subset
+        List of genes to be used to compute transition probabilities. By default, the `velocity_genes` of
+        :paramref:`adata` `. var` are used.
+    mode
+        How to compute transition probabilities. Options are "stochastic" (propagate uncertainty analytically),
+        "deterministic" (don't propagate uncertainty) and "sampling" (sample from velocity distribution).
+    random_state
+        Set the seed, only relevant for `mode='sampling'`.
+    sigma_corr
+        Scaling parameter for the softmax.
     weight_connectivities
         Weight given to transcriptomic similarities as opposed to velocities. Must be in `[0, 1]`.
-    use_negative_cosines
-        Whether to use correlations with cells that have an angle > 90 degree with :math:`v_i`.
-    sigma_corr
-        Scaling parameter for the softmax. Larger values will lead to a more concentrated distribution (more peaked).
-        Default is to use `1 / median_velocity_correlation`.
-    scale_by_variances
-        Use velocity variances to scale the softmax.
-    var_key
-        Key from :paramref:`adata` `.uns` to access velocity variances.
-    var_min
-        Variances are clipped to this value at the lower end.
-    self_transitions
-        Assign elements to the diagonal of the velocity-graph based on a confidence measure.
-    perc
-        Quantile of the distribution of exponentiated velocity correlations.
-        This is used as a threshold to set smaller values to zero.
-    threshold
-        Set a threshold to remove exponentiated velocity correlations smaller than :paramref:`threshold`.
     density_normalize
-        Whether to use density correction when computing the transition probabilities.
+        Whether to use density correction when computing the transition probabilities based on connectivities.
         Density correction is done as by [Haghverdi16]_.
 
     Returns
@@ -75,20 +66,10 @@ def transition_matrix(
 
     # initialise the velocity kernel and compute transition matrix
     vk = VelocityKernel(
-        adata,
-        backward=backward,
-        vkey=vkey,
-        use_negative_cosines=use_negative_cosines,
-        var_key=var_key,
+        adata, backward=backward, vkey=vkey, xkey=xkey, gene_subset=gene_subset
     )
     vk.compute_transition_matrix(
-        sigma_corr=sigma_corr,
-        scale_by_variances=scale_by_variances,
-        var_min=var_min,
-        self_transitions=self_transitions,
-        perc=perc,
-        threshold=threshold,
-        density_normalize=density_normalize,
+        sigma_corr=sigma_corr, mode=mode, random_state=random_state
     )
 
     if weight_connectivities is not None:

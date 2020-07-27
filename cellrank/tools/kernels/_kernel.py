@@ -875,8 +875,8 @@ class VelocityKernel(Kernel):
     def compute_transition_matrix(
         self,
         backward_mode: str = "transpose",
-        sigma_corr: float = 1.0,
-        mode: str = "stochastic",
+        sigma_corr: float = 4.0,
+        mode: str = "deterministic",
         random_state: int = 0,
         **kwargs,
     ) -> "VelocityKernel":
@@ -891,8 +891,7 @@ class VelocityKernel(Kernel):
         backward_mode
             Options are `['transpose', 'negate']`. Only matters if initialized as :paramref:`backward` =`True`.
         sigma_corr
-            Kernel width for exp kernel to be used to compute transition probabilities.
-            from the velocity graph. If `None`, the median cosine correlation in absolute value is used.
+            Scaling parameter for the softmax.
         mode
             How to compute transition probabilities. Options are "stochastic" (propagate uncertainty analytically),
             "deterministic" (don't propagate uncertainty) and "sampling" (sample from velocity distribution)
