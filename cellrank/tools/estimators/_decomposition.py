@@ -154,8 +154,7 @@ class Eigen(VectorPlottable, Decomposable):
         )
         if V is None:
             raise RuntimeError(
-                f"Compute eigendecomposition first as "
-                f"`.{F.COMPUTE.fmt(P.EIG)}(..., only_evals=False)`."
+                "Compute eigendecomposition first as `.compute_eigendecomposition(..., only_evals=False)`."
             )
 
         # if irreducible, first rigth e-vec should be const.
