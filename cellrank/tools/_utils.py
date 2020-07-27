@@ -1869,19 +1869,20 @@ def _softmax(x, sigma, use_jax: bool = True):
     return y
 
 
-def _predict_fwd(
-    x: np.ndarray, W: np.ndarray, sigma: float = 1, use_jax: bool = True
+def _predict_transition_probabilities(
+    X: np.ndarray, W: np.ndarray, sigma: float = 1, use_jax: bool = True
 ) -> np.ndarray:
     """
-    Compute a categorical distribution based on correlation between rows in `W` and vector `x`.
+    Compute a categorical distribution based on correlation between rows in `W` and `X`.
 
     We usually identify `x` with a velocity vector and `W` as the matrix storing transcriptomic
-    displacements of the current reference cell to its nearest neighbors.
+    displacements of the current reference cell to its nearest neighbors. For the backward process, `X` is a matrix
+    as well, storing the velocity vectors of all nearest neighbors.
 
     Params
     ---------
-    x
-        Feature representation of the sample of length `n_features`.
+    X
+        Either vector of shape `n_features` or matrix of shape `n_samples x n_features`.
     W
         Weight matrix of shape `n_samples x n_features`.
     sigma
@@ -1891,11 +1892,12 @@ def _predict_fwd(
         deterministic mode, it can slow down things so we have the option to turn it off.
 
     Returns
+    --------
     np.ndarray
         Vector of probabilities.
     """
 
-    u = _pearson_corr(W, x, use_jax=use_jax)
+    u = _pearson_corr(W, X, use_jax=use_jax)
     return _softmax(u, sigma, use_jax=use_jax)
 
 

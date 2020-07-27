@@ -29,10 +29,10 @@ from cellrank.tools._utils import (
     _normalize,
     _get_neighs,
     _has_neighs,
-    _predict_fwd,
     _vals_to_csr,
     is_connected,
     is_symmetric,
+    _predict_transition_probabilities,
 )
 from cellrank.utils._utils import _write_graph_data
 from cellrank.tools._constants import Direction, _transition
@@ -936,7 +936,7 @@ class VelocityKernel(Kernel):
             )
 
         # define a function to compute hessian matrices
-        get_hessian_fwd = jit(jacfwd(jacrev(_predict_fwd)))
+        get_hessian_fwd = jit(jacfwd(jacrev(_predict_transition_probabilities)))
 
         # sort cells by their number of neighbors - this makes jitting more efficient
         n_neighbors = np.array((self._conn != 0).sum(1)).flatten()
@@ -962,7 +962,9 @@ class VelocityKernel(Kernel):
                     logg.warning(f"Cell {cell_ix} has a zero velocity vector.")
                     p = 1 / len(nbhs_ixs) * np.ones(len(nbhs_ixs))
                 else:
-                    p = _predict_fwd(v_i, W, sigma=sigma_corr, use_jax=False)
+                    p = _predict_transition_probabilities(
+                        v_i, W, sigma=sigma_corr, use_jax=False
+                    )
 
             elif mode == "stochastic":
                 # treat `v_i` as random variable and use analytical approximation to propagate the distribution
@@ -985,7 +987,7 @@ class VelocityKernel(Kernel):
                     H_diag = np.concatenate([np.diag(h)[None, :] for h in H])
 
                     # compute zero order term
-                    p_0 = _predict_fwd(v_i, W, sigma=sigma_corr)
+                    p_0 = _predict_transition_probabilities(v_i, W, sigma=sigma_corr)
 
                     # compute second order term (note that the first order term cancels)
                     p_2 = 0.5 * H_diag.dot(variances)
@@ -1005,7 +1007,9 @@ class VelocityKernel(Kernel):
                 )
 
                 # use this sample to compute transition probabilities
-                p = _predict_fwd(v_i, W, sigma=sigma_corr, use_jax=False)
+                p = _predict_transition_probabilities(
+                    v_i, W, sigma=sigma_corr, use_jax=False
+                )
 
             # add the computed transition matrices to a list
             vals.extend(p)
