@@ -908,6 +908,13 @@ class VelocityKernel(Kernel):
         if mode not in ["stochastic", "deterministic", "sampling"]:
             raise NotImplementedError(f"Mode `{mode}` is not implemented. ")
 
+        if mode != "deterministic" and self._direction == Direction.BACKWARD:
+            logg.warning(
+                f"Mode `{mode}` is currently not supported for the backward process. "
+                f"Defaulting to mode `'deterministic'`."
+            )
+            mode = "deterministic"
+
         start = logg.info("Computing transition matrix based on velocity correlations")
 
         params = dict(  # noqa
@@ -955,15 +962,28 @@ class VelocityKernel(Kernel):
             if mode == "deterministic":
                 # treat `v_i` as deterministic, with no error
 
-                # evaluate the prediction at the actual velocity vector
-                v_i = self._velocity[cell_ix, :]
+                if self._direction == Direction.FORWARD or (
+                    self._direction == Direction.BACKWARD and backward_mode == "negate"
+                ):
+                    # evaluate the prediction at the actual velocity vector
+                    v_i = self._velocity[cell_ix, :]
 
-                if (self._velocity[cell_ix, :] == 0).all():
-                    logg.warning(f"Cell {cell_ix} has a zero velocity vector.")
-                    p = 1 / len(nbhs_ixs) * np.ones(len(nbhs_ixs))
+                    # for the transpose backward mode, just flip the velocity vector
+                    if self._direction == Direction.BACKWARD:
+                        v_i = -1 * v_i
+
+                    if (self._velocity[cell_ix, :] == 0).all():
+                        logg.warning(f"Cell {cell_ix} has a zero velocity vector.")
+                        p = 1 / len(nbhs_ixs) * np.ones(len(nbhs_ixs))
+                    else:
+                        p = _predict_transition_probabilities(
+                            v_i, W, sigma=sigma_corr, use_jax=False
+                        )
                 else:
+                    # compute how likely all neighbors are to transition to this cell
+                    V = self._velocity[nbhs_ixs, :]
                     p = _predict_transition_probabilities(
-                        v_i, W, sigma=sigma_corr, use_jax=False
+                        V, -1 * W, sigma=sigma_corr, use_jax=False
                     )
 
             elif mode == "stochastic":

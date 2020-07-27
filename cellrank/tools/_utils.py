@@ -1854,7 +1854,7 @@ def _cosine_corr(X: np.ndarray, Y: np.ndarray, use_jax: bool = True) -> np.ndarr
             c = X.dot(Y) / (X_norm * Y_norm)
         elif Y.ndim == 2:
             Y_norm = np.linalg.norm(Y, axis=1)
-            c = np.array([a.dot(b) for a, b in (X, Y)]) / (X_norm * Y_norm)
+            c = np.array([a.dot(b) for a, b in zip(X, Y)]) / (X_norm * Y_norm)
 
     return c
 
