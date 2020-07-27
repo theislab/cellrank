@@ -878,6 +878,7 @@ class VelocityKernel(Kernel):
         backward_mode: str = "transpose",
         sigma_corr: float = 1.0,
         mode: str = "stochastic",
+        random_state: int = 0,
         **kwargs,
     ) -> "VelocityKernel":
         """
@@ -898,6 +899,8 @@ class VelocityKernel(Kernel):
         mode
             How to compute transition probabilities. Options are "stochastic" (propagate uncertainty analytically),
             "deterministic" (don't propagate uncertainty) and "sampling" (sample from velocity distribution)
+        random_state
+            Set the seed, only relevant for `mode='sampling'`.
 
         Returns
         -------
@@ -922,6 +925,7 @@ class VelocityKernel(Kernel):
             bwd_mode=backward_mode if self._direction == Direction.BACKWARD else None,
             sigma_corr=sigma_corr,
             mode=mode,
+            random_state=random_state,
         )
 
         # check whether we already computed such a transition matrix. If yes, load from cache
@@ -935,6 +939,7 @@ class VelocityKernel(Kernel):
 
         # compute first and second order moments to model the distribution of the velocity vector
         if mode in ["stochastic", "sampling"]:
+            np.random.seed(random_state)
             velocity_expectation = get_moments(
                 self.adata, self._velocity, second_order=False
             )
@@ -1020,10 +1025,14 @@ class VelocityKernel(Kernel):
                 # treat `v_i` as random variable and use Monte Carlo approximation to propagate the distribution
 
                 # sample a single velocity vector from the distribution
-                v_i = np.random.multivariate_normal(
-                    velocity_expectation[cell_ix, :],
-                    np.diag(velocity_variance[cell_ix, :]),
-                    1,
+                v_i = np.array(
+                    [
+                        np.random.normal(mean, var)
+                        for mean, var in zip(
+                            velocity_expectation[cell_ix, :],
+                            velocity_variance[cell_ix, :],
+                        )
+                    ]
                 )
 
                 # use this sample to compute transition probabilities
