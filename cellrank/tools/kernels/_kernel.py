@@ -957,7 +957,12 @@ class VelocityKernel(Kernel):
 
                 # evaluate the prediction at the actual velocity vector
                 v_i = self._velocity[cell_ix, :]
-                p = _predict_fwd(v_i, W, sigma=sigma_corr, use_jax=False)
+
+                if (self._velocity[cell_ix, :] == 0).all():
+                    logg.warning(f"Cell {cell_ix} has a zero velocity vector.")
+                    p = 1 / len(nbhs_ixs) * np.ones(len(nbhs_ixs))
+                else:
+                    p = _predict_fwd(v_i, W, sigma=sigma_corr, use_jax=False)
 
             elif mode == "stochastic":
                 # treat `v_i` as random variable and use analytical approximation to propagate the distribution
@@ -965,23 +970,29 @@ class VelocityKernel(Kernel):
                 if iter % 100 == 0:
                     print(f"i = {iter}/{n_obs}")
 
-                # get the expectation and variance
+                # get the expected velocity vector
                 v_i = velocity_expectation[cell_ix, :]
-                variances = velocity_variance[cell_ix, :]
 
-                # compute the Hessian tensor, and turn it into a matrix that has the diagonal elements in its rows
-                H = get_hessian_fwd(v_i, W, sigma_corr)
-                H_diag = np.concatenate([np.diag(h)[None, :] for h in H])
+                if (v_i == 0).all():
+                    logg.warning(f"Cell {cell_ix} has a zero velocity vector.")
+                    p = 1 / len(nbhs_ixs) * np.ones(len(nbhs_ixs))
+                else:
+                    # get the variance of the distribution over velocity vectors
+                    variances = velocity_variance[cell_ix, :]
 
-                # compute zero order term
-                p_0 = _predict_fwd(v_i, W, sigma=sigma_corr)
+                    # compute the Hessian tensor, and turn it into a matrix that has the diagonal elements in its rows
+                    H = get_hessian_fwd(v_i, W, sigma_corr)
+                    H_diag = np.concatenate([np.diag(h)[None, :] for h in H])
 
-                # compute second order term (note that the first order term cancels)
-                p_2 = 0.5 * H_diag.dot(variances)
+                    # compute zero order term
+                    p_0 = _predict_fwd(v_i, W, sigma=sigma_corr)
 
-                # combine both to give the second order Taylor approximation. Can sometimes be negative because we
-                # neglected higher order terms, so force it to be non-negative
-                p = np.where((p_0 + p_2) >= 0, p_0 + p_2, 0)
+                    # compute second order term (note that the first order term cancels)
+                    p_2 = 0.5 * H_diag.dot(variances)
+
+                    # combine both to give the second order Taylor approximation. Can sometimes be negative because we
+                    # neglected higher order terms, so force it to be non-negative
+                    p = np.where((p_0 + p_2) >= 0, p_0 + p_2, 0)
 
             elif mode == "sampling":
                 # treat `v_i` as random variable and use Monte Carlo approximation to propagate the distribution

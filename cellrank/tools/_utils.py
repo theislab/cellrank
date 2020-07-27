@@ -1836,16 +1836,7 @@ def _cosine_corr(X: np.ndarray, y: np.ndarray, use_jax: bool = True) -> np.ndarr
         y_norm = np.linalg.norm(y)
         X_norm = np.linalg.norm(X, axis=1)
 
-    result = X.dot(y) / (X_norm * y_norm)
-
-    # with warnings.catch_warnings():
-    #     warnings.simplefilter("ignore")
-    #     if y_norm == 0:
-    #         print("encountered a zero vector")
-    #         result = jnp.zeros(X.shape[0])
-    #     else:
-    #         result = X.dot(y) / (X_norm * y_norm)
-    return result
+    return X.dot(y) / (X_norm * y_norm)
 
 
 def _softmax(x, sigma, use_jax: bool = True):
