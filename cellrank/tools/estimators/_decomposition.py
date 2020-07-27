@@ -4,18 +4,18 @@ from abc import ABC
 from typing import Any, Tuple, Union, Mapping, Optional
 from pathlib import Path
 
-import numpy as np
-from scipy.sparse.linalg import eigs
-
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+import numpy as np
 from cellrank import logging as logg
+from scipy.sparse.linalg import eigs
 from cellrank.utils._docs import d, inject_docs
 from cellrank.tools._utils import save_fig, _eigengap
 from cellrank.tools.estimators._utils import Metadata, _delegate
 from cellrank.tools.estimators._property import Property, KernelHolder, VectorPlottable
 from cellrank.tools.estimators._constants import A, F, P
+from cellrank._vendor.msmtools.util.sorted_schur import _check_conj_split
 from cellrank._vendor.msmtools.analysis.dense.gpcca import GPCCA as _GPCCA
 
 EPS = np.finfo(np.float64).eps
@@ -382,10 +382,17 @@ class Schur(VectorPlottable, Decomposable):
         setattr(self, A.SCHUR.s, self._gpcca.X)
         setattr(self, A.SCHUR_MAT.s, self._gpcca.R)
 
-        self._invalid_n_states = np.where(self._gpcca.eigenvalues.imag < 0)[0]
-        logg.info(
-            f"When computing metastable states, choose a number of states NOT in `{list(self._invalid_n_states)}`"
+        self._invalid_n_states = np.array(
+            [
+                i
+                for i in range(2, len(self._gpcca.eigenvalues))
+                if _check_conj_split(self._gpcca.eigenvalues[:i])
+            ]
         )
+        if len(self._invalid_n_states):
+            logg.info(
+                f"When computing metastable states, choose a number of states NOT in `{list(self._invalid_n_states)}`"
+            )
 
         self._write_eig_to_adata(
             {
