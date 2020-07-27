@@ -251,11 +251,19 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
 
         probs = self._get(P.META_PROBS)
 
-        if probs is None:
+        if self._get(P.META_PROBS) is None:
             raise RuntimeError(
-                "Compute metastable_states first as `.compute_metastable_states()` with "
-                "`n_states > 1`."
+                "Compute metastable_states first as `.compute_metastable_states()`."
             )
+        elif probs.shape[1] == 1:
+            self._set(
+                A.FIN, self._create_states(self._get(P.META_PROBS), n_cells=n_cells)
+            )
+            self._set(A.FIN_COLORS, self._get(A.META_COLORS))
+            self._set(A.FIN_PROBS, self._get(P.META_PROBS))
+            self._write_final_states()
+
+            return
 
         if names is None:
             names = probs.names
@@ -702,10 +710,17 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             p_thresh=p_thresh,
             en_cutoff=en_cutoff,
         )
+        self._set(
+            A.META_PROBS,
+            Lineage(
+                stationary_dist,
+                names=list(self._get(A.META).cat.categories),
+                colors=self._get(A.META_COLORS),
+            ),
+        )
 
         # reset all the things
         for key in (
-            A.META_PROBS,
             A.ABS_RPOBS,
             A.SCHUR,
             A.SCHUR_MAT,

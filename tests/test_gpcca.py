@@ -41,9 +41,13 @@ def _check_eigdecomposition(mc: cr.tl.GPCCA) -> None:
 
 def _check_compute_meta(mc: cr.tl.GPCCA) -> None:
     assert isinstance(mc._get(P.META), pd.Series)
+    assert len(mc._get(A.META_COLORS)) == len(mc._get(P.META).cat.categories)
 
     if "stationary_dist" in mc._get(P.EIG):  # one state
-        assert mc._get(P.META_PROBS) is None
+        assert isinstance(mc._get(P.META_PROBS), cr.tl.Lineage)
+        assert mc._get(P.META_PROBS).shape[1] == 1
+        np.testing.assert_array_almost_equal(mc._get(P.META_PROBS).X.sum(), 1.0)
+
         assert mc._get(P.COARSE_INIT_D) is None
         assert mc._get(P.SCHUR_MAT) is None
         assert mc._get(P.COARSE_STAT_D) is None
