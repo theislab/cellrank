@@ -585,7 +585,7 @@ class Kernel(UnaryKernelExpression, ABC):
         if len(problematic_indices) != 0:
             logg.warning(
                 f"Detected {len(problematic_indices)} absorbing states in the transition matrix. "
-                f"This matrix won't be reducible, consider setting `use_negative_cosines=True`"
+                f"This matrix won't be reducible. "
             )
             for ix in problematic_indices:
                 matrix[ix, ix] = 1.0
@@ -780,10 +780,11 @@ class VelocityKernel(Kernel):
         Direction of the process.
     vkey
         Key in :paramref:`adata` `.uns` where the velocities are stored.
-    var_key
-        Key in :paramref:`adata` `.obsp` where the velocity variances are stored.
-    use_negative_cosines
-        Whether to use correlations with cells that have an angle > 90 degree with :math:`v_i`.
+    xkey
+        Key in :paramref:`adata` `.layers` where expected gene expression counts are stored.
+    gene_subset
+        List of genes to be used to compute transition probabilities. By default, the `velocity_genes` of
+        :paramref:`adata` `. var` are used.
     compute_cond_num
         Whether to compute condition number of the transition matrix. Note that this might be costly,
         since it does not use sparse implementation.
@@ -877,7 +878,6 @@ class VelocityKernel(Kernel):
         backward_mode: str = "transpose",
         sigma_corr: float = 1.0,
         mode: str = "stochastic",
-        use_negative_correlations: bool = True,
         **kwargs,
     ) -> "VelocityKernel":
         """
@@ -914,7 +914,6 @@ class VelocityKernel(Kernel):
             dnorm=density_normalize,
             bwd_mode=backward_mode if self._direction == Direction.BACKWARD else None,
             sigma_corr=sigma_corr,
-            use_negative_correlations=use_negative_correlations,
             mode=mode,
         )
 
