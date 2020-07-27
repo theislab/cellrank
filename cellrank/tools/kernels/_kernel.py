@@ -940,7 +940,7 @@ class VelocityKernel(Kernel):
 
         # sort cells by their number of neighbors
         n_neighbors = np.array((self._conn != 0).sum(1)).flatten()
-        cell_ix = np.argsort(n_neighbors)
+        cell_ix = np.argsort(n_neighbors)[::-1]
 
         # loop over all cells
         vals, rows, cols, n_obs = [], [], [], self._gene_expression.shape[0]
@@ -951,15 +951,17 @@ class VelocityKernel(Kernel):
 
             # get the displacement matrix. Changing dimensions b/c varying numbers of neighbors slow down autograd
             W = self._gene_expression[nbhs_ixs, :] - self._gene_expression[cell_ix, :]
-            assert W.shape == (len(nbhs_ixs), self._velocity.shape[1])
 
             if mode == "deterministic":
+                # treat `v_i` as deterministic, with no error
 
                 # evaluate the prediction at the actual velocity vector
                 v_i = self._velocity[cell_ix, :]
                 p = _predict_fwd(v_i, W, sigma=sigma_corr, use_jax=False)
 
             elif mode == "stochastic":
+                # treat `v_i` as random variable and use analytical approximation to propagate the distribution
+
                 if iter % 100 == 0:
                     print(f"i = {iter}/{n_obs}")
 
@@ -982,7 +984,17 @@ class VelocityKernel(Kernel):
                 p = np.where((p_0 + p_2) >= 0, p_0 + p_2, 0)
 
             elif mode == "sampling":
-                pass
+                # treat `v_i` as random variable and use Monte Carlo approximation to propagate the distribution
+
+                # sample a single velocity vector from the distribution
+                v_i = np.random.multivariate_normal(
+                    velocity_expectation[cell_ix, :],
+                    np.diag(velocity_variance[cell_ix, :]),
+                    1,
+                )
+
+                # use this sample to compute transition probabilities
+                p = _predict_fwd(v_i, W, sigma=sigma_corr, use_jax=False)
 
             # add the computed transition matrices to a list
             vals.extend(p)
