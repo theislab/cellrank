@@ -1786,29 +1786,40 @@ def _solve_many_sparse_problems(
     return np.stack(x_list, axis=1), n_converged
 
 
-def _pearson_corr(X: np.ndarray, y: np.ndarray, use_jax: bool = True) -> np.ndarray:
+def _pearson_corr(X: np.ndarray, Y: np.ndarray, use_jax: bool = True) -> np.ndarray:
     """
-    Compute the pearson correlation between rows in matrix X and a vector y.
+    Compute the pearson correlation between rows X and Y.
 
-    Assumes you have samples in the rows and features in the columns.
+    Assumes you have samples in the rows and features in the columns. Y can be a vecor or a matrix if
+    `use_jax=False`. In case `use_jax=True`, Y has to be a vector.
 
     Params
     ------
     X
-        Matrix of `NxM` elements.
+        Matrix of shape `NxM`.
     y:
-        Vector of `M` elements.
+        Either vector of  shape `M` or matrix of shape `NxM`.
 
     Returns
     -------
     :class:`numpy.ndarray`
-        The computed pearson correlation.
+        The computed pearson correlations.  If `Y` is a vector, this corresponds to pearson correlation
+        of `Y` with all rows in `X`. If `Y` is a matrix, this corresponds to pearson correlation between
+        corresponding rows in `X` and `Y`.
     """
+    if use_jax:
+        X -= X.mean(axis=1)[:, None]
+        Y -= Y.mean()
+    else:
+        X -= X.mean(axis=1)[:, None]
+        if Y.ndim == 1:
+            Y -= Y.mean()
+        elif Y.ndim == 2:
+            Y -= Y.mean(axis=1)[:, None]
+        else:
+            raise NotImplementedError("Y has more than 2 dimensions. ")
 
-    X -= X.mean(axis=1)[:, None]
-    y -= y.mean()
-
-    return _cosine_corr(X, y, use_jax=use_jax)
+    return _cosine_corr(X, Y, use_jax=use_jax)
 
 
 def _cosine_corr(X: np.ndarray, Y: np.ndarray, use_jax: bool = True) -> np.ndarray:
@@ -1844,8 +1855,6 @@ def _cosine_corr(X: np.ndarray, Y: np.ndarray, use_jax: bool = True) -> np.ndarr
         elif Y.ndim == 2:
             Y_norm = np.linalg.norm(Y, axis=1)
             c = np.array([a.dot(b) for a, b in (X, Y)]) / (X_norm * Y_norm)
-        else:
-            raise NotImplementedError("Y has more than 2 dimensions.")
 
     return c
 
