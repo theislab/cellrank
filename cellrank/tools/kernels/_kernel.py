@@ -926,7 +926,7 @@ class VelocityKernel(Kernel):
 
         self._params = params
 
-        # compute moments and define a function which returns hessian matrices
+        # compute first and second order moments to model the distribution of the velocity vector
         if mode in ["stochastic", "sampling"]:
             velocity_expectation = get_moments(
                 self.adata, self._velocity, second_order=False
@@ -938,7 +938,7 @@ class VelocityKernel(Kernel):
         # define a function to compute hessian matrices
         get_hessian_fwd = jit(jacfwd(jacrev(_predict_fwd)))
 
-        # sort cells by their number of neighbors
+        # sort cells by their number of neighbors - this makes jitting more efficient
         n_neighbors = np.array((self._conn != 0).sum(1)).flatten()
         cell_ix = np.argsort(n_neighbors)[::-1]
 
