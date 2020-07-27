@@ -1842,9 +1842,9 @@ def _cosine_corr(X: np.ndarray, y: np.ndarray, use_jax: bool = True) -> np.ndarr
 def _softmax(x, sigma, use_jax: bool = True):
     """Compute softmax over input vector."""
     if use_jax:
-        y = jnp.exp(x * sigma) / jnp.sum(jnp.exp(x * sigma))
+        y = jnp.exp(x * sigma) / jnp.exp(x * sigma).sum()
     else:
-        y = np.exp(x * sigma) / np.sum(np.exp(x * sigma))
+        y = np.exp(x * sigma) / np.exp(x * sigma).sum()
 
     return y
 
