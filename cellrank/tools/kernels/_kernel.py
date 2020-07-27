@@ -940,9 +940,13 @@ class VelocityKernel(Kernel):
         # define a function to compute hessian matrices
         get_hessian_fwd = jit(jacfwd(jacrev(_predict_fwd)))
 
+        # sort cells by their number of neighbors
+        n_neighbors = np.array((self._conn != 0).sum(1)).flatten()
+        cell_ix = np.argsort(n_neighbors)
+
         # loop over all cells
         vals, rows, cols, n_obs = [], [], [], self._gene_expression.shape[0]
-        for i in range(n_obs):
+        for i in cell_ix:
             if i % 100 == 0:
                 print(f"i = {i}/{n_obs}")
             # print(f"i = {i}/{n_obs}")
