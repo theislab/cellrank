@@ -878,6 +878,7 @@ class VelocityKernel(Kernel):
         sigma_corr: float = 4.0,
         mode: str = "deterministic",
         random_state: int = 0,
+        return_pearson_correlations: bool = False,
         **kwargs,
     ) -> "VelocityKernel":
         """
@@ -897,6 +898,8 @@ class VelocityKernel(Kernel):
             "deterministic" (don't propagate uncertainty) and "sampling" (sample from velocity distribution)
         random_state
             Set the seed, only relevant for `mode='sampling'`.
+        return_pearson_correlations
+            Whether to return and save the pearson correlations.
 
         Returns
         -------
@@ -950,7 +953,7 @@ class VelocityKernel(Kernel):
         cell_ix = np.argsort(n_neighbors)[::-1]
 
         # loop over all cells
-        vals, rows, cols, n_obs = [], [], [], self._gene_expression.shape[0]
+        probs, corrs, rows, cols, n_obs = [], [], [], [], self._gene_expression.shape[0]
         for iter, cell_ix in enumerate(cell_ix):
 
             # get the neighbors
@@ -976,9 +979,18 @@ class VelocityKernel(Kernel):
                         logg.warning(f"Cell {cell_ix} has a zero velocity vector.")
                         p = 1 / len(nbhs_ixs) * np.ones(len(nbhs_ixs))
                     else:
-                        p = _predict_transition_probabilities(
-                            v_i, W, sigma=sigma_corr, use_jax=False
-                        )
+                        if return_pearson_correlations:
+                            p, u = _predict_transition_probabilities(
+                                v_i,
+                                W,
+                                sigma=sigma_corr,
+                                use_jax=False,
+                                return_pearson_correlations=return_pearson_correlations,
+                            )
+                        else:
+                            p = _predict_transition_probabilities(
+                                v_i, W, sigma=sigma_corr, use_jax=False
+                            )
                 else:
                     # compute how likely all neighbors are to transition to this cell
                     V = self._velocity[nbhs_ixs, :]
@@ -1036,15 +1048,23 @@ class VelocityKernel(Kernel):
                 )
 
             # add the computed transition matrices to a list
-            vals.extend(p)
+            if return_pearson_correlations:
+                corrs.extend(u)
+            probs.extend(p)
             rows.extend(np.ones(len(nbhs_ixs)) * cell_ix)
             cols.extend(nbhs_ixs)
 
         # collect everything in a single transition matrix
-        vals = np.hstack(vals)
-        vals[np.isnan(vals)] = 0
+        probs = np.hstack(probs)
+        probs[np.isnan(probs)] = 0
 
-        matrix = _vals_to_csr(vals, rows, cols, shape=(n_obs, n_obs))
+        if return_pearson_correlations:
+            corrs = np.hstack(corrs)
+            corrs[np.isnan(corrs)] = 0
+            corr_matrix = _vals_to_csr(corrs, rows, cols, shape=(n_obs, n_obs))
+            self._pearson_correlations = corr_matrix
+
+        matrix = _vals_to_csr(probs, rows, cols, shape=(n_obs, n_obs))
 
         self._compute_transition_matrix(matrix, density_normalize=False)
 
