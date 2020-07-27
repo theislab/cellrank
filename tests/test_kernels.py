@@ -1011,6 +1011,24 @@ class TestTransitionProbabilities:
         velocity_vector = vk._velocity[cell_ix, :]
         nbhs_ixs = vk._conn[cell_ix, :].indices
         W = vk._gene_expression[nbhs_ixs, :] - vk._gene_expression[cell_ix, :]
-        correlctions_cr = _pearson_corr(W, velocity_vector, use_jax=False)
+        correlations_cr = _pearson_corr(W, velocity_vector, use_jax=False)
 
-        assert np.allclose(correlations_scv.data, correlctions_cr)
+        assert np.allclose(correlations_scv.data, correlations_cr)
+
+    def test_pearson_correlations_bwd(self, adata):
+        # test whether cellrank implementation matches scVelo's implementation
+        cell_ix = 2
+
+        # recompute the velocity graph using scvelo
+        velocity_graph(adata, mode_neighbors="connectivities")
+        velo_graph = adata.uns["velocity_graph"] + adata.uns["velocity_graph_neg"]
+        correlations_scv = velo_graph[:, cell_ix]
+
+        # initialise velocity kernel
+        vk = VelocityKernel(adata)
+        nbhs_ixs = vk._conn[cell_ix, :].indices
+        W = vk._gene_expression[nbhs_ixs, :] - vk._gene_expression[cell_ix, :]
+        velocity_vectors = vk._velocity[nbhs_ixs, :]
+        correlations_cr = _pearson_corr(-1 * W, velocity_vectors, use_jax=False)
+
+        assert np.allclose(correlations_scv.data, correlations_cr)
