@@ -1811,32 +1811,43 @@ def _pearson_corr(X: np.ndarray, y: np.ndarray, use_jax: bool = True) -> np.ndar
     return _cosine_corr(X, y, use_jax=use_jax)
 
 
-def _cosine_corr(X: np.ndarray, y: np.ndarray, use_jax: bool = True) -> np.ndarray:
+def _cosine_corr(X: np.ndarray, Y: np.ndarray, use_jax: bool = True) -> np.ndarray:
     """
-    Compute the cosine correlation between rows in matrix A and a vector y.
+    Compute the cosine correlation between rows in X and Y.
 
-    Assumes you have samples in the rows and features in the columns.
+    Assumes you have samples in the rows and features in the columns. Y can be a vecor or a matrix if
+    `use_jax=False`. In case `use_jax=True`, Y has to be a vector.
 
     Params
     ------
     X
-        Matrix of `NxM` elements.
-    y:
-        Vector of `M` elements.
+        Matrix of shape `NxM`.
+    Y:
+        Either vector of  shape `M` or matrix of shape `NxM`.
 
     Returns
     -------
     :class:`numpy.ndarray`
-        The computed cosine correlation.
+        The computed cosine correlation(s). If `Y` is a vector, this corresponds to cosine correlation
+        with all rows in `X. If `Y` is a matrix, this corresponds to cosine correlation betweeen
+        corresponding rows in `X` and `Y`.
     """
     if use_jax:
-        y_norm = jnp.linalg.norm(y)
+        Y_norm = jnp.linalg.norm(Y)
         X_norm = jnp.linalg.norm(X, axis=1)
+        c = X.dot(Y) / (X_norm * Y_norm)
     else:
-        y_norm = np.linalg.norm(y)
         X_norm = np.linalg.norm(X, axis=1)
+        if Y.ndim == 1:
+            Y_norm = np.linalg.norm(Y)
+            c = X.dot(Y) / (X_norm * Y_norm)
+        elif Y.ndim == 2:
+            Y_norm = np.linalg.norm(Y, axis=1)
+            c = np.array([a.dot(b) for a, b in (X, Y)]) / (X_norm * Y_norm)
+        else:
+            raise NotImplementedError("Y has more than 2 dimensions.")
 
-    return X.dot(y) / (X_norm * y_norm)
+    return c
 
 
 def _softmax(x, sigma, use_jax: bool = True):
