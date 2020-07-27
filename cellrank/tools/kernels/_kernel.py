@@ -769,8 +769,8 @@ class VelocityKernel(Kernel):
     that connects cell *i* with cell *j* in gene expression space, and the features :math:`x_i` are given
     by the velocity vector :math:`v_i` of cell *i*.
 
-    Optionally, we apply a density correction as described in [Coifman05]_, where we use the implementation of
-    [Haghverdi16]_.
+    Optionally, we propagate uncertainty in the velocity vectors forward into transition probabilities using either
+    an analytical approximation or a Monte Carlo approach.
 
     Params
     ------
@@ -874,7 +874,6 @@ class VelocityKernel(Kernel):
 
     def compute_transition_matrix(
         self,
-        density_normalize: bool = False,
         backward_mode: str = "transpose",
         sigma_corr: float = 1.0,
         mode: str = "stochastic",
@@ -889,8 +888,6 @@ class VelocityKernel(Kernel):
 
         Params
         ------
-        density_normalize
-            Whether or not to use the underlying KNN graph for density normalization.
         backward_mode
             Options are `['transpose', 'negate']`. Only matters if initialized as :paramref:`backward` =`True`.
         sigma_corr
@@ -921,7 +918,6 @@ class VelocityKernel(Kernel):
         start = logg.info("Computing transition matrix based on velocity correlations")
 
         params = dict(  # noqa
-            dnorm=density_normalize,
             bwd_mode=backward_mode if self._direction == Direction.BACKWARD else None,
             sigma_corr=sigma_corr,
             mode=mode,
@@ -1051,7 +1047,7 @@ class VelocityKernel(Kernel):
 
         matrix = _vals_to_csr(vals, rows, cols, shape=(n_obs, n_obs))
 
-        self._compute_transition_matrix(matrix, density_normalize=density_normalize)
+        self._compute_transition_matrix(matrix, density_normalize=False)
 
         logg.info("    Finish", time=start)
 
