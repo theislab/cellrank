@@ -4,6 +4,7 @@ import pytest
 
 import anndata
 from scanpy import Neighbors
+from scvelo.tools import velocity_graph
 
 from _helpers import (
     bias_knn,
@@ -12,7 +13,7 @@ from _helpers import (
     density_normalization,
     random_transition_matrix,
 )
-from cellrank.tools._utils import _normalize
+from cellrank.tools._utils import _normalize, _pearson_corr
 from cellrank.utils._utils import _get_neighs, _get_neighs_params
 from cellrank.tools.kernels import (
     PalantirKernel,
@@ -993,3 +994,23 @@ class TestGeneral:
         assert isinstance(vk.condition_number, float)
         assert ck.condition_number is None
         assert isinstance(v.condition_number, float)
+
+
+class TestTransitionProbabilities:
+    def test_pearson_correlations_fwd(self, adata):
+        # test whether cellrank implementation matches scVelo's implementation
+        cell_ix = 2
+
+        # recompute the velocity graph using scvelo
+        velocity_graph(adata, mode_neighbors="connectivities")
+        velo_graph = adata.uns["velocity_graph"] + adata.uns["velocity_graph_neg"]
+        correlations_scv = velo_graph[cell_ix, :]
+
+        # initialise velocity kernel
+        vk = VelocityKernel(adata)
+        velocity_vector = vk._velocity[cell_ix, :]
+        nbhs_ixs = vk._conn[cell_ix, :].indices
+        W = vk._gene_expression[nbhs_ixs, :] - vk._gene_expression[cell_ix, :]
+        correlctions_cr = _pearson_corr(W, velocity_vector, use_jax=False)
+
+        assert np.allclose(correlations_scv.data, correlctions_cr)
