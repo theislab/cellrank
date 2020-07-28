@@ -998,7 +998,7 @@ class TestGeneral:
 
 class TestTransitionProbabilities:
     def test_pearson_correlations_fwd(self, adata):
-        # test whether cellrank implementation matches scVelo's implementation
+        # test whether pearson correlations in cellrank match those from scvelo, forward case
         cell_ix = 2
 
         # recompute the velocity graph using scvelo
@@ -1016,7 +1016,7 @@ class TestTransitionProbabilities:
         assert np.allclose(correlations_scv.data, correlations_cr)
 
     def test_pearson_correlations_bwd(self, adata):
-        # test whether cellrank implementation matches scVelo's implementation
+        # test whether pearson correlations in cellrank match those from scvelo, backward case
         cell_ix = 2
 
         # recompute the velocity graph using scvelo
@@ -1032,3 +1032,41 @@ class TestTransitionProbabilities:
         correlations_cr = _pearson_corr(-1 * W, velocity_vectors, use_jax=False)
 
         assert np.allclose(correlations_scv.data, correlations_cr)
+
+    def test_transition_probabilities_fwd(self, adata):
+        # test whether transition probabilities in cellrank match those from scvelo, forward case
+        sigma_test = 3
+
+        # compute transition probabilities using the scvelo graph
+        velocity_graph(adata, mode_neighbors="connectivities")
+        velo_graph = adata.uns["velocity_graph"] + adata.uns["velocity_graph_neg"]
+        T_scv = np.expm1(velo_graph * sigma_test)
+        T_scv.data += 1
+        T_scv = _normalize(T_scv)
+
+        # compute transition probabilities using cellrank
+        vk = VelocityKernel(adata)
+        vk.compute_transition_matrix(sigma_corr=sigma_test)
+        T_cr = vk.transition_matrix
+
+        # check them for point-wise equality
+        assert np.allclose((T_scv - T_cr).data, 0, atol=1e-5)
+
+    def test_transition_probabilities_bwd(self, adata):
+        # test whether transition probabilities in cellrank match those from scvelo, backward case
+        sigma_test = 3
+
+        # compute transition probabilities using the scvelo graph
+        velocity_graph(adata, mode_neighbors="connectivities")
+        velo_graph = adata.uns["velocity_graph"] + adata.uns["velocity_graph_neg"]
+        T_scv = np.expm1(velo_graph.T * sigma_test)
+        T_scv.data += 1
+        T_scv = _normalize(T_scv)
+
+        # compute transition probabilities using cellrank
+        vk = VelocityKernel(adata, backward=True)
+        vk.compute_transition_matrix(sigma_corr=sigma_test)
+        T_cr = vk.transition_matrix
+
+        # check them for point-wise equality
+        assert np.allclose((T_scv - T_cr).data, 0, atol=1e-5)
