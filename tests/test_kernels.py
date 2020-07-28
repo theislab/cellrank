@@ -999,39 +999,33 @@ class TestGeneral:
 class TestTransitionProbabilities:
     def test_pearson_correlations_fwd(self, adata):
         # test whether pearson correlations in cellrank match those from scvelo, forward case
-        cell_ix = 2
+        backward = False
 
-        # recompute the velocity graph using scvelo
+        # compute pearson correlations using scvelo
         velocity_graph(adata, mode_neighbors="connectivities")
         velo_graph = adata.uns["velocity_graph"] + adata.uns["velocity_graph_neg"]
-        correlations_scv = velo_graph[cell_ix, :]
 
-        # initialise velocity kernel
-        vk = VelocityKernel(adata)
-        velocity_vector = vk._velocity[cell_ix, :]
-        nbhs_ixs = vk._conn[cell_ix, :].indices
-        W = vk._gene_expression[nbhs_ixs, :] - vk._gene_expression[cell_ix, :]
-        correlations_cr = _pearson_corr(W, velocity_vector, use_jax=False)
+        # compute pearson correlations using cellrank
+        vk = VelocityKernel(adata, backward=backward)
+        vk.compute_transition_matrix(mode="deterministic")
+        pearson_correlations_cr = vk._pearson_correlations
 
-        assert np.allclose(correlations_scv.data, correlations_cr)
+        assert np.allclose((velo_graph - pearson_correlations_cr).data, 0, atol=1e-5)
 
     def test_pearson_correlations_bwd(self, adata):
         # test whether pearson correlations in cellrank match those from scvelo, backward case
-        cell_ix = 2
+        backward = True
 
-        # recompute the velocity graph using scvelo
+        # compute pearson correlations using scvelo
         velocity_graph(adata, mode_neighbors="connectivities")
-        velo_graph = adata.uns["velocity_graph"] + adata.uns["velocity_graph_neg"]
-        correlations_scv = velo_graph[:, cell_ix]
+        velo_graph = (adata.uns["velocity_graph"] + adata.uns["velocity_graph_neg"]).T
 
-        # initialise velocity kernel
-        vk = VelocityKernel(adata)
-        nbhs_ixs = vk._conn[cell_ix, :].indices
-        W = vk._gene_expression[nbhs_ixs, :] - vk._gene_expression[cell_ix, :]
-        velocity_vectors = vk._velocity[nbhs_ixs, :]
-        correlations_cr = _pearson_corr(-1 * W, velocity_vectors, use_jax=False)
+        # compute pearson correlations using cellrak
+        vk = VelocityKernel(adata, backward=backward)
+        vk.compute_transition_matrix(mode="deterministic")
+        pearson_correlations_cr = vk._pearson_correlations
 
-        assert np.allclose(correlations_scv.data, correlations_cr)
+        assert np.allclose((velo_graph - pearson_correlations_cr).data, 0, atol=1e-5)
 
     def test_transition_probabilities_fwd(self, adata):
         # test whether transition probabilities in cellrank match those from scvelo, forward case
@@ -1064,8 +1058,8 @@ class TestTransitionProbabilities:
         T_scv = _normalize(T_scv)
 
         # compute transition probabilities using cellrank
-        vk = VelocityKernel(adata, backward=True, mode="deterministic")
-        vk.compute_transition_matrix(sigma_corr=sigma_test)
+        vk = VelocityKernel(adata, backward=True)
+        vk.compute_transition_matrix(sigma_corr=sigma_test, mode="deterministic")
         T_cr = vk.transition_matrix
 
         # check them for point-wise equality
