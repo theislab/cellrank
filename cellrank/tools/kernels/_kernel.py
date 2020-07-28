@@ -987,13 +987,21 @@ class VelocityKernel(Kernel):
                         )
                     else:
                         probs, corrs = _predict_transition_probabilities(
-                            v_i, W, sigma=sigma_corr, use_jax=False
+                            v_i,
+                            W,
+                            sigma=sigma_corr,
+                            use_jax=False,
+                            return_pearson_correlation=True,
                         )
                 else:
                     # compute how likely all neighbors are to transition to this cell
                     V = self._velocity[nbhs_ixs, :]
                     probs, corrs = _predict_transition_probabilities(
-                        V, -1 * W, sigma=sigma_corr, use_jax=False
+                        V,
+                        -1 * W,
+                        sigma=sigma_corr,
+                        use_jax=False,
+                        return_pearson_correlation=True,
                     )
 
             elif mode == "stochastic":
@@ -1021,7 +1029,11 @@ class VelocityKernel(Kernel):
 
                     # compute zero order term
                     p_0, corrs = _predict_transition_probabilities(
-                        v_i, W, sigma=sigma_corr
+                        v_i,
+                        W,
+                        sigma=sigma_corr,
+                        use_jax=False,
+                        return_pearson_correlation=True,
                     )
 
                     # compute second order term (note that the first order term cancels)
@@ -1047,7 +1059,11 @@ class VelocityKernel(Kernel):
 
                 # use this sample to compute transition probabilities
                 probs, corrs = _predict_transition_probabilities(
-                    v_i, W, sigma=sigma_corr, use_jax=False
+                    v_i,
+                    W,
+                    sigma=sigma_corr,
+                    use_jax=False,
+                    return_pearson_correlation=True,
                 )
 
             # add the computed transition probabiliteis and correlations to lists
