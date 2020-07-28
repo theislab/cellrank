@@ -1046,7 +1046,7 @@ class TestTransitionProbabilities:
 
         # compute transition probabilities using cellrank
         vk = VelocityKernel(adata)
-        vk.compute_transition_matrix(sigma_corr=sigma_test)
+        vk.compute_transition_matrix(sigma_corr=sigma_test, mode="deterministic")
         T_cr = vk.transition_matrix
 
         # check them for point-wise equality
@@ -1064,7 +1064,7 @@ class TestTransitionProbabilities:
         T_scv = _normalize(T_scv)
 
         # compute transition probabilities using cellrank
-        vk = VelocityKernel(adata, backward=True)
+        vk = VelocityKernel(adata, backward=True, mode="deterministic")
         vk.compute_transition_matrix(sigma_corr=sigma_test)
         T_cr = vk.transition_matrix
 
