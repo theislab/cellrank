@@ -814,6 +814,7 @@ class VelocityKernel(Kernel):
         self._vkey = vkey  # for copy
         self._xkey = xkey
         self._gene_subset = gene_subset
+        self._pearson_correlations = None
 
     def _read_from_adata(self, **kwargs):
         super()._read_from_adata(**kwargs)
@@ -878,7 +879,6 @@ class VelocityKernel(Kernel):
         sigma_corr: float = 4.0,
         mode: str = "deterministic",
         random_state: int = 0,
-        return_pearson_correlations: bool = False,
         **kwargs,
     ) -> "VelocityKernel":
         """
@@ -898,8 +898,6 @@ class VelocityKernel(Kernel):
             "deterministic" (don't propagate uncertainty) and "sampling" (sample from velocity distribution)
         random_state
             Set the seed, only relevant for `mode='sampling'`.
-        return_pearson_correlations
-            Whether to return and save the pearson correlations.
 
         Returns
         -------
@@ -953,7 +951,13 @@ class VelocityKernel(Kernel):
         cell_ix = np.argsort(n_neighbors)[::-1]
 
         # loop over all cells
-        probs, corrs, rows, cols, n_obs = [], [], [], [], self._gene_expression.shape[0]
+        probs_list, corrs_list, rows, cols, n_obs = (
+            [],
+            [],
+            [],
+            [],
+            self._gene_expression.shape[0],
+        )
         for iter, cell_ix in enumerate(cell_ix):
 
             # get the neighbors
@@ -977,24 +981,18 @@ class VelocityKernel(Kernel):
 
                     if (self._velocity[cell_ix, :] == 0).all():
                         logg.warning(f"Cell {cell_ix} has a zero velocity vector.")
-                        p = 1 / len(nbhs_ixs) * np.ones(len(nbhs_ixs))
+                        probs, corrs = (
+                            1 / len(nbhs_ixs) * np.ones(len(nbhs_ixs)),
+                            np.zeros(len(nbhs_ixs)),
+                        )
                     else:
-                        if return_pearson_correlations:
-                            p, u = _predict_transition_probabilities(
-                                v_i,
-                                W,
-                                sigma=sigma_corr,
-                                use_jax=False,
-                                return_pearson_correlations=return_pearson_correlations,
-                            )
-                        else:
-                            p = _predict_transition_probabilities(
-                                v_i, W, sigma=sigma_corr, use_jax=False
-                            )
+                        probs, corrs = _predict_transition_probabilities(
+                            v_i, W, sigma=sigma_corr, use_jax=False
+                        )
                 else:
                     # compute how likely all neighbors are to transition to this cell
                     V = self._velocity[nbhs_ixs, :]
-                    p = _predict_transition_probabilities(
+                    probs, corrs = _predict_transition_probabilities(
                         V, -1 * W, sigma=sigma_corr, use_jax=False
                     )
 
@@ -1009,7 +1007,10 @@ class VelocityKernel(Kernel):
 
                 if (v_i == 0).all():
                     logg.warning(f"Cell {cell_ix} has a zero velocity vector.")
-                    p = 1 / len(nbhs_ixs) * np.ones(len(nbhs_ixs))
+                    probs, corrs = (
+                        1 / len(nbhs_ixs) * np.ones(len(nbhs_ixs)),
+                        np.zeros(len(nbhs_ixs)),
+                    )
                 else:
                     # get the variance of the distribution over velocity vectors
                     variances = velocity_variance[cell_ix, :]
@@ -1019,14 +1020,16 @@ class VelocityKernel(Kernel):
                     H_diag = np.concatenate([np.diag(h)[None, :] for h in H])
 
                     # compute zero order term
-                    p_0 = _predict_transition_probabilities(v_i, W, sigma=sigma_corr)
+                    p_0, corrs = _predict_transition_probabilities(
+                        v_i, W, sigma=sigma_corr
+                    )
 
                     # compute second order term (note that the first order term cancels)
                     p_2 = 0.5 * H_diag.dot(variances)
 
                     # combine both to give the second order Taylor approximation. Can sometimes be negative because we
                     # neglected higher order terms, so force it to be non-negative
-                    p = np.where((p_0 + p_2) >= 0, p_0 + p_2, 0)
+                    probs = np.where((p_0 + p_2) >= 0, p_0 + p_2, 0)
 
             elif mode == "sampling":
                 # treat `v_i` as random variable and use Monte Carlo approximation to propagate the distribution
@@ -1043,30 +1046,27 @@ class VelocityKernel(Kernel):
                 )
 
                 # use this sample to compute transition probabilities
-                p = _predict_transition_probabilities(
+                probs, corrs = _predict_transition_probabilities(
                     v_i, W, sigma=sigma_corr, use_jax=False
                 )
 
-            # add the computed transition matrices to a list
-            if return_pearson_correlations:
-                corrs.extend(u)
-            probs.extend(p)
+            # add the computed transition probabiliteis and correlations to lists
+            corrs_list.extend(corrs)
+            probs_list.extend(probs)
             rows.extend(np.ones(len(nbhs_ixs)) * cell_ix)
             cols.extend(nbhs_ixs)
 
-        # collect everything in a single transition matrix
-        probs = np.hstack(probs)
-        probs[np.isnan(probs)] = 0
+        # collect everything in a matrix of correlations and one of transition probabilities
+        probs_matrix, corrs_matrix = np.hstack(probs_list), np.hstack(corrs_list)
+        probs_matrix[np.isnan(probs_matrix)] = 0
+        corrs_matrix[np.isnan(corrs_matrix)] = 0
 
-        if return_pearson_correlations:
-            corrs = np.hstack(corrs)
-            corrs[np.isnan(corrs)] = 0
-            corr_matrix = _vals_to_csr(corrs, rows, cols, shape=(n_obs, n_obs))
-            self._pearson_correlations = corr_matrix
+        # transform to sparse matrices
+        corrs_matrix = _vals_to_csr(corrs_matrix, rows, cols, shape=(n_obs, n_obs))
+        probs_matrix = _vals_to_csr(probs_matrix, rows, cols, shape=(n_obs, n_obs))
 
-        matrix = _vals_to_csr(probs, rows, cols, shape=(n_obs, n_obs))
-
-        self._compute_transition_matrix(matrix, density_normalize=False)
+        self._compute_transition_matrix(probs_matrix, density_normalize=False)
+        self._pearson_correlations = corrs_matrix
 
         logg.info("    Finish", time=start)
 
