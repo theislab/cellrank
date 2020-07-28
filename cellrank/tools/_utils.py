@@ -1870,11 +1870,7 @@ def _softmax(x, sigma, use_jax: bool = True):
 
 
 def _predict_transition_probabilities(
-    X: np.ndarray,
-    W: np.ndarray,
-    sigma: float = 1,
-    use_jax: bool = True,
-    return_pearson_correlations: bool = False,
+    X: np.ndarray, W: np.ndarray, sigma: float = 1, use_jax: bool = True,
 ):
     """
     Compute a categorical distribution based on correlation between rows in `W` and `X`.
@@ -1899,15 +1895,14 @@ def _predict_transition_probabilities(
     --------
     np.ndarray
         Vector of probabilities.
+    np.ndarray
+        Vector of pearson correlations.
     """
 
     u = _pearson_corr(W, X, use_jax=use_jax)
     p = _softmax(u, sigma, use_jax=use_jax)
 
-    if return_pearson_correlations:
-        return p, u
-    else:
-        return p
+    return p, u
 
 
 def _vals_to_csr(vals, rows, cols, shape):
