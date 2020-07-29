@@ -7,21 +7,21 @@ from copy import copy
 from typing import Any, Tuple, TypeVar, Iterable, Optional
 from inspect import signature
 
-import numpy as np
-import pandas as pd
-from scipy.sparse import issparse
-from sklearn.base import BaseEstimator
-from scipy.ndimage.filters import convolve
-
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 
+import numpy as np
+import pandas as pd
+from scipy.sparse import issparse
+from sklearn.base import BaseEstimator
+from cellrank.utils._docs import d
 from cellrank.tools._utils import save_fig
 from cellrank.utils._utils import _minmax
+from scipy.ndimage.filters import convolve
 from cellrank.tools._lineage import Lineage
-from cellrank.tools._constants import LinKey
+from cellrank.tools._constants import AbsProbKey
 
 AnnData = TypeVar("AnnData")
 
@@ -138,12 +138,13 @@ class Model(ABC):
     def __copy__(self) -> "Model":
         return self.copy()
 
+    @d.dedent
     def prepare(
         self,
         gene: str,
-        lineage_name: str,
+        lineage: str,
+        backward: bool = False,
         data_key: str = "X",
-        final: bool = True,
         time_key: str = "latent_time",
         start_lineage: Optional[str] = None,
         end_lineage: Optional[str] = None,
@@ -160,12 +161,11 @@ class Model(ABC):
         ------
         gene
             Gene in :paramref:`adata` `.var_names`.
-        lineage_name
+        lineage
             Name of a lineage in :paramref:`adata` `.uns`:paramref:`lineage_key`.
+        %(backward)s
         data_key
             Key in :attr:`paramref.adata` `.layers` or `'X'` for :paramref:`adata` `.X`.
-        final
-            Whether to consider cells going to final states or vice versa.
         time_key
             Key in :paramref:`adata` `.obs` where the pseudotime is stored.
         start_lineage
@@ -213,7 +213,7 @@ class Model(ABC):
             if gene not in self.adata.obs:
                 raise KeyError(f"Unable to find key `{gene!r}` in `adata.obs`.")
 
-        lineage_key = str(LinKey.FORWARD if final else LinKey.BACKWARD)
+        lineage_key = str(AbsProbKey.BACKWARD if backward else AbsProbKey.FORWARD)
         if lineage_key not in self.adata.obsm:
             raise KeyError(f"Lineage key `{lineage_key!r}` not found in `adata.obsm`.")
         if not isinstance(self.adata.obsm[lineage_key], Lineage):
@@ -222,8 +222,8 @@ class Model(ABC):
                 f"found `{type(self.adata.obsm[lineage_key]).__name__}`."
             )
 
-        if lineage_name is not None:
-            _ = self.adata.obsm[lineage_key][lineage_name]
+        if lineage is not None:
+            _ = self.adata.obsm[lineage_key][lineage]
 
         if start_lineage is not None:
             if start_lineage not in self.adata.obsm[lineage_key].names:
@@ -254,9 +254,9 @@ class Model(ABC):
             y = np.asarray(y.todense())
         y = np.squeeze(y).astype(np.float64)
 
-        if lineage_name is not None:
+        if lineage is not None:
             w = (
-                np.array(self.adata.obsm[lineage_key][lineage_name])
+                np.array(self.adata.obsm[lineage_key][lineage])
                 .astype(self._dtype)
                 .squeeze()
             )
@@ -273,7 +273,7 @@ class Model(ABC):
         ixs = np.argsort(x)
         x, y, w = x[ixs], y[ixs], w[ixs]
 
-        if start_lineage is None or (start_lineage == lineage_name):
+        if start_lineage is None or (start_lineage == lineage):
             val_start = np.min(self.adata.obs[time_key])
         else:
             from_key = "_".join(lineage_key.split("_")[1:])
@@ -281,7 +281,7 @@ class Model(ABC):
                 self.adata.obs[time_key][self.adata.obs[from_key] == start_lineage]
             )
 
-        if end_lineage is None or (end_lineage == lineage_name):
+        if end_lineage is None or (end_lineage == lineage):
             if threshold is None:
                 threshold = np.nanmedian(w)
             w_test = w[w > threshold]

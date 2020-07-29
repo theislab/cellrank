@@ -6,17 +6,18 @@ from typing import Any, Dict, List, Tuple, Union, Mapping, TypeVar, Optional, Se
 
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import RandomForestRegressor
-from statsmodels.stats.multitest import multipletests
-
 from cellrank import logging as logg
 from cellrank.tools import GPCCA
+from sklearn.ensemble import RandomForestRegressor
+from cellrank.utils._docs import d
 from cellrank.utils._utils import _get_n_cores, check_collection
 from cellrank.utils.models import Model
 from cellrank.tools.kernels import ConnectivityKernel
 from cellrank.plotting._utils import _model_type, _create_models, _is_any_gam_mgcv
-from cellrank.tools._constants import LinKey
+from cellrank.tools._constants import AbsProbKey
 from cellrank.utils._parallelize import parallelize
+from statsmodels.stats.multitest import multipletests
+from cellrank.tools.estimators._constants import A
 
 AnnData = TypeVar("AnnData")
 
@@ -33,8 +34,8 @@ def _gi_permute(
     """
     Permutes the features and calculate importances using :class:`sklearn.ensemble.RandomForestRegressor`.
 
-    Params
-    ------
+    Parameters
+    ----------
     ix
         Offset for random :paramref:`seed`. Only used when :paramref:`seed` is not None.
     perms
@@ -80,8 +81,8 @@ def _gi_process(
     """
     Calculate the smoothed gene expression which will be used to get the gene importances.
 
-    Params
-    ------
+    Parameters
+    ----------
     genes
         Genes for which to calculate the importances.
     models
@@ -119,23 +120,24 @@ def _gi_process(
     return x, (res - mean) / sd
 
 
+@d.dedent
 def gene_importance(
     adata: AnnData,
     model: _model_type,
     genes: Sequence[str],
-    lineage_name: str,
+    lineage: str,
+    backward: bool = False,
     n_points: int = 200,
     time_key: str = "latent_time",
-    final: bool = True,
     norm: bool = True,
     n_perms: Optional[int] = None,
     fdr_correction: Optional[str] = "fdr_bh",
     alpha: float = 0.05,
-    n_jobs: Optional[int] = 1,
     seed: Optional[int] = None,
     return_model: bool = False,
-    backend: str = "multiprocessing",
     show_progress_bar: bool = True,
+    n_jobs: Optional[int] = 1,
+    backend: str = "multiprocessing",
     rf_kwargs: Mapping[str, Any] = MappingProxyType({"criterion": "mse"}),
     **kwargs,
 ) -> Union[pd.DataFrame, Tuple[RandomForestRegressor, pd.DataFrame]]:
@@ -150,20 +152,18 @@ def gene_importance(
     We adapted SCORPIUS to work with soft lineage assignments given by our lineage probabilities computed using
     :func:`cellrank.tl.lineages`.
 
-    Params
-    ------
-    adata : :class:`anndata.AnnData`
-        Annotated data object.
+    Parameters
+    ----------
+    %(adata)s
     genes
         Genes in :paramref:`adata` `.var_names`.
-    lineage_name
+    lineage
         Name of the lineage for which to calculate gene importance.
+    %(backward)s
     n_points
         Number of points used for prediction.
 
         If `None`, use original data points, not uniformly distributed across the pseudotime.
-    final
-        Whether to consider cells going to final states or vice versa.
     time_key
         Key in :paramref:`adata` `.obs` where the pseudotime is stored.
     norm
@@ -178,20 +178,14 @@ def gene_importance(
         For available methods, see :func:`statsmodels.stats.multitest.multipletests`.
     alpha
         Family-wise error rate for FDR correction.
-    n_jobs
-        Number of parallel jobs. If `-1`, use all available cores. If `None` or `1`, the execution is sequential.
     seed
         Seed for :class:`sklearn.ensemble.RandomForestRegressor` and the permutations.
     return_model
         Whether to also return the fitted model.
-    backend
-        Which backend to use for multiprocessing.
-        See :class:`joblib.Parallel` for valid options.
-    show_progress_bar
-        Whether to show a progress bar tracking models fitted.
+    %(parallel)s
     rf_kwargs
         Keyword arguments for :class:`sklearn.ensemble.RandomForestRegressor`.
-    **kwargs:
+    **kwargs
         Keyword arguments for :meth:`cellrank.ul.models.Model.prepare`.
 
     Returns
@@ -206,11 +200,11 @@ def gene_importance(
         Same as above, but also returns the fitted model.
     """
 
-    ln_key = str(LinKey.FORWARD if final else LinKey.BACKWARD)
+    ln_key = str(AbsProbKey.BACKWARD if backward else AbsProbKey.FORWARD)
     if ln_key not in adata.obsm:
         raise KeyError(f"Lineages key `{ln_key!r}` not found in `adata.obsm`.")
 
-    _ = adata.obsm[ln_key][lineage_name]
+    _ = adata.obsm[ln_key][lineage]
 
     if n_perms is not None:
         if n_perms < 0:
@@ -221,11 +215,11 @@ def gene_importance(
 
     n_jobs = _get_n_cores(n_jobs, len(genes))
 
-    kwargs["final"] = final
+    kwargs["backward"] = backward
     kwargs["time_key"] = time_key
     kwargs["n_test_points"] = n_points
 
-    models = _create_models(model, genes, [lineage_name])
+    models = _create_models(model, genes, [lineage])
     if _is_any_gam_mgcv(models):
         logg.debug("Setting backend to multiprocessing because model is `GamMGCV`")
         backend = "multiprocessing"
@@ -240,7 +234,7 @@ def gene_importance(
         extractor=np.hstack,
         backend=backend,
         show_progress_bar=show_progress_bar,
-    )(models, lineage_name, norm, **kwargs).T
+    )(models, lineage, norm, **kwargs).T
     logg.info("    Finish", time=start)
 
     x, y = data[..., 1], data[:, 0, 0]
@@ -304,61 +298,39 @@ def gene_importance(
     return (importances, model) if return_model else importances
 
 
+@d.dedent
 def lineage_drivers(
     adata: AnnData,
-    final: bool = True,
-    lin_names: Optional[Union[Sequence, str]] = None,
+    backward: bool = False,
+    lineages: Optional[Union[Sequence, str]] = None,
     cluster_key: Optional[str] = None,
     clusters: Optional[Union[Sequence, str]] = None,
     layer: str = "X",
     use_raw: bool = True,
     inplace: bool = True,
-):
+) -> Optional[pd.DataFrame]:  # noqa
     """
-    Compute driver genes per lineage.
+    %(lineage_drivers.full_desc)s
 
-    Correlates gene expression with lineage probabilities, for a given lineage and set of clusters.
-    Often, it makes sense to restrict this to a set of clusters which are relevant
-    for the lineage under consideration.
-
-    Params
-    ------
-    adata
-        Annodated data matrix
-    final
-        If True, use forward process, else backward
-    lin_names
-        Either a set of lineage names from :paramref:`lineage_probabilities` `.names` or None,
-        in which case all lineages are considered.
-    cluster_key
-        Key from :paramref:`adata` `.obs` to obtain cluster annotations.
-        These are considered for :paramref:`clusters`. Default is `"clusters"` if a list of `clusters` is given.
-    clusters
-        Restrict the correlations to these clusters.
-    layer
-        Key from :paramref:`adata` `.layers`.
-    use_raw
-        Whether or not to use :paramref:`adata` `.raw` to correlate gene expression.
-        If using a layer other than `.X`, this must be set to `False`.
+    Parameters
+    ----------
+    %(adata)s
+    %(backward)s
+    %(lineage_drivers.parameters)s
 
     Returns
     -------
-    :class:`pandas.DataFrame`, :class:`NoneType`
-        Writes to :paramref:`adata` `.var` or :paramref:`adata` `.raw.var`,
-        depending on the value of :paramref:`use_raw`.
-        For each lineage specified, a key is added to `.var` and correlations are saved there.
-
-        Returns `None` if :paramref:`inplace` `=True`, otherwise a :class:`pandas.DataFrame`.
+    %(lineage_drivers.returns)s
     """
 
     # create dummy kernel and estimator
-    kernel = ConnectivityKernel(adata, backward=not final)
+    kernel = ConnectivityKernel(adata, backward=backward)
     g = GPCCA(kernel)
-    g._lin_probs = adata.obsm[g._lin_key]
+    g._set(A.ABS_RPOBS, adata.obsm[g._abs_prob_key])
 
     # call the underlying function to compute and store the lineage drivers
-    g.compute_lineage_drivers(
-        lin_names=lin_names,
+    return g.compute_lineage_drivers(
+        lineages=lineages,
         cluster_key=cluster_key,
         clusters=clusters,
         layer=layer,

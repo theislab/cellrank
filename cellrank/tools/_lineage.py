@@ -16,6 +16,7 @@ import matplotlib.colors as c
 import matplotlib.pyplot as plt
 
 from cellrank import logging as logg
+from cellrank.utils._docs import d
 from cellrank.tools._utils import (
     save_fig,
     _convert_lineage_name,
@@ -171,7 +172,7 @@ class LineageMeta(type):
     """
     Metaclass for Lineaage.
 
-    Registers functions which are handled by us and overloads common attibutes, such as `.sum` with these functions.
+    Registers functions which are handled by us and overloads common attributes, such as `.sum` with these functions.
     """
 
     __overloaded_functions__ = dict(  # noqa
@@ -182,6 +183,7 @@ class LineageMeta(type):
         max=np.max,
         argmax=np.argmax,
         std=np.std,
+        sort=np.sort,
         squeeze=np.squeeze,
         entropy=entropy,
     )
@@ -606,6 +608,12 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
     def __str__(self):
         return f'{super().__str__()}\n names=[{", ".join(self.names)}]'
 
+    @property
+    def _fmt(self) -> Callable:
+        if np.issubdtype(self.dtype, np.float):
+            return "{:.06f}".format
+        return "{}".format
+
     def _repr_html_(self) -> str:
         def format_row(r):
             rng = (
@@ -618,7 +626,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             )
 
             cells = "".join(
-                f"<td style='text-align: right;'>" f"{self.X[r, c]:.06f}" f"</td>"
+                f"<td style='text-align: right;'>" f"{self._fmt(self.X[r, c])}" f"</td>"
                 if isinstance(c, int)
                 else _DUMMY_CELL
                 for c in rng
@@ -708,6 +716,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
     def __copy__(self):
         return self.copy()
 
+    @d.dedent
     def plot_pie(
         self,
         reduction: Callable = np.mean,
@@ -726,18 +735,11 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             Function that will be applied per lineage.
         title
             Title of the figure.
-        figsize
-            Size of the figure.
-        dpi
-            Dots per inch.
-        save
-            Filename where to save the plots.
-            If `None`, just shows the plot.
+        $(plotting)s
 
         Returns
         -------
-        None
-            Nothing, just plots the pie chart.
+        %(just_plots)s
         """
         if not callable(reduction):
             raise TypeError(
@@ -756,6 +758,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         if save is not None:
             save_fig(fig, save)
 
+    @d.dedent
     def reduce(
         self,
         keys: Union[str, List[str], Tuple[str], np.ndarray],
@@ -766,12 +769,12 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         return_weights: bool = False,
     ) -> Union["Lineage", Tuple["Lineage", Optional[pd.DataFrame]]]:
         """
-        Reduce metastable states to final/root states.
+        Reduce metastable states to %(root_or_final)s states.
 
         Params
         ------
         keys
-            List of keys that define the final/root states. The lineage will be reduced
+            List of keys that define the %(root_or_final)s states. The lineage will be reduced
             to these states by projecting the other states.
         mode
             Whether to use a distance measure to compute weights ('dist', or just rescale ('scale').
@@ -779,12 +782,12 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         dist_measure
             Used to quantify similarity between query and reference states. Valid options are:
 
-            - 'cosine_sim'
-            - 'wasserstein_dist'
-            - 'kl_div'
-            - 'js_div'
-            - 'mutual_inf'
-            - 'equal'
+                - 'cosine_sim'
+                - 'wasserstein_dist'
+                - 'kl_div'
+                - 'js_div'
+                - 'mutual_inf'
+                - 'equal'
         normalize_weights
             How to normalize the weights. Valid options are:
 
@@ -798,12 +801,12 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         Returns
         -------
         :class:`cellrank.tl.Lineage`
-            Lineage object, reduced to the final/root states.
+            Lineage object, reduced to the %(root_or_final)s states. If a reduction is not possible, return a copy.
         :class:`pandas.DataFrame`
             The weights used for the projection of shape `(n_query x n_reference)`.
         """
         if self._is_transposed:
-            raise RuntimeError("This matrix seems to be transposed.")
+            raise RuntimeError("This method works only on non-transposed matrices.")
 
         if isinstance(keys, str):
             keys = [keys]
@@ -813,9 +816,9 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
         if set(keys) == set(self.names):
             logg.warning(
-                "Unable to perform the reduction, `keys` specifies all lineages. Returning self"
+                "Unable to perform the reduction, `keys` specifies all lineages. Returning a copy self"
             )
-            return (self, None) if return_weights else self
+            return (self.copy(), None) if return_weights else self.copy()
 
         # check input parameters
         if return_weights and mode == "scale":

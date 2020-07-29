@@ -3,14 +3,15 @@
 
 from typing import Dict, List, Tuple, Union, TypeVar, Callable, Optional, Sequence
 
-import numpy as np
-from scipy.stats import chi2_contingency
-from scipy.spatial.distance import euclidean
-
 import matplotlib.pyplot as plt
 
+import numpy as np
 from cellrank import logging as logg
-from cellrank.tools._constants import LinKey
+from scipy.stats import chi2_contingency
+from pandas.api.types import infer_dtype, is_categorical_dtype
+from cellrank.utils._docs import d
+from scipy.spatial.distance import euclidean
+from cellrank.tools._constants import AbsProbKey
 
 AnnData = TypeVar("AnnData")
 
@@ -41,18 +42,19 @@ def _get_counts(pd: Union[np.ndarray, List[float]], n: int) -> List[float]:
     return freq
 
 
+@d.dedent
 def exact_mc_perm_test(
     adata: AnnData,
     cluster_key: str,
     cluster1: str,
     cluster2: str,
+    backward: bool = False,
     dist_measure: Callable[[Sequence[float], Sequence[float]], float] = euclidean,
     n_perms: int = 1000,
     use_counts: bool = False,
     n_counts: int = 1000,
     n_bins: int = 200,
     seed: Optional[int] = None,
-    final: bool = True,
     **kwargs,
 ) -> Tuple[List[float], float, float]:
     """
@@ -61,18 +63,18 @@ def exact_mc_perm_test(
     Get as input two clusters, then calculate its average probability distribution and calculate the distance
     between both averages. Then permute the elements on the clusters and repeat the process.
 
-    Params
-    ------
-    adata : :class:`anndata.AnnData`
-        Annotated data object.
+    Parameters
+    ----------
+    %(adata)s
     cluster_key
         Key in :paramref:`adata` `.obs` that contains the clusters.
     cluster1
         Name of the first cluster to compare.
     cluster2
         Name of the second cluster to compare.
+    %(backward)s
     dist_measure : :class:`Callable`
-        Distance measure to use.
+        Distance measure to use. Default is `'euclidean'`.
     n_perms
         Number of permutations to perform.
     use_counts
@@ -83,9 +85,7 @@ def exact_mc_perm_test(
         Number of bins for the histogram.
     seed
         Random seed.
-    final
-        If `True`, computes final states, i.e. end points. Otherwise, computes root states, i.e. starting points.
-    kwargs
+    **kwargs
         Keyword arguments for :paramref:`dist_measure`.
 
     Returns
@@ -97,6 +97,12 @@ def exact_mc_perm_test(
 
     if cluster_key not in adata.obs:
         raise ValueError(f"Cluster key `{cluster_key!r}` not found in `adata.obs`.")
+
+    if not is_categorical_dtype(adata.obs[cluster_key]):
+        raise TypeError(
+            f"Expected `adata.obs[{cluster_key!r}]` to be categorical, "
+            f"found `{infer_dtype(adata.obs[cluster_key])}`."
+        )
 
     if cluster1 not in adata.obs[cluster_key].cat.categories:
         raise ValueError(f"Cluster `{cluster1!r}` is not a valid cluster.")
@@ -114,7 +120,7 @@ def exact_mc_perm_test(
     np.random.seed(seed)
 
     # consider the two possible directions
-    lin_key = str(LinKey.FORWARD if final else LinKey.BACKWARD)
+    lin_key = str(AbsProbKey.BACKWARD if backward else AbsProbKey.FORWARD)
 
     xs = adata[adata.obs[cluster_key] == cluster1].obsm[lin_key]
     ys = adata[adata.obs[cluster_key] == cluster2].obsm[lin_key]
@@ -171,12 +177,13 @@ def exact_mc_perm_test(
     return diff[1:], diff[0], p_value
 
 
+@d.dedent
 def _counts(
     adata: AnnData,
     cluster_key: str,
     clusters: Optional[List[str]] = None,
     n_samples: int = 1000,
-    final: bool = True,
+    backward: bool = False,
 ) -> Dict[str, List[float]]:
     """
     Calculate the counts for each endpoint per cluster.
@@ -184,8 +191,8 @@ def _counts(
     Randomly chooses with replacement *n* cells in each cluster and for each choice samples one point using its
     probability distribution. Then counts the occurrences per each point.
 
-    Params
-    ------
+    Parameters
+    ----------
     adata: :class:`anndata.AnnData`
         Annotated data object containing the absorption matrix and the clustering.
     cluster_key
@@ -194,8 +201,7 @@ def _counts(
         List of clusters to consider. If `None`, all cluster are considered.
     n_samples
         Number of cells to sample from per cluster.
-    final
-        Whether the evolution is calculated towards end points or towards starting points.
+    %(backward)s
 
     Returns
     -------
@@ -218,7 +224,7 @@ def _counts(
         raise ValueError(f"Number of samples must be positive, found `{n_samples}`.")
 
     # Consider the two possible directions
-    lin_key = str(LinKey.FORWARD if final else LinKey.BACKWARD)
+    lin_key = str(AbsProbKey.BACKWARD if backward else AbsProbKey.FORWARD)
     if lin_key not in adata.obsm:
         raise KeyError(f"Lineages key `{lin_key!r}` not found in `adata.obsm`.")
 
@@ -247,8 +253,8 @@ def _cramers_v(x: List[float], y: List[float]) -> float:
     Uses correction from **Bergsma and Wicher, Journal of the Korean Statistical Society 42 (2013): 323-328**.
     This is a symmetric coefficient: :math:`V(x,y) = V(y,x)`.
 
-    Params
-    ------
+    Parameters
+    ----------
     x
         A sequence of categorical measurements.
     y

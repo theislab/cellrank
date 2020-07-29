@@ -84,4 +84,4 @@ Lineage
 -------
 
 .. autoclass:: cellrank.tl.Lineage
-    :members:
+    :members: reduce, plot_pie, entropy, X, T, view, names, colors

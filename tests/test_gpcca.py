@@ -13,88 +13,92 @@ import cellrank as cr
 from _helpers import assert_array_nan_equal
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tools._constants import (
-    LinKey,
-    Prefix,
-    MetaKey,
-    StateKey,
     Direction,
+    DirPrefix,
+    AbsProbKey,
+    FinalStatesKey,
     _dp,
     _probs,
     _colors,
     _lin_names,
 )
+from cellrank.tools.estimators._constants import A, P
 
 
 def _check_eigdecomposition(mc: cr.tl.GPCCA) -> None:
-    assert isinstance(mc.eigendecomposition, dict)
-    assert set(mc.eigendecomposition.keys()) == {
+    assert isinstance(mc._get(P.EIG), dict)
+    assert set(mc._get(P.EIG).keys()) == {
         "D",
         "eigengap",
         "params",
     }
-    assert "V_l" not in mc.eigendecomposition
-    assert "V_r" not in mc.eigendecomposition
-    assert "stationary_dist" not in mc.eigendecomposition
+    assert "V_l" not in mc._get(P.EIG)
+    assert "V_r" not in mc._get(P.EIG)
+    assert "stationary_dist" not in mc._get(P.EIG)
 
     assert f"eig_{Direction.FORWARD}" in mc.adata.uns.keys()
 
 
 def _check_compute_meta(mc: cr.tl.GPCCA) -> None:
-    assert mc.lineage_probabilities is None
-    assert isinstance(mc._meta_lin_probs, cr.tl.Lineage)
-    if mc._meta_lin_probs.shape[1] > 1:
-        np.testing.assert_array_almost_equal(mc._meta_lin_probs.sum(1), 1.0)
+    assert isinstance(mc._get(P.META), pd.Series)
+    assert len(mc._get(A.META_COLORS)) == len(mc._get(P.META).cat.categories)
 
-    assert isinstance(mc.metastable_states, pd.Series)
-    assert_array_nan_equal(mc.metastable_states, mc.adata.obs[str(MetaKey.FORWARD)])
+    if "stationary_dist" in mc._get(P.EIG):  # one state
+        assert isinstance(mc._get(P.META_PROBS), cr.tl.Lineage)
+        assert mc._get(P.META_PROBS).shape[1] == 1
+        np.testing.assert_array_almost_equal(mc._get(P.META_PROBS).X.sum(), 1.0)
 
-    np.testing.assert_array_equal(mc._meta_states_colors, mc._meta_lin_probs.colors)
-    np.testing.assert_array_equal(
-        mc._meta_states_colors, mc.adata.uns[_colors(str(MetaKey.FORWARD))]
-    )
-
-    if "stationary_dist" in mc.eigendecomposition:
-        assert mc._coarse_init_dist is None
-        assert mc._schur_matrix is None
-        assert mc.coarse_stationary_distribution is None
-        assert mc.coarse_T is None
-        assert mc.schur_vectors is None
+        assert mc._get(P.COARSE_INIT_D) is None
+        assert mc._get(P.SCHUR_MAT) is None
+        assert mc._get(P.COARSE_STAT_D) is None
+        assert mc._get(P.COARSE_T) is None
+        assert mc._get(P.SCHUR) is None
     else:
-        assert isinstance(mc._coarse_init_dist, pd.Series)
-        assert isinstance(mc._schur_matrix, np.ndarray)
-        assert mc.coarse_stationary_distribution is None or isinstance(
-            mc.coarse_stationary_distribution, pd.Series
+        assert isinstance(mc._get(P.META_PROBS), cr.tl.Lineage)
+        if mc._get(P.META_PROBS).shape[1] > 1:
+            np.testing.assert_array_almost_equal(mc._get(P.META_PROBS).sum(1), 1.0)
+
+        assert isinstance(mc._get(P.COARSE_INIT_D), pd.Series)
+        assert isinstance(mc._get(P.SCHUR_MAT), np.ndarray)
+        assert mc._get(P.COARSE_STAT_D) is None or isinstance(
+            mc._get(P.COARSE_STAT_D), pd.Series
         )
-        assert isinstance(mc.coarse_T, pd.DataFrame)
-        assert isinstance(mc.schur_vectors, np.ndarray)
+        assert isinstance(mc._get(P.COARSE_T), pd.DataFrame)
+        assert isinstance(mc._get(P.SCHUR), np.ndarray)
 
 
-def _check_main_states(mc: cr.tl.GPCCA, has_main_states: bool = True):
+def _check_abs_probs(mc: cr.tl.GPCCA, has_main_states: bool = True):
     if has_main_states:
-        assert isinstance(mc.main_states, pd.Series)
-        assert_array_nan_equal(mc.adata.obs[str(StateKey.FORWARD)], mc.main_states)
+        assert isinstance(mc._get(P.FIN), pd.Series)
+        assert_array_nan_equal(
+            mc.adata.obs[str(FinalStatesKey.FORWARD)], mc._get(P.FIN)
+        )
         np.testing.assert_array_equal(
-            mc.adata.uns[_colors(StateKey.FORWARD)],
-            mc.lineage_probabilities[list(mc.main_states.cat.categories)].colors,
+            mc.adata.uns[_colors(FinalStatesKey.FORWARD)],
+            mc._get(A.FIN_ABS_PROBS)[list(mc._get(P.FIN).cat.categories)].colors,
         )
 
-    assert isinstance(mc.diff_potential, pd.Series)
-    assert isinstance(mc.lineage_probabilities, cr.tl.Lineage)
-    np.testing.assert_array_almost_equal(mc.lineage_probabilities.sum(1), 1.0)
+    assert isinstance(mc._get(P.DIFF_POT), pd.Series)
+    assert isinstance(mc._get(P.ABS_PROBS), cr.tl.Lineage)
+    np.testing.assert_array_almost_equal(mc._get(P.ABS_PROBS).sum(1), 1.0)
 
     np.testing.assert_array_equal(
-        mc.adata.obsm[str(LinKey.FORWARD)], mc.lineage_probabilities.X
+        mc.adata.obsm[str(AbsProbKey.FORWARD)], mc._get(P.ABS_PROBS).X
     )
     np.testing.assert_array_equal(
-        mc.adata.uns[_lin_names(LinKey.FORWARD)], mc.lineage_probabilities.names
+        mc.adata.uns[_lin_names(AbsProbKey.FORWARD)], mc._get(P.ABS_PROBS).names
     )
     np.testing.assert_array_equal(
-        mc.adata.uns[_colors(LinKey.FORWARD)], mc.lineage_probabilities.colors
+        mc.adata.uns[_colors(AbsProbKey.FORWARD)], mc._get(P.ABS_PROBS).colors
     )
 
-    np.testing.assert_array_equal(mc.adata.obs[_dp(LinKey.FORWARD)], mc.diff_potential)
     np.testing.assert_array_equal(
-        mc.adata.obs[_probs(StateKey.FORWARD)], mc.main_states_probabilities
+        mc.adata.obs[_dp(AbsProbKey.FORWARD)], mc._get(P.DIFF_POT)
+    )
+
+    assert_array_nan_equal(mc.adata.obs[FinalStatesKey.FORWARD.s], mc._get(P.FIN))
+    np.testing.assert_array_equal(
+        mc.adata.obs[_probs(FinalStatesKey.FORWARD)], mc._get(P.FIN_PROBS)
     )
 
 
@@ -107,27 +111,25 @@ class TestCGPCCA:
         mc = cr.tl.GPCCA(final_kernel)
         mc.compute_partition()
 
-        assert isinstance(mc.irreducible, bool)
-        if not mc.irreducible:
+        assert isinstance(mc.is_irreducible, bool)
+        if not mc.is_irreducible:
             assert isinstance(mc.recurrent_classes, list)
             assert isinstance(mc.transient_classes, list)
-            assert f"{StateKey.FORWARD}_rec_classes" in mc.adata.obs
-            assert f"{StateKey.FORWARD}_trans_classes" in mc.adata.obs
+            assert f"{FinalStatesKey.FORWARD}_rec_classes" in mc.adata.obs
+            assert f"{FinalStatesKey.FORWARD}_trans_classes" in mc.adata.obs
         else:
             assert mc.recurrent_classes is None
             assert mc.transient_classes is None
 
-    def test_compute_eig(self, adata_large: AnnData):
+    def test_compute_eigendecomposition(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.GPCCA(final_kernel)
-        mc.compute_eig(k=2)
+        mc.compute_eigendecomposition(k=2, only_evals=True)
 
         _check_eigdecomposition(mc)
-
-        assert f"eig_{Direction.FORWARD}" in mc.adata.uns.keys()
 
     def test_compute_schur_invalid_n_comps(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
@@ -174,16 +176,16 @@ class TestCGPCCA:
         final_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.GPCCA(final_kernel)
-        mc.compute_eig(k=10)
+        mc.compute_eigendecomposition(k=10, only_evals=True)
 
         _check_eigdecomposition(mc)
-        orig_ed = deepcopy(mc.eigendecomposition)
+        orig_ed = deepcopy(mc._get(P.EIG))
 
-        mc._eigendecomposition = None
+        mc._set(A.EIG, None)
         mc.compute_schur(n_components=10, method="krylov")
 
         _check_eigdecomposition(mc)
-        schur_ed = mc.eigendecomposition
+        schur_ed = mc._get(P.EIG)
 
         assert orig_ed.keys() == schur_ed.keys()
         assert orig_ed["eigengap"] == schur_ed["eigengap"]
@@ -218,7 +220,7 @@ class TestCGPCCA:
         final_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.GPCCA(final_kernel)
-        mc.compute_eig()
+        mc.compute_eigendecomposition(only_evals=True)
         mc.compute_metastable_states(n_states=None)
 
         _check_compute_meta(mc)
@@ -254,10 +256,10 @@ class TestCGPCCA:
 
         mc.compute_metastable_states(n_states=2)
 
-        assert mc.schur_vectors.shape[1] == 10
-        assert mc._schur_matrix.shape == (10, 10)
+        assert mc._get(P.SCHUR).shape[1] == 10
+        assert mc._get(P.SCHUR_MAT).shape == (10, 10)
 
-    def test_set_main_states(self, adata_large: AnnData):
+    def test_set_final_states_from_metastable_states(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
@@ -266,11 +268,14 @@ class TestCGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_metastable_states(n_states=2, n_cells=5)
-        mc.set_main_states()
+        mc.set_final_states_from_metastable_states()
+        mc.compute_absorption_probabilities()
 
-        _check_main_states(mc)
+        _check_abs_probs(mc)
 
-    def test_set_main_states_no_cells(self, adata_large: AnnData):
+    def test_set_final_states_from_metastable_states_no_cells(
+        self, adata_large: AnnData
+    ):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
@@ -280,9 +285,11 @@ class TestCGPCCA:
 
         mc.compute_metastable_states(n_states=2, n_cells=None)
         with pytest.raises(TypeError):
-            mc.set_main_states(n_cells=None)
+            mc.set_final_states_from_metastable_states(n_cells=None)
 
-    def test_set_main_states_non_positive_cells(self, adata_large: AnnData):
+    def test_set_final_states_from_metastable_states_non_positive_cells(
+        self, adata_large: AnnData
+    ):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
@@ -292,9 +299,11 @@ class TestCGPCCA:
 
         mc.compute_metastable_states(n_states=2, n_cells=None)
         with pytest.raises(ValueError):
-            mc.set_main_states(n_cells=0)
+            mc.set_final_states_from_metastable_states(n_cells=0)
 
-    def test_set_main_states_invalid_name(self, adata_large: AnnData):
+    def test_set_final_states_from_metastable_states_invalid_name(
+        self, adata_large: AnnData
+    ):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
@@ -304,9 +313,9 @@ class TestCGPCCA:
 
         mc.compute_metastable_states(n_states=2)
         with pytest.raises(KeyError):
-            mc.set_main_states(names=["foobar"])
+            mc.set_final_states_from_metastable_states(names=["foobar"])
 
-    def test_compute_main_states_invalid_method(self, adata_large: AnnData):
+    def test_compute_final_states_invalid_method(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
@@ -316,9 +325,9 @@ class TestCGPCCA:
 
         mc.compute_metastable_states(n_states=2)
         with pytest.raises(ValueError):
-            mc.compute_main_states(method="foobar")
+            mc.compute_final_states(method="foobar")
 
-    def test_compute_main_states_no_cells(self, adata_large: AnnData):
+    def test_compute_final_states_no_cells(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
@@ -328,9 +337,9 @@ class TestCGPCCA:
 
         mc.compute_metastable_states(n_states=2)
         with pytest.raises(TypeError):
-            mc.compute_main_states(n_cells=None)
+            mc.compute_final_states(n_cells=None)
 
-    def test_compute_main_states_non_positive_cells(self, adata_large: AnnData):
+    def test_compute_final_states_non_positive_cells(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
@@ -340,9 +349,9 @@ class TestCGPCCA:
 
         mc.compute_metastable_states(n_states=2)
         with pytest.raises(ValueError):
-            mc.compute_main_states(n_cells=0)
+            mc.compute_final_states(n_cells=0)
 
-    def test_compute_main_states_eigengap(self, adata_large: AnnData):
+    def test_compute_final_states_eigengap(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
@@ -351,11 +360,12 @@ class TestCGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_metastable_states(n_states=2)
-        mc.compute_main_states(n_cells=5, method="eigengap")
+        mc.compute_final_states(n_cells=5, method="eigengap")
+        mc.compute_absorption_probabilities()
 
-        _check_main_states(mc)
+        _check_abs_probs(mc)
 
-    def test_compute_main_states_n_main_states(self, adata_large: AnnData):
+    def test_compute_final_states_n_main_states(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
@@ -364,11 +374,12 @@ class TestCGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_metastable_states(n_states=2)
-        mc.compute_main_states(n_cells=5, method="top_n", n_main_states=1)
+        mc.compute_final_states(n_cells=5, method="top_n", n_main_states=1)
+        mc.compute_absorption_probabilities()
 
-        _check_main_states(mc)
+        _check_abs_probs(mc)
 
-    def test_compute_main_states_min_self_prob(self, adata_large: AnnData):
+    def test_compute_final_states_min_self_prob(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
@@ -377,11 +388,12 @@ class TestCGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_metastable_states(n_states=2)
-        mc.compute_main_states(n_cells=5, method="min_self_prob", min_self_prob=0.5)
+        mc.compute_final_states(n_cells=5, method="min_self_prob", min_self_prob=0.5)
+        mc.compute_absorption_probabilities()
 
-        _check_main_states(mc)
+        _check_abs_probs(mc)
 
-    def test_compute_main_states(self, adata_large: AnnData):
+    def test_compute_final_states(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
@@ -390,9 +402,10 @@ class TestCGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_metastable_states(n_states=2)
-        mc.compute_main_states(n_cells=5)
+        mc.compute_final_states(n_cells=5)
+        mc.compute_absorption_probabilities()
 
-        _check_main_states(mc)
+        _check_abs_probs(mc)
 
     def test_compute_gdpt_no_schur(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
@@ -450,18 +463,6 @@ class TestCGPCCA:
 
         assert "gdpt_pseudotime" in mc.adata.obs
 
-    def test_compute_lineage_drivers_no_lineages(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
-        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        final_kernel = 0.8 * vk + 0.2 * ck
-
-        mc = cr.tl.GPCCA(final_kernel)
-        mc.compute_schur(n_components=10, method="krylov")
-        mc.compute_metastable_states(n_states=2)
-
-        with pytest.raises(RuntimeError):
-            mc.compute_lineage_drivers()
-
     def test_compute_lineage_drivers_invalid_lineages(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
@@ -470,10 +471,11 @@ class TestCGPCCA:
         mc = cr.tl.GPCCA(final_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_metastable_states(n_states=2)
-        mc.set_main_states()
+        mc.set_final_states_from_metastable_states()
+        mc.compute_absorption_probabilities()
 
         with pytest.raises(KeyError):
-            mc.compute_lineage_drivers(use_raw=False, lin_names=["foo"])
+            mc.compute_lineage_drivers(use_raw=False, lineages=["foo"])
 
     def test_compute_lineage_drivers_invalid_clusters(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
@@ -483,7 +485,8 @@ class TestCGPCCA:
         mc = cr.tl.GPCCA(final_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_metastable_states(n_states=2)
-        mc.set_main_states()
+        mc.set_final_states_from_metastable_states()
+        mc.compute_absorption_probabilities()
 
         with pytest.raises(KeyError):
             mc.compute_lineage_drivers(
@@ -498,11 +501,12 @@ class TestCGPCCA:
         mc = cr.tl.GPCCA(final_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_metastable_states(n_states=2)
-        mc.set_main_states()
+        mc.set_final_states_from_metastable_states()
+        mc.compute_absorption_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
         for lineage in ["0", "1"]:
-            assert f"{Prefix.FORWARD} {lineage} corr" in mc.adata.var.keys()
+            assert f"{DirPrefix.FORWARD} {lineage} corr" in mc.adata.var.keys()
 
 
 class TestGPCCACopy:
@@ -513,73 +517,3 @@ class TestGPCCACopy:
         assert mc1 is not mc2
         assert mc1.adata is not mc2.adata
         assert mc1.kernel is not mc2.kernel
-
-    def test_copy_deep(self, adata_gpcca_fwd: Tuple[AnnData, cr.tl.GPCCA]):
-        _, mc1 = adata_gpcca_fwd
-        mc2 = mc1.copy()
-
-        assert mc1.irreducible == mc2.irreducible
-        np.testing.assert_array_equal(mc1.recurrent_classes, mc2.recurrent_classes)
-        np.testing.assert_array_equal(mc1.transient_classes, mc2.transient_classes)
-
-        for k, v in mc1.eigendecomposition.items():
-            if isinstance(v, np.ndarray):
-                assert_array_nan_equal(v, mc2.eigendecomposition[k])
-            else:
-                assert v == mc2.eigendecomposition[k]
-
-        assert mc1._gpcca is not mc2._gpcca
-
-        np.testing.assert_array_equal(mc1.schur_vectors, mc2.schur_vectors)
-        assert mc1.schur_vectors is not mc2.schur_vectors
-
-        np.testing.assert_array_equal(mc1._schur_matrix, mc2._schur_matrix)
-        assert mc1._schur_matrix is not mc2._schur_matrix
-
-        np.testing.assert_array_equal(mc1.coarse_T.values, mc2.coarse_T.values)
-        assert mc1.coarse_T is not mc2.coarse_T
-
-        np.testing.assert_array_equal(
-            mc1._coarse_init_dist.values, mc2._coarse_init_dist.values
-        )
-        assert mc1._coarse_init_dist is not mc2._coarse_init_dist
-
-        np.testing.assert_array_equal(
-            mc1.coarse_stationary_distribution.values,
-            mc2.coarse_stationary_distribution.values,
-        )
-        assert (
-            mc1.coarse_stationary_distribution is not mc2.coarse_stationary_distribution
-        )
-
-        assert_array_nan_equal(mc1.metastable_states, mc2.metastable_states)
-        assert mc1.metastable_states is not mc2.metastable_states
-
-        np.testing.assert_array_equal(mc1._meta_states_colors, mc2._meta_states_colors)
-        assert mc1._meta_states_colors is not mc2._meta_states_colors
-
-        np.testing.assert_array_equal(mc1._meta_lin_probs, mc2._meta_lin_probs)
-        assert mc1._meta_lin_probs is not mc2._meta_lin_probs
-
-        assert_array_nan_equal(mc1.main_states, mc2.main_states)
-        assert mc1.main_states is not mc2.main_states
-
-        np.testing.assert_array_equal(
-            mc1.main_states_probabilities, mc2.main_states_probabilities
-        )
-        assert mc1.main_states_probabilities is not mc2.main_states_probabilities
-
-        np.testing.assert_array_equal(
-            mc1.lineage_probabilities, mc2.lineage_probabilities
-        )
-        assert mc1.lineage_probabilities is not mc2.lineage_probabilities
-
-        np.testing.assert_array_equal(mc1.diff_potential, mc2.diff_potential)
-        assert mc1.diff_potential is not mc2.diff_potential
-
-        assert mc1._G2M_score == mc2._G2M_score
-        assert mc1._S_score == mc2._S_score
-        assert mc1._g2m_key == mc2._g2m_key
-        assert mc1._s_key == mc2._s_key
-        assert mc1._key_added == mc2._key_added
-        assert mc1._is_sparse == mc2._is_sparse

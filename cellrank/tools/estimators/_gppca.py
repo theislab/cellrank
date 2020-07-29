@@ -1,275 +1,68 @@
 # -*- coding: utf-8 -*-
-"""Generalized Perron Cluster Cluster Analysis (GPCCA) module."""
+"""Generalized Perron Cluster Cluster Analysis [GPCCA18]_."""
 
-from copy import copy, deepcopy
 from types import MappingProxyType
-from typing import Any, Dict, List, Tuple, Union, Mapping, TypeVar, Iterable, Optional
+from typing import Any, Dict, List, Tuple, Union, Mapping, Iterable, Optional, Sequence
 from pathlib import Path
+
+import matplotlib as mpl
+import matplotlib.colors as mcolors
+import matplotlib.pyplot as plt
 
 import numpy as np
 import pandas as pd
-
-import matplotlib as mpl
-import matplotlib.cm as cm
-import matplotlib.colors as mcolors
-import matplotlib.pyplot as plt
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-
-import scvelo as scv
-
 from cellrank import logging as logg
+from cellrank.tools import Lineage
+from cellrank.utils._docs import d, inject_docs
 from cellrank.tools._utils import (
     save_fig,
     _eigengap,
     _fuzzy_to_discrete,
-    _convert_lineage_name,
-    _generate_random_keys,
     _series_from_one_hot_matrix,
 )
 from cellrank.tools._colors import _get_black_or_white
-from cellrank.tools._lineage import Lineage
-from cellrank.tools._constants import Lin, MetaKey, _dp, _probs, _colors, _lin_names
-from cellrank.tools.kernels._kernel import KernelExpression
+from cellrank.tools.estimators._utils import (
+    Metadata,
+    _print_insufficient_number_of_cells,
+)
+from cellrank.tools.estimators._property import MetaStates
+from cellrank.tools.estimators._constants import A, F, P
+from cellrank.tools.estimators._decomposition import Eigen, Schur
 from cellrank.tools.estimators._base_estimator import BaseEstimator
-from cellrank._vendor.msmtools.analysis.dense.gpcca import GPCCA as _GPCCA
-
-AnnData = TypeVar("AnnData")
-
-# whether to remove overlapping cells from both states, or assign them to the most likely clusters
-_REMOVE_OVERLAP = False
 
 
-class GPCCA(BaseEstimator):
+@d.dedent
+class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
     """
     Generalized Perron Cluster Cluster Analysis [GPCCA18]_.
 
-    Params
-    ------
-    kernel
-        Kernel object that stores a transition matrix.
-    adata : :class:`anndata.AnnData`
-        Optional annotated data object. If given, precomputed lineages can be read in from this.
-        Otherwise, read the object from the specified :paramref:`kernel`.
-    inplace
-        Whether to modify :paramref:`adata` object inplace or make a copy.
-    read_from_adata
-        Whether to read available attributes in :paramref:`adata`, if present.
-    g2m_key
-        Key from :paramref:`adata` `.obs`. Can be used to detect cell-cycle driven start- or endpoints.
-    s_key
-        Key from :paramref:`adata` `.obs`. Can be used to detect cell-cycle driven start- or endpoints.
-    key_added
-        Key in :paramref:`adata` where to store the final transition matrix.
+    Parameters
+    ----------
+    %(base_estimator.parameters)s
     """
 
-    def __init__(
-        self,
-        kernel: KernelExpression,
-        adata: Optional[AnnData] = None,
-        inplace: bool = True,
-        read_from_adata: bool = True,
-        g2m_key: Optional[str] = "G2M_score",
-        s_key: Optional[str] = "S_score",
-        key_added: Optional[str] = None,
-    ):
-        super().__init__(
-            kernel,
-            adata,
-            inplace=inplace,
-            read_from_adata=read_from_adata,
-            g2m_key=g2m_key,
-            s_key=s_key,
-            key_added=key_added,
-        )
-        self._meta_key = (
-            str(MetaKey.BACKWARD) if kernel.backward else str(MetaKey.FORWARD)
-        )
+    __prop_metadata__ = [
+        Metadata(
+            attr=A.COARSE_T,
+            prop=P.COARSE_T,
+            compute_fmt=F.NO_FUNC,
+            plot_fmt=F.NO_FUNC,
+            dtype=pd.DataFrame,
+        ),
+        Metadata(attr=A.FIN_ABS_PROBS, prop=P.NO_PROPERTY, dtype=Lineage),
+        Metadata(attr=A.COARSE_INIT_D, prop=P.COARSE_INIT_D, dtype=pd.Series),
+        Metadata(attr=A.COARSE_STAT_D, prop=P.COARSE_STAT_D, dtype=pd.Series),
+    ]
 
-        self._gpcca: Optional[GPCCA] = None
-        self._schur_vectors = None
-        self._schur_matrix = None
-        self._coarse_T = None
-        self._coarse_init_dist = None
-        self._coarse_stat_dist = None
-
-        self._meta_lin_probs = None
-
-        self._main_states = None
-        self._main_states_probabilities = None
-
-    def compute_eig(
-        self,
-        k: int = 20,
-        which: str = "LM",
-        alpha: float = 1,
-        ncv: Optional[int] = None,
-    ) -> None:
-        """
-        Compute eigendecomposition of the transition matrix.
-
-        Uses a sparse implementation, if possible, and only computes the top k eigenvalues.
-
-        Params
-        ------
-        k
-            Number of eigenvalues/vectors to compute.
-        which
-            Eigenvalues are in general complex. `'LR'` - largest real part, `'LM'` - largest magnitude.
-        alpha
-            Used to compute the `eigengap`. paramref:`alpha` is the weight given
-            to the deviation of an eigenvalue from one.
-        ncv
-            Number of Lanczos vectors generated.
-
-        Returns
-        -------
-        None
-            Nothing, but updates the following fields: :paramref:`eigendecomposition`.
-        """
-        self._compute_eig(k=k, which=which, alpha=alpha, only_evals=True, ncv=ncv)
-
-    def _read_from_adata(
-        self, g2m_key: Optional[str] = None, s_key: Optional[str] = None, **kwargs
-    ) -> None:
-        pass
-
-    def compute_schur(
-        self,
-        n_components: int = 10,
-        initial_distribution: Optional[np.ndarray] = None,
-        method: str = "krylov",
-        which: str = "LM",
-        alpha: float = 1,
-    ):
-        """
-        Compute the Schur decomposition.
-
-        Params
-        ------
-        n_components
-            Number of vectors to compute.
-        initial_distribution
-            Input probability distribution over all cells. If `None`, uniform is chosen.
-        method
-            Method for calculating the Schur vectors. Valid options are: `'krylov'` or `'brandts'`.
-
-            For benefits of each method, see :class:`msmtools.analysis.dense.gpcca.GPCCA`. The former is
-            an iterative procedure that computes a partial, sorted Schur decomposition for large, sparse
-            matrices whereas the latter computes a full sorted Schur decomposition of a dense matrix.
-        which
-            Eigenvalues are in general complex. `'LR'` - largest real part, `'LM'` - largest magnitude.
-        alpha
-            Used to compute the `eigengap`. :paramref:`alpha` is the weight given
-            to the deviation of an eigenvalue from one.
-
-        Returns
-        -------
-        None
-            Nothing, but updates the following fields:
-
-                - :paramref:`schur_vectors`
-        """
-
-        if n_components < 2:
-            raise ValueError(
-                f"Number of components must be `>=2`, found `{n_components}`."
-            )
-
-        self._gpcca = _GPCCA(self._T, eta=initial_distribution, z=which, method=method)
-        try:
-            self._gpcca._do_schur_helper(n_components)
-        except ValueError:
-            logg.warning(
-                f"Using {n_components} components would split a block of complex conjugates. "
-                f"Increasing `n_components` to {n_components + 1}"
-            )
-            self._gpcca._do_schur_helper(n_components + 1)
-
-        self._write_eig_to_adata(
-            {
-                "D": self._gpcca.eigenvalues,
-                "eigengap": _eigengap(self._gpcca.eigenvalues, alpha),
-                "params": {
-                    "which": which,
-                    "k": len(self._gpcca.eigenvalues),
-                    "alpha": alpha,
-                },
-            }
-        )
-        # make it available for plotting
-        self._schur_vectors = self._gpcca.X
-        self._schur_matrix = self._gpcca.R
-
-    def _compute_meta_states_1_state(
-        self,
-        n_cells: int,
-        cluster_key: Optional[str],
-        en_cutoff: Optional[float],
-        p_thresh: float,
-    ) -> None:
-        start = logg.info("Computing metastable states")
-        logg.warning("For `n_states=1`, stationary distribution is computed")
-
-        self._compute_eig(only_evals=False, which="LM")
-        stationary_dist = self.eigendecomposition["stationary_dist"]
-
-        self._assign_metastable_states(
-            memberships=stationary_dist[:, None],
-            n_cells=n_cells,
-            cluster_key=cluster_key,
-            p_thresh=p_thresh,
-            en_cutoff=en_cutoff,
-        )
-
-        (
-            self._lin_probs,
-            self._schur_vectors,
-            self._coarse_T,
-            self._coarse_init_dist,
-            self._coarse_stat_dist,
-            self._schur_matrix,
-        ) = [None] * 6
-
-        logg.info("Adding `.metastable_states`\n    Finish", time=start)
-
-    def _get_n_states_from_minchi(
-        self, n_states: Union[Tuple[int, int], List[int], Dict[str, int]]
-    ) -> int:
-        if not isinstance(n_states, (dict, tuple, list)):
-            raise TypeError(
-                f"Expected `n_states` to be either `dict`, `tuple` or a `list`, "
-                f"found `{type(n_states).__name__}`."
-            )
-        if len(n_states) != 2:
-            raise ValueError(
-                f"Expected `n_states` to be of size `2`, found `{len(n_states)}`."
-            )
-
-        minn, maxx = (
-            (n_states["min"], n_states["max"])
-            if isinstance(n_states, dict)
-            else n_states
-        )
-        if minn <= 1:
-            raise ValueError(f"Minimum value must be > 1, found `{minn}`.")
-        elif minn == 2:
-            logg.warning(
-                "In most cases, 2 clusters will always be optimal. "
-                "If you really expect 2 clusters, use `n_states=2`.\nSetting the minimum to 3"
-            )
-            minn = 3
-
-        logg.debug(f"Calculating minChi within interval `[{minn}, {maxx}]`")
-
-        return int(np.arange(minn, maxx)[np.argmax(self._gpcca.minChi(minn, maxx))])
-
+    @inject_docs(schur=P.SCHUR.s, coarse_T=P.COARSE_T, coarse_stat=P.COARSE_STAT_D)
+    @d.dedent
     def compute_metastable_states(
         self,
         n_states: Optional[
             Union[int, Tuple[int, int], List[int], Dict[str, int]]
         ] = None,
-        use_min_chi: bool = False,
         n_cells: Optional[int] = 30,
+        use_min_chi: bool = False,
         cluster_key: str = None,
         en_cutoff: Optional[float] = 0.7,
         p_thresh: float = 1e-15,
@@ -277,10 +70,11 @@ class GPCCA(BaseEstimator):
         """
         Compute the metastable states.
 
-        Params
-        ------
+        Parameters
+        ----------
         n_states
             Number of metastable states. If `None`, use the `eigengap` heuristic.
+        %(n_cells)s
         use_min_chi
             Whether to use :meth:`msmtools.analysis.dense.gpcca.GPCCA.minChi` to calculate the number of metastable
             states. If `True`, :paramref:`n_states` corresponds to an interval `[min, max]` inside of which
@@ -301,23 +95,36 @@ class GPCCA(BaseEstimator):
         None
             Nothing, but updates the following fields:
 
-                - :paramref:`schur_vectors`
-                - :paramref:`coarse_T`
-                - :paramref:`coarse_stationary_distribution`
+                - :paramref:`{schur}`
+                - :paramref:`{coarse_T}`
+                - :paramref:`{coarse_stat}`
         """
 
         was_from_eigengap = False
         if n_states is None:
-            if self.eigendecomposition is None:
+            if self._get(P.EIG) is None:
                 raise RuntimeError(
-                    "Compute eigendecomposition first as `.compute_eig()` or `.compute_schur()`."
+                    "Compute eigendecomposition first as `.compute_eigendecomposition()` or `.compute_schur()`."
                 )
             was_from_eigengap = True
-            n_states = self.eigendecomposition["eigengap"] + 1
-            logg.info(f"Using `{n_states}` states based on eigengap")
+            n_states = self._get(P.EIG)["eigengap"] + 1
+            logg.info(f"oUsing `{n_states}` states based on eigengap")
+
+        if n_states <= 0:
+            raise ValueError(
+                f"Expected `n_states` to be positive or `None`, found `{n_states}`."
+            )
+
+        if self._invalid_n_states is not None and n_states in self._invalid_n_states:
+            logg.warning(
+                f"Unable to compute metastable states with `n_states={n_states}` because it will "
+                f"split conjugate eigenvalues. Increasing `n_states` to `{n_states + 1}`"
+            )
+            n_states += 1  # cannot force recomputation of Schur decomposition
+            assert n_states not in self._invalid_n_states, "Sanity check failed."
 
         if n_states == 1:
-            self._compute_meta_states_1_state(
+            self._compute_meta_for_one_state(
                 n_cells=n_cells,
                 cluster_key=cluster_key,
                 p_thresh=p_thresh,
@@ -326,22 +133,24 @@ class GPCCA(BaseEstimator):
             return
 
         if self._gpcca is None:
-            if was_from_eigengap:
-                logg.warning(
-                    f"Number of states ({n_states}) was automatically determined by `eigengap` "
-                    "but no Schur decomposition was found. Computing with default parameters"
-                )
-                self.compute_schur(n_states + 1)
-            else:
+            if not was_from_eigengap:
                 raise RuntimeError(
                     "Compute Schur decomposition first as `.compute_schur()`."
                 )
+
+            logg.warning(
+                f"Number of states ({n_states}) was automatically determined by `eigengap` "
+                "but no Schur decomposition was found. Computing with default parameters"
+            )
+            # this cannot fail if splitting occurrs
+            # if it were to split, it's automatically increased in `compute_schur`
+            self.compute_schur(n_states + 1)
 
         if use_min_chi:
             n_states = self._get_n_states_from_minchi(n_states)
         elif not isinstance(n_states, int):
             raise ValueError(
-                f"Expected `n_states` to be an integer when `use_min_chi=False`, found `{type(n_states).__name__}`."
+                f"Expected `n_states` to be an integer when `use_min_chi=False`, found `{type(n_states).__name__!r}`."
             )
 
         if self._gpcca.X.shape[1] < n_states:
@@ -355,22 +164,14 @@ class GPCCA(BaseEstimator):
         try:
             self._gpcca = self._gpcca.optimize(m=n_states)
         except ValueError as e:
-            if n_states != self._schur_vectors.shape[1]:
-                raise e
-            logg.warning(
-                f"Unable to perform the optimization using `{self._schur_vectors.shape[1]}` Schur vectors. "
-                f"Recomputing the decomposition"
-            )
-            self.compute_schur(
-                n_states + 1,
-                initial_distribution=self._gpcca.eta,
-                method=self._gpcca.method,
-                which=self._gpcca.z,
-                alpha=self.eigendecomposition["params"]["alpha"],
-            )
+            # this is the following cage - we have 4 Schur vectors, user requests 5 states, but it splits the conj. ev.
+            # in the try block, schur decomposition with 5 vectors is computed, but it fails (no way of knowing)
+            # so in this case, we increate it by 1
+            n_states += 1
+            logg.warning(f"{e}\nIncreasing `n_states` to `{n_states}`")
             self._gpcca = self._gpcca.optimize(m=n_states)
 
-        self._assign_metastable_states(
+        self._set_meta_states(
             memberships=self._gpcca.memberships,
             n_cells=n_cells,
             cluster_key=cluster_key,
@@ -378,85 +179,67 @@ class GPCCA(BaseEstimator):
             en_cutoff=en_cutoff,
         )
 
-        self._lin_probs = None
-
         # cache the results and make sure we don't overwrite
-        self._schur_vectors = self._gpcca.X
-        self._schur_matrix = self._gpcca.R
+        self._set(A.SCHUR, self._gpcca.X)
+        self._set(A.SCHUR_MAT, self._gpcca.R)
 
-        names = self._meta_lin_probs.names
-        self._coarse_T = pd.DataFrame(
-            self._gpcca.coarse_grained_transition_matrix, index=names, columns=names,
+        names = self._get(P.META_PROBS).names
+
+        self._set(
+            A.COARSE_T,
+            pd.DataFrame(
+                self._gpcca.coarse_grained_transition_matrix,
+                index=names,
+                columns=names,
+            ),
         )
-        self._coarse_init_dist = pd.Series(
-            self._gpcca.coarse_grained_input_distribution, index=names
+        self._set(
+            A.COARSE_INIT_D,
+            pd.Series(self._gpcca.coarse_grained_input_distribution, index=names),
         )
+
         # careful here, in case computing the stat. dist failed
         if self._gpcca.coarse_grained_stationary_probability is not None:
-            self._coarse_stat_dist = pd.Series(
-                self._gpcca.coarse_grained_stationary_probability, index=names,
+            self._set(
+                A.COARSE_STAT_D,
+                pd.Series(
+                    self._gpcca.coarse_grained_stationary_probability, index=names,
+                ),
+            )
+            logg.info(
+                f"Adding `.{P.SCHUR}`\n"
+                f"       `.{P.COARSE_T}`\n"
+                f"       `.{P.COARSE_STAT_D}`\n"
+                f"    Finish",
+                time=start,
             )
         else:
             logg.warning("No stationary distribution found in GPCCA object")
+            logg.info(
+                f"Adding `.{P.SCHUR}`\n" f"       `.{P.COARSE_T}`\n" f"    Finish",
+                time=start,
+            )
 
-        logg.info(
-            "Adding `.schur_vectors`\n"
-            "       `.metastable_states`\n"
-            "       `.coarse_T`\n"
-            "       `.coarse_stationary_distribution`\n"
-            "    Finish",
-            time=start,
-        )
-
-    def _set_main_states(self, n_cells: int, write_to_adata: bool = True) -> None:
-        probs = self._lin_probs[[n for n in self._lin_probs.names if n != "rest"]]
-        a_discrete, _ = _fuzzy_to_discrete(
-            a_fuzzy=probs,
-            n_most_likely=n_cells,
-            remove_overlap=_REMOVE_OVERLAP,
-            raise_threshold=0.2,
-            check_row_sums=False,
-        )
-        self._main_states = _series_from_one_hot_matrix(
-            a=a_discrete, index=self.adata.obs_names, names=probs.names
-        )
-
-        if write_to_adata:
-            self.adata.obs[self._rc_key] = self._main_states
-            self.adata.uns[_colors(self._rc_key)] = probs[
-                list(self._main_states.cat.categories)
-            ].colors
-
-    def set_main_states(
-        self,
-        names: Optional[Union[Iterable[str], str]] = None,
-        n_cells: int = 30,
-        redistribute: bool = True,
-        **kwargs,
+    @d.dedent
+    @inject_docs(fs=P.FIN)
+    def set_final_states_from_metastable_states(
+        self, names: Optional[Union[Iterable[str], str]] = None, n_cells: int = 30,
     ):
         """
         Manually select the main states from the metastable states.
 
-        Params
-        ------
+        Parameters
+        ----------
         names
             Names of the main states. Multiple states can be combined using `','`, such as `['Alpha, Beta', 'Epsilon']`.
-        n_cells
-            Number of most likely cells from each main state to select. If `None`, on main states will be selected,
-            only the lineage probabilities may be redistributed.
-        redistribute
-            Whether to redistribute the probability mass of unselected lineages or create a `'rest'` lineage.
-        kwargs
-            Keyword arguments for :meth:`cellrank.tl.Lineage.reduce` when redistributing the probability mass.
+        %(n_cells)s
 
         Returns
         -------
         None
-            Nothing, but updates the following fields:
-
-                - :paramref:`lineage_probabilities`
-                - :paramref:`diff_potential`
+            Nothing, just sets `.{fs}`.
         """
+
         if not isinstance(n_cells, int):
             raise TypeError(
                 f"Expected `n_cells` to be of type `int`, found `{type(n_cells).__name__}`."
@@ -465,122 +248,116 @@ class GPCCA(BaseEstimator):
         if n_cells <= 0:
             raise ValueError(f"Expected `n_cells` to be positive, found `{n_cells}`.")
 
+        probs = self._get(P.META_PROBS)
+
+        if self._get(P.META_PROBS) is None:
+            raise RuntimeError(
+                "Compute metastable_states first as `.compute_metastable_states()`."
+            )
+        elif probs.shape[1] == 1:
+            self._set(
+                A.FIN, self._create_states(self._get(P.META_PROBS), n_cells=n_cells)
+            )
+            self._set(A.FIN_COLORS, self._get(A.META_COLORS))
+            self._set(
+                A.FIN_PROBS, self._get(P.META_PROBS) / self._get(P.META_PROBS).max()
+            )
+            self._write_final_states()
+
+            return
+
         if names is None:
-            names = self._meta_lin_probs.names
-            redistribute = False
+            names = probs.names
 
         if isinstance(names, str):
             names = [names]
 
-        if len(names) == 1 and redistribute:
-            logg.warning(
-                "Redistributing the mass to only 1 state will create a constant vector of ones. Not redistributing"
-            )
-            redistribute = False
-
-        names = list(names)
-        kwargs["return_weights"] = False
-
-        if redistribute:
-            self._lin_probs = self._meta_lin_probs[names + [Lin.OTHERS]]
-            self._lin_probs = self._lin_probs.reduce(
-                [" or ".join(_convert_lineage_name(name)) for name in names], **kwargs
-            )
-        else:
-            self._lin_probs = self._meta_lin_probs[names + [Lin.REST]]
-
-        self._set_main_states(n_cells)
+        meta_states_probs = probs[list(names)]
 
         # compute the aggregated probability of being a root/final state (no matter which)
-        scaled_probs = self._lin_probs[
-            [n for n in self._lin_probs.names if n != "rest"]
-        ].X
+        scaled_probs = meta_states_probs[
+            [n for n in meta_states_probs.names if n != "rest"]
+        ].X.copy()
         scaled_probs /= scaled_probs.max(0)
-        self._main_states_probabilities = scaled_probs.max(1)
 
-        # write to adata
-        self.adata.obs[_dp(self._lin_key)] = self._lin_probs.entropy(axis=1).X.squeeze(
-            axis=1
+        self._set(A.FIN, self._create_states(meta_states_probs, n_cells))
+        self._set(
+            A.FIN_PROBS, pd.Series(scaled_probs.max(1), index=self.adata.obs_names)
         )
-        self._dp = self.adata.obs[_dp(self._lin_key)]  # make it a pd.Series
+        self._set(
+            A.FIN_COLORS,
+            meta_states_probs[list(self._get(P.FIN).cat.categories)].colors,
+        )
 
-        self.adata.obs[_probs(self._rc_key)] = self._main_states_probabilities
+        self._set(A.FIN_ABS_PROBS, meta_states_probs)
 
-        self.adata.uns[_lin_names(self._lin_key)] = self._lin_probs.names
-        self.adata.uns[_colors(self._lin_key)] = self._lin_probs.colors
+        self._write_final_states()
 
-        self.adata.obsm[self._lin_key] = self._lin_probs
-
-        logg.info("Adding `.lineage_probabilities\n       `.diff_potential`")
-
-    def compute_main_states(
+    @inject_docs(fin_states=P.FIN, fin_states_probs=P.FIN_PROBS)
+    def compute_final_states(
         self,
         method: str = "eigengap",
-        redistribute: bool = True,
+        n_cells: int = 30,
         alpha: Optional[float] = 1,
         min_self_prob: Optional[float] = None,
         n_main_states: Optional[int] = None,
-        n_cells: int = 30,
-        **kwargs,
     ):
         """
         Automatically select the main states from metastable states.
 
-        Params
-        ------
+        Parameters
+        ----------
         method
             One of following:
 
-                - `'eigengap'` - select the number of states based on the eigengap of the transition matrix.
-                - `'eigengap_coarse'` - select the number of states based on the eigengap of the diagonal of the coarse-grained transition matrix.
-                - `'min_self_prob'` - select states which have the given minimum probability on the diagonal of the coarse-grained transition matrix.
-                - `'top_n'` - select top :paramref:`n_main_states` based on the probability on the diagonal of the coarse-grained transition matrix
-        redistribute
-            Whether to redistribute the probability mass of unselected lineages or create a `'rest'` lineage.
+                - `'eigengap'` - select the number of states based on the eigengap of the transition matrix
+                - `'eigengap_coarse'` - select the number of states based on the eigengap of the diagonal \
+                    of the coarse-grained transition matrix
+                - `'top_n'` - select top :paramref:`n_main_states` based on the probability of the diagonal \
+                    of the coarse-grained transition matrix
+                - `'min_self_prob'` - select states which have the given minimum probability of the diagonal \
+                    of the coarse-grained transition matrix
+        %(n_cells)s
         alpha
             Used when :paramref:`method` `='eigengap'` or `='eigengap_coarse`.
         min_self_prob
             Used when :paramref:`method` `='min_self_prob'`.
         n_main_states
             Used when :paramref:`method` `='top_n'`.
-        n_cells
-            Number of most likely cells from each main state to select.
-        kwargs
-            Keyword arguments for :meth:`cellrank.tl.Lineage.reduce` when redistributing the mass.
 
         Returns
         -------
         None
             Nothing, just updates the following fields:
 
-                - :paramref:`lineage_probabilities`
-                - :paramref:`diff_potential`
+                - :paramref:`{fin_states_probs}`
+                - :paramref:`{fin_states}`
         """  # noqa
-        if len(self.metastable_states.cat.categories) == 1:
+        if len(self._get(P.META).cat.categories) == 1:
             logg.warning(
                 "Found only one metastable state. Making it the single main state. "
             )
-            self.set_main_states(None, redistribute=False, n_cells=n_cells, **kwargs)
+            self.set_final_states_from_metastable_states(None, n_cells=n_cells)
             return
 
+        coarse_T = self._get(P.COARSE_T)
+
         if method == "eigengap":
-            if self.eigendecomposition is None:
+            if self._get(P.EIG) is None:
                 raise RuntimeError(
-                    "Compute eigendecomposition first as `.compute_eig()`."
+                    "Compute eigendecomposition first as `.compute_eigendecomposition()`."
                 )
-            n_main_states = _eigengap(self.eigendecomposition["D"], alpha=alpha) + 1
+            n_main_states = _eigengap(self._get(P.EIG)["D"], alpha=alpha) + 1
         elif method == "eigengap_coarse":
-            if self._coarse_T is None:
+            if coarse_T is None:
                 raise RuntimeError(
                     "Compute metastable states first as `.compute_metastable_states()`."
                 )
-            n_main_states = _eigengap(
-                np.sort(np.diag(self._coarse_T)[::-1]), alpha=alpha
-            )
+            n_main_states = _eigengap(np.sort(np.diag(coarse_T)[::-1]), alpha=alpha)
         elif method == "top_n":
             if n_main_states is None:
                 raise ValueError(
-                    "Argument `n_main_states` must not be `None` for `method='top_n'`."
+                    "Argument `n_main_states` must != `None` for `method='top_n'`."
                 )
             elif n_main_states <= 0:
                 raise ValueError(
@@ -589,15 +366,11 @@ class GPCCA(BaseEstimator):
         elif method == "min_self_prob":
             if min_self_prob is None:
                 raise ValueError(
-                    "Argument `min_self_prob` must not be `None` for `method='min_self_prob'`."
+                    "Argument `min_self_prob` must != `None` for `method='min_self_prob'`."
                 )
-            self_probs = pd.Series(
-                np.diag(self._coarse_T), index=self._coarse_T.columns
-            )
+            self_probs = pd.Series(np.diag(coarse_T), index=coarse_T.columns)
             names = self_probs[self_probs.values >= min_self_prob].index
-            self.set_main_states(
-                names, redistribute=redistribute, n_cells=n_cells, **kwargs
-            )
+            self.set_final_states_from_metastable_states(names, n_cells=n_cells)
             return
         else:
             raise ValueError(
@@ -605,115 +378,8 @@ class GPCCA(BaseEstimator):
                 f"'top_n' and 'min_self_prob'`."
             )
 
-        names = self._coarse_T.columns[np.argsort(np.diag(self._coarse_T))][
-            -n_main_states:
-        ]
-        self.set_main_states(
-            names, redistribute=redistribute, n_cells=n_cells, **kwargs
-        )
-
-    def _assign_metastable_states(
-        self,
-        memberships: np.ndarray,
-        n_cells: Optional[int] = 30,
-        cluster_key: str = "clusters",
-        en_cutoff: Optional[float] = 0.7,
-        p_thresh: float = 1e-15,
-        check_row_sums: bool = True,
-    ) -> None:
-        """
-        Map a fuzzy clustering to pre-computed annotations to get names and colors.
-
-        Given the fuzzy clustering we have computed, we would like to select the most likely cells from each state
-        and use these to give each state a name and a color by comparing with pre-computed, categorical cluster
-        annotations.
-
-        Params
-        --------
-        memberships
-            Fuzzy clustering.
-        n_cells
-            Number of cells to be used to represent each state.
-        cluster_key
-            Key from :paramref:`adata` `.obs` to get reference cluster annotations.
-        en_cutoff
-            Threshold to decide when we we want to warn the user about an uncertain name mapping. This happens when
-            one fuzzy state overlaps with several reference clusters, and the most likely cells are distributed almost
-            evenly across the reference clusters.
-        p_thresh
-            Only used to detect cell cycle stages. These have to be present in :paramref:`adata` `.obs`
-            as `G2M_score` and `S_score`.
-        check_row_sums
-            Check whether rows in `memberships` sum to 1.
-
-        Returns
-        --------
-        None
-            Writes a lineage object which mapped names and colors. Also creates a categorical :class:`pandas.Series`
-            `.metastable_states`, where the top `n_cells` cells represent each fuzzy state.
-        """
-
-        if n_cells is None:
-            max_assignment = np.argmax(memberships, axis=1)
-            _meta_assignment = pd.Series(
-                index=self.adata.obs_names, data=max_assignment, dtype="category"
-            )
-            # sometimes, the assignment can have a missing category and the Lineage creation therefore fails
-            # keep it as ints when `n_cells != None`
-            _meta_assignment.cat.set_categories(
-                list(range(memberships.shape[1])), inplace=True
-            )
-
-            logg.debug("Setting the metastable states using metastable assignment")
-            metastable_states = _meta_assignment.astype(str).astype("category").copy()
-            not_enough_cells = []
-        else:
-            if n_cells <= 0:
-                raise ValueError(
-                    f"Expected `n_cells` to be positive, found `{n_cells}`."
-                )
-
-            logg.debug("Setting the metastable states using metastable memberships")
-
-            # select the most likely cells from each metastable state
-            a_discrete, not_enough_cells = _fuzzy_to_discrete(
-                a_fuzzy=memberships,
-                n_most_likely=n_cells,
-                remove_overlap=_REMOVE_OVERLAP,
-                raise_threshold=0.2,
-                check_row_sums=check_row_sums,
-            )
-            metastable_states = _series_from_one_hot_matrix(
-                a=a_discrete, index=self.adata.obs_names
-            )
-            not_enough_cells = not_enough_cells.astype("str")
-
-        # _set_categorical_labels creates the names, we still need to remap the group names
-        orig_cats = metastable_states.cat.categories
-        self._set_categorical_labels(
-            attr_key="_meta_states",
-            pretty_attr_key="metastable_states",
-            cat_key=self._meta_key,
-            add_to_existing_error_msg="Compute metastable states first as `.compute_metastable_states()`.",
-            categories=metastable_states,
-            cluster_key=cluster_key,
-            en_cutoff=en_cutoff,
-            p_thresh=p_thresh,
-            add_to_existing=False,
-        )
-        name_mapper = dict(zip(orig_cats, self.metastable_states.cat.categories))
-        _print_insufficient_number_of_cells(
-            [name_mapper.get(n, n) for n in not_enough_cells], n_cells
-        )
-
-        logg.debug(
-            "Setting metastable lineage probabilities based on GPCCA membership vectors"
-        )
-        self._meta_lin_probs = Lineage(
-            memberships,
-            names=list(metastable_states.cat.categories),
-            colors=self._meta_states_colors,
-        )
+        names = coarse_T.columns[np.argsort(np.diag(coarse_T))][-n_main_states:]
+        self.set_final_states_from_metastable_states(names, n_cells=n_cells)
 
     def compute_gdpt(
         self, n_components: int = 10, key_added: str = "gdpt_pseudotime", **kwargs
@@ -721,13 +387,13 @@ class GPCCA(BaseEstimator):
         """
         Compute generalized DPT making use of the real Schur decomposition.
 
-        Params
-        ------
+        Parameters
+        ----------
         n_components
             Number of real Schur vectors to consider.
         key_added
             Key in :paramref:`adata` `.obs` where to save the pseudotime.
-        kwargs
+        **kwargs
             Keyword arguments for :meth:`cellrank.tl.GPCCA.compute_schur` if Schur decomposition is not found.
 
         Returns
@@ -768,12 +434,12 @@ class GPCCA(BaseEstimator):
                 f"Expected number of components >= 2, found `{n_components}`."
             )
 
-        if self._schur_vectors is None:
+        if self._get(P.SCHUR) is None:
             logg.warning("No Schur decomposition found. Computing")
             self.compute_schur(n_components, **kwargs)
-        elif self._schur_matrix.shape[1] < n_components:
+        elif self._get(P.SCHUR_MAT).shape[1] < n_components:
             logg.warning(
-                f"Requested `{n_components}` components, but only `{self._schur_matrix.shape[1]}` were found. "
+                f"Requested `{n_components}` components, but only `{self._get(P.SCHUR_MAT).shape[1]}` were found. "
                 f"Recomputing using default values"
             )
             self.compute_schur(n_components)
@@ -785,399 +451,19 @@ class GPCCA(BaseEstimator):
         )
 
         Q, eigenvalues = (
-            self._schur_vectors,
-            self.eigendecomposition["D"],
+            self._get(P.SCHUR),
+            self._get(P.EIG)["D"],
         )
         # may have to remove some values if too many converged
         Q, eigenvalues = Q[:, :n_components], eigenvalues[:n_components]
-
         D = _get_dpt_row(eigenvalues, Q, i=iroot)
         pseudotime = D / np.max(D[np.isfinite(D)])
+
         self.adata.obs[key_added] = pseudotime
 
         logg.info(f"Adding `{key_added!r}` to `adata.obs`\n    Finish", time=start)
 
-    def _plot_states(
-        self,
-        attr: str,
-        error_msg: str,
-        same_plot: bool = True,
-        title: Optional[Union[str, List[str]]] = None,
-        **kwargs,
-    ):
-        """
-        Plot the main states for each uncovered lineage.
-
-        Params
-        ------
-        n_cells
-            Number of most likely cells per lineage.
-        same_plot
-            Whether to plot the lineages on the same plot or separately.
-        title
-            The title of the plot.
-        kwargs
-            Keyword arguments for :func:`scvelo.pl.scatter`.
-
-        Returns
-        -------
-        None
-            Nothing, just plots the metastable or main states.
-        """
-
-        def cleanup():
-            for key in to_clean:
-                try:
-                    del self.adata.obs[key]
-                except KeyError:
-                    pass
-                try:
-                    del self.adata.uns[f"{key}_colors"]
-                except KeyError:
-                    pass
-
-        probs = getattr(self, attr, None)
-        if probs is None:
-            raise RuntimeError(error_msg)
-
-        probs = probs[[n for n in probs.names if n != "rest"]]
-
-        if attr == "_meta_lin_probs":
-            _main_states = self._meta_states
-        elif attr == "_lin_probs":
-            _main_states = self._main_states
-        else:
-            raise RuntimeError(f"Invalid attribute name: `{attr!r}`.")
-
-        to_clean = []
-        try:
-            if same_plot:
-                key = _generate_random_keys(self.adata, "obs")[0]
-                to_clean = [key]
-                self.adata.obs[key] = _main_states
-                self.adata.uns[f"{key}_colors"] = probs.colors
-
-                if title is None:
-                    title = (
-                        "metastable states (backward)"
-                        if self.kernel.backward
-                        else "metastable states (forward)"
-                    )
-                scv.pl.scatter(self.adata, title=title, color=key, **kwargs)
-            else:
-                keys = _generate_random_keys(
-                    self.adata, "obs", len(_main_states.cat.categories)
-                )
-
-                to_clean = keys
-
-                for key, cat in zip(keys, _main_states.cat.categories):
-                    d = _main_states.copy()
-                    d[_main_states != cat] = None
-                    d.cat.set_categories([cat], inplace=True)
-
-                    self.adata.obs[key] = d
-                    self.adata.uns[f"{key}_colors"] = probs[cat].colors
-
-                scv.pl.scatter(
-                    self.adata,
-                    color=keys,
-                    title=list(_main_states.cat.categories) if title is None else title,
-                    **kwargs,
-                )
-        except Exception as e:
-            raise e
-        finally:
-            cleanup()
-
-    def plot_schur_embedding(
-        self,
-        use: Optional[Union[int, tuple, list]] = None,
-        abs_value: bool = False,
-        cluster_key: Optional[str] = None,
-        **kwargs,
-    ) -> None:
-        """
-        Plot Schur vectors in an embedding.
-
-        .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/schur_embedding.png
-           :alt: image of schur embedding
-           :width: 400px
-           :align: center
-
-        Params
-        ------
-        use
-            Which or how many Schur vectors to be plotted. If `None`, all will be chosen.
-        abs_value
-            Whether to take the absolute value before plotting.
-        cluster_key
-            Key from :paramref:`adata` `.obs` to plot cluster annotations.
-        kwargs
-            Keyword arguments for :func:`scvelo.pl.scatter`.
-
-        Returns
-        -------
-        None
-            Nothing, just plots the Schur vectors.
-        """
-
-        if self.schur_vectors is None:
-            raise RuntimeError(
-                "Compute Schur vectors as `.compute_schur()` or `.compute_metastable_states()` with `n_states` > 1."
-            )
-
-        self._plot_vectors(
-            self.schur_vectors,
-            "schur",
-            abs_value=abs_value,
-            use=use,
-            cluster_key=cluster_key,
-            **kwargs,
-        )
-
-    def plot_schur_matrix(
-        self,
-        title: Optional[str] = "schur matrix",
-        cmap: str = "viridis",
-        figsize: Optional[Tuple[float, float]] = None,
-        dpi: Optional[float] = 80,
-        save: Optional[Union[str, Path]] = None,
-        **kwargs,
-    ):
-        """
-        Plot the Schur matrix.
-
-        .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/schur_matrix.png
-           :alt: image of schur matrix
-           :width: 400px
-           :align: center
-
-        Params
-        ------
-        title
-            Title of the figure.
-        cmap
-            Colormap to use.
-        figsize
-            Size of the figure.
-        dpi
-            Dots per inch.
-        save
-            Filename where to save the plots. If `None`, just shows the plot.
-
-        Returns
-        -------
-        None
-            Nothing, just plots the Schur matrix.
-        """
-
-        from seaborn import heatmap
-
-        if self._schur_matrix is None:
-            raise RuntimeError(
-                "Compute Schur matrix first as `.compute_schur()` or "
-                "`.compute_metastable_states()` with `n_states` > 1."
-            )
-
-        fig, ax = plt.subplots(
-            figsize=self._schur_matrix.shape if figsize is None else figsize, dpi=dpi
-        )
-
-        divider = make_axes_locatable(ax)  # square=True make the colorbar a bit bigger
-        cbar_ax = divider.append_axes("right", size="2.5%", pad=0.05)
-
-        mask = np.zeros_like(self._schur_matrix, dtype=np.bool)
-        mask[np.tril_indices_from(mask, k=-1)] = True
-        mask[~np.isclose(self._schur_matrix, 0.0)] = False
-
-        vmin, vmax = (
-            np.min(self._schur_matrix[~mask]),
-            np.max(self._schur_matrix[~mask]),
-        )
-
-        kwargs["fmt"] = kwargs.get("fmt", "0.2f")
-        heatmap(
-            self._schur_matrix,
-            cmap=cmap,
-            square=True,
-            annot=True,
-            vmin=vmin,
-            vmax=vmax,
-            cbar_ax=cbar_ax,
-            mask=mask,
-            xticklabels=[],
-            yticklabels=[],
-            ax=ax,
-            **kwargs,
-        )
-
-        ax.set_title(title)
-
-        if save is not None:
-            save_fig(fig, path=save)
-
-    def plot_metastable_states(
-        self,
-        discrete: bool = False,
-        lineages: Optional[Union[str, Iterable[str]]] = None,
-        cluster_key: Optional[str] = None,
-        mode: str = "embedding",
-        time_key: str = "latent_time",
-        same_plot: bool = True,
-        cmap: Union[str, mpl.colors.ListedColormap] = cm.viridis,
-        title: Optional[str] = None,
-        **kwargs,
-    ) -> None:
-        """
-        Plot the absorption probabilities of metastable states in the given embedding.
-
-        .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/gpcca_metastable_states.png
-           :alt: image of metastable states
-           :width: 400px
-           :align: center
-
-        Params
-        ------
-        discrete
-            Whether to plot the top cells from each lineages or the probabilities.
-        lineages
-            Only show these lineages. If `None`, plot all lineages.
-        cluster_key
-            Key from :paramref:`adata` `.obs` for plotting cluster labels.
-        mode
-            One of following:
-
-                - `'embedding'` - plot the embedding while coloring in the absorption probabilities.
-                - `'time'` - plot the pseudotime on x-axis and the absorption probabilities on y-axis.
-        time_key
-            Key from :paramref:`adata` `.obs` to use as a pseudotime ordering of the cells.
-        same_plot
-            Whether to plot the lineages on the same plot using color gradients when :paramref:`mode` `='embedding'`.
-        cmap
-            Colormap to use.
-        title
-            Either `None`, in which case titles are `"{to,from} {final,root} {state}"`,
-            or an array of titles, one per lineage.
-        kwargs
-            Keyword arguments for :func:`scvelo.pl.scatter`.
-
-        Returns
-        -------
-        None
-            Nothing, just plots the metastable states.
-        """  # noqa
-
-        attr = "_meta_lin_probs"
-        error_msg = "Compute metastable states first as `.compute_metastable_states()`."
-
-        if not discrete:
-            self._plot_probabilities(
-                attr=attr,
-                error_msg=error_msg,
-                lineages=lineages,
-                cluster_key=cluster_key,
-                mode=mode,
-                time_key=time_key,
-                show_dp=False,
-                title=title,
-                same_plot=same_plot,
-                color_map=cmap,
-                **kwargs,
-            )
-        else:
-            self._plot_states(
-                attr=attr,
-                error_msg=error_msg,
-                same_plot=same_plot,
-                title=title,
-                **kwargs,
-            )
-
-    def plot_main_states(
-        self,
-        discrete: bool = False,
-        lineages: Optional[Union[str, Iterable[str]]] = None,
-        cluster_key: Optional[str] = None,
-        mode: str = "embedding",
-        time_key: str = "latent_time",
-        same_plot: bool = True,
-        show_dp: bool = False,
-        title: Optional[str] = None,
-        cmap: Union[str, mpl.colors.ListedColormap] = cm.viridis,
-        **kwargs,
-    ) -> None:
-        """
-        Plot the absorption probabilities in the given embedding.
-
-        .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/main_states.png
-           :alt: image of main states
-           :width: 400px
-           :align: center
-
-        Params
-        ------
-
-        discrete
-            Whether to plot the top cells from each lineages or the probabilities.
-        lineages
-            Only plot these lineages. if `none`, plot all lineages.
-        cluster_key
-            Key from :paramref:`adata` `.obs` for plotting cluster labels.
-        mode
-            One of following:
-
-                - `'embedding'` - plot the embedding while coloring in the absorption probabilities.
-                - `'time'` - plot the pseudotime on x-axis and the absorption probabilities on y-axis.
-        time_key
-            Key from :paramref:`adata` `.obs` to use as a pseudotime ordering of the cells.
-        same_plot
-            Whether to plot the lineages on the same plot using color gradients when :paramref:`method` `='embedding'`.
-        show_dp
-            Whether to show :paramref:`diff_potential` when :paramref:`n_cells` `=None`.
-        title
-            Either `None`, in which case titles are `"{to,from} {final,root} {state}"`,
-            or an array of titles, one per lineage.
-        cmap
-            Colormap to use.
-        kwargs
-            Keyword arguments for :func:`scvelo.pl.scatter`.
-
-        Returns
-        -------
-        None
-            Nothing, just plots the main states.
-        """
-
-        attr = "_lin_probs"
-        error_msg = (
-            "compute main states first as `.compute_main_states()` "
-            "or set them manually as `.set_main_states()`."
-        )
-
-        if not discrete:
-            self._plot_probabilities(
-                attr=attr,
-                error_msg=error_msg,
-                lineages=lineages,
-                cluster_key=cluster_key,
-                mode=mode,
-                time_key=time_key,
-                show_dp=show_dp,
-                title=title,
-                same_plot=same_plot,
-                color_map=cmap,
-                **kwargs,
-            )
-        else:
-            self._plot_states(
-                attr=attr,
-                error_msg=error_msg,
-                same_plot=same_plot,
-                title=title,
-                **kwargs,
-            )
-
+    @d.dedent
     def plot_coarse_T(
         self,
         show_stationary_dist: bool = True,
@@ -1188,7 +474,7 @@ class GPCCA(BaseEstimator):
         show_cbar: bool = True,
         title: Optional[str] = None,
         figsize: Tuple[float, float] = (8, 8),
-        dpi: float = 80,
+        dpi: int = 80,
         save: Optional[Union[Path, str]] = None,
         text_kwargs: Mapping[str, Any] = MappingProxyType({}),
         **kwargs,
@@ -1201,8 +487,8 @@ class GPCCA(BaseEstimator):
            :width: 400px
            :align: center
 
-        Params
-        ------
+        Parameters
+        ----------
         show_stationary_dist
             Whether to show the stationary distribution, if present.
         show_initial_dist
@@ -1217,22 +503,15 @@ class GPCCA(BaseEstimator):
             Whether to show colorbar.
         title
             Title of the figure.
-        figsize
-            Size of the figure.
-        dpi
-            Dots per inch.
-        save
-            Filename where to save the plots.
-            If `None`, just show the plots.
+        %(plotting)s
         text_kwargs
             Keyword arguments for :func:`matplotlib.pyplot.text`.
-        kwargs
+        **kwargs
             Keyword arguments for :func:`matplotlib.pyplot.imshow`.
 
         Returns
         -------
-        None
-            Nothing, just plots and optionally saves the plot.
+        %(just_plots)s
         """
 
         def stylize_dist(
@@ -1301,15 +580,19 @@ class GPCCA(BaseEstimator):
                     **kw,
                 )
 
-        if self.coarse_T is None:
+        coarse_T = self._get(P.COARSE_T)
+        coarse_stat_d = self._get(P.COARSE_STAT_D)
+        coarse_init_d = self._get(P.COARSE_INIT_D)
+
+        if coarse_T is None:
             raise RuntimeError(
-                "Compute coarse transition matrix first as `.compute_metastable_states()` with `n_states` > 1."
+                "Compute coarse-grained transition matrix first as `.compute_metastable_states()` with `n_states > 1`."
             )
 
-        if show_stationary_dist and self.coarse_stationary_distribution is None:
+        if show_stationary_dist and coarse_stat_d is None:
             logg.warning("Coarse stationary distribution is `None`, not plotting")
             show_stationary_dist = False
-        if show_initial_dist and self._coarse_init_dist is None:
+        if show_initial_dist and coarse_init_d is None:
             logg.warning("Coarse initial distribution is `None`, not plotting")
             show_initial_dist = False
 
@@ -1339,38 +622,36 @@ class GPCCA(BaseEstimator):
         cax = fig.add_subplot(gs[:1, -1])
         init_ax, stat_ax = None, None
 
-        labels = list(self._coarse_T.columns)
+        labels = list(self.coarse_T.columns)
 
-        tmp = self.coarse_T
+        tmp = coarse_T
         if show_initial_dist:
-            tmp = np.c_[tmp, self.coarse_stationary_distribution]
+            tmp = np.c_[tmp, coarse_stat_d]
         if show_initial_dist:
-            tmp = np.c_[tmp, self._coarse_init_dist]
+            tmp = np.c_[tmp, coarse_init_d]
         norm = mpl.colors.Normalize(vmin=np.nanmin(tmp), vmax=np.nanmax(tmp))
 
         if show_stationary_dist:
             stat_ax = fig.add_subplot(gs[1, 0])
             stylize_dist(
-                stat_ax,
-                np.array(self.coarse_stationary_distribution).reshape(1, -1),
-                xticks_labels=labels,
+                stat_ax, np.array(coarse_stat_d).reshape(1, -1), xticks_labels=labels,
             )
-            stat_ax.set_xlabel("stationary distribution")  # , ha="right", x=1)
+            stat_ax.set_xlabel("stationary distribution")
 
         if show_initial_dist:
             init_ax = fig.add_subplot(gs[0, 1])
-            stylize_dist(init_ax, np.array(self._coarse_init_dist).reshape(-1, 1))
+            stylize_dist(init_ax, np.array(coarse_init_d).reshape(-1, 1))
 
             init_ax.yaxis.set_label_position("right")
             init_ax.set_ylabel("initial distribution", rotation=-90, va="bottom")
 
-        im = ax.imshow(self.coarse_T, aspect="auto", cmap=cmap, **kwargs)
+        im = ax.imshow(coarse_T, aspect="auto", cmap=cmap, **kwargs)
         ax.set_title("coarse-grained transition matrix" if title is None else title)
 
         if show_cbar:
             _ = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm)
 
-        ax.set_yticks(np.arange(self.coarse_T.shape[0]))
+        ax.set_yticks(np.arange(coarse_T.shape[0]))
         ax.set_yticklabels(labels)
 
         ax.tick_params(
@@ -1384,7 +665,7 @@ class GPCCA(BaseEstimator):
             spine.set_visible(False)
 
         if not show_stationary_dist:
-            ax.set_xticks(np.arange(self.coarse_T.shape[1]))
+            ax.set_xticks(np.arange(coarse_T.shape[1]))
             ax.set_xticklabels(labels)
             plt.setp(
                 ax.get_xticklabels(),
@@ -1395,104 +676,323 @@ class GPCCA(BaseEstimator):
         else:
             ax.set_xticks([])
 
-        ax.set_yticks(np.arange(self.coarse_T.shape[0] + 1) - 0.5, minor=True)
+        ax.set_yticks(np.arange(coarse_T.shape[0] + 1) - 0.5, minor=True)
         ax.tick_params(
             which="minor", bottom=not show_stationary_dist, left=False, top=False
         )
 
         if annotate:
             annotate_heatmap(im)
-            annotate_dist_ax(
-                stat_ax, self.coarse_stationary_distribution.values, is_vertical=False
-            )
-            annotate_dist_ax(init_ax, self._coarse_init_dist, is_vertical=True)
+            annotate_dist_ax(stat_ax, coarse_stat_d.values, is_vertical=False)
+            annotate_dist_ax(init_ax, coarse_init_d, is_vertical=True)
 
         if save:
             save_fig(fig, save)
 
         fig.show()
 
-    def copy(self) -> "GPCCA":
+    def _compute_meta_for_one_state(
+        self,
+        n_cells: int,
+        cluster_key: Optional[str],
+        en_cutoff: Optional[float],
+        p_thresh: float,
+    ) -> None:
+        start = logg.info("Computing metastable states")
+        logg.warning("For `n_states=1`, stationary distribution is computed")
+
+        self.compute_eigendecomposition(only_evals=False, which="LM")
+        stationary_dist = self._get(P.EIG)["stationary_dist"]
+
+        self._set_meta_states(
+            memberships=stationary_dist[:, None],
+            n_cells=n_cells,
+            cluster_key=cluster_key,
+            p_thresh=p_thresh,
+            en_cutoff=en_cutoff,
+        )
+        self._set(
+            A.META_PROBS,
+            Lineage(
+                stationary_dist,
+                names=list(self._get(A.META).cat.categories),
+                colors=self._get(A.META_COLORS),
+            ),
+        )
+
+        # reset all the things
+        for key in (
+            A.ABS_RPOBS,
+            A.SCHUR,
+            A.SCHUR_MAT,
+            A.COARSE_T,
+            A.COARSE_STAT_D,
+            A.COARSE_STAT_D,
+        ):
+            self._set(key.s, None)
+
+        logg.info(f"Adding `.{P.META}`\n    Finish", time=start)
+
+    def _get_n_states_from_minchi(
+        self, n_states: Union[Tuple[int, int], List[int], Dict[str, int]]
+    ) -> int:
+        if not isinstance(n_states, (dict, tuple, list)):
+            raise TypeError(
+                f"Expected `n_states` to be either `dict`, `tuple` or a `list`, "
+                f"found `{type(n_states).__name__}`."
+            )
+        if len(n_states) != 2:
+            raise ValueError(
+                f"Expected `n_states` to be of size `2`, found `{len(n_states)}`."
+            )
+
+        minn, maxx = (
+            (n_states["min"], n_states["max"])
+            if isinstance(n_states, dict)
+            else n_states
+        )
+        if minn <= 1:
+            raise ValueError(f"Minimum value must be > 1, found `{minn}`.")
+        elif minn == 2:
+            logg.warning(
+                "In most cases, 2 clusters will always be optimal. "
+                "If you really expect 2 clusters, use `n_states=2`.\nSetting the minimum to 3"
+            )
+            minn = 3
+
+        logg.debug(f"Calculating minChi within interval `[{minn}, {maxx}]`")
+
+        return int(np.arange(minn, maxx)[np.argmax(self._gpcca.minChi(minn, maxx))])
+
+    @d.dedent
+    def _set_meta_states(
+        self,
+        memberships: np.ndarray,
+        n_cells: Optional[int] = 30,
+        cluster_key: str = "clusters",
+        en_cutoff: Optional[float] = 0.7,
+        p_thresh: float = 1e-15,
+        check_row_sums: bool = True,
+    ) -> None:
         """
-        Return a copy of itself.
+        Map a fuzzy clustering to pre-computed annotations to get names and colors.
+
+        Given the fuzzy clustering we have computed, we would like to select the most likely cells from each state
+        and use these to give each state a name and a color by comparing with pre-computed, categorical cluster
+        annotations.
+
+        Parameters
+        --------
+        memberships
+            Fuzzy clustering.
+        %(n_cells)s
+        cluster_key
+            Key from :paramref:`adata` `.obs` to get reference cluster annotations.
+        en_cutoff
+            Threshold to decide when we we want to warn the user about an uncertain name mapping. This happens when
+            one fuzzy state overlaps with several reference clusters, and the most likely cells are distributed almost
+            evenly across the reference clusters.
+        p_thresh
+            Only used to detect cell cycle stages. These have to be present in :paramref:`adata` `.obs`
+            as `G2M_score` and `S_score`.
+        check_row_sums
+            Check whether rows in `memberships` sum to 1.
+
+        Returns
+        --------
+        None
+            Writes a lineage object which mapped names and colors. Also creates a categorical :class:`pandas.Series`
+            `.metastable_states`, where the top `n_cells` cells represent each fuzzy state.
+        """
+
+        if n_cells is None:
+            logg.debug("Setting the metastable states using metastable assignment")
+
+            max_assignment = np.argmax(memberships, axis=1)
+            _meta_assignment = pd.Series(
+                index=self.adata.obs_names, data=max_assignment, dtype="category"
+            )
+            # sometimes, the assignment can have a missing category and the Lineage creation therefore fails
+            # keep it as ints when `n_cells != None`
+            _meta_assignment.cat.set_categories(
+                list(range(memberships.shape[1])), inplace=True
+            )
+
+            metastable_states = _meta_assignment.astype(str).astype("category").copy()
+            not_enough_cells = []
+        else:
+            logg.debug("Setting the metastable states using metastable memberships")
+
+            # select the most likely cells from each metastable state
+            metastable_states, not_enough_cells = self._create_states(
+                memberships,
+                n_cells=n_cells,
+                check_row_sums=check_row_sums,
+                return_not_enough_cells=True,
+            )
+            not_enough_cells = not_enough_cells.astype("str")
+
+        # _set_categorical_labels creates the names, we still need to remap the group names
+        orig_cats = metastable_states.cat.categories
+        self._set_categorical_labels(
+            attr_key=A.META.v,
+            color_key=A.META_COLORS.v,
+            pretty_attr_key=P.META.v,
+            add_to_existing_error_msg="Compute metastable states first as `.compute_metastable_states()`.",
+            categories=metastable_states,
+            cluster_key=cluster_key,
+            en_cutoff=en_cutoff,
+            p_thresh=p_thresh,
+            add_to_existing=False,
+        )
+
+        name_mapper = dict(zip(orig_cats, self._get(P.META).cat.categories))
+        _print_insufficient_number_of_cells(
+            [name_mapper.get(n, n) for n in not_enough_cells], n_cells
+        )
+
+        logg.debug(
+            "Setting metastable lineage probabilities based on GPCCA membership vectors"
+        )
+
+        self._set(
+            A.META_PROBS,
+            Lineage(
+                memberships,
+                names=list(metastable_states.cat.categories),
+                colors=self._get(A.META_COLORS),
+            ),
+        )
+
+    def _create_states(
+        self,
+        probs: Union[np.ndarray, Lineage],
+        n_cells: int,
+        check_row_sums: bool = False,
+        return_not_enough_cells: bool = False,
+    ) -> pd.Series:
+        if n_cells <= 0:
+            raise ValueError(f"Expected `n_cells` to be positive, found `{n_cells}`.")
+
+        if isinstance(probs, Lineage):
+            probs = probs[[n for n in probs.names if n != "rest"]]
+
+        a_discrete, not_enough_cells = _fuzzy_to_discrete(
+            a_fuzzy=probs,
+            n_most_likely=n_cells,
+            remove_overlap=False,
+            raise_threshold=0.2,
+            check_row_sums=check_row_sums,
+        )
+
+        states = _series_from_one_hot_matrix(
+            a=a_discrete,
+            index=self.adata.obs_names,
+            names=probs.names if isinstance(probs, Lineage) else None,
+        )
+
+        return (states, not_enough_cells) if return_not_enough_cells else states
+
+    def _fit_final_states(
+        self,
+        n_lineages: Optional[int] = None,
+        cluster_key: Optional[str] = None,
+        method: str = "krylov",
+        **kwargs,
+    ) -> None:
+        if n_lineages is None or n_lineages == 1:
+            self.compute_eigendecomposition()
+            if n_lineages is None:
+                n_lineages = self.eigendecomposition["eigengap"] + 1
+
+        if n_lineages > 1:
+            self.compute_schur(n_lineages + 1, method=method)
+
+        try:
+            self.compute_metastable_states(
+                n_states=n_lineages, cluster_key=cluster_key, **kwargs
+            )
+        except ValueError:
+            logg.warning(
+                f"Computing `{n_lineages}` metastable states cuts through a block of complex conjugates. "
+                f"Increasing `n_lineages` to {n_lineages + 1}"
+            )
+            self.compute_metastable_states(
+                n_states=n_lineages + 1, cluster_key=cluster_key, **kwargs
+            )
+
+        if len(self._get(P.META).cat.categories) == 1:
+            # stationary distribution
+            self._set(A.FIN, self._get(P.META))
+            self._set(A.FIN_PROBS, self._get(P.META_PROBS))
+            self._set(A.FIN_COLORS, self._get(A.META_COLORS))
+            self._write_final_states()
+        elif n_lineages is None:
+            self.compute_final_states(method="eigengap")
+        else:
+            self.set_final_states_from_metastable_states()
+
+    @d.dedent  # because of fit
+    @d.dedent
+    @inject_docs(
+        ms=P.META,
+        msp=P.META_PROBS,
+        fs=P.FIN,
+        fsp=P.FIN_PROBS,
+        ap=P.ABS_PROBS,
+        dp=P.DIFF_POT,
+    )
+    def fit(
+        self,
+        n_lineages: Optional[int] = None,
+        cluster_key: Optional[str] = None,
+        keys: Optional[Sequence[str]] = None,
+        method: str = "krylov",
+        compute_absorption_probabilities: bool = True,
+        **kwargs,
+    ):
+        """
+        Run the pipeline, computing the metastable states, %(final)s states and optionally the absorption probabilities.
+
+        It is equivalent to running::
+
+            compute_eigendecomposition(...)  # if needed
+            compute_schur(...)
+            compute_metastable_states(...)
+
+            compute_final_states(...)   # if `n_lineages=None`
+            set_final_states_from_metastable_states(...)   # otherwise
+
+            compute_absorption_probabilities(...)  # optional
+
+        Parameters
+        ----------
+        %(fit)s
+        method
+            Method to use when computing the Schur decomposition. Valid options are: `'krylov'`, `'brandts'`.
+        compute_absorption_probabilities
+            Whether to compute absorption probabilities or only final states.
+        **kwargs
+            Keyword arguments for :meth:`cellrank.tl.GPCCA.compute_metastable_states`.
 
         Returns
         -------
-        :class:`cellrank.tl.GPCCA`
-            A copy of itself.
+        None
+            Nothing, just makes available the following fields:
+
+                - :paramref:`{ms}`
+                - :paramref:`{msp}`
+                - :paramref:`{fs}`
+                - :paramref:`{fsp}`
+                - :paramref:`{ap}`
+                - :paramref:`{dp}`
         """
 
-        kernel = copy(self.kernel)  # doesn't copy the adata object
-        g = GPCCA(kernel, self.adata.copy(), inplace=False, read_from_adata=False)
-
-        g._eig = deepcopy(self.eigendecomposition)
-
-        g._lin_probs = copy(self.lineage_probabilities)
-        g._dp = copy(self.diff_potential)
-
-        g._gpcca = deepcopy(self._gpcca)
-
-        g._schur_vectors = copy(self.schur_vectors)
-        g._schur_matrix = copy(self._schur_matrix)
-        g._coarse_T = copy(self.coarse_T)
-
-        g._meta_states = copy(self._meta_states)
-        g._meta_states_colors = copy(self._meta_states_colors)
-        g._meta_lin_probs = copy(self._meta_lin_probs)
-
-        g._main_states = copy(self.main_states)
-        g._main_states_probabilities = copy(self._main_states_probabilities)
-
-        g._coarse_stat_dist = copy(self.coarse_stationary_distribution)
-        g._coarse_init_dist = copy(self._coarse_init_dist)
-
-        g._G2M_score = copy(self._G2M_score)
-        g._S_score = copy(self._S_score)
-
-        g._g2m_key = self._g2m_key
-        g._s_key = self._s_key
-        g._key_added = self._key_added
-
-        g._is_irreducible = self.irreducible
-        g._rec_classes = copy(self._rec_classes)
-        g._trans_classes = copy(self._trans_classes)
-
-        return g
-
-    @property
-    def schur_vectors(self) -> np.ndarray:
-        """Schur vectors."""
-        return self._schur_vectors
-
-    @property
-    def coarse_T(self) -> pd.DataFrame:
-        """Coarse-grained transition matrix between metastable states."""
-        return self._coarse_T
-
-    @property
-    def metastable_states(self) -> pd.Series:
-        """Metastable states."""
-        return self._meta_states
-
-    @property
-    def coarse_stationary_distribution(self) -> pd.Series:
-        """Coarse-grained stationary distribution of metastable states."""
-        return self._coarse_stat_dist
-
-    @property
-    def main_states(self) -> pd.Series:
-        """Subset and/or combination of main states."""
-        return self._main_states
-
-    @property
-    def main_states_probabilities(self) -> pd.Series:
-        """Upper bound of of becoming a main states."""
-        return self._main_states_probabilities
-
-
-def _print_insufficient_number_of_cells(groups: Iterable[Any], n_cells: int):
-    if groups:
-        logg.debug(
-            f"The following groups have less than requested number of cells ({n_cells}): "
-            f"`{', '.join(sorted(map(str, groups)))}`"
+        super().fit(
+            n_lineages=n_lineages,
+            cluster_key=cluster_key,
+            keys=keys,
+            method=method,
+            compute_absorption_probabilities=compute_absorption_probabilities,
+            *kwargs,
         )
