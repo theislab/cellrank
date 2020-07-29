@@ -15,14 +15,12 @@ from typing import (
     Iterable,
     Optional,
 )
-from functools import wraps, reduce
-
-from scvelo.preprocessing.moments import get_moments
+from functools import wraps, reduce, partial
 
 import numpy as np
-from jax import jit, jacfwd, jacrev
-from cellrank import logging as logg
 from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix
+
+from scvelo.preprocessing.moments import get_moments
 
 from cellrank import logging as logg
 from cellrank.utils._docs import d
@@ -967,7 +965,24 @@ class VelocityKernel(Kernel):
             )
 
         # define a function to compute hessian matrices
-        get_hessian_fwd = jit(jacfwd(jacrev(_predict_transition_probabilities)))
+        if mode == "stochastic":
+            try:
+                from jax import jit, jacfwd, jacrev
+
+                get_hessian_fwd = jit(
+                    jacfwd(
+                        jacrev(
+                            partial(
+                                _predict_transition_probabilities,
+                                return_pearson_correlation=False,
+                                use_jax=True,
+                            )
+                        )
+                    )
+                )
+            except ImportError:
+                logg.warning("TODO: install jax")
+                mode = "sampling"
 
         # sort cells by their number of neighbors - this makes jitting more efficient
         n_neighbors = np.array((self._conn != 0).sum(1)).flatten()
@@ -1010,21 +1025,13 @@ class VelocityKernel(Kernel):
                         )
                     else:
                         probs, corrs = _predict_transition_probabilities(
-                            v_i,
-                            W,
-                            sigma=sigma_corr,
-                            use_jax=False,
-                            return_pearson_correlation=True,
+                            v_i, W, sigma=sigma_corr,
                         )
                 else:
                     # compute how likely all neighbors are to transition to this cell
                     V = self._velocity[nbhs_ixs, :]
                     probs, corrs = _predict_transition_probabilities(
-                        V,
-                        -1 * W,
-                        sigma=sigma_corr,
-                        use_jax=False,
-                        return_pearson_correlation=True,
+                        V, -1 * W, sigma=sigma_corr,
                     )
 
             elif mode == "stochastic":
@@ -1037,7 +1044,7 @@ class VelocityKernel(Kernel):
                 v_i = velocity_expectation[cell_ix, :]
 
                 if (v_i == 0).all():
-                    logg.warning(f"Cell {cell_ix} has a zero velocity vector")
+                    logg.warning(f"Cell `{cell_ix}` has a zero velocity vector")
                     probs, corrs = (
                         1 / len(nbhs_ixs) * np.ones(len(nbhs_ixs)),
                         np.zeros(len(nbhs_ixs)),
@@ -1052,11 +1059,7 @@ class VelocityKernel(Kernel):
 
                     # compute zero order term
                     p_0, corrs = _predict_transition_probabilities(
-                        v_i,
-                        W,
-                        sigma=sigma_corr,
-                        use_jax=False,
-                        return_pearson_correlation=True,
+                        v_i, W, sigma=sigma_corr,
                     )
 
                     # compute second order term (note that the first order term cancels)
@@ -1070,23 +1073,13 @@ class VelocityKernel(Kernel):
                 # treat `v_i` as random variable and use Monte Carlo approximation to propagate the distribution
 
                 # sample a single velocity vector from the distribution
-                v_i = np.array(
-                    [
-                        np.random.normal(mean, var)
-                        for mean, var in zip(
-                            velocity_expectation[cell_ix, :],
-                            velocity_variance[cell_ix, :],
-                        )
-                    ]
+                v_i = np.random.normal(
+                    velocity_expectation[cell_ix, :], velocity_variance[cell_ix, :]
                 )
 
                 # use this sample to compute transition probabilities
                 probs, corrs = _predict_transition_probabilities(
-                    v_i,
-                    W,
-                    sigma=sigma_corr,
-                    use_jax=False,
-                    return_pearson_correlation=True,
+                    v_i, W, sigma=sigma_corr,
                 )
 
             # add the computed transition probabilities and correlations to lists

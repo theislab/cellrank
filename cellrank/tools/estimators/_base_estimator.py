@@ -7,16 +7,17 @@ from copy import deepcopy
 from typing import Any, Dict, Union, TypeVar, Optional, Sequence
 from pathlib import Path
 
-from matplotlib.colors import is_color_like
-
 import numpy as np
 import pandas as pd
 from pandas import Series
-from cellrank import logging as logg
 from scipy.stats import ranksums
 from scipy.sparse import spmatrix
-from cellrank.tools import Lineage
 from pandas.api.types import infer_dtype, is_categorical_dtype
+
+from matplotlib.colors import is_color_like
+
+from cellrank import logging as logg
+from cellrank.tools import Lineage
 from cellrank.utils._docs import d, inject_docs
 from cellrank.tools._utils import (
     _pairwise,
@@ -639,7 +640,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             f"Adding `adata.obs[{_probs(self._fs_key)!r}]`\n"
             f"       `adata.obs[{self._fs_key!r}]`\n"
             f"       `.{P.FIN_PROBS}`\n"
-            f"       `.{P.FIN}`\n",
+            f"       `.{P.FIN}`",
             time=time,
         )
 

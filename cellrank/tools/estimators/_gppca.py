@@ -5,12 +5,13 @@ from types import MappingProxyType
 from typing import Any, Dict, List, Tuple, Union, Mapping, Iterable, Optional, Sequence
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
+
 import matplotlib as mpl
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 
-import numpy as np
-import pandas as pd
 from cellrank import logging as logg
 from cellrank.tools import Lineage
 from cellrank.utils._docs import d, inject_docs
@@ -108,7 +109,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
                 )
             was_from_eigengap = True
             n_states = self._get(P.EIG)["eigengap"] + 1
-            logg.info(f"oUsing `{n_states}` states based on eigengap")
+            logg.info(f"Using `{n_states}` states based on eigengap")
 
         if n_states <= 0:
             raise ValueError(
@@ -216,7 +217,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         else:
             logg.warning("No stationary distribution found in GPCCA object")
             logg.info(
-                f"Adding `.{P.SCHUR}`\n" f"       `.{P.COARSE_T}`\n" f"    Finish",
+                f"Adding `.{P.SCHUR}`\n       `.{P.COARSE_T}`\n" f"    Finish",
                 time=start,
             )
 
