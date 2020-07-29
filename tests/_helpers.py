@@ -5,6 +5,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytest
 from PIL import Image
 from sklearn.svm import SVR
 from scipy.sparse import spdiags, issparse, csr_matrix
@@ -20,6 +21,16 @@ from cellrank.tools._utils import _normalize
 from cellrank.utils._utils import _get_neighs, _get_neighs_params
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tools._constants import Direction, _transition
+
+
+def _jax_not_installed() -> bool:
+    try:
+        import jax
+        import jaxlib
+
+        return False
+    except ImportError:
+        return True
 
 
 def bias_knn(conn, pseudotime, n_neighbors, k=3):
@@ -110,10 +121,6 @@ def transition_matrix(
     """
     logg.info("Computing transition probability from velocity graph")
 
-    from datetime import datetime
-
-    print(datetime.now())
-
     # get the direction of the process
     direction = Direction.BACKWARD if backward else Direction.FORWARD
 
@@ -192,7 +199,7 @@ def transition_matrix(
         "sigma_corr": np.round(sigma_corr, 3),
         "diff_kernel": diff_kernel,
         "weight_diffusion": weight_diffusion,
-        "density_normalize": density_normalize,
+        "_density_normalize": density_normalize,
     }
 
     adata.uns[_transition(direction)] = {"T": T, "params": params}
@@ -273,13 +280,12 @@ def _is_connected(c) -> bool:
     return nx.is_connected(G)
 
 
-def create_kernels(
-    adata: AnnData,
-    var_key_connectivities: str = "connectivity_variances",
-    var_key_velocities: str = "velocity_variances",
-) -> Tuple[VelocityKernel, ConnectivityKernel]:
-    vk = VelocityKernel(adata, var_key=var_key_velocities)
-    ck = ConnectivityKernel(adata, var_key=var_key_connectivities)
+def create_kernels(adata: AnnData,) -> Tuple[VelocityKernel, ConnectivityKernel]:
+    vk = VelocityKernel(adata)
+    vk._mat_scaler = np.random.normal(size=(adata.n_obs, adata.n_obs))
+    ck = ConnectivityKernel(adata)
+    ck._mat_scaler = np.random.normal(size=(adata.n_obs, adata.n_obs))
+
     vk._transition_matrix = csr_matrix(np.eye(adata.n_obs))
     ck._transition_matrix = np.eye(adata.n_obs, k=1) / 2 + np.eye(adata.n_obs) / 2
     ck._transition_matrix[-1, -1] = 1
@@ -401,6 +407,11 @@ def _create_dummy_adata(n_obs: int) -> AnnData:
     sc.write(f"tests/_ground_truth_adatas/adata_{n_obs}.h5ad", adata)
 
     return adata
+
+
+jax_not_installed_skip = pytest.mark.skipif(
+    _jax_not_installed(), reason="JAX is not installed."
+)
 
 
 if __name__ == "__main__":

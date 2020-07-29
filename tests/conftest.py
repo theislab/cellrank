@@ -7,7 +7,6 @@ import pytest
 import matplotlib
 
 import scanpy as sc
-import scvelo as scv
 from anndata import AnnData
 
 import cellrank as cr

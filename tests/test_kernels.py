@@ -5,14 +5,16 @@ import pytest
 import anndata
 from scanpy import Neighbors
 
+import cellrank as cr
 from _helpers import (
     bias_knn,
     create_kernels,
     transition_matrix,
     density_normalization,
+    jax_not_installed_skip,
     random_transition_matrix,
 )
-from cellrank.tools._utils import _normalize, _pearson_corr
+from cellrank.tools._utils import _normalize
 from cellrank.utils._utils import _get_neighs, _get_neighs_params
 from cellrank.tools.kernels import (
     PalantirKernel,
@@ -242,41 +244,29 @@ class TestInitializeKernel:
         assert c3.transition_matrix == 1 / 2
 
     def test_adaptive_kernel_constants(self, adata):
-        k = (
-            3
-            * ConnectivityKernel(
-                adata, var_key="connectivity_variances"
-            ).compute_transition_matrix()
-        ) ^ (
-            1
-            * ConnectivityKernel(
-                adata, var_key="connectivity_variances"
-            ).compute_transition_matrix()
-        )
+        ck1 = ConnectivityKernel(adata).compute_transition_matrix()
+        ck1._mat_scaler = np.random.normal(size=(adata.n_obs, adata.n_obs))
+
+        ck2 = ConnectivityKernel(adata).compute_transition_matrix()
+        ck2._mat_scaler = np.random.normal(size=(adata.n_obs, adata.n_obs))
+
+        k = (3 * ck1) ^ (1 * ck2)
         k.compute_transition_matrix()
 
         assert k[0][0]._value == 3 / 4
         assert k[1][0]._value == 1 / 4
 
     def test_adaptive_kernel_complex(self, adata):
-        k = (
-            4
-            * (
-                (
-                    3
-                    * ConnectivityKernel(
-                        adata, var_key="connectivity_variances"
-                    ).compute_transition_matrix()
-                )
-                ^ (
-                    1
-                    * ConnectivityKernel(
-                        adata, var_key="connectivity_variances"
-                    ).compute_transition_matrix()
-                )
-            )
-            + 2 * ConnectivityKernel(adata).compute_transition_matrix()
-        )
+        ck1 = ConnectivityKernel(adata).compute_transition_matrix()
+        ck1._mat_scaler = np.random.normal(size=(adata.n_obs, adata.n_obs))
+
+        ck2 = ConnectivityKernel(adata).compute_transition_matrix()
+        ck2._mat_scaler = np.random.normal(size=(adata.n_obs, adata.n_obs))
+
+        ck3 = ConnectivityKernel(adata).compute_transition_matrix()
+        ck3._mat_scaler = np.random.normal(size=(adata.n_obs, adata.n_obs))
+
+        k = 4 * ((3 * ck1) ^ (1 * ck2)) + 2 * ck3
         k.compute_transition_matrix()
 
         assert k[0][0].transition_matrix == 4 / 6
@@ -392,15 +382,21 @@ class TestKernel:
         vk = VelocityKernel(adata)
         vk.compute_transition_matrix(mode="deterministic")
         T_det = vk.transition_matrix
-        vk.compute_transition_matrix(mode="stochastic")
-        T_stoch = vk.transition_matrix
         vk.compute_transition_matrix(mode="sampling")
         T_sam = vk.transition_matrix
 
         np.testing.assert_allclose(T_det.sum(1), 1, rtol=_rtol)
-        np.testing.assert_allclose(T_stoch.sum(1), 1, rtol=_rtol)
         np.testing.assert_allclose(T_sam.sum(1), 1, rtol=_rtol)
 
+    @jax_not_installed_skip
+    def test_row_normalized_dense_norm_stoch(self, adata):
+        vk = VelocityKernel(adata)
+        vk.compute_transition_matrix(mode="stochastic")
+        T_stoch = vk.transition_matrix
+
+        np.testing.assert_allclose(T_stoch.sum(1), 1, rtol=_rtol)
+
+    @jax_not_installed_skip
     def test_transition_forward_stoch(self, adata):
         backward = False
 
@@ -409,8 +405,9 @@ class TestKernel:
         )
         T_1 = vk.transition_matrix
 
-        transition_matrix(adata, mode="stochastic", backward=backward)
-        T_2 = adata.uns[_transition(Direction.FORWARD)]["T"]
+        T_2 = cr.tl.transition_matrix(
+            adata, mode="stochastic", backward=backward
+        ).transition_matrix
 
         np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
 
@@ -422,7 +419,7 @@ class TestKernel:
         )
         T_1 = vk.transition_matrix
 
-        transition_matrix(adata, mode="deterministic", backward=backward)
+        transition_matrix(adata, backward=backward)
         T_2 = adata.uns[_transition(Direction.FORWARD)]["T"]
 
         np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
@@ -435,11 +432,13 @@ class TestKernel:
         )
         T_1 = vk.transition_matrix
 
-        transition_matrix(adata, mode="sampling", backward=backward)
-        T_2 = adata.uns[_transition(Direction.FORWARD)]["T"]
+        T_2 = cr.tl.transition_matrix(
+            adata, mode="sampling", backward=backward
+        ).transition_matrix
 
         np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
 
+    @jax_not_installed_skip
     def test_transition_forward_differ_mode(self, adata):
         backward = False
 
@@ -448,7 +447,9 @@ class TestKernel:
         )
         T_1 = vk.transition_matrix
 
-        transition_matrix(adata, mode="deterministic", backward=backward)
+        transition_matrix(
+            adata, backward=backward
+        )  # this is the very old deterministic approach
         T_2 = adata.uns[_transition(Direction.FORWARD)]["T"]
 
         assert not (np.allclose(T_1.A, T_2.A, rtol=_rtol))
@@ -461,7 +462,7 @@ class TestKernel:
         )
         T_1 = vk.transition_matrix
 
-        transition_matrix(adata, mode="deterministic", backward=backward)
+        transition_matrix(adata, backward=backward)
         T_2 = adata.uns[_transition(Direction.BACKWARD)]["T"]
 
         np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
@@ -542,6 +543,7 @@ class TestKernel:
 
         np.testing.assert_allclose(T_comb_kernel.A, T_comb_manual.A, rtol=_rtol)
 
+    @jax_not_installed_skip
     def test_manual_combination_stoch(self, adata):
         mode = "stochastic"
 
@@ -666,7 +668,7 @@ class TestKernel:
 
 
 class TestPreviousImplementation:
-    def test_foward(self, adata):
+    def test_forward(self, adata):
         density_normalize = False
         vk = VelocityKernel(adata).compute_transition_matrix(mode="deterministic")
         ck = ConnectivityKernel(adata).compute_transition_matrix(
@@ -1009,7 +1011,7 @@ class TestTransitionProbabilities:
         # compute pearson correlations using cellrank
         vk = VelocityKernel(adata, backward=backward)
         vk.compute_transition_matrix(mode="deterministic")
-        pearson_correlations_cr = vk._pearson_correlations
+        pearson_correlations_cr = vk.pearson_correlations
 
         assert np.allclose((velo_graph - pearson_correlations_cr).data, 0, atol=1e-5)
 
@@ -1023,7 +1025,7 @@ class TestTransitionProbabilities:
         # compute pearson correlations using cellrak
         vk = VelocityKernel(adata, backward=backward)
         vk.compute_transition_matrix(mode="deterministic")
-        pearson_correlations_cr = vk._pearson_correlations
+        pearson_correlations_cr = vk.pearson_correlations
 
         assert np.allclose((velo_graph - pearson_correlations_cr).data, 0, atol=1e-5)
 

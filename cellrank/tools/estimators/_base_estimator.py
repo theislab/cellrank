@@ -459,8 +459,6 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
         # use `cluster_key` and clusters to subset the data
         if clusters is not None:
-            if cluster_key is None:
-                cluster_key = "clusters"
             if cluster_key not in self.adata.obs.keys():
                 raise KeyError(f"Key `{cluster_key!r}` not found in `adata.obs`.")
             if isinstance(clusters, str):
