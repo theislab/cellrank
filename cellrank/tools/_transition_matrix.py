@@ -4,6 +4,7 @@
 from typing import TypeVar, Iterable, Optional
 
 from cellrank import logging as logg
+from cellrank.utils._docs import d
 from cellrank.tools.kernels._kernel import (
     VelocityKernel,
     KernelExpression,
@@ -13,6 +14,7 @@ from cellrank.tools.kernels._kernel import (
 AnnData = TypeVar("AnnData")
 
 
+@d.dedent
 def transition_matrix(
     adata: AnnData,
     backward: bool = False,
@@ -20,7 +22,7 @@ def transition_matrix(
     xkey: str = "Ms",
     gene_subset: Optional[Iterable] = None,
     mode: str = "deterministic",
-    random_state: int = 0,
+    random_state: Optional[int] = None,
     sigma_corr: int = 4.0,
     weight_connectivities: Optional[float] = None,
     density_normalize: bool = True,
@@ -32,12 +34,10 @@ def transition_matrix(
     :class:`cellrank.tl.kernels.VelocityKernel` for the velocity-based transition matrix and
     :class:`cellrank.tl.kernels.ConnectivityKernel` for the transcriptomic-similarity-based transition matrix.
 
-    Params
-    ------
-    adata: :class:`anndata.AnnData`
-        Annotated data object.
-    backward
-        Direction of the process.
+    Parameters
+    ----------
+    %(adata)s
+    %(backward)s
     vkey
         Key from :paramref:`adata` `.layers` to access the velocities.
     xkey

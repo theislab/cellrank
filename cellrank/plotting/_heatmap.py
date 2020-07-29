@@ -6,6 +6,11 @@ from typing import Any, Tuple, Union, TypeVar, Optional, Sequence
 from pathlib import Path
 from collections import Iterable, defaultdict
 
+import numpy as np
+import pandas as pd
+from pandas.api.types import is_categorical_dtype
+from scipy.ndimage.filters import convolve
+
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
@@ -13,16 +18,13 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
-import numpy as np
-import pandas as pd
 from cellrank import logging as logg
-from pandas.api.types import is_categorical_dtype
+from cellrank.utils._docs import d
 from cellrank.tools._utils import save_fig, _unique_order_preserving
 from cellrank.utils._utils import _get_n_cores, check_collection
-from scipy.ndimage.filters import convolve
 from cellrank.tools._colors import _create_categorical_colors
 from cellrank.plotting._utils import _fit, _model_type, _create_models, _is_any_gam_mgcv
-from cellrank.tools._constants import LinKey
+from cellrank.tools._constants import AbsProbKey
 from cellrank.utils._parallelize import parallelize
 
 _N_XTICKS = 10
@@ -32,11 +34,12 @@ Norm = TypeVar("Norm")
 Ax = TypeVar("Ax")
 
 
+@d.dedent
 def heatmap(
     adata: AnnData,
     model: _model_type,
     genes: Sequence[str],
-    final: bool = True,
+    backward: bool = False,
     kind: str = "lineages",
     lineages: Optional[Union[str, Sequence[str]]] = None,
     start_lineage: Optional[Union[str, Sequence[str]]] = None,
@@ -53,10 +56,10 @@ def heatmap(
     cmap: mcolors.ListedColormap = cm.viridis,
     n_jobs: Optional[int] = 1,
     backend: str = "multiprocessing",
+    show_progress_bar: bool = True,
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
     save: Optional[Union[str, Path]] = None,
-    show_progress_bar: bool = True,
     **kwargs,
 ) -> None:
     """
@@ -66,25 +69,19 @@ def heatmap(
        :width: 400px
        :align: center
 
-    Params
-    ------
-    adata : :class:`anndata.AnnData`
-        Annotated data object.
-    model
-        Model to fit.
-
-            - If a :class:`dict`, gene and lineage specific models can be specified. Use `'*'` to indicate all \
-            genes or lineages, for example `{'Map2': {'*': ...}, 'Dcx': {'Alpha': ..., '*': ...}}`.
+    Parameters
+    ----------
+    %(adata)s
+    %(model)s
     genes
         Genes in :paramref:`adata` `.var_names` to plot.
-    final
-        Whether to consider cells going to final states or vice versa.
+    %(backward)s
     kind
         Variant of the heatmap:
 
             - `'genes'` - group by :paramref:`genes` for each lineage in :paramref:`lineage_names`.
             - `'lineages'` - group by :paramref:`lineage_names` for each gene in :paramref:`genes`.
-    lineage_names
+    lineages
         Names of the lineages which to plot.
     start_lineage
         Lineage from which to select cells with lowest pseudotime as starting points.
@@ -117,26 +114,14 @@ def heatmap(
         Label on the x-axis. If `None`, it is determined based on :paramref:`time_key`.
     cmap
         Colormap to use when visualizing the smoothed expression.
-    n_jobs
-        Number of parallel jobs. If `-1`, use all available cores. If `None` or `1`, the execution is sequential.
-    backend
-        Which backend to use for multiprocessing. See :class:`joblib.Parallel` for valid options.
-    figsize
-        Size of the figure. If `None`, it will determined automatically.
-    dpi
-        Dots per inch.
-    save
-        Filename where to save the plot. If `None`, just shows the plot.
-    show_progress_bar
-        Whether to show a progress bar tracking models fitted.
+    %(parallel)s
+    %s(plotting)s
     **kwargs
         Keyword arguments for :meth:`cellrank.ul.models.Model.prepare`.
 
     Returns
     -------
-    None
-        Nothing, just plots the heatmap depending on :paramref:`kind`.
-        Optionally saves the figure based on :paramref:`save`.
+    %s(just_plots)
     """
 
     import seaborn as sns
@@ -298,7 +283,11 @@ def heatmap(
             ax.set_xticks(np.linspace(x_min, x_max, _N_XTICKS))
 
             ax.set_yticks(np.array(ys) + lineage_height / 2)
-            ax.set_yticklabels(lineages)
+            ax.set_yticklabels(
+                list(lineages) + ["absorption probabilty"]
+                if show_absorption_probabilities
+                else []
+            )
             ax.set_title(gene)
             ax.set_ylabel("Lineage")
 
@@ -340,8 +329,8 @@ def heatmap(
     def lineage_per_gene():
         data_t = defaultdict(dict)  # transpose
         for gene, lns in data.items():
-            for ln, d in lns.items():
-                data_t[ln][gene] = d
+            for ln, y in lns.items():
+                data_t[ln][gene] = y
 
         for lname, models in data_t.items():
             xs = np.array([m.x_test for m in models.values()])
@@ -387,7 +376,7 @@ def heatmap(
                 cbar_kws={"label": "Expression"},
                 row_cluster=cluster_genes and df.shape[0] > 1,
                 col_colors=col_colors,
-                colors_ratio=0.05,
+                colors_ratio=0.02,
                 col_cluster=False,
                 cbar_pos=None,
                 yticklabels=show_all_genes or "auto",
@@ -395,8 +384,8 @@ def heatmap(
             )
             g.ax_heatmap.text(
                 x=0.5,
-                y=1.05
-                + 0.15
+                y=1.025
+                + 0.025
                 * (
                     (0 if cluster_key is None else len(cluster_key))
                     + show_absorption_probabilities
@@ -447,7 +436,7 @@ def heatmap(
 
         return fig
 
-    lineage_key = str(LinKey.FORWARD if final else LinKey.BACKWARD)
+    lineage_key = str(AbsProbKey.BACKWARD if backward else AbsProbKey.FORWARD)
     if lineage_key not in adata.obsm:
         raise KeyError(f"Lineages key `{lineage_key!r}` not found in `adata.obsm`.")
 
@@ -457,8 +446,7 @@ def heatmap(
         lineages = [lineages]
     lineages = _unique_order_preserving(lineages)
 
-    for lineage_name in lineages:
-        _ = adata.obsm[lineage_key][lineage_name]
+    _ = adata.obsm[lineage_key][lineages]
 
     if cluster_key is not None:
         if isinstance(cluster_key, str):

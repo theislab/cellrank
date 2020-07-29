@@ -22,7 +22,14 @@ def _load_dataset_from_url(fpath: Union[os.PathLike, str], url: str) -> AnnData:
     if os.path.isfile(fpath):
         logg.debug(f"Loading dataset from `{fpath!r}`")
     else:
-        logg.debug(f"Downloading dataset from `{url!r}`")
+        logg.debug(f"Downloading dataset from `{url!r}` and saving it to `{fpath!r}`")
+
+    dirname, _ = os.path.split(fpath)
+    try:
+        logg.debug(f"Creating directory `{dirname!r}`")
+        os.makedirs(dirname, exist_ok=True)
+    except OSError as e:
+        logg.debug(f"Unable to create directory `{dirname!r}`. Reason `{e}`")
 
     adata = read(fpath, backup_url=url, sparse=True, cache=True)
     adata.var_names_make_unique()

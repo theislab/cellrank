@@ -23,6 +23,9 @@ import numpy as np
 from jax import jit, jacfwd, jacrev
 from cellrank import logging as logg
 from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix
+
+from cellrank import logging as logg
+from cellrank.utils._docs import d
 from cellrank.tools._utils import (
     bias_knn,
     _normalize,
@@ -33,7 +36,7 @@ from cellrank.tools._utils import (
     is_symmetric,
     _predict_transition_probabilities,
 )
-from cellrank.utils._utils import _write_graph_data
+from cellrank.utils._utils import _read_graph_data, _write_graph_data
 from cellrank.tools._constants import Direction, _transition
 
 _ERROR_DIRECTION_MSG = "Can only combine kernels that have the same direction."
@@ -124,6 +127,7 @@ class KernelExpression(ABC):
         Returns
         -------
         None
+            Nothing, just updates the transition matrix and optionally normalizes it.
         """
 
         if self._parent is None:
@@ -537,6 +541,7 @@ class NaryKernelExpression(KernelExpression, ABC):
         )
 
 
+@d.dedent
 class Kernel(UnaryKernelExpression, ABC):
     """
     A base class from which all kernels are derived.
@@ -549,11 +554,11 @@ class Kernel(UnaryKernelExpression, ABC):
 
     Parameters
     ----------
-    adata : :class:`anndata.AnnData`
-        Annotated data object.
-    backward
-        Direction of the process.
-    kwargs
+    %(adata)s
+    %(backward)s
+    compute_cond_num
+        Whether to compute the condition number of the transition matrix. For large matrices, this can be very slow.
+    **kwargs
         Keyword arguments which can specify key to be read from :paramref:`adata` object.
     """
 
@@ -593,8 +598,18 @@ class Kernel(UnaryKernelExpression, ABC):
         self._maybe_compute_cond_num()
 
 
+@d.dedent
 class Constant(Kernel):
-    """Kernel representing a multiplication by a constant number."""
+    """
+    Kernel representing a multiplication by a constant number.
+
+    Parameters
+    ----------
+    %(adata)s
+    value
+        Constant value by which to multiply Must be a positive number.
+    %(backward)s
+    """
 
     def __init__(
         self, adata: AnnData, value: Union[int, float], backward: bool = False
@@ -602,7 +617,7 @@ class Constant(Kernel):
         super().__init__(adata, backward=backward)
         if not isinstance(value, (int, float)):
             raise TypeError(
-                f"Value must be on `float` or `int`, found `{type(value).__name__}`."
+                f"Value must be a `float` or `int`, found `{type(value).__name__}`."
             )
         if value <= 0:
             raise ValueError(f"Expected the constant to be positive, found `{value}`.")
@@ -694,22 +709,39 @@ class ConstantMatrix(Kernel):
         return str(round(self._value, _n_dec))
 
 
+@d.dedent
 class PrecomputedKernel(Kernel):
-    """Kernel which contains precomputed transition matrix."""
+    """
+    Kernel which contains precomputed transition matrix.
+
+    Parameters
+    ----------
+    transition_matrix
+        Row-normalized transition matrix or a key in :paramref:`adata` `.obsp`.
+    %(adata)s
+    %(backward)s
+    """
 
     def __init__(
         self,
-        transition_matrix: Union[np.ndarray, spmatrix],
+        transition_matrix: Union[np.ndarray, spmatrix, str],
         adata: Optional[AnnData] = None,
         backward: bool = False,
         compute_cond_num: bool = False,
     ):
         from anndata import AnnData as _AnnData
 
+        if isinstance(transition_matrix, str):
+            if adata is None:
+                raise ValueError(
+                    "When `transition_matrix` specifies a key to `adata.obsp`, `adata` cannot be None."
+                )
+            transition_matrix = _read_graph_data(adata, transition_matrix)
+
         if not isinstance(transition_matrix, (np.ndarray, spmatrix)):
             raise TypeError(
                 f"Expected transition matrix to be of type `numpy.ndarray` or `scipy.sparse.spmatrix`, "
-                f"found `{type(transition_matrix).__name__}`."
+                f"found `{type(transition_matrix).__name__!r}`."
             )
 
         if transition_matrix.shape[0] != transition_matrix.shape[1]:
@@ -757,6 +789,7 @@ class PrecomputedKernel(Kernel):
         return repr(self)
 
 
+@d.dedent
 class VelocityKernel(Kernel):
     """
     Kernel which computes a transition matrix based on velocity correlations.
@@ -772,10 +805,8 @@ class VelocityKernel(Kernel):
 
     Parameters
     ----------
-    adata : :class:`anndata.AnnData`
-        Annotated data object.
-    backward
-        Direction of the process.
+    %(adata)s
+    %(backward)s
     vkey
         Key in :paramref:`adata` `.uns` where the velocities are stored.
     xkey
@@ -1097,6 +1128,7 @@ class VelocityKernel(Kernel):
         return vk
 
 
+@d.dedent
 class ConnectivityKernel(Kernel):
     """
     Kernel which computes transition probabilities based on transcriptomic similarities.
@@ -1113,10 +1145,8 @@ class ConnectivityKernel(Kernel):
 
     Parameters
     ----------
-    adata : :class:`anndata.AnnData`
-        Annotated data object.
-    backward
-        Direction of the process.
+    %(adata)s
+    %(backward)s
     var_key
         Key in :paramref:`adata` `.uns` where the velocity variances are stored.
     compute_cond_num
@@ -1197,6 +1227,7 @@ class ConnectivityKernel(Kernel):
         return ck
 
 
+@d.dedent
 class PalantirKernel(Kernel):
     """
     Kernel which computes transition probabilities in a similar way to *Palantir*, see [Setty19]_.
@@ -1214,10 +1245,8 @@ class PalantirKernel(Kernel):
 
     Parameters
     ----------
-    adata : :class:`anndata.AnnData`
-        Annotated data object.
-    backward
-        Direction of the process.
+    %(adata)s
+    %(backward)s
     time_key
         Key in :paramref:`adata` `.obs` where the pseudotime is stored.
     var_key
@@ -1271,9 +1300,9 @@ class PalantirKernel(Kernel):
         This is a re-implementation of the Palantir algorithm by [Setty19]_.
         Note that this won't exactly reproduce the original Palantir results, for three reasons:
 
-            - 1. Palantir computes the KNN graph in a scaled space of diffusion components.
-            - 2. Palantir uses its own pseudotime to bias the KNN graph which is not implemented here.
-            - 3. Palantir uses a slightly different mechanism to ensure the graph remains connected when removing edges that point into the "pseudotime past".
+            - 1. Palantir computes the KNN graph in a scaled space of diffusion components
+            - 2. Palantir uses its own pseudotime to bias the KNN graph which is not implemented here
+            - 3. Palantir uses a slightly different mechanism to ensure the graph remains connected when removing edges that point into the "pseudotime past"
 
         If you would like to reproduce the original results, please use the original Palantir algorithm.
 

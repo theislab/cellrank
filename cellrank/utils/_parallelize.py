@@ -8,7 +8,6 @@ from multiprocessing import Manager
 import numpy as np
 import joblib as jl
 from scipy.sparse import issparse, spmatrix
-
 from cellrank.utils._utils import _get_n_cores
 
 _msg_shown = False
@@ -29,8 +28,8 @@ def parallelize(
     """
     Parallelize function call over a collection of elements.
 
-    Params
-    ------
+    Parameters
+    ----------
     callback
         Function to parallelize.
     collection
