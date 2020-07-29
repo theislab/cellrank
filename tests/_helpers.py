@@ -10,6 +10,8 @@ from sklearn.svm import SVR
 from scipy.sparse import spdiags, issparse, csr_matrix
 from scipy.sparse.linalg import norm
 
+import scanpy as sc
+import scvelo as scv
 from scanpy import logging as logg
 from anndata import AnnData
 
@@ -359,3 +361,48 @@ def random_transition_matrix(n: int) -> np.ndarray:
     x = np.abs(np.random.normal(size=(n, n)))
     rsum = x.sum(axis=1)
     return x / rsum[:, np.newaxis]
+
+
+def _create_dummy_adata(n_obs: int) -> AnnData:
+    """
+    Create a testing :class:`anndata.AnnData` object.
+
+    Call this function to regenerate the above objects.
+
+    Params
+    ------
+    n_obs
+        Number of cells.
+
+    Returns
+    -------
+    :class:`anndata.AnnData`
+        The created adata object.
+    """
+
+    np.random.seed(42)
+    adata = scv.datasets.toy_data(n_obs=n_obs)
+    scv.pp.filter_and_normalize(adata, min_shared_counts=20, n_top_genes=1000)
+    scv.pp.moments(adata, n_pcs=30, n_neighbors=30)
+    scv.tl.recover_dynamics(adata)
+    scv.tl.velocity(adata, mode="dynamical")
+    scv.tl.velocity_graph(adata)
+    scv.tl.latent_time(adata)
+
+    adata.uns["iroot"] = 0
+    sc.pp.neighbors(adata, n_pcs=15)
+    sc.tl.dpt(adata)
+
+    scv.tl.velocity_graph(adata)
+
+    adata.uns["connectivity_variances"] = np.ones((n_obs, n_obs), dtype=np.float64)
+    adata.uns["velocity_variances"] = np.ones((n_obs, n_obs), dtype=np.float64)
+
+    sc.write(f"tests/_ground_truth_adatas/adata_{n_obs}.h5ad", adata)
+
+    return adata
+
+
+if __name__ == "__main__":
+    for size in [50, 100, 200]:
+        _ = _create_dummy_adata(size)
