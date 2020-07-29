@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
-import numpy as np
-import pytest
-
 import anndata
 from scanpy import Neighbors
 from scvelo.tools import velocity_graph
 
+import numpy as np
+import pytest
 from _helpers import (
     bias_knn,
     create_kernels,
@@ -921,6 +920,9 @@ class TestKernelCopy:
         vk2 = vk1.copy()
 
         np.testing.assert_array_equal(vk1.transition_matrix.A, vk2.transition_matrix.A)
+        np.testing.assert_array_equal(
+            vk1._pearson_correlations, vk2._pearson_correlations
+        )
         assert vk1.params == vk2.params
         assert vk1.backward == vk2.backward
 

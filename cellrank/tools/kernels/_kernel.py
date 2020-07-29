@@ -17,13 +17,12 @@ from typing import (
 )
 from functools import wraps, reduce
 
-import numpy as np
-from jax import jit, jacfwd, jacrev
-from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix
-
 from scvelo.preprocessing.moments import get_moments
 
+import numpy as np
+from jax import jit, jacfwd, jacrev
 from cellrank import logging as logg
+from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix
 from cellrank.tools._utils import (
     bias_knn,
     _normalize,
@@ -117,8 +116,8 @@ class KernelExpression(ABC):
         """
         Set a new value of the transition matrix.
 
-        Params
-        ------
+        Parameters
+        ----------
         value
             The new transition matrix. If the expression has no parent, the matrix is normalized.
 
@@ -137,8 +136,8 @@ class KernelExpression(ABC):
         """
         Compute a transition matrix.
 
-        Params
-        ------
+        Parameters
+        ----------
         args
             Positional arguments.
         kwargs
@@ -155,8 +154,8 @@ class KernelExpression(ABC):
         """
         Write the parameters and transition matrix to the underlying :paramref:`adata` object.
 
-        Params
-        ------
+        Parameters
+        ----------
         key_added
             Postfix to be added to :paramref:`adata` `.uns` when writing the parameters.
 
@@ -415,8 +414,8 @@ class UnaryKernelExpression(KernelExpression, ABC):
         """
         Density normalization by the underlying KNN graph.
 
-        Params
-        ------
+        Parameters
+        ----------
         other:
             Matrix to normalize.
 
@@ -548,8 +547,8 @@ class Kernel(UnaryKernelExpression, ABC):
     on other functions which have computed a similarity based on two input arguments. The role of the kernels defined
     here is to add directionality to these symmetric similarity relations or to transform them.
 
-    Params
-    ------
+    Parameters
+    ----------
     adata : :class:`anndata.AnnData`
         Annotated data object.
     backward
@@ -582,13 +581,12 @@ class Kernel(UnaryKernelExpression, ABC):
 
         # check for zero-rows
         problematic_indices = np.where(np.array(matrix.sum(1)).flatten() == 0)[0]
-        if len(problematic_indices) != 0:
+        if len(problematic_indices):
             logg.warning(
-                f"Detected {len(problematic_indices)} absorbing states in the transition matrix. "
-                f"This matrix won't be reducible. "
+                f"Detected `{len(problematic_indices)}` absorbing states in the transition matrix. "
+                f"This matrix won't be reducible"
             )
-            for ix in problematic_indices:
-                matrix[ix, ix] = 1.0
+            matrix[problematic_indices, problematic_indices] = 1.0
 
         # setting this property automatically row-normalizes
         self.transition_matrix = csr_matrix(matrix)
@@ -772,8 +770,8 @@ class VelocityKernel(Kernel):
     Optionally, we propagate uncertainty in the velocity vectors forward into transition probabilities using either
     an analytical approximation or a Monte Carlo approach.
 
-    Params
-    ------
+    Parameters
+    ----------
     adata : :class:`anndata.AnnData`
         Annotated data object.
     backward
@@ -860,18 +858,12 @@ class VelocityKernel(Kernel):
             velocity_params = self.adata.uns[vkey + "_params"]
         else:
             velocity_params = None
-            logg.debug("Unable to load velocity parameters. ")
+            logg.debug("Unable to load velocity parameters")
 
         # add to self
         self._velocity = V
         self._gene_expression = X
         self._velocity_params = velocity_params
-
-        logg.debug(
-            "Adding `._velocity`, the gene-wise velocities. "
-            "Adding `._gene_expression`, the gene expression values. "
-            "Adding `._velocity_params`, the velocity parameters. "
-        )
 
     def compute_transition_matrix(
         self,
@@ -887,15 +879,15 @@ class VelocityKernel(Kernel):
         For each cell, infer transition probabilities based on the correlation of the cell's
         velocity-extrapolated cell state with cell states of its *K* nearest neighbors.
 
-        Params
-        ------
+        Parameters
+        ----------
         backward_mode
             Options are `['transpose', 'negate']`. Only matters if initialized as :paramref:`backward` =`True`.
         sigma_corr
             Scaling parameter for the softmax.
         mode
             How to compute transition probabilities. Options are "stochastic" (propagate uncertainty analytically),
-            "deterministic" (don't propagate uncertainty) and "sampling" (sample from velocity distribution)
+            "deterministic" (don't propagate uncertainty) and "sampling" (sample from velocity distribution).
         random_state
             Set the seed, only relevant for `mode='sampling'`.
 
@@ -906,12 +898,12 @@ class VelocityKernel(Kernel):
         """
 
         if mode not in ["stochastic", "deterministic", "sampling"]:
-            raise NotImplementedError(f"Mode `{mode}` is not implemented. ")
+            raise NotImplementedError(f"Mode `{mode}` is not implemented.")
 
         if mode != "deterministic" and self._direction == Direction.BACKWARD:
             logg.warning(
                 f"Mode `{mode}` is currently not supported for the backward process. "
-                f"Defaulting to mode `'deterministic'`."
+                f"Defaulting to mode `'deterministic'`"
             )
             mode = "deterministic"
 
@@ -980,7 +972,7 @@ class VelocityKernel(Kernel):
                         v_i = -1 * v_i
 
                     if (self._velocity[cell_ix, :] == 0).all():
-                        logg.warning(f"Cell {cell_ix} has a zero velocity vector.")
+                        logg.warning(f"Cell `{cell_ix}` has a zero velocity vector")
                         probs, corrs = (
                             1 / len(nbhs_ixs) * np.ones(len(nbhs_ixs)),
                             np.zeros(len(nbhs_ixs)),
@@ -1014,7 +1006,7 @@ class VelocityKernel(Kernel):
                 v_i = velocity_expectation[cell_ix, :]
 
                 if (v_i == 0).all():
-                    logg.warning(f"Cell {cell_ix} has a zero velocity vector.")
+                    logg.warning(f"Cell {cell_ix} has a zero velocity vector")
                     probs, corrs = (
                         1 / len(nbhs_ixs) * np.ones(len(nbhs_ixs)),
                         np.zeros(len(nbhs_ixs)),
@@ -1066,7 +1058,7 @@ class VelocityKernel(Kernel):
                     return_pearson_correlation=True,
                 )
 
-            # add the computed transition probabiliteis and correlations to lists
+            # add the computed transition probabilities and correlations to lists
             corrs_list.extend(corrs)
             probs_list.extend(probs)
             rows.extend(np.ones(len(nbhs_ixs)) * cell_ix)
@@ -1100,6 +1092,7 @@ class VelocityKernel(Kernel):
         vk._params = copy(self.params)
         vk._cond_num = self.condition_number
         vk._transition_matrix = copy(self._transition_matrix)
+        vk._pearson_correlations = copy(self._pearson_correlations)
 
         return vk
 
@@ -1118,8 +1111,8 @@ class ConnectivityKernel(Kernel):
     Optionally, we apply a density correction as described in [Coifman05]_, where we use the implementation of
     [Haghverdi16]_.
 
-    Params
-    ------
+    Parameters
+    ----------
     adata : :class:`anndata.AnnData`
         Annotated data object.
     backward
@@ -1130,7 +1123,7 @@ class ConnectivityKernel(Kernel):
         Whether to compute condition number of the transition matrix. Note that this might be costly,
         since it does not use sparse implementation.
     check_connectivity
-        Check whether the underlying KNN graph is connected
+        Check whether the underlying KNN graph is connected.
     """
 
     def __init__(
@@ -1163,8 +1156,8 @@ class ConnectivityKernel(Kernel):
         using :func:`scanpy.pp.neighbors`. Depending on the parameters used there, they can be UMAP connectivities or
         gaussian-kernel-based connectivities with adaptive kernel width.
 
-        Params
-        ------
+        Parameters
+        ----------
         density_normalize
             Whether or not to use the underlying KNN graph for density normalization.
 
@@ -1219,8 +1212,8 @@ class PalantirKernel(Kernel):
     Optionally, we apply density correction as described in [Coifman05]_, where we use the implementation of
     [Haghverdi16]_.
 
-    Params
-    ------
+    Parameters
+    ----------
     adata : :class:`anndata.AnnData`
         Annotated data object.
     backward
@@ -1284,8 +1277,8 @@ class PalantirKernel(Kernel):
 
         If you would like to reproduce the original results, please use the original Palantir algorithm.
 
-        Params
-        ------
+        Parameters
+        ----------
         k
             :paramref:`k` is the number of neighbors to keep for each node, regardless of pseudotime.
             This is done to ensure that the graph remains connected.
@@ -1442,8 +1435,8 @@ def _reduce(func: Callable, initial: Union[int, float]) -> Callable:
     """
     Wrap :func:`reduce` function for a given function and an initial state.
 
-    Params
-    ------
+    Parameters
+    ----------
     func
         Function to be used in the reduction.
     initial
@@ -1466,8 +1459,8 @@ def _get_expr_and_constant(k: KernelMul) -> Tuple[KernelExpression, Union[int, f
     """
     Get the value of a constant in binary multiplication.
 
-    Params
-    ------
+    Parameters
+    ----------
     k
         Binary multiplication involving a constant and a kernel.
 
@@ -1506,8 +1499,8 @@ def _is_bin_mult(
     """
     Check if an expression is a binary multiplication.
 
-    Params
-    ------
+    Parameters
+    ----------
     k
         Kernel expression to check.
     const_type
