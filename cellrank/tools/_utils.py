@@ -19,7 +19,6 @@ from itertools import tee, product, combinations
 
 import numpy as np
 import pandas as pd
-import jax.numpy as jnp
 from pandas import Series
 from numpy.linalg import norm as d_norm
 from scipy.linalg import solve
@@ -1791,8 +1790,8 @@ def _pearson_corr(X: np.ndarray, Y: np.ndarray, use_jax: bool = True) -> np.ndar
     Assumes you have samples in the rows and features in the columns. Y can be a vecor or a matrix if
     `use_jax=False`. In case `use_jax=True`, Y has to be a vector.
 
-    Params
-    ------
+    Parameters
+    ----------
     X
         Matrix of shape `NxM`.
     y:
@@ -1815,20 +1814,20 @@ def _pearson_corr(X: np.ndarray, Y: np.ndarray, use_jax: bool = True) -> np.ndar
         elif Y.ndim == 2:
             Y -= Y.mean(axis=1)[:, None]
         else:
-            raise NotImplementedError("Y has more than 2 dimensions. ")
+            raise NotImplementedError("Y is a scalar or has more than 2 dimensions.")
 
     return _cosine_corr(X, Y, use_jax=use_jax)
 
 
-def _cosine_corr(X: np.ndarray, Y: np.ndarray, use_jax: bool = True) -> np.ndarray:
+def _cosine_corr(X: np.ndarray, Y: np.ndarray, use_jax: bool = False) -> np.ndarray:
     """
     Compute the cosine correlation between rows in X and Y.
 
     Assumes you have samples in the rows and features in the columns. Y can be a vecor or a matrix if
     `use_jax=False`. In case `use_jax=True`, Y has to be a vector.
 
-    Params
-    ------
+    Parameters
+    ----------
     X
         Matrix of shape `NxM`.
     Y:
@@ -1838,10 +1837,12 @@ def _cosine_corr(X: np.ndarray, Y: np.ndarray, use_jax: bool = True) -> np.ndarr
     -------
     :class:`numpy.ndarray`
         The computed cosine correlation(s). If `Y` is a vector, this corresponds to cosine correlation
-        with all rows in `X. If `Y` is a matrix, this corresponds to cosine correlation betweeen
+        with all rows in `X. If `Y` is a matrix, this corresponds to cosine correlation between
         corresponding rows in `X` and `Y`.
     """
     if use_jax:
+        import jax.numpy as jnp
+
         Y_norm = jnp.linalg.norm(Y)
         X_norm = jnp.linalg.norm(X, axis=1)
         c = X.dot(Y) / (X_norm * Y_norm)
@@ -1852,27 +1853,31 @@ def _cosine_corr(X: np.ndarray, Y: np.ndarray, use_jax: bool = True) -> np.ndarr
             c = X.dot(Y) / (X_norm * Y_norm)
         elif Y.ndim == 2:
             Y_norm = np.linalg.norm(Y, axis=1)
-            c = np.array([a.dot(b) for a, b in zip(X, Y)]) / (X_norm * Y_norm)
+            c = np.einsum("ij,ij->i", X, Y) / (X_norm * Y_norm)
+        else:
+            raise NotImplementedError("Y is a scalar or has more than 2 dimensions.")
 
     return c
 
 
-def _softmax(x, sigma, use_jax: bool = True):
+def _softmax(x, sigma, use_jax: bool = False):
     """Compute softmax over input vector."""
     if use_jax:
-        y = jnp.exp(x * sigma) / jnp.exp(x * sigma).sum()
-    else:
-        y = np.exp(x * sigma) / np.exp(x * sigma).sum()
+        import jax.numpy as jnp
 
-    return y
+        mod = jnp
+    else:
+        mod = np
+
+    return mod.exp(x * sigma) / mod.exp(x * sigma).sum()
 
 
 def _predict_transition_probabilities(
     X: np.ndarray,
     W: np.ndarray,
     sigma: float = 1,
-    use_jax: bool = True,
-    return_pearson_correlation: bool = False,
+    use_jax: bool = False,
+    return_pearson_correlation: bool = True,
 ):
     """
     Compute a categorical distribution based on correlation between rows in `W` and `X`.
@@ -1881,8 +1886,8 @@ def _predict_transition_probabilities(
     displacements of the current reference cell to its nearest neighbors. For the backward process, `X` is a matrix
     as well, storing the velocity vectors of all nearest neighbors.
 
-    Params
-    ---------
+    Parameters
+    ----------
     X
         Either vector of shape `n_features` or matrix of shape `n_samples x n_features`.
     W
@@ -1895,28 +1900,28 @@ def _predict_transition_probabilities(
 
     Returns
     --------
-    np.ndarray
+    :class:`numpy.ndarray`
         Vector of probabilities.
-    np.ndarray
+    :class:`numpy.ndarray`
         Vector of pearson correlations.
     """
 
     u = _pearson_corr(W, X, use_jax=use_jax)
     p = _softmax(u, sigma, use_jax=use_jax)
 
-    if return_pearson_correlation:
-        return p, u
-    else:
-        return p
+    return (p, u) if return_pearson_correlation else p
 
 
-def _vals_to_csr(vals, rows, cols, shape):
+def _vals_to_csr(vals, rows, cols, shape) -> csr_matrix:
     graph = coo_matrix((vals, (rows, cols)), shape=shape, dtype=np.float64)
 
     return graph.tocsr()
 
+
 def _check_estimator_type(estimator: Any) -> None:
-    from cellrank.tools.estimators._base_estimator import BaseEstimator
+    from cellrank.tools.estimators._base_estimator import (
+        BaseEstimator,
+    )  # prevent cyclic import
 
     if not isinstance(estimator, type):
         raise TypeError(
