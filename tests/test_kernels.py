@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-import anndata
-from scanpy import Neighbors
-from scvelo.tools import velocity_graph
-
 import numpy as np
 import pytest
+
+import anndata
+from scanpy import Neighbors
+
 from _helpers import (
     bias_knn,
     create_kernels,
@@ -1004,7 +1004,6 @@ class TestTransitionProbabilities:
         backward = False
 
         # compute pearson correlations using scvelo
-        velocity_graph(adata, mode_neighbors="connectivities")
         velo_graph = adata.uns["velocity_graph"] + adata.uns["velocity_graph_neg"]
 
         # compute pearson correlations using cellrank
@@ -1019,7 +1018,6 @@ class TestTransitionProbabilities:
         backward = True
 
         # compute pearson correlations using scvelo
-        velocity_graph(adata, mode_neighbors="connectivities")
         velo_graph = (adata.uns["velocity_graph"] + adata.uns["velocity_graph_neg"]).T
 
         # compute pearson correlations using cellrak
@@ -1034,7 +1032,6 @@ class TestTransitionProbabilities:
         sigma_test = 3
 
         # compute transition probabilities using the scvelo graph
-        velocity_graph(adata, mode_neighbors="connectivities")
         velo_graph = adata.uns["velocity_graph"] + adata.uns["velocity_graph_neg"]
         T_scv = np.expm1(velo_graph * sigma_test)
         T_scv.data += 1
@@ -1053,7 +1050,6 @@ class TestTransitionProbabilities:
         sigma_test = 3
 
         # compute transition probabilities using the scvelo graph
-        velocity_graph(adata, mode_neighbors="connectivities")
         velo_graph = adata.uns["velocity_graph"] + adata.uns["velocity_graph_neg"]
         T_scv = np.expm1(velo_graph.T * sigma_test)
         T_scv.data += 1
