@@ -18,7 +18,7 @@ from typing import (
 from functools import wraps, reduce, partial
 
 import numpy as np
-from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix
+from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix, isspmatrix_csr
 
 from scvelo.preprocessing.moments import get_moments
 
@@ -42,9 +42,9 @@ _ERROR_EMPTY_CACHE_MSG = (
     "Fatal error: tried to used cached values, but the cache was empty."
 )
 _ERROR_CONF_ADAPT = (
-    "Confidence adaptive operator is only supported for kernels, found type `{}`."
+    "Confidence adaptive operator is only supported for kernels, found type `{!r}`."
 )
-_ERROR_VAR_NOT_FOUND = "Variances not found in kernel `{}`."
+_ERROR_VAR_NOT_FOUND = "Variances not found in kernel `{!r}`."
 
 _LOG_USING_CACHE = "Using cached transition matrix"
 
@@ -140,9 +140,9 @@ class KernelExpression(ABC):
 
         Parameters
         ----------
-        args
+        *args
             Positional arguments.
-        kwargs
+        **kwargs
             Keyword arguments.
 
         Returns
@@ -217,22 +217,22 @@ class KernelExpression(ABC):
     def __rxor__(self, other: "KernelExpression") -> "KernelExpression":
         def convert(obj):
             if isinstance(obj, _adaptive_add_type):
-                if obj._variances is None:
+                if obj._mat_scaler is None:
                     raise ValueError(_ERROR_VAR_NOT_FOUND.format(obj))
                 return KernelMul(
                     [
                         ConstantMatrix(
-                            obj.adata, 1, obj._variances, backward=obj.backward
+                            obj.adata, 1, obj._mat_scaler, backward=obj.backward
                         ),
                         obj,
                     ]
                 )
             if isinstance(_is_bin_mult(obj, return_constant=False), _adaptive_add_type):
                 e, c = _get_expr_and_constant(obj)
-                if e._variances is None:
+                if e._mat_scaler is None:
                     raise ValueError(_ERROR_VAR_NOT_FOUND.format(e))
                 return KernelMul(
-                    [ConstantMatrix(e.adata, c, e._variances, backward=e.backward), e]
+                    [ConstantMatrix(e.adata, c, e._mat_scaler, backward=e.backward), e]
                 )
 
             return obj
@@ -377,7 +377,6 @@ class UnaryKernelExpression(KernelExpression, ABC):
         backward: bool = False,
         op_name: Optional[str] = None,
         compute_cond_num: bool = False,
-        check_connectivity: bool = False,
         **kwargs,
     ):
         super().__init__(op_name, backward=backward, compute_cond_num=compute_cond_num)
@@ -385,58 +384,6 @@ class UnaryKernelExpression(KernelExpression, ABC):
             op_name is None
         ), "Unary kernel does not support any kind operation associated with it."
         self._adata = adata
-        self._read_from_adata(check_connectivity=check_connectivity, **kwargs)
-
-    @abstractmethod
-    def _read_from_adata(self, **kwargs):
-        """Import the base-KNN graph and optionally check for symmetry and connectivity."""
-
-        if not _has_neighs(self.adata):
-            raise KeyError("Compute KNN graph first as `scanpy.pp.neighbors()`.")
-
-        self._conn = _get_neighs(self.adata, "connectivities").astype(_dtype)
-
-        check_connectivity = kwargs.pop("check_connectivity", False)
-        if check_connectivity:
-            start = logg.debug("Checking the KNN graph for connectedness")
-            if not is_connected(self._conn):
-                logg.warning("KNN graph is not connected", time=start)
-            else:
-                logg.debug("Knn graph is connected", time=start)
-
-        start = logg.debug("Checking the KNN graph for symmetry")
-        if not is_symmetric(self._conn):
-            logg.warning("KNN graph is not symmetric", time=start)
-        else:
-            logg.debug("KNN graph is symmetric", time=start)
-
-    def density_normalize(
-        self, other: Union[np.ndarray, spmatrix]
-    ) -> Union[np.ndarray, spmatrix]:
-        """
-        Density normalization by the underlying KNN graph.
-
-        Parameters
-        ----------
-        other:
-            Matrix to normalize.
-
-        Returns
-        -------
-        :class:`np.ndarray` or :class:`scipy.sparse.spmatrix`
-            Density normalized transition matrix.
-        """
-
-        logg.debug("Density-normalizing the transition matrix")
-
-        q = np.asarray(self._conn.sum(axis=0))
-
-        if not issparse(other):
-            Q = np.diag(1.0 / q)
-        else:
-            Q = spdiags(1.0 / q, 0, other.shape[0], other.shape[0])
-
-        return Q @ other @ Q
 
     @property
     def adata(self) -> AnnData:
@@ -478,17 +425,17 @@ class NaryKernelExpression(KernelExpression, ABC):
         for kexprs in self._kexprs:
             kexprs._parent = self
 
-    def _maybe_recalculate_constants(self, typp: Type):
-        if typp == Constant:
+    def _maybe_recalculate_constants(self, type_: Type):
+        if type_ == Constant:
             accessor = "transition_matrix"
-        elif typp == ConstantMatrix:
+        elif type_ == ConstantMatrix:
             accessor = "_value"
         else:
             raise RuntimeError(
-                f"Unable to determine accessor for type `{type.__name__}`."
+                f"Unable to determine accessor for type `{type.__name__!r}`."
             )
 
-        constants = [_is_bin_mult(k, typp) for k in self]
+        constants = [_is_bin_mult(k, type_) for k in self]
         if all(c is not None for c in constants):
             assert all(
                 isinstance(getattr(c, accessor), (int, float)) for c in constants
@@ -556,6 +503,8 @@ class Kernel(UnaryKernelExpression, ABC):
     %(backward)s
     compute_cond_num
         Whether to compute the condition number of the transition matrix. For large matrices, this can be very slow.
+    check_connectivity
+        Check whether the underlying KNN graph is connected.
     **kwargs
         Keyword arguments which can specify key to be read from :paramref:`adata` object.
     """
@@ -565,11 +514,63 @@ class Kernel(UnaryKernelExpression, ABC):
         adata: AnnData,
         backward: bool = False,
         compute_cond_num: bool = False,
+        check_connectivity: bool = False,
         **kwargs,
     ):
         super().__init__(
             adata, backward, op_name=None, compute_cond_num=compute_cond_num, **kwargs
         )
+        self._read_from_adata(check_connectivity=check_connectivity, **kwargs)
+
+    def _read_from_adata(self, **kwargs):
+        """Import the base-KNN graph and optionally check for symmetry and connectivity."""
+
+        if not _has_neighs(self.adata):
+            raise KeyError("Compute KNN graph first as `scanpy.pp.neighbors()`.")
+
+        self._conn = _get_neighs(self.adata, "connectivities").astype(_dtype)
+
+        check_connectivity = kwargs.pop("check_connectivity", False)
+        if check_connectivity:
+            start = logg.debug("Checking the KNN graph for connectedness")
+            if not is_connected(self._conn):
+                logg.warning("KNN graph is not connected", time=start)
+            else:
+                logg.debug("KNN graph is connected", time=start)
+
+        start = logg.debug("Checking the KNN graph for symmetry")
+        if not is_symmetric(self._conn):
+            logg.warning("KNN graph is not symmetric", time=start)
+        else:
+            logg.debug("KNN graph is symmetric", time=start)
+
+    def _density_normalize(
+        self, other: Union[np.ndarray, spmatrix]
+    ) -> Union[np.ndarray, spmatrix]:
+        """
+        Density normalization by the underlying KNN graph.
+
+        Parameters
+        ----------
+        other:
+            Matrix to normalize.
+
+        Returns
+        -------
+        :class:`np.ndarray` or :class:`scipy.sparse.spmatrix`
+            Density normalized transition matrix.
+        """
+
+        logg.debug("Density-normalizing the transition matrix")
+
+        q = np.asarray(self._conn.sum(axis=0))
+
+        if not issparse(other):
+            Q = np.diag(1.0 / q)
+        else:
+            Q = spdiags(1.0 / q, 0, other.shape[0], other.shape[0])
+
+        return Q @ other @ Q
 
     def _get_kernels(self) -> Iterable["Kernel"]:
         yield self
@@ -577,10 +578,11 @@ class Kernel(UnaryKernelExpression, ABC):
     def _compute_transition_matrix(
         self, matrix: spmatrix, density_normalize: bool = True,
     ):
+        # density correction based on node degrees in the KNN graph
+        matrix = csr_matrix(matrix) if not isspmatrix_csr(matrix) else matrix
 
-        # density correction based on node degrees in the KNN grpah
         if density_normalize:
-            matrix = self.density_normalize(matrix)
+            matrix = self._density_normalize(matrix)
 
         # check for zero-rows
         problematic_indices = np.where(np.array(matrix.sum(1)).flatten() == 0)[0]
@@ -592,7 +594,7 @@ class Kernel(UnaryKernelExpression, ABC):
             matrix[problematic_indices, problematic_indices] = 1.0
 
         # setting this property automatically row-normalizes
-        self.transition_matrix = csr_matrix(matrix)
+        self.transition_matrix = matrix
         self._maybe_compute_cond_num()
 
 
@@ -672,7 +674,7 @@ class ConstantMatrix(Kernel):
             raise ValueError(f"Expected the constant to be positive, found `{value}`.")
 
         self._value = value
-        self._variances = (
+        self._mat_scaler = (
             csr_matrix(variances) if not issparse(variances) else variances
         )
         self._recalculate(value)
@@ -680,16 +682,13 @@ class ConstantMatrix(Kernel):
     def copy(self) -> "ConstantMatrix":
         """Return a copy of self."""
         return ConstantMatrix(
-            self.adata, self._value, copy(self._variances), self.backward
+            self.adata, self._value, copy(self._mat_scaler), self.backward
         )
 
     def _recalculate(self, value) -> None:
         self._value = value
         self._params = {"value": value}
-        self._transition_matrix = value * self._variances
-
-    def _read_from_adata(self, **kwargs) -> None:
-        super()._read_from_adata(**kwargs)  # we need the shape info from neighbors
+        self._transition_matrix = value * self._mat_scaler
 
     def compute_transition_matrix(self, *args, **kwargs) -> "ConstantMatrix":
         """Return self."""
@@ -923,7 +922,10 @@ class VelocityKernel(Kernel):
         Returns
         -------
         None
-            Nothing, but makes :paramref:`transition_matrix` available.
+            Nothing, just makes available the following fields:
+
+                - :paramref:`transition_matrix`
+                - :paramref:`pearson_correlations`
         """
 
         if mode not in ["stochastic", "deterministic", "sampling"]:
@@ -986,7 +988,7 @@ class VelocityKernel(Kernel):
 
         # sort cells by their number of neighbors - this makes jitting more efficient
         n_neighbors = np.array((self._conn != 0).sum(1)).flatten()
-        cell_ix = np.argsort(n_neighbors)[::-1]
+        cell_ixs = np.argsort(n_neighbors)[::-1]
 
         # loop over all cells
         probs_list, corrs_list, rows, cols, n_obs = (
@@ -996,7 +998,7 @@ class VelocityKernel(Kernel):
             [],
             self._gene_expression.shape[0],
         )
-        for iter, cell_ix in enumerate(cell_ix):
+        for cell_ix in cell_ixs:
 
             # get the neighbors
             nbhs_ixs = self._conn[cell_ix, :].indices
@@ -1036,9 +1038,6 @@ class VelocityKernel(Kernel):
 
             elif mode == "stochastic":
                 # treat `v_i` as random variable and use analytical approximation to propagate the distribution
-
-                if iter % 100 == 0:
-                    print(f"i = {iter}/{n_obs}")
 
                 # get the expected velocity vector
                 v_i = velocity_expectation[cell_ix, :]
@@ -1104,6 +1103,11 @@ class VelocityKernel(Kernel):
 
         return self
 
+    @property
+    def pearson_correlations(self) -> csr_matrix:
+        """TODO."""
+        return self._pearson_correlations
+
     def copy(self) -> "VelocityKernel":
         """Return a copy of self."""
         vk = VelocityKernel(
@@ -1140,8 +1144,6 @@ class ConnectivityKernel(Kernel):
     ----------
     %(adata)s
     %(backward)s
-    var_key
-        Key in :paramref:`adata` `.uns` where the velocity variances are stored.
     compute_cond_num
         Whether to compute condition number of the transition matrix. Note that this might be costly,
         since it does not use sparse implementation.
@@ -1153,24 +1155,18 @@ class ConnectivityKernel(Kernel):
         self,
         adata: AnnData,
         backward: bool = False,
-        var_key: Optional[str] = None,
         compute_cond_num: bool = False,
         check_connectivity: bool = False,
     ):
         super().__init__(
             adata,
             backward=backward,
-            var_key=var_key,
             compute_cond_num=compute_cond_num,
             check_connectivity=check_connectivity,
         )
-        self._var_key = var_key
-
-    def _read_from_adata(self, var_key: Optional[str] = None, **kwargs):
-        super()._read_from_adata(var_key=var_key, **kwargs)
 
     def compute_transition_matrix(
-        self, density_normalize: bool = True, **kwargs
+        self, density_normalize: bool = True
     ) -> "ConnectivityKernel":
         """
         Compute transition matrix based on transcriptomic similarity.
@@ -1210,9 +1206,7 @@ class ConnectivityKernel(Kernel):
 
     def copy(self) -> "ConnectivityKernel":
         """Return a copy of self."""
-        ck = ConnectivityKernel(
-            self.adata, backward=self.backward, var_key=self._var_key
-        )
+        ck = ConnectivityKernel(self.adata, backward=self.backward,)
         ck._params = copy(self.params)
         ck._cond_num = self.condition_number
         ck._transition_matrix = copy(self._transition_matrix)
@@ -1242,8 +1236,6 @@ class PalantirKernel(Kernel):
     %(backward)s
     time_key
         Key in :paramref:`adata` `.obs` where the pseudotime is stored.
-    var_key
-        Key in :paramref:`adata` `.uns` where the velocity variances are stored.
     compute_cond_num
         Whether to compute condition number of the transition matrix. Note that this might be costly,
         since it does not use sparse implementation.
@@ -1254,7 +1246,6 @@ class PalantirKernel(Kernel):
         adata: AnnData,
         backward: bool = False,
         time_key: str = "dpt_pseudotime",
-        var_key: Optional[str] = None,
         compute_cond_num: bool = False,
         check_connectivity: bool = False,
     ):
@@ -1262,15 +1253,13 @@ class PalantirKernel(Kernel):
             adata,
             backward=backward,
             time_key=time_key,
-            var_key=var_key,
             compute_cond_num=compute_cond_num,
             check_connectivity=check_connectivity,
         )
         self._time_key = time_key
-        self._var_key = var_key
 
-    def _read_from_adata(self, var_key: Optional[str] = None, **kwargs):
-        super()._read_from_adata(var_key=var_key, **kwargs)
+    def _read_from_adata(self, **kwargs):
+        super()._read_from_adata(**kwargs)
 
         time_key = kwargs.pop("time_key", "dpt_pseudotime")
         if time_key not in self.adata.obs.keys():
@@ -1285,7 +1274,7 @@ class PalantirKernel(Kernel):
             )
 
     def compute_transition_matrix(
-        self, k: int = 3, density_normalize: bool = True, **kwargs
+        self, k: int = 3, density_normalize: bool = True
     ) -> "PalantirKernel":
         """
         Compute transition matrix based on KNN graph and pseudotemporal ordering.
@@ -1366,10 +1355,7 @@ class PalantirKernel(Kernel):
     def copy(self) -> "PalantirKernel":
         """Return a copy of self."""
         pk = PalantirKernel(
-            self.adata,
-            backward=self.backward,
-            time_key=self._time_key,
-            var_key=self._var_key,
+            self.adata, backward=self.backward, time_key=self._time_key,
         )
         pk._pseudotime = copy(self.pseudotime)
         pk._params = copy(self._params)
