@@ -311,18 +311,18 @@ class TestInitializeKernel:
 
 
 class TestKernel:
-    def test_precomputed_not_array(self, adata):
+    def test_precomputed_not_array(self):
         with pytest.raises(TypeError):
             _ = PrecomputedKernel([[1, 0], [0, 1]])
 
-    def test_precomputed_not_square(self, adata):
+    def test_precomputed_not_square(self):
         with pytest.raises(ValueError):
             _ = PrecomputedKernel(np.random.normal(size=(10, 9)))
 
-    def test_precomputed_not_a_transition_matrix(self, adata):
+    def test_precomputed_not_a_transition_matrix(self):
+        mat = random_transition_matrix(100)
+        mat[0, 0] = 0xDEADBEEF
         with pytest.raises(ValueError):
-            mat = random_transition_matrix(adata.n_obs)
-            mat[0, 0] = 0xDEADBEEF
             _ = PrecomputedKernel(mat)
 
     def test_precomputed_no_adata(self):
@@ -428,15 +428,15 @@ class TestKernel:
         backward = False
 
         vk = VelocityKernel(adata, backward=backward).compute_transition_matrix(
-            mode="sampling"
+            mode="sampling", seed=42
         )
         T_1 = vk.transition_matrix
 
         T_2 = cr.tl.transition_matrix(
-            adata, mode="sampling", backward=backward
+            adata, mode="sampling", backward=backward, seed=42,
         ).transition_matrix
 
-        np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
+        np.testing.assert_array_equal(T_1.A, T_2.A)
 
     @jax_not_installed_skip
     def test_transition_forward_differ_mode(self, adata):
@@ -447,14 +447,13 @@ class TestKernel:
         )
         T_1 = vk.transition_matrix
 
-        transition_matrix(
-            adata, backward=backward
-        )  # this is the very old deterministic approach
+        # this is the very old deterministic approach
+        transition_matrix(adata, backward=backward)
         T_2 = adata.uns[_transition(Direction.FORWARD)]["T"]
 
-        assert not (np.allclose(T_1.A, T_2.A, rtol=_rtol))
+        assert not np.allclose(T_1.A, T_2.A, rtol=_rtol)
 
-    def test_transition_backward(self, adata):
+    def test_transition_backward_det(self, adata):
         backward = True
 
         vk = VelocityKernel(adata, backward=backward).compute_transition_matrix(
@@ -472,7 +471,7 @@ class TestKernel:
         backward_mode = "negate"
         vk = VelocityKernel(adata, backward=backward)
 
-        vk.compute_transition_matrix(backward_mode=backward_mode)
+        vk.compute_transition_matrix(backward_mode=backward_mode, mode="deterministic")
         T_1 = vk.transition_matrix
         transition_matrix(
             adata, backward=backward, backward_mode=backward_mode,
@@ -804,7 +803,11 @@ class TestKernelAddition:
         adata.uns["connectivity_variances"] = cv = np.random.random(
             size=(adata.n_obs, adata.n_obs)
         )
-        vk, ck = create_kernels(adata)
+        vk, ck = create_kernels(
+            adata,
+            velocity_variances="velocity_variances",
+            connectivity_variances="connectivity_variances",
+        )
 
         k = vk ^ ck
         expected = _normalize(
@@ -822,7 +825,11 @@ class TestKernelAddition:
         adata.uns["connectivity_variances"] = cv = np.random.random(
             size=(adata.n_obs, adata.n_obs)
         )
-        vk, ck = create_kernels(adata)  # diagonal + upper diag
+        vk, ck = create_kernels(
+            adata,
+            velocity_variances="velocity_variances",
+            connectivity_variances="connectivity_variances",
+        )
 
         k = a * vk ^ b * ck
         expected = _normalize(
@@ -840,7 +847,11 @@ class TestKernelAddition:
         adata.uns["connectivity_variances"] = np.random.random(
             size=(adata.n_obs, adata.n_obs)
         )
-        vk, ck = create_kernels(adata)
+        vk, ck = create_kernels(
+            adata,
+            velocity_variances="velocity_variances",
+            connectivity_variances="connectivity_variances",
+        )
 
         k = a * vk ^ b * ck
         expected = _normalize(
@@ -858,8 +869,16 @@ class TestKernelAddition:
         adata.uns["connectivity_variances"] = cv = np.random.random(
             size=(adata.n_obs, adata.n_obs)
         )
-        vk, ck = create_kernels(adata)
-        vk1, ck1 = create_kernels(adata)
+        vk, ck = create_kernels(
+            adata,
+            velocity_variances="velocity_variances",
+            connectivity_variances="connectivity_variances",
+        )
+        vk1, ck1 = create_kernels(
+            adata,
+            velocity_variances="velocity_variances",
+            connectivity_variances="connectivity_variances",
+        )
 
         k = a * vk ^ b * ck ^ c * vk1 ^ d * ck1
         expected = _normalize(
@@ -923,7 +942,7 @@ class TestKernelCopy:
 
         np.testing.assert_array_equal(vk1.transition_matrix.A, vk2.transition_matrix.A)
         np.testing.assert_array_equal(
-            vk1._pearson_correlations, vk2._pearson_correlations
+            vk1.pearson_correlations.A, vk2.pearson_correlations.A
         )
         assert vk1.params == vk2.params
         assert vk1.backward == vk2.backward

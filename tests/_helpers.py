@@ -280,11 +280,20 @@ def _is_connected(c) -> bool:
     return nx.is_connected(G)
 
 
-def create_kernels(adata: AnnData,) -> Tuple[VelocityKernel, ConnectivityKernel]:
+def create_kernels(
+    adata: AnnData,
+    velocity_variances: Optional[str] = None,
+    connectivity_variances: Optional[str] = None,
+) -> Tuple[VelocityKernel, ConnectivityKernel]:
     vk = VelocityKernel(adata)
-    vk._mat_scaler = np.random.normal(size=(adata.n_obs, adata.n_obs))
+    vk._mat_scaler = adata.uns.get(
+        velocity_variances, np.random.normal(size=(adata.n_obs, adata.n_obs))
+    )
+
     ck = ConnectivityKernel(adata)
-    ck._mat_scaler = np.random.normal(size=(adata.n_obs, adata.n_obs))
+    ck._mat_scaler = adata.uns.get(
+        connectivity_variances, np.random.normal(size=(adata.n_obs, adata.n_obs))
+    )
 
     vk._transition_matrix = csr_matrix(np.eye(adata.n_obs))
     ck._transition_matrix = np.eye(adata.n_obs, k=1) / 2 + np.eye(adata.n_obs) / 2
@@ -392,14 +401,12 @@ def _create_dummy_adata(n_obs: int) -> AnnData:
     scv.pp.moments(adata, n_pcs=30, n_neighbors=30)
     scv.tl.recover_dynamics(adata)
     scv.tl.velocity(adata, mode="dynamical")
-    scv.tl.velocity_graph(adata)
+    scv.tl.velocity_graph(adata, mode_neighbors="connectivities")
     scv.tl.latent_time(adata)
 
     adata.uns["iroot"] = 0
     sc.pp.neighbors(adata, n_pcs=15)
     sc.tl.dpt(adata)
-
-    scv.tl.velocity_graph(adata)
 
     adata.uns["connectivity_variances"] = np.ones((n_obs, n_obs), dtype=np.float64)
     adata.uns["velocity_variances"] = np.ones((n_obs, n_obs), dtype=np.float64)

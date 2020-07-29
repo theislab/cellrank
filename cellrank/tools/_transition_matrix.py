@@ -22,7 +22,7 @@ def transition_matrix(
     xkey: str = "Ms",
     gene_subset: Optional[Iterable] = None,
     mode: str = "deterministic",
-    random_state: Optional[int] = None,
+    seed: Optional[int] = None,
     sigma_corr: int = 4.0,
     weight_connectivities: Optional[float] = None,
     density_normalize: bool = True,
@@ -48,8 +48,8 @@ def transition_matrix(
     mode
         How to compute transition probabilities. Options are "stochastic" (propagate uncertainty analytically),
         "deterministic" (don't propagate uncertainty) and "sampling" (sample from velocity distribution).
-    random_state
-        Set the seed, only relevant for `mode='sampling'`.
+    seed
+        Set the seed for random state, only relevant for `mode='sampling'`.
     sigma_corr
         Scaling parameter for the softmax.
     weight_connectivities
@@ -68,9 +68,7 @@ def transition_matrix(
     vk = VelocityKernel(
         adata, backward=backward, vkey=vkey, xkey=xkey, gene_subset=gene_subset
     )
-    vk.compute_transition_matrix(
-        sigma_corr=sigma_corr, mode=mode, random_state=random_state
-    )
+    vk.compute_transition_matrix(sigma_corr=sigma_corr, mode=mode, seed=seed)
 
     if weight_connectivities is not None:
         if 0 < weight_connectivities < 1:
