@@ -898,7 +898,7 @@ class VelocityKernel(Kernel):
         backward_mode: str = "transpose",
         sigma_corr: float = 4.0,
         mode: str = "deterministic",
-        random_state: int = 0,
+        seed: Optional[int] = None,
         **kwargs,
     ) -> "VelocityKernel":
         """
@@ -916,8 +916,8 @@ class VelocityKernel(Kernel):
         mode
             How to compute transition probabilities. Options are "stochastic" (propagate uncertainty analytically),
             "deterministic" (don't propagate uncertainty) and "sampling" (sample from velocity distribution).
-        random_state
-            Set the seed, only relevant for `mode='sampling'`.
+        seed
+            Set the seed for random state, only relevant for `mode='sampling'`.
 
         Returns
         -------
@@ -944,7 +944,7 @@ class VelocityKernel(Kernel):
             bwd_mode=backward_mode if self._direction == Direction.BACKWARD else None,
             sigma_corr=sigma_corr,
             mode=mode,
-            random_state=random_state,
+            random_state=seed,
         )
 
         # check whether we already computed such a transition matrix. If yes, load from cache
@@ -958,7 +958,7 @@ class VelocityKernel(Kernel):
 
         # compute first and second order moments to model the distribution of the velocity vector
         if mode in ["stochastic", "sampling"]:
-            np.random.seed(random_state)
+            np.random.seed(seed)
             velocity_expectation = get_moments(
                 self.adata, self._velocity, second_order=False
             )
@@ -1120,7 +1120,7 @@ class VelocityKernel(Kernel):
         vk._params = copy(self.params)
         vk._cond_num = self.condition_number
         vk._transition_matrix = copy(self._transition_matrix)
-        vk._pearson_correlations = copy(self._pearson_correlations)
+        vk._pearson_correlations = copy(self.pearson_correlations)
 
         return vk
 
