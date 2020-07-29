@@ -3,39 +3,40 @@
 
 from typing import Union, TypeVar, Optional
 
-from cellrank import logging as logg
-from cellrank.utils._docs import inject_docs
-from cellrank.tools._utils import _info_if_obs_keys_categorical_present
-from cellrank.tools._constants import StateKey
+from cellrank.utils._docs import d, _root, _final, inject_docs
+from cellrank.tools._utils import (
+    _check_estimator_type,
+    _info_if_obs_keys_categorical_present,
+)
 from cellrank.tools.estimators import GPCCA, CFLARE
 from cellrank.tools._transition_matrix import transition_matrix
+from cellrank.tools.estimators._constants import P
 from cellrank.tools.estimators._base_estimator import BaseEstimator
 
 AnnData = TypeVar("AnnData")
 
 
 _find_docs = """\
-Compute {cells} states based on RNA velocity, see [Manno18]_. The tool models dynamic cellular
+Compute {direction} states based on RNA velocity, see [Manno18]_. The tool models dynamic cellular
 processes as a Markov chain, where the transition matrix is computed based on the velocity vectors of each
-individual cell. Based on this Markov chain, we provide two estimators to compute {cells} states, both of which
+individual cell. Based on this Markov chain, we provide two estimators to compute {direction} states, both of which
 are based on spectral methods.
 
 For the estimator :class:`cellrank.tl.GPCCA`, cells are fuzzily clustered into metastable states,
 using Generalized Perron Cluster Cluster Analysis [GPCCA18]_.
 In short, this coarse-grains the Markov chain into a set of macrostates representing the slow
 time-scale dynamics, i.e. transitions between these macrostates are rare. The most stable ones of these will represent
-{cells}, while the others will represent transient, metastable states.
+{direction}, while the others will represent transient, metastable states.
 
 For the estimator :class:`cellrank.tl.CFLARE`, cells are filtered into transient/recurrent cells using the
-left eigenvectors of the transition matrix and clustered into distinct groups of {cells} states using the right
+left eigenvectors of the transition matrix and clustered into distinct groups of {direction} states using the right
 eigenvectors of the transition matrix of the Markov chain.
 
-Params
-------
-adata : :class:`adata.AnnData`
-    Annotated data object.
+Parameters
+----------
+%(adata)s
 estimator
-    Estimator to use to compute the {cells} states.
+    Estimator to use to compute the {direction} states.
 n_states
     If you know how many {direction} states you are expecting, you can provide this number.
     Otherwise, an `eigengap` heuristic is used.
@@ -50,17 +51,14 @@ use_velocity_uncertainty
     Whether to use velocity uncertainty. Uncertainties are computed independently per gene using the neighborhood graph.
     They are then propagated into cosine similarities and finally used as a scaling factor in the softmax which
     transforms cosine similarities to probabilities, i.e. transitions we are uncertain about are down-weighted.
-method
-    Method to use when computing the Schur decomposition. Only needed when :paramref:`estimator`
-    is :class:`cellrank.tl.GPCCA`. Valid options are: `'krylov'` or `'brandts'`.
 show_plots
     Whether to show plots of the spectrum and eigenvectors in the embedding.
 copy
     Whether to update the existing :paramref:`adata` object or to return a copy.
 return_estimator
     Whether to return the estimator. Only available when :paramref:`copy=False`.
-kwargs
-    Keyword arguments for :meth:`cellrank.tl.BaseEstimator.compute_metastable_states`.
+**kwargs
+    Keyword arguments for :meth:`cellrank.tl.BaseEstimator.fit`.
 
 Returns
 -------
@@ -75,27 +73,24 @@ Returns
 def _root_final(
     adata: AnnData,
     estimator: type(BaseEstimator) = GPCCA,
-    final: bool = True,
+    backward: bool = False,
     n_states: Optional[int] = None,
     cluster_key: Optional[str] = None,
     weight_connectivities: float = None,
     use_velocity_uncertainty: bool = False,
-    method: str = "krylov",
     show_plots: bool = False,
     copy: bool = False,
     return_estimator: bool = False,
     **kwargs,
 ) -> Optional[Union[AnnData, BaseEstimator]]:
-    """Compute root or final states of  Markov Chain."""
 
-    key = StateKey.FORWARD if final else StateKey.BACKWARD
-    logg.info(f"Computing `{key}`")
+    _check_estimator_type(estimator)
     adata = adata.copy() if copy else adata
 
     # compute kernel object
     kernel = transition_matrix(
         adata,
-        backward=not final,
+        backward=backward,
         weight_connectivities=weight_connectivities,
         scale_by_variances=use_velocity_uncertainty,
     )
@@ -110,71 +105,47 @@ def _root_final(
             "Consider specifying it as `cluster_key`.",
         )
 
-    # run the computation
-    if isinstance(mc, CFLARE):
-        kwargs["use"] = n_states
+    mc.fit(
+        n_lineages=n_states,
+        cluster_key=cluster_key,
+        compute_absorption_probabilities=False,
+        **kwargs,
+    )
 
-        mc.compute_eig()
-        mc.compute_metastable_states(cluster_key=cluster_key, **kwargs)
-
-        if show_plots:
-            mc.plot_spectrum(real_only=True)
-            mc.plot_eig_embedding(abs_value=True, perc=[0, 98], use=n_states)
-            mc.plot_eig_embedding(left=False, use=n_states)
-
-    elif isinstance(mc, GPCCA):
-        if n_states is None or n_states == 1:
-            mc.compute_eig()
-            if n_states is None:
-                n_states = mc.eigendecomposition["eigengap"] + 1
-        if n_states > 1:
-            mc.compute_schur(n_states + 1, method=method)
-
-        try:
-            mc.compute_metastable_states(
-                n_states=n_states, cluster_key=cluster_key, **kwargs
-            )
-        except ValueError:
-            logg.warning(
-                f"Computing {n_states} metastable states cuts through a block of complex conjugates. "
-                f"Increasing `n_states` to {n_states + 1}"
-            )
-            mc.compute_metastable_states(
-                n_states=n_states + 1, cluster_key=cluster_key, **kwargs
-            )
-        mc.set_main_states()  # write to adata
-
-        if show_plots:
-            mc.plot_spectrum(real_only=True)
+    if show_plots:
+        mc.plot_spectrum(real_only=True)
+        if isinstance(mc, CFLARE):
+            mc.plot_eigendecomposition(abs_value=True, perc=[0, 98], use=n_states)
+            mc.plot_final_states(discrete=True, same_plot=False)
+        elif isinstance(mc, GPCCA):
+            n_states = len(mc._get(P.META).cat.categories)
             if n_states > 1:
-                mc.plot_schur_embedding()
-            mc.plot_metastable_states(same_plot=False)
+                mc.plot_schur()
+            mc.plot_final_states(discrete=True, same_plot=False)
             if n_states > 1:
                 mc.plot_coarse_T()
-    else:
-        raise NotImplementedError(
-            f"Pipeline not implemented for `{type(bytes).__name__}`"
-        )
+        else:
+            raise NotImplementedError(
+                f"Pipeline not implemented for `{type(mc).__name__!r}.`"
+            )
 
     return adata if copy else mc if return_estimator else None
 
 
-@inject_docs(
-    root=_find_docs.format(cells="root", direction="root", key_added="root_states")
-)
+@d.dedent
+@inject_docs(root=_find_docs.format(direction=_root, key_added=f"{_root}_states",))
 def root_states(
     adata: AnnData,
     estimator: type(BaseEstimator) = GPCCA,
     n_states: Optional[int] = None,
     weight_connectivities: float = None,
-    method: str = "krylov",
     show_plots: bool = False,
     copy: bool = False,
     return_estimator: bool = False,
     **kwargs,
 ) -> Optional[AnnData]:
     """
-    Find root states of a dynamic process of single cells.
+    Find %(root)s states of a dynamic process of single cells.
 
     {root}
     """
@@ -182,10 +153,9 @@ def root_states(
     return _root_final(
         adata,
         estimator=estimator,
-        final=False,
+        backward=True,
         n_states=n_states,
         weight_connectivities=weight_connectivities,
-        method=method,
         show_plots=show_plots,
         copy=copy,
         return_estimator=return_estimator,
@@ -193,22 +163,20 @@ def root_states(
     )
 
 
-@inject_docs(
-    final=_find_docs.format(cells="final", direction="final", key_added="final_states")
-)
+@d.dedent
+@inject_docs(final=_find_docs.format(direction=_final, key_added=f"{_final}_states",))
 def final_states(
     adata: AnnData,
     estimator: type(BaseEstimator) = GPCCA,
     n_states: Optional[int] = None,
     weight_connectivities: float = None,
-    method: str = "krylov",
     show_plots: bool = False,
     copy: bool = False,
     return_estimator: bool = False,
     **kwargs,
 ) -> Optional[AnnData]:
     """
-    Find final states of a dynamic process of single cells.
+    Find %(final)s states of a dynamic process of single cells.
 
     {final}
     """
@@ -216,10 +184,9 @@ def final_states(
     return _root_final(
         adata,
         estimator=estimator,
-        final=True,
+        backward=False,
         n_states=n_states,
         weight_connectivities=weight_connectivities,
-        method=method,
         show_plots=show_plots,
         copy=copy,
         return_estimator=return_estimator,

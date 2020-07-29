@@ -18,8 +18,10 @@ from typing import (
 from functools import wraps, reduce
 
 import numpy as np
-from cellrank import logging as logg
 from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix
+
+from cellrank import logging as logg
+from cellrank.utils._docs import d
 from cellrank.tools._utils import (
     bias_knn,
     _normalize,
@@ -28,7 +30,7 @@ from cellrank.tools._utils import (
     is_connected,
     is_symmetric,
 )
-from cellrank.utils._utils import _write_graph_data
+from cellrank.utils._utils import _read_graph_data, _write_graph_data
 from cellrank.tools._constants import Direction, _transition
 
 _ERROR_DIRECTION_MSG = "Can only combine kernels that have the same direction."
@@ -111,14 +113,15 @@ class KernelExpression(ABC):
         """
         Set a new value of the transition matrix.
 
-        Params
-        ------
+        Parameters
+        ----------
         value
             The new transition matrix. If the expression has no parent, the matrix is normalized.
 
         Returns
         -------
         None
+            Nothing, just updates the transition matrix and optionally normalizes it.
         """
 
         if self._parent is None:
@@ -131,8 +134,8 @@ class KernelExpression(ABC):
         """
         Compute a transition matrix.
 
-        Params
-        ------
+        Parameters
+        ----------
         args
             Positional arguments.
         kwargs
@@ -149,8 +152,8 @@ class KernelExpression(ABC):
         """
         Write the parameters and transition matrix to the underlying :paramref:`adata` object.
 
-        Params
-        ------
+        Parameters
+        ----------
         key_added
             Postfix to be added to :paramref:`adata` `.uns` when writing the parameters.
 
@@ -424,8 +427,8 @@ class UnaryKernelExpression(KernelExpression, ABC):
         """
         Density normalization by the underlying KNN graph.
 
-        Params
-        ------
+        Parameters
+        ----------
         other:
             Matrix to normalize.
 
@@ -547,6 +550,7 @@ class NaryKernelExpression(KernelExpression, ABC):
         )
 
 
+@d.dedent
 class Kernel(UnaryKernelExpression, ABC):
     """
     A base class from which all kernels are derived.
@@ -557,12 +561,12 @@ class Kernel(UnaryKernelExpression, ABC):
     on other functions which have computed a similarity based on two input arguments. The role of the kernels defined
     here is to add directionality to these symmetric similarity relations or to transform them.
 
-    Params
-    ------
-    adata : :class:`anndata.AnnData`
-        Annotated data object.
-    backward
-        Direction of the process.
+    Parameters
+    ----------
+    %(adata)s
+    %(backward)s
+    compute_cond_num
+        Whether to compute the condition number of the transition matrix. For large matrices, this can be very slow.
     kwargs
         Keyword arguments which can specify key to be read from :paramref:`adata` object.
     """
@@ -660,8 +664,18 @@ class Kernel(UnaryKernelExpression, ABC):
         self._maybe_compute_cond_num()
 
 
+@d.dedent
 class Constant(Kernel):
-    """Kernel representing a multiplication by a constant number."""
+    """
+    Kernel representing a multiplication by a constant number.
+
+    Parameters
+    ----------
+    %(adata)s
+    value
+        Constant value by which to multiply Must be a positive number.
+    %(backward)s
+    """
 
     def __init__(
         self, adata: AnnData, value: Union[int, float], backward: bool = False
@@ -669,7 +683,7 @@ class Constant(Kernel):
         super().__init__(adata, backward=backward)
         if not isinstance(value, (int, float)):
             raise TypeError(
-                f"Value must be on `float` or `int`, found `{type(value).__name__}`."
+                f"Value must be a `float` or `int`, found `{type(value).__name__}`."
             )
         if value <= 0:
             raise ValueError(f"Expected the constant to be positive, found `{value}`.")
@@ -761,22 +775,39 @@ class ConstantMatrix(Kernel):
         return str(round(self._value, _n_dec))
 
 
+@d.dedent
 class PrecomputedKernel(Kernel):
-    """Kernel which contains precomputed transition matrix."""
+    """
+    Kernel which contains precomputed transition matrix.
+
+    Parameters
+    ----------
+    transition_matrix
+        Row-normalized transition matrix or a key in :paramref:`adata` `.obsp`.
+    %(adata)s
+    %(backward)s
+    """
 
     def __init__(
         self,
-        transition_matrix: Union[np.ndarray, spmatrix],
+        transition_matrix: Union[np.ndarray, spmatrix, str],
         adata: Optional[AnnData] = None,
         backward: bool = False,
         compute_cond_num: bool = False,
     ):
         from anndata import AnnData as _AnnData
 
+        if isinstance(transition_matrix, str):
+            if adata is None:
+                raise ValueError(
+                    "When `transition_matrix` specifies a key to `adata.obsp`, `adata` cannot be None."
+                )
+            transition_matrix = _read_graph_data(adata, transition_matrix)
+
         if not isinstance(transition_matrix, (np.ndarray, spmatrix)):
             raise TypeError(
                 f"Expected transition matrix to be of type `numpy.ndarray` or `scipy.sparse.spmatrix`, "
-                f"found `{type(transition_matrix).__name__}`."
+                f"found `{type(transition_matrix).__name__!r}`."
             )
 
         if transition_matrix.shape[0] != transition_matrix.shape[1]:
@@ -824,6 +855,7 @@ class PrecomputedKernel(Kernel):
         return repr(self)
 
 
+@d.dedent
 class VelocityKernel(Kernel):
     """
     Kernel which computes a transition matrix based on velocity correlations.
@@ -837,12 +869,10 @@ class VelocityKernel(Kernel):
     Optionally, we apply a density correction as described in [Coifman05]_, where we use the implementation of
     [Haghverdi16]_.
 
-    Params
-    ------
-    adata : :class:`anndata.AnnData`
-        Annotated data object.
-    backward
-        Direction of the process.
+    Parameters
+    ----------
+    %(adata)s
+    %(backward)s
     vkey
         Key in :paramref:`adata` `.uns` where the velocities are stored.
     var_key
@@ -955,8 +985,8 @@ class VelocityKernel(Kernel):
         For each cell, infer transition probabilities based on the correlation of the cell's
         velocity-extrapolated cell state with cell states of its *K* nearest neighbors.
 
-        Params
-        ------
+        Parameters
+        ----------
         density_normalize
             Whether or not to use the underlying KNN graph for density normalization.
         backward_mode
@@ -1071,6 +1101,7 @@ class VelocityKernel(Kernel):
         return vk
 
 
+@d.dedent
 class ConnectivityKernel(Kernel):
     """
     Kernel which computes transition probabilities based on transcriptomic similarities.
@@ -1085,12 +1116,10 @@ class ConnectivityKernel(Kernel):
     Optionally, we apply a density correction as described in [Coifman05]_, where we use the implementation of
     [Haghverdi16]_.
 
-    Params
-    ------
-    adata : :class:`anndata.AnnData`
-        Annotated data object.
-    backward
-        Direction of the process.
+    Parameters
+    ----------
+    %(adata)s
+    %(backward)s
     var_key
         Key in :paramref:`adata` `.uns` where the velocity variances are stored.
     compute_cond_num
@@ -1130,8 +1159,8 @@ class ConnectivityKernel(Kernel):
         using :func:`scanpy.pp.neighbors`. Depending on the parameters used there, they can be UMAP connectivities or
         gaussian-kernel-based connectivities with adaptive kernel width.
 
-        Params
-        ------
+        Parameters
+        ----------
         density_normalize
             Whether or not to use the underlying KNN graph for density normalization.
 
@@ -1171,6 +1200,7 @@ class ConnectivityKernel(Kernel):
         return ck
 
 
+@d.dedent
 class PalantirKernel(Kernel):
     """
     Kernel which computes transition probabilities in a similar way to *Palantir*, see [Setty19]_.
@@ -1186,12 +1216,10 @@ class PalantirKernel(Kernel):
     Optionally, we apply density correction as described in [Coifman05]_, where we use the implementation of
     [Haghverdi16]_.
 
-    Params
-    ------
-    adata : :class:`anndata.AnnData`
-        Annotated data object.
-    backward
-        Direction of the process.
+    Parameters
+    ----------
+    %(adata)s
+    %(backward)s
     time_key
         Key in :paramref:`adata` `.obs` where the pseudotime is stored.
     var_key
@@ -1245,14 +1273,14 @@ class PalantirKernel(Kernel):
         This is a re-implementation of the Palantir algorithm by [Setty19]_.
         Note that this won't exactly reproduce the original Palantir results, for three reasons:
 
-            - 1. Palantir computes the KNN graph in a scaled space of diffusion components.
-            - 2. Palantir uses its own pseudotime to bias the KNN graph which is not implemented here.
-            - 3. Palantir uses a slightly different mechanism to ensure the graph remains connected when removing edges that point into the "pseudotime past".
+            - 1. Palantir computes the KNN graph in a scaled space of diffusion components
+            - 2. Palantir uses its own pseudotime to bias the KNN graph which is not implemented here
+            - 3. Palantir uses a slightly different mechanism to ensure the graph remains connected when removing edges that point into the "pseudotime past"
 
         If you would like to reproduce the original results, please use the original Palantir algorithm.
 
-        Params
-        ------
+        Parameters
+        ----------
         k
             :paramref:`k` is the number of neighbors to keep for each node, regardless of pseudotime.
             This is done to ensure that the graph remains connected.
@@ -1409,8 +1437,8 @@ def _reduce(func: Callable, initial: Union[int, float]) -> Callable:
     """
     Wrap :func:`reduce` function for a given function and an initial state.
 
-    Params
-    ------
+    Parameters
+    ----------
     func
         Function to be used in the reduction.
     initial
@@ -1433,8 +1461,8 @@ def _get_expr_and_constant(k: KernelMul) -> Tuple[KernelExpression, Union[int, f
     """
     Get the value of a constant in binary multiplication.
 
-    Params
-    ------
+    Parameters
+    ----------
     k
         Binary multiplication involving a constant and a kernel.
 
@@ -1473,8 +1501,8 @@ def _is_bin_mult(
     """
     Check if an expression is a binary multiplication.
 
-    Params
-    ------
+    Parameters
+    ----------
     k
         Kernel expression to check.
     const_type

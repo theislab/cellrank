@@ -3,6 +3,10 @@ import os
 from typing import Tuple, Union, Callable
 from pathlib import Path
 
+import numpy as np
+import pytest
+from packaging import version
+
 import matplotlib.cm as cm
 from matplotlib.testing import setup
 from matplotlib.testing.compare import compare_images
@@ -10,11 +14,8 @@ from matplotlib.testing.compare import compare_images
 import scvelo as scv
 from anndata import AnnData
 
-import numpy as np
-import pytest
 import cellrank as cr
 from _helpers import create_model, resize_images_to_same_sizes
-from packaging import version
 from cellrank.tools import GPCCA, CFLARE
 
 setup()
@@ -986,7 +987,7 @@ class TestGraph:
 
 class TestCFLARE:
     @compare(kind="cflare")
-    def test_mc_eig(self, mc: CFLARE, fpath: str):
+    def test_mc_spectrum(self, mc: CFLARE, fpath: str):
         mc.plot_spectrum(dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
@@ -1002,48 +1003,48 @@ class TestCFLARE:
         mc.plot_spectrum(title="foobar", real_only=False, dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
-    def test_scvelo_eig_embedding_clusters(self, mc: CFLARE, fpath: str):
-        mc.plot_eig_embedding(cluster_key="clusters", dpi=DPI, save=fpath)
+    def test_scvelo_eigendecomposition_clusters(self, mc: CFLARE, fpath: str):
+        mc.plot_eigendecomposition(cluster_key="clusters", dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
-    def test_scvelo_eig_embedding_left(self, mc: CFLARE, fpath: str):
-        mc.plot_eig_embedding(dpi=DPI, save=fpath)
+    def test_scvelo_eigendecomposition_left(self, mc: CFLARE, fpath: str):
+        mc.plot_eigendecomposition(dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
-    def test_scvelo_eig_embedding_right(self, mc: CFLARE, fpath: str):
-        mc.plot_eig_embedding(left=False, dpi=DPI, save=fpath)
+    def test_scvelo_eigendecomposition_right(self, mc: CFLARE, fpath: str):
+        mc.plot_eigendecomposition(left=False, dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
-    def test_scvelo_eig_embedding_use_2(self, mc: CFLARE, fpath: str):
-        mc.plot_eig_embedding(use=2, dpi=DPI, save=fpath)
+    def test_scvelo_eigendecomposition_use_2(self, mc: CFLARE, fpath: str):
+        mc.plot_eigendecomposition(use=2, dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
-    def test_scvelo_meta_states(self, mc: CFLARE, fpath: str):
-        mc.plot_metastable_states(dpi=DPI, save=fpath)
+    def test_scvelo_final_states(self, mc: CFLARE, fpath: str):
+        mc.plot_final_states(dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
-    def test_scvelo_meta_states(self, mc: CFLARE, fpath: str):
-        mc.plot_metastable_states(cluster_key="clusters", dpi=DPI, save=fpath)
+    def test_scvelo_final_states_clusters(self, mc: CFLARE, fpath: str):
+        mc.plot_final_states(cluster_key="clusters", dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
     def test_scvelo_lin_probs(self, mc: CFLARE, fpath: str):
-        mc.plot_lin_probs(dpi=DPI, save=fpath)
+        mc.plot_absorption_probabilities(dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
     def test_scvelo_lin_probs_clusters(self, mc: CFLARE, fpath: str):
-        mc.plot_lin_probs(cluster_key="clusters", dpi=DPI, save=fpath)
+        mc.plot_absorption_probabilities(cluster_key="clusters", dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
     def test_scvelo_lin_probs_cmap(self, mc: CFLARE, fpath: str):
-        mc.plot_lin_probs(cmap=cm.inferno, dpi=DPI, save=fpath)
+        mc.plot_absorption_probabilities(cmap=cm.inferno, dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
     def test_scvelo_lin_probs_lineages(self, mc: CFLARE, fpath: str):
-        mc.plot_lin_probs(lineages=["0"], dpi=DPI, save=fpath)
+        mc.plot_absorption_probabilities(lineages=["0"], dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
     def test_scvelo_lin_probs_time(self, mc: CFLARE, fpath: str):
-        mc.plot_lin_probs(mode="time", dpi=DPI, save=fpath)
+        mc.plot_absorption_probabilities(mode="time", dpi=DPI, save=fpath)
 
 
 class TestGPCCA:
@@ -1073,19 +1074,19 @@ class TestGPCCA:
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_schur_emb(self, mc: GPCCA, fpath: str):
-        mc.plot_schur_embedding(dpi=DPI, save=fpath)
+        mc.plot_schur(dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_schur_emb_use_2(self, mc: GPCCA, fpath: str):
-        mc.plot_schur_embedding(use=1, dpi=DPI, save=fpath)
+        mc.plot_schur(use=1, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_schur_emb_abs(self, mc: GPCCA, fpath: str):
-        mc.plot_schur_embedding(abs_value=True, dpi=DPI, save=fpath)
+        mc.plot_schur(abs_value=True, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_schur_cluster_key(self, mc: GPCCA, fpath: str):
-        mc.plot_schur_embedding(cluster_key="clusters", dpi=DPI, save=fpath)
+        mc.plot_schur(cluster_key="clusters", dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_gpcca_coarse_T(self, mc: GPCCA, fpath: str):
@@ -1154,36 +1155,66 @@ class TestGPCCA:
         mc.plot_metastable_states(mode="time", dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
-    def test_scvelo_gpcca_main_states(self, mc: GPCCA, fpath: str):
-        mc.plot_main_states(dpi=DPI, save=fpath)
+    def test_scvelo_gpcca_final_states(self, mc: GPCCA, fpath: str):
+        mc.plot_final_states(dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
-    def test_scvelo_gpcca_main_states_lineages(self, mc: GPCCA, fpath: str):
-        mc.plot_main_states(lineages=["0"], dpi=DPI, save=fpath)
+    def test_scvelo_gpcca_final_states_lineages(self, mc: GPCCA, fpath: str):
+        mc.plot_final_states(lineages=["0"], dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
-    def test_scvelo_gpcca_main_states_discrete(self, mc: GPCCA, fpath: str):
-        mc.plot_main_states(discrete=True, dpi=DPI, save=fpath)
+    def test_scvelo_gpcca_final_states_discrete(self, mc: GPCCA, fpath: str):
+        mc.plot_final_states(discrete=True, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
-    def test_scvelo_gpcca_main_states_cluster_key(self, mc: GPCCA, fpath: str):
-        mc.plot_main_states(cluster_key="clusters", dpi=DPI, save=fpath)
+    def test_scvelo_gpcca_final_states_cluster_key(self, mc: GPCCA, fpath: str):
+        mc.plot_final_states(cluster_key="clusters", dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
-    def test_scvelo_gpcca_main_states_no_same_plot(self, mc: GPCCA, fpath: str):
-        mc.plot_main_states(same_plot=False, dpi=DPI, save=fpath)
+    def test_scvelo_gpcca_final_states_no_same_plot(self, mc: GPCCA, fpath: str):
+        mc.plot_final_states(same_plot=False, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
-    def test_scvelo_gpcca_main_states_cmap(self, mc: GPCCA, fpath: str):
-        mc.plot_main_states(cmap=cm.inferno, same_plot=False, dpi=DPI, save=fpath)
+    def test_scvelo_gpcca_final_states_cmap(self, mc: GPCCA, fpath: str):
+        mc.plot_final_states(cmap=cm.inferno, same_plot=False, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
-    def test_scvelo_gpcca_main_states_title(self, mc: GPCCA, fpath: str):
-        mc.plot_main_states(title="foobar", dpi=DPI, save=fpath)
+    def test_scvelo_gpcca_final_states_title(self, mc: GPCCA, fpath: str):
+        mc.plot_final_states(title="foobar", dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
-    def test_scvelo_gpcca_main_states_time(self, mc: GPCCA, fpath: str):
-        mc.plot_main_states(mode="time", dpi=DPI, save=fpath)
+    def test_scvelo_gpcca_final_states_time(self, mc: GPCCA, fpath: str):
+        mc.plot_final_states(mode="time", dpi=DPI, save=fpath)
+
+    @compare(kind="gpcca")
+    def test_scvelo_gpcca_abs_probs_disc_same(self, mc: GPCCA, fpath: str):
+        mc.plot_absorption_probabilities(
+            cluster_key="clusters", discrete=True, same_plot=True, dpi=DPI, save=fpath
+        )
+
+    @compare(kind="gpcca")
+    def test_scvelo_gpcca_abs_probs_disc_not_same(self, mc: GPCCA, fpath: str):
+        mc.plot_absorption_probabilities(
+            cluster_key="clusters", discrete=True, same_plot=False, dpi=DPI, save=fpath
+        )
+
+    @compare(kind="gpcca")
+    def test_scvelo_gpcca_abs_probs_cont_same_no_clusters(self, mc: GPCCA, fpath: str):
+        mc.plot_absorption_probabilities(
+            discrete=False, same_plot=True, dpi=DPI, save=fpath
+        )
+
+    @compare(kind="gpcca")
+    def test_scvelo_gpcca_abs_probs_cont_same_clusters(self, mc: GPCCA, fpath: str):
+        mc.plot_absorption_probabilities(
+            cluster_key="clusters", discrete=False, same_plot=True, dpi=DPI, save=fpath
+        )
+
+    @compare(kind="gpcca")
+    def test_scvelo_gpcca_abs_probs_cont_not_same(self, mc: GPCCA, fpath: str):
+        mc.plot_absorption_probabilities(
+            cluster_key="clusters", discrete=False, same_plot=False, dpi=DPI, save=fpath
+        )
 
 
 class TestLineages:

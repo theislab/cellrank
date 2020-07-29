@@ -4,6 +4,7 @@
 from typing import TypeVar, Optional
 
 from cellrank import logging as logg
+from cellrank.utils._docs import d
 from cellrank.tools.kernels._kernel import (
     VelocityKernel,
     KernelExpression,
@@ -13,10 +14,11 @@ from cellrank.tools.kernels._kernel import (
 AnnData = TypeVar("AnnData")
 
 
+@d.dedent
 def transition_matrix(
     adata: AnnData,
-    vkey: str = "velocity",
     backward: bool = False,
+    vkey: str = "velocity",
     weight_connectivities: Optional[float] = None,
     sigma_corr: Optional[float] = None,
     scale_by_variances: bool = False,
@@ -35,14 +37,12 @@ def transition_matrix(
     :class:`cellrank.tl.kernels.VelocityKernel` for the velocity-based transition matrix and
     :class:`cellrank.tl.kernels.ConnectivityKernel` for the transcriptomic-similarity-based transition matrix.
 
-    Params
-    ------
-    adata: :class:`anndata.AnnData`
-        Annotated data object.
+    Parameters
+    ----------
+    %(adata)s
+    %(backward)s
     vkey
         Key from :paramref:`adata` `.layers` to access the velocities.
-    backward
-        Direction of the process.
     weight_connectivities
         Weight given to transcriptomic similarities as opposed to velocities. Must be in `[0, 1]`.
     use_negative_cosines
