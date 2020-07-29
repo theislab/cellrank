@@ -19,6 +19,7 @@ import pandas as pd
 from cellrank import logging as logg
 from scipy.sparse import issparse, spmatrix
 from pandas.api.types import is_categorical_dtype
+from cellrank.utils._docs import d
 from cellrank.tools._utils import save_fig
 from cellrank.utils._utils import _read_graph_data
 from cellrank.tools._constants import _colors
@@ -31,6 +32,7 @@ KEYS = str
 _msg_shown = False
 
 
+@d.dedent
 def graph(
     data: Union[AnnData, np.ndarray, spmatrix],
     graph_key: Optional[str] = None,
@@ -74,8 +76,8 @@ def graph(
        :width: 400px
        :align: center
 
-    Params
-    ------
+    Parameters
+    ----------
     data :
         The graph data, stored either in `.uns` [ :paramref:`graph_key` ], or as a sparse or a dense matrix.
     graph_key
@@ -140,19 +142,13 @@ def graph(
         Continuous colormap used when :paramref:`keys` contain continuous variables.
     legend_loc
         Location of the legend.
-    figsize
-        Size of the figure.
-    dpi
-        Dots per inch.
-    save
-        Filename where to save the plots. If `None`, just shows the plot.
+    %(plotting)s
     layout_kwargs
         Additional kwargs for :paramref:`layout`.
 
     Returns
     -------
-    None
-        Nothing, just plots the graph. Optionally saves the figure based on :paramref:`save`.
+    %(just_plots)s
     """
 
     from anndata import AnnData as _AnnData

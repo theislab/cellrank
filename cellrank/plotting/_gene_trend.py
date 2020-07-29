@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 
 import numpy as np
 from cellrank import logging as logg
+from cellrank.utils._docs import d
 from cellrank.tools._utils import save_fig
 from cellrank.utils._utils import _get_n_cores, _make_unique, check_collection
 from cellrank.plotting._utils import (
@@ -21,19 +22,20 @@ from cellrank.plotting._utils import (
     _trends_helper,
     _is_any_gam_mgcv,
 )
-from cellrank.tools._constants import LinKey
+from cellrank.tools._constants import AbsProbKey
 from cellrank.utils._parallelize import parallelize
 
 AnnData = TypeVar("AnnData")
 
 
+@d.dedent
 def gene_trends(
     adata: AnnData,
     model: _model_type,
     genes: Union[str, Sequence[str]],
+    backward: bool = False,
     lineages: Optional[Union[str, Sequence[str]]] = None,
     data_key: str = "X",
-    final: bool = True,
     start_lineage: Optional[Union[str, Sequence[str]]] = None,
     end_lineage: Optional[Union[str, Sequence[str]]] = None,
     conf_int: bool = True,
@@ -51,17 +53,17 @@ def gene_trends(
     show_cbar: bool = True,
     margins: float = 0.015,
     sharey: bool = False,
-    figsize: Optional[Tuple[float, float]] = None,
-    dpi: Optional[int] = None,
     ncols: int = 2,
-    n_jobs: Optional[int] = 1,
-    backend: str = "multiprocessing",
     ext: str = "png",
     suptitle: Optional[str] = None,
-    save: Optional[Union[str, Path]] = None,
-    dirname: Optional[str] = None,
-    plot_kwargs: Mapping = MappingProxyType({}),
+    n_jobs: Optional[int] = 1,
+    backend: str = "multiprocessing",
     show_progres_bar: bool = True,
+    dirname: Optional[str] = None,
+    figsize: Optional[Tuple[float, float]] = None,
+    dpi: Optional[int] = None,
+    save: Optional[Union[str, Path]] = None,
+    plot_kwargs: Mapping = MappingProxyType({}),
     **kwargs,
 ) -> None:
     """
@@ -75,23 +77,17 @@ def gene_trends(
        :width: 400px
        :align: center
 
-    Params
-    ------
-    adata : :class:`anndata.AnnData`
-        Annotated data object.
+    Parameters
+    ----------
+    %(adata)s
+    %(model)s
     genes
         Genes in :paramref:`adata` `.var_names` to plot.
-    model
-        Model to fit.
-
-        - If a :class:`dict`, gene and lineage specific models can be specified. Use `'*'` to indicate
-        all genes or lineages, for example `{'Map2': {'*': ...}, 'Dcx': {'Alpha': ..., '*': ...}}`.
-    lineage_names
+    %(backward)s
+    lineages
         Lineages names for which to show the gene expression.
     data_key
         Key in :paramref:`adata` `.layers` or `'X'` for :paramref:`adata` `.X` where the data is stored.
-    final
-        Whether to consider cells going to final states or vice versa.
     start_lineage
         Lineage from which to select cells with lowest pseudotime as starting points.
         If specified, the trends start at the earliest pseudotime within that lineage,
@@ -110,8 +106,7 @@ def gene_trends(
         Percentile for colors. Valid values are in range `[0, 100]`.
         This can improve visualization. Can be specified separately for each lineage separately.
     lineage_cmap
-        Colormap to use when coloring in the lineages.
-        Only used when :paramref:`same_plot` `=True`.
+        Colormap to use when coloring in the lineages. Only used when :paramref:`same_plot` `=True`.
     abs_prob_cmap
         Colormap to use when visualizing the absorption probabilities for each lineage.
         Only used when :paramref:`same_plot` `=False`.
@@ -134,41 +129,30 @@ def gene_trends(
     margins
         Margins around the plot.
     sharey
-        Whether to share y-axis.
-        Only used when :paramref:`same_plot` `=False`.
-    figsize
-        Size of the figure.
-    dpi
-        Dots per inch.
+        Whether to share y-axis. Only used when :paramref:`same_plot` `=False`.
     ncols
         Number of columns of the plot when plotting multiple genes.
         Only used when :paramref:`same_plot` `=True`.
+    %(parallel)s
     suptitle
-        Suptitle of the figure.
-        Only used when :paramref:`same_plot` `=True`.
-    n_jobs
-        Number of parallel jobs. If `-1`, use all available cores. If `None` or `1`, the execution is sequential.
-    backend
-        Which backend to use for multiprocessing. See :class:`joblib.Parallel` for valid options.
+        Suptitle of the figure. Only used when :paramref:`same_plot` `=True`.
     ext
         Extension to use when saving files, such as `'pdf'`.
         Only used when :paramref:`same_plot` `=False`.
-    save
-        Filename where to save the plots. If `None`, just show the plots.
     dirname
         Directory where to save the plots, one per gene in :paramref:`genes`. If `None`, just show the plots.
         Only used when :paramref:`same_plot` `=False`.
 
         The figures will be saved as :paramref:`dirname` /`{gene}`. :paramref:`ext`.
-    plot_kwargs:
+    %(plotting)s
+    plot_kwargs
         Keyword arguments for :meth:`cellrank.ul.models.Model.plot`.
-    kwargs
+    **kwargs
         Keyword arguments for :meth:`cellrank.ul.models.Model.prepare`.
 
     Returns
     -------
-    None
-        Nothing, just plots and optionally saves the plots.
+    %(just_plots)s
     """
 
     if isinstance(genes, str):
@@ -210,7 +194,7 @@ def gene_trends(
     elif save is not None:
         logg.warning("No directory specified for saving. Ignoring `save` argument")
 
-    ln_key = str(LinKey.FORWARD if final else LinKey.BACKWARD)
+    ln_key = str(AbsProbKey.BACKWARD if backward else AbsProbKey.FORWARD)
     if ln_key not in adata.obsm:
         raise KeyError(f"Lineages key `{ln_key!r}` not found in `adata.obsm`.")
 
@@ -246,7 +230,7 @@ def gene_trends(
 
     kwargs["models"] = _create_models(model, genes, lineages)
     kwargs["data_key"] = data_key
-    kwargs["final"] = final
+    kwargs["backward"] = backward
     kwargs["conf_int"] = conf_int
 
     plot_kwargs = dict(plot_kwargs)

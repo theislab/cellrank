@@ -16,18 +16,18 @@ from typing import (
 from pathlib import Path
 from collections import defaultdict
 
-import numpy as np
-from scipy.sparse import csr_matrix
-from pandas.core.dtypes.common import is_categorical_dtype
-
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 
-from cellrank.tools._utils import save_fig
+import numpy as np
+from scipy.sparse import diags
+from cellrank.utils._docs import d
+from cellrank.tools._utils import save_fig, _unique_order_preserving
 from cellrank.utils.models import Model, GamMGCVModel
-from cellrank.tools.kernels import VelocityKernel
+from cellrank.tools.kernels import PrecomputedKernel
 from cellrank.tools._constants import _colors
+from pandas.core.dtypes.common import is_categorical_dtype
 from cellrank.tools.estimators._cflare import CFLARE
 
 AnnData = TypeVar("AnnData")
@@ -40,10 +40,11 @@ _ERROR_INCOMPLETE_SPEC = (
 _model_type = Union[Model, Mapping[str, Mapping[str, Model]]]
 
 
+@d.dedent
 def lineages(
     adata: AnnData,
     lineages: Optional[Union[str, Iterable[str]]] = None,
-    final: bool = True,
+    backward: bool = False,
     cluster_key: Optional[str] = None,
     mode: str = "embedding",
     time_key: str = "latent_time",
@@ -53,7 +54,7 @@ def lineages(
     """
     Plot lineages that were uncovered using :func:`cellrank.tl.lineages`.
 
-    For each lineage, we show all cells in an embedding (default is UMAP but can be any) and color them by their
+    For each lineage, we show all cells in an embedding (default is UMAP, but can be any) and color them by their
     probability of belonging to this lineage. For cells that are already committed, this probability will be one for
     their respective lineage and zero otherwise. For naive cells, these probabilities will be more balanced, reflecting
     the fact that naive cells have the potential to develop towards multiple endpoints.
@@ -62,15 +63,12 @@ def lineages(
        :width: 400px
        :align: center
 
-    Params
-    ------
-
-    adata : :class:`adata.AnnData`
-        Annotated data object.
+    Parameters
+    ----------
+    %s(adata)s
     lineages
-        Only show these lineages. If `None`, plot all lineages.
-    final
-        Whether to consider cells going to final states or vice versa.
+        Plot only these lineages. If `None`, plot all lineages.
+    %(backward)s
     cluster_key
         If given, plot cluster annotations left of the lineage probabilities.
     mode
@@ -82,26 +80,23 @@ def lineages(
         Key from `adata.obs` to use as a pseudotime ordering of the cells.
     cmap
         Colormap to use.
-    kwargs
+    **kwargs
         Keyword arguments for :func:`scvelo.pl.scatter`.
 
     Returns
     -------
-    None
-        Nothing, Just plots the lineage probabilities.
+    %s(just_plots)s
     """
 
-    adata_dummy = adata.copy()
-
     # create a dummy kernel object
-    vk = VelocityKernel(adata_dummy, backward=not final)
-    vk._transition_matrix = csr_matrix((adata_dummy.n_obs, adata_dummy.n_obs))
+    dummy_transition_matrix = diags(np.ones(adata.n_obs))
+    k = PrecomputedKernel(dummy_transition_matrix, adata, backward=backward)
 
     # use this to initialize an MC object
-    mc = CFLARE(vk)
+    mc = CFLARE(k, read_from_adata=True, write_to_adata=False)
 
     # plot using the MC object
-    mc.plot_lin_probs(
+    mc.plot_absorption_probabilities(
         lineages=lineages,
         cluster_key=cluster_key,
         mode=mode,
@@ -122,8 +117,8 @@ def curved_edges(
     """
     Create curved edges from a graph. Modified from: https://github.com/beyondbeneath/bezier-curved-edges-networkx.
 
-    Params
-    ------
+    Parameters
+    ----------
     G: :class:`networkx.Graph`
         Graph for which to create curved edges.
     pos
@@ -244,6 +239,7 @@ def curved_edges(
     return curves
 
 
+@d.dedent
 def composition(
     adata: AnnData,
     key: str,
@@ -258,23 +254,16 @@ def composition(
        :width: 400px
        :align: center
 
-    Params
-    ------
-    adata
-        Annotated data object.
+    Parameters
+    ----------
+    %(adata)s
     key
         Key in :paramref:`adata` `.obs` containing categorical observation.
-    figsize
-        Size of the figure.
-    dpi
-        Dots per inch.
-    save
-        Filename where to save the plots. If `None`, just shows the plot.
+    %s(plotting)s
 
     Returns
     -------
-    None
-        Nothing, just plots the similarity matrix. Optionally saves the figure based on :paramref:`save`.
+    %s(just_plots)s
     """
 
     if key not in adata.obs:
@@ -303,8 +292,8 @@ def _is_any_gam_mgcv(models: Dict[str, Dict[str, Model]]) -> bool:
     """
     Return whether any models to be fit are from R's mgcv package.
 
-    Params
-    ------
+    Parameters
+    ----------
     models
         Models used for fitting.
 
@@ -324,8 +313,8 @@ def _create_models(
     """
     Create models for each gene and lineage.
 
-    Params
-    ------
+    Parameters
+    ----------
     obs
         Sequence of observations, such as genes.
     lineages
@@ -357,7 +346,7 @@ def _create_models(
     if isinstance(model, Model):
         return {o: {lin: copy(model) for lin in lineages} for o in obs}
 
-    lineages, obs = set(lineages), set(obs)
+    lineages, obs = _unique_order_preserving(lineages), _unique_order_preserving(obs)
     models = defaultdict(dict)
 
     if isinstance(model, Model):
@@ -392,8 +381,8 @@ def _fit(
     """
     Fit model for given genes and lineages.
 
-    Params
-    ------
+    Parameters
+    ----------
     genes
         Genes for which to fit the models.
     lineage_names
@@ -435,6 +424,7 @@ def _fit(
     return res
 
 
+@d.dedent
 def _trends_helper(
     adata: AnnData,
     models: Dict[str, Dict[str, Any]],
@@ -452,13 +442,10 @@ def _trends_helper(
     """
     Plot an expression gene for some lineages.
 
-    Params
-    ------
-    adata: :class:`anndata.AnnData`
-        Annotated data object.
-    models
-        Gene and lineage specific models can be specified. Use `'*'` to indicate
-        all genes or lineages, for example `{'Map2': {'*': ...}, 'Dcx': {'Alpha': ..., '*': ...}}`.
+    Parameters
+    ----------
+    %(adata)s
+    %(model)s
     gene
         Name of the gene in `adata.var_names`.
     fig
@@ -473,9 +460,7 @@ def _trends_helper(
 
     Returns
     -------
-    None
-        Nothing, just plots the trends.
-        Optionally saves the figure based on :paramref:`save`.
+    %(just_plots)s
     """
 
     n_lineages = len(lineage_names)
@@ -549,8 +534,8 @@ def _position_legend(ax: mpl.axes.Axes, legend_loc: str, **kwargs) -> mpl.legend
     """
     Position legend in- or outside the figure.
 
-    Params
-    ------
+    Parameters
+    ----------
     ax
         Ax where to position the legend.
     legend_loc
