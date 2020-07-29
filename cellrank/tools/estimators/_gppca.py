@@ -5,13 +5,12 @@ from types import MappingProxyType
 from typing import Any, Dict, List, Tuple, Union, Mapping, Iterable, Optional, Sequence
 from pathlib import Path
 
-import numpy as np
-import pandas as pd
-
 import matplotlib as mpl
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 
+import numpy as np
+import pandas as pd
 from cellrank import logging as logg
 from cellrank.tools import Lineage
 from cellrank.utils._docs import d, inject_docs
@@ -260,7 +259,9 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
                 A.FIN, self._create_states(self._get(P.META_PROBS), n_cells=n_cells)
             )
             self._set(A.FIN_COLORS, self._get(A.META_COLORS))
-            self._set(A.FIN_PROBS, self._get(P.META_PROBS))
+            self._set(
+                A.FIN_PROBS, self._get(P.META_PROBS) / self._get(P.META_PROBS).max()
+            )
             self._write_final_states()
 
             return
@@ -635,7 +636,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             stylize_dist(
                 stat_ax, np.array(coarse_stat_d).reshape(1, -1), xticks_labels=labels,
             )
-            stat_ax.set_xlabel("stationary distribution")  # , ha="right", x=1)
+            stat_ax.set_xlabel("stationary distribution")
 
         if show_initial_dist:
             init_ax = fig.add_subplot(gs[0, 1])
