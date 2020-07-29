@@ -87,6 +87,6 @@ def lineages(
     # compute the absorption probabilities
     mc.compute_absorption_probabilities(**kwargs)
 
-    logg.info(f"Adding lineages to `adata.obsm[{lin_key!r}]`\n    Finish", time=start)
+    logg.info(f"Adding lineages to `adata.obsm[{lin_key.s!r}]`\n    Finish", time=start)
 
     return adata if copy else mc if return_estimator else None

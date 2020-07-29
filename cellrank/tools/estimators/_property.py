@@ -478,7 +478,7 @@ class Plottable(KernelHolder, Property):
         time_key: str = "latent_time",
         show_dp: bool = True,
         title: Optional[str] = None,
-        same_plot: bool = False,
+        same_plot: bool = True,
         cmap: Optional[Union[str, mpl.colors.ListedColormap]] = cm.viridis,
         **kwargs,
     ) -> None:
@@ -568,7 +568,7 @@ class Plottable(KernelHolder, Property):
             if same_plot:
                 title = [
                     f"{prop.replace('_', ' ')} "
-                    f"({DirectionPlot.BACKARD if self.kernel.backward else Direction.FORWARD})"
+                    f"({DirectionPlot.BACKWARD if self.kernel.backward else Direction.FORWARD})"
                 ]
             else:
                 title = [f"{prefix} {lin}" for lin in lineages] + (
