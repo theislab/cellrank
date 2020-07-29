@@ -7,17 +7,16 @@ from copy import deepcopy
 from typing import Any, Dict, Union, TypeVar, Optional, Sequence
 from pathlib import Path
 
+from matplotlib.colors import is_color_like
+
 import numpy as np
 import pandas as pd
 from pandas import Series
+from cellrank import logging as logg
 from scipy.stats import ranksums
 from scipy.sparse import spmatrix
-from pandas.api.types import infer_dtype, is_categorical_dtype
-
-from matplotlib.colors import is_color_like
-
-from cellrank import logging as logg
 from cellrank.tools import Lineage
+from pandas.api.types import infer_dtype, is_categorical_dtype
 from cellrank.utils._docs import d, inject_docs
 from cellrank.tools._utils import (
     _pairwise,
@@ -70,6 +69,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         Key from :paramref:`adata` `.obs`. Can be used to detect cell-cycle driven start- or endpoints.
     s_key
         Key from :paramref:`adata` `.obs`. Can be used to detect cell-cycle driven start- or endpoints.
+    write_to_adata
+        Whether to write the transition matrix to :paramref:`adata` `.obsp`.
     key_added
         Key in :paramref:`adata` where to store the final transition matrix.
     """
@@ -82,11 +83,14 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         obsp_key: Optional[str] = None,
         g2m_key: Optional[str] = "G2M_score",
         s_key: Optional[str] = "S_score",
+        write_to_adata: bool = True,
         key_added: Optional[str] = None,
     ):
         from anndata import AnnData
 
-        super().__init__(obj, obsp_key=obsp_key, key_added=key_added)
+        super().__init__(
+            obj, obsp_key=obsp_key, key_added=key_added, write_to_adata=write_to_adata
+        )
 
         if isinstance(obj, (KernelExpression, AnnData)) and not inplace:
             self.kernel._adata = self.adata.copy()
@@ -309,6 +313,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         rec_indices, trans_indices, lookup_dict = _get_cat_and_null_indices(
             metastable_states_
         )
+        if not len(trans_indices):
+            raise RuntimeError("Cannot proceed - Markov chain is irreducible.")
 
         # create Q (restriction transient-transient), S (restriction transient-recurrent)
         q = t[trans_indices, :][:, trans_indices]
@@ -361,7 +367,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         # for recurrent states, set their self-absorption probability to one
         abs_classes = np.zeros((len(self), n_macrostates))
         rec_classes_full = {
-            cl: np.where(metastable_states_ == cl)
+            cl: np.where(metastable_states_ == cl)[0]
             for cl in metastable_states_.cat.categories
         }
         for col, cl_indices in enumerate(rec_classes_full.values()):
