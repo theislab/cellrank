@@ -93,7 +93,7 @@ def lineages(
     k = PrecomputedKernel(dummy_transition_matrix, adata, backward=backward)
 
     # use this to initialize an MC object
-    mc = CFLARE(k, read_from_adata=True)
+    mc = CFLARE(k, read_from_adata=True, write_to_adata=False)
 
     # plot using the MC object
     mc.plot_absorption_probabilities(
