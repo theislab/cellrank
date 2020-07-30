@@ -1017,12 +1017,12 @@ class VelocityKernel(Kernel):
 
                     # for the transpose backward mode, just flip the velocity vector
                     if self._direction == Direction.BACKWARD:
-                        v_i = -1 * v_i
+                        v_i *= -1
 
-                    if (self._velocity[cell_ix, :] == 0).all():
+                    if (v_i == 0).all():
                         logg.warning(f"Cell `{cell_ix}` has a zero velocity vector")
                         probs, corrs = (
-                            1 / len(nbhs_ixs) * np.ones(len(nbhs_ixs)),
+                            np.ones(len(nbhs_ixs)) / len(nbhs_ixs),
                             np.zeros(len(nbhs_ixs)),
                         )
                     else:
@@ -1045,7 +1045,7 @@ class VelocityKernel(Kernel):
                 if (v_i == 0).all():
                     logg.warning(f"Cell `{cell_ix}` has a zero velocity vector")
                     probs, corrs = (
-                        1 / len(nbhs_ixs) * np.ones(len(nbhs_ixs)),
+                        np.ones(len(nbhs_ixs)) / len(nbhs_ixs),
                         np.zeros(len(nbhs_ixs)),
                     )
                 else:
