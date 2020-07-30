@@ -55,7 +55,7 @@ class TestGeneImportance:
 
 class TestLineages:
     def test_no_root_cells(self, adata: AnnData):
-        with pytest.raises(KeyError):
+        with pytest.raises(RuntimeError):
             cr.tl.lineages(adata)
 
     def test_normal_run(self, adata_cflare):
@@ -68,6 +68,35 @@ class TestLineages:
 
         assert isinstance(adata_cr2, AnnData)
         assert adata_cflare is not adata_cr2
+
+
+class TestLineageDrivers:
+    def test_no_abs_probs(self, adata: AnnData):
+        with pytest.raises(RuntimeError):
+            cr.tl.lineage_drivers(adata)
+
+    def test_normal_run(self, adata_cflare):
+        cr.tl.lineages(adata_cflare)
+        cr.tl.lineage_drivers(adata_cflare)
+
+        for name in adata_cflare.obsm[AbsProbKey.FORWARD.s].names:
+            assert f"to {name} corr" in adata_cflare.var
+
+    def test_normal_run_raw(self, adata_cflare):
+        adata_cflare.raw = adata_cflare.copy()
+        cr.tl.lineages(adata_cflare)
+        cr.tl.lineage_drivers(adata_cflare, use_raw=True)
+
+        for name in adata_cflare.obsm[AbsProbKey.FORWARD.s].names:
+            assert f"to {name} corr" in adata_cflare.raw.var
+
+    def test_not_inplace(self, adata_cflare):
+        cr.tl.lineages(adata_cflare)
+        res = cr.tl.lineage_drivers(adata_cflare, inplace=False)
+
+        assert isinstance(res, pd.DataFrame)
+        assert res.shape[0] == adata_cflare.n_vars
+        assert set(res.columns) == set(adata_cflare.obsm[AbsProbKey.FORWARD.s].names)
 
 
 class TextExcatMCTest:
