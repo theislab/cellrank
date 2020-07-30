@@ -1793,3 +1793,12 @@ def _check_estimator_type(estimator: Any) -> None:
         raise TypeError(
             f"Expected estimator to be a subclass of `BaseEstimator`, found `{type(estimator).__name__!r}`."
         )
+
+
+def _densify_squeeze(x: Union[spmatrix, np.ndarray], dtype=np.float32) -> np.ndarray:
+    if issparse(x):
+        x = x.toarray()
+    if x.ndim == 2 and x.shape[1] == 1:
+        x = np.squeeze(x, axis=1)
+
+    return x[:].astype(dtype)
