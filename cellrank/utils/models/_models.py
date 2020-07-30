@@ -17,7 +17,6 @@ import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 
-from cellrank import logging as logg
 from cellrank.utils._docs import d
 from cellrank.tools._utils import save_fig, _densify_squeeze
 from cellrank.utils._utils import _minmax
@@ -200,8 +199,7 @@ class Model(ABC):
                 - :paramref:`x_test`
         """
         if use_raw and self.adata.raw is None:
-            logg.debug()
-            use_raw = False
+            raise AttributeError("AnnData object has no attribute `.raw`.")
 
         if data_key not in ["X", "obs"] + list(self.adata.layers.keys()):
             raise KeyError(
@@ -211,7 +209,9 @@ class Model(ABC):
             raise KeyError(f"Time key `{time_key!r}` not found in `adata.obs`.")
 
         if data_key != "obs":
-            if gene not in self.adata.var_names:
+            if use_raw and gene not in self.adata.raw.var_names:
+                raise KeyError(f"Gene `{gene!r}` not found in `adata.raw.var_names`.")
+            if not use_raw and gene not in self.adata.var_names:
                 raise KeyError(f"Gene `{gene!r}` not found in `adata.var_names`.")
         else:
             if gene not in self.adata.obs:
@@ -241,9 +241,10 @@ class Model(ABC):
                 )
 
         x = np.array(self.adata.obs[time_key]).astype(np.float64)
-        gene_ix = np.where(self.adata.var_names == gene)[0]
 
         adata = self.adata.raw.to_adata() if use_raw else self.adata
+        gene_ix = np.where(adata.var_names == gene)[0]
+
         if data_key == "X":
             y = adata.X[:, gene_ix]
         elif data_key == "obs":
