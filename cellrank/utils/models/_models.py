@@ -466,14 +466,14 @@ class Model(ABC):
         self._check("_x", x)
         self._check("_w", w, ndim=1)
 
-        use_ixs = np.where(self.w > 0)[0]
+        use_ixs = self.w > 0
         self._check("_x_hat", self.x[use_ixs])
 
         self._y_hat = self.predict(self.x_hat, key_added=None, **kwargs)
         self._y_test = self.predict(x_test, key_added="_x_test", **kwargs)
 
         n = np.sum(use_ixs)
-        sigma = np.sqrt(((self.y_hat - self.y[use_ixs]) ** 2).sum() / (n - 2))
+        sigma = np.sqrt(((self.y_hat - self.y[use_ixs].squeeze()) ** 2).sum() / (n - 2))
 
         stds = (
             np.sqrt(
@@ -837,7 +837,7 @@ class GamMGCVModel(Model):
     n_splines
         Number of splines for the GAM.
     sp
-        Vector of smoothing parameters.
+        Smoothing parameter.
     """
 
     def __init__(self, adata: AnnData, n_splines: int = 5, sp: float = 2):
@@ -884,7 +884,7 @@ class GamMGCVModel(Model):
 
         super().fit(x, y, w, **kwargs)
 
-        use_ixs = np.where(self.w > 0)[0]
+        use_ixs = self.w > 0
         self._x = self.x[use_ixs]
         self._y = self.y[use_ixs]
         self._w = self.w[use_ixs]
@@ -943,7 +943,11 @@ class GamMGCVModel(Model):
             np.array(
                 robjects.r.predict(
                     self.model,
-                    newdata=pandas2ri.py2rpy(pd.DataFrame(self.x_test, columns=["x"])),
+                    newdata=pandas2ri.py2rpy(
+                        pd.DataFrame(
+                            x_test if key_added is None else self.x_test, columns=["x"]
+                        )
+                    ),
                 )
             )
             .squeeze()
