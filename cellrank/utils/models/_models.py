@@ -878,7 +878,7 @@ class SKLearnModel(Model):
         return SKLearnModel(self.adata, deepcopy(self._model))
 
 
-class GAMModel(Model):  # noqa
+class GAM(Model):  # noqa
 
     _default_grid = {
         "n_splines": np.arange(6, 12),
@@ -995,7 +995,7 @@ class GAMModel(Model):  # noqa
         return self.conf_int
 
     def copy(self) -> "Model":  # noqa
-        res = GAMModel(self.adata)
+        res = GAM(self.adata)
 
         res._use_gam_cf = self._use_gam_cf
         res._grid = deepcopy(self._grid)
@@ -1004,24 +1004,32 @@ class GAMModel(Model):  # noqa
         return res
 
 
-class GamMGCVModel(Model):
+class GAMR(Model):
     """
-    Wrapper around R's `mgcv <https://cran.r-project.org/web/packages/mgcv/>`_ package for \
-    fitting Generalized Additive Models (GAMs).
+    Wrapper around R's `mgcv <https://cran.r-project.org/web/packages/mgcv/>`_ or  \
+    `mgcv <https://cran.r-project.org/web/packages/gam/>`_ package fors fitting Generalized Additive Models (GAMs).
 
     Parameters
     ----------
     adata : :class:`anndata.AnnData`
         Annotated data object.
     n_splines
-        Number of splines for the GAMModel.
+        Number of splines for the GAM.
     sp
         Smoothing parameter.
     family
         Family in `rpy2.robjects.r`, such as `"gaussian"` or `"poisson"`.
-    filter_dropout
+    filter_dropouts
         Filter out all cells with expression lower than this. If `True`, the value is `0`.
+    backend
+        R library used to fit GAMs. Valid options are `'mgcv'` and `'gam'`. Note that option `'gam'` ignores
+        the number of splines, as well as family and smoothing parameter.
     """
+
+    _backends = {
+        "gam": "mgcv",
+        "mgcv": "gam",
+    }
 
     def __init__(
         self,
@@ -1031,29 +1039,26 @@ class GamMGCVModel(Model):
         family: str = "gaussian",
         filter_dropouts: Optional[Union[bool, float]] = None,
         perform_import_check: bool = True,
+        backend: str = "mgcv",
     ):
         super().__init__(adata, model=None, filter_dropouts=filter_dropouts)
         self._n_splines = n_splines
         self._sp = sp
-        self._mgcv = None
+        self._lib = None
+        self._lib_name = None
         self._family = family
 
-        if perform_import_check:
-            try:
-                import rpy2  # noqa
+        if backend not in self._backends.keys():
+            raise ValueError(
+                f"Invalid backend library `{backend!r}`. Valid options are `{list(self._backends.keys())}`."
+            )
 
-                try:
-                    from rpy2.robjects.packages import importr
-
-                    self._mgcv = importr("mgcv")
-                except rpy2.robjects.packages.PackageNotInstalledError as e:
-                    raise RuntimeError(
-                        "Install R library `mgcv` first as `install.packages('mgcv').`"
-                    ) from e
-            except ImportError:
-                raise ImportError(
-                    "Unable to import `rpy2`, install it first as `pip install rpy2`."
-                )
+        if (
+            perform_import_check
+        ):  # it's a bit costly to import, copying just passes the reference
+            self._lib, self._lib_name = _maybe_import_r_lib(
+                backend
+            ) or _maybe_import_r_lib(self._backends[backend], raise_exc=True)
 
     def fit(
         self,
@@ -1061,7 +1066,7 @@ class GamMGCVModel(Model):
         y: Optional[np.ndarray] = None,
         w: Optional[np.ndarray] = None,
         **kwargs,
-    ) -> "GamMGCVModel":
+    ) -> "GAMR":
         """
         Fit the model.
 
@@ -1078,7 +1083,7 @@ class GamMGCVModel(Model):
 
         Returns
         -------
-        :class:`cellrank.ul.models.GamMGCVModel`
+        :class:`cellrank.ul.models.GAMR`
             Return fitted self.
         """
 
@@ -1098,13 +1103,28 @@ class GamMGCVModel(Model):
 
         pandas2ri.activate()
         df = pandas2ri.py2rpy(pd.DataFrame(np.c_[self.x, self.y], columns=["x", "y"]))
-        self._model = self._mgcv.gam(
-            Formula(f'y ~ s(x, k={self._n_splines}, bs="cs")'),
-            data=df,
-            sp=self._sp,
-            family=family,
-            weights=pd.Series(self.w),
-        )
+
+        if self._lib_name == "mgcv":
+            self._model = self._lib.gam(
+                Formula(f'y ~ s(x, k={self._n_splines}, bs="cs")'),
+                data=df,
+                sp=self._sp,
+                family=family,
+                weights=pd.Series(self.w),
+            )
+        elif self._lib_name == "gam":
+            self._model = self._lib.gam(
+                Formula("y ~ s(x)"),
+                data=df,
+                sp=self._sp,
+                family=family,
+                weights=pd.Series(self.w),
+            )
+        else:
+            raise NotImplementedError(
+                f"Not fitting implemented for R library `{self._lib_name!r}`."
+            )
+
         pandas2ri.deactivate()
 
         return self
@@ -1138,9 +1158,9 @@ class GamMGCVModel(Model):
             raise RuntimeError(
                 "Trying to call an uninitialized model. To initialize it, run `.fit()` first."
             )
-        if self._mgcv is None:
+        if self._lib is None:
             raise RuntimeError(
-                "Unable to fit the model, R package `mgcv` is not imported."
+                f"Unable to fit the model, R package `{self._lib_name}` is not imported."
             )
 
         x_test = self._check(key_added, x_test)
@@ -1180,9 +1200,9 @@ class GamMGCVModel(Model):
         """
         return self.default_conf_int(x_test=x_test, **kwargs)
 
-    def copy(self) -> "GamMGCVModel":
+    def copy(self) -> "GAMR":
         """Return a copy of self."""
-        res = GamMGCVModel(
+        res = GAMR(
             self.adata,
             self._n_splines,
             self._sp,
@@ -1190,5 +1210,26 @@ class GamMGCVModel(Model):
             filter_dropouts=self._filter_dropouts,
             perform_import_check=False,
         )
-        res._mgcv = self._mgcv
+        res._lib = self._lib
+        res._lib_name = self._lib_name
         return res
+
+
+def _maybe_import_r_lib(
+    name: str, raise_exc: bool = False
+) -> Optional[Tuple[Any, str]]:
+    try:
+        from rpy2.robjects.packages import PackageNotInstalledError, importr
+    except ImportError as e:
+        raise ImportError(
+            "Unable to import `rpy2`, install it first as `pip install rpy2`."
+        ) from e
+
+    try:
+        return importr(name), name
+    except PackageNotInstalledError as e:
+        if not raise_exc:
+            return
+        raise RuntimeError(
+            f"Install R library `{name}` first as `install.packages({name!r}).`"
+        ) from e
