@@ -7,19 +7,20 @@ from copy import copy
 from typing import Any, Tuple, TypeVar, Iterable, Optional
 from inspect import signature
 
+import numpy as np
+import pandas as pd
+from sklearn.base import BaseEstimator
+from scipy.ndimage.filters import convolve
+
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 
-import numpy as np
-import pandas as pd
-from scipy.sparse import issparse
-from sklearn.base import BaseEstimator
+from cellrank import logging as logg
 from cellrank.utils._docs import d
-from cellrank.tools._utils import save_fig
+from cellrank.tools._utils import save_fig, _densify_squeeze
 from cellrank.utils._utils import _minmax
-from scipy.ndimage.filters import convolve
 from cellrank.tools._lineage import Lineage
 from cellrank.tools._constants import AbsProbKey
 
@@ -33,8 +34,8 @@ class Model(ABC):
     """
     Base class for other model classes.
 
-    Params
-    ------
+    Parameters
+    ----------
     adata : :class:`anndata.AnnData`
         Annotated data object.
     model
@@ -146,19 +147,19 @@ class Model(ABC):
         backward: bool = False,
         data_key: str = "X",
         time_key: str = "latent_time",
+        use_raw: bool = False,
         start_lineage: Optional[str] = None,
         end_lineage: Optional[str] = None,
         threshold: Optional[float] = None,
         weight_threshold: float = 0.02,
-        weight_scale: float = 1,
         filter_data: float = False,
         n_test_points: int = 200,
     ) -> "Model":
         """
         Prepare the model to be ready for fitting.
 
-        Params
-        ------
+        Parameters
+        ----------
         gene
             Gene in :paramref:`adata` `.var_names`.
         lineage
@@ -168,6 +169,8 @@ class Model(ABC):
             Key in :attr:`paramref.adata` `.layers` or `'X'` for :paramref:`adata` `.X`.
         time_key
             Key in :paramref:`adata` `.obs` where the pseudotime is stored.
+        use_raw
+            Whether to access :paramref:`adata` `.raw` or not.
         start_lineage
             Lineage from which to select cells with lowest pseudotime as starting points.
             If specified, the trends start at the earliest pseudotime within that lineage,
@@ -180,9 +183,7 @@ class Model(ABC):
             Consider only cells with :paramref:`weights` > :paramref:`threshold` when estimating the testing endpoint.
             If `None`, use median of :paramref:`w`.
         weight_threshold
-            Set all weights below this to :paramref:`weight_scale` * :paramref:`weight_threshold`.
-        weight_scale
-            Weight threshold scale, see :paramref:`weight_threshold`.
+            Set all weights below this to :paramref:`weight_threshold`.
         filter_data
             Use only testing points for fitting.
         n_test_points
@@ -198,6 +199,9 @@ class Model(ABC):
                 - :paramref:`w`
                 - :paramref:`x_test`
         """
+        if use_raw and self.adata.raw is None:
+            logg.debug()
+            use_raw = False
 
         if data_key not in ["X", "obs"] + list(self.adata.layers.keys()):
             raise KeyError(
@@ -219,7 +223,7 @@ class Model(ABC):
         if not isinstance(self.adata.obsm[lineage_key], Lineage):
             raise TypeError(
                 f"Expected `adata.obsm[{lineage_key!r}]` to be of type `cellrank.tl.Lineage`, "
-                f"found `{type(self.adata.obsm[lineage_key]).__name__}`."
+                f"found `{type(self.adata.obsm[lineage_key]).__name__!r}`."
             )
 
         if lineage is not None:
@@ -239,34 +243,49 @@ class Model(ABC):
         x = np.array(self.adata.obs[time_key]).astype(np.float64)
         gene_ix = np.where(self.adata.var_names == gene)[0]
 
+        adata = self.adata.raw.to_adata() if use_raw else self.adata
         if data_key == "X":
-            y = self.adata.X[:, gene_ix]
+            y = adata.X[:, gene_ix]
         elif data_key == "obs":
-            y = self.adata.obs[gene].values
-        elif data_key in self.adata.layers:
-            y = self.adata.layers[data_key][:, gene_ix]
+            y = adata.obs[gene].values
+        elif data_key in adata.layers:
+            y = adata.layers[data_key][:, gene_ix]
         else:
-            raise NotImplementedError(
-                f"Data key `{data_key!r}` is not yet implemented."
-            )
-
-        if issparse(y):
-            y = np.asarray(y.todense())
-        y = np.squeeze(y).astype(np.float64)
+            raise NotImplementedError(f"Data key `{data_key!r}` is not implemented.")
 
         if lineage is not None:
-            w = (
-                np.array(self.adata.obsm[lineage_key][lineage])
-                .astype(self._dtype)
-                .squeeze()
-            )
-            w[w < weight_threshold] = np.clip(weight_threshold * weight_scale, 0, 1)
+            w = _densify_squeeze(self.adata.obsm[lineage_key][lineage].X, self._dtype)
+            w[w < weight_threshold] = weight_threshold
         else:
-            w = np.ones_like(x)
+            w = np.ones(len(x), dtype=self._dtype)
 
-        self._x_all, self._y_all, self._w_all = x[:], y[:], w[:]
+        if use_raw:
+            correct_ixs = np.isin(self.adata.obs_names, adata.obs_names)
+            x = x[correct_ixs]
+            w = w[correct_ixs]
 
-        x, ixs = np.unique(x, return_index=True)
+        del adata
+
+        self._x_all, self._y_all, self._w_all = (
+            _densify_squeeze(x, self._dtype)[:, np.newaxis],
+            _densify_squeeze(y, self._dtype)[:, np.newaxis],
+            w,
+        )
+        x, y, w = self.x_all[:], self.y_all[:], self.w_all[:]
+
+        # sanity checks
+        if self._x_all.shape[0] != self._y_all.shape[0]:
+            raise ValueError(
+                f"Independent variable's first dimension ({self._x_all.shape[0]}) "
+                f"differs from dependent variable's first dimension ({self._y_all.shape[0]})."
+            )
+        if self._x_all.shape[0] != self._w_all.shape[0]:
+            raise ValueError(
+                f"Independent variable's first dimension ({self._x_all.shape[0]}) "
+                f"differs from weights' first dimension ({self._w_all.shape[0]})."
+            )
+
+        x, ixs = np.unique(x, return_index=True)  # GamMGCV needs unique
         y = y[ixs]
         w = w[ixs]
 
@@ -307,11 +326,11 @@ class Model(ABC):
             x, y, w = x[fil], y[fil], w[fil]
 
         self._x, self._y, self._w = (
-            self._convert(x[:]),
-            self._convert(y[:]),
-            self._convert(w[:]).squeeze(-1),
+            self._convert(x),
+            self._convert(y),
+            self._convert(w).squeeze(-1),
         )
-        self._x_test = self._convert(x_test[:])
+        self._x_test = self._convert(x_test)
 
         return self
 
@@ -356,8 +375,8 @@ class Model(ABC):
         """
         Fit the model.
 
-        Params
-        ------
+        Parameters
+        ----------
         x
             Independent variables.
         y
@@ -398,8 +417,8 @@ class Model(ABC):
         """
         Run the prediction.
 
-        Params
-        ------
+        Parameters
+        ----------
         x_test
             Features used for prediction.
         key_added
@@ -426,8 +445,8 @@ class Model(ABC):
         """
         Calculate a confidence interval if underlying model has no method for it.
 
-        Params
-        ------
+        Parameters
+        ----------
         x
             Points used to fit the model.
         x_test
@@ -480,8 +499,8 @@ class Model(ABC):
 
         Use the default method if underlying model has not method for CI calculation.
 
-        Params
-        ------
+        Parameters
+        ----------
         x_test
             Points for which to calculate the confidence interval.
         kwargs
@@ -523,8 +542,8 @@ class Model(ABC):
         """
         Plot the smoothed gene expression.
 
-        Params
-        ------
+        Parameters
+        ----------
         figsize
             Size of the figure.
         same_plot
@@ -646,8 +665,8 @@ class SKLearnModel(Model):
     """
     Wrapper around :mod:`sklearn` model.
 
-    Params
-    ------
+    Parameters
+    ----------
     adata : :class:`anndata.AnnData`
         Annotated data object.
     model
@@ -712,8 +731,8 @@ class SKLearnModel(Model):
         """
         Fit the model.
 
-        Params
-        ------
+        Parameters
+        ----------
         x
             Independent variables.
         y
@@ -745,8 +764,8 @@ class SKLearnModel(Model):
         """
         Run the prediction.
 
-        Params
-        ------
+        Parameters
+        ----------
         x_test
             Features used for prediction.
         key_added
@@ -777,8 +796,8 @@ class SKLearnModel(Model):
 
         Use the default method if underlying model has not method for CI calculation.
 
-        Params
-        ------
+        Parameters
+        ----------
         x_test
             Points for which to calculate the confidence interval.
         kwargs
@@ -810,8 +829,8 @@ class GamMGCVModel(Model):
     Wrapper around R's `mgcv <https://cran.r-project.org/web/packages/mgcv/>`_ package for \
     fitting Generalized Additive Models (GAMs).
 
-    Params
-    ------
+    Parameters
+    ----------
     adata : :class:`anndata.AnnData`
         Annotated data object.
     n_splines
@@ -841,8 +860,8 @@ class GamMGCVModel(Model):
         """
         Fit the model.
 
-        Params
-        ------
+        Parameters
+        ----------
         x
             Independent variables.
         y
@@ -895,8 +914,8 @@ class GamMGCVModel(Model):
         """
         Run the prediction.
 
-        Params
-        ------
+        Parameters
+        ----------
         x_test
             Features used for prediction.
         key_added
@@ -941,8 +960,8 @@ class GamMGCVModel(Model):
         """
         Calculate a confidence interval using the default method.
 
-        Params
-        ------
+        Parameters
+        ----------
         x_test
             Points for which to calculate the confidence interval.
         kwargs
