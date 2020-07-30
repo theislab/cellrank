@@ -4,7 +4,7 @@
 import re
 from abc import ABC, abstractmethod
 from copy import copy
-from typing import Any, Tuple, TypeVar, Iterable, Optional
+from typing import Any, Tuple, Union, TypeVar, Iterable, Optional
 from inspect import signature
 
 import matplotlib as mpl
@@ -43,10 +43,15 @@ class Model(ABC):
         Name of the weight argument for :paramref:`model`.
     """
 
-    def __init__(self, adata: AnnData, model: Any, weight_name: Optional[str] = None):
+    def __init__(
+        self,
+        adata: AnnData,
+        model: Any,
+        filter_dropouts: Optional[Union[bool, float]] = None,
+    ):
         self._adata = adata
         self._model = model
-        self.weight_name = weight_name
+        self._filter_dropouts = filter_dropouts
 
         self._x_all = None
         self._y_all = None
@@ -266,6 +271,9 @@ class Model(ABC):
 
         self._x_all, self._y_all, self._w_all = x[:], y[:], w[:]
 
+        fin_mask = np.isfinite(x)
+        x, y, w = x[fin_mask], y[fin_mask], w[fin_mask]
+
         x, ixs = np.unique(x, return_index=True)
         y = y[ixs]
         w = w[ixs]
@@ -306,6 +314,14 @@ class Model(ABC):
             fil = (x >= val_start) & (x <= val_end)
             x, y, w = x[fil], y[fil], w[fil]
 
+        if self._filter_dropouts is not None:
+            fil = (
+                ~np.isclose(y, 0)
+                if (self._filter_dropouts == 0 or self._filter_dropouts is True)
+                else (y >= self._filter_dropouts)
+            )
+            x, y, w = x[fil], y[fil], w[fil]
+
         self._x, self._y, self._w = (
             self._convert(x[:]),
             self._convert(y[:]),
@@ -322,7 +338,9 @@ class Model(ABC):
             return np.swapaxes(value, 0, 1)
         return value
 
-    def _check(self, attr_name: Optional[str], value: np.ndarray, ndim: int = 2):
+    def _check(
+        self, attr_name: Optional[str], value: np.ndarray, ndim: int = 2
+    ) -> None:
         if attr_name is None:
             return
         if value is None:  # already called prepare
@@ -364,7 +382,7 @@ class Model(ABC):
             Dependent variables.
         w
             Weights of :paramref:`x`.
-        kwargs
+        **kwargs
             Keyword arguments.
 
         Returns
@@ -405,7 +423,7 @@ class Model(ABC):
         key_added
             Attribute name where to save the independent variables.
             If `None`, don't save them.
-        kwargs
+        **kwargs
             Keyword arguments.
 
         Returns
@@ -434,7 +452,7 @@ class Model(ABC):
             Points for which to calculate the interval
         w
             Weights of the points used to fit the model. Used for filtering those points.
-        kwargs
+        **kwargs
             Keyword arguments.
 
         Returns
@@ -484,7 +502,7 @@ class Model(ABC):
         ------
         x_test
             Points for which to calculate the confidence interval.
-        kwargs
+        **kwargs
             Keyword arguments.
 
         Returns
@@ -634,7 +652,7 @@ class Model(ABC):
         return repr(self)
 
     def __repr__(self) -> str:
-        return "{}[{}]".format(
+        return "{}<{}>".format(
             self.__class__.__name__,
             None
             if self.model is None
@@ -652,6 +670,8 @@ class SKLearnModel(Model):
         Annotated data object.
     model
         Underlying :mod:`sklearn` model.
+    filter_dropout
+        Filter out all cells with expression lower than this. If `True`, the value is `0`.
     weight_name
         Name of the weight argument for :paramref:`model` `.fit`.
     """
@@ -662,19 +682,40 @@ class SKLearnModel(Model):
     _conf_int_names = ("conf_int", "confidence_intervals")
 
     def __init__(
-        self, adata: AnnData, model: BaseEstimator, weight_name: Optional[str] = None,
+        self,
+        adata: AnnData,
+        model: BaseEstimator,
+        filter_dropouts: Optional[Union[bool, float]] = None,
+        weight_name: Optional[str] = None,
+        ignore_raises: bool = False,
     ):
-        super().__init__(adata, model)
-        self._fit_name = self._find_func(self._fit_names)
-        self._predict_name = self._find_func(self._predict_names)
-        self._weight_name = (
-            self._find_weight_param(self._weight_names)
-            if weight_name is None
-            else weight_name
-        )
-        self._ci_name = self._find_func(
-            self._conf_int_names, use_default=True, default=None
-        )
+        super().__init__(adata, model, filter_dropouts=filter_dropouts)
+
+        fit_name = self._find_func(self._fit_names)
+        predict_name = self._find_func(self._predict_names)
+        ci_name = self._find_func(self._conf_int_names, use_default=True, default=None)
+
+        if weight_name is None:
+            self._weight_name = self._find_weight_param(fit_name, self._weight_names)
+        else:
+            params = signature(getattr(self.model, fit_name)).parameters
+            if not ignore_raises and weight_name not in params:
+                raise ValueError(
+                    f"Unable to detect `{weight_name!r}` in the signature of `{fit_name!r}`."
+                    f"If it's in `kwargs`, set `ignore_raises=True.`"
+                )
+            self._weight_name = weight_name
+
+        if not ignore_raises and self._weight_name is None:
+            raise RuntimeError(
+                f"Unable to determine weights for function `{fit_name!r}`, searched for `{self._weight_names}`. "
+                f"Consider specifying it manually as `weight_name=...` or force using model without weights as "
+                f"`ignore_raises=True`."
+            )
+
+        self._fit_fn = getattr(self.model, fit_name)
+        self._pred_fn = getattr(self.model, predict_name)
+        self._ci_fn = None if ci_name is None else getattr(self.model, ci_name, None)
 
     @property
     def model(self) -> BaseEstimator:
@@ -696,8 +737,12 @@ class SKLearnModel(Model):
             f"Unable to find function and no default specified, tried searching `{list(func_names)}`."
         )
 
-    def _find_weight_param(self, param_names: Iterable[str]) -> Optional[str]:
-        for param in signature(getattr(self.model, self._fit_name)).parameters:
+    def _find_weight_param(
+        self, fit_name: Optional[str], param_names: Iterable[str]
+    ) -> Optional[str]:
+        if fit_name is None:
+            return None
+        for param in signature(getattr(self.model, fit_name)).parameters:
             if param in param_names:
                 return param
         return None
@@ -720,7 +765,7 @@ class SKLearnModel(Model):
             Dependent variables.
         w
             Weights of :paramref:`x`.
-        kwargs
+        **kwargs
             Keyword arguments.
 
         Returns
@@ -734,8 +779,7 @@ class SKLearnModel(Model):
         if self._weight_name is not None:
             kwargs[self._weight_name] = self._w
 
-        fit_fn = getattr(self.model, self._fit_name)
-        self._model = fit_fn(self.x, self.y, **kwargs)
+        self._model = self._fit_fn(self.x, self.y, **kwargs)
 
         return self
 
@@ -752,7 +796,7 @@ class SKLearnModel(Model):
         key_added
             Attribute name where to save the independent variables.
             If `None`, don't save them.
-        kwargs
+        **kwargs
             Keyword arguments.
 
         Returns
@@ -763,8 +807,7 @@ class SKLearnModel(Model):
 
         self._check(key_added, x_test)
 
-        pred_fn = getattr(self.model, self._predict_name)
-        self._y_test = pred_fn(self.x_test, **kwargs)
+        self._y_test = self._pred_fn(self.x_test, **kwargs)
         self._y_test = np.squeeze(self._y_test)
 
         return self.y_test
@@ -781,7 +824,7 @@ class SKLearnModel(Model):
         ------
         x_test
             Points for which to calculate the confidence interval.
-        kwargs
+        **kwargs
             Keyword arguments.
 
         Returns
@@ -790,13 +833,11 @@ class SKLearnModel(Model):
             The confidence interval.
         """
 
-        if self._ci_name is None:
+        if self._ci_fn is None:
             return self.default_conf_int(x_test=x_test, **kwargs)
 
         self._check("_x_test", x_test)
-        ci_fn = getattr(self.model, self._ci_name)
-
-        self._conf_int = ci_fn(self.x_test, **kwargs)
+        self._conf_int = self._ci_fn(self.x_test, **kwargs)
 
         return self.conf_int
 
@@ -814,16 +855,25 @@ class GamMGCVModel(Model):
     ------
     adata : :class:`anndata.AnnData`
         Annotated data object.
+    filter_dropout
+        Filter out all cells with expression lower than this. If `True`, the value is `0`.
     n_splines
         Number of splines for the GAM.
     sp
         Vector of smoothing parameters.
     """
 
-    def __init__(self, adata: AnnData, n_splines: int = 5, sp: float = 2):
-        super().__init__(adata, None)
+    def __init__(
+        self,
+        adata: AnnData,
+        n_splines: int = 5,
+        sp: float = 2,
+        filter_dropouts: Optional[Union[bool, float]] = None,
+    ):
+        super().__init__(adata, model=None, filter_dropouts=filter_dropouts)
         self._n_splines = n_splines
         self._sp = sp
+        # TODO: import gammgcv
         try:
             import rpy2  # noqa
         except ImportError:
@@ -836,6 +886,7 @@ class GamMGCVModel(Model):
         x: Optional[np.ndarray] = None,
         y: Optional[np.ndarray] = None,
         w: Optional[np.ndarray] = None,
+        n_splines: Optional[int] = None,
         **kwargs,
     ) -> "GamMGCVModel":
         """
@@ -849,7 +900,9 @@ class GamMGCVModel(Model):
             Dependent variables.
         w
             Weights of :paramref:`x`.
-        kwargs
+        n_splines
+            Number of splines to use. If `None`, use :paramref:`n_splines`.
+        **kwargs
             Keyword arguments.
 
         Returns
@@ -869,7 +922,7 @@ class GamMGCVModel(Model):
         self._y = self.y[use_ixs]
         self._w = self.w[use_ixs]
 
-        n_splines = kwargs.pop("n_splines", self._n_splines)
+        n_splines = self._n_splines if n_splines is None else n_splines
 
         mgcv = importr("mgcv")
         pandas2ri.activate()
@@ -902,7 +955,7 @@ class GamMGCVModel(Model):
         key_added
             Attribute name where to save the independent variables.
             If `None`, don't save them.
-        kwargs
+        **kwargs
             Keyword arguments.
 
         Returns
@@ -945,7 +998,7 @@ class GamMGCVModel(Model):
         ------
         x_test
             Points for which to calculate the confidence interval.
-        kwargs
+        **kwargs
             Keyword arguments.
 
         Returns
