@@ -51,10 +51,10 @@ SKLearnModel
     :members:
     :inherited-members:
 
-GamMGCVModel
+GAMR
 ------------
 
-.. autoclass:: cellrank.ul.models.GamMGCVModel
+.. autoclass:: cellrank.ul.models.GAMR
     :members:
     :inherited-members:
 

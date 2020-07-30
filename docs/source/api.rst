@@ -69,7 +69,7 @@ Utilities
     :toctree: api/ul
 
     ul.models.SKLearnModel
-    ul.models.GamMGCVModel
+    ul.models.GAMR
 
 Reading
 ~~~~~~~
