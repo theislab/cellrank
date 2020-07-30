@@ -43,10 +43,11 @@ def _create_dummy_adata(n_obs: int) -> AnnData:
     np.random.seed(42)
     adata = scv.datasets.toy_data(n_obs=n_obs)
     scv.pp.filter_and_normalize(adata, min_shared_counts=20, n_top_genes=1000)
+    adata.raw = adata[:, 42 : 42 + 50].copy()
     scv.pp.moments(adata, n_pcs=30, n_neighbors=30)
     scv.tl.recover_dynamics(adata)
     scv.tl.velocity(adata, mode="dynamical")
-    scv.tl.velocity_graph(adata)
+    scv.tl.velocity_graph(adata, n_recurse_neighbors=0, mode_neighbors="distances")
     scv.tl.latent_time(adata)
 
     adata.uns["iroot"] = 0
@@ -56,7 +57,7 @@ def _create_dummy_adata(n_obs: int) -> AnnData:
     adata.uns["connectivity_variances"] = np.ones((n_obs, n_obs), dtype=np.float64)
     adata.uns["velocity_variances"] = np.ones((n_obs, n_obs), dtype=np.float64)
 
-    sc.write(f"_ground_truth_adatas/adata_{n_obs}.h5ad", adata)
+    sc.write(f"tests/_ground_truth_adatas/adata_{n_obs}.h5ad", adata)
 
     return adata
 

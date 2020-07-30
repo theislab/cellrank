@@ -19,10 +19,9 @@ import cellrank.logging as logg
 from pygam import GAM as pGAM
 from pygam import ExpectileGAM
 from pygam.terms import s
-from scipy.sparse import issparse
 from sklearn.base import BaseEstimator
 from cellrank.utils._docs import d
-from cellrank.tools._utils import save_fig
+from cellrank.tools._utils import save_fig, _densify_squeeze
 from cellrank.utils._utils import _minmax
 from scipy.ndimage.filters import convolve
 from cellrank.tools._lineage import Lineage
@@ -38,8 +37,8 @@ class Model(ABC):
     """
     Base class for other model classes.
 
-    Params
-    ------
+    Parameters
+    ----------
     adata : :class:`anndata.AnnData`
         Annotated data object.
     model
@@ -150,6 +149,7 @@ class Model(ABC):
         backward: bool = False,
         data_key: str = "X",
         time_key: str = "latent_time",
+        use_raw: bool = False,
         start_lineage: Optional[str] = None,
         end_lineage: Optional[str] = None,
         threshold: Optional[float] = None,
@@ -160,8 +160,8 @@ class Model(ABC):
         """
         Prepare the model to be ready for fitting.
 
-        Params
-        ------
+        Parameters
+        ----------
         gene
             Gene in :paramref:`adata` `.var_names`.
         lineage
@@ -171,6 +171,8 @@ class Model(ABC):
             Key in :attr:`paramref.adata` `.layers` or `'X'` for :paramref:`adata` `.X`.
         time_key
             Key in :paramref:`adata` `.obs` where the pseudotime is stored.
+        use_raw
+            Whether to access :paramref:`adata` `.raw` or not.
         start_lineage
             Lineage from which to select cells with lowest pseudotime as starting points.
             If specified, the trends start at the earliest pseudotime within that lineage,
@@ -183,7 +185,7 @@ class Model(ABC):
             Consider only cells with :paramref:`weights` > :paramref:`threshold` when estimating the testing endpoint.
             If `None`, use median of :paramref:`w`.
         weight_threshold
-            Set all weights below :paramref:`weight_threshold` to either 0, or if :class:`tuple`, to the second value;/.
+            Set all weights below :paramref:`weight_threshold` to either 0, or if :class:`tuple`, to the second value.
         filter_data
             Use only testing points for fitting.
         n_test_points
@@ -199,6 +201,8 @@ class Model(ABC):
                 - :paramref:`w`
                 - :paramref:`x_test`
         """
+        if use_raw and self.adata.raw is None:
+            raise AttributeError("AnnData object has no attribute `.raw`.")
 
         if data_key not in ["X", "obs"] + list(self.adata.layers.keys()):
             raise KeyError(
@@ -208,7 +212,9 @@ class Model(ABC):
             raise KeyError(f"Time key `{time_key!r}` not found in `adata.obs`.")
 
         if data_key != "obs":
-            if gene not in self.adata.var_names:
+            if use_raw and gene not in self.adata.raw.var_names:
+                raise KeyError(f"Gene `{gene!r}` not found in `adata.raw.var_names`.")
+            if not use_raw and gene not in self.adata.var_names:
                 raise KeyError(f"Gene `{gene!r}` not found in `adata.var_names`.")
         else:
             if gene not in self.adata.obs:
@@ -220,7 +226,7 @@ class Model(ABC):
         if not isinstance(self.adata.obsm[lineage_key], Lineage):
             raise TypeError(
                 f"Expected `adata.obsm[{lineage_key!r}]` to be of type `cellrank.tl.Lineage`, "
-                f"found `{type(self.adata.obsm[lineage_key]).__name__}`."
+                f"found `{type(self.adata.obsm[lineage_key]).__name__!r}`."
             )
 
         if lineage is not None:
@@ -238,45 +244,58 @@ class Model(ABC):
                 )
 
         x = np.array(self.adata.obs[time_key]).astype(np.float64)
-        gene_ix = np.where(self.adata.var_names == gene)[0]
+
+        adata = self.adata.raw.to_adata() if use_raw else self.adata
+        gene_ix = np.where(adata.var_names == gene)[0]
 
         if data_key == "X":
-            y = self.adata.X[:, gene_ix]
+            y = adata.X[:, gene_ix]
         elif data_key == "obs":
-            y = self.adata.obs[gene].values
-        elif data_key in self.adata.layers:
-            y = self.adata.layers[data_key][:, gene_ix]
+            y = adata.obs[gene].values
+        elif data_key in adata.layers:
+            y = adata.layers[data_key][:, gene_ix]
         else:
-            raise NotImplementedError(
-                f"Data key `{data_key!r}` is not yet implemented."
-            )
-
-        if issparse(y):
-            y = np.asarray(y.todense())
-        y = np.squeeze(y).astype(np.float64)
+            raise NotImplementedError(f"Data key `{data_key!r}` is not implemented.")
 
         if lineage is not None:
-            w = (
-                np.array(self.adata.obsm[lineage_key][lineage])
-                .astype(self._dtype)
-                .squeeze()
-            )
             weight_threshold, val = (
                 weight_threshold
                 if isinstance(weight_threshold, (tuple, list))
                 else weight_threshold,
                 0,
             )
+            w = _densify_squeeze(self.adata.obsm[lineage_key][lineage].X, self._dtype)
             w[w < weight_threshold] = val
         else:
-            w = np.ones_like(x)
+            w = np.ones(len(x), dtype=self._dtype)
 
-        self._x_all, self._y_all, self._w_all = x[:], y[:], w[:]
+        if use_raw:
+            correct_ixs = np.isin(self.adata.obs_names, adata.obs_names)
+            x = x[correct_ixs]
+            w = w[correct_ixs]
 
-        fin_mask = np.isfinite(x)
-        x, y, w = x[fin_mask], y[fin_mask], w[fin_mask]
+        del adata
 
-        x, ixs = np.unique(x, return_index=True)
+        self._x_all, self._y_all, self._w_all = (
+            _densify_squeeze(x, self._dtype)[:, np.newaxis],
+            _densify_squeeze(y, self._dtype)[:, np.newaxis],
+            w,
+        )
+        x, y, w = self.x_all[:], self.y_all[:], self.w_all[:]
+
+        # sanity checks
+        if self._x_all.shape[0] != self._y_all.shape[0]:
+            raise ValueError(
+                f"Independent variable's first dimension ({self._x_all.shape[0]}) "
+                f"differs from dependent variable's first dimension ({self._y_all.shape[0]})."
+            )
+        if self._x_all.shape[0] != self._w_all.shape[0]:
+            raise ValueError(
+                f"Independent variable's first dimension ({self._x_all.shape[0]}) "
+                f"differs from weights' first dimension ({self._w_all.shape[0]})."
+            )
+
+        x, ixs = np.unique(x, return_index=True)  # GamMGCV needs unique
         y = y[ixs]
         w = w[ixs]
 
@@ -325,11 +344,11 @@ class Model(ABC):
             x, y, w = x[fil], y[fil], w[fil]
 
         self._x, self._y, self._w = (
-            self._convert(x[:]),
-            self._convert(y[:]),
-            self._convert(w[:]).squeeze(-1),
+            self._convert(x),
+            self._convert(y),
+            self._convert(w).squeeze(-1),
         )
-        self._x_test = self._convert(x_test[:])
+        self._x_test = self._convert(x_test)
 
         self._gene = gene
         self._lineage = lineage
@@ -348,8 +367,8 @@ class Model(ABC):
         """
         Fit the model.
 
-        Params
-        ------
+        Parameters
+        ----------
         x
             Independent variables.
         y
@@ -391,8 +410,8 @@ class Model(ABC):
         """
         Run the prediction.
 
-        Params
-        ------
+        Parameters
+        ----------
         x_test
             Features used for prediction.
         key_added
@@ -419,8 +438,8 @@ class Model(ABC):
         """
         Calculate a confidence interval if underlying model has no method for it.
 
-        Params
-        ------
+        Parameters
+        ----------
         x
             Points used to fit the model.
         x_test
@@ -446,7 +465,7 @@ class Model(ABC):
         self._y_test = self.predict(x_test, key_added="_x_test", **kwargs)
 
         n = np.sum(use_ixs)
-        sigma = np.sqrt(((self.y_hat - self.y[use_ixs]) ** 2).sum() / (n - 2))
+        sigma = np.sqrt(((self.y_hat - self.y[use_ixs].squeeze()) ** 2).sum() / (n - 2))
 
         stds = (
             np.sqrt(
@@ -474,8 +493,8 @@ class Model(ABC):
 
         Use the default method if underlying model has not method for CI calculation.
 
-        Params
-        ------
+        Parameters
+        ----------
         x_test
             Points for which to calculate the confidence interval.
         **kwargs
@@ -517,8 +536,8 @@ class Model(ABC):
         """
         Plot the smoothed gene expression.
 
-        Params
-        ------
+        Parameters
+        ----------
         figsize
             Size of the figure.
         same_plot
@@ -705,8 +724,8 @@ class SKLearnModel(Model):
     """
     Wrapper around :mod:`sklearn` model.
 
-    Params
-    ------
+    Parameters
+    ----------
     adata : :class:`anndata.AnnData`
         Annotated data object.
     model
@@ -780,8 +799,8 @@ class SKLearnModel(Model):
         """
         Run the prediction.
 
-        Params
-        ------
+        Parameters
+        ----------
         x_test
             Features used for prediction.
         key_added
@@ -811,8 +830,8 @@ class SKLearnModel(Model):
 
         Use the default method if underlying model has not method for CI calculation.
 
-        Params
-        ------
+        Parameters
+        ----------
         x_test
             Points for which to calculate the confidence interval.
         **kwargs
@@ -994,14 +1013,14 @@ class GamMGCVModel(Model):
     Wrapper around R's `mgcv <https://cran.r-project.org/web/packages/mgcv/>`_ package for \
     fitting Generalized Additive Models (GAMs).
 
-    Params
-    ------
+    Parameters
+    ----------
     adata : :class:`anndata.AnnData`
         Annotated data object.
     n_splines
         Number of splines for the GAMModel.
     sp
-        Vector of smoothing parameters.
+        Smoothing parameter.
     family
         Family in `rpy2.robjects.r`, such as `"gaussian"` or `"poisson"`.
     filter_dropout
@@ -1050,8 +1069,8 @@ class GamMGCVModel(Model):
         """
         Fit the model.
 
-        Params
-        ------
+        Parameters
+        ----------
         x
             Independent variables.
         y
@@ -1084,7 +1103,7 @@ class GamMGCVModel(Model):
         pandas2ri.activate()
         df = pandas2ri.py2rpy(pd.DataFrame(np.c_[self.x, self.y], columns=["x", "y"]))
         self._model = self._mgcv.gam(
-            Formula(f'y ~ s(x, k={self._n_splines}, bs="cr")'),
+            Formula(f'y ~ s(x, k={self._n_splines}, bs="cs")'),
             data=df,
             sp=self._sp,
             family=family,
@@ -1100,8 +1119,8 @@ class GamMGCVModel(Model):
         """
         Run the prediction.
 
-        Params
-        ------
+        Parameters
+        ----------
         x_test
             Features used for prediction.
         key_added
@@ -1135,7 +1154,11 @@ class GamMGCVModel(Model):
             np.array(
                 robjects.r.predict(
                     self.model,
-                    newdata=pandas2ri.py2rpy(pd.DataFrame(self.x_test, columns=["x"])),
+                    newdata=pandas2ri.py2rpy(
+                        pd.DataFrame(
+                            x_test if key_added is None else self.x_test, columns=["x"]
+                        )
+                    ),
                 )
             )
             .squeeze()
@@ -1151,8 +1174,8 @@ class GamMGCVModel(Model):
         """
         Calculate a confidence interval using the default method.
 
-        Params
-        ------
+        Parameters
+        ----------
         x_test
             Points for which to calculate the confidence interval.
         **kwargs
