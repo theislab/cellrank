@@ -143,7 +143,7 @@ def curved_edges(
     try:
         import bezier
     except ImportError as e:
-        raise RuntimeError("Please install `bezier` as `pip install bezier`.") from e
+        raise ImportError("Please install `bezier` as `pip install bezier`.") from e
 
     # Get nodes into np array
     edges = np.array(G.edges())
