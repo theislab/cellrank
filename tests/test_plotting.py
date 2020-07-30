@@ -26,6 +26,7 @@ FIGS = HERE / "figures"
 DPI = 40
 TOL = 300
 
+# both are for `50` adata
 GENES = [
     "Tcea1",
     "Tmeff2",
@@ -37,6 +38,18 @@ GENES = [
     "Cntnap5a",
     "Mpc2",
     "2010300C02Rik",
+]
+RAW_GENES = [
+    "Synpr",
+    "Rps24",
+    "Erc2",
+    "Mbnl2",
+    "Thoc7",
+    "Itm2b",
+    "Pcdh9",
+    "Fgf14",
+    "Rpl37",
+    "Cdh9",
 ]
 
 cr.settings.figdir = FIGS
@@ -363,6 +376,20 @@ class TestClusterLineages:
         )
 
     @compare()
+    def test_cluster_lineage_raw(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.cluster_lineage(
+            adata,
+            model,
+            RAW_GENES[:5],
+            "0",
+            time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
+            use_raw=True,
+        )
+
+    @compare()
     def test_cluster_lineage_no_norm(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.cluster_lineage(
@@ -402,6 +429,20 @@ class TestHeatmap:
             GENES[:10],
             kind="lineages",
             time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_heatmap_lineages_raw(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.heatmap(
+            adata,
+            model,
+            RAW_GENES[:5],
+            kind="lineages",
+            time_key="latent_time",
+            use_raw=True,
             dpi=DPI,
             save=fpath,
         )
@@ -720,6 +761,20 @@ class TestGeneTrend:
             GENES[:3],
             data_key="Ms",
             dirname="trends_simple",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare(dirname="trends_simple_raw")
+    def test_trends_raw(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            RAW_GENES[:5],
+            data_key="X",
+            dirname="trends_simple_raw",
+            use_raw=True,
             dpi=DPI,
             save=fpath,
         )
