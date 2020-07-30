@@ -894,15 +894,13 @@ class GamMGCVModel(Model):
         mgcv = importr("mgcv")
         pandas2ri.activate()
 
-        df = pandas2ri.py2rpy(
-            pd.DataFrame(np.c_[self.x, self.y][use_ixs, :], columns=["x", "y"])
-        )
+        df = pandas2ri.py2rpy(pd.DataFrame(np.c_[self.x, self.y], columns=["x", "y"]))
         self._model = mgcv.gam(
             Formula(f'y ~ s(x, k={n_splines}, bs="cr")'),
             data=df,
             sp=self._sp,
             family=robjects.r.gaussian,
-            weights=pd.Series(self.w[use_ixs]),
+            weights=pd.Series(self.w),
         )
 
         pandas2ri.deactivate()
