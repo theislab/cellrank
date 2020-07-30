@@ -1843,9 +1843,10 @@ def _cosine_corr(X: np.ndarray, Y: np.ndarray, use_jax: bool = False) -> np.ndar
     if use_jax:
         import jax.numpy as jnp
 
-        Y_norm = jnp.linalg.norm(Y)
         X_norm = jnp.linalg.norm(X, axis=1)
+        Y_norm = jnp.linalg.norm(Y)
         c = X.dot(Y) / (X_norm * Y_norm)
+        jnp.nan_to_num(c, copy=False, nan=0.0)
     else:
         X_norm = np.linalg.norm(X, axis=1)
         if Y.ndim == 1:
@@ -1856,6 +1857,7 @@ def _cosine_corr(X: np.ndarray, Y: np.ndarray, use_jax: bool = False) -> np.ndar
             c = np.einsum("ij,ij->i", X, Y) / (X_norm * Y_norm)
         else:
             raise NotImplementedError("Y is a scalar or has more than 2 dimensions.")
+        c[np.isnan(c)] = 0
 
     return c
 
@@ -1869,7 +1871,10 @@ def _softmax(x, sigma, use_jax: bool = False):
     else:
         mod = np
 
-    return mod.exp(x * sigma) / mod.exp(x * sigma).sum()
+    z = x - mod.max(x, axis=-1, keepdims=True)
+    numerator = mod.exp(z * sigma)
+    denominator = mod.sum(numerator, axis=-1, keepdims=True)
+    return numerator / denominator
 
 
 def _predict_transition_probabilities(
