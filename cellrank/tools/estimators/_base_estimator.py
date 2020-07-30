@@ -7,16 +7,17 @@ from copy import deepcopy
 from typing import Any, Dict, Union, TypeVar, Optional, Sequence
 from pathlib import Path
 
-from matplotlib.colors import is_color_like
-
 import numpy as np
 import pandas as pd
 from pandas import Series
-from cellrank import logging as logg
 from scipy.stats import ranksums
 from scipy.sparse import spmatrix
-from cellrank.tools import Lineage
 from pandas.api.types import infer_dtype, is_categorical_dtype
+
+from matplotlib.colors import is_color_like
+
+from cellrank import logging as logg
+from cellrank.tools import Lineage
 from cellrank.utils._docs import d, inject_docs
 from cellrank.tools._utils import (
     _pairwise,
@@ -458,8 +459,6 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
         # use `cluster_key` and clusters to subset the data
         if clusters is not None:
-            if cluster_key is None:
-                cluster_key = "clusters"
             if cluster_key not in self.adata.obs.keys():
                 raise KeyError(f"Key `{cluster_key!r}` not found in `adata.obs`.")
             if isinstance(clusters, str):
@@ -474,10 +473,10 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                     f"`adata.obs[{cluster_key!r}]`."
                 )
             subset_mask = np.in1d(self.adata.obs[cluster_key], clusters)
-            adata_comp = self.adata[subset_mask].copy()
+            adata_comp = self.adata[subset_mask]
             lin_probs = abs_probs[subset_mask, :]
         else:
-            adata_comp = self.adata.copy()
+            adata_comp = self.adata
             lin_probs = abs_probs
 
         # check that the layer exists, and that use raw is only used with layer X

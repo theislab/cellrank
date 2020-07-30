@@ -8,22 +8,23 @@ from copy import deepcopy
 from typing import Any, Tuple, Union, TypeVar, Iterable, Optional
 from inspect import signature
 
+import numpy as np
+import pandas as pd
+from pygam import GAM as pGAM
+from pygam import ExpectileGAM
+from pygam.terms import s
+from sklearn.base import BaseEstimator
+from scipy.ndimage.filters import convolve
+
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 
-import numpy as np
-import pandas as pd
 import cellrank.logging as logg
-from pygam import GAM as pGAM
-from pygam import ExpectileGAM
-from pygam.terms import s
-from sklearn.base import BaseEstimator
 from cellrank.utils._docs import d
 from cellrank.tools._utils import save_fig, _densify_squeeze
 from cellrank.utils._utils import _minmax
-from scipy.ndimage.filters import convolve
 from cellrank.tools._lineage import Lineage
 from cellrank.tools._constants import AbsProbKey
 
@@ -261,8 +262,7 @@ class Model(ABC):
             weight_threshold, val = (
                 weight_threshold
                 if isinstance(weight_threshold, (tuple, list))
-                else weight_threshold,
-                0,
+                else (weight_threshold, 0)
             )
             w = _densify_squeeze(self.adata.obsm[lineage_key][lineage].X, self._dtype)
             w[w < weight_threshold] = val
@@ -429,11 +429,7 @@ class Model(ABC):
         pass
 
     def default_conf_int(
-        self,
-        x: Optional[np.ndarray] = None,
-        x_test: Optional[np.ndarray] = None,
-        w: Optional[np.ndarray] = None,
-        **kwargs,
+        self, x_test: Optional[np.ndarray] = None, **kwargs,
     ) -> np.ndarray:
         """
         Calculate a confidence interval if underlying model has no method for it.
@@ -455,13 +451,12 @@ class Model(ABC):
             The confidence interval.
         """
 
-        self._check("_x", x)
-        self._check("_w", w, ndim=1)
-
         use_ixs = self.w > 0
-        self._check("_x_hat", self.x[use_ixs])
+        x_hat = self.x[use_ixs]
+        if x_test is None:
+            x_test = self.x_test
 
-        self._y_hat = self.predict(self.x_hat, key_added=None, **kwargs)
+        self._y_hat = self.predict(x_hat, key_added="_x_hat", **kwargs)
         self._y_test = self.predict(x_test, key_added="_x_test", **kwargs)
 
         n = np.sum(use_ixs)
@@ -655,7 +650,7 @@ class Model(ABC):
 
     def _check(
         self, attr_name: Optional[str], value: np.ndarray, ndim: int = 2
-    ) -> None:
+    ) -> np.ndarray:
         if attr_name is None:
             return
         if value is None:  # already called prepare
@@ -666,17 +661,19 @@ class Model(ABC):
                     f"Expected attribute `{attr_name!r}` to have `{ndim}` dimensions, "
                     f"found `{getattr(self, attr_name).ndim}` dimensions."
                 )
-        else:
-            setattr(self, attr_name, self._convert(value))
-            if attr_name.startswith("_"):
-                try:
-                    getattr(self, attr_name[1:])
-                except AttributeError:
-                    setattr(
-                        self,
-                        attr_name[1:],
-                        property(lambda self: getattr(self, attr_name)),
-                    )
+            return getattr(self, attr_name)
+
+        setattr(self, attr_name, self._convert(value))
+        if attr_name.startswith("_"):
+            try:
+                getattr(self, attr_name[1:])
+            except AttributeError:
+                setattr(
+                    self,
+                    attr_name[1:],
+                    property(lambda self: getattr(self, attr_name)),
+                )
+        return getattr(self, attr_name)
 
     def _deepcopy_attributes(self, dst: "Model") -> None:
         for attr in [
@@ -815,9 +812,9 @@ class SKLearnModel(Model):
             The predicted values.
         """
 
-        self._check(key_added, x_test)
+        x_test = self._check(key_added, x_test)
 
-        self._y_test = self._pred_fn(self.x_test, **kwargs)
+        self._y_test = self._pred_fn(x_test, **kwargs)
         self._y_test = np.squeeze(self._y_test)
 
         return self.y_test
@@ -846,8 +843,8 @@ class SKLearnModel(Model):
         if self._ci_fn is None:
             return self.default_conf_int(x_test=x_test, **kwargs)
 
-        self._check("_x_test", x_test)
-        self._conf_int = self._ci_fn(self.x_test, **kwargs)
+        x_test = self._check("_x_test", x_test)
+        self._conf_int = self._ci_fn(x_test, **kwargs)
 
         return self.conf_int
 
@@ -910,7 +907,6 @@ class GAMModel(Model):  # noqa
         if expectile is not None:
             if distribution != "normal" or link != "identity":
                 distribution, link = "normal", "identity"
-                print("expectile")
             model = ExpectileGAM(
                 term, expectile=expectile, max_iter=max_iter, verbose=False
             )
@@ -978,9 +974,9 @@ class GAMModel(Model):  # noqa
         key_added: Optional[str] = "_x_test",
         **kwargs,
     ) -> np.ndarray:  # noqa
-        self._check(key_added, x_test)
+        x_test = self._check(key_added, x_test)
 
-        self._y_test = self.model.predict(self.x_test, **kwargs)
+        self._y_test = self.model.predict(x_test, **kwargs)
         self._y_test = np.squeeze(self._y_test)
 
         return self.y_test
@@ -989,12 +985,12 @@ class GAMModel(Model):  # noqa
         self, x_test: Optional[np.ndarray] = None, **kwargs
     ) -> np.ndarray:  # noqa
 
-        self._check("_x_test", x_test)
+        x_test = self._check("_x_test", x_test)
 
         if self._use_gam_cf:
-            self._conf_int = self.model.confidence_intervals(self.x_test, **kwargs)
+            self._conf_int = self.model.confidence_intervals(x_test, **kwargs)
         else:
-            self._conf_int = self.default_conf_int(x_test=self.x_test, **kwargs)
+            self._conf_int = self.default_conf_int(x_test=x_test, **kwargs)
 
         return self.conf_int
 
@@ -1147,18 +1143,14 @@ class GamMGCVModel(Model):
                 "Unable to fit the model, R package `mgcv` is not imported."
             )
 
-        self._check(key_added, x_test)
+        x_test = self._check(key_added, x_test)
 
         pandas2ri.activate()
         self._y_test = (
             np.array(
                 robjects.r.predict(
                     self.model,
-                    newdata=pandas2ri.py2rpy(
-                        pd.DataFrame(
-                            x_test if key_added is None else self.x_test, columns=["x"]
-                        )
-                    ),
+                    newdata=pandas2ri.py2rpy(pd.DataFrame(x_test, columns=["x"])),
                 )
             )
             .squeeze()

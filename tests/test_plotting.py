@@ -24,7 +24,7 @@ HERE: str = Path(__file__).parent
 GT_FIGS = HERE / "_ground_truth_figures"
 FIGS = HERE / "figures"
 DPI = 40
-TOL = 300
+TOL = 150
 
 # both are for `50` adata
 GENES = [
