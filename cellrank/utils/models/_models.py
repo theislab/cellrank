@@ -44,15 +44,12 @@ class Model(ABC):
         Annotated data object.
     model
         Underlying model.
-    weight_name
-        Name of the weight argument for :paramref:`model`.
+    filter_dropouts
+        TODO
     """
 
     def __init__(
-        self,
-        adata: AnnData,
-        model: Any,
-        filter_dropouts: Optional[Union[bool, float]] = None,
+        self, adata: AnnData, model: Any, filter_dropouts: Optional[float] = None,
     ):
         self._adata = adata
         self._model = model
@@ -336,10 +333,9 @@ class Model(ABC):
             x, y, w = x[fil], y[fil], w[fil]
 
         if self._filter_dropouts is not None:
-            fil = (
-                ~np.isclose(y, 0)
-                if (self._filter_dropouts == 0 or self._filter_dropouts is True)
-                else (y >= self._filter_dropouts)
+            tmp = y.squeeze()
+            fil = (tmp >= self._filter_dropouts) & (
+                ~np.isclose(tmp, self._filter_dropouts).astype(np.bool)
             )
             x, y, w = x[fil], y[fil], w[fil]
 
@@ -650,7 +646,7 @@ class Model(ABC):
 
     def _check(
         self, attr_name: Optional[str], value: np.ndarray, ndim: int = 2
-    ) -> np.ndarray:
+    ) -> Optional[np.ndarray]:
         if attr_name is None:
             return
         if value is None:  # already called prepare
@@ -727,7 +723,7 @@ class SKLearnModel(Model):
         Annotated data object.
     model
         Underlying :mod:`sklearn` model.
-    filter_dropout
+    filter_dropouts
         Filter out all cells with expression lower than this. If `True`, the value is `0`.
     weight_name
         Name of the weight argument for :paramref:`model` `.fit`.
@@ -742,7 +738,7 @@ class SKLearnModel(Model):
         self,
         adata: AnnData,
         model: BaseEstimator,
-        filter_dropouts: Optional[Union[bool, float]] = None,
+        filter_dropouts: Optional[float] = None,
         weight_name: Optional[str] = None,
         ignore_raise: bool = False,
     ):
@@ -766,7 +762,7 @@ class SKLearnModel(Model):
 
         if self._weight_name is None:
             raise RuntimeError(
-                f"Unable to determine weights for function `{fit_name!r}`, searched for `{self._weight_names}`. "
+                f"Unable to determine weights for function `{fit_name!r}`, searched `{self._weight_names}`. "
                 f"Consider specifying it manually as `weight_name=...`."
             )
 
@@ -811,6 +807,7 @@ class SKLearnModel(Model):
         :class:`numpy.ndarray`
             The predicted values.
         """
+        # TODO: docs
 
         x_test = self._check(key_added, x_test)
 
@@ -878,13 +875,7 @@ class SKLearnModel(Model):
         return SKLearnModel(self.adata, deepcopy(self._model))
 
 
-class GAM(Model):  # noqa
-
-    _default_grid = {
-        "n_splines": np.arange(6, 12),
-        "lam": np.logspace(-3, 3, 5, base=2),
-    }
-
+class GAM(Model):  # noqa  TODO
     def __init__(
         self,
         adata: AnnData,
@@ -897,6 +888,23 @@ class GAM(Model):  # noqa
         grid: Union[bool, dict] = False,
         filter_droupouts=None,
     ):
+        """
+        Fit *G*eneralized *A*dditive *M*odel.
+
+        Parameters
+        ----------
+        adata
+        n_splines
+        spline_order
+        distribution
+        link
+        max_iter
+        expectile
+        grid
+            Whether to perform a grid search. Keys correspond to a parameter names and values to range to be searched.
+            If :class:`bool` and `True`, use the :paramref:`default_grid`.
+        filter_droupouts
+        """
         term = s(
             0,
             spline_order=spline_order,
@@ -906,6 +914,7 @@ class GAM(Model):  # noqa
         )
         if expectile is not None:
             if distribution != "normal" or link != "identity":
+                # TODO
                 distribution, link = "normal", "identity"
             model = ExpectileGAM(
                 term, expectile=expectile, max_iter=max_iter, verbose=False
@@ -923,9 +932,11 @@ class GAM(Model):  # noqa
         if isinstance(grid, dict):
             self._grid = grid
         elif isinstance(grid, bool):
-            self._grid = self._default_grid if grid else {}
+            self._grid = self.default_grid if grid else {}
         else:
-            raise TypeError()
+            raise TypeError(
+                f"Expected `grid` to be `bool` or `dict`, found `{type(grid).__name__!r}`."
+            )
 
         self._use_gam_cf = distribution == "normal" and link == "identity"
 
@@ -1003,6 +1014,13 @@ class GAM(Model):  # noqa
 
         return res
 
+    @property
+    def default_grid(self) -> dict:  # noqa
+        return {
+            "n_splines": np.arange(6, 12),
+            "lam": np.logspace(-3, 3, 5, base=2),
+        }
+
 
 class GAMR(Model):
     """
@@ -1037,7 +1055,7 @@ class GAMR(Model):
         n_splines: int = 5,
         sp: float = 2,
         family: str = "gaussian",
-        filter_dropouts: Optional[Union[bool, float]] = None,
+        filter_dropouts: Optional[float] = None,
         perform_import_check: bool = True,
         backend: str = "mgcv",
     ):
@@ -1122,7 +1140,7 @@ class GAMR(Model):
             )
         else:
             raise NotImplementedError(
-                f"Not fitting implemented for R library `{self._lib_name!r}`."
+                f"No fitting implemented for R library `{self._lib_name!r}`."
             )
 
         pandas2ri.deactivate()
