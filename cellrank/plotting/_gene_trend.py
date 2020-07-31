@@ -240,7 +240,7 @@ def gene_trends(
         plot_kwargs["xlabel"] = kwargs.get("time_key", None)
 
     if _is_any_gam_mgcv(kwargs["models"]):
-        logg.debug("Setting backend to multiprocessing because model is `GamMGCV`")
+        logg.debug("Setting backend to multiprocessing because model is `GamMGCVModel`")
         backend = "multiprocessing"
 
     n_jobs = _get_n_cores(n_jobs, len(genes))

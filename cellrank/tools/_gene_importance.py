@@ -222,7 +222,7 @@ def gene_importance(
 
     models = _create_models(model, genes, [lineage])
     if _is_any_gam_mgcv(models):
-        logg.debug("Setting backend to multiprocessing because model is `GamMGCV`")
+        logg.debug("Setting backend to multiprocessing because model is `GamMGCVModel`")
         backend = "multiprocessing"
 
     start = logg.info(f"Calculating gene trends using `{n_jobs}` core(s)")

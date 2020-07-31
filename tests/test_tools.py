@@ -77,7 +77,7 @@ class TestLineageDrivers:
 
     def test_normal_run(self, adata_cflare):
         cr.tl.lineages(adata_cflare)
-        cr.tl.lineage_drivers(adata_cflare)
+        cr.tl.lineage_drivers(adata_cflare, use_raw=False)
 
         for name in adata_cflare.obsm[AbsProbKey.FORWARD.s].names:
             assert f"to {name} corr" in adata_cflare.var
@@ -92,7 +92,7 @@ class TestLineageDrivers:
 
     def test_not_inplace(self, adata_cflare):
         cr.tl.lineages(adata_cflare)
-        res = cr.tl.lineage_drivers(adata_cflare, inplace=False)
+        res = cr.tl.lineage_drivers(adata_cflare, inplace=False, use_raw=False)
 
         assert isinstance(res, pd.DataFrame)
         assert res.shape[0] == adata_cflare.n_vars
