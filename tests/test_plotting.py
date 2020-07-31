@@ -79,10 +79,14 @@ def compare(
         assert res is None, res
 
     def _prepare_fname(func: Callable) -> Tuple[str, str]:
-        fpath = f"{func.__name__.replace('test_', '')}.png"
-        return fpath, str(fpath[7:] if fpath.startswith("scvelo_") else fpath)
+        fpath = f"{func.__name__.replace('test_', '')}"
+        # scvelo saves figures as pdf
+        return fpath, str(fpath[7:] + ".png" if fpath.startswith("scvelo_") else fpath)
 
     def _assert_equal(fpath: str) -> None:
+        # TODO: not an elegant solution, consider passing dirname to the functions
+        if not fpath.endswith(".png"):
+            fpath += ".png"
         if dirname is not None:
             for file in os.listdir(FIGS / dirname):
                 _compare_images(GT_FIGS / dirname / file, FIGS / dirname / file)
@@ -420,7 +424,7 @@ class TestClusterLineages:
 
 
 class TestHeatmap:
-    @compare()
+    @compare(dirname="heatmap_lineages")
     def test_heatmap_lineages(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.heatmap(
@@ -433,7 +437,7 @@ class TestHeatmap:
             save=fpath,
         )
 
-    @compare()
+    @compare(dirname="heatmap_lineages_raw")
     def test_heatmap_lineages_raw(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.heatmap(
@@ -460,7 +464,7 @@ class TestHeatmap:
             save=fpath,
         )
 
-    @compare()
+    @compare(dirname="heatmap_no_cluster_genes")
     def test_heatmap_no_cluster_genes(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.heatmap(
@@ -474,7 +478,7 @@ class TestHeatmap:
             save=fpath,
         )
 
-    @compare()
+    @compare(dirname="heatmap_cluster_genes")
     def test_heatmap_cluster_genes(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.heatmap(
@@ -488,7 +492,7 @@ class TestHeatmap:
             save=fpath,
         )
 
-    @compare()
+    @compare(dirname="heatmap_lineage_height")
     def test_heatmap_lineage_height(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.heatmap(
@@ -502,7 +506,7 @@ class TestHeatmap:
             save=fpath,
         )
 
-    @compare()
+    @compare(dirname="heatmap_start_end_clusters")
     def test_heatmap_start_end_clusters(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.heatmap(
@@ -531,7 +535,7 @@ class TestHeatmap:
             save=fpath,
         )
 
-    @compare()
+    @compare(dirname="heatmap_no_cbar_lineages")
     def test_heatmap_no_cbar_lineages(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.heatmap(
@@ -559,7 +563,7 @@ class TestHeatmap:
             save=fpath,
         )
 
-    @compare()
+    @compare(dirname="heatmap_abs_probs_lineages")
     def test_heatmap_abs_probs_lineages(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.heatmap(
@@ -587,7 +591,7 @@ class TestHeatmap:
             save=fpath,
         )
 
-    @compare()
+    @compare(dirname="heatmap_no_convolve")
     def test_heatmap_no_convolve(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.heatmap(
@@ -601,7 +605,7 @@ class TestHeatmap:
             save=fpath,
         )
 
-    @compare()
+    @compare(dirname="heatmap_no_scale_lineages")
     def test_heatmap_no_scale_lineages(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.heatmap(
@@ -629,7 +633,7 @@ class TestHeatmap:
             save=fpath,
         )
 
-    @compare()
+    @compare(dirname="heatmap_cluster_no_scale")
     def test_heatmap_cluster_no_scale(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.heatmap(
@@ -644,7 +648,7 @@ class TestHeatmap:
             save=fpath,
         )
 
-    @compare()
+    @compare(dirname="heatmap_no_cluster")
     def test_heatmap_no_cluster(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.heatmap(
@@ -658,7 +662,7 @@ class TestHeatmap:
             save=fpath,
         )
 
-    @compare()
+    @compare(dirname="heatmap_cluster_key_no_abs_probs")
     def test_heatmap_cluster_key_no_abs_probs(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.heatmap(
@@ -673,7 +677,7 @@ class TestHeatmap:
             save=fpath,
         )
 
-    @compare()
+    @compare(dirname="heatmap_cluster_key_abs_probs")
     def test_heatmap_cluster_key_abs_probs(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.heatmap(
@@ -688,8 +692,8 @@ class TestHeatmap:
             save=fpath,
         )
 
-    @compare()
-    def test_heatmap_multiplecluster_keys(self, adata: AnnData, fpath: str):
+    @compare(dirname="heatmap_multiple_cluster_keys")
+    def test_heatmap_multiple_cluster_keys(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.heatmap(
             adata,
@@ -703,8 +707,10 @@ class TestHeatmap:
             save=fpath,
         )
 
-    @compare()
-    def test_heatmap_multiplecluster_show_all_genes(self, adata: AnnData, fpath: str):
+    @compare(dirname="heatmap_multiple_cluster_keys_show_all_genes")
+    def test_heatmap_multiple_cluster_keys_show_all_genes(
+        self, adata: AnnData, fpath: str
+    ):
         model = create_model(adata)
         cr.pl.heatmap(
             adata,
@@ -716,7 +722,7 @@ class TestHeatmap:
             save=fpath,
         )
 
-    @compare()
+    @compare(dirname="heatmap_n_jobs")
     def test_heatmap_n_jobs(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.heatmap(
@@ -733,8 +739,8 @@ class TestHeatmap:
             save=fpath,
         )
 
-    @compare()
-    def test_heatmap_n_jobs_multiprocesing(self, adata: AnnData, fpath: str):
+    @compare(dirname="heatmap_n_jobs_multiprocessing")
+    def test_heatmap_n_jobs_multiprocessing(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.heatmap(
             adata,
@@ -746,6 +752,20 @@ class TestHeatmap:
             show_absorption_probabilities=True,
             kind="lineages",
             time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare(dirname="heatmap_keep_gene_order")
+    def test_heatmap_keep_gene_order(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.heatmap(
+            adata,
+            model,
+            GENES[:10],
+            kind="lineages",
+            time_key="latent_time",
+            keep_gene_order=True,
             dpi=DPI,
             save=fpath,
         )
