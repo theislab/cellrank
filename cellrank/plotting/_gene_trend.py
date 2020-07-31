@@ -6,15 +6,16 @@ from types import MappingProxyType
 from typing import Tuple, Union, Mapping, TypeVar, Optional, Sequence
 from pathlib import Path
 
+import numpy as np
+
 import matplotlib
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 
-import numpy as np
 from cellrank import logging as logg
 from cellrank.utils._docs import d
-from cellrank.tools._utils import save_fig
-from cellrank.utils._utils import _get_n_cores, _make_unique, check_collection
+from cellrank.tools._utils import save_fig, _unique_order_preserving
+from cellrank.utils._utils import _get_n_cores, check_collection
 from cellrank.plotting._utils import (
     _fit,
     _model_type,
@@ -157,12 +158,14 @@ def gene_trends(
 
     if isinstance(genes, str):
         genes = [genes]
-    genes = _make_unique(genes)
+    genes = _unique_order_preserving(genes)
 
     if data_key != "obs":
-        check_collection(adata, genes, "var_names")
+        check_collection(
+            adata, genes, "var_names", use_raw=kwargs.get("use_raw", False)
+        )
     else:
-        check_collection(adata, genes, "obs")
+        check_collection(adata, genes, "obs", use_raw=kwargs.get("use_raw", False))
 
     nrows = int(np.ceil(len(genes) / ncols))
     fig = None
@@ -205,11 +208,10 @@ def gene_trends(
     elif all(map(lambda ln: ln is None, lineages)):  # no lineage, all the weights are 1
         lineages = [None]
         show_cbar = False
-        logg.debug("All lineages are `None`, setting weights to be `1`")
-    lineages = _make_unique(lineages)
+        logg.debug("All lineages are `None`, setting the weights to `1`")
+    lineages = _unique_order_preserving(lineages)
 
-    for ln in filter(lambda ln: ln is not None, lineages):
-        _ = adata.obsm[ln_key][ln]
+    _ = adata.obsm[ln_key][[lin for lin in lineages if lin is not None]]
     n_lineages = len(lineages)
 
     if isinstance(start_lineage, (str, type(None))):
@@ -238,7 +240,7 @@ def gene_trends(
         plot_kwargs["xlabel"] = kwargs.get("time_key", None)
 
     if _is_any_gam_mgcv(kwargs["models"]):
-        logg.debug("Setting backend to multiprocessing because model is `GamMGCV`")
+        logg.debug("Setting backend to multiprocessing because model is `GamMGCVModel`")
         backend = "multiprocessing"
 
     n_jobs = _get_n_cores(n_jobs, len(genes))

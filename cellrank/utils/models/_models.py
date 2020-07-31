@@ -3,23 +3,24 @@
 
 import re
 from abc import ABC, abstractmethod
-from copy import copy
-from typing import Any, Tuple, TypeVar, Iterable, Optional
+from copy import copy as _copy
+from copy import deepcopy
+from typing import Any, Tuple, Union, TypeVar, Iterable, Optional
 from inspect import signature
+
+import numpy as np
+import pandas as pd
+from sklearn.base import BaseEstimator
+from scipy.ndimage.filters import convolve
 
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 
-import numpy as np
-import pandas as pd
-from scipy.sparse import issparse
-from sklearn.base import BaseEstimator
 from cellrank.utils._docs import d
-from cellrank.tools._utils import save_fig
+from cellrank.tools._utils import save_fig, _densify_squeeze
 from cellrank.utils._utils import _minmax
-from scipy.ndimage.filters import convolve
 from cellrank.tools._lineage import Lineage
 from cellrank.tools._constants import AbsProbKey
 
@@ -33,20 +34,24 @@ class Model(ABC):
     """
     Base class for other model classes.
 
-    Params
-    ------
+    Parameters
+    ----------
     adata : :class:`anndata.AnnData`
         Annotated data object.
     model
         Underlying model.
-    weight_name
-        Name of the weight argument for :paramref:`model`.
+    filter_dropouts
+        TODO
     """
 
-    def __init__(self, adata: AnnData, model: Any, weight_name: Optional[str] = None):
+    def __init__(
+        self, adata: AnnData, model: Any, filter_dropouts: Optional[float] = None,
+    ):
         self._adata = adata
         self._model = model
-        self.weight_name = weight_name
+        self._filter_dropouts = filter_dropouts
+        self._gene = None
+        self._lineage = None
 
         self._x_all = None
         self._y_all = None
@@ -130,14 +135,6 @@ class Model(ABC):
         """Confidence interval."""
         return self._conf_int
 
-    @abstractmethod
-    def copy(self) -> "Model":
-        """Return a copy of self."""
-        pass
-
-    def __copy__(self) -> "Model":
-        return self.copy()
-
     @d.dedent
     def prepare(
         self,
@@ -146,19 +143,19 @@ class Model(ABC):
         backward: bool = False,
         data_key: str = "X",
         time_key: str = "latent_time",
+        use_raw: bool = False,
         start_lineage: Optional[str] = None,
         end_lineage: Optional[str] = None,
         threshold: Optional[float] = None,
-        weight_threshold: float = 0.02,
-        weight_scale: float = 1,
+        weight_threshold: Union[float, Tuple[float, float]] = (0.01, 0.01),
         filter_data: float = False,
         n_test_points: int = 200,
     ) -> "Model":
         """
         Prepare the model to be ready for fitting.
 
-        Params
-        ------
+        Parameters
+        ----------
         gene
             Gene in :paramref:`adata` `.var_names`.
         lineage
@@ -168,6 +165,8 @@ class Model(ABC):
             Key in :attr:`paramref.adata` `.layers` or `'X'` for :paramref:`adata` `.X`.
         time_key
             Key in :paramref:`adata` `.obs` where the pseudotime is stored.
+        use_raw
+            Whether to access :paramref:`adata` `.raw` or not.
         start_lineage
             Lineage from which to select cells with lowest pseudotime as starting points.
             If specified, the trends start at the earliest pseudotime within that lineage,
@@ -180,9 +179,7 @@ class Model(ABC):
             Consider only cells with :paramref:`weights` > :paramref:`threshold` when estimating the testing endpoint.
             If `None`, use median of :paramref:`w`.
         weight_threshold
-            Set all weights below this to :paramref:`weight_scale` * :paramref:`weight_threshold`.
-        weight_scale
-            Weight threshold scale, see :paramref:`weight_threshold`.
+            Set all weights below :paramref:`weight_threshold` to either 0, or if :class:`tuple`, to the second value.
         filter_data
             Use only testing points for fitting.
         n_test_points
@@ -198,6 +195,8 @@ class Model(ABC):
                 - :paramref:`w`
                 - :paramref:`x_test`
         """
+        if use_raw and self.adata.raw is None:
+            raise AttributeError("AnnData object has no attribute `.raw`.")
 
         if data_key not in ["X", "obs"] + list(self.adata.layers.keys()):
             raise KeyError(
@@ -207,7 +206,9 @@ class Model(ABC):
             raise KeyError(f"Time key `{time_key!r}` not found in `adata.obs`.")
 
         if data_key != "obs":
-            if gene not in self.adata.var_names:
+            if use_raw and gene not in self.adata.raw.var_names:
+                raise KeyError(f"Gene `{gene!r}` not found in `adata.raw.var_names`.")
+            if not use_raw and gene not in self.adata.var_names:
                 raise KeyError(f"Gene `{gene!r}` not found in `adata.var_names`.")
         else:
             if gene not in self.adata.obs:
@@ -219,7 +220,7 @@ class Model(ABC):
         if not isinstance(self.adata.obsm[lineage_key], Lineage):
             raise TypeError(
                 f"Expected `adata.obsm[{lineage_key!r}]` to be of type `cellrank.tl.Lineage`, "
-                f"found `{type(self.adata.obsm[lineage_key]).__name__}`."
+                f"found `{type(self.adata.obsm[lineage_key]).__name__!r}`."
             )
 
         if lineage is not None:
@@ -237,36 +238,57 @@ class Model(ABC):
                 )
 
         x = np.array(self.adata.obs[time_key]).astype(np.float64)
-        gene_ix = np.where(self.adata.var_names == gene)[0]
+
+        adata = self.adata.raw.to_adata() if use_raw else self.adata
+        gene_ix = np.where(adata.var_names == gene)[0]
 
         if data_key == "X":
-            y = self.adata.X[:, gene_ix]
+            y = adata.X[:, gene_ix]
         elif data_key == "obs":
-            y = self.adata.obs[gene].values
-        elif data_key in self.adata.layers:
-            y = self.adata.layers[data_key][:, gene_ix]
+            y = adata.obs[gene].values
+        elif data_key in adata.layers:
+            y = adata.layers[data_key][:, gene_ix]
         else:
-            raise NotImplementedError(
-                f"Data key `{data_key!r}` is not yet implemented."
-            )
-
-        if issparse(y):
-            y = np.asarray(y.todense())
-        y = np.squeeze(y).astype(np.float64)
+            raise NotImplementedError(f"Data key `{data_key!r}` is not implemented.")
 
         if lineage is not None:
-            w = (
-                np.array(self.adata.obsm[lineage_key][lineage])
-                .astype(self._dtype)
-                .squeeze()
+            weight_threshold, val = (
+                weight_threshold
+                if isinstance(weight_threshold, (tuple, list))
+                else (weight_threshold, 0)
             )
-            w[w < weight_threshold] = np.clip(weight_threshold * weight_scale, 0, 1)
+            w = _densify_squeeze(self.adata.obsm[lineage_key][lineage].X, self._dtype)
+            w[w < weight_threshold] = val
         else:
-            w = np.ones_like(x)
+            w = np.ones(len(x), dtype=self._dtype)
 
-        self._x_all, self._y_all, self._w_all = x[:], y[:], w[:]
+        if use_raw:
+            correct_ixs = np.isin(self.adata.obs_names, adata.obs_names)
+            x = x[correct_ixs]
+            w = w[correct_ixs]
 
-        x, ixs = np.unique(x, return_index=True)
+        del adata
+
+        self._x_all, self._y_all, self._w_all = (
+            _densify_squeeze(x, self._dtype)[:, np.newaxis],
+            _densify_squeeze(y, self._dtype)[:, np.newaxis],
+            w,
+        )
+        x, y, w = self.x_all[:], self.y_all[:], self.w_all[:]
+
+        # sanity checks
+        if self._x_all.shape[0] != self._y_all.shape[0]:
+            raise ValueError(
+                f"Independent variable's first dimension ({self._x_all.shape[0]}) "
+                f"differs from dependent variable's first dimension ({self._y_all.shape[0]})."
+            )
+        if self._x_all.shape[0] != self._w_all.shape[0]:
+            raise ValueError(
+                f"Independent variable's first dimension ({self._x_all.shape[0]}) "
+                f"differs from weights' first dimension ({self._w_all.shape[0]})."
+            )
+
+        x, ixs = np.unique(x, return_index=True)  # GamMGCVModel needs unique
         y = y[ixs]
         w = w[ixs]
 
@@ -306,45 +328,26 @@ class Model(ABC):
             fil = (x >= val_start) & (x <= val_end)
             x, y, w = x[fil], y[fil], w[fil]
 
+        if self._filter_dropouts is not None:
+            tmp = y.squeeze()
+            fil = (tmp >= self._filter_dropouts) & (
+                ~np.isclose(tmp, self._filter_dropouts).astype(np.bool)
+            )
+            x, y, w = x[fil], y[fil], w[fil]
+
         self._x, self._y, self._w = (
-            self._convert(x[:]),
-            self._convert(y[:]),
-            self._convert(w[:]).squeeze(-1),
+            self._convert(x),
+            self._convert(y),
+            self._convert(w).squeeze(-1),
         )
-        self._x_test = self._convert(x_test[:])
+        self._x_test = self._convert(x_test)
+
+        self._gene = gene
+        self._lineage = lineage
 
         return self
 
-    def _convert(self, value: np.ndarray) -> np.ndarray:
-        was_1d = value.ndim == 1
-        value = np.atleast_2d(value).astype(self._dtype)
-        if was_1d:
-            return np.swapaxes(value, 0, 1)
-        return value
-
-    def _check(self, attr_name: Optional[str], value: np.ndarray, ndim: int = 2):
-        if attr_name is None:
-            return
-        if value is None:  # already called prepare
-            if not hasattr(self, attr_name):
-                raise AttributeError(f"No attribute `{attr_name!r}` found.")
-            if getattr(self, attr_name).ndim != ndim:
-                raise ValueError(
-                    f"Expected attribute `{attr_name!r}` to have `{ndim}` dimensions, "
-                    f"found `{getattr(self, attr_name).ndim}` dimensions."
-                )
-        else:
-            setattr(self, attr_name, self._convert(value))
-            if attr_name.startswith("_"):
-                try:
-                    getattr(self, attr_name[1:])
-                except AttributeError:
-                    setattr(
-                        self,
-                        attr_name[1:],
-                        property(lambda self: getattr(self, attr_name)),
-                    )
-
+    @d.get_sectionsf("model_fit")
     @abstractmethod
     def fit(
         self,
@@ -356,15 +359,15 @@ class Model(ABC):
         """
         Fit the model.
 
-        Params
-        ------
+        Parameters
+        ----------
         x
             Independent variables.
         y
             Dependent variables.
         w
             Weights of :paramref:`x`.
-        kwargs
+        **kwargs
             Keyword arguments.
 
         Returns
@@ -388,6 +391,7 @@ class Model(ABC):
 
         return self
 
+    @d.get_sectionsf("model_predict")
     @abstractmethod
     def predict(
         self,
@@ -398,14 +402,14 @@ class Model(ABC):
         """
         Run the prediction.
 
-        Params
-        ------
+        Parameters
+        ----------
         x_test
             Features used for prediction.
         key_added
             Attribute name where to save the independent variables.
             If `None`, don't save them.
-        kwargs
+        **kwargs
             Keyword arguments.
 
         Returns
@@ -417,24 +421,20 @@ class Model(ABC):
         pass
 
     def default_conf_int(
-        self,
-        x: Optional[np.ndarray] = None,
-        x_test: Optional[np.ndarray] = None,
-        w: Optional[np.ndarray] = None,
-        **kwargs,
+        self, x_test: Optional[np.ndarray] = None, **kwargs,
     ) -> np.ndarray:
         """
         Calculate a confidence interval if underlying model has no method for it.
 
-        Params
-        ------
+        Parameters
+        ----------
         x
             Points used to fit the model.
         x_test
             Points for which to calculate the interval
         w
             Weights of the points used to fit the model. Used for filtering those points.
-        kwargs
+        **kwargs
             Keyword arguments.
 
         Returns
@@ -443,17 +443,16 @@ class Model(ABC):
             The confidence interval.
         """
 
-        self._check("_x", x)
-        self._check("_w", w, ndim=1)
+        use_ixs = self.w > 0
+        x_hat = self.x[use_ixs]
+        if x_test is None:
+            x_test = self.x_test
 
-        use_ixs = np.where(self.w > 0)[0]
-        self._check("_x_hat", self.x[use_ixs])
-
-        self._y_hat = self.predict(self.x_hat, key_added=None, **kwargs)
+        self._y_hat = self.predict(x_hat, key_added="_x_hat", **kwargs)
         self._y_test = self.predict(x_test, key_added="_x_test", **kwargs)
 
         n = np.sum(use_ixs)
-        sigma = np.sqrt(((self.y_hat - self.y[use_ixs]) ** 2).sum() / (n - 2))
+        sigma = np.sqrt(((self.y_hat - self.y[use_ixs].squeeze()) ** 2).sum() / (n - 2))
 
         stds = (
             np.sqrt(
@@ -471,6 +470,7 @@ class Model(ABC):
 
         return self.conf_int
 
+    @d.get_sectionsf("model_conf_int")
     @abstractmethod
     def confidence_interval(
         self, x_test: Optional[np.ndarray] = None, **kwargs
@@ -480,11 +480,11 @@ class Model(ABC):
 
         Use the default method if underlying model has not method for CI calculation.
 
-        Params
-        ------
+        Parameters
+        ----------
         x_test
             Points for which to calculate the confidence interval.
-        kwargs
+        **kwargs
             Keyword arguments.
 
         Returns
@@ -523,8 +523,8 @@ class Model(ABC):
         """
         Plot the smoothed gene expression.
 
-        Params
-        ------
+        Parameters
+        ----------
         figsize
             Size of the figure.
         same_plot
@@ -598,6 +598,9 @@ class Model(ABC):
                 alpha=alpha,
             )
 
+        if title is None:
+            title = f"{self._gene} @ {self._lineage}"
+
         ax.plot(self.x_test, self.y_test, color=color, lw=lw, label=title)
 
         ax.set_title(title)
@@ -630,6 +633,70 @@ class Model(ABC):
         if return_fig:
             return fig
 
+    def _convert(self, value: np.ndarray) -> np.ndarray:
+        was_1d = value.ndim == 1
+        value = np.atleast_2d(value).astype(self._dtype)
+        if was_1d:
+            return np.swapaxes(value, 0, 1)
+        return value
+
+    def _check(
+        self, attr_name: Optional[str], value: np.ndarray, ndim: int = 2
+    ) -> Optional[np.ndarray]:
+        if attr_name is None:
+            return
+        if value is None:  # already called prepare
+            if not hasattr(self, attr_name):
+                raise AttributeError(f"No attribute `{attr_name!r}` found.")
+            if getattr(self, attr_name).ndim != ndim:
+                raise ValueError(
+                    f"Expected attribute `{attr_name!r}` to have `{ndim}` dimensions, "
+                    f"found `{getattr(self, attr_name).ndim}` dimensions."
+                )
+            return getattr(self, attr_name)
+
+        setattr(self, attr_name, self._convert(value))
+        if attr_name.startswith("_"):
+            try:
+                getattr(self, attr_name[1:])
+            except AttributeError:
+                setattr(
+                    self,
+                    attr_name[1:],
+                    property(lambda self: getattr(self, attr_name)),
+                )
+        return getattr(self, attr_name)
+
+    def _deepcopy_attributes(self, dst: "Model") -> None:
+        for attr in [
+            "_x_all",
+            "_y_all",
+            "_w_all",
+            "_x",
+            "_y",
+            "_w",
+            "_x_test",
+            "_y_test",
+            "_x_hat",
+            "_y_hat",
+            "_conf_int",
+        ]:
+            setattr(dst, attr, _copy(getattr(self, attr)))
+
+    @abstractmethod
+    def copy(self) -> "Model":
+        """Return a copy of self."""
+        pass
+
+    def __copy__(self) -> "Model":
+        return self.copy()
+
+    def __deepcopy__(self, memodict={}) -> "Model":  # noqa
+        res = self.copy()
+        memodict[id(self)] = res
+        self._deepcopy_attributes(res)
+        return res
+
     def __str__(self) -> str:
         return repr(self)
 
@@ -646,12 +713,14 @@ class SKLearnModel(Model):
     """
     Wrapper around :mod:`sklearn` model.
 
-    Params
-    ------
+    Parameters
+    ----------
     adata : :class:`anndata.AnnData`
         Annotated data object.
     model
         Underlying :mod:`sklearn` model.
+    filter_dropouts
+        Filter out all cells with expression lower than this. If `True`, the value is `0`.
     weight_name
         Name of the weight argument for :paramref:`model` `.fit`.
     """
@@ -662,24 +731,115 @@ class SKLearnModel(Model):
     _conf_int_names = ("conf_int", "confidence_intervals")
 
     def __init__(
-        self, adata: AnnData, model: BaseEstimator, weight_name: Optional[str] = None,
+        self,
+        adata: AnnData,
+        model: BaseEstimator,
+        filter_dropouts: Optional[float] = None,
+        weight_name: Optional[str] = None,
+        ignore_raise: bool = False,
     ):
-        super().__init__(adata, model)
-        self._fit_name = self._find_func(self._fit_names)
-        self._predict_name = self._find_func(self._predict_names)
-        self._weight_name = (
-            self._find_weight_param(self._weight_names)
-            if weight_name is None
-            else weight_name
-        )
-        self._ci_name = self._find_func(
-            self._conf_int_names, use_default=True, default=None
-        )
+        super().__init__(adata, model, filter_dropouts=filter_dropouts)
 
-    @property
-    def model(self) -> BaseEstimator:
-        """The underlying model."""  # noqa
-        return self._model
+        fit_name = self._find_func(self._fit_names)
+        predict_name = self._find_func(self._predict_names)
+        ci_name = self._find_func(self._conf_int_names, use_default=True, default=None)
+        self._weight_name = None
+
+        if weight_name is None:
+            self._weight_name = self._find_weight_param(fit_name, self._weight_names)
+        else:
+            params = signature(getattr(self.model, fit_name)).parameters
+            if not ignore_raise and weight_name not in params:
+                raise ValueError(
+                    f"Unable to detect `{weight_name!r}` in the signature of `{fit_name!r}`."
+                    f"If it's in `kwargs`, set `ignore_raise=True.`"
+                )
+            self._weight_name = weight_name
+
+        if self._weight_name is None:
+            raise RuntimeError(
+                f"Unable to determine weights for function `{fit_name!r}`, searched `{self._weight_names}`. "
+                f"Consider specifying it manually as `weight_name=...`."
+            )
+
+        self._fit_fn = getattr(self.model, fit_name)
+        self._pred_fn = getattr(self.model, predict_name)
+        self._ci_fn = None if ci_name is None else getattr(self.model, ci_name, None)
+
+    def fit(
+        self,
+        x: Optional[np.ndarray] = None,
+        y: Optional[np.ndarray] = None,
+        w: Optional[np.ndarray] = None,
+        **kwargs,
+    ) -> "SKLearnModel":  # noqa
+        super().fit(x, y, w, **kwargs)
+
+        if self._weight_name is not None:
+            kwargs[self._weight_name] = self._w
+
+        self._model = self._fit_fn(self.x, self.y, **kwargs)
+
+        return self
+
+    def predict(
+        self, x_test: Optional[np.ndarray] = None, key_added: str = "_x_test", **kwargs
+    ) -> np.ndarray:
+        """
+        Run the prediction.
+
+        Parameters
+        ----------
+        x_test
+            Features used for prediction.
+        key_added
+            Attribute name where to save the independent variables.
+            If `None`, don't save them.
+        **kwargs
+            Keyword arguments.
+
+        Returns
+        -------
+        :class:`numpy.ndarray`
+            The predicted values.
+        """
+        # TODO: docs
+
+        x_test = self._check(key_added, x_test)
+
+        self._y_test = self._pred_fn(x_test, **kwargs)
+        self._y_test = np.squeeze(self._y_test)
+
+        return self.y_test
+
+    def confidence_interval(
+        self, x_test: Optional[np.ndarray] = None, **kwargs
+    ) -> np.ndarray:
+        """
+        Calculate a confidence interval.
+
+        Use the default method if underlying model has not method for CI calculation.
+
+        Parameters
+        ----------
+        x_test
+            Points for which to calculate the confidence interval.
+        **kwargs
+            Keyword arguments.
+
+        Returns
+        -------
+        :class:`numpy.ndarray`
+            The confidence interval.
+        """
+
+        if self._ci_fn is None:
+            return self.default_conf_int(x_test=x_test, **kwargs)
+
+        x_test = self._check("_x_test", x_test)
+        self._conf_int = self._ci_fn(x_test, **kwargs)
+
+        return self.conf_int
 
     def _find_func(
         self,
@@ -696,140 +856,76 @@ class SKLearnModel(Model):
             f"Unable to find function and no default specified, tried searching `{list(func_names)}`."
         )
 
-    def _find_weight_param(self, param_names: Iterable[str]) -> Optional[str]:
-        for param in signature(getattr(self.model, self._fit_name)).parameters:
+    def _find_weight_param(
+        self, fit_name: Optional[str], param_names: Iterable[str]
+    ) -> Optional[str]:
+        if fit_name is None:
+            return None
+        for param in signature(getattr(self.model, fit_name)).parameters:
             if param in param_names:
                 return param
         return None
 
-    def fit(
-        self,
-        x: Optional[np.ndarray] = None,
-        y: Optional[np.ndarray] = None,
-        w: Optional[np.ndarray] = None,
-        **kwargs,
-    ) -> "SKLearnModel":
-        """
-        Fit the model.
-
-        Params
-        ------
-        x
-            Independent variables.
-        y
-            Dependent variables.
-        w
-            Weights of :paramref:`x`.
-        kwargs
-            Keyword arguments.
-
-        Returns
-        -------
-        :class:`cellrank.ul.models.SKLearnModel`
-            Return fitted self.
-        """
-
-        super().fit(x, y, w, **kwargs)
-
-        if self._weight_name is not None:
-            kwargs[self._weight_name] = self._w
-
-        fit_fn = getattr(self.model, self._fit_name)
-        self._model = fit_fn(self.x, self.y, **kwargs)
-
-        return self
-
-    def predict(
-        self, x_test: Optional[np.ndarray] = None, key_added: str = "_x_test", **kwargs
-    ) -> np.ndarray:
-        """
-        Run the prediction.
-
-        Params
-        ------
-        x_test
-            Features used for prediction.
-        key_added
-            Attribute name where to save the independent variables.
-            If `None`, don't save them.
-        kwargs
-            Keyword arguments.
-
-        Returns
-        -------
-        :class:`numpy.ndarray`
-            The predicted values.
-        """
-
-        self._check(key_added, x_test)
-
-        pred_fn = getattr(self.model, self._predict_name)
-        self._y_test = pred_fn(self.x_test, **kwargs)
-        self._y_test = np.squeeze(self._y_test)
-
-        return self.y_test
-
-    def confidence_interval(
-        self, x_test: Optional[np.ndarray] = None, **kwargs
-    ) -> np.ndarray:
-        """
-        Calculate a confidence interval.
-
-        Use the default method if underlying model has not method for CI calculation.
-
-        Params
-        ------
-        x_test
-            Points for which to calculate the confidence interval.
-        kwargs
-            Keyword arguments.
-
-        Returns
-        -------
-        :class:`numpy.ndarray`
-            The confidence interval.
-        """
-
-        if self._ci_name is None:
-            return self.default_conf_int(x_test=x_test, **kwargs)
-
-        self._check("_x_test", x_test)
-        ci_fn = getattr(self.model, self._ci_name)
-
-        self._conf_int = ci_fn(self.x_test, **kwargs)
-
-        return self.conf_int
-
     def copy(self) -> "SKLearnModel":
         """Return a copy of self."""
-        return type(self)(self.adata, copy(self._model))
+        return SKLearnModel(self.adata, deepcopy(self._model))
 
 
 class GamMGCVModel(Model):
     """
-    Wrapper around R's `mgcv <https://cran.r-project.org/web/packages/mgcv/>`_ package for \
-    fitting Generalized Additive Models (GAMs).
+    Wrapper around R's `mgcv <https://cran.r-project.org/web/packages/mgcv/>`_ or  \
+    `mgcv <https://cran.r-project.org/web/packages/gam/>`_ package fors fitting Generalized Additive Models (GAMs).
 
-    Params
-    ------
+    Parameters
+    ----------
     adata : :class:`anndata.AnnData`
         Annotated data object.
     n_splines
         Number of splines for the GAM.
     sp
-        Vector of smoothing parameters.
+        Smoothing parameter.
+    family
+        Family in `rpy2.robjects.r`, such as `"gaussian"` or `"poisson"`.
+    filter_dropouts
+        Filter out all cells with expression lower than this. If `True`, the value is `0`.
+    backend
+        R library used to fit GAMs. Valid options are `'mgcv'` and `'gam'`. Note that option `'gam'` ignores
+        the number of splines, as well as family and smoothing parameter.
     """
 
-    def __init__(self, adata: AnnData, n_splines: int = 5, sp: float = 2):
-        super().__init__(adata, None)
+    _backends = {
+        "gam": "mgcv",
+        "mgcv": "gam",
+    }
+
+    def __init__(
+        self,
+        adata: AnnData,
+        n_splines: int = 5,
+        sp: float = 2,
+        family: str = "gaussian",
+        filter_dropouts: Optional[float] = None,
+        perform_import_check: bool = True,
+        backend: str = "mgcv",
+    ):
+        super().__init__(adata, model=None, filter_dropouts=filter_dropouts)
         self._n_splines = n_splines
         self._sp = sp
-        try:
-            import rpy2  # noqa
-        except ImportError:
-            raise ImportError(
-                "Unable to import `rpy2`, install it first as `pip install rpy2`."
+        self._lib = None
+        self._lib_name = None
+        self._family = family
+
+        if backend not in self._backends.keys():
+            raise ValueError(
+                f"Invalid backend library `{backend!r}`. Valid options are `{list(self._backends.keys())}`."
             )
+
+        if (
+            perform_import_check
+        ):  # it's a bit costly to import, copying just passes the reference
+            self._lib, self._lib_name = _maybe_import_r_lib(
+                backend
+            ) or _maybe_import_r_lib(self._backends[backend], raise_exc=True)
 
     def fit(
         self,
@@ -841,15 +937,15 @@ class GamMGCVModel(Model):
         """
         Fit the model.
 
-        Params
-        ------
+        Parameters
+        ----------
         x
             Independent variables.
         y
             Dependent variables.
         w
             Weights of :paramref:`x`.
-        kwargs
+        **kwargs
             Keyword arguments.
 
         Returns
@@ -860,30 +956,41 @@ class GamMGCVModel(Model):
 
         from rpy2 import robjects
         from rpy2.robjects import pandas2ri, Formula
-        from rpy2.robjects.packages import importr
 
         super().fit(x, y, w, **kwargs)
 
-        use_ixs = np.where(self.w > 0)[0]
+        use_ixs = self.w > 0
         self._x = self.x[use_ixs]
         self._y = self.y[use_ixs]
         self._w = self.w[use_ixs]
 
-        n_splines = kwargs.pop("n_splines", self._n_splines)
+        family = getattr(robjects.r, self._family, None)
+        if family is None:
+            family = robjects.r.gaussian
 
-        mgcv = importr("mgcv")
         pandas2ri.activate()
+        df = pandas2ri.py2rpy(pd.DataFrame(np.c_[self.x, self.y], columns=["x", "y"]))
 
-        df = pandas2ri.py2rpy(
-            pd.DataFrame(np.c_[self.x, self.y][use_ixs, :], columns=["x", "y"])
-        )
-        self._model = mgcv.gam(
-            Formula(f'y ~ s(x, k={n_splines}, bs="cr")'),
-            data=df,
-            sp=self._sp,
-            family=robjects.r.gaussian,
-            weights=pd.Series(self.w[use_ixs]),
-        )
+        if self._lib_name == "mgcv":
+            self._model = self._lib.gam(
+                Formula(f'y ~ s(x, k={self._n_splines}, bs="cs")'),
+                data=df,
+                sp=self._sp,
+                family=family,
+                weights=pd.Series(self.w),
+            )
+        elif self._lib_name == "gam":
+            self._model = self._lib.gam(
+                Formula("y ~ s(x)"),
+                data=df,
+                sp=self._sp,
+                family=family,
+                weights=pd.Series(self.w),
+            )
+        else:
+            raise NotImplementedError(
+                f"No fitting implemented for R library `{self._lib_name!r}`."
+            )
 
         pandas2ri.deactivate()
 
@@ -895,14 +1002,14 @@ class GamMGCVModel(Model):
         """
         Run the prediction.
 
-        Params
-        ------
+        Parameters
+        ----------
         x_test
             Features used for prediction.
         key_added
             Attribute name where to save the independent variables.
             If `None`, don't save them.
-        kwargs
+        **kwargs
             Keyword arguments.
 
         Returns
@@ -918,14 +1025,19 @@ class GamMGCVModel(Model):
             raise RuntimeError(
                 "Trying to call an uninitialized model. To initialize it, run `.fit()` first."
             )
-        self._check(key_added, x_test)
+        if self._lib is None:
+            raise RuntimeError(
+                f"Unable to fit the model, R package `{self._lib_name}` is not imported."
+            )
+
+        x_test = self._check(key_added, x_test)
 
         pandas2ri.activate()
         self._y_test = (
             np.array(
                 robjects.r.predict(
                     self.model,
-                    newdata=pandas2ri.py2rpy(pd.DataFrame(self.x_test, columns=["x"])),
+                    newdata=pandas2ri.py2rpy(pd.DataFrame(x_test, columns=["x"])),
                 )
             )
             .squeeze()
@@ -941,11 +1053,11 @@ class GamMGCVModel(Model):
         """
         Calculate a confidence interval using the default method.
 
-        Params
-        ------
+        Parameters
+        ----------
         x_test
             Points for which to calculate the confidence interval.
-        kwargs
+        **kwargs
             Keyword arguments.
 
         Returns
@@ -957,4 +1069,34 @@ class GamMGCVModel(Model):
 
     def copy(self) -> "GamMGCVModel":
         """Return a copy of self."""
-        return type(self)(self.adata, self._n_splines, self._sp)
+        res = GamMGCVModel(
+            self.adata,
+            self._n_splines,
+            self._sp,
+            family=self._family,
+            filter_dropouts=self._filter_dropouts,
+            perform_import_check=False,
+        )
+        res._lib = self._lib
+        res._lib_name = self._lib_name
+        return res
+
+
+def _maybe_import_r_lib(
+    name: str, raise_exc: bool = False
+) -> Optional[Tuple[Any, str]]:
+    try:
+        from rpy2.robjects.packages import PackageNotInstalledError, importr
+    except ImportError as e:
+        raise ImportError(
+            "Unable to import `rpy2`, install it first as `pip install rpy2`."
+        ) from e
+
+    try:
+        return importr(name), name
+    except PackageNotInstalledError as e:
+        if not raise_exc:
+            return
+        raise RuntimeError(
+            f"Install R library `{name}` first as `install.packages({name!r}).`"
+        ) from e

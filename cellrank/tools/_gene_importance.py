@@ -6,9 +6,11 @@ from typing import Any, Dict, List, Tuple, Union, Mapping, TypeVar, Optional, Se
 
 import numpy as np
 import pandas as pd
+from sklearn.ensemble import RandomForestRegressor
+from statsmodels.stats.multitest import multipletests
+
 from cellrank import logging as logg
 from cellrank.tools import GPCCA
-from sklearn.ensemble import RandomForestRegressor
 from cellrank.utils._docs import d
 from cellrank.utils._utils import _get_n_cores, check_collection
 from cellrank.utils.models import Model
@@ -16,8 +18,7 @@ from cellrank.tools.kernels import ConnectivityKernel
 from cellrank.plotting._utils import _model_type, _create_models, _is_any_gam_mgcv
 from cellrank.tools._constants import AbsProbKey
 from cellrank.utils._parallelize import parallelize
-from statsmodels.stats.multitest import multipletests
-from cellrank.tools.estimators._constants import A
+from cellrank.tools.estimators._constants import P
 
 AnnData = TypeVar("AnnData")
 
@@ -211,7 +212,7 @@ def gene_importance(
             raise ValueError(
                 f"Number of permutations must be `>= 0`, found `{n_perms}`."
             )
-    check_collection(adata, genes, "var_names")
+    check_collection(adata, genes, "var_names", use_raw=kwargs.get("use_raw", False))
 
     n_jobs = _get_n_cores(n_jobs, len(genes))
 
@@ -221,7 +222,7 @@ def gene_importance(
 
     models = _create_models(model, genes, [lineage])
     if _is_any_gam_mgcv(models):
-        logg.debug("Setting backend to multiprocessing because model is `GamMGCV`")
+        logg.debug("Setting backend to multiprocessing because model is `GamMGCVModel`")
         backend = "multiprocessing"
 
     start = logg.info(f"Calculating gene trends using `{n_jobs}` core(s)")
@@ -325,8 +326,11 @@ def lineage_drivers(
 
     # create dummy kernel and estimator
     kernel = ConnectivityKernel(adata, backward=backward)
-    g = GPCCA(kernel)
-    g._set(A.ABS_RPOBS, adata.obsm[g._abs_prob_key])
+    g = GPCCA(kernel, read_from_adata=True)
+    if g._get(P.ABS_PROBS) is None:
+        raise RuntimeError(
+            "Compute absorption probabilities first as `cellrank.tl.lineages()`."
+        )
 
     # call the underlying function to compute and store the lineage drivers
     return g.compute_lineage_drivers(

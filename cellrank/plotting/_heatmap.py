@@ -456,7 +456,7 @@ def heatmap(
     if isinstance(genes, str):
         genes = [genes]
     genes = _unique_order_preserving(genes)
-    check_collection(adata, genes, "var_names")
+    check_collection(adata, genes, "var_names", use_raw=kwargs.get("use_raw", False))
 
     if isinstance(start_lineage, (str, type(None))):
         start_lineage = [start_lineage] * len(lineages)
@@ -475,7 +475,7 @@ def heatmap(
 
     kwargs["models"] = _create_models(model, genes, lineages)
     if _is_any_gam_mgcv(kwargs["models"]):
-        logg.debug("Setting backend to multiprocessing because model is `GamMGCV`")
+        logg.debug("Setting backend to multiprocessing because model is `GamMGCVModel`")
         backend = "multiprocessing"
 
     n_jobs = _get_n_cores(n_jobs, len(genes))
