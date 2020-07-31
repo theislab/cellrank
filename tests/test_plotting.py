@@ -750,6 +750,20 @@ class TestHeatmap:
             save=fpath,
         )
 
+    @compare()
+    def test_heatmap_keep_gene_order(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.heatmap(
+            adata,
+            model,
+            GENES[:10],
+            kind="lineages",
+            time_key="latent_time",
+            keep_gene_order=True,
+            dpi=DPI,
+            save=fpath,
+        )
+
 
 class TestGeneTrend:
     @compare(dirname="trends_simple")
