@@ -10,9 +10,6 @@ from inspect import signature
 
 import numpy as np
 import pandas as pd
-from pygam import GAM as pGAM
-from pygam import ExpectileGAM
-from pygam.terms import s
 from sklearn.base import BaseEstimator
 from scipy.ndimage.filters import convolve
 
@@ -21,7 +18,6 @@ import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 
-import cellrank.logging as logg
 from cellrank.utils._docs import d
 from cellrank.tools._utils import save_fig, _densify_squeeze
 from cellrank.utils._utils import _minmax
@@ -292,7 +288,7 @@ class Model(ABC):
                 f"differs from weights' first dimension ({self._w_all.shape[0]})."
             )
 
-        x, ixs = np.unique(x, return_index=True)  # GamMGCV needs unique
+        x, ixs = np.unique(x, return_index=True)  # GamMGCVModel needs unique
         y = y[ixs]
         w = w[ixs]
 
@@ -875,157 +871,10 @@ class SKLearnModel(Model):
         return SKLearnModel(self.adata, deepcopy(self._model))
 
 
-class GAM(Model):  # noqa  TODO
-    def __init__(
-        self,
-        adata: AnnData,
-        n_splines: Optional[int] = 10,
-        spline_order: int = 3,
-        distribution: str = "normal",
-        link: str = "identity",
-        max_iter: int = 1000,
-        expectile: Optional[float] = None,
-        grid: Union[bool, dict] = False,
-        filter_droupouts=None,
-    ):
-        """
-        Fit *G*eneralized *A*dditive *M*odel.
-
-        Parameters
-        ----------
-        adata
-        n_splines
-        spline_order
-        distribution
-        link
-        max_iter
-        expectile
-        grid
-            Whether to perform a grid search. Keys correspond to a parameter names and values to range to be searched.
-            If :class:`bool` and `True`, use the :paramref:`default_grid`.
-        filter_droupouts
-        """
-        term = s(
-            0,
-            spline_order=spline_order,
-            n_splines=n_splines,
-            lam=0.5,
-            penalties=["derivative"],
-        )
-        if expectile is not None:
-            if distribution != "normal" or link != "identity":
-                # TODO
-                distribution, link = "normal", "identity"
-            model = ExpectileGAM(
-                term, expectile=expectile, max_iter=max_iter, verbose=False
-            )
-        else:
-            model = pGAM(
-                term,
-                distribution=distribution,
-                link=link,
-                max_iter=max_iter,
-                verbose=False,
-            )
-        super().__init__(adata, model=model, filter_dropouts=filter_droupouts)
-
-        if isinstance(grid, dict):
-            self._grid = grid
-        elif isinstance(grid, bool):
-            self._grid = self.default_grid if grid else {}
-        else:
-            raise TypeError(
-                f"Expected `grid` to be `bool` or `dict`, found `{type(grid).__name__!r}`."
-            )
-
-        self._use_gam_cf = distribution == "normal" and link == "identity"
-
-    def fit(
-        self,
-        x: Optional[np.ndarray] = None,
-        y: Optional[np.ndarray] = None,
-        w: Optional[np.ndarray] = None,
-        **kwargs,
-    ) -> "Model":  # noqa
-        super().fit(x, y, w, **kwargs)
-
-        use_ixs = np.where(self.w > 0)[0]
-        self._x = self.x[use_ixs]
-        self._y = self.y[use_ixs]
-        self._w = self.w[use_ixs]
-
-        if self._grid:
-            try:
-                self.model.gridsearch(
-                    self.x,
-                    self.y,
-                    weights=self.w,
-                    keep_best=True,
-                    progress=False,
-                    **self._grid,
-                )
-                return self
-            except Exception as e:
-                logg.error(
-                    f"Grid search failed, reason: `{e}`. Fitting with default values"
-                )
-
-        try:
-            self.model.fit(self.x, self.y, weights=self.w)
-            return self
-        except Exception as e:
-            raise RuntimeError(
-                f"Unable to fit `{type(self).__name__}`for gene "
-                f"`{self._gene!r}` in lineage `{self._lineage!r}`."
-            ) from e
-
-    def predict(
-        self,
-        x_test: Optional[np.ndarray] = None,
-        key_added: Optional[str] = "_x_test",
-        **kwargs,
-    ) -> np.ndarray:  # noqa
-        x_test = self._check(key_added, x_test)
-
-        self._y_test = self.model.predict(x_test, **kwargs)
-        self._y_test = np.squeeze(self._y_test)
-
-        return self.y_test
-
-    def confidence_interval(
-        self, x_test: Optional[np.ndarray] = None, **kwargs
-    ) -> np.ndarray:  # noqa
-
-        x_test = self._check("_x_test", x_test)
-
-        if self._use_gam_cf:
-            self._conf_int = self.model.confidence_intervals(x_test, **kwargs)
-        else:
-            self._conf_int = self.default_conf_int(x_test=x_test, **kwargs)
-
-        return self.conf_int
-
-    def copy(self) -> "Model":  # noqa
-        res = GAM(self.adata)
-
-        res._use_gam_cf = self._use_gam_cf
-        res._grid = deepcopy(self._grid)
-        res._model = deepcopy(self.model)
-
-        return res
-
-    @property
-    def default_grid(self) -> dict:  # noqa
-        return {
-            "n_splines": np.arange(6, 12),
-            "lam": np.logspace(-3, 3, 5, base=2),
-        }
-
-
-class GAMR(Model):
+class GamMGCVModel(Model):
     """
     Wrapper around R's `mgcv <https://cran.r-project.org/web/packages/mgcv/>`_ or  \
-    `mgcv <https://cran.r-project.org/web/packages/gam/>`_ package fors fitting Generalized Additive Models (GAMs).
+    `mgcv <https://cran.r-project.org/web/packages/gam/>`_ package for fitting Generalized Additive Models (GAMs).
 
     Parameters
     ----------
@@ -1084,7 +933,7 @@ class GAMR(Model):
         y: Optional[np.ndarray] = None,
         w: Optional[np.ndarray] = None,
         **kwargs,
-    ) -> "GAMR":
+    ) -> "GamMGCVModel":
         """
         Fit the model.
 
@@ -1101,7 +950,7 @@ class GAMR(Model):
 
         Returns
         -------
-        :class:`cellrank.ul.models.GAMR`
+        :class:`cellrank.ul.models.GamMGCVModel`
             Return fitted self.
         """
 
@@ -1218,9 +1067,9 @@ class GAMR(Model):
         """
         return self.default_conf_int(x_test=x_test, **kwargs)
 
-    def copy(self) -> "GAMR":
+    def copy(self) -> "GamMGCVModel":
         """Return a copy of self."""
-        res = GAMR(
+        res = GamMGCVModel(
             self.adata,
             self._n_splines,
             self._sp,
