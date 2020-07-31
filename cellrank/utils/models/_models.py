@@ -8,23 +8,22 @@ from copy import deepcopy
 from typing import Any, Tuple, Union, TypeVar, Iterable, Optional
 from inspect import signature
 
-import numpy as np
-import pandas as pd
-from pygam import GAM as pGAM
-from pygam import ExpectileGAM
-from pygam.terms import s
-from sklearn.base import BaseEstimator
-from scipy.ndimage.filters import convolve
-
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 
+import numpy as np
+import pandas as pd
 import cellrank.logging as logg
+from pygam import GAM as pGAM
+from pygam import ExpectileGAM
+from pygam.terms import s
+from sklearn.base import BaseEstimator
 from cellrank.utils._docs import d
 from cellrank.tools._utils import save_fig, _densify_squeeze
 from cellrank.utils._utils import _minmax
+from scipy.ndimage.filters import convolve
 from cellrank.tools._lineage import Lineage
 from cellrank.tools._constants import AbsProbKey
 
@@ -32,6 +31,8 @@ AnnData = TypeVar("AnnData")
 
 
 _dup_spaces = re.compile(r" +")
+_r_lib = None
+_r_lib_name = None
 
 
 class Model(ABC):
@@ -1232,19 +1233,40 @@ class GAMR(Model):
         res._lib_name = self._lib_name
         return res
 
+    def __getstate__(self) -> dict:
+        return {k: v for k, v in self.__dict__.items() if k != "_lib"}
+
+    def __setstate__(self, state: dict):
+        self.__dict__ = state
+        self._lib, self._lib_name = _maybe_import_r_lib(self._lib_name, raise_exc=True)
+
 
 def _maybe_import_r_lib(
     name: str, raise_exc: bool = False
 ) -> Optional[Tuple[Any, str]]:
+    global _r_lib, _r_lib_name
+
+    if name == _r_lib_name and _r_lib is not None:
+        return _r_lib, _r_lib_name
+
     try:
+        from logging import ERROR
+        from rpy2.robjects import r
+        from rpy2.rinterface_lib.callbacks import logger
         from rpy2.robjects.packages import PackageNotInstalledError, importr
+
+        logger.setLevel(ERROR)
+        r["options"](warn=-1)
+
     except ImportError as e:
         raise ImportError(
             "Unable to import `rpy2`, install it first as `pip install rpy2`."
         ) from e
 
     try:
-        return importr(name), name
+        _r_lib = importr(name)
+        _r_lib_name = name
+        return _r_lib, _r_lib_name
     except PackageNotInstalledError as e:
         if not raise_exc:
             return
