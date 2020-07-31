@@ -312,6 +312,7 @@ class CFLARE(BaseEstimator, Eigen):
             cluster_key=cluster_key,
             n_clusters_kmeans=n_lineages,
             method="kmeans",
+            **kwargs,
         )
 
     @d.dedent  # because of fit
@@ -337,6 +338,8 @@ class CFLARE(BaseEstimator, Eigen):
         Parameters
         ----------
         %(fit)s
+        **kwargs
+            Keyword arguments for :meth:`compute_final_states`, such as `n_cells`.
 
         Returns
         -------

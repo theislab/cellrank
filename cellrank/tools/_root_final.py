@@ -57,7 +57,7 @@ copy
 return_estimator
     Whether to return the estimator. Only available when :paramref:`copy=False`.
 **kwargs
-    Keyword arguments for :meth:`cellrank.tl.BaseEstimator.fit`.
+    Keyword arguments for :meth:`cellrank.tl.BaseEstimator.fit`, such as `n_cells`.
 
 Returns
 -------
@@ -93,7 +93,7 @@ def _root_final(
         mode=mode,
         weight_connectivities=weight_connectivities,
     )
-    # create MarkovChain object
+    # create estimator object
     mc = estimator(kernel, read_from_adata=False)
 
     if cluster_key is None:
