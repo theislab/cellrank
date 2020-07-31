@@ -7,7 +7,6 @@ import pytest
 import matplotlib
 
 import scanpy as sc
-import scvelo as scv
 from anndata import AnnData
 
 import cellrank as cr
@@ -21,45 +20,6 @@ np.random.seed(42)
 _adata_small = sc.read("tests/_ground_truth_adatas/adata_50.h5ad")
 _adata_medium = sc.read("tests/_ground_truth_adatas/adata_100.h5ad")
 _adata_large = sc.read("tests/_ground_truth_adatas/adata_200.h5ad")
-
-
-def _create_dummy_adata(n_obs: int) -> AnnData:
-    """
-    Create a testing :class:`anndata.AnnData` object.
-
-    Call this function to regenerate the above objects.
-
-    Params
-    ------
-    n_obs
-        Number of cells.
-
-    Returns
-    -------
-    :class:`anndata.AnnData`
-        The created adata object.
-    """
-
-    np.random.seed(42)
-    adata = scv.datasets.toy_data(n_obs=n_obs)
-    scv.pp.filter_and_normalize(adata, min_shared_counts=20, n_top_genes=1000)
-    adata.raw = adata[:, 42 : 42 + 50].copy()
-    scv.pp.moments(adata, n_pcs=30, n_neighbors=30)
-    scv.tl.recover_dynamics(adata)
-    scv.tl.velocity(adata, mode="dynamical")
-    scv.tl.velocity_graph(adata, n_recurse_neighbors=0, mode_neighbors="distances")
-    scv.tl.latent_time(adata)
-
-    adata.uns["iroot"] = 0
-    sc.pp.neighbors(adata, n_pcs=15)
-    sc.tl.dpt(adata)
-
-    adata.uns["connectivity_variances"] = np.ones((n_obs, n_obs), dtype=np.float64)
-    adata.uns["velocity_variances"] = np.ones((n_obs, n_obs), dtype=np.float64)
-
-    sc.write(f"tests/_ground_truth_adatas/adata_{n_obs}.h5ad", adata)
-
-    return adata
 
 
 def _create_cflare(*, backward: bool = False) -> Tuple[AnnData, CFLARE]:

@@ -5,12 +5,13 @@ from types import MappingProxyType
 from typing import Any, Dict, List, Tuple, Union, Mapping, Iterable, Optional, Sequence
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
+
 import matplotlib as mpl
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 
-import numpy as np
-import pandas as pd
 from cellrank import logging as logg
 from cellrank.tools import Lineage
 from cellrank.utils._docs import d, inject_docs
@@ -108,7 +109,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
                 )
             was_from_eigengap = True
             n_states = self._get(P.EIG)["eigengap"] + 1
-            logg.info(f"oUsing `{n_states}` states based on eigengap")
+            logg.info(f"Using `{n_states}` states based on eigengap")
 
         if n_states <= 0:
             raise ValueError(
@@ -216,7 +217,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         else:
             logg.warning("No stationary distribution found in GPCCA object")
             logg.info(
-                f"Adding `.{P.SCHUR}`\n" f"       `.{P.COARSE_T}`\n" f"    Finish",
+                f"Adding `.{P.SCHUR}`\n       `.{P.COARSE_T}`\n" f"    Finish",
                 time=start,
             )
 
@@ -921,6 +922,8 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
                 n_states=n_lineages + 1, cluster_key=cluster_key, **kwargs
             )
 
+        fs_kwargs = {"n_cells": kwargs["n_cells"]} if "n_cells" in kwargs else {}
+
         if len(self._get(P.META).cat.categories) == 1:
             # stationary distribution
             self._set(A.FIN, self._get(P.META))
@@ -928,9 +931,9 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             self._set(A.FIN_COLORS, self._get(A.META_COLORS))
             self._write_final_states()
         elif n_lineages is None:
-            self.compute_final_states(method="eigengap")
+            self.compute_final_states(method="eigengap", **fs_kwargs)
         else:
-            self.set_final_states_from_metastable_states()
+            self.set_final_states_from_metastable_states(**fs_kwargs)
 
     @d.dedent  # because of fit
     @d.dedent
@@ -994,5 +997,5 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             keys=keys,
             method=method,
             compute_absorption_probabilities=compute_absorption_probabilities,
-            *kwargs,
+            **kwargs,
         )
