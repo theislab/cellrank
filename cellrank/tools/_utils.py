@@ -26,6 +26,7 @@ from scipy.sparse import eye as speye
 from scipy.sparse import (
     issparse,
     spmatrix,
+    coo_matrix,
     csc_matrix,
     csr_matrix,
     isspmatrix_csc,
@@ -60,6 +61,7 @@ CFLARE = TypeVar("CFLARE")
 DiGraph = TypeVar("DiGraph")
 LinSolver = TypeVar("LinSolver")
 Queue = TypeVar("Queue")
+KernelDirection = TypeVar("KernelDirection")
 
 EPS = np.finfo(np.float64).eps
 
@@ -569,7 +571,7 @@ def _eigengap(evals: np.ndarray, alpha: float) -> int:
     Parameters
     ----------
     evals
-        Must be real numbers.
+        Sorted array of real numbers. If complex, take their real part.
     alpha
         Determines how much weight is given to the deviation of an eigenvalue from one.
 
@@ -578,6 +580,10 @@ def _eigengap(evals: np.ndarray, alpha: float) -> int:
     int
         Number of eigenvectors to be used.
     """
+
+    if np.iscomplexobj(evals):
+        evals = evals.real
+    evals = np.sort(evals)[::-1]  # they could be ordered by LM, not LR
 
     gap, eps = evals[:-1] - evals[1:], (1 - evals)[:-1]
     J = gap - alpha * eps
@@ -1781,8 +1787,150 @@ def _solve_many_sparse_problems(
     return np.stack(x_list, axis=1), n_converged
 
 
+def _pearson_corr(X: np.ndarray, Y: np.ndarray, use_jax: bool = True) -> np.ndarray:
+    """
+    Compute the pearson correlation between rows X and Y.
+
+    Assumes you have samples in the rows and features in the columns. Y can be a vecor or a matrix if
+    `use_jax=False`. In case `use_jax=True`, Y has to be a vector.
+
+    Parameters
+    ----------
+    X
+        Matrix of shape `NxM`.
+    y:
+        Either vector of  shape `M` or matrix of shape `NxM`.
+
+    Returns
+    -------
+    :class:`numpy.ndarray`
+        The computed pearson correlations.  If `Y` is a vector, this corresponds to pearson correlation
+        of `Y` with all rows in `X`. If `Y` is a matrix, this corresponds to pearson correlation between
+        corresponding rows in `X` and `Y`.
+    """
+    if use_jax:
+        X -= X.mean(axis=1)[:, None]
+        Y -= Y.mean()
+    else:
+        X -= X.mean(axis=1)[:, None]
+        if Y.ndim == 1:
+            Y -= Y.mean()
+        elif Y.ndim == 2:
+            Y -= Y.mean(axis=1)[:, None]
+        else:
+            raise NotImplementedError("Y is a scalar or has more than 2 dimensions.")
+
+    return _cosine_corr(X, Y, use_jax=use_jax)
+
+
+def _cosine_corr(X: np.ndarray, Y: np.ndarray, use_jax: bool = False) -> np.ndarray:
+    """
+    Compute the cosine correlation between rows in X and Y.
+
+    Assumes you have samples in the rows and features in the columns. Y can be a vecor or a matrix if
+    `use_jax=False`. In case `use_jax=True`, Y has to be a vector.
+
+    Parameters
+    ----------
+    X
+        Matrix of shape `NxM`.
+    Y:
+        Either vector of  shape `M` or matrix of shape `NxM`.
+
+    Returns
+    -------
+    :class:`numpy.ndarray`
+        The computed cosine correlation(s). If `Y` is a vector, this corresponds to cosine correlation
+        with all rows in `X. If `Y` is a matrix, this corresponds to cosine correlation between
+        corresponding rows in `X` and `Y`.
+    """
+    if use_jax:
+        import jax.numpy as jnp
+
+        X_norm = jnp.linalg.norm(X, axis=1)
+        Y_norm = jnp.linalg.norm(Y)
+        c = X.dot(Y) / (X_norm * Y_norm)
+        jnp.nan_to_num(c, copy=False, nan=0.0)
+    else:
+        X_norm = np.linalg.norm(X, axis=1)
+        if Y.ndim == 1:
+            Y_norm = np.linalg.norm(Y)
+            c = X.dot(Y) / (X_norm * Y_norm)
+        elif Y.ndim == 2:
+            Y_norm = np.linalg.norm(Y, axis=1)
+            c = np.einsum("ij,ij->i", X, Y) / (X_norm * Y_norm)
+        else:
+            raise NotImplementedError("Y is a scalar or has more than 2 dimensions.")
+        c[np.isnan(c)] = 0
+
+    return c
+
+
+def _softmax(x, sigma, use_jax: bool = False):
+    """Compute softmax over input vector."""
+    if use_jax:
+        import jax.numpy as jnp
+
+        mod = jnp
+    else:
+        mod = np
+
+    z = x - mod.max(x, axis=-1, keepdims=True)
+    numerator = mod.exp(z * sigma)
+    denominator = mod.sum(numerator, axis=-1, keepdims=True)
+    return numerator / denominator
+
+
+def _predict_transition_probabilities(
+    X: np.ndarray,
+    W: np.ndarray,
+    softmax_scale: float = 1,
+    use_jax: bool = False,
+    return_pearson_correlation: bool = True,
+):
+    """
+    Compute a categorical distribution based on correlation between rows in `W` and `X`.
+
+    We usually identify `x` with a velocity vector and `W` as the matrix storing transcriptomic
+    displacements of the current reference cell to its nearest neighbors. For the backward process, `X` is a matrix
+    as well, storing the velocity vectors of all nearest neighbors.
+
+    Parameters
+    ----------
+    X
+        Either vector of shape `n_features` or matrix of shape `n_samples x n_features`.
+    W
+        Weight matrix of shape `n_samples x n_features`.
+    softmax_scale
+        Scaling factor for softmax activation function.
+    use_jax
+        Whether to use Jax. Jax enables automatic differentiation and is therefore required in stochastic mode. In
+        deterministic mode, it can slow down things so we have the option to turn it off.
+
+    Returns
+    --------
+    :class:`numpy.ndarray`
+        Vector of probabilities.
+    :class:`numpy.ndarray`
+        Vector of pearson correlations.
+    """
+
+    u = _pearson_corr(W, X, use_jax=use_jax)
+    p = _softmax(u, softmax_scale, use_jax=use_jax)
+
+    return (p, u) if return_pearson_correlation else p
+
+
+def _vals_to_csr(vals, rows, cols, shape) -> csr_matrix:
+    graph = coo_matrix((vals, (rows, cols)), shape=shape, dtype=np.float64)
+
+    return graph.tocsr()
+
+
 def _check_estimator_type(estimator: Any) -> None:
-    from cellrank.tools.estimators._base_estimator import BaseEstimator
+    from cellrank.tools.estimators._base_estimator import (
+        BaseEstimator,
+    )  # prevent cyclic import
 
     if not isinstance(estimator, type):
         raise TypeError(

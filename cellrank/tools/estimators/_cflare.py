@@ -300,18 +300,22 @@ class CFLARE(BaseEstimator, Eigen):
 
     def _fit_final_states(
         self,
-        n_lineages: Optional[int],
+        n_lineages: Optional[int] = None,
         keys: Optional[Sequence[str]] = None,
         cluster_key: Optional[str] = None,
         compute_absorption_probabilities: bool = True,
         **kwargs,
     ) -> None:
         self.compute_eigendecomposition(k=20 if n_lineages is None else n_lineages + 1)
+        if n_lineages is None:
+            n_lineages = self._get(P.EIG)["eigengap"] + 1
+
         self.compute_final_states(
             use=n_lineages,
             cluster_key=cluster_key,
             n_clusters_kmeans=n_lineages,
-            method="kmeans",
+            method=kwargs.pop("method", "kmeans"),
+            **kwargs,
         )
 
     @d.dedent  # because of fit
@@ -337,6 +341,8 @@ class CFLARE(BaseEstimator, Eigen):
         Parameters
         ----------
         %(fit)s
+        **kwargs
+            Keyword arguments for :meth:`compute_final_states`, such as `n_cells`.
 
         Returns
         -------

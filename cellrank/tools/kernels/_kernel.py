@@ -15,20 +15,23 @@ from typing import (
     Iterable,
     Optional,
 )
-from functools import wraps, reduce
+from functools import wraps, reduce, partial
+
+from scvelo.preprocessing.moments import get_moments
 
 import numpy as np
-from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix
-
 from cellrank import logging as logg
+from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix, isspmatrix_csr
 from cellrank.utils._docs import d
 from cellrank.tools._utils import (
     bias_knn,
     _normalize,
     _get_neighs,
     _has_neighs,
+    _vals_to_csr,
     is_connected,
     is_symmetric,
+    _predict_transition_probabilities,
 )
 from cellrank.utils._utils import _read_graph_data, _write_graph_data
 from cellrank.tools._constants import Direction, _transition
@@ -38,9 +41,9 @@ _ERROR_EMPTY_CACHE_MSG = (
     "Fatal error: tried to used cached values, but the cache was empty."
 )
 _ERROR_CONF_ADAPT = (
-    "Confidence adaptive operator is only supported for kernels, found type `{}`."
+    "Confidence adaptive operator is only supported for kernels, found type `{!r}`."
 )
-_ERROR_VAR_NOT_FOUND = "Variances not found in kernel `{}`."
+_ERROR_VAR_NOT_FOUND = "Variances not found in kernel `{!r}`."
 
 _LOG_USING_CACHE = "Using cached transition matrix"
 
@@ -136,9 +139,9 @@ class KernelExpression(ABC):
 
         Parameters
         ----------
-        args
+        *args
             Positional arguments.
-        kwargs
+        **kwargs
             Keyword arguments.
 
         Returns
@@ -213,22 +216,22 @@ class KernelExpression(ABC):
     def __rxor__(self, other: "KernelExpression") -> "KernelExpression":
         def convert(obj):
             if isinstance(obj, _adaptive_add_type):
-                if obj._variances is None:
+                if obj._mat_scaler is None:
                     raise ValueError(_ERROR_VAR_NOT_FOUND.format(obj))
                 return KernelMul(
                     [
                         ConstantMatrix(
-                            obj.adata, 1, obj._variances, backward=obj.backward
+                            obj.adata, 1, obj._mat_scaler, backward=obj.backward
                         ),
                         obj,
                     ]
                 )
             if isinstance(_is_bin_mult(obj, return_constant=False), _adaptive_add_type):
                 e, c = _get_expr_and_constant(obj)
-                if e._variances is None:
+                if e._mat_scaler is None:
                     raise ValueError(_ERROR_VAR_NOT_FOUND.format(e))
                 return KernelMul(
-                    [ConstantMatrix(e.adata, c, e._variances, backward=e.backward), e]
+                    [ConstantMatrix(e.adata, c, e._mat_scaler, backward=e.backward), e]
                 )
 
             return obj
@@ -373,7 +376,6 @@ class UnaryKernelExpression(KernelExpression, ABC):
         backward: bool = False,
         op_name: Optional[str] = None,
         compute_cond_num: bool = False,
-        check_connectivity: bool = False,
         **kwargs,
     ):
         super().__init__(op_name, backward=backward, compute_cond_num=compute_cond_num)
@@ -381,73 +383,6 @@ class UnaryKernelExpression(KernelExpression, ABC):
             op_name is None
         ), "Unary kernel does not support any kind operation associated with it."
         self._adata = adata
-        self._read_from_adata(check_connectivity=check_connectivity, **kwargs)
-
-    @abstractmethod
-    def _read_from_adata(self, var_key: Optional[str] = None, **kwargs):
-        """Import the base-KNN graph and optionally check for symmetry and connectivity."""
-
-        if not _has_neighs(self.adata):
-            raise KeyError("Compute KNN graph first as `scanpy.pp.neighbors()`.")
-
-        self._conn = _get_neighs(self.adata, "connectivities").astype(_dtype)
-        self._variances = None
-
-        check_connectivity = kwargs.pop("check_connectivity", False)
-        if check_connectivity:
-            start = logg.debug("Checking the KNN graph for connectedness")
-            if not is_connected(self._conn):
-                logg.warning("KNN graph is not connected", time=start)
-            else:
-                logg.debug("Knn graph is connected", time=start)
-
-        start = logg.debug("Checking the KNN graph for symmetry")
-        if not is_symmetric(self._conn):
-            logg.warning("KNN graph is not symmetric", time=start)
-        else:
-            logg.debug("KNN graph is symmetric", time=start)
-
-        if var_key is not None:
-            if var_key in self.adata.uns.keys():
-                logg.debug(f"Loading variances from `adata.uns[{var_key!r}]`")
-                # keep it sparse
-                self._variances = csr_matrix(self.adata.uns[var_key].astype(_dtype))
-                if self._conn.shape != self._variances.shape:
-                    raise ValueError(
-                        f"Expected variances' shape `{self._variances.shape}` to be equal to `{self._conn.shape}`."
-                    )
-            else:
-                logg.debug(f"Unable to load variances from `adata.uns[{var_key!r}]`")
-        else:
-            logg.debug("No variance key specified")
-
-    def density_normalize(
-        self, other: Union[np.ndarray, spmatrix]
-    ) -> Union[np.ndarray, spmatrix]:
-        """
-        Density normalization by the underlying KNN graph.
-
-        Parameters
-        ----------
-        other:
-            Matrix to normalize.
-
-        Returns
-        -------
-        :class:`np.ndarray` or :class:`scipy.sparse.spmatrix`
-            Density normalized transition matrix.
-        """
-
-        logg.debug("Density-normalizing the transition matrix")
-
-        q = np.asarray(self._conn.sum(axis=0))
-
-        if not issparse(other):
-            Q = np.diag(1.0 / q)
-        else:
-            Q = spdiags(1.0 / q, 0, other.shape[0], other.shape[0])
-
-        return Q @ other @ Q
 
     @property
     def adata(self) -> AnnData:
@@ -489,17 +424,17 @@ class NaryKernelExpression(KernelExpression, ABC):
         for kexprs in self._kexprs:
             kexprs._parent = self
 
-    def _maybe_recalculate_constants(self, typp: Type):
-        if typp == Constant:
+    def _maybe_recalculate_constants(self, type_: Type):
+        if type_ == Constant:
             accessor = "transition_matrix"
-        elif typp == ConstantMatrix:
+        elif type_ == ConstantMatrix:
             accessor = "_value"
         else:
             raise RuntimeError(
-                f"Unable to determine accessor for type `{type.__name__}`."
+                f"Unable to determine accessor for type `{type.__name__!r}`."
             )
 
-        constants = [_is_bin_mult(k, typp) for k in self]
+        constants = [_is_bin_mult(k, type_) for k in self]
         if all(c is not None for c in constants):
             assert all(
                 isinstance(getattr(c, accessor), (int, float)) for c in constants
@@ -567,7 +502,9 @@ class Kernel(UnaryKernelExpression, ABC):
     %(backward)s
     compute_cond_num
         Whether to compute the condition number of the transition matrix. For large matrices, this can be very slow.
-    kwargs
+    check_connectivity
+        Check whether the underlying KNN graph is connected.
+    **kwargs
         Keyword arguments which can specify key to be read from :paramref:`adata` object.
     """
 
@@ -576,91 +513,87 @@ class Kernel(UnaryKernelExpression, ABC):
         adata: AnnData,
         backward: bool = False,
         compute_cond_num: bool = False,
+        check_connectivity: bool = False,
         **kwargs,
     ):
         super().__init__(
             adata, backward, op_name=None, compute_cond_num=compute_cond_num, **kwargs
         )
+        self._read_from_adata(check_connectivity=check_connectivity, **kwargs)
+
+    def _read_from_adata(self, **kwargs):
+        """Import the base-KNN graph and optionally check for symmetry and connectivity."""
+
+        if not _has_neighs(self.adata):
+            raise KeyError("Compute KNN graph first as `scanpy.pp.neighbors()`.")
+
+        self._conn = _get_neighs(self.adata, "connectivities").astype(_dtype)
+
+        check_connectivity = kwargs.pop("check_connectivity", False)
+        if check_connectivity:
+            start = logg.debug("Checking the KNN graph for connectedness")
+            if not is_connected(self._conn):
+                logg.warning("KNN graph is not connected", time=start)
+            else:
+                logg.debug("KNN graph is connected", time=start)
+
+        start = logg.debug("Checking the KNN graph for symmetry")
+        if not is_symmetric(self._conn):
+            logg.warning("KNN graph is not symmetric", time=start)
+        else:
+            logg.debug("KNN graph is symmetric", time=start)
+
+    def _density_normalize(
+        self, other: Union[np.ndarray, spmatrix]
+    ) -> Union[np.ndarray, spmatrix]:
+        """
+        Density normalization by the underlying KNN graph.
+
+        Parameters
+        ----------
+        other:
+            Matrix to normalize.
+
+        Returns
+        -------
+        :class:`np.ndarray` or :class:`scipy.sparse.spmatrix`
+            Density normalized transition matrix.
+        """
+
+        logg.debug("Density-normalizing the transition matrix")
+
+        q = np.asarray(self._conn.sum(axis=0))
+
+        if not issparse(other):
+            Q = np.diag(1.0 / q)
+        else:
+            Q = spdiags(1.0 / q, 0, other.shape[0], other.shape[0])
+
+        return Q @ other @ Q
 
     def _get_kernels(self) -> Iterable["Kernel"]:
         yield self
 
     def _compute_transition_matrix(
-        self,
-        matrix: spmatrix,
-        variances: Optional[spmatrix] = None,
-        self_transitions: bool = False,
-        exp: bool = False,
-        var_min: float = 0.1,
-        sigma_corr: Optional[float] = None,
-        perc: Optional[float] = None,
-        threshold: Optional[float] = None,
-        density_normalize: bool = True,
+        self, matrix: spmatrix, density_normalize: bool = True,
     ):
+        # density correction based on node degrees in the KNN graph
+        matrix = csr_matrix(matrix) if not isspmatrix_csr(matrix) else matrix
 
-        # copied form scvelo, assign self-loops based on confidence heuristic
-        if self_transitions:
-            confidence = matrix.max(1).A.flatten()
-            ub = np.percentile(confidence, 98)
-            self_prob = np.clip(ub - confidence, 0, 1)
-            matrix.setdiag(self_prob)
-
-        # Scale weights either by variances or by constant value
-        if variances is not None:
-            logg.debug("Scaling by variances")
-
-            # check that both have been computed on the same elements
-            if len(variances.data) == len(matrix.data):
-                if not all(
-                    (
-                        (var_ixs == mat_ixs).all()
-                        for var_ixs, mat_ixs in zip(
-                            variances.nonzero(), matrix.nonzero()
-                        )
-                    )
-                ):
-                    logg.warning(
-                        "Uncertainty indices do not match velocity graph indices"
-                    )
-            else:
-                logg.warning("Uncertainty indices do not match velocity graph indices")
-
-            # for non-zero edge-weights, clip var's to a_min and scale the edge weights by these vars
-            ixs = matrix.nonzero()
-            variances[ixs] = np.array(
-                np.clip(variances[ixs], a_min=var_min, a_max=None)
-            ).flatten()
-            matrix[ixs] = np.array(matrix[ixs] / variances[ixs]).flatten()
-        elif sigma_corr is not None:
-            logg.debug("Scaling sigma correlation")
-            matrix.data = matrix.data * sigma_corr
-
-        # use softmax
-        if exp:
-            matrix.data = np.exp(matrix.data)
-
-        # copied from scvelo, threshold the unnormalized probabilities
-        if perc is not None or threshold is not None:
-            if threshold is None:
-                threshold = np.percentile(matrix.data, perc)
-            matrix.data[matrix.data < threshold] = 0
-            matrix.eliminate_zeros()
-
-        # density correction based on node degrees in the KNN grpah
         if density_normalize:
-            matrix = self.density_normalize(matrix)
+            matrix = self._density_normalize(matrix)
 
-        # check for zero-rows (can happen if we don't use neg. cosines for the velo graph)
+        # check for zero-rows
         problematic_indices = np.where(np.array(matrix.sum(1)).flatten() == 0)[0]
-        if len(problematic_indices) != 0:
+        if len(problematic_indices):
             logg.warning(
-                f"Detected {len(problematic_indices)} absorbing states in the transition matrix. "
-                f"This matrix won't be reducible, consider setting `use_negative_cosines=True`"
+                f"Detected `{len(problematic_indices)}` absorbing states in the transition matrix. "
+                f"This matrix won't be reducible"
             )
-            for ix in problematic_indices:
-                matrix[ix, ix] = 1.0
+            matrix[problematic_indices, problematic_indices] = 1.0
 
-        self.transition_matrix = csr_matrix(matrix)
+        # setting this property automatically row-normalizes
+        self.transition_matrix = matrix
         self._maybe_compute_cond_num()
 
 
@@ -740,7 +673,7 @@ class ConstantMatrix(Kernel):
             raise ValueError(f"Expected the constant to be positive, found `{value}`.")
 
         self._value = value
-        self._variances = (
+        self._mat_scaler = (
             csr_matrix(variances) if not issparse(variances) else variances
         )
         self._recalculate(value)
@@ -748,16 +681,13 @@ class ConstantMatrix(Kernel):
     def copy(self) -> "ConstantMatrix":
         """Return a copy of self."""
         return ConstantMatrix(
-            self.adata, self._value, copy(self._variances), self.backward
+            self.adata, self._value, copy(self._mat_scaler), self.backward
         )
 
     def _recalculate(self, value) -> None:
         self._value = value
         self._params = {"value": value}
-        self._transition_matrix = value * self._variances
-
-    def _read_from_adata(self, **kwargs) -> None:
-        super()._read_from_adata(**kwargs)  # we need the shape info from neighbors
+        self._transition_matrix = value * self._mat_scaler
 
     def compute_transition_matrix(self, *args, **kwargs) -> "ConstantMatrix":
         """Return self."""
@@ -866,8 +796,8 @@ class VelocityKernel(Kernel):
     that connects cell *i* with cell *j* in gene expression space, and the features :math:`x_i` are given
     by the velocity vector :math:`v_i` of cell *i*.
 
-    Optionally, we apply a density correction as described in [Coifman05]_, where we use the implementation of
-    [Haghverdi16]_.
+    Optionally, we propagate uncertainty in the velocity vectors forward into transition probabilities using either
+    an analytical approximation or a Monte Carlo approach.
 
     Parameters
     ----------
@@ -875,10 +805,11 @@ class VelocityKernel(Kernel):
     %(backward)s
     vkey
         Key in :paramref:`adata` `.uns` where the velocities are stored.
-    var_key
-        Key in :paramref:`adata` `.obsp` where the velocity variances are stored.
-    use_negative_cosines
-        Whether to use correlations with cells that have an angle > 90 degree with :math:`v_i`.
+    xkey
+        Key in :paramref:`adata` `.layers` where expected gene expression counts are stored.
+    gene_subset
+        List of genes to be used to compute transition probabilities. By default, the `velocity_genes` of
+        :paramref:`adata` `. var` are used.
     compute_cond_num
         Whether to compute condition number of the transition matrix. Note that this might be costly,
         since it does not use sparse implementation.
@@ -891,8 +822,8 @@ class VelocityKernel(Kernel):
         adata: AnnData,
         backward: bool = False,
         vkey: str = "velocity",
-        var_key: Optional[str] = "velocity_graph_uncertainties",
-        use_negative_cosines: bool = True,
+        xkey: str = "Ms",
+        gene_subset: Optional[Iterable] = None,
         compute_cond_num: bool = False,
         check_connectivity: bool = False,
     ):
@@ -900,168 +831,122 @@ class VelocityKernel(Kernel):
             adata,
             backward=backward,
             vkey=vkey,
-            var_key=var_key,
-            use_negative_cosines=use_negative_cosines,
+            xkey=xkey,
+            gene_subset=gene_subset,
             compute_cond_num=compute_cond_num,
             check_connectivity=check_connectivity,
         )
         self._vkey = vkey  # for copy
-        self._var_key = var_key
-        self._use_negative_cosines = use_negative_cosines
+        self._xkey = xkey
+        self._gene_subset = gene_subset
+        self._pearson_correlations = None
 
-    def _read_from_adata(self, var_key: Optional[str] = None, **kwargs):
-        super()._read_from_adata(var_key=var_key, **kwargs)
+    def _read_from_adata(self, **kwargs):
+        super()._read_from_adata(**kwargs)
 
+        # check whether velocities have been computed
         vkey = kwargs.pop("vkey", "velocity")
-        if (vkey + "_graph" not in self.adata.uns.keys()) or (
-            vkey + "_graph_neg" not in self.adata.uns.keys()
-        ):
-            raise KeyError(
-                "Compute cosine correlations first as `scvelo.tl.velocity_graph()`."
-            )
+        if vkey not in self.adata.layers.keys():
+            raise KeyError("Compute RNA velocity first as `scv.tl.velocity()`.")
+
+        # restrict genes to a subset, i.e. velocity genes or user provided list
+        gene_subset = kwargs.pop("gene_subset", None)
+        subset = np.ones(self.adata.n_vars, bool)
+        if gene_subset is not None:
+            var_names_subset = self.adata.var_names.isin(gene_subset)
+            subset &= var_names_subset if len(var_names_subset) > 0 else gene_subset
+        elif f"{vkey}_genes" in self.adata.var.keys():
+            subset &= np.array(self.adata.var[f"{vkey}_genes"].values, dtype=bool)
+
+        # chose data representation to use for transcriptomic displacements
+        xkey = kwargs.pop("xkey", "Ms")
+        xkey = xkey if xkey in self.adata.layers.keys() else "spliced"
+
+        # filter both the velocities and the gene expression profiles to the gene subset. Densify the matrices.
+        X = np.array(
+            self.adata.layers[xkey].A[:, subset]
+            if issparse(self.adata.layers[xkey])
+            else self.adata.layers[xkey][:, subset]
+        )
+        V = np.array(
+            self.adata.layers[vkey].A[:, subset]
+            if issparse(self.adata.layers[vkey])
+            else self.adata.layers[vkey][:, subset]
+        )
+
+        # remove genes that have any Nan values (in both X and V)
+        nans = np.isnan(np.sum(V, axis=0))
+        if np.any(nans):
+            X = X[:, ~nans]
+            V = V[:, ~nans]
 
         # check the velocity parameters
         if vkey + "_params" in self.adata.uns.keys():
             velocity_params = self.adata.uns[vkey + "_params"]
-            if velocity_params["mode_neighbors"] != "connectivities":
-                logg.warning(
-                    'Please re-compute the scvelo velocity graph using `mode_neighbors="connectivities"`'
-                )
-            if velocity_params["n_recurse_neighbors"] not in [0, 1]:
-                logg.warning(
-                    "Please re-compute the scvelo velocity graph using `n_recurse_neighbors=0`"
-                )
         else:
-            logg.debug("Unable to check velocity graph parameters")
+            velocity_params = None
+            logg.debug("Unable to load velocity parameters")
 
-        velo_corr_pos, velo_corr_neg = (
-            csr_matrix(self.adata.uns[vkey + "_graph"]).copy(),
-            csr_matrix(self.adata.uns[vkey + "_graph_neg"]).copy(),
-        )
-        logg.debug("Adding `.velo_corr`, the velocity correlations")
-
-        # check for a symmetric sparsity pattern in the velocity graph
-        start = logg.debug("Checking the velocity graph for symmetric sparsity pattern")
-        if not is_symmetric(
-            velo_corr_pos + velo_corr_neg, only_check_sparsity_pattern=True
-        ):
-            logg.warning(
-                "Sparsity pattern in the velocity graph is not symmetric", time=start
-            )
-        else:
-            logg.debug(
-                "Sparsity pattern in the velocity graph is symmetric", time=start
-            )
-
-        # recurse neighbors and the mode_neighbors can have an effect on the effective number of neighbors considered
-        n_neighbors_effective = np.median(
-            np.array((velo_corr_pos + velo_corr_neg != 0).sum(1)).flatten()
-        )
-        logg.debug(
-            f"The median effective number of neighbors for the velocity graph is {n_neighbors_effective}"
-        )
-
-        use_negative_cosines = kwargs.pop("use_negative_cosines", True)
-        if use_negative_cosines:
-            self._velo_corr = (velo_corr_pos + velo_corr_neg).astype(_dtype)
-        else:
-            self._velo_corr = velo_corr_pos.astype(_dtype)
+        # add to self
+        self._velocity = V
+        self._gene_expression = X
+        self._velocity_params = velocity_params
 
     def compute_transition_matrix(
         self,
-        density_normalize: bool = True,
         backward_mode: str = "transpose",
-        sigma_corr: Optional[float] = None,
-        scale_by_variances: bool = False,
-        var_min: float = 0.1,
-        self_transitions: bool = False,
-        perc: Optional[float] = None,
-        threshold: Optional[float] = None,
+        softmax_scale: float = 4.0,
+        mode: str = "deterministic",
+        seed: Optional[int] = None,
         **kwargs,
     ) -> "VelocityKernel":
         """
-        Compute transition matrix based on velocity correlations.
+        Compute transition matrix based on velocity directions on the local manifold.
 
         For each cell, infer transition probabilities based on the correlation of the cell's
         velocity-extrapolated cell state with cell states of its *K* nearest neighbors.
 
         Parameters
         ----------
-        density_normalize
-            Whether or not to use the underlying KNN graph for density normalization.
         backward_mode
             Options are `['transpose', 'negate']`. Only matters if initialized as :paramref:`backward` =`True`.
-        sigma_corr
-            Kernel width for exp kernel to be used to compute transition probabilities.
-            from the velocity graph. If `None`, the median cosine correlation in absolute value is used.
-        scale_by_variances
-            If variances for the velocity correlations were computed, use these as scaling factor in softmax.
-        var_min
-            Variances are clipped at the lower end to this value.
-        self_transitions
-            Assigns elements to the diagonal of the velocity-graph based on a confidence measure.
-        perc
-            Quantile of the distribution of exponentiated velocity correlations. This is used as a threshold to set
-            smaller values to zero.
-        threshold
-            Set a threshold to remove exponentiated velocity correlations smaller than `threshold`.
+        softmax_scale
+            Scaling parameter for the softmax.
+        mode
+            How to compute transition probabilities. Options are "stochastic" (propagate uncertainty analytically),
+            "deterministic" (don't propagate uncertainty) and "sampling" (sample from velocity distribution).
+        seed
+            Set the seed for random state, only relevant for `mode='sampling'`.
 
         Returns
         -------
         None
-            Nothing, but makes :paramref:`transition_matrix` available.
+            Nothing, just makes available the following fields:
+
+                - :paramref:`transition_matrix`
+                - :paramref:`pearson_correlations`
         """
+
+        if mode not in ["stochastic", "deterministic", "sampling"]:
+            raise NotImplementedError(f"Mode `{mode}` is not implemented.")
+
+        if mode != "deterministic" and self._direction == Direction.BACKWARD:
+            logg.warning(
+                f"Mode `{mode}` is currently not supported for the backward process. "
+                f"Defaulting to mode `'deterministic'`"
+            )
+            mode = "deterministic"
 
         start = logg.info("Computing transition matrix based on velocity correlations")
 
-        if self._variances is None and scale_by_variances:
-            logg.warning(
-                "No velocity uncertainties found. Try re-running `scv.tl.velocity_graph()` and set "
-                "`compute_uncertainties=True`. Further, pass the correct `var_key` when you create the VelocityKernel. "
-            )
-            scale_by_variances = False
-
-        # get the correlations, handle backwards case
-        if self._direction == Direction.BACKWARD:
-            if backward_mode == "negate":
-                correlations = self._velo_corr.multiply(-1)
-                if scale_by_variances:
-                    logg.warning(
-                        'Scaling by variances is not implemented for `backward_mode="negate". Skipping'
-                    )
-                variances = None
-            elif backward_mode == "transpose":
-                correlations = self._velo_corr.T
-                if self._variances is not None and scale_by_variances:
-                    variances = self._variances.T.copy()
-                else:
-                    variances = None
-            else:
-                raise ValueError(f"Unknown backward mode `{backward_mode!r}`.")
-        else:
-            correlations = self._velo_corr
-            if self._variances is not None and scale_by_variances:
-                variances = self._variances.copy()
-            else:
-                variances = None
-
-        # set the scaling parameter for the softmax
-        med_corr = np.median(np.abs(correlations.data))
-        if sigma_corr is None:
-            sigma_corr = 1.0 / med_corr
-
         params = dict(  # noqa
-            dnorm=density_normalize,
             bwd_mode=backward_mode if self._direction == Direction.BACKWARD else None,
-            sigma_corr=sigma_corr,
-            use_negative_cosines=self._use_negative_cosines,
-            self_transitions=self_transitions,
-            perc=perc,
-            threshold=threshold,
-            scale_by_variances=scale_by_variances,
-            var_min=var_min,
+            sigma_corr=softmax_scale,
+            mode=mode,
+            random_state=seed,
         )
 
+        # check whether we already computed such a transition matrix. If yes, load from cache
         if params == self._params:
             assert self.transition_matrix is not None, _ERROR_EMPTY_CACHE_MSG
             logg.debug(_LOG_USING_CACHE, time=start)
@@ -1069,21 +954,158 @@ class VelocityKernel(Kernel):
             return self
 
         self._params = params
-        self._compute_transition_matrix(
-            matrix=correlations.copy(),
-            variances=variances,
-            self_transitions=self_transitions,
-            exp=True,
-            var_min=var_min,
-            sigma_corr=sigma_corr,
-            perc=perc,
-            threshold=threshold,
-            density_normalize=density_normalize,
+
+        # compute first and second order moments to model the distribution of the velocity vector
+        if mode in ["stochastic", "sampling"]:
+            np.random.seed(seed)
+            velocity_expectation = get_moments(
+                self.adata, self._velocity, second_order=False
+            )
+            velocity_variance = get_moments(
+                self.adata, self._velocity, second_order=True
+            )
+
+        # define a function to compute hessian matrices
+        if mode == "stochastic":
+            try:
+                from jax import jit, jacfwd, jacrev
+
+                get_hessian_fwd = jit(
+                    jacfwd(
+                        jacrev(
+                            partial(
+                                _predict_transition_probabilities,
+                                return_pearson_correlation=False,
+                                use_jax=True,
+                            )
+                        )
+                    )
+                )
+            except ImportError:
+                logg.warning("TODO: install jax")
+                mode = "sampling"
+
+        # sort cells by their number of neighbors - this makes jitting more efficient
+        n_neighbors = np.array((self._conn != 0).sum(1)).flatten()
+        cell_ixs = np.argsort(n_neighbors)[::-1]
+
+        # loop over all cells
+        probs_list, corrs_list, rows, cols, n_obs = (
+            [],
+            [],
+            [],
+            [],
+            self._gene_expression.shape[0],
         )
+        for cell_ix in cell_ixs:
+
+            # get the neighbors
+            nbhs_ixs = self._conn[cell_ix, :].indices
+
+            # get the displacement matrix. Changing dimensions b/c varying numbers of neighbors slow down autograd
+            W = self._gene_expression[nbhs_ixs, :] - self._gene_expression[cell_ix, :]
+
+            if mode == "deterministic":
+                # treat `v_i` as deterministic, with no error
+
+                if self._direction == Direction.FORWARD or (
+                    self._direction == Direction.BACKWARD and backward_mode == "negate"
+                ):
+                    # evaluate the prediction at the actual velocity vector
+                    v_i = self._velocity[cell_ix, :]
+
+                    # for the transpose backward mode, just flip the velocity vector
+                    if self._direction == Direction.BACKWARD:
+                        v_i *= -1
+
+                    if (v_i == 0).all():
+                        logg.warning(f"Cell `{cell_ix}` has a zero velocity vector")
+                        probs, corrs = (
+                            np.ones(len(nbhs_ixs)) / len(nbhs_ixs),
+                            np.zeros(len(nbhs_ixs)),
+                        )
+                    else:
+                        probs, corrs = _predict_transition_probabilities(
+                            v_i, W, softmax_scale=softmax_scale,
+                        )
+                else:
+                    # compute how likely all neighbors are to transition to this cell
+                    V = self._velocity[nbhs_ixs, :]
+                    probs, corrs = _predict_transition_probabilities(
+                        V, -1 * W, softmax_scale=softmax_scale,
+                    )
+
+            elif mode == "stochastic":
+                # treat `v_i` as random variable and use analytical approximation to propagate the distribution
+
+                # get the expected velocity vector
+                v_i = velocity_expectation[cell_ix, :]
+
+                if (v_i == 0).all():
+                    logg.warning(f"Cell `{cell_ix}` has a zero velocity vector")
+                    probs, corrs = (
+                        np.ones(len(nbhs_ixs)) / len(nbhs_ixs),
+                        np.zeros(len(nbhs_ixs)),
+                    )
+                else:
+                    # get the variance of the distribution over velocity vectors
+                    variances = velocity_variance[cell_ix, :]
+
+                    # compute the Hessian tensor, and turn it into a matrix that has the diagonal elements in its rows
+                    H = get_hessian_fwd(v_i, W, softmax_scale)
+                    H_diag = np.concatenate([np.diag(h)[None, :] for h in H])
+
+                    # compute zero order term
+                    p_0, corrs = _predict_transition_probabilities(
+                        v_i, W, softmax_scale=softmax_scale,
+                    )
+
+                    # compute second order term (note that the first order term cancels)
+                    p_2 = 0.5 * H_diag.dot(variances)
+
+                    # combine both to give the second order Taylor approximation. Can sometimes be negative because we
+                    # neglected higher order terms, so force it to be non-negative
+                    probs = np.where((p_0 + p_2) >= 0, p_0 + p_2, 0)
+
+            elif mode == "sampling":
+                # treat `v_i` as random variable and use Monte Carlo approximation to propagate the distribution
+
+                # sample a single velocity vector from the distribution
+                v_i = np.random.normal(
+                    velocity_expectation[cell_ix, :], velocity_variance[cell_ix, :]
+                )
+
+                # use this sample to compute transition probabilities
+                probs, corrs = _predict_transition_probabilities(
+                    v_i, W, softmax_scale=softmax_scale,
+                )
+
+            # add the computed transition probabilities and correlations to lists
+            corrs_list.extend(corrs)
+            probs_list.extend(probs)
+            rows.extend(np.ones(len(nbhs_ixs)) * cell_ix)
+            cols.extend(nbhs_ixs)
+
+        # collect everything in a matrix of correlations and one of transition probabilities
+        probs_matrix, corrs_matrix = np.hstack(probs_list), np.hstack(corrs_list)
+        probs_matrix[np.isnan(probs_matrix)] = 0
+        corrs_matrix[np.isnan(corrs_matrix)] = 0
+
+        # transform to sparse matrices
+        corrs_matrix = _vals_to_csr(corrs_matrix, rows, cols, shape=(n_obs, n_obs))
+        probs_matrix = _vals_to_csr(probs_matrix, rows, cols, shape=(n_obs, n_obs))
+
+        self._compute_transition_matrix(probs_matrix, density_normalize=False)
+        self._pearson_correlations = corrs_matrix
 
         logg.info("    Finish", time=start)
 
         return self
+
+    @property
+    def pearson_correlations(self) -> csr_matrix:
+        """TODO."""
+        return self._pearson_correlations
 
     def copy(self) -> "VelocityKernel":
         """Return a copy of self."""
@@ -1091,12 +1113,13 @@ class VelocityKernel(Kernel):
             self.adata,
             backward=self.backward,
             vkey=self._vkey,
-            var_key=self._var_key,
-            use_negative_cosines=self._use_negative_cosines,
+            xkey=self._xkey,
+            gene_subset=self._gene_subset,
         )
         vk._params = copy(self.params)
         vk._cond_num = self.condition_number
         vk._transition_matrix = copy(self._transition_matrix)
+        vk._pearson_correlations = copy(self.pearson_correlations)
 
         return vk
 
@@ -1120,37 +1143,29 @@ class ConnectivityKernel(Kernel):
     ----------
     %(adata)s
     %(backward)s
-    var_key
-        Key in :paramref:`adata` `.uns` where the velocity variances are stored.
     compute_cond_num
         Whether to compute condition number of the transition matrix. Note that this might be costly,
         since it does not use sparse implementation.
     check_connectivity
-        Check whether the underlying KNN graph is connected
+        Check whether the underlying KNN graph is connected.
     """
 
     def __init__(
         self,
         adata: AnnData,
         backward: bool = False,
-        var_key: Optional[str] = None,
         compute_cond_num: bool = False,
         check_connectivity: bool = False,
     ):
         super().__init__(
             adata,
             backward=backward,
-            var_key=var_key,
             compute_cond_num=compute_cond_num,
             check_connectivity=check_connectivity,
         )
-        self._var_key = var_key
-
-    def _read_from_adata(self, var_key: Optional[str] = None, **kwargs):
-        super()._read_from_adata(var_key=var_key, **kwargs)
 
     def compute_transition_matrix(
-        self, density_normalize: bool = True, **kwargs
+        self, density_normalize: bool = True
     ) -> "ConnectivityKernel":
         """
         Compute transition matrix based on transcriptomic similarity.
@@ -1190,9 +1205,7 @@ class ConnectivityKernel(Kernel):
 
     def copy(self) -> "ConnectivityKernel":
         """Return a copy of self."""
-        ck = ConnectivityKernel(
-            self.adata, backward=self.backward, var_key=self._var_key
-        )
+        ck = ConnectivityKernel(self.adata, backward=self.backward,)
         ck._params = copy(self.params)
         ck._cond_num = self.condition_number
         ck._transition_matrix = copy(self._transition_matrix)
@@ -1222,8 +1235,6 @@ class PalantirKernel(Kernel):
     %(backward)s
     time_key
         Key in :paramref:`adata` `.obs` where the pseudotime is stored.
-    var_key
-        Key in :paramref:`adata` `.uns` where the velocity variances are stored.
     compute_cond_num
         Whether to compute condition number of the transition matrix. Note that this might be costly,
         since it does not use sparse implementation.
@@ -1234,7 +1245,6 @@ class PalantirKernel(Kernel):
         adata: AnnData,
         backward: bool = False,
         time_key: str = "dpt_pseudotime",
-        var_key: Optional[str] = None,
         compute_cond_num: bool = False,
         check_connectivity: bool = False,
     ):
@@ -1242,15 +1252,13 @@ class PalantirKernel(Kernel):
             adata,
             backward=backward,
             time_key=time_key,
-            var_key=var_key,
             compute_cond_num=compute_cond_num,
             check_connectivity=check_connectivity,
         )
         self._time_key = time_key
-        self._var_key = var_key
 
-    def _read_from_adata(self, var_key: Optional[str] = None, **kwargs):
-        super()._read_from_adata(var_key=var_key, **kwargs)
+    def _read_from_adata(self, **kwargs):
+        super()._read_from_adata(**kwargs)
 
         time_key = kwargs.pop("time_key", "dpt_pseudotime")
         if time_key not in self.adata.obs.keys():
@@ -1265,7 +1273,7 @@ class PalantirKernel(Kernel):
             )
 
     def compute_transition_matrix(
-        self, k: int = 3, density_normalize: bool = True, **kwargs
+        self, k: int = 3, density_normalize: bool = True
     ) -> "PalantirKernel":
         """
         Compute transition matrix based on KNN graph and pseudotemporal ordering.
@@ -1346,10 +1354,7 @@ class PalantirKernel(Kernel):
     def copy(self) -> "PalantirKernel":
         """Return a copy of self."""
         pk = PalantirKernel(
-            self.adata,
-            backward=self.backward,
-            time_key=self._time_key,
-            var_key=self._var_key,
+            self.adata, backward=self.backward, time_key=self._time_key,
         )
         pk._pseudotime = copy(self.pseudotime)
         pk._params = copy(self._params)

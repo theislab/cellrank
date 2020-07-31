@@ -5,11 +5,14 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytest
 from PIL import Image
 from sklearn.svm import SVR
 from scipy.sparse import spdiags, issparse, csr_matrix
 from scipy.sparse.linalg import norm
 
+import scanpy as sc
+import scvelo as scv
 from scanpy import logging as logg
 from anndata import AnnData
 
@@ -18,6 +21,16 @@ from cellrank.tools._utils import _normalize
 from cellrank.utils._utils import _get_neighs, _get_neighs_params
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tools._constants import Direction, _transition
+
+
+def _jax_not_installed() -> bool:
+    try:
+        import jax
+        import jaxlib
+
+        return False
+    except ImportError:
+        return True
 
 
 def bias_knn(conn, pseudotime, n_neighbors, k=3):
@@ -108,10 +121,6 @@ def transition_matrix(
     """
     logg.info("Computing transition probability from velocity graph")
 
-    from datetime import datetime
-
-    print(datetime.now())
-
     # get the direction of the process
     direction = Direction.BACKWARD if backward else Direction.FORWARD
 
@@ -190,7 +199,7 @@ def transition_matrix(
         "sigma_corr": np.round(sigma_corr, 3),
         "diff_kernel": diff_kernel,
         "weight_diffusion": weight_diffusion,
-        "density_normalize": density_normalize,
+        "_density_normalize": density_normalize,
     }
 
     adata.uns[_transition(direction)] = {"T": T, "params": params}
@@ -273,11 +282,19 @@ def _is_connected(c) -> bool:
 
 def create_kernels(
     adata: AnnData,
-    var_key_connectivities: str = "connectivity_variances",
-    var_key_velocities: str = "velocity_variances",
+    velocity_variances: Optional[str] = None,
+    connectivity_variances: Optional[str] = None,
 ) -> Tuple[VelocityKernel, ConnectivityKernel]:
-    vk = VelocityKernel(adata, var_key=var_key_velocities)
-    ck = ConnectivityKernel(adata, var_key=var_key_connectivities)
+    vk = VelocityKernel(adata)
+    vk._mat_scaler = adata.uns.get(
+        velocity_variances, np.random.normal(size=(adata.n_obs, adata.n_obs))
+    )
+
+    ck = ConnectivityKernel(adata)
+    ck._mat_scaler = adata.uns.get(
+        connectivity_variances, np.random.normal(size=(adata.n_obs, adata.n_obs))
+    )
+
     vk._transition_matrix = csr_matrix(np.eye(adata.n_obs))
     ck._transition_matrix = np.eye(adata.n_obs, k=1) / 2 + np.eye(adata.n_obs) / 2
     ck._transition_matrix[-1, -1] = 1
@@ -359,3 +376,52 @@ def random_transition_matrix(n: int) -> np.ndarray:
     x = np.abs(np.random.normal(size=(n, n)))
     rsum = x.sum(axis=1)
     return x / rsum[:, np.newaxis]
+
+
+def _create_dummy_adata(n_obs: int) -> AnnData:
+    """
+    Create a testing :class:`anndata.AnnData` object.
+
+    Call this function to regenerate the above objects.
+
+    Params
+    ------
+    n_obs
+        Number of cells.
+
+    Returns
+    -------
+    :class:`anndata.AnnData`
+        The created adata object.
+    """
+
+    np.random.seed(42)
+    adata = scv.datasets.toy_data(n_obs=n_obs)
+    scv.pp.filter_and_normalize(adata, min_shared_counts=20, n_top_genes=1000)
+    adata.raw = adata[:, 42 : 42 + 50].copy()
+    scv.pp.moments(adata, n_pcs=30, n_neighbors=30)
+    scv.tl.recover_dynamics(adata)
+    scv.tl.velocity(adata, mode="dynamical")
+    scv.tl.velocity_graph(adata, n_recurse_neighbors=0, mode_neighbors="distances")
+    scv.tl.latent_time(adata)
+
+    adata.uns["iroot"] = 0
+    sc.pp.neighbors(adata, n_pcs=15)
+    sc.tl.dpt(adata)
+
+    adata.uns["connectivity_variances"] = np.ones((n_obs, n_obs), dtype=np.float64)
+    adata.uns["velocity_variances"] = np.ones((n_obs, n_obs), dtype=np.float64)
+
+    sc.write(f"tests/_ground_truth_adatas/adata_{n_obs}.h5ad", adata)
+
+    return adata
+
+
+jax_not_installed_skip = pytest.mark.skipif(
+    _jax_not_installed(), reason="JAX is not installed."
+)
+
+
+if __name__ == "__main__":
+    for size in [50, 100, 200]:
+        _ = _create_dummy_adata(size)
