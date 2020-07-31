@@ -17,12 +17,9 @@ from typing import (
 )
 from itertools import tee, product, combinations
 
-import matplotlib.colors as mcolors
-
 import numpy as np
 import pandas as pd
 from pandas import Series
-from cellrank import logging as logg
 from numpy.linalg import norm as d_norm
 from scipy.linalg import solve
 from scipy.sparse import eye as speye
@@ -40,6 +37,10 @@ from pandas.api.types import infer_dtype, is_categorical_dtype
 from sklearn.neighbors import NearestNeighbors
 from scipy.sparse.linalg import norm as s_norm
 from scipy.sparse.linalg import gmres, lgmres, gcrotmk, bicgstab
+
+import matplotlib.colors as mcolors
+
+from cellrank import logging as logg
 from cellrank.utils._utils import (
     _get_neighs,
     _has_neighs,
@@ -570,7 +571,7 @@ def _eigengap(evals: np.ndarray, alpha: float) -> int:
     Parameters
     ----------
     evals
-        Must be real numbers.
+        Sorted array of real numbers. If complex, take their real part.
     alpha
         Determines how much weight is given to the deviation of an eigenvalue from one.
 
@@ -579,6 +580,10 @@ def _eigengap(evals: np.ndarray, alpha: float) -> int:
     int
         Number of eigenvectors to be used.
     """
+
+    if np.iscomplexobj(evals):
+        evals = evals.real
+    evals = np.sort(evals)[::-1]  # they could be ordered by LM, not LR
 
     gap, eps = evals[:-1] - evals[1:], (1 - evals)[:-1]
     J = gap - alpha * eps

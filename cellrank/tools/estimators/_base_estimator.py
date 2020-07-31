@@ -649,7 +649,6 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
     @inject_docs(fs=P.FIN, fsp=P.FIN_PROBS, ap=P.ABS_PROBS, dp=P.DIFF_POT)
     def fit(
         self,
-        *args,
         keys: Optional[Sequence] = None,
         compute_absorption_probabilities: bool = True,
         **kwargs,
@@ -678,7 +677,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 - :paramref:`{ap}`
                 - :paramref:`{dp}`
         """
-        self._fit_final_states(*args, **kwargs)
+        self._fit_final_states(**kwargs)
         if compute_absorption_probabilities:
             self.compute_absorption_probabilities(keys=keys)
 
