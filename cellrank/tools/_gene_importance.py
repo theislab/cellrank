@@ -212,7 +212,7 @@ def gene_importance(
             raise ValueError(
                 f"Number of permutations must be `>= 0`, found `{n_perms}`."
             )
-    check_collection(adata, genes, "var_names")
+    check_collection(adata, genes, "var_names", use_raw=kwargs.get("use_raw", False))
 
     n_jobs = _get_n_cores(n_jobs, len(genes))
 

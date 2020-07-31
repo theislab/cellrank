@@ -7,17 +7,17 @@ from typing import Any, List, Tuple, Union, Mapping, TypeVar, Optional, Sequence
 from pathlib import Path
 from collections import OrderedDict as odict
 
+import numpy as np
+import pandas as pd
+
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.colors
 import matplotlib.pyplot as plt
 
-import numpy as np
-import pandas as pd
 from cellrank import logging as logg
 from cellrank.utils._docs import d
-from cellrank.tools._utils import save_fig
-from cellrank.utils._utils import _make_unique
+from cellrank.tools._utils import save_fig, _unique_order_preserving
 from cellrank.plotting._utils import _position_legend
 from cellrank.tools._constants import DirPrefix, AbsProbKey, FinalStatesPlot
 from cellrank.tools._exact_mc_test import _counts, _cramers_v
@@ -415,7 +415,7 @@ def cluster_fates(
         if clusters is not None:
             if isinstance(clusters, str):
                 clusters = [clusters]
-            clusters = _make_unique(clusters)
+            clusters = _unique_order_preserving(clusters)
             if mode in ("paga", "paga_pie"):
                 logg.debug(
                     f"Setting `clusters` to all available ones because of `mode={mode!r}`"
@@ -425,7 +425,7 @@ def cluster_fates(
                 for cname in clusters:
                     if cname not in adata.obs[cluster_key].cat.categories:
                         raise KeyError(
-                            f"Cluster `{cname!r}` not found in `adata.obs[{cluster_key!r}]`"
+                            f"Cluster `{cname!r}` not found in `adata.obs[{cluster_key!r}]`."
                         )
         else:
             clusters = list(adata.obs[cluster_key].cat.categories)
@@ -439,16 +439,11 @@ def cluster_fates(
     if lineages is not None:
         if isinstance(lineages, str):
             lineages = [lineages]
-        lineages = _make_unique(lineages)
-        for ep in lineages:
-            if ep not in adata.obsm[lk].names:
-                raise ValueError(
-                    f"State `{ep!r}` not found in `adata.obsm[{lk!r}].names`."
-                )
-        lin_names = list(lineages)
+        lin_names = _unique_order_preserving(lineages)
     else:
         # must be list for `sc.pl.violin`, else cats str
         lin_names = list(adata.obsm[lk].names)
+    _ = adata.obsm[lk][lin_names]
 
     if mode == "violin" and not is_all:
         adata = adata[np.isin(adata.obs[cluster_key], clusters)].copy()
