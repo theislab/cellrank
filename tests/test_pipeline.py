@@ -68,7 +68,7 @@ class TestHighLevelPipeline:
             adata,
             estimator=cr.tl.CFLARE,
             cluster_key="clusters",
-            method="brandts",
+            method="kmeans",
             show_plots=True,
         )
         cr.tl.lineages(adata)
@@ -82,7 +82,7 @@ class TestHighLevelPipeline:
             adata,
             estimator=cr.tl.CFLARE,
             cluster_key="clusters",
-            method="brandts",
+            method="louvain",
             show_plots=True,
         )
         cr.tl.lineages(adata, backward=True)

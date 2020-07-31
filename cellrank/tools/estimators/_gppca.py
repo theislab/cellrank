@@ -997,5 +997,5 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             keys=keys,
             method=method,
             compute_absorption_probabilities=compute_absorption_probabilities,
-            *kwargs,
+            **kwargs,
         )
