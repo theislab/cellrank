@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """Heatmap module."""
 
+import os
 from math import fabs
-from typing import Any, Tuple, Union, TypeVar, Optional, Sequence
+from typing import Any, List, Tuple, Union, TypeVar, Optional, Sequence
 from pathlib import Path
 from collections import Iterable, defaultdict
 
@@ -23,7 +24,13 @@ from cellrank.utils._docs import d
 from cellrank.tools._utils import save_fig, _unique_order_preserving
 from cellrank.utils._utils import _get_n_cores, check_collection
 from cellrank.tools._colors import _create_categorical_colors
-from cellrank.plotting._utils import _fit, _model_type, _create_models, _is_any_gam_mgcv
+from cellrank.plotting._utils import (
+    _fit,
+    _model_type,
+    _create_models,
+    _is_any_gam_mgcv,
+    _maybe_create_dir,
+)
 from cellrank.tools._constants import AbsProbKey
 from cellrank.utils._parallelize import parallelize
 
@@ -35,6 +42,7 @@ AnnData = TypeVar("AnnData")
 Cmap = TypeVar("Cmap")
 Norm = TypeVar("Norm")
 Ax = TypeVar("Ax")
+Fig = TypeVar("Fig")
 
 
 @d.dedent
@@ -62,6 +70,7 @@ def heatmap(
     n_jobs: Optional[int] = 1,
     backend: str = "multiprocessing",
     show_progress_bar: bool = True,
+    ext: str = "png",
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
     save: Optional[Union[str, Path]] = None,
@@ -227,7 +236,7 @@ def heatmap(
 
         return cax
 
-    def gene_per_lineage():
+    def gene_per_lineage() -> Fig:
         def color_fill_rec(ax, xs, y1, y2, colors=None, cmap=cmap, **kwargs) -> None:
             colors = colors if cmap is None else cmap(colors)
 
@@ -334,14 +343,15 @@ def heatmap(
 
         return fig
 
-    def lineage_per_gene():
+    def lineage_per_gene() -> List[Fig]:
         data_t = defaultdict(dict)  # transpose
         for gene, lns in data.items():
             for ln, y in lns.items():
                 data_t[ln][gene] = y
 
-        fig = None
+        figs = []
         gene_order = None
+
         for lname, models in data_t.items():
             xs = np.array([m.x_test for m in models.values()])
             x_min, x_max = np.nanmin(xs), np.nanmax(xs)
@@ -449,9 +459,9 @@ def heatmap(
                 list(map(lambda n: round(n, 3), np.linspace(x_min, x_max, _N_XTICKS)))
             )
 
-            fig = g.fig
+            figs.append(g.fig)
 
-        return fig
+        return figs
 
     if kind not in ("lineages", "genes"):
         raise ValueError(_ERROR_INVALID_KIND.format(kind))
@@ -521,14 +531,23 @@ def heatmap(
         raise ValueError(_ERROR_INVALID_KIND.format(kind))
 
     if save is not None and fig is not None:
-        save_fig(fig, save)
+        if not isinstance(fig, Iterable):
+            save_fig(fig, save, ext=ext)
+            return
+        if len(fig) == 1:
+            save_fig(fig[0], save, ext=ext)
+            return
+
+        _maybe_create_dir(save)
+        for ln, f in zip(lineages, fig):
+            save_fig(f, os.path.join(save, f"lineage_{ln}"), ext=ext)
 
 
-def _get_ax_bbox(fig, ax):
+def _get_ax_bbox(fig: Fig, ax: Ax):
     return ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
 
 
-def _set_ax_height_to_cm(fig, ax, height: float) -> None:
+def _set_ax_height_to_cm(fig: Fig, ax: Ax, height: float) -> None:
     from mpl_toolkits.axes_grid1 import Divider, Size
 
     height /= 2.54  # cm to inches
