@@ -456,7 +456,7 @@ def heatmap(
     if isinstance(genes, str):
         genes = [genes]
     genes = _unique_order_preserving(genes)
-    check_collection(adata, genes, "var_names")
+    check_collection(adata, genes, "var_names", use_raw=kwargs.get("use_raw", False))
 
     if isinstance(start_lineage, (str, type(None))):
         start_lineage = [start_lineage] * len(lineages)
