@@ -27,7 +27,7 @@ import matplotlib.pyplot as plt
 
 from cellrank.utils._docs import d
 from cellrank.tools._utils import save_fig, _unique_order_preserving
-from cellrank.utils.models import GAMR, Model
+from cellrank.utils.models import Model, GamMGCVModel
 from cellrank.tools.kernels import PrecomputedKernel
 from cellrank.tools._constants import _colors
 from cellrank.tools.estimators._cflare import CFLARE
@@ -304,7 +304,9 @@ def _is_any_gam_mgcv(models: Dict[str, Dict[str, Model]]) -> bool:
         `True` if any of the models is from R's mgcv package, else `False`.
     """
 
-    return any(isinstance(m, GAMR) for ms in models.values() for m in ms.values())
+    return any(
+        isinstance(m, GamMGCVModel) for ms in models.values() for m in ms.values()
+    )
 
 
 def _create_models(
