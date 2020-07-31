@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
-import numpy as np
-import pytest
-
 import anndata
 from scanpy import Neighbors
 
+import numpy as np
+import pytest
 import cellrank as cr
 from _helpers import (
     bias_knn,
@@ -1071,7 +1070,7 @@ class TestTransitionProbabilities:
 
         # compute transition probabilities using cellrank
         vk = VelocityKernel(adata)
-        vk.compute_transition_matrix(sigma_corr=sigma_test, mode="deterministic")
+        vk.compute_transition_matrix(softmax_scale=sigma_test, mode="deterministic")
         T_cr = vk.transition_matrix
 
         # check them for point-wise equality
@@ -1089,7 +1088,7 @@ class TestTransitionProbabilities:
 
         # compute transition probabilities using cellrank
         vk = VelocityKernel(adata, backward=True)
-        vk.compute_transition_matrix(sigma_corr=sigma_test, mode="deterministic")
+        vk.compute_transition_matrix(softmax_scale=sigma_test, mode="deterministic")
         T_cr = vk.transition_matrix
 
         # check them for point-wise equality

@@ -17,9 +17,12 @@ from typing import (
 )
 from itertools import tee, product, combinations
 
+import matplotlib.colors as mcolors
+
 import numpy as np
 import pandas as pd
 from pandas import Series
+from cellrank import logging as logg
 from numpy.linalg import norm as d_norm
 from scipy.linalg import solve
 from scipy.sparse import eye as speye
@@ -37,10 +40,6 @@ from pandas.api.types import infer_dtype, is_categorical_dtype
 from sklearn.neighbors import NearestNeighbors
 from scipy.sparse.linalg import norm as s_norm
 from scipy.sparse.linalg import gmres, lgmres, gcrotmk, bicgstab
-
-import matplotlib.colors as mcolors
-
-from cellrank import logging as logg
 from cellrank.utils._utils import (
     _get_neighs,
     _has_neighs,
@@ -1880,7 +1879,7 @@ def _softmax(x, sigma, use_jax: bool = False):
 def _predict_transition_probabilities(
     X: np.ndarray,
     W: np.ndarray,
-    sigma: float = 1,
+    softmax_scale: float = 1,
     use_jax: bool = False,
     return_pearson_correlation: bool = True,
 ):
@@ -1897,7 +1896,7 @@ def _predict_transition_probabilities(
         Either vector of shape `n_features` or matrix of shape `n_samples x n_features`.
     W
         Weight matrix of shape `n_samples x n_features`.
-    sigma
+    softmax_scale
         Scaling factor for softmax activation function.
     use_jax
         Whether to use Jax. Jax enables automatic differentiation and is therefore required in stochastic mode. In
@@ -1912,7 +1911,7 @@ def _predict_transition_probabilities(
     """
 
     u = _pearson_corr(W, X, use_jax=use_jax)
-    p = _softmax(u, sigma, use_jax=use_jax)
+    p = _softmax(u, softmax_scale, use_jax=use_jax)
 
     return (p, u) if return_pearson_correlation else p
 

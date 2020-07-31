@@ -17,12 +17,11 @@ from typing import (
 )
 from functools import wraps, reduce, partial
 
-import numpy as np
-from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix, isspmatrix_csr
-
 from scvelo.preprocessing.moments import get_moments
 
+import numpy as np
 from cellrank import logging as logg
+from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix, isspmatrix_csr
 from cellrank.utils._docs import d
 from cellrank.tools._utils import (
     bias_knn,
@@ -896,7 +895,7 @@ class VelocityKernel(Kernel):
     def compute_transition_matrix(
         self,
         backward_mode: str = "transpose",
-        sigma_corr: float = 4.0,
+        softmax_scale: float = 4.0,
         mode: str = "deterministic",
         seed: Optional[int] = None,
         **kwargs,
@@ -911,7 +910,7 @@ class VelocityKernel(Kernel):
         ----------
         backward_mode
             Options are `['transpose', 'negate']`. Only matters if initialized as :paramref:`backward` =`True`.
-        sigma_corr
+        softmax_scale
             Scaling parameter for the softmax.
         mode
             How to compute transition probabilities. Options are "stochastic" (propagate uncertainty analytically),
@@ -942,7 +941,7 @@ class VelocityKernel(Kernel):
 
         params = dict(  # noqa
             bwd_mode=backward_mode if self._direction == Direction.BACKWARD else None,
-            sigma_corr=sigma_corr,
+            sigma_corr=softmax_scale,
             mode=mode,
             random_state=seed,
         )
@@ -1027,13 +1026,13 @@ class VelocityKernel(Kernel):
                         )
                     else:
                         probs, corrs = _predict_transition_probabilities(
-                            v_i, W, sigma=sigma_corr,
+                            v_i, W, softmax_scale=softmax_scale,
                         )
                 else:
                     # compute how likely all neighbors are to transition to this cell
                     V = self._velocity[nbhs_ixs, :]
                     probs, corrs = _predict_transition_probabilities(
-                        V, -1 * W, sigma=sigma_corr,
+                        V, -1 * W, softmax_scale=softmax_scale,
                     )
 
             elif mode == "stochastic":
@@ -1053,12 +1052,12 @@ class VelocityKernel(Kernel):
                     variances = velocity_variance[cell_ix, :]
 
                     # compute the Hessian tensor, and turn it into a matrix that has the diagonal elements in its rows
-                    H = get_hessian_fwd(v_i, W, sigma_corr)
+                    H = get_hessian_fwd(v_i, W, softmax_scale)
                     H_diag = np.concatenate([np.diag(h)[None, :] for h in H])
 
                     # compute zero order term
                     p_0, corrs = _predict_transition_probabilities(
-                        v_i, W, sigma=sigma_corr,
+                        v_i, W, softmax_scale=softmax_scale,
                     )
 
                     # compute second order term (note that the first order term cancels)
@@ -1078,7 +1077,7 @@ class VelocityKernel(Kernel):
 
                 # use this sample to compute transition probabilities
                 probs, corrs = _predict_transition_probabilities(
-                    v_i, W, sigma=sigma_corr,
+                    v_i, W, softmax_scale=softmax_scale,
                 )
 
             # add the computed transition probabilities and correlations to lists

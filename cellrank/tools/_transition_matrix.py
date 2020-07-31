@@ -68,7 +68,7 @@ def transition_matrix(
     vk = VelocityKernel(
         adata, backward=backward, vkey=vkey, xkey=xkey, gene_subset=gene_subset
     )
-    vk.compute_transition_matrix(sigma_corr=sigma_corr, mode=mode, seed=seed)
+    vk.compute_transition_matrix(softmax_scale=sigma_corr, mode=mode, seed=seed)
 
     if weight_connectivities is not None:
         if 0 < weight_connectivities < 1:
