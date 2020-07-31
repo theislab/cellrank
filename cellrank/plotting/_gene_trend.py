@@ -22,6 +22,7 @@ from cellrank.plotting._utils import (
     _create_models,
     _trends_helper,
     _is_any_gam_mgcv,
+    _maybe_create_dir,
 )
 from cellrank.tools._constants import AbsProbKey
 from cellrank.utils._parallelize import parallelize
@@ -180,20 +181,7 @@ def gene_trends(
         )
         axes = np.ravel(axes)
     elif dirname is not None:
-        from cellrank import settings
-
-        figdir = settings.figdir
-
-        if figdir is None:
-            raise RuntimeError(
-                f"Invalid combination: figures directory `cellrank.settings.figdir` is `None`, "
-                f"but `dirname={dirname}`."
-            )
-        if os.path.isabs(dirname):
-            if not os.path.isdir(dirname):
-                os.makedirs(dirname, exist_ok=True)
-        elif not os.path.isdir(os.path.join(figdir, dirname)):
-            os.makedirs(os.path.join(figdir, dirname), exist_ok=True)
+        _maybe_create_dir(dirname)
     elif save is not None:
         logg.warning("No directory specified for saving. Ignoring `save` argument")
 

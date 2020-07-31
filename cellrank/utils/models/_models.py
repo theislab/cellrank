@@ -874,7 +874,7 @@ class SKLearnModel(Model):
 class GamMGCVModel(Model):
     """
     Wrapper around R's `mgcv <https://cran.r-project.org/web/packages/mgcv/>`_ or  \
-    `mgcv <https://cran.r-project.org/web/packages/gam/>`_ package fors fitting Generalized Additive Models (GAMs).
+    `mgcv <https://cran.r-project.org/web/packages/gam/>`_ package for fitting Generalized Additive Models (GAMs).
 
     Parameters
     ----------
