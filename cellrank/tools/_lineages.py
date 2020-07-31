@@ -9,6 +9,7 @@ from cellrank.tools._utils import _check_estimator_type
 from cellrank.tools.kernels import PrecomputedKernel
 from cellrank.tools._constants import Direction, AbsProbKey, FinalStatesKey, _transition
 from cellrank.tools.estimators import GPCCA
+from cellrank.tools.estimators._constants import P
 from cellrank.tools.estimators._base_estimator import BaseEstimator
 
 AnnData = TypeVar("AnnData")
@@ -77,12 +78,16 @@ def lineages(
     try:
         vk = PrecomputedKernel(_transition(direction), adata, backward=backward)
     except KeyError as e:
-        raise KeyError(
-            f"Compute the states first as `cellrank.tl.find_{'root' if backward else 'final'}`."
+        raise RuntimeError(
+            "Compute transition matrix first a `cellrank.tl.transition_matrix()`."
         ) from e
 
     start = logg.info(f"Computing lineage probabilities towards `{rc_key}`")
     mc = estimator(vk, read_from_adata=True)
+    if mc._get(P.FIN) is None:
+        raise RuntimeError(
+            f"Compute the states first as `cellrank.tl.{'root' if backward else 'final'}_states()`."
+        )
 
     # compute the absorption probabilities
     mc.compute_absorption_probabilities(**kwargs)
