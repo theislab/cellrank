@@ -347,21 +347,13 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
         logg.debug(f"Found `{n_cells}` cells and `{s.shape[1]}` absorbing states")
 
-        # solve the linear system of equations
-        mat_x = _solve_lin_system(
-            q,
-            s,
-            solver=solver,
-            use_petsc=use_petsc,
-            preconditioner=preconditioner,
-            n_jobs=n_jobs,
-            backend=backend,
-            tol=tol,
-            use_eye=True,
-        )
+        mat_x, abs_time_mean, abs_time_var = None, None, None
 
-        abs_time_mean, abs_time_var = None, None
-        if absorption_time_moments == "first":
+        if absorption_time_moments == "second":
+            mat_x, abs_time_mean, abs_time_var = _calculate_absorption_time_moments(
+                q, s, rec_indices, trans_indices, ixs=None, use_petsc=use_petsc
+            )
+        elif absorption_time_moments == "first":
             mean_time = _min_max_scale(
                 _solve_lin_system(
                     q,
@@ -374,12 +366,21 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             )
             abs_time_mean = np.ones((self.adata.n_obs,), dtype=np.float32)
             abs_time_mean[trans_indices] = 1 - mean_time.squeeze()
-        elif absorption_time_moments == "second":
-            abs_time_mean, abs_time_var = _calculate_absorption_time_moments(
-                q, rec_indices, trans_indices, ixs=None, use_petsc=use_petsc
+        if mat_x is None:
+            # solve the linear system of equations
+            mat_x = _solve_lin_system(
+                q,
+                s,
+                solver=solver,
+                use_petsc=use_petsc,
+                preconditioner=preconditioner,
+                n_jobs=n_jobs,
+                backend=backend,
+                tol=tol,
+                use_eye=True,
             )
+            # take individual solutions and piece them together to get absorption probabilities towards the classes
 
-        # take individual solutions and piece them together to get absorption probabilities towards the classes
         macro_ix_helper = np.cumsum(
             [0] + [len(indices) for indices in lookup_dict.values()]
         )
