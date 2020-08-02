@@ -13,6 +13,7 @@ from cellrank import logging as logg
 from cellrank.utils._docs import d
 from cellrank.tools._utils import save_fig
 from cellrank.utils._utils import _get_n_cores, check_collection
+from sklearn.preprocessing import StandardScaler
 from cellrank.plotting._utils import _model_type, _create_models, _is_any_gam_mgcv
 from cellrank.tools._constants import AbsProbKey
 from cellrank.utils._parallelize import parallelize
@@ -25,7 +26,6 @@ def _cl_process(
     genes: Sequence[str],
     models: Dict[str, Dict[str, Model]],
     lineage_name: str,
-    norm: str,
     queue,
     **kwargs,
 ) -> np.ndarray:
@@ -40,8 +40,6 @@ def _cl_process(
         Gene and lineage specific models.
     lineage_name
         Name of the lineage for which to fit the models.
-    norm
-        Whether to z-normalize the fitted values.
     queue
         Signalling queue in the parent process/thread used to update the progress bar.
     kwargs
@@ -60,15 +58,7 @@ def _cl_process(
         queue.put(1)
     queue.put(None)
 
-    res = np.squeeze(np.array(res))
-
-    if not norm:
-        return res
-
-    mean = np.expand_dims(np.mean(res, 1), -1)
-    sd = np.expand_dims(np.sqrt(np.var(res, 1)), -1)
-
-    return (res - mean) / sd
+    return np.array(res)
 
 
 @d.dedent
@@ -194,11 +184,15 @@ def cluster_lineage(
             unit="gene",
             n_jobs=n_jobs,
             backend=backend,
+            extractor=np.vstack,
             show_progress_bar=show_progress_bar,
-        )(models, lineage, norm, **kwargs)
+        )(models, lineage, **kwargs)
         logg.info("    Finish", time=start)
 
-        trends = _AnnData(np.vstack(trends))
+        trends = trends.T
+        _ = StandardScaler(copy=False).fit_transform(trends)
+
+        trends = _AnnData(trends.T)
         trends.obs_names = genes
 
         # sanity check
@@ -212,9 +206,9 @@ def cluster_lineage(
             )
 
         pca_kwargs = dict(pca_kwargs)
-        n_comps = pca_kwargs.pop("n_comps", 50)  # default value
-        if n_comps > len(genes):
-            n_comps = len(genes) - 1
+        n_comps = pca_kwargs.pop(
+            "n_comps", min(50, kwargs.get("n_test_points"), len(genes)) - 1
+        )  # default value
 
         sc.pp.pca(trends, n_comps=n_comps, **pca_kwargs)
         sc.pp.neighbors(trends, **neighbors_kwargs)

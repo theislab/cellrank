@@ -22,11 +22,12 @@ from cellrank.utils._docs import d, inject_docs
 from cellrank.tools._utils import (
     _pairwise,
     _vec_mat_corr,
+    _min_max_scale,
     _process_series,
-    _solve_lin_system,
     _get_cat_and_null_indices,
     _merge_categorical_series,
     _convert_to_categorical_series,
+    _calculate_absorption_time_moments,
 )
 from cellrank.tools._colors import (
     _map_names_and_colors,
@@ -43,6 +44,7 @@ from cellrank.tools._constants import (
     _colors,
     _lin_names,
 )
+from cellrank.tools._linear_solver import _solve_lin_system
 from cellrank.tools.kernels._kernel import KernelExpression
 from cellrank.tools.estimators._property import Partitioner, LineageEstimatorMixin
 from cellrank.tools.estimators._constants import A, P
@@ -213,7 +215,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         check_irred: bool = False,
         solver: Optional[str] = None,
         use_petsc: Optional[bool] = None,
-        preconditioner: Optional[str] = None,
+        absorption_time_moments: Optional[str] = "first",
         n_jobs: Optional[int] = None,
         backend: str = "loky",
         tol: float = 1e-5,
@@ -243,9 +245,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             Whether to use solvers from :mod:`petsc4py` or :mod:`scipy`. Recommended for large problems.
             If `None`, it is determined automatically. If no installation is found, defaults
             to :func:`scipy.sparse.linalg.gmres`.
-        preconditioner
-            Preconditioner to use when :paramref:`use_petsc` `=True`.
-            For available preconditioner types, see `petsc4py.PETSc.PC.Type`.
+        absorption_time_moments
+            Whether to compute mean absorption time and its variance. Valid options are `None`, `'first'`, `'second'`.
         n_jobs
             Number of parallel jobs to use when using an iterative solver.
             When :paramref:`use_petsc` `=True` or for quickly-solvable problems,
@@ -269,6 +270,12 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 "Compute final states first as `.compute_final_states()` or set them manually as "
                 "`.set_final_states()`."
             )
+        if absorption_time_moments not in (None, "first", "second"):
+            raise ValueError(
+                f"Expcted `absorption_moments` to be `None`, `'first'` or `'second'`, "
+                f"found `{absorption_time_moments!r}`."
+            )
+
         if keys is not None:
             keys = sorted(set(keys))
 
@@ -336,24 +343,54 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 else "direct"
             )
         if use_petsc is None:
-            use_petsc = solver != "direct" and n_cells >= 3e5
+            use_petsc = n_cells >= 3e5
 
         logg.debug(f"Found `{n_cells}` cells and `{s.shape[1]}` absorbing states")
 
-        # solve the linear system of equations
-        mat_x = _solve_lin_system(
-            q,
-            s,
-            solver=solver,
-            use_petsc=use_petsc,
-            preconditioner=preconditioner,
-            n_jobs=n_jobs,
-            backend=backend,
-            tol=tol,
-            use_eye=True,
-        )
+        mat_x, abs_time_mean, abs_time_var = None, None, None
 
-        # take individual solutions and piece them together to get absorption probabilities towards the classes
+        if absorption_time_moments == "second":
+            mat_x, abs_time_mean, abs_time_var = _calculate_absorption_time_moments(
+                q,
+                s,
+                rec_indices,
+                trans_indices,
+                solver=solver,
+                use_petsc=use_petsc,
+                n_jobs=n_jobs,
+                backend=backend,
+                tol=tol,
+                use_eye=False,
+            )
+        elif absorption_time_moments == "first":
+            mean_time = _min_max_scale(
+                _solve_lin_system(
+                    q,
+                    np.ones((q.shape[0], 1), dtype=np.float32),
+                    solver=solver,
+                    use_petsc=use_petsc,
+                    n_jobs=1,
+                    backend=backend,
+                    tol=tol,
+                    use_eye=True,
+                )
+            )
+            abs_time_mean = np.ones((self.adata.n_obs,), dtype=np.float32)
+            abs_time_mean[trans_indices] = 1 - mean_time.squeeze()
+        if mat_x is None:
+            # solve the linear system of equations
+            mat_x = _solve_lin_system(
+                q,
+                s,
+                solver=solver,
+                use_petsc=use_petsc,
+                n_jobs=n_jobs,
+                backend=backend,
+                tol=tol,
+                use_eye=True,
+            )
+            # take individual solutions and piece them together to get absorption probabilities towards the classes
+
         macro_ix_helper = np.cumsum(
             [0] + [len(indices) for indices in lookup_dict.values()]
         )
@@ -383,7 +420,6 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 colors=self._get(P.ABS_PROBS).colors,
             ),
         )
-
         self._set(
             A.DIFF_POT,
             pd.Series(
@@ -391,6 +427,15 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 index=self.adata.obs.index,
             ),
         )
+
+        if abs_time_mean is not None:
+            self._set(
+                A.MEAN_ABS_TIME, pd.Series(abs_time_mean, index=self.adata.obs.index)
+            )
+        if abs_time_var is not None:
+            self._set(
+                A.VAR_ABS_TIME, pd.Series(abs_time_var, index=self.adata.obs.index)
+            )
 
         self._write_absorption_probabilities(time=start)
 
