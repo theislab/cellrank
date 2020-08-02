@@ -4,7 +4,6 @@ from typing import List, Tuple, Union, TypeVar, Optional
 from functools import singledispatch
 
 import numpy as np
-from cellrank import logging as logg
 from scipy.linalg import solve
 from scipy.sparse import eye as speye
 from scipy.sparse import (
@@ -17,6 +16,8 @@ from scipy.sparse import (
 )
 from scipy.sparse.linalg import inv as sinv
 from scipy.sparse.linalg import gmres, lgmres, gcrotmk, bicgstab
+
+from cellrank import logging as logg
 from cellrank.utils._utils import _get_n_cores
 from cellrank.utils._parallelize import parallelize
 
@@ -254,11 +255,14 @@ def _invert_matrix(mat, use_petsc: bool = True, **kwargs) -> np.ndarray:
 def _petsc_mat_solve(
     mat_a: Union[np.ndarray, spmatrix],
     mat_b: Optional[Union[spmatrix, np.ndarray]] = None,
+    tol: float = 1e-5,
     **kwargs,
 ) -> np.ndarray:
     from petsc4py import PETSc
 
     if mat_b is None:
+        if mat_a.shape[0] != mat_a.shape[1]:
+            raise ValueError("Matrix `A` is not square, unable to invert.")
         # matrix inversion
         B = PETSc.Mat().create()
         B.setSizes(mat_a.shape)
@@ -274,13 +278,25 @@ def _petsc_mat_solve(
         if mat_b.ndim == 1 or (mat_b.ndim == 2 and mat_b.shape[1] == 1):
             if issparse(mat_b):
                 mat_b = mat_b.toarray()
-            return _solve_many_sparse_problems_petsc(mat_b, mat_a=mat_a, **kwargs)[0]
+
+            res, converged = _solve_many_sparse_problems_petsc(
+                mat_b, mat_a=mat_a, tol=tol, **kwargs
+            )
+            if not converged:
+                logg.warning(
+                    f"The solution for system "
+                    f"`A{list(mat_a.shape)} * x[{mat_b.shape[0]}] = b[{mat_b.shape[0]}]` "
+                    f"did not converge"
+                )
+
+            return res
+
         B = _create_petsc_matrix(mat_b, as_dense=True)
 
     A = _create_petsc_matrix(mat_a)
 
     x = PETSc.Mat().create()
-    x.setSizes(B.getSize())
+    x.setSizes((A.getSize()[1], B.getSize()[1]))
     x.setType(PETSc.Mat.Type.DENSE)
     x.setFromOptions()
     x.setUp()
@@ -288,11 +304,12 @@ def _petsc_mat_solve(
 
     ksp = PETSc.KSP().create()
     ksp.setType(PETSc.KSP.Type.PREONLY)
+    ksp.setTolerances(rtol=tol)
     ksp.setOperators(A, A)
 
     pc = ksp.getPC()
     pc.setType(PETSc.PC.Type.LU)
-    # TODO: investigate why it's slow
+    # TODO: investigate why it's slow and find best solver type
     # pc.setFactorSolverType(PETSc.Mat.SolverType.MUMPS)
     pc.setFromOptions()
     pc.setUp()
@@ -306,6 +323,14 @@ def _petsc_mat_solve(
     factored_matrix.matSolve(B, x)
 
     res = np.array(x.getDenseArray(), copy=True)
+
+    if not ksp.converged:
+        logg.warning(
+            f"The solution for system "
+            f"`A{list(A.getSize())} * X{list(x.getSize())} = B{list(B.getSize())}` "
+            f"did not converge"
+        )
+
     return res
 
 
