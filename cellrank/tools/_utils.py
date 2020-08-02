@@ -17,9 +17,12 @@ from typing import (
 )
 from itertools import tee, product, combinations
 
+import matplotlib.colors as mcolors
+
 import numpy as np
 import pandas as pd
 from pandas import Series
+from cellrank import logging as logg
 from numpy.linalg import norm as d_norm
 from scipy.linalg import solve
 from scipy.sparse import eye as speye
@@ -35,12 +38,9 @@ from scipy.sparse import (
 from sklearn.cluster import KMeans
 from pandas.api.types import infer_dtype, is_categorical_dtype
 from sklearn.neighbors import NearestNeighbors
+from scipy.sparse.linalg import inv as sinv
 from scipy.sparse.linalg import norm as s_norm
 from scipy.sparse.linalg import gmres, lgmres, gcrotmk, bicgstab
-
-import matplotlib.colors as mcolors
-
-from cellrank import logging as logg
 from cellrank.utils._utils import (
     _get_neighs,
     _has_neighs,
@@ -86,6 +86,11 @@ def _pairwise(iterable):
     a, b = tee(iterable)
     next(b, None)
     return zip(a, b)
+
+
+def _min_max_scale(c: np.ndarray) -> np.ndarray:
+    minn, maxx = np.nanmin(c), np.nanmax(c)
+    return (c - minn) / (maxx - minn)
 
 
 def _create_root_final_annotations(
@@ -1508,6 +1513,10 @@ def _get_cat_and_null_indices(
     return cat_indices, null_indices, lookup_dict
 
 
+def _petsc_solve_direct():
+    pass
+
+
 def _solve_lin_system(
     mat_a: Union[np.ndarray, spmatrix],
     mat_b: Union[np.ndarray, spmatrix],
@@ -1587,26 +1596,30 @@ def _solve_lin_system(
             solver = _DEFAULT_SOLVER
             use_petsc = False
 
-    if solver == "direct":
+    if use_eye:
         if issparse(mat_a):
-            logg.debug("Densifying `A` for direct solver")
-            mat_a = mat_a.toarray()
-        if issparse(mat_b):
-            logg.debug("Densifying `B` for direct solver")
-            mat_b = mat_b.toarray()
-
-        if use_eye:
+            mat_a = speye(mat_a.shape[0]) - mat_a
+        else:
             mat_a = np.eye(mat_a.shape[0]) - mat_a
 
-        logg.debug("Solving the linear system using direct matrix factorisation")
+    if solver == "direct":
+        logg.debug("Solving the linear system using direct matrix factorization")
+
+        if use_petsc:
+            return _petsc_mat_solve(mat_a, mat_b)
+
+        if issparse(mat_a):
+            logg.debug("Densifying `A` for scipy direct solver")
+            mat_a = mat_a.toarray()
+        if issparse(mat_b):
+            logg.debug("Densifying `B` for scipy direct solver")
+            mat_b = mat_b.toarray()
 
         return solve(mat_a, mat_b)
 
     if use_petsc:
         if not isspmatrix_csr(mat_a):
             mat_a = csr_matrix(mat_a)
-        if use_eye:
-            mat_a = speye(mat_a.shape[0]) - mat_a
 
         mat_b = mat_b.T
         if not isspmatrix_csc(mat_b):
@@ -1633,8 +1646,6 @@ def _solve_lin_system(
         if not issparse(mat_a):
             logg.debug("Sparsifying `A` for iterative solver")
             mat_a = csr_matrix(mat_a)
-        if use_eye:
-            mat_a = speye(mat_a.shape[0]) - mat_a
 
         mat_b = mat_b.T
         if not issparse(mat_b):
@@ -1705,8 +1716,7 @@ def _solve_many_sparse_problems_petsc(
     if not isspmatrix_csc(mat_b):
         raise TypeError("Expected `B` to be CSC sparse matrix.")
 
-    A = PETSc.Mat().create()
-    A.createAIJ(size=mat_a.shape, csr=(mat_a.indptr, mat_a.indices, mat_a.data))
+    A = _create_petsc_matrix(mat_a)
 
     ksp = PETSc.KSP().create()
     ksp.setTolerances(rtol=tol)
@@ -1950,3 +1960,127 @@ def _densify_squeeze(x: Union[spmatrix, np.ndarray], dtype=np.float32) -> np.nda
         x = np.squeeze(x, axis=1)
 
     return x[:].astype(dtype)
+
+
+def _invert_matrix(mat, ixs=None, use_petsc: bool = True):
+    if ixs is not None:
+        raise RuntimeError()
+
+    if use_petsc:
+        try:
+            import petsc4py  # noqa
+        except ImportError:
+            # TODO: logg
+            use_petsc = False
+
+    if use_petsc:
+        return _petsc_mat_solve(mat, ixs=ixs)
+
+    return sinv(mat).toarray() if issparse(mat) else np.linalg.inv(mat)
+
+
+def _create_petsc_matrix(mat, as_dense: bool = False):
+    from petsc4py import PETSc
+
+    if issparse(mat) and as_dense:
+        mat = mat.toarray()
+
+    A = PETSc.Mat().create()
+    if issparse(mat):
+        if not isspmatrix_csr(mat):
+            mat = csr_matrix(mat)
+        A.createAIJ(size=mat.shape, csr=(mat.indptr, mat.indices, mat.data))
+    else:
+        A.createDense(mat.shape, array=mat)
+
+    return A
+
+
+def _petsc_mat_solve(
+    mat_a: Union[np.ndarray, spmatrix],
+    mat_b: Optional[Union[spmatrix, np.ndarray]] = None,
+    ixs: Iterable[int] = None,
+):
+    if ixs is not None:
+        pass
+
+    if mat_b is not None and ixs is not None:
+        raise ValueError()
+
+    from petsc4py import PETSc
+
+    A = _create_petsc_matrix(mat_a)
+
+    if mat_b is None:
+        B = PETSc.Mat().create()
+        B.setSizes(mat_a.shape)
+        B.setType(PETSc.Mat.Type.DENSE)
+        B.setFromOptions()
+        B.setUp()
+
+        start, end = B.getOwnershipRange()
+        for i in range(start, end):
+            B[i, i] = 1
+        B.assemble()
+    else:
+        if mat_b.ndim == 1:
+            raise ValueError()
+        B = _create_petsc_matrix(mat_b, as_dense=True)
+
+    x = PETSc.Mat().create()
+    x.setSizes(B.getSize())
+    x.setType(PETSc.Mat.Type.DENSE)
+    x.setFromOptions()
+    x.setUp()
+    x.assemble()
+
+    ksp = PETSc.KSP().create()
+    ksp.setType(PETSc.KSP.Type.PREONLY)
+    ksp.setOperators(A, A)
+
+    pc = ksp.getPC()
+    pc.setType(PETSc.PC.Type.LU)
+    # TODO: invesigate why it's slow
+    # pc.setFactorSolverType(PETSc.Mat.SolverType.MUMPS)
+    pc.setFromOptions()
+    pc.setUp()
+
+    ksp.setFromOptions()
+    ksp.setUp()
+
+    factored_matrix = pc.getFactorMatrix()
+
+    # invert A
+    factored_matrix.matSolve(B, x)
+
+    res = np.array(x.getDenseArray(), copy=True)
+    return res
+
+
+def _calculate_absorption_time_moments(
+    q: Union[np.ndarray, spmatrix],
+    rec_indices: np.ndarray,
+    trans_indices: np.ndarray,
+    ixs: Iterable[int] = None,
+    use_petsc: bool = True,
+) -> Tuple[np.ndarray, np.ndarray]:
+    def calculate():
+        I = speye(q.shape[0])  # noqa
+        N = _invert_matrix(I - q, ixs=ixs, use_petsc=use_petsc)  # fundamental matrix
+
+        mean = N.dot(np.ones(N.shape[0]))
+        var = (2 * N - I).dot(mean) - (mean ** 2)
+
+        return mean, np.array(var, copy=False).squeeze()
+
+    m, v = calculate()
+    m, v = _min_max_scale(m), _min_max_scale(v)
+
+    n = len(rec_indices) + len(trans_indices)
+    mean = np.ones(n, dtype=np.float32)
+    var = np.zeros(n, dtype=np.float32)
+
+    mean[trans_indices] = 1 - m
+    var[trans_indices] = v
+
+    return mean, var

@@ -7,26 +7,27 @@ from copy import deepcopy
 from typing import Any, Dict, Union, TypeVar, Optional, Sequence
 from pathlib import Path
 
+from matplotlib.colors import is_color_like
+
 import numpy as np
 import pandas as pd
 from pandas import Series
+from cellrank import logging as logg
 from scipy.stats import ranksums
 from scipy.sparse import spmatrix
-from pandas.api.types import infer_dtype, is_categorical_dtype
-
-from matplotlib.colors import is_color_like
-
-from cellrank import logging as logg
 from cellrank.tools import Lineage
+from pandas.api.types import infer_dtype, is_categorical_dtype
 from cellrank.utils._docs import d, inject_docs
 from cellrank.tools._utils import (
     _pairwise,
     _vec_mat_corr,
+    _min_max_scale,
     _process_series,
     _solve_lin_system,
     _get_cat_and_null_indices,
     _merge_categorical_series,
     _convert_to_categorical_series,
+    _calculate_absorption_time_moments,
 )
 from cellrank.tools._colors import (
     _map_names_and_colors,
@@ -214,6 +215,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         solver: Optional[str] = None,
         use_petsc: Optional[bool] = None,
         preconditioner: Optional[str] = None,
+        absorption_time_moments: str = "first",
         n_jobs: Optional[int] = None,
         backend: str = "loky",
         tol: float = 1e-5,
@@ -246,6 +248,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         preconditioner
             Preconditioner to use when :paramref:`use_petsc` `=True`.
             For available preconditioner types, see `petsc4py.PETSc.PC.Type`.
+        absorption_time_moments
+            TODO
         n_jobs
             Number of parallel jobs to use when using an iterative solver.
             When :paramref:`use_petsc` `=True` or for quickly-solvable problems,
@@ -269,6 +273,9 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 "Compute final states first as `.compute_final_states()` or set them manually as "
                 "`.set_final_states()`."
             )
+        if absorption_time_moments not in ("first", "second"):
+            raise ValueError()
+
         if keys is not None:
             keys = sorted(set(keys))
 
@@ -336,7 +343,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 else "direct"
             )
         if use_petsc is None:
-            use_petsc = solver != "direct" and n_cells >= 3e5
+            use_petsc = n_cells >= 3e5
 
         logg.debug(f"Found `{n_cells}` cells and `{s.shape[1]}` absorbing states")
 
@@ -352,6 +359,25 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             tol=tol,
             use_eye=True,
         )
+
+        abs_time_mean, abs_time_var = None, None
+        if absorption_time_moments == "first":
+            mean_time = _min_max_scale(
+                _solve_lin_system(
+                    q,
+                    np.ones((q.shape[0], 1), dtype=np.float32),
+                    solver=solver,
+                    n_jobs=1,
+                    tol=tol,
+                    use_eye=True,
+                )
+            )
+            abs_time_mean = np.ones((self.adata.n_obs,), dtype=np.float32)
+            abs_time_mean[trans_indices] = 1 - mean_time.squeeze()
+        elif absorption_time_moments == "second":
+            abs_time_mean, abs_time_var = _calculate_absorption_time_moments(
+                q, rec_indices, trans_indices, ixs=None, use_petsc=use_petsc
+            )
 
         # take individual solutions and piece them together to get absorption probabilities towards the classes
         macro_ix_helper = np.cumsum(
@@ -383,7 +409,6 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 colors=self._get(P.ABS_PROBS).colors,
             ),
         )
-
         self._set(
             A.DIFF_POT,
             pd.Series(
@@ -391,6 +416,15 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 index=self.adata.obs.index,
             ),
         )
+
+        if abs_time_mean is not None:
+            self._set(
+                A.MEAN_ABS_TIME, pd.Series(abs_time_mean, index=self.adata.obs.index)
+            )
+        if abs_time_var is not None:
+            self._set(
+                A.VAR_ABS_TIME, pd.Series(abs_time_var, index=self.adata.obs.index)
+            )
 
         self._write_absorption_probabilities(time=start)
 

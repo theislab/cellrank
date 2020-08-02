@@ -7,11 +7,6 @@ from typing import Any, List, Tuple, Union, TypeVar, Optional, Sequence
 from pathlib import Path
 from collections import Iterable, defaultdict
 
-import numpy as np
-import pandas as pd
-from pandas.api.types import is_categorical_dtype
-from scipy.ndimage.filters import convolve
-
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
@@ -19,10 +14,14 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
+import numpy as np
+import pandas as pd
 from cellrank import logging as logg
+from pandas.api.types import is_categorical_dtype
 from cellrank.utils._docs import d
-from cellrank.tools._utils import save_fig, _unique_order_preserving
+from cellrank.tools._utils import save_fig, _min_max_scale, _unique_order_preserving
 from cellrank.utils._utils import _get_n_cores, check_collection
+from scipy.ndimage.filters import convolve
 from cellrank.tools._colors import _create_categorical_colors
 from cellrank.plotting._utils import (
     _fit,
@@ -144,10 +143,6 @@ def heatmap(
     """
 
     import seaborn as sns
-
-    def min_max_scale(c: np.ndarray) -> np.ndarray:
-        minn, maxx = np.nanmin(c), np.nanmax(c)
-        return (c - minn) / (maxx - minn)
 
     def find_indices(series: pd.Series, values) -> Tuple[Any]:
         def find_nearest(array: np.ndarray, value: float) -> int:
@@ -288,7 +283,7 @@ def heatmap(
             else:
                 for x, c in ((m.x_test, m.y_test) for m in models.values()):
                     y = np.ones_like(x)
-                    c = min_max_scale(c) if scale else c
+                    c = _min_max_scale(c) if scale else c
 
                     color_fill_rec(
                         ax, x, y * ix, y * (ix + lineage_height), colors=norm(c)
@@ -364,7 +359,7 @@ def heatmap(
                     df = df.loc[gene_order]
                 else:
                     max_sort = np.argsort(
-                        np.argmax(df.apply(min_max_scale, axis=1).values, axis=1)
+                        np.argmax(df.apply(_min_max_scale, axis=1).values, axis=1)
                     )
                     df = df.iloc[max_sort, :]
                     if keep_gene_order:
