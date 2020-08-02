@@ -7,16 +7,17 @@ from copy import deepcopy
 from typing import Any, Dict, Union, TypeVar, Optional, Sequence
 from pathlib import Path
 
-from matplotlib.colors import is_color_like
-
 import numpy as np
 import pandas as pd
 from pandas import Series
-from cellrank import logging as logg
 from scipy.stats import ranksums
 from scipy.sparse import spmatrix
-from cellrank.tools import Lineage
 from pandas.api.types import infer_dtype, is_categorical_dtype
+
+from matplotlib.colors import is_color_like
+
+from cellrank import logging as logg
+from cellrank.tools import Lineage
 from cellrank.utils._docs import d, inject_docs
 from cellrank.tools._utils import (
     _pairwise,
@@ -214,7 +215,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         check_irred: bool = False,
         solver: Optional[str] = None,
         use_petsc: Optional[bool] = None,
-        absorption_time_moments: str = "first",
+        absorption_time_moments: Optional[str] = "first",
         n_jobs: Optional[int] = None,
         backend: str = "loky",
         tol: float = 1e-5,
@@ -245,9 +246,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             If `None`, it is determined automatically. If no installation is found, defaults
             to :func:`scipy.sparse.linalg.gmres`.
         absorption_time_moments
-            Whether to compute mean absorption time and its variance. Valid options are `'first'`, `'second'`.
-            Computing the second moment requires matrix inversion, which makes it not very feasible for large
-            problem.
+            Whether to compute mean absorption time and its variance. Valid options are `None`, `'first'`, `'second'`.
         n_jobs
             Number of parallel jobs to use when using an iterative solver.
             When :paramref:`use_petsc` `=True` or for quickly-solvable problems,
@@ -271,8 +270,11 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 "Compute final states first as `.compute_final_states()` or set them manually as "
                 "`.set_final_states()`."
             )
-        if absorption_time_moments not in ("first", "second"):
-            raise ValueError()
+        if absorption_time_moments not in (None, "first", "second"):
+            raise ValueError(
+                f"Expcted `absorption_moments` to be `None`, `'first'` or `'second'`, "
+                f"found `{absorption_time_moments!r}`."
+            )
 
         if keys is not None:
             keys = sorted(set(keys))
