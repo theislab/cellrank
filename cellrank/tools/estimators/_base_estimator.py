@@ -23,7 +23,6 @@ from cellrank.tools._utils import (
     _vec_mat_corr,
     _min_max_scale,
     _process_series,
-    _solve_lin_system,
     _get_cat_and_null_indices,
     _merge_categorical_series,
     _convert_to_categorical_series,
@@ -44,6 +43,7 @@ from cellrank.tools._constants import (
     _colors,
     _lin_names,
 )
+from cellrank.tools._linear_solver import _solve_lin_system
 from cellrank.tools.kernels._kernel import KernelExpression
 from cellrank.tools.estimators._property import Partitioner, LineageEstimatorMixin
 from cellrank.tools.estimators._constants import A, P
@@ -214,7 +214,6 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         check_irred: bool = False,
         solver: Optional[str] = None,
         use_petsc: Optional[bool] = None,
-        preconditioner: Optional[str] = None,
         absorption_time_moments: str = "first",
         n_jobs: Optional[int] = None,
         backend: str = "loky",
@@ -245,11 +244,10 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             Whether to use solvers from :mod:`petsc4py` or :mod:`scipy`. Recommended for large problems.
             If `None`, it is determined automatically. If no installation is found, defaults
             to :func:`scipy.sparse.linalg.gmres`.
-        preconditioner
-            Preconditioner to use when :paramref:`use_petsc` `=True`.
-            For available preconditioner types, see `petsc4py.PETSc.PC.Type`.
         absorption_time_moments
-            TODO
+            Whether to compute mean absorption time and its variance. Valid options are `'first'`, `'second'`.
+            Computing the second moment requires matrix inversion, which makes it not very feasible for large
+            problem.
         n_jobs
             Number of parallel jobs to use when using an iterative solver.
             When :paramref:`use_petsc` `=True` or for quickly-solvable problems,
@@ -351,7 +349,16 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
         if absorption_time_moments == "second":
             mat_x, abs_time_mean, abs_time_var = _calculate_absorption_time_moments(
-                q, s, rec_indices, trans_indices, ixs=None, use_petsc=use_petsc
+                q,
+                s,
+                rec_indices,
+                trans_indices,
+                solver=solver,
+                use_petsc=use_petsc,
+                n_jobs=n_jobs,
+                backend=backend,
+                tol=tol,
+                use_eye=False,
             )
         elif absorption_time_moments == "first":
             mean_time = _min_max_scale(
@@ -359,7 +366,9 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                     q,
                     np.ones((q.shape[0], 1), dtype=np.float32),
                     solver=solver,
+                    use_petsc=use_petsc,
                     n_jobs=1,
+                    backend=backend,
                     tol=tol,
                     use_eye=True,
                 )
@@ -373,7 +382,6 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 s,
                 solver=solver,
                 use_petsc=use_petsc,
-                preconditioner=preconditioner,
                 n_jobs=n_jobs,
                 backend=backend,
                 tol=tol,
