@@ -2059,21 +2059,23 @@ def _petsc_mat_solve(
 
 def _calculate_absorption_time_moments(
     q: Union[np.ndarray, spmatrix],
+    s: Union[np.ndarray, spmatrix],
     rec_indices: np.ndarray,
     trans_indices: np.ndarray,
     ixs: Iterable[int] = None,
     use_petsc: bool = True,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     def calculate():
         I = speye(q.shape[0])  # noqa
         N = _invert_matrix(I - q, ixs=ixs, use_petsc=use_petsc)  # fundamental matrix
 
+        abs_probs = N @ s
         mean = N.dot(np.ones(N.shape[0]))
         var = (2 * N - I).dot(mean) - (mean ** 2)
 
-        return mean, np.array(var, copy=False).squeeze()
+        return abs_probs, mean, np.array(var, copy=False).squeeze()
 
-    m, v = calculate()
+    ap, m, v = calculate()
     m, v = _min_max_scale(m), _min_max_scale(v)
 
     n = len(rec_indices) + len(trans_indices)
@@ -2083,4 +2085,4 @@ def _calculate_absorption_time_moments(
     mean[trans_indices] = 1 - m
     var[trans_indices] = v
 
-    return mean, var
+    return ap, mean, var
