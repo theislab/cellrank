@@ -19,8 +19,8 @@ from cellrank.tools import Lineage
 from pandas.api.types import is_categorical_dtype
 from cellrank.utils._docs import d
 from cellrank.tools._utils import _make_cat, partition, _complex_warning
+from cellrank.tools.kernels import PrecomputedKernel
 from cellrank.tools._constants import Direction, DirPrefix, DirectionPlot
-from cellrank.tools.kernels._kernel import KernelExpression, PrecomputedKernel
 from cellrank.tools.estimators._utils import (
     Metadata,
     RandomKeys,
@@ -28,6 +28,7 @@ from cellrank.tools.estimators._utils import (
     singledispatchmethod,
     _delegate_method_dispatch,
 )
+from cellrank.tools.kernels._base_kernel import KernelExpression
 from cellrank.tools.estimators._constants import META_KEY, A, F, P
 
 

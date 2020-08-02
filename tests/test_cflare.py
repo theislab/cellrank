@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 from typing import Tuple
 
+from anndata import AnnData
+
 import numpy as np
 import pandas as pd
 import pytest
-from pandas.api.types import is_categorical_dtype
-
-from anndata import AnnData
-
 import cellrank as cr
+import cellrank.tools.kernels._precomputed_kernel
 from _helpers import assert_array_nan_equal
+from pandas.api.types import is_categorical_dtype
 from cellrank.tools._colors import _create_categorical_colors
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tools._constants import (
@@ -296,7 +296,11 @@ class TestCFLARE:
         )
 
         # initialise a pre-computed kernel and CFLARE estimator object
-        c = cr.tl.CFLARE(cr.tl.kernels.PrecomputedKernel(transition_matrix))
+        c = cr.tl.CFLARE(
+            cellrank.tools.kernels._precomputed_kernel.PrecomputedKernel(
+                transition_matrix
+            )
+        )
 
         # define the set of metastable states
         state_annotation = pd.Series(index=range(p.shape[0]))
