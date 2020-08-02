@@ -7,17 +7,16 @@ from copy import deepcopy
 from typing import Any, Dict, Union, TypeVar, Optional, Sequence
 from pathlib import Path
 
+from matplotlib.colors import is_color_like
+
 import numpy as np
 import pandas as pd
 from pandas import Series
+from cellrank import logging as logg
 from scipy.stats import ranksums
 from scipy.sparse import spmatrix
-from pandas.api.types import infer_dtype, is_categorical_dtype
-
-from matplotlib.colors import is_color_like
-
-from cellrank import logging as logg
 from cellrank.tools import Lineage
+from pandas.api.types import infer_dtype, is_categorical_dtype
 from cellrank.utils._docs import d, inject_docs
 from cellrank.tools._utils import (
     _pairwise,
@@ -43,8 +42,8 @@ from cellrank.tools._constants import (
     _colors,
     _lin_names,
 )
-from cellrank.tools.kernels._kernel import KernelExpression
 from cellrank.tools.estimators._property import Partitioner, LineageEstimatorMixin
+from cellrank.tools.kernels._base_kernel import KernelExpression
 from cellrank.tools.estimators._constants import A, P
 
 AnnData = TypeVar("AnnData")

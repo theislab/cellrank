@@ -16,13 +16,14 @@ from _helpers import (
 from cellrank.tools._utils import _normalize
 from cellrank.utils._utils import _get_neighs, _get_neighs_params
 from cellrank.tools.kernels import (
+    Constant,
     PalantirKernel,
     VelocityKernel,
     PrecomputedKernel,
     ConnectivityKernel,
 )
 from cellrank.tools._constants import Direction, _transition
-from cellrank.tools.kernels._kernel import Constant, KernelAdd, KernelMul, _is_bin_mult
+from cellrank.tools.kernels._base_kernel import KernelAdd, KernelMul, _is_bin_mult
 
 _rtol = 1e-6
 
