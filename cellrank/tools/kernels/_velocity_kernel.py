@@ -1,23 +1,39 @@
 # -*- coding: utf-8 -*-
 """Velocity kernel module."""
 from copy import copy
-from typing import Iterable, Optional
+from enum import Enum
+from math import fsum
+from typing import List, Iterable, Optional
+from inspect import signature
 from functools import partial
 
 from scvelo.preprocessing.moments import get_moments
 
 import numpy as np
 from cellrank import logging as logg
-from scipy.sparse import issparse, csr_matrix
+from scipy.sparse import issparse, spmatrix, csr_matrix
 from cellrank.utils._docs import d
-from cellrank.tools._utils import _vals_to_csr, _predict_transition_probabilities
+from cellrank.tools._utils import _predict_transition_probabilities
+from cellrank.utils._utils import valuedispatch
 from cellrank.tools.kernels import Kernel
-from cellrank.tools._constants import Direction
+from cellrank.tools._constants import Direction, PrettyEnumMeta
+from cellrank.utils._parallelize import parallelize
 from cellrank.tools.kernels._base_kernel import (
     _LOG_USING_CACHE,
     _ERROR_EMPTY_CACHE_MSG,
     AnnData,
 )
+
+TOL = 1e-12
+
+
+class VelocityMode(Enum, metaclass=PrettyEnumMeta):
+    """Method to calculate the transition matrix of VelocityKernel."""
+
+    DETERMINISTIC = "deterministic"
+    STOCHASTIC = "stochastic"
+    SAMPLING = "sampling"
+    MONTE_CARLO = "monte_carlo"
 
 
 @d.dedent
@@ -127,12 +143,14 @@ class VelocityKernel(Kernel):
         self._gene_expression = X
         self._velocity_params = velocity_params
 
+    @d.dedent
     def compute_transition_matrix(
         self,
         backward_mode: str = "transpose",
         softmax_scale: float = 4.0,
         mode: str = "deterministic",
         seed: Optional[int] = None,
+        n_samples: int = 1000,
         **kwargs,
     ) -> "VelocityKernel":
         """
@@ -150,8 +168,11 @@ class VelocityKernel(Kernel):
         mode
             How to compute transition probabilities. Options are "stochastic" (propagate uncertainty analytically),
             "deterministic" (don't propagate uncertainty) and "sampling" (sample from velocity distribution).
+        n_samples
+            Number of bootstrap samples when :paramref:`mode` `='monte_carlo'`.
         seed
             Set the seed for random state, only relevant for `mode='sampling'`.
+        %(parallel)s
 
         Returns
         -------
@@ -162,15 +183,14 @@ class VelocityKernel(Kernel):
                 - :paramref:`pearson_correlations`
         """
 
-        if mode not in ["stochastic", "deterministic", "sampling"]:
-            raise NotImplementedError(f"Mode `{mode}` is not implemented.")
+        mode = VelocityMode(mode)
 
-        if mode != "deterministic" and self._direction == Direction.BACKWARD:
+        if mode != VelocityMode.DETERMINISTIC and self.backward:
             logg.warning(
-                f"Mode `{mode}` is currently not supported for the backward process. "
-                f"Defaulting to mode `'deterministic'`"
+                f"VelocityMode `{mode}` is currently not supported for the backward process. "
+                f"Defaulting to mode `{VelocityMode.DETERMINISTIC.value!r}`"
             )
-            mode = "deterministic"
+            mode = VelocityMode.DETERMINISTIC
 
         start = logg.info("Computing transition matrix based on velocity correlations")
 
@@ -178,7 +198,7 @@ class VelocityKernel(Kernel):
             bwd_mode=backward_mode if self._direction == Direction.BACKWARD else None,
             sigma_corr=softmax_scale,
             mode=mode,
-            random_state=seed,
+            seed=seed,
         )
 
         # check whether we already computed such a transition matrix. If yes, load from cache
@@ -191,147 +211,28 @@ class VelocityKernel(Kernel):
         self._params = params
 
         # compute first and second order moments to model the distribution of the velocity vector
-        if mode in ["stochastic", "sampling"]:
-            np.random.seed(seed)
-            velocity_expectation = get_moments(
-                self.adata, self._velocity, second_order=False
-            )
-            velocity_variance = get_moments(
-                self.adata, self._velocity, second_order=True
-            )
-
-        # define a function to compute hessian matrices
-        if mode == "stochastic":
-            try:
-                from jax import jit, jacfwd, jacrev
-
-                get_hessian_fwd = jit(
-                    jacfwd(
-                        jacrev(
-                            partial(
-                                _predict_transition_probabilities,
-                                return_pearson_correlation=False,
-                                use_jax=True,
-                            )
-                        )
-                    )
-                )
-            except ImportError:
-                logg.warning("TODO: install jax")
-                mode = "sampling"
-
-        # sort cells by their number of neighbors - this makes jitting more efficient
-        n_neighbors = np.array((self._conn != 0).sum(1)).flatten()
-        cell_ixs = np.argsort(n_neighbors)[::-1]
-
-        # loop over all cells
-        probs_list, corrs_list, rows, cols, n_obs = (
-            [],
-            [],
-            [],
-            [],
-            self._gene_expression.shape[0],
+        # if mode in ["stochastic", "sampling"]:
+        np.random.seed(seed)
+        velocity_expectation = get_moments(
+            self.adata, self._velocity, second_order=False
         )
-        for cell_ix in cell_ixs:
+        velocity_variance = get_moments(self.adata, self._velocity, second_order=True)
 
-            # get the neighbors
-            nbhs_ixs = self._conn[cell_ix, :].indices
+        t_mat, corrs_mat = _dispatch_computation(
+            VelocityMode(mode),
+            conn=self._conn,
+            expression=self._gene_expression,
+            velocity=self._velocity,
+            expectation=velocity_expectation,
+            variance=velocity_variance,
+            softmax_scale=softmax_scale,
+            backward=self.backward,
+            backward_mode=backward_mode,
+            **kwargs,
+        )
 
-            # get the displacement matrix. Changing dimensions b/c varying numbers of neighbors slow down autograd
-            W = self._gene_expression[nbhs_ixs, :] - self._gene_expression[cell_ix, :]
-
-            if mode == "deterministic":
-                # treat `v_i` as deterministic, with no error
-
-                if self._direction == Direction.FORWARD or (
-                    self._direction == Direction.BACKWARD and backward_mode == "negate"
-                ):
-                    # evaluate the prediction at the actual velocity vector
-                    v_i = self._velocity[cell_ix, :]
-
-                    # for the transpose backward mode, just flip the velocity vector
-                    if self._direction == Direction.BACKWARD:
-                        v_i *= -1
-
-                    if (v_i == 0).all():
-                        logg.warning(f"Cell `{cell_ix}` has a zero velocity vector")
-                        probs, corrs = (
-                            np.ones(len(nbhs_ixs)) / len(nbhs_ixs),
-                            np.zeros(len(nbhs_ixs)),
-                        )
-                    else:
-                        probs, corrs = _predict_transition_probabilities(
-                            v_i, W, softmax_scale=softmax_scale,
-                        )
-                else:
-                    # compute how likely all neighbors are to transition to this cell
-                    V = self._velocity[nbhs_ixs, :]
-                    probs, corrs = _predict_transition_probabilities(
-                        V, -1 * W, softmax_scale=softmax_scale,
-                    )
-
-            elif mode == "stochastic":
-                # treat `v_i` as random variable and use analytical approximation to propagate the distribution
-
-                # get the expected velocity vector
-                v_i = velocity_expectation[cell_ix, :]
-
-                if (v_i == 0).all():
-                    logg.warning(f"Cell `{cell_ix}` has a zero velocity vector")
-                    probs, corrs = (
-                        np.ones(len(nbhs_ixs)) / len(nbhs_ixs),
-                        np.zeros(len(nbhs_ixs)),
-                    )
-                else:
-                    # get the variance of the distribution over velocity vectors
-                    variances = velocity_variance[cell_ix, :]
-
-                    # compute the Hessian tensor, and turn it into a matrix that has the diagonal elements in its rows
-                    H = get_hessian_fwd(v_i, W, softmax_scale)
-                    H_diag = np.concatenate([np.diag(h)[None, :] for h in H])
-
-                    # compute zero order term
-                    p_0, corrs = _predict_transition_probabilities(
-                        v_i, W, softmax_scale=softmax_scale,
-                    )
-
-                    # compute second order term (note that the first order term cancels)
-                    p_2 = 0.5 * H_diag.dot(variances)
-
-                    # combine both to give the second order Taylor approximation. Can sometimes be negative because we
-                    # neglected higher order terms, so force it to be non-negative
-                    probs = np.where((p_0 + p_2) >= 0, p_0 + p_2, 0)
-
-            elif mode == "sampling":
-                # treat `v_i` as random variable and use Monte Carlo approximation to propagate the distribution
-
-                # sample a single velocity vector from the distribution
-                v_i = np.random.normal(
-                    velocity_expectation[cell_ix, :], velocity_variance[cell_ix, :]
-                )
-
-                # use this sample to compute transition probabilities
-                probs, corrs = _predict_transition_probabilities(
-                    v_i, W, softmax_scale=softmax_scale,
-                )
-
-            # add the computed transition probabilities and correlations to lists
-            corrs_list.extend(corrs)
-            probs_list.extend(probs)
-            rows.extend(np.ones(len(nbhs_ixs)) * cell_ix)
-            cols.extend(nbhs_ixs)
-
-        # collect everything in a matrix of correlations and one of transition probabilities
-        probs_matrix, corrs_matrix = np.hstack(probs_list), np.hstack(corrs_list)
-        probs_matrix[np.isnan(probs_matrix)] = 0
-        corrs_matrix[np.isnan(corrs_matrix)] = 0
-
-        # transform to sparse matrices
-        corrs_matrix = _vals_to_csr(corrs_matrix, rows, cols, shape=(n_obs, n_obs))
-        probs_matrix = _vals_to_csr(probs_matrix, rows, cols, shape=(n_obs, n_obs))
-
-        self._compute_transition_matrix(probs_matrix, density_normalize=False)
-        self._pearson_correlations = corrs_matrix
+        self._compute_transition_matrix(t_mat, density_normalize=False)
+        self._pearson_correlations = corrs_mat
 
         logg.info("    Finish", time=start)
 
@@ -357,3 +258,236 @@ class VelocityKernel(Kernel):
         vk._pearson_correlations = copy(self.pearson_correlations)
 
         return vk
+
+
+def _get_displacement(ix, conn, expression):
+    nbhs_ixs = conn[ix, :].indices
+
+    # get the displacement matrix. Changing dimensions b/c varying numbers of neighbors slow down autograd
+    W = expression[nbhs_ixs, :] - expression[ix, :]
+
+    return W, nbhs_ixs
+
+
+@valuedispatch
+def _dispatch_computation(mode, *_args, **_kwargs):
+    raise NotImplementedError(mode)
+
+
+def _run_in_parallel(fn, conn, sort_by_neighbors: bool = False, **kwargs):
+    def _to_csr_matrix(data: List[float], mat: csr_matrix):
+        return csr_matrix((data, mat.indices, mat.indptr))
+
+    if not sort_by_neighbors:
+        ixs = np.arange(conn.shape[0])
+    else:
+        n_neighbors = np.array((conn != 0).sum(1)).flatten()
+        ixs = np.argsort(n_neighbors)[::-1]
+
+    params = signature(parallelize).parameters
+    res = parallelize(
+        fn,
+        ixs,
+        as_array=True,
+        extractor=np.vstack,
+        unit="cell",
+        **{k: v for k, v in kwargs.items() if k in params},
+    )()
+    assert res.ndim == 2 and res.shape[1] == 2, "Sanity check failed."
+    probs, cors = res[:, 0], res[:, 1]
+
+    if not sort_by_neighbors:
+        return _to_csr_matrix(probs, conn), _to_csr_matrix(cors, conn)
+
+    conn = conn[ixs, :][:, ixs]  # get the correct indices and indptrs
+    aixs = np.argsort(ixs)
+
+    probs, conn = _to_csr_matrix(probs, conn), _to_csr_matrix(cors, conn)
+
+    return probs[aixs, :][:, aixs], conn[aixs, :][:, aixs]
+
+
+@_dispatch_computation.register(VelocityMode.MONTE_CARLO)
+def _(
+    conn: csr_matrix,
+    expression: np.ndarray,
+    expectation: np.ndarray,
+    variance: np.ndarray,
+    n_samples: int = 1,
+    softmax_scale: float = 1,
+    **kwargs,
+):
+    def runner(ixs, queue):
+        probs, cors = [], []
+
+        for ix in ixs:
+            W, nbhs_ixs = _get_displacement(ix, conn, expression)
+            v = _random_normal(expectation[ix], variance[ix], n_samples=n_samples)
+
+            p, c = _predict_transition_probabilities(v, W, softmax_scale=softmax_scale,)
+            probs.extend(p)
+            cors.extend(c)
+
+            queue.put(1)
+
+        queue.put(None)
+
+        return np.c_[probs, cors]
+
+    return _run_in_parallel(runner, conn, **kwargs)
+
+
+@_dispatch_computation.register(VelocityMode.SAMPLING)
+def _(
+    conn: csr_matrix,
+    expression: np.ndarray,
+    expectation: np.ndarray,
+    variance: np.ndarray,
+    n_samples: int = 1,
+    softmax_scale: float = 1,
+    **kwargs,
+):
+    loc = locals()
+    loc["n_samples"] = 1
+    _ = loc.pop("kwargs")
+    return _dispatch_computation(VelocityMode.MONTE_CARLO, **loc, **kwargs)
+
+
+@_dispatch_computation.register(VelocityMode.DETERMINISTIC)
+def _(
+    conn: spmatrix,
+    expression: np.ndarray,
+    velocity: np.ndarray,
+    backward: bool = False,
+    backward_mode: str = "negate",
+    softmax_scale: float = 1,
+    **kwargs,
+):
+    def runner(ixs, queue):
+        probs, cors = [], []
+
+        for ix in ixs:
+            W, nbhs_ixs = _get_displacement(ix, conn, expression)
+
+            if not backward or (backward and backward_mode == "negate"):
+                # evaluate the prediction at the actual velocity vector
+                v = velocity[ix]
+
+                # for the transpose backward mode, just flip the velocity vector
+                if backward:
+                    v *= -1
+
+                if np.all(v == 0):
+                    p, c = _get_probs_for_zero_vec(len(nbhs_ixs))
+                else:
+                    p, c = _predict_transition_probabilities(
+                        v, W, softmax_scale=softmax_scale,
+                    )
+            else:
+                # compute how likely all neighbors are to transition to this cell
+                V = velocity[nbhs_ixs, :]
+                p, c = _predict_transition_probabilities(
+                    V, -1 * W, softmax_scale=softmax_scale,
+                )
+
+            probs.extend(p)
+            cors.extend(p)
+
+            queue.put(1)
+
+        queue.put(None)
+
+        return np.c_[probs, cors]
+
+    return _run_in_parallel(runner, conn, **kwargs)
+
+
+@_dispatch_computation.register(VelocityMode.STOCHASTIC)
+def _(
+    conn: spmatrix,
+    expression: np.ndarray,
+    expectation: np.ndarray,
+    variance: np.ndarray,
+    softmax_scale: float = 1,
+    **kwargs,
+):
+    def runner(ixs, queue):
+        from jax import jit, jacfwd, jacrev
+
+        get_hessian_fwd = jit(jacfwd(jacrev(_predict_transition_probabilities_jax)))
+
+        probs, cors = [], []
+
+        for ix in ixs:
+            v = expectation[ix]
+            W, nbhs_ixs = _get_displacement(ix, conn, expression)
+
+            if np.all(v == 0):
+                p, c = _get_probs_for_zero_vec(len(nbhs_ixs))
+                sum_ = fsum(p)
+                if not np.isclose(sum_, 1.0, rtol=TOL):
+                    p /= sum_
+            else:
+                # get the variance of the distribution over velocity vectors
+                variances = variance[ix]
+
+                # compute the Hessian tensor, and turn it into a matrix that has the diagonal elements in its rows
+                H = get_hessian_fwd(v, W, softmax_scale)
+                H_diag = np.concatenate([np.diag(h)[None, :] for h in H])
+
+                # compute zero order term
+                p_0, c = _predict_transition_probabilities(
+                    v, W, softmax_scale=softmax_scale,
+                )
+
+                # compute second order term (note that the first order term cancels)
+                p_2 = 0.5 * H_diag.dot(variances)
+
+                # combine both to give the second order Taylor approximation. Can sometimes be negative because we
+                # neglected higher order terms, so force it to be non-negative
+                p = np.clip(p_0 + p_2, a_min=0, a_max=1)
+                mask = np.isnan(p)
+                p[mask] = 0
+
+                if np.all(p == 0):
+                    p, c = _get_probs_for_zero_vec(len(nbhs_ixs))
+
+                sum_ = fsum(p)
+                if not np.isclose(sum_, 1.0, rtol=TOL):
+                    p[~mask] = p[~mask] / sum_
+
+            probs.extend(p.astype(np.float64))  # can be float32 from JAX
+            cors.extend(c.astype(np.float64))
+
+            queue.put(1)
+
+        queue.put(None)
+
+        return np.c_[probs, cors]
+
+    return _run_in_parallel(runner, conn, sort_by_neighbors=True, **kwargs)
+
+
+def _get_probs_for_zero_vec(size: int):
+    # float32 doesn't have enough precision
+    return (
+        np.ones(size, dtype=np.float64) / size,
+        np.zeros(size, dtype=np.float64),
+    )
+
+
+def _random_normal(mean: np.ndarray, var: np.ndarray, n_samples=1):
+    if mean.ndim != 1:
+        raise ValueError()
+    if mean.shape != var.shape:
+        raise ValueError()
+
+    if n_samples == 1:
+        return np.random.normal(mean, var)
+
+    return np.mean(np.random.normal(mean, var, size=(n_samples, mean.shape[0])), axis=0)
+
+
+_predict_transition_probabilities_jax = partial(
+    _predict_transition_probabilities, return_pearson_correlation=False, use_jax=True,
+)
