@@ -6,9 +6,10 @@ from typing import Dict, Tuple, Union, TypeVar, Optional, Sequence
 from pathlib import Path
 from collections import Iterable
 
+import numpy as np
+
 import matplotlib.pyplot as plt
 
-import numpy as np
 from cellrank import logging as logg
 from cellrank.utils._docs import d
 from cellrank.tools._utils import save_fig
@@ -81,7 +82,7 @@ def cluster_lineage(
     clusters: Optional[Sequence[str]] = None,
     n_points: int = 200,
     time_key: str = "latent_time",
-    cluster_key: str = "louvain",
+    cluster_key: str = "clusters",
     norm: bool = True,
     recompute: bool = False,
     ncols: int = 3,

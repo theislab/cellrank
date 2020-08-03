@@ -16,26 +16,34 @@ import matplotlib.colors
 import matplotlib.pyplot as plt
 
 from cellrank import logging as logg
-from cellrank.utils._docs import d
+from cellrank.utils._docs import d, inject_docs
 from cellrank.tools._utils import save_fig, _unique_order_preserving
+from cellrank.utils._utils import valuedispatch
 from cellrank.plotting._utils import _position_legend
-from cellrank.tools._constants import DirPrefix, AbsProbKey, FinalStatesPlot
+from cellrank.tools._constants import ModeEnum, DirPrefix, AbsProbKey, FinalStatesPlot
 from cellrank.tools._exact_mc_test import _counts, _cramers_v
 
 AnnData = TypeVar("AnnData")
 
 
-_cluster_fates_modes = ("bar", "paga", "paga_pie", "violin", "heatmap", "clustermap")
+class ClusterFatesMode(ModeEnum):  # noqa
+    BAR = "bar"
+    PAGA = "paga"
+    PAGA_PIE = "paga_pie"
+    VIOLIN = "violin"
+    HEATMAP = "heatmap"
+    CLUSTERMAP = "clustermap"
 
 
 @d.dedent
+@inject_docs(m=ClusterFatesMode)
 def cluster_fates(
     adata: AnnData,
-    cluster_key: Optional[str] = "louvain",
+    mode: str = ClusterFatesMode.PAGA_PIE.s,
     backward: bool = False,
-    clusters: Optional[Union[str, Sequence[str]]] = None,
     lineages: Optional[Union[str, Sequence[str]]] = None,
-    mode: str = "bar",
+    cluster_key: Optional[str] = None,
+    clusters: Optional[Union[str, Sequence[str]]] = None,
     basis: Optional[str] = None,
     show_cbar: bool = True,
     ncols: Optional[int] = None,
@@ -47,10 +55,11 @@ def cluster_fates(
     **kwargs,
 ) -> None:
     """
-    Plot aggregate lineage probabilities at cluster level.
+    Plot aggregate lineage probabilities at a cluster level.
 
     This can be used to investigate how likely a certain cluster is to go to the %(final)s states, or in turn to have
-    descended from the %(root)s states. For mode `'paga'` and `'paga_pie'`, we use *PAGA*, see [Wolf19]_.
+    descended from the %(root)s states. For mode `{m.PAGA.s!r}` and `{m.PAGA_PIE.s!r}`,
+    we use *PAGA*, see [Wolf19]_.
 
     .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/cluster_fates.png
        :width: 400px
@@ -59,35 +68,37 @@ def cluster_fates(
     Parameters
     ----------
     %(adata)s
-    cluster_key
-        Key in :paramref:`adata` `.obs` containing the clusters.
+    mode
+        Type of plot to show. Valid options are:
+
+            - `{m.BAR.s!r}` - barplot, one panel per cluster
+            - `{m.PAGA.s!r}` - scanpy's PAGA, one per %(root_or_final)s state, colored in by fate
+            - `{m.PAGA_PIE.s!r}` - scanpy's PAGA with pie charts indicating aggregated fates
+            - `{m.VIOLIN.s!r}` - violin plots, one per %(root_or_final)s state
+            - `{m.HEATMAP.s!r}` - a heatmap, showing average fates per cluster
+            - `{m.CLUSTERMAP.s!r}` - same as heatmap, but with dendrogram
     %(backward)s
-    clusters
-        Clusters to visualize. If `None`, all clusters will be plotted.
     lineages
         Lineages for which to visualize absorption probabilities. If `None`, use all available lineages.
-    mode
-        Type of plot to show.
-
-            - `'bar'` - barplot, one panel per cluster
-            - `'paga'` - scanpy's PAGA, one per %(root_or_final)s state, colored in by fate
-            - `'paga_pie'` - scanpy's PAGA with pie charts indicating aggregated fates
-            - `'violin'` - violin plots, one per %(root_or_final)s state
-            - `'heatmap'` - seaborn heatmap, showing average fates per cluster
-            - `'clustermap'` - same as heatmap, but with dendrogram
+    cluster_key
+        Key in :paramref:`adata` `.obs` containing the clusters.
+    clusters
+        Clusters to visualize. If `None`, all clusters will be plotted.
     basis
-        Basis for scatterplot to use when :paramref:`mode` `='paga_pie'`. If `None`, don't show the scatterplot.
+        Basis for scatterplot to use when :paramref:`mode` `={m.PAGA_PIE.s!r}`.
+        If `None`, don't show the scatterplot.
     show_cbar
-        Whether to show colorbar when :paramref:`mode` is `'paga_pie'`.
+        Whether to show colorbar when :paramref:`mode` is `{m.PAGA_PIE.s!r}`.
     ncols
-        Number of columns when :paramref:`mode` is `'bar'` or `'paga'`.
+        Number of columns when :paramref:`mode` is `{m.BAR.s!r}` or `{m.PAGA.s!r}`.
     sharey
-        Whether to share y-axis when :paramref:`mode` is `'bar'`.
+        Whether to share y-axis when :paramref:`mode` is `{m.BAR.s!r}`.
     figsize
         Size of the figure.
     legend_kwargs
         Keyword arguments for :func:`matplotlib.axes.Axes.legend`, such as `'loc'` for legend position.
-        For `mode='paga_pie'` and `basis='...'`, this controls the placement of the absorption probabilities legend.
+        For `mode={m.PAGA_PIE.s!r}` and `basis='...'`, this controls the placement of
+        the absorption probabilities legend.
     %(plotting)s
     **kwargs
         Keyword arguments for :func:`scvelo.pl.paga`, :func:`scanpy.pl.violin` or :func:`matplotlib.pyplot.bar`,
@@ -102,7 +113,12 @@ def cluster_fates(
     from scanpy.plotting import violin
     from scvelo.plotting import paga
 
-    def plot_bar():
+    @valuedispatch
+    def plot(mode: ClusterFatesMode, *_args, **_kwargs):
+        raise NotImplementedError(mode.value)
+
+    @plot.register(ClusterFatesMode.BAR)
+    def _():
         cols = 4 if ncols is None else ncols
         n_rows = ceil(len(clusters) / cols)
         fig = plt.figure(
@@ -140,7 +156,8 @@ def cluster_fates(
 
         return fig
 
-    def plot_paga():
+    @plot.register(ClusterFatesMode.PAGA)
+    def _():
         kwargs["save"] = None
         kwargs["show"] = False
         if "cmap" not in kwargs:
@@ -185,7 +202,8 @@ def cluster_fates(
 
         return fig
 
-    def plot_paga_pie():
+    @plot.register(ClusterFatesMode.PAGA_PIE)
+    def _():
         colors = list(adata.obsm[lk][:, lin_names].colors)
         colors = {i: odict(zip(colors, mean)) for i, (mean, _) in enumerate(d.values())}
 
@@ -252,7 +270,8 @@ def cluster_fates(
 
         return fig
 
-    def plot_violin():
+    @plot.register(ClusterFatesMode.VIOLIN)
+    def _():
         kwargs.pop("ax", None)
         kwargs.pop("keys", None)
         kwargs.pop("save", None)  # we will handle saving
@@ -335,7 +354,8 @@ def cluster_fates(
 
         return fig
 
-    def plot_heatmap():
+    @plot.register(ClusterFatesMode.HEATMAP)
+    def _():
         title = kwargs.pop("title", None)
         if not title:
             title = "average fate per cluster"
@@ -389,16 +409,15 @@ def cluster_fates(
 
         return fig
 
-    if mode not in _cluster_fates_modes:
-        raise ValueError(
-            f"Invalid mode: `{mode!r}`. Valid options are: `{_cluster_fates_modes}`."
-        )
+    mode = ClusterFatesMode(mode)
+
     if cluster_key is not None:
         if cluster_key not in adata.obs:
             raise KeyError(f"Key `{cluster_key!r}` not found in `adata.obs`.")
-    elif mode not in ("bar", "violin"):
+    elif mode not in (mode.BAR, mode.VIOLIN):
         raise ValueError(
-            f"Not specifying cluster key is only available for modes `'bar'` and `'violin'`, found `mode={mode!r}`."
+            f"Not specifying cluster key is only available for modes"
+            f"`{ClusterFatesMode.BAR!r}` and `{ClusterFatesMode.VIOLIN!r}`, found `mode={mode!r}`."
         )
 
     if backward:
@@ -416,7 +435,7 @@ def cluster_fates(
             if isinstance(clusters, str):
                 clusters = [clusters]
             clusters = _unique_order_preserving(clusters)
-            if mode in ("paga", "paga_pie"):
+            if mode in (mode.PAGA, mode.PAGA_PIE):
                 logg.debug(
                     f"Setting `clusters` to all available ones because of `mode={mode!r}`"
                 )
@@ -445,7 +464,7 @@ def cluster_fates(
         lin_names = list(adata.obsm[lk].names)
     _ = adata.obsm[lk][lin_names]
 
-    if mode == "violin" and not is_all:
+    if mode == mode.VIOLIN and not is_all:
         adata = adata[np.isin(adata.obs[cluster_key], clusters)].copy()
 
     d = odict()
@@ -464,30 +483,23 @@ def cluster_fates(
     has_xrot = "xticks_rotation" in kwargs
     xrot = kwargs.pop("xticks_rotation", 45)
 
-    logg.debug(f"Using mode: `{mode!r}`")
+    logg.debug(f"Plotting in mode `{mode!r}`")
 
-    use_clustermap = mode == "clustermap"
-    if use_clustermap:
-        mode = "heatmap"
+    use_clustermap = False
+    if mode == mode.CLUSTERMAP:
+        use_clustermap = True
+        mode = mode.HEATMAP
+    elif (
+        mode in (ClusterFatesMode.PAGA, ClusterFatesMode.PAGA_PIE)
+        and "paga" not in adata.uns
+    ):
+        raise KeyError("Compute PAGA first as `scvelo.tl.paga()`.")
 
-    if mode == "bar":
-        fig = plot_bar()
-    elif mode == "paga":
-        if "paga" not in adata.uns:
-            raise KeyError("Compute PAGA first as `scvelo.tl.paga()`.")
-        fig = plot_paga()
-    elif mode == "paga_pie":
-        if "paga" not in adata.uns:
-            raise KeyError("Compute PAGA first as `scvelo.tl.paga()`.")
-        fig = plot_paga_pie()
-    elif mode == "violin":
-        fig = plot_violin_no_cluster_key() if cluster_key is None else plot_violin()
-    elif mode == "heatmap":
-        fig = plot_heatmap()
-    else:
-        raise ValueError(
-            f"Invalid mode `{mode!r}`. Valid options are: `{_cluster_fates_modes}`."
-        )
+    fig = (
+        plot_violin_no_cluster_key()
+        if mode == ClusterFatesMode.VIOLIN and cluster_key is None
+        else plot(mode)
+    )
 
     if save is not None:
         save_fig(fig, save)
