@@ -17,16 +17,18 @@ from typing import (
 )
 from itertools import tee, product, combinations
 
+import matplotlib.colors as mcolors
+
 import numpy as np
 import pandas as pd
 from pandas import Series
+from cellrank import logging as logg
 from numpy.linalg import norm as d_norm
 from scipy.linalg import solve
 from scipy.sparse import eye as speye
 from scipy.sparse import (
     issparse,
     spmatrix,
-    coo_matrix,
     csc_matrix,
     csr_matrix,
     isspmatrix_csc,
@@ -37,10 +39,6 @@ from pandas.api.types import infer_dtype, is_categorical_dtype
 from sklearn.neighbors import NearestNeighbors
 from scipy.sparse.linalg import norm as s_norm
 from scipy.sparse.linalg import gmres, lgmres, gcrotmk, bicgstab
-
-import matplotlib.colors as mcolors
-
-from cellrank import logging as logg
 from cellrank.utils._utils import (
     _get_neighs,
     _has_neighs,
@@ -504,8 +502,8 @@ def _filter_cells(distances: np.ndarray, rc_labels: Series, n_matches_min: int):
     freqs_new = np.array([np.sum(rc_labels == cl) for cl in cls])
 
     if any(freqs_new / freqs_orig < 0.5):
-        print(
-            "Warning: consider lowering  'n_matches_min' or "
+        logg.warning(
+            "Consider lowering  'n_matches_min' or "
             "increasing 'n_neighbors_filtering'. This filters out too many cells."
         )
 
@@ -1812,11 +1810,11 @@ def _pearson_corr(X: np.ndarray, Y: np.ndarray, use_jax: bool = True) -> np.ndar
         X -= X.mean(axis=1)[:, None]
         Y -= Y.mean()
     else:
-        X -= X.mean(axis=1)[:, None]
+        X = X - X.mean(axis=1)[:, None]
         if Y.ndim == 1:
-            Y -= Y.mean()
+            Y = Y - Y.mean()
         elif Y.ndim == 2:
-            Y -= Y.mean(axis=1)[:, None]
+            Y = Y - Y.mean(axis=1)[:, None]
         else:
             raise NotImplementedError("Y is a scalar or has more than 2 dimensions.")
 
@@ -1853,6 +1851,7 @@ def _cosine_corr(X: np.ndarray, Y: np.ndarray, use_jax: bool = False) -> np.ndar
         jnp.nan_to_num(c, copy=False, nan=0.0)
     else:
         X_norm = np.linalg.norm(X, axis=1)
+
         if Y.ndim == 1:
             Y_norm = np.linalg.norm(Y)
             c = X.dot(Y) / (X_norm * Y_norm)
@@ -1919,12 +1918,6 @@ def _predict_transition_probabilities(
     p = _softmax(u, softmax_scale, use_jax=use_jax)
 
     return (p, u) if return_pearson_correlation else p
-
-
-def _vals_to_csr(vals, rows, cols, shape) -> csr_matrix:
-    graph = coo_matrix((vals, (rows, cols)), shape=shape, dtype=np.float64)
-
-    return graph.tocsr()
 
 
 def _check_estimator_type(estimator: Any) -> None:

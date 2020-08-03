@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """Module containing CellRank contants."""
 
-from enum import Enum
+from enum import Enum, EnumMeta
 from typing import Any, Union, Callable
+from functools import wraps
 
 
 class PrettyEnum(Enum):
@@ -105,3 +106,27 @@ def _probs(k: Union[str, FinalStatesKey]) -> str:
 
 def _dp(k: Union[str, AbsProbKey]) -> str:
     return f"{k}_dp"
+
+
+class PrettyEnumMeta(EnumMeta):
+    """Metaclass for Enums which shows values when invalid is specified."""
+
+    def __new__(cls, clsname, superclasses, attributedict):  # noqa
+        res = super().__new__(cls, clsname, superclasses, attributedict)
+        res.__new__ = _pretty_raise_enum(
+            res.__new__, [m.value for m in res.__members__.values()]
+        )
+        return res
+
+
+def _pretty_raise_enum(fun, values):
+    @wraps(fun)
+    def wrapper(*args, **kwargs):
+        try:
+            return fun(*args, **kwargs)
+        except ValueError as e:
+            value = args[1]
+            e.args = (f"Invalid option `{value}`. Valid options are: `{values}`.",)
+            raise e
+
+    return wrapper
