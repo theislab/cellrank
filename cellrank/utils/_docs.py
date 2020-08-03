@@ -6,7 +6,7 @@ from textwrap import dedent
 from docrep import DocstringProcessor
 
 _adata = """\
-adata : :class:`anndata.AnnData`
+adata : :class:`~anndata.AnnData`
     Annotated data object."""
 _plotting = """\
 figsize

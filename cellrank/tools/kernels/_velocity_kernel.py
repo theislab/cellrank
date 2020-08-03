@@ -1,22 +1,22 @@
 # -*- coding: utf-8 -*-
 """Velocity kernel module."""
 from copy import copy
-from enum import Enum
 from math import fsum
 from typing import List, Iterable, Optional
 from inspect import signature
 from functools import partial
 
+import numpy as np
+from scipy.sparse import issparse, spmatrix, csr_matrix
+
 from scvelo.preprocessing.moments import get_moments
 
-import numpy as np
 from cellrank import logging as logg
-from scipy.sparse import issparse, spmatrix, csr_matrix
 from cellrank.utils._docs import d
 from cellrank.tools._utils import _predict_transition_probabilities
 from cellrank.utils._utils import valuedispatch
 from cellrank.tools.kernels import Kernel
-from cellrank.tools._constants import Direction, PrettyEnumMeta
+from cellrank.tools._constants import ModeEnum, Direction
 from cellrank.utils._parallelize import parallelize
 from cellrank.tools.kernels._base_kernel import (
     _LOG_USING_CACHE,
@@ -27,7 +27,7 @@ from cellrank.tools.kernels._base_kernel import (
 TOL = 1e-12
 
 
-class VelocityMode(Enum, metaclass=PrettyEnumMeta):
+class VelocityMode(ModeEnum):
     """Method to calculate the transition matrix of VelocityKernel."""
 
     DETERMINISTIC = "deterministic"
