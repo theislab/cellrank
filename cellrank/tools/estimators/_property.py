@@ -756,6 +756,8 @@ class AbsProbs(Plottable):
             dtype=pd.Series,
             doc="Differentiation potential.",
         ),
+        Metadata(attr=A.MEAN_ABS_TIME, prop=P.MEAN_ABS_TIME, dtype=pd.Series,),
+        Metadata(attr=A.VAR_ABS_TIME, prop=P.VAR_ABS_TIME, dtype=pd.Series,),
     ]
 
     @abstractmethod
