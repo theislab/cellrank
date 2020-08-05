@@ -22,6 +22,7 @@ from cellrank.utils._docs import d
 from cellrank.tools._utils import _make_cat, partition, _complex_warning
 from cellrank.tools.kernels import PrecomputedKernel
 from cellrank.tools._constants import Direction, DirPrefix, DirectionPlot
+from cellrank.tools.kernels._kernel import KernelExpression
 from cellrank.tools.estimators._utils import (
     Metadata,
     RandomKeys,
@@ -29,7 +30,6 @@ from cellrank.tools.estimators._utils import (
     singledispatchmethod,
     _delegate_method_dispatch,
 )
-from cellrank.tools.kernels._base_kernel import KernelExpression
 from cellrank.tools.estimators._constants import META_KEY, A, F, P
 
 
@@ -592,22 +592,19 @@ class Plottable(KernelHolder, Property):
             title = cluster_key + title
 
         if mode == "embedding":
+            if same_plot:
+                kwargs["color_gradients"] = A
+            else:
+                kwargs["color"] = color
+
             if A.shape[1] == 1:
                 if "perc" not in kwargs:
                     logg.debug("Did not detect percentile. Setting `perc=[0, 95]`")
                     kwargs["perc"] = [0, 95]
                 kwargs["color"] = X
-            else:
-                kwargs["color_gradients"] = A
+                kwargs.pop("color_gradients", None)
 
-            if same_plot:
-                scv.pl.scatter(
-                    self.adata, title=title, color_map=cmap, **kwargs,
-                )
-            else:
-                scv.pl.scatter(
-                    self.adata, color=color, title=title, color_map=cmap, **kwargs
-                )
+            scv.pl.scatter(self.adata, title=title, color_map=cmap, **kwargs)
         elif mode == "time":
             scv.pl.scatter(
                 self.adata,
