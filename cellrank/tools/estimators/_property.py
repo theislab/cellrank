@@ -5,18 +5,19 @@ from abc import ABC, ABCMeta, abstractmethod
 from typing import Any, Dict, List, Tuple, Union, Iterable, Optional
 from inspect import isabstract
 
+import numpy as np
+import pandas as pd
+from scipy.sparse import issparse, spmatrix
+from pandas.api.types import is_categorical_dtype
+
 import matplotlib as mpl
 from matplotlib import cm
 
 import scvelo as scv
 from anndata import AnnData
 
-import numpy as np
-import pandas as pd
 import cellrank.logging as logg
-from scipy.sparse import issparse, spmatrix
 from cellrank.tools import Lineage
-from pandas.api.types import is_categorical_dtype
 from cellrank.utils._docs import d
 from cellrank.tools._utils import _make_cat, partition, _complex_warning
 from cellrank.tools.kernels import PrecomputedKernel
@@ -601,10 +602,7 @@ class Plottable(KernelHolder, Property):
 
             if same_plot:
                 scv.pl.scatter(
-                    self.adata,
-                    title=title,
-                    color_map=cmap,
-                    **kwargs,
+                    self.adata, title=title, color_map=cmap, **kwargs,
                 )
             else:
                 scv.pl.scatter(

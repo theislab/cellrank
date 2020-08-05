@@ -256,9 +256,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
                 "Compute metastable_states first as `.compute_metastable_states()`."
             )
         elif probs.shape[1] == 1:
-            self._set(
-                A.FIN, self._create_states(probs, n_cells=n_cells)
-            )
+            self._set(A.FIN, self._create_states(probs, n_cells=n_cells))
             self._set(A.FIN_COLORS, self._get(A.META_COLORS))
             self._set(A.FIN_PROBS, probs / probs.max())
             self._write_final_states()
