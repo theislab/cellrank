@@ -4,9 +4,10 @@ from typing import List, Tuple, Union, Callable, Iterable, Optional
 from inspect import signature
 
 import numpy as np
-import cellrank.logging as logg
 from numba import njit, prange
 from scipy.sparse import csr_matrix
+
+import cellrank.logging as logg
 from cellrank.utils._parallelize import parallelize
 
 jit_kwargs = {"nogil": True, "cache": True, "fastmath": True}
@@ -194,6 +195,30 @@ def _get_probs_for_zero_vec(size: int) -> Tuple[np.ndarray, np.ndarray]:
 def _predict_transition_probabilities_numpy(
     X: np.ndarray, W: np.ndarray, softmax_scale: float
 ) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Compute a categorical distribution based on correlation between rows in `W` and `X`.
+
+    We usually identify `x` with a velocity vector and `W` as the matrix storing transcriptomic
+    displacements of the current reference cell to its nearest neighbors. For the backward process, `X` is a matrix
+    as well, storing the velocity vectors of all nearest neighbors.
+
+    Parameters
+    ----------
+    X
+        Either vector of shape `n_features` or matrix of shape `n_samples x n_features`.
+    W
+        Weight matrix of shape `n_samples x n_features`.
+    softmax_scale
+        Scaling factor for softmax activation function.
+
+    Returns
+    --------
+    :class:`numpy.ndarray`
+        Vector of probabilities.
+    :class:`numpy.ndarray`
+        Vector of pearson correlations.
+    """
+
     # mean centering + cosine correlation
     W -= np.expand_dims(np_mean(W, axis=1), axis=1)
     W_norm = norm(W, axis=1)
