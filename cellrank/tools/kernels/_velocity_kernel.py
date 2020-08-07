@@ -2,21 +2,21 @@
 """Velocity kernel module."""
 from copy import copy, deepcopy
 from math import fsum
-from typing import Union, Callable, Iterable, Optional
+from typing import Any, Union, Callable, Iterable, Optional
+
+import numpy as np
+from scipy.sparse import issparse, csr_matrix
 
 from scvelo.preprocessing.moments import get_moments
 
-import numpy as np
 from cellrank import logging as logg
-from scipy.sparse import issparse, csr_matrix
 from cellrank.utils._docs import d, inject_docs
 from cellrank.utils._utils import valuedispatch
 from cellrank.tools.kernels import Kernel
-from cellrank.tools._constants import ModeEnum, Direction
+from cellrank.tools._constants import ModeEnum
 from cellrank.utils._parallelize import parallelize
 from cellrank.tools.kernels._utils import (
     _HAS_JAX,
-    _HAS_NUMBA,
     njit,
     prange,
     jit_kwargs,
@@ -103,7 +103,7 @@ class VelocityKernel(Kernel):
         self._gene_subset = gene_subset
         self._pearson_correlations = None
 
-        self._tmas = None
+        self._tmats = None
         self._pcors = None
 
     def _read_from_adata(self, **kwargs):
@@ -164,11 +164,12 @@ class VelocityKernel(Kernel):
     @inject_docs(m=VelocityMode)
     def compute_transition_matrix(
         self,
+        mode: str = "monte_carlo",
         backward_mode: str = "transpose",
         softmax_scale: float = 4.0,
-        mode: str = "deterministic",
         n_samples: int = 1000,
         seed: Optional[int] = None,
+        use_numba: Optional[bool] = False,
         **kwargs,
     ) -> "VelocityKernel":
         """
@@ -179,54 +180,77 @@ class VelocityKernel(Kernel):
 
         Parameters
         ----------
+        mode
+            How to compute transition probabilities. Valid options are:
+
+                - `{m.DETERMINISTIC.s!r}` - deterministic computation that doesn't propagate uncertainty
+                - `{m.MONTE_CARLO.s!r}` - Monte Carlo average of randomly sampled velocity vectors
+                - `{m.STOCHASTIC.s!r}` - second order approximation, only available when :module:`jax` is installed.
+                - `{m.SAMPLING.s!r}` - sample from velocity distribution
+                - `{m.PROPAGATION.s!r}` - same as `{m.MONTE_CARLO!r}`, but does not average the vectors.
+                    Instead, it saves the sampled transition matrices to :paramref:`_t_mats` to be used
+                    for later uncertainty estimation. It is generally faster then `{m.MONTE_CARLO.s!r}`,
+                    but also less memory efficient
         backward_mode
             Options are `['transpose', 'negate']`. Only matters if initialized as :paramref:`backward` =`True`.
         softmax_scale
             Scaling parameter for the softmax.
-        mode
-            How to compute transition probabilities. Valid options are:
-
-                - `{m.DETERMINISTIC.s!r}`
-                - `{m.MONTE_CARLO.s!r}`
-                - `{m.STOCHASTIC.s!r}`
-                - `{m.SAMPLING.s!r}`
-                - `{m.PROPAGATION.s!r}`
-            "deterministic" (don't propagate uncertainty) and "sampling" (sample from velocity distribution).
         n_samples
-            Number of bootstrap samples when :paramref:`mode` `='monte_carlo'`.
+            Number of bootstrap samples when :paramref:`mode` is `{m.SAMPLING.s!r}`,
+            `{m.MONTE_CARLO.s!r}` or `{m.PROPAGATION.s!r}`.
         seed
-            Set the seed for random state, only relevant for `mode='sampling'`.
+            Set the seed for random state when the method requires :paramref:`n_samples`.
+        use_numba
+            Use :module:`numba` optimized functions. Only available if `:paramref:`mode` != `{m.STOCHASTIC.s!r}`.
+            Note that this options disables the progress bar, but can be faster for.
+            If `None`, it enables running :mod:`numba` jitted functions in conjunction with default parallelization
+            options.
         %(parallel)s
 
         Returns
         -------
-        None
-            Nothing, just makes available the following fields:
+        self
+            Makes available the following fields:
 
                 - :paramref:`transition_matrix`
                 - :paramref:`pearson_correlations`
+
+            If :paramref:`mode` `={m.PROPAGATION.s!r}`, makes also available:
+
+                - :paramref:`_tmats` - tuple of lenth :paramref:`n_samples` of transition matrices
+                - :paramref:`_pcors` - tuple of lenth :paramref:`n_samples` of Pearson correlations
         """
 
         mode = VelocityMode(mode)
 
-        if mode != VelocityMode.DETERMINISTIC and self.backward:
+        if self.backward and mode != VelocityMode.DETERMINISTIC:
             logg.warning(
-                f"VelocityMode `{mode}` is currently not supported for the backward process. "
-                f"Defaulting to mode `{VelocityMode.DETERMINISTIC.value!r}`"
+                f"Mode `{mode.s!r}` is currently not supported for the backward process. "
+                f"Defaulting to mode `{VelocityMode.DETERMINISTIC.s!r}`"
             )
             mode = VelocityMode.DETERMINISTIC
+        if mode == VelocityMode.STOCHASTIC and not _HAS_JAX:
+            logg.warning(
+                f"Unable to detect `jax` installation. Consider installing it as `pip install jax jaxlib`.\n"
+                f"Defaulting to mode `{VelocityMode.MONTE_CARLO.s!r}`"
+            )
+            mode = VelocityMode.MONTE_CARLO
 
-        start = logg.info("Computing transition matrix based on velocity correlations")
+        start = logg.info(
+            f"Computing transition matrix based on velocity correlations using mode `{mode.s!r}`"
+        )
 
+        if seed is None:
+            seed = np.random.randint(0, 2 ** 32)
         params = dict(  # noqa
-            bwd_mode=backward_mode if self._direction == Direction.BACKWARD else None,
+            bwd_mode=backward_mode if self.backward else None,
             sigma_corr=softmax_scale,
             mode=mode,
             seed=seed,
         )
 
         # check whether we already computed such a transition matrix. If yes, load from cache
-        if params == self._params and False:
+        if params == self._params:
             assert self._transition_matrix is not None, _ERROR_EMPTY_CACHE_MSG
             logg.debug(_LOG_USING_CACHE, time=start)
             logg.info("    Finish", time=start)
@@ -235,7 +259,6 @@ class VelocityKernel(Kernel):
         self._params = params
 
         # compute first and second order moments to model the distribution of the velocity vector
-        # if mode in ["stochastic", "sampling"]:
         np.random.seed(seed)
         velocity_expectation = get_moments(
             self.adata, self._velocity, second_order=False
@@ -255,11 +278,12 @@ class VelocityKernel(Kernel):
             backward=self.backward,
             backward_mode=backward_mode,
             n_samples=n_samples,
+            use_numba=use_numba,
             seed=seed,
             **kwargs,
         )
         if isinstance(tmat, (tuple, list)):
-            self._mats, self._cots = tmat, cmat
+            self._tmats, self._pcors = tmat, cmat
             tmat, cmat = tmat[0], cmat[0]
 
         self._compute_transition_matrix(tmat, density_normalize=False)
@@ -270,8 +294,8 @@ class VelocityKernel(Kernel):
         return self
 
     @property
-    def pearson_correlations(self) -> csr_matrix:
-        """TODO."""
+    def pearson_correlations(self) -> csr_matrix:  # noqa
+        """The matrix of Pearson correlations."""
         return self._pearson_correlations
 
     def copy(self) -> "VelocityKernel":
@@ -297,19 +321,23 @@ def _dispatch_computation(mode, *_args, **_kwargs):
     raise NotImplementedError(mode)
 
 
-def _run_in_parallel(fn: Callable, conn: csr_matrix, **kwargs):
+def _run_in_parallel(fn: Callable, conn: csr_matrix, **kwargs) -> Any:
     def extractor(res):
         assert res[0].ndim in (2, 3)
 
         res = np.concatenate(res, axis=0 - (res[0].ndim == 3))
         if res.shape[0] == 1:
+            assert kwargs.get("average", True), "Only averaging is supported."
             # sampling, MC
             res = res[0]
 
-        return _reconstruct_matrices(res, conn, resort_ixs)
+        return _reconstruct_matrices(
+            res, conn, resort_ixs, n_jobs=kwargs.pop("n_jobs", 1)
+        )
 
     fname = fn.__name__
-    if not kwargs.get("average", True):
+    kwargs["average"] = kwargs.get("average", True)
+    if not kwargs["average"]:
         assert fname == "_run_mc", "Invalid function."
         ixs = np.arange(conn.shape[0])
         resort_ixs = None
@@ -336,9 +364,9 @@ def _run_in_parallel(fn: Callable, conn: csr_matrix, **kwargs):
     )(**_filter_kwargs(fn, **kwargs))
 
 
-def _run(fn: Callable, **kwargs):
+def _run(fn: Callable, **kwargs) -> Any:
 
-    use_numba = kwargs.pop("use_numba", _HAS_NUMBA) and _HAS_NUMBA
+    use_numba = kwargs.pop("use_numba", False)
     conn = kwargs.pop("conn")
 
     kwargs["indices"] = conn.indices
@@ -348,12 +376,14 @@ def _run(fn: Callable, **kwargs):
         raise RuntimeError("Install `jax` and `jaxlib` as `pip install jax jaxlib`.")
 
     if not use_numba:
-        if hasattr(fn, "py_func"):
-            fn = fn.py_func
         # can be disabled because of 2 reasons: numba is not installed or manually disabled
-        return _run_in_parallel(
-            fn, conn, **kwargs
-        )  # TODO: should be handled by show progress bar
+        # remove the outer numba loop
+        if use_numba is not None and hasattr(fn, "py_func"):
+            logg.debug(
+                f"Disabling top level numba jitting for function `{fn.__name__!r}`"
+            )
+            fn = fn.py_func
+        return _run_in_parallel(fn, conn, **kwargs)
 
     kwargs["ixs"] = np.arange(conn.shape[0], dtype=np.int32)
     ks = _filter_kwargs(fn, **kwargs)
@@ -426,9 +456,9 @@ def _run_mc(
     expectation: np.ndarray,
     variance: np.ndarray,
     n_samples: int = 1,
-    average: bool = False,
+    average: bool = True,
     softmax_scale: float = 1,
-    seed: Optional[int] = None,
+    seed: int = 0,
     queue=None,
 ) -> np.ndarray:
 
@@ -440,8 +470,7 @@ def _run_mc(
 
     for i in prange(len(ixs)):
         ix = ixs[i]
-        if seed is not None:
-            seed += ix
+        np.random.seed(seed + ix)
 
         start, end = indptr[ix], indptr[ix + 1]
         nbhs_ixs = indices[start:end]
@@ -452,7 +481,7 @@ def _run_mc(
         if average:
             v = np.atleast_2d(
                 _random_normal(
-                    expectation[ix], variance[ix], n_samples=n_samples, seed=seed
+                    expectation[ix], variance[ix], n_samples=n_samples, average=True,
                 )
             )
 
@@ -460,11 +489,11 @@ def _run_mc(
                 v, W, softmax_scale=softmax_scale
             )
 
-            probs_cors[0, starts[i] : starts[i] + n_neigh] = p
-            probs_cors[1, starts[i] : starts[i] + n_neigh] = c
+            probs_cors[0, 0, starts[i] : starts[i] + n_neigh] = p
+            probs_cors[0, 1, starts[i] : starts[i] + n_neigh] = c
         else:
             samples = _random_normal(
-                expectation[ix], variance[ix], n_samples=n_samples, average=False
+                expectation[ix], variance[ix], n_samples=n_samples, average=False,
             )
             for j in prange(samples.shape[0]):
                 prob, cor = _predict_transition_probabilities_numpy(

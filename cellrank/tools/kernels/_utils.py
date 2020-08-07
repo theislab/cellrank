@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 """Utility functions for kernels, mostly VelocityKernel."""
-from typing import Tuple, Union, Callable, Iterable, Optional
+from typing import List, Tuple, Union, Callable, Iterable, Optional
 from inspect import signature
 
 import numpy as np
-import cellrank.logging as logg
+from numba import njit, prange
 from scipy.sparse import csr_matrix
+
+import cellrank.logging as logg
+from cellrank.utils._parallelize import parallelize
 
 jit_kwargs = {"nogil": True, "cache": True, "fastmath": True}
 
@@ -53,139 +56,116 @@ except ImportError:
     _predict_transition_probabilities_jax_H = None
 
 
-try:
-    from numba import njit, prange
+@njit(parallel=False, **jit_kwargs)
+def _np_apply_along_axis(func1d, axis: int, arr: np.ndarray) -> np.ndarray:
+    """
+    Apply a reduction function over a given axis.
 
-    _HAS_NUMBA = True
+    Parameters
+    ----------
+    func1d
+        Reduction function that operates only on 1 dimension.
+    axis
+        Axis over which to apply the reduction.
+    arr
+        The array to be reduced.
 
-    @njit(parallel=False, **jit_kwargs)
-    def np_apply_along_axis(func1d, axis: int, arr: np.ndarray) -> np.ndarray:
-        """
-        Apply a reduction function over a given axis.
+    Returns
+    -------
+    :class:`numpy.ndarray`
+        The reduced array.
+    """
 
-        Parameters
-        ----------
-        func1d
-            Reduction function that operates only on 1 dimension.
-        axis
-            Axis over which to apply the reduction.
-        arr
-            The array to be reduced.
+    assert arr.ndim == 2
+    assert axis in [0, 1]
 
-        Returns
-        -------
-        :class:`numpy.ndarray`
-            The reduced array.
-        """
-
-        assert arr.ndim == 2
-        assert axis in [0, 1]
-
-        if axis == 0:
-            result = np.empty(arr.shape[1])
-            for i in range(len(result)):
-                result[i] = func1d(arr[:, i])
-            return result
-
-        result = np.empty(arr.shape[0])
+    if axis == 0:
+        result = np.empty(arr.shape[1])
         for i in range(len(result)):
-            result[i] = func1d(arr[i, :])
-
+            result[i] = func1d(arr[:, i])
         return result
 
-    njit(**jit_kwargs)
+    result = np.empty(arr.shape[0])
+    for i in range(len(result)):
+        result[i] = func1d(arr[i, :])
 
-    def np_mean(array: np.ndarray, axis: int) -> np.ndarray:  # noqa
-        return np_apply_along_axis(np.mean, axis, array)
+    return result
 
-    @njit(**jit_kwargs)
-    def np_max(array: np.ndarray, axis: int) -> np.ndarray:  # noqa
-        return np_apply_along_axis(np.max, axis, array)
 
-    @njit(**jit_kwargs)
-    def np_sum(array: np.ndarray, axis: int) -> np.ndarray:  # noqa
-        return np_apply_along_axis(np.sum, axis, array)
+@njit(**jit_kwargs)
+def np_mean(array: np.ndarray, axis: int) -> np.ndarray:  # noqa
+    return _np_apply_along_axis(np.mean, axis, array)
 
-    @njit(**jit_kwargs)
-    def norm(array: np.ndarray, axis: int) -> np.ndarray:  # noqa
-        return np_apply_along_axis(np.linalg.norm, axis, array)
 
-    # this is faster than using flat array
-    @njit(parallel=True)
-    def _random_normal(
-        m: np.ndarray, v: np.ndarray, n_samples: int = 1, average: bool = True
-    ):
-        """
-        Sample number from normal distribution.
+@njit(**jit_kwargs)
+def np_max(array: np.ndarray, axis: int) -> np.ndarray:  # noqa
+    return _np_apply_along_axis(np.max, axis, array)
 
-        Parameters
-        ----------
-        m
-            Mean vector.
-        v
-            Variance vector.
-        n_samples
-            Number of samples to be generated
-        average
-            Whether to average over the number of samples.
 
-        Returns
-        -------
-        :class:`numpy.ndarray`
-            `n_samples x m.shape[0]` array from normal distribution.
-        """
+@njit(**jit_kwargs)
+def np_sum(array: np.ndarray, axis: int) -> np.ndarray:  # noqa
+    return _np_apply_along_axis(np.sum, axis, array)
 
-        assert m.ndim == 1, "Means are not 1 dimensional."
-        assert m.shape == v.shape, "Means and variances have different shape."
 
-        if n_samples == 1:
-            return np.expand_dims(
-                np.array([np.random.normal(m[i], v[i]) for i in prange(m.shape[0])]), 0
-            )
+@njit(**jit_kwargs)
+def norm(array: np.ndarray, axis: int) -> np.ndarray:  # noqa
+    return _np_apply_along_axis(np.linalg.norm, axis, array)
 
-        if average:
-            return np.expand_dims(
-                np.array(
-                    [
-                        np.mean(
-                            np.array(
-                                [
-                                    np.random.normal(m[i], v[i])
-                                    for _ in prange(n_samples)
-                                ]
-                            )
+
+# this is faster than using flat array
+@njit(parallel=True)
+def _random_normal(
+    m: np.ndarray, v: np.ndarray, n_samples: int = 1, average: bool = True,
+):
+    """
+    Sample number from normal distribution.
+
+    Parameters
+    ----------
+    m
+        Mean vector.
+    v
+        Variance vector.
+    n_samples
+        Number of samples to be generated
+    average
+        Whether to average over the number of samples.
+
+    Returns
+    -------
+    :class:`numpy.ndarray`
+        `n_samples x m.shape[0]` array from normal distribution.
+    """
+
+    assert m.ndim == 1, "Means are not 1 dimensional."
+    assert m.shape == v.shape, "Means and variances have different shape."
+
+    if n_samples == 1:
+        return np.expand_dims(
+            np.array([np.random.normal(m[i], v[i]) for i in prange(m.shape[0])]), 0
+        )
+
+    if average:
+        return np.expand_dims(
+            np.array(
+                [
+                    np.mean(
+                        np.array(
+                            [np.random.normal(m[i], v[i]) for _ in prange(n_samples)]
                         )
-                        for i in prange(m.shape[0])
-                    ]
-                ),
-                0,
-            )
+                    )
+                    for i in prange(m.shape[0])
+                ]
+            ),
+            0,
+        )
 
-        return np.array(
-            [
-                [np.random.normal(m[i], v[i]) for _ in prange(n_samples)]
-                for i in prange(m.shape[0])
-            ]
-        ).T
-
-
-except ImportError:
-    _HAS_NUMBA = False
-
-    prange = range
-    np_mean, np_max, np_sum, norm = np.mean, np.max, np.sum, np.linalg.norm
-
-    def njit(**_kwargs):  # noqa
-        return lambda _: _
-
-    def _random_normal(m: np.ndarray, v: np.ndarray, n_samples=1):
-        assert m.ndim == 1
-        assert m.shape == v.shape
-
-        if n_samples == 1:
-            return np.random.normal(m, v)
-
-        return np.mean(np.random.normal(m, v, size=(n_samples, m.shape[0])), axis=0)
+    return np.array(
+        [
+            [np.random.normal(m[i], v[i]) for _ in prange(n_samples)]
+            for i in prange(m.shape[0])
+        ]
+    ).T
 
 
 @njit(**jit_kwargs)
@@ -265,7 +245,7 @@ def _filter_kwargs(fn: Callable, **kwargs) -> dict:
     return {k: v for k, v in kwargs.items() if k in sig}
 
 
-def _reconstruct(
+def _reconstruct_one(
     data: np.ndarray,
     mat: csr_matrix,
     ixs: Optional[np.ndarray] = None,
@@ -294,27 +274,29 @@ def _reconstruct(
     assert data.ndim == 2 and data.shape == (
         2,
         mat.nnz,
-    ), f"Dimension or shape mismatch: `{data.shape}`, `{mat.nnz}`."
+    ), f"Dimension or shape mismatch: `{data.shape}`, `{2, mat.nnz}`."
 
     if ixs is not None:
-        assert (
-            ixs.shape[0] == mat.shape[0]
-        ), f"Shape mismatch: `{ixs.shape}`, `{mat.shape}`"
+        assert len(ixs) == mat.shape[0], f"Shape mismatch: `{ixs.shape}`, `{mat.shape}`"
         mat = mat[ixs]
 
     probs = csr_matrix((data[0], mat.indices, mat.indptr))
     cors = csr_matrix((data[1], mat.indices, mat.indptr))
 
-    if ixs is None:
-        return probs, cors
+    if aixs is not None:
+        assert (
+            len(aixs) == probs.shape[0]
+        ), f"Shape mismatch: `{ixs.shape}`, `{probs.shape}`."
+        probs, cors = probs[aixs], cors[aixs]
 
-    assert len(ixs) == probs.shape[0], "Sanity check failed."
-
-    return probs[aixs], cors[aixs]
+    return probs, cors
 
 
 def _reconstruct_matrices(
-    data: np.ndarray, mat: csr_matrix, ixs: Optional[np.ndarray] = None
+    data: np.ndarray,
+    mat: csr_matrix,
+    ixs: Optional[np.ndarray] = None,
+    n_jobs: Optional[int] = None,
 ) -> Union[Tuple[csr_matrix, csr_matrix], Iterable[Tuple[csr_matrix, csr_matrix]]]:
     """
     Transform :class:`numpy.ndarray` into :class:`scipy.sparse.csr_matrix`.
@@ -328,6 +310,8 @@ def _reconstruct_matrices(
         The original matrix with`
     ixs
         Indices which may have been used to pre-sort when solving the problem.
+    n_jobs
+        Number of parallel jobs when constructing multiple matrices.
 
     Returns
     -------
@@ -335,14 +319,63 @@ def _reconstruct_matrices(
         The probability and correlation matrix. If :paramref:`data` is 3 dimensional, return an iterable of them.
     """
 
+    def reconstruct_many(data: np.ndarray, queue):
+        assert data.ndim == 3, f"Dimension mismatch: `{data.ndim}`."
+        assert data.shape[1:] == (
+            2,
+            mat.nnz,
+        ), f"Shape mismatch: `{data.shape}`, `{2, mat.nnz}`."
+
+        probs, cors = [], []
+        for d in data:
+            tmp = _reconstruct_one(d, mat, ixs, aixs)
+            probs.append(tmp[0])
+            cors.append(tmp[1])
+
+            queue.put(1)
+
+        queue.put(None)
+
+        return probs, cors
+
+    def extractor(
+        res: List[Tuple[List[csr_matrix], List[csr_matrix]]]
+    ) -> Tuple[Tuple[csr_matrix], Tuple[csr_matrix]]:
+        probs, cors = zip(*res)
+        probs, cors = (
+            tuple(p for ps in probs for p in ps),
+            tuple(c for cs in cors for c in cs),
+        )
+
+        assert len(probs) == len(
+            cors
+        ), f"Length mismatch: `{len(probs)}`, `{len(cors)}`."
+        assert (
+            probs[0].shape == mat.shape
+        ), f"Shape mismatch: `{probs[0].shape}`, `{mat.shape}`."
+        assert (
+            probs[0].nnz == mat.nnz
+        ), f"Number of non-zero elements mismatch: `{probs[0].nnz}`, `{mat.nnz}`."
+
+        return probs, cors
+
     assert data.ndim in (2, 3), f"Dimension mismatch: `{data.ndim}`."
 
     aixs = np.argsort(ixs) if ixs is not None else None
     if data.ndim == 2:
-        return _reconstruct(data, mat, ixs, aixs)
+        return _reconstruct_one(data, mat, ixs, aixs)
 
     assert data.shape[1] == 2, f"Shape mismatch: `{data.shape}`."
-    return zip(*(_reconstruct(d, mat, ixs, aixs) for d in data))  # TOOD: parallelize?
+
+    return parallelize(
+        reconstruct_many,
+        data,
+        n_jobs=n_jobs,
+        unit="matrix",
+        backend="loky",
+        as_array=False,
+        extractor=extractor,
+    )()
 
 
 @njit(**jit_kwargs)

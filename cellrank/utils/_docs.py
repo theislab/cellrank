@@ -17,7 +17,7 @@ save
     Filename where to save the plot."""
 _parallel = """\
 show_progress_bar
-    Whether to show a progress bar when parallelizing.
+    Whether to show a progress bar. Disabling it may improve performance.
 n_jobs
     Number of parallel jobs. If `-1`, use all available cores. If `None` or `1`, the execution is sequential.
 backend
