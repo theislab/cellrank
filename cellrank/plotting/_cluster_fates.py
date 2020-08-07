@@ -7,14 +7,13 @@ from typing import Any, List, Tuple, Union, Mapping, TypeVar, Optional, Sequence
 from pathlib import Path
 from collections import OrderedDict as odict
 
-import numpy as np
-import pandas as pd
-
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.colors
 import matplotlib.pyplot as plt
 
+import numpy as np
+import pandas as pd
 from cellrank import logging as logg
 from cellrank.utils._docs import d, inject_docs
 from cellrank.tools._utils import save_fig, _unique_order_preserving
@@ -329,10 +328,10 @@ def cluster_fates(
         kwargs["xlabel"] = None
         kwargs["rotation"] = xrot
 
-        data = np.ravel(np.array(adata.obsm[lk]).T)[..., np.newaxis]
-        dadata = _AnnData(np.zeros_like(data))
-        dadata.obs["probability"] = data
-        dadata.obs[points] = (
+        data = np.ravel(adata.obsm[lk].X.T)[..., np.newaxis]
+        tmp = _AnnData(np.zeros_like(data))
+        tmp.obs["absorption probability"] = data
+        tmp.obs[points] = (
             pd.Series(
                 np.ravel(
                     [
@@ -344,13 +343,16 @@ def cluster_fates(
             .astype("category")
             .values
         )
-        dadata.uns[f"{points}_colors"] = adata.obsm[lk].colors
+        tmp.obs[points].cat.reorder_categories(
+            [f"{dir_prefix.lower()} {n}" for n in adata.obsm[lk].names], inplace=True
+        )
+        tmp.uns[f"{points}_colors"] = adata.obsm[lk].colors
 
         fig, ax = plt.subplots(
             figsize=figsize if figsize is not None else (8, 6), dpi=dpi
         )
         ax.set_title(points.capitalize())
-        violin(dadata, keys=["probability"], ax=ax, **kwargs)
+        violin(tmp, keys=["absorption probability"], ax=ax, **kwargs)
 
         return fig
 
