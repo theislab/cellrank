@@ -4,10 +4,9 @@ from typing import List, Tuple, Union, Callable, Iterable, Optional
 from inspect import signature
 
 import numpy as np
+import cellrank.logging as logg
 from numba import njit, prange
 from scipy.sparse import csr_matrix
-
-import cellrank.logging as logg
 from cellrank.utils._parallelize import parallelize
 
 jit_kwargs = {"nogil": True, "cache": True, "fastmath": True}
@@ -201,27 +200,31 @@ def _predict_transition_probabilities_numpy(
 
     if X.shape[0] == 1:
         X = X - np.mean(X)
-
         X_norm = np.linalg.norm(X)
-        x = W.dot(X[0]) / (X_norm * W_norm)
+
+        denom = X_norm * W_norm
+        mask = denom == 0
+        denom[mask] = 1
+
+        # pearson correlation
+        x = W.dot(X[0]) / denom
     else:
         assert X.shape[0] == W.shape[0]
         X = X - np.expand_dims(np_mean(X, axis=1), axis=1)
-
         X_norm = norm(X, axis=1)
-        x = np.array([np.dot(X[i], W[i]) for i in range(X.shape[0])]) / (
-            X_norm * W_norm
-        )
 
-    # pearson correlation
-    x[np.isnan(x)] = 0
+        denom = X_norm * W_norm
+        mask = denom == 0
+        denom[mask] = 1
 
-    # softmax
-    x *= softmax_scale
-    x -= np.max(x)
-    numerator = np.exp(x)
+        # pearson correlation
+        x = np.array([np.dot(X[i], W[i]) for i in range(X.shape[0])]) / denom
 
-    return numerator / np.sum(numerator), x
+    numerator = x * softmax_scale
+    numerator = np.exp(numerator - np.nanmax(numerator))
+    numerator = np.where(mask, 0, numerator)  # essential
+
+    return numerator / np.nansum(numerator), x
 
 
 def _filter_kwargs(fn: Callable, **kwargs) -> dict:
@@ -288,6 +291,9 @@ def _reconstruct_one(
             len(aixs) == probs.shape[0]
         ), f"Shape mismatch: `{ixs.shape}`, `{probs.shape}`."
         probs, cors = probs[aixs], cors[aixs]
+
+    if not np.all(np.isclose(probs.sum(axis=1), 1.0)):
+        raise ValueError("Matrix is not row-stochastic.")
 
     return probs, cors
 
