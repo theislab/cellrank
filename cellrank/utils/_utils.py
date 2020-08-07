@@ -6,8 +6,9 @@ from functools import wraps, update_wrapper
 from multiprocessing import cpu_count
 
 import numpy as np
-from cellrank import logging as logg
 from scipy.sparse import spmatrix
+
+from cellrank import logging as logg
 
 AnnData = TypeVar("AnnData")
 

@@ -1538,3 +1538,40 @@ def _calculate_absorption_time_moments(
     var[trans_indices] = v
 
     return ap, mean, var
+
+
+class RandomKeys:
+    """
+    Create random keys inside an :class:`anndataAnnData` object.
+
+    Parameters
+    ----------
+    adata
+        Annotated data object.
+    n
+        Number of keys, If `None`, create just 1 keys.
+    where
+        Attribute of :paramref:`adata`. If `'obs'`, also clean up `{key}'_colors'` for each generated key.
+    """
+
+    def __init__(self, adata: AnnData, n: Optional[int] = None, where: str = "obs"):
+        self._adata = adata
+        self._where = where
+        self._n = n
+        self._keys = []
+
+    def __enter__(self):
+        self._keys = _generate_random_keys(self._adata, self._where, self._n)
+        return self._keys
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        for key in self._keys:
+            try:
+                del self._adata.obs[key]
+            except KeyError:
+                pass
+            if self._where == "obs":
+                try:
+                    del self._adata.uns[f"{key}_colors"]
+                except KeyError:
+                    pass

@@ -7,16 +7,17 @@ from typing import Any, List, Tuple, Union, Mapping, TypeVar, Optional, Sequence
 from pathlib import Path
 from collections import OrderedDict as odict
 
+import numpy as np
+import pandas as pd
+
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.colors
 import matplotlib.pyplot as plt
 
-import numpy as np
-import pandas as pd
 from cellrank import logging as logg
 from cellrank.utils._docs import d, inject_docs
-from cellrank.tools._utils import save_fig, _unique_order_preserving
+from cellrank.tools._utils import RandomKeys, save_fig, _unique_order_preserving
 from cellrank.utils._utils import valuedispatch
 from cellrank.plotting._utils import _position_legend
 from cellrank.tools._constants import ModeEnum, DirPrefix, AbsProbKey, FinalStatesPlot
@@ -125,7 +126,7 @@ def cluster_fates(
         )
         fig.tight_layout()
 
-        gs = plt.GridSpec(n_rows, cols, figure=fig, wspace=0.7, hspace=0.9)
+        gs = plt.GridSpec(n_rows, cols, figure=fig, wspace=0.5, hspace=0.5)
 
         ax = None
         colors = list(adata.obsm[lk][:, lin_names].colors)
@@ -145,12 +146,10 @@ def cluster_fates(
                 ax = current_ax
 
             current_ax.set_xticks(np.arange(len(lin_names)))
-            current_ax.set_xticklabels(
-                lin_names, rotation=xrot if has_xrot else "vertical"
-            )
+            current_ax.set_xticklabels(lin_names, rotation=xrot if has_xrot else 45)
             if not is_all:
                 current_ax.set_xlabel(points)
-            current_ax.set_ylabel("probability")
+            current_ax.set_ylabel("absorption probability")
             current_ax.set_title(k)
 
         return fig
@@ -279,20 +278,9 @@ def cluster_fates(
         kwargs["groupby"] = cluster_key
         kwargs["rotation"] = xrot
 
-        data = adata.obsm[lk]
-        to_clean = []
-
-        for name in lin_names:
-            # TODO: once ylabel is implemented, the prefix isn't necessary
-            key = f"{dir_prefix} {name}"
-            if key not in adata.obs_keys():
-                to_clean.append(key)
-                adata.obs[key] = np.array(
-                    data[:, name]
-                )  # TODO: better approach - dummy adata
-
         cols = len(lin_names) if ncols is None else ncols
         nrows = ceil(len(lin_names) / cols)
+
         fig, axes = plt.subplots(
             nrows,
             cols,
@@ -300,19 +288,23 @@ def cluster_fates(
             sharey=sharey,
             dpi=dpi,
         )
+        fig.tight_layout()
+        fig.subplots_adjust(wspace=0.2, hspace=0.3)
+
         if not isinstance(axes, np.ndarray):
             axes = [axes]
         axes = np.ravel(axes)
 
-        i = 0
-        for i, (name, ax) in enumerate(zip(lin_names, axes)):
-            key = f"{dir_prefix} {name}"
-            ax.set_title(key)
-            violin(adata, ylabel="" if i else "probability", keys=key, ax=ax, **kwargs)
-        for ax in axes[i + 1 :]:  # noqa
-            ax.remove()
-        for name in to_clean:
-            del adata.obs[name]
+        with RandomKeys(adata, len(lin_names), where="obs") as keys:
+            _i = 0
+            for _i, (name, key, ax) in enumerate(zip(lin_names, keys, axes)):
+                adata.obs[key] = adata.obsm[lk][name].X
+                ax.set_title(f"{dir_prefix} {name}")
+                violin(
+                    adata, ylabel="absorption probability", keys=key, ax=ax, **kwargs
+                )
+            for ax in axes[_i + 1 :]:  # noqa
+                ax.remove()
 
         return fig
 
