@@ -592,14 +592,6 @@ class Plottable(KernelHolder, Property):
             title = cluster_key + title
 
         if mode == "embedding":
-            if A.shape[1] == 1:
-                if "perc" not in kwargs:
-                    logg.debug("Did not detect percentile. Setting `perc=[0, 95]`")
-                    kwargs["perc"] = [0, 95]
-                kwargs["color"] = X
-            else:
-                kwargs["color_gradients"] = A
-
             if same_plot:
                 kwargs["color_gradients"] = A
             else:
