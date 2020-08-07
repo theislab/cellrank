@@ -7,14 +7,13 @@ from typing import Any, List, Tuple, Union, Mapping, TypeVar, Optional, Sequence
 from pathlib import Path
 from collections import OrderedDict as odict
 
-import numpy as np
-import pandas as pd
-
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.colors
 import matplotlib.pyplot as plt
 
+import numpy as np
+import pandas as pd
 from cellrank import logging as logg
 from cellrank.utils._docs import d, inject_docs
 from cellrank.tools._utils import RandomKeys, save_fig, _unique_order_preserving
@@ -170,6 +169,7 @@ def cluster_fates(
             constrained_layout=True,
             dpi=dpi,
         )
+        # fig.tight_layout()
 
         i = 0
         axes = [axes] if not isinstance(axes, np.ndarray) else np.ravel(axes)
@@ -186,13 +186,16 @@ def cluster_fates(
             kwargs["colors"] = tuple(colors)
             kwargs["title"] = f"{dir_prefix} {lineage_name}"
 
+            vmin = np.min(colors + [vmin])
+            vmax = np.max(colors + [vmax])
+
             paga(adata, **kwargs)
 
         if show_cbar:
             norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
-            cax, _ = mpl.colorbar.make_axes(ax, aspect=100)  # new matplotlib feature
+            cax, _ = mpl.colorbar.make_axes(ax, aspect=60)
             _ = mpl.colorbar.ColorbarBase(
-                cax, norm=norm, cmap=kwargs["cmap"], label="probability"
+                cax, norm=norm, cmap=kwargs["cmap"], label="mean absorption probability"
             )
 
         for ax in axes[i + 1 :]:  # noqa
