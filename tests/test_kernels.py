@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
+import numpy as np
+import pytest
+
 import anndata
 from scanpy import Neighbors
 
-import numpy as np
-import pytest
 import cellrank as cr
 from _helpers import (
     bias_knn,
@@ -439,21 +440,6 @@ class TestKernel:
         T_2 = adata.uns[_transition(Direction.BACKWARD)]["T"]
 
         np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
-
-    def test_transition_forward_sam(self, adata):
-        # TODO: self-referential test (i.e. useless)
-        backward = False
-
-        vk = VelocityKernel(adata, backward=backward).compute_transition_matrix(
-            mode="sampling", seed=42
-        )
-        T_1 = vk.transition_matrix
-
-        T_2 = cr.tl.transition_matrix(
-            adata, mode="sampling", backward=backward, seed=42,
-        ).transition_matrix
-
-        np.testing.assert_array_equal(T_1.A, T_2.A)
 
     @jax_not_installed_skip
     def test_transition_forward_differ_mode(self, adata):
@@ -954,6 +940,13 @@ class TestKernelCopy:
         np.testing.assert_array_equal(
             vk1.pearson_correlations.A, vk2.pearson_correlations.A
         )
+        if vk1._tmats is not None:
+            for m1, m2 in zip(vk1._tmats, vk2._tmats):
+                np.testing.assert_array_equal(m1.A, m2.A)
+        if vk1._pcors is not None:
+            for m1, m2 in zip(vk1._pcors, vk2._pcors):
+                np.testing.assert_array_equal(m1.A, m2.A)
+
         assert vk1.params == vk2.params
         assert vk1.backward == vk2.backward
 

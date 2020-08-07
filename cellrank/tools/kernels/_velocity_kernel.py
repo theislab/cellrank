@@ -4,11 +4,12 @@ from copy import copy, deepcopy
 from math import fsum
 from typing import Any, Union, Callable, Iterable, Optional
 
+import numpy as np
+from scipy.sparse import issparse, csr_matrix
+
 from scvelo.preprocessing.moments import get_moments
 
-import numpy as np
 from cellrank import logging as logg
-from scipy.sparse import issparse, csr_matrix
 from cellrank.utils._docs import d, inject_docs
 from cellrank.utils._utils import valuedispatch
 from cellrank.tools.kernels import Kernel
@@ -308,8 +309,9 @@ class VelocityKernel(Kernel):
         vk._params = copy(self.params)
         vk._cond_num = self.condition_number
         vk._transition_matrix = copy(self._transition_matrix)
-        vk._tmats = deepcopy(self.pearson_correlations)
-        vk._porcs = deepcopy(self.pearson_correlations)
+        vk._pearson_correlations = copy(self.pearson_correlations)
+        vk._tmats = deepcopy(self._tmats)
+        vk._pcors = deepcopy(self._pcors)
 
         return vk
 
@@ -515,7 +517,6 @@ def _run_stochastic(
     softmax_scale: float = 1,
     queue=None,
 ) -> np.ndarray:
-
     # TODO: can't use numba yet, since we rely on JAX for hessians
     starts = _calculate_starts(indptr, ixs)
     probs_cors = np.empty((2, starts[-1]))
