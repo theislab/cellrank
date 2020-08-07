@@ -6,27 +6,29 @@ from typing import Dict, Tuple, Union, TypeVar, Optional, Sequence
 from pathlib import Path
 from collections import Iterable
 
+import numpy as np
+from sklearn.preprocessing import StandardScaler
+
 import matplotlib.pyplot as plt
 
-import numpy as np
 from cellrank import logging as logg
 from cellrank.utils._docs import d
-from cellrank.tools._utils import save_fig
+from cellrank.tools._utils import save_fig, _unique_order_preserving
 from cellrank.utils._utils import _get_n_cores, check_collection
-from sklearn.preprocessing import StandardScaler
 from cellrank.plotting._utils import _model_type, _create_models, _is_any_gam_mgcv
 from cellrank.tools._constants import AbsProbKey
 from cellrank.utils._parallelize import parallelize
 from cellrank.utils.models._models import Model
 
 AnnData = TypeVar("AnnData")
+Queue = TypeVar("Queue")
 
 
 def _cl_process(
     genes: Sequence[str],
     models: Dict[str, Dict[str, Model]],
     lineage_name: str,
-    queue,
+    queue: Optional[Queue],
     **kwargs,
 ) -> np.ndarray:
     """
@@ -55,8 +57,11 @@ def _cl_process(
     for gene in genes:
         model = models[gene][lineage_name].prepare(gene, lineage_name, **kwargs).fit()
         res.append(model.predict())
-        queue.put(1)
-    queue.put(None)
+        if queue is not None:
+            queue.put(1)
+
+    if queue is not None:
+        queue.put(None)
 
     return np.array(res)
 
@@ -71,7 +76,7 @@ def cluster_lineage(
     clusters: Optional[Sequence[str]] = None,
     n_points: int = 200,
     time_key: str = "latent_time",
-    cluster_key: str = "louvain",
+    cluster_key: str = "clusters",
     norm: bool = True,
     recompute: bool = False,
     ncols: int = 3,
@@ -158,7 +163,8 @@ def cluster_lineage(
 
     _ = adata.obsm[lineage_key][lineage]
 
-    check_collection(adata, genes, "var_names")
+    genes = _unique_order_preserving(genes)
+    check_collection(adata, genes, "var_names", kwargs.get("use_raw", False))
 
     key_to_add = f"lineage_{lineage}_trend"
     if key_added is not None:
@@ -190,7 +196,8 @@ def cluster_lineage(
         logg.info("    Finish", time=start)
 
         trends = trends.T
-        _ = StandardScaler(copy=False).fit_transform(trends)
+        if norm:
+            _ = StandardScaler(copy=False).fit_transform(trends)
 
         trends = _AnnData(trends.T)
         trends.obs_names = genes

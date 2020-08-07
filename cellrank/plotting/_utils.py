@@ -340,7 +340,7 @@ def _create_models(
             models[obs_name][lin_name] = copy(mod)
 
         if lin_rest_model is not None:
-            for lin_name in lineages - set(models[obs_name].keys()):
+            for lin_name in set(lineages) - set(models[obs_name].keys()):
                 models[obs_name][lin_name] = copy(lin_rest_model)
         elif set(models[obs_name].keys()) != lineages:
             raise RuntimeError(_ERROR_INCOMPLETE_SPEC.format(" lineage ", obs_name))
@@ -365,7 +365,7 @@ def _create_models(
         elif set(model.keys()) != obs:
             raise RuntimeError(_ERROR_INCOMPLETE_SPEC.format(" ", "genes"))
     else:
-        raise ValueError(
+        raise TypeError(
             "Model must be of type `cellrank.ul.Model` or a dictionary of such models."
         )
 
@@ -420,8 +420,12 @@ def _fit(
                 model.confidence_interval()
 
             res[gene][ln] = model
-        queue.put(1)
-    queue.put(None)
+
+        if queue is not None:
+            queue.put(1)
+
+    if queue is not None:
+        queue.put(None)
 
     return res
 

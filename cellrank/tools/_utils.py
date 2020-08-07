@@ -17,19 +17,20 @@ from typing import (
 )
 from itertools import tee, product, combinations
 
-import matplotlib.colors as mcolors
-
 import numpy as np
 import pandas as pd
 from pandas import Series
-from cellrank import logging as logg
 from numpy.linalg import norm as d_norm
 from scipy.sparse import eye as speye
-from scipy.sparse import issparse, spmatrix, coo_matrix, csr_matrix
+from scipy.sparse import issparse, spmatrix, csr_matrix
 from sklearn.cluster import KMeans
 from pandas.api.types import infer_dtype, is_categorical_dtype
 from sklearn.neighbors import NearestNeighbors
-from scipy.sparse.linalg import norm as s_norm
+from scipy.sparse.linalg import norm as sparse_norm
+
+import matplotlib.colors as mcolors
+
+from cellrank import logging as logg
 from cellrank.utils._utils import _get_neighs, _has_neighs, _get_neighs_params
 from cellrank.tools._colors import (
     _compute_mean_color,
@@ -328,6 +329,10 @@ def _vec_mat_corr(X: Union[np.ndarray, spmatrix], y: np.ndarray) -> np.ndarray:
         The computed correlation.
     """
 
+    from scipy.signal import correlate2d
+
+    return correlate2d(X.A if issparse(X) else X, y[:, None], mode="valid").squeeze()
+
     X_bar, y_std, n = np.array(X.mean(axis=0)).reshape(-1), np.std(y), X.shape[0]
     denom = X.T.dot(y) - n * X_bar * np.mean(y)
     nom = (
@@ -476,8 +481,8 @@ def _filter_cells(distances: np.ndarray, rc_labels: Series, n_matches_min: int):
     freqs_new = np.array([np.sum(rc_labels == cl) for cl in cls])
 
     if any(freqs_new / freqs_orig < 0.5):
-        print(
-            "Warning: consider lowering  'n_matches_min' or "
+        logg.warning(
+            "Consider lowering  'n_matches_min' or "
             "increasing 'n_neighbors_filtering'. This filters out too many cells."
         )
 
@@ -645,7 +650,7 @@ def is_symmetric(
             is_sym = ((matrix != 0) == (matrix != 0).T).all()
     else:
         if issparse(matrix):
-            is_sym = s_norm((matrix - matrix.T), ord=ord) < eps
+            is_sym = sparse_norm((matrix - matrix.T), ord=ord) < eps
         else:
             is_sym = d_norm((matrix - matrix.T), ord=ord) < eps
 
@@ -1480,146 +1485,6 @@ def _get_cat_and_null_indices(
     return cat_indices, null_indices, lookup_dict
 
 
-def _pearson_corr(X: np.ndarray, Y: np.ndarray, use_jax: bool = True) -> np.ndarray:
-    """
-    Compute the pearson correlation between rows X and Y.
-
-    Assumes you have samples in the rows and features in the columns. Y can be a vecor or a matrix if
-    `use_jax=False`. In case `use_jax=True`, Y has to be a vector.
-
-    Parameters
-    ----------
-    X
-        Matrix of shape `NxM`.
-    y:
-        Either vector of  shape `M` or matrix of shape `NxM`.
-
-    Returns
-    -------
-    :class:`numpy.ndarray`
-        The computed pearson correlations.  If `Y` is a vector, this corresponds to pearson correlation
-        of `Y` with all rows in `X`. If `Y` is a matrix, this corresponds to pearson correlation between
-        corresponding rows in `X` and `Y`.
-    """
-    if use_jax:
-        X -= X.mean(axis=1)[:, None]
-        Y -= Y.mean()
-    else:
-        X -= X.mean(axis=1)[:, None]
-        if Y.ndim == 1:
-            Y -= Y.mean()
-        elif Y.ndim == 2:
-            Y -= Y.mean(axis=1)[:, None]
-        else:
-            raise NotImplementedError("Y is a scalar or has more than 2 dimensions.")
-
-    return _cosine_corr(X, Y, use_jax=use_jax)
-
-
-def _cosine_corr(X: np.ndarray, Y: np.ndarray, use_jax: bool = False) -> np.ndarray:
-    """
-    Compute the cosine correlation between rows in X and Y.
-
-    Assumes you have samples in the rows and features in the columns. Y can be a vecor or a matrix if
-    `use_jax=False`. In case `use_jax=True`, Y has to be a vector.
-
-    Parameters
-    ----------
-    X
-        Matrix of shape `NxM`.
-    Y:
-        Either vector of  shape `M` or matrix of shape `NxM`.
-
-    Returns
-    -------
-    :class:`numpy.ndarray`
-        The computed cosine correlation(s). If `Y` is a vector, this corresponds to cosine correlation
-        with all rows in `X. If `Y` is a matrix, this corresponds to cosine correlation between
-        corresponding rows in `X` and `Y`.
-    """
-    if use_jax:
-        import jax.numpy as jnp
-
-        X_norm = jnp.linalg.norm(X, axis=1)
-        Y_norm = jnp.linalg.norm(Y)
-        c = X.dot(Y) / (X_norm * Y_norm)
-        jnp.nan_to_num(c, copy=False, nan=0.0)
-    else:
-        X_norm = np.linalg.norm(X, axis=1)
-        if Y.ndim == 1:
-            Y_norm = np.linalg.norm(Y)
-            c = X.dot(Y) / (X_norm * Y_norm)
-        elif Y.ndim == 2:
-            Y_norm = np.linalg.norm(Y, axis=1)
-            c = np.einsum("ij,ij->i", X, Y) / (X_norm * Y_norm)
-        else:
-            raise NotImplementedError("Y is a scalar or has more than 2 dimensions.")
-        c[np.isnan(c)] = 0
-
-    return c
-
-
-def _softmax(x, sigma, use_jax: bool = False):
-    """Compute softmax over input vector."""
-    if use_jax:
-        import jax.numpy as jnp
-
-        mod = jnp
-    else:
-        mod = np
-
-    z = x - mod.max(x, axis=-1, keepdims=True)
-    numerator = mod.exp(z * sigma)
-    denominator = mod.sum(numerator, axis=-1, keepdims=True)
-    return numerator / denominator
-
-
-def _predict_transition_probabilities(
-    X: np.ndarray,
-    W: np.ndarray,
-    softmax_scale: float = 1,
-    use_jax: bool = False,
-    return_pearson_correlation: bool = True,
-):
-    """
-    Compute a categorical distribution based on correlation between rows in `W` and `X`.
-
-    We usually identify `x` with a velocity vector and `W` as the matrix storing transcriptomic
-    displacements of the current reference cell to its nearest neighbors. For the backward process, `X` is a matrix
-    as well, storing the velocity vectors of all nearest neighbors.
-
-    Parameters
-    ----------
-    X
-        Either vector of shape `n_features` or matrix of shape `n_samples x n_features`.
-    W
-        Weight matrix of shape `n_samples x n_features`.
-    softmax_scale
-        Scaling factor for softmax activation function.
-    use_jax
-        Whether to use Jax. Jax enables automatic differentiation and is therefore required in stochastic mode. In
-        deterministic mode, it can slow down things so we have the option to turn it off.
-
-    Returns
-    --------
-    :class:`numpy.ndarray`
-        Vector of probabilities.
-    :class:`numpy.ndarray`
-        Vector of pearson correlations.
-    """
-
-    u = _pearson_corr(W, X, use_jax=use_jax)
-    p = _softmax(u, softmax_scale, use_jax=use_jax)
-
-    return (p, u) if return_pearson_correlation else p
-
-
-def _vals_to_csr(vals, rows, cols, shape) -> csr_matrix:
-    graph = coo_matrix((vals, (rows, cols)), shape=shape, dtype=np.float64)
-
-    return graph.tocsr()
-
-
 def _check_estimator_type(estimator: Any) -> None:
     from cellrank.tools.estimators._base_estimator import (
         BaseEstimator,
@@ -1673,3 +1538,40 @@ def _calculate_absorption_time_moments(
     var[trans_indices] = v
 
     return ap, mean, var
+
+
+class RandomKeys:
+    """
+    Create random keys inside an :class:`anndataAnnData` object.
+
+    Parameters
+    ----------
+    adata
+        Annotated data object.
+    n
+        Number of keys, If `None`, create just 1 keys.
+    where
+        Attribute of :paramref:`adata`. If `'obs'`, also clean up `{key}'_colors'` for each generated key.
+    """
+
+    def __init__(self, adata: AnnData, n: Optional[int] = None, where: str = "obs"):
+        self._adata = adata
+        self._where = where
+        self._n = n
+        self._keys = []
+
+    def __enter__(self):
+        self._keys = _generate_random_keys(self._adata, self._where, self._n)
+        return self._keys
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        for key in self._keys:
+            try:
+                del self._adata.obs[key]
+            except KeyError:
+                pass
+            if self._where == "obs":
+                try:
+                    del self._adata.uns[f"{key}_colors"]
+                except KeyError:
+                    pass

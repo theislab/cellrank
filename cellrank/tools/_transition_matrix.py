@@ -5,11 +5,8 @@ from typing import TypeVar, Iterable, Optional
 
 from cellrank import logging as logg
 from cellrank.utils._docs import d
-from cellrank.tools.kernels._kernel import (
-    VelocityKernel,
-    KernelExpression,
-    ConnectivityKernel,
-)
+from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
+from cellrank.tools.kernels._base_kernel import KernelExpression
 
 AnnData = TypeVar("AnnData")
 

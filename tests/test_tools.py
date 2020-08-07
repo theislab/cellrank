@@ -165,7 +165,7 @@ class TestRootFinal:
             cr.tl.root_states(adata, weight_connectivities=10)
 
     def test_invalid_invalid_mode(self, adata: AnnData):
-        with pytest.raises(NotImplementedError):
+        with pytest.raises(ValueError):
             cr.tl.root_states(adata, mode="foobar")
 
 
