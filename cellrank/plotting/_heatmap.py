@@ -7,6 +7,11 @@ from typing import Any, List, Tuple, Union, TypeVar, Optional, Sequence
 from pathlib import Path
 from collections import Iterable, defaultdict
 
+import numpy as np
+import pandas as pd
+from pandas.api.types import is_categorical_dtype
+from scipy.ndimage.filters import convolve
+
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
@@ -14,14 +19,10 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
-import numpy as np
-import pandas as pd
 from cellrank import logging as logg
-from pandas.api.types import is_categorical_dtype
-from cellrank.utils._docs import d
+from cellrank.utils._docs import d, inject_docs
 from cellrank.tools._utils import save_fig, _min_max_scale, _unique_order_preserving
-from cellrank.utils._utils import _get_n_cores, check_collection
-from scipy.ndimage.filters import convolve
+from cellrank.utils._utils import _get_n_cores, valuedispatch, check_collection
 from cellrank.tools._colors import _create_categorical_colors
 from cellrank.plotting._utils import (
     _fit,
@@ -30,13 +31,11 @@ from cellrank.plotting._utils import (
     _is_any_gam_mgcv,
     _maybe_create_dir,
 )
-from cellrank.tools._constants import AbsProbKey
+from cellrank.tools._constants import ModeEnum, AbsProbKey
 from cellrank.utils._parallelize import parallelize
 
 _N_XTICKS = 10
-_ERROR_INVALID_KIND = (
-    "Unknown heatmap kind `{!r}`. Valid options are: `'lineages'`, `'genes'`."
-)
+
 AnnData = TypeVar("AnnData")
 Cmap = TypeVar("Cmap")
 Norm = TypeVar("Norm")
@@ -44,13 +43,19 @@ Ax = TypeVar("Ax")
 Fig = TypeVar("Fig")
 
 
+class HeatmapMode(ModeEnum):  # noqa
+    GENES = "genes"
+    LINEAGES = "lineages"
+
+
 @d.dedent
+@inject_docs(m=HeatmapMode)
 def heatmap(
     adata: AnnData,
     model: _model_type,
     genes: Sequence[str],
     backward: bool = False,
-    kind: str = "lineages",
+    mode: str = HeatmapMode.LINEAGES.s,
     lineages: Optional[Union[str, Sequence[str]]] = None,
     start_lineage: Optional[Union[str, Sequence[str]]] = None,
     end_lineage: Optional[Union[str, Sequence[str]]] = None,
@@ -89,11 +94,11 @@ def heatmap(
     genes
         Genes in :paramref:`adata` `.var_names` to plot.
     %(backward)s
-    kind
+    mode
         Variant of the heatmap:
 
-            - `'genes'` - group by :paramref:`genes` for each lineage in :paramref:`lineage_names`.
-            - `'lineages'` - group by :paramref:`lineage_names` for each gene in :paramref:`genes`.
+            - `{m.LINEAGES.s!r}` - group by :paramref:`genes` for each lineage in :paramref:`lineage_names`
+            - `{m.GENES.s!r}` - group by :paramref:`lineage_names` for each gene in :paramref:`genes`
     lineages
         Names of the lineages which to plot.
     start_lineage
@@ -231,7 +236,12 @@ def heatmap(
 
         return cax
 
-    def gene_per_lineage() -> Fig:
+    @valuedispatch
+    def _plot_heatmap(_mode: HeatmapMode) -> Fig:
+        pass
+
+    @_plot_heatmap.register(HeatmapMode.GENES)
+    def _() -> Fig:
         def color_fill_rec(ax, xs, y1, y2, colors=None, cmap=cmap, **kwargs) -> None:
             colors = colors if cmap is None else cmap(colors)
 
@@ -338,7 +348,8 @@ def heatmap(
 
         return fig
 
-    def lineage_per_gene() -> List[Fig]:
+    @_plot_heatmap.register(HeatmapMode.LINEAGES)
+    def _() -> List[Fig]:
         data_t = defaultdict(dict)  # transpose
         for gene, lns in data.items():
             for ln, y in lns.items():
@@ -458,8 +469,7 @@ def heatmap(
 
         return figs
 
-    if kind not in ("lineages", "genes"):
-        raise ValueError(_ERROR_INVALID_KIND.format(kind))
+    mode = HeatmapMode(mode)
 
     lineage_key = str(AbsProbKey.BACKWARD if backward else AbsProbKey.FORWARD)
     if lineage_key not in adata.obsm:
@@ -516,14 +526,9 @@ def heatmap(
     )(lineages, start_lineage, end_lineage, **kwargs)
 
     logg.info("    Finish", time=start)
-    logg.debug(f"Plotting `{kind!r}` heatmap")
+    logg.debug(f"Plotting `{mode.s!r}` heatmap")
 
-    if kind == "genes":
-        fig = gene_per_lineage()
-    elif kind == "lineages":
-        fig = lineage_per_gene()
-    else:
-        raise ValueError(_ERROR_INVALID_KIND.format(kind))
+    fig = _plot_heatmap(mode)
 
     if save is not None and fig is not None:
         if not isinstance(fig, Iterable):

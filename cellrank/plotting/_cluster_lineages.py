@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 
 from cellrank import logging as logg
 from cellrank.utils._docs import d
-from cellrank.tools._utils import save_fig
+from cellrank.tools._utils import save_fig, _unique_order_preserving
 from cellrank.utils._utils import _get_n_cores, check_collection
 from cellrank.plotting._utils import _model_type, _create_models, _is_any_gam_mgcv
 from cellrank.tools._constants import AbsProbKey
@@ -163,7 +163,8 @@ def cluster_lineage(
 
     _ = adata.obsm[lineage_key][lineage]
 
-    check_collection(adata, genes, "var_names")
+    genes = _unique_order_preserving(genes)
+    check_collection(adata, genes, "var_names", kwargs.get("use_raw", False))
 
     key_to_add = f"lineage_{lineage}_trend"
     if key_added is not None:
