@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """General utility functions module."""
-
+from types import MappingProxyType
 from typing import Any, Dict, Tuple, Union, TypeVar, Iterable, Optional
+from functools import wraps, update_wrapper
 from multiprocessing import cpu_count
 
 import numpy as np
@@ -195,3 +196,29 @@ def _write_graph_data(
         write_to = "uns"
 
     logg.debug(f"Write graph data {key!r} to `adata.{write_to}`")
+
+
+def valuedispatch(func):
+    """Dispatch a function based on the first value."""
+    registry = {}
+
+    def dispatch(value):
+        return registry.get(value, func)
+
+    def register(value, func=None):
+        if func is None:
+            return lambda f: register(value, f)
+        registry[value] = func
+        return func
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        return dispatch(args[0])(*args[1:], **kwargs)
+
+    wrapper.register = register
+    wrapper.dispatch = dispatch
+    wrapper.registry = MappingProxyType(registry)
+
+    update_wrapper(wrapper, func)
+
+    return wrapper

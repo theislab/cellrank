@@ -19,17 +19,16 @@ from anndata import AnnData
 import cellrank.logging as logg
 from cellrank.tools import Lineage
 from cellrank.utils._docs import d
-from cellrank.tools._utils import _make_cat, partition, _complex_warning
+from cellrank.tools._utils import RandomKeys, _make_cat, partition, _complex_warning
 from cellrank.tools.kernels import PrecomputedKernel
 from cellrank.tools._constants import Direction, DirPrefix, DirectionPlot
-from cellrank.tools.kernels._kernel import KernelExpression
 from cellrank.tools.estimators._utils import (
     Metadata,
-    RandomKeys,
     _create_property,
     singledispatchmethod,
     _delegate_method_dispatch,
 )
+from cellrank.tools.kernels._base_kernel import KernelExpression
 from cellrank.tools.estimators._constants import META_KEY, A, F, P
 
 

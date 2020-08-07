@@ -6,21 +6,22 @@ from typing import Any, Dict, List, Tuple, Union, Mapping, TypeVar, Optional, Se
 
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import RandomForestRegressor
-from statsmodels.stats.multitest import multipletests
-
 from cellrank import logging as logg
 from cellrank.tools import GPCCA
+from sklearn.ensemble import RandomForestRegressor
 from cellrank.utils._docs import d
 from cellrank.utils._utils import _get_n_cores, check_collection
 from cellrank.utils.models import Model
+from sklearn.preprocessing import StandardScaler
 from cellrank.tools.kernels import ConnectivityKernel
 from cellrank.plotting._utils import _model_type, _create_models, _is_any_gam_mgcv
 from cellrank.tools._constants import AbsProbKey
 from cellrank.utils._parallelize import parallelize
+from statsmodels.stats.multitest import multipletests
 from cellrank.tools.estimators._constants import P
 
 AnnData = TypeVar("AnnData")
+Queue = TypeVar("Queue")
 
 
 def _gi_permute(
@@ -29,7 +30,7 @@ def _gi_permute(
     x: np.ndarray,
     y: np.ndarray,
     seed: Optional[int],
-    queue,
+    queue: Optional[Queue],
     **kwargs,
 ) -> List[np.ndarray]:
     """
@@ -47,13 +48,13 @@ def _gi_permute(
         Dependent variable, such as pseudotime.
     seed
         Random seed for reproducibility.
-    kwargs
+    **kwargs
         Keyword arguments for :class:`sklearn.ensemble.RandomForestRegressor`.
 
     Returns
     -------
     :class:`list`
-        List of importances of each features for every permutation.
+        List of gene importances of each features for every permutation.
     """
 
     state = np.random.RandomState(None if seed is None else seed + ix)
@@ -65,8 +66,12 @@ def _gi_permute(
             .fit(state.permutation(x), y)
             .feature_importances_
         )
-        queue.put(1)
-    queue.put(None)
+
+        if queue is not None:
+            queue.put(1)
+
+    if queue is not None:
+        queue.put(None)
 
     return imps
 
@@ -75,8 +80,7 @@ def _gi_process(
     genes: Sequence[str],
     models: Dict[str, Dict[str, Model]],
     lineage_name: str,
-    norm: bool,
-    queue,
+    queue: Optional[Queue],
     **kwargs,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
@@ -92,7 +96,7 @@ def _gi_process(
         Name of the lineage for which to calculate the gene importances.
     queue
         Signalling queue in the parent process/thread used to update the progress bar.
-    kwargs
+    **kwargs
         Keyword arguments for :meth:`cellrank.ul.models.Model.prepare`.
 
     Returns
@@ -106,19 +110,17 @@ def _gi_process(
     for gene in genes:
         model = models[gene][lineage_name].prepare(gene, lineage_name, **kwargs).fit()
         res.append([model.x_test.squeeze(), model.predict()])
-        queue.put(1)
-    queue.put(None)  # sentinel
+
+        if queue is not None:
+            queue.put(1)
+
+    if queue is not None:
+        queue.put(None)
 
     res = np.array(res).swapaxes(1, 2)  # genes x points x 2
-    x, res = res[..., 0], res[..., 1]
+    x, y = res[..., 0], res[..., 1]
 
-    if not norm:
-        return x, res
-
-    mean = np.expand_dims(np.mean(res, 1), -1)
-    sd = np.expand_dims(np.sqrt(np.var(res, 1)), -1)
-
-    return x, (res - mean) / sd
+    return x, y
 
 
 @d.dedent
@@ -163,26 +165,22 @@ def gene_importance(
     %(backward)s
     n_points
         Number of points used for prediction.
-
         If `None`, use original data points, not uniformly distributed across the pseudotime.
     time_key
         Key in :paramref:`adata` `.obs` where the pseudotime is stored.
     norm
         Normalize each trend to `0` mean, `1` variance.
     n_perms
-        Number of permutations to perform.
-
-        Use `None` if you don't want to calculate the p-values.
+        Number of permutations to perform. IF `None`, don't want to calculate the p-values.
     fdr_correction
         Method used to correct for false discovery rate.
-
         For available methods, see :func:`statsmodels.stats.multitest.multipletests`.
     alpha
         Family-wise error rate for FDR correction.
     seed
         Seed for :class:`sklearn.ensemble.RandomForestRegressor` and the permutations.
     return_model
-        Whether to also return the fitted model.
+        Whether to return the fitted model.
     %(parallel)s
     rf_kwargs
         Keyword arguments for :class:`sklearn.ensemble.RandomForestRegressor`.
@@ -203,7 +201,7 @@ def gene_importance(
 
     ln_key = str(AbsProbKey.BACKWARD if backward else AbsProbKey.FORWARD)
     if ln_key not in adata.obsm:
-        raise KeyError(f"Lineages key `{ln_key!r}` not found in `adata.obsm`.")
+        raise KeyError(f"Lineage key `{ln_key!r}` not found in `adata.obsm`.")
 
     _ = adata.obsm[ln_key][lineage]
 
@@ -235,21 +233,24 @@ def gene_importance(
         extractor=np.hstack,
         backend=backend,
         show_progress_bar=show_progress_bar,
-    )(models, lineage, norm, **kwargs).T
+    )(models, lineage, **kwargs).T
     logg.info("    Finish", time=start)
 
-    x, y = data[..., 1], data[:, 0, 0]
-    if np.all(y[..., np.newaxis] != data[..., 0]):
+    x, pt = data[..., 1], data[:, 0, 0]
+    if np.all(pt[..., np.newaxis] != data[..., 0]):
         raise RuntimeError("Sanity check failed: pseudotime differs for genes.")
-    if np.all(np.sort(y) != y):
+    if np.all(np.sort(pt) != pt):
         raise RuntimeError("Sanity check failed: pseudotime is not sorted.")
+
+    if norm:
+        _ = StandardScaler(copy=False).fit_transform(x)
 
     rf_kwargs = dict(rf_kwargs)
     if rf_kwargs.get("n_jobs", None) is None:
         rf_kwargs["n_jobs"] = n_jobs
 
-    logg.debug("Running random forest")
-    model = RandomForestRegressor(random_state=seed, **rf_kwargs).fit(x, y)
+    logg.debug("Fitting random forest")
+    model = RandomForestRegressor(random_state=seed, **rf_kwargs).fit(x, pt)
 
     importances = pd.DataFrame(
         model.feature_importances_.T, index=genes, columns=["importance"]
@@ -273,7 +274,7 @@ def gene_importance(
         extractor=np.vstack,
         use_ixs=True,
         show_progress_bar=show_progress_bar,
-    )(x, y, seed, **rf_kwargs)
+    )(x, pt, seed, **rf_kwargs)
     if perms.shape != (n_perms, len(genes)):
         raise RuntimeError("Sanity check failed: the number of permutations differ.")
     logg.info("    Finish", time=start)

@@ -151,65 +151,112 @@ def compare(
 class TestClusterFates:
     @compare()
     def test_bar(self, adata: AnnData, fpath: str):
-        cr.pl.cluster_fates(adata, "clusters", dpi=DPI, save=fpath)
+        cr.pl.cluster_fates(
+            adata, cluster_key="clusters", mode="bar", dpi=DPI, save=fpath
+        )
 
     @compare()
     def test_bar_cluster_subset(self, adata: AnnData, fpath: str):
         cr.pl.cluster_fates(
-            adata, "clusters", clusters=["Astrocytes", "GABA"], dpi=DPI, save=fpath
+            adata,
+            cluster_key="clusters",
+            mode="bar",
+            clusters=["Astrocytes", "GABA"],
+            dpi=DPI,
+            save=fpath,
         )
 
     @compare()
     def test_bar_lineage_subset(self, adata: AnnData, fpath: str):
-        cr.pl.cluster_fates(adata, "clusters", lineages=["0"], dpi=DPI, save=fpath)
+        cr.pl.cluster_fates(
+            adata,
+            cluster_key="clusters",
+            mode="bar",
+            lineages=["0"],
+            dpi=DPI,
+            save=fpath,
+        )
 
     @compare(tol=250)
     def test_paga_pie(self, adata: AnnData, fpath: str):
-        cr.pl.cluster_fates(adata, "clusters", mode="paga_pie", dpi=DPI, save=fpath)
+        cr.pl.cluster_fates(
+            adata, cluster_key="clusters", mode="paga_pie", dpi=DPI, save=fpath
+        )
 
     @compare(tol=250)
     def test_paga_pie_title(self, adata: AnnData, fpath: str):
         cr.pl.cluster_fates(
-            adata, "clusters", mode="paga_pie", title="foo bar baz", dpi=DPI, save=fpath
+            adata,
+            cluster_key="clusters",
+            mode="paga_pie",
+            title="foo bar baz",
+            dpi=DPI,
+            save=fpath,
         )
 
     @scvelo_paga_skip
     @compare()
     def test_paga_pie_embedding(self, adata: AnnData, fpath: str):
         cr.pl.cluster_fates(
-            adata, "clusters", mode="paga_pie", basis="umap", dpi=DPI, save=fpath
+            adata,
+            cluster_key="clusters",
+            mode="paga_pie",
+            basis="umap",
+            dpi=DPI,
+            save=fpath,
         )
 
     @scvelo_paga_skip
     @compare()
     def test_paga(self, adata: AnnData, fpath: str):
-        cr.pl.cluster_fates(adata, "clusters", mode="paga", dpi=DPI, save=fpath)
+        cr.pl.cluster_fates(
+            adata, cluster_key="clusters", mode="paga", dpi=DPI, save=fpath
+        )
 
     @scvelo_paga_skip
     @compare()
     def test_paga_lineage_subset(self, adata: AnnData, fpath: str):
         cr.pl.cluster_fates(
-            adata, "clusters", mode="paga", lineages=["0"], dpi=DPI, save=fpath
+            adata,
+            cluster_key="clusters",
+            mode="paga",
+            lineages=["0"],
+            dpi=DPI,
+            save=fpath,
         )
 
     @compare()
     def test_violin(self, adata: AnnData, fpath: str):
-        cr.pl.cluster_fates(adata, "clusters", mode="violin", dpi=DPI, save=fpath)
+        cr.pl.cluster_fates(
+            adata, cluster_key="clusters", mode="violin", dpi=DPI, save=fpath
+        )
 
     @compare()
     def test_violin_cluster_subset(self, adata: AnnData, fpath: str):
-        cr.pl.cluster_fates(adata, "clusters", mode="violin", dpi=DPI, save=fpath)
-
-    @compare()
-    def test_violin_lineage_subset(self, adata: AnnData, fpath: str):
         cr.pl.cluster_fates(
-            adata, "clusters", mode="violin", lineages=["1"], dpi=DPI, save=fpath
+            adata, cluster_key="clusters", mode="violin", dpi=DPI, save=fpath
         )
 
     @compare()
     def test_violin_lineage_subset(self, adata: AnnData, fpath: str):
         cr.pl.cluster_fates(
-            adata, "clusters", mode="violin", lineages=["1"], dpi=DPI, save=fpath
+            adata,
+            cluster_key="clusters",
+            mode="violin",
+            lineages=["1"],
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_violin_lineage_subset(self, adata: AnnData, fpath: str):
+        cr.pl.cluster_fates(
+            adata,
+            cluster_key="clusters",
+            mode="violin",
+            lineages=["1"],
+            dpi=DPI,
+            save=fpath,
         )
 
     @compare()
@@ -287,6 +334,13 @@ class TestClusterFates:
             legend_loc="center right out",
         )
 
+    def test_invalid_mode(self, adata_cflare_fwd):
+        adata, _ = adata_cflare_fwd
+        with pytest.raises(ValueError):
+            cr.pl.cluster_fates(
+                adata, cluster_key="clusters", mode="foobar",
+            )
+
     def test_paga_pie_wrong_legend_kind_1(self, adata_cflare_fwd):
         adata, _ = adata_cflare_fwd
         with pytest.raises(ValueError):
@@ -329,31 +383,48 @@ class TestClusterFates:
 
     @compare()
     def test_mode_heatmap(self, adata: AnnData, fpath: str):
-        cr.pl.cluster_fates(adata, "clusters", mode="heatmap", dpi=DPI, save=fpath)
+        cr.pl.cluster_fates(
+            adata, cluster_key="clusters", mode="heatmap", dpi=DPI, save=fpath
+        )
 
     @compare()
     def test_mode_heatmap_title(self, adata: AnnData, fpath: str):
         cr.pl.cluster_fates(
-            adata, "clusters", mode="heatmap", title="foo", dpi=DPI, save=fpath
+            adata,
+            cluster_key="clusters",
+            mode="heatmap",
+            title="foo",
+            dpi=DPI,
+            save=fpath,
         )
 
     @compare()
     def test_mode_heatmap_cmap(self, adata: AnnData, fpath: str):
         cr.pl.cluster_fates(
-            adata, "clusters", mode="heatmap", cmap="inferno", dpi=DPI, save=fpath
+            adata,
+            cluster_key="clusters",
+            mode="heatmap",
+            cmap="inferno",
+            dpi=DPI,
+            save=fpath,
         )
 
     @compare()
     def test_mode_heatmap_xticks_rotation(self, adata: AnnData, fpath: str):
         cr.pl.cluster_fates(
-            adata, "clusters", mode="heatmap", xticks_rotation=90, dpi=DPI, save=fpath
+            adata,
+            cluster_key="clusters",
+            mode="heatmap",
+            xticks_rotation=90,
+            dpi=DPI,
+            save=fpath,
         )
 
     @compare()
     def test_mode_heatmap_clusters(self, adata: AnnData, fpath: str):
         cr.pl.cluster_fates(
             adata,
-            "clusters",
+            cluster_key="clusters",
             mode="heatmap",
             clusters=["Astrocytes", "GABA"],
             dpi=DPI,
@@ -363,12 +434,19 @@ class TestClusterFates:
     @compare()
     def test_mode_heatmap_lineages(self, adata: AnnData, fpath: str):
         cr.pl.cluster_fates(
-            adata, "clusters", mode="heatmap", lineages=["0"], dpi=DPI, save=fpath
+            adata,
+            cluster_key="clusters",
+            mode="heatmap",
+            lineages=["0"],
+            dpi=DPI,
+            save=fpath,
         )
 
     @compare()
     def test_mode_clustermap(self, adata: AnnData, fpath: str):
-        cr.pl.cluster_fates(adata, "clusters", mode="clustermap", dpi=DPI, save=fpath)
+        cr.pl.cluster_fates(
+            adata, cluster_key="clusters", mode="clustermap", dpi=DPI, save=fpath
+        )
 
 
 class TestClusterLineages:
@@ -431,7 +509,7 @@ class TestHeatmap:
             adata,
             model,
             GENES[:10],
-            kind="lineages",
+            mode="lineages",
             time_key="latent_time",
             dpi=DPI,
             save=fpath,
@@ -444,7 +522,7 @@ class TestHeatmap:
             adata,
             model,
             RAW_GENES[:5],
-            kind="lineages",
+            mode="lineages",
             time_key="latent_time",
             use_raw=True,
             dpi=DPI,
@@ -458,7 +536,7 @@ class TestHeatmap:
             adata,
             model,
             GENES[:10],
-            kind="genes",
+            mode="genes",
             time_key="latent_time",
             dpi=DPI,
             save=fpath,
@@ -472,7 +550,7 @@ class TestHeatmap:
             model,
             GENES[:10],
             cluster_genes=False,
-            kind="lineages",
+            mode="lineages",
             time_key="latent_time",
             dpi=DPI,
             save=fpath,
@@ -485,7 +563,7 @@ class TestHeatmap:
             adata,
             model,
             GENES[:10],
-            kind="lineages",
+            mode="lineages",
             time_key="latent_time",
             cluster_genes=True,
             dpi=DPI,
@@ -499,7 +577,7 @@ class TestHeatmap:
             adata,
             model,
             GENES[:10],
-            kind="lineages",
+            mode="lineages",
             time_key="latent_time",
             lineage_height=0.2,
             dpi=DPI,
@@ -513,7 +591,7 @@ class TestHeatmap:
             adata,
             model,
             GENES[:10],
-            kind="lineages",
+            mode="lineages",
             time_key="latent_time",
             start_lineage="0",
             end_lineage="1",
@@ -528,7 +606,7 @@ class TestHeatmap:
             adata,
             model,
             GENES[:5],
-            kind="genes",
+            mode="genes",
             time_key="latent_time",
             cmap=cm.viridis,
             dpi=DPI,
@@ -542,7 +620,7 @@ class TestHeatmap:
             adata,
             model,
             GENES[:5],
-            kind="lineages",
+            mode="lineages",
             time_key="latent_time",
             show_cbar=False,
             dpi=DPI,
@@ -556,7 +634,7 @@ class TestHeatmap:
             adata,
             model,
             GENES[:5],
-            kind="genes",
+            mode="genes",
             time_key="latent_time",
             show_cbar=False,
             dpi=DPI,
@@ -570,7 +648,7 @@ class TestHeatmap:
             adata,
             model,
             GENES[:5],
-            kind="lineages",
+            mode="lineages",
             time_key="latent_time",
             show_absorption_probabilities=True,
             dpi=DPI,
@@ -584,7 +662,7 @@ class TestHeatmap:
             adata,
             model,
             GENES[:5],
-            kind="genes",
+            mode="genes",
             time_key="latent_time",
             show_absorption_probabilities=True,
             dpi=DPI,
@@ -598,7 +676,7 @@ class TestHeatmap:
             adata,
             model,
             GENES[:5],
-            kind="lineages",
+            mode="lineages",
             time_key="latent_time",
             n_convolve=None,
             dpi=DPI,
@@ -612,7 +690,7 @@ class TestHeatmap:
             adata,
             model,
             GENES[:5],
-            kind="lineages",
+            mode="lineages",
             time_key="latent_time",
             scale=False,
             dpi=DPI,
@@ -626,7 +704,7 @@ class TestHeatmap:
             adata,
             model,
             GENES[:5],
-            kind="genes",
+            mode="genes",
             time_key="latent_time",
             scale=False,
             dpi=DPI,
@@ -640,7 +718,7 @@ class TestHeatmap:
             adata,
             model,
             GENES[:5],
-            kind="lineages",
+            mode="lineages",
             time_key="latent_time",
             scale=False,
             cluster_genes=True,
@@ -655,7 +733,7 @@ class TestHeatmap:
             adata,
             model,
             GENES[:5],
-            kind="lineages",
+            mode="lineages",
             time_key="latent_time",
             cluster_genes=False,
             dpi=DPI,
@@ -671,7 +749,7 @@ class TestHeatmap:
             GENES[:5],
             cluster_key="clusters",
             show_absorption_probabilities=False,
-            kind="lineages",
+            mode="lineages",
             time_key="latent_time",
             dpi=DPI,
             save=fpath,
@@ -686,7 +764,7 @@ class TestHeatmap:
             GENES[:5],
             cluster_key="clusters",
             show_absorption_probabilities=True,
-            kind="lineages",
+            mode="lineages",
             time_key="latent_time",
             dpi=DPI,
             save=fpath,
@@ -701,7 +779,7 @@ class TestHeatmap:
             GENES[:5],
             cluster_key=["clusters", "clusters_enlarged", "clusters"],
             show_absorption_probabilities=True,
-            kind="lineages",
+            mode="lineages",
             time_key="latent_time",
             dpi=DPI,
             save=fpath,
@@ -716,7 +794,7 @@ class TestHeatmap:
             adata,
             model,
             GENES[:10],
-            kind="lineages",
+            mode="lineages",
             time_key="latent_time",
             dpi=DPI,
             save=fpath,
@@ -733,7 +811,7 @@ class TestHeatmap:
             backend="threading",
             cluster_key=["clusters", "clusters_enlarged", "clusters"],
             show_absorption_probabilities=True,
-            kind="lineages",
+            mode="lineages",
             time_key="latent_time",
             dpi=DPI,
             save=fpath,
@@ -750,7 +828,7 @@ class TestHeatmap:
             backend="loky",  # uses pickling of objects, such as Lineage
             cluster_key=["clusters", "clusters_enlarged", "clusters"],
             show_absorption_probabilities=True,
-            kind="lineages",
+            mode="lineages",
             time_key="latent_time",
             dpi=DPI,
             save=fpath,
@@ -763,7 +841,7 @@ class TestHeatmap:
             adata,
             model,
             GENES[:10],
-            kind="lineages",
+            mode="lineages",
             time_key="latent_time",
             keep_gene_order=True,
             dpi=DPI,
