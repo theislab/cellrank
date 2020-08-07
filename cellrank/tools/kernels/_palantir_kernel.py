@@ -3,6 +3,7 @@
 from copy import copy
 
 import numpy as np
+
 from cellrank import logging as logg
 from cellrank.utils._docs import d
 from cellrank.tools._utils import bias_knn, is_connected
@@ -156,9 +157,7 @@ class PalantirKernel(Kernel):
 
     def copy(self) -> "PalantirKernel":
         """Return a copy of self."""
-        pk = PalantirKernel(
-            self.adata, backward=self.backward, time_key=self._time_key,
-        )
+        pk = PalantirKernel(self.adata, backward=self.backward, time_key=self._time_key)
         pk._pseudotime = copy(self.pseudotime)
         pk._params = copy(self._params)
         pk._cond_num = self.condition_number

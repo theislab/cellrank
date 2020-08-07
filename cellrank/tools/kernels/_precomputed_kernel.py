@@ -4,8 +4,9 @@ from copy import copy
 from typing import Union, Optional
 
 import numpy as np
-from cellrank import logging as logg
 from scipy.sparse import spmatrix, csr_matrix
+
+from cellrank import logging as logg
 from cellrank.utils._docs import d
 from cellrank.utils._utils import _read_graph_data
 from cellrank.tools.kernels import Kernel
@@ -75,6 +76,7 @@ class PrecomputedKernel(Kernel):
             copy(self.transition_matrix), adata=self.adata, backward=self.backward
         )
         pk._cond_num = self.condition_number
+
         return pk
 
     def compute_transition_matrix(self, *args, **kwargs) -> "PrecomputedKernel":

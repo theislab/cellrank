@@ -18,8 +18,9 @@ from typing import (
 from functools import wraps, reduce
 
 import numpy as np
-from cellrank import logging as logg
 from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix, isspmatrix_csr
+
+from cellrank import logging as logg
 from cellrank.utils._docs import d
 from cellrank.tools._utils import (
     _normalize,
@@ -93,6 +94,11 @@ class KernelExpression(ABC):
     @abstractmethod
     def adata(self) -> AnnData:
         """The annotated data object."""  # noqa
+        pass
+
+    @adata.setter
+    @abstractmethod
+    def adata(self, value):
         pass
 
     @property
@@ -358,6 +364,14 @@ class KernelExpression(ABC):
     def __copy__(self) -> "KernelExpression":
         return self.copy()
 
+    def __deepcopy__(self, memodict={}) -> "KernelExpression":  # noqa
+        res = self.copy()
+        if self._parent is None:
+            res.adata = self.adata.copy()
+        memodict[id(self)] = res
+
+        return res
+
 
 class UnaryKernelExpression(KernelExpression, ABC):
     """Base class for unary kernel expressions, such as kernels or constants."""
@@ -380,6 +394,22 @@ class UnaryKernelExpression(KernelExpression, ABC):
     def adata(self) -> AnnData:
         """The annotated data object."""  # noqa
         return self._adata
+
+    @adata.setter
+    def adata(self, _adata: AnnData):
+        from anndata import AnnData
+
+        if not isinstance(_adata, AnnData):
+            raise TypeError(
+                f"Expected arugment of type `anndata.AnnData`, found `{type(_adata).__name__!r}`."
+            )
+        # otherwise, we'd have to reread bunch of attributes - it's better to initialize new object
+        if _adata.shape != self.adata.shape:
+            raise ValueError(
+                f"Expected the new object to have same shape as previous object `{self.adata.shape}`, "
+                f"found `{_adata.shape}`."
+            )
+        self._adata = _adata
 
     def __repr__(self):
         return f"{'~' if self.backward and self._parent is None else ''}<{self.__class__.__name__[:4]}>"
@@ -450,6 +480,10 @@ class NaryKernelExpression(KernelExpression, ABC):
         """The annotated data object."""  # noqa
         # we can do this because Constant requires adata as well
         return self._kexprs[0].adata
+
+    @adata.setter
+    def adata(self, _adata: AnnData):
+        self._kexprs[0].adata = _adata
 
     def __invert__(self) -> "NaryKernelExpression":
         super().__invert__()
@@ -736,7 +770,7 @@ class SimpleNaryExpression(NaryKernelExpression):
     def copy(self) -> "SimpleNaryExpression":
         """Return a copy of self."""
         sne = SimpleNaryExpression(
-            [k.copy() for k in self], op_name=self._op_name, fn=self._fn
+            [copy(k) for k in self], op_name=self._op_name, fn=self._fn
         )
         sne._transition_matrix = copy(self._transition_matrix)
 

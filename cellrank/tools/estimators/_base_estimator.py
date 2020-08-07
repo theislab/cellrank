@@ -3,7 +3,7 @@
 
 import pickle
 from abc import ABC, abstractmethod
-from copy import deepcopy
+from copy import copy, deepcopy
 from typing import Any, Dict, Union, TypeVar, Optional, Sequence
 from pathlib import Path
 
@@ -761,10 +761,13 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             logg.debug(f"Unable to set attribute `.{attr}`. Skipping")
 
     def copy(self) -> "BaseEstimator":
-        """Return a copy of self."""
+        """Return a copy of self, including the underlying :paramref:`adata` object."""
 
-        res = type(self)(self.kernel, read_from_adata=False)
-        res.__dict__ = deepcopy(self.__dict__)
+        k = deepcopy(self.kernel)  # ensure we copy the adata object
+        res = type(self)(k, read_from_adata=False)
+        for k, v in self.__dict__.items():
+            if k != "_kernel":
+                res.__dict__[k] = copy(v)
 
         return res
 

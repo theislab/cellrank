@@ -240,7 +240,7 @@ class VelocityKernel(Kernel):
         )
 
         if seed is None:
-            seed = np.random.randint(0, 2 ** 32)
+            seed = np.random.randint(0, 2 ** 16)
         params = dict(  # noqa
             bwd_mode=backward_mode if self.backward else None,
             sigma_corr=softmax_scale,
