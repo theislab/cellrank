@@ -5,18 +5,19 @@ from abc import ABC, ABCMeta, abstractmethod
 from typing import Any, Dict, List, Tuple, Union, Iterable, Optional
 from inspect import isabstract
 
+import numpy as np
+import pandas as pd
+from scipy.sparse import issparse, spmatrix
+from pandas.api.types import is_categorical_dtype
+
 import matplotlib as mpl
 from matplotlib import cm
 
 import scvelo as scv
 from anndata import AnnData
 
-import numpy as np
-import pandas as pd
 import cellrank.logging as logg
-from scipy.sparse import issparse, spmatrix
 from cellrank.tools import Lineage
-from pandas.api.types import is_categorical_dtype
 from cellrank.utils._docs import d
 from cellrank.tools._utils import _make_cat, partition, _complex_warning
 from cellrank.tools.kernels import PrecomputedKernel
@@ -600,13 +601,18 @@ class Plottable(KernelHolder, Property):
                 kwargs["color_gradients"] = A
 
             if same_plot:
-                scv.pl.scatter(
-                    self.adata, title=title, color_map=cmap, **kwargs,
-                )
+                kwargs["color_gradients"] = A
             else:
-                scv.pl.scatter(
-                    self.adata, color=color, title=title, color_map=cmap, **kwargs
-                )
+                kwargs["color"] = color
+
+            if A.shape[1] == 1:
+                if "perc" not in kwargs:
+                    logg.debug("Did not detect percentile. Setting `perc=[0, 95]`")
+                    kwargs["perc"] = [0, 95]
+                kwargs["color"] = X
+                kwargs.pop("color_gradients", None)
+
+            scv.pl.scatter(self.adata, title=title, color_map=cmap, **kwargs)
         elif mode == "time":
             scv.pl.scatter(
                 self.adata,
@@ -755,6 +761,8 @@ class AbsProbs(Plottable):
             dtype=pd.Series,
             doc="Differentiation potential.",
         ),
+        Metadata(attr=A.MEAN_ABS_TIME, prop=P.MEAN_ABS_TIME, dtype=pd.Series,),
+        Metadata(attr=A.VAR_ABS_TIME, prop=P.VAR_ABS_TIME, dtype=pd.Series,),
     ]
 
     @abstractmethod

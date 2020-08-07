@@ -17,66 +17,36 @@ from typing import (
 )
 from itertools import tee, product, combinations
 
-import matplotlib.colors as mcolors
-
 import numpy as np
 import pandas as pd
 from pandas import Series
-from cellrank import logging as logg
 from numpy.linalg import norm as d_norm
-from scipy.linalg import solve
 from scipy.sparse import eye as speye
-from scipy.sparse import (
-    issparse,
-    spmatrix,
-    csc_matrix,
-    csr_matrix,
-    isspmatrix_csc,
-    isspmatrix_csr,
-)
+from scipy.sparse import issparse, spmatrix, csr_matrix
 from sklearn.cluster import KMeans
 from pandas.api.types import infer_dtype, is_categorical_dtype
 from sklearn.neighbors import NearestNeighbors
-from scipy.sparse.linalg import norm as s_norm
-from scipy.sparse.linalg import gmres, lgmres, gcrotmk, bicgstab
-from cellrank.utils._utils import (
-    _get_neighs,
-    _has_neighs,
-    _get_n_cores,
-    _get_neighs_params,
-)
+from scipy.sparse.linalg import norm as sparse_norm
+
+import matplotlib.colors as mcolors
+
+from cellrank import logging as logg
+from cellrank.utils._utils import _get_neighs, _has_neighs, _get_neighs_params
 from cellrank.tools._colors import (
     _compute_mean_color,
     _convert_to_hex_colors,
     _insert_categorical_colors,
 )
-from cellrank.utils._parallelize import parallelize
+from cellrank.tools._linear_solver import _invert_matrix
 
 AnnData = TypeVar("AnnData")
 ColorLike = TypeVar("ColorLike")
 GPCCA = TypeVar("GPCCA")
 CFLARE = TypeVar("CFLARE")
 DiGraph = TypeVar("DiGraph")
-LinSolver = TypeVar("LinSolver")
-Queue = TypeVar("Queue")
 KernelDirection = TypeVar("KernelDirection")
 
 EPS = np.finfo(np.float64).eps
-
-_DEFAULT_SOLVER = "gmres"
-_PETSC_ERROR_MSG_SHOWN = False
-_PETSC_ERROR_MSG = (
-    "Unable to import petsc4py. "
-    "For installation, please refer to: https://petsc4py.readthedocs.io/en/stable/install.html.\n"
-    "Defaulting to `{!r}` solver."
-)
-
-_AVAIL_ITER_SOLVERS = {
-    "gmres": gmres,
-    "lgmres": lgmres,
-    "bicgstab": bicgstab,
-    "gcrotmk": gcrotmk,
-}
 
 
 def _pairwise(iterable):
@@ -84,6 +54,11 @@ def _pairwise(iterable):
     a, b = tee(iterable)
     next(b, None)
     return zip(a, b)
+
+
+def _min_max_scale(c: np.ndarray) -> np.ndarray:
+    minn, maxx = np.nanmin(c), np.nanmax(c)
+    return (c - minn) / (maxx - minn)
 
 
 def _create_root_final_annotations(
@@ -675,7 +650,7 @@ def is_symmetric(
             is_sym = ((matrix != 0) == (matrix != 0).T).all()
     else:
         if issparse(matrix):
-            is_sym = s_norm((matrix - matrix.T), ord=ord) < eps
+            is_sym = sparse_norm((matrix - matrix.T), ord=ord) < eps
         else:
             is_sym = d_norm((matrix - matrix.T), ord=ord) < eps
 
@@ -1510,285 +1485,6 @@ def _get_cat_and_null_indices(
     return cat_indices, null_indices, lookup_dict
 
 
-def _solve_lin_system(
-    mat_a: Union[np.ndarray, spmatrix],
-    mat_b: Union[np.ndarray, spmatrix],
-    solver: str = _DEFAULT_SOLVER,
-    use_petsc: bool = False,
-    preconditioner: Optional[str] = None,
-    n_jobs: Optional[int] = None,
-    backend: str = "multiprocessing",
-    tol: float = 1e-5,
-    use_eye: bool = False,
-) -> np.ndarray:
-    """
-    Solve `mat_a * x = mat_b` efficiently using either iterative or direct methods.
-
-    This is a utility function which is optimized for the case of `mat_a` and `mat_b` being sparse,
-    and columns in `mat_b` being related. In that case, we can treat each column of `mat_b` as a
-    separate linear problem and solve that efficiently using iterative solvers that exploit sparsity.
-
-    If the columns of `mat_b` are related, we can use the solution of the previous problem as an
-    initial guess for the next problem. Further, we parallelize the individual problems for each
-    column in `mat_b` and solve them on separate kernels.
-
-    In case `mat_a` is either not sparse, or very small, or `mat_b` has very many columns, it makes
-    sense to use a direct solver instead which computes a matrix factorization and thereby solves all
-    sub-problems at the same time.
-
-    Parameters
-    ----------
-    mat_a
-        Matrix of shape `n x n`. We make no assumptions on `mat_a` being symmetric or positive definite.
-    mat_b
-        Matrix of shape `n x m`, with m << n.
-    solver
-        Solver to use for the linear problem. Options are `['direct', 'gmres', 'lgmres', 'bicgstab', 'gcrotmk']`
-        when :paramref:`use_petsc` or one of `petsc4py.PETSc.KPS.Type` otherwise.
-
-        Information on the :module:`scipy` iterative solvers can be found in :func:`scipy.sparse.linalg` or
-        for the :module:`petsc4py` solver in https://www.mcs.anl.gov/petsc/documentation/linearsolvertable.html.
-    use_petsc
-        Whether to use solvers from :module:`petsc4py` instead of :module:`scipy`. Recommended for large problems.
-    preconditioner
-        Preconditioner to use when :paramref:`use_petsc` `=True`.
-        For available preconditioners, see `petsc4py.PETSc.PC.Type`.
-    n_jobs
-        Number of parallel jobs to use when :paramref:`use_petsc` `=True`. For small, quickly-solvable problems,
-        we recommend high number (>=8) of cores in order to fully saturate them.
-    backend
-        Which backend to use for multiprocessing. See :class:`joblib.Parallel` for valid options.
-    tol
-        Convergence threshold.
-    use_eye
-        Solve `(I - mat_a) * x = mat_b` instead.
-
-    Returns
-    --------
-    :class:`numpy.ndarray`
-        Matrix of shape `n x m`. Each column corresponds to the solution of one of the sub-problems
-        defined via columns in `mat_b`.
-    """
-
-    def extractor(
-        res_converged: List[Tuple[np.ndarray, int]]
-    ) -> Tuple[np.ndarray, int]:
-        res, converged = zip(*res_converged)
-        return np.hstack(res), sum(converged)
-
-    n_jobs = _get_n_cores(n_jobs, n_jobs=None)
-
-    if use_petsc:
-        try:
-            from petsc4py import PETSc  # noqa
-        except ImportError:
-            global _PETSC_ERROR_MSG_SHOWN
-            if not _PETSC_ERROR_MSG_SHOWN:
-                _PETSC_ERROR_MSG_SHOWN = True
-                print(_PETSC_ERROR_MSG.format(_DEFAULT_SOLVER))
-            solver = _DEFAULT_SOLVER
-            use_petsc = False
-
-    if solver == "direct":
-        if issparse(mat_a):
-            logg.debug("Densifying `A` for direct solver")
-            mat_a = mat_a.toarray()
-        if issparse(mat_b):
-            logg.debug("Densifying `B` for direct solver")
-            mat_b = mat_b.toarray()
-
-        if use_eye:
-            mat_a = np.eye(mat_a.shape[0]) - mat_a
-
-        logg.debug("Solving the linear system using direct matrix factorisation")
-
-        return solve(mat_a, mat_b)
-
-    if use_petsc:
-        if not isspmatrix_csr(mat_a):
-            mat_a = csr_matrix(mat_a)
-        if use_eye:
-            mat_a = speye(mat_a.shape[0]) - mat_a
-
-        mat_b = mat_b.T
-        if not isspmatrix_csc(mat_b):
-            mat_b = csc_matrix(mat_b)
-
-        # as_array causes an issue, because it's called like this np.array([(NxM), (NxK), ....]
-        # in the end, we want array of shape Nx(M + K + ...) - this is ensured by the extractor
-        logg.debug(
-            f"Solving the linear system using `PETSc` solver `{('gmres' if solver is None else solver)!r}` "
-            f"on `{n_jobs}` core(s) with {'no' if preconditioner is None else preconditioner} preconditioner and "
-            f"`tol={tol}`"
-        )
-
-        # can't pass PETSc matrix - not pickleable
-        mat_x, n_converged = parallelize(
-            _solve_many_sparse_problems_petsc,
-            mat_b,
-            n_jobs=n_jobs,
-            backend=backend,
-            as_array=False,
-            extractor=extractor,
-        )(mat_a, solver=solver, preconditioner=preconditioner, tol=tol)
-    elif solver in _AVAIL_ITER_SOLVERS:
-        if not issparse(mat_a):
-            logg.debug("Sparsifying `A` for iterative solver")
-            mat_a = csr_matrix(mat_a)
-        if use_eye:
-            mat_a = speye(mat_a.shape[0]) - mat_a
-
-        mat_b = mat_b.T
-        if not issparse(mat_b):
-            logg.debug("Sparsifying `B` for iterative solver")
-            mat_b = csr_matrix(mat_b)
-
-        logg.debug(
-            f"Solving the linear system using `scipy` solver `{solver!r}` on `{n_jobs} cores(s)` "
-            f"with `tol={tol}`"
-        )
-
-        mat_x, n_converged = parallelize(
-            _solve_many_sparse_problems,
-            mat_b,
-            n_jobs=n_jobs,
-            backend=backend,
-            as_array=False,
-            extractor=extractor,
-        )(mat_a, solver=_AVAIL_ITER_SOLVERS[solver], tol=tol)
-
-    else:
-        raise NotImplementedError(f"The solver `{solver!r}` was not found.")
-
-    if n_converged != mat_b.shape[0]:
-        logg.warning(f"`{mat_b.shape[0] - n_converged}` solution(s) did not converge")
-
-    return mat_x
-
-
-def _solve_many_sparse_problems_petsc(
-    mat_b: csc_matrix,
-    mat_a: csc_matrix,
-    solver: Optional[str],
-    preconditioner: Optional[str],
-    tol: float,
-    queue: Queue,
-) -> Tuple[np.ndarray, int]:
-    """
-    Solver many problems using :module:`petsc4py` solver.
-
-    Parameters
-    ----------
-    mat_b
-        Matrix of shape `n x m`, with m << n.
-    mat_a
-        Matrix of shape `n x n`. We make no assumptions on `mat_a` being symmetric or positive definite.
-    solver
-        Solver to use. One of `petsc4py.PETSc.KSP.Type`. By default, use `PETSc.KSP.Type.GMRES`.
-    preconditioner
-        Preconditioner to use. If `None`, don't use any.
-    tol
-        Relative tolerance.
-    queue
-        Queue used to signal when a solution has been computed.
-
-    Returns
-    -------
-    :class:`numpy.ndarray`
-        Matrix of shape `n x m`. Each column in `mat_x` corresponds to the solution of one of the sub-problems
-    int
-        Number of converged solution.
-    """
-
-    from petsc4py import PETSc
-
-    if not isspmatrix_csr(mat_a):
-        raise TypeError("Expected `A` to be CSR sparse matrix.")
-    if not isspmatrix_csc(mat_b):
-        raise TypeError("Expected `B` to be CSC sparse matrix.")
-
-    A = PETSc.Mat().create()
-    A.createAIJ(size=mat_a.shape, csr=(mat_a.indptr, mat_a.indices, mat_a.data))
-
-    ksp = PETSc.KSP().create()
-    ksp.setTolerances(rtol=tol)
-    ksp.setType(solver if solver is not None else PETSc.KSP.Type.GMRES)
-    if preconditioner is not None:
-        ksp.getPC().setType(preconditioner)
-
-    ksp.setOperators(A)
-
-    x, b = A.getVecs()
-    xs, converged = [], 0
-
-    for value in mat_b:
-        x.set(1)  # reset the solution
-
-        b.set(0)
-        b.setValues(value.indices, value.data)
-
-        ksp.solve(b, x)
-
-        xs.append(x.getArray().copy().squeeze())
-        converged += ksp.converged
-        queue.put(1)
-
-    queue.put(None)
-
-    return np.stack(xs, axis=1), converged
-
-
-def _solve_many_sparse_problems(
-    mat_b: spmatrix, mat_a: spmatrix, solver: LinSolver, tol: float, queue: Queue,
-) -> Tuple[np.ndarray, int]:
-    """
-    Solve `mat_a * x = mat_b` efficiently using an iterative solver.
-
-    This is a utility function which is optimized for the case of `mat_a` and `mat_b` being sparse,
-    and columns in `mat_b` being related. In that case, we can treat each column of `mat_b` as a
-    separate linear problem and solve that efficiently using iterative solvers that exploit sparsity.
-
-    Parameters
-    ----------
-    mat_b
-        Matrix of shape `n x m`, with m << n.
-    mat_a
-        Matrix of shape `n x n`. We make no assumptions on `mat_a` being symmetric or positive definite.
-    solver
-        Solver to use for the linear problem. Valid options can be found in :func:`scipy.sparse.linalg`.
-    tol
-        Convergence threshold.
-    queue
-        Queue used to signal when a solution has been computed.
-
-    Returns
-    -------
-    :class:`numpy.ndarray`
-        Matrix of shape `n x m`. Each column in `mat_x` corresponds to the solution of one of the sub-problems
-        defined via columns in `mat_b`.
-    int
-        Number of converged solutions.
-    """
-
-    # initialise solution list and info list
-    x_list, n_converged = [], 0
-    kwargs = {} if solver is not gmres else {"atol": "legacy"}  # get rid of the warning
-
-    for b in mat_b:
-        # actually call the solver for the current sub-problem
-        x, info = solver(mat_a, b.toarray().flatten(), tol=tol, x0=None, **kwargs)
-
-        # append solution and info
-        x_list.append(x)
-        n_converged += info == 0
-
-        queue.put(1)
-
-    queue.put(None)
-
-    return np.stack(x_list, axis=1), n_converged
-
-
 def _check_estimator_type(estimator: Any) -> None:
     from cellrank.tools.estimators._base_estimator import (
         BaseEstimator,
@@ -1812,3 +1508,33 @@ def _densify_squeeze(x: Union[spmatrix, np.ndarray], dtype=np.float32) -> np.nda
         x = np.squeeze(x, axis=1)
 
     return x[:].astype(dtype)
+
+
+def _calculate_absorption_time_moments(
+    q: Union[np.ndarray, spmatrix],
+    s: Union[np.ndarray, spmatrix],
+    rec_indices: np.ndarray,
+    trans_indices: np.ndarray,
+    **kwargs,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def calculate() -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        I = speye(q.shape[0])  # noqa
+        N = _invert_matrix(I - q, **kwargs)  # fundamental matrix
+
+        abs_probs = N @ s
+        mean = N.dot(np.ones(N.shape[0]))
+        var = (2 * N - I).dot(mean) - (mean ** 2)
+
+        return abs_probs, mean, np.array(var, copy=False).squeeze()
+
+    ap, m, v = calculate()
+    m, v = _min_max_scale(m), _min_max_scale(v)
+
+    n = len(rec_indices) + len(trans_indices)
+    mean = np.ones(n, dtype=np.float32)
+    var = np.zeros(n, dtype=np.float32)
+
+    mean[trans_indices] = 1 - m
+    var[trans_indices] = v
+
+    return ap, mean, var
