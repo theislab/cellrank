@@ -4,12 +4,11 @@ from copy import copy, deepcopy
 from math import fsum
 from typing import Any, Union, Callable, Iterable, Optional
 
-import numpy as np
-from scipy.sparse import issparse, csr_matrix
-
 from scvelo.preprocessing.moments import get_moments
 
+import numpy as np
 from cellrank import logging as logg
+from scipy.sparse import issparse, csr_matrix
 from cellrank.utils._docs import d, inject_docs
 from cellrank.utils._utils import valuedispatch
 from cellrank.tools.kernels import Kernel
@@ -164,7 +163,7 @@ class VelocityKernel(Kernel):
     @inject_docs(m=VelocityMode)
     def compute_transition_matrix(
         self,
-        mode: str = "monte_carlo",
+        mode: str = VelocityMode.DETERMINISTIC.s,
         backward_mode: str = "transpose",
         softmax_scale: float = 4.0,
         n_samples: int = 1000,
@@ -186,7 +185,7 @@ class VelocityKernel(Kernel):
                 - `{m.DETERMINISTIC.s!r}` - deterministic computation that doesn't propagate uncertainty
                 - `{m.MONTE_CARLO.s!r}` - Monte Carlo average of randomly sampled velocity vectors
                 - `{m.STOCHASTIC.s!r}` - second order approximation, only available when :module:`jax` is installed.
-                - `{m.SAMPLING.s!r}` - sample from velocity distribution
+                - `{m.SAMPLING.s!r}` - sample 1 transition matrix from velocity distribution
                 - `{m.PROPAGATION.s!r}` - same as `{m.MONTE_CARLO!r}`, but does not average the vectors.
                     Instead, it saves the sampled transition matrices to :paramref:`_t_mats` to be used
                     for later uncertainty estimation. It is generally faster then `{m.MONTE_CARLO.s!r}`,
@@ -196,8 +195,7 @@ class VelocityKernel(Kernel):
         softmax_scale
             Scaling parameter for the softmax.
         n_samples
-            Number of bootstrap samples when :paramref:`mode` is `{m.SAMPLING.s!r}`,
-            `{m.MONTE_CARLO.s!r}` or `{m.PROPAGATION.s!r}`.
+            Number of bootstrap samples when :paramref:`mode` is `{m.MONTE_CARLO.s!r}` or `{m.PROPAGATION.s!r}`.
         seed
             Set the seed for random state when the method requires :paramref:`n_samples`.
         use_numba
@@ -323,12 +321,11 @@ def _dispatch_computation(mode, *_args, **_kwargs):
 
 def _run_in_parallel(fn: Callable, conn: csr_matrix, **kwargs) -> Any:
     def extractor(res):
-        assert res[0].ndim in (2, 3)
+        assert res[0].ndim in (2, 3), f"Dimension mismatch: `{res[0].ndim}`"
 
-        res = np.concatenate(res, axis=0 - (res[0].ndim == 3))
+        res = np.concatenate(res, axis=-1)
         if res.shape[0] == 1:
-            assert kwargs.get("average", True), "Only averaging is supported."
-            # sampling, MC
+            # sampling, MC, propagation with only 1
             res = res[0]
 
         return _reconstruct_matrices(
@@ -379,9 +376,7 @@ def _run(fn: Callable, **kwargs) -> Any:
         # can be disabled because of 2 reasons: numba is not installed or manually disabled
         # remove the outer numba loop
         if use_numba is not None and hasattr(fn, "py_func"):
-            logg.debug(
-                f"Disabling top level numba jitting for function `{fn.__name__!r}`"
-            )
+            logg.debug(f"Disabling numba jitting for function `{fn.__name__!r}`")
             fn = fn.py_func
         return _run_in_parallel(fn, conn, **kwargs)
 
@@ -407,7 +402,7 @@ def _run_deterministic(
     starts = _calculate_starts(indptr, ixs)
     probs_cors = np.empty((2, starts[-1]))
 
-    for i in prange(indptr.shape[0] - 1):
+    for i in prange(len(ixs)):
         ix = ixs[i]
         start, end = indptr[ix], indptr[ix + 1]
         nbhs_ixs = indices[start:end]
@@ -415,7 +410,6 @@ def _run_deterministic(
         W = expression[nbhs_ixs, :] - expression[ix, :]
 
         if not backward or (backward and backward_mode == "negate"):
-            # evaluate the prediction at the actual velocity vector
             v = np.expand_dims(velocity[ix], 0)
 
             # for the transpose backward mode, just flip the velocity vector
