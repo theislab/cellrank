@@ -96,8 +96,8 @@ def cluster_fates(
         Size of the figure.
     legend_kwargs
         Keyword arguments for :func:`matplotlib.axes.Axes.legend`, such as `'loc'` for legend position.
-        For `mode={m.PAGA_PIE.s!r}` and `basis='...'`, this controls the placement of
-        the absorption probabilities legend.
+        For `mode={m.PAGA_PIE.s!r}` and `basis='...'`, this controls the placement of the
+        absorption probabilities legend.
     %(plotting)s
     **kwargs
         Keyword arguments for :func:`scvelo.pl.paga`, :func:`scanpy.pl.violin` or :func:`matplotlib.pyplot.bar`,
@@ -169,7 +169,7 @@ def cluster_fates(
             constrained_layout=True,
             dpi=dpi,
         )
-        # fig.tight_layout()
+        # fig.tight_layout()  can't use this because colorbar.make_axes fails
 
         i = 0
         axes = [axes] if not isinstance(axes, np.ndarray) else np.ravel(axes)
@@ -209,6 +209,7 @@ def cluster_fates(
         colors = {i: odict(zip(colors, mean)) for i, (mean, _) in enumerate(d.values())}
 
         fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
+        fig.tight_layout()
 
         kwargs["ax"] = ax
         kwargs["show"] = False
