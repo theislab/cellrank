@@ -6,9 +6,11 @@ from typing import Any, Dict, List, Tuple, Union, Mapping, TypeVar, Optional, Se
 
 import numpy as np
 import pandas as pd
+from sklearn.ensemble import RandomForestRegressor
+from statsmodels.stats.multitest import multipletests
+
 from cellrank import logging as logg
 from cellrank.tools import GPCCA
-from sklearn.ensemble import RandomForestRegressor
 from cellrank.utils._docs import d
 from cellrank.utils._utils import _get_n_cores, check_collection
 from cellrank.utils.models import Model
@@ -16,10 +18,10 @@ from cellrank.tools.kernels import ConnectivityKernel
 from cellrank.plotting._utils import _model_type, _create_models, _is_any_gam_mgcv
 from cellrank.tools._constants import AbsProbKey
 from cellrank.utils._parallelize import parallelize
-from statsmodels.stats.multitest import multipletests
 from cellrank.tools.estimators._constants import P
 
 AnnData = TypeVar("AnnData")
+Queue = TypeVar("Queue")
 
 
 def _gi_permute(
@@ -28,7 +30,7 @@ def _gi_permute(
     x: np.ndarray,
     y: np.ndarray,
     seed: Optional[int],
-    queue,
+    queue: Optional[Queue],
     **kwargs,
 ) -> List[np.ndarray]:
     """
