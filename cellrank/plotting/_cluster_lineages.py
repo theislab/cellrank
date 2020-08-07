@@ -6,10 +6,9 @@ from typing import Dict, Tuple, Union, TypeVar, Optional, Sequence
 from pathlib import Path
 from collections import Iterable
 
-import numpy as np
-
 import matplotlib.pyplot as plt
 
+import numpy as np
 from cellrank import logging as logg
 from cellrank.utils._docs import d
 from cellrank.tools._utils import save_fig
@@ -20,6 +19,7 @@ from cellrank.utils._parallelize import parallelize
 from cellrank.utils.models._models import Model
 
 AnnData = TypeVar("AnnData")
+Queue = TypeVar("Queue")
 
 
 def _cl_process(
@@ -27,7 +27,7 @@ def _cl_process(
     models: Dict[str, Dict[str, Model]],
     lineage_name: str,
     norm: str,
-    queue,
+    queue: Optional[Queue],
     **kwargs,
 ) -> np.ndarray:
     """
@@ -58,8 +58,11 @@ def _cl_process(
     for gene in genes:
         model = models[gene][lineage_name].prepare(gene, lineage_name, **kwargs).fit()
         res.append(model.predict())
-        queue.put(1)
-    queue.put(None)
+        if queue is not None:
+            queue.put(1)
+
+    if queue is not None:
+        queue.put(None)
 
     res = np.squeeze(np.array(res))
 

@@ -17,19 +17,18 @@ from typing import (
 from pathlib import Path
 from collections import defaultdict
 
-import numpy as np
-from scipy.sparse import diags
-from pandas.core.dtypes.common import is_categorical_dtype
-
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 
+import numpy as np
+from scipy.sparse import diags
 from cellrank.utils._docs import d
 from cellrank.tools._utils import save_fig, _unique_order_preserving
 from cellrank.utils.models import Model, GamMGCVModel
 from cellrank.tools.kernels import PrecomputedKernel
 from cellrank.tools._constants import _colors
+from pandas.core.dtypes.common import is_categorical_dtype
 from cellrank.tools.estimators._cflare import CFLARE
 
 AnnData = TypeVar("AnnData")
@@ -420,8 +419,12 @@ def _fit(
                 model.confidence_interval()
 
             res[gene][ln] = model
-        queue.put(1)
-    queue.put(None)
+
+        if queue is not None:
+            queue.put(1)
+
+    if queue is not None:
+        queue.put(None)
 
     return res
 
