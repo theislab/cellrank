@@ -8,6 +8,7 @@ from multiprocessing import Manager
 import numpy as np
 import joblib as jl
 from scipy.sparse import issparse, spmatrix
+
 from cellrank.utils._utils import _get_n_cores
 
 _msg_shown = False
@@ -104,15 +105,13 @@ def parallelize(
             pbar.close()
 
     def wrapper(*args, **kwargs):
-        pbar = None if tqdm is None else tqdm(total=col_len, unit=unit)
-
-        # TODO: or show_progress_bar is None - no communication (will be a bit faster)
         if pass_queue and show_progress_bar:
+            pbar = None if tqdm is None else tqdm(total=col_len, unit=unit)
             queue = Manager().Queue()
             thread = Thread(target=update, args=(pbar, queue, len(collections)))
             thread.start()
         else:
-            queue, thread = None, None
+            pbar, queue, thread = None, None, None
 
         res = jl.Parallel(n_jobs=n_jobs, backend=backend)(
             jl.delayed(callback)(
