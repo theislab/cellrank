@@ -208,7 +208,7 @@ class KernelHolder(ABC):
                 )
             elif obsp_key not in obj.obsp.keys():
                 raise KeyError(f"Key `{obsp_key!r}` not found in `adata.obsp`.")
-            self._kernel = PrecomputedKernel(obj.obsp[obsp_key])
+            self._kernel = PrecomputedKernel(obj.obsp[obsp_key], adata=obj)
         else:
             raise TypeError(f"Unsupported type: `{type(obj).__name__!r}`.")
 
@@ -591,13 +591,17 @@ class Plottable(KernelHolder, Property):
             title = cluster_key + title
 
         if mode == "embedding":
+            if A.shape[1] == 1:
+                if "perc" not in kwargs:
+                    logg.debug("Did not detect percentile. Setting `perc=[0, 95]`")
+                    kwargs["perc"] = [0, 95]
+                kwargs["color"] = X
+            else:
+                kwargs["color_gradients"] = A
+
             if same_plot:
                 scv.pl.scatter(
-                    self.adata,
-                    title=title,
-                    color_gradients=A,
-                    color_map=cmap,
-                    **kwargs,
+                    self.adata, title=title, color_map=cmap, **kwargs,
                 )
             else:
                 scv.pl.scatter(

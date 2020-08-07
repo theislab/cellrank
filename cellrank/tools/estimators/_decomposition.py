@@ -4,13 +4,12 @@ from abc import ABC
 from typing import Any, Tuple, Union, Mapping, Optional
 from pathlib import Path
 
-import numpy as np
-from scipy.sparse.linalg import eigs
-
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+import numpy as np
 from cellrank import logging as logg
+from scipy.sparse.linalg import eigs
 from cellrank.utils._docs import d, inject_docs
 from cellrank.tools._utils import save_fig, _eigengap
 from cellrank.tools.estimators._utils import Metadata, _delegate
@@ -29,7 +28,7 @@ class Decomposable(KernelHolder, Property, ABC):
         setattr(self, A.EIG.s, eig)
         self.adata.uns[f"eig_{self._direction}"] = eig
 
-        logg.debug(f"Adding `.{P.EIG}`" f"       `adata.uns['eig_{self._direction}']`")
+        logg.info(f"Adding `.{P.EIG}`\n       `adata.uns['eig_{self._direction}']`")
 
 
 class Eigen(VectorPlottable, Decomposable):

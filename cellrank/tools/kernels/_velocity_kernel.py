@@ -1,23 +1,33 @@
 # -*- coding: utf-8 -*-
 """Velocity kernel module."""
-from copy import copy
+from copy import copy, deepcopy
 from math import fsum
-from typing import List, Iterable, Optional
-from inspect import signature
-from functools import partial
-
-import numpy as np
-from scipy.sparse import issparse, spmatrix, csr_matrix
+from typing import Union, Callable, Iterable, Optional
 
 from scvelo.preprocessing.moments import get_moments
 
+import numpy as np
 from cellrank import logging as logg
-from cellrank.utils._docs import d
-from cellrank.tools._utils import _predict_transition_probabilities
+from scipy.sparse import issparse, csr_matrix
+from cellrank.utils._docs import d, inject_docs
 from cellrank.utils._utils import valuedispatch
 from cellrank.tools.kernels import Kernel
 from cellrank.tools._constants import ModeEnum, Direction
 from cellrank.utils._parallelize import parallelize
+from cellrank.tools.kernels._utils import (
+    _HAS_JAX,
+    _HAS_NUMBA,
+    njit,
+    prange,
+    jit_kwargs,
+    _filter_kwargs,
+    _random_normal,
+    _calculate_starts,
+    _reconstruct_matrices,
+    _get_probs_for_zero_vec,
+    _predict_transition_probabilities_jax_H,
+    _predict_transition_probabilities_numpy,
+)
 from cellrank.tools.kernels._base_kernel import (
     _LOG_USING_CACHE,
     _ERROR_EMPTY_CACHE_MSG,
@@ -34,6 +44,7 @@ class VelocityMode(ModeEnum):
     STOCHASTIC = "stochastic"
     SAMPLING = "sampling"
     MONTE_CARLO = "monte_carlo"
+    PROPAGATION = "propagation"
 
 
 @d.dedent
@@ -92,6 +103,9 @@ class VelocityKernel(Kernel):
         self._gene_subset = gene_subset
         self._pearson_correlations = None
 
+        self._tmas = None
+        self._pcors = None
+
     def _read_from_adata(self, **kwargs):
         super()._read_from_adata(**kwargs)
 
@@ -132,25 +146,29 @@ class VelocityKernel(Kernel):
             V = V[:, ~nans]
 
         # check the velocity parameters
-        if vkey + "_params" in self.adata.uns.keys():
-            velocity_params = self.adata.uns[vkey + "_params"]
+        par_key = f"{vkey}_params"
+        if par_key in self.adata.uns.keys():
+            velocity_params = self.adata.uns[par_key]
         else:
             velocity_params = None
-            logg.debug("Unable to load velocity parameters")
+            logg.debug(
+                f"Unable to load velocity parameters from `adata.uns[{par_key}!]`"
+            )
 
         # add to self
-        self._velocity = V
-        self._gene_expression = X
+        self._velocity = V.astype(np.float64)
+        self._gene_expression = X.astype(np.float64)
         self._velocity_params = velocity_params
 
     @d.dedent
+    @inject_docs(m=VelocityMode)
     def compute_transition_matrix(
         self,
         backward_mode: str = "transpose",
         softmax_scale: float = 4.0,
         mode: str = "deterministic",
-        seed: Optional[int] = None,
         n_samples: int = 1000,
+        seed: Optional[int] = None,
         **kwargs,
     ) -> "VelocityKernel":
         """
@@ -166,7 +184,13 @@ class VelocityKernel(Kernel):
         softmax_scale
             Scaling parameter for the softmax.
         mode
-            How to compute transition probabilities. Options are "stochastic" (propagate uncertainty analytically),
+            How to compute transition probabilities. Valid options are:
+
+                - `{m.DETERMINISTIC.s!r}`
+                - `{m.MONTE_CARLO.s!r}`
+                - `{m.STOCHASTIC.s!r}`
+                - `{m.SAMPLING.s!r}`
+                - `{m.PROPAGATION.s!r}`
             "deterministic" (don't propagate uncertainty) and "sampling" (sample from velocity distribution).
         n_samples
             Number of bootstrap samples when :paramref:`mode` `='monte_carlo'`.
@@ -202,8 +226,8 @@ class VelocityKernel(Kernel):
         )
 
         # check whether we already computed such a transition matrix. If yes, load from cache
-        if params == self._params:
-            assert self.transition_matrix is not None, _ERROR_EMPTY_CACHE_MSG
+        if params == self._params and False:
+            assert self._transition_matrix is not None, _ERROR_EMPTY_CACHE_MSG
             logg.debug(_LOG_USING_CACHE, time=start)
             logg.info("    Finish", time=start)
             return self
@@ -215,11 +239,13 @@ class VelocityKernel(Kernel):
         np.random.seed(seed)
         velocity_expectation = get_moments(
             self.adata, self._velocity, second_order=False
-        )
-        velocity_variance = get_moments(self.adata, self._velocity, second_order=True)
+        ).astype(np.float64)
+        velocity_variance = get_moments(
+            self.adata, self._velocity, second_order=True
+        ).astype(np.float64)
 
-        t_mat, corrs_mat = _dispatch_computation(
-            VelocityMode(mode),
+        tmat, cmat = _dispatch_computation(
+            mode,
             conn=self._conn,
             expression=self._gene_expression,
             velocity=self._velocity,
@@ -228,11 +254,16 @@ class VelocityKernel(Kernel):
             softmax_scale=softmax_scale,
             backward=self.backward,
             backward_mode=backward_mode,
+            n_samples=n_samples,
+            seed=seed,
             **kwargs,
         )
+        if isinstance(tmat, (tuple, list)):
+            self._mats, self._cots = tmat, cmat
+            tmat, cmat = tmat[0], cmat[0]
 
-        self._compute_transition_matrix(t_mat, density_normalize=False)
-        self._pearson_correlations = corrs_mat
+        self._compute_transition_matrix(tmat, density_normalize=False)
+        self._pearson_correlations = cmat
 
         logg.info("    Finish", time=start)
 
@@ -255,18 +286,10 @@ class VelocityKernel(Kernel):
         vk._params = copy(self.params)
         vk._cond_num = self.condition_number
         vk._transition_matrix = copy(self._transition_matrix)
-        vk._pearson_correlations = copy(self.pearson_correlations)
+        vk._tmats = deepcopy(self.pearson_correlations)
+        vk._porcs = deepcopy(self.pearson_correlations)
 
         return vk
-
-
-def _get_displacement(ix, conn, expression):
-    nbhs_ixs = conn[ix, :].indices
-
-    # get the displacement matrix. Changing dimensions b/c varying numbers of neighbors slow down autograd
-    W = expression[nbhs_ixs, :] - expression[ix, :]
-
-    return W, nbhs_ixs
 
 
 @valuedispatch
@@ -274,220 +297,275 @@ def _dispatch_computation(mode, *_args, **_kwargs):
     raise NotImplementedError(mode)
 
 
-def _run_in_parallel(fn, conn, sort_by_neighbors: bool = False, **kwargs):
-    def _to_csr_matrix(data: List[float], mat: csr_matrix):
-        return csr_matrix((data, mat.indices, mat.indptr))
+def _run_in_parallel(fn: Callable, conn: csr_matrix, **kwargs):
+    def extractor(res):
+        assert res[0].ndim in (2, 3)
 
-    if not sort_by_neighbors:
+        res = np.concatenate(res, axis=0 - (res[0].ndim == 3))
+        if res.shape[0] == 1:
+            # sampling, MC
+            res = res[0]
+
+        return _reconstruct_matrices(res, conn, resort_ixs)
+
+    fname = fn.__name__
+    if not kwargs.get("average", True):
+        assert fname == "_run_mc", "Invalid function."
         ixs = np.arange(conn.shape[0])
+        resort_ixs = None
+        unit = "sample"
     else:
-        n_neighbors = np.array((conn != 0).sum(1)).flatten()
-        ixs = np.argsort(n_neighbors)[::-1]
+        ixs = np.argsort(np.array((conn != 0).sum(1)).ravel())
+        resort_ixs = ixs
+        unit = (
+            "sample"
+            if (fname == "_run_mc") and kwargs.get("n_samples", 1) > 1
+            else "cell"
+        )
 
-    params = signature(parallelize).parameters
-    res = parallelize(
+    kwargs["indices"] = conn.indices
+    kwargs["indptr"] = conn.indptr
+
+    return parallelize(
         fn,
         ixs,
-        as_array=True,
-        extractor=np.vstack,
-        unit="cell",
-        **{k: v for k, v in kwargs.items() if k in params},
-    )()
-    assert res.ndim == 2 and res.shape[1] == 2, "Sanity check failed."
-    probs, cors = res[:, 0], res[:, 1]
-
-    if not sort_by_neighbors:
-        return _to_csr_matrix(probs, conn), _to_csr_matrix(cors, conn)
-
-    conn = conn[ixs, :][:, ixs]  # get the correct indices and indptrs
-    aixs = np.argsort(ixs)
-
-    probs, conn = _to_csr_matrix(probs, conn), _to_csr_matrix(cors, conn)
-
-    return probs[aixs, :][:, aixs], conn[aixs, :][:, aixs]
+        as_array=False,
+        extractor=extractor,
+        unit=unit,
+        **_filter_kwargs(parallelize, **kwargs),
+    )(**_filter_kwargs(fn, **kwargs))
 
 
-@_dispatch_computation.register(VelocityMode.MONTE_CARLO)
-def _(
-    conn: csr_matrix,
-    expression: np.ndarray,
-    expectation: np.ndarray,
-    variance: np.ndarray,
-    n_samples: int = 1,
-    softmax_scale: float = 1,
-    **kwargs,
-):
-    def runner(ixs, queue):
-        probs, cors = [], []
+def _run(fn: Callable, **kwargs):
 
-        for ix in ixs:
-            W, nbhs_ixs = _get_displacement(ix, conn, expression)
-            v = _random_normal(expectation[ix], variance[ix], n_samples=n_samples)
+    use_numba = kwargs.pop("use_numba", _HAS_NUMBA) and _HAS_NUMBA
+    conn = kwargs.pop("conn")
 
-            p, c = _predict_transition_probabilities(v, W, softmax_scale=softmax_scale,)
-            probs.extend(p)
-            cors.extend(c)
+    kwargs["indices"] = conn.indices
+    kwargs["indptr"] = conn.indptr
 
-            queue.put(1)
+    if fn is _run_stochastic and not _HAS_JAX:
+        raise RuntimeError("Install `jax` and `jaxlib` as `pip install jax jaxlib`.")
 
-        queue.put(None)
+    if not use_numba:
+        if hasattr(fn, "py_func"):
+            fn = fn.py_func
+        # can be disabled because of 2 reasons: numba is not installed or manually disabled
+        return _run_in_parallel(
+            fn, conn, **kwargs
+        )  # TODO: should be handled by show progress bar
 
-        return np.c_[probs, cors]
+    kwargs["ixs"] = np.arange(conn.shape[0], dtype=np.int32)
+    ks = _filter_kwargs(fn, **kwargs)
 
-    return _run_in_parallel(runner, conn, **kwargs)
+    return _reconstruct_matrices(fn(**ks), conn, ixs=None)
 
 
-@_dispatch_computation.register(VelocityMode.SAMPLING)
-def _(
-    conn: csr_matrix,
-    expression: np.ndarray,
-    expectation: np.ndarray,
-    variance: np.ndarray,
-    n_samples: int = 1,
-    softmax_scale: float = 1,
-    **kwargs,
-):
-    loc = locals()
-    loc["n_samples"] = 1
-    _ = loc.pop("kwargs")
-    return _dispatch_computation(VelocityMode.MONTE_CARLO, **loc, **kwargs)
-
-
-@_dispatch_computation.register(VelocityMode.DETERMINISTIC)
-def _(
-    conn: spmatrix,
+@njit(parallel=True, **jit_kwargs)
+def _run_deterministic(
+    ixs: Union[prange, np.ndarray],
+    indices: np.ndarray,
+    indptr: np.ndarray,
     expression: np.ndarray,
     velocity: np.ndarray,
     backward: bool = False,
     backward_mode: str = "negate",
     softmax_scale: float = 1,
-    **kwargs,
-):
-    def runner(ixs, queue):
-        probs, cors = [], []
+    queue=None,
+) -> np.ndarray:
 
-        for ix in ixs:
-            W, nbhs_ixs = _get_displacement(ix, conn, expression)
+    starts = _calculate_starts(indptr, ixs)
+    probs_cors = np.empty((2, starts[-1]))
 
-            if not backward or (backward and backward_mode == "negate"):
-                # evaluate the prediction at the actual velocity vector
-                v = velocity[ix]
+    for i in prange(indptr.shape[0] - 1):
+        ix = ixs[i]
+        start, end = indptr[ix], indptr[ix + 1]
+        nbhs_ixs = indices[start:end]
+        n_neigh = len(nbhs_ixs)
+        W = expression[nbhs_ixs, :] - expression[ix, :]
 
-                # for the transpose backward mode, just flip the velocity vector
-                if backward:
-                    v *= -1
+        if not backward or (backward and backward_mode == "negate"):
+            # evaluate the prediction at the actual velocity vector
+            v = np.expand_dims(velocity[ix], 0)
 
-                if np.all(v == 0):
-                    p, c = _get_probs_for_zero_vec(len(nbhs_ixs))
-                else:
-                    p, c = _predict_transition_probabilities(
-                        v, W, softmax_scale=softmax_scale,
-                    )
+            # for the transpose backward mode, just flip the velocity vector
+            if backward:
+                v *= -1
+
+            if np.all(v == 0):
+                p, c = _get_probs_for_zero_vec(len(nbhs_ixs))
             else:
-                # compute how likely all neighbors are to transition to this cell
-                V = velocity[nbhs_ixs, :]
-                p, c = _predict_transition_probabilities(
-                    V, -1 * W, softmax_scale=softmax_scale,
+                p, c = _predict_transition_probabilities_numpy(
+                    v, W, softmax_scale=softmax_scale,
                 )
+        else:
+            # compute how likely all neighbors are to transition to this cell
+            V = velocity[nbhs_ixs, :]
+            p, c = _predict_transition_probabilities_numpy(
+                V, -1 * W, softmax_scale=softmax_scale,
+            )
 
-            probs.extend(p)
-            cors.extend(p)
+        probs_cors[0, starts[i] : starts[i] + n_neigh] = p
+        probs_cors[1, starts[i] : starts[i] + n_neigh] = c
 
+        if queue is not None:
             queue.put(1)
 
+    if queue is not None:
         queue.put(None)
 
-        return np.c_[probs, cors]
-
-    return _run_in_parallel(runner, conn, **kwargs)
+    return probs_cors
 
 
-@_dispatch_computation.register(VelocityMode.STOCHASTIC)
-def _(
-    conn: spmatrix,
+@njit(parallel=True, **jit_kwargs)
+def _run_mc(
+    ixs: Optional[np.ndarray],
+    indices: np.ndarray,
+    indptr: np.ndarray,
+    expression: np.ndarray,
+    expectation: np.ndarray,
+    variance: np.ndarray,
+    n_samples: int = 1,
+    average: bool = False,
+    softmax_scale: float = 1,
+    seed: Optional[int] = None,
+    queue=None,
+) -> np.ndarray:
+
+    starts = _calculate_starts(indptr, ixs)
+    if average:
+        probs_cors = np.empty((1, 2, starts[-1]))
+    else:
+        probs_cors = np.empty((n_samples, 2, starts[-1]))
+
+    for i in prange(len(ixs)):
+        ix = ixs[i]
+        if seed is not None:
+            seed += ix
+
+        start, end = indptr[ix], indptr[ix + 1]
+        nbhs_ixs = indices[start:end]
+        n_neigh = len(nbhs_ixs)
+        # get the displacement matrix. Changing dimensions b/c varying numbers of neighbors slow down autograd
+        W = expression[nbhs_ixs, :] - expression[ix, :]
+
+        if average:
+            v = np.atleast_2d(
+                _random_normal(
+                    expectation[ix], variance[ix], n_samples=n_samples, seed=seed
+                )
+            )
+
+            p, c = _predict_transition_probabilities_numpy(
+                v, W, softmax_scale=softmax_scale
+            )
+
+            probs_cors[0, starts[i] : starts[i] + n_neigh] = p
+            probs_cors[1, starts[i] : starts[i] + n_neigh] = c
+        else:
+            samples = _random_normal(
+                expectation[ix], variance[ix], n_samples=n_samples, average=False
+            )
+            for j in prange(samples.shape[0]):
+                prob, cor = _predict_transition_probabilities_numpy(
+                    np.atleast_2d(samples[j]), W, softmax_scale=softmax_scale
+                )
+                probs_cors[j, 0, starts[i] : starts[i] + n_neigh] = prob
+                probs_cors[j, 1, starts[i] : starts[i] + n_neigh] = cor
+
+        if queue is not None:
+            queue.put(1)
+
+    if queue is not None:
+        queue.put(None)
+
+    return probs_cors
+
+
+def _run_stochastic(
+    ixs: np.ndarray,
+    indices: np.ndarray,
+    indptr: np.ndarray,
     expression: np.ndarray,
     expectation: np.ndarray,
     variance: np.ndarray,
     softmax_scale: float = 1,
-    **kwargs,
-):
-    def runner(ixs, queue):
-        from jax import jit, jacfwd, jacrev
+    queue=None,
+) -> np.ndarray:
 
-        get_hessian_fwd = jit(jacfwd(jacrev(_predict_transition_probabilities_jax)))
+    # TODO: can't use numba yet, since we rely on JAX for hessians
+    starts = _calculate_starts(indptr, ixs)
+    probs_cors = np.empty((2, starts[-1]))
 
-        probs, cors = [], []
+    for i, ix in enumerate(ixs):
+        start, end = indptr[ix], indptr[ix + 1]
+        nbhs_ixs = indices[start:end]
+        n_neigh = len(nbhs_ixs)
+        v = expectation[ix]
 
-        for ix in ixs:
-            v = expectation[ix]
-            W, nbhs_ixs = _get_displacement(ix, conn, expression)
+        if np.all(v == 0):
+            p, c = _get_probs_for_zero_vec(len(nbhs_ixs))
+        else:
+            # compute the Hessian tensor, and turn it into a matrix that has the diagonal elements in its rows
+            W = expression[nbhs_ixs, :] - expression[ix, :]
 
-            if np.all(v == 0):
+            H = _predict_transition_probabilities_jax_H(
+                v, W, softmax_scale=softmax_scale
+            )
+            H_diag = np.array([np.diag(h) for h in H])
+
+            # compute zero order term
+            p_0, c = _predict_transition_probabilities_numpy(
+                v[None, :], W, softmax_scale=softmax_scale
+            )
+
+            # compute second order term (note that the first order term cancels)
+            p_2 = 0.5 * H_diag.dot(variance[ix])
+
+            # combine both to give the second order Taylor approximation. Can sometimes be negative because we
+            # neglected higher order terms, so force it to be non-negative
+            p = np.clip(p_0 + p_2, a_min=0, a_max=1)
+
+            mask = np.isnan(p)
+            p[mask] = 0
+            c[mask] = 0
+
+            if np.all(p == 0):
                 p, c = _get_probs_for_zero_vec(len(nbhs_ixs))
-                sum_ = fsum(p)
-                if not np.isclose(sum_, 1.0, rtol=TOL):
-                    p /= sum_
-            else:
-                # get the variance of the distribution over velocity vectors
-                variances = variance[ix]
 
-                # compute the Hessian tensor, and turn it into a matrix that has the diagonal elements in its rows
-                H = get_hessian_fwd(v, W, softmax_scale)
-                H_diag = np.concatenate([np.diag(h)[None, :] for h in H])
+            sum_ = fsum(p)
+            if not np.isclose(sum_, 1.0, rtol=TOL):
+                p[~mask] = p[~mask] / sum_
 
-                # compute zero order term
-                p_0, c = _predict_transition_probabilities(
-                    v, W, softmax_scale=softmax_scale,
-                )
+        probs_cors[0, starts[i] : starts[i] + n_neigh] = p
+        probs_cors[1, starts[i] : starts[i] + n_neigh] = c
 
-                # compute second order term (note that the first order term cancels)
-                p_2 = 0.5 * H_diag.dot(variances)
+        queue.put(1)
 
-                # combine both to give the second order Taylor approximation. Can sometimes be negative because we
-                # neglected higher order terms, so force it to be non-negative
-                p = np.clip(p_0 + p_2, a_min=0, a_max=1)
-                mask = np.isnan(p)
-                p[mask] = 0
+    queue.put(None)
 
-                if np.all(p == 0):
-                    p, c = _get_probs_for_zero_vec(len(nbhs_ixs))
-
-                sum_ = fsum(p)
-                if not np.isclose(sum_, 1.0, rtol=TOL):
-                    p[~mask] = p[~mask] / sum_
-
-            probs.extend(p.astype(np.float64))  # can be float32 from JAX
-            cors.extend(c.astype(np.float64))
-
-            queue.put(1)
-
-        queue.put(None)
-
-        return np.c_[probs, cors]
-
-    return _run_in_parallel(runner, conn, sort_by_neighbors=True, **kwargs)
+    return probs_cors
 
 
-def _get_probs_for_zero_vec(size: int):
-    # float32 doesn't have enough precision
-    return (
-        np.ones(size, dtype=np.float64) / size,
-        np.zeros(size, dtype=np.float64),
-    )
+@_dispatch_computation.register(VelocityMode.SAMPLING)
+def _(**kwargs):
+    # cant 't use partial - parallelize needs to know whether function has `py_func` attribute + doesn't have a __name__
+    kwargs["n_samples"] = 1
+    return _run(_run_mc, **kwargs)
 
 
-def _random_normal(mean: np.ndarray, var: np.ndarray, n_samples=1):
-    if mean.ndim != 1:
-        raise ValueError()
-    if mean.shape != var.shape:
-        raise ValueError()
-
-    if n_samples == 1:
-        return np.random.normal(mean, var)
-
-    return np.mean(np.random.normal(mean, var, size=(n_samples, mean.shape[0])), axis=0)
+@_dispatch_computation.register(VelocityMode.PROPAGATION)
+def _(**kwargs):
+    kwargs["average"] = False
+    return _run(_run_mc, **kwargs)
 
 
-_predict_transition_probabilities_jax = partial(
-    _predict_transition_probabilities, return_pearson_correlation=False, use_jax=True,
+_dispatch_computation.register(VelocityMode.STOCHASTIC)(
+    lambda **kwargs: _run_in_parallel(_run_stochastic, **kwargs)
+)
+_dispatch_computation.register(VelocityMode.DETERMINISTIC)(
+    lambda **kwargs: _run(_run_deterministic, **kwargs)
+)
+_dispatch_computation.register(VelocityMode.MONTE_CARLO)(
+    lambda **kwargs: _run(_run_mc, **kwargs)
 )

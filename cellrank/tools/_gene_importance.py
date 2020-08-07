@@ -6,11 +6,9 @@ from typing import Any, Dict, List, Tuple, Union, Mapping, TypeVar, Optional, Se
 
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import RandomForestRegressor
-from statsmodels.stats.multitest import multipletests
-
 from cellrank import logging as logg
 from cellrank.tools import GPCCA
+from sklearn.ensemble import RandomForestRegressor
 from cellrank.utils._docs import d
 from cellrank.utils._utils import _get_n_cores, check_collection
 from cellrank.utils.models import Model
@@ -18,6 +16,7 @@ from cellrank.tools.kernels import ConnectivityKernel
 from cellrank.plotting._utils import _model_type, _create_models, _is_any_gam_mgcv
 from cellrank.tools._constants import AbsProbKey
 from cellrank.utils._parallelize import parallelize
+from statsmodels.stats.multitest import multipletests
 from cellrank.tools.estimators._constants import P
 
 AnnData = TypeVar("AnnData")
@@ -65,8 +64,12 @@ def _gi_permute(
             .fit(state.permutation(x), y)
             .feature_importances_
         )
-        queue.put(1)
-    queue.put(None)
+
+        if queue is not None:
+            queue.put(1)
+
+    if queue is not None:
+        queue.put(None)
 
     return imps
 
@@ -106,8 +109,12 @@ def _gi_process(
     for gene in genes:
         model = models[gene][lineage_name].prepare(gene, lineage_name, **kwargs).fit()
         res.append([model.x_test.squeeze(), model.predict()])
-        queue.put(1)
-    queue.put(None)  # sentinel
+
+        if queue is not None:
+            queue.put(1)
+
+    if queue is not None:
+        queue.put(None)
 
     res = np.array(res).swapaxes(1, 2)  # genes x points x 2
     x, res = res[..., 0], res[..., 1]
