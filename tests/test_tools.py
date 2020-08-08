@@ -102,15 +102,15 @@ class TestLineageDrivers:
 class TextExcatMCTest:
     def test_invalid_cluster_obs(self, adata_cflare):
         with pytest.raises(KeyError):
-            cr.tl.exact_mc_perm_test(adata_cflare, "foo", "bar", "baz")
+            cr.tl._permutation_test(adata_cflare, "foo", "bar", "baz")
 
     def test_invalid_clusters(self, adata_cflare):
         with pytest.raises(ValueError):
-            cr.tl.exact_mc_perm_test(adata_cflare, "clusters", "bar", "baz")
+            cr.tl._permutation_test(adata_cflare, "clusters", "bar", "baz")
 
     def test_invalid_n_perms(self, adata_cflare):
         with pytest.raises(ValueError):
-            cr.tl.exact_mc_perm_test(
+            cr.tl._permutation_test(
                 adata_cflare,
                 "clusters",
                 adata_cflare.obs["clusters"].cat.categories[0],
@@ -120,7 +120,7 @@ class TextExcatMCTest:
 
     def test_invalid_n_counts(self, adata_cflare):
         with pytest.raises(ValueError):
-            cr.tl.exact_mc_perm_test(
+            cr.tl._permutation_test(
                 adata_cflare,
                 "clusters",
                 adata_cflare.obs["clusters"].cat.categories[0],
@@ -129,7 +129,7 @@ class TextExcatMCTest:
             )
 
     def test_normal_run(self, adata_cflare):
-        dist, obs, pval = cr.tl.exact_mc_perm_test(
+        dist, obs, pval = cr.tl._permutation_test(
             adata_cflare,
             "clusters",
             adata_cflare.obs["clusters"].cat.categories[0],

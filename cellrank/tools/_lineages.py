@@ -50,7 +50,7 @@ def lineages(
         Estimator to use to compute the lineage probabilities.
     %(backward)s
     copy
-        Whether to update the existing AnnData object or to return a copy.
+        Whether to update the existing :class:`anndata.AnnData` object or to return a copy.
     return_estimator
         Whether to return the estimator. Only available when :paramref:`copy=False`.
     **kwargs

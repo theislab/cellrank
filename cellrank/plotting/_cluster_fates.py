@@ -7,20 +7,21 @@ from typing import Any, List, Tuple, Union, Mapping, TypeVar, Optional, Sequence
 from pathlib import Path
 from collections import OrderedDict as odict
 
+import numpy as np
+import pandas as pd
+
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.colors
 import matplotlib.pyplot as plt
 
-import numpy as np
-import pandas as pd
 from cellrank import logging as logg
 from cellrank.utils._docs import d, inject_docs
 from cellrank.tools._utils import RandomKeys, save_fig, _unique_order_preserving
 from cellrank.utils._utils import valuedispatch
 from cellrank.plotting._utils import _position_legend
 from cellrank.tools._constants import ModeEnum, DirPrefix, AbsProbKey, FinalStatesPlot
-from cellrank.tools._exact_mc_test import _counts, _cramers_v
+from cellrank.tools._permutation_test import _counts, _cramers_v
 
 AnnData = TypeVar("AnnData")
 
@@ -535,11 +536,10 @@ def similarity_plot(
     ----------
     %(adata)s
     cluster_key
-        Key in :paramref:`adata` `.obs` corresponding the the clustering.
+        Key in :paramref:`adata` `.obs` corresponding containing the clustering.
     %(backward)s
     clusters
-        Clusters in :paramref:`adata` `.obs` to consider.
-        If `None`, all cluster will be considered.
+        Clusters in :paramref:`adata` `.obs` to consider. If `None`, all cluster will be considered.
     n_samples
         Number of samples per cluster.
     cmap

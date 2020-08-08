@@ -18,7 +18,7 @@ from cellrank.utils._utils import _get_n_cores, check_collection
 from cellrank.plotting._utils import _model_type, _create_models, _is_any_gam_mgcv
 from cellrank.tools._constants import AbsProbKey
 from cellrank.utils._parallelize import parallelize
-from cellrank.utils.models._models import Model
+from cellrank.utils.models._models import BaseModel
 
 AnnData = TypeVar("AnnData")
 Queue = TypeVar("Queue")
@@ -26,7 +26,7 @@ Queue = TypeVar("Queue")
 
 def _cl_process(
     genes: Sequence[str],
-    models: Dict[str, Dict[str, Model]],
+    models: Dict[str, Dict[str, BaseModel]],
     lineage_name: str,
     queue: Optional[Queue],
     **kwargs,
@@ -45,7 +45,7 @@ def _cl_process(
     queue
         Signalling queue in the parent process/thread used to update the progress bar.
     kwargs
-        Keyword arguments for :meth:`cellrank.ul.models.Model.prepare`.
+        Keyword arguments for :meth:`cellrank.ul.models.BaseModel.prepare`.
 
     Returns
     -------
@@ -141,7 +141,7 @@ def cluster_lineage(
     louvain_kwargs
         Keyword arguments for :func:`scanpy.tl.louvain`.
     **kwargs:
-        Keyword arguments for :meth:`cellrank.ul.models.Model.prepare`.
+        Keyword arguments for :meth:`cellrank.ul.models.BaseModel.prepare`.
 
     Returns
     -------

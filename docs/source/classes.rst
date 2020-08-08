@@ -74,10 +74,10 @@ Kernel
     :members:
     :inherited-members:
 
-Model
+BaseModel
 -----
 
-.. autoclass:: cellrank.ul.models.Model
+.. autoclass:: cellrank.ul.models.BaseModel
     :members:
 
 Lineage
