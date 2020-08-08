@@ -61,8 +61,9 @@ _density_correction = (
 )
 _time_range = """
 time_range
-   Minimum and maximum pseudotime. If `None`, minimum is `0` and maximum is automatically determined.
-   If :class:`float`, it specified the maximum pseudotime. If (:class:`float`, :class:`float`), it specifies the
+   If a :class:`tuple`, it specifies the minimum and maximum pseudotime. Both values can be `None`, in which case
+   the minimum is the minimum pseudotime and maximum is automatically determined. If :class:`float`,
+   it specified the maximum pseudotime.
 """
 
 _copy = """Return a copy of self."""

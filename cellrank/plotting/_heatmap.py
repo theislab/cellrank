@@ -7,6 +7,11 @@ from typing import Any, List, Tuple, Union, TypeVar, Optional, Sequence
 from pathlib import Path
 from collections import Iterable, defaultdict
 
+import numpy as np
+import pandas as pd
+from pandas.api.types import is_categorical_dtype
+from scipy.ndimage.filters import convolve
+
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
@@ -14,20 +19,17 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
-import numpy as np
-import pandas as pd
 from cellrank import logging as logg
-from pandas.api.types import is_categorical_dtype
 from cellrank.utils._docs import d, inject_docs
 from cellrank.tools._utils import save_fig, _min_max_scale, _unique_order_preserving
 from cellrank.utils._utils import _get_n_cores, valuedispatch, check_collection
-from scipy.ndimage.filters import convolve
 from cellrank.tools._colors import _create_categorical_colors
 from cellrank.plotting._utils import (
     _model_type,
     _get_backend,
     _create_models,
     _fit_gene_trends,
+    _time_range_type,
     _maybe_create_dir,
 )
 from cellrank.tools._constants import ModeEnum, AbsProbKey
@@ -56,7 +58,7 @@ def heatmap(
     lineages: Optional[Union[str, Sequence[str]]] = None,
     backward: bool = False,
     mode: str = HeatmapMode.LINEAGES.s,
-    time_range: Optional[List[Union[float, Tuple[float, float]]]] = None,
+    time_range: Optional[Union[_time_range_type, List[_time_range_type]]] = None,
     cluster_key: Optional[Union[str, Sequence[str]]] = None,
     show_absorption_probabilities: bool = False,
     cluster_genes: bool = False,
