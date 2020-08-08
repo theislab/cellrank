@@ -34,15 +34,10 @@ class TestModel:
         with pytest.raises(KeyError):
             model.prepare(adata_cflare.var_names[0], "0", time_key="foo")
 
-    def test_prepare_invalid_start_cluster(self, adata_cflare):
+    def test_prepare_invalid_time_range(self, adata_cflare):
         model = create_model(adata_cflare)
-        with pytest.raises(KeyError):
-            model.prepare(adata_cflare.var_names[0], "0", start_lineage="foo")
-
-    def test_prepare_invalid_end_cluster(self, adata_cflare):
-        model = create_model(adata_cflare)
-        with pytest.raises(KeyError):
-            model.prepare(adata_cflare.var_names[0], "0", end_lineage="foo")
+        with pytest.raises(ValueError):
+            model.prepare(adata_cflare.var_names[0], "0", time_range=(0, 1, 2))
 
     def test_prepare_normal_run(self, adata_cflare):
         model = create_model(adata_cflare)
