@@ -5,27 +5,38 @@ import re
 from abc import ABC, abstractmethod
 from copy import copy as _copy
 from copy import deepcopy
+from types import MappingProxyType
 from typing import Any, Tuple, Union, TypeVar, Iterable, Optional
 from inspect import signature
+from collections import Mapping, defaultdict
+
+import numpy as np
+import pandas as pd
+from pygam import GAM as pGAM
+from pygam import (
+    GammaGAM,
+    LinearGAM,
+    PoissonGAM,
+    InvGaussGAM,
+    LogisticGAM,
+    ExpectileGAM,
+)
+from pygam.terms import s
+from sklearn.base import BaseEstimator
+from scipy.ndimage.filters import convolve
 
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 
-import numpy as np
-import pandas as pd
 import cellrank.logging as logg
-from pygam import GAM as pGAM
-from pygam import ExpectileGAM
-from pygam.terms import s
-from sklearn.base import BaseEstimator
 from cellrank.utils._docs import d
 from cellrank.tools._utils import save_fig, _densify_squeeze
 from cellrank.utils._utils import _minmax
-from scipy.ndimage.filters import convolve
 from cellrank.tools._lineage import Lineage
 from cellrank.tools._constants import ModeEnum, AbsProbKey
+from cellrank.tools.kernels._utils import _filter_kwargs
 
 AnnData = TypeVar("AnnData")
 
@@ -54,6 +65,18 @@ class GamLinkFunction(ModeEnum):  # noqa
     INV = "inverse"
     LOG = "log"
     INV_SQUARED = "inverse-squared"
+
+
+_gams = defaultdict(
+    lambda: pGAM,
+    {
+        (GamDistribution.NORMAL, GamLinkFunction.IDENTITY): LinearGAM,
+        (GamDistribution.BINOMIAL, GamLinkFunction.LOGIT): LogisticGAM,
+        (GamDistribution.POISSON, GamLinkFunction.LOG): PoissonGAM,
+        (GamDistribution.GAMMA, GamLinkFunction.LOG): GammaGAM,
+        (GamDistribution.INV_GAUSS, GamLinkFunction.LOG): InvGaussGAM,
+    },
+)
 
 
 @d.get_sectionsf("base_model", sections=["Parameters"])
@@ -361,11 +384,13 @@ class BaseModel(ABC):
             min(val_end, np.max(self.adata.obs[time_key])),
         )
 
+        fil = (x >= val_start) & (x <= val_end)
         x_test = (
             np.linspace(val_start, val_end, n_test_points)
             if n_test_points is not None
-            else x[(x >= val_start) & (x <= val_end)]
+            else x[fil]
         )
+        x, y, w = x[fil], y[fil], w[fil]
 
         if filter_dropouts is not None:
             tmp = y.squeeze()
@@ -1033,13 +1058,17 @@ class GAM(BaseModel):
         Maximum number of iterations for optimization.
     expectile
         Expectile for :class:`pygam.ExpectileGAM`. This forces the distribution to be `'normal'`
-        and link function to `'identity'`. Must be in interval `(0, 1)`.
+        and link function to `'identity'`. Must be in `(0, 1)`.
     use_default_conf_int
         Whether to use :meth:`default_confidence_interval` to calculate the confience interval or
         use the :paramref:`model`'s method.
     grid
         Whether to perform a grid search. Keys correspond to a parameter names and values to range to be searched.
-        If :class:`bool` and `True`, use the :paramref:`default_grid`.
+        If an empty :class:`dict`, don't perform a grid search. If `None`, uses a default grid.
+    spline_kwargs
+        Keyword arguments for :class:`pygam.s`.
+    **kwargs
+        Keyword arguments for :class:`pygam.GAM`.
     """
 
     def __init__(
@@ -1049,17 +1078,19 @@ class GAM(BaseModel):
         spline_order: int = 3,
         distribution: str = "gamma",
         link: str = "log",
-        max_iter: int = 1000,
+        max_iter: int = 2000,
         expectile: Optional[float] = None,
         use_default_conf_int: bool = False,
-        grid: Union[bool, dict] = False,
+        grid: Optional[Mapping] = MappingProxyType({}),
+        spline_kwargs: Mapping = MappingProxyType({}),
+        **kwargs,
     ):
         term = s(
             0,
             spline_order=spline_order,
             n_splines=n_splines,
-            lam=0.5,
             penalties=["derivative"],
+            **_filter_kwargs(s, **{**{"lam": 1}, **spline_kwargs}),
         )
         link = GamLinkFunction(link)
         distribution = GamDistribution(distribution)
@@ -1069,7 +1100,7 @@ class GAM(BaseModel):
         if expectile is not None:
             if not (0 < expectile < 1):
                 raise ValueError(
-                    f"Expected `expectile` to be in interval `(0, 1)`, found `{expectile}`."
+                    f"Expected `expectile` to be in `(0, 1)`, found `{expectile}`."
                 )
             if distribution != "normal" or link != "identity":
                 logg.warning(
@@ -1077,26 +1108,30 @@ class GAM(BaseModel):
                     f"found `{distribution!r}` distribution and {link!r} link functions."
                 )
             model = ExpectileGAM(
-                term, expectile=expectile, max_iter=max_iter, verbose=False
+                term, expectile=expectile, max_iter=max_iter, verbose=False, **kwargs
             )
         else:
-            model = pGAM(
+            gam = _gams[
+                distribution, link
+            ]  # doing it like this ensure that user can specify scale
+            kwargs["link"] = link.s
+            kwargs["distribution"] = distribution.s
+            model = gam(
                 term,
-                distribution=distribution.s,
-                link=link.s,
                 max_iter=max_iter,
                 verbose=False,
+                **_filter_kwargs(gam.__init__, **kwargs),
             )
         super().__init__(adata, model=model)
         self._use_default_conf_int = use_default_conf_int
-
-        if isinstance(grid, dict):
-            self._grid = grid
-        elif isinstance(grid, bool):
-            self._grid = self.default_grid if grid else {}
+        self._grid = object()  # sentinel value, `None` performs a grid search
+        if grid is None:
+            self._grid = None
+        elif isinstance(grid, MappingProxyType):
+            self._grid = dict(grid)
         else:
             raise TypeError(
-                f"Expected `grid` to be `bool` or `dict` of parameters, found `{type(grid).__name__!r}`."
+                f"Expected `grid` to be `dict` or `None`, found `{type(grid).__name__!r}`."
             )
 
     @d.dedent
@@ -1122,15 +1157,20 @@ class GAM(BaseModel):
 
         super().fit(x, y, w, **kwargs)
 
-        if self._grid:
+        if self._grid is not None:
+
+            grid = {} if not isinstance(self._grid, dict) else self._grid
             try:
+                # workaround for: https://github.com/dswah/pyGAM/issues/273
+                self.model.fit(self.x, self.y, weights=self.w, **kwargs)
                 self.model.gridsearch(
                     self.x,
                     self.y,
                     weights=self.w,
                     keep_best=True,
                     progress=False,
-                    **self._grid,
+                    **grid,
+                    **kwargs,
                 )
                 return self
             except Exception as e:
@@ -1139,7 +1179,7 @@ class GAM(BaseModel):
                 )
 
         try:
-            self.model.fit(self.x, self.y, weights=self.w)
+            self.model.fit(self.x, self.y, weights=self.w, **kwargs)
             return self
         except Exception as e:
             raise RuntimeError(
@@ -1207,14 +1247,6 @@ class GAM(BaseModel):
         res._model = deepcopy(self.model)
 
         return res
-
-    @property
-    def default_grid(self) -> dict:  # noqa
-        """Default grid for hyperparameter search."""
-        return {
-            "n_splines": np.arange(6, 12),
-            "lam": np.logspace(-3, 3, 5, base=2),
-        }
 
 
 @d.dedent
@@ -1453,5 +1485,5 @@ def _maybe_import_r_lib(
         if not raise_exc:
             return
         raise RuntimeError(
-            f"Install R library `{name}` first as `install.packages({name!r}).`"
+            f"Install R library `{name!r}` first as `install.packages({name!r}).`"
         ) from e
