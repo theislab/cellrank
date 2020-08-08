@@ -68,6 +68,7 @@ Utilities
 
     :toctree: api/ul
 
+    ul.models.GAM
     ul.models.SKLearnModel
     ul.models.GAMR
 

@@ -27,9 +27,10 @@ def lineages(
     """
     Compute probabilistic lineage assignment using RNA velocity.
 
-    For each cell `i` in {{1, ..., N}} and %(root_or_final)s state j in {{1, ..., M}}, the probability is computed
-    that cell `i` is either going to %(final)s state `j` (`backward=False`) or is coming from %(root)s state `j`
-    (`backward=True`). We provide two estimators for computing these probabilities:
+    For each cell `i` in :math:`{1, ..., N}` and %(root_or_final)s state `j` in :math:`{1, ..., M}`,
+    the probability is computed that cell `i` is either going to %(final)s state `j` (`backward=False`)
+    or is coming from %(root)s state `j` (`backward=True`).
+    We provide two estimators for computing these probabilities:
 
     For the estimator :class:`cellrank.tl.GPCCA`, we perform Generalized Perron Cluster Cluster Analysis [GPCCA18]_.
     Cells are mapped to a simplex where each corner represents a %(root_or_final) state, and the position of a cell

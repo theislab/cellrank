@@ -5,12 +5,13 @@ from types import MappingProxyType
 from typing import Any, Dict, List, Tuple, Union, Mapping, Iterable, Optional, Sequence
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
+
 import matplotlib as mpl
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 
-import numpy as np
-import pandas as pd
 from cellrank import logging as logg
 from cellrank.tools import Lineage
 from cellrank.utils._docs import d, inject_docs
@@ -237,7 +238,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         Returns
         -------
         None
-            Nothing, just sets `.{fs}`.
+            Nothing, just sets :paramref:`{fs}`.
         """
 
         if not isinstance(n_cells, int):
@@ -381,7 +382,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         self, n_components: int = 10, key_added: str = "gdpt_pseudotime", **kwargs
     ):
         """
-        Compute generalized DPT making use of the real Schur decomposition.
+        Compute generalized Diffusion pseudotime making use of the real Schur decomposition.
 
         Parameters
         ----------

@@ -85,6 +85,7 @@ intersphinx_mapping = dict(
     joblib=("https://joblib.readthedocs.io/en/latest/", None),
     sklearn=("https://scikit-learn.org/stable/", None),
     seaborn=("https://seaborn.pydata.org/", None),
+    pygam=("https://pygam.readthedocs.io/en/latest/", None),
     # TODO: add msmtools once the docs are up
 )
 

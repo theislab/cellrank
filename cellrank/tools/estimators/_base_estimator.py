@@ -7,16 +7,17 @@ from copy import copy, deepcopy
 from typing import Any, Dict, Union, TypeVar, Optional, Sequence
 from pathlib import Path
 
-from matplotlib.colors import is_color_like
-
 import numpy as np
 import pandas as pd
 from pandas import Series
-from cellrank import logging as logg
 from scipy.stats import ranksums
 from scipy.sparse import spmatrix
-from cellrank.tools import Lineage
 from pandas.api.types import infer_dtype, is_categorical_dtype
+
+from matplotlib.colors import is_color_like
+
+from cellrank import logging as logg
+from cellrank.tools import Lineage
 from cellrank.utils._docs import d, inject_docs
 from cellrank.tools._utils import (
     _pairwise,
@@ -191,7 +192,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         None
             Nothing, but updates the following fields:
 
-                - :paramref:`{fin_states}`.
+                - :paramref:`{fin_states}`
         """
 
         self._set_categorical_labels(
@@ -237,7 +238,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             when :paramref:`use_petsc` `=False` or one of :class:`petsc4py.PETSc.KPS.Type` otherwise.
 
             Information on the :mod:`scipy` iterative solvers can be found in :func:`scipy.sparse.linalg` or for
-            :mod:`petsc4py` solver found `here <https://www.mcs.anl.gov/petsc/documentation/linearsolvertable.html/>`_.
+            :mod:`petsc4py` solver found `here <https://www.mcs.anl.gov/petsc/documentation/linearsolvertable.html>`_.
 
             If is `None`, solver is chosen automatically, depending on the problem.
         use_petsc
@@ -476,12 +477,13 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
         Returns
         -------
-        :class:`pandas.DataFrame`, :class:`NoneType`
-            Writes to :paramref:`adata` `.var` or :paramref:`adata` `.raw.var`,
+        None
+            If :paramref:`inplace` `=False`, writes to :paramref:`adata` `.var` or :paramref:`adata` `.raw.var`,
             depending on the value of :paramref:`use_raw`.
-            For each lineage specified, a key is added to `.var` and correlations are saved there.
-
-            Returns `None` if :paramref:`inplace` `=True`, otherwise a :class:`pandas.DataFrame`.
+            For each lineage specified, a key is added to `.var` and correlations are saved as
+            `{direction} {lineage_names} corr`.
+        :class:`pandas.DataFrame`
+            If :paramref:`inplace` `=True`, return a :class:`pandas.DataFrame` with the columns mentioned as above.
         """
 
         # check that lineage probs have been computed
