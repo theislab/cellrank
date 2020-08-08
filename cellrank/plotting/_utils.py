@@ -17,19 +17,18 @@ from typing import (
 from pathlib import Path
 from collections import defaultdict
 
-import numpy as np
-from scipy.sparse import diags
-from pandas.core.dtypes.common import is_categorical_dtype
-
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 
+import numpy as np
+from scipy.sparse import diags
 from cellrank.utils._docs import d
 from cellrank.tools._utils import save_fig, _unique_order_preserving
 from cellrank.utils.models import GAMR, BaseModel
 from cellrank.tools.kernels import PrecomputedKernel
-from cellrank.tools._constants import _colors
+from cellrank.tools._constants import _DEFAULT_BACKEND, _colors
+from pandas.core.dtypes.common import is_categorical_dtype
 from cellrank.tools.estimators._cflare import CFLARE
 
 AnnData = TypeVar("AnnData")
@@ -250,7 +249,7 @@ def composition(
     save: Optional[Union[str, Path]] = None,
 ) -> None:
     """
-    Plot pie chart for categorical annotation.
+    Plot a pie chart for categorical annotation.
 
     .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/composition.png
        :width: 400px
@@ -290,21 +289,24 @@ def composition(
     fig.show()
 
 
-def _is_any_gam_mgcv(models: Dict[str, Dict[str, BaseModel]]) -> bool:
+def _is_any_gam_mgcv(models: Union[BaseModel, Dict[str, Dict[str, BaseModel]]]) -> bool:
     """
     Return whether any models to be fit are from R's mgcv package.
 
     Parameters
     ----------
     models
-        Models used for fitting.
+        Model(s) used for fitting.
 
     Returns
     -------
         `True` if any of the models is from R's mgcv package, else `False`.
     """
 
-    return any(isinstance(m, GAMR) for ms in models.values() for m in ms.values())
+    return isinstance(models, GAMR) or (
+        isinstance(models, dict)
+        and any(isinstance(m, GAMR) for ms in models.values() for m in ms.values())
+    )
 
 
 def _create_models(
@@ -364,17 +366,16 @@ def _create_models(
             raise RuntimeError(_ERROR_INCOMPLETE_SPEC.format(" ", "genes"))
     else:
         raise TypeError(
-            "BaseModel must be of type `cellrank.ul.BaseModel` or a dictionary of such models."
+            f"Class `{type(model).__name__!r}` must be of type `cellrank.ul.BaseModel` or a dictionary of such models."
         )
 
     return models
 
 
-def _fit(
+def _fit_gene_trends(
     genes: Sequence[str],
     lineage_names: Sequence[Optional[str]],
-    start_lineages: Sequence[Optional[str]],
-    end_lineages: Sequence[Optional[str]],
+    time_range: Sequence[Union[float, Tuple[float, float]]],
     queue,
     **kwargs,
 ) -> Dict[str, Dict[str, Any]]:
@@ -387,10 +388,8 @@ def _fit(
         Genes for which to fit the models.
     lineage_names
         Lineages for which to fit the models.
-    start_lineages
-        Start clusters for given :paramref:`lineage_names`.
-    end_lineages
-        End clusters for given :paramref:`lineage_names`.
+    time_range
+        Minimum and maximum pseudotimes.
     queue
         Signalling queue in the parent process/thread used to update the progress bar.
     kwargs
@@ -407,12 +406,8 @@ def _fit(
 
     for gene in genes:
         res[gene] = {}
-        for ln, sc, ec in zip(lineage_names, start_lineages, end_lineages):
-            model = (
-                models[gene][ln]
-                .prepare(gene, ln, start_lineage=sc, end_lineage=ec, **kwargs)
-                .fit()
-            )
+        for ln, tr in zip(lineage_names, time_range):
+            model = models[gene][ln].prepare(gene, ln, time_range=tr, **kwargs).fit()
             model.predict()
             if conf_int:
                 model.confidence_interval()
@@ -635,3 +630,7 @@ def _maybe_create_dir(dirname: Optional[Union[str, Path]]) -> None:
     elif not os.path.isdir(os.path.join(figdir, dirname)):
         os.makedirs(os.path.join(figdir, dirname), exist_ok=True)
         logg.debug(f"Creating directory `{dirname!r}`")
+
+
+def _get_backend(model, backend: str) -> str:
+    return _DEFAULT_BACKEND if _is_any_gam_mgcv(model) else backend

@@ -17,7 +17,7 @@ import numpy as np
 import pandas as pd
 import cellrank.logging as logg
 from pygam import GAM as pGAM
-from pygam import LinearGAM, ExpectileGAM
+from pygam import ExpectileGAM
 from pygam.terms import s
 from sklearn.base import BaseEstimator
 from cellrank.utils._docs import d
@@ -25,7 +25,7 @@ from cellrank.tools._utils import save_fig, _densify_squeeze
 from cellrank.utils._utils import _minmax
 from scipy.ndimage.filters import convolve
 from cellrank.tools._lineage import Lineage
-from cellrank.tools._constants import AbsProbKey
+from cellrank.tools._constants import ModeEnum, AbsProbKey
 
 AnnData = TypeVar("AnnData")
 
@@ -33,6 +33,27 @@ AnnData = TypeVar("AnnData")
 _dup_spaces = re.compile(r" +")
 _r_lib = None
 _r_lib_name = None
+
+_valid_distributions = ()
+
+_valid_link_functions = ()
+
+
+class GamDistribution(ModeEnum):  # noqa
+    NORMAL = "normal"
+    BINOMIAL = "binomial"
+    POISSON = "poisson"
+    GAMMA = "gamma"
+    GAUSS = "gaussian"
+    INV_GAUSS = "inv_gauss"
+
+
+class GamLinkFunction(ModeEnum):  # noqa
+    IDENTITY = "identity"
+    LOGIT = "logit"
+    INV = "inverse"
+    LOG = "log"
+    INV_SQUARED = "inverse-squared"
 
 
 @d.get_sectionsf("base_model", sections=["Parameters"])
@@ -46,16 +67,13 @@ class BaseModel(ABC):
     %(adata)s
     model
         Underlying model.
-    filter_dropouts
-        Filter out all cells with expression lower than this.
     """
 
     def __init__(
-        self, adata: AnnData, model: Any, filter_dropouts: Optional[float] = None,
+        self, adata: AnnData, model: Any,
     ):
         self._adata = adata
         self._model = model
-        self._filter_dropouts = filter_dropouts
         self._gene = None
         self._lineage = None
 
@@ -163,14 +181,13 @@ class BaseModel(ABC):
         gene: str,
         lineage: str,
         backward: bool = False,
+        time_range: Optional[Union[float, Tuple[float, float]]] = None,
         data_key: str = "X",
         time_key: str = "latent_time",
         use_raw: bool = False,
-        start_lineage: Optional[str] = None,
-        end_lineage: Optional[str] = None,
         threshold: Optional[float] = None,
         weight_threshold: Union[float, Tuple[float, float]] = (0.01, 0.01),
-        filter_data: float = False,
+        filter_dropouts: Optional[float] = None,
         n_test_points: int = 200,
     ) -> "BaseModel":
         """
@@ -183,27 +200,20 @@ class BaseModel(ABC):
         lineage
             Name of a lineage in :paramref:`adata` `.uns`:paramref:`lineage_key`.
         %(backward)s
+        %s(time_range)s
         data_key
             Key in :attr:`paramref.adata` `.layers` or `'X'` for :paramref:`adata` `.X`.
         time_key
             Key in :paramref:`adata` `.obs` where the pseudotime is stored.
         use_raw
             Whether to access :paramref:`adata` `.raw` or not.
-        start_lineage
-            Lineage from which to select cells with lowest pseudotime as starting points.
-            If specified, the trends start at the earliest pseudotime within that lineage,
-            otherwise they start from time `0`.
-        end_lineage
-            Lineage from which to select cells with highest pseudotime as endpoints.
-            If specified, the trends end at the latest pseudotime within that lineage,
-            otherwise, it is determined automatically.
         threshold
             Consider only cells with :paramref:`weights` > :paramref:`threshold` when estimating the testing endpoint.
             If `None`, use median of :paramref:`w`.
         weight_threshold
             Set all weights below :paramref:`weight_threshold` to either 0, or if :class:`tuple`, to the second value.
-        filter_data
-            Use only testing points for fitting.
+        filter_dropouts
+            Filter out all cells with expression lower than this.
         n_test_points
             Number of testing points. If `None`, use the original points based on :paramref:`threshold`.
 
@@ -250,19 +260,31 @@ class BaseModel(ABC):
                 f"found `{type(self.adata.obsm[lineage_key]).__name__!r}`."
             )
 
+        if not isinstance(time_range, (type(None), float, int, tuple)):
+            raise TypeError(
+                f"Expected time range to be either `None`, "
+                f"`float` or `tuple`, found `{type(time_range).__name__!r}`."
+            )
+        if isinstance(time_range, tuple):
+            if len(time_range) != 2:
+                raise ValueError(
+                    f"Expected time range to be a `tuple` of length `2`, found `{len(time_range)}`."
+                )
+            if not isinstance(
+                time_range[0], (float, int, type(None))
+            ) or not isinstance(time_range[1], (float, int, type(None))):
+                raise TypeError(
+                    f"Expected values in time ranges be of types `float` or `int` or `None`, "
+                    f"got `{type(time_range[0]).__name__!r}` and `{type(time_range[1]).__name__!r}`."
+                )
+            val_start, val_end = time_range
+        elif time_range is None:
+            val_start, val_end = None, None
+        else:
+            val_start, val_end = None, time_range
+
         if lineage is not None:
             _ = self.adata.obsm[lineage_key][lineage]
-
-        if start_lineage is not None:
-            if start_lineage not in self.adata.obsm[lineage_key].names:
-                raise KeyError(
-                    f"Start lineage `{start_lineage!r}` not found in `adata.obsm[{lineage_key!r}].names`."
-                )
-        if end_lineage is not None:
-            if end_lineage not in self.adata.obsm[lineage_key].names:
-                raise KeyError(
-                    f"End lineage `{end_lineage!r}` not found in `adata.obsm[{lineage_key!r}].names`."
-                )
 
         x = np.array(self.adata.obs[time_key]).astype(np.float64)
 
@@ -322,28 +344,22 @@ class BaseModel(ABC):
         ixs = np.argsort(x)
         x, y, w = x[ixs], y[ixs], w[ixs]
 
-        if start_lineage is None or (start_lineage == lineage):
-            val_start = np.min(self.adata.obs[time_key])
-        else:
-            from_key = "_".join(lineage_key.split("_")[1:])
-            val_start = np.nanmin(
-                self.adata.obs[time_key][self.adata.obs[from_key] == start_lineage]
-            )
-
-        if end_lineage is None or (end_lineage == lineage):
+        if val_start is None:
+            val_start = np.nanmin(self.adata.obs[time_key])
+        if val_end is None:
             if threshold is None:
                 threshold = np.nanmedian(w)
             w_test = w[w > threshold]
-            tmp = convolve(w_test, np.ones(10) / 10, mode="nearest")
+            n_window = 10 if n_test_points is None else n_test_points // 20
+            tmp = convolve(w_test, np.ones(n_window) / n_window, mode="nearest")
             val_end = x[w > threshold][np.nanargmax(tmp)]
-        else:
-            to_key = "_".join(lineage_key.split("_")[1:])
-            val_end = np.nanmax(
-                self.adata.obs[time_key][self.adata.obs[to_key] == end_lineage]
-            )
 
         if val_start > val_end:
             val_start, val_end = val_end, val_start
+        val_start, val_end = (
+            max(val_start, np.min(self.adata.obs[time_key])),
+            min(val_end, np.max(self.adata.obs[time_key])),
+        )
 
         x_test = (
             np.linspace(val_start, val_end, n_test_points)
@@ -351,14 +367,10 @@ class BaseModel(ABC):
             else x[(x >= val_start) & (x <= val_end)]
         )
 
-        if filter_data:
-            fil = (x >= val_start) & (x <= val_end)
-            x, y, w = x[fil], y[fil], w[fil]
-
-        if self._filter_dropouts is not None:
+        if filter_dropouts is not None:
             tmp = y.squeeze()
-            fil = (tmp >= self._filter_dropouts) & (
-                ~np.isclose(tmp, self._filter_dropouts).astype(np.bool)
+            fil = (tmp >= filter_dropouts) & (
+                ~np.isclose(tmp, filter_dropouts).astype(np.bool)
             )
             x, y, w = x[fil], y[fil], w[fil]
 
@@ -368,6 +380,14 @@ class BaseModel(ABC):
             self._reshape_and_retype(w).squeeze(-1),
         )
         self._x_test = self._reshape_and_retype(x_test)
+
+        if self.x.shape[0] == 0:
+            raise RuntimeError("Unable to proceed, no values to fit.")
+
+        if len({self.x.shape[0], self.y.shape[0], self.w.shape[0]}) != 1:
+            raise RuntimeError(
+                f"Values have different shapes: `{self.x.shape[0]}`, `{self.y.shape[0]}`, `{self.w.shape[0]}`."
+            )
 
         self._gene = gene
         self._lineage = lineage
@@ -788,8 +808,6 @@ class SKLearnModel(BaseModel):
     %(adata)s
     model
         Instance of :mod:`sklearn` model.
-    filter_dropouts
-        Filter out all cells with expression lower than this.
     weight_name
         Name of the weight argument for :paramref:`model` `.fit`.
     ignore_raise
@@ -806,7 +824,6 @@ class SKLearnModel(BaseModel):
         self,
         adata: AnnData,
         model: BaseEstimator,
-        filter_dropouts: Optional[float] = None,
         weight_name: Optional[str] = None,
         ignore_raise: bool = False,
     ):
@@ -815,7 +832,7 @@ class SKLearnModel(BaseModel):
                 f"Expected model to be of type `BaseEstimator`, found `{type(model).__name__!r}`."
             )
 
-        super().__init__(adata, model, filter_dropouts=filter_dropouts)
+        super().__init__(adata, model)
 
         fit_name = self._find_func(self._fit_names)
         predict_name = self._find_func(self._predict_names)
@@ -1016,9 +1033,10 @@ class GAM(BaseModel):
         Maximum number of iterations for optimization.
     expectile
         Expectile for :class:`pygam.ExpectileGAM`. This forces the distribution to be `'normal'`
-        and link function to `'identity'`.
-    filter_dropouts
-        Filter out all cells with expression lower than this.
+        and link function to `'identity'`. Must be in interval `(0, 1)`.
+    use_default_conf_int
+        Whether to use :meth:`default_confidence_interval` to calculate the confience interval or
+        use the :paramref:`model`'s method.
     grid
         Whether to perform a grid search. Keys correspond to a parameter names and values to range to be searched.
         If :class:`bool` and `True`, use the :paramref:`default_grid`.
@@ -1029,11 +1047,11 @@ class GAM(BaseModel):
         adata: AnnData,
         n_splines: Optional[int] = 10,
         spline_order: int = 3,
-        distribution: str = "normal",
-        link: str = "identity",
+        distribution: str = "gamma",
+        link: str = "log",
         max_iter: int = 1000,
         expectile: Optional[float] = None,
-        filter_dropouts: Optional[float] = None,
+        use_default_conf_int: bool = False,
         grid: Union[bool, dict] = False,
     ):
         term = s(
@@ -1043,27 +1061,34 @@ class GAM(BaseModel):
             lam=0.5,
             penalties=["derivative"],
         )
+        link = GamLinkFunction(link)
+        distribution = GamDistribution(distribution)
+        if distribution == GamDistribution.GAUSS:
+            distribution = GamDistribution.NORMAL
+
         if expectile is not None:
+            if not (0 < expectile < 1):
+                raise ValueError(
+                    f"Expected `expectile` to be in interval `(0, 1)`, found `{expectile}`."
+                )
             if distribution != "normal" or link != "identity":
                 logg.warning(
                     f"Expectile GAM works only with `normal` distribution and `identity` link function,"
                     f"found `{distribution!r}` distribution and {link!r} link functions."
                 )
-                distribution, link = "normal", "identity"
             model = ExpectileGAM(
                 term, expectile=expectile, max_iter=max_iter, verbose=False
             )
-        elif distribution == "normal" and link == "identity":
-            model = LinearGAM(term, max_iter=max_iter, verbose=False)
         else:
             model = pGAM(
                 term,
-                distribution=distribution,
-                link=link,
+                distribution=distribution.s,
+                link=link.s,
                 max_iter=max_iter,
                 verbose=False,
             )
-        super().__init__(adata, model=model, filter_dropouts=filter_dropouts)
+        super().__init__(adata, model=model)
+        self._use_default_conf_int = use_default_conf_int
 
         if isinstance(grid, dict):
             self._grid = grid
@@ -1119,7 +1144,7 @@ class GAM(BaseModel):
         except Exception as e:
             raise RuntimeError(
                 f"Unable to fit `{type(self).__name__}` for gene "
-                f"`{self._gene!r}` in lineage `{self._lineage!r}`."
+                f"`{self._gene!r}` in lineage `{self._lineage!r}`. Reason: `{e}`"
             ) from e
 
     @d.dedent
@@ -1155,9 +1180,6 @@ class GAM(BaseModel):
         """
         %(base_model_ci.summary)s
 
-        If the :paramref:`model` uses `'normal'` distribution and `'identity'` link function (:class:`pygam.LinearGam`),
-        use :meth:`prediction_intervals` method, otherwise use :meth:`confidence_intervals`.
-
         Parameters
         ----------
         %(base_model_ci.parameters)s
@@ -1168,11 +1190,10 @@ class GAM(BaseModel):
         """  # noqa
 
         x_test = self._check("_x_test", x_test)
-
-        if isinstance(self.model, LinearGAM):
-            self._conf_int = self.model.prediction_intervals(x_test, **kwargs)
+        if self._use_default_conf_int:
+            self._conf_int = self.default_confidence_interval(x_test=x_test, **kwargs)
         else:
-            self._conf_int = self.confidence_intervals(x_test=x_test, **kwargs)
+            self._conf_int = self.model.confidence_intervals(x_test, **kwargs)
 
         return self.conf_int
 
@@ -1181,6 +1202,7 @@ class GAM(BaseModel):
         """%(copy)s"""  # noqa
         res = GAM(self.adata)
 
+        res._use_default_conf_int = self._use_default_conf_int
         res._grid = deepcopy(self._grid)
         res._model = deepcopy(self.model)
 
@@ -1208,10 +1230,8 @@ class GAMR(BaseModel):
         Number of splines for the GAM.
     smoothing_param
         Smoothing parameter. Increasing this increases the smootheness of splines.
-    family
+    distribution
         Family in `rpy2.robjects.r`, such as `'gaussian'` or `'poisson'`.
-    filter_dropouts
-        Filter out all cells with expression lower than this.
     backend
         R library used to fit GAMs. Valid options are `'mgcv'` and `'gam'`.
         Option `'gam'` ignores the number of splines, as well as family and smoothing parameter.
@@ -1227,17 +1247,16 @@ class GAMR(BaseModel):
         adata: AnnData,
         n_splines: int = 5,
         smoothing_param: float = 2,
-        family: str = "gaussian",
-        filter_dropouts: Optional[float] = None,
+        distribution: str = "gaussian",
         backend: str = "mgcv",
         perform_import_check: bool = True,
     ):
-        super().__init__(adata, model=None, filter_dropouts=filter_dropouts)
+        super().__init__(adata, model=None)
         self._n_splines = n_splines
         self._sp = smoothing_param
         self._lib = None
         self._lib_name = None
-        self._family = family
+        self._family = distribution
 
         if backend not in self._fallback_backends.keys():
             raise ValueError(
@@ -1389,8 +1408,7 @@ class GAMR(BaseModel):
             self.adata,
             self._n_splines,
             self._sp,
-            family=self._family,
-            filter_dropouts=self._filter_dropouts,
+            distribution=self._family,
             perform_import_check=False,
         )
         res._lib = self._lib
