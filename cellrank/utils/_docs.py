@@ -27,7 +27,7 @@ model
     BaseModel to fit.
 
     - If a :class:`dict`, gene and lineage specific models can be specified. Use `'*'` to indicate
-    all genes or lineages, for example `{'Map2': {'*': ...}, 'Dcx': {'Alpha': ..., '*': ...}}`."""
+      all genes or lineages, for example `{'Map2': {'*': ...}, 'Dcx': {'Alpha': ..., '*': ...}}`."""
 _just_plots = """\
 None
     Nothing, just plots the figure. Optionally saves it based on :paramref:`save`."""
@@ -55,6 +55,11 @@ keys
     ['Neuronal_1', 'Neuronal_1', 'Astrocytes', 'OPC'], then passing keys=['Neuronal_1, Neuronal_2', 'OPC']
     means that the two neuronal %(final)s states are treated as one and the 'Astrocyte' state is excluded.
 """
+_density_correction = (
+    "Optionally, we apply a density correction as described in [Coifman05]_, "
+    "where we use the implementation of [Haghverdi16]_."
+)
+
 _copy = """Return a copy of self."""
 _root = "root"
 _final = "final"
@@ -84,4 +89,5 @@ d = DocstringProcessor(
     n_cells=_n_cells,
     fit=_fit,
     copy=_copy,
+    density_correction=_density_correction,
 )

@@ -196,7 +196,7 @@ def gene_importance(
         - If :paramref:`n_perm` `!=None`, it also contains `'pval'` columns with calculated `p-values`.
         - If :paramref:`fdr_correction` `!= None`, it also contains `'qval'` column, containing the
           corrected `p-values`.
-    (:class:`sklearn.ensemble.RandomForestRegressor`, :class:`pandas.DataFrame`)
+    :class:`sklearn.ensemble.RandomForestRegressor`, :class:`pandas.DataFrame`
         Same as above, but also returns the fitted model.
     """
 

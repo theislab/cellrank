@@ -58,9 +58,6 @@ class VelocityKernel(Kernel):
     that connects cell *i* with cell *j* in gene expression space, and the features :math:`x_i` are given
     by the velocity vector :math:`v_i` of cell *i*.
 
-    Optionally, we propagate uncertainty in the velocity vectors forward into transition probabilities using either
-    an analytical approximation or a Monte Carlo approach.
-
     Parameters
     ----------
     %(adata)s
@@ -185,14 +182,17 @@ class VelocityKernel(Kernel):
 
                 - `{m.DETERMINISTIC.s!r}` - deterministic computation that doesn't propagate uncertainty
                 - `{m.MONTE_CARLO.s!r}` - Monte Carlo average of randomly sampled velocity vectors
-                - `{m.STOCHASTIC.s!r}` - second order approximation, only available when :module:`jax` is installed.
+                - `{m.STOCHASTIC.s!r}` - second order approximation, only available when :mod:`jax` is installed.
                 - `{m.SAMPLING.s!r}` - sample 1 transition matrix from velocity distribution
-                - `{m.PROPAGATION.s!r}` - same as `{m.MONTE_CARLO!r}`, but does not average the vectors.
-                    Instead, it saves the sampled transition matrices to :paramref:`_t_mats` to be used
-                    for later uncertainty estimation. It is generally faster then `{m.MONTE_CARLO.s!r}`,
-                    but also less memory efficient
+                - `{m.PROPAGATION.s!r}` - same as `{m.MONTE_CARLO.s!r}`, but does not average the vectors.
+                  Instead, it saves the sampled transition matrices to :paramref:`_t_mats` to be used
+                  for later uncertainty estimation. It is generally faster then `{m.MONTE_CARLO.s!r}`,
+                  but also less memory efficient
         backward_mode
-            Options are `['transpose', 'negate']`. Only matters if initialized as :paramref:`backward` =`True`.
+            Only matters if initialized as :paramref:`backward` =`True`.  Valid options are:
+
+                - `'transpose'` - compute transitions from neighboring cells `j` to cell `i`
+                - `'negate'` - negate the velocity vector
         softmax_scale
             Scaling parameter for the softmax.
         n_samples
@@ -200,7 +200,7 @@ class VelocityKernel(Kernel):
         seed
             Set the seed for random state when the method requires :paramref:`n_samples`.
         use_numba
-            Use :module:`numba` optimized functions. Only available if `:paramref:`mode` != `{m.STOCHASTIC.s!r}`.
+            Use :mod:`numba` optimized functions. Only available if `:paramref:`mode` != `{m.STOCHASTIC.s!r}`.
             Note that this options disables the progress bar, but can be faster for.
             If `None`, it enables running :mod:`numba` jitted functions in conjunction with default parallelization
             options.
@@ -208,7 +208,7 @@ class VelocityKernel(Kernel):
 
         Returns
         -------
-        self
+        :class:`cellrank.tl.kernels.VelocityKernel`
             Makes available the following fields:
 
                 - :paramref:`transition_matrix`

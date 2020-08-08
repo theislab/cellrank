@@ -65,7 +65,7 @@ Returns
     Depending on :paramref:`copy`, either updates the existing :paramref:`adata` object, returns a copy or
     returns the estimator.
 
-    Marked cells can be found in :paramref:`adata` `.obs` under `{key_added!r}`.
+    Marked cells can be found in :paramref:`adata` `.obs[`{key_added!r}]``.
 """
 
 

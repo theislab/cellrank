@@ -735,7 +735,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             Function that will be applied per lineage.
         title
             Title of the figure.
-        $(plotting)s
+        %(plotting)s
 
         Returns
         -------
@@ -765,7 +765,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         mode: str = "dist",
         dist_measure: str = "mutual_info",
         normalize_weights: str = "softmax",
-        softmax_beta: float = 1,
+        softmax_scale: float = 1,
         return_weights: bool = False,
     ) -> Union["Lineage", Tuple["Lineage", Optional[pd.DataFrame]]]:
         """
@@ -777,22 +777,22 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             List of keys that define the %(root_or_final)s states. The lineage will be reduced
             to these states by projecting the other states.
         mode
-            Whether to use a distance measure to compute weights ('dist', or just rescale ('scale').
+            Whether to use a distance measure to compute weights - `'dist'`, or just rescale - `'scale'`.
             Scaling is baseline for benchmarking.
         dist_measure
             Used to quantify similarity between query and reference states. Valid options are:
 
-                - 'cosine_sim'
-                - 'wasserstein_dist'
-                - 'kl_div'
-                - 'js_div'
-                - 'mutual_inf'
-                - 'equal'
+                - `'cosine_sim'` - cosine similarity
+                - `'wasserstein_dist'` - Wasserstein distance
+                - `'kl_div'` - Kullback–Leibler divergence
+                - `'js_div'` - Jensen–Shannon divergence
+                - `'mutual_inf'` - mutual information
+                - `'equal'` - equally redistribute the mass among the rest
         normalize_weights
             How to normalize the weights. Valid options are:
 
-            - 'scale': divide by the sum (per row)
-            - 'softmax': use a softmax with beta = 1
+                - `'scale'` - divide by the sum (per row)
+                - `'softmax'`- use a softmax with beta = 1
         softmax_beta
             Scaling factor in the softmax, used for normalizing the weights to sum to 1.
         return_weights
@@ -803,10 +803,11 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         :class:`cellrank.tl.Lineage`
             Lineage object, reduced to the %(root_or_final)s states. If a reduction is not possible, return a copy.
         :class:`pandas.DataFrame`
-            The weights used for the projection of shape `(n_query x n_reference)`.
+            The weights used for the projection of shape `(n_query, n_reference)`.
         """
+
         if self._is_transposed:
-            raise RuntimeError("This method works only on non-transposed matrices.")
+            raise RuntimeError("This method works only on non-transposed lineages.")
 
         if isinstance(keys, str):
             keys = [keys]
@@ -879,7 +880,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             if normalize_weights == "scale":
                 weights_n = _row_normalize(weights)
             elif normalize_weights == "softmax":
-                weights_n = _softmax(_row_normalize(weights), softmax_beta)
+                weights_n = _softmax(_row_normalize(weights), softmax_scale)
             else:
                 raise ValueError(
                     f"Normalization method `{normalize_weights!r}` not found. Valid options are: `'scale', 'softmax'`."
@@ -919,7 +920,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
 
 class LineageView(Lineage):
-    """Simple view of :class:`cellrank.tools.Lineage`."""
+    """View of :class:`cellrank.tools.Lineage`."""
 
     def __new__(cls, lineage: Lineage) -> "LineageView":
         """Create a LineageView."""

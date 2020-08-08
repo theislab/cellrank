@@ -11,7 +11,7 @@ from inspect import signature
 import numpy as np
 import pandas as pd
 from pygam import GAM as pGAM
-from pygam import ExpectileGAM
+from pygam import LinearGAM, ExpectileGAM
 from pygam.terms import s
 from sklearn.base import BaseEstimator
 from scipy.ndimage.filters import convolve
@@ -80,7 +80,11 @@ class BaseModel(ABC):
     @property
     @d.dedent
     def adata(self) -> AnnData:
-        """%(adata)s"""  # noqa
+        """
+        Returns
+        -------
+        %(adata)s
+        """  # noqa
         return self._adata
 
     @property
@@ -387,13 +391,13 @@ class BaseModel(ABC):
         Parameters
         ----------
         x
-            Independent variables, an array of shape `(n_samples, 1)`.
+            Independent variables, array of shape `(n_samples, 1)`.
         y
-            Dependent variables, an array of shape `(n_samples, 1)`
+            Dependent variables, array of shape `(n_samples, 1)`
         w
-            Optional weights of :paramref:`x`, an array of shape `(n_samples,)`
+            Optional weights of :paramref:`x`, array of shape `(n_samples,)`
         **kwargs
-            Keyword arguments for underyling :paramref:`model`'s fitting function.
+            Keyword arguments for underlying :paramref:`model`'s fitting function.
 
         Returns
         -------
@@ -419,6 +423,7 @@ class BaseModel(ABC):
     @abstractmethod
     @d.get_sectionsf("base_model_predict", sections=["Parameters", "Returns"])
     @d.get_full_descriptionf("base_model_predict")
+    @d.dedent
     def predict(
         self,
         x_test: Optional[np.ndarray] = None,
@@ -431,18 +436,18 @@ class BaseModel(ABC):
         Parameters
         ----------
         x_test
-            An array of shape `(n_samples,)` used for prediction.
+            Array of shape `(n_samples,)` used for prediction.
         key_added
             Attribute name where to save the :paramref:`x_test` for later use. If `None`, don't save it.
         **kwargs
-            Keyword arguments for underlying :paramref:`model`'s fitting method.
+            Keyword arguments for underlying :paramref:`model`'s prediction method.
 
         Returns
         -------
         :class:`numpy.ndarray`
             Updates and returns the following:
 
-                - :paramref:`y_text` - %(base_model_y_yest).
+                - :paramref:`y_test` - %(base_model_y_test)s.
         """
         pass
 
@@ -463,7 +468,7 @@ class BaseModel(ABC):
         Parameters
         ----------
         x_test
-            An array of shape `(n_samples,)` used for confidence interval calculation.
+            Array of shape `(n_samples,)` used for confidence interval calculation.
         **kwargs
             Keyword arguments for underlying :paramref:`model`'s confidence method
             or for :meth:`default_confidence_interval`.
@@ -789,8 +794,8 @@ class SKLearnModel(BaseModel):
     weight_name
         Name of the weight argument for :paramref:`model` `.fit`.
     ignore_raise
-        Do not raise an exception if weight argument is not found the fittng function of :paramref:`model`.
-        This is useful in case when weight is passed in **kwargs and cannot be determined from signature.
+        Do not raise an exception if weight argument is not found in the fittng function of :paramref:`model`.
+        This is useful in case when weight is passed in `**kwargs` and cannot be determined from signature.
     """
 
     _fit_names = ("fit", "__init__")
@@ -899,9 +904,6 @@ class SKLearnModel(BaseModel):
         """
         %(base_model_ci.full_desc)s
 
-        Use :meth:`default_confidence_interval` function if underlying :paramref:`model` has not method
-        for confidence interval calculation.
-
         Parameters
         ----------
         %(base_model_ci.parameters)s
@@ -982,6 +984,11 @@ class SKLearnModel(BaseModel):
 
         return None
 
+    @property
+    def model(self) -> BaseEstimator:
+        """The underlying :mod:`sklearn` model."""  # noqa
+        return self._model
+
     @d.dedent
     def copy(self) -> "SKLearnModel":
         """%(copy)s"""  # noqa
@@ -991,7 +998,7 @@ class SKLearnModel(BaseModel):
 @d.dedent
 class GAM(BaseModel):
     """
-    Fit Generalized Additive Model from package :mod:`pygam`.
+    Fit Generalized Additive Models (GAMs) from package :mod:`pygam`.
 
     Parameters
     ----------
@@ -1001,9 +1008,11 @@ class GAM(BaseModel):
     spline_order
         Order of the splines.
     distribution
-        Name of the distribution
+        Name of the distribution. Available distributions can be found
+        `here <https://pygam.readthedocs.io/en/latest/notebooks/tour_of_pygam.html#Distribution:>`_.
     link
-        Name of the link function.
+        Name of the link function. Available functions can be found
+        `here <https://pygam.readthedocs.io/en/latest/notebooks/tour_of_pygam.html#Link-function:>`_.
     max_iter
         Maximum number of iterations for optimization.
     expectile
@@ -1045,6 +1054,8 @@ class GAM(BaseModel):
             model = ExpectileGAM(
                 term, expectile=expectile, max_iter=max_iter, verbose=False
             )
+        elif distribution == "normal" and link == "identity":
+            model = LinearGAM(term, max_iter=max_iter, verbose=False)
         else:
             model = pGAM(
                 term,
@@ -1063,8 +1074,6 @@ class GAM(BaseModel):
             raise TypeError(
                 f"Expected `grid` to be `bool` or `dict` of parameters, found `{type(grid).__name__!r}`."
             )
-
-        self._use_model_ci = distribution == "normal" and link == "identity"
 
     @d.dedent
     def fit(
@@ -1152,8 +1161,8 @@ class GAM(BaseModel):
         """
         %(base_model_ci.summary)s
 
-        If the :paramref:`model` uses `'normal'` distribution and `'identity'` link function, use it's
-        method for confidence interval calculatation. Otherwise, use :meth:`default_confidence_interval`.
+        If the :paramref:`model` uses `'normal'` distribution and `'identity'` link function (:class:`pygam.LinearGam`),
+        use :meth:`prediction_intervals` method, otherwise use :meth:`confidence_intervals`.
 
         Parameters
         ----------
@@ -1166,10 +1175,10 @@ class GAM(BaseModel):
 
         x_test = self._check("_x_test", x_test)
 
-        if self._use_model_ci:
-            self._conf_int = self.model.confidence_intervals(x_test, **kwargs)
+        if isinstance(self.model, LinearGAM):
+            self._conf_int = self.model.prediction_intervals(x_test, **kwargs)
         else:
-            self._conf_int = self.default_confidence_interval(x_test=x_test, **kwargs)
+            self._conf_int = self.confidence_intervals(x_test=x_test, **kwargs)
 
         return self.conf_int
 
@@ -1178,7 +1187,6 @@ class GAM(BaseModel):
         """%(copy)s"""  # noqa
         res = GAM(self.adata)
 
-        res._use_model_ci = self._use_model_ci
         res._grid = deepcopy(self._grid)
         res._model = deepcopy(self.model)
 
@@ -1201,14 +1209,13 @@ class GAMR(BaseModel):
 
     Parameters
     ----------
-    adata : :class:`anndata.AnnData`
-        Annotated data object.
+    %(adata)s
     n_splines
         Number of splines for the GAM.
     smoothing_param
-        Smoothing parameter.
+        Smoothing parameter. Increasing this increases the smootheness of splines.
     family
-        Family in `rpy2.robjects.r`, such as `"gaussian"` or `"poisson"`.
+        Family in `rpy2.robjects.r`, such as `'gaussian'` or `'poisson'`.
     filter_dropouts
         Filter out all cells with expression lower than this.
     backend
@@ -1216,7 +1223,7 @@ class GAMR(BaseModel):
         Option `'gam'` ignores the number of splines, as well as family and smoothing parameter.
     """  # noqa
 
-    _backends = {
+    _fallback_backends = {
         "gam": "mgcv",
         "mgcv": "gam",
     }
@@ -1228,8 +1235,8 @@ class GAMR(BaseModel):
         smoothing_param: float = 2,
         family: str = "gaussian",
         filter_dropouts: Optional[float] = None,
-        perform_import_check: bool = True,
         backend: str = "mgcv",
+        perform_import_check: bool = True,
     ):
         super().__init__(adata, model=None, filter_dropouts=filter_dropouts)
         self._n_splines = n_splines
@@ -1238,9 +1245,9 @@ class GAMR(BaseModel):
         self._lib_name = None
         self._family = family
 
-        if backend not in self._backends.keys():
+        if backend not in self._fallback_backends.keys():
             raise ValueError(
-                f"Invalid backend library `{backend!r}`. Valid options are `{list(self._backends.keys())}`."
+                f"Invalid backend library `{backend!r}`. Valid options are `{list(self._fallback_backends.keys())}`."
             )
 
         if (
@@ -1248,7 +1255,7 @@ class GAMR(BaseModel):
         ):  # it's a bit costly to import, copying just passes the reference
             self._lib, self._lib_name = _maybe_import_r_lib(
                 backend
-            ) or _maybe_import_r_lib(self._backends[backend], raise_exc=True)
+            ) or _maybe_import_r_lib(self._fallback_backends[backend], raise_exc=True)
 
     @d.dedent
     def fit(
@@ -1367,7 +1374,7 @@ class GAMR(BaseModel):
         self, x_test: Optional[np.ndarray] = None, **kwargs
     ) -> np.ndarray:
         """
-        %(base_model_cf.summary)s
+        %(base_model_ci.summary)s
 
         This method uses :meth:`default_confidence_interval`.
 

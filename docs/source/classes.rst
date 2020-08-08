@@ -44,6 +44,13 @@ Precomputed Kernel
 Models
 ~~~~~~
 
+GAM
+---
+
+.. autoclass:: cellrank.ul.models.GAM
+    :members:
+    :inherited-members:
+
 SKLearnModel
 ------------
 
@@ -52,7 +59,7 @@ SKLearnModel
     :inherited-members:
 
 GAMR
-------------
+----
 
 .. autoclass:: cellrank.ul.models.GAMR
     :members:
@@ -75,7 +82,7 @@ Kernel
     :inherited-members:
 
 BaseModel
------
+---------
 
 .. autoclass:: cellrank.ul.models.BaseModel
     :members:
