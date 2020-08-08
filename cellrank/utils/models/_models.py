@@ -1057,18 +1057,18 @@ class GAM(BaseModel):
     max_iter
         Maximum number of iterations for optimization.
     expectile
-        Expectile for :class:`pygam.ExpectileGAM`. This forces the distribution to be `'normal'`
+        Expectile for :class:`pygam.pygam.ExpectileGAM`. This forces the distribution to be `'normal'`
         and link function to `'identity'`. Must be in `(0, 1)`.
     use_default_conf_int
-        Whether to use :meth:`default_confidence_interval` to calculate the confience interval or
+        Whether to use :meth:`default_confidence_interval` to calculate the confidence interval or
         use the :paramref:`model`'s method.
     grid
         Whether to perform a grid search. Keys correspond to a parameter names and values to range to be searched.
         If an empty :class:`dict`, don't perform a grid search. If `None`, uses a default grid.
     spline_kwargs
-        Keyword arguments for :class:`pygam.s`.
+        Keyword arguments for :class:`pygam.terms.s`.
     **kwargs
-        Keyword arguments for :class:`pygam.GAM`.
+        Keyword arguments for :class:`pygam.pygam.GAM`.
     """
 
     def __init__(
@@ -1089,8 +1089,8 @@ class GAM(BaseModel):
             0,
             spline_order=spline_order,
             n_splines=n_splines,
-            penalties=["derivative"],
-            **_filter_kwargs(s, **{**{"lam": 1}, **spline_kwargs}),
+            penalties=["derivative", "l2"],
+            **_filter_kwargs(s, **{**{"lam": 3}, **spline_kwargs}),
         )
         link = GamLinkFunction(link)
         distribution = GamDistribution(distribution)
@@ -1125,10 +1125,12 @@ class GAM(BaseModel):
         super().__init__(adata, model=model)
         self._use_default_conf_int = use_default_conf_int
         self._grid = object()  # sentinel value, `None` performs a grid search
+
         if grid is None:
             self._grid = None
-        elif isinstance(grid, MappingProxyType):
-            self._grid = dict(grid)
+        elif isinstance(grid, (dict, MappingProxyType)):
+            if len(grid):
+                self._grid = dict(grid)
         else:
             raise TypeError(
                 f"Expected `grid` to be `dict` or `None`, found `{type(grid).__name__!r}`."
