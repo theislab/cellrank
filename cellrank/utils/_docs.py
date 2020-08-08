@@ -59,6 +59,11 @@ _density_correction = (
     "Optionally, we apply a density correction as described in [Coifman05]_, "
     "where we use the implementation of [Haghverdi16]_."
 )
+_time_range = """
+time_range
+   Minimum and maximum pseudotime. If `None`, minimum is `0` and maximum is automatically determined.
+   If :class:`float`, it specified the maximum pseudotime. If (:class:`float`, :class:`float`), it specifies the
+"""
 
 _copy = """Return a copy of self."""
 _root = "root"
