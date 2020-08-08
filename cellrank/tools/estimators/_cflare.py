@@ -38,7 +38,7 @@ class CFLARE(BaseEstimator, Eigen):
     %(base_estimator.parameters)s
     """
 
-    @inject_docs(fin_states=P.FIN, fin_states_probs=P.FIN_PROBS)
+    @inject_docs(fs=P.FIN, fsp=P.FIN_PROBS)
     def compute_final_states(
         self,
         use: Optional[Union[int, Tuple[int], List[int], range]] = None,
@@ -74,8 +74,7 @@ class CFLARE(BaseEstimator, Eigen):
         method
             Method to be used for clustering. Must be one of `['louvain', 'kmeans']`.
         cluster_key
-            If a key to cluster labels is given, :paramref:`metastable_states` will ge associated
-            with these for naming and colors.
+            If a key to cluster labels is given, :paramref:`{fs}` will ge associated with these for naming and colors.
         n_clusters_kmeans
             If `None`, this is set to :paramref:`use` `+ 1`.
         n_neighbors_louvain
@@ -110,8 +109,8 @@ class CFLARE(BaseEstimator, Eigen):
         None
             Nothing, but updates the following fields:
 
-                - :paramref:`{fin_states}`
-                - :paramref:`{fin_states_probs}`
+                - :paramref:`{fsp}`
+                - :paramref:`{fs}`
         """
 
         def compute_metastable_states_prob() -> Series:
@@ -219,7 +218,6 @@ class CFLARE(BaseEstimator, Eigen):
 
         # cluster X
         if method == "kmeans" and n_clusters_kmeans is None:
-            # TODO: @Marius - why the percentile?
             n_clusters_kmeans = len(use) + (percentile is None)
             if X.shape[0] < n_clusters_kmeans:
                 raise ValueError(
@@ -349,8 +347,8 @@ class CFLARE(BaseEstimator, Eigen):
         None
             Nothing, just makes available the following fields:
 
-                - :paramref:`{fs}`
                 - :paramref:`{fsp}`
+                - :paramref:`{fs}`
                 - :paramref:`{ap}`
                 - :paramref:`{dp}`
         """

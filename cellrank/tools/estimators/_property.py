@@ -105,7 +105,7 @@ class PropertyMeta(ABCMeta, type):
             )
 
         attributedict[prop_name] = _create_property(
-            str(md.attr), doc=md.doc, return_type=md.dtype
+            str(md.attr), prop_name, doc=md.doc, return_type=md.dtype
         )
 
         return prop_name
@@ -239,6 +239,7 @@ class KernelHolder(ABC):
         return self._kernel
 
     @property
+    @d.dedent
     def adata(self) -> AnnData:
         """
         Returns

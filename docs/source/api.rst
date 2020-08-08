@@ -26,8 +26,8 @@ Tools
 
     :toctree: api/tl
 
-    tl.CFLARE
     tl.GPCCA
+    tl.CFLARE
     tl.partition
     tl.root_states
     tl.final_states

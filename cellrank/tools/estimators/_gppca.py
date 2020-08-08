@@ -55,7 +55,13 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         Metadata(attr=A.COARSE_STAT_D, prop=P.COARSE_STAT_D, dtype=pd.Series),
     ]
 
-    @inject_docs(schur=P.SCHUR.s, coarse_T=P.COARSE_T, coarse_stat=P.COARSE_STAT_D)
+    @inject_docs(
+        ms=P.META,
+        msp=P.META_PROBS,
+        schur=P.SCHUR.s,
+        coarse_T=P.COARSE_T,
+        coarse_stat=P.COARSE_STAT_D,
+    )
     @d.dedent
     def compute_metastable_states(
         self,
@@ -96,6 +102,8 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         None
             Nothing, but updates the following fields:
 
+                - :paramref:`{msp}`
+                - :paramref:`{ms}`
                 - :paramref:`{schur}`
                 - :paramref:`{coarse_T}`
                 - :paramref:`{coarse_stat}`
@@ -222,7 +230,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             )
 
     @d.dedent
-    @inject_docs(fs=P.FIN)
+    @inject_docs(fs=P.FIN, fsp=P.FIN_PROBS)
     def set_final_states_from_metastable_states(
         self, names: Optional[Union[Iterable[str], str]] = None, n_cells: int = 30,
     ):
@@ -238,7 +246,10 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         Returns
         -------
         None
-            Nothing, just sets :paramref:`{fs}`.
+            Nothing, just updates the following fields:
+
+                - :paramref:`{fsp}`
+                - :paramref:`{fs}`
         """
 
         if not isinstance(n_cells, int):
@@ -290,7 +301,8 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
 
         self._write_final_states()
 
-    @inject_docs(fin_states=P.FIN, fin_states_probs=P.FIN_PROBS)
+    # TODO: singlevaluedispatch
+    @inject_docs(fs=P.FIN, fsp=P.FIN_PROBS)
     def compute_final_states(
         self,
         method: str = "eigengap",
@@ -327,8 +339,8 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         None
             Nothing, just updates the following fields:
 
-                - :paramref:`{fin_states_probs}`
-                - :paramref:`{fin_states}`
+                - :paramref:`{fsp}`
+                - :paramref:`{fs}`
         """  # noqa
         if len(self._get(P.META).cat.categories) == 1:
             logg.warning(
@@ -382,7 +394,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         self, n_components: int = 10, key_added: str = "gdpt_pseudotime", **kwargs
     ):
         """
-        Compute generalized Diffusion pseudotime making use of the real Schur decomposition.
+        Compute generalized Diffusion pseudotime from [Haghverdi16]_ making use of the real Schur decomposition.
 
         Parameters
         ----------
@@ -796,10 +808,10 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             Check whether rows in `memberships` sum to 1.
 
         Returns
-        --------
+        -------
         None
-            Writes a lineage object which mapped names and colors. Also creates a categorical :class:`pandas.Series`
-            `.metastable_states`, where the top `n_cells` cells represent each fuzzy state.
+            Writes a lineage object which mapped names and colors. Also writes a categorical :class:`pandas.Series`,
+            where the top `n_cells` cells represent each fuzzy state.
         """
 
         if n_cells is None:
@@ -979,10 +991,10 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         None
             Nothing, just makes available the following fields:
 
-                - :paramref:`{ms}`
                 - :paramref:`{msp}`
-                - :paramref:`{fs}`
+                - :paramref:`{ms}`
                 - :paramref:`{fsp}`
+                - :paramref:`{fs}`
                 - :paramref:`{ap}`
                 - :paramref:`{dp}`
         """
