@@ -4,12 +4,13 @@ from abc import ABC
 from typing import Any, Tuple, Union, Mapping, Optional
 from pathlib import Path
 
+import numpy as np
+from scipy.sparse.linalg import eigs
+
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-import numpy as np
 from cellrank import logging as logg
-from scipy.sparse.linalg import eigs
 from cellrank.utils._docs import d, inject_docs
 from cellrank.tools._utils import save_fig, _eigengap
 from cellrank.tools.estimators._utils import Metadata, _delegate
@@ -343,7 +344,6 @@ class Schur(VectorPlottable, Decomposable):
             Input probability distribution over all cells. If `None`, uniform is chosen.
         method
             Method for calculating the Schur vectors. Valid options are: `'krylov'` or `'brandts'`.
-
             For benefits of each method, see :class:`msmtools.analysis.dense.gpcca.GPCCA`. The former is
             an iterative procedure that computes a partial, sorted Schur decomposition for large, sparse
             matrices whereas the latter computes a full sorted Schur decomposition of a dense matrix.

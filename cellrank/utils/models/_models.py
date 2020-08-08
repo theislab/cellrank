@@ -447,7 +447,7 @@ class BaseModel(ABC):
         :class:`numpy.ndarray`
             Updates and returns the following:
 
-                - :paramref:`y_test` - %(base_model_y_test)s.
+                - :paramref:`y_test` - %(base_model_y_test.summary)s
         """
         pass
 

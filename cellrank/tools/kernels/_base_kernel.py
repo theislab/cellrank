@@ -92,6 +92,7 @@ class KernelExpression(ABC):
 
     @property
     @abstractmethod
+    @d.dedent
     def adata(self) -> AnnData:
         """
         Returns
@@ -395,6 +396,7 @@ class UnaryKernelExpression(KernelExpression, ABC):
         self._adata = adata
 
     @property
+    @d.dedent
     def adata(self) -> AnnData:
         """
         Returns
@@ -484,6 +486,7 @@ class NaryKernelExpression(KernelExpression, ABC):
                 yield from k._get_kernels()
 
     @property
+    @d.dedent
     def adata(self) -> AnnData:
         """
         Returns
