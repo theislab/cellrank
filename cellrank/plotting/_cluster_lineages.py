@@ -6,15 +6,21 @@ from typing import Dict, Tuple, Union, TypeVar, Optional, Sequence
 from pathlib import Path
 from collections import Iterable
 
+import numpy as np
+from sklearn.preprocessing import StandardScaler
+
 import matplotlib.pyplot as plt
 
-import numpy as np
 from cellrank import logging as logg
 from cellrank.utils._docs import d
 from cellrank.tools._utils import save_fig, _unique_order_preserving
 from cellrank.utils._utils import _get_n_cores, check_collection
-from sklearn.preprocessing import StandardScaler
-from cellrank.plotting._utils import _model_type, _get_backend, _create_models
+from cellrank.plotting._utils import (
+    _model_type,
+    _get_backend,
+    _create_models,
+    _time_range_type,
+)
 from cellrank.tools._constants import AbsProbKey
 from cellrank.utils._parallelize import parallelize
 from cellrank.utils.models._models import BaseModel
@@ -79,7 +85,7 @@ def cluster_lineage(
     genes: Sequence[str],
     lineage: str,
     backward: bool = False,
-    time_range: Optional[Union[float, Tuple[float, float]]] = None,
+    time_range: _time_range_type = None,
     clusters: Optional[Sequence[str]] = None,
     n_points: int = 200,
     time_key: str = "latent_time",
@@ -157,9 +163,9 @@ def cluster_lineage(
 
         Updates :paramref:`adata` `.uns` with the following key:
 
-            - lineage_{:paramref:`lineage_name`}_trend_{:paramref:`key_added`} \
-            :class:`anndata.AnnData` object of shape `len` (:paramref:`genes`) x :paramref:`n_points`
-            containing the clustered genes.
+            - lineage_{:paramref:`lineage_name`}_trend_{:paramref:`key_added`}
+              :class:`anndata.AnnData` object of shape `len` (:paramref:`genes`) x :paramref:`n_points`
+              containing the clustered genes.
     """
 
     from anndata import AnnData as _AnnData

@@ -6,11 +6,12 @@ from types import MappingProxyType
 from typing import List, Tuple, Union, Mapping, TypeVar, Optional, Sequence
 from pathlib import Path
 
+import numpy as np
+
 import matplotlib
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 
-import numpy as np
 from cellrank import logging as logg
 from cellrank.utils._docs import d
 from cellrank.tools._utils import save_fig, _unique_order_preserving
@@ -21,6 +22,7 @@ from cellrank.plotting._utils import (
     _create_models,
     _trends_helper,
     _fit_gene_trends,
+    _time_range_type,
     _maybe_create_dir,
 )
 from cellrank.tools._constants import AbsProbKey
@@ -37,7 +39,7 @@ def gene_trends(
     lineages: Optional[Union[str, Sequence[str]]] = None,
     backward: bool = False,
     data_key: str = "X",
-    time_range: Optional[List[Union[float, Tuple[float, float]]]] = None,
+    time_range: Optional[Union[_time_range_type, List[_time_range_type]]] = None,
     conf_int: bool = True,
     same_plot: bool = False,
     hide_cells: bool = False,
