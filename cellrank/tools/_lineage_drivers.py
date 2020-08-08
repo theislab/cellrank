@@ -6,18 +6,19 @@ from typing import Any, Dict, List, Tuple, Union, Mapping, TypeVar, Optional, Se
 
 import numpy as np
 import pandas as pd
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.preprocessing import StandardScaler
+from statsmodels.stats.multitest import multipletests
+
 from cellrank import logging as logg
 from cellrank.tools import GPCCA
-from sklearn.ensemble import RandomForestRegressor
 from cellrank.utils._docs import d
 from cellrank.utils._utils import _get_n_cores, check_collection
-from cellrank.utils.models import Model
-from sklearn.preprocessing import StandardScaler
+from cellrank.utils.models import BaseModel
 from cellrank.tools.kernels import ConnectivityKernel
 from cellrank.plotting._utils import _model_type, _create_models, _is_any_gam_mgcv
 from cellrank.tools._constants import AbsProbKey
 from cellrank.utils._parallelize import parallelize
-from statsmodels.stats.multitest import multipletests
 from cellrank.tools.estimators._constants import P
 
 AnnData = TypeVar("AnnData")
@@ -78,7 +79,7 @@ def _gi_permute(
 
 def _gi_process(
     genes: Sequence[str],
-    models: Dict[str, Dict[str, Model]],
+    models: Dict[str, Dict[str, BaseModel]],
     lineage_name: str,
     queue: Optional[Queue],
     **kwargs,
@@ -97,7 +98,7 @@ def _gi_process(
     queue
         Signalling queue in the parent process/thread used to update the progress bar.
     **kwargs
-        Keyword arguments for :meth:`cellrank.ul.models.Model.prepare`.
+        Keyword arguments for :meth:`cellrank.ul.models.BaseModel.prepare`.
 
     Returns
     -------
@@ -185,7 +186,7 @@ def gene_importance(
     rf_kwargs
         Keyword arguments for :class:`sklearn.ensemble.RandomForestRegressor`.
     **kwargs
-        Keyword arguments for :meth:`cellrank.ul.models.Model.prepare`.
+        Keyword arguments for :meth:`cellrank.ul.models.BaseModel.prepare`.
 
     Returns
     -------
@@ -326,6 +327,7 @@ def lineage_drivers(
     """
 
     # create dummy kernel and estimator
+    # TODO: precomputed kernel
     kernel = ConnectivityKernel(adata, backward=backward)
     g = GPCCA(kernel, read_from_adata=True)
     if g._get(P.ABS_PROBS) is None:

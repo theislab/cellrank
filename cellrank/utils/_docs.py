@@ -24,7 +24,7 @@ backend
     Which backend to use for multiprocessing. See :class:`joblib.Parallel` for valid options."""
 _model = """\
 model
-    Model to fit.
+    BaseModel to fit.
 
     - If a :class:`dict`, gene and lineage specific models can be specified. Use `'*'` to indicate
     all genes or lineages, for example `{'Map2': {'*': ...}, 'Dcx': {'Alpha': ..., '*': ...}}`."""
@@ -55,6 +55,7 @@ keys
     ['Neuronal_1', 'Neuronal_1', 'Astrocytes', 'OPC'], then passing keys=['Neuronal_1, Neuronal_2', 'OPC']
     means that the two neuronal %(final)s states are treated as one and the 'Astrocyte' state is excluded.
 """
+_copy = """Return a copy of self."""
 _root = "root"
 _final = "final"
 
@@ -82,4 +83,5 @@ d = DocstringProcessor(
     root_or_final=f"{_root} or {_final}",
     n_cells=_n_cells,
     fit=_fit,
+    copy=_copy,
 )

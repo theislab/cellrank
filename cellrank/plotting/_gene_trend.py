@@ -148,9 +148,9 @@ def gene_trends(
         The figures will be saved as :paramref:`dirname` /`{gene}`. :paramref:`ext`.
     %(plotting)s
     plot_kwargs
-        Keyword arguments for :meth:`cellrank.ul.models.Model.plot`.
+        Keyword arguments for :meth:`cellrank.ul.models.BaseModel.plot`.
     **kwargs
-        Keyword arguments for :meth:`cellrank.ul.models.Model.prepare`.
+        Keyword arguments for :meth:`cellrank.ul.models.BaseModel.prepare`.
 
     Returns
     -------

@@ -8,22 +8,23 @@ from copy import deepcopy
 from typing import Any, Tuple, Union, TypeVar, Iterable, Optional
 from inspect import signature
 
+import numpy as np
+import pandas as pd
+from pygam import GAM as pGAM
+from pygam import ExpectileGAM
+from pygam.terms import s
+from sklearn.base import BaseEstimator
+from scipy.ndimage.filters import convolve
+
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 
-import numpy as np
-import pandas as pd
 import cellrank.logging as logg
-from pygam import GAM as pGAM
-from pygam import ExpectileGAM
-from pygam.terms import s
-from sklearn.base import BaseEstimator
 from cellrank.utils._docs import d
 from cellrank.tools._utils import save_fig, _densify_squeeze
 from cellrank.utils._utils import _minmax
-from scipy.ndimage.filters import convolve
 from cellrank.tools._lineage import Lineage
 from cellrank.tools._constants import AbsProbKey
 
@@ -35,14 +36,15 @@ _r_lib = None
 _r_lib_name = None
 
 
-class Model(ABC):
+@d.get_sectionsf("base_model", sections=["Parameters"])
+@d.dedent
+class BaseModel(ABC):
     """
     Base class for other model classes.
 
     Parameters
     ----------
-    adata : :class:`anndata.AnnData`
-        Annotated data object.
+    %(adata)s
     model
         Underlying model.
     filter_dropouts
@@ -76,8 +78,9 @@ class Model(ABC):
         self._dtype = np.float32
 
     @property
+    @d.dedent
     def adata(self) -> AnnData:
-        """Annotated data object."""
+        """%(adata)s"""  # noqa
         return self._adata
 
     @property
@@ -86,58 +89,69 @@ class Model(ABC):
         return self._model
 
     @property
+    @d.get_summaryf("base_model_x_all")
     def x_all(self) -> np.ndarray:
-        """Original independent variables."""
+        """Unfiltered independent variables of shape `(n_cells, 1)`."""
         return self._x_all
 
     @property
+    @d.get_summaryf("base_model_y_all")
     def y_all(self) -> np.ndarray:
-        """Original dependent variables."""
+        """Unfiltered dependent variables of shape `(n_cells, 1)`."""
         return self._y_all
 
     @property
+    @d.get_summaryf("base_model_w_all")
     def w_all(self) -> np.ndarray:
-        """Original weights."""
+        """Unfiltered weights of shape `(n_cells,)`."""
         return self._w_all
 
     @property
+    @d.get_summaryf("base_model_x")
     def x(self) -> np.ndarray:
-        """Independent variables used for model fitting."""
+        """Filtered independent variables of shape `(n_filtered_cells, 1)` used for fitting."""  # noqa
         return self._x
 
     @property
+    @d.get_summaryf("base_model_y")
     def y(self) -> np.ndarray:
-        """Dependent variables used for model fitting."""
+        """Filtered dependent variables of shape `(n_filtered_cells, 1)` used for fitting."""  # noqa
         return self._y
 
     @property
+    @d.get_summaryf("base_model_w")
     def w(self) -> np.ndarray:
-        """Weights of independent variables used for model fitting."""
+        """Filtered weights of shape `(n_filtered_cells,)` used for fitting."""  # noqa
         return self._w
 
     @property
+    @d.get_summaryf("base_model_x_test")
     def x_test(self) -> np.ndarray:
-        """Independent variables used for prediction."""
+        """Independent variables of shape `(n_samples, 1)` used for prediction."""
         return self._x_test
 
     @property
+    @d.get_summaryf("base_model_y_test")
     def y_test(self) -> np.ndarray:
-        """Predicted values."""
+        """Prediction values of shape `(n_samples,)` for :paramref:`x_test`."""
         return self._y_test
 
     @property
+    @d.get_summaryf("base_model_x_hat")
     def x_hat(self) -> np.ndarray:
-        """Independent variables used when calculating default confidence interval."""
+        """Filtered independent variables used when calculating default confidence interval, usually same as :paramref:`x`."""  # noqa
         return self._x_hat
 
     @property
+    @d.get_summaryf("base_model_y_hat")
     def y_hat(self) -> np.ndarray:
-        """Dependent variables used when calculating default confidence interval."""
+        """Filtered dependent variables used when calculating default confidence interval, usually same as :paramref:`y`."""  # noqa
         return self._y_hat
 
     @property
+    @d.get_summaryf("base_model_conf_int")
     def conf_int(self) -> np.ndarray:
-        """Confidence interval."""
+        """Array of shape `(n_samples, 2)` containing the lower and upper bounds of the confidence interval."""  # noqa
         return self._conf_int
 
     @d.dedent
@@ -155,14 +169,14 @@ class Model(ABC):
         weight_threshold: Union[float, Tuple[float, float]] = (0.01, 0.01),
         filter_data: float = False,
         n_test_points: int = 200,
-    ) -> "Model":
+    ) -> "BaseModel":
         """
         Prepare the model to be ready for fitting.
 
         Parameters
         ----------
         gene
-            Gene in :paramref:`adata` `.var_names`.
+            Gene in :paramref:`adata` `.var_names` or in :paramref:`adata` `.raw.var_names`.
         lineage
             Name of a lineage in :paramref:`adata` `.uns`:paramref:`lineage_key`.
         %(backward)s
@@ -195,10 +209,15 @@ class Model(ABC):
         None
             Nothing, but updates the following fields:
 
-                - :paramref:`x`
-                - :paramref:`y`
-                - :paramref:`w`
-                - :paramref:`x_test`
+                - :paramref:`x` - %(base_model_x.summary)s
+                - :paramref:`y` - %(base_model_y.summary)s
+                - :paramref:`w` - %(base_model_w.summary)s
+
+                - :paramref:`x_all` - %(base_model_x_all.summary)s
+                - :paramref:`y_all` - %(base_model_y_all.summary)s
+                - :paramref:`w_all` - %(base_model_w_all.summary)s
+
+                - :paramref:`x_test` - %(base_model_x_test.summary)s
         """
         if use_raw and self.adata.raw is None:
             raise AttributeError("AnnData object has no attribute `.raw`.")
@@ -293,7 +312,7 @@ class Model(ABC):
                 f"differs from weights' first dimension ({self._w_all.shape[0]})."
             )
 
-        x, ixs = np.unique(x, return_index=True)  # GamMGCV needs unique
+        x, ixs = np.unique(x, return_index=True)  # GAMR (mgcv) needs unique
         y = y[ixs]
         w = w[ixs]
 
@@ -341,44 +360,45 @@ class Model(ABC):
             x, y, w = x[fil], y[fil], w[fil]
 
         self._x, self._y, self._w = (
-            self._convert(x),
-            self._convert(y),
-            self._convert(w).squeeze(-1),
+            self._reshape_and_retype(x),
+            self._reshape_and_retype(y),
+            self._reshape_and_retype(w).squeeze(-1),
         )
-        self._x_test = self._convert(x_test)
+        self._x_test = self._reshape_and_retype(x_test)
 
         self._gene = gene
         self._lineage = lineage
 
         return self
 
-    @d.get_sectionsf("model_fit")
     @abstractmethod
+    @d.get_sectionsf("base_model_fit", sections=["Parameters"])
+    @d.get_full_descriptionf("base_model_fit")
     def fit(
         self,
         x: Optional[np.ndarray] = None,
         y: Optional[np.ndarray] = None,
         w: Optional[np.ndarray] = None,
         **kwargs,
-    ) -> "Model":
+    ) -> "BaseModel":
         """
         Fit the model.
 
         Parameters
         ----------
         x
-            Independent variables.
+            Independent variables, an array of shape `(n_samples, 1)`.
         y
-            Dependent variables.
+            Dependent variables, an array of shape `(n_samples, 1)`
         w
-            Weights of :paramref:`x`.
+            Optional weights of :paramref:`x`, an array of shape `(n_samples,)`
         **kwargs
-            Keyword arguments.
+            Keyword arguments for underyling :paramref:`model`'s fitting function.
 
         Returns
         -------
-        None
-            Just fits the model.
+        :class:`cellrank.ul.models.BaseModel`
+            Fits the model and returns self.
         """
 
         self._check("_x", x)
@@ -396,8 +416,9 @@ class Model(ABC):
 
         return self
 
-    @d.get_sectionsf("model_predict")
     @abstractmethod
+    @d.get_sectionsf("base_model_predict", sections=["Parameters", "Returns"])
+    @d.get_full_descriptionf("base_model_predict")
     def predict(
         self,
         x_test: Optional[np.ndarray] = None,
@@ -410,42 +431,68 @@ class Model(ABC):
         Parameters
         ----------
         x_test
-            Features used for prediction.
+            An array of shape `(n_samples,)` used for prediction.
         key_added
-            Attribute name where to save the independent variables.
-            If `None`, don't save them.
+            Attribute name where to save the :paramref:`x_test` for later use. If `None`, don't save it.
         **kwargs
-            Keyword arguments.
+            Keyword arguments for underlying :paramref:`model`'s fitting method.
 
         Returns
         -------
         :class:`numpy.ndarray`
-            The predicted values.
-        """
+            Updates and returns the following:
 
+                - :paramref:`y_text` - %(base_model_y_yest).
+        """
         pass
 
-    def default_conf_int(
-        self, x_test: Optional[np.ndarray] = None, **kwargs,
+    @abstractmethod
+    @d.get_sectionsf("base_model_ci", sections=["Parameters", "Returns"])
+    @d.get_summaryf("base_model_ci")
+    @d.get_full_descriptionf("base_model_ci")
+    @d.dedent
+    def confidence_interval(
+        self, x_test: Optional[np.ndarray] = None, **kwargs
     ) -> np.ndarray:
         """
-        Calculate a confidence interval if underlying model has no method for it.
+        Calculate the confidence interval.
+
+        Use :meth:`default_confidence_interval` function if underlying :paramref:`model` has not method
+        for confidence interval calculation.
 
         Parameters
         ----------
-        x
-            Points used to fit the model.
         x_test
-            Points for which to calculate the interval
-        w
-            Weights of the points used to fit the model. Used for filtering those points.
+            An array of shape `(n_samples,)` used for confidence interval calculation.
         **kwargs
-            Keyword arguments.
+            Keyword arguments for underlying :paramref:`model`'s confidence method
+            or for :meth:`default_confidence_interval`.
 
         Returns
         -------
         :class:`numpy.ndarray`
-            The confidence interval.
+            Updates the following fields:
+
+                - :paramref:`conf_int` - %(base_model_conf_int.summary)s
+        """
+        pass
+
+    @d.dedent
+    def default_confidence_interval(
+        self, x_test: Optional[np.ndarray] = None, **kwargs,
+    ) -> np.ndarray:
+        """
+        Calculate the confidence interval, if the underlying :paramref:`model` has no method for it.
+
+        Parameters
+        ----------
+        %(base_model_ci.parameters)s
+
+        Returns
+        -------
+        %(base_model_ci.returns)s
+                - :paramref:`x_hat` - %(base_model_x_hat.summary)s
+                - :paramref:`y_hat` - %(base_model_y_hat.summary)s
         """
 
         use_ixs = self.w > 0
@@ -475,31 +522,7 @@ class Model(ABC):
 
         return self.conf_int
 
-    @d.get_sectionsf("model_conf_int")
-    @abstractmethod
-    def confidence_interval(
-        self, x_test: Optional[np.ndarray] = None, **kwargs
-    ) -> np.ndarray:
-        """
-        Calculate a confidence interval.
-
-        Use the default method if underlying model has not method for CI calculation.
-
-        Parameters
-        ----------
-        x_test
-            Points for which to calculate the confidence interval.
-        **kwargs
-            Keyword arguments.
-
-        Returns
-        -------
-        :class:`numpy.ndarray`
-            The confidence interval.
-        """
-
-        pass
-
+    @d.dedent
     def plot(
         self,
         figsize: Tuple[float, float] = (15, 10),
@@ -573,13 +596,11 @@ class Model(ABC):
         return_fig
             If `True`, return the figure object.
         save
-            Filename where to save the plot.
-            If `None`, just shows the plots.
+            Filename where to save the plot. If `None`, just shows the plots.
 
         Returns
         -------
-        None
-            Nothing, just plots the fitted model.
+        %(just_plots)s
         """
 
         if fig is None or ax is None:
@@ -629,7 +650,7 @@ class Model(ABC):
             norm = mcolors.Normalize(vmin=vmin, vmax=vmax)
             cax, _ = mpl.colorbar.make_axes(ax, aspect=200)
             _ = mpl.colorbar.ColorbarBase(
-                cax, norm=norm, cmap=abs_prob_cmap, label="Absorption probability"
+                cax, norm=norm, cmap=abs_prob_cmap, label="absorption probability"
             )
 
         if save is not None:
@@ -638,19 +659,56 @@ class Model(ABC):
         if return_fig:
             return fig
 
-    def _convert(self, value: np.ndarray) -> np.ndarray:
-        was_1d = value.ndim == 1
-        value = np.atleast_2d(value).astype(self._dtype)
-        if was_1d:
-            return np.swapaxes(value, 0, 1)
-        return value
+    def _reshape_and_retype(self, arr: np.ndarray) -> np.ndarray:
+        """
+        Convert 1D or 2D array to 2D array of shape `(n, 1)` and set the data type.
+
+        Parameters
+        ----------
+        arr
+            Array to convert.
+
+        Returns
+        -------
+        :class:`np.ndarray`
+            Array of shape `(n, 1)` with dtype as :paramref:`_dtype`.
+        """
+
+        if arr.ndim not in (1, 2):
+            raise ValueError(
+                f"Expected array to be 1 or 2 dimensional, found `{arr.ndim}` dimension(s)."
+            )
+        elif arr.ndim == 2 and arr.shape[1] != 1:
+            raise ValueError(
+                f"Expected the 2nd dimension to be 1, found `{arr.shape[1]}.`"
+            )
+
+        return np.reshape(arr, (-1, 1)).astype(self._dtype)
 
     def _check(
-        self, attr_name: Optional[str], value: np.ndarray, ndim: int = 2
+        self, attr_name: Optional[str], arr: np.ndarray, ndim: int = 2
     ) -> Optional[np.ndarray]:
+        """
+        Check if the attribute exists with the correct dimension and optionally set it.
+
+        Parameters
+        ----------
+        attr_name
+            Attribute name to check.
+        arr
+            Value to set. If `None`, just perform the checking.
+        ndim
+            Expected number of dimensions of the :paramref:`value`.
+
+        Returns
+        -------
+        :class:`numpy.ndarray`
+            The attribute under :paramref:`attr_name`.
+        """
+
         if attr_name is None:
             return
-        if value is None:  # already called prepare
+        if arr is None:  # already called prepare
             if not hasattr(self, attr_name):
                 raise AttributeError(f"No attribute `{attr_name!r}` found.")
             if getattr(self, attr_name).ndim != ndim:
@@ -660,7 +718,7 @@ class Model(ABC):
                 )
             return getattr(self, attr_name)
 
-        setattr(self, attr_name, self._convert(value))
+        setattr(self, attr_name, self._reshape_and_retype(arr))
         if attr_name.startswith("_"):
             try:
                 getattr(self, attr_name[1:])
@@ -672,7 +730,7 @@ class Model(ABC):
                 )
         return getattr(self, attr_name)
 
-    def _deepcopy_attributes(self, dst: "Model") -> None:
+    def _copy_attributes(self, dst: "BaseModel") -> None:
         for attr in [
             "_x_all",
             "_y_all",
@@ -689,17 +747,19 @@ class Model(ABC):
             setattr(dst, attr, _copy(getattr(self, attr)))
 
     @abstractmethod
-    def copy(self) -> "Model":
-        """Return a copy of self."""
+    @d.dedent
+    def copy(self) -> "BaseModel":  # noqa
+        """%(copy)s"""  # noqa
         pass
 
-    def __copy__(self) -> "Model":
+    def __copy__(self) -> "BaseModel":
         return self.copy()
 
-    def __deepcopy__(self, memodict={}) -> "Model":  # noqa
+    def __deepcopy__(self, memodict={}) -> "BaseModel":  # noqa
         res = self.copy()
+        res._adata = res.adata.copy()
+        self._copy_attributes(res)
         memodict[id(self)] = res
-        self._deepcopy_attributes(res)
         return res
 
     def __str__(self) -> str:
@@ -714,20 +774,23 @@ class Model(ABC):
         )
 
 
-class SKLearnModel(Model):
+@d.dedent
+class SKLearnModel(BaseModel):
     """
     Wrapper around :mod:`sklearn` model.
 
     Parameters
     ----------
-    adata : :class:`anndata.AnnData`
-        Annotated data object.
+    %(adata)s
     model
-        Underlying :mod:`sklearn` model.
+        Instance of :mod:`sklearn` model.
     filter_dropouts
         Filter out all cells with expression lower than this.
     weight_name
         Name of the weight argument for :paramref:`model` `.fit`.
+    ignore_raise
+        Do not raise an exception if weight argument is not found the fittng function of :paramref:`model`.
+        This is useful in case when weight is passed in **kwargs and cannot be determined from signature.
     """
 
     _fit_names = ("fit", "__init__")
@@ -743,6 +806,11 @@ class SKLearnModel(Model):
         weight_name: Optional[str] = None,
         ignore_raise: bool = False,
     ):
+        if not isinstance(model, BaseEstimator):
+            raise TypeError(
+                f"Expected model to be of type `BaseEstimator`, found `{type(model).__name__!r}`."
+            )
+
         super().__init__(adata, model, filter_dropouts=filter_dropouts)
 
         fit_name = self._find_func(self._fit_names)
@@ -751,7 +819,7 @@ class SKLearnModel(Model):
         self._weight_name = None
 
         if weight_name is None:
-            self._weight_name = self._find_weight_param(fit_name, self._weight_names)
+            self._weight_name = self._find_arg_name(fit_name, self._weight_names)
         else:
             params = signature(getattr(self.model, fit_name)).parameters
             if not ignore_raise and weight_name not in params:
@@ -771,13 +839,27 @@ class SKLearnModel(Model):
         self._pred_fn = getattr(self.model, predict_name)
         self._ci_fn = None if ci_name is None else getattr(self.model, ci_name, None)
 
+    @d.dedent
     def fit(
         self,
         x: Optional[np.ndarray] = None,
         y: Optional[np.ndarray] = None,
         w: Optional[np.ndarray] = None,
         **kwargs,
-    ) -> "SKLearnModel":  # noqa
+    ) -> "SKLearnModel":
+        """
+        %(base_model_fit.full_desc)s
+
+        Parameters
+        ----------
+        %(base_model_fit.parameters)s
+
+        Returns
+        -------
+        :class:`cellrank.ul.models.SKLearnModel`
+            Fits the model and returns self.
+        """  # noqa
+
         super().fit(x, y, w, **kwargs)
 
         if self._weight_name is not None:
@@ -787,28 +869,21 @@ class SKLearnModel(Model):
 
         return self
 
+    @d.dedent
     def predict(
         self, x_test: Optional[np.ndarray] = None, key_added: str = "_x_test", **kwargs
     ) -> np.ndarray:
         """
-        Run the prediction.
+        %(base_model_predict.full_desc)s
 
         Parameters
         ----------
-        x_test
-            Features used for prediction.
-        key_added
-            Attribute name where to save the independent variables.
-            If `None`, don't save them.
-        **kwargs
-            Keyword arguments.
+        %(base_model_predict.parameters)s
 
         Returns
         -------
-        :class:`numpy.ndarray`
-            The predicted values.
-        """
-        # TODO: docs
+        %(base_model_predict.returns)s
+        """  # noqa
 
         x_test = self._check(key_added, x_test)
 
@@ -817,29 +892,27 @@ class SKLearnModel(Model):
 
         return self.y_test
 
+    @d.dedent
     def confidence_interval(
         self, x_test: Optional[np.ndarray] = None, **kwargs
     ) -> np.ndarray:
         """
-        Calculate a confidence interval.
+        %(base_model_ci.full_desc)s
 
-        Use the default method if underlying model has not method for CI calculation.
+        Use :meth:`default_confidence_interval` function if underlying :paramref:`model` has not method
+        for confidence interval calculation.
 
         Parameters
         ----------
-        x_test
-            Points for which to calculate the confidence interval.
-        **kwargs
-            Keyword arguments.
+        %(base_model_ci.parameters)s
 
         Returns
         -------
-        :class:`numpy.ndarray`
-            The confidence interval.
-        """
+        %(base_model_ci.returns)s
+        """  # noqa
 
         if self._ci_fn is None:
-            return self.default_conf_int(x_test=x_test, **kwargs)
+            return self.default_confidence_interval(x_test=x_test, **kwargs)
 
         x_test = self._check("_x_test", x_test)
         self._conf_int = self._ci_fn(x_test, **kwargs)
@@ -852,31 +925,97 @@ class SKLearnModel(Model):
         use_default: bool = False,
         default: Optional[str] = None,
     ) -> Optional[str]:
+        """
+        Find a function in :parmref:`model` from given names.
+
+        If `None` is found, use :parmaref;`default` or raise a :class:`RuntimeError`.
+
+        Parameters
+        ----------
+        func_names
+            Function names to search. The first one found is returned.
+        use_default
+            Whether to return the default is it's `None` or raise :class:`RuntimeError`.
+        default
+            The default functional name to use if `None` was found.
+
+        Returns
+        -------
+        str, None
+            Name of the function or the default name.
+        """
+
         for name in func_names:
             if hasattr(self.model, name) and callable(getattr(self.model, name)):
                 return name
         if use_default:
             return default
         raise RuntimeError(
-            f"Unable to find function and no default specified, tried searching `{list(func_names)}`."
+            f"Unable to find function and no default specified, searched for `{list(func_names)}`."
         )
 
-    def _find_weight_param(
-        self, fit_name: Optional[str], param_names: Iterable[str]
+    def _find_arg_name(
+        self, func_name: Optional[str], param_names: Iterable[str]
     ) -> Optional[str]:
-        if fit_name is None:
+        """
+        Find an argument in :paramref:`model`'s :paramref:`func_name`.
+
+        Parameters
+        ----------
+        func_name
+            Function name of :paramref:`model`.
+        param_names
+            Parameter names to search. The first one found is returned.
+
+        Returns
+        -------
+        str, None
+            The parameter name or `None`, if `None` was found or :paramref:`func_name` was `None`.
+        """
+
+        if func_name is None:
             return None
-        for param in signature(getattr(self.model, fit_name)).parameters:
+
+        for param in signature(getattr(self.model, func_name)).parameters:
             if param in param_names:
                 return param
+
         return None
 
+    @d.dedent
     def copy(self) -> "SKLearnModel":
-        """Return a copy of self."""
+        """%(copy)s"""  # noqa
         return SKLearnModel(self.adata, deepcopy(self._model))
 
 
-class GAM(Model):  # noqa  TODO
+@d.dedent
+class GAM(BaseModel):
+    """
+    Fit Generalized Additive Model from package :mod:`pygam`.
+
+    Parameters
+    ----------
+    %(adata)s
+    n_splines
+        Number of splines.
+    spline_order
+        Order of the splines.
+    distribution
+        Name of the distribution
+    link
+        Name of the link function.
+    max_iter
+        Maximum number of iterations for optimization.
+    expectile
+        Expectile for :class:`pygam.ExpectileGAM`. This forces the distribution to be `'normal'`
+        and link function to `'identity'`.
+    filter_dropouts
+        Filter out all cells with expression lower than this.
+    grid
+        Whether to perform a grid search. Keys correspond to a parameter names and values to range to be searched.
+        If :class:`bool` and `True`, use the :paramref:`default_grid`.
+    """
+
     def __init__(
         self,
         adata: AnnData,
@@ -886,26 +1025,9 @@ class GAM(Model):  # noqa  TODO
         link: str = "identity",
         max_iter: int = 1000,
         expectile: Optional[float] = None,
+        filter_dropouts: Optional[float] = None,
         grid: Union[bool, dict] = False,
-        filter_droupouts=None,
     ):
-        """
-        Fit *G*eneralized *A*dditive *M*odel.
-
-        Parameters
-        ----------
-        adata
-        n_splines
-        spline_order
-        distribution
-        link
-        max_iter
-        expectile
-        grid
-            Whether to perform a grid search. Keys correspond to a parameter names and values to range to be searched.
-            If :class:`bool` and `True`, use the :paramref:`default_grid`.
-        filter_droupouts
-        """
         term = s(
             0,
             spline_order=spline_order,
@@ -915,7 +1037,10 @@ class GAM(Model):  # noqa  TODO
         )
         if expectile is not None:
             if distribution != "normal" or link != "identity":
-                # TODO
+                logg.warning(
+                    f"Expectile GAM works only with `normal` distribution and `identity` link function,"
+                    f"found `{distribution!r}` distribution and {link!r} link functions."
+                )
                 distribution, link = "normal", "identity"
             model = ExpectileGAM(
                 term, expectile=expectile, max_iter=max_iter, verbose=False
@@ -928,7 +1053,7 @@ class GAM(Model):  # noqa  TODO
                 max_iter=max_iter,
                 verbose=False,
             )
-        super().__init__(adata, model=model, filter_dropouts=filter_droupouts)
+        super().__init__(adata, model=model, filter_dropouts=filter_dropouts)
 
         if isinstance(grid, dict):
             self._grid = grid
@@ -936,24 +1061,38 @@ class GAM(Model):  # noqa  TODO
             self._grid = self.default_grid if grid else {}
         else:
             raise TypeError(
-                f"Expected `grid` to be `bool` or `dict`, found `{type(grid).__name__!r}`."
+                f"Expected `grid` to be `bool` or `dict` of parameters, found `{type(grid).__name__!r}`."
             )
 
-        self._use_gam_cf = distribution == "normal" and link == "identity"
+        self._use_model_ci = distribution == "normal" and link == "identity"
 
+    @d.dedent
     def fit(
         self,
         x: Optional[np.ndarray] = None,
         y: Optional[np.ndarray] = None,
         w: Optional[np.ndarray] = None,
         **kwargs,
-    ) -> "Model":  # noqa
+    ) -> "GAM":
+        """
+        %(base_model_fit.full_desc)s
+
+        Parameters
+        ----------
+        %(base_model_fit.parameters)s
+
+        Returns
+        -------
+        :class:`cellrank.ul.models.GAM`
+            Fits the model and returns self.
+        """  # noqa
+
         super().fit(x, y, w, **kwargs)
 
-        use_ixs = np.where(self.w > 0)[0]
-        self._x = self.x[use_ixs]
-        self._y = self.y[use_ixs]
-        self._w = self.w[use_ixs]
+        # use_ixs = np.where(self.w > 0)[0]
+        # self._x = self.x[use_ixs]
+        # self._y = self.y[use_ixs]
+        # self._w = self.w[use_ixs]
 
         if self._grid:
             try:
@@ -976,16 +1115,29 @@ class GAM(Model):  # noqa  TODO
             return self
         except Exception as e:
             raise RuntimeError(
-                f"Unable to fit `{type(self).__name__}`for gene "
+                f"Unable to fit `{type(self).__name__}` for gene "
                 f"`{self._gene!r}` in lineage `{self._lineage!r}`."
             ) from e
 
+    @d.dedent
     def predict(
         self,
         x_test: Optional[np.ndarray] = None,
         key_added: Optional[str] = "_x_test",
         **kwargs,
-    ) -> np.ndarray:  # noqa
+    ) -> np.ndarray:
+        """
+        %(base_model_predict.full_desc)s
+
+        Parameters
+        ----------
+        %(base_model_predict.parameters)s
+
+        Returns
+        -------
+        %(base_model_predict.returns)s
+        """  # noqa
+
         x_test = self._check(key_added, x_test)
 
         self._y_test = self.model.predict(x_test, **kwargs)
@@ -993,23 +1145,40 @@ class GAM(Model):  # noqa  TODO
 
         return self.y_test
 
+    @d.dedent
     def confidence_interval(
         self, x_test: Optional[np.ndarray] = None, **kwargs
-    ) -> np.ndarray:  # noqa
+    ) -> np.ndarray:
+        """
+        %(base_model_ci.summary)s
+
+        If the :paramref:`model` uses `'normal'` distribution and `'identity'` link function, use it's
+        method for confidence interval calculatation. Otherwise, use :meth:`default_confidence_interval`.
+
+        Parameters
+        ----------
+        %(base_model_ci.parameters)s
+
+        Returns
+        -------
+        %(base_model_ci.returns)s
+        """  # noqa
 
         x_test = self._check("_x_test", x_test)
 
-        if self._use_gam_cf:
+        if self._use_model_ci:
             self._conf_int = self.model.confidence_intervals(x_test, **kwargs)
         else:
-            self._conf_int = self.default_conf_int(x_test=x_test, **kwargs)
+            self._conf_int = self.default_confidence_interval(x_test=x_test, **kwargs)
 
         return self.conf_int
 
-    def copy(self) -> "Model":  # noqa
+    @d.dedent
+    def copy(self) -> "BaseModel":
+        """%(copy)s"""  # noqa
         res = GAM(self.adata)
 
-        res._use_gam_cf = self._use_gam_cf
+        res._use_model_ci = self._use_model_ci
         res._grid = deepcopy(self._grid)
         res._model = deepcopy(self.model)
 
@@ -1017,16 +1186,18 @@ class GAM(Model):  # noqa  TODO
 
     @property
     def default_grid(self) -> dict:  # noqa
+        """Default grid for hyperparameter search."""
         return {
             "n_splines": np.arange(6, 12),
             "lam": np.logspace(-3, 3, 5, base=2),
         }
 
 
-class GAMR(Model):
+@d.dedent
+class GAMR(BaseModel):
     """
-    Wrapper around R's `mgcv <https://cran.r-project.org/web/packages/mgcv/>`_ or  \
-    `mgcv <https://cran.r-project.org/web/packages/gam/>`_ package for fitting Generalized Additive Models (GAMs).
+    Wrapper around R's `mgcv <https://cran.r-project.org/web/packages/mgcv/>`_ or
+    `gam <https://cran.r-project.org/web/packages/gam/>`_ package for fitting Generalized Additive Models (GAMs).
 
     Parameters
     ----------
@@ -1034,16 +1205,16 @@ class GAMR(Model):
         Annotated data object.
     n_splines
         Number of splines for the GAM.
-    sp
+    smoothing_param
         Smoothing parameter.
     family
         Family in `rpy2.robjects.r`, such as `"gaussian"` or `"poisson"`.
     filter_dropouts
         Filter out all cells with expression lower than this.
     backend
-        R library used to fit GAMs. Valid options are `'mgcv'` and `'gam'`. Note that option `'gam'` ignores
-        the number of splines, as well as family and smoothing parameter.
-    """
+        R library used to fit GAMs. Valid options are `'mgcv'` and `'gam'`.
+        Option `'gam'` ignores the number of splines, as well as family and smoothing parameter.
+    """  # noqa
 
     _backends = {
         "gam": "mgcv",
@@ -1054,7 +1225,7 @@ class GAMR(Model):
         self,
         adata: AnnData,
         n_splines: int = 5,
-        sp: float = 2,
+        smoothing_param: float = 2,
         family: str = "gaussian",
         filter_dropouts: Optional[float] = None,
         perform_import_check: bool = True,
@@ -1062,7 +1233,7 @@ class GAMR(Model):
     ):
         super().__init__(adata, model=None, filter_dropouts=filter_dropouts)
         self._n_splines = n_splines
-        self._sp = sp
+        self._sp = smoothing_param
         self._lib = None
         self._lib_name = None
         self._family = family
@@ -1079,6 +1250,7 @@ class GAMR(Model):
                 backend
             ) or _maybe_import_r_lib(self._backends[backend], raise_exc=True)
 
+    @d.dedent
     def fit(
         self,
         x: Optional[np.ndarray] = None,
@@ -1087,24 +1259,21 @@ class GAMR(Model):
         **kwargs,
     ) -> "GAMR":
         """
-        Fit the model.
+        %(base_model_fit.full_desc)s
 
         Parameters
         ----------
-        x
-            Independent variables.
-        y
-            Dependent variables.
-        w
-            Weights of :paramref:`x`.
-        **kwargs
-            Keyword arguments.
+        %(base_model_fit.parameters)s
 
         Returns
         -------
         :class:`cellrank.ul.models.GAMR`
-            Return fitted self.
-        """
+            Fits the model and returns self. Updates the following fields by filtering out `0` weights :paramref:`w`:
+
+                - :paramref:`x` - %(base_model_x.summary)s
+                - :paramref:`y` - %(base_model_y.summary)s
+                - :paramref:`w` - %(base_model_w.summary)s
+        """  # noqa
 
         from rpy2 import robjects
         from rpy2.robjects import pandas2ri, Formula
@@ -1148,27 +1317,21 @@ class GAMR(Model):
 
         return self
 
+    @d.dedent
     def predict(
         self, x_test: Optional[np.ndarray] = None, key_added: str = "_x_test", **kwargs
     ) -> np.ndarray:
         """
-        Run the prediction.
+        %(base_model_predict.full_desc)s
 
         Parameters
         ----------
-        x_test
-            Features used for prediction.
-        key_added
-            Attribute name where to save the independent variables.
-            If `None`, don't save them.
-        **kwargs
-            Keyword arguments.
+        %(base_model_predict.parameters)s
 
         Returns
         -------
-        :class:`numpy.ndarray`
-            The predicted values.
-        """
+        %(base_model_predict.returns)s
+        """  # noqa
 
         from rpy2 import robjects
         from rpy2.robjects import pandas2ri
@@ -1199,28 +1362,28 @@ class GAMR(Model):
 
         return self.y_test
 
+    @d.dedent
     def confidence_interval(
         self, x_test: Optional[np.ndarray] = None, **kwargs
     ) -> np.ndarray:
         """
-        Calculate a confidence interval using the default method.
+        %(base_model_cf.summary)s
+
+        This method uses :meth:`default_confidence_interval`.
 
         Parameters
         ----------
-        x_test
-            Points for which to calculate the confidence interval.
-        **kwargs
-            Keyword arguments.
+        %(base_model_ci.parameters)s
 
         Returns
         -------
-        :class:`numpy.ndarray`
-            The confidence interval.
-        """
-        return self.default_conf_int(x_test=x_test, **kwargs)
+        %(base_model_ci.returns)s
+        """  # noqa
+        return self.default_confidence_interval(x_test=x_test, **kwargs)
 
+    @d.dedent
     def copy(self) -> "GAMR":
-        """Return a copy of self."""
+        """%(copy)s"""  # noqa
         res = GAMR(
             self.adata,
             self._n_splines,

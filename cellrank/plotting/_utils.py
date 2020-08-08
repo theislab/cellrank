@@ -17,18 +17,19 @@ from typing import (
 from pathlib import Path
 from collections import defaultdict
 
+import numpy as np
+from scipy.sparse import diags
+from pandas.core.dtypes.common import is_categorical_dtype
+
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 
-import numpy as np
-from scipy.sparse import diags
 from cellrank.utils._docs import d
 from cellrank.tools._utils import save_fig, _unique_order_preserving
-from cellrank.utils.models import GAMR, Model
+from cellrank.utils.models import GAMR, BaseModel
 from cellrank.tools.kernels import PrecomputedKernel
 from cellrank.tools._constants import _colors
-from pandas.core.dtypes.common import is_categorical_dtype
 from cellrank.tools.estimators._cflare import CFLARE
 
 AnnData = TypeVar("AnnData")
@@ -38,7 +39,7 @@ _ERROR_INCOMPLETE_SPEC = (
     "No options were specified for{}`{!r}`. "
     "Consider specifying a fallback model using '*'."
 )
-_model_type = Union[Model, Mapping[str, Mapping[str, Model]]]
+_model_type = Union[BaseModel, Mapping[str, Mapping[str, BaseModel]]]
 
 
 @d.dedent
@@ -107,7 +108,7 @@ def lineages(
     )
 
 
-def curved_edges(
+def _curved_edges(
     G,
     pos,
     radius_fraction: float,
@@ -289,7 +290,7 @@ def composition(
     fig.show()
 
 
-def _is_any_gam_mgcv(models: Dict[str, Dict[str, Model]]) -> bool:
+def _is_any_gam_mgcv(models: Dict[str, Dict[str, BaseModel]]) -> bool:
     """
     Return whether any models to be fit are from R's mgcv package.
 
@@ -308,7 +309,7 @@ def _is_any_gam_mgcv(models: Dict[str, Dict[str, Model]]) -> bool:
 
 def _create_models(
     model: _model_type, obs: Sequence[str], lineages: Sequence[str]
-) -> Dict[str, Dict[str, Model]]:
+) -> Dict[str, Dict[str, BaseModel]]:
     """
     Create models for each gene and lineage.
 
@@ -324,8 +325,8 @@ def _create_models(
         The created models.
     """
 
-    def process_lineages(obs_name: str, lin_names: Union[Model, Dict[str, Any]]):
-        if isinstance(lin_names, Model):
+    def process_lineages(obs_name: str, lin_names: Union[BaseModel, Dict[str, Any]]):
+        if isinstance(lin_names, BaseModel):
             for lin_name in lineages:
                 models[obs_name][lin_name] = lin_names
             return
@@ -342,13 +343,13 @@ def _create_models(
         elif set(models[obs_name].keys()) != lineages:
             raise RuntimeError(_ERROR_INCOMPLETE_SPEC.format(" lineage ", obs_name))
 
-    if isinstance(model, Model):
+    if isinstance(model, BaseModel):
         return {o: {lin: copy(model) for lin in lineages} for o in obs}
 
     lineages, obs = _unique_order_preserving(lineages), _unique_order_preserving(obs)
     models = defaultdict(dict)
 
-    if isinstance(model, Model):
+    if isinstance(model, BaseModel):
         model = {"*": {"*": model}}
 
     if isinstance(model, dict):
@@ -363,7 +364,7 @@ def _create_models(
             raise RuntimeError(_ERROR_INCOMPLETE_SPEC.format(" ", "genes"))
     else:
         raise TypeError(
-            "Model must be of type `cellrank.ul.Model` or a dictionary of such models."
+            "BaseModel must be of type `cellrank.ul.BaseModel` or a dictionary of such models."
         )
 
     return models
@@ -393,7 +394,7 @@ def _fit(
     queue
         Signalling queue in the parent process/thread used to update the progress bar.
     kwargs
-        Keyword arguments for :func:`cellrank.utils.models.Model.prepare`.
+        Keyword arguments for :func:`cellrank.utils.models.BaseModel.prepare`.
 
     Returns
     -------
@@ -459,7 +460,7 @@ def _trends_helper(
         Filename where to save the plot.
         If `None`, just shows the plots.
     **kwargs
-        Keyword arguments for :meth:`cellrank.ul.models.Model.plot`.
+        Keyword arguments for :meth:`cellrank.ul.models.BaseModel.plot`.
 
     Returns
     -------

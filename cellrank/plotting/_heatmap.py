@@ -140,7 +140,7 @@ def heatmap(
     %(parallel)s
     %s(plotting)s
     **kwargs
-        Keyword arguments for :meth:`cellrank.ul.models.Model.prepare`.
+        Keyword arguments for :meth:`cellrank.ul.models.BaseModel.prepare`.
 
     Returns
     -------

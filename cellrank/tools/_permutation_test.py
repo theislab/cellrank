@@ -3,14 +3,15 @@
 
 from typing import Dict, List, Tuple, Union, TypeVar, Callable, Optional, Sequence
 
-import matplotlib.pyplot as plt
-
 import numpy as np
-from cellrank import logging as logg
 from scipy.stats import chi2_contingency
 from pandas.api.types import infer_dtype, is_categorical_dtype
-from cellrank.utils._docs import d
 from scipy.spatial.distance import euclidean
+
+import matplotlib.pyplot as plt
+
+from cellrank import logging as logg
+from cellrank.utils._docs import d
 from cellrank.tools._constants import AbsProbKey
 
 AnnData = TypeVar("AnnData")
@@ -21,14 +22,14 @@ def _get_counts(pd: Union[np.ndarray, List[float]], n: int) -> List[float]:
     Generate a list of counts that follows a given probability distribution.
 
     Parameters
-    -----------
+    ----------
     pd
         Probability distribution used to generate the samples.
     n
         Total number of samples.
 
-    returns
-    --------
+    Returns
+    -------
     :class:`list`
         The counts.
     """
@@ -43,7 +44,7 @@ def _get_counts(pd: Union[np.ndarray, List[float]], n: int) -> List[float]:
 
 
 @d.dedent
-def exact_mc_perm_test(
+def _permutation_test(
     adata: AnnData,
     cluster_key: str,
     cluster1: str,
@@ -80,7 +81,7 @@ def exact_mc_perm_test(
     use_counts
         Whether to use counts distribution or probability distribution.
     n_counts
-        Number of total counts used to calculate the counts distributions.
+        Number of total counts used to calculate the counts distribution.
     n_bins
         Number of bins for the histogram.
     seed
@@ -188,17 +189,16 @@ def _counts(
     """
     Calculate the counts for each endpoint per cluster.
 
-    Randomly chooses with replacement *n* cells in each cluster and for each choice samples one point using its
-    probability distribution. Then counts the occurrences per each point.
+    Randomly choose with replacement *n* cells in each cluster and for each choice samples one point using its
+    probability distribution. Then count the occurrences per each point.
 
     Parameters
     ----------
-    adata: :class:`anndata.AnnData`
-        Annotated data object containing the absorption matrix and the clustering.
+    %(adata)s
     cluster_key
         Key in :paramref:`adata` `.obs` to access the cluster names.
     clusters
-        List of clusters to consider. If `None`, all cluster are considered.
+        List of clusters to consider. If `None`, all clusters are considered.
     n_samples
         Number of cells to sample from per cluster.
     %(backward)s
@@ -210,18 +210,18 @@ def _counts(
     """
 
     if cluster_key not in adata.obs:
-        raise KeyError(f"Invalid cluster key `{cluster_key!r}`.")
+        raise KeyError(f"Unable to find cluster key`{cluster_key!r}` in `adata.obs`.")
+
+    if n_samples <= 0:
+        raise ValueError(f"Number of samples must be positive, found `{n_samples}`.")
 
     if clusters is not None:
         for cname in clusters:
             if cname not in adata.obs[cluster_key].cat.categories:
-                raise ValueError(f"Key `{cname!r}` is not a valid cluster.")
+                raise ValueError(f"Key `{cname!r}` is not a categorical observation.")
         cluster_names = clusters
     else:
         cluster_names = adata.obs[cluster_key].cat.categories
-
-    if n_samples <= 0:
-        raise ValueError(f"Number of samples must be positive, found `{n_samples}`.")
 
     # Consider the two possible directions
     lin_key = str(AbsProbKey.BACKWARD if backward else AbsProbKey.FORWARD)
@@ -229,7 +229,8 @@ def _counts(
         raise KeyError(f"Lineages key `{lin_key!r}` not found in `adata.obsm`.")
 
     logg.debug("Calculating counts distribution of endpoint per cluster")
-    d = {}
+    res = {}
+
     for name in cluster_names:
         data = adata[adata.obs[cluster_key] == name].obsm[lin_key].X
         dim = data.shape[1]
@@ -241,9 +242,9 @@ def _counts(
             for ind in index
         ]
         freq = (lst.count(i) for i in range(dim))
-        d[name] = [i if i > 0 else 1e-5 for i in freq]
+        res[name] = [i if i > 0 else 1e-5 for i in freq]
 
-    return d
+    return res
 
 
 def _cramers_v(x: List[float], y: List[float]) -> float:
