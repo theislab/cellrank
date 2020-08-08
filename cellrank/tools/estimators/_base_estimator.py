@@ -152,7 +152,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             self.adata.uns[_lin_names(self._abs_prob_key)] = names
             self.adata.uns[_colors(self._abs_prob_key)] = colors
 
-    @inject_docs(fin_states=P.FIN.s)
+    @inject_docs(fs=P.FIN.s, fsp=P.FIN_PROBS.s)
     def set_final_states(
         self,
         labels: Union[Series, Dict[Any, Any]],
@@ -172,7 +172,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             belonging to a transient state or a :class:`dict`, where each key is the name of the recurrent class and
             values are list of cell names.
         cluster_key
-            If a key to cluster labels is given, :paramref"`metastable_states` will ge associated
+            If a key to cluster labels is given, :paramref:`{fs}` will ge associated
             with these for naming and colors.
         en_cutoff
             If :paramref:`cluster_key` is given, this parameter determines when an approximate recurrent class will
@@ -192,7 +192,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         None
             Nothing, but updates the following fields:
 
-                - :paramref:`{fin_states}`
+                - :paramref:`{fsp}`
+                - :paramref:`{fs}`
         """
 
         self._set_categorical_labels(
@@ -460,11 +461,11 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         Parameters
         ----------
         lineages
-            Either a set of lineage names from :paramref:`absorption_probabilities` `.names` or None,
+            Either a set of lineage names from :paramref:`absorption_probabilities` `.names` or `None`,
             in which case all lineages are considered.
         cluster_key
             Key from :paramref:`adata` `.obs` to obtain cluster annotations.
-            These are considered for :paramref:`clusters`. Default is `"clusters"` if a list of `clusters` is given.
+            These are considered for :paramref:`clusters`.
         clusters
             Restrict the correlations to these clusters.
         layer
@@ -483,7 +484,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             For each lineage specified, a key is added to `.var` and correlations are saved as
             `{direction} {lineage_names} corr`.
         :class:`pandas.DataFrame`
-            If :paramref:`inplace` `=True`, return a :class:`pandas.DataFrame` with the columns mentioned as above.
+            If :paramref:`inplace` `=True`, a :class:`pandas.DataFrame` with the columns same as mentioned above.
         """
 
         # check that lineage probs have been computed
@@ -718,8 +719,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         None
             Nothing, just makes available the following fields:
 
-                - :paramref:`{fs}`
                 - :paramref:`{fsp}`
+                - :paramref:`{fs}`
                 - :paramref:`{ap}`
                 - :paramref:`{dp}`
         """
