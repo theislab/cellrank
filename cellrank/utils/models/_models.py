@@ -8,23 +8,22 @@ from copy import deepcopy
 from typing import Any, Tuple, Union, TypeVar, Iterable, Optional
 from inspect import signature
 
-import numpy as np
-import pandas as pd
-from pygam import GAM as pGAM
-from pygam import LinearGAM, ExpectileGAM
-from pygam.terms import s
-from sklearn.base import BaseEstimator
-from scipy.ndimage.filters import convolve
-
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 
+import numpy as np
+import pandas as pd
 import cellrank.logging as logg
+from pygam import GAM as pGAM
+from pygam import LinearGAM, ExpectileGAM
+from pygam.terms import s
+from sklearn.base import BaseEstimator
 from cellrank.utils._docs import d
 from cellrank.tools._utils import save_fig, _densify_squeeze
 from cellrank.utils._utils import _minmax
+from scipy.ndimage.filters import convolve
 from cellrank.tools._lineage import Lineage
 from cellrank.tools._constants import AbsProbKey
 
@@ -1097,11 +1096,6 @@ class GAM(BaseModel):
         """  # noqa
 
         super().fit(x, y, w, **kwargs)
-
-        # use_ixs = np.where(self.w > 0)[0]
-        # self._x = self.x[use_ixs]
-        # self._y = self.y[use_ixs]
-        # self._w = self.w[use_ixs]
 
         if self._grid:
             try:
