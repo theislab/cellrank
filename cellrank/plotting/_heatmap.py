@@ -25,10 +25,11 @@ from cellrank.tools._utils import save_fig, _min_max_scale, _unique_order_preser
 from cellrank.utils._utils import _get_n_cores, valuedispatch, check_collection
 from cellrank.tools._colors import _create_categorical_colors
 from cellrank.plotting._utils import (
-    _fit,
     _model_type,
+    _get_backend,
     _create_models,
-    _is_any_gam_mgcv,
+    _fit_gene_trends,
+    _time_range_type,
     _maybe_create_dir,
 )
 from cellrank.tools._constants import ModeEnum, AbsProbKey
@@ -54,11 +55,10 @@ def heatmap(
     adata: AnnData,
     model: _model_type,
     genes: Sequence[str],
+    lineages: Optional[Union[str, Sequence[str]]] = None,
     backward: bool = False,
     mode: str = HeatmapMode.LINEAGES.s,
-    lineages: Optional[Union[str, Sequence[str]]] = None,
-    start_lineage: Optional[Union[str, Sequence[str]]] = None,
-    end_lineage: Optional[Union[str, Sequence[str]]] = None,
+    time_range: Optional[Union[_time_range_type, List[_time_range_type]]] = None,
     cluster_key: Optional[Union[str, Sequence[str]]] = None,
     show_absorption_probabilities: bool = False,
     cluster_genes: bool = False,
@@ -92,25 +92,17 @@ def heatmap(
     %(adata)s
     %(model)s
     genes
-        Genes in :paramref:`adata` `.var_names` to plot.
+        Genes in :paramref:`adata` `.var_names` to plot or in :paramref:`adata` `.raw.var_names`, if `use_raw=True`.
+    lineages
+        Names of the lineages which to plot. If `None`, plot all lineages.
     %(backward)s
     mode
-        Variant of the heatmap:
+        Valid options are:
 
             - `{m.LINEAGES.s!r}` - group by :paramref:`genes` for each lineage in :paramref:`lineage_names`
             - `{m.GENES.s!r}` - group by :paramref:`lineage_names` for each gene in :paramref:`genes`
-    lineages
-        Names of the lineages which to plot.
-    start_lineage
-        Lineage from which to select cells with lowest pseudotime as starting points.
-
-        If specified, the trends start at the earliest pseudotime point within that lineage, otherwise they start
-        from time `0`.
-    end_lineage
-        Lineage from which to select cells with highest pseudotime as endpoints.
-
-        If specified, the trends end at the latest pseudotime point within that lineage, otherwise,
-        it is determined automatically.
+    %(time_range)s
+       This can also be supplied in lineage-specific way, as a list of values described above.
     cluster_key
         Key(s) in :paramref:`adata: :.obs` containing categorical observations to be plotted on the top
         of the heatmap. Only available when :paramref:`kind` `='lineages'`.
@@ -140,7 +132,7 @@ def heatmap(
     %(parallel)s
     %s(plotting)s
     **kwargs
-        Keyword arguments for :meth:`cellrank.ul.models.Model.prepare`.
+        Keyword arguments for :meth:`cellrank.ul.models.BaseModel.prepare`.
 
     Returns
     -------
@@ -493,37 +485,32 @@ def heatmap(
     genes = _unique_order_preserving(genes)
     check_collection(adata, genes, "var_names", use_raw=kwargs.get("use_raw", False))
 
-    if isinstance(start_lineage, (str, type(None))):
-        start_lineage = [start_lineage] * len(lineages)
-    if isinstance(end_lineage, (str, type(None))):
-        end_lineage = [end_lineage] * len(lineages)
+    if isinstance(time_range, (tuple, float, int, type(None))):
+        time_range = [time_range] * len(lineages)
+    elif len(time_range) != len(lineages):
+        raise ValueError(
+            f"Expected time ranges to be of length `{len(lineages)}`, found `{len(time_range)}`."
+        )
 
     xlabel = kwargs.get("time_key", None) if xlabel is None else xlabel
 
-    _ = kwargs.pop("start_lineage", None)
-    _ = kwargs.pop("end_lineage", None)
-
-    for typp, clusters in zip(["Start", "End"], [start_lineage, end_lineage]):
-        for cl in filter(lambda c: c is not None, clusters):
-            if cl not in lineages:
-                raise ValueError(f"{typp} lineage `{cl!r}` not found in lineage names.")
+    _ = kwargs.pop("time_range", None)
 
     kwargs["models"] = _create_models(model, genes, lineages)
-    if _is_any_gam_mgcv(kwargs["models"]):
-        logg.debug("Setting backend to multiprocessing because model is `GamMGCVModel`")
-        backend = "multiprocessing"
 
+    backend = _get_backend(model, backend)
     n_jobs = _get_n_cores(n_jobs, len(genes))
+
     start = logg.info(f"Computing trends using `{n_jobs}` core(s)")
     data = parallelize(
-        _fit,
+        _fit_gene_trends,
         genes,
         unit="gene",
         backend=backend,
         n_jobs=n_jobs,
         extractor=lambda data: {k: v for d in data for k, v in d.items()},
         show_progress_bar=show_progress_bar,
-    )(lineages, start_lineage, end_lineage, **kwargs)
+    )(lineages, time_range, **kwargs)
 
     logg.info("    Finish", time=start)
     logg.debug(f"Plotting `{mode.s!r}` heatmap")

@@ -6,6 +6,11 @@ from types import MappingProxyType
 from typing import Dict, Tuple, Union, TypeVar, Callable, Optional, Sequence
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
+from scipy.sparse import issparse, spmatrix
+from pandas.api.types import is_categorical_dtype
+
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
@@ -14,11 +19,7 @@ from matplotlib.patches import ArrowStyle, FancyArrowPatch
 from matplotlib.collections import LineCollection
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-import numpy as np
-import pandas as pd
 from cellrank import logging as logg
-from scipy.sparse import issparse, spmatrix
-from pandas.api.types import is_categorical_dtype
 from cellrank.utils._docs import d
 from cellrank.tools._utils import save_fig
 from cellrank.utils._utils import _read_graph_data
@@ -377,10 +378,10 @@ def graph(
     curves, lc = None, None
     if edge_use_curved:
         try:
-            from ._utils import curved_edges
+            from ._utils import _curved_edges
 
             logg.debug("Creating curved edges")
-            curves = curved_edges(G, pos, self_loop_radius_frac, polarity="directed")
+            curves = _curved_edges(G, pos, self_loop_radius_frac, polarity="directed")
             lc = LineCollection(
                 curves,
                 colors="black",

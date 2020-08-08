@@ -92,8 +92,13 @@ class KernelExpression(ABC):
 
     @property
     @abstractmethod
+    @d.dedent
     def adata(self) -> AnnData:
-        """The annotated data object."""  # noqa
+        """
+        Returns
+        -------
+        %(adata)s
+        """  # noqa
         pass
 
     @adata.setter
@@ -166,8 +171,8 @@ class KernelExpression(ABC):
         None
             Updates the underlying :paramref:`.adata` object with the following fields:
 
-                - .obsp[`'T_{fwd,bwd}` _ :paramref:`key_added` '] - transition matrix.
-                - .uns[`'T_{fwd,bwd}` _  :paramref:`key_added` `_params'`] - parameters used.
+                - .obsp[`'T_{fwd,bwd}` _ :paramref:`key_added` '] - transition matrix
+                - .uns[`'T_{fwd,bwd}` _  :paramref:`key_added` `_params'`] - parameters used for calculation
         """
 
         if self.transition_matrix is None:
@@ -391,8 +396,13 @@ class UnaryKernelExpression(KernelExpression, ABC):
         self._adata = adata
 
     @property
+    @d.dedent
     def adata(self) -> AnnData:
-        """The annotated data object."""  # noqa
+        """
+        Returns
+        -------
+        %(adata)s
+        """  # noqa
         return self._adata
 
     @adata.setter
@@ -476,8 +486,13 @@ class NaryKernelExpression(KernelExpression, ABC):
                 yield from k._get_kernels()
 
     @property
+    @d.dedent
     def adata(self) -> AnnData:
-        """The annotated data object."""  # noqa
+        """
+        Returns
+        -------
+        %(adata)s
+        """  # noqa
         # we can do this because Constant requires adata as well
         return self._kexprs[0].adata
 

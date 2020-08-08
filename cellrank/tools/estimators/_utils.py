@@ -154,13 +154,16 @@ def _delegate_method_dispatch(fn: Callable, attr: str, prop_name: str, skip: int
 
 
 def _create_property(
-    attr_name: str, doc: Optional[str] = None, return_type: Optional[Type] = None
+    attr_name: str,
+    prop_name: str,
+    doc: Optional[str] = None,
+    return_type: Optional[Type] = None,
 ) -> property:
     def wrapper(self) -> return_type:
         return getattr(self, attr_name)
 
     if not doc:
-        doc = f"Property of {attr_name}."
+        doc = f"{prop_name.replace('_', ' ').capitalize()}."
     wrapper.__doc__ = doc
 
     return property(wrapper)

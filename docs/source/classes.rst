@@ -1,16 +1,16 @@
 Classes
 =======
 
+GPCCA
+~~~~~
+.. autoclass:: cellrank.tl.GPCCA
+    :members:
+    :inherited-members:
+
 CFLARE
 ~~~~~~
 
 .. autoclass:: cellrank.tl.CFLARE
-    :members:
-    :inherited-members:
-
-GPCCA
-~~~~~
-.. autoclass:: cellrank.tl.GPCCA
     :members:
     :inherited-members:
 
@@ -44,6 +44,13 @@ Precomputed Kernel
 Models
 ~~~~~~
 
+GAM
+---
+
+.. autoclass:: cellrank.ul.models.GAM
+    :members:
+    :inherited-members:
+
 SKLearnModel
 ------------
 
@@ -51,10 +58,10 @@ SKLearnModel
     :members:
     :inherited-members:
 
-GamMGCVModel
-------------
+GAMR
+----
 
-.. autoclass:: cellrank.ul.models.GamMGCVModel
+.. autoclass:: cellrank.ul.models.GAMR
     :members:
     :inherited-members:
 
@@ -74,10 +81,10 @@ Kernel
     :members:
     :inherited-members:
 
-Model
------
+BaseModel
+---------
 
-.. autoclass:: cellrank.ul.models.Model
+.. autoclass:: cellrank.ul.models.BaseModel
     :members:
 
 Lineage

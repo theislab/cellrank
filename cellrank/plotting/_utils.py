@@ -27,9 +27,9 @@ import matplotlib.pyplot as plt
 
 from cellrank.utils._docs import d
 from cellrank.tools._utils import save_fig, _unique_order_preserving
-from cellrank.utils.models import Model, GamMGCVModel
+from cellrank.utils.models import GAMR, BaseModel
 from cellrank.tools.kernels import PrecomputedKernel
-from cellrank.tools._constants import _colors
+from cellrank.tools._constants import _DEFAULT_BACKEND, _colors
 from cellrank.tools.estimators._cflare import CFLARE
 
 AnnData = TypeVar("AnnData")
@@ -39,7 +39,8 @@ _ERROR_INCOMPLETE_SPEC = (
     "No options were specified for{}`{!r}`. "
     "Consider specifying a fallback model using '*'."
 )
-_model_type = Union[Model, Mapping[str, Mapping[str, Model]]]
+_time_range_type = Optional[Union[float, Tuple[Optional[float], Optional[float]]]]
+_model_type = Union[BaseModel, Mapping[str, Mapping[str, BaseModel]]]
 
 
 @d.dedent
@@ -108,7 +109,7 @@ def lineages(
     )
 
 
-def curved_edges(
+def _curved_edges(
     G,
     pos,
     radius_fraction: float,
@@ -250,7 +251,7 @@ def composition(
     save: Optional[Union[str, Path]] = None,
 ) -> None:
     """
-    Plot pie chart for categorical annotation.
+    Plot a pie chart for categorical annotation.
 
     .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/composition.png
        :width: 400px
@@ -290,28 +291,29 @@ def composition(
     fig.show()
 
 
-def _is_any_gam_mgcv(models: Dict[str, Dict[str, Model]]) -> bool:
+def _is_any_gam_mgcv(models: Union[BaseModel, Dict[str, Dict[str, BaseModel]]]) -> bool:
     """
     Return whether any models to be fit are from R's mgcv package.
 
     Parameters
     ----------
     models
-        Models used for fitting.
+        Model(s) used for fitting.
 
     Returns
     -------
         `True` if any of the models is from R's mgcv package, else `False`.
     """
 
-    return any(
-        isinstance(m, GamMGCVModel) for ms in models.values() for m in ms.values()
+    return isinstance(models, GAMR) or (
+        isinstance(models, dict)
+        and any(isinstance(m, GAMR) for ms in models.values() for m in ms.values())
     )
 
 
 def _create_models(
     model: _model_type, obs: Sequence[str], lineages: Sequence[str]
-) -> Dict[str, Dict[str, Model]]:
+) -> Dict[str, Dict[str, BaseModel]]:
     """
     Create models for each gene and lineage.
 
@@ -327,8 +329,8 @@ def _create_models(
         The created models.
     """
 
-    def process_lineages(obs_name: str, lin_names: Union[Model, Dict[str, Any]]):
-        if isinstance(lin_names, Model):
+    def process_lineages(obs_name: str, lin_names: Union[BaseModel, Dict[str, Any]]):
+        if isinstance(lin_names, BaseModel):
             for lin_name in lineages:
                 models[obs_name][lin_name] = lin_names
             return
@@ -345,13 +347,13 @@ def _create_models(
         elif set(models[obs_name].keys()) != lineages:
             raise RuntimeError(_ERROR_INCOMPLETE_SPEC.format(" lineage ", obs_name))
 
-    if isinstance(model, Model):
+    if isinstance(model, BaseModel):
         return {o: {lin: copy(model) for lin in lineages} for o in obs}
 
     lineages, obs = _unique_order_preserving(lineages), _unique_order_preserving(obs)
     models = defaultdict(dict)
 
-    if isinstance(model, Model):
+    if isinstance(model, BaseModel):
         model = {"*": {"*": model}}
 
     if isinstance(model, dict):
@@ -366,17 +368,16 @@ def _create_models(
             raise RuntimeError(_ERROR_INCOMPLETE_SPEC.format(" ", "genes"))
     else:
         raise TypeError(
-            "Model must be of type `cellrank.ul.Model` or a dictionary of such models."
+            f"Class `{type(model).__name__!r}` must be of type `cellrank.ul.BaseModel` or a dictionary of such models."
         )
 
     return models
 
 
-def _fit(
+def _fit_gene_trends(
     genes: Sequence[str],
     lineage_names: Sequence[Optional[str]],
-    start_lineages: Sequence[Optional[str]],
-    end_lineages: Sequence[Optional[str]],
+    time_range: Sequence[Union[float, Tuple[float, float]]],
     queue,
     **kwargs,
 ) -> Dict[str, Dict[str, Any]]:
@@ -389,14 +390,12 @@ def _fit(
         Genes for which to fit the models.
     lineage_names
         Lineages for which to fit the models.
-    start_lineages
-        Start clusters for given :paramref:`lineage_names`.
-    end_lineages
-        End clusters for given :paramref:`lineage_names`.
+    time_range
+        Minimum and maximum pseudotimes.
     queue
         Signalling queue in the parent process/thread used to update the progress bar.
     kwargs
-        Keyword arguments for :func:`cellrank.utils.models.Model.prepare`.
+        Keyword arguments for :func:`cellrank.utils.models.BaseModel.prepare`.
 
     Returns
     -------
@@ -409,12 +408,8 @@ def _fit(
 
     for gene in genes:
         res[gene] = {}
-        for ln, sc, ec in zip(lineage_names, start_lineages, end_lineages):
-            model = (
-                models[gene][ln]
-                .prepare(gene, ln, start_lineage=sc, end_lineage=ec, **kwargs)
-                .fit()
-            )
+        for ln, tr in zip(lineage_names, time_range):
+            model = models[gene][ln].prepare(gene, ln, time_range=tr, **kwargs).fit()
             model.predict()
             if conf_int:
                 model.confidence_interval()
@@ -462,7 +457,7 @@ def _trends_helper(
         Filename where to save the plot.
         If `None`, just shows the plots.
     **kwargs
-        Keyword arguments for :meth:`cellrank.ul.models.Model.plot`.
+        Keyword arguments for :meth:`cellrank.ul.models.BaseModel.plot`.
 
     Returns
     -------
@@ -637,3 +632,7 @@ def _maybe_create_dir(dirname: Optional[Union[str, Path]]) -> None:
     elif not os.path.isdir(os.path.join(figdir, dirname)):
         os.makedirs(os.path.join(figdir, dirname), exist_ok=True)
         logg.debug(f"Creating directory `{dirname!r}`")
+
+
+def _get_backend(model, backend: str) -> str:
+    return _DEFAULT_BACKEND if _is_any_gam_mgcv(model) else backend

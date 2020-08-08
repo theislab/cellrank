@@ -499,7 +499,7 @@ def _cluster_X(
     """Cluster the rows of the matrix X.
 
     Parameters
-    --------
+    ----------
     X
         Data matrix of shape `n_samples x n_features`
     n_clusters
@@ -512,7 +512,7 @@ def _cluster_X(
         Resolution parameter for ['louvain', 'leiden']
 
     Returns
-    --------
+    -------
     labels
         List of cluster labels of length `n_samples`
     """
@@ -590,8 +590,8 @@ def partition(
 
     Returns
     -------
-    (:class:`list`, :class:`list`)
-        Recurrent and transient classes respectively.
+    :class:`list`, :class:`list`
+        Recurrent and transient classes, respectively.
     """
 
     import networkx as nx
@@ -667,7 +667,7 @@ def _subsample_embedding(
     """
     Subsample cells to uniformly cover an embedding.
 
-    If using default parameter settings, this will get very slow for more than 4 embedding dimensions.
+    If using the default parameter settings, this will get very slow for more than 4 embedding dimensions.
 
     Parameters
     ----------
@@ -1257,6 +1257,7 @@ def _fuzzy_to_discrete(
     critical_clusters
         Array of clusters with less than `n_most_likely` samples assigned.
     """
+
     # check the inputs
     n_samples, n_clusters = a_fuzzy.shape
     if not isinstance(a_fuzzy, np.ndarray):
@@ -1542,7 +1543,7 @@ def _calculate_absorption_time_moments(
 
 class RandomKeys:
     """
-    Create random keys inside an :class:`anndataAnnData` object.
+    Create random keys inside an :class:`anndata.AnnData` object.
 
     Parameters
     ----------
@@ -1551,7 +1552,7 @@ class RandomKeys:
     n
         Number of keys, If `None`, create just 1 keys.
     where
-        Attribute of :paramref:`adata`. If `'obs'`, also clean up `{key}'_colors'` for each generated key.
+        Attribute of :paramref:`adata`. If `'obs'`, also clean up `'{key}_colors'` for each generated key.
     """
 
     def __init__(self, adata: AnnData, n: Optional[int] = None, where: str = "obs"):

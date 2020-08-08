@@ -30,8 +30,7 @@ class PalantirKernel(Kernel):
     The implementation presented here won't exactly reproduce the original *Palantir* algorithm (see below)
     but the results are qualitatively very similar.
 
-    Optionally, we apply density correction as described in [Coifman05]_, where we use the implementation of
-    [Haghverdi16]_.
+    %(density_correction)s
 
     Parameters
     ----------
@@ -85,9 +84,10 @@ class PalantirKernel(Kernel):
         This is a re-implementation of the Palantir algorithm by [Setty19]_.
         Note that this won't exactly reproduce the original Palantir results, for three reasons:
 
-            - 1. Palantir computes the KNN graph in a scaled space of diffusion components
-            - 2. Palantir uses its own pseudotime to bias the KNN graph which is not implemented here
-            - 3. Palantir uses a slightly different mechanism to ensure the graph remains connected when removing edges that point into the "pseudotime past"
+            - Palantir computes the KNN graph in a scaled space of diffusion components
+            - Palantir uses its own pseudotime to bias the KNN graph which is not implemented here
+            - Palantir uses a slightly different mechanism to ensure the graph remains connected when removing edges
+              that point into the "pseudotime past"
 
         If you would like to reproduce the original results, please use the original Palantir algorithm.
 
@@ -101,9 +101,9 @@ class PalantirKernel(Kernel):
 
         Returns
         -------
-        None
-            Nothing, but makes :paramref:`transition_matrix` available.
-        """  # noqa
+        :class:`cellrank.tl.kernels.PalantirKernel`
+            Makes :paramref:`transition_matrix` available.
+        """
 
         start = logg.info("Computing transition matrix based on Palantir-like kernel")
 

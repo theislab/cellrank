@@ -105,7 +105,7 @@ class PropertyMeta(ABCMeta, type):
             )
 
         attributedict[prop_name] = _create_property(
-            str(md.attr), doc=md.doc, return_type=md.dtype
+            str(md.attr), prop_name, doc=md.doc, return_type=md.dtype
         )
 
         return prop_name
@@ -239,8 +239,13 @@ class KernelHolder(ABC):
         return self._kernel
 
     @property
+    @d.dedent
     def adata(self) -> AnnData:
-        """Annotated data object."""
+        """
+        Returns
+        -------
+        %(adata)s
+        """  # noqa
         return self.kernel.adata
 
     def __len__(self):
@@ -263,7 +268,7 @@ class VectorPlottable(KernelHolder, Property):
         - :class:`cellrank.tool.estimators._decomposition.Schur`
     """
 
-    @d.get_sectionsf("plot_vectors")
+    @d.get_sectionsf("plot_vectors", sections=["Parameters", "Returns"])
     @d.dedent
     def _plot_vectors(
         self,
@@ -786,7 +791,7 @@ class Partitioner(KernelHolder, ABC):
 
                 - :paramref:`recurrent_classes`
                 - :paramref:`transient_classes`
-                - :paramref:`irreducible`
+                - :paramref:`is_irreducible`
         """
 
         start = logg.info("Computing communication classes")
