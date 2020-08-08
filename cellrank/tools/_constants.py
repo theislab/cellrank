@@ -6,6 +6,8 @@ from enum import Enum, EnumMeta
 from typing import Any, Union, Callable
 from functools import wraps
 
+_DEFAULT_BACKEND = "loky"
+
 
 class PrettyEnum(Enum):
     """Enum wit a pretty __str__ and __repr__."""

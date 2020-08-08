@@ -24,8 +24,7 @@ class ConnectivityKernel(Kernel):
     However, the velocity-derived transition matrix can be combined with the similarity-based transition matrix as
     a means of regularization.
 
-    Optionally, we apply a density correction as described in [Coifman05]_, where we use the implementation of
-    [Haghverdi16]_.
+    %(density_correction)s
 
     Parameters
     ----------
@@ -69,8 +68,8 @@ class ConnectivityKernel(Kernel):
 
         Returns
         -------
-        None
-            Nothing, but makes :paramref:`transition_matrix` available.
+        :class:`cellrank.tl.kernels.ConnectivityKernel`
+            Makes :paramref:`transition_matrix` available.
         """
 
         start = logg.info("Computing transition matrix based on connectivities")

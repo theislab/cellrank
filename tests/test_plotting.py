@@ -24,7 +24,7 @@ HERE: str = Path(__file__).parent
 GT_FIGS = HERE / "_ground_truth_figures"
 FIGS = HERE / "figures"
 DPI = 40
-TOL = 300
+TOL = 150
 
 # both are for `50` adata
 GENES = [
@@ -584,8 +584,8 @@ class TestHeatmap:
             save=fpath,
         )
 
-    @compare(dirname="heatmap_start_end_clusters")
-    def test_heatmap_start_end_clusters(self, adata: AnnData, fpath: str):
+    @compare(dirname="heatmap_time_range")
+    def test_heatmap_time_range(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.heatmap(
             adata,
@@ -593,8 +593,7 @@ class TestHeatmap:
             GENES[:10],
             mode="lineages",
             time_key="latent_time",
-            start_lineage="0",
-            end_lineage="1",
+            time_range=(0.2, 0.5),
             dpi=DPI,
             save=fpath,
         )

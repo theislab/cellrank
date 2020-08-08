@@ -3,7 +3,7 @@
 
 import os
 from types import MappingProxyType
-from typing import Tuple, Union, Mapping, TypeVar, Optional, Sequence
+from typing import List, Tuple, Union, Mapping, TypeVar, Optional, Sequence
 from pathlib import Path
 
 import numpy as np
@@ -17,11 +17,12 @@ from cellrank.utils._docs import d
 from cellrank.tools._utils import save_fig, _unique_order_preserving
 from cellrank.utils._utils import _get_n_cores, check_collection
 from cellrank.plotting._utils import (
-    _fit,
     _model_type,
+    _get_backend,
     _create_models,
     _trends_helper,
-    _is_any_gam_mgcv,
+    _fit_gene_trends,
+    _time_range_type,
     _maybe_create_dir,
 )
 from cellrank.tools._constants import AbsProbKey
@@ -35,11 +36,10 @@ def gene_trends(
     adata: AnnData,
     model: _model_type,
     genes: Union[str, Sequence[str]],
-    backward: bool = False,
     lineages: Optional[Union[str, Sequence[str]]] = None,
+    backward: bool = False,
     data_key: str = "X",
-    start_lineage: Optional[Union[str, Sequence[str]]] = None,
-    end_lineage: Optional[Union[str, Sequence[str]]] = None,
+    time_range: Optional[Union[_time_range_type, List[_time_range_type]]] = None,
     conf_int: bool = True,
     same_plot: bool = False,
     hide_cells: bool = False,
@@ -84,20 +84,13 @@ def gene_trends(
     %(adata)s
     %(model)s
     genes
-        Genes in :paramref:`adata` `.var_names` to plot.
-    %(backward)s
+        Genes in :paramref:`adata` `.var_names` to plot or in :paramref:`adata` `.raw.var_names`, if `use_raw=True`.
     lineages
-        Lineages names for which to show the gene expression.
+        Names of the lineages which to plot. If `None`, plot all lineages.
+    %(backward)s
     data_key
         Key in :paramref:`adata` `.layers` or `'X'` for :paramref:`adata` `.X` where the data is stored.
-    start_lineage
-        Lineage from which to select cells with lowest pseudotime as starting points.
-        If specified, the trends start at the earliest pseudotime within that lineage,
-        otherwise they start from time `0`.
-    end_lineage
-        Lineage from which to select cells with highest pseudotime as endpoints.
-        If specified, the trends end at the latest pseudotime within that lineage,
-        otherwise, it is determined automatically.
+    %(time_range)s
     conf_int
         Whether to compute and show confidence intervals.
     same_plot
@@ -148,9 +141,9 @@ def gene_trends(
         The figures will be saved as :paramref:`dirname` /`{gene}`. :paramref:`ext`.
     %(plotting)s
     plot_kwargs
-        Keyword arguments for :meth:`cellrank.ul.models.Model.plot`.
+        Keyword arguments for :meth:`cellrank.ul.models.BaseModel.plot`.
     **kwargs
-        Keyword arguments for :meth:`cellrank.ul.models.Model.prepare`.
+        Keyword arguments for :meth:`cellrank.ul.models.BaseModel.prepare`.
 
     Returns
     -------
@@ -200,22 +193,12 @@ def gene_trends(
     lineages = _unique_order_preserving(lineages)
 
     _ = adata.obsm[ln_key][[lin for lin in lineages if lin is not None]]
-    n_lineages = len(lineages)
 
-    if isinstance(start_lineage, (str, type(None))):
-        start_lineage = [start_lineage] * n_lineages
-    if isinstance(end_lineage, (str, type(None))):
-        end_lineage = [end_lineage] * n_lineages
-
-    if len(start_lineage) != n_lineages:
+    if isinstance(time_range, (tuple, float, int, type(None))):
+        time_range = [time_range] * len(lineages)
+    elif len(time_range) != len(lineages):
         raise ValueError(
-            f"Expected the number of start lineages to be the same as number of lineages "
-            f"({n_lineages}), found `{len(start_lineage)}`."
-        )
-    if len(end_lineage) != n_lineages:
-        raise ValueError(
-            f"Expected the number of end lineages to be the same as number of lineages "
-            f"({n_lineages}), found `{len(start_lineage)}`."
+            f"Expected time ranges to be of length `{len(lineages)}`, found `{len(time_range)}`."
         )
 
     kwargs["models"] = _create_models(model, genes, lineages)
@@ -227,22 +210,19 @@ def gene_trends(
     if plot_kwargs.get("xlabel", None) is None:
         plot_kwargs["xlabel"] = kwargs.get("time_key", None)
 
-    if _is_any_gam_mgcv(kwargs["models"]):
-        logg.debug("Setting backend to multiprocessing because model is `GamMGCVModel`")
-        backend = "multiprocessing"
-
     n_jobs = _get_n_cores(n_jobs, len(genes))
+    backend = _get_backend(model, backend)
 
     start = logg.info(f"Computing trends using `{n_jobs}` core(s)")
     models = parallelize(
-        _fit,
+        _fit_gene_trends,
         genes,
         unit="gene" if data_key != "obs" else "obs",
         backend=backend,
         n_jobs=n_jobs,
         extractor=lambda modelss: {k: v for m in modelss for k, v in m.items()},
         show_progress_bar=show_progres_bar,
-    )(lineages, start_lineage, end_lineage, **kwargs)
+    )(lineages, time_range, **kwargs)
     logg.info("    Finish", time=start)
 
     logg.debug("Plotting trends")

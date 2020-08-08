@@ -15,19 +15,25 @@ from cellrank import logging as logg
 from cellrank.utils._docs import d
 from cellrank.tools._utils import save_fig, _unique_order_preserving
 from cellrank.utils._utils import _get_n_cores, check_collection
-from cellrank.plotting._utils import _model_type, _create_models, _is_any_gam_mgcv
+from cellrank.plotting._utils import (
+    _model_type,
+    _get_backend,
+    _create_models,
+    _time_range_type,
+)
 from cellrank.tools._constants import AbsProbKey
 from cellrank.utils._parallelize import parallelize
-from cellrank.utils.models._models import Model
+from cellrank.utils.models._models import BaseModel
 
 AnnData = TypeVar("AnnData")
 Queue = TypeVar("Queue")
 
 
-def _cl_process(
+def _cluster_lineages_helper(
     genes: Sequence[str],
-    models: Dict[str, Dict[str, Model]],
+    models: Dict[str, Dict[str, BaseModel]],
     lineage_name: str,
+    time_range: Optional[Union[float, Tuple[float, float]]],
     queue: Optional[Queue],
     **kwargs,
 ) -> np.ndarray:
@@ -42,10 +48,12 @@ def _cl_process(
         Gene and lineage specific models.
     lineage_name
         Name of the lineage for which to fit the models.
+    time_range
+        Minimum and maximum pseudotime.
     queue
         Signalling queue in the parent process/thread used to update the progress bar.
     kwargs
-        Keyword arguments for :meth:`cellrank.ul.models.Model.prepare`.
+        Keyword arguments for :meth:`cellrank.ul.models.BaseModel.prepare`.
 
     Returns
     -------
@@ -55,7 +63,11 @@ def _cl_process(
 
     res = []
     for gene in genes:
-        model = models[gene][lineage_name].prepare(gene, lineage_name, **kwargs).fit()
+        model = (
+            models[gene][lineage_name]
+            .prepare(gene, lineage_name, time_range=time_range, **kwargs)
+            .fit()
+        )
         res.append(model.predict())
         if queue is not None:
             queue.put(1)
@@ -73,6 +85,7 @@ def cluster_lineage(
     genes: Sequence[str],
     lineage: str,
     backward: bool = False,
+    time_range: _time_range_type = None,
     clusters: Optional[Sequence[str]] = None,
     n_points: int = 200,
     time_key: str = "latent_time",
@@ -109,10 +122,11 @@ def cluster_lineage(
     %(adata)s
     %(model)s
     genes
-        Genes in :paramref:`adata`.var_names to cluster.
-    lineage_name
-        Name of the lineage along which to cluster the genes.
+        Genes in :paramref:`adata` `.var_names` to plot or in :paramref:`adata` `.raw.var_names`, if `use_raw=True`.
+    lineage
+        Name of the lineage for which to cluster the genes.
     %(backward)s
+    %(time_range)s
     clusters
         Cluster identifiers to plot. If `None`, all clusters will be considered.
         Useful when plotting previously computed clusters.
@@ -141,7 +155,7 @@ def cluster_lineage(
     louvain_kwargs
         Keyword arguments for :func:`scanpy.tl.louvain`.
     **kwargs:
-        Keyword arguments for :meth:`cellrank.ul.models.Model.prepare`.
+        Keyword arguments for :meth:`cellrank.ul.models.BaseModel.prepare`.
 
     Returns
     -------
@@ -149,9 +163,9 @@ def cluster_lineage(
 
         Updates :paramref:`adata` `.uns` with the following key:
 
-            - lineage_{:paramref:`lineage_name`}_trend_{:paramref:`key_added`} \
-            :class:`anndata.AnnData` object of shape `len` (:paramref:`genes`) x :paramref:`n_points`
-            containing the clustered genes.
+            - lineage_{:paramref:`lineage_name`}_trend_{:paramref:`key_added`}
+              :class:`anndata.AnnData` object of shape `len` (:paramref:`genes`) x :paramref:`n_points`
+              containing the clustered genes.
     """
 
     from anndata import AnnData as _AnnData
@@ -177,14 +191,12 @@ def cluster_lineage(
         kwargs["backward"] = backward
 
         models = _create_models(model, genes, [lineage])
-        if _is_any_gam_mgcv(models):
-            backend = "multiprocessing"
-
+        backend = _get_backend(model, backend)
         n_jobs = _get_n_cores(n_jobs, len(genes))
 
-        start = logg.info(f"Computing trends using `{n_jobs}` core(s)")
+        start = logg.info(f"Computing gene trends using `{n_jobs}` core(s)")
         trends = parallelize(
-            _cl_process,
+            _cluster_lineages_helper,
             genes,
             as_array=True,
             unit="gene",
@@ -192,11 +204,12 @@ def cluster_lineage(
             backend=backend,
             extractor=np.vstack,
             show_progress_bar=show_progress_bar,
-        )(models, lineage, **kwargs)
+        )(models, lineage, time_range, **kwargs)
         logg.info("    Finish", time=start)
 
         trends = trends.T
         if norm:
+            logg.debug("Normalizing using `StandardScaler`")
             _ = StandardScaler(copy=False).fit_transform(trends)
 
         trends = _AnnData(trends.T)
