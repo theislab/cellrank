@@ -68,7 +68,7 @@ class TestHighLevelPipeline:
             adata,
             estimator=cr.tl.CFLARE,
             cluster_key="clusters",
-            method="brandts",
+            method="kmeans",
             show_plots=True,
         )
         cr.tl.lineages(adata)
@@ -82,7 +82,7 @@ class TestHighLevelPipeline:
             adata,
             estimator=cr.tl.CFLARE,
             cluster_key="clusters",
-            method="brandts",
+            method="louvain",
             show_plots=True,
         )
         cr.tl.lineages(adata, backward=True)
@@ -187,13 +187,13 @@ class TestLowLevelPipeline:
         estimator_fwd.compute_schur(5, method="brandts")
         estimator_fwd.plot_schur()
 
-        estimator_fwd.compute_metastable_states(3, n_cells=16)
+        estimator_fwd.compute_metastable_states(3, n_cells=10)
         estimator_fwd.plot_metastable_states()
         estimator_fwd.plot_coarse_T(show_initial_dist=True, show_stationary_dist=True)
         estimator_fwd.plot_schur_matrix()
 
         # select all states
-        estimator_fwd.set_final_states_from_metastable_states(n_cells=16)
+        estimator_fwd.set_final_states_from_metastable_states(n_cells=10)
         estimator_fwd.plot_final_states()
 
         estimator_fwd.compute_absorption_probabilities()

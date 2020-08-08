@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 """Module containing CellRank contants."""
 
-from enum import Enum
+from abc import ABC, ABCMeta
+from enum import Enum, EnumMeta
 from typing import Any, Union, Callable
+from functools import wraps
 
 
 class PrettyEnum(Enum):
@@ -105,3 +107,51 @@ def _probs(k: Union[str, FinalStatesKey]) -> str:
 
 def _dp(k: Union[str, AbsProbKey]) -> str:
     return f"{k}_dp"
+
+
+def _pretty_raise_enum(cls, fun):
+    @wraps(fun)
+    def wrapper(*args, **kwargs):
+        try:
+            return fun(*args, **kwargs)
+        except ValueError as e:
+            _cls, value, *_ = args
+            e.args = (cls._format(value),)
+            raise e
+
+    if not issubclass(cls, ErrorFormatterABC):
+        raise TypeError(f"Class `{cls}` must be subtype of `ErrorFormatterABC`.")
+    elif not len(cls.__members__):
+        # empty enum, for class hierarchy
+        return fun
+
+    return wrapper
+
+
+class ABCEnumMeta(EnumMeta, ABCMeta):  # noqa
+    def __call__(cls, *args, **kw):  # noqa
+        if getattr(cls, "__error_format__", None) is None:
+            raise TypeError(
+                f"Can't instantiate class `{cls.__name__}` "
+                f"without `__error_format__` class attribute."
+            )
+        return super().__call__(*args, **kw)
+
+    def __new__(cls, clsname, superclasses, attributedict):  # noqa
+        res = super().__new__(cls, clsname, superclasses, attributedict)
+        res.__new__ = _pretty_raise_enum(res, res.__new__)
+        return res
+
+
+class ErrorFormatterABC(ABC):  # noqa
+    __error_format__ = "Invalid option `{!r}` for `{}`. Valid options are: `{}`."
+
+    @classmethod
+    def _format(cls, value):
+        return cls.__error_format__.format(
+            value, cls.__name__, [m.value for m in cls.__members__.values()]
+        )
+
+
+class ModeEnum(ErrorFormatterABC, PrettyEnum, metaclass=ABCEnumMeta):  # noqa
+    pass

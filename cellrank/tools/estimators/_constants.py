@@ -24,6 +24,8 @@ class A(PrettyEnum):
     COARSE_T = "_coarse_T"
     COARSE_INIT_D = "_coarse_init_dist"
     COARSE_STAT_D = "_coarse_stat_dist"
+    MEAN_ABS_TIME = "_mean_abs_time"
+    VAR_ABS_TIME = "_var_abs_time"
 
 
 # properties
@@ -44,6 +46,8 @@ class P(PrettyEnum):
     COARSE_T = "coarse_T"
     COARSE_INIT_D = "coarse_initial_distribution"
     COARSE_STAT_D = "coarse_stationary_distribution"
+    MEAN_ABS_TIME = "absorption_time"
+    VAR_ABS_TIME = "absorption_time_variance"
 
 
 # functions

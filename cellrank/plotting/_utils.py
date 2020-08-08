@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Utility functions for CellRank plotting."""
 
+import os
 from copy import copy
 from typing import (
     Any,
@@ -16,19 +17,18 @@ from typing import (
 from pathlib import Path
 from collections import defaultdict
 
-import numpy as np
-from scipy.sparse import diags
-from pandas.core.dtypes.common import is_categorical_dtype
-
 import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 
+import numpy as np
+from scipy.sparse import diags
 from cellrank.utils._docs import d
 from cellrank.tools._utils import save_fig, _unique_order_preserving
 from cellrank.utils.models import GAMR, Model
 from cellrank.tools.kernels import PrecomputedKernel
 from cellrank.tools._constants import _colors
+from pandas.core.dtypes.common import is_categorical_dtype
 from cellrank.tools.estimators._cflare import CFLARE
 
 AnnData = TypeVar("AnnData")
@@ -337,7 +337,7 @@ def _create_models(
             models[obs_name][lin_name] = copy(mod)
 
         if lin_rest_model is not None:
-            for lin_name in lineages - set(models[obs_name].keys()):
+            for lin_name in set(lineages) - set(models[obs_name].keys()):
                 models[obs_name][lin_name] = copy(lin_rest_model)
         elif set(models[obs_name].keys()) != lineages:
             raise RuntimeError(_ERROR_INCOMPLETE_SPEC.format(" lineage ", obs_name))
@@ -362,7 +362,7 @@ def _create_models(
         elif set(model.keys()) != obs:
             raise RuntimeError(_ERROR_INCOMPLETE_SPEC.format(" ", "genes"))
     else:
-        raise ValueError(
+        raise TypeError(
             "Model must be of type `cellrank.ul.Model` or a dictionary of such models."
         )
 
@@ -417,8 +417,12 @@ def _fit(
                 model.confidence_interval()
 
             res[gene][ln] = model
-        queue.put(1)
-    queue.put(None)
+
+        if queue is not None:
+            queue.put(1)
+
+    if queue is not None:
+        queue.put(None)
 
     return res
 
@@ -503,7 +507,7 @@ def _trends_helper(
     )
 
     for i, (name, ax, perc) in enumerate(zip(lineage_names, axes, percs)):
-        title = name if name is not None else "No lineage"
+        title = name if name is not None else "no lineage"
         models[gene][name].plot(
             ax=ax,
             fig=fig,
@@ -609,3 +613,24 @@ def _position_legend(ax: mpl.axes.Axes, legend_loc: str, **kwargs) -> mpl.legend
         kwargs["bbox_to_anchor"] = (x, y)
 
     return ax.legend(loc=loc, **kwargs)
+
+
+def _maybe_create_dir(dirname: Optional[Union[str, Path]]) -> None:
+    if dirname is None:
+        return
+
+    from cellrank import settings, logging as logg
+
+    figdir = settings.figdir
+
+    if figdir is None:
+        raise RuntimeError(
+            f"Figures directory `cellrank.settings.figdir` is `None`, but `dirname={dirname!r}`."
+        )
+    if os.path.isabs(dirname):
+        if not os.path.isdir(dirname):
+            os.makedirs(dirname, exist_ok=True)
+            logg.debug(f"Creating directory `{dirname!r}`")
+    elif not os.path.isdir(os.path.join(figdir, dirname)):
+        os.makedirs(os.path.join(figdir, dirname), exist_ok=True)
+        logg.debug(f"Creating directory `{dirname!r}`")

@@ -4,6 +4,7 @@ future_fstrings
 joblib>=0.13.1
 matplotlib>=3.3.0
 networkx>=2.2
+numba>=0.50.1
 numpy>=1.19.1
 pandas>=0.23.4
 pygam>=0.8.0

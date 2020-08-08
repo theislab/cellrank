@@ -37,6 +37,9 @@ Parameters
 %(adata)s
 estimator
     Estimator to use to compute the {direction} states.
+mode
+    How to compute transition probabilities. Options are "stochastic" (propagate uncertainty analytically),
+    "deterministic" (don't propagate uncertainty) and "sampling" (sample from velocity distribution).
 n_states
     If you know how many {direction} states you are expecting, you can provide this number.
     Otherwise, an `eigengap` heuristic is used.
@@ -47,10 +50,6 @@ weight_connectivities
     Weight given to a transition matrix computed on the basis of the KNN connectivities. Must be in `[0, 1]`.
     This can help in situations where we have noisy velocities and want to give some weight to
     transcriptomic similarity.
-use_velocity_uncertainty
-    Whether to use velocity uncertainty. Uncertainties are computed independently per gene using the neighborhood graph.
-    They are then propagated into cosine similarities and finally used as a scaling factor in the softmax which
-    transforms cosine similarities to probabilities, i.e. transitions we are uncertain about are down-weighted.
 show_plots
     Whether to show plots of the spectrum and eigenvectors in the embedding.
 copy
@@ -58,7 +57,7 @@ copy
 return_estimator
     Whether to return the estimator. Only available when :paramref:`copy=False`.
 **kwargs
-    Keyword arguments for :meth:`cellrank.tl.BaseEstimator.fit`.
+    Keyword arguments for :meth:`cellrank.tl.BaseEstimator.fit`, such as `n_cells`.
 
 Returns
 -------
@@ -74,10 +73,10 @@ def _root_final(
     adata: AnnData,
     estimator: type(BaseEstimator) = GPCCA,
     backward: bool = False,
+    mode: str = "deterministic",
     n_states: Optional[int] = None,
     cluster_key: Optional[str] = None,
     weight_connectivities: float = None,
-    use_velocity_uncertainty: bool = False,
     show_plots: bool = False,
     copy: bool = False,
     return_estimator: bool = False,
@@ -91,10 +90,10 @@ def _root_final(
     kernel = transition_matrix(
         adata,
         backward=backward,
+        mode=mode,
         weight_connectivities=weight_connectivities,
-        scale_by_variances=use_velocity_uncertainty,
     )
-    # create MarkovChain object
+    # create estimator object
     mc = estimator(kernel, read_from_adata=False)
 
     if cluster_key is None:
@@ -137,7 +136,9 @@ def _root_final(
 def root_states(
     adata: AnnData,
     estimator: type(BaseEstimator) = GPCCA,
+    mode: str = "deterministic",
     n_states: Optional[int] = None,
+    cluster_key: Optional[str] = None,
     weight_connectivities: float = None,
     show_plots: bool = False,
     copy: bool = False,
@@ -153,8 +154,10 @@ def root_states(
     return _root_final(
         adata,
         estimator=estimator,
+        mode=mode,
         backward=True,
         n_states=n_states,
+        cluster_key=cluster_key,
         weight_connectivities=weight_connectivities,
         show_plots=show_plots,
         copy=copy,
@@ -168,7 +171,9 @@ def root_states(
 def final_states(
     adata: AnnData,
     estimator: type(BaseEstimator) = GPCCA,
+    mode: str = "deterministic",
     n_states: Optional[int] = None,
+    cluster_key: Optional[str] = None,
     weight_connectivities: float = None,
     show_plots: bool = False,
     copy: bool = False,
@@ -184,8 +189,10 @@ def final_states(
     return _root_final(
         adata,
         estimator=estimator,
+        mode=mode,
         backward=False,
         n_states=n_states,
+        cluster_key=cluster_key,
         weight_connectivities=weight_connectivities,
         show_plots=show_plots,
         copy=copy,
