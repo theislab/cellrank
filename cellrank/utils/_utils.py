@@ -1,18 +1,24 @@
 # -*- coding: utf-8 -*-
 """General utility functions module."""
-
-from typing import Any, Dict, List, Tuple, Union, TypeVar, Hashable, Iterable, Optional
+from types import MappingProxyType
+from typing import Any, Dict, Tuple, Union, TypeVar, Iterable, Optional
+from functools import wraps, update_wrapper
 from multiprocessing import cpu_count
 
 import numpy as np
-from cellrank import logging as logg
 from scipy.sparse import spmatrix
+
+from cellrank import logging as logg
 
 AnnData = TypeVar("AnnData")
 
 
 def check_collection(
-    adata: AnnData, needles: Iterable[str], attr_name: str, key_name: str = "Gene",
+    adata: AnnData,
+    needles: Iterable[str],
+    attr_name: str,
+    key_name: str = "Gene",
+    use_raw: bool = False,
 ) -> None:
     """
     Check if given collection contains all the keys.
@@ -27,17 +33,31 @@ def check_collection(
         Attribute of :paramref:`adata` where the needles are stored.
     key_name
         Pretty name of the key which will be displayed when error is found.
+    use_raw
+        Whether to access `adata.raw` or just `adata`.
 
     Returns
     -------
     None
         Nothing, but raises and :class:`KeyError` if one of needles is not found.
     """
+    adata_name = "adata"
+
+    if use_raw and adata.raw is None:
+        logg.warning(
+            "Argument `use_raw` was set to `True`, but no `raw` attribute is found. Ignoring"
+        )
+        use_raw = False
+    if use_raw:
+        adata_name = "adata.raw"
+        adata = adata.raw
 
     haystack = getattr(adata, attr_name)
     for needle in needles:
         if needle not in haystack:
-            raise KeyError(f"{key_name} `{needle}` not found in `adata.{attr_name}`.")
+            raise KeyError(
+                f"{key_name} `{needle}` not found in `{adata_name}.{attr_name}`."
+            )
 
 
 def _get_n_cores(n_cores: Optional[int], n_jobs: Optional[int]) -> int:
@@ -90,30 +110,6 @@ def _minmax(
         data = np.clip(data, *np.percentile(data, sorted(perc)))
 
     return float(np.nanmin(data)), float(np.nanmax(data))
-
-
-def _make_unique(collection: Iterable[Hashable]) -> List[Hashable]:
-    """
-    Make a collection unique while maintaining the order.
-
-    Parameters
-    ----------
-    collection
-        Values to make unique.
-
-    Returns
-    -------
-    :class:`list`
-        The same collection with unique values.
-    """
-
-    seen, res = set(), []
-    for item in collection:
-        if item not in seen:
-            seen.add(item)
-            res.append(item)
-
-    return res
 
 
 def _has_neighs(adata: AnnData) -> bool:
@@ -200,3 +196,29 @@ def _write_graph_data(
         write_to = "uns"
 
     logg.debug(f"Write graph data {key!r} to `adata.{write_to}`")
+
+
+def valuedispatch(func):
+    """Dispatch a function based on the first value."""
+    registry = {}
+
+    def dispatch(value):
+        return registry.get(value, func)
+
+    def register(value, func=None):
+        if func is None:
+            return lambda f: register(value, f)
+        registry[value] = func
+        return func
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        return dispatch(args[0])(*args[1:], **kwargs)
+
+    wrapper.register = register
+    wrapper.dispatch = dispatch
+    wrapper.registry = MappingProxyType(registry)
+
+    update_wrapper(wrapper, func)
+
+    return wrapper

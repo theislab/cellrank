@@ -1,17 +1,14 @@
 # -*- coding: utf-8 -*-
 """Utillity functions which deal with delegating methods."""
 import inspect
-from typing import Any, Type, TypeVar, Callable, Iterable, Optional
+from typing import *  # noqa
 from functools import partial, singledispatch, update_wrapper
 from collections import namedtuple
 
 import wrapt
+
 import cellrank.logging as logg
-from cellrank.tools._utils import _generate_random_keys
 from cellrank.tools.estimators._constants import F
-
-from typing import *  # noqa; get rid of flake8 warnings from above star import
-
 
 AnnData = TypeVar("AnnData")
 try:
@@ -35,43 +32,6 @@ except TypeError:
         F.COMPUTE,
         F.PLOT,
     )
-
-
-class RandomKeys:
-    """
-    Create random keys inside an :class:`anndataAnnData` object.
-
-    Parameters
-    ----------
-    adata
-        Annotated data object.
-    n
-        Number of keys, If `None`, create just 1 keys.
-    where
-        Attribute of :paramref:`adata`. If `'obs'`, also clean up `{key}'_colors'` for each generated key.
-    """
-
-    def __init__(self, adata: AnnData, n: Optional[int] = None, where: str = "obs"):
-        self._adata = adata
-        self._where = where
-        self._n = n
-        self._keys = []
-
-    def __enter__(self):
-        self._keys = _generate_random_keys(self._adata, self._where, self._n)
-        return self._keys
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        for key in self._keys:
-            try:
-                del self._adata.obs[key]
-            except KeyError:
-                pass
-            if self._where == "obs":
-                try:
-                    del self._adata.uns[f"{key}_colors"]
-                except KeyError:
-                    pass
 
 
 # copy of functools.singledispatchmethod (for Python < 3.8)
@@ -138,10 +98,7 @@ def argspec_factory(
         An adapter with the correct signature.
     """
     # for locals(), this is a whitelist of types we allow
-    import anndata  # noqa
-    import numpy  # noqa
-    import pandas  # noqa
-    import matplotlib  # noqa
+    import matplotlib  # noqa  this one seems to be missing, so whitelist it
 
     NoneType = type(None)
 
@@ -164,7 +121,7 @@ def _delegate(
     skip: int = 2,
 ) -> Callable:
     @wrapt.decorator()
-    def pass_through(wrapped, instance, args, kwargs):
+    def pass_through(wrapped, _instance, args, kwargs):
         return wrapped(*args, **kwargs)
 
     if prop_name is None:

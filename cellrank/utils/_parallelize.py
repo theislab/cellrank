@@ -8,6 +8,7 @@ from multiprocessing import Manager
 import numpy as np
 import joblib as jl
 from scipy.sparse import issparse, spmatrix
+
 from cellrank.utils._utils import _get_n_cores
 
 _msg_shown = False
@@ -104,21 +105,24 @@ def parallelize(
             pbar.close()
 
     def wrapper(*args, **kwargs):
-        pbar = None if tqdm is None else tqdm(total=col_len, unit=unit)
-
-        queue = Manager().Queue()
-        thread = Thread(target=update, args=(pbar, queue, len(collections)))
-        thread.start()
+        if pass_queue and show_progress_bar:
+            pbar = None if tqdm is None else tqdm(total=col_len, unit=unit)
+            queue = Manager().Queue()
+            thread = Thread(target=update, args=(pbar, queue, len(collections)))
+            thread.start()
+        else:
+            pbar, queue, thread = None, None, None
 
         res = jl.Parallel(n_jobs=n_jobs, backend=backend)(
             jl.delayed(callback)(
-                *((i, cs) if use_ixs else (cs,)), *args, **kwargs, queue=queue
+                *((i, cs) if use_ixs else (cs,)), *args, **kwargs, queue=queue,
             )
             for i, cs in enumerate(collections)
         )
 
         res = np.array(res) if as_array else res
-        thread.join()
+        if thread is not None:
+            thread.join()
 
         return res if extractor is None else extractor(res)
 
@@ -144,5 +148,7 @@ def parallelize(
             collections = [collection[ix, :] for ix in filter(len, ixs)]
     else:
         collections = list(filter(len, np.array_split(collection, n_split)))
+
+    pass_queue = not hasattr(callback, "py_func")  # we'd be inside a numba function
 
     return wrapper

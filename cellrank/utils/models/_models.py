@@ -46,7 +46,7 @@ class Model(ABC):
     model
         Underlying model.
     filter_dropouts
-        TODO
+        Filter out all cells with expression lower than this.
     """
 
     def __init__(
@@ -725,7 +725,7 @@ class SKLearnModel(Model):
     model
         Underlying :mod:`sklearn` model.
     filter_dropouts
-        Filter out all cells with expression lower than this. If `True`, the value is `0`.
+        Filter out all cells with expression lower than this.
     weight_name
         Name of the weight argument for :paramref:`model` `.fit`.
     """
@@ -1026,7 +1026,7 @@ class GAM(Model):  # noqa  TODO
 class GAMR(Model):
     """
     Wrapper around R's `mgcv <https://cran.r-project.org/web/packages/mgcv/>`_ or  \
-    `mgcv <https://cran.r-project.org/web/packages/gam/>`_ package fors fitting Generalized Additive Models (GAMs).
+    `mgcv <https://cran.r-project.org/web/packages/gam/>`_ package for fitting Generalized Additive Models (GAMs).
 
     Parameters
     ----------
@@ -1039,7 +1039,7 @@ class GAMR(Model):
     family
         Family in `rpy2.robjects.r`, such as `"gaussian"` or `"poisson"`.
     filter_dropouts
-        Filter out all cells with expression lower than this. If `True`, the value is `0`.
+        Filter out all cells with expression lower than this.
     backend
         R library used to fit GAMs. Valid options are `'mgcv'` and `'gam'`. Note that option `'gam'` ignores
         the number of splines, as well as family and smoothing parameter.

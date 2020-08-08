@@ -108,7 +108,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
                 )
             was_from_eigengap = True
             n_states = self._get(P.EIG)["eigengap"] + 1
-            logg.info(f"oUsing `{n_states}` states based on eigengap")
+            logg.info(f"Using `{n_states}` states based on eigengap")
 
         if n_states <= 0:
             raise ValueError(
@@ -216,7 +216,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         else:
             logg.warning("No stationary distribution found in GPCCA object")
             logg.info(
-                f"Adding `.{P.SCHUR}`\n" f"       `.{P.COARSE_T}`\n" f"    Finish",
+                f"Adding `.{P.SCHUR}`\n       `.{P.COARSE_T}`\n" f"    Finish",
                 time=start,
             )
 
@@ -255,13 +255,9 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
                 "Compute metastable_states first as `.compute_metastable_states()`."
             )
         elif probs.shape[1] == 1:
-            self._set(
-                A.FIN, self._create_states(self._get(P.META_PROBS), n_cells=n_cells)
-            )
+            self._set(A.FIN, self._create_states(probs, n_cells=n_cells))
             self._set(A.FIN_COLORS, self._get(A.META_COLORS))
-            self._set(
-                A.FIN_PROBS, self._get(P.META_PROBS) / self._get(P.META_PROBS).max()
-            )
+            self._set(A.FIN_PROBS, probs / probs.max())
             self._write_final_states()
 
             return
@@ -921,6 +917,8 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
                 n_states=n_lineages + 1, cluster_key=cluster_key, **kwargs
             )
 
+        fs_kwargs = {"n_cells": kwargs["n_cells"]} if "n_cells" in kwargs else {}
+
         if len(self._get(P.META).cat.categories) == 1:
             # stationary distribution
             self._set(A.FIN, self._get(P.META))
@@ -928,9 +926,9 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             self._set(A.FIN_COLORS, self._get(A.META_COLORS))
             self._write_final_states()
         elif n_lineages is None:
-            self.compute_final_states(method="eigengap")
+            self.compute_final_states(method="eigengap", **fs_kwargs)
         else:
-            self.set_final_states_from_metastable_states()
+            self.set_final_states_from_metastable_states(**fs_kwargs)
 
     @d.dedent  # because of fit
     @d.dedent
@@ -994,5 +992,5 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             keys=keys,
             method=method,
             compute_absorption_probabilities=compute_absorption_probabilities,
-            *kwargs,
+            **kwargs,
         )

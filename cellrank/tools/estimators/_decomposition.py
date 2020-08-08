@@ -28,7 +28,7 @@ class Decomposable(KernelHolder, Property, ABC):
         setattr(self, A.EIG.s, eig)
         self.adata.uns[f"eig_{self._direction}"] = eig
 
-        logg.debug(f"Adding `.{P.EIG}`" f"       `adata.uns['eig_{self._direction}']`")
+        logg.info(f"Adding `.{P.EIG}`\n       `adata.uns['eig_{self._direction}']`")
 
 
 class Eigen(VectorPlottable, Decomposable):
@@ -329,7 +329,7 @@ class Schur(VectorPlottable, Decomposable):
         n_components: int = 10,
         initial_distribution: Optional[np.ndarray] = None,
         method: str = "krylov",
-        which: str = "LM",
+        which: str = "LR",
         alpha: float = 1,
     ):
         """

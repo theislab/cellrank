@@ -151,7 +151,7 @@ class TestRootFinal:
         assert _probs(FinalStatesKey.BACKWARD) in adata.obs.keys()
 
     def test_find_final(self, adata: AnnData):
-        cr.tl.final_states(adata)
+        cr.tl.final_states(adata, n_states=5, n_cells=5)
 
         assert str(FinalStatesKey.FORWARD) in adata.obs.keys()
         assert _probs(FinalStatesKey.FORWARD) in adata.obs.keys()
@@ -163,6 +163,10 @@ class TestRootFinal:
     def test_invalid_weight(self, adata: AnnData):
         with pytest.raises(ValueError):
             cr.tl.root_states(adata, weight_connectivities=10)
+
+    def test_invalid_invalid_mode(self, adata: AnnData):
+        with pytest.raises(ValueError):
+            cr.tl.root_states(adata, mode="foobar")
 
 
 class TestTransitionMatrix:

@@ -6,21 +6,23 @@ from types import MappingProxyType
 from typing import Tuple, Union, Mapping, TypeVar, Optional, Sequence
 from pathlib import Path
 
+import numpy as np
+
 import matplotlib
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 
-import numpy as np
 from cellrank import logging as logg
 from cellrank.utils._docs import d
-from cellrank.tools._utils import save_fig
-from cellrank.utils._utils import _get_n_cores, _make_unique, check_collection
+from cellrank.tools._utils import save_fig, _unique_order_preserving
+from cellrank.utils._utils import _get_n_cores, check_collection
 from cellrank.plotting._utils import (
     _fit,
     _model_type,
     _create_models,
     _trends_helper,
     _is_any_gam_mgcv,
+    _maybe_create_dir,
 )
 from cellrank.tools._constants import AbsProbKey
 from cellrank.utils._parallelize import parallelize
@@ -157,12 +159,14 @@ def gene_trends(
 
     if isinstance(genes, str):
         genes = [genes]
-    genes = _make_unique(genes)
+    genes = _unique_order_preserving(genes)
 
     if data_key != "obs":
-        check_collection(adata, genes, "var_names")
+        check_collection(
+            adata, genes, "var_names", use_raw=kwargs.get("use_raw", False)
+        )
     else:
-        check_collection(adata, genes, "obs")
+        check_collection(adata, genes, "obs", use_raw=kwargs.get("use_raw", False))
 
     nrows = int(np.ceil(len(genes) / ncols))
     fig = None
@@ -177,20 +181,7 @@ def gene_trends(
         )
         axes = np.ravel(axes)
     elif dirname is not None:
-        from cellrank import settings
-
-        figdir = settings.figdir
-
-        if figdir is None:
-            raise RuntimeError(
-                f"Invalid combination: figures directory `cellrank.settings.figdir` is `None`, "
-                f"but `dirname={dirname}`."
-            )
-        if os.path.isabs(dirname):
-            if not os.path.isdir(dirname):
-                os.makedirs(dirname, exist_ok=True)
-        elif not os.path.isdir(os.path.join(figdir, dirname)):
-            os.makedirs(os.path.join(figdir, dirname), exist_ok=True)
+        _maybe_create_dir(dirname)
     elif save is not None:
         logg.warning("No directory specified for saving. Ignoring `save` argument")
 
@@ -205,11 +196,10 @@ def gene_trends(
     elif all(map(lambda ln: ln is None, lineages)):  # no lineage, all the weights are 1
         lineages = [None]
         show_cbar = False
-        logg.debug("All lineages are `None`, setting weights to be `1`")
-    lineages = _make_unique(lineages)
+        logg.debug("All lineages are `None`, setting the weights to `1`")
+    lineages = _unique_order_preserving(lineages)
 
-    for ln in filter(lambda ln: ln is not None, lineages):
-        _ = adata.obsm[ln_key][ln]
+    _ = adata.obsm[ln_key][[lin for lin in lineages if lin is not None]]
     n_lineages = len(lineages)
 
     if isinstance(start_lineage, (str, type(None))):
@@ -238,7 +228,7 @@ def gene_trends(
         plot_kwargs["xlabel"] = kwargs.get("time_key", None)
 
     if _is_any_gam_mgcv(kwargs["models"]):
-        logg.debug("Setting backend to multiprocessing because model is `GamMGCV`")
+        logg.debug("Setting backend to multiprocessing because model is `GamMGCVModel`")
         backend = "multiprocessing"
 
     n_jobs = _get_n_cores(n_jobs, len(genes))
