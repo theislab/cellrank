@@ -7,7 +7,7 @@ from cellrank import logging as logg
 from cellrank.utils._docs import d
 from cellrank.tools._utils import _check_estimator_type
 from cellrank.tools.kernels import PrecomputedKernel
-from cellrank.tools._constants import Direction, AbsProbKey, FinalStatesKey, _transition
+from cellrank.tools._constants import AbsProbKey, FinalStatesKey
 from cellrank.tools.estimators import GPCCA
 from cellrank.tools.estimators._constants import P
 from cellrank.tools.estimators._base_estimator import BaseEstimator
@@ -68,23 +68,21 @@ def lineages(
     adata = adata.copy() if copy else adata
 
     if backward:
-        direction = Direction.BACKWARD
         lin_key = AbsProbKey.BACKWARD
         rc_key = FinalStatesKey.BACKWARD
     else:
-        direction = Direction.FORWARD
         lin_key = AbsProbKey.FORWARD
         rc_key = FinalStatesKey.FORWARD
 
     try:
-        vk = PrecomputedKernel(_transition(direction), adata, backward=backward)
+        pk = PrecomputedKernel(adata=adata, backward=backward)
     except KeyError as e:
         raise RuntimeError(
             "Compute transition matrix first a `cellrank.tl.transition_matrix()`."
         ) from e
 
     start = logg.info(f"Computing lineage probabilities towards `{rc_key}`")
-    mc = estimator(vk, read_from_adata=True)
+    mc = estimator(pk, read_from_adata=True)
     if mc._get(P.FIN) is None:
         raise RuntimeError(
             f"Compute the states first as `cellrank.tl.{'root' if backward else 'final'}_states()`."

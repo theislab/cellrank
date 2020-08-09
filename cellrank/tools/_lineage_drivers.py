@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Tuple, Union, Mapping, TypeVar, Optional, Se
 
 import numpy as np
 import pandas as pd
+from scipy.sparse import eye as speye
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import StandardScaler
 from statsmodels.stats.multitest import multipletests
@@ -15,7 +16,7 @@ from cellrank.tools import GPCCA
 from cellrank.utils._docs import d
 from cellrank.utils._utils import _get_n_cores, check_collection
 from cellrank.utils.models import BaseModel
-from cellrank.tools.kernels import ConnectivityKernel
+from cellrank.tools.kernels import PrecomputedKernel
 from cellrank.plotting._utils import _model_type, _create_models, _is_any_gam_mgcv
 from cellrank.tools._constants import AbsProbKey
 from cellrank.utils._parallelize import parallelize
@@ -327,9 +328,10 @@ def lineage_drivers(
     """
 
     # create dummy kernel and estimator
-    # TODO: precomputed kernel
-    kernel = ConnectivityKernel(adata, backward=backward)
-    g = GPCCA(kernel, read_from_adata=True)
+    pk = PrecomputedKernel(
+        speye(adata.n_obs, adata.n_obs, format="csr"), adata=adata, backward=backward
+    )
+    g = GPCCA(pk, read_from_adata=True)
     if g._get(P.ABS_PROBS) is None:
         raise RuntimeError(
             "Compute absorption probabilities first as `cellrank.tl.lineages()`."

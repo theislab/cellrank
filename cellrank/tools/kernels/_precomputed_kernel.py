@@ -10,7 +10,7 @@ from cellrank import logging as logg
 from cellrank.utils._docs import d
 from cellrank.utils._utils import _read_graph_data
 from cellrank.tools.kernels import Kernel
-from cellrank.tools._constants import Direction
+from cellrank.tools._constants import Direction, _transition
 from cellrank.tools.kernels._base_kernel import AnnData
 
 
@@ -22,19 +22,26 @@ class PrecomputedKernel(Kernel):
     Parameters
     ----------
     transition_matrix
-        Row-normalized transition matrix or a key in :paramref:`adata` `.obsp`.
+        Row-normalized transition matrix or a key in :paramref:`adata` `.obsp`. If `None`, try to determine
+        the key based on :paramref:`backward`.
     %(adata)s
     %(backward)s
     """
 
     def __init__(
         self,
-        transition_matrix: Union[np.ndarray, spmatrix, str],
+        transition_matrix: Optional[Union[np.ndarray, spmatrix, str]] = None,
         adata: Optional[AnnData] = None,
         backward: bool = False,
         compute_cond_num: bool = False,
     ):
         from anndata import AnnData as _AnnData
+
+        if transition_matrix is None:
+            transition_matrix = _transition(
+                Direction.BACKWARD if backward else Direction.FORWARD
+            )
+            logg.debug(f"Setting transition matrix key to `{transition_matrix!r}`")
 
         if isinstance(transition_matrix, str):
             if adata is None:
@@ -70,8 +77,9 @@ class PrecomputedKernel(Kernel):
     def _read_from_adata(self, **kwargs):
         pass
 
+    @d.dedent
     def copy(self) -> "PrecomputedKernel":
-        """Return a copy of self."""
+        """%(copy)s"""  # noqa
         pk = PrecomputedKernel(
             copy(self.transition_matrix), adata=self.adata, backward=self.backward
         )
