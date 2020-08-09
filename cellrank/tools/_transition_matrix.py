@@ -4,13 +4,15 @@
 from typing import TypeVar, Iterable, Optional
 
 from cellrank import logging as logg
-from cellrank.utils._docs import d
+from cellrank.utils._docs import d, inject_docs
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tools.kernels._base_kernel import KernelExpression
+from cellrank.tools.kernels._velocity_kernel import BackwardMode, VelocityMode
 
 AnnData = TypeVar("AnnData")
 
 
+@inject_docs(m=VelocityMode, b=BackwardMode)  # don't swap the order
 @d.dedent
 def transition_matrix(
     adata: AnnData,
@@ -18,9 +20,10 @@ def transition_matrix(
     vkey: str = "velocity",
     xkey: str = "Ms",
     gene_subset: Optional[Iterable] = None,
-    mode: str = "deterministic",
+    mode: str = VelocityMode.DETERMINISTIC.s,
+    backward_mode: str = BackwardMode.TRANSPOSE.s,
     seed: Optional[int] = None,
-    sigma_corr: int = 4.0,
+    softmax_scale: int = 4.0,
     weight_connectivities: Optional[float] = None,
     density_normalize: bool = True,
 ) -> KernelExpression:
@@ -42,12 +45,11 @@ def transition_matrix(
     gene_subset
         List of genes to be used to compute transition probabilities. By default, the `velocity_genes` of
         :paramref:`adata` `. var` are used.
-    mode
-        How to compute transition probabilities. Options are "stochastic" (propagate uncertainty analytically),
-        "deterministic" (don't propagate uncertainty) and "sampling" (sample from velocity distribution).
+    %(velocity_mode)s
+    %(velocity_backward_mode)s
     seed
-        Set the seed for random state, only relevant for `mode='sampling'`.
-    sigma_corr
+        Set the seed for random state, only used when sampling.
+    softmax_scale
         Scaling parameter for the softmax.
     weight_connectivities
         Weight given to transcriptomic similarities as opposed to velocities. Must be in `[0, 1]`.
@@ -65,7 +67,9 @@ def transition_matrix(
     vk = VelocityKernel(
         adata, backward=backward, vkey=vkey, xkey=xkey, gene_subset=gene_subset
     )
-    vk.compute_transition_matrix(softmax_scale=sigma_corr, mode=mode, seed=seed)
+    vk.compute_transition_matrix(
+        softmax_scale=softmax_scale, mode=mode, backward_mode=backward_mode, seed=seed
+    )
 
     if weight_connectivities is not None:
         if 0 < weight_connectivities < 1:

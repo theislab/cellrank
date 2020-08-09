@@ -37,14 +37,17 @@ from cellrank.tools.kernels._base_kernel import (
 TOL = 1e-12
 
 
-class VelocityMode(ModeEnum):
-    """Method to calculate the transition matrix of VelocityKernel."""
-
+class VelocityMode(ModeEnum):  # noqa
     DETERMINISTIC = "deterministic"
     STOCHASTIC = "stochastic"
     SAMPLING = "sampling"
     MONTE_CARLO = "monte_carlo"
     PROPAGATION = "propagation"
+
+
+class BackwardMode(ModeEnum):  # noqa
+    TRANSPOSE = "transpose"
+    NEGATE = "negate"
 
 
 @d.dedent
@@ -149,7 +152,7 @@ class VelocityKernel(Kernel):
         else:
             velocity_params = None
             logg.debug(
-                f"Unable to load velocity parameters from `adata.uns[{par_key}!]`"
+                f"Unable to load velocity parameters from `adata.uns[{par_key!r}]`"
             )
 
         # add to self
@@ -157,12 +160,12 @@ class VelocityKernel(Kernel):
         self._gene_expression = X.astype(np.float64)
         self._velocity_params = velocity_params
 
+    @inject_docs(m=VelocityMode, b=BackwardMode)  # don't swap the order
     @d.dedent
-    @inject_docs(m=VelocityMode)
     def compute_transition_matrix(
         self,
         mode: str = VelocityMode.DETERMINISTIC.s,
-        backward_mode: str = "transpose",
+        backward_mode: str = BackwardMode.TRANSPOSE.s,
         softmax_scale: float = 4.0,
         n_samples: int = 1000,
         seed: Optional[int] = None,
@@ -177,22 +180,8 @@ class VelocityKernel(Kernel):
 
         Parameters
         ----------
-        mode
-            How to compute transition probabilities. Valid options are:
-
-                - `{m.DETERMINISTIC.s!r}` - deterministic computation that doesn't propagate uncertainty
-                - `{m.MONTE_CARLO.s!r}` - Monte Carlo average of randomly sampled velocity vectors
-                - `{m.STOCHASTIC.s!r}` - second order approximation, only available when :mod:`jax` is installed.
-                - `{m.SAMPLING.s!r}` - sample 1 transition matrix from velocity distribution
-                - `{m.PROPAGATION.s!r}` - same as `{m.MONTE_CARLO.s!r}`, but does not average the vectors.
-                  Instead, it saves the sampled transition matrices to :paramref:`_t_mats` to be used
-                  for later uncertainty estimation. It is generally faster then `{m.MONTE_CARLO.s!r}`,
-                  but also less memory efficient
-        backward_mode
-            Only matters if initialized as :paramref:`backward` =`True`.  Valid options are:
-
-                - `'transpose'` - compute transitions from neighboring cells `j` to cell `i`
-                - `'negate'` - negate the velocity vector
+        %(velocity_mode)s
+        %(velocity_backward_mode)s
         softmax_scale
             Scaling parameter for the softmax.
         n_samples
@@ -221,6 +210,7 @@ class VelocityKernel(Kernel):
         """
 
         mode = VelocityMode(mode)
+        backward_mode = BackwardMode(backward_mode)
 
         if self.backward and mode != VelocityMode.DETERMINISTIC:
             logg.warning(
@@ -241,12 +231,9 @@ class VelocityKernel(Kernel):
 
         if seed is None:
             seed = np.random.randint(0, 2 ** 16)
-        params = dict(  # noqa
-            bwd_mode=backward_mode if self.backward else None,
-            sigma_corr=softmax_scale,
-            mode=mode,
-            seed=seed,
-        )
+        params = dict(sigma_corr=softmax_scale, mode=mode, seed=seed,)  # noqa
+        if self.backward:
+            params["bwd_mode"] = backward_mode.s
 
         # check whether we already computed such a transition matrix. If yes, load from cache
         if params == self._params:
@@ -265,6 +252,15 @@ class VelocityKernel(Kernel):
         velocity_variance = get_moments(
             self.adata, self._velocity, second_order=True
         ).astype(np.float64)
+
+        if (
+            mode == VelocityMode.STOCHASTIC
+            and kwargs.get("backend,", "multiprocessing") == "multiprocessing"
+        ):
+            logg.warning(
+                f"Multiprocessing backend is not supported for mode `{mode.s!r}`. Defaulting to `'loky'`"
+            )
+            kwargs["backend"] = "loky"
 
         tmat, cmat = _dispatch_computation(
             mode,
@@ -396,7 +392,7 @@ def _run_deterministic(
     expression: np.ndarray,
     velocity: np.ndarray,
     backward: bool = False,
-    backward_mode: str = "negate",
+    backward_mode: BackwardMode = BackwardMode.TRANSPOSE,
     softmax_scale: float = 1,
     queue=None,
 ) -> np.ndarray:
@@ -411,7 +407,7 @@ def _run_deterministic(
         n_neigh = len(nbhs_ixs)
         W = expression[nbhs_ixs, :] - expression[ix, :]
 
-        if not backward or (backward and backward_mode == "negate"):
+        if not backward or (backward and backward_mode == BackwardMode.NEGATE):
             v = np.expand_dims(velocity[ix], 0)
 
             # for the transpose backward mode, just flip the velocity vector
