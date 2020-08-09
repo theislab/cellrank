@@ -450,7 +450,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         layer: str = "X",
         use_raw: bool = True,
         inplace: bool = True,
-    ):
+    ) -> Optional[pd.DataFrame]:
         """
         Compute driver genes per lineage.
 
