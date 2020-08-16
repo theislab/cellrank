@@ -8,7 +8,6 @@ from multiprocessing import Manager
 import numpy as np
 import joblib as jl
 from scipy.sparse import issparse, spmatrix
-
 from cellrank.utils._utils import _get_n_cores
 
 _msg_shown = False
@@ -55,7 +54,7 @@ def parallelize(
 
     Returns
     -------
-    :class:`numpy.ndarray`:w
+    :class:`numpy.ndarray`
         Result depending on :paramref:`extractor` and :paramref:`as_array`.
     """
 

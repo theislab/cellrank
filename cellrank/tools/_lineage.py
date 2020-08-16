@@ -8,14 +8,13 @@ from pathlib import Path
 from functools import wraps
 from itertools import combinations
 
-import numpy as np
-import pandas as pd
-from scipy.stats import entropy
-
 import matplotlib.colors as c
 import matplotlib.pyplot as plt
 
+import numpy as np
+import pandas as pd
 from cellrank import logging as logg
+from scipy.stats import entropy
 from cellrank.utils._docs import d
 from cellrank.tools._utils import (
     save_fig,
@@ -183,6 +182,7 @@ class LineageMeta(type):
         max=np.max,
         argmax=np.argmax,
         std=np.std,
+        var=np.var,
         sort=np.sort,
         squeeze=np.squeeze,
         entropy=entropy,
