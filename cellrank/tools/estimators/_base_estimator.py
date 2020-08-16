@@ -315,7 +315,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         keys = list(metastable_states_.cat.categories)
         if len(keys) == 1:
             logg.warning(
-                "There is only one recurrent class, all cells will have probability 1 of going there"
+                "There is only 1 recurrent class, all cells will have probability 1 of going there"
             )
 
         # get indices corresponding to recurrent and transient states
@@ -448,15 +448,14 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         cluster_key: Optional[str] = None,
         clusters: Optional[Union[Sequence, str]] = None,
         layer: str = "X",
-        use_raw: bool = True,
+        use_raw: bool = False,
         inplace: bool = True,
     ) -> Optional[pd.DataFrame]:
         """
         Compute driver genes per lineage.
 
         Correlates gene expression with lineage probabilities, for a given lineage and set of clusters.
-        Often, it makes sense to restrict this to a set of clusters which are relevant
-        for the lineage under consideration.
+        Often, it makes sense to restrict this to a set of clusters which are relevant for the specified lineages.
 
         Parameters
         ----------
@@ -482,7 +481,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             If :paramref:`inplace` `=False`, writes to :paramref:`adata` `.var` or :paramref:`adata` `.raw.var`,
             depending on the value of :paramref:`use_raw`.
             For each lineage specified, a key is added to `.var` and correlations are saved as
-            `{direction} {lineage_names} corr`.
+            `{direction} {lineage_name} corr`.
         :class:`pandas.DataFrame`
             If :paramref:`inplace` `=True`, a :class:`pandas.DataFrame` with the columns same as mentioned above.
         """
@@ -494,6 +493,13 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         if abs_probs is None:
             raise RuntimeError(
                 "Compute absorption probabilities first as `.compute_absorption_probabilities()`."
+            )
+        elif abs_probs.shape[1] == 1:
+            logg.warning(
+                "There is only 1 lineage present. Using the stationary distribution instead"
+            )
+            abs_probs = Lineage(
+                self._get(P.META_PROBS), names=abs_probs.names, colors=abs_probs.colors
             )
 
         # check all lin_keys exist in self.lin_names
@@ -565,7 +571,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
         field = "raw.var" if use_raw else "var"
         logg.info(
-            f"Adding gene correlations to `.adata.{field}`\n    Finish", time=start
+            f"Adding gene correlations to `adata.{field}`\n    Finish", time=start
         )
 
     def _detect_cc_stages(self, rc_labels: Series, p_thresh: float = 1e-15) -> None:

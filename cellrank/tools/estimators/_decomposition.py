@@ -25,11 +25,19 @@ EPS = np.finfo(np.float64).eps
 class Decomposable(KernelHolder, Property, ABC):
     """Helper class exposes writing the eigendecomposition to :class:`anndata.AnnData` object."""
 
-    def _write_eig_to_adata(self, eig: Mapping[str, Any]):
+    def _write_eig_to_adata(
+        self, eig: Mapping[str, Any], start=None, extra_msg: Optional[str] = None
+    ):
         setattr(self, A.EIG.s, eig)
         self.adata.uns[f"eig_{self._direction}"] = eig
 
-        logg.info(f"Adding `.{P.EIG}`\n       `adata.uns['eig_{self._direction}']`")
+        msg = f"Adding `.{P.EIG}`\n       `adata.uns['eig_{self._direction}']`"
+        if extra_msg is None:
+            extra_msg = "\n    Finish"
+
+        msg += extra_msg
+
+        logg.info(msg, time=start)
 
 
 class Eigen(VectorPlottable, Decomposable):
@@ -76,7 +84,7 @@ class Eigen(VectorPlottable, Decomposable):
         def get_top_k_evals():
             return D[np.flip(np.argsort(D.real))][:k]
 
-        logg.info("Computing eigendecomposition of the transition matrix")
+        start = logg.info("Computing eigendecomposition of the transition matrix")
 
         if self.issparse:
             logg.debug(f"Computing top `{k}` eigenvalues for sparse matrix")
@@ -124,7 +132,8 @@ class Eigen(VectorPlottable, Decomposable):
                 "V_r": V_r,
                 "eigengap": e_gap,
                 "params": {"which": which, "k": k, "alpha": alpha},
-            }
+            },
+            start=start,
         )
 
     @d.dedent
@@ -367,6 +376,7 @@ class Schur(VectorPlottable, Decomposable):
         self._gpcca = _GPCCA(
             self.transition_matrix, eta=initial_distribution, z=which, method=method
         )
+        start = logg.info("Computing Schur decomposition")
 
         try:
             self._gpcca._do_schur_helper(n_components)
@@ -393,17 +403,25 @@ class Schur(VectorPlottable, Decomposable):
                 f"When computing metastable states, choose a number of states NOT in `{list(self._invalid_n_states)}`"
             )
 
-        self._write_eig_to_adata(
-            {
-                "D": self._gpcca.eigenvalues,
-                "eigengap": _eigengap(self._gpcca.eigenvalues, alpha),
-                "params": {
-                    "which": which,
-                    "k": len(self._gpcca.eigenvalues),
-                    "alpha": alpha,
+        if getattr(self, P.EIG.s) is None:
+            self._write_eig_to_adata(
+                {
+                    "D": self._gpcca.eigenvalues,
+                    "eigengap": _eigengap(self._gpcca.eigenvalues, alpha),
+                    "params": {
+                        "which": which,
+                        "k": len(self._gpcca.eigenvalues),
+                        "alpha": alpha,
+                    },
                 },
-            }
-        )
+                start=start,
+                extra_msg=f"\n       `.{P.SCHUR}`\n       `.{P.SCHUR_MAT}`\n    Finish",
+            )
+        else:
+            logg.info(
+                f"Adding `.{P.SCHUR}`\n" f"       `.{P.SCHUR_MAT}`\n" f"    Finish",
+                time=start,
+            )
 
     plot_schur = _delegate(prop_name=P.SCHUR.s)(VectorPlottable._plot_vectors)
 

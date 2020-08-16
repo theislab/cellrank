@@ -216,7 +216,9 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
                 ),
             )
             logg.info(
-                f"Adding `.{P.SCHUR}`\n"
+                f"Adding `.{P.META_PROBS}`\n"
+                f"       `.{P.META}`\n"
+                f"       `.{P.SCHUR}`\n"
                 f"       `.{P.COARSE_T}`\n"
                 f"       `.{P.COARSE_STAT_D}`\n"
                 f"    Finish",
@@ -225,7 +227,11 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         else:
             logg.warning("No stationary distribution found in GPCCA object")
             logg.info(
-                f"Adding `.{P.SCHUR}`\n       `.{P.COARSE_T}`\n" f"    Finish",
+                f"Adding `.{P.META_PROBS}`\n"
+                f"       `.{P.META}`\n"
+                f"       `.{P.SCHUR}`\n"
+                f"       `.{P.COARSE_T}`\n"
+                f"    Finish",
                 time=start,
             )
 
@@ -710,8 +716,16 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         start = logg.info("Computing metastable states")
         logg.warning("For `n_states=1`, stationary distribution is computed")
 
-        self.compute_eigendecomposition(only_evals=False, which="LM")
-        stationary_dist = self._get(P.EIG)["stationary_dist"]
+        eig = self._get(P.EIG)
+        if (
+            eig is not None
+            and "stationary_dist" in eig
+            and eig["params"]["which"] == "LM"
+        ):
+            stationary_dist = eig["stationary_dist"]
+        else:
+            self.compute_eigendecomposition(only_evals=False, which="LM")
+            stationary_dist = self._get(P.EIG)["stationary_dist"]
 
         self._set_meta_states(
             memberships=stationary_dist[:, None],
@@ -740,7 +754,10 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         ):
             self._set(key.s, None)
 
-        logg.info(f"Adding `.{P.META}`\n    Finish", time=start)
+        logg.info(
+            f"Adding `.{P.META_PROBS}`\n" f"        .{P.META}\n" f"    Finish",
+            time=start,
+        )
 
     def _get_n_states_from_minchi(
         self, n_states: Union[Tuple[int, int], List[int], Dict[str, int]]

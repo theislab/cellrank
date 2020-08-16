@@ -17,12 +17,9 @@ from typing import (
 )
 from itertools import tee, product, combinations
 
-import matplotlib.colors as mcolors
-
 import numpy as np
 import pandas as pd
 from pandas import Series
-from cellrank import logging as logg
 from numpy.linalg import norm as d_norm
 from scipy.sparse import eye as speye
 from scipy.sparse import issparse, spmatrix, csr_matrix
@@ -30,6 +27,10 @@ from sklearn.cluster import KMeans
 from pandas.api.types import infer_dtype, is_categorical_dtype
 from sklearn.neighbors import NearestNeighbors
 from scipy.sparse.linalg import norm as sparse_norm
+
+import matplotlib.colors as mcolors
+
+from cellrank import logging as logg
 from cellrank.utils._utils import _get_neighs, _has_neighs, _get_neighs_params
 from cellrank.tools._colors import (
     _compute_mean_color,
@@ -1277,7 +1278,7 @@ def _fuzzy_to_discrete(
         if raise_threshold is None
         else np.max([int(raise_threshold * n_most_likely), 1])
     )
-    logg.debug(f"Raising an exception if if there are less than `{n_raise}` cells.")
+    logg.debug(f"Raising an exception if there are less than `{n_raise}` cells.")
 
     # initially select `n_most_likely` samples per cluster
     sample_assignment = {
