@@ -499,7 +499,9 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 "There is only 1 lineage present. Using the stationary distribution instead"
             )
             abs_probs = Lineage(
-                self._get(P.META_PROBS), names=abs_probs.names, colors=abs_probs.colors
+                self._get(P.FIN_PROBS).values,
+                names=abs_probs.names,
+                colors=abs_probs.colors,
             )
 
         # check all lin_keys exist in self.lin_names
