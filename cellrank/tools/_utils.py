@@ -17,9 +17,12 @@ from typing import (
 )
 from itertools import tee, product, combinations
 
+import matplotlib.colors as mcolors
+
 import numpy as np
 import pandas as pd
 from pandas import Series
+from cellrank import logging as logg
 from numpy.linalg import norm as d_norm
 from scipy.sparse import eye as speye
 from scipy.sparse import issparse, spmatrix, csr_matrix
@@ -27,10 +30,6 @@ from sklearn.cluster import KMeans
 from pandas.api.types import infer_dtype, is_categorical_dtype
 from sklearn.neighbors import NearestNeighbors
 from scipy.sparse.linalg import norm as sparse_norm
-
-import matplotlib.colors as mcolors
-
-from cellrank import logging as logg
 from cellrank.utils._utils import _get_neighs, _has_neighs, _get_neighs_params
 from cellrank.tools._colors import (
     _compute_mean_color,
@@ -328,10 +327,6 @@ def _vec_mat_corr(X: Union[np.ndarray, spmatrix], y: np.ndarray) -> np.ndarray:
     :class:`numpy.ndarray`
         The computed correlation.
     """
-
-    from scipy.signal import correlate2d
-
-    return correlate2d(X.A if issparse(X) else X, y[:, None], mode="valid").squeeze()
 
     X_bar, y_std, n = np.array(X.mean(axis=0)).reshape(-1), np.std(y), X.shape[0]
     denom = X.T.dot(y) - n * X_bar * np.mean(y)
