@@ -5,6 +5,9 @@ from abc import ABC, ABCMeta, abstractmethod
 from typing import Any, Dict, List, Tuple, Union, Iterable, Optional
 from inspect import isabstract
 
+import scvelo as scv
+from anndata import AnnData
+
 import numpy as np
 import pandas as pd
 from scipy.sparse import issparse, spmatrix
@@ -12,9 +15,6 @@ from pandas.api.types import is_categorical_dtype
 
 import matplotlib as mpl
 from matplotlib import cm
-
-import scvelo as scv
-from anndata import AnnData
 
 import cellrank.logging as logg
 from cellrank.tools import Lineage
@@ -757,17 +757,26 @@ class AbsProbs(Plottable):
             dtype=pd.Series,
             doc="Differentiation potential.",
         ),
-        Metadata(attr=A.MEAN_ABS_TIME, prop=P.MEAN_ABS_TIME, dtype=pd.Series,),
-        Metadata(attr=A.VAR_ABS_TIME, prop=P.VAR_ABS_TIME, dtype=pd.Series,),
+        Metadata(attr=A.MEAN_ABS_TIME, prop=P.MEAN_ABS_TIME, dtype=pd.Series),
+        Metadata(attr=A.VAR_ABS_TIME, prop=P.VAR_ABS_TIME, dtype=pd.Series),
     ]
-
-    @abstractmethod
-    def compute_absorption_probabilities(self, *args, **kwargs) -> None:  # noqa
-        pass
 
     @abstractmethod
     def _write_absorption_probabilities(self, *args, **kwargs) -> None:
         pass
+
+
+class LinDrivers(Plottable):  # noqa
+    __prop_metadata__ = [
+        Metadata(
+            attr=A.LIN_DRIVERS,
+            prop=P.LIN_DRIVERS,
+            dtype=pd.DataFrame,
+            doc="Lineage drivers.",
+            plot_fmt=F.NO_FUNC,
+            # in essence ignore Plottable (could be done by registering DataFrame, but it's ugly
+        )
+    ]
 
 
 class Partitioner(KernelHolder, ABC):
@@ -810,7 +819,7 @@ class Partitioner(KernelHolder, ABC):
                 f"Found `{(len(rec_classes))}` recurrent and `{len(trans_classes)}` transient classes\n"
                 f"Adding `.recurrent_classes`\n"
                 f"       `.transient_classes`\n"
-                f"       `.irreducible`\n"
+                f"       `.is_irreducible`\n"
                 f"    Finish",
                 time=start,
             )
@@ -836,7 +845,7 @@ class Partitioner(KernelHolder, ABC):
         return self._trans_classes
 
 
-class LineageEstimatorMixin(FinalStates, AbsProbs, ABC):
+class LineageEstimatorMixin(FinalStates, AbsProbs, LinDrivers, ABC):
     """Mixin containing final states and absorption probabilities."""
 
     pass

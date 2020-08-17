@@ -4,8 +4,11 @@
 import pickle
 from abc import ABC, abstractmethod
 from copy import copy, deepcopy
+from math import ceil
 from typing import Any, Dict, Union, TypeVar, Optional, Sequence
 from pathlib import Path
+
+import scvelo as scv
 
 import numpy as np
 import pandas as pd
@@ -449,8 +452,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         clusters: Optional[Union[Sequence, str]] = None,
         layer: str = "X",
         use_raw: bool = False,
-        inplace: bool = True,
-    ) -> Optional[pd.DataFrame]:
+    ) -> None:
         """
         Compute driver genes per lineage.
 
@@ -472,18 +474,13 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         use_raw
             Whether or not to use :paramref:`adata` `.raw` to correlate gene expression.
             If using a layer other than `.X`, this must be set to `False`.
-        inplace
-            Whether to write to :paramref:`adata` or return a :class:`pandas.DataFrame` object.
 
         Returns
         -------
         None
-            If :paramref:`inplace` `=False`, writes to :paramref:`adata` `.var` or :paramref:`adata` `.raw.var`,
-            depending on the value of :paramref:`use_raw`.
-            For each lineage specified, a key is added to `.var` and correlations are saved as
-            `{direction} {lineage_name} corr`.
-        :class:`pandas.DataFrame`
-            If :paramref:`inplace` `=True`, a :class:`pandas.DataFrame` with the columns same as mentioned above.
+            TODO
+            For each lineage specified, a key is added to `.var` () and correlations are saved as
+            `{direction} {lineage_name}`.
         """
 
         # check that lineage probs have been computed
@@ -511,6 +508,9 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             _ = abs_probs[lineages]
         else:
             lineages = abs_probs.names
+
+        if not len(lineages):
+            raise ValueError("No lineages have been selected.")
 
         # use `cluster_key` and clusters to subset the data
         if clusters is not None:
@@ -557,24 +557,72 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         # loop over lineages
         lin_corrs = {}
         for lineage in lineages:
-            y = lin_probs[:, lineage].X.squeeze()
-            correlations = _vec_mat_corr(data, y)
+            key = f"{prefix} {lineage}"
+            correlations = _vec_mat_corr(data, lin_probs[:, lineage].X.squeeze())
+            lin_corrs[lineage] = correlations
 
-            if inplace:
-                if use_raw:
-                    self.adata.raw.var[f"{prefix} {lineage} corr"] = correlations
-                else:
-                    self.adata.var[f"{prefix} {lineage} corr"] = correlations
+            if use_raw:
+                self.adata.raw.var[key] = correlations
             else:
-                lin_corrs[lineage] = correlations
+                self.adata.var[key] = correlations
 
-        if not inplace:
-            return pd.DataFrame(lin_corrs, index=var_names)
+        self._set(A.LIN_DRIVERS, pd.DataFrame(lin_corrs, index=var_names))
 
         field = "raw.var" if use_raw else "var"
+        keys_added = [f"`adata.{field}['{prefix} {lin}']`" for lin in lineages]
+
         logg.info(
-            f"Adding gene correlations to `adata.{field}`\n    Finish", time=start
+            f"Adding `.{P.LIN_DRIVERS}`\n       "
+            + "\n       ".join(keys_added)
+            + "\n    Finish",
+            time=start,
         )
+
+    @d.dedent
+    def plot_lineage_drivers(self, lineage: str, n_genes: int = 10, **kwargs) -> None:
+        """
+        Plot lineage drivers discovered by :meth:`compute_lineage_drivers`.
+
+        Parameters
+        ----------
+        lineage
+            Lineage for which to plot the driver genes.
+        n_genes
+            Number of genes to plot.
+        **kwargs
+            Keyword arguments for :func:`scvelo.pl.scatter`.
+
+        Returns
+        -------
+        %(just_plots)s
+        """
+
+        lin_drivers = self._get(P.LIN_DRIVERS)
+
+        if lin_drivers is None:
+            raise RuntimeError(
+                f"Compute `.{P.LIN_DRIVERS}` first as `.compute_lineage_drivers()`."
+            )
+
+        if lineage not in lin_drivers:
+            raise KeyError(
+                f"Lineage `{lineage!r}` not found in `{list(lin_drivers.columns)}`."
+            )
+
+        if n_genes <= 0:
+            raise ValueError(f"Expected `n_genes` to be positive, found `{n_genes}`.")
+
+        cmap = kwargs.pop("cmap", "viridis")
+        ncols = kwargs.pop("ncols", None)
+
+        geness = lin_drivers[lineage].sort_values(ascending=False).head(n_genes).index
+        ncols = 5 if len(geness) >= 10 else ncols
+
+        # TODO: scvelo can handle only < 20 plots, see https://github.com/theislab/scvelo/issues/252
+        geness = filter(len, np.array_split(geness, int(ceil(len(geness) / 10))))
+
+        for genes in geness:
+            scv.pl.scatter(self.adata, color=genes, cmap=cmap, ncols=ncols, **kwargs)
 
     def _detect_cc_stages(self, rc_labels: Series, p_thresh: float = 1e-15) -> None:
         """
