@@ -476,15 +476,13 @@ def _run_mc(
         # get the displacement matrix. Changing dimensions b/c varying numbers of neighbors slow down autograd
         W = expression[nbhs_ixs, :] - expression[ix, :]
 
+        # much faster (1.8x than sampling only 1 if average)
+        samples = _random_normal(expectation[ix], variance[ix], n_samples=n_samples,)
         if average:
-            exp, var = expectation[ix], variance[ix]
             probs_cors_tmp = np.empty((n_samples, n_neigh, 2))
-
             for j in prange(n_samples):
                 prob, cor = _predict_transition_probabilities_numpy(
-                    _random_normal(exp, var, n_samples=1, average=False),
-                    W,
-                    softmax_scale=softmax_scale,
+                    np.atleast_2d(samples[j]), W, softmax_scale=softmax_scale
                 )
                 probs_cors_tmp[j, :, 0] = prob
                 probs_cors_tmp[j, :, 1] = cor
@@ -496,9 +494,6 @@ def _run_mc(
                 probs_cors_tmp[..., 1], axis=0
             )
         else:
-            samples = _random_normal(
-                expectation[ix], variance[ix], n_samples=n_samples, average=False,
-            )
             for j in prange(samples.shape[0]):
                 prob, cor = _predict_transition_probabilities_numpy(
                     np.atleast_2d(samples[j]), W, softmax_scale=softmax_scale
@@ -525,7 +520,6 @@ def _run_stochastic(
     softmax_scale: float = 1,
     queue=None,
 ) -> np.ndarray:
-    # TODO: can't use numba yet, since we rely on JAX for hessians
     starts = _calculate_starts(indptr, ixs)
     probs_cors = np.empty((2, starts[-1]))
 
