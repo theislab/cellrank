@@ -26,6 +26,7 @@ class A(PrettyEnum):
     COARSE_STAT_D = "_coarse_stat_dist"
     MEAN_ABS_TIME = "_mean_abs_time"
     VAR_ABS_TIME = "_var_abs_time"
+    LIN_DRIVERS = "_lin_drivers"
 
 
 # properties
@@ -48,6 +49,7 @@ class P(PrettyEnum):
     COARSE_STAT_D = "coarse_stationary_distribution"
     MEAN_ABS_TIME = "absorption_time"
     VAR_ABS_TIME = "absorption_time_variance"
+    LIN_DRIVERS = "lineage_drivers"
 
 
 # functions
