@@ -1454,3 +1454,15 @@ class TestLineage:
     @compare(kind="lineage")
     def test_pie_t(self, lineage: cr.tl.Lineage, fpath: str):
         lineage.T.plot_pie(dpi=DPI, save=fpath)
+
+
+# TODO: more model tests + cr.pl.lineage_drivers
+class TestModel:
+    @compare()
+    def test_model_default(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        model.prepare(adata.var_names[0], "0")
+        model.fit()
+        model.predict()
+        model.confidence_interval()
+        model.plot(save=fpath)
