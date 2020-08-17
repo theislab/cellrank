@@ -99,7 +99,7 @@ def cluster_fates(
         Keyword arguments for :func:`matplotlib.axes.Axes.legend`, such as `'loc'` for legend position.
         For `mode={m.PAGA_PIE.s!r}` and `basis='...'`, this controls the placement of the
         absorption probabilities legend.
-    %(pl)s
+    %(plotting)s
     **kwargs
         Keyword arguments for :func:`scvelo.pl.paga`, :func:`scanpy.pl.violin` or :func:`matplotlib.pyplot.bar`,
         depending on :paramref:`mode`.
@@ -551,7 +551,7 @@ def similarity_plot(
         Rotation of labels on x-axis.
     title
         Title of the figure.
-    %(pl)s
+    %(plotting)s
 
     Returns
     -------

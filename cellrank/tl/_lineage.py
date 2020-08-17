@@ -732,7 +732,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             Function that will be applied per lineage.
         title
             Title of the figure.
-        %(pl)s
+        %(plotting)s
 
         Returns
         -------

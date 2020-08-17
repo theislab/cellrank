@@ -130,7 +130,7 @@ def heatmap(
     cmap
         Colormap to use when visualizing the smoothed expression.
     %(parallel)s
-    %(pl)s
+    %(plotting)s
     **kwargs
         Keyword arguments for :meth:`cellrank.ul.models.BaseModel.prepare`.
 

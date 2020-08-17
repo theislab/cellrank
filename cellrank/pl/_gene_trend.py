@@ -139,7 +139,7 @@ def gene_trends(
         Only used when :paramref:`same_plot` `=False`.
 
         The figures will be saved as :paramref:`dirname` /`{gene}`. :paramref:`ext`.
-    %(pl)s
+    %(plotting)s
     plot_kwargs
         Keyword arguments for :meth:`cellrank.ul.models.BaseModel.plot`.
     **kwargs
