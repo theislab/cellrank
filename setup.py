@@ -5,7 +5,7 @@ from pathlib import Path
 from setuptools import setup, find_packages
 
 try:
-    from cellrank import __author__, __email__, __version__, __maintainer__
+    from cellrank import __email__, __author__, __version__, __maintainer__
 except ImportError:
     __author__ = "Marius Lange, Michal Klein, Juan Luis Restrepo Lopez"
     __maintainer__ = "Marius Lange, Michal Klein"
@@ -24,11 +24,11 @@ if __name__ == "__main__":
         maintainer=__maintainer__,
         maintainer_email=__email__,
         version=__version__,
-        description="CellRank - Probabilistic Fate Mapping using RNA Velocity",
+        description=Path("README.rst").read_text("utf-8").split("\n")[3],
         long_description=Path("README.rst").read_text("utf-8"),
         url="https://github.com/theislab/cellrank",
         project_urls={
-            "Documentation": "https://cellrank.readthedocs.io/en/latest/",
+            "Documentation": "https://cellrank.readthedocs.io/en/latest",
             "Source Code": "https://github.com/theislab/cellrank",
         },
         download_url="https://github.com/theislab/cellrank",
@@ -66,7 +66,7 @@ if __name__ == "__main__":
                 )
                 if "requirements.txt" not in r
             ],
-            dev=["black==19.10b0", "pre-commit==2.5.1"],
+            dev=["black==19.10b0", "pre-commit==3.2.0"],
         ),
         zip_safe=False,
         packages=find_packages(),

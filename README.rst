@@ -76,17 +76,11 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
 
 .. _pancreatic endocrinogenesis: https://doi.org/10.1242/dev.173849
 
-.. _tutorial: https://cellrank.readthedocs.io/en/latest/pancreas_basic.html
-
-.. _PageRank: http://infolab.stanford.edu/~backrub/google.html
-
 .. _scanpy: https://scanpy.readthedocs.io/en/latest/
 
 .. _scvelo: https://scvelo.readthedocs.io/
 
 .. _cellrank.org: http://cellrank.org
-
-.. _documentation: https://cellrank.readthedocs.io
 
 .. _Theislab: https://www.helmholtz-muenchen.de/icb/research/groups/theis-lab/overview/index.html
 
