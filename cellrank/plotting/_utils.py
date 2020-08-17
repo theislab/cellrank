@@ -233,7 +233,7 @@ def _is_any_gam_mgcv(models: Union[BaseModel, Dict[str, Dict[str, BaseModel]]]) 
 
 
 def _create_models(
-    model: _model_type, obs: Sequence[str], lineages: Sequence[str]
+    model: _model_type, obs: Sequence[str], lineages: Sequence[Optional[str]]
 ) -> Dict[str, Dict[str, BaseModel]]:
     """
     Create models for each gene and lineage.
@@ -250,8 +250,11 @@ def _create_models(
         The created models.
     """
 
-    def process_lineages(obs_name: str, lin_names: Union[BaseModel, Dict[str, Any]]):
+    def process_lineages(
+        obs_name: str, lin_names: Union[BaseModel, Dict[Optional[str], Any]]
+    ):
         if isinstance(lin_names, BaseModel):
+            # sharing the same models for all lineages
             for lin_name in lineages:
                 models[obs_name][lin_name] = lin_names
             return
@@ -271,7 +274,10 @@ def _create_models(
     if isinstance(model, BaseModel):
         return {o: {lin: copy(model) for lin in lineages} for o in obs}
 
-    lineages, obs = _unique_order_preserving(lineages), _unique_order_preserving(obs)
+    lineages, obs = (
+        set(_unique_order_preserving(lineages)),
+        set(_unique_order_preserving(obs)),
+    )
     models = defaultdict(dict)
 
     if isinstance(model, BaseModel):

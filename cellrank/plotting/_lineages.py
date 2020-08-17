@@ -3,7 +3,6 @@
 from typing import Union, Iterable, Optional
 
 import pandas as pd
-from scipy.sparse import eye as speye
 
 import matplotlib as mpl
 from matplotlib import cm as cm
@@ -11,10 +10,10 @@ from matplotlib import cm as cm
 import cellrank.logging as logg
 from cellrank.tools import CFLARE
 from cellrank.utils._docs import d
-from cellrank.tools.kernels import PrecomputedKernel
 from cellrank.plotting._utils import AnnData
 from cellrank.tools._constants import DirPrefix
 from cellrank.tools.estimators._constants import A, P
+from cellrank.tools.kernels._precomputed_kernel import DummyKernel
 
 
 @d.dedent
@@ -65,12 +64,7 @@ def lineages(
     %s(just_plots)s
     """
 
-    # create a dummy kernel object
-    pk = PrecomputedKernel(
-        speye(adata.n_obs, adata.n_obs, format="csr"), adata=adata, backward=backward
-    )
-
-    # use this to initialize an MC object
+    pk = DummyKernel(adata, backward=backward)
     mc = CFLARE(pk, read_from_adata=True, write_to_adata=False)
     if mc._get(P.ABS_PROBS) is None:
         raise RuntimeError(
@@ -111,19 +105,14 @@ def lineage_drivers(
     %s(just_plots)s
     """
 
-    # create a dummy kernel object
-    pk = PrecomputedKernel(
-        speye(adata.n_obs, adata.n_obs, format="csr"), adata=adata, backward=backward
-    )
-
-    # use this to initialize an MC object
+    pk = DummyKernel(adata, backward=backward)
     mc = CFLARE(pk, read_from_adata=True, write_to_adata=False)
-
-    needle = f"{DirPrefix.BACKWARD if backward else DirPrefix.FORWARD} {lineage}"
 
     if use_raw and adata.raw is None:
         logg.warning("No raw attribute set. Using `adata.var` instead")
         use_raw = False
+
+    needle = f"{DirPrefix.BACKWARD if backward else DirPrefix.FORWARD} {lineage}"
 
     haystack = adata.raw.var if use_raw else adata.var
 
@@ -131,8 +120,8 @@ def lineage_drivers(
         raise RuntimeError(
             f"Unable to find lineage drivers in "
             f"`{'adata.raw.var' if use_raw else 'adata.var'}[{needle!r}]`. "
-            f"Try computing lineage drivers as `cellrank.tl.lineage_drivers(lineages={lineage!r}, "
-            f"use_raw={use_raw}).`"
+            f"Compute lineage drivers first as `cellrank.tl.lineage_drivers(lineages={lineage!r}, "
+            f"use_raw={use_raw}, backward={backward}).`"
         )
 
     drivers = pd.DataFrame(haystack[needle])

@@ -8,7 +8,6 @@ from statsmodels.stats.multitest import multipletests
 
 import numpy as np
 import pandas as pd
-from scipy.sparse import eye as speye
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import StandardScaler
 
@@ -17,11 +16,11 @@ from cellrank.tools import GPCCA
 from cellrank.utils._docs import d
 from cellrank.utils._utils import _get_n_cores, check_collection
 from cellrank.utils.models import BaseModel
-from cellrank.tools.kernels import PrecomputedKernel
 from cellrank.plotting._utils import _model_type, _get_backend, _create_models
 from cellrank.tools._constants import AbsProbKey
 from cellrank.utils._parallelize import parallelize
 from cellrank.tools.estimators._constants import P
+from cellrank.tools.kernels._precomputed_kernel import DummyKernel
 
 AnnData = TypeVar("AnnData")
 Queue = TypeVar("Queue")
@@ -127,7 +126,7 @@ def _gi_process(
 
 
 @d.dedent
-def gene_importance(
+def _gene_importance(
     adata: AnnData,
     model: _model_type,
     genes: Sequence[str],
@@ -195,9 +194,8 @@ def gene_importance(
     :class:`pandas.DataFrame`
         Dataframe with `'importance'` column which contains genes' importances.
 
-        - If :paramref:`n_perm` `!=None`, it also contains `'pval'` columns with calculated `p-values`.
-        - If :paramref:`fdr_correction` `!= None`, it also contains `'qval'` column, containing the
-          corrected `p-values`.
+        - If :paramref:`n_perm` `!=None`, it also contains `'pval'` column with the calculated `p-values`
+        - If :paramref:`fdr_correction` `!= None`, it also contains `'qval'` column, the corrected `p-values`
     :class:`sklearn.ensemble.RandomForestRegressor`, :class:`pandas.DataFrame`
         Same as above, but also returns the fitted model.
     """
@@ -310,6 +308,7 @@ def lineage_drivers(
     clusters: Optional[Union[Sequence, str]] = None,
     layer: str = "X",
     use_raw: bool = True,
+    return_drivers: bool = False,
 ) -> Optional[pd.DataFrame]:  # noqa
     """
     %(lineage_drivers.full_desc)s
@@ -326,9 +325,7 @@ def lineage_drivers(
     """
 
     # create dummy kernel and estimator
-    pk = PrecomputedKernel(
-        speye(adata.n_obs, adata.n_obs, format="csr"), adata=adata, backward=backward
-    )
+    pk = DummyKernel(adata, backward=backward)
     g = GPCCA(pk, read_from_adata=True)
     if g._get(P.ABS_PROBS) is None:
         raise RuntimeError(
@@ -342,5 +339,5 @@ def lineage_drivers(
         clusters=clusters,
         layer=layer,
         use_raw=use_raw,
-        return_drivers=False,
+        return_drivers=return_drivers,
     )

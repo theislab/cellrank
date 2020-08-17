@@ -6,7 +6,6 @@ import numpy as np
 from pandas.api.types import is_categorical_dtype
 
 import cellrank as cr
-import cellrank.plotting._lineages
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tools._constants import (
     Direction,
@@ -39,7 +38,7 @@ def _assert_has_all_keys(adata: AnnData, direction: Direction):
         # check the correlations with all lineages have been computed
         lin_probs = adata.obsm[str(AbsProbKey.FORWARD)]
         np.in1d(
-            [f"{str(DirPrefix.FORWARD)} {key} corr" for key in lin_probs.names],
+            [f"{str(DirPrefix.FORWARD)} {key}" for key in lin_probs.names],
             adata.var.keys(),
         ).all()
 
@@ -58,7 +57,7 @@ def _assert_has_all_keys(adata: AnnData, direction: Direction):
         # check the correlations with all lineages have been computed
         lin_probs = adata.obsm[str(AbsProbKey.BACKWARD)]
         np.in1d(
-            [f"{str(DirPrefix.BACKWARD)} {key} corr" for key in lin_probs.names],
+            [f"{str(DirPrefix.BACKWARD)} {key}" for key in lin_probs.names],
             adata.var.keys(),
         ).all()
 
@@ -73,8 +72,11 @@ class TestHighLevelPipeline:
             show_plots=True,
         )
         cr.tl.lineages(adata)
-        cellrank.plotting._lineages.lineages(adata)
+        cr.pl.lineages(adata)
         cr.tl.lineage_drivers(adata, use_raw=False)
+
+        ln = adata.obsm[str(AbsProbKey.FORWARD)].names[0]
+        cr.pl.lineage_drivers(adata, ln, use_raw=False, backward=False)
 
         _assert_has_all_keys(adata, Direction.FORWARD)
 
@@ -87,8 +89,11 @@ class TestHighLevelPipeline:
             show_plots=True,
         )
         cr.tl.lineages(adata, backward=True)
-        cellrank.plotting._lineages.lineages(adata, backward=True)
+        cr.pl.lineages(adata, backward=True)
         cr.tl.lineage_drivers(adata, use_raw=False, backward=True)
+
+        ln = adata.obsm[str(AbsProbKey.BACKWARD)].names[0]
+        cr.pl.lineage_drivers(adata, ln, use_raw=False, backward=True)
 
         _assert_has_all_keys(adata, Direction.BACKWARD)
 
@@ -101,8 +106,10 @@ class TestHighLevelPipeline:
             show_plots=True,
         )
         cr.tl.lineages(adata)
-        cellrank.plotting._lineages.lineages(adata)
+        cr.pl.lineages(adata)
         cr.tl.lineage_drivers(adata, use_raw=False)
+        ln = adata.obsm[str(AbsProbKey.FORWARD)].names[0]
+        cr.pl.lineage_drivers(adata, ln, use_raw=False, backward=False)
 
         _assert_has_all_keys(adata, Direction.FORWARD)
 
@@ -115,8 +122,10 @@ class TestHighLevelPipeline:
             show_plots=True,
         )
         cr.tl.lineages(adata, backward=True)
-        cellrank.plotting._lineages.lineages(adata, backward=True)
+        cr.pl.lineages(adata, backward=True)
         cr.tl.lineage_drivers(adata, use_raw=False, backward=True)
+        ln = adata.obsm[str(AbsProbKey.BACKWARD)].names[0]
+        cr.pl.lineage_drivers(adata, ln, use_raw=False, backward=True)
 
         _assert_has_all_keys(adata, Direction.BACKWARD)
 

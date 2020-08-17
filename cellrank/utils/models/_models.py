@@ -261,19 +261,11 @@ class BaseModel(ABC):
 
         if data_key not in ["X", "obs"] + list(self.adata.layers.keys()):
             raise KeyError(
-                f"Data key must be a key of `adata.layers`: `{list(self.adata.layers.keys())}`, '`obs`' or `'X'`."
+                f"Data key must be a key of `adata.layers`: `{list(self.adata.layers.keys())}`, "
+                f"`adata.X` or `adata.obs`."
             )
         if time_key not in self.adata.obs:
             raise KeyError(f"Time key `{time_key!r}` not found in `adata.obs`.")
-
-        if data_key != "obs":
-            if use_raw and gene not in self.adata.raw.var_names:
-                raise KeyError(f"Gene `{gene!r}` not found in `adata.raw.var_names`.")
-            if not use_raw and gene not in self.adata.var_names:
-                raise KeyError(f"Gene `{gene!r}` not found in `adata.var_names`.")
-        else:
-            if gene not in self.adata.obs:
-                raise KeyError(f"Unable to find key `{gene!r}` in `adata.obs`.")
 
         lineage_key = str(AbsProbKey.BACKWARD if backward else AbsProbKey.FORWARD)
         if lineage_key not in self.adata.obsm:
@@ -283,6 +275,18 @@ class BaseModel(ABC):
                 f"Expected `adata.obsm[{lineage_key!r}]` to be of type `cellrank.tl.Lineage`, "
                 f"found `{type(self.adata.obsm[lineage_key]).__name__!r}`."
             )
+
+        if lineage is not None:
+            _ = self.adata.obsm[lineage_key][lineage]
+
+        if data_key == "obs":
+            if gene not in self.adata.obs:
+                raise KeyError(f"Unable to find key `{gene!r}` in `adata.obs`.")
+        else:
+            if use_raw and gene not in self.adata.raw.var_names:
+                raise KeyError(f"Gene `{gene!r}` not found in `adata.raw.var_names`.")
+            if not use_raw and gene not in self.adata.var_names:
+                raise KeyError(f"Gene `{gene!r}` not found in `adata.var_names`.")
 
         if not isinstance(time_range, (type(None), float, int, tuple)):
             raise TypeError(
@@ -697,7 +701,12 @@ class BaseModel(ABC):
                 linestyle="--",
             )
 
-        if show_cbar and not hide_cells and not same_plot:
+        if (
+            show_cbar
+            and not hide_cells
+            and not same_plot
+            and not np.allclose(self.w_all, 1)
+        ):
             norm = mcolors.Normalize(vmin=vmin, vmax=vmax)
             cax, _ = mpl.colorbar.make_axes(ax, aspect=200)
             _ = mpl.colorbar.ColorbarBase(
