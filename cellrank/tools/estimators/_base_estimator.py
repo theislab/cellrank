@@ -482,12 +482,12 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
         Returns
         -------
-        None or :class:`pandas.DataFrame`
+        :class:`pandas.DataFrame` or :obj:`None`
             Updates :paramref:`adata` `.var` (or :paramref:`adata` `.raw.var`, depending on :paramref:`use_raw`)
-            with the drivers in the form of `{{directipn}} {{lineages}}`.
+            with the drivers in the form of ``{{direction}} {{lineages}}``.
             Also updates the following fields:
 
-                - `.{lin_drivers}` - the lineage drivers for each :paramref:`lineages`
+                - `.{lin_drivers}` - the lineage drivers for each lineage
 
             If :paramref:`return_drivers` `=True`. Also updates :paramref:`adata` as specified above.
         """

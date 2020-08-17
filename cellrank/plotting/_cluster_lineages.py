@@ -21,7 +21,7 @@ from cellrank.plotting._utils import (
     _create_models,
     _time_range_type,
 )
-from cellrank.tools._constants import AbsProbKey
+from cellrank.tools._constants import _DEFAULT_BACKEND, AbsProbKey
 from cellrank.utils._parallelize import parallelize
 from cellrank.utils.models._models import BaseModel
 
@@ -97,7 +97,7 @@ def cluster_lineage(
     key_added: Optional[str] = None,
     show_progress_bar: bool = True,
     n_jobs: Optional[int] = 1,
-    backend: str = "multiprocessing",
+    backend: str = _DEFAULT_BACKEND,
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
     save: Optional[Union[str, Path]] = None,

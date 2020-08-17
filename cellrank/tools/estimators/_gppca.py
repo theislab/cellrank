@@ -309,6 +309,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
 
     # TODO: singlevaluedispatch
     @inject_docs(fs=P.FIN, fsp=P.FIN_PROBS)
+    @d.dedent
     def compute_final_states(
         self,
         method: str = "eigengap",

@@ -41,7 +41,7 @@ def lineages(
 
     Parameters
     ----------
-    %s(adata)s
+    %(adata)s
     lineages
         Plot only these lineages. If `None`, plot all lineages.
     %(backward)s
@@ -61,7 +61,7 @@ def lineages(
 
     Returns
     -------
-    %s(just_plots)s
+    %(just_plots)s
     """
 
     pk = DummyKernel(adata, backward=backward)
@@ -102,7 +102,7 @@ def lineage_drivers(
 
     Returns
     -------
-    %s(just_plots)s
+    %(just_plots)s
     """
 
     pk = DummyKernel(adata, backward=backward)

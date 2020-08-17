@@ -19,6 +19,7 @@ from scipy.sparse.linalg import gmres, lgmres, gcrotmk, bicgstab
 
 from cellrank import logging as logg
 from cellrank.utils._utils import _get_n_cores
+from cellrank.tools._constants import _DEFAULT_BACKEND
 from cellrank.utils._parallelize import parallelize
 
 _DEFAULT_SOLVER = "gmres"
@@ -341,7 +342,7 @@ def _solve_lin_system(
     use_petsc: bool = False,
     preconditioner: Optional[str] = None,
     n_jobs: Optional[int] = None,
-    backend: str = "multiprocessing",
+    backend: str = _DEFAULT_BACKEND,
     tol: float = 1e-5,
     use_eye: bool = False,
 ) -> np.ndarray:

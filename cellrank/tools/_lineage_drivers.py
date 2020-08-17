@@ -17,7 +17,7 @@ from cellrank.utils._docs import d
 from cellrank.utils._utils import _get_n_cores, check_collection
 from cellrank.utils.models import BaseModel
 from cellrank.plotting._utils import _model_type, _get_backend, _create_models
-from cellrank.tools._constants import AbsProbKey
+from cellrank.tools._constants import _DEFAULT_BACKEND, AbsProbKey
 from cellrank.utils._parallelize import parallelize
 from cellrank.tools.estimators._constants import P
 from cellrank.tools.kernels._precomputed_kernel import DummyKernel
@@ -142,7 +142,7 @@ def _gene_importance(
     return_model: bool = False,
     show_progress_bar: bool = True,
     n_jobs: Optional[int] = 1,
-    backend: str = "multiprocessing",
+    backend: str = _DEFAULT_BACKEND,
     rf_kwargs: Mapping[str, Any] = MappingProxyType({"criterion": "mse"}),
     **kwargs,
 ) -> Union[pd.DataFrame, Tuple[RandomForestRegressor, pd.DataFrame]]:
