@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 
+from anndata import AnnData
+
 import numpy as np
 from pandas.api.types import is_categorical_dtype
 
-from anndata import AnnData
-
 import cellrank as cr
+import cellrank.plotting._lineages
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tools._constants import (
     Direction,
@@ -72,7 +73,7 @@ class TestHighLevelPipeline:
             show_plots=True,
         )
         cr.tl.lineages(adata)
-        cr.pl.lineages(adata)
+        cellrank.plotting._lineages.lineages(adata)
         cr.tl.lineage_drivers(adata, use_raw=False)
 
         _assert_has_all_keys(adata, Direction.FORWARD)
@@ -86,7 +87,7 @@ class TestHighLevelPipeline:
             show_plots=True,
         )
         cr.tl.lineages(adata, backward=True)
-        cr.pl.lineages(adata, backward=True)
+        cellrank.plotting._lineages.lineages(adata, backward=True)
         cr.tl.lineage_drivers(adata, use_raw=False, backward=True)
 
         _assert_has_all_keys(adata, Direction.BACKWARD)
@@ -100,7 +101,7 @@ class TestHighLevelPipeline:
             show_plots=True,
         )
         cr.tl.lineages(adata)
-        cr.pl.lineages(adata)
+        cellrank.plotting._lineages.lineages(adata)
         cr.tl.lineage_drivers(adata, use_raw=False)
 
         _assert_has_all_keys(adata, Direction.FORWARD)
@@ -114,7 +115,7 @@ class TestHighLevelPipeline:
             show_plots=True,
         )
         cr.tl.lineages(adata, backward=True)
-        cr.pl.lineages(adata, backward=True)
+        cellrank.plotting._lineages.lineages(adata, backward=True)
         cr.tl.lineage_drivers(adata, use_raw=False, backward=True)
 
         _assert_has_all_keys(adata, Direction.BACKWARD)

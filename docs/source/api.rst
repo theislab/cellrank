@@ -14,7 +14,7 @@ CellRank offers two modes to interact with its core functionality:
 Additionally, there is a set of plotting functions which can be used downstream of either analysis mode.
 
 The utilities are mainly for fitting continuous models to gene expression data
-and are utilised in some of the plotting functions, like :func:`cellrank.pl.gene_trends`.
+and are utilized in some of the plotting functions, like :func:`cellrank.pl.gene_trends`.
 
 Tools
 ~~~~~

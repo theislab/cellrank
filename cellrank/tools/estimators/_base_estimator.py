@@ -102,11 +102,11 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             self.kernel._adata = self.adata.copy()
 
         if self.kernel.backward:
-            self._fs_key: str = str(FinalStatesKey.BACKWARD)
-            self._abs_prob_key: str = str(AbsProbKey.BACKWARD)
+            self._fs_key = FinalStatesKey.BACKWARD.s
+            self._abs_prob_key = AbsProbKey.BACKWARD.s
         else:
-            self._fs_key: str = str(FinalStatesKey.FORWARD)
-            self._abs_prob_key: str = str(AbsProbKey.FORWARD)
+            self._fs_key = FinalStatesKey.FORWARD.s
+            self._abs_prob_key = AbsProbKey.FORWARD.s
 
         self._key_added = key_added
         self._g2m_key = g2m_key
@@ -130,6 +130,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
         self._set_or_debug(self._abs_prob_key, self.adata.obsm, A.ABS_RPOBS.s)
         self._set_or_debug(_dp(self._abs_prob_key), self.adata.obs, A.DIFF_POT.s)
+
         names = self._set_or_debug(_lin_names(self._abs_prob_key), self.adata.uns)
         colors = self._set_or_debug(_colors(self._abs_prob_key), self.adata.uns)
 
@@ -445,14 +446,16 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
     @d.get_sectionsf("lineage_drivers", sections=["Parameters", "Returns"])
     @d.get_full_descriptionf("lineage_drivers")
+    @inject_docs(lin_drivers=P.LIN_DRIVERS)
     def compute_lineage_drivers(
         self,
-        lineages: Optional[Union[Sequence, str]] = None,
+        lineages: Optional[Union[str, Sequence]] = None,
         cluster_key: Optional[str] = None,
-        clusters: Optional[Union[Sequence, str]] = None,
+        clusters: Optional[Union[str, Sequence]] = None,
         layer: str = "X",
         use_raw: bool = False,
-    ) -> None:
+        return_drivers: bool = False,
+    ) -> Optional[pd.DataFrame]:
         """
         Compute driver genes per lineage.
 
@@ -474,13 +477,20 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         use_raw
             Whether or not to use :paramref:`adata` `.raw` to correlate gene expression.
             If using a layer other than `.X`, this must be set to `False`.
+        return_drivers
+            Whether to return the lineage drivers as :class:`pandas.DataFrame`.
 
         Returns
         -------
         None
-            TODO
-            For each lineage specified, a key is added to `.var` () and correlations are saved as
-            `{direction} {lineage_name}`.
+            Updates :paramref:`adata` `.var` (or :paramref:`adata` `.raw.var`, depending on :paramref:`use_raw`)
+            with the drivers in the form of `{{directipn}} {{lineages}}`.
+            Also updates the following fields:
+
+                - `.{lin_drivers}` - the lineage drivers for each :paramref:`lineages`
+
+        :class:`pandas.DataFrame`
+            If :paramref:`return_drivers` `=True`. Also updates :paramref:`adata` as specified above.
         """
 
         # check that lineage probs have been computed
@@ -566,7 +576,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             else:
                 self.adata.var[key] = correlations
 
-        self._set(A.LIN_DRIVERS, pd.DataFrame(lin_corrs, index=var_names))
+        drivers = pd.DataFrame(lin_corrs, index=var_names)
+        self._set(A.LIN_DRIVERS, drivers)
 
         field = "raw.var" if use_raw else "var"
         keys_added = [f"`adata.{field}['{prefix} {lin}']`" for lin in lineages]
@@ -578,8 +589,14 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             time=start,
         )
 
+        if return_drivers:
+            return drivers
+
+    @d.get_sectionsf("plot_lineage_drivers", sections=["Parameters"])
     @d.dedent
-    def plot_lineage_drivers(self, lineage: str, n_genes: int = 10, **kwargs) -> None:
+    def plot_lineage_drivers(
+        self, lineage: str, n_genes: int = 10, use_raw: bool = False, **kwargs
+    ) -> None:
         """
         Plot lineage drivers discovered by :meth:`compute_lineage_drivers`.
 
@@ -589,6 +606,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             Lineage for which to plot the driver genes.
         n_genes
             Number of genes to plot.
+        use_raw
+            Whether to look in :paramref:`adata` `.raw.var` or :paramref:`adata` `.var`.
         **kwargs
             Keyword arguments for :func:`scvelo.pl.scatter`.
 
@@ -622,7 +641,14 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         geness = filter(len, np.array_split(geness, int(ceil(len(geness) / 10))))
 
         for genes in geness:
-            scv.pl.scatter(self.adata, color=genes, cmap=cmap, ncols=ncols, **kwargs)
+            scv.pl.scatter(
+                self.adata,
+                color=genes,
+                cmap=cmap,
+                ncols=ncols,
+                use_raw=use_raw,
+                **kwargs,
+            )
 
     def _detect_cc_stages(self, rc_labels: Series, p_thresh: float = 1e-15) -> None:
         """

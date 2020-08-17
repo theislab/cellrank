@@ -4,12 +4,13 @@
 from types import MappingProxyType
 from typing import Any, Dict, List, Tuple, Union, Mapping, TypeVar, Optional, Sequence
 
+from statsmodels.stats.multitest import multipletests
+
 import numpy as np
 import pandas as pd
 from scipy.sparse import eye as speye
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import StandardScaler
-from statsmodels.stats.multitest import multipletests
 
 from cellrank import logging as logg
 from cellrank.tools import GPCCA
@@ -17,7 +18,7 @@ from cellrank.utils._docs import d
 from cellrank.utils._utils import _get_n_cores, check_collection
 from cellrank.utils.models import BaseModel
 from cellrank.tools.kernels import PrecomputedKernel
-from cellrank.plotting._utils import _model_type, _create_models, _is_any_gam_mgcv
+from cellrank.plotting._utils import _model_type, _get_backend, _create_models
 from cellrank.tools._constants import AbsProbKey
 from cellrank.utils._parallelize import parallelize
 from cellrank.tools.estimators._constants import P
@@ -221,9 +222,7 @@ def gene_importance(
     kwargs["n_test_points"] = n_points
 
     models = _create_models(model, genes, [lineage])
-    if _is_any_gam_mgcv(models):
-        logg.debug("Setting backend to multiprocessing because model is `GamMGCVModel`")
-        backend = "multiprocessing"
+    backend = _get_backend(model, backend)
 
     start = logg.info(f"Calculating gene trends using `{n_jobs}` core(s)")
     data = parallelize(
@@ -311,7 +310,6 @@ def lineage_drivers(
     clusters: Optional[Union[Sequence, str]] = None,
     layer: str = "X",
     use_raw: bool = True,
-    inplace: bool = True,
 ) -> Optional[pd.DataFrame]:  # noqa
     """
     %(lineage_drivers.full_desc)s
@@ -344,5 +342,5 @@ def lineage_drivers(
         clusters=clusters,
         layer=layer,
         use_raw=use_raw,
-        inplace=inplace,
+        return_drivers=False,
     )

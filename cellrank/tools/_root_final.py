@@ -132,7 +132,7 @@ def _root_final(
 
 
 @d.dedent
-@inject_docs(root=_find_docs.format(direction=_root, key_added=f"{_root}_states",))
+@inject_docs(root=_find_docs.format(direction=_root, key_added=f"{_root}_states"))
 def root_states(
     adata: AnnData,
     estimator: type(BaseEstimator) = GPCCA,
@@ -167,7 +167,7 @@ def root_states(
 
 
 @d.dedent
-@inject_docs(final=_find_docs.format(direction=_final, key_added=f"{_final}_states",))
+@inject_docs(final=_find_docs.format(direction=_final, key_added=f"{_final}_states"))
 def final_states(
     adata: AnnData,
     estimator: type(BaseEstimator) = GPCCA,
