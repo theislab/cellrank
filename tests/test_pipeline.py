@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import pytest
 
 from anndata import AnnData
 
@@ -80,6 +81,22 @@ class TestHighLevelPipeline:
 
         _assert_has_all_keys(adata, Direction.FORWARD)
 
+    def test_fwd_pipeline_invalid_raw_requested(self, adata):
+        cr.tl.final_states(
+            adata,
+            estimator=cr.tl.CFLARE,
+            cluster_key="clusters",
+            method="kmeans",
+            show_plots=True,
+        )
+        cr.tl.lineages(adata)
+        cr.pl.lineages(adata)
+        cr.tl.lineage_drivers(adata, use_raw=False)
+
+        ln = adata.obsm[str(AbsProbKey.FORWARD)].names[0]
+        with pytest.raises(RuntimeError):
+            cr.pl.lineage_drivers(adata, ln, use_raw=True, backward=False)
+
     def test_bwd_pipeline_cflare(self, adata):
         cr.tl.root_states(
             adata,
@@ -112,6 +129,21 @@ class TestHighLevelPipeline:
         cr.pl.lineage_drivers(adata, ln, use_raw=False, backward=False)
 
         _assert_has_all_keys(adata, Direction.FORWARD)
+
+    def test_fwd_pipeline_gpcca_invalid_raw_requested(self, adata):
+        cr.tl.final_states(
+            adata,
+            estimator=cr.tl.GPCCA,
+            cluster_key="clusters",
+            method="brandts",
+            show_plots=True,
+        )
+        cr.tl.lineages(adata)
+        cr.pl.lineages(adata)
+        cr.tl.lineage_drivers(adata, use_raw=False)
+        ln = adata.obsm[str(AbsProbKey.FORWARD)].names[0]
+        with pytest.raises(RuntimeError):
+            cr.pl.lineage_drivers(adata, ln, use_raw=True, backward=False)
 
     def test_bwd_pipeline_gpcca(self, adata):
         cr.tl.root_states(
