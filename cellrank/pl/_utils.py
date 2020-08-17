@@ -183,7 +183,7 @@ def composition(
     %(adata)s
     key
         Key in :paramref:`adata` `.obs` containing categorical observation.
-    %(pl)s
+    %(plotting)s
 
     Returns
     -------

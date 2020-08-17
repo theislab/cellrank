@@ -143,7 +143,7 @@ def graph(
         Continuous colormap used when :paramref:`keys` contain continuous variables.
     legend_loc
         Location of the legend.
-    %(pl)s
+    %(plotting)s
     layout_kwargs
         Additional kwargs for :paramref:`layout`.
 

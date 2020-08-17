@@ -203,7 +203,7 @@ class Eigen(VectorPlottable, Decomposable):
             Location parameter for the legend.
         title
             Title of the figure.
-        %(pl)s
+        %(plotting)s
 
         Returns
         -------
@@ -449,7 +449,7 @@ class Schur(VectorPlottable, Decomposable):
             Title of the figure.
         cmap
             Colormap to use.
-        %(pl)s
+        %(plotting)s
         **kwargs
             Keyword arguments for :func:`seaborn.heatmap`.
 

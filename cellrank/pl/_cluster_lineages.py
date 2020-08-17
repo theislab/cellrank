@@ -147,7 +147,7 @@ def cluster_lineage(
     key_added
         Postfix to add when saving the results to :paramref:`adata` `.uns`.
     %(parallel)s
-    %(pl)s
+    %(plotting)s
     pca_kwargs
         Keyword arguments for :func:`scanpy.pp.pca`.
     neighbors_kwargs

@@ -516,7 +516,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             Whether to show colorbar.
         title
             Title of the figure.
-        %(pl)s
+        %(plotting)s
         text_kwargs
             Keyword arguments for :func:`matplotlib.pyplot.text`.
         **kwargs
