@@ -115,7 +115,7 @@ def norm(array: np.ndarray, axis: int) -> np.ndarray:  # noqa
 # this is faster than using flat array
 @njit(parallel=True)
 def _random_normal(
-    m: np.ndarray, v: np.ndarray, n_samples: int = 1, average: bool = True,
+    m: np.ndarray, v: np.ndarray, n_samples: int = 1,
 ):
     """
     Sample number from normal distribution.
@@ -128,8 +128,6 @@ def _random_normal(
         Variance vector.
     n_samples
         Number of samples to be generated
-    average
-        Whether to average over the number of samples.
 
     Returns
     -------
@@ -143,21 +141,6 @@ def _random_normal(
     if n_samples == 1:
         return np.expand_dims(
             np.array([np.random.normal(m[i], v[i]) for i in prange(m.shape[0])]), 0
-        )
-
-    if average:
-        return np.expand_dims(
-            np.array(
-                [
-                    np.mean(
-                        np.array(
-                            [np.random.normal(m[i], v[i]) for _ in prange(n_samples)]
-                        )
-                    )
-                    for i in prange(m.shape[0])
-                ]
-            ),
-            0,
         )
 
     return np.array(
@@ -350,7 +333,9 @@ def _reconstruct_matrices(
         The probability and correlation matrix. If :paramref:`data` is 3 dimensional, return an iterable of them.
     """
 
-    def reconstruct_many(data: np.ndarray, queue):
+    def reconstruct_many(
+        data: np.ndarray, queue
+    ) -> Tuple[List[csr_matrix], List[csr_matrix]]:
         assert data.ndim == 3, f"Dimension mismatch: `{data.ndim}`."
         assert data.shape[1:] == (
             2,
