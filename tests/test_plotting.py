@@ -17,8 +17,8 @@ from matplotlib.testing import setup
 from matplotlib.testing.compare import compare_images
 
 import cellrank as cr
-import cellrank.plotting._lineages
-from cellrank.tools import GPCCA, CFLARE
+import cellrank.pl._lineages
+from cellrank.tl import GPCCA, CFLARE
 
 setup()
 
@@ -1374,25 +1374,23 @@ class TestGPCCA:
 class TestLineages:
     @compare()
     def test_scvelo_lineages(self, adata: AnnData, fpath: str):
-        cellrank.plotting._lineages.lineages(adata, dpi=DPI, save=fpath)
+        cellrank.pl._lineages.lineages(adata, dpi=DPI, save=fpath)
 
     @compare()
     def test_scvelo_lineages_subset(self, adata: AnnData, fpath: str):
-        cellrank.plotting._lineages.lineages(adata, lineages=["1"], dpi=DPI, save=fpath)
+        cellrank.pl._lineages.lineages(adata, lineages=["1"], dpi=DPI, save=fpath)
 
     @compare()
     def test_scvelo_lineages_time(self, adata: AnnData, fpath: str):
-        cellrank.plotting._lineages.lineages(adata, mode="time", dpi=DPI, save=fpath)
+        cellrank.pl._lineages.lineages(adata, mode="time", dpi=DPI, save=fpath)
 
     @compare()
     def test_scvelo_lineages_cmap(self, adata: AnnData, fpath: str):
-        cellrank.plotting._lineages.lineages(
-            adata, cmap=cm.inferno, dpi=DPI, save=fpath
-        )
+        cellrank.pl._lineages.lineages(adata, cmap=cm.inferno, dpi=DPI, save=fpath)
 
     @compare()
     def test_scvelo_lineages_subset(self, adata: AnnData, fpath: str):
-        cellrank.plotting._lineages.lineages(
+        cellrank.pl._lineages.lineages(
             adata, cluster_key="clusters", dpi=DPI, save=fpath
         )
 

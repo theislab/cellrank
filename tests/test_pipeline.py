@@ -7,8 +7,8 @@ import numpy as np
 from pandas.api.types import is_categorical_dtype
 
 import cellrank as cr
-from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
-from cellrank.tools._constants import (
+from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
+from cellrank.tl._constants import (
     Direction,
     DirPrefix,
     AbsProbKey,

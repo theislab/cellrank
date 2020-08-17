@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
-import numpy as np
-import pandas as pd
 import pytest
-from pandas.api.types import is_categorical_dtype
+from _helpers import assert_array_nan_equal
 
 import scanpy as sc
 
-from _helpers import assert_array_nan_equal
-from cellrank.tools import Lineage
-from cellrank.tools._utils import (
+import numpy as np
+import pandas as pd
+from pandas.api.types import is_categorical_dtype
+
+from cellrank.tl import Lineage
+from cellrank.tl._utils import (
     _one_hot,
     _cluster_X,
     _process_series,
@@ -16,7 +17,7 @@ from cellrank.tools._utils import (
     _merge_categorical_series,
     _series_from_one_hot_matrix,
 )
-from cellrank.tools._colors import _compute_mean_color, _map_names_and_colors
+from cellrank.tl._colors import _compute_mean_color, _map_names_and_colors
 
 
 class TestToolsUtils:

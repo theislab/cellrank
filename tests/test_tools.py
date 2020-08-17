@@ -7,9 +7,9 @@ from anndata import AnnData
 import pandas as pd
 
 import cellrank as cr
-from cellrank.tools.kernels import Kernel
-from cellrank.tools._constants import AbsProbKey, FinalStatesKey, _probs
-from cellrank.tools._lineage_drivers import _gene_importance
+from cellrank.tl.kernels import Kernel
+from cellrank.tl._constants import AbsProbKey, FinalStatesKey, _probs
+from cellrank.tl._lineage_drivers import _gene_importance
 
 
 class TestGeneImportance:
