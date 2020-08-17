@@ -32,7 +32,7 @@ Tools
     tl.root_states
     tl.final_states
     tl.lineages
-    tl.gene_importance
+    tl.lineage_drivers
     tl.transition_matrix
     tl.kernels.VelocityKernel
     tl.kernels.ConnectivityKernel
@@ -56,6 +56,7 @@ Plotting
     pl.similarity_plot
     pl.graph
     pl.lineages
+    pl.lineage_drivers
     pl.composition
 
 Utilities
