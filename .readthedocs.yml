@@ -6,7 +6,7 @@ sphinx:
   fail_on_warning: false
 
 formats:
-  - html
+  - htmlzip
   - pdf
 
 build:
