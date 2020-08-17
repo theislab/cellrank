@@ -202,7 +202,7 @@ class BaseModel(ABC):
     def prepare(
         self,
         gene: str,
-        lineage: str,
+        lineage: Optional[str],
         backward: bool = False,
         time_range: Optional[Union[float, Tuple[float, float]]] = None,
         data_key: str = "X",
@@ -221,7 +221,8 @@ class BaseModel(ABC):
         gene
             Gene in :paramref:`adata` `.var_names` or in :paramref:`adata` `.raw.var_names`.
         lineage
-            Name of a lineage in :paramref:`adata` `.uns`:paramref:`lineage_key`.
+            Name of a lineage in :paramref:`adata` `.uns`:paramref:`lineage_key`. If `None`, all weights
+            will be set to `1`.
         %(backward)s
         %s(time_range)s
         data_key
@@ -372,10 +373,11 @@ class BaseModel(ABC):
         if val_end is None:
             if threshold is None:
                 threshold = np.nanmedian(w)
-            w_test = w[w > threshold]
+            # use `>=` because weights can all be 1
+            w_test = w[w >= threshold]
             n_window = 10 if n_test_points is None else n_test_points // 20
             tmp = convolve(w_test, np.ones(n_window) / n_window, mode="nearest")
-            val_end = x[w > threshold][np.nanargmax(tmp)]
+            val_end = x[w >= threshold][-1 if lineage is None else np.nanargmax(tmp)]
 
         if val_start > val_end:
             val_start, val_end = val_end, val_start
@@ -1330,7 +1332,7 @@ class GAMR(BaseModel):
         """  # noqa
 
         from rpy2 import robjects
-        from rpy2.robjects import pandas2ri, Formula
+        from rpy2.robjects import Formula, pandas2ri
 
         super().fit(x, y, w, **kwargs)
 
@@ -1467,9 +1469,10 @@ def _maybe_import_r_lib(
 
     try:
         from logging import ERROR
+
         from rpy2.robjects import r
-        from rpy2.rinterface_lib.callbacks import logger
         from rpy2.robjects.packages import PackageNotInstalledError, importr
+        from rpy2.rinterface_lib.callbacks import logger
 
         logger.setLevel(ERROR)
         r["options"](warn=-1)
