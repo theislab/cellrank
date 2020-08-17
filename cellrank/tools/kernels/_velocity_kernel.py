@@ -337,19 +337,17 @@ def _run_in_parallel(fn: Callable, conn: csr_matrix, **kwargs) -> Any:
 
     fname = fn.__name__
     kwargs["average"] = kwargs.get("average", True)
-    if not kwargs["average"]:
-        assert fname == "_run_mc", "Invalid function."
-        ixs = np.arange(conn.shape[0])
-        resort_ixs = None
-        unit = "sample"
-    else:
+
+    if fname == "_run_stochastic":
         ixs = np.argsort(np.array((conn != 0).sum(1)).ravel())
-        resort_ixs = ixs
-        unit = (
-            "sample"
-            if (fname == "_run_mc") and kwargs.get("n_samples", 1) > 1
-            else "cell"
-        )
+    else:
+        ixs = np.arange(conn.shape[0])
+        np.random.shuffle(ixs)
+    resort_ixs = ixs
+
+    unit = (
+        "sample" if (fname == "_run_mc") and kwargs.get("n_samples", 1) > 1 else "cell"
+    )
 
     kwargs["indices"] = conn.indices
     kwargs["indptr"] = conn.indptr
