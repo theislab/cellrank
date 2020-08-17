@@ -12,8 +12,8 @@ elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
         sudo apt-get install gcc gfortran libopenmpi-dev libblas-dev liblapack-dev -y
 
         if [[ "$CACHE_NAME" != "krylov" ]]; then
+            echo "Installing SLEPc and PETSc Python libraries"
             pip_cmd=$(which pip)
-            echo "Installing SLEPc and PETSc"
 
             sudo $pip_cmd install mpi4py
 
@@ -24,7 +24,7 @@ elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
             sudo $pip_cmd install slepc4py
 
             python -c "import slepc; import petsc;"
-            echo "Succesfully installed SLEPc and PETSc"
+            echo "Successfully installed SLEPc and PETSc"
         fi
     fi
 fi
