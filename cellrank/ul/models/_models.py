@@ -1077,7 +1077,7 @@ class GAM(BaseModel):
         Whether to perform a grid search. Keys correspond to a parameter names and values to range to be searched.
         If an empty :class:`dict`, don't perform a grid search. If `None`, uses a default grid.
     spline_kwargs
-        Keyword arguments for :class:`pygam.terms.s`.
+        Keyword arguments for :class:`pygam.s`.
     **kwargs
         Keyword arguments for :class:`pygam.pygam.GAM`.
     """

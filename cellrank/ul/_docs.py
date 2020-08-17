@@ -21,7 +21,7 @@ show_progress_bar
 n_jobs
     Number of parallel jobs. If `-1`, use all available cores. If `None` or `1`, the execution is sequential.
 backend
-    Which backend to use for multiprocessing. See :class:`joblib.Parallel` for valid options."""
+    Which backend to use for parallelization. See :class:`joblib.Parallel` for valid options."""
 _model = """\
 model
     BaseModel to fit.
@@ -61,9 +61,10 @@ _density_correction = (
 )
 _time_range = """\
 time_range
-   If a :class:`tuple`, it specifies the minimum and maximum pseudotime. Both values can be `None`, in which case
-   the minimum is the minimum pseudotime and maximum is automatically determined. If :class:`float`,
-   it specified the maximum pseudotime.
+   If a :class:`tuple`, it specifies the minimum and maximum pseudotime.
+   Both values can be `None`, in which case the minimum is the earliest pseudotime
+   and the maximum is automatically determined.
+   If a :class:`float`, it specifies the maximum pseudotime.
 """
 _velocity_mode = """\
 mode
@@ -71,19 +72,20 @@ mode
 
         - `{m.DETERMINISTIC.s!r}` - deterministic computation that doesn't propagate uncertainty
         - `{m.MONTE_CARLO.s!r}` - Monte Carlo average of randomly sampled velocity vectors
-        - `{m.STOCHASTIC.s!r}` - second order approximation, only available when :mod:`jax` is installed.
+        - `{m.STOCHASTIC.s!r}` - second order approximation, only available when :mod:`jax` is installed
         - `{m.SAMPLING.s!r}` - sample 1 transition matrix from velocity distribution
         - `{m.PROPAGATION.s!r}` - same as `{m.MONTE_CARLO.s!r}`, but does not average the vectors.
           Instead, it saves the sampled transition matrices to :paramref:`_t_mats` to be used
           for later uncertainty estimation. It is generally faster then `{m.MONTE_CARLO.s!r}`,
-          but also less memory efficient"""
+          but also less memory efficient
+"""
 _velocity_backward_mode = """\
 backward_mode
-    Only matters if initialized as :paramref:`backward` =`True`.  Valid options are:
+    Only matters if initialized as :paramref:`backward` `=True`.  Valid options are:
 
         - `{b.TRANSPOSE.s!r}` - compute transitions from neighboring cells `j` to cell `i`
-        - `{b.NEGATE.s!r}` - negate the velocity vector"""
-
+        - `{b.NEGATE.s!r}` - negate the velocity vector
+"""
 _copy = """Return a copy of self."""
 _root = "root"
 _final = "final"
