@@ -5,9 +5,11 @@ from typing import Any, Union, Callable, Optional, Sequence
 from threading import Thread
 from multiprocessing import Manager
 
-import numpy as np
 import joblib as jl
+
+import numpy as np
 from scipy.sparse import issparse, spmatrix
+
 from cellrank.utils._utils import _get_n_cores
 
 _msg_shown = False
@@ -24,7 +26,7 @@ def parallelize(
     backend: str = "multiprocessing",
     extractor: Optional[Callable[[Any], Any]] = None,
     show_progress_bar: bool = True,
-) -> Union[np.ndarray, Any]:
+) -> np.ndarray:
     """
     Parallelize function call over a collection of elements.
 

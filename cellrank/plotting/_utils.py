@@ -3,22 +3,11 @@
 
 import os
 from copy import copy
-from typing import (
-    Any,
-    Dict,
-    Tuple,
-    Union,
-    Mapping,
-    TypeVar,
-    Iterable,
-    Optional,
-    Sequence,
-)
+from typing import Any, Dict, Tuple, Union, Mapping, TypeVar, Optional, Sequence
 from pathlib import Path
 from collections import defaultdict
 
 import numpy as np
-from scipy.sparse import diags
 from pandas.core.dtypes.common import is_categorical_dtype
 
 import matplotlib as mpl
@@ -28,9 +17,7 @@ import matplotlib.pyplot as plt
 from cellrank.utils._docs import d
 from cellrank.tools._utils import save_fig, _unique_order_preserving
 from cellrank.utils.models import GAMR, BaseModel
-from cellrank.tools.kernels import PrecomputedKernel
 from cellrank.tools._constants import _DEFAULT_BACKEND, _colors
-from cellrank.tools.estimators._cflare import CFLARE
 
 AnnData = TypeVar("AnnData")
 
@@ -41,72 +28,6 @@ _ERROR_INCOMPLETE_SPEC = (
 )
 _time_range_type = Optional[Union[float, Tuple[Optional[float], Optional[float]]]]
 _model_type = Union[BaseModel, Mapping[str, Mapping[str, BaseModel]]]
-
-
-@d.dedent
-def lineages(
-    adata: AnnData,
-    lineages: Optional[Union[str, Iterable[str]]] = None,
-    backward: bool = False,
-    cluster_key: Optional[str] = None,
-    mode: str = "embedding",
-    time_key: str = "latent_time",
-    cmap: Union[str, mpl.colors.ListedColormap] = cm.viridis,
-    **kwargs,
-) -> None:
-    """
-    Plot lineages that were uncovered using :func:`cellrank.tl.lineages`.
-
-    For each lineage, we show all cells in an embedding (default is UMAP, but can be any) and color them by their
-    probability of belonging to this lineage. For cells that are already committed, this probability will be one for
-    their respective lineage and zero otherwise. For naive cells, these probabilities will be more balanced, reflecting
-    the fact that naive cells have the potential to develop towards multiple endpoints.
-
-    .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/lineages.png
-       :width: 400px
-       :align: center
-
-    Parameters
-    ----------
-    %s(adata)s
-    lineages
-        Plot only these lineages. If `None`, plot all lineages.
-    %(backward)s
-    cluster_key
-        If given, plot cluster annotations left of the lineage probabilities.
-    mode
-        Can be either `'embedding'` or `'time'`:
-
-            - `'embedding'` - plot the embedding while coloring in the absorption probabilities.
-            - `'time'` - plot the pseudotime on x-axis and the absorption probabilities on y-axis.
-    time_key
-        Key from `adata.obs` to use as a pseudotime ordering of the cells.
-    cmap
-        Colormap to use.
-    **kwargs
-        Keyword arguments for :func:`scvelo.pl.scatter`.
-
-    Returns
-    -------
-    %s(just_plots)s
-    """
-
-    # create a dummy kernel object
-    dummy_transition_matrix = diags(np.ones(adata.n_obs))
-    k = PrecomputedKernel(dummy_transition_matrix, adata, backward=backward)
-
-    # use this to initialize an MC object
-    mc = CFLARE(k, read_from_adata=True, write_to_adata=False)
-
-    # plot using the MC object
-    mc.plot_absorption_probabilities(
-        lineages=lineages,
-        cluster_key=cluster_key,
-        mode=mode,
-        time_key=time_key,
-        cmap=cmap,
-        **kwargs,
-    )
 
 
 def _curved_edges(
@@ -617,7 +538,8 @@ def _maybe_create_dir(dirname: Optional[Union[str, Path]]) -> None:
     if dirname is None:
         return
 
-    from cellrank import settings, logging as logg
+    from cellrank import logging as logg
+    from cellrank import settings
 
     figdir = settings.figdir
 
