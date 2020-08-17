@@ -13,7 +13,7 @@ Version 1.0
 - Updated documentation
 
 1.0.0-b.8 :small:`2020-07-12`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - Add installation options for PETSc and SLEPc
 - Add iterative solver for absorption proabilities
@@ -21,11 +21,11 @@ Version 1.0
 - Fix docstring issues
 
 1.0.0-b.2 :small:`2020-07-02`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - Fix installation by including future-fstrings.
 
 1.0.0-b.1 :small:`2020-07-02`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - Initial beta pre-release.

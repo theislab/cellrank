@@ -11,5 +11,5 @@ from cellrank.tools._constants import Lin
 
 __author__ = ", ".join(["Marius Lange", "Michal Klein", "Juan Luis Restrepo Lopez"])
 __maintainer__ = ", ".join(["Marius Lange", "Michal Klein"])
-__email__ = "info@cellrank.org"
 __version__ = "1.0.0-rc.4"
+__email__ = "info@cellrank.org"
