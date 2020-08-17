@@ -4,10 +4,10 @@ from copy import copy, deepcopy
 from math import fsum
 from typing import Any, Union, Callable, Iterable, Optional
 
+from scvelo.preprocessing.moments import get_moments
+
 import numpy as np
 from scipy.sparse import issparse, csr_matrix
-
-from scvelo.preprocessing.moments import get_moments
 
 from cellrank import logging as logg
 from cellrank.utils._docs import d, inject_docs
@@ -19,6 +19,7 @@ from cellrank.tools.kernels._utils import (
     _HAS_JAX,
     njit,
     prange,
+    np_mean,
     jit_kwargs,
     _filter_kwargs,
     _random_normal,
@@ -190,9 +191,9 @@ class VelocityKernel(Kernel):
             Set the seed for random state when the method requires :paramref:`n_samples`.
         use_numba
             Use :mod:`numba` optimized functions. Only available if `:paramref:`mode` != `{m.STOCHASTIC.s!r}`.
-            Note that this options disables the progress bar, but can be faster for.
-            If `None`, it enables running :mod:`numba` jitted functions in conjunction with default parallelization
-            options.
+            If `True`, the outermost loop is also :mod:`numba` optimized. This options disables the progress bar.
+            If `False`, the outermost loop is not optimized, but the workload is split among multiple cors.
+            If `None`, it's same as `True`, but the work is being split and each worker uses optimized outermost loop.
         %(parallel)s
 
         Returns
@@ -252,6 +253,10 @@ class VelocityKernel(Kernel):
         velocity_variance = get_moments(
             self.adata, self._velocity, second_order=True
         ).astype(np.float64)
+
+        if mode == VelocityMode.MONTE_CARLO and n_samples == 1:
+            logg.debug("Setting mode to sampling because `n_samples=1`")
+            mode = VelocityMode.SAMPLING
 
         if (
             mode == VelocityMode.STOCHASTIC
@@ -332,19 +337,17 @@ def _run_in_parallel(fn: Callable, conn: csr_matrix, **kwargs) -> Any:
 
     fname = fn.__name__
     kwargs["average"] = kwargs.get("average", True)
-    if not kwargs["average"]:
-        assert fname == "_run_mc", "Invalid function."
-        ixs = np.arange(conn.shape[0])
-        resort_ixs = None
-        unit = "sample"
-    else:
+
+    if fname == "_run_stochastic":
         ixs = np.argsort(np.array((conn != 0).sum(1)).ravel())
-        resort_ixs = ixs
-        unit = (
-            "sample"
-            if (fname == "_run_mc") and kwargs.get("n_samples", 1) > 1
-            else "cell"
-        )
+    else:
+        ixs = np.arange(conn.shape[0])
+        np.random.shuffle(ixs)
+    resort_ixs = ixs
+
+    unit = (
+        "sample" if (fname == "_run_mc") and kwargs.get("n_samples", 1) > 1 else "cell"
+    )
 
     kwargs["indices"] = conn.indices
     kwargs["indptr"] = conn.indptr
@@ -455,10 +458,11 @@ def _run_mc(
 ) -> np.ndarray:
 
     starts = _calculate_starts(indptr, ixs)
-    if average:
-        probs_cors = np.empty((1, 2, starts[-1]))
-    else:
-        probs_cors = np.empty((n_samples, 2, starts[-1]))
+    probs_cors = (
+        np.empty((1, 2, starts[-1]))
+        if average
+        else np.empty((n_samples, 2, starts[-1]))
+    )
 
     for i in prange(len(ixs)):
         ix = ixs[i]
@@ -470,23 +474,24 @@ def _run_mc(
         # get the displacement matrix. Changing dimensions b/c varying numbers of neighbors slow down autograd
         W = expression[nbhs_ixs, :] - expression[ix, :]
 
+        # much faster (1.8x than sampling only 1 if average)
+        samples = _random_normal(expectation[ix], variance[ix], n_samples=n_samples,)
         if average:
-            v = np.atleast_2d(
-                _random_normal(
-                    expectation[ix], variance[ix], n_samples=n_samples, average=True,
+            probs_cors_tmp = np.empty((n_samples, n_neigh, 2))
+            for j in prange(n_samples):
+                prob, cor = _predict_transition_probabilities_numpy(
+                    np.atleast_2d(samples[j]), W, softmax_scale=softmax_scale
                 )
-            )
+                probs_cors_tmp[j, :, 0] = prob
+                probs_cors_tmp[j, :, 1] = cor
 
-            p, c = _predict_transition_probabilities_numpy(
-                v, W, softmax_scale=softmax_scale
+            probs_cors[0, 0, starts[i] : starts[i] + n_neigh] = np_mean(
+                probs_cors_tmp[..., 0], axis=0
             )
-
-            probs_cors[0, 0, starts[i] : starts[i] + n_neigh] = p
-            probs_cors[0, 1, starts[i] : starts[i] + n_neigh] = c
+            probs_cors[0, 1, starts[i] : starts[i] + n_neigh] = np_mean(
+                probs_cors_tmp[..., 1], axis=0
+            )
         else:
-            samples = _random_normal(
-                expectation[ix], variance[ix], n_samples=n_samples, average=False,
-            )
             for j in prange(samples.shape[0]):
                 prob, cor = _predict_transition_probabilities_numpy(
                     np.atleast_2d(samples[j]), W, softmax_scale=softmax_scale
@@ -513,7 +518,6 @@ def _run_stochastic(
     softmax_scale: float = 1,
     queue=None,
 ) -> np.ndarray:
-    # TODO: can't use numba yet, since we rely on JAX for hessians
     starts = _calculate_starts(indptr, ixs)
     probs_cors = np.empty((2, starts[-1]))
 
