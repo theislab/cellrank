@@ -183,11 +183,11 @@ def composition(
     %(adata)s
     key
         Key in :paramref:`adata` `.obs` containing categorical observation.
-    %s(plotting)s
+    %(plotting)s
 
     Returns
     -------
-    %s(just_plots)s
+    %(just_plots)s
     """
 
     if key not in adata.obs:

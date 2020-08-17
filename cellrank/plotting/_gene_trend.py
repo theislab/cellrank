@@ -25,7 +25,7 @@ from cellrank.plotting._utils import (
     _time_range_type,
     _maybe_create_dir,
 )
-from cellrank.tools._constants import AbsProbKey
+from cellrank.tools._constants import _DEFAULT_BACKEND, AbsProbKey
 from cellrank.utils._parallelize import parallelize
 
 AnnData = TypeVar("AnnData")
@@ -59,7 +59,7 @@ def gene_trends(
     ext: str = "png",
     suptitle: Optional[str] = None,
     n_jobs: Optional[int] = 1,
-    backend: str = "multiprocessing",
+    backend: str = _DEFAULT_BACKEND,
     show_progres_bar: bool = True,
     dirname: Optional[str] = None,
     figsize: Optional[Tuple[float, float]] = None,

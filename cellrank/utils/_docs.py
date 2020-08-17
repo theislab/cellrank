@@ -114,6 +114,7 @@ d = DocstringProcessor(
     fit=_fit,
     copy=_copy,
     density_correction=_density_correction,
+    time_range=_time_range,
     velocity_mode=_velocity_mode,
     velocity_backward_mode=_velocity_backward_mode,
 )

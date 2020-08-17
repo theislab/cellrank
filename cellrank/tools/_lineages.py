@@ -59,7 +59,7 @@ def lineages(
 
     Returns
     -------
-    :class:`anndata.AnnData`, :class:`cellrank.tools.estimators.BaseEstimator` or :class:`NoneType`
+    :class:`anndata.AnnData`, :class:`cellrank.tools.estimators.BaseEstimator` or :obj:`None`
         Depending on :paramref:`copy`, either updates the existing :paramref:`adata` object
         or returns a copy or returns the estimator.
     """

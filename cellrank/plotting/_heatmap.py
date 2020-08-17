@@ -32,7 +32,7 @@ from cellrank.plotting._utils import (
     _time_range_type,
     _maybe_create_dir,
 )
-from cellrank.tools._constants import ModeEnum, AbsProbKey
+from cellrank.tools._constants import _DEFAULT_BACKEND, ModeEnum, AbsProbKey
 from cellrank.utils._parallelize import parallelize
 
 _N_XTICKS = 10
@@ -72,7 +72,7 @@ def heatmap(
     xlabel: Optional[str] = None,
     cmap: mcolors.ListedColormap = cm.viridis,
     n_jobs: Optional[int] = 1,
-    backend: str = "multiprocessing",
+    backend: str = _DEFAULT_BACKEND,
     show_progress_bar: bool = True,
     ext: str = "png",
     figsize: Optional[Tuple[float, float]] = None,
@@ -130,13 +130,13 @@ def heatmap(
     cmap
         Colormap to use when visualizing the smoothed expression.
     %(parallel)s
-    %s(plotting)s
+    %(plotting)s
     **kwargs
         Keyword arguments for :meth:`cellrank.ul.models.BaseModel.prepare`.
 
     Returns
     -------
-    %s(just_plots)
+    %(just_plots)s
     """
 
     import seaborn as sns
@@ -535,7 +535,7 @@ def _get_ax_bbox(fig: Fig, ax: Ax):
 
 
 def _set_ax_height_to_cm(fig: Fig, ax: Ax, height: float) -> None:
-    from mpl_toolkits.axes_grid1 import Divider, Size
+    from mpl_toolkits.axes_grid1 import Size, Divider
 
     height /= 2.54  # cm to inches
 

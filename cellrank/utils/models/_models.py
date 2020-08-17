@@ -224,7 +224,7 @@ class BaseModel(ABC):
             Name of a lineage in :paramref:`adata` `.uns`:paramref:`lineage_key`. If `None`, all weights
             will be set to `1`.
         %(backward)s
-        %s(time_range)s
+        %(time_range)s
         data_key
             Key in :attr:`paramref.adata` `.layers` or `'X'` for :paramref:`adata` `.X`.
         time_key
