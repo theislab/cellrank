@@ -1,18 +1,19 @@
 # -*- coding: utf-8 -*-
 from typing import Tuple
 
-import numpy as np
 import pytest
-
-import matplotlib
 
 import scanpy as sc
 from anndata import AnnData
 
+import numpy as np
+
+import matplotlib
+
 import cellrank as cr
-from cellrank.tools import GPCCA, CFLARE
-from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
-from cellrank.tools._constants import AbsProbKey
+from cellrank.tl import GPCCA, CFLARE
+from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
+from cellrank.tl._constants import AbsProbKey
 
 matplotlib.use("Agg")
 np.random.seed(42)

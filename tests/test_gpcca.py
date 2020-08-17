@@ -12,8 +12,8 @@ import numpy as np
 import pandas as pd
 
 import cellrank as cr
-from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
-from cellrank.tools._constants import (
+from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
+from cellrank.tl._constants import (
     Direction,
     DirPrefix,
     AbsProbKey,
@@ -23,7 +23,7 @@ from cellrank.tools._constants import (
     _colors,
     _lin_names,
 )
-from cellrank.tools.estimators._constants import A, P
+from cellrank.tl.estimators._constants import A, P
 
 
 def _check_eigdecomposition(mc: cr.tl.GPCCA) -> None:

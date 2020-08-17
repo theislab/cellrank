@@ -11,9 +11,9 @@ import pandas as pd
 from pandas.api.types import is_categorical_dtype
 
 import cellrank as cr
-import cellrank.tools.kernels._precomputed_kernel
-from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
-from cellrank.tools._constants import (
+import cellrank.tl.kernels._precomputed_kernel
+from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
+from cellrank.tl._constants import (
     Direction,
     DirPrefix,
     AbsProbKey,
@@ -22,7 +22,7 @@ from cellrank.tools._constants import (
     _colors,
     _lin_names,
 )
-from cellrank.tools.estimators._constants import A, P
+from cellrank.tl.estimators._constants import A, P
 
 EPS = np.finfo(np.float64).eps
 
@@ -351,9 +351,7 @@ class TestCFLARE:
 
         # initialise a pre-computed kernel and CFLARE estimator object
         c = cr.tl.CFLARE(
-            cellrank.tools.kernels._precomputed_kernel.PrecomputedKernel(
-                transition_matrix
-            )
+            cellrank.tl.kernels._precomputed_kernel.PrecomputedKernel(transition_matrix)
         )
 
         # define the set of metastable states
