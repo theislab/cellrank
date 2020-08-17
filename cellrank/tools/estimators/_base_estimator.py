@@ -482,14 +482,13 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
         Returns
         -------
-        None
+        None or :class:`pandas.DataFrame`
             Updates :paramref:`adata` `.var` (or :paramref:`adata` `.raw.var`, depending on :paramref:`use_raw`)
             with the drivers in the form of `{{directipn}} {{lineages}}`.
             Also updates the following fields:
 
                 - `.{lin_drivers}` - the lineage drivers for each :paramref:`lineages`
 
-        :class:`pandas.DataFrame`
             If :paramref:`return_drivers` `=True`. Also updates :paramref:`adata` as specified above.
         """
 
@@ -564,10 +563,10 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             f"layer `{layer}` with `use_raw={use_raw}`"
         )
 
-        # loop over lineages
         lin_corrs = {}
         for lineage in lineages:
             key = f"{prefix} {lineage}"
+
             correlations = _vec_mat_corr(data, lin_probs[:, lineage].X.squeeze())
             lin_corrs[lineage] = correlations
 

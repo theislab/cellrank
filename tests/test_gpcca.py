@@ -3,14 +3,15 @@
 from copy import deepcopy
 from typing import Tuple
 
-import numpy as np
-import pandas as pd
 import pytest
+from _helpers import assert_array_nan_equal
 
 from anndata import AnnData
 
+import numpy as np
+import pandas as pd
+
 import cellrank as cr
-from _helpers import assert_array_nan_equal
 from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tools._constants import (
     Direction,
@@ -102,7 +103,7 @@ def _check_abs_probs(mc: cr.tl.GPCCA, has_main_states: bool = True):
     )
 
 
-class TestCGPCCA:
+class TestGPCCA:
     def test_compute_partition(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
@@ -506,7 +507,65 @@ class TestCGPCCA:
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
         for lineage in ["0", "1"]:
-            assert f"{DirPrefix.FORWARD} {lineage} corr" in mc.adata.var.keys()
+            assert f"{DirPrefix.FORWARD} {lineage}" in mc.adata.var.keys()
+
+    def test_plot_lineage_drivers_not_computed(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.GPCCA(final_kernel)
+        mc.compute_schur(n_components=10, method="krylov")
+        mc.compute_metastable_states(n_states=2)
+        mc.set_final_states_from_metastable_states()
+        mc.compute_absorption_probabilities()
+
+        with pytest.raises(RuntimeError):
+            mc.plot_lineage_drivers("0")
+
+    def test_plot_lineage_drivers_invalid_name(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.GPCCA(final_kernel)
+        mc.compute_schur(n_components=10, method="krylov")
+        mc.compute_metastable_states(n_states=2)
+        mc.set_final_states_from_metastable_states()
+        mc.compute_absorption_probabilities()
+        mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
+
+        with pytest.raises(KeyError):
+            mc.plot_lineage_drivers("foo", use_raw=False)
+
+    def test_plot_lineage_drivers_invalid_n_genes(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.GPCCA(final_kernel)
+        mc.compute_schur(n_components=10, method="krylov")
+        mc.compute_metastable_states(n_states=2)
+        mc.set_final_states_from_metastable_states()
+        mc.compute_absorption_probabilities()
+        mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
+
+        with pytest.raises(ValueError):
+            mc.plot_lineage_drivers("0", use_raw=False, n_genes=0)
+
+    def test_plot_lineage_drivers_normal_run(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.GPCCA(final_kernel)
+        mc.compute_schur(n_components=10, method="krylov")
+        mc.compute_metastable_states(n_states=2)
+        mc.set_final_states_from_metastable_states()
+        mc.compute_absorption_probabilities()
+        mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
+
+        mc.plot_lineage_drivers("0", use_raw=False)
 
 
 class TestGPCCACopy:

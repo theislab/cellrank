@@ -111,7 +111,7 @@ def cluster_lineage(
 
     This function is based on Palantir, see [Setty19]_. It can be used to discover modules of genes that drive
     development along a given lineage. Consider running this function on a subset of genes which are potential lineage
-    drivers, identified e.g. by running :func:`cellrank.tl.gene_importance`.
+    drivers, identified e.g. by running :func:`cellrank.tl._gene_importance`.
 
     .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/cluster_lineage.png
        :width: 400px
@@ -168,8 +168,8 @@ def cluster_lineage(
               containing the clustered genes.
     """
 
-    from anndata import AnnData as _AnnData
     import scanpy as sc
+    from anndata import AnnData as _AnnData
 
     lineage_key = str(AbsProbKey.BACKWARD if backward else AbsProbKey.FORWARD)
     if lineage_key not in adata.obsm:

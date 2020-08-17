@@ -330,23 +330,23 @@ def _vec_mat_corr(X: Union[np.ndarray, spmatrix], y: np.ndarray) -> np.ndarray:
     """
 
     X_bar, y_std, n = np.array(X.mean(axis=0)).reshape(-1), np.std(y), X.shape[0]
-    denom = X.T.dot(y) - n * X_bar * np.mean(y)
-    nom = (
+    num = X.T.dot(y) - n * X_bar * np.mean(y)
+    denom = (
         (n - 1) * np.std(X.A, axis=0) * y_std
         if issparse(X)
         else (X.shape[0] - 1) * np.std(X, axis=0) * y_std
     )
 
-    if np.sum(nom == 0) > 0:
+    if np.sum(denom == 0):
         logg.warning(
-            f"No variation found in `{np.sum(nom==0)}` genes. Setting correlation for these to `NaN`"
+            f"No variation found in `{np.sum(denom==0)}` genes. Correlation for these will be `NaN`"
         )
 
-    return denom / nom
+    return num / denom
 
 
 def cyto_trace(
-    adata: AnnData, layer: str = "Ms", copy: bool = False, use_median: bool = False
+    adata: AnnData, layer: str = "Ms", inplace: bool = True, use_median: bool = False
 ) -> Optional[AnnData]:
     """
     Re-implementation of the CytoTrace algorithm by *Gulati et al.* to infer cell plasticity.
@@ -360,21 +360,21 @@ def cyto_trace(
 
     Parameters
     ----------
-    adata : :class:`anndata.AnnData`
+    adata : :class:`~anndata.AnnData`
         Annotated data object.
-    copy
+    inplace
         Whether to write directly to :paramref:`adata` or to a copy.
     use_median
         If `True`, use *median*, otherwise *mean*.
 
     Returns
     -------
-    :class:`anndata.AnnData` or :class:`NoneType`
+    None or :class:`anndata.AnnData`
         Depending on :paramref:`copy`, either updates :paramref:`adata` or returns a copy.
     """
 
     # check use_raw and copy
-    adata_comp = adata.copy() if copy else adata
+    adata_comp = adata if inplace else adata.copy()
     if layer not in adata_comp.layers:
         raise KeyError(f"Compute layer `{layer!r}` first")
 
@@ -412,7 +412,7 @@ def cyto_trace(
 
     logg.info("    Finish", time=start)
 
-    if copy:
+    if not inplace:
         return adata_comp
 
 
@@ -1483,9 +1483,9 @@ def _get_cat_and_null_indices(
 
 
 def _check_estimator_type(estimator: Any) -> None:
-    from cellrank.tools.estimators._base_estimator import (
+    from cellrank.tools.estimators._base_estimator import (  # prevent cyclic import
         BaseEstimator,
-    )  # prevent cyclic import
+    )
 
     if not isinstance(estimator, type):
         raise TypeError(

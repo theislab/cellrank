@@ -26,7 +26,7 @@ def parallelize(
     backend: str = "multiprocessing",
     extractor: Optional[Callable[[Any], Any]] = None,
     show_progress_bar: bool = True,
-) -> np.ndarray:
+) -> Any:
     """
     Parallelize function call over a collection of elements.
 
@@ -56,7 +56,6 @@ def parallelize(
 
     Returns
     -------
-    :class:`numpy.ndarray`
         Result depending on :paramref:`extractor` and :paramref:`as_array`.
     """
 
