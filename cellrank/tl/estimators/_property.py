@@ -556,13 +556,13 @@ class Plottable(KernelHolder, Property):
             # everything to one, if applicable
             if np.allclose(X, 1.0):
                 X = np.ones_like(X)
-        else:
-            for col in X.T:
-                mask = col != 1
-                # change the maximum value - the 1 is artificial and obscures the color scaling
-                if np.sum(mask) > 0:
-                    max_not_one = np.max(col[mask])
-                    col[~mask] = max_not_one
+
+        for col in X.T:
+            mask = ~np.isclose(col, 1.0)
+            # change the maximum value - the 1 is artificial and obscures the color scaling
+            if np.sum(mask):
+                max_not_one = np.max(col[mask])
+                col[~mask] = max_not_one
 
         if mode == "time":
             if time_key not in self.adata.obs.keys():
