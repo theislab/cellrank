@@ -1300,6 +1300,7 @@ class GAMR(BaseModel):
     _fallback_backends = {
         "gam": "mgcv",
         "mgcv": "gam",
+        "brms": "mgcv",
     }
 
     def __init__(
@@ -1317,6 +1318,11 @@ class GAMR(BaseModel):
         self._lib = None
         self._lib_name = None
         self._family = distribution
+
+        if distribution == "zinb":
+            backend = "brms"
+        elif backend == "brms":
+            distribution = "zinb"
 
         if backend not in self._fallback_backends.keys():
             raise ValueError(
@@ -1366,7 +1372,7 @@ class GAMR(BaseModel):
         self._w = self.w[use_ixs]
 
         family = getattr(robjects.r, self._family, None)
-        if family is None:
+        if family is None and self._family != "zinb":
             logg.debug(
                 f"Unable to find distribution `{self._family!r}`. Defaulting to `'gaussian'`"
             )
@@ -1383,6 +1389,14 @@ class GAMR(BaseModel):
                 sp=self._sp,
                 family=self._family,
                 weights=pd.Series(self.w),
+            )
+        elif self._lib_name == "brms":
+            self._model = self._lib.brm(
+                Formula(f'y ~ s(x, k={self._n_splines}, bs="cs")'),
+                data=df,
+                family=self._lib.zero_inflated_negbinomial(),
+                chains=4,
+                cores=4,
             )
         elif self._lib_name == "gam":
             self._model = self._lib.gam(
