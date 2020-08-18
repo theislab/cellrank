@@ -12,8 +12,6 @@ from scipy.sparse import issparse, spmatrix
 
 from cellrank.ul._utils import _get_n_cores
 
-_msg_shown = False
-
 
 def parallelize(
     callback: Callable[[Any], Any],
@@ -61,22 +59,9 @@ def parallelize(
 
     if show_progress_bar:
         try:
-            try:
-                from tqdm.notebook import tqdm
-            except ImportError:
-                from tqdm import tqdm_notebook as tqdm
-            import ipywidgets  # noqa
+            from tqdm.notebook import tqdm
         except ImportError:
-            global _msg_shown
-            tqdm = None
-
-            if not _msg_shown:
-                print(
-                    "Unable to create progress bar. Consider installing `tqdm` as `pip install tqdm` "
-                    "and `ipywidgets` as `pip install ipywidgets`.\n"
-                    "Optionally, you can disable the progress bar using `show_progress_bar=False`."
-                )
-                _msg_shown = True
+            from tqdm import tqdm_notebook as tqdm
     else:
         tqdm = None
 

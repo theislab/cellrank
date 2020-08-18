@@ -345,6 +345,7 @@ def _solve_lin_system(
     backend: str = _DEFAULT_BACKEND,
     tol: float = 1e-5,
     use_eye: bool = False,
+    show_progress_bar: bool = True,
 ) -> np.ndarray:
     """
     Solve `mat_a * x = mat_b` efficiently using either iterative or direct methods.
@@ -387,6 +388,8 @@ def _solve_lin_system(
         Convergence threshold.
     use_eye
         Solve `(I - mat_a) * x = mat_b` instead.
+    show_progress_bar
+        Whether to show progress bar when the solver isn't a direct one.
 
     Returns
     --------
@@ -461,6 +464,7 @@ def _solve_lin_system(
             backend=backend,
             as_array=False,
             extractor=extractor,
+            show_progress_bar=show_progress_bar,
         )(mat_a, solver=solver, preconditioner=preconditioner, tol=tol)
     elif solver in _AVAIL_ITER_SOLVERS:
         if not issparse(mat_a):
@@ -473,8 +477,7 @@ def _solve_lin_system(
             mat_b = csr_matrix(mat_b)
 
         logg.debug(
-            f"Solving the linear system using `scipy` solver `{solver!r}` on `{n_jobs} cores(s)` "
-            f"with `tol={tol}`"
+            f"Solving the linear system using `scipy` solver `{solver!r}` on `{n_jobs} cores(s)` with `tol={tol}`"
         )
 
         mat_x, n_converged = parallelize(
@@ -484,10 +487,11 @@ def _solve_lin_system(
             backend=backend,
             as_array=False,
             extractor=extractor,
+            show_progress_bar=show_progress_bar,
         )(mat_a, solver=_AVAIL_ITER_SOLVERS[solver], tol=tol)
 
     else:
-        raise NotImplementedError(f"The solver `{solver!r}` was not found.")
+        raise NotImplementedError(f"Solver `{solver!r}` is not yet implemented.")
 
     if n_converged != mat_b.shape[0]:
         logg.warning(f"`{mat_b.shape[0] - n_converged}` solution(s) did not converge")
