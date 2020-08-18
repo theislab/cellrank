@@ -1488,7 +1488,7 @@ def _maybe_import_r_lib(
 
     except ImportError as e:
         raise ImportError(
-            "Unable to import `rpy2`, install it first as `pip install rpy2>=3.3.5`."
+            "Unable to import `rpy2`, install it first as `pip install rpy2` version `>=3.3.0`."
         ) from e
 
     try:
