@@ -564,9 +564,11 @@ def _run_stochastic(
         probs_cors[0, starts[i] : starts[i] + n_neigh] = p
         probs_cors[1, starts[i] : starts[i] + n_neigh] = c
 
-        queue.put(1)
+        if queue is not None:
+            queue.put(1)
 
-    queue.put(None)
+    if queue is not None:
+        queue.put(None)
 
     return probs_cors
 

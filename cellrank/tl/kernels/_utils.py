@@ -348,9 +348,11 @@ def _reconstruct_matrices(
             probs.append(tmp[0])
             cors.append(tmp[1])
 
-            queue.put(1)
+            if queue is not None:
+                queue.put(1)
 
-        queue.put(None)
+        if queue is not None:
+            queue.put(None)
 
         return probs, cors
 

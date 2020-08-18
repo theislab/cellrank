@@ -177,9 +177,12 @@ def _(
 
         xs.append(x.getArray().copy().squeeze())
         converged += ksp.converged
-        queue.put(1)
 
-    queue.put(None)
+        if queue is not None:
+            queue.put(1)
+
+    if queue is not None:
+        queue.put(None)
 
     return np.stack(xs, axis=1), converged
 
@@ -228,9 +231,11 @@ def _solve_many_sparse_problems(
         x_list.append(x)
         n_converged += info == 0
 
-        queue.put(1)
+        if queue is not None:
+            queue.put(1)
 
-    queue.put(None)
+    if queue is not None:
+        queue.put(None)
 
     return np.stack(x_list, axis=1), n_converged
 
