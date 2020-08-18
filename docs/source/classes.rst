@@ -1,14 +1,17 @@
 Classes
 =======
 
+Estimators
+~~~~~~~~~~
+
 GPCCA
-~~~~~
+-----
 .. autoclass:: cellrank.tl.GPCCA
     :members:
     :inherited-members:
 
 CFLARE
-~~~~~~
+------
 
 .. autoclass:: cellrank.tl.CFLARE
     :members:
