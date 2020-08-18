@@ -1363,6 +1363,10 @@ class GAMR(BaseModel):
 
         family = getattr(robjects.r, self._family, None)
         if family is None:
+            logg.debug(
+                f"Unable to find distribution `{self._family!r}`. Defaulting to `'gaussian'`"
+            )
+            self._family = "gaussian"
             family = robjects.r.gaussian
 
         pandas2ri.activate()
@@ -1373,7 +1377,7 @@ class GAMR(BaseModel):
                 Formula(f'y ~ s(x, k={self._n_splines}, bs="cs")'),
                 data=df,
                 sp=self._sp,
-                family=family,
+                family=self._family,
                 weights=pd.Series(self.w),
             )
         elif self._lib_name == "gam":
@@ -1477,6 +1481,19 @@ class GAMR(BaseModel):
     def __setstate__(self, state: dict):
         self.__dict__ = state
         self._lib, self._lib_name = _maybe_import_r_lib(self._lib_name, raise_exc=True)
+
+    def __str__(self) -> str:
+        return repr(self)
+
+    def __repr__(self) -> str:
+        return "{}[{}]".format(
+            self.__class__.__name__,
+            None
+            if self.model is None
+            else f"gam[family={self._family!r}]"
+            if self._lib_name == "gam"
+            else _dup_spaces.sub(" ", str(self.model).replace("\n", " ")).strip(),
+        )
 
 
 def _maybe_import_r_lib(
