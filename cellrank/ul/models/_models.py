@@ -1574,7 +1574,7 @@ class NegativeBinomial(Distribution):
 
     @divide_weights
     @d.dedent
-    def V(self, mu: np.ndarray, alpha: float = 1.0) -> np.ndarray:
+    def V(self, mu: np.ndarray, alpha: Optional[float] = None) -> np.ndarray:
         """
         Variance function of negative binomial distribution.
 
@@ -1589,6 +1589,8 @@ class NegativeBinomial(Distribution):
         -------
             The variance, array of shape `(n,)`.
         """
+        if alpha is None:
+            alpha = 1.0 / self.levels
 
         return mu + alpha * mu ** 2
 
