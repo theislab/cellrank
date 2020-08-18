@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
+import pytest
+
+from anndata import AnnData
 
 import numpy as np
 from pandas.api.types import is_categorical_dtype
 
-from anndata import AnnData
-
 import cellrank as cr
-from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
-from cellrank.tools._constants import (
+from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
+from cellrank.tl._constants import (
     Direction,
     DirPrefix,
     AbsProbKey,
@@ -38,7 +39,7 @@ def _assert_has_all_keys(adata: AnnData, direction: Direction):
         # check the correlations with all lineages have been computed
         lin_probs = adata.obsm[str(AbsProbKey.FORWARD)]
         np.in1d(
-            [f"{str(DirPrefix.FORWARD)} {key} corr" for key in lin_probs.names],
+            [f"{str(DirPrefix.FORWARD)} {key}" for key in lin_probs.names],
             adata.var.keys(),
         ).all()
 
@@ -57,7 +58,7 @@ def _assert_has_all_keys(adata: AnnData, direction: Direction):
         # check the correlations with all lineages have been computed
         lin_probs = adata.obsm[str(AbsProbKey.BACKWARD)]
         np.in1d(
-            [f"{str(DirPrefix.BACKWARD)} {key} corr" for key in lin_probs.names],
+            [f"{str(DirPrefix.BACKWARD)} {key}" for key in lin_probs.names],
             adata.var.keys(),
         ).all()
 
@@ -75,7 +76,26 @@ class TestHighLevelPipeline:
         cr.pl.lineages(adata)
         cr.tl.lineage_drivers(adata, use_raw=False)
 
+        ln = adata.obsm[str(AbsProbKey.FORWARD)].names[0]
+        cr.pl.lineage_drivers(adata, ln, use_raw=False, backward=False)
+
         _assert_has_all_keys(adata, Direction.FORWARD)
+
+    def test_fwd_pipeline_invalid_raw_requested(self, adata):
+        cr.tl.final_states(
+            adata,
+            estimator=cr.tl.CFLARE,
+            cluster_key="clusters",
+            method="kmeans",
+            show_plots=True,
+        )
+        cr.tl.lineages(adata)
+        cr.pl.lineages(adata)
+        cr.tl.lineage_drivers(adata, use_raw=False)
+
+        ln = adata.obsm[str(AbsProbKey.FORWARD)].names[0]
+        with pytest.raises(RuntimeError):
+            cr.pl.lineage_drivers(adata, ln, use_raw=True, backward=False)
 
     def test_bwd_pipeline_cflare(self, adata):
         cr.tl.root_states(
@@ -88,6 +108,9 @@ class TestHighLevelPipeline:
         cr.tl.lineages(adata, backward=True)
         cr.pl.lineages(adata, backward=True)
         cr.tl.lineage_drivers(adata, use_raw=False, backward=True)
+
+        ln = adata.obsm[str(AbsProbKey.BACKWARD)].names[0]
+        cr.pl.lineage_drivers(adata, ln, use_raw=False, backward=True)
 
         _assert_has_all_keys(adata, Direction.BACKWARD)
 
@@ -102,8 +125,25 @@ class TestHighLevelPipeline:
         cr.tl.lineages(adata)
         cr.pl.lineages(adata)
         cr.tl.lineage_drivers(adata, use_raw=False)
+        ln = adata.obsm[str(AbsProbKey.FORWARD)].names[0]
+        cr.pl.lineage_drivers(adata, ln, use_raw=False, backward=False)
 
         _assert_has_all_keys(adata, Direction.FORWARD)
+
+    def test_fwd_pipeline_gpcca_invalid_raw_requested(self, adata):
+        cr.tl.final_states(
+            adata,
+            estimator=cr.tl.GPCCA,
+            cluster_key="clusters",
+            method="brandts",
+            show_plots=True,
+        )
+        cr.tl.lineages(adata)
+        cr.pl.lineages(adata)
+        cr.tl.lineage_drivers(adata, use_raw=False)
+        ln = adata.obsm[str(AbsProbKey.FORWARD)].names[0]
+        with pytest.raises(RuntimeError):
+            cr.pl.lineage_drivers(adata, ln, use_raw=True, backward=False)
 
     def test_bwd_pipeline_gpcca(self, adata):
         cr.tl.root_states(
@@ -116,6 +156,8 @@ class TestHighLevelPipeline:
         cr.tl.lineages(adata, backward=True)
         cr.pl.lineages(adata, backward=True)
         cr.tl.lineage_drivers(adata, use_raw=False, backward=True)
+        ln = adata.obsm[str(AbsProbKey.BACKWARD)].names[0]
+        cr.pl.lineage_drivers(adata, ln, use_raw=False, backward=True)
 
         _assert_has_all_keys(adata, Direction.BACKWARD)
 

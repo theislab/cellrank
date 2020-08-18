@@ -5,17 +5,18 @@ from collections import defaultdict
 from html.parser import HTMLParser
 
 import mock
-import numpy as np
 import pytest
+
+import numpy as np
 from pandas import DataFrame
 
 import matplotlib.colors as colors
 
-import cellrank.tools._lineage as mocker  # noqa
-from cellrank.tools import Lineage
-from cellrank.tools._colors import _compute_mean_color, _create_categorical_colors
-from cellrank.tools._lineage import _HT_CELLS, LineageView
-from cellrank.tools._constants import Lin
+import cellrank.tl._lineage as mocker  # noqa
+from cellrank.tl import Lineage
+from cellrank.tl._colors import _compute_mean_color, _create_categorical_colors
+from cellrank.tl._lineage import _HT_CELLS, LineageView
+from cellrank.tl._constants import Lin
 
 
 class SimpleHTMLValidator(HTMLParser):
@@ -742,7 +743,7 @@ class TestLineageNormalization:
         np.testing.assert_array_equal(lin.names, ["foo", "bar"])
         np.testing.assert_array_equal(lin.colors, lineage[["foo", "bar"]].colors)
 
-    @mock.patch("cellrank.tools._lineage._cosine_sim")
+    @mock.patch("cellrank.tl._lineage._cosine_sim")
     def test_cosine(self, mocker, lineage: Lineage):
         try:
             _ = lineage.reduce(["foo", "bar"], dist_measure="cosine_sim", mode="dist")
@@ -751,7 +752,7 @@ class TestLineageNormalization:
         finally:
             mocker.assert_called_once()
 
-    @mock.patch("cellrank.tools._lineage._wasserstein_dist")
+    @mock.patch("cellrank.tl._lineage._wasserstein_dist")
     def test_wasserstein(self, mocker, lineage: Lineage):
         try:
             _ = lineage.reduce(
@@ -762,7 +763,7 @@ class TestLineageNormalization:
         finally:
             mocker.assert_called_once()
 
-    @mock.patch("cellrank.tools._lineage._kl_div")
+    @mock.patch("cellrank.tl._lineage._kl_div")
     def test_kl_div(self, mocker, lineage: Lineage):
         try:
             _ = lineage.reduce(["foo", "bar"], dist_measure="kl_div", mode="dist")
@@ -771,7 +772,7 @@ class TestLineageNormalization:
         finally:
             mocker.assert_called_once()
 
-    @mock.patch("cellrank.tools._lineage._js_div")
+    @mock.patch("cellrank.tl._lineage._js_div")
     def test_js_div(self, mocker, lineage: Lineage):
         try:
             _ = lineage.reduce(["foo", "bar"], dist_measure="js_div", mode="dist")
@@ -780,7 +781,7 @@ class TestLineageNormalization:
         finally:
             mocker.assert_called_once()
 
-    @mock.patch("cellrank.tools._lineage._mutual_info")
+    @mock.patch("cellrank.tl._lineage._mutual_info")
     def test_mutual_info(self, mocker, lineage: Lineage):
         try:
             _ = lineage.reduce(["foo", "bar"], dist_measure="mutual_info", mode="dist")
@@ -789,7 +790,7 @@ class TestLineageNormalization:
         finally:
             mocker.assert_called_once()
 
-    @mock.patch("cellrank.tools._lineage._row_normalize")
+    @mock.patch("cellrank.tl._lineage._row_normalize")
     def test_equal(self, mocker, lineage: Lineage):
         try:
             _ = lineage.reduce(["foo", "bar"], dist_measure="equal", mode="dist")
@@ -799,7 +800,7 @@ class TestLineageNormalization:
             # should be twice, but we have extra check inside and we're mocking that does nothing
             mocker.assert_called_once()
 
-    @mock.patch("cellrank.tools._lineage._row_normalize")
+    @mock.patch("cellrank.tl._lineage._row_normalize")
     def test_row_normalize(self, mocker, lineage: Lineage):
         try:
             _ = lineage.reduce(["foo", "bar"], mode="scale")
@@ -808,7 +809,7 @@ class TestLineageNormalization:
         finally:
             mocker.assert_called_once()
 
-    @mock.patch("cellrank.tools._lineage._softmax")
+    @mock.patch("cellrank.tl._lineage._softmax")
     def test_softmax(self, mocker, lineage: Lineage):
         try:
             _ = lineage.reduce(["foo", "bar"], normalize_weights="softmax", mode="dist")

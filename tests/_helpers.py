@@ -3,24 +3,25 @@ import os
 from typing import Tuple, Union, Optional
 from pathlib import Path
 
-import numpy as np
-import pandas as pd
 import pytest
 from PIL import Image
-from sklearn.svm import SVR
-from scipy.sparse import spdiags, issparse, csr_matrix
-from scipy.sparse.linalg import norm
 
 import scanpy as sc
 import scvelo as scv
 from scanpy import logging as logg
 from anndata import AnnData
 
+import numpy as np
+import pandas as pd
+from sklearn.svm import SVR
+from scipy.sparse import spdiags, issparse, csr_matrix
+from scipy.sparse.linalg import norm
+
 import cellrank as cr
-from cellrank.tools._utils import _normalize
-from cellrank.utils._utils import _get_neighs, _get_neighs_params
-from cellrank.tools.kernels import VelocityKernel, ConnectivityKernel
-from cellrank.tools._constants import Direction, _transition
+from cellrank.tl._utils import _normalize
+from cellrank.ul._utils import _get_neighs, _get_neighs_params
+from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
+from cellrank.tl._constants import Direction, _transition
 
 
 def _jax_not_installed() -> bool:
@@ -272,8 +273,8 @@ def density_normalization(velo_graph, trans_graph):
 
 
 def _is_connected(c) -> bool:
-    from scipy.sparse import issparse
     import networkx as nx
+    from scipy.sparse import issparse
 
     G = nx.from_scipy_sparse_matrix(c) if issparse(c) else nx.from_numpy_array(c)
 

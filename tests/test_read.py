@@ -2,17 +2,18 @@
 from typing import Tuple, Callable
 from pathlib import Path
 
-import numpy as np
 import pytest
 
 import scanpy as sc
 from anndata import AnnData
 
+import numpy as np
+
 import cellrank as cr
-from cellrank.tools._colors import _create_categorical_colors
-from cellrank.tools._lineage import Lineage
-from cellrank.tools._constants import AbsProbKey, _colors, _lin_names
-from cellrank.tools.estimators._cflare import CFLARE
+from cellrank.tl._colors import _create_categorical_colors
+from cellrank.tl._lineage import Lineage
+from cellrank.tl._constants import AbsProbKey, _colors, _lin_names
+from cellrank.tl.estimators._cflare import CFLARE
 
 
 def test_fwd():
