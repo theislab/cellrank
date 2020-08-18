@@ -1,26 +1,28 @@
 # -*- coding: utf-8 -*-
-import pandas as pd
 import pytest
+from _helpers import create_model
 
 from anndata import AnnData
 
+import pandas as pd
+
 import cellrank as cr
-from _helpers import create_model
-from cellrank.tools.kernels import Kernel
-from cellrank.tools._constants import AbsProbKey, FinalStatesKey, _probs
+from cellrank.tl.kernels import Kernel
+from cellrank.tl._constants import AbsProbKey, FinalStatesKey, _probs
+from cellrank.tl._lineage_drivers import _gene_importance
 
 
 class TestGeneImportance:
     def test_invalid_n_perms(self, adata_cflare):
         model = create_model(adata_cflare)
         with pytest.raises(ValueError):
-            _ = cr.tl.gene_importance(
+            _ = _gene_importance(
                 adata_cflare, model, adata_cflare.var_names[:10], "0", n_perms=-1
             )
 
     def test_no_perms(self, adata_cflare):
         model = create_model(adata_cflare)
-        res = cr.tl.gene_importance(
+        res = _gene_importance(
             adata_cflare, model, adata_cflare.var_names[:10], "0", n_perms=None
         )
 
@@ -31,7 +33,7 @@ class TestGeneImportance:
 
     def test_perms_no_fdr_correction(self, adata_cflare):
         model = create_model(adata_cflare)
-        res = cr.tl.gene_importance(
+        res = _gene_importance(
             adata_cflare,
             model,
             adata_cflare.var_names,
@@ -45,7 +47,7 @@ class TestGeneImportance:
 
     def test_perms_fdr_correction(self, adata_cflare):
         model = create_model(adata_cflare)
-        res = cr.tl.gene_importance(
+        res = _gene_importance(
             adata_cflare, model, adata_cflare.var_names, "0", n_perms=10
         )
 
@@ -80,7 +82,7 @@ class TestLineageDrivers:
         cr.tl.lineage_drivers(adata_cflare, use_raw=False)
 
         for name in adata_cflare.obsm[AbsProbKey.FORWARD.s].names:
-            assert f"to {name} corr" in adata_cflare.var
+            assert f"to {name}" in adata_cflare.var
 
     def test_normal_run_raw(self, adata_cflare):
         adata_cflare.raw = adata_cflare.copy()
@@ -88,11 +90,11 @@ class TestLineageDrivers:
         cr.tl.lineage_drivers(adata_cflare, use_raw=True)
 
         for name in adata_cflare.obsm[AbsProbKey.FORWARD.s].names:
-            assert f"to {name} corr" in adata_cflare.raw.var
+            assert f"to {name}" in adata_cflare.raw.var
 
-    def test_not_inplace(self, adata_cflare):
+    def test_return_drivers(self, adata_cflare):
         cr.tl.lineages(adata_cflare)
-        res = cr.tl.lineage_drivers(adata_cflare, inplace=False, use_raw=False)
+        res = cr.tl.lineage_drivers(adata_cflare, return_drivers=True, use_raw=False)
 
         assert isinstance(res, pd.DataFrame)
         assert res.shape[0] == adata_cflare.n_vars
@@ -197,7 +199,7 @@ class TestCytoTrace:
         assert "correlates" in adata.var.keys()
 
     def test_normal_run_copy(self, adata: AnnData):
-        adata = cr.tl.cyto_trace(adata, copy=True)
+        adata = cr.tl.cyto_trace(adata, inplace=False)
 
         assert "gcs" in adata.obs.keys()
         assert "gene_corr" in adata.var.keys()

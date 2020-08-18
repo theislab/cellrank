@@ -3,7 +3,7 @@ import pytest
 
 from matplotlib.colors import is_color_like
 
-from cellrank.tools._colors import _create_categorical_colors
+from cellrank.tl._colors import _create_categorical_colors
 
 
 class TestColors:
