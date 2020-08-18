@@ -1,6 +1,8 @@
+# -*- coding: utf-8 -*-
 from anndata import AnnData
-from cellrank.tools import GPCCA
-from cellrank.tools._constants import Direction, _transition
+
+from cellrank.tl import GPCCA
+from cellrank.tl._constants import Direction, _transition
 
 
 class TestLoad:
