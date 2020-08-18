@@ -22,7 +22,10 @@ from pygam import (
     ExpectileGAM,
 )
 from pygam.terms import s
+from pygam.utils import ylogydu
+from scipy.stats import nbinom
 from sklearn.base import BaseEstimator
+from pygam.distributions import Distribution, divide_weights, multiply_weights
 from scipy.ndimage.filters import convolve
 
 import matplotlib as mpl
@@ -53,6 +56,7 @@ _valid_link_functions = ()
 class GamDistribution(ModeEnum):  # noqa
     NORMAL = "normal"
     BINOMIAL = "binomial"
+    NEGATIVE_BINOMIAL = "nb"
     POISSON = "poisson"
     GAMMA = "gamma"
     GAUSS = "gaussian"
@@ -1076,7 +1080,7 @@ class GAM(BaseModel):
         adata: AnnData,
         n_splines: Optional[int] = 10,
         spline_order: int = 3,
-        distribution: str = "gamma",
+        distribution: str = "nb",
         link: str = "log",
         max_iter: int = 2000,
         expectile: Optional[float] = None,
@@ -1094,8 +1098,11 @@ class GAM(BaseModel):
         )
         link = GamLinkFunction(link)
         distribution = GamDistribution(distribution)
+
         if distribution == GamDistribution.GAUSS:
             distribution = GamDistribution.NORMAL
+        elif distribution == GamDistribution.NEGATIVE_BINOMIAL:
+            distribution = NegativeBinomial()
 
         if expectile is not None:
             if not (0 < expectile < 1):
@@ -1115,7 +1122,11 @@ class GAM(BaseModel):
                 distribution, link
             ]  # doing it like this ensure that user can specify scale
             kwargs["link"] = link.s
-            kwargs["distribution"] = distribution.s
+            kwargs["distribution"] = (
+                distribution.s
+                if isinstance(distribution, GamDistribution)
+                else distribution
+            )
             model = gam(
                 term,
                 max_iter=max_iter,
@@ -1265,7 +1276,7 @@ class GAMR(BaseModel):
     smoothing_param
         Smoothing parameter. Increasing this increases the smootheness of splines.
     distribution
-        Family in `rpy2.robjects.r`, such as `'gaussian'` or `'poisson'`.
+        Family in `rpy2.robjects.r`, such as `'gaussian'`, 'poisson'` or `'nb'`.
     backend
         R library used to fit GAMs. Valid options are `'mgcv'` and `'gam'`.
         Option `'gam'` ignores the number of splines, as well as family and smoothing parameter.
@@ -1330,7 +1341,7 @@ class GAMR(BaseModel):
         """  # noqa
 
         from rpy2 import robjects
-        from rpy2.robjects import pandas2ri, Formula
+        from rpy2.robjects import Formula, pandas2ri
 
         super().fit(x, y, w, **kwargs)
 
@@ -1467,9 +1478,10 @@ def _maybe_import_r_lib(
 
     try:
         from logging import ERROR
+
         from rpy2.robjects import r
-        from rpy2.rinterface_lib.callbacks import logger
         from rpy2.robjects.packages import PackageNotInstalledError, importr
+        from rpy2.rinterface_lib.callbacks import logger
 
         logger.setLevel(ERROR)
         r["options"](warn=-1)
@@ -1489,3 +1501,111 @@ def _maybe_import_r_lib(
         raise RuntimeError(
             f"Install R library `{name!r}` first as `install.packages({name!r}).`"
         ) from e
+
+
+class NegativeBinomial(Distribution):
+    """
+    Negative binomial distribution.
+
+    Parameters
+    ----------
+    levels
+        Number of trials.
+    """
+
+    def __init__(self, levels: Optional[int] = 1):
+        super().__init__(name="nb", scale=1.0)
+        self.levels = 1 if levels is None else levels
+        if self.levels < 0:
+            raise ValueError(
+                f"Expected number of trials to be >= 0, got `{self.levels}`."
+            )
+        self._exclude.append("scale")
+
+    @d.dedent
+    def log_pdf(
+        self, y: np.ndarray, mu: np.ndarray, weights: Optional[np.ndarray] = None
+    ) -> np.ndarray:  # noqa
+        """
+        Computes the log of the pmf of the values under the current distribution.
+
+        Parameters
+        ----------
+        %(nb_y)s
+        %(nb_mu)s
+        weights : array-like shape (n,) or None, default: None
+            Sample weights, array of shape `(n,)`. If `None`, defaults to array of 1s.
+
+        Returns
+        -------
+            The log pmf.
+        """
+        p = mu / self.levels
+
+        return nbinom.logpmf(y, self.levels, p)
+
+    @divide_weights
+    @d.dedent
+    def V(self, mu: np.ndarray, alpha: float = 1.0) -> np.ndarray:
+        """
+        Variance function of negative binomial distribution.
+
+        Parameters
+        ----------
+        %(nb_mu)s
+        alpha
+            The ancillary parameter for the negative binomial variance function.
+            :paramref:`alpha` is assumed to be nonstochastic.
+
+        Returns
+        -------
+            The variance, array of shape `(n,)`.
+        """
+
+        return mu + alpha * mu ** 2
+
+    @multiply_weights
+    @d.dedent
+    def deviance(self, y: np.ndarray, mu: np.ndarray, scaled=True) -> np.ndarray:
+        """
+        Model deviance.
+
+        Parameters
+        ----------
+        %(nb_y)s
+        %(nb_mu)s
+        scaled
+            Whether to divide the deviance by the distribution scaled.
+
+        Returns
+        -------
+           The deviances, array of shape `(n,)`.
+        """
+        dev = 2 * (
+            ylogydu(y, mu)
+            - (y + self.levels) * np.log((self.levels + y) / (self.levels + mu))
+        )
+        if scaled:
+            dev /= self.scale
+
+        return dev
+
+    @d.dedent
+    def sample(self, mu: np.ndarray) -> np.ndarray:
+        """
+        Return random samples from this distribution.
+
+        Parameters
+        ----------
+        %(nb_mu)s
+
+        Returns
+        -------
+            Random samples, array of the same shape as :paramref:`mu`.
+        """
+
+        success_probability = mu / self.levels
+
+        return np.random.negative_binomial(
+            n=self.levels, p=success_probability, size=None
+        )

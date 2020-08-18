@@ -87,6 +87,14 @@ backward_mode
 _copy = """Return a copy of self."""
 _root = "root"
 _final = "final"
+_nb_y = """\
+y
+    Target values, array of of shape `(n,)`.
+"""
+_nb_mu = """\
+mu
+    Expected values, array of of shape `(n,)`.
+"""
 
 
 def inject_docs(**kwargs):
@@ -116,4 +124,6 @@ d = DocstringProcessor(
     density_correction=_density_correction,
     velocity_mode=_velocity_mode,
     velocity_backward_mode=_velocity_backward_mode,
+    nb_y=_nb_y,
+    nb_mu=_nb_mu,
 )
