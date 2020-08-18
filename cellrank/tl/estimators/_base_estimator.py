@@ -223,6 +223,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         absorption_time_moments: Optional[str] = "first",
         n_jobs: Optional[int] = None,
         backend: str = "loky",
+        show_progress_bar: bool = False,
         tol: float = 1e-5,
     ) -> None:
         """
@@ -258,6 +259,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             we recommend higher number (>=4) of jobs in order to fully saturate the cores.
         backend
             Which backend to use for multiprocessing. See :class:`joblib.Parallel` for valid options.
+        show_progress_bar
+            Whether to show progress bar when the solver isn't a direct one.
         tol
             Convergence tolerance for the iterative solver. The default is fine for most cases, only consider
             decreasing this for severely ill-conditioned matrices.
@@ -378,6 +381,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                     backend=backend,
                     tol=tol,
                     use_eye=True,
+                    show_progress_bar=show_progress_bar,
                 )
             )
             abs_time_mean = np.ones((self.adata.n_obs,), dtype=np.float32)
@@ -393,6 +397,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 backend=backend,
                 tol=tol,
                 use_eye=True,
+                show_progress_bar=show_progress_bar,
             )
             # take individual solutions and piece them together to get absorption probabilities towards the classes
 
