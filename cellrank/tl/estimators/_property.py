@@ -361,6 +361,7 @@ class VectorPlottable(KernelHolder, Property):
         color = list(V_.T)
         if cluster_key is not None:
             color = [cluster_key] + color
+        kwargs["cmap"] = kwargs.pop("cmap", "viridis")
 
         logg.debug(f"Showing `{use}` {name}vectors")
 

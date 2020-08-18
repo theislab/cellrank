@@ -1069,6 +1069,8 @@ class GAM(BaseModel):
     link
         Name of the link function. Available functions can be found
         `here <https://pygam.readthedocs.io/en/latest/notebooks/tour_of_pygam.html#Link-function:>`_.
+    r
+        Number of successes when :paramref:`distribution` is `'nb'`.
     max_iter
         Maximum number of iterations for optimization.
     expectile
@@ -1079,7 +1081,7 @@ class GAM(BaseModel):
         use the :paramref:`model`'s method.
     grid
         Whether to perform a grid search. Keys correspond to a parameter names and values to range to be searched.
-        If an empty :class:`dict`, don't perform a grid search. If `None`, uses a default grid.
+        If `'default'`, use the default grid. If `None`, don't perform grid search.
     spline_kwargs
         Keyword arguments for :class:`pygam.s`.
     **kwargs
@@ -1093,10 +1095,11 @@ class GAM(BaseModel):
         spline_order: int = 3,
         distribution: str = "nb",
         link: str = "log",
+        r: Optional[float] = None,
         max_iter: int = 2000,
         expectile: Optional[float] = None,
         use_default_conf_int: bool = False,
-        grid: Optional[Mapping] = MappingProxyType({}),
+        grid: Optional[Union[str, Mapping]] = None,
         spline_kwargs: Mapping = MappingProxyType({}),
         **kwargs,
     ):
@@ -1113,7 +1116,7 @@ class GAM(BaseModel):
         if distribution == GamDistribution.GAUSS:
             distribution = GamDistribution.NORMAL
         elif distribution == GamDistribution.NEGATIVE_BINOMIAL:
-            distribution = NegativeBinomial()
+            distribution = NegativeBinomial(r=r)
 
         if expectile is not None:
             if not (0 < expectile < 1):
@@ -1123,7 +1126,7 @@ class GAM(BaseModel):
             if distribution != "normal" or link != "identity":
                 logg.warning(
                     f"Expectile GAM works only with `normal` distribution and `identity` link function,"
-                    f"found `{distribution!r}` distribution and {link!r} link functions."
+                    f"found `{distribution!r}` distribution and `{link!r}` link functions."
                 )
             model = ExpectileGAM(
                 term, expectile=expectile, max_iter=max_iter, verbose=False, **kwargs
@@ -1146,16 +1149,16 @@ class GAM(BaseModel):
             )
         super().__init__(adata, model=model)
         self._use_default_conf_int = use_default_conf_int
-        self._grid = object()  # sentinel value, `None` performs a grid search
 
         if grid is None:
             self._grid = None
-        elif isinstance(grid, (dict, MappingProxyType)):
-            if len(grid):
-                self._grid = dict(grid)
+        elif isinstance(grid, dict):
+            self._grid = _copy(grid)
+        elif isinstance(grid, str):
+            self._grid = object() if grid == "default" else None
         else:
             raise TypeError(
-                f"Expected `grid` to be `dict` or `None`, found `{type(grid).__name__!r}`."
+                f"Expected `grid` to be `dict`, `str` or `None`, found `{type(grid).__name__!r}`."
             )
 
     @d.dedent
@@ -1182,11 +1185,11 @@ class GAM(BaseModel):
         super().fit(x, y, w, **kwargs)
 
         if self._grid is not None:
-
+            # use default grid
             grid = {} if not isinstance(self._grid, dict) else self._grid
+            print(grid)
             try:
                 # workaround for: https://github.com/dswah/pyGAM/issues/273
-                self.model.fit(self.x, self.y, weights=self.w, **kwargs)
                 self.model.gridsearch(
                     self.x,
                     self.y,
@@ -1198,6 +1201,7 @@ class GAM(BaseModel):
                 )
                 return self
             except Exception as e:
+                self.model.fit(self.x, self.y, weights=self.w, **kwargs)
                 logg.error(
                     f"Grid search failed, reason: `{e}`. Fitting with default values"
                 )
@@ -1537,17 +1541,19 @@ class NegativeBinomial(Distribution):
 
     Parameters
     ----------
-    levels
-        Number of trials.
+    r
+        Number of successes.
     """
 
-    def __init__(self, levels: Optional[int] = 1):
+    def __init__(self, r: float):
         super().__init__(name="nb", scale=1.0)
-        self.levels = 1 if levels is None else levels
-        if self.levels < 0:
+        if r is None:
             raise ValueError(
-                f"Expected number of trials to be >= 0, got `{self.levels}`."
+                "Number of successes `r` must an `int` or `float`, got `None`."
             )
+        if r <= 0:
+            raise ValueError(f"Expected number of successes to be > 0, got `{r}`.")
+        self._r = r
         self._exclude.append("scale")
 
     @d.dedent
@@ -1568,9 +1574,9 @@ class NegativeBinomial(Distribution):
         -------
             The log pmf.
         """
-        p = mu / self.levels
+        p = mu / (mu + self._r)  # success prob
 
-        return nbinom.logpmf(y, self.levels, p)
+        return nbinom.logpmf(y, 1, p)
 
     @divide_weights
     @d.dedent
@@ -1590,9 +1596,9 @@ class NegativeBinomial(Distribution):
             The variance, array of shape `(n,)`.
         """
         if alpha is None:
-            alpha = 1.0 / self.levels
+            alpha = 1 / self._r
 
-        return mu + alpha * mu ** 2
+        return mu + alpha * (mu ** 2)
 
     @multiply_weights
     @d.dedent
@@ -1612,8 +1618,7 @@ class NegativeBinomial(Distribution):
            The deviances, array of shape `(n,)`.
         """
         dev = 2 * (
-            ylogydu(y, mu)
-            - (y + self.levels) * np.log((self.levels + y) / (self.levels + mu))
+            ylogydu(y, mu) - (y + self._r) * np.log((self._r + y) / (self._r + mu))
         )
         if scaled:
             dev /= self.scale
@@ -1634,8 +1639,12 @@ class NegativeBinomial(Distribution):
             Random samples, array of the same shape as :paramref:`mu`.
         """
 
-        success_probability = mu / self.levels
+        p = mu / (mu + self._r)  # success prob
 
-        return np.random.negative_binomial(
-            n=self.levels, p=success_probability, size=None
-        )
+        return np.random.negative_binomial(n=1, p=p, size=None)
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(r={self._r})"
+
+    def __str__(self):
+        return repr(self)
