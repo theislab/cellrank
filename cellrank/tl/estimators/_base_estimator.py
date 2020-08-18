@@ -220,7 +220,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         check_irred: bool = False,
         solver: Optional[str] = None,
         use_petsc: Optional[bool] = None,
-        absorption_time_moments: Optional[str] = "first",
+        absorption_time_moments: Optional[str] = None,
         n_jobs: Optional[int] = None,
         backend: str = "loky",
         tol: float = 1e-5,
