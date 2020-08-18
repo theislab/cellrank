@@ -3,20 +3,22 @@ import os
 from typing import Tuple, Union, Callable
 from pathlib import Path
 
-import numpy as np
 import pytest
+from _helpers import create_model, resize_images_to_same_sizes
 from packaging import version
+
+import scvelo as scv
+from anndata import AnnData
+
+import numpy as np
 
 import matplotlib.cm as cm
 from matplotlib.testing import setup
 from matplotlib.testing.compare import compare_images
 
-import scvelo as scv
-from anndata import AnnData
-
 import cellrank as cr
-from _helpers import create_model, resize_images_to_same_sizes
-from cellrank.tools import GPCCA, CFLARE
+import cellrank.pl._lineages
+from cellrank.tl import GPCCA, CFLARE
 
 setup()
 
@@ -1372,23 +1374,25 @@ class TestGPCCA:
 class TestLineages:
     @compare()
     def test_scvelo_lineages(self, adata: AnnData, fpath: str):
-        cr.pl.lineages(adata, dpi=DPI, save=fpath)
+        cellrank.pl._lineages.lineages(adata, dpi=DPI, save=fpath)
 
     @compare()
     def test_scvelo_lineages_subset(self, adata: AnnData, fpath: str):
-        cr.pl.lineages(adata, lineages=["1"], dpi=DPI, save=fpath)
+        cellrank.pl._lineages.lineages(adata, lineages=["1"], dpi=DPI, save=fpath)
 
     @compare()
     def test_scvelo_lineages_time(self, adata: AnnData, fpath: str):
-        cr.pl.lineages(adata, mode="time", dpi=DPI, save=fpath)
+        cellrank.pl._lineages.lineages(adata, mode="time", dpi=DPI, save=fpath)
 
     @compare()
     def test_scvelo_lineages_cmap(self, adata: AnnData, fpath: str):
-        cr.pl.lineages(adata, cmap=cm.inferno, dpi=DPI, save=fpath)
+        cellrank.pl._lineages.lineages(adata, cmap=cm.inferno, dpi=DPI, save=fpath)
 
     @compare()
     def test_scvelo_lineages_subset(self, adata: AnnData, fpath: str):
-        cr.pl.lineages(adata, cluster_key="clusters", dpi=DPI, save=fpath)
+        cellrank.pl._lineages.lineages(
+            adata, cluster_key="clusters", dpi=DPI, save=fpath
+        )
 
 
 class TestSimilarityPlot:
@@ -1448,3 +1452,15 @@ class TestLineage:
     @compare(kind="lineage")
     def test_pie_t(self, lineage: cr.tl.Lineage, fpath: str):
         lineage.T.plot_pie(dpi=DPI, save=fpath)
+
+
+# TODO: more model tests + cr.pl.lineage_drivers
+class TestModel:
+    @compare()
+    def test_model_default(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        model.prepare(adata.var_names[0], "0")
+        model.fit()
+        model.predict()
+        model.confidence_interval()
+        model.plot(save=fpath)

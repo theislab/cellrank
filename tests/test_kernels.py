@@ -1,11 +1,5 @@
 # -*- coding: utf-8 -*-
-import numpy as np
 import pytest
-
-import anndata
-from scanpy import Neighbors
-
-import cellrank as cr
 from _helpers import (
     bias_knn,
     create_kernels,
@@ -14,17 +8,24 @@ from _helpers import (
     jax_not_installed_skip,
     random_transition_matrix,
 )
-from cellrank.tools._utils import _normalize
-from cellrank.utils._utils import _get_neighs, _get_neighs_params
-from cellrank.tools.kernels import (
+
+import anndata
+from scanpy import Neighbors
+
+import numpy as np
+
+import cellrank as cr
+from cellrank.tl._utils import _normalize
+from cellrank.ul._utils import _get_neighs, _get_neighs_params
+from cellrank.tl.kernels import (
     Constant,
     PalantirKernel,
     VelocityKernel,
     PrecomputedKernel,
     ConnectivityKernel,
 )
-from cellrank.tools._constants import Direction, _transition
-from cellrank.tools.kernels._base_kernel import KernelAdd, KernelMul, _is_bin_mult
+from cellrank.tl._constants import Direction, _transition
+from cellrank.tl.kernels._base_kernel import KernelAdd, KernelMul, _is_bin_mult
 
 _rtol = 1e-6
 
