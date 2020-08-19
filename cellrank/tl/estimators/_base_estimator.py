@@ -430,6 +430,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             ),
         )
 
+        extra_msg = ""
         if pt is not None:
             self._set(A.ABS_PT, pd.Series(pt, index=self.adata.obs.index))
             self.adata.obs["absorption_pseudotime"] = pt
