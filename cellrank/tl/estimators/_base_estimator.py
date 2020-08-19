@@ -7,6 +7,7 @@ from copy import copy, deepcopy
 from math import ceil
 from typing import Any, Dict, Union, TypeVar, Optional, Sequence
 from pathlib import Path
+from datetime import datetime
 
 import scvelo as scv
 
@@ -25,7 +26,6 @@ from cellrank.ul._docs import d, inject_docs
 from cellrank.tl._utils import (
     _pairwise,
     _vec_mat_corr,
-    _min_max_scale,
     _process_series,
     _get_cat_and_null_indices,
     _merge_categorical_series,
@@ -115,6 +115,9 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         self._G2M_score = None
         self._S_score = None
 
+        self._absorption_time_mean = None
+        self._absorption_time_var = None
+
         if read_from_adata:
             self._read_from_adata()
 
@@ -135,6 +138,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         colors = self._set_or_debug(_colors(self._abs_prob_key), self.adata.uns)
 
         abs_probs = self._get(P.ABS_PROBS)
+
         if abs_probs is not None:
             if len(names) != abs_probs.shape[1]:
                 logg.debug(
@@ -223,7 +227,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         absorption_time_moments: Optional[str] = None,
         n_jobs: Optional[int] = None,
         backend: str = "loky",
-        show_progress_bar: bool = False,
+        show_progress_bar: bool = True,
         tol: float = 1e-5,
     ) -> None:
         """
@@ -355,52 +359,40 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
         logg.debug(f"Found `{n_cells}` cells and `{s.shape[1]}` absorbing states")
 
-        mat_x, abs_time_mean, abs_time_var = None, None, None
+        # solve the linear system of equations
+        mat_x = _solve_lin_system(
+            q,
+            s,
+            solver=solver,
+            use_petsc=use_petsc,
+            n_jobs=n_jobs,
+            backend=backend,
+            tol=tol,
+            use_eye=True,
+            show_progress_bar=show_progress_bar,
+        )
 
-        if absorption_time_moments == "second":
-            mat_x, abs_time_mean, abs_time_var = _calculate_absorption_time_moments(
+        abs_time_mean, pt, abs_time_var, pt_uncertainty = None, None, None, None
+        if absorption_time_moments is not None:
+            (
+                abs_time_mean,
+                pt,
+                abs_time_var,
+                pt_uncertainty,
+            ) = _calculate_absorption_time_moments(
                 q,
-                s,
-                rec_indices,
                 trans_indices,
+                n=t.shape[0],
                 solver=solver,
                 use_petsc=use_petsc,
                 n_jobs=n_jobs,
                 backend=backend,
                 tol=tol,
-                use_eye=False,
-            )
-        elif absorption_time_moments == "first":
-            mean_time = _min_max_scale(
-                _solve_lin_system(
-                    q,
-                    np.ones((q.shape[0], 1), dtype=np.float32),
-                    solver=solver,
-                    use_petsc=use_petsc,
-                    n_jobs=1,
-                    backend=backend,
-                    tol=tol,
-                    use_eye=True,
-                    show_progress_bar=show_progress_bar,
-                )
-            )
-            abs_time_mean = np.ones((self.adata.n_obs,), dtype=np.float32)
-            abs_time_mean[trans_indices] = 1 - mean_time.squeeze()
-        if mat_x is None:
-            # solve the linear system of equations
-            mat_x = _solve_lin_system(
-                q,
-                s,
-                solver=solver,
-                use_petsc=use_petsc,
-                n_jobs=n_jobs,
-                backend=backend,
-                tol=tol,
-                use_eye=True,
                 show_progress_bar=show_progress_bar,
+                calculate_variance=absorption_time_moments == "second",
             )
-            # take individual solutions and piece them together to get absorption probabilities towards the classes
 
+        # take individual solutions and piece them together to get absorption probabilities towards the classes
         macro_ix_helper = np.cumsum(
             [0] + [len(indices) for indices in lookup_dict.values()]
         )
@@ -438,16 +430,29 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             ),
         )
 
-        if abs_time_mean is not None:
-            self._set(
-                A.MEAN_ABS_TIME, pd.Series(abs_time_mean, index=self.adata.obs.index)
+        if pt is not None:
+            self._set(A.ABS_PT, pd.Series(pt, index=self.adata.obs.index))
+            self.adata.obs["absorption_pseudotime"] = pt
+            extra_msg = (
+                f"       `adata.obs['absorption_pseudotime']`\n"
+                f"       `.{P.ABS_PT}`\n"
             )
-        if abs_time_var is not None:
+        if pt_uncertainty is not None:
             self._set(
-                A.VAR_ABS_TIME, pd.Series(abs_time_var, index=self.adata.obs.index)
+                A.ABS_PT_UNCERT, pd.Series(pt_uncertainty, index=self.adata.obs.index)
             )
+            self.adata.obs["absorption_pseudotime_uncert"] = pt_uncertainty
+            extra_msg = (
+                f"       `adata.obs['absorption_pseudotime']`\n"
+                f"       `adata.obs['absorption_pseudotime_uncert']`\n"
+                f"       `.{P.ABS_PT}`\n"
+                f"       `.{P.ABS_PT_UNCERT}\n"
+            )
+        # the original values
+        self._absorption_time_mean = abs_time_mean
+        self._absorption_time_var = abs_time_var
 
-        self._write_absorption_probabilities(time=start)
+        self._write_absorption_probabilities(time=start, extra_msg=extra_msg)
 
     @d.get_sectionsf("lineage_drivers", sections=["Parameters", "Returns"])
     @d.get_full_descriptionf("lineage_drivers")
@@ -814,7 +819,9 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         if compute_absorption_probabilities:
             self.compute_absorption_probabilities(keys=keys)
 
-    def _write_absorption_probabilities(self, time: float) -> None:
+    def _write_absorption_probabilities(
+        self, time: datetime, extra_msg: str = ""
+    ) -> None:
         self.adata.obsm[self._abs_prob_key] = self._get(P.ABS_PROBS)
 
         abs_prob = self._get(P.ABS_PROBS)
@@ -826,6 +833,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         logg.info(
             f"Adding `adata.obsm[{self._abs_prob_key!r}]`\n"
             f"       `adata.obs[{_dp(self._abs_prob_key)!r}]`\n"
+            f"{extra_msg}"
             f"       `.{P.ABS_PROBS}`\n"
             f"       `.{P.DIFF_POT}`\n"
             "    Finish",
