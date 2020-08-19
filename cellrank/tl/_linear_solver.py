@@ -423,15 +423,13 @@ def _solve_lin_system(
             use_petsc = False
 
     if use_eye:
-        if issparse(mat_a):
-            mat_a = speye(mat_a.shape[0]) - mat_a
-        else:
-            mat_a = np.eye(mat_a.shape[0]) - mat_a
+        mat_a = (
+            speye(mat_a.shape[0]) if issparse(mat_a) else np.eye(mat_a.shape[0])
+        ) - mat_a
 
     if solver == "direct" or n_jobs == 1:
-        logg.debug("Solving the linear system using direct matrix factorization")
-
         if use_petsc:
+            logg.debug("Solving the linear system directly using `PETSc`")
             return _petsc_mat_solve(
                 mat_a, mat_b, solver=solver, preconditioner=preconditioner, tol=tol
             )
@@ -442,6 +440,8 @@ def _solve_lin_system(
         if issparse(mat_b):
             logg.debug("Densifying `B` for scipy direct solver")
             mat_b = mat_b.toarray()
+
+        logg.debug("Solving the linear system directly using `scipy`")
 
         return solve(mat_a, mat_b)
 

@@ -37,7 +37,8 @@ from cellrank.tl._colors import (
     _convert_to_hex_colors,
     _insert_categorical_colors,
 )
-from cellrank.tl._linear_solver import _invert_matrix
+from cellrank.tl._linear_solver import _solve_lin_system
+from cellrank.tl.kernels._utils import _filter_kwargs
 
 AnnData = TypeVar("AnnData")
 ColorLike = TypeVar("ColorLike")
@@ -49,16 +50,16 @@ KernelDirection = TypeVar("KernelDirection")
 EPS = np.finfo(np.float64).eps
 
 
-def _pairwise(iterable):
+def _pairwise(iterable: Iterable) -> zip:
     """Return pairs of elements from an iterable."""
     a, b = tee(iterable)
     next(b, None)
     return zip(a, b)
 
 
-def _min_max_scale(c: np.ndarray) -> np.ndarray:
-    minn, maxx = np.nanmin(c), np.nanmax(c)
-    return (c - minn) / (maxx - minn)
+def _min_max_scale(x: np.ndarray) -> np.ndarray:
+    minn, maxx = np.nanmin(x), np.nanmax(x)
+    return (x - minn) / (maxx - minn)
 
 
 def _create_root_final_annotations(
@@ -1509,32 +1510,73 @@ def _densify_squeeze(x: Union[spmatrix, np.ndarray], dtype=np.float32) -> np.nda
 
 def _calculate_absorption_time_moments(
     q: Union[np.ndarray, spmatrix],
-    s: Union[np.ndarray, spmatrix],
-    rec_indices: np.ndarray,
     trans_indices: np.ndarray,
+    n: int,
+    calculate_variance: bool = False,
     **kwargs,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    def calculate() -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        I = speye(q.shape[0])  # noqa
-        N = _invert_matrix(I - q, **kwargs)  # fundamental matrix
+) -> Tuple[np.ndarray, np.ndarray, Optional[np.ndarray], Optional[np.ndarray]]:
+    """
+    Calculate the mean time until absorption and optionally its variance.
 
-        abs_probs = N @ s
-        mean = N.dot(np.ones(N.shape[0]))
-        var = (2 * N - I).dot(mean) - (mean ** 2)
+    Parameters
+    ----------
+    q
+        Transient-transient submatrix of the transition matrix.
+    trans_indices
+        Transient indices.
+    n
+        Number of states of the full transition matrix.
+    calculate_variance
+        Whether to calculate also the variance of time to absorption, not only mean.
+    **kwargs
+        Keyword arguments for :func:`cellrank.tl._lin_solver._solver_lin_system`.
 
-        return abs_probs, mean, np.array(var, copy=False).squeeze()
+    Returns
+    -------
+        Mean time until absorption, pseudotime based on the mean time, variance of time to absorption and it's scaled
+        version. If :paramref:`calculate_variance` `=False`, then these values are `None`.
+    """
 
-    ap, m, v = calculate()
-    m, v = _min_max_scale(m), _min_max_scale(v)
+    n_jobs = kwargs.pop("n_jobs", None)
+    solve_kwargs = _filter_kwargs(_solve_lin_system, **kwargs)
 
-    n = len(rec_indices) + len(trans_indices)
+    logg.debug("Calculating mean time to absorption")
+    m = _solve_lin_system(
+        q,
+        np.ones((q.shape[0],), dtype=np.float32),
+        n_jobs=1,
+        use_eye=True,
+        **solve_kwargs,
+    ).squeeze()
     mean = np.ones(n, dtype=np.float32)
-    var = np.zeros(n, dtype=np.float32)
+    pseudotime = mean.copy()
 
-    mean[trans_indices] = 1 - m
-    var[trans_indices] = v
+    mean[trans_indices] = m
+    pseudotime[trans_indices] = 1 - _min_max_scale(m)
 
-    return ap, mean, var
+    if calculate_variance:
+        logg.debug("Calculating variance of time to absorption")
+
+        I = speye(q.shape[0])  # noqa
+        A_t = (I + q).T
+        B_t = (I - q).T
+
+        logg.debug("Solving equation (1/2)")
+        X = _solve_lin_system(A_t, B_t, n_jobs=n_jobs, **kwargs).T
+        y = m - X @ (m ** 2)
+
+        logg.debug("Solving equation (2/2)")
+        v = _solve_lin_system(X, y, use_eye=False, n_jobs=1, **solve_kwargs).squeeze()
+
+        var = np.zeros(n, dtype=np.float32)
+        pseudotime_uncertainty = var.copy()
+
+        var[trans_indices] = v
+        pseudotime_uncertainty[trans_indices] = _min_max_scale(v)
+    else:
+        var = pseudotime_uncertainty = None
+
+    return mean, pseudotime, var, pseudotime_uncertainty
 
 
 class RandomKeys:
