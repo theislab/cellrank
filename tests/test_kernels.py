@@ -1044,14 +1044,14 @@ class TestTransitionProbabilities:
         backward = True
 
         # compute pearson correlations using scvelo
-        velo_graph = (adata.uns["velocity_graph"] + adata.uns["velocity_graph_neg"]).T
+        velo_graph = adata.uns["velocity_graph"] + adata.uns["velocity_graph_neg"]
 
         # compute pearson correlations using cellrak
         vk = VelocityKernel(adata, backward=backward)
         vk.compute_transition_matrix(mode="deterministic")
         pearson_correlations_cr = vk.pearson_correlations
 
-        assert np.allclose((velo_graph - pearson_correlations_cr).data, 0, atol=1e-5)
+        assert np.allclose((velo_graph.T - pearson_correlations_cr).data, 0, atol=1e-5)
 
     def test_transition_probabilities_fwd(self, adata):
         # test whether transition probabilities in cellrank match those from scvelo, forward case
