@@ -130,7 +130,7 @@ class KernelExpression(ABC):
         Returns
         -------
         None
-            Nothing, just updates the transition matrix and optionally normalizes it.
+            Nothing, just updates the :paramref:`transition_matrix` and optionally normalizes it.
         """
 
         if self._parent is None:

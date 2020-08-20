@@ -24,8 +24,8 @@ class A(PrettyEnum):
     COARSE_T = "_coarse_T"
     COARSE_INIT_D = "_coarse_init_dist"
     COARSE_STAT_D = "_coarse_stat_dist"
-    ABS_PT = "_mean_abs_time"
-    ABS_PT_UNCERT = "_abs_pt_uncert"
+    ABS_PT = "_abs_pt"
+    ABS_PT_VAR = "_abs_pt_var"
     LIN_DRIVERS = "_lin_drivers"
 
 
@@ -48,7 +48,7 @@ class P(PrettyEnum):
     COARSE_INIT_D = "coarse_initial_distribution"
     COARSE_STAT_D = "coarse_stationary_distribution"
     ABS_PT = "absorption_pseudotime"
-    ABS_PT_UNCERT = "absorption_pseudotime_uncertainty"
+    ABS_PT_VAR = "absorption_pseudotime_variance"
     LIN_DRIVERS = "lineage_drivers"
 
 

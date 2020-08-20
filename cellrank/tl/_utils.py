@@ -1533,8 +1533,8 @@ def _calculate_absorption_time_moments(
 
     Returns
     -------
-        Mean time until absorption, pseudotime based on the mean time, variance of time to absorption and it's scaled
-        version. If :paramref:`calculate_variance` `=False`, then these values are `None`.
+        Mean time until absorption, pseudotime based on the mean time and it's variance.
+        If :paramref:`calculate_variance` `=False`, then these values are `None`.
     """
 
     n_jobs = kwargs.pop("n_jobs", None)
@@ -1569,14 +1569,14 @@ def _calculate_absorption_time_moments(
         v = _solve_lin_system(X, y, use_eye=False, n_jobs=1, **solve_kwargs).squeeze()
 
         var = np.zeros(n, dtype=np.float32)
-        pseudotime_uncertainty = var.copy()
+        pseudotime_var = var.copy()
 
         var[trans_indices] = v
-        pseudotime_uncertainty[trans_indices] = _min_max_scale(v)
+        pseudotime_var[trans_indices] = v / ((np.nanmax(m) - np.nanmin(m)) ** 2)
     else:
-        var = pseudotime_uncertainty = None
+        var = pseudotime_var = None
 
-    return mean, pseudotime, var, pseudotime_uncertainty
+    return mean, pseudotime, var, pseudotime_var
 
 
 class RandomKeys:
