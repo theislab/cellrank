@@ -37,7 +37,8 @@ from cellrank.tl._colors import (
     _convert_to_hex_colors,
     _insert_categorical_colors,
 )
-from cellrank.tl._linear_solver import _invert_matrix
+from cellrank.tl._linear_solver import _solve_lin_system
+from cellrank.tl.kernels._utils import _filter_kwargs
 
 AnnData = TypeVar("AnnData")
 ColorLike = TypeVar("ColorLike")
@@ -86,16 +87,28 @@ class RandomKeys:
                     pass
 
 
-def _pairwise(iterable):
+def _pairwise(iterable: Iterable) -> zip:
     """Return pairs of elements from an iterable."""
     a, b = tee(iterable)
     next(b, None)
     return zip(a, b)
 
 
-def _min_max_scale(c: np.ndarray) -> np.ndarray:
-    minn, maxx = np.nanmin(c), np.nanmax(c)
-    return (c - minn) / (maxx - minn)
+def _min_max_scale(x: np.ndarray) -> np.ndarray:
+    """
+    Scale a 1D array to 0-1 range.
+
+    Parameters
+    ----------
+    x
+        Array to be scaled.
+
+    Returns
+    -------
+        The scaled array.
+    """
+    minn, maxx = np.nanmin(x), np.nanmax(x)
+    return (x - minn) / (maxx - minn)
 
 
 def _create_root_final_annotations(
@@ -1520,9 +1533,8 @@ def _get_cat_and_null_indices(
 
 
 def _check_estimator_type(estimator: Any) -> None:
-    from cellrank.tl.estimators._base_estimator import (  # prevent cyclic import
-        BaseEstimator,
-    )
+    # prevents cyclic import
+    from cellrank.tl.estimators._base_estimator import BaseEstimator
 
     if not isinstance(estimator, type):
         raise TypeError(
@@ -1546,29 +1558,70 @@ def _densify_squeeze(x: Union[spmatrix, np.ndarray], dtype=np.float32) -> np.nda
 
 def _calculate_absorption_time_moments(
     q: Union[np.ndarray, spmatrix],
-    s: Union[np.ndarray, spmatrix],
-    rec_indices: np.ndarray,
     trans_indices: np.ndarray,
+    n: int,
+    calculate_variance: bool = False,
     **kwargs,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    def calculate() -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+) -> Tuple[np.ndarray, np.ndarray, Optional[np.ndarray], Optional[np.ndarray]]:
+    """
+    Calculate the mean time until absorption and optionally its variance.
+
+    Parameters
+    ----------
+    q
+        Transient-transient submatrix of the transition matrix.
+    trans_indices
+        Transient indices.
+    n
+        Number of states of the full transition matrix.
+    calculate_variance
+        Whether to calculate also the variance of time to absorption, not only mean.
+    **kwargs
+        Keyword arguments for :func:`cellrank.tl._lin_solver._solver_lin_system`.
+
+    Returns
+    -------
+        Mean time until absorption, pseudotime based on the mean time and it's variance.
+        If :paramref:`calculate_variance` `=False`, then these values are `None`.
+    """
+
+    n_jobs = kwargs.pop("n_jobs", None)
+    solve_kwargs = _filter_kwargs(_solve_lin_system, **kwargs)
+
+    logg.debug("Calculating mean time to absorption")
+    m = _solve_lin_system(
+        q,
+        np.ones((q.shape[0],), dtype=np.float32),
+        n_jobs=1,
+        use_eye=True,
+        **solve_kwargs,
+    ).squeeze()
+    mean = np.zeros(n, dtype=np.float32)
+    pseudotime = np.ones(n, dtype=np.float32)
+
+    mean[trans_indices] = m
+    pseudotime[trans_indices] = 1 - _min_max_scale(m)
+
+    if calculate_variance:
+        logg.debug("Calculating variance of time to absorption")
+
         I = speye(q.shape[0])  # noqa
-        N = _invert_matrix(I - q, **kwargs)  # fundamental matrix
+        A_t = (I + q).T
+        B_t = (I - q).T
 
-        abs_probs = N @ s
-        mean = N.dot(np.ones(N.shape[0]))
-        var = (2 * N - I).dot(mean) - (mean ** 2)
+        logg.debug("Solving equation (1/2)")
+        X = _solve_lin_system(A_t, B_t, n_jobs=n_jobs, **kwargs).T
+        y = m - X @ (m ** 2)
 
-        return abs_probs, mean, np.array(var, copy=False).squeeze()
+        logg.debug("Solving equation (2/2)")
+        v = _solve_lin_system(X, y, use_eye=False, n_jobs=1, **solve_kwargs).squeeze()
 
-    ap, m, v = calculate()
-    m, v = _min_max_scale(m), _min_max_scale(v)
+        var = np.zeros(n, dtype=np.float32)
+        pseudotime_var = var.copy()
 
-    n = len(rec_indices) + len(trans_indices)
-    mean = np.ones(n, dtype=np.float32)
-    var = np.zeros(n, dtype=np.float32)
+        var[trans_indices] = v
+        pseudotime_var[trans_indices] = v / ((np.nanmax(m) - np.nanmin(m)) ** 2)
+    else:
+        var = pseudotime_var = None
 
-    mean[trans_indices] = 1 - m
-    var[trans_indices] = v
-
-    return ap, mean, var
+    return mean, pseudotime, var, pseudotime_var
