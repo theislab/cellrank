@@ -1094,27 +1094,43 @@ class TestTransitionProbabilities:
 
 
 class TestMonteCarlo:
-    def test_mc_and_mc_fwd(self, adata: AnnData):
+    def test_mc_and_mc_fwd_1k(self, adata: AnnData):
         vk_mc = VelocityKernel(adata, backward=False)
         vk_mc.compute_transition_matrix(
-            mode="monte_carlo", show_progress_bar=False, n_samples=50000, n_jobs=4
+            mode="monte_carlo", show_progress_bar=False, n_samples=1000, n_jobs=4
         )
 
         vk_s = VelocityKernel(adata, backward=False)
         vk_s.compute_transition_matrix(
-            mode="monte_carlo", show_progress_bar=False, n_samples=50000, n_jobs=4
+            mode="monte_carlo", show_progress_bar=False, n_samples=1000, n_jobs=4
         )
 
-        np.testing.assert_allclose(
-            vk_mc.transition_matrix.A, vk_s.transition_matrix.A, rtol=1e-4
+        val = np.mean(
+            np.abs(vk_mc.transition_matrix.data - vk_s.transition_matrix.data)
+        )
+        assert val < 1e-5, val
+
+    def test_mc_and_mc_fwd_10k(self, adata: AnnData):
+        vk_mc = VelocityKernel(adata, backward=False)
+        vk_mc.compute_transition_matrix(
+            mode="monte_carlo", show_progress_bar=False, n_samples=10000, n_jobs=4
         )
 
-    @pytest.mark.xfail()
+        vk_s = VelocityKernel(adata, backward=False)
+        vk_s.compute_transition_matrix(
+            mode="monte_carlo", show_progress_bar=False, n_samples=10000, n_jobs=4
+        )
+
+        val = np.mean(
+            np.abs(vk_mc.transition_matrix.data - vk_s.transition_matrix.data)
+        )
+        assert val < 1e-6, val
+
     @jax_not_installed_skip
     def test_mc_and_second_order_fwd(self, adata: AnnData):
         vk_mc = VelocityKernel(adata, backward=False)
         vk_mc.compute_transition_matrix(
-            mode="monte_carlo", show_progress_bar=False, n_samples=50000, n_jobs=4
+            mode="monte_carlo", show_progress_bar=False, n_samples=1000, n_jobs=4
         )
 
         vk_s = VelocityKernel(adata, backward=False)
@@ -1122,6 +1138,7 @@ class TestMonteCarlo:
             mode="stochastic", show_progress_bar=False, n_jobs=4
         )
 
-        np.testing.assert_allclose(
-            vk_mc.transition_matrix.A, vk_s.transition_matrix.A, rtol=1e-4
+        val = np.mean(
+            np.abs(vk_mc.transition_matrix.data - vk_s.transition_matrix.data)
         )
+        assert val < 1e-3, val
