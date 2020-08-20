@@ -380,9 +380,11 @@ def _reconstruct_matrices(
         assert (
             probs[0].shape == mat.shape
         ), f"Shape mismatch: `{probs[0].shape}`, `{mat.shape}`."
-        assert (
-            probs[0].nnz == mat.nnz
-        ), f"Number of non-zero elements mismatch: `{probs[0].nnz}`, `{mat.nnz}`."
+
+        # this no longer holds True, since we eliminate the zeros
+        # assert (
+        #    probs[0].nnz == mat.nnz
+        # ), f"Number of non-zero elements mismatch: `{probs[0].nnz}`, `{mat.nnz}`."
 
         return probs, cors
 
