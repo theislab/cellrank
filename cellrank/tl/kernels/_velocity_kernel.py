@@ -259,10 +259,11 @@ class VelocityKernel(Kernel):
             logg.debug("Setting mode to sampling because `n_samples=1`")
             mode = VelocityMode.SAMPLING
 
-        backend = kwargs.pop("backend", "loky")
-        if backend == "multiprocessing":
+        backend = kwargs.pop("backend", _DEFAULT_BACKEND)
+        if mode == VelocityMode.STOCHASTIC and backend == "multiprocessing":
             logg.warning(
-                f"Multiprocessing backend is not supported. Setting to `{_DEFAULT_BACKEND}`"
+                f"Multiprocessing backend is not supported for mode `{VelocityMode.STOCHASTIC.s!r}`. "
+                f"Defaulting to `{_DEFAULT_BACKEND}`"
             )
             backend = _DEFAULT_BACKEND
 
