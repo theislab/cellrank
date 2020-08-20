@@ -258,13 +258,7 @@ class VelocityKernel(Kernel):
             logg.debug("Setting mode to sampling because `n_samples=1`")
             mode = VelocityMode.SAMPLING
 
-        if (
-            mode == VelocityMode.STOCHASTIC
-            and kwargs.get("backend,", "multiprocessing") == "multiprocessing"
-        ):
-            logg.warning(
-                f"Multiprocessing backend is not supported for mode `{mode.s!r}`. Defaulting to `'loky'`"
-            )
+        if kwargs.get("backend,", "loky") != "loky":
             kwargs["backend"] = "loky"
 
         tmat, cmat = _dispatch_computation(
@@ -406,14 +400,17 @@ def _run_deterministic(
     for i in prange(len(ixs)):
         ix = ixs[i]
         start, end = indptr[ix], indptr[ix + 1]
+
         nbhs_ixs = indices[start:end]
         n_neigh = len(nbhs_ixs)
+        assert n_neigh, "Cell does not have any neighbors."
+
         W = expression[nbhs_ixs, :] - expression[ix, :]
 
         if not backward or (backward and backward_mode == BackwardMode.NEGATE):
             v = np.expand_dims(velocity[ix], 0)
 
-            # for the transpose backward mode, just flip the velocity vector
+            # for the negate backward mode
             if backward:
                 v *= -1
 
@@ -466,11 +463,14 @@ def _run_mc(
 
     for i in prange(len(ixs)):
         ix = ixs[i]
+        start, end = indptr[ix], indptr[ix + 1]
+
         np.random.seed(seed + ix)
 
-        start, end = indptr[ix], indptr[ix + 1]
         nbhs_ixs = indices[start:end]
         n_neigh = len(nbhs_ixs)
+        assert n_neigh, "Cell does not have any neighbors."
+
         # get the displacement matrix. Changing dimensions b/c varying numbers of neighbors slow down autograd
         W = expression[nbhs_ixs, :] - expression[ix, :]
 
@@ -523,8 +523,11 @@ def _run_stochastic(
 
     for i, ix in enumerate(ixs):
         start, end = indptr[ix], indptr[ix + 1]
+
         nbhs_ixs = indices[start:end]
         n_neigh = len(nbhs_ixs)
+        assert n_neigh, "Cell does not have any neighbors."
+
         v = expectation[ix]
 
         if np.all(v == 0):

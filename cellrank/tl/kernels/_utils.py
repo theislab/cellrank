@@ -291,8 +291,10 @@ def _reconstruct_one(
         assert len(ixs) == mat.shape[0], f"Shape mismatch: `{ixs.shape}`, `{mat.shape}`"
         mat = mat[ixs]
 
-    probs = csr_matrix((data[0], mat.indices, mat.indptr))
-    cors = csr_matrix((data[1], mat.indices, mat.indptr))
+    # strange bug happens when no copying and eliminating zeros from cors (it's no longer row-stochastic)
+    # only happens when using numba
+    probs = csr_matrix((data[0], mat.indices, mat.indptr)).copy()
+    cors = csr_matrix((data[1], mat.indices, mat.indptr)).copy()
 
     if aixs is not None:
         assert (
@@ -300,8 +302,15 @@ def _reconstruct_one(
         ), f"Shape mismatch: `{ixs.shape}`, `{probs.shape}`."
         probs, cors = probs[aixs], cors[aixs]
 
-    if not np.all(np.isclose(probs.sum(axis=1), 1.0)):
-        raise ValueError("Matrix is not row-stochastic.")
+    probs.eliminate_zeros()
+    cors.eliminate_zeros()
+
+    close_to_1 = np.isclose(probs.sum(1), 1.0)
+    if not np.all(close_to_1):
+        raise ValueError(
+            f"Matrix is not row-stochastic. "
+            f"The following rows don't sum to 1: `{list(np.where(~close_to_1)[0])}`."
+        )
 
     return probs, cors
 
