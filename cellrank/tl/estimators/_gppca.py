@@ -46,6 +46,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             compute_fmt=F.NO_FUNC,
             plot_fmt=F.NO_FUNC,
             dtype=pd.DataFrame,
+            doc="Coarse-grained transition matrix.",
         ),
         Metadata(attr=A.FIN_ABS_PROBS, prop=P.NO_PROPERTY, dtype=Lineage),
         Metadata(attr=A.COARSE_INIT_D, prop=P.COARSE_INIT_D, dtype=pd.Series),

@@ -526,7 +526,7 @@ def similarity_plot(
     Compare clusters with respect to their %(root_or_final)s probabilities.
 
     For each cluster, we compute how likely an 'average cell' goes towards the %(final)s states or comes
-     from the %(root)s states. We then compare these averaged probabilities using Cramér's V statistic, see
+    from the %(root)s states. We then compare these averaged probabilities using Cramér's V statistic, see
     `here <https://en.wikipedia.org/wiki/Cram%C3%A9r%27s_V>`_. The similarity is defined as :math:`1 - Cramér's V`.
 
     .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/similarity_plot.png

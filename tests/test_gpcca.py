@@ -253,12 +253,12 @@ class TestGPCCA:
         final_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.GPCCA(final_kernel)
-        mc.compute_schur(n_components=10, method="krylov")
+        mc.compute_schur(n_components=11, method="krylov")
 
         mc.compute_metastable_states(n_states=2)
 
-        assert mc._get(P.SCHUR).shape[1] == 10
-        assert mc._get(P.SCHUR_MAT).shape == (10, 10)
+        assert mc._get(P.SCHUR).shape[1] == 11
+        assert mc._get(P.SCHUR_MAT).shape == (11, 11)
 
     def test_set_final_states_from_metastable_states(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
