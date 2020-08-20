@@ -1023,7 +1023,6 @@ class TestGeneral:
         assert isinstance(v.condition_number, float)
 
 
-@pytest.mark.xfail(reason="unfinished")
 class TestTransitionProbabilities:
     def test_pearson_correlations_fwd(self, adata):
         # test whether pearson correlations in cellrank match those from scvelo, forward case
@@ -1037,7 +1036,9 @@ class TestTransitionProbabilities:
         vk.compute_transition_matrix(mode="deterministic")
         pearson_correlations_cr = vk.pearson_correlations
 
-        assert np.allclose((velo_graph - pearson_correlations_cr).data, 0, atol=1e-5)
+        np.testing.assert_allclose(
+            (velo_graph - pearson_correlations_cr).data, 0, atol=1e-5
+        )
 
     def test_pearson_correlations_bwd(self, adata):
         # test whether pearson correlations in cellrank match those from scvelo, backward case
@@ -1051,7 +1052,9 @@ class TestTransitionProbabilities:
         vk.compute_transition_matrix(mode="deterministic")
         pearson_correlations_cr = vk.pearson_correlations
 
-        assert np.allclose((velo_graph.T - pearson_correlations_cr).data, 0, atol=1e-5)
+        np.testing.assert_allclose(
+            (velo_graph.T - pearson_correlations_cr).data, 0, atol=1e-5
+        )
 
     def test_transition_probabilities_fwd(self, adata):
         # test whether transition probabilities in cellrank match those from scvelo, forward case
@@ -1069,7 +1072,7 @@ class TestTransitionProbabilities:
         T_cr = vk.transition_matrix
 
         # check them for point-wise equality
-        assert np.allclose((T_scv - T_cr).data, 0, atol=1e-5)
+        np.testing.assert_allclose((T_scv - T_cr).data, 0, atol=1e-5)
 
     def test_transition_probabilities_bwd(self, adata):
         # test whether transition probabilities in cellrank match those from scvelo, backward case
@@ -1087,4 +1090,4 @@ class TestTransitionProbabilities:
         T_cr = vk.transition_matrix
 
         # check them for point-wise equality
-        assert np.allclose((T_scv - T_cr).data, 0, atol=1e-5)
+        np.testing.assert_allclose((T_scv - T_cr).data, 0, atol=1e-5)
