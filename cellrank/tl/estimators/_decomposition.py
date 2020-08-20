@@ -180,6 +180,7 @@ class Eigen(VectorPlottable, Decomposable):
     @d.dedent
     def plot_spectrum(
         self,
+        n: Optional[int] = None,
         real_only: bool = False,
         legend_loc: Optional[str] = None,
         title: Optional[str] = None,
@@ -197,6 +198,8 @@ class Eigen(VectorPlottable, Decomposable):
 
         Parameters
         ----------
+        n
+            Number of eigenvalues to show. If `None`, show all.
         real_only
             Whether to plot only the real part of the spectrum.
         legend_loc
@@ -215,14 +218,18 @@ class Eigen(VectorPlottable, Decomposable):
             raise RuntimeError(
                 f"Compute `.{P.EIG}` first as `.{F.COMPUTE.fmt(P.EIG)}()`."
             )
+        if n is None:
+            n = len(eig["D"])
+        elif n <= 0:
+            raise ValueError(f"Expected `n` to be > 0, found `{n}`.")
 
         if real_only:
             fig = self._plot_real_spectrum(
-                dpi=dpi, figsize=figsize, legend_loc=legend_loc, title=title
+                n, dpi=dpi, figsize=figsize, legend_loc=legend_loc, title=title
             )
         else:
             fig = self._plot_complex_spectrum(
-                dpi=dpi, figsize=figsize, legend_loc=legend_loc, title=title
+                n, dpi=dpi, figsize=figsize, legend_loc=legend_loc, title=title
             )
 
         if save:
@@ -232,6 +239,7 @@ class Eigen(VectorPlottable, Decomposable):
 
     def _plot_complex_spectrum(
         self,
+        n: int,
         dpi: int = 100,
         figsize: Optional[Tuple[float, float]] = (None, None),
         legend_loc: Optional[str] = None,
@@ -245,7 +253,7 @@ class Eigen(VectorPlottable, Decomposable):
             )
 
         eig = getattr(self, P.EIG.s)
-        D, params = eig["D"], eig["params"]
+        D, params = eig["D"][:n], eig["params"]
 
         # create fiture and axes
         fig, ax = plt.subplots(nrows=1, ncols=1, dpi=dpi, figsize=figsize)
@@ -275,34 +283,40 @@ class Eigen(VectorPlottable, Decomposable):
 
         key = "real part" if params["which"] == "LR" else "magnitude"
         if title is None:
-            title = f"top {params['k']} eigenvalues according to their {key}"
-        ax.set_title(title)
+            title = f"top {n} eigenvalues according to their {key}"
 
+        ax.set_title(title)
         ax.legend(loc=legend_loc)
 
         return fig
 
     def _plot_real_spectrum(
         self,
+        n: int,
         dpi: int = 100,
         figsize: Optional[Tuple[float, float]] = None,
         legend_loc: Optional[str] = None,
         title: Optional[str] = None,
     ):
         eig = getattr(self, P.EIG.s)
-        D, params = eig["D"], eig["params"]
+        D, params = eig["D"][:n], eig["params"]
 
         D_real, D_imag = D.real, D.imag
         ixs = np.arange(len(D))
-        mask = D_imag == 0  # TODO: @Marius: isclose?
+        mask = D_imag == 0
 
         # plot the top eigenvalues
         fig, ax = plt.subplots(nrows=1, ncols=1, dpi=dpi, figsize=figsize)
-        ax.scatter(ixs[mask], D_real[mask], marker="o", label="real eigenvalue")
-        ax.scatter(ixs[~mask], D_real[~mask], marker="o", label="complex eigenvalue")
+        if np.any(mask):
+            ax.scatter(ixs[mask], D_real[mask], marker="o", label="real eigenvalue")
+        if np.any(~mask):
+            ax.scatter(
+                ixs[~mask], D_real[~mask], marker="o", label="complex eigenvalue"
+            )
 
         # add dashed line for the eigengap, ticks, labels, title and legend
-        ax.axvline(eig["eigengap"], label="eigengap", ls="--")
+        if eig["eigengap"] < n:
+            ax.axvline(eig["eigengap"], label="eigengap", ls="--")
 
         ax.set_xlabel("index")
         ax.set_xticks(range(len(D)))
@@ -311,11 +325,9 @@ class Eigen(VectorPlottable, Decomposable):
 
         key = "real part" if params["which"] == "LR" else "magnitude"
         if title is None:
-            title = (
-                f"real part of top {params['k']} eigenvalues according to their {key}"
-            )
-        ax.set_title(title)
+            title = f"real part of top {n} eigenvalues according to their {key}"
 
+        ax.set_title(title)
         ax.legend(loc=legend_loc)
 
         return fig
@@ -403,25 +415,19 @@ class Schur(VectorPlottable, Decomposable):
                 f"When computing metastable states, choose a number of states NOT in `{list(self._invalid_n_states)}`"
             )
 
-        if getattr(self, P.EIG.s) is None:
-            self._write_eig_to_adata(
-                {
-                    "D": self._gpcca.eigenvalues,
-                    "eigengap": _eigengap(self._gpcca.eigenvalues, alpha),
-                    "params": {
-                        "which": which,
-                        "k": len(self._gpcca.eigenvalues),
-                        "alpha": alpha,
-                    },
+        self._write_eig_to_adata(
+            {
+                "D": self._gpcca.eigenvalues,
+                "eigengap": _eigengap(self._gpcca.eigenvalues, alpha),
+                "params": {
+                    "which": which,
+                    "k": len(self._gpcca.eigenvalues),
+                    "alpha": alpha,
                 },
-                start=start,
-                extra_msg=f"\n       `.{P.SCHUR}`\n       `.{P.SCHUR_MAT}`\n    Finish",
-            )
-        else:
-            logg.info(
-                f"Adding `.{P.SCHUR}`\n" f"       `.{P.SCHUR_MAT}`\n" f"    Finish",
-                time=start,
-            )
+            },
+            start=start,
+            extra_msg=f"\n       `.{P.SCHUR}`\n       `.{P.SCHUR_MAT}`\n    Finish",
+        )
 
     plot_schur = _delegate(prop_name=P.SCHUR.s)(VectorPlottable._plot_vectors)
 
