@@ -217,7 +217,9 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         )
         self._write_final_states(time=kwargs.get("time", None))
 
-    @inject_docs(abs_prob=P.ABS_PROBS, diff_pot=P.DIFF_POT)
+    @inject_docs(
+        abs_prob=P.ABS_PROBS, diff_pot=P.DIFF_POT, apt=P.ABS_PT, aptv=P.ABS_PT_VAR
+    )
     def compute_absorption_probabilities(
         self,
         keys: Optional[Sequence[str]] = None,
@@ -274,8 +276,12 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         None
             Nothing, but updates the following fields:
 
-                - :paramref:`{abs_prob}`
-                - :paramref:`{diff_pot}`
+                - :paramref:`{abs_prob}` - probabilities of being absorbed into the final states.
+                - :paramref:`{diff_pot}` - differentiation potential of cells.
+                - :paramref:`{apt}` - pseudotime based on time until absorption.
+                  Only available if :paramref:`absorption_time_moments` is `'first'` or `'second'`.
+                - :paramref:`{aptv}` - variance of the pseudotime.
+                  Only available if :paramref:`absorption_time_moments` is `'second'`.
         """
         if self._get(P.FIN) is None:
             raise RuntimeError(
@@ -440,14 +446,14 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             )
         if pt_uncertainty is not None:
             self._set(
-                A.ABS_PT_UNCERT, pd.Series(pt_uncertainty, index=self.adata.obs.index)
+                A.ABS_PT_VAR, pd.Series(pt_uncertainty, index=self.adata.obs.index)
             )
             self.adata.obs["absorption_pseudotime_uncert"] = pt_uncertainty
             extra_msg = (
                 f"       `adata.obs['absorption_pseudotime']`\n"
                 f"       `adata.obs['absorption_pseudotime_uncert']`\n"
                 f"       `.{P.ABS_PT}`\n"
-                f"       `.{P.ABS_PT_UNCERT}\n"
+                f"       `.{P.ABS_PT_VAR}\n"
             )
         # the original values
         self._absorption_time_mean = abs_time_mean

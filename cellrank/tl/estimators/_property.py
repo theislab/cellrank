@@ -758,7 +758,7 @@ class AbsProbs(Plottable):
             doc="Differentiation potential.",
         ),
         Metadata(attr=A.ABS_PT, prop=P.ABS_PT, dtype=pd.Series),
-        Metadata(attr=A.ABS_PT_UNCERT, prop=P.ABS_PT_UNCERT, dtype=pd.Series),
+        Metadata(attr=A.ABS_PT_VAR, prop=P.ABS_PT_VAR, dtype=pd.Series),
     ]
 
     @abstractmethod
