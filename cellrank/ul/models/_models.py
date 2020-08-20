@@ -99,6 +99,7 @@ class BaseModel(ABC):
         self._model = model
         self._gene = None
         self._lineage = None
+        self._prepared = False
 
         self._x_all = None
         self._y_all = None
@@ -116,6 +117,11 @@ class BaseModel(ABC):
         self._conf_int = None
 
         self._dtype = np.float32
+
+    @property
+    def prepared(self):
+        """Whether the model is prepared for fitting."""
+        return self._prepared
 
     @property
     @d.dedent
@@ -422,6 +428,7 @@ class BaseModel(ABC):
 
         self._gene = gene
         self._lineage = lineage
+        self._prepared = True
 
         return self
 
@@ -454,6 +461,10 @@ class BaseModel(ABC):
         :class:`cellrank.ul.models.BaseModel`
             Fits the model and returns self.
         """
+        if not self.prepared:
+            raise RuntimeError(
+                "The model has not been prepared yet, call `.prepare()` first."
+            )
 
         self._check("_x", x)
         self._check("_y", y)
@@ -803,6 +814,7 @@ class BaseModel(ABC):
             "_x_hat",
             "_y_hat",
             "_conf_int",
+            "_prepared",
         ]:
             setattr(dst, attr, _copy(getattr(self, attr)))
 
