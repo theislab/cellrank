@@ -24,7 +24,6 @@ from cellrank.pl._utils import (
     _time_range_type,
     _create_callbacks,
     _maybe_create_dir,
-    _default_model_callback,
 )
 from cellrank.tl._utils import save_fig, _unique_order_preserving
 from cellrank.ul._utils import _get_n_cores, check_collection
@@ -43,7 +42,7 @@ def gene_trends(
     backward: bool = False,
     data_key: str = "X",
     time_range: Optional[Union[_time_range_type, List[_time_range_type]]] = None,
-    callback: _callback_type = _default_model_callback,
+    callback: _callback_type = None,
     conf_int: bool = True,
     same_plot: bool = False,
     hide_cells: bool = False,

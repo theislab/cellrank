@@ -39,7 +39,7 @@ _ERROR_INCOMPLETE_SPEC = (
 )
 _time_range_type = Optional[Union[float, Tuple[Optional[float], Optional[float]]]]
 _model_type = Union[BaseModel, Mapping[str, Mapping[str, BaseModel]]]
-_callback_type = Union[BaseModel, Mapping[str, Mapping[str, Callable]]]
+_callback_type = Optional[Union[Callable, Mapping[str, Mapping[str, Callable]]]]
 
 
 def _curved_edges(
@@ -583,9 +583,10 @@ def _get_backend(model, backend: str) -> str:
     return _DEFAULT_BACKEND if _is_any_gam_mgcv(model) else backend
 
 
+@d.dedent
 def _create_callbacks(
     adata: AnnData,
-    callback: Callable,
+    callback: Optional[Callable],
     obs: Sequence[str],
     lineages: Sequence[Optional[str]],
     perform_sanity_check: bool = True,
@@ -595,6 +596,9 @@ def _create_callbacks(
 
     Parameters
     ----------
+    %(adata)s
+    callback
+        Gene and lineage specific prepare callbacks.
     obs
         Sequence of observations, such as genes.
     lineages
@@ -608,8 +612,10 @@ def _create_callbacks(
     """
 
     def process_lineages(
-        obs_name: str, lin_names: Union[Callable, Dict[Optional[str], Any]]
+        obs_name: str, lin_names: Optional[Union[Callable, Dict[Optional[str], Any]]]
     ):
+        if lin_names is None:
+            lin_names = _default_model_callback
         if callable(lin_names):
             # sharing the same models for all lineages
             for lin_name in lineages:
@@ -662,6 +668,9 @@ def _create_callbacks(
                         f"Callback validation failed for "
                         f"gene `{gene!r}` and lineage `{lineage!r}`."
                     ) from e
+
+    if callback is None:
+        callback = _default_model_callback
 
     if callable(callback):
         callbacks = {o: {lin: copy(callback) for lin in lineages} for o in obs}
