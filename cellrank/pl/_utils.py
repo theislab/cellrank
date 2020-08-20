@@ -278,9 +278,10 @@ def _create_models(
             models[obs_name][lin_name] = copy(mod)
 
         if lin_rest_model is not None:
-            for lin_name in set(lineages) - set(models[obs_name].keys()):
+            for lin_name in lineages - set(models[obs_name].keys()):
                 models[obs_name][lin_name] = copy(lin_rest_model)
-        elif set(models[obs_name].keys()) != lineages:
+        else:
+            set(models[obs_name].keys()) != lineages
             raise RuntimeError(_ERROR_INCOMPLETE_SPEC.format(" lineage ", obs_name))
 
     if isinstance(model, BaseModel):
@@ -616,23 +617,29 @@ def _create_callbacks(
     ):
         if lin_names is None:
             lin_names = _default_model_callback
+
         if callable(lin_names):
             # sharing the same models for all lineages
             for lin_name in lineages:
                 callbacks[obs_name][lin_name] = lin_names
             return
-        lin_rest_callback = lin_names.get("*", None)  # do not pop
+        lin_rest_callback = (
+            lin_names.get("*", _default_model_callback) or _default_model_callback
+        )  # do not pop
 
-        for lin_name, mod in lin_names.items():
+        for lin_name, cb in lin_names.items():
             if lin_name == "*":
                 continue
-            callbacks[obs_name][lin_name] = copy(mod)
+            callbacks[obs_name][lin_name] = cb
 
-        if lin_rest_callback is not None:
-            for lin_name in set(lineages) - set(callbacks[obs_name].keys()):
-                callbacks[obs_name][lin_name] = copy(lin_rest_callback)
-        elif set(callbacks[obs_name].keys()) != lineages:
-            raise RuntimeError(_ERROR_INCOMPLETE_SPEC.format(" lineage ", obs_name))
+        if callable(lin_rest_callback):
+            for lin_name in lineages - set(callbacks[obs_name].keys()):
+                callbacks[obs_name][lin_name] = lin_rest_callback
+        else:
+            raise TypeError(
+                f"Expected the callback for the rest of lineages to be `callable`, "
+                f"found `{type(lin_rest_callback).__name__!r}`."
+            )
 
     def maybe_sanity_check(callbacks: Dict[str, Dict[str, Callable]]) -> None:
         if not perform_sanity_check:
@@ -684,15 +691,22 @@ def _create_callbacks(
     callbacks = defaultdict(dict)
 
     if isinstance(callback, dict):
-        obs_rest_model = callback.pop("*", None)
         for obs_name, lin_names in callback.items():
             process_lineages(obs_name, lin_names)
 
-        if obs_rest_model is not None:
+        # can be specified as None
+        obs_rest_callback = (
+            callback.pop("*", _default_model_callback) or _default_model_callback
+        )
+
+        if callable(obs_rest_callback):
             for obs_name in obs - set(callback.keys()):
-                process_lineages(obs_name, callback.get(obs_name, obs_rest_model))
-        elif set(callback.keys()) != obs:
-            raise RuntimeError(_ERROR_INCOMPLETE_SPEC.format(" ", "genes"))
+                process_lineages(obs_name, callback.get(obs_name, obs_rest_callback))
+        else:
+            raise TypeError(
+                f"Expected the callback for the rest of genes to be `callable`, "
+                f"found `{type(obs_rest_callback).__name__!r}`."
+            )
     else:
         raise TypeError(
             f"Class `{type(callback).__name__!r}` must be of type `callable` or a dictionary of such callables."
