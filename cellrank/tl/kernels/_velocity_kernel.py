@@ -13,7 +13,7 @@ from cellrank import logging as logg
 from cellrank.ul._docs import d, inject_docs
 from cellrank.ul._utils import valuedispatch
 from cellrank.tl.kernels import Kernel
-from cellrank.tl._constants import ModeEnum
+from cellrank.tl._constants import _DEFAULT_BACKEND, ModeEnum
 from cellrank.ul._parallelize import parallelize
 from cellrank.tl.kernels._utils import (
     _HAS_JAX,
@@ -104,6 +104,7 @@ class VelocityKernel(Kernel):
         self._gene_subset = gene_subset
         self._pearson_correlations = None
 
+        self._current_ix = None
         self._tmats = None
         self._pcors = None
 
@@ -258,14 +259,14 @@ class VelocityKernel(Kernel):
             logg.debug("Setting mode to sampling because `n_samples=1`")
             mode = VelocityMode.SAMPLING
 
-        if (
-            mode == VelocityMode.STOCHASTIC
-            and kwargs.get("backend,", "multiprocessing") == "multiprocessing"
-        ):
+        backend = kwargs.pop("backend", _DEFAULT_BACKEND)
+        if mode != VelocityMode.STOCHASTIC and backend == "multiprocessing":
+            # this is because on jitting and pickling (cloudpickle, used by loky, handles it correctly)
             logg.warning(
-                f"Multiprocessing backend is not supported for mode `{mode.s!r}`. Defaulting to `'loky'`"
+                f"Multiprocessing backend is supported only for mode `{VelocityMode.STOCHASTIC.s!r}`. "
+                f"Defaulting to `{_DEFAULT_BACKEND}`"
             )
-            kwargs["backend"] = "loky"
+            backend = _DEFAULT_BACKEND
 
         tmat, cmat = _dispatch_computation(
             mode,
@@ -280,11 +281,13 @@ class VelocityKernel(Kernel):
             n_samples=n_samples,
             use_numba=use_numba,
             seed=seed,
+            backend=backend,
             **kwargs,
         )
         if isinstance(tmat, (tuple, list)):
             self._tmats, self._pcors = tmat, cmat
-            tmat, cmat = tmat[0], cmat[0]
+            self._current_ix = 0
+            tmat, cmat = tmat[self._current_ix], cmat[self._current_ix]
 
         self._compute_transition_matrix(tmat, density_normalize=False)
         self._pearson_correlations = cmat
@@ -293,13 +296,45 @@ class VelocityKernel(Kernel):
 
         return self
 
+    @inject_docs(m=VelocityMode)
+    def switch_transition_matrix(self, index: int) -> None:
+        """
+        Switch between transition matrices when using `mode={m.PROPAGATION.s!r}`.
+
+        Parameters
+        ----------
+        index
+            Index of the transition matrix. The matrices are stored in :paramref:`_tmats`.
+
+        Returns
+        -------
+        None
+            Nothing, just switches the transition matrix.
+        """
+        if self._tmats is None:
+            raise ValueError(
+                f"No additional transition matrices found. Compute them first as "
+                f"`.compute_transition_matrix(mode={VelocityMode.PROPAGATION.s!r}, ...)`."
+            )
+        if index == self._current_ix:
+            return
+
+        try:
+            self._transition_matrix = self._tmats[index]
+            self._current_ix = index
+        except IndexError:
+            raise IndexError(
+                f"Invalid index `{index}`. Valid range is `[0, {len(self._tmats)})`."
+            ) from None
+
     @property
     def pearson_correlations(self) -> csr_matrix:  # noqa
         """The matrix of Pearson correlations."""
         return self._pearson_correlations
 
-    def copy(self) -> "VelocityKernel":
-        """Return a copy of self."""
+    @d.dedent
+    def copy(self) -> "VelocityKernel":  # noqa
+        """%(copy)s"""
         vk = VelocityKernel(
             self.adata,
             backward=self.backward,
@@ -313,6 +348,7 @@ class VelocityKernel(Kernel):
         vk._pearson_correlations = copy(self.pearson_correlations)
         vk._tmats = deepcopy(self._tmats)
         vk._pcors = deepcopy(self._pcors)
+        vk._current_ix = self._current_ix
 
         return vk
 
@@ -406,14 +442,17 @@ def _run_deterministic(
     for i in prange(len(ixs)):
         ix = ixs[i]
         start, end = indptr[ix], indptr[ix + 1]
+
         nbhs_ixs = indices[start:end]
         n_neigh = len(nbhs_ixs)
+        assert n_neigh, "Cell does not have any neighbors."
+
         W = expression[nbhs_ixs, :] - expression[ix, :]
 
         if not backward or (backward and backward_mode == BackwardMode.NEGATE):
             v = np.expand_dims(velocity[ix], 0)
 
-            # for the transpose backward mode, just flip the velocity vector
+            # for the negate backward mode
             if backward:
                 v *= -1
 
@@ -466,11 +505,14 @@ def _run_mc(
 
     for i in prange(len(ixs)):
         ix = ixs[i]
+        start, end = indptr[ix], indptr[ix + 1]
+
         np.random.seed(seed + ix)
 
-        start, end = indptr[ix], indptr[ix + 1]
         nbhs_ixs = indices[start:end]
         n_neigh = len(nbhs_ixs)
+        assert n_neigh, "Cell does not have any neighbors."
+
         # get the displacement matrix. Changing dimensions b/c varying numbers of neighbors slow down autograd
         W = expression[nbhs_ixs, :] - expression[ix, :]
 
@@ -523,8 +565,11 @@ def _run_stochastic(
 
     for i, ix in enumerate(ixs):
         start, end = indptr[ix], indptr[ix + 1]
+
         nbhs_ixs = indices[start:end]
         n_neigh = len(nbhs_ixs)
+        assert n_neigh, "Cell does not have any neighbors."
+
         v = expectation[ix]
 
         if np.all(v == 0):

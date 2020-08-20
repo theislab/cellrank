@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
+import os
 from typing import Tuple
+
+os.environ["NUMBA_NUM_THREADS"] = "4"
 
 import pytest
 
