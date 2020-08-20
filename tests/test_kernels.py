@@ -1142,3 +1142,38 @@ class TestMonteCarlo:
             np.abs(vk_mc.transition_matrix.data - vk_s.transition_matrix.data)
         )
         assert val < 1e-3, val
+
+
+class TestVelocityKernel:
+    def test_matrix_switch_no_prop(self, adata: AnnData):
+        vk = VelocityKernel(adata)
+        vk.compute_transition_matrix(mode="deterministic", show_progress_bar=False)
+
+        with pytest.raises(ValueError):
+            vk.switch_transition_matrix(1)
+
+    def test_matrix_switch_invalid_index(self, adata: AnnData):
+        vk = VelocityKernel(adata)
+        vk.compute_transition_matrix(
+            mode="propagation", show_progress_bar=False, n_samples=10, n_jobs=4
+        )
+
+        with pytest.raises(IndexError):
+            vk.switch_transition_matrix(42)
+
+    def test_matrix_switch_normal_run(self, adata: AnnData):
+        vk = VelocityKernel(adata)
+        vk.compute_transition_matrix(
+            mode="propagation", show_progress_bar=False, n_samples=10, n_jobs=4
+        )
+
+        t_0 = vk.transition_matrix
+
+        vk.switch_transition_matrix(1)
+        t_1 = vk.transition_matrix
+
+        vk.switch_transition_matrix(1)
+        t_2 = vk.transition_matrix
+
+        assert not np.all(t_0.A == t_1.A)
+        np.testing.assert_array_equal(t_1.A, t_2.A)
