@@ -50,6 +50,43 @@ KernelDirection = TypeVar("KernelDirection")
 EPS = np.finfo(np.float64).eps
 
 
+class RandomKeys:
+    """
+    Create random keys inside an :class:`anndata.AnnData` object.
+
+    Parameters
+    ----------
+    adata
+        Annotated data object.
+    n
+        Number of keys, If `None`, create just 1 keys.
+    where
+        Attribute of :paramref:`adata`. If `'obs'`, also clean up `'{key}_colors'` for each generated key.
+    """
+
+    def __init__(self, adata: AnnData, n: Optional[int] = None, where: str = "obs"):
+        self._adata = adata
+        self._where = where
+        self._n = n
+        self._keys = []
+
+    def __enter__(self):
+        self._keys = _generate_random_keys(self._adata, self._where, self._n)
+        return self._keys
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        for key in self._keys:
+            try:
+                del self._adata.obs[key]
+            except KeyError:
+                pass
+            if self._where == "obs":
+                try:
+                    del self._adata.uns[f"{key}_colors"]
+                except KeyError:
+                    pass
+
+
 def _pairwise(iterable: Iterable) -> zip:
     """Return pairs of elements from an iterable."""
     a, b = tee(iterable)
@@ -58,6 +95,18 @@ def _pairwise(iterable: Iterable) -> zip:
 
 
 def _min_max_scale(x: np.ndarray) -> np.ndarray:
+    """
+    Scale a 1D array to 0-1 range.
+
+    Parameters
+    ----------
+    x
+        Array to be scaled.
+
+    Returns
+    -------
+        The scaled array.
+    """
     minn, maxx = np.nanmin(x), np.nanmax(x)
     return (x - minn) / (maxx - minn)
 
@@ -1484,9 +1533,8 @@ def _get_cat_and_null_indices(
 
 
 def _check_estimator_type(estimator: Any) -> None:
-    from cellrank.tl.estimators._base_estimator import (  # prevent cyclic import
-        BaseEstimator,
-    )
+    # prevents cyclic import
+    from cellrank.tl.estimators._base_estimator import BaseEstimator
 
     if not isinstance(estimator, type):
         raise TypeError(
@@ -1577,40 +1625,3 @@ def _calculate_absorption_time_moments(
         var = pseudotime_var = None
 
     return mean, pseudotime, var, pseudotime_var
-
-
-class RandomKeys:
-    """
-    Create random keys inside an :class:`anndata.AnnData` object.
-
-    Parameters
-    ----------
-    adata
-        Annotated data object.
-    n
-        Number of keys, If `None`, create just 1 keys.
-    where
-        Attribute of :paramref:`adata`. If `'obs'`, also clean up `'{key}_colors'` for each generated key.
-    """
-
-    def __init__(self, adata: AnnData, n: Optional[int] = None, where: str = "obs"):
-        self._adata = adata
-        self._where = where
-        self._n = n
-        self._keys = []
-
-    def __enter__(self):
-        self._keys = _generate_random_keys(self._adata, self._where, self._n)
-        return self._keys
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        for key in self._keys:
-            try:
-                del self._adata.obs[key]
-            except KeyError:
-                pass
-            if self._where == "obs":
-                try:
-                    del self._adata.uns[f"{key}_colors"]
-                except KeyError:
-                    pass
