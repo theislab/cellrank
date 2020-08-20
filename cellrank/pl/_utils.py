@@ -645,11 +645,18 @@ def _create_callbacks(
                     model = cb(dummy_model, gene=gene, lineage=lineage)
                     assert model is dummy_model, (
                         "Creation of new models is not allowed. "
-                        "Ensure that the callback returns the same model."
+                        "Ensure that callback returns the same model."
                     )
                     assert (
                         model.prepared
-                    ), "Model is not prepared. Ensure that the callback calls `.prepare()`."
+                    ), "Model is not prepared. Ensure that callback calls `.prepare()`."
+                    assert (
+                        model._gene == gene
+                    ), f"Callback modified the gene from `{gene!r}` to `{model._gene!r}`."
+                    assert model._gene == gene, (
+                        f"Callback modified the lineage "
+                        f"from `{lineage!r}` to `{model._lineage!r}`."
+                    )
                 except Exception as e:
                     raise RuntimeError(
                         f"Callback validation failed for "
