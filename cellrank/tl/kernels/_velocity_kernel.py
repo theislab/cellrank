@@ -13,7 +13,7 @@ from cellrank import logging as logg
 from cellrank.ul._docs import d, inject_docs
 from cellrank.ul._utils import valuedispatch
 from cellrank.tl.kernels import Kernel
-from cellrank.tl._constants import ModeEnum
+from cellrank.tl._constants import _DEFAULT_BACKEND, ModeEnum
 from cellrank.ul._parallelize import parallelize
 from cellrank.tl.kernels._utils import (
     _HAS_JAX,
@@ -259,12 +259,12 @@ class VelocityKernel(Kernel):
             logg.debug("Setting mode to sampling because `n_samples=1`")
             mode = VelocityMode.SAMPLING
 
-        if kwargs.get("backend,", "loky") != "loky":
-            # TODO check if it's really necessary
+        backend = kwargs.pop("backend", "loky")
+        if backend == "multiprocessing":
             logg.warning(
-                "Only `'loky'` backend is supported. Setting backend to `'loky'`"
+                f"Multiprocessing backend is not supported. Setting to `{_DEFAULT_BACKEND}`"
             )
-            kwargs["backend"] = "loky"
+            backend = _DEFAULT_BACKEND
 
         tmat, cmat = _dispatch_computation(
             mode,
@@ -279,6 +279,7 @@ class VelocityKernel(Kernel):
             n_samples=n_samples,
             use_numba=use_numba,
             seed=seed,
+            backend=backend,
             **kwargs,
         )
         if isinstance(tmat, (tuple, list)):
