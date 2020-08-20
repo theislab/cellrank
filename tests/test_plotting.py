@@ -1157,6 +1157,14 @@ class TestCFLARE:
         mc.plot_spectrum(title="foobar", real_only=False, dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
+    def test_mc_spectrum_evals(self, mc: CFLARE, fpath: str):
+        mc.plot_spectrum(2, real_only=True, dpi=DPI, save=fpath)
+
+    @compare(kind="cflare")
+    def test_mc_spectrum_evals_complex(self, mc: CFLARE, fpath: str):
+        mc.plot_spectrum(2, real_only=False, dpi=DPI, save=fpath)
+
+    @compare(kind="cflare")
     def test_scvelo_eigendecomposition_clusters(self, mc: CFLARE, fpath: str):
         mc.plot_eigendecomposition(cluster_key="clusters", dpi=DPI, save=fpath)
 
@@ -1213,6 +1221,14 @@ class TestGPCCA:
     @compare(kind="gpcca")
     def test_gpcca_spectrum_title(self, mc: GPCCA, fpath: str):
         mc.plot_spectrum(title="foobar", real_only=True, dpi=DPI, save=fpath)
+
+    @compare(kind="gpcca")
+    def test_gpcca_spectrum_evals(self, mc: CFLARE, fpath: str):
+        mc.plot_spectrum(2, real_only=True, dpi=DPI, save=fpath)
+
+    @compare(kind="gpcca")
+    def test_gpcca_spectrum_evals_complex(self, mc: CFLARE, fpath: str):
+        mc.plot_spectrum(2, real_only=False, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_gpcca_schur_matrix(self, mc: GPCCA, fpath: str):
