@@ -1548,8 +1548,8 @@ def _calculate_absorption_time_moments(
         use_eye=True,
         **solve_kwargs,
     ).squeeze()
-    mean = np.ones(n, dtype=np.float32)
-    pseudotime = mean.copy()
+    mean = np.zeros(n, dtype=np.float32)
+    pseudotime = np.ones(n, dtype=np.float32)
 
     mean[trans_indices] = m
     pseudotime[trans_indices] = 1 - _min_max_scale(m)

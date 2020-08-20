@@ -210,7 +210,10 @@ class KernelHolder(ABC):
                 raise KeyError(f"Key `{obsp_key!r}` not found in `adata.obsp`.")
             self._kernel = PrecomputedKernel(obj.obsp[obsp_key], adata=obj)
         else:
-            raise TypeError(f"Unsupported type: `{type(obj).__name__!r}`.")
+            raise TypeError(
+                f"Expected an object of type `KernelExpression`, `numpy.ndarray`, `scipy.sparse.spmatrix` "
+                f"or `anndata.AnnData`, got `{type(obj).__name__!r}`."
+            )
 
         if self.kernel.transition_matrix is None:
             logg.debug("Computing transition matrix using default parameters")
