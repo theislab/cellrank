@@ -104,6 +104,7 @@ class VelocityKernel(Kernel):
         self._gene_subset = gene_subset
         self._pearson_correlations = None
 
+        self._current_ix = None
         self._tmats = None
         self._pcors = None
 
@@ -259,6 +260,10 @@ class VelocityKernel(Kernel):
             mode = VelocityMode.SAMPLING
 
         if kwargs.get("backend,", "loky") != "loky":
+            # TODO check if it's really necessary
+            logg.warning(
+                "Only `'loky'` backend is supported. Setting backend to `'loky'`"
+            )
             kwargs["backend"] = "loky"
 
         tmat, cmat = _dispatch_computation(
@@ -278,7 +283,8 @@ class VelocityKernel(Kernel):
         )
         if isinstance(tmat, (tuple, list)):
             self._tmats, self._pcors = tmat, cmat
-            tmat, cmat = tmat[0], cmat[0]
+            self._current_ix = 0
+            tmat, cmat = tmat[self._current_ix], cmat[self._current_ix]
 
         self._compute_transition_matrix(tmat, density_normalize=False)
         self._pearson_correlations = cmat
@@ -287,13 +293,45 @@ class VelocityKernel(Kernel):
 
         return self
 
+    @inject_docs(m=VelocityMode)
+    def switch_transition_matrix(self, index: int) -> None:
+        """
+        Switch between transition matrices when using `mode={m.PROPAGATION.s!r}`.
+
+        Parameters
+        ----------
+        index
+            Index of the transition matrix. The matrices are stored in :paramref:`_tmats`.
+
+        Returns
+        -------
+        None
+            Nothing, just switches the transition matrix.
+        """
+        if self._tmats is None:
+            raise ValueError(
+                f"No additional transition matrices found. Compute them first as "
+                f"`.compute_transition_matrix(mode={VelocityMode.PROPAGATION.s!r}, ...)`."
+            )
+        if index == self._current_ix:
+            return
+
+        try:
+            self._transition_matrix = self._tmats[index]
+            self._current_ix = index
+        except IndexError:
+            raise IndexError(
+                f"Invalid index `{index}`. Valid range is `[0, {len(self._tmats)})`."
+            ) from None
+
     @property
     def pearson_correlations(self) -> csr_matrix:  # noqa
         """The matrix of Pearson correlations."""
         return self._pearson_correlations
 
-    def copy(self) -> "VelocityKernel":
-        """Return a copy of self."""
+    @d.dedent
+    def copy(self) -> "VelocityKernel":  # noqa
+        """%(copy)s"""
         vk = VelocityKernel(
             self.adata,
             backward=self.backward,
@@ -307,6 +345,7 @@ class VelocityKernel(Kernel):
         vk._pearson_correlations = copy(self.pearson_correlations)
         vk._tmats = deepcopy(self._tmats)
         vk._pcors = deepcopy(self._pcors)
+        vk._current_ix = self._current_ix
 
         return vk
 
