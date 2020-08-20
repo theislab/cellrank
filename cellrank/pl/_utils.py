@@ -39,6 +39,7 @@ _ERROR_INCOMPLETE_SPEC = (
 )
 _time_range_type = Optional[Union[float, Tuple[Optional[float], Optional[float]]]]
 _model_type = Union[BaseModel, Mapping[str, Mapping[str, BaseModel]]]
+_callback_type = Union[BaseModel, Mapping[str, Mapping[str, Callable]]]
 
 
 def _curved_edges(
@@ -311,7 +312,9 @@ def _create_models(
 
 def _fit_gene_trends(
     genes: Sequence[str],
-    lineage_names: Sequence[Optional[str]],
+    models: _model_type,
+    callbacks: _callback_type,
+    lineages: Sequence[Optional[str]],
     time_range: Sequence[Union[float, Tuple[float, float]]],
     queue,
     **kwargs,
@@ -323,7 +326,11 @@ def _fit_gene_trends(
     ----------
     genes
         Genes for which to fit the models.
-    lineage_names
+    models
+        Gene and lineage specific models.
+    callbacks
+        Gene and lineage specific prepare callbacks.
+    lineages
         Lineages for which to fit the models.
     time_range
         Minimum and maximum pseudotimes.
@@ -338,13 +345,15 @@ def _fit_gene_trends(
     """
 
     res = {}
-    models = kwargs.pop("models")
     conf_int = kwargs.pop("conf_int", False)
 
     for gene in genes:
         res[gene] = {}
-        for ln, tr in zip(lineage_names, time_range):
-            model = models[gene][ln].prepare(gene, ln, time_range=tr, **kwargs).fit()
+        for ln, tr in zip(lineages, time_range):
+            cb = callbacks[gene][ln]
+            model = cb(
+                models[gene][ln], gene=gene, lineage=ln, time_range=tr, **kwargs
+            ).fit()
             model.predict()
             if conf_int:
                 model.confidence_interval()
@@ -629,7 +638,7 @@ def _create_callbacks(
 
         logg.debug("Performing callback sanity checks")
         for gene in callbacks.keys():
-            for lineage, cb in callbacks[gene].values():
+            for lineage, cb in callbacks[gene].items():
                 # create the model here because the callback can search the attribute
                 dummy_model = SKLearnModel(adata, model=SVR())
                 try:
@@ -678,5 +687,5 @@ def _create_callbacks(
     return callbacks
 
 
-def _default_model_callback(model: BaseModel, **kwargs):
+def _default_model_callback(model: BaseModel, **kwargs) -> BaseModel:
     return model.prepare(**kwargs)

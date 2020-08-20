@@ -17,11 +17,14 @@ from cellrank.ul._docs import d
 from cellrank.pl._utils import (
     _model_type,
     _get_backend,
+    _callback_type,
     _create_models,
     _trends_helper,
     _fit_gene_trends,
     _time_range_type,
+    _create_callbacks,
     _maybe_create_dir,
+    _default_model_callback,
 )
 from cellrank.tl._utils import save_fig, _unique_order_preserving
 from cellrank.ul._utils import _get_n_cores, check_collection
@@ -40,6 +43,7 @@ def gene_trends(
     backward: bool = False,
     data_key: str = "X",
     time_range: Optional[Union[_time_range_type, List[_time_range_type]]] = None,
+    callback: _callback_type = _default_model_callback,
     conf_int: bool = True,
     same_plot: bool = False,
     hide_cells: bool = False,
@@ -90,7 +94,8 @@ def gene_trends(
     %(backward)s
     data_key
         Key in :paramref:`adata` `.layers` or `'X'` for :paramref:`adata` `.X` where the data is stored.
-    %(time_range)s
+    %(time_ranges)s
+    %(model_callbacks)s
     conf_int
         Whether to compute and show confidence intervals.
     same_plot
@@ -201,7 +206,9 @@ def gene_trends(
             f"Expected time ranges to be of length `{len(lineages)}`, found `{len(time_range)}`."
         )
 
-    kwargs["models"] = _create_models(model, genes, lineages)
+    models = _create_models(model, genes, lineages)
+    callbacks = _create_callbacks(adata, callback, genes, lineages)
+
     kwargs["data_key"] = data_key
     kwargs["backward"] = backward
     kwargs["conf_int"] = conf_int
@@ -222,7 +229,7 @@ def gene_trends(
         n_jobs=n_jobs,
         extractor=lambda modelss: {k: v for m in modelss for k, v in m.items()},
         show_progress_bar=show_progres_bar,
-    )(lineages, time_range, **kwargs)
+    )(models, callbacks, lineages, time_range, **kwargs)
     logg.info("    Finish", time=start)
 
     logg.debug("Plotting trends")

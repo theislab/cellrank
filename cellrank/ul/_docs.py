@@ -61,11 +61,12 @@ _density_correction = (
 )
 _time_range = """\
 time_range
-   If a :class:`tuple`, it specifies the minimum and maximum pseudotime.
-   Both values can be `None`, in which case the minimum is the earliest pseudotime
-   and the maximum is automatically determined.
-   If a :class:`float`, it specifies the maximum pseudotime.
+    If a :class:`tuple`, it specifies the minimum and maximum pseudotime.
+    Both values can be `None`, in which case the minimum is the earliest pseudotime
+    and the maximum is automatically determined.
+    If a :class:`float`, it specifies the maximum pseudotime.
 """
+_time_ranges = f"{_time_range}\n    "
 _velocity_mode = """\
 mode
     How to compute transition probabilities. Valid options are:
@@ -89,6 +90,11 @@ backward_mode
 _copy = """Return a copy of self."""
 _root = "root"
 _final = "final"
+_model_callback = """\
+callback
+    Function which takes a model and some keyword arguments and returns a prepared model.
+    Can be specified in gene- and lineage-specific manner as :paramref:`model`.
+"""
 
 
 def inject_docs(**kwargs):
@@ -117,6 +123,8 @@ d = DocstringProcessor(
     copy=_copy,
     density_correction=_density_correction,
     time_range=_time_range,
+    time_ranges=_time_ranges,
     velocity_mode=_velocity_mode,
     velocity_backward_mode=_velocity_backward_mode,
+    model_callback=_model_callback,
 )
