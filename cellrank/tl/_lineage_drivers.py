@@ -2,7 +2,7 @@
 """Gene importance module."""
 
 from types import MappingProxyType
-from typing import Any, Dict, List, Tuple, Union, Mapping, TypeVar, Optional, Sequence
+from typing import Any, List, Tuple, Union, Mapping, TypeVar, Optional, Sequence
 
 from statsmodels.stats.multitest import multipletests
 
@@ -14,9 +14,15 @@ from sklearn.preprocessing import StandardScaler
 from cellrank import logging as logg
 from cellrank.tl import GPCCA
 from cellrank.ul._docs import d
-from cellrank.pl._utils import _model_type, _get_backend, _create_models
+from cellrank.pl._utils import (
+    _model_type,
+    _get_backend,
+    _callback_type,
+    _create_models,
+    _create_callbacks,
+    _default_model_callback,
+)
 from cellrank.ul._utils import _get_n_cores, check_collection
-from cellrank.ul.models import BaseModel
 from cellrank.tl._constants import _DEFAULT_BACKEND, AbsProbKey
 from cellrank.ul._parallelize import parallelize
 from cellrank.tl.estimators._constants import P
@@ -80,8 +86,9 @@ def _gi_permute(
 
 def _gi_process(
     genes: Sequence[str],
-    models: Dict[str, Dict[str, BaseModel]],
-    lineage_name: str,
+    models: _model_type,
+    callbacks: _callback_type,
+    lineage: str,
     queue: Optional[Queue],
     **kwargs,
 ) -> Tuple[np.ndarray, np.ndarray]:
@@ -94,7 +101,9 @@ def _gi_process(
         Genes for which to calculate the importances.
     models
         Gene and lineage specific models.
-    lineage_name
+    callbacks
+        Gene and lineage specific prepare callbacks.
+    lineage
         Name of the lineage for which to calculate the gene importances.
     queue
         Signalling queue in the parent process/thread used to update the progress bar.
@@ -110,7 +119,8 @@ def _gi_process(
     res = []
 
     for gene in genes:
-        model = models[gene][lineage_name].prepare(gene, lineage_name, **kwargs).fit()
+        cb = callbacks[gene][lineage]
+        model = cb(models[gene][lineage], gene=gene, lineage=lineage, **kwargs).fit()
         res.append([model.x_test.squeeze(), model.predict()])
 
         if queue is not None:
@@ -143,6 +153,7 @@ def _gene_importance(
     show_progress_bar: bool = True,
     n_jobs: Optional[int] = 1,
     backend: str = _DEFAULT_BACKEND,
+    callback: _callback_type = _default_model_callback,
     rf_kwargs: Mapping[str, Any] = MappingProxyType({"criterion": "mse"}),
     **kwargs,
 ) -> Union[pd.DataFrame, Tuple[RandomForestRegressor, pd.DataFrame]]:
@@ -184,6 +195,7 @@ def _gene_importance(
     return_model
         Whether to return the fitted model.
     %(parallel)s
+    %(model_callbacks)s
     rf_kwargs
         Keyword arguments for :class:`sklearn.ensemble.RandomForestRegressor`.
     **kwargs
@@ -220,6 +232,7 @@ def _gene_importance(
     kwargs["n_test_points"] = n_points
 
     models = _create_models(model, genes, [lineage])
+    callbacks = _create_callbacks(adata, callback, genes, [lineage])
     backend = _get_backend(model, backend)
 
     start = logg.info(f"Calculating gene trends using `{n_jobs}` core(s)")
@@ -232,7 +245,7 @@ def _gene_importance(
         extractor=np.hstack,
         backend=backend,
         show_progress_bar=show_progress_bar,
-    )(models, lineage, **kwargs).T
+    )(models, callbacks, lineage, **kwargs).T
     logg.info("    Finish", time=start)
 
     x, pt = data[..., 1], data[:, 0, 0]
