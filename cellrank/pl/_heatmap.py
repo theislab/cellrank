@@ -30,7 +30,6 @@ from cellrank.pl._utils import (
     _time_range_type,
     _create_callbacks,
     _maybe_create_dir,
-    _default_model_callback,
 )
 from cellrank.tl._utils import save_fig, _min_max_scale, _unique_order_preserving
 from cellrank.ul._utils import _get_n_cores, valuedispatch, check_collection
@@ -62,7 +61,7 @@ def heatmap(
     backward: bool = False,
     mode: str = HeatmapMode.LINEAGES.s,
     time_range: Optional[Union[_time_range_type, List[_time_range_type]]] = None,
-    callback: _callback_type = _default_model_callback,
+    callback: _callback_type = None,
     cluster_key: Optional[Union[str, Sequence[str]]] = None,
     show_absorption_probabilities: bool = False,
     cluster_genes: bool = False,

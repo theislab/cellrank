@@ -20,7 +20,6 @@ from cellrank.pl._utils import (
     _callback_type,
     _create_models,
     _create_callbacks,
-    _default_model_callback,
 )
 from cellrank.ul._utils import _get_n_cores, check_collection
 from cellrank.tl._constants import _DEFAULT_BACKEND, AbsProbKey
@@ -153,7 +152,7 @@ def _gene_importance(
     show_progress_bar: bool = True,
     n_jobs: Optional[int] = 1,
     backend: str = _DEFAULT_BACKEND,
-    callback: _callback_type = _default_model_callback,
+    callback: _callback_type = None,
     rf_kwargs: Mapping[str, Any] = MappingProxyType({"criterion": "mse"}),
     **kwargs,
 ) -> Union[pd.DataFrame, Tuple[RandomForestRegressor, pd.DataFrame]]:

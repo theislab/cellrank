@@ -20,7 +20,6 @@ from cellrank.pl._utils import (
     _create_models,
     _time_range_type,
     _create_callbacks,
-    _default_model_callback,
 )
 from cellrank.tl._utils import save_fig, _unique_order_preserving
 from cellrank.ul._utils import _get_n_cores, check_collection
@@ -102,6 +101,7 @@ def cluster_lineage(
     cluster_key: str = "clusters",
     norm: bool = True,
     recompute: bool = False,
+    callback: _callback_type = None,
     ncols: int = 3,
     sharey: bool = False,
     key_added: Optional[str] = None,
@@ -114,7 +114,6 @@ def cluster_lineage(
     pca_kwargs: Dict = MappingProxyType({"svd_solver": "arpack"}),
     neighbors_kwargs: Dict = MappingProxyType({"use_rep": "X"}),
     louvain_kwargs: Dict = MappingProxyType({}),
-    callback: _callback_type = _default_model_callback,
     **kwargs,
 ) -> None:
     """
@@ -151,6 +150,7 @@ def cluster_lineage(
         Whether to z-normalize each trend to have `0` mean, `1` variance.
     recompute
         If `True`, recompute the clustering, otherwise try to find already existing one.
+    %(model_callback)s
     ncols
         Number of columns for the plot.
     sharey
@@ -165,7 +165,6 @@ def cluster_lineage(
         Keyword arguments for :func:`scanpy.pp.neighbors`.
     louvain_kwargs
         Keyword arguments for :func:`scanpy.tl.louvain`.
-    %(model_callback)s
     **kwargs:
         Keyword arguments for :meth:`cellrank.ul.models.BaseModel.prepare`.
 
