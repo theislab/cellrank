@@ -210,7 +210,10 @@ class KernelHolder(ABC):
                 raise KeyError(f"Key `{obsp_key!r}` not found in `adata.obsp`.")
             self._kernel = PrecomputedKernel(obj.obsp[obsp_key], adata=obj)
         else:
-            raise TypeError(f"Unsupported type: `{type(obj).__name__!r}`.")
+            raise TypeError(
+                f"Expected an object of type `KernelExpression`, `numpy.ndarray`, `scipy.sparse.spmatrix` "
+                f"or `anndata.AnnData`, got `{type(obj).__name__!r}`."
+            )
 
         if self.kernel.transition_matrix is None:
             logg.debug("Computing transition matrix using default parameters")
@@ -757,8 +760,8 @@ class AbsProbs(Plottable):
             dtype=pd.Series,
             doc="Differentiation potential.",
         ),
-        Metadata(attr=A.MEAN_ABS_TIME, prop=P.MEAN_ABS_TIME, dtype=pd.Series),
-        Metadata(attr=A.VAR_ABS_TIME, prop=P.VAR_ABS_TIME, dtype=pd.Series),
+        Metadata(attr=A.ABS_PT, prop=P.ABS_PT, dtype=pd.Series),
+        Metadata(attr=A.ABS_PT_VAR, prop=P.ABS_PT_VAR, dtype=pd.Series),
     ]
 
     @abstractmethod

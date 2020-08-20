@@ -185,6 +185,59 @@ class TestCFLARE:
         assert not np.shares_memory(l_iter.X, l_iter_petsc.X)  # sanity check
         np.testing.assert_allclose(l_iter.X, l_iter_petsc.X, rtol=0, atol=tol)
 
+    def test_compute_absorption_probabilities_solver_mean_time(
+        self, adata_large: AnnData
+    ):
+        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+        tol = 1e-6
+
+        mc = cr.tl.CFLARE(final_kernel)
+        mc.compute_eigendecomposition(k=5)
+        mc.compute_final_states(use=2)
+
+        # compute lin probs using direct solver
+        mc.compute_absorption_probabilities(
+            solver="gmres", use_petsc=False, tol=tol, absorption_time_moments="first"
+        )
+        pt = mc._get(P.ABS_PT)
+
+        assert isinstance(mc._absorption_time_mean, np.ndarray)
+        assert isinstance(pt, pd.Series)
+        assert mc._absorption_time_mean.shape == pt.shape
+        assert (pt.min(), pt.max()) == (0, 1)
+        assert mc._get(P.ABS_PT_VAR) is None
+
+    def test_compute_absorption_probabilities_solver_mean_var(
+        self, adata_large: AnnData
+    ):
+        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+        tol = 1e-6
+
+        mc = cr.tl.CFLARE(final_kernel)
+        mc.compute_eigendecomposition(k=5)
+        mc.compute_final_states(use=2)
+
+        # compute lin probs using direct solver
+        mc.compute_absorption_probabilities(
+            solver="gmres", use_petsc=False, tol=tol, absorption_time_moments="second"
+        )
+        pt = mc._get(P.ABS_PT)
+        ptv = mc._get(P.ABS_PT_VAR)
+
+        assert isinstance(mc._absorption_time_mean, np.ndarray)
+        assert isinstance(pt, pd.Series)
+        assert mc._absorption_time_mean.shape == pt.shape
+        assert (pt.min(), pt.max()) == (0, 1)
+
+        assert isinstance(mc._absorption_time_var, np.ndarray)
+        assert isinstance(ptv, pd.Series)
+        assert mc._absorption_time_var.shape == ptv.shape
+        assert ptv.shape == pt.shape
+
     def test_compute_lineage_drivers_no_lineages(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
