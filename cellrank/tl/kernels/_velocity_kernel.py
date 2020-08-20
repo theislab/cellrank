@@ -260,9 +260,10 @@ class VelocityKernel(Kernel):
             mode = VelocityMode.SAMPLING
 
         backend = kwargs.pop("backend", _DEFAULT_BACKEND)
-        if mode == VelocityMode.STOCHASTIC and backend == "multiprocessing":
+        if mode != VelocityMode.STOCHASTIC and backend == "multiprocessing":
+            # this is because on jitting and pickling (cloudpickle, used by loky, handles it correctly)
             logg.warning(
-                f"Multiprocessing backend is not supported for mode `{VelocityMode.STOCHASTIC.s!r}`. "
+                f"Multiprocessing backend is supported only for mode `{VelocityMode.STOCHASTIC.s!r}`. "
                 f"Defaulting to `{_DEFAULT_BACKEND}`"
             )
             backend = _DEFAULT_BACKEND
