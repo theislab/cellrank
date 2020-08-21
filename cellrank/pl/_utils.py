@@ -27,7 +27,7 @@ import matplotlib.pyplot as plt
 from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.tl._utils import save_fig, _unique_order_preserving
-from cellrank.ul.models import GAMR, BaseModel
+from cellrank.ul.models import GAMR, BaseModel, SKLearnModel
 from cellrank.tl._constants import _DEFAULT_BACKEND, _colors
 
 AnnData = TypeVar("AnnData")
@@ -646,8 +646,6 @@ def _create_callbacks(
             return
 
         from sklearn.svm import SVR
-
-        from cellrank.ul.models import SKLearnModel
 
         logg.debug("Performing callback sanity checks")
         for gene in callbacks.keys():
