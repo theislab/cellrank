@@ -24,10 +24,10 @@ backend
     Which backend to use for parallelization. See :class:`joblib.Parallel` for valid options."""
 _model = """\
 model
-    BaseModel to fit.
+    :class:`cellrank.ul.models.BaseModel` to fit.
 
-    - If a :class:`dict`, gene and lineage specific models can be specified. Use `'*'` to indicate
-      all genes or lineages, for example `{'Map2': {'*': ...}, 'Dcx': {'Alpha': ..., '*': ...}}`."""
+    If a :class:`dict`, gene and lineage specific models can be specified. Use `'*'` to indicate
+    all genes or lineages, for example `{'Map2': {'*': ...}, 'Dcx': {'Alpha': ..., '*': ...}}`."""
 _just_plots = """\
 None
     Nothing, just plots the figure. Optionally saves it based on :paramref:`save`."""
@@ -61,12 +61,12 @@ _density_correction = (
 )
 _time_range = """\
 time_range
-    If a :class:`tuple`, it specifies the minimum and maximum pseudotime.
-    Both values can be `None`, in which case the minimum is the earliest pseudotime
-    and the maximum is automatically determined.
-    If a :class:`float`, it specifies the maximum pseudotime.
+    - If a :class:`tuple`, it specifies the minimum and maximum pseudotime.
+      Both values can be `None`, in which case the minimum is the earliest pseudotime
+      and the maximum is automatically determined.
+    - If a :class:`float`, it specifies the maximum pseudotime.
 """
-_time_ranges = f"{_time_range}\n    "
+_time_ranges = f"{_time_range}\n    This can also be specified on per-lineage basis."
 _velocity_mode = """\
 mode
     How to compute transition probabilities. Valid options are:
@@ -92,8 +92,9 @@ _root = "root"
 _final = "final"
 _model_callback = """\
 callback
-    Function which takes a model and some keyword arguments and returns a prepared model.
-    Can be specified in gene- and lineage-specific manner as :paramref:`model`.
+    Function which takes a :class:`cellrank.ul.models.BaseModel` and some keyword arguments
+    for :meth:`cellrank.ul.models.BaseModel.prepare` and returns the prepared model.
+    Can be specified in gene- and lineage-specific manner, similarly to :paramref:`model`.
 """
 
 

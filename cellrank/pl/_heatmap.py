@@ -105,7 +105,7 @@ def heatmap(
             - `{m.LINEAGES.s!r}` - group by :paramref:`genes` for each lineage in :paramref:`lineage_names`
             - `{m.GENES.s!r}` - group by :paramref:`lineage_names` for each gene in :paramref:`genes`
     %(time_ranges)s
-    %(model_callbacks)s
+    %(model_callback)s
     cluster_key
         Key(s) in :paramref:`adata: :.obs` containing categorical observations to be plotted on the top
         of the heatmap. Only available when :paramref:`kind` `='lineages'`.
