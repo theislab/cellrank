@@ -16,14 +16,15 @@ from cellrank.ul._docs import d
 from cellrank.pl._utils import (
     _model_type,
     _get_backend,
+    _callback_type,
     _create_models,
     _time_range_type,
+    _create_callbacks,
 )
 from cellrank.tl._utils import save_fig, _unique_order_preserving
 from cellrank.ul._utils import _get_n_cores, check_collection
 from cellrank.tl._constants import _DEFAULT_BACKEND, AbsProbKey
 from cellrank.ul._parallelize import parallelize
-from cellrank.ul.models._models import BaseModel
 
 AnnData = TypeVar("AnnData")
 Queue = TypeVar("Queue")
@@ -31,8 +32,9 @@ Queue = TypeVar("Queue")
 
 def _cluster_lineages_helper(
     genes: Sequence[str],
-    models: Dict[str, Dict[str, BaseModel]],
-    lineage_name: str,
+    models: _model_type,
+    callbacks: _callback_type,
+    lineage: str,
     time_range: Optional[Union[float, Tuple[float, float]]],
     queue: Optional[Queue],
     **kwargs,
@@ -46,7 +48,9 @@ def _cluster_lineages_helper(
         Genes or observations for which to fit the models.
     models
         Gene and lineage specific models.
-    lineage_name
+    callbacks
+        Gene and lineage specific prepare callbacks.
+    lineage
         Name of the lineage for which to fit the models.
     time_range
         Minimum and maximum pseudotime.
@@ -63,12 +67,17 @@ def _cluster_lineages_helper(
 
     res = []
     for gene in genes:
-        model = (
-            models[gene][lineage_name]
-            .prepare(gene, lineage_name, time_range=time_range, **kwargs)
-            .fit()
-        )
+        cb = callbacks[gene][lineage]
+
+        model = cb(
+            models[gene][lineage],
+            gene=gene,
+            lineage=lineage,
+            time_range=time_range,
+            **kwargs,
+        ).fit()
         res.append(model.predict())
+
         if queue is not None:
             queue.put(1)
 
@@ -92,6 +101,7 @@ def cluster_lineage(
     cluster_key: str = "clusters",
     norm: bool = True,
     recompute: bool = False,
+    callback: _callback_type = None,
     ncols: int = 3,
     sharey: bool = False,
     key_added: Optional[str] = None,
@@ -126,7 +136,7 @@ def cluster_lineage(
     lineage
         Name of the lineage for which to cluster the genes.
     %(backward)s
-    %(time_range)s
+    %(time_ranges)s
     clusters
         Cluster identifiers to plot. If `None`, all clusters will be considered.
         Useful when pl previously computed clusters.
@@ -140,6 +150,7 @@ def cluster_lineage(
         Whether to z-normalize each trend to have `0` mean, `1` variance.
     recompute
         If `True`, recompute the clustering, otherwise try to find already existing one.
+    %(model_callback)s
     ncols
         Number of columns for the plot.
     sharey
@@ -191,6 +202,8 @@ def cluster_lineage(
         kwargs["backward"] = backward
 
         models = _create_models(model, genes, [lineage])
+        callbacks = _create_callbacks(adata, callback, genes, [lineage])
+
         backend = _get_backend(model, backend)
         n_jobs = _get_n_cores(n_jobs, len(genes))
 
@@ -204,7 +217,7 @@ def cluster_lineage(
             backend=backend,
             extractor=np.vstack,
             show_progress_bar=show_progress_bar,
-        )(models, lineage, time_range, **kwargs)
+        )(models, callbacks, lineage, time_range, **kwargs)
         logg.info("    Finish", time=start)
 
         trends = trends.T

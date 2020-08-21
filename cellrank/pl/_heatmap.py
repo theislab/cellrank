@@ -24,9 +24,11 @@ from cellrank.ul._docs import d, inject_docs
 from cellrank.pl._utils import (
     _model_type,
     _get_backend,
+    _callback_type,
     _create_models,
     _fit_gene_trends,
     _time_range_type,
+    _create_callbacks,
     _maybe_create_dir,
 )
 from cellrank.tl._utils import save_fig, _min_max_scale, _unique_order_preserving
@@ -59,6 +61,7 @@ def heatmap(
     backward: bool = False,
     mode: str = HeatmapMode.LINEAGES.s,
     time_range: Optional[Union[_time_range_type, List[_time_range_type]]] = None,
+    callback: _callback_type = None,
     cluster_key: Optional[Union[str, Sequence[str]]] = None,
     show_absorption_probabilities: bool = False,
     cluster_genes: bool = False,
@@ -101,8 +104,8 @@ def heatmap(
 
             - `{m.LINEAGES.s!r}` - group by :paramref:`genes` for each lineage in :paramref:`lineage_names`
             - `{m.GENES.s!r}` - group by :paramref:`lineage_names` for each gene in :paramref:`genes`
-    %(time_range)s
-       This can also be supplied in lineage-specific way, as a list of values described above.
+    %(time_ranges)s
+    %(model_callbacks)s
     cluster_key
         Key(s) in :paramref:`adata: :.obs` containing categorical observations to be plotted on the top
         of the heatmap. Only available when :paramref:`kind` `='lineages'`.
@@ -496,7 +499,8 @@ def heatmap(
 
     _ = kwargs.pop("time_range", None)
 
-    kwargs["models"] = _create_models(model, genes, lineages)
+    models = _create_models(model, genes, lineages)
+    callbacks = _create_callbacks(adata, callback, genes, lineages)
 
     backend = _get_backend(model, backend)
     n_jobs = _get_n_cores(n_jobs, len(genes))
@@ -510,7 +514,7 @@ def heatmap(
         n_jobs=n_jobs,
         extractor=lambda data: {k: v for d in data for k, v in d.items()},
         show_progress_bar=show_progress_bar,
-    )(lineages, time_range, **kwargs)
+    )(models, callbacks, lineages, time_range, **kwargs)
 
     logg.info("    Finish", time=start)
     logg.debug(f"Plotting `{mode.s!r}` heatmap")
