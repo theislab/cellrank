@@ -3,7 +3,17 @@
 
 import os
 from copy import copy
-from typing import Any, Dict, Tuple, Union, Mapping, TypeVar, Optional, Sequence
+from typing import (
+    Any,
+    Dict,
+    Tuple,
+    Union,
+    Mapping,
+    TypeVar,
+    Callable,
+    Optional,
+    Sequence,
+)
 from pathlib import Path
 from collections import defaultdict
 
@@ -14,6 +24,7 @@ import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 
+from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.tl._utils import save_fig, _unique_order_preserving
 from cellrank.ul.models import GAMR, BaseModel
@@ -28,6 +39,7 @@ _ERROR_INCOMPLETE_SPEC = (
 )
 _time_range_type = Optional[Union[float, Tuple[Optional[float], Optional[float]]]]
 _model_type = Union[BaseModel, Mapping[str, Mapping[str, BaseModel]]]
+_callback_type = Optional[Union[Callable, Mapping[str, Mapping[str, Callable]]]]
 
 
 def _curved_edges(
@@ -266,9 +278,10 @@ def _create_models(
             models[obs_name][lin_name] = copy(mod)
 
         if lin_rest_model is not None:
-            for lin_name in set(lineages) - set(models[obs_name].keys()):
+            for lin_name in lineages - set(models[obs_name].keys()):
                 models[obs_name][lin_name] = copy(lin_rest_model)
-        elif set(models[obs_name].keys()) != lineages:
+        else:
+            set(models[obs_name].keys()) != lineages
             raise RuntimeError(_ERROR_INCOMPLETE_SPEC.format(" lineage ", obs_name))
 
     if isinstance(model, BaseModel):
@@ -279,9 +292,6 @@ def _create_models(
         set(_unique_order_preserving(obs)),
     )
     models = defaultdict(dict)
-
-    if isinstance(model, BaseModel):
-        model = {"*": {"*": model}}
 
     if isinstance(model, dict):
         obs_rest_model = model.pop("*", None)
@@ -303,7 +313,9 @@ def _create_models(
 
 def _fit_gene_trends(
     genes: Sequence[str],
-    lineage_names: Sequence[Optional[str]],
+    models: _model_type,
+    callbacks: _callback_type,
+    lineages: Sequence[Optional[str]],
     time_range: Sequence[Union[float, Tuple[float, float]]],
     queue,
     **kwargs,
@@ -315,7 +327,11 @@ def _fit_gene_trends(
     ----------
     genes
         Genes for which to fit the models.
-    lineage_names
+    models
+        Gene and lineage specific models.
+    callbacks
+        Gene and lineage specific prepare callbacks.
+    lineages
         Lineages for which to fit the models.
     time_range
         Minimum and maximum pseudotimes.
@@ -330,13 +346,15 @@ def _fit_gene_trends(
     """
 
     res = {}
-    models = kwargs.pop("models")
     conf_int = kwargs.pop("conf_int", False)
 
     for gene in genes:
         res[gene] = {}
-        for ln, tr in zip(lineage_names, time_range):
-            model = models[gene][ln].prepare(gene, ln, time_range=tr, **kwargs).fit()
+        for ln, tr in zip(lineages, time_range):
+            cb = callbacks[gene][ln]
+            model = cb(
+                models[gene][ln], gene=gene, lineage=ln, time_range=tr, **kwargs
+            ).fit()
             model.predict()
             if conf_int:
                 model.confidence_interval()
@@ -564,3 +582,140 @@ def _maybe_create_dir(dirname: Optional[Union[str, Path]]) -> None:
 
 def _get_backend(model, backend: str) -> str:
     return _DEFAULT_BACKEND if _is_any_gam_mgcv(model) else backend
+
+
+@d.dedent
+def _create_callbacks(
+    adata: AnnData,
+    callback: Optional[Callable],
+    obs: Sequence[str],
+    lineages: Sequence[Optional[str]],
+    perform_sanity_check: bool = True,
+) -> Dict[str, Dict[str, Callable]]:
+    """
+    Create models for each gene and lineage.
+
+    Parameters
+    ----------
+    %(adata)s
+    callback
+        Gene and lineage specific prepare callbacks.
+    obs
+        Sequence of observations, such as genes.
+    lineages
+        Sequence of genes.
+    perform_sanity_check
+        Whether to check if all callables have the correct signature. This is done by instantiating
+        dummy model and running the function. We're assuming that the callback isn't really a pricey operation.
+    Returns
+    -------
+        The created callbacks.
+    """
+
+    def process_lineages(
+        obs_name: str, lin_names: Optional[Union[Callable, Dict[Optional[str], Any]]]
+    ):
+        if lin_names is None:
+            lin_names = _default_model_callback
+
+        if callable(lin_names):
+            # sharing the same models for all lineages
+            for lin_name in lineages:
+                callbacks[obs_name][lin_name] = lin_names
+            return
+        lin_rest_callback = (
+            lin_names.get("*", _default_model_callback) or _default_model_callback
+        )  # do not pop
+
+        for lin_name, cb in lin_names.items():
+            if lin_name == "*":
+                continue
+            callbacks[obs_name][lin_name] = cb
+
+        if callable(lin_rest_callback):
+            for lin_name in lineages - set(callbacks[obs_name].keys()):
+                callbacks[obs_name][lin_name] = lin_rest_callback
+        else:
+            raise TypeError(
+                f"Expected the callback for the rest of lineages to be `callable`, "
+                f"found `{type(lin_rest_callback).__name__!r}`."
+            )
+
+    def maybe_sanity_check(callbacks: Dict[str, Dict[str, Callable]]) -> None:
+        if not perform_sanity_check:
+            return
+
+        from sklearn.svm import SVR
+
+        from cellrank.ul.models import SKLearnModel
+
+        logg.debug("Performing callback sanity checks")
+        for gene in callbacks.keys():
+            for lineage, cb in callbacks[gene].items():
+                # create the model here because the callback can search the attribute
+                dummy_model = SKLearnModel(adata, model=SVR())
+                try:
+                    model = cb(dummy_model, gene=gene, lineage=lineage)
+                    assert model is dummy_model, (
+                        "Creation of new models is not allowed. "
+                        "Ensure that callback returns the same model."
+                    )
+                    assert (
+                        model.prepared
+                    ), "Model is not prepared. Ensure that callback calls `.prepare()`."
+                    assert (
+                        model._gene == gene
+                    ), f"Callback modified the gene from `{gene!r}` to `{model._gene!r}`."
+                    assert model._gene == gene, (
+                        f"Callback modified the lineage "
+                        f"from `{lineage!r}` to `{model._lineage!r}`."
+                    )
+                except Exception as e:
+                    raise RuntimeError(
+                        f"Callback validation failed for "
+                        f"gene `{gene!r}` and lineage `{lineage!r}`."
+                    ) from e
+
+    if callback is None:
+        callback = _default_model_callback
+
+    if callable(callback):
+        callbacks = {o: {lin: copy(callback) for lin in lineages} for o in obs}
+        maybe_sanity_check(callbacks)
+        return callbacks
+
+    lineages, obs = (
+        set(_unique_order_preserving(lineages)),
+        set(_unique_order_preserving(obs)),
+    )
+    callbacks = defaultdict(dict)
+
+    if isinstance(callback, dict):
+        for obs_name, lin_names in callback.items():
+            process_lineages(obs_name, lin_names)
+
+        # can be specified as None
+        obs_rest_callback = (
+            callback.pop("*", _default_model_callback) or _default_model_callback
+        )
+
+        if callable(obs_rest_callback):
+            for obs_name in obs - set(callback.keys()):
+                process_lineages(obs_name, callback.get(obs_name, obs_rest_callback))
+        else:
+            raise TypeError(
+                f"Expected the callback for the rest of genes to be `callable`, "
+                f"found `{type(obs_rest_callback).__name__!r}`."
+            )
+    else:
+        raise TypeError(
+            f"Class `{type(callback).__name__!r}` must be of type `callable` or a dictionary of such callables."
+        )
+
+    maybe_sanity_check(callbacks)
+
+    return callbacks
+
+
+def _default_model_callback(model: BaseModel, **kwargs) -> BaseModel:
+    return model.prepare(**kwargs)
