@@ -133,10 +133,14 @@ class KernelExpression(ABC):
             Nothing, just updates the :paramref:`transition_matrix` and optionally normalizes it.
         """
 
+        should_norm = ~np.isclose(value.sum(1), 1.0, rtol=TOL).all()
+
         if self._parent is None:
-            self._transition_matrix = _normalize(value)
+            self._transition_matrix = _normalize(value) if should_norm else value
         else:
-            self._transition_matrix = _normalize(value) if self._normalize else value
+            self._transition_matrix = (
+                _normalize(value) if self._normalize and should_norm else value
+            )
 
     @abstractmethod
     def compute_transition_matrix(self, *args, **kwargs) -> "KernelExpression":
@@ -924,3 +928,6 @@ def _is_bin_mult(
 
 def _is_adaptive_type(k: KernelExpression) -> bool:
     return isinstance(k, Kernel) and not isinstance(k, ((Constant, ConstantMatrix)))
+
+
+TOL = 1e-12

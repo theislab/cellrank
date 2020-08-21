@@ -30,12 +30,11 @@ from cellrank.tl.kernels._utils import (
     _predict_transition_probabilities_numpy,
 )
 from cellrank.tl.kernels._base_kernel import (
+    TOL,
     _LOG_USING_CACHE,
     _ERROR_EMPTY_CACHE_MSG,
     AnnData,
 )
-
-TOL = 1e-12
 
 
 class VelocityMode(ModeEnum):  # noqa
