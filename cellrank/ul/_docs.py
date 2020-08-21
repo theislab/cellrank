@@ -24,7 +24,7 @@ backend
     Which backend to use for parallelization. See :class:`joblib.Parallel` for valid options."""
 _model = """\
 model
-    :class:`cellrank.ul.models.BaseModel` to fit.
+    Model based on :class:`cellrank.ul.models.BaseModel` to fit.
 
     If a :class:`dict`, gene and lineage specific models can be specified. Use `'*'` to indicate
     all genes or lineages, for example `{'Map2': {'*': ...}, 'Dcx': {'Alpha': ..., '*': ...}}`."""
