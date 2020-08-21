@@ -1178,3 +1178,11 @@ class TestVelocityKernel:
 
         assert not np.all(t_0.A == t_1.A)
         np.testing.assert_array_equal(t_1.A, t_2.A)
+
+    def test_estimate_softmax_scale(self, adata: AnnData):
+        vk = VelocityKernel(adata)
+        vk.compute_transition_matrix(
+            mode="deterministic", show_progress_bar=False, softmax_scale=None
+        )
+
+        assert vk.params["softmax_scale"] is not None

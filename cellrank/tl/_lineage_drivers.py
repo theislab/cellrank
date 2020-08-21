@@ -194,7 +194,7 @@ def _gene_importance(
     return_model
         Whether to return the fitted model.
     %(parallel)s
-    %(model_callbacks)s
+    %(model_callback)s
     rf_kwargs
         Keyword arguments for :class:`sklearn.ensemble.RandomForestRegressor`.
     **kwargs
