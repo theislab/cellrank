@@ -167,7 +167,7 @@ class VelocityKernel(Kernel):
         self,
         mode: str = VelocityMode.DETERMINISTIC.s,
         backward_mode: str = BackwardMode.TRANSPOSE.s,
-        softmax_scale: float = 4.0,
+        softmax_scale: Optional[float] = 4.0,
         n_samples: int = 1000,
         seed: Optional[int] = None,
         use_numba: Optional[bool] = False,
@@ -184,7 +184,7 @@ class VelocityKernel(Kernel):
         %(velocity_mode)s
         %(velocity_backward_mode)s
         softmax_scale
-            Scaling parameter for the softmax.
+            Scaling parameter for the softmax. If `None`, it will be estimated using TODO.
         n_samples
             Number of bootstrap samples when :paramref:`mode` is `{m.MONTE_CARLO.s!r}` or `{m.PROPAGATION.s!r}`.
         seed
@@ -227,12 +227,12 @@ class VelocityKernel(Kernel):
             mode = VelocityMode.MONTE_CARLO
 
         start = logg.info(
-            f"Computing transition matrix based on velocity correlations using mode `{mode.s!r}`"
+            f"Computing transition matrix based on velocity correlations using `{mode.s!r}` mode"
         )
 
         if seed is None:
             seed = np.random.randint(0, 2 ** 16)
-        params = dict(sigma_corr=softmax_scale, mode=mode, seed=seed,)  # noqa
+        params = dict(softmax_scale=softmax_scale, mode=mode, seed=seed)  # noqa
         if self.backward:
             params["bwd_mode"] = backward_mode.s
 
@@ -266,6 +266,30 @@ class VelocityKernel(Kernel):
                 f"Defaulting to `{_DEFAULT_BACKEND}`"
             )
             backend = _DEFAULT_BACKEND
+
+        if softmax_scale is None:
+            logg.info(
+                f"Estimating `softmax_scale` using `{VelocityMode.DETERMINISTIC.s!r}` mode"
+            )
+            _, cmat = _dispatch_computation(
+                VelocityMode.DETERMINISTIC,
+                conn=self._conn,
+                expression=self._gene_expression,
+                velocity=self._velocity,
+                expectation=velocity_expectation,
+                variance=velocity_variance,
+                softmax_scale=1.0,
+                backward=self.backward,
+                backward_mode=backward_mode,
+                n_samples=n_samples,
+                use_numba=use_numba,
+                seed=seed,
+                backend=backend,
+                **kwargs,
+            )
+            softmax_scale = 1.0 / np.median(np.abs(cmat.data))
+            params["softmax_scale"] = softmax_scale
+            logg.info(f"Setting `softmax_scale={softmax_scale:.4f}`")
 
         tmat, cmat = _dispatch_computation(
             mode,
