@@ -337,7 +337,13 @@ class Schur(VectorPlottable, Decomposable):
     """Class computing the Schur decomposition."""
 
     __prop_metadata__ = [
-        Metadata(attr=A.SCHUR, prop=P.SCHUR, dtype=np.ndarray, compute_fmt=F.NO_FUNC),
+        Metadata(
+            attr=A.SCHUR,
+            prop=P.SCHUR,
+            dtype=np.ndarray,
+            compute_fmt=F.NO_FUNC,
+            doc="Schur vectors.",
+        ),
         Metadata(attr=A.SCHUR_MAT, prop=P.SCHUR_MAT, dtype=np.ndarray),
         Metadata(attr=A.EIG, prop=P.EIG, dtype=Mapping[str, Any]),
         Metadata(attr="_invalid_n_states", prop=P.NO_PROPERTY, dtype=np.ndarray),

@@ -18,6 +18,7 @@ and are utilized in some of the plotting functions, like :func:`cellrank.pl.gene
 
 Tools
 ~~~~~
+This module offers a high-level API to compute cell fates and driver genes.
 
 .. module:: cellrank.tl
 .. currentmodule:: cellrank
@@ -26,18 +27,44 @@ Tools
 
     :toctree: api/tl
 
-    tl.GPCCA
-    tl.CFLARE
     tl.partition
+    tl.transition_matrix
     tl.root_states
     tl.final_states
     tl.lineages
     tl.lineage_drivers
-    tl.transition_matrix
+
+.. _kernels:
+
+Kernels
+-------
+Kernels are part of the low-level API and are used to estimate cell-to-cell transitions.
+
+.. module:: cellrank.tl
+.. currentmodule:: cellrank
+
+.. autosummary::
+
+    :toctree: api/tl
+
     tl.kernels.VelocityKernel
     tl.kernels.ConnectivityKernel
     tl.kernels.PalantirKernel
     tl.kernels.PrecomputedKernel
+
+Estimators
+----------
+Estimators predict cell fates using the transitions derived from :ref:`kernels`.
+
+.. module:: cellrank.tl
+.. currentmodule:: cellrank
+
+.. autosummary::
+
+    :toctree: api/tl
+
+    tl.estimators.GPCCA
+    tl.estimators.CFLARE
 
 Plotting
 ~~~~~~~~
@@ -53,10 +80,9 @@ Plotting
     pl.heatmap
     pl.cluster_lineage
     pl.cluster_fates
-    pl.similarity_plot
-    pl.graph
     pl.lineages
     pl.lineage_drivers
+    pl.graph
     pl.composition
 
 Utilities

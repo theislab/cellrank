@@ -17,7 +17,8 @@ def get_github_repo(app, path):
 
 
 def html_page_context(app, pagename, templatename, context, doctree):
-    if templatename != "page.html":
+    # doctree is None - otherwise viewcode fails
+    if templatename != "page.html" or doctree is None:
         return
 
     if not app.config.github_repo:

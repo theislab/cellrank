@@ -245,6 +245,8 @@ class KernelHolder(ABC):
     @d.dedent
     def adata(self) -> AnnData:
         """
+        Annotated data object.
+
         Returns
         -------
         %(adata)s

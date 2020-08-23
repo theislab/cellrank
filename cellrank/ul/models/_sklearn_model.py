@@ -15,7 +15,7 @@ from cellrank.ul.models._base_model import AnnData
 @d.dedent
 class SKLearnModel(BaseModel):
     """
-    Wrapper around :mod:`sklearn` model.
+    Wrapper around almost any :mod:`sklearn` model.
 
     Parameters
     ----------
