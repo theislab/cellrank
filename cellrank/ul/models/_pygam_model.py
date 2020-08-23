@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Module containing :mod:`pygam` model implementation."""
+from copy import copy as _copy
 from copy import deepcopy
 from types import MappingProxyType
 from typing import Mapping, Optional
@@ -102,7 +103,7 @@ class GAM(BaseModel):
         max_iter: int = 2000,
         expectile: Optional[float] = None,
         use_default_conf_int: bool = False,
-        grid: Optional[Mapping] = MappingProxyType({}),
+        grid: Optional[Mapping] = None,
         spline_kwargs: Mapping = MappingProxyType({}),
         **kwargs,
     ):
@@ -145,16 +146,16 @@ class GAM(BaseModel):
             )
         super().__init__(adata, model=model)
         self._use_default_conf_int = use_default_conf_int
-        self._grid = object()  # sentinel value, `None` performs a grid search
 
         if grid is None:
             self._grid = None
-        elif isinstance(grid, (dict, MappingProxyType)):
-            if len(grid):
-                self._grid = dict(grid)
+        elif isinstance(grid, dict):
+            self._grid = _copy(grid)
+        elif isinstance(grid, str):
+            self._grid = object() if grid == "default" else None
         else:
             raise TypeError(
-                f"Expected `grid` to be `dict` or `None`, found `{type(grid).__name__!r}`."
+                f"Expected `grid` to be `dict`, `str` or `None`, found `{type(grid).__name__!r}`."
             )
 
     @d.dedent
@@ -181,11 +182,9 @@ class GAM(BaseModel):
         super().fit(x, y, w, **kwargs)
 
         if self._grid is not None:
-
+            # use default search
             grid = {} if not isinstance(self._grid, dict) else self._grid
             try:
-                # workaround for: https://github.com/dswah/pyGAM/issues/273
-                self.model.fit(self.x, self.y, weights=self.w, **kwargs)
                 self.model.gridsearch(
                     self.x,
                     self.y,
@@ -197,6 +196,8 @@ class GAM(BaseModel):
                 )
                 return self
             except Exception as e:
+                # workaround for: https://github.com/dswah/pyGAM/issues/273
+                self.model.fit(self.x, self.y, weights=self.w, **kwargs)
                 logg.error(
                     f"Grid search failed, reason: `{e}`. Fitting with default values"
                 )
