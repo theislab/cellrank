@@ -21,7 +21,6 @@ from pandas.api.types import infer_dtype, is_categorical_dtype
 from matplotlib.colors import is_color_like
 
 from cellrank import logging as logg
-from cellrank.tl import Lineage
 from cellrank.ul._docs import d, inject_docs
 from cellrank.tl._utils import (
     _pairwise,
@@ -37,6 +36,7 @@ from cellrank.tl._colors import (
     _convert_to_hex_colors,
     _create_categorical_colors,
 )
+from cellrank.tl._lineage import Lineage
 from cellrank.tl._constants import (
     DirPrefix,
     AbsProbKey,

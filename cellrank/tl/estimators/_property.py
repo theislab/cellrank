@@ -17,10 +17,10 @@ import matplotlib as mpl
 from matplotlib import cm
 
 import cellrank.logging as logg
-from cellrank.tl import Lineage
 from cellrank.ul._docs import d
 from cellrank.tl._utils import RandomKeys, _make_cat, partition, _complex_warning
 from cellrank.tl.kernels import PrecomputedKernel
+from cellrank.tl._lineage import Lineage
 from cellrank.tl._constants import Direction, DirPrefix, DirectionPlot
 from cellrank.tl.estimators._utils import (
     Metadata,
