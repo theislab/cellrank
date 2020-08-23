@@ -8,10 +8,10 @@ import matplotlib as mpl
 from matplotlib import cm as cm
 
 import cellrank.logging as logg
-from cellrank.tl import CFLARE
 from cellrank.ul._docs import d
 from cellrank.pl._utils import AnnData
 from cellrank.tl._constants import DirPrefix
+from cellrank.tl.estimators import GPCCA
 from cellrank.tl.estimators._constants import A, P
 from cellrank.tl.kernels._precomputed_kernel import DummyKernel
 
@@ -65,7 +65,7 @@ def lineages(
     """
 
     pk = DummyKernel(adata, backward=backward)
-    mc = CFLARE(pk, read_from_adata=True, write_to_adata=False)
+    mc = GPCCA(pk, read_from_adata=True, write_to_adata=False)
     if mc._get(P.ABS_PROBS) is None:
         raise RuntimeError(
             "Compute absorption probabilities first as `cellrank.tl.lineages()`."
@@ -106,7 +106,7 @@ def lineage_drivers(
     """
 
     pk = DummyKernel(adata, backward=backward)
-    mc = CFLARE(pk, read_from_adata=True, write_to_adata=False)
+    mc = GPCCA(pk, read_from_adata=True, write_to_adata=False)
 
     if use_raw and adata.raw is None:
         logg.warning("No raw attribute set. Using `adata.var` instead")

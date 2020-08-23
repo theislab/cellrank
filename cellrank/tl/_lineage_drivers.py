@@ -12,7 +12,6 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import StandardScaler
 
 from cellrank import logging as logg
-from cellrank.tl import GPCCA
 from cellrank.ul._docs import d
 from cellrank.pl._utils import (
     _model_type,
@@ -23,6 +22,7 @@ from cellrank.pl._utils import (
 )
 from cellrank.ul._utils import _get_n_cores, check_collection
 from cellrank.tl._constants import _DEFAULT_BACKEND, AbsProbKey
+from cellrank.tl.estimators import GPCCA
 from cellrank.ul._parallelize import parallelize
 from cellrank.tl.estimators._constants import P
 from cellrank.tl.kernels._precomputed_kernel import DummyKernel

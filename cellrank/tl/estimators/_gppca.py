@@ -13,7 +13,6 @@ import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 
 from cellrank import logging as logg
-from cellrank.tl import Lineage
 from cellrank.ul._docs import d, inject_docs
 from cellrank.tl._utils import (
     save_fig,
@@ -22,6 +21,7 @@ from cellrank.tl._utils import (
     _series_from_one_hot_matrix,
 )
 from cellrank.tl._colors import _get_black_or_white
+from cellrank.tl._lineage import Lineage
 from cellrank.tl.estimators._utils import Metadata, _print_insufficient_number_of_cells
 from cellrank.tl.estimators._property import MetaStates
 from cellrank.tl.estimators._constants import A, F, P
