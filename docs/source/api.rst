@@ -82,6 +82,7 @@ Plotting
     pl.cluster_fates
     pl.lineages
     pl.lineage_drivers
+    pl.similarity_plot
     pl.graph
     pl.composition
 
