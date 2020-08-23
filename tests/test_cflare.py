@@ -33,7 +33,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.CFLARE(final_kernel)
+        mc = cr.tl.estimators.CFLARE(final_kernel)
         mc.compute_partition()
 
         assert isinstance(mc.is_irreducible, bool)
@@ -51,7 +51,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.CFLARE(final_kernel)
+        mc = cr.tl.estimators.CFLARE(final_kernel)
         mc.compute_eigendecomposition(k=2)
 
         assert isinstance(mc.eigendecomposition, dict)
@@ -70,7 +70,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.CFLARE(final_kernel)
+        mc = cr.tl.estimators.CFLARE(final_kernel)
         with pytest.raises(RuntimeError):
             mc.compute_final_states(use=2)
 
@@ -79,7 +79,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.CFLARE(final_kernel)
+        mc = cr.tl.estimators.CFLARE(final_kernel)
         mc.compute_eigendecomposition(k=2)
         with pytest.raises(ValueError):
             mc.compute_final_states(use=1000)
@@ -89,7 +89,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.CFLARE(final_kernel)
+        mc = cr.tl.estimators.CFLARE(final_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.compute_final_states(use=2)
 
@@ -105,7 +105,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.CFLARE(final_kernel)
+        mc = cr.tl.estimators.CFLARE(final_kernel)
         with pytest.raises(RuntimeError):
             mc.compute_absorption_probabilities()
 
@@ -114,7 +114,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.CFLARE(final_kernel)
+        mc = cr.tl.estimators.CFLARE(final_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.compute_final_states(use=2)
         mc.compute_absorption_probabilities()
@@ -149,7 +149,7 @@ class TestCFLARE:
         final_kernel = 0.8 * vk + 0.2 * ck
         tol = 1e-6
 
-        mc = cr.tl.CFLARE(final_kernel)
+        mc = cr.tl.estimators.CFLARE(final_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.compute_final_states(use=2)
 
@@ -170,7 +170,7 @@ class TestCFLARE:
         final_kernel = 0.8 * vk + 0.2 * ck
         tol = 1e-6
 
-        mc = cr.tl.CFLARE(final_kernel)
+        mc = cr.tl.estimators.CFLARE(final_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.compute_final_states(use=2)
 
@@ -193,7 +193,7 @@ class TestCFLARE:
         final_kernel = 0.8 * vk + 0.2 * ck
         tol = 1e-6
 
-        mc = cr.tl.CFLARE(final_kernel)
+        mc = cr.tl.estimators.CFLARE(final_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.compute_final_states(use=2)
 
@@ -217,7 +217,7 @@ class TestCFLARE:
         final_kernel = 0.8 * vk + 0.2 * ck
         tol = 1e-6
 
-        mc = cr.tl.CFLARE(final_kernel)
+        mc = cr.tl.estimators.CFLARE(final_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.compute_final_states(use=2)
 
@@ -243,7 +243,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.CFLARE(final_kernel)
+        mc = cr.tl.estimators.CFLARE(final_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.compute_final_states(use=2)
         with pytest.raises(RuntimeError):
@@ -254,7 +254,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.CFLARE(final_kernel)
+        mc = cr.tl.estimators.CFLARE(final_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.compute_final_states(use=2)
         mc.compute_absorption_probabilities()
@@ -266,7 +266,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.CFLARE(final_kernel)
+        mc = cr.tl.estimators.CFLARE(final_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.compute_final_states(use=2)
         mc.compute_absorption_probabilities()
@@ -280,7 +280,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.CFLARE(final_kernel)
+        mc = cr.tl.estimators.CFLARE(final_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.compute_final_states(use=2)
         mc.compute_absorption_probabilities()
@@ -294,7 +294,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.CFLARE(final_kernel)
+        mc = cr.tl.estimators.CFLARE(final_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.compute_final_states(use=2)
         mc.compute_absorption_probabilities()
@@ -307,7 +307,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.CFLARE(final_kernel)
+        mc = cr.tl.estimators.CFLARE(final_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.compute_final_states(use=2)
         mc.compute_absorption_probabilities()
@@ -321,7 +321,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.CFLARE(final_kernel)
+        mc = cr.tl.estimators.CFLARE(final_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.compute_final_states(use=2)
         mc.compute_absorption_probabilities()
@@ -335,7 +335,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.CFLARE(final_kernel)
+        mc = cr.tl.estimators.CFLARE(final_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.compute_final_states(use=2)
         mc.compute_absorption_probabilities()
@@ -348,7 +348,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc_fwd = cr.tl.CFLARE(final_kernel)
+        mc_fwd = cr.tl.estimators.CFLARE(final_kernel)
         mc_fwd.compute_partition()
         mc_fwd.compute_eigendecomposition()
         mc_fwd.compute_final_states(use=3)
@@ -403,7 +403,7 @@ class TestCFLARE:
         )
 
         # initialise a pre-computed kernel and CFLARE estimator object
-        c = cr.tl.CFLARE(
+        c = cr.tl.estimators.CFLARE(
             cellrank.tl.kernels._precomputed_kernel.PrecomputedKernel(transition_matrix)
         )
 
@@ -427,7 +427,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc_fwd = cr.tl.CFLARE(final_kernel)
+        mc_fwd = cr.tl.estimators.CFLARE(final_kernel)
         mc_fwd.compute_partition()
         mc_fwd.compute_eigendecomposition()
 
@@ -443,7 +443,9 @@ class TestCFLARE:
 
 
 class TestCFLARECopy:
-    def test_copy_simple(self, adata_cflare_fwd: Tuple[AnnData, cr.tl.CFLARE]):
+    def test_copy_simple(
+        self, adata_cflare_fwd: Tuple[AnnData, cr.tl.estimators.CFLARE]
+    ):
         _, mc1 = adata_cflare_fwd
         mc2 = mc1.copy()
 

@@ -64,10 +64,10 @@ def _assert_has_all_keys(adata: AnnData, direction: Direction):
 
 
 class TestHighLevelPipeline:
-    def test_fwd_pipeline_cflare(self, adata):
+    def test_fwd_pipeline_cflare(self, adata: AnnData):
         cr.tl.final_states(
             adata,
-            estimator=cr.tl.CFLARE,
+            estimator=cr.tl.estimators.CFLARE,
             cluster_key="clusters",
             method="kmeans",
             show_plots=True,
@@ -81,10 +81,10 @@ class TestHighLevelPipeline:
 
         _assert_has_all_keys(adata, Direction.FORWARD)
 
-    def test_fwd_pipeline_invalid_raw_requested(self, adata):
+    def test_fwd_pipeline_invalid_raw_requested(self, adata: AnnData):
         cr.tl.final_states(
             adata,
-            estimator=cr.tl.CFLARE,
+            estimator=cr.tl.estimators.CFLARE,
             cluster_key="clusters",
             method="kmeans",
             show_plots=True,
@@ -97,10 +97,10 @@ class TestHighLevelPipeline:
         with pytest.raises(RuntimeError):
             cr.pl.lineage_drivers(adata, ln, use_raw=True, backward=False)
 
-    def test_bwd_pipeline_cflare(self, adata):
+    def test_bwd_pipeline_cflare(self, adata: AnnData):
         cr.tl.root_states(
             adata,
-            estimator=cr.tl.CFLARE,
+            estimator=cr.tl.estimators.CFLARE,
             cluster_key="clusters",
             method="louvain",
             show_plots=True,
@@ -114,10 +114,10 @@ class TestHighLevelPipeline:
 
         _assert_has_all_keys(adata, Direction.BACKWARD)
 
-    def test_fwd_pipeline_gpcca(self, adata):
+    def test_fwd_pipeline_gpcca(self, adata: AnnData):
         cr.tl.final_states(
             adata,
-            estimator=cr.tl.GPCCA,
+            estimator=cr.tl.estimators.GPCCA,
             cluster_key="clusters",
             method="brandts",
             show_plots=True,
@@ -130,10 +130,10 @@ class TestHighLevelPipeline:
 
         _assert_has_all_keys(adata, Direction.FORWARD)
 
-    def test_fwd_pipeline_gpcca_invalid_raw_requested(self, adata):
+    def test_fwd_pipeline_gpcca_invalid_raw_requested(self, adata: AnnData):
         cr.tl.final_states(
             adata,
-            estimator=cr.tl.GPCCA,
+            estimator=cr.tl.estimators.GPCCA,
             cluster_key="clusters",
             method="brandts",
             show_plots=True,
@@ -145,10 +145,10 @@ class TestHighLevelPipeline:
         with pytest.raises(RuntimeError):
             cr.pl.lineage_drivers(adata, ln, use_raw=True, backward=False)
 
-    def test_bwd_pipeline_gpcca(self, adata):
+    def test_bwd_pipeline_gpcca(self, adata: AnnData):
         cr.tl.root_states(
             adata,
-            estimator=cr.tl.GPCCA,
+            estimator=cr.tl.estimators.GPCCA,
             cluster_key="clusters",
             method="brandts",
             show_plots=True,
@@ -163,12 +163,12 @@ class TestHighLevelPipeline:
 
 
 class TestLowLevelPipeline:
-    def test_fwd_pipelne_cflare(self, adata):
+    def test_fwd_pipelne_cflare(self, adata: AnnData):
         vk = VelocityKernel(adata).compute_transition_matrix()
         ck = ConnectivityKernel(adata).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        estimator_fwd = cr.tl.CFLARE(final_kernel)
+        estimator_fwd = cr.tl.estimators.CFLARE(final_kernel)
 
         estimator_fwd.compute_partition()
 
@@ -188,12 +188,12 @@ class TestLowLevelPipeline:
 
         _assert_has_all_keys(adata, Direction.FORWARD)
 
-    def test_bwd_pipelne_cflare(self, adata):
+    def test_bwd_pipelne_cflare(self, adata: AnnData):
         vk = VelocityKernel(adata, backward=True).compute_transition_matrix()
         ck = ConnectivityKernel(adata, backward=True).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        estimator_bwd = cr.tl.CFLARE(final_kernel)
+        estimator_bwd = cr.tl.estimators.CFLARE(final_kernel)
 
         estimator_bwd.compute_partition()
 
@@ -213,12 +213,12 @@ class TestLowLevelPipeline:
 
         _assert_has_all_keys(adata, Direction.BACKWARD)
 
-    def test_fwd_pipelne_gpcca(self, adata):
+    def test_fwd_pipelne_gpcca(self, adata: AnnData):
         vk = VelocityKernel(adata).compute_transition_matrix()
         ck = ConnectivityKernel(adata).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        estimator_fwd = cr.tl.GPCCA(final_kernel)
+        estimator_fwd = cr.tl.estimators.GPCCA(final_kernel)
 
         estimator_fwd.compute_partition()
 
@@ -254,12 +254,12 @@ class TestLowLevelPipeline:
 
         _assert_has_all_keys(adata, Direction.FORWARD)
 
-    def test_bwd_pipelne_gpcca(self, adata):
+    def test_bwd_pipelne_gpcca(self, adata: AnnData):
         vk = VelocityKernel(adata, backward=True).compute_transition_matrix()
         ck = ConnectivityKernel(adata, backward=True).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        estimator_bwd = cr.tl.GPCCA(final_kernel)
+        estimator_bwd = cr.tl.estimators.GPCCA(final_kernel)
 
         estimator_bwd.compute_eigendecomposition()
         estimator_bwd.plot_spectrum()
