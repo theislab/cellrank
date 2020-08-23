@@ -4,6 +4,7 @@ import sys
 import logging
 import subprocess
 from pathlib import Path
+from datetime import datetime
 from urllib.parse import urljoin
 from urllib.request import urlretrieve
 
@@ -19,7 +20,6 @@ if not os.path.exists(os.path.join(sys.path[1], "cellrank", "_vendor")):
 
 
 import cellrank  # noqa NOQA
-
 
 logger = logging.getLogger(__name__)
 
@@ -49,8 +49,10 @@ for nb in ["pancreas_basic.ipynb", "pancreas_advanced.ipynb"]:
 # -- Project information -----------------------------------------------------
 
 project = "CellRank"
-copyright = "2019, Marius Lange, Michal Klein, Juan Luis Restrepo Lopez"
-author = "Marius Lange, Michal Klein, Juan Luis Restrepo Lopez"
+author = cellrank.__author__
+copyright = f"{datetime.now():%Y}, {author}."
+release = "master"
+version = f"master ({cellrank.__version__})"
 
 
 # -- General configuration ---------------------------------------------------
@@ -61,6 +63,7 @@ author = "Marius Lange, Michal Klein, Juan Luis Restrepo Lopez"
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
+    "sphinx.ext.viewcode",
     "sphinx_autodoc_typehints",
     "sphinx.ext.intersphinx",
     "sphinx_paramlinks",
@@ -116,9 +119,6 @@ nbsphinx_prolog = r"""
       <a href="https://mybinder.org/v2/gh/theislab/cellrank_notebooks/{{ env.config.release|e }}?filepath={{ docname|e }}"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>
     </div>
 """
-
-release = "master"
-
 
 # -- Options for HTML output -------------------------------------------------
 
