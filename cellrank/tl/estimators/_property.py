@@ -366,10 +366,11 @@ class VectorPlottable(KernelHolder, Property):
         color = list(V_.T)
         if cluster_key is not None:
             color = [cluster_key] + color
+        cmap = kwargs.pop("cmap", "viridis")
 
-        logg.debug(f"Showing `{use}` {name}vectors")
+        logg.debug(f"Plotting `{use}` {name}vectors")
 
-        scv.pl.scatter(self.adata, color=color, title=title, **kwargs)
+        scv.pl.scatter(self.adata, color=color, title=title, cmap=cmap, **kwargs)
 
 
 class Plottable(KernelHolder, Property):
