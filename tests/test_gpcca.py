@@ -26,7 +26,7 @@ from cellrank.tl._constants import (
 from cellrank.tl.estimators._constants import A, P
 
 
-def _check_eigdecomposition(mc: cr.tl.GPCCA) -> None:
+def _check_eigdecomposition(mc: cr.tl.estimators.GPCCA) -> None:
     assert isinstance(mc._get(P.EIG), dict)
     assert set(mc._get(P.EIG).keys()) == {
         "D",
@@ -40,7 +40,7 @@ def _check_eigdecomposition(mc: cr.tl.GPCCA) -> None:
     assert f"eig_{Direction.FORWARD}" in mc.adata.uns.keys()
 
 
-def _check_compute_meta(mc: cr.tl.GPCCA) -> None:
+def _check_compute_meta(mc: cr.tl.estimators.GPCCA) -> None:
     assert isinstance(mc._get(P.META), pd.Series)
     assert len(mc._get(A.META_COLORS)) == len(mc._get(P.META).cat.categories)
 
@@ -68,7 +68,7 @@ def _check_compute_meta(mc: cr.tl.GPCCA) -> None:
         assert isinstance(mc._get(P.SCHUR), np.ndarray)
 
 
-def _check_abs_probs(mc: cr.tl.GPCCA, has_main_states: bool = True):
+def _check_abs_probs(mc: cr.tl.estimators.GPCCA, has_main_states: bool = True):
     if has_main_states:
         assert isinstance(mc._get(P.FIN), pd.Series)
         assert_array_nan_equal(
@@ -109,7 +109,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.GPCCA(final_kernel)
+        mc = cr.tl.estimators.GPCCA(final_kernel)
         mc.compute_partition()
 
         assert isinstance(mc.is_irreducible, bool)
@@ -127,7 +127,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.GPCCA(final_kernel)
+        mc = cr.tl.estimators.GPCCA(final_kernel)
         mc.compute_eigendecomposition(k=2, only_evals=True)
 
         _check_eigdecomposition(mc)
@@ -137,7 +137,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.GPCCA(final_kernel)
+        mc = cr.tl.estimators.GPCCA(final_kernel)
         with pytest.raises(ValueError):
             mc.compute_schur(n_components=1, method="krylov")
 
@@ -146,7 +146,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.GPCCA(final_kernel)
+        mc = cr.tl.estimators.GPCCA(final_kernel)
         with pytest.raises(ValueError):
             mc.compute_schur(method="foobar")
 
@@ -155,7 +155,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.GPCCA(final_kernel)
+        mc = cr.tl.estimators.GPCCA(final_kernel)
         with pytest.raises(ValueError):
             mc.compute_schur(which="foobar", method="krylov")
 
@@ -164,7 +164,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.GPCCA(final_kernel)
+        mc = cr.tl.estimators.GPCCA(final_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
         _check_eigdecomposition(mc)
@@ -176,7 +176,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.GPCCA(final_kernel)
+        mc = cr.tl.estimators.GPCCA(final_kernel)
         mc.compute_eigendecomposition(k=10, only_evals=True)
 
         _check_eigdecomposition(mc)
@@ -203,7 +203,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.GPCCA(final_kernel)
+        mc = cr.tl.estimators.GPCCA(final_kernel)
         with pytest.raises(RuntimeError):
             mc.compute_metastable_states(n_states=None)
 
@@ -212,7 +212,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.GPCCA(final_kernel)
+        mc = cr.tl.estimators.GPCCA(final_kernel)
         mc.compute_metastable_states(n_states=1)
 
     def test_compute_metastable_none_states(self, adata_large: AnnData):
@@ -220,7 +220,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.GPCCA(final_kernel)
+        mc = cr.tl.estimators.GPCCA(final_kernel)
         mc.compute_eigendecomposition(only_evals=True)
         mc.compute_metastable_states(n_states=None)
 
@@ -231,7 +231,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.GPCCA(final_kernel)
+        mc = cr.tl.estimators.GPCCA(final_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_metastable_states(n_states=2)
 
@@ -242,7 +242,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.GPCCA(final_kernel)
+        mc = cr.tl.estimators.GPCCA(final_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         with pytest.raises(KeyError):
             mc.compute_metastable_states(n_states=2, cluster_key="foobar")
@@ -252,7 +252,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.GPCCA(final_kernel)
+        mc = cr.tl.estimators.GPCCA(final_kernel)
         mc.compute_schur(n_components=11, method="krylov")
 
         mc.compute_metastable_states(n_states=2)
@@ -265,7 +265,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.GPCCA(final_kernel)
+        mc = cr.tl.estimators.GPCCA(final_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_metastable_states(n_states=2, n_cells=5)
@@ -281,7 +281,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.GPCCA(final_kernel)
+        mc = cr.tl.estimators.GPCCA(final_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_metastable_states(n_states=2, n_cells=None)
@@ -295,7 +295,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.GPCCA(final_kernel)
+        mc = cr.tl.estimators.GPCCA(final_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_metastable_states(n_states=2, n_cells=None)
@@ -309,7 +309,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.GPCCA(final_kernel)
+        mc = cr.tl.estimators.GPCCA(final_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_metastable_states(n_states=2)
@@ -321,7 +321,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.GPCCA(final_kernel)
+        mc = cr.tl.estimators.GPCCA(final_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_metastable_states(n_states=2)
@@ -333,7 +333,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.GPCCA(final_kernel)
+        mc = cr.tl.estimators.GPCCA(final_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_metastable_states(n_states=2)
@@ -345,7 +345,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.GPCCA(final_kernel)
+        mc = cr.tl.estimators.GPCCA(final_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_metastable_states(n_states=2)
@@ -357,7 +357,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.GPCCA(final_kernel)
+        mc = cr.tl.estimators.GPCCA(final_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_metastable_states(n_states=2)
@@ -371,7 +371,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.GPCCA(final_kernel)
+        mc = cr.tl.estimators.GPCCA(final_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_metastable_states(n_states=2)
@@ -385,7 +385,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.GPCCA(final_kernel)
+        mc = cr.tl.estimators.GPCCA(final_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_metastable_states(n_states=2)
@@ -399,7 +399,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.GPCCA(final_kernel)
+        mc = cr.tl.estimators.GPCCA(final_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_metastable_states(n_states=2)
@@ -413,7 +413,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.GPCCA(final_kernel)
+        mc = cr.tl.estimators.GPCCA(final_kernel)
 
         mc.compute_gdpt(method="krylov")
 
@@ -424,7 +424,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.GPCCA(final_kernel)
+        mc = cr.tl.estimators.GPCCA(final_kernel)
         mc.adata.uns.pop("iroot", None)
 
         with pytest.raises(KeyError):
@@ -435,7 +435,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.GPCCA(final_kernel)
+        mc = cr.tl.estimators.GPCCA(final_kernel)
 
         with pytest.raises(ValueError):
             mc.compute_gdpt(n_components=1)
@@ -445,7 +445,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.GPCCA(final_kernel)
+        mc = cr.tl.estimators.GPCCA(final_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_gdpt(key_added="foobar")
@@ -457,7 +457,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.GPCCA(final_kernel)
+        mc = cr.tl.estimators.GPCCA(final_kernel)
         mc.adata.uns["iroot"] = mc.adata.obs_names[0]
 
         mc.compute_gdpt()
@@ -469,7 +469,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.GPCCA(final_kernel)
+        mc = cr.tl.estimators.GPCCA(final_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_metastable_states(n_states=2)
         mc.set_final_states_from_metastable_states()
@@ -483,7 +483,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.GPCCA(final_kernel)
+        mc = cr.tl.estimators.GPCCA(final_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_metastable_states(n_states=2)
         mc.set_final_states_from_metastable_states()
@@ -499,7 +499,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.GPCCA(final_kernel)
+        mc = cr.tl.estimators.GPCCA(final_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_metastable_states(n_states=2)
         mc.set_final_states_from_metastable_states()
@@ -514,7 +514,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.GPCCA(final_kernel)
+        mc = cr.tl.estimators.GPCCA(final_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_metastable_states(n_states=2)
         mc.set_final_states_from_metastable_states()
@@ -528,7 +528,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.GPCCA(final_kernel)
+        mc = cr.tl.estimators.GPCCA(final_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_metastable_states(n_states=2)
         mc.set_final_states_from_metastable_states()
@@ -543,7 +543,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.GPCCA(final_kernel)
+        mc = cr.tl.estimators.GPCCA(final_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_metastable_states(n_states=2)
         mc.set_final_states_from_metastable_states()
@@ -558,7 +558,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.GPCCA(final_kernel)
+        mc = cr.tl.estimators.GPCCA(final_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_metastable_states(n_states=2)
         mc.set_final_states_from_metastable_states()
@@ -569,7 +569,7 @@ class TestGPCCA:
 
 
 class TestGPCCACopy:
-    def test_copy_simple(self, adata_gpcca_fwd: Tuple[AnnData, cr.tl.GPCCA]):
+    def test_copy_simple(self, adata_gpcca_fwd: Tuple[AnnData, cr.tl.estimators.GPCCA]):
         _, mc1 = adata_gpcca_fwd
         mc2 = mc1.copy()
 

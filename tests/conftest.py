@@ -14,9 +14,9 @@ import numpy as np
 import matplotlib
 
 import cellrank as cr
-from cellrank.tl import GPCCA, CFLARE
 from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tl._constants import AbsProbKey
+from cellrank.tl.estimators import GPCCA, CFLARE
 
 matplotlib.use("Agg")
 np.random.seed(42)
@@ -35,7 +35,7 @@ def _create_cflare(*, backward: bool = False) -> Tuple[AnnData, CFLARE]:
     ck = ConnectivityKernel(adata, backward=backward).compute_transition_matrix()
     final_kernel = 0.8 * vk + 0.2 * ck
 
-    mc = cr.tl.CFLARE(final_kernel)
+    mc = CFLARE(final_kernel)
 
     mc.compute_partition()
     mc.compute_eigendecomposition()
@@ -62,7 +62,7 @@ def _create_gpcca(*, backward: bool = False) -> Tuple[AnnData, GPCCA]:
     ck = ConnectivityKernel(adata, backward=backward).compute_transition_matrix()
     final_kernel = 0.8 * vk + 0.2 * ck
 
-    mc = cr.tl.GPCCA(final_kernel)
+    mc = GPCCA(final_kernel)
 
     mc.compute_partition()
     mc.compute_eigendecomposition()
