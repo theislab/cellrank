@@ -11,6 +11,7 @@ import scvelo as scv
 from anndata import AnnData
 
 import numpy as np
+import pandas as pd
 
 import matplotlib.cm as cm
 from matplotlib.testing import setup
@@ -18,6 +19,7 @@ from matplotlib.testing.compare import compare_images
 
 import cellrank as cr
 import cellrank.pl._lineages
+from cellrank.tl._constants import AbsProbKey
 from cellrank.tl.estimators import GPCCA, CFLARE
 from cellrank.pl._cluster_fates import similarity_plot
 
@@ -849,6 +851,102 @@ class TestHeatmap:
             dpi=DPI,
             save=fpath,
         )
+
+    @compare(dirname="heatmap_show_dendrogram")
+    def test_heatmap_show_dendrogram(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.heatmap(
+            adata,
+            model,
+            GENES[:10],
+            mode="lineages",
+            time_key="latent_time",
+            cluster_genes=True,
+            show_dendrogram=True,
+            dpi=DPI,
+            save=fpath,
+        )
+
+
+class TestHeatMapReturns:
+    def test_heatmap_lineages_return_genes(self, adata_cflare: AnnData):
+        model = create_model(adata_cflare)
+        df = cr.pl.heatmap(
+            adata_cflare,
+            model,
+            GENES[:10],
+            mode="lineages",
+            time_key="latent_time",
+            return_genes=True,
+            dpi=DPI,
+        )
+
+        assert isinstance(df, pd.DataFrame)
+        np.testing.assert_array_equal(
+            df.columns, adata_cflare.obsm[AbsProbKey.FORWARD.s].names
+        )
+        assert len(df) == 10
+        assert set(df.iloc[:, 0].values) == set(GENES[:10])
+
+    def test_heatmap_lineages_return_genes_large_number(self, adata_cflare: AnnData):
+        model = create_model(adata_cflare)
+        genes = adata_cflare.var_names[:100]
+        df = cr.pl.heatmap(
+            adata_cflare,
+            model,
+            genes,
+            mode="lineages",
+            time_key="latent_time",
+            return_genes=True,
+            dpi=DPI,
+        )
+
+        assert isinstance(df, pd.DataFrame)
+        np.testing.assert_array_equal(
+            df.columns, adata_cflare.obsm[AbsProbKey.FORWARD.s].names
+        )
+        assert len(df) == len(genes)
+        assert set(df.iloc[:, 0].values) == set(genes)
+
+    def test_heatmap_lineages_return_genes_same_order(self, adata_cflare: AnnData):
+        model = create_model(adata_cflare)
+        df = cr.pl.heatmap(
+            adata_cflare,
+            model,
+            GENES[:10],
+            keep_gene_order=True,
+            mode="lineages",
+            time_key="latent_time",
+            return_genes=True,
+            dpi=DPI,
+        )
+
+        assert isinstance(df, pd.DataFrame)
+        np.testing.assert_array_equal(
+            df.columns, adata_cflare.obsm[AbsProbKey.FORWARD.s].names
+        )
+        assert len(df) == 10
+        assert set(df.iloc[:, 0].values) == set(GENES[:10])
+
+        ref = df.iloc[:, 0].values
+        for i in range(1, len(df.columns)):
+            np.testing.assert_array_equal(df.iloc[:, i].values, ref)
+
+    def test_heatmap_genes_return_genes(self, adata_cflare: AnnData):
+        model = create_model(adata_cflare)
+        df = cr.pl.heatmap(
+            adata_cflare,
+            model,
+            GENES[:10],
+            mode="genes",
+            time_key="latent_time",
+            cluster_genes=True,
+            show_dendrogram=True,
+            return_genes=True,
+            dpi=DPI,
+        )
+
+        assert df is None
 
 
 class TestGeneTrend:
