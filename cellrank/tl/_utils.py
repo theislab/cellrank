@@ -22,7 +22,7 @@ import pandas as pd
 from pandas import Series
 from numpy.linalg import norm as d_norm
 from scipy.sparse import eye as speye
-from scipy.sparse import issparse, spmatrix, csr_matrix
+from scipy.sparse import diags, issparse, spmatrix, csr_matrix
 from sklearn.cluster import KMeans
 from pandas.api.types import infer_dtype, is_categorical_dtype
 from sklearn.neighbors import NearestNeighbors
@@ -1625,3 +1625,51 @@ def _calculate_absorption_time_moments(
         var = pseudotime_var = None
 
     return mean, pseudotime, var, pseudotime_var
+
+
+def _calculate_lineage_absorption_time_means(
+    Q: csr_matrix,
+    R: csr_matrix,
+    trans_indices: np.ndarray,
+    n: int,
+    ixs: Dict[str, np.ndarray],
+    lineages: Iterable[str],
+    **kwargs,
+) -> pd.DataFrame:
+    for ln in lineages:
+        if ln not in ixs.keys():
+            raise ValueError(
+                f"Invalid lineage key `{ln!r}`. Valid option are `{list(ixs.keys())}`."
+            )
+
+    res_mean = pd.DataFrame()
+    tmp_ixs, cnt = {}, 0
+    for k, ix in ixs.items():
+        # get the indices to B matrix
+        tmp_ixs[k] = np.arange(cnt, cnt + len(ix), dtype=np.int32)
+        cnt += len(ix)
+
+    I = speye(Q.shape[0])  # noqa
+    N_inv = I - Q
+
+    logg.debug("Solving equation for `B`")
+    B = _solve_lin_system(Q, R, use_eye=True, **kwargs)
+
+    for ln in lineages:
+        print(tmp_ixs[ln])
+        D_j = diags(np.sum(B[:, tmp_ixs[ln]], axis=1))
+        D_j_inv = D_j.copy()
+        D_j_inv.data = 1.0 / D_j.data
+
+        logg.debug(f"Solving mean time until absorption for lineage `{ln!r}`")
+        m = _solve_lin_system(
+            D_j @ N_inv @ D_j_inv, np.ones(Q.shape[0]), **kwargs
+        ).squeeze()
+
+        mean = np.empty(n, dtype=np.float64)
+        mean[:] = np.inf
+        mean[trans_indices] = m
+
+        res_mean[ln] = mean
+
+    return res_mean

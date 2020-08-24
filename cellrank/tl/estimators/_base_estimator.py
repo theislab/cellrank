@@ -30,6 +30,7 @@ from cellrank.tl._utils import (
     _merge_categorical_series,
     _convert_to_categorical_series,
     _calculate_absorption_time_moments,
+    _calculate_lineage_absorption_time_means,
 )
 from cellrank.tl._colors import (
     _map_names_and_colors,
@@ -227,6 +228,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         solver: Optional[str] = None,
         use_petsc: Optional[bool] = None,
         absorption_time_moments: Optional[str] = None,
+        lineage_absorption_time: Optional[str] = None,
         n_jobs: Optional[int] = None,
         backend: str = "loky",
         show_progress_bar: bool = True,
@@ -259,6 +261,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             to :func:`scipy.sparse.linalg.gmres`.
         absorption_time_moments
             Whether to compute mean absorption time and its variance. Valid options are `None`, `'first'`, `'second'`.
+        lineage_absorption_time
+            TODO
         n_jobs
             Number of parallel jobs to use when using an iterative solver.
             When :paramref:`use_petsc` `=True` or for quickly-solvable problems,
@@ -307,13 +311,22 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             )
 
         # process the current annotations according to `keys`
-        metastable_states_, colors_ = _process_series(
+        final_states_, colors_ = _process_series(
             series=self._get(P.FIN), keys=keys, colors=self._get(A.FIN_COLORS)
         )
 
-        # define the dimensions of this problem
+        if lineage_absorption_time is not None:
+            if isinstance(lineage_absorption_time, str):
+                lineage_absorption_time = [lineage_absorption_time]
+            for ln in lineage_absorption_time:
+                if ln not in final_states_.cat.categories:
+                    raise ValueError(
+                        f"Invalid state `{ln!r}`. Valid options are `{list(final_states_.cat.categories)}`."
+                    )
+
+            # define the dimensions of this problem
         n_cells = t.shape[0]
-        n_macrostates = len(metastable_states_.cat.categories)
+        n_macrostates = len(final_states_.cat.categories)
 
         #  create empty lineage object
         if self._get(P.ABS_PROBS) is not None:
@@ -323,13 +336,13 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             A.ABS_RPOBS,
             Lineage(
                 np.empty((1, len(colors_))),
-                names=metastable_states_.cat.categories,
+                names=final_states_.cat.categories,
                 colors=colors_,
             ),
         )
 
         # warn in case only one state is left
-        keys = list(metastable_states_.cat.categories)
+        keys = list(final_states_.cat.categories)
         if len(keys) == 1:
             logg.warning(
                 "There is only 1 recurrent class, all cells will have probability 1 of going there"
@@ -337,7 +350,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
         # get indices corresponding to recurrent and transient states
         rec_indices, trans_indices, lookup_dict = _get_cat_and_null_indices(
-            metastable_states_
+            final_states_
         )
         if not len(trans_indices):
             raise RuntimeError("Cannot proceed - Markov chain is irreducible.")
@@ -398,6 +411,24 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 calculate_variance=absorption_time_moments == "second",
             )
 
+        mean2 = None
+        if lineage_absorption_time is not None:
+            mean2 = _calculate_lineage_absorption_time_means(
+                q,
+                t[trans_indices, :][:, rec_indices],
+                trans_indices,
+                n=t.shape[0],
+                ixs=lookup_dict,
+                lineages=lineage_absorption_time,
+                solver=solver,
+                use_petsc=use_petsc,
+                n_jobs=n_jobs,
+                backend=backend,
+                tol=tol,
+                show_progress_bar=show_progress_bar,
+            )
+            self._atm = mean2
+
         # take individual solutions and piece them together to get absorption probabilities towards the classes
         macro_ix_helper = np.cumsum(
             [0] + [len(indices) for indices in lookup_dict.values()]
@@ -413,8 +444,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         # for recurrent states, set their self-absorption probability to one
         abs_classes = np.zeros((len(self), n_macrostates))
         rec_classes_full = {
-            cl: np.where(metastable_states_ == cl)[0]
-            for cl in metastable_states_.cat.categories
+            cl: np.where(final_states_ == cl)[0] for cl in final_states_.cat.categories
         }
         for col, cl_indices in enumerate(rec_classes_full.values()):
             abs_classes[trans_indices, col] = _abs_classes[:, col]
@@ -460,6 +490,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         self._absorption_time_var = abs_time_var
 
         self._write_absorption_probabilities(time=start, extra_msg=extra_msg)
+
+        return q, s, rec_indices, trans_indices
 
     @d.get_sectionsf("lineage_drivers", sections=["Parameters", "Returns"])
     @d.get_full_descriptionf("lineage_drivers")
