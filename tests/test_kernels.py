@@ -398,8 +398,7 @@ class TestKernel:
         np.testing.assert_allclose(T_stoch.sum(1), 1, rtol=_rtol)
 
     @jax_not_installed_skip
-    def test_transition_forward_stoch(self, adata: AnnData):
-        # TODO: self-referential test (i.e. useless)
+    def test_transition_forward_stoch_high_lvl(self, adata: AnnData):
         backward = False
 
         vk = VelocityKernel(adata, backward=backward).compute_transition_matrix(
@@ -412,22 +411,6 @@ class TestKernel:
         ).transition_matrix
 
         np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
-
-    @jax_not_installed_skip
-    def test_transition_forward_differ_mode(self, adata: AnnData):
-        # TODO: doesn't make sense - different implementation
-        backward = False
-
-        vk = VelocityKernel(adata, backward=backward).compute_transition_matrix(
-            mode="stochastic"
-        )
-        T_1 = vk.transition_matrix
-
-        # this is the very old deterministic approach
-        transition_matrix(adata, backward=backward)
-        T_2 = adata.uns[_transition(Direction.FORWARD)]["T"]
-
-        assert not np.allclose(T_1.A, T_2.A, rtol=_rtol)
 
     def test_palantir(self, adata: AnnData):
         conn = _get_neighs(adata, "connectivities")
