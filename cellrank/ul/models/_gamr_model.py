@@ -9,6 +9,9 @@ from cellrank.ul._docs import d
 from cellrank.ul.models import BaseModel
 from cellrank.ul.models._base_model import AnnData
 
+_r_lib = None
+_r_lib_name = None
+
 
 @d.dedent
 class GAMR(BaseModel):

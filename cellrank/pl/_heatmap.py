@@ -3,7 +3,7 @@
 
 import os
 from math import fabs
-from typing import Any, List, Tuple, Union, TypeVar, Optional, Sequence
+from typing import Any, Dict, List, Tuple, Union, TypeVar, Optional, Sequence
 from pathlib import Path
 from collections import Iterable, defaultdict
 
@@ -74,6 +74,8 @@ def heatmap(
     fontsize: Optional[float] = None,
     xlabel: Optional[str] = None,
     cmap: mcolors.ListedColormap = cm.viridis,
+    show_dendrogram: bool = True,
+    return_genes: bool = False,
     n_jobs: Optional[int] = 1,
     backend: str = _DEFAULT_BACKEND,
     show_progress_bar: bool = True,
@@ -82,7 +84,7 @@ def heatmap(
     dpi: Optional[int] = None,
     save: Optional[Union[str, Path]] = None,
     **kwargs,
-) -> None:
+) -> Optional[Dict[str, pd.DataFrame]]:
     """
     Plot a heatmap of smoothed gene expression along specified lineages.
 
@@ -132,6 +134,10 @@ def heatmap(
         Label on the x-axis. If `None`, it is determined based on :paramref:`time_key`.
     cmap
         Colormap to use when visualizing the smoothed expression.
+    show_dendrogram
+        Whether to show dendrogram when :paramref:`cluster_genes` `=True`.
+    return_genes
+        Whether to return the sorted or clustered genes. Only available when :paramref:`mode` `{m.LINEAGES.s!r}`.
     %(parallel)s
     %(plotting)s
     **kwargs
@@ -139,6 +145,8 @@ def heatmap(
 
     Returns
     -------
+    :class:`pandas.DataFrame`
+        If :paramref`return_genes`, returns :class:`pandas.DataFrame`, containing the clustered or sorted genes.
     %(just_plots)s
     """
 
@@ -236,7 +244,7 @@ def heatmap(
         pass
 
     @_plot_heatmap.register(HeatmapMode.GENES)
-    def _() -> Fig:
+    def _() -> Tuple[Fig, None]:
         def color_fill_rec(ax, xs, y1, y2, colors=None, cmap=cmap, **kwargs) -> None:
             colors = colors if cmap is None else cmap(colors)
 
@@ -304,7 +312,7 @@ def heatmap(
             ax.set_yticks(np.array(ys[:-1]) + lineage_height / 2)
             ax.spines["left"].set_position(
                 ("data", 0)
-            )  # move the left spine to the rectangles to get nices yticks
+            )  # move the left spine to the rectangles to get nicer yticks
             ax.set_yticklabels(lineages, ha="right")
 
             ax.set_title(gene, fontdict=dict(fontsize=fontsize))
@@ -341,10 +349,10 @@ def heatmap(
         )
         ax.set_xlabel(xlabel)
 
-        return fig
+        return fig, None
 
     @_plot_heatmap.register(HeatmapMode.LINEAGES)
-    def _() -> List[Fig]:
+    def _() -> Tuple[List[Fig], pd.DataFrame]:
         data_t = defaultdict(dict)  # transpose
         for gene, lns in data.items():
             for ln, y in lns.items():
@@ -352,6 +360,7 @@ def heatmap(
 
         figs = []
         gene_order = None
+        sorted_genes = pd.DataFrame() if return_genes else None
 
         for lname, models in data_t.items():
             xs = np.array([m.x_test for m in models.values()])
@@ -391,6 +400,9 @@ def heatmap(
                     col_colors = np.vstack([cat_colors, col_colors[None, :]])
             else:
                 col_colors, col_cmap, col_norm = cat_colors, None, None
+
+            row_cluster = cluster_genes and df.shape[0] > 1
+            show_clust = row_cluster and show_dendrogram
 
             g = sns.clustermap(
                 df,
@@ -449,10 +461,9 @@ def heatmap(
                 g.ax_heatmap.set_title(lname, fontdict=dict(fontsize=fontsize))
 
             g.ax_col_dendrogram.set_visible(False)  # gets rid of top free space
-            g.ax_row_dendrogram.set_visible(False)
 
             g.ax_heatmap.yaxis.tick_left()
-            g.ax_heatmap.yaxis.set_label_position("left")
+            g.ax_heatmap.yaxis.set_label_position("right")
 
             g.ax_heatmap.set_xlabel(xlabel)
             g.ax_heatmap.set_xticks(np.linspace(0, len(df.columns), _N_XTICKS))
@@ -460,9 +471,33 @@ def heatmap(
                 list(map(lambda n: round(n, 3), np.linspace(x_min, x_max, _N_XTICKS)))
             )
 
-            figs.append(g.fig)
+            if show_clust:
+                # robustly show dendrogram, because gene names can be long
+                g.ax_row_dendrogram.set_visible(True)
+                dendro_box = g.ax_row_dendrogram.get_position()
 
-        return figs
+                pad = 0.005
+                bb = g.ax_heatmap.yaxis.get_tightbbox(
+                    g.fig.canvas.get_renderer()
+                ).transformed(g.fig.transFigure.inverted())
+
+                dendro_box.x0 = bb.x0 - dendro_box.width - pad
+                dendro_box.x1 = bb.x0 - pad
+
+                g.ax_row_dendrogram.set_position(dendro_box)
+            else:
+                g.ax_row_dendrogram.set_visible(False)
+
+            if return_genes:
+                sorted_genes[lname] = (
+                    df.index[g.dendrogram_row.reordered_ind]
+                    if hasattr(g, "dendrogram_row") and g.dendrogram_row is not None
+                    else df.index
+                )
+
+            figs.append(g)
+
+        return figs, sorted_genes
 
     mode = HeatmapMode(mode)
 
@@ -495,8 +530,7 @@ def heatmap(
             f"Expected time ranges to be of length `{len(lineages)}`, found `{len(time_range)}`."
         )
 
-    xlabel = kwargs.get("time_key", None) if xlabel is None else xlabel
-
+    xlabel = xlabel or kwargs.get("time_key", "latent_time")
     _ = kwargs.pop("time_range", None)
 
     models = _create_models(model, genes, lineages)
@@ -519,7 +553,7 @@ def heatmap(
     logg.info("    Finish", time=start)
     logg.debug(f"Plotting `{mode.s!r}` heatmap")
 
-    fig = _plot_heatmap(mode)
+    fig, genes = _plot_heatmap(mode)
 
     if save is not None and fig is not None:
         if not isinstance(fig, Iterable):
@@ -532,6 +566,9 @@ def heatmap(
         _maybe_create_dir(save)
         for ln, f in zip(lineages, fig):
             save_fig(f, os.path.join(save, f"lineage_{ln}"), ext=ext)
+
+    if return_genes and mode == HeatmapMode.LINEAGES:
+        return genes
 
 
 def _get_ax_bbox(fig: Fig, ax: Ax):
