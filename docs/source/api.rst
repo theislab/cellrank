@@ -54,7 +54,7 @@ Kernels are part of the low-level API and are used to estimate cell-to-cell tran
 
 Estimators
 ----------
-Estimators predict cell fates using the transitions derived from :ref:`kernels`.
+Estimators predict cell fates using the transitions derived from :ref:`Kernels`.
 
 .. module:: cellrank.tl
 .. currentmodule:: cellrank
