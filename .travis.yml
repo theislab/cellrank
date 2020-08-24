@@ -23,9 +23,7 @@ jobs:
       os: linux
       python: "3.6"
       script:
-        - pip install black rstcheck
-        - black . --check --diff
-        - rstcheck . --recursive
+        - ./.scripts/ci/static_analysis.sh
       after_success: skip
 
     - name: "Python 3.6.5 on macOS"
