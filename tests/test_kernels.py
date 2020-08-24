@@ -3,7 +3,6 @@ import pytest
 from _helpers import (
     bias_knn,
     create_kernels,
-    transition_matrix,
     density_normalization,
     jax_not_installed_skip,
     random_transition_matrix,
@@ -414,34 +413,6 @@ class TestKernel:
 
         np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
 
-    @pytest.mark.xfail(reason="implementation difference")
-    def test_transition_forward_det(self, adata: AnnData):
-        backward = False
-
-        vk = VelocityKernel(adata, backward=backward).compute_transition_matrix(
-            mode="deterministic"
-        )
-        T_1 = vk.transition_matrix
-
-        transition_matrix(adata, backward=backward)
-        T_2 = adata.uns[_transition(Direction.FORWARD)]["T"]
-
-        np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
-
-    @pytest.mark.xfail(reason="implementation difference")
-    def test_transition_backward_det(self, adata: AnnData):
-        backward = True
-
-        vk = VelocityKernel(adata, backward=backward).compute_transition_matrix(
-            mode="deterministic"
-        )
-        T_1 = vk.transition_matrix
-
-        transition_matrix(adata, backward=backward)
-        T_2 = adata.uns[_transition(Direction.BACKWARD)]["T"]
-
-        np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
-
     @jax_not_installed_skip
     def test_transition_forward_differ_mode(self, adata: AnnData):
         # TODO: doesn't make sense - different implementation
@@ -457,21 +428,6 @@ class TestKernel:
         T_2 = adata.uns[_transition(Direction.FORWARD)]["T"]
 
         assert not np.allclose(T_1.A, T_2.A, rtol=_rtol)
-
-    @pytest.mark.xfail(reason="implementation difference")
-    def test_backward_negate(self, adata: AnnData):
-        backward = True
-        backward_mode = "negate"
-        vk = VelocityKernel(adata, backward=backward)
-
-        vk.compute_transition_matrix(backward_mode=backward_mode, mode="deterministic")
-        T_1 = vk.transition_matrix
-        transition_matrix(
-            adata, backward=backward, backward_mode=backward_mode,
-        )
-        T_2 = adata.uns[_transition(Direction.BACKWARD)]["T"]
-
-        np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
 
     def test_palantir(self, adata: AnnData):
         conn = _get_neighs(adata, "connectivities")
@@ -657,97 +613,6 @@ class TestKernel:
         assert T_sc.shape == T_cr.shape
         assert len(T_sc.indices) == len(T_cr.indices)
         assert np.allclose((T_cr - T_sc).data, 0)
-
-
-class TestPreviousImplementation:
-    @pytest.mark.xfail(reason="implementation difference")
-    def test_forward(self, adata: AnnData):
-        density_normalize = False
-        vk = VelocityKernel(adata).compute_transition_matrix(mode="deterministic")
-        ck = ConnectivityKernel(adata).compute_transition_matrix(
-            density_normalize=density_normalize
-        )
-
-        comb = 0.8 * vk + 0.2 * ck
-        T_1 = comb.transition_matrix
-
-        transition_matrix(
-            adata, diff_kernel="sum", weight_diffusion=0.2, density_normalize=False
-        )
-        T_2 = adata.uns[_transition(Direction.FORWARD)]["T"]
-
-        np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
-
-    @pytest.mark.xfail(reason="velocity kernel does not have dense norm")
-    def test_forward_manual_dense_norm(self, adata: AnnData):
-        vk = VelocityKernel(adata).compute_transition_matrix(mode="deterministic")
-        ck = ConnectivityKernel(adata).compute_transition_matrix(
-            density_normalize=False
-        )
-
-        comb = 0.8 * vk + 0.2 * ck
-        T_1 = comb.transition_matrix
-        conn = _get_neighs(adata, "connectivities")
-        T_1 = density_normalization(T_1, conn)
-        T_1 = _normalize(T_1)
-
-        transition_matrix(
-            adata, diff_kernel="sum", weight_diffusion=0.2, density_normalize=True
-        )
-        T_2 = adata.uns[_transition(Direction.FORWARD)]["T"]
-
-        np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
-
-    @pytest.mark.xfail(reason="implementation difference")
-    def test_backward(self, adata: AnnData):
-        density_norm, backward = False, True
-        vk = VelocityKernel(adata, backward=backward).compute_transition_matrix()
-
-        ck = ConnectivityKernel(adata, backward=backward).compute_transition_matrix(
-            density_normalize=density_norm
-        )
-
-        # combine the kernels
-        comb = 0.8 * vk + 0.2 * ck
-        T_1 = comb.transition_matrix
-
-        transition_matrix(
-            adata,
-            diff_kernel="sum",
-            weight_diffusion=0.2,
-            density_normalize=False,
-            backward=backward,
-        )
-        T_2 = adata.uns[_transition(Direction.BACKWARD)]["T"]
-
-        np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
-
-    @pytest.mark.xfail(reason="velocity kernel does not have dense norm")
-    def test_backward_manual_dense_norm(self, adata: AnnData):
-        backward = True
-        vk = VelocityKernel(adata, backward=backward).compute_transition_matrix()
-
-        ck = ConnectivityKernel(adata, backward=backward).compute_transition_matrix(
-            density_normalize=False
-        )
-
-        # combine the kernels
-        comb = 0.8 * vk + 0.2 * ck
-        T_1 = comb.transition_matrix
-        conn = _get_neighs(adata, "connectivities")
-        T_1 = density_normalization(T_1, conn)
-        T_1 = _normalize(T_1)
-
-        transition_matrix(
-            adata,
-            diff_kernel="sum",
-            weight_diffusion=0.2,
-            density_normalize=True,
-            backward=backward,
-        )
-        T_2 = adata.uns[_transition(Direction.BACKWARD)]["T"]
-
-        np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
 
 
 class TestKernelAddition:
@@ -1036,9 +901,8 @@ class TestTransitionProbabilities:
         vk.compute_transition_matrix(mode="deterministic")
         pearson_correlations_cr = vk.pearson_correlations
 
-        data = np.array(pearson_correlations_cr[(velo_graph != 0)]).squeeze()
         pc_r = velo_graph.copy()
-        pc_r.data = data
+        pc_r.data = np.array(pearson_correlations_cr[(velo_graph != 0)]).squeeze()
 
         assert np.max(np.abs((pc_r - velo_graph).data)) < _rtol
 
@@ -1054,9 +918,8 @@ class TestTransitionProbabilities:
         vk.compute_transition_matrix(mode="deterministic", backward_mode="transpose")
         pearson_correlations_cr = vk.pearson_correlations
 
-        data = np.array(pearson_correlations_cr[(velo_graph != 0)]).squeeze()
         pc_r = velo_graph.copy()
-        pc_r.data = data
+        pc_r.data = np.array(pearson_correlations_cr[(velo_graph != 0)]).squeeze()
 
         assert np.max(np.abs((pc_r - velo_graph.T).data)) < _rtol
 
