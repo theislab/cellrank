@@ -463,7 +463,7 @@ def heatmap(
             g.ax_col_dendrogram.set_visible(False)  # gets rid of top free space
 
             g.ax_heatmap.yaxis.tick_left()
-            g.ax_heatmap.yaxis.set_label_position("left")
+            g.ax_heatmap.yaxis.set_label_position("right")
 
             g.ax_heatmap.set_xlabel(xlabel)
             g.ax_heatmap.set_xticks(np.linspace(0, len(df.columns), _N_XTICKS))
