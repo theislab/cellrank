@@ -135,9 +135,9 @@ def heatmap(
     cmap
         Colormap to use when visualizing the smoothed expression.
     show_dendrogram
-        Whether to show dendrogram when :paramref:`` `=True`.
+        Whether to show dendrogram when :paramref:`cluster_genes` `=True`.
     return_genes
-        Whether to return the sorted or clustered genes.
+        Whether to return the sorted or clustered genes. Only available when :paramref:`mode` `{m.LINEAGES.s!r}`.
     %(parallel)s
     %(plotting)s
     **kwargs
@@ -244,7 +244,7 @@ def heatmap(
         pass
 
     @_plot_heatmap.register(HeatmapMode.GENES)
-    def _() -> Fig:
+    def _() -> Tuple[Fig, None]:
         def color_fill_rec(ax, xs, y1, y2, colors=None, cmap=cmap, **kwargs) -> None:
             colors = colors if cmap is None else cmap(colors)
 
@@ -349,7 +349,7 @@ def heatmap(
         )
         ax.set_xlabel(xlabel)
 
-        return fig
+        return fig, None
 
     @_plot_heatmap.register(HeatmapMode.LINEAGES)
     def _() -> Tuple[List[Fig], pd.DataFrame]:
@@ -567,7 +567,7 @@ def heatmap(
         for ln, f in zip(lineages, fig):
             save_fig(f, os.path.join(save, f"lineage_{ln}"), ext=ext)
 
-    if return_genes:
+    if return_genes and mode == HeatmapMode.LINEAGES:
         return genes
 
 
