@@ -1634,6 +1634,7 @@ def _calculate_lineage_absorption_time_means(
     n: int,
     ixs: Dict[str, np.ndarray],
     lineages: Iterable[str],
+    calculate_variance: bool = False,
     **kwargs,
 ) -> pd.DataFrame:
     for ln in lineages:
@@ -1642,7 +1643,7 @@ def _calculate_lineage_absorption_time_means(
                 f"Invalid lineage key `{ln!r}`. Valid option are `{list(ixs.keys())}`."
             )
 
-    res_mean = pd.DataFrame()
+    res = pd.DataFrame()
     tmp_ixs, cnt = {}, 0
     for k, ix in ixs.items():
         # get the indices to B matrix
@@ -1656,20 +1657,42 @@ def _calculate_lineage_absorption_time_means(
     B = _solve_lin_system(Q, R, use_eye=True, **kwargs)
 
     for ln in lineages:
-        print(tmp_ixs[ln])
         D_j = diags(np.sum(B[:, tmp_ixs[ln]], axis=1))
         D_j_inv = D_j.copy()
         D_j_inv.data = 1.0 / D_j.data
 
-        logg.debug(f"Solving mean time until absorption for lineage `{ln!r}`")
+        logg.debug(f"Calculating mean time to absorption for lineage `{ln!r}`")
         m = _solve_lin_system(
-            D_j @ N_inv @ D_j_inv, np.ones(Q.shape[0]), **kwargs
+            D_j_inv @ N_inv @ D_j, np.ones(Q.shape[0]), **kwargs
         ).squeeze()
 
         mean = np.empty(n, dtype=np.float64)
         mean[:] = np.inf
+        mean[ixs[ln]] = 0
         mean[trans_indices] = m
 
-        res_mean[ln] = mean
+        res[f"{ln}_abs_time_mean"] = mean
 
-    return res_mean
+        if calculate_variance:
+            logg.debug(
+                f"Calculating variance of time to absorption for lineage `{ln!r}`"
+            )
+
+            logg.debug("Solving equation (1/2)")
+            X = _solve_lin_system(D_j + Q @ D_j, N_inv @ D_j, **kwargs)
+            y = m - X @ (m ** 2)
+
+            _ = kwargs.pop("n_jobs", None)
+            logg.debug("Solving equation (2/2)")
+            v = _solve_lin_system(X, y, use_eye=False, n_jobs=1, **kwargs).squeeze()
+
+            assert np.all(v >= 0), f"Encountered negative variance: `{v[v < 0]}`."
+
+            var = np.empty(n, dtype=np.float64)
+            var[:] = np.inf
+            var[ixs[ln]] = 0
+            var[trans_indices] = v
+
+            res[f"{ln}_abs_time_var"] = var
+
+    return res
