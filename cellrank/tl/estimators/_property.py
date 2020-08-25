@@ -607,9 +607,11 @@ class Plottable(KernelHolder, Property):
             else:
                 kwargs["color"] = color
 
-            if probs.shape[1] == 1:
+            if probs.shape[1] == 1 and prop in (P.META_PROBS.s, P.FIN_PROBS.s):
                 if "perc" not in kwargs:
-                    logg.warning("Did not detect percentile. Setting `perc=[0, 95]`")
+                    logg.warning(
+                        "Did not detect percentile for stationary distribution. Setting `perc=[0, 95]`"
+                    )
                     kwargs["perc"] = [0, 95]
                 kwargs["color"] = X
                 kwargs.pop("color_gradients", None)
@@ -675,10 +677,10 @@ class Plottable(KernelHolder, Property):
             probs = getattr(self, A.FIN_ABS_PROBS.s, None)
             # we have this only in GPCCA
             if isinstance(probs, Lineage):
-                self._plot_continuous(probs, prop, **kwargs)
+                self._plot_continuous(probs, P.FIN_PROBS.v, **kwargs)
             else:
                 logg.warning(
-                    f"Unable to plot continuous observations for `{prop!r}`, pl in discrete mode"
+                    f"Unable to plot continuous observations for `{prop!r}`, plotting in discrete mode"
                 )
                 self._plot_discrete(data, prop, **kwargs)
         else:
