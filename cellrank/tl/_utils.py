@@ -1605,7 +1605,7 @@ def _calculate_absorption_time_moments(
     if calculate_variance:
         logg.debug("Calculating variance of time to absorption")
 
-        I = speye(q.shape[0])  # noqa
+        I = speye(q.shape[0]) if issparse(q) else np.eye(q.shape[0])  # noqa
         A_t = (I + q).T
         B_t = (I - q).T
 
@@ -1636,6 +1636,33 @@ def _calculate_lineage_absorption_time_means(
     lineages: Dict[str, str],
     **kwargs,
 ) -> pd.DataFrame:
+    """
+    Calculate the mean time until absorption and optionally its variance for specific lineages or their combinations.
+
+    Parameters
+    ----------
+    Q
+        Transient-transient submatrix of the transition matrix.
+    R
+        Transient-recurrent submatrix of the transition matrix.
+    trans_indices
+        Transient indices.
+    n
+        Number of states of the full transition matrix.
+    ixs
+        Mapping of names of absorbing states and their indices in the full transition matrix.
+    lineages
+        Lineages for which to calculate the mean time until absorption moments.
+    **kwargs
+        Keyword arguments for :func:`cellrank.tl._lin_solver._solver_lin_system`.
+
+    Returns
+    -------
+    :class:`pandas.DataFrame`
+        A dataframe with means and optionally variances of mean time to absorption for each lineage
+        in :paramref:`lineages`.
+    """
+
     for ln in lineages.keys():
         if ln not in ixs.keys():
             raise ValueError(
@@ -1649,7 +1676,7 @@ def _calculate_lineage_absorption_time_means(
         tmp_ixs[k] = np.arange(cnt, cnt + len(ix), dtype=np.int32)
         cnt += len(ix)
 
-    I = speye(Q.shape[0])  # noqa
+    I = speye(Q.shape[0]) if issparse(Q) else np.eye(Q.shape)  # noqa
     N_inv = I - Q
 
     logg.debug("Solving equation for `B`")
