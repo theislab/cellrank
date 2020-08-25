@@ -184,7 +184,8 @@ class VelocityKernel(Kernel):
         %(velocity_mode)s
         %(velocity_backward_mode)s
         softmax_scale
-            Scaling parameter for the softmax. If `None`, it will be estimated using TODO.
+            Scaling parameter for the softmax. If `None`, it will be estimated using 1/median(correlations). The idea
+            behind this is to scale the softmax to counteract everythin tending to orthogonality in high dimensions.
         n_samples
             Number of bootstrap samples when :paramref:`mode` is `{m.MONTE_CARLO.s!r}` or `{m.PROPAGATION.s!r}`.
         seed
@@ -192,7 +193,7 @@ class VelocityKernel(Kernel):
         use_numba
             Use :mod:`numba` optimized functions. Only available if `:paramref:`mode` != `{m.STOCHASTIC.s!r}`.
             If `True`, the outermost loop is also :mod:`numba` optimized. This options disables the progress bar.
-            If `False`, the outermost loop is not optimized, but the workload is split among multiple cors.
+            If `False`, the outermost loop is not optimized, but the workload is split among multiple cores.
             If `None`, it's same as `True`, but the work is being split and each worker uses optimized outermost loop.
         %(parallel)s
 
