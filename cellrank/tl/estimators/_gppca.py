@@ -347,7 +347,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         """  # noqa
         if len(self._get(P.META).cat.categories) == 1:
             logg.warning(
-                "Found only one metastable state. Making it the single main state. "
+                "Found only one metastable state. Making it the single main state"
             )
             self.set_final_states_from_metastable_states(None, n_cells=n_cells)
             return
