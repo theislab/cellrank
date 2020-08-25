@@ -22,6 +22,7 @@ from cellrank.tl._utils import RandomKeys, _make_cat, partition, _complex_warnin
 from cellrank.tl.kernels import PrecomputedKernel
 from cellrank.tl._lineage import Lineage
 from cellrank.tl._constants import Direction, DirPrefix, DirectionPlot
+from cellrank.tl.kernels._utils import _filter_kwargs
 from cellrank.tl.estimators._utils import (
     Metadata,
     _create_property,
@@ -294,7 +295,7 @@ class VectorPlottable(KernelHolder, Property):
         abs_value
             Whether to take the absolute value before pl.
         cluster_key
-            Key from :paramref:`adata` `.obs` to plot cluster annotations.
+            Key from :paramref:`adata` `.obs` for plotting categorical observations.
         **kwargs
             Keyword arguments for :func:`scvelo.pl.scatter`.
 
@@ -401,7 +402,7 @@ class Plottable(KernelHolder, Property):
         Parameters
         ----------
         cluster_key
-            Key from :paramref:`adata` `.obs` for pl cluster labels.
+            Key from :paramref:`adata` `.obs` for plotting categorical observations.
         same_plot
             Whether to plot the lineages on the same plot or separately.
         title
@@ -428,7 +429,7 @@ class Plottable(KernelHolder, Property):
             colors = getattr(self, A.META_COLORS.v, None)
         else:
             raise NotImplementedError(
-                f"Unable to determine pl conditions for property `.{prop}`."
+                f"Unable to determine plotting conditions for property `.{prop}`."
             )
 
         if cluster_key is None:
@@ -458,7 +459,7 @@ class Plottable(KernelHolder, Property):
                     self.adata,
                     title=cluster_key + title,
                     color=cluster_key + keys,
-                    **kwargs,
+                    **_filter_kwargs(scv.pl.scatter, **kwargs),
                 )
             else:
                 for i, (key, cat) in enumerate(zip(keys, data.cat.categories)):
@@ -475,7 +476,7 @@ class Plottable(KernelHolder, Property):
                     title=(cluster_key + list(data.cat.categories))
                     if title is None
                     else title,
-                    **kwargs,
+                    **_filter_kwargs(scv.pl.scatter, **kwargs),
                 )
 
     @d.get_sectionsf("plot_continuous")
@@ -503,12 +504,12 @@ class Plottable(KernelHolder, Property):
         lineages
             Plot only these lineages. If `None`, plot all lineages.
         cluster_key
-            Key from :paramref:`adata` `.obs` for pl cluster labels.
+            Key from :paramref:`adata` `.obs` for plotting categorical observations.
         mode
             One of following:
 
-                - `'embedding'` - plot the embedding while coloring in the absorption probabilities
-                - `'time'` - plot the pseudotime on x-axis and the absorption probabilities on y-axis
+                - `'embedding'` - plot the embedding while coloring in the absorption probabilities.
+                - `'time'` - plot the pseudotime on x-axis and the absorption probabilities on y-axis.
         time_key
             Key from :paramref:`adata` `.obs` to use as a pseudotime ordering of the cells.
         title
@@ -558,7 +559,7 @@ class Plottable(KernelHolder, Property):
 
         if X.shape[1] == 1:
             # this is the case for only 1 recurrent class - all cells have prob. 1 of going there
-            # however, scvelo's pl really picks up the slightest differences in the colormap, here we set
+            # however, matplotlib's plotting really picks up the slightest differences in the colormap, here we set
             # everything to one, if applicable
             if np.allclose(X, 1.0):
                 X = np.ones_like(X)
@@ -616,7 +617,12 @@ class Plottable(KernelHolder, Property):
                 kwargs["color"] = X
                 kwargs.pop("color_gradients", None)
 
-            scv.pl.scatter(self.adata, title=title, color_map=cmap, **kwargs)
+            scv.pl.scatter(
+                self.adata,
+                title=title,
+                color_map=cmap,
+                **_filter_kwargs(scv.pl.scatter, **kwargs),
+            )
         elif mode == "time":
             scv.pl.scatter(
                 self.adata,
@@ -626,7 +632,7 @@ class Plottable(KernelHolder, Property):
                 title=title,
                 xlabel=[time_key] * len(title),
                 ylabel=["probability" * len(title)],
-                **kwargs,
+                **_filter_kwargs(scv.pl.scatter, **kwargs),
             )
         else:
             raise ValueError(

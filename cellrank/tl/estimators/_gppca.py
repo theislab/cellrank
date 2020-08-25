@@ -289,12 +289,12 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         # compute the aggregated probability of being a root/final state (no matter which)
         scaled_probs = meta_states_probs[
             [n for n in meta_states_probs.names if n != "rest"]
-        ].X.copy()
+        ].copy()
         scaled_probs /= scaled_probs.max(0)
 
         self._set(A.FIN, self._create_states(meta_states_probs, n_cells))
         self._set(
-            A.FIN_PROBS, pd.Series(scaled_probs.max(1), index=self.adata.obs_names)
+            A.FIN_PROBS, pd.Series(scaled_probs.X.max(1), index=self.adata.obs_names)
         )
         self._set(
             A.FIN_COLORS,
