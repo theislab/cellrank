@@ -274,8 +274,8 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             self._set(A.FIN, self._create_states(probs, n_cells=n_cells))
             self._set(A.FIN_COLORS, self._get(A.META_COLORS))
             self._set(A.FIN_PROBS, probs / probs.max())
+            self._set(A.FIN_ABS_PROBS, probs)
             self._write_final_states()
-
             return
 
         if names is None:
@@ -301,11 +301,9 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             meta_states_probs[list(self._get(P.FIN).cat.categories)].colors,
         )
 
-        self._set(A.FIN_ABS_PROBS, meta_states_probs)
-
+        self._set(A.FIN_ABS_PROBS, scaled_probs)
         self._write_final_states()
 
-    # TODO: singlevaluedispatch
     @inject_docs(fs=P.FIN, fsp=P.FIN_PROBS)
     @d.dedent
     def compute_final_states(
