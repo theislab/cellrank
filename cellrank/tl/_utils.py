@@ -1633,11 +1633,10 @@ def _calculate_lineage_absorption_time_means(
     trans_indices: np.ndarray,
     n: int,
     ixs: Dict[str, np.ndarray],
-    lineages: Iterable[str],
-    calculate_variance: bool = False,
+    lineages: Dict[str, str],
     **kwargs,
 ) -> pd.DataFrame:
-    for ln in lineages:
+    for ln in lineages.keys():
         if ln not in ixs.keys():
             raise ValueError(
                 f"Invalid lineage key `{ln!r}`. Valid option are `{list(ixs.keys())}`."
@@ -1656,7 +1655,10 @@ def _calculate_lineage_absorption_time_means(
     logg.debug("Solving equation for `B`")
     B = _solve_lin_system(Q, R, use_eye=True, **kwargs)
 
-    for ln in lineages:
+    no_jobs_kwargs = kwargs.copy()
+    _ = no_jobs_kwargs.pop("n_jobs", None)
+
+    for ln, moment in lineages.items():
         D_j = diags(np.sum(B[:, tmp_ixs[ln]], axis=1))
         D_j_inv = D_j.copy()
         D_j_inv.data = 1.0 / D_j.data
@@ -1671,20 +1673,21 @@ def _calculate_lineage_absorption_time_means(
         mean[ixs[ln]] = 0
         mean[trans_indices] = m
 
-        res[f"{ln}_abs_time_mean"] = mean
+        res[f"{ln}_mean"] = mean
 
-        if calculate_variance:
+        if moment == "var":
             logg.debug(
                 f"Calculating variance of time to absorption for lineage `{ln!r}`"
             )
 
             logg.debug("Solving equation (1/2)")
-            X = _solve_lin_system(D_j + Q @ D_j, N_inv @ D_j, **kwargs)
+            X = _solve_lin_system(D_j + Q @ D_j, N_inv @ D_j, use_eye=False, **kwargs)
             y = m - X @ (m ** 2)
 
-            _ = kwargs.pop("n_jobs", None)
             logg.debug("Solving equation (2/2)")
-            v = _solve_lin_system(X, y, use_eye=False, n_jobs=1, **kwargs).squeeze()
+            v = _solve_lin_system(
+                X, y, use_eye=False, n_jobs=1, **no_jobs_kwargs
+            ).squeeze()
 
             assert np.all(v >= 0), f"Encountered negative variance: `{v[v < 0]}`."
 
@@ -1693,6 +1696,6 @@ def _calculate_lineage_absorption_time_means(
             var[ixs[ln]] = 0
             var[trans_indices] = v
 
-            res[f"{ln}_abs_time_var"] = var
+            res[f"{ln}_var"] = var
 
     return res

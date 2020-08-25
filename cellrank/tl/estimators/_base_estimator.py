@@ -219,7 +219,11 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         self._write_final_states(time=kwargs.get("time", None))
 
     @inject_docs(
-        abs_prob=P.ABS_PROBS, diff_pot=P.DIFF_POT, apt=P.ABS_PT, aptv=P.ABS_PT_VAR
+        abs_prob=P.ABS_PROBS,
+        diff_pot=P.DIFF_POT,
+        apt=P.ABS_PT,
+        aptv=P.ABS_PT_VAR,
+        lat=P.LIN_ABS_TIMES,
     )
     def compute_absorption_probabilities(
         self,
@@ -227,8 +231,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         check_irred: bool = False,
         solver: Optional[str] = None,
         use_petsc: Optional[bool] = None,
-        absorption_time_moments: Optional[str] = None,
-        lineage_absorption_time: Optional[str] = None,
+        absorption_pseudotime: Optional[str] = None,
+        lineage_absorption_times: Optional[Union[str, Sequence[str]]] = None,
         n_jobs: Optional[int] = None,
         backend: str = "loky",
         show_progress_bar: bool = True,
@@ -252,17 +256,21 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             when :paramref:`use_petsc` `=False` or one of :class:`petsc4py.PETSc.KPS.Type` otherwise.
 
             Information on the :mod:`scipy` iterative solvers can be found in :func:`scipy.sparse.linalg` or for
-            :mod:`petsc4py` solver found `here <https://www.mcs.anl.gov/petsc/documentation/linearsolvertable.html>`_.
+            :mod:`petsc4py` solver `here <https://www.mcs.anl.gov/petsc/documentation/linearsolvertable.html>`_.
 
             If is `None`, solver is chosen automatically, depending on the problem.
         use_petsc
             Whether to use solvers from :mod:`petsc4py` or :mod:`scipy`. Recommended for large problems.
             If `None`, it is determined automatically. If no installation is found, defaults
             to :func:`scipy.sparse.linalg.gmres`.
-        absorption_time_moments
-            Whether to compute mean absorption time and its variance. Valid options are `None`, `'first'`, `'second'`.
-        lineage_absorption_time
-            TODO
+        absorption_pseudotime
+            Whether to compute pseudotime based on mean time to absorption to all absorbing states and its variance.
+            Valid options are `None`, `'first'`, `'second'`.
+        lineage_absorption_times
+            Whether to compute mean time to absorption and its variance for specific absorbing states.
+            Can be specified as `'{{lineage}}:var'` to also calculate the variance.
+            It might be beneficial to disable the progress bar as :paramref:`show_progress_bar` `=False`, because
+            many linear systems are being solved.
         n_jobs
             Number of parallel jobs to use when using an iterative solver.
             When :paramref:`use_petsc` `=True` or for quickly-solvable problems,
@@ -286,16 +294,20 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                   Only available if :paramref:`absorption_time_moments` is `'first'` or `'second'`.
                 - :paramref:`{aptv}` - variance of the pseudotime.
                   Only available if :paramref:`absorption_time_moments` is `'second'`.
+                - :paramref:`{lat}` - times until absorption to individual absorbing states and optionally
+                  their variances saved as `'{{lineage}}_mean'` and `'{{lineage}}_var'`, respectively,
+                  for each lineage specified in ``lineage_absorption_times``.
         """
+
         if self._get(P.FIN) is None:
             raise RuntimeError(
                 "Compute final states first as `.compute_final_states()` or set them manually as "
                 "`.set_final_states()`."
             )
-        if absorption_time_moments not in (None, "first", "second"):
+        if absorption_pseudotime not in (None, "first", "second"):
             raise ValueError(
-                f"Expcted `absorption_moments` to be `None`, `'first'` or `'second'`, "
-                f"found `{absorption_time_moments!r}`."
+                f"Expcted `absorption_pseudotime` to be `None`, `'first'` or `'second'`, "
+                f"found `{absorption_pseudotime!r}`."
             )
 
         if keys is not None:
@@ -315,14 +327,21 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             series=self._get(P.FIN), keys=keys, colors=self._get(A.FIN_COLORS)
         )
 
-        if lineage_absorption_time is not None:
-            if isinstance(lineage_absorption_time, str):
-                lineage_absorption_time = [lineage_absorption_time]
-            for ln in lineage_absorption_time:
+        if lineage_absorption_times is not None:
+            if isinstance(lineage_absorption_times, str):
+                lineage_absorption_times = [lineage_absorption_times]
+            lin_abs_times = {}
+            for ln in lineage_absorption_times:
+                ln, moment = ln.split(":") if ":" in ln else (ln, "mean")
+                if moment not in ("mean", "var"):
+                    raise ValueError(
+                        f"Moment must be either `'mean'` or `'var'`, found `{moment!r}` for key `{ln!r}`."
+                    )
                 if ln not in final_states_.cat.categories:
                     raise ValueError(
                         f"Invalid state `{ln!r}`. Valid options are `{list(final_states_.cat.categories)}`."
                     )
+                lin_abs_times[ln] = moment
 
             # define the dimensions of this problem
         n_cells = t.shape[0]
@@ -392,7 +411,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         )
 
         abs_time_mean, pt, abs_time_var, pt_uncertainty = None, None, None, None
-        if absorption_time_moments is not None:
+        if absorption_pseudotime is not None:
             (
                 abs_time_mean,
                 pt,
@@ -408,27 +427,26 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 backend=backend,
                 tol=tol,
                 show_progress_bar=show_progress_bar,
-                calculate_variance=absorption_time_moments == "second",
+                calculate_variance=absorption_pseudotime == "second",
             )
 
-        mean2 = None
-        if lineage_absorption_time is not None:
-            mean2 = _calculate_lineage_absorption_time_means(
+        abs_time_means = None
+        if lineage_absorption_times is not None:
+            abs_time_means = _calculate_lineage_absorption_time_means(
                 q,
                 t[trans_indices, :][:, rec_indices],
                 trans_indices,
                 n=t.shape[0],
                 ixs=lookup_dict,
-                lineages=lineage_absorption_time,
+                lineages=lin_abs_times,
                 solver=solver,
                 use_petsc=use_petsc,
                 n_jobs=n_jobs,
                 backend=backend,
                 tol=tol,
                 show_progress_bar=show_progress_bar,
-                calculate_variance=absorption_time_moments == "second",
             )
-            self._atm = mean2
+            abs_time_means.index = self.adata.obs_names
 
         # take individual solutions and piece them together to get absorption probabilities towards the classes
         macro_ix_helper = np.cumsum(
@@ -486,13 +504,15 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 f"       `.{P.ABS_PT}`\n"
                 f"       `.{P.ABS_PT_VAR}\n"
             )
+        if abs_time_means is not None:
+            self._set(A.LIN_ABS_TIMES, abs_time_means)
+            extra_msg += f"       `.{P.LIN_ABS_TIMES}`\n"
+
         # the original values
         self._absorption_time_mean = abs_time_mean
         self._absorption_time_var = abs_time_var
 
         self._write_absorption_probabilities(time=start, extra_msg=extra_msg)
-
-        return q, s, rec_indices, trans_indices
 
     @d.get_sectionsf("lineage_drivers", sections=["Parameters", "Returns"])
     @d.get_full_descriptionf("lineage_drivers")

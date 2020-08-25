@@ -199,7 +199,7 @@ class TestCFLARE:
 
         # compute lin probs using direct solver
         mc.compute_absorption_probabilities(
-            solver="gmres", use_petsc=False, tol=tol, absorption_time_moments="first"
+            solver="gmres", use_petsc=False, tol=tol, absorption_pseudotime="first"
         )
         pt = mc._get(P.ABS_PT)
 
@@ -223,7 +223,7 @@ class TestCFLARE:
 
         # compute lin probs using direct solver
         mc.compute_absorption_probabilities(
-            solver="gmres", use_petsc=False, tol=tol, absorption_time_moments="second"
+            solver="gmres", use_petsc=False, tol=tol, absorption_pseudotime="second"
         )
         pt = mc._get(P.ABS_PT)
         ptv = mc._get(P.ABS_PT_VAR)
