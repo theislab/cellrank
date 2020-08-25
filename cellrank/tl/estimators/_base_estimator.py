@@ -232,7 +232,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         solver: Optional[str] = None,
         use_petsc: Optional[bool] = None,
         absorption_pseudotime: Optional[str] = None,
-        lineage_absorption_times: Optional[Union[str, Sequence[str]]] = None,
+        time_to_absorption: Optional[Union[str, Sequence[str]]] = None,
         n_jobs: Optional[int] = None,
         backend: str = "loky",
         show_progress_bar: bool = True,
@@ -266,7 +266,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         absorption_pseudotime
             Whether to compute pseudotime based on mean time to absorption to all absorbing states and its variance.
             Valid options are `None`, `'first'`, `'second'`.
-        lineage_absorption_times
+        time_to_absorption
             Whether to compute mean time to absorption and its variance for specific absorbing states.
             Can be specified as `'{{lineage}}:var'` to also calculate the variance.
             It might be beneficial to disable the progress bar as :paramref:`show_progress_bar` `=False`, because
@@ -296,7 +296,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                   Only available if :paramref:`absorption_time_moments` is `'second'`.
                 - :paramref:`{lat}` - times until absorption to individual absorbing states and optionally
                   their variances saved as `'{{lineage}}_mean'` and `'{{lineage}}_var'`, respectively,
-                  for each lineage specified in ``lineage_absorption_times``.
+                  for each lineage specified in ``time_to_absorption``.
         """
 
         if self._get(P.FIN) is None:
@@ -327,11 +327,11 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             series=self._get(P.FIN), keys=keys, colors=self._get(A.FIN_COLORS)
         )
 
-        if lineage_absorption_times is not None:
-            if isinstance(lineage_absorption_times, str):
-                lineage_absorption_times = [lineage_absorption_times]
+        if time_to_absorption is not None:
+            if isinstance(time_to_absorption, str):
+                time_to_absorption = [time_to_absorption]
             lin_abs_times = {}
-            for ln in lineage_absorption_times:
+            for ln in time_to_absorption:
                 ln, moment = ln.split(":") if ":" in ln else (ln, "mean")
                 if moment not in ("mean", "var"):
                     raise ValueError(
@@ -431,7 +431,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             )
 
         abs_time_means = None
-        if lineage_absorption_times is not None:
+        if time_to_absorption is not None:
             abs_time_means = _calculate_lineage_absorption_time_means(
                 q,
                 t[trans_indices, :][:, rec_indices],
