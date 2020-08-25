@@ -765,6 +765,7 @@ class AbsProbs(Plottable):
         ),
         Metadata(attr=A.ABS_PT, prop=P.ABS_PT, dtype=pd.Series),
         Metadata(attr=A.ABS_PT_VAR, prop=P.ABS_PT_VAR, dtype=pd.Series),
+        Metadata(attr=A.LIN_ABS_TIMES, prop=P.LIN_ABS_TIMES, dtype=pd.DataFrame),
     ]
 
     @abstractmethod
