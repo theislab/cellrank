@@ -23,9 +23,10 @@ def transition_matrix(
     mode: str = VelocityMode.DETERMINISTIC.s,
     backward_mode: str = BackwardMode.TRANSPOSE.s,
     seed: Optional[int] = None,
-    softmax_scale: int = 4.0,
+    softmax_scale: Optional[float] = 4.0,
     weight_connectivities: Optional[float] = None,
     density_normalize: bool = True,
+    n_jobs: Optional[int] = None,
 ) -> KernelExpression:
     """
     Compute a transition matrix based on a combination of RNA Velocity and transcriptomic similarity.
@@ -50,12 +51,15 @@ def transition_matrix(
     seed
         Set the seed for random state, only used when sampling.
     softmax_scale
-        Scaling parameter for the softmax.
+        Scaling parameter for the softmax. If `None`, it will be estimated using 1/median(correlations). The idea
+        behind this is to scale the softmax to counteract everythin tending to orthogonality in high dimensions.
     weight_connectivities
         Weight given to transcriptomic similarities as opposed to velocities. Must be in `[0, 1]`.
     density_normalize
         Whether to use density correction when computing the transition probabilities based on connectivities.
         Density correction is done as by [Haghverdi16]_.
+    n_jobs
+        Number of parallel jobs. If `-1`, use all available cores. If `None` or `1`, the execution is sequential.
 
     Returns
     -------
@@ -68,7 +72,11 @@ def transition_matrix(
         adata, backward=backward, vkey=vkey, xkey=xkey, gene_subset=gene_subset
     )
     vk.compute_transition_matrix(
-        softmax_scale=softmax_scale, mode=mode, backward_mode=backward_mode, seed=seed
+        softmax_scale=softmax_scale,
+        mode=mode,
+        backward_mode=backward_mode,
+        seed=seed,
+        n_jobs=n_jobs,
     )
 
     if weight_connectivities is not None:
