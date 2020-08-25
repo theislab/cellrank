@@ -426,6 +426,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 backend=backend,
                 tol=tol,
                 show_progress_bar=show_progress_bar,
+                calculate_variance=absorption_time_moments == "second",
             )
             self._atm = mean2
 
