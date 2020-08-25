@@ -545,7 +545,7 @@ class Plottable(KernelHolder, Property):
 
         prefix = DirPrefix.BACKWARD if self.kernel.backward else DirPrefix.FORWARD
         diff_potential = (
-            [diff_potential]
+            [diff_potential.values]
             if show_dp
             and not same_plot
             and diff_potential is not None
@@ -607,9 +607,9 @@ class Plottable(KernelHolder, Property):
             else:
                 kwargs["color"] = color
 
-            if A.shape[1] == 1:
+            if probs.shape[1] == 1:
                 if "perc" not in kwargs:
-                    logg.debug("Did not detect percentile. Setting `perc=[0, 95]`")
+                    logg.warning("Did not detect percentile. Setting `perc=[0, 95]`")
                     kwargs["perc"] = [0, 95]
                 kwargs["color"] = X
                 kwargs.pop("color_gradients", None)
