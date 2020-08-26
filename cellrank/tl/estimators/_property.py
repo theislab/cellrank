@@ -60,7 +60,7 @@ class PropertyMeta(ABCMeta, type):
     @staticmethod
     def update_attributes(md: Metadata, attributedict: Dict[str, Any]) -> Optional[str]:
         """
-        Update :paramref:`attributedict` with new attribute and property.
+        Update ``attributedict`` with new attribute and property.
 
         Parameters
         ----------
@@ -75,9 +75,11 @@ class PropertyMeta(ABCMeta, type):
             Old property name, if found, otherwise a newly constructed one, or `None` if no property is desired.
         """
 
-        # TODO: determine whether supporting strings is a good idea
+        # TODO: determine whether supporting strings is such a good idea
         if not isinstance(md, Metadata):
-            raise TypeError(f"Expected `Metadata` object, found `{type(md).__name__}`.")
+            raise TypeError(
+                f"Expected a `Metadata` object, found `{type(md).__name__}`."
+            )
 
         if not isinstance(md.attr, (str, A)):
             raise TypeError(
@@ -205,7 +207,7 @@ class KernelHolder(ABC):
         elif isinstance(obj, AnnData):
             if obsp_key is None:
                 raise ValueError(
-                    "Please specify `obsp_key=...` when supplying AnnData object."
+                    "Please specify `obsp_key=...` when supplying an AnnData object."
                 )
             elif obsp_key not in obj.obsp.keys():
                 raise KeyError(f"Key `{obsp_key!r}` not found in `adata.obsp`.")
@@ -269,7 +271,6 @@ class VectorPlottable(KernelHolder, Property):
     Injector class which plots vectors.
 
     To be used in conjunction with:
-
         - :class:`cellrank.tool.estimators._decomposition.Eig`
         - :class:`cellrank.tool.estimators._decomposition.Schur`
     """
@@ -293,9 +294,9 @@ class VectorPlottable(KernelHolder, Property):
         use
             Which or how many Schur vectors to be plotted. If `None`, all will be chosen.
         abs_value
-            Whether to take the absolute value before pl.
+            Whether to take the absolute value before plotting.
         cluster_key
-            Key from :paramref:`adata` `.obs` for plotting categorical observations.
+            Key from :paramref:`adata` ``.obs`` for plotting categorical observations.
         **kwargs
             Keyword arguments for :func:`scvelo.pl.scatter`.
 
@@ -376,10 +377,9 @@ class VectorPlottable(KernelHolder, Property):
 
 class Plottable(KernelHolder, Property):
     """
-    Injector class which plots metastable or final states or absorption probabilities.
+    Injector which plots metastable or final states or absorption probabilities.
 
     To be used in conjunction with:
-
         - :class:`cellrank.tool.estimators._property.MetaStates`
         - :class:`cellrank.tool.estimators._property.FinStates`
         - :class:`cellrank.tool.estimators._property.AbsProbs`
@@ -402,7 +402,7 @@ class Plottable(KernelHolder, Property):
         Parameters
         ----------
         cluster_key
-            Key from :paramref:`adata` `.obs` for plotting categorical observations.
+            Key from :paramref:`adata` ``.obs`` for plotting categorical observations.
         same_plot
             Whether to plot the lineages on the same plot or separately.
         title
@@ -504,19 +504,18 @@ class Plottable(KernelHolder, Property):
         lineages
             Plot only these lineages. If `None`, plot all lineages.
         cluster_key
-            Key from :paramref:`adata` `.obs` for plotting categorical observations.
+            Key from :paramref:`adata` ``.obs`` for plotting categorical observations.
         mode
             One of following:
-
                 - `'embedding'` - plot the embedding while coloring in the absorption probabilities.
                 - `'time'` - plot the pseudotime on x-axis and the absorption probabilities on y-axis.
         time_key
-            Key from :paramref:`adata` `.obs` to use as a pseudotime ordering of the cells.
+            Key from :paramref:`adata` ``.obs`` to use as a pseudotime ordering of the cells.
         title
-            Either `None`, in which case titles are `"{to,from} {final,root} {state}"`,
+            Either `None`, in which case titles are `"{to, from} {final, root} {state}"`,
             or an array of titles, one per lineage.
         same_plot
-            Whether to plot the lineages on the same plot using color gradients when :paramref:`mode` `='embedding'`.
+            Whether to plot the lineages on the same plot using color gradients when ``mode='embedding'``.
         cmap
             Colormap to use.
         **kwargs
@@ -636,7 +635,7 @@ class Plottable(KernelHolder, Property):
             )
         else:
             raise ValueError(
-                f"Invalid mode `{mode!r}`. Valid options are: `'embedding'` and `'time'`."
+                f"Invalid mode `{mode!r}`. Valid options are: `'embedding'` or `'time'`."
             )
 
     @singledispatchmethod
@@ -812,7 +811,6 @@ class Partitioner(KernelHolder, ABC):
         -------
         None
             Nothing, but updates the following fields:
-
                 - :paramref:`recurrent_classes`
                 - :paramref:`transient_classes`
                 - :paramref:`is_irreducible`

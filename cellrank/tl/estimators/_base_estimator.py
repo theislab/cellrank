@@ -71,13 +71,13 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
     read_from_adata
         Whether to read available attributes in :paramref:`adata`, if present.
     obsp_key
-        Key in :paramref:`obj` `.obsp` when :paramref:`obj` is an :class:`anndata.AnnData` object.
+        Key in ``obj.obsp`` when ``obj`` is an :class:`anndata.AnnData` object.
     g2m_key
-        Key from :paramref:`adata` `.obs`. Can be used to detect cell-cycle driven start- or endpoints.
+        Key from :paramref:`adata` ``.obs``. Can be used to detect cell-cycle driven start- or endpoints.
     s_key
-        Key from :paramref:`adata` `.obs`. Can be used to detect cell-cycle driven start- or endpoints.
+        Key from :paramref:`adata` ``.obs``. Can be used to detect cell-cycle driven start- or endpoints.
     write_to_adata
-        Whether to write the transition matrix to :paramref:`adata` `.obsp`.
+        Whether to write the transition matrix to :paramref:`adata` ``.obsp``.
     key_added
         Key in :paramref:`adata` where to store the final transition matrix.
     """
@@ -181,16 +181,14 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             belonging to a transient state or a :class:`dict`, where each key is the name of the recurrent class and
             values are list of cell names.
         cluster_key
-            If a key to cluster labels is given, :paramref:`{fs}` will ge associated
-            with these for naming and colors.
+            If a key to cluster labels is given, :paramref:`{fs}` will ge associated with these for naming and colors.
         en_cutoff
-            If :paramref:`cluster_key` is given, this parameter determines when an approximate recurrent class will
+            If ``cluster_key`` is given, this parameter determines when an approximate recurrent class will
             be labelled as *'Unknown'*, based on the entropy of the distribution of cells over transcriptomic clusters.
         p_thresh
             If cell cycle scores were provided, a *Wilcoxon rank-sum test* is conducted to identify cell-cycle driven
             start- or endpoints.
-            If the test returns a positive statistic and a p-value smaller than :paramref:`p_thresh`,
-            a warning will be issued.
+            If the test returns a positive statistic and a p-value smaller than ``p_thresh``, a warning will be issued.
         add_to_existing
             Whether to add thses categories to existing ones. Cells already belonging to recurrent classes will be
             updated if there's an overlap.
@@ -200,7 +198,6 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         -------
         None
             Nothing, but updates the following fields:
-
                 - :paramref:`{fsp}`
                 - :paramref:`{fs}`
         """
@@ -258,33 +255,32 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         check_irred
             Check whether the transition matrix is irreducible.
         solver
-            Solver to use for the linear problem. Options are `['direct', 'gmres', 'lgmres', 'bicgstab', 'gcrotmk']`
-            when :paramref:`use_petsc` `=False` or one of :class:`petsc4py.PETSc.KPS.Type` otherwise.
+            Solver to use for the linear problem. Options are `'direct', 'gmres', 'lgmres', 'bicgstab' or 'gcrotmk'`
+            when ``use_petsc=False`` or one of :class:`petsc4py.PETSc.KPS.Type` otherwise.
 
             Information on the :mod:`scipy` iterative solvers can be found in :func:`scipy.sparse.linalg` or for
             :mod:`petsc4py` solver `here <https://www.mcs.anl.gov/petsc/documentation/linearsolvertable.html>`_.
 
-            If is `None`, solver is chosen automatically, depending on the problem.
+            If is `None`, the solver is chosen automatically, depending on the problem size.
         use_petsc
             Whether to use solvers from :mod:`petsc4py` or :mod:`scipy`. Recommended for large problems.
-            If `None`, it is determined automatically. If no installation is found, defaults
-            to :func:`scipy.sparse.linalg.gmres`.
+            If `None`, it is determined automatically. If no installation is found, defaults to
+            :func:`scipy.sparse.linalg.gmres`.
         absorption_pseudotime
             Whether to compute pseudotime based on mean time to absorption to all absorbing states and its variance.
             Valid options are `None`, `'mean'`, `'var'`.
         time_to_absorption
             Whether to compute mean time to absorption and its variance to specific absorbing states.
 
-            If a :class:`dict`, can be specified as ``{{'Alpha':'var', ...}}`` to also compute variance.
+            If a :class:`dict`, can be specified as ``{{'Alpha': 'var', ...}}`` to also compute variance.
             In case when states are a :class:`tuple`, time to absorption will be computed to the subset of these states,
-            such as ``[('Alpha', 'Beta'), ...]`` or ``{{('Alpha', 'Beta'): 'mean', ...}}``.
+            such as `[('Alpha', 'Beta'), ...]` or `{{('Alpha', 'Beta'): 'mean', ...}}`.
 
             It might be beneficial to disable the progress bar as ``show_progress_bar=False``, because
             many linear systems are being solved.
         n_jobs
-            Number of parallel jobs to use when using an iterative solver.
-            When :paramref:`use_petsc` `=True` or for quickly-solvable problems,
-            we recommend higher number (>=4) of jobs in order to fully saturate the cores.
+            Number of parallel jobs to use when using an iterative solver. When ``use_petsc=True`` or for
+            quickly-solvable problems, we recommend higher number (>=8) of jobs in order to fully saturate the cores.
         backend
             Which backend to use for multiprocessing. See :class:`joblib.Parallel` for valid options.
         show_progress_bar
@@ -300,10 +296,10 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
                 - :paramref:`{abs_prob}` - probabilities of being absorbed into the final states.
                 - :paramref:`{diff_pot}` - differentiation potential of cells.
-                - :paramref:`{apt}` - pseudotime based on time until absorption.
-                  Only available if :paramref:`absorption_time_moments` is `'first'` or `'second'`.
+                - :paramref:`{apt}` - pseudotime based on the time until absorption.
+                  Only available if ``absorption_time_moments`` is `'mean'` or `'var'`.
                 - :paramref:`{aptv}` - variance of the pseudotime.
-                  Only available if :paramref:`absorption_time_moments` is `'second'`.
+                  Only available if ``absorption_time_moments`` is `'var'`.
                 - :paramref:`{lat}` - times until absorption to individual absorbing states and optionally
                   their variances saved as `'{{lineage}}_mean'` and `'{{lineage}}_var'`, respectively,
                   for each lineage specified in ``time_to_absorption``.
@@ -512,10 +508,10 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             self._set(
                 A.ABS_PT_VAR, pd.Series(pt_uncertainty, index=self.adata.obs.index)
             )
-            self.adata.obs["absorption_pseudotime_uncert"] = pt_uncertainty
+            self.adata.obs["absorption_pseudotime_var"] = pt_uncertainty
             extra_msg = (
                 f"       `adata.obs['absorption_pseudotime']`\n"
-                f"       `adata.obs['absorption_pseudotime_uncert']`\n"
+                f"       `adata.obs['absorption_pseudotime_var']`\n"
                 f"       `.{P.ABS_PT}`\n"
                 f"       `.{P.ABS_PT_VAR}\n"
             )
@@ -553,28 +549,27 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             Either a set of lineage names from :paramref:`absorption_probabilities` `.names` or `None`,
             in which case all lineages are considered.
         cluster_key
-            Key from :paramref:`adata` `.obs` to obtain cluster annotations.
-            These are considered for :paramref:`clusters`.
+            Key from :paramref:`adata` ``.obs`` to obtain cluster annotations. These are considered for ``clusters``.
         clusters
             Restrict the correlations to these clusters.
         layer
-            Key from :paramref:`adata` `.layers`.
+            Key from :paramref:`adata` ``.layers``.
         use_raw
-            Whether or not to use :paramref:`adata` `.raw` to correlate gene expression.
-            If using a layer other than `.X`, this must be set to `False`.
+            Whether or not to use :paramref:`adata` ``.raw`` to correlate gene expression.
+            If using a layer other than `X`, this must be set to `False`.
         return_drivers
             Whether to return the lineage drivers as :class:`pandas.DataFrame`.
 
         Returns
         -------
-        :class:`pandas.DataFrame` or :obj:`None`
-            Updates :paramref:`adata` `.var` (or :paramref:`adata` `.raw.var`, depending on :paramref:`use_raw`)
-            with the drivers in the form of ``{{direction}} {{lineages}}``.
+        None
+            Updates :paramref:`adata` ``.var`` or :paramref:`adata` ``.raw.var``, depending on ``use_raw``
+            with lineage drivers saved as columns of the form ``{{direction}} {{lineages}}``.
             Also updates the following fields:
+                - `.{lin_drivers}` - the lineage drivers for each lineage.
 
-                - `.{lin_drivers}` - the lineage drivers for each lineage
-
-            If :paramref:`return_drivers` `=True`. Also updates :paramref:`adata` as specified above.
+        :class:`pandas.DataFrame`
+            If ``return_drivers=True``, returns the lineage drivers as :class:`pandas.DataFrame`.
         """
 
         # check that lineage probs have been computed
@@ -691,7 +686,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         n_genes
             Number of genes to plot.
         use_raw
-            Whether to look in :paramref:`adata` `.raw.var` or :paramref:`adata` `.var`.
+            Whether to look in :paramref:`adata` ``.raw.var`` or :paramref:`adata` ``.var``.
         **kwargs
             Keyword arguments for :func:`scvelo.pl.scatter`.
 
@@ -871,20 +866,17 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
         Parameters
         ----------
-        args
-            Positional arguments.
         keys
             Names of final states for which to compute absorption probabilities.
         compute_absorption_probabilities
             Whether to compute absorption probabilities or just final states.
-        kwargs
+        **kwargs
             Keyword arguments.
 
         Returns
         -------
         None
             Nothing, just makes available the following fields:
-
                 - :paramref:`{fsp}`
                 - :paramref:`{fs}`
                 - :paramref:`{ap}`
@@ -933,7 +925,6 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
     def copy(self) -> "BaseEstimator":
         """Return a copy of self, including the underlying :paramref:`adata` object."""
-
         k = deepcopy(self.kernel)  # ensure we copy the adata object
         res = type(self)(k, read_from_adata=False)
         for k, v in self.__dict__.items():
