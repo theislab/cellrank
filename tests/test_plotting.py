@@ -950,20 +950,14 @@ class TestHeatMapReturns:
 
 
 class TestGeneTrend:
-    @compare(dirname="trends_simple")
+    @compare()
     def test_trends(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.gene_trends(
-            adata,
-            model,
-            GENES[:3],
-            data_key="Ms",
-            dirname="trends_simple",
-            dpi=DPI,
-            save=fpath,
+            adata, model, GENES[:3], data_key="Ms", dpi=DPI, save=fpath,
         )
 
-    @compare(dirname="trends_simple_raw")
+    @compare()
     def test_trends_raw(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.gene_trends(
@@ -971,7 +965,6 @@ class TestGeneTrend:
             model,
             RAW_GENES[:5],
             data_key="X",
-            dirname="trends_simple_raw",
             use_raw=True,
             dpi=DPI,
             save=fpath,
@@ -1012,22 +1005,57 @@ class TestGeneTrend:
             save=fpath,
         )
 
-    @compare(dirname="trends_sharey")
+    @compare()
     def test_trends_sharey(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata, model, GENES[:3], data_key="Ms", sharey="row", dpi=DPI, save=fpath,
+        )
+
+    @compare()
+    def test_trends_sharex(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.gene_trends(
             adata,
             model,
-            GENES[:3],
+            GENES[:10],
+            ncols=3,
             data_key="Ms",
-            sharey=False,
-            dirname="trends_sharey",
+            sharex="all",
             dpi=DPI,
             save=fpath,
         )
 
     @compare()
-    def test_trends_cbar(self, adata: AnnData, fpath: str):
+    def test_trends_gene_as_title(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            GENES[:10],
+            gene_as_title=False,
+            same_plot=True,
+            data_key="Ms",
+            sharex="all",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_trends_gene_no_legend(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            GENES[:10],
+            legend_loc=None,
+            data_key="Ms",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_trends_no_cbar(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.gene_trends(
             adata,
@@ -1050,6 +1078,21 @@ class TestGeneTrend:
             data_key="Ms",
             same_plot=True,
             lineage_cmap=cm.Set2,
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_trends_abs_prob_cmap(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            GENES[0],
+            data_key="Ms",
+            same_plot=False,
+            hide_cells=False,
+            abs_prob_cmap=cm.inferno,
             dpi=DPI,
             save=fpath,
         )
@@ -1078,6 +1121,103 @@ class TestGeneTrend:
             data_key="Ms",
             same_plot=True,
             lw=10,
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_trend_suptitle(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            GENES[:10],
+            suptitle="FOOBAR",
+            data_key="Ms",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_trends_size(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            GENES[0],
+            data_key="Ms",
+            same_plot=True,
+            size=30,
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_trends_margins(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            GENES[0],
+            data_key="Ms",
+            same_plot=True,
+            margins=0.2,
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_trends_cell_alpha(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            GENES[0],
+            data_key="Ms",
+            same_plot=True,
+            cell_alpha=0,
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_trends_lineage_alpha(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            GENES[0],
+            data_key="Ms",
+            same_plot=True,
+            lineage_alpha=1,
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_trend_time_range(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            GENES[:10],
+            data_key="Ms",
+            same_plot=False,
+            time_range=(0, 0.5),
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_trend_perc(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            GENES[:10],
+            data_key="Ms",
+            same_plot=False,
+            perc=(0, 50),
             dpi=DPI,
             save=fpath,
         )
@@ -1177,62 +1317,6 @@ class TestGraph:
             ixs=range(10),
             keys=["clusters"],
             keylocs=["obs"],
-            dpi=DPI,
-            save=fpath,
-        )
-
-    @compare()
-    def test_trends_size(self, adata: AnnData, fpath: str):
-        model = create_model(adata)
-        cr.pl.gene_trends(
-            adata,
-            model,
-            GENES[0],
-            data_key="Ms",
-            same_plot=True,
-            size=30,
-            dpi=DPI,
-            save=fpath,
-        )
-
-    @compare()
-    def test_trends_margins(self, adata: AnnData, fpath: str):
-        model = create_model(adata)
-        cr.pl.gene_trends(
-            adata,
-            model,
-            GENES[0],
-            data_key="Ms",
-            same_plot=True,
-            margins=0.2,
-            dpi=DPI,
-            save=fpath,
-        )
-
-    @compare()
-    def test_trends_cell_alpha(self, adata: AnnData, fpath: str):
-        model = create_model(adata)
-        cr.pl.gene_trends(
-            adata,
-            model,
-            GENES[0],
-            data_key="Ms",
-            same_plot=True,
-            cell_alpha=0,
-            dpi=DPI,
-            save=fpath,
-        )
-
-    @compare()
-    def test_trends_lineage_alpha(self, adata: AnnData, fpath: str):
-        model = create_model(adata)
-        cr.pl.gene_trends(
-            adata,
-            model,
-            GENES[0],
-            data_key="Ms",
-            same_plot=True,
-            lineage_alpha=1,
             dpi=DPI,
             save=fpath,
         )

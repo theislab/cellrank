@@ -48,15 +48,14 @@ def gene_trends(
     lineage_cmap: Optional[matplotlib.colors.ListedColormap] = None,
     abs_prob_cmap: matplotlib.colors.ListedColormap = cm.viridis,
     cell_color: str = "black",
-    color: str = "black",
     cell_alpha: float = 0.6,
     lineage_alpha: float = 0.2,
     size: float = 15,
     lw: float = 2,
     show_cbar: bool = True,
     margins: float = 0.015,
-    sharex: Optional[str] = None,
-    sharey: Optional[str] = None,
+    sharex: Optional[Union[str, bool]] = None,
+    sharey: Optional[Union[str, bool]] = None,
     gene_as_title: Optional[bool] = None,
     legend_loc: Optional[str] = "best",
     ncols: int = 2,
@@ -101,19 +100,15 @@ def gene_trends(
         If `True`, hide all the cells.
     perc
         Percentile for colors. Valid values are in `[0, 100]`.
-        This can improve visualization. Can be specified separately for each lineage separately.
+        This can improve visualization. Can be specified indivudually for each lineage.
     lineage_cmap
-        Colormap to use when coloring in the lineages. Only used when ``same_plot=True``. If `None`,
-        use the corresponding colors in `adata.uns`.
+        Colormap to use when coloring in the lineages. If `None` and ``same_plot``, use the corresponding colors
+        in ``adata.uns``, otherwise use `'black'`.
     abs_prob_cmap
         Colormap to use when visualizing the absorption probabilities for each lineage.
         Only used when ``same_plot=False``.
     cell_color
-        Color of the cells when not visualizing absorption probabilities.
-        Only used when ``same_plot=True``.
-    color
-        Color for the lineages, when each lineage is on
-        separate plot, otherwise according to ``lineage_cmap``.
+        Color of the cells when not visualizing absorption probabilities. Only used when ``same_plot=True``.
     cell_alpha
         Alpha channel for cells.
     lineage_alpha
@@ -124,16 +119,17 @@ def gene_trends(
         Line width of the smoothed values.
     show_cbar
         Whether to show colorbar. Always shown when percentiles for lineages differ.
+        Only used when ``same_plot=False``.
     margins
         Margins around the plot.
     sharex
-        Whether to share x-axis.
+        Whether to share x-axis. Valid options are `'row'`, `'col'` or `'none'`.
     sharey
-        Whether to share y-axis.
+        Whether to share y-axis. Valid options are `'row'`, `'col'` or `'none'`.
     gene_as_title
-        Whether to show gene names as title instead of on yaxis when ``same_plot=False``.
+        Whether to show gene names as titles instead on y-axis.
     legend_loc
-        Location of the legend. Only used when `same_plot=True`.
+        Location of the legend displaying lineages. Only used when `same_plot=True`.
     ncols
         Number of columns of the plot when pl multiple genes. Only used when ``same_plot=True``.
     suptitle
@@ -242,11 +238,6 @@ def gene_trends(
                 break
             gene = genes[cnt]
 
-            if same_plot:
-                show_xtick_and_labels = (row + 1) * ncols + col >= len(genes)
-            else:
-                show_xtick_and_labels = cnt == len(axes) - 1
-
             _trends_helper(
                 adata,
                 models,
@@ -256,10 +247,9 @@ def gene_trends(
                 same_plot=same_plot,
                 hide_cells=hide_cells,
                 perc=perc,
-                cmap=lineage_cmap,
+                lineage_cmap=lineage_cmap,
                 abs_prob_cmap=abs_prob_cmap,
                 cell_color=cell_color,
-                color=color,
                 alpha=cell_alpha,
                 lineage_alpha=lineage_alpha,
                 size=size,
@@ -275,7 +265,9 @@ def gene_trends(
                 axes=axes[row, col] if same_plot else axes[cnt],
                 show_ylabel=col == 0,
                 show_lineage=cnt == 0 or same_plot,
-                show_xticks_and_label=show_xtick_and_labels,
+                show_xticks_and_label=((row + 1) * ncols + col >= len(genes))
+                if same_plot
+                else (cnt == len(axes) - 1),
                 **plot_kwargs,
             )
             cnt += 1

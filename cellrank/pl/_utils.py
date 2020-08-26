@@ -384,7 +384,7 @@ def _trends_helper(
     show_ylabel: bool = True,
     show_lineage: bool = True,
     show_xticks_and_label: bool = True,
-    cmap=None,
+    lineage_cmap=None,
     abs_prob_cmap=cm.viridis,
     gene_as_title: bool = False,
     legend_loc: Optional[str] = "best",
@@ -415,7 +415,7 @@ def _trends_helper(
         Whether to show the lineage as the title. Usually, only first row will contain the lineage names.
     show_xticks_and_label
         Whether to show x-ticks and x-label. Usually, only the last row will show this.
-    cmap
+    lineage_cmap
         Colormap to use when coloring the the lineage. If `None`, use colors from ``adata.uns``.
     abs_prob_cmap:
         Colormap to use when coloring in the absorption probabilities, if they are being plotted.
@@ -457,13 +457,17 @@ def _trends_helper(
 
     hide_cells = kwargs.pop("hide_cells", False)
     show_cbar = kwargs.pop("show_cbar", True)
-    lineage_color = kwargs.pop("color", "black")
 
-    lc = (
-        cmap.colors
-        if cmap is not None and hasattr(cmap, "colors")
-        else adata.uns.get(f"{_colors(ln_key)}", cm.Set1.colors)
-    )
+    if same_plot:
+        lineage_colors = (
+            lineage_cmap.colors
+            if lineage_cmap is not None and hasattr(lineage_cmap, "colors")
+            else adata.uns.get(f"{_colors(ln_key)}", cm.Set1.colors)
+        )
+    else:
+        lineage_colors = (
+            "black" if not mcolors.is_color_like(lineage_cmap) else lineage_cmap
+        )
 
     for i, (name, ax, perc) in enumerate(zip(lineage_names, axes, percs)):
         if same_plot:
@@ -491,7 +495,9 @@ def _trends_helper(
             title=title,
             hide_cells=hide_cells or (same_plot and i == n_lineages - 1),
             same_plot=same_plot,
-            color=lc[i] if same_plot and name is not None else lineage_color,
+            lineage_color=lineage_colors[i]
+            if same_plot and name is not None
+            else lineage_colors,
             abs_prob_cmap=abs_prob_cmap,
             ylabel=ylabel,
             **kwargs,
