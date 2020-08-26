@@ -170,27 +170,28 @@ class BaseModel(ABC):
         Parameters
         ----------
         gene
-            Gene in :paramref:`adata` `.var_names` or in :paramref:`adata` `.raw.var_names`.
+            Gene in :paramref:`adata` ``.var_names`` or in :paramref:`adata` ``.raw.var_names``.
         lineage
-            Name of a lineage in :paramref:`adata` `.uns`:paramref:`lineage_key`. If `None`, all weights
-            will be set to `1`.
+            Name of a lineage in :paramref:`adata` ``.obsm[lineage_key]``.
+            If `None`, all weights will be set to `1`.
         %(backward)s
         %(time_range)s
         data_key
-            Key in :attr:`paramref.adata` `.layers` or `'X'` for :paramref:`adata` `.X`.
+            Key in :paramref:`adata` ``.layers`` or `'X'` for :paramref:`adata` ``.X``.
         time_key
-            Key in :paramref:`adata` `.obs` where the pseudotime is stored.
+            Key in :paramref:`adata` ``.obs`` where the pseudotime is stored.
         use_raw
-            Whether to access :paramref:`adata` `.raw` or not.
+            Whether to access :paramref:`adata` ``.raw`` or not.
         threshold
-            Consider only cells with :paramref:`weights` > :paramref:`threshold` when estimating the testing endpoint.
-            If `None`, use median of :paramref:`w`.
+            Consider only cells with weights > ``threshold`` when estimating the test endpoint.
+            If `None`, use the median of the weights.
         weight_threshold
-            Set all weights below :paramref:`weight_threshold` to either 0, or if :class:`tuple`, to the second value.
+            Set all weights below ``weight_threshold`` to either `0` if :class:`float`,
+            or if :class:`tuple`, to the second value.
         filter_dropouts
             Filter out all cells with expression lower than this.
         n_test_points
-            Number of testing points. If `None`, use the original points based on :paramref:`threshold`.
+            Number of test points. If `None`, use the original points based on ``threshold``.
 
         Returns
         -------
@@ -330,7 +331,7 @@ class BaseModel(ABC):
                 threshold = np.nanmedian(w)
             # use `>=` because weights can all be 1
             w_test = w[w >= threshold]
-            n_window = 10 if n_test_points is None else n_test_points // 20
+            n_window = n_test_points // 20
             tmp = convolve(w_test, np.ones(n_window) / n_window, mode="nearest")
             val_end = x[w >= threshold][-1 if lineage is None else np.nanargmax(tmp)]
 
@@ -687,7 +688,7 @@ class BaseModel(ABC):
         Returns
         -------
         :class:`np.ndarray`
-            Array of shape `(n, 1)` with dtype as :paramref:`_dtype`.
+            Array of shape `(n, 1)` with dtype set to :paramref:`_dtype`.
         """
 
         if arr.ndim not in (1, 2):
@@ -714,12 +715,12 @@ class BaseModel(ABC):
         arr
             Value to set. If `None`, just perform the checking.
         ndim
-            Expected number of dimensions of the :paramref:`value`.
+            Expected number of dimensions of the ``arr``.
 
         Returns
         -------
         :class:`numpy.ndarray`
-            The attribute under :paramref:`attr_name`.
+            The attribute under ``attr_name``.
         """
 
         if attr_name is None:
