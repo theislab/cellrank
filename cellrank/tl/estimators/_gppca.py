@@ -909,7 +909,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         )
 
         states = _series_from_one_hot_matrix(
-            a=a_discrete,
+            membership=a_discrete,
             index=self.adata.obs_names,
             names=probs.names if isinstance(probs, Lineage) else None,
         )
