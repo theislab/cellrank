@@ -543,7 +543,7 @@ class BaseModel(ABC):
         perc: Tuple[float, float] = None,
         abs_prob_cmap: mcolors.ListedColormap = cm.viridis,
         cell_color: str = "black",
-        color: str = "black",
+        lineage_color: str = "black",
         alpha: float = 0.8,
         lineage_alpha: float = 0.2,
         title: Optional[str] = None,
@@ -572,13 +572,13 @@ class BaseModel(ABC):
         hide_cells
             Whether to hide the cells.
         perc
-            Percentile by which to clip the absorption probabilities.
+            Percentile by which to clip the absorption probabilities./
         abs_prob_cmap
             Colormap to use when coloring in the absorption probabilities.
         cell_color
             Color for the cells when not coloring absorption probabilities.
-        color
-            Color for the lineages.
+        lineage_color
+            Color for the lineage.
         alpha
             Alpha channel for cells.
         lineage_alpha
@@ -639,7 +639,7 @@ class BaseModel(ABC):
         if title is None:
             title = f"{self._gene} @ {self._lineage}"
 
-        _ = ax.plot(self.x_test, self.y_test, color=color, lw=lw, label=title)
+        _ = ax.plot(self.x_test, self.y_test, color=lineage_color, lw=lw, label=title)
 
         ax.set_title(title)
         ax.set_ylabel(ylabel)
@@ -653,7 +653,7 @@ class BaseModel(ABC):
                 self.conf_int[:, 0],
                 self.conf_int[:, 1],
                 alpha=lineage_alpha,
-                color=color,
+                color=lineage_color,
                 linestyle="--",
             )
 
