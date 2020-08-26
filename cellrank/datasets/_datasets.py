@@ -7,6 +7,7 @@ from typing import Union, TypeVar
 from scanpy import read
 
 from cellrank import logging as logg
+from cellrank.ul._docs import d
 
 AnnData = TypeVar("AnnData")
 
@@ -37,6 +38,7 @@ def _load_dataset_from_url(fpath: Union[os.PathLike, str], url: str) -> AnnData:
     return adata
 
 
+@d.dedent
 def pancreas() -> AnnData:
     """
     Pancreatic endocrinogenesis from [Panc19]_.
@@ -46,8 +48,7 @@ def pancreas() -> AnnData:
 
     Returns
     -------
-    :class:`anndata.AnnData`
-        The annotated data object.
+    %(adata)s
     """
 
     return _load_dataset_from_url(*_datasets["pancreas"])
