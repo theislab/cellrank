@@ -22,13 +22,13 @@ processes as a Markov chain, where the transition matrix is computed based on th
 individual cell. Based on this Markov chain, we provide two estimators to compute {direction} states, both of which
 are based on spectral methods.
 
-For the estimator :class:`cellrank.tl.GPCCA`, cells are fuzzily clustered into metastable states,
+For the estimator :class:`cellrank.tl.estimators.GPCCA`, cells are fuzzily clustered into metastable states,
 using Generalized Perron Cluster Cluster Analysis [GPCCA18]_.
 In short, this coarse-grains the Markov chain into a set of macrostates representing the slow
 time-scale dynamics, i.e. transitions between these macrostates are rare. The most stable ones of these will represent
 {direction}, while the others will represent transient, metastable states.
 
-For the estimator :class:`cellrank.tl.CFLARE`, cells are filtered into transient/recurrent cells using the
+For the estimator :class:`cellrank.tl.estimators.CFLARE`, cells are filtered into transient/recurrent cells using the
 left eigenvectors of the transition matrix and clustered into distinct groups of {direction} states using the right
 eigenvectors of the transition matrix of the Markov chain.
 
@@ -44,28 +44,27 @@ n_states
     If you know how many {direction} states you are expecting, you can provide this number.
     Otherwise, an `eigengap` heuristic is used.
 cluster_key
-    Key from :paramref:`adata` `.obs` where cluster annotations are stored.
-    These are used to give names to the {direction} states.
+    Key from ``adata.obs`` where cluster annotations are stored. These are used to give names to the {direction} states.
 weight_connectivities
     Weight given to a transition matrix computed on the basis of the KNN connectivities. Must be in `[0, 1]`.
+
     This can help in situations where we have noisy velocities and want to give some weight to
     transcriptomic similarity.
 show_plots
     Whether to show plots of the spectrum and eigenvectors in the embedding.
 copy
-    Whether to update the existing :paramref:`adata` object or to return a copy.
+    Whether to update the existing ``adata`` object or to return a copy.
 return_estimator
-    Whether to return the estimator. Only available when :paramref:`copy=False`.
+    Whether to return the estimator. Only available when ``copy=False``.
 **kwargs
     Keyword arguments for :meth:`cellrank.tl.BaseEstimator.fit`, such as `n_cells`.
 
 Returns
 -------
 :class:`anndata.AnnData`, :class:`cellrank.tl.estimators.BaseEstimator` or :obj:`None`
-    Depending on :paramref:`copy`, either updates the existing :paramref:`adata` object, returns a copy or
-    returns the estimator.
+    Depending on ``copy``, either updates the existing ``adata`` object, returns a copy or returns the estimator.
 
-    Marked cells can be found in :paramref:`adata` `.obs[`{key_added!r}]`.
+    Marked cells can be found in ``adata.obs[`{key_added!r}]``.
 """
 
 
