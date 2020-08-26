@@ -13,7 +13,7 @@ from cellrank import logging as logg
 AnnData = TypeVar("AnnData")
 
 
-def check_collection(
+def _check_collection(
     adata: AnnData,
     needles: Iterable[str],
     attr_name: str,
@@ -30,11 +30,11 @@ def check_collection(
     needles
         Keys to check.
     attr_name
-        Attribute of :paramref:`adata` where the needles are stored.
+        Attribute of ``adata`` where the needles are stored.
     key_name
         Pretty name of the key which will be displayed when error is found.
     use_raw
-        Whether to access `adata.raw` or just `adata`.
+        Whether to access ``adata.raw`` or just ``adata``.
 
     Returns
     -------
@@ -129,9 +129,9 @@ def _get_neighs_params(adata: AnnData) -> Dict[str, Any]:
 
 def _read_graph_data(adata: AnnData, key: str) -> Union[np.ndarray, spmatrix]:
     """
-    Read graph data from :module:`anndata`.
+    Read graph data from :mod:`anndata`.
 
-    :module`AnnData` `>=0.7` stores (n_obs x n_obs) matrices in `.obsp` rather than `.uns`.
+    :module`AnnData` >=0.7 stores `(n_obs x n_obs)` matrices in `.obsp` rather than `.uns`.
     This is for backward compatibility.
 
     Parameters
@@ -139,7 +139,7 @@ def _read_graph_data(adata: AnnData, key: str) -> Union[np.ndarray, spmatrix]:
     adata
         Annotated data object.
     key
-        Key from either `.uns` or `.obsp`.
+        Key from either ``adata.uns`` or ``adata.obsp``.
 
     Returns
     -------
@@ -148,11 +148,11 @@ def _read_graph_data(adata: AnnData, key: str) -> Union[np.ndarray, spmatrix]:
     """
 
     if hasattr(adata, "obsp") and adata.obsp is not None and key in adata.obsp.keys():
-        logg.debug(f"Read key `{key!r}` from `adata.obsp`")
+        logg.debug(f"Reading key `{key!r}` from `adata.obsp`")
         return adata.obsp[key]
 
     if key in adata.uns.keys():
-        logg.debug(f"Read key `{key!r}` from `adata.uns`")
+        logg.debug(f"Reading key `{key!r}` from `adata.uns`")
         return adata.uns[key]
 
     raise KeyError(f"Unable to find key `{key!r}` in `adata.obsp` or `adata.uns`.")
@@ -162,9 +162,9 @@ def _write_graph_data(
     adata: AnnData, data: Union[np.ndarray, spmatrix], key: str,
 ):
     """
-    Write graph data to :module:`AnnData`.
+    Write graph data to :mod:`AnnData`.
 
-    :module`anndata` `>=0.7` stores (n_obs x n_obs) matrices in `.obsp` rather than `.uns`.
+    :module`anndata` >=0.7 stores `(n_obs x n_obs)` matrices in `.obsp` rather than `.uns`.
     This is for backward compatibility.
 
     Parameters
@@ -174,7 +174,7 @@ def _write_graph_data(
     data
         The graph data we want to write.
     key
-        Key from either `.uns` or `.obsp`.
+        Key from either ``adata.uns`` or `adata.obsp``.
 
     Returns
     --------
@@ -195,7 +195,7 @@ def _write_graph_data(
         adata.uns[key] = data
         write_to = "uns"
 
-    logg.debug(f"Write graph data {key!r} to `adata.{write_to}`")
+    logg.debug(f"Writing graph data to `adata.{write_to}[{key!r}]`")
 
 
 def valuedispatch(func):

@@ -22,7 +22,7 @@ from cellrank.pl._utils import (
     _create_callbacks,
 )
 from cellrank.tl._utils import save_fig, _unique_order_preserving
-from cellrank.ul._utils import _get_n_cores, check_collection
+from cellrank.ul._utils import _get_n_cores, _check_collection
 from cellrank.tl._constants import _DEFAULT_BACKEND, AbsProbKey
 from cellrank.ul._parallelize import parallelize
 
@@ -187,7 +187,7 @@ def cluster_lineage(
     _ = adata.obsm[lineage_key][lineage]
 
     genes = _unique_order_preserving(genes)
-    check_collection(adata, genes, "var_names", kwargs.get("use_raw", False))
+    _check_collection(adata, genes, "var_names", kwargs.get("use_raw", False))
 
     key_to_add = f"lineage_{lineage}_trend"
     if key_added is not None:

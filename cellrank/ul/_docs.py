@@ -102,9 +102,7 @@ genes
 """
 
 
-def inject_docs(**kwargs):
-    r"""Docstrings should start with "\" in the first line for proper formatting."""
-
+def inject_docs(**kwargs):  # noqa
     def decorator(obj):
         obj.__doc__ = dedent(obj.__doc__).format(**kwargs)
         return obj
