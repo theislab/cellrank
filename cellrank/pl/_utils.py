@@ -384,6 +384,7 @@ def _trends_helper(
     show_lineage: bool = True,
     show_xticks_and_label: bool = True,
     cmap=None,
+    abs_prob_cmap=cm.viridis,
     legend_loc: Optional[str] = "best",
     fig: mpl.figure.Figure = None,
     axes: mpl.axes.Axes = None,
@@ -471,6 +472,7 @@ def _trends_helper(
             hide_cells=hide_cells or (same_plot and i == n_lineages - 1),
             same_plot=same_plot,
             color=lc[i] if same_plot and name is not None else lineage_color,
+            abs_prob_cmap=abs_prob_cmap,
             ylabel=ylabel,
             **kwargs,
         )
@@ -497,7 +499,7 @@ def _trends_helper(
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="2.5%", pad=0.1)
         _ = mpl.colorbar.ColorbarBase(
-            cax, norm=norm, cmap=cmap, label="absorption probability"
+            cax, norm=norm, cmap=abs_prob_cmap, label="absorption probability"
         )
 
     if same_plot and lineage_names != [None] and legend_loc is not None:
