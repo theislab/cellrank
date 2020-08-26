@@ -83,7 +83,7 @@ def graph(
         The graph data to be plotted.
     graph_key
         Key in ``adata.obsp`` or ``adata.uns`` where the graph is stored. Only used
-        when ``data`` is :class:`Anndata` object.
+        when ``data`` is :class:`~anndata.Anndata` object.
     ixs
         Subset of indices of the graph to visualize.
     layout
@@ -96,7 +96,7 @@ def graph(
     keys
         Keys in ``adata.obs``, ``adata.obsm`` or ``adata.obsp`` to color the nodes.
 
-        - If `'incoming'`, `'outgoing'` or `'self_loops'` to visualize reduction (see ``edge_reductions``)
+        - If `'incoming'`, `'outgoing'` or `'self_loops'`, visualize reduction (see ``edge_reductions``)
           for each node based on incoming or outgoing edges, respectively.
     keylocs
         Locations of ``keys``, can be any attribute of ``data``.
@@ -106,7 +106,7 @@ def graph(
         Labels of the nodes.
     top_n_edges
         Either top N outgoing edges in descending order or a tuple
-        `(top_n_edges, in_ascending_order, {'incoming', 'outgoing'})`. If `None`, show all edges.
+        ``(top_n_edges, in_ascending_order, {'incoming', 'outgoing'})``. If `None`, show all edges.
     self_loops
         Whether visualize self transitions and also to consider them in ``top_n_edges``.
     self_loop_radius_frac

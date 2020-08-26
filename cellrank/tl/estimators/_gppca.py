@@ -319,6 +319,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         ----------
         method
             One of following:
+
                 - `'eigengap'` - select the number of states based on the eigengap of the transition matrix.
                 - `'eigengap_coarse'` - select the number of states based on the eigengap of the diagonal \
                     of the coarse-grained transition matrix.
@@ -328,8 +329,8 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
                     of the coarse-grained transition matrix.
         %(n_cells)s
         alpha
-            Weight given to the deviation of an eigenvalue from one. Used when ``method='eigengap'`
-            or ``method='eigengap_coarse``.
+            Weight given to the deviation of an eigenvalue from one. Used when ``method='eigengap'``
+            or ``method='eigengap_coarse'``.
         min_self_prob
             Used when ``method='min_self_prob'``.
         n_main_states

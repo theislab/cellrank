@@ -29,8 +29,8 @@ _model = """\
 model
     Model based on :class:`cellrank.ul.models.BaseModel` to fit.
 
-    If a :class:`dict`, gene and lineage specific models can be specified. Use `'*'` to indicate
-    all genes or lineages, for example `{'Map2': {'*': ...}, 'Dcx': {'Alpha': ..., '*': ...}}`."""
+    If a :class:`dict`, gene and lineage specific models can be specified. Use ``'*'`` to indicate
+    all genes or lineages, for example ``{'Map2': {'*': ...}, 'Dcx': {'Alpha': ..., '*': ...}}``."""
 _just_plots = """\
 None
     Nothing, just plots the figure. Optionally saves it based on ``save``."""
@@ -54,7 +54,7 @@ cluster_key
 keys
     Determines which %(root_or_final) states to use by passing their names.
     Further, %(root_or_final)s states can be combined. If e.g. the %(final)s states are
-    ['Neuronal_1', 'Neuronal_1', 'Astrocytes', 'OPC'], then passing keys=['Neuronal_1, Neuronal_2', 'OPC']
+    ['Neuronal_1', 'Neuronal_1', 'Astrocytes', 'OPC'], then passing ``keys=['Neuronal_1, Neuronal_2', 'OPC']``
     means that the two neuronal %(final)s states are treated as one and the 'Astrocyte' state is excluded.
 """
 _density_correction = (
@@ -108,12 +108,19 @@ callback
 """
 _genes = """\
 genes
-    Genes in ``adata.var_names`` to plot or in ``adata.raw.var_names``, if ``use_raw=True``.
+    Genes in ``adata.var_names`` or in ``adata.raw.var_names``, if ``use_raw=True``.
 """
 _softmax_scale = """\
 softmax_scale
-    Scaling parameter for the softmax. If `None`, it will be estimated using 1 / median(correlations). The idea
-    behind this is to scale the softmax to counteract everything tending to orthogonality in high dimensions.
+    Scaling parameter for the softmax. If `None`, it will be estimated using ``1 / median(correlations)``.
+    The idea behind this is to scale the softmax to counteract everything tending to orthogonality in high dimensions.
+"""
+_time_mode = """\
+mode
+    Can be either `'embedding'` or `'time'`:
+
+        - `'embedding'` - plot the embedding while coloring in the absorption probabilities.
+        - `'time'` - plot the pseudotime on x-axis and the absorption probabilities on y-axis.
 """
 
 
@@ -149,4 +156,5 @@ d = DocstringProcessor(
     model_callback=_model_callback,
     genes=_genes,
     softmax_scale=_softmax_scale,
+    time_mode=_time_mode,
 )

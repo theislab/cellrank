@@ -30,7 +30,7 @@ class GAMR(BaseModel):
         Family in `rpy2.robjects.r`, such as `'gaussian'` or `'poisson'`.
     backend
         R library used to fit GAMs. Valid options are `'mgcv'` or `'gam'`.
-        Option `'gam'` ignores the number of splines, as well as family and smoothing parameter.
+        Option `'gam'` ignores the number of splines, as well as ``distribution``and ``smoothing_param``.
     """  # noqa
 
     _fallback_backends = {
@@ -185,7 +185,7 @@ class GAMR(BaseModel):
         """
         %(base_model_ci.summary)s
 
-        This method uses :meth:`default_confidence_interval`.
+        This method uses the :meth:`default_confidence_interval`.
 
         Parameters
         ----------
