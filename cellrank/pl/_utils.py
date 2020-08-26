@@ -22,7 +22,9 @@ from pandas.core.dtypes.common import is_categorical_dtype
 
 import matplotlib as mpl
 import matplotlib.cm as cm
+import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from cellrank import logging as logg
 from cellrank.ul._docs import d
@@ -66,13 +68,13 @@ def _curved_edges(
     bezier_precision
         Number of points in the curves.
     polarity
-        Polarity of curves, one of `'random'`, `'directed' or `'fixed'`.`
+        Polarity of curves, one of `'random', 'directed' or 'fixed'`.
         If using `'random'`, incoming and outgoing edges may overlap.
 
     Returns
     -------
     :class:`np.ndarray`
-        Array of shape (n_edges, :paramref:`bezier_precision`, 2) containing the curved edges.
+        Array of shape ``(n_edges, bezier_precision, 2)`` containing the curved edges.
     """
 
     try:
@@ -104,7 +106,7 @@ def _curved_edges(
     else:
         raise ValueError(
             f"Polarity `{polarity!r}` is not a valid option. "
-            f"Valid options are: `'random', 'fixed' or 'fixed'`."
+            f"Valid options are: `'random', 'directed' or 'fixed'`."
         )
 
     # Coordinates (x, y) of both nodes for each edge
@@ -194,7 +196,7 @@ def composition(
     ----------
     %(adata)s
     key
-        Key in :paramref:`adata` `.obs` containing categorical observation.
+        Key in ``adata.obs`` containing categorical observation.
     %(plotting)s
 
     Returns
@@ -235,6 +237,7 @@ def _is_any_gam_mgcv(models: Union[BaseModel, Dict[str, Dict[str, BaseModel]]]) 
 
     Returns
     -------
+    bool
         `True` if any of the models is from R's mgcv package, else `False`.
     """
 
@@ -281,7 +284,6 @@ def _create_models(
             for lin_name in lineages - set(models[obs_name].keys()):
                 models[obs_name][lin_name] = copy(lin_rest_model)
         else:
-            set(models[obs_name].keys()) != lineages
             raise RuntimeError(_ERROR_INCOMPLETE_SPEC.format(" lineage ", obs_name))
 
     if isinstance(model, BaseModel):
@@ -378,11 +380,16 @@ def _trends_helper(
     ln_key: str,
     lineage_names: Optional[Sequence[str]] = None,
     same_plot: bool = False,
-    sharey: bool = True,
-    cmap=None,
+    sharey: Union[str, bool] = False,
+    show_ylabel: bool = True,
+    show_lineage: bool = True,
+    show_xticks_and_label: bool = True,
+    lineage_cmap=None,
+    abs_prob_cmap=cm.viridis,
+    gene_as_title: bool = False,
+    legend_loc: Optional[str] = "best",
     fig: mpl.figure.Figure = None,
-    ax: mpl.axes.Axes = None,
-    save: Optional[Union[str, Path]] = None,
+    axes: Union[mpl.axes.Axes, Sequence[mpl.axes.Axes]] = None,
     **kwargs,
 ) -> None:
     """
@@ -393,14 +400,33 @@ def _trends_helper(
     %(adata)s
     %(model)s
     gene
-        Name of the gene in `adata.var_names`.
+        Name of the gene in `adata.var_names``.
+    ln_key
+        Key in ``adata.obsm`` where to find the lineages.
+    lineage_names
+        Names of lineages to plot.
+    same_plot
+        Whether to plot all lineages in the same plot or separately.
+    sharey
+        Whether the y-axis is being shared.
+    show_ylabel
+        Whether to show y-label on the y-axis. Usually, only the first column will contain the y-label.
+    show_lineage
+        Whether to show the lineage as the title. Usually, only first row will contain the lineage names.
+    show_xticks_and_label
+        Whether to show x-ticks and x-label. Usually, only the last row will show this.
+    lineage_cmap
+        Colormap to use when coloring the the lineage. If `None`, use colors from ``adata.uns``.
+    abs_prob_cmap:
+        Colormap to use when coloring in the absorption probabilities, if they are being plotted.
+    gene_as_title
+        Whether to use the gene names as titles (with lineage names as well) or on the y-axis.
+    legend_loc
+        Location of the legend. If `None`, don't show any legend.
     fig
-        Figure to use, if `None`, create a new one.
+        Figure to use.
     ax
-        Ax to use, if `None`, create a new one.
-    save
-        Filename where to save the plot.
-        If `None`, just shows the plots.
+        Ax to use.
     **kwargs
         Keyword arguments for :meth:`cellrank.ul.models.BaseModel.plot`.
 
@@ -411,21 +437,11 @@ def _trends_helper(
 
     n_lineages = len(lineage_names)
     if same_plot:
-        if fig is None and ax is None:
-            fig, ax = plt.subplots(
-                1,
-                figsize=kwargs.get("figsize", None) or (15, 10),
-                constrained_layout=True,
-            )
-        axes = [ax] * len(lineage_names)
-    else:
-        fig, axes = plt.subplots(
-            ncols=n_lineages,
-            figsize=kwargs.get("figsize", None) or (6 * n_lineages, 6),
-            sharey=sharey,
-            constrained_layout=True,
-        )
+        axes = [axes] * len(lineage_names)
+
+    fig.tight_layout()
     axes = np.ravel(axes)
+
     percs = kwargs.pop("perc", None)
     if percs is None or not isinstance(percs[0], (tuple, list)):
         percs = [percs]
@@ -441,39 +457,79 @@ def _trends_helper(
 
     hide_cells = kwargs.pop("hide_cells", False)
     show_cbar = kwargs.pop("show_cbar", True)
-    lineage_color = kwargs.pop("color", "black")
 
-    lc = (
-        cmap.colors
-        if cmap is not None and hasattr(cmap, "colors")
-        else adata.uns.get(f"{_colors(ln_key)}", cm.Set1.colors)
-    )
+    if same_plot:
+        lineage_colors = (
+            lineage_cmap.colors
+            if lineage_cmap is not None and hasattr(lineage_cmap, "colors")
+            else adata.uns.get(f"{_colors(ln_key)}", cm.Set1.colors)
+        )
+    else:
+        lineage_colors = (
+            "black" if not mcolors.is_color_like(lineage_cmap) else lineage_cmap
+        )
 
     for i, (name, ax, perc) in enumerate(zip(lineage_names, axes, percs)):
-        title = name if name is not None else "no lineage"
+        if same_plot:
+            if gene_as_title:
+                title = gene
+                ylabel = "expression" if show_ylabel else None
+            else:
+                title = ""
+                ylabel = gene
+        else:
+            if gene_as_title:
+                title = None
+                ylabel = "expression" if i == 0 else None
+            else:
+                title = (
+                    (name if name is not None else "no lineage") if show_lineage else ""
+                )
+                ylabel = gene if i == 0 else None
+
         models[gene][name].plot(
             ax=ax,
             fig=fig,
             perc=perc,
-            show_cbar=True
-            if not same_perc
-            else False
-            if not show_cbar
-            else (i == n_lineages - 1),
+            show_cbar=False,
             title=title,
-            hide_cells=hide_cells or (same_plot and i != n_lineages - 1),
+            hide_cells=hide_cells or (same_plot and i == n_lineages - 1),
             same_plot=same_plot,
-            color=lc[i] if same_plot and name is not None else lineage_color,
-            ylabel=gene if not same_plot or name is None else "expression",
+            lineage_color=lineage_colors[i]
+            if same_plot and name is not None
+            else lineage_colors,
+            abs_prob_cmap=abs_prob_cmap,
+            ylabel=ylabel,
             **kwargs,
         )
+        if sharey in ("row", "all", True) and i == 0:
+            plt.setp(ax.get_yticklabels(), visible=True)
 
-    if same_plot and lineage_names != [None]:
-        ax.set_title(gene)
-        ax.legend()
+        if show_xticks_and_label:
+            plt.setp(ax.get_xticklabels(), visible=True)
+        else:
+            ax.set_xlabel(None)
 
-    if save is not None:
-        save_fig(fig, save)
+    if not same_plot and same_perc and show_cbar and not hide_cells:
+        vmin = np.min([models[gene][ln].w_all for ln in lineage_names])
+        vmax = np.max([models[gene][ln].w_all for ln in lineage_names])
+        norm = mcolors.Normalize(vmin=vmin, vmax=vmax)
+
+        for ax in axes:
+            [
+                c
+                for c in ax.get_children()
+                if isinstance(c, mpl.collections.PathCollection)
+            ][0].set_norm(norm)
+
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size="2.5%", pad=0.1)
+        _ = mpl.colorbar.ColorbarBase(
+            cax, norm=norm, cmap=abs_prob_cmap, label="absorption probability"
+        )
+
+    if same_plot and lineage_names != [None] and legend_loc is not None:
+        ax.legend(lineage_names, loc=legend_loc)
 
 
 def _position_legend(ax: mpl.axes.Axes, legend_loc: str, **kwargs) -> mpl.legend.Legend:
@@ -664,14 +720,12 @@ def _create_callbacks(
                     assert (
                         model._gene == gene
                     ), f"Callback modified the gene from `{gene!r}` to `{model._gene!r}`."
-                    assert model._gene == gene, (
-                        f"Callback modified the lineage "
-                        f"from `{lineage!r}` to `{model._lineage!r}`."
-                    )
+                    assert (
+                        model._gene == gene
+                    ), f"Callback modified the lineage from `{lineage!r}` to `{model._lineage!r}`."
                 except Exception as e:
                     raise RuntimeError(
-                        f"Callback validation failed for "
-                        f"gene `{gene!r}` and lineage `{lineage!r}`."
+                        f"Callback validation failed for gene `{gene!r}` and lineage `{lineage!r}`."
                     ) from e
 
     if callback is None:
@@ -707,7 +761,7 @@ def _create_callbacks(
             )
     else:
         raise TypeError(
-            f"Class `{type(callback).__name__!r}` must be of type `callable` or a dictionary of such callables."
+            f"Class `{type(callback).__name__!r}` must be callable` or a dictionary of callables."
         )
 
     maybe_sanity_check(callbacks)

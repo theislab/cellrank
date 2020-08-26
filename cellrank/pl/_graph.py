@@ -70,7 +70,7 @@ def graph(
 
     This is a utility function to look in more detail at the transition matrix in areas of interest, e.g. around an
     endpoint of development. This function is meant to visualise a small subset of nodes (~100-500) and the most likely
-    transitions between them. Note that limiting edges visualized using :paramref:`top_n_edges` will speed things up,
+    transitions between them. Note that limiting edges visualized using ``top_n_edges`` will speed things up,
     as well as reduce the visual clutter.
 
     .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/graph.png
@@ -79,42 +79,38 @@ def graph(
 
     Parameters
     ----------
-    data :
-        The graph data, stored either in `.uns` [ :paramref:`graph_key` ], or as a sparse or a dense matrix.
+    data
+        The graph data to be plotted.
     graph_key
-        Key in :paramref:`adata` `.uns` where the graph is stored.
-        Only used when :paramref:`adata` is :class:`Anndata` object.
+        Key in ``adata.obsp`` or ``adata.uns`` where the graph is stored. Only used
+        when ``data`` is :class:`~anndata.Anndata` object.
     ixs
         Subset of indices of the graph to visualize.
     layout
         Layout to use for graph drawing.
 
-        - If :class:`str`, search for embedding in :paramref:`adata` `.obsm[X_` :paramref:`layout` `]`.
-          Use :paramref:`layout_kwargs` = `{'components': [0, 1]}` to select components.
-        - If :class:`dict`, keys should be values in interval [0, len(:paramref:`ixs`))
+        - If :class:`str`, search for embedding in ``adata.obsm['X_{layout}']``.
+          Use ``layout_kwargs={'components': [0, 1]}`` to select components.
+        - If :class:`dict`, keys should be values in interval ``[0, len(ixs))``
           and values `(x, y)` pairs corresponding to node positions.
     keys
-        Keys in :paramref:`adata` `.obs`, :paramref:`adata` `.obsm` or :paramref:`adata` `.uns` to color the nodes.
+        Keys in ``adata.obs``, ``adata.obsm`` or ``adata.obsp`` to color the nodes.
 
-        - If `'incoming'`, `'outgoing'` or `'self_loops'` to
-          visualize reduction (see :paramref:`edge_reductions`) for each node based
-          on incoming or outgoing edges, respectively.
+        - If `'incoming'`, `'outgoing'` or `'self_loops'`, visualize reduction (see ``edge_reductions``)
+          for each node based on incoming or outgoing edges, respectively.
     keylocs
-        Locations of :paramref:`keys`, can be `'obs'`, `'obsm'` or `'uns'`.
+        Locations of ``keys``, can be any attribute of ``data``.
     node_size
         Size of the nodes.
     labels
         Labels of the nodes.
     top_n_edges
         Either top N outgoing edges in descending order or a tuple
-        `(top_n_edges, in_ascending_order, {'incoming', 'outgoing'})`.
-        If `None`, show all edges.
+        ``(top_n_edges, in_ascending_order, {'incoming', 'outgoing'})``. If `None`, show all edges.
     self_loops
-        Whether visualize self transitions and also to consider them in :paramref:`top_n_edges`.
+        Whether visualize self transitions and also to consider them in ``top_n_edges``.
     self_loop_radius_frac
-        Fraction of a unit circle to visualize self transitions.
-
-        If `None`, use :paramref:`node_size` / 1000.
+        Fraction of a unit circle to visualize self transitions. If `None`, use ``node_size / 1000``.
     filter_edges
         Whether to remove all edges not in `[min, max]` interval.
     edge_reductions
@@ -138,14 +134,14 @@ def graph(
     color_nodes
         Whether to color the nodes
     cat_cmap
-        Categorical colormap used when :paramref:`keys` contain categorical variables.
+        Categorical colormap used when ``keys`` contain categorical variables.
     cont_cmap
-        Continuous colormap used when :paramref:`keys` contain continuous variables.
+        Continuous colormap used when ``keys`` contain continuous variables.
     legend_loc
         Location of the legend.
     %(plotting)s
     layout_kwargs
-        Additional kwargs for :paramref:`layout`.
+        Additional kwargs for ``layout``.
 
     Returns
     -------
@@ -280,11 +276,12 @@ def graph(
         logg.debug("Ignoring key locations")
         keylocs = [None] * len(keys)
 
-    for k in ("obs", "obsm"):
-        if k in keylocs and ixs is None:
-            raise ValueError(
-                f"Invalid combination: `ixs` is None and found `{k!r}` in `keylocs`."
-            )
+    if ixs is None:
+        for k in ("obs", "obsm"):
+            if k in keylocs:
+                raise ValueError(
+                    f"Invalid combination: `ixs` is `None` and found `{k!r}` in `keylocs`."
+                )
 
     if not isinstance(edge_reductions, (tuple, list)):
         edge_reductions = [edge_reductions] * len(keys)
@@ -304,15 +301,15 @@ def graph(
     if isinstance(data, _AnnData):
         if graph_key is None:
             raise ValueError(
-                "Argument `graph_key` cannot be `None` when `adata` is `anndata.Anndata` object."
+                "Argument `graph_key` cannot be `None` when `data` is `anndata.Anndata` object."
             )
         gdata = _read_graph_data(data, graph_key)
     elif isinstance(data, (np.ndarray, spmatrix)):
         gdata = data
     else:
         raise TypeError(
-            f"Expected argument `data` to be one of `AnnData`, `numpy.ndarray`, `scipy.sparse.spmatrix`, "
-            f"found `{type(data).__name__}`"
+            f"Expected argument `data` to be one of `anndata.AnnData`, `numpy.ndarray`, `scipy.sparse.spmatrix`, "
+            f"found `{type(data).__name__!r}`."
         )
     is_sparse = issparse(gdata)
 
@@ -417,7 +414,7 @@ def graph(
             if key in label_col:
                 node_v = dict(zip(pos.keys(), label_col[key]))
             else:
-                raise RuntimeError(f"Key `{key!r}` not found in `adata.{keyloc!r}`.")
+                raise RuntimeError(f"Key `{key!r}` not found in `adata.{keyloc}`.")
 
         if labs is not None:
             if len(labs) != len(pos):

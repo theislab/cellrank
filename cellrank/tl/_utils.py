@@ -31,6 +31,7 @@ from scipy.sparse.linalg import norm as sparse_norm
 import matplotlib.colors as mcolors
 
 from cellrank import logging as logg
+from cellrank.ul._docs import d
 from cellrank.ul._utils import _get_neighs, _has_neighs, _get_neighs_params
 from cellrank.tl._colors import (
     _compute_mean_color,
@@ -61,7 +62,7 @@ class RandomKeys:
     n
         Number of keys, If `None`, create just 1 keys.
     where
-        Attribute of :paramref:`adata`. If `'obs'`, also clean up `'{key}_colors'` for each generated key.
+        Attribute of ``adata``. If `'obs'`, also clean up `'{key}_colors'` for each generated key.
     """
 
     def __init__(self, adata: AnnData, n: Optional[int] = None, where: str = "obs"):
@@ -123,26 +124,26 @@ def _create_root_final_annotations(
     Create categorical annotations of both root and final states.
 
     This is a utility function for creating a categorical Series object which combines the information about root
-    and final states. The Series is written directly to the AnnData object.  This can for example be used to create a
-    scatter plot in scvelo.
+    and final states. The :class:`pandas,Series` is written directly to the :class:`anndata.AnnData`object.
+    This can for example be used to create a scatter plot in :mod:`scvelo`.
 
     Parameters
     ----------
     adata
-        AnnData object to write to (`.obs[key_added]`)
+        AnnData object to write to ``.obs[key_added]``.
     final_key
-        Key from `.obs` where final states have been saved.
+        Key from ``adata.obs`` where final states have been saved.
     root_key
-        Key from `.obs` where root states have been saved.
+        Key from ``adata.obs`` where root states have been saved.
     final_pref, root_pref
-        DirPrefix used in the annotations.
+        Direction prefix used in the annotations.
     key_added
-        Key added to `adata.obs`.
+        Key added to ``adata.obs``.
 
     Returns
     -------
     None
-        Nothing, just writes to AnnData.
+        Nothing, just writes to ``adata``.
     """
 
     # get both Series objects
@@ -173,7 +174,7 @@ def _process_series(
     """
     Process :class:`pandas.Series` categorical objects.
 
-    Categories in :paramref:`series` are combined/removed according to :paramref:`keys`,
+    Categories in ``series`` are combined/removed according to ``keys``,
     the same transformation is applied to the corresponding colors.
 
     Parameters
@@ -192,8 +193,8 @@ def _process_series(
     Returns
     -------
     :class:`pandas.Series`
-        Categorical updated annotation. Each cell is assigned to either `NaN`
-        or one of updated approximate recurrent classes.
+        Categorical updated annotation. Each cell is assigned to either
+        `NaN` or one of updated approximate recurrent classes.
     list
         Color list processed according to keys.
     """
@@ -229,7 +230,7 @@ def _process_series(
         for rc in keys
     }
 
-    # check the `keys` are unique
+    # check that the keys are unique
     overlap = [set(ks) for ks in keys_]
     for c1, c2 in combinations(overlap, 2):
         overlap = c1 & c2
@@ -243,7 +244,7 @@ def _process_series(
             "Not all keys are proper categories. Check for spelling mistakes in `keys`."
         )
 
-    # remove cats and colors according to `keys`
+    # remove cats and colors according to keys
     n_remaining = len(remaining_cat)
     removed_cat = list(set(series_in.cat.categories) - set(remaining_cat))
     if process_colors:
@@ -292,7 +293,7 @@ def _complex_warning(
     X: np.array, use: Union[list, int, tuple, range], use_imag: bool = False
 ) -> np.ndarray:
     """
-    Check for imaginary components in columns of X specified by `use`.
+    Check for imaginary components in columns of X specified by ``use``.
 
     Parameters
     ----------
@@ -306,7 +307,7 @@ def _complex_warning(
     Returns
     -------
     class:`numpy.ndarray`
-        X_
+        An array containing either only real eigenvectors or also complex ones.
     """
 
     complex_mask = np.sum(X.imag != 0, axis=0) > 0
@@ -324,13 +325,31 @@ def _complex_warning(
     return X_
 
 
-def bias_knn(conn, pseudotime, n_neighbors, k=3):
+def bias_knn(
+    conn: csr_matrix, pseudotime: np.ndarray, n_neighbors: int, k: int = 3
+) -> csr_matrix:
     """
     Palantir Kernel utility function.
 
     This function takes in symmetric connectivities and a pseudotime and removes edges that point "against" pseudotime,
     in this way creating a directed graph. For each node, it always keeps the closest neighbors, making sure the graph
     remains connected.
+
+    Parameters
+    ----------
+    conn
+        The nearest neighbor connectivities.
+    pseudotime
+        Pseudotemporal ordering of cells.
+    n_neighbors
+        Number of neighbors to keep
+    k
+        Number, alongside with ``n_neighbors`` which determined the threshold for candidate indices.
+
+    Returns
+    -------
+    :class:`scipy.sparse.csr_matrix`.
+        Biased connectivities according to the ``pseudotime``.
     """
 
     # set a threshold for the neighbors to keep
@@ -395,6 +414,7 @@ def _vec_mat_corr(X: Union[np.ndarray, spmatrix], y: np.ndarray) -> np.ndarray:
     return num / denom
 
 
+@d.dedent
 def cyto_trace(
     adata: AnnData, layer: str = "Ms", inplace: bool = True, use_median: bool = False
 ) -> Optional[AnnData]:
@@ -405,22 +425,21 @@ def cyto_trace(
     For more references, see [Cyto20]_.
 
     Workflow:
-    In *scanpy*, take your raw :paramref:`adata` object and run :func:`scvelo.pp.moments` on it.
-    Then run this function.
+        - In :mod:`scanpy`, take your raw ``adata`` object and run :func:`scvelo.pp.moments` on it.
+        - Run this function.
 
     Parameters
     ----------
-    adata : :class:`~anndata.AnnData`
-        Annotated data object.
+    %(adata)s
     inplace
-        Whether to write directly to :paramref:`adata` or to a copy.
+        Whether to write directly to ``adata`` or to a copy.
     use_median
         If `True`, use *median*, otherwise *mean*.
 
     Returns
     -------
     None or :class:`anndata.AnnData`
-        Depending on :paramref:`copy`, either updates :paramref:`adata` or returns a copy.
+        Depending on ``copy``, either updates ``adata`` or returns its copy.
     """
 
     # check use_raw and copy
@@ -506,7 +525,9 @@ def _filter_cells(distances: np.ndarray, rc_labels: Series, n_matches_min: int):
     """Filter out some cells that look like transient states based on their neighbors."""
 
     if not is_categorical_dtype(rc_labels):
-        raise TypeError("`categories` must be a categorical variable.")
+        raise TypeError(
+            f"Argument `categories` must be a categorical variable, found `{infer_dtype(rc_labels)}`."
+        )
 
     # retrieve knn graph
     rows, cols = distances.nonzero()
@@ -547,21 +568,22 @@ def _cluster_X(
     Parameters
     ----------
     X
-        Data matrix of shape `n_samples x n_features`
+        Data matrix of shape `n_samples x n_features`.
     n_clusters
-        Number of clusters to use
+        Number of clusters to use.
     method
-        Method to use for clustering. Options are ['kmeans', 'louvain', 'leiden']
+        Method to use for clustering. Options are `'kmeans', 'louvain', 'leiden'`.
     n_neighbors
-        If using a community-detection based clustering algorithm, number of neighbors for KNN construction
+        If using a community-detection based clustering algorithm, number of neighbors for KNN construction.
     resolution
-        Resolution parameter for ['louvain', 'leiden']
+        Resolution parameter for `'louvain', 'leiden'`.
 
     Returns
     -------
-    labels
-        List of cluster labels of length `n_samples`
+    :class:`list`
+        List of cluster labels of length `n_samples`.
     """
+
     import scanpy as sc
 
     # make sure data is at least 2D
@@ -581,7 +603,7 @@ def _cluster_X(
         labels = adata_dummy.obs[method]
     else:
         raise NotImplementedError(
-            f"Invalid method `{method!r}`. Valid options are: `'kmeans', 'louvain'`."
+            f"Invalid method `{method!r}`. Valid options are: `'kmeans'` or `'louvain'`."
         )
 
     return list(labels)
@@ -720,15 +742,14 @@ def _subsample_embedding(
     data
         Either the embedding or an annotated data object containing an embedding.
     basis
-        Key to use to get the embedding from `adata.obsm`.
-        Ignored when data is an :class:`np.ndarray`.
+        Key to use to get the embedding from ``data.obsm``. Ignored when ``data`` is an :class:`np.ndarray`.
     n_dim:
         Number of dimensions in the embedding to use for subsampling.
     n_grid_points_total
         Determines how many gridpoints to use in total.
     n_grid_points_dim
         Determines how many gridpoints to use in each dimension.
-        Only one of :paramref:`n_grid_points_total` and :paramref:`n_grid_points_dim` can be specified.
+        Only one of ``n_grid_points_total`` and ``n_grid_points_dim`` can be specified.
 
     Returns
     -------
@@ -923,8 +944,7 @@ def save_fig(
     fig: :class:`matplotlib.figure.Figure`
         Figure to save.
     path:
-        Path where to save the figure.
-        If path is relative, save it under `sc.settings.figdir`.
+        Path where to save the figure. If path is relative, save it under `cellrank.settings.figdir`.
     make_dir:
         Whether to try making the directory if it does not exist.
     ext:
@@ -935,6 +955,7 @@ def save_fig(
     None
         Just saves the plot.
     """
+
     from cellrank import settings
 
     if os.path.splitext(path)[1] == "":
@@ -962,7 +983,7 @@ def _convert_to_categorical_series(
     rc_classes
         Recurrent classes in the following format: `{'rc_0': ['cell_0', 'cell_1', ...], ...}`.
     cell_names
-        List of valid cell names, usually taken from `adata.obs_names`.
+        List of valid cell names, usually taken from ``adata.obs_names``.
 
     Returns
     -------
@@ -978,7 +999,7 @@ def _convert_to_categorical_series(
         cells = [c if isinstance(c, str) else cell_names[c] for c in cells]
         rest = set(cells) - cnames
         if rest:
-            raise ValueError(f"Invalid cell names: `{list(rest)}`.")
+            raise ValueError(f"Invalid cell names `{list(rest)}`.")
         mapper[str(rc)] = cells
         expected_size += 1
 
@@ -1022,18 +1043,17 @@ def _merge_categorical_series(
     color_overwrite
         If `True`, overwrite the old colors with new ones for overlapping categories.
     inplace
-        Whether to update :paramref:`old` or create a copy.
+        Whether to update ``old`` or create a copy.
 
     Returns
     -------
     :class:`pandas.Series`
-        If paramref:`inplace` is `False`, returns the modified approximate recurrent classes and if
-        :paramref:`colors_old` and :paramref:`colors_new` are both `None`.
+        If ``inplace`` is `False`, returns the modified approximate recurrent classes and if
+        ``colors_old`` and ``colors_new`` are both `None`.
     :class:`numpy.ndarray`
-        If :paramref:`inplace` is `True` and any of :paramref:`colors_old`, :paramref:`colors_new`
-        containing the new colors.
+        If ``inplace`` is `True` and any of ``colors_old``, ``colors_new`` containing the new colors.
     :class:`pandas.Series`, :class:`numpy.ndarray`
-        The same as above, but with :paremref:`inplace` is `False`.
+        The same as above, but with ``inplaces` is `False`.
     """
 
     def get_color_mapper(
@@ -1165,38 +1185,39 @@ def _long_form_frequencies(
     x_label: Optional[str] = None,
 ):
     """
-    Compute frequencies of a `query_var` over groups defined by `groupby`.
+    Compute frequencies of a ``query_var`` over groups defined by ``groupby``.
 
     Parameters
     ----------
     adata
         Annotated data object.
     query_var
-        Key from `adata.obs` to a categorical variable whose frequencies with respect to groups defined by `groupby`
-        we want to compute.
+        Key from ``adata.obs`` to a categorical variable whose frequencies
+        with respect to groups defined by ``groupby`` we want to compute.
     query_var_groups
-        Subset of the categories from `query_var`. These are the categories whose frequencies we are intersted in.
+        Subset of the categories from ``query_var``. These are the categories whose frequencies we are interested in.
     groupby
-        Key from `adata.obs`. This defined the categorical variable with respect to which we are computing frequencies.
+        Key from ``adata.obs``. This defined the categorical variable with
+        respect to which we are computing frequencies.
     x_label
-        Optional annotation from `adata.obs` that's mapped to `groupby`. Mapping must be unique.
+        Optional annotation from ``adata.obs`` that's mapped to ``groupby``. Mapping must be unique.
 
     Returns
     -------
     :class:`pandas.DataFrame`
-        Long-form pandas DataFrame that's convenient for pl with seaborn.
+        Long-form pandas DataFrame that's convenient for plotting with :mod:`seaborn`.
     """
 
     # input checks
     if query_var not in adata.obs.keys():
-        raise ValueError(f"`{query_var}` not found in `adata.obs`")
+        raise ValueError(f"`{query_var}` not found in `adata.obs`.")
     if groupby not in adata.obs.keys():
-        raise ValueError(f"`{groupby}` not found in `adata.obs`")
+        raise ValueError(f"`{groupby}` not found in `adata.obs`.")
     if x_label is None:
         x_label = groupby
     else:
         if x_label not in adata.obs.keys():
-            raise ValueError(f"{x_label} not in `adata.obs.keys`")
+            raise ValueError(f"Key `{x_label!r}` not in `adata.obs.keys`.")
     if isinstance(query_var_groups, str):
         query_var_groups = [query_var_groups]
 
@@ -1213,7 +1234,7 @@ def _long_form_frequencies(
             np.unique(adata.obs[adata.obs[groupby] == sample][x_label].to_numpy())[0]
             for sample in rel_frequs.index
         ],
-        dtype="int",
+        dtype=np.int32,
     )
 
     # subset to groups of interest and bring into long-form
@@ -1265,32 +1286,33 @@ def _fuzzy_to_discrete(
     """
     Map fuzzy clustering to discrete clustering.
 
-    Given a fuzzy clustering of `n_samples` samples represented by a matrix `a_fuzzy` of shape
+    Given a fuzzy clustering of `n_samples` samples represented by a matrix ``a_fuzzy`` of shape
     `(n_samples x n_clusters)` where rows sum to one and indicate cluster membership to each of
     the `c_clusters` clusters, we compute an assignment of a subset of samples to clusters such
-    that each cluster is represented by its `n_most_likely` most likely samples. In case a sample
-    is assigned more than once, it can either be removed (`remove_overlap = True`) or it can be
-    assigned to the cluster it most likely belongs to (`remove_overlap = False`). In case this
-    leaves a cluster with less than `raise_threshold x n_most_likely` samples, we raise an exception.
-    In case this leaves clusters c_1, ..., c_m with less than `n_most_likely` samples, but more than
-    `raise_threshold x n_most_likely` samples, we append c_1, ..., c_m to a list `critical_clusters`,
+    that each cluster is represented by its ``n_most_likely`` most likely samples. In case a sample
+    is assigned more than once, it can either be removed (``remove_overlap=True``) or it can be
+    assigned to the cluster it most likely belongs to (``remove_overlap=False``). In case this
+    leaves a cluster with less than ``raise_threshold x n_most_likely`` samples, we raise an exception.
+    In case this leaves clusters c_1, ..., c_m with less than ``n_most_likely`` samples, but more than
+    ``raise_threshold x n_most_likely`` samples, we append c_1, ..., c_m to a list `critical_clusters`,
     which we return.
 
-    We return a boolean matrix `a_discrete` of the same shape as `a_fuzzy`, where 1 in position
+    We return a boolean matrix `a_discrete` of the same shape as ``a_fuzzy`;`, where `1` in position
     `i, j` indicates that sample `i` is assigned to cluster `j`. Note that we don't assign all samples
-    to clusters (most entries in `a_discrete` will be 0) - this is meant to only assign a small
+    to clusters (most entries in `a_discrete` will be `0`) - this is meant to only assign a small
     subset of the samples, which we are most confident in.
 
     Parameters
     ----------
     a_fuzzy
-        Numpy array of shape (`n_samples x n_clusters`) representing a fuzzy clustering. Rows must sum to one.
+        Numpy array of shape `(n_samples x n_clusters)` representing a fuzzy clustering.
+        Rows must sum to one.
     n_most_likely
         Number of samples we want to assign to each cluster.
     remove_overlap
-        If `True`, remove ambigious samples. Otherwise, assign them to the most likely cluster.
+        If `True`, remove ambiguous samples. Otherwise, assign them to the most likely cluster.
     raise_threshold
-        If a cluster is assigned less than `raise_threshold x n_most_likely` samples, raise an
+        If a cluster is assigned less than ``raise_threshold x n_most_likely`` samples, raise an
         exception. Set to `None` if you only want to raise if there is an empty cluster.
     check_row_sums
         Check whether rows in `a_fuzzy` sum to one. The one situation where we don't do this is when
@@ -1298,10 +1320,9 @@ def _fuzzy_to_discrete(
 
     Returns
     -------
-    a_discrete
-        Boolean matrix of the same shape as `a_fuzzy`, assigning a subset of the samples to clusters.
-    critical_clusters
-        Array of clusters with less than `n_most_likely` samples assigned.
+    :class:`numpy.ndarray`m :class:`numpy.ndarray`
+        Boolean matrix of the same shape as `a_fuzzy`, assigning a subset of the samples to clusters and
+        an rray of clusters with less than `n_most_likely` samples assigned, respectively.
     """
 
     # check the inputs
@@ -1315,7 +1336,7 @@ def _fuzzy_to_discrete(
         if n_clusters != 1 and not np.allclose(
             a_fuzzy.sum(1), 1, rtol=1e6 * EPS, atol=1e6 * EPS
         ):
-            raise ValueError("Rows in `a_fuzzy` do not sum to one.")
+            raise ValueError("Rows in `a_fuzzy` do not sum to `1`.")
     if n_most_likely > int(n_samples / n_clusters):
         raise ValueError(
             f"You've selected {n_most_likely} cells, please decrease this to at most "
@@ -1372,15 +1393,17 @@ def _fuzzy_to_discrete(
 
 
 def _series_from_one_hot_matrix(
-    a: np.array, index: Optional[Iterable] = None, names: Optional[Iterable] = None
+    membership: np.array,
+    index: Optional[Iterable] = None,
+    names: Optional[Iterable] = None,
 ) -> pd.Series:
     """
     Create a pandas Series based on a one-hot encoded matrix.
 
     Parameters
     ----------
-    a
-        One-hot encoded membership matrix, of shape (`n_samples x n_clusters`) i.e. a `1` in position `i, j`
+    membership
+        One-hot encoded membership matrix, of shape `(n_samples x n_clusters)` i.e. a `1` in position `i, j`
         signifies that sample `i` belongs to cluster `j`.
     index
         Index for the Series. Careful, if this is not given, categories are removed when writing to AnnData.
@@ -1388,43 +1411,46 @@ def _series_from_one_hot_matrix(
     Returns
     -------
     :class:`pandas.Series`
-        Series, indicating cluster membership for each sample. The data type of the categories is `str`
+        Series, indicating cluster membership for each sample. The data type of the categories is :class:`str`
         and samples that belong to no cluster are assigned `NaN`.
     """
-    n_samples, n_clusters = a.shape
-    if not isinstance(a, np.ndarray):
+    n_samples, n_clusters = membership.shape
+    if not isinstance(membership, np.ndarray):
         raise TypeError(
-            f"Expected `a` to be of type `numpy.ndarray`, found `{type(a).__name__!r}`."
+            f"Expected `membership` to be of type `numpy.ndarray`, found `{type(membership).__name__!r}`."
         )
-    a = np.asarray(a)  # change the type in case a lineage object was passed.
-    if a.dtype != np.bool:
+    membership = np.asarray(
+        membership
+    )  # change the type in case a lineage object was passed.
+    if membership.dtype != np.bool:
         raise TypeError(
-            f"Expected `a`'s elements to be boolean, found `{a.dtype.name!r}`."
+            f"Expected `membership`'s elements to be boolean, found `{membership.dtype.name!r}`."
         )
 
-    if not np.all(a.sum(axis=1) <= 1):
+    if not np.all(membership.sum(axis=1) <= 1):
         raise ValueError("Not all items are one-hot encoded or empty.")
-    if (a.sum(0) == 0).any():
-        logg.warning(f"Detected {np.sum((a.sum(0) == 0))} empty categorie(s)")
+    if (membership.sum(0) == 0).any():
+        logg.warning(f"Detected {np.sum((membership.sum(0) == 0))} empty categories")
 
     if index is None:
         index = range(n_samples)
     if names is not None:
         if len(names) != n_clusters:
             raise ValueError(
-                f"Shape mismatch, length of `names` is `{len(names)}`, but `n_clusters` = {n_clusters}."
+                f"Shape mismatch, length of `names` is `{len(names)}`, but `n_clusters={n_clusters}`."
             )
     else:
         names = np.arange(n_clusters).astype("str")
 
     target_series = pd.Series(index=index, dtype="category")
-    for vec, name in zip(a.T, names):
+    for vec, name in zip(membership.T, names):
         target_series.cat.add_categories(name, inplace=True)
         target_series[np.where(vec)[0]] = name
 
     return target_series
 
 
+@d.dedent
 def _colors_in_order(
     adata: AnnData,
     clusters: Optional[Iterable[str]] = None,
@@ -1433,17 +1459,16 @@ def _colors_in_order(
     """
     Get list of colors from AnnData in defined order.
 
-    This will extract a list of colors from `adata.uns[cluster_key]` corresponding to the `clusters`, in the
-    order defined by the `clusters`.
+    This will extract a list of colors from ``adata.uns[cluster_key]`` corresponding to the ``clusters``,
+    in the order defined by the ``clusters``.
 
     Parameters
     ----------
-    adata
-        Annotated data object.
+    %(adata)s
     clusters
-        Subset of the clusters we want the color for. Must be a subset of `adata.obs[cluster_key].cat.categories`.
+        Subset of the clusters we want the color for. Must be a subset of ``adata.obs[cluster_key].cat.categories``.
     cluster_key
-        Key from `adata.obs`.
+        Key from ``adata.obs``.
 
     Returns
     -------
@@ -1452,13 +1477,13 @@ def _colors_in_order(
     """
     assert (
         cluster_key in adata.obs.keys()
-    ), f"Could not find {cluster_key} in `adata.obs`"
+    ), f"Could not find {cluster_key} in `adata.obs`."
     assert np.in1d(
         clusters, adata.obs[cluster_key].cat.categories
     ).all(), "Not all `clusters` found."
     assert (
         f"{cluster_key}_colors" in adata.uns.keys()
-    ), f"No colors associated to {cluster_key} in `adata.uns`"
+    ), f"No colors associated to {cluster_key} in `adata.uns`."
 
     if clusters is None:
         clusters = adata.obs[cluster_key].cat.categories
@@ -1476,7 +1501,7 @@ def _get_cat_and_null_indices(
     cat_series: Series,
 ) -> Tuple[np.ndarray, np.ndarray, Dict[Any, np.ndarray]]:
     """
-    Given a categorical :class:`pandas.Series`, get the indices corresponding to categories and NaNs.
+    Given a categorical :class:`pandas.Series`, get the indices corresponding to categories and `NaNs`.
 
     Parameters
     ----------
@@ -1486,11 +1511,11 @@ def _get_cat_and_null_indices(
     Returns
     -------
     :class: `numpy.ndarray`
-        Array containing the indices of elements corresponding to categories in `cat_series`.
+        Array containing the indices of elements corresponding to categories in ``cat_series``.
     :class: `numpy.ndarray`
-        Array containing the indices of elements corresponding to NaNs in `cat_series`.
+        Array containing the indices of elements corresponding to NaNs in ``cat_series``.
     :class:`dict`
-        Dict containing categories of `cat_series` as keys and an array of corresponding indices as values.
+        Dict containing categories of ``cat_series`` as keys and an array of corresponding indices as values.
     """
 
     # check the dtype
@@ -1543,7 +1568,8 @@ def _check_estimator_type(estimator: Any) -> None:
 
     if not issubclass(estimator, BaseEstimator):
         raise TypeError(
-            f"Expected estimator to be a subclass of `BaseEstimator`, found `{type(estimator).__name__!r}`."
+            f"Expected estimator to be a subclass of `cellrank.tl.estimators.BaseEstimator`, "
+            f"found `{type(estimator).__name__!r}`."
         )
 
 
@@ -1582,7 +1608,7 @@ def _calculate_absorption_time_moments(
     Returns
     -------
         Mean time until absorption, pseudotime based on the mean time and it's variance.
-        If :paramref:`calculate_variance` `=False`, then these values are `None`.
+        If ``calculate_variance=False``, then these values are `None`.
     """
 
     n_jobs = kwargs.pop("n_jobs", None)
@@ -1659,8 +1685,8 @@ def _calculate_lineage_absorption_time_means(
     Returns
     -------
     :class:`pandas.DataFrame`
-        A dataframe with means and optionally variances of mean time to absorption for each lineage
-        in :paramref:`lineages`.
+        A :class:`pandas.DataFrame. with means and optionally variances of
+        mean time to absorption for each lineage in ``lineages``.
     """
 
     res = pd.DataFrame()

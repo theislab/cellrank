@@ -12,6 +12,7 @@ import matplotlib as mpl
 from matplotlib import cm as cm
 from matplotlib import colors as mcolors
 from matplotlib import pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from cellrank.tl import Lineage
 from cellrank.ul._docs import d
@@ -169,27 +170,28 @@ class BaseModel(ABC):
         Parameters
         ----------
         gene
-            Gene in :paramref:`adata` `.var_names` or in :paramref:`adata` `.raw.var_names`.
+            Gene in :paramref:`adata` ``.var_names`` or in :paramref:`adata` ``.raw.var_names``.
         lineage
-            Name of a lineage in :paramref:`adata` `.uns`:paramref:`lineage_key`. If `None`, all weights
-            will be set to `1`.
+            Name of a lineage in :paramref:`adata` ``.obsm[lineage_key]``.
+            If `None`, all weights will be set to `1`.
         %(backward)s
         %(time_range)s
         data_key
-            Key in :attr:`paramref.adata` `.layers` or `'X'` for :paramref:`adata` `.X`.
+            Key in :paramref:`adata` ``.layers`` or `'X'` for :paramref:`adata` ``.X``.
         time_key
-            Key in :paramref:`adata` `.obs` where the pseudotime is stored.
+            Key in :paramref:`adata` ``.obs`` where the pseudotime is stored.
         use_raw
-            Whether to access :paramref:`adata` `.raw` or not.
+            Whether to access :paramref:`adata` ``.raw`` or not.
         threshold
-            Consider only cells with :paramref:`weights` > :paramref:`threshold` when estimating the testing endpoint.
-            If `None`, use median of :paramref:`w`.
+            Consider only cells with weights > ``threshold`` when estimating the test endpoint.
+            If `None`, use the median of the weights.
         weight_threshold
-            Set all weights below :paramref:`weight_threshold` to either 0, or if :class:`tuple`, to the second value.
+            Set all weights below ``weight_threshold`` to either `0` if a :class:`float`,
+            or if a :class:`tuple`, to the second value.
         filter_dropouts
             Filter out all cells with expression lower than this.
         n_test_points
-            Number of testing points. If `None`, use the original points based on :paramref:`threshold`.
+            Number of test points. If `None`, use the original points based on ``threshold``.
 
         Returns
         -------
@@ -329,7 +331,7 @@ class BaseModel(ABC):
                 threshold = np.nanmedian(w)
             # use `>=` because weights can all be 1
             w_test = w[w >= threshold]
-            n_window = 10 if n_test_points is None else n_test_points // 20
+            n_window = n_test_points // 20
             tmp = convolve(w_test, np.ones(n_window) / n_window, mode="nearest")
             val_end = x[w >= threshold][-1 if lineage is None else np.nanargmax(tmp)]
 
@@ -541,7 +543,7 @@ class BaseModel(ABC):
         perc: Tuple[float, float] = None,
         abs_prob_cmap: mcolors.ListedColormap = cm.viridis,
         cell_color: str = "black",
-        color: str = "black",
+        lineage_color: str = "black",
         alpha: float = 0.8,
         lineage_alpha: float = 0.2,
         title: Optional[str] = None,
@@ -570,13 +572,13 @@ class BaseModel(ABC):
         hide_cells
             Whether to hide the cells.
         perc
-            Percentile by which to clip the absorption probabilities.
+            Percentile by which to clip the absorption probabilities./
         abs_prob_cmap
             Colormap to use when coloring in the absorption probabilities.
         cell_color
             Color for the cells when not coloring absorption probabilities.
-        color
-            Color for the lineages.
+        lineage_color
+            Color for the lineage.
         alpha
             Alpha channel for cells.
         lineage_alpha
@@ -637,12 +639,11 @@ class BaseModel(ABC):
         if title is None:
             title = f"{self._gene} @ {self._lineage}"
 
-        ax.plot(self.x_test, self.y_test, color=color, lw=lw, label=title)
+        _ = ax.plot(self.x_test, self.y_test, color=lineage_color, lw=lw, label=title)
 
         ax.set_title(title)
-
-        ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
+        ax.set_xlabel(xlabel)
 
         ax.margins(margins)
 
@@ -652,7 +653,7 @@ class BaseModel(ABC):
                 self.conf_int[:, 0],
                 self.conf_int[:, 1],
                 alpha=lineage_alpha,
-                color=color,
+                color=lineage_color,
                 linestyle="--",
             )
 
@@ -663,7 +664,8 @@ class BaseModel(ABC):
             and not np.allclose(self.w_all, 1)
         ):
             norm = mcolors.Normalize(vmin=vmin, vmax=vmax)
-            cax, _ = mpl.colorbar.make_axes(ax, aspect=200)
+            divider = make_axes_locatable(ax)
+            cax = divider.append_axes("right", size="2.5%", pad=0.1)
             _ = mpl.colorbar.ColorbarBase(
                 cax, norm=norm, cmap=abs_prob_cmap, label="absorption probability"
             )
@@ -686,7 +688,7 @@ class BaseModel(ABC):
         Returns
         -------
         :class:`np.ndarray`
-            Array of shape `(n, 1)` with dtype as :paramref:`_dtype`.
+            Array of shape `(n, 1)` with dtype set to :paramref:`_dtype`.
         """
 
         if arr.ndim not in (1, 2):
@@ -713,12 +715,12 @@ class BaseModel(ABC):
         arr
             Value to set. If `None`, just perform the checking.
         ndim
-            Expected number of dimensions of the :paramref:`value`.
+            Expected number of dimensions of the ``arr``.
 
         Returns
         -------
         :class:`numpy.ndarray`
-            The attribute under :paramref:`attr_name`.
+            The attribute under ``attr_name``.
         """
 
         if attr_name is None:

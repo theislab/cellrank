@@ -82,18 +82,17 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         %(n_cells)s
         use_min_chi
             Whether to use :meth:`msmtools.analysis.dense.gpcca.GPCCA.minChi` to calculate the number of metastable
-            states. If `True`, :paramref:`n_states` corresponds to an interval `[min, max]` inside of which
+            states. If `True`, ``n_states`` corresponds to an interval `[min, max]` inside of which
             the potentially optimal number of metastable states is searched.
         cluster_key
-            If a key to cluster labels is given, `approx_rcs` will ge associated with these for naming and colors.
+            If a key to cluster labels is given, names and colors of the states will be associated with the clusters.
         en_cutoff
-            If :paramref:`cluster_key` is given, this parameter determines when an approximate recurrent class will
+            If ``cluster_key`` is given, this parameter determines when an approximate recurrent class will
             be labelled as *'Unknown'*, based on the entropy of the distribution of cells over transcriptomic clusters.
         p_thresh
             If cell cycle scores were provided, a *Wilcoxon rank-sum test* is conducted to identify cell-cycle driven
             start- or endpoints.
-            If the test returns a positive statistic and a p-value smaller than :paramref:`p_thresh`,
-            a warning will be issued.
+            If the test returns a positive statistic and a p-value smaller than ``p_thresh``, a warning will be issued.
 
         Returns
         -------
@@ -125,7 +124,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         if self._invalid_n_states is not None and n_states in self._invalid_n_states:
             logg.warning(
                 f"Unable to compute metastable states with `n_states={n_states}` because it will "
-                f"split conjugate eigenvalues. Increasing `n_states` to `{n_states + 1}`"
+                f"split the conjugate eigenvalues. Increasing `n_states` to `{n_states + 1}`"
             )
             n_states += 1  # cannot force recomputation of Schur decomposition
             assert n_states not in self._invalid_n_states, "Sanity check failed."
@@ -146,10 +145,10 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
                 )
 
             logg.warning(
-                f"Number of states ({n_states}) was automatically determined by `eigengap` "
+                f"Number of states `{n_states}` was automatically determined by `eigengap` "
                 "but no Schur decomposition was found. Computing with default parameters"
             )
-            # this cannot fail if splitting occurrs
+            # this cannot fail if splitting occurs
             # if it were to split, it's automatically increased in `compute_schur`
             self.compute_schur(n_states + 1)
 
@@ -162,9 +161,8 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
 
         if self._gpcca.X.shape[1] < n_states:
             logg.warning(
-                f"Requested more metastable states ({n_states}) than available "
-                f"Schur vectors ({self._gpcca.X.shape[1]}). "
-                f"Recomputing the decomposition"
+                f"Requested more metastable states `{n_states}` than available "
+                f"Schur vectors `{self._gpcca.X.shape[1]}`. Recomputing the decomposition"
             )
 
         start = logg.info("Computing metastable states")
@@ -322,20 +320,21 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         method
             One of following:
 
-                - `'eigengap'` - select the number of states based on the eigengap of the transition matrix
+                - `'eigengap'` - select the number of states based on the eigengap of the transition matrix.
                 - `'eigengap_coarse'` - select the number of states based on the eigengap of the diagonal \
-                    of the coarse-grained transition matrix
+                    of the coarse-grained transition matrix.
                 - `'top_n'` - select top :paramref:`n_main_states` based on the probability of the diagonal \
-                    of the coarse-grained transition matrix
+                    of the coarse-grained transition matrix.
                 - `'min_self_prob'` - select states which have the given minimum probability of the diagonal \
-                    of the coarse-grained transition matrix
+                    of the coarse-grained transition matrix.
         %(n_cells)s
         alpha
-            Used when :paramref:`method` `='eigengap'` or `='eigengap_coarse`.
+            Weight given to the deviation of an eigenvalue from one. Used when ``method='eigengap'``
+            or ``method='eigengap_coarse'``.
         min_self_prob
-            Used when :paramref:`method` `='min_self_prob'`.
+            Used when ``method='min_self_prob'``.
         n_main_states
-            Used when :paramref:`method` `='top_n'`.
+            Used when ``method='top_n'``.
 
         Returns
         -------
@@ -345,6 +344,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
                 - :paramref:`{fsp}`
                 - :paramref:`{fs}`
         """  # noqa
+
         if len(self._get(P.META).cat.categories) == 1:
             logg.warning(
                 "Found only one metastable state. Making it the single main state"
@@ -369,7 +369,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         elif method == "top_n":
             if n_main_states is None:
                 raise ValueError(
-                    "Argument `n_main_states` must != `None` for `method='top_n'`."
+                    "Argument `n_main_states` must be != `None` for `method='top_n'`."
                 )
             elif n_main_states <= 0:
                 raise ValueError(
@@ -378,7 +378,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         elif method == "min_self_prob":
             if min_self_prob is None:
                 raise ValueError(
-                    "Argument `min_self_prob` must != `None` for `method='min_self_prob'`."
+                    "Argument `min_self_prob` must be != `None` for `method='min_self_prob'`."
                 )
             self_probs = pd.Series(np.diag(coarse_T), index=coarse_T.columns)
             names = self_probs[self_probs.values >= min_self_prob].index
@@ -404,14 +404,14 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         n_components
             Number of real Schur vectors to consider.
         key_added
-            Key in :paramref:`adata` `.obs` where to save the pseudotime.
+            Key in :paramref:`adata` ``.obs`` where to save the pseudotime.
         **kwargs
             Keyword arguments for :meth:`cellrank.tl.GPCCA.compute_schur` if Schur decomposition is not found.
 
         Returns
         -------
         None
-            Nothing, just updates :paramref:`adata` .obs[:paramref:`key_added`] with the computed pseudotime.
+            Nothing, just updates :paramref:`adata` ``.obs[`key_added]`` with the computed pseudotime.
         """
 
         def _get_dpt_row(e_vals: np.ndarray, e_vecs: np.ndarray, i: int):
@@ -602,10 +602,10 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             )
 
         if show_stationary_dist and coarse_stat_d is None:
-            logg.warning("Coarse stationary distribution is `None`, not pl")
+            logg.warning("Coarse stationary distribution is `None`, ignoring")
             show_stationary_dist = False
         if show_initial_dist and coarse_init_d is None:
-            logg.warning("Coarse initial distribution is `None`, not pl")
+            logg.warning("Coarse initial distribution is `None`, ignoring")
             show_initial_dist = False
 
         hrs, wrs = [1], [1]
@@ -779,7 +779,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         elif minn == 2:
             logg.warning(
                 "In most cases, 2 clusters will always be optimal. "
-                "If you really expect 2 clusters, use `n_states=2`.\nSetting the minimum to 3"
+                "If you really expect 2 clusters, use `n_states=2`. Setting the minimum to 3"
             )
             minn = 3
 
@@ -810,22 +810,22 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             Fuzzy clustering.
         %(n_cells)s
         cluster_key
-            Key from :paramref:`adata` `.obs` to get reference cluster annotations.
+            Key from :paramref:`adata` ``.obs`` to get reference cluster annotations.
         en_cutoff
             Threshold to decide when we we want to warn the user about an uncertain name mapping. This happens when
             one fuzzy state overlaps with several reference clusters, and the most likely cells are distributed almost
             evenly across the reference clusters.
         p_thresh
-            Only used to detect cell cycle stages. These have to be present in :paramref:`adata` `.obs`
-            as `G2M_score` and `S_score`.
+            Only used to detect cell cycle stages. These have to be present in
+            :paramref:`adata` ``.obs`` as `'G2M_score'` and `'S_score'`.
         check_row_sums
-            Check whether rows in `memberships` sum to 1.
+            Check whether rows in `memberships` sum to `1`.
 
         Returns
         -------
         None
-            Writes a lineage object which mapped names and colors. Also writes a categorical :class:`pandas.Series`,
-            where the top `n_cells` cells represent each fuzzy state.
+            Writes a :class:`cellrank.tl.Lineage` object which mapped names and colors.
+            Also writes a categorical :class:`pandas.Series`, where top ``n_cells`` cells represent each fuzzy state.
         """
 
         if n_cells is None:
@@ -909,7 +909,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         )
 
         states = _series_from_one_hot_matrix(
-            a=a_discrete,
+            membership=a_discrete,
             index=self.adata.obs_names,
             names=probs.names if isinstance(probs, Lineage) else None,
         )
@@ -985,7 +985,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             compute_schur(...)
             compute_metastable_states(...)
 
-            compute_final_states(...)   # if `n_lineages=None`
+            compute_final_states(...)   # if n_lineages=None
             set_final_states_from_metastable_states(...)   # otherwise
 
             compute_absorption_probabilities(...)  # optional
@@ -994,7 +994,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         ----------
         %(fit)s
         method
-            Method to use when computing the Schur decomposition. Valid options are: `'krylov'`, `'brandts'`.
+            Method to use when computing the Schur decomposition. Valid options are: `'krylov'` or `'brandts'`.
         compute_absorption_probabilities
             Whether to compute absorption probabilities or only final states.
         **kwargs

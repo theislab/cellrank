@@ -20,7 +20,7 @@ from cellrank.pl._utils import (
     _create_models,
     _create_callbacks,
 )
-from cellrank.ul._utils import _get_n_cores, check_collection
+from cellrank.ul._utils import _get_n_cores, _check_collection
 from cellrank.tl._constants import _DEFAULT_BACKEND, AbsProbKey
 from cellrank.tl.estimators import GPCCA
 from cellrank.ul._parallelize import parallelize
@@ -46,7 +46,7 @@ def _gi_permute(
     Parameters
     ----------
     ix
-        Offset for random :paramref:`seed`. Only used when :paramref:`seed` is not None.
+        Offset for random ``seed``. Only used when ``seed`` is not None.
     perms
         Permutation indices. Only used to get number of permutations.
     x
@@ -161,7 +161,7 @@ def _gene_importance(
 
     SCORPIUS detects potential lineage drivers by using `Random Forests` to predict the pseudotemporal ordering of cells
     given the gene expression data. We can asses how important each gene is for this prediction, which we define as the
-    'importance' of this gene. p-values are computed via a permutation test and q-values are computed via an FDR
+    `'importance'` of this gene. P-values are computed via a permutation test and q-values are computed via an FDR
     correction.
 
     We adapted SCORPIUS to work with soft lineage assignments given by our lineage probabilities computed using
@@ -171,7 +171,7 @@ def _gene_importance(
     ----------
     %(adata)s
     genes
-        Genes in :paramref:`adata` `.var_names`.
+        Genes in ``adata.var_names``.
     lineage
         Name of the lineage for which to calculate gene importance.
     %(backward)s
@@ -179,11 +179,11 @@ def _gene_importance(
         Number of points used for prediction.
         If `None`, use original data points, not uniformly distributed across the pseudotime.
     time_key
-        Key in :paramref:`adata` `.obs` where the pseudotime is stored.
+        Key in ``adata.obs`` where the pseudotime is stored.
     norm
         Normalize each trend to `0` mean, `1` variance.
     n_perms
-        Number of permutations to perform. IF `None`, don't want to calculate the p-values.
+        Number of permutations to perform. If `None`, don't calculate the p-values.
     fdr_correction
         Method used to correct for false discovery rate.
         For available methods, see :func:`statsmodels.stats.multitest.multipletests`.
@@ -203,10 +203,9 @@ def _gene_importance(
     Returns
     -------
     :class:`pandas.DataFrame`
-        Dataframe with `'importance'` column which contains genes' importances.
-
-        - If :paramref:`n_perm` `!=None`, it also contains `'pval'` column with the calculated `p-values`
-        - If :paramref:`fdr_correction` `!= None`, it also contains `'qval'` column, the corrected `p-values`
+        Dataframe with `'importance'` column which contains genes' importances:
+            - If ``n_perm!=None``, it also contains `'pval'` column with the calculated p-values.
+            - If ``fdr_correction!= None``, it also contains `'qval'` column with the corrected p-value`.
     :class:`sklearn.ensemble.RandomForestRegressor`, :class:`pandas.DataFrame`
         Same as above, but also returns the fitted model.
     """
@@ -222,7 +221,7 @@ def _gene_importance(
             raise ValueError(
                 f"Number of permutations must be `>= 0`, found `{n_perms}`."
             )
-    check_collection(adata, genes, "var_names", use_raw=kwargs.get("use_raw", False))
+    _check_collection(adata, genes, "var_names", use_raw=kwargs.get("use_raw", False))
 
     n_jobs = _get_n_cores(n_jobs, len(genes))
 
