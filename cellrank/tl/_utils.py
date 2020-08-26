@@ -1633,7 +1633,7 @@ def _calculate_lineage_absorption_time_means(
     trans_indices: np.ndarray,
     n: int,
     ixs: Dict[str, np.ndarray],
-    lineages: Dict[str, str],
+    lineages: Dict[Sequence[str], str],
     **kwargs,
 ) -> pd.DataFrame:
     """
@@ -1663,12 +1663,6 @@ def _calculate_lineage_absorption_time_means(
         in :paramref:`lineages`.
     """
 
-    for ln in lineages.keys():
-        if ln not in ixs.keys():
-            raise ValueError(
-                f"Invalid lineage key `{ln!r}`. Valid option are `{list(ixs.keys())}`."
-            )
-
     res = pd.DataFrame()
     tmp_ixs, cnt = {}, 0
     for k, ix in ixs.items():
@@ -1685,27 +1679,28 @@ def _calculate_lineage_absorption_time_means(
     no_jobs_kwargs = kwargs.copy()
     _ = no_jobs_kwargs.pop("n_jobs", None)
 
-    for ln, moment in lineages.items():
-        D_j = diags(np.sum(B[:, tmp_ixs[ln]], axis=1))
+    for lns, moment in lineages.items():
+        name = ", ".join(lns)
+        ix = np.concatenate([ixs[ln] for ln in lns])
+
+        D_j = diags(np.sum(B[:, np.concatenate([tmp_ixs[ln] for ln in lns])], axis=1))
         D_j_inv = D_j.copy()
         D_j_inv.data = 1.0 / D_j.data
 
-        logg.debug(f"Calculating mean time to absorption for lineage `{ln!r}`")
+        logg.debug(f"Calculating mean time to absorption for `{', '.join(lns)!r}`")
         m = _solve_lin_system(
             D_j_inv @ N_inv @ D_j, np.ones(Q.shape[0]), **kwargs
         ).squeeze()
 
         mean = np.empty(n, dtype=np.float64)
         mean[:] = np.inf
-        mean[ixs[ln]] = 0
+        mean[ix] = 0
         mean[trans_indices] = m
 
-        res[f"{ln}_mean"] = mean
+        res[f"{name} mean"] = mean
 
         if moment == "var":
-            logg.debug(
-                f"Calculating variance of time to absorption for lineage `{ln!r}`"
-            )
+            logg.debug(f"Calculating variance of time to absorption for `{name!r}`")
 
             logg.debug("Solving equation (1/2)")
             X = _solve_lin_system(D_j + Q @ D_j, N_inv @ D_j, use_eye=False, **kwargs)
@@ -1720,9 +1715,9 @@ def _calculate_lineage_absorption_time_means(
 
             var = np.empty(n, dtype=np.float64)
             var[:] = np.inf
-            var[ixs[ln]] = 0
+            var[ix] = 0
             var[trans_indices] = v
 
-            res[f"{ln}_var"] = var
+            res[f"{name} var"] = var
 
     return res

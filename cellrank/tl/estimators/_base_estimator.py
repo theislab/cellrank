@@ -232,7 +232,13 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         solver: Optional[str] = None,
         use_petsc: Optional[bool] = None,
         absorption_pseudotime: Optional[str] = None,
-        time_to_absorption: Optional[Union[str, Sequence[str]]] = None,
+        time_to_absorption: Optional[
+            Union[
+                str,
+                Sequence[Union[str, Sequence[str]]],
+                Dict[Union[str, Sequence[str]], str],
+            ]
+        ] = None,
         n_jobs: Optional[int] = None,
         backend: str = "loky",
         show_progress_bar: bool = True,
@@ -265,11 +271,15 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             to :func:`scipy.sparse.linalg.gmres`.
         absorption_pseudotime
             Whether to compute pseudotime based on mean time to absorption to all absorbing states and its variance.
-            Valid options are `None`, `'first'`, `'second'`.
+            Valid options are `None`, `'mean'`, `'var'`.
         time_to_absorption
-            Whether to compute mean time to absorption and its variance for specific absorbing states.
-            Can be specified as `'{{lineage}}:var'` to also calculate the variance.
-            It might be beneficial to disable the progress bar as :paramref:`show_progress_bar` `=False`, because
+            Whether to compute mean time to absorption and its variance to specific absorbing states.
+
+            If a :class:`dict`, can be specified as ``{{'Alpha':'var', ...}}`` to also compute variance.
+            In case when states are a :class:`tuple`, time to absorption will be computed to the subset of these states,
+            such as ``[('Alpha', 'Beta'), ...]`` or ``{{('Alpha', 'Beta'): 'mean', ...}}``.
+
+            It might be beneficial to disable the progress bar as ``show_progress_bar=False``, because
             many linear systems are being solved.
         n_jobs
             Number of parallel jobs to use when using an iterative solver.
@@ -304,9 +314,9 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 "Compute final states first as `.compute_final_states()` or set them manually as "
                 "`.set_final_states()`."
             )
-        if absorption_pseudotime not in (None, "first", "second"):
+        if absorption_pseudotime not in (None, "mean", "var"):
             raise ValueError(
-                f"Expcted `absorption_pseudotime` to be `None`, `'first'` or `'second'`, "
+                f"Expcted `absorption_pseudotime` to be `None`, `'mean'` or `'var'`, "
                 f"found `{absorption_pseudotime!r}`."
             )
 
@@ -330,17 +340,22 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         if time_to_absorption is not None:
             if isinstance(time_to_absorption, str):
                 time_to_absorption = [time_to_absorption]
+            if not isinstance(time_to_absorption, dict):
+                time_to_absorption = {ln: "mean" for ln in time_to_absorption}
             lin_abs_times = {}
-            for ln in time_to_absorption:
-                ln, moment = ln.split(":") if ":" in ln else (ln, "mean")
+            for ln, moment in time_to_absorption.items():
                 if moment not in ("mean", "var"):
                     raise ValueError(
-                        f"Moment must be either `'mean'` or `'var'`, found `{moment!r}` for key `{ln!r}`."
+                        f"Moment must be either `'mean'` or `'var'`, found `{moment!r}` for `{ln!r}`."
                     )
-                if ln not in final_states_.cat.categories:
-                    raise ValueError(
-                        f"Invalid state `{ln!r}`. Valid options are `{list(final_states_.cat.categories)}`."
-                    )
+                if isinstance(ln, str):
+                    ln = (ln,)
+                for lin in ln:
+                    if lin not in final_states_.cat.categories:
+                        raise ValueError(
+                            f"Invalid absorbing state `{lin!r}` in `{ln}`. "
+                            f"Valid options are `{list(final_states_.cat.categories)}`."
+                        )
                 lin_abs_times[ln] = moment
 
             # define the dimensions of this problem
@@ -427,7 +442,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 backend=backend,
                 tol=tol,
                 show_progress_bar=show_progress_bar,
-                calculate_variance=absorption_pseudotime == "second",
+                calculate_variance=absorption_pseudotime == "var",
             )
 
         abs_time_means = None
