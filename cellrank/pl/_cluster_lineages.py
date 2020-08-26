@@ -131,8 +131,7 @@ def cluster_lineage(
     ----------
     %(adata)s
     %(model)s
-    genes
-        Genes in ``adata.var_names`` to plot or in ``adata.raw.var_names``, if ``use_raw=True``.
+    %(genes)s
     lineage
         Name of the lineage for which to cluster the genes.
     %(backward)s

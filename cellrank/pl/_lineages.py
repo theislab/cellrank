@@ -49,11 +49,10 @@ def lineages(
         If given, plot cluster annotations left of the lineage probabilities.
     mode
         Can be either `'embedding'` or `'time'`:
-
             - `'embedding'` - plot the embedding while coloring in the absorption probabilities.
             - `'time'` - plot the pseudotime on x-axis and the absorption probabilities on y-axis.
     time_key
-        Key from `adata.obs` to use as a pseudotime ordering of the cells.
+        Key from ``adata.obs`` to use as a pseudotime ordering of the cells.
     cmap
         Colormap to use.
     **kwargs

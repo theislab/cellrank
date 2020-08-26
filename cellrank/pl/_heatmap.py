@@ -96,28 +96,27 @@ def heatmap(
     ----------
     %(adata)s
     %(model)s
-    genes
-        Genes in ``adata.var_names` to plot or in ``adata.raw.var_names`, if `use_raw=True`.
+    %(genes)s
     lineages
-        Names of the lineages which to plot. If `None`, plot all lineages.
+        Names of the lineages for which to plot. If `None`, plot all lineages.
     %(backward)s
     mode
         Valid options are:
-
-            - `{m.LINEAGES.s!r}` - group by ``genes` for each lineage in ``lineage_names`
-            - `{m.GENES.s!r}` - group by ``lineage_names` for each gene in ``genes`
+            - `{m.LINEAGES.s!r}` - group by ``genes`` for each lineage in ``lineage_names``.
+            - `{m.GENES.s!r}` - group by ``lineage_names`` for each gene in ``genes``.
     %(time_ranges)s
     %(model_callback)s
     cluster_key
-        Key(s) in ``adata: :.obs` containing categorical observations to be plotted on the top
-        of the heatmap. Only available when ``kind='lineages'`.
+        Key(s) in ``adata.obs`` containing categorical observations to be plotted on top of the heatmap.
+        Only available when ``kind={m.LINEAGES.s!r}``.
     show_absorption_probabilities
         Whether to also plot absorption probabilities alongside the smoothed expression.
+        Only available when ``kind={m.LINEAGES.s!r}``.
     cluster_genes
-        Whether to use :func:`seaborn.clustermap` when ``kind='lineages'`.
+        Whether to cluser genes using :func:`seaborn.clustermap` when ``kind='lineages'``.
     keep_gene_order
         Whether to keep the gene order for later lineages after the first was sorted.
-        Only available when ``cluster_genes=False` and ``kind='lineages'`.
+        Only available when ``cluster_genes=False`` and ``kind={m.LINEAGES.s!r}``.
     scale
         Whether to scale the expression per gene to `0-1` range.
     n_convolve
@@ -127,17 +126,18 @@ def heatmap(
     show_cbar
         Whether to show the colorbar.
     lineage_height
-        Height of a bar when ``kind` ='lineages'.
+        Height of a bar when ``kind={m.GENES.s!r}``.
     fontsize
         Size of the title's font.
     xlabel
-        Label on the x-axis. If `None`, it is determined based on ``time_key`.
+        Label on the x-axis. If `None`, it is determined based on ``time_key``.
     cmap
         Colormap to use when visualizing the smoothed expression.
     show_dendrogram
-        Whether to show dendrogram when ``cluster_genes=True`.
+        Whether to show dendrogram when ``cluster_genes=True``.
     return_genes
-        Whether to return the sorted or clustered genes. Only available when ``mode{m.LINEAGES.s!r}`.
+        Whether to return the sorted or clustered genes.
+        Only available when ``mode={m.LINEAGES.s!r}``.
     %(parallel)s
     %(plotting)s
     **kwargs
@@ -146,7 +146,8 @@ def heatmap(
     Returns
     -------
     :class:`pandas.DataFrame`
-        If :paramref`return_genes`, returns :class:`pandas.DataFrame`, containing the clustered or sorted genes.
+        If ``return_genes=True`` and ``mode={m.LINEAGES.s!r}``., returns :class:`pandas.DataFrame`,
+        containing the clustered or sorted genes.
     %(just_plots)s
     """
 

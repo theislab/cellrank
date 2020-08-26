@@ -85,8 +85,7 @@ def gene_trends(
     ----------
     %(adata)s
     %(model)s
-    genes
-        Genes in ``adata.var_names`` to plot or in ``adata.raw.var_names``, if ``use_raw=True``.
+    %(genes)s
     lineages
         Names of the lineages which to plot. If `None`, plot all lineages.
     %(backward)s

@@ -96,6 +96,10 @@ callback
     for :meth:`cellrank.ul.models.BaseModel.prepare` and returns the prepared model.
     Can be specified in gene- and lineage-specific manner, similarly to :paramref:`model`.
 """
+_genes = """\
+genes
+    Genes in ``adata.var_names`` to plot or in ``adata.raw.var_names``, if ``use_raw=True``.
+"""
 
 
 def inject_docs(**kwargs):
@@ -128,4 +132,5 @@ d = DocstringProcessor(
     velocity_mode=_velocity_mode,
     velocity_backward_mode=_velocity_backward_mode,
     model_callback=_model_callback,
+    genes=_genes,
 )
