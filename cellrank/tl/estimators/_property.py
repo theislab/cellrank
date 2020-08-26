@@ -271,6 +271,7 @@ class VectorPlottable(KernelHolder, Property):
     Injector class which plots vectors.
 
     To be used in conjunction with:
+
         - :class:`cellrank.tool.estimators._decomposition.Eig`
         - :class:`cellrank.tool.estimators._decomposition.Schur`
     """
@@ -380,6 +381,7 @@ class Plottable(KernelHolder, Property):
     Injector which plots metastable or final states or absorption probabilities.
 
     To be used in conjunction with:
+
         - :class:`cellrank.tool.estimators._property.MetaStates`
         - :class:`cellrank.tool.estimators._property.FinStates`
         - :class:`cellrank.tool.estimators._property.AbsProbs`
@@ -811,6 +813,7 @@ class Partitioner(KernelHolder, ABC):
         -------
         None
             Nothing, but updates the following fields:
+
                 - :paramref:`recurrent_classes`
                 - :paramref:`transient_classes`
                 - :paramref:`is_irreducible`

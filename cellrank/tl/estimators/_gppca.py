@@ -328,7 +328,8 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
                     of the coarse-grained transition matrix.
         %(n_cells)s
         alpha
-            Used when ``method='eigengap'` or ``method='eigengap_coarse``.
+            Weight given to the deviation of an eigenvalue from one. Used when ``method='eigengap'`
+            or ``method='eigengap_coarse``.
         min_self_prob
             Used when ``method='min_self_prob'``.
         n_main_states
@@ -338,6 +339,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         -------
         None
             Nothing, just updates the following fields:
+
                 - :paramref:`{fsp}`
                 - :paramref:`{fs}`
         """  # noqa
@@ -1001,6 +1003,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         -------
         None
             Nothing, just makes available the following fields:
+
                 - :paramref:`{msp}`
                 - :paramref:`{ms}`
                 - :paramref:`{fsp}`

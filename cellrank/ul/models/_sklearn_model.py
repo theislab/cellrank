@@ -26,7 +26,7 @@ class SKLearnModel(BaseModel):
         Name of the weight argument for :paramref:`model` ``.fit``.
     ignore_raise
         Do not raise an exception if weight argument is not found in the fitting function of :paramref:`model`.
-        This is useful in case when weight is passed in `**kwargs` and cannot be determined from signature.
+        This is useful in case when weight is passed in ``**kwargs`` and cannot be determined from signature.
     """
 
     _fit_names = ("fit", "__init__")

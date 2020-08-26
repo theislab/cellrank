@@ -15,11 +15,14 @@ dpi
     Dots per inch.
 save
     Filename where to save the plot."""
-_parallel = """\
-show_progress_bar
-    Whether to show a progress bar. Disabling it may improve performance.
+_n_jobs = """\
 n_jobs
     Number of parallel jobs. If `-1`, use all available cores. If `None` or `1`, the execution is sequential.
+"""
+_parallel = f"""\
+show_progress_bar
+    Whether to show a progress bar. Disabling it may improve performance.
+{_n_jobs}
 backend
     Which backend to use for parallelization. See :class:`joblib.Parallel` for valid options."""
 _model = """\
@@ -30,7 +33,7 @@ model
     all genes or lineages, for example `{'Map2': {'*': ...}, 'Dcx': {'Alpha': ..., '*': ...}}`."""
 _just_plots = """\
 None
-    Nothing, just plots the figure. Optionally saves it based on :paramref:`save`."""
+    Nothing, just plots the figure. Optionally saves it based on ``save``."""
 _backward = """\
 backward
     Direction of the process."""
@@ -38,8 +41,7 @@ _eigen = """\
 which
     Eigenvalues are in general complex. `'LR'` - largest real part, `'LM'` - largest magnitude.
 alpha
-    Used to compute the `eigengap`. :paramref:`alpha` is the weight given
-    to the deviation of an eigenvalue from one."""
+    Used to compute the `eigengap`. ``alpha`` is the weight given to the deviation of an eigenvalue from one."""
 _n_cells = """\
 n_cells
     Number of most likely cells from each main to select."""
@@ -48,7 +50,7 @@ n_lineages
     Number of lineages. If `None`, it will be determined automatically.
 cluster_key
     Match computed states against pre-computed clusters to annotate the states.
-    For this, provide a key from :paramref:`adata` `.obs` where cluster labels have been computed.
+    For this, provide a key from :paramref:`adata` ``.obs`` where cluster labels have been computed.
 keys
     Determines which %(root_or_final) states to use by passing their names.
     Further, %(root_or_final)s states can be combined. If e.g. the %(final)s states are
@@ -61,31 +63,39 @@ _density_correction = (
 )
 _time_range = """\
 time_range
-    - If a :class:`tuple`, it specifies the minimum and maximum pseudotime.
-      Both values can be `None`, in which case the minimum is the earliest pseudotime
-      and the maximum is automatically determined.
-    - If a :class:`float`, it specifies the maximum pseudotime.
+    Specify start and end times:
+
+        - If a :class:`tuple`, it specifies the minimum and maximum pseudotime. Both values can be `None`,
+          in which case the minimum is the earliest pseudotime and the maximum is automatically determined.
+        - If a :class:`float`, it specifies the maximum pseudotime.
 """
 _time_ranges = f"{_time_range}\n    This can also be specified on per-lineage basis."
 _velocity_mode = """\
 mode
     How to compute transition probabilities. Valid options are:
 
-        - `{m.DETERMINISTIC.s!r}` - deterministic computation that doesn't propagate uncertainty
-        - `{m.MONTE_CARLO.s!r}` - Monte Carlo average of randomly sampled velocity vectors
-        - `{m.STOCHASTIC.s!r}` - second order approximation, only available when :mod:`jax` is installed
-        - `{m.SAMPLING.s!r}` - sample 1 transition matrix from velocity distribution
+        - `{m.DETERMINISTIC.s!r}` - deterministic computation that doesn't propagate uncertainty.
+        - `{m.MONTE_CARLO.s!r}` - Monte Carlo average of randomly sampled velocity vectors.
+        - `{m.STOCHASTIC.s!r}` - second order approximation, only available when :mod:`jax` is installed.
+        - `{m.SAMPLING.s!r}` - sample 1 transition matrix from velocity distribution.
         - `{m.PROPAGATION.s!r}` - same as `{m.MONTE_CARLO.s!r}`, but does not average the vectors.
           Instead, it saves the sampled transition matrices to :paramref:`_t_mats` to be used
           for later uncertainty estimation. It is generally faster then `{m.MONTE_CARLO.s!r}`,
-          but also less memory efficient
+          but also slightly less memory efficient.
 """
 _velocity_backward_mode = """\
 backward_mode
     Only matters if initialized as :paramref:`backward` `=True`.  Valid options are:
 
-        - `{b.TRANSPOSE.s!r}` - compute transitions from neighboring cells `j` to cell `i`
-        - `{b.NEGATE.s!r}` - negate the velocity vector
+        - `{b.TRANSPOSE.s!r}` - compute transitions from neighboring cells `j` to cell `i`.
+        - `{b.NEGATE.s!r}` - negate the velocity vector.
+"""
+_velocity_backward_mode_high_lvl = """\
+backward_mode
+    How to compute the backward transitions. Valid options are:
+
+        - `{b.TRANSPOSE.s!r}` - compute transitions from neighboring cells `j` to cell `i`.
+        - `{b.NEGATE.s!r}` - negate the velocity vector.
 """
 _copy = """Return a copy of self."""
 _root = "root"
@@ -100,6 +110,11 @@ _genes = """\
 genes
     Genes in ``adata.var_names`` to plot or in ``adata.raw.var_names``, if ``use_raw=True``.
 """
+_softmax_scale = """\
+softmax_scale
+    Scaling parameter for the softmax. If `None`, it will be estimated using 1 / median(correlations). The idea
+    behind this is to scale the softmax to counteract everything tending to orthogonality in high dimensions.
+"""
 
 
 def inject_docs(**kwargs):  # noqa
@@ -112,6 +127,7 @@ def inject_docs(**kwargs):  # noqa
 
 d = DocstringProcessor(
     plotting=_plotting,
+    n_jobs=_n_jobs,
     parallel=_parallel,
     model=_model,
     adata=_adata,
@@ -129,6 +145,8 @@ d = DocstringProcessor(
     time_ranges=_time_ranges,
     velocity_mode=_velocity_mode,
     velocity_backward_mode=_velocity_backward_mode,
+    velocity_backward_mode_high_lvl=_velocity_backward_mode_high_lvl,
     model_callback=_model_callback,
     genes=_genes,
+    softmax_scale=_softmax_scale,
 )

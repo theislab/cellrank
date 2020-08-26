@@ -45,14 +45,12 @@ def transition_matrix(
         Key in ``adata.layers`` where expected gene expression counts are stored.
     gene_subset
         List of genes to be used to compute transition probabilities.
-        By default, genes from ``adata.var['velocity_genes]`` are used.
+        By default, genes from ``adata.var['velocity_genes']`` are used.
     %(velocity_mode)s
-    %(velocity_backward_mode)s
+    %(velocity_backward_mode_high_lvl)s
     seed
         Set the seed for random state, only used when sampling.
-    softmax_scale
-        Scaling parameter for the softmax. If `None`, it will be estimated using 1 / median(correlations). The idea
-        behind this is to scale the softmax to counteract everything tending to orthogonality in high dimensions.
+    %(softmax_scale)s
     weight_connectivities
         Weight given to transcriptomic similarities as opposed to velocities. Must be in `[0, 1]`.
     density_normalize

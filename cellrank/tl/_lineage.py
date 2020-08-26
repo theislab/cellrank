@@ -775,23 +775,22 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             to these states by projecting the other states.
         mode
             Whether to use a distance measure to compute weights - `'dist'`, or just rescale - `'scale'`.
-            Scaling is baseline for benchmarking.
         dist_measure
             Used to quantify similarity between query and reference states. Valid options are:
 
-                - `'cosine_sim'` - cosine similarity
-                - `'wasserstein_dist'` - Wasserstein distance
-                - `'kl_div'` - Kullback–Leibler divergence
-                - `'js_div'` - Jensen–Shannon divergence
-                - `'mutual_inf'` - mutual information
-                - `'equal'` - equally redistribute the mass among the rest
+                - `'cosine_sim'` - cosine similarity.
+                - `'wasserstein_dist'` - Wasserstein distance.
+                - `'kl_div'` - Kullback–Leibler divergence.
+                - `'js_div'` - Jensen–Shannon divergence.
+                - `'mutual_inf'` - mutual information.
+                - `'equal'` - equally redistribute the mass among the rest.
         normalize_weights
             How to normalize the weights. Valid options are:
 
-                - `'scale'` - divide by the sum (per row)
-                - `'softmax'`- use a softmax with beta = 1
-        softmax_beta
-            Scaling factor in the softmax, used for normalizing the weights to sum to 1.
+                - `'scale'` - divide by the sum (per row).
+                - `'softmax'`- use a softmax.
+        softmax_scale
+            Scaling factor in the softmax, used for normalizing the weights to sum to `1`.
         return_weights
             If `True`, a :class:`pandas.DataFrame` of the weights used for the projection is returned.
 
@@ -800,7 +799,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         :class:`cellrank.tl.Lineage`
             Lineage object, reduced to the %(root_or_final)s states. If a reduction is not possible, return a copy.
         :class:`pandas.DataFrame`
-            The weights used for the projection of shape `(n_query, n_reference)`.
+            The weights used for the projection of shape ``(n_query, n_reference)``.
         """
 
         if self._is_transposed:
