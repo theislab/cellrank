@@ -274,8 +274,8 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             self._set(A.FIN, self._create_states(probs, n_cells=n_cells))
             self._set(A.FIN_COLORS, self._get(A.META_COLORS))
             self._set(A.FIN_PROBS, probs / probs.max())
+            self._set(A.FIN_ABS_PROBS, probs)
             self._write_final_states()
-
             return
 
         if names is None:
@@ -289,23 +289,21 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         # compute the aggregated probability of being a root/final state (no matter which)
         scaled_probs = meta_states_probs[
             [n for n in meta_states_probs.names if n != "rest"]
-        ].X.copy()
+        ].copy()
         scaled_probs /= scaled_probs.max(0)
 
         self._set(A.FIN, self._create_states(meta_states_probs, n_cells))
         self._set(
-            A.FIN_PROBS, pd.Series(scaled_probs.max(1), index=self.adata.obs_names)
+            A.FIN_PROBS, pd.Series(scaled_probs.X.max(1), index=self.adata.obs_names)
         )
         self._set(
             A.FIN_COLORS,
             meta_states_probs[list(self._get(P.FIN).cat.categories)].colors,
         )
 
-        self._set(A.FIN_ABS_PROBS, meta_states_probs)
-
+        self._set(A.FIN_ABS_PROBS, scaled_probs)
         self._write_final_states()
 
-    # TODO: singlevaluedispatch
     @inject_docs(fs=P.FIN, fsp=P.FIN_PROBS)
     @d.dedent
     def compute_final_states(
@@ -349,7 +347,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         """  # noqa
         if len(self._get(P.META).cat.categories) == 1:
             logg.warning(
-                "Found only one metastable state. Making it the single main state. "
+                "Found only one metastable state. Making it the single main state"
             )
             self.set_final_states_from_metastable_states(None, n_cells=n_cells)
             return
