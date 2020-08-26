@@ -29,8 +29,8 @@ class GAMR(BaseModel):
     distribution
         Family in `rpy2.robjects.r`, such as `'gaussian'` or `'poisson'`.
     backend
-        R library used to fit GAMs. Valid options are `'mgcv'` and `'gam'`.
-        Option `'gam'` ignores the number of splines, as well as family and smoothing parameter.
+        R library used to fit GAMs. Valid options are `'mgcv'` or `'gam'`.
+        Option `'gam'` ignores the number of splines, as well as ``distribution``and ``smoothing_param``.
     """  # noqa
 
     _fallback_backends = {
@@ -158,7 +158,7 @@ class GAMR(BaseModel):
             )
         if self._lib is None:
             raise RuntimeError(
-                f"Unable to fit the model, R package `{self._lib_name}` is not imported."
+                f"Unable to fit the model, R package `{self._lib_name!r}` is not imported."
             )
 
         x_test = self._check(key_added, x_test)
@@ -185,7 +185,7 @@ class GAMR(BaseModel):
         """
         %(base_model_ci.summary)s
 
-        This method uses :meth:`default_confidence_interval`.
+        This method uses the :meth:`default_confidence_interval`.
 
         Parameters
         ----------

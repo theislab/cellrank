@@ -6,14 +6,14 @@ Estimators
 
 GPCCA
 -----
-.. autoclass:: cellrank.tl.GPCCA
+.. autoclass:: cellrank.tl.estimators.GPCCA
     :members:
     :inherited-members:
 
 CFLARE
 ------
 
-.. autoclass:: cellrank.tl.CFLARE
+.. autoclass:: cellrank.tl.estimator.CFLARE
     :members:
     :inherited-members:
 

@@ -81,28 +81,27 @@ def cluster_fates(
     lineages
         Lineages for which to visualize absorption probabilities. If `None`, use all available lineages.
     cluster_key
-        Key in :paramref:`adata` `.obs` containing the clusters.
+        Key in ``adata.obs`` containing the clusters.
     clusters
         Clusters to visualize. If `None`, all clusters will be plotted.
     basis
-        Basis for scatterplot to use when :paramref:`mode` `={m.PAGA_PIE.s!r}`.
-        If `None`, don't show the scatterplot.
+        Basis for scatterplot to use when ``mode={m.PAGA_PIE.s!r}``. If `None`, don't show a scatterplot.
     show_cbar
-        Whether to show colorbar when :paramref:`mode` is `{m.PAGA_PIE.s!r}`.
+        Whether to show colorbar when ``mode={m.PAGA_PIE.s!r}``.
     ncols
-        Number of columns when :paramref:`mode` is `{m.BAR.s!r}` or `{m.PAGA.s!r}`.
+        Number of columns when ``mode={m.BAR.s!r}`` or ``mode={m.PAGA.s!r}``.
     sharey
-        Whether to share y-axis when :paramref:`mode` is `{m.BAR.s!r}`.
+        Whether to share y-axis when ``mode={m.BAR.s!r}``.
     figsize
         Size of the figure.
     legend_kwargs
         Keyword arguments for :func:`matplotlib.axes.Axes.legend`, such as `'loc'` for legend position.
-        For `mode={m.PAGA_PIE.s!r}` and `basis='...'`, this controls the placement of the
+        For ``mode={m.PAGA_PIE.s!r}`` and ``basis='...'``, this controls the placement of the
         absorption probabilities legend.
     %(plotting)s
     **kwargs
         Keyword arguments for :func:`scvelo.pl.paga`, :func:`scanpy.pl.violin` or :func:`matplotlib.pyplot.bar`,
-        depending on :paramref:`mode`.
+        depending on ``mode``.
 
     Returns
     -------
@@ -537,10 +536,10 @@ def similarity_plot(
     ----------
     %(adata)s
     cluster_key
-        Key in :paramref:`adata` `.obs` corresponding containing the clustering.
+        Key in ``adata.obs`` corresponding containing the clustering.
     %(backward)s
     clusters
-        Clusters in :paramref:`adata` `.obs` to consider. If `None`, all cluster will be considered.
+        Clusters in ``adata.obs`` to consider. If `None`, all cluster will be considered.
     n_samples
         Number of samples per cluster.
     cmap

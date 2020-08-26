@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Gene trend module."""
 
-import os
 from types import MappingProxyType
 from typing import List, Tuple, Union, Mapping, TypeVar, Optional, Sequence
 from pathlib import Path
@@ -23,10 +22,9 @@ from cellrank.pl._utils import (
     _fit_gene_trends,
     _time_range_type,
     _create_callbacks,
-    _maybe_create_dir,
 )
 from cellrank.tl._utils import save_fig, _unique_order_preserving
-from cellrank.ul._utils import _get_n_cores, check_collection
+from cellrank.ul._utils import _get_n_cores, _check_collection
 from cellrank.tl._constants import _DEFAULT_BACKEND, AbsProbKey
 from cellrank.ul._parallelize import parallelize
 
@@ -50,21 +48,21 @@ def gene_trends(
     lineage_cmap: Optional[matplotlib.colors.ListedColormap] = None,
     abs_prob_cmap: matplotlib.colors.ListedColormap = cm.viridis,
     cell_color: str = "black",
-    color: str = "black",
     cell_alpha: float = 0.6,
     lineage_alpha: float = 0.2,
     size: float = 15,
     lw: float = 2,
     show_cbar: bool = True,
     margins: float = 0.015,
-    sharey: bool = False,
+    sharex: Optional[Union[str, bool]] = None,
+    sharey: Optional[Union[str, bool]] = None,
+    gene_as_title: Optional[bool] = None,
+    legend_loc: Optional[str] = "best",
     ncols: int = 2,
-    ext: str = "png",
     suptitle: Optional[str] = None,
     n_jobs: Optional[int] = 1,
     backend: str = _DEFAULT_BACKEND,
     show_progres_bar: bool = True,
-    dirname: Optional[str] = None,
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
     save: Optional[Union[str, Path]] = None,
@@ -86,13 +84,12 @@ def gene_trends(
     ----------
     %(adata)s
     %(model)s
-    genes
-        Genes in :paramref:`adata` `.var_names` to plot or in :paramref:`adata` `.raw.var_names`, if `use_raw=True`.
+    %(genes)s
     lineages
-        Names of the lineages which to plot. If `None`, plot all lineages.
+        Names of the lineages to plot. If `None`, plot all lineages.
     %(backward)s
     data_key
-        Key in :paramref:`adata` `.layers` or `'X'` for :paramref:`adata` `.X` where the data is stored.
+        Key in ``adata.layers`` or `'X'` for ``adata.X`` where the data is stored.
     %(time_ranges)s
     %(model_callback)s
     conf_int
@@ -102,19 +99,16 @@ def gene_trends(
     hide_cells
         If `True`, hide all the cells.
     perc
-        Percentile for colors. Valid values are in range `[0, 100]`.
-        This can improve visualization. Can be specified separately for each lineage separately.
+        Percentile for colors. Valid values are in `[0, 100]`.
+        This can improve visualization. Can be specified indivudually for each lineage.
     lineage_cmap
-        Colormap to use when coloring in the lineages. Only used when :paramref:`same_plot` `=True`.
+        Colormap to use when coloring in the lineages. If `None` and ``same_plot``, use the corresponding colors
+        in ``adata.uns``, otherwise use `'black'`.
     abs_prob_cmap
         Colormap to use when visualizing the absorption probabilities for each lineage.
-        Only used when :paramref:`same_plot` `=False`.
+        Only used when ``same_plot=False``.
     cell_color
-        Color of the cells when not visualizing absorption probabilities.
-        Only used when :paramref:`same_plot` `=True`.
-    color
-        Color for the lineages, when each lineage is on
-        separate plot, otherwise according to :paramref:`lineage_cmap`.
+        Color of the cells when not visualizing absorption probabilities. Only used when ``same_plot=True``.
     cell_alpha
         Alpha channel for cells.
     lineage_alpha
@@ -125,24 +119,22 @@ def gene_trends(
         Line width of the smoothed values.
     show_cbar
         Whether to show colorbar. Always shown when percentiles for lineages differ.
+        Only used when ``same_plot=False``.
     margins
         Margins around the plot.
+    sharex
+        Whether to share x-axis. Valid options are `'row'`, `'col'` or `'none'`.
     sharey
-        Whether to share y-axis. Only used when :paramref:`same_plot` `=False`.
+        Whether to share y-axis. Valid options are `'row'`, `'col'` or `'none'`.
+    gene_as_title
+        Whether to show gene names as titles instead on y-axis.
+    legend_loc
+        Location of the legend displaying lineages. Only used when `same_plot=True`.
     ncols
-        Number of columns of the plot when pl multiple genes.
-        Only used when :paramref:`same_plot` `=True`.
-    %(parallel)s
+        Number of columns of the plot when pl multiple genes. Only used when ``same_plot=True``.
     suptitle
-        Suptitle of the figure. Only used when :paramref:`same_plot` `=True`.
-    ext
-        Extension to use when saving files, such as `'pdf'`.
-        Only used when :paramref:`same_plot` `=False`.
-    dirname
-        Directory where to save the plots, one per gene in :paramref:`genes`. If `None`, just show the plots.
-        Only used when :paramref:`same_plot` `=False`.
-
-        The figures will be saved as :paramref:`dirname` /`{gene}`. :paramref:`ext`.
+        Suptitle of the figure.
+    %(parallel)s
     %(plotting)s
     plot_kwargs
         Keyword arguments for :meth:`cellrank.ul.models.BaseModel.plot`.
@@ -159,28 +151,11 @@ def gene_trends(
     genes = _unique_order_preserving(genes)
 
     if data_key != "obs":
-        check_collection(
+        _check_collection(
             adata, genes, "var_names", use_raw=kwargs.get("use_raw", False)
         )
     else:
-        check_collection(adata, genes, "obs", use_raw=kwargs.get("use_raw", False))
-
-    nrows = int(np.ceil(len(genes) / ncols))
-    fig = None
-    axes = [None] * len(genes)
-
-    if same_plot:
-        fig, axes = plt.subplots(
-            nrows=nrows,
-            ncols=ncols,
-            sharey=sharey,
-            figsize=(15 * ncols, 10 * nrows) if figsize is None else figsize,
-        )
-        axes = np.ravel(axes)
-    elif dirname is not None:
-        _maybe_create_dir(dirname)
-    elif save is not None:
-        logg.warning("No directory specified for saving. Ignoring `save` argument")
+        _check_collection(adata, genes, "obs", use_raw=kwargs.get("use_raw", False))
 
     ln_key = str(AbsProbKey.BACKWARD if backward else AbsProbKey.FORWARD)
     if ln_key not in adata.obsm:
@@ -195,6 +170,29 @@ def gene_trends(
         show_cbar = False
         logg.debug("All lineages are `None`, setting the weights to `1`")
     lineages = _unique_order_preserving(lineages)
+
+    if same_plot:
+        gene_as_title = True if gene_as_title is None else gene_as_title
+        sharex = "all" if sharex is None else sharex
+        sharey = "none" if sharey is None else sharey
+        ncols = len(genes) if ncols >= len(genes) else ncols
+        nrows = int(np.ceil(len(genes) / ncols))
+    else:
+        gene_as_title = False if gene_as_title is None else gene_as_title
+        sharex = "col" if sharex is None else sharex
+        sharey = ("none" if hide_cells else "row") if sharey is None else sharey
+        nrows = len(genes)
+        ncols = len(lineages)
+
+    fig, axes = plt.subplots(
+        nrows=nrows,
+        ncols=ncols,
+        sharex=sharex,
+        sharey=sharey,
+        figsize=(6 * ncols, 4 * nrows) if figsize is None else figsize,
+        constrained_layout=True,
+    )
+    axes = np.reshape(axes, (-1, ncols))
 
     _ = adata.obsm[ln_key][[lin for lin in lineages if lin is not None]]
 
@@ -231,46 +229,54 @@ def gene_trends(
     )(models, callbacks, lineages, time_range, **kwargs)
     logg.info("    Finish", time=start)
 
-    logg.debug("Plotting trends")
-    for gene, ax in zip(genes, axes):
-        f = (
-            None
-            if (same_plot or dirname is None)
-            else os.path.join(dirname, f"{gene}.{ext}")
-        )
-        _trends_helper(
-            adata,
-            models,
-            gene=gene,
-            lineage_names=lineages,
-            ln_key=ln_key,
-            same_plot=same_plot,
-            hide_cells=hide_cells,
-            perc=perc,
-            cmap=lineage_cmap,
-            abs_prob_cmap=abs_prob_cmap,
-            cell_color=cell_color,
-            color=color,
-            alpha=cell_alpha,
-            lineage_alpha=lineage_alpha,
-            size=size,
-            lw=lw,
-            show_cbar=show_cbar,
-            margins=margins,
-            sharey=sharey,
-            dpi=dpi,
-            figsize=figsize,
-            fig=fig,
-            ax=ax,
-            save=f,
-            **plot_kwargs,
-        )
+    logg.info("Plotting trends")
 
-    if same_plot:
-        for j in range(len(genes), len(axes)):
-            axes[j].remove()
+    cnt = 0
+    for row in range(len(axes)):
+        for col in range(len(axes[row])):
+            if cnt >= len(genes):
+                break
+            gene = genes[cnt]
 
-        fig.suptitle(suptitle)
+            _trends_helper(
+                adata,
+                models,
+                gene=gene,
+                lineage_names=lineages,
+                ln_key=ln_key,
+                same_plot=same_plot,
+                hide_cells=hide_cells,
+                perc=perc,
+                lineage_cmap=lineage_cmap,
+                abs_prob_cmap=abs_prob_cmap,
+                cell_color=cell_color,
+                alpha=cell_alpha,
+                lineage_alpha=lineage_alpha,
+                size=size,
+                lw=lw,
+                show_cbar=show_cbar,
+                margins=margins,
+                sharey=sharey,
+                gene_as_title=gene_as_title,
+                legend_loc=legend_loc,
+                dpi=dpi,
+                figsize=figsize,
+                fig=fig,
+                axes=axes[row, col] if same_plot else axes[cnt],
+                show_ylabel=col == 0,
+                show_lineage=cnt == 0 or same_plot,
+                show_xticks_and_label=((row + 1) * ncols + col >= len(genes))
+                if same_plot
+                else (cnt == len(axes) - 1),
+                **plot_kwargs,
+            )
+            cnt += 1
 
-        if save is not None:
-            save_fig(fig, save)
+    if same_plot and (col != ncols):
+        for ax in np.ravel(axes)[cnt:]:
+            ax.remove()
+
+    fig.suptitle(suptitle)
+
+    if save is not None:
+        save_fig(fig, save)

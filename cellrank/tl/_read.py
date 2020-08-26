@@ -38,13 +38,13 @@ def read(
     path
         Path to the annotated data object.
     key
-        Key in :paramref:`adata` `.obsm` where the :class:`cellrank.tl.Lineage` is stored.
+        Key in ``adata.obsm`` where the :class:`cellrank.tl.Lineage` is stored.
         If `None`, it is determined automatically.
     read_callback
         Function that actually reads the :class:`anndata.AnnData` object, such as
         :func:`scvelo.read` (default) or :func:`scanpy.read`.
     **kwargs
-        Keyword arguments for :paramref:`read_callback`.
+        Keyword arguments for ``read_callback``.
 
     Returns
     -------
@@ -72,12 +72,12 @@ def read(
 
             if names_key not in adata.uns.keys():
                 logg.warning(
-                    f"    Lineage names not found in `adata.uns[{names_key!r}]`, creating nw names"
+                    f"    Lineage names not found in `adata.uns[{names_key!r}]`, creating new names"
                 )
                 names = [f"Lineage {i}" for i in range(n_lineages)]
             elif len(adata.uns[names_key]) != n_lineages:
                 logg.warning(
-                    f"    Lineage names are don't have the required length ({n_lineages}), creating dummy names"
+                    f"    Lineage names are don't have the required length ({n_lineages}), creating new names"
                 )
                 names = [f"Lineage {i}" for i in range(n_lineages)]
             else:
@@ -107,7 +107,7 @@ def read(
             adata.uns[colors_key] = colors
             adata.uns[names_key] = names
         else:
-            logg.warning(
+            logg.debug(
                 f"Unable to load {pretty_name}`Lineage` from `adata.obsm[{lin_key!r}]`"
             )
 

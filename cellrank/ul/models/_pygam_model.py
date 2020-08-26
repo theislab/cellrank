@@ -74,7 +74,7 @@ class GAM(BaseModel):
         Name of the distribution. Available distributions can be found
         `here <https://pygam.readthedocs.io/en/latest/notebooks/tour_of_pygam.html#Distribution:>`_.
     link
-        Name of the link function. Available functions can be found
+        Name of the link function. Available link functions can be found
         `here <https://pygam.readthedocs.io/en/latest/notebooks/tour_of_pygam.html#Link-function:>`_.
     max_iter
         Maximum number of iterations for optimization.
@@ -86,7 +86,7 @@ class GAM(BaseModel):
         use the :paramref:`model`'s method.
     grid
         Whether to perform a grid search. Keys correspond to a parameter names and values to range to be searched.
-        If an empty :class:`dict`, don't perform a grid search. If `None`, uses a default grid.
+        If an empty :class:`dict`, don't perform a grid search. If `None`, use a default grid.
     spline_kwargs
         Keyword arguments for :class:`pygam.s`.
     **kwargs

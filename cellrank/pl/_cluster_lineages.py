@@ -22,7 +22,7 @@ from cellrank.pl._utils import (
     _create_callbacks,
 )
 from cellrank.tl._utils import save_fig, _unique_order_preserving
-from cellrank.ul._utils import _get_n_cores, check_collection
+from cellrank.ul._utils import _get_n_cores, _check_collection
 from cellrank.tl._constants import _DEFAULT_BACKEND, AbsProbKey
 from cellrank.ul._parallelize import parallelize
 
@@ -121,7 +121,7 @@ def cluster_lineage(
 
     This function is based on Palantir, see [Setty19]_. It can be used to discover modules of genes that drive
     development along a given lineage. Consider running this function on a subset of genes which are potential lineage
-    drivers, identified e.g. by running :func:`cellrank.tl._gene_importance`.
+    drivers, identified e.g. by running :func:`cellrank.tl.lineage_drivers`.
 
     .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/cluster_lineage.png
        :width: 400px
@@ -131,23 +131,22 @@ def cluster_lineage(
     ----------
     %(adata)s
     %(model)s
-    genes
-        Genes in :paramref:`adata` `.var_names` to plot or in :paramref:`adata` `.raw.var_names`, if `use_raw=True`.
+    %(genes)s
     lineage
         Name of the lineage for which to cluster the genes.
     %(backward)s
     %(time_ranges)s
     clusters
         Cluster identifiers to plot. If `None`, all clusters will be considered.
-        Useful when pl previously computed clusters.
+        Useful when plotting previously computed clusters.
     n_points
         Number of points used for prediction.
     time_key
-        Key in :paramref:`adata` `.obs` where the pseudotime is stored.
+        Key in ``adata.obs`` where the pseudotime is stored.
     cluster_key
-        Key in :paramref:`adata` `.obs` where the clustering is stored.
+        Key in ``adata.obs`` where the clustering is stored.
     norm
-        Whether to z-normalize each trend to have `0` mean, `1` variance.
+        Whether to z-normalize each trend to have zero mean, unit variance.
     recompute
         If `True`, recompute the clustering, otherwise try to find already existing one.
     %(model_callback)s
@@ -156,7 +155,7 @@ def cluster_lineage(
     sharey
         Whether to share y-axis across multiple plots.
     key_added
-        Postfix to add when saving the results to :paramref:`adata` `.uns`.
+        Postfix to add when saving the results to ``adata.uns``.
     %(parallel)s
     %(plotting)s
     pca_kwargs
@@ -172,11 +171,10 @@ def cluster_lineage(
     -------
     %(just_plots)s
 
-        Updates :paramref:`adata` `.uns` with the following key:
+        Updates ``adata.uns`` with the following key:
 
-            - lineage_{:paramref:`lineage_name`}_trend_{:paramref:`key_added`}
-              :class:`anndata.AnnData` object of shape `len` (:paramref:`genes`) x :paramref:`n_points`
-              containing the clustered genes.
+            - ``lineage_{lineage}_trend_{key_added}`` - an :class:`anndata.AnnData` object
+              of shape ``(n_genes, n_points)`` containing the clustered genes.
     """
 
     import scanpy as sc
@@ -189,7 +187,7 @@ def cluster_lineage(
     _ = adata.obsm[lineage_key][lineage]
 
     genes = _unique_order_preserving(genes)
-    check_collection(adata, genes, "var_names", kwargs.get("use_raw", False))
+    _check_collection(adata, genes, "var_names", kwargs.get("use_raw", False))
 
     key_to_add = f"lineage_{lineage}_trend"
     if key_added is not None:
