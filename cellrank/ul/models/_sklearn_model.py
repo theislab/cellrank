@@ -23,9 +23,9 @@ class SKLearnModel(BaseModel):
     model
         Instance of :mod:`sklearn` model.
     weight_name
-        Name of the weight argument for :paramref:`model` `.fit`.
+        Name of the weight argument for :paramref:`model` ``.fit``.
     ignore_raise
-        Do not raise an exception if weight argument is not found in the fittng function of :paramref:`model`.
+        Do not raise an exception if weight argument is not found in the fitting function of :paramref:`model`.
         This is useful in case when weight is passed in `**kwargs` and cannot be determined from signature.
     """
 
@@ -190,7 +190,7 @@ class SKLearnModel(BaseModel):
         self, func_name: Optional[str], param_names: Iterable[str]
     ) -> Optional[str]:
         """
-        Find an argument in :paramref:`model`'s :paramref:`func_name`.
+        Find an argument in :paramref:`model`'s ``func_name``.
 
         Parameters
         ----------
@@ -201,8 +201,8 @@ class SKLearnModel(BaseModel):
 
         Returns
         -------
-        str, None
-            The parameter name or `None`, if `None` was found or :paramref:`func_name` was `None`.
+        str or None
+            The parameter name or `None`, if `None` was found or ``func_name`` was `None`.
         """
 
         if func_name is None:
