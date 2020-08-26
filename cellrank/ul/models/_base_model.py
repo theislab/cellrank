@@ -12,6 +12,7 @@ import matplotlib as mpl
 from matplotlib import cm as cm
 from matplotlib import colors as mcolors
 from matplotlib import pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from cellrank.tl import Lineage
 from cellrank.ul._docs import d
@@ -637,12 +638,11 @@ class BaseModel(ABC):
         if title is None:
             title = f"{self._gene} @ {self._lineage}"
 
-        ax.plot(self.x_test, self.y_test, color=color, lw=lw, label=title)
+        _ = ax.plot(self.x_test, self.y_test, color=color, lw=lw, label=title)
 
         ax.set_title(title)
-
-        ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
+        ax.set_xlabel(xlabel)
 
         ax.margins(margins)
 
@@ -663,7 +663,8 @@ class BaseModel(ABC):
             and not np.allclose(self.w_all, 1)
         ):
             norm = mcolors.Normalize(vmin=vmin, vmax=vmax)
-            cax, _ = mpl.colorbar.make_axes(ax, aspect=200)
+            divider = make_axes_locatable(ax)
+            cax = divider.append_axes("right", size="2.5%", pad=0.1)
             _ = mpl.colorbar.ColorbarBase(
                 cax, norm=norm, cmap=abs_prob_cmap, label="absorption probability"
             )
