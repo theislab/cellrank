@@ -66,12 +66,12 @@ class VelocityKernel(Kernel):
     %(adata)s
     %(backward)s
     vkey
-        Key in :paramref:`adata` `.uns` where the velocities are stored.
+        Key in :paramref:`adata` ``.uns`` where the velocities are stored.
     xkey
-        Key in :paramref:`adata` `.layers` where expected gene expression counts are stored.
+        Key in :paramref:`adata` ``.layers`` where expected gene expression counts are stored.
     gene_subset
-        List of genes to be used to compute transition probabilities. By default, the `velocity_genes` of
-        :paramref:`adata` `. var` are used.
+        List of genes to be used to compute transition probabilities.
+        By default, genes from :paramref:`adata` ``.var['velocity_genes]`` are used.
     compute_cond_num
         Whether to compute condition number of the transition matrix. Note that this might be costly,
         since it does not use sparse implementation.
@@ -184,31 +184,29 @@ class VelocityKernel(Kernel):
         %(velocity_mode)s
         %(velocity_backward_mode)s
         softmax_scale
-            Scaling parameter for the softmax. If `None`, it will be estimated using 1/median(correlations). The idea
-            behind this is to scale the softmax to counteract everythin tending to orthogonality in high dimensions.
+            Scaling parameter for the softmax. If `None`, it will be estimated using 1 / median(correlations). The idea
+            behind this is to scale the softmax to counteract everything tending to orthogonality in high dimensions.
         n_samples
-            Number of bootstrap samples when :paramref:`mode` is `{m.MONTE_CARLO.s!r}` or `{m.PROPAGATION.s!r}`.
+            Number of bootstrap samples when ``mode={m.MONTE_CARLO.s!r}`` or ``mode={m.PROPAGATION.s!r}``.
         seed
-            Set the seed for random state when the method requires :paramref:`n_samples`.
+            Set the seed for random state when the method requires ``n_samples``.
         use_numba
-            Use :mod:`numba` optimized functions. Only available if `:paramref:`mode` != `{m.STOCHASTIC.s!r}`.
-            If `True`, the outermost loop is also :mod:`numba` optimized. This options disables the progress bar.
-            If `False`, the outermost loop is not optimized, but the workload is split among multiple cores.
-            If `None`, it's same as `True`, but the work is being split and each worker uses optimized outermost loop.
+            Use :mod:`numba` optimized functions. Only available if ``mode!={m.STOCHASTIC.s!r}``:
+                - If `True`, the outermost loop is also :mod:`numba` optimized. This options disables the progress bar.
+                - If `False`, the outermost loop is not optimized, but the workload is split among multiple cores.
+                - If `None`, same as `True`, but the work is being split and each worker uses optimized outermost loop.
         %(parallel)s
 
         Returns
         -------
         :class:`cellrank.tl.kernels.VelocityKernel`
             Makes available the following fields:
+                - :paramref:`transition_matrix`.
+                - :paramref:`pearson_correlations`.
 
-                - :paramref:`transition_matrix`
-                - :paramref:`pearson_correlations`
-
-            If :paramref:`mode` `={m.PROPAGATION.s!r}`, makes also available:
-
-                - :paramref:`_tmats` - tuple of lenth :paramref:`n_samples` of transition matrices
-                - :paramref:`_pcors` - tuple of lenth :paramref:`n_samples` of Pearson correlations
+            If ``mode={m.PROPAGATION.s!r}``, makes also available:
+                - :paramref:`_tmats` - tuple of length ``n_samples`` of transition matrices.
+                - :paramref:`_pcors` - tuple of length ``n_samples`` of pearson correlations.
         """
 
         mode = VelocityMode(mode)
@@ -309,7 +307,7 @@ class VelocityKernel(Kernel):
             **kwargs,
         )
         if isinstance(tmat, (tuple, list)):
-            self._tmats, self._pcors = tmat, cmat
+            self._tmats, self._pcors = tuple(tmat), tuple(cmat)
             self._current_ix = 0
             tmat, cmat = tmat[self._current_ix], cmat[self._current_ix]
 
@@ -323,7 +321,7 @@ class VelocityKernel(Kernel):
     @inject_docs(m=VelocityMode)
     def switch_transition_matrix(self, index: int) -> None:
         """
-        Switch between transition matrices when using `mode={m.PROPAGATION.s!r}`.
+        Switch between transition matrices when using ``mode={m.PROPAGATION.s!r}``.
 
         Parameters
         ----------

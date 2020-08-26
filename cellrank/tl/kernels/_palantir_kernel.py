@@ -37,7 +37,7 @@ class PalantirKernel(Kernel):
     %(adata)s
     %(backward)s
     time_key
-        Key in :paramref:`adata` `.obs` where the pseudotime is stored.
+        Key in :paramref:`adata` ``.obs`` where the pseudotime is stored.
     compute_cond_num
         Whether to compute condition number of the transition matrix. Note that this might be costly,
         since it does not use sparse implementation.
@@ -66,7 +66,6 @@ class PalantirKernel(Kernel):
         time_key = kwargs.pop("time_key", "dpt_pseudotime")
         if time_key not in self.adata.obs.keys():
             raise KeyError(f"Could not find time key in `adata.obs[{time_key!r}]`.")
-        logg.debug("Adding `.pseudotime`")
 
         self._pseudotime = np.array(self.adata.obs[time_key]).astype(_dtype)
 
@@ -74,6 +73,8 @@ class PalantirKernel(Kernel):
             raise ValueError(
                 f"Minimum pseudotime must be non-negative, found {np.nanmin(self.pseudotime)}."
             )
+        if not np.all(np.isfinite(self.pseudotime)):
+            raise ValueError("Found infinite values in pseudotime.")
 
     def compute_transition_matrix(
         self, k: int = 3, density_normalize: bool = True
@@ -94,7 +95,7 @@ class PalantirKernel(Kernel):
         Parameters
         ----------
         k
-            :paramref:`k` is the number of neighbors to keep for each node, regardless of pseudotime.
+            Number of neighbors to keep for each node, regardless of pseudotime.
             This is done to ensure that the graph remains connected.
         density_normalize
             Whether or not to use the underlying KNN graph for density normalization.

@@ -18,7 +18,7 @@ class ConnectivityKernel(Kernel):
     Kernel which computes transition probabilities based on transcriptomic similarities.
 
     As a measure for transcriptomic similarity, we use the weighted KNN graph computed using
-    :func:`scanpy.pp.neighbors`,see [Wolf18]_.
+    :func:`scanpy.pp.neighbors`, see [Wolf18]_.
     By definition, the resulting transition matrix is symmetric and cannot be used to learn about the direction of the
     developmental process under consideration.
     However, the velocity-derived transition matrix can be combined with the similarity-based transition matrix as

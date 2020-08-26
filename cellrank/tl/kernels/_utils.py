@@ -132,7 +132,7 @@ def _random_normal(
     Returns
     -------
     :class:`numpy.ndarray`
-        `n_samples x m.shape[0]` array from normal distribution.
+        `(n_samples x m.shape[0])` array from normal distribution.
     """
 
     assert m.ndim == 1, "Means are not 1 dimensional."
@@ -179,27 +179,25 @@ def _predict_transition_probabilities_numpy(
     X: np.ndarray, W: np.ndarray, softmax_scale: float
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
-    Compute a categorical distribution based on correlation between rows in `W` and `X`.
+    Compute a categorical distribution based on correlation between rows in ``W`` and ``X``.
 
-    We usually identify `x` with a velocity vector and `W` as the matrix storing transcriptomic
-    displacements of the current reference cell to its nearest neighbors. For the backward process, `X` is a matrix
-    as well, storing the velocity vectors of all nearest neighbors.
+    We usually identify ``X`` with a velocity vector and ``W`` as the matrix storing transcriptomic
+    displacements of the current reference cell to its nearest neighbors. For the backward process, ``X``
+    is a matrix as well, storing the velocity vectors of all nearest neighbors.
 
     Parameters
     ----------
     X
-        Either vector of shape `n_features` or matrix of shape `n_samples x n_features`.
+        Either vector of shape `(n_features,)` or matrix of shape `(n_samples x n_features)`.
     W
-        Weight matrix of shape `n_samples x n_features`.
+        Weight matrix of shape `(n_samples x n_features)`.
     softmax_scale
         Scaling factor for softmax activation function.
 
     Returns
     --------
-    :class:`numpy.ndarray`
-        Vector of probabilities.
-    :class:`numpy.ndarray`
-        Vector of pearson correlations.
+    :class:`scipy.sparse.csr_matrix`, :class:`scipy.sparse.csr_matrix`
+        The probability and pearson correlation matrices.
     """
 
     # mean centering + cosine correlation
@@ -268,13 +266,13 @@ def _reconstruct_one(
     Parameters
     ----------
     data
-        Array of shape `2 x number_of_nnz`.
+        Array of shape `(2 x number_of_nnz)`.
     mat
         The original sparse matrix.
     ixs
         Indices that were used to sort the data.
     aixs
-        Inversion of :paramref:`aixs`.
+        Inversion of ``ixs``.
 
     Returns
     -------
@@ -327,8 +325,8 @@ def _reconstruct_matrices(
     Parameters
     ----------
     data
-        Either a 2 dimensional array of shape `2 x number_of_nnz` or
-        a 3 dimensional array of of `number_of_matrices x 2 x number_of_nnz`.
+        Either a 2 dimensional array of shape `(2 x number_of_nnz)` or
+        a 3 dimensional array of of `(number_of_matrices x 2 x number_of_nnz)`.
     mat
         The original matrix with`
     ixs
@@ -339,7 +337,7 @@ def _reconstruct_matrices(
     Returns
     -------
     :class:`scipy.sparse.csr_matrix`, :class:`scipy.sparse.csr_matrix`
-        The probability and correlation matrix. If :paramref:`data` is 3 dimensional, return an iterable of them.
+        The probability and correlation matrix. If ``data`` is 3 dimensional, return an iterable of them.
     """
 
     def reconstruct_many(
@@ -380,11 +378,6 @@ def _reconstruct_matrices(
         assert (
             probs[0].shape == mat.shape
         ), f"Shape mismatch: `{probs[0].shape}`, `{mat.shape}`."
-
-        # this no longer holds True, since we eliminate the zeros
-        # assert (
-        #    probs[0].nnz == mat.nnz
-        # ), f"Number of non-zero elements mismatch: `{probs[0].nnz}`, `{mat.nnz}`."
 
         return probs, cors
 
