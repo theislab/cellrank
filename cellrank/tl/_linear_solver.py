@@ -331,7 +331,7 @@ def _petsc_mat_solve(
     res = np.array(x.getDenseArray(), copy=True)
 
     if not ksp.converged:
-        logg.warning(
+        logg.debug(
             f"The solution for system "
             f"`A{list(A.getSize())} * X{list(x.getSize())} = B{list(B.getSize())}` "
             f"did not converge"
