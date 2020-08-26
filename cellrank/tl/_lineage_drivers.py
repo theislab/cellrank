@@ -20,7 +20,7 @@ from cellrank.pl._utils import (
     _create_models,
     _create_callbacks,
 )
-from cellrank.ul._utils import _get_n_cores, check_collection
+from cellrank.ul._utils import _get_n_cores, _check_collection
 from cellrank.tl._constants import _DEFAULT_BACKEND, AbsProbKey
 from cellrank.tl.estimators import GPCCA
 from cellrank.ul._parallelize import parallelize
@@ -222,7 +222,7 @@ def _gene_importance(
             raise ValueError(
                 f"Number of permutations must be `>= 0`, found `{n_perms}`."
             )
-    check_collection(adata, genes, "var_names", use_raw=kwargs.get("use_raw", False))
+    _check_collection(adata, genes, "var_names", use_raw=kwargs.get("use_raw", False))
 
     n_jobs = _get_n_cores(n_jobs, len(genes))
 

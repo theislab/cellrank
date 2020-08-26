@@ -32,7 +32,7 @@ from cellrank.pl._utils import (
     _maybe_create_dir,
 )
 from cellrank.tl._utils import save_fig, _min_max_scale, _unique_order_preserving
-from cellrank.ul._utils import _get_n_cores, valuedispatch, check_collection
+from cellrank.ul._utils import _get_n_cores, valuedispatch, _check_collection
 from cellrank.tl._colors import _create_categorical_colors
 from cellrank.tl._constants import _DEFAULT_BACKEND, ModeEnum, AbsProbKey
 from cellrank.ul._parallelize import parallelize
@@ -522,7 +522,7 @@ def heatmap(
     if isinstance(genes, str):
         genes = [genes]
     genes = _unique_order_preserving(genes)
-    check_collection(adata, genes, "var_names", use_raw=kwargs.get("use_raw", False))
+    _check_collection(adata, genes, "var_names", use_raw=kwargs.get("use_raw", False))
 
     if isinstance(time_range, (tuple, float, int, type(None))):
         time_range = [time_range] * len(lineages)

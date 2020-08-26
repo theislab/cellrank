@@ -37,8 +37,7 @@ def parallelize(
     n_jobs
         Number of parallel jobs.
     n_split
-        Split :paramref:`collection` into :paramref:`n_split` chunks.
-        If `None`, split into :paramref:`n_jobs` chunks.
+        Split ``collection`` into ``n_split`` chunks. If `None`, split into ``n_jobs`` chunks.
     unit
         Unit of the progress bar.
     as_array
@@ -54,7 +53,7 @@ def parallelize(
 
     Returns
     -------
-        Result depending on :paramref:`extractor` and :paramref:`as_array`.
+        The result depending on ``callable``, ``extractor`` and ``as_array``.
     """
 
     if show_progress_bar:

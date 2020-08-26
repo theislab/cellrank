@@ -24,7 +24,7 @@ from cellrank.pl._utils import (
     _create_callbacks,
 )
 from cellrank.tl._utils import save_fig, _unique_order_preserving
-from cellrank.ul._utils import _get_n_cores, check_collection
+from cellrank.ul._utils import _get_n_cores, _check_collection
 from cellrank.tl._constants import _DEFAULT_BACKEND, AbsProbKey
 from cellrank.ul._parallelize import parallelize
 
@@ -155,11 +155,11 @@ def gene_trends(
     genes = _unique_order_preserving(genes)
 
     if data_key != "obs":
-        check_collection(
+        _check_collection(
             adata, genes, "var_names", use_raw=kwargs.get("use_raw", False)
         )
     else:
-        check_collection(adata, genes, "obs", use_raw=kwargs.get("use_raw", False))
+        _check_collection(adata, genes, "obs", use_raw=kwargs.get("use_raw", False))
 
     ln_key = str(AbsProbKey.BACKWARD if backward else AbsProbKey.FORWARD)
     if ln_key not in adata.obsm:
