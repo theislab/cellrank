@@ -86,12 +86,12 @@ def gene_trends(
     %(adata)s
     %(model)s
     genes
-        Genes in :paramref:`adata` `.var_names` to plot or in :paramref:`adata` `.raw.var_names`, if `use_raw=True`.
+        Genes in ``adata.var_names`` to plot or in ``adata.raw.var_names``, if ``use_raw=True``.
     lineages
         Names of the lineages which to plot. If `None`, plot all lineages.
     %(backward)s
     data_key
-        Key in :paramref:`adata` `.layers` or `'X'` for :paramref:`adata` `.X` where the data is stored.
+        Key in ``adata.layers`` or `'X'` for ``adata.X`` where the data is stored.
     %(time_ranges)s
     %(model_callback)s
     conf_int
@@ -104,16 +104,17 @@ def gene_trends(
         Percentile for colors. Valid values are in range `[0, 100]`.
         This can improve visualization. Can be specified separately for each lineage separately.
     lineage_cmap
-        Colormap to use when coloring in the lineages. Only used when :paramref:`same_plot` `=True`.
+        Colormap to use when coloring in the lineages. Only used when ``same_plot=True``. If `None`,
+        use the corresponding colors in `adata.uns`.
     abs_prob_cmap
         Colormap to use when visualizing the absorption probabilities for each lineage.
-        Only used when :paramref:`same_plot` `=False`.
+        Only used when ``same_plot=False``.
     cell_color
         Color of the cells when not visualizing absorption probabilities.
-        Only used when :paramref:`same_plot` `=True`.
+        Only used when ``same_plot=True``.
     color
         Color for the lineages, when each lineage is on
-        separate plot, otherwise according to :paramref:`lineage_cmap`.
+        separate plot, otherwise according to ``lineage_cmap``.
     cell_alpha
         Alpha channel for cells.
     lineage_alpha
@@ -126,13 +127,18 @@ def gene_trends(
         Whether to show colorbar. Always shown when percentiles for lineages differ.
     margins
         Margins around the plot.
+    sharex
+        Whether to share x-axis.
     sharey
-        Whether to share y-axis. Only used when :paramref:`same_plot` `=False`.
+        Whether to share y-axis.
+    gene_as_title
+        Whether to show gene names as title instead of on yaxis when ``same_plot=False``.
+    legend_loc
+        Location of the legend. Only used when `same_plot=True`.
     ncols
-        Number of columns of the plot when pl multiple genes.
-        Only used when :paramref:`same_plot` `=True`.
+        Number of columns of the plot when pl multiple genes. Only used when ``same_plot=True``.
     suptitle
-        Suptitle of the figure. Only used when :paramref:`same_plot` `=True`.
+        Suptitle of the figure.
     %(parallel)s
     %(plotting)s
     plot_kwargs
