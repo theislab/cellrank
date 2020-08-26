@@ -98,7 +98,7 @@ def _solve_many_sparse_problems_petsc(
     mat_b
         Matrix of shape `n x m`, with m << n.
     mat_a
-        Matrix of shape `n x n`. We make no assumptions on `mat_a` being symmetric or positive definite.
+        Matrix of shape `n x n`. We make no assumptions on ``mat_a`` being symmetric or positive definite.
     solver
         Solver to use. One of `petsc4py.PETSc.KSP.Type`. By default, use `PETSc.KSP.Type.GMRES`.
     preconditioner
@@ -111,9 +111,10 @@ def _solve_many_sparse_problems_petsc(
     Returns
     -------
     :class:`numpy.ndarray`
-        Matrix of shape `n x m`. Each column in `mat_x` corresponds to the solution of one of the sub-problems
+        Matrix of shape `n x m`. Each column in the resulting matrix corresponds to the solution
+        of one of the sub-problems defined via columns in ``mat_b``.
     int
-        Number of converged solution.
+        Number of converged solutions.
     """
     raise NotImplementedError(f"Not implemented for type `{type(mat_b).__name__!r}`.")
 
@@ -191,10 +192,10 @@ def _solve_many_sparse_problems(
     mat_b: spmatrix, mat_a: spmatrix, solver: LinSolver, tol: float, queue: Queue,
 ) -> Tuple[np.ndarray, int]:
     """
-    Solve `mat_a * x = mat_b` efficiently using an iterative solver.
+    Solve ``mat_a * x = mat_b`` efficiently using an iterative solver.
 
-    This is a utility function which is optimized for the case of `mat_a` and `mat_b` being sparse,
-    and columns in `mat_b` being related. In that case, we can treat each column of `mat_b` as a
+    This is a utility function which is optimized for the case of ``mat_a`` and ``mat_b`` being sparse,
+    and columns in ``mat_b`` being related. In that case, we can treat each column of ``mat_b`` as a
     separate linear problem and solve that efficiently using iterative solvers that exploit sparsity.
 
     Parameters
@@ -213,8 +214,8 @@ def _solve_many_sparse_problems(
     Returns
     -------
     :class:`numpy.ndarray`
-        Matrix of shape `n x m`. Each column in `mat_x` corresponds to the solution of one of the sub-problems
-        defined via columns in `mat_b`.
+        Matrix of shape `n x m`. Each column in the resulting matrix corresponds to the solution
+        of one of the sub-problems defined via columns in ``mat_b``.
     int
         Number of converged solutions.
     """
@@ -353,46 +354,45 @@ def _solve_lin_system(
     show_progress_bar: bool = True,
 ) -> np.ndarray:
     """
-    Solve `mat_a * x = mat_b` efficiently using either iterative or direct methods.
+    Solve ``mat_a * x = mat_b`` efficiently using either iterative or direct methods.
 
-    This is a utility function which is optimized for the case of `mat_a` and `mat_b` being sparse,
-    and columns in `mat_b` being related. In that case, we can treat each column of `mat_b` as a
+    This is a utility function which is optimized for the case of ``mat_a`` and ``mat_b`` being sparse,
+    and columns in ``mat_b`` being related. In that case, we can treat each column of ``mat_b`` as a
     separate linear problem and solve that efficiently using iterative solvers that exploit sparsity.
 
-    If the columns of `mat_b` are related, we can use the solution of the previous problem as an
+    If the columns of ``mat_b`` are related, we can use the solution of the previous problem as an
     initial guess for the next problem. Further, we parallelize the individual problems for each
-    column in `mat_b` and solve them on separate kernels.
+    column in ``mat_b`` and solve them on separate kernels.
 
-    In case `mat_a` is either not sparse, or very small, or `mat_b` has very many columns, it makes
+    In case ``mat_a`` is either not sparse, or very small, or ``mat_b`` has very many columns, it makes
     sense to use a direct solver instead which computes a matrix factorization and thereby solves all
     sub-problems at the same time.
 
     Parameters
     ----------
     mat_a
-        Matrix of shape `n x n`. We make no assumptions on `mat_a` being symmetric or positive definite.
+        Matrix of shape `n x n`. We make no assumptions on ``mat_a`` being symmetric or positive definite.
     mat_b
         Matrix of shape `n x m`, with m << n.
     solver
-        Solver to use for the linear problem. Options are `['direct', 'gmres', 'lgmres', 'bicgstab', 'gcrotmk']`
-        when :paramref:`use_petsc` or one of `petsc4py.PETSc.KPS.Type` otherwise.
+        Solver to use for the linear problem. Options are `'direct', 'gmres', 'lgmres', 'bicgstab' or 'gcrotmk'`
+        when ``use_petsc`` or one of `petsc4py.PETSc.KPS.Type` otherwise.
 
-        Information on the :module:`scipy` iterative solvers can be found in :func:`scipy.sparse.linalg` or
-        for the :module:`petsc4py` solver in https://www.mcs.anl.gov/petsc/documentation/linearsolvertable.html.
+        Information on the :mod:`scipy` iterative solvers can be found in :func:`scipy.sparse.linalg` or
+        for the :mod:`petsc4py` solver in https://www.mcs.anl.gov/petsc/documentation/linearsolvertable.html.
     use_petsc
-        Whether to use solvers from :module:`petsc4py` instead of :module:`scipy`. Recommended for large problems.
+        Whether to use solvers from :mod:`petsc4py` instead of :mod:`scipy`. Recommended for large problems.
     preconditioner
-        Preconditioner to use when :paramref:`use_petsc` `=True`.
-        For available preconditioners, see `petsc4py.PETSc.PC.Type`.
+        Preconditioner to use when ``use_petsc=True``. For available preconditioners, see `petsc4py.PETSc.PC.Type`.
     n_jobs
-        Number of parallel jobs to use when :paramref:`use_petsc` `=True`. For small, quickly-solvable problems,
+        Number of parallel jobs to use when ``use_petsc=True``. For small, quickly-solvable problems,
         we recommend high number (>=8) of cores in order to fully saturate them.
     backend
         Which backend to use for multiprocessing. See :class:`joblib.Parallel` for valid options.
     tol
         Convergence threshold.
     use_eye
-        Solve `(I - mat_a) * x = mat_b` instead.
+        Solve ``(I - mat_a) * x = mat_b`` instead.
     show_progress_bar
         Whether to show progress bar when the solver isn't a direct one.
 
@@ -400,7 +400,7 @@ def _solve_lin_system(
     --------
     :class:`numpy.ndarray`
         Matrix of shape `n x m`. Each column corresponds to the solution of one of the sub-problems
-        defined via columns in `mat_b`.
+        defined via columns in ``mat_b``.
     """
 
     def extractor(
@@ -435,10 +435,10 @@ def _solve_lin_system(
             )
 
         if issparse(mat_a):
-            logg.debug("Densifying `A` for scipy direct solver")
+            logg.debug("Densifying `A` for `scipy` direct solver")
             mat_a = mat_a.toarray()
         if issparse(mat_b):
-            logg.debug("Densifying `B` for scipy direct solver")
+            logg.debug("Densifying `B` for `scipy` direct solver")
             mat_b = mat_b.toarray()
 
         logg.debug("Solving the linear system directly using `scipy`")
