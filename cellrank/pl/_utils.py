@@ -68,13 +68,13 @@ def _curved_edges(
     bezier_precision
         Number of points in the curves.
     polarity
-        Polarity of curves, one of `'random'`, `'directed' or `'fixed'`.`
+        Polarity of curves, one of `'random', 'directed' or 'fixed'`.
         If using `'random'`, incoming and outgoing edges may overlap.
 
     Returns
     -------
     :class:`np.ndarray`
-        Array of shape (n_edges, :paramref:`bezier_precision`, 2) containing the curved edges.
+        Array of shape ``(n_edges, bezier_precision, 2)`` containing the curved edges.
     """
 
     try:
@@ -106,7 +106,7 @@ def _curved_edges(
     else:
         raise ValueError(
             f"Polarity `{polarity!r}` is not a valid option. "
-            f"Valid options are: `'random', 'fixed' or 'fixed'`."
+            f"Valid options are: `'random', 'directed' or 'fixed'`."
         )
 
     # Coordinates (x, y) of both nodes for each edge
@@ -196,7 +196,7 @@ def composition(
     ----------
     %(adata)s
     key
-        Key in :paramref:`adata` `.obs` containing categorical observation.
+        Key in ``adata.obs`` containing categorical observation.
     %(plotting)s
 
     Returns
@@ -237,6 +237,7 @@ def _is_any_gam_mgcv(models: Union[BaseModel, Dict[str, Dict[str, BaseModel]]]) 
 
     Returns
     -------
+    bool
         `True` if any of the models is from R's mgcv package, else `False`.
     """
 
@@ -385,10 +386,10 @@ def _trends_helper(
     show_xticks_and_label: bool = True,
     cmap=None,
     abs_prob_cmap=cm.viridis,
+    gene_as_title: bool = False,
     legend_loc: Optional[str] = "best",
     fig: mpl.figure.Figure = None,
-    axes: mpl.axes.Axes = None,
-    gene_as_title: bool = True,
+    axes: Union[mpl.axes.Axes, Sequence[mpl.axes.Axes]] = None,
     **kwargs,
 ) -> None:
     """
@@ -399,14 +400,33 @@ def _trends_helper(
     %(adata)s
     %(model)s
     gene
-        Name of the gene in `adata.var_names`.
+        Name of the gene in `adata.var_names``.
+    ln_key
+        Key in ``adata.obsm`` where to find the lineages.
+    lineage_names
+        Names of lineages to plot.
+    same_plot
+        Whether to plot all lineages in the same plot or separately.
+    sharey
+        Whether the y-axis is being shared.
+    show_ylabel
+        Whether to show y-label on the y-axis. Usually, only the first column will contain the y-label.
+    show_lineage
+        Whether to show the lineage as the title. Usually, only first row will contain the lineage names.
+    show_xticks_and_label
+        Whether to show x-ticks and x-label. Usually, only the last row will show this.
+    cmap
+        Colormap to use when coloring the the lineage. If `None`, use colors from ``adata.uns``.
+    abs_prob_cmap:
+        Colormap to use when coloring in the absorption probabilities, if they are being plotted.
+    gene_as_title
+        Whether to use the gene names as titles (with lineage names as well) or on the y-axis.
+    legend_loc
+        Location of the legend. If `None`, don't show any legend.
     fig
-        Figure to use, if `None`, create a new one.
+        Figure to use.
     ax
-        Ax to use, if `None`, create a new one.
-    save
-        Filename where to save the plot.
-        If `None`, just shows the plots.
+        Ax to use.
     **kwargs
         Keyword arguments for :meth:`cellrank.ul.models.BaseModel.plot`.
 
@@ -694,14 +714,12 @@ def _create_callbacks(
                     assert (
                         model._gene == gene
                     ), f"Callback modified the gene from `{gene!r}` to `{model._gene!r}`."
-                    assert model._gene == gene, (
-                        f"Callback modified the lineage "
-                        f"from `{lineage!r}` to `{model._lineage!r}`."
-                    )
+                    assert (
+                        model._gene == gene
+                    ), f"Callback modified the lineage from `{lineage!r}` to `{model._lineage!r}`."
                 except Exception as e:
                     raise RuntimeError(
-                        f"Callback validation failed for "
-                        f"gene `{gene!r}` and lineage `{lineage!r}`."
+                        f"Callback validation failed for gene `{gene!r}` and lineage `{lineage!r}`."
                     ) from e
 
     if callback is None:
@@ -737,7 +755,7 @@ def _create_callbacks(
             )
     else:
         raise TypeError(
-            f"Class `{type(callback).__name__!r}` must be of type `callable` or a dictionary of such callables."
+            f"Class `{type(callback).__name__!r}` must be callable` or a dictionary of callables."
         )
 
     maybe_sanity_check(callbacks)
