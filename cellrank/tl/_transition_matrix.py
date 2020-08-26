@@ -40,19 +40,19 @@ def transition_matrix(
     %(adata)s
     %(backward)s
     vkey
-        Key from :paramref:`adata` `.layers` to access the velocities.
+        Key from ``adata.layers`` to access the velocities.
     xkey
-        Key in :paramref:`adata` `.layers` where expected gene expression counts are stored.
+        Key in ``adata.layers`` where expected gene expression counts are stored.
     gene_subset
-        List of genes to be used to compute transition probabilities. By default, the `velocity_genes` of
-        :paramref:`adata` `. var` are used.
+        List of genes to be used to compute transition probabilities.
+        By default, genes from ``adata.var['velocity_genes]`` are used.
     %(velocity_mode)s
     %(velocity_backward_mode)s
     seed
         Set the seed for random state, only used when sampling.
     softmax_scale
-        Scaling parameter for the softmax. If `None`, it will be estimated using 1/median(correlations). The idea
-        behind this is to scale the softmax to counteract everythin tending to orthogonality in high dimensions.
+        Scaling parameter for the softmax. If `None`, it will be estimated using 1 / median(correlations). The idea
+        behind this is to scale the softmax to counteract everything tending to orthogonality in high dimensions.
     weight_connectivities
         Weight given to transcriptomic similarities as opposed to velocities. Must be in `[0, 1]`.
     density_normalize
@@ -64,7 +64,7 @@ def transition_matrix(
     Returns
     -------
     :class:`cellrank.tl.KernelExpression`
-        A kernel expression object.
+        A kernel expression object containing the computed transition matrix.
     """
 
     # initialise the velocity kernel and compute transition matrix
