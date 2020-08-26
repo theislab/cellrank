@@ -168,20 +168,19 @@ class KernelExpression(ABC):
         Parameters
         ----------
         key_added
-            Postfix to be added to :paramref:`adata` `.uns` when writing the parameters.
+            Postfix to be added to :paramref:`adata` ``.uns`` when writing the parameters.
 
         Returns
         -------
         None
-            Updates the underlying :paramref:`.adata` object with the following fields:
-
-                - .obsp[`'T_{fwd,bwd}` _ :paramref:`key_added` '] - transition matrix
-                - .uns[`'T_{fwd,bwd}` _  :paramref:`key_added` `_params'`] - parameters used for calculation
+            Updates the underlying :paramref:`adata` object with the following fields:
+                - .obsp['T_{fwd, bwd}_``key_added``'] - transition matrix.
+                - .uns['T_{fwd, bwd}_``key_added``_params'] - parameters used for calculation.
         """
 
         if self.transition_matrix is None:
             raise ValueError(
-                "Compute transition matrix first as `.compute_transition_matrix()`.`"
+                "Compute transition matrix first as `.compute_transition_matrix()`."
             )
 
         key = _transition(self._direction)
@@ -415,7 +414,7 @@ class UnaryKernelExpression(KernelExpression, ABC):
 
         if not isinstance(_adata, AnnData):
             raise TypeError(
-                f"Expected arugment of type `anndata.AnnData`, found `{type(_adata).__name__!r}`."
+                f"Expected argument of type `anndata.AnnData`, found `{type(_adata).__name__!r}`."
             )
         # otherwise, we'd have to reread bunch of attributes - it's better to initialize new object
         if _adata.shape != self.adata.shape:
@@ -712,7 +711,7 @@ class ConstantMatrix(Kernel):
             )
         if not isinstance(value, (int, float)):
             raise TypeError(
-                f"Value must be on `float` or `int`, found `{type(value).__name__}`."
+                f"Value must be on `float` or `int`, found `{type(value).__name__!r}`."
             )
         if value <= 0:
             raise ValueError(f"Expected the constant to be positive, found `{value}`.")
@@ -770,7 +769,7 @@ class SimpleNaryExpression(NaryKernelExpression):
                 if isinstance(kexpr, Kernel):
                     raise RuntimeError(
                         f"Kernel `{kexpr}` is uninitialized. "
-                        f"Compute its transition matrix as `.compute_transition_matrix()`."
+                        f"Compute its transition matrix first as `.compute_transition_matrix()`."
                     )
                 kexpr.compute_transition_matrix()
             elif isinstance(kexpr, Kernel):
@@ -859,7 +858,7 @@ def _get_expr_and_constant(k: KernelMul) -> Tuple[KernelExpression, Union[int, f
 
     Returns
     -------
-    :class:`KernelExpression`, Union[int, float]
+    :class:`KernelExpression`, int or float
         The expression which is being multiplied and the value of the constant.
     """
 
@@ -906,8 +905,7 @@ def _is_bin_mult(
     None
         If the expression is not a binary multiplication.
     :class:`cellrank.tl..kernels.KernelExpression`
-        Depending on :paramref:`return_constant`, it either returns the constant multiplier
-        or the expression being multiplied.
+        Depending on ``return_constant``, it either returns the constant multiplier or the expression being multiplied.
     """
 
     if not isinstance(k, KernelMul):

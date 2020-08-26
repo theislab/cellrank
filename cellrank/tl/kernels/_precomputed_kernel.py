@@ -23,8 +23,8 @@ class PrecomputedKernel(Kernel):
     Parameters
     ----------
     transition_matrix
-        Row-normalized transition matrix or a key in :paramref:`adata` `.obsp`. If `None`, try to determine
-        the key based on :paramref:`backward`.
+        Row-normalized transition matrix or a key in :paramref:`adata` ``.obsp``.
+        If `None`, try to determine the key based on ``backward``.
     %(adata)s
     %(backward)s
     """
