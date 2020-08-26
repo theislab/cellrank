@@ -22,7 +22,7 @@ import pandas as pd
 from pandas import Series
 from numpy.linalg import norm as d_norm
 from scipy.sparse import eye as speye
-from scipy.sparse import issparse, spmatrix, csr_matrix
+from scipy.sparse import diags, issparse, spmatrix, csr_matrix
 from sklearn.cluster import KMeans
 from pandas.api.types import infer_dtype, is_categorical_dtype
 from sklearn.neighbors import NearestNeighbors
@@ -1605,7 +1605,7 @@ def _calculate_absorption_time_moments(
     if calculate_variance:
         logg.debug("Calculating variance of time to absorption")
 
-        I = speye(q.shape[0])  # noqa
+        I = speye(q.shape[0]) if issparse(q) else np.eye(q.shape[0])  # noqa
         A_t = (I + q).T
         B_t = (I - q).T
 
@@ -1625,3 +1625,99 @@ def _calculate_absorption_time_moments(
         var = pseudotime_var = None
 
     return mean, pseudotime, var, pseudotime_var
+
+
+def _calculate_lineage_absorption_time_means(
+    Q: csr_matrix,
+    R: csr_matrix,
+    trans_indices: np.ndarray,
+    n: int,
+    ixs: Dict[str, np.ndarray],
+    lineages: Dict[Sequence[str], str],
+    **kwargs,
+) -> pd.DataFrame:
+    """
+    Calculate the mean time until absorption and optionally its variance for specific lineages or their combinations.
+
+    Parameters
+    ----------
+    Q
+        Transient-transient submatrix of the transition matrix.
+    R
+        Transient-recurrent submatrix of the transition matrix.
+    trans_indices
+        Transient indices.
+    n
+        Number of states of the full transition matrix.
+    ixs
+        Mapping of names of absorbing states and their indices in the full transition matrix.
+    lineages
+        Lineages for which to calculate the mean time until absorption moments.
+    **kwargs
+        Keyword arguments for :func:`cellrank.tl._lin_solver._solver_lin_system`.
+
+    Returns
+    -------
+    :class:`pandas.DataFrame`
+        A dataframe with means and optionally variances of mean time to absorption for each lineage
+        in :paramref:`lineages`.
+    """
+
+    res = pd.DataFrame()
+    tmp_ixs, cnt = {}, 0
+    for k, ix in ixs.items():
+        # get the indices to B matrix
+        tmp_ixs[k] = np.arange(cnt, cnt + len(ix), dtype=np.int32)
+        cnt += len(ix)
+
+    I = speye(Q.shape[0]) if issparse(Q) else np.eye(Q.shape)  # noqa
+    N_inv = I - Q
+
+    logg.debug("Solving equation for `B`")
+    B = _solve_lin_system(Q, R, use_eye=True, **kwargs)
+
+    no_jobs_kwargs = kwargs.copy()
+    _ = no_jobs_kwargs.pop("n_jobs", None)
+
+    for lns, moment in lineages.items():
+        name = ", ".join(lns)
+        ix = np.concatenate([ixs[ln] for ln in lns])
+
+        D_j = diags(np.sum(B[:, np.concatenate([tmp_ixs[ln] for ln in lns])], axis=1))
+        D_j_inv = D_j.copy()
+        D_j_inv.data = 1.0 / D_j.data
+
+        logg.debug(f"Calculating mean time to absorption for `{', '.join(lns)!r}`")
+        m = _solve_lin_system(
+            D_j_inv @ N_inv @ D_j, np.ones(Q.shape[0]), **kwargs
+        ).squeeze()
+
+        mean = np.empty(n, dtype=np.float64)
+        mean[:] = np.inf
+        mean[ix] = 0
+        mean[trans_indices] = m
+
+        res[f"{name} mean"] = mean
+
+        if moment == "var":
+            logg.debug(f"Calculating variance of time to absorption for `{name!r}`")
+
+            logg.debug("Solving equation (1/2)")
+            X = _solve_lin_system(D_j + Q @ D_j, N_inv @ D_j, use_eye=False, **kwargs)
+            y = m - X @ (m ** 2)
+
+            logg.debug("Solving equation (2/2)")
+            v = _solve_lin_system(
+                X, y, use_eye=False, n_jobs=1, **no_jobs_kwargs
+            ).squeeze()
+
+            assert np.all(v >= 0), f"Encountered negative variance: `{v[v < 0]}`."
+
+            var = np.empty(n, dtype=np.float64)
+            var[:] = np.inf
+            var[ix] = 0
+            var[trans_indices] = v
+
+            res[f"{name} var"] = var
+
+    return res
