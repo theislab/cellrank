@@ -77,7 +77,6 @@ class Eigen(VectorPlottable, Decomposable):
         -------
         None
             Nothing, but updates the following field:
-
                 - :paramref:`{prop}`
         """
 
@@ -380,7 +379,6 @@ class Schur(VectorPlottable, Decomposable):
         -------
         None
             Nothing, but updates the following fields:
-
                 - :paramref:`{schur_vectors}`
                 - :paramref:`{schur_matrix}`
                 - :paramref:`{eigendec}`
