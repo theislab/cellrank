@@ -74,7 +74,7 @@ class GAM(BaseModel):
         Name of the distribution. Available distributions can be found
         `here <https://pygam.readthedocs.io/en/latest/notebooks/tour_of_pygam.html#Distribution:>`_.
     link
-        Name of the link function. Available functions can be found
+        Name of the link function. Available link functions can be found
         `here <https://pygam.readthedocs.io/en/latest/notebooks/tour_of_pygam.html#Link-function:>`_.
     max_iter
         Maximum number of iterations for optimization.

@@ -507,10 +507,7 @@ class Plottable(KernelHolder, Property):
             Plot only these lineages. If `None`, plot all lineages.
         cluster_key
             Key from :paramref:`adata` ``.obs`` for plotting categorical observations.
-        mode
-            One of following:
-                - `'embedding'` - plot the embedding while coloring in the absorption probabilities.
-                - `'time'` - plot the pseudotime on x-axis and the absorption probabilities on y-axis.
+        %(time_mode)s
         time_key
             Key from :paramref:`adata` ``.obs`` to use as a pseudotime ordering of the cells.
         title

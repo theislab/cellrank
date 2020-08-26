@@ -73,9 +73,9 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
     obsp_key
         Key in ``obj.obsp`` when ``obj`` is an :class:`anndata.AnnData` object.
     g2m_key
-        Key from :paramref:`adata` ``.obs``. Can be used to detect cell-cycle driven start- or endpoints.
+        Key in :paramref:`adata` ``.obs``. Can be used to detect cell-cycle driven start- or endpoints.
     s_key
-        Key from :paramref:`adata` ``.obs``. Can be used to detect cell-cycle driven start- or endpoints.
+        Key in :paramref:`adata` ``.obs``. Can be used to detect cell-cycle driven start- or endpoints.
     write_to_adata
         Whether to write the transition matrix to :paramref:`adata` ``.obsp``.
     key_added
@@ -252,7 +252,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         Parameters
         ----------
         keys
-            Comma separated sequence of keys defining the recurrent classes.
+            Keys defining the recurrent classes.
         check_irred
             Check whether the transition matrix is irreducible.
         solver
@@ -268,7 +268,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             If `None`, it is determined automatically. If no installation is found, defaults to
             :func:`scipy.sparse.linalg.gmres`.
         absorption_pseudotime
-            Whether to compute pseudotime based on mean time to absorption to all absorbing states and its variance.
+            Whether to compute pseudotime based on mean time to absorption to all absorbing states and
+            optionally its variance.
             Valid options are `None`, `'mean'`, `'var'`.
         time_to_absorption
             Whether to compute mean time to absorption and its variance to specific absorbing states.
@@ -302,7 +303,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 - :paramref:`{aptv}` - variance of the pseudotime.
                   Only available if ``absorption_time_moments`` is `'var'`.
                 - :paramref:`{lat}` - times until absorption to individual absorbing states and optionally
-                  their variances saved as ``'{{lineage}}_mean'`` and ``'{{lineage}}_var'``, respectively,
+                  their variances saved as ``'{{lineage}} mean'`` and ``'{{lineage}} var'``, respectively,
                   for each lineage specified in ``time_to_absorption``.
         """
 
@@ -557,7 +558,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             Key from :paramref:`adata` ``.layers``.
         use_raw
             Whether or not to use :paramref:`adata` ``.raw`` to correlate gene expression.
-            If using a layer other than `X`, this must be set to `False`.
+            If using a layer other than ``.X``, this must be set to `False`.
         return_drivers
             Whether to return the lineage drivers as :class:`pandas.DataFrame`.
 
@@ -567,7 +568,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             Updates :paramref:`adata` ``.var`` or :paramref:`adata` ``.raw.var``, depending on ``use_raw``
             with lineage drivers saved as columns of the form ``{{direction}} {{lineages}}``.
             Also updates the following fields:
-                - `.{lin_drivers}` - the driver genes for each lineage.
+                - :paramref:`{lin_drivers}` - the driver genes for each lineage.
             If ``return_drivers=True``, returns the lineage drivers as :class:`pandas.DataFrame`.
         """
 

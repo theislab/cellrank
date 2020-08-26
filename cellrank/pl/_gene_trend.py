@@ -87,7 +87,7 @@ def gene_trends(
     %(model)s
     %(genes)s
     lineages
-        Names of the lineages which to plot. If `None`, plot all lineages.
+        Names of the lineages to plot. If `None`, plot all lineages.
     %(backward)s
     data_key
         Key in ``adata.layers`` or `'X'` for ``adata.X`` where the data is stored.
@@ -100,7 +100,7 @@ def gene_trends(
     hide_cells
         If `True`, hide all the cells.
     perc
-        Percentile for colors. Valid values are in range `[0, 100]`.
+        Percentile for colors. Valid values are in `[0, 100]`.
         This can improve visualization. Can be specified separately for each lineage separately.
     lineage_cmap
         Colormap to use when coloring in the lineages. Only used when ``same_plot=True``. If `None`,
