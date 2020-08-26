@@ -186,8 +186,8 @@ class BaseModel(ABC):
             Consider only cells with weights > ``threshold`` when estimating the test endpoint.
             If `None`, use the median of the weights.
         weight_threshold
-            Set all weights below ``weight_threshold`` to either `0` if :class:`float`,
-            or if :class:`tuple`, to the second value.
+            Set all weights below ``weight_threshold`` to either `0` if a :class:`float`,
+            or if a :class:`tuple`, to the second value.
         filter_dropouts
             Filter out all cells with expression lower than this.
         n_test_points

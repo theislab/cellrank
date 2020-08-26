@@ -18,7 +18,7 @@ AnnData = TypeVar("AnnData")
 @d.dedent
 def lineages(
     adata: AnnData,
-    estimator: type(BaseEstimator) = GPCCA,
+    estimator: BaseEstimator = GPCCA,
     backward: bool = False,
     copy: bool = False,
     return_estimator: bool = False,
@@ -48,7 +48,7 @@ def lineages(
     ----------
     %(adata)s
     estimator
-        Estimator to use to compute the lineage probabilities.
+        Estimator class to use to compute the lineage probabilities.
     %(backward)s
     copy
         Whether to update the existing ``adata`` object or to return a copy.

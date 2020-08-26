@@ -65,7 +65,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
     ----------
     obj
         Either a :class:`cellrank.tl.Kernel` object, an :class:`anndata.AnnData` object which
-        stores the transition matrix in `.obsp` attribute or :mod:`numpy` or :mod:`scipy` array.
+        stores the transition matrix in ``.obsp`` attribute or :mod:`numpy` or :mod:`scipy` array.
     inplace
         Whether to modify :paramref:`adata` object inplace or make a copy.
     read_from_adata
@@ -198,6 +198,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         -------
         None
             Nothing, but updates the following fields:
+
                 - :paramref:`{fsp}`
                 - :paramref:`{fs}`
         """
@@ -274,7 +275,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
             If a :class:`dict`, can be specified as ``{{'Alpha': 'var', ...}}`` to also compute variance.
             In case when states are a :class:`tuple`, time to absorption will be computed to the subset of these states,
-            such as `[('Alpha', 'Beta'), ...]` or `{{('Alpha', 'Beta'): 'mean', ...}}`.
+            such as ``[('Alpha', 'Beta'), ...]`` or ``{{('Alpha', 'Beta'): 'mean', ...}}``.
 
             It might be beneficial to disable the progress bar as ``show_progress_bar=False``, because
             many linear systems are being solved.
@@ -301,7 +302,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 - :paramref:`{aptv}` - variance of the pseudotime.
                   Only available if ``absorption_time_moments`` is `'var'`.
                 - :paramref:`{lat}` - times until absorption to individual absorbing states and optionally
-                  their variances saved as `'{{lineage}}_mean'` and `'{{lineage}}_var'`, respectively,
+                  their variances saved as ``'{{lineage}}_mean'`` and ``'{{lineage}}_var'``, respectively,
                   for each lineage specified in ``time_to_absorption``.
         """
 
@@ -562,13 +563,11 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
         Returns
         -------
-        None
+        :class:`pandas.DataFrame` or :obj:`None`
             Updates :paramref:`adata` ``.var`` or :paramref:`adata` ``.raw.var``, depending on ``use_raw``
             with lineage drivers saved as columns of the form ``{{direction}} {{lineages}}``.
             Also updates the following fields:
-                - `.{lin_drivers}` - the lineage drivers for each lineage.
-
-        :class:`pandas.DataFrame`
+                - `.{lin_drivers}` - the driver genes for each lineage.
             If ``return_drivers=True``, returns the lineage drivers as :class:`pandas.DataFrame`.
         """
 
@@ -877,6 +876,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         -------
         None
             Nothing, just makes available the following fields:
+
                 - :paramref:`{fsp}`
                 - :paramref:`{fs}`
                 - :paramref:`{ap}`

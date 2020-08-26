@@ -174,6 +174,7 @@ class KernelExpression(ABC):
         -------
         None
             Updates the underlying :paramref:`adata` object with the following fields:
+
                 - .obsp['T_{fwd, bwd}_``key_added``'] - transition matrix.
                 - .uns['T_{fwd, bwd}_``key_added``_params'] - parameters used for calculation.
         """

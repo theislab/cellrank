@@ -106,6 +106,7 @@ class CFLARE(BaseEstimator, Eigen):
         -------
         None
             Nothing, but updates the following fields:
+
                 - :paramref:`{fsp}`
                 - :paramref:`{fs}`
         """
@@ -343,6 +344,7 @@ class CFLARE(BaseEstimator, Eigen):
         -------
         None
             Nothing, just makes available the following fields:
+
                 - :paramref:`{fsp}`
                 - :paramref:`{fs}`
                 - :paramref:`{ap}`
