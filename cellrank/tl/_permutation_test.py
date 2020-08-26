@@ -68,7 +68,7 @@ def _permutation_test(
     ----------
     %(adata)s
     cluster_key
-        Key in :paramref:`adata` `.obs` that contains the clusters.
+        Key in ``adata.obs`` that contains the clusters.
     cluster1
         Name of the first cluster to compare.
     cluster2
@@ -87,7 +87,7 @@ def _permutation_test(
     seed
         Random seed.
     **kwargs
-        Keyword arguments for :paramref:`dist_measure`.
+        Keyword arguments for ``dist_measure``.
 
     Returns
     -------
@@ -196,7 +196,7 @@ def _counts(
     ----------
     %(adata)s
     cluster_key
-        Key in :paramref:`adata` `.obs` to access the cluster names.
+        Key in ``adata.obs`` to access the cluster names.
     clusters
         List of clusters to consider. If `None`, all clusters are considered.
     n_samples
@@ -210,7 +210,7 @@ def _counts(
     """
 
     if cluster_key not in adata.obs:
-        raise KeyError(f"Unable to find cluster key`{cluster_key!r}` in `adata.obs`.")
+        raise KeyError(f"Unable to find cluster key `{cluster_key!r}` in `adata.obs`.")
 
     if n_samples <= 0:
         raise ValueError(f"Number of samples must be positive, found `{n_samples}`.")
@@ -264,7 +264,7 @@ def _cramers_v(x: List[float], y: List[float]) -> float:
     Returns
     -------
     float
-        Cramer's v statistic for the :paramref:`x`, :paramref:`y` association.
+        Cramer's v statistic for the ``x`, ``y` association.
     """
 
     #  Taken from: https://github.com/shakedzy/dython
