@@ -70,7 +70,6 @@ def cluster_fates(
     %(adata)s
     mode
         Type of plot to show. Valid options are:
-
             - `{m.BAR.s!r}` - barplot, one panel per cluster.
             - `{m.PAGA.s!r}` - scanpy's PAGA, one per %(root_or_final)s state, colored in by fate.
             - `{m.PAGA_PIE.s!r}` - scanpy's PAGA with pie charts indicating aggregated fates.
@@ -89,7 +88,7 @@ def cluster_fates(
     show_cbar
         Whether to show colorbar when ``mode={m.PAGA_PIE.s!r}``.
     ncols
-        Number of columns when ``mode={m.BAR.s!r}`` or ``{m.PAGA.s!r}``.
+        Number of columns when ``mode={m.BAR.s!r}`` or ``mode={m.PAGA.s!r}``.
     sharey
         Whether to share y-axis when ``mode={m.BAR.s!r}``.
     figsize
