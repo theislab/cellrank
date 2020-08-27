@@ -206,6 +206,18 @@ class TestMapNamesAndColors:
         assert isinstance(colors, list)
         np.testing.assert_array_equal(colors, ["#bb2200", "#ee6655", "#008000"])
 
+    def test_more_colors_than_reference_categories(self):
+        x = pd.Series(["a", "b", np.nan, "b", np.nan]).astype("category")
+        y = pd.Series(["b", np.nan, np.nan, "d", "a"]).astype("category")
+
+        res, colors = _map_names_and_colors(
+            x, y, colors_reference=["red", "green", "blue", "yellow"]
+        )
+
+        assert isinstance(res, pd.Series)
+        assert isinstance(colors, list)
+        np.testing.assert_array_equal(colors, ["#bb2200", "#ee6655", "#008000"])
+
 
 class TestProcessSeries:
     def test_not_categorical(self):
