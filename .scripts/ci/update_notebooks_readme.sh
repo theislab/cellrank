@@ -10,7 +10,7 @@ if [[ -n "${DEPLOY_TOKEN+x}" ]]; then
   cp ../README.rst .
 
   git add "README.rst"
-  git commit -m "Update README.rst"
+  git commit -m "[ci skip] Update README.rst"
   git push "https://$DEPLOY_TOKEN@${ORIGIN:8}"
 
   cd ..

@@ -81,7 +81,14 @@ deploy:
       condition: -n ${DEPLOY_TOKEN+x}
 
   - provider: script
-    script: ./.scripts/ci/upload_bioconda.sh
+    script: ./.scripts/ci/upload_bioconda.sh  # this just modifies a private repo
     on:
       tags: true
       condition: -n ${DEPLOY_TOKEN+x}
+
+notifications:
+  email:
+    recipients:
+      - info@cellrank.org
+    on_success: never
+    on_failure: always
