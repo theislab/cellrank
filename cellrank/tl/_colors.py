@@ -188,18 +188,18 @@ def _map_names_and_colors(
             f"Query series must be `categorical`, found `{infer_dtype(series_query)}`."
         )
     if not np.all(series_reference.index == series_query.index):
-        raise ValueError("Series indices do not match, cannot map names/colors.")
+        raise ValueError("Series indices do not match, cannot map names and colors.")
 
     process_colors = colors_reference is not None
     if process_colors:
         if len(colors_reference) < len(series_reference.cat.categories):
             raise ValueError(
-                f"Length of reference colors `{len(colors_reference)}` is smaller than the "
+                f"Length of reference colors `{len(colors_reference)}` is smaller than "
                 f"length of reference series `{len(series_reference.cat.categories)}`."
             )
         colors_reference = colors_reference[: len(series_reference.cat.categories)]
         if not all(mcolors.is_color_like(c) for c in colors_reference):
-            raise ValueError("Not all colors are color-like.")
+            raise ValueError("Not all colors are valid colors.")
 
     # create dataframe to store the associations between reference and query
     cats_query = series_query.cat.categories
