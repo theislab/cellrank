@@ -185,6 +185,7 @@ class TestCFLARE:
         assert not np.shares_memory(l_iter.X, l_iter_petsc.X)  # sanity check
         np.testing.assert_allclose(l_iter.X, l_iter_petsc.X, rtol=0, atol=tol)
 
+    @pytest.mark.skip("previous implementation, may be reintroduced")
     def test_compute_absorption_probabilities_mean_time(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
@@ -207,6 +208,7 @@ class TestCFLARE:
         assert (pt.min(), pt.max()) == (0, 1)
         assert mc._get(P.ABS_PT_VAR) is None
 
+    @pytest.mark.skip("previous implementation, may be reintroduced")
     def test_compute_absorption_probabilities_mean_var(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix()
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
@@ -278,6 +280,30 @@ class TestCFLARE:
         np.testing.assert_array_equal(at.index, adata_large.obs_names)
         np.testing.assert_array_equal(at.columns, ["0 mean", "0 var"])
 
+    def test_compute_absorption_probabilities_lineage_absorption_all(
+        self, adata_large: AnnData
+    ):
+        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+        tol = 1e-6
+
+        mc = cr.tl.estimators.CFLARE(final_kernel)
+        mc.compute_eigendecomposition(k=5)
+        mc.compute_final_states(use=2)
+
+        # compute lin probs using direct solver
+        mc.compute_absorption_probabilities(
+            solver="gmres", use_petsc=False, tol=tol, time_to_absorption={"all": "var"}
+        )
+        name = ", ".join(mc._get(P.ABS_PROBS).names)
+        at = mc._get(P.LIN_ABS_TIMES)
+
+        assert isinstance(at, pd.DataFrame)
+        np.testing.assert_array_equal(at.index, adata_large.obs_names)
+        np.testing.assert_array_equal(at.columns, [f"{name} mean", f"{name} var"])
+
+    @pytest.mark.skip("previous implementation, may be reintroduced")
     def test_compute_absorption_probabilities_absorption_matches_all(
         self, adata_large: AnnData
     ):
