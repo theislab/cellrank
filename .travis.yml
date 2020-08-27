@@ -78,13 +78,15 @@ deploy:
     skip_cleanup: true  # necessary for vendorization
     on:
       tags: true
-      condition: -n ${DEPLOY_TOKEN+x}
+      branch: master
+      condition: -n ${DEPLOY_TOKEN+x} && $TRAVIS_EVENT_TYPE == "push"
 
   - provider: script
-    script: ./.scripts/ci/upload_bioconda.sh  # this just modifies a private repo
+    script: ./.scripts/ci/upload_bioconda.sh  # this just modifies a private bioconda-recipes repo
     on:
       tags: true
-      condition: -n ${DEPLOY_TOKEN+x}
+      branch: master
+      condition: -n ${DEPLOY_TOKEN+x} && $TRAVIS_EVENT_TYPE == "push"
 
 notifications:
   email:
