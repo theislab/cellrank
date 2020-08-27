@@ -1583,18 +1583,18 @@ def _densify_squeeze(x: Union[spmatrix, np.ndarray], dtype=np.float32) -> np.nda
 
 
 def _calculate_absorption_time_moments(
-    q: Union[np.ndarray, spmatrix],
+    Q: Union[np.ndarray, spmatrix],
     trans_indices: np.ndarray,
     n: int,
     calculate_variance: bool = False,
     **kwargs,
-) -> Tuple[np.ndarray, np.ndarray, Optional[np.ndarray], Optional[np.ndarray]]:
+) -> Tuple[np.ndarray, Optional[np.ndarray]]:
     """
     Calculate the mean time until absorption and optionally its variance.
 
     Parameters
     ----------
-    q
+    Q
         Transient-transient submatrix of the transition matrix.
     trans_indices
         Transient indices.
@@ -1607,33 +1607,32 @@ def _calculate_absorption_time_moments(
 
     Returns
     -------
-        Mean time until absorption, pseudotime based on the mean time and it's variance.
-        If ``calculate_variance=False``, then these values are `None`.
+        Mean time until absorption and optionally its variance, based on ``calculate_variance``.
     """
 
     n_jobs = kwargs.pop("n_jobs", None)
     solve_kwargs = _filter_kwargs(_solve_lin_system, **kwargs)
 
-    logg.debug("Calculating mean time to absorption")
+    logg.debug("Calculating mean time to absorption to any absorbing state")
     m = _solve_lin_system(
-        q,
-        np.ones((q.shape[0],), dtype=np.float32),
+        Q,
+        np.ones((Q.shape[0],), dtype=np.float32),
         n_jobs=1,
         use_eye=True,
         **solve_kwargs,
     ).squeeze()
     mean = np.zeros(n, dtype=np.float32)
-    pseudotime = np.ones(n, dtype=np.float32)
-
+    var = None
     mean[trans_indices] = m
-    pseudotime[trans_indices] = 1 - _min_max_scale(m)
 
     if calculate_variance:
-        logg.debug("Calculating variance of time to absorption")
+        logg.debug(
+            "Calculating variance of mean time to absorption to any absorbing state"
+        )
 
-        I = speye(q.shape[0]) if issparse(q) else np.eye(q.shape[0])  # noqa
-        A_t = (I + q).T
-        B_t = (I - q).T
+        I = speye(Q.shape[0]) if issparse(Q) else np.eye(Q.shape[0])  # noqa
+        A_t = (I + Q).T
+        B_t = (I - Q).T
 
         logg.debug("Solving equation (1/2)")
         X = _solve_lin_system(A_t, B_t, n_jobs=n_jobs, **kwargs).T
@@ -1641,16 +1640,12 @@ def _calculate_absorption_time_moments(
 
         logg.debug("Solving equation (2/2)")
         v = _solve_lin_system(X, y, use_eye=False, n_jobs=1, **solve_kwargs).squeeze()
+        assert np.all(v >= 0), f"Encountered negative variance: `{v[v < 0]}`."
 
         var = np.zeros(n, dtype=np.float32)
-        pseudotime_var = var.copy()
-
         var[trans_indices] = v
-        pseudotime_var[trans_indices] = v / ((np.nanmax(m) - np.nanmin(m)) ** 2)
-    else:
-        var = pseudotime_var = None
 
-    return mean, pseudotime, var, pseudotime_var
+    return mean, var
 
 
 def _calculate_lineage_absorption_time_means(
@@ -1687,7 +1682,25 @@ def _calculate_lineage_absorption_time_means(
     :class:`pandas.DataFrame`
         A :class:`pandas.DataFrame. with means and optionally variances of
         mean time to absorption for each lineage in ``lineages``.
+
+        Uses more efficient implementation if compute the time for all lineages.
     """
+
+    res = pd.DataFrame()
+    if len(lineages) == 1 and set(next(iter(lineages.keys()))) == set(ixs.keys()):
+        # use faster implementation in this case
+        name = ", ".join(ixs.keys())
+        res[f"{name} mean"], var = _calculate_absorption_time_moments(
+            Q,
+            trans_indices,
+            n,
+            calculate_variance=next(iter(lineages.values())) == "var",
+            **kwargs,
+        )
+        if var is not None:
+            res[f"{name} var"] = var
+
+        return res
 
     res = pd.DataFrame()
     tmp_ixs, cnt = {}, 0
@@ -1713,7 +1726,7 @@ def _calculate_lineage_absorption_time_means(
         D_j_inv = D_j.copy()
         D_j_inv.data = 1.0 / D_j.data
 
-        logg.debug(f"Calculating mean time to absorption for `{', '.join(lns)!r}`")
+        logg.debug(f"Calculating mean time to absorption to `{name!r}`")
         m = _solve_lin_system(
             D_j_inv @ N_inv @ D_j, np.ones(Q.shape[0]), **kwargs
         ).squeeze()
@@ -1726,7 +1739,7 @@ def _calculate_lineage_absorption_time_means(
         res[f"{name} mean"] = mean
 
         if moment == "var":
-            logg.debug(f"Calculating variance of time to absorption for `{name!r}`")
+            logg.debug(f"Calculating variance of mean time to absorption to `{name!r}`")
 
             logg.debug("Solving equation (1/2)")
             X = _solve_lin_system(D_j + Q @ D_j, N_inv @ D_j, use_eye=False, **kwargs)
@@ -1736,7 +1749,6 @@ def _calculate_lineage_absorption_time_means(
             v = _solve_lin_system(
                 X, y, use_eye=False, n_jobs=1, **no_jobs_kwargs
             ).squeeze()
-
             assert np.all(v >= 0), f"Encountered negative variance: `{v[v < 0]}`."
 
             var = np.empty(n, dtype=np.float64)
