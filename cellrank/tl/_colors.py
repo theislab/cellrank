@@ -187,16 +187,17 @@ def _map_names_and_colors(
         raise TypeError(
             f"Query series must be `categorical`, found `{infer_dtype(series_query)}`."
         )
-    index_query, index_reference = series_query.index, series_reference.index
-    if not np.all(index_reference == index_query):
+    if not np.all(series_reference.index == series_query.index):
         raise ValueError("Series indices do not match, cannot map names/colors.")
 
     process_colors = colors_reference is not None
     if process_colors:
-        if len(series_reference.cat.categories) != len(colors_reference):
+        if len(colors_reference) < len(series_reference.cat.categories):
             raise ValueError(
-                "Length of reference colors does not match length of reference series."
+                f"Length of reference colors `{len(colors_reference)}` is smaller than the "
+                f"length of reference series `{len(series_reference.cat.categories)}`."
             )
+        colors_reference = colors_reference[: len(series_reference.cat.categories)]
         if not all(mcolors.is_color_like(c) for c in colors_reference):
             raise ValueError("Not all colors are color-like.")
 
@@ -277,7 +278,7 @@ def _map_names_and_colors(
 
 
 def _compute_mean_color(color_list: List[str]) -> str:
-    """Compute the mean color."""
+    """Compute mean color."""
 
     if not all(map(lambda c: mcolors.is_color_like(c), color_list)):
         raise ValueError(f"Not all values are valid colors `{color_list}`.")
