@@ -946,13 +946,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
 
         fs_kwargs = {"n_cells": kwargs["n_cells"]} if "n_cells" in kwargs else {}
 
-        if len(self._get(P.META).cat.categories) == 1:
-            # stationary distribution
-            self._set(A.FIN, self._get(P.META))
-            self._set(A.FIN_PROBS, self._get(P.META_PROBS))
-            self._set(A.FIN_COLORS, self._get(A.META_COLORS))
-            self._write_final_states()
-        elif n_lineages is None:
+        if n_lineages is None:
             self.compute_final_states(method="eigengap", **fs_kwargs)
         else:
             self.set_final_states_from_metastable_states(**fs_kwargs)
