@@ -22,5 +22,5 @@ source ~/.config/bioconda/activate
 bioconda-utils autobump recipes/ --packages "$PACKAGE" --no-check-pinnings --exclude ''
 
 git add "recipes/$PACKAGE/meta.yaml"
-git commit -m "Update meta.yaml"
+git commit -m "[skip ci] Update meta.yaml"
 git push "https://$DEPLOY_TOKEN@${ORIGIN:8}"
