@@ -21,7 +21,7 @@ jobs:
   include:
     - name: "Code and reStructuredText analysis"
       os: linux
-      python: "3.8"
+      python: "3.6"
       env:
         - USE_SLEPC=false
       script:
