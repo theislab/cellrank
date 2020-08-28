@@ -15,6 +15,7 @@ git add -f "$FILE"
 git commit --allow-empty -m "Update README.rst: $TRAVIS_BUILD_NUMBER"
 
 if [[ $? -eq 0 ]]; then
+    echo "Pushing changes"
     git push "https://$DEPLOY_TOKEN@${ORIGIN:8}" --quiet
 else
     echo "Committing returned non-zero exit status, this shouldn't have happened"

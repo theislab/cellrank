@@ -8,12 +8,6 @@ elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
     if [[ "$CACHE_NAME" == "krylov" ]]; then
         pip install -e".[krylov,test]"
         python -c "import slepc; import petsc;"
-        if [[ $? -eq 0 ]]; then
-            echo "Successfully installed SLEPc and PETSc"
-        else
-            echo "Unable to import SLEPc or PETSc"
-            exit 1
-        fi
     else
         pip install -e".[test]"
     fi
