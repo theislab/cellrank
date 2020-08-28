@@ -7,7 +7,7 @@ elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
     if [[ ! -z "${DEPLOY_TOKEN+x}" ]]; then
         echo "Testing with coverage"
         python -m pytest --cov-config=.coveragerc --cov=./ --cov-report=xml
-    elif [[ "$USE_SLEPC" == "true"  ]]
+    elif [[ "$USE_SLEPC" == "true"  ]]; then
         echo "Testing without coverage"
         python -m pytest --workers 1
     else
