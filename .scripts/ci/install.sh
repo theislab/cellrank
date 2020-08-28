@@ -11,10 +11,8 @@ elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
     else
         pip install -e".[test]"
     fi
-    if [[ ! -z "${DEPLOY_TOKEN+x}" ]]; then
-        pip install pytest-cov
-        pip install codecov
-    fi
+    pip install pytest-cov
+    pip install codecov
 fi
 
 python-vendorize
