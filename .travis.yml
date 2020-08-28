@@ -62,7 +62,7 @@ install:
   - ./.scripts/ci/install.sh || travis_terminate 1
 
 script:
-  - travis_wait 15 ./.scripts/ci/test.sh
+  - ./.scripts/ci/test.sh
 
 after_success:
   - ./.scripts/ci/upload_coverage.sh
