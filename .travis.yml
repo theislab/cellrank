@@ -66,7 +66,10 @@ script:
 
 after_success:
   - ./.scripts/ci/upload_coverage.sh
-  - ./.scripts/ci/update_notebooks_readme.sh
+
+before_deploy:
+  - git config --global user.name "TravisCI"
+  - git config --global user.email "travis@travis-ci.com"
 
 deploy:
   - provider: pypi
@@ -82,9 +85,16 @@ deploy:
       condition: $TRAVIS_EVENT_TYPE == "push" && ! -z "${DEPLOY_TOKEN+x}"
 
   - provider: script
-    script: ./.scripts/ci/upload_bioconda.sh  # this just modifies a private bioconda-recipes repo
+    script: ./.scripts/ci/update_bioconda.sh
     on:
       tags: true
+      branch: master
+      condition: $TRAVIS_EVENT_TYPE == "push" && ! -z "${DEPLOY_TOKEN+x}"
+
+  - provider: script
+    script: ./.scripts/ci/update_notebooks.sh
+    on:
+      # we don't require tags here because we want the latest changes in the notebooks/docs
       branch: master
       condition: $TRAVIS_EVENT_TYPE == "push" && ! -z "${DEPLOY_TOKEN+x}"
 
