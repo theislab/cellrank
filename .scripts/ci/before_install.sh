@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -e
+set -ev
 
 if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
     pip3 install -U pip
