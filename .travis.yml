@@ -16,7 +16,8 @@ env:
 jobs:
   allow_failures:
     - name: "Allow failures for SLEPc"
-      if: env(USE_SLEPC) = "true"
+      env:
+        USE_SLEPC=true
   fast_finish: true
   include:
     - name: "Code and reStructuredText analysis"
