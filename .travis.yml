@@ -79,14 +79,14 @@ deploy:
     on:
       tags: true
       branch: master
-      condition: -n ${DEPLOY_TOKEN+x} && $TRAVIS_EVENT_TYPE == "push"
+      condition: $TRAVIS_EVENT_TYPE == "push" && ! -z "${DEPLOY_TOKEN+x}"
 
   - provider: script
     script: ./.scripts/ci/upload_bioconda.sh  # this just modifies a private bioconda-recipes repo
     on:
       tags: true
       branch: master
-      condition: -n ${DEPLOY_TOKEN+x} && $TRAVIS_EVENT_TYPE == "push"
+      condition: $TRAVIS_EVENT_TYPE == "push" && ! -z "${DEPLOY_TOKEN+x}"
 
 notifications:
   email:
