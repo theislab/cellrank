@@ -27,6 +27,8 @@ jobs:
       script:
         - ./.scripts/ci/static_analysis.sh
       after_success: skip
+      # If script returns a non-zero exit code, the build is failed, but continues to run before being marked as failed
+      after_failure: skip
 
     - name: "Python 3.6.5 on macOS"
       language: bash
