@@ -620,7 +620,9 @@ class Kernel(UnaryKernelExpression, ABC):
         yield self
 
     def _compute_transition_matrix(
-        self, matrix: spmatrix, density_normalize: bool = True,
+        self,
+        matrix: spmatrix,
+        density_normalize: bool = True,
     ):
         # density correction based on node degrees in the KNN graph
         matrix = csr_matrix(matrix) if not isspmatrix_csr(matrix) else matrix

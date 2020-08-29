@@ -134,12 +134,14 @@ class TestCFLARE:
 
         assert _lin_names(AbsProbKey.FORWARD) in mc.adata.uns.keys()
         np.testing.assert_array_equal(
-            mc._get(P.ABS_PROBS).names, mc.adata.uns[_lin_names(AbsProbKey.FORWARD)],
+            mc._get(P.ABS_PROBS).names,
+            mc.adata.uns[_lin_names(AbsProbKey.FORWARD)],
         )
 
         assert _colors(AbsProbKey.FORWARD) in mc.adata.uns.keys()
         np.testing.assert_array_equal(
-            mc._get(P.ABS_PROBS).colors, mc.adata.uns[_colors(AbsProbKey.FORWARD)],
+            mc._get(P.ABS_PROBS).colors,
+            mc.adata.uns[_colors(AbsProbKey.FORWARD)],
         )
         np.testing.assert_allclose(mc._get(P.ABS_PROBS).X.sum(1), 1)
 
@@ -250,7 +252,10 @@ class TestCFLARE:
 
         # compute lin probs using direct solver
         mc.compute_absorption_probabilities(
-            solver="gmres", use_petsc=False, tol=tol, time_to_absorption="0",
+            solver="gmres",
+            use_petsc=False,
+            tol=tol,
+            time_to_absorption="0",
         )
         at = mc._get(P.LIN_ABS_TIMES)
 

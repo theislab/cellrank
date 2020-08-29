@@ -189,7 +189,11 @@ def _(
 
 
 def _solve_many_sparse_problems(
-    mat_b: spmatrix, mat_a: spmatrix, solver: LinSolver, tol: float, queue: Queue,
+    mat_b: spmatrix,
+    mat_a: spmatrix,
+    solver: LinSolver,
+    tol: float,
+    queue: Queue,
 ) -> Tuple[np.ndarray, int]:
     """
     Solve ``mat_a * x = mat_b`` efficiently using an iterative solver.
