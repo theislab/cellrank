@@ -105,7 +105,9 @@ def wrap(numpy_func: Callable) -> Callable:
         lin = None
         if res.shape[0] == array.shape[is_t]:
             lin = Lineage(
-                res, names=[f"{fname} of {', '.join(array.names)}"], colors=["grey"],
+                res,
+                names=[f"{fname} of {', '.join(array.names)}"],
+                colors=["grey"],
             )
 
         if res.shape[1] == array.shape[1 - is_t]:

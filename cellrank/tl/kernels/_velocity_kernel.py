@@ -483,13 +483,17 @@ def _run_deterministic(
                 p, c = _get_probs_for_zero_vec(len(nbhs_ixs))
             else:
                 p, c = _predict_transition_probabilities_numpy(
-                    v, W, softmax_scale=softmax_scale,
+                    v,
+                    W,
+                    softmax_scale=softmax_scale,
                 )
         else:
             # compute how likely all neighbors are to transition to this cell
             V = velocity[nbhs_ixs, :]
             p, c = _predict_transition_probabilities_numpy(
-                V, -1 * W, softmax_scale=softmax_scale,
+                V,
+                -1 * W,
+                softmax_scale=softmax_scale,
             )
 
         probs_cors[0, starts[i] : starts[i] + n_neigh] = p
@@ -540,7 +544,11 @@ def _run_mc(
         W = expression[nbhs_ixs, :] - expression[ix, :]
 
         # much faster (1.8x than sampling only 1 if average)
-        samples = _random_normal(expectation[ix], variance[ix], n_samples=n_samples,)
+        samples = _random_normal(
+            expectation[ix],
+            variance[ix],
+            n_samples=n_samples,
+        )
         if average:
             probs_cors_tmp = np.empty((n_samples, n_neigh, 2))
             for j in prange(n_samples):
