@@ -2,6 +2,6 @@
 
 set -ev
 
-pip install black rstcheck
-black . --check --diff
+pip install black==20.8b1 rstcheck
+black . --check --diff --color
 rstcheck . --recursive
