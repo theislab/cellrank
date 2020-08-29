@@ -245,7 +245,8 @@ class TestLowLevelPipeline:
 
         # select a subset of states
         estimator_fwd.set_final_states_from_metastable_states(
-            n_cells=16, names=estimator_fwd.metastable_states.cat.categories[:2],
+            n_cells=16,
+            names=estimator_fwd.metastable_states.cat.categories[:2],
         )
         estimator_fwd.plot_final_states()
 
@@ -284,7 +285,8 @@ class TestLowLevelPipeline:
 
         # select a subset of states
         estimator_bwd.set_final_states_from_metastable_states(
-            n_cells=16, names=estimator_bwd.metastable_states.cat.categories[:2],
+            n_cells=16,
+            names=estimator_bwd.metastable_states.cat.categories[:2],
         )
         estimator_bwd.plot_final_states()
 

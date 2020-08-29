@@ -74,7 +74,10 @@ del version, get_version
 
 
 def compare(
-    *, kind: str = "adata", dirname: Union[str, Path] = None, tol: int = TOL,
+    *,
+    kind: str = "adata",
+    dirname: Union[str, Path] = None,
+    tol: int = TOL,
 ) -> Callable:
     def _compare_images(
         expected_path: Union[str, Path], actual_path: Union[str, Path]
@@ -343,7 +346,9 @@ class TestClusterFates:
         adata, _ = adata_cflare_fwd
         with pytest.raises(ValueError):
             cr.pl.cluster_fates(
-                adata, cluster_key="clusters", mode="foobar",
+                adata,
+                cluster_key="clusters",
+                mode="foobar",
             )
 
     def test_paga_pie_wrong_legend_kind_1(self, adata_cflare_fwd):
@@ -459,7 +464,13 @@ class TestClusterLineages:
     def test_cluster_lineage(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.cluster_lineage(
-            adata, model, GENES[:10], "0", time_key="latent_time", dpi=DPI, save=fpath,
+            adata,
+            model,
+            GENES[:10],
+            "0",
+            time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
         )
 
     @compare()
@@ -954,7 +965,12 @@ class TestGeneTrend:
     def test_trends(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.gene_trends(
-            adata, model, GENES[:3], data_key="Ms", dpi=DPI, save=fpath,
+            adata,
+            model,
+            GENES[:3],
+            data_key="Ms",
+            dpi=DPI,
+            save=fpath,
         )
 
     @compare()
@@ -974,7 +990,13 @@ class TestGeneTrend:
     def test_trends_same_plot(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.gene_trends(
-            adata, model, GENES[:3], data_key="Ms", same_plot=True, dpi=DPI, save=fpath,
+            adata,
+            model,
+            GENES[:3],
+            data_key="Ms",
+            same_plot=True,
+            dpi=DPI,
+            save=fpath,
         )
 
     @compare()
@@ -1009,7 +1031,13 @@ class TestGeneTrend:
     def test_trends_sharey(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.gene_trends(
-            adata, model, GENES[:3], data_key="Ms", sharey="row", dpi=DPI, save=fpath,
+            adata,
+            model,
+            GENES[:3],
+            data_key="Ms",
+            sharey="row",
+            dpi=DPI,
+            save=fpath,
         )
 
     @compare()
