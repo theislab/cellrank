@@ -110,6 +110,8 @@ venv.bak/
 
 # documentation
 docs/source/api
+docs/source/auto_examples
+docs/source/gen_modules
 docs/build
 
 # custom folders

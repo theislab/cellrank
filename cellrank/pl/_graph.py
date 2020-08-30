@@ -73,10 +73,6 @@ def graph(
     transitions between them. Note that limiting edges visualized using ``top_n_edges`` will speed things up,
     as well as reduce the visual clutter.
 
-    .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/graph.png
-       :width: 400px
-       :align: center
-
     Parameters
     ----------
     data

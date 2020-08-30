@@ -76,10 +76,6 @@ def gene_trends(
     function accepts any model based off :class:`cellrank.ul.models.BaseModel` to fit gene expression,
     where we take the lineage weights into account in the loss function.
 
-    .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/gene_trends.png
-       :width: 400px
-       :align: center
-
     Parameters
     ----------
     %(adata)s

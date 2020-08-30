@@ -195,11 +195,6 @@ class Eigen(VectorPlottable, Decomposable):
         """
         Plot the top eigenvalues in real or complex plane.
 
-        .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/real_spectrum.png
-           :alt: image of real spectrum
-           :width: 400px
-           :align: center
-
         Parameters
         ----------
         n
@@ -453,11 +448,6 @@ class Schur(VectorPlottable, Decomposable):
     ):
         """
         Plot the Schur matrix.
-
-        .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/schur_matrix.png
-           :alt: image of schur matrix
-           :width: 400px
-           :align: center
 
         Parameters
         ----------

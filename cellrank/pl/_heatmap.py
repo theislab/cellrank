@@ -88,10 +88,6 @@ def heatmap(
     """
     Plot a heatmap of smoothed gene expression along specified lineages.
 
-    .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/heatmap.png
-       :width: 400px
-       :align: center
-
     Parameters
     ----------
     %(adata)s

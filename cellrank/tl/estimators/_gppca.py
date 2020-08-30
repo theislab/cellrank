@@ -495,12 +495,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         **kwargs,
     ) -> None:
         """
-        Plot the coarse-grained transition matrix of the metastable states.
-
-        .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/coarse_T.png
-           :alt: image of coarse transition matrix
-           :width: 400px
-           :align: center
+        Plot the coarse-grained transition matrix between metastable states.
 
         Parameters
         ----------
