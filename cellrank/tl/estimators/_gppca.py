@@ -324,11 +324,11 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             One of following:
 
                 - `'eigengap'` - select the number of states based on the eigengap of the transition matrix.
-                - `'eigengap_coarse'` - select the number of states based on the eigengap of the diagonal \
+                - `'eigengap_coarse'` - select the number of states based on the eigengap of the diagonal
                     of the coarse-grained transition matrix.
-                - `'top_n'` - select top :paramref:`n_main_states` based on the probability of the diagonal \
+                - `'top_n'` - select top :paramref:`n_main_states` based on the probability of the diagonal
                     of the coarse-grained transition matrix.
-                - `'min_self_prob'` - select states which have the given minimum probability of the diagonal \
+                - `'min_self_prob'` - select states which have the given minimum probability of the diagonal
                     of the coarse-grained transition matrix.
         %(n_cells)s
         alpha
