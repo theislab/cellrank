@@ -15,7 +15,11 @@ _datasets = dict(  # noqa
     pancreas=(
         "datasets/endocrinogenesis_day15.5.h5ad",
         "https://github.com/theislab/cellrank_notebooks/raw/master/datasets/pancreas/endocrinogenesis_day15.5.h5ad",
-    )
+    ),
+    pancreas_preprocessed=(
+        "datasets/endocrinogenesis_day15.5_preprocessed.h5ad",
+        "https://github.com/theislab/cellrank_notebooks/raw/master/datasets/pancreas/endocrinogenesis_day15.5_preprocessed.h5ad",  # noqa
+    ),
 )
 
 
@@ -52,3 +56,20 @@ def pancreas() -> AnnData:
     """
 
     return _load_dataset_from_url(*_datasets["pancreas"])
+
+
+@d.dedent
+def pancreas_preprocessed() -> AnnData:
+    """
+    Pancreatic endocrinogenesis from [Panc19]_.
+
+    Note that we subsetted the original data to focus on endocrine development downstream of the Ngn3 low EP cluster,
+    i.e. we only consider cells that have high probability of becoming endocrine.
+
+    This dataset has been preprocessed according to the tutorials.
+
+    Returns
+    -------
+    %(adata)s
+    """
+    return read("/home/michal/preprocessed.h5ad")

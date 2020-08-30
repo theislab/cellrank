@@ -68,6 +68,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx_paramlinks",
     "sphinx.ext.autosummary",
+    "sphinx_gallery.gen_gallery",
     "nbsphinx",
     "sphinx_copybutton",
     "sphinx_last_updated_by_git",
@@ -104,7 +105,6 @@ pygments_style = "sphinx"
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = ["**.ipynb_checkpoints"]
 
-
 # -- Notebooks
 nbsphinx_execute_arguments = [
     "--InlineBackend.figure_formats={'png', 'pdf'}",  # correct figure resize
@@ -120,6 +120,45 @@ nbsphinx_prolog = r"""
       <a href="https://mybinder.org/v2/gh/theislab/cellrank_notebooks/{{ env.config.release|e }}?filepath={{ docname|e }}"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>
     </div>
 """
+
+# -- sphinx gallery
+
+
+def reset_scvelo(gallery_conf, fname):
+    import scvelo as scv
+
+    scv.set_figure_params(style="scvelo", color_map="viridis", format="png")
+
+
+example_dir = HERE.parent.parent / "examples"
+sphinx_gallery_conf = {
+    "image_scrapers": ("matplotlib",),
+    "reset_modules": ("matplotlib", "seaborn", reset_scvelo),
+    "examples_dirs": example_dir,
+    "gallery_dirs": "auto_examples",  # path to where to save gallery generated output
+    "abort_on_example_error": True,
+    "show_memory": True,
+    # "within_subsection_order": FileNameSortKey,
+    "reference_url": {
+        "sphinx_gallery": None,
+    },
+    "compress_images": ("images", "thumbnails", "-o3"),
+    "inspect_global_variables": False,
+    "backreferences_dir": "gen_modules/backreferences",
+    "doc_module": ("cellrank",),
+    "download_all_examples": False,
+    "binder": {
+        # Required keys
+        "org": "theislab",
+        "repo": "cellrank.readthedocs.io",
+        "branch": release,  # Can be any branch, tag, or commit hash. Use a branch that hosts your docs.
+        "binderhub_url": "https://mybinder.org/",
+        "dependencies": "binder/requirements.txt",
+        "notebooks_dir": "notebooks",
+        "use_jupyter_lab": False,
+    },
+}
+sphinx_gallery_conf.pop("binder", None)
 
 # -- Options for HTML output -------------------------------------------------
 

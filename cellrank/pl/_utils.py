@@ -188,10 +188,6 @@ def composition(
     """
     Plot a pie chart for categorical annotation.
 
-    .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/composition.png
-       :width: 400px
-       :align: center
-
     Parameters
     ----------
     %(adata)s

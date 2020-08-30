@@ -61,10 +61,6 @@ def cluster_fates(
     descended from the %(root)s states. For mode `{m.PAGA.s!r}` and `{m.PAGA_PIE.s!r}`,
     we use *PAGA*, see [Wolf19]_.
 
-    .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/cluster_fates.png
-       :width: 400px
-       :align: center
-
     Parameters
     ----------
     %(adata)s

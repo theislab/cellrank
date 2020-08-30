@@ -1,8 +1,10 @@
 -r ../requirements.txt
+memory_profiler>=0.57.0
 nbsphinx>=0.7
 sphinx>=3.2.1
 sphinx-autodoc-annotation
 sphinx-autodoc-typehints>=1.10.3
+sphinx-gallery
 sphinx-paramlinks
 sphinx_copybutton
 sphinx_last_updated_by_git

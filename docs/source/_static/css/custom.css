@@ -71,12 +71,71 @@ html.writer-html5 .rst-content dl[class]:not(.option-list):not(.field-list):not(
 /* Add colon between return tuple element name and type */
 .rst-content dl:not(.docutils) dl > dt .classifier::before { content: ' : ' }
 
+.rst-footer-buttons {
+    margin: 24px 0px 0px 0px;
+}
+
 /* prolog bg */
 .rst-content .note {
     background: #FFC76E;
 }
 
 .rst-content .output_area img {
-   max-width: unset;
-   width: 100% !important;
-   height: auto !important;
+    max-width: unset;
+    width: 100% !important;
+    height: auto !important;
+}
+
+/* sphinx-gallery */
+div.sphx-glr-download a {
+    background-color: #FFC76E !important;
+    background-image: none !important;
+    border-radius: 2px !important;
+    border: 1px solid #f49600 !important;
+    color: #404040 !important;
+    font-weight bold !important;
+    padding: 0.1cm !important;
+    text-align: center !important;
+}
+
+
+div.sphx-glr-download a[href$=".py"] {
+    display: none !important;
+}
+
+div.sphx-glr-download p {
+    margin: 0 !important;
+    width: auto !important;
+}
+
+.sphx-glr-script-out {
+    color: #404040 !important;
+}
+
+p.sphx-glr-signature {
+   display: none !important;
+}
+
+div.sphx-glr-download-link-note {
+   display: none !important;
+}
+
+/* this gets rid of uneven vertical padding */
+div.sphx-glr-download code.download {
+   display: block !important;
+}
+
+.sphx-glr-thumbcontainer {
+    background: none !important;
+    border: 1px solid #f49600 !important;
+    text-align: center !important;
+    min-height: 200px !important;
+}
+
+.sphx-glr-thumbcontainer .headerlink {
+    display: none !important;
+}
+
+div.sphx-glr-thumbcontainer span {
+    font-style: normal !important;
+}

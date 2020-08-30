@@ -35,10 +35,6 @@ def lineages(
     their respective lineage and zero otherwise. For naive cells, these probabilities will be more balanced, reflecting
     the fact that naive cells have the potential to develop towards multiple endpoints.
 
-    .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/lineages.png
-       :width: 400px
-       :align: center
-
     Parameters
     ----------
     %(adata)s
