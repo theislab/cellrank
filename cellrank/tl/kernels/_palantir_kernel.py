@@ -162,6 +162,6 @@ class PalantirKernel(Kernel):
         pk._pseudotime = copy(self.pseudotime)
         pk._params = copy(self._params)
         pk._cond_num = self.condition_number
-        pk._transition_matrix = copy(self._transition_matrix)
+        self._copy_transition_matrix(pk)
 
         return pk

@@ -66,7 +66,7 @@ class PrecomputedKernel(Kernel):
             raise ValueError("Not a valid transition matrix: not all rows sum to 1.")
 
         if adata is None:
-            logg.debug("Creating empty dummy AnnData object")
+            logg.warning("Creating empty `AnnData` object")
             adata = _AnnData(
                 csr_matrix((transition_matrix.shape[0], 1), dtype=np.float32)
             )
