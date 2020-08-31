@@ -216,7 +216,9 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         self._write_final_states(time=kwargs.get("time", None))
 
     @inject_docs(
-        abs_prob=P.ABS_PROBS, diff_pot=P.DIFF_POT, lat=P.LIN_ABS_TIMES,
+        abs_prob=P.ABS_PROBS,
+        diff_pot=P.DIFF_POT,
+        lat=P.LIN_ABS_TIMES,
     )
     def compute_absorption_probabilities(
         self,

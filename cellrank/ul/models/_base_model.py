@@ -38,7 +38,9 @@ class BaseModel(ABC):
     """
 
     def __init__(
-        self, adata: AnnData, model: Any,
+        self,
+        adata: AnnData,
+        model: Any,
     ):
         self._adata = adata
         self._model = model
@@ -491,7 +493,9 @@ class BaseModel(ABC):
 
     @d.dedent
     def default_confidence_interval(
-        self, x_test: Optional[np.ndarray] = None, **kwargs,
+        self,
+        x_test: Optional[np.ndarray] = None,
+        **kwargs,
     ) -> np.ndarray:
         """
         Calculate the confidence interval, if the underlying :paramref:`model` has no method for it.

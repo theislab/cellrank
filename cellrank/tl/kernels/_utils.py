@@ -21,7 +21,9 @@ try:
 
     @jit
     def _predict_transition_probabilities_jax(
-        X: np.ndarray, W: np.ndarray, softmax_scale: float = 1,
+        X: np.ndarray,
+        W: np.ndarray,
+        softmax_scale: float = 1,
     ):
         logg.debug(f"Tracing function of `{W.shape}` dimension")
 
@@ -115,7 +117,9 @@ def norm(array: np.ndarray, axis: int) -> np.ndarray:  # noqa
 # this is faster than using flat array
 @njit(parallel=True)
 def _random_normal(
-    m: np.ndarray, v: np.ndarray, n_samples: int = 1,
+    m: np.ndarray,
+    v: np.ndarray,
+    n_samples: int = 1,
 ):
     """
     Sample number from normal distribution.

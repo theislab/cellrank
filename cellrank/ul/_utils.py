@@ -159,7 +159,9 @@ def _read_graph_data(adata: AnnData, key: str) -> Union[np.ndarray, spmatrix]:
 
 
 def _write_graph_data(
-    adata: AnnData, data: Union[np.ndarray, spmatrix], key: str,
+    adata: AnnData,
+    data: Union[np.ndarray, spmatrix],
+    key: str,
 ):
     """
     Write graph data to :mod:`AnnData`.
