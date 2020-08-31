@@ -991,14 +991,14 @@ class TestMonteCarlo:
 
 
 class TestVelocityKernel:
-    def test_matrix_switch_no_prop(self, adata: AnnData):
+    def test_switch_no_prop(self, adata: AnnData):
         vk = VelocityKernel(adata)
         vk.compute_transition_matrix(mode="deterministic", show_progress_bar=False)
 
         with pytest.raises(ValueError):
             vk.switch_transition_matrix(1)
 
-    def test_matrix_switch_invalid_index(self, adata: AnnData):
+    def test_switch_invalid_index(self, adata: AnnData):
         vk = VelocityKernel(adata)
         vk.compute_transition_matrix(
             mode="propagation", show_progress_bar=False, n_samples=10, n_jobs=4
@@ -1007,7 +1007,7 @@ class TestVelocityKernel:
         with pytest.raises(IndexError):
             vk.switch_transition_matrix(42)
 
-    def test_matrix_switch_normal_run(self, adata: AnnData):
+    def test__switch_normal_run(self, adata: AnnData):
         vk = VelocityKernel(adata)
         vk.compute_transition_matrix(
             mode="propagation", show_progress_bar=False, n_samples=10, n_jobs=4
@@ -1031,3 +1031,141 @@ class TestVelocityKernel:
         )
 
         assert vk.params["softmax_scale"] is not None
+
+    def test_propagation_with_connectivity(self, adata: AnnData):
+        k = (
+            VelocityKernel(adata).compute_transition_matrix(
+                mode="propagation", show_progress_bar=False, n_samples=10, n_jobs=4
+            )
+            + ConnectivityKernel(adata).compute_transition_matrix()
+        )
+        k.compute_transition_matrix()
+
+        assert isinstance(k.transition_matrices, tuple)
+        assert len(k.transition_matrices) == 10
+        assert k.transition_matrix is k.transition_matrices[k._current_ix]
+
+    def test_propagation_with_connectivity_copy(self, adata: AnnData):
+        k = (
+            VelocityKernel(adata).compute_transition_matrix(
+                mode="propagation", show_progress_bar=False, n_samples=10, n_jobs=4
+            )
+            + ConnectivityKernel(adata).compute_transition_matrix()
+        )
+        k.compute_transition_matrix()
+
+        k2 = k.copy()
+
+        assert isinstance(k2.transition_matrices, tuple)
+        assert len(k2.transition_matrices) == 10
+        assert k2.transition_matrix is k2.transition_matrices[k._current_ix]
+
+        for i, tmat in enumerate(k2.transition_matrices):
+            assert tmat is not k.transition_matrices[i]
+
+    def test_propagation_different_n_samples(self, adata: AnnData):
+        vk1 = VelocityKernel(adata).compute_transition_matrix(
+            mode="propagation", show_progress_bar=False, n_samples=10, n_jobs=4
+        )
+        vk2 = VelocityKernel(adata).compute_transition_matrix(
+            mode="propagation", show_progress_bar=False, n_samples=11, n_jobs=4
+        )
+
+        with pytest.raises(ValueError):
+            _ = vk1 + vk2
+
+    def test_propagation_same_index(self, adata: AnnData):
+        vk1 = VelocityKernel(adata).compute_transition_matrix(
+            mode="propagation", show_progress_bar=False, n_samples=10, n_jobs=4
+        )
+        vk1.switch_transition_matrix(5)
+
+        vk2 = VelocityKernel(adata).compute_transition_matrix(
+            mode="propagation", show_progress_bar=False, n_samples=10, n_jobs=4
+        )
+        vk2.switch_transition_matrix(5)
+
+        assert vk1._current_ix == 5
+        assert vk2._current_ix == 5
+
+        k = (vk1 + vk2).compute_transition_matrix()
+
+        assert k._current_ix == 5
+        assert k.transition_matrix is k.transition_matrices[5]
+        assert isinstance(k.transition_matrices, tuple)
+        assert len(k.transition_matrices) == 10
+
+    def test_propagation_different_index(self, adata: AnnData):
+        vk1 = VelocityKernel(adata).compute_transition_matrix(
+            mode="propagation", show_progress_bar=False, n_samples=10, n_jobs=4
+        )
+        vk1.switch_transition_matrix(4)
+
+        vk2 = VelocityKernel(adata).compute_transition_matrix(
+            mode="propagation", show_progress_bar=False, n_samples=10, n_jobs=4
+        )
+        vk2.switch_transition_matrix(2)
+
+        assert vk1._current_ix == 4
+        assert vk2._current_ix == 2
+
+        k = (vk1 + vk2).compute_transition_matrix()
+
+        assert k._current_ix == 0
+        assert k.transition_matrix is k.transition_matrices[0]
+        assert isinstance(k.transition_matrices, tuple)
+        assert len(k.transition_matrices) == 10
+
+    def test_propagation_addition(self, adata: AnnData):
+        vk1 = VelocityKernel(adata).compute_transition_matrix(
+            mode="propagation", show_progress_bar=False, n_samples=10, n_jobs=4
+        )
+        vk2 = VelocityKernel(adata).compute_transition_matrix(
+            mode="propagation", show_progress_bar=False, n_samples=10, n_jobs=4
+        )
+        k = (vk1 + vk2).compute_transition_matrix()
+
+        for i in range(len(k.transition_matrices)):
+            np.testing.assert_array_equal(
+                k.transition_matrices[i].A,
+                (0.5 * vk1.transition_matrices[i] + 0.5 * vk2.transition_matrices[i]).A,
+            )
+
+    def test_propagation_multiplication(self, adata: AnnData):
+        vk1 = VelocityKernel(adata).compute_transition_matrix(
+            mode="propagation", show_progress_bar=False, n_samples=10, n_jobs=4
+        )
+        vk2 = VelocityKernel(adata).compute_transition_matrix(
+            mode="propagation", show_progress_bar=False, n_samples=10, n_jobs=4
+        )
+        k = ((6 * vk1) * (9 * vk2)).compute_transition_matrix()
+
+        for i in range(len(k.transition_matrices)):
+            np.testing.assert_allclose(
+                k.transition_matrices[i].A,
+                _normalize(
+                    ((6 / 9) * vk1.transition_matrices[i])
+                    * ((9 / 6) * vk2.transition_matrices[i])
+                ).A,
+            )
+
+    def test_higher_order_propagation(self, adata: AnnData):
+        vk1 = VelocityKernel(adata).compute_transition_matrix(
+            mode="propagation", show_progress_bar=False, n_samples=10, n_jobs=4
+        )
+        vk2 = VelocityKernel(adata).compute_transition_matrix(
+            mode="deterministic",
+            show_progress_bar=False,
+            n_jobs=4,
+            backend="loky",
+        )
+        ck1 = ConnectivityKernel(adata).compute_transition_matrix()
+        ck2 = ConnectivityKernel(adata).compute_transition_matrix()
+
+        k = 3 * ck1 + 12 * ((3 * vk1 + 4 * vk2) * 3 * ck2)
+
+        assert isinstance(k.transition_matrices, tuple)
+        assert len(k.transition_matrices) == 10
+        assert k.transition_matrix is k.transition_matrices[k._current_ix]
+        for mat in k.transition_matrices:
+            np.testing.assert_allclose(mat.sum(1).data, 1.0)
