@@ -2,7 +2,7 @@
 """Kernel module."""
 
 from abc import ABC, abstractmethod
-from copy import copy
+from copy import copy, deepcopy
 from typing import (
     Any,
     Dict,
@@ -31,6 +31,8 @@ from cellrank.tl._utils import (
 )
 from cellrank.ul._utils import _write_graph_data
 from cellrank.tl._constants import Direction, _transition
+from cellrank.ul._parallelize import parallelize
+from cellrank.tl.kernels._utils import _filter_kwargs
 
 _ERROR_DIRECTION_MSG = "Can only combine kernels that have the same direction."
 _ERROR_EMPTY_CACHE_MSG = (
@@ -60,6 +62,8 @@ class KernelExpression(ABC):
     ):
         self._op_name = op_name
         self._transition_matrix = None
+        self._tmats = None
+        self._current_ix = 0
         self._direction = Direction.BACKWARD if backward else Direction.FORWARD
         self._compute_cond_num = compute_cond_num
         self._cond_num = None
@@ -77,13 +81,18 @@ class KernelExpression(ABC):
         """
         Return row-normalized transition matrix.
 
-        If not present, compute it, if all the underlying kernels have been initialized.
+        If not present, it is computed, if all the underlying kernels have been initialized.
         """
 
         if self._parent is None and self._transition_matrix is None:
             self.compute_transition_matrix()
 
         return self._transition_matrix
+
+    @property
+    def transition_matrices(self) -> Optional[List[Union[np.ndarray, spmatrix]]]:
+        """Return sampled transition matrices, if available."""
+        return self._tmats
 
     @property
     def backward(self) -> bool:
@@ -133,14 +142,37 @@ class KernelExpression(ABC):
             Nothing, just updates the :paramref:`transition_matrix` and optionally normalizes it.
         """
 
-        should_norm = ~np.isclose(value.sum(1), 1.0, rtol=TOL).all()
+        self._transition_matrix = _maybe_normalize(
+            value, has_parent=self._parent is not None, normalize=self._normalize
+        )
 
-        if self._parent is None:
-            self._transition_matrix = _normalize(value) if should_norm else value
-        else:
-            self._transition_matrix = (
-                _normalize(value) if self._normalize and should_norm else value
-            )
+    def switch_transition_matrix(self, index: int) -> None:
+        """
+        Switch between transition matrices stored in :paramref:`transition_matrices`.
+
+        Parameters
+        ----------
+        index
+            Index of the transition matrix.
+
+        Returns
+        -------
+        None
+            Nothing, just switches the transition matrix.
+        """
+        if self._tmats is None:
+            raise ValueError("No additional transition matrices found.")
+        if index == self._current_ix and self._transition_matrix is not None:
+            # the None check is because SimpleNaryKernelExpression uses this to set the matrix
+            return
+
+        try:
+            self.transition_matrix = self._tmats[index]
+            self._current_ix = index
+        except IndexError:
+            raise IndexError(
+                f"Invalid index `{index}`. Valid range is `[0, {len(self._tmats)})`."
+            ) from None
 
     @abstractmethod
     def compute_transition_matrix(self, *args, **kwargs) -> "KernelExpression":
@@ -210,6 +242,17 @@ class KernelExpression(ABC):
                 )
             else:
                 logg.info(f"Condition number is `{self._cond_num:.2e}`")
+
+    def _copy_transition_matrix(self, new_obj: "KernelExpression") -> None:
+        if self.transition_matrices is not None:
+            assert (
+                self._transition_matrix is self.transition_matrices[self._current_ix]
+            ), f"Active transition matrix differs from the one with index `{self._current_ix}`."
+            new_obj._tmats = deepcopy(self.transition_matrices)
+            new_obj.switch_transition_matrix(self._current_ix)
+        else:
+            new_obj._transition_matrix = copy(self.transition_matrix)
+            new_obj._current_ix = self._current_ix
 
     @abstractmethod
     def _get_kernels(self) -> Iterable["Kernel"]:
@@ -447,6 +490,28 @@ class NaryKernelExpression(KernelExpression, ABC):
         backward = kexprs[0].backward
         assert all(k.backward == backward for k in kexprs), _ERROR_DIRECTION_MSG
 
+        kexprs_with_tmats = [
+            kexpr for kexpr in kexprs if kexpr.transition_matrices is not None
+        ]
+        if len(kexprs_with_tmats):
+            n_expected = len(kexprs_with_tmats[0].transition_matrices)
+            ix, msg_shown = kexprs_with_tmats[0]._current_ix, False
+
+            for kexpr in kexprs_with_tmats:
+                if len(kexpr.transition_matrices) != n_expected:
+                    raise ValueError(
+                        f"Expected kernel expression `{kexpr}` to have `{n_expected}` transition matrices, "
+                        f"found `{len(kexpr.transition_matrices)}`."
+                    )
+                if kexpr._current_ix != ix and not msg_shown:
+                    logg.warning(
+                        "Expressions have different transition matrix indices. "
+                        "New index will be set to `0`"
+                    )
+                    msg_shown = True
+
+                self._current_ix = 0 if msg_shown else ix
+
         # use OR instead of AND
         super().__init__(
             op_name,
@@ -680,8 +745,9 @@ class Constant(Kernel):
         """Return self."""
         return self
 
-    def copy(self) -> "Constant":
-        """Return a copy of self."""
+    @d.dedent
+    def copy(self) -> "Constant":  # noqa
+        """%(copy)s"""
         return Constant(self.adata, self.transition_matrix, self.backward)
 
     def __invert__(self) -> "Constant":
@@ -725,8 +791,9 @@ class ConstantMatrix(Kernel):
         )
         self._recalculate(value)
 
-    def copy(self) -> "ConstantMatrix":
-        """Return a copy of self."""
+    @d.dedent
+    def copy(self) -> "ConstantMatrix":  # noqa
+        """%(copy)s"""
         return ConstantMatrix(
             self.adata, self._value, copy(self._mat_scaler), self.backward
         )
@@ -778,9 +845,35 @@ class SimpleNaryExpression(NaryKernelExpression):
             elif isinstance(kexpr, Kernel):
                 logg.debug(_LOG_USING_CACHE)
 
-        self.transition_matrix = csr_matrix(
-            self._fn([kexpr.transition_matrix for kexpr in self])
-        )
+        kexprs_with_tmats = [
+            kexpr for kexpr in self if kexpr.transition_matrices is not None
+        ]
+        if len(kexprs_with_tmats):
+            # error checking -the same number of samples - is done in `NaryKernelExpression`
+            n_expected = len(kexprs_with_tmats[0].transition_matrices)
+            logg.debug(f"Combining `{n_expected}` transition matrices")
+            tmats = self._fn(
+                [
+                    (kexpr.transition_matrix,) * n_expected
+                    if kexpr.transition_matrices is None
+                    else kexpr.transition_matrices
+                    for kexpr in self
+                ]
+            )
+            self._tmats = parallelize(
+                _maybe_normalize_multiple,
+                tmats,
+                n_jobs=-1,  # using all cores
+                as_array=False,
+                backend="threading",
+                show_progress_bar=False,
+                extractor=lambda res: tuple(r for rs in res for r in rs),
+            )(has_parent=self._parent is not None, normalize=self._normalize)
+            self.switch_transition_matrix(self._current_ix)
+        else:
+            self.transition_matrix = csr_matrix(
+                self._fn([kexpr.transition_matrix for kexpr in self])
+            )
 
         # only the top level expression and kernels will have condition number computed
         if self._parent is None:
@@ -788,12 +881,13 @@ class SimpleNaryExpression(NaryKernelExpression):
 
         return self
 
-    def copy(self) -> "SimpleNaryExpression":
-        """Return a copy of self."""
+    @d.dedent
+    def copy(self) -> "SimpleNaryExpression":  # noqa
+        """%(copy)s"""
         sne = SimpleNaryExpression(
             [copy(k) for k in self], op_name=self._op_name, fn=self._fn
         )
-        sne._transition_matrix = copy(self._transition_matrix)
+        self._copy_transition_matrix(sne)
 
         return sne
 
@@ -928,7 +1022,29 @@ def _is_bin_mult(
 
 
 def _is_adaptive_type(k: KernelExpression) -> bool:
-    return isinstance(k, Kernel) and not isinstance(k, ((Constant, ConstantMatrix)))
+    return isinstance(k, Kernel) and not isinstance(k, (Constant, ConstantMatrix))
+
+
+def _maybe_normalize(
+    value: Union[np.ndarray, spmatrix],
+    has_parent: bool,
+    normalize: bool,
+) -> Union[np.ndarray, spmatrix]:
+    should_norm = ~np.isclose(value.sum(1), 1.0, rtol=TOL).all()
+
+    if not has_parent:
+        return _normalize(value) if should_norm else value
+
+    return _normalize(value) if normalize and should_norm else value
+
+
+def _maybe_normalize_multiple(
+    matrices: np.ndarray, **kwargs
+) -> List[Union[np.ndarray, spmatrix]]:
+    return [
+        _maybe_normalize(mat, **_filter_kwargs(_maybe_normalize, **kwargs))
+        for mat in matrices
+    ]
 
 
 TOL = 1e-12
