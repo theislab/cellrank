@@ -510,7 +510,10 @@ class NaryKernelExpression(KernelExpression, ABC):
                     )
                     msg_shown = True
 
-                self._current_ix = 0 if msg_shown else ix
+                if msg_shown:
+                    ix = 0
+        else:
+            n_expected, ix = 0, 0
 
         # use OR instead of AND
         super().__init__(
@@ -524,6 +527,11 @@ class NaryKernelExpression(KernelExpression, ABC):
 
         for kexprs in self._kexprs:
             kexprs._parent = self
+
+        # must be called after super()
+        if n_expected:
+            self._tmats = (None,) * n_expected
+        self._current_ix = ix
 
     def _maybe_recalculate_constants(self, type_: Type):
         if type_ == Constant:
