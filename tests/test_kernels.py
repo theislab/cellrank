@@ -1154,7 +1154,10 @@ class TestVelocityKernel:
             mode="propagation", show_progress_bar=False, n_samples=10, n_jobs=4
         )
         vk2 = VelocityKernel(adata).compute_transition_matrix(
-            mode="deterministic", show_progress_bar=False, n_jobs=4
+            mode="deterministic",
+            show_progress_bar=False,
+            n_jobs=4,
+            backend="loky",
         )
         ck1 = ConnectivityKernel(adata).compute_transition_matrix()
         ck2 = ConnectivityKernel(adata).compute_transition_matrix()
