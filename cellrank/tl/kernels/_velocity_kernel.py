@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Velocity kernel module."""
+from sys import version_info
 from copy import copy, deepcopy
 from math import fsum
 from typing import Any, Union, Callable, Iterable, Optional
@@ -257,7 +258,10 @@ class VelocityKernel(Kernel):
             mode = VelocityMode.SAMPLING
 
         backend = kwargs.pop("backend", _DEFAULT_BACKEND)
-        if mode != VelocityMode.STOCHASTIC and backend == "multiprocessing":
+        if version_info[:2] <= (3, 6):
+            logg.warning("For Python3.6, only `'threading'` backend is supported")
+            backend = "threading"
+        elif mode != VelocityMode.STOCHASTIC and backend == "multiprocessing":
             # this is because on jitting and pickling (cloudpickle, used by loky, handles it correctly)
             logg.warning(
                 f"Multiprocessing backend is supported only for mode `{VelocityMode.STOCHASTIC.s!r}`. "
