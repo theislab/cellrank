@@ -1115,3 +1115,36 @@ class TestVelocityKernel:
         assert k.transition_matrix is k.transition_matrices[0]
         assert isinstance(k.transition_matrices, tuple)
         assert len(k.transition_matrices) == 10
+
+    def test_propagation_addition(self, adata: AnnData):
+        vk1 = VelocityKernel(adata).compute_transition_matrix(
+            mode="propagation", show_progress_bar=False, n_samples=10, n_jobs=4
+        )
+        vk2 = VelocityKernel(adata).compute_transition_matrix(
+            mode="propagation", show_progress_bar=False, n_samples=10, n_jobs=4
+        )
+        k = (vk1 + vk2).compute_transition_matrix()
+
+        for i in range(len(k.transition_matrices)):
+            np.testing.assert_array_equal(
+                k.transition_matrices[i].A,
+                (0.5 * vk1.transition_matrices[i] + 0.5 * vk2.transition_matrices[i]).A,
+            )
+
+    def test_propagation_multiplication(self, adata: AnnData):
+        vk1 = VelocityKernel(adata).compute_transition_matrix(
+            mode="propagation", show_progress_bar=False, n_samples=10, n_jobs=4
+        )
+        vk2 = VelocityKernel(adata).compute_transition_matrix(
+            mode="propagation", show_progress_bar=False, n_samples=10, n_jobs=4
+        )
+        k = ((6 * vk1) * (9 * vk2)).compute_transition_matrix()
+
+        for i in range(len(k.transition_matrices)):
+            np.testing.assert_allclose(
+                k.transition_matrices[i].A,
+                _normalize(
+                    ((6 / 9) * vk1.transition_matrices[i])
+                    * ((9 / 6) * vk2.transition_matrices[i])
+                ).A,
+            )
