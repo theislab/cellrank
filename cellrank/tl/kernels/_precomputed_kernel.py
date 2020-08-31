@@ -116,7 +116,9 @@ class DummyKernel(PrecomputedKernel):
     """
 
     def __init__(
-        self, adata: AnnData, backward: bool = False,
+        self,
+        adata: AnnData,
+        backward: bool = False,
     ):
         super().__init__(
             speye(adata.n_obs, format="csr"),

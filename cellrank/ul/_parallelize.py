@@ -99,7 +99,10 @@ def parallelize(
 
         res = jl.Parallel(n_jobs=n_jobs, backend=backend)(
             jl.delayed(callback)(
-                *((i, cs) if use_ixs else (cs,)), *args, **kwargs, queue=queue,
+                *((i, cs) if use_ixs else (cs,)),
+                *args,
+                **kwargs,
+                queue=queue,
             )
             for i, cs in enumerate(collections)
         )

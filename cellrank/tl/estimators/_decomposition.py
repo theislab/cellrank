@@ -174,7 +174,11 @@ class Eigen(VectorPlottable, Decomposable):
                 V[:, 0] = 1.0
 
         self._plot_vectors(
-            V, P.EIG.s, *args, D=D, **kwargs,
+            V,
+            P.EIG.s,
+            *args,
+            D=D,
+            **kwargs,
         )
 
     @d.dedent

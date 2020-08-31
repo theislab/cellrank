@@ -208,7 +208,8 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             self._set(
                 A.COARSE_STAT_D,
                 pd.Series(
-                    self._gpcca.coarse_grained_stationary_probability, index=names,
+                    self._gpcca.coarse_grained_stationary_probability,
+                    index=names,
                 ),
             )
             logg.info(
@@ -234,7 +235,9 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
     @d.dedent
     @inject_docs(fs=P.FIN, fsp=P.FIN_PROBS)
     def set_final_states_from_metastable_states(
-        self, names: Optional[Union[Iterable[str], str]] = None, n_cells: int = 30,
+        self,
+        names: Optional[Union[Iterable[str], str]] = None,
+        n_cells: int = 30,
     ):
         """
         Manually select the main states from the metastable states.
@@ -646,7 +649,9 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         if show_stationary_dist:
             stat_ax = fig.add_subplot(gs[1, 0])
             stylize_dist(
-                stat_ax, np.array(coarse_stat_d).reshape(1, -1), xticks_labels=labels,
+                stat_ax,
+                np.array(coarse_stat_d).reshape(1, -1),
+                xticks_labels=labels,
             )
             stat_ax.set_xlabel("stationary distribution")
 
