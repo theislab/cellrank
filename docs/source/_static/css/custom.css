@@ -86,6 +86,14 @@ html.writer-html5 .rst-content dl[class]:not(.option-list):not(.field-list):not(
     height: auto !important;
 }
 
+.rst-content div[class^="highlight"] pre {
+    white-space: pre;
+    margin: 0;
+    padding: 5px;
+    display: block;
+    overflow: auto;
+}
+
 /* sphinx-gallery */
 div.sphx-glr-download a {
     background-color: #FFC76E !important;
@@ -103,6 +111,19 @@ div.sphx-glr-download a[href$=".py"] {
     display: none !important;
 }
 
+div.sphx-glr-example-title div[class="highlight"] {
+    background-color: #F5F5F5;
+    border: none;
+}
+
+.sphx-glr-script-out .highlight pre {
+    background: #FCFCFC !important;
+}
+
+p.sphx-glr-script-out {
+    display: none !important;
+}
+
 div.sphx-glr-download p {
     margin: 0 !important;
     width: auto !important;
@@ -110,6 +131,7 @@ div.sphx-glr-download p {
 
 .sphx-glr-script-out {
     color: #404040 !important;
+    margin: -24px 0px 0px 0px !important;
 }
 
 p.sphx-glr-signature {
@@ -138,4 +160,14 @@ div.sphx-glr-download code.download {
 
 div.sphx-glr-thumbcontainer span {
     font-style: normal !important;
+}
+
+p.sphx-glr-timing {
+    margin: 0 !important;
+    padding-top: 24px;
+    border-top: 1px solid #000;
+}
+
+.sphx-glr-thumbcontainer:hover {
+    box-shadow: 0 0 15px RGBA(244, 150, 0, 0.5) !important;
 }

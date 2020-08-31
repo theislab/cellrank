@@ -72,4 +72,5 @@ def pancreas_preprocessed() -> AnnData:
     -------
     %(adata)s
     """
-    return read("/home/michal/preprocessed.h5ad")
+    return _load_dataset_from_url(*_datasets["pancreas"])
+    # return read("/home/michal/preprocessed.h5ad")
