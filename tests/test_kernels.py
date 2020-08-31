@@ -1148,3 +1148,21 @@ class TestVelocityKernel:
                     * ((9 / 6) * vk2.transition_matrices[i])
                 ).A,
             )
+
+    def test_higher_order_propagation(self, adata: AnnData):
+        vk1 = VelocityKernel(adata).compute_transition_matrix(
+            mode="propagation", show_progress_bar=False, n_samples=10, n_jobs=4
+        )
+        vk2 = VelocityKernel(adata).compute_transition_matrix(
+            mode="deterministic", show_progress_bar=False, n_jobs=4
+        )
+        ck1 = ConnectivityKernel(adata).compute_transition_matrix()
+        ck2 = ConnectivityKernel(adata).compute_transition_matrix()
+
+        k = 3 * ck1 + 12 * ((3 * vk1 + 4 * vk2) * 3 * ck2)
+
+        assert isinstance(k.transition_matrices, tuple)
+        assert len(k.transition_matrices) == 10
+        assert k.transition_matrix is k.transition_matrices[k._current_ix]
+        for mat in k.transition_matrices:
+            np.testing.assert_allclose(mat.sum(1).data, 1.0)
