@@ -251,7 +251,8 @@ class KernelExpression(ABC):
             new_obj._tmats = deepcopy(self.transition_matrices)
             new_obj.switch_transition_matrix(self._current_ix)
         else:
-            new_obj._transition_matrix = copy(self.transition_matrix)
+            # careful not to call .transition_matrix, as it can compute it
+            new_obj._transition_matrix = copy(self._transition_matrix)
             new_obj._current_ix = self._current_ix
 
     @abstractmethod
