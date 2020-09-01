@@ -31,7 +31,9 @@ def _create_cflare(*, backward: bool = False) -> Tuple[AnnData, CFLARE]:
 
     sc.tl.paga(adata, groups="clusters")
 
-    vk = VelocityKernel(adata, backward=backward).compute_transition_matrix()
+    vk = VelocityKernel(adata, backward=backward).compute_transition_matrix(
+        softmax_scale=4
+    )
     ck = ConnectivityKernel(adata, backward=backward).compute_transition_matrix()
     final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -58,7 +60,9 @@ def _create_gpcca(*, backward: bool = False) -> Tuple[AnnData, GPCCA]:
 
     sc.tl.paga(adata, groups="clusters")
 
-    vk = VelocityKernel(adata, backward=backward).compute_transition_matrix()
+    vk = VelocityKernel(adata, backward=backward).compute_transition_matrix(
+        softmax_scale=4
+    )
     ck = ConnectivityKernel(adata, backward=backward).compute_transition_matrix()
     final_kernel = 0.8 * vk + 0.2 * ck
 
