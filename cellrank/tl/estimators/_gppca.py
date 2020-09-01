@@ -287,7 +287,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
 
         meta_states_probs = probs[list(names)]
 
-        # compute the aggregated probability of being a root/final state (no matter which)
+        # compute the aggregated probability of being a initial/terminal state (no matter which)
         scaled_probs = meta_states_probs[
             [n for n in meta_states_probs.names if n != "rest"]
         ].copy()

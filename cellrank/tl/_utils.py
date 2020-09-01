@@ -112,62 +112,6 @@ def _min_max_scale(x: np.ndarray) -> np.ndarray:
     return (x - minn) / (maxx - minn)
 
 
-def _create_root_final_annotations(
-    adata: AnnData,
-    final_key: str = "final_states",
-    root_key: str = "root_states",
-    final_pref: Optional[str] = "final",
-    root_pref: Optional[str] = "root",
-    key_added: Optional[str] = "root_final",
-) -> None:
-    """
-    Create categorical annotations of both root and final states.
-
-    This is a utility function for creating a categorical Series object which combines the information about root
-    and final states. The :class:`pandas,Series` is written directly to the :class:`anndata.AnnData`object.
-    This can for example be used to create a scatter plot in :mod:`scvelo`.
-
-    Parameters
-    ----------
-    adata
-        AnnData object to write to ``.obs[key_added]``.
-    final_key
-        Key from ``adata.obs`` where final states have been saved.
-    root_key
-        Key from ``adata.obs`` where root states have been saved.
-    final_pref, root_pref
-        Direction prefix used in the annotations.
-    key_added
-        Key added to ``adata.obs``.
-
-    Returns
-    -------
-    None
-        Nothing, just writes to ``adata``.
-    """
-
-    # get both Series objects
-    cats_final, colors_final = adata.obs[final_key], adata.uns[f"{final_key}_colors"]
-    cats_root, colors_root = adata.obs[root_key], adata.uns[f"{root_key}_colors"]
-
-    # merge
-    cats_merged, colors_merged = _merge_categorical_series(
-        cats_final, cats_root, list(colors_final), list(colors_root)
-    )
-
-    # adjust the names
-    final_names = cats_final.cat.categories
-    final_labels = [
-        f"{final_pref if key in final_names else root_pref}: {key}"
-        for key in cats_merged.cat.categories
-    ]
-    cats_merged.cat.rename_categories(final_labels, inplace=True)
-
-    # write to AnnData
-    adata.obs[key_added] = cats_merged
-    adata.uns[f"{key_added}_colors"] = colors_merged
-
-
 def _process_series(
     series: pd.Series, keys: Optional[List[str]], colors: Optional[np.array] = None
 ) -> Union[pd.Series, Tuple[pd.Series, List[str]]]:

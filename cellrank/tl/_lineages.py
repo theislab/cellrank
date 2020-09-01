@@ -7,7 +7,7 @@ from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.tl._utils import _check_estimator_type
 from cellrank.tl.kernels import PrecomputedKernel
-from cellrank.tl._constants import AbsProbKey, FinalStatesKey
+from cellrank.tl._constants import AbsProbKey, FinalStatesKey, FinalStatesPlot
 from cellrank.tl.estimators import GPCCA
 from cellrank.tl.estimators._constants import P
 from cellrank.tl.estimators._base_estimator import BaseEstimator
@@ -27,22 +27,23 @@ def lineages(
     """
     Compute probabilistic lineage assignment using RNA velocity.
 
-    For each cell `i` in :math:`{1, ..., N}` and %(root_or_final)s state `j` in :math:`{1, ..., M}`,
-    the probability is computed that cell `i` is either going to %(final)s state `j` (``backward=False``)
-    or is coming from %(root)s state `j` (``backward=True``).
+    For each cell `i` in :math:`{1, ..., N}` and %(initial_or_terminal)s state `j` in :math:`{1, ..., M}`,
+    the probability is computed that cell `i` is either going to %(terminal)s state `j` (``backward=False``)
+    or is coming from %(initial)s state `j` (``backward=True``).
     We provide two estimators for computing these probabilities:
 
     For the estimator :class:`cellrank.tl.estimators.GPCCA`, we perform Generalized Perron Cluster Cluster Analysis
-    [GPCCA18]_. Cells are mapped to a simplex where each corner represents a %(root_or_final) state, and the position
-    of a cell in the simplex determines its probability of going to a %(final)s states or coming from %(root)s states.
+    [GPCCA18]_. Cells are mapped to a simplex where each corner represents a %(initial_or_terminal) state, and the
+    position of a cell in the simplex determines its probability of going to a %(terminal)s states or
+    coming from %(initial)s states.
 
     For the estimator :class:`cellrank.tl.estimators.CFLARE`, we compute absorption probabilities towards
-    the %(root_or_final)s states of the Markov chain.
+    the %(initial_or_terminal)s states of the Markov chain.
     For related approaches in the single cell context that utilise absorption probabilities to map cells to lineages,
     see [Setty19]_ or [Weinreb18]_.
 
-    Before running this function, compute %(root_or_final) states using :func:`cellrank.tl.root_states` or
-    :func:`cellrank.tl.final_states`, respectively.
+    Before running this function, compute %(initial_or_terminal) states using :func:`cellrank.tl.initial_states` or
+    :func:`cellrank.tl.terminall_states`, respectively.
 
     Parameters
     ----------
@@ -68,11 +69,12 @@ def lineages(
 
     if backward:
         lin_key = AbsProbKey.BACKWARD
-        rc_key = FinalStatesKey.BACKWARD
+        fs_key = FinalStatesKey.BACKWARD
+        fs_key_pretty = FinalStatesPlot.BACKWARD
     else:
         lin_key = AbsProbKey.FORWARD
-        rc_key = FinalStatesKey.FORWARD
-
+        fs_key = FinalStatesKey.FORWARD
+        fs_key_pretty = FinalStatesPlot.FORWARD
     try:
         pk = PrecomputedKernel(adata=adata, backward=backward)
     except KeyError as e:
@@ -80,12 +82,10 @@ def lineages(
             "Compute transition matrix first a `cellrank.tl.transition_matrix()`."
         ) from e
 
-    start = logg.info(f"Computing lineage probabilities towards `{rc_key}`")
+    start = logg.info(f"Computing lineage probabilities towards {fs_key_pretty.s}")
     mc = estimator(pk, read_from_adata=True)
     if mc._get(P.FIN) is None:
-        raise RuntimeError(
-            f"Compute the states first as `cellrank.tl.{'root' if backward else 'final'}_states()`."
-        )
+        raise RuntimeError(f"Compute the states first as `cellrank.tl.{fs_key.s}()`.")
 
     # compute the absorption probabilities
     mc.compute_absorption_probabilities(**kwargs)
