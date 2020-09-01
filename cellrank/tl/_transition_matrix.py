@@ -23,7 +23,7 @@ def transition_matrix(
     mode: str = VelocityMode.DETERMINISTIC.s,
     backward_mode: str = BackwardMode.TRANSPOSE.s,
     seed: Optional[int] = None,
-    softmax_scale: Optional[float] = 4.0,
+    softmax_scale: Optional[float] = None,
     weight_connectivities: Optional[float] = None,
     density_normalize: bool = True,
     n_jobs: Optional[int] = None,
