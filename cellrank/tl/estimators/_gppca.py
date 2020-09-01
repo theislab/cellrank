@@ -997,7 +997,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         compute_absorption_probabilities
             Whether to compute absorption probabilities or only final states.
         **kwargs
-            Keyword arguments for :meth:`cellrank.tl.GPCCA.compute_metastable_states`.
+            Keyword arguments for :meth:`cellrank.tl.estimators.GPCCA.compute_metastable_states`.
 
         Returns
         -------
