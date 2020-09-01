@@ -105,7 +105,7 @@ def _check_abs_probs(mc: cr.tl.estimators.GPCCA, has_main_states: bool = True):
 
 class TestGPCCA:
     def test_compute_partition(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -123,7 +123,7 @@ class TestGPCCA:
             assert mc.transient_classes is None
 
     def test_compute_eigendecomposition(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -133,7 +133,7 @@ class TestGPCCA:
         _check_eigdecomposition(mc)
 
     def test_compute_schur_invalid_n_comps(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -142,7 +142,7 @@ class TestGPCCA:
             mc.compute_schur(n_components=1, method="krylov")
 
     def test_compute_schur_invalid_method(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -151,7 +151,7 @@ class TestGPCCA:
             mc.compute_schur(method="foobar")
 
     def test_compute_schur_invalid_eig_sort(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -160,7 +160,7 @@ class TestGPCCA:
             mc.compute_schur(which="foobar", method="krylov")
 
     def test_compute_schur_write_eigvals(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -172,7 +172,7 @@ class TestGPCCA:
     def test_compute_schur_write_eigvals_similar_to_orig_eigdecomp(
         self, adata_large: AnnData
     ):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -199,7 +199,7 @@ class TestGPCCA:
         )  # complex conj.
 
     def test_compute_metastable_states_no_eig(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -208,7 +208,7 @@ class TestGPCCA:
             mc.compute_metastable_states(n_states=None)
 
     def test_compute_metastable_states_1_state_no_eig(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -216,7 +216,7 @@ class TestGPCCA:
         mc.compute_metastable_states(n_states=1)
 
     def test_compute_metastable_none_states(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -227,7 +227,7 @@ class TestGPCCA:
         _check_compute_meta(mc)
 
     def test_compute_metastable_states_schur(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -238,7 +238,7 @@ class TestGPCCA:
         _check_compute_meta(mc)
 
     def test_compute_metastable_invalid_cluster_key(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -248,7 +248,7 @@ class TestGPCCA:
             mc.compute_metastable_states(n_states=2, cluster_key="foobar")
 
     def test_compute_metastable_cache(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -261,7 +261,7 @@ class TestGPCCA:
         assert mc._get(P.SCHUR_MAT).shape == (11, 11)
 
     def test_set_final_states_from_metastable_states(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -277,7 +277,7 @@ class TestGPCCA:
     def test_set_final_states_from_metastable_states_no_cells(
         self, adata_large: AnnData
     ):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -291,7 +291,7 @@ class TestGPCCA:
     def test_set_final_states_from_metastable_states_non_positive_cells(
         self, adata_large: AnnData
     ):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -305,7 +305,7 @@ class TestGPCCA:
     def test_set_final_states_from_metastable_states_invalid_name(
         self, adata_large: AnnData
     ):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -317,7 +317,7 @@ class TestGPCCA:
             mc.set_final_states_from_metastable_states(names=["foobar"])
 
     def test_compute_final_states_invalid_method(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -329,7 +329,7 @@ class TestGPCCA:
             mc.compute_final_states(method="foobar")
 
     def test_compute_final_states_no_cells(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -341,7 +341,7 @@ class TestGPCCA:
             mc.compute_final_states(n_cells=None)
 
     def test_compute_final_states_non_positive_cells(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -353,7 +353,7 @@ class TestGPCCA:
             mc.compute_final_states(n_cells=0)
 
     def test_compute_final_states_eigengap(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -367,7 +367,7 @@ class TestGPCCA:
         _check_abs_probs(mc)
 
     def test_compute_final_states_n_main_states(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -381,7 +381,7 @@ class TestGPCCA:
         _check_abs_probs(mc)
 
     def test_compute_final_states_min_self_prob(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -395,7 +395,7 @@ class TestGPCCA:
         _check_abs_probs(mc)
 
     def test_compute_final_states(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -409,7 +409,7 @@ class TestGPCCA:
         _check_abs_probs(mc)
 
     def test_compute_gdpt_no_schur(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -420,7 +420,7 @@ class TestGPCCA:
         assert "gdpt_pseudotime" in mc.adata.obs
 
     def test_compute_gdpt_no_iroot(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -431,7 +431,7 @@ class TestGPCCA:
             mc.compute_gdpt()
 
     def test_compute_gdpt_invalid_n_comps(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -441,7 +441,7 @@ class TestGPCCA:
             mc.compute_gdpt(n_components=1)
 
     def test_compute_gdpt_cellname_key_added(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -453,7 +453,7 @@ class TestGPCCA:
         assert "foobar" in mc.adata.obs
 
     def test_compute_gdpt_cellname_iroot(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -465,7 +465,7 @@ class TestGPCCA:
         assert "gdpt_pseudotime" in mc.adata.obs
 
     def test_compute_lineage_drivers_invalid_lineages(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -479,7 +479,7 @@ class TestGPCCA:
             mc.compute_lineage_drivers(use_raw=False, lineages=["foo"])
 
     def test_compute_lineage_drivers_invalid_clusters(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -495,7 +495,7 @@ class TestGPCCA:
             )
 
     def test_compute_lineage_drivers_normal_run(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -510,7 +510,7 @@ class TestGPCCA:
             assert f"{DirPrefix.FORWARD} {lineage}" in mc.adata.var.keys()
 
     def test_plot_lineage_drivers_not_computed(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -524,7 +524,7 @@ class TestGPCCA:
             mc.plot_lineage_drivers("0")
 
     def test_plot_lineage_drivers_invalid_name(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -539,7 +539,7 @@ class TestGPCCA:
             mc.plot_lineage_drivers("foo", use_raw=False)
 
     def test_plot_lineage_drivers_invalid_n_genes(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -554,7 +554,7 @@ class TestGPCCA:
             mc.plot_lineage_drivers("0", use_raw=False, n_genes=0)
 
     def test_plot_lineage_drivers_normal_run(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
