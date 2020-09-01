@@ -166,7 +166,7 @@ class VelocityKernel(Kernel):
         self,
         mode: str = VelocityMode.DETERMINISTIC.s,
         backward_mode: str = BackwardMode.TRANSPOSE.s,
-        softmax_scale: Optional[float] = 4.0,
+        softmax_scale: Optional[float] = None,
         n_samples: int = 1000,
         seed: Optional[int] = None,
         use_numba: Optional[bool] = False,
@@ -205,7 +205,7 @@ class VelocityKernel(Kernel):
 
             If ``mode={m.PROPAGATION.s!r}``, makes also available:
 
-                - :paramref:`_tmats` - tuple of length ``n_samples`` of transition matrices.
+                - :paramref:`transition_matrices` - tuple of length ``n_samples`` of transition matrices.
                 - :paramref:`_pcors` - tuple of length ``n_samples`` of pearson correlations.
         """
 

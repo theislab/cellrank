@@ -23,7 +23,6 @@ from cellrank.tl.kernels import (
     PrecomputedKernel,
     ConnectivityKernel,
 )
-from cellrank.tl._constants import Direction, _transition
 from cellrank.tl.kernels._base_kernel import KernelAdd, KernelMul, _is_bin_mult
 
 _rtol = 1e-6
@@ -40,7 +39,7 @@ class TestInitializeKernel:
         assert pk._transition_matrix is None
 
     def test_not_none_transition_matrix_compute(self, adata: AnnData):
-        vk = VelocityKernel(adata).compute_transition_matrix()
+        vk = VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata).compute_transition_matrix()
         pk = PalantirKernel(adata, time_key="latent_time").compute_transition_matrix()
 
@@ -58,7 +57,7 @@ class TestInitializeKernel:
         assert pk.transition_matrix is not None
 
     def test_adding_hidden_constants(self, adata: AnnData):
-        k: KernelAdd = VelocityKernel(adata) + ConnectivityKernel(adata)
+        k = VelocityKernel(adata) + ConnectivityKernel(adata)
 
         assert _is_bin_mult(k[0])
         assert isinstance(k[0], KernelMul)
@@ -73,11 +72,11 @@ class TestInitializeKernel:
         assert k[1][0].transition_matrix == 1.0
 
     def test_length(self, adata: AnnData):
-        k: KernelAdd = VelocityKernel(adata) + ConnectivityKernel(adata)
+        k = VelocityKernel(adata) + ConnectivityKernel(adata)
         assert len(k) == 2
 
     def test_accessor_out_of_range(self, adata: AnnData):
-        k: KernelAdd = VelocityKernel(adata) + ConnectivityKernel(adata)
+        k = VelocityKernel(adata) + ConnectivityKernel(adata)
 
         with pytest.raises(IndexError):
             _ = k[2]
@@ -108,7 +107,7 @@ class TestInitializeKernel:
 
     def test_initialized(self, adata: AnnData):
         k = (
-            VelocityKernel(adata).compute_transition_matrix()
+            VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
             + ConnectivityKernel(adata).compute_transition_matrix()
         )
         k.compute_transition_matrix()
@@ -180,7 +179,7 @@ class TestInitializeKernel:
         assert c.transition_matrix == 10
 
     def test_multiplication_simple_normalization(self, adata: AnnData):
-        k = 10 * VelocityKernel(adata).compute_transition_matrix()
+        k = 10 * VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
         c = _is_bin_mult(k)
 
         assert c.transition_matrix == 10
@@ -194,7 +193,7 @@ class TestInitializeKernel:
 
     def test_constant_normalize_2(self, adata: AnnData):
         k = (
-            9 * VelocityKernel(adata).compute_transition_matrix()
+            9 * VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
             + 1 * ConnectivityKernel(adata).compute_transition_matrix()
         )
         k.compute_transition_matrix()
@@ -205,7 +204,7 @@ class TestInitializeKernel:
 
     def test_constant_normalize_3(self, adata: AnnData):
         k = (
-            VelocityKernel(adata).compute_transition_matrix()
+            VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
             + ConnectivityKernel(adata).compute_transition_matrix()
             + ConnectivityKernel(adata).compute_transition_matrix()
         )
@@ -217,7 +216,7 @@ class TestInitializeKernel:
         assert c3.transition_matrix == 1 / 3
 
     def test_constant_wrong_parentheses(self, adata: AnnData):
-        k = VelocityKernel(adata).compute_transition_matrix() + (
+        k = VelocityKernel(adata).compute_transition_matrix(softmax_scale=4) + (
             ConnectivityKernel(adata).compute_transition_matrix()
             + ConnectivityKernel(adata).compute_transition_matrix()
         )
@@ -229,7 +228,7 @@ class TestInitializeKernel:
         assert c3.transition_matrix == 1 / 3
 
     def test_constant_correct_parentheses(self, adata: AnnData):
-        k = 1 * VelocityKernel(adata).compute_transition_matrix() + 1 * (
+        k = 1 * VelocityKernel(adata).compute_transition_matrix(softmax_scale=4) + 1 * (
             ConnectivityKernel(adata).compute_transition_matrix()
             + ConnectivityKernel(adata).compute_transition_matrix()
         )
@@ -353,7 +352,7 @@ class TestKernel:
     def test_precomputed_sum(self, adata: AnnData):
         mat = random_transition_matrix(adata.n_obs)
         pk = PrecomputedKernel(mat)
-        vk = VelocityKernel(adata).compute_transition_matrix()
+        vk = VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
 
         expected = (0.5 * vk.transition_matrix) + (0.5 * pk.transition_matrix)
         actual = (pk + vk).compute_transition_matrix()
@@ -363,7 +362,7 @@ class TestKernel:
         )
 
     def test_write_adata(self, adata: AnnData):
-        vk = VelocityKernel(adata).compute_transition_matrix()
+        vk = VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
         vk.write_to_adata()
 
         assert adata is vk.adata
@@ -375,13 +374,13 @@ class TestKernel:
     def test_row_normalized(self, adata: AnnData):
         vk = VelocityKernel(adata)
 
-        vk.compute_transition_matrix(density_normalize=False)
+        vk.compute_transition_matrix(density_normalize=False, softmax_scale=4)
         T = vk.transition_matrix
         np.testing.assert_allclose(T.sum(1), 1, rtol=_rtol)
 
     def test_row_normalized_dense_norm(self, adata: AnnData):
         vk = VelocityKernel(adata)
-        vk.compute_transition_matrix(mode="deterministic")
+        vk.compute_transition_matrix(mode="deterministic", softmax_scale=4)
         T_det = vk.transition_matrix
         vk.compute_transition_matrix(mode="sampling")
         T_sam = vk.transition_matrix
@@ -392,7 +391,7 @@ class TestKernel:
     @jax_not_installed_skip
     def test_row_normalized_dense_norm_stoch(self, adata: AnnData):
         vk = VelocityKernel(adata)
-        vk.compute_transition_matrix(mode="stochastic")
+        vk.compute_transition_matrix(mode="stochastic", softmax_scale=4)
         T_stoch = vk.transition_matrix
 
         np.testing.assert_allclose(T_stoch.sum(1), 1, rtol=_rtol)
@@ -402,12 +401,16 @@ class TestKernel:
         backward = False
 
         vk = VelocityKernel(adata, backward=backward).compute_transition_matrix(
-            mode="stochastic"
+            mode="stochastic",
+            softmax_scale=4,
         )
         T_1 = vk.transition_matrix
 
         T_2 = cr.tl.transition_matrix(
-            adata, mode="stochastic", backward=backward
+            adata,
+            mode="stochastic",
+            backward=backward,
+            softmax_scale=4,
         ).transition_matrix
 
         np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
@@ -462,7 +465,7 @@ class TestKernel:
     def test_manual_combination_det(self, adata: AnnData):
         mode = "deterministic"
 
-        vk = VelocityKernel(adata).compute_transition_matrix(mode=mode)
+        vk = VelocityKernel(adata).compute_transition_matrix(mode=mode, softmax_scale=4)
         ck = ConnectivityKernel(adata).compute_transition_matrix()
 
         T_vk = vk.transition_matrix
@@ -478,7 +481,7 @@ class TestKernel:
     def test_manual_combination_stoch(self, adata: AnnData):
         mode = "stochastic"
 
-        vk = VelocityKernel(adata).compute_transition_matrix(mode=mode)
+        vk = VelocityKernel(adata).compute_transition_matrix(mode=mode, softmax_scale=4)
         ck = ConnectivityKernel(adata).compute_transition_matrix()
 
         T_vk = vk.transition_matrix
@@ -493,7 +496,7 @@ class TestKernel:
     def test_manual_combination_sam(self, adata: AnnData):
         mode = "sampling"
 
-        vk = VelocityKernel(adata).compute_transition_matrix(mode=mode)
+        vk = VelocityKernel(adata).compute_transition_matrix(mode=mode, softmax_scale=4)
         ck = ConnectivityKernel(adata).compute_transition_matrix()
 
         T_vk = vk.transition_matrix
@@ -508,7 +511,7 @@ class TestKernel:
     def test_manual_combination_no_precomputed(self, adata: AnnData):
         density_normalize = False
 
-        vk = VelocityKernel(adata).compute_transition_matrix()
+        vk = VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata).compute_transition_matrix(
             density_normalize=density_normalize
         )
@@ -517,7 +520,7 @@ class TestKernel:
         T_ck = ck.transition_matrix
         T_comb_manual = 0.8 * T_vk + 0.2 * T_ck
 
-        vk = VelocityKernel(adata).compute_transition_matrix()
+        vk = VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata).compute_transition_matrix(
             density_normalize=density_normalize
         )
@@ -530,7 +533,9 @@ class TestKernel:
     def test_manual_combination_backward(self, adata: AnnData):
         backward, density_normalize = True, False
 
-        vk = VelocityKernel(adata, backward=backward).compute_transition_matrix()
+        vk = VelocityKernel(adata, backward=backward).compute_transition_matrix(
+            softmax_scale=4
+        )
 
         ck = ConnectivityKernel(adata, backward=backward).compute_transition_matrix(
             density_normalize=density_normalize
@@ -548,7 +553,9 @@ class TestKernel:
     def test_manual_combination_backward_dense_norm(self, adata: AnnData):
         backward, density_normalize = True, True
 
-        vk = VelocityKernel(adata, backward=backward).compute_transition_matrix()
+        vk = VelocityKernel(adata, backward=backward).compute_transition_matrix(
+            softmax_scale=4
+        )
 
         ck = ConnectivityKernel(adata, backward=backward).compute_transition_matrix(
             density_normalize=density_normalize
@@ -751,13 +758,13 @@ class TestKernelCopy:
         assert vk2.adata is adata
 
     def test_copy_transition_matrix(self, adata: AnnData):
-        vk1 = VelocityKernel(adata).compute_transition_matrix()
+        vk1 = VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
         vk2 = vk1.copy()
 
         np.testing.assert_array_equal(vk1.transition_matrix.A, vk2.transition_matrix.A)
 
     def test_copy_params(self, adata: AnnData):
-        vk1 = VelocityKernel(adata).compute_transition_matrix()
+        vk1 = VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
         vk2 = vk1.copy()
 
         assert vk1.params == vk2.params
@@ -773,6 +780,10 @@ class TestKernelCopy:
                 k1 = KernelClass(
                     random_transition_matrix(adata.n_obs), compute_cond_num=True
                 )
+            elif KernelClass is VelocityKernel:
+                k1 = KernelClass(
+                    adata, compute_cond_num=True
+                ).compute_transition_matrix(softmax_scale=4)
             else:
                 k1 = KernelClass(
                     adata, compute_cond_num=True
@@ -782,7 +793,7 @@ class TestKernelCopy:
             assert k1.condition_number == k2.condition_number
 
     def test_copy_velocity_kernel(self, adata: AnnData):
-        vk1 = VelocityKernel(adata).compute_transition_matrix()
+        vk1 = VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
         vk2 = vk1.copy()
 
         np.testing.assert_array_equal(vk1.transition_matrix.A, vk2.transition_matrix.A)
@@ -850,17 +861,21 @@ class TestGeneral:
         assert v.kernels == [vk, ck]
 
     def test_no_comp_cond_num(self, adata: AnnData):
-        vk = VelocityKernel(adata).compute_transition_matrix()
+        vk = VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
 
         assert vk.condition_number is None
 
     def test_comp_cond_num(self, adata: AnnData):
-        vk = VelocityKernel(adata, compute_cond_num=True).compute_transition_matrix()
+        vk = VelocityKernel(adata, compute_cond_num=True).compute_transition_matrix(
+            softmax_scale=4
+        )
 
         assert isinstance(vk.condition_number, float)
 
     def test_comp_cond_num_or_policy(self, adata: AnnData):
-        vk = VelocityKernel(adata, compute_cond_num=True).compute_transition_matrix()
+        vk = VelocityKernel(adata, compute_cond_num=True).compute_transition_matrix(
+            softmax_scale=4
+        )
         ck = ConnectivityKernel(
             adata, compute_cond_num=False
         ).compute_transition_matrix()
@@ -881,7 +896,7 @@ class TestTransitionProbabilities:
 
         # compute pearson correlations using cellrank
         vk = VelocityKernel(adata, backward=backward)
-        vk.compute_transition_matrix(mode="deterministic")
+        vk.compute_transition_matrix(mode="deterministic", softmax_scale=4)
         pearson_correlations_cr = vk.pearson_correlations
 
         pc_r = velo_graph.copy()
@@ -898,7 +913,9 @@ class TestTransitionProbabilities:
 
         # compute pearson correlations using cellrak
         vk = VelocityKernel(adata, backward=backward)
-        vk.compute_transition_matrix(mode="deterministic", backward_mode="transpose")
+        vk.compute_transition_matrix(
+            mode="deterministic", backward_mode="transpose", softmax_scale=4
+        )
         pearson_correlations_cr = vk.pearson_correlations
 
         pc_r = velo_graph.copy()
@@ -943,12 +960,20 @@ class TestMonteCarlo:
     def test_mc_and_mc_fwd_1k(self, adata: AnnData):
         vk_mc = VelocityKernel(adata, backward=False)
         vk_mc.compute_transition_matrix(
-            mode="monte_carlo", show_progress_bar=False, n_samples=1000, n_jobs=4
+            mode="monte_carlo",
+            show_progress_bar=False,
+            n_samples=1000,
+            n_jobs=4,
+            softmax_scale=4,
         )
 
         vk_s = VelocityKernel(adata, backward=False)
         vk_s.compute_transition_matrix(
-            mode="monte_carlo", show_progress_bar=False, n_samples=1000, n_jobs=4
+            mode="monte_carlo",
+            show_progress_bar=False,
+            n_samples=1000,
+            n_jobs=4,
+            softmax_scale=4,
         )
 
         val = np.mean(
@@ -959,12 +984,20 @@ class TestMonteCarlo:
     def test_mc_and_mc_fwd_10k(self, adata: AnnData):
         vk_mc = VelocityKernel(adata, backward=False)
         vk_mc.compute_transition_matrix(
-            mode="monte_carlo", show_progress_bar=False, n_samples=10000, n_jobs=4
+            mode="monte_carlo",
+            show_progress_bar=False,
+            n_samples=10000,
+            n_jobs=4,
+            softmax_scale=4,
         )
 
         vk_s = VelocityKernel(adata, backward=False)
         vk_s.compute_transition_matrix(
-            mode="monte_carlo", show_progress_bar=False, n_samples=10000, n_jobs=4
+            mode="monte_carlo",
+            show_progress_bar=False,
+            n_samples=10000,
+            n_jobs=4,
+            softmax_scale=4,
         )
 
         val = np.mean(
@@ -976,12 +1009,16 @@ class TestMonteCarlo:
     def test_mc_and_second_order_fwd(self, adata: AnnData):
         vk_mc = VelocityKernel(adata, backward=False)
         vk_mc.compute_transition_matrix(
-            mode="monte_carlo", show_progress_bar=False, n_samples=1000, n_jobs=4
+            mode="monte_carlo",
+            show_progress_bar=False,
+            n_samples=1000,
+            n_jobs=4,
+            softmax_scale=4,
         )
 
         vk_s = VelocityKernel(adata, backward=False)
         vk_s.compute_transition_matrix(
-            mode="stochastic", show_progress_bar=False, n_jobs=4
+            mode="stochastic", show_progress_bar=False, n_jobs=4, softmax_scale=4
         )
 
         val = np.mean(
@@ -993,7 +1030,9 @@ class TestMonteCarlo:
 class TestVelocityKernel:
     def test_switch_no_prop(self, adata: AnnData):
         vk = VelocityKernel(adata)
-        vk.compute_transition_matrix(mode="deterministic", show_progress_bar=False)
+        vk.compute_transition_matrix(
+            mode="deterministic", show_progress_bar=False, softmax_scale=4
+        )
 
         with pytest.raises(ValueError):
             vk.switch_transition_matrix(1)
@@ -1001,7 +1040,11 @@ class TestVelocityKernel:
     def test_switch_invalid_index(self, adata: AnnData):
         vk = VelocityKernel(adata)
         vk.compute_transition_matrix(
-            mode="propagation", show_progress_bar=False, n_samples=10, n_jobs=4
+            mode="propagation",
+            show_progress_bar=False,
+            n_samples=10,
+            n_jobs=4,
+            softmax_scale=4,
         )
 
         with pytest.raises(IndexError):
@@ -1010,7 +1053,11 @@ class TestVelocityKernel:
     def test__switch_normal_run(self, adata: AnnData):
         vk = VelocityKernel(adata)
         vk.compute_transition_matrix(
-            mode="propagation", show_progress_bar=False, n_samples=10, n_jobs=4
+            mode="propagation",
+            show_progress_bar=False,
+            n_samples=10,
+            n_jobs=4,
+            softmax_scale=4,
         )
 
         t_0 = vk.transition_matrix
@@ -1030,12 +1077,16 @@ class TestVelocityKernel:
             mode="deterministic", show_progress_bar=False, softmax_scale=None
         )
 
-        assert vk.params["softmax_scale"] is not None
+        assert isinstance(vk.params["softmax_scale"], float)
 
     def test_propagation_with_connectivity(self, adata: AnnData):
         k = (
             VelocityKernel(adata).compute_transition_matrix(
-                mode="propagation", show_progress_bar=False, n_samples=10, n_jobs=4
+                mode="propagation",
+                show_progress_bar=False,
+                n_samples=10,
+                n_jobs=4,
+                softmax_scale=4,
             )
             + ConnectivityKernel(adata).compute_transition_matrix()
         )
@@ -1048,7 +1099,11 @@ class TestVelocityKernel:
     def test_propagation_with_connectivity_copy(self, adata: AnnData):
         k = (
             VelocityKernel(adata).compute_transition_matrix(
-                mode="propagation", show_progress_bar=False, n_samples=10, n_jobs=4
+                mode="propagation",
+                show_progress_bar=False,
+                n_samples=10,
+                n_jobs=4,
+                softmax_scale=4,
             )
             + ConnectivityKernel(adata).compute_transition_matrix()
         )
@@ -1065,10 +1120,18 @@ class TestVelocityKernel:
 
     def test_propagation_different_n_samples(self, adata: AnnData):
         vk1 = VelocityKernel(adata).compute_transition_matrix(
-            mode="propagation", show_progress_bar=False, n_samples=10, n_jobs=4
+            mode="propagation",
+            show_progress_bar=False,
+            n_samples=10,
+            n_jobs=4,
+            softmax_scale=4,
         )
         vk2 = VelocityKernel(adata).compute_transition_matrix(
-            mode="propagation", show_progress_bar=False, n_samples=11, n_jobs=4
+            mode="propagation",
+            show_progress_bar=False,
+            n_samples=11,
+            n_jobs=4,
+            softmax_scale=4,
         )
 
         with pytest.raises(ValueError):
@@ -1076,12 +1139,20 @@ class TestVelocityKernel:
 
     def test_propagation_same_index(self, adata: AnnData):
         vk1 = VelocityKernel(adata).compute_transition_matrix(
-            mode="propagation", show_progress_bar=False, n_samples=10, n_jobs=4
+            mode="propagation",
+            show_progress_bar=False,
+            n_samples=10,
+            n_jobs=4,
+            softmax_scale=4,
         )
         vk1.switch_transition_matrix(5)
 
         vk2 = VelocityKernel(adata).compute_transition_matrix(
-            mode="propagation", show_progress_bar=False, n_samples=10, n_jobs=4
+            mode="propagation",
+            show_progress_bar=False,
+            n_samples=10,
+            n_jobs=4,
+            softmax_scale=4,
         )
         vk2.switch_transition_matrix(5)
 
@@ -1097,12 +1168,20 @@ class TestVelocityKernel:
 
     def test_propagation_different_index(self, adata: AnnData):
         vk1 = VelocityKernel(adata).compute_transition_matrix(
-            mode="propagation", show_progress_bar=False, n_samples=10, n_jobs=4
+            mode="propagation",
+            show_progress_bar=False,
+            n_samples=10,
+            n_jobs=4,
+            softmax_scale=4,
         )
         vk1.switch_transition_matrix(4)
 
         vk2 = VelocityKernel(adata).compute_transition_matrix(
-            mode="propagation", show_progress_bar=False, n_samples=10, n_jobs=4
+            mode="propagation",
+            show_progress_bar=False,
+            n_samples=10,
+            n_jobs=4,
+            softmax_scale=4,
         )
         vk2.switch_transition_matrix(2)
 
@@ -1118,10 +1197,18 @@ class TestVelocityKernel:
 
     def test_propagation_addition(self, adata: AnnData):
         vk1 = VelocityKernel(adata).compute_transition_matrix(
-            mode="propagation", show_progress_bar=False, n_samples=10, n_jobs=4
+            mode="propagation",
+            show_progress_bar=False,
+            n_samples=10,
+            n_jobs=4,
+            softmax_scale=4,
         )
         vk2 = VelocityKernel(adata).compute_transition_matrix(
-            mode="propagation", show_progress_bar=False, n_samples=10, n_jobs=4
+            mode="propagation",
+            show_progress_bar=False,
+            n_samples=10,
+            n_jobs=4,
+            softmax_scale=4,
         )
         k = (vk1 + vk2).compute_transition_matrix()
 
@@ -1133,10 +1220,18 @@ class TestVelocityKernel:
 
     def test_propagation_multiplication(self, adata: AnnData):
         vk1 = VelocityKernel(adata).compute_transition_matrix(
-            mode="propagation", show_progress_bar=False, n_samples=10, n_jobs=4
+            mode="propagation",
+            show_progress_bar=False,
+            n_samples=10,
+            n_jobs=4,
+            softmax_scale=4,
         )
         vk2 = VelocityKernel(adata).compute_transition_matrix(
-            mode="propagation", show_progress_bar=False, n_samples=10, n_jobs=4
+            mode="propagation",
+            show_progress_bar=False,
+            n_samples=10,
+            n_jobs=4,
+            softmax_scale=4,
         )
         k = ((6 * vk1) * (9 * vk2)).compute_transition_matrix()
 
@@ -1151,13 +1246,18 @@ class TestVelocityKernel:
 
     def test_higher_order_propagation(self, adata: AnnData):
         vk1 = VelocityKernel(adata).compute_transition_matrix(
-            mode="propagation", show_progress_bar=False, n_samples=10, n_jobs=4
+            mode="propagation",
+            show_progress_bar=False,
+            n_samples=10,
+            n_jobs=4,
+            softmax_scale=4,
         )
         vk2 = VelocityKernel(adata).compute_transition_matrix(
             mode="deterministic",
             show_progress_bar=False,
             n_jobs=4,
             backend="loky",
+            softmax_scale=4,
         )
         ck1 = ConnectivityKernel(adata).compute_transition_matrix()
         ck2 = ConnectivityKernel(adata).compute_transition_matrix()
