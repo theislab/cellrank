@@ -22,7 +22,7 @@ def transition_matrix(
     gene_subset: Optional[Iterable] = None,
     mode: str = VelocityMode.DETERMINISTIC.s,
     backward_mode: str = BackwardMode.TRANSPOSE.s,
-    softmax_scale: Optional[float] = 4.0,
+    softmax_scale: Optional[float] = None,
     weight_connectivities: Optional[float] = None,
     density_normalize: bool = True,
     **kwargs,
