@@ -18,7 +18,7 @@ AnnData = TypeVar("AnnData")
 @d.dedent
 def lineages(
     adata: AnnData,
-    estimator: BaseEstimator = GPCCA,
+    estimator: type(BaseEstimator) = GPCCA,
     backward: bool = False,
     copy: bool = False,
     return_estimator: bool = False,
