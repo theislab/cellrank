@@ -45,8 +45,8 @@ def wrap(numpy_func: Callable) -> Callable:
 
     Modifies functionality of some function (e.g. ignoring `.squeeze`, retaining dimensions).
 
-    Params
-    ------
+    Parameters
+    ----------
     numpy_func
         Function to be wrapped.
 
@@ -201,8 +201,8 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
     """
     Lightweight :class:`numpy.ndarray` wrapper that adds names and colors.
 
-    Params
-    ------
+    Parameters
+    ----------
     input_array
         Input array containing lineage probabilities, each lineage being stored in a column.
     names
@@ -365,11 +365,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
             try:
                 # slicing an array where row/col are like 2D indices
-                if (
-                    len(col) > 1
-                    and len(rows) == self.shape[0]
-                    and len(rows) == len(col)
-                ):
+                if 1 < len(col) == len(rows) and len(rows) == self.shape[0]:
                     col = self._maybe_convert_names(col, make_unique=False)
                     return Lineage(
                         # never remove this expand_dims - it's critical
@@ -728,8 +724,8 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         """
         Plot a pie chart visualizing the aggregated lineage probabilities.
 
-        Params
-        ------
+        Parameters
+        ----------
         reduction
             Function that will be applied per lineage.
         title
@@ -770,8 +766,8 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         """
         Reduce metastable states to %(root_or_final)s states.
 
-        Params
-        ------
+        Parameters
+        ----------
         keys
             List of keys that define the %(root_or_final)s states. The lineage will be reduced
             to these states by projecting the other states.

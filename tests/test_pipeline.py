@@ -164,7 +164,7 @@ class TestHighLevelPipeline:
 
 class TestLowLevelPipeline:
     def test_fwd_pipelne_cflare(self, adata: AnnData):
-        vk = VelocityKernel(adata).compute_transition_matrix()
+        vk = VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -189,7 +189,9 @@ class TestLowLevelPipeline:
         _assert_has_all_keys(adata, Direction.FORWARD)
 
     def test_bwd_pipelne_cflare(self, adata: AnnData):
-        vk = VelocityKernel(adata, backward=True).compute_transition_matrix()
+        vk = VelocityKernel(adata, backward=True).compute_transition_matrix(
+            softmax_scale=4
+        )
         ck = ConnectivityKernel(adata, backward=True).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -214,7 +216,7 @@ class TestLowLevelPipeline:
         _assert_has_all_keys(adata, Direction.BACKWARD)
 
     def test_fwd_pipelne_gpcca(self, adata: AnnData):
-        vk = VelocityKernel(adata).compute_transition_matrix()
+        vk = VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -256,7 +258,9 @@ class TestLowLevelPipeline:
         _assert_has_all_keys(adata, Direction.FORWARD)
 
     def test_bwd_pipelne_gpcca(self, adata: AnnData):
-        vk = VelocityKernel(adata, backward=True).compute_transition_matrix()
+        vk = VelocityKernel(adata, backward=True).compute_transition_matrix(
+            softmax_scale=4
+        )
         ck = ConnectivityKernel(adata, backward=True).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
