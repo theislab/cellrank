@@ -18,7 +18,7 @@ AnnData = TypeVar("AnnData")
 @d.dedent
 def lineages(
     adata: AnnData,
-    estimator: type(BaseEstimator) = GPCCA,
+    estimator: type(BaseEstimator) = GPCCA,  # TODO remove this
     backward: bool = False,
     copy: bool = False,
     return_estimator: bool = False,
@@ -29,7 +29,7 @@ def lineages(
 
     For each cell `i` in :math:`{1, ..., N}` and %(root_or_final)s state `j` in :math:`{1, ..., M}`,
     the probability is computed that cell `i` is either going to %(final)s state `j` (``backward=False``)
-    or is coming from %(root)s state `j` (`backward=True`).
+    or is coming from %(root)s state `j` (``backward=True``).
     We provide two estimators for computing these probabilities:
 
     For the estimator :class:`cellrank.tl.estimators.GPCCA`, we perform Generalized Perron Cluster Cluster Analysis
