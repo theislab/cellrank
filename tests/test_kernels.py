@@ -57,7 +57,7 @@ class TestInitializeKernel:
         assert pk.transition_matrix is not None
 
     def test_adding_hidden_constants(self, adata: AnnData):
-        k: KernelAdd = VelocityKernel(adata) + ConnectivityKernel(adata)
+        k = VelocityKernel(adata) + ConnectivityKernel(adata)
 
         assert _is_bin_mult(k[0])
         assert isinstance(k[0], KernelMul)
@@ -72,11 +72,11 @@ class TestInitializeKernel:
         assert k[1][0].transition_matrix == 1.0
 
     def test_length(self, adata: AnnData):
-        k: KernelAdd = VelocityKernel(adata) + ConnectivityKernel(adata)
+        k = VelocityKernel(adata) + ConnectivityKernel(adata)
         assert len(k) == 2
 
     def test_accessor_out_of_range(self, adata: AnnData):
-        k: KernelAdd = VelocityKernel(adata) + ConnectivityKernel(adata)
+        k = VelocityKernel(adata) + ConnectivityKernel(adata)
 
         with pytest.raises(IndexError):
             _ = k[2]
