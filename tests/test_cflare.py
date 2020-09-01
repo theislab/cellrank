@@ -29,7 +29,7 @@ EPS = np.finfo(np.float64).eps
 
 class TestCFLARE:
     def test_compute_partition(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -47,7 +47,7 @@ class TestCFLARE:
             assert mc.transient_classes is None
 
     def test_compute_eigendecomposition(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -66,7 +66,7 @@ class TestCFLARE:
         assert f"eig_{Direction.FORWARD}" in mc.adata.uns.keys()
 
     def test_compute_final_states_no_eig(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -75,7 +75,7 @@ class TestCFLARE:
             mc.compute_final_states(use=2)
 
     def test_compute_final_states_too_large_use(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -85,7 +85,7 @@ class TestCFLARE:
             mc.compute_final_states(use=1000)
 
     def test_compute_approx_normal_run(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -101,7 +101,7 @@ class TestCFLARE:
         assert _colors(FinalStatesKey.FORWARD) in mc.adata.uns.keys()
 
     def test_compute_absorption_probabilities_no_args(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -110,7 +110,7 @@ class TestCFLARE:
             mc.compute_absorption_probabilities()
 
     def test_compute_absorption_probabilities_normal_run(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -146,7 +146,7 @@ class TestCFLARE:
         np.testing.assert_allclose(mc._get(P.ABS_PROBS).X.sum(1), 1)
 
     def test_compute_absorption_probabilities_solver(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
         tol = 1e-6
@@ -167,7 +167,7 @@ class TestCFLARE:
         np.testing.assert_allclose(l_direct.X, l_iterative.X, rtol=0, atol=tol)
 
     def test_compute_absorption_probabilities_solver_petsc(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
         tol = 1e-6
@@ -189,7 +189,7 @@ class TestCFLARE:
 
     @pytest.mark.skip("previous implementation, may be reintroduced")
     def test_compute_absorption_probabilities_mean_time(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
         tol = 1e-6
@@ -212,7 +212,7 @@ class TestCFLARE:
 
     @pytest.mark.skip("previous implementation, may be reintroduced")
     def test_compute_absorption_probabilities_mean_var(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
         tol = 1e-6
@@ -241,7 +241,7 @@ class TestCFLARE:
     def test_compute_absorption_probabilities_lineage_absorption_mean(
         self, adata_large: AnnData
     ):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
         tol = 1e-6
@@ -266,7 +266,7 @@ class TestCFLARE:
     def test_compute_absorption_probabilities_lineage_absorption_var(
         self, adata_large: AnnData
     ):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
         tol = 1e-6
@@ -288,7 +288,7 @@ class TestCFLARE:
     def test_compute_absorption_probabilities_lineage_absorption_all(
         self, adata_large: AnnData
     ):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
         tol = 1e-6
@@ -312,7 +312,7 @@ class TestCFLARE:
     def test_compute_absorption_probabilities_absorption_matches_all(
         self, adata_large: AnnData
     ):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
         tol = 1e-6
@@ -345,7 +345,7 @@ class TestCFLARE:
         np.testing.assert_allclose(at_1[f"{names} var"].values, at_2_var)
 
     def test_compute_lineage_drivers_no_lineages(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -356,7 +356,7 @@ class TestCFLARE:
             mc.compute_lineage_drivers()
 
     def test_compute_lineage_drivers_invalid_lineages(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -368,7 +368,7 @@ class TestCFLARE:
             mc.compute_lineage_drivers(use_raw=False, lineages=["foo"])
 
     def test_compute_lineage_drivers_invalid_clusters(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -382,7 +382,7 @@ class TestCFLARE:
             )
 
     def test_compute_lineage_drivers_normal_run(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -396,7 +396,7 @@ class TestCFLARE:
             assert f"{DirPrefix.FORWARD} {lineage}" in mc.adata.var.keys()
 
     def test_plot_lineage_drivers_not_computed(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -409,7 +409,7 @@ class TestCFLARE:
             mc.plot_lineage_drivers("0")
 
     def test_plot_lineage_drivers_invalid_name(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -423,7 +423,7 @@ class TestCFLARE:
             mc.plot_lineage_drivers("foo", use_raw=False)
 
     def test_plot_lineage_drivers_invalid_n_genes(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -437,7 +437,7 @@ class TestCFLARE:
             mc.plot_lineage_drivers("0", use_raw=False, n_genes=0)
 
     def test_plot_lineage_drivers_normal_run(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -450,7 +450,7 @@ class TestCFLARE:
 
     def test_compute_absorption_probabilities_keys_colors(self, adata_large: AnnData):
         adata = adata_large
-        vk = VelocityKernel(adata).compute_transition_matrix()
+        vk = VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -529,7 +529,7 @@ class TestCFLARE:
 
     def test_manual_approx_rc_set(self, adata_large):
         adata = adata_large
-        vk = VelocityKernel(adata).compute_transition_matrix()
+        vk = VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
