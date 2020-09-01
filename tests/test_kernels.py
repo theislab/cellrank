@@ -1077,7 +1077,7 @@ class TestVelocityKernel:
             mode="deterministic", show_progress_bar=False, softmax_scale=None
         )
 
-        assert vk.params["softmax_scale"] is not None
+        assert isinstance(vk.params["softmax_scale"], float)
 
     def test_propagation_with_connectivity(self, adata: AnnData):
         k = (
