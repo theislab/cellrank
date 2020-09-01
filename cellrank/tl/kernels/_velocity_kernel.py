@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Velocity kernel module."""
+from sys import version_info
 from copy import copy, deepcopy
 from math import fsum
 from typing import Any, Union, Callable, Iterable, Optional
@@ -57,7 +58,7 @@ class VelocityKernel(Kernel):
 
     This borrows ideas from both [Manno18]_ and [Bergen19]_. In short, for each cell *i*, we compute transition
     probabilities :math:`p_{i, j}` to each cell *j* in the neighborhood of *i*. The transition probabilities are
-    computed as a multinominal logistic regression where the weights :math:`w_j` (for all *j*) are given by the vector
+    computed as a multinomial logistic regression where the weights :math:`w_j` (for all *j*) are given by the vector
     that connects cell *i* with cell *j* in gene expression space, and the features :math:`x_i` are given
     by the velocity vector :math:`v_i` of cell *i*.
 
@@ -103,8 +104,6 @@ class VelocityKernel(Kernel):
         self._gene_subset = gene_subset
         self._pearson_correlations = None
 
-        self._current_ix = None
-        self._tmats = None
         self._pcors = None
 
     def _read_from_adata(self, **kwargs):
@@ -167,7 +166,7 @@ class VelocityKernel(Kernel):
         self,
         mode: str = VelocityMode.DETERMINISTIC.s,
         backward_mode: str = BackwardMode.TRANSPOSE.s,
-        softmax_scale: Optional[float] = 4.0,
+        softmax_scale: Optional[float] = None,
         n_samples: int = 1000,
         seed: Optional[int] = None,
         use_numba: Optional[bool] = False,
@@ -206,7 +205,7 @@ class VelocityKernel(Kernel):
 
             If ``mode={m.PROPAGATION.s!r}``, makes also available:
 
-                - :paramref:`_tmats` - tuple of length ``n_samples`` of transition matrices.
+                - :paramref:`transition_matrices` - tuple of length ``n_samples`` of transition matrices.
                 - :paramref:`_pcors` - tuple of length ``n_samples`` of pearson correlations.
         """
 
@@ -259,7 +258,10 @@ class VelocityKernel(Kernel):
             mode = VelocityMode.SAMPLING
 
         backend = kwargs.pop("backend", _DEFAULT_BACKEND)
-        if mode != VelocityMode.STOCHASTIC and backend == "multiprocessing":
+        if version_info[:2] <= (3, 6):
+            logg.warning("For Python3.6, only `'threading'` backend is supported")
+            backend = "threading"
+        elif mode != VelocityMode.STOCHASTIC and backend == "multiprocessing":
             # this is because on jitting and pickling (cloudpickle, used by loky, handles it correctly)
             logg.warning(
                 f"Multiprocessing backend is supported only for mode `{VelocityMode.STOCHASTIC.s!r}`. "
@@ -309,7 +311,6 @@ class VelocityKernel(Kernel):
         )
         if isinstance(tmat, (tuple, list)):
             self._tmats, self._pcors = tuple(tmat), tuple(cmat)
-            self._current_ix = 0
             tmat, cmat = tmat[self._current_ix], cmat[self._current_ix]
 
         self._compute_transition_matrix(tmat, density_normalize=False)
@@ -318,37 +319,6 @@ class VelocityKernel(Kernel):
         logg.info("    Finish", time=start)
 
         return self
-
-    @inject_docs(m=VelocityMode)
-    def switch_transition_matrix(self, index: int) -> None:
-        """
-        Switch between transition matrices when using ``mode={m.PROPAGATION.s!r}``.
-
-        Parameters
-        ----------
-        index
-            Index of the transition matrix. The matrices are stored in :paramref:`_tmats`.
-
-        Returns
-        -------
-        None
-            Nothing, just switches the transition matrix.
-        """
-        if self._tmats is None:
-            raise ValueError(
-                f"No additional transition matrices found. Compute them first as "
-                f"`.compute_transition_matrix(mode={VelocityMode.PROPAGATION.s!r}, ...)`."
-            )
-        if index == self._current_ix:
-            return
-
-        try:
-            self._transition_matrix = self._tmats[index]
-            self._current_ix = index
-        except IndexError:
-            raise IndexError(
-                f"Invalid index `{index}`. Valid range is `[0, {len(self._tmats)})`."
-            ) from None
 
     @property
     def pearson_correlations(self) -> csr_matrix:  # noqa
@@ -367,11 +337,9 @@ class VelocityKernel(Kernel):
         )
         vk._params = copy(self.params)
         vk._cond_num = self.condition_number
-        vk._transition_matrix = copy(self._transition_matrix)
+        self._copy_transition_matrix(vk)
         vk._pearson_correlations = copy(self.pearson_correlations)
-        vk._tmats = deepcopy(self._tmats)
         vk._pcors = deepcopy(self._pcors)
-        vk._current_ix = self._current_ix
 
         return vk
 
