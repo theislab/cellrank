@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
-"""Module used for finding root and final states."""
+"""Module used for finding initial and terminal states."""
 
 from typing import Union, TypeVar, Optional
 
-from cellrank.ul._docs import d, _root, _final, inject_docs
+from cellrank.ul._docs import d, _initial, _terminal, inject_docs
 from cellrank.tl._utils import (
     _check_estimator_type,
     _info_if_obs_keys_categorical_present,
 )
+from cellrank.tl._constants import FinalStatesKey
 from cellrank.tl.estimators import GPCCA, CFLARE
 from cellrank.tl._transition_matrix import transition_matrix
 from cellrank.tl.estimators._constants import P
@@ -62,15 +63,16 @@ return_estimator
 Returns
 -------
 :class:`anndata.AnnData`, :class:`cellrank.tl.estimators.BaseEstimator` or :obj:`None`
-    Depending on ``copy``, either updates the existing ``adata`` object, returns a copy or returns the estimator.
+    Depending on ``copy`` and ``return_estimator``, either updates the existing ``adata`` object,
+    returns its copy or returns the estimator.
 
     Marked cells can be found in ``adata.obs[{key_added!r}]``.
 """
 
 
-def _root_final(
+def _initial_terminal(
     adata: AnnData,
-    estimator: BaseEstimator = GPCCA,
+    estimator: type(BaseEstimator) = GPCCA,
     backward: bool = False,
     mode: str = VelocityMode.DETERMINISTIC.s,
     backward_mode: str = BackwardMode.TRANSPOSE.s,
@@ -137,13 +139,13 @@ def _root_final(
 @inject_docs(m=VelocityMode, b=BackwardMode)
 @d.dedent
 @inject_docs(
-    root=_find_docs.format(
-        direction=_root,
-        key_added=f"{_root}_states",
+    initial=_find_docs.format(
+        direction=_initial,
+        key_added=FinalStatesKey.BACKWARD.s,
         bwd_mode="\n%(velocity_backward_mode_high_lvl)s",
     )
 )
-def root_states(
+def initial_states(
     adata: AnnData,
     estimator: type(BaseEstimator) = GPCCA,
     mode: str = VelocityMode.DETERMINISTIC.s,
@@ -158,12 +160,12 @@ def root_states(
     **kwargs,
 ) -> Optional[AnnData]:
     """
-    Find %(root)s states of a dynamic process of single cells.
+    Find %(initial)s states of a dynamic process of single cells.
 
-    {root}
+    {initial}
     """
 
-    return _root_final(
+    return _initial_terminal(
         adata,
         estimator=estimator,
         mode=mode,
@@ -183,9 +185,11 @@ def root_states(
 @inject_docs(m=VelocityMode, b=BackwardMode)
 @d.dedent
 @inject_docs(
-    final=_find_docs.format(direction=_final, key_added=f"{_final}_states", bwd_mode="")
+    terminal=_find_docs.format(
+        direction=_terminal, key_added=FinalStatesKey.FORWARD.s, bwd_mode=""
+    )
 )
-def final_states(
+def terminal_states(
     adata: AnnData,
     estimator: type(BaseEstimator) = GPCCA,
     mode: str = VelocityMode.DETERMINISTIC.s,
@@ -199,12 +203,12 @@ def final_states(
     **kwargs,
 ) -> Optional[AnnData]:
     """
-    Find %(final)s states of a dynamic process of single cells.
+    Find %(terminal)s states of a dynamic process of single cells.
 
-    {final}
+    {terminal}
     """
 
-    return _root_final(
+    return _initial_terminal(
         adata,
         estimator=estimator,
         mode=mode,

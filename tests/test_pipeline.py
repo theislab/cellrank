@@ -65,7 +65,7 @@ def _assert_has_all_keys(adata: AnnData, direction: Direction):
 
 class TestHighLevelPipeline:
     def test_fwd_pipeline_cflare(self, adata: AnnData):
-        cr.tl.final_states(
+        cr.tl.terminal_states(
             adata,
             estimator=cr.tl.estimators.CFLARE,
             cluster_key="clusters",
@@ -82,7 +82,7 @@ class TestHighLevelPipeline:
         _assert_has_all_keys(adata, Direction.FORWARD)
 
     def test_fwd_pipeline_invalid_raw_requested(self, adata: AnnData):
-        cr.tl.final_states(
+        cr.tl.terminal_states(
             adata,
             estimator=cr.tl.estimators.CFLARE,
             cluster_key="clusters",
@@ -98,7 +98,7 @@ class TestHighLevelPipeline:
             cr.pl.lineage_drivers(adata, ln, use_raw=True, backward=False)
 
     def test_bwd_pipeline_cflare(self, adata: AnnData):
-        cr.tl.root_states(
+        cr.tl.initial_states(
             adata,
             estimator=cr.tl.estimators.CFLARE,
             cluster_key="clusters",
@@ -115,7 +115,7 @@ class TestHighLevelPipeline:
         _assert_has_all_keys(adata, Direction.BACKWARD)
 
     def test_fwd_pipeline_gpcca(self, adata: AnnData):
-        cr.tl.final_states(
+        cr.tl.terminal_states(
             adata,
             estimator=cr.tl.estimators.GPCCA,
             cluster_key="clusters",
@@ -131,7 +131,7 @@ class TestHighLevelPipeline:
         _assert_has_all_keys(adata, Direction.FORWARD)
 
     def test_fwd_pipeline_gpcca_invalid_raw_requested(self, adata: AnnData):
-        cr.tl.final_states(
+        cr.tl.terminal_states(
             adata,
             estimator=cr.tl.estimators.GPCCA,
             cluster_key="clusters",
@@ -146,7 +146,7 @@ class TestHighLevelPipeline:
             cr.pl.lineage_drivers(adata, ln, use_raw=True, backward=False)
 
     def test_bwd_pipeline_gpcca(self, adata: AnnData):
-        cr.tl.root_states(
+        cr.tl.initial_states(
             adata,
             estimator=cr.tl.estimators.GPCCA,
             cluster_key="clusters",

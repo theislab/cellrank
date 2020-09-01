@@ -382,9 +382,9 @@ class Plottable(KernelHolder, Property):
 
     To be used in conjunction with:
 
-        - :class:`cellrank.tool.estimators._property.MetaStates`
-        - :class:`cellrank.tool.estimators._property.FinStates`
-        - :class:`cellrank.tool.estimators._property.AbsProbs`
+        - :class:`cellrank.tool.estimators._property.MetaStates`.
+        - :class:`cellrank.tool.estimators._property.FinStates`.
+        - :class:`cellrank.tool.estimators._property.AbsProbs`.
     """
 
     @d.get_sectionsf("plot_discrete")
@@ -511,7 +511,7 @@ class Plottable(KernelHolder, Property):
         time_key
             Key from :paramref:`adata` ``.obs`` to use as a pseudotime ordering of the cells.
         title
-            Either `None`, in which case titles are `"{to, from} {final, root} {state}"`,
+            Either `None`, in which case titles are ``'{to, from} {terminal, initial} {state}'``,
             or an array of titles, one per lineage.
         same_plot
             Whether to plot the lineages on the same plot using color gradients when ``mode='embedding'``.

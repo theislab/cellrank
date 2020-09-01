@@ -147,28 +147,28 @@ class TextExcatMCTest:
 
 class TestRootFinal:
     def test_find_root(self, adata: AnnData):
-        cr.tl.root_states(adata)
+        cr.tl.initial_states(adata)
 
         assert str(FinalStatesKey.BACKWARD) in adata.obs.keys()
         assert _probs(FinalStatesKey.BACKWARD) in adata.obs.keys()
 
     def test_find_final(self, adata: AnnData):
-        cr.tl.final_states(adata, n_states=5, n_cells=5)
+        cr.tl.terminal_states(adata, n_states=5, n_cells=5)
 
         assert str(FinalStatesKey.FORWARD) in adata.obs.keys()
         assert _probs(FinalStatesKey.FORWARD) in adata.obs.keys()
 
     def test_invalid_cluster_key(self, adata: AnnData):
         with pytest.raises(KeyError):
-            cr.tl.root_states(adata, cluster_key="foo")
+            cr.tl.initial_states(adata, cluster_key="foo")
 
     def test_invalid_weight(self, adata: AnnData):
         with pytest.raises(ValueError):
-            cr.tl.root_states(adata, weight_connectivities=10)
+            cr.tl.initial_states(adata, weight_connectivities=10)
 
     def test_invalid_invalid_mode(self, adata: AnnData):
         with pytest.raises(ValueError):
-            cr.tl.root_states(adata, mode="foobar")
+            cr.tl.initial_states(adata, mode="foobar")
 
 
 class TestTransitionMatrix:
