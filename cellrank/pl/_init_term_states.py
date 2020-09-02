@@ -14,7 +14,7 @@ AnnData = TypeVar("AnnData")
 
 
 _find_docs = """\
-Plot direction} states uncovered by :class:`cellrank.tl.{fn_name}`.
+Plot {direction} states uncovered by :class:`cellrank.tl.{fn_name}`.
 
 Parameters
 ----------
