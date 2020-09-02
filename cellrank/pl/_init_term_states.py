@@ -48,10 +48,19 @@ def _initial_terminal(
     pk = DummyKernel(adata=adata, backward=backward)
     mc = GPCCA(pk, read_from_adata=True, write_to_adata=False)
 
-    if kwargs.get("title", None) is None and kwargs.get("same_plot", True):
-        kwargs["title"] = (
-            FinalStatesPlot.BACKWARD.s if backward else FinalStatesPlot.FORWARD.s
-        )
+    if isinstance(states, str) or len(states) == 1:
+        kwargs["same_plot"] = True
+
+    # this monstrosity correctly sets the title
+    if (
+        mode == "embedding"
+        and kwargs.get("title", None) is None
+        and kwargs.get("same_plot", True)
+    ):
+        if discrete or (isinstance(states, (list, tuple)) and len(states) > 1):
+            kwargs["title"] = (
+                FinalStatesPlot.BACKWARD.s if backward else FinalStatesPlot.FORWARD.s
+            )
 
     if mc._get(P.FIN) is None:
         raise RuntimeError(

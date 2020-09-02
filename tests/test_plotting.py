@@ -1637,6 +1637,30 @@ class TestHighLvlStates:
         cr.pl.terminal_states(adata, discrete=False, dpi=DPI, save=fpath)
 
     @compare()
+    def test_scvelo_terminal_disc_same_subset(self, adata: AnnData, fpath: str):
+        cr.pl.terminal_states(
+            adata, discrete=True, same_plot=True, states="0", dpi=DPI, save=fpath
+        )
+
+    @compare()
+    def test_scvelo_terminal_disc_not_same_subset(self, adata: AnnData, fpath: str):
+        cr.pl.terminal_states(
+            adata, discrete=True, same_plot=False, states="0", dpi=DPI, save=fpath
+        )
+
+    @compare()
+    def test_scvelo_terminal_cont_same_subset(self, adata: AnnData, fpath: str):
+        cr.pl.terminal_states(
+            adata, discrete=False, same_plot=True, states="0", dpi=DPI, save=fpath
+        )
+
+    @compare()
+    def test_scvelo_terminal_cont_not_same_subset(self, adata: AnnData, fpath: str):
+        cr.pl.terminal_states(
+            adata, discrete=False, same_plot=False, states="0", dpi=DPI, save=fpath
+        )
+
+    @compare()
     def test_scvelo_terminal_diff_plot(self, adata: AnnData, fpath: str):
         cr.pl.terminal_states(adata, same_plot=False, dpi=DPI, save=fpath)
 
@@ -1647,7 +1671,7 @@ class TestHighLvlStates:
         )
 
     @compare()
-    def test_scvelo_terminal_cluster_key(self, adata: AnnData, fpath: str):
+    def test_scvelo_terminal_cluster_key_discrete(self, adata: AnnData, fpath: str):
         cr.pl.terminal_states(
             adata, discrete=True, cluster_key="clusters", dpi=DPI, save=fpath
         )
@@ -1659,7 +1683,30 @@ class TestHighLvlStates:
             adata,
             discrete=False,
             mode="time",
-            time_key="dpt_pseudotime",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_scvelo_terminal_time_mode_subset(self, adata: AnnData, fpath: str):
+        # only works in continuous mode
+        cr.pl.terminal_states(
+            adata,
+            states="0",
+            discrete=False,
+            mode="time",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_scvelo_terminal_time_mode_clusters(self, adata: AnnData, fpath: str):
+        # only works in continuous mode
+        cr.pl.terminal_states(
+            adata,
+            discrete=False,
+            cluster_key="clusters",
+            mode="time",
             dpi=DPI,
             save=fpath,
         )
@@ -1683,7 +1730,15 @@ class TestLineage:
         lineage.T.plot_pie(dpi=DPI, save=fpath)
 
 
-# TODO: more model tests + cr.pl.lineage_drivers
+class TestLineageDrivers:
+    def test_scvelo_terminal_n_genes(self, adata: AnnData, fpath: str):
+        cr.pl.lineage_drivers(adata, "0", n_genes=5, dpi=DPI, save=fpath)
+
+    def test_scvelo_terminal_cmap(self, adata: AnnData, fpath: str):
+        cr.pl.lineage_drivers(adata, "0", cmap="inferno", dpi=DPI, save=fpath)
+
+
+# TODO: more model tests
 class TestModel:
     @compare()
     def test_model_default(self, adata: AnnData, fpath: str):
@@ -1693,3 +1748,9 @@ class TestModel:
         model.predict()
         model.confidence_interval()
         model.plot(save=fpath)
+
+
+class TestComposition:
+    @compare()
+    def test_composition(self, adata: AnnData, fpath: str):
+        cr.pl._utils.composition(adata, "clusters", dpi=DPI, save=fpath)
