@@ -468,6 +468,8 @@ class Plottable(KernelHolder, Property):
         if not isinstance(cluster_key, list):
             cluster_key = list(cluster_key)
 
+        same_plot = same_plot or len(data.cat.categories) == 1
+
         with RandomKeys(
             self.adata, None if same_plot else len(data.cat.categories), where="obs"
         ) as keys:
@@ -589,6 +591,9 @@ class Plottable(KernelHolder, Property):
         X = A.X  # list(A.T) behaves differently, because it's Lineage
 
         if X.shape[1] == 1:
+            same_plot = (
+                False  # because color_gradients for 1 state is buggy (looks empty)
+            )
             # this is the case for only 1 recurrent class - all cells have prob. 1 of going there
             # however, matplotlib's plotting really picks up the slightest differences in the colormap, here we set
             # everything to one, if applicable
@@ -640,6 +645,7 @@ class Plottable(KernelHolder, Property):
         if mode == "embedding":
             if same_plot:
                 kwargs["color_gradients"] = A
+                # kwargs["color"] = cluster_key  this results in a bug, cluster_key data is overwritten, will make a PR
             else:
                 kwargs["color"] = color
 
@@ -688,7 +694,7 @@ class Plottable(KernelHolder, Property):
         show_dp: bool = True,
         title: Optional[str] = None,
         same_plot: bool = False,
-        cmap: Optional[Union[str, mpl.colors.ListedColormap]] = "viridis",
+        cmap: Union[str, mpl.colors.ListedColormap] = "viridis",
         **kwargs,
     ) -> None:
         """
@@ -711,7 +717,7 @@ class Plottable(KernelHolder, Property):
     def _(self, data: pd.Series, prop: str, discrete: bool = False, **kwargs) -> None:
         if discrete and kwargs.get("mode", "embedding") == "time":
             logg.warning(
-                "`mode='time'` is implemented in continuous case. Plotting in continuous mode"
+                "`mode='time'` is implemented in continuous case, plotting in continuous mode"
             )
             discrete = False
 
@@ -729,7 +735,6 @@ class Plottable(KernelHolder, Property):
                 logg.warning(
                     f"Unable to plot continuous observations for `{prop!r}`, plotting in discrete mode"
                 )
-                kwargs["states"] = kwargs.get("states", kwargs.get("lineages"))
                 self._plot_discrete(data, prop, **kwargs)
         else:
             raise NotImplementedError(
@@ -740,7 +745,7 @@ class Plottable(KernelHolder, Property):
     def _(self, data: Lineage, prop: str, discrete: bool = False, **kwargs) -> None:
         if discrete and kwargs.get("mode", "embedding") == "time":
             logg.warning(
-                "`mode='time'` is implemented in continuous case. Plotting in continuous mode"
+                "`mode='time'` is implemented in continuous case, plotting in continuous mode"
             )
             discrete = False
 
