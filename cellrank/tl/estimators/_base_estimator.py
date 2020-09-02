@@ -38,6 +38,7 @@ from cellrank.tl._colors import (
 )
 from cellrank.tl._lineage import Lineage
 from cellrank.tl._constants import (
+    MetaKey,
     DirPrefix,
     AbsProbKey,
     PrettyEnum,
@@ -104,9 +105,11 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         if self.kernel.backward:
             self._fs_key = FinalStatesKey.BACKWARD.s
             self._abs_prob_key = AbsProbKey.BACKWARD.s
+            self._fin_abs_prob_key = MetaKey.BACKWARD.s
         else:
             self._fs_key = FinalStatesKey.FORWARD.s
             self._abs_prob_key = AbsProbKey.FORWARD.s
+            self._fin_abs_prob_key = MetaKey.FORWARD.s
 
         self._key_added = key_added
         self._g2m_key = g2m_key
@@ -128,37 +131,47 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         self._set_or_debug(self._s_key, self.adata.obs, "_S_score")
 
         self._set_or_debug(self._fs_key, self.adata.obs, A.FIN.s)
-        self._set_or_debug(_probs(self._fs_key), self.adata.obs, A.FIN_PROBS.s)
-        self._set_or_debug(_colors(self._fs_key), self.adata.uns, A.FIN_COLORS.s)
+        self._set_or_debug(_probs(self._fs_key), self.adata.obs, A.FIN_PROBS)
+        self._set_or_debug(_colors(self._fs_key), self.adata.uns, A.FIN_COLORS)
 
-        self._set_or_debug(self._abs_prob_key, self.adata.obsm, A.ABS_PROBS.s)
-        self._set_or_debug(_dp(self._abs_prob_key), self.adata.obs, A.DIFF_POT.s)
+        self._set_or_debug(self._abs_prob_key, self.adata.obsm, A.ABS_PROBS)
+        self._reconstruct_lineage(A.ABS_PROBS, self._abs_prob_key)
+        self._set_or_debug(_dp(self._abs_prob_key), self.adata.obs, A.DIFF_POT)
 
-        names = self._set_or_debug(_lin_names(self._abs_prob_key), self.adata.uns)
-        colors = self._set_or_debug(_colors(self._abs_prob_key), self.adata.uns)
+    def _reconstruct_lineage(
+        self, attr: PrettyEnum, obsm_key: str, cn_key: Optional[str] = None
+    ):
 
-        abs_probs = self._get(P.ABS_PROBS)
+        self._set_or_debug(obsm_key, self.adata.obsm, attr)
+        if cn_key is None:
+            cn_key = obsm_key
 
-        if abs_probs is not None:
-            if len(names) != abs_probs.shape[1]:
+        names = self._set_or_debug(_lin_names(cn_key), self.adata.uns)
+        colors = self._set_or_debug(_colors(cn_key), self.adata.uns)
+
+        # choosing this instead of property because GPCCA doesn't have property for FIN_ABS_PROBS
+        probs = self._get(attr)
+
+        if probs is not None:
+            if len(names) != probs.shape[1]:
                 logg.debug(
-                    f"Expected lineage names to be of length `{abs_probs.shape[1]}`, found `{len(names)}`. "
+                    f"Expected lineage names to be of length `{probs.shape[1]}`, found `{len(names)}`. "
                     f"Creating new names"
                 )
-                names = [f"Lineage {i}" for i in range(abs_probs.shape[1])]
-            if len(colors) != abs_probs.shape[1] or not all(
+                names = [f"Lineage {i}" for i in range(probs.shape[1])]
+            if len(colors) != probs.shape[1] or not all(
                 map(lambda c: isinstance(c, str) and is_color_like(c), colors)
             ):
                 logg.debug(
-                    f"Expected lineage colors to be of length `{abs_probs.shape[1]}`, found `{len(names)}`. "
+                    f"Expected lineage colors to be of length `{probs.shape[1]}`, found `{len(names)}`. "
                     f"Creating new colors"
                 )
-                colors = _create_categorical_colors(abs_probs.shape[1])
-            self._set(A.ABS_PROBS, Lineage(abs_probs, names=names, colors=colors))
+                colors = _create_categorical_colors(probs.shape[1])
+            self._set(attr, Lineage(probs, names=names, colors=colors))
 
-            self.adata.obsm[self._abs_prob_key] = self._get(P.ABS_PROBS)
-            self.adata.uns[_lin_names(self._abs_prob_key)] = names
-            self.adata.uns[_colors(self._abs_prob_key)] = colors
+            self.adata.obsm[obsm_key] = self._get(P.ABS_PROBS)
+            self.adata.uns[_lin_names(cn_key)] = names
+            self.adata.uns[_colors(cn_key)] = colors
 
     @inject_docs(fs=P.FIN.s, fsp=P.FIN_PROBS.s)
     def set_final_states(
@@ -790,9 +803,15 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
         self.adata.uns[_colors(self._fs_key)] = self._get(A.FIN_COLORS)
 
+        extra_msg = ""
+        if hasattr(self, A.FIN_ABS_PROBS.s) and hasattr(self, "_fin_abs_prob_key"):
+            self.adata.obsm[self._fin_abs_prob_key] = self._get(A.FIN_ABS_PROBS)
+            extra_msg = f"       `adata.obsm[{self._fin_abs_prob_key!r}]`\n"
+
         logg.info(
             f"Adding `adata.obs[{_probs(self._fs_key)!r}]`\n"
             f"       `adata.obs[{self._fs_key!r}]`\n"
+            f"{extra_msg}"
             f"       `.{P.FIN_PROBS}`\n"
             f"       `.{P.FIN}`",
             time=time,
@@ -863,8 +882,10 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         return getattr(self, n.s if isinstance(n, PrettyEnum) else n)
 
     def _set_or_debug(
-        self, needle: str, haystack, attr: Optional[str] = None
+        self, needle: str, haystack, attr: Optional[Union[str, PrettyEnum]] = None
     ) -> Optional[Any]:
+        if isinstance(attr, PrettyEnum):
+            attr = attr.s
         if needle in haystack:
             if attr is None:
                 return haystack[needle]

@@ -53,6 +53,12 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         Metadata(attr=A.COARSE_STAT_D, prop=P.COARSE_STAT_D, dtype=pd.Series),
     ]
 
+    def _read_from_adata(self) -> None:
+        super()._read_from_adata()
+        self._reconstruct_lineage(
+            A.FIN_ABS_PROBS, self._fin_abs_prob_key, cn_key=self._abs_prob_key
+        )
+
     @inject_docs(
         ms=P.META,
         msp=P.META_PROBS,

@@ -79,7 +79,7 @@ class FinalStatesPlot(PrettyEnum):
 
 
 class MetaKey(PrettyEnum):
-    """Metastable state key in `adata.obs`."""
+    """Key for scaled, subsampled metastable state in `adata.obsm`."""
 
     FORWARD = f"metastable_states_{Direction.FORWARD}"
     BACKWARD = f"metastable_states_{Direction.BACKWARD}"
