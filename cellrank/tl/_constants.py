@@ -51,7 +51,7 @@ class Direction(PrettyEnum):
 
 
 class DirectionPlot(PrettyEnum):
-    """Pretty direction names for pl."""
+    """Pretty direction names for plotting."""
 
     FORWARD = "forward"
     BACKWARD = "backward"
