@@ -3,11 +3,9 @@
 from typing import TypeVar, Optional
 
 from cellrank.ul._docs import d, _initial, _terminal, inject_docs
-from cellrank.tl._utils import _check_estimator_type
 from cellrank.tl._constants import FinalStatesKey, FinalStatesPlot
 from cellrank.tl.estimators import GPCCA
 from cellrank.tl.estimators._constants import P
-from cellrank.tl.estimators._base_estimator import BaseEstimator
 from cellrank.tl.kernels._precomputed_kernel import DummyKernel
 
 AnnData = TypeVar("AnnData")
@@ -23,7 +21,7 @@ estimator
     Estimator class that was used to compute the {direction} states.
 discrete
     If `True`, plot probability distribution of {direction} states.
-    Only available when ``estimator`` is :class:`cellrank.tl.estimators.GPCCA` type.
+    Only available when {direction} were estimated by :class:`cellrank.tl.estimators.GPCCA`.
 title
     Title of the figure. If `None`, it will be set to `{title!r}`.
 **kwargs
@@ -37,17 +35,14 @@ Returns
 
 def _initial_terminal(
     adata: AnnData,
-    estimator: type(BaseEstimator) = GPCCA,
     backward: bool = False,
     discrete: bool = False,
     title: Optional[str] = None,
     **kwargs,
 ) -> None:
 
-    _check_estimator_type(estimator)
-
     pk = DummyKernel(adata=adata, backward=backward)
-    mc = estimator(pk, read_from_adata=True, write_to_adata=False)
+    mc = GPCCA(pk, read_from_adata=True, write_to_adata=False)
 
     if title is None:
         title = FinalStatesPlot.BACKWARD.s if backward else FinalStatesPlot.FORWARD.s
@@ -55,7 +50,7 @@ def _initial_terminal(
     if mc._get(P.FIN) is None:
         raise RuntimeError(
             f"Compute {_initial if backward else _terminal} states first as "
-            f"`cellrank.tl.compute_{FinalStatesKey.BACKWARD if backward else FinalStatesKey.FORWARD}`."
+            f"`cellrank.tl.compute_{FinalStatesKey.BACKWARD if backward else FinalStatesKey.FORWARD}()`."
         )
 
     mc.plot_final_states(discrete=discrete, title=title, **kwargs)
@@ -71,7 +66,6 @@ def _initial_terminal(
 )
 def initial_states(
     adata: AnnData,
-    estimator: type(BaseEstimator) = GPCCA,
     discrete: bool = True,
     title: Optional[str] = None,
     **kwargs,
@@ -79,7 +73,6 @@ def initial_states(
 
     return _initial_terminal(
         adata,
-        estimator=estimator,
         backward=True,
         discrete=discrete,
         title=title,
@@ -97,7 +90,6 @@ def initial_states(
 )
 def terminal_states(
     adata: AnnData,
-    estimator: type(BaseEstimator) = GPCCA,
     discrete: bool = True,
     title: Optional[str] = None,
     **kwargs,
@@ -105,7 +97,6 @@ def terminal_states(
 
     return _initial_terminal(
         adata,
-        estimator=estimator,
         backward=False,
         discrete=discrete,
         title=title,
