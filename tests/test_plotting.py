@@ -18,7 +18,6 @@ from matplotlib.testing import setup
 from matplotlib.testing.compare import compare_images
 
 import cellrank as cr
-import cellrank.pl._lineages
 from cellrank.tl._constants import AbsProbKey
 from cellrank.tl.estimators import GPCCA, CFLARE
 
@@ -91,7 +90,6 @@ def compare(
         return fpath, str(fpath[7:] + ".png" if fpath.startswith("scvelo_") else fpath)
 
     def _assert_equal(fpath: str) -> None:
-        # TODO: not an elegant solution, consider passing dirname to the functions
         if not fpath.endswith(".png"):
             fpath += ".png"
         if dirname is not None:
@@ -152,7 +150,8 @@ def compare(
     if kind == "lineage":
         return compare_lineage
 
-    return compare_cflare_fwd  # here we hand `kind='adata'`
+    # `kind='adata'` - don't changes this, otherwise some tests in `TestHighLvlStates` are meaningless
+    return compare_gpcca_fwd
 
 
 class TestClusterFates:
@@ -1600,24 +1599,69 @@ class TestGPCCA:
 class TestLineages:
     @compare()
     def test_scvelo_lineages(self, adata: AnnData, fpath: str):
-        cellrank.pl._lineages.lineages(adata, dpi=DPI, save=fpath)
+        cr.pl.lineages(adata, dpi=DPI, save=fpath)
 
     @compare()
     def test_scvelo_lineages_subset(self, adata: AnnData, fpath: str):
-        cellrank.pl._lineages.lineages(adata, lineages=["1"], dpi=DPI, save=fpath)
+        cr.pl.lineages(adata, lineages=["1"], dpi=DPI, save=fpath)
 
     @compare()
     def test_scvelo_lineages_time(self, adata: AnnData, fpath: str):
-        cellrank.pl._lineages.lineages(adata, mode="time", dpi=DPI, save=fpath)
+        cr.pl.lineages(adata, mode="time", dpi=DPI, save=fpath)
 
     @compare()
     def test_scvelo_lineages_cmap(self, adata: AnnData, fpath: str):
-        cellrank.pl._lineages.lineages(adata, cmap=cm.inferno, dpi=DPI, save=fpath)
+        cr.pl.lineages(adata, cmap=cm.inferno, dpi=DPI, save=fpath)
 
     @compare()
     def test_scvelo_lineages_subset(self, adata: AnnData, fpath: str):
-        cellrank.pl._lineages.lineages(
-            adata, cluster_key="clusters", dpi=DPI, save=fpath
+        cr.pl.lineages(adata, cluster_key="clusters", dpi=DPI, save=fpath)
+
+
+class TestHighLvlStates:
+    @compare()
+    def test_scvelo_initial_states_disc(self, adata: AnnData, fpath: str):
+        cr.pl.initial_states(adata, discrete=True, dpi=DPI, save=fpath)
+
+    @compare()
+    def test_scvelo_terminal_states_disc(self, adata: AnnData, fpath: str):
+        cr.pl.terminal_states(adata, discrete=True, dpi=DPI, save=fpath)
+
+    # only matters when kind='adata' was computed using GPCCA
+    @compare()
+    def test_scvelo_initial_states_cont(self, adata: AnnData, fpath: str):
+        cr.pl.initial_states(adata, discrete=False, dpi=DPI, save=fpath)
+
+    @compare()
+    def test_scvelo_terminal_states_cont(self, adata: AnnData, fpath: str):
+        cr.pl.terminal_states(adata, discrete=False, dpi=DPI, save=fpath)
+
+    @compare()
+    def test_scvelo_terminal_diff_plot(self, adata: AnnData, fpath: str):
+        cr.pl.terminal_states(adata, same_plot=False, dpi=DPI, save=fpath)
+
+    @compare()
+    def test_scvelo_terminal_diff_plot_titles(self, adata: AnnData, fpath: str):
+        cr.pl.terminal_states(
+            adata, same_plot=False, title=["foo", "bar"] * 10, dpi=DPI, save=fpath
+        )
+
+    @compare()
+    def test_scvelo_terminal_cluster_key(self, adata: AnnData, fpath: str):
+        cr.pl.terminal_states(
+            adata, discrete=True, cluster_key="clusters", dpi=DPI, save=fpath
+        )
+
+    @compare()
+    def test_scvelo_terminal_time_mode(self, adata: AnnData, fpath: str):
+        # only works in continuous mode
+        cr.pl.terminal_states(
+            adata,
+            discrete=False,
+            mode="time",
+            time_key="dpt_pseudotime",
+            dpi=DPI,
+            save=fpath,
         )
 
 

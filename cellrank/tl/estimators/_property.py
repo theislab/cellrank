@@ -629,7 +629,7 @@ class Plottable(KernelHolder, Property):
                 y=color,
                 title=title,
                 xlabel=[time_key] * len(title),
-                ylabel=["probability" * len(title)],
+                ylabel=["probability"] * len(title),
                 **_filter_kwargs(scv.pl.scatter, **kwargs),
             )
         else:

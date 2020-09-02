@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Module used for finding initial and terminal states."""
-from typing import TypeVar, Optional
+from typing import Union, TypeVar, Optional, Sequence
 
 from cellrank.ul._docs import d, _initial, _terminal, inject_docs
 from cellrank.tl._constants import FinalStatesKey, FinalStatesPlot
@@ -37,14 +37,14 @@ def _initial_terminal(
     adata: AnnData,
     backward: bool = False,
     discrete: bool = False,
-    title: Optional[str] = None,
+    title: Optional[Union[str, Sequence[str]]] = None,
     **kwargs,
 ) -> None:
 
     pk = DummyKernel(adata=adata, backward=backward)
     mc = GPCCA(pk, read_from_adata=True, write_to_adata=False)
 
-    if title is None:
+    if title is None and kwargs.get("same_plot", True):
         title = FinalStatesPlot.BACKWARD.s if backward else FinalStatesPlot.FORWARD.s
 
     if mc._get(P.FIN) is None:
@@ -67,7 +67,7 @@ def _initial_terminal(
 def initial_states(
     adata: AnnData,
     discrete: bool = True,
-    title: Optional[str] = None,
+    title: Optional[Union[str, Sequence[str]]] = None,
     **kwargs,
 ) -> Optional[AnnData]:  # noqa
 
@@ -91,7 +91,7 @@ def initial_states(
 def terminal_states(
     adata: AnnData,
     discrete: bool = True,
-    title: Optional[str] = None,
+    title: Optional[Union[str, Sequence[str]]] = None,
     **kwargs,
 ) -> Optional[AnnData]:  # noqa
 
