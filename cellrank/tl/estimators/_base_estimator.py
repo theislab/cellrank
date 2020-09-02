@@ -131,7 +131,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         self._set_or_debug(_probs(self._fs_key), self.adata.obs, A.FIN_PROBS.s)
         self._set_or_debug(_colors(self._fs_key), self.adata.uns, A.FIN_COLORS.s)
 
-        self._set_or_debug(self._abs_prob_key, self.adata.obsm, A.ABS_RPOBS.s)
+        self._set_or_debug(self._abs_prob_key, self.adata.obsm, A.ABS_PROBS.s)
         self._set_or_debug(_dp(self._abs_prob_key), self.adata.obs, A.DIFF_POT.s)
 
         names = self._set_or_debug(_lin_names(self._abs_prob_key), self.adata.uns)
@@ -154,7 +154,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                     f"Creating new colors"
                 )
                 colors = _create_categorical_colors(abs_probs.shape[1])
-            self._set(A.ABS_RPOBS, Lineage(abs_probs, names=names, colors=colors))
+            self._set(A.ABS_PROBS, Lineage(abs_probs, names=names, colors=colors))
 
             self.adata.obsm[self._abs_prob_key] = self._get(P.ABS_PROBS)
             self.adata.uns[_lin_names(self._abs_prob_key)] = names
@@ -361,7 +361,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             logg.debug(f"Overwriting `.{P.ABS_PROBS}`")
 
         self._set(
-            A.ABS_RPOBS,
+            A.ABS_PROBS,
             Lineage(
                 np.empty((1, len(colors_))),
                 names=final_states_.cat.categories,
@@ -453,7 +453,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             abs_classes[cl_indices, col] = 1
 
         self._set(
-            A.ABS_RPOBS,
+            A.ABS_PROBS,
             Lineage(
                 abs_classes,
                 names=self._get(P.ABS_PROBS).names,

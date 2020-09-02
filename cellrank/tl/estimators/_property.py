@@ -758,7 +758,7 @@ class AbsProbs(Plottable):
 
     __prop_metadata__ = [
         Metadata(
-            attr=A.ABS_RPOBS,
+            attr=A.ABS_PROBS,
             prop=P.ABS_PROBS,
             dtype=Lineage,
             doc="Absorption probabilities.",
