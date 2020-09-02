@@ -764,13 +764,13 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         return_weights: bool = False,
     ) -> Union["Lineage", Tuple["Lineage", Optional[pd.DataFrame]]]:
         """
-        Reduce metastable states to %(root_or_final)s states.
+        Reduce metastable states to %(initial_or_terminal)s states.
 
         Parameters
         ----------
         keys
-            List of keys that define the %(root_or_final)s states. The lineage will be reduced
-            to these states by projecting the other states.
+            List of keys that define the %(initial_terminal)s states. The lineage will be reduced to these states
+            by projecting the other states.
         mode
             Whether to use a distance measure to compute weights - `'dist'`, or just rescale - `'scale'`.
         dist_measure
@@ -783,9 +783,9 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
                 - `'mutual_inf'` - mutual information.
                 - `'equal'` - equally redistribute the mass among the rest.
         normalize_weights
-            How to normalize the weights. Valid options are:
+            How to row-normalize the weights. Valid options are:
 
-                - `'scale'` - divide by the sum (per row).
+                - `'scale'` - divide by the sum.
                 - `'softmax'`- use a softmax.
         softmax_scale
             Scaling factor in the softmax, used for normalizing the weights to sum to `1`.
@@ -795,7 +795,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         Returns
         -------
         :class:`cellrank.tl.Lineage`
-            Lineage object, reduced to the %(root_or_final)s states. If a reduction is not possible, return a copy.
+            Lineage object, reduced to the %(inital_terminal)s states. If a reduction is not possible, return a copy.
         :class:`pandas.DataFrame`
             The weights used for the projection of shape ``(n_query, n_reference)``.
         """

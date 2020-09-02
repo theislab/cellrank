@@ -5,12 +5,10 @@ from typing import TypeVar, Optional
 
 from cellrank import logging as logg
 from cellrank.ul._docs import d
-from cellrank.tl._utils import _check_estimator_type
 from cellrank.tl.kernels import PrecomputedKernel
 from cellrank.tl._constants import AbsProbKey, FinalStatesKey, FinalStatesPlot
 from cellrank.tl.estimators import GPCCA
 from cellrank.tl.estimators._constants import P
-from cellrank.tl.estimators._base_estimator import BaseEstimator
 
 AnnData = TypeVar("AnnData")
 
@@ -18,7 +16,6 @@ AnnData = TypeVar("AnnData")
 @d.dedent
 def lineages(
     adata: AnnData,
-    estimator: type(BaseEstimator) = GPCCA,  # TODO remove this
     backward: bool = False,
     copy: bool = False,
     return_estimator: bool = False,
@@ -43,13 +40,11 @@ def lineages(
     see [Setty19]_ or [Weinreb18]_.
 
     Before running this function, compute %(initial_or_terminal) states using :func:`cellrank.tl.initial_states` or
-    :func:`cellrank.tl.terminall_states`, respectively.
+    :func:`cellrank.tl.terminal_states`, respectively.
 
     Parameters
     ----------
     %(adata)s
-    estimator
-        Estimator class to use to compute the lineage probabilities.
     %(backward)s
     copy
         Whether to update the existing ``adata`` object or to return a copy.
@@ -61,11 +56,9 @@ def lineages(
     Returns
     -------
     :class:`anndata.AnnData`, :class:`cellrank.tl.estimators.BaseEstimator` or :obj:`None`
-        Depending on ``copy``, either updates the existing ``adata`` object or returns a copy or returns the estimator.
+        Depending on ``copy`` and ``return_estimato``, either updates the existing ``adata`` object,
+        returns its copy or returns the estimator.
     """
-
-    _check_estimator_type(estimator)
-    adata = adata.copy() if copy else adata
 
     if backward:
         lin_key = AbsProbKey.BACKWARD
@@ -83,7 +76,9 @@ def lineages(
         ) from e
 
     start = logg.info(f"Computing lineage probabilities towards {fs_key_pretty.s}")
-    mc = estimator(pk, read_from_adata=True)
+    mc = GPCCA(
+        pk, read_from_adata=True, inplace=not copy
+    )  # GPCCA is more general than CFLARE
     if mc._get(P.FIN) is None:
         raise RuntimeError(f"Compute the states first as `cellrank.tl.{fs_key.s}()`.")
 
@@ -92,4 +87,4 @@ def lineages(
 
     logg.info(f"Adding lineages to `adata.obsm[{lin_key.s!r}]`\n    Finish", time=start)
 
-    return adata if copy else mc if return_estimator else None
+    return mc.adata if copy else mc if return_estimator else None
