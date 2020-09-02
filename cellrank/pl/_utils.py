@@ -13,9 +13,11 @@ from typing import (
     Optional,
     Sequence,
 )
+from pathlib import Path
 from collections import defaultdict
 
 import numpy as np
+from pandas.api.types import is_categorical_dtype
 
 import matplotlib as mpl
 import matplotlib.cm as cm
@@ -25,7 +27,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from cellrank import logging as logg
 from cellrank.ul._docs import d
-from cellrank.tl._utils import _unique_order_preserving
+from cellrank.tl._utils import save_fig, _unique_order_preserving
 from cellrank.ul.models import GAMR, BaseModel, SKLearnModel
 from cellrank.tl._constants import _DEFAULT_BACKEND, _colors
 
@@ -697,3 +699,52 @@ def _create_callbacks(
 
 def _default_model_callback(model: BaseModel, **kwargs) -> BaseModel:
     return model.prepare(**kwargs)
+
+
+@d.dedent
+def composition(
+    adata: AnnData,
+    key: str,
+    figsize: Optional[Tuple[float, float]] = None,
+    dpi: Optional[float] = None,
+    save: Optional[Union[str, Path]] = None,
+) -> None:
+    """
+    Plot a pie chart for categorical annotation.
+
+    .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/composition.png
+       :width: 400px
+       :align: center
+
+    Parameters
+    ----------
+    %(adata)s
+    key
+        Key in ``adata.obs`` containing categorical observation.
+    %(plotting)s
+
+    Returns
+    -------
+    %(just_plots)s
+    """
+
+    if key not in adata.obs:
+        raise KeyError(f"Key `{key!r}` not found in `adata.obs`.")
+    if not is_categorical_dtype(adata.obs[key]):
+        raise TypeError(f"Observation `adata.obs[{key!r}]` is not categorical.")
+
+    cats = adata.obs[key].cat.categories
+    colors = adata.uns.get(f"{key}_colors", None)
+    x = [np.sum(adata.obs[key] == cl) for cl in cats]
+    cats_frac = x / np.sum(x)
+
+    # plot these fractions in a pie plot
+    fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
+
+    ax.pie(x=cats_frac, labels=cats, colors=colors)
+    ax.set_title(f"composition by {key}")
+
+    if save is not None:
+        save_fig(fig, save)
+
+    fig.show()

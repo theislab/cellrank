@@ -17,13 +17,14 @@ Plot {direction} states uncovered by :class:`cellrank.tl.{fn_name}`.
 Parameters
 ----------
 %(adata)s
-estimator
-    Estimator class that was used to compute the {direction} states.
+cluster_key
+    If given, plot cluster annotations left of the {direction} states.
+%(time_mode)s
+time_key
+    Key from ``adata.obs`` to use as a pseudotime ordering of the cells.
 discrete
     If `True`, plot probability distribution of {direction} states.
     Only available when {direction} were estimated by :class:`cellrank.tl.estimators.GPCCA`.
-title
-    Title of the figure. If `None`, it will be set to `{title!r}`.
 **kwargs
     Keyword arguments for :meth:`cellrank.tl.estimators.BaseEstimator.plot_final_states`.
 
@@ -37,15 +38,20 @@ def _initial_terminal(
     adata: AnnData,
     backward: bool = False,
     discrete: bool = False,
-    title: Optional[Union[str, Sequence[str]]] = None,
+    states: Optional[Union[str, Sequence[str]]] = None,
+    cluster_key: Optional[str] = None,
+    mode: str = "embedding",
+    time_key: str = "latent_time",
     **kwargs,
 ) -> None:
 
     pk = DummyKernel(adata=adata, backward=backward)
     mc = GPCCA(pk, read_from_adata=True, write_to_adata=False)
 
-    if title is None and kwargs.get("same_plot", True):
-        title = FinalStatesPlot.BACKWARD.s if backward else FinalStatesPlot.FORWARD.s
+    if kwargs.get("title", None) is None and kwargs.get("same_plot", True):
+        kwargs["title"] = (
+            FinalStatesPlot.BACKWARD.s if backward else FinalStatesPlot.FORWARD.s
+        )
 
     if mc._get(P.FIN) is None:
         raise RuntimeError(
@@ -53,7 +59,16 @@ def _initial_terminal(
             f"`cellrank.tl.compute_{FinalStatesKey.BACKWARD if backward else FinalStatesKey.FORWARD}()`."
         )
 
-    mc.plot_final_states(discrete=discrete, title=title, **kwargs)
+    _ = kwargs.pop("lineages", None)  # user makes a mistake
+
+    mc.plot_final_states(
+        lineages=states,
+        cluster_key=cluster_key,
+        mode=mode,
+        time_key=time_key,
+        discrete=discrete,
+        **kwargs,
+    )
 
 
 @d.dedent
@@ -66,8 +81,11 @@ def _initial_terminal(
 )
 def initial_states(
     adata: AnnData,
-    discrete: bool = True,
-    title: Optional[Union[str, Sequence[str]]] = None,
+    discrete: bool = False,
+    states: Optional[Union[str, Sequence[str]]] = None,
+    cluster_key: Optional[str] = None,
+    mode: str = "embedding",
+    time_key: str = "latent_time",
     **kwargs,
 ) -> Optional[AnnData]:  # noqa
 
@@ -75,7 +93,10 @@ def initial_states(
         adata,
         backward=True,
         discrete=discrete,
-        title=title,
+        states=states,
+        cluster_key=cluster_key,
+        mode=mode,
+        time_key=time_key,
         **kwargs,
     )
 
@@ -90,8 +111,11 @@ def initial_states(
 )
 def terminal_states(
     adata: AnnData,
-    discrete: bool = True,
-    title: Optional[Union[str, Sequence[str]]] = None,
+    discrete: bool = False,
+    states: Optional[Union[str, Sequence[str]]] = None,
+    cluster_key: Optional[str] = None,
+    mode: str = "embedding",
+    time_key: str = "latent_time",
     **kwargs,
 ) -> Optional[AnnData]:  # noqa
 
@@ -99,6 +123,9 @@ def terminal_states(
         adata,
         backward=False,
         discrete=discrete,
-        title=title,
+        states=states,
+        cluster_key=cluster_key,
+        mode=mode,
+        time_key=time_key,
         **kwargs,
     )
