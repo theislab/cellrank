@@ -27,20 +27,12 @@ def lineages(
     For each cell `i` in :math:`{1, ..., N}` and %(initial_or_terminal)s state `j` in :math:`{1, ..., M}`,
     the probability is computed that cell `i` is either going to %(terminal)s state `j` (``backward=False``)
     or is coming from %(initial)s state `j` (``backward=True``).
-    We provide two estimators for computing these probabilities:
 
-    For the estimator :class:`cellrank.tl.estimators.GPCCA`, we perform Generalized Perron Cluster Cluster Analysis
-    [GPCCA18]_. Cells are mapped to a simplex where each corner represents a %(initial_or_terminal) state, and the
-    position of a cell in the simplex determines its probability of going to a %(terminal)s states or
-    coming from %(initial)s states.
+    This function computes the absorption probabilities of a Markov chain towards %(initial_or_terminal) states
+    uncovered by :func:`cellrank.tl.initial_states` or :func:`cellrank.tl.terminal_states`.
 
-    For the estimator :class:`cellrank.tl.estimators.CFLARE`, we compute absorption probabilities towards
-    the %(initial_or_terminal)s states of the Markov chain.
-    For related approaches in the single cell context that utilise absorption probabilities to map cells to lineages,
-    see [Setty19]_ or [Weinreb18]_.
-
-    Before running this function, compute %(initial_or_terminal) states using :func:`cellrank.tl.initial_states` or
-    :func:`cellrank.tl.terminal_states`, respectively.
+    It's also possible to calculate mean and variance of time until absorption all or just a subset
+    of %(initial_or_terminal)s states
 
     Parameters
     ----------
@@ -56,7 +48,7 @@ def lineages(
     Returns
     -------
     :class:`anndata.AnnData`, :class:`cellrank.tl.estimators.BaseEstimator` or :obj:`None`
-        Depending on ``copy`` and ``return_estimato``, either updates the existing ``adata`` object,
+        Depending on ``copy`` and ``return_estimator``, either updates the existing ``adata`` object,
         returns its copy or returns the estimator.
     """
 
@@ -72,7 +64,8 @@ def lineages(
         pk = PrecomputedKernel(adata=adata, backward=backward)
     except KeyError as e:
         raise RuntimeError(
-            "Compute transition matrix first a `cellrank.tl.transition_matrix()`."
+            f"Compute {'backward' if backward else 'forward'} transition matrix first as "
+            f"`cellrank.tl.transition_matrix(..., backward={backward})`."
         ) from e
 
     start = logg.info(f"Computing lineage probabilities towards {fs_key_pretty.s}")
