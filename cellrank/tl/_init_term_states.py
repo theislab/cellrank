@@ -19,10 +19,11 @@ AnnData = TypeVar("AnnData")
 
 
 _find_docs = """\
-Compute {direction} states based on RNA velocity, see [Manno18]_. The tool models dynamic cellular
-processes as a Markov chain, where the transition matrix is computed based on the velocity vectors of each
-individual cell. Based on this Markov chain, we provide two estimators to compute {direction} states, both of which
-are based on spectral methods.
+Find {direction} states of a dynamic process of single cells based on RNA velocity [Manno18]_.
+
+The function models dynamic cellular processes as a Markov chain, where the transition matrix is computed based
+on the velocity vectors of each individual cell. Based on this Markov chain, we provide two estimators
+to compute {direction} states, both of which are based on spectral methods.
 
 For the estimator :class:`cellrank.tl.estimators.GPCCA`, cells are fuzzily clustered into metastable states,
 using Generalized Perron Cluster Cluster Analysis [GPCCA18]_.
@@ -137,7 +138,7 @@ def _initial_terminal(
 @inject_docs(m=VelocityMode, b=BackwardMode)
 @d.dedent
 @inject_docs(
-    initial=_find_docs.format(
+    __doc__=_find_docs.format(
         direction=_initial,
         key_added=FinalStatesKey.BACKWARD.s,
         bwd_mode="\n%(velocity_backward_mode_high_lvl)s",
@@ -155,12 +156,7 @@ def initial_states(
     return_estimator: bool = False,
     fit_kwargs: Mapping = MappingProxyType({}),
     **kwargs,
-) -> Optional[AnnData]:
-    """
-    Find %(initial)s states of a dynamic process of single cells.
-
-    {initial}
-    """
+) -> Optional[AnnData]:  # noqa
 
     return _initial_terminal(
         adata,
@@ -181,7 +177,7 @@ def initial_states(
 @inject_docs(m=VelocityMode, b=BackwardMode)
 @d.dedent
 @inject_docs(
-    terminal=_find_docs.format(
+    __doc__=_find_docs.format(
         direction=_terminal, key_added=FinalStatesKey.FORWARD.s, bwd_mode=""
     )
 )
@@ -196,12 +192,7 @@ def terminal_states(
     return_estimator: bool = False,
     fit_kwargs: Mapping = MappingProxyType({}),
     **kwargs,
-) -> Optional[AnnData]:
-    """
-    Find %(terminal)s states of a dynamic process of single cells.
-
-    {terminal}
-    """
+) -> Optional[AnnData]:  # noqa
 
     return _initial_terminal(
         adata,

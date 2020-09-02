@@ -111,7 +111,7 @@ class TestRootFinal:
         assert _probs(FinalStatesKey.BACKWARD) in adata.obs.keys()
 
     def test_find_final(self, adata: AnnData):
-        cr.tl.terminal_states(adata, n_states=5, n_cells=5)
+        cr.tl.terminal_states(adata, n_states=5, fit_kwargs=dict(n_cells=5))
 
         assert str(FinalStatesKey.FORWARD) in adata.obs.keys()
         assert _probs(FinalStatesKey.FORWARD) in adata.obs.keys()
