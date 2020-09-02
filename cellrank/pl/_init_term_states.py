@@ -14,7 +14,7 @@ AnnData = TypeVar("AnnData")
 
 
 _find_docs = """\
-Plot {direction} states.
+Plot direction} states uncovered by :class:`cellrank.tl.{fn_name}`.
 
 Parameters
 ----------
@@ -22,7 +22,8 @@ Parameters
 estimator
     Estimator class that was used to compute the {direction} states.
 discrete
-    TODO
+    If `True`, plot probability distribution of {direction} states.
+    Only available when ``estimator`` is :class:`cellrank.tl.estimators.GPCCA` type.
 **kwargs
     Keyword arguments for :meth:`cellrank.tl.estimators.BaseEstimator.plot_final_states`.
 
@@ -55,7 +56,9 @@ def _initial_terminal(
 
 
 @d.dedent
-@inject_docs(__doc__=_find_docs.format(direction=_terminal))
+@inject_docs(
+    __doc__=_find_docs.format(direction=_initial, fn_name=FinalStatesKey.BACKWARD.s)
+)
 def initial_states(
     adata: AnnData,
     estimator: type(BaseEstimator) = GPCCA,
@@ -73,7 +76,9 @@ def initial_states(
 
 
 @d.dedent
-@inject_docs(__doc__=_find_docs.format(direction=_terminal))
+@inject_docs(
+    __doc__=_find_docs.format(direction=_terminal, fn_name=FinalStatesKey.FORWARD.s)
+)
 def terminal_states(
     adata: AnnData,
     estimator: type(BaseEstimator) = GPCCA,
