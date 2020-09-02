@@ -2,9 +2,11 @@
 """Module used for finding initial and terminal states."""
 from typing import TypeVar, Optional
 
-from cellrank.ul._docs import d, _terminal, inject_docs
+from cellrank.ul._docs import d, _initial, _terminal, inject_docs
 from cellrank.tl._utils import _check_estimator_type
+from cellrank.tl._constants import FinalStatesKey
 from cellrank.tl.estimators import GPCCA
+from cellrank.tl.estimators._constants import P
 from cellrank.tl.estimators._base_estimator import BaseEstimator
 from cellrank.tl.kernels._precomputed_kernel import DummyKernel
 
@@ -43,7 +45,11 @@ def _initial_terminal(
     pk = DummyKernel(adata=adata, backward=backward)
     mc = estimator(pk, read_from_adata=True, write_to_adata=False)
 
-    # TODO: error checking
+    if mc._get(P.FIN) is None:
+        raise RuntimeError(
+            f"Compute {_initial if backward else _terminal} states first as "
+            f"`cellrank.tl.compute_{FinalStatesKey.BACKWARD if backward else FinalStatesKey.FORWARD}`."
+        )
 
     mc.plot_final_states(discrete=discrete, **kwargs)
 
