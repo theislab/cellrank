@@ -4,7 +4,7 @@ from typing import TypeVar, Optional
 
 from cellrank.ul._docs import d, _initial, _terminal, inject_docs
 from cellrank.tl._utils import _check_estimator_type
-from cellrank.tl._constants import FinalStatesKey
+from cellrank.tl._constants import FinalStatesKey, FinalStatesPlot
 from cellrank.tl.estimators import GPCCA
 from cellrank.tl.estimators._constants import P
 from cellrank.tl.estimators._base_estimator import BaseEstimator
@@ -24,6 +24,8 @@ estimator
 discrete
     If `True`, plot probability distribution of {direction} states.
     Only available when ``estimator`` is :class:`cellrank.tl.estimators.GPCCA` type.
+title
+    Title of the figure. If `None`, it will be set to `{title!r}`.
 **kwargs
     Keyword arguments for :meth:`cellrank.tl.estimators.BaseEstimator.plot_final_states`.
 
@@ -38,6 +40,7 @@ def _initial_terminal(
     estimator: type(BaseEstimator) = GPCCA,
     backward: bool = False,
     discrete: bool = False,
+    title: Optional[str] = None,
     **kwargs,
 ) -> None:
 
@@ -46,23 +49,31 @@ def _initial_terminal(
     pk = DummyKernel(adata=adata, backward=backward)
     mc = estimator(pk, read_from_adata=True, write_to_adata=False)
 
+    if title is None:
+        title = FinalStatesPlot.BACKWARD.s if backward else FinalStatesPlot.FORWARD.s
+
     if mc._get(P.FIN) is None:
         raise RuntimeError(
             f"Compute {_initial if backward else _terminal} states first as "
             f"`cellrank.tl.compute_{FinalStatesKey.BACKWARD if backward else FinalStatesKey.FORWARD}`."
         )
 
-    mc.plot_final_states(discrete=discrete, **kwargs)
+    mc.plot_final_states(discrete=discrete, title=title, **kwargs)
 
 
 @d.dedent
 @inject_docs(
-    __doc__=_find_docs.format(direction=_initial, fn_name=FinalStatesKey.BACKWARD.s)
+    __doc__=_find_docs.format(
+        direction=_initial,
+        fn_name=FinalStatesKey.BACKWARD.s,
+        title=FinalStatesPlot.BACKWARD.s,
+    )
 )
 def initial_states(
     adata: AnnData,
     estimator: type(BaseEstimator) = GPCCA,
     discrete: bool = True,
+    title: Optional[str] = None,
     **kwargs,
 ) -> Optional[AnnData]:  # noqa
 
@@ -71,18 +82,24 @@ def initial_states(
         estimator=estimator,
         backward=True,
         discrete=discrete,
+        title=title,
         **kwargs,
     )
 
 
 @d.dedent
 @inject_docs(
-    __doc__=_find_docs.format(direction=_terminal, fn_name=FinalStatesKey.FORWARD.s)
+    __doc__=_find_docs.format(
+        direction=_terminal,
+        fn_name=FinalStatesKey.FORWARD.s,
+        title=FinalStatesPlot.FORWARD.s,
+    )
 )
 def terminal_states(
     adata: AnnData,
     estimator: type(BaseEstimator) = GPCCA,
     discrete: bool = True,
+    title: Optional[str] = None,
     **kwargs,
 ) -> Optional[AnnData]:  # noqa
 
@@ -91,5 +108,6 @@ def terminal_states(
         estimator=estimator,
         backward=False,
         discrete=discrete,
+        title=title,
         **kwargs,
     )
