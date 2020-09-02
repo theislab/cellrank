@@ -57,9 +57,8 @@ def cluster_fates(
     """
     Plot aggregate lineage probabilities at a cluster level.
 
-    This can be used to investigate how likely a certain cluster is to go to the %(final)s states, or in turn to have
-    descended from the %(root)s states. For mode `{m.PAGA.s!r}` and `{m.PAGA_PIE.s!r}`,
-    we use *PAGA*, see [Wolf19]_.
+    This can be used to investigate how likely a certain cluster is to go to the %(terminal)s states,or in turn to have
+    descended from the %(initial)s states. For mode `{m.PAGA.s!r}` and `{m.PAGA_PIE.s!r}`, we use *PAGA*, see [Wolf19]_.
 
     .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/cluster_fates.png
        :width: 400px
@@ -72,9 +71,9 @@ def cluster_fates(
         Type of plot to show. Valid options are:
 
             - `{m.BAR.s!r}` - barplot, one panel per cluster.
-            - `{m.PAGA.s!r}` - scanpy's PAGA, one per %(root_or_final)s state, colored in by fate.
+            - `{m.PAGA.s!r}` - scanpy's PAGA, one per %(initial_or_terminal)s state, colored in by fate.
             - `{m.PAGA_PIE.s!r}` - scanpy's PAGA with pie charts indicating aggregated fates.
-            - `{m.VIOLIN.s!r}` - violin plots, one per %(root_or_final)s state.
+            - `{m.VIOLIN.s!r}` - violin plots, one per %(initial_or_terminal)s state.
             - `{m.HEATMAP.s!r}` - a heatmap, showing average fates per cluster.
             - `{m.CLUSTERMAP.s!r}` - same as a heatmap, but with a dendrogram.
     %(backward)s
@@ -522,10 +521,10 @@ def similarity_plot(
     save: Optional[Union[str, Path]] = None,
 ) -> None:
     """
-    Compare clusters with respect to their %(root_or_final)s probabilities.
+    Compare clusters with respect to their %(initial_or_terminal)s probabilities.
 
-    For each cluster, we compute how likely an 'average cell' goes towards the %(final)s states or comes
-    from the %(root)s states. We then compare these averaged probabilities using Cramér's V statistic, see
+    For each cluster, we compute how likely an 'average cell' goes towards the %(terminal)s states or comes
+    from the %(initial)s states. We then compare these averaged probabilities using Cramér's V statistic, see
     `here <https://en.wikipedia.org/wiki/Cram%C3%A9r%27s_V>`_. The similarity is defined as :math:`1 - Cramér's V`.
 
     .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/similarity_plot.png

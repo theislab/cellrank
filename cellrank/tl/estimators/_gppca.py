@@ -287,7 +287,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
 
         meta_states_probs = probs[list(names)]
 
-        # compute the aggregated probability of being a root/final state (no matter which)
+        # compute the aggregated probability of being a initial/terminal state (no matter which)
         scaled_probs = meta_states_probs[
             [n for n in meta_states_probs.names if n != "rest"]
         ].copy()
@@ -747,7 +747,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
 
         # reset all the things
         for key in (
-            A.ABS_RPOBS,
+            A.ABS_PROBS,
             A.SCHUR,
             A.SCHUR_MAT,
             A.COARSE_T,
@@ -980,12 +980,17 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
 
         It is equivalent to running::
 
-            compute_eigendecomposition(...)  # if needed
-            compute_schur(...)
+            if n_lineages is None or n_lieages == 1:
+                compute_eigendecomposition(...)  # get the stationary distribution
+            if n_lineages > 1:
+                compute_schur(...)
+
             compute_metastable_states(...)
 
-            compute_final_states(...)   # if n_lineages=None
-            set_final_states_from_metastable_states(...)   # otherwise
+            if n_lineages is None:
+                compute_final_states(...)
+            else:
+                set_final_states_from_metastable_states(...)
 
             compute_absorption_probabilities(...)  # optional
 

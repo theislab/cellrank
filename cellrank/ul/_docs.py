@@ -52,8 +52,8 @@ cluster_key
     Match computed states against pre-computed clusters to annotate the states.
     For this, provide a key from :paramref:`adata` ``.obs`` where cluster labels have been computed.
 keys
-    Determines which %(root_or_final) states to use by passing their names.
-    Further, %(root_or_final)s states can be combined. If e.g. the %(final)s states are
+    Determines which %(initial_or_terminal) states to use by passing their names.
+    Further, %(initial_or_terminal)s states can be combined. If e.g. the %(final)s states are
     ['Neuronal_1', 'Neuronal_1', 'Astrocytes', 'OPC'], then passing ``keys=['Neuronal_1, Neuronal_2', 'OPC']``
     means that the two neuronal %(final)s states are treated as one and the 'Astrocyte' state is excluded.
 """
@@ -79,7 +79,7 @@ mode
         - `{m.STOCHASTIC.s!r}` - second order approximation, only available when :mod:`jax` is installed.
         - `{m.SAMPLING.s!r}` - sample 1 transition matrix from velocity distribution.
         - `{m.PROPAGATION.s!r}` - same as `{m.MONTE_CARLO.s!r}`, but does not average the vectors.
-          Instead, it saves the sampled transition matrices to :paramref:`_t_mats` to be used
+          Instead, it saves the sampled transition matrices to :paramref:`transition_matrices` to be used
           for later uncertainty estimation. It is generally faster then `{m.MONTE_CARLO.s!r}`,
           but also slightly less memory efficient.
 """
@@ -98,7 +98,8 @@ backward_mode
         - `{b.NEGATE.s!r}` - negate the velocity vector.
 """
 _copy = """Return a copy of self."""
-_root = "root"
+_initial = "initial"
+_terminal = "terminal"
 _final = "final"
 _model_callback = """\
 callback
@@ -140,10 +141,11 @@ d = DocstringProcessor(
     adata=_adata,
     just_plots=_just_plots,
     backward=_backward,
-    root=_root,
+    initial=_initial,
+    terminal=_terminal,
     final=_final,
     eigen=_eigen,
-    root_or_final=f"{_root} or {_final}",
+    initial_or_terminal=f"{_initial} or {_terminal}",
     n_cells=_n_cells,
     fit=_fit,
     copy=_copy,
