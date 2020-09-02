@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Module used for finding initial and terminal states."""
-
-from typing import Union, TypeVar, Optional
+from types import MappingProxyType
+from typing import Union, Mapping, TypeVar, Optional
 
 from cellrank.ul._docs import d, _initial, _terminal, inject_docs
 from cellrank.tl._utils import (
@@ -57,8 +57,10 @@ copy
     Whether to update the existing ``adata`` object or to return a copy.
 return_estimator
     Whether to return the estimator. Only available when ``copy=False``.
-**kwargs
+fit_kwargs
     Keyword arguments for :meth:`cellrank.tl.BaseEstimator.fit`, such as ``n_cells``.
+**kwargs
+    Keyword arguments for :func:`cellrank.tl.transition_matrix`, such as ``weight_connectivities`` or ``softmax_scale``.
 
 Returns
 -------
@@ -78,28 +80,24 @@ def _initial_terminal(
     backward_mode: str = BackwardMode.TRANSPOSE.s,
     n_states: Optional[int] = None,
     cluster_key: Optional[str] = None,
-    weight_connectivities: float = None,
     show_plots: bool = False,
-    n_jobs: Optional[int] = 1,
     copy: bool = False,
     return_estimator: bool = False,
+    fit_kwargs: Mapping = MappingProxyType({}),
     **kwargs,
 ) -> Optional[Union[AnnData, BaseEstimator]]:
 
     _check_estimator_type(estimator)
-    adata = adata.copy() if copy else adata
-
     # compute kernel object
     kernel = transition_matrix(
         adata,
         backward=backward,
         mode=mode,
         backward_mode=backward_mode,
-        n_jobs=n_jobs,
-        weight_connectivities=weight_connectivities,
+        **kwargs,
     )
     # create estimator object
-    mc = estimator(kernel, read_from_adata=False)
+    mc = estimator(kernel, read_from_adata=False, inplace=not copy)
 
     if cluster_key is None:
         _info_if_obs_keys_categorical_present(
@@ -113,7 +111,7 @@ def _initial_terminal(
         n_lineages=n_states,
         cluster_key=cluster_key,
         compute_absorption_probabilities=False,
-        **kwargs,
+        **fit_kwargs,
     )
 
     if show_plots:
@@ -133,7 +131,7 @@ def _initial_terminal(
                 f"Pipeline not implemented for `{type(mc).__name__!r}.`"
             )
 
-    return adata if copy else mc if return_estimator else None
+    return mc.adata if copy else mc if return_estimator else None
 
 
 @inject_docs(m=VelocityMode, b=BackwardMode)
@@ -152,11 +150,10 @@ def initial_states(
     backward_mode: str = BackwardMode.TRANSPOSE.s,
     n_states: Optional[int] = None,
     cluster_key: Optional[str] = None,
-    weight_connectivities: float = None,
     show_plots: bool = False,
-    n_jobs: Optional[int] = 1,
     copy: bool = False,
     return_estimator: bool = False,
+    fit_kwargs: Mapping = MappingProxyType({}),
     **kwargs,
 ) -> Optional[AnnData]:
     """
@@ -173,11 +170,10 @@ def initial_states(
         backward=True,
         n_states=n_states,
         cluster_key=cluster_key,
-        weight_connectivities=weight_connectivities,
         show_plots=show_plots,
-        n_jobs=n_jobs,
         copy=copy,
         return_estimator=return_estimator,
+        fit_kwargs=fit_kwargs,
         **kwargs,
     )
 
@@ -195,11 +191,10 @@ def terminal_states(
     mode: str = VelocityMode.DETERMINISTIC.s,
     n_states: Optional[int] = None,
     cluster_key: Optional[str] = None,
-    weight_connectivities: float = None,
     show_plots: bool = False,
-    n_jobs: Optional[int] = 1,
     copy: bool = False,
     return_estimator: bool = False,
+    fit_kwargs: Mapping = MappingProxyType({}),
     **kwargs,
 ) -> Optional[AnnData]:
     """
@@ -215,10 +210,9 @@ def terminal_states(
         backward=False,
         n_states=n_states,
         cluster_key=cluster_key,
-        weight_connectivities=weight_connectivities,
         show_plots=show_plots,
-        n_jobs=n_jobs,
         copy=copy,
         return_estimator=return_estimator,
+        fit_kwargs=fit_kwargs,
         **kwargs,
     )
