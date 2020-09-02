@@ -113,16 +113,12 @@ def compare(
 
     def compare_gpcca_fwd(func: Callable) -> Callable:
         def decorator(self, adata_gpcca_fwd) -> None:
-            _, gpcca = adata_gpcca_fwd
+            adata, gpcca = adata_gpcca_fwd
             fpath, path = _prepare_fname(func)
 
-            func(self, gpcca, path)
+            func(self, adata if kind == "adata" else gpcca, path)
 
             _assert_equal(fpath)
-
-        assert (
-            kind == "gpcca"
-        ), "Function `compare_gpcca_fwd` only supports `kind='gpcca'`."
 
         return decorator
 
@@ -142,16 +138,20 @@ def compare(
 
     if kind not in ("adata", "cflare", "gpcca", "lineage"):
         raise ValueError(
-            f"Invalid kind `{kind!r}`. Valid options are `'adata'`, `'cflare'` and `'gpcca'`."
+            f"Invalid kind `{kind!r}`. Valid options are `['adata', 'cflare', 'gpcca', 'lineage']`."
         )
 
+    if kind == "adata":
+        # `kind='adata'` - don't changes this, otherwise some tests in `TestHighLvlStates` are meaningless
+        return compare_gpcca_fwd
+    if kind == "cflare":
+        return compare_cflare_fwd
     if kind == "gpcca":
         return compare_gpcca_fwd
     if kind == "lineage":
         return compare_lineage
 
-    # `kind='adata'` - don't changes this, otherwise some tests in `TestHighLvlStates` are meaningless
-    return compare_gpcca_fwd
+    raise NotImplementedError(f"Invalid kind `{kind!r}`.")
 
 
 class TestClusterFates:
@@ -570,13 +570,14 @@ class TestHeatmap:
             save=fpath,
         )
 
-    @compare(dirname="heatmap_cluster_genes")
+    @compare()
     def test_heatmap_cluster_genes(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.heatmap(
             adata,
             model,
             GENES[:10],
+            lineages="1",
             mode="lineages",
             time_key="latent_time",
             cluster_genes=True,
@@ -724,13 +725,14 @@ class TestHeatmap:
             save=fpath,
         )
 
-    @compare(dirname="heatmap_cluster_no_scale")
+    @compare()
     def test_heatmap_cluster_no_scale(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.heatmap(
             adata,
             model,
             GENES[:5],
+            lineages="1",
             mode="lineages",
             time_key="latent_time",
             scale=False,
@@ -861,7 +863,7 @@ class TestHeatmap:
             save=fpath,
         )
 
-    @compare(dirname="heatmap_show_dendrogram")
+    @compare()
     def test_heatmap_show_dendrogram(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.heatmap(
@@ -869,6 +871,7 @@ class TestHeatmap:
             model,
             GENES[:10],
             mode="lineages",
+            lineages="1",
             time_key="latent_time",
             cluster_genes=True,
             show_dendrogram=True,
@@ -1620,18 +1623,10 @@ class TestLineages:
 
 class TestHighLvlStates:
     @compare()
-    def test_scvelo_initial_states_disc(self, adata: AnnData, fpath: str):
-        cr.pl.initial_states(adata, discrete=True, dpi=DPI, save=fpath)
-
-    @compare()
     def test_scvelo_terminal_states_disc(self, adata: AnnData, fpath: str):
         cr.pl.terminal_states(adata, discrete=True, dpi=DPI, save=fpath)
 
     # only matters when kind='adata' was computed using GPCCA
-    @compare()
-    def test_scvelo_initial_states_cont(self, adata: AnnData, fpath: str):
-        cr.pl.initial_states(adata, discrete=False, dpi=DPI, save=fpath)
-
     @compare()
     def test_scvelo_terminal_states_cont(self, adata: AnnData, fpath: str):
         cr.pl.terminal_states(adata, discrete=False, dpi=DPI, save=fpath)
@@ -1731,9 +1726,11 @@ class TestLineage:
 
 
 class TestLineageDrivers:
+    @compare()
     def test_scvelo_terminal_n_genes(self, adata: AnnData, fpath: str):
         cr.pl.lineage_drivers(adata, "0", n_genes=5, dpi=DPI, save=fpath)
 
+    @compare()
     def test_scvelo_terminal_cmap(self, adata: AnnData, fpath: str):
         cr.pl.lineage_drivers(adata, "0", cmap="inferno", dpi=DPI, save=fpath)
 
