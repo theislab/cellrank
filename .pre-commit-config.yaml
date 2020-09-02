@@ -1,6 +1,22 @@
 # See https://pre-commit.com for more information
 # See https://pre-commit.com/hooks.html for more hooks
+fail_fast: false
+default_language_version:
+    python: python3
+default_stages:
+    - commit
+    - push
+minimum_pre_commit_version: 2.7.1
 repos:
+-   repo: https://github.com/psf/black
+    rev: 20.8b1
+    hooks:
+        - id: black
+-   repo: https://github.com/timothycrosley/isort
+    rev: 5.4.2
+    hooks:
+        - id: isort
+          additional_dependencies: ["toml"]
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v3.2.0
     hooks:
@@ -10,7 +26,7 @@ repos:
       exclude: ^tests/_ground_truth_adatas/*
     - id: mixed-line-ending
     - id: trailing-whitespace
-      exclude: ^.bumpversion.cfg  # trailing whitespace
+      exclude: ^.bumpversion.cfg$  # trailing whitespace
     - id: check-merge-conflict
     - id: check-case-conflict
     - id: check-symlinks
@@ -18,15 +34,6 @@ repos:
     - id: check-ast
     - id: fix-encoding-pragma
     - id: requirements-txt-fixer
--   repo: https://github.com/psf/black
-    rev: 20.8b1
-    hooks:
-    - id: black
--   repo: https://github.com/timothycrosley/isort
-    rev: 5.4.2
-    hooks:
-    - id: isort
-      additional_dependencies: ["toml"]
 -   repo: https://gitlab.com/pycqa/flake8
     rev: 3.8.3
     hooks:
@@ -40,3 +47,8 @@ repos:
     rev: 'master'
     hooks:
     -   id: rstcheck
+-   repo: https://github.com/asottile/blacken-docs
+    rev: v1.8.0
+    hooks:
+    -   id: blacken-docs
+        additional_dependencies: [black==20.8b1]
