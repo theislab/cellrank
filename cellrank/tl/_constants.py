@@ -12,7 +12,7 @@ _DEFAULT_BACKEND = "loky"
 
 
 class PrettyEnum(Enum):
-    """Enum wit a pretty __str__ and __repr__."""
+    """Enum with a pretty __str__ and __repr__."""
 
     def __repr__(self):
         return str(self)

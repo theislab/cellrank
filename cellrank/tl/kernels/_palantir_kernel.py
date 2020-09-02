@@ -6,7 +6,7 @@ import numpy as np
 
 from cellrank import logging as logg
 from cellrank.ul._docs import d
-from cellrank.tl._utils import bias_knn, is_connected
+from cellrank.tl._utils import _bias_knn, _connected
 from cellrank.tl.kernels import Kernel
 from cellrank.tl._constants import Direction
 from cellrank.tl.kernels._base_kernel import (
@@ -136,11 +136,11 @@ class PalantirKernel(Kernel):
             if self._direction == Direction.BACKWARD
             else self.pseudotime
         )
-        biased_conn = bias_knn(
+        biased_conn = _bias_knn(
             conn=self._conn, pseudotime=pseudotime, n_neighbors=n_neighbors, k=k
         ).astype(_dtype)
         # make sure the biased graph is still connected
-        if not is_connected(biased_conn):
+        if not _connected(biased_conn):
             logg.warning("Biased KNN graph is disconnected")
 
         self._compute_transition_matrix(

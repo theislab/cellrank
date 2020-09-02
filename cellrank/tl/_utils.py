@@ -25,13 +25,11 @@ from scipy.sparse import eye as speye
 from scipy.sparse import diags, issparse, spmatrix, csr_matrix
 from sklearn.cluster import KMeans
 from pandas.api.types import infer_dtype, is_categorical_dtype
-from sklearn.neighbors import NearestNeighbors
 from scipy.sparse.linalg import norm as sparse_norm
 
 import matplotlib.colors as mcolors
 
 from cellrank import logging as logg
-from cellrank.ul._docs import d
 from cellrank.ul._utils import _get_neighs, _has_neighs, _get_neighs_params
 from cellrank.tl._colors import (
     _compute_mean_color,
@@ -269,7 +267,7 @@ def _complex_warning(
     return X_
 
 
-def bias_knn(
+def _bias_knn(
     conn: csr_matrix, pseudotime: np.ndarray, n_neighbors: int, k: int = 3
 ) -> csr_matrix:
     """
@@ -358,77 +356,6 @@ def _vec_mat_corr(X: Union[np.ndarray, spmatrix], y: np.ndarray) -> np.ndarray:
     return num / denom
 
 
-@d.dedent
-def cyto_trace(
-    adata: AnnData, layer: str = "Ms", inplace: bool = True, use_median: bool = False
-) -> Optional[AnnData]:
-    """
-    Re-implementation of the CytoTrace algorithm by *Gulati et al.* to infer cell plasticity.
-
-    Finds the top 200 genes correlated with #genes/cell and computes their (imputed) mean or median expression.
-    For more references, see [Cyto20]_.
-
-    Workflow:
-        - In :mod:`scanpy`, take your raw ``adata`` object and run :func:`scvelo.pp.moments` on it.
-        - Run this function.
-
-    Parameters
-    ----------
-    %(adata)s
-    inplace
-        Whether to write directly to ``adata`` or to a copy.
-    use_median
-        If `True`, use *median*, otherwise *mean*.
-
-    Returns
-    -------
-    None or :class:`anndata.AnnData`
-        Depending on ``copy``, either updates ``adata`` or returns its copy.
-    """
-
-    # check use_raw and copy
-    adata_comp = adata if inplace else adata.copy()
-    if layer not in adata_comp.layers:
-        raise KeyError(f"Compute layer `{layer!r}` first")
-
-    start = logg.info(f"Computing CytoTrace score with `{adata.n_vars}` genes")
-    if adata_comp.n_vars < 10000:
-        logg.warning("Consider using more than `10000` genes")
-
-    # compute number of expressed genes per cell
-    logg.debug("Computing number of genes expressed per cell")
-    num_exp_genes = np.array((adata_comp.X > 0).sum(axis=1)).reshape(-1)
-    adata_comp.obs["num_exp_genes"] = num_exp_genes
-
-    # compute correlation with all genes
-    logg.debug("Correlating all genes with number of genes expressed per cell")
-    gene_corr = _vec_mat_corr(adata_comp.X, num_exp_genes)
-
-    # annotate the top 200 genes in terms of correlation
-    logg.debug("Finding the top `200` most correlated genes")
-    adata_comp.var["gene_corr"] = gene_corr
-    top_200 = adata_comp.var.sort_values(by="gene_corr", ascending=False).index[:200]
-    adata_comp.var["correlates"] = False
-    adata_comp.var.loc[top_200, "correlates"] = True
-
-    # compute mean/median over top 200 genes, aggregate over genes and shift to [0, 1] range
-    logg.debug("Aggregating imputed gene expression")
-    corr_mask = adata_comp.var["correlates"]
-    imputed_exp = (
-        adata_comp[:, corr_mask].X
-        if layer == "X"
-        else adata_comp[:, corr_mask].layers[layer]
-    )
-    gcs = np.median(imputed_exp, axis=1) if use_median else np.mean(imputed_exp, axis=1)
-    gcs /= np.max(gcs)
-    adata_comp.obs["gcs"] = gcs
-
-    logg.info("    Finish", time=start)
-
-    if not inplace:
-        return adata_comp
-
-
 def _make_cat(
     labels: List[List[Any]], n_states: int, state_names: Sequence[str]
 ) -> Series:
@@ -441,28 +368,6 @@ def _make_cat(
     labels_new.cat.categories = labels_new.cat.categories.astype("int")
 
     return labels_new
-
-
-def _compute_comm_classes(
-    A: Union[np.ndarray, spmatrix]
-) -> Tuple[List[List[Any]], bool]:
-    """Compute communication classes for a graph given by A."""
-
-    import networkx as nx
-
-    di_graph = (
-        nx.from_scipy_sparse_matrix(A, create_using=nx.DiGraph)
-        if issparse(A)
-        else nx.from_numpy_array(A, create_using=nx.DiGraph)
-    )
-
-    nx.strongly_connected_components(di_graph)
-    comm_classes = sorted(
-        nx.strongly_connected_components(di_graph), key=len, reverse=True
-    )
-    is_irreducible = len(comm_classes) == 1
-
-    return comm_classes, is_irreducible
 
 
 def _filter_cells(distances: np.ndarray, rc_labels: Series, n_matches_min: int):
@@ -532,7 +437,7 @@ def _cluster_X(
 
     # make sure data is at least 2D
     if X.ndim == 1:
-        X = X[:, None]
+        X = X.reshape((1, -1))
 
     if method == "kmeans":
         kmeans = KMeans(n_clusters=n_clusters).fit(X)
@@ -547,7 +452,7 @@ def _cluster_X(
         labels = adata_dummy.obs[method]
     else:
         raise NotImplementedError(
-            f"Invalid method `{method!r}`. Valid options are: `'kmeans'` or `'louvain'`."
+            f"Invalid method `{method!r}`. Valid options are: `'kmeans'`, `'louvain'` or `'leiden'`."
         )
 
     return list(labels)
@@ -580,7 +485,7 @@ def _eigengap(evals: np.ndarray, alpha: float) -> int:
     return int(np.argmax(J))
 
 
-def partition(
+def _partition(
     conn: Union[DiGraph, np.ndarray, spmatrix], sort: bool = True
 ) -> Tuple[List[List[Any]], List[List[Any]]]:
     """
@@ -598,7 +503,7 @@ def partition(
     Parameters
     ----------
     conn
-        Directed graph to partition.
+        Directed graph to _partition.
 
     Returns
     -------
@@ -638,7 +543,7 @@ def partition(
     return maybe_sort(rec_classes), maybe_sort(trans_classes)
 
 
-def is_connected(c):
+def _connected(c: Union[spmatrix, np.ndarray]) -> bool:
     """Check whether the undirected graph encoded by c is connected."""
 
     import networkx as nx
@@ -648,125 +553,21 @@ def is_connected(c):
     return nx.is_connected(G)
 
 
-def is_symmetric(
+def _symmetric(
     matrix: Union[spmatrix, np.ndarray],
     ord: str = "fro",
     eps: float = 1e-4,
     only_check_sparsity_pattern: bool = False,
-):
+) -> bool:
     """Check whether the graph encoded by `matrix` is symmetric."""
     if only_check_sparsity_pattern:
         if issparse(matrix):
-            is_sym = len(((matrix != 0) - (matrix != 0).T).data) == 0
-        else:
-            is_sym = ((matrix != 0) == (matrix != 0).T).all()
-    else:
-        if issparse(matrix):
-            is_sym = sparse_norm((matrix - matrix.T), ord=ord) < eps
-        else:
-            is_sym = d_norm((matrix - matrix.T), ord=ord) < eps
+            return len(((matrix != 0) - (matrix != 0).T).data) == 0
+        return ((matrix != 0) == (matrix != 0).T).all()
 
-    return is_sym
-
-
-def _subsample_embedding(
-    data: Union[np.ndarray, AnnData],
-    basis: str = "umap",
-    n_dim: int = 2,
-    n_grid_points_total: Optional[int] = None,
-    n_grid_points_dim: Optional[int] = None,
-) -> Tuple[np.ndarray, float]:
-    """
-    Subsample cells to uniformly cover an embedding.
-
-    If using the default parameter settings, this will get very slow for more than 4 embedding dimensions.
-
-    Parameters
-    ----------
-    data
-        Either the embedding or an annotated data object containing an embedding.
-    basis
-        Key to use to get the embedding from ``data.obsm``. Ignored when ``data`` is an :class:`np.ndarray`.
-    n_dim:
-        Number of dimensions in the embedding to use for subsampling.
-    n_grid_points_total
-        Determines how many gridpoints to use in total.
-    n_grid_points_dim
-        Determines how many gridpoints to use in each dimension.
-        Only one of ``n_grid_points_total`` and ``n_grid_points_dim`` can be specified.
-
-    Returns
-    -------
-    :class:`np.ndarray`
-        Contains the indices of the subsampled cells.
-    float
-        Euclidian distance between neighboring grid points. Can be used downstream to select a kernel width.
-    """
-
-    # check whether we are given an AnnData object
-    if isinstance(data, AnnData):
-        if f"X_{basis}" not in data.obsm.keys():
-            raise ValueError(f"Basis {basis} not found.")
-        X_em = data.obsm[f"X_{basis}"][:, :n_dim]
-    else:
-        X_em = data[:, n_dim]
-
-    # handle grid specification
-    if (n_grid_points_total is not None) and (n_grid_points_dim is not None):
-        raise ValueError(
-            "Can only specify one of `n_grid_points_total` and `n_grid_points_dim`"
-        )
-    if n_grid_points_total is not None:
-        n_grid_points_dim = int((n_grid_points_total) ** (1 / n_dim))
-    if (n_grid_points_total is None) and (n_grid_points_dim is None):
-        n_grid_points_total = 10 ** (2 + n_dim)
-        n_grid_points_dim = int((n_grid_points_total) ** (1 / n_dim))
-
-    # set up the grid
-    steps = np.repeat(n_grid_points_dim, n_dim)
-    grs = []
-    for dim_i in range(n_dim):
-        m, M = np.min(X_em[:, dim_i]), np.max(X_em[:, dim_i])
-        m = m - 0.025 * np.abs(M - m)
-        M = M + 0.025 * np.abs(M - m)
-        gr = np.linspace(m, M, steps[dim_i])
-        grs.append(gr)
-    meshes_tuple = np.meshgrid(*grs)
-    gridpoints_coordinates = np.vstack([i.flat for i in meshes_tuple]).T
-
-    # fit nearest neighbors classifier to embedding and determine nearest neighbors of each grid point
-    nn = NearestNeighbors()
-    nn.fit(X_em)
-    dist, ixs = nn.kneighbors(gridpoints_coordinates, 1)
-
-    # reduce this to indices coming from gridpoints covered by the data
-    diag_step_dist = np.linalg.norm(
-        [grs[dim_i][1] - grs[dim_i][0] for dim_i in range(n_dim)]
-    )
-    min_dist = diag_step_dist / 2
-    ixs = ixs[dist < min_dist]
-
-    cells_ixs = np.unique(ixs)
-
-    return cells_ixs, diag_step_dist
-
-
-def _gaussian_kernel(
-    X: Union[np.ndarray, spmatrix], mu: float = 0, sigma: float = 1
-) -> np.ndarray:
-    """Compute a Gaussian kernel."""
-
-    if issparse(X):
-        G = X.copy()
-        G.data = np.exp(-((G.data - mu) ** 2) / (2 * sigma ** 2)) / np.sqrt(
-            2 * np.pi * sigma ** 2
-        )
-    else:
-        G = np.exp(-((X - mu) ** 2) / (2 * sigma ** 2)) / np.sqrt(
-            2 * np.pi * sigma ** 2
-        )
-
-    return G
+    if issparse(matrix):
+        return sparse_norm((matrix - matrix.T), ord=ord) < eps
+    return d_norm((matrix - matrix.T), ord=ord) < eps
 
 
 def _normalize(X: Union[np.ndarray, spmatrix]) -> Union[np.ndarray, spmatrix]:
@@ -787,11 +588,9 @@ def _normalize(X: Union[np.ndarray, spmatrix]) -> Union[np.ndarray, spmatrix]:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         if issparse(X):
-            X = X.multiply(csr_matrix(1.0 / np.abs(X).sum(1)))
-        else:
-            X = np.array(X)
-            X /= X.sum(1)[:, None]
-    return X
+            return X.multiply(csr_matrix(1.0 / np.abs(X).sum(1)))
+        X = np.array(X)
+        return X / X.sum(1)[:, None]
 
 
 def _get_connectivities(
@@ -888,7 +687,7 @@ def save_fig(
     fig: :class:`matplotlib.figure.Figure`
         Figure to save.
     path:
-        Path where to save the figure. If path is relative, save it under `cellrank.settings.figdir`.
+        Path where to save the figure. If path is relative, save it under ``cellrank.settings.figdir``.
     make_dir:
         Whether to try making the directory if it does not exist.
     ext:
@@ -1121,96 +920,21 @@ def _convert_lineage_name(names: str) -> Tuple[str, ...]:
     )
 
 
-def _long_form_frequencies(
-    adata: AnnData,
-    query_var: str = "clusters",
-    query_var_groups: Optional[Union[Iterable, str]] = None,
-    groupby: str = "identifier",
-    x_label: Optional[str] = None,
-):
-    """
-    Compute frequencies of a ``query_var`` over groups defined by ``groupby``.
-
-    Parameters
-    ----------
-    adata
-        Annotated data object.
-    query_var
-        Key from ``adata.obs`` to a categorical variable whose frequencies
-        with respect to groups defined by ``groupby`` we want to compute.
-    query_var_groups
-        Subset of the categories from ``query_var``. These are the categories whose frequencies we are interested in.
-    groupby
-        Key from ``adata.obs``. This defined the categorical variable with
-        respect to which we are computing frequencies.
-    x_label
-        Optional annotation from ``adata.obs`` that's mapped to ``groupby``. Mapping must be unique.
-
-    Returns
-    -------
-    :class:`pandas.DataFrame`
-        Long-form pandas DataFrame that's convenient for plotting with :mod:`seaborn`.
-    """
-
-    # input checks
-    if query_var not in adata.obs.keys():
-        raise ValueError(f"`{query_var}` not found in `adata.obs`.")
-    if groupby not in adata.obs.keys():
-        raise ValueError(f"`{groupby}` not found in `adata.obs`.")
-    if x_label is None:
-        x_label = groupby
-    else:
-        if x_label not in adata.obs.keys():
-            raise ValueError(f"Key `{x_label!r}` not in `adata.obs.keys`.")
-    if isinstance(query_var_groups, str):
-        query_var_groups = [query_var_groups]
-
-    # compute frequencies, and get unique annotations
-    frequs = adata.obs.groupby([groupby, query_var]).size()
-    samples = adata.obs[groupby].cat.categories.to_numpy()
-    ind = adata.obs[query_var].cat.categories.to_numpy()
-
-    # compute relative frequencies (for all categories in query_var)
-    rel_frequs = [frequs[ident] / np.sum(frequs[ident]) for ident in samples]
-    rel_frequs = pd.DataFrame(rel_frequs, columns=ind, index=samples).fillna(0)
-    rel_frequs["x_label"] = np.array(
-        [
-            np.unique(adata.obs[adata.obs[groupby] == sample][x_label].to_numpy())[0]
-            for sample in rel_frequs.index
-        ],
-        dtype=np.int32,
-    )
-
-    # subset to groups of interest and bring into long-form
-    sub_frequs = rel_frequs.loc[:, query_var_groups + ["x_label"]]
-
-    return pd.melt(sub_frequs, id_vars="x_label")
-
-
-def _info_if_obs_key_categorical_present(
-    adata: AnnData, key: str, msg_fmt: str
-) -> bool:
-    if key in adata.obs.keys() and is_categorical_dtype(adata.obs[key]):
-        logg.info(msg_fmt.format(key))
-        return True
-
-
 def _info_if_obs_keys_categorical_present(
     adata: AnnData, keys: Iterable[str], msg_fmt: str, warn_once: bool = True
 ) -> None:
     for key in keys:
-        if (
-            _info_if_obs_key_categorical_present(adata, key, msg_fmt=msg_fmt)
-            and warn_once
-        ):
-            break
+        if key in adata.obs.keys() and is_categorical_dtype(adata.obs[key]):
+            logg.info(msg_fmt.format(key))
+            if warn_once:
+                break
 
 
 def _one_hot(n, cat: Optional[int] = None) -> np.ndarray:
     """
     One-hot encode cat to a vector of length n.
 
-    If cat is None, return a vector of zeros.
+    If cat is `None`, return a vector of zeros.
     """
 
     out = np.zeros(n, dtype=np.bool)
@@ -1394,53 +1118,6 @@ def _series_from_one_hot_matrix(
     return target_series
 
 
-@d.dedent
-def _colors_in_order(
-    adata: AnnData,
-    clusters: Optional[Iterable[str]] = None,
-    cluster_key: str = "clusters",
-) -> List[Any]:
-    """
-    Get list of colors from AnnData in defined order.
-
-    This will extract a list of colors from ``adata.uns[cluster_key]`` corresponding to the ``clusters``,
-    in the order defined by the ``clusters``.
-
-    Parameters
-    ----------
-    %(adata)s
-    clusters
-        Subset of the clusters we want the color for. Must be a subset of ``adata.obs[cluster_key].cat.categories``.
-    cluster_key
-        Key from ``adata.obs``.
-
-    Returns
-    -------
-    list
-        List of colors in order defined by `clusters`.
-    """
-    assert (
-        cluster_key in adata.obs.keys()
-    ), f"Could not find {cluster_key} in `adata.obs`."
-    assert np.in1d(
-        clusters, adata.obs[cluster_key].cat.categories
-    ).all(), "Not all `clusters` found."
-    assert (
-        f"{cluster_key}_colors" in adata.uns.keys()
-    ), f"No colors associated to {cluster_key} in `adata.uns`."
-
-    if clusters is None:
-        clusters = adata.obs[cluster_key].cat.categories
-
-    color_list = []
-    all_clusters = adata.obs[cluster_key].cat.categories
-    for cl in clusters:
-        mask = np.in1d(all_clusters, cl)
-        color_list.append(adata.uns[f"{cluster_key}_colors"][mask][0])
-
-    return color_list
-
-
 def _get_cat_and_null_indices(
     cat_series: Series,
 ) -> Tuple[np.ndarray, np.ndarray, Dict[Any, np.ndarray]]:
@@ -1515,15 +1192,6 @@ def _check_estimator_type(estimator: Any) -> None:
             f"Expected estimator to be a subclass of `cellrank.tl.estimators.BaseEstimator`, "
             f"found `{type(estimator).__name__!r}`."
         )
-
-
-def _densify_squeeze(x: Union[spmatrix, np.ndarray], dtype=np.float32) -> np.ndarray:
-    if issparse(x):
-        x = x.toarray()
-    if x.ndim == 2 and x.shape[1] == 1:
-        x = np.squeeze(x, axis=1)
-
-    return x[:].astype(dtype)
 
 
 def _calculate_absorption_time_moments(

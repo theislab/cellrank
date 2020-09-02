@@ -18,7 +18,7 @@ from matplotlib import cm
 
 import cellrank.logging as logg
 from cellrank.ul._docs import d
-from cellrank.tl._utils import RandomKeys, _make_cat, partition, _complex_warning
+from cellrank.tl._utils import RandomKeys, _make_cat, _partition, _complex_warning
 from cellrank.tl.kernels import PrecomputedKernel
 from cellrank.tl._lineage import Lineage
 from cellrank.tl._constants import Direction, DirPrefix, DirectionPlot
@@ -817,7 +817,7 @@ class Partitioner(KernelHolder, ABC):
         start = logg.info("Computing communication classes")
         n_states = len(self)
 
-        rec_classes, trans_classes = partition(self.transition_matrix)
+        rec_classes, trans_classes = _partition(self.transition_matrix)
 
         self._is_irreducible = len(rec_classes) == 1 and len(trans_classes) == 0
 
@@ -836,7 +836,7 @@ class Partitioner(KernelHolder, ABC):
             )
         else:
             logg.warning(
-                "The transition matrix is irreducible - cannot further partition it\n    Finish",
+                "The transition matrix is irreducible - cannot further _partition it\n    Finish",
                 time=start,
             )
 

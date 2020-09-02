@@ -21,7 +21,6 @@ import cellrank as cr
 import cellrank.pl._lineages
 from cellrank.tl._constants import AbsProbKey
 from cellrank.tl.estimators import GPCCA, CFLARE
-from cellrank.pl._cluster_fates import similarity_plot
 
 setup()
 
@@ -1620,47 +1619,6 @@ class TestLineages:
         cellrank.pl._lineages.lineages(
             adata, cluster_key="clusters", dpi=DPI, save=fpath
         )
-
-
-class TestSimilarityPlot:
-    @compare()
-    def test_similarity(self, adata: AnnData, fpath: str):
-        similarity_plot(adata, "clusters", n_samples=10, dpi=DPI, save=fpath)
-
-    @compare()
-    def test_similarity_clusters(self, adata: AnnData, fpath: str):
-        similarity_plot(
-            adata,
-            "clusters",
-            n_samples=10,
-            clusters=adata.obs["clusters"].cat.categories,
-            dpi=DPI,
-            save=fpath,
-        )
-
-    @compare()
-    def test_similarity_cmap(self, adata: AnnData, fpath: str):
-        similarity_plot(
-            adata, "clusters", n_samples=10, cmap=cm.inferno, dpi=DPI, save=fpath
-        )
-
-    @compare()
-    def test_similarity_fontsize(self, adata: AnnData, fpath: str):
-        similarity_plot(
-            adata, "clusters", n_samples=10, fontsize=30, dpi=DPI, save=fpath
-        )
-
-    @compare()
-    def test_similarity_rotation(self, adata: AnnData, fpath: str):
-        similarity_plot(
-            adata, "clusters", n_samples=10, rotation=90, dpi=DPI, save=fpath
-        )
-
-
-class TestComposition:
-    @compare()
-    def test_composition(self, adata: AnnData, fpath: str):
-        cr.pl.composition(adata, "clusters", dpi=DPI, save=fpath)
 
 
 class TestLineage:

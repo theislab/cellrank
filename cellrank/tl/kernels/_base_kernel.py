@@ -23,11 +23,11 @@ from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix, isspmatrix_csr
 from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.tl._utils import (
+    _connected,
     _normalize,
+    _symmetric,
     _get_neighs,
     _has_neighs,
-    is_connected,
-    is_symmetric,
 )
 from cellrank.ul._utils import _write_graph_data
 from cellrank.tl._constants import Direction, _transition
@@ -651,13 +651,13 @@ class Kernel(UnaryKernelExpression, ABC):
         check_connectivity = kwargs.pop("check_connectivity", False)
         if check_connectivity:
             start = logg.debug("Checking the KNN graph for connectedness")
-            if not is_connected(self._conn):
+            if not _connected(self._conn):
                 logg.warning("KNN graph is not connected", time=start)
             else:
                 logg.debug("KNN graph is connected", time=start)
 
         start = logg.debug("Checking the KNN graph for symmetry")
-        if not is_symmetric(self._conn):
+        if not _symmetric(self._conn):
             logg.warning("KNN graph is not symmetric", time=start)
         else:
             logg.debug("KNN graph is symmetric", time=start)
