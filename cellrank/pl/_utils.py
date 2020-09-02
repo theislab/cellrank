@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-"""Utility functions for CellRank pl."""
+"""Utility functions for CellRank plotting."""
 
-import os
 from copy import copy
 from typing import (
     Any,
@@ -14,11 +13,9 @@ from typing import (
     Optional,
     Sequence,
 )
-from pathlib import Path
 from collections import defaultdict
 
 import numpy as np
-from pandas.core.dtypes.common import is_categorical_dtype
 
 import matplotlib as mpl
 import matplotlib.cm as cm
@@ -28,7 +25,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from cellrank import logging as logg
 from cellrank.ul._docs import d
-from cellrank.tl._utils import save_fig, _unique_order_preserving
+from cellrank.tl._utils import _unique_order_preserving
 from cellrank.ul.models import GAMR, BaseModel, SKLearnModel
 from cellrank.tl._constants import _DEFAULT_BACKEND, _colors
 
@@ -175,55 +172,6 @@ def _curved_edges(
         curves[self_loop_mask, ...] = self_loops
 
     return curves
-
-
-@d.dedent
-def composition(
-    adata: AnnData,
-    key: str,
-    figsize: Optional[Tuple[float, float]] = None,
-    dpi: Optional[float] = None,
-    save: Optional[Union[str, Path]] = None,
-) -> None:
-    """
-    Plot a pie chart for categorical annotation.
-
-    .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/composition.png
-       :width: 400px
-       :align: center
-
-    Parameters
-    ----------
-    %(adata)s
-    key
-        Key in ``adata.obs`` containing categorical observation.
-    %(plotting)s
-
-    Returns
-    -------
-    %(just_plots)s
-    """
-
-    if key not in adata.obs:
-        raise KeyError(f"Key `{key!r}` not found in `adata.obs`.")
-    if not is_categorical_dtype(adata.obs[key]):
-        raise TypeError(f"Observation `adata.obs[{key!r}]` is not categorical.")
-
-    cats = adata.obs[key].cat.categories
-    colors = adata.uns.get(f"{key}_colors", None)
-    x = [np.sum(adata.obs[key] == cl) for cl in cats]
-    cats_frac = x / np.sum(x)
-
-    # plot these fractions in a pie plot
-    fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
-
-    ax.pie(x=cats_frac, labels=cats, colors=colors)
-    ax.set_title(f"composition by {key}")
-
-    if save is not None:
-        save_fig(fig, save)
-
-    fig.show()
 
 
 def _is_any_gam_mgcv(models: Union[BaseModel, Dict[str, Dict[str, BaseModel]]]) -> bool:
@@ -612,28 +560,6 @@ def _position_legend(ax: mpl.axes.Axes, legend_loc: str, **kwargs) -> mpl.legend
         kwargs["bbox_to_anchor"] = (x, y)
 
     return ax.legend(loc=loc, **kwargs)
-
-
-def _maybe_create_dir(dirname: Optional[Union[str, Path]]) -> None:
-    if dirname is None:
-        return
-
-    from cellrank import logging as logg
-    from cellrank import settings
-
-    figdir = settings.figdir
-
-    if figdir is None:
-        raise RuntimeError(
-            f"Figures directory `cellrank.settings.figdir` is `None`, but `dirname={dirname!r}`."
-        )
-    if os.path.isabs(dirname):
-        if not os.path.isdir(dirname):
-            os.makedirs(dirname, exist_ok=True)
-            logg.debug(f"Creating directory `{dirname!r}`")
-    elif not os.path.isdir(os.path.join(figdir, dirname)):
-        os.makedirs(os.path.join(figdir, dirname), exist_ok=True)
-        logg.debug(f"Creating directory `{dirname!r}`")
 
 
 def _get_backend(model, backend: str) -> str:

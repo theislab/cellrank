@@ -7,6 +7,7 @@ import numpy as np
 from pandas.api.types import is_categorical_dtype
 
 import cellrank as cr
+import cellrank.tl._lineages
 from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tl._constants import (
     Direction,
@@ -74,7 +75,7 @@ class TestHighLevelPipeline:
         )
         cr.tl.lineages(adata)
         cr.pl.lineages(adata)
-        cr.tl.lineage_drivers(adata, use_raw=False)
+        cellrank.tl._lineages.lineage_drivers(adata, use_raw=False)
 
         ln = adata.obsm[str(AbsProbKey.FORWARD)].names[0]
         cr.pl.lineage_drivers(adata, ln, use_raw=False, backward=False)
@@ -91,7 +92,7 @@ class TestHighLevelPipeline:
         )
         cr.tl.lineages(adata)
         cr.pl.lineages(adata)
-        cr.tl.lineage_drivers(adata, use_raw=False)
+        cellrank.tl._lineages.lineage_drivers(adata, use_raw=False)
 
         ln = adata.obsm[str(AbsProbKey.FORWARD)].names[0]
         with pytest.raises(RuntimeError):
@@ -107,7 +108,7 @@ class TestHighLevelPipeline:
         )
         cr.tl.lineages(adata, backward=True)
         cr.pl.lineages(adata, backward=True)
-        cr.tl.lineage_drivers(adata, use_raw=False, backward=True)
+        cellrank.tl._lineages.lineage_drivers(adata, use_raw=False, backward=True)
 
         ln = adata.obsm[str(AbsProbKey.BACKWARD)].names[0]
         cr.pl.lineage_drivers(adata, ln, use_raw=False, backward=True)
@@ -124,7 +125,7 @@ class TestHighLevelPipeline:
         )
         cr.tl.lineages(adata)
         cr.pl.lineages(adata)
-        cr.tl.lineage_drivers(adata, use_raw=False)
+        cellrank.tl._lineages.lineage_drivers(adata, use_raw=False)
         ln = adata.obsm[str(AbsProbKey.FORWARD)].names[0]
         cr.pl.lineage_drivers(adata, ln, use_raw=False, backward=False)
 
@@ -140,7 +141,7 @@ class TestHighLevelPipeline:
         )
         cr.tl.lineages(adata)
         cr.pl.lineages(adata)
-        cr.tl.lineage_drivers(adata, use_raw=False)
+        cellrank.tl._lineages.lineage_drivers(adata, use_raw=False)
         ln = adata.obsm[str(AbsProbKey.FORWARD)].names[0]
         with pytest.raises(RuntimeError):
             cr.pl.lineage_drivers(adata, ln, use_raw=True, backward=False)
@@ -155,7 +156,7 @@ class TestHighLevelPipeline:
         )
         cr.tl.lineages(adata, backward=True)
         cr.pl.lineages(adata, backward=True)
-        cr.tl.lineage_drivers(adata, use_raw=False, backward=True)
+        cellrank.tl._lineages.lineage_drivers(adata, use_raw=False, backward=True)
         ln = adata.obsm[str(AbsProbKey.BACKWARD)].names[0]
         cr.pl.lineage_drivers(adata, ln, use_raw=False, backward=True)
 

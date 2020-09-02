@@ -27,7 +27,6 @@ This module offers a high-level API to compute cell fates and driver genes.
 
     :toctree: api/tl
 
-    tl.partition
     tl.transition_matrix
     tl.initial_states
     tl.terminal_states
@@ -84,7 +83,6 @@ Plotting
     pl.lineage_drivers
     pl.similarity_plot
     pl.graph
-    pl.composition
 
 Utilities
 ~~~~~~~~~
