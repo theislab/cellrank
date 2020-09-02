@@ -469,6 +469,7 @@ class Plottable(KernelHolder, Property):
             cluster_key = list(cluster_key)
 
         same_plot = same_plot or len(data.cat.categories) == 1
+        kwargs["legend_loc"] = kwargs.get("legend_loc", "on data")
 
         with RandomKeys(
             self.adata, None if same_plot else len(data.cat.categories), where="obs"

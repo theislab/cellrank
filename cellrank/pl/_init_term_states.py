@@ -48,10 +48,18 @@ def _initial_terminal(
     pk = DummyKernel(adata=adata, backward=backward)
     mc = GPCCA(pk, read_from_adata=True, write_to_adata=False)
 
-    if isinstance(states, str) or len(states) == 1:
+    if mc._get(P.FIN) is None:
+        raise RuntimeError(
+            f"Compute {_initial if backward else _terminal} states first as "
+            f"`cellrank.tl.compute_{FinalStatesKey.BACKWARD if backward else FinalStatesKey.FORWARD}()`."
+        )
+
+    if len(mc._get(P.FIN).cat.categories) == 1 or (
+        states is not None and (isinstance(states, str) or len(states) == 1)
+    ):
         kwargs["same_plot"] = True
 
-    # this monstrosity correctly sets the title
+    # this correctly sets the title
     if (
         mode == "embedding"
         and kwargs.get("title", None) is None
@@ -62,13 +70,7 @@ def _initial_terminal(
                 FinalStatesPlot.BACKWARD.s if backward else FinalStatesPlot.FORWARD.s
             )
 
-    if mc._get(P.FIN) is None:
-        raise RuntimeError(
-            f"Compute {_initial if backward else _terminal} states first as "
-            f"`cellrank.tl.compute_{FinalStatesKey.BACKWARD if backward else FinalStatesKey.FORWARD}()`."
-        )
-
-    _ = kwargs.pop("lineages", None)  # user makes a mistake
+    _ = kwargs.pop("lineages", None)
 
     mc.plot_final_states(
         lineages=states,
