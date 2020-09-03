@@ -72,6 +72,21 @@ class TestHighLevelPipeline:
         with pytest.raises(RuntimeError):
             cr.pl.terminal_states(adata)
 
+    def test_write_transition_matrix(self, adata: AnnData):
+        cr.tl.transition_matrix(adata, key="foo")
+
+        assert "foo" in adata.obsp
+        np.testing.assert_allclose(adata.obsp["foo"].A.sum(1), 1.0)
+        assert "foo_params" in adata.uns
+
+    def test_states_use_precomputed_transition_matrix(self, adata: AnnData):
+        cr.tl.transition_matrix(adata, key="foo")
+        obsp_keys = set(adata.obsp.keys())
+
+        cr.tl.terminal_states(adata, key="foo")
+
+        assert obsp_keys == set(adata.obsp.keys())
+
     def test_fwd_pipeline_cflare(self, adata: AnnData):
         cr.tl.terminal_states(
             adata,

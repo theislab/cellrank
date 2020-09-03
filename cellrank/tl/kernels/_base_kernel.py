@@ -198,7 +198,7 @@ class KernelExpression(ABC):
     @d.dedent
     def write_to_adata(self, key: Optional[str] = None) -> None:
         """
-        Write the parameters and transition matrix to the underlying :paramref:`adata` object.
+        Write the transition matrix and parameters used for computation to the underlying :paramref:`adata` object.
 
         Parameters
         ----------
