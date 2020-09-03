@@ -22,6 +22,8 @@ from cellrank.tl._constants import (
 
 def _assert_has_all_keys(adata: AnnData, direction: Direction):
     assert _transition(direction) in adata.obsp.keys()
+    # check if it's not a dummy transition matrix
+    assert not np.all(np.isclose(np.diag(adata.obsp[_transition(direction)].A), 1.0))
     assert f"{_transition(direction)}_params" in adata.uns.keys()
 
     if direction == Direction.FORWARD:

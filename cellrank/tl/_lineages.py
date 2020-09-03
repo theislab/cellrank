@@ -113,10 +113,10 @@ def lineage_drivers(
 
     # create dummy kernel and estimator
     pk = DummyKernel(adata, backward=backward)
-    g = GPCCA(pk, read_from_adata=True)
+    g = GPCCA(pk, read_from_adata=True, write_to_adata=False)
     if g._get(P.ABS_PROBS) is None:
         raise RuntimeError(
-            "Compute absorption probabilities first as `cellrank.tl.lineages()`."
+            f"Compute absorption probabilities first as `cellrank.tl.lineages(..., backward={backward})`."
         )
 
     # call the underlying function to compute and store the lineage drivers

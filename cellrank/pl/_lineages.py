@@ -58,7 +58,7 @@ def lineages(
     mc = GPCCA(pk, read_from_adata=True, write_to_adata=False)
     if mc._get(P.ABS_PROBS) is None:
         raise RuntimeError(
-            "Compute absorption probabilities first as `cellrank.tl.lineages()`."
+            f"Compute absorption probabilities first as `cellrank.tl.lineages(..., backward={backward})`."
         )
 
     # plot using the MC object
