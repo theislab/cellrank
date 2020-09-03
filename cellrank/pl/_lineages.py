@@ -1,11 +1,8 @@
 # -*- coding: utf-8 -*-
-"""Module for pl lineage-related stuff."""
-from typing import Union, Iterable, Optional
+"""Module for plotting lineage-related stuff."""
+from typing import Union, Optional, Sequence
 
 import pandas as pd
-
-import matplotlib as mpl
-from matplotlib import cm as cm
 
 import cellrank.logging as logg
 from cellrank.ul._docs import d
@@ -19,12 +16,11 @@ from cellrank.tl.kernels._precomputed_kernel import DummyKernel
 @d.dedent
 def lineages(
     adata: AnnData,
-    lineages: Optional[Union[str, Iterable[str]]] = None,
+    lineages: Optional[Union[str, Sequence[str]]] = None,
     backward: bool = False,
     cluster_key: Optional[str] = None,
     mode: str = "embedding",
     time_key: str = "latent_time",
-    cmap: Union[str, mpl.colors.ListedColormap] = cm.viridis,
     **kwargs,
 ) -> None:
     """
@@ -50,10 +46,8 @@ def lineages(
     %(time_mode)s
     time_key
         Key from ``adata.obs`` to use as a pseudotime ordering of the cells.
-    cmap
-        Colormap to use.
     **kwargs
-        Keyword arguments for :func:`scvelo.pl.scatter`.
+        Keyword arguments for :meth:`cellrank.tl.estimators.BaseEstimator.plot_absorption_probabilities`.
 
     Returns
     -------
@@ -64,7 +58,7 @@ def lineages(
     mc = GPCCA(pk, read_from_adata=True, write_to_adata=False)
     if mc._get(P.ABS_PROBS) is None:
         raise RuntimeError(
-            "Compute absorption probabilities first as `cellrank.tl.lineages()`."
+            f"Compute absorption probabilities first as `cellrank.tl.lineages(..., backward={backward})`."
         )
 
     # plot using the MC object
@@ -73,7 +67,6 @@ def lineages(
         cluster_key=cluster_key,
         mode=mode,
         time_key=time_key,
-        cmap=cmap,
         **kwargs,
     )
 

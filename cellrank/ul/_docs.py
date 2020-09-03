@@ -123,12 +123,25 @@ mode
         - `'embedding'` - plot the embedding while coloring in the absorption probabilities.
         - `'time'` - plot the pseudotime on x-axis and the absorption probabilities on y-axis.
 """
+_write_to_adata = """\
+Updates the :paramref:`adata` with the following fields:
+
+        - ``.obsp['{{key}}']`` - the transition matrix.
+        - ``.uns['{{key}}_params']`` - parameters used for calculation.
+"""
 
 
 def inject_docs(**kwargs):  # noqa
     def decorator(obj):
         obj.__doc__ = dedent(obj.__doc__).format(**kwargs)
         return obj
+
+    def decorator2(obj):
+        obj.__doc__ = dedent(kwargs["__doc__"])
+        return obj
+
+    if isinstance(kwargs.get("__doc__", None), str) and len(kwargs) == 1:
+        return decorator2
 
     return decorator
 
@@ -159,4 +172,5 @@ d = DocstringProcessor(
     genes=_genes,
     softmax_scale=_softmax_scale,
     time_mode=_time_mode,
+    write_to_adata=_write_to_adata,
 )

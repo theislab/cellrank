@@ -17,14 +17,16 @@ import matplotlib as mpl
 from matplotlib import cm
 
 import cellrank.logging as logg
-from cellrank.ul._docs import d
-from cellrank.tl._utils import RandomKeys, _make_cat, partition, _complex_warning
+from cellrank.ul._docs import d, _initial, _terminal
+from cellrank.tl._utils import RandomKeys, _make_cat, _partition, _complex_warning
+from cellrank.tl._colors import _create_categorical_colors
 from cellrank.tl.kernels import PrecomputedKernel
 from cellrank.tl._lineage import Lineage
 from cellrank.tl._constants import Direction, DirPrefix, DirectionPlot
 from cellrank.tl.kernels._utils import _filter_kwargs
 from cellrank.tl.estimators._utils import (
     Metadata,
+    Sequence,
     _create_property,
     singledispatchmethod,
     _delegate_method_dispatch,
@@ -196,7 +198,7 @@ class KernelHolder(ABC):
     def __init__(
         self,
         obj: Union[AnnData, np.ndarray, spmatrix, KernelExpression],
-        key_added: Optional[str] = None,
+        key: Optional[str] = None,
         obsp_key: Optional[str] = None,
         write_to_adata: bool = True,
     ):
@@ -223,7 +225,7 @@ class KernelHolder(ABC):
             self.kernel.compute_transition_matrix()
 
         if write_to_adata:
-            self.kernel.write_to_adata(key_added=key_added)
+            self.kernel.write_to_adata(key=key)
 
     @property
     def _direction(self):
@@ -393,6 +395,7 @@ class Plottable(KernelHolder, Property):
         self,
         data: pd.Series,
         prop: str,
+        lineages: Optional[Union[str, Sequence[str]]] = None,
         cluster_key: Optional[str] = None,
         same_plot: bool = True,
         title: Optional[Union[str, List[str]]] = None,
@@ -403,6 +406,8 @@ class Plottable(KernelHolder, Property):
 
         Parameters
         ----------
+        lineages
+            Plot only these lineages. If `None`, plot all lineages.
         cluster_key
             Key from :paramref:`adata` ``.obs`` for plotting categorical observations.
         same_plot
@@ -430,9 +435,31 @@ class Plottable(KernelHolder, Property):
         elif prop == P.META.v:
             colors = getattr(self, A.META_COLORS.v, None)
         else:
-            raise NotImplementedError(
-                f"Unable to determine plotting conditions for property `.{prop}`."
-            )
+            logg.debug("No colors found. Creating new ones")
+            colors = _create_categorical_colors(len(data.cat.categories))
+        colors = dict(zip(data.cat.categories, colors))
+
+        if (
+            lineages is not None
+        ):  # these are states per-se, but I want to keep the arg names for dispatch the same
+            if isinstance(lineages, str):
+                lineages = [lineages]
+            for state in lineages:
+                if state not in data.cat.categories:
+                    raise ValueError(
+                        f"Invalid state `{state!r}`. Valid options are `{list(data.cat.categories)}`."
+                    )
+            data = data.copy()
+            to_remove = list(set(data.cat.categories) - set(lineages))
+
+            if len(to_remove) == len(data.cat.categories):
+                raise RuntimeError(
+                    "Nothing to plot because empty subset has been selected."
+                )
+
+            for state in to_remove:
+                data[data == state] = np.nan
+            data.cat.remove_categories(to_remove, inplace=True)
 
         if cluster_key is None:
             cluster_key = []
@@ -441,13 +468,18 @@ class Plottable(KernelHolder, Property):
         if not isinstance(cluster_key, list):
             cluster_key = list(cluster_key)
 
+        same_plot = same_plot or len(data.cat.categories) == 1
+        kwargs["legend_loc"] = kwargs.get("legend_loc", "on data")
+
         with RandomKeys(
             self.adata, None if same_plot else len(data.cat.categories), where="obs"
         ) as keys:
             if same_plot:
                 key = keys[0]
                 self.adata.obs[key] = data
-                self.adata.uns[f"{key}_colors"] = colors
+                self.adata.uns[f"{key}_colors"] = [
+                    colors[c] for c in data.cat.categories
+                ]
 
                 if title is None:
                     title = (
@@ -464,18 +496,24 @@ class Plottable(KernelHolder, Property):
                     **_filter_kwargs(scv.pl.scatter, **kwargs),
                 )
             else:
-                for i, (key, cat) in enumerate(zip(keys, data.cat.categories)):
+                for key, cat in zip(keys, data.cat.categories):
                     d = data.copy()
                     d[data != cat] = None
                     d.cat.set_categories([cat], inplace=True)
 
                     self.adata.obs[key] = d
-                    self.adata.uns[f"{key}_colors"] = [colors[i]]
+                    self.adata.uns[f"{key}_colors"] = [colors[cat]]
 
                 scv.pl.scatter(
                     self.adata,
                     color=cluster_key + keys,
-                    title=(cluster_key + list(data.cat.categories))
+                    title=(
+                        cluster_key
+                        + [
+                            f"{_initial if self.kernel.backward else _terminal} state {c}"
+                            for c in data.cat.categories
+                        ]
+                    )
                     if title is None
                     else title,
                     **_filter_kwargs(scv.pl.scatter, **kwargs),
@@ -495,7 +533,7 @@ class Plottable(KernelHolder, Property):
         show_dp: bool = True,
         title: Optional[str] = None,
         same_plot: bool = True,
-        cmap: Optional[Union[str, mpl.colors.ListedColormap]] = cm.viridis,
+        cmap: Union[str, mpl.colors.ListedColormap] = cm.viridis,
         **kwargs,
     ) -> None:
         """
@@ -539,10 +577,14 @@ class Plottable(KernelHolder, Property):
         else:
             A = probs[lineages]
 
-        if cmap is None:
-            cmap = cm.viridis
+        if not len(lineages):
+            raise RuntimeError(
+                "Nothing to plot because empty subset has been selected."
+            )
 
         prefix = DirPrefix.BACKWARD if self.kernel.backward else DirPrefix.FORWARD
+        same_plot = same_plot and mode == "embedding"  # set this silently
+
         diff_potential = (
             [diff_potential.values]
             if show_dp
@@ -556,6 +598,9 @@ class Plottable(KernelHolder, Property):
         X = A.X  # list(A.T) behaves differently, because it's Lineage
 
         if X.shape[1] == 1:
+            same_plot = (
+                False  # because color_gradients for 1 state is buggy (looks empty)
+            )
             # this is the case for only 1 recurrent class - all cells have prob. 1 of going there
             # however, matplotlib's plotting really picks up the slightest differences in the colormap, here we set
             # everything to one, if applicable
@@ -573,6 +618,10 @@ class Plottable(KernelHolder, Property):
             if time_key not in self.adata.obs.keys():
                 raise KeyError(f"Time key `{time_key!r}` not found in `adata.obs`.")
             time = self.adata.obs[time_key]
+            if cluster_key is not None:
+                logg.warning(
+                    f"Cluster key `{cluster_key!r}` is ignored when `mode='time'`"
+                )
             cluster_key = None
 
         color = list(X.T) + diff_potential
@@ -603,6 +652,10 @@ class Plottable(KernelHolder, Property):
         if mode == "embedding":
             if same_plot:
                 kwargs["color_gradients"] = A
+                logg.warning(
+                    "Ignoring `cluster_key` when plotting probabilities in the same plot"
+                )
+                # kwargs["color"] = cluster_key  this results in a bug, cluster_key data is overwritten, will make a PR
             else:
                 kwargs["color"] = color
 
@@ -629,7 +682,7 @@ class Plottable(KernelHolder, Property):
                 y=color,
                 title=title,
                 xlabel=[time_key] * len(title),
-                ylabel=["probability" * len(title)],
+                ylabel=["probability"] * len(title),
                 **_filter_kwargs(scv.pl.scatter, **kwargs),
             )
         else:
@@ -644,14 +697,14 @@ class Plottable(KernelHolder, Property):
         data,
         prop: str,
         discrete: bool = False,
-        lineages: Optional[Union[str, Iterable[str]]] = None,
+        lineages: Optional[Union[str, Sequence[str]]] = None,
         cluster_key: Optional[str] = None,
         mode: str = "embedding",
         time_key: str = "latent_time",
         show_dp: bool = True,
         title: Optional[str] = None,
         same_plot: bool = False,
-        cmap: Optional[Union[str, mpl.colors.ListedColormap]] = None,
+        cmap: Union[str, mpl.colors.ListedColormap] = "viridis",
         **kwargs,
     ) -> None:
         """
@@ -672,6 +725,12 @@ class Plottable(KernelHolder, Property):
 
     @_plot.register(pd.Series)
     def _(self, data: pd.Series, prop: str, discrete: bool = False, **kwargs) -> None:
+        if discrete and kwargs.get("mode", "embedding") == "time":
+            logg.warning(
+                "`mode='time'` is implemented in continuous case, plotting in continuous mode"
+            )
+            discrete = False
+
         if discrete:
             self._plot_discrete(data, prop, **kwargs)
         elif prop == P.META.v:  # GPCCA
@@ -694,6 +753,12 @@ class Plottable(KernelHolder, Property):
 
     @_plot.register(Lineage)
     def _(self, data: Lineage, prop: str, discrete: bool = False, **kwargs) -> None:
+        if discrete and kwargs.get("mode", "embedding") == "time":
+            logg.warning(
+                "`mode='time'` is implemented in continuous case, plotting in continuous mode"
+            )
+            discrete = False
+
         if not discrete:
             diff_potential = getattr(self, P.DIFF_POT.v, None)
             self._plot_continuous(data, prop, diff_potential, **kwargs)
@@ -817,7 +882,7 @@ class Partitioner(KernelHolder, ABC):
         start = logg.info("Computing communication classes")
         n_states = len(self)
 
-        rec_classes, trans_classes = partition(self.transition_matrix)
+        rec_classes, trans_classes = _partition(self.transition_matrix)
 
         self._is_irreducible = len(rec_classes) == 1 and len(trans_classes) == 0
 
@@ -836,7 +901,7 @@ class Partitioner(KernelHolder, ABC):
             )
         else:
             logg.warning(
-                "The transition matrix is irreducible - cannot further partition it\n    Finish",
+                "The transition matrix is irreducible - cannot further _partition it\n    Finish",
                 time=start,
             )
 
