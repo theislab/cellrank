@@ -134,20 +134,14 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         self._set_or_debug(_probs(self._fs_key), self.adata.obs, A.FIN_PROBS)
         self._set_or_debug(_colors(self._fs_key), self.adata.uns, A.FIN_COLORS)
 
-        self._set_or_debug(self._abs_prob_key, self.adata.obsm, A.ABS_PROBS)
         self._reconstruct_lineage(A.ABS_PROBS, self._abs_prob_key)
         self._set_or_debug(_dp(self._abs_prob_key), self.adata.obs, A.DIFF_POT)
 
-    def _reconstruct_lineage(
-        self, attr: PrettyEnum, obsm_key: str, cn_key: Optional[str] = None
-    ):
+    def _reconstruct_lineage(self, attr: PrettyEnum, obsm_key: str):
 
         self._set_or_debug(obsm_key, self.adata.obsm, attr)
-        if cn_key is None:
-            cn_key = obsm_key
-
-        names = self._set_or_debug(_lin_names(cn_key), self.adata.uns)
-        colors = self._set_or_debug(_colors(cn_key), self.adata.uns)
+        names = self._set_or_debug(_lin_names(self._fs_key), self.adata.uns)
+        colors = self._set_or_debug(_colors(self._fs_key), self.adata.uns)
 
         # choosing this instead of property because GPCCA doesn't have property for FIN_ABS_PROBS
         probs = self._get(attr)
@@ -169,9 +163,9 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 colors = _create_categorical_colors(probs.shape[1])
             self._set(attr, Lineage(probs, names=names, colors=colors))
 
-            self.adata.obsm[obsm_key] = self._get(P.ABS_PROBS)
-            self.adata.uns[_lin_names(cn_key)] = names
-            self.adata.uns[_colors(cn_key)] = colors
+            self.adata.obsm[obsm_key] = self._get(attr)
+            self.adata.uns[_lin_names(self._fs_key)] = names
+            self.adata.uns[_colors(self._fs_key)] = colors
 
     @inject_docs(fs=P.FIN.s, fsp=P.FIN_PROBS.s)
     def set_final_states(
@@ -802,6 +796,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         self.adata.obs[_probs(self._fs_key)] = self._get(P.FIN_PROBS)
 
         self.adata.uns[_colors(self._fs_key)] = self._get(A.FIN_COLORS)
+        self.adata.uns[_lin_names(self._fs_key)] = list(self._get(P.FIN).cat.categories)
 
         extra_msg = ""
         if hasattr(self, A.FIN_ABS_PROBS.s) and hasattr(self, "_fin_abs_prob_key"):
@@ -891,7 +886,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 return haystack[needle]
             setattr(self, attr, haystack[needle])
         elif attr is not None:
-            logg.debug(f"Unable to set attribute `.{attr}`. Skipping")
+            logg.debug(f"Unable to set attribute `.{attr}`, skipping")
 
     def copy(self) -> "BaseEstimator":
         """Return a copy of self, including the underlying :paramref:`adata` object."""
