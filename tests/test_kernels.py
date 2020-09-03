@@ -371,6 +371,16 @@ class TestKernel:
             adata.obsp["T_fwd"].toarray(), vk.transition_matrix.toarray()
         )
 
+    def test_write_adata_key(self, adata: AnnData):
+        vk = VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
+        vk.write_to_adata(key="foo")
+
+        assert adata is vk.adata
+        assert "foo_params" in adata.uns.keys()
+        np.testing.assert_array_equal(
+            adata.obsp["foo"].toarray(), vk.transition_matrix.toarray()
+        )
+
     def test_row_normalized(self, adata: AnnData):
         vk = VelocityKernel(adata)
 
