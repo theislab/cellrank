@@ -28,11 +28,13 @@ def lineages(
     the probability is computed that cell `i` is either going to %(terminal)s state `j` (``backward=False``)
     or is coming from %(initial)s state `j` (``backward=True``).
 
-    This function computes the absorption probabilities of a Markov chain towards %(initial_or_terminal) states
-    uncovered by :func:`cellrank.tl.initial_states` or :func:`cellrank.tl.terminal_states`.
+    This function computes the absorption probabilities of a Markov chain towards the %(initial_or_terminal) states
+    uncovered by :func:`cellrank.tl.initial_states` or :func:`cellrank.tl.terminal_states` using a highly efficient
+    implementation that scales to large cell numbers.
 
-    It's also possible to calculate mean and variance of time until absorption all or just a subset
-    of %(initial_or_terminal)s states
+    It's also possible to calculate mean and variance of the time until absorption for all or just a subset
+    of the %(initial_or_terminal)s states. This can be seen as a pseudotemporal measure, either towards any terminal
+    population of the state change trajectory, or towards specific ones.
 
     Parameters
     ----------
