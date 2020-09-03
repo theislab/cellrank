@@ -53,6 +53,13 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         Metadata(attr=A.COARSE_STAT_D, prop=P.COARSE_STAT_D, dtype=pd.Series),
     ]
 
+    def _read_from_adata(self) -> None:
+        super()._read_from_adata()
+        self._reconstruct_lineage(
+            A.FIN_ABS_PROBS,
+            self._fin_abs_prob_key,
+        )
+
     @inject_docs(
         ms=P.META,
         msp=P.META_PROBS,
@@ -992,7 +999,8 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             else:
                 set_final_states_from_metastable_states(...)
 
-            compute_absorption_probabilities(...)  # optional
+            if compute_absorption_probabilities:
+                compute_absorption_probabilities(...)
 
         Parameters
         ----------

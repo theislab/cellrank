@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 """Lineages module."""
 
-from typing import TypeVar, Optional
+from typing import Union, TypeVar, Optional, Sequence
+
+import pandas as pd
 
 from cellrank import logging as logg
 from cellrank.ul._docs import d
@@ -9,6 +11,7 @@ from cellrank.tl.kernels import PrecomputedKernel
 from cellrank.tl._constants import AbsProbKey, FinalStatesKey, FinalStatesPlot
 from cellrank.tl.estimators import GPCCA
 from cellrank.tl.estimators._constants import P
+from cellrank.tl.kernels._precomputed_kernel import DummyKernel
 
 AnnData = TypeVar("AnnData")
 
@@ -62,20 +65,22 @@ def lineages(
         lin_key = AbsProbKey.FORWARD
         fs_key = FinalStatesKey.FORWARD
         fs_key_pretty = FinalStatesPlot.FORWARD
+
     try:
         pk = PrecomputedKernel(adata=adata, backward=backward)
     except KeyError as e:
         raise RuntimeError(
-            f"Compute {'backward' if backward else 'forward'} transition matrix first as "
-            f"`cellrank.tl.transition_matrix(..., backward={backward})`."
+            f"Compute transition matrix first as `cellrank.tl.transition_matrix(..., backward={backward})`."
         ) from e
 
     start = logg.info(f"Computing lineage probabilities towards {fs_key_pretty.s}")
     mc = GPCCA(
         pk, read_from_adata=True, inplace=not copy
-    )  # GPCCA is more general than CFLARE
+    )  # GPCCA is more general than CFLARE, in terms of what is saves
     if mc._get(P.FIN) is None:
-        raise RuntimeError(f"Compute the states first as `cellrank.tl.{fs_key.s}()`.")
+        raise RuntimeError(
+            f"Compute the states first as `cellrank.tl.{fs_key.s}(..., backward={backward})`."
+        )
 
     # compute the absorption probabilities
     mc.compute_absorption_probabilities(**kwargs)
@@ -83,3 +88,47 @@ def lineages(
     logg.info(f"Adding lineages to `adata.obsm[{lin_key.s!r}]`\n    Finish", time=start)
 
     return mc.adata if copy else mc if return_estimator else None
+
+
+@d.dedent
+def lineage_drivers(
+    adata: AnnData,
+    backward: bool = False,
+    lineages: Optional[Union[Sequence, str]] = None,
+    cluster_key: Optional[str] = None,
+    clusters: Optional[Union[Sequence, str]] = None,
+    layer: str = "X",
+    use_raw: bool = True,
+    return_drivers: bool = False,
+) -> Optional[pd.DataFrame]:  # noqa
+    """
+    %(lineage_drivers.full_desc)s
+
+    Parameters
+    ----------
+    %(adata)s
+    %(backward)s
+    %(lineage_drivers.parameters)s
+
+    Returns
+    -------
+    %(lineage_drivers.returns)s
+    """
+
+    # create dummy kernel and estimator
+    pk = DummyKernel(adata, backward=backward)
+    g = GPCCA(pk, read_from_adata=True, write_to_adata=False)
+    if g._get(P.ABS_PROBS) is None:
+        raise RuntimeError(
+            f"Compute absorption probabilities first as `cellrank.tl.lineages(..., backward={backward})`."
+        )
+
+    # call the underlying function to compute and store the lineage drivers
+    return g.compute_lineage_drivers(
+        lineages=lineages,
+        cluster_key=cluster_key,
+        clusters=clusters,
+        layer=layer,
+        use_raw=use_raw,
+        return_drivers=return_drivers,
+    )

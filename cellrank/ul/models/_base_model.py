@@ -16,8 +16,8 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from cellrank.tl import Lineage
 from cellrank.ul._docs import d
-from cellrank.tl._utils import save_fig, _densify_squeeze
-from cellrank.ul._utils import _minmax
+from cellrank.tl._utils import save_fig
+from cellrank.ul._utils import _minmax, _densify_squeeze
 from cellrank.tl._constants import AbsProbKey
 
 AnnData = TypeVar("AnnData")

@@ -3,7 +3,7 @@
 
 from math import ceil
 from types import MappingProxyType
-from typing import Any, List, Tuple, Union, Mapping, TypeVar, Optional, Sequence
+from typing import Any, Tuple, Union, Mapping, TypeVar, Optional, Sequence
 from pathlib import Path
 from collections import OrderedDict as odict
 
@@ -21,7 +21,6 @@ from cellrank.pl._utils import _position_legend
 from cellrank.tl._utils import RandomKeys, save_fig, _unique_order_preserving
 from cellrank.ul._utils import valuedispatch
 from cellrank.tl._constants import ModeEnum, DirPrefix, AbsProbKey, FinalStatesPlot
-from cellrank.tl._permutation_test import _counts, _cramers_v
 
 AnnData = TypeVar("AnnData")
 
@@ -78,7 +77,7 @@ def cluster_fates(
             - `{m.CLUSTERMAP.s!r}` - same as a heatmap, but with a dendrogram.
     %(backward)s
     lineages
-        Lineages for which to visualize absorption probabilities. If `None`, use all available lineages.
+        Lineages for which to visualize absorption probabilities. If `None`, use all lineages.
     cluster_key
         Key in ``adata.obs`` containing the clusters.
     clusters
@@ -498,96 +497,6 @@ def cluster_fates(
         if mode == ClusterFatesMode.VIOLIN and cluster_key is None
         else plot(mode)
     )
-
-    if save is not None:
-        save_fig(fig, save)
-
-    fig.show()
-
-
-@d.dedent
-def similarity_plot(
-    adata: AnnData,
-    cluster_key: str,
-    backward: bool = False,
-    clusters: Optional[List[str]] = None,
-    n_samples: int = 1000,
-    cmap: mpl.colors.ListedColormap = cm.viridis,
-    fontsize: float = 14,
-    rotation: float = 45,
-    title: Optional[str] = "similarity",
-    figsize: Tuple[float, float] = (12, 10),
-    dpi: Optional[int] = None,
-    save: Optional[Union[str, Path]] = None,
-) -> None:
-    """
-    Compare clusters with respect to their %(initial_or_terminal)s probabilities.
-
-    For each cluster, we compute how likely an 'average cell' goes towards the %(terminal)s states or comes
-    from the %(initial)s states. We then compare these averaged probabilities using Cramér's V statistic, see
-    `here <https://en.wikipedia.org/wiki/Cram%C3%A9r%27s_V>`_. The similarity is defined as :math:`1 - Cramér's V`.
-
-    .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/similarity_plot.png
-       :width: 400px
-       :align: center
-
-    Parameters
-    ----------
-    %(adata)s
-    cluster_key
-        Key in ``adata.obs`` corresponding containing the clustering.
-    %(backward)s
-    clusters
-        Clusters in ``adata.obs`` to consider. If `None`, all cluster will be considered.
-    n_samples
-        Number of samples per cluster.
-    cmap
-        Colormap to use.
-    fontsize
-        Font size of the labels.
-    rotation
-        Rotation of labels on x-axis.
-    title
-        Title of the figure.
-    %(plotting)s
-
-    Returns
-    -------
-    %(just_plots)s
-    """
-
-    logg.debug("Getting the counts")
-    data = _counts(
-        adata,
-        cluster_key=cluster_key,
-        clusters=clusters,
-        n_samples=n_samples,
-        backward=backward,
-    )
-
-    cluster_names = list(data.keys())
-    logg.debug("Calculating Cramer`s V statistic")
-    sim = [
-        [1 - _cramers_v(data[name2], data[name]) for name in cluster_names]
-        for name2 in cluster_names
-    ]
-
-    # Plotting function
-    fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
-
-    im = ax.imshow(sim, cmap=cmap)
-
-    ax.set_xticks(range(len(cluster_names)))
-    ax.set_yticks(range(len(cluster_names)))
-
-    ax.set_xticklabels(cluster_names, fontsize=fontsize, rotation=rotation)
-    ax.set_yticklabels(cluster_names, fontsize=fontsize)
-
-    ax.set_title(title)
-    ax.tick_params(top=False, bottom=True, labeltop=False, labelbottom=True)
-
-    cbar = ax.figure.colorbar(im, ax=ax, norm=mpl.colors.Normalize(vmin=0, vmax=1))
-    cbar.set_ticks(np.linspace(0, 1, 10))
 
     if save is not None:
         save_fig(fig, save)

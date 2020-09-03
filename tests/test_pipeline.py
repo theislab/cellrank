@@ -22,6 +22,8 @@ from cellrank.tl._constants import (
 
 def _assert_has_all_keys(adata: AnnData, direction: Direction):
     assert _transition(direction) in adata.obsp.keys()
+    # check if it's not a dummy transition matrix
+    assert not np.all(np.isclose(np.diag(adata.obsp[_transition(direction)].A), 1.0))
     assert f"{_transition(direction)}_params" in adata.uns.keys()
 
     if direction == Direction.FORWARD:
@@ -64,6 +66,27 @@ def _assert_has_all_keys(adata: AnnData, direction: Direction):
 
 
 class TestHighLevelPipeline:
+    def test_plot_states_not_computed(self, adata: AnnData):
+        with pytest.raises(RuntimeError):
+            cr.pl.initial_states(adata)
+        with pytest.raises(RuntimeError):
+            cr.pl.terminal_states(adata)
+
+    def test_write_transition_matrix(self, adata: AnnData):
+        cr.tl.transition_matrix(adata, key="foo")
+
+        assert "foo" in adata.obsp
+        np.testing.assert_allclose(adata.obsp["foo"].A.sum(1), 1.0)
+        assert "foo_params" in adata.uns
+
+    def test_states_use_precomputed_transition_matrix(self, adata: AnnData):
+        cr.tl.transition_matrix(adata, key="foo")
+        obsp_keys = set(adata.obsp.keys())
+
+        cr.tl.terminal_states(adata, key="foo")
+
+        assert obsp_keys == set(adata.obsp.keys())
+
     def test_fwd_pipeline_cflare(self, adata: AnnData):
         cr.tl.terminal_states(
             adata,
@@ -72,6 +95,7 @@ class TestHighLevelPipeline:
             method="kmeans",
             show_plots=True,
         )
+        cr.pl.terminal_states(adata)
         cr.tl.lineages(adata)
         cr.pl.lineages(adata)
         cr.tl.lineage_drivers(adata, use_raw=False)
@@ -89,6 +113,7 @@ class TestHighLevelPipeline:
             method="kmeans",
             show_plots=True,
         )
+        cr.pl.terminal_states(adata)
         cr.tl.lineages(adata)
         cr.pl.lineages(adata)
         cr.tl.lineage_drivers(adata, use_raw=False)
@@ -105,6 +130,7 @@ class TestHighLevelPipeline:
             method="louvain",
             show_plots=True,
         )
+        cr.pl.initial_states(adata)
         cr.tl.lineages(adata, backward=True)
         cr.pl.lineages(adata, backward=True)
         cr.tl.lineage_drivers(adata, use_raw=False, backward=True)
@@ -122,6 +148,7 @@ class TestHighLevelPipeline:
             method="brandts",
             show_plots=True,
         )
+        cr.pl.terminal_states(adata)
         cr.tl.lineages(adata)
         cr.pl.lineages(adata)
         cr.tl.lineage_drivers(adata, use_raw=False)
@@ -138,6 +165,7 @@ class TestHighLevelPipeline:
             method="brandts",
             show_plots=True,
         )
+        cr.pl.terminal_states(adata)
         cr.tl.lineages(adata)
         cr.pl.lineages(adata)
         cr.tl.lineage_drivers(adata, use_raw=False)
@@ -153,6 +181,7 @@ class TestHighLevelPipeline:
             method="brandts",
             show_plots=True,
         )
+        cr.pl.initial_states(adata)
         cr.tl.lineages(adata, backward=True)
         cr.pl.lineages(adata, backward=True)
         cr.tl.lineage_drivers(adata, use_raw=False, backward=True)

@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from sys import version_info
 from typing import Tuple
 
 import pytest
@@ -187,57 +186,6 @@ class TestCFLARE:
         assert not np.shares_memory(l_iter.X, l_iter_petsc.X)  # sanity check
         np.testing.assert_allclose(l_iter.X, l_iter_petsc.X, rtol=0, atol=tol)
 
-    @pytest.mark.skip("previous implementation, may be reintroduced")
-    def test_compute_absorption_probabilities_mean_time(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
-        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        final_kernel = 0.8 * vk + 0.2 * ck
-        tol = 1e-6
-
-        mc = cr.tl.estimators.CFLARE(final_kernel)
-        mc.compute_eigendecomposition(k=5)
-        mc.compute_final_states(use=2)
-
-        # compute lin probs using direct solver
-        mc.compute_absorption_probabilities(
-            solver="gmres", use_petsc=False, tol=tol, absorption_pseudotime="mean"
-        )
-        pt = mc._get(P.ABS_PT)
-
-        assert isinstance(mc._absorption_time_mean, np.ndarray)
-        assert isinstance(pt, pd.Series)
-        assert mc._absorption_time_mean.shape == pt.shape
-        assert (pt.min(), pt.max()) == (0, 1)
-        assert mc._get(P.ABS_PT_VAR) is None
-
-    @pytest.mark.skip("previous implementation, may be reintroduced")
-    def test_compute_absorption_probabilities_mean_var(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
-        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        final_kernel = 0.8 * vk + 0.2 * ck
-        tol = 1e-6
-
-        mc = cr.tl.estimators.CFLARE(final_kernel)
-        mc.compute_eigendecomposition(k=5)
-        mc.compute_final_states(use=2)
-
-        # compute lin probs using direct solver
-        mc.compute_absorption_probabilities(
-            solver="gmres", use_petsc=False, tol=tol, absorption_pseudotime="var"
-        )
-        pt = mc._get(P.ABS_PT)
-        ptv = mc._get(P.ABS_PT_VAR)
-
-        assert isinstance(mc._absorption_time_mean, np.ndarray)
-        assert isinstance(pt, pd.Series)
-        assert mc._absorption_time_mean.shape == pt.shape
-        assert (pt.min(), pt.max()) == (0, 1)
-
-        assert isinstance(mc._absorption_time_var, np.ndarray)
-        assert isinstance(ptv, pd.Series)
-        assert mc._absorption_time_var.shape == ptv.shape
-        assert ptv.shape == pt.shape
-
     def test_compute_absorption_probabilities_lineage_absorption_mean(
         self, adata_large: AnnData
     ):
@@ -307,42 +255,6 @@ class TestCFLARE:
         assert isinstance(at, pd.DataFrame)
         np.testing.assert_array_equal(at.index, adata_large.obs_names)
         np.testing.assert_array_equal(at.columns, [f"{name} mean", f"{name} var"])
-
-    @pytest.mark.skip("previous implementation, may be reintroduced")
-    def test_compute_absorption_probabilities_absorption_matches_all(
-        self, adata_large: AnnData
-    ):
-        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
-        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        final_kernel = 0.8 * vk + 0.2 * ck
-        tol = 1e-6
-
-        mc = cr.tl.estimators.CFLARE(final_kernel)
-        mc.compute_eigendecomposition(k=5)
-        mc.compute_final_states(use=2)
-
-        fs = tuple(mc._get(P.FIN).cat.categories)
-        names = ", ".join(fs)
-
-        # compute lin probs using direct solver
-        mc.compute_absorption_probabilities(
-            solver="gmres",
-            use_petsc=False,
-            tol=tol,
-            time_to_absorption={fs: "var"},
-            absorption_pseudotime="var",
-        )
-        at_1 = mc._get(P.LIN_ABS_TIMES)
-        at_2_mean = mc._absorption_time_mean
-        at_2_var = mc._absorption_time_var
-
-        assert isinstance(at_1, pd.DataFrame)
-        assert isinstance(at_2_mean, np.ndarray)
-        assert isinstance(at_2_var, np.ndarray)
-        np.testing.assert_array_equal(at_1.index, adata_large.obs_names)
-        np.testing.assert_array_equal(at_1.columns, [f"{names} mean", f"{names} var"])
-        np.testing.assert_allclose(at_1[f"{names} mean"].values, at_2_mean)
-        np.testing.assert_allclose(at_1[f"{names} var"].values, at_2_var)
 
     def test_compute_lineage_drivers_no_lineages(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
