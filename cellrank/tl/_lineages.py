@@ -63,20 +63,22 @@ def lineages(
         lin_key = AbsProbKey.FORWARD
         fs_key = FinalStatesKey.FORWARD
         fs_key_pretty = FinalStatesPlot.FORWARD
+
     try:
         pk = PrecomputedKernel(adata=adata, backward=backward)
     except KeyError as e:
         raise RuntimeError(
-            f"Compute {'backward' if backward else 'forward'} transition matrix first as "
-            f"`cellrank.tl.transition_matrix(..., backward={backward})`."
+            f"Compute transition matrix first as `cellrank.tl.transition_matrix(..., backward={backward})`."
         ) from e
 
     start = logg.info(f"Computing lineage probabilities towards {fs_key_pretty.s}")
     mc = GPCCA(
         pk, read_from_adata=True, inplace=not copy
-    )  # GPCCA is more general than CFLARE
+    )  # GPCCA is more general than CFLARE, in terms of what is saves
     if mc._get(P.FIN) is None:
-        raise RuntimeError(f"Compute the states first as `cellrank.tl.{fs_key.s}()`.")
+        raise RuntimeError(
+            f"Compute the states first as `cellrank.tl.{fs_key.s}(..., backward={backward})`."
+        )
 
     # compute the absorption probabilities
     mc.compute_absorption_probabilities(**kwargs)

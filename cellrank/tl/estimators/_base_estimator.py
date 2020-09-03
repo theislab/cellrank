@@ -57,6 +57,7 @@ AnnData = TypeVar("AnnData")
 
 
 @d.get_sectionsf("base_estimator", sections=["Parameters"])
+@d.dedent
 class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
     """
     Base class for all estimators.
@@ -77,9 +78,10 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
     s_key
         Key in :paramref:`adata` ``.obs``. Can be used to detect cell-cycle driven start- or endpoints.
     write_to_adata
-        Whether to write the transition matrix to :paramref:`adata` ``.obsp``.
-    key_added
-        Key in :paramref:`adata` where to store the final transition matrix.
+        Whether to write the transition matrix to :paramref:`adata` ``.obsp``
+        and the parameters to :paramref:`adata` ``.uns``.
+    %(write_to_adata.parameters)s
+        Only used when ``write_to_adata=True``.
     """
 
     def __init__(
@@ -91,13 +93,11 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         g2m_key: Optional[str] = "G2M_score",
         s_key: Optional[str] = "S_score",
         write_to_adata: bool = True,
-        key_added: Optional[str] = None,
+        key: Optional[str] = None,
     ):
         from anndata import AnnData
 
-        super().__init__(
-            obj, obsp_key=obsp_key, key_added=key_added, write_to_adata=write_to_adata
-        )
+        super().__init__(obj, obsp_key=obsp_key, key=key, write_to_adata=write_to_adata)
 
         if isinstance(obj, (KernelExpression, AnnData)) and not inplace:
             self.kernel._adata = self.adata.copy()
@@ -111,7 +111,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             self._abs_prob_key = AbsProbKey.FORWARD.s
             self._fin_abs_prob_key = MetaKey.FORWARD.s
 
-        self._key_added = key_added
+        self._key_added = key
         self._g2m_key = g2m_key
         self._s_key = s_key
 

@@ -21,7 +21,7 @@ import numpy as np
 from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix, isspmatrix_csr
 
 from cellrank import logging as logg
-from cellrank.ul._docs import d
+from cellrank.ul._docs import d, inject_docs
 from cellrank.tl._utils import (
     _connected,
     _normalize,
@@ -193,22 +193,23 @@ class KernelExpression(ABC):
         """
         pass
 
-    def write_to_adata(self, key_added: Optional[str] = None) -> None:
+    @d.get_sectionsf("write_to_adata", sections=["Parameters"])
+    @inject_docs()  # get rid of {{}}
+    @d.dedent
+    def write_to_adata(self, key: Optional[str] = None) -> None:
         """
         Write the parameters and transition matrix to the underlying :paramref:`adata` object.
 
         Parameters
         ----------
-        key_added
-            Postfix to be added to :paramref:`adata` ``.uns`` when writing the parameters.
+        key
+            Key used when writing transition matrix to :paramref:`adata`.
+            If `None`, it is `'T_bwd'` if :paramref:`backward` is `True`, else `'T_fwd'`.
 
         Returns
         -------
         None
-            Updates the underlying :paramref:`adata` object with the following fields:
-
-                - ``.obsp['T_{fwd, bwd}_{key_added}']`` - the transition matrix.
-                - ``.uns['T_{fwd, bwd}_{key_added}_params']`` - parameters used for calculation.
+            %(write_to_adata)s
         """
 
         if self.transition_matrix is None:
@@ -216,9 +217,8 @@ class KernelExpression(ABC):
                 "Compute transition matrix first as `.compute_transition_matrix()`."
             )
 
-        key = _transition(self._direction)
-        if key_added is not None:
-            key += f"_{key_added}"
+        if key is None:
+            key = _transition(self._direction)
 
         self.adata.uns[f"{key}_params"] = str(self)
         _write_graph_data(self.adata, self.transition_matrix, key)
