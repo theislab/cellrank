@@ -17,7 +17,7 @@ import matplotlib as mpl
 from matplotlib import cm
 
 import cellrank.logging as logg
-from cellrank.ul._docs import d
+from cellrank.ul._docs import d, _initial, _terminal
 from cellrank.tl._utils import RandomKeys, _make_cat, _partition, _complex_warning
 from cellrank.tl._colors import _create_categorical_colors
 from cellrank.tl.kernels import PrecomputedKernel
@@ -507,7 +507,13 @@ class Plottable(KernelHolder, Property):
                 scv.pl.scatter(
                     self.adata,
                     color=cluster_key + keys,
-                    title=(cluster_key + list(data.cat.categories))
+                    title=(
+                        cluster_key
+                        + [
+                            f"{_initial if self.kernel.backward else _terminal} state {c}"
+                            for c in data.cat.categories
+                        ]
+                    )
                     if title is None
                     else title,
                     **_filter_kwargs(scv.pl.scatter, **kwargs),
@@ -646,6 +652,9 @@ class Plottable(KernelHolder, Property):
         if mode == "embedding":
             if same_plot:
                 kwargs["color_gradients"] = A
+                logg.warning(
+                    "Ignoring `cluster_key` when plotting probabilities in the same plot"
+                )
                 # kwargs["color"] = cluster_key  this results in a bug, cluster_key data is overwritten, will make a PR
             else:
                 kwargs["color"] = color

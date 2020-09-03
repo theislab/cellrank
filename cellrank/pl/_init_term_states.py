@@ -54,18 +54,31 @@ def _initial_terminal(
             f"`cellrank.tl.compute_{FinalStatesKey.BACKWARD if backward else FinalStatesKey.FORWARD}()`."
         )
 
-    if len(mc._get(P.FIN).cat.categories) == 1 or (
+    n_states = len(mc._get(P.FIN).cat.categories)
+    if n_states == 1 or (
         states is not None and (isinstance(states, str) or len(states) == 1)
     ):
         kwargs["same_plot"] = True
 
-    # this correctly sets the title
-    if (
-        mode == "embedding"
-        and kwargs.get("title", None) is None
-        and kwargs.get("same_plot", True)
-    ):
-        if discrete or (isinstance(states, (list, tuple)) and len(states) > 1):
+    if kwargs.get("title", None) is None:
+        if discrete:
+            if kwargs.get("same_plot", True):
+                kwargs["title"] = (
+                    FinalStatesPlot.BACKWARD.s
+                    if backward
+                    else FinalStatesPlot.FORWARD.s
+                )
+        elif (
+            mode == "embedding"
+            and kwargs.get("title", None) is None
+            and (
+                kwargs.get("same_plot", True)
+                and n_states > 1
+                and (
+                    states is None or (not isinstance(states, str) and len(states) > 1)
+                )
+            )
+        ):
             kwargs["title"] = (
                 FinalStatesPlot.BACKWARD.s if backward else FinalStatesPlot.FORWARD.s
             )
