@@ -25,6 +25,7 @@ def transition_matrix(
     softmax_scale: Optional[float] = None,
     weight_connectivities: Optional[float] = None,
     density_normalize: bool = True,
+    key: Optional[str] = None,
     **kwargs,
 ) -> KernelExpression:
     """
@@ -53,6 +54,7 @@ def transition_matrix(
     density_normalize
         Whether to use density correction when computing the transition probabilities based on connectivities.
         Density correction is done as by [Haghverdi16]_.
+    %(write_to_adata.parameters)s
     **kwargs
         Keyword arguments for :meth:`cellrank.tl.kernels.VelocityKernel.compute_transition_matrix`.
 
@@ -60,6 +62,8 @@ def transition_matrix(
     -------
     :class:`cellrank.tl.KernelExpression`
         A kernel expression object containing the computed transition matrix.
+
+        %(write_to_adata)s
     """
 
     # initialise the velocity kernel and compute transition matrix
@@ -91,6 +95,6 @@ def transition_matrix(
             )
     else:
         final = vk
-    final.write_to_adata()
+    final.write_to_adata(key=key)
 
     return final

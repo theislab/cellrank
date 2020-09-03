@@ -198,7 +198,7 @@ class KernelHolder(ABC):
     def __init__(
         self,
         obj: Union[AnnData, np.ndarray, spmatrix, KernelExpression],
-        key_added: Optional[str] = None,
+        key: Optional[str] = None,
         obsp_key: Optional[str] = None,
         write_to_adata: bool = True,
     ):
@@ -225,7 +225,7 @@ class KernelHolder(ABC):
             self.kernel.compute_transition_matrix()
 
         if write_to_adata:
-            self.kernel.write_to_adata(key_added=key_added)
+            self.kernel.write_to_adata(key=key)
 
     @property
     def _direction(self):
