@@ -22,11 +22,11 @@ def transition_matrix(
     gene_subset: Optional[Iterable] = None,
     mode: str = VelocityMode.DETERMINISTIC.s,
     backward_mode: str = BackwardMode.TRANSPOSE.s,
-    seed: Optional[int] = None,
     softmax_scale: Optional[float] = None,
     weight_connectivities: Optional[float] = None,
     density_normalize: bool = True,
-    n_jobs: Optional[int] = None,
+    key: Optional[str] = None,
+    **kwargs,
 ) -> KernelExpression:
     """
     Compute a transition matrix based on a combination of RNA Velocity and transcriptomic similarity.
@@ -48,21 +48,22 @@ def transition_matrix(
         By default, genes from ``adata.var['velocity_genes']`` are used.
     %(velocity_mode)s
     %(velocity_backward_mode_high_lvl)s
-    seed
-        Set the seed for random state, only used when sampling.
     %(softmax_scale)s
     weight_connectivities
         Weight given to transcriptomic similarities as opposed to velocities. Must be in `[0, 1]`.
     density_normalize
         Whether to use density correction when computing the transition probabilities based on connectivities.
         Density correction is done as by [Haghverdi16]_.
-    n_jobs
-        Number of parallel jobs. If `-1`, use all available cores. If `None` or `1`, the execution is sequential.
+    %(write_to_adata.parameters)s
+    **kwargs
+        Keyword arguments for :meth:`cellrank.tl.kernels.VelocityKernel.compute_transition_matrix`.
 
     Returns
     -------
     :class:`cellrank.tl.KernelExpression`
         A kernel expression object containing the computed transition matrix.
+
+        %(write_to_adata)s
     """
 
     # initialise the velocity kernel and compute transition matrix
@@ -70,11 +71,7 @@ def transition_matrix(
         adata, backward=backward, vkey=vkey, xkey=xkey, gene_subset=gene_subset
     )
     vk.compute_transition_matrix(
-        softmax_scale=softmax_scale,
-        mode=mode,
-        backward_mode=backward_mode,
-        seed=seed,
-        n_jobs=n_jobs,
+        softmax_scale=softmax_scale, mode=mode, backward_mode=backward_mode, **kwargs
     )
 
     if weight_connectivities is not None:
@@ -98,6 +95,6 @@ def transition_matrix(
             )
     else:
         final = vk
-    final.write_to_adata()
+    final.write_to_adata(key=key)
 
     return final

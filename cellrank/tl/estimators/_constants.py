@@ -19,7 +19,7 @@ class A(PrettyEnum):
     FIN_PROBS = "_final_states_probabilities"
     FIN_COLORS = "_final_colors"
     FIN_ABS_PROBS = "_final_abs_probabilities"  # the Lineage object
-    ABS_RPOBS = "_absorption_probabilities"
+    ABS_PROBS = "_absorption_probabilities"
     DIFF_POT = "_diff_potential"
     COARSE_T = "_coarse_T"
     COARSE_INIT_D = "_coarse_init_dist"
