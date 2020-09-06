@@ -333,7 +333,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
                 - `'eigengap'` - select the number of states based on the eigengap of the transition matrix.
                 - `'eigengap_coarse'` - select the number of states based on the eigengap of the diagonal \
                     of the coarse-grained transition matrix.
-                - `'top_n'` - select top :paramref:`n_main_states` based on the probability of the diagonal \
+                - `'top_n'` - select top ``n_final_states`` based on the probability of the diagonal \
                     of the coarse-grained transition matrix.
                 - `'min_self_prob'` - select states which have the given minimum probability of the diagonal \
                     of the coarse-grained transition matrix.
@@ -379,11 +379,11 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         elif method == "top_n":
             if n_final_states is None:
                 raise ValueError(
-                    "Argument `n_main_states` must be != `None` for `method='top_n'`."
+                    "Argument `n_final_states` must be != `None` for `method='top_n'`."
                 )
             elif n_final_states <= 0:
                 raise ValueError(
-                    f"Expected `n_main_states` to be positive, found `{n_final_states}`."
+                    f"Expected `n_final_states` to be positive, found `{n_final_states}`."
                 )
         elif method == "min_self_prob":
             if min_self_prob is None:
