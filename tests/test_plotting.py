@@ -18,10 +18,8 @@ from matplotlib.testing import setup
 from matplotlib.testing.compare import compare_images
 
 import cellrank as cr
-import cellrank.pl._lineages
 from cellrank.tl._constants import AbsProbKey
 from cellrank.tl.estimators import GPCCA, CFLARE
-from cellrank.pl._cluster_fates import similarity_plot
 
 setup()
 
@@ -92,7 +90,6 @@ def compare(
         return fpath, str(fpath[7:] + ".png" if fpath.startswith("scvelo_") else fpath)
 
     def _assert_equal(fpath: str) -> None:
-        # TODO: not an elegant solution, consider passing dirname to the functions
         if not fpath.endswith(".png"):
             fpath += ".png"
         if dirname is not None:
@@ -116,16 +113,12 @@ def compare(
 
     def compare_gpcca_fwd(func: Callable) -> Callable:
         def decorator(self, adata_gpcca_fwd) -> None:
-            _, gpcca = adata_gpcca_fwd
+            adata, gpcca = adata_gpcca_fwd
             fpath, path = _prepare_fname(func)
 
-            func(self, gpcca, path)
+            func(self, adata if kind == "adata" else gpcca, path)
 
             _assert_equal(fpath)
-
-        assert (
-            kind == "gpcca"
-        ), "Function `compare_gpcca_fwd` only supports `kind='gpcca'`."
 
         return decorator
 
@@ -145,15 +138,20 @@ def compare(
 
     if kind not in ("adata", "cflare", "gpcca", "lineage"):
         raise ValueError(
-            f"Invalid kind `{kind!r}`. Valid options are `'adata'`, `'cflare'` and `'gpcca'`."
+            f"Invalid kind `{kind!r}`. Valid options are `['adata', 'cflare', 'gpcca', 'lineage']`."
         )
 
+    if kind == "adata":
+        # `kind='adata'` - don't changes this, otherwise some tests in `TestHighLvlStates` are meaningless
+        return compare_gpcca_fwd
+    if kind == "cflare":
+        return compare_cflare_fwd
     if kind == "gpcca":
         return compare_gpcca_fwd
     if kind == "lineage":
         return compare_lineage
 
-    return compare_cflare_fwd  # here we hand `kind='adata'`
+    raise NotImplementedError(f"Invalid kind `{kind!r}`.")
 
 
 class TestClusterFates:
@@ -572,13 +570,14 @@ class TestHeatmap:
             save=fpath,
         )
 
-    @compare(dirname="heatmap_cluster_genes")
+    @compare()
     def test_heatmap_cluster_genes(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.heatmap(
             adata,
             model,
             GENES[:10],
+            lineages="1",
             mode="lineages",
             time_key="latent_time",
             cluster_genes=True,
@@ -726,13 +725,14 @@ class TestHeatmap:
             save=fpath,
         )
 
-    @compare(dirname="heatmap_cluster_no_scale")
+    @compare()
     def test_heatmap_cluster_no_scale(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.heatmap(
             adata,
             model,
             GENES[:5],
+            lineages="1",
             mode="lineages",
             time_key="latent_time",
             scale=False,
@@ -863,7 +863,7 @@ class TestHeatmap:
             save=fpath,
         )
 
-    @compare(dirname="heatmap_show_dendrogram")
+    @compare()
     def test_heatmap_show_dendrogram(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.heatmap(
@@ -871,6 +871,7 @@ class TestHeatmap:
             model,
             GENES[:10],
             mode="lineages",
+            lineages="1",
             time_key="latent_time",
             cluster_genes=True,
             show_dendrogram=True,
@@ -1601,66 +1602,109 @@ class TestGPCCA:
 class TestLineages:
     @compare()
     def test_scvelo_lineages(self, adata: AnnData, fpath: str):
-        cellrank.pl._lineages.lineages(adata, dpi=DPI, save=fpath)
+        cr.pl.lineages(adata, dpi=DPI, save=fpath)
 
     @compare()
     def test_scvelo_lineages_subset(self, adata: AnnData, fpath: str):
-        cellrank.pl._lineages.lineages(adata, lineages=["1"], dpi=DPI, save=fpath)
+        cr.pl.lineages(adata, lineages=["1"], dpi=DPI, save=fpath)
 
     @compare()
     def test_scvelo_lineages_time(self, adata: AnnData, fpath: str):
-        cellrank.pl._lineages.lineages(adata, mode="time", dpi=DPI, save=fpath)
+        cr.pl.lineages(adata, mode="time", dpi=DPI, save=fpath)
 
     @compare()
     def test_scvelo_lineages_cmap(self, adata: AnnData, fpath: str):
-        cellrank.pl._lineages.lineages(adata, cmap=cm.inferno, dpi=DPI, save=fpath)
+        cr.pl.lineages(adata, cmap=cm.inferno, dpi=DPI, save=fpath)
 
     @compare()
     def test_scvelo_lineages_subset(self, adata: AnnData, fpath: str):
-        cellrank.pl._lineages.lineages(
-            adata, cluster_key="clusters", dpi=DPI, save=fpath
+        cr.pl.lineages(adata, cluster_key="clusters", dpi=DPI, save=fpath)
+
+
+class TestHighLvlStates:
+    @compare()
+    def test_scvelo_terminal_states_disc(self, adata: AnnData, fpath: str):
+        cr.pl.terminal_states(adata, discrete=True, dpi=DPI, save=fpath)
+
+    # only matters when kind='adata' was computed using GPCCA
+    @compare()
+    def test_scvelo_terminal_states_cont(self, adata: AnnData, fpath: str):
+        cr.pl.terminal_states(adata, discrete=False, dpi=DPI, save=fpath)
+
+    @compare()
+    def test_scvelo_terminal_disc_same_subset(self, adata: AnnData, fpath: str):
+        cr.pl.terminal_states(
+            adata, discrete=True, same_plot=True, states="0", dpi=DPI, save=fpath
         )
 
-
-class TestSimilarityPlot:
     @compare()
-    def test_similarity(self, adata: AnnData, fpath: str):
-        similarity_plot(adata, "clusters", n_samples=10, dpi=DPI, save=fpath)
+    def test_scvelo_terminal_disc_not_same_subset(self, adata: AnnData, fpath: str):
+        cr.pl.terminal_states(
+            adata, discrete=True, same_plot=False, states="0", dpi=DPI, save=fpath
+        )
 
     @compare()
-    def test_similarity_clusters(self, adata: AnnData, fpath: str):
-        similarity_plot(
+    def test_scvelo_terminal_cont_same_subset(self, adata: AnnData, fpath: str):
+        cr.pl.terminal_states(
+            adata, discrete=False, same_plot=True, states="0", dpi=DPI, save=fpath
+        )
+
+    @compare()
+    def test_scvelo_terminal_cont_not_same_subset(self, adata: AnnData, fpath: str):
+        cr.pl.terminal_states(
+            adata, discrete=False, same_plot=False, states="0", dpi=DPI, save=fpath
+        )
+
+    @compare()
+    def test_scvelo_terminal_diff_plot(self, adata: AnnData, fpath: str):
+        cr.pl.terminal_states(adata, same_plot=False, dpi=DPI, save=fpath)
+
+    @compare()
+    def test_scvelo_terminal_diff_plot_titles(self, adata: AnnData, fpath: str):
+        cr.pl.terminal_states(
+            adata, same_plot=False, title=["foo", "bar"] * 10, dpi=DPI, save=fpath
+        )
+
+    @compare()
+    def test_scvelo_terminal_cluster_key_discrete(self, adata: AnnData, fpath: str):
+        cr.pl.terminal_states(
+            adata, discrete=True, cluster_key="clusters", dpi=DPI, save=fpath
+        )
+
+    @compare()
+    def test_scvelo_terminal_time_mode(self, adata: AnnData, fpath: str):
+        # only works in continuous mode
+        cr.pl.terminal_states(
             adata,
-            "clusters",
-            n_samples=10,
-            clusters=adata.obs["clusters"].cat.categories,
+            discrete=False,
+            mode="time",
             dpi=DPI,
             save=fpath,
         )
 
     @compare()
-    def test_similarity_cmap(self, adata: AnnData, fpath: str):
-        similarity_plot(
-            adata, "clusters", n_samples=10, cmap=cm.inferno, dpi=DPI, save=fpath
+    def test_scvelo_terminal_time_mode_subset(self, adata: AnnData, fpath: str):
+        # only works in continuous mode
+        cr.pl.terminal_states(
+            adata,
+            states="0",
+            discrete=False,
+            mode="time",
+            dpi=DPI,
+            save=fpath,
         )
 
     @compare()
-    def test_similarity_fontsize(self, adata: AnnData, fpath: str):
-        similarity_plot(
-            adata, "clusters", n_samples=10, fontsize=30, dpi=DPI, save=fpath
+    def test_scvelo_terminal_time_mode_clusters(self, adata: AnnData, fpath: str):
+        # only works in continuous mode
+        cr.pl.terminal_states(
+            adata,
+            discrete=False,
+            cluster_key="clusters",
+            mode="time",
+            dpi=DPI,
+            save=fpath,
         )
-
-    @compare()
-    def test_similarity_rotation(self, adata: AnnData, fpath: str):
-        similarity_plot(
-            adata, "clusters", n_samples=10, rotation=90, dpi=DPI, save=fpath
-        )
-
-
-class TestComposition:
-    @compare()
-    def test_composition(self, adata: AnnData, fpath: str):
-        cr.pl.composition(adata, "clusters", dpi=DPI, save=fpath)
 
 
 class TestLineage:
@@ -1681,7 +1725,17 @@ class TestLineage:
         lineage.T.plot_pie(dpi=DPI, save=fpath)
 
 
-# TODO: more model tests + cr.pl.lineage_drivers
+class TestLineageDrivers:
+    @compare()
+    def test_scvelo_terminal_n_genes(self, adata: AnnData, fpath: str):
+        cr.pl.lineage_drivers(adata, "0", n_genes=5, dpi=DPI, save=fpath)
+
+    @compare()
+    def test_scvelo_terminal_cmap(self, adata: AnnData, fpath: str):
+        cr.pl.lineage_drivers(adata, "0", cmap="inferno", dpi=DPI, save=fpath)
+
+
+# TODO: more model tests
 class TestModel:
     @compare()
     def test_model_default(self, adata: AnnData, fpath: str):
@@ -1691,3 +1745,9 @@ class TestModel:
         model.predict()
         model.confidence_interval()
         model.plot(save=fpath)
+
+
+class TestComposition:
+    @compare()
+    def test_composition(self, adata: AnnData, fpath: str):
+        cr.pl._utils.composition(adata, "clusters", dpi=DPI, save=fpath)

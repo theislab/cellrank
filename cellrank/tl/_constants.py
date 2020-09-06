@@ -6,11 +6,13 @@ from enum import Enum, EnumMeta
 from typing import Any, Union, Callable
 from functools import wraps
 
+from cellrank.ul._docs import _initial, _terminal
+
 _DEFAULT_BACKEND = "loky"
 
 
 class PrettyEnum(Enum):
-    """Enum wit a pretty __str__ and __repr__."""
+    """Enum with a pretty __str__ and __repr__."""
 
     def __repr__(self):
         return str(self)
@@ -49,39 +51,10 @@ class Direction(PrettyEnum):
 
 
 class DirectionPlot(PrettyEnum):
-    """Pretty direction names for pl."""
+    """Pretty direction names for plotting."""
 
     FORWARD = "forward"
     BACKWARD = "backward"
-
-
-class FinalStatesKey(PrettyEnum):
-    """State key in `adata.obs`."""
-
-    FORWARD = "final_states"
-    BACKWARD = "root_states"
-
-
-class FinalStatesPlot(PrettyEnum):
-    """Pretty state names for pl."""
-
-    FORWARD = "final states"
-    BACKWARD = "root states"
-
-
-# FinalStatesKey and AbsProbKey must have the same suffix `_..._states` because of model.prepare
-class AbsProbKey(PrettyEnum):
-    """Lineage key in `adata.obsm`."""
-
-    FORWARD = "to_final_states"
-    BACKWARD = "from_root_states"
-
-
-class MetaKey(PrettyEnum):
-    """Metastable state key in `adata.obs`."""
-
-    FORWARD = "metastable_states_fwd"
-    BACKWARD = "metastable_states_bwd"
 
 
 class DirPrefix(PrettyEnum):
@@ -89,6 +62,35 @@ class DirPrefix(PrettyEnum):
 
     FORWARD = "to"
     BACKWARD = "from"
+
+
+class FinalStatesKey(PrettyEnum):
+    """State key in `adata.obs`."""
+
+    FORWARD = f"{_terminal}_states"
+    BACKWARD = f"{_initial}_states"
+
+
+class FinalStatesPlot(PrettyEnum):
+    """Pretty state names for pl."""
+
+    FORWARD = FinalStatesKey.FORWARD.s.replace("_", " ")
+    BACKWARD = FinalStatesKey.BACKWARD.s.replace("_", " ")
+
+
+class MetaKey(PrettyEnum):
+    """Key for scaled, subsampled metastable state in `adata.obsm`."""
+
+    FORWARD = f"metastable_states_{Direction.FORWARD}"
+    BACKWARD = f"metastable_states_{Direction.BACKWARD}"
+
+
+# FinalStatesKey and AbsProbKey must have the same suffix `_..._states` because of model.prepare
+class AbsProbKey(PrettyEnum):
+    """Lineage key in `adata.obsm`."""
+
+    FORWARD = f"{DirPrefix.FORWARD}_{FinalStatesKey.FORWARD}"
+    BACKWARD = f"{DirPrefix.BACKWARD}_{FinalStatesKey.BACKWARD}"
 
 
 def _transition(d: Union[str, Direction]) -> str:

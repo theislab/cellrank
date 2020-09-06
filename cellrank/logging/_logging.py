@@ -115,12 +115,14 @@ _DEPENDENCIES_NUMERICS = [
     "scanpy",
     "anndata",
     "numpy",
+    "numba",
     "scipy",
     "pandas",
     ("sklearn", "scikit-learn"),
     "statsmodels",
     ("igraph", "python-igraph"),
     "scvelo",
+    "pygam",
 ]
 
 
@@ -146,7 +148,7 @@ def print_versions():
     """
     from cellrank import settings
 
-    modules = ["cellrank"] + _DEPENDENCIES_NUMERICS
+    modules = ["cellrank"] + _DEPENDENCIES_NUMERICS + _DEPENDENCIES_PLOTTING
     print(
         " ".join(f"{mod}=={ver}" for mod, ver in _versions_dependencies(modules)),
         file=settings.logfile,
@@ -160,7 +162,7 @@ def print_version_and_date():
     Useful for starting a notebook so you see when you started working.
     """
 
-    from cellrank import __version__, settings
+    from cellrank import settings, __version__
 
     print(
         f"Running CellRank {__version__}, " f"on {datetime.now():%Y-%m-%d %H:%M}.",

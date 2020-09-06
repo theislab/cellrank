@@ -53,6 +53,13 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         Metadata(attr=A.COARSE_STAT_D, prop=P.COARSE_STAT_D, dtype=pd.Series),
     ]
 
+    def _read_from_adata(self) -> None:
+        super()._read_from_adata()
+        self._reconstruct_lineage(
+            A.FIN_ABS_PROBS,
+            self._fin_abs_prob_key,
+        )
+
     @inject_docs(
         ms=P.META,
         msp=P.META_PROBS,
@@ -287,7 +294,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
 
         meta_states_probs = probs[list(names)]
 
-        # compute the aggregated probability of being a root/final state (no matter which)
+        # compute the aggregated probability of being a initial/terminal state (no matter which)
         scaled_probs = meta_states_probs[
             [n for n in meta_states_probs.names if n != "rest"]
         ].copy()
@@ -313,7 +320,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         n_cells: int = 30,
         alpha: Optional[float] = 1,
         min_self_prob: Optional[float] = None,
-        n_main_states: Optional[int] = None,
+        n_final_states: Optional[int] = None,
     ):
         """
         Automatically select the main states from metastable states.
@@ -326,7 +333,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
                 - `'eigengap'` - select the number of states based on the eigengap of the transition matrix.
                 - `'eigengap_coarse'` - select the number of states based on the eigengap of the diagonal
                     of the coarse-grained transition matrix.
-                - `'top_n'` - select top :paramref:`n_main_states` based on the probability of the diagonal
+                - `'top_n'` - select top ``n_final_states`` based on the probability of the diagonal \
                     of the coarse-grained transition matrix.
                 - `'min_self_prob'` - select states which have the given minimum probability of the diagonal
                     of the coarse-grained transition matrix.
@@ -336,7 +343,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             or ``method='eigengap_coarse'``.
         min_self_prob
             Used when ``method='min_self_prob'``.
-        n_main_states
+        n_final_states
             Used when ``method='top_n'``.
 
         Returns
@@ -362,21 +369,21 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
                 raise RuntimeError(
                     "Compute eigendecomposition first as `.compute_eigendecomposition()`."
                 )
-            n_main_states = _eigengap(self._get(P.EIG)["D"], alpha=alpha) + 1
+            n_final_states = _eigengap(self._get(P.EIG)["D"], alpha=alpha) + 1
         elif method == "eigengap_coarse":
             if coarse_T is None:
                 raise RuntimeError(
                     "Compute metastable states first as `.compute_metastable_states()`."
                 )
-            n_main_states = _eigengap(np.sort(np.diag(coarse_T)[::-1]), alpha=alpha)
+            n_final_states = _eigengap(np.sort(np.diag(coarse_T)[::-1]), alpha=alpha)
         elif method == "top_n":
-            if n_main_states is None:
+            if n_final_states is None:
                 raise ValueError(
-                    "Argument `n_main_states` must be != `None` for `method='top_n'`."
+                    "Argument `n_final_states` must be != `None` for `method='top_n'`."
                 )
-            elif n_main_states <= 0:
+            elif n_final_states <= 0:
                 raise ValueError(
-                    f"Expected `n_main_states` to be positive, found `{n_main_states}`."
+                    f"Expected `n_final_states` to be positive, found `{n_final_states}`."
                 )
         elif method == "min_self_prob":
             if min_self_prob is None:
@@ -393,7 +400,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
                 f"'top_n' and 'min_self_prob'`."
             )
 
-        names = coarse_T.columns[np.argsort(np.diag(coarse_T))][-n_main_states:]
+        names = coarse_T.columns[np.argsort(np.diag(coarse_T))][-n_final_states:]
         self.set_final_states_from_metastable_states(names, n_cells=n_cells)
 
     def compute_gdpt(
@@ -414,7 +421,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         Returns
         -------
         None
-            Nothing, just updates :paramref:`adata` ``.obs[`key_added]`` with the computed pseudotime.
+            Nothing, just updates :paramref:`adata` ``.obs[key_added]`` with the computed pseudotime.
         """
 
         def _get_dpt_row(e_vals: np.ndarray, e_vecs: np.ndarray, i: int):
@@ -742,7 +749,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
 
         # reset all the things
         for key in (
-            A.ABS_RPOBS,
+            A.ABS_PROBS,
             A.SCHUR,
             A.SCHUR_MAT,
             A.COARSE_T,
@@ -975,14 +982,20 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
 
         It is equivalent to running::
 
-            compute_eigendecomposition(...)  # if needed
-            compute_schur(...)
+            if n_lineages is None or n_lieages == 1:
+                compute_eigendecomposition(...)  # get the stationary distribution
+            if n_lineages > 1:
+                compute_schur(...)
+
             compute_metastable_states(...)
 
-            compute_final_states(...)   # if n_lineages=None
-            set_final_states_from_metastable_states(...)   # otherwise
+            if n_lineages is None:
+                compute_final_states(...)
+            else:
+                set_final_states_from_metastable_states(...)
 
-            compute_absorption_probabilities(...)  # optional
+            if compute_absorption_probabilities:
+                compute_absorption_probabilities(...)
 
         Parameters
         ----------
@@ -992,7 +1005,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         compute_absorption_probabilities
             Whether to compute absorption probabilities or only final states.
         **kwargs
-            Keyword arguments for :meth:`cellrank.tl.GPCCA.compute_metastable_states`.
+            Keyword arguments for :meth:`cellrank.tl.estimators.GPCCA.compute_metastable_states`.
 
         Returns
         -------

@@ -29,7 +29,6 @@ from cellrank.pl._utils import (
     _fit_gene_trends,
     _time_range_type,
     _create_callbacks,
-    _maybe_create_dir,
 )
 from cellrank.tl._utils import save_fig, _min_max_scale, _unique_order_preserving
 from cellrank.ul._utils import _get_n_cores, valuedispatch, _check_collection
@@ -561,7 +560,6 @@ def heatmap(
             save_fig(fig[0], save, ext=ext)
             return
 
-        _maybe_create_dir(save)
         for ln, f in zip(lineages, fig):
             save_fig(f, os.path.join(save, f"lineage_{ln}"), ext=ext)
 
