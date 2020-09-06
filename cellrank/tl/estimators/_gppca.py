@@ -320,7 +320,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         n_cells: int = 30,
         alpha: Optional[float] = 1,
         min_self_prob: Optional[float] = None,
-        n_main_states: Optional[int] = None,
+        n_final_states: Optional[int] = None,
     ):
         """
         Automatically select the main states from metastable states.
@@ -343,7 +343,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             or ``method='eigengap_coarse'``.
         min_self_prob
             Used when ``method='min_self_prob'``.
-        n_main_states
+        n_final_states
             Used when ``method='top_n'``.
 
         Returns
@@ -369,21 +369,21 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
                 raise RuntimeError(
                     "Compute eigendecomposition first as `.compute_eigendecomposition()`."
                 )
-            n_main_states = _eigengap(self._get(P.EIG)["D"], alpha=alpha) + 1
+            n_final_states = _eigengap(self._get(P.EIG)["D"], alpha=alpha) + 1
         elif method == "eigengap_coarse":
             if coarse_T is None:
                 raise RuntimeError(
                     "Compute metastable states first as `.compute_metastable_states()`."
                 )
-            n_main_states = _eigengap(np.sort(np.diag(coarse_T)[::-1]), alpha=alpha)
+            n_final_states = _eigengap(np.sort(np.diag(coarse_T)[::-1]), alpha=alpha)
         elif method == "top_n":
-            if n_main_states is None:
+            if n_final_states is None:
                 raise ValueError(
                     "Argument `n_main_states` must be != `None` for `method='top_n'`."
                 )
-            elif n_main_states <= 0:
+            elif n_final_states <= 0:
                 raise ValueError(
-                    f"Expected `n_main_states` to be positive, found `{n_main_states}`."
+                    f"Expected `n_main_states` to be positive, found `{n_final_states}`."
                 )
         elif method == "min_self_prob":
             if min_self_prob is None:
@@ -400,7 +400,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
                 f"'top_n' and 'min_self_prob'`."
             )
 
-        names = coarse_T.columns[np.argsort(np.diag(coarse_T))][-n_main_states:]
+        names = coarse_T.columns[np.argsort(np.diag(coarse_T))][-n_final_states:]
         self.set_final_states_from_metastable_states(names, n_cells=n_cells)
 
     def compute_gdpt(
@@ -421,7 +421,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         Returns
         -------
         None
-            Nothing, just updates :paramref:`adata` ``.obs[`key_added]`` with the computed pseudotime.
+            Nothing, just updates :paramref:`adata` ``.obs[key_added]`` with the computed pseudotime.
         """
 
         def _get_dpt_row(e_vals: np.ndarray, e_vecs: np.ndarray, i: int):

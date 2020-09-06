@@ -375,7 +375,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_metastable_states(n_states=2)
-        mc.compute_final_states(n_cells=5, method="top_n", n_main_states=1)
+        mc.compute_final_states(n_cells=5, method="top_n", n_final_states=1)
         mc.compute_absorption_probabilities()
 
         _check_abs_probs(mc)
