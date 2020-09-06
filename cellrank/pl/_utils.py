@@ -175,7 +175,7 @@ def _curved_edges(
 
     return curves
 
-  
+
 def _is_any_gam_mgcv(models: Union[BaseModel, Dict[str, Dict[str, BaseModel]]]) -> bool:
     """
     Return whether any models to be fit are from R's mgcv package.
