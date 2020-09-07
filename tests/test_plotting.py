@@ -1251,6 +1251,32 @@ class TestGeneTrend:
             save=fpath,
         )
 
+    @compare()
+    def test_trend_time_key(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            GENES[:10],
+            data_key="Ms",
+            same_plot=False,
+            time_key="dpt_pseudotime",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    def test_invalid_time_key(self, adata: AnnData):
+        model = create_model(adata)
+        with pytest.raises(KeyError):
+            cr.pl.gene_trends(
+                adata,
+                model,
+                GENES[:10],
+                data_key="Ms",
+                same_plot=False,
+                time_key="foobar",
+            )
+
 
 class TestGraph:
     @compare()
