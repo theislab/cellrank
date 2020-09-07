@@ -50,6 +50,8 @@ def _cluster_lineages_helper(
         Gene and lineage specific models.
     callbacks
         Gene and lineage specific prepare callbacks.
+    backward
+        Direction of the process.
     lineage
         Name of the lineage for which to fit the models.
     time_range
@@ -103,7 +105,7 @@ def cluster_lineage(
     recompute: bool = False,
     callback: _callback_type = None,
     ncols: int = 3,
-    sharey: bool = False,
+    sharey: Union[str, bool] = False,
     key_added: Optional[str] = None,
     show_progress_bar: bool = True,
     n_jobs: Optional[int] = 1,
@@ -200,7 +202,7 @@ def cluster_lineage(
         kwargs["backward"] = backward
 
         models = _create_models(model, genes, [lineage])
-        callbacks = _create_callbacks(adata, callback, genes, [lineage])
+        callbacks = _create_callbacks(adata, callback, genes, [lineage], **kwargs)
 
         backend = _get_backend(model, backend)
         n_jobs = _get_n_cores(n_jobs, len(genes))

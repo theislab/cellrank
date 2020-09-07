@@ -84,6 +84,8 @@ def compare(
         res = compare_images(expected_path, actual_path, tol=tol)
         assert res is None, res
 
+    # TODO: refactor
+
     def _prepare_fname(func: Callable) -> Tuple[str, str]:
         fpath = f"{func.__name__.replace('test_', '')}"
         # scvelo saves figures as pdf
@@ -122,6 +124,17 @@ def compare(
 
         return decorator
 
+    def compare_gpcca_bwd(func: Callable) -> Callable:
+        def decorator(self, adata_gpcca_bwd) -> None:
+            adata, gpcca = adata_gpcca_bwd
+            fpath, path = _prepare_fname(func)
+
+            func(self, adata, path)
+
+            _assert_equal(fpath)
+
+        return decorator
+
     def compare_lineage(func: Callable):
         def decorator(self, lineage):
             path, fpath = _prepare_fname(func)
@@ -136,9 +149,9 @@ def compare(
 
         return decorator
 
-    if kind not in ("adata", "cflare", "gpcca", "lineage"):
+    if kind not in ("adata", "cflare", "gpcca", "lineage", "bwd"):
         raise ValueError(
-            f"Invalid kind `{kind!r}`. Valid options are `['adata', 'cflare', 'gpcca', 'lineage']`."
+            f"Invalid kind `{kind!r}`. Valid options are: `['adata', 'cflare', 'gpcca', 'lineage', 'bwd']`."
         )
 
     if kind == "adata":
@@ -150,6 +163,8 @@ def compare(
         return compare_gpcca_fwd
     if kind == "lineage":
         return compare_lineage
+    if kind == "bwd":
+        return compare_gpcca_bwd
 
     raise NotImplementedError(f"Invalid kind `{kind!r}`.")
 
@@ -159,6 +174,17 @@ class TestClusterFates:
     def test_bar(self, adata: AnnData, fpath: str):
         cr.pl.cluster_fates(
             adata, cluster_key="clusters", mode="bar", dpi=DPI, save=fpath
+        )
+
+    @compare(kind="bwd")
+    def test_bar_bwd(self, adata: AnnData, fpath: str):
+        cr.pl.cluster_fates(
+            adata,
+            cluster_key="clusters",
+            backward=True,
+            mode="bar",
+            dpi=DPI,
+            save=fpath,
         )
 
     @compare()
@@ -471,6 +497,20 @@ class TestClusterLineages:
             save=fpath,
         )
 
+    @compare(kind="bwd")
+    def test_cluster_lineage_bwd(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.cluster_lineage(
+            adata,
+            model,
+            GENES[:10],
+            "0",
+            backward=True,
+            time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
+        )
+
     @compare()
     def test_cluster_lineage_raw(self, adata: AnnData, fpath: str):
         model = create_model(adata)
@@ -523,6 +563,20 @@ class TestHeatmap:
             adata,
             model,
             GENES[:10],
+            mode="lineages",
+            time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare(kind="bwd", dirname="heatmap_lineages_bwd")
+    def test_heatmap_lineages_bwd(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.heatmap(
+            adata,
+            model,
+            GENES[:10],
+            backward=True,
             mode="lineages",
             time_key="latent_time",
             dpi=DPI,
@@ -974,6 +1028,19 @@ class TestGeneTrend:
             save=fpath,
         )
 
+    @compare(kind="bwd")
+    def test_trends_bwd(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            GENES[:3],
+            backward=True,
+            data_key="Ms",
+            dpi=DPI,
+            save=fpath,
+        )
+
     @compare()
     def test_trends_raw(self, adata: AnnData, fpath: str):
         model = create_model(adata)
@@ -1141,7 +1208,7 @@ class TestGeneTrend:
         )
 
     @compare()
-    def test_trend_lw(self, adata: AnnData, fpath: str):
+    def test_trends_lw(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.gene_trends(
             adata,
@@ -1155,7 +1222,7 @@ class TestGeneTrend:
         )
 
     @compare()
-    def test_trend_suptitle(self, adata: AnnData, fpath: str):
+    def test_trends_suptitle(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.gene_trends(
             adata,
@@ -1224,7 +1291,7 @@ class TestGeneTrend:
         )
 
     @compare()
-    def test_trend_time_range(self, adata: AnnData, fpath: str):
+    def test_trends_time_range(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.gene_trends(
             adata,
@@ -1238,7 +1305,7 @@ class TestGeneTrend:
         )
 
     @compare()
-    def test_trend_perc(self, adata: AnnData, fpath: str):
+    def test_trends_perc(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.gene_trends(
             adata,
@@ -1252,7 +1319,23 @@ class TestGeneTrend:
         )
 
     @compare()
-    def test_trend_time_key(self, adata: AnnData, fpath: str):
+    def test_trends_time_key(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            GENES[:10],
+            data_key="Ms",
+            same_plot=False,
+            time_key="dpt_pseudotime",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_trends_time_key_del_latent_time(self, adata: AnnData, fpath: str):
+        # this ensures that the callback passes the correct values
+        del adata.obs["latent_time"]
         model = create_model(adata)
         cr.pl.gene_trends(
             adata,
@@ -1278,10 +1361,15 @@ class TestGeneTrend:
             )
 
 
+# TODO: use the proper constants for transition matrices
 class TestGraph:
     @compare()
     def test_graph(self, adata: AnnData, fpath: str):
         cr.pl.graph(adata, "T_fwd", ixs=range(10), dpi=DPI, save=fpath)
+
+    @compare(kind="bwd")
+    def test_graph_bwd(self, adata: AnnData, fpath: str):
+        cr.pl.graph(adata, "T_bwd", ixs=range(10), dpi=DPI, save=fpath)
 
     @compare()
     def test_graph_layout(self, adata: AnnData, fpath: str):
@@ -1652,6 +1740,10 @@ class TestHighLvlStates:
     def test_scvelo_terminal_states_disc(self, adata: AnnData, fpath: str):
         cr.pl.terminal_states(adata, discrete=True, dpi=DPI, save=fpath)
 
+    @compare(kind="bwd")
+    def test_scvelo_initial_states_disc(self, adata: AnnData, fpath: str):
+        cr.pl.initial_states(adata, discrete=True, dpi=DPI, save=fpath)
+
     # only matters when kind='adata' was computed using GPCCA
     @compare()
     def test_scvelo_terminal_states_cont(self, adata: AnnData, fpath: str):
@@ -1753,11 +1845,15 @@ class TestLineage:
 
 class TestLineageDrivers:
     @compare()
-    def test_scvelo_terminal_n_genes(self, adata: AnnData, fpath: str):
+    def test_scvelo_drivers_n_genes(self, adata: AnnData, fpath: str):
         cr.pl.lineage_drivers(adata, "0", n_genes=5, dpi=DPI, save=fpath)
 
+    @compare(kind="bwd")
+    def test_scvelo_drivers_n_genes(self, adata: AnnData, fpath: str):
+        cr.pl.lineage_drivers(adata, "0", backward=True, n_genes=5, dpi=DPI, save=fpath)
+
     @compare()
-    def test_scvelo_terminal_cmap(self, adata: AnnData, fpath: str):
+    def test_scvelo_drivers_cmap(self, adata: AnnData, fpath: str):
         cr.pl.lineage_drivers(adata, "0", cmap="inferno", dpi=DPI, save=fpath)
 
 
@@ -1767,6 +1863,15 @@ class TestModel:
     def test_model_default(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         model.prepare(adata.var_names[0], "0")
+        model.fit()
+        model.predict()
+        model.confidence_interval()
+        model.plot(save=fpath)
+
+    @compare(kind="bwd")
+    def test_model_default_bwd(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        model.prepare(adata.var_names[0], "0", backward=True)
         model.fit()
         model.predict()
         model.confidence_interval()

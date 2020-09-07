@@ -83,7 +83,7 @@ def cluster_fates(
     clusters
         Clusters to visualize. If `None`, all clusters will be plotted.
     basis
-        Basis for scatterplot to use when ``mode={m.PAGA_PIE.s!r}``. If `None`, don't show a scatterplot.
+        Basis for scatterplot to use when ``mode={m.PAGA_PIE.s!r}``. If `None`, don't show scatterplot.
     show_cbar
         Whether to show colorbar when ``mode={m.PAGA_PIE.s!r}``.
     ncols
@@ -99,7 +99,7 @@ def cluster_fates(
     %(plotting)s
     **kwargs
         Keyword arguments for :func:`scvelo.pl.paga`, :func:`scanpy.pl.violin` or :func:`matplotlib.pyplot.bar`,
-        depending on ``mode``.
+        depending on the value of ``mode``.
 
     Returns
     -------
