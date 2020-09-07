@@ -366,7 +366,9 @@ def _run_in_parallel(fn: Callable, conn: csr_matrix, **kwargs) -> Any:
     kwargs["average"] = kwargs.get("average", True)
 
     if fname == "_run_stochastic":
-        ixs = np.argsort(np.array((conn != 0).sum(1)).ravel())
+        ixs = np.argsort(np.array((conn != 0).sum(1)).ravel())[
+            ::-1
+        ]  # important - keep the descending order
     else:
         ixs = np.arange(conn.shape[0])
         np.random.shuffle(ixs)
@@ -562,6 +564,8 @@ def _run_stochastic(
     starts = _calculate_starts(indptr, ixs)
     probs_cors = np.empty((2, starts[-1]))
 
+    max_n = np.max(np.diff(starts))
+
     for i, ix in enumerate(ixs):
         start, end = indptr[ix], indptr[ix + 1]
 
@@ -577,9 +581,14 @@ def _run_stochastic(
             # compute the Hessian tensor, and turn it into a matrix that has the diagonal elements in its rows
             W = expression[nbhs_ixs, :] - expression[ix, :]
 
+            W_size = W.shape[0]
+            if max_n - W_size >= 10:
+                max_n -= 10
+            W_padded = np.pad(W, [(0, max_n - W.shape[0]), (0, 0)])
+
             H = _predict_transition_probabilities_jax_H(
-                v, W, softmax_scale=softmax_scale
-            )
+                v, W_padded, softmax_scale=softmax_scale
+            )[:W_size]
             H_diag = np.array([np.diag(h) for h in H])
 
             # compute zero order term

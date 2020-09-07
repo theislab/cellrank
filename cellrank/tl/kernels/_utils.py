@@ -7,7 +7,6 @@ import numpy as np
 from numba import njit, prange
 from scipy.sparse import csr_matrix
 
-import cellrank.logging as logg
 from cellrank.ul._parallelize import parallelize
 
 jit_kwargs = {"nogil": True, "cache": True, "fastmath": True}
@@ -25,8 +24,6 @@ try:
         W: np.ndarray,
         softmax_scale: float = 1,
     ):
-        logg.debug(f"Tracing function of `{W.shape}` dimension")
-
         # pearson correlation
         W -= W.mean(axis=1)[:, None]
         X -= X.mean()
@@ -36,13 +33,13 @@ try:
         denom = X_norm * W_norm
 
         mask = jnp.isclose(denom, 0)
-        denom = jnp.where(jnp.isclose(denom, 0), 1, denom)  # essential
+        denom = jnp.where(jnp.isclose(denom, 0), 1, denom)  # keep gradients flowing
 
         x = W.dot(X) / denom
 
         numerator = x * softmax_scale
         numerator = jnp.exp(numerator - jnp.nanmax(numerator))
-        numerator = jnp.where(mask, 0, numerator)  # essential
+        numerator = jnp.where(mask, 0, numerator)  # keep gradients flowing
 
         softmax = numerator / jnp.nansum(numerator)
 
