@@ -799,7 +799,11 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         self.adata.uns[_lin_names(self._fs_key)] = list(self._get(P.FIN).cat.categories)
 
         extra_msg = ""
-        if hasattr(self, A.FIN_ABS_PROBS.s) and hasattr(self, "_fin_abs_prob_key"):
+        if getattr(self, A.FIN_ABS_PROBS.s, None) is not None and hasattr(
+            self, "_fin_abs_prob_key"
+        ):
+            # checking for None because final states can be set using `set_final_states`
+            # without the probabilities in GPCCA
             self.adata.obsm[self._fin_abs_prob_key] = self._get(A.FIN_ABS_PROBS)
             extra_msg = f"       `adata.obsm[{self._fin_abs_prob_key!r}]`\n"
 
