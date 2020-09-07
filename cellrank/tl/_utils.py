@@ -1375,10 +1375,10 @@ def _calculate_lineage_absorption_time_means(
 
 def _create_initial_terminal_annotations(
     adata: AnnData,
-    final_key: str = "terminal_states",
-    root_key: str = "nitial_states",
-    final_pref: Optional[str] = "terminal",
-    root_pref: Optional[str] = "initial",
+    terminal_key: str = "terminal_states",
+    initial_key: str = "initial_states",
+    terminal_prefix: Optional[str] = "terminal",
+    initial_prefix: Optional[str] = "initial",
     key_added: Optional[str] = "initial_terminal",
 ) -> None:
     """
@@ -1392,13 +1392,13 @@ def _create_initial_terminal_annotations(
     ----------
     adata
         AnnData object to write to ``.obs[key_added]``.
-    final_key
+    terminal_key
         Key from ``adata.obs`` where final states have been saved.
-    root_key
+    initial_key
         Key from ``adata.obs`` where root states have been saved.
-    final_pref
+    terminal_prefix
         Forward direction prefix used in the annotations.
-    root_pref
+    initial_prefix
         Backward direction prefix used in the annotations.
     key_added
         Key added to ``adata.obs``.
@@ -1410,8 +1410,11 @@ def _create_initial_terminal_annotations(
     """
 
     # get both Series objects
-    cats_final, colors_final = adata.obs[final_key], adata.uns[f"{final_key}_colors"]
-    cats_root, colors_root = adata.obs[root_key], adata.uns[f"{root_key}_colors"]
+    cats_final, colors_final = (
+        adata.obs[terminal_key],
+        adata.uns[f"{terminal_key}_colors"],
+    )
+    cats_root, colors_root = adata.obs[initial_key], adata.uns[f"{initial_key}_colors"]
 
     # merge
     cats_merged, colors_merged = _merge_categorical_series(
@@ -1421,7 +1424,7 @@ def _create_initial_terminal_annotations(
     # adjust the names
     final_names = cats_final.cat.categories
     final_labels = [
-        f"{final_pref if key in final_names else root_pref}: {key}"
+        f"{terminal_prefix if key in final_names else initial_prefix}: {key}"
         for key in cats_merged.cat.categories
     ]
     cats_merged.cat.rename_categories(final_labels, inplace=True)
