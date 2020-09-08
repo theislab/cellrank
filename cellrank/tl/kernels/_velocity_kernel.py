@@ -306,17 +306,17 @@ class VelocityKernel(Kernel):
             if lazy:
                 self._tmp_dir = mkdtemp(prefix="cellrank_vk_", dir=TMP_DIR)
                 logg.debug(
-                    f"Memory mapping sampled transition matrices and Pearson correlations under `{self._tmpdir}`"
+                    f"Memory mapping sampled transition matrices and Pearson correlations under `{self._tmp_dir}`"
                 )
 
                 self._tmats = np.memmap(
-                    os.path.join(self._tmpdir, "transition_matrices.dat"),
+                    os.path.join(self._tmp_dir, "transition_matrices.dat"),
                     mode="w+",
                     dtype=np.float64,
                     shape=(n_samples, n_elems),
                 )
                 self._pcors = np.memmap(
-                    os.path.join(self._tmpdir, "pearson_correlations.dat"),
+                    os.path.join(self._tmp_dir, "pearson_correlations.dat"),
                     mode="w+",
                     dtype=np.float64,
                     shape=(n_samples, n_elems),
