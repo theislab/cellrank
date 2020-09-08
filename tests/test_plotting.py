@@ -422,6 +422,17 @@ class TestClusterFates:
         )
 
     @compare()
+    def test_mode_heatmap_format(self, adata: AnnData, fpath: str):
+        cr.pl.cluster_fates(
+            adata,
+            cluster_key="clusters",
+            mode="heatmap",
+            fmt=".10f",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
     def test_mode_heatmap_title(self, adata: AnnData, fpath: str):
         cr.pl.cluster_fates(
             adata,
@@ -480,6 +491,17 @@ class TestClusterFates:
     def test_mode_clustermap(self, adata: AnnData, fpath: str):
         cr.pl.cluster_fates(
             adata, cluster_key="clusters", mode="clustermap", dpi=DPI, save=fpath
+        )
+
+    @compare()
+    def test_mode_clustermap_format(self, adata: AnnData, fpath: str):
+        cr.pl.cluster_fates(
+            adata,
+            cluster_key="clusters",
+            mode="clustermap",
+            fmt=".10f",
+            dpi=DPI,
+            save=fpath,
         )
 
 
