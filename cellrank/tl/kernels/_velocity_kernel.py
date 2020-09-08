@@ -428,9 +428,7 @@ def _run_in_parallel(fn: Callable, conn: csr_matrix, **kwargs) -> Any:
                 # sampling, MC, propagation with only 1
                 res = res[0]
 
-        return _reconstruct_matrices(
-            res, conn, ixs, n_jobs=kwargs.pop("n_jobs", 1)
-        )
+        return _reconstruct_matrices(res, conn, ixs, n_jobs=kwargs.pop("n_jobs", 1))
 
     fname = fn.__name__
     if fname == "_run_stochastic":
