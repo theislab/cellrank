@@ -1505,6 +1505,14 @@ class TestCFLARE:
         mc.plot_spectrum(title="foobar", real_only=False, dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
+    def test_mc_marker(self, mc: CFLARE, fpath: str):
+        mc.plot_spectrum(dpi=DPI, marker="X", save=fpath)
+
+    @compare(kind="cflare")
+    def test_mc_kwargs_linewidths(self, mc: CFLARE, fpath: str):
+        mc.plot_spectrum(dpi=DPI, linewidths=20, save=fpath)
+
+    @compare(kind="cflare")
     def test_mc_spectrum_evals(self, mc: CFLARE, fpath: str):
         mc.plot_spectrum(2, real_only=True, dpi=DPI, save=fpath)
 

@@ -214,9 +214,9 @@ class Eigen(VectorPlottable, Decomposable):
             Title of the figure.
         %(plotting)s
         marker
-            Marker symbol used by matplotlib.
+            Marker symbol used, valid options can be found in :mod:`matplotlib.markers`.
         **kwargs
-            Keyword arguments for :func:`plt.scatter`.
+            Keyword arguments for :func:`matplotlib.pyplot.scatter`.
 
         Returns
         -------
