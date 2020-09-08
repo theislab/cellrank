@@ -191,6 +191,8 @@ class Eigen(VectorPlottable, Decomposable):
         figsize: Optional[Tuple[float, float]] = (5, 5),
         dpi: int = 100,
         save: Optional[Union[str, Path]] = None,
+        marker: str = ".",
+        **kwargs,
     ) -> None:
         """
         Plot the top eigenvalues in real or complex plane.
@@ -203,7 +205,7 @@ class Eigen(VectorPlottable, Decomposable):
         Parameters
         ----------
         n
-            Number of eigenvalues to show. If `None`, show all.
+            Number of eigenvalues to show. If `None`, show all that have been computed.
         real_only
             Whether to plot only the real part of the spectrum.
         legend_loc
@@ -211,6 +213,10 @@ class Eigen(VectorPlottable, Decomposable):
         title
             Title of the figure.
         %(plotting)s
+        marker
+            Marker symbol used by matplotlib.
+        **kwargs
+            Keyword arguments for :func:`plt.scatter`.
 
         Returns
         -------
@@ -229,11 +235,23 @@ class Eigen(VectorPlottable, Decomposable):
 
         if real_only:
             fig = self._plot_real_spectrum(
-                n, dpi=dpi, figsize=figsize, legend_loc=legend_loc, title=title
+                n,
+                dpi=dpi,
+                figsize=figsize,
+                legend_loc=legend_loc,
+                title=title,
+                marker=marker,
+                **kwargs,
             )
         else:
             fig = self._plot_complex_spectrum(
-                n, dpi=dpi, figsize=figsize, legend_loc=legend_loc, title=title
+                n,
+                dpi=dpi,
+                figsize=figsize,
+                legend_loc=legend_loc,
+                title=title,
+                marker=marker,
+                **kwargs,
             )
 
         if save:
@@ -248,6 +266,8 @@ class Eigen(VectorPlottable, Decomposable):
         figsize: Optional[Tuple[float, float]] = (None, None),
         legend_loc: Optional[str] = None,
         title: Optional[str] = None,
+        marker: str = ".",
+        **kwargs,
     ):
         # define a function to make the data limits rectangular
         def adapt_range(min_, max_, range_):
@@ -273,7 +293,7 @@ class Eigen(VectorPlottable, Decomposable):
         y_min_, y_max_ = adapt_range(y_min, y_max, final_range)
 
         # plot the data and the unit circle
-        ax.scatter(D.real, D.imag, marker=".", label="eigenvalue")
+        ax.scatter(D.real, D.imag, marker=marker, label="eigenvalue", **kwargs)
         t = np.linspace(0, 2 * np.pi, 500)
         x_circle, y_circle = np.sin(t), np.cos(t)
         ax.plot(x_circle, y_circle, "k-", label="unit circle")
@@ -301,6 +321,8 @@ class Eigen(VectorPlottable, Decomposable):
         figsize: Optional[Tuple[float, float]] = None,
         legend_loc: Optional[str] = None,
         title: Optional[str] = None,
+        marker: str = ".",
+        **kwargs,
     ):
         eig = getattr(self, P.EIG.s)
         D, params = eig["D"][:n], eig["params"]
@@ -312,10 +334,20 @@ class Eigen(VectorPlottable, Decomposable):
         # plot the top eigenvalues
         fig, ax = plt.subplots(nrows=1, ncols=1, dpi=dpi, figsize=figsize)
         if np.any(mask):
-            ax.scatter(ixs[mask], D_real[mask], marker="o", label="real eigenvalue")
+            ax.scatter(
+                ixs[mask],
+                D_real[mask],
+                marker=marker,
+                label="real eigenvalue",
+                **kwargs,
+            )
         if np.any(~mask):
             ax.scatter(
-                ixs[~mask], D_real[~mask], marker="o", label="complex eigenvalue"
+                ixs[~mask],
+                D_real[~mask],
+                marker=marker,
+                label="complex eigenvalue",
+                **kwargs,
             )
 
         # add dashed line for the eigengap, ticks, labels, title and legend
