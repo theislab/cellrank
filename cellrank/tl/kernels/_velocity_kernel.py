@@ -428,9 +428,7 @@ def _run_in_parallel(fn: Callable, conn: csr_matrix, **kwargs) -> Any:
                 # sampling, MC, propagation with only 1
                 res = res[0]
 
-        return _reconstruct_matrices(
-            res, conn, resort_ixs, n_jobs=kwargs.pop("n_jobs", 1)
-        )
+        return _reconstruct_matrices(res, conn, ixs, n_jobs=kwargs.pop("n_jobs", 1))
 
     fname = fn.__name__
     if fname == "_run_stochastic":
@@ -438,7 +436,9 @@ def _run_in_parallel(fn: Callable, conn: csr_matrix, **kwargs) -> Any:
             raise RuntimeError(
                 "Install `jax` and `jaxlib` as `pip install jax jaxlib`."
             )
-        ixs = np.argsort(np.array((conn != 0).sum(1)).ravel())
+        ixs = np.argsort(np.array((conn != 0).sum(1)).ravel())[
+            ::-1
+        ]  # important - keep the descending order
     else:
         # very important for 2 reasons:
         # 1. the function requires sorted indices for correct offset calculation (we could pass it, but this is elegant)
@@ -449,8 +449,6 @@ def _run_in_parallel(fn: Callable, conn: csr_matrix, **kwargs) -> Any:
         ixs = np.arange(conn.shape[0])
         if kwargs.get("probs", None) is None:
             np.random.shuffle(ixs)
-
-    resort_ixs = ixs
 
     kwargs["indices"] = conn.indices
     kwargs["indptr"] = conn.indptr
@@ -631,6 +629,8 @@ def _run_stochastic(
     starts = _calculate_starts(indptr, ixs)
     probs_cors = np.empty((2, starts[-1]))
 
+    max_n = np.max(np.diff(starts))
+
     for i, ix in enumerate(ixs):
         start, end = indptr[ix], indptr[ix + 1]
 
@@ -646,9 +646,14 @@ def _run_stochastic(
             # compute the Hessian tensor, and turn it into a matrix that has the diagonal elements in its rows
             W = expression[nbhs_ixs, :] - expression[ix, :]
 
+            W_size = W.shape[0]
+            if max_n - W_size >= 10:
+                max_n -= 10
+            W_padded = np.pad(W, [(0, max_n - W.shape[0]), (0, 0)])
+
             H = _predict_transition_probabilities_jax_H(
-                v, W, softmax_scale=softmax_scale
-            )
+                v, W_padded, softmax_scale=softmax_scale
+            )[:W_size]
             H_diag = np.array([np.diag(h) for h in H])
 
             # compute zero order term
