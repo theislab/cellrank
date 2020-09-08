@@ -170,25 +170,22 @@ class KernelExpression(ABC):
 
         try:
             if isinstance(self._tmats, np.memmap):
-                # should be always sparse
-                if issparse(self._transition_matrix):
-                    if not isspmatrix_csr(self._transition_matrix):
-                        raise TypeError()
-                    self.transition_matrix = csr_matrix(
-                        (
-                            self._tmats[index],
-                            self._transition_matrix.indices,
-                            self._transition_matrix.indptr,
-                        ),
-                        shape=self._transition_matrix.shape,
-                        copy=True,
+                if not hasattr(self, "_conn"):
+                    # TODO: mitigate this in the future
+                    raise AttributeError(
+                        "Only kernels with connectivities are able to reconstruct memory mapped transition matrices."
                     )
-                else:
-                    self.transition_matrix = (
-                        np.array(self._tmats[index])
-                        .astype(np.float64)
-                        .reshape(self._transition_matrix.shape)
-                    )
+                tmp = csr_matrix(
+                    (
+                        self._tmats[index],
+                        self._conn.indices,
+                        self._conn.indptr,
+                    ),
+                    shape=self._transition_matrix.shape,
+                    copy=True,
+                )
+                tmp.eliminate_zeros()  # mustn't forget this
+                self.transition_matrix = tmp
             else:
                 self.transition_matrix = self._tmats[index]
             self._current_ix = index
