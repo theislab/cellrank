@@ -574,7 +574,8 @@ def _create_callbacks(
     callback: Optional[Callable],
     obs: Sequence[str],
     lineages: Sequence[Optional[str]],
-    perform_sanity_check: bool = True,
+    perform_sanity_check: Optional[bool] = None,
+    **kwargs,
 ) -> Dict[str, Dict[str, Callable]]:
     """
     Create models for each gene and lineage.
@@ -589,8 +590,13 @@ def _create_callbacks(
     lineages
         Sequence of genes.
     perform_sanity_check
-        Whether to check if all callables have the correct signature. This is done by instantiating
+        Whether to check if all callbacks have the correct signature. This is done by instantiating
         dummy model and running the function. We're assuming that the callback isn't really a pricey operation.
+
+        If `None`, it is only performed for non-default callbacks.
+    **kwargs
+        Keyword arguments for ``callback`` when performing the sanity check.
+
     Returns
     -------
         The created callbacks.
@@ -637,7 +643,7 @@ def _create_callbacks(
                 # create the model here because the callback can search the attribute
                 dummy_model = SKLearnModel(adata, model=SVR())
                 try:
-                    model = cb(dummy_model, gene=gene, lineage=lineage)
+                    model = cb(dummy_model, gene=gene, lineage=lineage, **kwargs)
                     assert model is dummy_model, (
                         "Creation of new models is not allowed. "
                         "Ensure that callback returns the same model."
@@ -649,7 +655,7 @@ def _create_callbacks(
                         model._gene == gene
                     ), f"Callback modified the gene from `{gene!r}` to `{model._gene!r}`."
                     assert (
-                        model._gene == gene
+                        model._lineage == lineage
                     ), f"Callback modified the lineage from `{lineage!r}` to `{model._lineage!r}`."
                 except Exception as e:
                     raise RuntimeError(
@@ -658,6 +664,9 @@ def _create_callbacks(
 
     if callback is None:
         callback = _default_model_callback
+
+    if perform_sanity_check is None:
+        perform_sanity_check = callback is not _default_model_callback
 
     if callable(callback):
         callbacks = {o: {lin: copy(callback) for lin in lineages} for o in obs}
@@ -698,6 +707,7 @@ def _create_callbacks(
 
 
 def _default_model_callback(model: BaseModel, **kwargs) -> BaseModel:
+    # we could filter kwargs, but it's better not to - this will detect if we pass useless stuff
     return model.prepare(**kwargs)
 
 
