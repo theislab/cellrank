@@ -6,7 +6,7 @@ default_language_version:
 default_stages:
     - commit
     - push
-minimum_pre_commit_version: 2.7.1
+minimum_pre_commit_version: 2.5.1
 repos:
 -   repo: https://github.com/psf/black
     rev: 20.8b1

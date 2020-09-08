@@ -290,10 +290,8 @@ def _reconstruct_one(
         assert len(ixs) == mat.shape[0], f"Shape mismatch: `{ixs.shape}`, `{mat.shape}`"
         mat = mat[ixs]
 
-    # strange bug happens when no copying and eliminating zeros from cors (it's no longer row-stochastic)
-    # only happens when using numba
-    probs = csr_matrix((data[0], mat.indices, mat.indptr)).copy()
-    cors = csr_matrix((data[1], mat.indices, mat.indptr)).copy()
+    probs = csr_matrix((data[0], mat.indices, mat.indptr))
+    cors = csr_matrix((data[1], mat.indices, mat.indptr))
 
     if aixs is not None:
         assert (
@@ -388,11 +386,12 @@ def _reconstruct_matrices(
     if data.ndim == 2:
         return _reconstruct_one(data, mat, ixs, aixs)
 
-    assert data.shape[1] == 2, f"Shape mismatch: `{data.shape}`."
+    # 2, n_samples, nnz
+    assert data.shape[0] == 2, f"Shape mismatch: `{data.shape}`."
 
     return parallelize(
         reconstruct_many,
-        data,
+        data.swapaxes(0, 1),
         n_jobs=n_jobs,
         unit="matrix",
         backend="loky",

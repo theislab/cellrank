@@ -1279,3 +1279,44 @@ class TestVelocityKernel:
         assert k.transition_matrix is k.transition_matrices[k._current_ix]
         for mat in k.transition_matrices:
             np.testing.assert_allclose(mat.sum(1).data, 1.0)
+
+    def test_memory_mapping(self, adata: AnnData):
+        vk = VelocityKernel(adata).compute_transition_matrix(
+            mode="propagation",
+            show_progress_bar=False,
+            lazy=True,
+            n_samples=10,
+            n_jobs=4,
+            softmax_scale=4,
+        )
+
+        assert isinstance(vk.transition_matrices, np.memmap)
+        # we're comparing with connectivities.nnz since it's the upper bound
+        assert vk.transition_matrices.shape == (10, vk._conn.nnz)
+        assert isinstance(vk._pcors, np.memmap)
+        assert vk._pcors.shape == (10, vk._conn.nnz)
+
+    def test_memory_mapping_switch_transition_matrix(self, adata: AnnData):
+        vk = VelocityKernel(adata).compute_transition_matrix(
+            mode="propagation",
+            show_progress_bar=False,
+            lazy=True,
+            n_samples=10,
+            n_jobs=4,
+            softmax_scale=4,
+        )
+
+        prev, prev_shape = None, None
+
+        for i in range(10):
+            vk.switch_transition_matrix(i)
+
+            np.testing.assert_allclose(vk.transition_matrix.A.sum(1), 1.0)
+            assert vk.transition_matrix.nnz <= vk._conn.nnz
+
+            assert vk.transition_matrix is not prev
+            if prev_shape is not None:
+                assert vk.transition_matrix.shape == prev_shape
+
+            prev = vk.transition_matrix
+            prev_shape = vk.transition_matrix.shape

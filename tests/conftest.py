@@ -111,6 +111,12 @@ def adata_gpcca_fwd(adata_gpcca=_create_gpcca(backward=False)) -> Tuple[AnnData,
 
 
 @pytest.fixture
+def adata_gpcca_bwd(adata_gpcca=_create_gpcca(backward=True)) -> Tuple[AnnData, GPCCA]:
+    adata, gpcca = adata_gpcca
+    return adata.copy(), gpcca
+
+
+@pytest.fixture
 def adata_cflare(adata_cflare=_create_cflare(backward=False)) -> AnnData:
     return adata_cflare[0].copy()
 
