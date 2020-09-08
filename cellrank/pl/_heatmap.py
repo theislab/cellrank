@@ -59,6 +59,7 @@ def heatmap(
     lineages: Optional[Union[str, Sequence[str]]] = None,
     backward: bool = False,
     mode: str = HeatmapMode.LINEAGES.s,
+    time_key: str = "latent_time",
     time_range: Optional[Union[_time_range_type, List[_time_range_type]]] = None,
     callback: _callback_type = None,
     cluster_key: Optional[Union[str, Sequence[str]]] = None,
@@ -104,6 +105,8 @@ def heatmap(
 
             - `{m.LINEAGES.s!r}` - group by ``genes`` for each lineage in ``lineages``.
             - `{m.GENES.s!r}` - group by ``lineages`` for each gene in ``genes``.
+    time_key
+        Key in ``adata.obs`` where the pseudotime is stored.
     %(time_ranges)s
     %(model_callback)s
     cluster_key
@@ -113,14 +116,14 @@ def heatmap(
         Whether to also plot absorption probabilities alongside the smoothed expression.
         Only available when ``mode={m.LINEAGES.s!r}``.
     cluster_genes
-        Whether to cluser genes using :func:`seaborn.clustermap` when ``mode='lineages'``.
+        Whether to cluster genes using :func:`seaborn.clustermap` when ``mode='lineages'``.
     keep_gene_order
         Whether to keep the gene order for later lineages after the first was sorted.
         Only available when ``cluster_genes=False`` and ``mode={m.LINEAGES.s!r}``.
     scale
-        Whether to scale the gene expression `0-1` range.
+        Whether to normalize the gene expression `0-1` range.
     n_convolve
-        Size of the convolution window when smoothing out absorption probabilities.
+        Size of the convolution window when smoothing absorption probabilities.
     show_all_genes
         Whether to show all genes on y-axis.
     show_cbar
@@ -168,7 +171,7 @@ def heatmap(
         return tuple(series[[find_nearest(series.values, v) for v in values]].index)
 
     def subset_lineage(lname: str, rng: np.ndarray) -> np.ndarray:
-        time_series = adata.obs[kwargs.get("time_key", "latent_time")]
+        time_series = adata.obs[time_key]
         ixs = find_indices(time_series, rng)
 
         lin = adata[ixs, :].obsm[lineage_key][lname]
@@ -217,7 +220,7 @@ def heatmap(
         else:
             colors = adata.uns[color_key]
 
-        time_series = adata.obs[kwargs.get("time_key", "latent_time")]
+        time_series = adata.obs[time_key]
         ixs = find_indices(time_series, rng)
 
         mapper = dict(zip(adata.obs[cluster_key].cat.categories, colors))
@@ -531,11 +534,12 @@ def heatmap(
             f"Expected time ranges to be of length `{len(lineages)}`, found `{len(time_range)}`."
         )
 
-    xlabel = xlabel or kwargs.get("time_key", "latent_time")
-    _ = kwargs.pop("time_range", None)
-
+    xlabel = time_key if xlabel is None else xlabel
     models = _create_models(model, genes, lineages)
-    callbacks = _create_callbacks(adata, callback, genes, lineages)
+
+    kwargs["backward"] = backward
+    kwargs["time_key"] = time_key
+    callbacks = _create_callbacks(adata, callback, genes, lineages, **kwargs)
 
     backend = _get_backend(model, backend)
     n_jobs = _get_n_cores(n_jobs, len(genes))
@@ -550,10 +554,9 @@ def heatmap(
         extractor=lambda data: {k: v for d in data for k, v in d.items()},
         show_progress_bar=show_progress_bar,
     )(models, callbacks, lineages, time_range, **kwargs)
-
     logg.info("    Finish", time=start)
-    logg.debug(f"Plotting `{mode.s!r}` heatmap")
 
+    logg.debug(f"Plotting `{mode.s!r}` heatmap")
     fig, genes = _plot_heatmap(mode)
 
     if save is not None and fig is not None:
