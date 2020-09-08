@@ -90,7 +90,9 @@ class KernelExpression(ABC):
         return self._transition_matrix
 
     @property
-    def transition_matrices(self) -> Optional[List[Union[np.ndarray, spmatrix]]]:
+    def transition_matrices(
+        self,
+    ) -> Optional[List[Union[np.ndarray, np.memmap, spmatrix]]]:
         """Return sampled transition matrices, if available."""
         return self._tmats
 
@@ -167,7 +169,25 @@ class KernelExpression(ABC):
             return
 
         try:
-            self.transition_matrix = self._tmats[index]
+            if isinstance(self._tmats, np.memmap):
+                if not hasattr(self, "_conn"):
+                    # TODO: mitigate this in the future
+                    raise AttributeError(
+                        "Only kernels with connectivities are able to reconstruct memory mapped transition matrices."
+                    )
+                tmp = csr_matrix(
+                    (
+                        self._tmats[index],
+                        self._conn.indices,
+                        self._conn.indptr,
+                    ),
+                    shape=self._transition_matrix.shape,
+                    copy=True,
+                )
+                tmp.eliminate_zeros()  # mustn't forget this
+                self.transition_matrix = tmp
+            else:
+                self.transition_matrix = self._tmats[index]
             self._current_ix = index
         except IndexError:
             raise IndexError(
