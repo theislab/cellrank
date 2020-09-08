@@ -90,7 +90,9 @@ class KernelExpression(ABC):
         return self._transition_matrix
 
     @property
-    def transition_matrices(self) -> Optional[List[Union[np.ndarray, spmatrix]]]:
+    def transition_matrices(
+        self,
+    ) -> Optional[List[Union[np.ndarray, np.memmap, spmatrix]]]:
         """Return sampled transition matrices, if available."""
         return self._tmats
 
@@ -167,7 +169,28 @@ class KernelExpression(ABC):
             return
 
         try:
-            self.transition_matrix = self._tmats[index]
+            if isinstance(self._tmats, np.memmap):
+                # should be always sparse
+                if issparse(self._transition_matrix):
+                    if not isspmatrix_csr(self._transition_matrix):
+                        raise TypeError()
+                    self.transition_matrix = csr_matrix(
+                        (
+                            self._tmats[index],
+                            self._transition_matrix.indices,
+                            self._transition_matrix.indptr,
+                        ),
+                        shape=self._transition_matrix.shape,
+                        copy=True,
+                    )
+                else:
+                    self.transition_matrix = (
+                        np.array(self._tmats[index])
+                        .astype(np.float64)
+                        .reshape(self._transition_matrix.shape)
+                    )
+            else:
+                self.transition_matrix = self._tmats[index]
             self._current_ix = index
         except IndexError:
             raise IndexError(
