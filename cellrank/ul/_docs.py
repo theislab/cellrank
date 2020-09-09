@@ -55,8 +55,7 @@ keys
     Determines which %(initial_or_terminal) states to use by passing their names.
     Further, %(initial_or_terminal)s states can be combined. If e.g. the %(final)s states are
     ['Neuronal_1', 'Neuronal_1', 'Astrocytes', 'OPC'], then passing ``keys=['Neuronal_1, Neuronal_2', 'OPC']``
-    means that the two neuronal %(final)s states are treated as one and the 'Astrocyte' state is excluded.
-"""
+    means that the two neuronal %(final)s states are treated as one and the 'Astrocyte' state is excluded."""
 _density_correction = (
     "Optionally, we apply a density correction as described in [Coifman05]_, "
     "where we use the implementation of [Haghverdi16]_."
