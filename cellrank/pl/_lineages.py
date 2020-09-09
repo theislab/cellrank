@@ -41,7 +41,7 @@ def lineages(
         If given, plot cluster annotations left of the lineage probabilities.
     %(time_mode)s
     time_key
-        Key from ``adata.obs`` to use as a pseudotime ordering of the cells.
+        Key in ``adata.obs`` where the pseudotime is stored.
     **kwargs
         Keyword arguments for :meth:`cellrank.tl.estimators.BaseEstimator.plot_absorption_probabilities`.
 

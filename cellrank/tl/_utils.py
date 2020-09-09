@@ -1371,3 +1371,64 @@ def _calculate_lineage_absorption_time_means(
             res[f"{name} var"] = var
 
     return res
+
+
+def _create_initial_terminal_annotations(
+    adata: AnnData,
+    terminal_key: str = "terminal_states",
+    initial_key: str = "initial_states",
+    terminal_prefix: Optional[str] = "terminal",
+    initial_prefix: Optional[str] = "initial",
+    key_added: Optional[str] = "initial_terminal",
+) -> None:
+    """
+    Create categorical annotations of both initial and terminal states.
+
+    This is a utility function for creating a categorical :class:`pandas.Series` object which combines
+    the information about initial and terminal states. The :class:`pandas.Series` is written directly
+    to the :class:`anndata.AnnData`object. This can for example be used to create a scatter plot in :mod:`scvelo`.
+
+    Parameters
+    ----------
+    adata
+        AnnData object to write to ``.obs[key_added]``.
+    terminal_key
+        Key from ``adata.obs`` where final states have been saved.
+    initial_key
+        Key from ``adata.obs`` where root states have been saved.
+    terminal_prefix
+        Forward direction prefix used in the annotations.
+    initial_prefix
+        Backward direction prefix used in the annotations.
+    key_added
+        Key added to ``adata.obs``.
+
+    Returns
+    -------
+    None
+        Nothing, just writes to ``adata``.
+    """
+
+    # get both Series objects
+    cats_final, colors_final = (
+        adata.obs[terminal_key],
+        adata.uns[f"{terminal_key}_colors"],
+    )
+    cats_root, colors_root = adata.obs[initial_key], adata.uns[f"{initial_key}_colors"]
+
+    # merge
+    cats_merged, colors_merged = _merge_categorical_series(
+        cats_final, cats_root, list(colors_final), list(colors_root)
+    )
+
+    # adjust the names
+    final_names = cats_final.cat.categories
+    final_labels = [
+        f"{terminal_prefix if key in final_names else initial_prefix}: {key}"
+        for key in cats_merged.cat.categories
+    ]
+    cats_merged.cat.rename_categories(final_labels, inplace=True)
+
+    # write to AnnData
+    adata.obs[key_added] = cats_merged
+    adata.uns[f"{key_added}_colors"] = colors_merged

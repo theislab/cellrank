@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Velocity kernel module."""
 from sys import version_info
-from copy import copy, deepcopy
+from copy import copy
 from math import fsum
 from typing import Any, Union, Callable, Iterable, Optional
 
@@ -18,20 +18,18 @@ from cellrank.tl._constants import _DEFAULT_BACKEND, ModeEnum
 from cellrank.ul._parallelize import parallelize
 from cellrank.tl.kernels._utils import (
     _HAS_JAX,
-    njit,
     prange,
     np_mean,
-    jit_kwargs,
     _filter_kwargs,
     _random_normal,
+    _reconstruct_one,
     _calculate_starts,
-    _reconstruct_matrices,
     _get_probs_for_zero_vec,
     _predict_transition_probabilities_jax_H,
     _predict_transition_probabilities_numpy,
 )
 from cellrank.tl.kernels._base_kernel import (
-    TOL,
+    _RTOL,
     _LOG_USING_CACHE,
     _ERROR_EMPTY_CACHE_MSG,
     AnnData,
@@ -43,7 +41,6 @@ class VelocityMode(ModeEnum):  # noqa
     STOCHASTIC = "stochastic"
     SAMPLING = "sampling"
     MONTE_CARLO = "monte_carlo"
-    PROPAGATION = "propagation"
 
 
 class BackwardMode(ModeEnum):  # noqa
@@ -103,8 +100,6 @@ class VelocityKernel(Kernel):
         self._xkey = xkey
         self._gene_subset = gene_subset
         self._pearson_correlations = None
-
-        self._pcors = None
 
     def _read_from_adata(self, **kwargs):
         super()._read_from_adata(**kwargs)
@@ -169,7 +164,6 @@ class VelocityKernel(Kernel):
         softmax_scale: Optional[float] = None,
         n_samples: int = 1000,
         seed: Optional[int] = None,
-        use_numba: Optional[bool] = False,
         **kwargs,
     ) -> "VelocityKernel":
         """
@@ -184,15 +178,9 @@ class VelocityKernel(Kernel):
         %(velocity_backward_mode)s
         %(softmax_scale)s
         n_samples
-            Number of bootstrap samples when ``mode={m.MONTE_CARLO.s!r}`` or ``mode={m.PROPAGATION.s!r}``.
+            Number of bootstrap samples when ``mode={m.MONTE_CARLO.s!r}``.
         seed
             Set the seed for random state when the method requires ``n_samples``.
-        use_numba
-            Use :mod:`numba` optimized functions. Only available if ``mode!={m.STOCHASTIC.s!r}``:
-
-                - If `True`, the outermost loop is also :mod:`numba` optimized. This options disables the progress bar.
-                - If `False`, the outermost loop is not optimized, but the workload is split among multiple cores.
-                - If `None`, same as `True`, but the work is being split and each worker uses optimized outermost loop.
         %(parallel)s
 
         Returns
@@ -202,11 +190,6 @@ class VelocityKernel(Kernel):
 
                 - :paramref:`transition_matrix`
                 - :paramref:`pearson_correlations`
-
-            If ``mode={m.PROPAGATION.s!r}``, makes also available:
-
-                - :paramref:`transition_matrices` - tuple of length ``n_samples`` of transition matrices.
-                - :paramref:`_pcors` - tuple of length ``n_samples`` of pearson correlations.
         """
 
         mode = VelocityMode(mode)
@@ -284,7 +267,6 @@ class VelocityKernel(Kernel):
                 backward=self.backward,
                 backward_mode=backward_mode,
                 n_samples=n_samples,
-                use_numba=use_numba,
                 seed=seed,
                 backend=backend,
                 **kwargs,
@@ -304,15 +286,10 @@ class VelocityKernel(Kernel):
             backward=self.backward,
             backward_mode=backward_mode,
             n_samples=n_samples,
-            use_numba=use_numba,
             seed=seed,
             backend=backend,
             **kwargs,
         )
-        if isinstance(tmat, (tuple, list)):
-            self._tmats, self._pcors = tuple(tmat), tuple(cmat)
-            tmat, cmat = tmat[self._current_ix], cmat[self._current_ix]
-
         self._compute_transition_matrix(tmat, density_normalize=False)
         self._pearson_correlations = cmat
 
@@ -322,7 +299,7 @@ class VelocityKernel(Kernel):
 
     @property
     def pearson_correlations(self) -> csr_matrix:  # noqa
-        """The matrix of Pearson correlations."""
+        """The matrix containing Pearson correlations."""
         return self._pearson_correlations
 
     @d.dedent
@@ -337,9 +314,8 @@ class VelocityKernel(Kernel):
         )
         vk._params = copy(self.params)
         vk._cond_num = self.condition_number
-        self._copy_transition_matrix(vk)
+        vk._transition_matrix = copy(self._transition_matrix)
         vk._pearson_correlations = copy(self.pearson_correlations)
-        vk._pcors = deepcopy(self._pcors)
 
         return vk
 
@@ -350,32 +326,20 @@ def _dispatch_computation(mode, *_args, **_kwargs):
 
 
 def _run_in_parallel(fn: Callable, conn: csr_matrix, **kwargs) -> Any:
-    def extractor(res):
-        assert res[0].ndim in (2, 3), f"Dimension mismatch: `{res[0].ndim}`"
-
-        res = np.concatenate(res, axis=-1)
-        if res.shape[0] == 1:
-            # sampling, MC, propagation with only 1
-            res = res[0]
-
-        return _reconstruct_matrices(
-            res, conn, resort_ixs, n_jobs=kwargs.pop("n_jobs", 1)
-        )
-
     fname = fn.__name__
-    kwargs["average"] = kwargs.get("average", True)
-
     if fname == "_run_stochastic":
-        ixs = np.argsort(np.array((conn != 0).sum(1)).ravel())
+        if not _HAS_JAX:
+            raise RuntimeError(
+                "Install `jax` and `jaxlib` as `pip install jax jaxlib`."
+            )
+        ixs = np.argsort(np.array((conn != 0).sum(1)).ravel())[::-1]
     else:
         ixs = np.arange(conn.shape[0])
         np.random.shuffle(ixs)
-    resort_ixs = ixs
 
     unit = (
         "sample" if (fname == "_run_mc") and kwargs.get("n_samples", 1) > 1 else "cell"
     )
-
     kwargs["indices"] = conn.indices
     kwargs["indptr"] = conn.indptr
 
@@ -383,38 +347,12 @@ def _run_in_parallel(fn: Callable, conn: csr_matrix, **kwargs) -> Any:
         fn,
         ixs,
         as_array=False,
-        extractor=extractor,
+        extractor=lambda res: _reconstruct_one(np.concatenate(res, axis=-1), conn, ixs),
         unit=unit,
         **_filter_kwargs(parallelize, **kwargs),
     )(**_filter_kwargs(fn, **kwargs))
 
 
-def _run(fn: Callable, **kwargs) -> Any:
-
-    use_numba = kwargs.pop("use_numba", False)
-    conn = kwargs.pop("conn")
-
-    kwargs["indices"] = conn.indices
-    kwargs["indptr"] = conn.indptr
-
-    if fn is _run_stochastic and not _HAS_JAX:
-        raise RuntimeError("Install `jax` and `jaxlib` as `pip install jax jaxlib`.")
-
-    if not use_numba:
-        # can be disabled because of 2 reasons: numba is not installed or manually disabled
-        # remove the outer numba loop
-        if use_numba is not None and hasattr(fn, "py_func"):
-            logg.debug(f"Disabling numba jitting for function `{fn.__name__!r}`")
-            fn = fn.py_func
-        return _run_in_parallel(fn, conn, **kwargs)
-
-    kwargs["ixs"] = np.arange(conn.shape[0], dtype=np.int32)
-    ks = _filter_kwargs(fn, **kwargs)
-
-    return _reconstruct_matrices(fn(**ks), conn, ixs=None)
-
-
-@njit(parallel=True, **jit_kwargs)
 def _run_deterministic(
     ixs: Union[prange, np.ndarray],
     indices: np.ndarray,
@@ -436,7 +374,7 @@ def _run_deterministic(
 
         nbhs_ixs = indices[start:end]
         n_neigh = len(nbhs_ixs)
-        assert n_neigh, "Cell does not have any neighbors."
+        assert n_neigh, f"Cell {ix} does not have any neighbors."
 
         W = expression[nbhs_ixs, :] - expression[ix, :]
 
@@ -476,7 +414,6 @@ def _run_deterministic(
     return probs_cors
 
 
-@njit(parallel=True, **jit_kwargs)
 def _run_mc(
     ixs: Optional[np.ndarray],
     indices: np.ndarray,
@@ -485,18 +422,13 @@ def _run_mc(
     expectation: np.ndarray,
     variance: np.ndarray,
     n_samples: int = 1,
-    average: bool = True,
     softmax_scale: float = 1,
     seed: int = 0,
     queue=None,
 ) -> np.ndarray:
 
     starts = _calculate_starts(indptr, ixs)
-    probs_cors = (
-        np.empty((1, 2, starts[-1]))
-        if average
-        else np.empty((n_samples, 2, starts[-1]))
-    )
+    probs_cors = np.empty((2, starts[-1]))
 
     for i in prange(len(ixs)):
         ix = ixs[i]
@@ -506,7 +438,7 @@ def _run_mc(
 
         nbhs_ixs = indices[start:end]
         n_neigh = len(nbhs_ixs)
-        assert n_neigh, "Cell does not have any neighbors."
+        assert n_neigh, f"Cell {ix} does not have any neighbors."
 
         # get the displacement matrix. Changing dimensions b/c varying numbers of neighbors slow down autograd
         W = expression[nbhs_ixs, :] - expression[ix, :]
@@ -517,28 +449,21 @@ def _run_mc(
             variance[ix],
             n_samples=n_samples,
         )
-        if average:
-            probs_cors_tmp = np.empty((n_samples, n_neigh, 2))
-            for j in prange(n_samples):
-                prob, cor = _predict_transition_probabilities_numpy(
-                    np.atleast_2d(samples[j]), W, softmax_scale=softmax_scale
-                )
-                probs_cors_tmp[j, :, 0] = prob
-                probs_cors_tmp[j, :, 1] = cor
 
-            probs_cors[0, 0, starts[i] : starts[i] + n_neigh] = np_mean(
-                probs_cors_tmp[..., 0], axis=0
+        probs_cors_tmp = np.empty((2, n_samples, n_neigh))
+        for j in prange(n_samples):
+            prob, cor = _predict_transition_probabilities_numpy(
+                np.atleast_2d(samples[j]), W, softmax_scale=softmax_scale
             )
-            probs_cors[0, 1, starts[i] : starts[i] + n_neigh] = np_mean(
-                probs_cors_tmp[..., 1], axis=0
-            )
-        else:
-            for j in prange(samples.shape[0]):
-                prob, cor = _predict_transition_probabilities_numpy(
-                    np.atleast_2d(samples[j]), W, softmax_scale=softmax_scale
-                )
-                probs_cors[j, 0, starts[i] : starts[i] + n_neigh] = prob
-                probs_cors[j, 1, starts[i] : starts[i] + n_neigh] = cor
+            probs_cors_tmp[0, j, :] = prob
+            probs_cors_tmp[1, j, :] = cor
+
+        probs_cors[0, starts[i] : starts[i] + n_neigh] = np_mean(
+            probs_cors_tmp[0], axis=0
+        )
+        probs_cors[1, starts[i] : starts[i] + n_neigh] = np_mean(
+            probs_cors_tmp[1], axis=0
+        )
 
         if queue is not None:
             queue.put(1)
@@ -567,7 +492,7 @@ def _run_stochastic(
 
         nbhs_ixs = indices[start:end]
         n_neigh = len(nbhs_ixs)
-        assert n_neigh, "Cell does not have any neighbors."
+        assert n_neigh, f"Cell {ix} does not have any neighbors."
 
         v = expectation[ix]
 
@@ -602,7 +527,7 @@ def _run_stochastic(
                 p, c = _get_probs_for_zero_vec(len(nbhs_ixs))
 
             sum_ = fsum(p)
-            if not np.isclose(sum_, 1.0, rtol=TOL):
+            if not np.isclose(sum_, 1.0, rtol=_RTOL):
                 p[~mask] = p[~mask] / sum_
 
         probs_cors[0, starts[i] : starts[i] + n_neigh] = p
@@ -621,21 +546,15 @@ def _run_stochastic(
 def _(**kwargs):
     # cant 't use partial - parallelize needs to know whether function has `py_func` attribute + doesn't have a __name__
     kwargs["n_samples"] = 1
-    return _run(_run_mc, **kwargs)
-
-
-@_dispatch_computation.register(VelocityMode.PROPAGATION)
-def _(**kwargs):
-    kwargs["average"] = False
-    return _run(_run_mc, **kwargs)
+    return _run_in_parallel(_run_mc, **kwargs)
 
 
 _dispatch_computation.register(VelocityMode.STOCHASTIC)(
     lambda **kwargs: _run_in_parallel(_run_stochastic, **kwargs)
 )
 _dispatch_computation.register(VelocityMode.DETERMINISTIC)(
-    lambda **kwargs: _run(_run_deterministic, **kwargs)
+    lambda **kwargs: _run_in_parallel(_run_deterministic, **kwargs)
 )
 _dispatch_computation.register(VelocityMode.MONTE_CARLO)(
-    lambda **kwargs: _run(_run_mc, **kwargs)
+    lambda **kwargs: _run_in_parallel(_run_mc, **kwargs)
 )

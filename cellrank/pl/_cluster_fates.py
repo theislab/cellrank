@@ -47,6 +47,7 @@ def cluster_fates(
     show_cbar: bool = True,
     ncols: Optional[int] = None,
     sharey: bool = False,
+    fmt: str = "0.2f",
     legend_kwargs: Mapping[str, Any] = MappingProxyType({"loc": "best"}),
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
@@ -79,13 +80,15 @@ def cluster_fates(
     clusters
         Clusters to visualize. If `None`, all clusters will be plotted.
     basis
-        Basis for scatterplot to use when ``mode={m.PAGA_PIE.s!r}``. If `None`, don't show a scatterplot.
+        Basis for scatterplot to use when ``mode={m.PAGA_PIE.s!r}``. If `None`, don't show scatterplot.
     show_cbar
         Whether to show colorbar when ``mode={m.PAGA_PIE.s!r}``.
     ncols
         Number of columns when ``mode={m.BAR.s!r}`` or ``mode={m.PAGA.s!r}``.
     sharey
         Whether to share y-axis when ``mode={m.BAR.s!r}``.
+    fmt
+        Format when using ``mode={m.HEATMAP.s!r}`` or ``mode={m.CLUSTERMAP.s!r}``.
     figsize
         Size of the figure.
     legend_kwargs
@@ -95,7 +98,7 @@ def cluster_fates(
     %(plotting)s
     **kwargs
         Keyword arguments for :func:`scvelo.pl.paga`, :func:`scanpy.pl.violin` or :func:`matplotlib.pyplot.bar`,
-        depending on ``mode``.
+        depending on the value of ``mode``.
 
     Returns
     -------
@@ -367,7 +370,7 @@ def cluster_fates(
                 data,
                 robust=True,
                 annot=True,
-                fmt=".2f",
+                fmt=fmt,
                 row_colors=adata.obsm[lk][lin_names].colors,
                 dendrogram_ratio=(
                     0.15 * data.shape[0] / max_size,
@@ -388,7 +391,7 @@ def cluster_fates(
                 data,
                 robust=True,
                 annot=True,
-                fmt=".2f",
+                fmt=fmt,
                 cbar=show_cbar,
                 ax=ax,
                 **kwargs,

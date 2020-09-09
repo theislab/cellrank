@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Color handling module."""
 
-from typing import Any, List, Tuple, Union, Optional, Sequence
+from typing import Any, List, Tuple, Union, Iterable, Optional, Sequence
 
 import numpy as np
 from pandas import Series, DataFrame, to_numeric
@@ -286,3 +286,53 @@ def _compute_mean_color(color_list: List[str]) -> str:
     color_list = np.array([mcolors.rgb_to_hsv(mcolors.to_rgb(c)) for c in color_list])
 
     return mcolors.to_hex(mcolors.hsv_to_rgb(np.mean(color_list, axis=0)))
+
+
+def _colors_in_order(
+    adata,
+    clusters: Optional[Iterable[str]] = None,
+    cluster_key: str = "clusters",
+) -> List[Any]:
+    """
+    Get list of colors from AnnData in defined order.
+
+    Extracts a list of colors from ``adata.uns[cluster_key]`` in the order defined by the ``clusters``.
+
+    Parameters
+    ----------
+    %(adata)s
+    clusters
+        Subset of the clusters we want the color for. Must be a subset of ``adata.obs[cluster_key].cat.categories``.
+    cluster_key
+        Key from ``adata.obs``.
+
+    Returns
+    -------
+    list
+        List of colors in order defined by `clusters`.
+    """
+
+    assert (
+        cluster_key in adata.obs.keys()
+    ), f"Could not find {cluster_key} in `adata.obs`."
+
+    if clusters is not None:
+        assert np.all(
+            np.in1d(clusters, adata.obs[cluster_key].cat.categories)
+        ), "Not all `clusters` found."
+
+    assert (
+        f"{cluster_key}_colors" in adata.uns.keys()
+    ), f"No colors associated to {cluster_key} in `adata.uns`."
+
+    if clusters is None:
+        clusters = adata.obs[cluster_key].cat.categories
+
+    color_list = []
+    all_clusters = adata.obs[cluster_key].cat.categories
+
+    for cl in clusters:
+        mask = np.in1d(all_clusters, cl)
+        color_list.append(adata.uns[f"{cluster_key}_colors"][mask][0])
+
+    return color_list
