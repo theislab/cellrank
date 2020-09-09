@@ -69,12 +69,11 @@ class PalantirKernel(Kernel):
 
         self._pseudotime = np.array(self.adata.obs[time_key]).astype(_dtype)
 
-        if np.nanmin(self.pseudotime) < 0:
-            raise ValueError(
-                f"Minimum pseudotime must be non-negative, found {np.nanmin(self.pseudotime)}."
-            )
-        if not np.all(np.isfinite(self.pseudotime)):
-            raise ValueError("Found infinite values in pseudotime.")
+        if np.any(np.isnan(self._pseudotime)):
+            raise ValueError("Encountered NaN values in pseudotime.")
+
+        logg.debug("Clipping the pseudotime to 0-1 range")
+        self._pseudotime = np.clip(self._pseudotime, 0, 1)
 
     def compute_transition_matrix(
         self, k: int = 3, density_normalize: bool = True
@@ -85,10 +84,10 @@ class PalantirKernel(Kernel):
         This is a re-implementation of the Palantir algorithm by [Setty19]_.
         Note that this won't exactly reproduce the original Palantir results, for three reasons:
 
-            - Palantir computes the KNN graph in a scaled space of diffusion components
-            - Palantir uses its own pseudotime to bias the KNN graph which is not implemented here
+            - Palantir computes the KNN graph in a scaled space of diffusion components.
+            - Palantir uses its own pseudotime to bias the KNN graph which is not implemented here.
             - Palantir uses a slightly different mechanism to ensure the graph remains connected when removing edges
-              that point into the "pseudotime past"
+              that point into the "pseudotime past".
 
         If you would like to reproduce the original results, please use the original Palantir algorithm.
 
@@ -109,13 +108,12 @@ class PalantirKernel(Kernel):
         start = logg.info("Computing transition matrix based on Palantir-like kernel")
 
         # get the connectivities and number of neighbors
-        if (
-            "neighbors" in self.adata.uns
-            and "params" in self.adata.uns["neighbors"]
-            and "n_neighbors" in self.adata.uns["neighbors"]["params"]
-        ):
-            n_neighbors = self.adata.uns["neighbors"]["params"]["n_neighbors"]
-        else:
+        n_neighbors = (
+            self.adata.uns.get("neighbors", {})
+            .get("params", {})
+            .get("n_neighbors", None)
+        )
+        if n_neighbors is None:
             logg.warning(
                 "Could not find 'n_neighbors' in `adata.uns['neighbors']['params']`. Using an estimate"
             )
@@ -162,6 +160,6 @@ class PalantirKernel(Kernel):
         pk._pseudotime = copy(self.pseudotime)
         pk._params = copy(self._params)
         pk._cond_num = self.condition_number
-        self._copy_transition_matrix(pk)
+        pk._transition_matrix = copy(self._transition_matrix)
 
         return pk

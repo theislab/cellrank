@@ -12,7 +12,7 @@ from cellrank.ul._docs import d
 from cellrank.ul._utils import _read_graph_data
 from cellrank.tl.kernels import Kernel
 from cellrank.tl._constants import Direction, _transition
-from cellrank.tl.kernels._base_kernel import AnnData
+from cellrank.tl.kernels._base_kernel import _RTOL, AnnData
 
 
 @d.dedent
@@ -62,7 +62,7 @@ class PrecomputedKernel(Kernel):
                 f"Expected transition matrix to be square, found `{transition_matrix.shape}`."
             )
 
-        if not np.allclose(np.sum(transition_matrix, axis=1), 1.0):
+        if not np.allclose(np.sum(transition_matrix, axis=1), 1.0, rtol=_RTOL):
             raise ValueError("Not a valid transition matrix: not all rows sum to 1.")
 
         if adata is None:
@@ -82,7 +82,10 @@ class PrecomputedKernel(Kernel):
     def copy(self) -> "PrecomputedKernel":
         """%(copy)s"""  # noqa
         pk = PrecomputedKernel(
-            copy(self.transition_matrix), adata=self.adata, backward=self.backward
+            copy(self.transition_matrix),
+            adata=self.adata,
+            backward=self.backward,
+            compute_cond_num=False,
         )
         pk._cond_num = self.condition_number
 
