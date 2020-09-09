@@ -174,8 +174,7 @@ class BaseModel(ABC):
         gene
             Gene in :paramref:`adata` ``.var_names`` or in :paramref:`adata` ``.raw.var_names``.
         lineage
-            Name of a lineage in :paramref:`adata` ``.obsm[lineage_key]``.
-            If `None`, all weights will be set to `1`.
+            Name of a lineage in :paramref:`adata` ``.obsm[lineage_key]``. If `None`, all weights will be set to `1`.
         %(backward)s
         %(time_range)s
         data_key

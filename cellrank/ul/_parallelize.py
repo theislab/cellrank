@@ -33,7 +33,7 @@ def parallelize(
     callback
         Function to parallelize.
     collection
-        Sequence of items which to chunkify.
+        Sequence of items which to chunkify or an already .
     n_jobs
         Number of parallel jobs.
     n_split

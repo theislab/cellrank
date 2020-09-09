@@ -21,7 +21,7 @@ cluster_key
     If given, plot cluster annotations left of the {direction} states.
 %(time_mode)s
 time_key
-    Key from ``adata.obs`` to use as a pseudotime ordering of the cells.
+    Key in ``adata.obs`` where the pseudotime is stored.
 discrete
     If `True`, plot probability distribution of {direction} states.
     Only available when {direction} were estimated by :class:`cellrank.tl.estimators.GPCCA`.

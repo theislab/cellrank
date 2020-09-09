@@ -39,6 +39,7 @@ def gene_trends(
     lineages: Optional[Union[str, Sequence[str]]] = None,
     backward: bool = False,
     data_key: str = "X",
+    time_key: str = "latent_time",
     time_range: Optional[Union[_time_range_type, List[_time_range_type]]] = None,
     callback: _callback_type = None,
     conf_int: bool = True,
@@ -86,6 +87,8 @@ def gene_trends(
     %(backward)s
     data_key
         Key in ``adata.layers`` or `'X'` for ``adata.X`` where the data is stored.
+    time_key
+        Key in ``adata.obs`` where the pseudotime is stored.
     %(time_ranges)s
     %(model_callback)s
     conf_int
@@ -93,10 +96,10 @@ def gene_trends(
     same_plot
         Whether to plot all lineages for each gene in the same plot.
     hide_cells
-        If `True`, hide all the cells.
+        If `True`, hide all cells.
     perc
-        Percentile for colors. Valid values are in `[0, 100]`.
-        This can improve visualization. Can be specified indivudually for each lineage.
+        Percentile for colors. Valid values are in interval `[0, 100]`.
+        This can improve visualization. Can be specified individually for each lineage.
     lineage_cmap
         Colormap to use when coloring in the lineages. If `None` and ``same_plot``, use the corresponding colors
         in ``adata.uns``, otherwise use `'black'`.
@@ -114,8 +117,7 @@ def gene_trends(
     lw
         Line width of the smoothed values.
     show_cbar
-        Whether to show colorbar. Always shown when percentiles for lineages differ.
-        Only used when ``same_plot=False``.
+        Whether to show colorbar. Always shown when percentiles for lineages differ. Only used when ``same_plot=False``.
     margins
         Margins around the plot.
     sharex
@@ -199,16 +201,17 @@ def gene_trends(
             f"Expected time ranges to be of length `{len(lineages)}`, found `{len(time_range)}`."
         )
 
-    models = _create_models(model, genes, lineages)
-    callbacks = _create_callbacks(adata, callback, genes, lineages)
-
+    kwargs["time_key"] = time_key
     kwargs["data_key"] = data_key
     kwargs["backward"] = backward
-    kwargs["conf_int"] = conf_int
+    callbacks = _create_callbacks(adata, callback, genes, lineages, **kwargs)
+
+    kwargs["conf_int"] = conf_int  # prepare doesnt take or need this
+    models = _create_models(model, genes, lineages)
 
     plot_kwargs = dict(plot_kwargs)
     if plot_kwargs.get("xlabel", None) is None:
-        plot_kwargs["xlabel"] = kwargs.get("time_key", None)
+        plot_kwargs["xlabel"] = time_key
 
     n_jobs = _get_n_cores(n_jobs, len(genes))
     backend = _get_backend(model, backend)
