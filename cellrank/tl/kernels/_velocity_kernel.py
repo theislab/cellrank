@@ -1,12 +1,9 @@
 # -*- coding: utf-8 -*-
 """Velocity kernel module."""
-import os
 from sys import version_info
-from copy import copy, deepcopy
+from copy import copy
 from math import fsum
-from shutil import rmtree
 from typing import Any, Union, Callable, Iterable, Optional
-from tempfile import mkdtemp
 
 from scvelo.preprocessing.moments import get_moments
 
@@ -25,14 +22,14 @@ from cellrank.tl.kernels._utils import (
     np_mean,
     _filter_kwargs,
     _random_normal,
+    _reconstruct_one,
     _calculate_starts,
-    _reconstruct_matrices,
     _get_probs_for_zero_vec,
     _predict_transition_probabilities_jax_H,
     _predict_transition_probabilities_numpy,
 )
 from cellrank.tl.kernels._base_kernel import (
-    TOL,
+    _RTOL,
     _LOG_USING_CACHE,
     _ERROR_EMPTY_CACHE_MSG,
     AnnData,
@@ -44,16 +41,11 @@ class VelocityMode(ModeEnum):  # noqa
     STOCHASTIC = "stochastic"
     SAMPLING = "sampling"
     MONTE_CARLO = "monte_carlo"
-    PROPAGATION = "propagation"
 
 
 class BackwardMode(ModeEnum):  # noqa
     TRANSPOSE = "transpose"
     NEGATE = "negate"
-
-
-MAX_N_ELEMS = 1024 * 1024 * 1024  # 1 million, or 8GiB in float64
-TMP_DIR = None
 
 
 @d.dedent
@@ -109,9 +101,6 @@ class VelocityKernel(Kernel):
         self._gene_subset = gene_subset
         self._pearson_correlations = None
 
-        self._pcors = None
-        self._tmp_dir = None
-
     def _read_from_adata(self, **kwargs):
         super()._read_from_adata(**kwargs)
 
@@ -133,7 +122,7 @@ class VelocityKernel(Kernel):
         xkey = kwargs.pop("xkey", "Ms")
         xkey = xkey if xkey in self.adata.layers.keys() else "spliced"
 
-        # filter both the velocities and the gene expression profiles to the gene subset, densify the matrices
+        # filter both the velocities and the gene expression profiles to the gene subset. Densify the matrices.
         X = np.array(
             self.adata.layers[xkey].A[:, subset]
             if issparse(self.adata.layers[xkey])
@@ -174,7 +163,6 @@ class VelocityKernel(Kernel):
         backward_mode: str = BackwardMode.TRANSPOSE.s,
         softmax_scale: Optional[float] = None,
         n_samples: int = 1000,
-        lazy: Optional[bool] = None,
         seed: Optional[int] = None,
         **kwargs,
     ) -> "VelocityKernel":
@@ -190,10 +178,7 @@ class VelocityKernel(Kernel):
         %(velocity_backward_mode)s
         %(softmax_scale)s
         n_samples
-            Number of bootstrap samples when ``mode={m.MONTE_CARLO.s!r}`` or ``mode={m.PROPAGATION.s!r}``.
-        lazy
-            Whether to memory-map the transition matrices when ``mode={m.PROPAGATION.s!r}``.
-            If `None`, the matrices will be memory-mapped if they will be larger in total than 8 GiB.
+            Number of bootstrap samples when ``mode={m.MONTE_CARLO.s!r}``.
         seed
             Set the seed for random state when the method requires ``n_samples``.
         %(parallel)s
@@ -205,11 +190,6 @@ class VelocityKernel(Kernel):
 
                 - :paramref:`transition_matrix`.
                 - :paramref:`pearson_correlations`.
-
-            If ``mode={m.PROPAGATION.s!r}``, makes also available:
-
-                - :paramref:`transition_matrices` - tuple of length ``n_samples`` of transition matrices.
-                - :paramref:`_pcors` - tuple of length ``n_samples`` of pearson correlations.
         """
 
         mode = VelocityMode(mode)
@@ -246,7 +226,6 @@ class VelocityKernel(Kernel):
             return self
 
         self._params = params
-        self._current_ix = 0
 
         # compute first and second order moments to model the distribution of the velocity vector
         np.random.seed(seed)
@@ -266,6 +245,7 @@ class VelocityKernel(Kernel):
             logg.warning("For Python3.6, only `'threading'` backend is supported")
             backend = "threading"
         elif mode != VelocityMode.STOCHASTIC and backend == "multiprocessing":
+            # this is because on jitting and pickling (cloudpickle, used by loky, handles it correctly)
             logg.warning(
                 f"Multiprocessing backend is supported only for mode `{VelocityMode.STOCHASTIC.s!r}`. "
                 f"Defaulting to `{_DEFAULT_BACKEND}`"
@@ -295,35 +275,6 @@ class VelocityKernel(Kernel):
             params["softmax_scale"] = softmax_scale
             logg.info(f"Setting `softmax_scale={softmax_scale:.4f}`")
 
-        if self._tmp_dir is not None:
-            rmtree(self._tmp_dir, ignore_errors=True)
-            self._tmp_dir = None
-
-        if mode == VelocityMode.PROPAGATION:
-            n_elems = self._conn.nnz
-            if lazy is None:
-                lazy = n_samples * n_elems >= MAX_N_ELEMS
-            if lazy:
-                self._tmp_dir = mkdtemp(prefix="cellrank_vk_", dir=TMP_DIR)
-                logg.debug(
-                    f"Memory mapping sampled transition matrices and Pearson correlations under `{self._tmp_dir}`"
-                )
-
-                self._tmats = np.memmap(
-                    os.path.join(self._tmp_dir, "transition_matrices.dat"),
-                    mode="w+",
-                    dtype=np.float64,
-                    shape=(n_samples, n_elems),
-                )
-                self._pcors = np.memmap(
-                    os.path.join(self._tmp_dir, "pearson_correlations.dat"),
-                    mode="w+",
-                    dtype=np.float64,
-                    shape=(n_samples, n_elems),
-                )
-                kwargs["probs"] = self._tmats
-                kwargs["cors"] = self._pcors
-
         tmat, cmat = _dispatch_computation(
             mode,
             conn=self._conn,
@@ -339,29 +290,6 @@ class VelocityKernel(Kernel):
             backend=backend,
             **kwargs,
         )
-
-        # this is ok, since the memory-mapped version returns only 1 matrix
-        if isinstance(tmat, (tuple, list)):
-            self._tmats, self._pcors = tuple(tmat), tuple(cmat)
-            tmat, cmat = tmat[self._current_ix], cmat[self._current_ix]
-        elif isinstance(self._tmats, np.memmap) and isinstance(self._pcors, np.memmap):
-            logg.debug("Flushing memory mapped files")
-            self._tmats.flush()
-            self._pcors.flush()
-
-            self._tmats = np.memmap(
-                self._tmats.filename,
-                dtype=self._tmats.dtype,
-                mode="r",
-                shape=self._tmats.shape,
-            )
-            self._pcors = np.memmap(
-                self._pcors.filename,
-                dtype=self._pcors.dtype,
-                mode="r",
-                shape=self._pcors.shape,
-            )
-
         self._compute_transition_matrix(tmat, density_normalize=False)
         self._pearson_correlations = cmat
 
@@ -371,19 +299,12 @@ class VelocityKernel(Kernel):
 
     @property
     def pearson_correlations(self) -> csr_matrix:  # noqa
-        """The matrix of Pearson correlations."""
+        """The matrix containing Pearson correlations."""
         return self._pearson_correlations
 
     @d.dedent
     def copy(self) -> "VelocityKernel":  # noqa
         """%(copy)s"""
-        if isinstance(self.transition_matrices, np.memmap) or isinstance(
-            self._pcors, np.memmap
-        ):
-            raise TypeError(
-                "Transition matrices or Pearson correlations are memory mapped, copying will move them to memory."
-            )
-
         vk = VelocityKernel(
             self.adata,
             backward=self.backward,
@@ -393,15 +314,10 @@ class VelocityKernel(Kernel):
         )
         vk._params = copy(self.params)
         vk._cond_num = self.condition_number
-        self._copy_transition_matrix(vk)
+        vk._transition_matrix = copy(self._transition_matrix)
         vk._pearson_correlations = copy(self.pearson_correlations)
-        vk._pcors = deepcopy(self._pcors)
 
         return vk
-
-    def __del__(self):
-        if self._tmp_dir is not None:
-            rmtree(self._tmp_dir, ignore_errors=True)
 
 
 @valuedispatch
@@ -410,59 +326,28 @@ def _dispatch_computation(mode, *_args, **_kwargs):
 
 
 def _run_in_parallel(fn: Callable, conn: csr_matrix, **kwargs) -> Any:
-    def extractor(res):
-        if res[0] is None:
-            probs, cors = kwargs.get("probs", None), kwargs.get("cors", None)
-            assert isinstance(
-                probs, np.memmap
-            ), f"Expected memory mapped data, got `{type(probs).__name__}`."
-            assert isinstance(
-                cors, np.memmap
-            ), f"Expected memory mapped data, got `{type(cors).__name__}`."
-            # get the first sample
-            res = np.stack([probs[0], cors[0]])
-        else:
-            assert res[0].ndim in (2, 3), f"Dimension mismatch: `{res[0].ndim}`."
-            res = np.concatenate(res, axis=-1)
-            if res.shape[0] == 1:
-                # sampling, MC, propagation with only 1
-                res = res[0]
-
-        return _reconstruct_matrices(res, conn, ixs, n_jobs=kwargs.pop("n_jobs", 1))
-
     fname = fn.__name__
     if fname == "_run_stochastic":
         if not _HAS_JAX:
             raise RuntimeError(
                 "Install `jax` and `jaxlib` as `pip install jax jaxlib`."
             )
-        ixs = np.argsort(np.array((conn != 0).sum(1)).ravel())[
-            ::-1
-        ]  # important - keep the descending order
+        ixs = np.argsort(np.array((conn != 0).sum(1)).ravel())[::-1]
     else:
-        # very important for 2 reasons:
-        # 1. the function requires sorted indices for correct offset calculation (we could pass it, but this is elegant)
-        # 2. we get more cache hits, since we're not writing randomly into the array
-        # the below case doesn't matter, because there we create an array for each process separately whereas in the
-        # memory mapped case, we share a pointer to a possibly large file
-        # the downside is, of course, possible uneven split between the data
         ixs = np.arange(conn.shape[0])
-        if kwargs.get("probs", None) is None:
-            np.random.shuffle(ixs)
-
-    kwargs["indices"] = conn.indices
-    kwargs["indptr"] = conn.indptr
-    kwargs["average"] = kwargs.get("average", True)
+        np.random.shuffle(ixs)
 
     unit = (
         "sample" if (fname == "_run_mc") and kwargs.get("n_samples", 1) > 1 else "cell"
     )
+    kwargs["indices"] = conn.indices
+    kwargs["indptr"] = conn.indptr
 
     return parallelize(
         fn,
         ixs,
         as_array=False,
-        extractor=extractor,
+        extractor=lambda res: _reconstruct_one(np.concatenate(res, axis=-1), conn, ixs),
         unit=unit,
         **_filter_kwargs(parallelize, **kwargs),
     )(**_filter_kwargs(fn, **kwargs))
@@ -489,7 +374,7 @@ def _run_deterministic(
 
         nbhs_ixs = indices[start:end]
         n_neigh = len(nbhs_ixs)
-        assert n_neigh, "Cell does not have any neighbors."
+        assert n_neigh, f"Cell {ix} does not have any neighbors."
 
         W = expression[nbhs_ixs, :] - expression[ix, :]
 
@@ -537,26 +422,13 @@ def _run_mc(
     expectation: np.ndarray,
     variance: np.ndarray,
     n_samples: int = 1,
-    average: bool = True,
     softmax_scale: float = 1,
     seed: int = 0,
     queue=None,
-    probs: Optional[np.memmap] = None,
-    cors: Optional[np.memmap] = None,
-) -> Optional[np.ndarray]:
+) -> np.ndarray:
 
     starts = _calculate_starts(indptr, ixs)
-    if probs is not None and cors is not None:
-        assert not average, "Memory mapping is only supported when not averaging."
-        probs_cors = [probs, cors]
-        offset = indptr[np.min(ixs)]  # where we start
-    else:
-        probs_cors = (
-            np.empty((2, starts[-1]))
-            if average
-            else np.empty((2, n_samples, starts[-1]))
-        )
-        offset = 0
+    probs_cors = np.empty((2, starts[-1]))
 
     for i in prange(len(ixs)):
         ix = ixs[i]
@@ -566,7 +438,7 @@ def _run_mc(
 
         nbhs_ixs = indices[start:end]
         n_neigh = len(nbhs_ixs)
-        assert n_neigh, f"Cell with index `{ix}` does not have any neighbors."
+        assert n_neigh, f"Cell {ix} does not have any neighbors."
 
         # get the displacement matrix. Changing dimensions b/c varying numbers of neighbors slow down autograd
         W = expression[nbhs_ixs, :] - expression[ix, :]
@@ -577,41 +449,27 @@ def _run_mc(
             variance[ix],
             n_samples=n_samples,
         )
-        if average:
-            probs_cors_tmp = np.empty((2, n_samples, n_neigh))
-            for j in range(n_samples):
-                prob, cor = _predict_transition_probabilities_numpy(
-                    np.atleast_2d(samples[j]), W, softmax_scale=softmax_scale
-                )
-                probs_cors_tmp[0, j, :] = prob
-                probs_cors_tmp[1, j, :] = cor
 
-            probs_cors[0, starts[i] : starts[i] + n_neigh] = np_mean(
-                probs_cors_tmp[0], axis=0
+        probs_cors_tmp = np.empty((2, n_samples, n_neigh))
+        for j in prange(n_samples):
+            prob, cor = _predict_transition_probabilities_numpy(
+                np.atleast_2d(samples[j]), W, softmax_scale=softmax_scale
             )
-            probs_cors[1, starts[i] : starts[i] + n_neigh] = np_mean(
-                probs_cors_tmp[1], axis=0
-            )
-        else:
-            for j in range(samples.shape[0]):
-                prob, cor = _predict_transition_probabilities_numpy(
-                    np.atleast_2d(samples[j]), W, softmax_scale=softmax_scale
-                )
-                probs_cors[0][
-                    j, offset + starts[i] : offset + starts[i] + n_neigh
-                ] = prob
-                probs_cors[1][
-                    j, offset + starts[i] : offset + starts[i] + n_neigh
-                ] = cor
+            probs_cors_tmp[0, j, :] = prob
+            probs_cors_tmp[1, j, :] = cor
+
+        probs_cors[0, starts[i] : starts[i] + n_neigh] = np_mean(
+            probs_cors_tmp[0], axis=0
+        )
+        probs_cors[1, starts[i] : starts[i] + n_neigh] = np_mean(
+            probs_cors_tmp[1], axis=0
+        )
 
         if queue is not None:
             queue.put(1)
 
     if queue is not None:
         queue.put(None)
-
-    if probs is not None and cors is not None:
-        return None
 
     return probs_cors
 
@@ -629,14 +487,12 @@ def _run_stochastic(
     starts = _calculate_starts(indptr, ixs)
     probs_cors = np.empty((2, starts[-1]))
 
-    max_n = np.max(np.diff(starts))
-
     for i, ix in enumerate(ixs):
         start, end = indptr[ix], indptr[ix + 1]
 
         nbhs_ixs = indices[start:end]
         n_neigh = len(nbhs_ixs)
-        assert n_neigh, "Cell does not have any neighbors."
+        assert n_neigh, f"Cell {ix} does not have any neighbors."
 
         v = expectation[ix]
 
@@ -646,14 +502,9 @@ def _run_stochastic(
             # compute the Hessian tensor, and turn it into a matrix that has the diagonal elements in its rows
             W = expression[nbhs_ixs, :] - expression[ix, :]
 
-            W_size = W.shape[0]
-            if max_n - W_size >= 10:
-                max_n -= 10
-            W_padded = np.pad(W, [(0, max_n - W.shape[0]), (0, 0)])
-
             H = _predict_transition_probabilities_jax_H(
-                v, W_padded, softmax_scale=softmax_scale
-            )[:W_size]
+                v, W, softmax_scale=softmax_scale
+            )
             H_diag = np.array([np.diag(h) for h in H])
 
             # compute zero order term
@@ -676,7 +527,7 @@ def _run_stochastic(
                 p, c = _get_probs_for_zero_vec(len(nbhs_ixs))
 
             sum_ = fsum(p)
-            if not np.isclose(sum_, 1.0, rtol=TOL):
+            if not np.isclose(sum_, 1.0, rtol=_RTOL):
                 p[~mask] = p[~mask] / sum_
 
         probs_cors[0, starts[i] : starts[i] + n_neigh] = p
@@ -693,15 +544,8 @@ def _run_stochastic(
 
 @_dispatch_computation.register(VelocityMode.SAMPLING)
 def _(**kwargs):
-    # cant 't use partial - kwargs has the attributes (could filter in principle)
+    # cant 't use partial - parallelize needs to know whether function has `py_func` attribute + doesn't have a __name__
     kwargs["n_samples"] = 1
-    kwargs["average"] = False
-    return _run_in_parallel(_run_mc, **kwargs)
-
-
-@_dispatch_computation.register(VelocityMode.PROPAGATION)
-def _(**kwargs):
-    kwargs["average"] = False
     return _run_in_parallel(_run_mc, **kwargs)
 
 

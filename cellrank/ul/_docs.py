@@ -78,10 +78,6 @@ mode
         - `{m.MONTE_CARLO.s!r}` - Monte Carlo average of randomly sampled velocity vectors.
         - `{m.STOCHASTIC.s!r}` - second order approximation, only available when :mod:`jax` is installed.
         - `{m.SAMPLING.s!r}` - sample 1 transition matrix from velocity distribution.
-        - `{m.PROPAGATION.s!r}` - same as `{m.MONTE_CARLO.s!r}`, but does not average the vectors.
-          Instead, it saves the sampled transition matrices to :paramref:`transition_matrices` to be used
-          for later uncertainty estimation. It is generally faster then `{m.MONTE_CARLO.s!r}`,
-          but also slightly less memory efficient.
 """
 _velocity_backward_mode = """\
 backward_mode

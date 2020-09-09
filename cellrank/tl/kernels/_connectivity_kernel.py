@@ -95,6 +95,6 @@ class ConnectivityKernel(Kernel):
         ck = ConnectivityKernel(self.adata, backward=self.backward)
         ck._params = copy(self.params)
         ck._cond_num = self.condition_number
-        self._copy_transition_matrix(ck)
+        ck._transition_matrix = copy(self._transition_matrix)
 
         return ck
