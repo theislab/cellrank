@@ -756,7 +756,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
     @d.dedent
     def reduce(
         self,
-        keys: Union[str, List[str], Tuple[str], np.ndarray],
+        *keys: str,
         mode: str = "dist",
         dist_measure: str = "mutual_info",
         normalize_weights: str = "softmax",
@@ -794,26 +794,27 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
         Returns
         -------
-        :class:`cellrank.tl.Lineage`
-            Lineage object, reduced to the %(inital_terminal)s states. If a reduction is not possible, return a copy.
-        :class:`pandas.DataFrame`
-            The weights used for the projection of shape ``(n_query, n_reference)``.
+        :class:`cellrank.tl.Lineage`, :class:`pandas.DataFrame`
+            Lineage object, reduced to the %(inital_terminal)s states. If a reduction is not possible, returns a copy.
+            The weights used for the projection of shape ``(n_query, n_reference)``, if ``return_weights=True``.
         """
 
         if self._is_transposed:
             raise RuntimeError("This method works only on non-transposed lineages.")
 
-        if isinstance(keys, str):
-            keys = [keys]
-
         if not len(keys):
             raise ValueError("Unable to perform the reduction, no keys specified.")
 
-        if set(keys) == set(self.names):
-            logg.warning(
-                "Unable to perform the reduction, `keys` specifies all lineages. Returning a copy self"
+        # check the lineage object
+        if not np.allclose(np.sum(self, axis=1).X, 1.0):
+            raise ValueError("Memberships do not sum to one row-wise.")
+
+        if len(keys) == 1:
+            return Lineage(
+                np.ones((self.shape[0], 1), dtype=self.dtype),
+                names=keys,
+                colors=[self.colors[self._names_to_ixs[keys[0]]]],
             )
-            return (self.copy(), None) if return_weights else self.copy()
 
         # check input parameters
         if return_weights and mode == "scale":
@@ -821,21 +822,17 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
                 "If `mode=='scale'`, no weights are computed. Returning `None`"
             )
 
-        # check the lineage object
-        if not np.allclose(np.sum(self, axis=1).X, 1.0):
-            raise ValueError("Memberships do not sum to one row-wise.")
-
-        # check the keys are all in L.names
-        key_mask = np.array([key in self.names for key in keys])
-        if not key_mask.all():
-            raise ValueError(
-                f"Invalid lineage names `{list(np.array(keys)[~key_mask])}`. Valid names are: `{list(self.names)}`."
+        reference = self[:, keys]
+        rest = [
+            k for k in self.names if all(map(lambda rk: k not in rk, reference.names))
+        ]
+        if not len(rest):
+            logg.warning(
+                "Unable to perform reduction because all keys have been selected. Returning combined object only"
             )
+            return (reference.copy(), None) if return_weights else reference.copy()
 
-        # get query and reference
-        mask = np.in1d(self.names, keys)
-        reference = self[:, mask]
-        query = self[:, ~mask]
+        query = self[:, rest]
 
         if mode == "dist":
             # compute a set of weights of shape (n_query x n_reference)
