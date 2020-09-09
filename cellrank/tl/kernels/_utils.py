@@ -1,13 +1,11 @@
 # -*- coding: utf-8 -*-
 """Utility functions for kernels, mostly VelocityKernel."""
-from typing import List, Tuple, Union, Callable, Iterable, Optional
+from typing import Tuple, Callable, Optional
 from inspect import signature
 
 import numpy as np
 from numba import njit, prange
 from scipy.sparse import csr_matrix
-
-from cellrank.ul._parallelize import parallelize
 
 jit_kwargs = {"nogil": True, "cache": True, "fastmath": True}
 
@@ -33,13 +31,13 @@ try:
         denom = X_norm * W_norm
 
         mask = jnp.isclose(denom, 0)
-        denom = jnp.where(jnp.isclose(denom, 0), 1, denom)  # keep gradients flowing
+        denom = jnp.where(jnp.isclose(denom, 0), 1, denom)  # essential
 
         x = W.dot(X) / denom
 
         numerator = x * softmax_scale
         numerator = jnp.exp(numerator - jnp.nanmax(numerator))
-        numerator = jnp.where(mask, 0, numerator)  # keep gradients flowing
+        numerator = jnp.where(mask, 0, numerator)  # essential
 
         softmax = numerator / jnp.nansum(numerator)
 
@@ -259,7 +257,6 @@ def _reconstruct_one(
     data: np.ndarray,
     mat: csr_matrix,
     ixs: Optional[np.ndarray] = None,
-    aixs: Optional[np.ndarray] = None,
 ) -> Tuple[csr_matrix, csr_matrix]:
     """
     Transform :class:`numpy.ndarray` into :class:`scipy.sparse.csr_matrix`.
@@ -272,8 +269,6 @@ def _reconstruct_one(
         The original sparse matrix.
     ixs
         Indices that were used to sort the data.
-    aixs
-        Inversion of ``ixs``.
 
     Returns
     -------
@@ -286,10 +281,14 @@ def _reconstruct_one(
         mat.nnz,
     ), f"Dimension or shape mismatch: `{data.shape}`, `{2, mat.nnz}`."
 
+    aixs = None
     if ixs is not None:
+        aixs = np.argsort(ixs)
         assert len(ixs) == mat.shape[0], f"Shape mismatch: `{ixs.shape}`, `{mat.shape}`"
         mat = mat[ixs]
 
+    # strange bug happens when no copying and eliminating zeros from cors (it's no longer row-stochastic)
+    # only happens when using numba
     probs = csr_matrix((data[0], mat.indices, mat.indptr))
     cors = csr_matrix((data[1], mat.indices, mat.indptr))
 
@@ -310,94 +309,6 @@ def _reconstruct_one(
         )
 
     return probs, cors
-
-
-def _reconstruct_matrices(
-    data: np.ndarray,
-    mat: csr_matrix,
-    ixs: Optional[np.ndarray] = None,
-    n_jobs: Optional[int] = None,
-) -> Union[Tuple[csr_matrix, csr_matrix], Iterable[Tuple[csr_matrix, csr_matrix]]]:
-    """
-    Transform :class:`numpy.ndarray` into :class:`scipy.sparse.csr_matrix`.
-
-    Parameters
-    ----------
-    data
-        Either a 2 dimensional array of shape `(2 x number_of_nnz)` or
-        a 3 dimensional array of of `(number_of_matrices x 2 x number_of_nnz)`.
-    mat
-        The original matrix with`
-    ixs
-        Indices which may have been used to pre-sort when solving the problem.
-    n_jobs
-        Number of parallel jobs when constructing multiple matrices.
-
-    Returns
-    -------
-    :class:`scipy.sparse.csr_matrix`, :class:`scipy.sparse.csr_matrix`
-        The probability and correlation matrix. If ``data`` is 3 dimensional, return an iterable of them.
-    """
-
-    def reconstruct_many(
-        data: np.ndarray, queue
-    ) -> Tuple[List[csr_matrix], List[csr_matrix]]:
-        assert data.ndim == 3, f"Dimension mismatch: `{data.ndim}`."
-        assert data.shape[1:] == (
-            2,
-            mat.nnz,
-        ), f"Shape mismatch: `{data.shape}`, `{2, mat.nnz}`."
-
-        probs, cors = [], []
-        for d in data:
-            tmp = _reconstruct_one(d, mat, ixs, aixs)
-            probs.append(tmp[0])
-            cors.append(tmp[1])
-
-            if queue is not None:
-                queue.put(1)
-
-        if queue is not None:
-            queue.put(None)
-
-        return probs, cors
-
-    def extractor(
-        res: List[Tuple[List[csr_matrix], List[csr_matrix]]]
-    ) -> Tuple[Tuple[csr_matrix], Tuple[csr_matrix]]:
-        probs, cors = zip(*res)
-        probs, cors = (
-            tuple(p for ps in probs for p in ps),
-            tuple(c for cs in cors for c in cs),
-        )
-
-        assert len(probs) == len(
-            cors
-        ), f"Length mismatch: `{len(probs)}`, `{len(cors)}`."
-        assert (
-            probs[0].shape == mat.shape
-        ), f"Shape mismatch: `{probs[0].shape}`, `{mat.shape}`."
-
-        return probs, cors
-
-    assert data.ndim in (2, 3), f"Dimension mismatch: `{data.ndim}`."
-
-    aixs = np.argsort(ixs) if ixs is not None else None
-    if data.ndim == 2:
-        return _reconstruct_one(data, mat, ixs, aixs)
-
-    # 2, n_samples, nnz
-    assert data.shape[0] == 2, f"Shape mismatch: `{data.shape}`."
-
-    return parallelize(
-        reconstruct_many,
-        data.swapaxes(0, 1),
-        n_jobs=n_jobs,
-        unit="matrix",
-        backend="loky",
-        as_array=False,
-        extractor=extractor,
-    )()
 
 
 @njit(**jit_kwargs)
