@@ -171,3 +171,8 @@ p.sphx-glr-timing {
 .sphx-glr-thumbcontainer:hover {
     box-shadow: 0 0 15px RGBA(244, 150, 0, 0.5) !important;
 }
+
+/* sphinx-gallery inserts 2 <br> after_repr_html_, ignore the 1st one */
+div[class="rendered_html"] + br {
+    display: none!important;
+}
