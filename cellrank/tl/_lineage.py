@@ -665,7 +665,11 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
         if self._is_transposed:
             header = ""
-        return f"<div style='scoped'><table>{header}{body}</table>{metadata}</div>"
+        return (
+            f"<div style='scoped' class='rendered_html'>"
+            f"<table class='dataframe'>{header}{body}</table>{metadata}"
+            f"</div>"
+        )
 
     def __format__(self, format_spec):
         if self.shape == (1, 1):
@@ -810,10 +814,11 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             raise ValueError("Memberships do not sum to one row-wise.")
 
         if len(keys) == 1:
+            tmp = self[:, keys]
             return Lineage(
                 np.ones((self.shape[0], 1), dtype=self.dtype),
-                names=keys,
-                colors=[self.colors[self._names_to_ixs[keys[0]]]],
+                names=tmp.names,
+                colors=tmp.colors,
             )
 
         # check input parameters

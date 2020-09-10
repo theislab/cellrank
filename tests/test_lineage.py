@@ -751,6 +751,14 @@ class TestLineageNormalization:
         np.testing.assert_array_equal(lin.names, ["bar or foo", "baz"])
         np.testing.assert_array_equal(lin.colors, lineage[["foo, bar", "baz"]].colors)
 
+    def test_normal_run_combination_only_1(self, lineage: Lineage):
+        lin = lineage.reduce("foo, bar")
+
+        assert lin.shape == (10, 1)
+        np.testing.assert_allclose(np.sum(lin, axis=1), 1.0)
+        np.testing.assert_array_equal(lin.names, ["bar or foo"])
+        np.testing.assert_array_equal(lin.colors, lineage[["foo, bar"]].colors)
+
     def test_normal_run_combination_all(self, lineage: Lineage):
         assert lineage.shape == (10, 4)
         lin = lineage.reduce("foo, bar", "baz, quux")

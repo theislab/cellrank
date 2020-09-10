@@ -134,6 +134,7 @@ example_dir = HERE.parent.parent / "examples"
 sphinx_gallery_conf = {
     "image_scrapers": ("matplotlib",),
     "reset_modules": ("matplotlib", "seaborn", reset_scvelo),
+    "filename_pattern": f"{os.path.sep}(plot_|compute_)",
     "examples_dirs": example_dir,
     "gallery_dirs": "auto_examples",  # path to where to save gallery generated output
     "abort_on_example_error": True,
