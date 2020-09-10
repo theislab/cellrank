@@ -114,6 +114,7 @@ Datasets
     :toctree: api/datasets
 
     datasets.pancreas
+    datasets.pancreas_processed
 
 
 .. _scvelo: https://scvelo.readthedocs.io/
