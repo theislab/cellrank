@@ -31,7 +31,7 @@ lin /= lin.sum(1)
 lin.X
 
 # %%
-# Lineage can also be transposed as.
+# Lineages can also be transposed.
 lin.T
 
 # %%
