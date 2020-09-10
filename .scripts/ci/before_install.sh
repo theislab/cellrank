@@ -9,3 +9,9 @@ elif [[ "$TRAVIS_OS_NAME" == "linux" && "$USE_SLEPC" == "true" ]]; then
     sudo apt-get update -y
     sudo apt-get install gcc gfortran libopenmpi-dev libblas-dev liblapack-dev -y
 fi
+
+if [[ "$TRAVIS_OS_NAME" == "linux" && "$TRAVIS_BRANCH" == "master" && "$TRAVIS_EVENT_TYPE" == "push" && ! -z "${DEPLOY_TOKEN+x}" ]]; then
+    echo "Installing git-lfs"
+    sudo apt-get update -y
+    sudo apt-get install git-lfs -y
+fi

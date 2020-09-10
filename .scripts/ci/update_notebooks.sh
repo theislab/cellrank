@@ -5,7 +5,8 @@ DIRNAME="cellrank_notebooks"
 FILE="README.rst"
 
 
-git clone "$ORIGIN" "$DIRNAME"
+# we don't need the dataset files
+GIT_LFS_SKIP_SMUDGE=1 git clone "$ORIGIN" "$DIRNAME"
 cd "$DIRNAME"
 
 cp "../$FILE" .
