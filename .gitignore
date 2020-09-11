@@ -118,6 +118,7 @@ docs/build
 /local_resources
 tests/data
 tests/figures
+tests/_ground_truth_figures/*-failed-diff.png
 figures
 data
 **/*.ipynb

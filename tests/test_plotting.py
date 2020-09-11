@@ -1856,21 +1856,47 @@ class TestHighLvlStates:
 
 
 class TestLineage:
+    def test_pie(self, lineage: cr.tl.Lineage):
+        with pytest.raises(ValueError):
+            lineage[:, 0].plot_pie(dpi=DPI, save=fpath)
+
     @compare(kind="lineage")
     def test_pie(self, lineage: cr.tl.Lineage, fpath: str):
-        lineage.plot_pie(dpi=DPI, save=fpath)
+        lineage.plot_pie(np.mean, dpi=DPI, save=fpath)
 
     @compare(kind="lineage")
     def test_pie_reduction(self, lineage: cr.tl.Lineage, fpath: str):
-        lineage.plot_pie(reduction=np.var, dpi=DPI, save=fpath)
+        lineage.plot_pie(np.var, dpi=DPI, save=fpath)
 
     @compare(kind="lineage")
     def test_pie_title(self, lineage: cr.tl.Lineage, fpath: str):
-        lineage.plot_pie(title="FOOBAR", dpi=DPI, save=fpath)
+        lineage.plot_pie(np.mean, title="FOOBAR", dpi=DPI, save=fpath)
 
     @compare(kind="lineage")
     def test_pie_t(self, lineage: cr.tl.Lineage, fpath: str):
-        lineage.T.plot_pie(dpi=DPI, save=fpath)
+        lineage.T.plot_pie(np.mean, dpi=DPI, save=fpath)
+
+    @compare(kind="lineage")
+    def test_pie_autopct_none(self, lineage: cr.tl.Lineage, fpath: str):
+        lineage.T.plot_pie(np.mean, dpi=DPI, save=fpath, autopct=None)
+
+    @compare(kind="lineage")
+    def test_pie_legend_loc(self, lineage: cr.tl.Lineage, fpath: str):
+        lineage.plot_pie(np.mean, dpi=DPI, save=fpath, legend_loc="best")
+
+    @compare(kind="lineage")
+    def test_pie_legend_loc_one(self, lineage: cr.tl.Lineage, fpath: str):
+        lineage.plot_pie(np.mean, dpi=DPI, save=fpath, legend_loc=None)
+
+    @compare(kind="lineage")
+    def test_pie_legend_kwargs(self, lineage: cr.tl.Lineage, fpath: str):
+        lineage.plot_pie(
+            np.mean,
+            dpi=DPI,
+            save=fpath,
+            legend_loc="best",
+            legend_kwargs={"fontsize": 20},
+        )
 
 
 class TestLineageDrivers:

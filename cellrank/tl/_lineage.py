@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """Lineage class module."""
 
-from types import FunctionType
-from typing import List, Tuple, Union, TypeVar, Callable, Iterable, Optional
+from types import FunctionType, MappingProxyType
+from typing import List, Tuple, Union, Mapping, TypeVar, Callable, Iterable, Optional
 from inspect import signature
 from pathlib import Path
 from functools import wraps
@@ -718,39 +718,84 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
     @d.dedent
     def plot_pie(
         self,
-        reduction: Callable = np.mean,
+        reduction: Callable,
         title: Optional[str] = None,
+        legend_loc: Optional[str] = "on data",
+        legend_kwargs: Mapping = MappingProxyType({}),
         figsize: Optional[Tuple[float, float]] = None,
         dpi: Optional[float] = None,
         save: Optional[Union[Path, str]] = None,
         **kwargs,
     ) -> None:
         """
-        Plot a pie chart visualizing the aggregated lineage probabilities.
+        Plot a pie chart visualizing aggregated lineage probabilities.
 
         Parameters
         ----------
         reduction
-            Function that will be applied per lineage.
+            Function that will be applied lineage-wise.
         title
             Title of the figure.
+        legend_loc
+            Location of the legend. If `None`, it is not shown.
+        legend_kwargs
+            Keyword arguments for :func:`matplotlib.axes.Axes.legend`.
         %(plotting)s
 
         Returns
         -------
         %(just_plots)s
         """
-        if not callable(reduction):
-            raise TypeError(
-                f"Expected `reduction` to be callable, found `{type(reduction).__name__}`."
-            )
+
+        if len(self.names) == 1:
+            raise ValueError("Cannot plot pie chart for only 1 lineage.")
 
         fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
-        title = reduction.__name__ if title is None else title
 
-        reduction = reduction(self, axis=int(self._is_transposed))
-        ax.pie(reduction.X.squeeze(), labels=self.names, colors=self.colors, **kwargs)
+        if "autopct" not in kwargs:
+            autopct_found = False
+            autopct = (
+                "{:.1f}%".format
+            )  # we don't really care, we don't shot the pct, but the value
+        else:
+            autopct_found = True
+            autopct = kwargs.pop("autopct")
+
+        if title is None:
+            title = reduction.__name__ if hasattr(reduction, "__name__") else None
+
+        reduction = reduction(self, axis=int(self._is_transposed)).X.squeeze()
+        reduction_norm = reduction / np.sum(reduction)
+
+        wedges, texts, *autotexts = ax.pie(
+            reduction_norm.squeeze(),
+            labels=self.names if legend_loc == "on data" else None,
+            autopct=autopct,
+            wedgeprops=dict(edgecolor="w"),
+            colors=self.colors,
+            **kwargs,
+        )
+
+        # if autopct is not None
+        if len(autotexts):
+            autotexts = autotexts[0]
+            for name, at in zip(self.names, autotexts):
+                ix = self._names_to_ixs[name]
+                at.set_color(_get_bg_fg_colors(self.colors[ix])[1])
+                if not autopct_found:
+                    at.set_text(f"{reduction[ix]:.4f}")
+
+        if legend_loc not in (None, "on data"):
+            ax.legend(
+                wedges,
+                self.names,
+                title="lineages",
+                loc=legend_loc,
+                **legend_kwargs,
+            )
+
         ax.set_title(title)
+        ax.set_aspect("equal")
 
         fig.show()
 
