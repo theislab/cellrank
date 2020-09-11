@@ -3,7 +3,7 @@
 Plot Schur matrix
 -----------------
 
-This examples show how to compute and plot Schur matrix.
+This examples show how to compute and plot the Schur matrix.
 """
 
 import cellrank as cr
