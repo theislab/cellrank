@@ -3,7 +3,7 @@
 Plot Schur vectors
 ------------------
 
-This examples show how to plot and compute Schur vectors.
+This examples show how to compute and plot the Schur vectors.
 """
 
 import cellrank as cr
