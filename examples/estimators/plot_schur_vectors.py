@@ -17,8 +17,8 @@ k = cr.tl.transition_matrix(adata, show_progress_bar=False)
 g = cr.tl.estimators.GPCCA(k)
 
 # %%
-# To compute the Schur vectors, simply run the code below. Parameter ``n_components`` controls how many vectors
-# to compute (default is 10).
+# To compute the Schur vectors, simply run the code below. Parameter ``n_components``
+# controls how many vectors to compute.
 g.compute_schur(n_components=6)
 
 # %%
@@ -27,5 +27,5 @@ g.plot_schur()
 
 # %%
 # Note that above, only 5 vectors are shown, because the 1st Schur vector is a unit vector. This can be verified
-# visually by plotting the first vector.
+# visually by plotting the first Schur vector.
 g.plot_schur(use=[0])
