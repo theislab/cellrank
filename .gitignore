@@ -119,6 +119,7 @@ docs/build
 tests/data
 tests/figures
 tests/_ground_truth_figures/*-failed-diff.png
+examples/example.h5ad
 figures
 data
 **/*.ipynb
