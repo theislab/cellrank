@@ -52,4 +52,4 @@ model.plot()
 # Wrapping :mod:`sklearn` models is easy, just pass the instance to :class:`cellrank.ul.models.SKLearnModel`.
 svr = SVR()
 model = cr.ul.models.SKLearnModel(adata, model=svr)
-model[:5]
+model
