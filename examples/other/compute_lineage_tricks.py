@@ -51,3 +51,7 @@ lin.entropy(axis=1)
 # interpreted as a probability distribution. We offer a method :paramref:`cellrank.tl.Lineage.reduce` which
 # can be used to deal with this issue. Below we show only one out of many normalization options.
 lin.reduce("foo, quux", "baz", normalize_weights="softmax")
+
+# %%
+# Aggregate information about lineages, such as :func:`numpy.mean` or others.
+lin.plot_pie(np.mean, legend_loc="on data")
