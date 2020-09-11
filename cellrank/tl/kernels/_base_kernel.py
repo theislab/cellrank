@@ -181,7 +181,7 @@ class KernelExpression(ABC):
             %(write_to_adata)s
         """
 
-        if self.transition_matrix is None:
+        if self._transition_matrix is None:
             raise ValueError(
                 "Compute transition matrix first as `.compute_transition_matrix()`."
             )
