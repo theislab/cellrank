@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Plotting Schur vectors
-----------------------
+Plot Schur vectors
+------------------
 
 This examples show how to plot and compute Schur vectors.
 """

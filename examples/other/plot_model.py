@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Model fitting and plotting
+Fit model and plot results
 --------------------------
 
-This example shows how to prepare and fit :class:`cellrank.ul.models.BaseModel` and how to plot the results.
+This example shows how to prepare and fit :class:`cellrank.ul.models.BaseModel` and how to plot the estimated trend.
 """
 
 from sklearn.svm import SVR
