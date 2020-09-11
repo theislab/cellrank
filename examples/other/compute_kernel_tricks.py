@@ -9,6 +9,9 @@ This example shows some niche, but useful functionalities of :class:`cellrank.tl
 import cellrank as cr
 
 adata = cr.datasets.pancreas_preprocessed("../example.h5ad")
+adata
+
+# %% First, let's create some kernels that will be used to compute a cell-to-cell transition matrix.
 vk = cr.tl.kernels.VelocityKernel(adata)
 ck = cr.tl.kernels.ConnectivityKernel(adata)
 

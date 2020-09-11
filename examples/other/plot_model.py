@@ -13,6 +13,7 @@ import cellrank as cr
 import scanpy as sc
 
 adata = cr.datasets.pancreas_preprocessed("../example.h5ad")
+adata
 
 # %%
 # First, we need to compute the pseudotime and the lineages.
