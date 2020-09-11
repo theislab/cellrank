@@ -17,10 +17,6 @@ References
    *RNA velocity of single cells*,
    `Nature <https://doi.org/10.1038/s41586-018-0414-6>`__.
 
-.. [SCORPIUS16] Cannoodt *et al.* (2016)
-   *SCORPIUS improves trajectory inference and identifies novel modules in dendritic cell development*,
-   `bioRxiv <https://doi.org/10.1101/079509>`__.
-
 .. [Setty19] Setty *et al.* (2019),
    *Characterization of cell fate probabilities in single-cell data with Palantir*,
    `Nature Biotechnology <https://doi.org/10.1038/s41587-019-0068-4>`__.

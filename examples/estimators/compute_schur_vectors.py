@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Plot Schur matrix
------------------
+Compute Schur vectors
+---------------------
 
-This examples show how to compute and plot the Schur matrix.
+This examples show how to compute and plot the Schur vectors.
 """
 
 import cellrank as cr
@@ -19,8 +19,13 @@ g = cr.tl.estimators.GPCCA(k)
 # %%
 # To compute the Schur vectors, simply run the code below. Parameter ``n_components``
 # controls how many vectors to compute.
-g.compute_schur(n_components=20)
+g.compute_schur(n_components=6)
 
 # %%
-# Finally, we are ready to plot the Schur matrix. The elements in the lower triangle should all be zeros.
-g.plot_schur_matrix()
+# Lastly, we plot the vectors in the UMAP embedding (default).
+g.plot_schur()
+
+# %%
+# Note that above, only 5 vectors are shown, because the 1st Schur vector is a unit vector. This can be verified
+# visually by plotting the first Schur vector.
+g.plot_schur(use=[0])
