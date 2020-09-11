@@ -6,10 +6,8 @@ Lineage tricks
 This example shows some niche, but useful functionalities of :class:`cellrank.tl.Lineage`.
 """
 
-import numpy as np
-
-# %%
 import cellrank as cr
+import numpy as np
 
 np.random.seed(42)
 
