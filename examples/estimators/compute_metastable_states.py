@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Plot metastable states
-----------------------
+Compute metastable states
+-------------------------
 
 This examples show how to compute and plot metastable states obtained by :class:`cellrank.tl.estimators.GPCCA`.
 """
@@ -22,7 +22,7 @@ g.compute_schur()
 
 # %%
 # Now we can compute the metastable states of the Markov chain. By default, the number of states is estimated
-# by the `eigengap`, which is computed by running the Schur vectors. Important parameter here is the ``cluster_key``,
+# by the `eigengap`, which is computed when computing the Schur vectors. Important parameter is the ``cluster_key``,
 # which tries to associate the names of metastable states with cluster labels saved under that key.
 #
 # The second import parameter is ``n_cells``, which select the top number of cells from each state. We are using the
@@ -39,8 +39,8 @@ g.metastable_states_probabilities
 g.metastable_states
 
 # %%
-# Other option how to specify the number of states is to use the `minChi` ... from. In order to do this,
-# we need to supply a closed interval where we expect our number of metastable states to lie.
+# Other option how to specify the number of states is to use the `minChi` criterion from from [GPCCA18]_.
+# In order to do this, we need to supply a closed interval where we expect our number of metastable states to lie.
 g.compute_metastable_states(n_states=[3, 6], use_min_chi=True, cluster_key="clusters")
 g.metastable_states_probabilities
 

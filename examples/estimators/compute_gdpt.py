@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Plot gDPT
-----------
+Compute gDPT
+------------
 
 This examples shows how to compute and plot generalized Diffusion pseudotime from [Haghverdi16]_ .
 """

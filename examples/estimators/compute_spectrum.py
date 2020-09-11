@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Plot spectrum
--------------
+Compute spectrum
+----------------
 
 This examples show how to compute and plot the spectrum of the transition matrix.
 """
