@@ -295,7 +295,7 @@ class VectorPlottable(KernelHolder, Property):
         Parameters
         ----------
         use
-            Which or how many Schur vectors to be plotted. If `None`, all will be chosen.
+            Which or how many vectors are to be plotted.
         abs_value
             Whether to take the absolute value before plotting.
         cluster_key
