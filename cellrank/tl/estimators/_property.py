@@ -332,10 +332,10 @@ class VectorPlottable(KernelHolder, Property):
         if use is None:
             m = (
                 getattr(self, P.EIG.s).get("eigengap", vectors.shape[1]) + 1
-                if hasattr(self, P.EIG.s)
+                if hasattr(self, P.EIG.s) and not is_schur
                 else vectors.shape[1]
             )
-            use = list(range(is_schur, m + is_schur))
+            use = list(range(is_schur, m))
         elif isinstance(use, int):
             use = list(range(is_schur, use + is_schur))
         elif not isinstance(use, (tuple, list, range)):
