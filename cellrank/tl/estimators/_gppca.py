@@ -464,7 +464,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             logg.debug("Using cached Schur decomposition")
 
         start = logg.info(
-            f"Computing Generalized Diffusion Pseudotime using n_components = {n_components}"
+            f"Computing Generalized Diffusion Pseudotime using `n_components={n_components}`"
         )
 
         Q, eigenvalues = (
