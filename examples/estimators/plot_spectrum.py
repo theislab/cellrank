@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Plot metastable states
-----------------------
+Plot spectrum
+-------------
 
-This examples show how to compute and plot metastable states obtained by :class:`cellrank.tl.estimators.GPCCA`.
+This examples show how to compute and plot the spectrum of the transition matrix.
 """
 
 import cellrank as cr
