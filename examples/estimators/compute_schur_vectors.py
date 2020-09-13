@@ -26,6 +26,6 @@ g.compute_schur(n_components=6)
 g.plot_schur()
 
 # %%
-# Note that above, only 5 vectors are shown, because the 1st Schur vector is a unit vector. This can be verified
-# visually by plotting the first Schur vector.
+# Note that above, only 5 vectors are shown, because the 1st Schur vector is a constant vector of 1s.
+# This can be verified visually by plotting the first Schur vector.
 g.plot_schur(use=[0])
