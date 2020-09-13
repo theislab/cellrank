@@ -1008,7 +1008,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
 
         It is equivalent to running::
 
-            if n_lineages is None or n_lieages == 1:
+            if n_lineages is None or n_lineages == 1:
                 compute_eigendecomposition(...)  # get the stationary distribution
             if n_lineages > 1:
                 compute_schur(...)

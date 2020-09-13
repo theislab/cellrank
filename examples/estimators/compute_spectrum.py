@@ -19,12 +19,12 @@ g = cr.tl.estimators.GPCCA(k)
 # %%
 # We can decide whether we want to also compute eigenvectors (will be a bit slower). In this example, we also
 # visualize the eigenvectors in an embedding, so we compute them as well, but for the method
-# :meth:`cellrank.tl.estimators.BaseEstimator.plot_spectrum` they are not necessary.
+# :meth:`cellrank.tl.estimators.BaseEstimator.plot_spectrum`, they are not necessary.
 g.compute_eigendecomposition(k=20, only_evals=False)
 g.eigendecomposition
 
 # %%
-# Let's start first by plotting the real spectrum. The eigengap is shown by the horizontal line. Below
+# Let's start first by plotting the real spectrum. The `eigengap` is shown by the vertical line. Below
 # we plot only the first 10 real eigenvalues.
 g.plot_spectrum(10, real_only=True)
 
@@ -37,3 +37,7 @@ g.plot_spectrum(real_only=False)
 # vectors to plot using the parameter ``use``. If not specified, vectors upto the eigengap are plotted.
 g.plot_eigendecomposition(left=False)
 g.plot_eigendecomposition(left=True, use=2)
+
+# %%
+# Left and right eigenvectors are used in :class:`cellrank.tl.estimators.CFLARE` estimator to compute the
+# final states of the process, see :ref:`sphx_glr_auto_examples_estimators_compute_final_states_cflare.py`.
