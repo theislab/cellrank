@@ -1,5 +1,37 @@
 # -*- coding: utf-8 -*-
 """
-Dummy header
-------------
+Compute coarse-grained transition matrix
+----------------------------------------
+
+This examples show how to compute and plot coarse-grained transition matrix of the metastable states.
 """
+
+import cellrank as cr
+
+adata = cr.datasets.pancreas_preprocessed("../example.h5ad")
+adata
+
+# %%
+# First, let us prepare the kernel using high-level pipeline and the :class:`cellrank.tl.estimators.GPCCA` estimator.
+k = cr.tl.transition_matrix(adata, show_progress_bar=False)
+g = cr.tl.estimators.GPCCA(k)
+
+# %%
+# Next, we compute the Schur vectors. See :ref:`sphx_glr_auto_examples_estimators_compute_schur_vectors.py` for
+# more information.
+g.compute_schur(n_components=8)
+
+# %%
+# Now we can compute the metastable states of the Markov chain, which also compute the coarse-grained transition matrix.
+# Here, parameter ``cluster_key`` tries to associate the names of the metastable states with the cluster information.
+# For more options, see :ref:`sphx_glr_auto_examples_estimators_compute_metastable_states.py`.
+g.compute_metastable_states(n_states=8, cluster_key="clusters")
+
+# %%
+# Now we can plot the coarse-grained transition matrix. Apart from the stationary distribution, which is shown by
+# default (if it exists), we can also plot the initial distribution over the metastable states.
+g.plot_coarse_T(show_initial_dist=True, text_kwargs={"fontsize": 10})
+
+# %%
+# The coarse-grained transition matrix can also be used when setting the final states, see
+# :ref:`sphx_glr_auto_examples_estimators_compute_final_states_gpcca.py`.

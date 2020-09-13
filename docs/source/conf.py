@@ -8,6 +8,8 @@ from datetime import datetime
 from urllib.parse import urljoin
 from urllib.request import urlretrieve
 
+from sphinx_gallery.sorting import ExplicitOrder
+
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE.parent.parent))
 sys.path.insert(0, os.path.abspath("_ext"))
@@ -127,10 +129,14 @@ nbsphinx_prolog = r"""
 def reset_scvelo(gallery_conf, fname):
     import scvelo as scv
 
-    scv.set_figure_params(style="scvelo", color_map="viridis", format="png")
+    scv.set_figure_params(
+        style="scvelo", color_map="viridis", format="png", ipython_format="png"
+    )
 
 
 example_dir = HERE.parent.parent / "examples"
+rel_example_dir = Path("..") / ".." / "examples"
+
 sphinx_gallery_conf = {
     "image_scrapers": ("matplotlib",),
     "reset_modules": ("matplotlib", "seaborn", reset_scvelo),
@@ -140,6 +146,13 @@ sphinx_gallery_conf = {
     "abort_on_example_error": True,
     "show_memory": True,
     # "within_subsection_order": FileNameSortKey,
+    "subsection_order": ExplicitOrder(
+        [
+            rel_example_dir / "estimators",  # really must be relative
+            rel_example_dir / "plotting",
+            rel_example_dir / "other",
+        ]
+    ),
     "reference_url": {
         "sphinx_gallery": None,
     },

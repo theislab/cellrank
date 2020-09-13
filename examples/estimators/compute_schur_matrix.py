@@ -25,3 +25,6 @@ g.compute_schur(n_components=20)
 # Finally, we are ready to plot the Schur matrix. The real Schur matrix is quasi-upper triangular,
 # which means there may be 1x1 or 2x2 blocks on the diagonal.
 g.plot_schur_matrix()
+
+# %%
+# For more information about the Schur vectors, see :ref:`sphx_glr_auto_examples_estimators_compute_schur_vectors.py`.

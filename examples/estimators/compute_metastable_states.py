@@ -25,8 +25,8 @@ g.compute_schur()
 # by the `eigengap`, which is computed when computing the Schur vectors. Important parameter is the ``cluster_key``,
 # which tries to associate the names of metastable states with the cluster labels.
 #
-# The second import parameter is ``n_cells``, which selects the top number of cells from each state.
-# We are using the default 30 cells here.
+# The second import parameter is ``n_cells``, which selects the top cells from each state based
+# on the membership degree. By default, only 30 cells are selected.
 g.compute_metastable_states(cluster_key="clusters")
 
 # %%
@@ -58,6 +58,9 @@ g.plot_metastable_states(same_plot=False)
 
 # %%
 # Lastly, it's also possible to look only at a subset of metastable states or to combine these states into new ones.
-# Below we combine the `'Alpha'` and  `'Beta'` - each cell's value corresponds to the degree of membership
-# for the newly defined `'Alpha'` or `'Beta'` metastable state.
+# Below we combine the `'Alpha'` and  `'Beta'` into joint `'Alpha'` or `'Beta'` metastable state.
 g.plot_metastable_states(lineages=["Alpha, Beta"])
+
+# %%
+# Method :meth:`cellrank.tl.estimators.GPCCA.compute_metastable_states` also computes the coarse-grained transition
+# matrix between metastable states, see :ref:`sphx_glr_auto_examples_estimators_compute_coarse_T.py`.
