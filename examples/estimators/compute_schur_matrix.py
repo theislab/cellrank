@@ -22,5 +22,6 @@ g = cr.tl.estimators.GPCCA(k)
 g.compute_schur(n_components=20)
 
 # %%
-# Finally, we are ready to plot the Schur matrix. The elements in the lower triangle should all be zeros.
+# Finally, we are ready to plot the Schur matrix. The real Schur matrix is quasi-upper triangular,
+# which means there may be 1x1 or 2x2 blocks on the diagonal.
 g.plot_schur_matrix()
