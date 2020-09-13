@@ -95,6 +95,7 @@ def transition_matrix(
             )
     else:
         final = vk
-    final.write_to_adata(key=key)
+
+    final.compute_transition_matrix().write_to_adata(key=key)
 
     return final

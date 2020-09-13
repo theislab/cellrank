@@ -41,7 +41,7 @@ def cluster_fates(
     mode: str = ClusterFatesMode.PAGA_PIE.s,
     backward: bool = False,
     lineages: Optional[Union[str, Sequence[str]]] = None,
-    cluster_key: Optional[str] = None,
+    cluster_key: Optional[str] = "clusters",
     clusters: Optional[Union[str, Sequence[str]]] = None,
     basis: Optional[str] = None,
     show_cbar: bool = True,
@@ -193,7 +193,10 @@ def cluster_fates(
             norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
             cax, _ = mpl.colorbar.make_axes(ax, aspect=60)
             _ = mpl.colorbar.ColorbarBase(
-                cax, norm=norm, cmap=kwargs["cmap"], label="mean absorption probability"
+                cax,
+                norm=norm,
+                cmap=kwargs["cmap"],
+                label="average absorption probability",
             )
 
         for ax in axes[i + 1 :]:  # noqa
@@ -412,7 +415,7 @@ def cluster_fates(
             raise KeyError(f"Key `{cluster_key!r}` not found in `adata.obs`.")
     elif mode not in (mode.BAR, mode.VIOLIN):
         raise ValueError(
-            f"Not specifying cluster key is only available for modes"
+            f"Not specifying cluster key is only available for modes "
             f"`{ClusterFatesMode.BAR!r}` and `{ClusterFatesMode.VIOLIN!r}`, found `mode={mode!r}`."
         )
 
