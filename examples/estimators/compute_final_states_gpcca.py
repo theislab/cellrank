@@ -21,7 +21,7 @@ g = cr.tl.estimators.GPCCA(k)
 # %%
 # Next, we need to compute the Schur vectors and metastable states. We refer the reader to
 # :ref:`sphx_glr_auto_examples_estimators_compute_metastable_states.py` where it's explained more in detail.
-g.compute_schur(n_components=6)
+g.compute_schur(n_components=4)
 g.compute_metastable_states(cluster_key="clusters")
 
 # %%

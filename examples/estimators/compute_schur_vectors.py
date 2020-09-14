@@ -22,7 +22,7 @@ g = cr.tl.estimators.GPCCA(k)
 # To compute the Schur vectors, simply run the code below. Parameter ``n_components`` controls how many vectors
 # to compute. We can also specify prior initial distribution over all cells as ``initial_distribution``, which
 # by default is uniform.
-g.compute_schur(n_components=6)
+g.compute_schur(n_components=4)
 
 # %%
 # Lastly, we plot the vectors in the UMAP embedding (default).
