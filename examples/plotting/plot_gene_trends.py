@@ -31,7 +31,7 @@ sc.tl.dpt(adata)
 model = cr.ul.models.GAM(adata)
 
 # %%
-# To plot the gene trends, run the code below Parameter ``data_key`` specifies layer in ``adata.layers``
+# To plot the trends for some genes, run the code below. Parameter ``data_key`` specifies layer in ``adata.layers``
 # from which we take our gene expression.
 cr.pl.gene_trends(
     adata,
@@ -69,7 +69,6 @@ cr.pl.gene_trends(
     time_key="dpt_pseudotime",
     show_progres_bar=False,
 )
-
 
 # %%
 # There are many more options as how to customize the plot or how to pass additional arguments to
