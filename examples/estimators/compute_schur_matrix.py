@@ -12,15 +12,14 @@ adata = cr.datasets.pancreas_preprocessed("../example.h5ad")
 adata
 
 # %%
-# First, let us prepare the kernel using high-level pipeline and the :class:`cellrank.tl.estimators.GPCCA` estimator.
+# First, we prepare the kernel using high-level pipeline and the :class:`cellrank.tl.estimators.GPCCA` estimator.
 k = cr.tl.transition_matrix(
     adata, weight_connectivities=0.2, softmax_scale=4, show_progress_bar=False
 )
 g = cr.tl.estimators.GPCCA(k)
 
 # %%
-# To compute the Schur vectors, simply run the code below. Parameter ``n_components`` controls how many vectors
-# to compute.
+# To compute the Schur vectors, run the code below. Parameter ``n_components`` controls how many vectors to compute.
 g.compute_schur(n_components=6)
 
 # %%
