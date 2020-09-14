@@ -15,8 +15,13 @@ adata
 
 # %%
 # First, we need to compute the lineages of the forward process.
-cr.tl.transition_matrix(adata, show_progress_bar=False, mode="deterministic")
-cr.tl.terminal_states(adata, cluster_key="clusters")
+cr.tl.terminal_states(
+    adata,
+    cluster_key="clusters",
+    weight_connectivities=0.2,
+    softmax_scale=4,
+    show_progress_bar=False,
+)
 cr.tl.lineages(adata)
 
 # %%
