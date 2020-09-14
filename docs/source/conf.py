@@ -134,12 +134,28 @@ def reset_scvelo(gallery_conf, fname):
     )
 
 
+def reset_matplotlib(gallery_conf, fname):
+    import matplotlib as mpl
+
+    mpl.use("agg")
+
+    import matplotlib.pyplot as plt
+
+    plt.rcdefaults()
+    mpl.rcParams["savefig.bbox"] = "tight"
+    mpl.rcParams["savefig.transparent"] = True
+
+
 example_dir = HERE.parent.parent / "examples"
 rel_example_dir = Path("..") / ".." / "examples"
 
 sphinx_gallery_conf = {
     "image_scrapers": ("matplotlib",),
-    "reset_modules": ("matplotlib", "seaborn", reset_scvelo),
+    "reset_modules": (
+        "seaborn",
+        reset_matplotlib,
+        reset_scvelo,
+    ),  # reset scvelo as last
     "filename_pattern": f"{os.path.sep}(plot_|compute_)",
     "examples_dirs": example_dir,
     "gallery_dirs": "auto_examples",  # path to where to save gallery generated output
@@ -165,7 +181,7 @@ sphinx_gallery_conf = {
         # Required keys
         "org": "theislab",
         "repo": "cellrank.readthedocs.io",
-        "branch": release,  # Can be any branch, tag, or commit hash. Use a branch that hosts your docs.
+        "branch": release,  # master branch
         "binderhub_url": "https://mybinder.org/",
         "dependencies": "binder/requirements.txt",
         "notebooks_dir": "notebooks",

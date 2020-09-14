@@ -3,7 +3,7 @@
 Compute absorption probabilities
 --------------------------------
 
-This examples show how to compute and plot absorption probabilities and time to absorption.
+This example shows how to compute and plot absorption probabilities and time to absorption.
 """
 
 import cellrank as cr

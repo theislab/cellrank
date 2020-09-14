@@ -3,7 +3,7 @@
 Plot lineages
 -------------
 
-This example shows how to plot the initial states of the process.
+This example shows how to plot absorption probabilities of the process.
 """
 
 import cellrank as cr

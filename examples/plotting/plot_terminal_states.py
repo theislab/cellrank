@@ -3,7 +3,7 @@
 Plot terminal states
 --------------------
 
-This example shows how to compute and plot the terminal states of the process.
+This example shows how to compute and plot terminal states of the process.
 """
 
 import cellrank as cr

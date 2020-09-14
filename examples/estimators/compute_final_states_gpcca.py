@@ -3,7 +3,7 @@
 Compute final states using GPCCA
 --------------------------------
 
-This examples show how to compute and plot final states using :class:`cellrank.tl.estimators.GPCCA`.
+This example shows how to compute and plot final states using :class:`cellrank.tl.estimators.GPCCA`.
 """
 
 import cellrank as cr

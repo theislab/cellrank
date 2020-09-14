@@ -3,7 +3,7 @@
 Plot lineages drivers
 ---------------------
 
-This example shows how to compute and plot the lineage driver genes.
+This example shows how to compute and plot lineage driver genes.
 """
 
 import cellrank as cr

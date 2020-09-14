@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Fit model and plot results
---------------------------
+Fit model and plot gene trend
+-----------------------------
 
 This example shows how to prepare and fit :class:`cellrank.ul.models.BaseModel` and how to plot the estimated trend.
 """
@@ -47,7 +47,7 @@ conf_int[:5]
 
 # %%
 # After the prediction and confidence interval calculation, we can finally plot the results.
-model.plot()
+model.plot(show_conf_int=True)
 
 # %%
 # Wrapping :mod:`sklearn` models is easy, just pass the instance to :class:`cellrank.ul.models.SKLearnModel`.

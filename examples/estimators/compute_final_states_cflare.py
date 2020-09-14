@@ -3,7 +3,7 @@
 Compute final states using CFLARE
 ---------------------------------
 
-This examples show how to compute and plot final states using :class:`cellrank.tl.estimators.CFLARE`.
+This example shows how to compute and plot final states using :class:`cellrank.tl.estimators.CFLARE`.
 """
 
 import cellrank as cr
