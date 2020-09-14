@@ -5,10 +5,11 @@ import logging
 import subprocess
 from pathlib import Path
 from datetime import datetime
+from collections import ChainMap, defaultdict
 from urllib.parse import urljoin
 from urllib.request import urlretrieve
 
-from sphinx_gallery.sorting import ExplicitOrder
+from sphinx_gallery.sorting import ExplicitOrder, _SortKey
 
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE.parent.parent))
@@ -149,6 +150,52 @@ def reset_matplotlib(gallery_conf, fname):
 example_dir = HERE.parent.parent / "examples"
 rel_example_dir = Path("..") / ".." / "examples"
 
+
+class ExplicitSubsectionOrder(_SortKey):
+
+    _order = ChainMap(
+        {
+            example_dir / "estimators" / "compute_schur_vectors.py": 0,
+            example_dir / "estimators" / "compute_schur_matrix.py": 10,
+            example_dir / "estimators" / "compute_metastable_states.py": 20,
+            example_dir / "estimators" / "compute_coarse_T.py": 30,
+            example_dir / "estimators" / "compute_final_states_gpcca.py": 40,
+            example_dir / "estimators" / "compute_spectrum.py": 50,
+            example_dir / "estimators" / "compute_final_states_cflare.py": 60,
+            example_dir / "estimators" / "compute_abs_probs.py": 70,
+            example_dir / "estimators" / "compute_lineage_drivers.py": 80,
+            example_dir / "estimators" / "compute_fit.py": 90,
+        },
+        {
+            example_dir / "plotting" / "plot_initial_states.py": 0,
+            example_dir / "plotting" / "plot_terminal_states.py": 10,
+            example_dir / "plotting" / "plot_lineages.py": 20,
+            example_dir / "plotting" / "plot_lineage_drivers.py": 30,
+            example_dir / "plotting" / "plot_directed_paga.py": 40,
+            example_dir / "plotting" / "plot_gene_trends.py": 50,
+            example_dir / "plotting" / "plot_heatmap.py": 60,
+            example_dir / "plotting" / "plot_cluster_lineage.py": 70,
+            example_dir / "plotting" / "plot_cluster_fates.py": 80,
+            example_dir / "plotting" / "plot_graph.py": 90,
+        },
+        defaultdict(
+            lambda: 1000,
+            {
+                example_dir / "other" / "plot_model.py": 0,
+                example_dir / "other" / "compute_kernel_tricks.py": 10,
+                example_dir / "other" / "compute_lineage_tricks.py": 20,
+            },
+        ),
+    )
+
+    def __call__(self, filename: str) -> int:
+        src_file = os.path.normpath(os.path.join(self.src_dir, filename))
+        return self._order[Path(src_file)]
+
+    def __repr__(self) -> str:
+        return f"<{self.__class__.__name__}: {repr(dict(self._order))}>"
+
+
 sphinx_gallery_conf = {
     "image_scrapers": ("matplotlib",),
     "reset_modules": (
@@ -161,7 +208,7 @@ sphinx_gallery_conf = {
     "gallery_dirs": "auto_examples",  # path to where to save gallery generated output
     "abort_on_example_error": True,
     "show_memory": True,
-    # "within_subsection_order": FileNameSortKey,
+    "within_subsection_order": ExplicitSubsectionOrder,
     "subsection_order": ExplicitOrder(
         [
             rel_example_dir / "estimators",  # really must be relative
@@ -172,6 +219,7 @@ sphinx_gallery_conf = {
     "reference_url": {
         "sphinx_gallery": None,
     },
+    "line_numbers": True,
     "compress_images": ("images", "thumbnails", "-o3"),
     "inspect_global_variables": False,
     "backreferences_dir": "gen_modules/backreferences",
