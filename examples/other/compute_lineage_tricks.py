@@ -12,11 +12,11 @@ import numpy as np
 np.random.seed(42)
 
 # %%
-# The lineage class behaves like a :mod:`numpy` array, for the most part. The key difference is, that
-# it tries to always preserve it's 2 dimensional shape and it has :mod:`pandas`-like indexing.
+# The lineage class behaves like a :mod:`numpy` array, for the most part. The key difference is that
+# it tries to always preserve it's 2 dimensional shape and that it has :mod:`pandas`-like indexing.
 #
-# The constructor requires the underlying array and lineage names, which must be unique, colors are optional and by
-# default are automatically generated.
+# The constructor requires the underlying array and the lineage names, which must be unique. The colors are optional
+# and by default they are automatically generated.
 
 lin = cr.tl.Lineage(
     np.abs(np.random.normal(size=(10, 4))), names=["foo", "bar", "baz", "quux"]
@@ -24,7 +24,7 @@ lin = cr.tl.Lineage(
 lin /= lin.sum(1)
 
 # %%
-# In some cases, this behaviour is not desirable or can have unintended consequences. To access the underlying
+# In some cases, this behavior is not desirable or can have unintended consequences. To access the underlying
 # :class:`numpy` array, use the :paramref:`cellrank.tl.Lineage.X` attribute.
 lin.X
 
@@ -37,8 +37,8 @@ lin.T
 lin[["foo", "bar"]]
 
 # %%
-# Two or more lineage can be combined into by delimiting the lineages to be joined by ",". This also automatically
-# updates the color by combining the colors of the joined lineages.
+# Two or more lineage can be combined into by joining the names with `","`. This also automatically
+# updates the color based on the combined lineages' colors.
 lin[["bar, baz, quux"]]
 
 # %%
@@ -47,11 +47,11 @@ lin[["bar, baz, quux"]]
 lin.entropy(axis=1)
 
 # %%
-# Lastly, when subsetting the lineage and not selecting all of them, they will no longer sum to 1 and cannot be
+# When subsetting the lineage and not selecting all of them, they will no longer sum to 1 and cannot be
 # interpreted as a probability distribution. We offer a method :paramref:`cellrank.tl.Lineage.reduce` which
-# can be used to deal with this issue. Below we show only one out of many normalization options.
+# can be used to solve this issue. Below we show only one out of many normalization techniques.
 lin.reduce("foo, quux", "baz", normalize_weights="softmax")
 
 # %%
-# Aggregate information about lineages, such as :func:`numpy.mean` or others.
+# Lastly, we can plot aggregate information about lineages, such as :func:`numpy.mean` and others.
 lin.plot_pie(np.mean, legend_loc="on data")

@@ -3,7 +3,7 @@
 Fit model and plot gene trend
 -----------------------------
 
-This example shows how to prepare and fit :class:`cellrank.ul.models.BaseModel` and how to plot the estimated trend.
+This example shows how to prepare, fit and plot :class:`cellrank.ul.models.BaseModel`.
 """
 
 from sklearn.svm import SVR
@@ -25,9 +25,9 @@ cr.tl.terminal_states(
 cr.tl.lineages(adata)
 
 # %%
-# Models in :mod:`cellrank.ul.models` follow similar patterns as :mod:`sklearn` models. Below we show an example usage.
+# Models in :mod:`cellrank.ul.models` follow similar patterns as :mod:`sklearn` models.
 # We begin by initializing and preparing the model for fitting. :meth:`cellrank.ul.models.BaseModel.prepare` requires
-# only a gene name and a lineage name and must be called before :meth:`cellrank.ul.models.BaseModel.fit`. It also
+# only the gene name and the lineage name and must be called before :meth:`cellrank.ul.models.BaseModel.fit`. It also
 # includes various useful parameters, such as ``time_range`` or ``weight_threshold``, which determine the start and
 # end pseudotime and the minimum required threshold for lineage probabilities, respectively.
 model = cr.ul.models.GAM(adata)
@@ -40,23 +40,24 @@ model.prepare(
 )
 
 # %%
-# After the model has been prepared, it is ready for fitting and prediction.
+# Once the model has been prepared, it is ready for fitting and prediction.
 y_hat = model.fit().predict()
 y_hat
 
 # %%
 # Optionally, we can also get the confidence interval. Models which don't have a method to compute it, such as
-# :class:`cellrank.ul.models.SKLearnModel` wrapper for :mod:`sklearn` estimators, use the default confidence interval
-# define here :meth:`cellrank.ul.models.BaseModel.default_confidence_interval`.
+# :class:`cellrank.ul.models.SKLearnModel` wrapper for some :mod:`sklearn` estimators, can use the default
+# confidence interval method :meth:`cellrank.ul.models.BaseModel.default_confidence_interval`.
 conf_int = model.confidence_interval()
 conf_int[:5]
 
 # %%
-# After the prediction and confidence interval calculation, we can plot the results.
+# After the prediction and optionally the confidence interval calculation, we can plot the smoothed gene expression.
 model.plot(show_conf_int=True)
 
 # %%
-# Wrapping :mod:`sklearn` estimators is simple, just pass the instance to :class:`cellrank.ul.models.SKLearnModel`.
+# Lastly, wrapping :mod:`sklearn` estimators is fairly simple, we just pass the instance
+# to :class:`cellrank.ul.models.SKLearnModel`.
 svr = SVR()
 model = cr.ul.models.SKLearnModel(adata, model=svr)
 model
