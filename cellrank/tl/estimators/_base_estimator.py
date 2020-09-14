@@ -629,7 +629,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
     @d.get_sectionsf("plot_lineage_drivers", sections=["Parameters"])
     @d.dedent
     def plot_lineage_drivers(
-        self, lineage: str, n_genes: int = 10, use_raw: bool = False, **kwargs
+        self, lineage: str, n_genes: int = 8, use_raw: bool = False, **kwargs
     ) -> None:
         """
         Plot lineage drivers discovered by :meth:`compute_lineage_drivers`.
@@ -669,10 +669,11 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         ncols = kwargs.pop("ncols", None)
 
         geness = lin_drivers[lineage].sort_values(ascending=False).head(n_genes).index
-        ncols = 5 if len(geness) >= 10 else ncols
+        if ncols is None and len(geness) >= 8:
+            ncols = 4
 
         # TODO: scvelo can handle only < 20 plots, see https://github.com/theislab/scvelo/issues/252
-        geness = filter(len, np.array_split(geness, int(ceil(len(geness) / 10))))
+        geness = filter(len, np.array_split(geness, int(ceil(len(geness) / 8))))
 
         for genes in geness:
             scv.pl.scatter(

@@ -70,7 +70,7 @@ def heatmap(
     n_convolve: Optional[int] = 5,
     show_all_genes: bool = False,
     show_cbar: bool = True,
-    lineage_height: float = 0.1,
+    lineage_height: float = 0.33,
     fontsize: Optional[float] = None,
     xlabel: Optional[str] = None,
     cmap: mcolors.ListedColormap = cm.viridis,
@@ -259,8 +259,11 @@ def heatmap(
 
         fig, axes = plt.subplots(
             nrows=len(genes) + show_absorption_probabilities,
-            figsize=(15, len(genes) + len(lineages)) if figsize is None else figsize,
+            figsize=(12, len(genes) + len(lineages) * lineage_height)
+            if figsize is None
+            else figsize,
             dpi=dpi,
+            constrained_layout=True,
         )
 
         if not isinstance(axes, Iterable):

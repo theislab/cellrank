@@ -412,7 +412,8 @@ def _cluster_X(
     n_neighbors: int = 15,
     resolution: float = 1.0,
 ) -> List[Any]:
-    """Cluster the rows of the matrix X.
+    """
+    Cluster the rows of the matrix X.
 
     Parameters
     ----------

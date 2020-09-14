@@ -48,7 +48,9 @@ print(inv_ck is ck)
 
 # %%
 # Kernels can be copied, which can solve the problem
-vk.compute_transition_matrix(mode="deterministic", show_progress_bar=False)
+vk.compute_transition_matrix(
+    mode="deterministic", softmax_scale=4, show_progress_bar=False
+)
 print(vk.transition_matrix is not None)
 
 inv_vk = ~(vk.copy())

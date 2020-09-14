@@ -13,7 +13,9 @@ adata
 
 # %%
 # First, let us prepare the kernel using high-level pipeline and the :class:`cellrank.tl.estimators.GPCCA` estimator.
-k = cr.tl.transition_matrix(adata, show_progress_bar=False)
+k = cr.tl.transition_matrix(
+    adata, weight_connectivities=0.2, softmax_scale=4, show_progress_bar=False
+)
 g = cr.tl.estimators.GPCCA(k)
 
 # %%
@@ -60,16 +62,16 @@ g.set_final_states_from_metastable_states(["Alpha, Beta", "Epsilon"])
 # Compute final states
 # ^^^^^^^^^^^^^^^^^^^^
 # Lastly, :meth:`cellrank.tl.estimators.GPCCA.compute_final_states` which also makes use of the coarse-grained
-# transition matrix :paramref:`cellrank.tl.estimators.GPCCA.coarse_T` or the eigengap.
+# transition matrix :paramref:`cellrank.tl.estimators.GPCCA.coarse_T` or the `eigengap`.
 #
-# In the example below, we use ``method='eigenap'`` which selects the number of states based on the eigengap.
+# In the example below, we use ``method='eigenap'`` which selects the number of states based on the `eigengap`.
 # The final states are defined as the top most likely states from the diagonal of the coarse-grained transition matrix.
 # To find out more about it, see :ref:`sphx_glr_auto_examples_estimators_compute_coarse_T.py`.
 g.compute_final_states(method="eigengap")
 
 # %%
 # Now that the final states have been either set or compute, we can visualize them in an embedding.
-# All of the options seen in :ref:`sphx_glr_auto_examples_estimators_compute_metastable_states.py` also apply here -
-# we can plot the final states in one plot or separately (``same_plot=...``) or whether we plot the membership degrees
-# or the discrete values (``discrete=...``).
+# All of the options seen in :ref:`sphx_glr_auto_examples_estimators_compute_metastable_states.py` also apply here,
+# like plotting in the same plot (parameter ``same_plot``, used below) or plotting the discrete values (parameter
+# ``discrete=``).
 g.plot_final_states(same_plot=False)

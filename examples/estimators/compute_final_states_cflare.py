@@ -13,7 +13,9 @@ adata
 
 # %%
 # First, let us prepare the kernel using high-level pipeline and the :class:`cellrank.tl.estimators.CFLARE` estimator.
-k = cr.tl.transition_matrix(adata, show_progress_bar=False)
+k = cr.tl.transition_matrix(
+    adata, weight_connectivities=0.2, softmax_scale=4, show_progress_bar=False
+)
 g = cr.tl.estimators.CFLARE(k)
 
 # %%
@@ -60,7 +62,7 @@ g.compute_final_states(method="kmeans", n_clusters_kmeans=3, cluster_key="cluste
 # %%
 # Now that the final states have been either set or computed, we can visualize them in an embedding.
 # All of the options seen in :ref:`sphx_glr_auto_examples_estimators_compute_metastable_states.py` also apply here -
-# we can plot the final states in one plot or separately (``same_plot=...``) but unlike
+# we can plot the final states in one plot or separately (parameter ``same_plot=``) but unlike
 # in :ref:`sphx_glr_auto_examples_estimators_compute_final_states_gpcca.py`, we cannot plot the membership degrees,
 # because they are nonexistent.
 

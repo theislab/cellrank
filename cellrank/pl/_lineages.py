@@ -72,7 +72,7 @@ def lineage_drivers(
     adata: AnnData,
     lineage: str,
     backward: bool = False,
-    n_genes: int = 10,
+    n_genes: int = 8,
     use_raw: bool = False,
     **kwargs,
 ) -> None:

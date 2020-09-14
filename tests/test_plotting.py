@@ -1475,6 +1475,12 @@ class TestGraph:
         )
 
     @compare()
+    def test_graph_edge_reductions(self, adata: AnnData, fpath: str):
+        cr.pl.graph(
+            adata, "T_fwd", ixs=range(10), edge_reductions=np.max, dpi=DPI, save=fpath
+        )
+
+    @compare()
     def test_graph_categorical_key(self, adata: AnnData, fpath: str):
         cr.pl.graph(
             adata,
