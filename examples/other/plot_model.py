@@ -31,7 +31,13 @@ cr.tl.lineages(adata)
 # includes various useful parameters, such as ``time_range`` or ``weight_threshold``, which determine the start and
 # end pseudotime and the minimum required threshold for lineage probabilities, respectively.
 model = cr.ul.models.GAM(adata)
-model.prepare(gene="Pak3", lineage="Alpha", time_key="dpt_pseudotime", data_key="Ms")
+model.prepare(
+    gene="Pak3",
+    lineage="Alpha",
+    time_key="dpt_pseudotime",
+    data_key="Ms",
+    n_test_points=100,
+)
 
 # %%
 # After the model has been prepared, it is ready for fitting and prediction.
@@ -46,11 +52,11 @@ conf_int = model.confidence_interval()
 conf_int[:5]
 
 # %%
-# After the prediction and confidence interval calculation, we can finally plot the results.
+# After the prediction and confidence interval calculation, we can plot the results.
 model.plot(show_conf_int=True)
 
 # %%
-# Wrapping :mod:`sklearn` models is easy, just pass the instance to :class:`cellrank.ul.models.SKLearnModel`.
+# Wrapping :mod:`sklearn` estimators is simple, just pass the instance to :class:`cellrank.ul.models.SKLearnModel`.
 svr = SVR()
 model = cr.ul.models.SKLearnModel(adata, model=svr)
 model

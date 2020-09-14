@@ -30,7 +30,7 @@ model = cr.ul.models.GAM(adata)
 cr.pl.heatmap(
     adata,
     model,
-    adata.var_names[:25],
+    adata.var_names[:15],
     time_key="dpt_pseudotime",
     lineages="Alpha",
     show_absorption_probabilities=True,
@@ -47,7 +47,7 @@ cr.pl.heatmap(
 genes = cr.pl.heatmap(
     adata,
     model,
-    adata.var_names[:25],
+    adata.var_names[:15],
     time_key="dpt_pseudotime",
     keep_gene_order=True,
     lineages=["Alpha", "Beta"],

@@ -25,7 +25,7 @@ cr.tl.terminal_states(
 )
 cr.tl.lineages(adata)
 
-cr.tl.initial_states(adata, cluster_key="clusters", softmax_scale=4)
+cr.tl.initial_states(adata, cluster_key="clusters", n_states=1, softmax_scale=4)
 
 # %%
 # We can use :func:`scvelo.tl.recover_latent_time` to compute gene-shared latent time, as well as using the initial and
