@@ -1639,6 +1639,12 @@ class TestGPCCA:
         )
 
     @compare(kind="gpcca")
+    def test_gpcca_coarse_T_stat_init_dist(self, mc: GPCCA, fpath: str):
+        mc.plot_coarse_T(
+            show_initial_dist=True, show_stationary_dist=True, dpi=DPI, save=fpath
+        )
+
+    @compare(kind="gpcca")
     def test_gpcca_coarse_T_no_cbar(self, mc: GPCCA, fpath: str):
         mc.plot_coarse_T(show_cbar=False, dpi=DPI, save=fpath)
 

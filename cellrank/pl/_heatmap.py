@@ -561,13 +561,11 @@ def heatmap(
     if save is not None and fig is not None:
         if not isinstance(fig, Iterable):
             save_fig(fig, save, ext=ext)
-            return
-        if len(fig) == 1:
+        elif len(fig) == 1:
             save_fig(fig[0], save, ext=ext)
-            return
-
-        for ln, f in zip(lineages, fig):
-            save_fig(f, os.path.join(save, f"lineage_{ln}"), ext=ext)
+        else:
+            for ln, f in zip(lineages, fig):
+                save_fig(f, os.path.join(save, f"lineage_{ln}"), ext=ext)
 
     if return_genes and mode == HeatmapMode.LINEAGES:
         return genes
