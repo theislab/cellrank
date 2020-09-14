@@ -177,3 +177,8 @@ p.sphx-glr-timing {
 div[class="rendered_html"] + br {
     display: none!important;
 }
+
+span[id^="sphx-glr-auto-examples"] {
+    min-height: 24px !important;
+    display: block !important;
+}
