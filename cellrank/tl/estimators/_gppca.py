@@ -114,6 +114,10 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         """
 
         was_from_eigengap = False
+
+        if use_min_chi:
+            n_states = self._get_n_states_from_minchi(n_states)
+
         if n_states is None:
             if self._get(P.EIG) is None:
                 raise RuntimeError(
@@ -122,20 +126,18 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             was_from_eigengap = True
             n_states = self._get(P.EIG)["eigengap"] + 1
             logg.info(f"Using `{n_states}` states based on eigengap")
+        elif not isinstance(n_states, int):
+            raise ValueError(
+                f"Expected `n_states` to be an integer when `use_min_chi=False`, "
+                f"found `{type(n_states).__name__!r}`."
+            )
 
         if n_states <= 0:
             raise ValueError(
                 f"Expected `n_states` to be positive or `None`, found `{n_states}`."
             )
 
-        if self._invalid_n_states is not None and n_states in self._invalid_n_states:
-            logg.warning(
-                f"Unable to compute metastable states with `n_states={n_states}` because it will "
-                f"split the conjugate eigenvalues. Increasing `n_states` to `{n_states + 1}`"
-            )
-            n_states += 1  # cannot force recomputation of Schur decomposition
-            assert n_states not in self._invalid_n_states, "Sanity check failed."
-
+        n_states = self._check_states_validity(n_states)
         if n_states == 1:
             self._compute_meta_for_one_state(
                 n_cells=n_cells,
@@ -159,20 +161,13 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             # if it were to split, it's automatically increased in `compute_schur`
             self.compute_schur(n_states + 1)
 
-        if use_min_chi:
-            n_states = self._get_n_states_from_minchi(n_states)
-        elif not isinstance(n_states, int):
-            raise ValueError(
-                f"Expected `n_states` to be an integer when `use_min_chi=False`, found `{type(n_states).__name__!r}`."
-            )
-
         if self._gpcca.X.shape[1] < n_states:
             logg.warning(
                 f"Requested more metastable states `{n_states}` than available "
                 f"Schur vectors `{self._gpcca.X.shape[1]}`. Recomputing the decomposition"
             )
 
-        start = logg.info("Computing metastable states")
+        start = logg.info(f"Computing `{n_states}` metastable states")
         try:
             self._gpcca = self._gpcca.optimize(m=n_states)
         except ValueError as e:
@@ -331,11 +326,11 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             One of following:
 
                 - `'eigengap'` - select the number of states based on the eigengap of the transition matrix.
-                - `'eigengap_coarse'` - select the number of states based on the eigengap of the diagonal \
+                - `'eigengap_coarse'` - select the number of states based on the eigengap of the diagonal
                     of the coarse-grained transition matrix.
                 - `'top_n'` - select top ``n_final_states`` based on the probability of the diagonal \
                     of the coarse-grained transition matrix.
-                - `'min_self_prob'` - select states which have the given minimum probability of the diagonal \
+                - `'min_self_prob'` - select states which have the given minimum probability of the diagonal
                     of the coarse-grained transition matrix.
         %(n_cells)s
         alpha
@@ -469,7 +464,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             logg.debug("Using cached Schur decomposition")
 
         start = logg.info(
-            f"Computing Generalized Diffusion Pseudotime using n_components = {n_components}"
+            f"Computing Generalized Diffusion Pseudotime using `n_components={n_components}`"
         )
 
         Q, eigenvalues = (
@@ -502,12 +497,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         **kwargs,
     ) -> None:
         """
-        Plot the coarse-grained transition matrix of the metastable states.
-
-        .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/coarse_T.png
-           :alt: image of coarse transition matrix
-           :width: 400px
-           :align: center
+        Plot the coarse-grained transition matrix between metastable states.
 
         Parameters
         ----------
@@ -764,13 +754,18 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             self._set(key.s, None)
 
         logg.info(
-            f"Adding `.{P.META_PROBS}`\n" f"        .{P.META}\n" f"    Finish",
+            f"Adding `.{P.META_PROBS}`\n        `.{P.META}`\n    Finish",
             time=start,
         )
 
     def _get_n_states_from_minchi(
         self, n_states: Union[Tuple[int, int], List[int], Dict[str, int]]
     ) -> int:
+        if self._gpcca is None:
+            raise RuntimeError(
+                "Compute Schur decomposition first as `.compute_schur()` when `use_min_chi=True`."
+            )
+
         if not isinstance(n_states, (dict, tuple, list)):
             raise TypeError(
                 f"Expected `n_states` to be either `dict`, `tuple` or a `list`, "
@@ -781,21 +776,36 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
                 f"Expected `n_states` to be of size `2`, found `{len(n_states)}`."
             )
 
-        minn, maxx = (
-            (n_states["min"], n_states["max"])
-            if isinstance(n_states, dict)
-            else n_states
-        )
+        if isinstance(n_states, dict):
+            if "min" not in n_states or "max" not in n_states:
+                raise KeyError(
+                    f"Expected the dictionary to have `'min'` and `'max'` keys, "
+                    f"found `{tuple(n_states.keys())}`."
+                )
+            minn, maxx = n_states["min"], n_states["max"]
+        else:
+            minn, maxx = n_states
+
+        if minn > maxx:
+            logg.debug(f"Swapping minimum and maximum because `{minn}` > `{maxx}`")
+            minn, maxx = maxx, minn
+
         if minn <= 1:
-            raise ValueError(f"Minimum value must be > 1, found `{minn}`.")
+            raise ValueError(f"Minimum value must be > `1`, found `{minn}`.")
         elif minn == 2:
             logg.warning(
                 "In most cases, 2 clusters will always be optimal. "
-                "If you really expect 2 clusters, use `n_states=2`. Setting the minimum to 3"
+                "If you really expect 2 clusters, use `n_states=2` and `use_minchi=False`. Setting minimum to `3`"
             )
             minn = 3
 
-        logg.debug(f"Calculating minChi within interval `[{minn}, {maxx}]`")
+        if minn >= maxx:
+            maxx = minn + 1
+            logg.debug(
+                f"Setting maximum to `{maxx}` because it was <= than minimum `{minn}`"
+            )
+
+        logg.info(f"Calculating minChi within interval `[{minn}, {maxx}]`")
 
         return int(np.arange(minn, maxx)[np.argmax(self._gpcca.minChi(minn, maxx))])
 
@@ -928,6 +938,17 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
 
         return (states, not_enough_cells) if return_not_enough_cells else states
 
+    def _check_states_validity(self, n_states: int) -> int:
+        if self._invalid_n_states is not None and n_states in self._invalid_n_states:
+            logg.warning(
+                f"Unable to compute metastable states with `n_states={n_states}` because it will "
+                f"split the conjugate eigenvalues. Increasing `n_states` to `{n_states + 1}`"
+            )
+            n_states += 1  # cannot force recomputation of Schur decomposition
+            assert n_states not in self._invalid_n_states, "Sanity check failed."
+
+        return n_states
+
     def _fit_final_states(
         self,
         n_lineages: Optional[int] = None,
@@ -987,7 +1008,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
 
         It is equivalent to running::
 
-            if n_lineages is None or n_lieages == 1:
+            if n_lineages is None or n_lineages == 1:
                 compute_eigendecomposition(...)  # get the stationary distribution
             if n_lineages > 1:
                 compute_schur(...)

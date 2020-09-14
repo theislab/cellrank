@@ -688,41 +688,41 @@ class TestLineageMixing:
 class TestLineageNormalization:
     def test_empty_keys(self, lineage: Lineage):
         with pytest.raises(ValueError):
-            lineage.reduce([])
+            lineage.reduce()
 
     def test_not_summing_to_1(self, lineage: Lineage):
         lineage[0, 0] = 0
         with pytest.raises(ValueError):
-            lineage.reduce(["foo"])
+            lineage.reduce("foo")
 
     def test_invalid_key(self, lineage: Lineage):
-        with pytest.raises(ValueError):
-            lineage.reduce(keys=["non_existent"])
+        with pytest.raises(KeyError):
+            lineage.reduce("non_existent")
 
     def test_all_names(self, lineage: Lineage):
-        lin = lineage.reduce(lineage.names)
+        lin = lineage.reduce(*lineage.names)
         np.testing.assert_array_equal(lin.X, lineage.X)
 
     def test_invalid_mode(self, lineage: Lineage):
         with pytest.raises(ValueError):
-            lineage.reduce(["foo", "bar"], mode="foo")
+            lineage.reduce("foo", "bar", mode="foo")
 
     def test_invalid_dist_measure(self, lineage: Lineage):
         with pytest.raises(ValueError):
-            lineage.reduce(["foo", "bar"], dist_measure="foo")
+            lineage.reduce("foo", "bar", dist_measure="foo")
 
     def test_invalid_weight_normalize(self, lineage: Lineage):
         with pytest.raises(ValueError):
-            lineage.reduce(["foo", "bar"], normalize_weights="foo")
+            lineage.reduce("foo", "bar", normalize_weights="foo")
 
     def test_return_weights_mode_scale(self, lineage: Lineage):
-        lin, weights = lineage.reduce(["foo", "bar"], mode="scale", return_weights=True)
+        lin, weights = lineage.reduce("foo", "bar", mode="scale", return_weights=True)
 
         assert isinstance(lin, Lineage)
         assert weights is None
 
     def test_return_weights_mode_dist(self, lineage: Lineage):
-        lin, weights = lineage.reduce(["foo", "bar"], mode="dist", return_weights=True)
+        lin, weights = lineage.reduce("foo", "bar", mode="dist", return_weights=True)
 
         assert isinstance(lin, Lineage)
         assert isinstance(weights, DataFrame)
@@ -736,17 +736,44 @@ class TestLineageNormalization:
         np.testing.assert_array_equal(lin.colors, lineage[["foo"]].colors)
 
     def test_normal_run(self, lineage: Lineage):
-        lin = lineage.reduce(["foo", "bar"])
+        lin = lineage.reduce("foo", "bar")
 
         assert lin.shape == (10, 2)
         np.testing.assert_allclose(np.sum(lin, axis=1), 1.0)
         np.testing.assert_array_equal(lin.names, ["foo", "bar"])
         np.testing.assert_array_equal(lin.colors, lineage[["foo", "bar"]].colors)
 
+    def test_normal_run_combination(self, lineage: Lineage):
+        lin = lineage.reduce("foo, bar", "baz")
+
+        assert lin.shape == (10, 2)
+        np.testing.assert_allclose(np.sum(lin, axis=1), 1.0)
+        np.testing.assert_array_equal(lin.names, ["bar or foo", "baz"])
+        np.testing.assert_array_equal(lin.colors, lineage[["foo, bar", "baz"]].colors)
+
+    def test_normal_run_combination_only_1(self, lineage: Lineage):
+        lin = lineage.reduce("foo, bar")
+
+        assert lin.shape == (10, 1)
+        np.testing.assert_allclose(np.sum(lin, axis=1), 1.0)
+        np.testing.assert_array_equal(lin.names, ["bar or foo"])
+        np.testing.assert_array_equal(lin.colors, lineage[["foo, bar"]].colors)
+
+    def test_normal_run_combination_all(self, lineage: Lineage):
+        assert lineage.shape == (10, 4)
+        lin = lineage.reduce("foo, bar", "baz, quux")
+
+        assert lin.shape == (10, 2)
+        np.testing.assert_allclose(np.sum(lin, axis=1), 1.0)
+        np.testing.assert_array_equal(lin.names, ["bar or foo", "baz or quux"])
+        np.testing.assert_array_equal(
+            lin.colors, lineage[["foo, bar", "baz or quux"]].colors
+        )
+
     @mock.patch("cellrank.tl._lineage._cosine_sim")
     def test_cosine(self, mocker, lineage: Lineage):
         try:
-            _ = lineage.reduce(["foo", "bar"], dist_measure="cosine_sim", mode="dist")
+            _ = lineage.reduce("foo", "bar", dist_measure="cosine_sim", mode="dist")
         except ValueError:
             pass
         finally:
@@ -756,7 +783,7 @@ class TestLineageNormalization:
     def test_wasserstein(self, mocker, lineage: Lineage):
         try:
             _ = lineage.reduce(
-                ["foo", "bar"], dist_measure="wasserstein_dist", mode="dist"
+                "foo", "bar", dist_measure="wasserstein_dist", mode="dist"
             )
         except ValueError:
             pass
@@ -766,7 +793,7 @@ class TestLineageNormalization:
     @mock.patch("cellrank.tl._lineage._kl_div")
     def test_kl_div(self, mocker, lineage: Lineage):
         try:
-            _ = lineage.reduce(["foo", "bar"], dist_measure="kl_div", mode="dist")
+            _ = lineage.reduce("foo", "bar", dist_measure="kl_div", mode="dist")
         except ValueError:
             pass
         finally:
@@ -775,7 +802,7 @@ class TestLineageNormalization:
     @mock.patch("cellrank.tl._lineage._js_div")
     def test_js_div(self, mocker, lineage: Lineage):
         try:
-            _ = lineage.reduce(["foo", "bar"], dist_measure="js_div", mode="dist")
+            _ = lineage.reduce("foo", "bar", dist_measure="js_div", mode="dist")
         except ValueError:
             pass
         finally:
@@ -784,7 +811,7 @@ class TestLineageNormalization:
     @mock.patch("cellrank.tl._lineage._mutual_info")
     def test_mutual_info(self, mocker, lineage: Lineage):
         try:
-            _ = lineage.reduce(["foo", "bar"], dist_measure="mutual_info", mode="dist")
+            _ = lineage.reduce("foo", "bar", dist_measure="mutual_info", mode="dist")
         except ValueError:
             pass
         finally:
@@ -793,7 +820,7 @@ class TestLineageNormalization:
     @mock.patch("cellrank.tl._lineage._row_normalize")
     def test_equal(self, mocker, lineage: Lineage):
         try:
-            _ = lineage.reduce(["foo", "bar"], dist_measure="equal", mode="dist")
+            _ = lineage.reduce("foo", "bar", dist_measure="equal", mode="dist")
         except ValueError:
             pass
         finally:
@@ -803,7 +830,7 @@ class TestLineageNormalization:
     @mock.patch("cellrank.tl._lineage._row_normalize")
     def test_row_normalize(self, mocker, lineage: Lineage):
         try:
-            _ = lineage.reduce(["foo", "bar"], mode="scale")
+            _ = lineage.reduce("foo", "bar", mode="scale")
         except ValueError:
             pass
         finally:
@@ -812,7 +839,7 @@ class TestLineageNormalization:
     @mock.patch("cellrank.tl._lineage._softmax")
     def test_softmax(self, mocker, lineage: Lineage):
         try:
-            _ = lineage.reduce(["foo", "bar"], normalize_weights="softmax", mode="dist")
+            _ = lineage.reduce("foo", "bar", normalize_weights="softmax", mode="dist")
         except ValueError:
             pass
         finally:

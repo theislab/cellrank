@@ -237,6 +237,67 @@ class TestGPCCA:
 
         _check_compute_meta(mc)
 
+    def test_compute_metastable_states_min_chi_too_low_min(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.estimators.GPCCA(final_kernel)
+        mc.compute_schur(n_components=10, method="krylov")
+        with pytest.raises(ValueError):
+            mc.compute_metastable_states(n_states=[1, 4], use_min_chi=True)
+
+    def test_compute_metastable_states_min_chi_inverted_range(
+        self, adata_large: AnnData
+    ):
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.estimators.GPCCA(final_kernel)
+        mc.compute_schur(n_components=10, method="krylov")
+        mc.compute_metastable_states(n_states=[4, 2], use_min_chi=True)
+
+        _check_compute_meta(mc)
+
+    def test_compute_metastable_states_min_chi_range_same_values(
+        self, adata_large: AnnData
+    ):
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.estimators.GPCCA(final_kernel)
+        mc.compute_schur(n_components=10, method="krylov")
+        mc.compute_metastable_states(n_states=[2, 2], use_min_chi=True)
+
+        _check_compute_meta(mc)
+
+    def test_compute_metastable_states_min_chi_dict_wrong_keys(
+        self, adata_large: AnnData
+    ):
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.estimators.GPCCA(final_kernel)
+        mc.compute_schur(n_components=10, method="krylov")
+        with pytest.raises(KeyError):
+            mc.compute_metastable_states(
+                n_states={"foo": 2, "max": 3}, use_min_chi=True
+            )
+
+    def test_compute_metastable_states_min_chi_normal_run(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        final_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.estimators.GPCCA(final_kernel)
+        mc.compute_schur(n_components=10, method="krylov")
+        mc.compute_metastable_states(n_states=[2, 4], use_min_chi=True)
+
+        _check_compute_meta(mc)
+
     def test_compute_metastable_invalid_cluster_key(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()

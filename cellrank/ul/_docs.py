@@ -8,6 +8,9 @@ from docrep import DocstringProcessor
 _adata = """\
 adata : :class:`~anndata.AnnData`
     Annotated data object."""
+_adata_ret = """\
+:class:`~anndata.AnnData`
+    Annotated data object."""
 _plotting = """\
 figsize
     Size of the figure.
@@ -55,8 +58,7 @@ keys
     Determines which %(initial_or_terminal) states to use by passing their names.
     Further, %(initial_or_terminal)s states can be combined. If e.g. the %(final)s states are
     ['Neuronal_1', 'Neuronal_1', 'Astrocytes', 'OPC'], then passing ``keys=['Neuronal_1, Neuronal_2', 'OPC']``
-    means that the two neuronal %(final)s states are treated as one and the 'Astrocyte' state is excluded.
-"""
+    means that the two neuronal %(final)s states are treated as one and the 'Astrocyte' state is excluded."""
 _density_correction = (
     "Optionally, we apply a density correction as described in [Coifman05]_, "
     "where we use the implementation of [Haghverdi16]_."
@@ -67,8 +69,7 @@ time_range
 
         - If a :class:`tuple`, it specifies the minimum and maximum pseudotime. Both values can be `None`,
           in which case the minimum is the earliest pseudotime and the maximum is automatically determined.
-        - If a :class:`float`, it specifies the maximum pseudotime.
-"""
+        - If a :class:`float`, it specifies the maximum pseudotime."""
 _time_ranges = f"{_time_range}\n    This can also be specified on per-lineage basis."
 _velocity_mode = """\
 mode
@@ -77,22 +78,19 @@ mode
         - `{m.DETERMINISTIC.s!r}` - deterministic computation that doesn't propagate uncertainty.
         - `{m.MONTE_CARLO.s!r}` - Monte Carlo average of randomly sampled velocity vectors.
         - `{m.STOCHASTIC.s!r}` - second order approximation, only available when :mod:`jax` is installed.
-        - `{m.SAMPLING.s!r}` - sample 1 transition matrix from velocity distribution.
-"""
+        - `{m.SAMPLING.s!r}` - sample 1 transition matrix from velocity distribution."""
 _velocity_backward_mode = """\
 backward_mode
     Only matters if initialized as :paramref:`backward` `=True`.  Valid options are:
 
         - `{b.TRANSPOSE.s!r}` - compute transitions from neighboring cells `j` to cell `i`.
-        - `{b.NEGATE.s!r}` - negate the velocity vector.
-"""
+        - `{b.NEGATE.s!r}` - negate the velocity vector."""
 _velocity_backward_mode_high_lvl = """\
 backward_mode
     How to compute the backward transitions. Valid options are:
 
         - `{b.TRANSPOSE.s!r}` - compute transitions from neighboring cells `j` to cell `i`.
-        - `{b.NEGATE.s!r}` - negate the velocity vector.
-"""
+        - `{b.NEGATE.s!r}` - negate the velocity vector."""
 _copy = """Return a copy of self."""
 _initial = "initial"
 _terminal = "terminal"
@@ -101,8 +99,7 @@ _model_callback = """\
 callback
     Function which takes a :class:`cellrank.ul.models.BaseModel` and some keyword arguments
     for :meth:`cellrank.ul.models.BaseModel.prepare` and returns the prepared model.
-    Can be specified in gene- and lineage-specific manner, similarly to :paramref:`model`.
-"""
+    Can be specified in gene- and lineage-specific manner, similarly to :paramref:`model`."""
 _genes = """\
 genes
     Genes in ``adata.var_names`` or in ``adata.raw.var_names``, if ``use_raw=True``.
@@ -110,21 +107,18 @@ genes
 _softmax_scale = """\
 softmax_scale
     Scaling parameter for the softmax. If `None`, it will be estimated using ``1 / median(correlations)``.
-    The idea behind this is to scale the softmax to counteract everything tending to orthogonality in high dimensions.
-"""
+    The idea behind this is to scale the softmax to counteract everything tending to orthogonality in high dimensions."""  # noqa
 _time_mode = """\
 mode
     Can be either `'embedding'` or `'time'`:
 
         - `'embedding'` - plot the embedding while coloring in the absorption probabilities.
-        - `'time'` - plot the pseudotime on x-axis and the absorption probabilities on y-axis.
-"""
+        - `'time'` - plot the pseudotime on x-axis and the absorption probabilities on y-axis."""
 _write_to_adata = """\
 Updates the :paramref:`adata` with the following fields:
 
         - ``.obsp['{{key}}']`` - the transition matrix.
-        - ``.uns['{{key}}_params']`` - parameters used for calculation.
-"""
+        - ``.uns['{{key}}_params']`` - parameters used for calculation."""
 
 
 def inject_docs(**kwargs):  # noqa
@@ -148,6 +142,7 @@ d = DocstringProcessor(
     parallel=_parallel,
     model=_model,
     adata=_adata,
+    adata_ret=_adata_ret,
     just_plots=_just_plots,
     backward=_backward,
     initial=_initial,
