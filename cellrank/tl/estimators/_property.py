@@ -254,7 +254,7 @@ class KernelHolder(ABC):
 
         Returns
         -------
-        %(adata)s
+        %(adata_ret)s
         """  # noqa
         return self.kernel.adata
 

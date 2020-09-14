@@ -57,7 +57,7 @@ class CFLARE(BaseEstimator, Eigen):
         p_thresh: float = 1e-15,
     ) -> None:
         """
-        Find approximate recurrent classes in the Markov chain.
+        Find approximate recurrent classes of the Markov chain.
 
         Filter to obtain recurrent states in left eigenvectors.
         Cluster to obtain approximate recurrent classes in right eigenvectors.
