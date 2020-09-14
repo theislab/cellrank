@@ -15,10 +15,14 @@ adata
 # First, we compute the initial states. By default, we're using the :class:`cellrank.tl.estimators.GPCCA` estimator.
 # Parameter ``cluster_key`` tries to associate the names of the initial states with cluster labels, whereas
 # ``n_cells`` controls how many cells we take from each final state as categorical observation - this is only available
-# for the above mentioned estimator. The number of states is estimated can be specified manually,
-# but by default, it is estimated. Relevant plots can be shown using ``show_plots=True``.
+# for the above mentioned estimator. Plots showing the terminal states and more can be specified by ``show_plots=True``.
 cr.tl.initial_states(
-    adata, cluster_key="clusters", n_cells=30, softmax_scale=4, show_progress_bar=False
+    adata,
+    cluster_key="clusters",
+    n_cells=30,
+    softmax_scale=4,
+    n_states=1,
+    show_progress_bar=False,
 )
 
 # %%

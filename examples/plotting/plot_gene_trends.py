@@ -17,6 +17,7 @@ cr.tl.terminal_states(
     adata,
     cluster_key="clusters",
     weight_connectivities=0.2,
+    n_states=3,
     softmax_scale=4,
     show_progress_bar=False,
 )

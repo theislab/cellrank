@@ -20,7 +20,7 @@ g = cr.tl.estimators.GPCCA(k)
 
 # %%
 # First, we need to compute the Schur vectors. By default, only the first 10 vectors are computed.
-g.compute_schur()
+g.compute_schur(n_components=6)
 
 # %%
 # Now we can compute the metastable states of the Markov chain. By default, the number of states is estimated
@@ -47,7 +47,7 @@ g.compute_metastable_states(n_states=[3, 6], use_min_chi=True, cluster_key="clus
 g.metastable_states_probabilities
 
 # %%
-# In the case above, the number of states has stayed the same.
+# In the case above, we can see the initial states also being included in the metastable states.
 #
 # Finally, we can plot the membership degrees, as well as the categorical assignment.
 g.plot_metastable_states()
