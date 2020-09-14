@@ -20,8 +20,7 @@ cr.tl.transition_matrix(
 )
 
 # %%
-# Now we can start plotting the transition matrix. Below we don't show any arrows, which dramatically speeds up the
-# plotting.
+# We can now plot the transition matrix. Below we don't show any arrows, which dramatically speeds up the plotting.
 cr.pl.graph(
     adata,
     "T_fwd",
@@ -33,10 +32,17 @@ cr.pl.graph(
 )
 
 # %%
-# To further illustrate the functionalities, let us only consider the `'Delta`' cluster. Below we plot only the top
-# 3 incoming edges in descending order. Nodes are colored in by the total incoming weights, in this case, the transition
-# probabilities. Note that the aggregate values are calculated before any filtering or normalization takes place.
+# To further illustrate the functionalities, let us only consider the `'Delta`' cluster. We can also filter the edges
+# by their weights, as shown below. Only transition with probability at least 0.1 are plotted.
 ixs = np.where(adata.obs["clusters"] == "Delta")[0]
+cr.pl.graph(
+    adata, "T_fwd", ixs=ixs, show_arrows=True, node_size=200, filter_edges=(0.1, 1)
+)
+
+# %%
+# Below we plot only the top 3 incoming edges in descending order. Nodes are colored in by the sum of incoming weights,
+# in this case, the transition probabilities. Note that the aggregate values are calculated before any filtering
+# or normalization takes place.
 cr.pl.graph(
     adata,
     "T_fwd",
@@ -47,15 +53,8 @@ cr.pl.graph(
 )
 
 # %%
-# We can also filter the edges by their weights, as shown below. Only transition with probability at least 0.1 are
-# plotted.
-cr.pl.graph(
-    adata, "T_fwd", ixs=ixs, show_arrows=True, node_size=200, filter_edges=(0.1, 1)
-)
-
-# %%
-# Lastly, we can visualize different edge aggregations, such as minimum or maximum, shown below. Here we take
-# the top 5 outgoing edges for each node in descending order and color the nodes by the maximum outgoing weights.
+# Lastly, we can visualize different edge aggregations, such as minimum or maximum. Here we take the top 5 outgoing
+# edges for each node in descending order and color the nodes by the maximum outgoing weights.
 cr.pl.graph(
     adata,
     "T_fwd",

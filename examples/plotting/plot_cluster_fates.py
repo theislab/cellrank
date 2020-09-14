@@ -36,7 +36,8 @@ cr.pl.cluster_fates(adata, mode="heatmap")
 cr.pl.cluster_fates(adata, mode="clustermap")
 
 # %%
-# Violin plot can be useful to visualize the distribution of absorption probabilities per cluster.
+# Violin plot can be useful to visualize the distribution of absorption probabilities per cluster. It is also
+# possible to restric this plot only to a subset of clusters.
 cr.pl.cluster_fates(adata, mode="violin", cluster_key="clusters")
 
 # %%
@@ -48,5 +49,5 @@ cr.pl.cluster_fates(adata, mode="violin", cluster_key="clusters")
 cr.pl.cluster_fates(adata, mode="paga_pie", basis="umap", cluster_key="clusters")
 
 # %%
-# Lastly, we can visualize the absorption probabilities in PAGA graph by coloring the node.
+# Lastly, we can visualize the absorption probabilities in PAGA graph by coloring the nodes.
 cr.pl.cluster_fates(adata, mode="paga")

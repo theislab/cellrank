@@ -15,7 +15,7 @@ adata
 # First, we compute the initial states. By default, we're using the :class:`cellrank.tl.estimators.GPCCA` estimator.
 # Parameter ``cluster_key`` tries to associate the names of the initial states with cluster labels, whereas
 # ``n_cells`` controls how many cells we take from each final state as categorical observation - this is only available
-# for the above mentioned estimator. Plots showing the terminal states and more can be specified by ``show_plots=True``.
+# for the above mentioned estimator. We can show some plots of interest by specifying ``show_plots=True``.
 cr.tl.initial_states(
     adata,
     cluster_key="clusters",
@@ -31,10 +31,14 @@ cr.tl.initial_states(
 cr.pl.initial_states(adata)
 
 # %%
-# Lastly, we can also plot the discrete values, as seen below.
+# We can plot these values also separately, one initial state per plot.
+cr.pl.initial_states(adata, same_plot=False)
+
+# %%
+# Lastly, we can also plot the discrete values by specifying ``discrete=True``.
 cr.pl.initial_states(adata, discrete=True)
 
 # %%
 # To see how to compute and plot the terminal states or the lineages, see
-# :ref:`sphx_glr_auto_examples_plotting_plot_terminal_states.py` and
-# see :ref:`sphx_glr_auto_examples_plotting_plot_lineages.py`.
+# :ref:`sphx_glr_auto_examples_plotting_plot_terminal_states.py` or
+# :ref:`sphx_glr_auto_examples_plotting_plot_lineages.py`, respectively.

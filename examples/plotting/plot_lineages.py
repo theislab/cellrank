@@ -24,11 +24,12 @@ cr.tl.terminal_states(
 cr.tl.lineages(adata)
 
 # %%
-# We can now plot the initial states. By default, we plot the degree of membership.
+# We can now plot the initial states. By default, we plot the degree of membership, which is available only to the
+# :class:`cellrank.tl.estimators.GPCCA` estimator.
 cr.pl.lineages(adata)
 
 # %%
-# We can plot only a subset of them or plot the most likely cells.
+# We can also plot only a subset of these lineages or plot the most likely cells.
 cr.pl.lineages(adata, ["Alpha", "Beta"], discrete=True)
 
 # %%
@@ -37,5 +38,5 @@ cr.pl.lineages(adata, ["Alpha", "Beta"], discrete=True)
 cr.pl.lineages(adata, same_plot=False)
 
 # %%
-# To see how to compute and plot the lineage drivers,
-# see :ref:`sphx_glr_auto_examples_plotting_plot_lineage_drivers.py`.
+# To see how to compute and plot the lineage driver genes,
+# refer to :ref:`sphx_glr_auto_examples_plotting_plot_lineage_drivers.py`.

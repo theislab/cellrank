@@ -12,7 +12,7 @@ adata = cr.datasets.pancreas_preprocessed("../example.h5ad")
 adata
 
 # %%
-# First, we compute the absorption probabilities and the model that will be used for gene trend smoothing.
+# First, we compute the absorption probabilities and select a model that will be used for gene trend smoothing.
 cr.tl.terminal_states(
     adata,
     cluster_key="clusters",
@@ -27,9 +27,9 @@ model = cr.ul.models.GAM(adata)
 
 # %%
 # Next, we can fit the model for some subset of genes for a specific lineage, as seen below. After the model
-# is fitted, we use it to predict the smoothed gene expression for the test points (by default, it's 200 points
-# uniformly spaced along the pseudotime). Afterwards, we reduce the dimension using `PCA` and cluster using `louvain`
-# clustering.
+# has been fitted, we use it to get the smoothed gene expression for the test points (by default, it is 200 points
+# uniformly spaced along the pseudotime). Afterwards, we reduce the dimension using `PCA` and cluster using the
+# `louvain` algorithm.
 #
 # Note that calling this function twice will use the already computed values, unless ``recompute=True`` is specified.
 cr.pl.cluster_lineage(

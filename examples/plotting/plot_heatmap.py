@@ -12,7 +12,7 @@ adata = cr.datasets.pancreas_preprocessed("../example.h5ad")
 adata
 
 # %%
-# First, we compute the absorption probabilities and the model that will be used for gene trend smoothing.
+# First, we compute the absorption probabilities and select a model that will be used for gene trend smoothing.
 cr.tl.terminal_states(
     adata,
     cluster_key="clusters",
@@ -26,7 +26,8 @@ cr.tl.lineages(adata)
 model = cr.ul.models.GAM(adata)
 
 # %%
-# We can now plot the heatmap, as shown below. By default, the model is fitted for all specified genes and all lineages.
+# We can now plot the heatmap. By default, the model is fitted for all specified genes and all lineages. Paramterer
+# ``show_absorption_probabilities`` is used to create a bar on top of the heatmap.
 cr.pl.heatmap(
     adata,
     model,
@@ -37,13 +38,12 @@ cr.pl.heatmap(
     show_progress_bar=False,
 )
 
-
 # %%
 # Sometimes, it might be beneficial to compare the smoothed expression across lineages. Parameter ``keep_gene_order``
-# keeps the genes in the order as defined by the first lineage's heatmap.
+# keeps the genes in the order as defined by the order in the first heatmap, which is the first listed lineage.
 #
-# Apart from the default gene sorting, we can use hierarchical clustering to cluster the genes specifying
-# ``cluster_genes=True``. We can also return by specifying ``return_genes=True``.
+# Apart from the default gene sorting, we can use hierarchical clustering to cluster the genes by specifying
+# ``cluster_genes=True``. We can also return the sorted/clustered genes by specifying ``return_genes=True``.
 genes = cr.pl.heatmap(
     adata,
     model,
@@ -56,10 +56,9 @@ genes = cr.pl.heatmap(
 )
 genes
 
-
 # %%
-# Lastly, we cal also plot a heatmap-like plot where we group by genes, instead of lineages. In the case below,
-# we also don't scale the expression to 0-1 range, which is the default behaviour seen above.
+# Finally, we plot a heatmap-like plot where we group by genes, instead of lineages. In the case below,
+# we also don't scale the expression to 0-1 range, which is the default behaviour as seen above.
 cr.pl.heatmap(
     adata,
     model,
