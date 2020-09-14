@@ -8,18 +8,13 @@ This example shows how to prepare and fit :class:`cellrank.ul.models.BaseModel` 
 
 from sklearn.svm import SVR
 
-import numpy as np
 import cellrank as cr
-import scanpy as sc
 
 adata = cr.datasets.pancreas_preprocessed("../example.h5ad")
 adata
 
 # %%
-# First, we need to compute the pseudotime and the lineages.
-adata.uns["iroot"] = root_idx = np.where(adata.obs["clusters"] == "Ngn3 low EP")[0][0]
-sc.tl.dpt(adata)
-
+# First, we need to compute the lineages of the forward process.
 cr.tl.transition_matrix(adata, show_progress_bar=False, mode="deterministic")
 cr.tl.terminal_states(adata, cluster_key="clusters")
 cr.tl.lineages(adata)

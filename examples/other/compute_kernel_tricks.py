@@ -14,6 +14,7 @@ adata
 # %% First, let's create some kernels that will be used to compute a cell-to-cell transition matrix.
 vk = cr.tl.kernels.VelocityKernel(adata)
 ck = cr.tl.kernels.ConnectivityKernel(adata)
+pk = cr.tl.kernels.PalantirKernel(adata)
 
 # %%
 # Kernels can be easily and freely combined with each other. All of the constants within parentheses
@@ -23,7 +24,7 @@ ck = cr.tl.kernels.ConnectivityKernel(adata)
 # %%
 # We can build much more complex kernel expression. Note that multiple invocation of the same kernel instance in the
 # expression caches it's transition matrix, so it's only computed once.
-k = ((vk + vk + 42 * vk) + ck * 2) + ck * vk
+k = ((vk + vk + 42 * vk) + ck * 2) + ck * (3 * vk + 4 * pk)
 k
 
 # %%
@@ -38,7 +39,8 @@ k.kernels
 #
 # Note that in the 2nd :func:`print` statement, we access the private attribute -
 # that's because accessing :paramref:`cellrank.tl.kernels.Kernel.transition_matrix` computes the transition matrix
-# with default values. This happens only with basic kernels, not the kernel expressions.
+# with default values. This happens only with basic kernels, not the kernel expressions and only if they are not part
+# of a larger expression.
 ck.compute_transition_matrix()
 print(ck.transition_matrix is not None)
 
@@ -63,8 +65,8 @@ ck.compute_transition_matrix()
 ck.params
 
 # %%
-# The transition matrix can be written to :mod:`anndata` object. It is saved in the ``.obsp`` attribute and the key
-# is optional. This also writes the parameters to ``.uns`` attribute of the :mod:`anndata` object.
+# The transition matrix can be written to :class:`anndata.AnnData` object. It is saved in the ``.obsp`` attribute
+# and the key is optional. This also writes the parameters to ``.uns`` attribute of the :class:`anndata.AnnData` object.
 ck.write_to_adata(key="transition_matrix")
 adata.obsp["transition_matrix"]
 

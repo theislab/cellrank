@@ -3,7 +3,7 @@
 Plot terminal states
 --------------------
 
-This example shows how to plot the terminal states of the process.
+This example shows how to compute and plot the terminal states of the process.
 """
 
 import cellrank as cr
@@ -22,7 +22,7 @@ cr.tl.terminal_states(
 )
 
 # %%
-# We can now plot the terminal states. By default, we plot the membership degree, which is only available to
+# We can now plot the terminal states. By default, we plot the membership degree, which is only available to the
 # :class:`cellrank.tl.estimators.GPCCA` estimator.
 cr.pl.terminal_states(adata)
 

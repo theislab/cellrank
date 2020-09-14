@@ -163,3 +163,8 @@ class PalantirKernel(Kernel):
         pk._transition_matrix = copy(self._transition_matrix)
 
         return pk
+
+    def __invert__(self) -> "PalantirKernel":
+        super().__invert__()
+        self._pseudotime = 1 - self.pseudotime
+        return self
