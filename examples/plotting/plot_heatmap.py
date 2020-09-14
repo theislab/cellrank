@@ -41,7 +41,10 @@ cr.pl.heatmap(
 # %%
 # Sometimes, it might be beneficial to compare the smoothed expression across lineages. Parameter ``keep_gene_order``
 # keeps the genes in the order as defined by the first lineage's heatmap.
-cr.pl.heatmap(
+#
+# Apart from the default gene sorting, we can use hierarchical clustering to cluster the genes specifying
+# ``cluster_genes=True``. We can also return by specifying ``return_genes=True``.
+genes = cr.pl.heatmap(
     adata,
     model,
     adata.var_names[:25],
@@ -49,20 +52,6 @@ cr.pl.heatmap(
     keep_gene_order=True,
     lineages=["Alpha", "Beta"],
     show_absorption_probabilities=True,
-    show_progress_bar=False,
-)
-
-# %%
-# Apart from the default gene sorting, we can use hierarchical clustering to cluster the genes. We can also return
-# by specifying ``return_genes=True``.
-genes = cr.pl.heatmap(
-    adata,
-    model,
-    adata.var_names[:25],
-    time_key="dpt_pseudotime",
-    lineages="Alpha",
-    cluster_genes=True,
-    return_genes=True,
     show_progress_bar=False,
 )
 genes
@@ -74,7 +63,7 @@ genes
 cr.pl.heatmap(
     adata,
     model,
-    adata.var_names[:5],
+    adata.var_names[:3],
     mode="genes",
     time_key="dpt_pseudotime",
     scale=False,
