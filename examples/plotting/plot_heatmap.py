@@ -7,15 +7,12 @@ This example show how to plot smoothed gene expression using a heatmap.
 """
 
 import cellrank as cr
-import scanpy as sc
-import numpy as np
 
 adata = cr.datasets.pancreas_preprocessed("../example.h5ad")
 adata
 
 # %%
-# First, we compute the absorption probabilities, the pseudotime and the model that will be used for
-# gene trend smoothing.
+# First, we compute the absorption probabilities and the model that will be used for gene trend smoothing.
 cr.tl.terminal_states(
     adata,
     cluster_key="clusters",
@@ -24,9 +21,6 @@ cr.tl.terminal_states(
     show_progress_bar=False,
 )
 cr.tl.lineages(adata)
-
-adata.uns["iroot"] = np.where(adata.obs["clusters"] == "Ngn3 low EP")[0][0]
-sc.tl.dpt(adata)
 
 model = cr.ul.models.GAM(adata)
 
