@@ -24,9 +24,9 @@ cr.tl.terminal_states(
 cr.tl.lineages(adata)
 
 # %%
-# Now that the lineages have been computed, we can compute the driver genes for them.
-# By default, we compute the driver genes for all the lineages. It is also possible to restrict this computation to
-# just a few clusters, defined by ``cluster_key`` and ``clusters``.
+# Once the lineages have been computed, we can compute the driver genes for each of them. It is also possible to
+# restrict this computation to just a few clusters, defined by ``cluster_key`` and ``clusters``. By default
+# we are computing the driver genes for all lineages.
 cr.tl.lineage_drivers(adata)
 
 # %%

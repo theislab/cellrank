@@ -33,7 +33,6 @@ g.set_final_states_from_metastable_states(["Alpha", "Beta", "Epsilon"])
 # few selected final states. Here, we compute the probabilities of being absorbed in all the final states.
 g.compute_absorption_probabilities()
 
-
 # %%
 # The absorption probabilities can be inspected as seen below. Curious reader is encouraged to take a look at
 # some niche tricks for :class:`cellrank.tl.Lineage` in :ref:`sphx_glr_auto_examples_other_compute_lineage_tricks.py`.

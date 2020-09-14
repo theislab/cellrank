@@ -12,7 +12,7 @@ adata = cr.datasets.pancreas_preprocessed("../example.h5ad")
 adata
 
 # %%
-# First, we compute the absorption probabilities and the model that will be used for gene trend smoothing.
+# First, we compute the absorption probabilities and select a model that will be used for gene trend smoothing.
 cr.tl.terminal_states(
     adata,
     cluster_key="clusters",
@@ -27,7 +27,7 @@ model = cr.ul.models.GAM(adata)
 
 # %%
 # To plot the trends for some genes, run the code below. Parameter ``data_key`` specifies layer in ``adata.layers``
-# from which we take our gene expression.
+# from which we take the gene expression - in this case, the data has been imputed by :mod:`scvelo`.
 cr.pl.gene_trends(
     adata,
     model,
@@ -38,7 +38,7 @@ cr.pl.gene_trends(
 )
 
 # %%
-# We can plot all the trends in the same plot and hide the cells, as seen below.
+# We can plot all trends in the same plot and hide the cells, as shown below.
 cr.pl.gene_trends(
     adata,
     model,
@@ -52,8 +52,8 @@ cr.pl.gene_trends(
 
 # %%
 # We can specify specific pseudotime ranges, separately for each lineage - the model is always fitted
-# using cells with a given time range. By default, the start is always 0 and the end is automatically determined
-# from the absorption probabilities.
+# using cells with the given time range. By default, the start is always 0 and the end is automatically determined
+# based on the absorption probabilities.
 cr.pl.gene_trends(
     adata,
     model,
@@ -67,5 +67,5 @@ cr.pl.gene_trends(
 
 # %%
 # There are many more options as how to customize the plot or how to pass additional arguments to
-# :meth:`cellrank.ul.models.BaseModel` and we encourage the reader to take a closer look at the documentation of
-# :func:`cellrank.pl.gene_trends`.
+# :meth:`cellrank.ul.models.BaseModel.prepare` and we encourage the reader to take a closer look at the documentation of
+# :func:`cellrank.pl.gene_trends` and the above mentioned method.
