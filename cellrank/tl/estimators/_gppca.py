@@ -533,8 +533,8 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             for spine in ax.spines.values():
                 spine.set_visible(False)
 
-            ax.set_xticklabels(xticks_labels)
-            if xticks_labels:
+            if xticks_labels is not None:
+                ax.set_xticklabels(xticks_labels)
                 ax.set_xticks(np.arange(data.shape[1]))
                 plt.setp(
                     ax.get_xticklabels(),
@@ -543,6 +543,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
                     rotation_mode="anchor",
                 )
             else:
+                ax.set_xticks([])
                 ax.tick_params(
                     which="both", top=False, right=False, bottom=False, left=False
                 )
@@ -569,9 +570,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
                     text = im.axes.text(j, i, valfmt(data[i, j], None), **kw)
                     texts.append(text)
 
-        def annotate_dist_ax(
-            ax, data: np.ndarray, is_vertical: bool, valfmt: str = "{x:.2f}"
-        ):
+        def annotate_dist_ax(ax, data: np.ndarray, valfmt: str = "{x:.2f}"):
             if ax is None:
                 return
 
@@ -580,14 +579,12 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
 
             kw = {"ha": "center", "va": "center"}
             kw.update(**text_kwargs)
-            if is_vertical:
-                kw["rotation"] = -90
 
             for i, val in enumerate(data):
                 kw.update(color=_get_black_or_white(im.norm(val), cmap))
                 ax.text(
-                    0 if is_vertical else i,
-                    i if is_vertical else 0,
+                    i,
+                    0,
                     valfmt(val, None),
                     **kw,
                 )
@@ -609,29 +606,29 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             show_initial_dist = False
 
         hrs, wrs = [1], [1]
-        if show_initial_dist:
-            wrs += [0.05]
         if show_stationary_dist:
             hrs += [0.05]
+        if show_initial_dist:
+            hrs += [0.05]
         if show_cbar:
-            wrs += [
-                0.025
-            ] * 2  # dirty trick so that ylabel doesn't overlap with colorbar
+            wrs += [0.025]
+
+        dont_show_dist = not show_initial_dist and not show_stationary_dist
 
         fig = plt.figure(constrained_layout=False, figsize=figsize, dpi=dpi)
         gs = plt.GridSpec(
-            1 + show_stationary_dist,
-            1 + show_initial_dist + (show_cbar * 2),
+            1 + show_stationary_dist + show_initial_dist,
+            1 + show_cbar,
             height_ratios=hrs,
             width_ratios=wrs,
-            wspace=0.10,
+            wspace=0.05,
             hspace=0.05,
         )
         if isinstance(cmap, str):
             cmap = plt.get_cmap(cmap)
 
         ax = fig.add_subplot(gs[0, 0])
-        cax = fig.add_subplot(gs[:1, -1])
+        cax = fig.add_subplot(gs[:1, -1]) if show_cbar else None
         init_ax, stat_ax = None, None
 
         labels = list(self.coarse_T.columns)
@@ -641,44 +638,55 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             tmp = np.c_[tmp, coarse_stat_d]
         if show_initial_dist:
             tmp = np.c_[tmp, coarse_init_d]
-        norm = mpl.colors.Normalize(vmin=np.nanmin(tmp), vmax=np.nanmax(tmp))
+
+        minn, maxx = np.nanmin(tmp), np.nanmax(tmp)
+        norm = mpl.colors.Normalize(vmin=minn, vmax=maxx)
 
         if show_stationary_dist:
             stat_ax = fig.add_subplot(gs[1, 0])
             stylize_dist(
                 stat_ax,
                 np.array(coarse_stat_d).reshape(1, -1),
-                xticks_labels=labels,
+                xticks_labels=labels if not show_initial_dist else None,
             )
-            stat_ax.set_xlabel("stationary distribution")
+            stat_ax.yaxis.set_label_position("right")
+            stat_ax.set_ylabel("stationary dist", rotation=0, ha="left", va="center")
 
         if show_initial_dist:
-            init_ax = fig.add_subplot(gs[0, 1])
-            stylize_dist(init_ax, np.array(coarse_init_d).reshape(-1, 1))
+            init_ax = fig.add_subplot(gs[show_stationary_dist + show_initial_dist, 0])
+            stylize_dist(
+                init_ax, np.array(coarse_init_d).reshape(1, -1), xticks_labels=labels
+            )
 
             init_ax.yaxis.set_label_position("right")
-            init_ax.set_ylabel("initial distribution", rotation=-90, va="bottom")
+            init_ax.set_ylabel("initial dist", rotation=0, ha="left", va="center")
 
-        im = ax.imshow(coarse_T, aspect="auto", cmap=cmap, **kwargs)
+        im = ax.imshow(coarse_T, aspect="auto", cmap=cmap, norm=norm, **kwargs)
         ax.set_title("coarse-grained transition matrix" if title is None else title)
 
-        if show_cbar:
-            _ = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm)
+        if cax is not None:
+            _ = mpl.colorbar.ColorbarBase(
+                cax,
+                cmap=cmap,
+                norm=norm,
+                ticks=np.linspace(minn, maxx, 10),
+                format="%0.3f",
+            )
 
         ax.set_yticks(np.arange(coarse_T.shape[0]))
         ax.set_yticklabels(labels)
 
         ax.tick_params(
             top=False,
-            bottom=not show_stationary_dist,
+            bottom=dont_show_dist,
             labeltop=False,
-            labelbottom=not show_stationary_dist,
+            labelbottom=dont_show_dist,
         )
 
         for spine in ax.spines.values():
             spine.set_visible(False)
 
-        if not show_stationary_dist:
+        if dont_show_dist:
             ax.set_xticks(np.arange(coarse_T.shape[1]))
             ax.set_xticklabels(labels)
             plt.setp(
@@ -691,14 +699,12 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             ax.set_xticks([])
 
         ax.set_yticks(np.arange(coarse_T.shape[0] + 1) - 0.5, minor=True)
-        ax.tick_params(
-            which="minor", bottom=not show_stationary_dist, left=False, top=False
-        )
+        ax.tick_params(which="minor", bottom=dont_show_dist, left=False, top=False)
 
         if annotate:
             annotate_heatmap(im)
-            annotate_dist_ax(stat_ax, coarse_stat_d.values, is_vertical=False)
-            annotate_dist_ax(init_ax, coarse_init_d, is_vertical=True)
+            annotate_dist_ax(stat_ax, coarse_stat_d.values)
+            annotate_dist_ax(init_ax, coarse_init_d)
 
         if save:
             save_fig(fig, save)
@@ -719,11 +725,11 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         if (
             eig is not None
             and "stationary_dist" in eig
-            and eig["params"]["which"] == "LM"
+            and eig["params"]["which"] == "LR"
         ):
             stationary_dist = eig["stationary_dist"]
         else:
-            self.compute_eigendecomposition(only_evals=False, which="LM")
+            self.compute_eigendecomposition(only_evals=False, which="LR")
             stationary_dist = self._get(P.EIG)["stationary_dist"]
 
         self._set_meta_states(
