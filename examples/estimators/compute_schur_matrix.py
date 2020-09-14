@@ -21,7 +21,7 @@ g = cr.tl.estimators.GPCCA(k)
 # %%
 # To compute the Schur vectors, simply run the code below. Parameter ``n_components`` controls how many vectors
 # to compute.
-g.compute_schur(n_components=11)
+g.compute_schur(n_components=9)
 
 # %%
 # Finally, we are ready to plot the Schur matrix. The real Schur matrix is quasi-upper triangular,

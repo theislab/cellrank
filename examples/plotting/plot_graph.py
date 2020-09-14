@@ -54,7 +54,7 @@ cr.pl.graph(
 )
 
 # %%
-# Lastly, we can visualize different edge aggregations, such as minimum or maximum, which is shown below. Here we take
+# Lastly, we can visualize different edge aggregations, such as minimum or maximum, shown below. Here we take
 # the top 5 outgoing edges for each node in descending order and color the nodes by the maximum outgoing weights.
 cr.pl.graph(
     adata,
