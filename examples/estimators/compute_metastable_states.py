@@ -3,7 +3,7 @@
 Compute metastable states
 -------------------------
 
-This examples show how to compute and plot metastable states obtained by :class:`cellrank.tl.estimators.GPCCA`.
+This example shows how to compute and plot metastable states obtained by :class:`cellrank.tl.estimators.GPCCA`.
 """
 
 import cellrank as cr
