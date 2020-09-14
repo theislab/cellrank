@@ -440,6 +440,16 @@ class TestKernel:
 
         np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
 
+    def test_palantir_inverse(self, adata: AnnData):
+        pk = PalantirKernel(adata, time_key="latent_time")
+        pt = pk.pseudotime.copy()
+
+        pk_inv = ~pk
+
+        assert pk_inv is pk
+        assert pk_inv.backward
+        np.testing.assert_allclose(pt, 1 - pk_inv.pseudotime)
+
     def test_palantir_dense_norm(self, adata: AnnData):
         conn = _get_neighs(adata, "connectivities")
         n_neighbors = _get_neighs_params(adata)["n_neighbors"]
@@ -854,7 +864,8 @@ class TestGeneral:
         v = vk + ck
 
         assert len(v.kernels) == 2
-        assert v.kernels == [vk, ck]
+        assert vk in v.kernels
+        assert ck in v.kernels
 
     def test_kernels_multiple_constant(self, adata: AnnData):
         vk = VelocityKernel(adata)
@@ -862,7 +873,15 @@ class TestGeneral:
         v = 100 * vk + 42 * ck
 
         assert len(v.kernels) == 2
-        assert v.kernels == [vk, ck]
+        assert vk in v.kernels
+        assert ck in v.kernels
+
+    def test_kernels_unique(self, adata: AnnData):
+        vk = VelocityKernel(adata)
+        v = vk + vk + vk + vk
+
+        assert len(v.kernels) == 1
+        assert v.kernels[0] is vk
 
     def test_no_comp_cond_num(self, adata: AnnData):
         vk = VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)

@@ -5,8 +5,11 @@ import logging
 import subprocess
 from pathlib import Path
 from datetime import datetime
+from collections import ChainMap, defaultdict
 from urllib.parse import urljoin
 from urllib.request import urlretrieve
+
+from sphinx_gallery.sorting import ExplicitOrder, _SortKey
 
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE.parent.parent))
@@ -68,6 +71,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx_paramlinks",
     "sphinx.ext.autosummary",
+    "sphinx_gallery.gen_gallery",
     "nbsphinx",
     "sphinx_copybutton",
     "sphinx_last_updated_by_git",
@@ -94,7 +98,7 @@ intersphinx_mapping = dict(
 )
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ["_templates"]
+templates_path = ["_templates", "_build"]
 source_suffix = [".rst", ".ipynb"]
 master_doc = "index"
 pygments_style = "sphinx"
@@ -103,7 +107,6 @@ pygments_style = "sphinx"
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = ["**.ipynb_checkpoints"]
-
 
 # -- Notebooks
 nbsphinx_execute_arguments = [
@@ -120,6 +123,110 @@ nbsphinx_prolog = r"""
       <a href="https://mybinder.org/v2/gh/theislab/cellrank_notebooks/{{ env.config.release|e }}?filepath={{ docname|e }}"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>
     </div>
 """
+
+# -- sphinx gallery
+
+
+def reset_scvelo(gallery_conf, fname):
+    import scvelo as scv
+
+    scv.set_figure_params(
+        style="scvelo", color_map="viridis", format="png", ipython_format="png"
+    )
+
+
+def reset_matplotlib(gallery_conf, fname):
+    import matplotlib as mpl
+
+    mpl.use("agg")
+
+    import matplotlib.pyplot as plt
+
+    plt.rcdefaults()
+    mpl.rcParams["savefig.bbox"] = "tight"
+    mpl.rcParams["savefig.transparent"] = True
+
+
+example_dir = HERE.parent.parent / "examples"
+rel_example_dir = Path("..") / ".." / "examples"
+
+
+class ExplicitSubsectionOrder(_SortKey):
+
+    _order = ChainMap(
+        {
+            example_dir / "estimators" / "compute_schur_vectors.py": 0,
+            example_dir / "estimators" / "compute_schur_matrix.py": 10,
+            example_dir / "estimators" / "compute_metastable_states.py": 20,
+            example_dir / "estimators" / "compute_coarse_T.py": 30,
+            example_dir / "estimators" / "compute_final_states_gpcca.py": 40,
+            example_dir / "estimators" / "compute_spectrum.py": 50,
+            example_dir / "estimators" / "compute_final_states_cflare.py": 60,
+            example_dir / "estimators" / "compute_abs_probs.py": 70,
+            example_dir / "estimators" / "compute_lineage_drivers.py": 80,
+            example_dir / "estimators" / "compute_fit.py": 90,
+        },
+        {
+            example_dir / "plotting" / "plot_initial_states.py": 0,
+            example_dir / "plotting" / "plot_terminal_states.py": 10,
+            example_dir / "plotting" / "plot_lineages.py": 20,
+            example_dir / "plotting" / "plot_lineage_drivers.py": 30,
+            example_dir / "plotting" / "plot_directed_paga.py": 40,
+            example_dir / "plotting" / "plot_gene_trends.py": 50,
+            example_dir / "plotting" / "plot_heatmap.py": 60,
+            example_dir / "plotting" / "plot_cluster_lineage.py": 70,
+            example_dir / "plotting" / "plot_cluster_fates.py": 80,
+            example_dir / "plotting" / "plot_graph.py": 90,
+        },
+        defaultdict(
+            lambda: 1000,
+            {
+                example_dir / "other" / "plot_model.py": 0,
+                example_dir / "other" / "compute_kernel_tricks.py": 10,
+                example_dir / "other" / "compute_lineage_tricks.py": 20,
+            },
+        ),
+    )
+
+    def __call__(self, filename: str) -> int:
+        src_file = os.path.normpath(os.path.join(self.src_dir, filename))
+        return self._order[Path(src_file)]
+
+    def __repr__(self) -> str:
+        return f"<{self.__class__.__name__}: {repr(dict(self._order))}>"
+
+
+sphinx_gallery_conf = {
+    "image_scrapers": "matplotlib",
+    "reset_modules": (
+        "seaborn",
+        reset_matplotlib,
+        reset_scvelo,
+    ),  # reset scvelo as last
+    "filename_pattern": f"{os.path.sep}(plot_|compute_)",
+    "examples_dirs": example_dir,
+    "gallery_dirs": "auto_examples",  # path to where to save gallery generated output
+    "abort_on_example_error": True,
+    "show_memory": True,
+    "within_subsection_order": ExplicitSubsectionOrder,
+    "subsection_order": ExplicitOrder(
+        [
+            rel_example_dir / "estimators",  # really must be relative
+            rel_example_dir / "plotting",
+            rel_example_dir / "other",
+        ]
+    ),
+    "reference_url": {
+        "sphinx_gallery": None,
+    },
+    "line_numbers": False,
+    "compress_images": ("images", "thumbnails", "-o3"),
+    "inspect_global_variables": False,
+    "backreferences_dir": "gen_modules/backreferences",
+    "doc_module": "cellrank",
+    "download_all_examples": False,
+    "pypandoc": True,  # convert rST to md when downloading notebooks
+}
 
 # -- Options for HTML output -------------------------------------------------
 

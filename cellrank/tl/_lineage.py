@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """Lineage class module."""
 
-from types import FunctionType
-from typing import List, Tuple, Union, TypeVar, Callable, Iterable, Optional
+from types import FunctionType, MappingProxyType
+from typing import List, Tuple, Union, Mapping, TypeVar, Callable, Iterable, Optional
 from inspect import signature
 from pathlib import Path
 from functools import wraps
@@ -665,7 +665,11 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
         if self._is_transposed:
             header = ""
-        return f"<div style='scoped'><table>{header}{body}</table>{metadata}</div>"
+        return (
+            f"<div style='scoped' class='rendered_html'>"
+            f"<table class='dataframe'>{header}{body}</table>{metadata}"
+            f"</div>"
+        )
 
     def __format__(self, format_spec):
         if self.shape == (1, 1):
@@ -714,39 +718,84 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
     @d.dedent
     def plot_pie(
         self,
-        reduction: Callable = np.mean,
+        reduction: Callable,
         title: Optional[str] = None,
+        legend_loc: Optional[str] = "on data",
+        legend_kwargs: Mapping = MappingProxyType({}),
         figsize: Optional[Tuple[float, float]] = None,
         dpi: Optional[float] = None,
         save: Optional[Union[Path, str]] = None,
         **kwargs,
     ) -> None:
         """
-        Plot a pie chart visualizing the aggregated lineage probabilities.
+        Plot a pie chart visualizing aggregated lineage probabilities.
 
         Parameters
         ----------
         reduction
-            Function that will be applied per lineage.
+            Function that will be applied lineage-wise.
         title
             Title of the figure.
+        legend_loc
+            Location of the legend. If `None`, it is not shown.
+        legend_kwargs
+            Keyword arguments for :func:`matplotlib.axes.Axes.legend`.
         %(plotting)s
 
         Returns
         -------
         %(just_plots)s
         """
-        if not callable(reduction):
-            raise TypeError(
-                f"Expected `reduction` to be callable, found `{type(reduction).__name__}`."
-            )
+
+        if len(self.names) == 1:
+            raise ValueError("Cannot plot pie chart for only 1 lineage.")
 
         fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
-        title = reduction.__name__ if title is None else title
 
-        reduction = reduction(self, axis=int(self._is_transposed))
-        ax.pie(reduction.X.squeeze(), labels=self.names, colors=self.colors, **kwargs)
+        if "autopct" not in kwargs:
+            autopct_found = False
+            autopct = (
+                "{:.1f}%".format
+            )  # we don't really care, we don't shot the pct, but the value
+        else:
+            autopct_found = True
+            autopct = kwargs.pop("autopct")
+
+        if title is None:
+            title = reduction.__name__ if hasattr(reduction, "__name__") else None
+
+        reduction = reduction(self, axis=int(self._is_transposed)).X.squeeze()
+        reduction_norm = reduction / np.sum(reduction)
+
+        wedges, texts, *autotexts = ax.pie(
+            reduction_norm.squeeze(),
+            labels=self.names if legend_loc == "on data" else None,
+            autopct=autopct,
+            wedgeprops=dict(edgecolor="w"),
+            colors=self.colors,
+            **kwargs,
+        )
+
+        # if autopct is not None
+        if len(autotexts):
+            autotexts = autotexts[0]
+            for name, at in zip(self.names, autotexts):
+                ix = self._names_to_ixs[name]
+                at.set_color(_get_bg_fg_colors(self.colors[ix])[1])
+                if not autopct_found:
+                    at.set_text(f"{reduction[ix]:.4f}")
+
+        if legend_loc not in (None, "on data"):
+            ax.legend(
+                wedges,
+                self.names,
+                title="lineages",
+                loc=legend_loc,
+                **legend_kwargs,
+            )
+
         ax.set_title(title)
+        ax.set_aspect("equal")
 
         fig.show()
 
@@ -756,7 +805,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
     @d.dedent
     def reduce(
         self,
-        keys: Union[str, List[str], Tuple[str], np.ndarray],
+        *keys: str,
         mode: str = "dist",
         dist_measure: str = "mutual_info",
         normalize_weights: str = "softmax",
@@ -794,26 +843,28 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
         Returns
         -------
-        :class:`cellrank.tl.Lineage`
-            Lineage object, reduced to the %(inital_terminal)s states. If a reduction is not possible, return a copy.
-        :class:`pandas.DataFrame`
-            The weights used for the projection of shape ``(n_query, n_reference)``.
+        :class:`cellrank.tl.Lineage`, :class:`pandas.DataFrame`
+            Lineage object, reduced to the %(inital_terminal)s states. If a reduction is not possible, returns a copy.
+            The weights used for the projection of shape ``(n_query, n_reference)``, if ``return_weights=True``.
         """
 
         if self._is_transposed:
             raise RuntimeError("This method works only on non-transposed lineages.")
 
-        if isinstance(keys, str):
-            keys = [keys]
-
         if not len(keys):
             raise ValueError("Unable to perform the reduction, no keys specified.")
 
-        if set(keys) == set(self.names):
-            logg.warning(
-                "Unable to perform the reduction, `keys` specifies all lineages. Returning a copy self"
+        # check the lineage object
+        if not np.allclose(np.sum(self, axis=1).X, 1.0):
+            raise ValueError("Memberships do not sum to one row-wise.")
+
+        if len(keys) == 1:
+            tmp = self[:, keys]
+            return Lineage(
+                np.ones((self.shape[0], 1), dtype=self.dtype),
+                names=tmp.names,
+                colors=tmp.colors,
             )
-            return (self.copy(), None) if return_weights else self.copy()
 
         # check input parameters
         if return_weights and mode == "scale":
@@ -821,21 +872,17 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
                 "If `mode=='scale'`, no weights are computed. Returning `None`"
             )
 
-        # check the lineage object
-        if not np.allclose(np.sum(self, axis=1).X, 1.0):
-            raise ValueError("Memberships do not sum to one row-wise.")
-
-        # check the keys are all in L.names
-        key_mask = np.array([key in self.names for key in keys])
-        if not key_mask.all():
-            raise ValueError(
-                f"Invalid lineage names `{list(np.array(keys)[~key_mask])}`. Valid names are: `{list(self.names)}`."
+        reference = self[:, keys]
+        rest = [
+            k for k in self.names if all(map(lambda rk: k not in rk, reference.names))
+        ]
+        if not len(rest):
+            logg.warning(
+                "Unable to perform reduction because all keys have been selected. Returning combined object only"
             )
+            return (reference.copy(), None) if return_weights else reference.copy()
 
-        # get query and reference
-        mask = np.in1d(self.names, keys)
-        reference = self[:, mask]
-        query = self[:, ~mask]
+        query = self[:, rest]
 
         if mode == "dist":
             # compute a set of weights of shape (n_query x n_reference)

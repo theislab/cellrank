@@ -412,7 +412,8 @@ def _cluster_X(
     n_neighbors: int = 15,
     resolution: float = 1.0,
 ) -> List[Any]:
-    """Cluster the rows of the matrix X.
+    """
+    Cluster the rows of the matrix X.
 
     Parameters
     ----------
@@ -716,7 +717,7 @@ def save_fig(
 
 
 def _convert_to_categorical_series(
-    rc_classes: Dict[Union[int, str], Iterable[Union[int, str]]], cell_names: List[str]
+    rc_classes: Dict[Union[int, str], Sequence[Union[int, str]]], cell_names: List[str]
 ) -> Series:
     """
     Convert a mapping of recurrent classes to cells to a :class:`pandas.Series`.
@@ -737,7 +738,8 @@ def _convert_to_categorical_series(
     cnames = set(cell_names)
     mapper, expected_size = {}, 0
     for rc, cells in rc_classes.items():
-        if not cells:
+        if not len(cells):
+            logg.warning(f"No cells selected for category `{rc!r}`.")
             continue
         cells = [c if isinstance(c, str) else cell_names[c] for c in cells]
         rest = set(cells) - cnames

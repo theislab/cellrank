@@ -254,7 +254,7 @@ class KernelHolder(ABC):
 
         Returns
         -------
-        %(adata)s
+        %(adata_ret)s
         """  # noqa
         return self.kernel.adata
 
@@ -295,7 +295,7 @@ class VectorPlottable(KernelHolder, Property):
         Parameters
         ----------
         use
-            Which or how many Schur vectors to be plotted. If `None`, all will be chosen.
+            Which or how many vectors are to be plotted.
         abs_value
             Whether to take the absolute value before plotting.
         cluster_key
@@ -332,10 +332,10 @@ class VectorPlottable(KernelHolder, Property):
         if use is None:
             m = (
                 getattr(self, P.EIG.s).get("eigengap", vectors.shape[1]) + 1
-                if hasattr(self, P.EIG.s)
+                if hasattr(self, P.EIG.s) and not is_schur
                 else vectors.shape[1]
             )
-            use = list(range(is_schur, m + is_schur))
+            use = list(range(is_schur, m))
         elif isinstance(use, int):
             use = list(range(is_schur, use + is_schur))
         elif not isinstance(use, (tuple, list, range)):
@@ -652,9 +652,10 @@ class Plottable(KernelHolder, Property):
         if mode == "embedding":
             if same_plot:
                 kwargs["color_gradients"] = A
-                logg.warning(
-                    "Ignoring `cluster_key` when plotting probabilities in the same plot"
-                )
+                if len(cluster_key):
+                    logg.warning(
+                        "Ignoring `cluster_key` when plotting probabilities in the same plot"
+                    )
                 # kwargs["color"] = cluster_key  this results in a bug, cluster_key data is overwritten, will make a PR
             else:
                 kwargs["color"] = color

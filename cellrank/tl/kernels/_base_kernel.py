@@ -96,9 +96,11 @@ class KernelExpression(ABC):
     @d.dedent
     def adata(self) -> AnnData:
         """
+        Annotated data object.
+
         Returns
         -------
-        %(adata)s
+        %(adata_ret)s
         """  # noqa
         pass
 
@@ -181,7 +183,7 @@ class KernelExpression(ABC):
             %(write_to_adata)s
         """
 
-        if self.transition_matrix is None:
+        if self._transition_matrix is None:
             raise ValueError(
                 "Compute transition matrix first as `.compute_transition_matrix()`."
             )
@@ -219,7 +221,7 @@ class KernelExpression(ABC):
     @property
     def kernels(self) -> List["Kernel"]:
         """Get the kernels of the kernel expression, except for constants."""
-        return list(self._get_kernels())
+        return list(set(self._get_kernels()))
 
     def __xor__(self, other: "KernelExpression") -> "KernelExpression":
         return self.__rxor__(other)
@@ -404,9 +406,11 @@ class UnaryKernelExpression(KernelExpression, ABC):
     @d.dedent
     def adata(self) -> AnnData:
         """
+        Annotated data object.
+
         Returns
         -------
-        %(adata)s
+        %(adata_ret)s
         """  # noqa
         return self._adata
 
@@ -494,9 +498,11 @@ class NaryKernelExpression(KernelExpression, ABC):
     @d.dedent
     def adata(self) -> AnnData:
         """
+        Annotated data object.
+
         Returns
         -------
-        %(adata)s
+        %(adata_ret)s
         """  # noqa
         # we can do this because Constant requires adata as well
         return self._kexprs[0].adata

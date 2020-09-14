@@ -110,12 +110,16 @@ venv.bak/
 
 # documentation
 docs/source/api
+docs/source/auto_examples
+docs/source/gen_modules
 docs/build
 
 # custom folders
 /local_resources
 tests/data
 tests/figures
+tests/_ground_truth_figures/*-failed-diff.png
+examples/example.h5ad
 figures
 data
 **/*.ipynb

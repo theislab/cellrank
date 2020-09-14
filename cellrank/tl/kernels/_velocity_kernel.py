@@ -188,8 +188,8 @@ class VelocityKernel(Kernel):
         :class:`cellrank.tl.kernels.VelocityKernel`
             Makes available the following fields:
 
-                - :paramref:`transition_matrix`.
-                - :paramref:`pearson_correlations`.
+                - :paramref:`transition_matrix`
+                - :paramref:`pearson_correlations`
         """
 
         mode = VelocityMode(mode)

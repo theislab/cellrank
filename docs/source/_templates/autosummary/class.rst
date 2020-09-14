@@ -4,8 +4,6 @@
 
 .. currentmodule:: {{ module }}
 
-.. add toctree option to make autodoc generate the pages
-
 .. autoclass:: {{ objname }}
 
    {% block attributes %}
@@ -33,3 +31,9 @@
    {%- endfor %}
    {% endif %}
    {% endblock %}
+
+   .. _sphx_glr_backref_{{fullname}}:
+
+   .. minigallery:: {{fullname}}
+       :add-heading: Examples
+       :heading-level: -

@@ -46,8 +46,8 @@ class CFLARE(BaseEstimator, Eigen):
         method: str = "kmeans",
         cluster_key: Optional[str] = None,
         n_clusters_kmeans: Optional[int] = None,
-        n_neighbors_louvain: int = 20,
-        resolution_louvain: float = 0.1,
+        n_neighbors: int = 20,
+        resolution: float = 0.1,
         n_matches_min: Optional[int] = 0,
         n_neighbors_filtering: int = 15,
         basis: Optional[str] = None,
@@ -57,7 +57,7 @@ class CFLARE(BaseEstimator, Eigen):
         p_thresh: float = 1e-15,
     ) -> None:
         """
-        Find approximate recurrent classes in the Markov chain.
+        Find approximate recurrent classes of the Markov chain.
 
         Filter to obtain recurrent states in left eigenvectors.
         Cluster to obtain approximate recurrent classes in right eigenvectors.
@@ -72,16 +72,16 @@ class CFLARE(BaseEstimator, Eigen):
             Cells which are in the lower ``percentile`` percent of each eigenvector
             will be removed from the data matrix.
         method
-            Method to be used for clustering. Must be one of `'louvain'` or `'kmeans'`.
+            Method to be used for clustering. Must be one of `'louvain'`, `'leiden'` or `'kmeans'`.
         cluster_key
             If a key to cluster labels is given, :paramref:`{fs}` will ge associated with these for naming and colors.
         n_clusters_kmeans
             If `None`, this is set to ``use + 1``.
-        n_neighbors_louvain
-            If we use `'louvain'` for clustering cells, we need to build a KNN graph.
+        n_neighbors
+            If we use `'louvain'` or `'leiden'` for clustering cells, we need to build a KNN graph.
             This is the K parameter for that, the number of neighbors for each cell.
-        resolution_louvain
-            Resolution parameter from `'louvain'` clustering. Should be chosen relatively small.
+        resolution
+            Resolution parameter for `'louvain'` or `'leiden'` clustering. Should be chosen relatively small.
         n_matches_min
             Filters out cells which don't have at least n_matches_min neighbors from the same class.
             This filters out some cells which are transient but have been misassigned.
@@ -91,16 +91,16 @@ class CFLARE(BaseEstimator, Eigen):
         basis
             Key from :paramref`adata` ``.obsm`` to be used as additional features for the clustering.
         n_comps
-            Number of embedding components to be use.
+            Number of embedding components to be use when ``basis`` is not `None`.
         scale
-            Scale to z-scores. Consider using if appending embedding to features.
+            Scale to z-scores. Consider using this if appending embedding to features.
         en_cutoff
             If ``cluster_key`` is given, this parameter determines when an approximate recurrent class will
             be labelled as *'Unknown'*, based on the entropy of the distribution of cells over transcriptomic clusters.
         p_thresh
-            If cell cycle scores were provided, a *Wilcoxon rank-sum test* is
-            conducted to identify cell-cycle driven start- or endpoints.
-            If the test returns a positive statistic and a p-value smaller than ``p_thresh``, a warning will be issued.
+            If cell cycle scores were provided, a *Wilcoxon rank-sum test* is conducted to identify cell-cycle final
+            states If the test returns a positive statistic and a p-value smaller than ``p_thresh``,
+            a warning will be issued.
 
         Returns
         -------
@@ -136,9 +136,9 @@ class CFLARE(BaseEstimator, Eigen):
             return Series(c, index=self.adata.obs_names)
 
         def check_use(use) -> List[int]:
-            if method not in ["kmeans", "louvain"]:
+            if method not in ["kmeans", "louvain", "leiden"]:
                 raise ValueError(
-                    f"Invalid method `{method!r}`. Valid options are `'louvain'` or `'louvain'`."
+                    f"Invalid method `{method!r}`. Valid options are `'louvain'`, `'leiden'` or `'kmeans'`."
                 )
 
             if use is None:
@@ -230,8 +230,8 @@ class CFLARE(BaseEstimator, Eigen):
             X,
             method=method,
             n_clusters=n_clusters_kmeans,
-            n_neighbors=n_neighbors_louvain,
-            resolution=resolution_louvain,
+            n_neighbors=n_neighbors,
+            resolution=resolution,
         )
 
         # fill in the labels in case we filtered out cells before

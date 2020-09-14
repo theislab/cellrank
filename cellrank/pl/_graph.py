@@ -60,7 +60,7 @@ def graph(
     cat_cmap: ListedColormap = cm.Set3,
     cont_cmap: ListedColormap = cm.viridis,
     legend_loc: Optional[str] = "best",
-    figsize: Tuple[float, float] = (15, 10),
+    figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
     save: Optional[Union[str, Path]] = None,
     layout_kwargs: Dict = MappingProxyType({}),
@@ -72,10 +72,6 @@ def graph(
     endpoint of development. This function is meant to visualise a small subset of nodes (~100-500) and the most likely
     transitions between them. Note that limiting edges visualized using ``top_n_edges`` will speed things up,
     as well as reduce the visual clutter.
-
-    .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/graph.png
-       :width: 400px
-       :align: center
 
     Parameters
     ----------
@@ -99,7 +95,7 @@ def graph(
         - If `'incoming'`, `'outgoing'` or `'self_loops'`, visualize reduction (see ``edge_reductions``)
           for each node based on incoming or outgoing edges, respectively.
     keylocs
-        Locations of ``keys``, can be any attribute of ``data``.
+        Locations of ``keys``. Can be any attribute of ``data`` if it's :class:`anndata.AnnData` object.
     node_size
         Size of the nodes.
     labels
@@ -276,17 +272,10 @@ def graph(
         logg.debug("Ignoring key locations")
         keylocs = [None] * len(keys)
 
-    if ixs is None:
-        for k in ("obs", "obsm"):
-            if k in keylocs:
-                raise ValueError(
-                    f"Invalid combination: `ixs` is `None` and found `{k!r}` in `keylocs`."
-                )
-
     if not isinstance(edge_reductions, (tuple, list)):
         edge_reductions = [edge_reductions] * len(keys)
     if not all(map(callable, edge_reductions)):
-        raise ValueError("Not all edge_reductions functions are callable.")
+        raise ValueError("Not all `edge_reductions` functions are callable.")
 
     if not isinstance(labels, (tuple, list)):
         labels = [labels] * len(keys)
@@ -295,8 +284,10 @@ def graph(
     elif not isinstance(labels[0], (tuple, list)):
         labels = [labels] * len(keys)
 
-    if len(labels) != len(keys):
-        raise ValueError("`Keys` and `labels` must be of the same shape.")
+    if len(keys) != len(labels):
+        raise ValueError(
+            f"`Keys` and `labels` must be of the same shape, found `{len(keys)}` and `{len(labels)}`."
+        )
 
     if isinstance(data, _AnnData):
         if graph_key is None:
@@ -334,6 +325,9 @@ def graph(
     # do NOT recreate the graph, for the edge reductions
     # gdata = nx.to_numpy_array(G)
 
+    if figsize is None:
+        figsize = (12, 8 * len(keys))
+
     fig, axes = plt.subplots(nrows=len(keys), ncols=1, figsize=figsize, dpi=dpi)
     if not isinstance(axes, np.ndarray):
         axes = np.array([axes])
@@ -359,10 +353,10 @@ def graph(
                 )
             if len(v) != 2:
                 raise ValueError(
-                    f"Value in `layout` must be a tuple or list of length 2, found `{v}`."
+                    f"Value in `layout` must be a `tuple` or a `list` of length 2, found `{len(v)}`."
                 )
         pos = layout
-        logg.debug("Using pre-specified layout")
+        logg.debug("Using precomputed layout")
     elif callable(layout):
         start = logg.info(f"Embedding graph using `{layout.__name__!r}` layout")
         pos = layout(G, **layout_kwargs)
@@ -405,7 +399,10 @@ def graph(
 
         if key in ("incoming", "outgoing", "self_loops"):
             if key in ("incoming", "outgoing"):
-                vals = np.array(er(gdata, axis=int(key == "outgoing"))).flatten()
+                vals = er(gdata, axis=int(key == "outgoing"))
+                if issparse(vals):
+                    vals = vals.A
+                vals = vals.flatten()
             else:
                 vals = gdata.diagonal() if is_sparse else np.diag(gdata)
             node_v = dict(zip(pos.keys(), vals))
