@@ -98,7 +98,7 @@ intersphinx_mapping = dict(
 )
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ["_templates", "build", "build"]
+templates_path = ["_templates", "_build"]
 source_suffix = [".rst", ".ipynb"]
 master_doc = "index"
 pygments_style = "sphinx"
@@ -197,7 +197,7 @@ class ExplicitSubsectionOrder(_SortKey):
 
 
 sphinx_gallery_conf = {
-    "image_scrapers": ("matplotlib",),
+    "image_scrapers": "matplotlib",
     "reset_modules": (
         "seaborn",
         reset_matplotlib,
@@ -223,8 +223,9 @@ sphinx_gallery_conf = {
     "compress_images": ("images", "thumbnails", "-o3"),
     "inspect_global_variables": False,
     "backreferences_dir": "gen_modules/backreferences",
-    "doc_module": ("cellrank",),
+    "doc_module": "cellrank",
     "download_all_examples": False,
+    "pypandoc": True,  # convert rST to md when downloading notebooks
 }
 
 # -- Options for HTML output -------------------------------------------------
