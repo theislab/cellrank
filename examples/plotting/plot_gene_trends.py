@@ -33,8 +33,8 @@ cr.pl.gene_trends(
     model,
     adata.var_names[:2],
     data_key="Ms",
-    show_progres_bar=False,
     time_key="dpt_pseudotime",
+    show_progres_bar=False,
 )
 
 # %%
