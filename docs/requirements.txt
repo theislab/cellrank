@@ -1,7 +1,10 @@
 -r ../requirements.txt
 bezier
+louvain>=0.6,!=0.6.2
 memory_profiler>=0.57.0
 nbsphinx>=0.7
+pypandoc
+python-igraph
 sphinx>=3.2.1
 sphinx-autodoc-annotation
 sphinx-autodoc-typehints>=1.10.3
