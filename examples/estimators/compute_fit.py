@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Fit an estimator
-----------------
+Fit estimator
+-------------
 
-This example shows how to fit an estimator to compute the absorption probabilities.
+This example shows how to fit an estimator in order to compute the lineages.
 """
 
 import cellrank as cr

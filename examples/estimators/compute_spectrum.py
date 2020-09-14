@@ -3,7 +3,7 @@
 Compute spectrum
 ----------------
 
-This examples show how to compute and plot the spectrum of the transition matrix.
+This example shows how to compute and plot spectrum of the transition matrix.
 """
 
 import cellrank as cr

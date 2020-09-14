@@ -3,7 +3,7 @@
 Plot initial states
 -------------------
 
-This example shows how to compute and plot the initial states of the process.
+This example shows how to compute and plot initial states of the process.
 """
 
 import cellrank as cr

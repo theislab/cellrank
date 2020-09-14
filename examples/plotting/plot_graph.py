@@ -3,7 +3,7 @@
 Plot graph
 ----------
 
-This functions show how to plot graphs, such as the transition matrix.
+This functions show how to plot graph data, such as the transition matrix.
 """
 
 import cellrank as cr

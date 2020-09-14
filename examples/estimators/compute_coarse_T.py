@@ -3,7 +3,7 @@
 Compute coarse-grained transition matrix
 ----------------------------------------
 
-This examples show how to compute and plot coarse-grained transition matrix of the metastable states.
+This example shows how to compute and plot coarse-grained transition matrix of the metastable states.
 """
 
 import cellrank as cr
