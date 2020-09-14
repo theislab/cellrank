@@ -96,9 +96,11 @@ class KernelExpression(ABC):
     @d.dedent
     def adata(self) -> AnnData:
         """
+        Annotated data object.
+
         Returns
         -------
-        %(adata)s
+        %(adata_ret)s
         """  # noqa
         pass
 
@@ -404,9 +406,11 @@ class UnaryKernelExpression(KernelExpression, ABC):
     @d.dedent
     def adata(self) -> AnnData:
         """
+        Annotated data object.
+
         Returns
         -------
-        %(adata)s
+        %(adata_ret)s
         """  # noqa
         return self._adata
 
@@ -494,9 +498,11 @@ class NaryKernelExpression(KernelExpression, ABC):
     @d.dedent
     def adata(self) -> AnnData:
         """
+        Annotated data object.
+
         Returns
         -------
-        %(adata)s
+        %(adata_ret)s
         """  # noqa
         # we can do this because Constant requires adata as well
         return self._kexprs[0].adata

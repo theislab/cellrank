@@ -8,6 +8,9 @@ from docrep import DocstringProcessor
 _adata = """\
 adata : :class:`~anndata.AnnData`
     Annotated data object."""
+_adata_ret = """\
+:class:`~anndata.AnnData`
+    Annotated data object."""
 _plotting = """\
 figsize
     Size of the figure.
@@ -139,6 +142,7 @@ d = DocstringProcessor(
     parallel=_parallel,
     model=_model,
     adata=_adata,
+    adata_ret=_adata_ret,
     just_plots=_just_plots,
     backward=_backward,
     initial=_initial,
