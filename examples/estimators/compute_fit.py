@@ -12,16 +12,16 @@ adata = cr.datasets.pancreas_preprocessed("../example.h5ad")
 adata
 
 # %%
-# First, let us prepare the kernel using high-level pipeline and the :class:`cellrank.tl.estimators.GPCCA` estimator.
+# First, we prepare the kernel using high-level pipeline and the :class:`cellrank.tl.estimators.GPCCA` estimator.
 k = cr.tl.transition_matrix(
     adata, weight_connectivities=0.2, softmax_scale=4, show_progress_bar=False
 )
 g = cr.tl.estimators.GPCCA(k)
 
 # %%
-# Afterwards, we simply call the :meth:`cellrank.tl.estimators.BaseEstimator.fit`. It offers a quick and easy way
-# to compute the final states and optionally the absorption probabilities by following similar steps as defined in
-# :ref:`sphx_glr_auto_examples_estimators_compute_final_states_gpcca.py` or
+# Afterwards, we simply call :meth:`cellrank.tl.estimators.BaseEstimator.fit`. It offers a quick and easy way
+# to compute the final states and optionally also the absorption probabilities by following similar steps as defined in
+# :ref:`sphx_glr_auto_examples_estimators_compute_final_states_gpcca.py` or in
 # :ref:`sphx_glr_auto_examples_estimators_compute_final_states_cflare.py`, depending on the estimator.
 g.fit(n_lineages=3, cluster_key="clusters", compute_absorption_probabilities=True)
 

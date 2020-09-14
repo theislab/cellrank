@@ -31,7 +31,7 @@ sc.tl.paga(adata, "clusters")
 cr.pl.cluster_fates(adata, mode="bar")
 
 # %%
-# Similarlyaggregate information can be visualized using a heatmap or a clustermap.
+# Similarly, the aggregate information can be visualized using a heatmap or a clustermap.
 cr.pl.cluster_fates(adata, mode="heatmap")
 cr.pl.cluster_fates(adata, mode="clustermap")
 
