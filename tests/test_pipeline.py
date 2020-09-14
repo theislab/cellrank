@@ -79,6 +79,11 @@ class TestHighLevelPipeline:
         np.testing.assert_allclose(adata.obsp["foo"].A.sum(1), 1.0)
         assert "foo_params" in adata.uns
 
+    def test_states_no_precomputed_transition_matrix(self, adata: AnnData):
+        cr.tl.terminal_states(adata, key="foo")
+
+        assert str(_transition(Direction.FORWARD)) in adata.obsp
+
     def test_states_use_precomputed_transition_matrix(self, adata: AnnData):
         cr.tl.transition_matrix(adata, key="foo")
         obsp_keys = set(adata.obsp.keys())

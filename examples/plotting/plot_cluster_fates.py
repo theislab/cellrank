@@ -9,12 +9,17 @@ This example shows how to plot average absorption probabilities in a cluster spe
 import cellrank as cr
 import scanpy as sc
 
-adata = cr.datasets.pancreas_preprocessed()
+adata = cr.datasets.pancreas_preprocessed("../example.h5ad")
+adata
 
 # %%
 # First, we compute the terminal states and the lineages, as well as scanpy's PAGA.
 cr.tl.terminal_states(
-    adata, cluster_key="clusters", weight_connectivities=0.2, show_progress_bar=False
+    adata,
+    cluster_key="clusters",
+    weight_connectivities=0.2,
+    softmax_scale=4,
+    show_progress_bar=False,
 )
 cr.tl.lineages(adata)
 
@@ -25,7 +30,7 @@ sc.tl.paga(adata, "clusters")
 cr.pl.cluster_fates(adata, mode="bar")
 
 # %%
-# Similary aggregate information can be visualized using heatmap or a clustermap.
+# Similarlyaggregate information can be visualized using a heatmap or a clustermap.
 cr.pl.cluster_fates(adata, mode="heatmap")
 cr.pl.cluster_fates(adata, mode="clustermap")
 
@@ -42,5 +47,5 @@ cr.pl.cluster_fates(adata, mode="violin", cluster_key="clusters")
 cr.pl.cluster_fates(adata, mode="paga_pie", basis="umap", cluster_key="clusters")
 
 # %%
-# Lastly, we can visualize the absorption probabilities in PAGA graph by coloring the node colors.
+# Lastly, we can visualize the absorption probabilities in PAGA graph by coloring the node.
 cr.pl.cluster_fates(adata, mode="paga")

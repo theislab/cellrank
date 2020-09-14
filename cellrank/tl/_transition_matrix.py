@@ -82,7 +82,9 @@ def transition_matrix(
             ck = ConnectivityKernel(adata, backward=backward).compute_transition_matrix(
                 density_normalize=density_normalize
             )
-            final = (1 - weight_connectivities) * vk + weight_connectivities * ck
+            final = (
+                (1 - weight_connectivities) * vk + weight_connectivities * ck
+            ).compute_transition_matrix()
         elif weight_connectivities == 0:
             final = vk
         elif weight_connectivities == 1:
@@ -96,6 +98,6 @@ def transition_matrix(
     else:
         final = vk
 
-    final.compute_transition_matrix().write_to_adata(key=key)
+    final.write_to_adata(key=key)
 
     return final

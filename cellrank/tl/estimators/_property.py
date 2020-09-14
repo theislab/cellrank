@@ -652,9 +652,10 @@ class Plottable(KernelHolder, Property):
         if mode == "embedding":
             if same_plot:
                 kwargs["color_gradients"] = A
-                logg.warning(
-                    "Ignoring `cluster_key` when plotting probabilities in the same plot"
-                )
+                if len(cluster_key):
+                    logg.warning(
+                        "Ignoring `cluster_key` when plotting probabilities in the same plot"
+                    )
                 # kwargs["color"] = cluster_key  this results in a bug, cluster_key data is overwritten, will make a PR
             else:
                 kwargs["color"] = color

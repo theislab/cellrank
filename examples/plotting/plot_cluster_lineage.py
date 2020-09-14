@@ -10,13 +10,18 @@ import cellrank as cr
 import scanpy as sc
 import numpy as np
 
-adata = cr.datasets.pancreas_preprocessed()
+adata = cr.datasets.pancreas_preprocessed("../example.h5ad")
+adata
 
 # %%
 # First, we compute the absorption probabilities, the pseudotime and the model that will be used for
 # gene trend smoothing.
 cr.tl.terminal_states(
-    adata, cluster_key="clusters", weight_connectivities=0.2, show_progress_bar=False
+    adata,
+    cluster_key="clusters",
+    weight_connectivities=0.2,
+    softmax_scale=4,
+    show_progress_bar=False,
 )
 cr.tl.lineages(adata)
 
@@ -35,7 +40,7 @@ model = cr.ul.models.GAM(adata)
 cr.pl.cluster_lineage(
     adata,
     model,
-    adata.var_names[:300],
+    adata.var_names[:200],
     lineage="Alpha",
     time_key="dpt_pseudotime",
     n_jobs=2,
