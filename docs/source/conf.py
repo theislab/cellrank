@@ -98,7 +98,7 @@ intersphinx_mapping = dict(
 )
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ["_templates"]
+templates_path = ["_templates", "build", "build"]
 source_suffix = [".rst", ".ipynb"]
 master_doc = "index"
 pygments_style = "sphinx"
@@ -219,24 +219,13 @@ sphinx_gallery_conf = {
     "reference_url": {
         "sphinx_gallery": None,
     },
-    "line_numbers": True,
+    "line_numbers": False,
     "compress_images": ("images", "thumbnails", "-o3"),
     "inspect_global_variables": False,
     "backreferences_dir": "gen_modules/backreferences",
     "doc_module": ("cellrank",),
     "download_all_examples": False,
-    "binder": {
-        # Required keys
-        "org": "theislab",
-        "repo": "cellrank.readthedocs.io",
-        "branch": release,  # master branch
-        "binderhub_url": "https://mybinder.org/",
-        "dependencies": "binder/requirements.txt",
-        "notebooks_dir": "notebooks",
-        "use_jupyter_lab": False,
-    },
 }
-sphinx_gallery_conf.pop("binder", None)
 
 # -- Options for HTML output -------------------------------------------------
 
