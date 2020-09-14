@@ -28,7 +28,7 @@ k = ((vk + vk + 42 * vk) + ck * 2) + ck * (3 * vk + 4 * pk)
 k
 
 # %%
-# For complex expression like the one above, one can get the basic kernels as follows.
+# For complex expression like the one above, one can get the basic unique kernels as follows.
 k.kernels
 
 # %%

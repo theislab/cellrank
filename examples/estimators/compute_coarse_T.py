@@ -21,13 +21,13 @@ g = cr.tl.estimators.GPCCA(k)
 # %%
 # Next, we compute the Schur vectors. See :ref:`sphx_glr_auto_examples_estimators_compute_schur_vectors.py` for
 # more information.
-g.compute_schur(n_components=8)
+g.compute_schur(n_components=6)
 
 # %%
 # Now we can compute the metastable states of the Markov chain, which also compute the coarse-grained transition matrix.
 # Here, parameter ``cluster_key`` tries to associate the names of the metastable states with the cluster information.
 # For more options, see :ref:`sphx_glr_auto_examples_estimators_compute_metastable_states.py`.
-g.compute_metastable_states(n_states=8, cluster_key="clusters")
+g.compute_metastable_states(n_states=6, cluster_key="clusters")
 
 # %%
 # Now we can plot the coarse-grained transition matrix. Apart from the stationary distribution, which is shown by

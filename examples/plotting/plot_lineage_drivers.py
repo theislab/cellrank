@@ -14,7 +14,12 @@ adata
 # %%
 # First, we need to compute the initial or terminal states and the absorption probabilities towards them.
 cr.tl.terminal_states(
-    adata, cluster_key="clusters", n_cells=30, softmax_scale=4, show_progress_bar=False
+    adata,
+    cluster_key="clusters",
+    n_cells=30,
+    n_states=3,
+    softmax_scale=4,
+    show_progress_bar=False,
 )
 cr.tl.lineages(adata)
 
