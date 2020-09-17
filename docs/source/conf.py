@@ -181,8 +181,8 @@ class ExplicitSubsectionOrder(_SortKey):
             lambda: 1000,
             {
                 example_dir / "other" / "plot_model.py": 0,
-                example_dir / "other" / "compute_kernel_tricks.py": 10,
-                example_dir / "other" / "compute_lineage_tricks.py": 20,
+                example_dir / "other" / "compute_lineage_tricks.py": 10,
+                example_dir / "other" / "compute_kernel_tricks.py": 20,
             },
         ),
     )

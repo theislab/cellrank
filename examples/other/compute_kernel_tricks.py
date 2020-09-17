@@ -67,7 +67,7 @@ ck.params
 
 # %%
 # The transition matrix can be written to :class:`anndata.AnnData` object. It is saved in the ``.obsp`` attribute.
-# This also writes the parameters to ``.uns`` attribute.
+# This also writes the parameters to the ``.uns`` attribute.
 ck.write_to_adata(key="transition_matrix")
 adata.obsp["transition_matrix"]
 
