@@ -36,7 +36,7 @@ g.compute_metastable_states(n_states=6, cluster_key="clusters")
 
 # %%
 # We can now plot the coarse-grained transition matrix.
-g.plot_coarse_T(show_initial_dist=True, text_kwargs={"fontsize": 10})
+g.plot_coarse_T(text_kwargs={"fontsize": 10})
 
 # %%
 # The coarse-grained transition matrix can also be used when setting the terminal states, see

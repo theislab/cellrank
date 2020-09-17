@@ -5,9 +5,9 @@ Compute metastable states
 
 This example shows how to compute and plot the metastable states.
 
-For the computation of metastable states, we adapted the popular Generalized Perron Cluster Cluster Analysis (GPCCA)
-method to the single cell context [GPCCA18]_ [Reuter19]_. We provide a scalable implementation which can decompose
-datasets of 100k+ cells into their dominant dynamical macrostates in just a few minutes. GPCCA relies on the real
+For the computation of metastable states, we adapted the popular Generalized Perron Cluster Cluster Analysis [GPCCA18]_
+[Reuter19]_ method to the single cell context. We provide a scalable implementation which can decompose datasets of
+100k+ cells into their dominant dynamical macrostates in just a few minutes. GPCCA relies on the real
 Schur decomposition to handle non-symmetric transition matrices as they arise from RNA velocity information,
 see :ref:`sphx_glr_auto_examples_estimators_compute_schur_vectors.py` and
 :ref:`sphx_glr_auto_examples_estimators_compute_schur_matrix.py`.
@@ -35,7 +35,7 @@ g.compute_schur(n_components=4)
 # The second import parameter is ``n_cells``, which selects the top cells from each state based
 # on the membership degree. By default, 30 cells are selected.
 #
-# Lastly, the parameter ``n_states`` can also be estimated by using either the `eigengap or the `minChi` criterion from
+# Lastly, the parameter ``n_states`` can also be estimated by using either the `eigengap` or the `minChi` criterion from
 # [GPCCA18]_.
 g.compute_metastable_states(n_states=3, cluster_key="clusters")
 
@@ -60,4 +60,4 @@ g.plot_metastable_states(same_plot=False)
 
 # %%
 # Method :meth:`cellrank.tl.estimators.GPCCA.compute_metastable_states` also computes the coarse-grained transition
-# matrix between metastable states, see :ref:`sphx_glr_auto_examples_estimators_compute_coarse_T.py`.
+# matrix between the metastable states, see :ref:`sphx_glr_auto_examples_estimators_compute_coarse_T.py`.

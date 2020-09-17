@@ -26,7 +26,7 @@ g = cr.tl.estimators.GPCCA(k)
 # :class:`cellrank.tl.estimators.CFLARE` can be used as well.
 #
 # In detail guide for :class:`cellrank.tl.estimators.GPCCA` estimator can be found in
-# :ref:`sphx_glr_auto_examples_estimators_compute_final_states_gpcca.py`.
+# :ref:`sphx_glr_auto_examples_estimators_compute_terminal_states_gpcca.py`.
 g.compute_schur(n_components=4)
 g.compute_metastable_states(cluster_key="clusters")
 g.set_final_states_from_metastable_states(["Alpha", "Beta", "Epsilon"])
@@ -42,5 +42,5 @@ g.compute_lineage_drivers()
 g.lineage_drivers
 
 # %%
-# Lastly, we plot the top 3 potential driver genes for the `'Alpha'` lineage.
+# Lastly, we plot the top 3 potential driver genes for the `"Alpha"` lineage.
 g.plot_lineage_drivers("Alpha", n_genes=3)

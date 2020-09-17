@@ -8,7 +8,7 @@ This examples show how to compute and plot the `Schur matrix <https://en.wikiped
 The Schur matrix is equivalent to the diagonal matrix of eigenvalues for diagonalizable matrices. For the real
 Schur decomposition, it is a real, quasi-upper triangular matrix with 1x1 and 2x2 blocks on the diagonal.
 For a rectangular, real matrix :math:`T`, it holds: :math:`T = Q R Q^T`, where :math:`R` is the real Schur matrix and
-:math:`Q` is an orthogonal matrix containing the real Schur vectors as columns. 1x1 blocks on the diagonal of :math`R`
+:math:`Q` is an orthogonal matrix containing the real Schur vectors as columns. 1x1 blocks on the diagonal of :math:`R`
 correspond to real eigenvalues of :math:`T` whereas 2x2 blocks on the diagonal of :math:`R` correspond to pairs of
 complex conjugate eigenvalues of :math:`T`.
 """

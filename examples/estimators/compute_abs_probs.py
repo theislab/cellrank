@@ -57,13 +57,13 @@ g.plot_absorption_probabilities()
 # and the variance of time to absorption to all or just to a subset of final states.
 #
 # This can be specified by supplying ``time_to_absorption`` parameter. Below we compute only the mean time to
-# absorption to all final states. To compute the mean and the variance only for the `'Alpha'` absorbing state,
+# absorption to all final states. To compute the mean and the variance only for the `"Alpha"` absorbing state,
 # one specify the following ``time_to_absorption={"Alpha": "var"}``.
 g.compute_absorption_probabilities(time_to_absorption="all")
 g.lineage_absorption_times
 
 # %%
-# Lastly, we plot the above computed times.
+# Lastly, we plot the above computed time.
 adata.obs["mean_time_to_absorption"] = g.lineage_absorption_times[
     "Alpha, Beta, Epsilon mean"
 ]

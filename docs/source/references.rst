@@ -1,7 +1,7 @@
 References
 ----------
 
-.. [Bergen2020] Bergen, V. *et al.* (2020),
+.. [Bergen20] Bergen, V. *et al.* (2020),
    *Generalizing RNA velocity to transient cell states through dynamical modeling*,
    `Nature Biotechnology <https://doi.org/10.1038/s41587-020-0591-3>`__.
 

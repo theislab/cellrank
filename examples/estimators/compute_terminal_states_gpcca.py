@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-Compute terminal states using GPCCA [GPCCA18]_ [Reuter19]_
-----------------------------------------------------------
+Compute terminal states using GPCCA
+-----------------------------------
 
-This example shows how to compute and plot the terminal states using :class:`cellrank.tl.estimators.GPCCA`.
+This example shows how to compute and plot the terminal states using the :class:`cellrank.tl.estimators.GPCCA`.
+
+This estimator makes use of Generalized Perron Cluster Cluster Analysis [GPCCA18]_ [Reuter19]_.
 """
 
 import cellrank as cr
@@ -27,6 +29,7 @@ g.compute_metastable_states(cluster_key="clusters")
 # %%
 # We used the term final states to refer to the terminal states if we're considering the forward process, such as this
 # case. For the backward process, this term refers to the initial states of the process.
+#
 # For :class:`cellrank.tl.estimators.GPCCA`, there are 3 methods for choosing the final states:
 #
 #     1. :meth:`cellrank.tl.estimators.GPCCA.set_final_states`
@@ -47,7 +50,7 @@ g.compute_metastable_states(cluster_key="clusters")
 # not belonging to any final state or a :class:`dict`, where keys correspond to the names of the final states,
 # and the values to the sequence of cell names or their indices.
 #
-# Below we set the final state called `'Alpha'` as all the cells from the `'Alpha``
+# Below we set the final state called `"Alpha"` as all the cells from the `"Alpha"`
 # cluster under ``adata.obs["clusters"]``.
 g.set_final_states({"Alpha": adata[adata.obs["clusters"] == "Alpha"].obs_names})
 
@@ -56,7 +59,7 @@ g.set_final_states({"Alpha": adata[adata.obs["clusters"] == "Alpha"].obs_names})
 # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 # :meth:`cellrank.tl.estimators.GPCCA.set_final_states_from_metastable_states` sets the final states by subsetting
 # the metastable states. Note that multiple states can also be combined into new, joint states, as shown below,
-# where we combine `'Alpha'` and `'Beta'` states into a new one.
+# where we combine `"Alpha"` and `"Beta"` states into a new one.
 g.set_final_states_from_metastable_states(["Alpha, Beta", "Epsilon"])
 
 # %%

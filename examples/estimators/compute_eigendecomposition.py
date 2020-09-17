@@ -26,7 +26,7 @@ g = cr.tl.estimators.GPCCA(k)
 
 # %%
 # In this example, we visualize the eigenvectors in an embedding, therefore we specify ``only_evals=False``,
-# but for the method :meth:`cellrank.tl.estimators.BaseEstimator.plot_spectrum`, they are not necessary, because
+# but for the method :meth:`cellrank.tl.estimators.GPCCA.plot_spectrum`, they are not necessary, because
 # there we plot only the eigenvalues.
 g.compute_eigendecomposition(k=20, only_evals=False)
 g.eigendecomposition
