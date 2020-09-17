@@ -18,8 +18,7 @@ adata = cr.datasets.pancreas_preprocessed("../example.h5ad")
 adata
 
 # %%
-# First, we prepare the kernel using the high-level the pipeline and the
-# :class:`cellrank.tl.estimators.GPCCA` estimator.
+# First, we prepare the kernel using the high-level pipeline and the :class:`cellrank.tl.estimators.GPCCA` estimator.
 k = cr.tl.transition_matrix(
     adata, weight_connectivities=0.2, softmax_scale=4, show_progress_bar=False
 )
