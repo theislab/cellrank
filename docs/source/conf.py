@@ -155,11 +155,11 @@ class ExplicitSubsectionOrder(_SortKey):
 
     _order = ChainMap(
         {
-            example_dir / "estimators" / "compute_schur_vectors.py": 0,
-            example_dir / "estimators" / "compute_schur_matrix.py": 10,
-            example_dir / "estimators" / "compute_spectrum.py": 20,
+            example_dir / "estimators" / "compute_eigendecomposition.py": 0,
+            example_dir / "estimators" / "compute_schur_vectors.py": 10,
+            example_dir / "estimators" / "compute_schur_matrix.py": 20,
             example_dir / "estimators" / "compute_metastable_states.py": 30,
-            example_dir / "estimators" / "compute_coarse_T.py": 30,
+            example_dir / "estimators" / "compute_coarse_T.py": 40,
             example_dir / "estimators" / "compute_terminal_states_gpcca.py": 50,
             example_dir / "estimators" / "compute_abs_probs.py": 60,
             example_dir / "estimators" / "compute_lineage_drivers.py": 70,
