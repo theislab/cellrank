@@ -9,7 +9,7 @@ CellRank - Probabilistic Fate Mapping using RNA Velocity
    :align: center
 
 **CellRank** is a toolkit to uncover cellular dynamics based on scRNA-seq data with RNA velocity annotation,
-see `La Manno et al. (2018)`_ and `Bergen et al. (2019)`_. CellRank models cellular dynamics as a Markov chain, where transition
+see `La Manno et al. (2018)`_ and `Bergen et al. (2020)`_. CellRank models cellular dynamics as a Markov chain, where transition
 probabilities are computed based on RNA velocity and transcriptomic similarity, taking into account uncertainty
 in the velocities. The Markov chain is coarse grained into a set of metastable states which represent root &
 final states as well as transient intermediate states. For each cell, we obtain the probability of it belonging
@@ -72,7 +72,7 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
 
 .. _La Manno et al. (2018): https://doi.org/10.1038/s41586-018-0414-6
 
-.. _Bergen et al. (2019): https://doi.org/10.1101/820936
+.. _Bergen et al. (2020): https://doi.org/10.1038/s41587-020-0591-3
 
 .. _pancreatic endocrinogenesis: https://doi.org/10.1242/dev.173849
 
