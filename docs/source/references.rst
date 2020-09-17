@@ -1,9 +1,9 @@
 References
 ----------
 
-.. [Bergen19] Bergen *et al.* (2019),
+.. [Bergen20] Bergen, V. *et al.* (2020),
    *Generalizing RNA velocity to transient cell states through dynamical modeling*,
-   `bioRxiv <https://doi.org/10.1101/820936>`__.
+   `Nature Biotechnology <https://doi.org/10.1038/s41587-020-0591-3>`__.
 
 .. [Coifman05] Coifman *et al.* (2005),
   *Geometric diffusions as a tool for harmonic analysis and structure definition of data: Diffusion maps*,
@@ -47,5 +47,9 @@ References
    `Development <https://doi.org/10.1242/dev.173849>`__.
 
 .. [GPCCA18] Reuter, B. *et al.* (2018),
-   *Generalized Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on Amyloid β Conformational Dynamics Driven by an Oscillating Electric Field.*
+   *Generalized Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on Amyloid β Conformational Dynamics Driven by an Oscillating Electric Field.*,
    `Journal of Chemical Theory and Computation <https://doi.org/10.1021/acs.jctc.8b00079>`__.
+
+.. [Reuter19] Reuter, B. *et al.* (2019),
+    *Generalized Markov modeling of nonreversible molecular kinetics*,
+    `The Journal of Chemical Physics <https://doi.org/10.1063/1.5064530>`__.

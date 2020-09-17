@@ -155,16 +155,15 @@ class ExplicitSubsectionOrder(_SortKey):
 
     _order = ChainMap(
         {
-            example_dir / "estimators" / "compute_schur_vectors.py": 0,
-            example_dir / "estimators" / "compute_schur_matrix.py": 10,
-            example_dir / "estimators" / "compute_metastable_states.py": 20,
-            example_dir / "estimators" / "compute_coarse_T.py": 30,
-            example_dir / "estimators" / "compute_final_states_gpcca.py": 40,
-            example_dir / "estimators" / "compute_spectrum.py": 50,
-            example_dir / "estimators" / "compute_final_states_cflare.py": 60,
-            example_dir / "estimators" / "compute_abs_probs.py": 70,
-            example_dir / "estimators" / "compute_lineage_drivers.py": 80,
-            example_dir / "estimators" / "compute_fit.py": 90,
+            example_dir / "estimators" / "compute_eigendecomposition.py": 0,
+            example_dir / "estimators" / "compute_schur_vectors.py": 10,
+            example_dir / "estimators" / "compute_schur_matrix.py": 20,
+            example_dir / "estimators" / "compute_metastable_states.py": 30,
+            example_dir / "estimators" / "compute_coarse_T.py": 40,
+            example_dir / "estimators" / "compute_terminal_states_gpcca.py": 50,
+            example_dir / "estimators" / "compute_abs_probs.py": 60,
+            example_dir / "estimators" / "compute_lineage_drivers.py": 70,
+            example_dir / "estimators" / "compute_fit.py": 80,
         },
         {
             example_dir / "plotting" / "plot_initial_states.py": 0,
@@ -182,8 +181,8 @@ class ExplicitSubsectionOrder(_SortKey):
             lambda: 1000,
             {
                 example_dir / "other" / "plot_model.py": 0,
-                example_dir / "other" / "compute_kernel_tricks.py": 10,
-                example_dir / "other" / "compute_lineage_tricks.py": 20,
+                example_dir / "other" / "compute_lineage_tricks.py": 10,
+                example_dir / "other" / "compute_kernel_tricks.py": 20,
             },
         ),
     )
