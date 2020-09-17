@@ -3,7 +3,7 @@
 Compute Schur vectors
 ---------------------
 
-This example shows how to compute and plot the `Schur vectors https://en.wikipedia.org/wiki/Schur_decomposition`_.
+This example shows how to compute and plot the `Schur vectors <https://en.wikipedia.org/wiki/Schur_decomposition>`_.
 
 In CellRank, we work with the real Schur decomposition because the transition matrices we are concerned with are non
 symmetrical (think of the velocity flow). In general, for these matrices the eigendecomposition does not exist.

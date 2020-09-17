@@ -3,7 +3,12 @@
 Compute absorption probabilities
 --------------------------------
 
-This example shows how to compute and plot absorption probabilities and time to absorption.
+This example shows how to compute and plot the absorption probabilities and the time to absorption.
+
+Absorption probabilities are used in CellRank to define how likely each individual cell is to transition into each of
+the identified final states. In a usual workflow, you would first compute a set of final states for your dataset
+and next ask the question how likely each cell is to develop towards each of these states. CellRank provides an
+efficient implementation of computing the absorption probabilities that scales to 100k+ cells.
 """
 
 import cellrank as cr
@@ -13,7 +18,7 @@ adata = cr.datasets.pancreas_preprocessed("../example.h5ad")
 adata
 
 # %%
-# First, we prepare the kernel using high-level pipeline and the :class:`cellrank.tl.estimators.GPCCA` estimator.
+# First, we prepare the kernel using the high-level pipeline and the :class:`cellrank.tl.estimators.GPCCA` estimator.
 k = cr.tl.transition_matrix(
     adata, weight_connectivities=0.2, softmax_scale=4, show_progress_bar=False
 )
@@ -28,9 +33,12 @@ g.compute_metastable_states(cluster_key="clusters")
 g.set_final_states_from_metastable_states(["Alpha", "Beta", "Epsilon"])
 
 # %%
-# :meth:`cellrank.tl.estimators.BaseEstimator.compute_absorption_probabilities` easily scales to 100K+ cells,
-# thanks to the linear solvers from :mod:`PETSc`. If needed, we can compute the absorption probabilities only to a
-# few selected final states. Here, we compute the probabilities of being absorbed in all the final states.
+# :meth:`cellrank.tl.estimators.BaseEstimator.compute_absorption_probabilities` easily scales to 100k+ cells,
+# thanks to the linear solvers from :mod:`PETSc`.
+#
+# The computation of absorption probabilities may be restricted to a subset of the identified states via the ``keys``
+# parameter. In our case, we are interested in the absorption probabilities towards each of the terminal states we
+# identified in our data.
 g.compute_absorption_probabilities()
 
 # %%

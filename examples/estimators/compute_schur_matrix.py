@@ -3,7 +3,7 @@
 Compute Schur matrix
 --------------------
 
-This examples show how to compute and plot the `Schur matrix https://en.wikipedia.org/wiki/Schur_decomposition`_.
+This examples show how to compute and plot the `Schur matrix <https://en.wikipedia.org/wiki/Schur_decomposition>`_.
 
 The Schur matrix is equivalent to the diagonal matrix of eigenvalues for diagonalizable matrices. For the real
 Schur decomposition, it is a real, quasi-upper triangular matrix with 1x1 and 2x2 blocks on the diagonal.
