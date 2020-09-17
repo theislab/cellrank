@@ -6,7 +6,7 @@ Compute metastable states
 This example shows how to compute and plot the metastable states.
 
 For the computation of metastable states, we adapted the popular Generalized Perron Cluster Cluster Analysis (GPCCA)
-method to the single cell context [GPCCA18]_, [Reuter19]_. We provide a scalable implementation which can decompose
+method to the single cell context [GPCCA18]_ [Reuter19]_. We provide a scalable implementation which can decompose
 datasets of 100k+ cells into their dominant dynamical macrostates in just a few minutes. GPCCA relies on the real
 Schur decomposition to handle non-symmetric transition matrices as they arise from RNA velocity information,
 see :ref:`sphx_glr_auto_examples_estimators_compute_schur_vectors.py` and

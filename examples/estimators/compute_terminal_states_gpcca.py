@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Compute final states using GPCCA
---------------------------------
+Compute terminal states using GPCCA [GPCCA18]_ [Reuter19]_
+----------------------------------------------------------
 
-This example shows how to compute and plot final states using :class:`cellrank.tl.estimators.GPCCA`.
+This example shows how to compute and plot the terminal states using :class:`cellrank.tl.estimators.GPCCA`.
 """
 
 import cellrank as cr
@@ -12,30 +12,31 @@ adata = cr.datasets.pancreas_preprocessed("../example.h5ad")
 adata
 
 # %%
-# First, we prepare the kernel using high-level pipeline and the :class:`cellrank.tl.estimators.GPCCA` estimator.
+# First, we prepare the kernel using the high-level pipeline and the :class:`cellrank.tl.estimators.GPCCA` estimator.
 k = cr.tl.transition_matrix(
     adata, weight_connectivities=0.2, softmax_scale=4, show_progress_bar=False
 )
 g = cr.tl.estimators.GPCCA(k)
 
 # %%
-# Next, we need to compute the Schur vectors and metastable states. We refer the reader to
-# :ref:`sphx_glr_auto_examples_estimators_compute_metastable_states.py` where it's explained more in detail.
+# Next, we need to compute the Schur vectors and the metastable states. We refer the reader to
+# :ref:`sphx_glr_auto_examples_estimators_compute_metastable_states.py` where the method is explained more in detail.
 g.compute_schur(n_components=4)
 g.compute_metastable_states(cluster_key="clusters")
 
 # %%
+# We used the term final states to refer to the terminal states if we're considering the forward process, such as this
+# case. For the backward process, this term refers to the initial states of the process.
 # For :class:`cellrank.tl.estimators.GPCCA`, there are 3 methods for choosing the final states:
 #
 #     1. :meth:`cellrank.tl.estimators.GPCCA.set_final_states`
 #     2. :meth:`cellrank.tl.estimators.GPCCA.set_final_states_from_metastable_states`
 #     3. :meth:`cellrank.tl.estimators.GPCCA.compute_final_states`
 #
-# We will cover each of these methods below. In the last 2 cases, parameter ``n_cells`` controls how many from each
-# final state we take as a categorical annotation. Towards these states we can later compute the
-# absorption probabilities, as shown in :ref:`sphx_glr_auto_examples_estimators_compute_abs_probs.py`.
+# We will cover each of these methods below. In the last 2 cases, parameter ``n_cells`` controls how many cells to take
+# from each final state we take as a categorical annotation.
 
-# %%
+# %%G
 # Set final states
 # ^^^^^^^^^^^^^^^^
 # :meth:`cellrank.tl.estimators.GPCCA.set_final_states` simply sets the final states manually - this
@@ -76,3 +77,9 @@ g.compute_final_states(method="eigengap")
 # like plotting in the same plot (parameter ``same_plot``) or plotting the discrete values (parameter
 # ``discrete``).
 g.plot_final_states(same_plot=False)
+
+# %%
+# We note that membership degree of metastable/terminal states should not be confused with the probability of
+# traveling/developing towards these states. For that, we compute the absorption probabilities, see
+# :ref:`sphx_glr_auto_examples_estimators_compute_abs_probs.py`. The assignment of cells to metastable states is
+# a soft assignment that specifies the degree of membership of any particular cell to a given state.
