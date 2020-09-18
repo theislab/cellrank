@@ -8,6 +8,7 @@ import numpy as np
 from scipy.sparse.linalg import eigs
 
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from cellrank import logging as logg
@@ -186,6 +187,8 @@ class Eigen(VectorPlottable, Decomposable):
         self,
         n: Optional[int] = None,
         real_only: bool = False,
+        show_eigengap: bool = True,
+        show_all_xticks: bool = True,
         legend_loc: Optional[str] = None,
         title: Optional[str] = None,
         figsize: Optional[Tuple[float, float]] = (5, 5),
@@ -203,6 +206,12 @@ class Eigen(VectorPlottable, Decomposable):
             Number of eigenvalues to show. If `None`, show all that have been computed.
         real_only
             Whether to plot only the real part of the spectrum.
+        show_eigengap
+            When `real_only=True`, this determines whether to show the inferred eigengap as
+            a dotted line.
+        show_all_xticks
+            When `real_only=True`, this determines whether to show the indices of all eigenvalues
+            on the x-axis.
         legend_loc
             Location parameter for the legend.
         title
@@ -231,6 +240,8 @@ class Eigen(VectorPlottable, Decomposable):
         if real_only:
             fig = self._plot_real_spectrum(
                 n,
+                show_eigengap=show_eigengap,
+                show_all_xticks=show_all_xticks,
                 dpi=dpi,
                 figsize=figsize,
                 legend_loc=legend_loc,
@@ -312,6 +323,8 @@ class Eigen(VectorPlottable, Decomposable):
     def _plot_real_spectrum(
         self,
         n: int,
+        show_eigengap: bool = True,
+        show_all_xticks: bool = True,
         dpi: int = 100,
         figsize: Optional[Tuple[float, float]] = None,
         legend_loc: Optional[str] = None,
@@ -346,11 +359,15 @@ class Eigen(VectorPlottable, Decomposable):
             )
 
         # add dashed line for the eigengap, ticks, labels, title and legend
-        if eig["eigengap"] < n:
-            ax.axvline(eig["eigengap"], label="eigengap", ls="--")
+        if show_eigengap and eig["eigengap"] < n:
+            ax.axvline(eig["eigengap"], label="eigengap", ls="--", lw=1)
 
         ax.set_xlabel("index")
-        ax.set_xticks(range(len(D)))
+        if show_all_xticks:
+            ax.set_xticks(np.arange(len(D)))
+        else:
+            ax.xaxis.set_major_locator(MultipleLocator(2.0))
+            ax.xaxis.set_major_formatter(FormatStrFormatter("%d"))
 
         ax.set_ylabel(r"Re($\lambda_i$)")
 
