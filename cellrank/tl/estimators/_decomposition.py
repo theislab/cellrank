@@ -352,9 +352,8 @@ class Eigen(VectorPlottable, Decomposable):
             )
 
         # add dashed line for the eigengap, ticks, labels, title and legend
-        if show_eigengap:
-            if eig["eigengap"] < n:
-                ax.axvline(eig["eigengap"], label="eigengap", ls="--")
+        if show_eigengap and eig["eigengap"] < n:
+            ax.axvline(eig["eigengap"], label="eigengap", ls="--")
 
         ax.set_xlabel("index")
         ax.set_xticks(range(len(D)))

@@ -1507,6 +1507,10 @@ class TestCFLARE:
         mc.plot_spectrum(real_only=True, dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
+    def test_mc_real_spectrum_hide_eigengap(self, mc: CFLARE, fpath: str):
+        mc.plot_spectrum(real_only=True, show_eigengap=False, dpi=DPI, save=fpath)
+
+    @compare(kind="cflare")
     def test_mc_spectrum_title(self, mc: CFLARE, fpath: str):
         mc.plot_spectrum(title="foobar", real_only=False, dpi=DPI, save=fpath)
 
@@ -1579,6 +1583,10 @@ class TestGPCCA:
     @compare(kind="gpcca")
     def test_gpcca_real_spectrum(self, mc: GPCCA, fpath: str):
         mc.plot_spectrum(real_only=True, dpi=DPI, save=fpath)
+
+    @compare(kind="gpcca")
+    def test_gpcca_real_spectrum_hide_eigengap(self, mc: GPCCA, fpath: str):
+        mc.plot_spectrum(real_only=True, show_eigengap=False, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_gpcca_spectrum_title(self, mc: GPCCA, fpath: str):
