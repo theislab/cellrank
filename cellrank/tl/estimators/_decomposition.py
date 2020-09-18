@@ -187,6 +187,7 @@ class Eigen(VectorPlottable, Decomposable):
         n: Optional[int] = None,
         real_only: bool = False,
         show_eigengap: bool = True,
+        show_all_xticks: bool = True,
         legend_loc: Optional[str] = None,
         title: Optional[str] = None,
         figsize: Optional[Tuple[float, float]] = (5, 5),
@@ -207,6 +208,9 @@ class Eigen(VectorPlottable, Decomposable):
         show_eigengap
             When `real_only=True`, this determines whether to show the inferred eigengap as
             a dotted line.
+        show_all_xticks
+            When `real_only=True`, this determines whether to show the indices of all eigenvalues
+            on the x-axis.
         legend_loc
             Location parameter for the legend.
         title
@@ -236,6 +240,7 @@ class Eigen(VectorPlottable, Decomposable):
             fig = self._plot_real_spectrum(
                 n,
                 show_eigengap=show_eigengap,
+                show_all_xticks=show_all_xticks,
                 dpi=dpi,
                 figsize=figsize,
                 legend_loc=legend_loc,
@@ -318,6 +323,7 @@ class Eigen(VectorPlottable, Decomposable):
         self,
         n: int,
         show_eigengap: bool = True,
+        show_all_xticks: bool = True,
         dpi: int = 100,
         figsize: Optional[Tuple[float, float]] = None,
         legend_loc: Optional[str] = None,
@@ -357,7 +363,8 @@ class Eigen(VectorPlottable, Decomposable):
                 ax.axvline(eig["eigengap"], label="eigengap", ls="--")
 
         ax.set_xlabel("index")
-        ax.set_xticks(range(len(D)))
+        if show_all_xticks:
+            ax.set_xticks(range(len(D)))
 
         ax.set_ylabel(r"Re($\lambda_i$)")
 
