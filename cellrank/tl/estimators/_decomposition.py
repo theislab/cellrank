@@ -186,6 +186,7 @@ class Eigen(VectorPlottable, Decomposable):
         self,
         n: Optional[int] = None,
         real_only: bool = False,
+        show_eigengap: bool = True,
         legend_loc: Optional[str] = None,
         title: Optional[str] = None,
         figsize: Optional[Tuple[float, float]] = (5, 5),
@@ -203,6 +204,9 @@ class Eigen(VectorPlottable, Decomposable):
             Number of eigenvalues to show. If `None`, show all that have been computed.
         real_only
             Whether to plot only the real part of the spectrum.
+        show_eigengap
+            When `real_only=True`, this determines whether to show the inferred eigengap as
+            a dotted line.
         legend_loc
             Location parameter for the legend.
         title
@@ -231,6 +235,7 @@ class Eigen(VectorPlottable, Decomposable):
         if real_only:
             fig = self._plot_real_spectrum(
                 n,
+                show_eigengap=show_eigengap,
                 dpi=dpi,
                 figsize=figsize,
                 legend_loc=legend_loc,
@@ -312,6 +317,7 @@ class Eigen(VectorPlottable, Decomposable):
     def _plot_real_spectrum(
         self,
         n: int,
+        show_eigengap: bool = True,
         dpi: int = 100,
         figsize: Optional[Tuple[float, float]] = None,
         legend_loc: Optional[str] = None,
@@ -346,8 +352,9 @@ class Eigen(VectorPlottable, Decomposable):
             )
 
         # add dashed line for the eigengap, ticks, labels, title and legend
-        if eig["eigengap"] < n:
-            ax.axvline(eig["eigengap"], label="eigengap", ls="--")
+        if show_eigengap:
+            if eig["eigengap"] < n:
+                ax.axvline(eig["eigengap"], label="eigengap", ls="--")
 
         ax.set_xlabel("index")
         ax.set_xticks(range(len(D)))
