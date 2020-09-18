@@ -8,6 +8,7 @@ import numpy as np
 from scipy.sparse.linalg import eigs
 
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from cellrank import logging as logg
@@ -359,11 +360,14 @@ class Eigen(VectorPlottable, Decomposable):
 
         # add dashed line for the eigengap, ticks, labels, title and legend
         if show_eigengap and eig["eigengap"] < n:
-            ax.axvline(eig["eigengap"], label="eigengap", ls="--")
+            ax.axvline(eig["eigengap"], label="eigengap", ls="--", lw=1)
 
         ax.set_xlabel("index")
         if show_all_xticks:
-            ax.set_xticks(range(len(D)))
+            ax.set_xticks(np.arange(len(D)))
+        else:
+            ax.xaxis.set_major_locator(MultipleLocator(2.0))
+            ax.xaxis.set_major_formatter(FormatStrFormatter("%d"))
 
         ax.set_ylabel(r"Re($\lambda_i$)")
 

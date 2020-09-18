@@ -1507,6 +1507,10 @@ class TestCFLARE:
         mc.plot_spectrum(real_only=True, dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
+    def test_mc_real_spectrum_hide_xticks(self, mc: CFLARE, fpath: str):
+        mc.plot_spectrum(real_only=True, show_all_xticks=False, dpi=DPI, save=fpath)
+
+    @compare(kind="cflare")
     def test_mc_real_spectrum_hide_eigengap(self, mc: CFLARE, fpath: str):
         mc.plot_spectrum(real_only=True, show_eigengap=False, dpi=DPI, save=fpath)
 
