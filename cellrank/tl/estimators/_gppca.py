@@ -22,6 +22,7 @@ from cellrank.tl._utils import (
 )
 from cellrank.tl._colors import _get_black_or_white
 from cellrank.tl._lineage import Lineage
+from cellrank.tl._constants import TermStatesKey, _probs, _colors, _lin_names
 from cellrank.tl.estimators._utils import Metadata, _print_insufficient_number_of_cells
 from cellrank.tl.estimators._property import MetaStates
 from cellrank.tl.estimators._constants import A, F, P
@@ -241,8 +242,8 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         Parameters
         ----------
         names
-            Names of the metastable states. Multiple states can be combined using `','`,
-            such as `['Alpha, Beta', 'Epsilon']`.
+            Names of the metastable states to be marked as terminal. Multiple states can be combined using `','`,
+            such as `["Alpha, Beta", "Epsilon"]`.
         %(n_cells)s
 
         Returns
@@ -266,7 +267,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
 
         if self._get(P.META_MEMBER) is None:
             raise RuntimeError(
-                "Compute metastable_states first as `.compute_metastable_states()`."
+                "Compute metastable states first as `.compute_metastable_states()`."
             )
         elif probs.shape[1] == 1:
             self._set(A.TERM, self._create_states(probs, n_cells=n_cells))
@@ -282,15 +283,13 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         if isinstance(names, str):
             names = [names]
 
-        meta_states_probs = probs[list(names)]
+        meta_states_probs = probs[[n for n in names if n != "rest"]]
 
         # compute the aggregated probability of being a initial/terminal state (no matter which)
-        scaled_probs = meta_states_probs[
-            [n for n in meta_states_probs.names if n != "rest"]
-        ].copy()
+        scaled_probs = meta_states_probs.copy()
         scaled_probs /= scaled_probs.max(0)
 
-        self._set(A.TERM, self._create_states(meta_states_probs, n_cells))
+        self._set(A.TERM, self._create_states(meta_states_probs, n_cells=n_cells))
         self._set(
             A.TERM_PROBS, pd.Series(scaled_probs.X.max(1), index=self.adata.obs_names)
         )
@@ -1054,4 +1053,83 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             method=method,
             compute_absorption_probabilities=compute_absorption_probabilities,
             **kwargs,
+        )
+
+    @d.dedent
+    @inject_docs(
+        key=TermStatesKey.BACKWARD.s, probs_key=_probs(TermStatesKey.BACKWARD.s)
+    )
+    def _set_initial_states_from_metastable_states(
+        self,
+        names: Optional[Union[Iterable[str], str]] = None,
+        n_cells: int = 30,
+    ):
+        """
+        Manually select initial states from metastable states.
+
+        Note that no check is performed to ensure initial and terminal states are distinct.
+
+        Parameters
+        ----------
+        names
+            Names of the metastable states to be marked as initial states. Multiple states can be combined using `','`,
+            such as `["Alpha, Beta", "Epsilon"]`.
+        %(n_cells)s
+
+        Returns
+        -------
+        None
+            Nothing, just writes to :paramref:`adata`:
+
+                - ``.obs[{key!r}]`` - probability of being an initial state.
+                - ``.obs[{probs_key!r}]`` - top ``n_cells`` from each initial state.
+        """
+
+        if not isinstance(n_cells, int):
+            raise TypeError(
+                f"Expected `n_cells` to be of type `int`, found `{type(n_cells).__name__}`."
+            )
+
+        if n_cells <= 0:
+            raise ValueError(f"Expected `n_cells` to be positive, found `{n_cells}`.")
+
+        probs = self._get(P.META_MEMBER)
+
+        if self._get(P.META_MEMBER) is None:
+            raise RuntimeError(
+                "Compute metastable states first as `.compute_metastable_states()`."
+            )
+        elif probs.shape[1] == 1:
+            categorical = self._create_states(probs, n_cells=n_cells)
+            scaled = probs / probs.max()
+        else:
+            if names is None:
+                names = probs.names
+
+            if isinstance(names, str):
+                names = [names]
+
+            probs = probs[[n for n in names if n != "rest"]]
+            categorical = self._create_states(probs, n_cells=n_cells)
+            probs /= probs.max(0)
+
+            # compute the aggregated probability of being a initial/terminal state (no matter which)
+            scaled = probs.X.max(1)
+
+        self._write_initial_states(membership=probs, probs=scaled, cats=categorical)
+
+    def _write_initial_states(
+        self, membership: Lineage, probs: pd.Series, cats: pd.Series, time=None
+    ) -> None:
+        key = TermStatesKey.BACKWARD.s
+
+        self.adata.obs[key] = cats
+        self.adata.obs[_probs(key)] = probs
+
+        self.adata.uns[_colors(key)] = membership.colors
+        self.adata.uns[_lin_names(key)] = membership.names
+
+        logg.info(
+            f"Adding `adata.obs[{_probs(key)!r}]`\n" f"       `adata.obs[{key!r}]`\n",
+            time=time,
         )

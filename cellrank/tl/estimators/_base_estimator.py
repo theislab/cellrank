@@ -42,7 +42,7 @@ from cellrank.tl._constants import (
     DirPrefix,
     AbsProbKey,
     PrettyEnum,
-    FinalStatesKey,
+    TermStatesKey,
     _dp,
     _probs,
     _colors,
@@ -103,11 +103,11 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             self.kernel._adata = self.adata.copy()
 
         if self.kernel.backward:
-            self._fs_key = FinalStatesKey.BACKWARD.s
+            self._term_key = TermStatesKey.BACKWARD.s
             self._abs_prob_key = AbsProbKey.BACKWARD.s
             self._term_abs_prob_key = MetaKey.BACKWARD.s
         else:
-            self._fs_key = FinalStatesKey.FORWARD.s
+            self._term_key = TermStatesKey.FORWARD.s
             self._abs_prob_key = AbsProbKey.FORWARD.s
             self._term_abs_prob_key = MetaKey.FORWARD.s
 
@@ -130,9 +130,9 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         self._set_or_debug(self._g2m_key, self.adata.obs, "_G2M_score")
         self._set_or_debug(self._s_key, self.adata.obs, "_S_score")
 
-        self._set_or_debug(self._fs_key, self.adata.obs, A.TERM.s)
-        self._set_or_debug(_probs(self._fs_key), self.adata.obs, A.TERM_PROBS)
-        self._set_or_debug(_colors(self._fs_key), self.adata.uns, A.TERM_COLORS)
+        self._set_or_debug(self._term_key, self.adata.obs, A.TERM.s)
+        self._set_or_debug(_probs(self._term_key), self.adata.obs, A.TERM_PROBS)
+        self._set_or_debug(_colors(self._term_key), self.adata.uns, A.TERM_COLORS)
 
         self._reconstruct_lineage(A.ABS_PROBS, self._abs_prob_key)
         self._set_or_debug(_dp(self._abs_prob_key), self.adata.obs, A.DIFF_POT)
@@ -140,8 +140,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
     def _reconstruct_lineage(self, attr: PrettyEnum, obsm_key: str):
 
         self._set_or_debug(obsm_key, self.adata.obsm, attr)
-        names = self._set_or_debug(_lin_names(self._fs_key), self.adata.uns)
-        colors = self._set_or_debug(_colors(self._fs_key), self.adata.uns)
+        names = self._set_or_debug(_lin_names(self._term_key), self.adata.uns)
+        colors = self._set_or_debug(_colors(self._term_key), self.adata.uns)
 
         # choosing this instead of property because GPCCA doesn't have property for FIN_ABS_PROBS
         probs = self._get(attr)
@@ -164,8 +164,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             self._set(attr, Lineage(probs, names=names, colors=colors))
 
             self.adata.obsm[obsm_key] = self._get(attr)
-            self.adata.uns[_lin_names(self._fs_key)] = names
-            self.adata.uns[_colors(self._fs_key)] = colors
+            self.adata.uns[_lin_names(self._term_key)] = names
+            self.adata.uns[_colors(self._term_key)] = colors
 
     @d.dedent
     @inject_docs(fs=P.TERM.s, fsp=P.TERM_PROBS.s)
@@ -790,11 +790,11 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         setattr(self, attr_key, categories)
 
     def _write_terminal_states(self, time=None) -> None:
-        self.adata.obs[self._fs_key] = self._get(P.TERM)
-        self.adata.obs[_probs(self._fs_key)] = self._get(P.TERM_PROBS)
+        self.adata.obs[self._term_key] = self._get(P.TERM)
+        self.adata.obs[_probs(self._term_key)] = self._get(P.TERM_PROBS)
 
-        self.adata.uns[_colors(self._fs_key)] = self._get(A.TERM_COLORS)
-        self.adata.uns[_lin_names(self._fs_key)] = list(
+        self.adata.uns[_colors(self._term_key)] = self._get(A.TERM_COLORS)
+        self.adata.uns[_lin_names(self._term_key)] = list(
             self._get(P.TERM).cat.categories
         )
 
@@ -808,8 +808,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             extra_msg = f"       `adata.obsm[{self._term_abs_prob_key!r}]`\n"
 
         logg.info(
-            f"Adding `adata.obs[{_probs(self._fs_key)!r}]`\n"
-            f"       `adata.obs[{self._fs_key!r}]`\n"
+            f"Adding `adata.obs[{_probs(self._term_key)!r}]`\n"
+            f"       `adata.obs[{self._term_key!r}]`\n"
             f"{extra_msg}"
             f"       `.{P.TERM_PROBS}`\n"
             f"       `.{P.TERM}`",

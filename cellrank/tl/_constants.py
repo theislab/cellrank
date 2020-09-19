@@ -64,7 +64,7 @@ class DirPrefix(PrettyEnum):
     BACKWARD = "from"
 
 
-class FinalStatesKey(PrettyEnum):
+class TermStatesKey(PrettyEnum):
     """State key in `adata.obs`."""
 
     FORWARD = f"{_terminal}_states"
@@ -74,8 +74,8 @@ class FinalStatesKey(PrettyEnum):
 class FinalStatesPlot(PrettyEnum):
     """Pretty state names for pl."""
 
-    FORWARD = FinalStatesKey.FORWARD.s.replace("_", " ")
-    BACKWARD = FinalStatesKey.BACKWARD.s.replace("_", " ")
+    FORWARD = TermStatesKey.FORWARD.s.replace("_", " ")
+    BACKWARD = TermStatesKey.BACKWARD.s.replace("_", " ")
 
 
 class MetaKey(PrettyEnum):
@@ -85,12 +85,12 @@ class MetaKey(PrettyEnum):
     BACKWARD = f"metastable_states_{Direction.BACKWARD}"
 
 
-# FinalStatesKey and AbsProbKey must have the same suffix `_..._states` because of model.prepare
+# TermStatesKey and AbsProbKey must have the same suffix `_..._states` because of model.prepare
 class AbsProbKey(PrettyEnum):
     """Lineage key in `adata.obsm`."""
 
-    FORWARD = f"{DirPrefix.FORWARD}_{FinalStatesKey.FORWARD}"
-    BACKWARD = f"{DirPrefix.BACKWARD}_{FinalStatesKey.BACKWARD}"
+    FORWARD = f"{DirPrefix.FORWARD}_{TermStatesKey.FORWARD}"
+    BACKWARD = f"{DirPrefix.BACKWARD}_{TermStatesKey.BACKWARD}"
 
 
 def _transition(d: Union[str, Direction]) -> str:
@@ -101,11 +101,11 @@ def _lin_names(k: Union[str, AbsProbKey]) -> str:
     return f"{k}_names"
 
 
-def _colors(k: Union[str, AbsProbKey, FinalStatesKey]) -> str:
+def _colors(k: Union[str, AbsProbKey, TermStatesKey]) -> str:
     return f"{k}_colors"
 
 
-def _probs(k: Union[str, FinalStatesKey]) -> str:
+def _probs(k: Union[str, TermStatesKey]) -> str:
     return f"{k}_probs"
 
 

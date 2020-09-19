@@ -17,7 +17,7 @@ from cellrank.tl._constants import (
     Direction,
     DirPrefix,
     AbsProbKey,
-    FinalStatesKey,
+    TermStatesKey,
     _dp,
     _probs,
     _colors,
@@ -72,10 +72,10 @@ def _check_abs_probs(mc: cr.tl.estimators.GPCCA, has_main_states: bool = True):
     if has_main_states:
         assert isinstance(mc._get(P.TERM), pd.Series)
         assert_array_nan_equal(
-            mc.adata.obs[str(FinalStatesKey.FORWARD)], mc._get(P.TERM)
+            mc.adata.obs[str(TermStatesKey.FORWARD)], mc._get(P.TERM)
         )
         np.testing.assert_array_equal(
-            mc.adata.uns[_colors(FinalStatesKey.FORWARD)],
+            mc.adata.uns[_colors(TermStatesKey.FORWARD)],
             mc._get(A.TERM_ABS_PROBS)[list(mc._get(P.TERM).cat.categories)].colors,
         )
 
@@ -97,9 +97,9 @@ def _check_abs_probs(mc: cr.tl.estimators.GPCCA, has_main_states: bool = True):
         mc.adata.obs[_dp(AbsProbKey.FORWARD)], mc._get(P.DIFF_POT)
     )
 
-    assert_array_nan_equal(mc.adata.obs[FinalStatesKey.FORWARD.s], mc._get(P.TERM))
+    assert_array_nan_equal(mc.adata.obs[TermStatesKey.FORWARD.s], mc._get(P.TERM))
     np.testing.assert_array_equal(
-        mc.adata.obs[_probs(FinalStatesKey.FORWARD)], mc._get(P.TERM_PROBS)
+        mc.adata.obs[_probs(TermStatesKey.FORWARD)], mc._get(P.TERM_PROBS)
     )
 
 
@@ -116,8 +116,8 @@ class TestGPCCA:
         if not mc.is_irreducible:
             assert isinstance(mc.recurrent_classes, list)
             assert isinstance(mc.transient_classes, list)
-            assert f"{FinalStatesKey.FORWARD}_rec_classes" in mc.adata.obs
-            assert f"{FinalStatesKey.FORWARD}_trans_classes" in mc.adata.obs
+            assert f"{TermStatesKey.FORWARD}_rec_classes" in mc.adata.obs
+            assert f"{TermStatesKey.FORWARD}_trans_classes" in mc.adata.obs
         else:
             assert mc.recurrent_classes is None
             assert mc.transient_classes is None

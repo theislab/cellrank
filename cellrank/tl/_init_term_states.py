@@ -10,7 +10,7 @@ from cellrank.tl._utils import (
     _info_if_obs_keys_categorical_present,
 )
 from cellrank.tl.kernels import PrecomputedKernel
-from cellrank.tl._constants import FinalStatesKey
+from cellrank.tl._constants import TermStatesKey
 from cellrank.tl.estimators import GPCCA, CFLARE
 from cellrank.tl._transition_matrix import transition_matrix
 from cellrank.tl.estimators._constants import P
@@ -158,7 +158,7 @@ def _initial_terminal(
 @inject_docs(
     __doc__=_docstring.format(
         direction=_initial,
-        key_added=FinalStatesKey.BACKWARD.s,
+        key_added=TermStatesKey.BACKWARD.s,
         bwd_mode="\n%(velocity_backward_mode_high_lvl)s",
     )
 )
@@ -198,7 +198,7 @@ def initial_states(
 @d.dedent
 @inject_docs(
     __doc__=_docstring.format(
-        direction=_terminal, key_added=FinalStatesKey.FORWARD.s, bwd_mode=""
+        direction=_terminal, key_added=TermStatesKey.FORWARD.s, bwd_mode=""
     )
 )
 def terminal_states(

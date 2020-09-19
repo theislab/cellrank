@@ -3,7 +3,7 @@
 from typing import Union, TypeVar, Optional, Sequence
 
 from cellrank.ul._docs import d, _initial, _terminal, inject_docs
-from cellrank.tl._constants import FinalStatesKey, FinalStatesPlot
+from cellrank.tl._constants import TermStatesKey, FinalStatesPlot
 from cellrank.tl.estimators import GPCCA
 from cellrank.tl.estimators._constants import P
 from cellrank.tl.kernels._precomputed_kernel import DummyKernel
@@ -51,7 +51,7 @@ def _initial_terminal(
     if mc._get(P.TERM) is None:
         raise RuntimeError(
             f"Compute {_initial if backward else _terminal} states first as "
-            f"`cellrank.tl.compute_{FinalStatesKey.BACKWARD if backward else FinalStatesKey.FORWARD}()`."
+            f"`cellrank.tl.compute_{TermStatesKey.BACKWARD if backward else TermStatesKey.FORWARD}()`."
         )
 
     n_states = len(mc._get(P.TERM).cat.categories)
@@ -99,7 +99,7 @@ def _initial_terminal(
 @inject_docs(
     __doc__=_find_docs.format(
         direction=_initial,
-        fn_name=FinalStatesKey.BACKWARD.s,
+        fn_name=TermStatesKey.BACKWARD.s,
         title=FinalStatesPlot.BACKWARD.s,
     )
 )
@@ -129,7 +129,7 @@ def initial_states(
 @inject_docs(
     __doc__=_find_docs.format(
         direction=_terminal,
-        fn_name=FinalStatesKey.FORWARD.s,
+        fn_name=TermStatesKey.FORWARD.s,
         title=FinalStatesPlot.FORWARD.s,
     )
 )

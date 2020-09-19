@@ -16,7 +16,7 @@ from cellrank.tl._constants import (
     Direction,
     DirPrefix,
     AbsProbKey,
-    FinalStatesKey,
+    TermStatesKey,
     _probs,
     _colors,
     _lin_names,
@@ -39,8 +39,8 @@ class TestCFLARE:
         if not mc.is_irreducible:
             assert isinstance(mc.recurrent_classes, list)
             assert isinstance(mc.transient_classes, list)
-            assert f"{FinalStatesKey.FORWARD}_rec_classes" in mc.adata.obs
-            assert f"{FinalStatesKey.FORWARD}_trans_classes" in mc.adata.obs
+            assert f"{TermStatesKey.FORWARD}_rec_classes" in mc.adata.obs
+            assert f"{TermStatesKey.FORWARD}_trans_classes" in mc.adata.obs
         else:
             assert mc.recurrent_classes is None
             assert mc.transient_classes is None
@@ -95,9 +95,9 @@ class TestCFLARE:
         assert is_categorical_dtype(mc._get(P.TERM))
         assert mc._get(P.TERM_PROBS) is not None
 
-        assert FinalStatesKey.FORWARD.s in mc.adata.obs.keys()
-        assert _probs(FinalStatesKey.FORWARD) in mc.adata.obs.keys()
-        assert _colors(FinalStatesKey.FORWARD) in mc.adata.uns.keys()
+        assert TermStatesKey.FORWARD.s in mc.adata.obs.keys()
+        assert _probs(TermStatesKey.FORWARD) in mc.adata.obs.keys()
+        assert _colors(TermStatesKey.FORWARD) in mc.adata.uns.keys()
 
     def test_compute_absorption_probabilities_no_args(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -450,14 +450,14 @@ class TestCFLARE:
         mc_fwd.compute_eigendecomposition()
 
         mc_fwd.compute_terminal_states(use=3)
-        original = np.array(adata.obs[f"{FinalStatesKey.FORWARD}"].copy())
+        original = np.array(adata.obs[f"{TermStatesKey.FORWARD}"].copy())
         zero_mask = original == "0"
 
         cells = list(adata[zero_mask].obs_names)
         mc_fwd.set_terminal_states({"foo": cells})
 
-        assert (adata.obs[f"{FinalStatesKey.FORWARD}"][zero_mask] == "foo").all()
-        assert pd.isna(adata.obs[f"{FinalStatesKey.FORWARD}"][~zero_mask]).all()
+        assert (adata.obs[f"{TermStatesKey.FORWARD}"][zero_mask] == "foo").all()
+        assert pd.isna(adata.obs[f"{TermStatesKey.FORWARD}"][~zero_mask]).all()
 
 
 class TestCFLARECopy:

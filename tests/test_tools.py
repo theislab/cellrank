@@ -8,7 +8,7 @@ import pandas as pd
 import cellrank as cr
 import cellrank.tl._lineages
 from cellrank.tl.kernels import Kernel
-from cellrank.tl._constants import AbsProbKey, FinalStatesKey, _probs
+from cellrank.tl._constants import AbsProbKey, TermStatesKey, _probs
 
 
 class TestLineages:
@@ -107,14 +107,14 @@ class TestRootFinal:
     def test_find_root(self, adata: AnnData):
         cr.tl.initial_states(adata)
 
-        assert str(FinalStatesKey.BACKWARD) in adata.obs.keys()
-        assert _probs(FinalStatesKey.BACKWARD) in adata.obs.keys()
+        assert str(TermStatesKey.BACKWARD) in adata.obs.keys()
+        assert _probs(TermStatesKey.BACKWARD) in adata.obs.keys()
 
     def test_find_final(self, adata: AnnData):
         cr.tl.terminal_states(adata, n_states=5, fit_kwargs=dict(n_cells=5))
 
-        assert str(FinalStatesKey.FORWARD) in adata.obs.keys()
-        assert _probs(FinalStatesKey.FORWARD) in adata.obs.keys()
+        assert str(TermStatesKey.FORWARD) in adata.obs.keys()
+        assert _probs(TermStatesKey.FORWARD) in adata.obs.keys()
 
     def test_invalid_cluster_key(self, adata: AnnData):
         with pytest.raises(KeyError):
