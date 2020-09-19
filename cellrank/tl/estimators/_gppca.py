@@ -302,7 +302,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         self._write_terminal_states()
 
     def set_final_states_from_metastable_states(self, *args, **kwargs):
-        """This function has been deprecated. Please use `set_terminal_states_from_metastable_states` instead."""  # noqa
+        """This function has been deprecated. Please use :meth:`cellrank.tl.estimators.GPCCA.set_terminal_states_from_metastable_states` instead."""  # noqa
         print(
             "This function has been deprecated. Please use `set_terminal_states_from_metastable_states` instead."
         )
