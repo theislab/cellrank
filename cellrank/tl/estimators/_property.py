@@ -906,7 +906,7 @@ class Partitioner(KernelHolder, ABC):
             )
         else:
             logg.warning(
-                "The transition matrix is irreducible - cannot further _partition it\n    Finish",
+                "The transition matrix is irreducible - cannot further partition it\n    Finish",
                 time=start,
             )
 
@@ -926,7 +926,30 @@ class Partitioner(KernelHolder, ABC):
         return self._trans_classes
 
 
-class LineageEstimatorMixin(TerminalStates, AbsProbs, LinDrivers, ABC):
+class Deprecated:  # noqa
+    def plot_final_states(self, *args, **kwargs):
+        """"This function has been deprecated. Please use `plot_terminal_states` instead."""  # noqa
+        print(
+            "This function has been deprecated. Please use `plot_terminal_states` instead."
+        )
+        return self.plot_terminal_states(*args, **kwargs)
+
+    def set_final_states(self, *args, **kwargs):
+        """This function has been deprecated. Please use `set_terminal_states` instead."""  # noqa
+        print(
+            "This function has been deprecated. Please use `set_terminal_states` instead."
+        )
+        return self.set_terminal_states(*args, **kwargs)
+
+    def compute_final_states(self, *args, **kwargs):
+        """This function has been deprecated. Please use `compute_terminal_states` instead."""  # noqa
+        print(
+            "This function has been deprecated. Please use `compute_terminal_states` instead."
+        )
+        return self.compute_terminal_states(*args, **kwargs)
+
+
+class LineageEstimatorMixin(TerminalStates, AbsProbs, LinDrivers, Deprecated, ABC):
     """Mixin containing terminal states and absorption probabilities."""
 
     pass

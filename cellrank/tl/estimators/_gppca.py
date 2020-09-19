@@ -301,6 +301,13 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         self._set(A.TERM_ABS_PROBS, scaled_probs)
         self._write_terminal_states()
 
+    def set_final_states_from_metastable_states(self, *args, **kwargs):
+        """This function has been deprecated. Please use `set_terminal_states_from_metastable_states` instead."""  # noqa
+        print(
+            "This function has been deprecated. Please use `set_terminal_states_from_metastable_states` instead."
+        )
+        return self.set_terminal_states_from_metastable_states(*args, **kwargs)
+
     @inject_docs(fs=P.TERM, fsp=P.TERM_PROBS)
     @d.dedent
     def compute_terminal_states(
