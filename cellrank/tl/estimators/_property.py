@@ -220,8 +220,10 @@ class KernelHolder(ABC):
                 f"or `anndata.AnnData`, got `{type(obj).__name__!r}`."
             )
 
-        if self.kernel.transition_matrix is None:
-            logg.debug("Computing transition matrix using default parameters")
+        if self.kernel._transition_matrix is None:
+            # access the private attribute to avoid accidentaly computing the transition matrix
+            # in principle, it doesn't make a difference, apart from not seeing the message
+            logg.warning("Computing transition matrix using default parameters")
             self.kernel.compute_transition_matrix()
 
         if write_to_adata:
