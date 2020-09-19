@@ -6,7 +6,7 @@ Compute absorption probabilities
 This example shows how to compute and plot the absorption probabilities and the time to absorption.
 
 Absorption probabilities are used in CellRank to define how likely each individual cell is to transition into each of
-the identified final states. In a usual workflow, you would first compute a set of final states for your dataset
+the identified terminal states. In a usual workflow, you would first compute a set of terminal states for your dataset
 and next ask the question how likely each cell is to develop towards each of these states. CellRank provides an
 efficient implementation of computing the absorption probabilities that scales to 100k+ cells.
 """
@@ -25,9 +25,8 @@ k = cr.tl.transition_matrix(
 g = cr.tl.estimators.GPCCA(k)
 
 # %%
-# We need to compute or set the final states. In detail guide for both of our estimators can be found here
-# :ref:`sphx_glr_auto_examples_estimators_compute_final_states_gpcca.py` or here
-# :ref:`sphx_glr_auto_examples_estimators_compute_final_states_cflare.py`
+# We need to compute or set the terminal states. In detail guide for both of our estimators can be found here
+# :ref:`sphx_glr_auto_examples_estimators_compute_terminal_states_gpcca.py`.
 g.compute_schur(n_components=4)
 g.compute_metastable_states(cluster_key="clusters")
 g.set_terminal_states_from_metastable_states(["Alpha", "Beta", "Epsilon"])
@@ -49,15 +48,15 @@ g.absorption_probabilities
 # %%
 # We can now plot the absorption probabilities. We can use parameters like ``same_plot`` or ``discrete`` to control
 # whether to plot each lineage in a separate plot or show only the top ``n_cells`` - this is set when computing/setting
-# the final states. By default, 30 cells are selected from each final state.
+# the terminal states. By default, 30 cells are selected from each terminal state.
 g.plot_absorption_probabilities()
 
 # %%
 # :meth:`cellrank.tl.estimators.BaseEstimator.compute_absorption_probabilities` can also be used to compute the mean
-# and the variance of time to absorption to all or just to a subset of final states.
+# and the variance of time to absorption to all or just to a subset of terminal states.
 #
 # This can be specified by supplying ``time_to_absorption`` parameter. Below we compute only the mean time to
-# absorption to all final states. To compute the mean and the variance only for the `"Alpha"` absorbing state,
+# absorption to all terminal states. To compute the mean and the variance only for the `"Alpha"` absorbing state,
 # one specify the following ``time_to_absorption={"Alpha": "var"}``.
 g.compute_absorption_probabilities(time_to_absorption="all")
 g.lineage_absorption_times

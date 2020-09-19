@@ -5,7 +5,7 @@ Compute potential lineage drivers
 
 This example shows how to compute and plot expression trends for genes which may be involved in lineage decisions.
 
-We identify these by correlating gene expression with absorption probabilities towards a specific final state.
+We identify these by correlating gene expression with absorption probabilities towards a specific terminal state.
 """
 
 import cellrank as cr
