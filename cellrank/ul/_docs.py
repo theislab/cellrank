@@ -119,6 +119,13 @@ Updates the :paramref:`adata` with the following fields:
 
         - ``.obsp['{{key}}']`` - the transition matrix.
         - ``.uns['{{key}}_params']`` - parameters used for calculation."""
+_en_cutoff_p_thresh = """\
+en_cutoff
+    If ``cluster_key`` is given, this parameter determines when an approximate recurrent class will
+    be labelled as *'Unknown'*, based on the entropy of the distribution of cells over transcriptomic clusters.
+p_thresh
+    If cell cycle scores were provided, a *Wilcoxon rank-sum test* is conducted to identify cell-cycle states.
+    If the test returns a positive statistic and a p-value smaller than ``p_thresh``, a warning will be issued."""
 
 
 def inject_docs(**kwargs):  # noqa

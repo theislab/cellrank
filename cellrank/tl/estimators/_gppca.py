@@ -57,7 +57,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         super()._read_from_adata()
         self._reconstruct_lineage(
             A.TERM_ABS_PROBS,
-            self._fin_abs_prob_key,
+            self._term_abs_prob_key,
         )
 
     @inject_docs(
@@ -89,17 +89,11 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         %(n_cells)s
         use_min_chi
             Whether to use :meth:`msmtools.analysis.dense.gpcca.GPCCA.minChi` to calculate the number of metastable
-            states. If `True`, ``n_states`` corresponds to an interval `[min, max]` inside of which
-            the potentially optimal number of metastable states is searched.
+            states. If `True`, ``n_states`` corresponds to a closed interval `[min, max]` inside of which the
+            potentially optimal number of metastable states is searched.
         cluster_key
             If a key to cluster labels is given, names and colors of the states will be associated with the clusters.
-        en_cutoff
-            If ``cluster_key`` is given, this parameter determines when an approximate recurrent class will
-            be labelled as *'Unknown'*, based on the entropy of the distribution of cells over transcriptomic clusters.
-        p_thresh
-            If cell cycle scores were provided, a *Wilcoxon rank-sum test* is conducted to identify cell-cycle driven
-            start- or endpoints.
-            If the test returns a positive statistic and a p-value smaller than ``p_thresh``, a warning will be issued.
+        %(en_cutoff_p_thresh)s
 
         Returns
         -------
@@ -403,7 +397,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         self, n_components: int = 10, key_added: str = "gdpt_pseudotime", **kwargs
     ):
         """
-        Compute generalized Diffusion pseudotime from [Haghverdi16]_ making use of the real Schur decomposition.
+        Compute generalized Diffusion pseudotime from [Haghverdi16]_ using the real Schur decomposition.
 
         Parameters
         ----------
@@ -827,14 +821,13 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         check_row_sums: bool = True,
     ) -> None:
         """
-        Map a fuzzy clustering to pre-computed annotations to get names and colors.
+        Map fuzzy clustering to pre-computed annotations to get names and colors.
 
-        Given the fuzzy clustering we have computed, we would like to select the most likely cells from each state
-        and use these to give each state a name and a color by comparing with pre-computed, categorical cluster
-        annotations.
+        Given the fuzzy clustering, we would like to select the most likely cells from each state and use these to
+        give each state a name and a color by comparing with pre-computed, categorical cluster annotations.
 
         Parameters
-        --------
+        ----------
         memberships
             Fuzzy clustering.
         %(n_cells)s
@@ -845,8 +838,8 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             one fuzzy state overlaps with several reference clusters, and the most likely cells are distributed almost
             evenly across the reference clusters.
         p_thresh
-            Only used to detect cell cycle stages. These have to be present in
-            :paramref:`adata` ``.obs`` as `'G2M_score'` and `'S_score'`.
+            Only used to detect cell cycle stages. These have to be present in :paramref:`adata` ``.obs`` as
+            `'G2M_score'` and `'S_score'`.
         check_row_sums
             Check whether rows in `memberships` sum to `1`.
 
@@ -951,7 +944,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
                 f"Unable to compute metastable states with `n_states={n_states}` because it will "
                 f"split the conjugate eigenvalues. Increasing `n_states` to `{n_states + 1}`"
             )
-            n_states += 1  # cannot force recomputation of Schur decomposition
+            n_states += 1  # cannot force recomputation of the Schur decomposition
             assert n_states not in self._invalid_n_states, "Sanity check failed."
 
         return n_states
@@ -1037,7 +1030,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         method
             Method to use when computing the Schur decomposition. Valid options are: `'krylov'` or `'brandts'`.
         compute_absorption_probabilities
-            Whether to compute absorption probabilities or only %(initial_or_terminal)s states.
+            Whether to compute the absorption probabilities or only the %(initial_or_terminal)s states.
         **kwargs
             Keyword arguments for :meth:`cellrank.tl.estimators.GPCCA.compute_metastable_states`.
 

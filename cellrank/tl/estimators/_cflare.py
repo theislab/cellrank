@@ -38,6 +38,7 @@ class CFLARE(BaseEstimator, Eigen):
     %(base_estimator.parameters)s
     """
 
+    @d.dedent
     @inject_docs(fs=P.TERM, fsp=P.TERM_PROBS)
     def compute_terminal_states(
         self,
@@ -68,38 +69,32 @@ class CFLARE(BaseEstimator, Eigen):
             Which or how many first eigenvectors to use as features for clustering/filtering.
             If `None`, use `eigengap` statistic.
         percentile
-            Threshold used for filtering out cells which are most likely transient states.
-            Cells which are in the lower ``percentile`` percent of each eigenvector
-            will be removed from the data matrix.
+            Threshold used for filtering out cells which are most likely transient states. Cells which are in the
+            lower ``percentile`` percent of each eigenvector will be removed from the data matrix.
         method
             Method to be used for clustering. Must be one of `'louvain'`, `'leiden'` or `'kmeans'`.
         cluster_key
-            If a key to cluster labels is given, :paramref:`{fs}` will ge associated with these for naming and colors.
+            If a key to cluster labels is given, :paramref:`{fs}` will get associated with these for naming and colors.
         n_clusters_kmeans
             If `None`, this is set to ``use + 1``.
         n_neighbors
             If we use `'louvain'` or `'leiden'` for clustering cells, we need to build a KNN graph.
-            This is the K parameter for that, the number of neighbors for each cell.
+            This is the :math:`K` parameter for that, the number of neighbors for each cell.
         resolution
             Resolution parameter for `'louvain'` or `'leiden'` clustering. Should be chosen relatively small.
         n_matches_min
             Filters out cells which don't have at least n_matches_min neighbors from the same class.
             This filters out some cells which are transient but have been misassigned.
         n_neighbors_filtering
-            Parameter for filtering cells. Cells are filtered out if they don't have at
-            least ``n_matches_min`` neighbors among their ``n_neighbors_filtering`` nearest cells.
+            Parameter for filtering cells. Cells are filtered out if they don't have at least ``n_matches_min``
+            neighbors among their ``n_neighbors_filtering`` nearest cells.
         basis
             Key from :paramref`adata` ``.obsm`` to be used as additional features for the clustering.
         n_comps
             Number of embedding components to be use when ``basis`` is not `None`.
         scale
             Scale to z-scores. Consider using this if appending embedding to features.
-        en_cutoff
-            If ``cluster_key`` is given, this parameter determines when an approximate recurrent class will
-            be labelled as *'Unknown'*, based on the entropy of the distribution of cells over transcriptomic clusters.
-        p_thresh
-            If cell cycle scores were provided, a *Wilcoxon rank-sum test* is conducted to identify cell-cycle  states.
-            If the test returns a positive statistic and a p-value smaller than ``p_thresh``, a warning will be issued.
+        %(en_cutoff_p_thresh)%
 
         Returns
         -------
@@ -261,37 +256,6 @@ class CFLARE(BaseEstimator, Eigen):
             add_to_existing=False,
             time=start,
         )
-
-    def _get_restriction_to_main(self) -> Tuple[Series, np.ndarray]:
-        """
-        Restrict the categorical of metastable states.
-
-        This restricts the categorical Series object where we store metastable states to the set of those states
-        that we computed lineage probabilities for. This is a utility function - it is needed because in CFLARE,
-        we currently have no possibility to conveniently restrict the metastable states to a core set of main states,
-        other than by computing lineage probabilities
-
-        Returns
-        -------
-        :class:`pandas.Series`, :class:`numpy.ndararay`
-            The restricted categorical annotations and matching colors.
-        """
-        # TODO: @Marius, you've written: "this won't be able to deal with combined states", is it fixed?
-
-        # get the names of the main states, remove 'rest' if present
-        main_names = self._get(P.ABS_PROBS).names
-        main_names = main_names[main_names != "rest"]
-
-        # get the metastable annotations & colors
-        cats_main = self._get(P.TERM).copy()
-        colors_main = np.array(self._get(A.TERM_COLORS).copy())
-
-        # restrict both colors and categories
-        mask = np.in1d(cats_main.cat.categories, main_names)
-        colors_main = colors_main[mask]
-        cats_main.cat.remove_categories(cats_main.cat.categories[~mask], inplace=True)
-
-        return cats_main, colors_main
 
     def _fit_terminal_states(
         self,

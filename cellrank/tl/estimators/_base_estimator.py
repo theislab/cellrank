@@ -105,11 +105,11 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         if self.kernel.backward:
             self._fs_key = FinalStatesKey.BACKWARD.s
             self._abs_prob_key = AbsProbKey.BACKWARD.s
-            self._fin_abs_prob_key = MetaKey.BACKWARD.s
+            self._term_abs_prob_key = MetaKey.BACKWARD.s
         else:
             self._fs_key = FinalStatesKey.FORWARD.s
             self._abs_prob_key = AbsProbKey.FORWARD.s
-            self._fin_abs_prob_key = MetaKey.FORWARD.s
+            self._term_abs_prob_key = MetaKey.FORWARD.s
 
         self._key_added = key
         self._g2m_key = g2m_key
@@ -167,10 +167,11 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             self.adata.uns[_lin_names(self._fs_key)] = names
             self.adata.uns[_colors(self._fs_key)] = colors
 
+    @d.dedent
     @inject_docs(fs=P.TERM.s, fsp=P.TERM_PROBS.s)
     def set_terminal_states(
         self,
-        labels: Union[Series, Dict[Any, Any]],
+        labels: Union[Series, Dict[str, Any]],
         cluster_key: Optional[str] = None,
         en_cutoff: Optional[float] = None,
         p_thresh: Optional[float] = None,
@@ -188,13 +189,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             values are list of cell names.
         cluster_key
             If a key to cluster labels is given, :paramref:`{fs}` will ge associated with these for naming and colors.
-        en_cutoff
-            If ``cluster_key`` is given, this parameter determines when an approximate recurrent class will
-            be labelled as *'Unknown'*, based on the entropy of the distribution of cells over transcriptomic clusters.
-        p_thresh
-            If cell cycle scores were provided, a *Wilcoxon rank-sum test* is conducted to identify cell-cycle driven
-            start- or endpoints.
-            If the test returns a positive statistic and a p-value smaller than ``p_thresh``, a warning will be issued.
+        %(en_cutoff_p_thresh)s
         add_to_existing
             Whether to add thses categories to existing ones. Cells already belonging to recurrent classes will be
             updated if there's an overlap.
@@ -224,6 +219,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
     @inject_docs(
         abs_prob=P.ABS_PROBS,
+        fs=P.TERM.s,
         diff_pot=P.DIFF_POT,
         lat=P.LIN_ABS_TIMES,
     )
@@ -248,9 +244,9 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         """
         Compute absorption probabilities of a Markov chain.
 
-        For each cell, this computes the probability of it reaching any of the approximate recurrent classes.
-        This also computes the entropy over absorption probabilities, which is a measure of cell plasticity, see
-        [Setty19]_.
+        For each cell, this computes the probability of it reaching any of the approximate recurrent classes defined
+        by :paramref:`{fs}`. This also computes the entropy over absorption probabilities, which is a measure of cell
+        plasticity, see [Setty19]_.
 
         Parameters
         ----------
@@ -279,8 +275,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             Can be specified as ``'all'`` to compute it to any absorbing state in ``keys``, which is more efficient
             than listing all absorbing states.
 
-            It might be beneficial to disable the progress bar as ``show_progress_bar=False``,
-            because many linear systems are being solved.
+            It might be beneficial to disable the progress bar as ``show_progress_bar=False``, because many linear
+            systems are being solved.
         n_jobs
             Number of parallel jobs to use when using an iterative solver. When ``use_petsc=True`` or for
             quickly-solvable problems, we recommend higher number (>=8) of jobs in order to fully saturate the cores.
@@ -804,12 +800,12 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
         extra_msg = ""
         if getattr(self, A.TERM_ABS_PROBS.s, None) is not None and hasattr(
-            self, "_fin_abs_prob_key"
+            self, "_term_abs_prob_key"
         ):
             # checking for None because terminal states can be set using `set_terminal_states`
             # without the probabilities in GPCCA
-            self.adata.obsm[self._fin_abs_prob_key] = self._get(A.TERM_ABS_PROBS)
-            extra_msg = f"       `adata.obsm[{self._fin_abs_prob_key!r}]`\n"
+            self.adata.obsm[self._term_abs_prob_key] = self._get(A.TERM_ABS_PROBS)
+            extra_msg = f"       `adata.obsm[{self._term_abs_prob_key!r}]`\n"
 
         logg.info(
             f"Adding `adata.obs[{_probs(self._fs_key)!r}]`\n"
@@ -921,7 +917,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         Returns
         -------
         None
-            Nothing, just pickles itself to a file.
+            Nothing, just writes itself to a file.
         """
 
         fname = str(fname)
@@ -943,7 +939,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
         Returns
         -------
-        :class:`cellrank.tl.estimators._base_estimator.BaseEstimator`
+        :class:`cellrank.tl.estimators.BaseEstimator`
             An estimator.
         """
 
