@@ -1130,6 +1130,6 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         self.adata.uns[_lin_names(key)] = membership.names
 
         logg.info(
-            f"Adding `adata.obs[{_probs(key)!r}]`\n" f"       `adata.obs[{key!r}]`\n",
+            f"Adding `adata.obs[{_probs(key)!r}]`\n       `adata.obs[{key!r}]`\n",
             time=time,
         )

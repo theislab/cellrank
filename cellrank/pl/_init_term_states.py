@@ -26,7 +26,7 @@ discrete
     If `True`, plot probability distribution of {direction} states.
     Only available when {direction} were estimated by :class:`cellrank.tl.estimators.GPCCA`.
 **kwargs
-    Keyword arguments for :meth:`cellrank.tl.estimators.BaseEstimator.plot_final_states`.
+    Keyword arguments for :meth:`cellrank.tl.estimators.BaseEstimator.plot_terminal_states`.
 
 Returns
 -------
@@ -85,7 +85,7 @@ def _initial_terminal(
 
     _ = kwargs.pop("lineages", None)
 
-    mc.plot_final_states(
+    mc.plot_terminal_states(
         lineages=states,
         cluster_key=cluster_key,
         mode=mode,

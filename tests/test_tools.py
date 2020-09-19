@@ -59,50 +59,6 @@ class TestLineageDrivers:
         assert set(res.columns) == set(adata_cflare.obsm[AbsProbKey.FORWARD.s].names)
 
 
-class TextExcatMCTest:
-    def test_invalid_cluster_obs(self, adata_cflare):
-        with pytest.raises(KeyError):
-            cr.tl._permutation_test(adata_cflare, "foo", "bar", "baz")
-
-    def test_invalid_clusters(self, adata_cflare):
-        with pytest.raises(ValueError):
-            cr.tl._permutation_test(adata_cflare, "clusters", "bar", "baz")
-
-    def test_invalid_n_perms(self, adata_cflare):
-        with pytest.raises(ValueError):
-            cr.tl._permutation_test(
-                adata_cflare,
-                "clusters",
-                adata_cflare.obs["clusters"].cat.categories[0],
-                adata_cflare.obs["clusters"].cat.categories[1],
-                n_perms=-1,
-            )
-
-    def test_invalid_n_counts(self, adata_cflare):
-        with pytest.raises(ValueError):
-            cr.tl._permutation_test(
-                adata_cflare,
-                "clusters",
-                adata_cflare.obs["clusters"].cat.categories[0],
-                adata_cflare.obs["clusters"].cat.categories[1],
-                n_counts=-1,
-            )
-
-    def test_normal_run(self, adata_cflare):
-        dist, obs, pval = cr.tl._permutation_test(
-            adata_cflare,
-            "clusters",
-            adata_cflare.obs["clusters"].cat.categories[0],
-            adata_cflare.obs["clusters"].cat.categories[1],
-            n_perms=10,
-            n_counts=10,
-        )
-
-        assert isinstance(dist, list)
-        assert isinstance(obs, float)
-        assert isinstance(pval, float)
-
-
 class TestRootFinal:
     def test_find_root(self, adata: AnnData):
         cr.tl.initial_states(adata)
@@ -142,3 +98,4 @@ class TestTransitionMatrix:
         kernel_add = cr.tl.transition_matrix(adata, backward=True)
 
         assert isinstance(kernel_add, Kernel)
+        assert kernel_add.backward

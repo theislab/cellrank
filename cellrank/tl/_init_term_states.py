@@ -137,12 +137,12 @@ def _initial_terminal(
         mc.plot_spectrum(real_only=True)
         if isinstance(mc, CFLARE):
             mc.plot_eigendecomposition(abs_value=True, perc=[0, 98], use=n_states)
-            mc.plot_final_states(discrete=True, same_plot=False)
+            mc.plot_terminal_states(discrete=True, same_plot=False)
         elif isinstance(mc, GPCCA):
             n_states = len(mc._get(P.META).cat.categories)
             if n_states > 1:
                 mc.plot_schur()
-            mc.plot_final_states(discrete=True, same_plot=False)
+            mc.plot_terminal_states(discrete=True, same_plot=False)
             if n_states > 1:
                 mc.plot_coarse_T()
         else:

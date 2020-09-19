@@ -213,7 +213,7 @@ class TestLowLevelPipeline:
         estimator_fwd.plot_eigendecomposition(left=False)
 
         estimator_fwd.compute_terminal_states(use=1)
-        estimator_fwd.plot_final_states()
+        estimator_fwd.plot_terminal_states()
 
         estimator_fwd.compute_absorption_probabilities()
         estimator_fwd.plot_absorption_probabilities()
@@ -240,7 +240,7 @@ class TestLowLevelPipeline:
         estimator_bwd.plot_eigendecomposition(left=False)
 
         estimator_bwd.compute_terminal_states(use=1)
-        estimator_bwd.plot_final_states()
+        estimator_bwd.plot_terminal_states()
 
         estimator_bwd.compute_absorption_probabilities()
         estimator_bwd.plot_absorption_probabilities()
@@ -272,7 +272,7 @@ class TestLowLevelPipeline:
 
         # select all states
         estimator_fwd.set_terminal_states_from_metastable_states(n_cells=10)
-        estimator_fwd.plot_final_states()
+        estimator_fwd.plot_terminal_states()
 
         estimator_fwd.compute_absorption_probabilities()
         estimator_fwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
@@ -284,7 +284,7 @@ class TestLowLevelPipeline:
             n_cells=16,
             names=estimator_fwd.metastable_states.cat.categories[:2],
         )
-        estimator_fwd.plot_final_states()
+        estimator_fwd.plot_terminal_states()
 
         estimator_fwd.compute_absorption_probabilities()
         estimator_fwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
@@ -314,7 +314,7 @@ class TestLowLevelPipeline:
 
         # select all cells
         estimator_bwd.set_terminal_states_from_metastable_states(n_cells=16)
-        estimator_bwd.plot_final_states()
+        estimator_bwd.plot_terminal_states()
 
         estimator_bwd.compute_absorption_probabilities()
         estimator_bwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
@@ -326,7 +326,7 @@ class TestLowLevelPipeline:
             n_cells=16,
             names=estimator_bwd.metastable_states.cat.categories[:2],
         )
-        estimator_bwd.plot_final_states()
+        estimator_bwd.plot_terminal_states()
 
         estimator_bwd.compute_absorption_probabilities()
         estimator_bwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
