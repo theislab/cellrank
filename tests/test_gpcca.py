@@ -45,9 +45,9 @@ def _check_compute_meta(mc: cr.tl.estimators.GPCCA) -> None:
     assert len(mc._get(A.META_COLORS)) == len(mc._get(P.META).cat.categories)
 
     if "stationary_dist" in mc._get(P.EIG):  # one state
-        assert isinstance(mc._get(P.META_PROBS), cr.tl.Lineage)
-        assert mc._get(P.META_PROBS).shape[1] == 1
-        np.testing.assert_array_almost_equal(mc._get(P.META_PROBS).X.sum(), 1.0)
+        assert isinstance(mc._get(P.META_MEMBER), cr.tl.Lineage)
+        assert mc._get(P.META_MEMBER).shape[1] == 1
+        np.testing.assert_array_almost_equal(mc._get(P.META_MEMBER).X.sum(), 1.0)
 
         assert mc._get(P.COARSE_INIT_D) is None
         assert mc._get(P.SCHUR_MAT) is None
@@ -55,9 +55,9 @@ def _check_compute_meta(mc: cr.tl.estimators.GPCCA) -> None:
         assert mc._get(P.COARSE_T) is None
         assert mc._get(P.SCHUR) is None
     else:
-        assert isinstance(mc._get(P.META_PROBS), cr.tl.Lineage)
-        if mc._get(P.META_PROBS).shape[1] > 1:
-            np.testing.assert_array_almost_equal(mc._get(P.META_PROBS).sum(1), 1.0)
+        assert isinstance(mc._get(P.META_MEMBER), cr.tl.Lineage)
+        if mc._get(P.META_MEMBER).shape[1] > 1:
+            np.testing.assert_array_almost_equal(mc._get(P.META_MEMBER).sum(1), 1.0)
 
         assert isinstance(mc._get(P.COARSE_INIT_D), pd.Series)
         assert isinstance(mc._get(P.SCHUR_MAT), np.ndarray)
@@ -70,13 +70,13 @@ def _check_compute_meta(mc: cr.tl.estimators.GPCCA) -> None:
 
 def _check_abs_probs(mc: cr.tl.estimators.GPCCA, has_main_states: bool = True):
     if has_main_states:
-        assert isinstance(mc._get(P.FIN), pd.Series)
+        assert isinstance(mc._get(P.TERM), pd.Series)
         assert_array_nan_equal(
-            mc.adata.obs[str(FinalStatesKey.FORWARD)], mc._get(P.FIN)
+            mc.adata.obs[str(FinalStatesKey.FORWARD)], mc._get(P.TERM)
         )
         np.testing.assert_array_equal(
             mc.adata.uns[_colors(FinalStatesKey.FORWARD)],
-            mc._get(A.FIN_ABS_PROBS)[list(mc._get(P.FIN).cat.categories)].colors,
+            mc._get(A.TERM_ABS_PROBS)[list(mc._get(P.TERM).cat.categories)].colors,
         )
 
     assert isinstance(mc._get(P.DIFF_POT), pd.Series)
@@ -97,9 +97,9 @@ def _check_abs_probs(mc: cr.tl.estimators.GPCCA, has_main_states: bool = True):
         mc.adata.obs[_dp(AbsProbKey.FORWARD)], mc._get(P.DIFF_POT)
     )
 
-    assert_array_nan_equal(mc.adata.obs[FinalStatesKey.FORWARD.s], mc._get(P.FIN))
+    assert_array_nan_equal(mc.adata.obs[FinalStatesKey.FORWARD.s], mc._get(P.TERM))
     np.testing.assert_array_equal(
-        mc.adata.obs[_probs(FinalStatesKey.FORWARD)], mc._get(P.FIN_PROBS)
+        mc.adata.obs[_probs(FinalStatesKey.FORWARD)], mc._get(P.TERM_PROBS)
     )
 
 
@@ -330,7 +330,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_metastable_states(n_states=2, n_cells=5)
-        mc.set_final_states_from_metastable_states()
+        mc.set_terminal_states_from_metastable_states()
         mc.compute_absorption_probabilities()
 
         _check_abs_probs(mc)
@@ -347,7 +347,7 @@ class TestGPCCA:
 
         mc.compute_metastable_states(n_states=2, n_cells=None)
         with pytest.raises(TypeError):
-            mc.set_final_states_from_metastable_states(n_cells=None)
+            mc.set_terminal_states_from_metastable_states(n_cells=None)
 
     def test_set_final_states_from_metastable_states_non_positive_cells(
         self, adata_large: AnnData
@@ -361,7 +361,7 @@ class TestGPCCA:
 
         mc.compute_metastable_states(n_states=2, n_cells=None)
         with pytest.raises(ValueError):
-            mc.set_final_states_from_metastable_states(n_cells=0)
+            mc.set_terminal_states_from_metastable_states(n_cells=0)
 
     def test_set_final_states_from_metastable_states_invalid_name(
         self, adata_large: AnnData
@@ -375,7 +375,7 @@ class TestGPCCA:
 
         mc.compute_metastable_states(n_states=2)
         with pytest.raises(KeyError):
-            mc.set_final_states_from_metastable_states(names=["foobar"])
+            mc.set_terminal_states_from_metastable_states(names=["foobar"])
 
     def test_compute_final_states_invalid_method(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -387,7 +387,7 @@ class TestGPCCA:
 
         mc.compute_metastable_states(n_states=2)
         with pytest.raises(ValueError):
-            mc.compute_final_states(method="foobar")
+            mc.compute_terminal_states(method="foobar")
 
     def test_compute_final_states_no_cells(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -399,7 +399,7 @@ class TestGPCCA:
 
         mc.compute_metastable_states(n_states=2)
         with pytest.raises(TypeError):
-            mc.compute_final_states(n_cells=None)
+            mc.compute_terminal_states(n_cells=None)
 
     def test_compute_final_states_non_positive_cells(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -411,7 +411,7 @@ class TestGPCCA:
 
         mc.compute_metastable_states(n_states=2)
         with pytest.raises(ValueError):
-            mc.compute_final_states(n_cells=0)
+            mc.compute_terminal_states(n_cells=0)
 
     def test_compute_final_states_eigengap(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -422,7 +422,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_metastable_states(n_states=2)
-        mc.compute_final_states(n_cells=5, method="eigengap")
+        mc.compute_terminal_states(n_cells=5, method="eigengap")
         mc.compute_absorption_probabilities()
 
         _check_abs_probs(mc)
@@ -436,7 +436,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_metastable_states(n_states=2)
-        mc.compute_final_states(n_cells=5, method="top_n", n_final_states=1)
+        mc.compute_terminal_states(n_cells=5, method="top_n", n_states=1)
         mc.compute_absorption_probabilities()
 
         _check_abs_probs(mc)
@@ -450,7 +450,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_metastable_states(n_states=2)
-        mc.compute_final_states(n_cells=5, method="min_self_prob", min_self_prob=0.5)
+        mc.compute_terminal_states(n_cells=5, method="min_self_prob", min_self_prob=0.5)
         mc.compute_absorption_probabilities()
 
         _check_abs_probs(mc)
@@ -464,7 +464,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_metastable_states(n_states=2)
-        mc.compute_final_states(n_cells=5)
+        mc.compute_terminal_states(n_cells=5)
         mc.compute_absorption_probabilities()
 
         _check_abs_probs(mc)
@@ -533,7 +533,7 @@ class TestGPCCA:
         mc = cr.tl.estimators.GPCCA(final_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_metastable_states(n_states=2)
-        mc.set_final_states_from_metastable_states()
+        mc.set_terminal_states_from_metastable_states()
         mc.compute_absorption_probabilities()
 
         with pytest.raises(KeyError):
@@ -547,7 +547,7 @@ class TestGPCCA:
         mc = cr.tl.estimators.GPCCA(final_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_metastable_states(n_states=2)
-        mc.set_final_states_from_metastable_states()
+        mc.set_terminal_states_from_metastable_states()
         mc.compute_absorption_probabilities()
 
         with pytest.raises(KeyError):
@@ -563,7 +563,7 @@ class TestGPCCA:
         mc = cr.tl.estimators.GPCCA(final_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_metastable_states(n_states=2)
-        mc.set_final_states_from_metastable_states()
+        mc.set_terminal_states_from_metastable_states()
         mc.compute_absorption_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
@@ -578,7 +578,7 @@ class TestGPCCA:
         mc = cr.tl.estimators.GPCCA(final_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_metastable_states(n_states=2)
-        mc.set_final_states_from_metastable_states()
+        mc.set_terminal_states_from_metastable_states()
         mc.compute_absorption_probabilities()
 
         with pytest.raises(RuntimeError):
@@ -592,7 +592,7 @@ class TestGPCCA:
         mc = cr.tl.estimators.GPCCA(final_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_metastable_states(n_states=2)
-        mc.set_final_states_from_metastable_states()
+        mc.set_terminal_states_from_metastable_states()
         mc.compute_absorption_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
@@ -607,7 +607,7 @@ class TestGPCCA:
         mc = cr.tl.estimators.GPCCA(final_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_metastable_states(n_states=2)
-        mc.set_final_states_from_metastable_states()
+        mc.set_terminal_states_from_metastable_states()
         mc.compute_absorption_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
@@ -622,7 +622,7 @@ class TestGPCCA:
         mc = cr.tl.estimators.GPCCA(final_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_metastable_states(n_states=2)
-        mc.set_final_states_from_metastable_states()
+        mc.set_terminal_states_from_metastable_states()
         mc.compute_absorption_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 

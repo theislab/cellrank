@@ -48,13 +48,13 @@ def _initial_terminal(
     pk = DummyKernel(adata=adata, backward=backward)
     mc = GPCCA(pk, read_from_adata=True, write_to_adata=False)
 
-    if mc._get(P.FIN) is None:
+    if mc._get(P.TERM) is None:
         raise RuntimeError(
             f"Compute {_initial if backward else _terminal} states first as "
             f"`cellrank.tl.compute_{FinalStatesKey.BACKWARD if backward else FinalStatesKey.FORWARD}()`."
         )
 
-    n_states = len(mc._get(P.FIN).cat.categories)
+    n_states = len(mc._get(P.TERM).cat.categories)
     if n_states == 1 or (
         states is not None and (isinstance(states, str) or len(states) == 1)
     ):

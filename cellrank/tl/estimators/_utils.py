@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Utillity functions which deal with delegating methods."""
+"""Utility functions which deal with delegating methods."""
 import inspect
 from typing import *  # noqa
 from functools import partial, singledispatch, update_wrapper

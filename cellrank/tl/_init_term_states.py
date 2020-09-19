@@ -73,7 +73,7 @@ Returns
     Depending on ``copy`` and ``return_estimator``, either updates the existing ``adata`` object,
     returns its copy or returns the estimator.
 
-    Marked cells can be found in ``adata.obs[{key_added!r}]``.
+    Marked cells are added to ``adata.obs[{key_added!r}]``.
 """
 
 

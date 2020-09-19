@@ -38,8 +38,8 @@ class CFLARE(BaseEstimator, Eigen):
     %(base_estimator.parameters)s
     """
 
-    @inject_docs(fs=P.FIN, fsp=P.FIN_PROBS)
-    def compute_final_states(
+    @inject_docs(fs=P.TERM, fsp=P.TERM_PROBS)
+    def compute_terminal_states(
         self,
         use: Optional[Union[int, Tuple[int], List[int], range]] = None,
         percentile: Optional[int] = 98,
@@ -98,9 +98,8 @@ class CFLARE(BaseEstimator, Eigen):
             If ``cluster_key`` is given, this parameter determines when an approximate recurrent class will
             be labelled as *'Unknown'*, based on the entropy of the distribution of cells over transcriptomic clusters.
         p_thresh
-            If cell cycle scores were provided, a *Wilcoxon rank-sum test* is conducted to identify cell-cycle final
-            states If the test returns a positive statistic and a p-value smaller than ``p_thresh``,
-            a warning will be issued.
+            If cell cycle scores were provided, a *Wilcoxon rank-sum test* is conducted to identify cell-cycle  states.
+            If the test returns a positive statistic and a p-value smaller than ``p_thresh``, a warning will be issued.
 
         Returns
         -------
@@ -185,7 +184,7 @@ class CFLARE(BaseEstimator, Eigen):
 
         # compute a rc probability
         logg.debug("Computing probabilities of approximate recurrent classes")
-        self._set(A.FIN_PROBS, compute_metastable_states_prob())
+        self._set(A.TERM_PROBS, compute_metastable_states_prob())
 
         # retrieve embedding and concatenate
         if basis is not None:
@@ -254,7 +253,7 @@ class CFLARE(BaseEstimator, Eigen):
                 distances, rc_labels=rc_labels, n_matches_min=n_matches_min
             )
 
-        self.set_final_states(
+        self.set_terminal_states(
             labels=rc_labels,
             cluster_key=cluster_key,
             en_cutoff=en_cutoff,
@@ -284,8 +283,8 @@ class CFLARE(BaseEstimator, Eigen):
         main_names = main_names[main_names != "rest"]
 
         # get the metastable annotations & colors
-        cats_main = self._get(P.FIN).copy()
-        colors_main = np.array(self._get(A.FIN_COLORS).copy())
+        cats_main = self._get(P.TERM).copy()
+        colors_main = np.array(self._get(A.TERM_COLORS).copy())
 
         # restrict both colors and categories
         mask = np.in1d(cats_main.cat.categories, main_names)
@@ -294,7 +293,7 @@ class CFLARE(BaseEstimator, Eigen):
 
         return cats_main, colors_main
 
-    def _fit_final_states(
+    def _fit_terminal_states(
         self,
         n_lineages: Optional[int] = None,
         keys: Optional[Sequence[str]] = None,
@@ -306,7 +305,7 @@ class CFLARE(BaseEstimator, Eigen):
         if n_lineages is None:
             n_lineages = self._get(P.EIG)["eigengap"] + 1
 
-        self.compute_final_states(
+        self.compute_terminal_states(
             use=n_lineages,
             cluster_key=cluster_key,
             n_clusters_kmeans=n_lineages,
@@ -316,7 +315,7 @@ class CFLARE(BaseEstimator, Eigen):
 
     @d.dedent  # because of fit
     @d.dedent
-    @inject_docs(fs=P.FIN, fsp=P.FIN_PROBS, ap=P.ABS_PROBS, dp=P.DIFF_POT)
+    @inject_docs(fs=P.TERM, fsp=P.TERM_PROBS, ap=P.ABS_PROBS, dp=P.DIFF_POT)
     def fit(
         self,
         n_lineages: Optional[int],
@@ -326,19 +325,19 @@ class CFLARE(BaseEstimator, Eigen):
         **kwargs,
     ):
         """
-        Run the pipeline, computing the %(final)s states and optionally, the absorption probabilities.
+        Run the pipeline, computing the %(initial_or_terminal)s states and optionally the absorption probabilities.
 
         It is equivalent to running::
 
             compute_eigendecomposition(...)
-            compute_final_states(...)
+            compute_terminal_states(...)
             compute_absorption_probabilities(...)
 
         Parameters
         ----------
         %(fit)s
         **kwargs
-            Keyword arguments for :meth:`compute_final_states`, such as ``n_cells``.
+            Keyword arguments for :meth:`compute_terminal_states`, such as ``n_cells``.
 
         Returns
         -------

@@ -29,7 +29,7 @@ g = cr.tl.estimators.GPCCA(k)
 # :ref:`sphx_glr_auto_examples_estimators_compute_terminal_states_gpcca.py`.
 g.compute_schur(n_components=4)
 g.compute_metastable_states(cluster_key="clusters")
-g.set_final_states_from_metastable_states(["Alpha", "Beta", "Epsilon"])
+g.set_terminal_states_from_metastable_states(["Alpha", "Beta", "Epsilon"])
 g.compute_absorption_probabilities()
 g.absorption_probabilities
 

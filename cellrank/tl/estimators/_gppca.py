@@ -48,7 +48,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             dtype=pd.DataFrame,
             doc="Coarse-grained transition matrix.",
         ),
-        Metadata(attr=A.FIN_ABS_PROBS, prop=P.NO_PROPERTY, dtype=Lineage),
+        Metadata(attr=A.TERM_ABS_PROBS, prop=P.NO_PROPERTY, dtype=Lineage),
         Metadata(attr=A.COARSE_INIT_D, prop=P.COARSE_INIT_D, dtype=pd.Series),
         Metadata(attr=A.COARSE_STAT_D, prop=P.COARSE_STAT_D, dtype=pd.Series),
     ]
@@ -56,13 +56,13 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
     def _read_from_adata(self) -> None:
         super()._read_from_adata()
         self._reconstruct_lineage(
-            A.FIN_ABS_PROBS,
+            A.TERM_ABS_PROBS,
             self._fin_abs_prob_key,
         )
 
     @inject_docs(
         ms=P.META,
-        msp=P.META_PROBS,
+        msp=P.META_MEMBER,
         schur=P.SCHUR.s,
         coarse_T=P.COARSE_T,
         coarse_stat=P.COARSE_STAT_D,
@@ -190,7 +190,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         self._set(A.SCHUR, self._gpcca.X)
         self._set(A.SCHUR_MAT, self._gpcca.R)
 
-        names = self._get(P.META_PROBS).names
+        names = self._get(P.META_MEMBER).names
 
         self._set(
             A.COARSE_T,
@@ -215,7 +215,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
                 ),
             )
             logg.info(
-                f"Adding `.{P.META_PROBS}`\n"
+                f"Adding `.{P.META_MEMBER}`\n"
                 f"       `.{P.META}`\n"
                 f"       `.{P.SCHUR}`\n"
                 f"       `.{P.COARSE_T}`\n"
@@ -226,7 +226,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         else:
             logg.warning("No stationary distribution found in GPCCA object")
             logg.info(
-                f"Adding `.{P.META_PROBS}`\n"
+                f"Adding `.{P.META_MEMBER}`\n"
                 f"       `.{P.META}`\n"
                 f"       `.{P.SCHUR}`\n"
                 f"       `.{P.COARSE_T}`\n"
@@ -235,19 +235,20 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             )
 
     @d.dedent
-    @inject_docs(fs=P.FIN, fsp=P.FIN_PROBS)
-    def set_final_states_from_metastable_states(
+    @inject_docs(fs=P.TERM, fsp=P.TERM_PROBS)
+    def set_terminal_states_from_metastable_states(
         self,
         names: Optional[Union[Iterable[str], str]] = None,
         n_cells: int = 30,
     ):
         """
-        Manually select the main states from the metastable states.
+        Manually select terminal states from metastable states.
 
         Parameters
         ----------
         names
-            Names of the main states. Multiple states can be combined using `','`, such as `['Alpha, Beta', 'Epsilon']`.
+            Names of the metastable states. Multiple states can be combined using `','`,
+            such as `['Alpha, Beta', 'Epsilon']`.
         %(n_cells)s
 
         Returns
@@ -267,18 +268,18 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         if n_cells <= 0:
             raise ValueError(f"Expected `n_cells` to be positive, found `{n_cells}`.")
 
-        probs = self._get(P.META_PROBS)
+        probs = self._get(P.META_MEMBER)
 
-        if self._get(P.META_PROBS) is None:
+        if self._get(P.META_MEMBER) is None:
             raise RuntimeError(
                 "Compute metastable_states first as `.compute_metastable_states()`."
             )
         elif probs.shape[1] == 1:
-            self._set(A.FIN, self._create_states(probs, n_cells=n_cells))
-            self._set(A.FIN_COLORS, self._get(A.META_COLORS))
-            self._set(A.FIN_PROBS, probs / probs.max())
-            self._set(A.FIN_ABS_PROBS, probs)
-            self._write_final_states()
+            self._set(A.TERM, self._create_states(probs, n_cells=n_cells))
+            self._set(A.TERM_COLORS, self._get(A.META_COLORS))
+            self._set(A.TERM_PROBS, probs / probs.max())
+            self._set(A.TERM_ABS_PROBS, probs)
+            self._write_terminal_states()
             return
 
         if names is None:
@@ -295,30 +296,30 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         ].copy()
         scaled_probs /= scaled_probs.max(0)
 
-        self._set(A.FIN, self._create_states(meta_states_probs, n_cells))
+        self._set(A.TERM, self._create_states(meta_states_probs, n_cells))
         self._set(
-            A.FIN_PROBS, pd.Series(scaled_probs.X.max(1), index=self.adata.obs_names)
+            A.TERM_PROBS, pd.Series(scaled_probs.X.max(1), index=self.adata.obs_names)
         )
         self._set(
-            A.FIN_COLORS,
-            meta_states_probs[list(self._get(P.FIN).cat.categories)].colors,
+            A.TERM_COLORS,
+            meta_states_probs[list(self._get(P.TERM).cat.categories)].colors,
         )
 
-        self._set(A.FIN_ABS_PROBS, scaled_probs)
-        self._write_final_states()
+        self._set(A.TERM_ABS_PROBS, scaled_probs)
+        self._write_terminal_states()
 
-    @inject_docs(fs=P.FIN, fsp=P.FIN_PROBS)
+    @inject_docs(fs=P.TERM, fsp=P.TERM_PROBS)
     @d.dedent
-    def compute_final_states(
+    def compute_terminal_states(
         self,
         method: str = "eigengap",
         n_cells: int = 30,
         alpha: Optional[float] = 1,
         min_self_prob: Optional[float] = None,
-        n_final_states: Optional[int] = None,
+        n_states: Optional[int] = None,
     ):
         """
-        Automatically select the main states from metastable states.
+        Automatically select terminal states from metastable states.
 
         Parameters
         ----------
@@ -328,7 +329,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
                 - `'eigengap'` - select the number of states based on the eigengap of the transition matrix.
                 - `'eigengap_coarse'` - select the number of states based on the eigengap of the diagonal
                     of the coarse-grained transition matrix.
-                - `'top_n'` - select top ``n_final_states`` based on the probability of the diagonal \
+                - `'top_n'` - select top ``n_states`` based on the probability of the diagonal \
                     of the coarse-grained transition matrix.
                 - `'min_self_prob'` - select states which have the given minimum probability of the diagonal
                     of the coarse-grained transition matrix.
@@ -338,7 +339,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             or ``method='eigengap_coarse'``.
         min_self_prob
             Used when ``method='min_self_prob'``.
-        n_final_states
+        n_states
             Used when ``method='top_n'``.
 
         Returns
@@ -354,7 +355,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             logg.warning(
                 "Found only one metastable state. Making it the single main state"
             )
-            self.set_final_states_from_metastable_states(None, n_cells=n_cells)
+            self.set_terminal_states_from_metastable_states(None, n_cells=n_cells)
             return
 
         coarse_T = self._get(P.COARSE_T)
@@ -364,21 +365,21 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
                 raise RuntimeError(
                     "Compute eigendecomposition first as `.compute_eigendecomposition()`."
                 )
-            n_final_states = _eigengap(self._get(P.EIG)["D"], alpha=alpha) + 1
+            n_states = _eigengap(self._get(P.EIG)["D"], alpha=alpha) + 1
         elif method == "eigengap_coarse":
             if coarse_T is None:
                 raise RuntimeError(
                     "Compute metastable states first as `.compute_metastable_states()`."
                 )
-            n_final_states = _eigengap(np.sort(np.diag(coarse_T)[::-1]), alpha=alpha)
+            n_states = _eigengap(np.sort(np.diag(coarse_T)[::-1]), alpha=alpha)
         elif method == "top_n":
-            if n_final_states is None:
+            if n_states is None:
                 raise ValueError(
-                    "Argument `n_final_states` must be != `None` for `method='top_n'`."
+                    "Argument `n_states` must be != `None` for `method='top_n'`."
                 )
-            elif n_final_states <= 0:
+            elif n_states <= 0:
                 raise ValueError(
-                    f"Expected `n_final_states` to be positive, found `{n_final_states}`."
+                    f"Expected `n_states` to be positive, found `{n_states}`."
                 )
         elif method == "min_self_prob":
             if min_self_prob is None:
@@ -387,7 +388,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
                 )
             self_probs = pd.Series(np.diag(coarse_T), index=coarse_T.columns)
             names = self_probs[self_probs.values >= min_self_prob].index
-            self.set_final_states_from_metastable_states(names, n_cells=n_cells)
+            self.set_terminal_states_from_metastable_states(names, n_cells=n_cells)
             return
         else:
             raise ValueError(
@@ -395,8 +396,8 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
                 f"'top_n' and 'min_self_prob'`."
             )
 
-        names = coarse_T.columns[np.argsort(np.diag(coarse_T))][-n_final_states:]
-        self.set_final_states_from_metastable_states(names, n_cells=n_cells)
+        names = coarse_T.columns[np.argsort(np.diag(coarse_T))][-n_states:]
+        self.set_terminal_states_from_metastable_states(names, n_cells=n_cells)
 
     def compute_gdpt(
         self, n_components: int = 10, key_added: str = "gdpt_pseudotime", **kwargs
@@ -740,7 +741,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             en_cutoff=en_cutoff,
         )
         self._set(
-            A.META_PROBS,
+            A.META_MEMBER,
             Lineage(
                 stationary_dist,
                 names=list(self._get(A.META).cat.categories),
@@ -760,7 +761,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             self._set(key.s, None)
 
         logg.info(
-            f"Adding `.{P.META_PROBS}`\n        `.{P.META}`\n    Finish",
+            f"Adding `.{P.META_MEMBER}`\n        `.{P.META}`\n    Finish",
             time=start,
         )
 
@@ -907,7 +908,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         )
 
         self._set(
-            A.META_PROBS,
+            A.META_MEMBER,
             Lineage(
                 memberships,
                 names=list(metastable_states.cat.categories),
@@ -955,7 +956,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
 
         return n_states
 
-    def _fit_final_states(
+    def _fit_terminal_states(
         self,
         n_lineages: Optional[int] = None,
         cluster_key: Optional[str] = None,
@@ -986,17 +987,17 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         fs_kwargs = {"n_cells": kwargs["n_cells"]} if "n_cells" in kwargs else {}
 
         if n_lineages is None:
-            self.compute_final_states(method="eigengap", **fs_kwargs)
+            self.compute_terminal_states(method="eigengap", **fs_kwargs)
         else:
-            self.set_final_states_from_metastable_states(**fs_kwargs)
+            self.set_terminal_states_from_metastable_states(**fs_kwargs)
 
     @d.dedent  # because of fit
     @d.dedent
     @inject_docs(
         ms=P.META,
-        msp=P.META_PROBS,
-        fs=P.FIN,
-        fsp=P.FIN_PROBS,
+        msp=P.META_MEMBER,
+        fs=P.TERM,
+        fsp=P.TERM_PROBS,
         ap=P.ABS_PROBS,
         dp=P.DIFF_POT,
     )
@@ -1010,7 +1011,8 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         **kwargs,
     ):
         """
-        Run the pipeline, computing the metastable states, %(final)s states and optionally the absorption probabilities.
+        Run the pipeline, computing the metastable states, %(initial_or_terminal)s states \
+        and optionally the absorption probabilities.
 
         It is equivalent to running::
 
@@ -1022,9 +1024,9 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             compute_metastable_states(...)
 
             if n_lineages is None:
-                compute_final_states(...)
+                compute_terminal_states(...)
             else:
-                set_final_states_from_metastable_states(...)
+                set_terminal_states_from_metastable_states(...)
 
             if compute_absorption_probabilities:
                 compute_absorption_probabilities(...)
@@ -1035,7 +1037,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         method
             Method to use when computing the Schur decomposition. Valid options are: `'krylov'` or `'brandts'`.
         compute_absorption_probabilities
-            Whether to compute absorption probabilities or only final states.
+            Whether to compute absorption probabilities or only %(initial_or_terminal)s states.
         **kwargs
             Keyword arguments for :meth:`cellrank.tl.estimators.GPCCA.compute_metastable_states`.
 

@@ -73,7 +73,7 @@ adata.obsp["transition_matrix"]
 
 # %%
 # Precomputed kernel doesn't require :mod:`anndata` object - a dummy one will be created if none is supplied.
-# This can be useful in conjunction with :meth:`cellrank.tl.estimators.BaseEstimator.set_final_states` to calculate
+# This can be useful in conjunction with :meth:`cellrank.tl.estimators.BaseEstimator.set_terminal_states` to calculate
 # absorption probabilities using :meth:`cellrank.tl.estimators.BaseEstimator.compute_absorption_probabilities`.
 pk = cr.tl.kernels.PrecomputedKernel(adata.obsp["transition_matrix"])
 pk.adata

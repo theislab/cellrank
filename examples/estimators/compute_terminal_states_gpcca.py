@@ -32,9 +32,9 @@ g.compute_metastable_states(cluster_key="clusters")
 #
 # For :class:`cellrank.tl.estimators.GPCCA`, there are 3 methods for choosing the final states:
 #
-#     1. :meth:`cellrank.tl.estimators.GPCCA.set_final_states`
-#     2. :meth:`cellrank.tl.estimators.GPCCA.set_final_states_from_metastable_states`
-#     3. :meth:`cellrank.tl.estimators.GPCCA.compute_final_states`
+#     1. :meth:`cellrank.tl.estimators.GPCCA.set_terminal_states`
+#     2. :meth:`cellrank.tl.estimators.GPCCA.set_terminal_states_from_metastable_states`
+#     3. :meth:`cellrank.tl.estimators.GPCCA.compute_terminal_states`
 #
 # We will cover each of these methods below. In the last 2 cases, parameter ``n_cells`` controls how many cells to take
 # from each final state we take as a categorical annotation.
@@ -42,7 +42,7 @@ g.compute_metastable_states(cluster_key="clusters")
 # %%G
 # Set final states
 # ^^^^^^^^^^^^^^^^
-# :meth:`cellrank.tl.estimators.GPCCA.set_final_states` simply sets the final states manually - this
+# :meth:`cellrank.tl.estimators.GPCCA.set_terminal_states` simply sets the final states manually - this
 # can be useful when the final states are known beforehand. In this case, we don't need to compute the metastable
 # states.
 #
@@ -52,27 +52,27 @@ g.compute_metastable_states(cluster_key="clusters")
 #
 # Below we set the final state called `"Alpha"` as all the cells from the `"Alpha"`
 # cluster under ``adata.obs["clusters"]``.
-g.set_final_states({"Alpha": adata[adata.obs["clusters"] == "Alpha"].obs_names})
+g.set_terminal_states({"Alpha": adata[adata.obs["clusters"] == "Alpha"].obs_names})
 
 # %%
 # Set final states from metastable states
 # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-# :meth:`cellrank.tl.estimators.GPCCA.set_final_states_from_metastable_states` sets the final states by subsetting
+# :meth:`cellrank.tl.estimators.GPCCA.set_terminal_states_from_metastable_states` sets the final states by subsetting
 # the metastable states. Note that multiple states can also be combined into new, joint states, as shown below,
 # where we combine `"Alpha"` and `"Beta"` states into a new one.
-g.set_final_states_from_metastable_states(["Alpha, Beta", "Epsilon"])
+g.set_terminal_states_from_metastable_states(["Alpha, Beta", "Epsilon"])
 
 # %%
 # Compute final states
 # ^^^^^^^^^^^^^^^^^^^^
-# Lastly, :meth:`cellrank.tl.estimators.GPCCA.compute_final_states` which also makes use of the coarse-grained
+# Lastly, :meth:`cellrank.tl.estimators.GPCCA.compute_terminal_states` which also makes use of the coarse-grained
 # transition matrix :paramref:`cellrank.tl.estimators.GPCCA.coarse_T` of the metastable states or the `eigengap`
 # statistic.
 #
 # In the example below, we use ``method='eigenap'`` which selects the number of states based on the `eigengap`.
 # The final states are defined as the top most likely states from the diagonal of the coarse-grained transition matrix.
 # To find out more, see :ref:`sphx_glr_auto_examples_estimators_compute_coarse_T.py`.
-g.compute_final_states(method="eigengap")
+g.compute_terminal_states(method="eigengap")
 
 # %%
 # Now that the final states have been either set or computed, we can visualize them in an embedding.

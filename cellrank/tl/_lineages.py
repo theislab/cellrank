@@ -77,7 +77,7 @@ def lineages(
     mc = GPCCA(
         pk, read_from_adata=True, inplace=not copy
     )  # GPCCA is more general than CFLARE, in terms of what is saves
-    if mc._get(P.FIN) is None:
+    if mc._get(P.TERM) is None:
         raise RuntimeError(
             f"Compute the states first as `cellrank.tl.{fs_key.s}(..., backward={backward})`."
         )
