@@ -3,7 +3,9 @@
 Plot initial states
 -------------------
 
-This example shows how to compute and plot initial states of the process.
+This example shows how to compute and plot the initial states of the cell-state transition.
+
+CellRank can be applied to any cell-state transition, be it differentiation, regeneration, reprogramming or others.
 """
 
 import cellrank as cr
@@ -13,9 +15,9 @@ adata
 
 # %%
 # First, we compute the initial states. By default, we're using the :class:`cellrank.tl.estimators.GPCCA` estimator.
-# Parameter ``cluster_key`` tries to associate the names of the initial states with cluster labels, whereas
+# The parameter ``cluster_key`` tries to associate the names of the initial states with cluster labels, whereas
 # ``n_cells`` controls how many cells we take from each final state as categorical observation - this is only available
-# for the above mentioned estimator. We can show some plots of interest by specifying ``show_plots=True``.
+# to the above mentioned estimator. We can show some plots of interest by specifying ``show_plots=True``.
 cr.tl.initial_states(
     adata,
     cluster_key="clusters",
@@ -26,16 +28,16 @@ cr.tl.initial_states(
 )
 
 # %%
-# We can now plot the initial states. By default, we plot the membership degree, which is only available to
-# :class:`cellrank.tl.estimators.GPCCA` estimator.
+# We can now plot the initial states. By default, when using :class:`cellrank.tl.estimators.GPCCA`, we plot continuous
+# membership vectors to visualize individual cells associations with an initial state
+#
+# We can also plot membership vectors for different initial states separately if we computed more than one initial
+# state using ``same_plot=False``. As we only have one initial state here, this does not make sense.
 cr.pl.initial_states(adata)
 
 # %%
-# We can plot these values also separately, one initial state per plot.
-cr.pl.initial_states(adata, same_plot=False)
-
-# %%
-# Lastly, we can also plot the discrete values by specifying ``discrete=True``.
+# Lastly, we can discretize the assignment of cells to initial states by showing the cells most
+# likely to belong to the initial state by specifying the ``discrete`` parameter.
 cr.pl.initial_states(adata, discrete=True)
 
 # %%
