@@ -61,7 +61,7 @@ cr.pl.graph(
 #
 # Below we compare the maximum transition from each of the `"Delta"` cells to any of the `"Alpha"` cells or the `"Beta"`
 # cells. We can visually inspect that the values are larger when going to the `"Beta"` cells, which is consistent with
-# known biology, as well as our prediction, see .
+# known biology, as well as our fate probabilities, see :ref:`sphx_glr_auto_examples_plotting_plot_lineages_states.py`.
 cr.pl.graph(
     adata,
     "T_fwd",
