@@ -1398,6 +1398,24 @@ class TestGraph:
         cr.pl.graph(adata, "T_fwd", ixs=range(10), layout="umap", dpi=DPI, save=fpath)
 
     @compare()
+    def test_graph_title(self, adata: AnnData, fpath: str):
+        cr.pl.graph(
+            adata, "T_fwd", ixs=range(10), title="foo bar baz quux", dpi=DPI, save=fpath
+        )
+
+    @compare()
+    def test_graph_titles(self, adata: AnnData, fpath: str):
+        cr.pl.graph(
+            adata,
+            "T_fwd",
+            ixs=range(10),
+            keys=["incoming", "self_loops"],
+            title=["foo", "bar"],
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
     def test_graph_keys(self, adata: AnnData, fpath: str):
         cr.pl.graph(
             adata,
@@ -1481,13 +1499,41 @@ class TestGraph:
         )
 
     @compare()
+    def test_graph_edge_reductions_restriction_incoming(
+        self, adata: AnnData, fpath: str
+    ):
+        cr.pl.graph(
+            adata,
+            "T_fwd",
+            ixs=range(10),
+            keys="incoming",
+            edge_reductions_restrict_to_ixs=range(20, 40),
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_graph_edge_reductions_restriction_outgoing(
+        self, adata: AnnData, fpath: str
+    ):
+        cr.pl.graph(
+            adata,
+            "T_fwd",
+            ixs=range(10),
+            keys="outgoing",
+            edge_reductions_restrict_to_ixs=range(20, 40),
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
     def test_graph_categorical_key(self, adata: AnnData, fpath: str):
         cr.pl.graph(
             adata,
             "T_fwd",
             ixs=range(10),
-            keys=["clusters"],
-            keylocs=["obs"],
+            keys="clusters",
+            keylocs="obs",
             dpi=DPI,
             save=fpath,
         )

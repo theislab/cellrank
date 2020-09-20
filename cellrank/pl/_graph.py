@@ -37,7 +37,7 @@ _msg_shown = False
 def graph(
     data: Union[AnnData, np.ndarray, spmatrix],
     graph_key: Optional[str] = None,
-    ixs: Optional[np.array] = None,
+    ixs: Optional[Union[range, np.array]] = None,
     layout: Union[str, Dict, Callable] = "umap",
     keys: Sequence[KEYS] = ("incoming",),
     keylocs: Union[KEYLOCS, Sequence[KEYLOCS]] = "uns",
@@ -48,7 +48,7 @@ def graph(
     self_loop_radius_frac: Optional[float] = None,
     filter_edges: Optional[Tuple[float, float]] = None,
     edge_reductions: Union[Callable, Sequence[Callable]] = np.sum,
-    edge_reductions_restrict_to_ixs: Optional[np.ndarray] = None,
+    edge_reductions_restrict_to_ixs: Optional[Union[range, np.ndarray]] = None,
     edge_weight_scale: float = 10,
     edge_width_limit: Optional[float] = None,
     edge_alpha: float = 1.0,
