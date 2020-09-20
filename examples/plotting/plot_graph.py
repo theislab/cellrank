@@ -40,19 +40,6 @@ cr.pl.graph(
 )
 
 # %%
-# Below we plot at most the top 3 incoming edges restricted to ``ixs`` in descending order. Nodes are also colored in
-# by the sum of incoming weights, in this case, the transition probabilities. Note that the aggregate values are
-# calculated before any filtering or normalization takes place.
-cr.pl.graph(
-    adata,
-    "T_fwd",
-    ixs=ixs,
-    node_size=200,
-    show_arrows=True,
-    top_n_edges=(3, False, "incoming"),
-)
-
-# %%
 # Lastly, we can visualize different edge aggregations, such as minimum or maximum. Here we take at most 5 outgoing
 # edges restricted to ``ixs`` for each node in descending order and color the nodes by the maximum outgoing weights.
 #

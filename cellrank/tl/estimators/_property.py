@@ -926,7 +926,9 @@ class Partitioner(KernelHolder, ABC):
         return self._trans_classes
 
 
-class Deprecated:  # noqa
+class Deprecated:
+    """This class contains deprecated functions that will be removed in the next release."""
+
     def plot_final_states(self, *args, **kwargs):
         """This function has been deprecated. Please use :meth:`cellrank.tl.estimators.BaseEstimator.plot_terminal_states` instead."""  # noqa
         print(

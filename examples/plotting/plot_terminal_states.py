@@ -30,10 +30,11 @@ cr.tl.terminal_states(
 # %%
 # We can now plot the terminal states. By default, when using :class:`cellrank.tl.estimators.GPCCA`, we plot continuous
 # membership vectors to visualize individual cells associations with an terminal state
-#
-# We can also plot membership vectors for different terminal states separately if we computed more than one terminal
-# state using ``same_plot=False``. As we only have one terminal state here, this does not make sense.
 cr.pl.terminal_states(adata)
+
+# %%
+# We can also plot membership vectors for different terminal states separately  state using ``same_plot=False``.
+cr.pl.terminal_states(adata, same_plot=False)
 
 # %%
 # Lastly, we can discretize the assignment of cells to terminal states by showing the cells most
