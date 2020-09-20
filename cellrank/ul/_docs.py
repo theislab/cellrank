@@ -56,9 +56,9 @@ cluster_key
     For this, provide a key from :paramref:`adata` ``.obs`` where cluster labels have been computed.
 keys
     Determines which %(initial_or_terminal) states to use by passing their names.
-    Further, %(initial_or_terminal)s states can be combined. If e.g. the %(final)s states are
+    Further, %(initial_or_terminal)s states can be combined. If e.g. the %(terminal)s states are
     ['Neuronal_1', 'Neuronal_1', 'Astrocytes', 'OPC'], then passing ``keys=['Neuronal_1, Neuronal_2', 'OPC']``
-    means that the two neuronal %(final)s states are treated as one and the 'Astrocyte' state is excluded."""
+    means that the two neuronal %(terminal)s states are treated as one and the 'Astrocyte' state is excluded."""
 _density_correction = (
     "Optionally, we apply a density correction as described in [Coifman05]_, "
     "where we use the implementation of [Haghverdi16]_."
@@ -94,7 +94,6 @@ backward_mode
 _copy = """Return a copy of self."""
 _initial = "initial"
 _terminal = "terminal"
-_final = "final"
 _model_callback = """\
 callback
     Function which takes a :class:`cellrank.ul.models.BaseModel` and some keyword arguments
@@ -154,7 +153,6 @@ d = DocstringProcessor(
     backward=_backward,
     initial=_initial,
     terminal=_terminal,
-    final=_final,
     eigen=_eigen,
     initial_or_terminal=f"{_initial} or {_terminal}",
     n_cells=_n_cells,
