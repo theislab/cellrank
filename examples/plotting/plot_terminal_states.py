@@ -5,7 +5,7 @@ Plot terminal states
 
 This example shows how to compute and plot the terminal states of the cell-state transition.
 
-CellRank can be applied to any cell-state transition, be it differentiation, regeneration, reprogramming or others.
+CellRank can be applied to any cell-state transition, be it differentiation, regeneration, reprogramming or other.
 """
 
 import cellrank as cr
@@ -23,13 +23,13 @@ cr.tl.terminal_states(
     cluster_key="clusters",
     n_cells=30,
     softmax_scale=4,
-    n_states=1,
+    n_states=3,
     show_progress_bar=False,
 )
 
 # %%
 # We can now plot the terminal states. By default, when using :class:`cellrank.tl.estimators.GPCCA`, we plot continuous
-# membership vectors to visualize individual cells associations with an terminal state
+# membership vectors to visualize individual cells associations with an terminal state.
 cr.pl.terminal_states(adata)
 
 # %%

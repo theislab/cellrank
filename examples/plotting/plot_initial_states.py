@@ -5,7 +5,7 @@ Plot initial states
 
 This example shows how to compute and plot the initial states of the cell-state transition.
 
-CellRank can be applied to any cell-state transition, be it differentiation, regeneration, reprogramming or others.
+CellRank can be applied to any cell-state transition, be it differentiation, regeneration, reprogramming or other.
 """
 
 import cellrank as cr
@@ -29,7 +29,7 @@ cr.tl.initial_states(
 
 # %%
 # We can now plot the initial states. By default, when using :class:`cellrank.tl.estimators.GPCCA`, we plot continuous
-# membership vectors to visualize individual cells associations with an initial state
+# membership vectors to visualize individual cells associations with an initial state.
 #
 # We can also plot membership vectors for different initial states separately if we computed more than one initial
 # state using ``same_plot=False``. As we only have one initial state here, this does not make sense.

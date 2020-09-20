@@ -14,7 +14,7 @@ adata
 
 
 # %%
-# First, we create the forward transition matrix using high-level pipeline.
+# First, we create a forward transition matrix using the high-level pipeline.
 cr.tl.transition_matrix(
     adata, show_progress_bar=False, weight_connectivities=0.2, softmax_scale=4
 )
@@ -27,28 +27,27 @@ cr.pl.graph(
     edge_alpha=0.1,
     node_size=5,
     show_arrows=False,
-    keys=("clusters",),
+    keys="clusters",
     keylocs="obs",
 )
 
 # %%
 # To further illustrate the functionalities, let us only consider the `'Delta`' cluster. We can also filter the edges
-# by their weights, as shown below. Only transition with probability at least 0.1 are plotted.
+# by their weights, as shown below. Only transitions with probability at least 0.1 are plotted.
 ixs = np.where(adata.obs["clusters"] == "Delta")[0]
 cr.pl.graph(
     adata, "T_fwd", ixs=ixs, show_arrows=True, node_size=200, filter_edges=(0.1, 1)
 )
 
 # %%
-# Lastly, we can visualize different edge aggregations, such as minimum or maximum. Here we take at most 5 outgoing
+# Lastly, we can visualize different edge aggregations, such as minimum or maximum. Here we take at most 3 outgoing
 # edges restricted to ``ixs`` for each node in descending order and color the nodes by the maximum outgoing weights.
+# Aggregated values are always computed before any filtering happens, such as shown above.
 #
 # Here we also specify ``edge_reductions_restrict_to_ixs`` (by default, it is the same as ``ixs``) that computes the
-# statistic between the cells marked with ``ixs`` and ``edge_reduction_indices``.
+# statistic between the cells marked with ``ixs`` and ``edge_reductions_restrict_to_ixs``.
 #
-# Below we compare the maximum transition from each of the `"Delta"` cells to any of the `"Alpha"` cells or the `"Beta"`
-# cells. We can visually inspect that the values are larger when going to the `"Beta"` cells, which is consistent with
-# known biology, as well as our fate probabilities, see :ref:`sphx_glr_auto_examples_plotting_plot_lineages_states.py`.
+# Below we compare the maximum transition from each of the `"Delta"` cells to any of the `"Beta"` cells.
 cr.pl.graph(
     adata,
     "T_fwd",
@@ -57,22 +56,8 @@ cr.pl.graph(
     node_size=200,
     keys="outgoing",
     show_arrows=False,
-    top_n_edges=(5, False, "outgoing"),
+    top_n_edges=(3, False, "outgoing"),
     title="outgoing to Beta",
     edge_reductions=np.max,
     edge_reductions_restrict_to_ixs=np.where(adata.obs["clusters"] == "Beta")[0],
-)
-
-cr.pl.graph(
-    adata,
-    "T_fwd",
-    ixs=ixs,
-    edge_alpha=0.5,
-    node_size=200,
-    keys="outgoing",
-    show_arrows=False,
-    top_n_edges=(5, False, "outgoing"),
-    title="outgoing to Alpha",
-    edge_reductions=np.max,
-    edge_reductions_restrict_to_ixs=np.where(adata.obs["clusters"] == "Alpha")[0],
 )

@@ -18,7 +18,7 @@ adata = cr.datasets.pancreas_preprocessed("../example.h5ad")
 adata
 
 # %%
-# First, we compute initial and terminal state probabilities as well as absorption probabilities towards the
+# First, we compute initial and terminal state probabilities as well as the absorption probabilities towards the
 # identified terminal states.
 cr.tl.terminal_states(
     adata,
