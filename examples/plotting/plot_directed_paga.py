@@ -3,7 +3,12 @@
 Plot directed PAGA
 ------------------
 
-This example shows how to compute and plot directed PAGA [Wolf19_].
+This example shows how to compute and plot a directed version of the popular PAGA algorithm [Wolf19]_.
+
+In classical PAGA plot, nodes correspond to clusters and edge thickness denotes transcriptomic similarity.
+We introduce a new directed version of PAGA where directed edges reflect local velocity flow. We add the possibility
+to include prior information in the form of a pseudotemporal ordering or initial/terminal state annotation to restrict
+the possible edge set. We further replace nodes by pie charts that show average CellRank fate probabilities.
 """
 
 import cellrank as cr
@@ -13,8 +18,8 @@ adata = cr.datasets.pancreas_preprocessed("../example.h5ad")
 adata
 
 # %%
-# First, we compute the initial and terminal states probabilities, as well as the absorption probabilities towards
-# the terminal states.
+# First, we compute initial and terminal state probabilities as well as the absorption probabilities towards the
+# identified terminal states.
 cr.tl.terminal_states(
     adata,
     cluster_key="clusters",
@@ -36,7 +41,7 @@ scv.tl.recover_latent_time(
 
 # %%
 # Afterwards, we compute the directed PAGA using :func:`scvelo.tl.paga` by again specifying the initial
-# and terminal states and the time prior.
+# and terminal states and the time prior computed above.
 scv.tl.paga(
     adata,
     groups="clusters",

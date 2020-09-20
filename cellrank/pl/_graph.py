@@ -37,7 +37,7 @@ _msg_shown = False
 def graph(
     data: Union[AnnData, np.ndarray, spmatrix],
     graph_key: Optional[str] = None,
-    ixs: Optional[np.array] = None,
+    ixs: Optional[Union[range, np.array]] = None,
     layout: Union[str, Dict, Callable] = "umap",
     keys: Sequence[KEYS] = ("incoming",),
     keylocs: Union[KEYLOCS, Sequence[KEYLOCS]] = "uns",
@@ -48,6 +48,7 @@ def graph(
     self_loop_radius_frac: Optional[float] = None,
     filter_edges: Optional[Tuple[float, float]] = None,
     edge_reductions: Union[Callable, Sequence[Callable]] = np.sum,
+    edge_reductions_restrict_to_ixs: Optional[Union[range, np.ndarray]] = None,
     edge_weight_scale: float = 10,
     edge_width_limit: Optional[float] = None,
     edge_alpha: float = 1.0,
@@ -60,6 +61,7 @@ def graph(
     cat_cmap: ListedColormap = cm.Set3,
     cont_cmap: ListedColormap = cm.viridis,
     legend_loc: Optional[str] = "best",
+    title: Optional[Union[str, Sequence[Optional[str]]]] = None,
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
     save: Optional[Union[str, Path]] = None,
@@ -111,6 +113,9 @@ def graph(
         Whether to remove all edges not in `[min, max]` interval.
     edge_reductions
         Aggregation function to use when coloring nodes by edge weights.
+    edge_reductions_restrict_to_ixs
+        Whether to use the full graph when calculating the ``edge_reductions`` or just use the nodes
+        marked by the ``ixs`` and this parameter. If `None`, it's the same as ``ixs``.
     edge_weight_scale
         Number by which to scale the width of the edges. Useful when the weights are small.
     edge_width_limit
@@ -135,6 +140,8 @@ def graph(
         Continuous colormap used when ``keys`` contain continuous variables.
     legend_loc
         Location of the legend.
+    title
+        Title of the figure(s), one for each ``key``.
     %(plotting)s
     layout_kwargs
         Additional kwargs for ``layout``.
@@ -263,6 +270,9 @@ def graph(
         )
         logg.debug(f"Setting self loop radius fraction to `{self_loop_radius_frac}`")
 
+    if not isinstance(keys, (tuple, list)):
+        keys = [keys]
+
     if not isinstance(keylocs, (tuple, list)):
         keylocs = [keylocs] * len(keys)
     elif len(keylocs) == 1:
@@ -288,6 +298,12 @@ def graph(
         raise ValueError(
             f"`Keys` and `labels` must be of the same shape, found `{len(keys)}` and `{len(labels)}`."
         )
+    if title is None or isinstance(title, str):
+        title = [title] * len(keys)
+    if len(title) != len(keys):
+        raise ValueError(
+            f"`Titles` and `keys` must be of the same shape, found `{len(title)}` and `{len(keys)}`."
+        )
 
     if isinstance(data, _AnnData):
         if graph_key is None:
@@ -304,10 +320,14 @@ def graph(
         )
     is_sparse = issparse(gdata)
 
+    gdata_full = gdata
     if ixs is not None:
         gdata = gdata[ixs, :][:, ixs]
     else:
         ixs = list(range(gdata.shape[0]))
+
+    if edge_reductions_restrict_to_ixs is None:
+        edge_reductions_restrict_to_ixs = ixs
 
     start = logg.info("Creating graph")
     G = (
@@ -370,7 +390,7 @@ def graph(
     curves, lc = None, None
     if edge_use_curved:
         try:
-            from ._utils import _curved_edges
+            from cellrank.pl._utils import _curved_edges
 
             logg.debug("Creating curved edges")
             curves = _curved_edges(G, pos, self_loop_radius_frac, polarity="directed")
@@ -394,17 +414,32 @@ def graph(
                 )
                 _msg_shown = True
 
-    for ax, keyloc, key, labs, er in zip(axes, keylocs, keys, labels, edge_reductions):
+    for ax, keyloc, title, key, labs, er in zip(
+        axes, keylocs, title, keys, labels, edge_reductions
+    ):
         label_col = {}  # dummy value
 
         if key in ("incoming", "outgoing", "self_loops"):
             if key in ("incoming", "outgoing"):
-                vals = er(gdata, axis=int(key == "outgoing"))
-                if issparse(vals):
-                    vals = vals.A
-                vals = vals.flatten()
+                axis = int(key == "outgoing")
+                tmp_data = (
+                    gdata_full[ixs, :][:, edge_reductions_restrict_to_ixs]
+                    if axis
+                    else gdata_full[edge_reductions_restrict_to_ixs, :][:, ixs]
+                )
+                vals = er(tmp_data, axis=axis)
             else:
                 vals = gdata.diagonal() if is_sparse else np.diag(gdata)
+
+            if issparse(vals):
+                vals = vals.toarray()
+            vals = np.squeeze(np.array(vals))
+
+            assert len(pos) == len(vals), (
+                f"Expected reduction values to be of length `{len(pos)}`, "
+                f"found `{len(vals)}`."
+            )
+
             node_v = dict(zip(pos.keys(), vals))
         else:
             label_col = getattr(data, keyloc)
@@ -493,7 +528,7 @@ def graph(
 
         nx.draw_networkx_nodes(G, pos, node_size=node_size, ax=ax, **nodes_kwargs)
 
-        ax.set_title(key)
+        ax.set_title(key if title is None else title)
         ax.axis("off")
 
     if save is not None:

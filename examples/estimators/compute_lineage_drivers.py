@@ -5,7 +5,7 @@ Compute potential lineage drivers
 
 This example shows how to compute and plot expression trends for genes which may be involved in lineage decisions.
 
-We identify these by correlating gene expression with absorption probabilities towards a specific final state.
+We identify these by correlating gene expression with absorption probabilities towards a specific terminal state.
 """
 
 import cellrank as cr
@@ -29,7 +29,7 @@ g = cr.tl.estimators.GPCCA(k)
 # :ref:`sphx_glr_auto_examples_estimators_compute_terminal_states_gpcca.py`.
 g.compute_schur(n_components=4)
 g.compute_metastable_states(cluster_key="clusters")
-g.set_final_states_from_metastable_states(["Alpha", "Beta", "Epsilon"])
+g.set_terminal_states_from_metastable_states(["Alpha", "Beta", "Epsilon"])
 g.compute_absorption_probabilities()
 g.absorption_probabilities
 

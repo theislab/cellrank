@@ -3,7 +3,7 @@
 from typing import Union, TypeVar, Optional, Sequence
 
 from cellrank.ul._docs import d, _initial, _terminal, inject_docs
-from cellrank.tl._constants import FinalStatesKey, FinalStatesPlot
+from cellrank.tl._constants import TermStatesKey, FinalStatesPlot
 from cellrank.tl.estimators import GPCCA
 from cellrank.tl.estimators._constants import P
 from cellrank.tl.kernels._precomputed_kernel import DummyKernel
@@ -26,7 +26,7 @@ discrete
     If `True`, plot probability distribution of {direction} states.
     Only available when {direction} were estimated by :class:`cellrank.tl.estimators.GPCCA`.
 **kwargs
-    Keyword arguments for :meth:`cellrank.tl.estimators.BaseEstimator.plot_final_states`.
+    Keyword arguments for :meth:`cellrank.tl.estimators.BaseEstimator.plot_terminal_states`.
 
 Returns
 -------
@@ -48,13 +48,13 @@ def _initial_terminal(
     pk = DummyKernel(adata=adata, backward=backward)
     mc = GPCCA(pk, read_from_adata=True, write_to_adata=False)
 
-    if mc._get(P.FIN) is None:
+    if mc._get(P.TERM) is None:
         raise RuntimeError(
             f"Compute {_initial if backward else _terminal} states first as "
-            f"`cellrank.tl.compute_{FinalStatesKey.BACKWARD if backward else FinalStatesKey.FORWARD}()`."
+            f"`cellrank.tl.compute_{TermStatesKey.BACKWARD if backward else TermStatesKey.FORWARD}()`."
         )
 
-    n_states = len(mc._get(P.FIN).cat.categories)
+    n_states = len(mc._get(P.TERM).cat.categories)
     if n_states == 1 or (
         states is not None and (isinstance(states, str) or len(states) == 1)
     ):
@@ -85,7 +85,7 @@ def _initial_terminal(
 
     _ = kwargs.pop("lineages", None)
 
-    mc.plot_final_states(
+    mc.plot_terminal_states(
         lineages=states,
         cluster_key=cluster_key,
         mode=mode,
@@ -99,7 +99,7 @@ def _initial_terminal(
 @inject_docs(
     __doc__=_find_docs.format(
         direction=_initial,
-        fn_name=FinalStatesKey.BACKWARD.s,
+        fn_name=TermStatesKey.BACKWARD.s,
         title=FinalStatesPlot.BACKWARD.s,
     )
 )
@@ -129,7 +129,7 @@ def initial_states(
 @inject_docs(
     __doc__=_find_docs.format(
         direction=_terminal,
-        fn_name=FinalStatesKey.FORWARD.s,
+        fn_name=TermStatesKey.FORWARD.s,
         title=FinalStatesPlot.FORWARD.s,
     )
 )

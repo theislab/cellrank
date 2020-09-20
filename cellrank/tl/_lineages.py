@@ -8,7 +8,7 @@ import pandas as pd
 from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.tl.kernels import PrecomputedKernel
-from cellrank.tl._constants import AbsProbKey, FinalStatesKey, FinalStatesPlot
+from cellrank.tl._constants import AbsProbKey, TermStatesKey, FinalStatesPlot
 from cellrank.tl.estimators import GPCCA
 from cellrank.tl.estimators._constants import P
 from cellrank.tl.kernels._precomputed_kernel import DummyKernel
@@ -59,11 +59,11 @@ def lineages(
 
     if backward:
         lin_key = AbsProbKey.BACKWARD
-        fs_key = FinalStatesKey.BACKWARD
+        fs_key = TermStatesKey.BACKWARD
         fs_key_pretty = FinalStatesPlot.BACKWARD
     else:
         lin_key = AbsProbKey.FORWARD
-        fs_key = FinalStatesKey.FORWARD
+        fs_key = TermStatesKey.FORWARD
         fs_key_pretty = FinalStatesPlot.FORWARD
 
     try:
@@ -77,7 +77,7 @@ def lineages(
     mc = GPCCA(
         pk, read_from_adata=True, inplace=not copy
     )  # GPCCA is more general than CFLARE, in terms of what is saves
-    if mc._get(P.FIN) is None:
+    if mc._get(P.TERM) is None:
         raise RuntimeError(
             f"Compute the states first as `cellrank.tl.{fs_key.s}(..., backward={backward})`."
         )

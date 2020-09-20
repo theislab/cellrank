@@ -42,7 +42,7 @@ g.compute_metastable_states(n_states=3, cluster_key="clusters")
 # %%
 # After computing the metastable states, we can inspect them as follows. Below we show for each cell the membership
 # degree of the metastable states.
-g.metastable_states_probabilities
+g.metastable_states_memberships
 
 # %%
 # To get the categorical observations, top ``n_cells`` for each metastable state, we can inspect the attribute below.

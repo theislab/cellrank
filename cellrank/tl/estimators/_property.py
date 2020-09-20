@@ -382,7 +382,7 @@ class VectorPlottable(KernelHolder, Property):
 
 class Plottable(KernelHolder, Property):
     """
-    Injector which plots metastable or final states or absorption probabilities.
+    Injector which plots metastable or terminal states or absorption probabilities.
 
     To be used in conjunction with:
 
@@ -432,8 +432,8 @@ class Plottable(KernelHolder, Property):
             raise TypeError(
                 f"Expected property `.{prop}` to be categorical, found `{type(data).__name__!r}`."
             )
-        if prop in (P.ABS_PROBS.s, P.FIN.s):
-            colors = getattr(self, A.FIN_COLORS.v, None)
+        if prop in (P.ABS_PROBS.s, P.TERM.s):
+            colors = getattr(self, A.TERM_COLORS.v, None)
         elif prop == P.META.v:
             colors = getattr(self, A.META_COLORS.v, None)
         else:
@@ -662,7 +662,7 @@ class Plottable(KernelHolder, Property):
             else:
                 kwargs["color"] = color
 
-            if probs.shape[1] == 1 and prop in (P.META_PROBS.s, P.FIN_PROBS.s):
+            if probs.shape[1] == 1 and prop in (P.META_MEMBER.s, P.TERM_PROBS.s):
                 if "perc" not in kwargs:
                     logg.warning(
                         "Did not detect percentile for stationary distribution. Setting `perc=[0, 95]`"
@@ -737,13 +737,13 @@ class Plottable(KernelHolder, Property):
         if discrete:
             self._plot_discrete(data, prop, **kwargs)
         elif prop == P.META.v:  # GPCCA
-            prop = P.META_PROBS.v
+            prop = P.META_MEMBER.v
             self._plot_continuous(getattr(self, prop, None), prop, None, **kwargs)
-        elif prop == P.FIN.v:
-            probs = getattr(self, A.FIN_ABS_PROBS.s, None)
+        elif prop == P.TERM.v:
+            probs = getattr(self, A.TERM_ABS_PROBS.s, None)
             # we have this only in GPCCA
             if isinstance(probs, Lineage):
-                self._plot_continuous(probs, P.FIN_PROBS.v, **kwargs)
+                self._plot_continuous(probs, P.TERM_PROBS.v, **kwargs)
             else:
                 logg.warning(
                     f"Unable to plot continuous observations for `{prop!r}`, plotting in discrete mode"
@@ -766,8 +766,8 @@ class Plottable(KernelHolder, Property):
             diff_potential = getattr(self, P.DIFF_POT.v, None)
             self._plot_continuous(data, prop, diff_potential, **kwargs)
         elif prop == P.ABS_PROBS.v:
-            # for discrete and abs. probs, plot the final states
-            prop = P.FIN.v
+            # for discrete and abs. probs, plot the terminal states
+            prop = P.TERM.v
             self._plot_discrete(getattr(self, prop, None), prop, **kwargs)
         else:
             raise NotImplementedError(
@@ -781,10 +781,10 @@ class MetaStates(Plottable):
     __prop_metadata__ = [
         Metadata(attr=A.META, prop=P.META, dtype=pd.Series, doc="Metastable states."),
         Metadata(
-            attr=A.META_PROBS,
-            prop=P.META_PROBS,
+            attr=A.META_MEMBER,
+            prop=P.META_MEMBER,
             dtype=Lineage,
-            doc="Metastable states probabilities.",
+            doc="Metastable states membership.",
         ),
         Metadata(attr=A.META_COLORS, prop=P.NO_PROPERTY, dtype=np.ndarray),
     ]
@@ -794,30 +794,32 @@ class MetaStates(Plottable):
         pass
 
 
-class FinalStates(Plottable):
-    """Class dealing with final states."""
+class TerminalStates(Plottable):
+    """Class dealing with terminal states."""
 
     __prop_metadata__ = [
-        Metadata(attr=A.FIN, prop=P.FIN, dtype=pd.Series, doc="Final states."),
+        Metadata(attr=A.TERM, prop=P.TERM, dtype=pd.Series, doc="Terminal states."),
         Metadata(
-            attr=A.FIN_PROBS,
-            prop=P.FIN_PROBS,
+            attr=A.TERM_PROBS,
+            prop=P.TERM_PROBS,
             dtype=pd.Series,
-            doc="Final states probabilities.",
+            doc="Terminal states probabilities.",
         ),
-        Metadata(attr=A.FIN_COLORS, prop=P.NO_PROPERTY, dtype=np.ndarray),
+        Metadata(attr=A.TERM_COLORS, prop=P.NO_PROPERTY, dtype=np.ndarray),
     ]
 
     @abstractmethod
-    def set_final_states(self, *args, **kwargs) -> None:  # noqa
+    def set_terminal_states(self, *args, **kwargs) -> None:  # noqa
         pass
 
     @abstractmethod
-    def compute_final_states(self, *args, **kwargs) -> None:  # noqa
+    def compute_terminal_states(self, *args, **kwargs) -> None:  # noqa
         pass
 
+    # TODO: back compat
+
     @abstractmethod
-    def _write_final_states(self, *args, **kwargs) -> None:
+    def _write_terminal_states(self, *args, **kwargs) -> None:
         pass
 
 
@@ -904,7 +906,7 @@ class Partitioner(KernelHolder, ABC):
             )
         else:
             logg.warning(
-                "The transition matrix is irreducible - cannot further _partition it\n    Finish",
+                "The transition matrix is irreducible, cannot further partition it\n    Finish",
                 time=start,
             )
 
@@ -924,7 +926,32 @@ class Partitioner(KernelHolder, ABC):
         return self._trans_classes
 
 
-class LineageEstimatorMixin(FinalStates, AbsProbs, LinDrivers, ABC):
-    """Mixin containing final states and absorption probabilities."""
+class Deprecated:
+    """This class contains deprecated functions that will be removed in the next release."""
+
+    def plot_final_states(self, *args, **kwargs):
+        """This function has been deprecated. Please use :meth:`cellrank.tl.estimators.BaseEstimator.plot_terminal_states` instead."""  # noqa
+        print(
+            "This function has been deprecated. Please use `plot_terminal_states` instead."
+        )
+        return self.plot_terminal_states(*args, **kwargs)
+
+    def set_final_states(self, *args, **kwargs):
+        """This function has been deprecated. Please use :meth:`cellrank.tl.estimators.BaseEstimator.set_terminal_states` instead."""  # noqa
+        print(
+            "This function has been deprecated. Please use `set_terminal_states` instead."
+        )
+        return self.set_terminal_states(*args, **kwargs)
+
+    def compute_final_states(self, *args, **kwargs):
+        """This function has been deprecated. Please use :meth:`cellrank.tl.estimators.BaseEstimator.compute_terminal_states` instead."""  # noqa
+        print(
+            "This function has been deprecated. Please use `compute_terminal_states` instead."
+        )
+        return self.compute_terminal_states(*args, **kwargs)
+
+
+class LineageEstimatorMixin(TerminalStates, AbsProbs, LinDrivers, Deprecated, ABC):
+    """Mixin containing terminal states and absorption probabilities."""
 
     pass
