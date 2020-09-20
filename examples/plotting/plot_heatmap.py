@@ -5,8 +5,8 @@ Plot a heatmap of expression trends
 
 This example shows how to plot smoothed gene expression using a heatmap.
 
-This is especially useful when looking at many genes at the same time, to investigate gene expression cascades as
-they appear in many cell state transitions.
+This is especially useful when looking at many genes at the same time in order to investigate gene expression
+cascades as they appear in many cell state transitions.
 """
 
 import cellrank as cr

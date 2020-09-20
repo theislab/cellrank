@@ -7,6 +7,8 @@ This example shows how to plot smoothed gene expression toward specific terminal
 
 By default, we use Generalized Additive Models (`GAMs <https://en.wikipedia.org/wiki/Generalized_additive_model>`_)
 to fit gene expression values and we specify each cell’s contribution to each lineage via the lineage probabilities.
+
+For models based on :mod:`sklearn` estimators, see :class:`cellrank.ul.models.SKLearnModel`.
 """
 
 import cellrank as cr
