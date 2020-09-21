@@ -14,6 +14,10 @@ from cellrank.tl._lineage import Lineage
 from cellrank.tl._constants import ModeEnum
 from cellrank.ul._parallelize import parallelize
 
+# sources:
+# edgeR: https://github.com/jianjinxu/edgeR/blob/master/R/calcNormFactors.R
+# tradeSeq: https://github.com/statOmics/tradeSeq/blob/master/R/fitGAM.R
+
 
 class NormMode(ModeEnum):  # noqa
     TMM = "tmm"
