@@ -137,7 +137,7 @@ class GAMR(BaseModel):
                 f"s(x{i}, by=l{i}, bs='cr', k={self._n_splines})"
                 for i in range(len(pt.names))
             )
-            self._formula = f"y ~ -1 + {terms} + offset(offset)"
+            self._formula = f"y ~ -1 + U + {terms} + offset(offset)"
 
         return self
 
