@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from typing import Union, Optional
+from typing import List, Union, Optional
 
 from anndata import AnnData
 
@@ -56,8 +56,8 @@ def _assign_cells(
     elif isinstance(x, pd.DataFrame):
         names = x.columns
         x = x.values
-    elif isinstance(x, AnnData):
-        index = x.obs_names
+    if isinstance(data, AnnData):
+        index = data.obs_names
 
     if np.any(x < 0):
         raise ValueError("Negative weights are not supported.")
@@ -83,21 +83,10 @@ def _assign_cells(
     return assignment.astype(bool)
 
 
-def _calculate_norm_factors(
-    adata: Union[AnnData, np.ndarray, spmatrix],
-    method: str = NormMode.TMM.s,
-    layer: Optional[str] = None,
-    use_raw: bool = True,
-    library_size: Optional[np.ndarray] = None,
-    ref_ix: Optional[int] = None,
-    logratio_trim: float = 0.3,
-    sum_trim: float = 0.05,
-    weight: bool = True,
-    a_cutoff: float = -1e10,
-    p: float = 0.75,
-):
-    method = NormMode(method)
-
+# TODO: make nicer
+def _extract_data(
+    adata, layer: str, use_raw: bool = True
+) -> Union[np.ndarray, spmatrix]:
     if isinstance(adata, AnnData):
         if use_raw:
             if not hasattr(adata, "raw"):
@@ -115,6 +104,26 @@ def _calculate_norm_factors(
         raise TypeError()
     else:
         x = adata
+
+    return x
+
+
+def _calculate_norm_factors(
+    data: Union[AnnData, np.ndarray, spmatrix],
+    method: str = NormMode.TMM.s,
+    layer: Optional[str] = None,
+    use_raw: bool = True,
+    library_size: Optional[np.ndarray] = None,
+    ref_ix: Optional[int] = None,
+    logratio_trim: float = 0.3,
+    sum_trim: float = 0.05,
+    weight: bool = True,
+    a_cutoff: float = -1e10,
+    p: float = 0.75,
+) -> np.ndarray:
+    method = NormMode(method)
+
+    x = _extract_data(data, layer, use_raw)
 
     if library_size is None:
         library_size = np.array(x.sum(1)).squeeze()
@@ -143,7 +152,9 @@ def _dispatch_computation(mode, *_args, **_kwargs):
 
 
 @_dispatch_computation.register(NormMode.TMM)
-def _(x: Union[np.ndarray, spmatrix], library_size, ref_ix=None, **kwargs):
+def _(
+    x: Union[np.ndarray, spmatrix], library_size, ref_ix=None, **kwargs
+) -> np.ndarray:
     if ref_ix is None:
         assert library_size is not None
         f75 = _calc_factor_quant(x, library_size=library_size, p=0.75)
@@ -169,7 +180,7 @@ def _(x: Union[np.ndarray, spmatrix], library_size, ref_ix=None, **kwargs):
 @_dispatch_computation.register(NormMode.UPPER_QUANT)
 def _calc_factor_quant(
     x: Union[np.ndarray, spmatrix], library_size: np.ndarray, p: float, **_
-):
+) -> np.ndarray:
     library_size = np.array(library_size).reshape((-1, 1))
     if not issparse(x):
         # this is same as below, which is R's default
@@ -182,7 +193,7 @@ def _calc_factor_quant(
 
 
 @_dispatch_computation.register(NormMode.RLE)
-def _(x: Union[np.ndarray, spmatrix], **_):
+def _(x: Union[np.ndarray, spmatrix], **_) -> np.ndarray:
     gm = np.array(np.exp(np.sum(np.log1p(x), axis=0))).squeeze()
     mask = (gm > 0) & np.isfinite(gm)
     if not issparse(x):
@@ -192,7 +203,7 @@ def _(x: Union[np.ndarray, spmatrix], **_):
 
 
 @_dispatch_computation.register(NormMode.NONE)
-def _(x: Union[np.ndarray, spmatrix], **_):
+def _(x: Union[np.ndarray, spmatrix], **_) -> np.ndarray:
     return np.ones((x.shape[0],), dtype=x.dtype)
 
 
@@ -208,7 +219,8 @@ def _calc_factor_weighted(
     a_cutoff: float = -1e10,
     queue=None,
     **_,
-):
+) -> List[float]:
+    # TODO: vectorize, not parallelize
     if issparse(ref):
         ref = ref.A.squeeze(0)  # 1 x genes
     if ref_lib_size is None:
@@ -279,7 +291,9 @@ def _calc_factor_weighted(
     return res
 
 
-def _find_knots(n_knots: int, pseudotime: np.ndarray, w_samp: pd.DataFrame):
+def _find_knots(
+    n_knots: int, pseudotime: np.ndarray, w_samp: pd.DataFrame
+) -> np.ndarray:
     # TODO some mask... (we're filtering weights)
     # this should be used per lineage
 
@@ -313,3 +327,14 @@ def _find_knots(n_knots: int, pseudotime: np.ndarray, w_samp: pd.DataFrame):
     locs[-1] = np.max(pt_all)
 
     return locs
+
+
+def _get_offset(adata, layer: Optional[str] = None, use_raw: bool = True, **kwargs):
+    data = _extract_data(adata, layer=layer, use_raw=use_raw)
+    try:
+        nf = _calculate_norm_factors(adata, layer=layer, use_raw=use_raw, **kwargs)
+    except Exception as e:
+        # TODO: logg
+        print(e)
+        nf = np.ones(adata.n_obs, dtype=np.floay64)
+    return np.log1p(nf * np.array(data.sum(1)).squeeze())

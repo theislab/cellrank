@@ -25,7 +25,7 @@ class GAMR(BaseModel):
     n_splines
         Number of splines for the GAM.
     smoothing_param
-        Smoothing parameter. Increasing this increases the smootheness of splines.
+        Smoothing parameter. Increasing this increases the smoothness of splines.
     distribution
         Family in `rpy2.robjects.r`, such as `'gaussian'` or `'poisson'`.
     backend
@@ -53,6 +53,7 @@ class GAMR(BaseModel):
         self._lib = None
         self._lib_name = None
         self._family = distribution
+        self._formula = None
 
         if backend not in self._fallback_backends.keys():
             raise ValueError(
@@ -65,6 +66,80 @@ class GAMR(BaseModel):
             self._lib, self._lib_name = _maybe_import_r_lib(
                 backend
             ) or _maybe_import_r_lib(self._fallback_backends[backend], raise_exc=True)
+
+    def prepare(
+        self,
+        gene: str,
+        lineage: Optional[str],
+        offset: np.ndarray,
+        knots: Optional[np.ndarray] = None,
+        w_samp: Optional[pd.DataFrame] = None,
+        fixed_effects: Optional[np.ndarray] = None,
+        time_key: str = "latent_time",
+        **kwargs,
+    ) -> "GAMR":
+        """TODO"""  # noqa
+
+        _ = super().prepare(gene=gene, lineage=lineage, time_key=time_key, **kwargs)
+
+        use_ixs = self.w > 0
+        self._x = self.x[use_ixs]
+        self._y = self.y[use_ixs]
+        self._w = self.w[use_ixs]
+        obs_names = self._obs_names[use_ixs]
+
+        if w_samp is not None and w_samp.shape[0] != offset.shape[0]:
+            raise ValueError()
+        if fixed_effects is not None and fixed_effects.shape[0] != offset.shape[0]:
+            raise ValueError()
+
+        if w_samp is not None:
+            mask = np.isin(w_samp.index, obs_names)
+            w_samp = w_samp[mask].copy()
+        else:
+            mask = np.isin(self.adata.obs_names, obs_names)
+
+        offset = offset[mask]
+        if fixed_effects is None:
+            fixed_effects = np.ones_like(self.w, dtype=np.float64)
+        else:
+            fixed_effects = fixed_effects[mask]
+
+        if knots is None:
+            knots = np.linspace(
+                np.min(self.x), np.max(self.x), self._n_splines, endpoint=True
+            )
+
+        assert len(knots) == self._n_splines
+        self._knots = knots
+
+        assert offset.shape[0] == fixed_effects.shape[0]
+
+        self._df = pd.DataFrame(
+            np.c_[self.x, self.y, offset, fixed_effects],
+            columns=["x0", "y", "offset", "U"],
+        )
+
+        if time_key in self.adata.obs:
+            self._formula = f"y ~ -1 + U + s(x0, bs='cr', id=1, k={self._n_splines}) + offset(offset)"
+        elif w_samp is None:
+            raise ValueError()
+        else:
+            # it's in obsm, super makes sure it's Lineage of correct shape
+            pt = self.adata.obsm[time_key][mask]
+            if set(pt.names) != set(w_samp.columns):
+                raise ValueError()
+            for i, ln in enumerate(pt.names):
+                self._df[f"x{i}"] = pt[ln].X.squeeze()
+                self._df[f"l{i}"] = (w_samp[ln] * 1).values
+
+            terms = " + ".join(
+                f"s(x{i}, by=l{i}, bs='cr', k={self._n_splines})"
+                for i in range(len(pt.names))
+            )
+            self._formula = f"y ~ -1 + {terms} + offset(offset)"
+
+        return self
 
     @d.dedent
     def fit(
@@ -96,42 +171,37 @@ class GAMR(BaseModel):
 
         super().fit(x, y, w, **kwargs)
 
-        use_ixs = self.w > 0
-        self._x = self.x[use_ixs]
-        self._y = self.y[use_ixs]
-        self._w = self.w[use_ixs]
-
         family = getattr(robjects.r, self._family, None)
         if family is None:
             family = robjects.r.gaussian
 
         pandas2ri.activate()
-        df = pandas2ri.py2rpy(pd.DataFrame(np.c_[self.x, self.y], columns=["x", "y"]))
 
-        if self._lib_name == "mgcv":
-            self._model = self._lib.gam(
-                Formula(f'y ~ s(x, k={self._n_splines}, bs="cs")'),
-                data=df,
-                sp=self._sp,
-                family=family,
-                weights=pd.Series(self.w),
-            )
-        elif self._lib_name == "gam":
-            self._model = self._lib.gam(
-                Formula("y ~ s(x)"),
-                data=df,
-                sp=self._sp,
-                family=family,
-                weights=pd.Series(self.w),
-            )
-        else:
-            raise NotImplementedError(
-                f"No fitting implemented for R library `{self._lib_name!r}`."
-            )
+        self._model = self._lib.gam(
+            Formula(self._formula),
+            data=self._df,
+            sp=self._sp,
+            family=family,
+            weights=pd.Series(self.w),
+            knots=pd.DataFrame(self._knots),  # needs to be a DataFrame
+        )
 
         pandas2ri.deactivate()
 
         return self
+
+    def _get_xtest(self, x_test, key_added: str = "_x_test"):
+        newdata = pd.DataFrame(self._check(key_added, x_test), columns=["x0"])
+        for c in [c for c in self._df if c[0] == "l"]:
+            newdata[c] = 0
+            if f"x{c[1:]}" not in newdata:
+                newdata[f"x{c[1:]}"] = 0.0
+        if "l0" in newdata:
+            newdata["l0"] = 1
+        newdata["offset"] = np.mean(self._df["offset"])
+        newdata["U"] = 1.0
+
+        return newdata
 
     @d.dedent
     def predict(
@@ -158,23 +228,24 @@ class GAMR(BaseModel):
             )
         if self._lib is None:
             raise RuntimeError(
-                f"Unable to fit the model, R package `{self._lib_name!r}` is not imported."
+                f"Unable to run prediction, R package `{self._lib_name!r}` is not imported."
             )
 
-        x_test = self._check(key_added, x_test)
+        newdata = self._get_xtest(x_test, key_added)
 
         pandas2ri.activate()
         self._y_test = (
             np.array(
                 robjects.r.predict(
                     self.model,
-                    newdata=pandas2ri.py2rpy(pd.DataFrame(x_test, columns=["x"])),
+                    newdata=pandas2ri.py2rpy(newdata),
                 )
             )
             .squeeze()
             .astype(self._dtype)
         )
         pandas2ri.deactivate()
+        self._y_test = np.exp(self._y_test)
 
         return self.y_test
 
@@ -209,6 +280,8 @@ class GAMR(BaseModel):
         )
         res._lib = self._lib
         res._lib_name = self._lib_name
+        res._formula = self._formula
+
         return res
 
     def __getstate__(self) -> dict:

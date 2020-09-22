@@ -48,6 +48,8 @@ class BaseModel(ABC):
         self._lineage = None
         self._prepared = False
 
+        self._obs_names = None
+
         self._x_all = None
         self._y_all = None
         self._w_all = None
@@ -180,7 +182,9 @@ class BaseModel(ABC):
         data_key
             Key in :paramref:`adata` ``.layers`` or `'X'` for :paramref:`adata` ``.X``.
         time_key
-            Key in :paramref:`adata` ``.obs`` where the pseudotime is stored.
+            Key in :paramref:`adata` ``.obs`` or ``.obsm`` where the pseudotime is stored.
+            If in ``.obsm``, it must be of type :class:`cellrank.tl.Lineages` and have the same dimensions and names
+            as lineages stored in ``.obsm[lineage_key]``.
         use_raw
             Whether to access :paramref:`adata` ``.raw`` or not.
         threshold
@@ -217,8 +221,6 @@ class BaseModel(ABC):
                 f"Data key must be a key of `adata.layers`: `{list(self.adata.layers.keys())}`, "
                 f"`adata.X` or `adata.obs`."
             )
-        if time_key not in self.adata.obs:
-            raise KeyError(f"Time key `{time_key!r}` not found in `adata.obs`.")
 
         lineage_key = str(AbsProbKey.BACKWARD if backward else AbsProbKey.FORWARD)
         if lineage_key not in self.adata.obsm:
@@ -231,6 +233,20 @@ class BaseModel(ABC):
 
         if lineage is not None:
             _ = self.adata.obsm[lineage_key][lineage]
+
+        if time_key not in self.adata.obs and time_key not in self.adata.obsm:
+            raise KeyError(
+                f"Time key `{time_key!r}` not found in `adata.obs` or `adata.obsm`."
+            )
+        elif time_key in self.adata.obsm:
+            if not isinstance(self.adata.obsm[time_key], Lineage):
+                raise TypeError()
+            if self.adata.obsm[lineage_key].shape != self.adata.obsm[time_key].shape:
+                raise ValueError()
+            if not np.all(
+                self.adata.obsm[lineage_key].names == self.adata.obsm[time_key].names
+            ):
+                raise ValueError()
 
         if data_key == "obs":
             if gene not in self.adata.obs:
@@ -267,7 +283,14 @@ class BaseModel(ABC):
         if lineage is not None:
             _ = self.adata.obsm[lineage_key][lineage]
 
-        x = np.array(self.adata.obs[time_key]).astype(np.float64)
+        self._obs_names = self.adata.obs_names.values[:]
+
+        if time_key in self.adata.obs:
+            x = np.array(self.adata.obs[time_key]).astype(self._dtype)
+        else:
+            x = np.array(self.adata.obsm[time_key][lineage].X.squeeze()).astype(
+                self._dtype
+            )
 
         adata = self.adata.raw.to_adata() if use_raw else self.adata
         gene_ix = np.where(adata.var_names == gene)[0]
@@ -295,7 +318,9 @@ class BaseModel(ABC):
         if use_raw:
             correct_ixs = np.isin(self.adata.obs_names, adata.obs_names)
             x = x[correct_ixs]
+            y = y[correct_ixs]
             w = w[correct_ixs]
+            self._obs_names = self._obs_names[correct_ixs]
 
         del adata
 
@@ -324,9 +349,10 @@ class BaseModel(ABC):
 
         ixs = np.argsort(x)
         x, y, w = x[ixs], y[ixs], w[ixs]
+        self._obs_names = self._obs_names[ixs]
 
         if val_start is None:
-            val_start = np.nanmin(self.adata.obs[time_key])
+            val_start = np.min(x)
         if val_end is None:
             if threshold is None:
                 threshold = np.nanmedian(w)
@@ -338,10 +364,7 @@ class BaseModel(ABC):
 
         if val_start > val_end:
             val_start, val_end = val_end, val_start
-        val_start, val_end = (
-            max(val_start, np.min(self.adata.obs[time_key])),
-            min(val_end, np.max(self.adata.obs[time_key])),
-        )
+        val_start, val_end = (max(val_start, np.min(x)), min(val_end, np.max(x)))
 
         fil = (x >= val_start) & (x <= val_end)
         x_test = (
@@ -350,6 +373,7 @@ class BaseModel(ABC):
             else x[fil]
         )
         x, y, w = x[fil], y[fil], w[fil]
+        self._obs_names = self._obs_names[fil]
 
         if filter_dropouts is not None:
             tmp = y.squeeze()
@@ -357,6 +381,7 @@ class BaseModel(ABC):
                 ~np.isclose(tmp, filter_dropouts).astype(np.bool)
             )
             x, y, w = x[fil], y[fil], w[fil]
+            self._obs_names = self._obs_names[fil]
 
         self._x, self._y, self._w = (
             self._reshape_and_retype(x),
@@ -764,6 +789,7 @@ class BaseModel(ABC):
             "_y_hat",
             "_conf_int",
             "_prepared",
+            "_obs_names",
         ]:
             setattr(dst, attr, _copy(getattr(self, attr)))
 
