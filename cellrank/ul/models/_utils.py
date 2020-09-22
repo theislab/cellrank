@@ -80,7 +80,7 @@ def _assign_cells(
     if names is not None:
         assignment.columns = names
 
-    return assignment
+    return assignment.astype(bool)
 
 
 def _calculate_norm_factors(
@@ -277,3 +277,39 @@ def _calc_factor_weighted(
         queue.put(None)
 
     return res
+
+
+def _find_knots(n_knots: int, pseudotime: np.ndarray, w_samp: pd.DataFrame):
+    # TODO some mask... (we're filtering weights)
+    # this should be used per lineage
+
+    if n_knots <= 0:
+        raise ValueError()
+    if pseudotime.shape[0] != w_samp.shape[0]:
+        raise ValueError()
+
+    if w_samp.values.dtype != np.bool:
+        raise TypeError()
+    if pseudotime.ndim == 1:
+        pseudotime = pseudotime.reshape((-1, 1)).repeat(w_samp.shape[1], axis=1)
+    if pseudotime.shape[1] != w_samp.shape[1]:
+        raise ValueError()
+
+    pt_all = pseudotime[np.where(w_samp)]
+
+    x = np.quantile(pt_all, q=np.arange(n_knots, dtype=np.float64) / (n_knots - 1))
+    u, ix, c = np.unique(x, return_index=True, return_counts=True)
+
+    if len(u) != len(x):
+        locs = []
+        for start, end, size in zip(x[ix], x[ix[1:]], c):
+            locs.extend(np.linspace(start, end, size, endpoint=False))
+        locs.extend(np.linspace(locs[-1], x[ix[-1]], c[-1] + 1, endpoint=True)[1:])
+        locs = np.array(locs)
+    else:
+        locs = x
+
+    locs[0] = np.min(pt_all)
+    locs[-1] = np.max(pt_all)
+
+    return locs
