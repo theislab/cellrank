@@ -55,6 +55,7 @@ if __name__ == "__main__":
                 "mock>=4.0.2",
                 "python-igraph",
                 "louvain==0.6.1",
+                "leidenalg==0.8.1",
             ],
             docs=[
                 r

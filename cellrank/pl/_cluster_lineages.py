@@ -193,6 +193,8 @@ def cluster_lineage(
     if key is None:
         key = f"lineage_{lineage}_trend"
 
+    random_state = np.random.mtrand.RandomState(random_state).randint(2 ** 16)
+
     if recompute or key not in adata.uns:
         kwargs["time_key"] = time_key  # kwargs for the model.prepare
         kwargs["n_test_points"] = n_points
@@ -219,7 +221,7 @@ def cluster_lineage(
 
         trends = trends.T
         if norm:
-            logg.debug("Normalizing data")
+            logg.debug("Normalizing trends")
             _ = StandardScaler(copy=False).fit_transform(trends)
 
         trends = _AnnData(trends.T)
@@ -236,7 +238,7 @@ def cluster_lineage(
             )
 
         pca_kwargs = dict(pca_kwargs)
-        pca_kwargs.setdefault("n_comps", min(50, int(np.ceil(n_points / 10))) - 1)
+        pca_kwargs.setdefault("n_comps", min(50, n_points, len(genes)) - 1)
         pca_kwargs.setdefault("random_state", random_state)
         sc.pp.pca(trends, **pca_kwargs)
 
@@ -249,7 +251,7 @@ def cluster_lineage(
         clustering_kwargs.setdefault("random_state", random_state)
         try:
             if use_leiden:
-                sc.tl.leiden(adata, **clustering_kwargs)
+                sc.tl.leiden(trends, **clustering_kwargs)
             else:
                 sc.tl.louvain(trends, **clustering_kwargs)
         except ImportError as e:
@@ -257,7 +259,7 @@ def cluster_lineage(
             if use_leiden:
                 sc.tl.louvain(trends, **clustering_kwargs)
             else:
-                sc.tl.leiden(adata, **clustering_kwargs)
+                sc.tl.leiden(trends, **clustering_kwargs)
 
         logg.info(f"Saving data to `adata.uns[{key!r}]`")
         adata.uns[key] = trends
