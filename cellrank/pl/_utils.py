@@ -718,6 +718,7 @@ def composition(
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[float] = None,
     save: Optional[Union[str, Path]] = None,
+    **kwargs
 ) -> None:
     """
     Plot a pie chart for categorical annotation.
@@ -732,6 +733,8 @@ def composition(
     key
         Key in ``adata.obs`` containing categorical observation.
     %(plotting)s
+    **kwargs
+        Keyworded arguments for :func:`matplotlib.pyplot.pie`.
 
     Returns
     -------
@@ -751,7 +754,7 @@ def composition(
     # plot these fractions in a pie plot
     fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
 
-    ax.pie(x=cats_frac, labels=cats, colors=colors)
+    ax.pie(x=cats_frac, labels=cats, colors=colors, **kwargs)
     ax.set_title(f"composition by {key}")
 
     if save is not None:
