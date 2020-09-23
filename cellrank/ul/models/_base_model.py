@@ -499,6 +499,8 @@ class BaseModel(ABC):
         """
         Calculate the confidence interval, if the underlying :paramref:`model` has no method for it.
 
+        This formula is taken from [DeSalvo71]_, eq. 5.
+
         Parameters
         ----------
         %(base_model_ci.parameters)s
@@ -508,6 +510,12 @@ class BaseModel(ABC):
         %(base_model_ci.returns)s
                 - :paramref:`x_hat` - %(base_model_x_hat.summary)s
                 - :paramref:`y_hat` - %(base_model_y_hat.summary)s
+
+        References
+        ----------
+        .. [DeSalvo71] Desalvo, J. (1971),
+            *Standard Error of Forecast in Multiple Regression: Proof of a Useful Result.*,
+            `The American Statistician, 25(4), 32-34 <https:doi.org/10.2307/2682924>`__.
         """
 
         use_ixs = self.w > 0
@@ -519,21 +527,17 @@ class BaseModel(ABC):
         self._y_test = self.predict(x_test, key_added="_x_test", **kwargs)
 
         n = np.sum(use_ixs)
-        sigma = np.sqrt(((self.y_hat - self.y[use_ixs].squeeze()) ** 2).sum() / (n - 2))
+        sigma_hat = np.sqrt(
+            ((self.y_hat - self.y[use_ixs].squeeze()) ** 2).sum() / (n - 2)
+        )
+        mean = np.mean(self.x)
 
-        stds = (
-            np.sqrt(
-                1
-                + 1 / n
-                + ((self.x_test - np.mean(self.x)) ** 2)
-                / ((self.x - np.mean(self.x)) ** 2).sum()
-            )
-            * sigma
-            / 2
+        stds = sigma_hat * np.sqrt(
+            1 + 1 / n + ((self.x_test - mean) ** 2) / ((self.x - mean) ** 2).sum()
         )
         stds = np.squeeze(stds)
 
-        self._conf_int = np.c_[self._y_test - stds, self._y_test + stds]
+        self._conf_int = np.c_[self._y_test - stds / 2.0, self._y_test + stds / 2.0]
 
         return self.conf_int
 
