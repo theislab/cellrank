@@ -2008,3 +2008,7 @@ class TestComposition:
     @compare()
     def test_composition(self, adata: AnnData, fpath: str):
         cr.pl._utils.composition(adata, "clusters", dpi=DPI, save=fpath)
+
+    @compare()
+    def test_composition_kwargs_autopct(self, adata: AnnData, fpath: str):
+        cr.pl._utils.composition(adata, "clusters", dpi=DPI, save=fpath, autopct='%1.0f%%')
