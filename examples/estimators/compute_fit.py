@@ -31,8 +31,8 @@ g = cr.tl.estimators.GPCCA(k)
 
 # %%
 # Afterwards, we simply call :meth:`cellrank.tl.estimators.BaseEstimator.fit`. It offers a quick and easy way
-# to compute the final states and optionally the absorption probabilities by following similar steps as defined in
-# :ref:`sphx_glr_auto_examples_estimators_compute_final_states_gpcca.py`.
+# to compute the terminal states and optionally the absorption probabilities by following similar steps as defined in
+# :ref:`sphx_glr_auto_examples_estimators_compute_terminal_states_gpcca.py`.
 g.fit(n_lineages=3, cluster_key="clusters", compute_absorption_probabilities=True)
 
 # %%

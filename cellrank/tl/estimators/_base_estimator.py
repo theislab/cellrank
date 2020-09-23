@@ -42,7 +42,7 @@ from cellrank.tl._constants import (
     DirPrefix,
     AbsProbKey,
     PrettyEnum,
-    FinalStatesKey,
+    TermStatesKey,
     _dp,
     _probs,
     _colors,
@@ -103,13 +103,13 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             self.kernel._adata = self.adata.copy()
 
         if self.kernel.backward:
-            self._fs_key = FinalStatesKey.BACKWARD.s
+            self._term_key = TermStatesKey.BACKWARD.s
             self._abs_prob_key = AbsProbKey.BACKWARD.s
-            self._fin_abs_prob_key = MetaKey.BACKWARD.s
+            self._term_abs_prob_key = MetaKey.BACKWARD.s
         else:
-            self._fs_key = FinalStatesKey.FORWARD.s
+            self._term_key = TermStatesKey.FORWARD.s
             self._abs_prob_key = AbsProbKey.FORWARD.s
-            self._fin_abs_prob_key = MetaKey.FORWARD.s
+            self._term_abs_prob_key = MetaKey.FORWARD.s
 
         self._key_added = key
         self._g2m_key = g2m_key
@@ -130,9 +130,9 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         self._set_or_debug(self._g2m_key, self.adata.obs, "_G2M_score")
         self._set_or_debug(self._s_key, self.adata.obs, "_S_score")
 
-        self._set_or_debug(self._fs_key, self.adata.obs, A.FIN.s)
-        self._set_or_debug(_probs(self._fs_key), self.adata.obs, A.FIN_PROBS)
-        self._set_or_debug(_colors(self._fs_key), self.adata.uns, A.FIN_COLORS)
+        self._set_or_debug(self._term_key, self.adata.obs, A.TERM.s)
+        self._set_or_debug(_probs(self._term_key), self.adata.obs, A.TERM_PROBS)
+        self._set_or_debug(_colors(self._term_key), self.adata.uns, A.TERM_COLORS)
 
         self._reconstruct_lineage(A.ABS_PROBS, self._abs_prob_key)
         self._set_or_debug(_dp(self._abs_prob_key), self.adata.obs, A.DIFF_POT)
@@ -140,8 +140,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
     def _reconstruct_lineage(self, attr: PrettyEnum, obsm_key: str):
 
         self._set_or_debug(obsm_key, self.adata.obsm, attr)
-        names = self._set_or_debug(_lin_names(self._fs_key), self.adata.uns)
-        colors = self._set_or_debug(_colors(self._fs_key), self.adata.uns)
+        names = self._set_or_debug(_lin_names(self._term_key), self.adata.uns)
+        colors = self._set_or_debug(_colors(self._term_key), self.adata.uns)
 
         # choosing this instead of property because GPCCA doesn't have property for FIN_ABS_PROBS
         probs = self._get(attr)
@@ -164,13 +164,14 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             self._set(attr, Lineage(probs, names=names, colors=colors))
 
             self.adata.obsm[obsm_key] = self._get(attr)
-            self.adata.uns[_lin_names(self._fs_key)] = names
-            self.adata.uns[_colors(self._fs_key)] = colors
+            self.adata.uns[_lin_names(self._term_key)] = names
+            self.adata.uns[_colors(self._term_key)] = colors
 
-    @inject_docs(fs=P.FIN.s, fsp=P.FIN_PROBS.s)
-    def set_final_states(
+    @d.dedent
+    @inject_docs(fs=P.TERM.s, fsp=P.TERM_PROBS.s)
+    def set_terminal_states(
         self,
-        labels: Union[Series, Dict[Any, Any]],
+        labels: Union[Series, Dict[str, Any]],
         cluster_key: Optional[str] = None,
         en_cutoff: Optional[float] = None,
         p_thresh: Optional[float] = None,
@@ -188,13 +189,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             values are list of cell names.
         cluster_key
             If a key to cluster labels is given, :paramref:`{fs}` will ge associated with these for naming and colors.
-        en_cutoff
-            If ``cluster_key`` is given, this parameter determines when an approximate recurrent class will
-            be labelled as *'Unknown'*, based on the entropy of the distribution of cells over transcriptomic clusters.
-        p_thresh
-            If cell cycle scores were provided, a *Wilcoxon rank-sum test* is conducted to identify cell-cycle driven
-            start- or endpoints.
-            If the test returns a positive statistic and a p-value smaller than ``p_thresh``, a warning will be issued.
+        %(en_cutoff_p_thresh)s
         add_to_existing
             Whether to add thses categories to existing ones. Cells already belonging to recurrent classes will be
             updated if there's an overlap.
@@ -210,20 +205,21 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         """
 
         self._set_categorical_labels(
-            attr_key=A.FIN.v,
-            color_key=A.FIN_COLORS.v,
-            pretty_attr_key=P.FIN.v,
-            add_to_existing_error_msg="Compute final states first as `.compute_final_states()`.",
+            attr_key=A.TERM.v,
+            color_key=A.TERM_COLORS.v,
+            pretty_attr_key=P.TERM.v,
+            add_to_existing_error_msg="Compute terminal states first as `.compute_terminal_states()`.",
             categories=labels,
             cluster_key=cluster_key,
             en_cutoff=en_cutoff,
             p_thresh=p_thresh,
             add_to_existing=add_to_existing,
         )
-        self._write_final_states(time=kwargs.get("time", None))
+        self._write_terminal_states(time=kwargs.get("time", None))
 
     @inject_docs(
         abs_prob=P.ABS_PROBS,
+        fs=P.TERM.s,
         diff_pot=P.DIFF_POT,
         lat=P.LIN_ABS_TIMES,
     )
@@ -248,9 +244,9 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         """
         Compute absorption probabilities of a Markov chain.
 
-        For each cell, this computes the probability of it reaching any of the approximate recurrent classes.
-        This also computes the entropy over absorption probabilities, which is a measure of cell plasticity, see
-        [Setty19]_.
+        For each cell, this computes the probability of it reaching any of the approximate recurrent classes defined
+        by :paramref:`{fs}`. This also computes the entropy over absorption probabilities, which is a measure of cell
+        plasticity, see [Setty19]_.
 
         Parameters
         ----------
@@ -279,8 +275,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             Can be specified as ``'all'`` to compute it to any absorbing state in ``keys``, which is more efficient
             than listing all absorbing states.
 
-            It might be beneficial to disable the progress bar as ``show_progress_bar=False``,
-            because many linear systems are being solved.
+            It might be beneficial to disable the progress bar as ``show_progress_bar=False``, because many linear
+            systems are being solved.
         n_jobs
             Number of parallel jobs to use when using an iterative solver. When ``use_petsc=True`` or for
             quickly-solvable problems, we recommend higher number (>=8) of jobs in order to fully saturate the cores.
@@ -297,17 +293,17 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         None
             Nothing, but updates the following fields:
 
-                - :paramref:`{abs_prob}` - probabilities of being absorbed into the final states.
+                - :paramref:`{abs_prob}` - probabilities of being absorbed into the terminal states.
                 - :paramref:`{diff_pot}` - differentiation potential of cells.
                 - :paramref:`{lat}` - mean times until absorption to subset absorbing states and optionally
                   their variances saved as ``'{{lineage}} mean'`` and ``'{{lineage}} var'``, respectively,
                   for each subset of absorbing states specified in ``time_to_absorption``.
         """
 
-        if self._get(P.FIN) is None:
+        if self._get(P.TERM) is None:
             raise RuntimeError(
-                "Compute final states first as `.compute_final_states()` or set them manually as "
-                "`.set_final_states()`."
+                "Compute terminal states first as `.compute_terminal_states()` or set them manually as "
+                "`.set_terminal_states()`."
             )
         if keys is not None:
             keys = sorted(set(keys))
@@ -322,11 +318,11 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             )
 
         # process the current annotations according to `keys`
-        final_states_, colors_ = _process_series(
-            series=self._get(P.FIN), keys=keys, colors=self._get(A.FIN_COLORS)
+        terminal_states_, colors_ = _process_series(
+            series=self._get(P.TERM), keys=keys, colors=self._get(A.TERM_COLORS)
         )
         # warn in case only one state is left
-        keys = list(final_states_.cat.categories)
+        keys = list(terminal_states_.cat.categories)
         if len(keys) == 1:
             logg.warning(
                 "There is only 1 recurrent class, all cells will have probability 1 of going there"
@@ -355,13 +351,13 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                         if lin not in keys:
                             raise ValueError(
                                 f"Invalid absorbing state `{lin!r}` in `{ln}`. "
-                                f"Valid options are `{list(final_states_.cat.categories)}`."
+                                f"Valid options are `{list(terminal_states_.cat.categories)}`."
                             )
                     lin_abs_times[tuple(ln)] = moment
 
             # define the dimensions of this problem
         n_cells = t.shape[0]
-        n_macrostates = len(final_states_.cat.categories)
+        n_macrostates = len(terminal_states_.cat.categories)
 
         #  create empty lineage object
         if self._get(P.ABS_PROBS) is not None:
@@ -371,14 +367,14 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             A.ABS_PROBS,
             Lineage(
                 np.empty((1, len(colors_))),
-                names=final_states_.cat.categories,
+                names=terminal_states_.cat.categories,
                 colors=colors_,
             ),
         )
 
         # get indices corresponding to recurrent and transient states
         rec_indices, trans_indices, lookup_dict = _get_cat_and_null_indices(
-            final_states_
+            terminal_states_
         )
         if not len(trans_indices):
             raise RuntimeError("Cannot proceed - Markov chain is irreducible.")
@@ -453,7 +449,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         # for recurrent states, set their self-absorption probability to one
         abs_classes = np.zeros((len(self), n_macrostates))
         rec_classes_full = {
-            cl: np.where(final_states_ == cl)[0] for cl in final_states_.cat.categories
+            cl: np.where(terminal_states_ == cl)[0]
+            for cl in terminal_states_.cat.categories
         }
         for col, cl_indices in enumerate(rec_classes_full.values()):
             abs_classes[trans_indices, col] = _abs_classes[:, col]
@@ -540,7 +537,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 "There is only 1 lineage present. Using the stationary distribution instead"
             )
             abs_probs = Lineage(
-                self._get(P.FIN_PROBS).values,
+                self._get(P.TERM_PROBS).values,
                 names=abs_probs.names,
                 colors=abs_probs.colors,
             )
@@ -792,36 +789,38 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
         setattr(self, attr_key, categories)
 
-    def _write_final_states(self, time=None) -> None:
-        self.adata.obs[self._fs_key] = self._get(P.FIN)
-        self.adata.obs[_probs(self._fs_key)] = self._get(P.FIN_PROBS)
+    def _write_terminal_states(self, time=None) -> None:
+        self.adata.obs[self._term_key] = self._get(P.TERM)
+        self.adata.obs[_probs(self._term_key)] = self._get(P.TERM_PROBS)
 
-        self.adata.uns[_colors(self._fs_key)] = self._get(A.FIN_COLORS)
-        self.adata.uns[_lin_names(self._fs_key)] = list(self._get(P.FIN).cat.categories)
+        self.adata.uns[_colors(self._term_key)] = self._get(A.TERM_COLORS)
+        self.adata.uns[_lin_names(self._term_key)] = list(
+            self._get(P.TERM).cat.categories
+        )
 
         extra_msg = ""
-        if getattr(self, A.FIN_ABS_PROBS.s, None) is not None and hasattr(
-            self, "_fin_abs_prob_key"
+        if getattr(self, A.TERM_ABS_PROBS.s, None) is not None and hasattr(
+            self, "_term_abs_prob_key"
         ):
-            # checking for None because final states can be set using `set_final_states`
+            # checking for None because terminal states can be set using `set_terminal_states`
             # without the probabilities in GPCCA
-            self.adata.obsm[self._fin_abs_prob_key] = self._get(A.FIN_ABS_PROBS)
-            extra_msg = f"       `adata.obsm[{self._fin_abs_prob_key!r}]`\n"
+            self.adata.obsm[self._term_abs_prob_key] = self._get(A.TERM_ABS_PROBS)
+            extra_msg = f"       `adata.obsm[{self._term_abs_prob_key!r}]`\n"
 
         logg.info(
-            f"Adding `adata.obs[{_probs(self._fs_key)!r}]`\n"
-            f"       `adata.obs[{self._fs_key!r}]`\n"
+            f"Adding `adata.obs[{_probs(self._term_key)!r}]`\n"
+            f"       `adata.obs[{self._term_key!r}]`\n"
             f"{extra_msg}"
-            f"       `.{P.FIN_PROBS}`\n"
-            f"       `.{P.FIN}`",
+            f"       `.{P.TERM_PROBS}`\n"
+            f"       `.{P.TERM}`",
             time=time,
         )
 
     @abstractmethod
-    def _fit_final_states(self, *args, **kwargs):
+    def _fit_terminal_states(self, *args, **kwargs):
         pass
 
-    @inject_docs(fs=P.FIN, fsp=P.FIN_PROBS, ap=P.ABS_PROBS, dp=P.DIFF_POT)
+    @inject_docs(fs=P.TERM, fsp=P.TERM_PROBS, ap=P.ABS_PROBS, dp=P.DIFF_POT)
     def fit(
         self,
         keys: Optional[Sequence] = None,
@@ -834,9 +833,9 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         Parameters
         ----------
         keys
-            Names of final states for which to compute absorption probabilities.
+            States for which to compute absorption probabilities.
         compute_absorption_probabilities
-            Whether to compute absorption probabilities or just final states.
+            Whether to compute absorption probabilities or just %(initial_or_terminal)s states.
         **kwargs
             Keyword arguments.
 
@@ -850,7 +849,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 - :paramref:`{ap}`
                 - :paramref:`{dp}`
         """
-        self._fit_final_states(**kwargs)
+        self._fit_terminal_states(**kwargs)
         if compute_absorption_probabilities:
             self.compute_absorption_probabilities(keys=keys)
 
@@ -918,7 +917,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         Returns
         -------
         None
-            Nothing, just pickles itself to a file.
+            Nothing, just writes itself to a file.
         """
 
         fname = str(fname)
@@ -940,7 +939,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
         Returns
         -------
-        :class:`cellrank.tl.estimators._base_estimator.BaseEstimator`
+        :class:`cellrank.tl.estimators.BaseEstimator`
             An estimator.
         """
 

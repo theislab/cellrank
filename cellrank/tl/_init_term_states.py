@@ -10,7 +10,7 @@ from cellrank.tl._utils import (
     _info_if_obs_keys_categorical_present,
 )
 from cellrank.tl.kernels import PrecomputedKernel
-from cellrank.tl._constants import FinalStatesKey
+from cellrank.tl._constants import TermStatesKey
 from cellrank.tl.estimators import GPCCA, CFLARE
 from cellrank.tl._transition_matrix import transition_matrix
 from cellrank.tl.estimators._constants import P
@@ -73,7 +73,7 @@ Returns
     Depending on ``copy`` and ``return_estimator``, either updates the existing ``adata`` object,
     returns its copy or returns the estimator.
 
-    Marked cells can be found in ``adata.obs[{key_added!r}]``.
+    Marked cells are added to ``adata.obs[{key_added!r}]``.
 """
 
 
@@ -137,12 +137,12 @@ def _initial_terminal(
         mc.plot_spectrum(real_only=True)
         if isinstance(mc, CFLARE):
             mc.plot_eigendecomposition(abs_value=True, perc=[0, 98], use=n_states)
-            mc.plot_final_states(discrete=True, same_plot=False)
+            mc.plot_terminal_states(discrete=True, same_plot=False)
         elif isinstance(mc, GPCCA):
             n_states = len(mc._get(P.META).cat.categories)
             if n_states > 1:
                 mc.plot_schur()
-            mc.plot_final_states(discrete=True, same_plot=False)
+            mc.plot_terminal_states(discrete=True, same_plot=False)
             if n_states > 1:
                 mc.plot_coarse_T()
         else:
@@ -158,7 +158,7 @@ def _initial_terminal(
 @inject_docs(
     __doc__=_docstring.format(
         direction=_initial,
-        key_added=FinalStatesKey.BACKWARD.s,
+        key_added=TermStatesKey.BACKWARD.s,
         bwd_mode="\n%(velocity_backward_mode_high_lvl)s",
     )
 )
@@ -198,7 +198,7 @@ def initial_states(
 @d.dedent
 @inject_docs(
     __doc__=_docstring.format(
-        direction=_terminal, key_added=FinalStatesKey.FORWARD.s, bwd_mode=""
+        direction=_terminal, key_added=TermStatesKey.FORWARD.s, bwd_mode=""
     )
 )
 def terminal_states(

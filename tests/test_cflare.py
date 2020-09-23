@@ -16,7 +16,7 @@ from cellrank.tl._constants import (
     Direction,
     DirPrefix,
     AbsProbKey,
-    FinalStatesKey,
+    TermStatesKey,
     _probs,
     _colors,
     _lin_names,
@@ -30,17 +30,17 @@ class TestCFLARE:
     def test_compute_partition(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        final_kernel = 0.8 * vk + 0.2 * ck
+        terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.CFLARE(final_kernel)
+        mc = cr.tl.estimators.CFLARE(terminal_kernel)
         mc.compute_partition()
 
         assert isinstance(mc.is_irreducible, bool)
         if not mc.is_irreducible:
             assert isinstance(mc.recurrent_classes, list)
             assert isinstance(mc.transient_classes, list)
-            assert f"{FinalStatesKey.FORWARD}_rec_classes" in mc.adata.obs
-            assert f"{FinalStatesKey.FORWARD}_trans_classes" in mc.adata.obs
+            assert f"{TermStatesKey.FORWARD}_rec_classes" in mc.adata.obs
+            assert f"{TermStatesKey.FORWARD}_trans_classes" in mc.adata.obs
         else:
             assert mc.recurrent_classes is None
             assert mc.transient_classes is None
@@ -48,9 +48,9 @@ class TestCFLARE:
     def test_compute_eigendecomposition(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        final_kernel = 0.8 * vk + 0.2 * ck
+        terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.CFLARE(final_kernel)
+        mc = cr.tl.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=2)
 
         assert isinstance(mc.eigendecomposition, dict)
@@ -64,58 +64,58 @@ class TestCFLARE:
         }
         assert f"eig_{Direction.FORWARD}" in mc.adata.uns.keys()
 
-    def test_compute_final_states_no_eig(self, adata_large: AnnData):
+    def test_compute_terminal_states_no_eig(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        final_kernel = 0.8 * vk + 0.2 * ck
+        terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.CFLARE(final_kernel)
+        mc = cr.tl.estimators.CFLARE(terminal_kernel)
         with pytest.raises(RuntimeError):
-            mc.compute_final_states(use=2)
+            mc.compute_terminal_states(use=2)
 
-    def test_compute_final_states_too_large_use(self, adata_large: AnnData):
+    def test_compute_terminal_states_too_large_use(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        final_kernel = 0.8 * vk + 0.2 * ck
+        terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.CFLARE(final_kernel)
+        mc = cr.tl.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=2)
         with pytest.raises(ValueError):
-            mc.compute_final_states(use=1000)
+            mc.compute_terminal_states(use=1000)
 
     def test_compute_approx_normal_run(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        final_kernel = 0.8 * vk + 0.2 * ck
+        terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.CFLARE(final_kernel)
+        mc = cr.tl.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_final_states(use=2)
+        mc.compute_terminal_states(use=2)
 
-        assert is_categorical_dtype(mc._get(P.FIN))
-        assert mc._get(P.FIN_PROBS) is not None
+        assert is_categorical_dtype(mc._get(P.TERM))
+        assert mc._get(P.TERM_PROBS) is not None
 
-        assert FinalStatesKey.FORWARD.s in mc.adata.obs.keys()
-        assert _probs(FinalStatesKey.FORWARD) in mc.adata.obs.keys()
-        assert _colors(FinalStatesKey.FORWARD) in mc.adata.uns.keys()
+        assert TermStatesKey.FORWARD.s in mc.adata.obs.keys()
+        assert _probs(TermStatesKey.FORWARD) in mc.adata.obs.keys()
+        assert _colors(TermStatesKey.FORWARD) in mc.adata.uns.keys()
 
     def test_compute_absorption_probabilities_no_args(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        final_kernel = 0.8 * vk + 0.2 * ck
+        terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.CFLARE(final_kernel)
+        mc = cr.tl.estimators.CFLARE(terminal_kernel)
         with pytest.raises(RuntimeError):
             mc.compute_absorption_probabilities()
 
     def test_compute_absorption_probabilities_normal_run(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        final_kernel = 0.8 * vk + 0.2 * ck
+        terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.CFLARE(final_kernel)
+        mc = cr.tl.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_final_states(use=2)
+        mc.compute_terminal_states(use=2)
         mc.compute_absorption_probabilities()
 
         assert isinstance(mc._get(P.DIFF_POT), pd.Series)
@@ -147,12 +147,12 @@ class TestCFLARE:
     def test_compute_absorption_probabilities_solver(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        final_kernel = 0.8 * vk + 0.2 * ck
+        terminal_kernel = 0.8 * vk + 0.2 * ck
         tol = 1e-6
 
-        mc = cr.tl.estimators.CFLARE(final_kernel)
+        mc = cr.tl.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_final_states(use=2)
+        mc.compute_terminal_states(use=2)
 
         # compute lin probs using direct solver
         mc.compute_absorption_probabilities(solver="direct")
@@ -168,12 +168,12 @@ class TestCFLARE:
     def test_compute_absorption_probabilities_solver_petsc(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        final_kernel = 0.8 * vk + 0.2 * ck
+        terminal_kernel = 0.8 * vk + 0.2 * ck
         tol = 1e-6
 
-        mc = cr.tl.estimators.CFLARE(final_kernel)
+        mc = cr.tl.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_final_states(use=2)
+        mc.compute_terminal_states(use=2)
 
         # compute lin probs using direct solver
         mc.compute_absorption_probabilities(solver="gmres", use_petsc=False, tol=tol)
@@ -191,12 +191,12 @@ class TestCFLARE:
     ):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        final_kernel = 0.8 * vk + 0.2 * ck
+        terminal_kernel = 0.8 * vk + 0.2 * ck
         tol = 1e-6
 
-        mc = cr.tl.estimators.CFLARE(final_kernel)
+        mc = cr.tl.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_final_states(use=2)
+        mc.compute_terminal_states(use=2)
 
         # compute lin probs using direct solver
         mc.compute_absorption_probabilities(
@@ -216,12 +216,12 @@ class TestCFLARE:
     ):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        final_kernel = 0.8 * vk + 0.2 * ck
+        terminal_kernel = 0.8 * vk + 0.2 * ck
         tol = 1e-6
 
-        mc = cr.tl.estimators.CFLARE(final_kernel)
+        mc = cr.tl.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_final_states(use=2)
+        mc.compute_terminal_states(use=2)
 
         # compute lin probs using direct solver
         mc.compute_absorption_probabilities(
@@ -238,12 +238,12 @@ class TestCFLARE:
     ):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        final_kernel = 0.8 * vk + 0.2 * ck
+        terminal_kernel = 0.8 * vk + 0.2 * ck
         tol = 1e-6
 
-        mc = cr.tl.estimators.CFLARE(final_kernel)
+        mc = cr.tl.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_final_states(use=2)
+        mc.compute_terminal_states(use=2)
 
         # compute lin probs using direct solver
         mc.compute_absorption_probabilities(
@@ -259,22 +259,22 @@ class TestCFLARE:
     def test_compute_lineage_drivers_no_lineages(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        final_kernel = 0.8 * vk + 0.2 * ck
+        terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.CFLARE(final_kernel)
+        mc = cr.tl.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_final_states(use=2)
+        mc.compute_terminal_states(use=2)
         with pytest.raises(RuntimeError):
             mc.compute_lineage_drivers()
 
     def test_compute_lineage_drivers_invalid_lineages(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        final_kernel = 0.8 * vk + 0.2 * ck
+        terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.CFLARE(final_kernel)
+        mc = cr.tl.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_final_states(use=2)
+        mc.compute_terminal_states(use=2)
         mc.compute_absorption_probabilities()
         with pytest.raises(KeyError):
             mc.compute_lineage_drivers(use_raw=False, lineages=["foo"])
@@ -282,11 +282,11 @@ class TestCFLARE:
     def test_compute_lineage_drivers_invalid_clusters(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        final_kernel = 0.8 * vk + 0.2 * ck
+        terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.CFLARE(final_kernel)
+        mc = cr.tl.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_final_states(use=2)
+        mc.compute_terminal_states(use=2)
         mc.compute_absorption_probabilities()
         with pytest.raises(KeyError):
             mc.compute_lineage_drivers(
@@ -296,11 +296,11 @@ class TestCFLARE:
     def test_compute_lineage_drivers_normal_run(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        final_kernel = 0.8 * vk + 0.2 * ck
+        terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.CFLARE(final_kernel)
+        mc = cr.tl.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_final_states(use=2)
+        mc.compute_terminal_states(use=2)
         mc.compute_absorption_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
@@ -310,11 +310,11 @@ class TestCFLARE:
     def test_plot_lineage_drivers_not_computed(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        final_kernel = 0.8 * vk + 0.2 * ck
+        terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.CFLARE(final_kernel)
+        mc = cr.tl.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_final_states(use=2)
+        mc.compute_terminal_states(use=2)
         mc.compute_absorption_probabilities()
 
         with pytest.raises(RuntimeError):
@@ -323,11 +323,11 @@ class TestCFLARE:
     def test_plot_lineage_drivers_invalid_name(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        final_kernel = 0.8 * vk + 0.2 * ck
+        terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.CFLARE(final_kernel)
+        mc = cr.tl.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_final_states(use=2)
+        mc.compute_terminal_states(use=2)
         mc.compute_absorption_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
@@ -337,11 +337,11 @@ class TestCFLARE:
     def test_plot_lineage_drivers_invalid_n_genes(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        final_kernel = 0.8 * vk + 0.2 * ck
+        terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.CFLARE(final_kernel)
+        mc = cr.tl.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_final_states(use=2)
+        mc.compute_terminal_states(use=2)
         mc.compute_absorption_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
@@ -351,11 +351,11 @@ class TestCFLARE:
     def test_plot_lineage_drivers_normal_run(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        final_kernel = 0.8 * vk + 0.2 * ck
+        terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.CFLARE(final_kernel)
+        mc = cr.tl.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_final_states(use=2)
+        mc.compute_terminal_states(use=2)
         mc.compute_absorption_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
         mc.plot_lineage_drivers("0", use_raw=False)
@@ -364,18 +364,18 @@ class TestCFLARE:
         adata = adata_large
         vk = VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata).compute_transition_matrix()
-        final_kernel = 0.8 * vk + 0.2 * ck
+        terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc_fwd = cr.tl.estimators.CFLARE(final_kernel)
+        mc_fwd = cr.tl.estimators.CFLARE(terminal_kernel)
         mc_fwd.compute_partition()
         mc_fwd.compute_eigendecomposition()
-        mc_fwd.compute_final_states(use=3)
+        mc_fwd.compute_terminal_states(use=3)
 
         arcs = ["0", "2"]
         arc_colors = [
             c
             for arc, c in zip(
-                mc_fwd._get(P.FIN).cat.categories, mc_fwd._get(A.FIN_COLORS)
+                mc_fwd._get(P.TERM).cat.categories, mc_fwd._get(A.TERM_COLORS)
             )
             if arc in arcs
         ]
@@ -430,7 +430,7 @@ class TestCFLARE:
         state_annotation[7] = "terminal_1"
         state_annotation[10] = "terminal_2"
         state_annotation = state_annotation.astype("category")
-        c._set(A.FIN, state_annotation)
+        c._set(A.TERM, state_annotation)
 
         # compute absorption probabilities
         c.compute_absorption_probabilities()
@@ -443,21 +443,21 @@ class TestCFLARE:
         adata = adata_large
         vk = VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata).compute_transition_matrix()
-        final_kernel = 0.8 * vk + 0.2 * ck
+        terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc_fwd = cr.tl.estimators.CFLARE(final_kernel)
+        mc_fwd = cr.tl.estimators.CFLARE(terminal_kernel)
         mc_fwd.compute_partition()
         mc_fwd.compute_eigendecomposition()
 
-        mc_fwd.compute_final_states(use=3)
-        original = np.array(adata.obs[f"{FinalStatesKey.FORWARD}"].copy())
+        mc_fwd.compute_terminal_states(use=3)
+        original = np.array(adata.obs[f"{TermStatesKey.FORWARD}"].copy())
         zero_mask = original == "0"
 
         cells = list(adata[zero_mask].obs_names)
-        mc_fwd.set_final_states({"foo": cells})
+        mc_fwd.set_terminal_states({"foo": cells})
 
-        assert (adata.obs[f"{FinalStatesKey.FORWARD}"][zero_mask] == "foo").all()
-        assert pd.isna(adata.obs[f"{FinalStatesKey.FORWARD}"][~zero_mask]).all()
+        assert (adata.obs[f"{TermStatesKey.FORWARD}"][zero_mask] == "foo").all()
+        assert pd.isna(adata.obs[f"{TermStatesKey.FORWARD}"][~zero_mask]).all()
 
 
 class TestCFLARECopy:

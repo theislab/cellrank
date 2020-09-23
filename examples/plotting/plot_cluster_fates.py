@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Plot cluster fates
-------------------
+Plot aggregated cellular fates
+------------------------------
 
-This example shows how to plot average absorption probabilities in a cluster specific way.
+This example shows how to aggregate fate probabilities from the single cell level to a cluster level
+and how to visualize these in various ways.
 """
 
 import cellrank as cr
@@ -13,7 +14,7 @@ adata = cr.datasets.pancreas_preprocessed("../example.h5ad")
 adata
 
 # %%
-# First, we compute the terminal states and the lineages, as well as scanpy's PAGA.
+# First, we compute the terminal states and the lineages, as well as :mod:`scanpy`'s PAGA [Wolf19]_.
 cr.tl.terminal_states(
     adata,
     cluster_key="clusters",
@@ -36,8 +37,8 @@ cr.pl.cluster_fates(adata, mode="heatmap")
 cr.pl.cluster_fates(adata, mode="clustermap")
 
 # %%
-# Violin plot can be useful to visualize the distribution of absorption probabilities per cluster. It is also
-# possible to restric this plot only to a subset of clusters.
+# Violin plots are helpful to visualize the distribution of fate probabilities per cluster.
+# It is also possible to restrict this plot only to a subset of clusters using the ``clusters`` parameter.
 cr.pl.cluster_fates(adata, mode="violin", cluster_key="clusters")
 
 # %%
@@ -50,4 +51,4 @@ cr.pl.cluster_fates(adata, mode="paga_pie", basis="umap", cluster_key="clusters"
 
 # %%
 # Lastly, we can visualize the absorption probabilities in PAGA graph by coloring the nodes.
-cr.pl.cluster_fates(adata, mode="paga")
+cr.pl.cluster_fates(adata, mode="paga", legend_loc="on data", basis="umap")

@@ -1398,6 +1398,24 @@ class TestGraph:
         cr.pl.graph(adata, "T_fwd", ixs=range(10), layout="umap", dpi=DPI, save=fpath)
 
     @compare()
+    def test_graph_title(self, adata: AnnData, fpath: str):
+        cr.pl.graph(
+            adata, "T_fwd", ixs=range(10), title="foo bar baz quux", dpi=DPI, save=fpath
+        )
+
+    @compare()
+    def test_graph_titles(self, adata: AnnData, fpath: str):
+        cr.pl.graph(
+            adata,
+            "T_fwd",
+            ixs=range(10),
+            keys=["incoming", "self_loops"],
+            title=["foo", "bar"],
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
     def test_graph_keys(self, adata: AnnData, fpath: str):
         cr.pl.graph(
             adata,
@@ -1481,13 +1499,41 @@ class TestGraph:
         )
 
     @compare()
+    def test_graph_edge_reductions_restriction_incoming(
+        self, adata: AnnData, fpath: str
+    ):
+        cr.pl.graph(
+            adata,
+            "T_fwd",
+            ixs=range(10),
+            keys="incoming",
+            edge_reductions_restrict_to_ixs=range(20, 40),
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_graph_edge_reductions_restriction_outgoing(
+        self, adata: AnnData, fpath: str
+    ):
+        cr.pl.graph(
+            adata,
+            "T_fwd",
+            ixs=range(10),
+            keys="outgoing",
+            edge_reductions_restrict_to_ixs=range(20, 40),
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
     def test_graph_categorical_key(self, adata: AnnData, fpath: str):
         cr.pl.graph(
             adata,
             "T_fwd",
             ixs=range(10),
-            keys=["clusters"],
-            keylocs=["obs"],
+            keys="clusters",
+            keylocs="obs",
             dpi=DPI,
             save=fpath,
         )
@@ -1505,6 +1551,10 @@ class TestCFLARE:
     @compare(kind="cflare")
     def test_mc_real_spectrum(self, mc: CFLARE, fpath: str):
         mc.plot_spectrum(real_only=True, dpi=DPI, save=fpath)
+
+    @compare(kind="cflare")
+    def test_mc_real_spectrum_hide_xticks(self, mc: CFLARE, fpath: str):
+        mc.plot_spectrum(real_only=True, show_all_xticks=False, dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
     def test_mc_real_spectrum_hide_eigengap(self, mc: CFLARE, fpath: str):
@@ -1548,11 +1598,11 @@ class TestCFLARE:
 
     @compare(kind="cflare")
     def test_scvelo_final_states(self, mc: CFLARE, fpath: str):
-        mc.plot_final_states(dpi=DPI, save=fpath)
+        mc.plot_terminal_states(dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
     def test_scvelo_final_states_clusters(self, mc: CFLARE, fpath: str):
-        mc.plot_final_states(cluster_key="clusters", dpi=DPI, save=fpath)
+        mc.plot_terminal_states(cluster_key="clusters", dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
     def test_scvelo_lin_probs(self, mc: CFLARE, fpath: str):
@@ -1702,35 +1752,35 @@ class TestGPCCA:
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_final_states(self, mc: GPCCA, fpath: str):
-        mc.plot_final_states(dpi=DPI, save=fpath)
+        mc.plot_terminal_states(dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_final_states_lineages(self, mc: GPCCA, fpath: str):
-        mc.plot_final_states(lineages=["0"], dpi=DPI, save=fpath)
+        mc.plot_terminal_states(lineages=["0"], dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_final_states_discrete(self, mc: GPCCA, fpath: str):
-        mc.plot_final_states(discrete=True, dpi=DPI, save=fpath)
+        mc.plot_terminal_states(discrete=True, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_final_states_cluster_key(self, mc: GPCCA, fpath: str):
-        mc.plot_final_states(cluster_key="clusters", dpi=DPI, save=fpath)
+        mc.plot_terminal_states(cluster_key="clusters", dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_final_states_no_same_plot(self, mc: GPCCA, fpath: str):
-        mc.plot_final_states(same_plot=False, dpi=DPI, save=fpath)
+        mc.plot_terminal_states(same_plot=False, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_final_states_cmap(self, mc: GPCCA, fpath: str):
-        mc.plot_final_states(cmap=cm.inferno, same_plot=False, dpi=DPI, save=fpath)
+        mc.plot_terminal_states(cmap=cm.inferno, same_plot=False, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_final_states_title(self, mc: GPCCA, fpath: str):
-        mc.plot_final_states(title="foobar", dpi=DPI, save=fpath)
+        mc.plot_terminal_states(title="foobar", dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_final_states_time(self, mc: GPCCA, fpath: str):
-        mc.plot_final_states(mode="time", dpi=DPI, save=fpath)
+        mc.plot_terminal_states(mode="time", dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_abs_probs_disc_same(self, mc: GPCCA, fpath: str):

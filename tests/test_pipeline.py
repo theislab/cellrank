@@ -12,7 +12,7 @@ from cellrank.tl._constants import (
     Direction,
     DirPrefix,
     AbsProbKey,
-    FinalStatesKey,
+    TermStatesKey,
     _probs,
     _colors,
     _lin_names,
@@ -33,10 +33,10 @@ def _assert_has_all_keys(adata: AnnData, direction: Direction):
         assert _colors(AbsProbKey.FORWARD) in adata.uns.keys()
         assert _lin_names(AbsProbKey.FORWARD) in adata.uns.keys()
 
-        assert str(FinalStatesKey.FORWARD) in adata.obs
-        assert is_categorical_dtype(adata.obs[str(FinalStatesKey.FORWARD)])
+        assert str(TermStatesKey.FORWARD) in adata.obs
+        assert is_categorical_dtype(adata.obs[str(TermStatesKey.FORWARD)])
 
-        assert _probs(FinalStatesKey.FORWARD) in adata.obs
+        assert _probs(TermStatesKey.FORWARD) in adata.obs
 
         # check the correlations with all lineages have been computed
         lin_probs = adata.obsm[str(AbsProbKey.FORWARD)]
@@ -52,10 +52,10 @@ def _assert_has_all_keys(adata: AnnData, direction: Direction):
         assert _colors(AbsProbKey.BACKWARD) in adata.uns.keys()
         assert _lin_names(AbsProbKey.BACKWARD) in adata.uns.keys()
 
-        assert str(FinalStatesKey.BACKWARD) in adata.obs
-        assert is_categorical_dtype(adata.obs[str(FinalStatesKey.BACKWARD)])
+        assert str(TermStatesKey.BACKWARD) in adata.obs
+        assert is_categorical_dtype(adata.obs[str(TermStatesKey.BACKWARD)])
 
-        assert _probs(FinalStatesKey.BACKWARD) in adata.obs
+        assert _probs(TermStatesKey.BACKWARD) in adata.obs
 
         # check the correlations with all lineages have been computed
         lin_probs = adata.obsm[str(AbsProbKey.BACKWARD)]
@@ -212,8 +212,8 @@ class TestLowLevelPipeline:
         estimator_fwd.plot_eigendecomposition()
         estimator_fwd.plot_eigendecomposition(left=False)
 
-        estimator_fwd.compute_final_states(use=1)
-        estimator_fwd.plot_final_states()
+        estimator_fwd.compute_terminal_states(use=1)
+        estimator_fwd.plot_terminal_states()
 
         estimator_fwd.compute_absorption_probabilities()
         estimator_fwd.plot_absorption_probabilities()
@@ -239,8 +239,8 @@ class TestLowLevelPipeline:
         estimator_bwd.plot_eigendecomposition()
         estimator_bwd.plot_eigendecomposition(left=False)
 
-        estimator_bwd.compute_final_states(use=1)
-        estimator_bwd.plot_final_states()
+        estimator_bwd.compute_terminal_states(use=1)
+        estimator_bwd.plot_terminal_states()
 
         estimator_bwd.compute_absorption_probabilities()
         estimator_bwd.plot_absorption_probabilities()
@@ -271,8 +271,8 @@ class TestLowLevelPipeline:
         estimator_fwd.plot_schur_matrix()
 
         # select all states
-        estimator_fwd.set_final_states_from_metastable_states(n_cells=10)
-        estimator_fwd.plot_final_states()
+        estimator_fwd.set_terminal_states_from_metastable_states(n_cells=10)
+        estimator_fwd.plot_terminal_states()
 
         estimator_fwd.compute_absorption_probabilities()
         estimator_fwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
@@ -280,11 +280,11 @@ class TestLowLevelPipeline:
         _assert_has_all_keys(adata, Direction.FORWARD)
 
         # select a subset of states
-        estimator_fwd.set_final_states_from_metastable_states(
+        estimator_fwd.set_terminal_states_from_metastable_states(
             n_cells=16,
             names=estimator_fwd.metastable_states.cat.categories[:2],
         )
-        estimator_fwd.plot_final_states()
+        estimator_fwd.plot_terminal_states()
 
         estimator_fwd.compute_absorption_probabilities()
         estimator_fwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
@@ -313,8 +313,8 @@ class TestLowLevelPipeline:
         estimator_bwd.plot_schur_matrix()
 
         # select all cells
-        estimator_bwd.set_final_states_from_metastable_states(n_cells=16)
-        estimator_bwd.plot_final_states()
+        estimator_bwd.set_terminal_states_from_metastable_states(n_cells=16)
+        estimator_bwd.plot_terminal_states()
 
         estimator_bwd.compute_absorption_probabilities()
         estimator_bwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
@@ -322,11 +322,11 @@ class TestLowLevelPipeline:
         _assert_has_all_keys(adata, Direction.BACKWARD)
 
         # select a subset of states
-        estimator_bwd.set_final_states_from_metastable_states(
+        estimator_bwd.set_terminal_states_from_metastable_states(
             n_cells=16,
             names=estimator_bwd.metastable_states.cat.categories[:2],
         )
-        estimator_bwd.plot_final_states()
+        estimator_bwd.plot_terminal_states()
 
         estimator_bwd.compute_absorption_probabilities()
         estimator_bwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)

@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-Plot heatmap
-------------
+Plot a heatmap of expression trends
+-----------------------------------
 
-This example show how to plot smoothed gene expression using a heatmap.
+This example shows how to plot smoothed gene expression using a heatmap.
+
+This is especially useful when looking at many genes at the same time in order to investigate gene expression
+cascades as they appear in many cell state transitions.
 """
 
 import cellrank as cr
@@ -28,19 +31,6 @@ model = cr.ul.models.GAM(adata)
 # %%
 # We can now plot the heatmap. By default, the model is fitted for all specified genes and all lineages. Paramterer
 # ``show_absorption_probabilities`` is used to create a bar on top of the heatmap.
-cr.pl.heatmap(
-    adata,
-    model,
-    adata.var_names[:15],
-    time_key="dpt_pseudotime",
-    lineages="Alpha",
-    show_absorption_probabilities=True,
-    show_progress_bar=False,
-)
-
-# %%
-# Sometimes, it might be beneficial to compare the smoothed expression across lineages. Parameter ``keep_gene_order``
-# keeps the genes in the order as defined by the order in the first heatmap, which is the first listed lineage.
 #
 # Apart from the default gene sorting, we can use hierarchical clustering to cluster the genes by specifying
 # ``cluster_genes=True``. We can also return the sorted/clustered genes by specifying ``return_genes=True``.
@@ -49,16 +39,21 @@ genes = cr.pl.heatmap(
     model,
     adata.var_names[:15],
     time_key="dpt_pseudotime",
-    keep_gene_order=True,
-    lineages=["Alpha", "Beta"],
+    lineages="Alpha",
     show_absorption_probabilities=True,
     show_progress_bar=False,
+    return_genes=True,
 )
 genes
 
 # %%
+# Sometimes, it might be beneficial to compare the smoothed expression across lineages. The parameter
+# ``keep_gene_order`` keeps the genes in the order as defined by the order in the first heatmap,
+# which is the first listed lineage.
+
+# %%
 # Finally, we plot a heatmap-like plot where we group by genes, instead of lineages. In the case below,
-# we also don't scale the expression to 0-1 range, which is the default behaviour as seen above.
+# we also don't scale the expression to 0-1 range, which is the default behavior as seen above.
 cr.pl.heatmap(
     adata,
     model,
