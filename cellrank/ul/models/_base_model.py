@@ -513,7 +513,7 @@ class BaseModel(ABC):
 
         References
         ----------
-        .. [DeSalvo71] Desalvo, J. (1971),
+        .. [DeSalvo71] DeSalvo, J. (1971),
             *Standard Error of Forecast in Multiple Regression: Proof of a Useful Result.*,
             `The American Statistician, 25(4), 32-34 <https:doi.org/10.2307/2682924>`__.
         """
