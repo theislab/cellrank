@@ -718,7 +718,7 @@ def composition(
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[float] = None,
     save: Optional[Union[str, Path]] = None,
-    **kwargs
+    **kwargs,
 ) -> None:
     """
     Plot a pie chart for categorical annotation.

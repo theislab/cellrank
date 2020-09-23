@@ -2011,4 +2011,6 @@ class TestComposition:
 
     @compare()
     def test_composition_kwargs_autopct(self, adata: AnnData, fpath: str):
-        cr.pl._utils.composition(adata, "clusters", dpi=DPI, save=fpath, autopct='%1.0f%%')
+        cr.pl._utils.composition(
+            adata, "clusters", dpi=DPI, save=fpath, autopct="%1.0f%%"
+        )
