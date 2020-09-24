@@ -4,6 +4,14 @@ Lineage tricks
 --------------
 
 This example shows some niche, but useful functionalities of :class:`cellrank.tl.Lineage`.
+
+:class:`cellrank.tl.Lineage` is our primary container which we use to store either the fate probabilities or the
+metastable states memberships as columns, see :ref:`sphx_glr_auto_examples_estimators_compute_abs_probs.py` or
+:ref:`sphx_glr_auto_examples_estimators_compute_metastable_states.py`. respectively.
+
+It is a lightweight wrapper around :class:`numpy.ndarray` containing names and colors and colors that allows for
+:mod:`pandas`-like indexing. It also provides methods to redistribute the probability mass or plot some aggregate
+information for each column.
 """
 
 import cellrank as cr
@@ -12,8 +20,8 @@ import numpy as np
 np.random.seed(42)
 
 # %%
-# The lineage class behaves like a :mod:`numpy` array, for the most part. The key difference is that
-# it tries to always preserve it's 2 dimensional shape and that it has :mod:`pandas`-like indexing.
+# The lineage class behaves like a :mod:`numpy` array, for the most part. The key difference is that only 2 dimensional
+# arrays are allowed and that it tries to always preserve it's 2 dimensional shape.
 #
 # The constructor requires the underlying array and the lineage names, which must be unique. The colors are optional
 # and by default they are automatically generated.

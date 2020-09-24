@@ -6,7 +6,7 @@ Kernel tricks
 This example shows some niche, but useful functionalities of :class:`cellrank.tl.kernels.Kernel`.
 
 CellRank is split into :mod:`cellrank.tl.kernels` and :mod:`cellrank.tl.estimators:. Kernels compute transition matrices
-based on some inputs, like RNA velocity [Bergen20]_, [Manno18_], while estimators perform inference based on a given
+based on some inputs, like RNA velocity [Bergen20]_, [Manno18]_, while estimators perform inference based on a given
 kernel, e.g. they compute initial and terminal cells and fate probabilities.
 
 Here, will will dive a bit deeper into the how these kernel objects work.
@@ -17,14 +17,16 @@ import cellrank as cr
 adata = cr.datasets.pancreas_preprocessed("../example.h5ad")
 adata
 
-# %% First, we create some kernels that will be used to compute the cell-to-cell transition matrix:
-# - :class:`cellrank.tl.kernels.ConnectivityKernel` computes the transition matrix using transcriptomic similarity using
-#   the KNN graph from :func:`scanpy.pp.neighbors` [Wolf18]_. Note that this kernel is directionless and should
-#   be combined with any of the below mentioned kernels.
+# %%
+# First, we create some kernels that will be used to compute the cell-to-cell transition matrix:
+#
+# - :class:`cellrank.tl.kernels.ConnectivityKernel` computes the transition matrix using  the KNN graph from
+#   :func:`scanpy.pp.neighbors` [Wolf18]_. Note that this kernel is by itself directionless and should be used in
+#   combination with e.g. :class:`cellrank.tl.kernels.VelocityKernel`.
 # - :class:`cellrank.tl.kernels.VelocityKernel` is based on [Bergen20]_ and [Manno18]_, but can also take into account
 #   uncertainty in RNA velocity.
 # - :class:`cellrank.tl.kernels.PalantirKernel` works similarly as in [Setty19]_, that is, it orients the edges of the
-#   KNN graph constructed in expression space using pseudotemporal ordering.
+#   KNN graph constructed in the expression space using the pseudotemporal ordering, such as DPT [Haghverdi16]_.
 ck = cr.tl.kernels.ConnectivityKernel(adata)
 vk = cr.tl.kernels.VelocityKernel(adata)
 pk = cr.tl.kernels.PalantirKernel(adata)
