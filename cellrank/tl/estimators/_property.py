@@ -221,7 +221,7 @@ class KernelHolder(ABC):
             )
 
         if self.kernel._transition_matrix is None:
-            # access the private attribute to avoid accidentaly computing the transition matrix
+            # access the private attribute to avoid accidentally computing the transition matrix
             # in principle, it doesn't make a difference, apart from not seeing the message
             logg.warning("Computing transition matrix using the default parameters")
             self.kernel.compute_transition_matrix()

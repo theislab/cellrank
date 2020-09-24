@@ -112,7 +112,10 @@ class KernelExpression(ABC):
     @property
     def params(self) -> Dict[str, Any]:
         """Parameters which are used to compute the transition matrix."""
-        return self._params
+        if len(self.kernels) == 1:
+            return self._params
+        # we need some identifier
+        return {f"{repr(k)}:{i}": k.params for i, k in enumerate(self.kernels)}
 
     def _format_params(self):
         return ", ".join(

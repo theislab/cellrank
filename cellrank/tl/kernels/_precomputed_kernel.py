@@ -42,6 +42,7 @@ class PrecomputedKernel(Kernel):
         from anndata import AnnData as _AnnData
 
         self._origin = "'array'"
+        params = {}
 
         if transition_matrix is None:
             transition_matrix = _transition(
@@ -69,6 +70,7 @@ class PrecomputedKernel(Kernel):
 
             # use `str` because it captures the params
             self._origin = str(transition_matrix).strip("~<>")
+            params = transition_matrix.params.copy()
             backward = transition_matrix.backward
             adata = transition_matrix.adata
             transition_matrix = transition_matrix.transition_matrix
@@ -95,6 +97,7 @@ class PrecomputedKernel(Kernel):
 
         super().__init__(adata, backward=backward, compute_cond_num=compute_cond_num)
 
+        self._params = params
         self._transition_matrix = csr_matrix(transition_matrix)
         self._maybe_compute_cond_num()
 
@@ -112,6 +115,7 @@ class PrecomputedKernel(Kernel):
         )
         pk._cond_num = self.condition_number
         pk._origin = self._origin
+        pk._params = self._params.copy()
 
         return pk
 
