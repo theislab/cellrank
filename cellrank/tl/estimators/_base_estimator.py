@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Abstract base class for all kernel-holding estimators."""
 
-import pickle
 from abc import ABC, abstractmethod
 from sys import version_info
 from copy import copy, deepcopy
@@ -9,6 +8,8 @@ from math import ceil
 from typing import Any, Dict, Union, TypeVar, Optional, Sequence
 from pathlib import Path
 from datetime import datetime
+
+import cloudpickle
 
 import scvelo as scv
 
@@ -907,7 +908,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
     def __copy__(self) -> "BaseEstimator":
         return self.copy()
 
-    def write(self, fname: Union[str, Path], ext: Optional[str] = ".pickle") -> None:
+    def write(self, fname: Union[str, Path], ext: Optional[str] = "pickle") -> None:
         """
         Serialize self to a file.
 
@@ -915,6 +916,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         ----------
         fname
             Filename where to save the object.
+        ext
+            Filename extension to use. If `None`, don't append any extension.
 
         Returns
         -------
@@ -923,14 +926,19 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         """
 
         fname = str(fname)
-        if ext is not None and not fname.endswith(ext):
-            fname += ext
+        if ext is not None:
+            if not ext.startswith("."):
+                ext = "." + ext
+            if not fname.endswith(ext):
+                fname += ext
 
         logg.debug(f"Writing to `{fname}`")
 
         with open(fname, "wb") as fout:
             if version_info[:2] > (3, 6):
-                pickle.dump(self, fout)
+                # TODO: _reduce in BaseKernel requires us to use cloudpickle
+                # determine if there's a workaround
+                cloudpickle.dump(self, fout)
             else:
                 # we need to use PrecomputedKernel because Python3.6 can't pickle Enums
                 # and they are present in VelocityKernel
@@ -938,8 +946,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 orig_kernel = self.kernel
                 self._kernel = PrecomputedKernel(self.kernel)
                 try:
-                    with open(fname, "wb") as fout:
-                        pickle.dump(self, fout)
+                    cloudpickle.dump(self, fout)
                 except Exception as e:
                     raise e
                 finally:
@@ -962,4 +969,4 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         """
 
         with open(fname, "rb") as fin:
-            return pickle.load(fin)
+            return cloudpickle.load(fin)

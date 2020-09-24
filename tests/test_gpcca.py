@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 
+import os
 from copy import deepcopy
 from typing import Tuple
+from tempfile import TemporaryDirectory
 
 import pytest
 from _helpers import assert_array_nan_equal
@@ -653,7 +655,7 @@ class TestGPCCA:
         mc.plot_lineage_drivers("0", use_raw=False)
 
 
-class TestGPCCACopy:
+class TestGPCCAIO:
     def test_copy_simple(self, adata_gpcca_fwd: Tuple[AnnData, cr.tl.estimators.GPCCA]):
         _, mc1 = adata_gpcca_fwd
         mc2 = mc1.copy()
@@ -661,3 +663,34 @@ class TestGPCCACopy:
         assert mc1 is not mc2
         assert mc1.adata is not mc2.adata
         assert mc1.kernel is not mc2.kernel
+
+    def test_write_ext(self, adata_gpcca_fwd: Tuple[AnnData, cr.tl.estimators.GPCCA]):
+        _, mc = adata_gpcca_fwd
+
+        with TemporaryDirectory() as tmpdir:
+            fname = "foo"
+            mc.write(os.path.join(tmpdir, fname), ext="bar")
+
+            assert os.path.isfile(os.path.join(tmpdir, f"foo.bar"))
+
+    def test_write_no_ext(
+        self, adata_gpcca_fwd: Tuple[AnnData, cr.tl.estimators.GPCCA]
+    ):
+        _, mc = adata_gpcca_fwd
+
+        with TemporaryDirectory() as tmpdir:
+            fname = "foo"
+            mc.write(os.path.join(tmpdir, fname), ext=None)
+
+            assert os.path.isfile(os.path.join(tmpdir, f"foo"))
+
+    def test_write_ext_with_dot(
+        self, adata_gpcca_fwd: Tuple[AnnData, cr.tl.estimators.GPCCA]
+    ):
+        _, mc = adata_gpcca_fwd
+
+        with TemporaryDirectory() as tmpdir:
+            fname = "foo"
+            mc.write(os.path.join(tmpdir, fname), ext=".bar")
+
+            assert os.path.isfile(os.path.join(tmpdir, f"foo.bar"))
