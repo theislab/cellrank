@@ -31,6 +31,7 @@ from cellrank.tl._utils import (
 )
 from cellrank.ul._utils import _write_graph_data
 from cellrank.tl._constants import Direction, _transition
+from cellrank.tl.kernels._utils import _filter_kwargs
 
 _ERROR_DIRECTION_MSG = "Can only combine kernels that have the same direction."
 _ERROR_EMPTY_CACHE_MSG = (
@@ -803,10 +804,20 @@ class SimpleNaryExpression(NaryKernelExpression):
     @d.dedent
     def copy(self) -> "SimpleNaryExpression":  # noqa
         """%(copy)s"""
-        sne = SimpleNaryExpression(
-            [copy(k) for k in self], op_name=self._op_name, fn=self._fn
+        constructor = type(self)
+        kwargs = {"op_name": self._op_name, "fn": self._fn}
+
+        # preserve the type information so that combination can properly work
+        # we test for this
+        sne = constructor(
+            [copy(k) for k in self], **_filter_kwargs(constructor, **kwargs)
         )
+
+        # TODO: copying's a bit buggy - the parent stays the same
+        # we could disallow it for inner expressions
         sne._transition_matrix = copy(self._transition_matrix)
+        sne._condition_number = self._cond_num
+        sne._normalize = self._normalize
 
         return sne
 

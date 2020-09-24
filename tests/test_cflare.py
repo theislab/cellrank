@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 import os
-from sys import version_info
 from typing import Tuple
 from tempfile import TemporaryDirectory
 
 import pytest
-from _helpers import assert_array_nan_equal
+from _helpers import assert_estimators_equal
 
 from anndata import AnnData
 
@@ -465,53 +464,17 @@ class TestCFLARE:
 
 
 class TestCFLAREIO:
-    def test_copy_simple(
-        self, adata_cflare_fwd: Tuple[AnnData, cr.tl.estimators.CFLARE]
-    ):
+    def test_copy(self, adata_cflare_fwd: Tuple[AnnData, cr.tl.estimators.CFLARE]):
         _, mc1 = adata_cflare_fwd
         mc2 = mc1.copy()
 
-        assert mc1 is not mc2
-        assert mc1.adata is not mc2.adata
-        assert mc1.kernel is not mc2.kernel
+        assert_estimators_equal(mc1, mc2)
 
     def test_read(self, adata_cflare_fwd: Tuple[AnnData, cr.tl.estimators.CFLARE]):
         _, mc1 = adata_cflare_fwd
 
         with TemporaryDirectory() as tmpdir:
             mc1.write(os.path.join(tmpdir, "foo"))
-
             mc2 = cr.tl.estimators.CFLARE.read(os.path.join(tmpdir, "foo.pickle"))
 
-            assert mc2.adata.shape == mc1.adata.shape
-            assert mc2.adata is mc2.kernel.adata
-            assert mc2.kernel.backward == mc1.kernel.backward
-            if version_info[:2] > (3, 6):
-                assert isinstance(mc2.kernel, type(mc1.kernel))
-            else:
-                assert isinstance(mc2.kernel, cr.tl.kernels.PrecomputedKernel)
-            np.testing.assert_array_equal(
-                mc2.transition_matrix.A, mc1.transition_matrix.A
-            )
-
-            for attr in [
-                str(a) for a in cr.tl.estimators._constants.A if hasattr(mc1, str(a))
-            ]:
-                val2, val1 = getattr(mc2, attr), getattr(mc1, attr)
-                if isinstance(val1, cr.tl.Lineage):
-                    assert_array_nan_equal(val2.X, val1.X)
-                elif isinstance(val1, (np.ndarray, pd.Series)):
-                    try:
-                        # can be array of strings, can't get NaN
-                        assert_array_nan_equal(val2, val1)
-                    except:
-                        np.testing.assert_array_equal(val2, val1)
-                elif isinstance(val1, dict):
-                    assert val2.keys() == val1.keys()
-                    for v2, v1 in zip(val2.values(), val1.values()):
-                        if isinstance(v2, np.ndarray):
-                            np.testing.assert_array_equal(v2, v1)
-                        else:
-                            assert v2 == v1
-                else:
-                    assert v2 == v1
+        assert_estimators_equal(mc1, mc2)

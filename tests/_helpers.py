@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
+from sys import version_info
 from typing import Tuple, Union, Optional
 from pathlib import Path
 
@@ -159,6 +160,54 @@ def assert_array_nan_equal(
     )
     np.testing.assert_array_equal(np.where(mask1), np.where(mask2))
     np.testing.assert_array_equal(actual[mask1], expected[mask2])
+
+
+def assert_estimators_equal(
+    expected: cr.tl.estimators.BaseEstimator, actual: cr.tl.estimators.BaseEstimator
+) -> None:
+    assert actual is not expected
+    assert actual.adata is not expected.adata
+    assert actual.kernel is not expected.kernel
+
+    assert actual is not expected
+    assert actual.adata.shape == expected.adata.shape
+    assert actual.adata is actual.kernel.adata
+    assert actual.kernel.backward == expected.kernel.backward
+
+    if version_info[:2] > (3, 6):
+        assert isinstance(actual.kernel, type(expected.kernel)), (
+            type(actual.kernel),
+            type(expected.kernel),
+        )
+    else:
+        assert isinstance(actual.kernel, cr.tl.kernels.PrecomputedKernel)
+    np.testing.assert_array_equal(
+        actual.transition_matrix.A, expected.transition_matrix.A
+    )
+
+    assert expected.__dict__.keys() == actual.__dict__.keys()
+
+    for attr in expected.__dict__.keys():
+        val2, val1 = getattr(actual, attr), getattr(expected, attr)
+        if isinstance(val1, cr.tl.Lineage):
+            assert_array_nan_equal(val2.X, val1.X)
+        elif isinstance(val1, (np.ndarray, pd.Series, pd.DataFrame)):
+            try:
+                # can be array of strings, can't get NaN
+                assert_array_nan_equal(val2, val1)
+            except:
+                np.testing.assert_array_equal(val2, val1)
+        elif isinstance(val1, dict):
+            assert val2.keys() == val1.keys()
+            for v2, v1 in zip(val2.values(), val1.values()):
+                if isinstance(v2, np.ndarray):
+                    np.testing.assert_array_equal(v2, v1)
+                else:
+                    assert v2 == v1
+        elif attr not in ("_kernel", "_gpcca"):
+            assert val2 == val1, (val2, val1)
+        else:
+            assert isinstance(val2, type(val1))
 
 
 def random_transition_matrix(n: int) -> np.ndarray:
