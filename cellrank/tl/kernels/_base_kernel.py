@@ -777,7 +777,7 @@ class SimpleNaryExpression(NaryKernelExpression):
             self._maybe_recalculate_constants(ConstantMatrix)
 
         for kexpr in self:
-            if kexpr.transition_matrix is None:
+            if kexpr._transition_matrix is None:
                 if isinstance(kexpr, Kernel):
                     raise RuntimeError(
                         f"Kernel `{kexpr}` is uninitialized. "

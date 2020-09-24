@@ -4,6 +4,14 @@ Lineage tricks
 --------------
 
 This example shows some niche, but useful functionalities of :class:`cellrank.tl.Lineage`.
+
+:class:`cellrank.tl.Lineage` is a lightweight wrapper around :class:`numpy.ndarray` containing names and colors which
+stores the data in columns and allows for :mod:`pandas`-like indexing. It also provides various methods, such as a
+method for plotting some aggregate information for each column.
+
+We use it primarily to store either the fate probabilities or the metastable states memberships, see
+:ref:`sphx_glr_auto_examples_estimators_compute_abs_probs.py` or
+:ref:`sphx_glr_auto_examples_estimators_compute_metastable_states.py`, to learn how to compute them.
 """
 
 import cellrank as cr
@@ -12,8 +20,8 @@ import numpy as np
 np.random.seed(42)
 
 # %%
-# The lineage class behaves like a :mod:`numpy` array, for the most part. The key difference is that
-# it tries to always preserve it's 2 dimensional shape and that it has :mod:`pandas`-like indexing.
+# The lineage class behaves like a :mod:`numpy` array for the most part. The key differences are that only 2 dimensional
+# arrays are allowed as input and that it always tries to preserve it's shape, even if scalar is requested.
 #
 # The constructor requires the underlying array and the lineage names, which must be unique. The colors are optional
 # and by default they are automatically generated.
@@ -37,13 +45,13 @@ lin.T
 lin[["foo", "bar"]]
 
 # %%
-# Two or more lineage can be combined into by joining the names with `","`. This also automatically
-# updates the color based on the combined lineages' colors.
+# Two or more lineage can be combined into by joining the names with `","`. This also automatically updates the color
+# based on the combined lineages' colors.
 lin[["bar, baz, quux"]]
 
 # %%
 # Most of the :mod:`numpy` methods are supported by the :class:`cellrank.tl.Lineage`. One can also calculate the
-# entropy, which in [Setty19]_ is defined as the differentiation potential.
+# entropy, which in [Setty19]_ is defined as the differentiation potential of cells.
 lin.entropy(axis=1)
 
 # %%
