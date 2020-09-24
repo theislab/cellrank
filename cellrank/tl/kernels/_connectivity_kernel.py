@@ -21,8 +21,8 @@ class ConnectivityKernel(Kernel):
     :func:`scanpy.pp.neighbors`, see [Wolf18]_.
     By definition, the resulting transition matrix is symmetric and cannot be used to learn about the direction of the
     developmental process under consideration.
-    However, the velocity-derived transition matrix can be combined with the similarity-based transition matrix as
-    a means of regularization.
+    However, the velocity-derived transition matrix from :class:`cellrank.tl.kernels.VelocityKernel` can be combined
+    with the similarity-based transition matrix as a means of regularization.
 
     %(density_correction)s
 

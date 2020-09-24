@@ -4,6 +4,12 @@ Kernel tricks
 -------------
 
 This example shows some niche, but useful functionalities of :class:`cellrank.tl.kernels.Kernel`.
+
+CellRank is split into :mod:`cellrank.tl.kernels` and :mod:`cellrank.tl.estimators:. Kernels compute transition matrices
+based on some inputs, like RNA velocity [Bergen20]_, [Manno18_], while estimators perform inference based on a given
+kernel, e.g. they compute initial and terminal cells and fate probabilities.
+
+Here, will will dive a bit deeper into the how these kernel objects work.
 """
 
 import cellrank as cr
@@ -11,9 +17,16 @@ import cellrank as cr
 adata = cr.datasets.pancreas_preprocessed("../example.h5ad")
 adata
 
-# %% First, we create some kernels that will be used to compute the cell-to-cell transition matrix.
-vk = cr.tl.kernels.VelocityKernel(adata)
+# %% First, we create some kernels that will be used to compute the cell-to-cell transition matrix:
+# - :class:`cellrank.tl.kernels.ConnectivityKernel` computes the transition matrix using transcriptomic similarity using
+#   the KNN graph from :func:`scanpy.pp.neighbors` [Wolf18]_. Note that this kernel is directionless and should
+#   be combined with any of the below mentioned kernels.
+# - :class:`cellrank.tl.kernels.VelocityKernel` is based on [Bergen20]_ and [Manno18]_, but can also take into account
+#   uncertainty in RNA velocity.
+# - :class:`cellrank.tl.kernels.PalantirKernel` works similarly as in [Setty19]_, that is, it orients the edges of the
+#   KNN graph constructed in expression space using pseudotemporal ordering.
 ck = cr.tl.kernels.ConnectivityKernel(adata)
+vk = cr.tl.kernels.VelocityKernel(adata)
 pk = cr.tl.kernels.PalantirKernel(adata)
 
 # %%
@@ -72,8 +85,11 @@ ck.write_to_adata(key="transition_matrix")
 adata.obsp["transition_matrix"]
 
 # %%
-# Precomputed kernel doesn't require :mod:`anndata` object - a dummy one will be created if none is supplied.
-# This can be useful in conjunction with :meth:`cellrank.tl.estimators.BaseEstimator.set_terminal_states` to calculate
-# absorption probabilities using :meth:`cellrank.tl.estimators.BaseEstimator.compute_absorption_probabilities`.
+# Precomputed kernels are useful if you have a transition matrix that was computed outside of CellRank that you would
+# like to analyze using one of our estimators. It’s essentially an interface to CellRank’s estimators.
+#
+# Below we supply a transition matrix saved in ``adata.obsp["transition_matrix"]``, but :class:`anndata.AnnData` object
+# is not required and we can just supply either :mod:`numpy` or :mod:`scipy.sparse` array. In that case, a minimal
+# empty :class:`anndata.AnnData` object is created.
 pk = cr.tl.kernels.PrecomputedKernel(adata.obsp["transition_matrix"])
 pk.adata
