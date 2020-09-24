@@ -12,6 +12,8 @@ from anndata import AnnData
 
 import numpy as np
 import pandas as pd
+from scipy.sparse import issparse
+from pandas.api.types import is_categorical_dtype
 
 import matplotlib.cm as cm
 from matplotlib.testing import setup
@@ -513,7 +515,7 @@ class TestClusterLineages:
             adata,
             model,
             GENES[:10],
-            "0",
+            "1",
             time_key="latent_time",
             dpi=DPI,
             save=fpath,
@@ -540,7 +542,7 @@ class TestClusterLineages:
             adata,
             model,
             RAW_GENES[:5],
-            "0",
+            "1",
             time_key="latent_time",
             dpi=DPI,
             save=fpath,
@@ -554,7 +556,7 @@ class TestClusterLineages:
             adata,
             model,
             GENES[:10],
-            "0",
+            "1",
             time_key="latent_time",
             norm=False,
             dpi=DPI,
@@ -568,13 +570,85 @@ class TestClusterLineages:
             adata,
             model,
             GENES[:10],
-            "0",
+            "1",
             time_key="latent_time",
             data_key="Ms",
             norm=False,
             dpi=DPI,
             save=fpath,
         )
+
+    @compare()
+    def test_cluster_lineage_random_state(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.cluster_lineage(
+            adata,
+            model,
+            GENES[:10],
+            "1",
+            time_key="latent_time",
+            random_state=42,
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_cluster_lineage_leiden(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.cluster_lineage(
+            adata,
+            model,
+            GENES[:10],
+            "1",
+            time_key="latent_time",
+            use_leiden=True,
+            dpi=DPI,
+            save=fpath,
+        )
+
+    def test_cluster_lineage_random_state_same_pca(self, adata_cflare: AnnData):
+        model = create_model(adata_cflare)
+        cr.pl.cluster_lineage(
+            adata_cflare,
+            model,
+            GENES[:10],
+            "1",
+            time_key="latent_time",
+            random_state=42,
+            key="foo",
+        )
+
+        cr.pl.cluster_lineage(
+            adata_cflare,
+            model,
+            GENES[:10],
+            "1",
+            time_key="latent_time",
+            random_state=42,
+            key="bar",
+        )
+
+        np.allclose(
+            adata_cflare.uns["foo"].obsm["X_pca"], adata_cflare.uns["bar"].obsm["X_pca"]
+        )
+
+    def test_cluster_lineage_writes(self, adata_cflare: AnnData):
+        model = create_model(adata_cflare)
+        cr.pl.cluster_lineage(adata_cflare, model, GENES[:10], "0", n_test_points=200)
+
+        assert isinstance(adata_cflare.uns["lineage_0_trend"], AnnData)
+        assert adata_cflare.uns["lineage_0_trend"].shape == (10, 200)
+        assert is_categorical_dtype(adata_cflare.uns["lineage_0_trend"].obs["clusters"])
+
+    def test_cluster_lineage_key(self, adata_cflare: AnnData):
+        model = create_model(adata_cflare)
+        cr.pl.cluster_lineage(
+            adata_cflare, model, GENES[:10], "0", n_test_points=200, key="foobar"
+        )
+
+        assert isinstance(adata_cflare.uns["foobar"], AnnData)
+        assert adata_cflare.uns["foobar"].shape == (10, 200)
+        assert is_categorical_dtype(adata_cflare.uns["foobar"].obs["clusters"])
 
 
 class TestHeatmap:
@@ -1984,11 +2058,12 @@ class TestLineageDrivers:
 
 
 # TODO: more model tests
+# TODO: fwd lineage 0 seems to be corrupted (i.e. very short, modify to 1)
 class TestModel:
     @compare()
     def test_model_default(self, adata: AnnData, fpath: str):
         model = create_model(adata)
-        model.prepare(adata.var_names[0], "0")
+        model.prepare(adata.var_names[0], "1")
         model.fit()
         model.predict()
         model.confidence_interval()
@@ -1998,6 +2073,18 @@ class TestModel:
     def test_model_default_bwd(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         model.prepare(adata.var_names[0], "0", backward=True)
+        model.fit()
+        model.predict()
+        model.confidence_interval()
+        model.plot(save=fpath)
+
+    @compare()
+    def test_model_obs_data_key(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        gene = adata.X[:, 0]
+        adata.obs["foo"] = gene.A if issparse(gene) else gene
+
+        model.prepare("foo", "1", data_key="obs")
         model.fit()
         model.predict()
         model.confidence_interval()
