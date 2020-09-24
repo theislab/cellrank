@@ -660,7 +660,7 @@ class TestGPCCAIO:
         _, mc1 = adata_gpcca_fwd
         mc2 = mc1.copy()
 
-        assert_estimators_equal(mc1, mc2)
+        assert_estimators_equal(mc1, mc2, copy=True)
 
     def test_write_ext(self, adata_gpcca_fwd: Tuple[AnnData, cr.tl.estimators.GPCCA]):
         _, mc = adata_gpcca_fwd

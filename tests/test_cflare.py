@@ -468,7 +468,7 @@ class TestCFLAREIO:
         _, mc1 = adata_cflare_fwd
         mc2 = mc1.copy()
 
-        assert_estimators_equal(mc1, mc2)
+        assert_estimators_equal(mc1, mc2, copy=True)
 
     def test_read(self, adata_cflare_fwd: Tuple[AnnData, cr.tl.estimators.CFLARE]):
         _, mc1 = adata_cflare_fwd

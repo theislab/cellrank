@@ -163,7 +163,9 @@ def assert_array_nan_equal(
 
 
 def assert_estimators_equal(
-    expected: cr.tl.estimators.BaseEstimator, actual: cr.tl.estimators.BaseEstimator
+    expected: cr.tl.estimators.BaseEstimator,
+    actual: cr.tl.estimators.BaseEstimator,
+    copy: bool = False,
 ) -> None:
     assert actual is not expected
     assert actual.adata is not expected.adata
@@ -174,7 +176,7 @@ def assert_estimators_equal(
     assert actual.adata is actual.kernel.adata
     assert actual.kernel.backward == expected.kernel.backward
 
-    if version_info[:2] > (3, 6):
+    if copy or version_info[:2] > (3, 6):
         assert isinstance(actual.kernel, type(expected.kernel)), (
             type(actual.kernel),
             type(expected.kernel),
@@ -206,8 +208,9 @@ def assert_estimators_equal(
                     assert v2 == v1
         elif attr not in ("_kernel", "_gpcca"):
             assert val2 == val1, (val2, val1)
-        else:
-            assert isinstance(val2, type(val1))
+        elif copy or version_info[:2] > (3, 6):
+            # we can compare the kernel types, but for 3.6, it's saved as Precomputed
+            assert isinstance(val2, type(val1)), (val2, val1)
 
 
 def random_transition_matrix(n: int) -> np.ndarray:
