@@ -12,7 +12,7 @@ from cellrank.ul._docs import d
 from cellrank.ul._utils import _read_graph_data
 from cellrank.tl.kernels import Kernel
 from cellrank.tl._constants import Direction, _transition
-from cellrank.tl.kernels._base_kernel import _RTOL, AnnData
+from cellrank.tl.kernels._base_kernel import _RTOL, AnnData, KernelExpression
 
 
 @d.dedent
@@ -23,7 +23,8 @@ class PrecomputedKernel(Kernel):
     Parameters
     ----------
     transition_matrix
-        Row-normalized transition matrix or a key in :paramref:`adata` ``.obsp``.
+        Row-normalized transition matrix or a key in :paramref:`adata` ``.obsp``
+        or a :class:`cellrank.tl.kernels.KernelExpression` with the computed transition matrix.
         If `None`, try to determine the key based on ``backward``.
     %(adata)s
     %(backward)s
@@ -31,12 +32,16 @@ class PrecomputedKernel(Kernel):
 
     def __init__(
         self,
-        transition_matrix: Optional[Union[np.ndarray, spmatrix, str]] = None,
+        transition_matrix: Optional[
+            Union[np.ndarray, spmatrix, KernelExpression, str]
+        ] = None,
         adata: Optional[AnnData] = None,
         backward: bool = False,
         compute_cond_num: bool = False,
     ):
         from anndata import AnnData as _AnnData
+
+        self._origin = "'array'"
 
         if transition_matrix is None:
             transition_matrix = _transition(
@@ -49,7 +54,24 @@ class PrecomputedKernel(Kernel):
                 raise ValueError(
                     "When `transition_matrix` specifies a key to `adata.obsp`, `adata` cannot be None."
                 )
+            self._origin = f"adata.obsp[{transition_matrix!r}]"
             transition_matrix = _read_graph_data(adata, transition_matrix)
+
+        elif isinstance(transition_matrix, KernelExpression):
+            if transition_matrix._transition_matrix is None:
+                raise ValueError(
+                    "Compute transition matrix first as `.compute_transition_matrix()`."
+                )
+            if adata is not None and adata is not transition_matrix.adata:
+                logg.warning(
+                    "Ignoring supplied `adata` object because it differs from the kernel's `adata` object."
+                )
+
+            # use `str` because it captures the params
+            self._origin = str(transition_matrix).strip("~<>")
+            backward = transition_matrix.backward
+            adata = transition_matrix.adata
+            transition_matrix = transition_matrix.transition_matrix
 
         if not isinstance(transition_matrix, (np.ndarray, spmatrix)):
             raise TypeError(
@@ -63,7 +85,7 @@ class PrecomputedKernel(Kernel):
             )
 
         if not np.allclose(np.sum(transition_matrix, axis=1), 1.0, rtol=_RTOL):
-            raise ValueError("Not a valid transition matrix: not all rows sum to 1.")
+            raise ValueError("Not a valid transition matrix, not all rows sum to 1")
 
         if adata is None:
             logg.warning("Creating empty `AnnData` object")
@@ -72,6 +94,7 @@ class PrecomputedKernel(Kernel):
             )
 
         super().__init__(adata, backward=backward, compute_cond_num=compute_cond_num)
+
         self._transition_matrix = csr_matrix(transition_matrix)
         self._maybe_compute_cond_num()
 
@@ -88,6 +111,7 @@ class PrecomputedKernel(Kernel):
             compute_cond_num=False,
         )
         pk._cond_num = self.condition_number
+        pk._origin = self._origin
 
         return pk
 
@@ -101,7 +125,7 @@ class PrecomputedKernel(Kernel):
         return self
 
     def __repr__(self):
-        return f"{'~' if self.backward and self._parent is None else ''}<Precomputed>"
+        return f"{'~' if self.backward and self._parent is None else ''}<Precomputed[origin={self._origin}]>"
 
     def __str__(self):
         return repr(self)
