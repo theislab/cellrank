@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+from sys import version_info
 from copy import deepcopy
 from typing import Tuple
 from tempfile import TemporaryDirectory
@@ -694,3 +695,44 @@ class TestGPCCAIO:
             mc.write(os.path.join(tmpdir, fname), ext=".bar")
 
             assert os.path.isfile(os.path.join(tmpdir, f"foo.bar"))
+
+    def test_read(self, adata_gpcca_fwd: Tuple[AnnData, cr.tl.estimators.GPCCA]):
+        _, mc1 = adata_gpcca_fwd
+
+        with TemporaryDirectory() as tmpdir:
+            mc1.write(os.path.join(tmpdir, "foo"))
+
+            mc2 = cr.tl.estimators.GPCCA.read(os.path.join(tmpdir, "foo.pickle"))
+
+            assert mc2.adata.shape == mc1.adata.shape
+            assert mc2.adata is mc2.kernel.adata
+            assert mc2.kernel.backward == mc1.kernel.backward
+            if version_info[:2] > (3, 6):
+                assert isinstance(mc2.kernel, type(mc1.kernel))
+            else:
+                assert isinstance(mc2.kernel, cr.tl.kernels.PrecomputedKernel)
+            np.testing.assert_array_equal(
+                mc2.transition_matrix.A, mc1.transition_matrix.A
+            )
+
+            for attr in [
+                str(a) for a in cr.tl.estimators._constants.A if hasattr(mc1, str(a))
+            ]:
+                val2, val1 = getattr(mc2, attr), getattr(mc1, attr)
+                if isinstance(val1, cr.tl.Lineage):
+                    assert_array_nan_equal(val2.X, val1.X)
+                elif isinstance(val1, (np.ndarray, pd.Series)):
+                    try:
+                        # can be array of strings, can't get NaN
+                        assert_array_nan_equal(val2, val1)
+                    except:
+                        np.testing.assert_array_equal(val2, val1)
+                elif isinstance(val1, dict):
+                    assert val2.keys() == val1.keys()
+                    for v2, v1 in zip(val2.values(), val1.values()):
+                        if isinstance(v2, np.ndarray):
+                            np.testing.assert_array_equal(v2, v1)
+                        else:
+                            assert v2 == v1
+                else:
+                    assert v2 == v1
