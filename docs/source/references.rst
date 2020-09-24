@@ -50,6 +50,6 @@ References
     *Generalized Markov modeling of nonreversible molecular kinetics*,
     `The Journal of Chemical Physics <https://doi.org/10.1063/1.5064530>`__.
 
-.. [MAGIC18] van Dijk, D. et al. (2018),
+.. [MAGIC18] Van Dijk, D. *et al.* (2018),
     *Recovering Gene Interactions from Single-Cell Data Using Data Diffusion*,
     `Cell <https://doi.org/10.1016/j.cell.2018.05.061>`__.

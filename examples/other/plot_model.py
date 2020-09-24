@@ -49,8 +49,9 @@ model.prepare(
 # CellRank allows any pseudotime from ``adata.obs`` to be passed via the ``time_key``, e.g. Diffusion Pseudotime (DPT)
 # [Haghverdi16]_, :mod:`scvelo`’s latent time [Bergen20]_, Palantir’s pseudotime [Setty19]_, etc.
 #
-# Further, CellRank accepts imputed gene expression values stored in ``adata.layers`` via the ``data_key``, i.e. you can
-# pass MAGIC [MAGIC18] imputed data, :func:`scvelo.pp.moments` [Bergen20] (used below) or any other form of imputation.
+# Further, CellRank accepts imputed gene expression values stored in ``adata.layers`` via the ``data_key``, i.e. you
+# can pass MAGIC [MAGIC18]_ imputed data, :func:`scvelo.pp.moments` [Bergen20]_ (used below) or any other form of
+# imputation.
 
 # %%
 # Once the model has been prepared, it is ready for fitting and prediction.
@@ -66,8 +67,9 @@ conf_int[:5]
 
 # %%
 # After the prediction and optionally the confidence interval calculation, we can plot the smoothed gene expression.
+#
 # Cells in this plot have been colored by their fate probability of reaching the `Alpha` terminal state. We
-# include these probabilities as weights in the loss function when fitting the model. This allows us to weigh each
+# include these probabilities as weights in the loss function when fitting the model. This allows us to weight each
 # cell by its relative contribution to the lineage, without needing to subset cells for each lineage.
 model.plot(show_conf_int=True)
 
