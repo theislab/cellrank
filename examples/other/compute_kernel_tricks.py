@@ -26,7 +26,8 @@ adata
 # - :class:`cellrank.tl.kernels.VelocityKernel` is based on [Bergen20]_ and [Manno18]_, but can also take into account
 #   uncertainty in RNA velocity.
 # - :class:`cellrank.tl.kernels.PalantirKernel` works similarly as in [Setty19]_, that is, it orients the edges of the
-#   KNN graph constructed in the expression space using the pseudotemporal ordering, such as DPT [Haghverdi16]_.
+#   KNN graph constructed in the expression space using the pseudotemporal ordering, such as Diffusion Pseudotime (DPT)
+#   [Haghverdi16]_.
 ck = cr.tl.kernels.ConnectivityKernel(adata)
 vk = cr.tl.kernels.VelocityKernel(adata)
 pk = cr.tl.kernels.PalantirKernel(adata)
