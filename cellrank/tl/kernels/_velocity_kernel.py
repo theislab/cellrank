@@ -214,7 +214,7 @@ class VelocityKernel(Kernel):
 
         if seed is None:
             seed = np.random.randint(0, 2 ** 16)
-        params = dict(softmax_scale=softmax_scale, mode=mode, seed=seed)  # noqa
+        params = dict(softmax_scale=softmax_scale, mode=mode.s, seed=seed)  # noqa
         if self.backward:
             params["bwd_mode"] = backward_mode.s
 

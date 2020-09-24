@@ -15,7 +15,7 @@ from typing import (
     Iterable,
     Optional,
 )
-from functools import wraps, reduce
+from functools import reduce
 
 import numpy as np
 from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix, isspmatrix_csr
@@ -31,6 +31,7 @@ from cellrank.tl._utils import (
 )
 from cellrank.ul._utils import _write_graph_data
 from cellrank.tl._constants import Direction, _transition
+from cellrank.tl.kernels._utils import _filter_kwargs
 
 _ERROR_DIRECTION_MSG = "Can only combine kernels that have the same direction."
 _ERROR_EMPTY_CACHE_MSG = (
@@ -112,7 +113,10 @@ class KernelExpression(ABC):
     @property
     def params(self) -> Dict[str, Any]:
         """Parameters which are used to compute the transition matrix."""
-        return self._params
+        if len(self.kernels) == 1:
+            return self._params
+        # we need some identifier
+        return {f"{repr(k)}:{i}": k.params for i, k in enumerate(self.kernels)}
 
     def _format_params(self):
         return ", ".join(
@@ -800,10 +804,20 @@ class SimpleNaryExpression(NaryKernelExpression):
     @d.dedent
     def copy(self) -> "SimpleNaryExpression":  # noqa
         """%(copy)s"""
-        sne = SimpleNaryExpression(
-            [copy(k) for k in self], op_name=self._op_name, fn=self._fn
+        constructor = type(self)
+        kwargs = {"op_name": self._op_name, "fn": self._fn}
+
+        # preserve the type information so that combination can properly work
+        # we test for this
+        sne = constructor(
+            [copy(k) for k in self], **_filter_kwargs(constructor, **kwargs)
         )
+
+        # TODO: copying's a bit buggy - the parent stays the same
+        # we could disallow it for inner expressions
         sne._transition_matrix = copy(self._transition_matrix)
+        sne._condition_number = self._cond_num
+        sne._normalize = self._normalize
 
         return sne
 
@@ -812,7 +826,7 @@ class KernelAdd(SimpleNaryExpression):
     """Base class that represents the addition of :class:`KernelExpression`."""
 
     def __init__(self, kexprs: List[KernelExpression], op_name: str):
-        super().__init__(kexprs, op_name=op_name, fn=_reduce(np.add, 0))
+        super().__init__(kexprs, op_name=op_name, fn=Reductor(np.add, 0))
 
 
 class KernelSimpleAdd(KernelAdd):
@@ -833,31 +847,29 @@ class KernelMul(SimpleNaryExpression):
     """Multiplication of :class:`KernelExpression`."""
 
     def __init__(self, kexprs: List[KernelExpression]):
-        super().__init__(kexprs, op_name="*", fn=_reduce(np.multiply, 1))
+        super().__init__(kexprs, op_name="*", fn=Reductor(np.multiply, 1))
 
 
-def _reduce(func: Callable, initial: Union[int, float]) -> Callable:
+class Reductor:
     """
-    Wrap :func:`reduce` function for a given function and an initial state.
+    Class that reduces an iterable.
+
+    We don't define a decorator because of pickling.
 
     Parameters
     ----------
     func
-        Function to be used in the reduction.
+        Reduction function.
     initial
-        Initial value for the reduction.
-
-    Returns
-    -------
-    Callable
-        The wrapped :func:`reduce` function.
+        Initial value for :func:`reduce`.
     """
 
-    @wraps(func)
-    def wrapper(seq: Iterable):
-        return reduce(func, seq, initial)
+    def __init__(self, func: Callable, initial: Union[int, float]):
+        self._func = func
+        self._initial = initial
 
-    return wrapper
+    def __call__(self, seq: Iterable):  # noqa
+        return reduce(self._func, seq, self._initial)
 
 
 def _get_expr_and_constant(k: KernelMul) -> Tuple[KernelExpression, Union[int, float]]:
