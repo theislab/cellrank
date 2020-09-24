@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Abstract base class for all kernel-holding estimators."""
 
+import pickle
 from abc import ABC, abstractmethod
 from sys import version_info
 from copy import copy, deepcopy
@@ -8,8 +9,6 @@ from math import ceil
 from typing import Any, Dict, Union, TypeVar, Optional, Sequence
 from pathlib import Path
 from datetime import datetime
-
-import cloudpickle
 
 import scvelo as scv
 
@@ -936,9 +935,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
         with open(fname, "wb") as fout:
             if version_info[:2] > (3, 6):
-                # TODO: _reduce in BaseKernel requires us to use cloudpickle
-                # determine if there's a workaround
-                cloudpickle.dump(self, fout)
+                pickle.dump(self, fout)
             else:
                 # we need to use PrecomputedKernel because Python3.6 can't pickle Enums
                 # and they are present in VelocityKernel
@@ -946,7 +943,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 orig_kernel = self.kernel
                 self._kernel = PrecomputedKernel(self.kernel)
                 try:
-                    cloudpickle.dump(self, fout)
+                    pickle.dump(self, fout)
                 except Exception as e:
                     raise e
                 finally:
@@ -969,4 +966,4 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         """
 
         with open(fname, "rb") as fin:
-            return cloudpickle.load(fin)
+            return pickle.load(fin)

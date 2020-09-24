@@ -6,7 +6,7 @@ from typing import Tuple
 from tempfile import TemporaryDirectory
 
 import pytest
-from _helpers import assert_estimators_equal
+from _helpers import assert_array_nan_equal, assert_estimators_equal
 
 from anndata import AnnData
 

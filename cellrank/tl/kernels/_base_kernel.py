@@ -15,7 +15,7 @@ from typing import (
     Iterable,
     Optional,
 )
-from functools import wraps, reduce
+from functools import reduce
 
 import numpy as np
 from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix, isspmatrix_csr
@@ -826,7 +826,7 @@ class KernelAdd(SimpleNaryExpression):
     """Base class that represents the addition of :class:`KernelExpression`."""
 
     def __init__(self, kexprs: List[KernelExpression], op_name: str):
-        super().__init__(kexprs, op_name=op_name, fn=_reduce(np.add, 0))
+        super().__init__(kexprs, op_name=op_name, fn=Reductor(np.add, 0))
 
 
 class KernelSimpleAdd(KernelAdd):
@@ -847,31 +847,29 @@ class KernelMul(SimpleNaryExpression):
     """Multiplication of :class:`KernelExpression`."""
 
     def __init__(self, kexprs: List[KernelExpression]):
-        super().__init__(kexprs, op_name="*", fn=_reduce(np.multiply, 1))
+        super().__init__(kexprs, op_name="*", fn=Reductor(np.multiply, 1))
 
 
-def _reduce(func: Callable, initial: Union[int, float]) -> Callable:
+class Reductor:
     """
-    Wrap :func:`reduce` function for a given function and an initial state.
+    Class that reduces an iterable.
+
+    We don't define a decorator because of pickling.
 
     Parameters
     ----------
     func
-        Function to be used in the reduction.
+        Reduction function.
     initial
-        Initial value for the reduction.
-
-    Returns
-    -------
-    Callable
-        The wrapped :func:`reduce` function.
+        Initial value for :func:`reduce`.
     """
 
-    @wraps(func)
-    def wrapper(seq: Iterable):
-        return reduce(func, seq, initial)
+    def __init__(self, func: Callable, initial: Union[int, float]):
+        self._func = func
+        self._initial = initial
 
-    return wrapper
+    def __call__(self, seq: Iterable):  # noqa
+        return reduce(self._func, seq, self._initial)
 
 
 def _get_expr_and_constant(k: KernelMul) -> Tuple[KernelExpression, Union[int, float]]:
