@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-import logging
-
 import pytest
 
 import numpy as np
@@ -10,7 +8,6 @@ from pandas.api.types import is_categorical_dtype
 from matplotlib.colors import is_color_like
 
 from cellrank.tl._colors import _map_names_and_colors, _create_categorical_colors
-from cellrank.logging._logging import _RootLogger
 
 
 class TestColors:
@@ -34,6 +31,8 @@ class TestColors:
         assert all(map(lambda c: isinstance(c, str), colors))
         assert all(map(lambda c: is_color_like(c), colors))
 
+
+class TestMappingColors:
     def test_mapping_colors_not_categorical(self):
         query = pd.Series(["foo", "bar", "baz"], dtype="str")
         reference = pd.Series(["foo", np.nan, "bar", "baz"], dtype="category")
@@ -71,7 +70,19 @@ class TestColors:
         with pytest.raises(ValueError):
             _map_names_and_colors(reference, query, colors_reference=["red", "green"])
 
-    def test_mapping_colors_simple(self):
+    def test_mapping_colors_simple_1(self):
+        x = pd.Series(["a", "b", np.nan, "b", np.nan]).astype("category")
+        y = pd.Series(["b", np.nan, np.nan, "d", "a"]).astype("category")
+        expected = pd.Series(["a_1", "a_2", "b"])
+        expected_index = pd.Index(["a", "b", "d"])
+
+        res = _map_names_and_colors(x, y)
+
+        assert isinstance(res, pd.Series)
+        np.testing.assert_array_equal(res.values, expected.values)
+        np.testing.assert_array_equal(res.index.values, expected_index.values)
+
+    def test_mapping_colors_simple_2(self):
         query = pd.Series(["foo", "bar", "baz"], dtype="category")
         reference = pd.Series(["foo", "bar", "baz"], dtype="category")
 
@@ -199,7 +210,7 @@ class TestColors:
         with pytest.raises(ValueError):
             _map_names_and_colors(reference, query, en_cutoff=-1)
 
-    def test_mapping_colors_negative_en_cutoff(self, caplog):
+    def test_mapping_colors_negative_en_cutoff(self):
         query = pd.Series(["bar", "bar", "bar"], dtype="category")
         reference = pd.Series(["bar", "bar", "bar"], dtype="category")
 
@@ -210,3 +221,25 @@ class TestColors:
         assert is_categorical_dtype(r)
         assert list(r.index) == ["bar"]
         assert list(r.values) == ["bar"]
+
+    def test_mapping_colors_merging(self):
+        x = pd.Series(["a", "b", np.nan, "b", np.nan]).astype("category")
+        y = pd.Series(["b", np.nan, np.nan, "d", "a"]).astype("category")
+
+        res, colors = _map_names_and_colors(x, y, colors_reference=["red", "green"])
+
+        assert isinstance(res, pd.Series)
+        assert isinstance(colors, list)
+        np.testing.assert_array_equal(colors, ["#b20000", "#e65c00", "#008000"])
+
+    def test_mapping_colors_merging_more(self):
+        x = pd.Series(["a", "b", np.nan, "b", np.nan]).astype("category")
+        y = pd.Series(["b", np.nan, np.nan, "d", "a"]).astype("category")
+
+        res, colors = _map_names_and_colors(
+            x, y, colors_reference=["red", "green", "blue", "yellow"]
+        )
+
+        assert isinstance(res, pd.Series)
+        assert isinstance(colors, list)
+        np.testing.assert_array_equal(colors, ["#b20000", "#e65c00", "#008000"])
