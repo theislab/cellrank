@@ -3,11 +3,11 @@
 Compute coarse-grained transition matrix
 ----------------------------------------
 
-This example shows how to compute and plot the coarse-grained transition matrix among the set of metastable states.
+This example shows how to compute and plot the coarse-grained transition matrix among the set of macrostates.
 
-We computed the metastable states using Generalized Perron Cluster Cluster Analysis [GPCCA18]_ [Reuter19]_, see
-the example :ref:`sphx_glr_auto_examples_estimators_compute_metastable_states.py`. The coarse-grained transition matrix
-shows transitional behavior among the set of metastable states and may be used to classify these states as initial,
+We computed the macrostates using Generalized Perron Cluster Cluster Analysis [GPCCA18]_ [Reuter19]_, see the example
+:ref:`sphx_glr_auto_examples_estimators_compute_macrostates.py`. The coarse-grained transition matrix shows
+transitional behavior among the set of macrostates and may be used to classify these states as initial,
 intermediate or terminal.
 """
 
@@ -29,10 +29,10 @@ g = cr.tl.estimators.GPCCA(k)
 g.compute_schur(n_components=6)
 
 # %%
-# Now we can compute the metastable states of the process, which also computes the coarse-grained transition matrix.
-# Here, parameter ``cluster_key`` tries to associate the names of metastable states with the cluster labels.
-# For more options, see :ref:`sphx_glr_auto_examples_estimators_compute_metastable_states.py`.
-g.compute_metastable_states(n_states=6, cluster_key="clusters")
+# Now we can compute the macrostates of the process, which also computes the coarse-grained transition matrix.
+# Here, parameter ``cluster_key`` tries to associate the names of macrostates with the cluster labels.
+# For more options, see :ref:`sphx_glr_auto_examples_estimators_compute_macrostates.py`.
+g.compute_macrostates(n_states=6, cluster_key="clusters")
 
 # %%
 # We can now plot the coarse-grained transition matrix.

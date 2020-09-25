@@ -71,18 +71,18 @@ class TermStatesKey(PrettyEnum):
     BACKWARD = f"{_initial}_states"
 
 
-class FinalStatesPlot(PrettyEnum):
+class TerminalStatesPlot(PrettyEnum):
     """Pretty state names for pl."""
 
     FORWARD = TermStatesKey.FORWARD.s.replace("_", " ")
     BACKWARD = TermStatesKey.BACKWARD.s.replace("_", " ")
 
 
-class MetaKey(PrettyEnum):
-    """Key for scaled, subsampled metastable state in `adata.obsm`."""
+class Macro(PrettyEnum):
+    """Key for scaled, subsampled macrostates in `adata.obsm`."""
 
-    FORWARD = f"metastable_states_{Direction.FORWARD}"
-    BACKWARD = f"metastable_states_{Direction.BACKWARD}"
+    FORWARD = f"macrostates_{Direction.FORWARD}"
+    BACKWARD = f"macrostates_{Direction.BACKWARD}"
 
 
 # TermStatesKey and AbsProbKey must have the same suffix `_..._states` because of model.prepare

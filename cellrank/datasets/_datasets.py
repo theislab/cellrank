@@ -65,12 +65,11 @@ def pancreas_preprocessed(
     path: Union[str, Path] = "datasets/endocrinogenesis_day15.5_preprocessed.h5ad"
 ) -> AnnData:
     """
-    Pancreatic endocrinogenesis from [Panc19]_.
+    Pancreatic endocrinogenesis from [Panc19]_ preprocessed according to the \
+    `basic tutorial <https://cellrank.readthedocs.io/en/latest/pancreas_basic.html>`__.
 
     Note that we subset the original data to focus on endocrine development downstream of the Ngn3 low EP cluster,
     i.e. we only consider cells that have high probability of becoming endocrine.
-
-    This dataset has been preprocessed according to the basic tutorial.
 
     Parameters
     ----------

@@ -105,7 +105,7 @@ class CFLARE(BaseEstimator, Eigen):
                 - :paramref:`{fs}`
         """
 
-        def compute_metastable_states_prob() -> Series:
+        def _compute_macrostates_prob() -> Series:
             """Compute a global score of being an approximate recurrent class."""
 
             # get the truncated eigendecomposition
@@ -179,7 +179,7 @@ class CFLARE(BaseEstimator, Eigen):
 
         # compute a rc probability
         logg.debug("Computing probabilities of approximate recurrent classes")
-        self._set(A.TERM_PROBS, compute_metastable_states_prob())
+        self._set(A.TERM_PROBS, _compute_macrostates_prob())
 
         # retrieve embedding and concatenate
         if basis is not None:

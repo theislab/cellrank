@@ -1395,9 +1395,9 @@ def _create_initial_terminal_annotations(
     adata
         AnnData object to write to ``.obs[key_added]``.
     terminal_key
-        Key from ``adata.obs`` where final states have been saved.
+        Key from ``adata.obs`` where terminal states have been saved.
     initial_key
-        Key from ``adata.obs`` where root states have been saved.
+        Key from ``adata.obs`` where initial states have been saved.
     terminal_prefix
         Forward direction prefix used in the annotations.
     initial_prefix

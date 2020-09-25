@@ -60,10 +60,10 @@ RAW_GENES = [
 cr.settings.figdir = FIGS
 scv.settings.figdir = str(FIGS)
 
-
 try:
     from importlib_metadata import version as get_version
 except ImportError:
+    # >=Python3.8
     from importlib.metadata import version as get_version
 
 scvelo_paga_skip = pytest.mark.skipif(
@@ -1794,35 +1794,35 @@ class TestGPCCA:
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_meta_states(self, mc: GPCCA, fpath: str):
-        mc.plot_metastable_states(dpi=DPI, save=fpath)
+        mc.plot_macrostates(dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_meta_states_lineages(self, mc: GPCCA, fpath: str):
-        mc.plot_metastable_states(lineages=["0"], dpi=DPI, save=fpath)
+        mc.plot_macrostates(lineages=["0"], dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_meta_states_discrete(self, mc: GPCCA, fpath: str):
-        mc.plot_metastable_states(discrete=True, dpi=DPI, save=fpath)
+        mc.plot_macrostates(discrete=True, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_meta_states_cluster_key(self, mc: GPCCA, fpath: str):
-        mc.plot_metastable_states(cluster_key="clusters", dpi=DPI, save=fpath)
+        mc.plot_macrostates(cluster_key="clusters", dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_meta_states_no_same_plot(self, mc: GPCCA, fpath: str):
-        mc.plot_metastable_states(same_plot=False, dpi=DPI, save=fpath)
+        mc.plot_macrostates(same_plot=False, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_meta_states_cmap(self, mc: GPCCA, fpath: str):
-        mc.plot_metastable_states(cmap=cm.inferno, same_plot=False, dpi=DPI, save=fpath)
+        mc.plot_macrostates(cmap=cm.inferno, same_plot=False, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_meta_states_title(self, mc: GPCCA, fpath: str):
-        mc.plot_metastable_states(title="foobar", dpi=DPI, save=fpath)
+        mc.plot_macrostates(title="foobar", dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_meta_states_time(self, mc: GPCCA, fpath: str):
-        mc.plot_metastable_states(mode="time", dpi=DPI, save=fpath)
+        mc.plot_macrostates(mode="time", dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_final_states(self, mc: GPCCA, fpath: str):

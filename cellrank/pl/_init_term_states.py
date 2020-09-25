@@ -3,7 +3,7 @@
 from typing import Union, TypeVar, Optional, Sequence
 
 from cellrank.ul._docs import d, _initial, _terminal, inject_docs
-from cellrank.tl._constants import TermStatesKey, FinalStatesPlot
+from cellrank.tl._constants import TermStatesKey, TerminalStatesPlot
 from cellrank.tl.estimators import GPCCA
 from cellrank.tl.estimators._constants import P
 from cellrank.tl.kernels._precomputed_kernel import DummyKernel
@@ -64,9 +64,9 @@ def _initial_terminal(
         if discrete:
             if kwargs.get("same_plot", True):
                 kwargs["title"] = (
-                    FinalStatesPlot.BACKWARD.s
+                    TerminalStatesPlot.BACKWARD.s
                     if backward
-                    else FinalStatesPlot.FORWARD.s
+                    else TerminalStatesPlot.FORWARD.s
                 )
         elif (
             mode == "embedding"
@@ -80,7 +80,9 @@ def _initial_terminal(
             )
         ):
             kwargs["title"] = (
-                FinalStatesPlot.BACKWARD.s if backward else FinalStatesPlot.FORWARD.s
+                TerminalStatesPlot.BACKWARD.s
+                if backward
+                else TerminalStatesPlot.FORWARD.s
             )
 
     _ = kwargs.pop("lineages", None)
@@ -100,7 +102,7 @@ def _initial_terminal(
     __doc__=_find_docs.format(
         direction=_initial,
         fn_name=TermStatesKey.BACKWARD.s,
-        title=FinalStatesPlot.BACKWARD.s,
+        title=TerminalStatesPlot.BACKWARD.s,
     )
 )
 def initial_states(
@@ -130,7 +132,7 @@ def initial_states(
     __doc__=_find_docs.format(
         direction=_terminal,
         fn_name=TermStatesKey.FORWARD.s,
-        title=FinalStatesPlot.FORWARD.s,
+        title=TerminalStatesPlot.FORWARD.s,
     )
 )
 def terminal_states(
