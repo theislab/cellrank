@@ -107,3 +107,30 @@ class TestColors:
 
         assert isinstance(c, list)
         assert c == ["#ff0000", "#008000", "#0000ff"]
+
+    def test_mapping_colors_non_unique_colors(self):
+        query = pd.Series(["foo", "bar", "baz"], dtype="category")
+        reference = pd.Series(["foo", "bar", "baz"], dtype="category")
+
+        res, c = _map_names_and_colors(
+            reference, query, colors_reference=["red", "red", "red"]
+        )
+
+        assert isinstance(res, pd.Series)
+        assert len(res) == 3
+        assert is_categorical_dtype(res)
+
+        assert isinstance(c, list)
+        assert c == ["#ff0000", "#ff0000", "#ff0000"]
+
+    def test_mapping_colors_same_reference(self):
+        query = pd.Series(["foo", "bar", "baz"], dtype="category")
+        reference = pd.Series(["foo", "foo", "foo"], dtype="category")
+
+        r, c = _map_names_and_colors(
+            reference, query, colors_reference=["red", "red", "red"]
+        )
+
+        assert list(r.index) == ["bar", "baz", "foo"]
+        assert list(r.values) == ["foo_1", "foo_2", "foo_3"]
+        assert c == ["#b20000", "#d13200", "#f07300"]

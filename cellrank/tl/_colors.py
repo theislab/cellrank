@@ -84,7 +84,7 @@ def _create_colors(
 
 def _convert_to_hex_colors(colors: Sequence[Any]) -> List[str]:
     if not all(mcolors.is_color_like(c) for c in colors):
-        raise ValueError("Not all colors are color-like.")
+        raise ValueError("Not all values are color-like.")
 
     return [mcolors.to_hex(c) for c in colors]
 
@@ -243,9 +243,11 @@ def _map_names_and_colors(
         key: np.sum(names_query == key) for key in names_query_series.cat.categories
     }
 
-    names_query_new = np.array(names_query.copy())
+    # warning: do NOT use np.array - if I pass for e.g. colors ['red'], the dtype will be '<U3'
+    # but _create_colors convert them to hex, which will leave them trimmed to #ff or similar
+    names_query_new = Series(names_query.copy())
     if process_colors:
-        colors_query_new = np.array(colors_query.copy())
+        colors_query_new = Series(colors_query.copy())
 
     # Create unique names by adding suffixes "..._1, ..._2" etc and unique colors by shifting the original color
     for key, value in frequ.items():
@@ -253,18 +255,17 @@ def _map_names_and_colors(
             continue  # already unique, skip
 
         # deal with non-unique names
-        suffix = list(np.arange(1, value + 1).astype("str"))
-        unique_names = [f"{key}_{rep}" for rep in suffix]
-        names_query_new[names_query_series == key] = unique_names
+        unique_names = [f"{key}_{rep}" for rep in np.arange(1, value + 1)]
+        names_query_new.iloc[names_query_series == key] = unique_names
         if process_colors:
             color = association_df[association_df["name"] == key]["color"].values[0]
             shifted_colors = _create_colors(color, value, saturation_range=None)
-            colors_query_new[names_query_series == key] = shifted_colors
+            colors_query_new.iloc[names_query_series == key] = shifted_colors
 
     association_df["name"] = names_query_new
     if process_colors:
         association_df["color"] = _convert_to_hex_colors(
-            colors_query_new
+            colors_query_new.values
         )  # original colors can be still there, convert to hex
 
     # issue a warning for mapping with high entropy
