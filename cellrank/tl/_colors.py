@@ -193,6 +193,11 @@ def _map_names_and_colors(
             f"found `{len(series_reference)}`, `{len(series_query)}`."
         )
 
+    if en_cutoff is not None and en_cutoff < 0:
+        raise ValueError(
+            f"Expected entropy cutoff to be non-negative, found `{en_cutoff}`."
+        )
+
     if not np.all(series_reference.index == series_query.index):
         raise ValueError("Series indices do not match, cannot map names and colors.")
 
@@ -206,7 +211,7 @@ def _map_names_and_colors(
         if len(colors_reference) < len(series_reference.cat.categories):
             raise ValueError(
                 f"Length of reference colors `{len(colors_reference)}` is smaller than "
-                f"length of reference series `{len(series_reference.cat.categories)}`."
+                f"length of reference categories `{len(series_reference.cat.categories)}`."
             )
         colors_reference = colors_reference[: len(series_reference.cat.categories)]
         if not all(mcolors.is_color_like(c) for c in colors_reference):
@@ -230,6 +235,8 @@ def _map_names_and_colors(
 
     # find the mapping which maximizes overlap
     names_query = association_df.T.idxmax()
+    if en_cutoff is not None:
+        association_df["entropy"] = entropy(association_df.T)
     association_df["name"] = names_query
 
     # assign query colors
@@ -258,7 +265,6 @@ def _map_names_and_colors(
     for key, value in frequ.items():
         if value == 1:
             continue  # already unique, skip
-
         # deal with non-unique names
         unique_names = [f"{key}_{rep}" for rep in np.arange(1, value + 1)]
         names_query_new.iloc[names_query_series == key] = unique_names
@@ -267,15 +273,10 @@ def _map_names_and_colors(
             shifted_colors = _create_colors(color, value, saturation_range=None)
             colors_query_new.iloc[names_query_series == key] = shifted_colors
 
-    association_df["name"] = names_query_new
-    if process_colors:
-        association_df["color"] = _convert_to_hex_colors(
-            colors_query_new.values
-        )  # original colors can be still there, convert to hex
+    names_query_new = names_query_new.astype("category")
 
     # issue a warning for mapping with high entropy
     if en_cutoff is not None:
-        association_df["entropy"] = entropy(association_df.T)
         critical_cats = list(
             association_df.loc[association_df["entropy"] > en_cutoff, "name"].values
         )
@@ -285,9 +286,9 @@ def _map_names_and_colors(
             )
 
     return (
-        (association_df["name"].astype("category"), list(association_df["color"]))
+        (names_query_new, list(_convert_to_hex_colors(colors_query_new)))
         if process_colors
-        else association_df["name"].astype("category")
+        else names_query_new
     )
 
 

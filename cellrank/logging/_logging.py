@@ -57,27 +57,6 @@ class _RootLogger(logging.RootLogger):
         return self.log(DEBUG, msg, time=time, deep=deep, extra=extra)
 
 
-def _set_log_file(settings):
-    file = settings.logfile
-    name = settings.logpath
-    root = settings._root_logger
-    h = logging.StreamHandler(file) if name is None else logging.FileHandler(name)
-    h.setFormatter(_LogFormatter())
-    h.setLevel(root.level)
-    if len(root.handlers) == 1:
-        root.removeHandler(root.handlers[0])
-    elif len(root.handlers) > 1:
-        raise RuntimeError("Scanpy’s root logger somehow got more than one handler")
-    root.addHandler(h)
-
-
-def _set_log_level(settings, level: int):
-    root = settings._root_logger
-    root.setLevel(level)
-    (h,) = root.handlers  # may only be 1
-    h.setLevel(level)
-
-
 class _LogFormatter(logging.Formatter):
     def __init__(
         self, fmt="{levelname}: {message}", datefmt="%Y-%m-%d %H:%M", style="{"
@@ -141,11 +120,7 @@ def _versions_dependencies(dependencies):
 
 
 def print_versions():
-    """
-    Versions that might influence the numerical results.
-
-    Matplotlib and Seaborn are excluded from this.
-    """
+    """Print packageversions that might influence the numerical and plotting results."""
     from cellrank import settings
 
     modules = ["cellrank"] + _DEPENDENCIES_NUMERICS + _DEPENDENCIES_PLOTTING
@@ -165,7 +140,7 @@ def print_version_and_date():
     from cellrank import settings, __version__
 
     print(
-        f"Running CellRank {__version__}, " f"on {datetime.now():%Y-%m-%d %H:%M}.",
+        f"Running CellRank {__version__}, on {datetime.now():%Y-%m-%d %H:%M}.",
         file=settings.logfile,
     )
 

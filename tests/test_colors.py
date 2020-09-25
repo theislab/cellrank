@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import logging
+
 import pytest
 
 import numpy as np
@@ -8,6 +10,7 @@ from pandas.api.types import is_categorical_dtype
 from matplotlib.colors import is_color_like
 
 from cellrank.tl._colors import _map_names_and_colors, _create_categorical_colors
+from cellrank.logging._logging import _RootLogger
 
 
 class TestColors:
@@ -166,9 +169,44 @@ class TestColors:
         query = pd.Series([], dtype="category")
         reference = pd.Series([], dtype="category")
 
+        r = _map_names_and_colors(reference, query)
+
+        assert isinstance(r, pd.Series)
+        assert is_categorical_dtype(r)
+
+    def test_mapping_colors_empty_with_color(self):
+        query = pd.Series([], dtype="category")
+        reference = pd.Series([], dtype="category")
+
         r, c = _map_names_and_colors(reference, query, colors_reference=[])
 
         assert isinstance(r, pd.Series)
         assert is_categorical_dtype(r)
         assert isinstance(c, list)
         assert len(c) == 0
+
+    def test_mapping_colors_negative_en_cutoff(self):
+        query = pd.Series(["foo", "bar", "baz"], dtype="category")
+        reference = pd.Series(["foo", "bar", "baz"], dtype="category")
+
+        with pytest.raises(ValueError):
+            _map_names_and_colors(reference, query, en_cutoff=-1)
+
+    def test_mapping_colors_negative_en_cutoff(self):
+        query = pd.Series(["foo", "bar", "baz"], dtype="category")
+        reference = pd.Series(["foo", "bar", "baz"], dtype="category")
+
+        with pytest.raises(ValueError):
+            _map_names_and_colors(reference, query, en_cutoff=-1)
+
+    def test_mapping_colors_negative_en_cutoff(self, caplog):
+        query = pd.Series(["bar", "bar", "bar"], dtype="category")
+        reference = pd.Series(["bar", "bar", "bar"], dtype="category")
+
+        # TODO: somehow extract the custom logger and check for logs
+        r = _map_names_and_colors(reference, query, en_cutoff=0)
+
+        assert isinstance(r, pd.Series)
+        assert is_categorical_dtype(r)
+        assert list(r.index) == ["bar"]
+        assert list(r.values) == ["bar"]
