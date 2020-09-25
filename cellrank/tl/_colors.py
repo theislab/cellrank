@@ -201,7 +201,7 @@ def _map_names_and_colors(
         if not all(mcolors.is_color_like(c) for c in colors_reference):
             raise ValueError("Not all colors are valid colors.")
         if len(np.unique(colors_reference)) != len(colors_reference):
-            logg.warning("Color sequence contains non-unique elements.")
+            logg.warning("Color sequence contains non-unique elements")
 
     # create dataframe to store the associations between reference and query
     cats_query = series_query.cat.categories
