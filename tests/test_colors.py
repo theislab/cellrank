@@ -134,3 +134,26 @@ class TestColors:
         assert list(r.index) == ["bar", "baz", "foo"]
         assert list(r.values) == ["foo_1", "foo_2", "foo_3"]
         assert c == ["#b20000", "#d13200", "#f07300"]
+
+    def test_mapping_colors_diff_query_reference(self):
+        query = pd.Series(["bar", "bar", "bar"], dtype="category")
+        reference = pd.Series(["foo", "foo", "foo"], dtype="category")
+
+        r, c = _map_names_and_colors(
+            reference, query, colors_reference=["red", "red", "red"]
+        )
+
+        assert list(r.index) == ["bar"]
+        assert list(r.values) == ["foo"]
+        assert c == ["#ff0000"]
+
+    def test_mapping_colors_empty(self):
+        query = pd.Series([], dtype="category")
+        reference = pd.Series([], dtype="category")
+
+        r, c = _map_names_and_colors(reference, query, colors_reference=[])
+
+        assert isinstance(r, pd.Series)
+        assert is_categorical_dtype(r)
+        assert isinstance(c, list)
+        assert len(c) == 0

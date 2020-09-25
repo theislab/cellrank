@@ -197,6 +197,11 @@ def _map_names_and_colors(
         raise ValueError("Series indices do not match, cannot map names and colors.")
 
     process_colors = colors_reference is not None
+
+    if not len(series_query):
+        res = Series([], dtype="category")
+        return (res, []) if process_colors else res
+
     if process_colors:
         if len(colors_reference) < len(series_reference.cat.categories):
             raise ValueError(
