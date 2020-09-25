@@ -252,7 +252,7 @@ def _map_names_and_colors(
         if process_colors:
             color = association_df[association_df["name"] == key]["color"].values[0]
             shifted_colors = _create_colors(color, value, saturation_range=None)
-            colors_query_new[np.array(colors_query) == color] = shifted_colors
+            colors_query_new[names_query_series == key] = shifted_colors
 
     association_df["name"] = names_query_new
     if process_colors:
