@@ -31,7 +31,7 @@ For the estimator :class:`cellrank.tl.estimators.GPCCA`, cells are fuzzily clust
 using Generalized Perron Cluster Cluster Analysis [GPCCA18]_.
 In short, this coarse-grains the Markov chain into a set of macrostates representing the slow
 time-scale dynamics, i.e. transitions between these macrostates are rare. The most stable ones of these will represent
-{direction}, while the others will represent transient, macrostates.
+{direction}, while the others represent intermediate macrostates.
 
 For the estimator :class:`cellrank.tl.estimators.CFLARE`, cells are filtered into transient/recurrent cells using the
 left eigenvectors of the transition matrix and clustered into distinct groups of {direction} states using the right
