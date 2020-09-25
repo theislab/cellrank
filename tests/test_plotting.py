@@ -6,7 +6,6 @@ from pathlib import Path
 import pytest
 from _helpers import create_model, resize_images_to_same_sizes
 from packaging import version
-from importlib_metadata import version as get_version
 
 import scvelo as scv
 from anndata import AnnData
@@ -61,6 +60,11 @@ RAW_GENES = [
 cr.settings.figdir = FIGS
 scv.settings.figdir = str(FIGS)
 
+try:
+    from importlib_metadata import version as get_version
+except ImportError:
+    # >=Python3.8
+    from importlib.metadata import version as get_version
 
 scvelo_paga_skip = pytest.mark.skipif(
     version.parse(get_version(scv.__name__)) < version.parse("0.1.26.dev189+gc441c72"),
