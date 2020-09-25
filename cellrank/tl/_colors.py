@@ -187,6 +187,12 @@ def _map_names_and_colors(
         raise TypeError(
             f"Query series must be `categorical`, found `{infer_dtype(series_query)}`."
         )
+    if len(series_reference) != len(series_query):
+        raise ValueError(
+            f"Expected the reference and query to have same length,"
+            f"found `{len(series_reference)}`, `{len(series_query)}`."
+        )
+
     if not np.all(series_reference.index == series_query.index):
         raise ValueError("Series indices do not match, cannot map names and colors.")
 
@@ -199,7 +205,7 @@ def _map_names_and_colors(
             )
         colors_reference = colors_reference[: len(series_reference.cat.categories)]
         if not all(mcolors.is_color_like(c) for c in colors_reference):
-            raise ValueError("Not all colors are valid colors.")
+            raise ValueError("Not all values are valid colors.")
         if len(np.unique(colors_reference)) != len(colors_reference):
             logg.warning("Color sequence contains non-unique elements")
 
@@ -217,9 +223,8 @@ def _map_names_and_colors(
         association_df.loc[cl] = row
     association_df = association_df.apply(to_numeric)
 
-    # find the mapping which maximizes overlap and compute entropy
+    # find the mapping which maximizes overlap
     names_query = association_df.T.idxmax()
-    association_df["entropy"] = entropy(association_df.T)
     association_df["name"] = names_query
 
     # assign query colors
@@ -264,6 +269,7 @@ def _map_names_and_colors(
 
     # issue a warning for mapping with high entropy
     if en_cutoff is not None:
+        association_df["entropy"] = entropy(association_df.T)
         critical_cats = list(
             association_df.loc[association_df["entropy"] > en_cutoff, "name"].values
         )
@@ -273,9 +279,9 @@ def _map_names_and_colors(
             )
 
     return (
-        (association_df["name"], list(association_df["color"]))
+        (association_df["name"].astype("category"), list(association_df["color"]))
         if process_colors
-        else association_df["name"]
+        else association_df["name"].astype("category")
     )
 
 
