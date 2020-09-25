@@ -53,7 +53,7 @@ class VelocityKernel(Kernel):
     """
     Kernel which computes a transition matrix based on velocity correlations.
 
-    This borrows ideas from both [Manno18]_ and [Bergen19]_. In short, for each cell *i*, we compute transition
+    This borrows ideas from both [Manno18]_ and [Bergen20]_. In short, for each cell *i*, we compute transition
     probabilities :math:`p_{i, j}` to each cell *j* in the neighborhood of *i*. The transition probabilities are
     computed as a multinomial logistic regression where the weights :math:`w_j` (for all *j*) are given by the vector
     that connects cell *i* with cell *j* in gene expression space, and the features :math:`x_i` are given
@@ -214,7 +214,7 @@ class VelocityKernel(Kernel):
 
         if seed is None:
             seed = np.random.randint(0, 2 ** 16)
-        params = dict(softmax_scale=softmax_scale, mode=mode, seed=seed)  # noqa
+        params = dict(softmax_scale=softmax_scale, mode=mode.s, seed=seed)  # noqa
         if self.backward:
             params["bwd_mode"] = backward_mode.s
 
