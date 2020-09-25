@@ -35,6 +35,15 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
     """
     Generalized Perron Cluster Cluster Analysis [GPCCA18]_.
 
+    Coarse-grains a discrete Markov chain into a set of macrostates and computes coarse-grained transition probabilities
+    among the macrostates. Each macrostate corresponds to an area of the state space, i.e. to a subset of cells. The
+    assignment is soft, i.e. each cell is assigned to every macrostate with a certain weight, where weights sum to
+    one per cell. Macrostates are computed by maximizing the 'crispness' which can be thought of as a measure for
+    minimal overlap between macrostates in a certain inner-product sense. Once the macrostates have been computed,
+    we project the large transition matrix onto a coarse-grained transition matrix among the macrostates via
+    a Galerkin projection. This projection is based on invariant subspaces of the original transition matrix which
+    are obtained using the real Schur decomposition [GPCCA18]_.
+
     Parameters
     ----------
     %(base_estimator.parameters)s
