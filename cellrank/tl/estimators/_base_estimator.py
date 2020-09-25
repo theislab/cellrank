@@ -40,7 +40,7 @@ from cellrank.tl._colors import (
 from cellrank.tl.kernels import PrecomputedKernel
 from cellrank.tl._lineage import Lineage
 from cellrank.tl._constants import (
-    MetaKey,
+    Macro,
     DirPrefix,
     AbsProbKey,
     PrettyEnum,
@@ -107,11 +107,11 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         if self.kernel.backward:
             self._term_key = TermStatesKey.BACKWARD.s
             self._abs_prob_key = AbsProbKey.BACKWARD.s
-            self._term_abs_prob_key = MetaKey.BACKWARD.s
+            self._term_abs_prob_key = Macro.BACKWARD.s
         else:
             self._term_key = TermStatesKey.FORWARD.s
             self._abs_prob_key = AbsProbKey.FORWARD.s
-            self._term_abs_prob_key = MetaKey.FORWARD.s
+            self._term_abs_prob_key = Macro.FORWARD.s
 
         self._key_added = key
         self._g2m_key = g2m_key

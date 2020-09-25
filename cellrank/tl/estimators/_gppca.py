@@ -24,14 +24,14 @@ from cellrank.tl._colors import _get_black_or_white
 from cellrank.tl._lineage import Lineage
 from cellrank.tl._constants import TermStatesKey, _probs, _colors, _lin_names
 from cellrank.tl.estimators._utils import Metadata, _print_insufficient_number_of_cells
-from cellrank.tl.estimators._property import MetaStates
+from cellrank.tl.estimators._property import Macrostates
 from cellrank.tl.estimators._constants import A, F, P
 from cellrank.tl.estimators._decomposition import Eigen, Schur
 from cellrank.tl.estimators._base_estimator import BaseEstimator
 
 
 @d.dedent
-class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
+class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
     """
     Generalized Perron Cluster Cluster Analysis [GPCCA18]_.
 

@@ -382,12 +382,12 @@ class VectorPlottable(KernelHolder, Property):
 
 class Plottable(KernelHolder, Property):
     """
-    Injector which plots metastable or terminal states or absorption probabilities.
+    Injector which plots macrostates or terminal states or absorption probabilities.
 
     To be used in conjunction with:
 
-        - :class:`cellrank.tool.estimators._property.MetaStates`.
-        - :class:`cellrank.tool.estimators._property.FinStates`.
+        - :class:`cellrank.tool.estimators._property.MacroStates`.
+        - :class:`cellrank.tool.estimators._property.TermStates`.
         - :class:`cellrank.tool.estimators._property.AbsProbs`.
     """
 
@@ -775,7 +775,7 @@ class Plottable(KernelHolder, Property):
             )
 
 
-class MetaStates(Plottable):
+class Macrostates(Plottable):
     """Class dealing with macrostates."""
 
     __prop_metadata__ = [

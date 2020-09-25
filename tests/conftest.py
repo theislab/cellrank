@@ -72,7 +72,7 @@ def _create_gpcca(*, backward: bool = False) -> Tuple[AnnData, GPCCA]:
     mc.compute_eigendecomposition()
     mc.compute_schur(method="krylov")
     mc.compute_macrostates(n_states=2)
-    mc.set_terminal_states_from_metastable_states()
+    mc.set_terminal_states_from_macrostates()
     mc.compute_absorption_probabilities()
     mc.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
 

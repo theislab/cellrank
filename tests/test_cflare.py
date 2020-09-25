@@ -428,7 +428,7 @@ class TestCFLARE:
             cellrank.tl.kernels._precomputed_kernel.PrecomputedKernel(transition_matrix)
         )
 
-        # define the set of metastable states
+        # define the set of macrostates
         state_annotation = pd.Series(index=range(p.shape[0]))
         state_annotation[7] = "terminal_1"
         state_annotation[10] = "terminal_2"

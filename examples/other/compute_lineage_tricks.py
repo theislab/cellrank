@@ -9,9 +9,9 @@ This example shows some niche, but useful functionalities of :class:`cellrank.tl
 stores the data in columns and allows for :mod:`pandas`-like indexing. It also provides various methods, such as a
 method for plotting some aggregate information for each column.
 
-We use it primarily to store either the fate probabilities or the metastable states memberships, see
+We use it primarily to store either the fate probabilities or the macrostates memberships, see
 :ref:`sphx_glr_auto_examples_estimators_compute_abs_probs.py` or
-:ref:`sphx_glr_auto_examples_estimators_compute_metastable_states.py`, to learn how to compute them.
+:ref:`sphx_glr_auto_examples_estimators_compute_macrostates.py`, to learn how to compute them.
 """
 
 import cellrank as cr

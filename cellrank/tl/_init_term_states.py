@@ -53,8 +53,8 @@ key
     If not found, compute a new one using :func:`cellrank.tl.transition_matrix`.
 weight_connectivities
     Weight given to a transition matrix computed on the basis of the KNN connectivities. Must be in `[0, 1]`.
-    This can help in situations where we have noisy velocities and want to give some weight to
-    transcriptomic similarity.
+    This can help in situations where we have noisy velocities and want to give some weight to transcriptomic
+    similarity.
 show_plots
     Whether to show plots of the spectrum and eigenvectors in the embedding.
 %(n_jobs)s
