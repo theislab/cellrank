@@ -38,7 +38,7 @@ class P(PrettyEnum):
     SCHUR = "schur"
     SCHUR_MAT = "schur_matrix"
     MACRO = "macrostates"
-    MACRO_MEMBER = "macrostates_membership"
+    MACRO_MEMBER = "macrostates_memberships"
     TERM = "terminal_states"
     TERM_PROBS = "terminal_states_probabilities"
     ABS_PROBS = "absorption_probabilities"
