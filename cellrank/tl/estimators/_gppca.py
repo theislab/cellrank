@@ -62,14 +62,14 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         )
 
     @inject_docs(
-        ms=P.META,
-        msp=P.META_MEMBER,
+        ms=P.MACRO,
+        msp=P.MACRO_MEMBER,
         schur=P.SCHUR.s,
         coarse_T=P.COARSE_T,
         coarse_stat=P.COARSE_STAT_D,
     )
     @d.dedent
-    def compute_metastable_states(
+    def compute_macrostates(
         self,
         n_states: Optional[
             Union[int, Tuple[int, int], List[int], Dict[str, int]]
@@ -81,17 +81,17 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         p_thresh: float = 1e-15,
     ):
         """
-        Compute the metastable states.
+        Compute the macrostates.
 
         Parameters
         ----------
         n_states
-            Number of metastable states. If `None`, use the `eigengap` heuristic.
+            Number of macrostates. If `None`, use the `eigengap` heuristic.
         %(n_cells)s
         use_min_chi
-            Whether to use :meth:`msmtools.analysis.dense.gpcca.GPCCA.minChi` to calculate the number of metastable
-            states. If `True`, ``n_states`` corresponds to a closed interval `[min, max]` inside of which the
-            potentially optimal number of metastable states is searched.
+            Whether to use :meth:`msmtools.analysis.dense.gpcca.GPCCA.minChi` to calculate the number of macrostates.
+            If `True`, ``n_states`` corresponds to a closed interval `[min, max]` inside of which the potentially
+            optimal number of macrostates is searched.
         cluster_key
             If a key to cluster labels is given, names and colors of the states will be associated with the clusters.
         %(en_cutoff_p_thresh)s
@@ -134,7 +134,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
 
         n_states = self._check_states_validity(n_states)
         if n_states == 1:
-            self._compute_meta_for_one_state(
+            self._compute_one_macrostate(
                 n_cells=n_cells,
                 cluster_key=cluster_key,
                 p_thresh=p_thresh,
@@ -158,11 +158,11 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
 
         if self._gpcca.X.shape[1] < n_states:
             logg.warning(
-                f"Requested more metastable states `{n_states}` than available "
+                f"Requested more macrostates `{n_states}` than available "
                 f"Schur vectors `{self._gpcca.X.shape[1]}`. Recomputing the decomposition"
             )
 
-        start = logg.info(f"Computing `{n_states}` metastable states")
+        start = logg.info(f"Computing `{n_states}` macrostates")
         try:
             self._gpcca = self._gpcca.optimize(m=n_states)
         except ValueError as e:
@@ -173,7 +173,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             logg.warning(f"{e}\nIncreasing `n_states` to `{n_states}`")
             self._gpcca = self._gpcca.optimize(m=n_states)
 
-        self._set_meta_states(
+        self._set_macrostates(
             memberships=self._gpcca.memberships,
             n_cells=n_cells,
             cluster_key=cluster_key,
@@ -185,7 +185,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         self._set(A.SCHUR, self._gpcca.X)
         self._set(A.SCHUR_MAT, self._gpcca.R)
 
-        names = self._get(P.META_MEMBER).names
+        names = self._get(P.MACRO_MEMBER).names
 
         self._set(
             A.COARSE_T,
@@ -210,8 +210,8 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
                 ),
             )
             logg.info(
-                f"Adding `.{P.META_MEMBER}`\n"
-                f"       `.{P.META}`\n"
+                f"Adding `.{P.MACRO_MEMBER}`\n"
+                f"       `.{P.MACRO}`\n"
                 f"       `.{P.SCHUR}`\n"
                 f"       `.{P.COARSE_T}`\n"
                 f"       `.{P.COARSE_STAT_D}`\n"
@@ -221,29 +221,36 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         else:
             logg.warning("No stationary distribution found in GPCCA object")
             logg.info(
-                f"Adding `.{P.META_MEMBER}`\n"
-                f"       `.{P.META}`\n"
+                f"Adding `.{P.MACRO_MEMBER}`\n"
+                f"       `.{P.MACRO}`\n"
                 f"       `.{P.SCHUR}`\n"
                 f"       `.{P.COARSE_T}`\n"
                 f"    Finish",
                 time=start,
             )
 
+    def compute_metastable_states(self, *args, **kwargs):
+        """This function has been deprecated. Please use :meth:`cellrank.tl.estimators.GPCCA.compute_macrostates` instead."""  # noqa
+        print(
+            "This function has been deprecated. Please use `compute_macrostates` instead."
+        )
+        return self.compute_macrostates(*args, **kwargs)
+
     @d.dedent
     @inject_docs(fs=P.TERM, fsp=P.TERM_PROBS)
-    def set_terminal_states_from_metastable_states(
+    def set_terminal_states_from_macrostates(
         self,
         names: Optional[Union[Iterable[str], str]] = None,
         n_cells: int = 30,
     ):
         """
-        Manually select terminal states from metastable states.
+        Manually select terminal states from macrostates.
 
         Parameters
         ----------
         names
-            Names of the metastable states to be marked as terminal. Multiple states can be combined using `','`,
-            such as `["Alpha, Beta", "Epsilon"]`.
+            Names of the macrostates to be marked as terminal. Multiple states can be combined using `','`,
+            such as ``["Alpha, Beta", "Epsilon"]``.
         %(n_cells)s
 
         Returns
@@ -263,15 +270,13 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         if n_cells <= 0:
             raise ValueError(f"Expected `n_cells` to be positive, found `{n_cells}`.")
 
-        probs = self._get(P.META_MEMBER)
+        probs = self._get(P.MACRO_MEMBER)
 
-        if self._get(P.META_MEMBER) is None:
-            raise RuntimeError(
-                "Compute metastable states first as `.compute_metastable_states()`."
-            )
+        if self._get(P.MACRO_MEMBER) is None:
+            raise RuntimeError("Compute macrostates first as `.compute_macrostates()`.")
         elif probs.shape[1] == 1:
             self._set(A.TERM, self._create_states(probs, n_cells=n_cells))
-            self._set(A.TERM_COLORS, self._get(A.META_COLORS))
+            self._set(A.TERM_COLORS, self._get(A.MACRO_COLORS))
             self._set(A.TERM_PROBS, probs / probs.max())
             self._set(A.TERM_ABS_PROBS, probs)
             self._write_terminal_states()
@@ -283,30 +288,30 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         if isinstance(names, str):
             names = [names]
 
-        meta_states_probs = probs[[n for n in names if n != "rest"]]
+        macrostates_probs = probs[[n for n in names if n != "rest"]]
 
         # compute the aggregated probability of being a initial/terminal state (no matter which)
-        scaled_probs = meta_states_probs.copy()
+        scaled_probs = macrostates_probs.copy()
         scaled_probs /= scaled_probs.max(0)
 
-        self._set(A.TERM, self._create_states(meta_states_probs, n_cells=n_cells))
+        self._set(A.TERM, self._create_states(macrostates_probs, n_cells=n_cells))
         self._set(
             A.TERM_PROBS, pd.Series(scaled_probs.X.max(1), index=self.adata.obs_names)
         )
         self._set(
             A.TERM_COLORS,
-            meta_states_probs[list(self._get(P.TERM).cat.categories)].colors,
+            macrostates_probs[list(self._get(P.TERM).cat.categories)].colors,
         )
 
         self._set(A.TERM_ABS_PROBS, scaled_probs)
         self._write_terminal_states()
 
-    def set_final_states_from_metastable_states(self, *args, **kwargs):
-        """This function has been deprecated. Please use :meth:`cellrank.tl.estimators.GPCCA.set_terminal_states_from_metastable_states` instead."""  # noqa
+    def set_terminal_states_from_metastable_states(self, *args, **kwargs):
+        """This function has been deprecated. Please use :meth:`cellrank.tl.estimators.GPCCA.set_terminal_states_from_macrostates` instead."""  # noqa
         print(
-            "This function has been deprecated. Please use `set_terminal_states_from_metastable_states` instead."
+            "This function has been deprecated. Please use `set_terminal_states_from_macrostates` instead."
         )
-        return self.set_terminal_states_from_metastable_states(*args, **kwargs)
+        return self.set_terminal_states_from_macrostates(*args, **kwargs)
 
     @inject_docs(fs=P.TERM, fsp=P.TERM_PROBS)
     @d.dedent
@@ -319,7 +324,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         n_states: Optional[int] = None,
     ):
         """
-        Automatically select terminal states from metastable states.
+        Automatically select terminal states from macrostates.
 
         Parameters
         ----------
@@ -351,11 +356,9 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
                 - :paramref:`{fs}`
         """  # noqa
 
-        if len(self._get(P.META).cat.categories) == 1:
-            logg.warning(
-                "Found only one metastable state. Making it the single main state"
-            )
-            self.set_terminal_states_from_metastable_states(None, n_cells=n_cells)
+        if len(self._get(P.MACRO).cat.categories) == 1:
+            logg.warning("Found only one macrostate. Making it the single main state")
+            self.set_terminal_states_from_macrostates(None, n_cells=n_cells)
             return
 
         coarse_T = self._get(P.COARSE_T)
@@ -369,7 +372,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         elif method == "eigengap_coarse":
             if coarse_T is None:
                 raise RuntimeError(
-                    "Compute metastable states first as `.compute_metastable_states()`."
+                    "Compute macrostates first as `.compute_macrostates()`."
                 )
             n_states = _eigengap(np.sort(np.diag(coarse_T)[::-1]), alpha=alpha)
         elif method == "top_n":
@@ -388,7 +391,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
                 )
             self_probs = pd.Series(np.diag(coarse_T), index=coarse_T.columns)
             names = self_probs[self_probs.values >= min_self_prob].index
-            self.set_terminal_states_from_metastable_states(names, n_cells=n_cells)
+            self.set_terminal_states_from_macrostates(names, n_cells=n_cells)
             return
         else:
             raise ValueError(
@@ -397,7 +400,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             )
 
         names = coarse_T.columns[np.argsort(np.diag(coarse_T))][-n_states:]
-        self.set_terminal_states_from_metastable_states(names, n_cells=n_cells)
+        self.set_terminal_states_from_macrostates(names, n_cells=n_cells)
 
     def compute_gdpt(
         self, n_components: int = 10, key_added: str = "gdpt_pseudotime", **kwargs
@@ -498,7 +501,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         **kwargs,
     ) -> None:
         """
-        Plot the coarse-grained transition matrix between metastable states.
+        Plot the coarse-grained transition matrix between macrostates.
 
         Parameters
         ----------
@@ -596,7 +599,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
 
         if coarse_T is None:
             raise RuntimeError(
-                "Compute coarse-grained transition matrix first as `.compute_metastable_states()` with `n_states > 1`."
+                "Compute coarse-grained transition matrix first as `.compute_macrostates()` with `n_states > 1`."
             )
 
         if show_stationary_dist and coarse_stat_d is None:
@@ -712,15 +715,14 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
 
         fig.show()
 
-    def _compute_meta_for_one_state(
+    def _compute_one_macrostate(
         self,
         n_cells: int,
         cluster_key: Optional[str],
         en_cutoff: Optional[float],
         p_thresh: float,
     ) -> None:
-        start = logg.info("Computing metastable states")
-        logg.warning("For `n_states=1`, stationary distribution is computed")
+        start = logg.warning("For 1 macrostate, stationary distribution is computed")
 
         eig = self._get(P.EIG)
         if (
@@ -733,7 +735,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             self.compute_eigendecomposition(only_evals=False, which="LR")
             stationary_dist = self._get(P.EIG)["stationary_dist"]
 
-        self._set_meta_states(
+        self._set_macrostates(
             memberships=stationary_dist[:, None],
             n_cells=n_cells,
             cluster_key=cluster_key,
@@ -741,11 +743,11 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             en_cutoff=en_cutoff,
         )
         self._set(
-            A.META_MEMBER,
+            A.MACRO_MEMBER,
             Lineage(
                 stationary_dist,
-                names=list(self._get(A.META).cat.categories),
-                colors=self._get(A.META_COLORS),
+                names=list(self._get(A.MACRO).cat.categories),
+                colors=self._get(A.MACRO_COLORS),
             ),
         )
 
@@ -761,7 +763,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             self._set(key.s, None)
 
         logg.info(
-            f"Adding `.{P.META_MEMBER}`\n        `.{P.META}`\n    Finish",
+            f"Adding `.{P.MACRO_MEMBER}`\n        `.{P.MACRO}`\n    Finish",
             time=start,
         )
 
@@ -817,7 +819,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         return int(np.arange(minn, maxx)[np.argmax(self._gpcca.minChi(minn, maxx))])
 
     @d.dedent
-    def _set_meta_states(
+    def _set_macrostates(
         self,
         memberships: np.ndarray,
         n_cells: Optional[int] = 30,
@@ -857,25 +859,25 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         """
 
         if n_cells is None:
-            logg.debug("Setting the metastable states using metastable assignment")
+            logg.debug("Setting the macrostates using macrostate assignment")
 
             max_assignment = np.argmax(memberships, axis=1)
-            _meta_assignment = pd.Series(
+            _macro_assignment = pd.Series(
                 index=self.adata.obs_names, data=max_assignment, dtype="category"
             )
             # sometimes, the assignment can have a missing category and the Lineage creation therefore fails
             # keep it as ints when `n_cells != None`
-            _meta_assignment.cat.set_categories(
+            _macro_assignment.cat.set_categories(
                 list(range(memberships.shape[1])), inplace=True
             )
 
-            metastable_states = _meta_assignment.astype(str).astype("category").copy()
+            macrostates = _macro_assignment.astype(str).astype("category").copy()
             not_enough_cells = []
         else:
-            logg.debug("Setting the metastable states using metastable memberships")
+            logg.debug("Setting the macrostates using macrostates memberships")
 
-            # select the most likely cells from each metastable state
-            metastable_states, not_enough_cells = self._create_states(
+            # select the most likely cells from each macrostate
+            macrostates, not_enough_cells = self._create_states(
                 memberships,
                 n_cells=n_cells,
                 check_row_sums=check_row_sums,
@@ -884,34 +886,32 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             not_enough_cells = not_enough_cells.astype("str")
 
         # _set_categorical_labels creates the names, we still need to remap the group names
-        orig_cats = metastable_states.cat.categories
+        orig_cats = macrostates.cat.categories
         self._set_categorical_labels(
-            attr_key=A.META.v,
-            color_key=A.META_COLORS.v,
-            pretty_attr_key=P.META.v,
-            add_to_existing_error_msg="Compute metastable states first as `.compute_metastable_states()`.",
-            categories=metastable_states,
+            attr_key=A.MACRO.v,
+            color_key=A.MACRO_COLORS.v,
+            pretty_attr_key=P.MACRO.v,
+            add_to_existing_error_msg="Compute macrostates first as `.compute_macrostates()`.",
+            categories=macrostates,
             cluster_key=cluster_key,
             en_cutoff=en_cutoff,
             p_thresh=p_thresh,
             add_to_existing=False,
         )
 
-        name_mapper = dict(zip(orig_cats, self._get(P.META).cat.categories))
+        name_mapper = dict(zip(orig_cats, self._get(P.MACRO).cat.categories))
         _print_insufficient_number_of_cells(
             [name_mapper.get(n, n) for n in not_enough_cells], n_cells
         )
 
-        logg.debug(
-            "Setting metastable lineage probabilities based on GPCCA membership vectors"
-        )
+        logg.debug("Setting macrostates memberships based on GPCCA membership vectors")
 
         self._set(
-            A.META_MEMBER,
+            A.MACRO_MEMBER,
             Lineage(
                 memberships,
-                names=list(metastable_states.cat.categories),
-                colors=self._get(A.META_COLORS),
+                names=list(macrostates.cat.categories),
+                colors=self._get(A.MACRO_COLORS),
             ),
         )
 
@@ -947,7 +947,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
     def _check_states_validity(self, n_states: int) -> int:
         if self._invalid_n_states is not None and n_states in self._invalid_n_states:
             logg.warning(
-                f"Unable to compute metastable states with `n_states={n_states}` because it will "
+                f"Unable to compute macrostates with `n_states={n_states}` because it will "
                 f"split the conjugate eigenvalues. Increasing `n_states` to `{n_states + 1}`"
             )
             n_states += 1  # cannot force recomputation of the Schur decomposition
@@ -971,15 +971,15 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             self.compute_schur(n_lineages + 1, method=method)
 
         try:
-            self.compute_metastable_states(
+            self.compute_macrostates(
                 n_states=n_lineages, cluster_key=cluster_key, **kwargs
             )
         except ValueError:
             logg.warning(
-                f"Computing `{n_lineages}` metastable states cuts through a block of complex conjugates. "
+                f"Computing `{n_lineages}` macrostates cuts through a block of complex conjugates. "
                 f"Increasing `n_lineages` to {n_lineages + 1}"
             )
-            self.compute_metastable_states(
+            self.compute_macrostates(
                 n_states=n_lineages + 1, cluster_key=cluster_key, **kwargs
             )
 
@@ -988,13 +988,13 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         if n_lineages is None:
             self.compute_terminal_states(method="eigengap", **fs_kwargs)
         else:
-            self.set_terminal_states_from_metastable_states(**fs_kwargs)
+            self.set_terminal_states_from_macrostates(**fs_kwargs)
 
     @d.dedent  # because of fit
     @d.dedent
     @inject_docs(
-        ms=P.META,
-        msp=P.META_MEMBER,
+        ms=P.MACRO,
+        msp=P.MACRO_MEMBER,
         fs=P.TERM,
         fsp=P.TERM_PROBS,
         ap=P.ABS_PROBS,
@@ -1010,7 +1010,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         **kwargs,
     ):
         """
-        Run the pipeline, computing the metastable states, %(initial_or_terminal)s states \
+        Run the pipeline, computing the macrostates, %(initial_or_terminal)s states \
         and optionally the absorption probabilities.
 
         It is equivalent to running::
@@ -1020,12 +1020,12 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
             if n_lineages > 1:
                 compute_schur(...)
 
-            compute_metastable_states(...)
+            compute_macrostates(...)
 
             if n_lineages is None:
                 compute_terminal_states(...)
             else:
-                set_terminal_states_from_metastable_states(...)
+                set_terminal_states_from_macrostates(...)
 
             if compute_absorption_probabilities:
                 compute_absorption_probabilities(...)
@@ -1038,7 +1038,7 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         compute_absorption_probabilities
             Whether to compute the absorption probabilities or only the %(initial_or_terminal)s states.
         **kwargs
-            Keyword arguments for :meth:`cellrank.tl.estimators.GPCCA.compute_metastable_states`.
+            Keyword arguments for :meth:`cellrank.tl.estimators.GPCCA.compute_macrostates`.
 
         Returns
         -------
@@ -1066,20 +1066,20 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
     @inject_docs(
         key=TermStatesKey.BACKWARD.s, probs_key=_probs(TermStatesKey.BACKWARD.s)
     )
-    def _set_initial_states_from_metastable_states(
+    def _set_initial_states_from_macrostates(
         self,
         names: Optional[Union[Iterable[str], str]] = None,
         n_cells: int = 30,
     ):
         """
-        Manually select initial states from metastable states.
+        Manually select initial states from macrostates.
 
         Note that no check is performed to ensure initial and terminal states are distinct.
 
         Parameters
         ----------
         names
-            Names of the metastable states to be marked as initial states. Multiple states can be combined using `','`,
+            Names of the macrostates to be marked as initial states. Multiple states can be combined using `','`,
             such as `["Alpha, Beta", "Epsilon"]`.
         %(n_cells)s
 
@@ -1100,12 +1100,10 @@ class GPCCA(BaseEstimator, MetaStates, Schur, Eigen):
         if n_cells <= 0:
             raise ValueError(f"Expected `n_cells` to be positive, found `{n_cells}`.")
 
-        probs = self._get(P.META_MEMBER)
+        probs = self._get(P.MACRO_MEMBER)
 
-        if self._get(P.META_MEMBER) is None:
-            raise RuntimeError(
-                "Compute metastable states first as `.compute_metastable_states()`."
-            )
+        if self._get(P.MACRO_MEMBER) is None:
+            raise RuntimeError("Compute macrostates first as `.compute_macrostates()`.")
         elif probs.shape[1] == 1:
             categorical = self._create_states(probs, n_cells=n_cells)
             scaled = probs / probs.max()

@@ -78,8 +78,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
     s_key
         Key in :paramref:`adata` ``.obs``. Can be used to detect cell-cycle driven start- or endpoints.
     write_to_adata
-        Whether to write the transition matrix to :paramref:`adata` ``.obsp``
-        and the parameters to :paramref:`adata` ``.uns``.
+        Whether to write the transition matrix to :paramref:`adata` ``.obsp`` and the parameters to
+        :paramref:`adata` ``.uns``.
     %(write_to_adata.parameters)s
         Only used when ``write_to_adata=True``.
     """

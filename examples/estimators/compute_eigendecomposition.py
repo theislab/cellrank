@@ -6,10 +6,10 @@ Compute eigendecomposition
 This example shows how to compute and plot the spectrum of a transition matrix.
 
 The spectrum of a rectangular matrix :math:`T` is given by its `eigenvalues
-<https://en.wikipedia.org/wiki/Eigendecomposition_of_a_matrix>`_
-For a general, real valued matrix :math:`T`, eigenvalues will either be real or appear in pairs of complex conjugates.
-CellRank can plot the spectrum in the complex plane or restrict the visualization to the real part of the eigenvalues,
-which may be helpful to spot the `eigengap <https://en.wikipedia.org/wiki/Eigengap>`_.
+<https://en.wikipedia.org/wiki/Eigendecomposition_of_a_matrix>`_. For a general, real valued matrix :math:`T`,
+eigenvalues will either be real or appear in pairs of complex conjugates. CellRank can plot the spectrum in the complex
+plane or restrict the visualization to the real part of the eigenvalues, which may be helpful to spot the
+`eigengap <https://en.wikipedia.org/wiki/Eigengap>`_.
 """
 
 import cellrank as cr
