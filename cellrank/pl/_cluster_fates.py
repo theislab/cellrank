@@ -20,7 +20,7 @@ from cellrank.ul._docs import d, inject_docs
 from cellrank.pl._utils import _position_legend
 from cellrank.tl._utils import RandomKeys, save_fig, _unique_order_preserving
 from cellrank.ul._utils import valuedispatch
-from cellrank.tl._constants import ModeEnum, DirPrefix, AbsProbKey, FinalStatesPlot
+from cellrank.tl._constants import ModeEnum, DirPrefix, AbsProbKey, TerminalStatesPlot
 
 AnnData = TypeVar("AnnData")
 
@@ -421,11 +421,11 @@ def cluster_fates(
 
     if backward:
         lk = AbsProbKey.BACKWARD.s
-        points = FinalStatesPlot.BACKWARD.s
+        points = TerminalStatesPlot.BACKWARD.s
         dir_prefix = DirPrefix.BACKWARD.s
     else:
         lk = AbsProbKey.FORWARD.s
-        points = FinalStatesPlot.FORWARD.s
+        points = TerminalStatesPlot.FORWARD.s
         dir_prefix = DirPrefix.FORWARD.s
 
     if cluster_key is not None:

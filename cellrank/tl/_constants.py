@@ -71,7 +71,7 @@ class TermStatesKey(PrettyEnum):
     BACKWARD = f"{_initial}_states"
 
 
-class FinalStatesPlot(PrettyEnum):
+class TerminalStatesPlot(PrettyEnum):
     """Pretty state names for pl."""
 
     FORWARD = TermStatesKey.FORWARD.s.replace("_", " ")

@@ -16,8 +16,8 @@ adata
 # %%
 # First, we compute the terminal states. By default, we're using the :class:`cellrank.tl.estimators.GPCCA` estimator.
 # The parameter ``cluster_key`` tries to associate the names of the terminal states with cluster labels, whereas
-# ``n_cells`` controls how many cells we take from each final state as categorical observation - this is only available
-# to the above mentioned estimator. We can show some plots of interest by specifying ``show_plots=True``.
+# ``n_cells`` controls how many cells we take from each terminal state as categorical observation - this is only
+# available to the above mentioned estimator. We can show some plots of interest by specifying ``show_plots=True``.
 cr.tl.terminal_states(
     adata,
     cluster_key="clusters",
