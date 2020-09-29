@@ -6,6 +6,11 @@ Release Notes
 Version 1.0
 -----------
 
+1.0.0-rc.11 :small:`2020-09-29`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Fix major bug when mapping names and colors
+
 1.0.0-rc.11 :small:`2020-09-25`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

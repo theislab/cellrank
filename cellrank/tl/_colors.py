@@ -273,7 +273,10 @@ def _map_names_and_colors(
             shifted_colors = _create_colors(color, value, saturation_range=None)
             colors_query_new.iloc[names_query_series == key] = shifted_colors
 
+    # warnings: if it's categorical and assigning to `.cat.categories`, it will
+    # take the categorical information, making the 2nd line below necessary
     names_query_new = names_query_new.astype("category")
+    names_query_new.cat.reorder_categories(np.array(names_query_new), inplace=True)
 
     # issue a warning for mapping with high entropy
     if en_cutoff is not None:

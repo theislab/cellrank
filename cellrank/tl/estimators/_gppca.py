@@ -912,7 +912,6 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         _print_insufficient_number_of_cells(
             [name_mapper.get(n, n) for n in not_enough_cells], n_cells
         )
-
         logg.debug("Setting macrostates memberships based on GPCCA membership vectors")
 
         self._set(

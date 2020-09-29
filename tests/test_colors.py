@@ -203,14 +203,7 @@ class TestMappingColors:
         with pytest.raises(ValueError):
             _map_names_and_colors(reference, query, en_cutoff=-1)
 
-    def test_mapping_colors_negative_en_cutoff(self):
-        query = pd.Series(["foo", "bar", "baz"], dtype="category")
-        reference = pd.Series(["foo", "bar", "baz"], dtype="category")
-
-        with pytest.raises(ValueError):
-            _map_names_and_colors(reference, query, en_cutoff=-1)
-
-    def test_mapping_colors_negative_en_cutoff(self):
+    def test_mapping_colors_0_en_cutoff(self):
         query = pd.Series(["bar", "bar", "bar"], dtype="category")
         reference = pd.Series(["bar", "bar", "bar"], dtype="category")
 
@@ -243,3 +236,17 @@ class TestMappingColors:
         assert isinstance(res, pd.Series)
         assert isinstance(colors, list)
         np.testing.assert_array_equal(colors, ["#b20000", "#e65c00", "#008000"])
+
+    def test_mapping_colors_name_order_same_as_cat_order(self):
+        x = pd.Series(["b", "a", np.nan, "a", np.nan]).astype("category")
+        y = pd.Series(["a", np.nan, np.nan, "d", "b"]).astype("category")
+        expected = pd.Series(["b", "a_1", "a_2"])
+        expected_index = pd.Index(["a", "b", "d"])
+
+        res = _map_names_and_colors(x, y)
+
+        assert isinstance(res, pd.Series)
+        assert is_categorical_dtype(res)
+        np.testing.assert_array_equal(res.values, expected.values)
+        np.testing.assert_array_equal(res.index.values, expected_index.values)
+        np.testing.assert_array_equal(res.cat.categories.values, res.values)

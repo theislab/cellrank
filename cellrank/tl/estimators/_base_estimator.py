@@ -774,6 +774,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 en_cutoff=en_cutoff,
             )
             setattr(self, color_key, colors)
+            # if approx_rcs_names is categorical, the info is take from .cat.categories
             categories.cat.categories = approx_rcs_names
         else:
             setattr(
