@@ -267,11 +267,12 @@ def _map_names_and_colors(
             continue  # already unique, skip
         # deal with non-unique names
         unique_names = [f"{key}_{rep}" for rep in np.arange(1, value + 1)]
-        names_query_new.iloc[names_query_series == key] = unique_names
+        # .value because of pandas 1.0.0
+        names_query_new.iloc[(names_query_series == key).values] = unique_names
         if process_colors:
             color = association_df[association_df["name"] == key]["color"].values[0]
             shifted_colors = _create_colors(color, value, saturation_range=None)
-            colors_query_new.iloc[names_query_series == key] = shifted_colors
+            colors_query_new.iloc[(names_query_series == key).values] = shifted_colors
 
     # warnings: if it's categorical and assigning to `.cat.categories`, it will
     # take the categorical information, making the 2nd line below necessary
@@ -280,12 +281,14 @@ def _map_names_and_colors(
 
     # issue a warning for mapping with high entropy
     if en_cutoff is not None:
-        critical_cats = list(
-            association_df.loc[association_df["entropy"] > en_cutoff, "name"].values
+        critical_cats = sorted(
+            set(
+                association_df.loc[association_df["entropy"] > en_cutoff, "name"].values
+            )
         )
         if len(critical_cats) > 0:
             logg.warning(
-                f"The following states could not be mapped uniquely: `{', '.join(map(str, critical_cats))}`"
+                f"The following states could not be mapped uniquely: `{critical_cats}`"
             )
 
     return (
