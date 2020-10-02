@@ -1071,6 +1071,51 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         )
 
     @d.dedent
+    def _compute_initial_states(self, n_states: int = 1, n_cells: int = 30) -> None:
+        """
+        Compute initial states from macrostates.
+
+        Parameters
+        ----------
+        n_states
+            Number of initial states.
+        %(n_cells)s
+
+        Returns
+        -------
+        %(set_initial_states_from_macrostates.returns)s
+        """
+
+        if n_states <= 0:
+            raise ValueError(f"Expected `n_states` to be positive, found `{n_states}`.")
+
+        if n_cells <= 0:
+            raise ValueError(f"Expected `n_cells` to be positive, found `{n_cells}`.")
+
+        probs = self._get(P.MACRO_MEMBER)
+
+        if probs is None:
+            raise RuntimeError("Compute macrostates first as `.compute_macrostates()`.")
+
+        if n_states > probs.shape[1]:
+            raise ValueError(
+                f"Requested `{n_states}` initial states, but only `{probs.shape[1]}` macrostates have been computed."
+            )
+
+        if probs.shape[1] == 1:
+            self._set_initial_states_from_macrostates(probs.names[0], n_cells=n_cells)
+            return
+
+        stat_dist = self._get(P.COARSE_STAT_D)
+        if stat_dist is None:
+            raise RuntimeError("No coarse-grained stationary distribution found.")
+
+        self._set_initial_states_from_macrostates(
+            stat_dist[np.argsort(stat_dist)][:n_states].index, n_cells=n_cells
+        )
+
+    @d.get_sectionsf("set_initial_states_from_macrostates", sections=["Returns"])
+    @d.dedent
     @inject_docs(
         key=TermStatesKey.BACKWARD.s, probs_key=_probs(TermStatesKey.BACKWARD.s)
     )
@@ -1078,7 +1123,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         self,
         names: Optional[Union[Iterable[str], str]] = None,
         n_cells: int = 30,
-    ):
+    ) -> None:
         """
         Manually select initial states from macrostates.
 
@@ -1110,7 +1155,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
 
         probs = self._get(P.MACRO_MEMBER)
 
-        if self._get(P.MACRO_MEMBER) is None:
+        if probs is None:
             raise RuntimeError("Compute macrostates first as `.compute_macrostates()`.")
         elif probs.shape[1] == 1:
             categorical = self._create_states(probs, n_cells=n_cells)

@@ -9,6 +9,7 @@ import cellrank as cr
 import cellrank.tl._lineages
 from cellrank.tl.kernels import Kernel
 from cellrank.tl._constants import AbsProbKey, TermStatesKey, _probs
+from cellrank.tl.kernels._base_kernel import KernelAdd
 
 
 class TestLineages:
@@ -94,8 +95,24 @@ class TestTransitionMatrix:
         with pytest.raises(ValueError):
             cr.tl.transition_matrix(adata, weight_connectivities=-1)
 
-    def test_backward(self, adata: AnnData):
-        kernel_add = cr.tl.transition_matrix(adata, backward=True)
+    def test_forward(self, adata: AnnData):
+        kernel_add = cr.tl.transition_matrix(adata, backward=False, softmax_scale=None)
 
-        assert isinstance(kernel_add, Kernel)
+        assert isinstance(kernel_add, KernelAdd)
+        assert not kernel_add.backward
+
+    def test_only_connectivities(self, adata: AnnData):
+        ck = cr.tl.transition_matrix(adata, weight_connectivities=1)
+
+        assert isinstance(ck, cr.tl.kernels.ConnectivityKernel)
+
+    def test_only_velocity(self, adata: AnnData):
+        vk = cr.tl.transition_matrix(adata, weight_connectivities=0)
+
+        assert isinstance(vk, cr.tl.kernels.VelocityKernel)
+
+    def test_backward(self, adata: AnnData):
+        kernel_add = cr.tl.transition_matrix(adata, backward=True, softmax_scale=None)
+
+        assert isinstance(kernel_add, KernelAdd)
         assert kernel_add.backward
