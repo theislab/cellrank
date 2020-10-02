@@ -264,6 +264,13 @@ class BaseModel(ABC):
         else:
             val_start, val_end = None, time_range
 
+        if isinstance(weight_threshold, (int, float)):
+            weight_threshold = (weight_threshold, weight_threshold)
+        if len(weight_threshold) != 2:
+            raise ValueError(
+                f"Expected `weight_threshold` to be of size `2`, found `{len(weight_threshold)}`."
+            )
+
         if lineage is not None:
             _ = self.adata.obsm[lineage_key][lineage]
 
@@ -282,11 +289,7 @@ class BaseModel(ABC):
             raise NotImplementedError(f"Data key `{data_key!r}` is not implemented.")
 
         if lineage is not None:
-            weight_threshold, val = (
-                weight_threshold
-                if isinstance(weight_threshold, (tuple, list))
-                else (weight_threshold, 0)
-            )
+            weight_threshold, val = weight_threshold
             w = _densify_squeeze(self.adata.obsm[lineage_key][lineage].X, self._dtype)
             w[w < weight_threshold] = val
         else:
