@@ -18,6 +18,7 @@ from cellrank.tl._constants import (
     _lin_names,
     _transition,
 )
+from cellrank.tl.estimators._constants import P
 
 
 def _assert_has_all_keys(adata: AnnData, direction: Direction):
@@ -265,13 +266,13 @@ class TestLowLevelPipeline:
         estimator_fwd.compute_schur(5, method="brandts")
         estimator_fwd.plot_schur()
 
-        estimator_fwd.compute_metastable_states(3, n_cells=10)
-        estimator_fwd.plot_metastable_states()
+        estimator_fwd.compute_macrostates(3, n_cells=10)
+        estimator_fwd.plot_macrostates()
         estimator_fwd.plot_coarse_T(show_initial_dist=True, show_stationary_dist=True)
         estimator_fwd.plot_schur_matrix()
 
         # select all states
-        estimator_fwd.set_terminal_states_from_metastable_states(n_cells=10)
+        estimator_fwd.set_terminal_states_from_macrostates(n_cells=10)
         estimator_fwd.plot_terminal_states()
 
         estimator_fwd.compute_absorption_probabilities()
@@ -280,9 +281,9 @@ class TestLowLevelPipeline:
         _assert_has_all_keys(adata, Direction.FORWARD)
 
         # select a subset of states
-        estimator_fwd.set_terminal_states_from_metastable_states(
+        estimator_fwd.set_terminal_states_from_macrostates(
             n_cells=16,
-            names=estimator_fwd.metastable_states.cat.categories[:2],
+            names=estimator_fwd._get(P.MACRO).cat.categories[:2],
         )
         estimator_fwd.plot_terminal_states()
 
@@ -307,13 +308,13 @@ class TestLowLevelPipeline:
         estimator_bwd.compute_schur(5, method="brandts")
         estimator_bwd.plot_schur()
 
-        estimator_bwd.compute_metastable_states(3, n_cells=16)
-        estimator_bwd.plot_metastable_states()
+        estimator_bwd.compute_macrostates(3, n_cells=16)
+        estimator_bwd.plot_macrostates()
         estimator_bwd.plot_coarse_T(show_initial_dist=True, show_stationary_dist=True)
         estimator_bwd.plot_schur_matrix()
 
         # select all cells
-        estimator_bwd.set_terminal_states_from_metastable_states(n_cells=16)
+        estimator_bwd.set_terminal_states_from_macrostates(n_cells=16)
         estimator_bwd.plot_terminal_states()
 
         estimator_bwd.compute_absorption_probabilities()
@@ -322,9 +323,9 @@ class TestLowLevelPipeline:
         _assert_has_all_keys(adata, Direction.BACKWARD)
 
         # select a subset of states
-        estimator_bwd.set_terminal_states_from_metastable_states(
+        estimator_bwd.set_terminal_states_from_macrostates(
             n_cells=16,
-            names=estimator_bwd.metastable_states.cat.categories[:2],
+            names=estimator_bwd._get(P.MACRO).cat.categories[:2],
         )
         estimator_bwd.plot_terminal_states()
 

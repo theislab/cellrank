@@ -84,7 +84,7 @@ def _create_colors(
 
 def _convert_to_hex_colors(colors: Sequence[Any]) -> List[str]:
     if not all(mcolors.is_color_like(c) for c in colors):
-        raise ValueError("Not all colors are color-like.")
+        raise ValueError("Not all values are color-like.")
 
     return [mcolors.to_hex(c) for c in colors]
 
@@ -187,19 +187,37 @@ def _map_names_and_colors(
         raise TypeError(
             f"Query series must be `categorical`, found `{infer_dtype(series_query)}`."
         )
+    if len(series_reference) != len(series_query):
+        raise ValueError(
+            f"Expected the reference and query to have same length,"
+            f"found `{len(series_reference)}`, `{len(series_query)}`."
+        )
+
+    if en_cutoff is not None and en_cutoff < 0:
+        raise ValueError(
+            f"Expected entropy cutoff to be non-negative, found `{en_cutoff}`."
+        )
+
     if not np.all(series_reference.index == series_query.index):
         raise ValueError("Series indices do not match, cannot map names and colors.")
 
     process_colors = colors_reference is not None
+
+    if not len(series_query):
+        res = Series([], dtype="category")
+        return (res, []) if process_colors else res
+
     if process_colors:
         if len(colors_reference) < len(series_reference.cat.categories):
             raise ValueError(
                 f"Length of reference colors `{len(colors_reference)}` is smaller than "
-                f"length of reference series `{len(series_reference.cat.categories)}`."
+                f"length of reference categories `{len(series_reference.cat.categories)}`."
             )
         colors_reference = colors_reference[: len(series_reference.cat.categories)]
         if not all(mcolors.is_color_like(c) for c in colors_reference):
-            raise ValueError("Not all colors are valid colors.")
+            raise ValueError("Not all values are valid colors.")
+        if len(set(colors_reference)) != len(colors_reference):
+            logg.warning("Color sequence contains non-unique elements")
 
     # create dataframe to store the associations between reference and query
     cats_query = series_query.cat.categories
@@ -215,9 +233,10 @@ def _map_names_and_colors(
         association_df.loc[cl] = row
     association_df = association_df.apply(to_numeric)
 
-    # find the mapping which maximizes overlap and compute entropy
+    # find the mapping which maximizes overlap
     names_query = association_df.T.idxmax()
-    association_df["entropy"] = entropy(association_df.T)
+    if en_cutoff is not None:
+        association_df["entropy"] = entropy(association_df.T)
     association_df["name"] = names_query
 
     # assign query colors
@@ -236,44 +255,46 @@ def _map_names_and_colors(
         key: np.sum(names_query == key) for key in names_query_series.cat.categories
     }
 
-    names_query_new = np.array(names_query.copy())
+    # warning: do NOT use np.array - if I pass for e.g. colors ['red'], the dtype will be '<U3'
+    # but _create_colors convert them to hex, which will leave them trimmed to #ff or similar
+    names_query_new = Series(names_query.copy())
     if process_colors:
-        colors_query_new = np.array(colors_query.copy())
+        colors_query_new = Series(colors_query.copy())
 
     # Create unique names by adding suffixes "..._1, ..._2" etc and unique colors by shifting the original color
     for key, value in frequ.items():
         if value == 1:
             continue  # already unique, skip
-
         # deal with non-unique names
-        suffix = list(np.arange(1, value + 1).astype("str"))
-        unique_names = [f"{key}_{rep}" for rep in suffix]
-        names_query_new[names_query_series == key] = unique_names
+        unique_names = [f"{key}_{rep}" for rep in np.arange(1, value + 1)]
+        # .value because of pandas 1.0.0
+        names_query_new.iloc[(names_query_series == key).values] = unique_names
         if process_colors:
             color = association_df[association_df["name"] == key]["color"].values[0]
             shifted_colors = _create_colors(color, value, saturation_range=None)
-            colors_query_new[np.array(colors_query) == color] = shifted_colors
+            colors_query_new.iloc[(names_query_series == key).values] = shifted_colors
 
-    association_df["name"] = names_query_new
-    if process_colors:
-        association_df["color"] = _convert_to_hex_colors(
-            colors_query_new
-        )  # original colors can be still there, convert to hex
+    # warnings: if it's categorical and assigning to `.cat.categories`, it will
+    # take the categorical information, making the 2nd line below necessary
+    names_query_new = names_query_new.astype("category")
+    names_query_new.cat.reorder_categories(np.array(names_query_new), inplace=True)
 
     # issue a warning for mapping with high entropy
     if en_cutoff is not None:
-        critical_cats = list(
-            association_df.loc[association_df["entropy"] > en_cutoff, "name"].values
+        critical_cats = sorted(
+            set(
+                association_df.loc[association_df["entropy"] > en_cutoff, "name"].values
+            )
         )
         if len(critical_cats) > 0:
             logg.warning(
-                f"The following states could not be mapped uniquely: `{', '.join(map(str, critical_cats))}`"
+                f"The following states could not be mapped uniquely: `{critical_cats}`"
             )
 
     return (
-        (association_df["name"], list(association_df["color"]))
+        (names_query_new, list(_convert_to_hex_colors(colors_query_new)))
         if process_colors
-        else association_df["name"]
+        else names_query_new
     )
 
 

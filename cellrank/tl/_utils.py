@@ -1009,8 +1009,8 @@ def _fuzzy_to_discrete(
             raise ValueError("Rows in `a_fuzzy` do not sum to `1`.")
     if n_most_likely > int(n_samples / n_clusters):
         raise ValueError(
-            f"You've selected {n_most_likely} cells, please decrease this to at most "
-            f"{int(n_samples / n_clusters)} cells for your dataset."
+            f"You've selected `{n_most_likely}` cells, please decrease this to at most "
+            f"`{int(n_samples / n_clusters)}` cells for your dataset."
         )
 
     # initialise
@@ -1395,9 +1395,9 @@ def _create_initial_terminal_annotations(
     adata
         AnnData object to write to ``.obs[key_added]``.
     terminal_key
-        Key from ``adata.obs`` where final states have been saved.
+        Key from ``adata.obs`` where terminal states have been saved.
     initial_key
-        Key from ``adata.obs`` where root states have been saved.
+        Key from ``adata.obs`` where initial states have been saved.
     terminal_prefix
         Forward direction prefix used in the annotations.
     initial_prefix

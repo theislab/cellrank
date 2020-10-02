@@ -100,13 +100,14 @@ def cluster_lineage(
     clusters: Optional[Sequence[str]] = None,
     n_points: int = 200,
     time_key: str = "latent_time",
-    cluster_key: str = "clusters",
     norm: bool = True,
     recompute: bool = False,
     callback: _callback_type = None,
     ncols: int = 3,
     sharey: Union[str, bool] = False,
-    key_added: Optional[str] = None,
+    key: Optional[str] = None,
+    random_state: Optional[int] = None,
+    use_leiden: bool = False,
     show_progress_bar: bool = True,
     n_jobs: Optional[int] = 1,
     backend: str = _DEFAULT_BACKEND,
@@ -115,15 +116,15 @@ def cluster_lineage(
     save: Optional[Union[str, Path]] = None,
     pca_kwargs: Dict = MappingProxyType({"svd_solver": "arpack"}),
     neighbors_kwargs: Dict = MappingProxyType({"use_rep": "X"}),
-    louvain_kwargs: Dict = MappingProxyType({}),
+    clustering_kwargs: Dict = MappingProxyType({}),
     **kwargs,
 ) -> None:
     """
     Cluster gene expression trends within a lineage and plot the clusters.
 
     This function is based on Palantir, see [Setty19]_. It can be used to discover modules of genes that drive
-    development along a given lineage. Consider running this function on a subset of genes which are potential lineage
-    drivers, identified e.g. by running :func:`cellrank.tl.lineage_drivers`.
+    development along a given lineage. Consider running this function on a subset of genes which are potential
+    lineage drivers, identified e.g. by running :func:`cellrank.tl.lineage_drivers`.
 
     Parameters
     ----------
@@ -135,14 +136,12 @@ def cluster_lineage(
     %(backward)s
     %(time_ranges)s
     clusters
-        Cluster identifiers to plot. If `None`, all clusters will be considered.
-        Useful when plotting previously computed clusters.
+        Cluster identifiers to plot. If `None`, all clusters will be considered. Useful when
+        plotting previously computed clusters.
     n_points
         Number of points used for prediction.
     time_key
         Key in ``adata.obs`` where the pseudotime is stored.
-    cluster_key
-        Key in ``adata.obs`` where the clustering is stored.
     norm
         Whether to z-normalize each trend to have zero mean, unit variance.
     recompute
@@ -152,16 +151,20 @@ def cluster_lineage(
         Number of columns for the plot.
     sharey
         Whether to share y-axis across multiple plots.
-    key_added
-        Postfix to add when saving the results to ``adata.uns``.
+    key
+        Key in ``adata.uns`` where to save the results. If `None`, it will be saved as ``lineage_{lineage}_trend`` .
+    random_state
+        Random seed for reproducibility.
+    use_leiden
+        Whether to use :func:`scanpy.tl.leiden` for clustering or :func:`scanpy.tl.louvain`.
     %(parallel)s
     %(plotting)s
     pca_kwargs
         Keyword arguments for :func:`scanpy.pp.pca`.
     neighbors_kwargs
         Keyword arguments for :func:`scanpy.pp.neighbors`.
-    louvain_kwargs
-        Keyword arguments for :func:`scanpy.tl.louvain`.
+    clustering_kwargs
+        Keyword arguments for :func:`scanpy.tl.louvain` or :func:`scanpy.tl.leiden`.
     **kwargs:
         Keyword arguments for :meth:`cellrank.ul.models.BaseModel.prepare`.
 
@@ -171,7 +174,7 @@ def cluster_lineage(
 
         Updates ``adata.uns`` with the following key:
 
-            - ``lineage_{lineage}_trend_{key_added}`` - an :class:`anndata.AnnData` object
+            - ``key`` or ``lineage_{lineage}_trend`` - an :class:`anndata.AnnData` object
               of shape ``(n_genes, n_points)`` containing the clustered genes.
     """
 
@@ -187,12 +190,12 @@ def cluster_lineage(
     genes = _unique_order_preserving(genes)
     _check_collection(adata, genes, "var_names", kwargs.get("use_raw", False))
 
-    key_to_add = f"lineage_{lineage}_trend"
-    if key_added is not None:
-        logg.debug(f"Adding key `{key_added!r}`")
-        key_to_add += f"_{key_added}"
+    if key is None:
+        key = f"lineage_{lineage}_trend"
 
-    if recompute or key_to_add not in adata.uns:
+    random_state = np.random.mtrand.RandomState(random_state).randint(2 ** 16)
+
+    if recompute or key not in adata.uns:
         kwargs["time_key"] = time_key  # kwargs for the model.prepare
         kwargs["n_test_points"] = n_points
         kwargs["backward"] = backward
@@ -218,7 +221,7 @@ def cluster_lineage(
 
         trends = trends.T
         if norm:
-            logg.debug("Normalizing using `StandardScaler`")
+            logg.debug("Normalizing trends")
             _ = StandardScaler(copy=False).fit_transform(trends)
 
         trends = _AnnData(trends.T)
@@ -229,32 +232,52 @@ def cluster_lineage(
             raise RuntimeError(
                 f"Expected to find `{len(genes)}` genes, found `{trends.n_obs}`."
             )
-        if n_points is not None and trends.n_vars != n_points:
+        if trends.n_vars != n_points:
             raise RuntimeError(
                 f"Expected to find `{n_points}` points, found `{trends.n_vars}`."
             )
 
         pca_kwargs = dict(pca_kwargs)
-        n_comps = pca_kwargs.pop(
-            "n_comps", min(50, kwargs.get("n_test_points"), len(genes)) - 1
-        )  # default value
+        pca_kwargs.setdefault("n_comps", min(50, n_points, len(genes)) - 1)
+        pca_kwargs.setdefault("random_state", random_state)
+        sc.pp.pca(trends, **pca_kwargs)
 
-        sc.pp.pca(trends, n_comps=n_comps, **pca_kwargs)
+        neighbors_kwargs = dict(neighbors_kwargs)
+        neighbors_kwargs.setdefault("random_state", random_state)
         sc.pp.neighbors(trends, **neighbors_kwargs)
 
-        louvain_kwargs = dict(louvain_kwargs)
-        louvain_kwargs["key_added"] = cluster_key
-        sc.tl.louvain(trends, **louvain_kwargs)
+        clustering_kwargs = dict(clustering_kwargs)
+        clustering_kwargs["key_added"] = "clusters"
+        clustering_kwargs.setdefault("random_state", random_state)
+        try:
+            if use_leiden:
+                sc.tl.leiden(trends, **clustering_kwargs)
+            else:
+                sc.tl.louvain(trends, **clustering_kwargs)
+        except ImportError as e:
+            logg.warning(str(e))
+            if use_leiden:
+                sc.tl.louvain(trends, **clustering_kwargs)
+            else:
+                sc.tl.leiden(trends, **clustering_kwargs)
 
-        adata.uns[key_to_add] = trends
+        logg.info(f"Saving data to `adata.uns[{key!r}]`")
+        adata.uns[key] = trends
     else:
-        logg.info(f"Loading data from `adata.uns[{key_to_add!r}]`")
-        trends = adata.uns[key_to_add]
+        logg.info(f"Loading data from `adata.uns[{key!r}]`")
+        trends = adata.uns[key]
+
+    if "clusters" not in trends.obs:
+        raise KeyError("Unable to find the clustering in `trends.obs['clusters']`.")
 
     if clusters is None:
-        if cluster_key not in trends.obs:
-            raise KeyError(f"Invalid cluster key `{cluster_key!r}`.")
-        clusters = trends.obs[cluster_key].cat.categories
+        clusters = trends.obs["clusters"].cat.categories
+    for c in clusters:
+        if c not in trends.obs["clusters"].cat.categories:
+            raise ValueError(
+                f"Invalid cluster name `{c!r}`. "
+                f"Valid options are `{list(trends.obs['clusters'].cat.categories)}`."
+            )
 
     nrows = int(np.ceil(len(clusters) / ncols))
     fig, axes = plt.subplots(
@@ -271,7 +294,7 @@ def cluster_lineage(
 
     j = 0
     for j, (ax, c) in enumerate(zip(axes, clusters)):  # noqa
-        data = trends[trends.obs[cluster_key] == c].X
+        data = trends[trends.obs["clusters"] == c].X
         mean, sd = np.mean(data, axis=0), np.var(data, axis=0)
         sd = np.sqrt(sd)
 

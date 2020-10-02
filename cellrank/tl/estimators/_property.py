@@ -221,7 +221,7 @@ class KernelHolder(ABC):
             )
 
         if self.kernel._transition_matrix is None:
-            # access the private attribute to avoid accidentaly computing the transition matrix
+            # access the private attribute to avoid accidentally computing the transition matrix
             # in principle, it doesn't make a difference, apart from not seeing the message
             logg.warning("Computing transition matrix using the default parameters")
             self.kernel.compute_transition_matrix()
@@ -382,12 +382,12 @@ class VectorPlottable(KernelHolder, Property):
 
 class Plottable(KernelHolder, Property):
     """
-    Injector which plots metastable or terminal states or absorption probabilities.
+    Injector which plots macrostates or terminal states or absorption probabilities.
 
     To be used in conjunction with:
 
-        - :class:`cellrank.tool.estimators._property.MetaStates`.
-        - :class:`cellrank.tool.estimators._property.FinStates`.
+        - :class:`cellrank.tool.estimators._property.MacroStates`.
+        - :class:`cellrank.tool.estimators._property.TermStates`.
         - :class:`cellrank.tool.estimators._property.AbsProbs`.
     """
 
@@ -434,8 +434,8 @@ class Plottable(KernelHolder, Property):
             )
         if prop in (P.ABS_PROBS.s, P.TERM.s):
             colors = getattr(self, A.TERM_COLORS.v, None)
-        elif prop == P.META.v:
-            colors = getattr(self, A.META_COLORS.v, None)
+        elif prop == P.MACRO.v:
+            colors = getattr(self, A.MACRO_COLORS.v, None)
         else:
             logg.debug("No colors found. Creating new ones")
             colors = _create_categorical_colors(len(data.cat.categories))
@@ -662,7 +662,7 @@ class Plottable(KernelHolder, Property):
             else:
                 kwargs["color"] = color
 
-            if probs.shape[1] == 1 and prop in (P.META_MEMBER.s, P.TERM_PROBS.s):
+            if probs.shape[1] == 1 and prop in (P.MACRO_MEMBER.s, P.TERM_PROBS.s):
                 if "perc" not in kwargs:
                     logg.warning(
                         "Did not detect percentile for stationary distribution. Setting `perc=[0, 95]`"
@@ -736,8 +736,8 @@ class Plottable(KernelHolder, Property):
 
         if discrete:
             self._plot_discrete(data, prop, **kwargs)
-        elif prop == P.META.v:  # GPCCA
-            prop = P.META_MEMBER.v
+        elif prop == P.MACRO.v:  # GPCCA
+            prop = P.MACRO_MEMBER.v
             self._plot_continuous(getattr(self, prop, None), prop, None, **kwargs)
         elif prop == P.TERM.v:
             probs = getattr(self, A.TERM_ABS_PROBS.s, None)
@@ -775,22 +775,21 @@ class Plottable(KernelHolder, Property):
             )
 
 
-class MetaStates(Plottable):
-    """Class dealing with metastable states."""
+class Macrostates(Plottable):
+    """Class dealing with macrostates."""
 
     __prop_metadata__ = [
-        Metadata(attr=A.META, prop=P.META, dtype=pd.Series, doc="Metastable states."),
+        Metadata(attr=A.MACRO, prop=P.MACRO, dtype=pd.Series),
         Metadata(
-            attr=A.META_MEMBER,
-            prop=P.META_MEMBER,
+            attr=A.MACRO_MEMBER,
+            prop=P.MACRO_MEMBER,
             dtype=Lineage,
-            doc="Metastable states membership.",
         ),
-        Metadata(attr=A.META_COLORS, prop=P.NO_PROPERTY, dtype=np.ndarray),
+        Metadata(attr=A.MACRO_COLORS, prop=P.NO_PROPERTY, dtype=np.ndarray),
     ]
 
     @abstractmethod
-    def compute_metastable_states(self, *args, **kwargs) -> None:  # noqa
+    def compute_macrostates(self, *args, **kwargs) -> None:  # noqa
         pass
 
 

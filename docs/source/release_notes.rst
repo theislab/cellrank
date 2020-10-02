@@ -6,7 +6,24 @@ Release Notes
 Version 1.0
 -----------
 
+1.0.0-rc.11 :small:`2020-09-29`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Fix major bug when mapping names and colors
+
+1.0.0-rc.11 :small:`2020-09-25`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Rename ``metastable states`` to ``macrostates``
+- Rename ``final states`` to ``terminal states``
+- Fix pickling if :class:`cellrank.tl.estimators.BaseEstimator`
+- Fix various color bugs
+- Improve :class:`cellrank.tl.kernels.PrecomputedKernel`
+- Update gallery
+- Other various minor changes
+
 1.0.0-rc.0 :small:`2020-07-15`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - Fix pickling of :class:`cellrank.tl.Lineage` improvements
 - Add additional options to :func:`cellrank.pl.heatmap`

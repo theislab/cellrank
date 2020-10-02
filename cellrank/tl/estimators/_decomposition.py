@@ -466,7 +466,7 @@ class Schur(VectorPlottable, Decomposable):
         )
         if len(self._invalid_n_states):
             logg.info(
-                f"When computing metastable states, choose a number of states NOT in `{list(self._invalid_n_states)}`"
+                f"When computing macrostates, choose a number of states NOT in `{list(self._invalid_n_states)}`"
             )
 
         self._write_eig_to_adata(

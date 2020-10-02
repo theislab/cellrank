@@ -309,6 +309,27 @@ class TestInitializeKernel:
 
         assert string == "~<Conn[dnorm=True]>"
 
+    def test_combination_correct_parameters(self, adata: AnnData):
+        k = VelocityKernel(adata).compute_transition_matrix(
+            softmax_scale=4, seed=42
+        ) + (
+            ConnectivityKernel(adata).compute_transition_matrix(density_normalize=False)
+            + ConnectivityKernel(adata).compute_transition_matrix(
+                density_normalize=True
+            )
+        )
+        k.compute_transition_matrix()
+
+        assert isinstance(k.params, dict)
+        assert len(k.params) == 3
+        assert {"dnorm": True} in k.params.values()
+        assert {"dnorm": False} in k.params.values()
+        assert {
+            "softmax_scale": 4,
+            "mode": "deterministic",
+            "seed": 42,
+        } in k.params.values()
+
 
 class TestKernel:
     def test_precomputed_not_array(self):
@@ -325,18 +346,63 @@ class TestKernel:
         with pytest.raises(ValueError):
             _ = PrecomputedKernel(mat)
 
+    def test_precomputed_from_kernel_no_transition(self, adata: AnnData):
+        vk = VelocityKernel(adata)
+
+        with pytest.raises(ValueError):
+            PrecomputedKernel(vk)
+
+    def test_precomputed_from_kernel(self, adata: AnnData):
+        vk = VelocityKernel(adata).compute_transition_matrix(
+            mode="stochastic", softmax_scale=4
+        )
+
+        pk = PrecomputedKernel(vk)
+        pk.write_to_adata()
+
+        assert pk.adata is vk.adata
+        assert pk._origin == str(vk).strip("~<>")
+        assert pk.params is not vk.params
+        assert pk.params == vk.params
+        assert pk.transition_matrix is not vk.transition_matrix
+        np.testing.assert_array_equal(pk.transition_matrix.A, vk.transition_matrix.A)
+
     def test_precomputed_no_adata(self):
         pk = PrecomputedKernel(random_transition_matrix(50))
         pk.write_to_adata()
 
         assert isinstance(pk.adata, AnnData)
+        assert pk._origin == "'array'"
         assert pk.adata.shape == (50, 1)
         assert pk.adata.obs.shape == (50, 0)
         assert pk.adata.var.shape == (1, 0)
         assert "T_fwd_params" in pk.adata.uns.keys()
+        assert pk.adata.uns["T_fwd_params"] == "<Precomputed[origin='array']>"
         np.testing.assert_array_equal(
             pk.adata.obsp["T_fwd"].toarray(), pk.transition_matrix.toarray()
         )
+
+    def test_precomputed_different_adata(self, adata: AnnData):
+        vk = VelocityKernel(adata).compute_transition_matrix(
+            mode="stochastic", softmax_scale=4
+        )
+        bdata = adata.copy()
+
+        pk = PrecomputedKernel(vk, adata=bdata)
+
+        assert pk.adata is adata
+        assert pk.adata is vk.adata
+        assert pk.adata is not bdata
+
+    def test_precomputed_adata_origin(self, adata: AnnData):
+        vk = VelocityKernel(adata).compute_transition_matrix(
+            mode="stochastic", softmax_scale=4
+        )
+        vk.write_to_adata("foo")
+
+        pk = PrecomputedKernel("foo", adata=adata)
+
+        assert pk._origin == "adata.obsp['foo']"
 
     def test_precomputed_adata(self, adata: AnnData):
         pk = PrecomputedKernel(random_transition_matrix(adata.n_obs), adata=adata)
@@ -421,6 +487,7 @@ class TestKernel:
             mode="stochastic",
             backward=backward,
             softmax_scale=4,
+            weight_connectivities=0,
         ).transition_matrix
 
         np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)

@@ -3,6 +3,7 @@
 
 import pickle
 from abc import ABC, abstractmethod
+from sys import version_info
 from copy import copy, deepcopy
 from math import ceil
 from typing import Any, Dict, Union, TypeVar, Optional, Sequence
@@ -36,9 +37,10 @@ from cellrank.tl._colors import (
     _convert_to_hex_colors,
     _create_categorical_colors,
 )
+from cellrank.tl.kernels import PrecomputedKernel
 from cellrank.tl._lineage import Lineage
 from cellrank.tl._constants import (
-    MetaKey,
+    Macro,
     DirPrefix,
     AbsProbKey,
     PrettyEnum,
@@ -78,8 +80,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
     s_key
         Key in :paramref:`adata` ``.obs``. Can be used to detect cell-cycle driven start- or endpoints.
     write_to_adata
-        Whether to write the transition matrix to :paramref:`adata` ``.obsp``
-        and the parameters to :paramref:`adata` ``.uns``.
+        Whether to write the transition matrix to :paramref:`adata` ``.obsp`` and the parameters to
+        :paramref:`adata` ``.uns``.
     %(write_to_adata.parameters)s
         Only used when ``write_to_adata=True``.
     """
@@ -105,11 +107,11 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         if self.kernel.backward:
             self._term_key = TermStatesKey.BACKWARD.s
             self._abs_prob_key = AbsProbKey.BACKWARD.s
-            self._term_abs_prob_key = MetaKey.BACKWARD.s
+            self._term_abs_prob_key = Macro.BACKWARD.s
         else:
             self._term_key = TermStatesKey.FORWARD.s
             self._abs_prob_key = AbsProbKey.FORWARD.s
-            self._term_abs_prob_key = MetaKey.FORWARD.s
+            self._term_abs_prob_key = Macro.FORWARD.s
 
         self._key_added = key
         self._g2m_key = g2m_key
@@ -772,6 +774,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 en_cutoff=en_cutoff,
             )
             setattr(self, color_key, colors)
+            # if approx_rcs_names is categorical, the info is take from .cat.categories
             categories.cat.categories = approx_rcs_names
         else:
             setattr(
@@ -905,7 +908,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
     def __copy__(self) -> "BaseEstimator":
         return self.copy()
 
-    def write(self, fname: Union[str, Path]) -> None:
+    def write(self, fname: Union[str, Path], ext: Optional[str] = "pickle") -> None:
         """
         Serialize self to a file.
 
@@ -913,6 +916,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         ----------
         fname
             Filename where to save the object.
+        ext
+            Filename extension to use. If `None`, don't append any extension.
 
         Returns
         -------
@@ -921,11 +926,29 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         """
 
         fname = str(fname)
-        if not fname.endswith(".pickle"):
-            fname += ".pickle"
+        if ext is not None:
+            if not ext.startswith("."):
+                ext = "." + ext
+            if not fname.endswith(ext):
+                fname += ext
+
+        logg.debug(f"Writing to `{fname}`")
 
         with open(fname, "wb") as fout:
-            pickle.dump(self, fout)
+            if version_info[:2] > (3, 6):
+                pickle.dump(self, fout)
+            else:
+                # we need to use PrecomputedKernel because Python3.6 can't pickle Enums
+                # and they are present in VelocityKernel
+                logg.warning("Saving kernel as `cellrank.tl.kernels.PrecomputedKernel`")
+                orig_kernel = self.kernel
+                self._kernel = PrecomputedKernel(self.kernel)
+                try:
+                    pickle.dump(self, fout)
+                except Exception as e:
+                    raise e
+                finally:
+                    self._kernel = orig_kernel
 
     @staticmethod
     def read(fname: Union[str, Path]) -> "BaseEstimator":

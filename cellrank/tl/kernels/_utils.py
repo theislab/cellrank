@@ -232,13 +232,13 @@ def _predict_transition_probabilities_numpy(
     return numerator / np.nansum(numerator), x
 
 
-def _filter_kwargs(fn: Callable, **kwargs) -> dict:
+def _filter_kwargs(_fn: Callable, **kwargs) -> dict:
     """
     Filter keyword arguments.
 
     Parameters
     ----------
-    fn
+    _fn
         Function for which to filter keyword arguments.
     **kwargs
         Keyword arguments to filter
@@ -249,7 +249,7 @@ def _filter_kwargs(fn: Callable, **kwargs) -> dict:
         Filtered keyword arguments for the given function.
     """
 
-    sig = signature(fn).parameters
+    sig = signature(_fn).parameters
     return {k: v for k, v in kwargs.items() if k in sig}
 
 

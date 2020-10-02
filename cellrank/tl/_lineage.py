@@ -813,13 +813,13 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         return_weights: bool = False,
     ) -> Union["Lineage", Tuple["Lineage", Optional[pd.DataFrame]]]:
         """
-        Reduce metastable states to %(initial_or_terminal)s states.
+        Subset states and normalize them so that they again sum to 1.
 
         Parameters
         ----------
         keys
-            List of keys that define the %(initial_terminal)s states. The lineage will be reduced to these states
-            by projecting the other states.
+            List of keys that define the states, to which this object will be reduced by projecting the values
+            of the other states.
         mode
             Whether to use a distance measure to compute weights - `'dist'`, or just rescale - `'scale'`.
         dist_measure

@@ -8,7 +8,7 @@ import pandas as pd
 from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.tl.kernels import PrecomputedKernel
-from cellrank.tl._constants import AbsProbKey, TermStatesKey, FinalStatesPlot
+from cellrank.tl._constants import AbsProbKey, TermStatesKey, TerminalStatesPlot
 from cellrank.tl.estimators import GPCCA
 from cellrank.tl.estimators._constants import P
 from cellrank.tl.kernels._precomputed_kernel import DummyKernel
@@ -60,11 +60,11 @@ def lineages(
     if backward:
         lin_key = AbsProbKey.BACKWARD
         fs_key = TermStatesKey.BACKWARD
-        fs_key_pretty = FinalStatesPlot.BACKWARD
+        fs_key_pretty = TerminalStatesPlot.BACKWARD
     else:
         lin_key = AbsProbKey.FORWARD
         fs_key = TermStatesKey.FORWARD
-        fs_key_pretty = FinalStatesPlot.FORWARD
+        fs_key_pretty = TerminalStatesPlot.FORWARD
 
     try:
         pk = PrecomputedKernel(adata=adata, backward=backward)

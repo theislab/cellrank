@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
+import os
 from typing import Tuple
+from tempfile import TemporaryDirectory
 
 import pytest
+from _helpers import assert_estimators_equal
 
 from anndata import AnnData
 
@@ -425,7 +428,7 @@ class TestCFLARE:
             cellrank.tl.kernels._precomputed_kernel.PrecomputedKernel(transition_matrix)
         )
 
-        # define the set of metastable states
+        # define the set of macrostates
         state_annotation = pd.Series(index=range(p.shape[0]))
         state_annotation[7] = "terminal_1"
         state_annotation[10] = "terminal_2"
@@ -460,16 +463,18 @@ class TestCFLARE:
         assert pd.isna(adata.obs[f"{TermStatesKey.FORWARD}"][~zero_mask]).all()
 
 
-class TestCFLARECopy:
-    def test_copy_simple(
-        self, adata_cflare_fwd: Tuple[AnnData, cr.tl.estimators.CFLARE]
-    ):
+class TestCFLAREIO:
+    def test_copy(self, adata_cflare_fwd: Tuple[AnnData, cr.tl.estimators.CFLARE]):
         _, mc1 = adata_cflare_fwd
         mc2 = mc1.copy()
 
-        assert mc1 is not mc2
-        assert mc1.adata is not mc2.adata
-        assert mc1.kernel is not mc2.kernel
+        assert_estimators_equal(mc1, mc2, copy=True)
 
-    # TODO - copy tests, saving tests, fit tests
-    # careful in 3.6 - can't pickle enums
+    def test_read(self, adata_cflare_fwd: Tuple[AnnData, cr.tl.estimators.CFLARE]):
+        _, mc1 = adata_cflare_fwd
+
+        with TemporaryDirectory() as tmpdir:
+            mc1.write(os.path.join(tmpdir, "foo"))
+            mc2 = cr.tl.estimators.CFLARE.read(os.path.join(tmpdir, "foo.pickle"))
+
+        assert_estimators_equal(mc1, mc2)

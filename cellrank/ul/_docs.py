@@ -47,7 +47,7 @@ alpha
     Used to compute the `eigengap`. ``alpha`` is the weight given to the deviation of an eigenvalue from one."""
 _n_cells = """\
 n_cells
-    Number of most likely cells from each main to select."""
+    Number of most likely cells from each macrostate to select."""
 _fit = """\
 n_lineages
     Number of lineages. If `None`, it will be determined automatically.

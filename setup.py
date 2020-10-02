@@ -10,7 +10,7 @@ except ImportError:
     __author__ = "Marius Lange, Michal Klein, Juan Luis Restrepo Lopez"
     __maintainer__ = "Marius Lange, Michal Klein"
     __email__ = "info@cellrank.org"
-    __version__ = "1.0.0-rc.10"
+    __version__ = "1.0.0-rc.12"
 
 
 if __name__ == "__main__":
@@ -55,6 +55,7 @@ if __name__ == "__main__":
                 "mock>=4.0.2",
                 "python-igraph",
                 "louvain==0.6.1",
+                "leidenalg==0.8.1",
             ],
             docs=[
                 r
