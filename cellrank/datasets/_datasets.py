@@ -17,6 +17,10 @@ _datasets = dict(  # noqa
         "datasets/endocrinogenesis_day15.5.h5ad",
         "https://github.com/theislab/cellrank_notebooks/raw/master/datasets/pancreas/endocrinogenesis_day15.5.h5ad",
     ),
+    lung=(
+        "datasets/lung_regeneration.h5ad",
+        "https://github.com/theislab/cellrank_notebooks/raw/master/datasets/lung/regeneration.h5ad",
+    ),
     pancreas_preprocessed=(
         None,
         "https://github.com/theislab/cellrank_notebooks/raw/master/"
@@ -58,6 +62,19 @@ def pancreas() -> AnnData:
     """
 
     return _load_dataset_from_url(*_datasets["pancreas"])
+
+
+@d.dedent
+def lung() -> AnnData:
+    """
+    Lung regeneration from [Lung20]_.
+
+    Returns
+    -------
+    %(adata)s
+    """
+
+    return _load_dataset_from_url(*_datasets["lung"])
 
 
 @d.dedent
