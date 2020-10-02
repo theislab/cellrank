@@ -487,6 +487,7 @@ class TestKernel:
             mode="stochastic",
             backward=backward,
             softmax_scale=4,
+            weight_connectivities=0,
         ).transition_matrix
 
         np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)

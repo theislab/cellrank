@@ -16,8 +16,8 @@ macrostates which represent initial & terminal states as well as transient inter
 i.e. for each cell that's not assigned to a terminal state, we then compute its fate probability of it reaching any of the terminal states.
 We show an example of such a fate map in the figure above, which has been computed using the data of `pancreatic endocrinogenesis`_.
 
-CellRank scales to large cell numbers, is fully compatible with `scanpy`_ and `scvelo`_ and is easy
-to use. For **installation instructions**, **documentation** and **tutorials**, visit `cellrank.org`_.
+CellRank scales to large cell numbers, is fully compatible with `scanpy`_ and `scvelo`_ and is easy to use.
+For **installation instructions**, **documentation** and **tutorials**, visit `cellrank.org`_.
 
 CellRank's key applications
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
