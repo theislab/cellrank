@@ -332,6 +332,97 @@ class TestGPCCA:
         key = TermStatesKey.BACKWARD.s
 
         assert key in mc.adata.obs
+        np.testing.assert_array_equal(mc.adata.obs[key].cat.categories, ["0"])
+        assert _probs(key) in mc.adata.obs
+        assert _colors(key) in mc.adata.uns
+        assert _lin_names(key) in mc.adata.uns
+
+        # make sure that we don't write anything there - it's useless
+        assert set(mc.adata.obsm.keys()) == obsm_keys
+
+    def test_compute_initial_states_from_forward_no_macro(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large, backward=False).compute_transition_matrix(
+            softmax_scale=4
+        )
+        ck = ConnectivityKernel(adata_large, backward=False).compute_transition_matrix()
+        terminal_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc.compute_schur(n_components=10, method="krylov")
+
+        with pytest.raises(RuntimeError):
+            mc._compute_initial_states(1)
+
+    def test_compute_initial_states_from_forward_too_many_states(
+        self, adata_large: AnnData
+    ):
+        vk = VelocityKernel(adata_large, backward=False).compute_transition_matrix(
+            softmax_scale=4
+        )
+        ck = ConnectivityKernel(adata_large, backward=False).compute_transition_matrix()
+        terminal_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc.compute_schur(n_components=10, method="krylov")
+
+        mc.compute_macrostates(n_states=2, n_cells=5)
+        with pytest.raises(ValueError):
+            mc._compute_initial_states(42)
+
+    def test_compute_initial_states_from_forward_too_few_states(
+        self, adata_large: AnnData
+    ):
+        vk = VelocityKernel(adata_large, backward=False).compute_transition_matrix(
+            softmax_scale=4
+        )
+        ck = ConnectivityKernel(adata_large, backward=False).compute_transition_matrix()
+        terminal_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc.compute_schur(n_components=10, method="krylov")
+
+        mc.compute_macrostates(n_states=2, n_cells=5)
+        with pytest.raises(ValueError):
+            mc._compute_initial_states(0)
+
+    def test_compute_initial_states_from_forward_no_stat_dist(
+        self, adata_large: AnnData
+    ):
+        vk = VelocityKernel(adata_large, backward=False).compute_transition_matrix(
+            softmax_scale=4
+        )
+        ck = ConnectivityKernel(adata_large, backward=False).compute_transition_matrix()
+        terminal_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc.compute_schur(n_components=10, method="krylov")
+
+        mc.compute_macrostates(n_states=2, n_cells=5)
+        mc._coarse_stat_dist = None
+
+        with pytest.raises(ValueError):
+            mc._compute_initial_states(0)
+
+    def test_compute_initial_states_from_forward_normal_run(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large, backward=False).compute_transition_matrix(
+            softmax_scale=4
+        )
+        ck = ConnectivityKernel(adata_large, backward=False).compute_transition_matrix()
+        terminal_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc.compute_schur(n_components=10, method="krylov")
+
+        mc.compute_macrostates(n_states=2, n_cells=5)
+        obsm_keys = set(mc.adata.obsm.keys())
+        expected = mc._get(P.COARSE_STAT_D).index[np.argmin(mc._get(P.COARSE_STAT_D))]
+
+        mc._compute_initial_states(1)
+
+        key = TermStatesKey.BACKWARD.s
+
+        assert key in mc.adata.obs
+        np.testing.assert_array_equal(mc.adata.obs[key].cat.categories, [expected])
         assert _probs(key) in mc.adata.obs
         assert _colors(key) in mc.adata.uns
         assert _lin_names(key) in mc.adata.uns
