@@ -114,6 +114,7 @@ Datasets
     :toctree: api/datasets
 
     datasets.pancreas
+    datasets.lung
     datasets.pancreas_preprocessed
 
 
