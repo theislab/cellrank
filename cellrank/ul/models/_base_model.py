@@ -726,8 +726,7 @@ class BaseModel(ABC):
                 cax,
                 norm=norm,
                 cmap=abs_prob_cmap,
-                label="absorption probability",
-                ticks=np.linspace(np.min(self.w_all), np.max(self.w_all), 5),
+                ticks=np.linspace(norm.vmin, norm.vmax, 5),
             )
 
         if save is not None:

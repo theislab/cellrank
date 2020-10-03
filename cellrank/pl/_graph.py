@@ -520,7 +520,10 @@ def graph(
             divider = make_axes_locatable(ax)
             cax = divider.append_axes("right", size="1.5%", pad=0.05)
             _ = mpl.colorbar.ColorbarBase(
-                cax, cmap=cont_cmap, norm=mpl.colors.Normalize(vmin=vmin, vmax=vmax)
+                cax,
+                cmap=cont_cmap,
+                norm=mpl.colors.Normalize(vmin=vmin, vmax=vmax),
+                ticks=np.linspace(vmin, vmax, 10),
             )
 
         if color_nodes is False:
