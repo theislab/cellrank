@@ -46,7 +46,7 @@ class GAMR(BaseModel):
         super().__init__(adata, model=None)
         self._n_splines = n_splines
         self._family = distribution
-        self._formula = f"y ~ s(x0, bs='cr', k={self._n_splines})"
+        self._formula = f"y ~ -1 + U + s(x0, bs='cr', k={self._n_splines}, id=1)"
         self._design_mat = None
         self._original_offset = None  # for copy
         self._gam_kwargs = copy(kwargs)
@@ -92,6 +92,7 @@ class GAMR(BaseModel):
             np.c_[self.x, self.y],
             columns=["x0", "y"],
         )
+        self._design_mat["U"] = 1.0
 
         if self._original_offset is not None:
             mask = np.isin(self.adata.obs_names, self._obs_names[use_ixs])
@@ -151,6 +152,8 @@ class GAMR(BaseModel):
         self, x_test: Optional[np.ndarray] = None, key_added: str = "_x_test"
     ) -> pd.DataFrame:
         newdata = pd.DataFrame(self._check(key_added, x_test), columns=["x0"])
+        newdata["U"] = 1.0
+
         if "offset" in self._design_mat:
             newdata["offset"] = np.mean(self._design_mat["offset"])
 

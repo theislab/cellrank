@@ -85,7 +85,7 @@ def _calculate_norm_factors(
     )
 
     # return f / np.exp(np.mean(np.log(f)))
-    return f / np.expm1(np.mean(np.log1p(f)))
+    return f / np.exp(np.mean(np.log(f)))
 
 
 @valuedispatch
@@ -108,7 +108,7 @@ def _(
         show_progress_bar=False,
         as_array=False,
         extractor=lambda res: np.array([r for rs in res for r in rs]),
-        backend="threading",  # TODO: expose?
+        backend="threading",  # TODO: numba...
         n_jobs=4,
     )(
         obs_=x,
@@ -274,5 +274,7 @@ def _get_offset(
     except Exception as e:
         # TODO: logg
         print(e)
-        nf = np.ones(adata.n_obs, dtype=np.floay64)
-    return np.log1p(nf * np.array(data.sum(1)).squeeze())
+        nf = np.ones(adata.n_obs, dtype=np.float64)
+    offset = np.log(nf * np.array(data.sum(1)).squeeze())
+
+    return offset
