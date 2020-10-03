@@ -34,6 +34,7 @@ class GAMR(BaseModel):
         TODO.
     """  # noqa
 
+    # TODO: add fixed effects
     def __init__(
         self,
         adata: AnnData,
@@ -46,10 +47,10 @@ class GAMR(BaseModel):
         super().__init__(adata, model=None)
         self._n_splines = n_splines
         self._family = distribution
-        self._formula = f"y ~ -1 + U + s(x0, bs='cr', k={self._n_splines}, id=1)"
+        self._formula = f"y ~ -1 + U + s(x0, bs='cr', k={self._n_splines})"
         self._design_mat = None
         self._original_offset = None  # for copy
-        self._gam_kwargs = copy(kwargs)
+        self._control_kwargs = copy(kwargs)
 
         self._lib = None
         self._lib_name = None
@@ -141,7 +142,7 @@ class GAMR(BaseModel):
             knots=pd.DataFrame(
                 _find_knots(self.x, self._n_splines)
             ),  # needs to be a DataFrame
-            **self._gam_kwargs,
+            control=self._lib.gam_control(**self._control_kwargs),
         )
 
         pandas2ri.deactivate()
@@ -194,6 +195,7 @@ class GAMR(BaseModel):
             np.array(
                 robjects.r.predict(
                     self.model,
+                    type="response",
                     newdata=pandas2ri.py2rpy(newdata),
                 )
             )
@@ -242,10 +244,12 @@ class GAMR(BaseModel):
 
         newdata = self._get_x_test(x_test)
 
+        # TODO: maybe don't recompute and use se=True in predict
         pandas2ri.activate()
         res = robjects.r.predict(
             self.model,
             newdata=pandas2ri.py2rpy(newdata),
+            type="response",
             se=True,
         )
         pandas2ri.deactivate()
@@ -270,7 +274,7 @@ class GAMR(BaseModel):
         )
         res._lib = self._lib
         res._lib_name = self._lib_name
-        res._gam_kwargs = self._gam_kwargs
+        res._control_kwargs = self._control_kwargs
 
         return res
 
