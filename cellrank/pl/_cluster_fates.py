@@ -194,6 +194,7 @@ def cluster_fates(
             cax, _ = mpl.colorbar.make_axes(ax, aspect=60)
             _ = mpl.colorbar.ColorbarBase(
                 cax,
+                ticks=np.linspace(norm.vmin, norm.vmax, 5),
                 norm=norm,
                 cmap=kwargs["cmap"],
                 label="average absorption probability",

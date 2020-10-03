@@ -473,9 +473,13 @@ def _trends_helper(
             ][0].set_norm(norm)
 
         divider = make_axes_locatable(ax)
-        cax = divider.append_axes("right", size="2.5%", pad=0.1)
+        cax = divider.append_axes("right", size="2%", pad=0.1)
         _ = mpl.colorbar.ColorbarBase(
-            cax, norm=norm, cmap=abs_prob_cmap, label="absorption probability"
+            cax,
+            norm=norm,
+            cmap=abs_prob_cmap,
+            label="absorption probability",
+            ticks=np.linspace(norm.vmin, norm.vmax, 5),
         )
 
     if same_plot and lineage_names != [None] and legend_loc is not None:

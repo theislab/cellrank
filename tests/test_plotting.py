@@ -59,6 +59,7 @@ RAW_GENES = [
 
 cr.settings.figdir = FIGS
 scv.settings.figdir = str(FIGS)
+scv.set_figure_params(transparent=True)
 
 try:
     from importlib_metadata import version as get_version
@@ -2064,19 +2065,17 @@ class TestModel:
     def test_model_default(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         model.prepare(adata.var_names[0], "1")
-        model.fit()
-        model.predict()
+        model.fit().predict()
         model.confidence_interval()
-        model.plot(save=fpath)
+        model.plot(save=fpath, dpi=DPI)
 
     @compare(kind="bwd")
     def test_model_default_bwd(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         model.prepare(adata.var_names[0], "0", backward=True)
-        model.fit()
-        model.predict()
+        model.fit().predict()
         model.confidence_interval()
-        model.plot(save=fpath)
+        model.plot(save=fpath, dpi=DPI)
 
     @compare()
     def test_model_obs_data_key(self, adata: AnnData, fpath: str):
@@ -2085,10 +2084,32 @@ class TestModel:
         adata.obs["foo"] = gene.A if issparse(gene) else gene
 
         model.prepare("foo", "1", data_key="obs")
-        model.fit()
-        model.predict()
+        model.fit().predict()
         model.confidence_interval()
-        model.plot(save=fpath)
+        model.plot(save=fpath, dpi=DPI)
+
+    @compare()
+    def test_model_no_lineage(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        model.prepare(adata.var_names[0], None)
+        model.fit().predict()
+        model.confidence_interval()
+        model.plot(save=fpath, dpi=DPI)
+
+    # TODO: parametrize (hide cells, ci)
+    @compare()
+    def test_model_show_lib_prob_cells_ci(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        model.prepare(adata.var_names[0], "0")
+        model.fit().predict()
+        model.confidence_interval()
+        model.plot(
+            save=fpath,
+            dpi=DPI,
+            hide_cells=False,
+            show_conf_int=True,
+            show_lineage_probability=True,
+        )
 
 
 class TestComposition:
