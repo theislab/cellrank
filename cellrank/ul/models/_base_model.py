@@ -3,6 +3,7 @@
 import re
 from abc import ABC, abstractmethod
 from copy import copy as _copy
+from copy import deepcopy
 from typing import Any, Tuple, Union, TypeVar, Optional
 
 import numpy as np
@@ -564,11 +565,13 @@ class BaseModel(ABC):
         xlabel: str = "pseudotime",
         ylabel: str = "expression",
         show_conf_int: bool = True,
+        show_lineage_probability: bool = False,
         dpi: int = None,
         fig: mpl.figure.Figure = None,
         ax: mpl.axes.Axes = None,
         return_fig: bool = False,
         save: Optional[str] = None,
+        **kwargs,
     ) -> Optional[mpl.figure.Figure]:
         """
         Plot the smoothed gene expression.
@@ -609,6 +612,8 @@ class BaseModel(ABC):
             Label on the y-axis.
         show_conf_int
             Whether to show the confidence interval.
+        show_lineage_probability
+            Whether to show smoothed lineage probability. Note that this will require 1 additional model fit.
         dpi
             Dots per inch.
         fig
@@ -619,6 +624,9 @@ class BaseModel(ABC):
             If `True`, return the figure object.
         save
             Filename where to save the plot. If `None`, just shows the plots.
+        **kwargs
+            Keyword arguments for :meth:`matplotlib.axes.Axes.legend`, e.g. to disable the legend, specify ``loc=None``.
+            Only available when ``show_lineage_probability=True``.
 
         Returns
         -------
@@ -631,11 +639,29 @@ class BaseModel(ABC):
         if dpi is not None:
             fig.set_dpi(dpi)
 
+        show_conf_int = show_conf_int and self.conf_int is not None
+
+        if not show_lineage_probability:
+            scaler = lambda _: _  # noqa
+        else:
+            minn = np.min(self.y_all)
+
+            maxes = [self.y_test]
+            if not hide_cells:
+                maxes.append([self.y_all])
+            if show_conf_int:
+                maxes.append([self.conf_int])
+            maxx = max(map(np.max, maxes))
+
+            scaler = lambda x: (x - minn) / (maxx - minn)  # noqa
+            if ylabel == "expression":
+                ylabel = "scaled expression"
+
         vmin, vmax = _minmax(self.w, perc)
         if not hide_cells:
             _ = ax.scatter(
                 self.x_all.squeeze(),
-                self.y_all.squeeze(),
+                scaler(self.y_all.squeeze()),
                 c=cell_color
                 if same_plot or np.allclose(self.w_all, 1.0)
                 else self.w_all.squeeze(),
@@ -649,7 +675,9 @@ class BaseModel(ABC):
         if title is None:
             title = f"{self._gene} @ {self._lineage}"
 
-        _ = ax.plot(self.x_test, self.y_test, color=lineage_color, lw=lw, label=title)
+        ax.plot(
+            self.x_test, scaler(self.y_test), color=lineage_color, lw=lw, label=title
+        )
 
         ax.set_title(title)
         ax.set_ylabel(ylabel)
@@ -657,15 +685,33 @@ class BaseModel(ABC):
 
         ax.margins(margins)
 
-        if show_conf_int and self.conf_int is not None:
+        if show_conf_int:
             ax.fill_between(
                 self.x_test.squeeze(),
-                self.conf_int[:, 0],
-                self.conf_int[:, 1],
+                scaler(self.conf_int[:, 0]),
+                scaler(self.conf_int[:, 1]),
                 alpha=lineage_alpha,
                 color=lineage_color,
                 linestyle="--",
             )
+
+        if show_lineage_probability:
+            model = deepcopy(self)
+            model._y = self._reshape_and_retype(model.w)
+            model._w = np.ones_like(model.w)
+            y = model.fit().predict()
+
+            handle = ax.plot(
+                model.x_test,
+                y,
+                color=lineage_color,
+                lw=lw,
+                linestyle="--",
+                zorder=-1,
+                label=f"{self._lineage} probability",
+            )
+            if kwargs.get("loc", object) is not None:
+                ax.legend(handles=handle, **kwargs)
 
         if (
             show_cbar
@@ -675,9 +721,13 @@ class BaseModel(ABC):
         ):
             norm = mcolors.Normalize(vmin=vmin, vmax=vmax)
             divider = make_axes_locatable(ax)
-            cax = divider.append_axes("right", size="2.5%", pad=0.1)
+            cax = divider.append_axes("right", size="2%", pad=0.1)
             _ = mpl.colorbar.ColorbarBase(
-                cax, norm=norm, cmap=abs_prob_cmap, label="absorption probability"
+                cax,
+                norm=norm,
+                cmap=abs_prob_cmap,
+                label="absorption probability",
+                ticks=np.linspace(np.min(self.w_all), np.max(self.w_all), 5),
             )
 
         if save is not None:
