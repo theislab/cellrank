@@ -53,3 +53,11 @@ References
 .. [MAGIC18] Van Dijk, D. *et al.* (2018),
     *Recovering Gene Interactions from Single-Cell Data Using Data Diffusion*,
     `Cell <https://doi.org/10.1016/j.cell.2018.05.061>`__.
+
+.. [Lung20] Strunz, M. *et al.* (2020),
+    *Alveolar regeneration through a Krt8+ transitional stem cell state that persists in human lung fibrosis*,
+    `Nature Communications <https://doi.org/10.1038/s41467-020-17358-3>`__.
+
+.. [Macosko15] Macosko, E. Z. *et al.*, (2015),
+    *Highly Parallel Genome-wide Expression Profiling of Individual Cells Using Nanoliter Droplets*,
+    `Cell <https://doi.org/10.1016/j.cell.2015.05.002>`__.
