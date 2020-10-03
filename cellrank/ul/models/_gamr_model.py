@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 """Module containing all models somehow interfacing R."""
+from copy import copy
 from typing import Any, Tuple, Optional
 
 import numpy as np
 import pandas as pd
+from scipy.stats import norm
 
 from cellrank.ul._docs import d
 from cellrank.ul.models import BaseModel
+from cellrank.ul.models._utils import _find_knots, _get_offset
 from cellrank.ul.models._base_model import AnnData
 
 _r_lib = None
@@ -24,120 +27,75 @@ class GAMR(BaseModel):
     %(adata)s
     n_splines
         Number of splines for the GAM.
-    smoothing_param
-        Smoothing parameter. Increasing this increases the smoothness of splines.
     distribution
-        Family in `rpy2.robjects.r`, such as `'gaussian'` or `'poisson'`.
-    backend
-        R library used to fit GAMs. Valid options are `'mgcv'` or `'gam'`.
-        Option `'gam'` ignores the number of splines, as well as ``distribution``and ``smoothing_param``.
+        Distribution family in `rpy2.robjects.r`, such as `'gaussian'`, `'poisson'` or `'nb'`.
+        If `'nb'`, we always use the data in :paramref:`adata` ``.raw``.
+    **kwargs
+        TODO.
     """  # noqa
-
-    _fallback_backends = {
-        "gam": "mgcv",
-        "mgcv": "gam",
-    }
 
     def __init__(
         self,
         adata: AnnData,
         n_splines: int = 5,
-        smoothing_param: float = 2,
         distribution: str = "gaussian",
-        backend: str = "mgcv",
+        offset: Optional[np.ndarray] = None,
         perform_import_check: bool = True,
+        **kwargs,
     ):
         super().__init__(adata, model=None)
         self._n_splines = n_splines
-        self._sp = smoothing_param
+        self._family = distribution
+        self._formula = f"y ~ s(x0, bs='cr', k={self._n_splines})"
+        self._design_mat = None
+        self._original_offset = None  # for copy
+        self._gam_kwargs = copy(kwargs)
+
         self._lib = None
         self._lib_name = None
-        self._family = distribution
-        self._formula = None
 
-        if backend not in self._fallback_backends.keys():
-            raise ValueError(
-                f"Invalid backend library `{backend!r}`. Valid options are `{list(self._fallback_backends.keys())}`."
-            )
+        if perform_import_check:
+            # it's a bit costly to import, copying just passes the reference
+            self._lib, self._lib_name = _maybe_import_r_lib("mgcv")
 
-        if (
-            perform_import_check
-        ):  # it's a bit costly to import, copying just passes the reference
-            self._lib, self._lib_name = _maybe_import_r_lib(
-                backend
-            ) or _maybe_import_r_lib(self._fallback_backends[backend], raise_exc=True)
+        if distribution == "nb":
+            if offset is None:
+                offset = _get_offset(adata, use_raw=True)
+            offset = np.asarray(offset, dtype=self._dtype)
+
+            if offset.shape != (adata.n_obs,):
+                raise ValueError(
+                    f"Expected offset to be of shape `{(adata.n_obs,)}`, found `{offset.shape}`."
+                )
+
+            # TODO: it's still WIP
+            self._formula += " + offset(offset)"
+            self._original_offset = offset
 
     def prepare(
         self,
-        gene: str,
-        lineage: Optional[str],
-        offset: np.ndarray,
-        knots: Optional[np.ndarray] = None,
-        w_samp: Optional[pd.DataFrame] = None,
-        fixed_effects: Optional[np.ndarray] = None,
-        time_key: str = "latent_time",
+        *args,
         **kwargs,
     ) -> "GAMR":
         """TODO"""  # noqa
 
-        _ = super().prepare(gene=gene, lineage=lineage, time_key=time_key, **kwargs)
+        if self._family == "nb":
+            kwargs["use_raw"] = True
+        _ = super().prepare(*args, **kwargs)
 
         use_ixs = self.w > 0
         self._x = self.x[use_ixs]
         self._y = self.y[use_ixs]
         self._w = self.w[use_ixs]
-        obs_names = self._obs_names[use_ixs]
 
-        if w_samp is not None and w_samp.shape[0] != offset.shape[0]:
-            raise ValueError()
-        if fixed_effects is not None and fixed_effects.shape[0] != offset.shape[0]:
-            raise ValueError()
-
-        if w_samp is not None:
-            mask = np.isin(w_samp.index, obs_names)
-            w_samp = w_samp[mask].copy()
-        else:
-            mask = np.isin(self.adata.obs_names, obs_names)
-
-        offset = offset[mask]
-        if fixed_effects is None:
-            fixed_effects = np.ones_like(self.w, dtype=np.float64)
-        else:
-            fixed_effects = fixed_effects[mask]
-
-        if knots is None:
-            knots = np.linspace(
-                np.min(self.x), np.max(self.x), self._n_splines, endpoint=True
-            )
-
-        assert len(knots) == self._n_splines
-        self._knots = knots
-
-        assert offset.shape[0] == fixed_effects.shape[0]
-
-        self._df = pd.DataFrame(
-            np.c_[self.x, self.y, offset, fixed_effects],
-            columns=["x0", "y", "offset", "U"],
+        self._design_mat = pd.DataFrame(
+            np.c_[self.x, self.y],
+            columns=["x0", "y"],
         )
 
-        if time_key in self.adata.obs:
-            self._formula = f"y ~ -1 + U + s(x0, bs='cr', id=1, k={self._n_splines}) + offset(offset)"
-        elif w_samp is None:
-            raise ValueError()
-        else:
-            # it's in obsm, super makes sure it's Lineage of correct shape
-            pt = self.adata.obsm[time_key][mask]
-            if set(pt.names) != set(w_samp.columns):
-                raise ValueError()
-            for i, ln in enumerate(pt.names):
-                self._df[f"x{i}"] = pt[ln].X.squeeze()
-                self._df[f"l{i}"] = (w_samp[ln] * 1).values
-
-            terms = " + ".join(
-                f"s(x{i}, by=l{i}, bs='cr', k={self._n_splines})"
-                for i in range(len(pt.names))
-            )
-            self._formula = f"y ~ -1 + U + {terms} + offset(offset)"
+        if self._original_offset is not None:
+            mask = np.isin(self.adata.obs_names, self._obs_names[use_ixs])
+            self._design_mat["offset"] = self._original_offset[mask]
 
         return self
 
@@ -166,40 +124,35 @@ class GAMR(BaseModel):
                 - :paramref:`w` - %(base_model_w.summary)s
         """  # noqa
 
-        from rpy2 import robjects
-        from rpy2.robjects import Formula, pandas2ri
+        from rpy2.robjects import Formula, r, pandas2ri
 
         super().fit(x, y, w, **kwargs)
 
-        family = getattr(robjects.r, self._family, None)
-        if family is None:
-            family = robjects.r.gaussian
-
         pandas2ri.activate()
+
+        family = getattr(r, self._family)
 
         self._model = self._lib.gam(
             Formula(self._formula),
-            data=self._df,
-            sp=self._sp,
+            data=self._design_mat,
             family=family,
             weights=pd.Series(self.w),
-            knots=pd.DataFrame(self._knots),  # needs to be a DataFrame
+            knots=pd.DataFrame(
+                _find_knots(self.x, self._n_splines)
+            ),  # needs to be a DataFrame
+            **self._gam_kwargs,
         )
 
         pandas2ri.deactivate()
 
         return self
 
-    def _get_xtest(self, x_test, key_added: str = "_x_test"):
+    def _get_x_test(
+        self, x_test: Optional[np.ndarray] = None, key_added: str = "_x_test"
+    ) -> pd.DataFrame:
         newdata = pd.DataFrame(self._check(key_added, x_test), columns=["x0"])
-        for c in [c for c in self._df if c[0] == "l"]:
-            newdata[c] = 0
-            if f"x{c[1:]}" not in newdata:
-                newdata[f"x{c[1:]}"] = 0.0
-        if "l0" in newdata:
-            newdata["l0"] = 1
-        newdata["offset"] = np.mean(self._df["offset"])
-        newdata["U"] = 1.0
+        if "offset" in self._design_mat:
+            newdata["offset"] = np.mean(self._design_mat["offset"])
 
         return newdata
 
@@ -231,7 +184,7 @@ class GAMR(BaseModel):
                 f"Unable to run prediction, R package `{self._lib_name!r}` is not imported."
             )
 
-        newdata = self._get_xtest(x_test, key_added)
+        newdata = self._get_x_test(x_test, key_added=key_added)
 
         pandas2ri.activate()
         self._y_test = (
@@ -244,29 +197,63 @@ class GAMR(BaseModel):
             .squeeze()
             .astype(self._dtype)
         )
+
         pandas2ri.deactivate()
-        self._y_test = np.exp(self._y_test)
 
         return self.y_test
 
     @d.dedent
     def confidence_interval(
-        self, x_test: Optional[np.ndarray] = None, **kwargs
+        self, x_test: Optional[np.ndarray] = None, level: float = 0.95, **kwargs
     ) -> np.ndarray:
         """
         %(base_model_ci.summary)s
 
-        This method uses the :meth:`default_confidence_interval`.
-
         Parameters
         ----------
         %(base_model_ci.parameters)s
+        level
 
         Returns
         -------
         %(base_model_ci.returns)s
         """  # noqa
-        return self.default_confidence_interval(x_test=x_test, **kwargs)
+
+        from rpy2 import robjects
+        from rpy2.robjects import pandas2ri
+
+        # TODO: DRY
+        if self.model is None:
+            raise RuntimeError(
+                "Trying to call an uninitialized model. To initialize it, run `.fit()` first."
+            )
+        if self._lib is None:
+            raise RuntimeError(
+                f"Unable to run prediction, R package `{self._lib_name!r}` is not imported."
+            )
+
+        if not (0 <= level <= 1):
+            raise ValueError(
+                f"Expected level to be in interval `[0, 1]`, found `{level}`."
+            )
+
+        newdata = self._get_x_test(x_test)
+
+        pandas2ri.activate()
+        res = robjects.r.predict(
+            self.model,
+            newdata=pandas2ri.py2rpy(newdata),
+            se=True,
+        )
+        pandas2ri.deactivate()
+
+        self._y_test = np.array(res.rx2("fit")).squeeze().astype(self._dtype)
+        se = np.array(res.rx2("se.fit")).squeeze().astype(self._dtype)
+
+        level = norm.ppf(level + (1 - level) / 2)
+        self._conf_int = np.c_[self.y_test - level * se, self.y_test + level * se]
+
+        return self._conf_int
 
     @d.dedent
     def copy(self) -> "GAMR":
@@ -274,13 +261,13 @@ class GAMR(BaseModel):
         res = GAMR(
             self.adata,
             self._n_splines,
-            self._sp,
             distribution=self._family,
+            offset=self._original_offset,
             perform_import_check=False,
         )
         res._lib = self._lib
         res._lib_name = self._lib_name
-        res._formula = self._formula
+        res._gam_kwargs = self._gam_kwargs
 
         return res
 

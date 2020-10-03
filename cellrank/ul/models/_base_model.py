@@ -182,9 +182,7 @@ class BaseModel(ABC):
         data_key
             Key in :paramref:`adata` ``.layers`` or `'X'` for :paramref:`adata` ``.X``.
         time_key
-            Key in :paramref:`adata` ``.obs`` or ``.obsm`` where the pseudotime is stored.
-            If in ``.obsm``, it must be of type :class:`cellrank.tl.Lineages` and have the same dimensions and names
-            as lineages stored in ``.obsm[lineage_key]``.
+            Key in :paramref:`adata` ``.obs`` where the pseudotime is stored.
         use_raw
             Whether to access :paramref:`adata` ``.raw`` or not.
         threshold
@@ -234,19 +232,8 @@ class BaseModel(ABC):
         if lineage is not None:
             _ = self.adata.obsm[lineage_key][lineage]
 
-        if time_key not in self.adata.obs and time_key not in self.adata.obsm:
-            raise KeyError(
-                f"Time key `{time_key!r}` not found in `adata.obs` or `adata.obsm`."
-            )
-        elif time_key in self.adata.obsm:
-            if not isinstance(self.adata.obsm[time_key], Lineage):
-                raise TypeError()
-            if self.adata.obsm[lineage_key].shape != self.adata.obsm[time_key].shape:
-                raise ValueError()
-            if not np.all(
-                self.adata.obsm[lineage_key].names == self.adata.obsm[time_key].names
-            ):
-                raise ValueError()
+        if time_key not in self.adata.obs:
+            raise KeyError(f"Time key `{time_key!r}` not found in `adata.obs`.")
 
         if data_key == "obs":
             if gene not in self.adata.obs:
@@ -292,12 +279,7 @@ class BaseModel(ABC):
 
         self._obs_names = self.adata.obs_names.values[:]
 
-        if time_key in self.adata.obs:
-            x = np.array(self.adata.obs[time_key]).astype(self._dtype)
-        else:
-            x = np.array(self.adata.obsm[time_key][lineage].X.squeeze()).astype(
-                self._dtype
-            )
+        x = np.array(self.adata.obs[time_key]).astype(self._dtype)
 
         adata = self.adata.raw.to_adata() if use_raw else self.adata
         gene_ix = np.where(adata.var_names == gene)[0]
@@ -649,6 +631,9 @@ class BaseModel(ABC):
         -------
         %(just_plots)s
         """
+
+        if self.y_test is None:
+            raise RuntimeError("Run `.predict()` first.")
 
         if fig is None or ax is None:
             fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)

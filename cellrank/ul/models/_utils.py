@@ -1,22 +1,20 @@
 # -*- coding: utf-8 -*-
-from typing import List, Union, Optional
-
-from anndata import AnnData
+from typing import List, Union, TypeVar, Optional
 
 import numpy as np
-import pandas as pd
 from scipy.stats import rankdata
 from scipy.sparse import issparse, spmatrix
 from sklearn.utils.sparsefuncs import csc_median_axis_0
 
+import cellrank.logging as logg
 from cellrank.ul._utils import valuedispatch
-from cellrank.tl._lineage import Lineage
 from cellrank.tl._constants import ModeEnum
 from cellrank.ul._parallelize import parallelize
 
 # sources:
 # edgeR: https://github.com/jianjinxu/edgeR/blob/master/R/calcNormFactors.R
-# tradeSeq: https://github.com/statOmics/tradeSeq/blob/master/R/fitGAM.R
+
+AnnData = TypeVar("AnnData")
 
 
 class NormMode(ModeEnum):  # noqa
@@ -26,68 +24,12 @@ class NormMode(ModeEnum):  # noqa
     NONE = "none"
 
 
-def _assign_cells(
-    data: Union[AnnData, Lineage, np.ndarray, pd.DataFrame],
-    key: Optional[str] = None,
-    use_multinomial: bool = True,
-    seed: Optional[int] = None,
-):
-    if key is not None:
-        if not isinstance(data, AnnData):
-            raise TypeError(
-                f"Expected `data` to be of type `anndata.AnnData`, found `{type(data).__name__}`."
-            )
-        if key not in data.obsm:
-            raise KeyError(f"Key `{key}` not found in `adata.obsm`.")
-
-        x = data.obsm[key]
-    elif isinstance(data, AnnData):
-        raise TypeError(
-            f"Expected `data` to be of type `numpy.ndarray`, `pandas.DataFrame` or "
-            f"`cellrank.tl.Lineage` found `{type(data).__name__}`."
-        )
-    else:
-        x = data
-
-    names, index = None, None
-    if isinstance(x, Lineage):
-        names = x.names
-        x = x.X
-    elif isinstance(x, pd.DataFrame):
-        names = x.columns
-        x = x.values
-    if isinstance(data, AnnData):
-        index = data.obs_names
-
-    if np.any(x < 0):
-        raise ValueError("Negative weights are not supported.")
-    if np.any(~np.isclose(np.sum(x, axis=1), 1.0)):
-        # TODO: debug (normalizing)
-        print("Normalizing to 1")
-        x = x / x.sum(1)[:, None]
-
-    assign_fn = (
-        (lambda r: np.argmax(np.random.multinomial(1, r)))
-        if use_multinomial
-        else (lambda r: np.argmax(r))
-    )
-
-    np.random.seed(seed)
-
-    assignment = pd.get_dummies(pd.DataFrame(x).apply(assign_fn, axis=1))
-    if index is not None:
-        assignment.index = index
-    if names is not None:
-        assignment.columns = names
-
-    return assignment.astype(bool)
-
-
-# TODO: make nicer
 def _extract_data(
     adata, layer: str, use_raw: bool = True
 ) -> Union[np.ndarray, spmatrix]:
-    if isinstance(adata, AnnData):
+    from anndata import AnnData as _AnnData
+
+    if isinstance(adata, _AnnData):
         if use_raw:
             if not hasattr(adata, "raw"):
                 raise AttributeError()
@@ -292,26 +234,18 @@ def _calc_factor_weighted(
 
 
 def _find_knots(
-    n_knots: int, pseudotime: np.ndarray, w_samp: pd.DataFrame
+    pseudotime: np.ndarray,
+    n_knots: int,
 ) -> np.ndarray:
-    # TODO some mask... (we're filtering weights)
-    # this should be used per lineage
-
     if n_knots <= 0:
         raise ValueError()
-    if pseudotime.shape[0] != w_samp.shape[0]:
+
+    if np.any(~np.isfinite(pseudotime)):
         raise ValueError()
 
-    if w_samp.values.dtype != np.bool:
-        raise TypeError()
-    if pseudotime.ndim == 1:
-        pseudotime = pseudotime.reshape((-1, 1)).repeat(w_samp.shape[1], axis=1)
-    if pseudotime.shape[1] != w_samp.shape[1]:
-        raise ValueError()
-
-    pt_all = pseudotime[np.where(w_samp)]
-
-    x = np.quantile(pt_all, q=np.arange(n_knots, dtype=np.float64) / (n_knots - 1))
+    x = np.quantile(
+        pseudotime, q=np.arange(n_knots, dtype=np.float64) / max(n_knots - 1, 1)
+    )
     u, ix, c = np.unique(x, return_index=True, return_counts=True)
 
     if len(u) != len(x):
@@ -323,13 +257,17 @@ def _find_knots(
     else:
         locs = x
 
-    locs[0] = np.min(pt_all)
-    locs[-1] = np.max(pt_all)
+    locs[0] = np.min(pseudotime)
+    locs[-1] = np.max(pseudotime)
+
+    logg.debug(f"Setting knot locations to `{list(locs)}`.")
 
     return locs
 
 
-def _get_offset(adata, layer: Optional[str] = None, use_raw: bool = True, **kwargs):
+def _get_offset(
+    adata: AnnData, layer: Optional[str] = None, use_raw: bool = True, **kwargs
+) -> np.ndarray:
     data = _extract_data(adata, layer=layer, use_raw=use_raw)
     try:
         nf = _calculate_norm_factors(adata, layer=layer, use_raw=use_raw, **kwargs)
