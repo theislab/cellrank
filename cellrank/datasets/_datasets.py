@@ -17,6 +17,10 @@ _datasets = dict(  # noqa
         "datasets/endocrinogenesis_day15.5.h5ad",
         "https://github.com/theislab/cellrank_notebooks/raw/master/datasets/pancreas/endocrinogenesis_day15.5.h5ad",
     ),
+    lung=(
+        "datasets/lung_regeneration.h5ad",
+        "https://github.com/theislab/cellrank_notebooks/raw/master/datasets/lung/regeneration.h5ad",
+    ),
     pancreas_preprocessed=(
         None,
         "https://github.com/theislab/cellrank_notebooks/raw/master/"
@@ -47,10 +51,13 @@ def _load_dataset_from_url(fpath: Union[os.PathLike, str], url: str) -> AnnData:
 @d.dedent
 def pancreas() -> AnnData:
     """
-    Pancreatic endocrinogenesis from [Panc19]_.
+    Development of the murine pancreas at E15.5 from [Panc19]_.
 
-    Note that we subset the original data to focus on endocrine development downstream of the Ngn3 low EP cluster,
-    i.e. we only consider cells that have high probability of becoming endocrine.
+    scRNA-seq dataset comprising 2531 cells recorded using 10x Chromium in a single time point. Data was filtered
+    to remove heavily cycling populations and to focus on the late stages of endocrinogenesis.
+
+    Contains raw spliced and un-spliced count data, low-dimensional embedding coordinates as well as original
+    cluster annotations.
 
     Returns
     -------
@@ -61,15 +68,33 @@ def pancreas() -> AnnData:
 
 
 @d.dedent
+def lung() -> AnnData:
+    """
+    Regeneration of murine lung epithelial cells at 13 time points from [Lung20]_.
+
+    scRNA-seq dataset comprising 24,051 cells recorded using Dropseq [Macosko15]_ at 13 time points spanning days
+    2-15 past lung bleomycin injury. Data was filtered to remove control cells as well as later time points which  are
+    more spaced out. We wanted to focus on the densely sampled days where RNA velocity [Manno18]_ [Bergen20]_ can be
+    used to predict the future cellular state.
+
+    Contains raw spliced and un-spliced count data, low-dimensional embedding coordinates as well as  original
+    cluster annotations.
+
+    Returns
+    -------
+    %(adata)s
+    """
+
+    return _load_dataset_from_url(*_datasets["lung"])
+
+
+@d.dedent
 def pancreas_preprocessed(
     path: Union[str, Path] = "datasets/endocrinogenesis_day15.5_preprocessed.h5ad"
 ) -> AnnData:
     """
-    Pancreatic endocrinogenesis from [Panc19]_ preprocessed according to the \
+    Development of the murine pancreas at E15.5 from [Panc19]_, preprocessed according to the \
     `basic tutorial <https://cellrank.readthedocs.io/en/latest/pancreas_basic.html>`__.
-
-    Note that we subset the original data to focus on endocrine development downstream of the Ngn3 low EP cluster,
-    i.e. we only consider cells that have high probability of becoming endocrine.
 
     Parameters
     ----------
