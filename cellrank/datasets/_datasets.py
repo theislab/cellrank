@@ -53,7 +53,7 @@ def pancreas() -> AnnData:
     """
     Development of the murine pancreas at E15.5 from [Panc19]_.
 
-    scRNA-seq dataset comprising 2531 cells recorded using 10x Genomics CITE in a single time point. Data was filtered
+    scRNA-seq dataset comprising 2531 cells recorded using 10x Chromium in a single time point. Data was filtered
     to remove heavily cycling populations and to focus on the late stages of endocrinogenesis. Contains raw spliced and
     un-spliced count data, low-dimensional embedding coordinates as well as original cluster annotations.
 
