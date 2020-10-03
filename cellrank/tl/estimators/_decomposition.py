@@ -527,7 +527,7 @@ class Schur(VectorPlottable, Decomposable):
         )
 
         divider = make_axes_locatable(ax)  # square=True make the colorbar a bit bigger
-        cbar_ax = divider.append_axes("right", size="2.5%", pad=0.05)
+        cbar_ax = divider.append_axes("right", size="2%", pad=0.1)
 
         mask = np.zeros_like(schur_matrix, dtype=np.bool)
         mask[np.tril_indices_from(mask, k=-1)] = True
@@ -547,6 +547,7 @@ class Schur(VectorPlottable, Decomposable):
             vmin=vmin,
             vmax=vmax,
             cbar_ax=cbar_ax,
+            cbar_kws={"ticks": np.linspace(vmin, vmax, 10)},
             mask=mask,
             xticklabels=[],
             yticklabels=[],

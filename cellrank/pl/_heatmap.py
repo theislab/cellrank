@@ -225,7 +225,13 @@ def heatmap(
             [mcolors.to_hex(mapper[v]) for v in adata[ixs, :].obs[cluster_key].values]
         )
 
-    def create_cbar(ax, x_delta: float, cmap, norm, label=None) -> Ax:
+    def create_cbar(
+        ax,
+        x_delta: float,
+        cmap: Cmap,
+        norm: Norm,
+        label: Optional[str] = None,
+    ) -> Ax:
         cax = inset_axes(
             ax,
             width="1%",
@@ -235,7 +241,13 @@ def heatmap(
             bbox_transform=ax.transAxes,
         )
 
-        _ = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm, label=label)
+        _ = mpl.colorbar.ColorbarBase(
+            cax,
+            cmap=cmap,
+            norm=norm,
+            label=label,
+            ticks=np.linspace(norm.vmin, norm.vmax, 5),
+        )
 
         return cax
 
@@ -275,11 +287,12 @@ def heatmap(
 
         for ax, (gene, models) in zip(axes, data.items()):
             if scale:
-                norm = mcolors.Normalize(vmin=0, vmax=1)
+                vmin, vmax = 0, 1
             else:
                 c = np.array([m.y_test for m in models.values()])
-                c_min, c_max = np.nanmin(c), np.nanmax(c)
-                norm = mcolors.Normalize(vmin=c_min, vmax=c_max)
+                vmin, vmax = np.nanmin(c), np.nanmax(c)
+
+            norm = mcolors.Normalize(vmin=vmin, vmax=vmax)
 
             ix = 0
             ys = [ix]
@@ -324,13 +337,19 @@ def heatmap(
             for pos in ["top", "bottom", "left", "right"]:
                 ax.spines[pos].set_visible(False)
 
-            cax, _ = mpl.colorbar.make_axes(ax)
-            _ = mpl.colorbar.ColorbarBase(
-                cax,
-                norm=norm,
-                cmap=cmap,
-                label="value" if gene == "absorption probability" else "expression",
-            )
+            if show_cbar:
+                cax, _ = mpl.colorbar.make_axes(ax)
+                _ = mpl.colorbar.ColorbarBase(
+                    cax,
+                    ticks=np.linspace(vmin, vmax, 5),
+                    norm=norm,
+                    cmap=cmap,
+                    label="value"
+                    if gene == "absorption probability"
+                    else "scaled expression"
+                    if scale
+                    else "expression",
+                )
 
             ax.tick_params(
                 top=False,
@@ -433,7 +452,7 @@ def heatmap(
                         vmin=0 if scale else np.min(df.values),
                         vmax=1 if scale else np.max(df.values),
                     ),
-                    label="expression",
+                    label="scaled expression" if scale else "expression",
                 )
                 g.fig.add_axes(cax)
 
