@@ -68,6 +68,7 @@ class BaseModel(ABC):
 
         self._dtype = np.float32
 
+    @d.get_summaryf("base_model_prepared")
     @property
     def prepared(self):
         """Whether the model is prepared for fitting."""
@@ -154,6 +155,8 @@ class BaseModel(ABC):
         """Array of shape `(n_samples, 2)` containing the lower and upper bounds of the confidence interval."""  # noqa
         return self._conf_int
 
+    @d.get_sectionsf("base_model_prepare", sections=["Parameters", "Returns"])
+    @d.get_full_descriptionf("base_model_prepare")
     @d.dedent
     def prepare(
         self,
@@ -190,8 +193,8 @@ class BaseModel(ABC):
             Consider only cells with weights > ``threshold`` when estimating the test endpoint.
             If `None`, use the median of the weights.
         weight_threshold
-            Set all weights below ``weight_threshold`` to either `0` if a :class:`float`,
-            or if a :class:`tuple`, to the second value.
+            Set all weights below ``weight_threshold`` to ``weight_threshold`` if a :class:`float`,
+            or to the second value, if a :class:`tuple`.
         filter_dropouts
             Filter out all cells with expression lower than this.
         n_test_points
@@ -211,6 +214,8 @@ class BaseModel(ABC):
                 - :paramref:`w_all` - %(base_model_w_all.summary)s
 
                 - :paramref:`x_test` - %(base_model_x_test.summary)s
+
+                - :paramref:`prepared` - %(base_model_prepared.summary)s
         """
         if use_raw and self.adata.raw is None:
             raise AttributeError("AnnData object has no attribute `.raw`.")

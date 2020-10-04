@@ -19,8 +19,8 @@ _r_lib_name = None
 @d.dedent
 class GAMR(BaseModel):
     """
-    Wrapper around R's `mgcv <https://cran.r-project.org/web/packages/mgcv/>`_ or
-    `gam <https://cran.r-project.org/web/packages/gam/>`_ package for fitting Generalized Additive Models (GAMs).
+    Wrapper around R's `mgcv <https://cran.r-project.org/web/packages/mgcv/>`_ package for fitting
+    Generalized Additive Models (GAMs).
 
     Parameters
     ----------
@@ -28,18 +28,21 @@ class GAMR(BaseModel):
     n_splines
         Number of splines for the GAM.
     distribution
-        Distribution family in `rpy2.robjects.r`, such as `'gaussian'`, `'poisson'` or `'nb'`.
+        Distribution family in `rpy2.robjects.r`, such as `'gaussian'` or `'nb'` for negative binomial.
         If `'nb'`, we always use the data in :paramref:`adata` ``.raw``.
+    basis
+        Basis for the smoothing term. See
+        `here <https://www.rdocumentation.org/packages/mgcv/versions/1.8-33/topics/s>`__ for valid options.
     **kwargs
-        TODO.
+        Keyword arguments for ``gam.control``.
     """  # noqa
 
-    # TODO: add fixed effects
     def __init__(
         self,
         adata: AnnData,
         n_splines: int = 5,
         distribution: str = "gaussian",
+        basis: str = "cr",
         offset: Optional[np.ndarray] = None,
         perform_import_check: bool = True,
         **kwargs,
@@ -47,9 +50,11 @@ class GAMR(BaseModel):
         super().__init__(adata, model=None)
         self._n_splines = n_splines
         self._family = distribution
-        self._formula = f"y ~ -1 + U + s(x0, bs='cr', k={self._n_splines})"
+
+        self._formula = f"y ~ s(x, bs='{basis}', k={self._n_splines})"
         self._design_mat = None
-        self._original_offset = None  # for copy
+        self._offset = None
+
         self._control_kwargs = copy(kwargs)
 
         self._lib = None
@@ -69,16 +74,27 @@ class GAMR(BaseModel):
                     f"Expected offset to be of shape `{(adata.n_obs,)}`, found `{offset.shape}`."
                 )
 
-            # TODO: it's still WIP
             self._formula += " + offset(offset)"
-            self._original_offset = offset
+            self._offset = offset
 
+    @d.dedent
     def prepare(
         self,
         *args,
         **kwargs,
     ) -> "GAMR":
-        """TODO"""  # noqa
+        """
+        %(base_model_prepare.full_desc)s
+        This also removes not positive weights and prepares the design matrix.
+
+        Parameters
+        ----------
+        %(base_model_prepare.parameters)s
+
+        Returns
+        -------
+        %(base_model_prepare.returns)s
+        """  # noqa
 
         if self._family == "nb":
             kwargs["use_raw"] = True
@@ -91,13 +107,12 @@ class GAMR(BaseModel):
 
         self._design_mat = pd.DataFrame(
             np.c_[self.x, self.y],
-            columns=["x0", "y"],
+            columns=["x", "y"],
         )
-        self._design_mat["U"] = 1.0
 
-        if self._original_offset is not None:
+        if self._offset is not None:
             mask = np.isin(self.adata.obs_names, self._obs_names[use_ixs])
-            self._design_mat["offset"] = self._original_offset[mask]
+            self._design_mat["offset"] = self._offset[mask]
 
         return self
 
@@ -152,8 +167,7 @@ class GAMR(BaseModel):
     def _get_x_test(
         self, x_test: Optional[np.ndarray] = None, key_added: str = "_x_test"
     ) -> pd.DataFrame:
-        newdata = pd.DataFrame(self._check(key_added, x_test), columns=["x0"])
-        newdata["U"] = 1.0
+        newdata = pd.DataFrame(self._check(key_added, x_test), columns=["x"])
 
         if "offset" in self._design_mat:
             newdata["offset"] = np.mean(self._design_mat["offset"])
@@ -218,6 +232,7 @@ class GAMR(BaseModel):
         ----------
         %(base_model_ci.parameters)s
         level
+            Confidence level.
 
         Returns
         -------
@@ -269,9 +284,10 @@ class GAMR(BaseModel):
             self.adata,
             self._n_splines,
             distribution=self._family,
-            offset=self._original_offset,
+            offset=self._offset,
             perform_import_check=False,
         )
+        res._formula = self._formula  # we don't save the basis inside
         res._lib = self._lib
         res._lib_name = self._lib_name
         res._control_kwargs = self._control_kwargs

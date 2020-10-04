@@ -439,6 +439,8 @@ def _get_knotlocs(
         raise ValueError("Not all pseudotime values are finite.")
 
     pseudotime = np.asarray(pseudotime)
+    if pseudotime.ndim == 2 and pseudotime.shape[1] == 1:
+        pseudotime = pseudotime.squeeze(1)
     if pseudotime.ndim != 1:
         raise ValueError(
             f"Expected pseudotime to have `1` dimension, found `{pseudotime.ndim}`."
