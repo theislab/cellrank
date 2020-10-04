@@ -9,7 +9,7 @@ from scipy.stats import norm
 
 from cellrank.ul._docs import d
 from cellrank.ul.models import BaseModel
-from cellrank.ul.models._utils import _find_knots, _get_offset
+from cellrank.ul.models._utils import _get_offset, _get_knotlocs
 from cellrank.ul.models._base_model import AnnData
 
 _r_lib = None
@@ -140,7 +140,7 @@ class GAMR(BaseModel):
             family=family,
             weights=pd.Series(self.w),
             knots=pd.DataFrame(
-                _find_knots(self.x, self._n_splines)
+                _get_knotlocs(self.x, self._n_splines)
             ),  # needs to be a DataFrame
             control=self._lib.gam_control(**self._control_kwargs),
         )

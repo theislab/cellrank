@@ -7,6 +7,7 @@ from scipy.sparse import issparse, spmatrix
 from sklearn.utils.sparsefuncs import csc_median_axis_0
 
 import cellrank.logging as logg
+from cellrank.ul._docs import d
 from cellrank.ul._utils import valuedispatch
 from cellrank.tl._constants import ModeEnum
 from cellrank.ul._parallelize import parallelize
@@ -233,15 +234,37 @@ def _calc_factor_weighted(
     return res
 
 
-def _find_knots(
+def _get_knotlocs(
     pseudotime: np.ndarray,
     n_knots: int,
 ) -> np.ndarray:
+    """
+    Find knot locations.
+
+    Parameters
+    ----------
+    pseudotime
+        Pseudotemporal ordering of cells.
+    n_knots
+        Number of knots.
+
+    Returns
+    -------
+    :class:`numpy.ndarray`
+        Array of shape `(n_knots,)` containing the locations of knots along the pseudotime.
+    """
+
     if n_knots <= 0:
-        raise ValueError()
+        raise ValueError(f"Expected number of knots to be positive, found `{n_knots}`.")
 
     if np.any(~np.isfinite(pseudotime)):
-        raise ValueError()
+        raise ValueError("Not all pseudotime values are finite.")
+
+    pseudotime = np.asarray(pseudotime)
+    if pseudotime.ndim != 1:
+        raise ValueError(
+            f"Expected pseudotime to have `1` dimension, found `{pseudotime.ndim}`."
+        )
 
     x = np.quantile(
         pseudotime, q=np.arange(n_knots, dtype=np.float64) / max(n_knots - 1, 1)
@@ -249,32 +272,53 @@ def _find_knots(
     u, ix, c = np.unique(x, return_index=True, return_counts=True)
 
     if len(u) != len(x):
-        locs = []
+        knotlocs = []
         for start, end, size in zip(x[ix], x[ix[1:]], c):
-            locs.extend(np.linspace(start, end, size, endpoint=False))
-        locs.extend(np.linspace(locs[-1], x[ix[-1]], c[-1] + 1, endpoint=True)[1:])
-        locs = np.array(locs)
+            knotlocs.extend(np.linspace(start, end, size, endpoint=False))
+        knotlocs.extend(
+            np.linspace(knotlocs[-1], x[ix[-1]], c[-1] + 1, endpoint=True)[1:]
+        )
+        knotlocs = np.array(knotlocs)
     else:
-        locs = x
+        knotlocs = x
 
-    locs[0] = np.min(pseudotime)
-    locs[-1] = np.max(pseudotime)
+    knotlocs[0] = np.min(pseudotime)
+    knotlocs[-1] = np.max(pseudotime)
 
-    logg.debug(f"Setting knot locations to `{list(locs)}`.")
+    logg.debug(f"Setting knot locations to `{list(knotlocs)}`.")
 
-    return locs
+    return knotlocs
 
 
+@d.dedent
 def _get_offset(
-    adata: AnnData, layer: Optional[str] = None, use_raw: bool = True, **kwargs
+    adata: AnnData, use_raw: bool = True, layer: Optional[str] = None, **kwargs
 ) -> np.ndarray:
+    """
+    Return an offset for negative binomial GAM.
+
+    Parameters
+    ----------
+    %(adata)s
+    use_raw
+        Whether to access ``adata.raw`` or not.
+    layer
+        Layer in ``adata.layers`` or `None` for ``adata.X``.
+    **kwargs
+        Keyword arguments for :func:`cellrank.ul.models._utils._calc_norm_factors`.
+
+    Returns
+    -------
+    :class:`numpy.ndarray`
+        Array of shape `(adata.n_obs,)` containing the offset.
+    """
+
     data = _extract_data(adata, layer=layer, use_raw=use_raw)
     try:
         nf = _calculate_norm_factors(adata, layer=layer, use_raw=use_raw, **kwargs)
     except Exception as e:
-        # TODO: logg
-        print(e)
+        logg.debug(f"Unable to calculate the normalization factors. Reason: `{e}`")
         nf = np.ones(adata.n_obs, dtype=np.float64)
-    offset = np.log(nf * np.array(data.sum(1)).squeeze())
 
-    return offset
+    # TODO; handle zeros
+    return np.log(nf * np.array(data.sum(1)).squeeze())
