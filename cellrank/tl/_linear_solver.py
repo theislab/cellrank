@@ -431,7 +431,7 @@ def _solve_lin_system(
             speye(mat_a.shape[0]) if issparse(mat_a) else np.eye(mat_a.shape[0])
         ) - mat_a
 
-    if solver == "direct" or n_jobs == 1:
+    if solver == "direct":
         if use_petsc:
             logg.debug("Solving the linear system directly using `PETSc`")
             return _petsc_mat_solve(

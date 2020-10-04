@@ -68,8 +68,9 @@ def _get_n_cores(n_cores: Optional[int], n_jobs: Optional[int]) -> int:
     ----------
     n_cores
         Number of cores to use.
-    n_genes.
-        Number of genes.
+    n_jobs.
+        Number of jobs. This is just used to determine if the collection is a singleton.
+        If `1`, always returns `1`.
 
     Returns
     -------
