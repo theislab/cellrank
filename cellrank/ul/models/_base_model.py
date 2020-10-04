@@ -597,7 +597,7 @@ class BaseModel(ABC):
         hide_cells
             Whether to hide the cells.
         perc
-            Percentile by which to clip the absorption probabilities./
+            Percentile by which to clip the absorption probabilities.
         abs_prob_cmap
             Colormap to use when coloring in the absorption probabilities.
         cell_color

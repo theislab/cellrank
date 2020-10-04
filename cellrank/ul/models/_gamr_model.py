@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Module containing all models interfacing R's mgcv package."""
 from copy import copy
-from typing import Any, Tuple, Optional
+from typing import Any, Tuple, Union, Optional
 
 import numpy as np
 import pandas as pd
@@ -30,13 +30,13 @@ class GAMR(BaseModel):
         Number of splines for the GAM.
     distribution
         Distribution family in `rpy2.robjects.r`, such as `'gaussian'` or `'nb'` for negative binomial.
-        If `'nb'`, we always use the data in :paramref:`adata` ``.raw``.
+        If `'nb'`, data in :paramref:`adata` ``.raw`` is always used.
     basis
         Basis for the smoothing term. See
         `here <https://www.rdocumentation.org/packages/mgcv/versions/1.8-33/topics/s>`__ for valid options.
     offset
-        Offset for the GAM. If `None`, it is calculated automatically. The values are cached in
-        :paramref:`adata` `.obs[{key!r}]`.
+        Offset for the GAM. If `'default'`, it is calculated automatically. The values are cached in
+        :paramref:`adata` `.obs[{key!r}]`. If `None`, no offset is used.
     **kwargs
         Keyword arguments for ``gam.control``.
     """  # noqa
@@ -47,7 +47,7 @@ class GAMR(BaseModel):
         n_splines: int = 5,
         distribution: str = "gaussian",
         basis: str = "cr",
-        offset: Optional[np.ndarray] = None,
+        offset: Optional[Union[np.ndarray, str]] = "default",
         perform_import_check: bool = True,
         **kwargs,
     ):
@@ -68,9 +68,20 @@ class GAMR(BaseModel):
             # it's a bit costly to import, copying just passes the reference
             self._lib, self._lib_name = _maybe_import_r_lib("mgcv")
 
-        if distribution == "nb":
-            if offset is None:
+        if distribution == "nb" and offset is not None:
+            if not isinstance(offset, (np.ndarray, str)):
+                raise TypeError(
+                    f"Expected `offset` to be either `'default'` or `numpy.ndarray`,"
+                    f"got `{type(offset).__name__}`."
+                )
+
+            if isinstance(offset, str):
+                if offset != "default":
+                    raise ValueError(
+                        "Only value `'default'` is allowed when `offset` is a string."
+                    )
                 offset = _get_offset(adata, use_raw=True, recompute=False)
+
             offset = np.asarray(offset, dtype=self._dtype)
 
             if offset.shape != (adata.n_obs,):
@@ -245,8 +256,8 @@ class GAMR(BaseModel):
     ) -> np.ndarray:
         """
         %(base_model_ci.summary)s
-        Internally, this method calls :meth:`cellrank.ul.models.GAMR.predict` to extract the confidence intreval,
-        if needed.
+        Internally, this method calls :meth:`cellrank.ul.models.GAMR.predict` to extract
+        the confidence interval, if needed.
 
         Parameters
         ----------
