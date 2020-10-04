@@ -25,28 +25,53 @@ class NormMode(ModeEnum):  # noqa
     NONE = "none"
 
 
+@d.dedent
 def _extract_data(
-    adata, layer: str, use_raw: bool = True
+    data: AnnData, layer: str, use_raw: bool = True
 ) -> Union[np.ndarray, spmatrix]:
+    """
+    Extract expression data from an object.
+
+    Parameters
+    ----------
+    data
+        Annotated data object or an array.
+    layer
+        Key in ``adata.layers`` accessed when ``use_raw=False``. Only used when ``data`` is :class:`anndata.AnnData`.
+    use_raw
+        Whether to access ``adata.raw``. Only used when ``data`` is :class:`anndata.AnnData`.
+
+    Returns
+    -------
+    :class:`numpy.ndarray` or :class`scipy.sparse.spmatrix`
+        The extracted expression data.
+    """
+
     from anndata import AnnData as _AnnData
 
-    if isinstance(adata, _AnnData):
+    if isinstance(data, _AnnData):
         if use_raw:
-            if not hasattr(adata, "raw"):
-                raise AttributeError()
-            elif adata.raw is None:
-                raise ValueError()
-            x = adata.raw.X
+            if not hasattr(data, "raw"):
+                raise AttributeError("No `.raw` attribute found.")
+            elif data.raw is None:
+                raise ValueError("Attribute `.raw` is None.")
+            x = data.raw.X
         elif layer is not None:
-            if layer not in adata.layers:
-                raise KeyError()
-            x = adata.layers[layer]
+            if layer not in data.layers:
+                raise KeyError(
+                    f"Layer `{layer!s}` not found in `adata.layers`. "
+                    f"Valid options are: `{list(data.layers.keys())}`."
+                )
+            x = data.layers[layer]
         else:
-            x = adata.X
-    elif not isinstance(adata, (np.ndarray, spmatrix)):
-        raise TypeError()
+            x = data.X
+    elif not isinstance(data, (np.ndarray, spmatrix)):
+        raise TypeError(
+            f"Expected parameter `data` to be either `anndata.AnnData`, `numpy.ndarray` "
+            f"or `scipy.sparse.spmatrix`, found `{type(data).__name__!r}`."
+        )
     else:
-        x = adata
+        x = data
 
     return x
 
@@ -64,6 +89,31 @@ def _calculate_norm_factors(
     a_cutoff: float = -1e10,
     p: float = 0.75,
 ) -> np.ndarray:
+    """
+    Calculate normalization factors according to edgeR TODO: link.
+
+    Parameters
+    ----------
+    data
+        Data of shape `(n_cells, n_genes)` containing e.g. the counts.
+    method
+    layer
+        Layer in ``adata.layers`` or `None` for ``adata.X``. Only used when ``use_raw=False``.
+    use_raw
+        Whether to access ``adata.raw``.
+    library_size
+    ref_ix
+    logratio_trim
+    sum_trim
+    weight
+    a_cutoff
+    p
+
+    Returns
+    -------
+    :class:`numpy.ndarray`
+        Array of shape `(data.shape[0],)` containing the factors.
+    """
     method = NormMode(method)
 
     x = _extract_data(data, layer, use_raw)
@@ -71,7 +121,9 @@ def _calculate_norm_factors(
     if library_size is None:
         library_size = np.array(x.sum(1)).squeeze()
     elif library_size.shape != (x.shape[0],):
-        raise ValueError()
+        raise ValueError(
+            f"Expected `library_size` to be of shape `({x.shape[0]},)`, found `{library_size.shape}`."
+        )
 
     f = _dispatch_computation(
         method,
@@ -85,7 +137,6 @@ def _calculate_norm_factors(
         p=p,
     )
 
-    # return f / np.exp(np.mean(np.log(f)))
     return f / np.exp(np.mean(np.log(f)))
 
 
@@ -285,7 +336,7 @@ def _get_knotlocs(
     knotlocs[0] = np.min(pseudotime)
     knotlocs[-1] = np.max(pseudotime)
 
-    logg.debug(f"Setting knot locations to `{list(knotlocs)}`.")
+    logg.debug(f"Setting knot locations to `{list(knotlocs)}`")
 
     return knotlocs
 
@@ -295,15 +346,15 @@ def _get_offset(
     adata: AnnData, use_raw: bool = True, layer: Optional[str] = None, **kwargs
 ) -> np.ndarray:
     """
-    Return an offset for negative binomial GAM.
+    Return an offset for GAM.
 
     Parameters
     ----------
     %(adata)s
     use_raw
-        Whether to access ``adata.raw`` or not.
+        Whether to access ``adata.raw``.
     layer
-        Layer in ``adata.layers`` or `None` for ``adata.X``.
+        Layer in ``adata.layers`` or `None` for ``adata.X``. Only used when ``use_raw=False``.
     **kwargs
         Keyword arguments for :func:`cellrank.ul.models._utils._calc_norm_factors`.
 
