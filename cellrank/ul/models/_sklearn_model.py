@@ -120,11 +120,10 @@ class SKLearnModel(BaseModel):
         %(base_model_predict.returns)s
         """  # noqa
 
-        kwargs.pop("level", None)
         x_test = self._check(key_added, x_test)
 
         self._y_test = self._pred_fn(x_test, **kwargs)
-        self._y_test = np.squeeze(self._y_test)
+        self._y_test = np.squeeze(self._y_test).astype(self._dtype)
 
         return self.y_test
 

@@ -230,11 +230,10 @@ class GAM(BaseModel):
         %(base_model_predict.returns)s
         """  # noqa
 
-        kwargs.pop("level", None)
         x_test = self._check(key_added, x_test)
 
         self._y_test = self.model.predict(x_test, **kwargs)
-        self._y_test = np.squeeze(self._y_test)
+        self._y_test = np.squeeze(self._y_test).astype(self._dtype)
 
         return self.y_test
 
@@ -258,7 +257,9 @@ class GAM(BaseModel):
         if self._use_default_conf_int:
             self._conf_int = self.default_confidence_interval(x_test=x_test, **kwargs)
         else:
-            self._conf_int = self.model.confidence_intervals(x_test, **kwargs)
+            self._conf_int = self.model.confidence_intervals(x_test, **kwargs).astype(
+                self._dtype
+            )
 
         return self.conf_int
 
