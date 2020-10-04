@@ -416,6 +416,7 @@ def _calc_factor_weighted_helper(
 def _get_knotlocs(
     pseudotime: np.ndarray,
     n_knots: int,
+    uniform: bool = False,
 ) -> np.ndarray:
     """
     Find knot locations.
@@ -426,6 +427,8 @@ def _get_knotlocs(
         Pseudotemporal ordering of cells.
     n_knots
         Number of knots.
+    uniform
+        Whether to place the knots uniformly across the ``pseudotime`` or place them based on ``pseudotime``'s density.
 
     Returns
     -------
@@ -444,7 +447,12 @@ def _get_knotlocs(
         pseudotime = pseudotime.squeeze(1)
     if pseudotime.ndim != 1:
         raise ValueError(
-            f"Expected pseudotime to have `1` dimension, found `{pseudotime.ndim}`."
+            f"Expected `pseudotime` to have `1` dimension, found `{pseudotime.ndim}`."
+        )
+
+    if uniform:
+        return np.linspace(
+            np.min(pseudotime), np.max(pseudotime), n_knots, endpoint=True
         )
 
     x = np.quantile(

@@ -87,7 +87,7 @@ def _solve_many_sparse_problems_petsc(
     mat_a: Union[np.ndarray, spmatrix],
     solver: Optional[str] = None,
     preconditioner: Optional[str] = None,
-    tol: float = 1e-5,
+    tol: float = 1e-6,
     queue: Optional[Queue] = None,
 ) -> Tuple[np.ndarray, int]:
     """
@@ -125,7 +125,7 @@ def _(
     mat_a: Union[np.ndarray, spmatrix],
     solver: Optional[str] = None,
     preconditioner: Optional[str] = None,
-    tol: float = 1e-5,
+    tol: float = 1e-6,
     _queue: Optional[Queue] = None,
 ) -> Tuple[np.ndarray, int]:
     if mat_b.ndim not in (1, 2) or (mat_b.ndim == 2 and mat_b.shape[1] != 1):
@@ -266,7 +266,7 @@ def _invert_matrix(mat, use_petsc: bool = True, **kwargs) -> np.ndarray:
 def _petsc_mat_solve(
     mat_a: Union[np.ndarray, spmatrix],
     mat_b: Optional[Union[spmatrix, np.ndarray]] = None,
-    tol: float = 1e-5,
+    tol: float = 1e-6,
     **kwargs,
 ) -> np.ndarray:
     from petsc4py import PETSc
@@ -353,7 +353,7 @@ def _solve_lin_system(
     preconditioner: Optional[str] = None,
     n_jobs: Optional[int] = None,
     backend: str = _DEFAULT_BACKEND,
-    tol: float = 1e-5,
+    tol: float = 1e-6,
     use_eye: bool = False,
     show_progress_bar: bool = True,
 ) -> np.ndarray:

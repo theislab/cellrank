@@ -185,6 +185,7 @@ class BaseModel(ABC):
         %(time_range)s
         data_key
             Key in :paramref:`adata` ``.layers`` or `'X'` for :paramref:`adata` ``.X``.
+            If ``use_raw=True``, it's always set to `'X'`.
         time_key
             Key in :paramref:`adata` ``.obs`` where the pseudotime is stored.
         use_raw
@@ -217,8 +218,12 @@ class BaseModel(ABC):
 
                 - :paramref:`prepared` - %(base_model_prepared.summary)s
         """
-        if use_raw and self.adata.raw is None:
-            raise AttributeError("AnnData object has no attribute `.raw`.")
+
+        if use_raw:
+            if self.adata.raw is None:
+                raise AttributeError("AnnData object has no attribute `.raw`.")
+            if data_key != "X":
+                data_key = "X"
 
         if data_key not in ["X", "obs"] + list(self.adata.layers.keys()):
             raise KeyError(

@@ -9,6 +9,7 @@ from scipy.stats import norm
 
 from cellrank.ul._docs import d, inject_docs
 from cellrank.ul.models import BaseModel
+from cellrank.tl._constants import ModeEnum
 from cellrank.ul.models._utils import _OFFSET_KEY, _get_offset, _get_knotlocs
 from cellrank.ul.models._base_model import AnnData
 
@@ -16,7 +17,13 @@ _r_lib = None
 _r_lib_name = None
 
 
-@inject_docs(key=_OFFSET_KEY)
+class KnotLocs(ModeEnum):  # noqa
+    AUTO = "auto"
+    DENSITY = "density"
+    UNIFORM = "uniform"
+
+
+@inject_docs(key=_OFFSET_KEY, kloc=KnotLocs)
 @d.dedent
 class GAMR(BaseModel):
     """
@@ -35,8 +42,16 @@ class GAMR(BaseModel):
         Basis for the smoothing term. See
         `here <https://www.rdocumentation.org/packages/mgcv/versions/1.8-33/topics/s>`__ for valid options.
     offset
-        Offset for the GAM. If `'default'`, it is calculated automatically. The values are cached in
-        :paramref:`adata` `.obs[{key!r}]`. If `None`, no offset is used.
+        Offset term for the GAM. Only available when ``distribution='nb'``. If `'default'`, it is calculated
+        automatically. The values are cached in :paramref:`adata` `.obs[{key!r}]`. If `None`, no offset is used.
+    knotlocs
+        Position of knots. Can be one of the following:
+
+            - `{kloc.DENSITY.s!r}` - position the knots based on the density of pseudotime.
+            - `{kloc.AUTO.s!r}` - let `mgcv` handle knot positions; denepnds on ``basis``.
+            - `{kloc.UNIFORM.s!r}` - uniformly place the knots across the pseudotime.
+    smoothing_penalty
+        Penalty for the smoothing term. The larger the value, the smoother the fitted curve.
     **kwargs
         Keyword arguments for ``gam.control``.
     """  # noqa
@@ -48,16 +63,30 @@ class GAMR(BaseModel):
         distribution: str = "gaussian",
         basis: str = "cr",
         offset: Optional[Union[np.ndarray, str]] = "default",
+        knotlocs: str = KnotLocs.DENSITY.s,
+        smoothing_penalty: float = 1.0,
         perform_import_check: bool = True,
         **kwargs,
     ):
+        if n_splines <= 0:
+            raise ValueError(
+                f"Expected `n_splines` to be positive, found `{n_splines}`."
+            )
+        if smoothing_penalty < 0:
+            raise ValueError(
+                f"Expected `smoothing_penalty` to be non-negative, found `{smoothing_penalty}`."
+            )
+
         super().__init__(adata, model=None)
         self._n_splines = n_splines
         self._family = distribution
 
-        self._formula = f"y ~ s(x, bs='{basis}', k={self._n_splines})"
+        self._formula = (
+            f"y ~ s(x, bs='{basis}', k={self._n_splines}, sp={smoothing_penalty})"
+        )
         self._design_mat = None
         self._offset = None
+        self._knotslocs = KnotLocs(knotlocs)
 
         self._control_kwargs = copy(kwargs)
 
@@ -165,15 +194,22 @@ class GAMR(BaseModel):
 
         family = getattr(r, self._family)
 
+        kwargs = {}
+        if self._knotslocs != KnotLocs.AUTO:
+            kwargs["knots"] = pd.DataFrame(
+                _get_knotlocs(
+                    self.x, self._n_splines, uniform=self._knotslocs == KnotLocs.UNIFORM
+                ),
+                columns=["x"],
+            )
+
         self._model = self._lib.gam(
             Formula(self._formula),
             data=self._design_mat,
             family=family,
             weights=pd.Series(self.w),
-            knots=pd.DataFrame(
-                _get_knotlocs(self.x, self._n_splines)
-            ),  # needs to be a DataFrame
             control=self._lib.gam_control(**self._control_kwargs),
+            **kwargs,
         )
 
         pandas2ri.deactivate()
@@ -289,6 +325,7 @@ class GAMR(BaseModel):
             self._n_splines,
             distribution=self._family,
             offset=self._offset,
+            knotlocs=self._knotslocs.s,
             perform_import_check=False,
         )
         res._formula = self._formula  # we don't save the basis inside
