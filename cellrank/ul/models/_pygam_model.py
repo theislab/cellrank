@@ -230,7 +230,7 @@ class GAM(BaseModel):
         %(base_model_predict.returns)s
         """  # noqa
 
-        kwargs.pop("level")
+        kwargs.pop("level", None)
         x_test = self._check(key_added, x_test)
 
         self._y_test = self.model.predict(x_test, **kwargs)
