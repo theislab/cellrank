@@ -39,7 +39,7 @@ def _check_collection(
     Returns
     -------
     None
-        Nothing, but raises and :class:`KeyError` if one of needles is not found.
+        Nothing, but raises and :class:`KeyError` if one of the needles is not found.
     """
     adata_name = "adata"
 

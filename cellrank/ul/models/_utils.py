@@ -2,6 +2,7 @@
 from typing import List, Union, TypeVar, Optional
 
 import numpy as np
+from numba import njit, prange
 from scipy.stats import rankdata
 from scipy.sparse import issparse, spmatrix
 from sklearn.utils.sparsefuncs import csc_median_axis_0
@@ -183,15 +184,35 @@ def _calc_factor_quant(
 
     # not very efficient
     y = x.multiply(1.0 / library_size).tocsr()
-    return np.array([np.quantile(y[i].A[0], p) for i in range(y.shape[0])])
+    return _calc_factor_quant_helper(
+        y.data, y.indices, y.indptr, p=p, n_cols=y.shape[1]
+    )
+
+
+@njit(parallel=True, fastmath=True, cache=True)
+def _calc_factor_quant_helper(
+    data: np.ndarray, indices: np.ndarray, indptr: np.ndarray, p: float, n_cols: int
+) -> np.ndarray:
+    out = np.empty(len(indptr) - 1)
+
+    for ix in prange(len(indptr) - 1):
+        d = data[indices[indptr[ix] : indptr[ix + 1]]]
+        # TODO
+        tmp = np.zeros(shape=(n_cols,))
+        tmp[: len(d)] = d
+        out[ix] = np.quantile(tmp, p)
+
+    return out
 
 
 @_dispatch_computation.register(NormMode.RLE)
 def _(x: Union[np.ndarray, spmatrix], **_) -> np.ndarray:
-    gm = np.array(np.exp(np.sum(np.log1p(x), axis=0))).squeeze()
+    # TODO: np.log(x) will not work with sparse matrix...
+    # log1p and expm1
+    gm = np.array(np.exp(np.mean(np.log(x), axis=0))).squeeze()
     mask = (gm > 0) & np.isfinite(gm)
     if not issparse(x):
-        return np.median(x[:, mask] / gm[mask], axis=1)
+        return np.median(x[:, mask] / gm[mask], axis=1), gm, mask
 
     return csc_median_axis_0(x.tocsr()[:, mask].multiply(1.0 / gm[mask]).tocsr().T)
 
