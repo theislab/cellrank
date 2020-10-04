@@ -16,6 +16,7 @@ from cellrank.ul._parallelize import parallelize
 # edgeR:
 
 AnnData = TypeVar("AnnData")
+_OFFSET_KEY = "cellrank_offset"
 
 
 class NormMode(ModeEnum):  # noqa
@@ -470,12 +471,14 @@ def _get_knotlocs(
     return knotlocs
 
 
+@inject_docs(key=_OFFSET_KEY)
 @d.dedent
 def _get_offset(
     adata: AnnData,
     layer: Optional[str] = None,
     use_raw: bool = True,
     ref_ix: Optional[int] = None,
+    recompute: bool = False,
     **kwargs,
 ) -> np.ndarray:
     """
@@ -490,6 +493,8 @@ def _get_offset(
         Whether to access ``adata.raw``.
     ref_ix
         Index of a reference cell. If `None`, it will be determined automatically.
+    recompute
+        Whether to recompute the offset if already found in ``adata.obs[{key!r}]``.
     **kwargs
         Keyword arguments for :func:`cellrank.ul.models._utils._calc_norm_factors`.
 
@@ -498,6 +503,12 @@ def _get_offset(
     :class:`numpy.ndarray`
         Array of shape `(adata.n_obs,)` containing the offset.
     """
+
+    if not recompute and _OFFSET_KEY in adata.obs:
+        logg.debug(f"Fetching offset from `adata.obs[{_OFFSET_KEY!r}]`")
+        return adata.obs[_OFFSET_KEY]
+
+    logg.debug(f"Calculating offset for `{adata.n_obs}` cells")
 
     data = _extract_data(adata, layer=layer, use_raw=use_raw)
     try:
@@ -512,5 +523,7 @@ def _get_offset(
 
     offset = np.log(nf * np.array(data.sum(1)).squeeze())
     offset[offset == 0] = 1
+
+    adata.obs[_OFFSET_KEY] = offset
 
     return offset

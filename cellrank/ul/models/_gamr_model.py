@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Module containing all models somehow interfacing R."""
+"""Module containing all models interfacing R's mgcv package."""
 from copy import copy
 from typing import Any, Tuple, Optional
 
@@ -7,15 +7,16 @@ import numpy as np
 import pandas as pd
 from scipy.stats import norm
 
-from cellrank.ul._docs import d
+from cellrank.ul._docs import d, inject_docs
 from cellrank.ul.models import BaseModel
-from cellrank.ul.models._utils import _get_offset, _get_knotlocs
+from cellrank.ul.models._utils import _OFFSET_KEY, _get_offset, _get_knotlocs
 from cellrank.ul.models._base_model import AnnData
 
 _r_lib = None
 _r_lib_name = None
 
 
+@inject_docs(key=_OFFSET_KEY)
 @d.dedent
 class GAMR(BaseModel):
     """
@@ -33,6 +34,9 @@ class GAMR(BaseModel):
     basis
         Basis for the smoothing term. See
         `here <https://www.rdocumentation.org/packages/mgcv/versions/1.8-33/topics/s>`__ for valid options.
+    offset
+        Offset for the GAM. If `None`, it is calculated automatically. The values are cached in
+        :paramref:`adata` `.obs[{key!r}]`.
     **kwargs
         Keyword arguments for ``gam.control``.
     """  # noqa
@@ -66,13 +70,14 @@ class GAMR(BaseModel):
 
         if distribution == "nb":
             if offset is None:
-                offset = _get_offset(adata, use_raw=True)
+                offset = _get_offset(adata, use_raw=True, recompute=False)
             offset = np.asarray(offset, dtype=self._dtype)
 
             if offset.shape != (adata.n_obs,):
                 raise ValueError(
                     f"Expected offset to be of shape `{(adata.n_obs,)}`, found `{offset.shape}`."
                 )
+            adata.obs[_OFFSET_KEY] = offset
 
             self._formula += " + offset(offset)"
             self._offset = offset
@@ -176,10 +181,15 @@ class GAMR(BaseModel):
 
     @d.dedent
     def predict(
-        self, x_test: Optional[np.ndarray] = None, key_added: str = "_x_test", **kwargs
+        self,
+        x_test: Optional[np.ndarray] = None,
+        key_added: str = "_x_test",
+        level: Optional[float] = None,
+        **kwargs,
     ) -> np.ndarray:
         """
         %(base_model_predict.full_desc)s
+        This method can also compute the confidence interval.
 
         Parameters
         ----------
@@ -202,22 +212,30 @@ class GAMR(BaseModel):
                 f"Unable to run prediction, R package `{self._lib_name!r}` is not imported."
             )
 
-        newdata = self._get_x_test(x_test, key_added=key_added)
+        if level is not None and not (0 <= level <= 1):
+            raise ValueError(
+                f"Expected level to be in interval `[0, 1]`, found `{level}`."
+            )
+
+        newdata = self._get_x_test(x_test)
 
         pandas2ri.activate()
-        self._y_test = (
-            np.array(
-                robjects.r.predict(
-                    self.model,
-                    type="response",
-                    newdata=pandas2ri.py2rpy(newdata),
-                )
-            )
-            .squeeze()
-            .astype(self._dtype)
+        res = robjects.r.predict(
+            self.model,
+            newdata=pandas2ri.py2rpy(newdata),
+            type="response",
+            se=level is not None,
         )
-
         pandas2ri.deactivate()
+
+        if level is None:
+            self._y_test = np.array(res).squeeze().astype(self._dtype)
+        else:
+            self._y_test = np.array(res.rx2("fit")).squeeze().astype(self._dtype)
+            se = np.array(res.rx2("se.fit")).squeeze().astype(self._dtype)
+
+            level = norm.ppf(level + (1 - level) / 2)
+            self._conf_int = np.c_[self.y_test - level * se, self.y_test + level * se]
 
         return self.y_test
 
@@ -227,6 +245,8 @@ class GAMR(BaseModel):
     ) -> np.ndarray:
         """
         %(base_model_ci.summary)s
+        Internally, this method calls :meth:`cellrank.ul.models.GAMR.predict` to extract the confidence intreval,
+        if needed.
 
         Parameters
         ----------
@@ -239,41 +259,14 @@ class GAMR(BaseModel):
         %(base_model_ci.returns)s
         """  # noqa
 
-        from rpy2 import robjects
-        from rpy2.robjects import pandas2ri
+        # this is 2x as fast as opposed to calling `robjects.r.predict` again
+        # on my PC (Michal):
+        #   -`.predict` take ~6.5ms (without se=True, it's ~5.5ms, 20% slowdown)
+        #   -`.predict` withouty se=True + `.confidence_interval` take ~12ms
+        # this impl. achieves the 2x speedup withouty sacrificing the 20%
 
-        # TODO: DRY
-        if self.model is None:
-            raise RuntimeError(
-                "Trying to call an uninitialized model. To initialize it, run `.fit()` first."
-            )
-        if self._lib is None:
-            raise RuntimeError(
-                f"Unable to run prediction, R package `{self._lib_name!r}` is not imported."
-            )
-
-        if not (0 <= level <= 1):
-            raise ValueError(
-                f"Expected level to be in interval `[0, 1]`, found `{level}`."
-            )
-
-        newdata = self._get_x_test(x_test)
-
-        # TODO: maybe don't recompute and use se=True in predict
-        pandas2ri.activate()
-        res = robjects.r.predict(
-            self.model,
-            newdata=pandas2ri.py2rpy(newdata),
-            type="response",
-            se=True,
-        )
-        pandas2ri.deactivate()
-
-        self._y_test = np.array(res.rx2("fit")).squeeze().astype(self._dtype)
-        se = np.array(res.rx2("se.fit")).squeeze().astype(self._dtype)
-
-        level = norm.ppf(level + (1 - level) / 2)
-        self._conf_int = np.c_[self.y_test - level * se, self.y_test + level * se]
+        if x_test is not None or level != 0.95 or self._conf_int is None:
+            _ = self.predict(x_test=x_test, level=level)
 
         return self._conf_int
 

@@ -307,7 +307,9 @@ def _fit_gene_trends(
             model = cb(
                 models[gene][ln], gene=gene, lineage=ln, time_range=tr, **kwargs
             ).fit()
-            model.predict()
+            # GAMR is a bit faster if we don't need the conf int
+            # if it's needed, `.predict` will calculate it and `confidence_interval` will do nothing
+            model.predict(level=0.95 if conf_int else None)
             if conf_int:
                 model.confidence_interval()
 
