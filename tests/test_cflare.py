@@ -102,6 +102,80 @@ class TestCFLARE:
         assert _probs(TermStatesKey.FORWARD) in mc.adata.obs.keys()
         assert _colors(TermStatesKey.FORWARD) in mc.adata.uns.keys()
 
+    def test_rename_terminal_states_no_terminal_states(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        terminal_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc.compute_eigendecomposition(k=5)
+        with pytest.raises(RuntimeError):
+            mc.rename_terminal_states({"foo": "bar"})
+
+    def test_rename_terminal_states_invalid_old_name(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        terminal_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc.compute_eigendecomposition(k=5)
+        mc.compute_terminal_states(use=2)
+        with pytest.raises(ValueError):
+            mc.rename_terminal_states({"foo": "bar"})
+
+    def test_rename_terminal_states_invalid_new_name(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        terminal_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc.compute_eigendecomposition(k=5)
+        mc.compute_terminal_states(use=2)
+        with pytest.raises(ValueError):
+            mc.rename_terminal_states({"0": "1"})
+
+    def test_rename_terminal_states_empty_mapping(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        terminal_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc.compute_eigendecomposition(k=5)
+        mc.compute_terminal_states(use=2)
+
+        orig_cats = list(mc._get(P.TERM).cat.categories)
+        mc.rename_terminal_states({})
+
+        np.testing.assert_array_equal(mc._get(P.TERM).cat.categories, orig_cats)
+
+    def test_rename_terminal_states_normal_run(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        terminal_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc.compute_eigendecomposition(k=5)
+        mc.compute_terminal_states(use=2)
+
+        mc.rename_terminal_states({"0": "foo", "1": "bar"})
+
+        np.testing.assert_array_equal(mc._get(P.TERM).cat.categories, ["foo", "bar"])
+
+    def test_rename_terminal_states_non_string_new_names(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        terminal_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc.compute_eigendecomposition(k=5)
+        mc.compute_terminal_states(use=2)
+
+        mc.rename_terminal_states({"0": 42, "1": object})
+
+        np.testing.assert_array_equal(
+            mc._get(P.TERM).cat.categories, ["42", str(object)]
+        )
+
     def test_compute_absorption_probabilities_no_args(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()

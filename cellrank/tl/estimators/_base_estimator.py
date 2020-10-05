@@ -236,7 +236,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         Returns
         -------
         None
-            Nothing, just updates the names :paramref:`{ts}`.
+            Nothing, just updates the names of :paramref:`{ts}`.
         """
 
         term_states = self._get(P.TERM)
@@ -246,6 +246,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
         if not isinstance(new_names, Mapping):
             raise TypeError(f"Expected a `Mapping` type, found `{type(new_names)!r}`.")
+        if not len(new_names):
+            return
 
         new_names = {k: str(v) for k, v in new_names.items()}
 
@@ -263,7 +265,9 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
         term_states.cat.rename_categories(new_names, inplace=True)
 
-        memberships = self._get(A.TERM_ABS_PROBS)
+        memberships = (
+            self._get(A.TERM_ABS_PROBS) if hasattr(self, A.TERM_ABS_PROBS.s) else None
+        )
         if memberships is not None:  # GPCCA
             memberships.names = [new_names.get(n, n) for n in memberships.names]
             self._set(A.TERM_ABS_PROBS, memberships)
