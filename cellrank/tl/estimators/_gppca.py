@@ -329,7 +329,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         method: str = "eigengap",
         n_cells: int = 30,
         alpha: Optional[float] = 1,
-        threshold: float = 0.95,
+        stability_threshold: float = 0.96,
         n_states: Optional[int] = None,
     ):
         """
@@ -345,14 +345,14 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
                     of the coarse-grained transition matrix.
                 - `'top_n'` - select top ``n_states`` based on the probability of the diagonal \
                     of the coarse-grained transition matrix.
-                - `'threshold'` - select states which have the minimum probability of the diagonal
-                    of the coarse-grained transition matrix >= ``threshold``.
+                - `'stability'` - select states which have a stability index >= ``stability_threshold``. The stability
+                    index is given by the diagonal elements of the coarse-grained transition matrix.
         %(n_cells)s
         alpha
             Weight given to the deviation of an eigenvalue from one. Used when ``method='eigengap'``
             or ``method='eigengap_coarse'``.
-        threshold
-            Threshold used when ``method='threshold'``.
+        stability_threshold
+            Threshold used when ``method='stability'``.
         n_states
             Numer of states used when ``method='top_n'``.
 
@@ -393,13 +393,13 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
                 raise ValueError(
                     f"Expected `n_states` to be positive, found `{n_states}`."
                 )
-        elif method == "min_self_prob":
-            if threshold is None:
+        elif method == "stability":
+            if stability_threshold is None:
                 raise ValueError(
-                    "Argument `min_self_prob` must be != `None` for `method='min_self_prob'`."
+                    "Argument `stability_threshold` must be != `None` for `method='stability'`."
                 )
             self_probs = pd.Series(np.diag(coarse_T), index=coarse_T.columns)
-            names = self_probs[self_probs.values >= threshold].index
+            names = self_probs[self_probs.values >= stability_threshold].index
             self.set_terminal_states_from_macrostates(names, n_cells=n_cells)
             return
         else:
