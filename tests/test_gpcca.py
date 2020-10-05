@@ -444,6 +444,48 @@ class TestGPCCA:
 
         _check_abs_probs(mc)
 
+    def test_set_terminal_states_from_macrostates_rename_states_invalid(
+        self, adata_large: AnnData
+    ):
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        terminal_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc.compute_schur(n_components=10, method="krylov")
+
+        mc.compute_macrostates(n_states=2, n_cells=5)
+        with pytest.raises(ValueError):
+            mc.set_terminal_states_from_macrostates({"0": "1"})
+
+        assert mc._get(P.TERM) is None
+        assert mc._get(P.TERM_PROBS) is None
+        assert mc._get(A.TERM_ABS_PROBS) is None
+
+        assert TermStatesKey.FORWARD.s not in mc.adata.obs
+        assert _probs(TermStatesKey.FORWARD.s) not in mc.adata.obs
+        assert _colors(TermStatesKey.FORWARD.s) not in mc.adata.uns
+        assert _lin_names(TermStatesKey.FORWARD.s) not in mc.adata.uns
+
+    def test_set_terminal_states_from_macrostates_rename_states(
+        self, adata_large: AnnData
+    ):
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        terminal_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc.compute_schur(n_components=10, method="krylov")
+
+        mc.compute_macrostates(n_states=2, n_cells=5)
+        mc.set_terminal_states_from_macrostates({"0": "foo"})
+        mc.compute_absorption_probabilities()
+
+        _check_abs_probs(mc)
+
+        np.testing.assert_array_equal(mc._get(P.TERM).cat.categories, ["foo"])
+        np.testing.assert_array_equal(mc._get(A.TERM_ABS_PROBS).names, ["foo"])
+
     def test_set_terminal_states_from_macrostates_no_cells(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
