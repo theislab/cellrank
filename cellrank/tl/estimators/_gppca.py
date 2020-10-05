@@ -259,7 +259,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         ----------
         names
             Names of the macrostates to be marked as terminal. Multiple states can be combined using `','`,
-            such as ``["Alpha, Beta", "Epsilon"]``.
+            such as ``["Alpha, Beta", "Epsilon"]``. If `None`, select all macrostates.
         %(n_cells)s
 
         Returns
@@ -297,6 +297,9 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         if isinstance(names, str):
             names = [names]
 
+        if not len(names):
+            raise ValueError("No macrostates have been selected.")
+
         macrostates_probs = probs[[n for n in names if n != "rest"]]
 
         # compute the aggregated probability of being a initial/terminal state (no matter which)
@@ -326,10 +329,10 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
     @d.dedent
     def compute_terminal_states(
         self,
-        method: str = "eigengap",
+        method: str = "stability",
         n_cells: int = 30,
         alpha: Optional[float] = 1,
-        min_self_prob: Optional[float] = None,
+        stability_threshold: float = 0.96,
         n_states: Optional[int] = None,
     ):
         """
@@ -340,21 +343,21 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         method
             One of following:
 
-                - `'eigengap'` - select the number of states based on the eigengap of the transition matrix.
-                - `'eigengap_coarse'` - select the number of states based on the eigengap of the diagonal
+                - `'eigengap'` - select the number of states based on the `eigengap` of the transition matrix.
+                - `'eigengap_coarse'` - select the number of states based on the `eigengap` of the diagonal
                     of the coarse-grained transition matrix.
                 - `'top_n'` - select top ``n_states`` based on the probability of the diagonal \
                     of the coarse-grained transition matrix.
-                - `'min_self_prob'` - select states which have the given minimum probability of the diagonal
-                    of the coarse-grained transition matrix.
+                - `'stability'` - select states which have a stability index >= ``stability_threshold``. The stability
+                    index is given by the diagonal elements of the coarse-grained transition matrix.
         %(n_cells)s
         alpha
             Weight given to the deviation of an eigenvalue from one. Used when ``method='eigengap'``
             or ``method='eigengap_coarse'``.
-        min_self_prob
-            Used when ``method='min_self_prob'``.
+        stability_threshold
+            Threshold used when ``method='stability'``.
         n_states
-            Used when ``method='top_n'``.
+            Numer of states used when ``method='top_n'``.
 
         Returns
         -------
@@ -393,13 +396,13 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
                 raise ValueError(
                     f"Expected `n_states` to be positive, found `{n_states}`."
                 )
-        elif method == "min_self_prob":
-            if min_self_prob is None:
+        elif method == "stability":
+            if stability_threshold is None:
                 raise ValueError(
-                    "Argument `min_self_prob` must be != `None` for `method='min_self_prob'`."
+                    "Argument `stability_threshold` must be != `None` for `method='stability'`."
                 )
             self_probs = pd.Series(np.diag(coarse_T), index=coarse_T.columns)
-            names = self_probs[self_probs.values >= min_self_prob].index
+            names = self_probs[self_probs.values >= stability_threshold].index
             self.set_terminal_states_from_macrostates(names, n_cells=n_cells)
             return
         else:
