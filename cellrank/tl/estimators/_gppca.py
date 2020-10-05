@@ -298,7 +298,20 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
 
         if self._get(P.MACRO_MEMBER) is None:
             raise RuntimeError("Compute macrostates first as `.compute_macrostates()`.")
-        elif probs.shape[1] == 1:
+
+        # this also checks that the names are correct before renaming
+        macrostates_probs = probs[list(names.keys())]
+
+        # we do this also here because if `rename_terminal_states` fails
+        # invalid states would've been written to this object and nothing to adata
+        new_names = {k: str(v) for k, v in names.items()}
+        names_after_renaming = [new_names.get(n, n) for n in probs.names]
+        if len(set(names_after_renaming)) != probs.shape[1]:
+            raise ValueError(
+                f"After renaming, the names will not be unique: `{names_after_renaming}`."
+            )
+
+        if probs.shape[1] == 1:
             self._set(A.TERM, self._create_states(probs, n_cells=n_cells))
             self._set(A.TERM_COLORS, self._get(A.MACRO_COLORS))
             self._set(A.TERM_PROBS, probs / probs.max())
@@ -308,9 +321,6 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
 
             self._write_terminal_states()
             return
-
-        macrostates_probs = probs[list(names.keys())]
-        macrostates_probs.nams = names.keys()
 
         # compute the aggregated probability of being a initial/terminal state (no matter which)
         scaled_probs = macrostates_probs.copy()
