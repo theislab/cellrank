@@ -224,7 +224,9 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         self._write_terminal_states(time=kwargs.get("time", None))
 
     @inject_docs(ts=P.TERM.s)
-    def rename_terminal_states(self, new_names: Mapping[str, str]) -> None:
+    def rename_terminal_states(
+        self, new_names: Mapping[str, str], update_adata: bool = True
+    ) -> None:
         """
         Rename the names of :paramref:`{ts}`.
 
@@ -232,6 +234,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         ----------
         new_names
             Mapping where keys are the old names and the values are the new names. New names must be unique.
+        update_adata
+            Whether to update underlying :paramref:`adata` object as well or not.
 
         Returns
         -------
@@ -271,6 +275,19 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         if memberships is not None:  # GPCCA
             memberships.names = [new_names.get(n, n) for n in memberships.names]
             self._set(A.TERM_ABS_PROBS, memberships)
+
+        # we can be just computing it and it's not yet saved in adata
+        if (
+            update_adata
+            and self._term_key in self.adata.obs
+            and _lin_names(self._term_key) in self.adata.uns
+        ):
+            self.adata.obs[self._term_key].cat.rename_categories(
+                new_names, inplace=True
+            )
+            self.adata.uns[_lin_names(self._term_key)] = np.array(
+                self.adata.obs[self._term_key].cat.categories
+            )
 
     @inject_docs(
         abs_prob=P.ABS_PROBS,
@@ -847,7 +864,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         self.adata.obs[_probs(self._term_key)] = self._get(P.TERM_PROBS)
 
         self.adata.uns[_colors(self._term_key)] = self._get(A.TERM_COLORS)
-        self.adata.uns[_lin_names(self._term_key)] = list(
+        self.adata.uns[_lin_names(self._term_key)] = np.array(
             self._get(P.TERM).cat.categories
         )
 

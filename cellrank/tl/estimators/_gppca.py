@@ -309,7 +309,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
             self._write_terminal_states()
             return
 
-        macrostates_probs = probs[list(names.values())]
+        macrostates_probs = probs[list(names.keys())]
         macrostates_probs.nams = names.keys()
 
         # compute the aggregated probability of being a initial/terminal state (no matter which)
@@ -1115,7 +1115,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
             )
 
         if probs.shape[1] == 1:
-            self._set_initial_states_from_macrostates(probs.names[0], n_cells=n_cells)
+            self._set_initial_states_from_macrostates(n_cells=n_cells)
             return
 
         stat_dist = self._get(P.COARSE_STAT_D)
@@ -1159,7 +1159,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
 
         if not isinstance(n_cells, int):
             raise TypeError(
-                f"Expected `n_cells` to be of type `int`, found `{type(n_cells).__name__}`."
+                f"Expected `n_cells` to be of type `int`, found `{type(n_cells).__name__!r}`."
             )
 
         if n_cells <= 0:
@@ -1175,10 +1175,10 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         else:
             if names is None:
                 names = probs.names
-
             if isinstance(names, str):
                 names = [names]
 
+            probs = probs[list(names)]
             categorical = self._create_states(probs, n_cells=n_cells)
             probs /= probs.max(0)
 
