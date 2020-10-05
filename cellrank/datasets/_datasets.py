@@ -2,7 +2,7 @@
 """Datasets module."""
 
 import os
-from typing import Union, TypeVar
+from typing import Tuple, Union, TypeVar
 from pathlib import Path
 
 from scanpy import read
@@ -12,24 +12,33 @@ from cellrank.ul._docs import d
 
 AnnData = TypeVar("AnnData")
 
-_datasets = dict(  # noqa
-    pancreas=(
-        "datasets/endocrinogenesis_day15.5.h5ad",
-        "https://github.com/theislab/cellrank_notebooks/raw/master/datasets/pancreas/endocrinogenesis_day15.5.h5ad",
+
+_datasets = {
+    "pancreas": (
+        "https://github.com/theislab/cellrank_notebooks/raw/master/datasets/"
+        "pancreas/endocrinogenesis_day15.5.h5ad",
+        (2531, 27998),
     ),
-    lung=(
-        "datasets/lung_regeneration.h5ad",
+    "pancreas_preprocessed": (
+        "https://github.com/theislab/cellrank_notebooks/raw/master/datasets/"
+        "pancreas/endocrinogenesis_day15.5_preprocessed.h5ad",
+        (2531, 2000),
+    ),
+    "lung": (
         "https://github.com/theislab/cellrank_notebooks/raw/master/datasets/lung/regeneration.h5ad",
+        (24882, 24051),
     ),
-    pancreas_preprocessed=(
-        None,
-        "https://github.com/theislab/cellrank_notebooks/raw/master/"
-        "datasets/pancreas/endocrinogenesis_day15.5_preprocessed.h5ad",
-    ),
-)
+}
 
 
-def _load_dataset_from_url(fpath: Union[os.PathLike, str], url: str) -> AnnData:
+def _load_dataset_from_url(
+    fpath: Union[os.PathLike, str], url: str, expected_shape: Tuple[int, int], **kwargs
+) -> AnnData:
+
+    fpath = str(fpath)
+    if not fpath.endswith(".h5ad"):
+        fpath += ".h5ad"
+
     if os.path.isfile(fpath):
         logg.debug(f"Loading dataset from `{fpath!r}`")
     else:
@@ -42,14 +51,27 @@ def _load_dataset_from_url(fpath: Union[os.PathLike, str], url: str) -> AnnData:
     except OSError as e:
         logg.debug(f"Unable to create directory `{dirname!r}`. Reason `{e}`")
 
-    adata = read(fpath, backup_url=url, sparse=True, cache=True)
+    kwargs.setdefault("sparse", True)
+    kwargs.setdefault("cache", True)
+
+    adata = read(fpath, backup_url=url, **kwargs)
+
+    if adata.shape != expected_shape:
+        raise ValueError(
+            f"Expected `anndata.AnnData` object to have shape `{expected_shape}`, found `{adata.shape}`."
+        )
+
     adata.var_names_make_unique()
 
     return adata
 
 
+@d.get_sectionsf("dataset", sections=["Parameters"])
 @d.dedent
-def pancreas() -> AnnData:
+def pancreas(
+    path: Union[str, Path] = "datasets/endocrinogenesis_day15.5.h5ad",
+    **kwargs,
+) -> AnnData:
     """
     Development of the murine pancreas at E15.5 from [Panc19]_.
 
@@ -59,16 +81,47 @@ def pancreas() -> AnnData:
     Contains raw spliced and un-spliced count data, low-dimensional embedding coordinates as well as original
     cluster annotations.
 
+    Parameters
+    ----------
+    path
+        Path where to save the dataset.
+    **kwargs
+        Keyword arguments for :func:`scanpy.read`.
+
     Returns
     -------
     %(adata)s
     """
 
-    return _load_dataset_from_url(*_datasets["pancreas"])
+    return _load_dataset_from_url(path, *_datasets["pancreas"], **kwargs)
 
 
 @d.dedent
-def lung() -> AnnData:
+def pancreas_preprocessed(
+    path: Union[str, Path] = "datasets/endocrinogenesis_day15.5_preprocessed.h5ad",
+    **kwargs,
+) -> AnnData:
+    """
+    Development of the murine pancreas at E15.5 from [Panc19]_, preprocessed according to the \
+    `basic tutorial <https://cellrank.readthedocs.io/en/latest/pancreas_basic.html>`__.
+
+    Parameters
+    ----------
+    %(dataset.parameters)s
+
+    Returns
+    -------
+    %(adata)s
+    """
+
+    return _load_dataset_from_url(path, *_datasets["pancreas_preprocessed"], **kwargs)
+
+
+@d.dedent
+def lung(
+    path: Union[str, Path] = "datasets/lung_regeneration.h5ad",
+    **kwargs,
+) -> AnnData:
     """
     Regeneration of murine lung epithelial cells at 13 time points from [Lung20]_.
 
@@ -80,31 +133,13 @@ def lung() -> AnnData:
     Contains raw spliced and un-spliced count data, low-dimensional embedding coordinates as well as  original
     cluster annotations.
 
-    Returns
-    -------
-    %(adata)s
-    """
-
-    return _load_dataset_from_url(*_datasets["lung"])
-
-
-@d.dedent
-def pancreas_preprocessed(
-    path: Union[str, Path] = "datasets/endocrinogenesis_day15.5_preprocessed.h5ad"
-) -> AnnData:
-    """
-    Development of the murine pancreas at E15.5 from [Panc19]_, preprocessed according to the \
-    `basic tutorial <https://cellrank.readthedocs.io/en/latest/pancreas_basic.html>`__.
-
     Parameters
     ----------
-    path
-        Path where to save the dataset.
+    %(dataset.parameters)s
 
     Returns
     -------
     %(adata)s
     """
 
-    _, url = _datasets["pancreas_preprocessed"]
-    return _load_dataset_from_url(path, url)
+    return _load_dataset_from_url(path, *_datasets["lung"], **kwargs)
