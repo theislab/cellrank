@@ -249,7 +249,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
     @inject_docs(fs=P.TERM, fsp=P.TERM_PROBS)
     def set_terminal_states_from_macrostates(
         self,
-        names: Optional[Union[Iterable[str], str]] = None,
+        names: Optional[Union[Sequence[str], Mapping[str, str], str]] = None,
         n_cells: int = 30,
     ):
         """
@@ -259,7 +259,8 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         ----------
         names
             Names of the macrostates to be marked as terminal. Multiple states can be combined using `','`,
-            such as ``["Alpha, Beta", "Epsilon"]``. If `None`, select all macrostates.
+            such as ``["Alpha, Beta", "Epsilon"]``.  If a :class:`dict`, keys correspond to the names
+            of the macrostates and the values to the new names.  If `None`, select all macrostates.
         %(n_cells)s
 
         Returns
@@ -279,7 +280,21 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         if n_cells <= 0:
             raise ValueError(f"Expected `n_cells` to be positive, found `{n_cells}`.")
 
+        rename = True
         probs = self._get(P.MACRO_MEMBER)
+
+        if names is None:
+            names = probs.names
+            rename = False
+        if isinstance(names, str):
+            names = [names]
+            rename = False
+        if not isinstance(names, dict):
+            names = {n: n for n in names}
+            rename = False
+
+        if not len(names):
+            raise ValueError("No macrostates have been selected.")
 
         if self._get(P.MACRO_MEMBER) is None:
             raise RuntimeError("Compute macrostates first as `.compute_macrostates()`.")
@@ -288,19 +303,14 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
             self._set(A.TERM_COLORS, self._get(A.MACRO_COLORS))
             self._set(A.TERM_PROBS, probs / probs.max())
             self._set(A.TERM_ABS_PROBS, probs)
+            if rename:
+                self.rename_terminal_states(names)
+
             self._write_terminal_states()
             return
 
-        if names is None:
-            names = probs.names
-
-        if isinstance(names, str):
-            names = [names]
-
-        if not len(names):
-            raise ValueError("No macrostates have been selected.")
-
-        macrostates_probs = probs[[n for n in names if n != "rest"]]
+        macrostates_probs = probs[list(names.values())]
+        macrostates_probs.nams = names.keys()
 
         # compute the aggregated probability of being a initial/terminal state (no matter which)
         scaled_probs = macrostates_probs.copy()
@@ -314,8 +324,10 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
             A.TERM_COLORS,
             macrostates_probs[list(self._get(P.TERM).cat.categories)].colors,
         )
-
         self._set(A.TERM_ABS_PROBS, scaled_probs)
+        if rename:
+            self.rename_terminal_states(names)
+
         self._write_terminal_states()
 
     def set_terminal_states_from_metastable_states(self, *args, **kwargs):
@@ -936,9 +948,6 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         if n_cells <= 0:
             raise ValueError(f"Expected `n_cells` to be positive, found `{n_cells}`.")
 
-        if isinstance(probs, Lineage):
-            probs = probs[[n for n in probs.names if n != "rest"]]
-
         a_discrete, not_enough_cells = _fuzzy_to_discrete(
             a_fuzzy=probs,
             n_most_likely=n_cells,
@@ -1170,7 +1179,6 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
             if isinstance(names, str):
                 names = [names]
 
-            probs = probs[[n for n in names if n != "rest"]]
             categorical = self._create_states(probs, n_cells=n_cells)
             probs /= probs.max(0)
 
