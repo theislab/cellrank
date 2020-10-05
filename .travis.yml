@@ -7,7 +7,7 @@ python:
 
 os: linux
 
-dist: bionic
+dist: bionic  # Ubuntu 18.04
 
 before_cache:
   - rm -f $HOME/.cache/pip/log/debug.log
