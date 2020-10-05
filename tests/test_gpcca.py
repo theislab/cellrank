@@ -557,7 +557,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2)
-        mc.compute_terminal_states(n_cells=5, method="min_self_prob", min_self_prob=0.5)
+        mc.compute_terminal_states(n_cells=5, method="min_self_prob", threshold=0.5)
         mc.compute_absorption_probabilities()
 
         _check_abs_probs(mc)

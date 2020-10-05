@@ -329,7 +329,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         method: str = "eigengap",
         n_cells: int = 30,
         alpha: Optional[float] = 1,
-        min_self_prob: Optional[float] = None,
+        threshold: float = 0.95,
         n_states: Optional[int] = None,
     ):
         """
@@ -340,21 +340,21 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         method
             One of following:
 
-                - `'eigengap'` - select the number of states based on the eigengap of the transition matrix.
-                - `'eigengap_coarse'` - select the number of states based on the eigengap of the diagonal
+                - `'eigengap'` - select the number of states based on the `eigengap` of the transition matrix.
+                - `'eigengap_coarse'` - select the number of states based on the `eigengap` of the diagonal
                     of the coarse-grained transition matrix.
                 - `'top_n'` - select top ``n_states`` based on the probability of the diagonal \
                     of the coarse-grained transition matrix.
-                - `'min_self_prob'` - select states which have the given minimum probability of the diagonal
-                    of the coarse-grained transition matrix.
+                - `'threshold'` - select states which have the minimum probability of the diagonal
+                    of the coarse-grained transition matrix >= ``threshold``.
         %(n_cells)s
         alpha
             Weight given to the deviation of an eigenvalue from one. Used when ``method='eigengap'``
             or ``method='eigengap_coarse'``.
-        min_self_prob
-            Used when ``method='min_self_prob'``.
+        threshold
+            Threshold used when ``method='threshold'``.
         n_states
-            Used when ``method='top_n'``.
+            Numer of states used when ``method='top_n'``.
 
         Returns
         -------
@@ -394,12 +394,12 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
                     f"Expected `n_states` to be positive, found `{n_states}`."
                 )
         elif method == "min_self_prob":
-            if min_self_prob is None:
+            if threshold is None:
                 raise ValueError(
                     "Argument `min_self_prob` must be != `None` for `method='min_self_prob'`."
                 )
             self_probs = pd.Series(np.diag(coarse_T), index=coarse_T.columns)
-            names = self_probs[self_probs.values >= min_self_prob].index
+            names = self_probs[self_probs.values >= threshold].index
             self.set_terminal_states_from_macrostates(names, n_cells=n_cells)
             return
         else:
