@@ -47,8 +47,8 @@ class GAMR(BaseModel):
     knotlocs
         Position of knots. Can be one of the following:
 
+            - `{kloc.AUTO.s!r}` - let `mgcv` handle knot positions.
             - `{kloc.DENSITY.s!r}` - position the knots based on the density of pseudotime.
-            - `{kloc.AUTO.s!r}` - let `mgcv` handle knot positions; depends on ``basis``.
             - `{kloc.UNIFORM.s!r}` - uniformly place the knots across the pseudotime.
     smoothing_penalty
         Penalty for the smoothing term. The larger the value, the smoother the fitted curve.
@@ -63,7 +63,7 @@ class GAMR(BaseModel):
         distribution: str = "gaussian",
         basis: str = "cr",
         offset: Optional[Union[np.ndarray, str]] = "default",
-        knotlocs: str = KnotLocs.DENSITY.s,
+        knotlocs: str = KnotLocs.AUTO.s,
         smoothing_penalty: float = 1.0,
         perform_import_check: bool = True,
         **kwargs,
