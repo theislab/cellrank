@@ -259,7 +259,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         ----------
         names
             Names of the macrostates to be marked as terminal. Multiple states can be combined using `','`,
-            such as ``["Alpha, Beta", "Epsilon"]``.
+            such as ``["Alpha, Beta", "Epsilon"]``. If `None`, select all macrostates.
         %(n_cells)s
 
         Returns
@@ -297,6 +297,9 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         if isinstance(names, str):
             names = [names]
 
+        if not len(names):
+            raise ValueError("No macrostates have been selected.")
+
         macrostates_probs = probs[[n for n in names if n != "rest"]]
 
         # compute the aggregated probability of being a initial/terminal state (no matter which)
@@ -326,7 +329,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
     @d.dedent
     def compute_terminal_states(
         self,
-        method: str = "eigengap",
+        method: str = "stability",
         n_cells: int = 30,
         alpha: Optional[float] = 1,
         stability_threshold: float = 0.96,
