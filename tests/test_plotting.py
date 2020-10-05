@@ -267,6 +267,10 @@ class TestClusterFates:
         )
 
     @compare()
+    def test_violin_no_cluster_key(self, adata: AnnData, fpath: str):
+        cr.pl.cluster_fates(adata, mode="violin", cluster_key=None, dpi=DPI, save=fpath)
+
+    @compare()
     def test_violin_cluster_subset(self, adata: AnnData, fpath: str):
         cr.pl.cluster_fates(
             adata, cluster_key="clusters", mode="violin", dpi=DPI, save=fpath
@@ -463,7 +467,7 @@ class TestClusterFates:
             adata,
             cluster_key="clusters",
             mode="heatmap",
-            xticks_rotation=90,
+            xrot=45,
             dpi=DPI,
             save=fpath,
         )

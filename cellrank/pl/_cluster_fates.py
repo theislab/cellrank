@@ -9,6 +9,7 @@ from collections import OrderedDict as odict
 
 import numpy as np
 import pandas as pd
+from scipy.sparse import csr_matrix
 
 import matplotlib as mpl
 import matplotlib.cm as cm
@@ -48,6 +49,7 @@ def cluster_fates(
     ncols: Optional[int] = None,
     sharey: bool = False,
     fmt: str = "0.2f",
+    xrot: float = 90,
     legend_kwargs: Mapping[str, Any] = MappingProxyType({"loc": "best"}),
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
@@ -80,7 +82,7 @@ def cluster_fates(
     clusters
         Clusters to visualize. If `None`, all clusters will be plotted.
     basis
-        Basis for scatterplot to use when ``mode={m.PAGA_PIE.s!r}``. If `None`, don't show scatterplot.
+        Basis for scatterplot to use when ``mode={m.PAGA_PIE.s!r}``. If `None`, don't show the scatterplot.
     show_cbar
         Whether to show colorbar when ``mode={m.PAGA_PIE.s!r}``.
     ncols
@@ -89,6 +91,8 @@ def cluster_fates(
         Whether to share y-axis when ``mode={m.BAR.s!r}``.
     fmt
         Format when using ``mode={m.HEATMAP.s!r}`` or ``mode={m.CLUSTERMAP.s!r}``.
+    xrot
+        Rotation of the labels on the x-axis.
     figsize
         Size of the figure.
     legend_kwargs
@@ -143,7 +147,7 @@ def cluster_fates(
                 ax = current_ax
 
             current_ax.set_xticks(np.arange(len(lin_names)))
-            current_ax.set_xticklabels(lin_names, rotation=xrot if has_xrot else 45)
+            current_ax.set_xticklabels(lin_names, rotation=xrot)
             if not is_all:
                 current_ax.set_xlabel(points)
             current_ax.set_ylabel("absorption probability")
@@ -327,11 +331,11 @@ def cluster_fates(
         kwargs["rotation"] = xrot
 
         data = np.ravel(adata.obsm[lk].X.T)[..., np.newaxis]
-        tmp = _AnnData(np.zeros_like(data))
+        tmp = _AnnData(csr_matrix(data.shape, dtype=np.float32))
         tmp.obs["absorption probability"] = data
         tmp.obs[points] = (
             pd.Series(
-                np.ravel(
+                np.concatenate(
                     [
                         [f"{dir_prefix.lower()} {n}"] * adata.n_obs
                         for n in adata.obsm[lk].names
@@ -350,6 +354,7 @@ def cluster_fates(
             figsize=figsize if figsize is not None else (8, 6), dpi=dpi
         )
         ax.set_title(points.capitalize())
+
         violin(tmp, keys=["absorption probability"], ax=ax, **kwargs)
 
         return fig
@@ -480,11 +485,7 @@ def cluster_fates(
         std = np.nanstd(data, axis=0) / np.sqrt(data.shape[0])
         d[name] = [mean, std]
 
-    has_xrot = "xticks_rotation" in kwargs
-    xrot = kwargs.pop("xticks_rotation", 45)
-
     logg.debug(f"Plotting in mode `{mode!r}`")
-
     use_clustermap = False
     if mode == mode.CLUSTERMAP:
         use_clustermap = True
