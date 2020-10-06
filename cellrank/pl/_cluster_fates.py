@@ -45,7 +45,7 @@ def cluster_fates(
     cluster_key: Optional[str] = "clusters",
     clusters: Optional[Union[str, Sequence[str]]] = None,
     basis: Optional[str] = None,
-    show_cbar: bool = True,
+    cbar: bool = True,
     ncols: Optional[int] = None,
     sharey: bool = False,
     fmt: str = "0.2f",
@@ -83,7 +83,7 @@ def cluster_fates(
         Clusters to visualize. If `None`, all clusters will be plotted.
     basis
         Basis for scatterplot to use when ``mode={m.PAGA_PIE.s!r}``. If `None`, don't show the scatterplot.
-    show_cbar
+    cbar
         Whether to show colorbar when ``mode={m.PAGA_PIE.s!r}``.
     ncols
         Number of columns when ``mode={m.BAR.s!r}`` or ``mode={m.PAGA.s!r}``.
@@ -193,7 +193,7 @@ def cluster_fates(
 
             paga(adata, **kwargs)
 
-        if show_cbar:
+        if cbar:
             norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
             cax, _ = mpl.colorbar.make_axes(ax, aspect=60)
             _ = mpl.colorbar.ColorbarBase(
@@ -361,18 +361,19 @@ def cluster_fates(
 
     @plot.register(ClusterFatesMode.HEATMAP)
     def _():
-        title = kwargs.pop("title", None)
-        if not title:
-            title = "average fate per cluster"
         data = pd.DataFrame(
             [mean for mean, _ in d.values()], columns=lin_names, index=clusters
         ).T
 
-        if "cmap" not in kwargs:
-            kwargs["cmap"] = "viridis"
+        title = kwargs.pop("title", "average fate per cluster")
+        cbar_kws = {
+            "label": "probability",
+            "ticks": np.linspace(data.values.min(), data.values.max(), 5),
+        }
+        kwargs.setdefault("cmap", "viridis")
 
         if use_clustermap:
-            kwargs["cbar_pos"] = (0, 0.9, 0.025, 0.15) if show_cbar else None
+            kwargs["cbar_pos"] = (0, 0.9, 0.025, 0.15) if cbar else None
             max_size = float(max(data.shape))
 
             g = clustermap(
@@ -385,6 +386,7 @@ def cluster_fates(
                     0.15 * data.shape[0] / max_size,
                     0.15 * data.shape[1] / max_size,
                 ),
+                cbar_kws=cbar_kws,
                 figsize=figsize,
                 **kwargs,
             )
@@ -401,7 +403,8 @@ def cluster_fates(
                 robust=True,
                 annot=True,
                 fmt=fmt,
-                cbar=show_cbar,
+                cbar=cbar,
+                cbar_kws=cbar_kws,
                 ax=ax,
                 **kwargs,
             )

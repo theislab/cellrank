@@ -791,7 +791,7 @@ class TestHeatmap:
             GENES[:5],
             mode="lineages",
             time_key="latent_time",
-            show_cbar=False,
+            cbar=False,
             dpi=DPI,
             save=fpath,
         )
@@ -805,7 +805,7 @@ class TestHeatmap:
             GENES[:5],
             mode="genes",
             time_key="latent_time",
-            show_cbar=False,
+            cbar=False,
             dpi=DPI,
             save=fpath,
         )
@@ -1029,7 +1029,7 @@ class TestHeatmap:
             lineages="1",
             time_key="latent_time",
             cluster_genes=True,
-            show_dendrogram=True,
+            dendrogram=True,
             dpi=DPI,
             save=fpath,
         )
@@ -1108,7 +1108,7 @@ class TestHeatMapReturns:
             mode="genes",
             time_key="latent_time",
             cluster_genes=True,
-            show_dendrogram=True,
+            dendrogram=True,
             return_genes=True,
             dpi=DPI,
         )
@@ -1260,7 +1260,7 @@ class TestGeneTrend:
             GENES[0],
             data_key="Ms",
             same_plot=True,
-            show_cbar=False,
+            cbar=False,
             dpi=DPI,
             save=fpath,
         )
@@ -1434,6 +1434,51 @@ class TestGeneTrend:
         )
 
     @compare()
+    def test_trends_show_lineage_same_plot(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            GENES[:5],
+            data_key="Ms",
+            same_plot=True,
+            plot_kwargs=dict(lineage_probability=True),
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_trends_show_lineage_diff_plot(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            GENES[0],
+            data_key="Ms",
+            same_plot=False,
+            plot_kwargs=dict(lineage_probability=True),
+            figsize=(5, 5),
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_trends_show_lineage_ci(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            GENES[0],
+            data_key="Ms",
+            same_plot=True,
+            plot_kwargs=dict(
+                lineage_probability=True, lineage_probability_conf_int=True
+            ),
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
     def test_trends_time_key_del_latent_time(self, adata: AnnData, fpath: str):
         # this ensures that the callback passes the correct values
         del adata.obs["latent_time"]
@@ -1517,7 +1562,7 @@ class TestGraph:
             adata,
             "T_fwd",
             ixs=range(15),
-            show_arrows=False,
+            arrows=False,
             edge_weight_scale=100,
             dpi=DPI,
             save=fpath,
@@ -2100,19 +2145,49 @@ class TestModel:
         model.confidence_interval()
         model.plot(save=fpath, dpi=DPI)
 
+    @compare()
+    def test_model_no_lineage_show_lin_probs(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        model.prepare(adata.var_names[0], None)
+        model.fit().predict()
+        model.plot(save=fpath, dpi=DPI, lineage_probability=True)
+
+    @compare()
+    def test_model_no_legend(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        model.prepare(adata.var_names[0], "1")
+        model.fit().predict()
+        model.confidence_interval()
+        model.plot(save=fpath, dpi=DPI, loc=None)
+
     # TODO: parametrize (hide cells, ci)
     @compare()
-    def test_model_show_lib_prob_cells_ci(self, adata: AnnData, fpath: str):
+    def test_model_show_lin_prob_cells_ci(self, adata: AnnData, fpath: str):
         model = create_model(adata)
-        model.prepare(adata.var_names[0], "0")
+        model.prepare(adata.var_names[0], "1")
         model.fit().predict()
         model.confidence_interval()
         model.plot(
             save=fpath,
             dpi=DPI,
             hide_cells=False,
-            show_conf_int=True,
-            show_lineage_probability=True,
+            conf_int=True,
+            lineage_probability=True,
+        )
+
+    @compare()
+    def test_model_show_lin_prob_cells_lineage_ci(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        model.prepare(adata.var_names[0], "1")
+        model.fit().predict()
+        model.confidence_interval()
+        model.plot(
+            save=fpath,
+            dpi=DPI,
+            hide_cells=True,
+            conf_int=True,
+            lineage_probability=True,
+            lineage_probability_conf_int=True,
         )
 
 

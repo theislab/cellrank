@@ -69,12 +69,12 @@ def heatmap(
     scale: bool = True,
     n_convolve: Optional[int] = 5,
     show_all_genes: bool = False,
-    show_cbar: bool = True,
+    cbar: bool = True,
     lineage_height: float = 0.33,
     fontsize: Optional[float] = None,
     xlabel: Optional[str] = None,
     cmap: mcolors.ListedColormap = cm.viridis,
-    show_dendrogram: bool = True,
+    dendrogram: bool = True,
     return_genes: bool = False,
     n_jobs: Optional[int] = 1,
     backend: str = _DEFAULT_BACKEND,
@@ -122,7 +122,7 @@ def heatmap(
         Size of the convolution window when smoothing absorption probabilities.
     show_all_genes
         Whether to show all genes on y-axis.
-    show_cbar
+    cbar
         Whether to show the colorbar.
     lineage_height
         Height of a bar when ``mode={m.GENES.s!r}``.
@@ -132,7 +132,7 @@ def heatmap(
         Label on the x-axis. If `None`, it is determined based on ``time_key``.
     cmap
         Colormap to use when visualizing the smoothed expression.
-    show_dendrogram
+    dendrogram
         Whether to show dendrogram when ``cluster_genes=True``.
     return_genes
         Whether to return the sorted or clustered genes.
@@ -337,7 +337,7 @@ def heatmap(
             for pos in ["top", "bottom", "left", "right"]:
                 ax.spines[pos].set_visible(False)
 
-            if show_cbar:
+            if cbar:
                 cax, _ = mpl.colorbar.make_axes(ax)
                 _ = mpl.colorbar.ColorbarBase(
                     cax,
@@ -424,7 +424,7 @@ def heatmap(
                 col_colors, col_cmap, col_norm = cat_colors, None, None
 
             row_cluster = cluster_genes and df.shape[0] > 1
-            show_clust = row_cluster and show_dendrogram
+            show_clust = row_cluster and dendrogram
 
             g = sns.clustermap(
                 df,
@@ -433,7 +433,6 @@ def heatmap(
                 if figsize is None
                 else figsize,
                 xticklabels=False,
-                cbar_kws={"label": "expression"},
                 row_cluster=cluster_genes and df.shape[0] > 1,
                 col_colors=col_colors,
                 colors_ratio=0,
@@ -443,7 +442,7 @@ def heatmap(
                 standard_scale=0 if scale else None,
             )
 
-            if show_cbar:
+            if cbar:
                 cax = create_cbar(
                     g.ax_heatmap,
                     0.1,
