@@ -366,9 +366,10 @@ def cluster_fates(
         ).T
 
         title = kwargs.pop("title", "average fate per cluster")
-        cbar_kws = (
-            {"label": "probability", "ticks": np.linspace(data.min(), data.max(), 5)},
-        )
+        cbar_kws = {
+            "label": "probability",
+            "ticks": np.linspace(data.min(), data.max(), 5),
+        }
         kwargs.setdefault("cmap", "viridis")
 
         if use_clustermap:

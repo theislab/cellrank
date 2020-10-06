@@ -791,7 +791,7 @@ class TestHeatmap:
             GENES[:5],
             mode="lineages",
             time_key="latent_time",
-            show_cbar=False,
+            cbar=False,
             dpi=DPI,
             save=fpath,
         )
@@ -805,7 +805,7 @@ class TestHeatmap:
             GENES[:5],
             mode="genes",
             time_key="latent_time",
-            show_cbar=False,
+            cbar=False,
             dpi=DPI,
             save=fpath,
         )
@@ -1029,7 +1029,7 @@ class TestHeatmap:
             lineages="1",
             time_key="latent_time",
             cluster_genes=True,
-            show_dendrogram=True,
+            dendrogram=True,
             dpi=DPI,
             save=fpath,
         )
@@ -1108,7 +1108,7 @@ class TestHeatMapReturns:
             mode="genes",
             time_key="latent_time",
             cluster_genes=True,
-            show_dendrogram=True,
+            dendrogram=True,
             return_genes=True,
             dpi=DPI,
         )
@@ -1517,7 +1517,7 @@ class TestGraph:
             adata,
             "T_fwd",
             ixs=range(15),
-            show_arrows=False,
+            arrows=False,
             edge_weight_scale=100,
             dpi=DPI,
             save=fpath,
