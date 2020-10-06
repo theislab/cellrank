@@ -90,7 +90,16 @@ def _convert_to_hex_colors(colors: Sequence[Any]) -> List[str]:
 
 
 def _create_categorical_colors(n_categories: Optional[int] = None):
-    cmaps = [cm.tab10, cm.tab20, cm.Paired, cm.Accent, cm.Set1, cm.Set2, cm.Set3]
+    from scanpy.plotting.palettes import vega_20_scanpy
+
+    cmaps = [
+        mcolors.ListedColormap(vega_20_scanpy),
+        cm.Accent,
+        mcolors.ListedColormap(np.array(cm.Dark2.colors)[[1, 2, 4, 5, 6]]),
+        cm.Set1,
+        cm.Set2,
+        cm.Set3,
+    ]
     max_cats = sum(c.N for c in cmaps)
 
     if n_categories is None:
