@@ -7,7 +7,7 @@ python:
 
 os: linux
 
-dist: bionic  # Ubuntu 18.04
+dist: xenial  # SLEPc fails on bionic
 
 before_cache:
   - rm -f $HOME/.cache/pip/log/debug.log
@@ -22,7 +22,7 @@ addons:
   apt:
     update: true
     sources:
-      - sourceline: "deb https://cloud.r-project.org/bin/linux/ubuntu bionic-cran40/"
+      - sourceline: "deb https://cloud.r-project.org/bin/linux/ubuntu xenial-cran40/"
         key_url: "http://keyserver.ubuntu.com:11371/pks/lookup?op=get&search=0xE298A3A825C0D65DFD57CBB651716619E084DAB9"
     packages:
       - libopenblas-base
