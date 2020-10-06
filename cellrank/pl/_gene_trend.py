@@ -195,6 +195,7 @@ def gene_trends(
         sharey=sharey,
         figsize=(6 * ncols, 4 * nrows) if figsize is None else figsize,
         constrained_layout=True,
+        dpi=dpi,
     )
     axes = np.reshape(axes, (-1, ncols))
 
@@ -264,7 +265,6 @@ def gene_trends(
                 sharey=sharey,
                 gene_as_title=gene_as_title,
                 legend_loc=legend_loc,
-                dpi=dpi,
                 figsize=figsize,
                 fig=fig,
                 axes=axes[row, col] if same_plot else axes[cnt],

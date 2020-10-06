@@ -430,10 +430,10 @@ def _trends_helper(
             ]
         )
         minn, maxx = min(minns), max(maxxs)
-        kwargs["loc"] = None
+        kwargs["loc"] = legend_loc
         kwargs["scaler"] = lambda x: (x - minn) / (maxx - minn)
     else:
-        kwargs["loc"] = legend_loc
+        kwargs["loc"] = None
 
     for i, (name, ax, perc) in enumerate(zip(lineage_names, axes, percs)):
         if same_plot:

@@ -1434,6 +1434,51 @@ class TestGeneTrend:
         )
 
     @compare()
+    def test_trends_show_lineage_same_plot(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            GENES[:5],
+            data_key="Ms",
+            same_plot=True,
+            plot_kwargs=dict(lineage_probability=True),
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_trends_show_lineage_diff_plot(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            GENES[0],
+            data_key="Ms",
+            same_plot=False,
+            plot_kwargs=dict(lineage_probability=True),
+            figsize=(5, 5),
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_trends_show_lineage_ci(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            GENES[0],
+            data_key="Ms",
+            same_plot=True,
+            plot_kwargs=dict(
+                lineage_probability=True, lineage_probability_conf_int=True
+            ),
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
     def test_trends_time_key_del_latent_time(self, adata: AnnData, fpath: str):
         # this ensures that the callback passes the correct values
         del adata.obs["latent_time"]
@@ -2100,11 +2145,26 @@ class TestModel:
         model.confidence_interval()
         model.plot(save=fpath, dpi=DPI)
 
+    @compare()
+    def test_model_no_lineage_show_lin_probs(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        model.prepare(adata.var_names[0], None)
+        model.fit().predict()
+        model.plot(save=fpath, dpi=DPI, lineage_probability=True)
+
+    @compare()
+    def test_model_no_legend(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        model.prepare(adata.var_names[0], "1")
+        model.fit().predict()
+        model.confidence_interval()
+        model.plot(save=fpath, dpi=DPI, loc=None)
+
     # TODO: parametrize (hide cells, ci)
     @compare()
-    def test_model_show_lib_prob_cells_ci(self, adata: AnnData, fpath: str):
+    def test_model_show_lin_prob_cells_ci(self, adata: AnnData, fpath: str):
         model = create_model(adata)
-        model.prepare(adata.var_names[0], "0")
+        model.prepare(adata.var_names[0], "1")
         model.fit().predict()
         model.confidence_interval()
         model.plot(
@@ -2113,6 +2173,21 @@ class TestModel:
             hide_cells=False,
             conf_int=True,
             lineage_probability=True,
+        )
+
+    @compare()
+    def test_model_show_lin_prob_cells_lineage_ci(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        model.prepare(adata.var_names[0], "1")
+        model.fit().predict()
+        model.confidence_interval()
+        model.plot(
+            save=fpath,
+            dpi=DPI,
+            hide_cells=True,
+            conf_int=True,
+            lineage_probability=True,
+            lineage_probability_conf_int=True,
         )
 
 
