@@ -1260,7 +1260,7 @@ class TestGeneTrend:
             GENES[0],
             data_key="Ms",
             same_plot=True,
-            show_cbar=False,
+            cbar=False,
             dpi=DPI,
             save=fpath,
         )
@@ -2111,8 +2111,8 @@ class TestModel:
             save=fpath,
             dpi=DPI,
             hide_cells=False,
-            show_conf_int=True,
-            show_lineage_probability=True,
+            conf_int=True,
+            lineage_probability=True,
         )
 
 

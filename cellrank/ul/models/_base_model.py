@@ -560,12 +560,13 @@ class BaseModel(ABC):
         title: Optional[str] = None,
         size: int = 15,
         lw: float = 2,
-        show_cbar: bool = True,
+        cbar: bool = True,
         margins: float = 0.015,
         xlabel: str = "pseudotime",
         ylabel: str = "expression",
-        show_conf_int: bool = True,
-        show_lineage_probability: bool = False,
+        conf_int: bool = True,
+        lineage_probability: bool = False,
+        lineage_probability_conf_int: bool = False,
         dpi: int = None,
         fig: mpl.figure.Figure = None,
         ax: mpl.axes.Axes = None,
@@ -602,7 +603,7 @@ class BaseModel(ABC):
             Size of the points.
         lw
             Line width for the smoothed values.
-        show_cbar
+        cbar
             Whether to show colorbar.
         margins
             Margins around the plot.
@@ -610,10 +611,14 @@ class BaseModel(ABC):
             Label on the x-axis.
         ylabel
             Label on the y-axis.
-        show_conf_int
+        conf_int
             Whether to show the confidence interval.
-        show_lineage_probability
-            Whether to show smoothed lineage probability. Note that this will require 1 additional model fit.
+        lineage_probability
+            Whether to show smoothed lineage probability as a dashed line.
+            Note that this will require 1 additional model fit.
+        lineage_probability_conf_int
+            Whether to show smoothed lineage probability confidence interval. Only used when
+            ``show_lineage_probability=True``.
         dpi
             Dots per inch.
         fig
@@ -639,23 +644,19 @@ class BaseModel(ABC):
         if dpi is not None:
             fig.set_dpi(dpi)
 
-        show_conf_int = show_conf_int and self.conf_int is not None
+        conf_int = conf_int and self.conf_int is not None
 
-        if not show_lineage_probability:
-            scaler = lambda _: _  # noqa
-        else:
-            minn = np.min(self.y_all)
+        scaler = kwargs.pop(
+            "scaler",
+            self._create_scaler(
+                lineage_probability,
+                show_conf_int=conf_int,
+            ),
+        )
 
-            maxes = [self.y_test]
-            if not hide_cells:
-                maxes.append([self.y_all])
-            if show_conf_int:
-                maxes.append([self.conf_int])
-            maxx = max(map(np.max, maxes))
-
-            scaler = lambda x: (x - minn) / (maxx - minn)  # noqa
-            if ylabel == "expression":
-                ylabel = "scaled expression"
+        if lineage_probability:
+            if ylabel in ("expression", self._gene):
+                ylabel = f"scaled {ylabel}"
 
         vmin, vmax = _minmax(self.w, perc)
         if not hide_cells:
@@ -673,7 +674,11 @@ class BaseModel(ABC):
             )
 
         if title is None:
-            title = f"{self._gene} @ {self._lineage}"
+            title = (
+                f"{self._gene} @ {self._lineage}"
+                if self._lineage is not None
+                else f"{self._gene}"
+            )
 
         ax.plot(
             self.x_test, scaler(self.y_test), color=lineage_color, lw=lw, label=title
@@ -685,7 +690,7 @@ class BaseModel(ABC):
 
         ax.margins(margins)
 
-        if show_conf_int:
+        if conf_int:
             ax.fill_between(
                 self.x_test.squeeze(),
                 scaler(self.conf_int[:, 0]),
@@ -695,11 +700,29 @@ class BaseModel(ABC):
                 linestyle="--",
             )
 
-        if show_lineage_probability:
+        if lineage_probability and self._lineage is not None:
+            from cellrank.pl._utils import _is_any_gam_mgcv
+
             model = deepcopy(self)
-            model._y = self._reshape_and_retype(model.w)
-            model._w = np.ones_like(model.w)
-            y = model.fit().predict()
+            model._y = self._reshape_and_retype(self.w).copy()
+            model = model.fit()
+
+            if not lineage_probability_conf_int:
+                y = model.predict()
+            elif _is_any_gam_mgcv(model):
+                y = model.predict(level=0.95)
+            else:
+                y = model.predict()
+                model.confidence_interval()
+
+                ax.fill_between(
+                    model.x_test.squeeze(),
+                    model.conf_int[:, 0],
+                    model.conf_int[:, 1],
+                    alpha=lineage_alpha,
+                    color=lineage_color,
+                    linestyle="--",
+                )
 
             handle = ax.plot(
                 model.x_test,
@@ -708,17 +731,13 @@ class BaseModel(ABC):
                 lw=lw,
                 linestyle="--",
                 zorder=-1,
-                label=f"{self._lineage} probability",
+                label="probability",
             )
-            if kwargs.get("loc", object) is not None:
+
+            if kwargs.get("loc", "best") is not None:
                 ax.legend(handles=handle, **kwargs)
 
-        if (
-            show_cbar
-            and not hide_cells
-            and not same_plot
-            and not np.allclose(self.w_all, 1)
-        ):
+        if cbar and not hide_cells and not same_plot and not np.allclose(self.w_all, 1):
             norm = mcolors.Normalize(vmin=vmin, vmax=vmax)
             divider = make_axes_locatable(ax)
             cax = divider.append_axes("right", size="2%", pad=0.1)
@@ -849,3 +868,23 @@ class BaseModel(ABC):
             if self.model is None
             else _dup_spaces.sub(" ", str(self.model).replace("\n", " ")).strip(),
         )
+
+    def _create_scaler(self, show_lineage_probability: bool, show_conf_int: bool):
+        if not show_lineage_probability:
+            return lambda _: _
+
+        minn, maxx = self._return_min_max(show_conf_int)
+        return lambda x: (x - minn) / (maxx - minn)
+
+    def _return_min_max(self, show_conf_int: bool):
+        if self.y_test is None:
+            raise RuntimeError("Run `.predict()` first.")
+
+        vals = [self.y_test, self.y_all]
+        if show_conf_int and self.conf_int is not None:
+            vals.append([self.conf_int])
+
+        minn = min(map(np.min, vals))
+        maxx = max(map(np.max, vals))
+
+        return minn, maxx

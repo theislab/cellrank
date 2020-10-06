@@ -53,7 +53,7 @@ def gene_trends(
     lineage_alpha: float = 0.2,
     size: float = 15,
     lw: float = 2,
-    show_cbar: bool = True,
+    cbar: bool = True,
     margins: float = 0.015,
     sharex: Optional[Union[str, bool]] = None,
     sharey: Optional[Union[str, bool]] = None,
@@ -116,7 +116,7 @@ def gene_trends(
         Size of the points.
     lw
         Line width of the smoothed values.
-    show_cbar
+    cbar
         Whether to show colorbar. Always shown when percentiles for lineages differ. Only used when ``same_plot=False``.
     margins
         Margins around the plot.
@@ -165,20 +165,26 @@ def gene_trends(
         lineages = [lineages]
     elif all(map(lambda ln: ln is None, lineages)):  # no lineage, all the weights are 1
         lineages = [None]
-        show_cbar = False
+        cbar = False
         logg.debug("All lineages are `None`, setting the weights to `1`")
     lineages = _unique_order_preserving(lineages)
 
     if same_plot:
         gene_as_title = True if gene_as_title is None else gene_as_title
         sharex = "all" if sharex is None else sharex
-        sharey = "none" if sharey is None else sharey
+        if sharey is None:
+            sharey = "row" if plot_kwargs.get("lineage_probability", False) else "none"
         ncols = len(genes) if ncols >= len(genes) else ncols
         nrows = int(np.ceil(len(genes) / ncols))
     else:
         gene_as_title = False if gene_as_title is None else gene_as_title
         sharex = "col" if sharex is None else sharex
-        sharey = ("none" if hide_cells else "row") if sharey is None else sharey
+        if sharey is None:
+            sharey = (
+                "row"
+                if not hide_cells or plot_kwargs.get("lineage_probability", False)
+                else "none"
+            )
         nrows = len(genes)
         ncols = len(lineages)
 
@@ -253,7 +259,7 @@ def gene_trends(
                 lineage_alpha=lineage_alpha,
                 size=size,
                 lw=lw,
-                show_cbar=show_cbar,
+                cbar=cbar,
                 margins=margins,
                 sharey=sharey,
                 gene_as_title=gene_as_title,

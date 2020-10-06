@@ -433,7 +433,6 @@ def heatmap(
                 if figsize is None
                 else figsize,
                 xticklabels=False,
-                cbar_kws={"label": "expression"},
                 row_cluster=cluster_genes and df.shape[0] > 1,
                 col_colors=col_colors,
                 colors_ratio=0,
