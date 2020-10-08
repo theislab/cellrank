@@ -366,9 +366,11 @@ def cluster_fates(
         ).T
 
         title = kwargs.pop("title", "average fate per cluster")
+        vmin, vmax = data.values.min(), data.values.max()
         cbar_kws = {
             "label": "probability",
-            "ticks": np.linspace(data.values.min(), data.values.max(), 5),
+            "ticks": np.linspace(vmin, vmax, 5),
+            "format": "%.3f",
         }
         kwargs.setdefault("cmap", "viridis")
 
@@ -378,8 +380,9 @@ def cluster_fates(
 
             g = clustermap(
                 data,
-                robust=True,
                 annot=True,
+                vmin=vmin,
+                vmax=vmax,
                 fmt=fmt,
                 row_colors=adata.obsm[lk][lin_names].colors,
                 dendrogram_ratio=(
@@ -400,7 +403,8 @@ def cluster_fates(
             fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
             g = heatmap(
                 data,
-                robust=True,
+                vmin=vmin,
+                vmax=vmax,
                 annot=True,
                 fmt=fmt,
                 cbar=cbar,
@@ -482,7 +486,7 @@ def cluster_fates(
             if is_all
             else (adata.obs[cluster_key] == name).values
         )
-        mask = list(np.array(mask, dtype=np.bool))
+        mask = np.array(mask, dtype=np.bool)
         data = adata.obsm[lk][mask, lin_names].X
         mean = np.nanmean(data, axis=0)
         std = np.nanstd(data, axis=0) / np.sqrt(data.shape[0])
