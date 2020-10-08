@@ -567,7 +567,7 @@ class TestLineageAccessor:
         np.testing.assert_array_equal(y.X, x[[0, -1], :][:, [1, 2, 0]])
 
     def test_mask_and_names(self):
-        # see https://github.com/theislab/cellrank_notebooks_dev/issues/80
+        # see https://github.com/theislab/cellrank/issues/427
         lin = Lineage(
             np.random.normal(size=(100, 9)),
             names=[
