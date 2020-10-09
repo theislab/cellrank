@@ -519,11 +519,13 @@ def _get_offset(
         Array of shape `(adata.n_obs,)` containing the offset.
     """
 
-    if not recompute and _OFFSET_KEY in adata.obs:
-        logg.debug(f"Fetching offset from `adata.obs[{_OFFSET_KEY!r}]`")
-        return adata.obs[_OFFSET_KEY]
+    from anndata import AnnData as _AnnData
 
-    logg.debug(f"Calculating offset for `{adata.n_obs}` cells")
+    if not recompute and isinstance(adata, _AnnData) and _OFFSET_KEY in adata.obs:
+        logg.debug(f"Fetching offset from `adata.obs[{_OFFSET_KEY!r}]`")
+        return adata.obs[_OFFSET_KEY].values.copy()
+
+    logg.debug(f"Calculating offset for `{adata.shape[0]}` cells")
 
     data = _extract_data(adata, layer=layer, use_raw=use_raw)
     try:
@@ -537,8 +539,14 @@ def _get_offset(
         nf = np.ones(adata.n_obs, dtype=np.float64)
 
     offset = np.log(nf * np.array(data.sum(1)).squeeze())
-    offset[offset == 0] = 1
+    offset[offset == 0] = 1.0
 
-    adata.obs[_OFFSET_KEY] = offset
+    mask = ~np.isfinite(offset)
+    if np.any(mask):
+        logg.warning(f"`{np.sum(mask)}` elements are not finite. Setting them to `1`")
+        offset[mask] = 1.0
+
+    if isinstance(adata, _AnnData):
+        adata.obs[_OFFSET_KEY] = offset
 
     return offset

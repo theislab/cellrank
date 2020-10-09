@@ -8,7 +8,14 @@ import numpy as np
 from scipy.stats import rankdata
 from sklearn.svm._classes import SVR
 
-from cellrank.ul.models._utils import _rankdata, _extract_data, _get_knotlocs
+from cellrank.ul.models._utils import (
+    _OFFSET_KEY,
+    NormMode,
+    _rankdata,
+    _get_offset,
+    _extract_data,
+    _get_knotlocs,
+)
 
 
 class TestModel:
@@ -112,7 +119,7 @@ class TestUtils:
         assert raw is adata.raw.X
 
     @pytest.mark.parametrize("method", ["average", "min", "max", "dense", "ordinal"])
-    def test_rank_data(self, method):
+    def test_rank_data(self, method: str):
         x = np.random.normal(size=(10,))
 
         np.testing.assert_array_equal(_rankdata(x), rankdata(x))
@@ -167,7 +174,7 @@ class TestUtils:
         np.testing.assert_array_equal(actual, expected)
 
     @pytest.mark.parametrize("seed,n_knots", zip(range(10), range(2, 11)))
-    def test_get_knots_unique(self, seed, n_knots):
+    def test_get_knots_unique(self, seed: int, n_knots: int):
         np.random.seed(seed)
         x = np.random.normal(size=(100,))
         actual = _get_knotlocs(x, n_knots=n_knots)
@@ -197,3 +204,43 @@ class TestUtils:
         actual = _get_knotlocs(x, 10, uniform=False)
 
         np.testing.assert_almost_equal(actual, expected)
+
+    @pytest.mark.parametrize(
+        "method,seed", zip(list(NormMode), range(len(list(NormMode))))
+    )
+    def test_get_offset(self, method: str, seed: int):
+        np.random.seed(seed)
+        x = np.random.normal(size=(100, 50))
+
+        offset = _get_offset(x, method=method, ref_ix=0)
+
+        assert isinstance(offset, np.ndarray)
+        assert offset.shape == (100,)
+        assert np.all(np.isfinite(offset))
+
+    def test_get_offset_degenerate_case(self):
+        x = np.zeros((100, 2))
+
+        offset = _get_offset(x, ref_ix=0)
+
+        assert isinstance(offset, np.ndarray)
+        np.testing.assert_array_equal(offset, np.ones((100,)))
+
+    def test_get_offset_writing_to_adata(self, adata: AnnData):
+        offset = _get_offset(adata, use_raw=False, ref_ix=0)
+
+        assert _OFFSET_KEY in adata.obs
+        np.testing.assert_array_equal(offset, adata.obs[_OFFSET_KEY].values)
+
+    def test_get_offset_use_raw(self, adata: AnnData):
+        offset = _get_offset(adata, use_raw=False, recompute=True, ref_ix=0)
+        offset_raw = _get_offset(adata, use_raw=True, recompute=True, ref_ix=0)
+
+        assert offset.shape == offset_raw.shape == (adata.n_obs,)
+        assert not np.all(np.isclose(offset, offset_raw))
+
+    def test_offset_automatic_ref_ix(self, adata: AnnData):
+        offset = _get_offset(adata, ref_ix=None)
+
+        assert offset.shape == (adata.n_obs,)
+        assert np.all(np.isfinite(offset))
