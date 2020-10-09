@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 import os
-from typing import Tuple
+from typing import Tuple, Callable
+
+from cellrank.ul.models import GAMR
 
 os.environ["NUMBA_NUM_THREADS"] = "4"
 
@@ -24,6 +26,24 @@ np.random.seed(42)
 _adata_small = sc.read("tests/_ground_truth_adatas/adata_50.h5ad")
 _adata_medium = sc.read("tests/_ground_truth_adatas/adata_100.h5ad")
 _adata_large = sc.read("tests/_ground_truth_adatas/adata_200.h5ad")
+
+
+def _gamr_skip() -> Callable:
+    try:
+        from rpy2.robjects.packages import PackageNotInstalledError, importr
+
+        try:
+            _ = importr("mgcv")
+        except PackageNotInstalledError:
+            return pytest.mark.skip("R library `mgcv` is not installed")
+
+    except ImportError:
+        return pytest.mark.skip("`rpy2` is not installed")
+
+    return lambda _: _
+
+
+gamr_skip = _gamr_skip()
 
 
 def _create_cflare(*, backward: bool = False) -> Tuple[AnnData, CFLARE]:
@@ -119,6 +139,15 @@ def adata_gpcca_bwd(adata_gpcca=_create_gpcca(backward=True)) -> Tuple[AnnData, 
 @pytest.fixture
 def adata_cflare(adata_cflare=_create_cflare(backward=False)) -> AnnData:
     return adata_cflare[0].copy()
+
+
+@pytest.fixture
+def gamr_model(adata_cflare: AnnData) -> GAMR:
+    m = GAMR(adata_cflare)
+    m.prepare(adata_cflare.var_names[0], "0").fit()
+    m.predict(level=0.95)
+
+    return m
 
 
 @pytest.fixture

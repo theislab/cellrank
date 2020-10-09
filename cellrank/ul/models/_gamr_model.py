@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Module containing all models interfacing R's mgcv package."""
-from copy import copy
+from copy import copy, deepcopy
 from typing import Any, Tuple, Union, Optional
 
 import numpy as np
@@ -38,20 +38,28 @@ class GAMR(BaseModel):
         Distribution family in `rpy2.robjects.r`, such as `'gaussian'` or `'nb'` for negative binomial.
         If `'nb'`, raw count data in :paramref:`adata` ``.raw`` is always used.
     basis
-        Basis for the smoothing term. See
-        `here <https://www.rdocumentation.org/packages/mgcv/versions/1.8-33/topics/s>`__ for valid options.
-    offset
-        Offset term for the GAM. Only available when ``distribution='nb'``. If `'default'`, it is calculated
-        automatically. The values are saved in :paramref:`adata` `.obs[{key!r}]`. If `None`, no offset is used.
+        Basis for the smoothing term.
+        See `here <https://www.rdocumentation.org/packages/mgcv/versions/1.8-33/topics/s>`__ for valid options.
     knotlocs
         Position of the knots. Can be one of the following:
 
             - `{kloc.AUTO.s!r}` - let `mgcv` handle the knot positions.
             - `{kloc.DENSITY.s!r}` - position the knots based on the density of pseudotime.
+    offset
+        Offset term for the GAM. Only available when ``distribution='nb'``. If `'default'`, it is calculated
+        according to `[Robinson10]_`. The values are saved in :paramref:`adata` `.obs[{key!r}]`.
+        If `None`, no offset is used.
     smoothing_penalty
         Penalty for the smoothing term. The larger the value, the smoother the fitted curve.
     **kwargs
         Keyword arguments for ``gam.control``.
+        See `here <https://www.rdocumentation.org/packages/mgcv/versions/1.8-33/topics/gam.control>`__ for reference.
+
+    References
+    ----------
+    .. [Robinson10] Robinson, M. D. *et al.* (2010),
+            *A scaling normalization method for differential expression analysis of RNA-seq data*,
+            `Genome Biology <https://doi.org/10.1186/gb-2010-11-3-r25>`__.
     """  # noqa
 
     def __init__(
@@ -60,10 +68,9 @@ class GAMR(BaseModel):
         n_knots: int = 5,
         distribution: str = "gaussian",
         basis: str = "cr",
-        offset: Optional[Union[np.ndarray, str]] = "default",
         knotlocs: str = KnotLocs.AUTO.s,
+        offset: Optional[Union[np.ndarray, str]] = "default",
         smoothing_penalty: float = 1.0,
-        perform_import_check: bool = True,
         **kwargs,
     ):
         if n_knots <= 0:
@@ -74,11 +81,11 @@ class GAMR(BaseModel):
             )
 
         super().__init__(adata, model=None)
-        self._n_splines = n_knots
+        self._n_knots = n_knots
         self._family = distribution
 
         self._formula = (
-            f"y ~ s(x, bs='{basis}', k={self._n_splines}, sp={smoothing_penalty})"
+            f"y ~ s(x, bs='{basis}', k={self._n_knots}, sp={smoothing_penalty})"
         )
         self._design_mat = None
         self._offset = None
@@ -89,8 +96,8 @@ class GAMR(BaseModel):
         self._lib = None
         self._lib_name = None
 
-        if perform_import_check:
-            # it's a bit costly to import, copying just passes the reference
+        # it's a bit costly to import, copying just passes the reference
+        if kwargs.pop("perform_import_check", True):
             self._lib, self._lib_name = _maybe_import_r_lib("mgcv")
 
         if distribution == "nb" and offset is not None:
@@ -194,7 +201,7 @@ class GAMR(BaseModel):
         if self._knotslocs != KnotLocs.AUTO:
             kwargs["knots"] = pd.DataFrame(
                 _get_knotlocs(
-                    self.x, self._n_splines, uniform=self._knotslocs == KnotLocs.UNIFORM
+                    self.x, self._n_knots, uniform=self._knotslocs == KnotLocs.UNIFORM
                 ),
                 columns=["x"],
             )
@@ -313,20 +320,33 @@ class GAMR(BaseModel):
 
         return self._conf_int
 
+    def _deepcopy_attributes(self, dst: "GAMR") -> None:
+        super()._deepcopy_attributes(dst)
+        dst._offset = deepcopy(self._offset)
+        dst._design_mat = deepcopy(self._design_mat)
+
     @d.dedent
     def copy(self) -> "GAMR":
         """%(copy)s"""  # noqa
         res = GAMR(
             self.adata,
-            self._n_splines,
+            self._n_knots,
             distribution=self._family,
             offset=self._offset,
             knotlocs=self._knotslocs.s,
             perform_import_check=False,
         )
+        self._shallowcopy_attributes(
+            res
+        )  # does not copy `prepared`, since we're not copying the arrays
+
         res._formula = self._formula  # we don't save the basis inside
-        res._lib = self._lib
+        res._design_mat = self._design_mat
+        res._offset = self._offset
+
+        res._lib = self._lib  # just passing the reference
         res._lib_name = self._lib_name
+
         res._control_kwargs = self._control_kwargs
 
         return res

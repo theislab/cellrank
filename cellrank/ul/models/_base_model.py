@@ -845,7 +845,11 @@ class BaseModel(ABC):
                 )
         return getattr(self, attr_name)
 
-    def _copy_attributes(self, dst: "BaseModel") -> None:
+    def _deepcopy_attributes(self, dst: "BaseModel") -> None:
+        # __deepcopy__ will usually call `_shallowcopy_attributes` twice, since it calls `.copy()`,
+        # which should always call it (it copies the lineage and gene names + deepcopies the model)
+
+        self._shallowcopy_attributes(dst)
         for attr in [
             "_x_all",
             "_y_all",
@@ -859,9 +863,16 @@ class BaseModel(ABC):
             "_y_hat",
             "_conf_int",
             "_prepared",
-            "_obs_names",
         ]:
             setattr(dst, attr, _copy(getattr(self, attr)))
+
+    def _shallowcopy_attributes(self, dst: "BaseModel") -> None:
+        for attr in ["_gene", "_lineage"]:
+            setattr(dst, attr, _copy(getattr(self, attr)))
+        # user is not exposed to this
+        dst._obs_names = self._obs_names
+        # always deepcopy the model (we're manipulating it in multiple threads/processed)
+        dst._model = deepcopy(self.model)
 
     @abstractmethod
     @d.dedent
@@ -873,9 +884,15 @@ class BaseModel(ABC):
         return self.copy()
 
     def __deepcopy__(self, memodict={}) -> "BaseModel":  # noqa
+        # deepcopy expects that `.copy()` makes a really shallow copy (i.e. only references to the arrays)
+        # it should also not copy the `.prepared` attribute, since copying is happening mostly during
+        # parallelization and it serves as 1 extra sanity check (a precaution that's not necessary, per-se, but highly
+        # desirable)
         res = self.copy()
-        res._adata = res.adata.copy()
-        self._copy_attributes(res)
+        # we don't copy the adata object for 2 reasons:
+        # 1. these objects are meant to be as lightweight as possible
+        # 2. in `.plot`, we deepcopy the model when plotting smoothed probabilities
+        self._deepcopy_attributes(res)
         memodict[id(self)] = res
         return res
 

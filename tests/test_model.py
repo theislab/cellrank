@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
+import pickle
+from io import BytesIO
+from copy import copy, deepcopy
+
 import pytest
-from _helpers import create_model
+from _helpers import create_model, assert_models_equal
+from conftest import gamr_skip
 
 from anndata import AnnData
 
@@ -8,6 +13,7 @@ import numpy as np
 from scipy.stats import rankdata
 from sklearn.svm._classes import SVR
 
+from cellrank.ul.models import GAMR
 from cellrank.ul.models._utils import (
     _OFFSET_KEY,
     NormMode,
@@ -244,3 +250,45 @@ class TestUtils:
 
         assert offset.shape == (adata.n_obs,)
         assert np.all(np.isfinite(offset))
+
+
+@gamr_skip
+class TestGAMR:
+    def test_invalid_n_knots(self, adata: AnnData):
+        with pytest.raises(ValueError):
+            _ = GAMR(adata, n_knots=0)
+
+    def test_invalid_smoothing_penalty(self, adata: AnnData):
+        with pytest.raises(ValueError):
+            _ = GAMR(adata, smoothing_penalty=-0.001)
+
+    def test_invalid_knotlocs(self, adata: AnnData):
+        with pytest.raises(ValueError):
+            _ = GAMR(adata, knotlocs="foobar")
+
+    def test_normal_initialization(self, adata_cflare: AnnData):
+        m = GAMR(adata_cflare)
+
+        assert not m.prepared
+        assert m._lineage is None
+        assert m._gene is None
+
+    def test_sharing_library(self, gamr_model: GAMR):
+        pass
+
+    def test_shallow_copy(self, gamr_model: GAMR):
+        assert_models_equal(gamr_model, copy(gamr_model), deepcopy=False)
+
+    def test_deep_copy(self, gamr_model: GAMR):
+        assert_models_equal(gamr_model, deepcopy(gamr_model), deepcopy=True)
+
+    def test_pickling(self, gamr_model: GAMR):
+        fp = BytesIO()
+
+        pickle.dump(gamr_model, fp)
+        fp.flush()
+        fp.seek(0)
+
+        actual_model = pickle.load(fp)
+
+        assert_models_equal(gamr_model, actual_model, pickled=True)

@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """Module containing model which wraps around :mod:`sklearn` estimators."""
-from copy import deepcopy
 from typing import Iterable, Optional
 from inspect import signature
 
@@ -222,4 +221,7 @@ class SKLearnModel(BaseModel):
     @d.dedent
     def copy(self) -> "SKLearnModel":
         """%(copy)s"""  # noqa
-        return SKLearnModel(self.adata, deepcopy(self._model))
+        res = SKLearnModel(self.adata, self._model)
+        self._shallowcopy_attributes(res)  # this deepcopies the underlying model
+
+        return res

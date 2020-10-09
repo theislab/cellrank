@@ -267,9 +267,9 @@ class GAM(BaseModel):
     def copy(self) -> "BaseModel":
         """%(copy)s"""  # noqa
         res = GAM(self.adata)
+        self._shallowcopy_attributes(res)
 
-        res._use_default_conf_int = self._use_default_conf_int
         res._grid = deepcopy(self._grid)
-        res._model = deepcopy(self.model)
+        res._use_default_conf_int = self._use_default_conf_int
 
         return res

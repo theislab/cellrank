@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 from _helpers import create_model, resize_images_to_same_sizes
+from conftest import gamr_skip
 from packaging import version
 
 import scvelo as scv
@@ -62,21 +63,6 @@ scv.settings.figdir = str(FIGS)
 scv.set_figure_params(transparent=True)
 
 
-def _gamr_skip() -> Callable:
-    try:
-        from rpy2.robjects.packages import PackageNotInstalledError, importr
-
-        try:
-            _ = importr("mgcv")
-        except PackageNotInstalledError:
-            return pytest.mark.skip("R library `mgcv` is not installed")
-
-    except ImportError:
-        return pytest.mark.skip("`rpy2` is not installed")
-
-    return lambda _: _
-
-
 try:
     from importlib_metadata import version as get_version
 except ImportError:
@@ -87,7 +73,6 @@ scvelo_paga_skip = pytest.mark.skipif(
     version.parse(get_version(scv.__name__)) < version.parse("0.1.26.dev189+gc441c72"),
     reason="scVelo < `0.1.26.dev189+gc441c72` supports new PAGA, including node colors and confidence",
 )
-gamr_skip = _gamr_skip()
 
 del version, get_version
 
@@ -2207,6 +2192,11 @@ class TestModel:
             lineage_probability=True,
             lineage_probability_conf_int=True,
         )
+
+
+@gamr_skip
+class TestGAMR:
+    pass
 
 
 class TestComposition:
