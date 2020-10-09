@@ -91,8 +91,8 @@ Utilities
     :toctree: api/ul
 
     ul.models.GAM
-    ul.models.SKLearnModel
     ul.models.GAMR
+    ul.models.SKLearnModel
 
 Reading
 ~~~~~~~
@@ -113,8 +113,8 @@ Datasets
 .. autosummary::
     :toctree: api/datasets
 
-    datasets.pancreas
     datasets.lung
+    datasets.pancreas
     datasets.pancreas_preprocessed
 
 

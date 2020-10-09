@@ -44,10 +44,10 @@ class GAMR(BaseModel):
         Position of the knots. Can be one of the following:
 
             - `{kloc.AUTO.s!r}` - let `mgcv` handle the knot positions.
-            - `{kloc.DENSITY.s!r}` - position the knots based on the density of pseudotime.
+            - `{kloc.DENSITY.s!r}` - position the knots based on the density of the pseudotime.
     offset
         Offset term for the GAM. Only available when ``distribution='nb'``. If `'default'`, it is calculated
-        according to `[Robinson10]_`. The values are saved in :paramref:`adata` `.obs[{key!r}]`.
+        according to [Robinson10]_. The values are saved in :paramref:`adata` ``.obs[{key!r}]``.
         If `None`, no offset is used.
     smoothing_penalty
         Penalty for the smoothing term. The larger the value, the smoother the fitted curve.
@@ -133,7 +133,7 @@ class GAMR(BaseModel):
     ) -> "GAMR":
         """
         %(base_model_prepare.full_desc)s
-        This also removes not positive weights and prepares the design matrix.
+        This also removes the zero and negative weights and prepares the design matrix.
 
         Parameters
         ----------
@@ -244,6 +244,9 @@ class GAMR(BaseModel):
         Parameters
         ----------
         %(base_model_predict.parameters)s
+        level
+            Confidence level for confidence interval calculation. If `None`, don't compute the confidence interval.
+            Must be in the interval `[0, 1]`.
 
         Returns
         -------
@@ -264,7 +267,7 @@ class GAMR(BaseModel):
 
         if level is not None and not (0 <= level <= 1):
             raise ValueError(
-                f"Expected level to be in interval `[0, 1]`, found `{level}`."
+                f"Expected the confidence level to be in interval `[0, 1]`, found `{level}`."
             )
 
         newdata = self._get_x_test(x_test)

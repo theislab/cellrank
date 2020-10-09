@@ -86,7 +86,7 @@ class GAM(BaseModel):
         use the :paramref:`model`'s method.
     grid
         Whether to perform a grid search. Keys correspond to a parameter names and values to range to be searched.
-        If `'default'`, use the default grid.
+        If `'default'`, use the default grid. If `None`, don't perform a grid search.
     spline_kwargs
         Keyword arguments for :class:`pygam.s`.
     **kwargs
