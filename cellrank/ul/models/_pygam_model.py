@@ -66,10 +66,10 @@ class GAM(BaseModel):
     Parameters
     ----------
     %(adata)s
-    n_splines
-        Number of splines.
+    n_knots
+        Number of knots.
     spline_order
-        Order of the splines.
+        Order of the splines, i.e. `3` for cubic splines.
     distribution
         Name of the distribution. Available distributions can be found
         `here <https://pygam.readthedocs.io/en/latest/notebooks/tour_of_pygam.html#Distribution:>`_.
@@ -80,7 +80,7 @@ class GAM(BaseModel):
         Maximum number of iterations for optimization.
     expectile
         Expectile for :class:`pygam.pygam.ExpectileGAM`. This forces the distribution to be `'normal'`
-        and link function to `'identity'`. Must be in `(0, 1)`.
+        and link function to `'identity'`. Must be in interval `(0, 1)`.
     use_default_conf_int
         Whether to use :meth:`default_confidence_interval` to calculate the confidence interval or
         use the :paramref:`model`'s method.
@@ -96,7 +96,7 @@ class GAM(BaseModel):
     def __init__(
         self,
         adata: AnnData,
-        n_splines: Optional[int] = 10,
+        n_knots: Optional[int] = 6,
         spline_order: int = 3,
         distribution: str = "gamma",
         link: str = "log",
@@ -110,7 +110,7 @@ class GAM(BaseModel):
         term = s(
             0,
             spline_order=spline_order,
-            n_splines=n_splines,
+            n_splines=n_knots,
             penalties=["derivative", "l2"],
             **_filter_kwargs(s, **{**{"lam": 3}, **spline_kwargs}),
         )

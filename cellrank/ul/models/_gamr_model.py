@@ -20,7 +20,6 @@ _r_lib_name = None
 class KnotLocs(ModeEnum):  # noqa
     AUTO = "auto"
     DENSITY = "density"
-    UNIFORM = "uniform"
 
 
 @inject_docs(key=_OFFSET_KEY, kloc=KnotLocs)
@@ -33,23 +32,22 @@ class GAMR(BaseModel):
     Parameters
     ----------
     %(adata)s
-    n_splines
-        Number of splines for the GAM.
+    n_knots
+        Number of knots.
     distribution
         Distribution family in `rpy2.robjects.r`, such as `'gaussian'` or `'nb'` for negative binomial.
-        If `'nb'`, data in :paramref:`adata` ``.raw`` is always used.
+        If `'nb'`, raw count data in :paramref:`adata` ``.raw`` is always used.
     basis
         Basis for the smoothing term. See
         `here <https://www.rdocumentation.org/packages/mgcv/versions/1.8-33/topics/s>`__ for valid options.
     offset
         Offset term for the GAM. Only available when ``distribution='nb'``. If `'default'`, it is calculated
-        automatically. The values are cached in :paramref:`adata` `.obs[{key!r}]`. If `None`, no offset is used.
+        automatically. The values are saved in :paramref:`adata` `.obs[{key!r}]`. If `None`, no offset is used.
     knotlocs
-        Position of knots. Can be one of the following:
+        Position of the knots. Can be one of the following:
 
-            - `{kloc.AUTO.s!r}` - let `mgcv` handle knot positions.
+            - `{kloc.AUTO.s!r}` - let `mgcv` handle the knot positions.
             - `{kloc.DENSITY.s!r}` - position the knots based on the density of pseudotime.
-            - `{kloc.UNIFORM.s!r}` - uniformly place the knots across the pseudotime.
     smoothing_penalty
         Penalty for the smoothing term. The larger the value, the smoother the fitted curve.
     **kwargs
@@ -59,7 +57,7 @@ class GAMR(BaseModel):
     def __init__(
         self,
         adata: AnnData,
-        n_splines: int = 5,
+        n_knots: int = 5,
         distribution: str = "gaussian",
         basis: str = "cr",
         offset: Optional[Union[np.ndarray, str]] = "default",
@@ -68,17 +66,15 @@ class GAMR(BaseModel):
         perform_import_check: bool = True,
         **kwargs,
     ):
-        if n_splines <= 0:
-            raise ValueError(
-                f"Expected `n_splines` to be positive, found `{n_splines}`."
-            )
+        if n_knots <= 0:
+            raise ValueError(f"Expected `n_splines` to be positive, found `{n_knots}`.")
         if smoothing_penalty < 0:
             raise ValueError(
                 f"Expected `smoothing_penalty` to be non-negative, found `{smoothing_penalty}`."
             )
 
         super().__init__(adata, model=None)
-        self._n_splines = n_splines
+        self._n_splines = n_knots
         self._family = distribution
 
         self._formula = (
