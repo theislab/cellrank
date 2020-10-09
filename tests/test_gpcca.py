@@ -444,6 +444,48 @@ class TestGPCCA:
 
         _check_abs_probs(mc)
 
+    def test_set_terminal_states_from_macrostates_rename_states_invalid(
+        self, adata_large: AnnData
+    ):
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        terminal_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc.compute_schur(n_components=10, method="krylov")
+
+        mc.compute_macrostates(n_states=2, n_cells=5)
+        with pytest.raises(ValueError):
+            mc.set_terminal_states_from_macrostates({"0": "1"})
+
+        assert mc._get(P.TERM) is None
+        assert mc._get(P.TERM_PROBS) is None
+        assert mc._get(A.TERM_ABS_PROBS) is None
+
+        assert TermStatesKey.FORWARD.s not in mc.adata.obs
+        assert _probs(TermStatesKey.FORWARD.s) not in mc.adata.obs
+        assert _colors(TermStatesKey.FORWARD.s) not in mc.adata.uns
+        assert _lin_names(TermStatesKey.FORWARD.s) not in mc.adata.uns
+
+    def test_set_terminal_states_from_macrostates_rename_states(
+        self, adata_large: AnnData
+    ):
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        terminal_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc.compute_schur(n_components=10, method="krylov")
+
+        mc.compute_macrostates(n_states=2, n_cells=5)
+        mc.set_terminal_states_from_macrostates({"0": "foo"})
+        mc.compute_absorption_probabilities()
+
+        _check_abs_probs(mc)
+
+        np.testing.assert_array_equal(mc._get(P.TERM).cat.categories, ["foo"])
+        np.testing.assert_array_equal(mc._get(A.TERM_ABS_PROBS).names, ["foo"])
+
     def test_set_terminal_states_from_macrostates_no_cells(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
@@ -548,7 +590,29 @@ class TestGPCCA:
 
         _check_abs_probs(mc)
 
-    def test_compute_terminal_states_min_self_prob(self, adata_large: AnnData):
+    def test_compute_terminal_states_stability(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        terminal_kernel = 0.8 * vk + 0.2 * ck
+        thresh = 0.5
+
+        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc.compute_schur(n_components=10, method="krylov")
+
+        mc.compute_macrostates(n_states=5)
+        mc.compute_terminal_states(
+            n_cells=5, method="stability", stability_threshold=thresh
+        )
+        mc.compute_absorption_probabilities()
+
+        coarse_T = mc._get(P.COARSE_T)
+        self_probs = pd.Series(np.diag(coarse_T), index=coarse_T.columns)
+        names = self_probs[self_probs.values >= thresh].index
+
+        np.testing.assert_array_equal(set(names), set(mc._get(P.TERM).cat.categories))
+        _check_abs_probs(mc)
+
+    def test_compute_terminal_states_no_selected(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
@@ -557,12 +621,24 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2)
-        mc.compute_terminal_states(n_cells=5, method="min_self_prob", min_self_prob=0.5)
-        mc.compute_absorption_probabilities()
+        with pytest.raises(ValueError):
+            mc.compute_terminal_states(
+                n_cells=5, method="stability", stability_threshold=42
+            )
 
-        _check_abs_probs(mc)
+    def test_compute_terminal_states_too_many_cells(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        terminal_kernel = 0.8 * vk + 0.2 * ck
 
-    def test_compute_terminal_states(self, adata_large: AnnData):
+        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc.compute_schur(n_components=10, method="krylov")
+
+        mc.compute_macrostates(n_states=2)
+        with pytest.raises(ValueError):
+            mc.compute_terminal_states(n_cells=4200)
+
+    def test_compute_terminal_states_default(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck

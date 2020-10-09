@@ -25,9 +25,9 @@ class TestColors:
             _create_categorical_colors(-1)
 
     def test_create_categorical_colors_normal_run(self):
-        colors = _create_categorical_colors(79)
+        colors = _create_categorical_colors(62)
 
-        assert len(colors) == 79
+        assert len(colors) == 62
         assert all(map(lambda c: isinstance(c, str), colors))
         assert all(map(lambda c: is_color_like(c), colors))
 

@@ -9,6 +9,7 @@ from collections import OrderedDict as odict
 
 import numpy as np
 import pandas as pd
+from scipy.sparse import csr_matrix
 
 import matplotlib as mpl
 import matplotlib.cm as cm
@@ -44,10 +45,11 @@ def cluster_fates(
     cluster_key: Optional[str] = "clusters",
     clusters: Optional[Union[str, Sequence[str]]] = None,
     basis: Optional[str] = None,
-    show_cbar: bool = True,
+    cbar: bool = True,
     ncols: Optional[int] = None,
     sharey: bool = False,
     fmt: str = "0.2f",
+    xrot: float = 90,
     legend_kwargs: Mapping[str, Any] = MappingProxyType({"loc": "best"}),
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
@@ -80,8 +82,8 @@ def cluster_fates(
     clusters
         Clusters to visualize. If `None`, all clusters will be plotted.
     basis
-        Basis for scatterplot to use when ``mode={m.PAGA_PIE.s!r}``. If `None`, don't show scatterplot.
-    show_cbar
+        Basis for scatterplot to use when ``mode={m.PAGA_PIE.s!r}``. If `None`, don't show the scatterplot.
+    cbar
         Whether to show colorbar when ``mode={m.PAGA_PIE.s!r}``.
     ncols
         Number of columns when ``mode={m.BAR.s!r}`` or ``mode={m.PAGA.s!r}``.
@@ -89,6 +91,8 @@ def cluster_fates(
         Whether to share y-axis when ``mode={m.BAR.s!r}``.
     fmt
         Format when using ``mode={m.HEATMAP.s!r}`` or ``mode={m.CLUSTERMAP.s!r}``.
+    xrot
+        Rotation of the labels on the x-axis.
     figsize
         Size of the figure.
     legend_kwargs
@@ -143,7 +147,7 @@ def cluster_fates(
                 ax = current_ax
 
             current_ax.set_xticks(np.arange(len(lin_names)))
-            current_ax.set_xticklabels(lin_names, rotation=xrot if has_xrot else 45)
+            current_ax.set_xticklabels(lin_names, rotation=xrot)
             if not is_all:
                 current_ax.set_xlabel(points)
             current_ax.set_ylabel("absorption probability")
@@ -189,7 +193,7 @@ def cluster_fates(
 
             paga(adata, **kwargs)
 
-        if show_cbar:
+        if cbar:
             norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
             cax, _ = mpl.colorbar.make_axes(ax, aspect=60)
             _ = mpl.colorbar.ColorbarBase(
@@ -327,11 +331,11 @@ def cluster_fates(
         kwargs["rotation"] = xrot
 
         data = np.ravel(adata.obsm[lk].X.T)[..., np.newaxis]
-        tmp = _AnnData(np.zeros_like(data))
+        tmp = _AnnData(csr_matrix(data.shape, dtype=np.float32))
         tmp.obs["absorption probability"] = data
         tmp.obs[points] = (
             pd.Series(
-                np.ravel(
+                np.concatenate(
                     [
                         [f"{dir_prefix.lower()} {n}"] * adata.n_obs
                         for n in adata.obsm[lk].names
@@ -350,36 +354,42 @@ def cluster_fates(
             figsize=figsize if figsize is not None else (8, 6), dpi=dpi
         )
         ax.set_title(points.capitalize())
+
         violin(tmp, keys=["absorption probability"], ax=ax, **kwargs)
 
         return fig
 
     @plot.register(ClusterFatesMode.HEATMAP)
     def _():
-        title = kwargs.pop("title", None)
-        if not title:
-            title = "average fate per cluster"
         data = pd.DataFrame(
             [mean for mean, _ in d.values()], columns=lin_names, index=clusters
         ).T
 
-        if "cmap" not in kwargs:
-            kwargs["cmap"] = "viridis"
+        title = kwargs.pop("title", "average fate per cluster")
+        vmin, vmax = data.values.min(), data.values.max()
+        cbar_kws = {
+            "label": "probability",
+            "ticks": np.linspace(vmin, vmax, 5),
+            "format": "%.3f",
+        }
+        kwargs.setdefault("cmap", "viridis")
 
         if use_clustermap:
-            kwargs["cbar_pos"] = (0, 0.9, 0.025, 0.15) if show_cbar else None
+            kwargs["cbar_pos"] = (0, 0.9, 0.025, 0.15) if cbar else None
             max_size = float(max(data.shape))
 
             g = clustermap(
                 data,
-                robust=True,
                 annot=True,
+                vmin=vmin,
+                vmax=vmax,
                 fmt=fmt,
                 row_colors=adata.obsm[lk][lin_names].colors,
                 dendrogram_ratio=(
                     0.15 * data.shape[0] / max_size,
                     0.15 * data.shape[1] / max_size,
                 ),
+                cbar_kws=cbar_kws,
                 figsize=figsize,
                 **kwargs,
             )
@@ -393,10 +403,12 @@ def cluster_fates(
             fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
             g = heatmap(
                 data,
-                robust=True,
+                vmin=vmin,
+                vmax=vmax,
                 annot=True,
                 fmt=fmt,
-                cbar=show_cbar,
+                cbar=cbar,
+                cbar_kws=cbar_kws,
                 ax=ax,
                 **kwargs,
             )
@@ -474,17 +486,13 @@ def cluster_fates(
             if is_all
             else (adata.obs[cluster_key] == name).values
         )
-        mask = list(np.array(mask, dtype=np.bool))
+        mask = np.array(mask, dtype=np.bool)
         data = adata.obsm[lk][mask, lin_names].X
         mean = np.nanmean(data, axis=0)
         std = np.nanstd(data, axis=0) / np.sqrt(data.shape[0])
         d[name] = [mean, std]
 
-    has_xrot = "xticks_rotation" in kwargs
-    xrot = kwargs.pop("xticks_rotation", 45)
-
     logg.debug(f"Plotting in mode `{mode!r}`")
-
     use_clustermap = False
     if mode == mode.CLUSTERMAP:
         use_clustermap = True

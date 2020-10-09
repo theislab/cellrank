@@ -566,6 +566,36 @@ class TestLineageAccessor:
         np.testing.assert_array_equal(y.colors, [cmapper[n] for n in y.names])
         np.testing.assert_array_equal(y.X, x[[0, -1], :][:, [1, 2, 0]])
 
+    def test_mask_and_names(self):
+        # see https://github.com/theislab/cellrank/issues/427
+        lin = Lineage(
+            np.random.normal(size=(100, 9)),
+            names=[
+                "Neuroendocrine",
+                "Ciliated activated_1",
+                "Basal",
+                "Goblet",
+                "Mki67+ proliferation",
+                "Ciliated activated_2",
+                "Krt8+ ADI",
+                "Ciliated",
+                "AT2 activated",
+            ],
+        )
+        lineages = [
+            "Goblet",
+            "Ciliated",
+            "Ciliated activated_1",
+            "Ciliated activated_2",
+        ]
+        mask = np.random.randint(2, size=(100,), dtype=bool)
+
+        res = lin[mask, lineages]
+
+        np.testing.assert_array_equal(res.names, lin.names[[3, 7, 1, 5]])
+        np.testing.assert_array_equal(res.colors, lin.colors[[3, 7, 1, 5]])
+        np.testing.assert_array_equal(res.X, lin[mask, :][:, [3, 7, 1, 5]])
+
 
 class TestLineageMixing:
     def test_overlap(self):

@@ -71,7 +71,7 @@ conf_int[:5]
 # Cells in this plot have been colored by their fate probability of reaching the `Alpha` terminal state. We
 # include these probabilities as weights in the loss function when fitting the model. This allows us to weight each
 # cell by its relative contribution to the lineage, without needing to subset cells for each lineage.
-model.plot(show_conf_int=True)
+model.plot(conf_int=True)
 
 # %%
 # Lastly, wrapping :mod:`sklearn` estimators is fairly simple, we just pass the instance

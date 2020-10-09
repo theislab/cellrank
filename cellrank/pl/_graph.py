@@ -54,7 +54,7 @@ def graph(
     edge_alpha: float = 1.0,
     edge_normalize: bool = False,
     edge_use_curved: bool = True,
-    show_arrows: bool = True,
+    arrows: bool = True,
     font_size: int = 12,
     font_color: str = "black",
     color_nodes: bool = True,
@@ -126,7 +126,7 @@ def graph(
         If `True`, normalize edges to `[0, 1]` interval prior to applying any scaling or truncation.
     edge_use_curved
         If `True`, use curved edges. This can improve visualization at a small performance cost.
-    show_arrows
+    arrows
         Whether to show the arrows. Setting this to `False` may dramatically speed things up.
     font_size
         Font size for node labels.
@@ -464,7 +464,7 @@ def graph(
 
         if lc is not None and curves is not None:
             ax.add_collection(deepcopy(lc))  # copying necessary
-            if show_arrows:
+            if arrows:
                 plot_arrows(curves, G, pos, ax, edge_weight_scale)
         else:
             nx.draw_networkx_edges(

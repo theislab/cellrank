@@ -412,7 +412,8 @@ def _trends_helper(
         percs = percs * n_lineages
 
     hide_cells = kwargs.pop("hide_cells", False)
-    show_cbar = kwargs.pop("show_cbar", True)
+    show_cbar = kwargs.pop("cbar", True)
+    show_prob = kwargs.pop("lineage_probability", False)
 
     if same_plot:
         lineage_colors = (
@@ -424,6 +425,21 @@ def _trends_helper(
         lineage_colors = (
             "black" if not mcolors.is_color_like(lineage_cmap) else lineage_cmap
         )
+
+    if show_prob and not same_plot:
+        minns, maxxs = zip(
+            *[
+                models[gene][n]._return_min_max(
+                    show_conf_int=kwargs.get("conf_int", False),
+                )
+                for n in lineage_names
+            ]
+        )
+        minn, maxx = min(minns), max(maxxs)
+        kwargs["loc"] = legend_loc
+        kwargs["scaler"] = lambda x: (x - minn) / (maxx - minn)
+    else:
+        kwargs["loc"] = None
 
     for i, (name, ax, perc) in enumerate(zip(lineage_names, axes, percs)):
         if same_plot:
@@ -447,7 +463,7 @@ def _trends_helper(
             ax=ax,
             fig=fig,
             perc=perc,
-            show_cbar=False,
+            cbar=False,
             title=title,
             hide_cells=hide_cells or (same_plot and i == n_lineages - 1),
             same_plot=same_plot,
@@ -455,6 +471,7 @@ def _trends_helper(
             if same_plot and name is not None
             else lineage_colors,
             abs_prob_cmap=abs_prob_cmap,
+            lineage_probability=show_prob,
             ylabel=ylabel,
             **kwargs,
         )
@@ -489,7 +506,11 @@ def _trends_helper(
         )
 
     if same_plot and lineage_names != [None] and legend_loc is not None:
-        ax.legend(lineage_names, loc=legend_loc)
+        handles = [
+            mpl.lines.Line2D([], [], color=c, label=n)
+            for c, n in zip(lineage_colors, lineage_names)
+        ]
+        ax.legend(handles=handles, loc=legend_loc, title="lineage")
 
 
 def _position_legend(ax: mpl.axes.Axes, legend_loc: str, **kwargs) -> mpl.legend.Legend:

@@ -26,7 +26,7 @@ cr.pl.graph(
     "T_fwd",
     edge_alpha=0.1,
     node_size=5,
-    show_arrows=False,
+    arrows=False,
     keys="clusters",
     keylocs="obs",
 )
@@ -35,9 +35,7 @@ cr.pl.graph(
 # To further illustrate the functionalities, let us only consider the `'Delta`' cluster. We can also filter the edges
 # by their weights, as shown below. Only transitions with probability at least 0.1 are plotted.
 ixs = np.where(adata.obs["clusters"] == "Delta")[0]
-cr.pl.graph(
-    adata, "T_fwd", ixs=ixs, show_arrows=True, node_size=200, filter_edges=(0.1, 1)
-)
+cr.pl.graph(adata, "T_fwd", ixs=ixs, arrows=True, node_size=200, filter_edges=(0.1, 1))
 
 # %%
 # Lastly, we can visualize different edge aggregations, such as minimum or maximum. Here we take at most 3 outgoing
@@ -55,7 +53,7 @@ cr.pl.graph(
     edge_alpha=0.5,
     node_size=200,
     keys="outgoing",
-    show_arrows=False,
+    arrows=False,
     top_n_edges=(3, False, "outgoing"),
     title="outgoing to Beta",
     edge_reductions=np.max,

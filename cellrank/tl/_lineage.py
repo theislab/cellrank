@@ -427,7 +427,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
                     row_order = (
                         item_0[:, 0]
                         if item_0.shape[0] == self.shape[0]
-                        else np.argsort(item_0[:, 0])
+                        else np.argsort(np.argsort(item_0[:, 0]))
                     )
                     item_0 = _at_least_2d(np.isin(np.arange(self.shape[0]), item_0), -1)
                 item = item_0 * item_1
@@ -440,7 +440,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
                     col_order = (
                         item_1[0, :]
                         if item_1.shape[1] == self.shape[1]
-                        else np.argsort(item_1[0, :])
+                        else np.argsort(np.argsort(item_1[0, :]))
                     )
                     item_1 = _at_least_2d(np.isin(np.arange(self.shape[1]), item_1), 0)
 
