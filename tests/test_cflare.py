@@ -134,6 +134,17 @@ class TestCFLARE:
         with pytest.raises(ValueError):
             mc.rename_terminal_states({"0": "1"})
 
+    def test_rename_terminal_states_try_joinining_states(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        terminal_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc.compute_eigendecomposition(k=5)
+        mc.compute_terminal_states(use=2)
+        with pytest.raises(ValueError):
+            mc.rename_terminal_states({"0, 1": "foo"})
+
     def test_rename_terminal_states_empty_mapping(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()

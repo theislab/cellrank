@@ -70,6 +70,17 @@ def _check_compute_macro(mc: cr.tl.estimators.GPCCA) -> None:
         assert isinstance(mc._get(P.SCHUR), np.ndarray)
 
 
+def _check_renaming_no_write_terminal(mc: cr.tl.estimators.GPCCA) -> None:
+    assert mc._get(P.TERM) is None
+    assert mc._get(P.TERM_PROBS) is None
+    assert mc._get(A.TERM_ABS_PROBS) is None
+
+    assert TermStatesKey.FORWARD.s not in mc.adata.obs
+    assert _probs(TermStatesKey.FORWARD.s) not in mc.adata.obs
+    assert _colors(TermStatesKey.FORWARD.s) not in mc.adata.uns
+    assert _lin_names(TermStatesKey.FORWARD.s) not in mc.adata.uns
+
+
 def _check_abs_probs(mc: cr.tl.estimators.GPCCA, has_main_states: bool = True):
     if has_main_states:
         assert isinstance(mc._get(P.TERM), pd.Series)
@@ -457,15 +468,37 @@ class TestGPCCA:
         mc.compute_macrostates(n_states=2, n_cells=5)
         with pytest.raises(ValueError):
             mc.set_terminal_states_from_macrostates({"0": "1"})
+        _check_renaming_no_write_terminal(mc)
 
-        assert mc._get(P.TERM) is None
-        assert mc._get(P.TERM_PROBS) is None
-        assert mc._get(A.TERM_ABS_PROBS) is None
+    def test_set_terminal_states_from_macrostates_rename_not_unique_new_names(
+        self, adata_large: AnnData
+    ):
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        assert TermStatesKey.FORWARD.s not in mc.adata.obs
-        assert _probs(TermStatesKey.FORWARD.s) not in mc.adata.obs
-        assert _colors(TermStatesKey.FORWARD.s) not in mc.adata.uns
-        assert _lin_names(TermStatesKey.FORWARD.s) not in mc.adata.uns
+        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc.compute_schur(n_components=10, method="krylov")
+
+        mc.compute_macrostates(n_states=3, n_cells=5)
+        with pytest.raises(ValueError):
+            mc.set_terminal_states_from_macrostates({"0": "1", "1": "1"})
+        _check_renaming_no_write_terminal(mc)
+
+    def test_set_terminal_states_from_macrostates_rename_overlapping_old_keys(
+        self, adata_large: AnnData
+    ):
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        terminal_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc.compute_schur(n_components=10, method="krylov")
+
+        mc.compute_macrostates(n_states=3, n_cells=5)
+        with pytest.raises(ValueError):
+            mc.set_terminal_states_from_macrostates({"0, 1": "foo", "1, 2": "bar"})
+        _check_renaming_no_write_terminal(mc)
 
     def test_set_terminal_states_from_macrostates_rename_states(
         self, adata_large: AnnData
@@ -485,6 +518,25 @@ class TestGPCCA:
 
         np.testing.assert_array_equal(mc._get(P.TERM).cat.categories, ["foo"])
         np.testing.assert_array_equal(mc._get(A.TERM_ABS_PROBS).names, ["foo"])
+
+    def test_set_terminal_states_from_macrostates_join_and_rename_states(
+        self, adata_large: AnnData
+    ):
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        terminal_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc.compute_schur(n_components=10, method="krylov")
+
+        mc.compute_macrostates(n_states=3, n_cells=5)
+        mc.set_terminal_states_from_macrostates({"0, 1": "foo", "2": "bar"})
+        mc.compute_absorption_probabilities()
+
+        _check_abs_probs(mc)
+
+        np.testing.assert_array_equal(mc._get(P.TERM).cat.categories, ["foo", "bar"])
+        np.testing.assert_array_equal(mc._get(A.TERM_ABS_PROBS).names, ["foo", "bar"])
 
     def test_set_terminal_states_from_macrostates_no_cells(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)

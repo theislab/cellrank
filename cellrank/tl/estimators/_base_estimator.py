@@ -258,7 +258,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         mask = np.isin(list(new_names.keys()), term_states.cat.categories)
         if not np.all(mask):
             raise ValueError(
-                f"Invalid old terminal state names: `{np.array(list(new_names.keys()))[~mask]}`."
+                f"Invalid old terminal states names: `{np.array(list(new_names.keys()))[~mask]}`."
             )
 
         names_after_renaming = [new_names.get(n, n) for n in term_states.cat.categories]
