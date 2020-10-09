@@ -280,9 +280,11 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         if n_cells <= 0:
             raise ValueError(f"Expected `n_cells` to be positive, found `{n_cells}`.")
 
-        rename = True
         probs = self._get(P.MACRO_MEMBER)
+        if probs is None:
+            raise RuntimeError("Compute macrostates first as `.compute_macrostates()`.")
 
+        rename = True
         if names is None:
             names = probs.names
             rename = False
@@ -296,8 +298,11 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         if not len(names):
             raise ValueError("No macrostates have been selected.")
 
-        if self._get(P.MACRO_MEMBER) is None:
-            raise RuntimeError("Compute macrostates first as `.compute_macrostates()`.")
+        if not all(isinstance(old, str) for old in names.keys()):
+            raise TypeError("Not all new names are strings.")
+
+        if not all(isinstance(new, (str, int)) for new in names.values()):
+            raise TypeError("Not all macrostates names are strings or integers.")
 
         # this also checks that the names are correct before renaming
         macrostates_probs = probs[list(names.keys())]
@@ -305,6 +310,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         # we do this also here because if `rename_terminal_states` fails
         # invalid states would've been written to this object and nothing to adata
         new_names = {k: str(v) for k, v in names.items()}
+        # TODO: seems wrong
         names_after_renaming = [new_names.get(n, n) for n in probs.names]
         if len(set(names_after_renaming)) != probs.shape[1]:
             raise ValueError(
@@ -317,7 +323,10 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
             self._set(A.TERM_PROBS, probs / probs.max())
             self._set(A.TERM_ABS_PROBS, probs)
             if rename:
-                self.rename_terminal_states(names)
+                # access lineage renames join states, e.g. 'Alpha, Beta' becomes 'Alpha or Beta' + whitespace stripping
+                self.rename_terminal_states(
+                    dict(zip(self._get(P.TERM).cat.categories, names.values()))
+                )
 
             self._write_terminal_states()
             return
@@ -336,7 +345,9 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         )
         self._set(A.TERM_ABS_PROBS, scaled_probs)
         if rename:
-            self.rename_terminal_states(names)
+            self.rename_terminal_states(
+                dict(zip(self._get(P.TERM).cat.categories, names.values()))
+            )
 
         self._write_terminal_states()
 
