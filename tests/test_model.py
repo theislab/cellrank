@@ -7,6 +7,8 @@ from anndata import AnnData
 import numpy as np
 from sklearn.svm._classes import SVR
 
+from cellrank.ul.models._utils import _extract_data
+
 
 class TestModel:
     def test_initialize(self, adata: AnnData):
@@ -80,4 +82,30 @@ class TestModel:
 
 
 class TestUtils:
-    pass
+    def test_extract_data_wrong_type(self):
+        with pytest.raises(TypeError):
+            _extract_data(None)
+
+    def test_extract_data_raw_None(self, adata: AnnData):
+        adata = AnnData(adata.X, raw=None)
+        with pytest.raises(ValueError):
+            _extract_data(adata, use_raw=True)
+
+    def test_extract_data_invalid_layer(self, adata: AnnData):
+        with pytest.raises(KeyError):
+            _extract_data(adata, layer="foo", use_raw=False)
+
+    def test_extract_data_normal_run(self, adata: AnnData):
+        X = _extract_data(adata, use_raw=False)
+
+        assert X is adata.X
+
+    def test_extract_data_normal_run_layer(self, adata: AnnData):
+        ms = _extract_data(adata, layer="Ms", use_raw=False)
+
+        assert ms is adata.layers["Ms"]
+
+    def test_extract_data_normal_run_raw(self, adata: AnnData):
+        raw = _extract_data(adata, use_raw=True, layer="Ms")
+
+        assert raw is adata.raw.X

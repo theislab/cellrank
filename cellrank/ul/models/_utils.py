@@ -28,7 +28,7 @@ class NormMode(ModeEnum):  # noqa
 
 @d.dedent
 def _extract_data(
-    data: AnnData, layer: str, use_raw: bool = True
+    data: AnnData, layer: Optional[str] = None, use_raw: bool = True
 ) -> Union[np.ndarray, spmatrix]:
     """
     Extract expression data from an object.
