@@ -257,7 +257,7 @@ def assert_estimators_equal(
             assert val2.keys() == val1.keys()
             for v2, v1 in zip(val2.values(), val1.values()):
                 if isinstance(v2, np.ndarray):
-                    assert v2 is not v1
+                    assert v2 is not v1, attr
                     np.testing.assert_array_equal(v2, v1)
                 else:
                     assert v2 == v1, (v2, v1, attr)

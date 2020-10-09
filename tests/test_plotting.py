@@ -21,6 +21,7 @@ from matplotlib.testing import setup
 from matplotlib.testing.compare import compare_images
 
 import cellrank as cr
+from cellrank.ul.models import GAMR
 from cellrank.tl._constants import AbsProbKey
 from cellrank.tl.estimators import GPCCA, CFLARE
 
@@ -2196,7 +2197,53 @@ class TestModel:
 
 @gamr_skip
 class TestGAMR:
-    pass
+    @compare()
+    def test_gamr_default(self, adata: AnnData, fpath: str):
+        model = GAMR(adata, offset=None)
+        model.prepare(adata.var_names[0], "1")
+        model.fit().predict()
+        model.confidence_interval()
+        model.plot(
+            save=fpath,
+            dpi=DPI,
+        )
+
+    @compare()
+    def test_gamr_no_ci(self, adata: AnnData, fpath: str):
+        model = GAMR(adata, offset=None)
+        model.prepare(adata.var_names[0], "1")
+        model.fit().predict()
+        model.confidence_interval()
+        model.plot(
+            conf_int=False,
+            save=fpath,
+            dpi=DPI,
+        )
+
+    @compare()
+    def test_gamr_no_cbar(self, adata: AnnData, fpath: str):
+        model = GAMR(adata, offset=None)
+        model.prepare(adata.var_names[0], "1")
+        model.fit().predict()
+        model.confidence_interval()
+        model.plot(
+            cbar=False,
+            save=fpath,
+            dpi=DPI,
+        )
+
+    @compare()
+    def test_gamr_lineage_prob(self, adata: AnnData, fpath: str):
+        model = GAMR(adata)
+        model.prepare(adata.var_names[0], "1")
+        model.fit().predict()
+        model.confidence_interval()
+        model.plot(
+            lineage_probability=True,
+            lineage_probability_conf_int=True,
+            save=fpath,
+            dpi=DPI,
+        )
 
 
 class TestComposition:

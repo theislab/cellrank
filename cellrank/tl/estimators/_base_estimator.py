@@ -967,7 +967,9 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         k = deepcopy(self.kernel)  # ensure we copy the adata object
         res = type(self)(k, read_from_adata=False)
         for k, v in self.__dict__.items():
-            if k != "_kernel":
+            if isinstance(v, dict):
+                res.__dict__[k] = deepcopy(v)
+            elif k != "_kernel":
                 res.__dict__[k] = copy(v)
 
         return res

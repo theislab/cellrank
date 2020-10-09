@@ -4,7 +4,7 @@ from typing import Tuple, Callable
 
 from cellrank.ul.models import GAM, GAMR, SKLearnModel
 
-os.environ["NUMBA_NUM_THREADS"] = "4"
+os.environ["NUMBA_NUM_THREADS"] = "1"
 
 import pytest
 from _helpers import create_model
