@@ -354,7 +354,9 @@ class TestKernel:
 
     def test_precomputed_from_kernel(self, adata: AnnData):
         vk = VelocityKernel(adata).compute_transition_matrix(
-            mode="stochastic", softmax_scale=4
+            mode="stochastic",
+            softmax_scale=4,
+            n_jobs=1,
         )
 
         pk = PrecomputedKernel(vk)
