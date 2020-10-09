@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from typing import Union, TypeVar, Optional
+from typing import Union, TypeVar, Optional, Sequence
 
 import numpy as np
 from numba import njit, prange
@@ -11,9 +11,6 @@ from cellrank.ul._docs import d, inject_docs
 from cellrank.ul._utils import valuedispatch
 from cellrank.tl._constants import ModeEnum
 from cellrank.ul._parallelize import parallelize
-
-# sources:
-# edgeR:
 
 AnnData = TypeVar("AnnData")
 _OFFSET_KEY = "cellrank_offset"
@@ -414,12 +411,14 @@ def _calc_factor_weighted_helper(
 
 
 def _get_knotlocs(
-    pseudotime: np.ndarray,
+    pseudotime: Union[np.ndarray, Sequence],
     n_knots: int,
     uniform: bool = False,
 ) -> np.ndarray:
     """
     Find knot locations.
+
+    The first and last knots are always placed at the beginning and the of the ``pseudotime``.
 
     Parameters
     ----------
@@ -443,6 +442,11 @@ def _get_knotlocs(
         raise ValueError("Not all pseudotime values are finite.")
 
     pseudotime = np.asarray(pseudotime)
+
+    unique = np.unique(pseudotime)
+    if len(unique) in (0, 1):
+        raise ValueError(f"All pseudotime values are the same: `{unique}`.")
+
     if pseudotime.ndim == 2 and pseudotime.shape[1] == 1:
         pseudotime = pseudotime.squeeze(1)
     if pseudotime.ndim != 1:
@@ -451,13 +455,19 @@ def _get_knotlocs(
         )
 
     if uniform:
-        return np.linspace(
-            np.min(pseudotime), np.max(pseudotime), n_knots, endpoint=True
+        # replicate the result from not uniform
+        return (
+            np.linspace(np.min(pseudotime), np.max(pseudotime), n_knots, endpoint=True)
+            if n_knots > 1
+            else np.array([np.max(pseudotime)])
         )
 
     x = np.quantile(
         pseudotime, q=np.arange(n_knots, dtype=np.float64) / max(n_knots - 1, 1)
     )
+    x[0] = np.min(pseudotime)
+    x[-1] = np.max(pseudotime)
+
     u, ix, c = np.unique(x, return_index=True, return_counts=True)
 
     if len(u) != len(x):
@@ -470,9 +480,6 @@ def _get_knotlocs(
         knotlocs = np.array(knotlocs)
     else:
         knotlocs = x
-
-    knotlocs[0] = np.min(pseudotime)
-    knotlocs[-1] = np.max(pseudotime)
 
     logg.debug(f"Setting knot locations to `{list(knotlocs)}`")
 
