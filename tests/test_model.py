@@ -5,9 +5,10 @@ from _helpers import create_model
 from anndata import AnnData
 
 import numpy as np
+from scipy.stats import rankdata
 from sklearn.svm._classes import SVR
 
-from cellrank.ul.models._utils import _extract_data
+from cellrank.ul.models._utils import _rankdata, _extract_data
 
 
 class TestModel:
@@ -109,3 +110,13 @@ class TestUtils:
         raw = _extract_data(adata, use_raw=True, layer="Ms")
 
         assert raw is adata.raw.X
+
+    @pytest.mark.parametrize("method", ["average", "min", "max", "dense", "ordinal"])
+    def test_rank_data(self, method):
+        x = np.random.normal(size=(10,))
+
+        np.testing.assert_array_equal(_rankdata(x), rankdata(x))
+
+    def test_rank_data_invalid_method(self):
+        with pytest.raises(AssertionError):
+            _rankdata(np.random.normal(size=(10,)), method="foobar")
