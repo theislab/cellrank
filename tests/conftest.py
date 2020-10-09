@@ -2,11 +2,12 @@
 import os
 from typing import Tuple, Callable
 
-from cellrank.ul.models import GAMR
+from cellrank.ul.models import GAM, GAMR, SKLearnModel
 
 os.environ["NUMBA_NUM_THREADS"] = "4"
 
 import pytest
+from _helpers import create_model
 
 import scanpy as sc
 from anndata import AnnData
@@ -146,6 +147,28 @@ def gamr_model(adata_cflare: AnnData) -> GAMR:
     m = GAMR(adata_cflare)
     m.prepare(adata_cflare.var_names[0], "0").fit()
     m.predict(level=0.95)
+
+    return m
+
+
+@pytest.fixture
+def pygam_model(adata_cflare: AnnData) -> GAM:
+    m = GAM(adata_cflare)
+    m.prepare(adata_cflare.var_names[0], "0").fit()
+    m.predict()
+    m.confidence_interval()
+
+    return m
+
+
+@pytest.fixture
+def sklearn_model(adata_cflare: AnnData) -> SKLearnModel:
+    m = create_model(adata_cflare)
+    assert isinstance(m, SKLearnModel), m
+
+    m.prepare(adata_cflare.var_names[0], "0").fit()
+    m.predict()
+    m.confidence_interval()
 
     return m
 

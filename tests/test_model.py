@@ -13,7 +13,7 @@ import numpy as np
 from scipy.stats import rankdata
 from sklearn.svm._classes import SVR
 
-from cellrank.ul.models import GAMR
+from cellrank.ul.models import GAM, GAMR, SKLearnModel
 from cellrank.ul.models._utils import (
     _OFFSET_KEY,
     NormMode,
@@ -274,7 +274,10 @@ class TestGAMR:
         assert m._gene is None
 
     def test_sharing_library(self, gamr_model: GAMR):
-        pass
+        actual = gamr_model.copy()
+
+        assert actual._lib_name == gamr_model._lib_name
+        assert actual._lib is gamr_model._lib
 
     def test_shallow_copy(self, gamr_model: GAMR):
         assert_models_equal(gamr_model, copy(gamr_model), deepcopy=False)
@@ -288,7 +291,40 @@ class TestGAMR:
         pickle.dump(gamr_model, fp)
         fp.flush()
         fp.seek(0)
-
         actual_model = pickle.load(fp)
 
         assert_models_equal(gamr_model, actual_model, pickled=True)
+
+
+class TestModelsIO:
+    def test_shallow_copy_sklearn(self, sklearn_model: SKLearnModel):
+        assert_models_equal(sklearn_model, copy(sklearn_model), deepcopy=False)
+
+    def test_deep_copy_sklearn(self, sklearn_model: SKLearnModel):
+        assert_models_equal(sklearn_model, deepcopy(sklearn_model), deepcopy=True)
+
+    def test_pickling_sklearn(self, sklearn_model: SKLearnModel):
+        fp = BytesIO()
+
+        pickle.dump(sklearn_model, fp)
+        fp.flush()
+        fp.seek(0)
+        actual_model = pickle.load(fp)
+
+        assert_models_equal(sklearn_model, actual_model, pickled=True)
+
+    def test_shallow_copy_pygam(self, pygam_model: GAM):
+        assert_models_equal(pygam_model, copy(pygam_model), deepcopy=False)
+
+    def test_deep_copy_pygam(self, pygam_model: GAM):
+        assert_models_equal(pygam_model, deepcopy(pygam_model), deepcopy=True)
+
+    def test_pickling_pygam(self, pygam_model: GAM):
+        fp = BytesIO()
+
+        pickle.dump(pygam_model, fp)
+        fp.flush()
+        fp.seek(0)
+        actual_model = pickle.load(fp)
+
+        assert_models_equal(pygam_model, actual_model, pickled=True)

@@ -208,7 +208,8 @@ def assert_models_equal(
         # we don't expect any dictionaries as in estimators
         elif attr == "_model":
             assert val2 is not val1  # model is always deepcopied
-        elif not isinstance(val2, AnnData):
+        elif not isinstance(val2, AnnData) and not callable(val2):
+            # callable because SKLearnModel has default conf int function
             assert val2 == val1, (val2, val1, attr)
         else:
             assert isinstance(val2, type(val1)), (val2, val1, attr)
