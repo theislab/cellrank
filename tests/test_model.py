@@ -77,3 +77,7 @@ class TestModel:
         assert isinstance(model.conf_int, np.ndarray)
         assert len(model.y_test) == len(model.conf_int)
         assert ci is model.conf_int
+
+
+class TestUtils:
+    pass
