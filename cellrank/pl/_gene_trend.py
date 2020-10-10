@@ -93,7 +93,7 @@ def gene_trends(
     %(model_callback)s
     conf_int
         Whether to compute and show confidence intervals. If the :paramref:`model` is :class:`cellrank.ul.models.GAMR`,
-        it can also specify confidence level in the `[0, 1]` interval, the default is `0.95`.
+        it can also specify the confidence level, the default is `0.95`.
     same_plot
         Whether to plot all lineages for each gene in the same plot.
     hide_cells
