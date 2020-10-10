@@ -351,7 +351,7 @@ class TestSKLearnModel:
 class TestFailedModel:
     def test_wrong_model_type(self):
         with pytest.raises(TypeError):
-            FailedModel(SVR())
+            _ = FailedModel(SVR())
 
     def test_correct_gene_and_lineage(self, gamr_model):
         fm = FailedModel(gamr_model)
@@ -376,6 +376,10 @@ class TestFailedModel:
         with pytest.raises(RuntimeError):
             fm.copy()
 
+    def test_exception_not_base_exception(self, gamr_model: GAMR):
+        with pytest.raises(TypeError):
+            _ = FailedModel(gamr_model, exc=0)
+
     def test_reraise(self, gamr_model: GAMR):
         fm = FailedModel(gamr_model, exc=ValueError("foobar"))
 
@@ -384,7 +388,15 @@ class TestFailedModel:
 
         assert isinstance(fm._exc, ValueError)
 
-    def test_str(self, gamr_model: GAMR):
+    def test_reraise_str(self, gamr_model: GAMR):
+        fm = FailedModel(gamr_model, exc="foobar")
+
+        with pytest.raises(RuntimeError):
+            fm.reraise()
+
+        assert isinstance(fm._exc, RuntimeError)
+
+    def test_str_repr(self, gamr_model: GAMR):
         expected = (
             f"FailedModel[gene={gamr_model._gene!r}, lineage={gamr_model._lineage!r}]"
         )

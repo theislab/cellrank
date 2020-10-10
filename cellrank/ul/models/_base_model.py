@@ -944,7 +944,7 @@ class FailedModel(BaseModel):
     model
         The original model which has failed.
     exc
-        The exception that caused the :paramref:`model` to fail.
+        The exception that caused the :paramref:`model` to fail or a :class:`str` containing the message.
     """
 
     # which I was in a functional programming language like Haskell
@@ -954,8 +954,13 @@ class FailedModel(BaseModel):
             raise TypeError(
                 f"Expected `model` to be of type `cellrank.ul.models.BaseMode`, found `{type(model).__name__!r}`."
             )
-        if exc is not None and not isinstance(exc, BaseException):
-            raise TypeError()
+        if exc is not None:
+            if isinstance(exc, str):
+                exc = RuntimeError(exc)
+            if not isinstance(exc, BaseException):
+                raise TypeError(
+                    f"Expected `exc` to be either a string or a `BaseException`, found `{type(exc).__name__!r}`."
+                )
 
         super().__init__(model.adata, model.model)
         self._gene = model._gene
@@ -1005,9 +1010,7 @@ class FailedModel(BaseModel):
 
     def reraise(self):
         """Raise a :class:`RuntimeError` with gene and lineage information."""
-        raise RuntimeError(
-            f"Unable to run the model on `{self}`. Reason: `{self._exc}`."
-        )
+        raise RuntimeError(f"Unable to run the model `{self}`.") from self._exc
 
     @d.dedent
     def copy(self) -> "FailedModel":
@@ -1021,3 +1024,8 @@ class FailedModel(BaseModel):
         return (
             f"{self.__class__.__name__}[gene={self._gene!r}, lineage={self._lineage!r}]"
         )
+
+
+class ModelExceptionPolicy:  # noqa
+    RERAISE = "reraise"
+    IGNORE = "ignore"
