@@ -933,3 +933,61 @@ class BaseModel(ABC):
         maxx = max(map(np.max, vals))
 
         return minn, maxx
+
+
+class FailedModel(BaseModel):
+    """
+    Dummy model class representing a failure.
+
+    Parameters
+    ----------
+    model
+        The original model which has failed.
+    """
+
+    def __init__(self, model: BaseModel):
+        super().__init__(model.adata, model.model)
+        self._gene = model._gene
+        self._lineage = model._lineage
+
+    def fit(
+        self,
+        x: Optional[np.ndarray] = None,
+        y: Optional[np.ndarray] = None,
+        w: Optional[np.ndarray] = None,
+        **kwargs,
+    ) -> "BaseModel":
+        """Raise a :class:`RuntimeError`."""
+        raise RuntimeError("Unable to fit a failed model")
+
+    def predict(
+        self,
+        x_test: Optional[np.ndarray] = None,
+        key_added: Optional[str] = "_x_test",
+        **kwargs,
+    ) -> np.ndarray:
+        """Raise a :class:`RuntimeError`."""
+        raise RuntimeError("Unable to predict with a failed model")
+
+    def confidence_interval(
+        self, x_test: Optional[np.ndarray] = None, **kwargs
+    ) -> np.ndarray:
+        """Raise a :class:`RuntimeError`."""
+        raise RuntimeError(
+            "Unable to calculate confidence interval with a failed model"
+        )
+
+    @property
+    def gene(self):
+        """Gene for which this model failed."""
+        return self._gene
+
+    @property
+    def lineage(self):
+        """Lineage for which this model failed."""
+        return self._lineage
+
+    @d.dedent
+    def copy(self) -> "FailedModel":
+        """Raise a :class:`RuntimeError`."""
+        raise RuntimeError("Unable to copy a failed model")
