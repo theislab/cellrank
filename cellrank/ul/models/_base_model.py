@@ -943,17 +943,32 @@ class FailedModel(BaseModel):
     ----------
     model
         The original model which has failed.
+    exc
+        The exception that caused the :paramref:`model` to fail.
     """
 
-    def __init__(self, model: BaseModel):
+    # which I was in a functional programming language like Haskell
+    # essentially BaseModel would be a Maybe monad
+    def __init__(self, model: BaseModel, exc: Optional[Exception] = None):
         if not isinstance(model, BaseModel):
             raise TypeError(
                 f"Expected `model` to be of type `cellrank.ul.models.BaseMode`, found `{type(model).__name__!r}`."
             )
+        if exc is not None and not isinstance(exc, BaseException):
+            raise TypeError()
 
         super().__init__(model.adata, model.model)
         self._gene = model._gene
         self._lineage = model._lineage
+        self._exc = exc
+
+    def prepare(
+        self,
+        *_args,
+        **_kwargs,
+    ) -> "BaseModel":
+        """Do nothing."""
+        pass
 
     def fit(
         self,
@@ -962,25 +977,8 @@ class FailedModel(BaseModel):
         w: Optional[np.ndarray] = None,
         **kwargs,
     ) -> "BaseModel":
-        """Raise a :class:`RuntimeError`."""
-        raise RuntimeError("Unable to fit a failed model")
-
-    def prepare(
-        self,
-        gene: str,
-        lineage: Optional[str],
-        backward: bool = False,
-        time_range: Optional[Union[float, Tuple[float, float]]] = None,
-        data_key: str = "X",
-        time_key: str = "latent_time",
-        use_raw: bool = False,
-        threshold: Optional[float] = None,
-        weight_threshold: Union[float, Tuple[float, float]] = (0.01, 0.01),
-        filter_cells: Optional[float] = None,
-        n_test_points: int = 200,
-    ) -> "BaseModel":
-        """Raise a :class:`RuntimeError`."""
-        raise RuntimeError("Unable to prepare a failed model.")
+        """Do nothing."""
+        pass
 
     def predict(
         self,
@@ -988,36 +986,38 @@ class FailedModel(BaseModel):
         key_added: Optional[str] = "_x_test",
         **kwargs,
     ) -> np.ndarray:
-        """Raise a :class:`RuntimeError`."""
-        raise RuntimeError("Unable to predict with a failed model.")
+        """Do nothing."""
+        pass
 
     def confidence_interval(
         self, x_test: Optional[np.ndarray] = None, **kwargs
     ) -> np.ndarray:
-        """Raise a :class:`RuntimeError`."""
-        return self.default_confidence_interval()
+        """Do nothing."""
+        pass
 
     def default_confidence_interval(
         self,
         x_test: Optional[np.ndarray] = None,
         **kwargs,
     ) -> np.ndarray:
-        """Raise a :class:`RuntimeError`."""
+        """Do nothing."""
+        pass
+
+    def reraise(self):
+        """Raise a :class:`RuntimeError` with gene and lineage information."""
         raise RuntimeError(
-            "Unable to calculate the confidence interval with a failed model."
+            f"Unable to run the model on `{self}`. Reason: `{self._exc}`."
         )
-
-    @property
-    def gene(self):
-        """Gene for which the :paramref:`model` failed."""
-        return self._gene
-
-    @property
-    def lineage(self):
-        """Lineage for which :paramref:`model` failed."""
-        return self._lineage
 
     @d.dedent
     def copy(self) -> "FailedModel":
         """Raise a :class:`RuntimeError`."""
         raise RuntimeError("Unable to copy a failed model.")
+
+    def __str__(self) -> str:
+        return repr(self)
+
+    def __repr__(self) -> str:
+        return (
+            f"{self.__class__.__name__}[gene={self._gene!r}, lineage={self._lineage!r}]"
+        )

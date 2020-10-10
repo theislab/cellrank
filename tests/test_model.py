@@ -356,24 +356,42 @@ class TestFailedModel:
     def test_correct_gene_and_lineage(self, gamr_model):
         fm = FailedModel(gamr_model)
 
-        assert fm.gene == gamr_model._gene
-        assert fm.lineage == gamr_model._lineage
+        assert fm._gene == gamr_model._gene
+        assert fm._lineage == gamr_model._lineage
 
-    def test_unable_to_do_anything(self, gamr_model):
+    def test_do_nothing(self, gamr_model: GAMR):
         fm = FailedModel(gamr_model)
-
-        with pytest.raises(RuntimeError):
-            fm.prepare(fm.adata.var_names[0], "0")
+        keys = fm.__dict__.keys()
 
         for fn in [
+            "prepare",
             "fit",
             "predict",
             "confidence_interval",
             "default_confidence_interval",
-            "copy",
         ]:
-            with pytest.raises(RuntimeError):
-                getattr(fm, fn)()
+            getattr(fm, fn)()
+            assert fm.__dict__.keys() == keys
+
+        with pytest.raises(RuntimeError):
+            fm.copy()
+
+    def test_reraise(self, gamr_model: GAMR):
+        fm = FailedModel(gamr_model, exc=ValueError("foobar"))
+
+        with pytest.raises(RuntimeError):
+            fm.reraise()
+
+        assert isinstance(fm._exc, ValueError)
+
+    def test_str(self, gamr_model: GAMR):
+        expected = (
+            f"FailedModel[gene={gamr_model._gene!r}, lineage={gamr_model._lineage!r}]"
+        )
+        fm = FailedModel(gamr_model)
+
+        assert str(fm) == expected
+        assert repr(fm) == expected
 
 
 class TestModelsIO:
