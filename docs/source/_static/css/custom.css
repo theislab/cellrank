@@ -67,6 +67,11 @@ html.writer-html5 .rst-content dl[class]:not(.option-list):not(.field-list):not(
     background: #FFC76E;
 }
 
+/*class="longtable docutils align-default"*/
+table.longtable td {
+    white-space: normal!important;
+}
+
 /* Parameters contain <strong> parts and don’t need bold font */
 .rst-content dl.field-list dl > dt { font-weight: unset }
 /* Add colon between return tuple element name and type */
