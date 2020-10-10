@@ -974,20 +974,20 @@ class FailedModel(BaseModel):
     ) -> np.ndarray:
         """Raise a :class:`RuntimeError`."""
         raise RuntimeError(
-            "Unable to calculate confidence interval with a failed model"
+            "Unable to calculate confidence interval with a failed model."
         )
 
     @property
     def gene(self):
-        """Gene for which this model failed."""
+        """Gene for which the :paramref:`model` failed."""
         return self._gene
 
     @property
     def lineage(self):
-        """Lineage for which this model failed."""
+        """Lineage for which :paramref:`model` failed."""
         return self._lineage
 
     @d.dedent
     def copy(self) -> "FailedModel":
         """Raise a :class:`RuntimeError`."""
-        raise RuntimeError("Unable to copy a failed model")
+        raise RuntimeError("Unable to copy a failed model.")
