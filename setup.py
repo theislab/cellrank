@@ -48,7 +48,7 @@ if __name__ == "__main__":
                 "slepc4py>=3.13.0",
             ],
             test=[
-                "pytest>=4.4",
+                "pytest>=6.1.1",
                 "pytest-mock>=3.1.0",
                 "pytest-xdist>=2.1.0",
                 "filelock",
