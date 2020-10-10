@@ -61,7 +61,7 @@ _gams = defaultdict(
 @d.dedent
 class GAM(BaseModel):
     """
-    Fit Generalized Additive Models (GAMs) using package :mod:`pygam`.
+    Fit Generalized Additive Models (GAMs) using :mod:`pygam`.
 
     Parameters
     ----------
