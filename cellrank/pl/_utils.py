@@ -312,7 +312,7 @@ def _fit_gene_trends(
             if not conf_int:
                 model.predict()
             elif _is_any_gam_mgcv(model):
-                model.predict(level=0.95)
+                model.predict(level=conf_int if isinstance(conf_int, float) else 0.95)
             else:
                 model.predict()
                 model.confidence_interval()

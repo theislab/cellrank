@@ -42,7 +42,7 @@ def gene_trends(
     time_key: str = "latent_time",
     time_range: Optional[Union[_time_range_type, List[_time_range_type]]] = None,
     callback: _callback_type = None,
-    conf_int: bool = True,
+    conf_int: Union[bool] = True,
     same_plot: bool = False,
     hide_cells: bool = False,
     perc: Optional[Union[Tuple[float, float], Sequence[Tuple[float, float]]]] = None,
@@ -92,7 +92,8 @@ def gene_trends(
     %(time_ranges)s
     %(model_callback)s
     conf_int
-        Whether to compute and show confidence intervals.
+        Whether to compute and show confidence intervals. If the :paramref:`model` is :class:`cellrank.ul.models.GAMR`,
+        it can also specify confidence level in the `[0, 1]` interval, the default is `0.95`.
     same_plot
         Whether to plot all lineages for each gene in the same plot.
     hide_cells
