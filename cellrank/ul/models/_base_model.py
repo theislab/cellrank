@@ -43,6 +43,13 @@ class BaseModel(ABC):
         adata: AnnData,
         model: Any,
     ):
+        from anndata import AnnData as _AnnData
+
+        if not isinstance(adata, _AnnData):
+            raise TypeError(
+                f"Expected `adata` to be of type `anndata.AnnData`, found `{type(adata).__name__!r}`."
+            )
+
         self._adata = adata
         self._model = model
         self._gene = None

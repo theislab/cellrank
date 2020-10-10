@@ -10,6 +10,7 @@ from anndata import AnnData
 
 import numpy as np
 from scipy.stats import rankdata
+from sklearn.svm import SVR
 from sklearn.svm._classes import SVR
 
 from cellrank.ul.models import GAM, GAMR, SKLearnModel
@@ -24,6 +25,10 @@ from cellrank.ul.models._utils import (
 
 
 class TestModel:
+    def test_wrong_type(self):
+        with pytest.raises(TypeError):
+            SKLearnModel(0, SVR())
+
     def test_initialize(self, adata: AnnData):
         model = create_model(adata)
 
@@ -293,6 +298,54 @@ class TestGAMR:
         actual_model = pickle.load(fp)
 
         assert_models_equal(gamr_model, actual_model, pickled=True)
+
+
+class TestSKLearnModel:
+    def test_wrong_model_type(self, adata_cflare: AnnData):
+        model = create_model(adata_cflare)
+        with pytest.raises(TypeError):
+            SKLearnModel(adata_cflare, model)
+
+    def test_svr_correct_no_weights(self, adata_cflare: AnnData):
+        model = (
+            SKLearnModel(adata_cflare, SVR(), weight_name="")
+            .prepare(adata_cflare.var_names[0], "0")
+            .fit()
+        )
+        model_w = (
+            SKLearnModel(adata_cflare, SVR())
+            .prepare(adata_cflare.var_names[0], "0")
+            .fit()
+        )
+
+        assert model._weight_name == ""
+        assert model_w._weight_name == "sample_weight"
+
+        assert not np.allclose(model.predict(), model_w.predict())
+
+    def test_svr_invalid_weight_name(self, adata_cflare: AnnData):
+        with pytest.raises(ValueError):
+            SKLearnModel(adata_cflare, SVR(), weight_name="foobar")
+
+    def test_svr_invalid_weight_name_no_raise_fit(self, adata_cflare: AnnData):
+        model = SKLearnModel(
+            adata_cflare, SVR(), weight_name="w", ignore_raise=True
+        ).prepare(adata_cflare.var_names[0], "0")
+
+        with pytest.raises(TypeError):
+            model.fit()
+
+    def test_svr_invalid_weight_name_no_raise(self, adata_cflare: AnnData):
+        model = SKLearnModel(
+            adata_cflare, SVR(), weight_name="foobar", ignore_raise=True
+        )
+
+        assert model._weight_name == "foobar"
+
+    def test_svr_correct_weight_name(self, adata_cflare: AnnData):
+        model = SKLearnModel(adata_cflare, SVR())
+
+        assert model._weight_name == "sample_weight"
 
 
 class TestModelsIO:
