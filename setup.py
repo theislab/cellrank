@@ -51,6 +51,7 @@ if __name__ == "__main__":
                 "pytest>=4.4",
                 "pytest-mock>=3.1.0",
                 "pytest-xdist>=2.1.0",
+                "filelock",
                 "Pillow",
                 "mock>=4.0.2",
                 "python-igraph",
