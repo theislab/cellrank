@@ -890,6 +890,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
     def _fit_terminal_states(self, *args, **kwargs):
         pass
 
+    @d.dedent
     @inject_docs(fs=P.TERM, fsp=P.TERM_PROBS, ap=P.ABS_PROBS, dp=P.DIFF_POT)
     def fit(
         self,

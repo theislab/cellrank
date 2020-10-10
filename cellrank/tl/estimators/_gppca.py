@@ -238,13 +238,6 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
                 time=start,
             )
 
-    def compute_metastable_states(self, *args, **kwargs):
-        """This function has been deprecated. Please use :meth:`cellrank.tl.estimators.GPCCA.compute_macrostates` instead."""  # noqa
-        print(
-            "This function has been deprecated. Please use `compute_macrostates` instead."
-        )
-        return self.compute_macrostates(*args, **kwargs)
-
     @d.dedent
     @inject_docs(fs=P.TERM, fsp=P.TERM_PROBS)
     def set_terminal_states_from_macrostates(
@@ -340,13 +333,6 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
 
         self._write_terminal_states()
 
-    def set_terminal_states_from_metastable_states(self, *args, **kwargs):
-        """This function has been deprecated. Please use :meth:`cellrank.tl.estimators.GPCCA.set_terminal_states_from_macrostates` instead."""  # noqa
-        print(
-            "This function has been deprecated. Please use `set_terminal_states_from_macrostates` instead."
-        )
-        return self.set_terminal_states_from_macrostates(*args, **kwargs)
-
     @inject_docs(fs=P.TERM, fsp=P.TERM_PROBS)
     @d.dedent
     def compute_terminal_states(
@@ -367,11 +353,11 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
 
                 - `'eigengap'` - select the number of states based on the `eigengap` of the transition matrix.
                 - `'eigengap_coarse'` - select the number of states based on the `eigengap` of the diagonal
-                    of the coarse-grained transition matrix.
-                - `'top_n'` - select top ``n_states`` based on the probability of the diagonal \
-                    of the coarse-grained transition matrix.
+                  of the coarse-grained transition matrix.
+                - `'top_n'` - select top ``n_states`` based on the probability of the diagonal
+                  of the coarse-grained transition matrix.
                 - `'stability'` - select states which have a stability index >= ``stability_threshold``. The stability
-                    index is given by the diagonal elements of the coarse-grained transition matrix.
+                  index is given by the diagonal elements of the coarse-grained transition matrix.
         %(n_cells)s
         alpha
             Weight given to the deviation of an eigenvalue from one. Used when ``method='eigengap'``

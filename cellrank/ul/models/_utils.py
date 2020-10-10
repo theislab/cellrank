@@ -170,15 +170,12 @@ def _calculate_norm_factors(
 
     References
     ----------
-    .. [Robinson10] Robinson, M. D. *et al.* (2010),
-            *A scaling normalization method for differential expression analysis of RNA-seq data*,
-            `Genome Biology <https://doi.org/10.1186/gb-2010-11-3-r25>`__.
     .. [Anders10] Anders, S. *et al.* (2010),
-            *Differential expression analysis for sequence count data*,
-            `Genome Biology <https://doi.org/10.1186/gb-2010-11-10-r106>`__.
+        *Differential expression analysis for sequence count data*,
+        `Genome Biology <https://doi.org/10.1186/gb-2010-11-10-r106>`__.
     .. [Bullard10] Bullard, J. H. *et al.* (2010),
-            *Evaluation of statistical methods for normalization and differential expression in mRNA-Seq experiments*,
-            `BMC Bioinformatics <https://doi.org/10.1186/1471-2105-11-94>`__.
+        *Evaluation of statistical methods for normalization and differential expression in mRNA-Seq experiments*,
+        `BMC Bioinformatics <https://doi.org/10.1186/1471-2105-11-94>`__.
     """  # noqa
 
     method = NormMode(method)

@@ -18,7 +18,7 @@ from cellrank.tl.kernels._base_kernel import _RTOL, AnnData, KernelExpression
 @d.dedent
 class PrecomputedKernel(Kernel):
     """
-    Kernel which contains precomputed transition matrix.
+    Kernel which contains a precomputed transition matrix.
 
     Parameters
     ----------

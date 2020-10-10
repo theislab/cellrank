@@ -54,12 +54,6 @@ class GAMR(BaseModel):
     **kwargs
         Keyword arguments for ``gam.control``.
         See `here <https://www.rdocumentation.org/packages/mgcv/versions/1.8-33/topics/gam.control>`__ for reference.
-
-    References
-    ----------
-    .. [Robinson10] Robinson, M. D. *et al.* (2010),
-            *A scaling normalization method for differential expression analysis of RNA-seq data*,
-            `Genome Biology <https://doi.org/10.1186/gb-2010-11-3-r25>`__.
     """  # noqa
 
     def __init__(
@@ -85,7 +79,7 @@ class GAMR(BaseModel):
         self._family = distribution
 
         self._formula = (
-            f"y ~ s(x, bs='{basis}', k={self._n_knots}, sp={smoothing_penalty})"
+            f"y ~ s(x, bs={basis!r}, k={self._n_knots}, sp={smoothing_penalty})"
         )
         self._design_mat = None
         self._offset = None

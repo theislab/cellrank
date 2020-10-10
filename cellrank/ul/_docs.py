@@ -78,7 +78,7 @@ mode
         - `{m.DETERMINISTIC.s!r}` - deterministic computation that doesn't propagate uncertainty.
         - `{m.MONTE_CARLO.s!r}` - Monte Carlo average of randomly sampled velocity vectors.
         - `{m.STOCHASTIC.s!r}` - second order approximation, only available when :mod:`jax` is installed.
-        - `{m.SAMPLING.s!r}` - sample 1 transition matrix from velocity distribution."""
+        - `{m.SAMPLING.s!r}` - sample 1 transition matrix from the velocity distribution."""
 _velocity_backward_mode = """\
 backward_mode
     Only matters if initialized as :paramref:`backward` `=True`.  Valid options are:
@@ -169,4 +169,5 @@ d = DocstringProcessor(
     softmax_scale=_softmax_scale,
     time_mode=_time_mode,
     write_to_adata=_write_to_adata,
+    en_cutoff_p_thresh=_en_cutoff_p_thresh,
 )

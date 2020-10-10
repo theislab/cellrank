@@ -169,7 +169,7 @@ class BaseModel(ABC):
         use_raw: bool = False,
         threshold: Optional[float] = None,
         weight_threshold: Union[float, Tuple[float, float]] = (0.01, 0.01),
-        filter_dropouts: Optional[float] = None,
+        filter_cells: Optional[float] = None,
         n_test_points: int = 200,
     ) -> "BaseModel":
         """
@@ -196,8 +196,8 @@ class BaseModel(ABC):
         weight_threshold
             Set all weights below ``weight_threshold`` to ``weight_threshold`` if a :class:`float`,
             or to the second value, if a :class:`tuple`.
-        filter_dropouts
-            Filter out all cells with expression lower than this.
+        filter_cells
+            Filter out all cells with expression values lower than this threshold.
         n_test_points
             Number of test points. If `None`, use the original points based on ``threshold``.
 
@@ -371,10 +371,10 @@ class BaseModel(ABC):
         x, y, w = x[fil], y[fil], w[fil]
         self._obs_names = self._obs_names[fil]
 
-        if filter_dropouts is not None:
+        if filter_cells is not None:
             tmp = y.squeeze()
-            fil = (tmp >= filter_dropouts) & (
-                ~np.isclose(tmp, filter_dropouts).astype(np.bool)
+            fil = (tmp >= filter_cells) & (
+                ~np.isclose(tmp, filter_cells).astype(np.bool)
             )
             x, y, w = x[fil], y[fil], w[fil]
             self._obs_names = self._obs_names[fil]
@@ -416,11 +416,11 @@ class BaseModel(ABC):
         Parameters
         ----------
         x
-            Independent variables, array of shape `(n_samples, 1)`.
+            Independent variables, array of shape `(n_samples, 1)`. If `None`, use :paramref:`x`.
         y
-            Dependent variables, array of shape `(n_samples, 1)`
+            Dependent variables, array of shape `(n_samples, 1)`. If `None`, use :paramref:`y`.
         w
-            Optional weights of :paramref:`x`, array of shape `(n_samples,)`
+            Optional weights of :paramref:`x`, array of shape `(n_samples,)`. If `None`, use :paramref:`w`.
         **kwargs
             Keyword arguments for underlying :paramref:`model`'s fitting function.
 
@@ -465,7 +465,7 @@ class BaseModel(ABC):
         Parameters
         ----------
         x_test
-            Array of shape `(n_samples,)` used for prediction.
+            Array of shape `(n_samples,)` used for prediction. If `None`, use :paramref:`x_test`.
         key_added
             Attribute name where to save the :paramref:`x_test` for later use. If `None`, don't save it.
         **kwargs
@@ -497,7 +497,7 @@ class BaseModel(ABC):
         Parameters
         ----------
         x_test
-            Array of shape `(n_samples,)` used for confidence interval calculation.
+            Array of shape `(n_samples,)` used for confidence interval calculation. If `None`, use :paramref:`x_test`.
         **kwargs
             Keyword arguments for underlying :paramref:`model`'s confidence method
             or for :meth:`default_confidence_interval`.

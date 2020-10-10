@@ -6,10 +6,13 @@ Release Notes
 Version 1.0
 -----------
 
-1.0.0-rc.12 :small:`2020-09-29`
+1.0.0 :small:`2020-10-10`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-- Fix major bug when mapping names and colors
+- Fix bug when subsetting :class:`cellrank.tl.Lineage`
+- Add renaming terminal states :meth:`cellrank.tl.estimators.BaseEstimator.rename_terminal_states`
+- Enable negative binomial distribution for :class:`cellrank.ul.models.GAMR`
+- Remove previously deprecated functions
+- Various other minor bugfixes
 
 1.0.0-rc.11 :small:`2020-09-25`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

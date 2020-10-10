@@ -925,32 +925,7 @@ class Partitioner(KernelHolder, ABC):
         return self._trans_classes
 
 
-class Deprecated:
-    """This class contains deprecated functions that will be removed in the next release."""
-
-    def plot_final_states(self, *args, **kwargs):
-        """This function has been deprecated. Please use :meth:`cellrank.tl.estimators.BaseEstimator.plot_terminal_states` instead."""  # noqa
-        print(
-            "This function has been deprecated. Please use `plot_terminal_states` instead."
-        )
-        return self.plot_terminal_states(*args, **kwargs)
-
-    def set_final_states(self, *args, **kwargs):
-        """This function has been deprecated. Please use :meth:`cellrank.tl.estimators.BaseEstimator.set_terminal_states` instead."""  # noqa
-        print(
-            "This function has been deprecated. Please use `set_terminal_states` instead."
-        )
-        return self.set_terminal_states(*args, **kwargs)
-
-    def compute_final_states(self, *args, **kwargs):
-        """This function has been deprecated. Please use :meth:`cellrank.tl.estimators.BaseEstimator.compute_terminal_states` instead."""  # noqa
-        print(
-            "This function has been deprecated. Please use `compute_terminal_states` instead."
-        )
-        return self.compute_terminal_states(*args, **kwargs)
-
-
-class LineageEstimatorMixin(TerminalStates, AbsProbs, LinDrivers, Deprecated, ABC):
+class LineageEstimatorMixin(TerminalStates, AbsProbs, LinDrivers, ABC):
     """Mixin containing terminal states and absorption probabilities."""
 
     pass
