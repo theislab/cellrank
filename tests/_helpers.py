@@ -332,3 +332,33 @@ jax_not_installed_skip = pytest.mark.skipif(
 if __name__ == "__main__":
     for size in [50, 100, 200]:
         _ = _create_dummy_adata(size)
+
+
+def _import_rpy2_mgcv() -> bool:
+    try:
+        import rpy2
+        from packaging import version
+        from rpy2.robjects.packages import PackageNotInstalledError, importr
+
+        try:
+            from importlib_metadata import version as get_version
+        except ImportError:
+            # >=Python3.8
+            from importlib.metadata import version as get_version
+
+        try:
+            assert version.parse(get_version(rpy2.__name__)) >= version.parse("3.3.0")
+            _ = importr("mgcv")
+            return False
+        except (PackageNotInstalledError, AssertionError):
+            pass
+
+    except ImportError:
+        pass
+
+    return True
+
+
+gamr_skip = pytest.mark.skipif(
+    _import_rpy2_mgcv(), "Cannot import `rpy2` or R's `mgcv` package."
+)

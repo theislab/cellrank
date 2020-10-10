@@ -4,8 +4,7 @@ from typing import Tuple, Union, Callable
 from pathlib import Path
 
 import pytest
-from _helpers import create_model, resize_images_to_same_sizes
-from conftest import gamr_skip
+from _helpers import gamr_skip, create_model, resize_images_to_same_sizes
 from packaging import version
 
 import scvelo as scv

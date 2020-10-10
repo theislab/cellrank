@@ -4,8 +4,7 @@ from io import BytesIO
 from copy import copy, deepcopy
 
 import pytest
-from _helpers import create_model, assert_models_equal
-from conftest import gamr_skip
+from _helpers import gamr_skip, create_model, assert_models_equal
 
 from anndata import AnnData
 

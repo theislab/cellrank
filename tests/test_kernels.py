@@ -356,7 +356,6 @@ class TestKernel:
         vk = VelocityKernel(adata).compute_transition_matrix(
             mode="stochastic",
             softmax_scale=4,
-            n_jobs=1,
         )
 
         pk = PrecomputedKernel(vk)
@@ -455,16 +454,6 @@ class TestKernel:
         vk.compute_transition_matrix(density_normalize=False, softmax_scale=4)
         T = vk.transition_matrix
         np.testing.assert_allclose(T.sum(1), 1, rtol=_rtol)
-
-    def test_row_normalized_dense_norm(self, adata: AnnData):
-        vk = VelocityKernel(adata)
-        vk.compute_transition_matrix(mode="deterministic", softmax_scale=4)
-        T_det = vk.transition_matrix
-        vk.compute_transition_matrix(mode="sampling")
-        T_sam = vk.transition_matrix
-
-        np.testing.assert_allclose(T_det.sum(1), 1, rtol=_rtol)
-        np.testing.assert_allclose(T_sam.sum(1), 1, rtol=_rtol)
 
     @jax_not_installed_skip
     def test_row_normalized_dense_norm_stoch(self, adata: AnnData):

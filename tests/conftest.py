@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 import os
-from typing import Tuple, Callable, Optional
+from typing import Tuple, Optional
 
 from cellrank.ul.models import GAM, GAMR, SKLearnModel
 
-os.environ["NUMBA_NUM_THREADS"] = "1"
+os.environ["NUMBA_NUM_THREADS"] = "4"
 
 import pytest
 from _helpers import create_model
@@ -27,24 +27,6 @@ np.random.seed(42)
 _adata_small = sc.read("tests/_ground_truth_adatas/adata_50.h5ad")
 _adata_medium = sc.read("tests/_ground_truth_adatas/adata_100.h5ad")
 _adata_large = sc.read("tests/_ground_truth_adatas/adata_200.h5ad")
-
-
-def _gamr_skip() -> Callable:
-    try:
-        from rpy2.robjects.packages import PackageNotInstalledError, importr
-
-        try:
-            _ = importr("mgcv")
-        except PackageNotInstalledError:
-            return pytest.mark.skip("R library `mgcv` is not installed")
-
-    except ImportError:
-        return pytest.mark.skip("`rpy2` is not installed")
-
-    return lambda _: _
-
-
-gamr_skip = _gamr_skip()
 
 
 def _create_cflare(*, backward: bool = False) -> Tuple[AnnData, CFLARE]:

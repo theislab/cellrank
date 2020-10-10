@@ -15,6 +15,7 @@ elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
     else
         pip install -e".[test]"
     fi
+    pip install rpy2>=3.3.0 jax jaxlib
 fi
 
 python-vendorize
