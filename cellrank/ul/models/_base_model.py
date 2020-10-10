@@ -23,7 +23,9 @@ from cellrank.ul._docs import d
 from cellrank.tl._utils import save_fig
 from cellrank.ul._utils import _minmax, valuedispatch, _densify_squeeze
 from cellrank.tl._constants import ModeEnum, AbsProbKey
-from cellrank.ul.models._utils import _should_raise
+
+# TODO
+# from cellrank.ul.models._utils import _should_raise
 
 AnnData = TypeVar("AnnData")
 _dup_spaces = re.compile(r" +")  # used on repr for underlying model's repr
@@ -49,9 +51,10 @@ def _handle_exception(return_type: FailedReturnType, func: Callable) -> Callable
             if isinstance(instance, FailedModel):
                 raise instance._exc from None
             return wrapped(*args, **kwargs)
-        except Exception as e:
-            if not instance._is_bulk or _should_raise():
-                raise e from None
+        except Exception:
+            # TODO
+            # if not instance._is_bulk or _should_raise():
+            #    raise e from None
             n_points = kwargs.get("x_test", None) or instance.x_test or 200
             return np.full((n_points, array_shape), np.nan, dtype=instance._dtype)
 
@@ -63,18 +66,21 @@ def _handle_exception(return_type: FailedReturnType, func: Callable) -> Callable
             if isinstance(instance, FailedModel):
                 raise instance._exc from None
             return wrapped(*args, **kwargs)
-        except Exception as e:
-            if not instance._is_bulk or _should_raise():
-                raise e from None
-            return FailedModel(instance, exc=e)
+        except Exception:
+            # TODO
+            # if not instance._is_bulk or _should_raise():
+            #    raise e from None
+            return FailedModel(instance, exc=None)
 
     @wrapt.decorator
     def handle_no_output(wrapped, instance: "BaseModel", args, kwargs) -> None:
         try:
             return wrapped(*args, **kwargs)
-        except Exception as e:
-            if not instance._is_bulk:
-                raise e from None
+        except Exception:
+            # TODO
+            pass
+            # if not instance._is_bulk:
+            #    raise e from None
 
     @valuedispatch
     def wrapper(mode: FailedReturnType, *_args, **_kwargs):
@@ -1010,7 +1016,11 @@ class BaseModel(ABC, metaclass=BaseModelMeta):
         # 2. in `.plot`, we deepcopy the model when plotting smoothed probabilities
         self._deepcopy_attributes(res)
         memodict[id(self)] = res
+
         return res
+
+    def __bool__(self):
+        return True
 
     def __str__(self) -> str:
         return repr(self)
@@ -1078,6 +1088,7 @@ class FailedModel(BaseModel):
         self._gene = model._gene
         self._lineage = model._lineage
         self._exc = exc
+        self._prepared = True
 
     def prepare(
         self,
@@ -1129,10 +1140,19 @@ class FailedModel(BaseModel):
         """Raise a :class:`RuntimeError` with gene and lineage information."""
         raise RuntimeError(f"Unable to run the model `{self}`.") from self._exc
 
+    def _return_min_max(self, show_conf_int: bool):
+        return np.inf, -np.inf
+
     @d.dedent
     def copy(self) -> "FailedModel":
         """%(copy)s"""  # noqa
-        return FailedModel(self.model, exc=self._exc)
+        res = FailedModel(self.model, exc=self._exc)
+        res._is_bulk = self._is_bulk
+
+        return res
+
+    def __bool__(self):
+        return False
 
     def __str__(self) -> str:
         return repr(self)

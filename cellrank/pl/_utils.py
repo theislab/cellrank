@@ -17,6 +17,7 @@ from pathlib import Path
 from collections import defaultdict
 
 import numpy as np
+import pandas as pd
 from pandas.api.types import is_categorical_dtype
 
 import matplotlib as mpl
@@ -28,8 +29,9 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.tl._utils import save_fig, _unique_order_preserving
-from cellrank.ul.models import GAMR, BaseModel, SKLearnModel
+from cellrank.ul.models import GAMR, BaseModel, FailedModel, SKLearnModel
 from cellrank.tl._constants import _DEFAULT_BACKEND, _colors
+from cellrank.ul._parallelize import parallelize
 
 AnnData = TypeVar("AnnData")
 
@@ -170,7 +172,7 @@ def _curved_edges(
 
     # Return an array of these curves
     curves = np.array(curveplots)
-    if any(self_loop_mask):
+    if np.any(self_loop_mask):
         curves[self_loop_mask, ...] = self_loops
 
     return curves
@@ -263,7 +265,7 @@ def _create_models(
     return models
 
 
-def _fit_gene_trends(
+def _fit_bulk_helper(
     genes: Sequence[str],
     models: _model_type,
     callbacks: _callback_type,
@@ -271,7 +273,7 @@ def _fit_gene_trends(
     time_range: Sequence[Union[float, Tuple[float, float]]],
     queue,
     **kwargs,
-) -> Dict[str, Dict[str, Any]]:
+) -> Dict[str, Dict[str, BaseModel]]:
     """
     Fit model for given genes and lineages.
 
@@ -294,19 +296,23 @@ def _fit_gene_trends(
 
     Returns
     -------
-        The fitted models, optionally containing the confidence interval.
+        The fitted models, optionally containing the confidence interval in the
+        form of `{'gene1': {'lineage1': model11, ...}, ...}`.
+        If any step has failed, the model will be of type :class:`cellrank.ul.models.FailedModel`.
     """
+    assert len(lineages) == len(time_range)
 
-    res = {}
     conf_int = kwargs.pop("conf_int", False)
+    res = {}
 
     for gene in genes:
         res[gene] = {}
         for ln, tr in zip(lineages, time_range):
             cb = callbacks[gene][ln]
-            model = cb(
-                models[gene][ln], gene=gene, lineage=ln, time_range=tr, **kwargs
-            ).fit()
+            model = models[gene][ln]
+            model._is_bulk = True
+
+            model = cb(model, gene=gene, lineage=ln, time_range=tr, **kwargs).fit()
             # GAMR is a bit faster if we don't need the conf int
             # if it's needed, `.predict` will calculate it and `confidence_interval` will do nothing
             if not conf_int:
@@ -326,6 +332,73 @@ def _fit_gene_trends(
         queue.put(None)
 
     return res
+
+
+def _fit_bulk(
+    genes,
+    models,
+    callbacks,
+    lineages,
+    time_range,
+    parallel_kwargs: dict,
+    filter_all_failed: bool = True,
+    **kwargs,
+):
+    """TODO."""  # noqa
+    if isinstance(genes, str):
+        genes = [genes]
+
+    if isinstance(lineages, str):
+        lineages = [lineages]
+
+    if isinstance(time_range, (tuple, float, int, type(None))):
+        time_range = [time_range] * len(lineages)
+    elif len(time_range) != len(lineages):
+        raise ValueError(
+            f"Expected time ranges to be of length `{len(lineages)}`, found `{len(time_range)}`."
+        )
+
+    n_jobs = parallel_kwargs.pop("n_jobs", 1)
+
+    start = logg.info(f"Computing trends using `{n_jobs}` core(s)")
+    models = parallelize(
+        _fit_bulk_helper,
+        genes,
+        unit="gene" if kwargs.get("data_key", "gene") != "obs" else "obs",
+        n_jobs=n_jobs,
+        extractor=lambda modelss: {k: v for m in modelss for k, v in m.items()},
+    )(models, callbacks, lineages, time_range, **kwargs)
+    logg.info("    Finish", time=start)
+
+    return _filter_models(models, filter_all_failed=filter_all_failed)
+
+
+def _filter_models(models, filter_all_failed: bool = True):
+    # TODO: warn
+    to_keep = pd.DataFrame(models).T.astype(bool)
+    to_keep = to_keep[to_keep.any(axis=1)]
+    to_keep = to_keep.loc[:, to_keep.any(axis=0)].T
+
+    models = {
+        gene: {
+            ln: models[gene][ln]
+            for ln in (
+                ln for ln in v.keys() if not filter_all_failed or models[gene][ln]
+            )
+        }
+        for gene, v in to_keep.to_dict().items()
+    }
+
+    if not len(models):
+        raise RuntimeError()
+
+    for gene, vs in models.items():
+        for lineage, m in vs.items():
+            assert m._gene == gene
+            assert m._lineage == lineage
+
+    # lineages is the max number of lineages
+    return models, tuple(models.keys()), tuple(to_keep.index)
 
 
 @d.dedent
@@ -423,9 +496,15 @@ def _trends_helper(
         )
     else:
         lineage_colors = (
-            "black" if not mcolors.is_color_like(lineage_cmap) else lineage_cmap
-        )
+            ("black" if not mcolors.is_color_like(lineage_cmap) else lineage_cmap),
+        ) * len(lineage_names)
+    lineage_color_mapper = {ln: lineage_colors[i] for i, ln in enumerate(lineage_names)}
 
+    successful_models = {
+        ln: models[gene][ln] for ln in lineage_names if models[gene][ln]
+    }
+
+    # remove all failed models
     if show_prob and not same_plot:
         minns, maxxs = zip(
             *[
@@ -441,7 +520,13 @@ def _trends_helper(
     else:
         kwargs["loc"] = None
 
+    last_ax = None
     for i, (name, ax, perc) in enumerate(zip(lineage_names, axes, percs)):
+        model = models[gene][name]
+        if isinstance(model, FailedModel) and not same_plot:
+            ax.remove()
+            continue
+
         if same_plot:
             if gene_as_title:
                 title = gene
@@ -467,9 +552,7 @@ def _trends_helper(
             title=title,
             hide_cells=hide_cells or (same_plot and i == n_lineages - 1),
             same_plot=same_plot,
-            lineage_color=lineage_colors[i]
-            if same_plot and name is not None
-            else lineage_colors,
+            lineage_color=lineage_color_mapper[name],
             abs_prob_cmap=abs_prob_cmap,
             lineage_probability=show_prob,
             ylabel=ylabel,
@@ -483,19 +566,23 @@ def _trends_helper(
         else:
             ax.set_xlabel(None)
 
+        last_ax = ax
+
     if not same_plot and same_perc and show_cbar and not hide_cells:
-        vmin = np.min([models[gene][ln].w_all for ln in lineage_names])
-        vmax = np.max([models[gene][ln].w_all for ln in lineage_names])
+        vmin = np.min([model.w_all for model in successful_models.values()])
+        vmax = np.max([model.w_all for model in successful_models.values()])
         norm = mcolors.Normalize(vmin=vmin, vmax=vmax)
 
         for ax in axes:
-            [
+            children = [
                 c
                 for c in ax.get_children()
                 if isinstance(c, mpl.collections.PathCollection)
-            ][0].set_norm(norm)
+            ]
+            if len(children):
+                children[0].set_norm(norm)
 
-        divider = make_axes_locatable(ax)
+        divider = make_axes_locatable(last_ax)
         cax = divider.append_axes("right", size="2%", pad=0.1)
         _ = mpl.colorbar.ColorbarBase(
             cax,
@@ -507,10 +594,10 @@ def _trends_helper(
 
     if same_plot and lineage_names != [None] and legend_loc is not None:
         handles = [
-            mpl.lines.Line2D([], [], color=c, label=n)
-            for c, n in zip(lineage_colors, lineage_names)
+            mpl.lines.Line2D([], [], color=lineage_color_mapper[ln], label=ln)
+            for ln in successful_models.keys()
         ]
-        ax.legend(handles=handles, loc=legend_loc, title="lineage")
+        last_ax.legend(handles=handles, loc=legend_loc, title="lineage")
 
 
 def _position_legend(ax: mpl.axes.Axes, legend_loc: str, **kwargs) -> mpl.legend.Legend:

@@ -14,19 +14,18 @@ import matplotlib.pyplot as plt
 from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.pl._utils import (
+    _fit_bulk,
     _model_type,
     _get_backend,
     _callback_type,
     _create_models,
     _trends_helper,
-    _fit_gene_trends,
     _time_range_type,
     _create_callbacks,
 )
 from cellrank.tl._utils import save_fig, _unique_order_preserving
 from cellrank.ul._utils import _get_n_cores, _check_collection
 from cellrank.tl._constants import _DEFAULT_BACKEND, AbsProbKey
-from cellrank.ul._parallelize import parallelize
 
 AnnData = TypeVar("AnnData")
 
@@ -63,7 +62,7 @@ def gene_trends(
     suptitle: Optional[str] = None,
     n_jobs: Optional[int] = 1,
     backend: str = _DEFAULT_BACKEND,
-    show_progres_bar: bool = True,
+    show_progress_bar: bool = True,
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
     save: Optional[Union[str, Path]] = None,
@@ -148,7 +147,6 @@ def gene_trends(
     if isinstance(genes, str):
         genes = [genes]
     genes = _unique_order_preserving(genes)
-
     if data_key != "obs":
         _check_collection(
             adata, genes, "var_names", use_raw=kwargs.get("use_raw", False)
@@ -170,6 +168,32 @@ def gene_trends(
         logg.debug("All lineages are `None`, setting the weights to `1`")
     lineages = _unique_order_preserving(lineages)
 
+    if isinstance(time_range, (tuple, float, int, type(None))):
+        time_range = [time_range] * len(lineages)
+    elif len(time_range) != len(lineages):
+        raise ValueError(
+            f"Expected time ranges to be of length `{len(lineages)}`, found `{len(time_range)}`."
+        )
+
+    kwargs["time_key"] = time_key
+    kwargs["data_key"] = data_key
+    kwargs["backward"] = backward
+    kwargs["conf_int"] = conf_int  # prepare doesnt take or need this
+    models, genes, lineages = _fit_bulk(
+        genes,
+        _create_models(model, genes, lineages),
+        _create_callbacks(adata, callback, genes, lineages, **kwargs),
+        lineages,
+        time_range,
+        filter_all_failed=False,
+        parallel_kwargs={
+            "show_progress_bar": show_progress_bar,
+            "n_jobs": _get_n_cores(n_jobs, len(genes)),
+            "backend": _get_backend(model, backend),
+        },
+        **kwargs,
+    )
+
     if same_plot:
         gene_as_title = True if gene_as_title is None else gene_as_title
         sharex = "all" if sharex is None else sharex
@@ -189,6 +213,10 @@ def gene_trends(
         nrows = len(genes)
         ncols = len(lineages)
 
+    plot_kwargs = dict(plot_kwargs)
+    if plot_kwargs.get("xlabel", None) is None:
+        plot_kwargs["xlabel"] = time_key
+
     fig, axes = plt.subplots(
         nrows=nrows,
         ncols=ncols,
@@ -200,45 +228,9 @@ def gene_trends(
     )
     axes = np.reshape(axes, (-1, ncols))
 
-    _ = adata.obsm[ln_key][[lin for lin in lineages if lin is not None]]
-
-    if isinstance(time_range, (tuple, float, int, type(None))):
-        time_range = [time_range] * len(lineages)
-    elif len(time_range) != len(lineages):
-        raise ValueError(
-            f"Expected time ranges to be of length `{len(lineages)}`, found `{len(time_range)}`."
-        )
-
-    kwargs["time_key"] = time_key
-    kwargs["data_key"] = data_key
-    kwargs["backward"] = backward
-    callbacks = _create_callbacks(adata, callback, genes, lineages, **kwargs)
-
-    kwargs["conf_int"] = conf_int  # prepare doesnt take or need this
-    models = _create_models(model, genes, lineages)
-
-    plot_kwargs = dict(plot_kwargs)
-    if plot_kwargs.get("xlabel", None) is None:
-        plot_kwargs["xlabel"] = time_key
-
-    n_jobs = _get_n_cores(n_jobs, len(genes))
-    backend = _get_backend(model, backend)
-
-    start = logg.info(f"Computing trends using `{n_jobs}` core(s)")
-    models = parallelize(
-        _fit_gene_trends,
-        genes,
-        unit="gene" if data_key != "obs" else "obs",
-        backend=backend,
-        n_jobs=n_jobs,
-        extractor=lambda modelss: {k: v for m in modelss for k, v in m.items()},
-        show_progress_bar=show_progres_bar,
-    )(models, callbacks, lineages, time_range, **kwargs)
-    logg.info("    Finish", time=start)
-
     logg.info("Plotting trends")
-
     cnt = 0
+
     for row in range(len(axes)):
         for col in range(len(axes[row])):
             if cnt >= len(genes):

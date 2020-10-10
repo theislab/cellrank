@@ -22,11 +22,11 @@ from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from cellrank import logging as logg
 from cellrank.ul._docs import d, inject_docs
 from cellrank.pl._utils import (
+    _fit_bulk,
     _model_type,
     _get_backend,
     _callback_type,
     _create_models,
-    _fit_gene_trends,
     _time_range_type,
     _create_callbacks,
 )
@@ -34,7 +34,6 @@ from cellrank.tl._utils import save_fig, _min_max_scale, _unique_order_preservin
 from cellrank.ul._utils import _get_n_cores, valuedispatch, _check_collection
 from cellrank.tl._colors import _create_categorical_colors
 from cellrank.tl._constants import _DEFAULT_BACKEND, ModeEnum, AbsProbKey
-from cellrank.ul._parallelize import parallelize
 
 _N_XTICKS = 10
 
@@ -329,7 +328,7 @@ def heatmap(
             ax.spines["left"].set_position(
                 ("data", 0)
             )  # move the left spine to the rectangles to get nicer yticks
-            ax.set_yticklabels(lineages, ha="right")
+            ax.set_yticklabels(models.keys(), ha="right")
 
             ax.set_title(gene, fontdict=dict(fontsize=fontsize))
             ax.set_ylabel("lineage")
@@ -388,7 +387,7 @@ def heatmap(
             xs = np.array([m.x_test for m in models.values()])
             x_min, x_max = np.nanmin(xs), np.nanmax(xs)
 
-            df = pd.DataFrame([m.y_test for m in models.values()], index=genes)
+            df = pd.DataFrame([m.y_test for m in models.values()], index=models.keys())
             df.index.name = "genes"
 
             if not cluster_genes:
@@ -433,7 +432,7 @@ def heatmap(
                 if figsize is None
                 else figsize,
                 xticklabels=False,
-                row_cluster=cluster_genes and df.shape[0] > 1,
+                row_cluster=row_cluster,
                 col_colors=col_colors,
                 colors_ratio=0,
                 col_cluster=False,
@@ -544,34 +543,24 @@ def heatmap(
     genes = _unique_order_preserving(genes)
     _check_collection(adata, genes, "var_names", use_raw=kwargs.get("use_raw", False))
 
-    if isinstance(time_range, (tuple, float, int, type(None))):
-        time_range = [time_range] * len(lineages)
-    elif len(time_range) != len(lineages):
-        raise ValueError(
-            f"Expected time ranges to be of length `{len(lineages)}`, found `{len(time_range)}`."
-        )
-
-    xlabel = time_key if xlabel is None else xlabel
-    models = _create_models(model, genes, lineages)
-
     kwargs["backward"] = backward
     kwargs["time_key"] = time_key
-    callbacks = _create_callbacks(adata, callback, genes, lineages, **kwargs)
-
-    backend = _get_backend(model, backend)
-    n_jobs = _get_n_cores(n_jobs, len(genes))
-
-    start = logg.info(f"Computing trends using `{n_jobs}` core(s)")
-    data = parallelize(
-        _fit_gene_trends,
+    data, genes, lineages = _fit_bulk(
         genes,
-        unit="gene",
-        backend=backend,
-        n_jobs=n_jobs,
-        extractor=lambda data: {k: v for d in data for k, v in d.items()},
-        show_progress_bar=show_progress_bar,
-    )(models, callbacks, lineages, time_range, **kwargs)
-    logg.info("    Finish", time=start)
+        _create_models(model, genes, lineages),
+        _create_callbacks(adata, callback, genes, lineages, **kwargs),
+        lineages,
+        time_range,
+        filter_all_failed=True,
+        parallel_kwargs={
+            "show_progress_bar": show_progress_bar,
+            "n_jobs": _get_n_cores(n_jobs, len(genes)),
+            "backend": _get_backend(model, backend),
+        },
+        **kwargs,
+    )
+
+    xlabel = time_key if xlabel is None else xlabel
 
     logg.debug(f"Plotting `{mode.s!r}` heatmap")
     fig, genes = _plot_heatmap(mode)
