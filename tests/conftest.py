@@ -134,17 +134,22 @@ def adata_gpcca_bwd(adata_gpcca=_create_gpcca(backward=True)) -> Tuple[AnnData, 
     return adata.copy(), gpcca
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def adata_cflare(adata_cflare=_create_cflare(backward=False)) -> AnnData:
     return adata_cflare[0].copy()
 
 
 @pytest.fixture(scope="session")
+def adata_gamr(adata_cflare=_create_cflare(backward=False)) -> AnnData:
+    return adata_cflare[0].copy()
+
+
+@pytest.fixture(scope="session")
 def gamr_model(
-    adata_cflare: AnnData, tmp_path_factory: Path, worker_id: str
+    adata_gamr: AnnData, tmp_path_factory: Path, worker_id: str
 ) -> Optional[GAMR]:
     if worker_id == "master":
-        return _create_gamr_model(adata_cflare, prepare=True)
+        return _create_gamr_model(adata_gamr, prepare=True)
 
     root_tmp_dir = tmp_path_factory.getbasetemp().parent
     fn = root_tmp_dir / "data.json"
@@ -154,10 +159,11 @@ def gamr_model(
             with open(fn, "rb") as fin:
                 model = pickle.load(fin)
         else:
-            model = _create_gamr_model(adata_cflare, prepare=True)
+            model = _create_gamr_model(adata_gamr, prepare=True)
             if model is not None:
                 with open(fn, "wb") as fout:
                     pickle.dump(model, fout)
+
     return model
 
 

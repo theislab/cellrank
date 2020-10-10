@@ -42,7 +42,7 @@ def gene_trends(
     time_key: str = "latent_time",
     time_range: Optional[Union[_time_range_type, List[_time_range_type]]] = None,
     callback: _callback_type = None,
-    conf_int: Union[bool] = True,
+    conf_int: Union[bool, float] = True,
     same_plot: bool = False,
     hide_cells: bool = False,
     perc: Optional[Union[Tuple[float, float], Sequence[Tuple[float, float]]]] = None,

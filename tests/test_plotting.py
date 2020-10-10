@@ -2069,7 +2069,7 @@ class TestHighLvlStates:
 class TestLineage:
     def test_pie(self, lineage: cr.tl.Lineage):
         with pytest.raises(ValueError):
-            lineage[:, 0].plot_pie(dpi=DPI, save=fpath)
+            lineage[:, 0].plot_pie(dpi=DPI)
 
     @compare(kind="lineage")
     def test_pie(self, lineage: cr.tl.Lineage, fpath: str):
@@ -2214,8 +2214,17 @@ class TestGAMR:
     def test_gamr_default(self, model: GAMR, fpath: str):
         model.prepare(model.adata.var_names[0], "1")
         model.fit().predict()
-        model.confidence_interval()
         model.plot(
+            save=fpath,
+            dpi=DPI,
+        )
+
+    @compare(kind="gamr")
+    def test_gamr_ci_100(self, model: GAMR, fpath: str):
+        model.prepare(model.adata.var_names[0], "1")
+        model.fit().predict(level=1)
+        model.plot(
+            conf_int=False,
             save=fpath,
             dpi=DPI,
         )
@@ -2223,8 +2232,7 @@ class TestGAMR:
     @compare(kind="gamr")
     def test_gamr_no_ci(self, model: GAMR, fpath: str):
         model.prepare(model.adata.var_names[0], "1")
-        model.fit().predict()
-        model.confidence_interval()
+        model.fit().predict(level=None)
         model.plot(
             conf_int=False,
             save=fpath,
@@ -2234,8 +2242,7 @@ class TestGAMR:
     @compare(kind="gamr")
     def test_gamr_no_cbar(self, model: GAMR, fpath: str):
         model.prepare(model.adata.var_names[0], "1")
-        model.fit().predict()
-        model.confidence_interval()
+        model.fit().predict(level=0.95)
         model.plot(
             cbar=False,
             save=fpath,
@@ -2245,13 +2252,38 @@ class TestGAMR:
     @compare(kind="gamr")
     def test_gamr_lineage_prob(self, model: GAMR, fpath: str):
         model.prepare(model.adata.var_names[0], "1")
-        model.fit().predict()
-        model.confidence_interval()
+        model.fit().predict(level=0.95)
         model.plot(
             lineage_probability=True,
             lineage_probability_conf_int=True,
             save=fpath,
             dpi=DPI,
+        )
+
+    @compare(kind="gamr")
+    def test_trends_gam_ci_100(self, model: GAMR, fpath: str):
+        cr.pl.gene_trends(
+            model.adata,
+            model,
+            GENES[:3],
+            conf_int=1,
+            backward=False,
+            data_key="Ms",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare(kind="gamr")
+    def test_trends_gam_ci_80(self, model: GAMR, fpath: str):
+        cr.pl.gene_trends(
+            model.adata,
+            model,
+            GENES[:3],
+            conf_int=0.8,
+            backward=False,
+            data_key="Ms",
+            dpi=DPI,
+            save=fpath,
         )
 
 
