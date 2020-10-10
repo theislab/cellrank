@@ -937,7 +937,7 @@ class BaseModel(ABC):
 
 class FailedModel(BaseModel):
     """
-    Dummy model class representing a failure.
+    Dummy class representing a failure..
 
     Parameters
     ----------
@@ -946,6 +946,11 @@ class FailedModel(BaseModel):
     """
 
     def __init__(self, model: BaseModel):
+        if not isinstance(model, BaseModel):
+            raise TypeError(
+                f"Expected `model` to be of type `cellrank.ul.models.BaseMode`, found `{type(model).__name__!r}`."
+            )
+
         super().__init__(model.adata, model.model)
         self._gene = model._gene
         self._lineage = model._lineage
@@ -960,6 +965,23 @@ class FailedModel(BaseModel):
         """Raise a :class:`RuntimeError`."""
         raise RuntimeError("Unable to fit a failed model")
 
+    def prepare(
+        self,
+        gene: str,
+        lineage: Optional[str],
+        backward: bool = False,
+        time_range: Optional[Union[float, Tuple[float, float]]] = None,
+        data_key: str = "X",
+        time_key: str = "latent_time",
+        use_raw: bool = False,
+        threshold: Optional[float] = None,
+        weight_threshold: Union[float, Tuple[float, float]] = (0.01, 0.01),
+        filter_cells: Optional[float] = None,
+        n_test_points: int = 200,
+    ) -> "BaseModel":
+        """Raise a :class:`RuntimeError`."""
+        raise RuntimeError("Unable to prepare a failed model.")
+
     def predict(
         self,
         x_test: Optional[np.ndarray] = None,
@@ -967,14 +989,22 @@ class FailedModel(BaseModel):
         **kwargs,
     ) -> np.ndarray:
         """Raise a :class:`RuntimeError`."""
-        raise RuntimeError("Unable to predict with a failed model")
+        raise RuntimeError("Unable to predict with a failed model.")
 
     def confidence_interval(
         self, x_test: Optional[np.ndarray] = None, **kwargs
     ) -> np.ndarray:
         """Raise a :class:`RuntimeError`."""
+        return self.default_confidence_interval()
+
+    def default_confidence_interval(
+        self,
+        x_test: Optional[np.ndarray] = None,
+        **kwargs,
+    ) -> np.ndarray:
+        """Raise a :class:`RuntimeError`."""
         raise RuntimeError(
-            "Unable to calculate confidence interval with a failed model."
+            "Unable to calculate the confidence interval with a failed model."
         )
 
     @property

@@ -11,7 +11,6 @@ from anndata import AnnData
 import numpy as np
 from scipy.stats import rankdata
 from sklearn.svm import SVR
-from sklearn.svm._classes import SVR
 
 from cellrank.ul.models import GAM, GAMR, SKLearnModel
 from cellrank.ul.models._utils import (
@@ -22,6 +21,7 @@ from cellrank.ul.models._utils import (
     _extract_data,
     _get_knotlocs,
 )
+from cellrank.ul.models._base_model import FailedModel
 
 
 class TestModel:
@@ -346,6 +346,34 @@ class TestSKLearnModel:
         model = SKLearnModel(adata_cflare, SVR())
 
         assert model._weight_name == "sample_weight"
+
+
+class TestFailedModel:
+    def test_wrong_model_type(self):
+        with pytest.raises(TypeError):
+            FailedModel(SVR())
+
+    def test_correct_gene_and_lineage(self, gamr_model):
+        fm = FailedModel(gamr_model)
+
+        assert fm.gene == gamr_model._gene
+        assert fm.lineage == gamr_model._lineage
+
+    def test_unable_to_do_anything(self, gamr_model):
+        fm = FailedModel(gamr_model)
+
+        with pytest.raises(RuntimeError):
+            fm.prepare(fm.adata.var_names[0], "0")
+
+        for fn in [
+            "fit",
+            "predict",
+            "confidence_interval",
+            "default_confidence_interval",
+            "copy",
+        ]:
+            with pytest.raises(RuntimeError):
+                getattr(fm, fn)()
 
 
 class TestModelsIO:
