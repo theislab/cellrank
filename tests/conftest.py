@@ -93,15 +93,14 @@ def _create_gpcca(*, backward: bool = False) -> Tuple[AnnData, GPCCA]:
     return adata, mc
 
 
-def _create_gamr_model(_adata: AnnData, prepare: bool = True) -> GAMR:
+def _create_gamr_model(_adata: AnnData) -> Optional[GAMR]:
     try:
         m = GAMR(_adata)
-        if prepare:
-            m.prepare(_adata.var_names[0], "0").fit()
-            m.predict(level=0.95)
+        m.prepare(_adata.var_names[0], "0").fit()
+        m.predict(level=0.95)
         return m
     except:
-        pytest.skip("Unable to create GAMR model.")
+        return None
 
 
 @pytest.fixture
@@ -149,20 +148,23 @@ def gamr_model(
     adata_gamr: AnnData, tmp_path_factory: Path, worker_id: str
 ) -> Optional[GAMR]:
     if worker_id == "master":
-        return _create_gamr_model(adata_gamr, prepare=True)
+        model = _create_gamr_model(adata_gamr)
+    else:
+        root_tmp_dir = tmp_path_factory.getbasetemp().parent
+        fn = root_tmp_dir / "model.pickle"
 
-    root_tmp_dir = tmp_path_factory.getbasetemp().parent
-    fn = root_tmp_dir / "data.json"
+        with FileLock(f"{fn}.lock"):
+            if fn.is_file():
+                with open(fn, "rb") as fin:
+                    model = pickle.load(fin)
+            else:
+                model = _create_gamr_model(adata_gamr)
+                if model is not None:
+                    with open(fn, "wb") as fout:
+                        pickle.dump(model, fout)
 
-    with FileLock(str(fn) + ".lock"):
-        if fn.is_file():
-            with open(fn, "rb") as fin:
-                model = pickle.load(fin)
-        else:
-            model = _create_gamr_model(adata_gamr, prepare=True)
-            if model is not None:
-                with open(fn, "wb") as fout:
-                    pickle.dump(model, fout)
+    if model is None:
+        pytest.skip("Unable to create `cellrank.ul.models.GAMR`.")
 
     return model
 
