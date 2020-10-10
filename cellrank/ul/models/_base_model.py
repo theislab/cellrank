@@ -983,7 +983,7 @@ class BaseModel(ABC, metaclass=BaseModelMeta):
             setattr(dst, attr, _copy(getattr(self, attr)))
 
     def _shallowcopy_attributes(self, dst: "BaseModel") -> None:
-        for attr in ["_gene", "_lineage"]:
+        for attr in ["_gene", "_lineage", "_is_bulk"]:
             setattr(dst, attr, _copy(getattr(self, attr)))
         # user is not exposed to this
         dst._obs_names = self._obs_names
