@@ -360,5 +360,5 @@ def _import_rpy2_mgcv() -> bool:
 
 
 gamr_skip = pytest.mark.skipif(
-    _import_rpy2_mgcv(), "Cannot import `rpy2` or R's `mgcv` package."
+    _import_rpy2_mgcv(), reason="Cannot import `rpy2` or R's `mgcv` package."
 )

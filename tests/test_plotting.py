@@ -155,9 +155,21 @@ def compare(
 
         return decorator
 
-    if kind not in ("adata", "cflare", "gpcca", "lineage", "bwd"):
+    def compare_gamr(func: Callable):
+        def decorator(self, gamr_model: GAMR):
+            path, fpath = _prepare_fname(func)
+
+            func(self, gamr_model, path)
+
+            _assert_equal(fpath)
+
+        assert kind == "gamr", "Function `compare_gamr` only supports `kind='gamr'`."
+
+        return decorator
+
+    if kind not in ("adata", "cflare", "gpcca", "lineage", "bwd", "gamr"):
         raise ValueError(
-            f"Invalid kind `{kind!r}`. Valid options are: `['adata', 'cflare', 'gpcca', 'lineage', 'bwd']`."
+            f"Invalid kind `{kind!r}`. Valid options are: `['adata', 'cflare', 'gpcca', 'lineage', 'bwd', 'gamr']`."
         )
 
     if kind == "adata":
@@ -171,6 +183,8 @@ def compare(
         return compare_lineage
     if kind == "bwd":
         return compare_gpcca_bwd
+    if kind == "gamr":
+        return compare_gamr
 
     raise NotImplementedError(f"Invalid kind `{kind!r}`.")
 
@@ -2196,10 +2210,9 @@ class TestModel:
 
 @gamr_skip
 class TestGAMR:
-    @compare()
-    def test_gamr_default(self, adata: AnnData, fpath: str):
-        model = GAMR(adata, offset=None)
-        model.prepare(adata.var_names[0], "1")
+    @compare(kind="gamr")
+    def test_gamr_default(self, model: GAMR, fpath: str):
+        model.prepare(model.adata.var_names[0], "1")
         model.fit().predict()
         model.confidence_interval()
         model.plot(
@@ -2207,10 +2220,9 @@ class TestGAMR:
             dpi=DPI,
         )
 
-    @compare()
-    def test_gamr_no_ci(self, adata: AnnData, fpath: str):
-        model = GAMR(adata, offset=None)
-        model.prepare(adata.var_names[0], "1")
+    @compare(kind="gamr")
+    def test_gamr_no_ci(self, model: GAMR, fpath: str):
+        model.prepare(model.adata.var_names[0], "1")
         model.fit().predict()
         model.confidence_interval()
         model.plot(
@@ -2219,10 +2231,9 @@ class TestGAMR:
             dpi=DPI,
         )
 
-    @compare()
-    def test_gamr_no_cbar(self, adata: AnnData, fpath: str):
-        model = GAMR(adata, offset=None)
-        model.prepare(adata.var_names[0], "1")
+    @compare(kind="gamr")
+    def test_gamr_no_cbar(self, model: GAMR, fpath: str):
+        model.prepare(model.adata.var_names[0], "1")
         model.fit().predict()
         model.confidence_interval()
         model.plot(
@@ -2231,10 +2242,9 @@ class TestGAMR:
             dpi=DPI,
         )
 
-    @compare()
-    def test_gamr_lineage_prob(self, adata: AnnData, fpath: str):
-        model = GAMR(adata)
-        model.prepare(adata.var_names[0], "1")
+    @compare(kind="gamr")
+    def test_gamr_lineage_prob(self, model: GAMR, fpath: str):
+        model.prepare(model.adata.var_names[0], "1")
         model.fit().predict()
         model.confidence_interval()
         model.plot(

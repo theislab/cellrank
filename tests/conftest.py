@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 import os
+import pickle
 from typing import Tuple, Optional
+from pathlib import Path
+
+from filelock import FileLock
 
 from cellrank.ul.models import GAM, GAMR, SKLearnModel
 
@@ -89,6 +93,17 @@ def _create_gpcca(*, backward: bool = False) -> Tuple[AnnData, GPCCA]:
     return adata, mc
 
 
+def _create_gamr_model(_adata: AnnData, prepare: bool = True) -> GAMR:
+    try:
+        m = GAMR(_adata)
+        if prepare:
+            m.prepare(_adata.var_names[0], "0").fit()
+            m.predict(level=0.95)
+        return m
+    except:
+        pytest.skip("Unable to create GAMR model.")
+
+
 @pytest.fixture
 def adata() -> AnnData:
     return _adata_small.copy()
@@ -119,20 +134,31 @@ def adata_gpcca_bwd(adata_gpcca=_create_gpcca(backward=True)) -> Tuple[AnnData, 
     return adata.copy(), gpcca
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def adata_cflare(adata_cflare=_create_cflare(backward=False)) -> AnnData:
     return adata_cflare[0].copy()
 
 
-@pytest.fixture
-def gamr_model(adata_cflare: AnnData) -> Optional[GAMR]:
-    try:
-        m = GAMR(adata_cflare)
-        m.prepare(adata_cflare.var_names[0], "0").fit()
-        m.predict(level=0.95)
-        return m
-    except:
-        pytest.skip("Unable to create GAMR model.")
+@pytest.fixture(scope="session")
+def gamr_model(
+    adata_cflare: AnnData, tmp_path_factory: Path, worker_id: str
+) -> Optional[GAMR]:
+    if worker_id == "master":
+        return _create_gamr_model(adata_cflare, prepare=True)
+
+    root_tmp_dir = tmp_path_factory.getbasetemp().parent
+    fn = root_tmp_dir / "data.json"
+
+    with FileLock(str(fn) + ".lock"):
+        if fn.is_file():
+            with open(fn, "rb") as fin:
+                model = pickle.load(fin)
+        else:
+            model = _create_gamr_model(adata_cflare, prepare=True)
+            if model is not None:
+                with open(fn, "wb") as fout:
+                    pickle.dump(model, fout)
+    return model
 
 
 @pytest.fixture
