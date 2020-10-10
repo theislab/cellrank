@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 """Base class for all models."""
 import re
-from abc import ABC, abstractmethod
+from abc import ABC, ABCMeta, abstractmethod
+from ast import literal_eval
 from copy import copy as _copy
 from copy import deepcopy
-from typing import Any, Tuple, Union, TypeVar, Optional
+from typing import Any, Tuple, Union, TypeVar, Callable, Optional
+
+import wrapt
 
 import numpy as np
 from scipy.ndimage import convolve
@@ -18,18 +21,124 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from cellrank.tl import Lineage
 from cellrank.ul._docs import d
 from cellrank.tl._utils import save_fig
-from cellrank.ul._utils import _minmax, _densify_squeeze
-from cellrank.tl._constants import AbsProbKey
+from cellrank.ul._utils import _minmax, valuedispatch, _densify_squeeze
+from cellrank.tl._constants import ModeEnum, AbsProbKey
+from cellrank.ul.models._utils import _should_raise
 
 AnnData = TypeVar("AnnData")
 _dup_spaces = re.compile(r" +")  # used on repr for underlying model's repr
 
 
+class UnknownModelError(RuntimeError):  # noqa
+    pass
+
+
+class FailedReturnType(ModeEnum):  # noqa
+    PREPARE = "prepare"
+    FIT = "fit"
+    PREDICT = "predict"
+    CONFIDENCE_INTERVAL = "confidence_interval"
+    DEFAULT_CONFIDENCE_INTERVAL = "default_confidence_interval"
+    PLOT = "plot"
+
+
+def _handle_exception(return_type: FailedReturnType, func: Callable) -> Callable:
+    @wrapt.decorator
+    def handle_array_output(wrapped, instance: "BaseModel", args, kwargs) -> np.ndarray:
+        try:
+            if isinstance(instance, FailedModel):
+                raise instance._exc from None
+            return wrapped(*args, **kwargs)
+        except Exception as e:
+            if not instance._is_bulk or _should_raise():
+                raise e from None
+            n_points = kwargs.get("x_test", None) or instance.x_test or 200
+            return np.full((n_points, array_shape), np.nan, dtype=instance._dtype)
+
+    @wrapt.decorator
+    def handle_model_output(
+        wrapped, instance: "BaseModel", args, kwargs
+    ) -> Union["BaseModel", "FailedModel"]:
+        try:
+            if isinstance(instance, FailedModel):
+                raise instance._exc from None
+            return wrapped(*args, **kwargs)
+        except Exception as e:
+            if not instance._is_bulk or _should_raise():
+                raise e from None
+            return FailedModel(instance, exc=e)
+
+    @wrapt.decorator
+    def handle_no_output(wrapped, instance: "BaseModel", args, kwargs) -> None:
+        try:
+            return wrapped(*args, **kwargs)
+        except Exception as e:
+            if not instance._is_bulk:
+                raise e from None
+
+    @valuedispatch
+    def wrapper(mode: FailedReturnType, *_args, **_kwargs):
+        raise NotImplementedError(mode)
+
+    @wrapper.register(FailedReturnType.PREDICT)
+    @wrapper.register(FailedReturnType.CONFIDENCE_INTERVAL)
+    @wrapper.register(FailedReturnType.DEFAULT_CONFIDENCE_INTERVAL)
+    def _(func: Callable) -> Callable:
+        return handle_array_output(func)
+
+    @wrapper.register(FailedReturnType.PREPARE)
+    @wrapper.register(FailedReturnType.FIT)
+    def _(func: Callable) -> Callable:
+        return handle_model_output(func)
+
+    @wrapper.register(FailedReturnType.PLOT)
+    def _(func: Callable):
+        return handle_no_output(func)
+
+    array_shape = 1 + (
+        return_type
+        in (
+            FailedReturnType.CONFIDENCE_INTERVAL,
+            FailedReturnType.DEFAULT_CONFIDENCE_INTERVAL,
+        )
+    )
+    return wrapper(return_type, func)
+
+
+class BaseModelMeta(ABCMeta):
+    """Metaclass for all base models."""
+
+    def __new__(cls, clsname, superclasses, attributedict):
+        """
+        Create a new instance.
+
+        Parameters
+        ----------
+        clsname
+            Name of class to be constructed.
+        superclasses
+            List of superclasses.
+        attributedict
+            Dictionary of attributes.
+        """
+
+        obj = super().__new__(cls, clsname, superclasses, attributedict)
+        for fun_name in list(FailedReturnType):
+            setattr(
+                obj,
+                fun_name.s,
+                _handle_exception(FailedReturnType(fun_name), getattr(obj, fun_name.s)),
+            )
+
+        return obj
+
+
+@d.get_sectionsf("base_model_prepare", sections=["Parameters", "Returns"])
 @d.get_sectionsf("base_model", sections=["Parameters"])
 @d.dedent
-class BaseModel(ABC):
+class BaseModel(ABC, metaclass=BaseModelMeta):
     """
-    Base class for other model classes.
+    Base class for all model classes.
 
     Parameters
     ----------
@@ -57,6 +166,7 @@ class BaseModel(ABC):
         self._prepared = False
 
         self._obs_names = None
+        self._is_bulk = False
 
         self._x_all = None
         self._y_all = None
@@ -162,7 +272,6 @@ class BaseModel(ABC):
         """Array of shape `(n_samples, 2)` containing the lower and upper bounds of the confidence interval."""  # noqa
         return self._conf_int
 
-    @d.get_sectionsf("base_model_prepare", sections=["Parameters", "Returns"])
     @d.get_full_descriptionf("base_model_prepare")
     @d.dedent
     def prepare(
@@ -961,8 +1070,11 @@ class FailedModel(BaseModel):
                 raise TypeError(
                     f"Expected `exc` to be either a string or a `BaseException`, found `{type(exc).__name__!r}`."
                 )
+        else:
+            exc = UnknownModelError(exc)
 
-        super().__init__(model.adata, model.model)
+        super().__init__(model.adata, model)
+
         self._gene = model._gene
         self._lineage = model._lineage
         self._exc = exc
@@ -971,9 +1083,9 @@ class FailedModel(BaseModel):
         self,
         *_args,
         **_kwargs,
-    ) -> "BaseModel":
-        """Do nothing."""
-        pass
+    ) -> "FailedModel":
+        """Return self."""
+        return self
 
     def fit(
         self,
@@ -981,9 +1093,9 @@ class FailedModel(BaseModel):
         y: Optional[np.ndarray] = None,
         w: Optional[np.ndarray] = None,
         **kwargs,
-    ) -> "BaseModel":
+    ) -> "FailedModel":
         """Do nothing."""
-        pass
+        return self
 
     def predict(
         self,
@@ -1008,14 +1120,19 @@ class FailedModel(BaseModel):
         """Do nothing."""
         pass
 
-    def reraise(self):
+    @property
+    def reason(self) -> str:
+        """Get the reason why the model has failed."""
+        return literal_eval(str(self._exc))
+
+    def reraise(self) -> None:
         """Raise a :class:`RuntimeError` with gene and lineage information."""
         raise RuntimeError(f"Unable to run the model `{self}`.") from self._exc
 
     @d.dedent
     def copy(self) -> "FailedModel":
-        """Raise a :class:`RuntimeError`."""
-        raise RuntimeError("Unable to copy a failed model.")
+        """%(copy)s"""  # noqa
+        return FailedModel(self.model, exc=self._exc)
 
     def __str__(self) -> str:
         return repr(self)
@@ -1024,8 +1141,3 @@ class FailedModel(BaseModel):
         return (
             f"{self.__class__.__name__}[gene={self._gene!r}, lineage={self._lineage!r}]"
         )
-
-
-class ModelExceptionPolicy:  # noqa
-    RERAISE = "reraise"
-    IGNORE = "ignore"

@@ -11,7 +11,7 @@ from cellrank.ul._docs import d, inject_docs
 from cellrank.ul.models import BaseModel
 from cellrank.tl._constants import ModeEnum
 from cellrank.ul.models._utils import _OFFSET_KEY, _get_offset, _get_knotlocs
-from cellrank.ul.models._base_model import AnnData
+from cellrank.ul.models._base_model import AnnData, FailedModel
 
 _r_lib = None
 _r_lib_name = None
@@ -140,7 +140,9 @@ class GAMR(BaseModel):
 
         if self._family == "nb":
             kwargs["use_raw"] = True
-        _ = super().prepare(*args, **kwargs)
+        prepared = super().prepare(*args, **kwargs)
+        if isinstance(prepared, FailedModel):
+            return prepared
 
         use_ixs = self.w > 0
         self._x = self.x[use_ixs]
