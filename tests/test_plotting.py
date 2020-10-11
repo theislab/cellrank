@@ -1452,7 +1452,6 @@ class TestGeneTrend:
             save=fpath,
         )
 
-    @pytest.mark.skip("TODO")
     @compare()
     def test_trends_show_lineage_same_plot(self, adata: AnnData, fpath: str):
         model = create_model(adata)
@@ -1460,6 +1459,7 @@ class TestGeneTrend:
             adata,
             model,
             GENES[:5],
+            transpose=True,
             data_key="Ms",
             same_plot=True,
             plot_kwargs=dict(lineage_probability=True),
@@ -1467,7 +1467,6 @@ class TestGeneTrend:
             save=fpath,
         )
 
-    @pytest.mark.skip("TODO")
     @compare()
     def test_trends_show_lineage_diff_plot(self, adata: AnnData, fpath: str):
         model = create_model(adata)
@@ -1477,13 +1476,13 @@ class TestGeneTrend:
             GENES[0],
             data_key="Ms",
             same_plot=False,
+            transpose=True,
             plot_kwargs=dict(lineage_probability=True),
             figsize=(5, 5),
             dpi=DPI,
             save=fpath,
         )
 
-    @pytest.mark.skip("TODO")
     @compare()
     def test_trends_show_lineage_ci(self, adata: AnnData, fpath: str):
         model = create_model(adata)
@@ -1493,6 +1492,7 @@ class TestGeneTrend:
             GENES[0],
             data_key="Ms",
             same_plot=True,
+            transpose=True,
             plot_kwargs=dict(
                 lineage_probability=True, lineage_probability_conf_int=True
             ),
