@@ -15,13 +15,14 @@ from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.pl._utils import (
     _fit_bulk,
-    _model_type,
     _get_backend,
     _callback_type,
     _create_models,
     _trends_helper,
     _time_range_type,
     _create_callbacks,
+    _input_model_type,
+    _return_model_type,
 )
 from cellrank.tl._utils import save_fig, _unique_order_preserving
 from cellrank.ul._utils import _get_n_cores, _check_collection
@@ -33,7 +34,7 @@ AnnData = TypeVar("AnnData")
 @d.dedent
 def gene_trends(
     adata: AnnData,
-    model: _model_type,
+    model: _input_model_type,
     genes: Union[str, Sequence[str]],
     lineages: Optional[Union[str, Sequence[str]]] = None,
     backward: bool = False,
@@ -60,6 +61,7 @@ def gene_trends(
     legend_loc: Optional[str] = "best",
     ncols: int = 2,
     suptitle: Optional[str] = None,
+    return_models: bool = False,
     n_jobs: Optional[int] = 1,
     backend: str = _DEFAULT_BACKEND,
     show_progress_bar: bool = True,
@@ -68,7 +70,7 @@ def gene_trends(
     save: Optional[Union[str, Path]] = None,
     plot_kwargs: Mapping = MappingProxyType({}),
     **kwargs,
-) -> None:
+) -> Optional[_return_model_type]:
     """
     Plot gene expression trends along lineages.
 
@@ -132,6 +134,7 @@ def gene_trends(
         Number of columns of the plot when pl multiple genes. Only used when ``same_plot=True``.
     suptitle
         Suptitle of the figure.
+    %(return_models)s
     %(parallel)s
     %(plotting)s
     plot_kwargs
@@ -141,7 +144,7 @@ def gene_trends(
 
     Returns
     -------
-    %(just_plots)s
+    %(plots_or_returns_models)s
     """
 
     if isinstance(genes, str):
@@ -179,7 +182,7 @@ def gene_trends(
     kwargs["data_key"] = data_key
     kwargs["backward"] = backward
     kwargs["conf_int"] = conf_int  # prepare doesnt take or need this
-    models, genes, lineages = _fit_bulk(
+    all_models, models, genes, lineages = _fit_bulk(
         genes,
         _create_models(model, genes, lineages),
         _create_callbacks(adata, callback, genes, lineages, **kwargs),
@@ -279,3 +282,6 @@ def gene_trends(
 
     if save is not None:
         save_fig(fig, save)
+
+    if return_models:
+        return all_models

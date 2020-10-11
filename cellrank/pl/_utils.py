@@ -43,7 +43,8 @@ _ERROR_INCOMPLETE_SPEC = (
     "Consider specifying a fallback model using '*'."
 )
 _time_range_type = Optional[Union[float, Tuple[Optional[float], Optional[float]]]]
-_model_type = Union[BaseModel, Mapping[str, Mapping[str, BaseModel]]]
+_return_model_type = Mapping[str, Mapping[str, BaseModel]]
+_input_model_type = Union[BaseModel, _return_model_type]
 _callback_type = Optional[Union[Callable, Mapping[str, Mapping[str, Callable]]]]
 
 BulkRes = namedtuple("BulkRes", ["x_test", "y_test"])
@@ -204,7 +205,7 @@ def _is_any_gam_mgcv(models: Union[BaseModel, Dict[str, Dict[str, BaseModel]]]) 
 
 
 def _create_models(
-    model: _model_type, obs: Sequence[str], lineages: Sequence[Optional[str]]
+    model: _input_model_type, obs: Sequence[str], lineages: Sequence[Optional[str]]
 ) -> Dict[str, Dict[str, BaseModel]]:
     """
     Create models for each gene and lineage.
@@ -271,7 +272,7 @@ def _create_models(
 
 def _fit_bulk_helper(
     genes: Sequence[str],
-    models: _model_type,
+    models: _input_model_type,
     callbacks: _callback_type,
     lineages: Sequence[Optional[str]],
     time_range: Sequence[Union[float, Tuple[float, float]]],
@@ -409,7 +410,7 @@ def _filter_models(models, return_models: bool = False, filter_all_failed: bool 
     to_keep = to_keep[to_keep.any(axis=1)]
     to_keep = to_keep.loc[:, to_keep.any(axis=0)].T
 
-    models = {
+    filtered_models = {
         gene: {
             ln: models[gene][ln]
             for ln in (
@@ -421,11 +422,11 @@ def _filter_models(models, return_models: bool = False, filter_all_failed: bool 
         for gene, v in to_keep.to_dict().items()
     }
 
-    if not len(models):
+    if not len(filtered_models):
         raise RuntimeError()
 
     # lineages is the max number of lineages
-    return models, tuple(models.keys()), tuple(to_keep.index)
+    return models, filtered_models, tuple(filtered_models.keys()), tuple(to_keep.index)
 
 
 @d.dedent

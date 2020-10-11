@@ -37,6 +37,13 @@ model
 _just_plots = """\
 None
     Nothing, just plots the figure. Optionally saves it based on ``save``."""
+_plots_or_returns_models = """\
+None
+    If ``return_models=False``, just plots the figure and optionally saves it based on ``save``.
+Dict[str, Dict[str, :class:`cellrank.ul.models.BaseModel`]]
+    Otherwise returns the fitted models as ``{'gene_1': {'lineage_1': <model_11>, ...}, ...}``.
+    Models which have failed will be instances of :class:`cellrank.ul.models.FailedModel`.
+"""
 _backward = """\
 backward
     Direction of the process."""
@@ -125,6 +132,10 @@ en_cutoff
 p_thresh
     If cell cycle scores were provided, a *Wilcoxon rank-sum test* is conducted to identify cell-cycle states.
     If the test returns a positive statistic and a p-value smaller than ``p_thresh``, a warning will be issued."""
+_return_models = """\
+return_models
+    If `True`, return the fitted models for each gene in ``genes`` and lineage in ``lineages``.
+"""
 
 
 def inject_docs(**kwargs):  # noqa
@@ -170,4 +181,6 @@ d = DocstringProcessor(
     time_mode=_time_mode,
     write_to_adata=_write_to_adata,
     en_cutoff_p_thresh=_en_cutoff_p_thresh,
+    return_models=_return_models,
+    plots_or_returns_models=_plots_or_returns_models,
 )

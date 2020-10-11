@@ -23,12 +23,13 @@ from cellrank import logging as logg
 from cellrank.ul._docs import d, inject_docs
 from cellrank.pl._utils import (
     _fit_bulk,
-    _model_type,
     _get_backend,
     _callback_type,
     _create_models,
     _time_range_type,
     _create_callbacks,
+    _input_model_type,
+    _return_model_type,
 )
 from cellrank.tl._utils import save_fig, _min_max_scale, _unique_order_preserving
 from cellrank.ul._utils import _get_n_cores, valuedispatch, _check_collection
@@ -53,7 +54,7 @@ class HeatmapMode(ModeEnum):  # noqa
 @inject_docs(m=HeatmapMode)
 def heatmap(
     adata: AnnData,
-    model: _model_type,
+    model: _input_model_type,
     genes: Sequence[str],
     lineages: Optional[Union[str, Sequence[str]]] = None,
     backward: bool = False,
@@ -75,15 +76,17 @@ def heatmap(
     cmap: mcolors.ListedColormap = cm.viridis,
     dendrogram: bool = True,
     return_genes: bool = False,
+    return_models: bool = False,
     n_jobs: Optional[int] = 1,
     backend: str = _DEFAULT_BACKEND,
     show_progress_bar: bool = True,
-    ext: str = "png",
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
     save: Optional[Union[str, Path]] = None,
     **kwargs,
-) -> Optional[Dict[str, pd.DataFrame]]:
+) -> Optional[
+    Union[Dict[str, pd.DataFrame], Tuple[_return_model_type, Dict[str, pd.DataFrame]]]
+]:
     """
     Plot a heatmap of smoothed gene expression along specified lineages.
 
@@ -134,8 +137,8 @@ def heatmap(
     dendrogram
         Whether to show dendrogram when ``cluster_genes=True``.
     return_genes
-        Whether to return the sorted or clustered genes.
-        Only available when ``mode={m.LINEAGES.s!r}``.
+        Whether to return the sorted or clustered genes. Only available when ``mode={m.LINEAGES.s!r}``.
+    %(return_models)s
     %(parallel)s
     %(plotting)s
     **kwargs
@@ -545,13 +548,13 @@ def heatmap(
 
     kwargs["backward"] = backward
     kwargs["time_key"] = time_key
-    data, genes, lineages = _fit_bulk(
+    all_models, data, genes, lineages = _fit_bulk(
         genes,
         _create_models(model, genes, lineages),
         _create_callbacks(adata, callback, genes, lineages, **kwargs),
         lineages,
         time_range,
-        return_models=False,
+        return_models=return_models,
         filter_all_failed=True,
         parallel_kwargs={
             "show_progress_bar": show_progress_bar,
@@ -568,15 +571,17 @@ def heatmap(
 
     if save is not None and fig is not None:
         if not isinstance(fig, Iterable):
-            save_fig(fig, save, ext=ext)
+            save_fig(fig, save)
         elif len(fig) == 1:
-            save_fig(fig[0], save, ext=ext)
+            save_fig(fig[0], save)
         else:
             for ln, f in zip(lineages, fig):
-                save_fig(f, os.path.join(save, f"lineage_{ln}"), ext=ext)
+                save_fig(f, os.path.join(save, f"lineage_{ln}"))
 
     if return_genes and mode == HeatmapMode.LINEAGES:
-        return genes
+        return (all_models, genes) if return_models else genes
+    elif return_models:
+        return all_models
 
 
 def _get_ax_bbox(fig: Fig, ax: Ax):

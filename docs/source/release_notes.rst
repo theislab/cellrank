@@ -13,6 +13,7 @@ Version 1.0
 - Enable negative binomial distribution for :class:`cellrank.ul.models.GAMR`
 - Remove previously deprecated functions
 - Add :class:`cellrank.ul.models.FailedModel` inspired by the maybe monad
+- Allow returning models when doing bulk fitting
 - Various other minor bugfixes
 
 1.0.0-rc.11 :small:`2020-09-25`
