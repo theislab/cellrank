@@ -548,10 +548,11 @@ def heatmap(
 
     kwargs["backward"] = backward
     kwargs["time_key"] = time_key
+    models = _create_models(model, genes, lineages)
     all_models, data, genes, lineages = _fit_bulk(
-        genes,
-        _create_models(model, genes, lineages),
+        models,
         _create_callbacks(adata, callback, genes, lineages, **kwargs),
+        genes,
         lineages,
         time_range,
         return_models=True,  # always return (better error messages)
@@ -559,7 +560,7 @@ def heatmap(
         parallel_kwargs={
             "show_progress_bar": show_progress_bar,
             "n_jobs": _get_n_cores(n_jobs, len(genes)),
-            "backend": _get_backend(model, backend),
+            "backend": _get_backend(models, backend),
         },
         **kwargs,
     )

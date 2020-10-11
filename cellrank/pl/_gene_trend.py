@@ -191,10 +191,12 @@ def gene_trends(
     kwargs["data_key"] = data_key
     kwargs["backward"] = backward
     kwargs["conf_int"] = conf_int  # prepare doesnt take or need this
+    models = _create_models(model, genes, lineages)
+
     all_models, models, genes, lineages = _fit_bulk(
-        genes,
-        _create_models(model, genes, lineages),
+        models,
         _create_callbacks(adata, callback, genes, lineages, **kwargs),
+        genes,
         lineages,
         time_range,
         return_models=True,
@@ -202,7 +204,7 @@ def gene_trends(
         parallel_kwargs={
             "show_progress_bar": show_progress_bar,
             "n_jobs": _get_n_cores(n_jobs, len(genes)),
-            "backend": _get_backend(model, backend),
+            "backend": _get_backend(models, backend),
         },
         **kwargs,
     )

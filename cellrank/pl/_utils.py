@@ -40,7 +40,7 @@ Graph = TypeVar("Graph")
 
 
 _ERROR_INCOMPLETE_SPEC = (
-    "No options were specified for{}`{!r}`. "
+    "No options were specified for {}. "
     "Consider specifying a fallback model using '*'."
 )
 _time_range_type = Optional[Union[float, Tuple[Optional[float], Optional[float]]]]
@@ -186,7 +186,7 @@ def _curved_edges(
 
 def _is_any_gam_mgcv(models: Union[BaseModel, Dict[str, Dict[str, BaseModel]]]) -> bool:
     """
-    Return whether any models to be fit are from R's mgcv package.
+    Return whether any models to be fit are from R's `mgcv` package.
 
     Parameters
     ----------
@@ -207,7 +207,7 @@ def _is_any_gam_mgcv(models: Union[BaseModel, Dict[str, Dict[str, BaseModel]]]) 
 
 def _create_models(
     model: _input_model_type, obs: Sequence[str], lineages: Sequence[Optional[str]]
-) -> Dict[str, Dict[str, BaseModel]]:
+) -> _return_model_type:
     """
     Create models for each gene and lineage.
 
@@ -229,9 +229,20 @@ def _create_models(
         if isinstance(lin_names, BaseModel):
             # sharing the same models for all lineages
             for lin_name in lineages:
-                models[obs_name][lin_name] = lin_names
+                models[obs_name][lin_name] = copy(lin_names)
             return
+        if not isinstance(lin_names, dict):
+            raise TypeError(
+                f"Expected the model to be either a lineage specific `dict` or a `BaseModel`, "
+                f"found `{type(lin_names).__name__!r}`."
+            )
+
         lin_rest_model = lin_names.get("*", None)  # do not pop
+        if lin_rest_model is not None and not isinstance(lin_rest_model, BaseModel):
+            raise TypeError(
+                f"Expected the lineage fallback model for gene `{obs_name!r}` to be of type `BaseModel`, "
+                f"found `{type(lin_rest_model).__name__!r}`."
+            )
 
         for lin_name, mod in lin_names.items():
             if lin_name == "*":
@@ -242,7 +253,9 @@ def _create_models(
             for lin_name in lineages - set(models[obs_name].keys()):
                 models[obs_name][lin_name] = copy(lin_rest_model)
         else:
-            raise RuntimeError(_ERROR_INCOMPLETE_SPEC.format(" lineage ", obs_name))
+            raise RuntimeError(
+                _ERROR_INCOMPLETE_SPEC.format(f"all lineages for gene `{obs_name!r}`")
+            )
 
     if isinstance(model, BaseModel):
         return {o: {lin: copy(model) for lin in lineages} for o in obs}
@@ -255,6 +268,12 @@ def _create_models(
 
     if isinstance(model, dict):
         obs_rest_model = model.pop("*", None)
+        if obs_rest_model is not None and not isinstance(obs_rest_model, BaseModel):
+            raise TypeError(
+                f"Expected the gene fallback model to be of type `BaseModel`, "
+                f"found `{type(obs_rest_model).__name__!r}`."
+            )
+
         for obs_name, lin_names in model.items():
             process_lineages(obs_name, lin_names)
 
@@ -262,10 +281,15 @@ def _create_models(
             for obs_name in obs - set(model.keys()):
                 process_lineages(obs_name, model.get(obs_name, obs_rest_model))
         elif set(model.keys()) != obs:
-            raise RuntimeError(_ERROR_INCOMPLETE_SPEC.format(" ", "genes"))
+            raise RuntimeError(
+                _ERROR_INCOMPLETE_SPEC.format(
+                    f"genes `{list(obs - set(model.keys()))}`."
+                )
+            )
     else:
         raise TypeError(
-            f"Class `{type(model).__name__!r}` must be of type `cellrank.ul.BaseModel` or a dictionary of such models."
+            f"Class `{type(model).__name__!r}` must be of type `BaseModel` or "
+            f"a gene and lineage specific `dict` of `BaseModel`.."
         )
 
     return models
@@ -306,7 +330,7 @@ def _fit_bulk_helper(
     Returns
     -------
         The fitted models, optionally containing the confidence interval in the
-        form of `{'gene1': {'lineage1': model11, ...}, ...}`.
+        form of `{'gene1': {'lineage1': <model11>, ...}, ...}`.
         If any step has failed, the model will be of type :class:`cellrank.ul.models.FailedModel`.
     """
     if len(lineages) != len(time_range):
@@ -351,16 +375,55 @@ def _fit_bulk_helper(
 
 
 def _fit_bulk(
-    genes: Union[str, Sequence[str]],
     models: Mapping[str, Mapping[str, Callable]],
     callbacks: Mapping[str, Mapping[str, Callable]],
+    genes: Union[str, Sequence[str]],
     lineages: Union[str, Sequence[str]],
     time_range: _time_range_type,
     parallel_kwargs: dict,
     return_models: bool = False,
     filter_all_failed: bool = True,
     **kwargs,
-):
+) -> Tuple[_return_model_type, _return_model_type, Sequence[str], Sequence[str]]:
+    """
+    Fit models for given genes and lineages.
+
+    Parameters
+    ----------
+    models
+        Gene and lineage specific estimators.
+    callbacks
+        Functions which are called to prepare the ``models`.
+    genes
+        Genes for which to fit the ``models``.
+    lineages
+        Lineages for which to fit the ``models``.
+    time_range
+        Possibly ``lineages`` specific start- and endtimes.
+    parallel_kwargs
+        Keyword arguments for :func:`cellrank.ul._utils.parallelize`.
+    return_models
+        Whether to return the full models or just a dictionary of dictionaries of :class:`collections.namedtuple`,
+        `(x_test, y_test)`. This is highly discouraged because no meaningful error messages will be produced.
+    filter_all_failed
+        Whether to filter out all models which have failed.
+
+    Returns
+    -------
+    :class:`dict`
+        All the models, including the failed ones. It is a nested dictionary where keys are the ``genes`` and the values
+        is again a :class:`dict`, where keys are ``lineages`` and values are the failed or fitted models or
+        the :class:`collections.namedtuple`, based on ``return_models=True``.
+    :class:`dict`
+        Same as above, but can contain failed models if ``filter_all_failed=False``. In that case, it is guaranteed
+        that this dictionary will contain only genes which have been successfully fitted for at least 1 lineage.
+        If ``return_models=True``, the models are just a :class:`collections.namedtuple` of `(x_test, y_test)`.
+    :class:`tuple`
+        All the genes of the filtered models.
+    :class:`tuple`
+        All the lineage of the filtered models.
+    """
+
     if isinstance(genes, str):
         genes = [genes]
 
@@ -398,7 +461,9 @@ def _fit_bulk(
     )
 
 
-def _filter_models(models, return_models: bool = False, filter_all_failed: bool = True):
+def _filter_models(
+    models, return_models: bool = False, filter_all_failed: bool = True
+) -> Tuple[_return_model_type, _return_model_type, Sequence[str], Sequence[str]]:
     def is_valid(x: Union[BaseModel, BulkRes]) -> bool:
         if return_models:
             assert isinstance(
@@ -835,23 +900,25 @@ def _create_callbacks(
             for lin_name in lineages:
                 callbacks[obs_name][lin_name] = lin_names
             return
+        elif not isinstance(lin_names, dict):
+            raise TypeError("TODO")
+
         lin_rest_callback = (
             lin_names.get("*", _default_model_callback) or _default_model_callback
         )  # do not pop
+        if not callable(lin_rest_callback):
+            raise TypeError(
+                f"Expected the lineage fallback callback for gene `{obs_name!r}` to be `callable`, "
+                f"found `{type(lin_rest_callback).__name__!r}`."
+            )
 
         for lin_name, cb in lin_names.items():
             if lin_name == "*":
                 continue
-            callbacks[obs_name][lin_name] = cb
+            callbacks[obs_name][lin_name] = copy(cb)
 
-        if callable(lin_rest_callback):
-            for lin_name in lineages - set(callbacks[obs_name].keys()):
-                callbacks[obs_name][lin_name] = lin_rest_callback
-        else:
-            raise TypeError(
-                f"Expected the callback for the rest of lineages to be `callable`, "
-                f"found `{type(lin_rest_callback).__name__!r}`."
-            )
+        for lin_name in lineages - set(callbacks[obs_name].keys()):
+            callbacks[obs_name][lin_name] = lin_rest_callback
 
     def maybe_sanity_check(callbacks: Dict[str, Dict[str, Callable]]) -> None:
         if not perform_sanity_check:
@@ -879,6 +946,8 @@ def _create_callbacks(
                     assert (
                         model._lineage == lineage
                     ), f"Callback modified the lineage from `{lineage!r}` to `{model._lineage!r}`."
+                    if isinstance(model, FailedModel):
+                        model.reraise()
                 except Exception as e:
                     raise RuntimeError(
                         f"Callback validation failed for gene `{gene!r}` and lineage `{lineage!r}`."
@@ -915,12 +984,13 @@ def _create_callbacks(
                 process_lineages(obs_name, callback.get(obs_name, obs_rest_callback))
         else:
             raise TypeError(
-                f"Expected the callback for the rest of genes to be `callable`, "
+                f"Expected the gene fallback callback to be `callable`, "
                 f"found `{type(obs_rest_callback).__name__!r}`."
             )
     else:
         raise TypeError(
-            f"Class `{type(callback).__name__!r}` must be callable` or a dictionary of callables."
+            f"Class `{type(callback).__name__!r}` must be `callable` or "
+            f"a gene and lineage specific `dict` of callables."
         )
 
     maybe_sanity_check(callbacks)

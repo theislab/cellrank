@@ -141,10 +141,11 @@ def cluster_lineage(
         kwargs["backward"] = backward
         kwargs["time_key"] = time_key
         kwargs["n_test_points"] = n_points
+        models = _create_models(model, genes, [lineage])
         all_models, models, genes, _ = _fit_bulk(
-            genes,
-            _create_models(model, genes, [lineage]),
+            models,
             _create_callbacks(adata, callback, genes, [lineage], **kwargs),
+            genes,
             lineage,
             time_range,
             return_models=True,  # always return (better error messages)
@@ -152,7 +153,7 @@ def cluster_lineage(
             parallel_kwargs={
                 "show_progress_bar": show_progress_bar,
                 "n_jobs": _get_n_cores(n_jobs, len(genes)),
-                "backend": _get_backend(model, backend),
+                "backend": _get_backend(models, backend),
             },
             **kwargs,
         )
