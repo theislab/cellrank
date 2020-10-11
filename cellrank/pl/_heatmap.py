@@ -554,7 +554,7 @@ def heatmap(
         _create_callbacks(adata, callback, genes, lineages, **kwargs),
         lineages,
         time_range,
-        return_models=return_models,
+        return_models=True,  # always return (better error messages)
         filter_all_failed=True,
         parallel_kwargs={
             "show_progress_bar": show_progress_bar,

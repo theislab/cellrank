@@ -223,18 +223,15 @@ def assert_estimators_equal(
     assert actual is not expected
     assert actual.adata is not expected.adata
     assert actual.kernel is not expected.kernel
+    assert isinstance(actual.kernel, type(expected.kernel)), (
+        type(actual.kernel),
+        type(expected.kernel),
+    )
 
     assert actual.adata.shape == expected.adata.shape
     assert actual.adata is actual.kernel.adata
     assert actual.kernel.backward == expected.kernel.backward
 
-    if copy or version_info[:2] > (3, 6):
-        assert isinstance(actual.kernel, type(expected.kernel)), (
-            type(actual.kernel),
-            type(expected.kernel),
-        )
-    else:
-        assert isinstance(actual.kernel, cr.tl.kernels.PrecomputedKernel)
     np.testing.assert_array_equal(
         actual.transition_matrix.A, expected.transition_matrix.A
     )

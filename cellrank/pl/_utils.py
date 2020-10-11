@@ -310,7 +310,10 @@ def _fit_bulk_helper(
         If any step has failed, the model will be of type :class:`cellrank.ul.models.FailedModel`.
     """
     if len(lineages) != len(time_range):
-        raise ValueError("TODO")
+        raise ValueError(
+            f"Expected `lineage` and `time_range` to be of same length, "
+            f"found `{len(lineages)}` != `{len(time_range)}`."
+        )
 
     conf_int = return_models and kwargs.pop("conf_int", False)
     res = {}
@@ -358,7 +361,6 @@ def _fit_bulk(
     filter_all_failed: bool = True,
     **kwargs,
 ):
-    """TODO."""  # noqa
     if isinstance(genes, str):
         genes = [genes]
 
@@ -407,8 +409,8 @@ def _filter_models(models, return_models: bool = False, filter_all_failed: bool 
             and np.all(np.isfinite(x.y_test))
         )
 
-    to_keep = pd.DataFrame(models).T.applymap(is_valid)
-    to_keep = to_keep[to_keep.any(axis=1)]
+    modelmat = pd.DataFrame(models).T.applymap(is_valid)
+    to_keep = modelmat[modelmat.any(axis=1)]
     to_keep = to_keep.loc[:, to_keep.any(axis=0)].T
 
     filtered_models = {
@@ -424,7 +426,13 @@ def _filter_models(models, return_models: bool = False, filter_all_failed: bool 
     }
 
     if not len(filtered_models):
-        raise RuntimeError()
+        if not return_models:
+            raise RuntimeError(
+                "Fitting of all gene/lineage combinations has failed. "
+                "Specify ``return_models=True`` for more information."
+            )
+    elif not np.all(modelmat.values):
+        logg.warning("TODO - print combinations")
 
     # lineages is the max number of lineages
     return models, filtered_models, tuple(filtered_models.keys()), tuple(to_keep.index)
@@ -545,7 +553,9 @@ def _trends_helper(
         ) * n_lineages
 
     if n_lineages > len(lineage_colors):
-        raise ValueError("TODO")
+        raise ValueError(
+            f"Expected at least `{n_lineages}` colors, found `{len(lineage_colors)}`."
+        )
 
     lineage_color_mapper = {ln: lineage_colors[i] for i, ln in enumerate(lineage_names)}
 
@@ -571,12 +581,18 @@ def _trends_helper(
     if isinstance(show_xticks_and_label, bool):
         show_xticks_and_label = [show_xticks_and_label] * len(lineage_names)
     elif len(show_xticks_and_label) != len(lineage_names):
-        raise ValueError("TODO")
+        raise ValueError(
+            f"Expected `show_xticks_label` to be the same length as `lineage_names`, "
+            f"found `{len(show_xticks_and_label)}` != `{len(lineage_names)}`."
+        )
 
     if isinstance(show_lineage, bool):
         show_lineage = [show_lineage] * len(lineage_names)
-    elif len(show_xticks_and_label) != len(lineage_names):
-        raise ValueError("TODO")
+    elif len(show_lineage) != len(lineage_names):
+        raise ValueError(
+            f"Expected `show_lineage` to be the same length as `lineage_names`, "
+            f"found `{len(show_lineage)}` != `{len(lineage_names)}`."
+        )
 
     last_ax = None
     ylabel_shown = False
@@ -650,7 +666,6 @@ def _trends_helper(
                 children[0].set_norm(norm)
 
         divider = make_axes_locatable(last_ax)
-        # TODO: is consumes a bit of the ax's space
         cax = divider.append_axes("right", size="2%", pad=0.1)
         _ = mpl.colorbar.ColorbarBase(
             cax,

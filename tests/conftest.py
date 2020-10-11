@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 import os
-import pickle
-from sys import version_info
 from typing import Tuple, Optional
 from pathlib import Path
 
@@ -148,11 +146,7 @@ def adata_gamr(adata_cflare=_create_cflare(backward=False)) -> AnnData:
 def gamr_model(
     adata_gamr: AnnData, tmp_path_factory: Path, worker_id: str
 ) -> Optional[GAMR]:
-    model = None
-
-    if version_info[:2] <= (3, 6):
-        pytest.skip("Pickling of Enums doesn't work for Python3.6.")
-    elif worker_id == "master":
+    if worker_id == "master":
         model = _create_gamr_model(adata_gamr)
     else:
         root_tmp_dir = tmp_path_factory.getbasetemp().parent
@@ -160,13 +154,10 @@ def gamr_model(
 
         with FileLock(f"{fn}.lock"):
             if fn.is_file():
-                with open(fn, "rb") as fin:
-                    model = pickle.load(fin)
+                model = GAMR.read(fn)
             else:
                 model = _create_gamr_model(adata_gamr)
-                if model is not None:
-                    with open(fn, "wb") as fout:
-                        pickle.dump(model, fout)
+                model.write(fn)
 
     if model is None:
         pytest.skip("Unable to create `cellrank.ul.models.GAMR`.")

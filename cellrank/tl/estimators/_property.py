@@ -19,6 +19,7 @@ from matplotlib import cm
 import cellrank.logging as logg
 from cellrank.ul._docs import d, _initial, _terminal
 from cellrank.tl._utils import RandomKeys, _make_cat, _partition, _complex_warning
+from cellrank.ul._utils import Pickleable
 from cellrank.tl._colors import _create_categorical_colors
 from cellrank.tl.kernels import PrecomputedKernel
 from cellrank.tl._lineage import Lineage
@@ -35,7 +36,6 @@ from cellrank.tl.kernels._base_kernel import KernelExpression
 from cellrank.tl.estimators._constants import META_KEY, A, F, P
 
 
-# has to be in the same module
 def is_abstract(classname: str) -> bool:  # TODO: determine the necessity of this
     """
     Check whether class with a given name inside this module is abstract.
@@ -925,7 +925,7 @@ class Partitioner(KernelHolder, ABC):
         return self._trans_classes
 
 
-class LineageEstimatorMixin(TerminalStates, AbsProbs, LinDrivers, ABC):
+class LineageEstimatorMixin(TerminalStates, AbsProbs, LinDrivers, Pickleable, ABC):
     """Mixin containing terminal states and absorption probabilities."""
 
     pass

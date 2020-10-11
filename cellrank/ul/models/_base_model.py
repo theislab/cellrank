@@ -21,7 +21,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from cellrank.tl import Lineage
 from cellrank.ul._docs import d
 from cellrank.tl._utils import save_fig
-from cellrank.ul._utils import _minmax, valuedispatch, _densify_squeeze
+from cellrank.ul._utils import Pickleable, _minmax, valuedispatch, _densify_squeeze
 from cellrank.tl._constants import ModeEnum, AbsProbKey
 
 AnnData = TypeVar("AnnData")
@@ -146,7 +146,7 @@ class BaseModelMeta(ABCMeta):
 @d.get_sectionsf("base_model_prepare", sections=["Parameters", "Returns"])
 @d.get_sectionsf("base_model", sections=["Parameters"])
 @d.dedent
-class BaseModel(ABC, metaclass=BaseModelMeta):
+class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
     """
     Base class for all model classes.
 

@@ -207,12 +207,12 @@ def gene_trends(
         **kwargs,
     )
 
+    plot_kwargs = dict(plot_kwargs)
     if transpose:
         all_models = pd.DataFrame(all_models).T.to_dict()
         models = pd.DataFrame(models).T.to_dict()
         genes, lineages = lineages, genes
         hide_cells = same_plot or hide_cells
-        plot_kwargs = dict(plot_kwargs)
     else:
         # information overload otherwise
         plot_kwargs["lineage_probability"] = False
