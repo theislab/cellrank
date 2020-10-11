@@ -109,8 +109,14 @@ def create_kernels(
     return vk, ck
 
 
+# TODO: make it a fixture
 def create_model(adata: AnnData) -> cr.ul.models.SKLearnModel:
     return cr.ul.models.SKLearnModel(adata, SVR(kernel="rbf"))
+
+
+# TODO: make it a fixture
+def create_failed_model(adata: AnnData) -> cr.ul.models.FailedModel:
+    return cr.ul.models.FailedModel(create_model(adata), exc="foobar")
 
 
 def resize_images_to_same_sizes(

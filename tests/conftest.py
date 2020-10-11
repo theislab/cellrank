@@ -162,7 +162,8 @@ def gamr_model(
                 model = GAMR.read(fn)
             else:
                 model = _create_gamr_model(adata_gamr)
-                model.write(fn)
+                if model is not None:
+                    model.write(fn)
 
     if model is None:
         pytest.skip("Unable to create `cellrank.ul.models.GAMR`.")

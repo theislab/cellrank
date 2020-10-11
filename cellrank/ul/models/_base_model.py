@@ -1095,7 +1095,7 @@ class FailedModel(BaseModel):
     ):
         if not isinstance(model, BaseModel):
             raise TypeError(
-                f"Expected `model` to be of type `cellrank.ul.models.BaseMode`, found `{type(model).__name__!r}`."
+                f"Expected `model` to be of type `BaseModel`, found `{type(model).__name__!r}`."
             )
         if exc is not None:
             if isinstance(exc, str):
@@ -1158,7 +1158,7 @@ class FailedModel(BaseModel):
         pass
 
     def reraise(self) -> None:
-        """Raise a :class:`RuntimeError` with gene and lineage information."""
+        """Raise a the original exception with additional model information."""
         # retain the exception type and also the original exception
         raise type(self._exc)(f"Fatal model failure `{self}`.") from self._exc
 
