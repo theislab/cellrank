@@ -21,7 +21,7 @@ from cellrank.ul.models._utils import (
     _extract_data,
     _get_knotlocs,
 )
-from cellrank.ul.models._base_model import FailedModel
+from cellrank.ul.models._base_model import FailedModel, UnknownModelError
 
 
 class TestModel:
@@ -361,9 +361,44 @@ class TestFailedModel:
         assert fm._gene == gamr_model._gene
         assert fm._lineage == gamr_model._lineage
 
-    def test_do_nothing(self, gamr_model: GAMR):
-        # TODO
-        pass
+    def test_do_nothing_no_bulk_fit(self, gamr_model: GAMR):
+        fm = FailedModel(gamr_model)
+        expected_dict = fm.__dict__.copy()
+
+        for fn in [
+            "prepare",
+            "fit",
+            "predict",
+            "confidence_interval",
+            "default_confidence_interval",
+            "plot",
+        ]:
+            with pytest.raises(UnknownModelError):
+                getattr(fm, fn)()
+
+    def test_do_nothing_bulk_fit(self, gamr_model: GAMR):
+        gamr_model._is_bulk = True
+        fm = FailedModel(gamr_model)
+        expected_dict = fm.__dict__.copy()
+
+        for fn in [
+            "prepare",
+            "fit",
+            "predict",
+            "confidence_interval",
+            "default_confidence_interval",
+            "plot",
+        ]:
+            getattr(fm, fn)()
+
+        assert expected_dict == fm.__dict__
+
+    def test_copy(self, gamr_model):
+        fm1 = FailedModel(gamr_model)
+        fm2 = fm1.copy()
+
+        assert fm1.model is not fm2.model
+        assert fm1.adata is fm2.adata
 
     def test_exception_not_base_exception(self, gamr_model: GAMR):
         with pytest.raises(TypeError):

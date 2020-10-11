@@ -2,7 +2,6 @@
 """Base class for all models."""
 import re
 from abc import ABC, ABCMeta, abstractmethod
-from ast import literal_eval
 from copy import copy as _copy
 from copy import deepcopy
 from typing import Any, Tuple, Union, TypeVar, Callable, Optional
@@ -1047,7 +1046,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         return repr(self)
 
     def __repr__(self) -> str:
-        return "<{}[gene={!r}, lineage={!r}, {}]>".format(
+        return "<{}[gene={!r}, lineage={!r}, model={}]>".format(
             self.__class__.__name__,
             self._gene,
             self._lineage,
@@ -1112,9 +1111,10 @@ class FailedModel(BaseModel):
 
         self._gene = model._gene
         self._lineage = model._lineage
-        self._exc = exc
-        self._prepared = True
+        self._prepared = model._prepared
         self._is_bulk = model._is_bulk
+
+        self._exc = exc
 
     def prepare(
         self,
@@ -1157,15 +1157,10 @@ class FailedModel(BaseModel):
         """Do nothing."""
         pass
 
-    @property
-    def reason(self) -> str:
-        """Get the reason why the model has failed."""
-        return literal_eval(str(self._exc))
-
     def reraise(self) -> None:
         """Raise a :class:`RuntimeError` with gene and lineage information."""
         # retain the exception type and also the original exception
-        raise type(self._exc)(f"Unable to run the model `{self}`.") from self._exc
+        raise type(self._exc)(f"Fatal model failure `{self}`.") from self._exc
 
     def _return_min_max(self, show_conf_int: bool):
         return np.inf, -np.inf
@@ -1173,10 +1168,7 @@ class FailedModel(BaseModel):
     @d.dedent
     def copy(self) -> "FailedModel":
         """%(copy)s"""  # noqa
-        res = FailedModel(self.model, exc=self._exc)
-        res._is_bulk = self._is_bulk
-
-        return res
+        return FailedModel(self.model.copy(), exc=self._exc)
 
     def __bool__(self):
         return False
