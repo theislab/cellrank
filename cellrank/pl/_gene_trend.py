@@ -6,6 +6,7 @@ from typing import List, Tuple, Union, Mapping, TypeVar, Optional, Sequence
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 
 import matplotlib
 import matplotlib.cm as cm
@@ -207,6 +208,9 @@ def gene_trends(
         },
         **kwargs,
     )
+    tmp = pd.DataFrame(models).T.astype(bool)
+    start_rows = np.argmax(tmp.values, axis=0)
+    end_rows = tmp.shape[0] - np.argmax(tmp[::-1].values, axis=0) - 1
 
     if same_plot:
         gene_as_title = True if gene_as_title is None else gene_as_title
@@ -240,7 +244,7 @@ def gene_trends(
         constrained_layout=True,
         dpi=dpi,
     )
-    axes = np.reshape(axes, (-1, ncols))
+    axes = np.reshape(axes, (nrows, ncols))
 
     logg.info("Plotting trends")
     cnt = 0
@@ -276,10 +280,10 @@ def gene_trends(
                 fig=fig,
                 axes=axes[row, col] if same_plot else axes[cnt],
                 show_ylabel=col == 0,
-                show_lineage=cnt == 0 or same_plot,
+                show_lineage=same_plot or (cnt == start_rows),
                 show_xticks_and_label=((row + 1) * ncols + col >= len(genes))
                 if same_plot
-                else (cnt == len(axes) - 1),
+                else (cnt == end_rows),
                 **plot_kwargs,
             )
             cnt += 1
@@ -288,7 +292,7 @@ def gene_trends(
         for ax in np.ravel(axes)[cnt:]:
             ax.remove()
 
-    fig.suptitle(suptitle)
+    fig.suptitle(suptitle, y=1.05)
 
     if save is not None:
         save_fig(fig, save)

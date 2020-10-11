@@ -439,8 +439,8 @@ def _trends_helper(
     same_plot: bool = False,
     sharey: Union[str, bool] = False,
     show_ylabel: bool = True,
-    show_lineage: bool = True,
-    show_xticks_and_label: bool = True,
+    show_lineage: Union[bool, np.ndarray] = True,
+    show_xticks_and_label: Union[bool, np.ndarray] = True,
     lineage_cmap=None,
     abs_prob_cmap=cm.viridis,
     gene_as_title: bool = False,
@@ -548,11 +548,21 @@ def _trends_helper(
     else:
         kwargs["loc"] = None
 
+    if isinstance(show_xticks_and_label, bool):
+        show_xticks_and_label = [show_xticks_and_label] * len(lineage_names)
+    elif len(show_xticks_and_label) != len(lineage_names):
+        raise ValueError("TODO")
+
+    if isinstance(show_lineage, bool):
+        show_lineage = [show_lineage] * len(lineage_names)
+    elif len(show_xticks_and_label) != len(lineage_names):
+        raise ValueError("TODO")
+
     last_ax = None
     ylabel_shown = False
     cells_shown = False
 
-    for name, ax, perc in zip(lineage_names, axes, percs):
+    for i, (name, ax, perc) in enumerate(zip(lineage_names, axes, percs)):
         model = models[gene][name]
         if isinstance(model, FailedModel) and not same_plot:
             ax.remove()
@@ -571,7 +581,9 @@ def _trends_helper(
                 ylabel = "expression" if not ylabel_shown else None
             else:
                 title = (
-                    (name if name is not None else "no lineage") if show_lineage else ""
+                    (name if name is not None else "no lineage")
+                    if show_lineage[i]
+                    else ""
                 )
                 ylabel = gene if not ylabel_shown else None
 
@@ -589,10 +601,10 @@ def _trends_helper(
             ylabel=ylabel,
             **kwargs,
         )
-        if sharey in ("row", "all", True):
+        if sharey in ("row", "all", True) and not ylabel_shown:
             plt.setp(ax.get_yticklabels(), visible=True)
 
-        if show_xticks_and_label:
+        if show_xticks_and_label[i]:
             plt.setp(ax.get_xticklabels(), visible=True)
         else:
             ax.set_xlabel(None)
@@ -616,6 +628,7 @@ def _trends_helper(
                 children[0].set_norm(norm)
 
         divider = make_axes_locatable(last_ax)
+        # TODO: is consumes a bit of the ax's space
         cax = divider.append_axes("right", size="2%", pad=0.1)
         _ = mpl.colorbar.ColorbarBase(
             cax,
