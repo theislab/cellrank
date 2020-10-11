@@ -185,6 +185,7 @@ def gene_trends(
         _create_callbacks(adata, callback, genes, lineages, **kwargs),
         lineages,
         time_range,
+        return_models=True,
         filter_all_failed=False,
         parallel_kwargs={
             "show_progress_bar": show_progress_bar,

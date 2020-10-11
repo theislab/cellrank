@@ -372,7 +372,7 @@ class TestFailedModel:
     def test_reraise(self, gamr_model: GAMR):
         fm = FailedModel(gamr_model, exc=ValueError("foobar"))
 
-        with pytest.raises(RuntimeError):
+        with pytest.raises(ValueError):
             fm.reraise()
 
         assert isinstance(fm._exc, ValueError)
@@ -386,9 +386,7 @@ class TestFailedModel:
         assert isinstance(fm._exc, RuntimeError)
 
     def test_str_repr(self, gamr_model: GAMR):
-        expected = (
-            f"FailedModel[gene={gamr_model._gene!r}, lineage={gamr_model._lineage!r}]"
-        )
+        expected = f"FailedModel[origin={gamr_model}]"
         fm = FailedModel(gamr_model)
 
         assert str(fm) == expected

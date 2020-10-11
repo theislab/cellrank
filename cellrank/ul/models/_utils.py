@@ -23,11 +23,6 @@ class NormMode(ModeEnum):  # noqa
     NONE = "none"
 
 
-class ModelExceptionPolicy(ModeEnum):  # noqa
-    FAIL = "fail"
-    IGNORE = "ignore"
-
-
 @d.dedent
 def _extract_data(
     data: AnnData, layer: Optional[str] = None, use_raw: bool = True
@@ -552,12 +547,3 @@ def _get_offset(
         adata.obs[_OFFSET_KEY] = offset
 
     return offset
-
-
-def _should_raise():
-    from cellrank import settings
-
-    return (
-        hasattr("settings", "model_policy")
-        and ModelExceptionPolicy(settings.model_policy) == ModelExceptionPolicy.FAIL
-    )

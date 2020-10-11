@@ -144,6 +144,7 @@ def cluster_lineage(
             _create_callbacks(adata, callback, genes, [lineage], **kwargs),
             lineage,
             time_range,
+            return_models=False,
             filter_all_failed=True,
             parallel_kwargs={
                 "show_progress_bar": show_progress_bar,

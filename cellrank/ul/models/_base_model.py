@@ -24,9 +24,6 @@ from cellrank.tl._utils import save_fig
 from cellrank.ul._utils import _minmax, valuedispatch, _densify_squeeze
 from cellrank.tl._constants import ModeEnum, AbsProbKey
 
-# TODO
-# from cellrank.ul.models._utils import _should_raise
-
 AnnData = TypeVar("AnnData")
 _dup_spaces = re.compile(r" +")  # used on repr for underlying model's repr
 
@@ -45,65 +42,68 @@ class FailedReturnType(ModeEnum):  # noqa
 
 
 def _handle_exception(return_type: FailedReturnType, func: Callable) -> Callable:
-    @wrapt.decorator
-    def handle_array_output(wrapped, instance: "BaseModel", args, kwargs) -> np.ndarray:
-        try:
-            if isinstance(instance, FailedModel):
-                raise instance._exc from None
-            return wrapped(*args, **kwargs)
-        except Exception as e:
-            raise e from None
-            # TODO
-            # if not instance._is_bulk or _should_raise():
-            #    raise e from None
-            n_points = kwargs.get("x_test", None) or instance.x_test or 200
-            return np.full((n_points, array_shape), np.nan, dtype=instance._dtype)
+    def handle(*, exception_handler: Callable):
+        @wrapt.decorator
+        def wrapper(wrapped, instance, args, kwargs):
+            try:
+                if isinstance(instance, FailedModel):
+                    instance.reraise()
+                return wrapped(*args, **kwargs)
+            except Exception as e:
+                return exception_handler(instance, e, *args, **kwargs)
 
-    @wrapt.decorator
-    def handle_model_output(
-        wrapped, instance: "BaseModel", args, kwargs
-    ) -> Union["BaseModel", "FailedModel"]:
-        try:
-            if isinstance(instance, FailedModel):
-                raise instance._exc from None
-            return wrapped(*args, **kwargs)
-        except Exception as e:
-            raise e from None
-            # TODO
-            # if not instance._is_bulk or _should_raise():
-            #    raise e from None
-            return FailedModel(instance, exc=None)
+        return wrapper
 
-    @wrapt.decorator
-    def handle_no_output(wrapped, instance: "BaseModel", args, kwargs) -> None:
-        try:
-            return wrapped(*args, **kwargs)
-        except Exception as e:
-            raise e from None
-            # TODO
-            pass
-            # if not instance._is_bulk:
-            #    raise e from None
+    def array_output(
+        instance: "BaseModel", exc: BaseException, *_args, **kwargs
+    ) -> np.ndarray:
+        if not instance._is_bulk:
+            raise exc from None
+
+        if kwargs.get("x_test", None) is not None:
+            n_obs = kwargs["x_test"].shape[0]
+        elif instance.x_test is not None:
+            n_obs = instance.x_test.shape[0]
+        else:
+            n_obs = 200
+
+        return np.full((n_obs, array_shape), np.nan, dtype=instance._dtype)
+
+    def model_output(
+        instance: "BaseModel", exc: BaseException, *_args, **_kwargs
+    ) -> "FailedModel":
+        if not isinstance(instance, FailedModel):
+            instance = FailedModel(instance, exc=exc)
+        if not instance._is_bulk:
+            instance.reraise()
+
+        return instance
+
+    def no_output(instance: "BaseModel", exc: BaseException, *_args, **_kwargs) -> None:
+        if not instance._is_bulk:
+            raise exc from None
+        return None
 
     @valuedispatch
     def wrapper(mode: FailedReturnType, *_args, **_kwargs):
         raise NotImplementedError(mode)
 
+    @wrapper.register(FailedReturnType.PREPARE)
+    @wrapper.register(FailedReturnType.FIT)
+    def _(func: Callable) -> Callable:
+        return handle(exception_handler=model_output)(func)
+
     @wrapper.register(FailedReturnType.PREDICT)
     @wrapper.register(FailedReturnType.CONFIDENCE_INTERVAL)
     @wrapper.register(FailedReturnType.DEFAULT_CONFIDENCE_INTERVAL)
     def _(func: Callable) -> Callable:
-        return handle_array_output(func)
-
-    @wrapper.register(FailedReturnType.PREPARE)
-    @wrapper.register(FailedReturnType.FIT)
-    def _(func: Callable) -> Callable:
-        return handle_model_output(func)
+        return handle(exception_handler=array_output)(func)
 
     @wrapper.register(FailedReturnType.PLOT)
     def _(func: Callable):
-        return handle_no_output(func)
+        return handle(exception_handler=no_output)(func)
 
+    return_type = FailedReturnType(return_type)
     array_shape = 1 + (
         return_type
         in (
@@ -111,6 +111,7 @@ def _handle_exception(return_type: FailedReturnType, func: Callable) -> Callable
             FailedReturnType.DEFAULT_CONFIDENCE_INTERVAL,
         )
     )
+
     return wrapper(return_type, func)
 
 
@@ -1029,11 +1030,13 @@ class BaseModel(ABC, metaclass=BaseModelMeta):
         return repr(self)
 
     def __repr__(self) -> str:
-        return "{}[{}]".format(
+        return "{}[{}, gene={!r}, lineage={!r}]".format(
             self.__class__.__name__,
             None
             if self.model is None
             else _dup_spaces.sub(" ", str(self.model).replace("\n", " ")).strip(),
+            self._gene,
+            self._lineage,
         )
 
     def _create_scaler(self, show_lineage_probability: bool, show_conf_int: bool):
@@ -1059,7 +1062,7 @@ class BaseModel(ABC, metaclass=BaseModelMeta):
 
 class FailedModel(BaseModel):
     """
-    Dummy class representing a failure..
+    Model representing a failure.
 
     Parameters
     ----------
@@ -1071,7 +1074,7 @@ class FailedModel(BaseModel):
 
     # which I was in a functional programming language like Haskell
     # essentially BaseModel would be a Maybe monad
-    def __init__(self, model: BaseModel, exc: Optional[Exception] = None):
+    def __init__(self, model: BaseModel, exc: Optional[BaseException] = None):
         if not isinstance(model, BaseModel):
             raise TypeError(
                 f"Expected `model` to be of type `cellrank.ul.models.BaseMode`, found `{type(model).__name__!r}`."
@@ -1084,7 +1087,7 @@ class FailedModel(BaseModel):
                     f"Expected `exc` to be either a string or a `BaseException`, found `{type(exc).__name__!r}`."
                 )
         else:
-            exc = UnknownModelError(exc)
+            exc = UnknownModelError()
 
         super().__init__(model.adata, model)
 
@@ -1092,6 +1095,7 @@ class FailedModel(BaseModel):
         self._lineage = model._lineage
         self._exc = exc
         self._prepared = True
+        self._is_bulk = model._is_bulk
 
     def prepare(
         self,
@@ -1141,7 +1145,8 @@ class FailedModel(BaseModel):
 
     def reraise(self) -> None:
         """Raise a :class:`RuntimeError` with gene and lineage information."""
-        raise RuntimeError(f"Unable to run the model `{self}`.") from self._exc
+        # retain the exception type and also the original exception
+        raise type(self._exc)(f"Unable to run the model `{self}`.") from self._exc
 
     def _return_min_max(self, show_conf_int: bool):
         return np.inf, -np.inf
@@ -1161,6 +1166,4 @@ class FailedModel(BaseModel):
         return repr(self)
 
     def __repr__(self) -> str:
-        return (
-            f"{self.__class__.__name__}[gene={self._gene!r}, lineage={self._lineage!r}]"
-        )
+        return f"{self.__class__.__name__}[origin={self.model!r}]"

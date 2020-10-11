@@ -14,7 +14,7 @@ from typing import (
     Sequence,
 )
 from pathlib import Path
-from collections import defaultdict
+from collections import namedtuple, defaultdict
 
 import numpy as np
 import pandas as pd
@@ -34,6 +34,8 @@ from cellrank.tl._constants import _DEFAULT_BACKEND, _colors
 from cellrank.ul._parallelize import parallelize
 
 AnnData = TypeVar("AnnData")
+Queue = TypeVar("Queue")
+Graph = TypeVar("Graph")
 
 
 _ERROR_INCOMPLETE_SPEC = (
@@ -44,10 +46,12 @@ _time_range_type = Optional[Union[float, Tuple[Optional[float], Optional[float]]
 _model_type = Union[BaseModel, Mapping[str, Mapping[str, BaseModel]]]
 _callback_type = Optional[Union[Callable, Mapping[str, Mapping[str, Callable]]]]
 
+BulkRes = namedtuple("BulkRes", ["x_test", "y_test"])
+
 
 def _curved_edges(
-    G,
-    pos,
+    G: Graph,
+    pos: Mapping,
     radius_fraction: float,
     dist_ratio: float = 0.2,
     bezier_precision: int = 20,
@@ -271,7 +275,8 @@ def _fit_bulk_helper(
     callbacks: _callback_type,
     lineages: Sequence[Optional[str]],
     time_range: Sequence[Union[float, Tuple[float, float]]],
-    queue,
+    return_models: bool = False,
+    queue: Optional[Queue] = None,
     **kwargs,
 ) -> Dict[str, Dict[str, BaseModel]]:
     """
@@ -289,6 +294,8 @@ def _fit_bulk_helper(
         Lineages for which to fit the models.
     time_range
         Minimum and maximum pseudotimes.
+    return_models
+        Whether to return the full models or just tuple ``(x_test,  y_test)``.
     queue
         Signalling queue in the parent process/thread used to update the progress bar.
     kwargs
@@ -300,13 +307,11 @@ def _fit_bulk_helper(
         form of `{'gene1': {'lineage1': model11, ...}, ...}`.
         If any step has failed, the model will be of type :class:`cellrank.ul.models.FailedModel`.
     """
-    assert len(lineages) == len(time_range)
+    if len(lineages) != len(time_range):
+        raise ValueError("TODO")
 
-    conf_int = kwargs.pop("conf_int", False)
+    conf_int = return_models and kwargs.pop("conf_int", False)
     res = {}
-
-    # TODO: optionally only return fitted values
-    # heatmap hangs (only when testing) it we return models
 
     for gene in genes:
         res[gene] = {}
@@ -315,7 +320,8 @@ def _fit_bulk_helper(
             model = models[gene][ln]
             model._is_bulk = True
 
-            model = cb(model, gene=gene, lineage=ln, time_range=tr, **kwargs).fit()
+            model = cb(model, gene=gene, lineage=ln, time_range=tr, **kwargs)
+            model = model.fit()
             # GAMR is a bit faster if we don't need the conf int
             # if it's needed, `.predict` will calculate it and `confidence_interval` will do nothing
             if not conf_int:
@@ -326,7 +332,9 @@ def _fit_bulk_helper(
                 model.predict()
                 model.confidence_interval()
 
-            res[gene][ln] = model
+            res[gene][ln] = (
+                model if return_models else BulkRes(model.x_test, model.y_test)
+            )
 
         if queue is not None:
             queue.put(1)
@@ -344,6 +352,7 @@ def _fit_bulk(
     lineages,
     time_range,
     parallel_kwargs: dict,
+    return_models: bool = False,
     filter_all_failed: bool = True,
     **kwargs,
 ):
@@ -370,15 +379,33 @@ def _fit_bulk(
         unit="gene" if kwargs.get("data_key", "gene") != "obs" else "obs",
         n_jobs=n_jobs,
         extractor=lambda modelss: {k: v for m in modelss for k, v in m.items()},
-    )(models, callbacks, lineages, time_range, **kwargs)
+    )(
+        models=models,
+        callbacks=callbacks,
+        lineages=lineages,
+        time_range=time_range,
+        return_models=return_models,
+        **kwargs,
+    )
     logg.info("    Finish", time=start)
 
-    return _filter_models(models, filter_all_failed=filter_all_failed)
+    return _filter_models(
+        models, return_models=return_models, filter_all_failed=filter_all_failed
+    )
 
 
-def _filter_models(models, filter_all_failed: bool = True):
-    # TODO: warn
-    to_keep = pd.DataFrame(models).T.astype(bool)
+def _filter_models(models, return_models: bool = False, filter_all_failed: bool = True):
+    def is_valid(x: Union[BaseModel, BulkRes]) -> bool:
+        if return_models:
+            return bool(x)
+
+        return (
+            x.x_test is not None
+            and x.y_test is not None
+            and np.all(np.isfinite(x.y_test))
+        )
+
+    to_keep = pd.DataFrame(models).T.applymap(is_valid)
     to_keep = to_keep[to_keep.any(axis=1)]
     to_keep = to_keep.loc[:, to_keep.any(axis=0)].T
 
@@ -386,7 +413,9 @@ def _filter_models(models, filter_all_failed: bool = True):
         gene: {
             ln: models[gene][ln]
             for ln in (
-                ln for ln in v.keys() if not filter_all_failed or models[gene][ln]
+                ln
+                for ln in v.keys()
+                if (is_valid(models[gene][ln]) if filter_all_failed else True)
             )
         }
         for gene, v in to_keep.to_dict().items()
@@ -394,11 +423,6 @@ def _filter_models(models, filter_all_failed: bool = True):
 
     if not len(models):
         raise RuntimeError()
-
-    for gene, vs in models.items():
-        for lineage, m in vs.items():
-            assert m._gene == gene
-            assert m._lineage == lineage
 
     # lineages is the max number of lineages
     return models, tuple(models.keys()), tuple(to_keep.index)
