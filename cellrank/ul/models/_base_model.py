@@ -709,7 +709,8 @@ class BaseModel(ABC, metaclass=BaseModelMeta):
         ylabel: str = "expression",
         conf_int: bool = True,
         lineage_probability: bool = False,
-        lineage_probability_conf_int: bool = False,
+        lineage_probability_conf_int: Union[bool, float] = False,
+        lineage_probability_color: Optional[str] = None,
         dpi: int = None,
         fig: mpl.figure.Figure = None,
         ax: mpl.axes.Axes = None,
@@ -760,8 +761,12 @@ class BaseModel(ABC, metaclass=BaseModelMeta):
             Whether to show smoothed lineage probability as a dashed line.
             Note that this will require 1 additional model fit.
         lineage_probability_conf_int
-            Whether to show smoothed lineage probability confidence interval. Only used when
-            ``show_lineage_probability=True``.
+            Whether to compute and show smoothed lineage probability confidence interval.
+            If :paramref:`self` is :class:`cellrank.ul.models.GAMR`, it can also specify the confidence level,
+            the default is `0.95`. Only used when ``show_lineage_probability=True``.
+        lineage_probability_color
+            Color to use when plotting the smoothed ``lineage_probability``.
+            If `None`, it's the same as ``lineage_color``. Only used when ``show_lineage_probability=True``.
         dpi
             Dots per inch.
         fig
@@ -791,6 +796,11 @@ class BaseModel(ABC, metaclass=BaseModelMeta):
             fig.set_dpi(dpi)
 
         conf_int = conf_int and self.conf_int is not None
+        lineage_probability_color = (
+            lineage_color
+            if lineage_probability_color is None
+            else lineage_probability_color
+        )
 
         scaler = kwargs.pop(
             "scaler",
@@ -859,7 +869,11 @@ class BaseModel(ABC, metaclass=BaseModelMeta):
             if not lineage_probability_conf_int:
                 y = model.predict()
             elif _is_any_gam_mgcv(model):
-                y = model.predict(level=0.95)
+                y = model.predict(
+                    level=lineage_probability_conf_int
+                    if isinstance(lineage_probability_conf_int, float)
+                    else 0.95
+                )
             else:
                 y = model.predict()
                 model.confidence_interval()
@@ -869,14 +883,14 @@ class BaseModel(ABC, metaclass=BaseModelMeta):
                     model.conf_int[:, 0],
                     model.conf_int[:, 1],
                     alpha=lineage_alpha,
-                    color=lineage_color,
+                    color=lineage_probability_color,
                     linestyle="--",
                 )
 
             handle = ax.plot(
                 model.x_test,
                 y,
-                color=lineage_color,
+                color=lineage_probability_color,
                 lw=lw,
                 linestyle="--",
                 zorder=-1,

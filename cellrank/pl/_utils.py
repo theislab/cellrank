@@ -30,7 +30,8 @@ from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.tl._utils import save_fig, _unique_order_preserving
 from cellrank.ul.models import GAMR, BaseModel, FailedModel, SKLearnModel
-from cellrank.tl._constants import _DEFAULT_BACKEND, _colors
+from cellrank.tl._colors import _create_categorical_colors
+from cellrank.tl._constants import _DEFAULT_BACKEND
 from cellrank.ul._parallelize import parallelize
 
 AnnData = TypeVar("AnnData")
@@ -431,17 +432,17 @@ def _filter_models(models, return_models: bool = False, filter_all_failed: bool 
 
 @d.dedent
 def _trends_helper(
-    adata: AnnData,
     models: Dict[str, Dict[str, Any]],
     gene: str,
-    ln_key: str,
+    transpose: bool = False,
     lineage_names: Optional[Sequence[str]] = None,
     same_plot: bool = False,
     sharey: Union[str, bool] = False,
     show_ylabel: bool = True,
     show_lineage: Union[bool, np.ndarray] = True,
     show_xticks_and_label: Union[bool, np.ndarray] = True,
-    lineage_cmap=None,
+    lineage_cmap: Optional[Union[mpl.colors.ListedColormap, Sequence]] = None,
+    lineage_probability_color: Optional[str] = None,
     abs_prob_cmap=cm.viridis,
     gene_as_title: bool = False,
     legend_loc: Optional[str] = "best",
@@ -473,7 +474,10 @@ def _trends_helper(
     show_xticks_and_label
         Whether to show x-ticks and x-label. Usually, only the last row will show this.
     lineage_cmap
-        Colormap to use when coloring the the lineage. If `None`, use colors from ``adata.uns``.
+        Colormap to use when coloring the the lineage. When ``transpose``, this corresponds to the color of genes.
+    lineage_probability_color
+        Actual color of 1 ``lineage``. Only used when ``same_plot=True`` and ``transpose=True`` and
+        ``lineage_probability=True``.
     abs_prob_cmap:
         Colormap to use when coloring in the absorption probabilities, if they are being plotted.
     gene_as_title
@@ -517,23 +521,39 @@ def _trends_helper(
     show_prob = kwargs.pop("lineage_probability", False)
 
     if same_plot:
-        lineage_colors = (
-            lineage_cmap.colors
-            if lineage_cmap is not None and hasattr(lineage_cmap, "colors")
-            else adata.uns.get(f"{_colors(ln_key)}", cm.Set1.colors)
-        )
+        if not transpose:
+            lineage_colors = (
+                lineage_cmap.colors
+                if lineage_cmap is not None and hasattr(lineage_cmap, "colors")
+                else lineage_cmap
+            )
+        else:
+            # this should be fine w.r.t. to the missing genes, since they are in the same order AND
+            # we're also passing the failed models (this is important)
+            # these are actually gene colors, bu w/e
+            if lineage_cmap is not None:
+                lineage_colors = (
+                    lineage_cmap.colors
+                    if hasattr(lineage_cmap, "colors")
+                    else [c for _, c in zip(lineage_names, lineage_cmap)]
+                )
+            else:
+                lineage_colors = _create_categorical_colors(n_lineages)
     else:
         lineage_colors = (
             ("black" if not mcolors.is_color_like(lineage_cmap) else lineage_cmap),
-        ) * len(lineage_names)
+        ) * n_lineages
+
+    if n_lineages > len(lineage_colors):
+        raise ValueError("TODO")
+
     lineage_color_mapper = {ln: lineage_colors[i] for i, ln in enumerate(lineage_names)}
 
     successful_models = {
         ln: models[gene][ln] for ln in lineage_names if models[gene][ln]
     }
 
-    # remove all failed models
-    if show_prob and not same_plot:
+    if show_prob and same_plot:
         minns, maxxs = zip(
             *[
                 models[gene][n]._return_min_max(
@@ -564,8 +584,9 @@ def _trends_helper(
 
     for i, (name, ax, perc) in enumerate(zip(lineage_names, axes, percs)):
         model = models[gene][name]
-        if isinstance(model, FailedModel) and not same_plot:
-            ax.remove()
+        if isinstance(model, FailedModel):
+            if not same_plot:
+                ax.remove()
             continue
 
         if same_plot:
@@ -593,9 +614,10 @@ def _trends_helper(
             perc=perc,
             cbar=False,
             title=title,
-            hide_cells=hide_cells or (same_plot and not cells_shown),
+            hide_cells=cells_shown if not hide_cells else True,
             same_plot=same_plot,
             lineage_color=lineage_color_mapper[name],
+            lineage_probability_color=lineage_probability_color,
             abs_prob_cmap=abs_prob_cmap,
             lineage_probability=show_prob,
             ylabel=ylabel,
@@ -643,7 +665,7 @@ def _trends_helper(
             mpl.lines.Line2D([], [], color=lineage_color_mapper[ln], label=ln)
             for ln in successful_models.keys()
         ]
-        last_ax.legend(handles=handles, loc=legend_loc, title="lineage")
+        last_ax.legend(handles=handles, loc=legend_loc)
 
 
 def _position_legend(ax: mpl.axes.Axes, legend_loc: str, **kwargs) -> mpl.legend.Legend:

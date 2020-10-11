@@ -41,6 +41,7 @@ def gene_trends(
     backward: bool = False,
     data_key: str = "X",
     time_key: str = "latent_time",
+    transpose: bool = False,
     time_range: Optional[Union[_time_range_type, List[_time_range_type]]] = None,
     callback: _callback_type = None,
     conf_int: Union[bool, float] = True,
@@ -92,9 +93,12 @@ def gene_trends(
     time_key
         Key in ``adata.obs`` where the pseudotime is stored.
     %(time_ranges)s
+    transpose
+        If ``same_plot=True``, group the trends by ``lineages`` instead of ``genes``. This enforces ``hide_cells=True``.
+        If ``same_plot=False``, show ``lineages`` in rows and ``genes`` in columns.
     %(model_callback)s
     conf_int
-        Whether to compute and show confidence intervals. If the :paramref:`model` is :class:`cellrank.ul.models.GAMR`,
+        Whether to compute and show confidence interval. If the :paramref:`model` is :class:`cellrank.ul.models.GAMR`,
         it can also specify the confidence level, the default is `0.95`.
     same_plot
         Whether to plot all lineages for each gene in the same plot.
@@ -104,10 +108,10 @@ def gene_trends(
         Percentile for colors. Valid values are in interval `[0, 100]`.
         This can improve visualization. Can be specified individually for each lineage.
     lineage_cmap
-        Colormap to use when coloring in the lineages. If `None` and ``same_plot``, use the corresponding colors
-        in ``adata.uns``, otherwise use `'black'`.
+        Categorical colormap to use when coloring in the lineages. If `None` and ``same_plot``,
+        use the corresponding colors in ``adata.uns``, otherwise use `'black'`.
     abs_prob_cmap
-        Colormap to use when visualizing the absorption probabilities for each lineage.
+        Continuous colormap to use when visualizing the absorption probabilities for each lineage.
         Only used when ``same_plot=False``.
     cell_color
         Color of the cells when not visualizing absorption probabilities. Only used when ``same_plot=True``.
@@ -132,7 +136,7 @@ def gene_trends(
     legend_loc
         Location of the legend displaying lineages. Only used when `same_plot=True`.
     ncols
-        Number of columns of the plot when pl multiple genes. Only used when ``same_plot=True``.
+        Number of columns of the plot when plotting multiple genes. Only used when ``same_plot=True``.
     suptitle
         Suptitle of the figure.
     %(return_models)s
@@ -147,16 +151,6 @@ def gene_trends(
     -------
     %(plots_or_returns_models)s
     """
-
-    def show_y_label(row: int, col: int, cnt: int):
-        if same_plot:
-            return True
-
-    def show_x_ticks():
-        pass
-
-    def show_lineage():
-        pass
 
     if isinstance(genes, str):
         genes = [genes]
@@ -181,6 +175,10 @@ def gene_trends(
         cbar = False
         logg.debug("All lineages are `None`, setting the weights to `1`")
     lineages = _unique_order_preserving(lineages)
+
+    tmp = adata.obsm[ln_key][lineages].colors
+    if lineage_cmap is None and not transpose:
+        lineage_cmap = tmp
 
     if isinstance(time_range, (tuple, float, int, type(None))):
         time_range = [time_range] * len(lineages)
@@ -208,6 +206,18 @@ def gene_trends(
         },
         **kwargs,
     )
+
+    if transpose:
+        all_models = pd.DataFrame(all_models).T.to_dict()
+        models = pd.DataFrame(models).T.to_dict()
+        genes, lineages = lineages, genes
+        hide_cells = same_plot or hide_cells
+        plot_kwargs = dict(plot_kwargs)
+    else:
+        # information overload otherwise
+        plot_kwargs["lineage_probability"] = False
+        plot_kwargs["lineage_probability_conf_int"] = False
+
     tmp = pd.DataFrame(models).T.astype(bool)
     start_rows = np.argmax(tmp.values, axis=0)
     end_rows = tmp.shape[0] - np.argmax(tmp[::-1].values, axis=0) - 1
@@ -254,18 +264,26 @@ def gene_trends(
             if cnt >= len(genes):
                 break
             gene = genes[cnt]
+            if (
+                same_plot
+                and plot_kwargs.get("lineage_probability", False)
+                and transpose
+            ):
+                lpc = adata.obsm[ln_key][gene].colors[0]
+            else:
+                lpc = None
 
             _trends_helper(
-                adata,
                 models,
                 gene=gene,
                 lineage_names=lineages,
-                ln_key=ln_key,
+                transpose=transpose,
                 same_plot=same_plot,
                 hide_cells=hide_cells,
                 perc=perc,
                 lineage_cmap=lineage_cmap,
                 abs_prob_cmap=abs_prob_cmap,
+                lineage_probability_color=lpc,
                 cell_color=cell_color,
                 alpha=cell_alpha,
                 lineage_alpha=lineage_alpha,

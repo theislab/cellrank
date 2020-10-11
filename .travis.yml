@@ -32,6 +32,7 @@ addons:
       - r-base
       - r-base-dev
       - r-cran-mgcv
+      - libhdf5-dev  #Python3.9-dev
 
 env:
   - USE_SLEPC=true
