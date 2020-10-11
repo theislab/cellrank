@@ -351,11 +351,11 @@ def _fit_bulk_helper(
 
 
 def _fit_bulk(
-    genes,
-    models,
-    callbacks,
-    lineages,
-    time_range,
+    genes: Union[str, Sequence[str]],
+    models: Mapping[str, Mapping[str, Callable]],
+    callbacks: Mapping[str, Mapping[str, Callable]],
+    lineages: Union[str, Sequence[str]],
+    time_range: _time_range_type,
     parallel_kwargs: dict,
     return_models: bool = False,
     filter_all_failed: bool = True,
@@ -401,6 +401,9 @@ def _fit_bulk(
 def _filter_models(models, return_models: bool = False, filter_all_failed: bool = True):
     def is_valid(x: Union[BaseModel, BulkRes]) -> bool:
         if return_models:
+            assert isinstance(
+                x, BaseModel
+            ), f"Expected `BaseModel`, found `{type(x).__name__!r}`."
             return bool(x)
 
         return (
@@ -409,8 +412,9 @@ def _filter_models(models, return_models: bool = False, filter_all_failed: bool 
             and np.all(np.isfinite(x.y_test))
         )
 
-    modelmat = pd.DataFrame(models).T.applymap(is_valid)
-    to_keep = modelmat[modelmat.any(axis=1)]
+    modelmat = pd.DataFrame(models).T
+    modelmask = modelmat.applymap(is_valid)
+    to_keep = modelmask[modelmask.any(axis=1)]
     to_keep = to_keep.loc[:, to_keep.any(axis=0)].T
 
     filtered_models = {
@@ -428,11 +432,28 @@ def _filter_models(models, return_models: bool = False, filter_all_failed: bool 
     if not len(filtered_models):
         if not return_models:
             raise RuntimeError(
-                "Fitting of all gene/lineage combinations has failed. "
-                "Specify ``return_models=True`` for more information."
+                "Fitting has failed for all gene/lineage combinations. "
+                "Specify `return_models=True` for more information."
             )
-    elif not np.all(modelmat.values):
-        logg.warning("TODO - print combinations")
+        for ms in models.values():
+            for model in ms.values():
+                assert isinstance(
+                    model, FailedModel
+                ), f"Expected `FailedModel`, found `{type(model).__name__!r}`."
+                model.reraise()
+
+    if not np.all(modelmask.values):
+        failed_models = modelmat.values[~modelmask.values]
+        logg.warning(
+            f"Unable to fit `{len(failed_models)}` models." + ""
+            if return_models
+            else "Consider specify `return_models=True` for further inspection."
+        )
+        logg.debug(
+            "The failed models were:\n`{}`".format(
+                "\n".join(f"    {m}" for m in failed_models)
+            )
+        )
 
     # lineages is the max number of lineages
     return models, filtered_models, tuple(filtered_models.keys()), tuple(to_keep.index)
