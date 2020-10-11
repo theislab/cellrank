@@ -146,7 +146,7 @@ def heatmap(
 
     Returns
     -------
-    %(just_plots)s
+    %(plots_or_returns_models)s
     :class:`pandas.DataFrame`
         If ``return_genes=True`` and ``mode={m.LINEAGES.s!r}``, returns :class:`pandas.DataFrame`
         containing the clustered or sorted genes.

@@ -116,10 +116,10 @@ def cluster_lineage(
     -------
     %(plots_or_returns_models)s
 
-        Updates ``adata.uns`` with the following:
+        Also updates ``adata.uns`` with the following:
 
-            - ``key`` or ``lineage_{lineage}_trend`` - an :class:`anndata.AnnData` object
-              of shape `(n_genes, n_points)` containing the clustered genes.
+            - ``key`` or ``lineage_{lineage}_trend`` - an :class:`anndata.AnnData` object of
+              shape `(n_genes, n_points)` containing the clustered genes.
     """
 
     import scanpy as sc

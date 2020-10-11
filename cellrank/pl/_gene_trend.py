@@ -147,6 +147,16 @@ def gene_trends(
     %(plots_or_returns_models)s
     """
 
+    def show_y_label(row: int, col: int, cnt: int):
+        if same_plot:
+            return True
+
+    def show_x_ticks():
+        pass
+
+    def show_lineage():
+        pass
+
     if isinstance(genes, str):
         genes = [genes]
     genes = _unique_order_preserving(genes)

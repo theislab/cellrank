@@ -549,7 +549,10 @@ def _trends_helper(
         kwargs["loc"] = None
 
     last_ax = None
-    for i, (name, ax, perc) in enumerate(zip(lineage_names, axes, percs)):
+    ylabel_shown = False
+    cells_shown = False
+
+    for name, ax, perc in zip(lineage_names, axes, percs):
         model = models[gene][name]
         if isinstance(model, FailedModel) and not same_plot:
             ax.remove()
@@ -565,20 +568,20 @@ def _trends_helper(
         else:
             if gene_as_title:
                 title = None
-                ylabel = "expression" if i == 0 else None
+                ylabel = "expression" if not ylabel_shown else None
             else:
                 title = (
                     (name if name is not None else "no lineage") if show_lineage else ""
                 )
-                ylabel = gene if i == 0 else None
+                ylabel = gene if not ylabel_shown else None
 
-        models[gene][name].plot(
+        model.plot(
             ax=ax,
             fig=fig,
             perc=perc,
             cbar=False,
             title=title,
-            hide_cells=hide_cells or (same_plot and i == n_lineages - 1),
+            hide_cells=hide_cells or (same_plot and not cells_shown),
             same_plot=same_plot,
             lineage_color=lineage_color_mapper[name],
             abs_prob_cmap=abs_prob_cmap,
@@ -586,7 +589,7 @@ def _trends_helper(
             ylabel=ylabel,
             **kwargs,
         )
-        if sharey in ("row", "all", True) and i == 0:
+        if sharey in ("row", "all", True):
             plt.setp(ax.get_yticklabels(), visible=True)
 
         if show_xticks_and_label:
@@ -595,6 +598,8 @@ def _trends_helper(
             ax.set_xlabel(None)
 
         last_ax = ax
+        ylabel_shown = True
+        cells_shown = True
 
     if not same_plot and same_perc and show_cbar and not hide_cells:
         vmin = np.min([model.w_all for model in successful_models.values()])

@@ -830,9 +830,12 @@ class BaseModel(ABC, metaclass=BaseModelMeta):
             self.x_test, scaler(self.y_test), color=lineage_color, lw=lw, label=title
         )
 
-        ax.set_title(title)
-        ax.set_ylabel(ylabel)
-        ax.set_xlabel(xlabel)
+        if title is not None:
+            ax.set_title(title)
+        if ylabel is not None:
+            ax.set_ylabel(ylabel)
+        if xlabel is not None:
+            ax.set_xlabel(xlabel)
 
         ax.margins(margins)
 
@@ -1074,7 +1077,9 @@ class FailedModel(BaseModel):
 
     # which I was in a functional programming language like Haskell
     # essentially BaseModel would be a Maybe monad
-    def __init__(self, model: BaseModel, exc: Optional[BaseException] = None):
+    def __init__(
+        self, model: BaseModel, exc: Optional[Union[BaseException, str]] = None
+    ):
         if not isinstance(model, BaseModel):
             raise TypeError(
                 f"Expected `model` to be of type `cellrank.ul.models.BaseMode`, found `{type(model).__name__!r}`."

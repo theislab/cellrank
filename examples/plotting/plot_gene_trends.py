@@ -43,7 +43,7 @@ cr.pl.gene_trends(
     ["Map2", "Dcx"],
     data_key="Ms",
     time_key="dpt_pseudotime",
-    show_progres_bar=False,
+    show_progress_bar=False,
 )
 
 # %%
@@ -56,7 +56,7 @@ cr.pl.gene_trends(
     same_plot=True,
     hide_cells=True,
     time_key="dpt_pseudotime",
-    show_progres_bar=False,
+    show_progress_bar=False,
 )
 
 # %%
@@ -71,8 +71,30 @@ cr.pl.gene_trends(
     lineages=["Alpha", "Beta"],
     time_range=[(0.2, 1), (0, 0.8)],
     time_key="dpt_pseudotime",
-    show_progres_bar=False,
+    show_progress_bar=False,
 )
+
+# %%
+# We can also return the models, which can be useful to inspect the fitted models more granularly or when the
+# fitting has failed - such models will be returned as :class:`cellrank.ul.models.FailedModel`.
+#
+# Below we show what would happen if a model were to fail for some arbitrary gene and lineage combination.
+failed_model = cr.ul.models.FailedModel(model, exc="This is just a dummy example.")
+
+models = cr.pl.gene_trends(
+    adata,
+    {
+        "Map2": {"Alpha": failed_model, "*": model},
+        "Dcx": {"Beta": failed_model, "*": model},
+    },
+    ["Map2", "Dcx"],
+    data_key="Ms",
+    time_key="dpt_pseudotime",
+    show_progress_bar=False,
+    return_models=True,
+)
+models["Map2"]["Alpha"]
+
 
 # %%
 # There are many more options as how to customize the plot or how to pass additional arguments to
