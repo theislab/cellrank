@@ -386,7 +386,7 @@ class TestFailedModel:
         assert isinstance(fm._exc, RuntimeError)
 
     def test_str_repr(self, gamr_model: GAMR):
-        expected = f"FailedModel[origin={gamr_model}]"
+        expected = f"<FailedModel[origin={str(gamr_model).strip('<>')}]>"
         fm = FailedModel(gamr_model)
 
         assert str(fm) == expected

@@ -1047,13 +1047,13 @@ class BaseModel(ABC, metaclass=BaseModelMeta):
         return repr(self)
 
     def __repr__(self) -> str:
-        return "{}[{}, gene={!r}, lineage={!r}]".format(
+        return "<{}[gene={!r}, lineage={!r}, {}]>".format(
             self.__class__.__name__,
+            self._gene,
+            self._lineage,
             None
             if self.model is None
             else _dup_spaces.sub(" ", str(self.model).replace("\n", " ")).strip(),
-            self._gene,
-            self._lineage,
         )
 
     def _create_scaler(self, show_lineage_probability: bool, show_conf_int: bool):
@@ -1185,4 +1185,4 @@ class FailedModel(BaseModel):
         return repr(self)
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}[origin={self.model!r}]"
+        return f"<{self.__class__.__name__}[origin={repr(self.model).strip('<>')}]>"
