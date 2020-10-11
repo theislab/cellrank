@@ -9,7 +9,7 @@ from filelock import FileLock
 
 from cellrank.ul.models import GAM, GAMR, SKLearnModel
 
-os.environ["NUMBA_NUM_THREADS"] = "4"
+os.environ["NUMBA_NUM_THREADS"] = "2"
 
 import pytest
 from _helpers import create_model

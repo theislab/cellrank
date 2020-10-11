@@ -305,6 +305,9 @@ def _fit_bulk_helper(
     conf_int = kwargs.pop("conf_int", False)
     res = {}
 
+    # TODO: optionally only return fitted values
+    # heatmap hangs (only when testing) it we return models
+
     for gene in genes:
         res[gene] = {}
         for ln, tr in zip(lineages, time_range):

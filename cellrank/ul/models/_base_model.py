@@ -51,7 +51,8 @@ def _handle_exception(return_type: FailedReturnType, func: Callable) -> Callable
             if isinstance(instance, FailedModel):
                 raise instance._exc from None
             return wrapped(*args, **kwargs)
-        except Exception:
+        except Exception as e:
+            raise e from None
             # TODO
             # if not instance._is_bulk or _should_raise():
             #    raise e from None
@@ -66,7 +67,8 @@ def _handle_exception(return_type: FailedReturnType, func: Callable) -> Callable
             if isinstance(instance, FailedModel):
                 raise instance._exc from None
             return wrapped(*args, **kwargs)
-        except Exception:
+        except Exception as e:
+            raise e from None
             # TODO
             # if not instance._is_bulk or _should_raise():
             #    raise e from None
@@ -76,7 +78,8 @@ def _handle_exception(return_type: FailedReturnType, func: Callable) -> Callable
     def handle_no_output(wrapped, instance: "BaseModel", args, kwargs) -> None:
         try:
             return wrapped(*args, **kwargs)
-        except Exception:
+        except Exception as e:
+            raise e from None
             # TODO
             pass
             # if not instance._is_bulk:
