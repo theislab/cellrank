@@ -150,7 +150,7 @@ def gamr_model(
 ) -> Optional[GAMR]:
     model = None
 
-    if version_info <= (3, 6):
+    if version_info[:2] <= (3, 6):
         pytest.skip("Pickling of Enums doesn't work for Python3.6.")
     elif worker_id == "master":
         model = _create_gamr_model(adata_gamr)
