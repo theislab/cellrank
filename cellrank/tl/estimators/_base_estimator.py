@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 """Abstract base class for all kernel-holding estimators."""
-
+import pickle
 from abc import ABC, abstractmethod
+from sys import version_info
 from copy import copy, deepcopy
 from math import ceil
 from typing import Any, Dict, Union, Mapping, TypeVar, Optional, Sequence
+from pathlib import Path
 from datetime import datetime
 
 import scvelo as scv
@@ -34,6 +36,7 @@ from cellrank.tl._colors import (
     _convert_to_hex_colors,
     _create_categorical_colors,
 )
+from cellrank.tl.kernels import PrecomputedKernel
 from cellrank.tl._lineage import Lineage
 from cellrank.tl._constants import (
     Macro,
@@ -973,3 +976,42 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
     def __copy__(self) -> "BaseEstimator":
         return self.copy()
+
+    @d.dedent
+    def write(self, fname: Union[str, Path], ext: Optional[str] = "pickle") -> None:
+        """
+        %(pickleable.full_desc)s
+
+        Parameters
+        ----------
+        %(pickleable.parameters)s
+
+        Returns
+        -------
+        %(pickleable.returns)s
+        """  # noqa
+
+        fname = str(fname)
+        if ext is not None:
+            if not ext.startswith("."):
+                ext = "." + ext
+            if not fname.endswith(ext):
+                fname += ext
+
+        logg.debug(f"Writing to `{fname}`")
+
+        with open(fname, "wb") as fout:
+            if version_info[:2] > (3, 6):
+                pickle.dump(self, fout)
+            else:
+                # we need to use PrecomputedKernel because Python3.6 can't pickle Enums
+                # and they are present in VelocityKernel
+                logg.warning("Saving kernel as `cellrank.tl.kernels.PrecomputedKernel`")
+                orig_kernel = self.kernel
+                self._kernel = PrecomputedKernel(self.kernel)
+                try:
+                    pickle.dump(self, fout)
+                except Exception as e:
+                    raise e
+                finally:
+                    self._kernel = orig_kernel

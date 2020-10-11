@@ -209,7 +209,7 @@ class KernelHolder(ABC):
         elif isinstance(obj, AnnData):
             if obsp_key is None:
                 raise ValueError(
-                    "Please specify `obsp_key=...` when supplying an AnnData object."
+                    "Specify `obsp_key=...` when supplying an `AnnData` object."
                 )
             elif obsp_key not in obj.obsp.keys():
                 raise KeyError(f"Key `{obsp_key!r}` not found in `adata.obsp`.")

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
+from sys import version_info
 from typing import Tuple, Optional
 from pathlib import Path
 
@@ -146,7 +147,11 @@ def adata_gamr(adata_cflare=_create_cflare(backward=False)) -> AnnData:
 def gamr_model(
     adata_gamr: AnnData, tmp_path_factory: Path, worker_id: str
 ) -> Optional[GAMR]:
-    if worker_id == "master":
+    model = None
+
+    if version_info[:2] <= (3, 6):
+        pytest.skip("Pickling of Enums doesn't work in Python3.6.")
+    elif worker_id == "master":
         model = _create_gamr_model(adata_gamr)
     else:
         root_tmp_dir = tmp_path_factory.getbasetemp().parent
