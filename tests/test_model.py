@@ -644,3 +644,34 @@ class TestFittedModel:
         assert fm.y_all is not m.y_all
         np.testing.assert_array_equal(fm.w_all, m.w_all)
         assert fm.y_all is not m.w_all
+
+    def test_fitted_copy(self):
+        m = FittedModel(
+            np.array([0, 1]),
+            np.array([2, 3]),
+            conf_int=np.array([[4, 5], [6, 7]]),
+            x_all=[4, 5],
+            y_all=(6, 7),
+            w_all=[8, 9],
+        )
+
+        fm = m.copy()
+
+        assert isinstance(fm, FittedModel)
+        assert fm.prepared
+        assert fm._gene == m._gene
+        assert fm._lineage == m._lineage
+
+        np.testing.assert_array_equal(fm.x_test, m.x_test)
+        assert fm.x_test is not m.x_test
+        np.testing.assert_array_equal(fm.y_test, m.y_test)
+        assert fm.y_test is not m.y_test
+        np.testing.assert_array_equal(fm.conf_int, m.conf_int)
+        assert fm.conf_int is not m.conf_int
+
+        np.testing.assert_array_equal(fm.x_all, m.x_all)
+        assert fm.x_all is not m.x_all
+        np.testing.assert_array_equal(fm.y_all, m.y_all)
+        assert fm.y_all is not m.y_all
+        np.testing.assert_array_equal(fm.w_all, m.w_all)
+        assert fm.y_all is not m.w_all

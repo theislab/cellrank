@@ -2690,22 +2690,20 @@ class TestFittedModel:
         self, _adata: AnnData, fpath: str
     ):
         np.random.seed(44)
-        y_test = np.random.normal(size=100)
 
         fm = cr.ul.models.FittedModel(
             np.arange(100),
-            y_test,
+            np.random.normal(size=100),
         )
         fm.plot(conf_int=True, dpi=DPI, save=fpath)
 
     @compare()
     def test_fitted_model_cells_with_weights(self, _adata: AnnData, fpath: str):
         np.random.seed(45)
-        y_test = np.random.normal(size=100)
 
         fm = cr.ul.models.FittedModel(
             np.arange(100),
-            y_test,
+            np.random.normal(size=100),
             x_all=np.random.normal(size=200),
             y_all=np.random.normal(size=200),
         )
@@ -2715,11 +2713,10 @@ class TestFittedModel:
     @compare()
     def test_fitted_model_weights(self, _adata: AnnData, fpath: str):
         np.random.seed(46)
-        y_test = np.random.normal(size=100)
 
         fm = cr.ul.models.FittedModel(
             np.arange(100),
-            y_test,
+            np.random.normal(size=100),
             x_all=np.random.normal(size=200),
             y_all=np.random.normal(size=200),
             w_all=np.random.normal(size=200),
@@ -2730,11 +2727,10 @@ class TestFittedModel:
     @compare()
     def test_fitted_ignore_plot_smoothed_lineage(self, _adata: AnnData, fpath: str):
         np.random.seed(47)
-        y_test = np.random.normal(size=100)
 
         fm = cr.ul.models.FittedModel(
             np.arange(100),
-            y_test,
+            np.random.normal(size=100),
             x_all=np.random.normal(size=200),
             y_all=np.random.normal(size=200),
             w_all=np.random.normal(size=200),
@@ -2743,6 +2739,70 @@ class TestFittedModel:
         fm.plot(
             lineage_probability=True,
             lineage_probability_conf_int=True,
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_fitted_gene_trends(self, adata: AnnData, fpath: str):
+        np.random.seed(48)
+
+        fm1 = cr.ul.models.FittedModel(
+            np.arange(100),
+            np.random.normal(size=100),
+            x_all=np.random.normal(size=200),
+            y_all=np.random.normal(size=200),
+            w_all=np.random.normal(size=200),
+        )
+        fm2 = cr.ul.models.FittedModel(
+            np.arange(100),
+            np.random.normal(size=100),
+            x_all=np.random.normal(size=200),
+            y_all=np.random.normal(size=200),
+            w_all=np.random.normal(size=200),
+        )
+        cr.pl.gene_trends(
+            adata,
+            {GENES[0]: fm1, GENES[1]: fm2},
+            GENES[:2],
+            data_key="Ms",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_fitted_cluster_fates(self, adata: AnnData, fpath: str):
+        np.random.seed(49)
+
+        model = cr.ul.models.FittedModel(
+            np.arange(100),
+            np.random.normal(size=100),
+        )
+        cr.pl.cluster_lineage(
+            adata,
+            model,
+            GENES[:10],
+            "1",
+            n_points=100,
+            time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare(dirname="fitted_heatmap")
+    def test_fitted_heatmap(self, adata: AnnData, fpath: str):
+        np.random.seed(49)
+
+        fm = cr.ul.models.FittedModel(
+            np.arange(100),
+            np.random.normal(size=100),
+        )
+        cr.pl.heatmap(
+            adata,
+            fm,
+            GENES[:10],
+            mode="lineages",
+            time_key="latent_time",
             dpi=DPI,
             save=fpath,
         )

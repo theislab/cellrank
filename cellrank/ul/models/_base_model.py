@@ -1343,7 +1343,7 @@ class FittedModel(BaseModel):
     def copy(self) -> "FittedModel":
         """%(copy)s"""  # noqa
         # here we return a deepcopy since it doesn't make sense to make a shallow one
-        return deepcopy(self)
+        return FittedModel.from_model(self)
 
     @staticmethod
     def from_model(model: BaseModel) -> "FittedModel":
@@ -1361,8 +1361,10 @@ class FittedModel(BaseModel):
             y_all=model.y_all,
             w_all=model.w_all,
         )
+
         fm._gene = model._gene
         fm._lineage = model._lineage
         fm._is_bulk = model._is_bulk
+        fm._prepared = True
 
         return fm
