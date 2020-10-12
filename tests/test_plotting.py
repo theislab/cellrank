@@ -543,6 +543,7 @@ class TestClusterLineage:
             model,
             GENES[:10],
             "1",
+            random_state=0,
             time_key="latent_time",
             dpi=DPI,
             save=fpath,
@@ -556,6 +557,7 @@ class TestClusterLineage:
             model,
             GENES[:10],
             "0",
+            random_state=0,
             backward=True,
             time_key="latent_time",
             dpi=DPI,
@@ -570,6 +572,7 @@ class TestClusterLineage:
             model,
             RAW_GENES[:5],
             "1",
+            random_state=0,
             time_key="latent_time",
             dpi=DPI,
             save=fpath,
@@ -584,6 +587,7 @@ class TestClusterLineage:
             model,
             GENES[:10],
             "1",
+            random_state=0,
             time_key="latent_time",
             norm=False,
             dpi=DPI,
@@ -598,6 +602,7 @@ class TestClusterLineage:
             model,
             GENES[:10],
             "1",
+            random_state=0,
             time_key="latent_time",
             data_key="Ms",
             norm=False,
@@ -627,6 +632,7 @@ class TestClusterLineage:
             model,
             GENES[:10],
             "1",
+            random_state=0,
             time_key="latent_time",
             use_leiden=True,
             dpi=DPI,
@@ -641,6 +647,7 @@ class TestClusterLineage:
             {GENES[0]: fm, GENES[5]: fm, "*": fm.model},
             GENES[:10],
             "1",
+            random_state=0,
             time_key="latent_time",
             key="foobar",
             dpi=DPI,
@@ -657,8 +664,8 @@ class TestClusterLineage:
             {GENES[0]: fm, "*": fm.model},
             GENES[:10],
             "1",
+            random_state=0,
             time_key="latent_time",
-            random_state=42,
             return_models=True,
         )
 
@@ -2770,7 +2777,7 @@ class TestFittedModel:
             save=fpath,
         )
 
-    @compare()
+    @compare(tol=250)
     def test_fitted_cluster_fates(self, adata: AnnData, fpath: str):
         np.random.seed(49)
 
@@ -2785,6 +2792,7 @@ class TestFittedModel:
             "1",
             n_points=100,
             time_key="latent_time",
+            random_state=49,
             dpi=DPI,
             save=fpath,
         )
