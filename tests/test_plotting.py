@@ -28,7 +28,6 @@ import cellrank as cr
 from cellrank.ul.models import GAMR
 from cellrank.tl._constants import AbsProbKey
 from cellrank.tl.estimators import GPCCA, CFLARE
-from cellrank.ul.models._base_model import UnknownModelError
 
 setup()
 
@@ -2666,4 +2665,84 @@ class TestComposition:
     def test_composition_kwargs_autopct(self, adata: AnnData, fpath: str):
         cr.pl._utils.composition(
             adata, "clusters", dpi=DPI, save=fpath, autopct="%1.0f%%"
+        )
+
+
+class TestFittedModel:
+    @compare()
+    def test_fitted_empty_model(self, _adata: AnnData, fpath: str):
+        np.random.seed(42)
+        fm = cr.ul.models.FittedModel(np.arange(100), np.random.normal(size=100))
+        fm.plot(dpi=DPI, save=fpath)
+
+    @compare()
+    def test_fitted_model_conf_int(self, _adata: AnnData, fpath: str):
+        np.random.seed(43)
+        y_test = np.random.normal(size=100)
+
+        fm = cr.ul.models.FittedModel(
+            np.arange(100), y_test, conf_int=np.c_[y_test - 1, y_test + 1]
+        )
+        fm.plot(conf_int=True, dpi=DPI, save=fpath)
+
+    @compare()
+    def test_fitted_model_conf_int_no_conf_int_computed(
+        self, _adata: AnnData, fpath: str
+    ):
+        np.random.seed(44)
+        y_test = np.random.normal(size=100)
+
+        fm = cr.ul.models.FittedModel(
+            np.arange(100),
+            y_test,
+        )
+        fm.plot(conf_int=True, dpi=DPI, save=fpath)
+
+    @compare()
+    def test_fitted_model_cells_with_weights(self, _adata: AnnData, fpath: str):
+        np.random.seed(45)
+        y_test = np.random.normal(size=100)
+
+        fm = cr.ul.models.FittedModel(
+            np.arange(100),
+            y_test,
+            x_all=np.random.normal(size=200),
+            y_all=np.random.normal(size=200),
+        )
+
+        fm.plot(hide_cells=False, dpi=DPI, save=fpath)
+
+    @compare()
+    def test_fitted_model_weights(self, _adata: AnnData, fpath: str):
+        np.random.seed(46)
+        y_test = np.random.normal(size=100)
+
+        fm = cr.ul.models.FittedModel(
+            np.arange(100),
+            y_test,
+            x_all=np.random.normal(size=200),
+            y_all=np.random.normal(size=200),
+            w_all=np.random.normal(size=200),
+        )
+
+        fm.plot(hide_cells=False, dpi=DPI, save=fpath)
+
+    @compare()
+    def test_fitted_ignore_plot_smoothed_lineage(self, _adata: AnnData, fpath: str):
+        np.random.seed(47)
+        y_test = np.random.normal(size=100)
+
+        fm = cr.ul.models.FittedModel(
+            np.arange(100),
+            y_test,
+            x_all=np.random.normal(size=200),
+            y_all=np.random.normal(size=200),
+            w_all=np.random.normal(size=200),
+        )
+
+        fm.plot(
+            lineage_probability=True,
+            lineage_probability_conf_int=True,
+            dpi=DPI,
+            save=fpath,
         )

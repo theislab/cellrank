@@ -584,9 +584,8 @@ class TestFittedModel:
         np.testing.assert_array_equal(fm.y_test, [2, 3])
         np.testing.assert_array_equal(fm.conf_int, [[4, 5], [6, 7]])
 
-        np.testing.assert_array_equal(fm.conf_int, [[4, 5], [6, 7]])
         np.testing.assert_array_equal(fm.x_all, [[4], [5]])
-        np.testing.assert_array_equal(fm.y_all, [6, 7])
+        np.testing.assert_array_equal(fm.y_all, [[6], [7]])
         np.testing.assert_array_equal(fm.w_all, [8, 9])
 
     def test_normal_run(self):
@@ -610,3 +609,38 @@ class TestFittedModel:
         np.testing.assert_array_equal(
             fm.default_confidence_interval(), [[4, 5], [6, 7]]
         )
+
+    def from_model_wrong_type(self, adata_cflare):
+        m = create_model(adata_cflare)
+        with pytest.raises(TypeError):
+            FittedModel.from_model(m.model)
+
+    def test_from_model_not_fitted_model(self, adata_cflare: AnnData):
+        m = create_model(adata_cflare).prepare(adata_cflare.var_names[0], "1")
+        with pytest.raises(ValueError):
+            FittedModel.from_model(m)
+
+    def test_from_model_normal_run(self, adata_cflare: AnnData):
+        m = create_model(adata_cflare).prepare(adata_cflare.var_names[0], "1").fit()
+        m.predict()
+        m.confidence_interval()
+
+        fm = FittedModel.from_model(m)
+
+        assert fm.prepared
+        assert fm._gene == m._gene
+        assert fm._lineage == m._lineage
+
+        np.testing.assert_array_equal(fm.x_test, m.x_test)
+        assert fm.x_test is not m.x_test
+        np.testing.assert_array_equal(fm.y_test, m.y_test)
+        assert fm.y_test is not m.y_test
+        np.testing.assert_array_equal(fm.conf_int, m.conf_int)
+        assert fm.conf_int is not m.conf_int
+
+        np.testing.assert_array_equal(fm.x_all, m.x_all)
+        assert fm.x_all is not m.x_all
+        np.testing.assert_array_equal(fm.y_all, m.y_all)
+        assert fm.y_all is not m.y_all
+        np.testing.assert_array_equal(fm.w_all, m.w_all)
+        assert fm.y_all is not m.w_all

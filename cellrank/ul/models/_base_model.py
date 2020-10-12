@@ -1270,10 +1270,10 @@ class FittedModel(BaseModel):
                     f"Expected `x_all` to be of shape `(..., 1)`, found `{self.x_all.shape}`."
                 )
 
-            self._y_all = _densify_squeeze(y_all, self._dtype)
-            if self.y_all.shape != (self.x_all.shape[0],):
+            self._y_all = _densify_squeeze(y_all, self._dtype)[:, np.newaxis]
+            if self.y_all.shape != self.x_all.shape:
                 raise ValueError(
-                    f"Expected `y_all` to be of shape `({self.x_all.shape[0]},)`, found `{self.y_all.shape}`."
+                    f"Expected `y_all` to be of shape `({self.x_all.shape[0]}, 1)`, found `{self.y_all.shape}`."
                 )
 
             if w_all is not None:
@@ -1344,3 +1344,25 @@ class FittedModel(BaseModel):
         """%(copy)s"""  # noqa
         # here we return a deepcopy since it doesn't make sense to make a shallow one
         return deepcopy(self)
+
+    @staticmethod
+    def from_model(model: BaseModel) -> "FittedModel":
+        """Create a :class:`cellrank.ul.models.FittedModel` instance from :class:`cellrank.ul.models.BaseModel`."""
+        if not isinstance(model, BaseModel):
+            raise TypeError(
+                f"Expected `model` to be of type `BaseModel`, found `{type(model).__name__!r}`."
+            )
+
+        fm = FittedModel(
+            model.x_test,
+            model.y_test,
+            conf_int=model.conf_int,
+            x_all=model.x_all,
+            y_all=model.y_all,
+            w_all=model.w_all,
+        )
+        fm._gene = model._gene
+        fm._lineage = model._lineage
+        fm._is_bulk = model._is_bulk
+
+        return fm
