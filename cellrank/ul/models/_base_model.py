@@ -207,6 +207,8 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
     @d.dedent
     def adata(self) -> AnnData:
         """
+        Annotated data object.
+
         Returns
         -------
         %(adata)s
