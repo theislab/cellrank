@@ -12,7 +12,7 @@ import numpy as np
 from scipy.stats import rankdata
 from sklearn.svm import SVR
 
-from cellrank.ul.models import GAM, GAMR, SKLearnModel
+from cellrank.ul.models import GAM, GAMR, FittedModel, SKLearnModel
 from cellrank.ul.models._utils import (
     _OFFSET_KEY,
     NormMode,
@@ -460,3 +460,153 @@ class TestModelsIO:
         actual_model = pickle.load(fp)
 
         assert_models_equal(pygam_model, actual_model, pickled=True)
+
+
+class TestFittedModel:
+    def test_wrong_xt_yt_shape(self):
+        with pytest.raises(ValueError):
+            FittedModel(np.array([1]), np.array([2, 3]))
+
+    def test_wrong_xt_dum(self):
+        with pytest.raises(ValueError):
+            FittedModel(np.array([[0, 1], [1, 2]]), np.array([2, 3]))
+
+    def test_wrong_conf_int_dim(self):
+        with pytest.raises(ValueError):
+            FittedModel(np.array([0, 1]), np.array([2, 3]), conf_int=np.array([4, 5]))
+
+    def test_wrong_conf_int_wrong_shape(self):
+        with pytest.raises(ValueError):
+            FittedModel(
+                np.array([0, 1]),
+                np.array([2, 3]),
+                conf_int=np.array([[4, 5], [6, 7], [8, 9]]),
+            )
+
+    def test_densify_only_first_axis(self):
+        with pytest.raises(ValueError):
+            FittedModel(np.array([[[0, 1]]]), np.array([2, 3]))
+
+    def test_wrong_x_all_shape(self):
+        with pytest.raises(ValueError):
+            FittedModel(
+                np.array([[0, 1]]),
+                np.array([2, 3]),
+                x_all=np.array([[4, 5, 6]]),
+                y_all=np.array([7, 8]),
+            )
+
+    def test_wrong_y_all_shape(self):
+        with pytest.raises(ValueError):
+            FittedModel(
+                np.array([[0, 1]]),
+                np.array([2, 3]),
+                x_all=np.array([[4, 5]]),
+                y_all=np.array([6, 8, 7]),
+            )
+
+    def test_wrong_w_all_shape(self):
+        with pytest.raises(ValueError):
+            FittedModel(
+                np.array([[0, 1]]),
+                np.array([2, 3]),
+                x_all=np.array([[4, 5]]),
+                y_all=np.array([6, 7]),
+                w_all=np.array([8]),
+            )
+
+    def test_conf_int_raise_error_missing(self):
+        fm = FittedModel([0, 1, 2], [3, 4, 5])
+        with pytest.raises(RuntimeError):
+            fm.confidence_interval()
+
+        with pytest.raises(RuntimeError):
+            fm.default_confidence_interval()
+
+    def test_zero_array(self):
+        fm = FittedModel(np.array([]), np.array([]))
+
+        np.testing.assert_array_equal(fm.x_test, np.array([[]]).reshape((0, 1)))
+        np.testing.assert_array_equal(fm.y_test, [])
+
+        assert fm.conf_int is None
+        assert fm.x_all is None
+        assert fm.w_all is None
+        assert fm.y_all is None
+
+    def test_non_array_input(self):
+        fm = FittedModel([0, 1, 2], [3, 4, 5])
+
+        np.testing.assert_array_equal(fm.x_test, [[0], [1], [2]])
+        np.testing.assert_array_equal(fm.y_test, [3, 4, 5])
+
+        assert fm.conf_int is None
+        assert fm.x_all is None
+        assert fm.w_all is None
+        assert fm.y_all is None
+
+    def test_wrong_conf_int(self):
+        fm = FittedModel(
+            np.array([0, 1]), np.array([2, 3]), conf_int=np.array([[4, 5], [6, 7]])
+        )
+
+        np.testing.assert_array_equal(fm.x_test, [[0], [1]])
+        np.testing.assert_array_equal(fm.y_test, [2, 3])
+        np.testing.assert_array_equal(fm.conf_int, [[4, 5], [6, 7]])
+
+        assert fm.x_all is None
+        assert fm.w_all is None
+        assert fm.y_all is None
+
+    def test_only_partial_x_all(self):
+        fm = FittedModel(np.array([0, 1]), np.array([2, 3]), x_all=[4, 5], w_all=[6, 7])
+
+        np.testing.assert_array_equal(fm.x_test, [[0], [1]])
+        np.testing.assert_array_equal(fm.y_test, [2, 3])
+
+        assert fm.x_all is None
+        assert fm.w_all is None
+        assert fm.y_all is None
+
+    def test_full_initialization(self):
+        fm = FittedModel(
+            np.array([0, 1]),
+            np.array([2, 3]),
+            conf_int=np.array([[4, 5], [6, 7]]),
+            x_all=[4, 5],
+            y_all=(6, 7),
+            w_all=[8, 9],
+        )
+
+        assert fm.prepared
+
+        np.testing.assert_array_equal(fm.x_test, [[0], [1]])
+        np.testing.assert_array_equal(fm.y_test, [2, 3])
+        np.testing.assert_array_equal(fm.conf_int, [[4, 5], [6, 7]])
+
+        np.testing.assert_array_equal(fm.conf_int, [[4, 5], [6, 7]])
+        np.testing.assert_array_equal(fm.x_all, [[4], [5]])
+        np.testing.assert_array_equal(fm.y_all, [6, 7])
+        np.testing.assert_array_equal(fm.w_all, [8, 9])
+
+    def test_normal_run(self):
+        fm = FittedModel(
+            np.array([0, 1]),
+            np.array([2, 3]),
+            conf_int=np.array([[4, 5], [6, 7]]),
+            x_all=[4, 5],
+            y_all=(6, 7),
+            w_all=[8, 9],
+        )
+
+        fm = fm.prepare()
+        assert fm is fm
+
+        fm = fm.fit()
+        assert fm is fm
+
+        np.testing.assert_array_equal(fm.predict(), [2, 3])
+        np.testing.assert_array_equal(fm.confidence_interval(), [[4, 5], [6, 7]])
+        np.testing.assert_array_equal(
+            fm.default_confidence_interval(), [[4, 5], [6, 7]]
+        )

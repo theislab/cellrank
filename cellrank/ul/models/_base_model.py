@@ -4,11 +4,12 @@ import re
 from abc import ABC, ABCMeta, abstractmethod
 from copy import copy as _copy
 from copy import deepcopy
-from typing import Any, Tuple, Union, TypeVar, Callable, Optional
+from typing import Any, List, Tuple, Union, TypeVar, Callable, Optional
 
 import wrapt
 
 import numpy as np
+from scipy.sparse import spmatrix
 from scipy.ndimage import convolve
 
 import matplotlib as mpl
@@ -26,6 +27,7 @@ from cellrank.tl._constants import ModeEnum, AbsProbKey
 
 AnnData = TypeVar("AnnData")
 _dup_spaces = re.compile(r" +")  # used on repr for underlying model's repr
+ArrayLike = Union[np.ndarray, spmatrix, List, Tuple]
 
 
 class UnknownModelError(RuntimeError):  # noqa
@@ -1227,12 +1229,12 @@ class FittedModel(BaseModel):
 
     def __init__(
         self,
-        x_test: np.ndarray,
-        y_test: np.ndarray,
-        conf_int: Optional[np.ndarray] = None,
-        x_all: Optional[np.ndarray] = None,
-        y_all: Optional[np.ndarray] = None,
-        w_all: Optional[np.ndarray] = None,
+        x_test: ArrayLike,
+        y_test: ArrayLike,
+        conf_int: Optional[ArrayLike] = None,
+        x_all: Optional[ArrayLike] = None,
+        y_all: Optional[ArrayLike] = None,
+        w_all: Optional[ArrayLike] = None,
     ):
         super().__init__(None, None)
 
@@ -1268,14 +1270,14 @@ class FittedModel(BaseModel):
                     f"Expected `x_all` to be of shape `(..., 1)`, found `{self.x_all.shape}`."
                 )
 
-            self._y_all = _densify_squeeze(y_all, self._dtype)[:, np.newaxis]
-            if self.y_all.shape != self.x_all.shape:
+            self._y_all = _densify_squeeze(y_all, self._dtype)
+            if self.y_all.shape != (self.x_all.shape[0],):
                 raise ValueError(
-                    f"Expected `y_all` to be of shape `{self.x_all.shape}`, found `{self.y_all.shape}`."
+                    f"Expected `y_all` to be of shape `({self.x_all.shape[0]},)`, found `{self.y_all.shape}`."
                 )
 
             if w_all is not None:
-                self._w_all = _densify_squeeze(x_all, self._dtype)
+                self._w_all = _densify_squeeze(w_all, self._dtype)
                 if self.w_all.ndim != 1 or self.w_all.shape[0] != self.x_all.shape[0]:
                     raise ValueError(
                         f"Expected `w_all` to be of shape `({self.x_all.shape[0]},)`, "
