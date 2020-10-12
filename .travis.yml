@@ -4,13 +4,35 @@ python:
   - "3.6"
   - "3.7"
   - "3.8"
+# - "3.9-dev"
 
 os: linux
+group: edge
+arch: arm64-graviton2
 
+dist: focal
+
+before_cache:
+  - rm -f $HOME/.cache/pip/log/debug.log
+# don't cache APT (can be slower)
 cache:
   - pip
   - directories:
       - $HOME/.cache/pre-commit
+      - $HOME/R/Library
+
+addons:
+  apt:
+    update: true
+    sources:
+      - sourceline: "deb https://cloud.r-project.org/bin/linux/ubuntu focal-cran40/"
+        key_url: "http://keyserver.ubuntu.com:11371/pks/lookup?op=get&search=0xE298A3A825C0D65DFD57CBB651716619E084DAB9"
+    packages:
+      - libopenblas-base
+      - r-base
+      - r-base-dev
+      - r-cran-mgcv
+#      - libhdf5-dev  #Python3.9-dev
 
 env:
   - USE_SLEPC=true

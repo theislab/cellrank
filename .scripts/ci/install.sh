@@ -9,12 +9,16 @@ elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
         pip install pytest-cov
         pip install codecov
     fi
+
     if [[ "$USE_SLEPC" == "true" ]]; then
         pip install -e".[krylov,test]"
         python -c "import slepc; import petsc;"
     else
         pip install -e".[test]"
     fi
+
+    pip install rpy2>=3.3.0 jax jaxlib
+    Rscript --vanilla -e "library('mgcv')"
 fi
 
 python-vendorize

@@ -67,7 +67,7 @@ class CFLARE(BaseEstimator, Eigen):
         ----------
         use
             Which or how many first eigenvectors to use as features for clustering/filtering.
-            If `None`, use `eigengap` statistic.
+            If `None`, use the `eigengap` statistic.
         percentile
             Threshold used for filtering out cells which are most likely transient states. Cells which are in the
             lower ``percentile`` percent of each eigenvector will be removed from the data matrix.
@@ -94,7 +94,7 @@ class CFLARE(BaseEstimator, Eigen):
             Number of embedding components to be use when ``basis`` is not `None`.
         scale
             Scale to z-scores. Consider using this if appending embedding to features.
-        %(en_cutoff_p_thresh)%
+        %(en_cutoff_p_thresh)s
 
         Returns
         -------

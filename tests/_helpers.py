@@ -109,8 +109,14 @@ def create_kernels(
     return vk, ck
 
 
+# TODO: make it a fixture
 def create_model(adata: AnnData) -> cr.ul.models.SKLearnModel:
     return cr.ul.models.SKLearnModel(adata, SVR(kernel="rbf"))
+
+
+# TODO: make it a fixture
+def create_failed_model(adata: AnnData) -> cr.ul.models.FailedModel:
+    return cr.ul.models.FailedModel(create_model(adata), exc="foobar")
 
 
 def resize_images_to_same_sizes(
@@ -162,6 +168,59 @@ def assert_array_nan_equal(
     np.testing.assert_array_equal(actual[mask1], expected[mask2])
 
 
+def assert_models_equal(
+    expected: cr.ul.models.BaseModel,
+    actual: cr.ul.models.BaseModel,
+    pickled: bool = False,
+    deepcopy: bool = True,
+) -> None:
+    assert actual is not expected
+    if not pickled:
+        assert actual.adata is expected.adata
+    else:
+        assert actual.adata is not expected.adata
+
+    assert actual.adata.shape == expected.adata.shape
+
+    assert expected.__dict__.keys() == actual.__dict__.keys()
+
+    for attr in expected.__dict__.keys():
+        val2, val1 = getattr(actual, attr), getattr(expected, attr)
+        if attr == "_prepared":
+            # we expect the expected model to be prepared only if deepcopied
+            if deepcopy:
+                assert val2 == val1
+            else:
+                assert not val2
+                assert val1
+        elif isinstance(val1, cr.tl.Lineage):
+            if deepcopy or pickled:
+                assert val2 is not val1
+                assert_array_nan_equal(val2.X, val1.X)
+            else:
+                assert val2 is val1, (val2, val1, attr)
+        elif isinstance(val1, (np.ndarray, pd.Series, pd.DataFrame)):
+            if deepcopy or pickled:
+                try:
+                    assert val2 is not val1, attr
+                    # can be array of strings, can't get NaN
+                    assert_array_nan_equal(val2, val1)
+                except:
+                    np.testing.assert_array_equal(val2, val1)
+            # e.g. for GAMR, we point to the offset and design matrix
+            # however, the `x`, and so pointers are not modified
+            elif val2 is not None:
+                assert val2 is val1, attr
+        # we don't expect any dictionaries as in estimators
+        elif attr == "_model":
+            assert val2 is not val1  # model is always deepcopied
+        elif not isinstance(val2, AnnData) and not callable(val2):
+            # callable because SKLearnModel has default conf int function
+            assert val2 == val1, (val2, val1, attr)
+        else:
+            assert isinstance(val2, type(val1)), (val2, val1, attr)
+
+
 def assert_estimators_equal(
     expected: cr.tl.estimators.BaseEstimator,
     actual: cr.tl.estimators.BaseEstimator,
@@ -170,19 +229,19 @@ def assert_estimators_equal(
     assert actual is not expected
     assert actual.adata is not expected.adata
     assert actual.kernel is not expected.kernel
-
-    assert actual is not expected
-    assert actual.adata.shape == expected.adata.shape
-    assert actual.adata is actual.kernel.adata
-    assert actual.kernel.backward == expected.kernel.backward
-
     if copy or version_info[:2] > (3, 6):
+        # pickling of Enums doesn't work in Python3.6
         assert isinstance(actual.kernel, type(expected.kernel)), (
             type(actual.kernel),
             type(expected.kernel),
         )
     else:
         assert isinstance(actual.kernel, cr.tl.kernels.PrecomputedKernel)
+
+    assert actual.adata.shape == expected.adata.shape
+    assert actual.adata is actual.kernel.adata
+    assert actual.kernel.backward == expected.kernel.backward
+
     np.testing.assert_array_equal(
         actual.transition_matrix.A, expected.transition_matrix.A
     )
@@ -192,8 +251,10 @@ def assert_estimators_equal(
     for attr in expected.__dict__.keys():
         val2, val1 = getattr(actual, attr), getattr(expected, attr)
         if isinstance(val1, cr.tl.Lineage):
+            assert val2 is not val1, attr
             assert_array_nan_equal(val2.X, val1.X)
         elif isinstance(val1, (np.ndarray, pd.Series, pd.DataFrame)):
+            assert val2 is not val1, attr
             try:
                 # can be array of strings, can't get NaN
                 assert_array_nan_equal(val2, val1)
@@ -203,14 +264,15 @@ def assert_estimators_equal(
             assert val2.keys() == val1.keys()
             for v2, v1 in zip(val2.values(), val1.values()):
                 if isinstance(v2, np.ndarray):
+                    assert v2 is not v1, attr
                     np.testing.assert_array_equal(v2, v1)
                 else:
-                    assert v2 == v1
+                    assert v2 == v1, (v2, v1, attr)
         elif attr not in ("_kernel", "_gpcca"):
-            assert val2 == val1, (val2, val1)
+            assert val2 == val1, (val2, val1, attr)
         elif copy or version_info[:2] > (3, 6):
             # we can compare the kernel types, but for 3.6, it's saved as Precomputed
-            assert isinstance(val2, type(val1)), (val2, val1)
+            assert isinstance(val2, type(val1)), (val2, val1, attr)
 
 
 def random_transition_matrix(n: int) -> np.ndarray:
@@ -277,3 +339,33 @@ jax_not_installed_skip = pytest.mark.skipif(
 if __name__ == "__main__":
     for size in [50, 100, 200]:
         _ = _create_dummy_adata(size)
+
+
+def _import_rpy2_mgcv() -> bool:
+    try:
+        import rpy2
+        from packaging import version
+        from rpy2.robjects.packages import PackageNotInstalledError, importr
+
+        try:
+            from importlib_metadata import version as get_version
+        except ImportError:
+            # >=Python3.8
+            from importlib.metadata import version as get_version
+
+        try:
+            assert version.parse(get_version(rpy2.__name__)) >= version.parse("3.3.0")
+            _ = importr("mgcv")
+            return False
+        except (PackageNotInstalledError, AssertionError):
+            pass
+
+    except ImportError:
+        pass
+
+    return True
+
+
+gamr_skip = pytest.mark.skipif(
+    _import_rpy2_mgcv(), reason="Cannot import `rpy2` or R's `mgcv` package."
+)

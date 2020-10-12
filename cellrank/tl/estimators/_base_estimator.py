@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """Abstract base class for all kernel-holding estimators."""
-
 import pickle
 from abc import ABC, abstractmethod
 from sys import version_info
@@ -890,6 +889,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
     def _fit_terminal_states(self, *args, **kwargs):
         pass
 
+    @d.dedent
     @inject_docs(fs=P.TERM, fsp=P.TERM_PROBS, ap=P.ABS_PROBS, dp=P.DIFF_POT)
     def fit(
         self,
@@ -967,7 +967,9 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         k = deepcopy(self.kernel)  # ensure we copy the adata object
         res = type(self)(k, read_from_adata=False)
         for k, v in self.__dict__.items():
-            if k != "_kernel":
+            if isinstance(v, dict):
+                res.__dict__[k] = deepcopy(v)
+            elif k != "_kernel":
                 res.__dict__[k] = copy(v)
 
         return res
@@ -975,22 +977,19 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
     def __copy__(self) -> "BaseEstimator":
         return self.copy()
 
+    @d.dedent
     def write(self, fname: Union[str, Path], ext: Optional[str] = "pickle") -> None:
         """
-        Serialize self to a file.
+        %(pickleable.full_desc)s
 
         Parameters
         ----------
-        fname
-            Filename where to save the object.
-        ext
-            Filename extension to use. If `None`, don't append any extension.
+        %(pickleable.parameters)s
 
         Returns
         -------
-        None
-            Nothing, just writes itself to a file.
-        """
+        %(pickleable.returns)s
+        """  # noqa
 
         fname = str(fname)
         if ext is not None:
@@ -1016,22 +1015,3 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                     raise e
                 finally:
                     self._kernel = orig_kernel
-
-    @staticmethod
-    def read(fname: Union[str, Path]) -> "BaseEstimator":
-        """
-        Deserialize self from a file.
-
-        Parameters
-        ----------
-        fname
-            Filename from which to read the object.
-
-        Returns
-        -------
-        :class:`cellrank.tl.estimators.BaseEstimator`
-            An estimator.
-        """
-
-        with open(fname, "rb") as fin:
-            return pickle.load(fin)

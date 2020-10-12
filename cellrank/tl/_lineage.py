@@ -844,8 +844,9 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         Returns
         -------
         :class:`cellrank.tl.Lineage`, :class:`pandas.DataFrame`
-            Lineage object, reduced to the %(inital_terminal)s states. If a reduction is not possible, returns a copy.
-            The weights used for the projection of shape ``(n_query, n_reference)``, if ``return_weights=True``.
+            Lineage object, reduced to the %(initial_or_terminal)s states. If a reduction is not possible,
+            returns just a copy of self.The weights used for the projection of shape
+            ``(n_query, n_reference)``, if ``return_weights=True``.
         """
 
         if self._is_transposed:

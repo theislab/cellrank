@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """Module containing model which wraps around :mod:`sklearn` estimators."""
-from copy import deepcopy
 from typing import Iterable, Optional
 from inspect import signature
 
@@ -15,15 +14,16 @@ from cellrank.ul.models._base_model import AnnData
 @d.dedent
 class SKLearnModel(BaseModel):
     """
-    Wrapper around almost any :mod:`sklearn` model.
+    Wrapper around :class:`sklearn.base.BaseEstimator`.
 
     Parameters
     ----------
     %(adata)s
     model
-        Instance of :mod:`sklearn` model.
+        Instance of the underlying :mod:`sklearn` estimator, such as :class:`sklearn.svm.SVR`.
     weight_name
-        Name of the weight argument for :paramref:`model` ``.fit``.
+        Name of the weight argument for :paramref:`model` ``.fit``. If `None`, to determine it automatically.
+        If and empty string, no weights will be used.
     ignore_raise
         Do not raise an exception if weight argument is not found in the fitting function of :paramref:`model`.
         This is useful in case when weight is passed in ``**kwargs`` and cannot be determined from signature.
@@ -51,23 +51,27 @@ class SKLearnModel(BaseModel):
         fit_name = self._find_func(self._fit_names)
         predict_name = self._find_func(self._predict_names)
         ci_name = self._find_func(self._conf_int_names, use_default=True, default=None)
-        self._weight_name = None
 
-        if weight_name is None:
-            self._weight_name = self._find_arg_name(fit_name, self._weight_names)
-        else:
-            params = signature(getattr(self.model, fit_name)).parameters
-            if not ignore_raise and weight_name not in params:
-                raise ValueError(
-                    f"Unable to detect `{weight_name!r}` in the signature of `{fit_name!r}`."
-                    f"If it's in `kwargs`, set `ignore_raise=True.`"
-                )
-            self._weight_name = weight_name
+        self._weight_name = (
+            self._find_arg_name(fit_name, self._weight_names)
+            if weight_name is None
+            else weight_name
+        )
 
         if self._weight_name is None:
             raise RuntimeError(
                 f"Unable to determine weights for function `{fit_name!r}`, searched `{self._weight_names}`. "
                 f"Consider specifying it manually as `weight_name=...`."
+            )
+        elif (
+            not ignore_raise
+            and self._weight_name != ""
+            and self._weight_name
+            not in signature(getattr(self.model, fit_name)).parameters
+        ):
+            raise ValueError(
+                f"Unable to detect `{weight_name!r}` in the signature of `{fit_name!r}`."
+                f"If it's in `kwargs`, set `ignore_raise=True.`"
             )
 
         self._fit_fn = getattr(self.model, fit_name)
@@ -97,7 +101,7 @@ class SKLearnModel(BaseModel):
 
         super().fit(x, y, w, **kwargs)
 
-        if self._weight_name is not None:
+        if self._weight_name not in (None, ""):
             kwargs[self._weight_name] = self._w
 
         self._model = self._fit_fn(self.x, self.y, **kwargs)
@@ -123,7 +127,7 @@ class SKLearnModel(BaseModel):
         x_test = self._check(key_added, x_test)
 
         self._y_test = self._pred_fn(x_test, **kwargs)
-        self._y_test = np.squeeze(self._y_test)
+        self._y_test = np.squeeze(self._y_test).astype(self._dtype)
 
         return self.y_test
 
@@ -173,7 +177,7 @@ class SKLearnModel(BaseModel):
 
         Returns
         -------
-        str, None
+        str or None
             Name of the function or the default name.
         """
 
@@ -216,10 +220,15 @@ class SKLearnModel(BaseModel):
 
     @property
     def model(self) -> BaseEstimator:
-        """The underlying :mod:`sklearn` model."""  # noqa
+        """The underlying :class:`sklearn.base.BaseEstimator`."""  # noqa
         return self._model
 
     @d.dedent
     def copy(self) -> "SKLearnModel":
         """%(copy)s"""  # noqa
-        return SKLearnModel(self.adata, deepcopy(self._model))
+        res = SKLearnModel(
+            self.adata, self._model, weight_name=self._weight_name, ignore_raise=True
+        )
+        self._shallowcopy_attributes(res)  # this deepcopies the underlying model
+
+        return res

@@ -29,7 +29,7 @@ from cellrank.tl._utils import (
     _get_neighs,
     _has_neighs,
 )
-from cellrank.ul._utils import _write_graph_data
+from cellrank.ul._utils import Pickleable, _write_graph_data
 from cellrank.tl._constants import Direction, _transition
 from cellrank.tl.kernels._utils import _filter_kwargs
 
@@ -51,7 +51,7 @@ _cond_num_tolerance = 1e-15
 AnnData = TypeVar("AnnData")
 
 
-class KernelExpression(ABC):
+class KernelExpression(Pickleable, ABC):
     """Base class for all kernels and kernel expressions."""
 
     def __init__(

@@ -91,8 +91,10 @@ Utilities
     :toctree: api/ul
 
     ul.models.GAM
-    ul.models.SKLearnModel
     ul.models.GAMR
+    ul.models.SKLearnModel
+    ul.models.FittedModel
+    ul.models.FailedModel
 
 Reading
 ~~~~~~~
@@ -114,7 +116,6 @@ Datasets
     :toctree: api/datasets
 
     datasets.pancreas
-    datasets.lung
     datasets.pancreas_preprocessed
 
 

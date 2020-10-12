@@ -6,6 +6,7 @@ from typing import List, Tuple, Union, Mapping, TypeVar, Optional, Sequence
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 
 import matplotlib
 import matplotlib.cm as cm
@@ -14,19 +15,19 @@ import matplotlib.pyplot as plt
 from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.pl._utils import (
-    _model_type,
+    _fit_bulk,
     _get_backend,
     _callback_type,
     _create_models,
     _trends_helper,
-    _fit_gene_trends,
     _time_range_type,
     _create_callbacks,
+    _input_model_type,
+    _return_model_type,
 )
 from cellrank.tl._utils import save_fig, _unique_order_preserving
 from cellrank.ul._utils import _get_n_cores, _check_collection
 from cellrank.tl._constants import _DEFAULT_BACKEND, AbsProbKey
-from cellrank.ul._parallelize import parallelize
 
 AnnData = TypeVar("AnnData")
 
@@ -34,15 +35,16 @@ AnnData = TypeVar("AnnData")
 @d.dedent
 def gene_trends(
     adata: AnnData,
-    model: _model_type,
+    model: _input_model_type,
     genes: Union[str, Sequence[str]],
     lineages: Optional[Union[str, Sequence[str]]] = None,
     backward: bool = False,
     data_key: str = "X",
     time_key: str = "latent_time",
+    transpose: bool = False,
     time_range: Optional[Union[_time_range_type, List[_time_range_type]]] = None,
     callback: _callback_type = None,
-    conf_int: bool = True,
+    conf_int: Union[bool, float] = True,
     same_plot: bool = False,
     hide_cells: bool = False,
     perc: Optional[Union[Tuple[float, float], Sequence[Tuple[float, float]]]] = None,
@@ -61,15 +63,16 @@ def gene_trends(
     legend_loc: Optional[str] = "best",
     ncols: int = 2,
     suptitle: Optional[str] = None,
+    return_models: bool = False,
     n_jobs: Optional[int] = 1,
     backend: str = _DEFAULT_BACKEND,
-    show_progres_bar: bool = True,
+    show_progress_bar: bool = True,
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
     save: Optional[Union[str, Path]] = None,
     plot_kwargs: Mapping = MappingProxyType({}),
     **kwargs,
-) -> None:
+) -> Optional[_return_model_type]:
     """
     Plot gene expression trends along lineages.
 
@@ -90,9 +93,13 @@ def gene_trends(
     time_key
         Key in ``adata.obs`` where the pseudotime is stored.
     %(time_ranges)s
+    transpose
+        If ``same_plot=True``, group the trends by ``lineages`` instead of ``genes``. This enforces ``hide_cells=True``.
+        If ``same_plot=False``, show ``lineages`` in rows and ``genes`` in columns.
     %(model_callback)s
     conf_int
-        Whether to compute and show confidence intervals.
+        Whether to compute and show confidence interval. If the :paramref:`model` is :class:`cellrank.ul.models.GAMR`,
+        it can also specify the confidence level, the default is `0.95`.
     same_plot
         Whether to plot all lineages for each gene in the same plot.
     hide_cells
@@ -101,10 +108,10 @@ def gene_trends(
         Percentile for colors. Valid values are in interval `[0, 100]`.
         This can improve visualization. Can be specified individually for each lineage.
     lineage_cmap
-        Colormap to use when coloring in the lineages. If `None` and ``same_plot``, use the corresponding colors
-        in ``adata.uns``, otherwise use `'black'`.
+        Categorical colormap to use when coloring in the lineages. If `None` and ``same_plot``,
+        use the corresponding colors in ``adata.uns``, otherwise use `'black'`.
     abs_prob_cmap
-        Colormap to use when visualizing the absorption probabilities for each lineage.
+        Continuous colormap to use when visualizing the absorption probabilities for each lineage.
         Only used when ``same_plot=False``.
     cell_color
         Color of the cells when not visualizing absorption probabilities. Only used when ``same_plot=True``.
@@ -129,9 +136,10 @@ def gene_trends(
     legend_loc
         Location of the legend displaying lineages. Only used when `same_plot=True`.
     ncols
-        Number of columns of the plot when pl multiple genes. Only used when ``same_plot=True``.
+        Number of columns of the plot when plotting multiple genes. Only used when ``same_plot=True``.
     suptitle
         Suptitle of the figure.
+    %(return_models)s
     %(parallel)s
     %(plotting)s
     plot_kwargs
@@ -141,13 +149,12 @@ def gene_trends(
 
     Returns
     -------
-    %(just_plots)s
+    %(plots_or_returns_models)s
     """
 
     if isinstance(genes, str):
         genes = [genes]
     genes = _unique_order_preserving(genes)
-
     if data_key != "obs":
         _check_collection(
             adata, genes, "var_names", use_raw=kwargs.get("use_raw", False)
@@ -169,6 +176,54 @@ def gene_trends(
         logg.debug("All lineages are `None`, setting the weights to `1`")
     lineages = _unique_order_preserving(lineages)
 
+    tmp = adata.obsm[ln_key][lineages].colors
+    if lineage_cmap is None and not transpose:
+        lineage_cmap = tmp
+
+    if isinstance(time_range, (tuple, float, int, type(None))):
+        time_range = [time_range] * len(lineages)
+    elif len(time_range) != len(lineages):
+        raise ValueError(
+            f"Expected time ranges to be of length `{len(lineages)}`, found `{len(time_range)}`."
+        )
+
+    kwargs["time_key"] = time_key
+    kwargs["data_key"] = data_key
+    kwargs["backward"] = backward
+    kwargs["conf_int"] = conf_int  # prepare doesnt take or need this
+    models = _create_models(model, genes, lineages)
+
+    all_models, models, genes, lineages = _fit_bulk(
+        models,
+        _create_callbacks(adata, callback, genes, lineages, **kwargs),
+        genes,
+        lineages,
+        time_range,
+        return_models=True,
+        filter_all_failed=False,
+        parallel_kwargs={
+            "show_progress_bar": show_progress_bar,
+            "n_jobs": _get_n_cores(n_jobs, len(genes)),
+            "backend": _get_backend(models, backend),
+        },
+        **kwargs,
+    )
+
+    plot_kwargs = dict(plot_kwargs)
+    if transpose:
+        all_models = pd.DataFrame(all_models).T.to_dict()
+        models = pd.DataFrame(models).T.to_dict()
+        genes, lineages = lineages, genes
+        hide_cells = same_plot or hide_cells
+    else:
+        # information overload otherwise
+        plot_kwargs["lineage_probability"] = False
+        plot_kwargs["lineage_probability_conf_int"] = False
+
+    tmp = pd.DataFrame(models).T.astype(bool)
+    start_rows = np.argmax(tmp.values, axis=0)
+    end_rows = tmp.shape[0] - np.argmax(tmp[::-1].values, axis=0) - 1
+
     if same_plot:
         gene_as_title = True if gene_as_title is None else gene_as_title
         sharex = "all" if sharex is None else sharex
@@ -188,6 +243,10 @@ def gene_trends(
         nrows = len(genes)
         ncols = len(lineages)
 
+    plot_kwargs = dict(plot_kwargs)
+    if plot_kwargs.get("xlabel", None) is None:
+        plot_kwargs["xlabel"] = time_key
+
     fig, axes = plt.subplots(
         nrows=nrows,
         ncols=ncols,
@@ -197,64 +256,36 @@ def gene_trends(
         constrained_layout=True,
         dpi=dpi,
     )
-    axes = np.reshape(axes, (-1, ncols))
-
-    _ = adata.obsm[ln_key][[lin for lin in lineages if lin is not None]]
-
-    if isinstance(time_range, (tuple, float, int, type(None))):
-        time_range = [time_range] * len(lineages)
-    elif len(time_range) != len(lineages):
-        raise ValueError(
-            f"Expected time ranges to be of length `{len(lineages)}`, found `{len(time_range)}`."
-        )
-
-    kwargs["time_key"] = time_key
-    kwargs["data_key"] = data_key
-    kwargs["backward"] = backward
-    callbacks = _create_callbacks(adata, callback, genes, lineages, **kwargs)
-
-    kwargs["conf_int"] = conf_int  # prepare doesnt take or need this
-    models = _create_models(model, genes, lineages)
-
-    plot_kwargs = dict(plot_kwargs)
-    if plot_kwargs.get("xlabel", None) is None:
-        plot_kwargs["xlabel"] = time_key
-
-    n_jobs = _get_n_cores(n_jobs, len(genes))
-    backend = _get_backend(model, backend)
-
-    start = logg.info(f"Computing trends using `{n_jobs}` core(s)")
-    models = parallelize(
-        _fit_gene_trends,
-        genes,
-        unit="gene" if data_key != "obs" else "obs",
-        backend=backend,
-        n_jobs=n_jobs,
-        extractor=lambda modelss: {k: v for m in modelss for k, v in m.items()},
-        show_progress_bar=show_progres_bar,
-    )(models, callbacks, lineages, time_range, **kwargs)
-    logg.info("    Finish", time=start)
+    axes = np.reshape(axes, (nrows, ncols))
 
     logg.info("Plotting trends")
-
     cnt = 0
+
     for row in range(len(axes)):
         for col in range(len(axes[row])):
             if cnt >= len(genes):
                 break
             gene = genes[cnt]
+            if (
+                same_plot
+                and plot_kwargs.get("lineage_probability", False)
+                and transpose
+            ):
+                lpc = adata.obsm[ln_key][gene].colors[0]
+            else:
+                lpc = None
 
             _trends_helper(
-                adata,
                 models,
                 gene=gene,
                 lineage_names=lineages,
-                ln_key=ln_key,
+                transpose=transpose,
                 same_plot=same_plot,
                 hide_cells=hide_cells,
                 perc=perc,
                 lineage_cmap=lineage_cmap,
                 abs_prob_cmap=abs_prob_cmap,
+                lineage_probability_color=lpc,
                 cell_color=cell_color,
                 alpha=cell_alpha,
                 lineage_alpha=lineage_alpha,
@@ -269,10 +300,10 @@ def gene_trends(
                 fig=fig,
                 axes=axes[row, col] if same_plot else axes[cnt],
                 show_ylabel=col == 0,
-                show_lineage=cnt == 0 or same_plot,
+                show_lineage=same_plot or (cnt == start_rows),
                 show_xticks_and_label=((row + 1) * ncols + col >= len(genes))
                 if same_plot
-                else (cnt == len(axes) - 1),
+                else (cnt == end_rows),
                 **plot_kwargs,
             )
             cnt += 1
@@ -281,7 +312,10 @@ def gene_trends(
         for ax in np.ravel(axes)[cnt:]:
             ax.remove()
 
-    fig.suptitle(suptitle)
+    fig.suptitle(suptitle, y=1.05)
 
     if save is not None:
         save_fig(fig, save)
+
+    if return_models:
+        return all_models

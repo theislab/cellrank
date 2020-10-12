@@ -14,9 +14,10 @@ from typing import (
     Sequence,
 )
 from pathlib import Path
-from collections import defaultdict
+from collections import namedtuple, defaultdict
 
 import numpy as np
+import pandas as pd
 from pandas.api.types import is_categorical_dtype
 
 import matplotlib as mpl
@@ -28,24 +29,31 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.tl._utils import save_fig, _unique_order_preserving
-from cellrank.ul.models import GAMR, BaseModel, SKLearnModel
-from cellrank.tl._constants import _DEFAULT_BACKEND, _colors
+from cellrank.ul.models import GAMR, BaseModel, FailedModel, SKLearnModel
+from cellrank.tl._colors import _create_categorical_colors
+from cellrank.tl._constants import _DEFAULT_BACKEND
+from cellrank.ul._parallelize import parallelize
 
 AnnData = TypeVar("AnnData")
+Queue = TypeVar("Queue")
+Graph = TypeVar("Graph")
 
 
 _ERROR_INCOMPLETE_SPEC = (
-    "No options were specified for{}`{!r}`. "
+    "No options were specified for {}. "
     "Consider specifying a fallback model using '*'."
 )
 _time_range_type = Optional[Union[float, Tuple[Optional[float], Optional[float]]]]
-_model_type = Union[BaseModel, Mapping[str, Mapping[str, BaseModel]]]
+_return_model_type = Mapping[str, Mapping[str, BaseModel]]
+_input_model_type = Union[BaseModel, _return_model_type]
 _callback_type = Optional[Union[Callable, Mapping[str, Mapping[str, Callable]]]]
+
+BulkRes = namedtuple("BulkRes", ["x_test", "y_test"])
 
 
 def _curved_edges(
-    G,
-    pos,
+    G: Graph,
+    pos: Mapping,
     radius_fraction: float,
     dist_ratio: float = 0.2,
     bezier_precision: int = 20,
@@ -170,7 +178,7 @@ def _curved_edges(
 
     # Return an array of these curves
     curves = np.array(curveplots)
-    if any(self_loop_mask):
+    if np.any(self_loop_mask):
         curves[self_loop_mask, ...] = self_loops
 
     return curves
@@ -178,7 +186,7 @@ def _curved_edges(
 
 def _is_any_gam_mgcv(models: Union[BaseModel, Dict[str, Dict[str, BaseModel]]]) -> bool:
     """
-    Return whether any models to be fit are from R's mgcv package.
+    Return whether any models to be fit are from R's `mgcv` package.
 
     Parameters
     ----------
@@ -198,8 +206,8 @@ def _is_any_gam_mgcv(models: Union[BaseModel, Dict[str, Dict[str, BaseModel]]]) 
 
 
 def _create_models(
-    model: _model_type, obs: Sequence[str], lineages: Sequence[Optional[str]]
-) -> Dict[str, Dict[str, BaseModel]]:
+    model: _input_model_type, obs: Sequence[str], lineages: Sequence[Optional[str]]
+) -> _return_model_type:
     """
     Create models for each gene and lineage.
 
@@ -221,9 +229,20 @@ def _create_models(
         if isinstance(lin_names, BaseModel):
             # sharing the same models for all lineages
             for lin_name in lineages:
-                models[obs_name][lin_name] = lin_names
+                models[obs_name][lin_name] = copy(lin_names)
             return
+        if not isinstance(lin_names, dict):
+            raise TypeError(
+                f"Expected the model to be either a lineage specific `dict` or a `BaseModel`, "
+                f"found `{type(lin_names).__name__!r}`."
+            )
+
         lin_rest_model = lin_names.get("*", None)  # do not pop
+        if lin_rest_model is not None and not isinstance(lin_rest_model, BaseModel):
+            raise TypeError(
+                f"Expected the lineage fallback model for gene `{obs_name!r}` to be of type `BaseModel`, "
+                f"found `{type(lin_rest_model).__name__!r}`."
+            )
 
         for lin_name, mod in lin_names.items():
             if lin_name == "*":
@@ -234,7 +253,9 @@ def _create_models(
             for lin_name in lineages - set(models[obs_name].keys()):
                 models[obs_name][lin_name] = copy(lin_rest_model)
         else:
-            raise RuntimeError(_ERROR_INCOMPLETE_SPEC.format(" lineage ", obs_name))
+            raise RuntimeError(
+                _ERROR_INCOMPLETE_SPEC.format(f"all lineages for gene `{obs_name!r}`")
+            )
 
     if isinstance(model, BaseModel):
         return {o: {lin: copy(model) for lin in lineages} for o in obs}
@@ -247,6 +268,12 @@ def _create_models(
 
     if isinstance(model, dict):
         obs_rest_model = model.pop("*", None)
+        if obs_rest_model is not None and not isinstance(obs_rest_model, BaseModel):
+            raise TypeError(
+                f"Expected the gene fallback model to be of type `BaseModel`, "
+                f"found `{type(obs_rest_model).__name__!r}`."
+            )
+
         for obs_name, lin_names in model.items():
             process_lineages(obs_name, lin_names)
 
@@ -254,24 +281,30 @@ def _create_models(
             for obs_name in obs - set(model.keys()):
                 process_lineages(obs_name, model.get(obs_name, obs_rest_model))
         elif set(model.keys()) != obs:
-            raise RuntimeError(_ERROR_INCOMPLETE_SPEC.format(" ", "genes"))
+            raise RuntimeError(
+                _ERROR_INCOMPLETE_SPEC.format(
+                    f"genes `{list(obs - set(model.keys()))}`."
+                )
+            )
     else:
         raise TypeError(
-            f"Class `{type(model).__name__!r}` must be of type `cellrank.ul.BaseModel` or a dictionary of such models."
+            f"Class `{type(model).__name__!r}` must be of type `BaseModel` or "
+            f"a gene and lineage specific `dict` of `BaseModel`.."
         )
 
     return models
 
 
-def _fit_gene_trends(
+def _fit_bulk_helper(
     genes: Sequence[str],
-    models: _model_type,
+    models: _input_model_type,
     callbacks: _callback_type,
     lineages: Sequence[Optional[str]],
     time_range: Sequence[Union[float, Tuple[float, float]]],
-    queue,
+    return_models: bool = False,
+    queue: Optional[Queue] = None,
     **kwargs,
-) -> Dict[str, Dict[str, Any]]:
+) -> Dict[str, Dict[str, BaseModel]]:
     """
     Fit model for given genes and lineages.
 
@@ -287,6 +320,8 @@ def _fit_gene_trends(
         Lineages for which to fit the models.
     time_range
         Minimum and maximum pseudotimes.
+    return_models
+        Whether to return the full models or just tuple ``(x_test,  y_test)``.
     queue
         Signalling queue in the parent process/thread used to update the progress bar.
     kwargs
@@ -294,24 +329,41 @@ def _fit_gene_trends(
 
     Returns
     -------
-        The fitted models, optionally containing the confidence interval.
+        The fitted models, optionally containing the confidence interval in the
+        form of `{'gene1': {'lineage1': <model11>, ...}, ...}`.
+        If any step has failed, the model will be of type :class:`cellrank.ul.models.FailedModel`.
     """
+    if len(lineages) != len(time_range):
+        raise ValueError(
+            f"Expected `lineage` and `time_range` to be of same length, "
+            f"found `{len(lineages)}` != `{len(time_range)}`."
+        )
 
+    conf_int = return_models and kwargs.pop("conf_int", False)
     res = {}
-    conf_int = kwargs.pop("conf_int", False)
 
     for gene in genes:
         res[gene] = {}
         for ln, tr in zip(lineages, time_range):
             cb = callbacks[gene][ln]
-            model = cb(
-                models[gene][ln], gene=gene, lineage=ln, time_range=tr, **kwargs
-            ).fit()
-            model.predict()
-            if conf_int:
+            model = models[gene][ln]
+            model._is_bulk = True
+
+            model = cb(model, gene=gene, lineage=ln, time_range=tr, **kwargs)
+            model = model.fit()
+            # GAMR is a bit faster if we don't need the conf int
+            # if it's needed, `.predict` will calculate it and `confidence_interval` will do nothing
+            if not conf_int:
+                model.predict()
+            elif _is_any_gam_mgcv(model):
+                model.predict(level=conf_int if isinstance(conf_int, float) else 0.95)
+            else:
+                model.predict()
                 model.confidence_interval()
 
-            res[gene][ln] = model
+            res[gene][ln] = (
+                model if return_models else BulkRes(model.x_test, model.y_test)
+            )
 
         if queue is not None:
             queue.put(1)
@@ -322,19 +374,169 @@ def _fit_gene_trends(
     return res
 
 
+def _fit_bulk(
+    models: Mapping[str, Mapping[str, Callable]],
+    callbacks: Mapping[str, Mapping[str, Callable]],
+    genes: Union[str, Sequence[str]],
+    lineages: Union[str, Sequence[str]],
+    time_range: _time_range_type,
+    parallel_kwargs: dict,
+    return_models: bool = False,
+    filter_all_failed: bool = True,
+    **kwargs,
+) -> Tuple[_return_model_type, _return_model_type, Sequence[str], Sequence[str]]:
+    """
+    Fit models for given genes and lineages.
+
+    Parameters
+    ----------
+    models
+        Gene and lineage specific estimators.
+    callbacks
+        Functions which are called to prepare the ``models`.
+    genes
+        Genes for which to fit the ``models``.
+    lineages
+        Lineages for which to fit the ``models``.
+    time_range
+        Possibly ``lineages`` specific start- and endtimes.
+    parallel_kwargs
+        Keyword arguments for :func:`cellrank.ul._utils.parallelize`.
+    return_models
+        Whether to return the full models or just a dictionary of dictionaries of :class:`collections.namedtuple`,
+        `(x_test, y_test)`. This is highly discouraged because no meaningful error messages will be produced.
+    filter_all_failed
+        Whether to filter out all models which have failed.
+
+    Returns
+    -------
+    :class:`dict`
+        All the models, including the failed ones. It is a nested dictionary where keys are the ``genes`` and the values
+        is again a :class:`dict`, where keys are ``lineages`` and values are the failed or fitted models or
+        the :class:`collections.namedtuple`, based on ``return_models=True``.
+    :class:`dict`
+        Same as above, but can contain failed models if ``filter_all_failed=False``. In that case, it is guaranteed
+        that this dictionary will contain only genes which have been successfully fitted for at least 1 lineage.
+        If ``return_models=True``, the models are just a :class:`collections.namedtuple` of `(x_test, y_test)`.
+    :class:`tuple`
+        All the genes of the filtered models.
+    :class:`tuple`
+        All the lineage of the filtered models.
+    """
+
+    if isinstance(genes, str):
+        genes = [genes]
+
+    if isinstance(lineages, str):
+        lineages = [lineages]
+
+    if isinstance(time_range, (tuple, float, int, type(None))):
+        time_range = [time_range] * len(lineages)
+    elif len(time_range) != len(lineages):
+        raise ValueError(
+            f"Expected time ranges to be of length `{len(lineages)}`, found `{len(time_range)}`."
+        )
+
+    n_jobs = parallel_kwargs.pop("n_jobs", 1)
+
+    start = logg.info(f"Computing trends using `{n_jobs}` core(s)")
+    models = parallelize(
+        _fit_bulk_helper,
+        genes,
+        unit="gene" if kwargs.get("data_key", "gene") != "obs" else "obs",
+        n_jobs=n_jobs,
+        extractor=lambda modelss: {k: v for m in modelss for k, v in m.items()},
+    )(
+        models=models,
+        callbacks=callbacks,
+        lineages=lineages,
+        time_range=time_range,
+        return_models=return_models,
+        **kwargs,
+    )
+    logg.info("    Finish", time=start)
+
+    return _filter_models(
+        models, return_models=return_models, filter_all_failed=filter_all_failed
+    )
+
+
+def _filter_models(
+    models, return_models: bool = False, filter_all_failed: bool = True
+) -> Tuple[_return_model_type, _return_model_type, Sequence[str], Sequence[str]]:
+    def is_valid(x: Union[BaseModel, BulkRes]) -> bool:
+        if return_models:
+            assert isinstance(
+                x, BaseModel
+            ), f"Expected `BaseModel`, found `{type(x).__name__!r}`."
+            return bool(x)
+
+        return (
+            x.x_test is not None
+            and x.y_test is not None
+            and np.all(np.isfinite(x.y_test))
+        )
+
+    modelmat = pd.DataFrame(models).T
+    modelmask = modelmat.applymap(is_valid)
+    to_keep = modelmask[modelmask.any(axis=1)]
+    to_keep = to_keep.loc[:, to_keep.any(axis=0)].T
+
+    filtered_models = {
+        gene: {
+            ln: models[gene][ln]
+            for ln in (
+                ln
+                for ln in v.keys()
+                if (is_valid(models[gene][ln]) if filter_all_failed else True)
+            )
+        }
+        for gene, v in to_keep.to_dict().items()
+    }
+
+    if not len(filtered_models):
+        if not return_models:
+            raise RuntimeError(
+                "Fitting has failed for all gene/lineage combinations. "
+                "Specify `return_models=True` for more information."
+            )
+        for ms in models.values():
+            for model in ms.values():
+                assert isinstance(
+                    model, FailedModel
+                ), f"Expected `FailedModel`, found `{type(model).__name__!r}`."
+                model.reraise()
+
+    if not np.all(modelmask.values):
+        failed_models = modelmat.values[~modelmask.values]
+        logg.warning(
+            f"Unable to fit `{len(failed_models)}` models." + ""
+            if return_models
+            else "Consider specify `return_models=True` for further inspection."
+        )
+        logg.debug(
+            "The failed models were:\n`{}`".format(
+                "\n".join(f"    {m}" for m in failed_models)
+            )
+        )
+
+    # lineages is the max number of lineages
+    return models, filtered_models, tuple(filtered_models.keys()), tuple(to_keep.index)
+
+
 @d.dedent
 def _trends_helper(
-    adata: AnnData,
     models: Dict[str, Dict[str, Any]],
     gene: str,
-    ln_key: str,
+    transpose: bool = False,
     lineage_names: Optional[Sequence[str]] = None,
     same_plot: bool = False,
     sharey: Union[str, bool] = False,
     show_ylabel: bool = True,
-    show_lineage: bool = True,
-    show_xticks_and_label: bool = True,
-    lineage_cmap=None,
+    show_lineage: Union[bool, np.ndarray] = True,
+    show_xticks_and_label: Union[bool, np.ndarray] = True,
+    lineage_cmap: Optional[Union[mpl.colors.ListedColormap, Sequence]] = None,
+    lineage_probability_color: Optional[str] = None,
     abs_prob_cmap=cm.viridis,
     gene_as_title: bool = False,
     legend_loc: Optional[str] = "best",
@@ -366,7 +568,10 @@ def _trends_helper(
     show_xticks_and_label
         Whether to show x-ticks and x-label. Usually, only the last row will show this.
     lineage_cmap
-        Colormap to use when coloring the the lineage. If `None`, use colors from ``adata.uns``.
+        Colormap to use when coloring the the lineage. When ``transpose``, this corresponds to the color of genes.
+    lineage_probability_color
+        Actual color of 1 ``lineage``. Only used when ``same_plot=True`` and ``transpose=True`` and
+        ``lineage_probability=True``.
     abs_prob_cmap:
         Colormap to use when coloring in the absorption probabilities, if they are being plotted.
     gene_as_title
@@ -410,17 +615,41 @@ def _trends_helper(
     show_prob = kwargs.pop("lineage_probability", False)
 
     if same_plot:
-        lineage_colors = (
-            lineage_cmap.colors
-            if lineage_cmap is not None and hasattr(lineage_cmap, "colors")
-            else adata.uns.get(f"{_colors(ln_key)}", cm.Set1.colors)
-        )
+        if not transpose:
+            lineage_colors = (
+                lineage_cmap.colors
+                if lineage_cmap is not None and hasattr(lineage_cmap, "colors")
+                else lineage_cmap
+            )
+        else:
+            # this should be fine w.r.t. to the missing genes, since they are in the same order AND
+            # we're also passing the failed models (this is important)
+            # these are actually gene colors, bu w/e
+            if lineage_cmap is not None:
+                lineage_colors = (
+                    lineage_cmap.colors
+                    if hasattr(lineage_cmap, "colors")
+                    else [c for _, c in zip(lineage_names, lineage_cmap)]
+                )
+            else:
+                lineage_colors = _create_categorical_colors(n_lineages)
     else:
         lineage_colors = (
-            "black" if not mcolors.is_color_like(lineage_cmap) else lineage_cmap
+            ("black" if not mcolors.is_color_like(lineage_cmap) else lineage_cmap),
+        ) * n_lineages
+
+    if n_lineages > len(lineage_colors):
+        raise ValueError(
+            f"Expected at least `{n_lineages}` colors, found `{len(lineage_colors)}`."
         )
 
-    if show_prob and not same_plot:
+    lineage_color_mapper = {ln: lineage_colors[i] for i, ln in enumerate(lineage_names)}
+
+    successful_models = {
+        ln: models[gene][ln] for ln in lineage_names if models[gene][ln]
+    }
+
+    if show_prob and same_plot:
         minns, maxxs = zip(
             *[
                 models[gene][n]._return_min_max(
@@ -435,7 +664,33 @@ def _trends_helper(
     else:
         kwargs["loc"] = None
 
+    if isinstance(show_xticks_and_label, bool):
+        show_xticks_and_label = [show_xticks_and_label] * len(lineage_names)
+    elif len(show_xticks_and_label) != len(lineage_names):
+        raise ValueError(
+            f"Expected `show_xticks_label` to be the same length as `lineage_names`, "
+            f"found `{len(show_xticks_and_label)}` != `{len(lineage_names)}`."
+        )
+
+    if isinstance(show_lineage, bool):
+        show_lineage = [show_lineage] * len(lineage_names)
+    elif len(show_lineage) != len(lineage_names):
+        raise ValueError(
+            f"Expected `show_lineage` to be the same length as `lineage_names`, "
+            f"found `{len(show_lineage)}` != `{len(lineage_names)}`."
+        )
+
+    last_ax = None
+    ylabel_shown = False
+    cells_shown = False
+
     for i, (name, ax, perc) in enumerate(zip(lineage_names, axes, percs)):
+        model = models[gene][name]
+        if isinstance(model, FailedModel):
+            if not same_plot:
+                ax.remove()
+            continue
+
         if same_plot:
             if gene_as_title:
                 title = gene
@@ -446,50 +701,57 @@ def _trends_helper(
         else:
             if gene_as_title:
                 title = None
-                ylabel = "expression" if i == 0 else None
+                ylabel = "expression" if not ylabel_shown else None
             else:
                 title = (
-                    (name if name is not None else "no lineage") if show_lineage else ""
+                    (name if name is not None else "no lineage")
+                    if show_lineage[i]
+                    else ""
                 )
-                ylabel = gene if i == 0 else None
+                ylabel = gene if not ylabel_shown else None
 
-        models[gene][name].plot(
+        model.plot(
             ax=ax,
             fig=fig,
             perc=perc,
             cbar=False,
             title=title,
-            hide_cells=hide_cells or (same_plot and i == n_lineages - 1),
+            hide_cells=cells_shown if not hide_cells else True,
             same_plot=same_plot,
-            lineage_color=lineage_colors[i]
-            if same_plot and name is not None
-            else lineage_colors,
+            lineage_color=lineage_color_mapper[name],
+            lineage_probability_color=lineage_probability_color,
             abs_prob_cmap=abs_prob_cmap,
             lineage_probability=show_prob,
             ylabel=ylabel,
             **kwargs,
         )
-        if sharey in ("row", "all", True) and i == 0:
+        if sharey in ("row", "all", True) and not ylabel_shown:
             plt.setp(ax.get_yticklabels(), visible=True)
 
-        if show_xticks_and_label:
+        if show_xticks_and_label[i]:
             plt.setp(ax.get_xticklabels(), visible=True)
         else:
             ax.set_xlabel(None)
 
+        last_ax = ax
+        ylabel_shown = True
+        cells_shown = True
+
     if not same_plot and same_perc and show_cbar and not hide_cells:
-        vmin = np.min([models[gene][ln].w_all for ln in lineage_names])
-        vmax = np.max([models[gene][ln].w_all for ln in lineage_names])
+        vmin = np.min([model.w_all for model in successful_models.values()])
+        vmax = np.max([model.w_all for model in successful_models.values()])
         norm = mcolors.Normalize(vmin=vmin, vmax=vmax)
 
         for ax in axes:
-            [
+            children = [
                 c
                 for c in ax.get_children()
                 if isinstance(c, mpl.collections.PathCollection)
-            ][0].set_norm(norm)
+            ]
+            if len(children):
+                children[0].set_norm(norm)
 
-        divider = make_axes_locatable(ax)
+        divider = make_axes_locatable(last_ax)
         cax = divider.append_axes("right", size="2%", pad=0.1)
         _ = mpl.colorbar.ColorbarBase(
             cax,
@@ -501,10 +763,10 @@ def _trends_helper(
 
     if same_plot and lineage_names != [None] and legend_loc is not None:
         handles = [
-            mpl.lines.Line2D([], [], color=c, label=n)
-            for c, n in zip(lineage_colors, lineage_names)
+            mpl.lines.Line2D([], [], color=lineage_color_mapper[ln], label=ln)
+            for ln in successful_models.keys()
         ]
-        ax.legend(handles=handles, loc=legend_loc, title="lineage")
+        last_ax.legend(handles=handles, loc=legend_loc)
 
 
 def _position_legend(ax: mpl.axes.Axes, legend_loc: str, **kwargs) -> mpl.legend.Legend:
@@ -638,23 +900,25 @@ def _create_callbacks(
             for lin_name in lineages:
                 callbacks[obs_name][lin_name] = lin_names
             return
+        elif not isinstance(lin_names, dict):
+            raise TypeError("TODO")
+
         lin_rest_callback = (
             lin_names.get("*", _default_model_callback) or _default_model_callback
         )  # do not pop
+        if not callable(lin_rest_callback):
+            raise TypeError(
+                f"Expected the lineage fallback callback for gene `{obs_name!r}` to be `callable`, "
+                f"found `{type(lin_rest_callback).__name__!r}`."
+            )
 
         for lin_name, cb in lin_names.items():
             if lin_name == "*":
                 continue
-            callbacks[obs_name][lin_name] = cb
+            callbacks[obs_name][lin_name] = copy(cb)
 
-        if callable(lin_rest_callback):
-            for lin_name in lineages - set(callbacks[obs_name].keys()):
-                callbacks[obs_name][lin_name] = lin_rest_callback
-        else:
-            raise TypeError(
-                f"Expected the callback for the rest of lineages to be `callable`, "
-                f"found `{type(lin_rest_callback).__name__!r}`."
-            )
+        for lin_name in lineages - set(callbacks[obs_name].keys()):
+            callbacks[obs_name][lin_name] = lin_rest_callback
 
     def maybe_sanity_check(callbacks: Dict[str, Dict[str, Callable]]) -> None:
         if not perform_sanity_check:
@@ -682,6 +946,8 @@ def _create_callbacks(
                     assert (
                         model._lineage == lineage
                     ), f"Callback modified the lineage from `{lineage!r}` to `{model._lineage!r}`."
+                    if isinstance(model, FailedModel):
+                        model.reraise()
                 except Exception as e:
                     raise RuntimeError(
                         f"Callback validation failed for gene `{gene!r}` and lineage `{lineage!r}`."
@@ -718,12 +984,13 @@ def _create_callbacks(
                 process_lineages(obs_name, callback.get(obs_name, obs_rest_callback))
         else:
             raise TypeError(
-                f"Expected the callback for the rest of genes to be `callable`, "
+                f"Expected the gene fallback callback to be `callable`, "
                 f"found `{type(obs_rest_callback).__name__!r}`."
             )
     else:
         raise TypeError(
-            f"Class `{type(callback).__name__!r}` must be callable` or a dictionary of callables."
+            f"Class `{type(callback).__name__!r}` must be `callable` or "
+            f"a gene and lineage specific `dict` of callables."
         )
 
     maybe_sanity_check(callbacks)

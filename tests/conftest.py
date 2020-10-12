@@ -1,10 +1,17 @@
 # -*- coding: utf-8 -*-
 import os
-from typing import Tuple
+from sys import version_info
+from typing import Tuple, Optional
+from pathlib import Path
 
-os.environ["NUMBA_NUM_THREADS"] = "4"
+from filelock import FileLock
+
+from cellrank.ul.models import GAM, GAMR, SKLearnModel
+
+os.environ["NUMBA_NUM_THREADS"] = "2"
 
 import pytest
+from _helpers import create_model
 
 import scanpy as sc
 from anndata import AnnData
@@ -86,6 +93,16 @@ def _create_gpcca(*, backward: bool = False) -> Tuple[AnnData, GPCCA]:
     return adata, mc
 
 
+def _create_gamr_model(_adata: AnnData) -> Optional[GAMR]:
+    try:
+        m = GAMR(_adata)
+        m.prepare(_adata.var_names[0], "0").fit()
+        m.predict(level=0.95)
+        return m
+    except:
+        return None
+
+
 @pytest.fixture
 def adata() -> AnnData:
     return _adata_small.copy()
@@ -119,6 +136,61 @@ def adata_gpcca_bwd(adata_gpcca=_create_gpcca(backward=True)) -> Tuple[AnnData, 
 @pytest.fixture
 def adata_cflare(adata_cflare=_create_cflare(backward=False)) -> AnnData:
     return adata_cflare[0].copy()
+
+
+@pytest.fixture(scope="session")
+def adata_gamr(adata_cflare=_create_cflare(backward=False)) -> AnnData:
+    return adata_cflare[0].copy()
+
+
+@pytest.fixture(scope="session")
+def gamr_model(
+    adata_gamr: AnnData, tmp_path_factory: Path, worker_id: str
+) -> Optional[GAMR]:
+    model = None
+
+    if version_info[:2] <= (3, 6):
+        pytest.skip("Pickling of Enums doesn't work in Python3.6.")
+    elif worker_id == "master":
+        model = _create_gamr_model(adata_gamr)
+    else:
+        root_tmp_dir = tmp_path_factory.getbasetemp().parent
+        fn = root_tmp_dir / "model.pickle"
+
+        with FileLock(f"{fn}.lock"):
+            if fn.is_file():
+                model = GAMR.read(fn)
+            else:
+                model = _create_gamr_model(adata_gamr)
+                if model is not None:
+                    model.write(fn)
+
+    if model is None:
+        pytest.skip("Unable to create `cellrank.ul.models.GAMR`.")
+
+    return model
+
+
+@pytest.fixture
+def pygam_model(adata_cflare: AnnData) -> GAM:
+    m = GAM(adata_cflare)
+    m.prepare(adata_cflare.var_names[0], "0").fit()
+    m.predict()
+    m.confidence_interval()
+
+    return m
+
+
+@pytest.fixture
+def sklearn_model(adata_cflare: AnnData) -> SKLearnModel:
+    m = create_model(adata_cflare)
+    assert isinstance(m, SKLearnModel), m
+
+    m.prepare(adata_cflare.var_names[0], "0").fit()
+    m.predict()
+    m.confidence_interval()
+
+    return m
 
 
 @pytest.fixture

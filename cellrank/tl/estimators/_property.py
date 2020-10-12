@@ -19,6 +19,7 @@ from matplotlib import cm
 import cellrank.logging as logg
 from cellrank.ul._docs import d, _initial, _terminal
 from cellrank.tl._utils import RandomKeys, _make_cat, _partition, _complex_warning
+from cellrank.ul._utils import Pickleable
 from cellrank.tl._colors import _create_categorical_colors
 from cellrank.tl.kernels import PrecomputedKernel
 from cellrank.tl._lineage import Lineage
@@ -35,7 +36,6 @@ from cellrank.tl.kernels._base_kernel import KernelExpression
 from cellrank.tl.estimators._constants import META_KEY, A, F, P
 
 
-# has to be in the same module
 def is_abstract(classname: str) -> bool:  # TODO: determine the necessity of this
     """
     Check whether class with a given name inside this module is abstract.
@@ -209,7 +209,7 @@ class KernelHolder(ABC):
         elif isinstance(obj, AnnData):
             if obsp_key is None:
                 raise ValueError(
-                    "Please specify `obsp_key=...` when supplying an AnnData object."
+                    "Specify `obsp_key=...` when supplying an `AnnData` object."
                 )
             elif obsp_key not in obj.obsp.keys():
                 raise KeyError(f"Key `{obsp_key!r}` not found in `adata.obsp`.")
@@ -925,32 +925,7 @@ class Partitioner(KernelHolder, ABC):
         return self._trans_classes
 
 
-class Deprecated:
-    """This class contains deprecated functions that will be removed in the next release."""
-
-    def plot_final_states(self, *args, **kwargs):
-        """This function has been deprecated. Please use :meth:`cellrank.tl.estimators.BaseEstimator.plot_terminal_states` instead."""  # noqa
-        print(
-            "This function has been deprecated. Please use `plot_terminal_states` instead."
-        )
-        return self.plot_terminal_states(*args, **kwargs)
-
-    def set_final_states(self, *args, **kwargs):
-        """This function has been deprecated. Please use :meth:`cellrank.tl.estimators.BaseEstimator.set_terminal_states` instead."""  # noqa
-        print(
-            "This function has been deprecated. Please use `set_terminal_states` instead."
-        )
-        return self.set_terminal_states(*args, **kwargs)
-
-    def compute_final_states(self, *args, **kwargs):
-        """This function has been deprecated. Please use :meth:`cellrank.tl.estimators.BaseEstimator.compute_terminal_states` instead."""  # noqa
-        print(
-            "This function has been deprecated. Please use `compute_terminal_states` instead."
-        )
-        return self.compute_terminal_states(*args, **kwargs)
-
-
-class LineageEstimatorMixin(TerminalStates, AbsProbs, LinDrivers, Deprecated, ABC):
+class LineageEstimatorMixin(TerminalStates, AbsProbs, LinDrivers, Pickleable, ABC):
     """Mixin containing terminal states and absorption probabilities."""
 
     pass

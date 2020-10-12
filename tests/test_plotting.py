@@ -4,7 +4,12 @@ from typing import Tuple, Union, Callable
 from pathlib import Path
 
 import pytest
-from _helpers import create_model, resize_images_to_same_sizes
+from _helpers import (
+    gamr_skip,
+    create_model,
+    create_failed_model,
+    resize_images_to_same_sizes,
+)
 from packaging import version
 
 import scvelo as scv
@@ -20,6 +25,7 @@ from matplotlib.testing import setup
 from matplotlib.testing.compare import compare_images
 
 import cellrank as cr
+from cellrank.ul.models import GAMR
 from cellrank.tl._constants import AbsProbKey
 from cellrank.tl.estimators import GPCCA, CFLARE
 
@@ -61,6 +67,7 @@ cr.settings.figdir = FIGS
 scv.settings.figdir = str(FIGS)
 scv.set_figure_params(transparent=True)
 
+
 try:
     from importlib_metadata import version as get_version
 except ImportError:
@@ -71,6 +78,7 @@ scvelo_paga_skip = pytest.mark.skipif(
     version.parse(get_version(scv.__name__)) < version.parse("0.1.26.dev189+gc441c72"),
     reason="scVelo < `0.1.26.dev189+gc441c72` supports new PAGA, including node colors and confidence",
 )
+
 del version, get_version
 
 
@@ -152,9 +160,21 @@ def compare(
 
         return decorator
 
-    if kind not in ("adata", "cflare", "gpcca", "lineage", "bwd"):
+    def compare_gamr(func: Callable):
+        def decorator(self, gamr_model: GAMR):
+            path, fpath = _prepare_fname(func)
+
+            func(self, gamr_model, path)
+
+            _assert_equal(fpath)
+
+        assert kind == "gamr", "Function `compare_gamr` only supports `kind='gamr'`."
+
+        return decorator
+
+    if kind not in ("adata", "cflare", "gpcca", "lineage", "bwd", "gamr"):
         raise ValueError(
-            f"Invalid kind `{kind!r}`. Valid options are: `['adata', 'cflare', 'gpcca', 'lineage', 'bwd']`."
+            f"Invalid kind `{kind!r}`. Valid options are: `['adata', 'cflare', 'gpcca', 'lineage', 'bwd', 'gamr']`."
         )
 
     if kind == "adata":
@@ -168,6 +188,8 @@ def compare(
         return compare_lineage
     if kind == "bwd":
         return compare_gpcca_bwd
+    if kind == "gamr":
+        return compare_gamr
 
     raise NotImplementedError(f"Invalid kind `{kind!r}`.")
 
@@ -512,7 +534,7 @@ class TestClusterFates:
         )
 
 
-class TestClusterLineages:
+class TestClusterLineage:
     @compare()
     def test_cluster_lineage(self, adata: AnnData, fpath: str):
         model = create_model(adata)
@@ -521,6 +543,7 @@ class TestClusterLineages:
             model,
             GENES[:10],
             "1",
+            random_state=0,
             time_key="latent_time",
             dpi=DPI,
             save=fpath,
@@ -534,6 +557,7 @@ class TestClusterLineages:
             model,
             GENES[:10],
             "0",
+            random_state=0,
             backward=True,
             time_key="latent_time",
             dpi=DPI,
@@ -548,6 +572,7 @@ class TestClusterLineages:
             model,
             RAW_GENES[:5],
             "1",
+            random_state=0,
             time_key="latent_time",
             dpi=DPI,
             save=fpath,
@@ -562,6 +587,7 @@ class TestClusterLineages:
             model,
             GENES[:10],
             "1",
+            random_state=0,
             time_key="latent_time",
             norm=False,
             dpi=DPI,
@@ -576,6 +602,7 @@ class TestClusterLineages:
             model,
             GENES[:10],
             "1",
+            random_state=0,
             time_key="latent_time",
             data_key="Ms",
             norm=False,
@@ -605,11 +632,53 @@ class TestClusterLineages:
             model,
             GENES[:10],
             "1",
+            random_state=0,
             time_key="latent_time",
             use_leiden=True,
             dpi=DPI,
             save=fpath,
         )
+
+    @compare()
+    def test_cluster_lineage_2_failed_genes(self, adata: AnnData, fpath: str):
+        fm = create_failed_model(adata)
+        cr.pl.cluster_lineage(
+            adata,
+            {GENES[0]: fm, GENES[5]: fm, "*": fm.model},
+            GENES[:10],
+            "1",
+            random_state=0,
+            time_key="latent_time",
+            key="foobar",
+            dpi=DPI,
+            save=fpath,
+        )
+
+        assert isinstance(adata.uns["foobar"], AnnData)
+        assert adata.uns["foobar"].shape == (8, 200)
+
+    def test_cluster_lineage_returns_fitted_models(self, adata_cflare: AnnData):
+        fm = create_failed_model(adata_cflare)
+        models = cr.pl.cluster_lineage(
+            adata_cflare,
+            {GENES[0]: fm, "*": fm.model},
+            GENES[:10],
+            "1",
+            random_state=0,
+            time_key="latent_time",
+            return_models=True,
+        )
+
+        models = pd.DataFrame(models).T
+        np.testing.assert_array_equal(models.index, GENES[:10])
+        np.testing.assert_array_equal(models.columns, ["1"])
+        assert isinstance(models.loc[GENES[0], "1"], cr.ul.models.FailedModel)
+
+        mask = models.astype(bool)
+        assert not mask.loc[GENES[0], "1"]
+        mask.loc[GENES[0], "1"] = True
+
+        assert np.all(mask)
 
     def test_cluster_lineage_random_state_same_pca(self, adata_cflare: AnnData):
         model = create_model(adata_cflare)
@@ -970,6 +1039,7 @@ class TestHeatmap:
             save=fpath,
         )
 
+    @pytest.mark.skip("Hangs using pytest-xdist")
     @compare(dirname="heatmap_n_jobs")
     def test_heatmap_n_jobs(self, adata: AnnData, fpath: str):
         model = create_model(adata)
@@ -987,6 +1057,7 @@ class TestHeatmap:
             save=fpath,
         )
 
+    @pytest.mark.skip("Hangs using pytest-xdist")
     @compare(dirname="heatmap_n_jobs_multiprocessing")
     def test_heatmap_n_jobs_multiprocessing(self, adata: AnnData, fpath: str):
         model = create_model(adata)
@@ -1034,8 +1105,34 @@ class TestHeatmap:
             save=fpath,
         )
 
+    @compare(dirname="heatmap_lineages_1_lineage_failed")
+    def test_heatmap_lineages_1_lineage_failed(self, adata: AnnData, fpath: str):
+        fm = create_failed_model(adata)
+        cr.pl.heatmap(
+            adata,
+            {g: {"0": fm, "*": fm.model} for g in GENES[:10]},
+            GENES[:10],
+            mode="lineages",
+            time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
+        )
 
-class TestHeatMapReturns:
+    @compare()
+    def test_heatmap_genes_1_gene_failed(self, adata: AnnData, fpath: str):
+        fm = create_failed_model(adata)
+        cr.pl.heatmap(
+            adata,
+            {GENES[0]: fm, "*": fm.model},
+            GENES[:10],
+            mode="genes",
+            time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
+        )
+
+
+class TestHeatmapReturns:
     def test_heatmap_lineages_return_genes(self, adata_cflare: AnnData):
         model = create_model(adata_cflare)
         df = cr.pl.heatmap(
@@ -1052,6 +1149,50 @@ class TestHeatMapReturns:
         np.testing.assert_array_equal(
             df.columns, adata_cflare.obsm[AbsProbKey.FORWARD.s].names
         )
+        assert len(df) == 10
+        assert set(df.iloc[:, 0].values) == set(GENES[:10])
+
+    def test_heatmap_lineages_return_models(self, adata_cflare: AnnData):
+        model = create_model(adata_cflare)
+        models = cr.pl.heatmap(
+            adata_cflare,
+            model,
+            GENES[:10],
+            mode="lineages",
+            time_key="latent_time",
+            return_models=True,
+            dpi=DPI,
+        )
+
+        models = pd.DataFrame(models).T
+        np.testing.assert_array_equal(models.index, GENES[:10])
+        np.testing.assert_array_equal(
+            models.columns, adata_cflare.obsm[AbsProbKey.FORWARD.s].names
+        )
+        assert np.all(models.astype(bool))
+
+    def test_heatmap_lineages_return_models_and_genes(self, adata_cflare: AnnData):
+        model = create_model(adata_cflare)
+        models, df = cr.pl.heatmap(
+            adata_cflare,
+            model,
+            GENES[:10],
+            mode="lineages",
+            time_key="latent_time",
+            return_models=True,
+            return_genes=True,
+            dpi=DPI,
+        )
+
+        lnames = adata_cflare.obsm[AbsProbKey.FORWARD.s].names
+
+        models = pd.DataFrame(models).T
+        np.testing.assert_array_equal(models.index, GENES[:10])
+        np.testing.assert_array_equal(models.columns, lnames)
+        assert np.all(models.astype(bool))
+
+        assert isinstance(df, pd.DataFrame)
+        np.testing.assert_array_equal(df.columns, lnames)
         assert len(df) == 10
         assert set(df.iloc[:, 0].values) == set(GENES[:10])
 
@@ -1099,7 +1240,7 @@ class TestHeatMapReturns:
         for i in range(1, len(df.columns)):
             np.testing.assert_array_equal(df.iloc[:, i].values, ref)
 
-    def test_heatmap_genes_return_genes(self, adata_cflare: AnnData):
+    def test_heatmap_genes_return_no_genes(self, adata_cflare: AnnData):
         model = create_model(adata_cflare)
         df = cr.pl.heatmap(
             adata_cflare,
@@ -1420,6 +1561,21 @@ class TestGeneTrend:
         )
 
     @compare()
+    def test_trends_perc_per_lineage(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            GENES[:3],
+            figsize=(5, 5),
+            data_key="Ms",
+            same_plot=False,
+            perc=[(0, 50), (5, 95), (50, 100)],
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
     def test_trends_time_key(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.gene_trends(
@@ -1434,12 +1590,28 @@ class TestGeneTrend:
         )
 
     @compare()
+    def test_trends_show_lineage_ignores_no_transpose(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            GENES[:5],
+            transpose=False,
+            data_key="Ms",
+            same_plot=True,
+            plot_kwargs=dict(lineage_probability=True),
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
     def test_trends_show_lineage_same_plot(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.gene_trends(
             adata,
             model,
             GENES[:5],
+            transpose=True,
             data_key="Ms",
             same_plot=True,
             plot_kwargs=dict(lineage_probability=True),
@@ -1456,6 +1628,7 @@ class TestGeneTrend:
             GENES[0],
             data_key="Ms",
             same_plot=False,
+            transpose=True,
             plot_kwargs=dict(lineage_probability=True),
             figsize=(5, 5),
             dpi=DPI,
@@ -1471,6 +1644,7 @@ class TestGeneTrend:
             GENES[0],
             data_key="Ms",
             same_plot=True,
+            transpose=True,
             plot_kwargs=dict(
                 lineage_probability=True, lineage_probability_conf_int=True
             ),
@@ -1482,6 +1656,8 @@ class TestGeneTrend:
     def test_trends_time_key_del_latent_time(self, adata: AnnData, fpath: str):
         # this ensures that the callback passes the correct values
         del adata.obs["latent_time"]
+        assert "latent_time" not in adata.obs
+
         model = create_model(adata)
         cr.pl.gene_trends(
             adata,
@@ -1494,11 +1670,11 @@ class TestGeneTrend:
             save=fpath,
         )
 
-    def test_invalid_time_key(self, adata: AnnData):
-        model = create_model(adata)
+    def test_invalid_time_key(self, adata_cflare: AnnData):
+        model = create_model(adata_cflare)
         with pytest.raises(KeyError):
             cr.pl.gene_trends(
-                adata,
+                adata_cflare,
                 model,
                 GENES[:10],
                 data_key="Ms",
@@ -1506,8 +1682,225 @@ class TestGeneTrend:
                 time_key="foobar",
             )
 
+    def test_all_models_failed(self, adata_cflare: AnnData):
+        fm = create_failed_model(adata_cflare)
+        with pytest.raises(RuntimeError):
+            cr.pl.gene_trends(
+                adata_cflare,
+                fm,
+                GENES[:10],
+                data_key="Ms",
+                mode="lineages",
+                time_key="latent_time",
+                dpi=DPI,
+            )
 
-# TODO: use the proper constants for transition matrices
+    def test_return_models_no_failures(self, adata_cflare: AnnData):
+        model = create_model(adata_cflare)
+        models = cr.pl.gene_trends(
+            adata_cflare,
+            model,
+            GENES[:10],
+            data_key="Ms",
+            lineages=["0", "1"],
+            time_key="latent_time",
+            dpi=DPI,
+            return_models=True,
+        )
+
+        models = pd.DataFrame(models).T
+        np.testing.assert_array_equal(models.index, GENES[:10])
+        np.testing.assert_array_equal(models.columns, [str(i) for i in range(2)])
+        assert np.all(models.astype(bool))
+
+    def test_return_models_with_failures(self, adata_cflare: AnnData):
+        fm = create_failed_model(adata_cflare)
+        models = cr.pl.gene_trends(
+            adata_cflare,
+            {GENES[0]: {"0": fm, "*": fm.model}, "*": fm.model},
+            GENES[:10],
+            lineages=["0", "1"],
+            time_key="latent_time",
+            dpi=DPI,
+            return_models=True,
+        )
+
+        models = pd.DataFrame(models).T
+        np.testing.assert_array_equal(models.index, GENES[:10])
+        np.testing.assert_array_equal(models.columns, [str(i) for i in range(2)])
+        assert isinstance(models.loc[GENES[0], "0"], cr.ul.models.FailedModel)
+
+        mask = models.astype(bool)
+        assert not mask.loc[GENES[0], "0"]
+        mask.loc[GENES[0], "0"] = True
+
+        assert np.all(mask)
+
+    @compare()
+    def test_all_models_for_1_gene_failed(self, adata: AnnData, fpath: str):
+        fm = create_failed_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            {GENES[0]: fm, "*": fm.model},
+            GENES[:3],
+            figsize=(5, 5),
+            data_key="Ms",
+            time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_all_models_for_1_lineage_failed(self, adata: AnnData, fpath: str):
+        fm = create_failed_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            {g: {"0": fm, "*": fm.model} for g in GENES[:3]},
+            GENES[:3],
+            figsize=(5, 5),
+            data_key="Ms",
+            time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_all_models_for_1_gene_failed_same_plot(self, adata: AnnData, fpath: str):
+        fm = create_failed_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            {GENES[0]: fm, "*": fm.model},
+            GENES[:10],
+            data_key="Ms",
+            time_key="latent_time",
+            same_plot=True,
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_failed_only_main_diagonal(self, adata: AnnData, fpath: str):
+        fm = create_failed_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            {g: {str(ln): fm.model, "*": fm} for ln, g in enumerate(GENES[:3])},
+            GENES[:3],
+            lineages=["0", "1", "2"],
+            data_key="Ms",
+            time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_failed_only_off_diagonal(self, adata: AnnData, fpath: str):
+        fm = create_failed_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            {
+                g: {str(ln): fm.model, "*": fm}
+                for ln, g in zip(range(3)[::-1], GENES[:3])
+            },
+            GENES[:3],
+            data_key="Ms",
+            time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_transpose(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            GENES[:4],
+            transpose=True,
+            data_key="Ms",
+            time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_transpose_same_plot(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            GENES[:3],
+            transpose=True,
+            same_plot=True,
+            data_key="Ms",
+            time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_transpose_all_models_for_1_gene_failed(self, adata: AnnData, fpath: str):
+        fm = create_failed_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            {GENES[0]: fm, "*": fm.model},
+            GENES[:10],
+            transpose=True,
+            time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_transpose_all_models_for_1_lineage_failed(
+        self, adata: AnnData, fpath: str
+    ):
+        fm = create_failed_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            {g: {"0": fm, "*": fm.model} for g in GENES[:10]},
+            GENES[:10],
+            transpose=True,
+            data_key="Ms",
+            time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_transpose_failed_only_off_diagonal(self, adata: AnnData, fpath: str):
+        fm = create_failed_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            {
+                g: {str(ln): fm.model, "*": fm}
+                for ln, g in zip(range(3)[::-1], GENES[:3])
+            },
+            GENES[:3],
+            transpose=True,
+            data_key="Ms",
+            time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_transpose_all_models_for_1_lineage_failed_same_plot(
+        self, adata: AnnData, fpath: str
+    ):
+        fm = create_failed_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            {g: {"0": fm, "*": fm.model} for g in GENES[:10]},
+            GENES[:10],
+            transpose=True,
+            same_plot=True,
+            data_key="Ms",
+            time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
+        )
+
+
 class TestGraph:
     @compare()
     def test_graph(self, adata: AnnData, fpath: str):
@@ -2052,7 +2445,7 @@ class TestHighLvlStates:
 class TestLineage:
     def test_pie(self, lineage: cr.tl.Lineage):
         with pytest.raises(ValueError):
-            lineage[:, 0].plot_pie(dpi=DPI, save=fpath)
+            lineage[:, 0].plot_pie(dpi=DPI)
 
     @compare(kind="lineage")
     def test_pie(self, lineage: cr.tl.Lineage, fpath: str):
@@ -2191,6 +2584,85 @@ class TestModel:
         )
 
 
+@gamr_skip
+class TestGAMR:
+    @compare(kind="gamr")
+    def test_gamr_default(self, model: GAMR, fpath: str):
+        model.prepare(model.adata.var_names[0], "1")
+        model.fit().predict()
+        model.plot(
+            save=fpath,
+            dpi=DPI,
+        )
+
+    @compare(kind="gamr")
+    def test_gamr_ci_50(self, model: GAMR, fpath: str):
+        model.prepare(model.adata.var_names[0], "1")
+        model.fit().predict(level=0.5)
+        model.plot(
+            conf_int=True,
+            save=fpath,
+            dpi=DPI,
+        )
+
+    @compare(kind="gamr")
+    def test_gamr_no_ci(self, model: GAMR, fpath: str):
+        model.prepare(model.adata.var_names[0], "1")
+        model.fit().predict(level=None)
+        model.plot(
+            conf_int=False,
+            save=fpath,
+            dpi=DPI,
+        )
+
+    @compare(kind="gamr")
+    def test_gamr_no_cbar(self, model: GAMR, fpath: str):
+        model.prepare(model.adata.var_names[0], "1")
+        model.fit().predict(level=0.95)
+        model.plot(
+            cbar=False,
+            save=fpath,
+            dpi=DPI,
+        )
+
+    @compare(kind="gamr")
+    def test_gamr_lineage_prob(self, model: GAMR, fpath: str):
+        model.prepare(model.adata.var_names[0], "1")
+        model.fit().predict(level=0.95)
+        model.plot(
+            lineage_probability=True,
+            lineage_probability_conf_int=True,
+            save=fpath,
+            dpi=DPI,
+        )
+
+    @compare(kind="gamr")
+    def test_trends_gam_ci_100(self, model: GAMR, fpath: str):
+        cr.pl.gene_trends(
+            model.adata,
+            model,
+            GENES[:3],
+            conf_int=1,
+            backward=False,
+            data_key="Ms",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare(kind="gamr")
+    def test_trends_gam_ci_20(self, model: GAMR, fpath: str):
+        cr.pl.gene_trends(
+            model.adata,
+            model,
+            GENES[:3],
+            conf_int=0.2,
+            backward=False,
+            data_key="Ms",
+            dpi=DPI,
+            save=fpath,
+        )
+
+
 class TestComposition:
     @compare()
     def test_composition(self, adata: AnnData, fpath: str):
@@ -2200,4 +2672,145 @@ class TestComposition:
     def test_composition_kwargs_autopct(self, adata: AnnData, fpath: str):
         cr.pl._utils.composition(
             adata, "clusters", dpi=DPI, save=fpath, autopct="%1.0f%%"
+        )
+
+
+class TestFittedModel:
+    @compare()
+    def test_fitted_empty_model(self, _adata: AnnData, fpath: str):
+        np.random.seed(42)
+        fm = cr.ul.models.FittedModel(np.arange(100), np.random.normal(size=100))
+        fm.plot(dpi=DPI, save=fpath)
+
+    @compare()
+    def test_fitted_model_conf_int(self, _adata: AnnData, fpath: str):
+        np.random.seed(43)
+        y_test = np.random.normal(size=100)
+
+        fm = cr.ul.models.FittedModel(
+            np.arange(100), y_test, conf_int=np.c_[y_test - 1, y_test + 1]
+        )
+        fm.plot(conf_int=True, dpi=DPI, save=fpath)
+
+    @compare()
+    def test_fitted_model_conf_int_no_conf_int_computed(
+        self, _adata: AnnData, fpath: str
+    ):
+        np.random.seed(44)
+
+        fm = cr.ul.models.FittedModel(
+            np.arange(100),
+            np.random.normal(size=100),
+        )
+        fm.plot(conf_int=True, dpi=DPI, save=fpath)
+
+    @compare()
+    def test_fitted_model_cells_with_weights(self, _adata: AnnData, fpath: str):
+        np.random.seed(45)
+
+        fm = cr.ul.models.FittedModel(
+            np.arange(100),
+            np.random.normal(size=100),
+            x_all=np.random.normal(size=200),
+            y_all=np.random.normal(size=200),
+        )
+
+        fm.plot(hide_cells=False, dpi=DPI, save=fpath)
+
+    @compare()
+    def test_fitted_model_weights(self, _adata: AnnData, fpath: str):
+        np.random.seed(46)
+
+        fm = cr.ul.models.FittedModel(
+            np.arange(100),
+            np.random.normal(size=100),
+            x_all=np.random.normal(size=200),
+            y_all=np.random.normal(size=200),
+            w_all=np.random.normal(size=200),
+        )
+
+        fm.plot(hide_cells=False, dpi=DPI, save=fpath)
+
+    @compare()
+    def test_fitted_ignore_plot_smoothed_lineage(self, _adata: AnnData, fpath: str):
+        np.random.seed(47)
+
+        fm = cr.ul.models.FittedModel(
+            np.arange(100),
+            np.random.normal(size=100),
+            x_all=np.random.normal(size=200),
+            y_all=np.random.normal(size=200),
+            w_all=np.random.normal(size=200),
+        )
+
+        fm.plot(
+            lineage_probability=True,
+            lineage_probability_conf_int=True,
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_fitted_gene_trends(self, adata: AnnData, fpath: str):
+        np.random.seed(48)
+
+        fm1 = cr.ul.models.FittedModel(
+            np.arange(100),
+            np.random.normal(size=100),
+            x_all=np.random.normal(size=200),
+            y_all=np.random.normal(size=200),
+            w_all=np.random.normal(size=200),
+        )
+        fm2 = cr.ul.models.FittedModel(
+            np.arange(100),
+            np.random.normal(size=100),
+            x_all=np.random.normal(size=200),
+            y_all=np.random.normal(size=200),
+            w_all=np.random.normal(size=200),
+        )
+        cr.pl.gene_trends(
+            adata,
+            {GENES[0]: fm1, GENES[1]: fm2},
+            GENES[:2],
+            data_key="Ms",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare(tol=250)
+    def test_fitted_cluster_fates(self, adata: AnnData, fpath: str):
+        np.random.seed(49)
+
+        model = cr.ul.models.FittedModel(
+            np.arange(100),
+            np.random.normal(size=100),
+        )
+        cr.pl.cluster_lineage(
+            adata,
+            model,
+            GENES[:10],
+            "1",
+            n_points=100,
+            time_key="latent_time",
+            random_state=49,
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare(dirname="fitted_heatmap")
+    def test_fitted_heatmap(self, adata: AnnData, fpath: str):
+        np.random.seed(49)
+
+        fm = cr.ul.models.FittedModel(
+            np.arange(100),
+            np.random.normal(size=100),
+        )
+        cr.pl.heatmap(
+            adata,
+            fm,
+            GENES[:10],
+            mode="lineages",
+            time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
         )

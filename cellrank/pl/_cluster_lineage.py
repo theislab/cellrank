@@ -14,85 +14,27 @@ import matplotlib.pyplot as plt
 from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.pl._utils import (
-    _model_type,
+    _fit_bulk,
     _get_backend,
     _callback_type,
     _create_models,
     _time_range_type,
     _create_callbacks,
+    _input_model_type,
+    _return_model_type,
 )
 from cellrank.tl._utils import save_fig, _unique_order_preserving
 from cellrank.ul._utils import _get_n_cores, _check_collection
 from cellrank.tl._constants import _DEFAULT_BACKEND, AbsProbKey
-from cellrank.ul._parallelize import parallelize
 
 AnnData = TypeVar("AnnData")
 Queue = TypeVar("Queue")
 
 
-def _cluster_lineages_helper(
-    genes: Sequence[str],
-    models: _model_type,
-    callbacks: _callback_type,
-    lineage: str,
-    time_range: Optional[Union[float, Tuple[float, float]]],
-    queue: Optional[Queue],
-    **kwargs,
-) -> np.ndarray:
-    """
-    Fit models to genes in given lineages. Used by :func:`cellrank.pl.cluster_lineage`.
-
-    Parameters
-    ----------
-    genes
-        Genes or observations for which to fit the models.
-    models
-        Gene and lineage specific models.
-    callbacks
-        Gene and lineage specific prepare callbacks.
-    backward
-        Direction of the process.
-    lineage
-        Name of the lineage for which to fit the models.
-    time_range
-        Minimum and maximum pseudotime.
-    queue
-        Signalling queue in the parent process/thread used to update the progress bar.
-    kwargs
-        Keyword arguments for :meth:`cellrank.ul.models.BaseModel.prepare`.
-
-    Returns
-    -------
-    :class:`numpy.ndarray`
-        The model predictions, optionally normed.
-    """
-
-    res = []
-    for gene in genes:
-        cb = callbacks[gene][lineage]
-
-        model = cb(
-            models[gene][lineage],
-            gene=gene,
-            lineage=lineage,
-            time_range=time_range,
-            **kwargs,
-        ).fit()
-        res.append(model.predict())
-
-        if queue is not None:
-            queue.put(1)
-
-    if queue is not None:
-        queue.put(None)
-
-    return np.array(res)
-
-
 @d.dedent
 def cluster_lineage(
     adata: AnnData,
-    model: _model_type,
+    model: _input_model_type,
     genes: Sequence[str],
     lineage: str,
     backward: bool = False,
@@ -117,8 +59,9 @@ def cluster_lineage(
     pca_kwargs: Dict = MappingProxyType({"svd_solver": "arpack"}),
     neighbors_kwargs: Dict = MappingProxyType({"use_rep": "X"}),
     clustering_kwargs: Dict = MappingProxyType({}),
+    return_models: bool = False,
     **kwargs,
-) -> None:
+) -> Optional[_return_model_type]:
     """
     Cluster gene expression trends within a lineage and plot the clusters.
 
@@ -165,17 +108,18 @@ def cluster_lineage(
         Keyword arguments for :func:`scanpy.pp.neighbors`.
     clustering_kwargs
         Keyword arguments for :func:`scanpy.tl.louvain` or :func:`scanpy.tl.leiden`.
+    %(return_models)s
     **kwargs:
         Keyword arguments for :meth:`cellrank.ul.models.BaseModel.prepare`.
 
     Returns
     -------
-    %(just_plots)s
+    %(plots_or_returns_models)s
 
-        Updates ``adata.uns`` with the following key:
+        Also updates ``adata.uns`` with the following:
 
-            - ``key`` or ``lineage_{lineage}_trend`` - an :class:`anndata.AnnData` object
-              of shape ``(n_genes, n_points)`` containing the clustered genes.
+            - ``key`` or ``lineage_{lineage}_trend`` - an :class:`anndata.AnnData` object of
+              shape `(n_genes, n_points)` containing the clustered genes.
     """
 
     import scanpy as sc
@@ -193,33 +137,30 @@ def cluster_lineage(
     if key is None:
         key = f"lineage_{lineage}_trend"
 
-    random_state = np.random.mtrand.RandomState(random_state).randint(2 ** 16)
-
     if recompute or key not in adata.uns:
-        kwargs["time_key"] = time_key  # kwargs for the model.prepare
-        kwargs["n_test_points"] = n_points
         kwargs["backward"] = backward
-
+        kwargs["time_key"] = time_key
+        kwargs["n_test_points"] = n_points
         models = _create_models(model, genes, [lineage])
-        callbacks = _create_callbacks(adata, callback, genes, [lineage], **kwargs)
-
-        backend = _get_backend(model, backend)
-        n_jobs = _get_n_cores(n_jobs, len(genes))
-
-        start = logg.info(f"Computing gene trends using `{n_jobs}` core(s)")
-        trends = parallelize(
-            _cluster_lineages_helper,
+        all_models, models, genes, _ = _fit_bulk(
+            models,
+            _create_callbacks(adata, callback, genes, [lineage], **kwargs),
             genes,
-            as_array=True,
-            unit="gene",
-            n_jobs=n_jobs,
-            backend=backend,
-            extractor=np.vstack,
-            show_progress_bar=show_progress_bar,
-        )(models, callbacks, lineage, time_range, **kwargs)
-        logg.info("    Finish", time=start)
+            lineage,
+            time_range,
+            return_models=True,  # always return (better error messages)
+            filter_all_failed=True,
+            parallel_kwargs={
+                "show_progress_bar": show_progress_bar,
+                "n_jobs": _get_n_cores(n_jobs, len(genes)),
+                "backend": _get_backend(models, backend),
+            },
+            **kwargs,
+        )
 
-        trends = trends.T
+        # `n_genes, n_test_points`
+        trends = np.vstack([model[lineage].y_test for model in models.values()]).T
+
         if norm:
             logg.debug("Normalizing trends")
             _ = StandardScaler(copy=False).fit_transform(trends)
@@ -236,6 +177,8 @@ def cluster_lineage(
             raise RuntimeError(
                 f"Expected to find `{n_points}` points, found `{trends.n_vars}`."
             )
+
+        random_state = np.random.mtrand.RandomState(random_state).randint(2 ** 16)
 
         pca_kwargs = dict(pca_kwargs)
         pca_kwargs.setdefault("n_comps", min(50, n_points, len(genes)) - 1)
@@ -264,6 +207,7 @@ def cluster_lineage(
         logg.info(f"Saving data to `adata.uns[{key!r}]`")
         adata.uns[key] = trends
     else:
+        all_models = None
         logg.info(f"Loading data from `adata.uns[{key!r}]`")
         trends = adata.uns[key]
 
@@ -319,3 +263,6 @@ def cluster_lineage(
 
     if save is not None:
         save_fig(fig, save)
+
+    if return_models:
+        return all_models

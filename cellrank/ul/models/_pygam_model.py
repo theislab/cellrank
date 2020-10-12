@@ -61,15 +61,15 @@ _gams = defaultdict(
 @d.dedent
 class GAM(BaseModel):
     """
-    Fit Generalized Additive Models (GAMs) using package :mod:`pygam`.
+    Fit Generalized Additive Models (GAMs) using :mod:`pygam`.
 
     Parameters
     ----------
     %(adata)s
-    n_splines
-        Number of splines.
+    n_knots
+        Number of knots.
     spline_order
-        Order of the splines.
+        Order of the splines, i.e. `3` for cubic splines.
     distribution
         Name of the distribution. Available distributions can be found
         `here <https://pygam.readthedocs.io/en/latest/notebooks/tour_of_pygam.html#Distribution:>`_.
@@ -80,13 +80,13 @@ class GAM(BaseModel):
         Maximum number of iterations for optimization.
     expectile
         Expectile for :class:`pygam.pygam.ExpectileGAM`. This forces the distribution to be `'normal'`
-        and link function to `'identity'`. Must be in `(0, 1)`.
+        and link function to `'identity'`. Must be in interval `(0, 1)`.
     use_default_conf_int
         Whether to use :meth:`default_confidence_interval` to calculate the confidence interval or
         use the :paramref:`model`'s method.
     grid
         Whether to perform a grid search. Keys correspond to a parameter names and values to range to be searched.
-        If an empty :class:`dict`, don't perform a grid search. If `None`, use a default grid.
+        If `'default'`, use the default grid. If `None`, don't perform a grid search.
     spline_kwargs
         Keyword arguments for :class:`pygam.s`.
     **kwargs
@@ -96,7 +96,7 @@ class GAM(BaseModel):
     def __init__(
         self,
         adata: AnnData,
-        n_splines: Optional[int] = 10,
+        n_knots: Optional[int] = 6,
         spline_order: int = 3,
         distribution: str = "gamma",
         link: str = "log",
@@ -110,7 +110,7 @@ class GAM(BaseModel):
         term = s(
             0,
             spline_order=spline_order,
-            n_splines=n_splines,
+            n_splines=n_knots,
             penalties=["derivative", "l2"],
             **_filter_kwargs(s, **{**{"lam": 3}, **spline_kwargs}),
         )
@@ -233,7 +233,7 @@ class GAM(BaseModel):
         x_test = self._check(key_added, x_test)
 
         self._y_test = self.model.predict(x_test, **kwargs)
-        self._y_test = np.squeeze(self._y_test)
+        self._y_test = np.squeeze(self._y_test).astype(self._dtype)
 
         return self.y_test
 
@@ -257,7 +257,9 @@ class GAM(BaseModel):
         if self._use_default_conf_int:
             self._conf_int = self.default_confidence_interval(x_test=x_test, **kwargs)
         else:
-            self._conf_int = self.model.confidence_intervals(x_test, **kwargs)
+            self._conf_int = self.model.confidence_intervals(x_test, **kwargs).astype(
+                self._dtype
+            )
 
         return self.conf_int
 
@@ -265,9 +267,9 @@ class GAM(BaseModel):
     def copy(self) -> "BaseModel":
         """%(copy)s"""  # noqa
         res = GAM(self.adata)
+        self._shallowcopy_attributes(res)
 
-        res._use_default_conf_int = self._use_default_conf_int
         res._grid = deepcopy(self._grid)
-        res._model = deepcopy(self.model)
+        res._use_default_conf_int = self._use_default_conf_int
 
         return res

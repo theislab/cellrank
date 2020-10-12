@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 """General utility functions module."""
+import pickle
 from types import MappingProxyType
 from typing import Any, Dict, Tuple, Union, TypeVar, Iterable, Optional
+from pathlib import Path
 from functools import wraps, update_wrapper
 from multiprocessing import cpu_count
 
@@ -9,8 +11,63 @@ import numpy as np
 from scipy.sparse import issparse, spmatrix
 
 from cellrank import logging as logg
+from cellrank.ul._docs import d
 
 AnnData = TypeVar("AnnData")
+
+
+class Pickleable:
+    """Class which allows serialization and deserialization using :mod:pickle."""
+
+    @d.get_full_descriptionf("pickleable")
+    @d.get_sectionsf("pickleable", sections=["Parameters", "Returns"])
+    def write(self, fname: Union[str, Path], ext: Optional[str] = "pickle") -> None:
+        """
+        Serialize self to a file.
+
+        Parameters
+        ----------
+        fname
+            Filename where to save the object.
+        ext
+            Filename extension to use. If `None`, don't append any extension.
+
+        Returns
+        -------
+        None
+            Nothing, just writes itself to a file using :mod:`pickle`.
+        """
+
+        fname = str(fname)
+        if ext is not None:
+            if not ext.startswith("."):
+                ext = "." + ext
+            if not fname.endswith(ext):
+                fname += ext
+
+        logg.debug(f"Writing to `{fname}`")
+
+        with open(fname, "wb") as fout:
+            pickle.dump(self, fout)
+
+    @staticmethod
+    def read(fname: Union[str, Path]) -> Any:
+        """
+        Deserialize self from a file.
+
+        Parameters
+        ----------
+        fname
+            Filename from which to read the object.
+
+        Returns
+        -------
+        :class:`typing.Any`
+            The deserialized object.
+        """
+
+        with open(fname, "rb") as fin:
+            return pickle.load(fin)
 
 
 def _check_collection(
@@ -39,7 +96,7 @@ def _check_collection(
     Returns
     -------
     None
-        Nothing, but raises and :class:`KeyError` if one of needles is not found.
+        Nothing, but raises and :class:`KeyError` if one of the needles is not found.
     """
     adata_name = "adata"
 
@@ -230,7 +287,9 @@ def valuedispatch(func):
 def _densify_squeeze(x: Union[spmatrix, np.ndarray], dtype=np.float32) -> np.ndarray:
     if issparse(x):
         x = x.toarray()
+    # use np.array instead of asarray to create a copy
+    x = np.array(x, dtype=dtype)
     if x.ndim == 2 and x.shape[1] == 1:
         x = np.squeeze(x, axis=1)
 
-    return x[:].astype(dtype)
+    return x

@@ -3,6 +3,7 @@
 
 .wy-nav-top { background-color: #f07e44 }
 .wy-side-nav-search { background-color: #E05600; }
+.wy-nav-content { max-width: 950px }
 .wy-side-nav-search input[type="text"] { border-width: 0 }
 
 
@@ -64,6 +65,11 @@ html.writer-html5 .rst-content dl[class]:not(.option-list):not(.field-list):not(
     color: #363636;
     border-top: solid 3px #363636;
     background: #FFC76E;
+}
+
+/*class="longtable docutils align-default"*/
+table.longtable td {
+    white-space: normal!important;
 }
 
 /* Parameters contain <strong> parts and don’t need bold font */
