@@ -93,6 +93,8 @@ Utilities
     ul.models.GAM
     ul.models.GAMR
     ul.models.SKLearnModel
+    ul.models.FittedModel
+    ul.models.FailedModel
 
 Reading
 ~~~~~~~

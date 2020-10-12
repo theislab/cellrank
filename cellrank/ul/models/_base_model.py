@@ -17,6 +17,7 @@ from matplotlib import colors as mcolors
 from matplotlib import pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+from cellrank import logging as logg
 from cellrank.tl import Lineage
 from cellrank.ul._docs import d
 from cellrank.tl._utils import save_fig
@@ -153,7 +154,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
     ----------
     %(adata)s
     model
-        Underlying model.
+        The underlying model that is used for fitting and prediction.
     """
 
     def __init__(
@@ -163,7 +164,8 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
     ):
         from anndata import AnnData as _AnnData
 
-        if not isinstance(adata, _AnnData):
+        if not isinstance(adata, _AnnData) and not isinstance(self, FittedModel):
+            # FittedModel doesn't need it
             raise TypeError(
                 f"Expected `adata` to be of type `anndata.AnnData`, found `{type(adata).__name__!r}`."
             )
@@ -690,7 +692,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
     @d.dedent
     def plot(
         self,
-        figsize: Tuple[float, float] = (15, 10),
+        figsize: Tuple[float, float] = (8, 5),
         same_plot: bool = False,
         hide_cells: bool = False,
         perc: Tuple[float, float] = None,
@@ -813,8 +815,15 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
             if ylabel in ("expression", self._gene):
                 ylabel = f"scaled {ylabel}"
 
-        vmin, vmax = _minmax(self.w, perc)
-        if not hide_cells:
+        vmin, vmax = None, None
+        if (
+            not hide_cells
+            and self.x_all is not None
+            and self.w_all is not None
+            and self.y_all is not None
+        ):
+            # the extra checks are for the `FittedModel`
+            vmin, vmax = _minmax(self.w_all, perc)
             _ = ax.scatter(
                 self.x_all.squeeze(),
                 scaler(self.y_all.squeeze()),
@@ -858,7 +867,11 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
                 linestyle="--",
             )
 
-        if lineage_probability and self._lineage is not None:
+        if (
+            lineage_probability
+            and not isinstance(self, FittedModel)
+            and np.allclose(self.w, 1.0)
+        ):
             from cellrank.pl._utils import _is_any_gam_mgcv
 
             model = deepcopy(self)
@@ -943,7 +956,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         return np.reshape(arr, (-1, 1)).astype(self._dtype)
 
     def _check(
-        self, attr_name: Optional[str], arr: np.ndarray, ndim: int = 2
+        self, attr_name: Optional[str], arr: Optional[np.ndarray], ndim: int = 2
     ) -> Optional[np.ndarray]:
         """
         Check if the attribute exists with the correct dimension and optionally set it.
@@ -968,6 +981,11 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         if arr is None:  # already called prepare
             if not hasattr(self, attr_name):
                 raise AttributeError(f"No attribute `{attr_name!r}` found.")
+            if not isinstance(getattr(self, attr_name, None), np.ndarray):
+                raise AttributeError(
+                    f"Expected `{attr_name!r}` to be `numpy.ndarray`, "
+                    f"found `{type(getattr(self, attr_name, None)).__name__!r}`."
+                )
             if getattr(self, attr_name).ndim != ndim:
                 raise ValueError(
                     f"Expected attribute `{attr_name!r}` to have `{ndim}` dimensions, "
@@ -1066,9 +1084,12 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         if self.y_test is None:
             raise RuntimeError("Run `.predict()` first.")
 
-        vals = [self.y_test, self.y_all]
-        if show_conf_int and self.conf_int is not None:
-            vals.append([self.conf_int])
+        vals = [self.y_test]
+        if isinstance(self.y_all, np.ndarray):
+            # FittedModel Does not need to have these
+            vals.append(self.y_all)
+        if show_conf_int and isinstance(self.conf_int, np.ndarray):
+            vals.append(self.conf_int)
 
         minn = min(map(np.min, vals))
         maxx = max(map(np.max, vals))
@@ -1078,7 +1099,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
 
 class FailedModel(BaseModel):
     """
-    Model representing a failure.
+    Model representing a failure of original :paramref:`model`.
 
     Parameters
     ----------
@@ -1086,10 +1107,11 @@ class FailedModel(BaseModel):
         The original model which has failed.
     exc
         The exception that caused the :paramref:`model` to fail or a :class:`str` containing the message.
+        In the latter case, :meth:`cellrank.ul.models.FailedModel.reraise` a :class:`RuntimeError` with that message.
+        If `None`, :class`UnknownModelError` will eventually be raised.
     """
 
-    # which I was in a functional programming language like Haskell
-    # essentially BaseModel would be a Maybe monad
+    # in a functional programming language like Haskell essentially BaseModel would be a Maybe monad and this Nothing
     def __init__(
         self, model: BaseModel, exc: Optional[Union[BaseException, str]] = None
     ):
@@ -1121,7 +1143,7 @@ class FailedModel(BaseModel):
         *_args,
         **_kwargs,
     ) -> "FailedModel":
-        """Return self."""
+        """Do nothing and return self."""
         return self
 
     def fit(
@@ -1131,7 +1153,7 @@ class FailedModel(BaseModel):
         w: Optional[np.ndarray] = None,
         **kwargs,
     ) -> "FailedModel":
-        """Do nothing."""
+        """Do nothing and return self."""
         return self
 
     def predict(
@@ -1158,7 +1180,7 @@ class FailedModel(BaseModel):
         pass
 
     def reraise(self) -> None:
-        """Raise a the original exception with additional model information."""
+        """Raise the original exception with additional model information."""
         # retain the exception type and also the original exception
         raise type(self._exc)(f"Fatal model failure `{self}`.") from self._exc
 
@@ -1178,3 +1200,146 @@ class FailedModel(BaseModel):
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}[origin={repr(self.model).strip('<>')}]>"
+
+
+@d.dedent
+class FittedModel(BaseModel):
+    """
+    Class representing an already fitted model. Useful when the smoothed gene expression was computed externally.
+
+    Parameters
+    ----------
+    x_test
+        %(base_model_x_test.summary)s
+    y_test
+        %(base_model_y_test.summary)s
+    conf_int
+        %(base_model_conf_int.summary)s
+        If `None`, always set ``conf_int=False`` in :meth:`cellrank.ul.models.BaseModel.plot`.
+    x_all
+        %(base_model_x_all.summary)s
+        If `None`, always sets ``hide_cells=True`` in :meth:`cellrank.ul.models.BaseModel.plot`.
+    y_all
+        %(base_model_y_all.summary)s
+        If `None`, always sets `hide_cells=True`` in :meth:`cellrank.ul.models.BaseModel.plot`.
+    w_all
+        %(base_model_w_all.summary)s
+        If `None` and :paramref:`x_all` and :paramref:`y_all` are present, it will be set an array of `1`.
+    """
+
+    def __init__(
+        self,
+        x_test: np.ndarray,
+        y_test: np.ndarray,
+        conf_int: Optional[np.ndarray] = None,
+        x_all: Optional[np.ndarray] = None,
+        y_all: Optional[np.ndarray] = None,
+        w_all: Optional[np.ndarray] = None,
+    ):
+        super().__init__(None, None)
+
+        self._x_test = _densify_squeeze(x_test, self._dtype)[:, np.newaxis]
+        self._y_test = _densify_squeeze(y_test, self._dtype)
+
+        if self.x_test.ndim != 2 or self.x_test.shape[1] != 1:
+            raise ValueError(
+                f"Expected `x_test` to be of shape `(..., 1)`, found `{self.x_test.shape}`."
+            )
+        if self.y_test.shape != (self.x_test.shape[0],):
+            raise ValueError(
+                f"Expected `y_test` to be of shape `({self.x_test.shape[0]},)`, "
+                f"found `{self.y_test.shape}`."
+            )
+
+        if conf_int is not None:
+            self._conf_int = _densify_squeeze(conf_int, self._dtype)
+            if self.conf_int.shape != (self.x_test.shape[0], 2):
+                raise ValueError(
+                    f"Expected `conf_int` to be of shape `({self.x_test.shape[0]}, 2)`."
+                )
+        else:
+            logg.debug(
+                "No `conf_int` have been supplied, will be ignored during plotting"
+            )
+
+        if x_all is not None and y_all is not None:
+            self._x_all = _densify_squeeze(x_all, self._dtype)[:, np.newaxis]
+            if self.x_all.ndim != 2 or self.x_all.shape[1] != 1:
+                raise ValueError(
+                    f"Expected `x_all` to be of shape `(..., 1)`, found `{self.x_all.shape}`."
+                )
+
+            self._y_all = _densify_squeeze(y_all, self._dtype)[:, np.newaxis]
+            if self.y_all.shape != self.x_all.shape:
+                raise ValueError(
+                    f"Expected `y_all` to be of shape `{self.x_all.shape}`, found `{self.y_all.shape}`."
+                )
+
+            if w_all is not None:
+                self._w_all = _densify_squeeze(x_all, self._dtype)
+                if self.w_all.ndim != 1 or self.w_all.shape[0] != self.x_all.shape[0]:
+                    raise ValueError(
+                        f"Expected `w_all` to be of shape `({self.x_all.shape[0]},)`, "
+                        f"found `{self.w_all.shape}`."
+                    )
+            else:
+                logg.debug("Setting `w_all` to an array of `1`")
+                self._w_all = np.ones_like(self.x_all).squeeze(1)
+        else:
+            logg.debug(
+                "None or partially incomplete `x_all` and `y_all` have been supplied, "
+                "will be ignored during plotting"
+            )
+
+        self._prepared = True
+
+    def prepare(self, *_args, **_kwargs) -> "FittedModel":
+        """Do nothing and return self."""
+        return self
+
+    def fit(
+        self,
+        x: Optional[np.ndarray] = None,
+        y: Optional[np.ndarray] = None,
+        w: Optional[np.ndarray] = None,
+        **kwargs,
+    ) -> "FittedModel":
+        """Do nothing and return self."""
+        return self
+
+    @d.dedent
+    def predict(
+        self,
+        x_test: Optional[np.ndarray] = None,
+        key_added: Optional[str] = "_x_test",
+        **kwargs,
+    ) -> np.ndarray:
+        """%(base_model_y_test.summary)s"""  # noqa
+        return self._y_test
+
+    @d.dedent
+    def confidence_interval(
+        self, x_test: Optional[np.ndarray] = None, **kwargs
+    ) -> np.ndarray:
+        """%(base_model_conf_int.summary)s Raise a :class:`RuntimeError` if not present."""  # noqa
+        if self.conf_int is None:
+            raise RuntimeError(
+                "No confidence interval has been supplied. "
+                "Use `conf_int=...` when instantiating this class."
+            )
+        return self.conf_int
+
+    @d.dedent
+    def default_confidence_interval(
+        self,
+        x_test: Optional[np.ndarray] = None,
+        **kwargs,
+    ) -> np.ndarray:
+        """%(base_model_conf_int.summary)s Raise a :class:`RuntimeError` if not present."""  # noqa
+        return self.confidence_interval()
+
+    @d.dedent
+    def copy(self) -> "FittedModel":
+        """%(copy)s"""  # noqa
+        # here we return a deepcopy since it doesn't make sense to make a shallow one
+        return deepcopy(self)

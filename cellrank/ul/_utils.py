@@ -287,7 +287,9 @@ def valuedispatch(func):
 def _densify_squeeze(x: Union[spmatrix, np.ndarray], dtype=np.float32) -> np.ndarray:
     if issparse(x):
         x = x.toarray()
+    # use np.array instead of asarray to create a copy
+    x = np.array(x, dtype=dtype)
     if x.ndim == 2 and x.shape[1] == 1:
         x = np.squeeze(x, axis=1)
 
-    return x[:].astype(dtype)
+    return x
