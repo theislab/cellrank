@@ -2589,11 +2589,11 @@ class TestGAMR:
         )
 
     @compare(kind="gamr")
-    def test_gamr_ci_100(self, model: GAMR, fpath: str):
+    def test_gamr_ci_50(self, model: GAMR, fpath: str):
         model.prepare(model.adata.var_names[0], "1")
-        model.fit().predict(level=1)
+        model.fit().predict(level=0.5)
         model.plot(
-            conf_int=False,
+            conf_int=True,
             save=fpath,
             dpi=DPI,
         )
@@ -2643,12 +2643,12 @@ class TestGAMR:
         )
 
     @compare(kind="gamr")
-    def test_trends_gam_ci_80(self, model: GAMR, fpath: str):
+    def test_trends_gam_ci_20(self, model: GAMR, fpath: str):
         cr.pl.gene_trends(
             model.adata,
             model,
             GENES[:3],
-            conf_int=0.8,
+            conf_int=0.2,
             backward=False,
             data_key="Ms",
             dpi=DPI,

@@ -145,7 +145,6 @@ class BaseModelMeta(ABCMeta):
         return obj
 
 
-@d.get_sectionsf("base_model_prepare", sections=["Parameters", "Returns"])
 @d.get_sectionsf("base_model", sections=["Parameters"])
 @d.dedent
 class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
@@ -285,6 +284,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         """Array of shape `(n_samples, 2)` containing the lower and upper bounds of the confidence interval."""  # noqa
         return self._conf_int
 
+    @d.get_sectionsf("base_model_prepare", sections=["Parameters", "Returns"])
     @d.get_full_descriptionf("base_model_prepare")
     @d.dedent
     def prepare(
@@ -870,7 +870,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         if (
             lineage_probability
             and not isinstance(self, FittedModel)
-            and np.allclose(self.w, 1.0)
+            and not np.allclose(self.w, 1.0)
         ):
             from cellrank.pl._utils import _is_any_gam_mgcv
 
@@ -912,7 +912,12 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
             if kwargs.get("loc", "best") is not None:
                 ax.legend(handles=handle, **kwargs)
 
-        if cbar and not hide_cells and not same_plot and not np.allclose(self.w_all, 1):
+        if (
+            cbar
+            and not hide_cells
+            and not same_plot
+            and not np.allclose(self.w_all, 1.0)
+        ):
             norm = mcolors.Normalize(vmin=vmin, vmax=vmax)
             divider = make_axes_locatable(ax)
             cax = divider.append_axes("right", size="2%", pad=0.1)
@@ -1085,10 +1090,10 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
             raise RuntimeError("Run `.predict()` first.")
 
         vals = [self.y_test]
-        if isinstance(self.y_all, np.ndarray):
-            # FittedModel Does not need to have these
+        # FittedModel Does not need to have these
+        if self.y_all is not None:
             vals.append(self.y_all)
-        if show_conf_int and isinstance(self.conf_int, np.ndarray):
+        if show_conf_int and self.conf_int is not None:
             vals.append(self.conf_int)
 
         minn = min(map(np.min, vals))
