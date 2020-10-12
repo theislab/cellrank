@@ -797,6 +797,10 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
             fig.set_dpi(dpi)
 
         conf_int = conf_int and self.conf_int is not None
+        hide_cells = (
+            hide_cells or self.x_all is None or self.w_all is None or self.y_all is None
+        )
+
         lineage_probability_color = (
             lineage_color
             if lineage_probability_color is None
@@ -816,13 +820,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
                 ylabel = f"scaled {ylabel}"
 
         vmin, vmax = None, None
-        if (
-            not hide_cells
-            and self.x_all is not None
-            and self.w_all is not None
-            and self.y_all is not None
-        ):
-            # the extra checks are for the `FittedModel`
+        if not hide_cells:
             vmin, vmax = _minmax(self.w_all, perc)
             _ = ax.scatter(
                 self.x_all.squeeze(),
@@ -1245,6 +1243,7 @@ class FittedModel(BaseModel):
             raise ValueError(
                 f"Expected `x_test` to be of shape `(..., 1)`, found `{self.x_test.shape}`."
             )
+
         if self.y_test.shape != (self.x_test.shape[0],):
             raise ValueError(
                 f"Expected `y_test` to be of shape `({self.x_test.shape[0]},)`, "
