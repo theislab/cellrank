@@ -95,8 +95,7 @@ def compare(
         res = compare_images(expected_path, actual_path, tol=tol)
         assert res is None, res
 
-    # TODO: refactor
-
+    # TODO: refactor (we can remove the prefix from scvelo
     def _prepare_fname(func: Callable) -> Tuple[str, str]:
         fpath = f"{func.__name__.replace('test_', '')}"
         # scvelo saves figures as pdf

@@ -247,6 +247,11 @@ def _create_models(
         for lin_name, mod in lin_names.items():
             if lin_name == "*":
                 continue
+            if not isinstance(mod, BaseModel):
+                raise TypeError(
+                    f"Expected the model for gene `{obs_name!r}` and lineage `{lin_name!r}` "
+                    f"to be of type `BaseModel`, found `{type(mod).__name__!r}`."
+                )
             models[obs_name][lin_name] = copy(mod)
 
         if lin_rest_model is not None:
@@ -291,6 +296,17 @@ def _create_models(
             f"Class `{type(model).__name__!r}` must be of type `BaseModel` or "
             f"a gene and lineage specific `dict` of `BaseModel`.."
         )
+
+    if set(models.keys()) & obs != obs:
+        raise ValueError(
+            f"Missing gene models for the following genes: `{list(obs - set(models.keys()))}`."
+        )
+
+    for gene, vs in models.items():
+        if set(vs.keys()) & lineages != lineages:
+            raise ValueError(
+                f"Missing lineage models for the gene `{gene!r}`: `{list(lineages - set(vs.keys()))}`."
+            )
 
     return models
 
@@ -901,7 +917,10 @@ def _create_callbacks(
                 callbacks[obs_name][lin_name] = lin_names
             return
         elif not isinstance(lin_names, dict):
-            raise TypeError("TODO")
+            raise TypeError(
+                f"Expected the lineage callback to be either `callable` or a dictionary of callables, "
+                f"found `{type(lin_names).__name__!r}`."
+            )
 
         lin_rest_callback = (
             lin_names.get("*", _default_model_callback) or _default_model_callback
@@ -915,6 +934,11 @@ def _create_callbacks(
         for lin_name, cb in lin_names.items():
             if lin_name == "*":
                 continue
+            if not callable(cb):
+                raise TypeError(
+                    f"Expected the callback for gene `{obs_name!r}` and lineage `{lin_name!r}` "
+                    f"to be `callable`, found `{type(cb).__name__!r}`."
+                )
             callbacks[obs_name][lin_name] = copy(cb)
 
         for lin_name in lineages - set(callbacks[obs_name].keys()):
@@ -990,8 +1014,19 @@ def _create_callbacks(
     else:
         raise TypeError(
             f"Class `{type(callback).__name__!r}` must be `callable` or "
-            f"a gene and lineage specific `dict` of callables."
+            f"a gene and lineage specific `dict` of `callables`."
         )
+
+    if set(callbacks.keys()) & obs != obs:
+        raise ValueError(
+            f"Missing gene callbacks for the following genes: `{list(obs - set(callbacks.keys()))}`."
+        )
+
+    for gene, vs in callbacks.items():
+        if set(vs.keys()) & lineages != lineages:
+            raise ValueError(
+                f"Missing lineage callbacks for gene `{gene!r}`: `{list(lineages - set(vs.keys()))}`."
+            )
 
     maybe_sanity_check(callbacks)
 
