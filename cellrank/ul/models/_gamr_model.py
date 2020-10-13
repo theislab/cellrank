@@ -197,7 +197,9 @@ class GAMR(BaseModel):
         if self._knotslocs != KnotLocs.AUTO:
             kwargs["knots"] = pd.DataFrame(
                 _get_knotlocs(
-                    self.x, self._n_knots, uniform=self._knotslocs == KnotLocs.UNIFORM
+                    self.x,
+                    self._n_knots,
+                    uniform=False,
                 ),
                 columns=["x"],
             )

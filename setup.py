@@ -57,6 +57,7 @@ if __name__ == "__main__":
                 "python-igraph",
                 "louvain==0.6.1",
                 "leidenalg==0.8.1",
+                "bezier",  # curved edges for `cellrank.pl.graph`
             ],
             docs=[
                 r

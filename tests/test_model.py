@@ -282,35 +282,63 @@ class TestGAMR:
         with pytest.raises(ValueError):
             _ = GAMR(adata, knotlocs="foobar")
 
+    def test_density_knotlocs(self, adata_cflare: AnnData):
+        g = GAMR(adata_cflare, knotlocs="density")
+        g.prepare(adata_cflare.var_names[0], "0", n_test_points=300).fit()
+        g.predict(level=0.95)
+
+        assert g.y_test.shape == (300,)
+        assert g.conf_int.shape == (300, 2)
+
     def test_normal_initialization(self, adata_cflare: AnnData):
         m = GAMR(adata_cflare)
 
         assert not m.prepared
         assert m._lineage is None
         assert m._gene is None
+        assert m._offset is None
 
-    # TODO
-    def test_negative_binomial_invalid_offset_str(self):
-        pass
+    def test_negative_binomial_invalid_offset_str(self, adata_cflare: AnnData):
+        with pytest.raises(ValueError):
+            GAMR(adata_cflare, offset="foobar", distribution="nb")
 
-    def test_negative_binomial_invalid_offset_shape(self):
-        pass
+    def test_negative_binomial_invalid_offset_shape(self, adata_cflare: AnnData):
+        with pytest.raises(ValueError):
+            GAMR(
+                adata_cflare,
+                offset=np.empty(
+                    adata_cflare.n_obs + 1,
+                ),
+                distribution="nb",
+            )
 
-    def test_negative_binomial_invalid_offset_shape(self):
-        pass
+    def test_negative_binomial_offset_automatic(self, adata_cflare: AnnData):
+        assert _OFFSET_KEY not in adata_cflare.obs
+        g = GAMR(adata_cflare, offset="default", distribution="nb")
 
-    def test_negative_binomial_offset_automatic(self):
-        pass
+        assert _OFFSET_KEY in adata_cflare.obs
+        np.testing.assert_array_equal(adata_cflare.obs[_OFFSET_KEY].values, g._offset)
+        assert g._offset.shape == (adata_cflare.n_obs,)
+        assert "offset(offset)" in g._formula
 
-    def test_negative_binomial_offset_ignored_if_not_nb(self):
-        pass
+    def test_negative_binomial_offset_ignored_if_not_nb(self, adata_cflare: AnnData):
+        g = GAMR(adata_cflare, offset="default", distribution="gaussian")
 
-    def test_manually_call_conf_int_not_in_predict(self):
-        pass
+        assert _OFFSET_KEY not in adata_cflare.obs
+        assert g._offset is None
 
-    def test_rpy2_not_installed(self):
-        # TODO: mock
-        pass
+    def test_manually_call_conf_int_not_in_predict(self, adata_cflare: AnnData):
+        g = GAMR(adata_cflare).prepare(adata_cflare.var_names[0], "1").fit()
+        g.predict(level=None)
+        assert g.conf_int is None
+
+        ci_95 = g.confidence_interval(level=0.95)
+        np.testing.assert_array_equal(g.conf_int, ci_95)
+
+        ci_100 = g.confidence_interval(level=1)
+        np.testing.assert_array_equal(g.conf_int, ci_100)
+
+        assert not np.allclose(ci_95, ci_100)
 
     def test_sharing_library(self, gamr_model: GAMR):
         actual = gamr_model.copy()
@@ -383,7 +411,6 @@ class TestSKLearnModel:
         assert model._weight_name == "sample_weight"
 
 
-# TODO
 class TestGAM:
     def test_invalid_distribution(self, adata: AnnData):
         with pytest.raises(ValueError):
