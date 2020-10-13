@@ -14,7 +14,6 @@ from scipy.sparse import (
     isspmatrix_csc,
     isspmatrix_csr,
 )
-from scipy.sparse.linalg import inv as sinv
 from scipy.sparse.linalg import gmres, lgmres, gcrotmk, bicgstab
 
 from cellrank import logging as logg
@@ -55,7 +54,6 @@ def _create_petsc_matrix(
         Only used when ``mat`` is a sparse matrix. If `True`, create `'seqdense'` matrix,
         otherwise `'seqaij'` matrix.
 
-
     Returns
     -------
     :class:`petsc4py.PETSc.Mat`
@@ -63,6 +61,11 @@ def _create_petsc_matrix(
     """
 
     from petsc4py import PETSc
+
+    if issparse(mat) and as_dense:
+        mat = mat.toarray()
+
+    A = PETSc.Mat().create()
 
     if issparse(mat) and as_dense:
         mat = mat.toarray()
@@ -97,9 +100,10 @@ def _create_solver(
         Preconditioner to use. If `None`, don't use any.
     tol
         Relative tolerance.
+
     Returns
     -------
-        Tripe containing the solver, vector ``x`` and vector ``b`` in ``A * x = b``.
+        Triple containing the solver, vector ``x`` and vector ``b`` in ``A * x = b``.
     """
 
     from petsc4py import PETSc
@@ -142,7 +146,7 @@ def _(
 ) -> Tuple[np.ndarray, int]:
     if mat_b.ndim not in (1, 2) or (mat_b.ndim == 2 and mat_b.shape[1] != 1):
         raise ValueError(
-            f"Expected either a vector or a matrix with 1 column, got `{mat_b.shape}`."
+            f"Expected either a vector or a matrix with `1` column, got `{mat_b.shape}`."
         )
 
     if solver == "direct":  # this can sometimes happen
@@ -257,24 +261,6 @@ def _solve_many_sparse_problems(
     return np.stack(x_list, axis=1), n_converged
 
 
-def _invert_matrix(mat, use_petsc: bool = True, **kwargs) -> np.ndarray:
-    if use_petsc:
-        try:
-            import petsc4py  # noqa
-        except ImportError:
-            global _PETSC_ERROR_MSG_SHOWN
-            if not _PETSC_ERROR_MSG_SHOWN:
-                _PETSC_ERROR_MSG_SHOWN = True
-                logg.warning(_PETSC_ERROR_MSG.format(_DEFAULT_SOLVER))
-            kwargs["solver"] = _DEFAULT_SOLVER
-            use_petsc = False
-
-    if use_petsc:
-        return _solve_lin_system(mat, speye(mat.shape[0]), use_petsc=True, **kwargs)
-
-    return sinv(mat).toarray() if issparse(mat) else np.linalg.inv(mat)
-
-
 def _petsc_mat_solve(
     mat_a: Union[np.ndarray, spmatrix],
     mat_b: Optional[Union[spmatrix, np.ndarray]] = None,
@@ -332,8 +318,6 @@ def _petsc_mat_solve(
 
     pc = ksp.getPC()
     pc.setType(PETSc.PC.Type.LU)
-    # TODO: investigate why it's slow and find best solver type
-    # pc.setFactorSolverType(PETSc.Mat.SolverType.MUMPS)
     pc.setFromOptions()
     pc.setUp()
 

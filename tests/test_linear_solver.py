@@ -23,7 +23,23 @@ petsc_slepc_skip = pytest.mark.skipif(
 )
 
 
-class TestLinearSolverScipy:
+def _create_a_b_matrices(seed: int, sparse: bool):
+    np.random.seed(seed)
+    if sparse:
+        A = random(
+            20, 20, density=0.5, random_state=np.random.randint(0, 100), format="csr"
+        )
+        B = random(
+            20, 10, density=0.5, random_state=np.random.randint(0, 100), format="csr"
+        )
+    else:
+        A = np.random.normal(size=(20, 20))
+        B = np.random.normal(size=(20, 10))
+
+    return A, B
+
+
+class TestScipyLinearSolver:
     def test_invalid_solver(self):
         np.random.seed(42)
         A = np.random.normal(size=(20, 10))
@@ -32,11 +48,9 @@ class TestLinearSolverScipy:
         with pytest.raises(ValueError):
             _solve_lin_system(A, B, solver="foobar", use_petsc=False)
 
-    @pytest.mark.parametrize("seed", range(5))
-    def test_gmres_dense(self, seed: int):
-        np.random.seed(seed)
-        A = np.random.normal(size=(20, 20))
-        B = np.random.normal(size=(20, 10))
+    @pytest.mark.parametrize("seed, sparse", zip(range(10), [False] * 5 + [True] * 5))
+    def test_gmres(self, seed: int, sparse: bool):
+        A, B = _create_a_b_matrices(seed, sparse)
 
         sol = _solve_lin_system(
             A,
@@ -47,35 +61,18 @@ class TestLinearSolverScipy:
             show_progress_bar=False,
             tol=1e-6,
         )
-        for i in range(B.shape[1]):
-            np.testing.assert_allclose(A @ sol[:, i], B[:, i], rtol=1e-6, atol=1e-10)
 
-    @pytest.mark.parametrize("seed", range(5, 10))
-    def test_eye_dense(self, seed: int):
-        np.random.seed(seed)
-        A = np.random.normal(size=(20, 20))
-        B = np.random.normal(size=(20, 10))
-        I = np.eye(20, 20)
+        if sparse:
+            A = A.A
+            B = B.A
 
-        sol = _solve_lin_system(
-            A,
-            B,
-            solver="gmres",
-            use_petsc=False,
-            use_eye=True,
-            show_progress_bar=False,
-            tol=1e-6,
-        )
-        for i in range(B.shape[1]):
-            np.testing.assert_allclose(
-                (I - A) @ sol[:, i], B[:, i], rtol=1e-6, atol=1e-10
-            )
+        np.testing.assert_allclose(A @ sol, B, rtol=1e-6, atol=1e-10)
 
-    @pytest.mark.parametrize("seed", range(10, 15))
-    def test_direct_solver_dense(self, seed: int):
-        np.random.seed(seed)
-        A = np.random.normal(size=(20, 20))
-        B = np.random.normal(size=(20, 10))
+    @pytest.mark.parametrize(
+        "seed, sparse", zip(range(10, 20), [False] * 5 + [True] * 5)
+    )
+    def test_direct_solver_dense(self, seed: int, sparse: bool):
+        A, B = _create_a_b_matrices(seed, sparse)
 
         sol = _solve_lin_system(
             A,
@@ -86,43 +83,18 @@ class TestLinearSolverScipy:
             show_progress_bar=False,
             tol=1e-6,
         )
-        for i in range(B.shape[1]):
-            np.testing.assert_allclose(A @ sol[:, i], B[:, i], rtol=1e-6, atol=1e-10)
 
-    @pytest.mark.parametrize("seed", range(5))
-    def test_gmres_sparse(self, seed: int):
-        np.random.seed(seed)
-        A = random(
-            20, 20, density=0.5, random_state=np.random.randint(0, 100), format="csr"
-        )
-        B = random(
-            20, 10, density=0.3, random_state=np.random.randint(0, 100), format="csr"
-        )
+        if sparse:
+            A = A.A
+            B = B.A
 
-        sol = _solve_lin_system(
-            A,
-            B,
-            solver="gmres",
-            use_petsc=False,
-            use_eye=False,
-            show_progress_bar=False,
-            tol=1e-6,
-        )
-        for i in range(B.shape[1]):
-            np.testing.assert_allclose(
-                A.A @ sol[:, i], B.A[:, i], rtol=1e-6, atol=1e-10
-            )
+        np.testing.assert_allclose(A @ sol, B, rtol=1e-6, atol=1e-10)
 
-    @pytest.mark.parametrize("seed", range(5, 10))
-    def test_eye_sparse(self, seed: int):
-        np.random.seed(seed)
-        A = random(
-            20, 20, density=0.5, random_state=np.random.randint(0, 100), format="coo"
-        )
-        B = random(
-            20, 10, density=0.3, random_state=np.random.randint(0, 100), format="csc"
-        )
-        I = speye(20, 20)
+    @pytest.mark.parametrize(
+        "seed, sparse", zip(range(30, 40), [False] * 5 + [True] * 5)
+    )
+    def test_eye(self, seed: int, sparse: bool):
+        A, B = _create_a_b_matrices(seed, sparse)
 
         sol = _solve_lin_system(
             A,
@@ -133,34 +105,13 @@ class TestLinearSolverScipy:
             show_progress_bar=False,
             tol=1e-6,
         )
-        for i in range(B.shape[1]):
-            np.testing.assert_allclose(
-                (I - A) @ sol[:, i], B.A[:, i], rtol=1e-6, atol=1e-10
-            )
 
-    @pytest.mark.parametrize("seed", range(10, 15))
-    def test_direct_solver_sparse(self, seed: int):
-        np.random.seed(seed)
-        A = random(
-            20, 20, density=0.5, random_state=np.random.randint(0, 100), format="csr"
-        )
-        B = random(
-            20, 10, density=0.3, random_state=np.random.randint(0, 100), format="csr"
-        )
+        if sparse:
+            A = A.A
+            B = B.A
+        A = np.eye(20, 20) - A
 
-        sol = _solve_lin_system(
-            A,
-            B,
-            solver="direct",
-            use_petsc=False,
-            use_eye=False,
-            show_progress_bar=False,
-            tol=1e-6,
-        )
-        for i in range(B.shape[1]):
-            np.testing.assert_allclose(
-                A.A @ sol[:, i], B.A[:, i], rtol=1e-6, atol=1e-10
-            )
+        np.testing.assert_allclose(A @ sol, B, rtol=1e-6, atol=1e-10)
 
 
 @petsc_slepc_skip
@@ -205,36 +156,101 @@ class TestLinearSolverPETSc:
     def test_create_solver_invalid_solver(self):
         from petsc4py.PETSc import Error
 
-        np.random.seed(42)
-        A = np.random.normal(size=(20, 10))
+        A = np.random.normal(size=(20, 20))
         B = np.random.normal(size=(20, 10))
 
         with pytest.raises(Error):
             _solve_lin_system(A, B, solver="foobar", use_petsc=True)
 
     def test_create_solver_invalid_preconditioner(self):
-        pass
+        from petsc4py.PETSc import Error
 
-    def test_many_solves_sparse_matrix(self):
-        pass
+        A = np.random.normal(size=(20, 20))
+        B = np.random.normal(size=(20, 10))
 
-    def test_many_solves_array(self):
-        pass
+        with pytest.raises(Error):
+            _solve_lin_system(A, B, preconditioner="foobar", use_petsc=True)
 
-    def test_mat_mat_solve_invalid_dimension(self):
-        pass
+    def test_solve_invalid_dimension(self):
+        from petsc4py.PETSc import Error
 
-    def test_mat_mat_solve_normal_run(self):
-        pass
+        A = np.random.normal(size=(20, 10))
+        B = np.random.normal(size=(20, 10))
 
-    def test_invert_matrix_not_square(self):
-        pass
+        with pytest.raises(Error):
+            _solve_lin_system(A, B, use_petsc=True)
 
-    def test_invert_matrix_normal_run(self):
-        pass
+    @pytest.mark.parametrize(
+        "seed, solver, sparse",
+        zip(
+            range(42, 62),
+            ["direct"] * 5 + ["gmres"] * 5 + ["direct"] * 5 + ["gmres"] * 5,
+            [False] * 10 + [True] * 10,
+        ),
+    )
+    def test_petsc_scipy_dense_matches(self, seed: int, solver: str, sparse: bool):
+        A, B = _create_a_b_matrices(seed, sparse)
 
-    def test_petsc_scipy_direct_matches(self):
-        pass
+        sol_petsc = _solve_lin_system(
+            A,
+            B,
+            solver=solver,
+            use_petsc=True,
+            use_eye=True,
+            show_progress_bar=False,
+            tol=1e-6,
+        )
+        sol_scipy = _solve_lin_system(
+            A,
+            B,
+            solver=solver,
+            use_petsc=True,
+            use_eye=True,
+            show_progress_bar=False,
+            tol=1e-6,
+        )
 
-    def test_petsc_scipy_gmres_matches(self):
-        pass
+        np.testing.assert_allclose(sol_petsc, sol_scipy, rtol=1e-6, atol=1e-10)
+
+    @pytest.mark.parametrize("seed, sparse", zip(range(10), [False] * 5 + [True] * 5))
+    def test_gmres(self, seed: int, sparse: bool):
+        A, B = _create_a_b_matrices(seed, sparse)
+        if sparse:
+            # https://lists.mcs.anl.gov/mailman/htdig/petsc-users/2014-October/023212.html
+            pytest.xfail("Matrix is missing diagonal entry 0.")
+
+        sol = _solve_lin_system(
+            A,
+            B,
+            solver="gmres",
+            use_petsc=True,
+            use_eye=False,
+            show_progress_bar=False,
+            tol=1e-6,
+        )
+
+        if sparse:
+            A = A.A
+            B = B.A
+
+        np.testing.assert_allclose(A @ sol, B, rtol=1e-6, atol=1e-10)
+
+    @pytest.mark.parametrize("seed, sparse", zip(range(10), [False] * 5 + [True] * 5))
+    def test_direct_solver_dense(self, seed: int, sparse: bool):
+        A, B = _create_a_b_matrices(seed, sparse)
+
+        sol = _solve_lin_system(
+            A,
+            B,
+            solver="direct",
+            use_petsc=True,
+            use_eye=True,
+            show_progress_bar=False,
+            tol=1e-6,
+        )
+
+        if sparse:
+            A = A.A
+            B = B.A
+
+        np.testing.assert_allclose((np.eye(20, 20) - A) @ sol, B, rtol=1e-6, atol=1e-10)
