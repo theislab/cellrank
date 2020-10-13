@@ -500,7 +500,7 @@ def _solve_lin_system(
         )(mat_a, solver=_AVAIL_ITER_SOLVERS[solver], tol=tol)
 
     else:
-        raise NotImplementedError(f"Solver `{solver!r}` is not yet implemented.")
+        raise ValueError(f"Invalid solver `{solver!r}`.")
 
     if n_converged != mat_b.shape[0]:
         logg.warning(f"`{mat_b.shape[0] - n_converged}` solution(s) did not converge")
