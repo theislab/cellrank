@@ -22,6 +22,10 @@ _datasets = {
         "https://ndownloader.figshare.com/files/25030028?private_link=c3a8004ca127b370cc15",
         (2531, 2000),
     ),
+    "lung": (
+        "https://ndownloader.figshare.com/files/25038224?private_link=89d53249778c18d45e9f",
+        (24882, 24051),
+    ),
 }
 
 
@@ -109,3 +113,29 @@ def pancreas_preprocessed(
     """
 
     return _load_dataset_from_url(path, *_datasets["pancreas_preprocessed"], **kwargs)
+
+
+@d.dedent
+def _lung(
+    path: Union[str, Path] = "datasets/lung_regeneration.h5ad",
+    **kwargs,
+) -> AnnData:
+    """
+    Regeneration of murine lung epithelial cells at 13 time points from [Lung20]_.
+
+    scRNA-seq dataset comprising of 24,051 cells recorded using Dropseq [Macosko15]_ at 13 time points spanning days
+    2-15 past lung bleomycin injury. Data was filtered to remove control cells as well as later time points which  are
+    more spaced out. We wanted to focus on the densely sampled days where RNA velocity [Manno18]_ [Bergen20]_ can be
+    used to predict the future cellular state.
+
+    Contains raw spliced and un-spliced count data, low-dimensional embedding coordinates as well as  original
+    cluster annotations.
+    Parameters
+    ----------
+    %(dataset.parameters)s
+    Returns
+    -------
+    %(adata)s
+    """
+
+    return _load_dataset_from_url(path, *_datasets["lung"], **kwargs)
