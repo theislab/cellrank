@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
 import pytest
-from _helpers import assert_array_nan_equal
+from _helpers import create_model, assert_array_nan_equal
 
 import scanpy as sc
+from anndata import AnnData
 
 import numpy as np
 import pandas as pd
 from pandas.api.types import is_categorical_dtype
 
 from cellrank.tl import Lineage
+from cellrank.pl._utils import _create_models, _create_callbacks
 from cellrank.tl._utils import (
     _one_hot,
     _cluster_X,
@@ -17,7 +19,8 @@ from cellrank.tl._utils import (
     _merge_categorical_series,
     _series_from_one_hot_matrix,
 )
-from cellrank.tl._colors import _compute_mean_color, _map_names_and_colors
+from cellrank.ul.models import GAM
+from cellrank.tl._colors import _compute_mean_color
 
 
 class TestToolsUtils:
@@ -459,24 +462,158 @@ class TestSeriesFromOneHotMatrix:
         assert (actual_series.cat.categories == expected_series.cat.categories).all()
 
 
-# TODO
 class TestPlottingUtils:
-    def test_create_models(self):
-        pass
+    def test_create_models_not_a_model_local(self):
+        with pytest.raises(TypeError):
+            _create_models({"foo": {"bar": 42}}, ["foo"], ["bar"])
 
-    def test_create_callbacks(self):
-        # TODO: bunch of tests needed here
-        pass
+    def test_create_models_not_a_model_gene_fallback(self, adata: AnnData):
+        m = create_model(adata)
+        with pytest.raises(TypeError):
+            _create_models({"foo": {"baz": m}, "*": 42}, ["foo", "bar"], ["baz"])
+
+    def test_create_models_not_a_model_lineage_fallback(self, adata: AnnData):
+        m = create_model(adata)
+        with pytest.raises(TypeError):
+            _create_models({"foo": {"baz": m, "*": 42}}, ["foo"], ["bar", "baz"])
+
+    def test_create_models_not_a_model_global(self):
+        with pytest.raises(TypeError):
+            _create_models(None, ["foo"], ["bar"])
+
+    def test_create_models_no_models_gene(self):
+        with pytest.raises(ValueError):
+            _create_models({}, ["foo"], [])
+
+    def test_create_models_no_models_lineage(self):
+        with pytest.raises(ValueError):
+            _create_models({"foo": {}}, ["foo"], ["bar"])
+
+    def test_create_models_gene_incomplete(self, adata: AnnData):
+        m = create_model(adata)
+        with pytest.raises(ValueError):
+            _create_models({"foo": {"baz": m}}, ["foo", "bar"], ["baz"])
+
+    def test_create_models_lineage_incomplete(self, adata: AnnData):
+        m = create_model(adata)
+        with pytest.raises(ValueError):
+            _create_models({"foo": {"baz": m}}, ["foo"], ["bar", "baz"])
+
+    def test_create_model_no_genes(self, adata: AnnData):
+        with pytest.raises(ValueError):
+            m = create_model(adata)
+            _create_models(m, [], ["foo"])
+
+    def test_create_model_no_lineage(self, adata: AnnData):
+        with pytest.raises(ValueError):
+            m = create_model(adata)
+            _create_models(m, ["foo"], [])
+
+    def test_create_models_1_model(self, adata: AnnData):
+        m = create_model(adata)
+        models = _create_models(m, ["foo"], ["bar"])
+
+        assert set(models.keys()) == {"foo"}
+        assert set(models["foo"].keys()) == {"bar"}
+        assert isinstance(models["foo"]["bar"], type(m))
+        assert models["foo"]["bar"] is not m
+
+    def test_create_models_gene_specific(self, adata: AnnData):
+        m1 = create_model(adata)
+        m2 = GAM(adata)
+
+        models = _create_models({"foo": m1, "bar": m2}, ["foo", "bar"], ["baz"])
+        assert set(models.keys()) == {"foo", "bar"}
+        assert set(models["foo"].keys()) == {"baz"}
+        assert set(models["bar"].keys()) == {"baz"}
+        assert isinstance(models["foo"]["baz"], type(m1))
+        assert models["foo"]["baz"] is not m1
+
+        assert isinstance(models["bar"]["baz"], type(m2))
+        assert models["bar"]["baz"] is not m2
+
+    def test_create_models_gene_specific_fallback(self, adata: AnnData):
+        m1 = create_model(adata)
+        m2 = GAM(adata)
+
+        models = _create_models(
+            {"foo": m1, "*": m2}, ["foo", "bar", "baz", "quux"], ["quas", "wex"]
+        )
+        assert set(models.keys()) == {"foo", "bar", "baz", "quux"}
+        for k, vs in models.items():
+            assert set(vs.keys()) == {"quas", "wex"}
+
+        for g in {"foo"}:
+            for l in {"quas", "wex"}:
+                assert isinstance(models[g][l], type(m1))
+                assert models[g][l] is not m1
+
+        for g in {"bar", "baz", "quux"}:
+            for l in {"quas", "wex"}:
+                assert isinstance(models[g][l], type(m2))
+                assert models[g][l] is not m2
+
+    def test_create_models_lineage_specific(self, adata: AnnData):
+        m1 = create_model(adata)
+        m2 = GAM(adata)
+
+        models = _create_models(
+            {"foo": {"bar": m1, "baz": m2}}, ["foo"], ["bar", "baz"]
+        )
+        assert set(models["foo"].keys()) == {"bar", "baz"}
+        assert isinstance(models["foo"]["bar"], type(m1))
+        assert models["foo"]["bar"] is not m1
+
+        assert isinstance(models["foo"]["baz"], type(m2))
+        assert models["foo"]["baz"] is not m2
+
+    def test_create_models_lineage_specific_fallback(self, adata: AnnData):
+        m1 = create_model(adata)
+        m2 = GAM(adata)
+
+        models = _create_models(
+            {"foo": {"baz": m1, "*": m2}, "bar": {"quux": m2, "*": m1}},
+            ["foo", "bar"],
+            ["baz", "quux", "quas", "wex"],
+        )
+        assert set(models.keys()) == {"foo", "bar"}
+
+        for k, vs in models.items():
+            assert set(vs.keys()) == {"baz", "quux", "quas", "wex"}
+
+        assert isinstance(models["foo"]["baz"], type(m1))
+        assert models["foo"]["baz"] is not m1
+
+        for l in {"quux", "quas", "wex"}:
+            assert isinstance(models["foo"][l], type(m2))
+            assert models["foo"][l] is not m2
+
+        assert isinstance(models["bar"]["quux"], type(m2))
+        assert models["bar"]["quux"] is not m2
+
+        for l in {"baz", "quas", "wex"}:
+            assert isinstance(models["bar"][l], type(m1))
+            assert models["bar"][l] is not m1
 
 
 class TestClusterX:
-    def test_normal_run(self):
+    def test_normal_run_louvain(self):
         # create some data
         adata = sc.datasets.blobs(n_observations=100, n_variables=6)
 
         # kmeans, louvain, leiden
         labels_kmeans = _cluster_X(adata.X, n_clusters=5, method="kmeans")
         labels_louvain = _cluster_X(adata.X, n_clusters=5, method="louvain")
+
+        assert len(labels_kmeans) == len(labels_louvain) == adata.n_obs
+
+    def test_normal_run_leiden(self):
+        # create some data
+        adata = sc.datasets.blobs(n_observations=100, n_variables=6)
+
+        # kmeans, louvain, leiden
+        labels_kmeans = _cluster_X(adata.X, n_clusters=5, method="kmeans")
+        labels_louvain = _cluster_X(adata.X, n_clusters=5, method="leiden")
 
         assert len(labels_kmeans) == len(labels_louvain) == adata.n_obs
 

@@ -254,16 +254,28 @@ def _create_models(
                 )
             models[obs_name][lin_name] = copy(mod)
 
+        if set(models[obs_name].keys()) & lineages == lineages:
+            return
+
         if lin_rest_model is not None:
             for lin_name in lineages - set(models[obs_name].keys()):
                 models[obs_name][lin_name] = copy(lin_rest_model)
         else:
-            raise RuntimeError(
+            raise ValueError(
                 _ERROR_INCOMPLETE_SPEC.format(f"all lineages for gene `{obs_name!r}`")
             )
 
+    if not len(lineages):
+        raise ValueError("No lineages have been selected.")
+
+    if not len(obs):
+        raise ValueError("No genes have been selected.")
+
     if isinstance(model, BaseModel):
-        return {o: {lin: copy(model) for lin in lineages} for o in obs}
+        return {
+            o: {lin: copy(model) for lin in _unique_order_preserving(lineages)}
+            for o in _unique_order_preserving(obs)
+        }
 
     lineages, obs = (
         set(_unique_order_preserving(lineages)),
@@ -286,7 +298,7 @@ def _create_models(
             for obs_name in obs - set(model.keys()):
                 process_lineages(obs_name, model.get(obs_name, obs_rest_model))
         elif set(model.keys()) != obs:
-            raise RuntimeError(
+            raise ValueError(
                 _ERROR_INCOMPLETE_SPEC.format(
                     f"genes `{list(obs - set(model.keys()))}`."
                 )
