@@ -41,7 +41,27 @@ PETScMat = TypeVar("PETScMat")
 Queue = TypeVar("Queue")
 
 
-def _create_petsc_matrix(mat, as_dense: bool = False) -> PETScMat:
+def _create_petsc_matrix(
+    mat: Union[np.ndarray, spmatrix], as_dense: bool = False
+) -> PETScMat:
+    """
+    Create a PETSc matrix from :mod:`numpy` or :mod:`scipy.sparse` matrix.
+
+    Parameters
+    ----------
+    mat
+        The matrix to convert.
+    as_dense
+        Only used when ``mat`` is a sparse matrix. If `True`, create `'seqdense'` matrix,
+        otherwise `'seqaij'` matrix.
+
+
+    Returns
+    -------
+    :class:`petsc4py.PETSc.Mat`
+        The converted matrix.
+    """
+
     from petsc4py import PETSc
 
     if issparse(mat) and as_dense:
@@ -63,7 +83,25 @@ def _create_solver(
     solver: Optional[str],
     preconditioner: Optional[str],
     tol: float,
-):
+) -> Tuple["petsc4py.PETSc.KSP", "petsc4py.PETSc.Vec", "petsc4py.PETScVec"]:  # noqa
+    """
+    Create a linear system solver.
+
+    Parameters
+    ----------
+    mat_a
+        Matrix defining the linear system.
+    solver
+        Type of the solver. If `None`, use `'gmres'`.
+    preconditioner
+        Preconditioner to use. If `None`, don't use any.
+    tol
+        Relative tolerance.
+    Returns
+    -------
+        Tripe containing the solver, vector ``x`` and vector ``b`` in ``A * x = b``.
+    """
+
     from petsc4py import PETSc
 
     A = _create_petsc_matrix(mat_a)
@@ -84,38 +122,12 @@ def _create_solver(
 @singledispatch
 def _solve_many_sparse_problems_petsc(
     mat_b: csc_matrix,
-    mat_a: Union[np.ndarray, spmatrix],
-    solver: Optional[str] = None,
-    preconditioner: Optional[str] = None,
-    tol: float = 1e-6,
-    queue: Optional[Queue] = None,
+    _mat_a: Union[np.ndarray, spmatrix],
+    _solver: Optional[str] = None,
+    _preconditioner: Optional[str] = None,
+    _tol: float = 1e-6,
+    _queue: Optional[Queue] = None,
 ) -> Tuple[np.ndarray, int]:
-    """
-    Solver many problems using :module:`petsc4py` solver.
-
-    Parameters
-    ----------
-    mat_b
-        Matrix of shape `n x m`, with m << n.
-    mat_a
-        Matrix of shape `n x n`. We make no assumptions on ``mat_a`` being symmetric or positive definite.
-    solver
-        Solver to use. One of `petsc4py.PETSc.KSP.Type`. By default, use `PETSc.KSP.Type.GMRES`.
-    preconditioner
-        Preconditioner to use. If `None`, don't use any.
-    tol
-        Relative tolerance.
-    queue
-        Queue used to signal when a solution has been computed.
-
-    Returns
-    -------
-    :class:`numpy.ndarray`
-        Matrix of shape `n x m`. Each column in the resulting matrix corresponds to the solution
-        of one of the sub-problems defined via columns in ``mat_b``.
-    int
-        Number of converged solutions.
-    """
     raise NotImplementedError(f"Not implemented for type `{type(mat_b).__name__!r}`.")
 
 
