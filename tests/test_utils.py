@@ -740,10 +740,10 @@ class TestKernelUtils:
     @pytest.mark.parametrize("seed", range(10))
     def test_numpy_and_jax(self, seed: int):
         np.random.seed(seed)
-        x = np.random.normal(size=(10, 100))
-        w = np.random.normal(size=(10, 100))
+        x = np.random.normal(size=(100,))
+        w = np.random.normal(size=(1, 100))
 
-        np_res = _predict_transition_probabilities_numpy(x, w, 1)
-        jax_res = _predict_transition_probabilities_numpy(x, w, 1)
+        np_res, _ = _predict_transition_probabilities_numpy(x[None, :], w, 1)
+        jax_res = _predict_transition_probabilities_jax(x, w, 1)
 
         np.testing.assert_allclose(np_res, jax_res)
