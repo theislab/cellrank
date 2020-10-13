@@ -81,9 +81,6 @@ class GAM(BaseModel):
     expectile
         Expectile for :class:`pygam.pygam.ExpectileGAM`. This forces the distribution to be `'normal'`
         and link function to `'identity'`. Must be in interval `(0, 1)`.
-    use_default_conf_int
-        Whether to use :meth:`default_confidence_interval` to calculate the confidence interval or
-        use the :paramref:`model`'s method.
     grid
         Whether to perform a grid search. Keys correspond to a parameter names and values to range to be searched.
         If `'default'`, use the default grid. If `None`, don't perform a grid search.
@@ -102,7 +99,6 @@ class GAM(BaseModel):
         link: str = "log",
         max_iter: int = 2000,
         expectile: Optional[float] = None,
-        use_default_conf_int: bool = False,
         grid: Optional[Mapping] = None,
         spline_kwargs: Mapping = MappingProxyType({}),
         **kwargs,
@@ -145,7 +141,6 @@ class GAM(BaseModel):
                 **_filter_kwargs(gam.__init__, **kwargs),
             )
         super().__init__(adata, model=model)
-        self._use_default_conf_int = use_default_conf_int
 
         if grid is None:
             self._grid = None
@@ -254,12 +249,9 @@ class GAM(BaseModel):
         """  # noqa
 
         x_test = self._check("_x_test", x_test)
-        if self._use_default_conf_int:
-            self._conf_int = self.default_confidence_interval(x_test=x_test, **kwargs)
-        else:
-            self._conf_int = self.model.confidence_intervals(x_test, **kwargs).astype(
-                self._dtype
-            )
+        self._conf_int = self.model.confidence_intervals(x_test, **kwargs).astype(
+            self._dtype
+        )
 
         return self.conf_int
 
@@ -270,6 +262,5 @@ class GAM(BaseModel):
         self._shallowcopy_attributes(res)
 
         res._grid = deepcopy(self._grid)
-        res._use_default_conf_int = self._use_default_conf_int
 
         return res

@@ -128,6 +128,16 @@ class TestUtils:
 
         assert raw is adata.raw.X
 
+    def test_rank_data_dummy_array(self):
+        x = np.ones((100,))
+
+        np.testing.assert_array_equal(_rankdata(x), rankdata(x))
+
+    def test_rank_data_empty(self):
+        x = np.empty(shape=(0,))
+
+        np.testing.assert_array_equal(_rankdata(x), rankdata(x))
+
     @pytest.mark.parametrize("method", ["average", "min", "max", "dense", "ordinal"])
     def test_rank_data(self, method: str):
         x = np.random.normal(size=(10,))
@@ -346,6 +356,30 @@ class TestSKLearnModel:
         model = SKLearnModel(adata_cflare, SVR())
 
         assert model._weight_name == "sample_weight"
+
+
+# TODO
+class TestGAM:
+    def test_invalid_distribution(self):
+        pass
+
+    def test_invalid_link_function(self):
+        pass
+
+    def test_invalid_grid_type(self):
+        pass
+
+    def test_default_grid(self):
+        pass
+
+    def test_custom_grid(self):
+        pass
+
+    def test_expectilegam_invalid_expectile(self):
+        pass
+
+    def test_expectile_set_correct_distribution_and_link(self):
+        pass
 
 
 class TestFailedModel:
