@@ -66,11 +66,6 @@ def _create_petsc_matrix(
         mat = mat.toarray()
 
     A = PETSc.Mat().create()
-
-    if issparse(mat) and as_dense:
-        mat = mat.toarray()
-
-    A = PETSc.Mat().create()
     if issparse(mat):
         if not isspmatrix_csr(mat):
             mat = csr_matrix(mat)
