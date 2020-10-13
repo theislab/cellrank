@@ -459,6 +459,16 @@ class TestSeriesFromOneHotMatrix:
         assert (actual_series.cat.categories == expected_series.cat.categories).all()
 
 
+# TODO
+class TestPlottingUtils:
+    def test_create_models(self):
+        pass
+
+    def test_create_callbacks(self):
+        # TODO: bunch of tests needed here
+        pass
+
+
 class TestClusterX:
     def test_normal_run(self):
         # create some data
