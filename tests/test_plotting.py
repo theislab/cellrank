@@ -2111,21 +2111,55 @@ class TestGraph:
             save=fpath,
         )
 
-    # TODO
-    def test_graph_curved_edges(self):
-        pass
+    @compare()
+    def test_graph_filter_edges(self, adata: AnnData, fpath: str):
+        cr.pl.graph(
+            adata,
+            "T_fwd",
+            ixs=range(10),
+            filter_edges=(0.25, 0.5),
+            edge_use_curved=False,
+            dpi=DPI,
+            save=fpath,
+        )
 
-    def test_grpah_filter_edges(self):
-        pass
+    @compare()
+    def test_graph_dict_layout(self, adata: AnnData, fpath: str):
+        cr.pl.graph(
+            adata,
+            "T_fwd",
+            ixs=range(10),
+            layout={i: (i, i) for i in range(10)},
+            edge_use_curved=False,
+            dpi=DPI,
+            save=fpath,
+        )
 
-    def test_graph_dict_layout(self):
-        pass
+    @compare()
+    def test_graph_networkx_layout(self, adata: AnnData, fpath: str):
+        import networkx as nx
 
-    def test_graph_networkx_layout(self):
-        pass
+        cr.pl.graph(
+            adata,
+            "T_fwd",
+            ixs=range(10),
+            layout=nx.layout.kamada_kawai_layout,
+            edge_use_curved=False,
+            dpi=DPI,
+            save=fpath,
+        )
 
-    def test_graph_precomputed_layour_umap(self):
-        pass
+    @compare()
+    def test_graph_precomputed_layour_pca(self, adata: AnnData, fpath: str):
+        cr.pl.graph(
+            adata,
+            "T_fwd",
+            ixs=range(10),
+            layout="pca",
+            edge_use_curved=False,
+            dpi=DPI,
+            save=fpath,
+        )
 
 
 class TestCFLARE:
@@ -2572,8 +2606,6 @@ class TestLineageDrivers:
         cr.pl.lineage_drivers(adata, "0", cmap="inferno", dpi=DPI, save=fpath)
 
 
-# TODO: more model tests
-# TODO: fwd lineage 0 seems to be corrupted (i.e. very short, modify to 1)
 class TestModel:
     @compare()
     def test_model_default(self, adata: AnnData, fpath: str):
