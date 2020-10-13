@@ -9,6 +9,7 @@ from _helpers import gamr_skip, create_model, assert_models_equal
 from anndata import AnnData
 
 import numpy as np
+from pygam import ExpectileGAM
 from scipy.stats import rankdata
 from sklearn.svm import SVR
 
@@ -22,6 +23,7 @@ from cellrank.ul.models._utils import (
     _get_knotlocs,
 )
 from cellrank.ul.models._base_model import FailedModel, UnknownModelError
+from cellrank.ul.models._pygam_model import GamDistribution
 
 
 class TestModel:
@@ -383,26 +385,61 @@ class TestSKLearnModel:
 
 # TODO
 class TestGAM:
-    def test_invalid_distribution(self):
-        pass
+    def test_invalid_distribution(self, adata: AnnData):
+        with pytest.raises(ValueError):
+            GAM(adata, distribution="foobar")
 
-    def test_invalid_link_function(self):
-        pass
+    def test_invalid_link_function(self, adata: AnnData):
+        with pytest.raises(ValueError):
+            GAM(adata, link="foob")
 
-    def test_invalid_grid_type(self):
-        pass
+    def test_invalid_grid_type(self, adata: AnnData):
+        with pytest.raises(TypeError):
+            GAM(adata, grid=1311)
 
-    def test_default_grid(self):
-        pass
+    def test_default_grid(self, adata_cflare: AnnData):
+        g = GAM(adata_cflare, grid="default")
 
-    def test_custom_grid(self):
-        pass
+        g.prepare(adata_cflare.var_names[0], "0")
+        g.fit()
+        g.predict()
+        g.confidence_interval()
 
-    def test_expectilegam_invalid_expectile(self):
-        pass
+        assert g._grid is not None
+        assert not isinstance(g._grid, str)
+        assert g.y_test is not None
+        assert g.conf_int is not None
 
-    def test_expectile_set_correct_distribution_and_link(self):
-        pass
+    def test_custom_grid(self, adata_cflare: AnnData):
+        g = GAM(adata_cflare, grid={"lam": [0.1, 1, 10]})
+
+        g.prepare(adata_cflare.var_names[0], "0")
+        g.fit()
+        g.predict()
+        g.confidence_interval()
+
+        assert g._grid is not None
+        assert g._grid == {"lam": [0.1, 1, 10]}
+        assert g.y_test is not None
+        assert g.conf_int is not None
+
+    def test_expectilegam_invalid_expectile(self, adata: AnnData):
+        with pytest.raises(ValueError):
+            GAM(adata, expectile=0)
+        with pytest.raises(ValueError):
+            GAM(adata, expectile=1)
+
+    def test_expectile_sets_correct_distribution_and_link(self, adata_cflare: AnnData):
+        g = GAM(adata_cflare, expectile=0.2)
+
+        g.prepare(adata_cflare.var_names[0], "0")
+        g.fit()
+        g.predict()
+        g.confidence_interval()
+
+        assert isinstance(g.model, ExpectileGAM)
+        assert g.y_test is not None
+        assert g.conf_int is not None
 
 
 class TestFailedModel:

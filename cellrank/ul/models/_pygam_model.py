@@ -3,7 +3,7 @@
 from copy import copy as _copy
 from copy import deepcopy
 from types import MappingProxyType
-from typing import Mapping, Optional
+from typing import Union, Mapping, Optional
 from collections import defaultdict
 
 import numpy as np
@@ -99,7 +99,7 @@ class GAM(BaseModel):
         link: str = "log",
         max_iter: int = 2000,
         expectile: Optional[float] = None,
-        grid: Optional[Mapping] = None,
+        grid: Optional[Union[str, Mapping]] = None,
         spline_kwargs: Mapping = MappingProxyType({}),
         **kwargs,
     ):
