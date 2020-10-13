@@ -130,9 +130,11 @@ def _lung(
 
     Contains raw spliced and un-spliced count data, low-dimensional embedding coordinates as well as  original
     cluster annotations.
+
     Parameters
     ----------
     %(dataset.parameters)s
+
     Returns
     -------
     %(adata)s
