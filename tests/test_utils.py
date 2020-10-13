@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 import pytest
-from _helpers import create_model, assert_array_nan_equal
+from _helpers import create_model, assert_array_nan_equal, jax_not_installed_skip
 
 import scanpy as sc
 from anndata import AnnData
 
 import numpy as np
 import pandas as pd
+from scipy.sparse import diags, random, csr_matrix
 from pandas.api.types import is_categorical_dtype
 
 from cellrank.tl import Lineage
@@ -21,6 +22,17 @@ from cellrank.tl._utils import (
 )
 from cellrank.ul.models import GAM
 from cellrank.tl._colors import _compute_mean_color
+from cellrank.tl.kernels._utils import (
+    norm,
+    np_max,
+    np_sum,
+    np_mean,
+    _reconstruct_one,
+    _calculate_starts,
+    _get_probs_for_zero_vec,
+    _predict_transition_probabilities_jax,
+    _predict_transition_probabilities_numpy,
+)
 
 
 class TestToolsUtils:
@@ -595,6 +607,8 @@ class TestPlottingUtils:
             assert isinstance(models["bar"][l], type(m1))
             assert models["bar"][l] is not m1
 
+    # TODO: test callback
+
 
 class TestClusterX:
     def test_normal_run_louvain(self):
@@ -626,3 +640,110 @@ class TestClusterX:
         labels_louvain = _cluster_X(adata.X, n_clusters=5, method="louvain")
 
         assert len(labels_kmeans) == len(labels_louvain) == adata.n_obs
+
+
+class TestKernelUtils:
+    @pytest.mark.parametrize("seed", range(10))
+    def test_numba_mean_axis_0(self, seed):
+        np.random.seed(seed)
+        x = np.random.normal(size=(10, 10))
+
+        np.testing.assert_allclose(np.mean(x, axis=0), np_mean(x, 0))
+
+    @pytest.mark.parametrize("seed", range(10))
+    def test_numba_mean_axis_1(self, seed):
+        np.random.seed(seed)
+        x = np.random.normal(size=(10, 10))
+
+        np.testing.assert_allclose(np.mean(x, axis=1), np_mean(x, 1))
+
+    @pytest.mark.parametrize("seed", range(10))
+    def test_numba_max_axis_0(self, seed):
+        np.random.seed(seed)
+        x = np.random.normal(size=(10, 10))
+
+        np.testing.assert_allclose(np.max(x, axis=0), np_max(x, 0))
+
+    @pytest.mark.parametrize("seed", range(10))
+    def test_numba_max_axis_1(self, seed):
+        np.random.seed(seed)
+        x = np.random.normal(size=(10, 10))
+
+        np.testing.assert_allclose(np.max(x, axis=1), np_max(x, 1))
+
+    @pytest.mark.parametrize("seed", range(10))
+    def test_numba_sum_axis_0(self, seed):
+        np.random.seed(seed)
+        x = np.random.normal(size=(10, 10))
+
+        np.testing.assert_allclose(np.sum(x, axis=0), np_sum(x, 0))
+
+    @pytest.mark.parametrize("seed", range(10))
+    def test_numba_sum_axis_1(self, seed):
+        np.random.seed(seed)
+        x = np.random.normal(size=(10, 10))
+
+        np.testing.assert_allclose(np.sum(x, axis=1), np_sum(x, 1))
+
+    @pytest.mark.parametrize("seed", range(10))
+    def test_numba_norm_axis_0(self, seed):
+        np.random.seed(seed)
+        x = np.random.normal(size=(10, 10))
+
+        np.testing.assert_allclose(np.linalg.norm(x, axis=0), norm(x, 0))
+
+    @pytest.mark.parametrize("seed", range(10))
+    def test_numba_norm_axis_1(self, seed):
+        np.random.seed(seed)
+        x = np.random.normal(size=(10, 10))
+
+        np.testing.assert_allclose(np.linalg.norm(x, axis=1), norm(x, 1))
+
+    def test_zero_unif_sum_to_1_vector(self):
+        sum_to_1, zero = _get_probs_for_zero_vec(10)
+
+        assert zero.shape == (10,)
+        assert sum_to_1.shape == (10,)
+        np.testing.assert_array_equal(zero, np.zeros_like(zero))
+        np.testing.assert_allclose(sum_to_1, np.ones_like(sum_to_1) / sum_to_1.shape[0])
+        assert np.isclose(sum_to_1.sum(), 1.0)
+
+    def calculate_starts(self):
+        starts = _calculate_starts(diags(np.ones(10)).tocsr().indptr, np.arange(10))
+
+        np.testing.assert_array_equal(starts, np.arange(10))
+
+    @pytest.mark.parametrize("seed, shuffle", zip(range(10), [False] * 5 + [True] * 5))
+    def test_reconstruct_one(self, seed: int, shuffle: bool):
+        m1 = random(100, 10, random_state=seed, density=0.5, format="csr")
+        m1[:, 0] = 0.1
+        m1 /= m1.sum(1)
+        m1 = csr_matrix(m1)
+
+        m2_data = np.random.normal(size=(m1.nnz))
+        m2 = csr_matrix((m2_data, m1.indices, m1.indptr))
+
+        if shuffle:
+            ixs = np.arange(100)
+            np.random.shuffle(ixs)
+            data = np.c_[m1[ixs, :].data, m2[ixs, :].data].T
+        else:
+            ixs = None
+            data = np.c_[m1.data, m2.data].T
+
+        r1, r2 = _reconstruct_one(data, m1, ixs=ixs)
+
+        np.testing.assert_array_equal(r1.A, m1.A)
+        np.testing.assert_array_equal(r2.A, m2.A)
+
+    @jax_not_installed_skip
+    @pytest.mark.parametrize("seed", range(10))
+    def test_numpy_and_jax(self, seed: int):
+        np.random.seed(seed)
+        x = np.random.normal(size=(10, 100))
+        w = np.random.normal(size=(10, 100))
+
+        np_res = _predict_transition_probabilities_numpy(x, w, 1)
+        jax_res = _predict_transition_probabilities_numpy(x, w, 1)
+
+        np.testing.assert_allclose(np_res, jax_res)
