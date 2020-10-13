@@ -287,6 +287,29 @@ class TestGAMR:
         assert m._lineage is None
         assert m._gene is None
 
+    # TODO
+    def test_negative_binomial_invalid_offset_str(self):
+        pass
+
+    def test_negative_binomial_invalid_offset_shape(self):
+        pass
+
+    def test_negative_binomial_invalid_offset_shape(self):
+        pass
+
+    def test_negative_binomial_offset_automatic(self):
+        pass
+
+    def test_negative_binomial_offset_ignored_if_not_nb(self):
+        pass
+
+    def test_manually_call_conf_int_not_in_predict(self):
+        pass
+
+    def test_rpy2_not_installed(self):
+        # TODO: mock
+        pass
+
     def test_sharing_library(self, gamr_model: GAMR):
         actual = gamr_model.copy()
 
