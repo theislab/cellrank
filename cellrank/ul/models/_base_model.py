@@ -1106,7 +1106,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
 
 class FailedModel(BaseModel):
     """
-    Model representing a failure of original :paramref:`model`.
+    Model representing a failure of the original :paramref:`model`.
 
     Parameters
     ----------
