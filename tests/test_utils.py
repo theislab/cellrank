@@ -474,7 +474,7 @@ class TestSeriesFromOneHotMatrix:
         assert (actual_series.cat.categories == expected_series.cat.categories).all()
 
 
-class TestPlottingUtils:
+class TestCreateModels:
     def test_create_models_not_a_model_local(self):
         with pytest.raises(TypeError):
             _create_models({"foo": {"bar": 42}}, ["foo"], ["bar"])
@@ -607,7 +607,9 @@ class TestPlottingUtils:
             assert isinstance(models["bar"][l], type(m1))
             assert models["bar"][l] is not m1
 
-    # TODO: test callback
+
+class TestCreateCallbacks:
+    pass
 
 
 class TestClusterX:
