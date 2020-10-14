@@ -7,6 +7,7 @@ from anndata import AnnData
 
 import numpy as np
 import pandas as pd
+from numba import njit
 from scipy.sparse import diags, random, csr_matrix
 from pandas.api.types import is_categorical_dtype
 
@@ -31,8 +32,10 @@ from cellrank.tl.kernels._utils import (
     np_max,
     np_sum,
     np_mean,
+    _random_normal,
     _reconstruct_one,
     _calculate_starts,
+    _np_apply_along_axis,
     _get_probs_for_zero_vec,
     _predict_transition_probabilities_jax,
     _predict_transition_probabilities_numpy,
@@ -931,6 +934,24 @@ class TestKernelUtils:
 
         np.testing.assert_allclose(np.linalg.norm(x, axis=1), norm(x, 1))
 
+    @pytest.mark.parametrize("seed", range(10))
+    def test_apply_along_axis(self, seed: int):
+        np.random.seed(seed)
+        x = np.random.normal(size=(10, 10))
+
+        def _create_numba_fn(fn):
+            @njit
+            def wrapped(axis: int, x: np.ndarray):
+                return _np_apply_along_axis(fn, axis, x)
+
+            return wrapped
+
+        for axis in [0, 1]:
+            for fn in (np.var, np.std):
+                np.testing.assert_allclose(
+                    fn(x, axis=axis), _create_numba_fn(fn)(axis, x)
+                )
+
     def test_zero_unif_sum_to_1_vector(self):
         sum_to_1, zero = _get_probs_for_zero_vec(10)
 
@@ -940,7 +961,7 @@ class TestKernelUtils:
         np.testing.assert_allclose(sum_to_1, np.ones_like(sum_to_1) / sum_to_1.shape[0])
         assert np.isclose(sum_to_1.sum(), 1.0)
 
-    def calculate_starts(self):
+    def test_calculate_starts(self):
         starts = _calculate_starts(diags(np.ones(10)).tocsr().indptr, np.arange(10))
 
         np.testing.assert_array_equal(starts, np.arange(10))
@@ -979,3 +1000,21 @@ class TestKernelUtils:
         jax_res = _predict_transition_probabilities_jax(x, w, 1)
 
         np.testing.assert_allclose(np_res, jax_res)
+
+    def test_random_normal_wrong_ndim(self):
+        with pytest.raises(AssertionError):
+            _random_normal(np.array([[1, 2, 3]]), np.array([[1, 2, 3]]))
+
+    def test_random_normal_wrong_var_shape(self):
+        with pytest.raises(AssertionError):
+            _random_normal(np.array([1, 2, 3]), np.array([1, 2]))
+
+    def test_random_normal(self):
+        x = _random_normal(np.array([0]), np.array([1]), 1000)
+
+        assert x.shape == (1000, 1)
+
+    def test_random_normal_1_sample(self):
+        x = _random_normal(np.array([0]), np.array([1]), 1)
+
+        assert x.shape == (1, 1)
