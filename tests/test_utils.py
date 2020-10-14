@@ -11,7 +11,11 @@ from scipy.sparse import diags, random, csr_matrix
 from pandas.api.types import is_categorical_dtype
 
 from cellrank.tl import Lineage
-from cellrank.pl._utils import _create_models, _create_callbacks
+from cellrank.pl._utils import (
+    _create_models,
+    _create_callbacks,
+    _default_model_callback,
+)
 from cellrank.tl._utils import (
     _one_hot,
     _cluster_X,
@@ -609,7 +613,120 @@ class TestCreateModels:
 
 
 class TestCreateCallbacks:
-    pass
+    def test_no_genes(self, adata_cflare: AnnData):
+        with pytest.raises(ValueError):
+            _create_callbacks(adata_cflare, None, [], ["foo"])
+
+    def test_no_lineages(self, adata_cflare: AnnData):
+        with pytest.raises(ValueError):
+            _create_callbacks(adata_cflare, None, ["foo"], [])
+
+    def test_callback_not_callable(self, adata_cflare: AnnData):
+        with pytest.raises(TypeError):
+            _create_callbacks(adata_cflare, 42, ["foo"], ["bar"])
+
+    def test_callback_gene_fallback_not_callable(self, adata_cflare: AnnData):
+        with pytest.raises(TypeError):
+            _create_callbacks(
+                adata_cflare,
+                {"foo": _default_model_callback, "*": 42},
+                ["foo", "bar"],
+                ["baz"],
+            )
+
+    def test_callback_lineage_fallback_not_callable(self, adata_cflare: AnnData):
+        with pytest.raises(TypeError):
+            _create_callbacks(
+                adata_cflare,
+                {"foo": {"bar": _default_model_callback, "*": 42}},
+                ["foo"],
+                ["bar", "baz"],
+            )
+
+    def test_create_callbacks_no_models_gene(self, adata_cflare: AnnData):
+        with pytest.raises(ValueError):
+            _create_callbacks(adata_cflare, {}, ["foo"], [])
+
+    def test_create_models_no_models_lineage(self, adata_cflare: AnnData):
+        # in contrast to _create_models, incomplete specification leads to default callback
+        # i.e. only calling .prepare, which satisfies the minimum requirements
+        cbs = _create_callbacks(
+            adata_cflare, {"foo": {}}, ["foo"], ["bar"], perform_sanity_check=False
+        )
+
+        assert cbs.keys() == {"foo"}
+        assert cbs["foo"].keys() == {"bar"}
+
+        assert cbs["foo"]["bar"] is _default_model_callback
+
+    def test_create_models_gene_incomplete(self, adata_cflare: AnnData):
+        cbs = _create_callbacks(
+            adata_cflare,
+            {"foo": {"baz": _default_model_callback}},
+            ["foo", "bar"],
+            ["baz"],
+            perform_sanity_check=False,
+        )
+
+        assert cbs.keys() == {"foo", "bar"}
+        assert cbs["foo"].keys() == {"baz"}
+        assert cbs["bar"].keys() == {"baz"}
+
+        assert cbs["foo"]["baz"] is _default_model_callback
+        assert cbs["bar"]["baz"] is _default_model_callback
+
+    def test_create_models_lineage_incomplete(self, adata_cflare: AnnData):
+        cbs = _create_callbacks(
+            adata_cflare,
+            {"foo": {"baz": _default_model_callback}},
+            ["foo"],
+            ["bar", "baz"],
+            perform_sanity_check=False,
+        )
+
+        assert cbs.keys() == {"foo"}
+        assert cbs["foo"].keys() == {"bar", "baz"}
+        assert cbs["foo"]["bar"] is _default_model_callback
+        assert cbs["foo"]["baz"] is _default_model_callback
+
+    def test_callback_default_callback(self, adata_cflare: AnnData):
+        cbs = _create_callbacks(adata_cflare, None, ["foo"], ["bar"])
+
+        assert cbs.keys() == {"foo"}
+        assert cbs["foo"].keys() == {"bar"}
+
+        assert cbs["foo"]["bar"] is _default_model_callback
+
+    def test_callback_default_gene_callback(self, adata_cflare: AnnData):
+        cbs = _create_callbacks(
+            adata_cflare,
+            {"foo": _default_model_callback, "*": None},
+            ["foo", "bar"],
+            ["baz"],
+            perform_sanity_check=False,
+        )
+
+        assert cbs.keys() == {"foo", "bar"}
+        assert cbs["foo"].keys() == {"baz"}
+        assert cbs["bar"].keys() == {"baz"}
+
+        assert cbs["foo"]["baz"] is _default_model_callback
+        assert cbs["bar"]["baz"] is _default_model_callback
+
+    def test_callback_default_lineage_callback(self, adata_cflare: AnnData):
+        cbs = _create_callbacks(
+            adata_cflare,
+            {"foo": {"bar": _default_model_callback, "*": None}},
+            ["foo"],
+            ["bar", "baz"],
+            perform_sanity_check=False,
+        )
+
+        assert cbs.keys() == {"foo"}
+        assert cbs["foo"].keys() == {"bar", "baz"}
+
+        assert cbs["foo"]["bar"] is _default_model_callback
+        assert cbs["foo"]["baz"] is _default_model_callback
 
 
 class TestClusterX:

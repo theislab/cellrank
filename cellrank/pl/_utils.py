@@ -989,6 +989,12 @@ def _create_callbacks(
                         f"Callback validation failed for gene `{gene!r}` and lineage `{lineage!r}`."
                     ) from e
 
+    if not len(lineages):
+        raise ValueError("No lineages have been selected.")
+
+    if not len(obs):
+        raise ValueError("No genes have been selected.")
+
     if callback is None:
         callback = _default_model_callback
 
@@ -1007,13 +1013,13 @@ def _create_callbacks(
     callbacks = defaultdict(dict)
 
     if isinstance(callback, dict):
-        for obs_name, lin_names in callback.items():
-            process_lineages(obs_name, lin_names)
-
         # can be specified as None
         obs_rest_callback = (
             callback.pop("*", _default_model_callback) or _default_model_callback
         )
+
+        for obs_name, lin_names in callback.items():
+            process_lineages(obs_name, lin_names)
 
         if callable(obs_rest_callback):
             for obs_name in obs - set(callback.keys()):
