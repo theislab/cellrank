@@ -122,7 +122,8 @@ def _create_solver(
         if preconditioner == "ilu":
             # https://en.wikipedia.org/wiki/Incomplete_LU_factorization#Generalizations
             pc.setFactorLevels(1)
-        ksp.setType(PETSc.KSP.Type.PREONLY)
+        elif preconditioner == "lu":
+            ksp.setType(PETSc.KSP.Type.PREONLY)
 
     ksp.setOperators(A)
     ksp.setFromOptions()
@@ -178,18 +179,6 @@ def _(
     tol: float,
     queue: Queue,
 ) -> Tuple[np.ndarray, int]:
-    from petsc4py import PETSc
-
-    A = _create_petsc_matrix(mat_a)
-
-    ksp = PETSc.KSP().create()
-    ksp.setTolerances(rtol=tol)
-    ksp.setType(solver if solver is not None else PETSc.KSP.Type.GMRES)
-    if preconditioner is not None:
-        ksp.getPC().setType(preconditioner)
-
-    ksp.setOperators(A)
-
     ksp, x, b = _create_solver(mat_a, solver, preconditioner=preconditioner, tol=tol)
     xs, converged = [], 0
 

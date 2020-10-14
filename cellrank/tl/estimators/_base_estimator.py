@@ -361,7 +361,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             decreasing this for severely ill-conditioned matrices.
         preconditioner
             Preconditioner to use, only available when ``use_petsc=True``. For available values, see
-            `here <https://www.mcs.anl.gov/petsc/petsc-current/docs/manualpages/PC/PCType.html#PCType>`
+            `here <https://www.mcs.anl.gov/petsc/petsc-current/docs/manualpages/PC/PCType.html#PCType>` or the values
+            of `petsc4py.PETSc.PC.Type`.
 
         Returns
         -------
