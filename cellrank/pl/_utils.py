@@ -919,7 +919,7 @@ def _create_callbacks(
 
     def process_lineages(
         obs_name: str, lin_names: Optional[Union[Callable, Dict[Optional[str], Any]]]
-    ):
+    ) -> None:
         if lin_names is None:
             lin_names = _default_model_callback
 
@@ -989,6 +989,18 @@ def _create_callbacks(
                         f"Callback validation failed for gene `{gene!r}` and lineage `{lineage!r}`."
                     ) from e
 
+    def all_callbacks_are_default(cbs: dict) -> bool:
+        # this correctly implicitly handles '*': None
+        for vs in cbs.values():
+            if isinstance(vs, dict):
+                for cb in vs.values():
+                    if callable(cb) and cb is not _default_model_callback:
+                        return False
+            elif callable(vs) and vs is not _default_model_callback:
+                return False
+
+        return True
+
     if not len(lineages):
         raise ValueError("No lineages have been selected.")
 
@@ -999,7 +1011,11 @@ def _create_callbacks(
         callback = _default_model_callback
 
     if perform_sanity_check is None:
-        perform_sanity_check = callback is not _default_model_callback
+        perform_sanity_check = (
+            not all_callbacks_are_default(callback)
+            if isinstance(callback, dict)
+            else callback is not _default_model_callback
+        )
 
     if callable(callback):
         callbacks = {o: {lin: callback for lin in lineages} for o in obs}

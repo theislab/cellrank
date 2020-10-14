@@ -697,6 +697,16 @@ class TestCreateCallbacks:
 
         assert cbs["foo"]["bar"] is _default_model_callback
 
+    def test_default_callback_dict_no_perf_check(self, adata_cflare: AnnData):
+        cbs = _create_callbacks(
+            adata_cflare, {"foo": {"bar": _default_model_callback}}, ["foo"], ["bar"]
+        )
+
+        assert cbs.keys() == {"foo"}
+        assert cbs["foo"].keys() == {"bar"}
+
+        assert cbs["foo"]["bar"] is _default_model_callback
+
     def test_callback_default_gene_callback(self, adata_cflare: AnnData):
         cbs = _create_callbacks(
             adata_cflare,
