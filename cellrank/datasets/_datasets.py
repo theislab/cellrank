@@ -15,7 +15,7 @@ AnnData = TypeVar("AnnData")
 
 _datasets = {
     "pancreas": (
-        "https://ndownloader.figshare.com/files/25028786?private_link=bb68d6e4686df12a0e2a",
+        "https://ndownloader.figshare.com/files/25060877?private_link=bb68d6e4686df12a0e2a",
         (2531, 27998),
     ),
     "pancreas_preprocessed": (
