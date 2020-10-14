@@ -60,6 +60,10 @@ def _create_petsc_matrix(
         The converted matrix.
     """
 
+    # TODO:
+    # for some solvers, we need to set the diagonal entries explicitly, even if they are zeros
+    # see: https://lists.mcs.anl.gov/mailman/htdig/petsc-users/2014-October/023212.html
+
     from petsc4py import PETSc
 
     if issparse(mat) and as_dense:
@@ -72,6 +76,9 @@ def _create_petsc_matrix(
         A.createAIJ(size=mat.shape, csr=(mat.indptr, mat.indices, mat.data))
     else:
         A.createDense(mat.shape, array=mat)
+
+    A.assemblyBegin()
+    A.assemblyEnd()
 
     return A
 
@@ -94,7 +101,7 @@ def _create_solver(
     preconditioner
         Preconditioner to use. If `None`, don't use any.
     tol
-        Relative tolerance.
+        The relative convergence tolerance, relative decrease in the (possibly preconditioned) residual norm .
 
     Returns
     -------
@@ -108,10 +115,17 @@ def _create_solver(
     ksp = PETSc.KSP().create()
     ksp.setTolerances(rtol=tol)
     ksp.setType(solver if solver is not None else PETSc.KSP.Type.GMRES)
+
     if preconditioner is not None:
-        ksp.getPC().setType(preconditioner)
+        pc = ksp.getPC()
+        pc.setType(preconditioner)
+        if preconditioner == "ilu":
+            # https://en.wikipedia.org/wiki/Incomplete_LU_factorization#Generalizations
+            pc.setFactorLevels(1)
+        ksp.setType(PETSc.KSP.Type.PREONLY)
 
     ksp.setOperators(A)
+    ksp.setFromOptions()
 
     x, b = A.getVecs()
 
@@ -124,7 +138,7 @@ def _solve_many_sparse_problems_petsc(
     _mat_a: Union[np.ndarray, spmatrix],
     _solver: Optional[str] = None,
     _preconditioner: Optional[str] = None,
-    _tol: float = 1e-6,
+    _tol: float = 1e-5,
     _queue: Optional[Queue] = None,
 ) -> Tuple[np.ndarray, int]:
     raise NotImplementedError(f"Not implemented for type `{type(mat_b).__name__!r}`.")
@@ -136,7 +150,7 @@ def _(
     mat_a: Union[np.ndarray, spmatrix],
     solver: Optional[str] = None,
     preconditioner: Optional[str] = None,
-    tol: float = 1e-6,
+    tol: float = 1e-5,
     _queue: Optional[Queue] = None,
 ) -> Tuple[np.ndarray, int]:
     if mat_b.ndim not in (1, 2) or (mat_b.ndim == 2 and mat_b.shape[1] != 1):
@@ -222,7 +236,7 @@ def _solve_many_sparse_problems(
     solver
         Solver to use for the linear problem. Valid options can be found in :func:`scipy.sparse.linalg`.
     tol
-        Convergence threshold.
+        The relative convergence tolerance, relative decrease in the (possibly preconditioned) residual norm .
     queue
         Queue used to signal when a solution has been computed.
 
@@ -259,7 +273,7 @@ def _solve_many_sparse_problems(
 def _petsc_mat_solve(
     mat_a: Union[np.ndarray, spmatrix],
     mat_b: Optional[Union[spmatrix, np.ndarray]] = None,
-    tol: float = 1e-6,
+    tol: float = 1e-5,
     **kwargs,
 ) -> np.ndarray:
     from petsc4py import PETSc
@@ -344,7 +358,7 @@ def _solve_lin_system(
     preconditioner: Optional[str] = None,
     n_jobs: Optional[int] = None,
     backend: str = _DEFAULT_BACKEND,
-    tol: float = 1e-6,
+    tol: float = 1e-5,
     use_eye: bool = False,
     show_progress_bar: bool = True,
 ) -> np.ndarray:
@@ -385,7 +399,7 @@ def _solve_lin_system(
     backend
         Which backend to use for multiprocessing. See :class:`joblib.Parallel` for valid options.
     tol
-        Convergence threshold.
+        The relative convergence tolerance, relative decrease in the (possibly preconditioned) residual norm .
     use_eye
         Solve ``(I - mat_a) * x = mat_b`` instead.
     show_progress_bar
