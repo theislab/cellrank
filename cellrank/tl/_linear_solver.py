@@ -121,7 +121,8 @@ def _create_solver(
         pc.setType(preconditioner)
         if preconditioner == "ilu":
             # https://en.wikipedia.org/wiki/Incomplete_LU_factorization#Generalizations
-            pc.setFactorLevels(1)
+            # level 1 - 3x slower on pancreas (200ms -> 600ms)
+            pc.setFactorLevels(0)
         elif preconditioner == "lu":
             ksp.setType(PETSc.KSP.Type.PREONLY)
 

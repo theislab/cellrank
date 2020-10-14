@@ -311,7 +311,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         backend: str = "loky",
         show_progress_bar: bool = True,
         tol: float = 1e-5,
-        preconditioner: str = "ilu",
+        preconditioner: Optional[str] = None,
     ) -> None:
         """
         Compute absorption probabilities of a Markov chain.
@@ -363,6 +363,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             Preconditioner to use, only available when ``use_petsc=True``. For available values, see
             `here <https://www.mcs.anl.gov/petsc/petsc-current/docs/manualpages/PC/PCType.html#PCType>` or the values
             of `petsc4py.PETSc.PC.Type`.
+            Recommended preconditioner: `'ilu'`.
 
         Returns
         -------
