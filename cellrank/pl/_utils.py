@@ -951,7 +951,7 @@ def _create_callbacks(
                     f"Expected the callback for gene `{obs_name!r}` and lineage `{lin_name!r}` "
                     f"to be `callable`, found `{type(cb).__name__!r}`."
                 )
-            callbacks[obs_name][lin_name] = copy(cb)
+            callbacks[obs_name][lin_name] = cb
 
         for lin_name in lineages - set(callbacks[obs_name].keys()):
             callbacks[obs_name][lin_name] = lin_rest_callback
@@ -1002,7 +1002,7 @@ def _create_callbacks(
         perform_sanity_check = callback is not _default_model_callback
 
     if callable(callback):
-        callbacks = {o: {lin: copy(callback) for lin in lineages} for o in obs}
+        callbacks = {o: {lin: callback for lin in lineages} for o in obs}
         maybe_sanity_check(callbacks)
         return callbacks
 

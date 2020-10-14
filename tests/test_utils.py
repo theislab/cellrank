@@ -24,7 +24,7 @@ from cellrank.tl._utils import (
     _merge_categorical_series,
     _series_from_one_hot_matrix,
 )
-from cellrank.ul.models import GAM
+from cellrank.ul.models import GAM, BaseModel
 from cellrank.tl._colors import _compute_mean_color
 from cellrank.tl.kernels._utils import (
     norm,
@@ -727,6 +727,109 @@ class TestCreateCallbacks:
 
         assert cbs["foo"]["bar"] is _default_model_callback
         assert cbs["foo"]["baz"] is _default_model_callback
+
+    def test_callback_does_not_return_model(self, adata_cflare: AnnData):
+        def cb(*_args, **_kwargs):
+            return 42
+
+        with pytest.raises(RuntimeError):
+            _create_callbacks(
+                adata_cflare,
+                cb,
+                ["foo"],
+                ["bar"],
+            )
+
+    def test_callback_wrong_gene(self, adata_cflare: AnnData):
+        with pytest.raises(RuntimeError):
+            _create_callbacks(
+                adata_cflare,
+                _default_model_callback,
+                ["foo"],
+                ["0"],
+                perform_sanity_check=True,  # default callback disables it
+            )
+
+    def test_callback_wrong_lineage(self, adata_cflare: AnnData):
+        with pytest.raises(RuntimeError):
+            _create_callbacks(
+                adata_cflare,
+                _default_model_callback,
+                [adata_cflare.var_names[0]],
+                ["foo"],
+                perform_sanity_check=True,  # default callback disables it
+            )
+
+    def test_callback_does_model_not_prepare(self, adata_cflare: AnnData):
+        def cb(model: BaseModel, *_args, **_kwargs):
+            return model
+
+        with pytest.raises(RuntimeError):
+            _create_callbacks(
+                adata_cflare,
+                cb,
+                [adata_cflare.var_names[0]],
+                ["0"],
+            )
+
+    def test_callback_modifies_gene(self, adata_cflare: AnnData):
+        def cb(model: BaseModel, *_args, **_kwargs):
+            model._gene = "bar"
+            return model
+
+        with pytest.raises(RuntimeError):
+            _create_callbacks(
+                adata_cflare,
+                cb,
+                [adata_cflare.var_names[0]],
+                ["0"],
+            )
+
+    def test_callback_modifies_lineage(self, adata_cflare: AnnData):
+        def cb(model: BaseModel, *_args, **_kwargs):
+            model._lineage = "bar"
+            return model
+
+        with pytest.raises(RuntimeError):
+            _create_callbacks(
+                adata_cflare,
+                cb,
+                [adata_cflare.var_names[0]],
+                ["0"],
+            )
+
+    def test_callback_unexpected_failure(self, adata_cflare: AnnData):
+        def cb(_model: BaseModel, *_args, **_kwargs):
+            raise TypeError("foobar")
+
+        with pytest.raises(RuntimeError):
+            _create_callbacks(
+                adata_cflare,
+                cb,
+                [adata_cflare.var_names[0]],
+                ["0"],
+            )
+
+    def test_callback_lineage_and_gene_specific(self, adata_cflare: AnnData):
+        def cb1(model: BaseModel, *args, **kwargs):
+            return model.prepare(*args, **kwargs)
+
+        def cb2(model: BaseModel, *args, **kwargs):
+            return model.prepare(*args, **kwargs)
+
+        g = adata_cflare.var_names[0]
+        cbs = _create_callbacks(
+            adata_cflare,
+            {g: {"0": cb1, "1": cb2}},
+            [g],
+            ["0", "1"],
+        )
+
+        assert cbs.keys() == {g}
+        assert cbs[g].keys() == {"0", "1"}
+
+        assert cbs[g]["0"] is cb1
+        assert cbs[g]["1"] is cb2
 
 
 class TestClusterX:
