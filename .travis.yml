@@ -4,7 +4,7 @@ python:
   - "3.6"
   - "3.7"
   - "3.8"
-# - "3.9-dev"
+  - "3.9-dev"
 
 os: linux
 group: edge
@@ -32,7 +32,7 @@ addons:
       - r-base
       - r-base-dev
       - r-cran-mgcv
-#      - libhdf5-dev  #Python3.9-dev
+      - libhdf5-dev  # Python3.9-dev
 
 env:
   - USE_SLEPC=true
