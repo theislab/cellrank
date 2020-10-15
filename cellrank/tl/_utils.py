@@ -358,9 +358,9 @@ def _vec_mat_corr(
 
     corr = num / denom
 
-    # 2-sided test
+    # 1-sided test
     mean, se = np.arctanh(corr), 1 / np.sqrt(n - 3)
-    pval = 2 * norm.cdf((corr - mean) / se)
+    pval = norm.cdf(-((corr - mean) / se))
 
     # 95% CI
     z = norm.ppf(0.95 + (1 - 0.95) / 2)
