@@ -10,6 +10,11 @@ elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
         pip install codecov
     fi
 
+    if [[ "$TRAVIS_PYTHON_VERSION" == "3.9-dev" ]]; then
+        # https://github.com/dhermes/bezier/issues/243
+        BEZIER_NO_EXTENSION=true pip install --upgrade bezier --no-binary=bezier
+    fi
+
     if [[ "$USE_SLEPC" == "true" ]]; then
         pip install -e".[krylov,test]"
         python -c "import slepc; import petsc;"

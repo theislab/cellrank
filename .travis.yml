@@ -119,5 +119,5 @@ notifications:
   email:
     recipients:
       - info@cellrank.org
-    on_success: never
+    on_success: change
     on_failure: always
