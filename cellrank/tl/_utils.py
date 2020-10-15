@@ -20,7 +20,7 @@ from itertools import tee, product, combinations
 import numpy as np
 import pandas as pd
 from pandas import Series
-from scipy.stats import norm
+from scipy.stats import t, norm
 from numpy.linalg import norm as d_norm
 from scipy.sparse import eye as speye
 from scipy.sparse import diags, issparse, spmatrix, csr_matrix
@@ -358,9 +358,9 @@ def _vec_mat_corr(
 
     corr = num / denom
 
-    # 1-sided test
     mean, se = np.arctanh(corr), 1 / np.sqrt(n - 3)
-    pval = norm.cdf(-((corr - mean) / se))
+    T = corr * np.sqrt((n - 2) / (1 - corr ** 2))
+    pval = 2 * (1 - t.cdf(T, df=2))
 
     # 95% CI
     z = norm.ppf(0.95 + (1 - 0.95) / 2)
