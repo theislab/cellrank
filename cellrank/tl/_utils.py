@@ -360,7 +360,7 @@ def _vec_mat_corr(
 
     mean, se = np.arctanh(corr), 1 / np.sqrt(n - 3)
     T = corr * np.sqrt((n - 2) / (1 - corr ** 2))
-    pval = 2 * (1 - t.cdf(T, df=2))
+    pval = 1 - t.cdf(np.abs(T), df=2) + t.cdf(-np.abs(T), df=2)
 
     # 95% CI
     z = norm.ppf(0.95 + (1 - 0.95) / 2)
