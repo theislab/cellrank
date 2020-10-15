@@ -964,7 +964,7 @@ class TestKernelUtils:
     def test_calculate_starts(self):
         starts = _calculate_starts(diags(np.ones(10)).tocsr().indptr, np.arange(10))
 
-        np.testing.assert_array_equal(starts, np.arange(10))
+        np.testing.assert_array_equal(starts, np.arange(11))
 
     @pytest.mark.parametrize("seed, shuffle", zip(range(10), [False] * 5 + [True] * 5))
     def test_reconstruct_one(self, seed: int, shuffle: bool):
