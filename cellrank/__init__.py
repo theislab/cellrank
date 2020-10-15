@@ -17,6 +17,12 @@ try:
     from importlib_metadata import version  # Python < 3.8
 except ImportError:
     from importlib.metadata import version  # Python = 3.8
-__full_version__ = version(__name__)
 
-del version
+from packaging.version import parse
+
+__full_version__ = parse(version(__name__))
+__full_version__ = (
+    f"{__version__}+{__full_version__.local}" if __full_version__.local else __version__
+)
+
+del version, parse
