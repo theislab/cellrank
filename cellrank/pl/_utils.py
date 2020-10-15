@@ -247,18 +247,35 @@ def _create_models(
         for lin_name, mod in lin_names.items():
             if lin_name == "*":
                 continue
+            if not isinstance(mod, BaseModel):
+                raise TypeError(
+                    f"Expected the model for gene `{obs_name!r}` and lineage `{lin_name!r}` "
+                    f"to be of type `BaseModel`, found `{type(mod).__name__!r}`."
+                )
             models[obs_name][lin_name] = copy(mod)
+
+        if set(models[obs_name].keys()) & lineages == lineages:
+            return
 
         if lin_rest_model is not None:
             for lin_name in lineages - set(models[obs_name].keys()):
                 models[obs_name][lin_name] = copy(lin_rest_model)
         else:
-            raise RuntimeError(
+            raise ValueError(
                 _ERROR_INCOMPLETE_SPEC.format(f"all lineages for gene `{obs_name!r}`")
             )
 
+    if not len(lineages):
+        raise ValueError("No lineages have been selected.")
+
+    if not len(obs):
+        raise ValueError("No genes have been selected.")
+
     if isinstance(model, BaseModel):
-        return {o: {lin: copy(model) for lin in lineages} for o in obs}
+        return {
+            o: {lin: copy(model) for lin in _unique_order_preserving(lineages)}
+            for o in _unique_order_preserving(obs)
+        }
 
     lineages, obs = (
         set(_unique_order_preserving(lineages)),
@@ -281,7 +298,7 @@ def _create_models(
             for obs_name in obs - set(model.keys()):
                 process_lineages(obs_name, model.get(obs_name, obs_rest_model))
         elif set(model.keys()) != obs:
-            raise RuntimeError(
+            raise ValueError(
                 _ERROR_INCOMPLETE_SPEC.format(
                     f"genes `{list(obs - set(model.keys()))}`."
                 )
@@ -291,6 +308,17 @@ def _create_models(
             f"Class `{type(model).__name__!r}` must be of type `BaseModel` or "
             f"a gene and lineage specific `dict` of `BaseModel`.."
         )
+
+    if set(models.keys()) & obs != obs:
+        raise ValueError(
+            f"Missing gene models for the following genes: `{list(obs - set(models.keys()))}`."
+        )
+
+    for gene, vs in models.items():
+        if set(vs.keys()) & lineages != lineages:
+            raise ValueError(
+                f"Missing lineage models for the gene `{gene!r}`: `{list(lineages - set(vs.keys()))}`."
+            )
 
     return models
 
@@ -891,7 +919,7 @@ def _create_callbacks(
 
     def process_lineages(
         obs_name: str, lin_names: Optional[Union[Callable, Dict[Optional[str], Any]]]
-    ):
+    ) -> None:
         if lin_names is None:
             lin_names = _default_model_callback
 
@@ -901,7 +929,10 @@ def _create_callbacks(
                 callbacks[obs_name][lin_name] = lin_names
             return
         elif not isinstance(lin_names, dict):
-            raise TypeError("TODO")
+            raise TypeError(
+                f"Expected the lineage callback to be either `callable` or a dictionary of callables, "
+                f"found `{type(lin_names).__name__!r}`."
+            )
 
         lin_rest_callback = (
             lin_names.get("*", _default_model_callback) or _default_model_callback
@@ -915,7 +946,12 @@ def _create_callbacks(
         for lin_name, cb in lin_names.items():
             if lin_name == "*":
                 continue
-            callbacks[obs_name][lin_name] = copy(cb)
+            if not callable(cb):
+                raise TypeError(
+                    f"Expected the callback for gene `{obs_name!r}` and lineage `{lin_name!r}` "
+                    f"to be `callable`, found `{type(cb).__name__!r}`."
+                )
+            callbacks[obs_name][lin_name] = cb
 
         for lin_name in lineages - set(callbacks[obs_name].keys()):
             callbacks[obs_name][lin_name] = lin_rest_callback
@@ -953,14 +989,36 @@ def _create_callbacks(
                         f"Callback validation failed for gene `{gene!r}` and lineage `{lineage!r}`."
                     ) from e
 
+    def all_callbacks_are_default(cbs: dict) -> bool:
+        # this correctly implicitly handles '*': None
+        for vs in cbs.values():
+            if isinstance(vs, dict):
+                for cb in vs.values():
+                    if callable(cb) and cb is not _default_model_callback:
+                        return False
+            elif callable(vs) and vs is not _default_model_callback:
+                return False
+
+        return True
+
+    if not len(lineages):
+        raise ValueError("No lineages have been selected.")
+
+    if not len(obs):
+        raise ValueError("No genes have been selected.")
+
     if callback is None:
         callback = _default_model_callback
 
     if perform_sanity_check is None:
-        perform_sanity_check = callback is not _default_model_callback
+        perform_sanity_check = (
+            not all_callbacks_are_default(callback)
+            if isinstance(callback, dict)
+            else callback is not _default_model_callback
+        )
 
     if callable(callback):
-        callbacks = {o: {lin: copy(callback) for lin in lineages} for o in obs}
+        callbacks = {o: {lin: callback for lin in lineages} for o in obs}
         maybe_sanity_check(callbacks)
         return callbacks
 
@@ -971,13 +1029,13 @@ def _create_callbacks(
     callbacks = defaultdict(dict)
 
     if isinstance(callback, dict):
-        for obs_name, lin_names in callback.items():
-            process_lineages(obs_name, lin_names)
-
         # can be specified as None
         obs_rest_callback = (
             callback.pop("*", _default_model_callback) or _default_model_callback
         )
+
+        for obs_name, lin_names in callback.items():
+            process_lineages(obs_name, lin_names)
 
         if callable(obs_rest_callback):
             for obs_name in obs - set(callback.keys()):
@@ -990,8 +1048,19 @@ def _create_callbacks(
     else:
         raise TypeError(
             f"Class `{type(callback).__name__!r}` must be `callable` or "
-            f"a gene and lineage specific `dict` of callables."
+            f"a gene and lineage specific `dict` of `callables`."
         )
+
+    if set(callbacks.keys()) & obs != obs:
+        raise ValueError(
+            f"Missing gene callbacks for the following genes: `{list(obs - set(callbacks.keys()))}`."
+        )
+
+    for gene, vs in callbacks.items():
+        if set(vs.keys()) & lineages != lineages:
+            raise ValueError(
+                f"Missing lineage callbacks for gene `{gene!r}`: `{list(lineages - set(vs.keys()))}`."
+            )
 
     maybe_sanity_check(callbacks)
 

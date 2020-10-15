@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
-from scanpy import settings
-
 import cellrank.pl
 import cellrank.tl
 import cellrank.ul
 import cellrank.logging
 import cellrank.datasets
+from cellrank.settings import settings as settings
 from cellrank.tl._read import read
 from cellrank.tl._constants import Lin
 

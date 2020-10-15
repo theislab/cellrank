@@ -44,8 +44,9 @@ def _load_dataset_from_url(
 
     dirname, _ = os.path.split(fpath)
     try:
-        logg.debug(f"Creating directory `{dirname!r}`")
-        os.makedirs(dirname, exist_ok=True)
+        if not os.path.isdir(dirname):
+            logg.debug(f"Creating directory `{dirname!r}`")
+            os.makedirs(dirname, exist_ok=True)
     except OSError as e:
         logg.debug(f"Unable to create directory `{dirname!r}`. Reason `{e}`")
 

@@ -311,6 +311,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         backend: str = "loky",
         show_progress_bar: bool = True,
         tol: float = 1e-5,
+        preconditioner: Optional[str] = None,
     ) -> None:
         """
         Compute absorption probabilities of a Markov chain.
@@ -358,6 +359,11 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         tol
             Convergence tolerance for the iterative solver. The default is fine for most cases, only consider
             decreasing this for severely ill-conditioned matrices.
+        preconditioner
+            Preconditioner to use, only available when ``use_petsc=True``. For available values, see
+            `here <https://www.mcs.anl.gov/petsc/petsc-current/docs/manualpages/PC/PCType.html#PCType>` or the values
+            of `petsc4py.PETSc.PC.Type`.
+            We recommended `'ilu'` preconditioner for badly conditioned problems.
 
         Returns
         -------
@@ -481,6 +487,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             tol=tol,
             use_eye=True,
             show_progress_bar=show_progress_bar,
+            preconditioner=preconditioner,
         )
 
         if time_to_absorption is not None:
@@ -497,6 +504,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 backend=backend,
                 tol=tol,
                 show_progress_bar=show_progress_bar,
+                preconditioner=preconditioner,
             )
             abs_time_means.index = self.adata.obs_names
         else:

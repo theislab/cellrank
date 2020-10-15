@@ -14,7 +14,6 @@ from scipy.sparse import (
     isspmatrix_csc,
     isspmatrix_csr,
 )
-from scipy.sparse.linalg import inv as sinv
 from scipy.sparse.linalg import gmres, lgmres, gcrotmk, bicgstab
 
 from cellrank import logging as logg
@@ -41,7 +40,30 @@ PETScMat = TypeVar("PETScMat")
 Queue = TypeVar("Queue")
 
 
-def _create_petsc_matrix(mat, as_dense: bool = False) -> PETScMat:
+def _create_petsc_matrix(
+    mat: Union[np.ndarray, spmatrix], as_dense: bool = False
+) -> PETScMat:
+    """
+    Create a PETSc matrix from :mod:`numpy` or :mod:`scipy.sparse` matrix.
+
+    Parameters
+    ----------
+    mat
+        The matrix to convert.
+    as_dense
+        Only used when ``mat`` is a sparse matrix. If `True`, create `'seqdense'` matrix,
+        otherwise `'seqaij'` matrix.
+
+    Returns
+    -------
+    :class:`petsc4py.PETSc.Mat`
+        The converted matrix.
+    """
+
+    # TODO:
+    # for some solvers, we need to set the diagonal entries explicitly, even if they are zeros
+    # see: https://lists.mcs.anl.gov/mailman/htdig/petsc-users/2014-October/023212.html
+
     from petsc4py import PETSc
 
     if issparse(mat) and as_dense:
@@ -55,6 +77,9 @@ def _create_petsc_matrix(mat, as_dense: bool = False) -> PETScMat:
     else:
         A.createDense(mat.shape, array=mat)
 
+    A.assemblyBegin()
+    A.assemblyEnd()
+
     return A
 
 
@@ -63,7 +88,26 @@ def _create_solver(
     solver: Optional[str],
     preconditioner: Optional[str],
     tol: float,
-):
+) -> Tuple["petsc4py.PETSc.KSP", "petsc4py.PETSc.Vec", "petsc4py.PETScVec"]:  # noqa
+    """
+    Create a linear system solver.
+
+    Parameters
+    ----------
+    mat_a
+        Matrix defining the linear system.
+    solver
+        Type of the solver. If `None`, use `'gmres'`.
+    preconditioner
+        Preconditioner to use. If `None`, don't use any.
+    tol
+        The relative convergence tolerance, relative decrease in the (possibly preconditioned) residual norm .
+
+    Returns
+    -------
+        Triple containing the solver, vector ``x`` and vector ``b`` in ``A * x = b``.
+    """
+
     from petsc4py import PETSc
 
     A = _create_petsc_matrix(mat_a)
@@ -71,10 +115,20 @@ def _create_solver(
     ksp = PETSc.KSP().create()
     ksp.setTolerances(rtol=tol)
     ksp.setType(solver if solver is not None else PETSc.KSP.Type.GMRES)
+
     if preconditioner is not None:
-        ksp.getPC().setType(preconditioner)
+        pc = ksp.getPC()
+        pc.setType(preconditioner)
+        if preconditioner == "ilu":
+            # https://en.wikipedia.org/wiki/Incomplete_LU_factorization#Generalizations
+            # level 1 - 3x slower on pancreas (200ms -> 600ms)
+            # however, for badly conditioned problems, it works much better
+            pc.setFactorLevels(1)
+        elif preconditioner == "lu":
+            ksp.setType(PETSc.KSP.Type.PREONLY)
 
     ksp.setOperators(A)
+    ksp.setFromOptions()
 
     x, b = A.getVecs()
 
@@ -84,38 +138,12 @@ def _create_solver(
 @singledispatch
 def _solve_many_sparse_problems_petsc(
     mat_b: csc_matrix,
-    mat_a: Union[np.ndarray, spmatrix],
-    solver: Optional[str] = None,
-    preconditioner: Optional[str] = None,
-    tol: float = 1e-6,
-    queue: Optional[Queue] = None,
+    _mat_a: Union[np.ndarray, spmatrix],
+    _solver: Optional[str] = None,
+    _preconditioner: Optional[str] = None,
+    _tol: float = 1e-5,
+    _queue: Optional[Queue] = None,
 ) -> Tuple[np.ndarray, int]:
-    """
-    Solver many problems using :module:`petsc4py` solver.
-
-    Parameters
-    ----------
-    mat_b
-        Matrix of shape `n x m`, with m << n.
-    mat_a
-        Matrix of shape `n x n`. We make no assumptions on ``mat_a`` being symmetric or positive definite.
-    solver
-        Solver to use. One of `petsc4py.PETSc.KSP.Type`. By default, use `PETSc.KSP.Type.GMRES`.
-    preconditioner
-        Preconditioner to use. If `None`, don't use any.
-    tol
-        Relative tolerance.
-    queue
-        Queue used to signal when a solution has been computed.
-
-    Returns
-    -------
-    :class:`numpy.ndarray`
-        Matrix of shape `n x m`. Each column in the resulting matrix corresponds to the solution
-        of one of the sub-problems defined via columns in ``mat_b``.
-    int
-        Number of converged solutions.
-    """
     raise NotImplementedError(f"Not implemented for type `{type(mat_b).__name__!r}`.")
 
 
@@ -125,12 +153,12 @@ def _(
     mat_a: Union[np.ndarray, spmatrix],
     solver: Optional[str] = None,
     preconditioner: Optional[str] = None,
-    tol: float = 1e-6,
+    tol: float = 1e-5,
     _queue: Optional[Queue] = None,
 ) -> Tuple[np.ndarray, int]:
     if mat_b.ndim not in (1, 2) or (mat_b.ndim == 2 and mat_b.shape[1] != 1):
         raise ValueError(
-            f"Expected either a vector or a matrix with 1 column, got `{mat_b.shape}`."
+            f"Expected either a vector or a matrix with `1` column, got `{mat_b.shape}`."
         )
 
     if solver == "direct":  # this can sometimes happen
@@ -153,18 +181,6 @@ def _(
     tol: float,
     queue: Queue,
 ) -> Tuple[np.ndarray, int]:
-    from petsc4py import PETSc
-
-    A = _create_petsc_matrix(mat_a)
-
-    ksp = PETSc.KSP().create()
-    ksp.setTolerances(rtol=tol)
-    ksp.setType(solver if solver is not None else PETSc.KSP.Type.GMRES)
-    if preconditioner is not None:
-        ksp.getPC().setType(preconditioner)
-
-    ksp.setOperators(A)
-
     ksp, x, b = _create_solver(mat_a, solver, preconditioner=preconditioner, tol=tol)
     xs, converged = [], 0
 
@@ -211,7 +227,7 @@ def _solve_many_sparse_problems(
     solver
         Solver to use for the linear problem. Valid options can be found in :func:`scipy.sparse.linalg`.
     tol
-        Convergence threshold.
+        The relative convergence tolerance, relative decrease in the (possibly preconditioned) residual norm .
     queue
         Queue used to signal when a solution has been computed.
 
@@ -245,28 +261,10 @@ def _solve_many_sparse_problems(
     return np.stack(x_list, axis=1), n_converged
 
 
-def _invert_matrix(mat, use_petsc: bool = True, **kwargs) -> np.ndarray:
-    if use_petsc:
-        try:
-            import petsc4py  # noqa
-        except ImportError:
-            global _PETSC_ERROR_MSG_SHOWN
-            if not _PETSC_ERROR_MSG_SHOWN:
-                _PETSC_ERROR_MSG_SHOWN = True
-                logg.warning(_PETSC_ERROR_MSG.format(_DEFAULT_SOLVER))
-            kwargs["solver"] = _DEFAULT_SOLVER
-            use_petsc = False
-
-    if use_petsc:
-        return _solve_lin_system(mat, speye(mat.shape[0]), use_petsc=True, **kwargs)
-
-    return sinv(mat).toarray() if issparse(mat) else np.linalg.inv(mat)
-
-
 def _petsc_mat_solve(
     mat_a: Union[np.ndarray, spmatrix],
     mat_b: Optional[Union[spmatrix, np.ndarray]] = None,
-    tol: float = 1e-6,
+    tol: float = 1e-5,
     **kwargs,
 ) -> np.ndarray:
     from petsc4py import PETSc
@@ -320,8 +318,6 @@ def _petsc_mat_solve(
 
     pc = ksp.getPC()
     pc.setType(PETSc.PC.Type.LU)
-    # TODO: investigate why it's slow and find best solver type
-    # pc.setFactorSolverType(PETSc.Mat.SolverType.MUMPS)
     pc.setFromOptions()
     pc.setUp()
 
@@ -353,7 +349,7 @@ def _solve_lin_system(
     preconditioner: Optional[str] = None,
     n_jobs: Optional[int] = None,
     backend: str = _DEFAULT_BACKEND,
-    tol: float = 1e-6,
+    tol: float = 1e-5,
     use_eye: bool = False,
     show_progress_bar: bool = True,
 ) -> np.ndarray:
@@ -394,7 +390,7 @@ def _solve_lin_system(
     backend
         Which backend to use for multiprocessing. See :class:`joblib.Parallel` for valid options.
     tol
-        Convergence threshold.
+        The relative convergence tolerance, relative decrease in the (possibly preconditioned) residual norm .
     use_eye
         Solve ``(I - mat_a) * x = mat_b`` instead.
     show_progress_bar
@@ -500,7 +496,7 @@ def _solve_lin_system(
         )(mat_a, solver=_AVAIL_ITER_SOLVERS[solver], tol=tol)
 
     else:
-        raise NotImplementedError(f"Solver `{solver!r}` is not yet implemented.")
+        raise ValueError(f"Invalid solver `{solver!r}`.")
 
     if n_converged != mat_b.shape[0]:
         logg.warning(f"`{mat_b.shape[0] - n_converged}` solution(s) did not converge")

@@ -95,8 +95,7 @@ def compare(
         res = compare_images(expected_path, actual_path, tol=tol)
         assert res is None, res
 
-    # TODO: refactor
-
+    # TODO: refactor (we can remove the prefix from scvelo
     def _prepare_fname(func: Callable) -> Tuple[str, str]:
         fpath = f"{func.__name__.replace('test_', '')}"
         # scvelo saves figures as pdf
@@ -1904,20 +1903,38 @@ class TestGeneTrend:
 class TestGraph:
     @compare()
     def test_graph(self, adata: AnnData, fpath: str):
-        cr.pl.graph(adata, "T_fwd", ixs=range(10), dpi=DPI, save=fpath)
+        cr.pl.graph(
+            adata, "T_fwd", ixs=range(10), edge_use_curved=False, dpi=DPI, save=fpath
+        )
 
     @compare(kind="bwd")
     def test_graph_bwd(self, adata: AnnData, fpath: str):
-        cr.pl.graph(adata, "T_bwd", ixs=range(10), dpi=DPI, save=fpath)
+        cr.pl.graph(
+            adata, "T_bwd", ixs=range(10), edge_use_curved=False, dpi=DPI, save=fpath
+        )
 
     @compare()
     def test_graph_layout(self, adata: AnnData, fpath: str):
-        cr.pl.graph(adata, "T_fwd", ixs=range(10), layout="umap", dpi=DPI, save=fpath)
+        cr.pl.graph(
+            adata,
+            "T_fwd",
+            ixs=range(10),
+            edge_use_curved=False,
+            layout="umap",
+            dpi=DPI,
+            save=fpath,
+        )
 
     @compare()
     def test_graph_title(self, adata: AnnData, fpath: str):
         cr.pl.graph(
-            adata, "T_fwd", ixs=range(10), title="foo bar baz quux", dpi=DPI, save=fpath
+            adata,
+            "T_fwd",
+            ixs=range(10),
+            title="foo bar baz quux",
+            edge_use_curved=False,
+            dpi=DPI,
+            save=fpath,
         )
 
     @compare()
@@ -1926,6 +1943,7 @@ class TestGraph:
             adata,
             "T_fwd",
             ixs=range(10),
+            edge_use_curved=False,
             keys=["incoming", "self_loops"],
             title=["foo", "bar"],
             dpi=DPI,
@@ -1938,6 +1956,7 @@ class TestGraph:
             adata,
             "T_fwd",
             ixs=range(10),
+            edge_use_curved=False,
             keys=("outgoing", "self_loops"),
             dpi=DPI,
             save=fpath,
@@ -1946,7 +1965,13 @@ class TestGraph:
     @compare()
     def test_graph_edge_weight_scale(self, adata: AnnData, fpath: str):
         cr.pl.graph(
-            adata, "T_fwd", ixs=range(10), edge_weight_scale=100, dpi=DPI, save=fpath
+            adata,
+            "T_fwd",
+            ixs=range(10),
+            edge_use_curved=False,
+            edge_weight_scale=100,
+            dpi=DPI,
+            save=fpath,
         )
 
     @compare()
@@ -1955,6 +1980,7 @@ class TestGraph:
             adata,
             "T_fwd",
             ixs=range(15),
+            edge_use_curved=False,
             arrows=False,
             edge_weight_scale=100,
             dpi=DPI,
@@ -1964,19 +1990,31 @@ class TestGraph:
     @compare()
     def test_graph_curved_edges(self, adata: AnnData, fpath: str):
         cr.pl.graph(
-            adata, "T_fwd", ixs=range(10), edge_use_curved=False, dpi=DPI, save=fpath
+            adata, "T_fwd", ixs=range(10), edge_use_curved=True, dpi=DPI, save=fpath
         )
 
     @compare()
     def test_graph_labels(self, adata: AnnData, fpath: str):
         cr.pl.graph(
-            adata, "T_fwd", ixs=range(10), labels=range(10), dpi=DPI, save=fpath
+            adata,
+            "T_fwd",
+            ixs=range(10),
+            edge_use_curved=False,
+            labels=range(10),
+            dpi=DPI,
+            save=fpath,
         )
 
     @compare()
     def test_graph_cmap(self, adata: AnnData, fpath: str):
         cr.pl.graph(
-            adata, "T_fwd", ixs=range(10), cont_cmap=cm.inferno, dpi=DPI, save=fpath
+            adata,
+            "T_fwd",
+            ixs=range(10),
+            edge_use_curved=False,
+            cont_cmap=cm.inferno,
+            dpi=DPI,
+            save=fpath,
         )
 
     @compare()
@@ -1985,6 +2023,7 @@ class TestGraph:
             adata,
             "T_fwd",
             ixs=range(10),
+            edge_use_curved=False,
             top_n_edges=(2, True, "incoming"),
             edge_weight_scale=100,
             dpi=DPI,
@@ -1997,6 +2036,7 @@ class TestGraph:
             adata,
             "T_fwd",
             ixs=range(10),
+            edge_use_curved=False,
             top_n_edges=(2, False, "outgoing"),
             edge_weight_scale=100,
             dpi=DPI,
@@ -2006,13 +2046,25 @@ class TestGraph:
     @compare()
     def test_graph_edge_normalize(self, adata: AnnData, fpath: str):
         cr.pl.graph(
-            adata, "T_fwd", ixs=range(10), edge_normalize=True, dpi=DPI, save=fpath
+            adata,
+            "T_fwd",
+            ixs=range(10),
+            edge_use_curved=False,
+            edge_normalize=True,
+            dpi=DPI,
+            save=fpath,
         )
 
     @compare()
     def test_graph_edge_reductions(self, adata: AnnData, fpath: str):
         cr.pl.graph(
-            adata, "T_fwd", ixs=range(10), edge_reductions=np.max, dpi=DPI, save=fpath
+            adata,
+            "T_fwd",
+            ixs=range(10),
+            edge_use_curved=False,
+            edge_reductions=np.max,
+            dpi=DPI,
+            save=fpath,
         )
 
     @compare()
@@ -2024,6 +2076,7 @@ class TestGraph:
             "T_fwd",
             ixs=range(10),
             keys="incoming",
+            edge_use_curved=False,
             edge_reductions_restrict_to_ixs=range(20, 40),
             dpi=DPI,
             save=fpath,
@@ -2038,6 +2091,7 @@ class TestGraph:
             "T_fwd",
             ixs=range(10),
             keys="outgoing",
+            edge_use_curved=False,
             edge_reductions_restrict_to_ixs=range(20, 40),
             dpi=DPI,
             save=fpath,
@@ -2049,8 +2103,59 @@ class TestGraph:
             adata,
             "T_fwd",
             ixs=range(10),
+            edge_use_curved=False,
             keys="clusters",
             keylocs="obs",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_graph_filter_edges(self, adata: AnnData, fpath: str):
+        cr.pl.graph(
+            adata,
+            "T_fwd",
+            ixs=range(10),
+            filter_edges=(0.25, 0.5),
+            edge_use_curved=False,
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_graph_dict_layout(self, adata: AnnData, fpath: str):
+        cr.pl.graph(
+            adata,
+            "T_fwd",
+            ixs=range(10),
+            layout={i: (i, i) for i in range(10)},
+            edge_use_curved=False,
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_graph_networkx_layout(self, adata: AnnData, fpath: str):
+        import networkx as nx
+
+        cr.pl.graph(
+            adata,
+            "T_fwd",
+            ixs=range(10),
+            layout=nx.layout.kamada_kawai_layout,
+            edge_use_curved=False,
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_graph_precomputed_layour_pca(self, adata: AnnData, fpath: str):
+        cr.pl.graph(
+            adata,
+            "T_fwd",
+            ixs=range(10),
+            layout="pca",
+            edge_use_curved=False,
             dpi=DPI,
             save=fpath,
         )
@@ -2500,8 +2605,6 @@ class TestLineageDrivers:
         cr.pl.lineage_drivers(adata, "0", cmap="inferno", dpi=DPI, save=fpath)
 
 
-# TODO: more model tests
-# TODO: fwd lineage 0 seems to be corrupted (i.e. very short, modify to 1)
 class TestModel:
     @compare()
     def test_model_default(self, adata: AnnData, fpath: str):

@@ -28,6 +28,10 @@ class _RootLogger(logging.RootLogger):
     ) -> datetime:
         from cellrank import settings
 
+        # this will correctly initialize the handles if doing
+        # just from cellrank import logging
+        settings.verbosity = settings.verbosity
+
         now = datetime.now(timezone.utc)
         time_passed: timedelta = None if time is None else now - time
         extra = {
@@ -70,7 +74,7 @@ class _LogFormatter(logging.Formatter):
         elif record.levelno == HINT:
             self._style._fmt = "--> {message}"
         elif record.levelno == DEBUG:
-            self._style._fmt = "    {message}"
+            self._style._fmt = "DEBUG: {message}"
         if record.time_passed:
             # strip microseconds
             if record.time_passed.microseconds:
@@ -159,8 +163,8 @@ def error(
     """
     Log message with specific level and return current time.
 
-    Params
-    ------
+    Parameters
+    ----------
     msg
         Message to display.
     time
@@ -173,6 +177,11 @@ def error(
         this gets displayed as well
     extra
         Additional values you can specify in `msg` like `{time_passed}`.
+
+    Returns
+    -------
+    :class:`datetime.datetime`
+        The current time.
     """
     from cellrank import settings
 
@@ -203,8 +212,5 @@ def hint(msg: str, *, time=None, deep=None, extra=None) -> datetime:  # noqa
 @_copy_docs_and_signature(error)
 def debug(msg: str, *, time=None, deep=None, extra=None) -> datetime:  # noqa
     from cellrank import settings
-
-    if not msg.startswith("DEBUG: "):
-        msg = "DEBUG: " + msg
 
     return settings._root_logger.debug(msg, time=time, deep=deep, extra=extra)
