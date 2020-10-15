@@ -358,12 +358,13 @@ def _vec_mat_corr(
 
     corr = num / denom
 
-    mean, se = np.arctanh(corr), 1 / np.sqrt(n - 3)
+    # p-value
     T = corr * np.sqrt((n - 2) / (1 - corr ** 2))
     pval = 1 - t.cdf(np.abs(T), df=2) + t.cdf(-np.abs(T), df=2)
 
     # 95% CI
-    z = norm.ppf(0.95 + (1 - 0.95) / 2)
+    mean, se = np.arctanh(corr), 1.0 / np.sqrt(n - 3)
+    z = norm.ppf(0.95 + (1 - 0.95) / 2.0)
     corr_ci = np.tanh(np.c_[mean - z * se, mean + z * se])
 
     return corr, corr_ci, pval
