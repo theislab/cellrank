@@ -20,6 +20,7 @@ from itertools import tee, product, combinations
 import numpy as np
 import pandas as pd
 from pandas import Series
+from scipy.stats import norm
 from numpy.linalg import norm as d_norm
 from scipy.sparse import eye as speye
 from scipy.sparse import diags, issparse, spmatrix, csr_matrix
@@ -321,23 +322,25 @@ def _bias_knn(
     return conn_biased
 
 
-def _vec_mat_corr(X: Union[np.ndarray, spmatrix], y: np.ndarray) -> np.ndarray:
+def _vec_mat_corr(
+    X: Union[np.ndarray, spmatrix], y: np.ndarray
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
-    Compute the correlation between columns in matrix X and a vector y.
+    Compute the correlation between columns in matrix ``X`` and a vector ``y``.
 
     Return NaN for genes which don't vary across cells.
 
     Parameters
     ----------
     X
-        Matrix of `NxM` elements.
+        Matrix of `(N, M)` elements.
     y:
-        Vector of `M` elements.
+        Vector of `(M,)` elements.
 
     Returns
     -------
     :class:`numpy.ndarray`
-        The computed correlation.
+        The computed correlation, 95% confidence interval and the p-values.
     """
 
     X_bar, y_std, n = np.array(X.mean(axis=0)).reshape(-1), np.std(y), X.shape[0]
@@ -353,7 +356,17 @@ def _vec_mat_corr(X: Union[np.ndarray, spmatrix], y: np.ndarray) -> np.ndarray:
             f"No variation found in `{np.sum(denom==0)}` genes. Correlation for these will be `NaN`"
         )
 
-    return num / denom
+    corr = num / denom
+
+    # 2-sided test
+    mean, se = np.arctanh(corr), 1 / np.sqrt(n - 3)
+    pval = 2 * norm.cdf((corr - mean) / se)
+
+    # 95% CI
+    z = norm.ppf(0.95 + (1 - 0.95) / 2)
+    corr_ci = np.tanh(np.c_[mean - z * se, mean + z * se])
+
+    return corr, corr_ci, pval
 
 
 def _make_cat(

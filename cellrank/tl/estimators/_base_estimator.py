@@ -592,12 +592,17 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
         Returns
         -------
-        :class:`pandas.DataFrame` or :obj:`None`
+        None
             Updates :paramref:`adata` ``.var`` or :paramref:`adata` ``.raw.var``, depending on ``use_raw``
             with lineage drivers saved as columns of the form ``{{direction}} {{lineages}}``.
+
             Also updates the following fields:
+
                 - :paramref:`{lin_drivers}` - the driver genes for each lineage.
+
+        :class:`pandas.DataFrame`
             If ``return_drivers=True``, returns the lineage drivers as :class:`pandas.DataFrame`.
+            This also contains the p-values and 95% confidence interval for the Pearson correlations.
         """
 
         # check that lineage probs have been computed
@@ -675,8 +680,13 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         for lineage in lineages:
             key = f"{prefix} {lineage}"
 
-            correlations = _vec_mat_corr(data, lin_probs[:, lineage].X.squeeze())
+            correlations, ci_95, pvals = _vec_mat_corr(
+                data, lin_probs[:, lineage].X.squeeze()
+            )
             lin_corrs[lineage] = correlations
+            lin_corrs[f"{lineage} pval"] = pvals
+            lin_corrs[f"{lineage} ci low"] = ci_95[:, 0]
+            lin_corrs[f"{lineage} ci high"] = ci_95[:, 1]
 
             if use_raw:
                 self.adata.raw.var[key] = correlations
@@ -687,7 +697,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         self._set(A.LIN_DRIVERS, drivers)
 
         field = "raw.var" if use_raw else "var"
-        keys_added = [f"`adata.{field}['{prefix} {lin}']`" for lin in lineages]
+        keys_added = [f"`adata.{field}['{prefix} {lin}]`" for lin in lineages]
 
         logg.info(
             f"Adding `.{P.LIN_DRIVERS}`\n       "
