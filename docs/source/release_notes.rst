@@ -6,7 +6,7 @@ Release Notes
 Version 1.0
 -----------
 
-1.0.0 :small:`2020-10-11`
+1.0.0 :small:`2020-10-17`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 - Fix bug when subsetting :class:`cellrank.tl.Lineage`
 - Add renaming terminal states :meth:`cellrank.tl.estimators.BaseEstimator.rename_terminal_states`
