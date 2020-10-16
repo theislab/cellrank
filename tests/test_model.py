@@ -2,6 +2,7 @@
 import pickle
 from io import BytesIO
 from copy import copy, deepcopy
+from itertools import product
 
 import pytest
 from _helpers import gamr_skip, create_model, assert_models_equal
@@ -23,7 +24,7 @@ from cellrank.ul.models._utils import (
     _get_knotlocs,
 )
 from cellrank.ul.models._base_model import FailedModel, UnknownModelError
-from cellrank.ul.models._pygam_model import GamDistribution
+from cellrank.ul.models._pygam_model import GamDistribution, GamLinkFunction, _gams
 
 
 class TestModel:
@@ -468,6 +469,23 @@ class TestGAM:
         assert g.y_test is not None
         assert g.conf_int is not None
 
+    def test_raises_invalid_kwargs(self, adata_cflare: AnnData):
+        with pytest.raises(TypeError):
+            GAM(adata_cflare, n_lineages=12)
+
+    @pytest.mark.parametrize(
+        "dist,link", product(list(GamDistribution), list(GamLinkFunction))
+    )
+    def test_dist_link_combinations(
+        self, adata_cflare: AnnData, dist: GamDistribution, link: GamLinkFunction
+    ):
+        g = GAM(adata_cflare, link=link, distribution=dist)
+
+        expected_model_type = _gams[dist, link]
+
+        assert isinstance(g.model, expected_model_type)
+        # don't test for link or dist equality (we have normal-gaussian alias, sometimes, they are not strings in pygam)
+
 
 class TestFailedModel:
     def test_wrong_model_type(self):
@@ -484,7 +502,6 @@ class TestFailedModel:
 
     def test_do_nothing_no_bulk_fit(self, gamr_model: GAMR):
         fm = FailedModel(gamr_model)
-        expected_dict = fm.__dict__.copy()
 
         for fn in [
             "prepare",
