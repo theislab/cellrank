@@ -7,8 +7,6 @@ python:
   - "3.9-dev"
 
 os: linux
-group: edge
-arch: arm64-graviton2
 
 dist: focal
 
@@ -39,6 +37,8 @@ env:
   - USE_SLEPC=false
 
 jobs:
+  allow_failures:
+    - env: TRAVIS_PYTHON_VERSION=3.9-dev
   fast_finish: true
   include:
     - name: "Code and reStructuredText analysis"
@@ -69,7 +69,7 @@ jobs:
     - name: "Python 3.8 deployment"
       python: "3.8"
       env:
-        - USE_SLEPC=true NUMBA_DISABLE_JIT=1
+        - USE_SLEPC=true
         - secure: "lTOgoZugqLoYUjtMj7qUro200HfhJBycJ3RVEkyLH/5OrKhf5nTx66AocXfaGsQoXgsghS71s6r6wixd8f6tMBhbq78KksWVkXWWJr8QJ70dU68hx+6T0+rHFtuFNEpiB+BEjAqhBHfwY3p6LHc+hMiw7ej1lfiMQtt/KnSsf7BbJN+4Xre0Q9q1yHojz/Rdp1cvcR6PXJH9o4spL2+kyzQBAtPe22NZICOnfUjquQB5BHfGcipkhxld1sM9iHEljK2OHwJL7GCo8hwyE3c1UtEOIoAz9+pubrrnCSqaeOoLSBTFqh6yUjwfNyYuBJhrQFgwEloa4g4iI4BWwZcKk8ALbRldRdz2Fg1l838f+mVqErrdU04jblhQKlSM50ZDcTv/D+kx7BjHHDVmLUQQGO+Qo87PYMxsFgan0LKkyeyjfSJQjmNHgRZjhXTeoGP9ZxzQzfKuKvgNHmJc51ssGeSb09DJUzeZECNZRlOjeMkhnxHa8XL3GeY+aEZiuIqyGHyVaOlZUFD3Ov5rK0gcmSCFDuQgpcNFGRxeJeYLw0J4BobWHAAVJ2RnCvTjlYIU5hNicVxwfE+xObkGJ0VfAkSQdz3uhjrOZuXHGrKyxInaNc/4OcCQBM9okWIhSail2pdXUvUtu2qbPE9VZExlXwQc75HhmLuppHycU42WxKg="
 
 before_install:
@@ -79,7 +79,7 @@ install:
   - ./.scripts/ci/install.sh || travis_terminate 1
 
 script:
-  - travis_wait 40 ./.scripts/ci/test.sh
+  - travis_wait 20 ./.scripts/ci/test.sh
 
 after_success:
   - ./.scripts/ci/upload_coverage.sh
