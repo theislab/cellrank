@@ -7,7 +7,7 @@ if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
 elif [[ "$TRAVIS_OS_NAME" == "linux" && "$USE_SLEPC" == "true" ]]; then
     echo "Installing APT dependencies"
     sudo apt-get update -y
-    sudo apt-get install gcc gfortran libopenmpi-dev libblas-dev liblapack-dev -y
+    sudo apt-get install gcc gfortran libopenmpi-dev libblas-dev liblapack-dev petsc-dev slepc-dev -y
 fi
 
 if [[ "$TRAVIS_OS_NAME" == "linux" && "$TRAVIS_BRANCH" == "master" && "$TRAVIS_EVENT_TYPE" == "push" && ! -z "${DEPLOY_TOKEN+x}" ]]; then
