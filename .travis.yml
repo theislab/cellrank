@@ -4,7 +4,7 @@ python:
   - "3.6"
   - "3.7"
   - "3.8"
-  - "3.9-dev"
+#  - "3.9-dev"
 
 os: linux
 
@@ -30,15 +30,13 @@ addons:
       - r-base
       - r-base-dev
       - r-cran-mgcv
-      - libhdf5-dev  # Python3.9-dev
+#      - libhdf5-dev  # Python3.9-dev
 
 env:
   - USE_SLEPC=true
   - USE_SLEPC=false
 
 jobs:
-  allow_failures:
-    - env: TRAVIS_PYTHON_VERSION=3.9-dev
   fast_finish: true
   include:
     - name: "Code and reStructuredText analysis"

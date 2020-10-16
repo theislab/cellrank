@@ -301,7 +301,8 @@ class VectorPlottable(KernelHolder, Property):
         abs_value
             Whether to take the absolute value before plotting.
         cluster_key
-            Key from :paramref:`adata` ``.obs`` for plotting categorical observations.
+            Key in :paramref:`adata` ``.obs`` for plotting categorical observations.
+        %(basis)s
         **kwargs
             Keyword arguments for :func:`scvelo.pl.scatter`.
 
@@ -416,6 +417,7 @@ class Plottable(KernelHolder, Property):
             Whether to plot the lineages on the same plot or separately.
         title
             The title of the plot.
+        %(basis)s
         **kwargs
             Keyword arguments for :func:`scvelo.pl.scatter`.
 
@@ -539,7 +541,7 @@ class Plottable(KernelHolder, Property):
         **kwargs,
     ) -> None:
         """
-        Plot continuous observations, such as lineages, in an embedding.
+        Plot continuous observations such as macrostates memberships or lineages in an embedding.
 
         Parameters
         ----------
@@ -557,6 +559,7 @@ class Plottable(KernelHolder, Property):
             Whether to plot the lineages on the same plot using color gradients when ``mode='embedding'``.
         cmap
             Colormap to use.
+        %(basis)s
         **kwargs
             Keyword arguments for :func:`scvelo.pl.scatter`.
 
@@ -656,7 +659,7 @@ class Plottable(KernelHolder, Property):
                 kwargs["color_gradients"] = A
                 if len(cluster_key):
                     logg.warning(
-                        "Ignoring `cluster_key` when plotting probabilities in the same plot"
+                        "Ignoring `cluster_key` when plotting continuous observations in the same plot"
                     )
                 # kwargs["color"] = cluster_key  this results in a bug, cluster_key data is overwritten, will make a PR
             else:

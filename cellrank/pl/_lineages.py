@@ -26,9 +26,9 @@ def lineages(
     """
     Plot lineages that were uncovered using :func:`cellrank.tl.lineages`.
 
-    For each lineage, we show all cells in an embedding (default is UMAP, but can be any) and color them by their
-    probability of belonging to this lineage. For cells that are already committed, this probability will be one for
-    their respective lineage and zero otherwise. For naive cells, these probabilities will be more balanced, reflecting
+    For each lineage, we show all cells in an embedding (default is UMAP) and color them by their probability of
+    belonging to this lineage. For cells that are already committed, this probability will be one for  their respective
+    lineage and zero otherwise. For naive cells, these probabilities will be more balanced, reflecting
     the fact that naive cells have the potential to develop towards multiple endpoints.
 
     Parameters
@@ -42,6 +42,7 @@ def lineages(
     %(time_mode)s
     time_key
         Key in ``adata.obs`` where the pseudotime is stored.
+    %(basis)s
     **kwargs
         Keyword arguments for :meth:`cellrank.tl.estimators.BaseEstimator.plot_absorption_probabilities`.
 
