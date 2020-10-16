@@ -72,10 +72,10 @@ class GAM(BaseModel):
         Order of the splines, i.e. `3` for cubic splines.
     distribution
         Name of the distribution. Available distributions can be found
-        `here <https://pygam.readthedocs.io/en/latest/notebooks/tour_of_pygam.html#Distribution:>`_.
+        `here <https://pygam.readthedocs.io/en/latest/notebooks/tour_of_pygam.html#Distribution:>`__.
     link
         Name of the link function. Available link functions can be found
-        `here <https://pygam.readthedocs.io/en/latest/notebooks/tour_of_pygam.html#Link-function:>`_.
+        `here <https://pygam.readthedocs.io/en/latest/notebooks/tour_of_pygam.html#Link-function:>`__.
     max_iter
         Maximum number of iterations for optimization.
     expectile
