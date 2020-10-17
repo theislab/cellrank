@@ -72,10 +72,10 @@ class GAM(BaseModel):
         Order of the splines, i.e. `3` for cubic splines.
     distribution
         Name of the distribution. Available distributions can be found
-        `here <https://pygam.readthedocs.io/en/latest/notebooks/tour_of_pygam.html#Distribution:>`_.
+        `here <https://pygam.readthedocs.io/en/latest/notebooks/tour_of_pygam.html#Distribution:>`__.
     link
         Name of the link function. Available link functions can be found
-        `here <https://pygam.readthedocs.io/en/latest/notebooks/tour_of_pygam.html#Link-function:>`_.
+        `here <https://pygam.readthedocs.io/en/latest/notebooks/tour_of_pygam.html#Link-function:>`__.
     max_iter
         Maximum number of iterations for optimization.
     expectile
@@ -129,16 +129,24 @@ class GAM(BaseModel):
                 term, expectile=expectile, max_iter=max_iter, verbose=False, **kwargs
             )
         else:
-            gam = _gams[
-                distribution, link
-            ]  # doing it like this ensure that user can specify scale
-            kwargs["link"] = link.s
-            kwargs["distribution"] = distribution.s
+            # doing it like this ensure that user can specify scale
+            gam = _gams[distribution, link]
+
+            filtered_kwargs = _filter_kwargs(gam.__init__, **kwargs)
+            if len(kwargs) != len(filtered_kwargs):
+                raise TypeError(
+                    f"Invalid arguments `{list(set(kwargs) - set(filtered_kwargs))}` "
+                    f"for `{type(gam).__name__!r}`."
+                )
+
+            filtered_kwargs["link"] = link.s
+            filtered_kwargs["distribution"] = distribution.s
+
             model = gam(
                 term,
                 max_iter=max_iter,
                 verbose=False,
-                **_filter_kwargs(gam.__init__, **kwargs),
+                **_filter_kwargs(gam.__init__, **filtered_kwargs),
             )
         super().__init__(adata, model=model)
 

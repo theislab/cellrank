@@ -136,6 +136,10 @@ _return_models = """\
 return_models
     If `True`, return the fitted models for each gene in ``genes`` and lineage in ``lineages``.
 """
+_basis = """\
+basis
+    Basis to use when ``mode='embedding'``. If `None`, use `'umap'`.
+"""
 
 
 def inject_docs(**kwargs):  # noqa
@@ -183,4 +187,5 @@ d = DocstringProcessor(
     en_cutoff_p_thresh=_en_cutoff_p_thresh,
     return_models=_return_models,
     plots_or_returns_models=_plots_or_returns_models,
+    basis=_basis,
 )

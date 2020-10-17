@@ -4,11 +4,9 @@ python:
   - "3.6"
   - "3.7"
   - "3.8"
-# - "3.9-dev"
+#  - "3.9-dev"
 
 os: linux
-group: edge
-arch: arm64-graviton2
 
 dist: focal
 
@@ -32,7 +30,7 @@ addons:
       - r-base
       - r-base-dev
       - r-cran-mgcv
-#      - libhdf5-dev  #Python3.9-dev
+#      - libhdf5-dev  # Python3.9-dev
 
 env:
   - USE_SLEPC=true
@@ -119,5 +117,5 @@ notifications:
   email:
     recipients:
       - info@cellrank.org
-    on_success: never
+    on_success: change
     on_failure: always

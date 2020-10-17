@@ -26,7 +26,7 @@ class KnotLocs(ModeEnum):  # noqa
 @d.dedent
 class GAMR(BaseModel):
     """
-    Wrapper around R's `mgcv <https://cran.r-project.org/web/packages/mgcv/>`_ package for fitting
+    Wrapper around R's `mgcv <https://cran.r-project.org/web/packages/mgcv/>`__ package for fitting
     Generalized Additive Models (GAMs).
 
     Parameters
