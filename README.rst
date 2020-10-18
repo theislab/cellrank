@@ -56,7 +56,7 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
     :target: https://bioconda.github.io/recipes/cellrank/README.html
     :alt: Bioconda
 
-.. |Travis| image:: https://travis-ci.org/theislab/cellrank.svg?branch=master
+.. |Travis| image:: https://img.shields.io/travis/com/theislab/cellrank
     :target: https://travis-ci.com/github/theislab/cellrank
     :alt: CI
 
