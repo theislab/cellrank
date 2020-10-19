@@ -17,6 +17,8 @@ from typing import (
 )
 from itertools import tee, product, combinations
 
+from statsmodels.stats.multitest import multipletests
+
 import numpy as np
 import pandas as pd
 from pandas import Series
@@ -324,7 +326,7 @@ def _bias_knn(
 
 def _vec_mat_corr(
     X: Union[np.ndarray, spmatrix], y: np.ndarray
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Compute the correlation between columns in matrix ``X`` and a vector ``y``.
 
@@ -340,7 +342,7 @@ def _vec_mat_corr(
     Returns
     -------
     :class:`numpy.ndarray`
-        The computed correlation, 95% confidence interval and the p-values.
+        The computed correlation, 95% confidence interval, the p-values and corrected p-values.
     """
 
     X_bar, y_std, n = np.array(X.mean(axis=0)).reshape(-1), np.std(y), X.shape[0]
@@ -358,16 +360,22 @@ def _vec_mat_corr(
 
     corr = num / denom
 
-    # p-value
     T = corr * np.sqrt((n - 2) / (1 - corr ** 2))
-    pval = 1 - t.cdf(np.abs(T), df=2) + t.cdf(-np.abs(T), df=2)
+    pvals = 1 - t.cdf(np.abs(T), df=2) + t.cdf(-np.abs(T), df=2)
+    _, qvals, _, _ = multipletests(
+        pvals,
+        alpha=0.05,
+        method="fdr_bh",
+        is_sorted=False,
+        returnsorted=False,
+    )
 
-    # 95% CI
+    # 95% CI for the correlations
     mean, se = np.arctanh(corr), 1.0 / np.sqrt(n - 3)
-    z = norm.ppf(0.95 + (1 - 0.95) / 2.0)
+    z = norm.ppf(0.975)
     corr_ci = np.tanh(np.c_[mean - z * se, mean + z * se])
 
-    return corr, corr_ci, pval
+    return corr, corr_ci, pvals, qvals
 
 
 def _make_cat(

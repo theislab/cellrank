@@ -602,7 +602,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
         :class:`pandas.DataFrame`
             If ``return_drivers=True``, returns the lineage drivers as :class:`pandas.DataFrame`.
-            This also contains the p-values and 95% confidence interval for the Pearson correlations.
+            This also contains p-values, corrected p-values and 95% confidence interval for Pearson correlations.
         """
 
         # check that lineage probs have been computed
@@ -680,11 +680,12 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         for lineage in lineages:
             key = f"{prefix} {lineage}"
 
-            correlations, ci_95, pvals = _vec_mat_corr(
+            correlations, ci_95, pvals, qvals = _vec_mat_corr(
                 data, lin_probs[:, lineage].X.squeeze()
             )
             lin_corrs[lineage] = correlations
             lin_corrs[f"{lineage} pval"] = pvals
+            lin_corrs[f"{lineage} qval"] = qvals
             lin_corrs[f"{lineage} ci low"] = ci_95[:, 0]
             lin_corrs[f"{lineage} ci high"] = ci_95[:, 1]
 
@@ -694,6 +695,10 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 self.adata.var[key] = correlations
 
         drivers = pd.DataFrame(lin_corrs, index=var_names)
+        drivers.sort_values(
+            by=[f"{ln} qval" for ln in lineages], ascending=True, inplace=True
+        )
+
         self._set(A.LIN_DRIVERS, drivers)
 
         field = "raw.var" if use_raw else "var"
