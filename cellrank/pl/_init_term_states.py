@@ -17,14 +17,17 @@ Plot {direction} states uncovered by :class:`cellrank.tl.{fn_name}`.
 Parameters
 ----------
 %(adata)s
+discrete
+    If `True`, plot probability distribution of {direction} states.
+    Only available when {direction} were estimated by :class:`cellrank.tl.estimators.GPCCA`.
+states
+    Subset of {direction} states to plot. If `None`, plot all {direction} states.
 cluster_key
     If given, plot cluster annotations left of the {direction} states.
 %(time_mode)s
 time_key
     Key in ``adata.obs`` where the pseudotime is stored.
-discrete
-    If `True`, plot probability distribution of {direction} states.
-    Only available when {direction} were estimated by :class:`cellrank.tl.estimators.GPCCA`.
+%(basis)s
 **kwargs
     Keyword arguments for :meth:`cellrank.tl.estimators.BaseEstimator.plot_terminal_states`.
 

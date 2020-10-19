@@ -55,7 +55,7 @@ References
 
 .. [Weinreb18] Weinreb *et al.* (2018),
     *Fundamental limits on dynamic inference from single-cell snapshots*,
-    `PNAS <https:doi.org/10.1073/pnas.1714723115>`__.
+    `PNAS <https://doi.org/10.1073/pnas.1714723115>`__.
 
 .. [Wolf18] Wolf *et al.* (2018),
     *Scanpy: large-scale single-cell gene expression data analysis*,

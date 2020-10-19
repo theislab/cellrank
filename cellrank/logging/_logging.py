@@ -118,7 +118,10 @@ def _versions_dependencies(dependencies):
         mod_name, dist_name = mod if isinstance(mod, tuple) else (mod, mod)
         try:
             imp = __import__(mod_name)
-            yield dist_name, imp.__version__
+            if mod == "cellrank":
+                yield dist_name, imp.__full_version__
+            else:
+                yield dist_name, imp.__version__
         except (ImportError, AttributeError):
             pass
 
@@ -141,10 +144,10 @@ def print_version_and_date():
     Useful for starting a notebook so you see when you started working.
     """
 
-    from cellrank import settings, __version__
+    from cellrank import settings, __full_version__
 
     print(
-        f"Running CellRank {__version__}, on {datetime.now():%Y-%m-%d %H:%M}.",
+        f"Running CellRank {__full_version__}, on {datetime.now():%Y-%m-%d %H:%M}.",
         file=settings.logfile,
     )
 

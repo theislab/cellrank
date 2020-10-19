@@ -651,7 +651,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         """
         Calculate the confidence interval, if the underlying :paramref:`model` has no method for it.
 
-        This formula is taken from [DeSalvo71]_, eq. 5.
+        This formula is taken from [DeSalvo70]_, eq. 5.
 
         Parameters
         ----------
@@ -665,9 +665,9 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
 
         References
         ----------
-        .. [DeSalvo71] DeSalvo, J. (1971),
+        .. [DeSalvo70] DeSalvo, J. S. (1970),
             *Standard Error of Forecast in Multiple Regression: Proof of a Useful Result.*,
-            `The American Statistician, 25(4), 32-34 <https:doi.org/10.2307/2682924>`__.
+            `RAND Corporation <https://www.rand.org/pubs/papers/P4365.html>`__.
         """
 
         use_ixs = self.w > 0
