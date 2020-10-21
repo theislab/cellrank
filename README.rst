@@ -86,7 +86,7 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
     :target: https://codecov.io/gh/theislab/cellrank
     :alt: Coverage
 
-.. _preprint: https://www.biorxiv.org/content/10.1101/2020.10.19.345983v1
+.. _preprint: https://doi.org/10.1101/2020.10.19.345983
 
 .. _PageRank: https://en.wikipedia.org/wiki/PageRank#cite_note-1
 
