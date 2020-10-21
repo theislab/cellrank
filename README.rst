@@ -44,6 +44,12 @@ or via PyPI::
     # or with extra libraries, useful for large datasets
     pip install 'cellrank[krylov]'
 
+Why is it called "CellRank"?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+CellRank **does not** rank cells, we gave the package this name because just like Google's original **PageRank**
+algorithm, it works with Markov chains to aggregate relationships between individual objects (cells vs. websites)
+to learn about more global properties of the underlying dynamics (initial & terminal states and fate probabilities vs. website relevance).
+
 Support
 ^^^^^^^
 We welcome your feedback! Feel free to open an `issue <https://github.com/theislab/cellrank/issues/new/choose>`_
