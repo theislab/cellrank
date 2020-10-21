@@ -46,7 +46,7 @@ or via PyPI::
 
 Why is it called "CellRank"?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-CellRank **does not** rank cells, we gave the package this name because just like Google's original **PageRank**
+CellRank **does not** rank cells, we gave the package this name because just like Google's original `PageRank`_
 algorithm, it works with Markov chains to aggregate relationships between individual objects (cells vs. websites)
 to learn about more global properties of the underlying dynamics (initial & terminal states and fate probabilities vs. website relevance).
 
@@ -87,6 +87,8 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
     :alt: Coverage
 
 .. _preprint: https://www.biorxiv.org/content/10.1101/2020.10.19.345983v1
+
+.._PageRank: https://en.wikipedia.org/wiki/PageRank#cite_note-1
 
 .. _La Manno et al. (2018): https://doi.org/10.1038/s41586-018-0414-6
 
