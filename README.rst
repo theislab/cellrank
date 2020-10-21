@@ -88,7 +88,7 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
 
 .. _preprint: https://www.biorxiv.org/content/10.1101/2020.10.19.345983v1
 
-.._PageRank: https://en.wikipedia.org/wiki/PageRank#cite_note-1
+.. _PageRank: https://en.wikipedia.org/wiki/PageRank#cite_note-1
 
 .. _La Manno et al. (2018): https://doi.org/10.1038/s41586-018-0414-6
 
