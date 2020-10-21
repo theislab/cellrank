@@ -117,7 +117,7 @@ def pancreas_preprocessed(
 
 
 @d.dedent
-def _lung(
+def lung(
     path: Union[str, Path] = "datasets/lung_regeneration.h5ad",
     **kwargs,
 ) -> AnnData:
@@ -129,7 +129,7 @@ def _lung(
     more spaced out. We wanted to focus on the densely sampled days where RNA velocity [Manno18]_ [Bergen20]_ can be
     used to predict the future cellular state.
 
-    Contains raw spliced and un-spliced count data, low-dimensional embedding coordinates as well as  original
+    Contains raw spliced and un-spliced count data, low-dimensional embedding coordinates as well as original
     cluster annotations.
 
     Parameters
