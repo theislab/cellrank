@@ -30,7 +30,7 @@ class TestDataSet:
         assert adata.shape == (2531, 2000)
 
     def test_lung(self, tmpdir_factory):
-        adata = cr.datasets._lung(tmpdir_factory.mktemp("lung").join("adata.h5ad"))
+        adata = cr.datasets.lung(tmpdir_factory.mktemp("lung").join("adata.h5ad"))
 
         assert isinstance(adata, AnnData)
         assert adata.shape == (24882, 24051)
