@@ -20,12 +20,22 @@ data of [Panc19]_.
 CellRank scales to large cell numbers, is fully compatible with `scanpy`_ and `scvelo`_ and is easy to use.
 To get started, see our `tutorial`_.
 
+Manuscript
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Please see our `preprint`_ on **bioRxiv** to learn more.
+
 CellRank's key applications
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 - compute initial & terminal as well as intermediate macrostates of your biological system
 - infer fate probabilities towards the terminal states for each individual cell
 - visualize gene expression trends along specific linegeages while accounting for the continous nature of fate determination
 - identify potential driver genes for each identified cellular trajectory
+
+Why is it called "CellRank"?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+CellRank **does not** rank cells, we gave the package this name because just like Google's original `PageRank`_
+algorithm, it works with Markov chains to aggregate relationships between individual objects (cells vs. websites)
+to learn about more global properties of the underlying dynamics (initial & terminal states and fate probabilities vs. website relevance).
 
 Support
 ^^^^^^^
@@ -88,6 +98,10 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
 .. |Codecov| image:: https://codecov.io/gh/theislab/cellrank/branch/master/graph/badge.svg
     :target: https://codecov.io/gh/theislab/cellrank
     :alt: Coverage
+
+.. _preprint: https://www.biorxiv.org/content/10.1101/2020.10.19.345983v1
+
+.. _PageRank: https://en.wikipedia.org/wiki/PageRank#cite_note-1
 
 .. _tutorial: https://cellrank.readthedocs.io/en/latest/pancreas_basic.html
 
