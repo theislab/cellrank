@@ -19,6 +19,10 @@ cache:
       - $HOME/.cache/pre-commit
       - $HOME/R/Library
 
+branches:
+  only:
+    - master
+
 addons:
   apt:
     update: true
