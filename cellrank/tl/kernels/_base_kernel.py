@@ -929,7 +929,7 @@ def _is_bin_mult(
     -------
     None
         If the expression is not a binary multiplication.
-    :class:`cellrank.tl..kernels.KernelExpression`
+    :class:`cellrank.tl.kernels.KernelExpression`
         Depending on ``return_constant``, it either returns the constant multiplier or the expression being multiplied.
     """
 
