@@ -43,5 +43,5 @@ g.compute_lineage_drivers(lineages="Alpha")
 g.lineage_drivers.sort_values("Alpha corr", ascending=False)
 
 # %%
-# Lastly, we plot the top 3 significant (based on q-values) potential driver genes for the `"Alpha"` lineage.
-g.plot_lineage_drivers("Alpha", n_genes=3, level=0.05)
+# Lastly, we plot the top 3 potential driver genes for the `"Alpha"` lineage.
+g.plot_lineage_drivers("Alpha", n_genes=3)

@@ -101,8 +101,10 @@ def lineage_drivers(
     clusters: Optional[Union[Sequence, str]] = None,
     layer: str = "X",
     use_raw: bool = False,
+    n_perms: int = 1000,
+    return_drivers: bool = True,
     **kwargs,
-) -> pd.DataFrame:  # noqa
+) -> Optional[pd.DataFrame]:  # noqa
     """
     %(lineage_drivers.full_desc)s
 
@@ -133,5 +135,7 @@ def lineage_drivers(
         clusters=clusters,
         layer=layer,
         use_raw=use_raw,
+        n_perms=n_perms,
+        return_drivers=return_drivers,
         **kwargs,
     )

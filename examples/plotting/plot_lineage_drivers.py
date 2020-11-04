@@ -35,5 +35,4 @@ drivers
 
 # %%
 # Finally, we can plot the potential drivers. Below we plot top 3 driver genes for the `'Alpha'` lineage.
-# We can also specify ``level=0.05`` to filter out all genes with higher corrected p-value than ``level``.
-cr.pl.lineage_drivers(adata, lineage="Alpha", n_genes=3, level=0.05)
+cr.pl.lineage_drivers(adata, lineage="Alpha", n_genes=3)

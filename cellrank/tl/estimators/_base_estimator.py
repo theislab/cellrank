@@ -569,8 +569,9 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         layer: str = "X",
         use_raw: bool = False,
         n_perms: int = 1000,
+        return_drivers: bool = True,
         **kwargs,
-    ) -> pd.DataFrame:
+    ) -> Optional[pd.DataFrame]:
         """
         Compute driver genes per lineage.
 
@@ -598,16 +599,19 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             If using a layer other than ``.X``, this must be set to `False`.
         n_perms
             Number of permutations to use when ``method={tm.PERM_TEST.s!r}``.
+        return_drivers
+            Whether to return the drivers. This also contains the lower and upper 95% confidence interval bounds.
         %(parallel)s
 
         Returns
         -------
         %(correlation_test.returns)s
+            Only if ``return_drivers=True``.
 
-            Updates :paramref:`adata` ``.var`` or :paramref:`adata` ``.raw.var``, depending on ``use_raw`` with:
+            Updates :paramref:`adata` ``.var`` or :paramref:`adata` ``.raw.var``, depending ``use_raw`` with:
 
-                - ``{{direction}} {{ineage}} corr - the potential drivers.
-                - ``{{direction}} {{ineage}} qval - the corrected p-values.
+                - ``'{{direction}} {{lineage}} corr'`` - the potential lineage drivers.
+                - ``'{{direction}} {{lineage}} qval'`` - the corrected p-values.
 
             Updates the following fields:
 
@@ -716,7 +720,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             time=start,
         )
 
-        return drivers
+        if return_drivers:
+            return drivers
 
     @d.get_sectionsf("plot_lineage_drivers", sections=["Parameters"])
     @d.dedent
@@ -725,7 +730,6 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         lineage: str,
         n_genes: int = 8,
         use_raw: bool = False,
-        level: Optional[float] = 0.05,
         **kwargs,
     ) -> None:
         """
@@ -739,8 +743,6 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             Number of genes to plot.
         use_raw
             Whether to look in :paramref:`adata` ``.raw.var`` or :paramref:`adata` ``.var``.
-        level
-            Filter out genes whose corrected p-value is largen than ``level``. If `None`, no filter is applied.
         **kwargs
             Keyword arguments for :func:`scvelo.pl.scatter`.
 
@@ -764,18 +766,6 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
         if n_genes <= 0:
             raise ValueError(f"Expected `n_genes` to be positive, found `{n_genes}`.")
-
-        if level is not None:
-            if not (0 <= level <= 1):
-                raise ValueError(
-                    f"Expected `level` to be in interval `[0, 1]`, found `{level}`."
-                )
-            lin_drivers = lin_drivers[lin_drivers[f"{lineage} qval"] <= level]
-
-            if lin_drivers.empty:
-                raise RuntimeError(
-                    "No lineage drivers have been selected. Consider increasing the `level`"
-                )
 
         cmap = kwargs.pop("cmap", "viridis")
         ncols = kwargs.pop("ncols", None)
