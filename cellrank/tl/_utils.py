@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Utility functions for CellRank tl."""
+"""Utility functions for CellRank tools."""
 
 import os
 import warnings
@@ -22,10 +22,10 @@ from statsmodels.stats.multitest import multipletests
 import numpy as np
 import pandas as pd
 from pandas import Series
-from scipy.stats import t, norm
+from scipy.stats import norm
 from numpy.linalg import norm as d_norm
 from scipy.sparse import eye as speye
-from scipy.sparse import diags, issparse, spmatrix, csr_matrix
+from scipy.sparse import diags, issparse, spmatrix, csr_matrix, isspmatrix_csr
 from sklearn.cluster import KMeans
 from pandas.api.types import infer_dtype, is_categorical_dtype
 from scipy.sparse.linalg import norm as sparse_norm
@@ -33,14 +33,17 @@ from scipy.sparse.linalg import norm as sparse_norm
 import matplotlib.colors as mcolors
 
 from cellrank import logging as logg
+from cellrank.ul._docs import d
 from cellrank.ul._utils import _get_neighs, _has_neighs, _get_neighs_params
 from cellrank.tl._colors import (
     _compute_mean_color,
     _convert_to_hex_colors,
     _insert_categorical_colors,
 )
+from cellrank.tl._constants import ModeEnum
+from cellrank.ul._parallelize import parallelize
 from cellrank.tl._linear_solver import _solve_lin_system
-from cellrank.tl.kernels._utils import _filter_kwargs
+from cellrank.tl.kernels._utils import np_std, np_mean, _filter_kwargs
 
 AnnData = TypeVar("AnnData")
 ColorLike = TypeVar("ColorLike")
@@ -50,6 +53,11 @@ DiGraph = TypeVar("DiGraph")
 KernelDirection = TypeVar("KernelDirection")
 
 EPS = np.finfo(np.float64).eps
+
+
+class TestMethod(ModeEnum):  # noqa
+    FISCHER = "fischer"
+    PERM_TEST = "perm_test"
 
 
 class RandomKeys:
@@ -324,58 +332,216 @@ def _bias_knn(
     return conn_biased
 
 
-def _vec_mat_corr(
-    X: Union[np.ndarray, spmatrix], y: np.ndarray
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def _mat_mat_corr_sparse(
+    X: csr_matrix,
+    Y: np.ndarray,
+) -> np.ndarray:
+    n = X.shape[1]
+
+    X_bar = np.reshape(np.array(X.mean(axis=1)), (-1, 1))
+    X_std = np.reshape(
+        np.sqrt(np.array(X.power(2).mean(axis=1)) - (X_bar ** 2)), (-1, 1)
+    )
+
+    y_bar = np.reshape(np.mean(Y, axis=0), (1, -1))
+    y_std = np.reshape(np.std(Y, axis=0), (1, -1))
+
+    return (X @ Y - (n * X_bar * y_bar)) / ((n - 1) * X_std * y_std)
+
+
+def _mat_mat_corr_dense(X: np.ndarray, Y: np.ndarray) -> np.ndarray:
+    n = X.shape[1]
+
+    X_bar = np.reshape(np_mean(X, axis=1), (-1, 1))
+    X_std = np.reshape(np_std(X, axis=1), (-1, 1))
+
+    y_bar = np.reshape(np_mean(Y, axis=0), (1, -1))
+    y_std = np.reshape(np_std(Y, axis=0), (1, -1))
+
+    return (X @ Y - (n * X_bar * y_bar)) / ((n - 1) * X_std * y_std)
+
+
+def _perm_test(
+    ixs: np.ndarray,
+    corr: np.ndarray,
+    X: Union[np.ndarray, spmatrix],
+    Y: np.ndarray,
+    seed: Optional[int] = None,
+    queue=None,
+) -> Tuple[np.ndarray, np.ndarray]:
+    rs = np.random.RandomState(None if seed is None else seed + ixs[0])
+    cell_ixs = np.arange(X.shape[1])
+    pvals = np.zeros_like(corr, dtype=np.float64)
+    corr_bs = np.zeros((len(ixs), X.shape[0], Y.shape[1]))  # perms x genes x lineages
+
+    mmc = _mat_mat_corr_sparse if issparse(X) else _mat_mat_corr_dense
+
+    for i, _ in enumerate(ixs):
+        rs.shuffle(cell_ixs)
+        corr_i = mmc(X, Y[cell_ixs, :])
+        pvals += np.abs(corr_i) >= np.abs(corr)
+
+        bootstrap_ixs = rs.choice(cell_ixs, replace=True, size=len(cell_ixs))
+        corr_bs[i, :, :] = mmc(X[:, bootstrap_ixs], Y[bootstrap_ixs, :])
+
+        if queue is not None:
+            queue.put(1)
+
+    if queue is not None:
+        queue.put(None)
+
+    return pvals, corr_bs
+
+
+@d.get_sectionsf("correlation_test", sections=["Returns"])
+def _correlation_test(
+    X: Union[np.ndarray, spmatrix],
+    Y: "Lineage",  # noqa: F821
+    gene_names: Sequence[str],
+    method: TestMethod = TestMethod.FISCHER,
+    n_perms: Optional[int] = None,
+    seed: Optional[int] = None,
+    **kwargs,
+) -> pd.DataFrame:
     """
-    Compute the correlation between columns in matrix ``X`` and a vector ``y``.
+    Perform a stastical test.
 
     Return NaN for genes which don't vary across cells.
 
     Parameters
     ----------
     X
-        Matrix of `(N, M)` elements.
-    y:
-        Vector of `(M,)` elements.
+        Array or sparse matrix of shape ``(n_cells, n_genes)`` containing the expression.
+    Y
+        Array of shape ``(n_cells, n_lineages)`` containing the absorption probabilities.
+    gene_names
+        Sequence of shape ``(n_genes,)`` containing the gene names.
+    method
+        Method for p-value calculation.
+    n_perms
+        Number of permutations if ``method='perm_test'``.
+    seed
+        Random seed if ``method='perm_test'``.
+    **kwargs
+        Keyword arguments for :func:`cellrank.ul._parallelize.parallelize`.
 
     Returns
     -------
-    :class:`numpy.ndarray`
-        The computed correlation, 95% confidence interval, the p-values and corrected p-values.
+    :class:`pandas.DataFrame`
+        Dataframe of shape ``(n_genes, n_lineages * 5)`` containing the following columns, 1 for each lineage:
+
+            - ``{lineage} corr`` - correlation between the gene expression and absorption probabilities.
+            - ``{lineage} pval`` - calulated p-values for double-sided test.
+            - ``{lineage} qval`` - corrected p-values using Benjamini-Hochberg method at level `0.05`.
+            - ``{lineage} ci low`` - lower bound of the `95%` correlation confidence interval.
+            - ``{lineage} ci high`` - upper bound of the `95%` correlation confidence interval.
     """
 
-    X_bar, y_std, n = np.array(X.mean(axis=0)).reshape(-1), np.std(y), X.shape[0]
-    num = X.T.dot(y) - n * X_bar * np.mean(y)
-    denom = (
-        (n - 1) * np.std(X.A, axis=0) * y_std
-        if issparse(X)
-        else (X.shape[0] - 1) * np.std(X, axis=0) * y_std
+    corr, pvals, ci_low, ci_high = _correlation_test_helper(
+        X.T, Y.X, method=method, n_perms=n_perms, seed=seed, **kwargs
     )
+    res = pd.DataFrame(corr, index=gene_names, columns=[f"{c} corr" for c in Y.names])
+    res[[f"{c} pval" for c in Y.names]] = pvals
+    res[[f"{c} qval" for c in Y.names]] = res[[f"{c} pval" for c in Y.names]].apply(
+        lambda c: multipletests(c, alpha=0.05, method="fdr_bh")[1]
+    )
+    res[[f"{c} ci low" for c in Y.names]] = ci_low
+    res[[f"{c} ci high" for c in Y.names]] = ci_high
 
-    if np.sum(denom == 0):
-        logg.warning(
-            f"No variation found in `{np.sum(denom==0)}` genes. Correlation for these will be `NaN`"
+    res = res[
+        [
+            f"{c} {stat}"
+            for c in Y.names
+            for stat in ("corr", "pval", "qval", "ci low", "ci high")
+        ]
+    ]
+    res.sort_values(by=[f"{c} corr" for c in Y.names], ascending=False, inplace=True)
+
+    return res
+
+
+def _correlation_test_helper(
+    X: Union[np.ndarray, spmatrix],
+    Y: np.ndarray,
+    method: TestMethod = TestMethod.FISCHER,
+    n_perms: Optional[int] = None,
+    seed: Optional[int] = None,
+    **kwargs,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Compute the correlation between rows in matrix ``X`` columns of matrix ``Y``.
+
+    Parameters
+    ----------
+    X
+        Array or matrix of `(M, N)` elements.
+    Y
+        Array of `(N, K)` elements.
+    method
+        Method for p-value calculation.
+    n_perms
+        Number of permutations if ``method='perm_test'``.
+    seed
+        Random seed if ``method='perm_test'``.
+    **kwargs
+        Keyword arguments for :func:`cellrank.ul._parallelize.parallelize`.
+
+    Returns
+    -------
+        Correlations, p-values, corrected p-values, lower and upper bound of 95% confidence interval.
+        Each array if of shape ``(n_genes, n_lineages)``.
+    """
+
+    def perm_test_extractor(
+        res: Sequence[Tuple[np.ndarray, np.ndarray]]
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        pvals, corr_bs = zip(*res)
+        pvals = np.sum(pvals, axis=0) / float(n_perms)
+
+        corr_bs = np.concatenate(corr_bs, axis=0)
+        corr_ci_low, corr_ci_high = np.quantile(corr_bs, q=0.025, axis=0), np.quantile(
+            corr_bs, q=0.975, axis=0
         )
 
-    corr = num / denom
+        return pvals, corr_ci_low, corr_ci_high
 
-    T = corr * np.sqrt((n - 2) / (1 - corr ** 2))
-    pvals = 1 - t.cdf(np.abs(T), df=2) + t.cdf(-np.abs(T), df=2)
-    _, qvals, _, _ = multipletests(
-        pvals,
-        alpha=0.05,
-        method="fdr_bh",
-        is_sorted=False,
-        returnsorted=False,
-    )
+    n = X.shape[1]  # genes x cells
 
-    # 95% CI for the correlations
-    mean, se = np.arctanh(corr), 1.0 / np.sqrt(n - 3)
-    z = norm.ppf(0.975)
-    corr_ci = np.tanh(np.c_[mean - z * se, mean + z * se])
+    if issparse(X) and not isspmatrix_csr(X):
+        X = csr_matrix(X)
 
-    return corr, corr_ci, pvals, qvals
+    corr = _mat_mat_corr_sparse(X, Y) if issparse(X) else _mat_mat_corr_dense(X, Y)
+
+    if method == TestMethod.FISCHER:
+        mean, se = np.arctanh(corr), 1.0 / np.sqrt(n - 3)
+        z_score = (np.arctanh(corr) - np.arctanh(0)) * np.sqrt(n - 3)
+
+        z = norm.ppf(0.975)
+        corr_ci_low = np.tanh(mean - z * se)
+        corr_ci_high = np.tanh(mean + z * se)
+        pvals = 2 * norm.cdf(-np.abs(z_score))
+
+    elif method == TestMethod.PERM_TEST:
+        if not isinstance(n_perms, int):
+            raise TypeError(
+                f"Expected `n_perms` to be an integer, found `{type(n_perms).__name__!r}`."
+            )
+        if n_perms <= 0:
+            raise ValueError(f"Expcted `n_perms` to be positive, found `{n_perms}`.")
+
+        pvals, corr_ci_low, corr_ci_high = parallelize(
+            _perm_test,
+            np.arange(n_perms),
+            as_array=False,
+            unit="permutation",
+            extractor=perm_test_extractor,
+            **kwargs,
+        )(corr, X, Y, seed=seed)
+
+    else:
+        raise NotImplementedError(method)
+
+    return corr, pvals, corr_ci_low, corr_ci_high
 
 
 def _make_cat(

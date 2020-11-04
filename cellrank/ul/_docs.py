@@ -24,7 +24,7 @@ n_jobs
 """
 _parallel = f"""\
 show_progress_bar
-    Whether to show a progress bar. Disabling it may improve performance.
+    Whether to show a progress bar. Disabling it may slightly improve performance.
 {_n_jobs}
 backend
     Which backend to use for parallelization. See :class:`joblib.Parallel` for valid options."""
