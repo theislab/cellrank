@@ -31,7 +31,7 @@ from cellrank.tl.kernels._base_kernel import (
     _ERROR_EMPTY_CACHE_MSG,
     AnnData,
 )
-from cellrank.tl.kernels._velocity_schemes import _HAS_JAX, Scheme, _create_scheme
+from cellrank.tl.kernels._velocity_schemes import Scheme, _create_scheme
 
 
 class VelocityMode(ModeEnum):  # noqa
@@ -341,10 +341,6 @@ def _dispatch_computation(mode, *_args, **_kwargs):
 def _run_in_parallel(fn: Callable, conn: csr_matrix, **kwargs) -> Any:
     fname = fn.__name__
     if fname == "_run_stochastic":
-        if not _HAS_JAX:
-            raise RuntimeError(
-                "Install `jax` and `jaxlib` as `pip install jax jaxlib`."
-            )
         ixs = np.argsort(np.array((conn != 0).sum(1)).ravel())[::-1]
     else:
         ixs = np.arange(conn.shape[0])
