@@ -346,7 +346,11 @@ def _mat_mat_corr_sparse(
     y_bar = np.reshape(np.mean(Y, axis=0), (1, -1))
     y_std = np.reshape(np.std(Y, axis=0), (1, -1))
 
-    return (X @ Y - (n * X_bar * y_bar)) / ((n - 1) * X_std * y_std)
+    with np.warnings.catch_warnings():
+        np.warnings.filterwarnings(
+            "ignore", r"invalid value encountered in true_divide"
+        )
+        return (X @ Y - (n * X_bar * y_bar)) / ((n - 1) * X_std * y_std)
 
 
 def _mat_mat_corr_dense(X: np.ndarray, Y: np.ndarray) -> np.ndarray:
@@ -358,7 +362,11 @@ def _mat_mat_corr_dense(X: np.ndarray, Y: np.ndarray) -> np.ndarray:
     y_bar = np.reshape(np_mean(Y, axis=0), (1, -1))
     y_std = np.reshape(np_std(Y, axis=0), (1, -1))
 
-    return (X @ Y - (n * X_bar * y_bar)) / ((n - 1) * X_std * y_std)
+    with np.warnings.catch_warnings():
+        np.warnings.filterwarnings(
+            "ignore", r"invalid value encountered in true_divide"
+        )
+        return (X @ Y - (n * X_bar * y_bar)) / ((n - 1) * X_std * y_std)
 
 
 def _perm_test(

@@ -98,6 +98,90 @@ class TestLineageDrivers:
             assert np.all(res[f"{name} corr"] >= res[f"{name} ci low"])
             assert np.all(res[f"{name} corr"] <= res[f"{name} ci high"])
 
+    def test_invalid_mode(self, adata_cflare: AnnData):
+        cr.tl.lineages(adata_cflare)
+        with pytest.raises(ValueError):
+            cr.tl.lineage_drivers(adata_cflare, use_raw=False, method="foobar")
+
+    def test_invalid_n_perms_type(self, adata_cflare: AnnData):
+        cr.tl.lineages(adata_cflare)
+        with pytest.raises(TypeError):
+            cr.tl.lineage_drivers(
+                adata_cflare, use_raw=False, n_perms=None, method="perm_test"
+            )
+
+    def test_invalid_n_perms_value(self, adata_cflare: AnnData):
+        cr.tl.lineages(adata_cflare)
+        with pytest.raises(ValueError):
+            cr.tl.lineage_drivers(
+                adata_cflare, use_raw=False, n_perms=0, method="perm_test"
+            )
+
+    def test_seed_reproducible(self, adata_cflare: AnnData):
+        cr.tl.lineages(adata_cflare)
+        res_a = cr.tl.lineage_drivers(
+            adata_cflare,
+            use_raw=False,
+            return_drivers=True,
+            n_perms=10,
+            n_jobs=1,
+            seed=0,
+            method="perm_test",
+        )
+        res_b = cr.tl.lineage_drivers(
+            adata_cflare,
+            use_raw=False,
+            return_drivers=True,
+            n_perms=10,
+            n_jobs=1,
+            seed=0,
+            method="perm_test",
+        )
+        res_diff_seed = cr.tl.lineage_drivers(
+            adata_cflare,
+            use_raw=False,
+            return_drivers=True,
+            n_perms=10,
+            n_jobs=1,
+            seed=1,
+            method="perm_test",
+        )
+
+        assert res_a is not res_b
+        np.testing.assert_array_equal(res_a.index, res_b.index)
+        np.testing.assert_array_equal(res_a.columns, res_b.columns)
+        np.testing.assert_allclose(res_a.values, res_b.values)
+
+        assert not np.allclose(res_a.values, res_diff_seed.values)
+
+    def test_seed_reproducible_parallel(self, adata_cflare: AnnData):
+        cr.tl.lineages(adata_cflare)
+        res_a = cr.tl.lineage_drivers(
+            adata_cflare,
+            use_raw=False,
+            return_drivers=True,
+            n_perms=10,
+            n_jobs=2,
+            backend="threading",
+            seed=42,
+            method="perm_test",
+        )
+        res_b = cr.tl.lineage_drivers(
+            adata_cflare,
+            use_raw=False,
+            return_drivers=True,
+            n_perms=10,
+            n_jobs=2,
+            backend="threading",
+            seed=42,
+            method="perm_test",
+        )
+
+        assert res_a is not res_b
+        np.testing.assert_array_equal(res_a.index, res_b.index)
+        np.testing.assert_array_equal(res_a.columns, res_b.columns)
+        np.testing.assert_allclose(res_a.values, res_b.values)
+
 
 class TestRootFinal:
     def test_find_root(self, adata: AnnData):
