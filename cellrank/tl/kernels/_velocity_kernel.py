@@ -17,7 +17,6 @@ from cellrank.tl.kernels import Kernel
 from cellrank.tl._constants import _DEFAULT_BACKEND, ModeEnum
 from cellrank.ul._parallelize import parallelize
 from cellrank.tl.kernels._utils import (
-    _HAS_JAX,
     prange,
     np_mean,
     _filter_kwargs,
@@ -25,8 +24,6 @@ from cellrank.tl.kernels._utils import (
     _reconstruct_one,
     _calculate_starts,
     _get_probs_for_zero_vec,
-    _predict_transition_probabilities_jax_H,
-    _predict_transition_probabilities_numpy,
 )
 from cellrank.tl.kernels._base_kernel import (
     _RTOL,
@@ -34,6 +31,7 @@ from cellrank.tl.kernels._base_kernel import (
     _ERROR_EMPTY_CACHE_MSG,
     AnnData,
 )
+from cellrank.tl.kernels._velocity_schemes import _HAS_JAX, Scheme, _create_scheme
 
 
 class VelocityMode(ModeEnum):  # noqa
@@ -161,6 +159,7 @@ class VelocityKernel(Kernel):
         self,
         mode: str = VelocityMode.DETERMINISTIC.s,
         backward_mode: str = BackwardMode.TRANSPOSE.s,
+        scheme: Union[str, Callable] = Scheme.CORRELATION.s,
         softmax_scale: Optional[float] = None,
         n_samples: int = 1000,
         seed: Optional[int] = None,
@@ -176,6 +175,8 @@ class VelocityKernel(Kernel):
         ----------
         %(velocity_mode)s
         %(velocity_backward_mode)s
+        scheme
+            TODO.
         %(softmax_scale)s
         n_samples
             Number of bootstrap samples when ``mode={m.MONTE_CARLO.s!r}``.
@@ -188,12 +189,18 @@ class VelocityKernel(Kernel):
         :class:`cellrank.tl.kernels.VelocityKernel`
             Makes available the following fields:
 
-                - :paramref:`transition_matrix`
-                - :paramref:`pearson_correlations`
+                - :paramref:`transition_matrix`.
+                - :paramref:`pearson_correlations`.
         """
-
         mode = VelocityMode(mode)
         backward_mode = BackwardMode(backward_mode)
+
+        if isinstance(scheme, str):
+            scheme = _create_scheme(Scheme(scheme))
+        if not callable(scheme):
+            raise TypeError(
+                f"Expected `scheme` to be a `callable`, found `{type(scheme)!r}`."
+            )
 
         if self.backward and mode != VelocityMode.DETERMINISTIC:
             logg.warning(
@@ -201,9 +208,11 @@ class VelocityKernel(Kernel):
                 f"Defaulting to mode `{VelocityMode.DETERMINISTIC.s!r}`"
             )
             mode = VelocityMode.DETERMINISTIC
-        if mode == VelocityMode.STOCHASTIC and not _HAS_JAX:
+
+        if mode == VelocityMode.STOCHASTIC and not hasattr(scheme, "hessian"):
             logg.warning(
-                f"Unable to detect `jax` installation. Consider installing it as `pip install jax jaxlib`.\n"
+                f"Unable to detect a method for Hessian computation. If using predefined functions, consider "
+                f"installing `jax` as `pip install jax jaxlib`.\n"
                 f"Defaulting to mode `{VelocityMode.MONTE_CARLO.s!r}`"
             )
             mode = VelocityMode.MONTE_CARLO
@@ -214,11 +223,13 @@ class VelocityKernel(Kernel):
 
         if seed is None:
             seed = np.random.randint(0, 2 ** 16)
-        params = dict(softmax_scale=softmax_scale, mode=mode.s, seed=seed)  # noqa
+        params = dict(
+            softmax_scale=softmax_scale, mode=mode.s, seed=seed, scheme=str(scheme)
+        )  # noqa
         if self.backward:
             params["bwd_mode"] = backward_mode.s
 
-        # check whether we already computed such a transition matrix. If yes, load from cache
+        # check whether we already computed such a transition matrix
         if params == self._params:
             assert self._transition_matrix is not None, _ERROR_EMPTY_CACHE_MSG
             logg.debug(_LOG_USING_CACHE, time=start)
@@ -258,6 +269,7 @@ class VelocityKernel(Kernel):
             )
             _, cmat = _dispatch_computation(
                 VelocityMode.DETERMINISTIC,
+                scheme=scheme,
                 conn=self._conn,
                 expression=self._gene_expression,
                 velocity=self._velocity,
@@ -277,6 +289,7 @@ class VelocityKernel(Kernel):
 
         tmat, cmat = _dispatch_computation(
             mode,
+            scheme=scheme,
             conn=self._conn,
             expression=self._gene_expression,
             velocity=self._velocity,
@@ -355,6 +368,7 @@ def _run_in_parallel(fn: Callable, conn: csr_matrix, **kwargs) -> Any:
 
 def _run_deterministic(
     ixs: Union[prange, np.ndarray],
+    scheme: Callable,
     indices: np.ndarray,
     indptr: np.ndarray,
     expression: np.ndarray,
@@ -388,19 +402,11 @@ def _run_deterministic(
             if np.all(v == 0):
                 p, c = _get_probs_for_zero_vec(len(nbhs_ixs))
             else:
-                p, c = _predict_transition_probabilities_numpy(
-                    v,
-                    W,
-                    softmax_scale=softmax_scale,
-                )
+                p, c = scheme(v, W, softmax_scale)
         else:
             # compute how likely all neighbors are to transition to this cell
             V = velocity[nbhs_ixs, :]
-            p, c = _predict_transition_probabilities_numpy(
-                V,
-                -1 * W,
-                softmax_scale=softmax_scale,
-            )
+            p, c = scheme(V, -1 * W, softmax_scale)
 
         probs_cors[0, starts[i] : starts[i] + n_neigh] = p
         probs_cors[1, starts[i] : starts[i] + n_neigh] = c
@@ -416,6 +422,7 @@ def _run_deterministic(
 
 def _run_mc(
     ixs: Optional[np.ndarray],
+    scheme: Callable,
     indices: np.ndarray,
     indptr: np.ndarray,
     expression: np.ndarray,
@@ -452,9 +459,7 @@ def _run_mc(
 
         probs_cors_tmp = np.empty((2, n_samples, n_neigh))
         for j in prange(n_samples):
-            prob, cor = _predict_transition_probabilities_numpy(
-                np.atleast_2d(samples[j]), W, softmax_scale=softmax_scale
-            )
+            prob, cor = scheme(np.atleast_2d(samples[j]), W, softmax_scale)
             probs_cors_tmp[0, j, :] = prob
             probs_cors_tmp[1, j, :] = cor
 
@@ -476,6 +481,7 @@ def _run_mc(
 
 def _run_stochastic(
     ixs: np.ndarray,
+    scheme: Callable,
     indices: np.ndarray,
     indptr: np.ndarray,
     expression: np.ndarray,
@@ -484,8 +490,12 @@ def _run_stochastic(
     softmax_scale: float = 1,
     queue=None,
 ) -> np.ndarray:
+    if not hasattr(scheme, "hessian"):
+        raise AttributeError()
+
     starts = _calculate_starts(indptr, ixs)
     probs_cors = np.empty((2, starts[-1]))
+    n_genes = expression.shape[1]
 
     for i, ix in enumerate(ixs):
         start, end = indptr[ix], indptr[ix + 1]
@@ -502,15 +512,19 @@ def _run_stochastic(
             # compute the Hessian tensor, and turn it into a matrix that has the diagonal elements in its rows
             W = expression[nbhs_ixs, :] - expression[ix, :]
 
-            H = _predict_transition_probabilities_jax_H(
-                v, W, softmax_scale=softmax_scale
-            )
-            H_diag = np.array([np.diag(h) for h in H])
+            H = scheme.hessian(v, W, softmax_scale)
+            if H.shape == (n_neigh, n_genes):
+                H_diag = H
+            elif H.shape == (n_neigh, n_genes, n_genes):
+                H_diag = np.array([np.diag(h) for h in H])
+            else:
+                raise ValueError(
+                    f"Expected full Hessian matrix of shape `{(n_neigh, n_genes, n_genes)}` "
+                    f"or its diagonal of shape `{(n_neigh, n_genes)}`, found `{H.shape}`."
+                )
 
             # compute zero order term
-            p_0, c = _predict_transition_probabilities_numpy(
-                v[None, :], W, softmax_scale=softmax_scale
-            )
+            p_0, c = scheme(v[None, :], W, softmax_scale)
 
             # compute second order term (note that the first order term cancels)
             p_2 = 0.5 * H_diag.dot(variance[ix])

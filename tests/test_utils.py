@@ -37,6 +37,8 @@ from cellrank.tl.kernels._utils import (
     _calculate_starts,
     _np_apply_along_axis,
     _get_probs_for_zero_vec,
+)
+from cellrank.tl.kernels._velocity_schemes import (
     _predict_transition_probabilities_jax,
     _predict_transition_probabilities_numpy,
 )
