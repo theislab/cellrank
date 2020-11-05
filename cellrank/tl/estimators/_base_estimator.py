@@ -608,7 +608,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         seed
             Random seed when ``method={tm.PERM_TEST.s!r}``.
         return_drivers
-            Whether to return the drivers. This also contains the lower and upper 95% confidence interval bounds.
+            Whether to return the drivers. This also contains the lower and upper ``confidence_level`` confidence
+            interval bounds.
         %(parallel)s
 
         Returns

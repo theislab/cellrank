@@ -407,6 +407,7 @@ def _correlation_test(
     Y: "Lineage",  # noqa: F821
     gene_names: Sequence[str],
     method: TestMethod = TestMethod.FISCHER,
+    confidence_level: float = 0.95,
     n_perms: Optional[int] = None,
     seed: Optional[int] = None,
     **kwargs,
@@ -426,6 +427,8 @@ def _correlation_test(
         Sequence of shape ``(n_genes,)`` containing the gene names.
     method
         Method for p-value calculation.
+    confidence_level
+        Confidence level for the confidence interval calculation. Must be in `[0, 1]`.
     n_perms
         Number of permutations if ``method='perm_test'``.
     seed
@@ -441,13 +444,20 @@ def _correlation_test(
             - ``{lineage} corr`` - correlation between the gene expression and absorption probabilities.
             - ``{lineage} pval`` - calulated p-values for double-sided test.
             - ``{lineage} qval`` - corrected p-values using Benjamini-Hochberg method at level `0.05`.
-            - ``{lineage} ci low`` - lower bound of the `95%` correlation confidence interval.
-            - ``{lineage} ci high`` - upper bound of the `95%` correlation confidence interval.
+            - ``{lineage} ci low`` - lower bound of the ``confidence_level`` correlation confidence interval.
+            - ``{lineage} ci high`` - upper bound of the ``confidence_level`` correlation confidence interval.
     """
 
     corr, pvals, ci_low, ci_high = _correlation_test_helper(
-        X.T, Y.X, method=method, n_perms=n_perms, seed=seed, **kwargs
+        X.T,
+        Y.X,
+        method=method,
+        n_perms=n_perms,
+        seed=seed,
+        confidence_level=confidence_level,
+        **kwargs,
     )
+
     res = pd.DataFrame(corr, index=gene_names, columns=[f"{c} corr" for c in Y.names])
     res[[f"{c} pval" for c in Y.names]] = pvals
     res[[f"{c} qval" for c in Y.names]] = res[[f"{c} pval" for c in Y.names]].apply(
