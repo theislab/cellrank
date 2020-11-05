@@ -182,6 +182,25 @@ class TestLineageDrivers:
         np.testing.assert_array_equal(res_a.columns, res_b.columns)
         np.testing.assert_allclose(res_a.values, res_b.values)
 
+    def test_confidence_level(self, adata_cflare: AnnData):
+        cr.tl.lineages(adata_cflare)
+        res_narrow = cr.tl.lineage_drivers(
+            adata_cflare,
+            use_raw=False,
+            return_drivers=True,
+            confidence_level=0.95,
+        )
+        res_wide = cr.tl.lineage_drivers(
+            adata_cflare,
+            use_raw=False,
+            return_drivers=True,
+            confidence_level=0.99,
+        )
+
+        for name in ["0", "1"]:
+            assert np.all(res_narrow[f"{name} ci low"] >= res_wide[f"{name} ci low"])
+            assert np.all(res_narrow[f"{name} ci high"] <= res_wide[f"{name} ci high"])
+
 
 class TestRootFinal:
     def test_find_root(self, adata: AnnData):

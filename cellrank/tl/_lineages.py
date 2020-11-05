@@ -101,7 +101,9 @@ def lineage_drivers(
     clusters: Optional[Union[Sequence, str]] = None,
     layer: str = "X",
     use_raw: bool = False,
+    confidence_level: float = 0.95,
     n_perms: int = 1000,
+    seed: Optional[int] = None,
     return_drivers: bool = True,
     **kwargs,
 ) -> Optional[pd.DataFrame]:  # noqa
@@ -117,6 +119,10 @@ def lineage_drivers(
     Returns
     -------
     %(lineage_drivers.returns)s
+
+    References
+    ----------
+    %(lineage_drivers.references)s
     """
 
     # create dummy kernel and estimator
@@ -135,7 +141,9 @@ def lineage_drivers(
         clusters=clusters,
         layer=layer,
         use_raw=use_raw,
+        confidence_level=confidence_level,
         n_perms=n_perms,
+        seed=seed,
         return_drivers=return_drivers,
         **kwargs,
     )

@@ -474,6 +474,7 @@ def _correlation_test_helper(
     method: TestMethod = TestMethod.FISCHER,
     n_perms: Optional[int] = None,
     seed: Optional[int] = None,
+    confidence_level: float = 0.95,
     **kwargs,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
@@ -491,6 +492,8 @@ def _correlation_test_helper(
         Number of permutations if ``method='perm_test'``.
     seed
         Random seed if ``method='perm_test'``.
+    confidence_level
+        Confidence level for the confidence interval calculation. Must be in `[0, 1]`.
     **kwargs
         Keyword arguments for :func:`cellrank.ul._parallelize.parallelize`.
 
@@ -507,13 +510,20 @@ def _correlation_test_helper(
         pvals = np.sum(pvals, axis=0) / float(n_perms)
 
         corr_bs = np.concatenate(corr_bs, axis=0)
-        corr_ci_low, corr_ci_high = np.quantile(corr_bs, q=0.025, axis=0), np.quantile(
-            corr_bs, q=0.975, axis=0
+        corr_ci_low, corr_ci_high = np.quantile(corr_bs, q=ql, axis=0), np.quantile(
+            corr_bs, q=qh, axis=0
         )
 
         return pvals, corr_ci_low, corr_ci_high
 
+    if not (0 <= confidence_level <= 1):
+        raise ValueError(
+            f"Expected `confidence_level` to be in interval `[0, 1]`, found `{confidence_level}`."
+        )
+
     n = X.shape[1]  # genes x cells
+    ql = 1 - confidence_level - (1 - confidence_level) / 2.0
+    qh = confidence_level + (1 - confidence_level) / 2.0
 
     if issparse(X) and not isspmatrix_csr(X):
         X = csr_matrix(X)
@@ -521,10 +531,11 @@ def _correlation_test_helper(
     corr = _mat_mat_corr_sparse(X, Y) if issparse(X) else _mat_mat_corr_dense(X, Y)
 
     if method == TestMethod.FISCHER:
+        # see: https://en.wikipedia.org/wiki/Pearson_correlation_coefficient#Using_the_Fisher_transformation
         mean, se = np.arctanh(corr), 1.0 / np.sqrt(n - 3)
         z_score = (np.arctanh(corr) - np.arctanh(0)) * np.sqrt(n - 3)
 
-        z = norm.ppf(0.975)
+        z = norm.ppf(qh)
         corr_ci_low = np.tanh(mean - z * se)
         corr_ci_high = np.tanh(mean + z * se)
         pvals = 2 * norm.cdf(-np.abs(z_score))

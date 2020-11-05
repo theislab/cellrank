@@ -556,7 +556,9 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
         self._write_absorption_probabilities(time=start, extra_msg=extra_msg)
 
-    @d.get_sectionsf("lineage_drivers", sections=["Parameters", "Returns"])
+    @d.get_sectionsf(
+        "lineage_drivers", sections=["Parameters", "Returns", "References"]
+    )
     @d.get_full_descriptionf("lineage_drivers")
     @d.dedent
     @inject_docs(lin_drivers=P.LIN_DRIVERS, tm=TestMethod)
@@ -568,7 +570,9 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         clusters: Optional[Union[str, Sequence]] = None,
         layer: str = "X",
         use_raw: bool = False,
+        confidence_level: float = 0.95,
         n_perms: int = 1000,
+        seed: Optional[int] = None,
         return_drivers: bool = True,
         **kwargs,
     ) -> Optional[pd.DataFrame]:
@@ -586,7 +590,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         method
             Mode to use when calculating p-values and confidence intervals. Can be one of:
 
-                - {tm.FISCHER.s!r} - use Fischer transformation.
+                - {tm.FISCHER.s!r} - use Fischer transformation [Fischer21]_.
                 - {tm.PERM_TEST.s!r} - use permutation test.
         cluster_key
             Key from :paramref:`adata` ``.obs`` to obtain cluster annotations. These are considered for ``clusters``.
@@ -597,8 +601,12 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         use_raw
             Whether or not to use :paramref:`adata` ``.raw`` to correlate gene expression.
             If using a layer other than ``.X``, this must be set to `False`.
+        confidence_level
+            Confidence level for the confidence interval calculation. Must be in `[0, 1]`.
         n_perms
             Number of permutations to use when ``method={tm.PERM_TEST.s!r}``.
+        seed
+            Random seed when ``method={tm.PERM_TEST.s!r}``.
         return_drivers
             Whether to return the drivers. This also contains the lower and upper 95% confidence interval bounds.
         %(parallel)s
@@ -608,6 +616,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         %(correlation_test.returns)s
             Only if ``return_drivers=True``.
 
+        None
             Updates :paramref:`adata` ``.var`` or :paramref:`adata` ``.raw.var``, depending ``use_raw`` with:
 
                 - ``'{{direction}} {{lineage}} corr'`` - the potential lineage drivers.
@@ -616,6 +625,12 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             Updates the following fields:
 
                 - :paramref:`{lin_drivers}` - same as the returned values.
+
+        References
+        ----------
+        .. [Fischer21] Fisher, R. A. (1921),
+            *On the “probable error” of a coefficient of correlation deduced from a small sample.*,
+            `Metron 1 3–32 <http://hdl.handle.net/2440/15169>`__.
         """
 
         # check that lineage probs have been computed
@@ -696,6 +711,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             gene_names=var_names,
             method=method,
             n_perms=n_perms,
+            seed=seed,
+            confidence_level=confidence_level,
             **kwargs,
         )
         self._set(A.LIN_DRIVERS, drivers)
@@ -711,7 +728,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             self.adata.var[[f"{prefix} {col}" for col in qvals]] = drivers[qvals]
 
         field = "raw.var" if use_raw else "var"
-        keys_added = [f"`adata.{field}['{prefix} {lin}]`" for lin in lineages]
+        keys_added = [f"`adata.{field}['{prefix} {lin} corr']`" for lin in lineages]
 
         logg.info(
             f"Adding `.{P.LIN_DRIVERS}`\n       "
