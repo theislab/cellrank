@@ -3,11 +3,10 @@ import pytest
 
 from anndata import AnnData
 
+import numpy as np
 import pandas as pd
 
 import cellrank as cr
-import cellrank.tl._lineages
-from cellrank.tl.kernels import Kernel
 from cellrank.tl._constants import AbsProbKey, TermStatesKey, _probs
 from cellrank.tl.kernels._base_kernel import KernelAdd
 
@@ -32,32 +31,175 @@ class TestLineages:
 class TestLineageDrivers:
     def test_no_abs_probs(self, adata: AnnData):
         with pytest.raises(RuntimeError):
-            cellrank.tl._lineages.lineage_drivers(adata)
+            cr.tl.lineage_drivers(adata)
 
     def test_normal_run(self, adata_cflare):
         cr.tl.lineages(adata_cflare)
-        cellrank.tl._lineages.lineage_drivers(adata_cflare, use_raw=False)
+        cr.tl.lineage_drivers(adata_cflare, use_raw=False)
 
         for name in adata_cflare.obsm[AbsProbKey.FORWARD.s].names:
-            assert f"to {name}" in adata_cflare.var
+            assert np.all(adata_cflare.var[f"to {name} corr"] >= -1.0)
+            assert np.all(adata_cflare.var[f"to {name} corr"] <= 1.0)
+
+            assert np.all(adata_cflare.var[f"to {name} qval"] >= 0)
+            assert np.all(adata_cflare.var[f"to {name} qval"] <= 1.0)
 
     def test_normal_run_raw(self, adata_cflare):
         adata_cflare.raw = adata_cflare.copy()
         cr.tl.lineages(adata_cflare)
-        cellrank.tl._lineages.lineage_drivers(adata_cflare, use_raw=True)
+        cr.tl.lineage_drivers(adata_cflare, use_raw=True)
 
         for name in adata_cflare.obsm[AbsProbKey.FORWARD.s].names:
-            assert f"to {name}" in adata_cflare.raw.var
+            assert np.all(adata_cflare.raw.var[f"to {name} corr"] >= -1.0)
+            assert np.all(adata_cflare.raw.var[f"to {name} corr"] <= 1.0)
+
+            assert np.all(adata_cflare.raw.var[f"to {name} qval"] >= 0)
+            assert np.all(adata_cflare.raw.var[f"to {name} qval"] <= 1.0)
 
     def test_return_drivers(self, adata_cflare):
         cr.tl.lineages(adata_cflare)
-        res = cellrank.tl._lineages.lineage_drivers(
-            adata_cflare, return_drivers=True, use_raw=False
-        )
+        res = cr.tl.lineage_drivers(adata_cflare, return_drivers=True, use_raw=False)
 
         assert isinstance(res, pd.DataFrame)
         assert res.shape[0] == adata_cflare.n_vars
-        assert set(res.columns) == set(adata_cflare.obsm[AbsProbKey.FORWARD.s].names)
+        assert {
+            "0 corr",
+            "0 pval",
+            "0 qval",
+            "0 ci low",
+            "0 ci high",
+            "1 corr",
+            "1 pval",
+            "1 qval",
+            "1 ci low",
+            "1 ci high",
+        } == set(res.columns)
+
+        for name in ["0", "1"]:
+            assert np.all(adata_cflare.var[f"to {name} corr"] >= -1.0)
+            assert np.all(adata_cflare.var[f"to {name} corr"] <= 1.0)
+            # res is sorted
+            np.testing.assert_allclose(
+                adata_cflare.var[f"to {name} corr"],
+                res[f"{name} corr"].loc[adata_cflare.var_names],
+            )
+
+            assert np.all(res[f"{name} pval"] >= 0)
+            assert np.all(res[f"{name} pval"] <= 1.0)
+
+            assert np.all(adata_cflare.var[f"to {name} qval"] >= 0)
+            assert np.all(adata_cflare.var[f"to {name} qval"] <= 1.0)
+            # res is sorted
+            np.testing.assert_allclose(
+                adata_cflare.var[f"to {name} qval"],
+                res[f"{name} qval"].loc[adata_cflare.var_names],
+            )
+
+            assert np.all(res[f"{name} corr"] >= res[f"{name} ci low"])
+            assert np.all(res[f"{name} corr"] <= res[f"{name} ci high"])
+
+    def test_invalid_mode(self, adata_cflare: AnnData):
+        cr.tl.lineages(adata_cflare)
+        with pytest.raises(ValueError):
+            cr.tl.lineage_drivers(adata_cflare, use_raw=False, method="foobar")
+
+    def test_invalid_n_perms_type(self, adata_cflare: AnnData):
+        cr.tl.lineages(adata_cflare)
+        with pytest.raises(TypeError):
+            cr.tl.lineage_drivers(
+                adata_cflare, use_raw=False, n_perms=None, method="perm_test"
+            )
+
+    def test_invalid_n_perms_value(self, adata_cflare: AnnData):
+        cr.tl.lineages(adata_cflare)
+        with pytest.raises(ValueError):
+            cr.tl.lineage_drivers(
+                adata_cflare, use_raw=False, n_perms=0, method="perm_test"
+            )
+
+    def test_seed_reproducible(self, adata_cflare: AnnData):
+        cr.tl.lineages(adata_cflare)
+        res_a = cr.tl.lineage_drivers(
+            adata_cflare,
+            use_raw=False,
+            return_drivers=True,
+            n_perms=10,
+            n_jobs=1,
+            seed=0,
+            method="perm_test",
+        )
+        res_b = cr.tl.lineage_drivers(
+            adata_cflare,
+            use_raw=False,
+            return_drivers=True,
+            n_perms=10,
+            n_jobs=1,
+            seed=0,
+            method="perm_test",
+        )
+        res_diff_seed = cr.tl.lineage_drivers(
+            adata_cflare,
+            use_raw=False,
+            return_drivers=True,
+            n_perms=10,
+            n_jobs=1,
+            seed=1,
+            method="perm_test",
+        )
+
+        assert res_a is not res_b
+        np.testing.assert_array_equal(res_a.index, res_b.index)
+        np.testing.assert_array_equal(res_a.columns, res_b.columns)
+        np.testing.assert_allclose(res_a.values, res_b.values)
+
+        assert not np.allclose(res_a.values, res_diff_seed.values)
+
+    def test_seed_reproducible_parallel(self, adata_cflare: AnnData):
+        cr.tl.lineages(adata_cflare)
+        res_a = cr.tl.lineage_drivers(
+            adata_cflare,
+            use_raw=False,
+            return_drivers=True,
+            n_perms=10,
+            n_jobs=2,
+            backend="threading",
+            seed=42,
+            method="perm_test",
+        )
+        res_b = cr.tl.lineage_drivers(
+            adata_cflare,
+            use_raw=False,
+            return_drivers=True,
+            n_perms=10,
+            n_jobs=2,
+            backend="threading",
+            seed=42,
+            method="perm_test",
+        )
+
+        assert res_a is not res_b
+        np.testing.assert_array_equal(res_a.index, res_b.index)
+        np.testing.assert_array_equal(res_a.columns, res_b.columns)
+        np.testing.assert_allclose(res_a.values, res_b.values)
+
+    def test_confidence_level(self, adata_cflare: AnnData):
+        cr.tl.lineages(adata_cflare)
+        res_narrow = cr.tl.lineage_drivers(
+            adata_cflare,
+            use_raw=False,
+            return_drivers=True,
+            confidence_level=0.95,
+        )
+        res_wide = cr.tl.lineage_drivers(
+            adata_cflare,
+            use_raw=False,
+            return_drivers=True,
+            confidence_level=0.99,
+        )
+
+        for name in ["0", "1"]:
+            assert np.all(res_narrow[f"{name} ci low"] >= res_wide[f"{name} ci low"])
+            assert np.all(res_narrow[f"{name} ci high"] <= res_wide[f"{name} ci high"])
 
 
 class TestRootFinal:

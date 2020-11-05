@@ -333,7 +333,7 @@ def heatmap(
             )  # move the left spine to the rectangles to get nicer yticks
             ax.set_yticklabels(models.keys(), ha="right")
 
-            ax.set_title(gene, fontdict=dict(fontsize=fontsize))
+            ax.set_title(gene, fontdict={"fontsize": fontsize})
             ax.set_ylabel("lineage")
 
             for pos in ["top", "bottom", "left", "right"]:
@@ -479,9 +479,9 @@ def heatmap(
                         5, max(n_bars * main_bbox.height / len(df), 0.25 * n_bars)
                     ),
                 )
-                g.ax_col_colors.set_title(lname, fontdict=dict(fontsize=fontsize))
+                g.ax_col_colors.set_title(lname, fontdict={"fontsize": fontsize})
             else:
-                g.ax_heatmap.set_title(lname, fontdict=dict(fontsize=fontsize))
+                g.ax_heatmap.set_title(lname, fontdict={"fontsize": fontsize})
 
             g.ax_col_dendrogram.set_visible(False)  # gets rid of top free space
 

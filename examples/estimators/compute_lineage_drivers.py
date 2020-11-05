@@ -38,8 +38,9 @@ g.absorption_probabilities
 # :meth:`cellrank.tl.estimators.BaseEstimator.compute_lineage_drivers` method. By default, the these are computed for
 # all lineages. We can restrict this computation to only a few clusters, using the ``cluster_key`` and ``clusters``
 # parameters.
-g.compute_lineage_drivers()
-g.lineage_drivers
+# We also compute the corrected p-values (qval) and the 95% confidence intervals for the correlations.
+g.compute_lineage_drivers(lineages="Alpha")
+g.lineage_drivers.sort_values("Alpha corr", ascending=False)
 
 # %%
 # Lastly, we plot the top 3 potential driver genes for the `"Alpha"` lineage.

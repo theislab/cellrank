@@ -98,7 +98,8 @@ def lineage_drivers(
         logg.warning("No raw attribute set. Using `adata.var` instead")
         use_raw = False
 
-    needle = f"{DirPrefix.BACKWARD if backward else DirPrefix.FORWARD} {lineage}"
+    direction = DirPrefix.BACKWARD if backward else DirPrefix.FORWARD
+    needle = f"{direction} {lineage} corr"
 
     haystack = adata.raw.var if use_raw else adata.var
 
@@ -110,8 +111,8 @@ def lineage_drivers(
             f"use_raw={use_raw}, backward={backward}).`"
         )
 
-    drivers = pd.DataFrame(haystack[needle])
-    drivers.columns = [lineage]
+    drivers = pd.DataFrame(haystack[[needle, f"{direction} {lineage} qval"]])
+    drivers.columns = [f"{lineage} corr", f"{lineage} qval"]
     mc._set(A.LIN_DRIVERS, drivers)
 
-    mc.plot_lineage_drivers(lineage, n_genes=n_genes, **kwargs)
+    mc.plot_lineage_drivers(lineage, n_genes=n_genes, use_raw=use_raw, **kwargs)
