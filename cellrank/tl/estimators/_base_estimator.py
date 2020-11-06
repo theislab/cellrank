@@ -23,9 +23,10 @@ from matplotlib.colors import is_color_like
 from cellrank import logging as logg
 from cellrank.ul._docs import d, inject_docs
 from cellrank.tl._utils import (
+    TestMethod,
     _pairwise,
-    _vec_mat_corr,
     _process_series,
+    _correlation_test,
     _get_cat_and_null_indices,
     _merge_categorical_series,
     _convert_to_categorical_series,
@@ -555,17 +556,25 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
         self._write_absorption_probabilities(time=start, extra_msg=extra_msg)
 
-    @d.get_sectionsf("lineage_drivers", sections=["Parameters", "Returns"])
+    @d.get_sectionsf(
+        "lineage_drivers", sections=["Parameters", "Returns", "References"]
+    )
     @d.get_full_descriptionf("lineage_drivers")
-    @inject_docs(lin_drivers=P.LIN_DRIVERS)
+    @d.dedent
+    @inject_docs(lin_drivers=P.LIN_DRIVERS, tm=TestMethod)
     def compute_lineage_drivers(
         self,
         lineages: Optional[Union[str, Sequence]] = None,
+        method: str = TestMethod.FISCHER.s,
         cluster_key: Optional[str] = None,
         clusters: Optional[Union[str, Sequence]] = None,
         layer: str = "X",
         use_raw: bool = False,
-        return_drivers: bool = False,
+        confidence_level: float = 0.95,
+        n_perms: int = 1000,
+        seed: Optional[int] = None,
+        return_drivers: bool = True,
+        **kwargs,
     ) -> Optional[pd.DataFrame]:
         """
         Compute driver genes per lineage.
@@ -578,6 +587,11 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         lineages
             Either a set of lineage names from :paramref:`absorption_probabilities` `.names` or `None`,
             in which case all lineages are considered.
+        method
+            Mode to use when calculating p-values and confidence intervals. Can be one of:
+
+                - {tm.FISCHER.s!r} - use Fischer transformation [Fischer21]_.
+                - {tm.PERM_TEST.s!r} - use permutation test.
         cluster_key
             Key from :paramref:`adata` ``.obs`` to obtain cluster annotations. These are considered for ``clusters``.
         clusters
@@ -587,20 +601,41 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         use_raw
             Whether or not to use :paramref:`adata` ``.raw`` to correlate gene expression.
             If using a layer other than ``.X``, this must be set to `False`.
+        confidence_level
+            Confidence level for the confidence interval calculation. Must be in `[0, 1]`.
+        n_perms
+            Number of permutations to use when ``method={tm.PERM_TEST.s!r}``.
+        seed
+            Random seed when ``method={tm.PERM_TEST.s!r}``.
         return_drivers
-            Whether to return the lineage drivers as :class:`pandas.DataFrame`.
+            Whether to return the drivers. This also contains the lower and upper ``confidence_level`` confidence
+            interval bounds.
+        %(parallel)s
 
         Returns
         -------
-        :class:`pandas.DataFrame` or :obj:`None`
-            Updates :paramref:`adata` ``.var`` or :paramref:`adata` ``.raw.var``, depending on ``use_raw``
-            with lineage drivers saved as columns of the form ``{{direction}} {{lineages}}``.
-            Also updates the following fields:
-                - :paramref:`{lin_drivers}` - the driver genes for each lineage.
-            If ``return_drivers=True``, returns the lineage drivers as :class:`pandas.DataFrame`.
+        %(correlation_test.returns)s
+            Only if ``return_drivers=True``.
+
+        None
+            Updates :paramref:`adata` ``.var`` or :paramref:`adata` ``.raw.var``, depending ``use_raw`` with:
+
+                - ``'{{direction}} {{lineage}} corr'`` - the potential lineage drivers.
+                - ``'{{direction}} {{lineage}} qval'`` - the corrected p-values.
+
+            Updates the following fields:
+
+                - :paramref:`{lin_drivers}` - same as the returned values.
+
+        References
+        ----------
+        .. [Fischer21] Fisher, R. A. (1921),
+            *On the “probable error” of a coefficient of correlation deduced from a small sample.*,
+            `Metron 1 3–32 <http://hdl.handle.net/2440/15169>`__.
         """
 
         # check that lineage probs have been computed
+        method = TestMethod(method)
         abs_probs = self._get(P.ABS_PROBS)
         prefix = DirPrefix.BACKWARD if self.kernel.backward else DirPrefix.FORWARD
 
@@ -671,23 +706,30 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             f"layer `{layer}` with `use_raw={use_raw}`"
         )
 
-        lin_corrs = {}
-        for lineage in lineages:
-            key = f"{prefix} {lineage}"
-
-            correlations = _vec_mat_corr(data, lin_probs[:, lineage].X.squeeze())
-            lin_corrs[lineage] = correlations
-
-            if use_raw:
-                self.adata.raw.var[key] = correlations
-            else:
-                self.adata.var[key] = correlations
-
-        drivers = pd.DataFrame(lin_corrs, index=var_names)
+        drivers = _correlation_test(
+            data,
+            lin_probs[lineages],
+            gene_names=var_names,
+            method=method,
+            n_perms=n_perms,
+            seed=seed,
+            confidence_level=confidence_level,
+            **kwargs,
+        )
         self._set(A.LIN_DRIVERS, drivers)
 
+        corrs, qvals = [f"{lin} corr" for lin in lineages], [
+            f"{lin} qval" for lin in lineages
+        ]
+        if use_raw:
+            self.adata.raw.var[[f"{prefix} {col}" for col in corrs]] = drivers[corrs]
+            self.adata.raw.var[[f"{prefix} {col}" for col in qvals]] = drivers[qvals]
+        else:
+            self.adata.var[[f"{prefix} {col}" for col in corrs]] = drivers[corrs]
+            self.adata.var[[f"{prefix} {col}" for col in qvals]] = drivers[qvals]
+
         field = "raw.var" if use_raw else "var"
-        keys_added = [f"`adata.{field}['{prefix} {lin}']`" for lin in lineages]
+        keys_added = [f"`adata.{field}['{prefix} {lin} corr']`" for lin in lineages]
 
         logg.info(
             f"Adding `.{P.LIN_DRIVERS}`\n       "
@@ -702,7 +744,11 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
     @d.get_sectionsf("plot_lineage_drivers", sections=["Parameters"])
     @d.dedent
     def plot_lineage_drivers(
-        self, lineage: str, n_genes: int = 8, use_raw: bool = False, **kwargs
+        self,
+        lineage: str,
+        n_genes: int = 8,
+        use_raw: bool = False,
+        **kwargs,
     ) -> None:
         """
         Plot lineage drivers discovered by :meth:`compute_lineage_drivers`.
@@ -730,9 +776,10 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 f"Compute `.{P.LIN_DRIVERS}` first as `.compute_lineage_drivers()`."
             )
 
-        if lineage not in lin_drivers:
+        key = f"{lineage} corr"
+        if key not in lin_drivers:
             raise KeyError(
-                f"Lineage `{lineage!r}` not found in `{list(lin_drivers.columns)}`."
+                f"Lineage `{key!r}` not found in `{list(lin_drivers.columns)}`."
             )
 
         if n_genes <= 0:
@@ -741,12 +788,20 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         cmap = kwargs.pop("cmap", "viridis")
         ncols = kwargs.pop("ncols", None)
 
-        geness = lin_drivers[lineage].sort_values(ascending=False).head(n_genes).index
+        geness = lin_drivers.sort_values(by=key, ascending=False).head(n_genes)
+        kwargs.setdefault(
+            "title",
+            [
+                f"{g} q-value={q}"
+                for g, q in dict(geness[f"{lineage} qval"].map("{:.4e}".format)).items()
+            ],
+        )
+
         if ncols is None and len(geness) >= 8:
             ncols = 4
 
         # TODO: scvelo can handle only < 20 plots, see https://github.com/theislab/scvelo/issues/252
-        geness = filter(len, np.array_split(geness, int(ceil(len(geness) / 8))))
+        geness = filter(len, np.array_split(geness.index, int(ceil(len(geness) / 8))))
 
         for genes in geness:
             scv.pl.scatter(

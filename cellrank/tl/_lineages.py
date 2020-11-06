@@ -7,6 +7,7 @@ import pandas as pd
 
 from cellrank import logging as logg
 from cellrank.ul._docs import d
+from cellrank.tl._utils import TestMethod
 from cellrank.tl.kernels import PrecomputedKernel
 from cellrank.tl._constants import AbsProbKey, TermStatesKey, TerminalStatesPlot
 from cellrank.tl.estimators import GPCCA
@@ -95,11 +96,16 @@ def lineage_drivers(
     adata: AnnData,
     backward: bool = False,
     lineages: Optional[Union[Sequence, str]] = None,
+    method: str = TestMethod.FISCHER.s,
     cluster_key: Optional[str] = None,
     clusters: Optional[Union[Sequence, str]] = None,
     layer: str = "X",
-    use_raw: bool = True,
-    return_drivers: bool = False,
+    use_raw: bool = False,
+    confidence_level: float = 0.95,
+    n_perms: int = 1000,
+    seed: Optional[int] = None,
+    return_drivers: bool = True,
+    **kwargs,
 ) -> Optional[pd.DataFrame]:  # noqa
     """
     %(lineage_drivers.full_desc)s
@@ -113,6 +119,10 @@ def lineage_drivers(
     Returns
     -------
     %(lineage_drivers.returns)s
+
+    References
+    ----------
+    %(lineage_drivers.references)s
     """
 
     # create dummy kernel and estimator
@@ -125,10 +135,15 @@ def lineage_drivers(
 
     # call the underlying function to compute and store the lineage drivers
     return g.compute_lineage_drivers(
+        method=method,
         lineages=lineages,
         cluster_key=cluster_key,
         clusters=clusters,
         layer=layer,
         use_raw=use_raw,
+        confidence_level=confidence_level,
+        n_perms=n_perms,
+        seed=seed,
         return_drivers=return_drivers,
+        **kwargs,
     )

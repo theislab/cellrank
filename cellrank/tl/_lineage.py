@@ -771,7 +771,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             reduction_norm.squeeze(),
             labels=self.names if legend_loc == "on data" else None,
             autopct=autopct,
-            wedgeprops=dict(edgecolor="w"),
+            wedgeprops={"edgecolor": "w"},
             colors=self.colors,
             **kwargs,
         )

@@ -52,6 +52,11 @@ def np_mean(array: np.ndarray, axis: int) -> np.ndarray:  # noqa
 
 
 @njit(**jit_kwargs)
+def np_std(array: np.ndarray, axis: int) -> np.ndarray:  # noqa
+    return _np_apply_along_axis(np.std, axis, array)
+
+
+@njit(**jit_kwargs)
 def np_max(array: np.ndarray, axis: int) -> np.ndarray:  # noqa
     return _np_apply_along_axis(np.max, axis, array)
 

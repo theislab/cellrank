@@ -30,7 +30,8 @@ cr.tl.lineages(adata)
 # possible to restrict this computation to just a few clusters, defined by ``cluster_key`` and ``clusters``.
 #
 # By default we are computing the driver genes for all lineages.
-cr.tl.lineage_drivers(adata)
+drivers = cr.tl.lineage_drivers(adata, lineages="Alpha")
+drivers
 
 # %%
 # Finally, we can plot the potential drivers. Below we plot top 3 driver genes for the `'Alpha'` lineage.
