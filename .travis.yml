@@ -54,19 +54,19 @@ jobs:
       # If script returns a non-zero exit code, the build is failed, but continues to run before being marked as failed
       after_failure: skip
 
-    - name: "Python 3.6.5 on macOS"
-      language: bash
-      os: osx
-      osx_image: xcode9.4
-      env:
-        - PYTHON_VERSION=3.6.5 USE_SLEPC=false
+    #- name: "Python 3.6.5 on macOS"
+    #  language: bash
+    #  os: osx
+    #  osx_image: xcode9.4
+    #  env:
+    #    - PYTHON_VERSION=3.6.5 USE_SLEPC=false
 
-    - name: "Python 3.7.3 on macOS"
-      language: bash
-      os: osx
-      osx_image: xcode10.2
-      env:
-        - PYTHON_VERSION=3.7.3 USE_SLEPC=false
+    #- name: "Python 3.7.3 on macOS"
+    #  language: bash
+    #  os: osx
+    #  osx_image: xcode10.2
+    #  env:
+    #    - PYTHON_VERSION=3.7.3 USE_SLEPC=false
 
     - name: "Python 3.8 deployment"
       python: "3.8"
