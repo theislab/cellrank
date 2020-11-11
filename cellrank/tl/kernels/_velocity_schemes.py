@@ -140,13 +140,13 @@ def _predict_transition_probabilities_numpy(
 
 class SimilaritySchemeMeta(ABCMeta):  # noqa: D101
     def __new__(cls, clsname, superclasses, attributedict):  # noqa: D102
+        res = super().__new__(cls, clsname, superclasses, attributedict)
         if (
             attributedict.pop("__use_jax__", False)
             and not _HAS_JAX
             and "hessian" in attributedict
         ):
-            del attributedict["hessian"]
-        res = super().__new__(cls, clsname, superclasses, attributedict)
+            delattr(res, "hessian")
 
         return res
 
