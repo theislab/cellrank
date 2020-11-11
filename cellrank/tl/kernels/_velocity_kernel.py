@@ -49,7 +49,7 @@ class BackwardMode(ModeEnum):  # noqa
 @d.dedent
 class VelocityKernel(Kernel):
     """
-    Kernel which computes a transition matrix based on velocity correlations.
+    Kernel which computes a transition matrix based on RNA velocity.
 
     This borrows ideas from both [Manno18]_ and [Bergen20]_. In short, for each cell *i*, we compute transition
     probabilities :math:`p_{i, j}` to each cell *j* in the neighborhood of *i*. The transition probabilities are
@@ -97,7 +97,7 @@ class VelocityKernel(Kernel):
         self._vkey = vkey  # for copy
         self._xkey = xkey
         self._gene_subset = gene_subset
-        self._pearson_correlations = None
+        self._logits = None
 
     def _read_from_adata(self, **kwargs):
         super()._read_from_adata(**kwargs)
@@ -153,7 +153,7 @@ class VelocityKernel(Kernel):
         self._gene_expression = X.astype(np.float64)
         self._velocity_params = velocity_params
 
-    @inject_docs(m=VelocityMode, b=BackwardMode)  # don't swap the order
+    @inject_docs(m=VelocityMode, b=BackwardMode, s=Scheme)  # don't swap the order
     @d.dedent
     def compute_transition_matrix(
         self,
@@ -168,15 +168,22 @@ class VelocityKernel(Kernel):
         """
         Compute transition matrix based on velocity directions on the local manifold.
 
-        For each cell, infer transition probabilities based on the correlation of the cell's
-        velocity-extrapolated cell state with cell states of its *K* nearest neighbors.
+        For each cell, infer transition probabilities based on the cell's velocity-extrapolated cell state and the
+        cell states of its *K* nearest neighbors.
 
         Parameters
         ----------
         %(velocity_mode)s
         %(velocity_backward_mode)s
         scheme
-            TODO.
+            Similarity scheme between cells as described in [Li2020]_. Can be one of the following:
+
+                - `{s.DOT_PRODUCT.s!r}` - :class:`cellrank.tl.kernels.DotProductScheme`.
+                - `{s.COSINE.s!r}` - :class:`cellrank.tl.kernels.CosineScheme`.
+                - `{s.CORRELATION.s!r}` - :class:`cellrank.tl.kernels.CorrelationScheme`.
+
+            Alternatively, any function can be passed as long as it follows the call signature of
+            :class:`cellrank.tl.kernels.SimilarityScheme`.
         %(softmax_scale)s
         n_samples
             Number of bootstrap samples when ``mode={m.MONTE_CARLO.s!r}``.
@@ -190,7 +197,7 @@ class VelocityKernel(Kernel):
             Makes available the following fields:
 
                 - :paramref:`transition_matrix`.
-                - :paramref:`pearson_correlations`.
+                - :paramref:`logits`.
         """
         mode = VelocityMode(mode)
         backward_mode = BackwardMode(backward_mode)
@@ -218,7 +225,7 @@ class VelocityKernel(Kernel):
             mode = VelocityMode.MONTE_CARLO
 
         start = logg.info(
-            f"Computing transition matrix based on velocity correlations using `{mode.s!r}` mode"
+            f"Computing transition matrix based on logits using `{mode.s!r}` mode"
         )
 
         if seed is None:
@@ -304,16 +311,16 @@ class VelocityKernel(Kernel):
             **kwargs,
         )
         self._compute_transition_matrix(tmat, density_normalize=False)
-        self._pearson_correlations = cmat
+        self._logits = cmat
 
         logg.info("    Finish", time=start)
 
         return self
 
     @property
-    def pearson_correlations(self) -> csr_matrix:  # noqa
-        """The matrix containing Pearson correlations."""
-        return self._pearson_correlations
+    def logits(self) -> csr_matrix:  # noqa
+        """Array of shape ``(n_cells, n_cells)`` containing the logits."""
+        return self._logits
 
     @d.dedent
     def copy(self) -> "VelocityKernel":  # noqa
@@ -328,7 +335,7 @@ class VelocityKernel(Kernel):
         vk._params = copy(self.params)
         vk._cond_num = self.condition_number
         vk._transition_matrix = copy(self._transition_matrix)
-        vk._pearson_correlations = copy(self.pearson_correlations)
+        vk._logits = copy(self.logits)
 
         return vk
 

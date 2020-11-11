@@ -6,6 +6,7 @@ from functools import partial
 import numpy as np
 from numba import njit
 
+from cellrank.ul._docs import d
 from cellrank.ul._utils import valuedispatch
 from cellrank.tl._constants import ModeEnum
 from cellrank.tl.kernels._utils import norm, np_mean, jit_kwargs
@@ -138,7 +139,7 @@ def _predict_transition_probabilities_numpy(
     )
 
 
-class SimilaritySchemeMeta(ABCMeta):  # noqa: D101
+class HessianMeta(ABCMeta):  # noqa: D101
     def __new__(cls, clsname, superclasses, attributedict):  # noqa: D102
         res = super().__new__(cls, clsname, superclasses, attributedict)
         if (
@@ -151,43 +152,74 @@ class SimilaritySchemeMeta(ABCMeta):  # noqa: D101
         return res
 
 
-class Hessian(ABC, metaclass=SimilaritySchemeMeta):  # noqa: D101
+class Hessian(ABC, metaclass=HessianMeta):  # noqa: D101
+    @d.get_full_descriptionf("hessian")
+    @d.get_sectionsf("hessian", sections=["Parameters", "Returns"])
     @abstractmethod
     def hessian(
-        self, X: np.ndarray, W: np.ndarray, softmax_scale: float = 1.0
+        self, v: np.ndarray, D: np.ndarray, softmax_scale: float = 1.0
     ) -> np.ndarray:
-        """TODO."""
+        """
+        Compute the Hessian.
+
+        Parameters
+        ----------
+        v
+            Array of shape ``(n_genes,)`` containing the velocity vector.
+        D
+            Array of shape ``(n_neighbors, n_genes)`` corresponding to the transcriptomic displacement of the current
+            cell with respect to ist nearest neighbors.
+        softmax_scale
+            Scaling factor for the softmax function.
+
+        Returns
+        -------
+        :class:`numpy.ndarray`
+            The full Hessian of shape ``(n_neighbors, n_genes, n_genes)`` or only its diagonal of shape
+            ``(n_neighbors, n_genes)``.
+
+        Developer notes
+        ---------------
+        This class should be used in conjunction with any class that implements the ``__call__`` method and should
+        compute the Hessian of such function. This it does not need to handle the case of a backward process,
+        i.e. when the velocity vector `v` is of shape ``(n_genes, n_neighbors)``.
+
+        If using :mod:`jax` to compute the Hessian, please specify a class attribute ``__use_jax__ = True``.
+        """
         pass
 
 
 class SimilaritySchemeABC(ABC):
-    """TODO."""
+    """
+    Abstract base class for all similarity schemes.
 
+    All custom made scheme should subclass this and optionally :class:`cellrank.tl.kernels._velocity_schemes.Hessian`.
+    """
+
+    @d.get_full_descriptionf("sim_scheme")
+    @d.get_sectionsf("sim_scheme", sections=["Parameters", "Returns"])
     @abstractmethod
     def __call__(
-        self, X: np.ndarray, W: np.ndarray, softmax_scale: float = 1.0
+        self, v: np.ndarray, D: np.ndarray, softmax_scale: float = 1.0
     ) -> Tuple[np.ndarray, np.ndarray]:
-        # TODO: update docs
         """
-        Compute a categorical distribution based on correlation between rows in ``W`` and ``X``.
-
-        We usually identify ``X`` with a velocity vector and ``W`` as the matrix storing transcriptomic
-        displacements of the current reference cell to its nearest neighbors. For the backward process, ``X``
-        is a matrix as well, storing the velocity vectors of all nearest neighbors.
+        Compute transition probability of a cell to its nearest neighbors using RNA velocity.
 
         Parameters
         ----------
-        X
-            Either vector of shape `(n_features,)` or matrix of shape ``(n_samples, n_features)``.
-        W
-            Weight matrix of shape ``(n_samples, n_features)``.
+        v
+            Array of shape ``(n_genes,)`` or ``(n_neighbors, n_genes)`` containing the velocity vector(s).
+            The second case is used for the backward process.
+        D
+            Array of shape ``(n_neighbors, n_genes)`` corresponding to the transcriptomic displacement of the current
+            cell with respect to ist nearest neighbors.
         softmax_scale
-            Scaling factor for softmax activation function.
+            Scaling factor for the softmax function.
 
         Returns
-        --------
-        :class:`scipy.sparse.csr_matrix`, :class:`scipy.sparse.csr_matrix`
-            The probability and pearson correlation matrices.
+        -------
+        :class:`numpy.ndarray`, :class:`numpy.ndarray`
+            The probability and logits arrays of shape ``(n_neighbors,)``.
         """
         pass
 
@@ -198,43 +230,103 @@ class SimilaritySchemeABC(ABC):
         return repr(self)
 
 
-class SimilarityScheme(SimilaritySchemeABC, Hessian):  # noqa: D101
+class SimilarityScheme(SimilaritySchemeABC, Hessian):
+    """
+    Base class for all similarity schemes as defined in [Li2020]_.
+
+    Parameters
+    ----------
+    center_mean
+        Whether to center the velocity vector(s) and the transcriptomic displacement matrix.
+    scale_by_norm
+        Whether to scale the velocity vector(s) and the transcriptomic displacement matrix by their norms.
+    """
+
     __use_jax__: bool = True
 
     def __init__(self, center_mean: bool, scale_by_norm: bool):
         self._center_mean = center_mean
         self._scale_by_norm = scale_by_norm
 
+    @d.dedent
     def __call__(
         self, X: np.ndarray, W: np.ndarray, softmax_scale: float = 1.0
     ) -> Tuple[np.ndarray, np.ndarray]:
-        """TODO."""
+        """
+        %(sim_scheme.full_desc)s
+
+        Parameters
+        ----------
+        %(sim_scheme.parameters)s
+
+        Returns
+        -------
+        %(sim_scheme.returns)s
+        """  # noqa: D400
         return _predict_transition_probabilities_numpy(
             X, W, softmax_scale, self._center_mean, self._scale_by_norm
         )
 
+    @d.dedent
     def hessian(
         self, X: np.ndarray, W: np.ndarray, softmax_scale: float = 1.0
     ) -> np.ndarray:
-        """TODO."""
+        """
+        %(hessian.full_desc)s
+
+        Parameters
+        ----------
+        %(hessian.parameters)s
+
+        Returns
+        -------
+        %(hessian.returns)s
+        """  # noqa: D400
         return _predict_transition_probabilities_jax_H(
             X, W, softmax_scale, self._center_mean, self._scale_by_norm
         )
 
 
-class DotProductScheme(SimilarityScheme):  # noqa: D101
+class DotProductScheme(SimilarityScheme):
+    r"""
+    Dot product scheme as defined in eq. (4.9) of [Li2020]_.
+
+        :math:`v(s_i, s_j) = g(\delta_{i, j}^T v_i)`
+
+    where :math:`v_i` is the velocity vector of cell :math:`i`, :math:`\delta_{i, j}` corresponds to the transcriptional
+    displacement between cells :math:`i` and :math:`j` and :math:`g` is a softmax function with some scaling parameter.
+    """
+
     def __init__(self):
         super().__init__(center_mean=False, scale_by_norm=False)
 
 
-class CosineScheme(SimilarityScheme):  # noqa: D101 TODO
-    def __init__(self):
-        super().__init__(center_mean=False, scale_by_norm=True)
+class CorrelationScheme(SimilarityScheme):
+    r"""
+    Pearson correlation scheme as defined in eq. (4.8) of [Li2020]_.
 
+        :math:`v(s_i, s_j) = g(corr(\delta_{i, j}, v_i))`
 
-class CorrelationScheme(SimilarityScheme):  # noqa: D101 TODO
+    where :math:`v_i` is the velocity vector of cell :math:`i`, :math:`\delta_{i, j}` corresponds to the transcriptional
+    displacement between cells :math:`i` and :math:`j` and :math:`g` is a softmax function with some scaling parameter.
+    """
+
     def __init__(self):
         super().__init__(center_mean=True, scale_by_norm=True)
+
+
+class CosineScheme(SimilarityScheme):
+    r"""
+    Cosine similarity scheme as defined in eq. (4.7) of [Li2020]_.
+
+        :math:`v(s_i, s_j) = g(cos(\delta_{i, j}, v_i))`
+
+    where :math:`v_i` is the velocity vector of cell :math:`i`, :math:`\delta_{i, j}` corresponds to the transcriptional
+    displacement between cells :math:`i` and :math:`j` and :math:`g` is a softmax function with some scaling parameter.
+    """
+
+    def __init__(self):
+        super().__init__(center_mean=False, scale_by_norm=True)
 
 
 @valuedispatch

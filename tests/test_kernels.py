@@ -875,9 +875,7 @@ class TestKernelCopy:
         vk2 = vk1.copy()
 
         np.testing.assert_array_equal(vk1.transition_matrix.A, vk2.transition_matrix.A)
-        np.testing.assert_array_equal(
-            vk1.pearson_correlations.A, vk2.pearson_correlations.A
-        )
+        np.testing.assert_array_equal(vk1.logits.A, vk2.logits.A)
 
         assert vk1.params == vk2.params
         assert vk1.backward == vk2.backward
@@ -978,7 +976,7 @@ class TestTransitionProbabilities:
         # compute pearson correlations using cellrank
         vk = VelocityKernel(adata, backward=backward)
         vk.compute_transition_matrix(mode="deterministic", softmax_scale=4)
-        pearson_correlations_cr = vk.pearson_correlations
+        pearson_correlations_cr = vk.logits
 
         pc_r = velo_graph.copy()
         pc_r.data = np.array(pearson_correlations_cr[(velo_graph != 0)]).squeeze()
@@ -997,7 +995,7 @@ class TestTransitionProbabilities:
         vk.compute_transition_matrix(
             mode="deterministic", backward_mode="transpose", softmax_scale=4
         )
-        pearson_correlations_cr = vk.pearson_correlations
+        pearson_correlations_cr = vk.logits
 
         pc_r = velo_graph.copy()
         pc_r.data = np.array(pearson_correlations_cr[(velo_graph != 0)]).squeeze()
@@ -1013,7 +1011,7 @@ class TestTransitionProbabilities:
         vk.compute_transition_matrix(softmax_scale=sigma_test, mode="deterministic")
         T_cr = vk.transition_matrix
 
-        pearson_correlation = vk.pearson_correlations
+        pearson_correlation = vk.logits
         T_exp = np.expm1(pearson_correlation * sigma_test)
         T_exp.data += 1
         T_exp = _normalize(T_exp)
@@ -1029,7 +1027,7 @@ class TestTransitionProbabilities:
         vk.compute_transition_matrix(softmax_scale=sigma_test, mode="deterministic")
         T_cr = vk.transition_matrix
 
-        pearson_correlation = vk.pearson_correlations
+        pearson_correlation = vk.logits
         T_exp = np.expm1(pearson_correlation * sigma_test)
         T_exp.data += 1
         T_exp = _normalize(T_exp)

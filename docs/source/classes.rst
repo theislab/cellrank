@@ -26,6 +26,25 @@ Velocity Kernel
 .. autoclass:: cellrank.tl.kernels.VelocityKernel
     :members:
 
+Cosine similarity scheme
++++++++++++++++++++++++++
+
+.. autoclass:: cellrank.tl.kernels.CosineScheme
+    :members:
+
+Correlation scheme
+++++++++++++++++++
+
+.. autoclass:: cellrank.tl.kernels.CorrelationScheme
+    :members:
+
+Dot product scheme
+++++++++++++++++++
+
+.. autoclass:: cellrank.tl.kernels.DotProductScheme
+    :members:
+
+
 Connectivity Kernel
 -------------------
 
@@ -83,6 +102,14 @@ Kernel
 .. autoclass:: cellrank.tl.kernels.Kernel
     :members:
     :inherited-members:
+
+Similarity scheme
+-----------------
+.. autoclass:: cellrank.tl.kernels.SimilarityScheme
+    :members:
+    :special-members: __call__
+    :inherited-members:
+
 
 BaseModel
 ---------
