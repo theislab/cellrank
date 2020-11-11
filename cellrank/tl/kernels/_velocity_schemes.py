@@ -250,7 +250,7 @@ class SimilarityScheme(SimilaritySchemeABC, Hessian):
 
     @d.dedent
     def __call__(
-        self, X: np.ndarray, W: np.ndarray, softmax_scale: float = 1.0
+        self, v: np.ndarray, D: np.ndarray, softmax_scale: float = 1.0
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
         %(sim_scheme.full_desc)s
@@ -264,12 +264,12 @@ class SimilarityScheme(SimilaritySchemeABC, Hessian):
         %(sim_scheme.returns)s
         """  # noqa: D400
         return _predict_transition_probabilities_numpy(
-            X, W, softmax_scale, self._center_mean, self._scale_by_norm
+            v, D, softmax_scale, self._center_mean, self._scale_by_norm
         )
 
     @d.dedent
     def hessian(
-        self, X: np.ndarray, W: np.ndarray, softmax_scale: float = 1.0
+        self, v: np.ndarray, D: np.ndarray, softmax_scale: float = 1.0
     ) -> np.ndarray:
         """
         %(hessian.full_desc)s
@@ -283,7 +283,7 @@ class SimilarityScheme(SimilaritySchemeABC, Hessian):
         %(hessian.returns)s
         """  # noqa: D400
         return _predict_transition_probabilities_jax_H(
-            X, W, softmax_scale, self._center_mean, self._scale_by_norm
+            v, D, softmax_scale, self._center_mean, self._scale_by_norm
         )
 
 

@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from typing import Tuple
+
 import pytest
 from _helpers import (
     bias_knn,
@@ -26,6 +28,20 @@ from cellrank.tl.kernels import (
 from cellrank.tl.kernels._base_kernel import KernelAdd, KernelMul, _is_bin_mult
 
 _rtol = 1e-6
+
+
+class CustomFN(cr.tl.kernels.SimilarityScheme):
+    __use_jax__ = True
+
+    def __call__(
+        self, v: np.ndarray, D: np.ndarray, softmax_scale: float = 1.0
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        pass
+
+    def hessian(
+        self, v: np.ndarray, D: np.ndarray, softmax_scale: float = 1.0
+    ) -> np.ndarray:
+        pass
 
 
 class TestInitializeKernel:
@@ -310,8 +326,12 @@ class TestInitializeKernel:
         assert string == "~<Conn[dnorm=True]>"
 
     def test_combination_correct_parameters(self, adata: AnnData):
+        from cellrank.tl.kernels import CosineScheme
+
         k = VelocityKernel(adata).compute_transition_matrix(
-            softmax_scale=4, seed=42
+            softmax_scale=4,
+            seed=42,
+            scheme="cosine",
         ) + (
             ConnectivityKernel(adata).compute_transition_matrix(density_normalize=False)
             + ConnectivityKernel(adata).compute_transition_matrix(
@@ -328,6 +348,7 @@ class TestInitializeKernel:
             "softmax_scale": 4,
             "mode": "deterministic",
             "seed": 42,
+            "scheme": str(CosineScheme()),
         } in k.params.values()
 
 
@@ -1112,3 +1133,12 @@ class TestMonteCarlo:
             np.abs(vk_mc.transition_matrix.data - vk_s.transition_matrix.data)
         )
         assert val < 1e-3, val
+
+
+class TestVelocityScheme:
+    def test_foo(self, adata: AnnData):
+        pass
+
+    def test_custom_function(self, adata: AnnData):
+
+        pass

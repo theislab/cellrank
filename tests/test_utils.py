@@ -992,14 +992,19 @@ class TestKernelUtils:
         np.testing.assert_array_equal(r2.A, m2.A)
 
     @jax_not_installed_skip
-    @pytest.mark.parametrize("seed", range(10))
-    def test_numpy_and_jax(self, seed: int):
+    @pytest.mark.parametrize(
+        "seed,c,s",
+        zip(range(4), [True, True, False, False], [True, False, True, False]),
+    )
+    def test_numpy_and_jax(self, seed: int, c: bool, s: bool):
         np.random.seed(seed)
         x = np.random.normal(size=(100,))
         w = np.random.normal(size=(1, 100))
 
-        np_res, _ = _predict_transition_probabilities_numpy(x[None, :], w, 1)
-        jax_res = _predict_transition_probabilities_jax(x, w, 1)
+        np_res, _ = _predict_transition_probabilities_numpy(
+            x[None, :], w, 1, center_mean=c, scale_by_norm=s
+        )
+        jax_res = _predict_transition_probabilities_jax(x, w, 1, c, s)
 
         np.testing.assert_allclose(np_res, jax_res)
 
