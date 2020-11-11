@@ -5,8 +5,8 @@ from cellrank.tl.kernels._velocity_kernel import VelocityKernel
 from cellrank.tl.kernels._velocity_schemes import (
     CosineScheme,
     DotProductScheme,
-    SimilarityScheme,
     CorrelationScheme,
+    SimilaritySchemeABC,
 )
 from cellrank.tl.kernels._precomputed_kernel import PrecomputedKernel
 from cellrank.tl.kernels._connectivity_kernel import ConnectivityKernel

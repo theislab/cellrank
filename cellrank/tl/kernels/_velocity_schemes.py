@@ -190,11 +190,7 @@ class Hessian(ABC, metaclass=HessianMeta):  # noqa: D101
 
 
 class SimilaritySchemeABC(ABC):
-    """
-    Abstract base class for all similarity schemes.
-
-    All custom made scheme should subclass this and optionally :class:`cellrank.tl.kernels._velocity_schemes.Hessian`.
-    """
+    """Base class for all similarity schemes."""
 
     @d.get_full_descriptionf("sim_scheme")
     @d.get_sectionsf("sim_scheme", sections=["Parameters", "Returns"])
@@ -230,7 +226,7 @@ class SimilaritySchemeABC(ABC):
         return repr(self)
 
 
-class SimilarityScheme(SimilaritySchemeABC, Hessian):
+class SimilaritySchemeHessian(SimilaritySchemeABC, Hessian):
     """
     Base class for all similarity schemes as defined in [Li2020]_.
 
@@ -287,7 +283,7 @@ class SimilarityScheme(SimilaritySchemeABC, Hessian):
         )
 
 
-class DotProductScheme(SimilarityScheme):
+class DotProductScheme(SimilaritySchemeHessian):
     r"""
     Dot product scheme as defined in eq. (4.9) of [Li2020]_.
 
@@ -301,21 +297,7 @@ class DotProductScheme(SimilarityScheme):
         super().__init__(center_mean=False, scale_by_norm=False)
 
 
-class CorrelationScheme(SimilarityScheme):
-    r"""
-    Pearson correlation scheme as defined in eq. (4.8) of [Li2020]_.
-
-        :math:`v(s_i, s_j) = g(corr(\delta_{i, j}, v_i))`
-
-    where :math:`v_i` is the velocity vector of cell :math:`i`, :math:`\delta_{i, j}` corresponds to the transcriptional
-    displacement between cells :math:`i` and :math:`j` and :math:`g` is a softmax function with some scaling parameter.
-    """
-
-    def __init__(self):
-        super().__init__(center_mean=True, scale_by_norm=True)
-
-
-class CosineScheme(SimilarityScheme):
+class CosineScheme(SimilaritySchemeHessian):
     r"""
     Cosine similarity scheme as defined in eq. (4.7) of [Li2020]_.
 
@@ -327,6 +309,20 @@ class CosineScheme(SimilarityScheme):
 
     def __init__(self):
         super().__init__(center_mean=False, scale_by_norm=True)
+
+
+class CorrelationScheme(SimilaritySchemeHessian):
+    r"""
+    Pearson correlation scheme as defined in eq. (4.8) of [Li2020]_.
+
+        :math:`v(s_i, s_j) = g(corr(\delta_{i, j}, v_i))`
+
+    where :math:`v_i` is the velocity vector of cell :math:`i`, :math:`\delta_{i, j}` corresponds to the transcriptional
+    displacement between cells :math:`i` and :math:`j` and :math:`g` is a softmax function with some scaling parameter.
+    """
+
+    def __init__(self):
+        super().__init__(center_mean=True, scale_by_norm=True)
 
 
 @valuedispatch

@@ -183,7 +183,7 @@ class VelocityKernel(Kernel):
                 - `{s.CORRELATION.s!r}` - :class:`cellrank.tl.kernels.CorrelationScheme`.
 
             Alternatively, any function can be passed as long as it follows the call signature of
-            :class:`cellrank.tl.kernels.SimilarityScheme`.
+            :class:`cellrank.tl.kernels.SimilaritySchemeABC`.
         %(softmax_scale)s
         n_samples
             Number of bootstrap samples when ``mode={m.MONTE_CARLO.s!r}``.
@@ -204,9 +204,15 @@ class VelocityKernel(Kernel):
 
         if isinstance(scheme, str):
             scheme = _get_scheme(Scheme(scheme))
+
         if not callable(scheme):
             raise TypeError(
-                f"Expected `scheme` to be a `callable`, found `{type(scheme)!r}`."
+                f"Expected `scheme` to be a function, found `{type(scheme)!r}`."
+            )
+        elif isinstance(scheme, type):
+            raise TypeError(
+                f"Expected `scheme` to be a function object, found function type `{type(scheme)!r}`. "
+                f"Try instantiating the type."
             )
 
         if self.backward and mode != VelocityMode.DETERMINISTIC:

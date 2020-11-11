@@ -105,7 +105,7 @@ Kernel
 
 Similarity scheme
 -----------------
-.. autoclass:: cellrank.tl.kernels.SimilarityScheme
+.. autoclass:: cellrank.tl.kernels.SimilaritySchemeABC
     :members:
     :special-members: __call__
     :inherited-members:
