@@ -31,7 +31,7 @@ from cellrank.tl.kernels._base_kernel import (
     _ERROR_EMPTY_CACHE_MSG,
     AnnData,
 )
-from cellrank.tl.kernels._velocity_schemes import Scheme, _create_scheme
+from cellrank.tl.kernels._velocity_schemes import Scheme, _get_scheme
 
 
 class VelocityMode(ModeEnum):  # noqa
@@ -196,7 +196,7 @@ class VelocityKernel(Kernel):
         backward_mode = BackwardMode(backward_mode)
 
         if isinstance(scheme, str):
-            scheme = _create_scheme(Scheme(scheme))
+            scheme = _get_scheme(Scheme(scheme))
         if not callable(scheme):
             raise TypeError(
                 f"Expected `scheme` to be a `callable`, found `{type(scheme)!r}`."
@@ -223,9 +223,9 @@ class VelocityKernel(Kernel):
 
         if seed is None:
             seed = np.random.randint(0, 2 ** 16)
-        params = dict(
+        params = dict(  # noqa: C408
             softmax_scale=softmax_scale, mode=mode.s, seed=seed, scheme=str(scheme)
-        )  # noqa
+        )
         if self.backward:
             params["bwd_mode"] = backward_mode.s
 

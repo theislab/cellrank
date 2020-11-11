@@ -57,10 +57,7 @@ def parallelize(
     """
 
     if show_progress_bar:
-        try:
-            from tqdm.notebook import tqdm
-        except ImportError:
-            from tqdm import tqdm_notebook as tqdm
+        from tqdm.auto import tqdm
     else:
         tqdm = None
 
@@ -90,7 +87,11 @@ def parallelize(
 
     def wrapper(*args, **kwargs):
         if pass_queue and show_progress_bar:
-            pbar = None if tqdm is None else tqdm(total=col_len, unit=unit)
+            pbar = (
+                None
+                if tqdm is None
+                else tqdm(total=col_len, unit=unit, mininterval=0.125)
+            )
             queue = Manager().Queue()
             thread = Thread(target=update, args=(pbar, queue, len(collections)))
             thread.start()

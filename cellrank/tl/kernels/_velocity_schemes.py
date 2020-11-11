@@ -21,32 +21,42 @@ try:
     import jax.numpy as jnp
     from jax import jit, hessian
 
-    @partial(jit, static_argnums=(3,))
+    @jit
+    def _softmax_jax(x: np.ndarray, softmax_scale) -> np.ndarray:
+        numerator = x * softmax_scale
+        numerator = jnp.exp(numerator - jnp.max(numerator))
+        return numerator / jnp.sum(numerator)
+
+    @jit
+    def _softmax_masked_jax(
+        x: np.ndarray, mask: np.ndarray, softmax_scale
+    ) -> np.ndarray:
+        numerator = x * softmax_scale
+        numerator = jnp.exp(numerator - jnp.nanmax(numerator))
+        numerator = jnp.where(mask, 0, numerator)  # essential
+
+        return numerator / jnp.nansum(numerator)
+
+    @partial(jit, static_argnums=(3, 4))
     def _predict_transition_probabilities_jax(
         X: np.ndarray,
         W: np.ndarray,
         softmax_scale: float = 1.0,
         center_mean: bool = True,
+        scale_by_norm: bool = True,
     ):
         if center_mean:
             # pearson correlation, otherwise cosine
             W -= W.mean(axis=1)[:, None]
             X -= X.mean()
 
-        W_norm = jnp.linalg.norm(W, axis=1)
-        X_norm = jnp.linalg.norm(X)
-        denom = X_norm * W_norm
+        if scale_by_norm:
+            denom = jnp.linalg.norm(X) * jnp.linalg.norm(W, axis=1)
+            mask = jnp.isclose(denom, 0)
+            denom = jnp.where(jnp.isclose(denom, 0), 1, denom)  # essential
+            return _softmax_masked_jax(W.dot(X) / denom, mask, softmax_scale)
 
-        mask = jnp.isclose(denom, 0)
-        denom = jnp.where(jnp.isclose(denom, 0), 1, denom)  # essential
-
-        x = W.dot(X) / denom
-
-        numerator = x * softmax_scale
-        numerator = jnp.exp(numerator - jnp.nanmax(numerator))
-        numerator = jnp.where(mask, 0, numerator)  # essential
-
-        return numerator / jnp.nansum(numerator)
+        return _softmax_jax(W.dot(X), softmax_scale)
 
     _predict_transition_probabilities_jax_H = hessian(
         _predict_transition_probabilities_jax
@@ -58,53 +68,74 @@ except ImportError:
 
     hessian = jit = lambda _: _
 
-    def _predict_transition_probabilities_jax(*args, **kwargs):
-        raise NotImplementedError("No `jax installation found`.")
+    def _predict_transition_probabilities_jax(*_args, **_kwargs):
+        raise NotImplementedError("No `jax` installation found.")
 
     _predict_transition_probabilities_jax_H = _predict_transition_probabilities_jax
 
 
 @njit(**jit_kwargs)
-def _predict_transition_probabilities_numpy(
-    X: np.ndarray,
-    W: np.ndarray,
-    softmax_scale: float = 1.0,
-    center_mean: bool = True,
+def _softmax(x: np.ndarray, softmax_scale: float) -> Tuple[np.ndarray, np.ndarray]:
+    numerator = x * softmax_scale
+    numerator = np.exp(numerator - np.max(numerator))
+    return numerator / np.sum(numerator), x
+
+
+@njit(**jit_kwargs)
+def _softmax_masked(
+    x: np.ndarray, mask: np.ndarray, softmax_scale: float
 ) -> Tuple[np.ndarray, np.ndarray]:
-    if center_mean:
-        # pearson correlation, otherwise cosine
-        W -= np.expand_dims(np_mean(W, axis=1), axis=1)
-    W_norm = norm(W, axis=1)
-
-    if X.shape[0] == 1:
-        if center_mean:
-            X = X - np.mean(X)
-        X_norm = np.linalg.norm(X)
-
-        denom = X_norm * W_norm
-        mask = denom == 0
-        denom[mask] = 1
-
-        # pearson correlation
-        x = W.dot(X[0]) / denom
-    else:
-        assert X.shape[0] == W.shape[0], "Wrong shape."
-        if center_mean:
-            X = X - np.expand_dims(np_mean(X, axis=1), axis=1)
-        X_norm = norm(X, axis=1)
-
-        denom = X_norm * W_norm
-        mask = denom == 0
-        denom[mask] = 1
-
-        # pearson correlation
-        x = np.array([np.dot(X[i], W[i]) for i in range(X.shape[0])]) / denom
-
     numerator = x * softmax_scale
     numerator = np.exp(numerator - np.nanmax(numerator))
     numerator = np.where(mask, 0, numerator)  # essential
 
     return numerator / np.nansum(numerator), x
+
+
+@njit(parallel=False, **jit_kwargs)
+def _predict_transition_probabilities_numpy(
+    X: np.ndarray,
+    W: np.ndarray,
+    softmax_scale: float = 1.0,
+    center_mean: bool = True,
+    scale_by_norm: bool = True,
+) -> Tuple[np.ndarray, np.ndarray]:
+    if center_mean:
+        # pearson correlation
+        W -= np.expand_dims(np_mean(W, axis=1), axis=1)
+
+    if X.shape[0] == 1:
+        if center_mean:
+            # pearson correlation
+            X = X - np.mean(X)
+
+        if scale_by_norm:
+            # cosine or pearson correlation
+            denom = np.linalg.norm(X) * norm(W, axis=1)
+            mask = denom == 0
+            denom[mask] = 1
+            return _softmax_masked(W.dot(X[0]) / denom, mask, softmax_scale)
+
+        return _softmax(W.dot(X[0]), softmax_scale)
+
+    assert X.shape[0] == W.shape[0], "Wrong shape."
+
+    if center_mean:
+        X = X - np.expand_dims(np_mean(X, axis=1), axis=1)
+
+    if scale_by_norm:
+        denom = norm(X, axis=1) * norm(W, axis=1)
+        mask = denom == 0
+        denom[mask] = 1
+        return _softmax_masked(
+            np.array([np.dot(X[i], W[i]) for i in range(X.shape[0])]) / denom,
+            mask,
+            softmax_scale,
+        )
+
+    return _softmax(
+        np.array([np.dot(X[i], W[i]) for i in range(X.shape[0])]), softmax_scale
+    )
 
 
 class SimilaritySchemeMeta(ABCMeta):  # noqa: D101
@@ -120,8 +151,17 @@ class SimilaritySchemeMeta(ABCMeta):  # noqa: D101
         return res
 
 
-class SimilaritySchemeABC(ABC, metaclass=SimilaritySchemeMeta):  # noqa: D101
-    __use_jax__: bool = True
+class Hessian(ABC, metaclass=SimilaritySchemeMeta):  # noqa: D101
+    @abstractmethod
+    def hessian(
+        self, X: np.ndarray, W: np.ndarray, softmax_scale: float = 1.0
+    ) -> np.ndarray:
+        """TODO."""
+        pass
+
+
+class SimilaritySchemeABC(ABC):
+    """TODO."""
 
     @abstractmethod
     def __call__(
@@ -138,9 +178,9 @@ class SimilaritySchemeABC(ABC, metaclass=SimilaritySchemeMeta):  # noqa: D101
         Parameters
         ----------
         X
-            Either vector of shape `(n_features,)` or matrix of shape `(n_samples x n_features)`.
+            Either vector of shape `(n_features,)` or matrix of shape ``(n_samples, n_features)``.
         W
-            Weight matrix of shape `(n_samples x n_features)`.
+            Weight matrix of shape ``(n_samples, n_features)``.
         softmax_scale
             Scaling factor for softmax activation function.
 
@@ -151,18 +191,6 @@ class SimilaritySchemeABC(ABC, metaclass=SimilaritySchemeMeta):  # noqa: D101
         """
         pass
 
-    @abstractmethod
-    def _hessian(
-        self, X: np.ndarray, W: np.ndarray, softmax_scale: float = 1.0
-    ) -> np.ndarray:
-        pass
-
-    def hessian(
-        self, X: np.ndarray, W: np.ndarray, softmax_scale: float = 1.0
-    ) -> np.ndarray:
-        """TODO."""
-        return self._hessian(X, W, softmax_scale)
-
     def __repr__(self):
         return f"<{self.__class__.__name__}>"
 
@@ -170,88 +198,60 @@ class SimilaritySchemeABC(ABC, metaclass=SimilaritySchemeMeta):  # noqa: D101
         return repr(self)
 
 
-# TODO: rename me
-class Scheme_(SimilaritySchemeABC):  # noqa: D101
-    # TODO: refrain from saving state inside
-    def __init__(self, center_mean: bool):
+class SimilarityScheme(SimilaritySchemeABC, Hessian):  # noqa: D101
+    __use_jax__: bool = True
+
+    def __init__(self, center_mean: bool, scale_by_norm: bool):
         self._center_mean = center_mean
+        self._scale_by_norm = scale_by_norm
 
     def __call__(
         self, X: np.ndarray, W: np.ndarray, softmax_scale: float = 1.0
     ) -> Tuple[np.ndarray, np.ndarray]:
-        """TODO: docrep."""
+        """TODO."""
         return _predict_transition_probabilities_numpy(
-            X, W, softmax_scale, self._center_mean
+            X, W, softmax_scale, self._center_mean, self._scale_by_norm
         )
 
-    def _hessian(
+    def hessian(
         self, X: np.ndarray, W: np.ndarray, softmax_scale: float = 1.0
     ) -> np.ndarray:
+        """TODO."""
         return _predict_transition_probabilities_jax_H(
-            X, W, softmax_scale, self._center_mean
+            X, W, softmax_scale, self._center_mean, self._scale_by_norm
         )
 
 
-class CosineScheme(Scheme_):  # noqa: D101 TODO
+class DotProductScheme(SimilarityScheme):  # noqa: D101
     def __init__(self):
-        super().__init__(center_mean=False)
+        super().__init__(center_mean=False, scale_by_norm=False)
 
 
-class CorrelationScheme(Scheme_):  # noqa: D101 TODO
+class CosineScheme(SimilarityScheme):  # noqa: D101 TODO
     def __init__(self):
-        super().__init__(center_mean=True)
+        super().__init__(center_mean=False, scale_by_norm=True)
 
 
-class DotProductScheme(SimilaritySchemeABC):  # noqa: D101 TODO
-    # TODO: refrain from saving state inside
+class CorrelationScheme(SimilarityScheme):  # noqa: D101 TODO
     def __init__(self):
-        def _hessian_impl(
-            X: np.ndarray, W: np.ndarray, softmax_scale=1.0
-        ) -> np.ndarray:
-            numerator = W.dot(X) * softmax_scale
-            numerator = jnp.exp(numerator - jnp.nanmax(numerator))
-
-            return numerator / jnp.nansum(numerator)
-
-        # TODO: add some activation function g?
-        self._hessian_impl = hessian(jit(_hessian_impl))
-
-    # hardly any point in jitting this
-    def __call__(
-        self, X: np.ndarray, W: np.ndarray, softmax_scale: float = 1.0
-    ) -> Tuple[np.ndarray, np.ndarray]:
-        """TODO: docrep."""
-        if X.shape[0] == 1:
-            x = W.dot(X[0])
-        else:
-            x = np.array([np.dot(X[i], W[i]) for i in range(X.shape[0])])
-
-        numerator = x * softmax_scale
-        numerator = np.exp(numerator - np.nanmax(numerator))
-
-        return numerator / np.nansum(numerator), x
-
-    def _hessian(
-        self, X: np.ndarray, W: np.ndarray, softmax_scale: float = 1.0
-    ) -> np.ndarray:
-        return self._hessian_impl(X, W, softmax_scale)
+        super().__init__(center_mean=True, scale_by_norm=True)
 
 
 @valuedispatch
-def _create_scheme(scheme: Scheme, *_args, **_kwargs) -> SimilaritySchemeABC:
+def _get_scheme(scheme: Scheme, *_args, **_kwargs) -> SimilaritySchemeABC:
     raise NotImplementedError(scheme)
 
 
-@_create_scheme.register(Scheme.DOT_PRODUCT)
+@_get_scheme.register(Scheme.DOT_PRODUCT)
 def _():
     return DotProductScheme()
 
 
-@_create_scheme.register(Scheme.COSINE)
+@_get_scheme.register(Scheme.COSINE)
 def _():
     return CosineScheme()
 
 
-@_create_scheme.register(Scheme.CORRELATION)
+@_get_scheme.register(Scheme.CORRELATION)
 def _():
     return CorrelationScheme()
