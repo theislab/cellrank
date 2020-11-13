@@ -175,16 +175,8 @@ class VelocityKernel(Kernel):
         ----------
         %(velocity_mode)s
         %(velocity_backward_mode)s
-        scheme
-            Similarity scheme between cells as described in [Li2020]_. Can be one of the following:
-
-                - `{s.DOT_PRODUCT.s!r}` - :class:`cellrank.tl.kernels.DotProductScheme`.
-                - `{s.COSINE.s!r}` - :class:`cellrank.tl.kernels.CosineScheme`.
-                - `{s.CORRELATION.s!r}` - :class:`cellrank.tl.kernels.CorrelationScheme`.
-
-            Alternatively, any function can be passed as long as it follows the call signature of
-            :class:`cellrank.tl.kernels.SimilaritySchemeABC`.
         %(softmax_scale)s
+        %(velocity_scheme)s
         n_samples
             Number of bootstrap samples when ``mode={m.MONTE_CARLO.s!r}``.
         seed
