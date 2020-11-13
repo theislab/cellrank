@@ -8,9 +8,16 @@ from pathlib import Path
 from scanpy import read
 
 from cellrank import logging as logg
-from cellrank.ul._docs import d
+from cellrank.ul._docs import d, inject_docs
+from cellrank.tl._constants import PrettyEnum
 
 AnnData = TypeVar("AnnData")
+
+
+class ReprogrammingSubset(PrettyEnum):  # noqa: D101
+    FULL = "full"
+    K45 = "45k"
+    K85 = "85k"
 
 
 _datasets = {
@@ -25,6 +32,10 @@ _datasets = {
     "lung": (
         "https://ndownloader.figshare.com/files/25038224?private_link=89d53249778c18d45e9f",
         (24882, 24051),
+    ),
+    "reprogramming": (
+        "TODO: insert the link here",
+        (104679, 22630),
     ),
 }
 
@@ -142,3 +153,50 @@ def lung(
     """
 
     return _load_dataset_from_url(path, *_datasets["lung"], **kwargs)
+
+
+@inject_docs(s=ReprogrammingSubset)
+@d.dedent
+def reprogramming(
+    subset: str = ReprogrammingSubset.FULL.s,
+    path: Union[str, Path] = "datasets/reprogramming.h5ad",
+    **kwargs,
+) -> AnnData:
+    """
+    Reprogramming data from [Morris18]_.
+
+    TODO: @Marius please add some nice description including stuff in obs like
+    The following keys can be found in :attr:`anndata.AnnData.obs`:
+
+        - `'foo'` - baz
+        - `'bar'` - quux
+
+    Parameters
+    ---------
+    subset
+        Whether to return the full object or just a subset. Can be one of:
+
+            - `{s.FULL.s!r}` - return the complete dataset.
+            - `{s.K45.s!r}` - return the subset as described in [Morris18]_, TODO.
+            - `{s.K85.s!r}` - return the subset as described in [Morris18]_, TODO.
+    %(dataset.parameters)s
+
+    Returns
+    -------
+    %(adata)s
+    """
+    subset = ReprogrammingSubset(subset)
+    adata = _load_dataset_from_url(path, *_datasets["reprogramming"], **kwargs)
+
+    if subset == ReprogrammingSubset.K45:
+        # TODO
+        adata = adata
+    elif subset == ReprogrammingSubset.K85:
+        # TODO
+        adata = adata
+    elif subset != ReprogrammingSubset.FULL:
+        raise NotImplementedError(
+            f"Subsetting option `{subset.s!r}` is not yet implemented."
+        )
+
+    return adata

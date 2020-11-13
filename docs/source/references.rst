@@ -17,6 +17,10 @@ References
    *Diffusion pseudotime robustly reconstructs branching cellular lineages*,
    `Nature Methods <https://doi.org/10.1038/nmeth.3971>`__.
 
+.. [Li2020] Li, T. *et al.* (2020),
+    *On the Mathematics of RNA Velocity I: Theoretical Analysis*,
+    `bioRxiv <https://doi.org/10.1101/2020.09.19.304584>`__.
+
 .. [Lung20] Strunz, M. *et al.* (2020),
     *Alveolar regeneration through a Krt8+ transitional stem cell state that persists in human lung fibrosis*,
     `Nature Communications <https://doi.org/10.1038/s41467-020-17358-3>`__.
@@ -29,13 +33,13 @@ References
     *Recovering Gene Interactions from Single-Cell Data Using Data Diffusion*,
     `Cell <https://doi.org/10.1016/j.cell.2018.05.061>`__.
 
-.. [Li2020] Li, T. *et al.* (2020),
-    *On the Mathematics of RNA Velocity I: Theoretical Analysis*,
-    `bioRxiv <https://doi.org/10.1101/2020.09.19.304584>`__.
-
 .. [Manno18] La Manno *et al.* (2018),
     *RNA velocity of single cells*,
     `Nature <https://doi.org/10.1038/s41586-018-0414-6>`__.
+
+.. [Morris18] Biddy, B.A., Kong, W., Kamimoto, K. *et al.* (2018),
+    *Single-cell mapping of lineage and identity in direct reprogramming.*,
+    `Nature 564, 219–224 <https://doi.org/10.1038/s41586-018-0744-4>`__.
 
 .. [Panc19] Bastidas-Ponce *et al.* (2019),
     *Comprehensive single cell mRNA profiling reveals a detailed roadmap for pancreatic endocrinogenesis*,

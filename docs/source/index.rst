@@ -2,7 +2,7 @@
 
 
 CellRank - Probabilistic Fate Mapping using RNA Velocity
-===================================================================
+========================================================
 
 .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/cellrank_fate_map.png
    :width: 600px
@@ -21,7 +21,7 @@ CellRank scales to large cell numbers, is fully compatible with `scanpy`_ and `s
 To get started, see our `tutorial`_.
 
 Manuscript
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^
 Please see our `preprint`_ on **bioRxiv** to learn more.
 
 CellRank's key applications
