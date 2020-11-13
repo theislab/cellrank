@@ -24,6 +24,11 @@ Manuscript
 ^^^^^^^^^^
 Please see our `preprint`_ on **bioRxiv** to learn more.
 
+Latest additions
+^^^^^^^^^^^^^^^^
+
+.. include:: latest_additions.rst
+
 CellRank's key applications
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 - compute initial & terminal as well as intermediate macrostates of your biological system
