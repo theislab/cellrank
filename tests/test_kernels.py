@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from typing import Tuple, Callable
+
 import pytest
 from _helpers import (
     bias_knn,
@@ -26,6 +28,53 @@ from cellrank.tl.kernels import (
 from cellrank.tl.kernels._base_kernel import KernelAdd, KernelMul, _is_bin_mult
 
 _rtol = 1e-6
+
+
+class CustomFunc(cr.tl.kernels.SimilaritySchemeABC):
+    def __call__(
+        self, v: np.ndarray, D: np.ndarray, softmax_scale: float = 1.0
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        probs, logits = np.zeros((D.shape[0],), dtype=np.float64), np.zeros(
+            (D.shape[0],), dtype=np.float64
+        )
+        probs[0] = 1.0
+
+        return probs, logits
+
+
+class CustomFuncHessian(CustomFunc):
+    def hessian(
+        self, v: np.ndarray, D: np.ndarray, _softmax_scale: float = 1.0
+    ) -> np.ndarray:
+        # should be either (n, g, g) or (n, g), will be (g, g)
+        return np.zeros((D.shape[0], v.shape[0], v.shape[0]))
+
+
+class InvalidFuncProbs(cr.tl.kernels.SimilaritySchemeABC):
+    def __call__(
+        self, v: np.ndarray, D: np.ndarray, _softmax_scale: float = 1.0
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        return np.ones((D.shape[0],), dtype=np.float64), np.zeros(
+            (D.shape[0],), dtype=np.float64
+        )
+
+
+class InvalidFuncHessianShape(CustomFunc):
+    def __call__(
+        self, v: np.ndarray, D: np.ndarray, _softmax_scale: float = 1.0
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        probs, logits = np.zeros((D.shape[0],), dtype=np.float64), np.zeros(
+            (D.shape[0],), dtype=np.float64
+        )
+        probs[-1] = 1.0
+
+        return probs, logits
+
+    def hessian(
+        self, v: np.ndarray, _D: np.ndarray, _softmax_scale: float = 1.0
+    ) -> np.ndarray:
+        # should be either (n, g, g) or (n, g), will be (g, g)
+        return np.zeros((v.shape[0], v.shape[0]))
 
 
 class TestInitializeKernel:
@@ -310,8 +359,12 @@ class TestInitializeKernel:
         assert string == "~<Conn[dnorm=True]>"
 
     def test_combination_correct_parameters(self, adata: AnnData):
+        from cellrank.tl.kernels import CosineScheme
+
         k = VelocityKernel(adata).compute_transition_matrix(
-            softmax_scale=4, seed=42
+            softmax_scale=4,
+            seed=42,
+            scheme="cosine",
         ) + (
             ConnectivityKernel(adata).compute_transition_matrix(density_normalize=False)
             + ConnectivityKernel(adata).compute_transition_matrix(
@@ -328,6 +381,7 @@ class TestInitializeKernel:
             "softmax_scale": 4,
             "mode": "deterministic",
             "seed": 42,
+            "scheme": str(CosineScheme()),
         } in k.params.values()
 
 
@@ -875,9 +929,7 @@ class TestKernelCopy:
         vk2 = vk1.copy()
 
         np.testing.assert_array_equal(vk1.transition_matrix.A, vk2.transition_matrix.A)
-        np.testing.assert_array_equal(
-            vk1.pearson_correlations.A, vk2.pearson_correlations.A
-        )
+        np.testing.assert_array_equal(vk1.logits.A, vk2.logits.A)
 
         assert vk1.params == vk2.params
         assert vk1.backward == vk2.backward
@@ -978,7 +1030,7 @@ class TestTransitionProbabilities:
         # compute pearson correlations using cellrank
         vk = VelocityKernel(adata, backward=backward)
         vk.compute_transition_matrix(mode="deterministic", softmax_scale=4)
-        pearson_correlations_cr = vk.pearson_correlations
+        pearson_correlations_cr = vk.logits
 
         pc_r = velo_graph.copy()
         pc_r.data = np.array(pearson_correlations_cr[(velo_graph != 0)]).squeeze()
@@ -997,7 +1049,7 @@ class TestTransitionProbabilities:
         vk.compute_transition_matrix(
             mode="deterministic", backward_mode="transpose", softmax_scale=4
         )
-        pearson_correlations_cr = vk.pearson_correlations
+        pearson_correlations_cr = vk.logits
 
         pc_r = velo_graph.copy()
         pc_r.data = np.array(pearson_correlations_cr[(velo_graph != 0)]).squeeze()
@@ -1013,7 +1065,7 @@ class TestTransitionProbabilities:
         vk.compute_transition_matrix(softmax_scale=sigma_test, mode="deterministic")
         T_cr = vk.transition_matrix
 
-        pearson_correlation = vk.pearson_correlations
+        pearson_correlation = vk.logits
         T_exp = np.expm1(pearson_correlation * sigma_test)
         T_exp.data += 1
         T_exp = _normalize(T_exp)
@@ -1029,7 +1081,7 @@ class TestTransitionProbabilities:
         vk.compute_transition_matrix(softmax_scale=sigma_test, mode="deterministic")
         T_cr = vk.transition_matrix
 
-        pearson_correlation = vk.pearson_correlations
+        pearson_correlation = vk.logits
         T_exp = np.expm1(pearson_correlation * sigma_test)
         T_exp.data += 1
         T_exp = _normalize(T_exp)
@@ -1114,3 +1166,101 @@ class TestMonteCarlo:
             np.abs(vk_mc.transition_matrix.data - vk_s.transition_matrix.data)
         )
         assert val < 1e-3, val
+
+
+class TestVelocityScheme:
+    def test_invalid_string_key(self, adata: AnnData):
+        vk = VelocityKernel(adata)
+        with pytest.raises(ValueError):
+            vk.compute_transition_matrix(scheme="foobar")
+
+    def test_not_callable(self, adata: AnnData):
+        vk = VelocityKernel(adata)
+        with pytest.raises(
+            TypeError, match="Expected `scheme` to be a function, found"
+        ):
+            vk.compute_transition_matrix(scheme=1311)
+
+    def test_not_callable_object(self, adata: AnnData):
+        vk = VelocityKernel(adata)
+        with pytest.raises(
+            TypeError, match="Expected `scheme` to be a function object"
+        ):
+            vk.compute_transition_matrix(scheme=CustomFunc)
+
+    def test_custom_function_not_sum_to_1(self, adata: AnnData):
+        vk = VelocityKernel(adata)
+        with pytest.raises(ValueError, match=r"Matrix is not row-stochastic."):
+            vk.compute_transition_matrix(scheme=InvalidFuncProbs())
+
+    def test_custom_function_invalid_hessian(self, adata: AnnData):
+        vk = VelocityKernel(adata)
+        with pytest.raises(ValueError, match=r"Expected full Hessian matrix"):
+            vk.compute_transition_matrix(
+                mode="stochastic", scheme=InvalidFuncHessianShape(), softmax_scale=4
+            )
+
+    @pytest.mark.parametrize("backward", [True, False])
+    def test_implementations_differ(self, adata: AnnData, backward: bool):
+        vk_dot = VelocityKernel(adata, backward=backward)
+        vk_dot.compute_transition_matrix(
+            mode="deterministic", softmax_scale=4, scheme="dot_product"
+        )
+        vk_cos = VelocityKernel(adata, backward=backward)
+        vk_cos.compute_transition_matrix(
+            mode="deterministic", softmax_scale=4, scheme="cosine"
+        )
+        vk_cor = VelocityKernel(adata, backward=backward)
+        vk_cor.compute_transition_matrix(
+            mode="deterministic", softmax_scale=4, scheme="correlation"
+        )
+
+        np.testing.assert_allclose(vk_dot.transition_matrix.sum(1), 1.0)
+        np.testing.assert_allclose(vk_cor.transition_matrix.sum(1), 1.0)
+        np.testing.assert_allclose(vk_cor.transition_matrix.sum(1), 1.0)
+
+        assert not np.allclose(vk_dot.transition_matrix.A, vk_cos.transition_matrix.A)
+        assert not np.allclose(vk_cos.transition_matrix.A, vk_cor.transition_matrix.A)
+        assert not np.allclose(vk_cor.transition_matrix.A, vk_dot.transition_matrix.A)
+
+    @pytest.mark.parametrize(
+        "key,fn",
+        zip(
+            ["dot_product", "cosine", "correlation"],
+            [
+                cr.tl.kernels.DotProductScheme(),
+                cr.tl.kernels.CosineScheme(),
+                cr.tl.kernels.CorrelationScheme(),
+            ],
+        ),
+    )
+    def test_function_and_string_key(self, adata: AnnData, key: str, fn: Callable):
+        vk_k = VelocityKernel(adata)
+        vk_fn = VelocityKernel(adata)
+
+        vk_k.compute_transition_matrix(
+            mode="deterministic", softmax_scale=4, scheme=key
+        )
+        vk_fn.compute_transition_matrix(
+            mode="deterministic", softmax_scale=4, scheme=fn
+        )
+
+        np.testing.assert_allclose(vk_k.transition_matrix.A, vk_fn.transition_matrix.A)
+
+    @pytest.mark.parametrize("backward", [True, False])
+    def test_custom_function(self, adata: AnnData, backward: bool):
+        vk = VelocityKernel(adata, backward=backward)
+        vk.compute_transition_matrix(
+            mode="deterministic", softmax_scale=4, scheme=CustomFuncHessian()
+        )
+
+        assert vk.params["scheme"] == str(CustomFuncHessian())
+
+    def test_custom_function_stochastic_no_hessian(self, adata: AnnData):
+        vk = VelocityKernel(adata)
+        vk.compute_transition_matrix(
+            mode="stochastic", scheme=CustomFunc(), softmax_scale=4, n_samples=10
+        )
+
+        assert vk.params["mode"] == "monte_carlo"
+        assert vk.params["scheme"] == str(CustomFunc())

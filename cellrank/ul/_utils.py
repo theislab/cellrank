@@ -134,7 +134,6 @@ def _get_n_cores(n_cores: Optional[int], n_jobs: Optional[int]) -> int:
     int
         Positive integer corresponding to how many cores to use.
     """
-
     if n_cores == 0:
         raise ValueError("Number of cores cannot be `0`.")
     if n_jobs == 1 or n_cores is None:
@@ -163,7 +162,6 @@ def _minmax(
     :class:`tuple`
         Minimum and maximum values, respectively.
     """
-
     if perc is not None:
         data = np.clip(data, *np.percentile(data, sorted(perc)))
 

@@ -140,6 +140,17 @@ _basis = """\
 basis
     Basis to use when ``mode='embedding'``. If `None`, use `'umap'`.
 """
+_velocity_scheme = """\
+scheme
+    Similarity scheme between cells as described in [Li2020]_. Can be one of the following:
+
+        - `{s.DOT_PRODUCT.s!r}` - :class:`cellrank.tl.kernels.DotProductScheme`.
+        - `{s.COSINE.s!r}` - :class:`cellrank.tl.kernels.CosineScheme`.
+        - `{s.CORRELATION.s!r}` - :class:`cellrank.tl.kernels.CorrelationScheme`.
+
+    Alternatively, any function can be passed as long as it follows the call signature of
+    :class:`cellrank.tl.kernels.SimilaritySchemeABC`.
+"""
 
 
 def inject_docs(**kwargs):  # noqa
@@ -188,4 +199,5 @@ d = DocstringProcessor(
     return_models=_return_models,
     plots_or_returns_models=_plots_or_returns_models,
     basis=_basis,
+    velocity_scheme=_velocity_scheme,
 )

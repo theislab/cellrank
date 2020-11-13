@@ -10,49 +10,6 @@ from scipy.sparse import csr_matrix
 jit_kwargs = {"nogil": True, "cache": True, "fastmath": True}
 
 
-try:
-    import jax.numpy as jnp
-    from jax import jit, hessian
-
-    _HAS_JAX = True
-
-    @jit
-    def _predict_transition_probabilities_jax(
-        X: np.ndarray,
-        W: np.ndarray,
-        softmax_scale: float = 1,
-    ):
-        # pearson correlation
-        W -= W.mean(axis=1)[:, None]
-        X -= X.mean()
-
-        W_norm = jnp.linalg.norm(W, axis=1)
-        X_norm = jnp.linalg.norm(X)
-        denom = X_norm * W_norm
-
-        mask = jnp.isclose(denom, 0)
-        denom = jnp.where(jnp.isclose(denom, 0), 1, denom)  # essential
-
-        x = W.dot(X) / denom
-
-        numerator = x * softmax_scale
-        numerator = jnp.exp(numerator - jnp.nanmax(numerator))
-        numerator = jnp.where(mask, 0, numerator)  # essential
-
-        softmax = numerator / jnp.nansum(numerator)
-
-        return softmax
-
-    _predict_transition_probabilities_jax_H = hessian(
-        _predict_transition_probabilities_jax
-    )
-
-except ImportError:
-    _HAS_JAX = False
-    _predict_transition_probabilities_jax = None
-    _predict_transition_probabilities_jax_H = None
-
-
 @njit(parallel=False, **jit_kwargs)
 def _np_apply_along_axis(func1d, axis: int, arr: np.ndarray) -> np.ndarray:
     """
@@ -176,65 +133,6 @@ def _get_probs_for_zero_vec(size: int) -> Tuple[np.ndarray, np.ndarray]:
         np.ones(size, dtype=np.float64) / size,
         np.zeros(size, dtype=np.float64),
     )
-
-
-@njit(**jit_kwargs)
-def _predict_transition_probabilities_numpy(
-    X: np.ndarray, W: np.ndarray, softmax_scale: float
-) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Compute a categorical distribution based on correlation between rows in ``W`` and ``X``.
-
-    We usually identify ``X`` with a velocity vector and ``W`` as the matrix storing transcriptomic
-    displacements of the current reference cell to its nearest neighbors. For the backward process, ``X``
-    is a matrix as well, storing the velocity vectors of all nearest neighbors.
-
-    Parameters
-    ----------
-    X
-        Either vector of shape `(n_features,)` or matrix of shape `(n_samples x n_features)`.
-    W
-        Weight matrix of shape `(n_samples x n_features)`.
-    softmax_scale
-        Scaling factor for softmax activation function.
-
-    Returns
-    --------
-    :class:`scipy.sparse.csr_matrix`, :class:`scipy.sparse.csr_matrix`
-        The probability and pearson correlation matrices.
-    """
-
-    # mean centering + cosine correlation
-    W -= np.expand_dims(np_mean(W, axis=1), axis=1)
-    W_norm = norm(W, axis=1)
-
-    if X.shape[0] == 1:
-        X = X - np.mean(X)
-        X_norm = np.linalg.norm(X)
-
-        denom = X_norm * W_norm
-        mask = denom == 0
-        denom[mask] = 1
-
-        # pearson correlation
-        x = W.dot(X[0]) / denom
-    else:
-        assert X.shape[0] == W.shape[0]
-        X = X - np.expand_dims(np_mean(X, axis=1), axis=1)
-        X_norm = norm(X, axis=1)
-
-        denom = X_norm * W_norm
-        mask = denom == 0
-        denom[mask] = 1
-
-        # pearson correlation
-        x = np.array([np.dot(X[i], W[i]) for i in range(X.shape[0])]) / denom
-
-    numerator = x * softmax_scale
-    numerator = np.exp(numerator - np.nanmax(numerator))
-    numerator = np.where(mask, 0, numerator)  # essential
-
-    return numerator / np.nansum(numerator), x
 
 
 def _filter_kwargs(_fn: Callable, **kwargs) -> dict:

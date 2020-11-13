@@ -8,11 +8,12 @@ from cellrank.ul._docs import d, inject_docs
 from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tl.kernels._base_kernel import KernelExpression
 from cellrank.tl.kernels._velocity_kernel import BackwardMode, VelocityMode
+from cellrank.tl.kernels._velocity_schemes import Scheme
 
 AnnData = TypeVar("AnnData")
 
 
-@inject_docs(m=VelocityMode, b=BackwardMode)  # don't swap the order
+@inject_docs(m=VelocityMode, b=BackwardMode, s=Scheme)  # don't swap the order
 @d.dedent
 def transition_matrix(
     adata: AnnData,
@@ -22,6 +23,7 @@ def transition_matrix(
     gene_subset: Optional[Iterable] = None,
     mode: str = VelocityMode.DETERMINISTIC.s,
     backward_mode: str = BackwardMode.TRANSPOSE.s,
+    scheme: str = Scheme.CORRELATION.s,
     softmax_scale: Optional[float] = None,
     weight_connectivities: Optional[float] = 0.2,
     density_normalize: bool = True,
@@ -48,6 +50,7 @@ def transition_matrix(
         By default, genes from ``adata.var['velocity_genes']`` are used.
     %(velocity_mode)s
     %(velocity_backward_mode_high_lvl)s
+    %(velocity_scheme)s
     %(softmax_scale)s
     weight_connectivities
         Weight given to transcriptomic similarities as opposed to velocities. Must be in `[0, 1]`.
@@ -71,7 +74,11 @@ def transition_matrix(
         adata, backward=backward, vkey=vkey, xkey=xkey, gene_subset=gene_subset
     )
     vk.compute_transition_matrix(
-        softmax_scale=softmax_scale, mode=mode, backward_mode=backward_mode, **kwargs
+        softmax_scale=softmax_scale,
+        mode=mode,
+        backward_mode=backward_mode,
+        scheme=scheme,
+        **kwargs,
     )
 
     if weight_connectivities is not None:

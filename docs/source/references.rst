@@ -29,6 +29,10 @@ References
     *Recovering Gene Interactions from Single-Cell Data Using Data Diffusion*,
     `Cell <https://doi.org/10.1016/j.cell.2018.05.061>`__.
 
+.. [Li2020] Li, T. *et al.* (2020),
+    *On the Mathematics of RNA Velocity I: Theoretical Analysis*,
+    `bioRxiv <https://doi.org/10.1101/2020.09.19.304584>`__.
+
 .. [Manno18] La Manno *et al.* (2018),
     *RNA velocity of single cells*,
     `Nature <https://doi.org/10.1038/s41586-018-0414-6>`__.
