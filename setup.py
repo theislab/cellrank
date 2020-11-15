@@ -7,7 +7,7 @@ from setuptools import setup, find_packages
 try:
     from cellrank import __email__, __author__, __version__, __maintainer__
 except ImportError:
-    __author__ = "Marius Lange, Michal Klein, Juan Luis Restrepo Lopez"
+    __author__ = "Marius Lange, Michal Klein"
     __maintainer__ = "Marius Lange, Michal Klein"
     __email__ = "info@cellrank.org"
     __version__ = "1.0.0"
@@ -83,7 +83,7 @@ if __name__ == "__main__":
             "GPCCA",
         ],
         classifiers=[
-            "Development Status :: 4 - Beta",
+            "Development Status :: 5 - Production/Stable",
             "Intended Audience :: Developers",
             "Intended Audience :: Science/Research",
             "Natural Language :: English",
@@ -96,6 +96,7 @@ if __name__ == "__main__":
             "Programming Language :: Python :: 3.6",
             "Programming Language :: Python :: 3.7",
             "Programming Language :: Python :: 3.8",
+            "Programming Language :: Python :: 3.9",
             "Topic :: Scientific/Engineering :: Bio-Informatics",
             "Topic :: Scientific/Engineering :: Visualization",
         ],

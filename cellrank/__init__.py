@@ -8,7 +8,7 @@ from cellrank.settings import settings as settings
 from cellrank.tl._read import read
 from cellrank.tl._constants import Lin
 
-__author__ = ", ".join(["Marius Lange", "Michal Klein", "Juan Luis Restrepo Lopez"])
+__author__ = ", ".join(["Marius Lange", "Michal Klein"])
 __maintainer__ = ", ".join(["Marius Lange", "Michal Klein"])
 __version__ = "1.0.0"
 __email__ = "info@cellrank.org"
