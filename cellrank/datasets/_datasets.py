@@ -135,7 +135,7 @@ def lung(
     """
     Regeneration of murine lung epithelial cells at 13 time points from [Lung20]_.
 
-    scRNA-seq dataset comprising of 24,051 cells recorded using Dropseq [Macosko15]_ at 13 time points spanning days
+    scRNA-seq dataset comprising 24,051 cells recorded using Dropseq [Macosko15]_ at 13 time points spanning days
     2-15 past lung bleomycin injury. Data was filtered to remove control cells as well as later time points which  are
     more spaced out. We wanted to focus on the densely sampled days where RNA velocity [Manno18]_ [Bergen20]_ can be
     used to predict the future cellular state.
@@ -163,22 +163,27 @@ def reprogramming(
     **kwargs,
 ) -> AnnData:
     """
-    Reprogramming data from [Morris18]_.
+    Reprogramming of mouse embryonic fibrobalsts to induced endoderm progenitors at 8 time points from [Morris18]_.
 
-    TODO: @Marius please add some nice description including stuff in obs like
-    The following keys can be found in :attr:`anndata.AnnData.obs`:
+    scRNA-seq dataset comprising 104,887 cell recorded using 10X Chromium and Dropseq [Macosko15]_ at 8 time points
+    spanning days 0-28 past reprogramming initiation.
 
-        - `'foo'` - baz
-        - `'bar'` - quux
+    Contains raw spliced and un-spliced count data, low-dimensional embedding coordinates as well as clonal information
+    from CellTagging [Morris18]_. Moreover, contains the following attr:`anndata.AnnData.obs`: annotations:
+
+        - `'reprogramming_day'` - time-point information
+        - `'reprogramming'` - whether this clone is enriched for cells from successfully reprogrammed populations.
+        - `'CellTagDN_XXk'` - CellTag from day N from the XXk cells subset (85k subset refers to Fig. 1, 48k subset
+            refers to Fig. 3 in [Morris18]_)
 
     Parameters
     ---------
     subset
         Whether to return the full object or just a subset. Can be one of:
 
-            - `{s.FULL.s!r}` - return the complete dataset of `TODO` cells.
-            - `{s.K45.s!r}` - return the subset as described in [Morris18]_, TODO: mention reference (e.g. figure)?.
-            - `{s.K85.s!r}` - return the subset as described in [Morris18]_, TODO: mention reference (e.g. figure)?.
+            - `{s.FULL.s!r}` - return the complete dataset of `TODO` cells. (104,887 cells in total)
+            - `{s.K48.s!r}` - return the subset as described in [Morris18]_, TODO: mention reference: Fig. 3.
+            - `{s.K85.s!r}` - return the subset as described in [Morris18]_, TODO: mention reference: Fig. 1.
     %(dataset.parameters)s
 
     Returns
