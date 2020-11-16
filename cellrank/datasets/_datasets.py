@@ -9,32 +9,32 @@ from scanpy import read
 
 from cellrank import logging as logg
 from cellrank.ul._docs import d, inject_docs
-from cellrank.tl._constants import PrettyEnum
+from cellrank.tl._constants import ModeEnum
 
 AnnData = TypeVar("AnnData")
 
 
-class ReprogrammingSubset(PrettyEnum):  # noqa: D101
+class ReprogrammingSubset(ModeEnum):  # noqa: D101
     FULL = "full"
-    K45 = "45k"
+    K48 = "48k"
     K85 = "85k"
 
 
 _datasets = {
     "pancreas": (
-        "https://ndownloader.figshare.com/files/25060877?private_link=bb68d6e4686df12a0e2a",
+        "https://ndownloader.figshare.com/files/25060877",
         (2531, 27998),
     ),
     "pancreas_preprocessed": (
-        "https://ndownloader.figshare.com/files/25030028?private_link=c3a8004ca127b370cc15",
+        "https://ndownloader.figshare.com/files/25030028",
         (2531, 2000),
     ),
     "lung": (
-        "https://ndownloader.figshare.com/files/25038224?private_link=89d53249778c18d45e9f",
+        "https://ndownloader.figshare.com/files/25038224",
         (24882, 24051),
     ),
     "reprogramming": (
-        "TODO: insert the link here",
+        "https://ndownloader.figshare.com/files/25503773",
         (104679, 22630),
     ),
 }
@@ -135,7 +135,7 @@ def lung(
     """
     Regeneration of murine lung epithelial cells at 13 time points from [Lung20]_.
 
-    scRNA-seq dataset comprising of 24,051 cells recorded using Dropseq [Macosko15]_ at 13 time points spanning days
+    scRNA-seq dataset comprising 24,051 cells recorded using Dropseq [Macosko15]_ at 13 time points spanning days
     2-15 past lung bleomycin injury. Data was filtered to remove control cells as well as later time points which  are
     more spaced out. We wanted to focus on the densely sampled days where RNA velocity [Manno18]_ [Bergen20]_ can be
     used to predict the future cellular state.
@@ -163,40 +163,47 @@ def reprogramming(
     **kwargs,
 ) -> AnnData:
     """
-    Reprogramming data from [Morris18]_.
+    Reprogramming of mouse embryonic fibroblasts to induced endoderm progenitors at 8 time points from [Morris18]_.
 
-    TODO: @Marius please add some nice description including stuff in obs like
-    The following keys can be found in :attr:`anndata.AnnData.obs`:
+    scRNA-seq dataset comprising `104,887` cell recorded using 10X Chromium and Dropseq [Macosko15]_ at 8 time points
+    spanning days 0-28 past reprogramming initiation.
 
-        - `'foo'` - baz
-        - `'bar'` - quux
+    Contains raw spliced and un-spliced count data, low-dimensional embedding coordinates as well as clonal information
+    from CellTagging [Morris18]_. Moreover, contains the following attr:`anndata.AnnData.obs`: annotations:
+
+        - `'reprogramming_day'` - time-point information.
+        - `'reprogramming'` - whether this clone is enriched for cells from successfully reprogrammed populations.
+        - `'CellTagDN_XXk'` - CellTag from day `N` from the `XXk` cells ``subset``.
 
     Parameters
     ---------
     subset
         Whether to return the full object or just a subset. Can be one of:
 
-            - `{s.FULL.s!r}` - return the complete dataset.
-            - `{s.K45.s!r}` - return the subset as described in [Morris18]_, TODO.
-            - `{s.K85.s!r}` - return the subset as described in [Morris18]_, TODO.
+            - `{s.FULL.s!r}` - return the complete dataset containing `104,887` cells.
+            - `{s.K85.s!r}` - return the subset as described in [Morris18]_ Fig. 1, containing `85,010` cells.
+            - `{s.K48.s!r}` - return the subset as described in [Morris18]_ Fig. 3, containing `48,515` cells.
+
     %(dataset.parameters)s
 
     Returns
     -------
     %(adata)s
+
+    Notes
+    -----
+    The dataset has approximately 1.5GiB and the subsetting is performed only locally after the full download.
     """
     subset = ReprogrammingSubset(subset)
     adata = _load_dataset_from_url(path, *_datasets["reprogramming"], **kwargs)
 
-    if subset == ReprogrammingSubset.K45:
-        # TODO
-        adata = adata
-    elif subset == ReprogrammingSubset.K85:
-        # TODO
-        adata = adata
-    elif subset != ReprogrammingSubset.FULL:
-        raise NotImplementedError(
-            f"Subsetting option `{subset.s!r}` is not yet implemented."
-        )
+    if subset == ReprogrammingSubset.FULL:
+        return adata
+    if subset == ReprogrammingSubset.K48:
+        return adata[~adata.obs["cluster"].isnull()].copy()
+    if subset == ReprogrammingSubset.K85:
+        return adata[~adata.obs["timecourse"].isnull()].copy()
 
-    return adata
+    raise NotImplementedError(
+        f"Subsetting option `{subset.s!r}` is not yet implemented."
+    )
