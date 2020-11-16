@@ -173,8 +173,7 @@ def reprogramming(
 
         - `'reprogramming_day'` - time-point information.
         - `'reprogramming'` - whether this clone is enriched for cells from successfully reprogrammed populations.
-        - `'CellTagDN_XXk'` - CellTag from day `N` from the `XXk` cells subset (`85k` subset refers to Fig. 1,
-        `48k` subset refers to Fig. 3 in [Morris18]_).
+        - `'CellTagDN_XXk'` - CellTag from day `N` from the `XXk` cells ``subset``.
 
     Parameters
     ---------
@@ -182,8 +181,8 @@ def reprogramming(
         Whether to return the full object or just a subset. Can be one of:
 
             - `{s.FULL.s!r}` - return the complete dataset containing `104,887` cells.
-            - `{s.K85.s!r}` - return the subset as described in [Morris18]_, Fig. 1 containing `85,010` cells.
-            - `{s.K48.s!r}` - return the subset as described in [Morris18]_, Fig. 3 containing `48,515` cells.
+            - `{s.K85.s!r}` - return the subset as described in [Morris18]_ Fig. 1, containing `85,010` cells.
+            - `{s.K48.s!r}` - return the subset as described in [Morris18]_ Fig. 3, containing `48,515` cells.
 
     %(dataset.parameters)s
 
