@@ -176,9 +176,9 @@ def reprogramming(
     subset
         Whether to return the full object or just a subset. Can be one of:
 
-            - `{s.FULL.s!r}` - return the complete dataset.
-            - `{s.K45.s!r}` - return the subset as described in [Morris18]_, TODO.
-            - `{s.K85.s!r}` - return the subset as described in [Morris18]_, TODO.
+            - `{s.FULL.s!r}` - return the complete dataset of `TODO` cells.
+            - `{s.K45.s!r}` - return the subset as described in [Morris18]_, TODO: mention reference (e.g. figure)?.
+            - `{s.K85.s!r}` - return the subset as described in [Morris18]_, TODO: mention reference (e.g. figure)?.
     %(dataset.parameters)s
 
     Returns
