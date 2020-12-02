@@ -486,7 +486,7 @@ def _get_knotlocs(
 @inject_docs(key=_OFFSET_KEY)
 @d.dedent
 def _get_offset(
-    adata: AnnData,
+    adata: Union[AnnData, np.ndarray, spmatrix],
     layer: Optional[str] = None,
     use_raw: bool = True,
     ref_ix: Optional[int] = None,
@@ -533,7 +533,7 @@ def _get_offset(
         logg.debug(
             f"Unable to calculate the normalization factors, setting them to `1`. Reason: `{e}`"
         )
-        nf = np.ones(adata.n_obs, dtype=np.float64)
+        nf = np.ones(len(adata), dtype=np.float64)
 
     offset = np.log(nf * np.array(data.sum(1)).squeeze())
     offset[offset == 0] = 1.0

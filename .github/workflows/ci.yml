@@ -93,7 +93,8 @@ jobs:
 
       - name: Testing
         run: |
-          python -m pytest --cov-config=./.coveragerc --cov=./ --cov-report=xml
+
+          python -m pytest --cov --cov-report=term-missing --cov-config=./.coveragerc --cov-report=xml -vv
 
       - name: Upload coverage
         env:
