@@ -43,8 +43,8 @@ jobs:
           pip install -e".[docs,dev]"
       - name: Run static analysis
         run: |
-          pre-commit run --all-files
-          sphinx-build -j2 -b linkcheck docs/source docs/build/linkcheck
+          pre-commit run --all-files --show-diff-on-failure
+        # sphinx-build -j2 -b linkcheck docs/source docs/build/linkcheck
 
   test:
     needs: linting
