@@ -169,7 +169,7 @@ def reprogramming(
     spanning days 0-28 past reprogramming initiation.
 
     Contains raw spliced and un-spliced count data, low-dimensional embedding coordinates as well as clonal information
-    from CellTagging [Morris18]_. Moreover, contains the following attr:`anndata.AnnData.obs`: annotations:
+    from CellTagging [Morris18]_. Moreover, contains the following :attr:`anndata.AnnData.obs`: annotations:
 
         - `'reprogramming_day'` - time-point information.
         - `'reprogramming'` - whether this clone is enriched for cells from successfully reprogrammed populations.

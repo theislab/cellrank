@@ -71,7 +71,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
     Parameters
     ----------
     obj
-        Either a :class:`cellrank.tl.Kernel` object, an :class:`anndata.AnnData` object which
+        Either a :class:`cellrank.tl.kernels.Kernel` object, an :class:`anndata.AnnData` object which
         stores the transition matrix in ``.obsp`` attribute or :mod:`numpy` or :mod:`scipy` array.
     inplace
         Whether to modify :paramref:`adata` object inplace or make a copy.
