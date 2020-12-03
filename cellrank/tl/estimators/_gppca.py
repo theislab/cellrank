@@ -847,7 +847,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
 
         logg.info(f"Calculating minChi within interval `[{minn}, {maxx}]`")
 
-        return int(np.arange(minn, maxx)[np.argmax(self._gpcca.minChi(minn, maxx))])
+        return int(np.arange(minn, maxx + 1)[np.argmax(self._gpcca.minChi(minn, maxx))])
 
     @d.dedent
     def _set_macrostates(

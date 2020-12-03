@@ -27,7 +27,7 @@ Velocity Kernel
     :members:
 
 Cosine similarity scheme
-+++++++++++++++++++++++++
+++++++++++++++++++++++++
 
 .. autoclass:: cellrank.tl.kernels.CosineScheme
     :members:
