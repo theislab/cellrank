@@ -73,7 +73,7 @@ if __name__ == "__main__":
         ),
         zip_safe=False,
         packages=find_packages(),
-        python_required=">=3.6",
+        python_requires=">=3.6",
         platforms=["Linux", "MacOs", "Windows"],
         keywords=[
             "bio-informatics",
