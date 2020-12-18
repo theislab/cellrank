@@ -2,7 +2,7 @@
 """General utility functions module."""
 import pickle
 from types import MappingProxyType
-from typing import Any, Dict, Tuple, Union, TypeVar, Iterable, Optional
+from typing import Any, Dict, List, Tuple, Union, TypeVar, Iterable, Optional
 from pathlib import Path
 from functools import wraps, update_wrapper
 from multiprocessing import cpu_count
@@ -76,7 +76,8 @@ def _check_collection(
     attr_name: str,
     key_name: str = "Gene",
     use_raw: bool = False,
-) -> None:
+    raise_exc: bool = True,
+) -> List[str]:
     """
     Check if given collection contains all the keys.
 
@@ -109,12 +110,17 @@ def _check_collection(
         adata_name = "adata.raw"
         adata = adata.raw
 
-    haystack = getattr(adata, attr_name)
+    haystack, res = getattr(adata, attr_name), []
     for needle in needles:
         if needle not in haystack:
-            raise KeyError(
-                f"{key_name} `{needle}` not found in `{adata_name}.{attr_name}`."
-            )
+            if raise_exc:
+                raise KeyError(
+                    f"{key_name} `{needle}` not found in `{adata_name}.{attr_name}`."
+                )
+        else:
+            res.append(needle)
+
+    return res
 
 
 def _get_n_cores(n_cores: Optional[int], n_jobs: Optional[int]) -> int:
