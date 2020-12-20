@@ -31,6 +31,11 @@ class SpecialKey(ModeEnum):  # noqa: D101
     DIRECTION = "priming_direction"
 
 
+class LabelRot(ModeEnum):  # noqa: D101
+    DEFAULT = "default"
+    BEST = "best"
+
+
 Metric_T = Union[str, Callable, np.ndarray, pd.DataFrame]
 
 
@@ -71,10 +76,9 @@ def _get_optimal_order(data: Lineage, metric: Metric_T) -> Tuple[float, np.ndarr
 def _priming_degree(probs: Union[np.ndarray, Lineage]) -> np.ndarray:
     if isinstance(probs, Lineage):
         probs = probs.X
-    return -np.sum(probs * np.log(probs / np.mean(probs, axis=0)), axis=1)
+    return np.sum(probs * np.log2(probs / np.mean(probs, axis=0)), axis=1)
 
 
-# TODO: do we event want this?
 def _priming_direction(probs: Union[np.ndarray, Lineage]) -> np.ndarray:
     if isinstance(probs, Lineage):
         probs = probs.X
@@ -86,7 +90,6 @@ def circular_projection(
     adata: AnnData,
     keys: Union[str, Sequence[str]],
     backward: bool = False,
-    delta: Optional[float] = 1.25,
     lineages: Optional[Union[str, Sequence[str]]] = None,
     lineage_order: Optional[str] = None,
     metric: Union[str, Callable, np.ndarray, pd.DataFrame] = "correlation",
@@ -94,6 +97,9 @@ def circular_projection(
     space: float = 0.25,
     use_raw: bool = False,
     text_kwargs: Mapping[str, Any] = MappingProxyType({}),
+    labeldistance: float = 1.25,
+    labelrot: Union[str, float] = "best",
+    hide_wedges: bool = False,
     key_added: Optional[str] = None,
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
@@ -109,22 +115,24 @@ def circular_projection(
     keys
         Keys in :attr:`anndata.AnnData.obs` or :attr:`anndata.AnnData.var_names`. Extra available keys:
 
-            - `'priming_degree'`: the entropy relative to the "average" cell, as described in [Velten17]_. It follows \
-            the formula :math:`\sum_{j} p_{i, j} \log \frac{p_{ij}}{\overline{p_j}}` where :math:`i` corresponds to a \
-            cell and :math:`j` corresponds to a lineage and :math:`\overline{p_j}` is the average probability for
-            lineage :math:`j`.
+            - `'priming_degree'`: the entropy relative to the "average" cell, as described in [Velten17]_.
+              It follows  the formula :math:`\sum_{j} p_{i, j} \log \frac{p_{ij}}{\overline{p_j}}` where :math:`i`
+              corresponds to a cell, :math:`j` corresponds to a lineage and :math:`\overline{p_j}` is the average
+              probability for lineage :math:`j`.
+            - `'priming_direction'`: defined as :math:`d_i = argmax_j \frac{p_{ij}}{\overline{p_j}}` in [Velten17]_
+              where :math:`i`, :math:`j` and :math:`\overline{p_j}` are defined as above.
+
     %(backward)s
-    delta
-        Distance at which the lineage labels will be drawn. If `None`, don't draw the lineage labels.
     lineages
         Lineages to plot. If `None`, plot all lineages.
     lineage_order
         Can be one of the following:
 
             - `None`: it will determined automatically, based on the number of lineages.
-            - `'optimal'`: order the lineages optimally by solving the Travelling salesman problem. \
-            Recommended for <= `20` lineages.
+            - `'optimal'`: order the lineages optimally by solving the Travelling salesman problem (TSP).
+              Recommended for <= `20` lineages.
             - `'default'`: use the order as specified in ``lineages``.
+
     metric
         Metric to use when contructing pairwise distance matrix when ``lineage_order = 'optimal'``. For available
         options, see :func:`sklearn.metrics.pairwise_distances`.
@@ -136,6 +144,18 @@ def circular_projection(
         Whether to access :attr:`anndata.AnnData.raw` when there are ``keys`` in :attr:`anndata.AnnData.var_names`.
     text_kwargs
         Keyword arguments for :func:`matplotlib.pyplot.text`.
+    labeldistance
+        Distance at which the lineage labels will be drawn.
+    labelrot
+        How to rotate the labels. Valid options are:
+
+            - `'best'`: rotate labels so that they are easily readable.
+            - `'default'`: use :mod:`matplotlib` default.
+            - `None`: same as `'default'`.
+
+        If a :class:`float`, all labels will be rotated by this many degrees.
+    hide_wedges
+        Whether to hide the wedges or not.
     key_added
         Key in :attr:`anndata.AnnData.obsm` where to add the circular embedding. If `None`, it will be set to
         `'X_fate_simplex_{fwd,bwd}'`, based on ``backward``.
@@ -146,11 +166,23 @@ def circular_projection(
     Returns
     -------
     %(just_plots)s
+        Also updates ``adata`` with the following fields:
+
+            - :attr:`anndata.AnnData.obsm` ``[{key_added}]``: the circular projection.
+            - :attr:`anndata.AnnData.obs` ``['priming_degree_{fwd,bwd}']``: the priming degree, if in ``keys``.
+            - :attr:`anndata.AnnData.obs` ``['priming_direction_{fwd,bwd}']``: the priming direction, if in ``keys``.
     """
-    # TODO: logging, tests, polish docstrings, references
-    # TODO: warn if using optimal and too many lineages (> 10)
+    if labeldistance is not None and labeldistance < 0:
+        raise ValueError(f"Expected `delta` to be positive, found `{labeldistance}`.")
+
+    if labelrot is None:
+        labelrot = LabelRot.DEFAULT
+    if isinstance(labelrot, str):
+        labelrot = LabelRot(labelrot)
+
+    suffix = "bwd" if backward else "fwd"
     if key_added is None:
-        key_added = "X_fate_simplex_" + ("bwd" if backward else "fwd")
+        key_added = "X_fate_simplex_" + suffix
 
     if isinstance(keys, str):
         keys = (keys,)
@@ -163,6 +195,7 @@ def circular_projection(
     )
     haystack = {s.s for s in SpecialKey}
     keys = keys_ + [k for k in keys if k in haystack]
+    keys = _unique_order_preserving(keys)
 
     if not len(keys):
         raise ValueError("No valid keys have been selected.")
@@ -185,6 +218,7 @@ def circular_projection(
 
     if lineage_order is None:
         lineage_order = LineageOrder.OPTIMAL if n_lin <= 15 else LineageOrder.DEFAULT
+        logg.debug(f"Set ordering to `{lineage_order}`")
     lineage_order = LineageOrder(lineage_order)
 
     if lineage_order == LineageOrder.OPTIMAL:
@@ -196,8 +230,8 @@ def circular_projection(
     probs = probs[:, order]
 
     angle_vec = np.linspace(0, 2 * np.pi, n_lin, endpoint=False)
-    angle_vec_sin = np.sin(angle_vec)
-    angle_vec_cos = np.cos(angle_vec)
+    angle_vec_sin = np.cos(angle_vec)
+    angle_vec_cos = np.sin(angle_vec)
 
     x = np.sum(probs.X * angle_vec_sin, axis=1)
     y = np.sum(probs.X * angle_vec_cos, axis=1)
@@ -214,19 +248,34 @@ def circular_projection(
     fig.subplots_adjust(wspace=space, hspace=space)
     axes = np.ravel([ax])
 
+    text_kwargs = dict(text_kwargs)
+    text_kwargs["ha"] = "center"
+    text_kwargs["va"] = "center"
+
     _i = 0
     for _i, (k, ax) in enumerate(zip(keys, axes)):
 
         try:
             k = SpecialKey(k)
-            kwargs["title"] = k
+            logg.debug(f"Calculating `{k}`")
             if k == SpecialKey.DEGREE:
-                k = _priming_degree(probs)
+                val = _priming_degree(probs)
+            elif k == SpecialKey.DIRECTION:
+                val = pd.Series(
+                    probs.names[_priming_direction(probs)], dtype="category"
+                )
+                color_mapper = dict(zip(probs.names, probs.colors))
+                adata.uns[f"{k.s}_{suffix}_colors"] = [
+                    color_mapper[c] for c in val.cat.categories
+                ]
+                val = val.values
             else:
-                # TODO: for SK.Direction, how to supply to the categorical colors, should we just save to anndata?
-                raise NotImplementedError(k)
+                raise NotImplementedError(f"Special key `{k}` is not implemented.")
+            k = f"{k}_{suffix}"
+            if k in adata.obs:
+                logg.debug(f"Overwriting `adata.obs[{k!r}]`")
+            adata.obs[k] = val
         except ValueError:
-            # not a special key
             pass
 
         scv.pl.scatter(
@@ -238,18 +287,33 @@ def circular_projection(
             use_raw=use_raw,
             **kwargs,
         )
-
-        if delta is None:
-            continue
-        for j, (lin, c) in enumerate(zip(probs.names, probs.colors)):
-            ax.text(
-                delta * angle_vec_sin[j],
-                delta * angle_vec_cos[j],
-                s=lin,
-                ha="center",
-                c=c,
-                **text_kwargs,
-            )
+        patches, texts = ax.pie(
+            np.ones_like(angle_vec),
+            labeldistance=labeldistance,
+            rotatelabels=True,
+            labels=probs.names[::-1],
+            startangle=-360 / len(angle_vec) / 2,
+            counterclock=False,
+            textprops=text_kwargs,
+            wedgeprops={"width": -0.0125},  # move outwards
+        )
+        # clockwise
+        for color, text in zip(probs.colors[::-1], texts):
+            if isinstance(labelrot, (int, float)):
+                text.set_rotation(labelrot)
+            elif labelrot == LabelRot.BEST:
+                rot = text.get_rotation()
+                text.set_rotation(rot + 90 + (1 - rot // 180) * 180)
+            elif labelrot != LabelRot.DEFAULT:
+                raise NotImplementedError(
+                    f"Label rotation `{labelrot}` is not yet implemented."
+                )
+            text.set_color(color)
+        for color, patch in zip(probs.colors[::-1], patches):
+            patch.set_alpha(0.33)
+            patch.set_color(color)
+            patch.set_visible(not hide_wedges)
+            patch.set_zorder(-1)
 
     for j in range(_i + 1, len(axes)):
         axes[j].remove()
