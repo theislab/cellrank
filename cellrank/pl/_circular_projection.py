@@ -39,9 +39,12 @@ class LabelRot(ModeEnum):  # noqa: D101
 Metric_T = Union[str, Callable, np.ndarray, pd.DataFrame]
 
 
-def _get_distances(data: Lineage, metric: Metric_T) -> np.ndarray:
+def _get_distances(data: Union[np.ndarray, Lineage], metric: Metric_T) -> np.ndarray:
+    if isinstance(data, Lineage):
+        data = data.X
+
     if isinstance(metric, str) or callable(metric):
-        metric = pairwise_distances(data.X.T, metric=metric)
+        metric = pairwise_distances(data.T, metric=metric)
     elif isinstance(metric, np.ndarray):
         shape = (data.shape[1], data.shape[1])
         if metric.shape != shape:
@@ -93,6 +96,7 @@ def circular_projection(
     lineages: Optional[Union[str, Sequence[str]]] = None,
     lineage_order: Optional[str] = None,
     metric: Union[str, Callable, np.ndarray, pd.DataFrame] = "correlation",
+    normalize_by_mean: bool = True,
     ncols: int = 4,
     space: float = 0.25,
     use_raw: bool = False,
@@ -136,6 +140,8 @@ def circular_projection(
     metric
         Metric to use when contructing pairwise distance matrix when ``lineage_order = 'optimal'``. For available
         options, see :func:`sklearn.metrics.pairwise_distances`.
+    normalize_by_mean
+        If `True`, normalize each lineage by its mean probability, as done in [Velten17]_.
     ncols
         Number of columns when plotting multiple ``keys``.
     space
@@ -216,6 +222,11 @@ def circular_projection(
     if n_lin <= 1:
         raise ValueError(f"Expected at least `2` lineages, found `{n_lin}`")
 
+    X = probs.X.copy()
+    if normalize_by_mean:
+        X /= np.mean(X, axis=0)[None, :]
+        X /= X.sum(1)[:, None]
+
     if lineage_order is None:
         lineage_order = LineageOrder.OPTIMAL if n_lin <= 15 else LineageOrder.DEFAULT
         logg.debug(f"Set ordering to `{lineage_order}`")
@@ -223,18 +234,19 @@ def circular_projection(
 
     if lineage_order == LineageOrder.OPTIMAL:
         logg.info(f"Solving TSP for `{n_lin}` states")
-        _, order = _get_optimal_order(probs, metric=metric)
+        _, order = _get_optimal_order(X, metric=metric)
     else:
         order = np.arange(n_lin)
 
     probs = probs[:, order]
+    X = X[:, order]
 
     angle_vec = np.linspace(0, 2 * np.pi, n_lin, endpoint=False)
     angle_vec_sin = np.cos(angle_vec)
     angle_vec_cos = np.sin(angle_vec)
 
-    x = np.sum(probs.X * angle_vec_sin, axis=1)
-    y = np.sum(probs.X * angle_vec_cos, axis=1)
+    x = np.sum(X * angle_vec_sin, axis=1)
+    y = np.sum(X * angle_vec_cos, axis=1)
     adata.obsm[key_added] = np.c_[x, y]
 
     nrows = int(np.ceil(len(keys) / ncols))
