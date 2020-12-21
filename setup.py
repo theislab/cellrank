@@ -40,11 +40,12 @@ if __name__ == "__main__":
             )
         ),
         extras_require=dict(
+            # https://gitlab.com/petsc/petsc/-/issues/803
             krylov=[
                 "mpi4py>=3.0.3",
-                "petsc>=3.13.0",
+                "petsc>=3.13.0,!=3.14.0",
                 "slepc>=3.13.0",
-                "petsc4py>=3.13.0",
+                "petsc4py>=3.13.0,!=3.14.0",
                 "slepc4py>=3.13.0",
             ],
             test=[
