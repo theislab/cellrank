@@ -11,6 +11,8 @@ import pandas as pd
 from sklearn.metrics import pairwise_distances
 
 import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm, LinearSegmentedColormap
+from matplotlib.collections import LineCollection
 
 from cellrank import logging as logg
 from cellrank.tl import Lineage
@@ -37,6 +39,7 @@ class LabelRot(ModeEnum):  # noqa: D101
 
 
 Metric_T = Union[str, Callable, np.ndarray, pd.DataFrame]
+_N = 200
 
 
 def _get_distances(data: Union[np.ndarray, Lineage], metric: Metric_T) -> np.ndarray:
@@ -103,7 +106,7 @@ def circular_projection(
     text_kwargs: Mapping[str, Any] = MappingProxyType({}),
     labeldistance: float = 1.25,
     labelrot: Union[str, float] = "best",
-    hide_wedges: bool = False,
+    show_edges: bool = True,
     key_added: Optional[str] = None,
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
@@ -160,8 +163,8 @@ def circular_projection(
             - `None`: same as `'default'`.
 
         If a :class:`float`, all labels will be rotated by this many degrees.
-    hide_wedges
-        Whether to hide the wedges or not.
+    show_edges
+        Whether to show the edges surrounding the simplex.
     key_added
         Key in :attr:`anndata.AnnData.obsm` where to add the circular embedding. If `None`, it will be set to
         `'X_fate_simplex_{fwd,bwd}'`, based on ``backward``.
@@ -219,13 +222,15 @@ def circular_projection(
 
     probs = adata.obsm[lineage_key][lineages]
     n_lin = probs.shape[1]
-    if n_lin <= 1:
-        raise ValueError(f"Expected at least `2` lineages, found `{n_lin}`")
+    if n_lin <= 2:
+        raise ValueError(f"Expected at least `3` lineages, found `{n_lin}`")
 
     X = probs.X.copy()
     if normalize_by_mean:
         X /= np.mean(X, axis=0)[None, :]
         X /= X.sum(1)[:, None]
+        # this happens when cells for sel. lineages sum to 1 (or when the lineage average is 0, which is unlikely)
+        X = np.nan_to_num(X, nan=1.0 / n_lin, copy=False)
 
     if lineage_order is None:
         lineage_order = LineageOrder.OPTIMAL if n_lin <= 15 else LineageOrder.DEFAULT
@@ -267,11 +272,13 @@ def circular_projection(
     _i = 0
     for _i, (k, ax) in enumerate(zip(keys, axes)):
 
+        set_lognorm = False
         try:
             k = SpecialKey(k)
             logg.debug(f"Calculating `{k}`")
             if k == SpecialKey.DEGREE:
                 val = _priming_degree(probs)
+                set_lognorm = True
             elif k == SpecialKey.DIRECTION:
                 val = pd.Series(
                     probs.names[_priming_direction(probs)], dtype="category"
@@ -297,8 +304,18 @@ def circular_projection(
             show=False,
             ax=ax,
             use_raw=use_raw,
+            norm=LogNorm() if set_lognorm else None,
             **kwargs,
         )
+        if set_lognorm:
+            cbar = ax.collections[0].colorbar
+            cax = cbar.locator.axis
+            ticks = cax.minor.locator.tick_values(cbar.vmin, cbar.vmax)
+            ticks = [ticks[0], ticks[len(ticks) // 2 + 1], ticks[-1]]
+            cbar.set_ticks(ticks)
+            cbar.set_ticklabels([f"{t:.2f}" for t in ticks])
+            cbar.update_ticks()
+
         patches, texts = ax.pie(
             np.ones_like(angle_vec),
             labeldistance=labeldistance,
@@ -307,8 +324,11 @@ def circular_projection(
             startangle=-360 / len(angle_vec) / 2,
             counterclock=False,
             textprops=text_kwargs,
-            wedgeprops={"width": -0.0125},  # move outwards
         )
+
+        for patch in patches:
+            patch.set_visible(False)
+
         # clockwise
         for color, text in zip(probs.colors[::-1], texts):
             if isinstance(labelrot, (int, float)):
@@ -321,11 +341,24 @@ def circular_projection(
                     f"Label rotation `{labelrot}` is not yet implemented."
                 )
             text.set_color(color)
-        for color, patch in zip(probs.colors[::-1], patches):
-            patch.set_alpha(0.33)
-            patch.set_color(color)
-            patch.set_visible(not hide_wedges)
-            patch.set_zorder(-1)
+
+        if not show_edges:
+            continue
+
+        for i, color in enumerate(probs.colors):
+            next = (i + 1) % n_lin
+            x = 1.04 * np.linspace(angle_vec_sin[i], angle_vec_sin[next], _N)
+            y = 1.04 * np.linspace(angle_vec_cos[i], angle_vec_cos[next], _N)
+            points = np.array([x, y]).T.reshape(-1, 1, 2)
+            segments = np.concatenate([points[:-1], points[1:]], axis=1)
+
+            cmap = LinearSegmentedColormap.from_list(
+                "abs_prob_cmap", [color, probs.colors[next]], N=_N
+            )
+            lc = LineCollection(segments, cmap=cmap)
+            lc.set_array(np.linspace(0, 1, _N))
+            lc.set_linewidth(2)
+            ax.add_collection(lc)
 
     for j in range(_i + 1, len(axes)):
         axes[j].remove()
