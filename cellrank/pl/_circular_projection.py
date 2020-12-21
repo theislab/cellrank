@@ -141,7 +141,7 @@ def circular_projection(
             - `'default'`: use the order as specified in ``lineages``.
 
     metric
-        Metric to use when contructing pairwise distance matrix when ``lineage_order = 'optimal'``. For available
+        Metric to use when constructing pairwise distance matrix when ``lineage_order = 'optimal'``. For available
         options, see :func:`sklearn.metrics.pairwise_distances`.
     normalize_by_mean
         If `True`, normalize each lineage by its mean probability, as done in [Velten17]_.
@@ -159,7 +159,7 @@ def circular_projection(
         How to rotate the labels. Valid options are:
 
             - `'best'`: rotate labels so that they are easily readable.
-            - `'default'`: use :mod:`matplotlib` default.
+            - `'default'`: use :mod:`matplotlib`'s default.
             - `None`: same as `'default'`.
 
         If a :class:`float`, all labels will be rotated by this many degrees.
@@ -355,7 +355,7 @@ def circular_projection(
             cmap = LinearSegmentedColormap.from_list(
                 "abs_prob_cmap", [color, probs.colors[next]], N=_N
             )
-            lc = LineCollection(segments, cmap=cmap)
+            lc = LineCollection(segments, cmap=cmap, zorder=-1)
             lc.set_array(np.linspace(0, 1, _N))
             lc.set_linewidth(2)
             ax.add_collection(lc)
