@@ -2917,3 +2917,100 @@ class TestFittedModel:
             dpi=DPI,
             save=fpath,
         )
+
+
+class TestCircularProjection:
+    def test_proj_too_few_lineages(self, adata_gpcca_fwd):
+        adata, _ = adata_gpcca_fwd
+        lineages = adata.obsm[AbsProbKey.FORWARD.s].names[:2]
+
+        with pytest.raises(ValueError, match=r"Expected at least `3` lineages"):
+            cr.pl.circular_projection(
+                adata, keys=["clusters", "clusters"], lineages=lineages
+            )
+
+    @compare()
+    def test_proj_duplicate_keys(self, adata: AnnData, fpath: str):
+        cr.pl.circular_projection(
+            adata, keys=["clusters", "clusters"], dpi=DPI, save=fpath
+        )
+
+        key = "X_fate_simplex_fwd"
+        assert key in adata.obsm
+        assert isinstance(adata.obsm[key], np.ndarray)
+        assert adata.obsm[key].shape[1] == 2
+
+    @compare()
+    def test_proj_key_added(self, adata: AnnData, fpath: str):
+        key = "foo"
+        cr.pl.circular_projection(
+            adata, keys=adata.var_names[0], key_added=key, dpi=DPI, save=fpath
+        )
+
+        assert key in adata.obsm
+        assert isinstance(adata.obsm[key], np.ndarray)
+        assert adata.obsm[key].shape[1] == 2
+
+    @compare()
+    def test_proj_hide_edges(self, adata: AnnData, fpath: str):
+        cr.pl.circular_projection(
+            adata, keys="dpt_pseudotime", show_edges=False, dpi=DPI, save=fpath
+        )
+
+    @compare()
+    def test_proj_dont_normalize_by_mean(self, adata: AnnData, fpath: str):
+        cr.pl.circular_projection(
+            adata, keys="clusters", normalize_by_mean=False, dpi=DPI, save=fpath
+        )
+
+    @compare()
+    def test_proj_use_raw(self, adata: AnnData, fpath: str):
+        cr.pl.circular_projection(
+            adata, keys=adata.raw.var_names[0], use_raw=True, dpi=DPI, save=fpath
+        )
+
+    @compare()
+    def test_proj_ncols(self, adata: AnnData, fpath: str):
+        cr.pl.circular_projection(
+            adata, keys=adata.var_names[:2], ncols=1, dpi=DPI, save=fpath
+        )
+
+    @compare()
+    def test_proj_labelrot(self, adata: AnnData, fpath: str):
+        cr.pl.circular_projection(
+            adata, keys="clusters", labelrot="default", dpi=DPI, save=fpath
+        )
+
+    @compare()
+    def test_proj_labeldistance(self, adata: AnnData, fpath: str):
+        cr.pl.circular_projection(
+            adata, keys="clusters", labeldistance=1.5, dpi=DPI, save=fpath
+        )
+
+    @compare()
+    def test_proj_text_kwargs(self, adata: AnnData, fpath: str):
+        cr.pl.circular_projection(
+            adata, keys="clusters", text_kwargs={"size": 20}, dpi=DPI, save=fpath
+        )
+
+    @compare()
+    def test_proj_default_ordering(self, adata: AnnData, fpath: str):
+        cr.pl.circular_projection(
+            adata, keys="clusters", lineage_order="default", dpi=DPI, save=fpath
+        )
+
+    @compare()
+    def test_proj_extra_keys(self, adata: AnnData, fpath: str):
+        cr.pl.circular_projection(
+            adata, keys=["priming_direction", "priming_degree"], dpi=DPI, save=fpath
+        )
+
+        assert "priming_direction_fwd" in adata.obs
+        assert is_categorical_dtype(adata.obs["priming_direction_fwd"])
+        assert "priming_degree_fwd" in adata.obs
+
+    @compare()
+    def test_proj_scvelo_kwargs(self, adata: AnnData, fpath: str):
+        cr.pl.circular_projection(
+            adata, keys="clusters", legend_loc="upper right", dpi=DPI, save=fpath
+        )

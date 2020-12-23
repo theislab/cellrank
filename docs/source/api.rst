@@ -75,6 +75,7 @@ Plotting
     pl.terminal_states
     pl.lineages
     pl.lineage_drivers
+    pl.circular_projection
     pl.gene_trends
     pl.heatmap
     pl.cluster_lineage

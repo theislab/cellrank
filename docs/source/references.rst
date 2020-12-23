@@ -57,6 +57,10 @@ References
     *Characterization of cell fate probabilities in single-cell data with Palantir*,
     `Nature Biotechnology <https://doi.org/10.1038/s41587-019-0068-4>`__.
 
+.. [Velten17] Velten, L. *et al.* (2017),
+    *Human haematopoietic stem cell lineage commitment is a continuous process.*,
+    `Nat Cell Biol 19, 271–281 <https://doi.org/10.1038/ncb3493>`__.
+
 .. [Tolver16] Tolver (2016),
     *An introduction to Markov chains*,
     `Recuperado el 15 <http://old.math.ku.dk/noter/filer/stoknoter.pdf>`__.
