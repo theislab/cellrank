@@ -3,7 +3,7 @@
 Plot circular embedding
 -----------------------
 
-This example shows how to plot absorption probabilities using circular aposteriori projection as used in [Velten17]_.
+This example shows how to plot absorption probabilities using circular a posteriori projection as used in [Velten17]_.
 """
 
 import cellrank as cr
@@ -25,8 +25,8 @@ cr.tl.lineages(adata)
 
 # %%
 # We can now visualize the absorption probabilities by projecting them onto a unit circle. The tips of the simplex
-# indicate the probability of 1.0 of belonging to the lineage and the midpoint between the edges signifies where the
-# probabilities of belonging to the connected lineages are 0.5.
+# indicate the probability of 1.0 for the lineages and the midpoints of the edges of the edges mark where the
+# probabilities of the lineages connected by an edge are equal.
 cr.pl.circular_projection(
     adata, keys=["clusters", "to_terminal_states_dp"], legend_loc="upper right"
 )
