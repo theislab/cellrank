@@ -28,7 +28,8 @@ cr.tl.lineages(adata)
 sc.tl.paga(adata, "clusters")
 
 # %%
-# We can visualize the aggregate absorption probabilities as a bar plot.
+# We can visualize the aggregate absorption probabilities as a bar plot. The whiskers correspond to the standard error
+# of the mean.
 cr.pl.cluster_fates(adata, mode="bar")
 
 # %%

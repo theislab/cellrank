@@ -68,7 +68,7 @@ def cluster_fates(
     mode
         Type of plot to show. Valid options are:
 
-            - `{m.BAR.s!r}` - barplot, one panel per cluster.
+            - `{m.BAR.s!r}` - barplot, one panel per cluster. The whiskers correspond to the standard error of the mean.
             - `{m.PAGA.s!r}` - scanpy's PAGA, one per %(initial_or_terminal)s state, colored in by fate.
             - `{m.PAGA_PIE.s!r}` - scanpy's PAGA with pie charts indicating aggregated fates.
             - `{m.VIOLIN.s!r}` - violin plots, one per %(initial_or_terminal)s state.
