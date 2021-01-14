@@ -1077,6 +1077,7 @@ def _default_model_callback(model: BaseModel, **kwargs) -> BaseModel:
 def composition(
     adata: AnnData,
     key: str,
+    fontsize: Optional[str] = None,
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[float] = None,
     save: Optional[Union[str, Path]] = None,
@@ -1094,6 +1095,8 @@ def composition(
     %(adata)s
     key
         Key in ``adata.obs`` containing categorical observation.
+    fontsize
+        Font size for the pie chart labels.
     %(plotting)s
     **kwargs
         Keyworded arguments for :func:`matplotlib.pyplot.pie`.
@@ -1116,7 +1119,13 @@ def composition(
     # plot these fractions in a pie plot
     fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
 
-    ax.pie(x=cats_frac, labels=cats, colors=colors, **kwargs)
+    ax.pie(
+        x=cats_frac,
+        labels=cats,
+        colors=colors,
+        textprops={"fontsize": fontsize},
+        **kwargs,
+    )
     ax.set_title(f"composition by {key}")
 
     if save is not None:
