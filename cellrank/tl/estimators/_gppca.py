@@ -98,7 +98,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
             Number of macrostates. If `None`, use the `eigengap` heuristic.
         %(n_cells)s
         use_min_chi
-            Whether to use :meth:`msmtools.analysis.dense.gpcca.GPCCA.minChi` to calculate the number of macrostates.
+            Whether to use :meth:`pygpcca.GPCCA.minChi` to calculate the number of macrostates.
             If `True`, ``n_states`` corresponds to a closed interval `[min, max]` inside of which the potentially
             optimal number of macrostates is searched.
         cluster_key

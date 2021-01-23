@@ -10,6 +10,7 @@ numba>=0.51.0
 numpy>=1.19.1
 pandas>=0.23.4
 pygam>=0.8.0
+pygpcca>=1.0.0
 scanpy>=1.6.0
 scikit-learn>=0.21.3
 scipy>=1.2.0

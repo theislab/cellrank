@@ -15,13 +15,6 @@ HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE.parent.parent))
 sys.path.insert(0, os.path.abspath("_ext"))
 
-# this must be called prior to importing CellRank
-if not os.path.exists(os.path.join(sys.path[1], "cellrank", "_vendor")):
-    config_path = os.path.join(HERE.parent.parent, "vendorize.toml")
-    print(f"Running vendorize using config: {config_path}")
-    subprocess.run(["python-vendorize", config_path])
-
-
 import cellrank  # noqa NOQA
 
 logger = logging.getLogger(__name__)

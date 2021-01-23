@@ -1,4 +1,0 @@
-target = "cellrank/_vendor"
-packages = [
-    "git+git://github.com/msmdev/msmtools@d662da6da54b8c792f5b3e30301fcd102c3a02ff"
-]

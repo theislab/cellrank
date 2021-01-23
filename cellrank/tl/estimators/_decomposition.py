@@ -4,6 +4,9 @@ from abc import ABC
 from typing import Any, Tuple, Union, Mapping, Optional
 from pathlib import Path
 
+from pygpcca import GPCCA as _GPCCA
+from pygpcca._sorted_schur import _check_conj_split
+
 import numpy as np
 from scipy.sparse.linalg import eigs
 
@@ -17,8 +20,6 @@ from cellrank.tl._utils import save_fig, _eigengap
 from cellrank.tl.estimators._utils import Metadata, _delegate
 from cellrank.tl.estimators._property import Property, KernelHolder, VectorPlottable
 from cellrank.tl.estimators._constants import A, F, P
-from cellrank._vendor.msmtools.util.sorted_schur import _check_conj_split
-from cellrank._vendor.msmtools.analysis.dense.gpcca import GPCCA as _GPCCA
 
 EPS = np.finfo(np.float64).eps
 
@@ -419,7 +420,7 @@ class Schur(VectorPlottable, Decomposable):
             Input probability distribution over all cells. If `None`, uniform is chosen.
         method
             Method for calculating the Schur vectors. Valid options are: `'krylov'` or `'brandts'`.
-            For benefits of each method, see :class:`msmtools.analysis.dense.gpcca.GPCCA`. The former is
+            For benefits of each method, see :class:`pygpcca.GPCCA`. The former is
             an iterative procedure that computes a partial, sorted Schur decomposition for large, sparse
             matrices whereas the latter computes a full sorted Schur decomposition of a dense matrix.
         %(eigen)s
