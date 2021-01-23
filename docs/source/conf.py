@@ -76,7 +76,7 @@ intersphinx_mapping = dict(
     python=("https://docs.python.org/3", None),
     numpy=("https://docs.scipy.org/doc/numpy/", None),
     scipy=("https://docs.scipy.org/doc/scipy/reference/", None),
-    networkx=("https://networkx.github.io/documentation/stable/", None),
+    networkx=("https://networkx.org/documentation/stable/", None),
     pandas=("https://pandas.pydata.org/pandas-docs/stable/", None),
     statsmodels=("https://www.statsmodels.org/stable/", None),
     matplotlib=("https://matplotlib.org/", None),
@@ -85,7 +85,7 @@ intersphinx_mapping = dict(
     seaborn=("https://seaborn.pydata.org/", None),
     pygam=("https://pygam.readthedocs.io/en/latest/", None),
     jax=("https://jax.readthedocs.io/en/latest/", None),
-    # TODO: add msmtools once the docs are up
+    pygpcca=("https://pygpcca.readthedocs.io/en/latest/", None),
 )
 
 # Add any paths that contain templates here, relative to this directory.
@@ -97,7 +97,8 @@ pygments_style = "sphinx"
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ["**.ipynb_checkpoints"]
+exclude_patterns = ["**.ipynb_checkpoints", "**.md5"]
+suppress_warnings = ["ref.citation"]
 
 # -- Notebooks
 nbsphinx_execute_arguments = [

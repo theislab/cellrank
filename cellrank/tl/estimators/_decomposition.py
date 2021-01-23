@@ -454,14 +454,14 @@ class Schur(VectorPlottable, Decomposable):
             self._gpcca._do_schur_helper(n_components + 1)
 
         # make it available for pl
-        setattr(self, A.SCHUR.s, self._gpcca.X)
-        setattr(self, A.SCHUR_MAT.s, self._gpcca.R)
+        setattr(self, A.SCHUR.s, self._gpcca._p_X)
+        setattr(self, A.SCHUR_MAT.s, self._gpcca._p_R)
 
         self._invalid_n_states = np.array(
             [
                 i
-                for i in range(2, len(self._gpcca.eigenvalues))
-                if _check_conj_split(self._gpcca.eigenvalues[:i])
+                for i in range(2, len(self._gpcca._p_eigenvalues))
+                if _check_conj_split(self._gpcca._p_eigenvalues[:i])
             ]
         )
         if len(self._invalid_n_states):
@@ -471,11 +471,11 @@ class Schur(VectorPlottable, Decomposable):
 
         self._write_eig_to_adata(
             {
-                "D": self._gpcca.eigenvalues,
-                "eigengap": _eigengap(self._gpcca.eigenvalues, alpha),
+                "D": self._gpcca._p_eigenvalues,
+                "eigengap": _eigengap(self._gpcca._p_eigenvalues, alpha),
                 "params": {
                     "which": which,
-                    "k": len(self._gpcca.eigenvalues),
+                    "k": len(self._gpcca._p_eigenvalues),
                     "alpha": alpha,
                 },
             },

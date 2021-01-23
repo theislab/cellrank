@@ -164,7 +164,8 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
             # if it were to split, it's automatically increased in `compute_schur`
             self.compute_schur(n_states + 1)
 
-        if self._gpcca.X.shape[1] < n_states:
+        # pre-computed X
+        if self._gpcca._p_X.shape[1] < n_states:
             logg.warning(
                 f"Requested more macrostates `{n_states}` than available "
                 f"Schur vectors `{self._gpcca.X.shape[1]}`. Recomputing the decomposition"
@@ -190,8 +191,8 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         )
 
         # cache the results and make sure we don't overwrite
-        self._set(A.SCHUR, self._gpcca.X)
-        self._set(A.SCHUR_MAT, self._gpcca.R)
+        self._set(A.SCHUR, self._gpcca.schur_vectors)
+        self._set(A.SCHUR_MAT, self._gpcca.schur_matrix)
 
         names = self._get(P.MACRO_MEMBER).names
 

@@ -72,6 +72,14 @@ table.longtable td {
     white-space: normal!important;
 }
 
+table.dataframe {
+    margin-left: unset!important;
+}
+
+div.highlight > pre {
+    background: #F5F5F5;
+}
+
 /* Parameters contain <strong> parts and don’t need bold font */
 .rst-content dl.field-list dl > dt { font-weight: unset }
 /* Add colon between return tuple element name and type */

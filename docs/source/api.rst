@@ -30,7 +30,7 @@ This module offers a high-level API to compute cell fates and driver genes.
 .. currentmodule:: cellrank
 
 .. autosummary::
-    :toctree: gen_modules
+    :toctree: api
 
     tl.transition_matrix
     tl.initial_states
@@ -48,7 +48,7 @@ Kernels are part of the low-level API and are used to estimate cell-to-cell tran
 .. currentmodule:: cellrank
 
 .. autosummary::
-    :toctree: gen_modules
+    :toctree: api
 
     tl.kernels.VelocityKernel
     tl.kernels.ConnectivityKernel
@@ -63,7 +63,7 @@ Estimators predict cell fates using the transitions derived from :ref:`Kernels`.
 .. currentmodule:: cellrank
 
 .. autosummary::
-    :toctree: gen_modules
+    :toctree: api
 
     tl.estimators.GPCCA
     tl.estimators.CFLARE
@@ -75,7 +75,7 @@ Plotting
 .. currentmodule:: cellrank
 
 .. autosummary::
-    :toctree: gen_modules
+    :toctree: api
 
     pl.initial_states
     pl.terminal_states
@@ -95,7 +95,7 @@ Utilities
 .. currentmodule:: cellrank
 
 .. autosummary::
-    :toctree: api/ul
+    :toctree: api
 
     ul.models.GAM
     ul.models.GAMR
@@ -120,7 +120,7 @@ Datasets
 .. currentmodule:: cellrank
 
 .. autosummary::
-    :toctree: api/datasets
+    :toctree: api
 
     datasets.pancreas
     datasets.lung
