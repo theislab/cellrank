@@ -191,8 +191,8 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         )
 
         # cache the results and make sure we don't overwrite
-        self._set(A.SCHUR, self._gpcca.schur_vectors)
-        self._set(A.SCHUR_MAT, self._gpcca.schur_matrix)
+        self._set(A.SCHUR, self._gpcca._p_X)
+        self._set(A.SCHUR_MAT, self._gpcca._p_R)
 
         names = self._get(P.MACRO_MEMBER).names
 
