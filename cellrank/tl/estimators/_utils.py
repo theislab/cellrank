@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Utility functions which deal with delegating methods."""
 import inspect
 from typing import *  # noqa

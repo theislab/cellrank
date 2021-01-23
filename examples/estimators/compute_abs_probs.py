@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Compute absorption probabilities
 --------------------------------
@@ -11,8 +10,9 @@ and next ask the question how likely each cell is to develop towards each of the
 efficient implementation of computing the absorption probabilities that scales to 100k+ cells.
 """
 
-import cellrank as cr
 import scvelo as scv
+
+import cellrank as cr
 
 adata = cr.datasets.pancreas_preprocessed("../example.h5ad")
 adata

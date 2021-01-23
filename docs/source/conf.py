@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 import os
 import sys
 import logging
-import subprocess
 from pathlib import Path
 from datetime import datetime
 from collections import ChainMap, defaultdict
@@ -15,7 +13,7 @@ HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE.parent.parent))
 sys.path.insert(0, os.path.abspath("_ext"))
 
-import cellrank  # noqa NOQA
+import cellrank
 
 logger = logging.getLogger(__name__)
 

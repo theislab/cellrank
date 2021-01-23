@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Abstract base class for all kernel-holding estimators."""
 import pickle
 from abc import ABC, abstractmethod
@@ -761,7 +760,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             Number of genes to plot.
         use_raw
             Whether to look in :paramref:`adata` ``.raw.var`` or :paramref:`adata` ``.var``.
-        **kwargs
+        kwargs
             Keyword arguments for :func:`scvelo.pl.scatter`.
 
         Returns
@@ -969,7 +968,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             States for which to compute absorption probabilities.
         compute_absorption_probabilities
             Whether to compute absorption probabilities or just %(initial_or_terminal)s states.
-        **kwargs
+        kwargs
             Keyword arguments.
 
         Returns
@@ -1074,7 +1073,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 self._kernel = PrecomputedKernel(self.kernel)
                 try:
                     pickle.dump(self, fout)
-                except Exception as e:
+                except Exception as e:  # noqa: B902
                     raise e
                 finally:
                     self._kernel = orig_kernel

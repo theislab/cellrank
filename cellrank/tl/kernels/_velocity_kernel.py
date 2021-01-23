@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Velocity kernel module."""
 from sys import version_info
 from copy import copy
@@ -316,13 +315,13 @@ class VelocityKernel(Kernel):
         return self
 
     @property
-    def logits(self) -> csr_matrix:  # noqa
+    def logits(self) -> csr_matrix:
         """Array of shape ``(n_cells, n_cells)`` containing the logits."""
         return self._logits
 
     @d.dedent
-    def copy(self) -> "VelocityKernel":  # noqa
-        """%(copy)s"""
+    def copy(self) -> "VelocityKernel":
+        """%(copy)s"""  # noqa
         vk = VelocityKernel(
             self.adata,
             backward=self.backward,

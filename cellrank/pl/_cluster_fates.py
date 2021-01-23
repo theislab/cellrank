@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Cluster fatess and similarity module."""
 
 from math import ceil
@@ -12,9 +11,9 @@ import pandas as pd
 from scipy.sparse import csr_matrix
 
 import matplotlib as mpl
-import matplotlib.cm as cm
 import matplotlib.colors
 import matplotlib.pyplot as plt
+from matplotlib import cm
 
 from cellrank import logging as logg
 from cellrank.ul._docs import d, inject_docs
@@ -100,7 +99,7 @@ def cluster_fates(
         For ``mode={m.PAGA_PIE.s!r}`` and ``basis='...'``, this controls the placement of the
         absorption probabilities legend.
     %(plotting)s
-    **kwargs
+    kwargs
         Keyword arguments for :func:`scvelo.pl.paga`, :func:`scanpy.pl.violin` or :func:`matplotlib.pyplot.bar`,
         depending on the value of ``mode``.
 
@@ -204,7 +203,7 @@ def cluster_fates(
                 label="average absorption probability",
             )
 
-        for ax in axes[i + 1 :]:  # noqa
+        for ax in axes[i + 1 :]:
             ax.remove()
 
         return fig
@@ -313,7 +312,7 @@ def cluster_fates(
                 violin(
                     adata, ylabel="absorption probability", keys=key, ax=ax, **kwargs
                 )
-            for ax in axes[_i + 1 :]:  # noqa
+            for ax in axes[_i + 1 :]:
                 ax.remove()
 
         return fig

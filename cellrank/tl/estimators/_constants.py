@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Attribute, property and function names for estimators."""
 from cellrank.tl._constants import PrettyEnum
 

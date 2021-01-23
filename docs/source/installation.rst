@@ -77,8 +77,8 @@ but this doesn't matter if the installer finally tells you::
     Successfully installed [insert package name here]
 
 On Mac OS, install `MPICH`_ as a message passing interface and then proceed as above, using either pip or the
-installation instructions given on the `PETSc`_ and `SLEPc`_ websites. The `SLEPc`_ homepage even offers a video tutorial
-explaining the installation.
+installation instructions given on the `PETSc`_ and `SLEPc`_ websites. The `SLEPc`_ homepage even offers a video
+tutorial explaining the installation.
 
 If after reading this, you still can't proceed with the installation, feel free to open a `GitHub issue`_.
 

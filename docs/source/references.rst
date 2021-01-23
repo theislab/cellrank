@@ -10,7 +10,8 @@ References
     `PNAS <https://doi.org/10.1073/pnas.0500334102>`__.
 
 .. [GPCCA18] Reuter, B. *et al.* (2018),
-   *Generalized Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on Amyloid β Conformational Dynamics Driven by an Oscillating Electric Field.*,
+   *Generalized Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on Amyloid β
+   Conformational Dynamics Driven by an Oscillating Electric Field.*,
    `Journal of Chemical Theory and Computation <https://doi.org/10.1021/acs.jctc.8b00079>`__.
 
 .. [Haghverdi16] Haghverdi *et al.* (2016),
@@ -74,5 +75,6 @@ References
     `Genome Biology <https://doi.org/10.1186/s13059-017-1382-0>`__.
 
 .. [Wolf19] Wolf *et al.* (2019),
-    *PAGA: Graph abstraction reconciles clustering with trajectory inference through a topology preserving map of single cells*,
+    *PAGA: Graph abstraction reconciles clustering with trajectory inference through a topology preserving map of
+    single cells*,
     `Genome Biology <https://doi.org/10.1186/s13059-019-1663-x>`__.

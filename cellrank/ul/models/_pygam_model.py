@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module containing :mod:`pygam` model implementation."""
 from copy import copy as _copy
 from copy import deepcopy
@@ -86,7 +85,7 @@ class GAM(BaseModel):
         If `'default'`, use the default grid. If `None`, don't perform a grid search.
     spline_kwargs
         Keyword arguments for :class:`pygam.s`.
-    **kwargs
+    kwargs
         Keyword arguments for :class:`pygam.pygam.GAM`.
     """
 
@@ -198,7 +197,7 @@ class GAM(BaseModel):
                     **kwargs,
                 )
                 return self
-            except Exception as e:
+            except Exception as e:  # noqa: B902
                 # workaround for: https://github.com/dswah/pyGAM/issues/273
                 self.model.fit(self.x, self.y, weights=self.w, **kwargs)
                 logg.error(
@@ -208,7 +207,7 @@ class GAM(BaseModel):
         try:
             self.model.fit(self.x, self.y, weights=self.w, **kwargs)
             return self
-        except Exception as e:
+        except Exception as e:  # noqa: B902
             raise RuntimeError(
                 f"Unable to fit `{type(self).__name__}` for gene "
                 f"`{self._gene!r}` in lineage `{self._lineage!r}`. Reason: `{e}`"

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from cellrank.logging._logging import (
     hint,
     info,

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module containing CellRank contants."""
 
 from abc import ABC, ABCMeta

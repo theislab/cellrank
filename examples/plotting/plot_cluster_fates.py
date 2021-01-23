@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Plot aggregated cellular fates
 ------------------------------
@@ -7,8 +6,9 @@ This example shows how to aggregate fate probabilities from the single cell leve
 and how to visualize these in various ways.
 """
 
-import cellrank as cr
 import scanpy as sc
+
+import cellrank as cr
 
 adata = cr.datasets.pancreas_preprocessed("../example.h5ad")
 adata

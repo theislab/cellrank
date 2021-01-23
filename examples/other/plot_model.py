@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Fit models and plot gene trends
 -------------------------------

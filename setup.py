@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import os
 from pathlib import Path
 
@@ -36,7 +35,7 @@ if __name__ == "__main__":
         install_requires=list(
             map(
                 str.strip,
-                open(os.path.abspath("requirements.txt"), "r").read().splitlines(),
+                open(os.path.abspath("requirements.txt")).read().splitlines(),
             )
         ),
         extras_require=dict(
@@ -57,13 +56,11 @@ if __name__ == "__main__":
                 r
                 for r in map(
                     str.strip,
-                    open(os.path.abspath("docs/requirements.txt"), "r")
-                    .read()
-                    .splitlines(),
+                    open(os.path.abspath("docs/requirements.txt")).read().splitlines(),
                 )
                 if "requirements.txt" not in r
             ],
-            dev=["pre-commit>=2.7.1"],
+            dev=["pre-commit>=2.9.0"],
         ),
         zip_safe=False,
         packages=find_packages(),

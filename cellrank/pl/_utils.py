@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Utility functions for CellRank plotting."""
 
 from copy import copy
@@ -22,9 +21,9 @@ import pandas as pd
 from pandas.api.types import is_categorical_dtype
 
 import matplotlib as mpl
-import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
+from matplotlib import cm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from cellrank import logging as logg
@@ -611,7 +610,7 @@ def _trends_helper(
         Figure to use.
     ax
         Ax to use.
-    **kwargs
+    kwargs
         Keyword arguments for :meth:`cellrank.ul.models.BaseModel.plot`.
 
     Returns
@@ -808,7 +807,7 @@ def _position_legend(ax: mpl.axes.Axes, legend_loc: str, **kwargs) -> mpl.legend
         Ax where to position the legend.
     legend_loc
         Position of legend.
-    **kwargs
+    kwargs
         Keyword arguments for :func:`matplotlib.pyplot.legend`.
 
     Returns
@@ -910,7 +909,7 @@ def _create_callbacks(
         dummy model and running the function. We're assuming that the callback isn't really a pricey operation.
 
         If `None`, it is only performed for non-default callbacks.
-    **kwargs
+    kwargs
         Keyword arguments for ``callback`` when performing the sanity check.
 
     Returns
@@ -985,7 +984,7 @@ def _create_callbacks(
                     ), f"Callback modified the lineage from `{lineage!r}` to `{model._lineage!r}`."
                     if isinstance(model, FailedModel):
                         model.reraise()
-                except Exception as e:
+                except Exception as e:  # noqa: B902
                     raise RuntimeError(
                         f"Callback validation failed for gene `{gene!r}` and lineage `{lineage!r}`."
                     ) from e

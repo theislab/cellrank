@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Lineage class module."""
 
 from types import FunctionType, MappingProxyType

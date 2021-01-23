@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Datasets module."""
 
 import os

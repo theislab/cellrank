@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from cellrank.tl.kernels._base_kernel import Kernel, Constant
 from cellrank.tl.kernels._palantir_kernel import PalantirKernel
 from cellrank.tl.kernels._velocity_kernel import VelocityKernel

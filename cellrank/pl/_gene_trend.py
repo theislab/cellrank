@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Gene trend module."""
 
 from types import MappingProxyType
@@ -9,8 +8,8 @@ import numpy as np
 import pandas as pd
 
 import matplotlib
-import matplotlib.cm as cm
 import matplotlib.pyplot as plt
+from matplotlib import cm
 
 from cellrank import logging as logg
 from cellrank.ul._docs import d
@@ -144,7 +143,7 @@ def gene_trends(
     %(plotting)s
     plot_kwargs
         Keyword arguments for :meth:`cellrank.ul.models.BaseModel.plot`.
-    **kwargs
+    kwargs
         Keyword arguments for :meth:`cellrank.ul.models.BaseModel.prepare`.
 
     Returns

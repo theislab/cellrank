@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Kernel module."""
 
 from abc import ABC, abstractmethod
@@ -102,8 +101,7 @@ class KernelExpression(Pickleable, ABC):
         Returns
         -------
         %(adata_ret)s
-        """  # noqa
-        pass
+        """
 
     @adata.setter
     @abstractmethod
@@ -158,7 +156,7 @@ class KernelExpression(Pickleable, ABC):
         ----------
         *args
             Positional arguments.
-        **kwargs
+        kwargs
             Keyword arguments.
 
         Returns
@@ -166,7 +164,6 @@ class KernelExpression(Pickleable, ABC):
         :class:`cellrank.tl.kernels.KernelExpression`
             Self.
         """
-        pass
 
     @d.get_sectionsf("write_to_adata", sections=["Parameters"])
     @inject_docs()  # get rid of {{}}
@@ -201,7 +198,6 @@ class KernelExpression(Pickleable, ABC):
     @abstractmethod
     def copy(self) -> "KernelExpression":
         """Return a copy of itself. Note that the underlying :paramref:`adata` object is not copied."""
-        pass
 
     def _maybe_compute_cond_num(self):
         if self._compute_cond_num and self._cond_num is None:
@@ -415,7 +411,7 @@ class UnaryKernelExpression(KernelExpression, ABC):
         Returns
         -------
         %(adata_ret)s
-        """  # noqa
+        """
         return self._adata
 
     @adata.setter
@@ -507,7 +503,7 @@ class NaryKernelExpression(KernelExpression, ABC):
         Returns
         -------
         %(adata_ret)s
-        """  # noqa
+        """
         # we can do this because Constant requires adata as well
         return self._kexprs[0].adata
 
@@ -560,7 +556,7 @@ class Kernel(UnaryKernelExpression, ABC):
         Whether to compute the condition number of the transition matrix. For large matrices, this can be very slow.
     check_connectivity
         Check whether the underlying KNN graph is connected.
-    **kwargs
+    kwargs
         Keyword arguments which can specify key to be read from :paramref:`adata` object.
     """
 
@@ -692,8 +688,8 @@ class Constant(Kernel):
         return self
 
     @d.dedent
-    def copy(self) -> "Constant":  # noqa
-        """%(copy)s"""
+    def copy(self) -> "Constant":
+        """%(copy)s"""  # noqa: D400, D401
         return Constant(self.adata, self.transition_matrix, self.backward)
 
     def __invert__(self) -> "Constant":
@@ -738,8 +734,8 @@ class ConstantMatrix(Kernel):
         self._recalculate(value)
 
     @d.dedent
-    def copy(self) -> "ConstantMatrix":  # noqa
-        """%(copy)s"""
+    def copy(self) -> "ConstantMatrix":
+        """%(copy)s"""  # noqa: D400, D401
         return ConstantMatrix(
             self.adata, self._value, copy(self._mat_scaler), self.backward
         )
@@ -802,8 +798,8 @@ class SimpleNaryExpression(NaryKernelExpression):
         return self
 
     @d.dedent
-    def copy(self) -> "SimpleNaryExpression":  # noqa
-        """%(copy)s"""
+    def copy(self) -> "SimpleNaryExpression":
+        """%(copy)s"""  # noqa: D400, D401
         constructor = type(self)
         kwargs = {"op_name": self._op_name, "fn": self._fn}
 

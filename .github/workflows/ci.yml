@@ -1,143 +1,143 @@
 name: CI
 
 on:
-  schedule:
-    - cron: '00 00 * * 1'  # run every Monday at 09:00
-  push:
-    branches:
-      - master
-    tags:
-      - v*
-  pull_request:
-    branches:
-      - master
+    schedule:
+    -   cron: 00 00 * * 1  # run every Monday at 09:00
+    push:
+        branches:
+        -   master
+        tags:
+        -   v*
+    pull_request:
+        branches:
+        -   master
 
 jobs:
-  init:
-    runs-on: ubuntu-latest
-    outputs:
-      skip: ${{ steps.ci-skip-step.outputs.ci-skip }}
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-      - id: ci-skip-step
-        uses: mstachniuk/ci-skip@master
-        with:
-          commit-filter: '[ci skip];[ci-skip];[skip ci];[skip-ci]'
-          commit-filter-separator: ';'
+    init:
+        runs-on: ubuntu-latest
+        outputs:
+            skip: ${{ steps.ci-skip-step.outputs.ci-skip }}
+        steps:
+        -   uses: actions/checkout@v2
+            with:
+                fetch-depth: 0
+        -   id: ci-skip-step
+            uses: mstachniuk/ci-skip@master
+            with:
+                commit-filter: '[ci skip];[ci-skip];[skip ci];[skip-ci]'
+                commit-filter-separator: ;
 
-  linting:
-    needs: init
-    if: ${{ github.event_name == 'schedule' || needs.init.outputs.skip == 'false' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Set up Python 3.8
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.8
-      - name: Install dependencies
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install pandoc
-          python -m pip install --upgrade pip
-          pip install -e".[docs,dev]"
-      - name: Run static analysis
-        run: |
-          pre-commit run --all-files --show-diff-on-failure
+    linting:
+        needs: init
+        if: ${{ github.event_name == 'schedule' || needs.init.outputs.skip == 'false' }}
+        runs-on: ubuntu-latest
+        steps:
+        -   uses: actions/checkout@v2
+        -   name: Set up Python 3.8
+            uses: actions/setup-python@v2
+            with:
+                python-version: 3.8
+        -   name: Install dependencies
+            run: |
+                sudo apt-get update -y
+                sudo apt-get install pandoc
+                python -m pip install --upgrade pip
+                pip install -e".[docs,dev]"
+        -   name: Run static analysis
+            run: |
+                pre-commit run --all-files --show-diff-on-failure
 
-  test:
-    needs: linting
-    runs-on: ${{ matrix.os }}
-    strategy:
-      max-parallel: 3
-      matrix:
-        python: [3.7]
-        os: [ubuntu-latest, macos-latest]
-        use_slepc: [false]
-        include:
-          - os: ubuntu-latest
-            python: 3.8
-            use_slepc: true
-    env:
-      OS: ${{ matrix.os }}
-      PYTHON: ${{ matrix.python }}
-      USE_SLEPC: ${{ matrix.use_slepc }}
-
-    steps:
-      - uses: actions/checkout@v2
-      - name: Set up Python ${{ matrix.python }}
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python }}
-
-      - name: Get pip cache dir
-        id: pip-cache
-        run: |
-          echo "::set-output name=dir::$(pip cache dir)"
-      - name: Cache pip
-        uses: actions/cache@v2
-        with:
-          path: ${{ steps.pip-cache.outputs.dir }}
-          # not an ideal key, since 3.7.9 and 3.7.10 might share cache if an update on GA occurs
-          key: ${{ runner.os }}-{{ runner.python }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-{{ runner.python }}-pip-
-
-      - name: Before install
-        run: |
-          ./.scripts/ci/before_install.sh
-      - name: Install
-        run: |
-          ./.scripts/ci/install.sh
-
-      - name: Testing
-        timeout-minutes: 20
-        run: |
-          python -m pytest --cov --cov-report=term-missing --cov-config=./.coveragerc --cov-report=xml -vv
-
-      - name: Upload coverage
+    test:
+        needs: linting
+        runs-on: ${{ matrix.os }}
+        strategy:
+            max-parallel: 3
+            matrix:
+                python: [3.7]
+                os: [ubuntu-latest, macos-latest]
+                use_slepc: [false]
+                include:
+                -   os: ubuntu-latest
+                    python: 3.8
+                    use_slepc: true
         env:
-          CODECOV_NAME: ${{ matrix.os }}-${{ matrix.python }}-{{ matrix.use_slepc }}
-        run: |
-          codecov --no-color --required --flags unittests
+            OS: ${{ matrix.os }}
+            PYTHON: ${{ matrix.python }}
+            USE_SLEPC: ${{ matrix.use_slepc }}
 
-  regenerate:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Rebuild tutorials
-        uses: peter-evans/repository-dispatch@v1
-        with:
-          token: ${{ secrets.ACCESS_TOKEN }}
-          repository: theislab/cellrank_notebooks
-          event-type: rebuild
-          client-payload: '{"ref": "${{ github.ref }}", "sha": "${{ github.sha }}"}'
+        steps:
+        -   uses: actions/checkout@v2
+        -   name: Set up Python ${{ matrix.python }}
+            uses: actions/setup-python@v2
+            with:
+                python-version: ${{ matrix.python }}
 
-  deploy:
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Set up Python 3.8
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.8
-      - name: Install pypa/build
-        run: |
-          python -m pip install --upgrade pip
-          pip install build
-      - name: Build a binary wheel and a source tarball
-        run: |
-          python -m build --sdist --wheel --outdir dist/
+        -   name: Get pip cache dir
+            id: pip-cache
+            run: |
+                echo "::set-output name=dir::$(pip cache dir)"
+        -   name: Cache pip
+            uses: actions/cache@v2
+            with:
+                path: ${{ steps.pip-cache.outputs.dir }}
+          # not an ideal key, since 3.7.9 and 3.7.10 might share cache if an update on GA occurs
+                key: ${{ runner.os }}-{{ runner.python }}-pip-${{ hashFiles('**/requirements.txt') }}
+                restore-keys: |
+                    ${{ runner.os }}-{{ runner.python }}-pip-
 
-      - name: Publish package on PyPI
-        uses: pypa/gh-action-pypi-publish@master
-        with:
-          user: __token__
-          password: ${{ secrets.PYPI_TOKEN }}
-          skip_existing: true
-          verbose: true
+        -   name: Before install
+            run: |
+                ./.scripts/ci/before_install.sh
+        -   name: Install
+            run: |
+                ./.scripts/ci/install.sh
+
+        -   name: Testing
+            timeout-minutes: 20
+            run: |
+                python -m pytest --cov --cov-report=term-missing --cov-config=./.coveragerc --cov-report=xml -vv
+
+        -   name: Upload coverage
+            env:
+                CODECOV_NAME: ${{ matrix.os }}-${{ matrix.python }}-{{ matrix.use_slepc }}
+            run: |
+                codecov --no-color --required --flags unittests
+
+    regenerate:
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        needs: test
+        runs-on: ubuntu-latest
+        steps:
+        -   name: Rebuild tutorials
+            uses: peter-evans/repository-dispatch@v1
+            with:
+                token: ${{ secrets.ACCESS_TOKEN }}
+                repository: theislab/cellrank_notebooks
+                event-type: rebuild
+                client-payload: '{"ref": "${{ github.ref }}", "sha": "${{ github.sha }}"}'
+
+    deploy:
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+        needs: test
+        runs-on: ubuntu-latest
+        steps:
+        -   uses: actions/checkout@v2
+        -   name: Set up Python 3.8
+            uses: actions/setup-python@v2
+            with:
+                python-version: 3.8
+        -   name: Install pypa/build
+            run: |
+                python -m pip install --upgrade pip
+                pip install build
+        -   name: Build a binary wheel and a source tarball
+            run: |
+                python -m build --sdist --wheel --outdir dist/
+
+        -   name: Publish package on PyPI
+            uses: pypa/gh-action-pypi-publish@master
+            with:
+                user: __token__
+                password: ${{ secrets.PYPI_TOKEN }}
+                skip_existing: true
+                verbose: true

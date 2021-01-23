@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module containing all models interfacing R's mgcv package."""
 from copy import copy, deepcopy
 from typing import Any, Tuple, Union, Optional
@@ -51,7 +50,7 @@ class GAMR(BaseModel):
         If `None`, no offset is used.
     smoothing_penalty
         Penalty for the smoothing term. The larger the value, the smoother the fitted curve.
-    **kwargs
+    kwargs
         Keyword arguments for ``gam.control``.
         See `here <https://www.rdocumentation.org/packages/mgcv/versions/1.8-33/topics/gam.control>`__ for reference.
     """  # noqa

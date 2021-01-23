@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """General utility functions module."""
 import pickle
 from types import MappingProxyType

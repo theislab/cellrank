@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Utility functions for kernels, mostly VelocityKernel."""
 from typing import Tuple, Callable, Optional
 from inspect import signature
@@ -143,7 +142,7 @@ def _filter_kwargs(_fn: Callable, **kwargs) -> dict:
     ----------
     _fn
         Function for which to filter keyword arguments.
-    **kwargs
+    kwargs
         Keyword arguments to filter
 
     Returns

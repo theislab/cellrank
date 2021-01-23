@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 import pickle
 from io import BytesIO
+from unittest import mock
 from collections import defaultdict
 from html.parser import HTMLParser
 
-import mock
 import pytest
 
 import numpy as np
@@ -12,7 +11,7 @@ from pandas import DataFrame
 
 import matplotlib.colors as colors
 
-import cellrank.tl._lineage as mocker  # noqa
+import cellrank.tl._lineage as mocker
 from cellrank.tl import Lineage
 from cellrank.tl._colors import _compute_mean_color, _create_categorical_colors
 from cellrank.tl._lineage import _HT_CELLS, LineageView
@@ -304,7 +303,7 @@ class TestLineageAccessor:
         )
 
         with pytest.raises(KeyError):
-            y = l["quux"]
+            l["quux"]
 
     def test_row_subset_with_ints(self):
         x = np.random.random((10, 3))

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Matrix decomposition module."""
 from abc import ABC
 from typing import Any, Tuple, Union, Mapping, Optional
@@ -220,7 +219,7 @@ class Eigen(VectorPlottable, Decomposable):
         %(plotting)s
         marker
             Marker symbol used, valid options can be found in :mod:`matplotlib.markers`.
-        **kwargs
+        kwargs
             Keyword arguments for :func:`matplotlib.pyplot.scatter`.
 
         Returns
@@ -506,7 +505,7 @@ class Schur(VectorPlottable, Decomposable):
         cmap
             Colormap to use.
         %(plotting)s
-        **kwargs
+        kwargs
             Keyword arguments for :func:`seaborn.heatmap`.
 
         Returns

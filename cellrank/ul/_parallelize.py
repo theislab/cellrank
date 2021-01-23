@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module used to parallelize model fitting."""
 
 from typing import Any, Union, Callable, Optional, Sequence

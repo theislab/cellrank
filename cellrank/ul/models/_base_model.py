@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Base class for all models."""
 import re
 from abc import ABC, ABCMeta, abstractmethod
@@ -13,7 +12,7 @@ from scipy.sparse import spmatrix
 from scipy.ndimage import convolve
 
 import matplotlib as mpl
-from matplotlib import cm as cm
+from matplotlib import cm
 from matplotlib import colors as mcolors
 from matplotlib import pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -51,7 +50,7 @@ def _handle_exception(return_type: FailedReturnType, func: Callable) -> Callable
                 if isinstance(instance, FailedModel):
                     instance.reraise()
                 return wrapped(*args, **kwargs)
-            except Exception as e:
+            except Exception as e:  # noqa: B902
                 return exception_handler(instance, e, *args, **kwargs)
 
         return wrapper
@@ -212,7 +211,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         Returns
         -------
         %(adata)s
-        """  # noqa
+        """
         return self._adata
 
     @property
@@ -283,7 +282,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
     @property
     @d.get_summaryf("base_model_conf_int")
     def conf_int(self) -> np.ndarray:
-        """Array of shape `(n_samples, 2)` containing the lower and upper bounds of the confidence interval."""  # noqa
+        """Array of shape `(n_samples, 2)` containing the lower and upper bounds of the confidence interval."""
         return self._conf_int
 
     @d.get_sectionsf("base_model_prepare", sections=["Parameters", "Returns"])
@@ -552,7 +551,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
             Dependent variables, array of shape `(n_samples, 1)`. If `None`, use :paramref:`y`.
         w
             Optional weights of :paramref:`x`, array of shape `(n_samples,)`. If `None`, use :paramref:`w`.
-        **kwargs
+        kwargs
             Keyword arguments for underlying :paramref:`model`'s fitting function.
 
         Returns
@@ -599,7 +598,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
             Array of shape `(n_samples,)` used for prediction. If `None`, use :paramref:`x_test`.
         key_added
             Attribute name where to save the :paramref:`x_test` for later use. If `None`, don't save it.
-        **kwargs
+        kwargs
             Keyword arguments for underlying :paramref:`model`'s prediction method.
 
         Returns
@@ -609,7 +608,6 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
 
                 - :paramref:`y_test` - %(base_model_y_test.summary)s
         """
-        pass
 
     @abstractmethod
     @d.get_sectionsf("base_model_ci", sections=["Parameters", "Returns"])
@@ -629,7 +627,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         ----------
         x_test
             Array of shape `(n_samples,)` used for confidence interval calculation. If `None`, use :paramref:`x_test`.
-        **kwargs
+        kwargs
             Keyword arguments for underlying :paramref:`model`'s confidence method
             or for :meth:`default_confidence_interval`.
 
@@ -640,7 +638,6 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
 
                 - :paramref:`conf_int` - %(base_model_conf_int.summary)s
         """
-        pass
 
     @d.dedent
     def default_confidence_interval(
@@ -782,7 +779,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
             If `True`, return the figure object.
         save
             Filename where to save the plot. If `None`, just shows the plots.
-        **kwargs
+        kwargs
             Keyword arguments for :meth:`matplotlib.axes.Axes.legend`, e.g. to disable the legend, specify ``loc=None``.
             Only available when ``show_lineage_probability=True``.
 
@@ -1043,9 +1040,8 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
 
     @abstractmethod
     @d.dedent
-    def copy(self) -> "BaseModel":  # noqa
+    def copy(self) -> "BaseModel":
         """%(copy)s"""  # noqa
-        pass
 
     def __copy__(self) -> "BaseModel":
         return self.copy()
@@ -1170,13 +1166,11 @@ class FailedModel(BaseModel):
         **kwargs,
     ) -> np.ndarray:
         """Do nothing."""
-        pass
 
     def confidence_interval(
         self, x_test: Optional[np.ndarray] = None, **kwargs
     ) -> np.ndarray:
         """Do nothing."""
-        pass
 
     def default_confidence_interval(
         self,
@@ -1184,7 +1178,6 @@ class FailedModel(BaseModel):
         **kwargs,
     ) -> np.ndarray:
         """Do nothing."""
-        pass
 
     def reraise(self) -> None:
         """Raise the original exception with additional model information."""
@@ -1329,7 +1322,7 @@ class FittedModel(BaseModel):
     def confidence_interval(
         self, x_test: Optional[np.ndarray] = None, **kwargs
     ) -> np.ndarray:
-        """%(base_model_conf_int.summary)s Raise a :class:`RuntimeError` if not present."""  # noqa
+        """%(base_model_conf_int.summary)s Raise a :class:`RuntimeError` if not present."""
         if self.conf_int is None:
             raise RuntimeError(
                 "No confidence interval has been supplied. "
@@ -1343,7 +1336,7 @@ class FittedModel(BaseModel):
         x_test: Optional[np.ndarray] = None,
         **kwargs,
     ) -> np.ndarray:
-        """%(base_model_conf_int.summary)s Raise a :class:`RuntimeError` if not present."""  # noqa
+        """%(base_model_conf_int.summary)s Raise a :class:`RuntimeError` if not present."""
         return self.confidence_interval()
 
     @d.dedent

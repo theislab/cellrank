@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Lineages module."""
 
 from typing import Union, TypeVar, Optional, Sequence
@@ -48,7 +47,7 @@ def lineages(
         Whether to update the existing ``adata`` object or to return a copy.
     return_estimator
         Whether to return the estimator. Only available when ``copy=False``.
-    **kwargs
+    kwargs
         Keyword arguments for :meth:`cellrank.tl.estimators.BaseEstimator.compute_absorption_probabilities`.
 
     Returns
@@ -106,7 +105,7 @@ def lineage_drivers(
     seed: Optional[int] = None,
     return_drivers: bool = True,
     **kwargs,
-) -> Optional[pd.DataFrame]:  # noqa
+) -> Optional[pd.DataFrame]:
     """
     %(lineage_drivers.full_desc)s
 
@@ -123,7 +122,7 @@ def lineage_drivers(
     References
     ----------
     %(lineage_drivers.references)s
-    """
+    """  # noqa: D400
 
     # create dummy kernel and estimator
     pk = DummyKernel(adata, backward=backward)

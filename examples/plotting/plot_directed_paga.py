@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Plot directed PAGA
 ------------------
@@ -11,8 +10,9 @@ to include prior information in the form of a pseudotemporal ordering or initial
 the possible edge set. We further replace nodes by pie charts that show average CellRank fate probabilities.
 """
 
-import cellrank as cr
 import scvelo as scv
+
+import cellrank as cr
 
 adata = cr.datasets.pancreas_preprocessed("../example.h5ad")
 adata

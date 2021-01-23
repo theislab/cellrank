@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import pytest
 from _helpers import create_model, assert_array_nan_equal, jax_not_installed_skip
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Base properties used within the estimators."""
 import sys
 from abc import ABC, ABCMeta, abstractmethod
@@ -189,8 +188,6 @@ class PropertyMeta(ABCMeta, type):
 class Property(ABC, metaclass=PropertyMeta):
     """Base class for all the properties."""
 
-    pass
-
 
 class KernelHolder(ABC):
     """Base class which holds a :class:`cellrank.tool.kernels._kernel.KernelExpression`."""
@@ -257,7 +254,7 @@ class KernelHolder(ABC):
         Returns
         -------
         %(adata_ret)s
-        """  # noqa
+        """
         return self.kernel.adata
 
     def __len__(self):
@@ -303,7 +300,7 @@ class VectorPlottable(KernelHolder, Property):
         cluster_key
             Key in :paramref:`adata` ``.obs`` for plotting categorical observations.
         %(basis)s
-        **kwargs
+        kwargs
             Keyword arguments for :func:`scvelo.pl.scatter`.
 
         Returns
@@ -418,7 +415,7 @@ class Plottable(KernelHolder, Property):
         title
             The title of the plot.
         %(basis)s
-        **kwargs
+        kwargs
             Keyword arguments for :func:`scvelo.pl.scatter`.
 
         Returns
@@ -560,7 +557,7 @@ class Plottable(KernelHolder, Property):
         cmap
             Colormap to use.
         %(basis)s
-        **kwargs
+        kwargs
             Keyword arguments for :func:`scvelo.pl.scatter`.
 
         Returns
@@ -919,16 +916,14 @@ class Partitioner(KernelHolder, ABC):
 
     @property
     def recurrent_classes(self):
-        """Recurrent classes of the Markov chain."""  # noqa
+        """Recurrent classes of the Markov chain."""
         return self._rec_classes
 
     @property
     def transient_classes(self):
-        """Transient classes of the Markov chain."""  # noqa
+        """Transient classes of the Markov chain."""
         return self._trans_classes
 
 
 class LineageEstimatorMixin(TerminalStates, AbsProbs, LinDrivers, Pickleable, ABC):
     """Mixin containing terminal states and absorption probabilities."""
-
-    pass

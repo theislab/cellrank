@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module used for finding initial and terminal states."""
 from types import MappingProxyType
 from typing import Union, Mapping, TypeVar, Optional
@@ -64,7 +63,7 @@ return_estimator
     Whether to return the estimator. Only available when ``copy=False``.
 fit_kwargs
     Keyword arguments for :meth:`cellrank.tl.BaseEstimator.fit`, such as ``n_cells``.
-**kwargs
+kwargs
     Keyword arguments for :func:`cellrank.tl.transition_matrix`, such as ``weight_connectivities`` or ``softmax_scale``.
 
 Returns
@@ -162,7 +161,7 @@ def _initial_terminal(
         bwd_mode="\n%(velocity_backward_mode_high_lvl)s",
     )
 )
-def initial_states(
+def initial_states(  # noqa: D103
     adata: AnnData,
     estimator: type(BaseEstimator) = GPCCA,
     mode: str = VelocityMode.DETERMINISTIC.s,
@@ -175,7 +174,7 @@ def initial_states(
     return_estimator: bool = False,
     fit_kwargs: Mapping = MappingProxyType({}),
     **kwargs,
-) -> Optional[AnnData]:  # noqa
+) -> Optional[AnnData]:
 
     return _initial_terminal(
         adata,
@@ -201,7 +200,7 @@ def initial_states(
         direction=_terminal, key_added=TermStatesKey.FORWARD.s, bwd_mode=""
     )
 )
-def terminal_states(
+def terminal_states(  # noqa: D103
     adata: AnnData,
     estimator: type(BaseEstimator) = GPCCA,
     mode: str = VelocityMode.DETERMINISTIC.s,
@@ -213,7 +212,7 @@ def terminal_states(
     return_estimator: bool = False,
     fit_kwargs: Mapping = MappingProxyType({}),
     **kwargs,
-) -> Optional[AnnData]:  # noqa
+) -> Optional[AnnData]:
 
     return _initial_terminal(
         adata,

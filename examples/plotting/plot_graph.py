@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Plot graph structures
 ---------------------
@@ -6,8 +5,9 @@ Plot graph structures
 This functions show how to plot graph structures, such as the transition matrix.
 """
 
-import cellrank as cr
 import numpy as np
+
+import cellrank as cr
 
 adata = cr.datasets.pancreas_preprocessed("../example.h5ad")
 adata

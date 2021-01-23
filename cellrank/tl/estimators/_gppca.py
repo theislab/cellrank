@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Generalized Perron Cluster Cluster Analysis [GPCCA18]_."""
 
 from types import MappingProxyType
@@ -385,7 +384,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
 
                 - :paramref:`{fsp}`
                 - :paramref:`{fs}`
-        """  # noqa
+        """
 
         if len(self._get(P.MACRO).cat.categories) == 1:
             logg.warning("Found only one macrostate. Making it the single main state")
@@ -445,7 +444,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
             Number of real Schur vectors to consider.
         key_added
             Key in :paramref:`adata` ``.obs`` where to save the pseudotime.
-        **kwargs
+        kwargs
             Keyword arguments for :meth:`cellrank.tl.GPCCA.compute_schur` if Schur decomposition is not found.
 
         Returns
@@ -553,7 +552,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         %(plotting)s
         text_kwargs
             Keyword arguments for :func:`matplotlib.pyplot.text`.
-        **kwargs
+        kwargs
             Keyword arguments for :func:`matplotlib.pyplot.imshow`.
 
         Returns
@@ -1064,7 +1063,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
             Method to use when computing the Schur decomposition. Valid options are: `'krylov'` or `'brandts'`.
         compute_absorption_probabilities
             Whether to compute the absorption probabilities or only the %(initial_or_terminal)s states.
-        **kwargs
+        kwargs
             Keyword arguments for :meth:`cellrank.tl.estimators.GPCCA.compute_macrostates`.
 
         Returns

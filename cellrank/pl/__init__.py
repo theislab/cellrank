@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from cellrank.pl._graph import graph
 from cellrank.pl._heatmap import heatmap
 from cellrank.pl._lineages import lineages, lineage_drivers
