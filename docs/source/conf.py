@@ -97,7 +97,11 @@ pygments_style = "sphinx"
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ["**.ipynb_checkpoints", "**.md5"]
+exclude_patterns = [
+    "**.md5",
+    "**.py",
+    "**.ipynb_checkpoints",
+]  # ignore anything that isn't .rst
 suppress_warnings = ["ref.citation"]
 
 # -- Notebooks

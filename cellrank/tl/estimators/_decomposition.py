@@ -7,6 +7,7 @@ from pygpcca import GPCCA as _GPCCA
 from pygpcca._sorted_schur import _check_conj_split
 
 import numpy as np
+from scipy.sparse import issparse
 from scipy.sparse.linalg import eigs
 
 import matplotlib.pyplot as plt
@@ -439,9 +440,13 @@ class Schur(VectorPlottable, Decomposable):
                 f"Number of components must be `>=2`, found `{n_components}`."
             )
 
-        self._gpcca = _GPCCA(
-            self.transition_matrix, eta=initial_distribution, z=which, method=method
-        )
+        if method == "brandts" and issparse(self.transition_matrix):
+            logg.warning("For `method='brandts'`, dense matrix is required. Densifying")
+            tmat = self.transition_matrix.A
+        else:
+            tmat = self.transition_matrix
+
+        self._gpcca = _GPCCA(tmat, eta=initial_distribution, z=which, method=method)
         start = logg.info("Computing Schur decomposition")
 
         try:
