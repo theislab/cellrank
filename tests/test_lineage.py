@@ -304,7 +304,7 @@ class TestLineageAccessor:
         )
 
         with pytest.raises(KeyError):
-            y = l["quux"]
+            l["quux"]
 
     def test_row_subset_with_ints(self):
         x = np.random.random((10, 3))

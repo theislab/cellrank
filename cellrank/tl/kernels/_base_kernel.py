@@ -103,7 +103,6 @@ class KernelExpression(Pickleable, ABC):
         -------
         %(adata_ret)s
         """  # noqa
-        pass
 
     @adata.setter
     @abstractmethod
@@ -166,7 +165,6 @@ class KernelExpression(Pickleable, ABC):
         :class:`cellrank.tl.kernels.KernelExpression`
             Self.
         """
-        pass
 
     @d.get_sectionsf("write_to_adata", sections=["Parameters"])
     @inject_docs()  # get rid of {{}}
@@ -201,7 +199,6 @@ class KernelExpression(Pickleable, ABC):
     @abstractmethod
     def copy(self) -> "KernelExpression":
         """Return a copy of itself. Note that the underlying :paramref:`adata` object is not copied."""
-        pass
 
     def _maybe_compute_cond_num(self):
         if self._compute_cond_num and self._cond_num is None:
