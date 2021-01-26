@@ -186,7 +186,6 @@ class Hessian(ABC, metaclass=HessianMeta):  # noqa: D101
 
         If using :mod:`jax` to compute the Hessian, please specify a class attribute ``__use_jax__ = True``.
         """
-        pass
 
 
 class SimilaritySchemeABC(ABC):
@@ -217,7 +216,6 @@ class SimilaritySchemeABC(ABC):
         :class:`numpy.ndarray`, :class:`numpy.ndarray`
             The probability and logits arrays of shape ``(n_neighbors,)``.
         """
-        pass
 
     def __repr__(self):
         return f"<{self.__class__.__name__}>"

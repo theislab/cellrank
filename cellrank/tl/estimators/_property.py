@@ -189,8 +189,6 @@ class PropertyMeta(ABCMeta, type):
 class Property(ABC, metaclass=PropertyMeta):
     """Base class for all the properties."""
 
-    pass
-
 
 class KernelHolder(ABC):
     """Base class which holds a :class:`cellrank.tool.kernels._kernel.KernelExpression`."""
@@ -930,5 +928,3 @@ class Partitioner(KernelHolder, ABC):
 
 class LineageEstimatorMixin(TerminalStates, AbsProbs, LinDrivers, Pickleable, ABC):
     """Mixin containing terminal states and absorption probabilities."""
-
-    pass

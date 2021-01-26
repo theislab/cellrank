@@ -609,7 +609,6 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
 
                 - :paramref:`y_test` - %(base_model_y_test.summary)s
         """
-        pass
 
     @abstractmethod
     @d.get_sectionsf("base_model_ci", sections=["Parameters", "Returns"])
@@ -640,7 +639,6 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
 
                 - :paramref:`conf_int` - %(base_model_conf_int.summary)s
         """
-        pass
 
     @d.dedent
     def default_confidence_interval(
@@ -1045,7 +1043,6 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
     @d.dedent
     def copy(self) -> "BaseModel":  # noqa
         """%(copy)s"""  # noqa
-        pass
 
     def __copy__(self) -> "BaseModel":
         return self.copy()
@@ -1170,13 +1167,11 @@ class FailedModel(BaseModel):
         **kwargs,
     ) -> np.ndarray:
         """Do nothing."""
-        pass
 
     def confidence_interval(
         self, x_test: Optional[np.ndarray] = None, **kwargs
     ) -> np.ndarray:
         """Do nothing."""
-        pass
 
     def default_confidence_interval(
         self,
@@ -1184,7 +1179,6 @@ class FailedModel(BaseModel):
         **kwargs,
     ) -> np.ndarray:
         """Do nothing."""
-        pass
 
     def reraise(self) -> None:
         """Raise the original exception with additional model information."""
