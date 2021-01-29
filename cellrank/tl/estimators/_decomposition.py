@@ -360,7 +360,7 @@ class Eigen(VectorPlottable, Decomposable):
 
         # add dashed line for the eigengap, ticks, labels, title and legend
         if show_eigengap and eig["eigengap"] < n:
-            ax.axvline(eig["eigengap"], label="eigengap", ls="--", lw=1)
+            ax.axvline(eig["eigengap"], label="eigengap", ls="--", lw=2, c="k")
 
         ax.set_xlabel("index")
         if show_all_xticks:
