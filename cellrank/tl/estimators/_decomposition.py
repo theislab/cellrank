@@ -154,7 +154,7 @@ class Eigen(VectorPlottable, Decomposable):
         %(plot_vectors.returns)s
         """
 
-        eig = getattr(self, P.EIG.s)
+        eig = getattr(self, P.EIG.s, None)
 
         if eig is None:
             self._plot_vectors(None, P.EIG.s)
@@ -228,7 +228,7 @@ class Eigen(VectorPlottable, Decomposable):
         %(just_plots)s
         """
 
-        eig = getattr(self, P.EIG.s)
+        eig = getattr(self, P.EIG.s, None)
         if eig is None:
             raise RuntimeError(
                 f"Compute `.{P.EIG}` first as `.{F.COMPUTE.fmt(P.EIG)}()`."
@@ -420,8 +420,9 @@ class Schur(VectorPlottable, Decomposable):
             Input probability distribution over all cells. If `None`, uniform is chosen.
         method
             Method for calculating the Schur vectors. Valid options are: `'krylov'` or `'brandts'`.
-            For benefits of each method, see :class:`pygpcca.GPCCA`. The former is
-            an iterative procedure that computes a partial, sorted Schur decomposition for large, sparse
+            For benefits of each method, see :class:`pygpcca.GPCCA`.
+
+            The former is an iterative procedure that computes a partial, sorted Schur decomposition for large, sparse
             matrices whereas the latter computes a full sorted Schur decomposition of a dense matrix.
         %(eigen)s
 
@@ -458,7 +459,7 @@ class Schur(VectorPlottable, Decomposable):
             )
             self._gpcca._do_schur_helper(n_components + 1)
 
-        # make it available for pl
+        # make it available for plotting
         setattr(self, A.SCHUR.s, self._gpcca._p_X)
         setattr(self, A.SCHUR_MAT.s, self._gpcca._p_R)
 
@@ -470,6 +471,7 @@ class Schur(VectorPlottable, Decomposable):
             ]
         )
         if len(self._invalid_n_states):
+            # TODO: don't B-, B+
             logg.info(
                 f"When computing macrostates, choose a number of states NOT in `{list(self._invalid_n_states)}`"
             )
@@ -520,7 +522,7 @@ class Schur(VectorPlottable, Decomposable):
 
         from seaborn import heatmap
 
-        schur_matrix = getattr(self, P.SCHUR_MAT.s)
+        schur_matrix = getattr(self, P.SCHUR_MAT.s, None)
 
         if schur_matrix is None:
             raise RuntimeError(
@@ -534,7 +536,7 @@ class Schur(VectorPlottable, Decomposable):
         divider = make_axes_locatable(ax)  # square=True make the colorbar a bit bigger
         cbar_ax = divider.append_axes("right", size="2%", pad=0.1)
 
-        mask = np.zeros_like(schur_matrix, dtype=np.bool)
+        mask = np.zeros_like(schur_matrix, dtype=np.bool_)
         mask[np.tril_indices_from(mask, k=-1)] = True
         mask[~np.isclose(schur_matrix, 0.0)] = False
 

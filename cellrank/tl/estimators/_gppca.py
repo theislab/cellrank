@@ -175,9 +175,9 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         try:
             self._gpcca = self._gpcca.optimize(m=n_states)
         except ValueError as e:
-            # this is the following cage - we have 4 Schur vectors, user requests 5 states, but it splits the conj. ev.
-            # in the try block, schur decomposition with 5 vectors is computed, but it fails (no way of knowing)
-            # so in this case, we increate it by 1
+            # this is the following case - we have 4 Schur vectors, user requests 5 states, but it splits the conj. ev.
+            # in the try block, Schur decomposition with 5 vectors is computed, but it fails (no way of knowing)
+            # so in this case, we increase it by 1
             n_states += 1
             logg.warning(f"{e}\nIncreasing `n_states` to `{n_states}`")
             self._gpcca = self._gpcca.optimize(m=n_states)
