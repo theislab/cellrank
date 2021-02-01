@@ -459,12 +459,11 @@ def _correlation_test(
     )
 
     res = pd.DataFrame(corr, index=gene_names, columns=[f"{c} corr" for c in Y.names])
-    res[[f"{c} pval" for c in Y.names]] = pvals
-    res[[f"{c} qval" for c in Y.names]] = res[[f"{c} pval" for c in Y.names]].apply(
-        lambda c: multipletests(c, alpha=0.05, method="fdr_bh")[1]
-    )
-    res[[f"{c} ci low" for c in Y.names]] = ci_low
-    res[[f"{c} ci high" for c in Y.names]] = ci_high
+    for idx, c in enumerate(Y.names):
+        res[f"{c} pval"] = pvals[:, idx]
+        res[f"{c} qval"] = multipletests(pvals[:, idx], alpha=0.05, method="fdr_bh")[1]
+        res[f"{c} ci low"] = ci_low[:, idx]
+        res[f"{c} ci high"] = ci_high[:, idx]
 
     res = res[
         [
