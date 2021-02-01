@@ -125,7 +125,8 @@ div.sphx-glr-download a[href$=".py"] {
     display: none !important;
 }
 
-div.sphx-glr-example-title div[class="highlight"] {
+div.sphx-glr-example-title div[class="highlight"],
+div.highlight-ipython3 div[class="highlight"] {
     background-color: #F5F5F5;
     border: none;
 }

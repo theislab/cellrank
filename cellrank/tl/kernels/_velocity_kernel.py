@@ -213,13 +213,16 @@ class VelocityKernel(Kernel):
             )
             mode = VelocityMode.DETERMINISTIC
 
-        if mode == VelocityMode.STOCHASTIC and not hasattr(scheme, "hessian"):
-            logg.warning(
-                f"Unable to detect a method for Hessian computation. If using predefined functions, consider "
-                f"installing `jax` as `pip install jax jaxlib`.\n"
-                f"Defaulting to mode `{VelocityMode.MONTE_CARLO.s!r}`"
-            )
-            mode = VelocityMode.MONTE_CARLO
+        if mode == VelocityMode.STOCHASTIC:
+            try:
+                hasattr(scheme, "hessian")
+            except NotImplementedError:
+                logg.warning(
+                    f"Unable to detect a method for Hessian computation. If using predefined functions, consider "
+                    f"installing `jax` as `pip install jax jaxlib`\n"
+                    f"Defaulting to `mode={VelocityMode.MONTE_CARLO.s!r}` and `n_samples={n_samples}`"
+                )
+                mode = VelocityMode.MONTE_CARLO
 
         start = logg.info(
             f"Computing transition matrix based on logits using `{mode.s!r}` mode"
