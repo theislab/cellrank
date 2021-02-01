@@ -435,10 +435,18 @@ class Schur(VectorPlottable, Decomposable):
                 - :paramref:`{schur_matrix}`
                 - :paramref:`{eigendec}`
         """
-
         if n_components < 2:
             raise ValueError(
                 f"Number of components must be `>=2`, found `{n_components}`."
+            )
+
+        try:
+            import petsc4py  # noqa
+            import slepc4py  # noqa
+        except ImportError:
+            method = "brandts"
+            logg.warning(
+                f"Unable to import `petsc4py` or `slepc4py`. Using `method={method!r}`"
             )
 
         if method == "brandts" and issparse(self.transition_matrix):
