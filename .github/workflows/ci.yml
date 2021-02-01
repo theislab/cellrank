@@ -2,7 +2,7 @@ name: CI
 
 on:
     schedule:
-    -   cron: 00 00 * * 1  # run every Monday at 09:00
+    -   cron: 00 00 * * 1  # every Monday at 00:00
     push:
         branches:
         -   master
@@ -49,6 +49,7 @@ jobs:
         needs: linting
         runs-on: ${{ matrix.os }}
         strategy:
+            fail-fast: false
             max-parallel: 3
             matrix:
                 python: [3.7]
