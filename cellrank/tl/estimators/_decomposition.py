@@ -440,6 +440,11 @@ class Schur(VectorPlottable, Decomposable):
                 f"Number of components must be `>=2`, found `{n_components}`."
             )
 
+        if method not in ("brandts", "krylov"):
+            raise ValueError(
+                f"Invalid method `{method!r}`. Valid options are: 'brandts', 'krylov'."
+            )
+
         try:
             import petsc4py  # noqa
             import slepc4py  # noqa
