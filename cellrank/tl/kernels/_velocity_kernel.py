@@ -215,7 +215,10 @@ class VelocityKernel(Kernel):
 
         if mode == VelocityMode.STOCHASTIC:
             try:
-                hasattr(scheme, "hessian")
+                if not hasattr(
+                    scheme, "hessian"
+                ):  # this can also raise in our velocity scheme definition
+                    raise NotImplementedError
             except NotImplementedError:
                 logg.warning(
                     f"Unable to detect a method for Hessian computation. If using predefined functions, consider "
