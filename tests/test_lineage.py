@@ -1015,6 +1015,15 @@ class TestUfuncs:
         np.testing.assert_array_equal(
             y.names, ["std of foo", "std of bar", "std of baz", "std of quux"]
         )
+
+    def test_color_propagation_axis_0(self, lineage: Lineage):
+        lineage = lineage.copy()
+        lineage.colors = [
+            ["red", "green", "blue"][i % 3] for i in range(lineage.shape[1])
+        ]
+
+        y = lineage.mean(0)
+
         np.testing.assert_array_equal(y.colors, lineage.colors)
 
     def test_pretty_naming_axis_1(self, lineage: Lineage):
