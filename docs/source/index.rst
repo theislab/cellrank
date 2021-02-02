@@ -12,10 +12,11 @@ CellRank - Probabilistic Fate Mapping using RNA Velocity
 see [Manno18]_ and [Bergen20]_. CellRank models cellular dynamics as a Markov chain, where transition
 probabilities are computed based on RNA velocity and transcriptomic similarity, taking into account uncertainty
 in the velocities and the stochastic nature of cell fate decisions. The Markov chain is coarse-grained into a set of
-macrostates which represent initial & terminal states as well as transient intermediate states. For each transient cell,
-i.e. for each cell that's not assigned to a terminal state, we then compute its fate probability of it reaching any
-of the terminal states. We show an example of such a fate map in the figure above, which has been computed using the
-data of [Panc19]_.
+macrostates which represent initial and terminal states, as well as transient intermediate states using Generalized
+Perron Cluster Cluster Analysis (G-PCCA) [GPCCA18]_ as implemented in the novel `pyGPCCA`_ package.
+For each transient cell, i.e. for each cell that's not assigned to a terminal state, we then compute its fate
+probability of it reaching any of the terminal states. We show an example of such a fate map in the figure above,
+which has been computed using the data from [Panc19]_.
 
 CellRank scales to large cell numbers, is fully compatible with `scanpy`_ and `scvelo`_ and is easy to use.
 To get started, see our `tutorial`_.
@@ -119,3 +120,5 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
 .. _Theislab: https://www.helmholtz-muenchen.de/icb/research/groups/theis-lab/overview/index.html
 
 .. _Peerlab: https://www.mskcc.org/research/ski/labs/dana-pe-er
+
+.. _pyGPCCA: https://pygpcca.readthedocs.io/en/latest/

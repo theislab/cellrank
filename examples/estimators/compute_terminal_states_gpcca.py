@@ -4,7 +4,8 @@ Compute terminal states using GPCCA
 
 This example shows how to compute and plot the terminal states using the :class:`cellrank.tl.estimators.GPCCA`.
 
-This estimator makes use of Generalized Perron Cluster Cluster Analysis [GPCCA18]_ [Reuter19]_.
+This estimator makes use of Generalized Perron Cluster Cluster Analysis [GPCCA18]_ [Reuter19]_ as implemented in
+`pyGPCCA <https://pygpcca.readthedocs.io/en/latest/>`_.
 """
 
 import cellrank as cr

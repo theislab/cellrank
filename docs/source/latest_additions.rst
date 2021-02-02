@@ -1,25 +1,29 @@
 .. role:: small
 
-1.1.0 :small:`2020-11-17`
+1.2.0 :small:`2021-02-02`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This release includes:
 
 .. rubric:: Bugfixes
 
-- Fix not vendorizing correct :mod:`msmtools` which sometimes cause densification of a sparse matrix..
-- Bump scanpy version requirement to 1.6 to fix plotting `PR 444 <https://github.com/theislab/cellrank/pull/444>`_.
+- Fix a bug when computing the Schur decomposition for reducible Markov chains
+  (*Schur vectors appear to not be D-orthogonal*). GPCCA requires the leading Schur vectors to be orthogonal w.r.t. a
+  symmetric, positive definite matrix :math:`D` `PR 453 <https://github.com/theislab/cellrank/pull/453>`_.
+- Fix not falling back to ``mode='monte_carlo'`` if no :mod:`jax` is found when using ``mode='stochastic'`` in
+  :meth:`cellrank.tl.kernels.VelocityKernel.compute_transition_matrix`
+  `PR 472 <https://github.com/theislab/cellrank/pull/472>`_.
+- Fix :mod:`pandas` ``v1.0.1`` indexing error in :func:`cellrank.tl.lineage_drivers`
+  `PR 475 <https://github.com/theislab/cellrank/pull/475>`_.
 
 .. rubric:: Additions
 
-- :func:`cellrank.tl.lineage_drivers` computes p-values for the identified driver genes now, using either
-  a Fisher-transformation to approximate the distribution of the test statistic under the null hypothesis
-  or an exact, permutation based test. Corrects for multiple-testing.
-- :meth:`cellrank.tl.kernels.VelocityKernel.compute_transition_matrix` now allows different metrics to be used to
-  compare velocity vectors with expression-differences across neighboring cells. We add cosine-correlation and
-  dot-product schemes and we allow the user to input their own scheme. It has been shown recently by [Li2020]_
-  that the choice of metric can lead to slightly different results. Users can now also supply their own scheme as long
-  as it follows the signature of :class:`cellrank.tl.kernels.SimilaritySchemeABC`.
-- :func:`cellrank.datasets.reprogramming` has been added to allow for easy reproducibility of the time & memory
-  benchmarking results in our `CellRank preprint <https://doi.org/10.1101/2020.10.19.345983>`_. This is a reprogramming
-  dataset from [Morris18]_.
+- Completely **refactored the underlying code base of GPCCA** and set it up as it's own package called
+  `pyGPCCA <https://pygpcca.readthedocs.io/en/latest/>`_ with documentation and an example. Going forwards, this will
+  ensure that one of the "engines" of CellRank is also easy to maintain to extend. Further, this will make CellRank's
+  installation more convenient by not needing to vendorize additional dependencies
+  `PR 472 <https://github.com/theislab/cellrank/pull/472>`_.
+- Add :func:`cellrank.pl.circular_projection` visualizing computed fate probabilities as done in [Velten17]_
+  `PR 459 <https://github.com/theislab/cellrank/pull/459>`_.
+- Allow legends not to be plotted by passing ``legend_loc="none"``, as done in `scVelo <https://scvelo.org>`_
+  `PR 470 <https://github.com/theislab/cellrank/pull/470>`_.
