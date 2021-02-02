@@ -23,7 +23,7 @@ if __name__ == "__main__":
         maintainer=__maintainer__,
         maintainer_email=__email__,
         version=__version__,
-        description=Path("README.rst").read_text("utf-8").split("\n")[3],
+        description=Path("README.rst").read_text("utf-8").split("\n")[2],
         long_description=Path("README.rst").read_text("utf-8"),
         url="https://github.com/theislab/cellrank",
         project_urls={
