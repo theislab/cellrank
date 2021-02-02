@@ -15,6 +15,8 @@ This release includes:
   `PR 472 <https://github.com/theislab/cellrank/pull/472>`_.
 - Fix :mod:`pandas` ``v1.0.1`` indexing error in :func:`cellrank.tl.lineage_drivers`
   `PR 475 <https://github.com/theislab/cellrank/pull/475>`_.
+- Fix not correctly propagating colors during aggregation in :class:`cellrank.tl.Lineage`
+  `PR 482 <https://github.com/theislab/cellrank/pull/482>`_.
 
 .. rubric:: Additions
 

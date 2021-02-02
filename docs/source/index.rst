@@ -8,7 +8,7 @@ CellRank - Probabilistic Fate Mapping using RNA Velocity
    :align: center
 
 **CellRank** is a toolkit to uncover cellular dynamics based on scRNA-seq data with RNA velocity annotation,
-see `[Manno18]`_ and `[Bergen20]`_. In short, CellRank models cellular dynamics as a
+see [Manno18]_ and [Bergen20]_. In short, CellRank models cellular dynamics as a
 Markov chain, where transition probabilities are computed based on **RNA velocity and transcriptomic similarity**,
 taking into account **uncertainty in the velocities** and the stochastic nature of cell fate decisions.
 The Markov chain is coarse-grained into a set of macrostates which represent initial and terminal states,
@@ -16,7 +16,7 @@ as well as transient intermediate states using Generalized Perron Cluster Cluste
 implemented in the novel `pyGPCCA`_ package. For each transient cell, i.e. for each cell that's not assigned to a
 terminal state, we then compute its fate probability of it reaching any of the terminal states.
 We show an example of such a fate map in the figure above, which has been computed using the data
-of `[Panc19]`_.
+of [Panc19]_.
 
 CellRank scales to large cell numbers, is fully compatible with `scanpy`_ and `scvelo`_ and is easy to use.
 To get started, see our `tutorial`_.
