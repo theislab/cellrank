@@ -316,7 +316,8 @@ class Eigen(VectorPlottable, Decomposable):
             title = f"top {n} eigenvalues according to their {key}"
 
         ax.set_title(title)
-        ax.legend(loc=legend_loc)
+        if legend_loc not in (None, "none"):
+            ax.legend(loc=legend_loc)
 
         return fig
 
@@ -376,7 +377,7 @@ class Eigen(VectorPlottable, Decomposable):
             title = f"real part of top {n} eigenvalues according to their {key}"
 
         ax.set_title(title)
-        if legend_loc != "none":
+        if legend_loc not in (None, "none"):
             ax.legend(loc=legend_loc)
 
         return fig

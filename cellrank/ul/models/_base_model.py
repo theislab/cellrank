@@ -911,7 +911,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
                 label="probability",
             )
 
-            if kwargs.get("loc", "best") is not None:
+            if kwargs.get("loc", "best") not in (None, "none"):
                 ax.legend(handles=handle, **kwargs)
 
         if (
