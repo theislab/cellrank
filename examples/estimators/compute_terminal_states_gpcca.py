@@ -36,7 +36,7 @@ g.compute_macrostates(cluster_key="clusters")
 # We will cover each of these methods below. In the last 2 cases, parameter ``n_cells`` controls how many cells to take
 # from each terminal state we take as a categorical annotation.
 
-# %%G
+# %%
 # Set terminal states
 # ^^^^^^^^^^^^^^^^^^^
 # :meth:`cellrank.tl.estimators.GPCCA.set_terminal_states` simply sets the terminal states manually - this
