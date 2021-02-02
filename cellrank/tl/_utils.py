@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Utility functions for CellRank tools."""
 
 import os
@@ -433,7 +432,7 @@ def _correlation_test(
         Number of permutations if ``method='perm_test'``.
     seed
         Random seed if ``method='perm_test'``.
-    **kwargs
+    kwargs
         Keyword arguments for :func:`cellrank.ul._parallelize.parallelize`.
 
     Returns
@@ -503,7 +502,7 @@ def _correlation_test_helper(
         Random seed if ``method='perm_test'``.
     confidence_level
         Confidence level for the confidence interval calculation. Must be in `[0, 1]`.
-    **kwargs
+    kwargs
         Keyword arguments for :func:`cellrank.ul._parallelize.parallelize`.
 
     Returns
@@ -1432,7 +1431,7 @@ def _calculate_absorption_time_moments(
         Number of states of the full transition matrix.
     calculate_variance
         Whether to calculate also the variance of time to absorption, not only mean.
-    **kwargs
+    kwargs
         Keyword arguments for :func:`cellrank.tl._lin_solver._solver_lin_system`.
 
     Returns
@@ -1504,7 +1503,7 @@ def _calculate_lineage_absorption_time_means(
         Mapping of names of absorbing states and their indices in the full transition matrix.
     lineages
         Lineages for which to calculate the mean time until absorption moments.
-    **kwargs
+    kwargs
         Keyword arguments for :func:`cellrank.tl._lin_solver._solver_lin_system`.
 
     Returns

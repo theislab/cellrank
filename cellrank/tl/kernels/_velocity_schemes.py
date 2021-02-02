@@ -1,6 +1,5 @@
-# -*- coding: utf-8 -*-
-from abc import ABC, ABCMeta, abstractmethod
-from typing import Tuple
+from abc import ABC, abstractmethod
+from typing import Any, Tuple
 from functools import partial
 
 import numpy as np
@@ -139,20 +138,7 @@ def _predict_transition_probabilities_numpy(
     )
 
 
-class HessianMeta(ABCMeta):  # noqa: D101
-    def __new__(cls, clsname, superclasses, attributedict):  # noqa: D102
-        res = super().__new__(cls, clsname, superclasses, attributedict)
-        if (
-            attributedict.pop("__use_jax__", False)
-            and not _HAS_JAX
-            and "hessian" in attributedict
-        ):
-            delattr(res, "hessian")
-
-        return res
-
-
-class Hessian(ABC, metaclass=HessianMeta):  # noqa: D101
+class Hessian(ABC):  # noqa: D101
     @d.get_full_descriptionf("hessian")
     @d.get_sectionsf("hessian", sections=["Parameters", "Returns"])
     @abstractmethod
@@ -279,6 +265,11 @@ class SimilaritySchemeHessian(SimilaritySchemeABC, Hessian):
         return _predict_transition_probabilities_jax_H(
             v, D, softmax_scale, self._center_mean, self._scale_by_norm
         )
+
+    def __getattribute__(self, name: str) -> Any:
+        if name == "hessian" and self.__use_jax__ and not _HAS_JAX:
+            raise NotImplementedError("No `jax` installation found.")
+        return super().__getattribute__(name)
 
 
 class DotProductScheme(SimilaritySchemeHessian):

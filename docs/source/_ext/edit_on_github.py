@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Loosely based on gist.github.com/MantasVaitkunas/7c16de233812adcb7028
 """

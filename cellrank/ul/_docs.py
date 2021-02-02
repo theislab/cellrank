@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module for documentation helper function."""
 
 from textwrap import dedent
@@ -20,8 +19,7 @@ save
     Filename where to save the plot."""
 _n_jobs = """\
 n_jobs
-    Number of parallel jobs. If `-1`, use all available cores. If `None` or `1`, the execution is sequential.
-"""
+    Number of parallel jobs. If `-1`, use all available cores. If `None` or `1`, the execution is sequential."""
 _parallel = f"""\
 show_progress_bar
     Whether to show a progress bar. Disabling it may slightly improve performance.
@@ -42,8 +40,7 @@ None
     If ``return_models=False``, just plots the figure and optionally saves it based on ``save``.
 Dict[str, Dict[str, :class:`cellrank.ul.models.BaseModel`]]
     Otherwise returns the fitted models as ``{'gene_1': {'lineage_1': <model_11>, ...}, ...}``.
-    Models which have failed will be instances of :class:`cellrank.ul.models.FailedModel`.
-"""
+    Models which have failed will be instances of :class:`cellrank.ul.models.FailedModel`."""
 _backward = """\
 backward
     Direction of the process."""
@@ -108,8 +105,7 @@ callback
     Can be specified in gene- and lineage-specific manner, similarly to :paramref:`model`."""
 _genes = """\
 genes
-    Genes in ``adata.var_names`` or in ``adata.raw.var_names``, if ``use_raw=True``.
-"""
+    Genes in ``adata.var_names`` or in ``adata.raw.var_names``, if ``use_raw=True``."""
 _softmax_scale = """\
 softmax_scale
     Scaling parameter for the softmax. If `None`, it will be estimated using ``1 / median(correlations)``.
@@ -134,12 +130,10 @@ p_thresh
     If the test returns a positive statistic and a p-value smaller than ``p_thresh``, a warning will be issued."""
 _return_models = """\
 return_models
-    If `True`, return the fitted models for each gene in ``genes`` and lineage in ``lineages``.
-"""
+    If `True`, return the fitted models for each gene in ``genes`` and lineage in ``lineages``."""
 _basis = """\
 basis
-    Basis to use when ``mode='embedding'``. If `None`, use `'umap'`.
-"""
+    Basis to use when ``mode='embedding'``. If `None`, use `'umap'`."""
 _velocity_scheme = """\
 scheme
     Similarity scheme between cells as described in [Li2020]_. Can be one of the following:
@@ -149,8 +143,7 @@ scheme
         - `{s.CORRELATION.s!r}` - :class:`cellrank.tl.kernels.CorrelationScheme`.
 
     Alternatively, any function can be passed as long as it follows the call signature of
-    :class:`cellrank.tl.kernels.SimilaritySchemeABC`.
-"""
+    :class:`cellrank.tl.kernels.SimilaritySchemeABC`."""
 
 
 def inject_docs(**kwargs):  # noqa

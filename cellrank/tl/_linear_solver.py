@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module containing anything related to linear solvers."""
 from typing import List, Tuple, Union, TypeVar, Optional
 from functools import singledispatch

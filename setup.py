@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import os
 from pathlib import Path
 
@@ -36,18 +35,11 @@ if __name__ == "__main__":
         install_requires=list(
             map(
                 str.strip,
-                open(os.path.abspath("requirements.txt"), "r").read().splitlines(),
+                open(os.path.abspath("requirements.txt")).read().splitlines(),
             )
         ),
         extras_require=dict(
-            # https://gitlab.com/petsc/petsc/-/issues/803
-            krylov=[
-                "mpi4py>=3.0.3",
-                "petsc>=3.13.0,!=3.14.0",
-                "slepc>=3.13.0",
-                "petsc4py>=3.13.0,!=3.14.0",
-                "slepc4py>=3.13.0",
-            ],
+            krylov=["pygpcca[slepc]"],
             test=[
                 "pytest>=6.1.1",
                 "pytest-mock>=3.1.0",
@@ -64,25 +56,26 @@ if __name__ == "__main__":
                 r
                 for r in map(
                     str.strip,
-                    open(os.path.abspath("docs/requirements.txt"), "r")
-                    .read()
-                    .splitlines(),
+                    open(os.path.abspath("docs/requirements.txt")).read().splitlines(),
                 )
                 if "requirements.txt" not in r
             ],
-            dev=["pre-commit>=2.7.1"],
+            dev=["pre-commit>=2.9.0"],
         ),
         zip_safe=False,
         packages=find_packages(),
         python_requires=">=3.6",
         platforms=["Linux", "MacOs", "Windows"],
-        keywords=[
-            "bio-informatics",
-            "single-cell",
-            "RNA velocity",
-            "Markov chain",
-            "GPCCA",
-        ],
+        keywords=sorted(
+            [
+                "single-cell",
+                "bio-informatics",
+                "single-cell",
+                "RNA velocity",
+                "Markov chain",
+                "GPCCA",
+            ]
+        ),
         classifiers=[
             "Development Status :: 5 - Production/Stable",
             "Intended Audience :: Developers",

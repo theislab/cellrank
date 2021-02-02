@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Palantir kernel module."""
 from copy import copy
 

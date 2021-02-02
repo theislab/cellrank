@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module containing model which wraps around :mod:`sklearn` estimators."""
 from typing import Iterable, Optional
 from inspect import signature
@@ -162,9 +161,9 @@ class SKLearnModel(BaseModel):
         default: Optional[str] = None,
     ) -> Optional[str]:
         """
-        Find a function in :parmref:`model` from given names.
+        Find a function in :paramref:`model` from given names.
 
-        If `None` is found, use :parmaref;`default` or raise a :class:`RuntimeError`.
+        If `None` is found, use :paramref;`default` or raise a :class:`RuntimeError`.
 
         Parameters
         ----------

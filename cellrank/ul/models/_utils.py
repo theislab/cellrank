@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from typing import Union, TypeVar, Optional, Sequence
 
 import numpy as np
@@ -507,7 +506,7 @@ def _get_offset(
         Index of a reference cell. If `None`, it will be determined automatically.
     recompute
         Whether to recompute the offset if already found in ``adata.obs[{key!r}]``.
-    **kwargs
+    kwargs
         Keyword arguments for :func:`cellrank.ul.models._utils._calc_norm_factors`.
 
     Returns
@@ -529,7 +528,7 @@ def _get_offset(
         nf = _calculate_norm_factors(
             adata, layer=layer, use_raw=use_raw, ref_ix=ref_ix, **kwargs
         )
-    except Exception as e:
+    except Exception as e:  # noqa: B902
         logg.debug(
             f"Unable to calculate the normalization factors, setting them to `1`. Reason: `{e}`"
         )

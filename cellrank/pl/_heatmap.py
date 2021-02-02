@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Heatmap module."""
 
 import os
@@ -13,9 +12,9 @@ from pandas.api.types import is_categorical_dtype
 from scipy.ndimage.filters import convolve
 
 import matplotlib as mpl
-import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
+from matplotlib import cm
 from matplotlib.ticker import FormatStrFormatter
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
@@ -141,7 +140,7 @@ def heatmap(
     %(return_models)s
     %(parallel)s
     %(plotting)s
-    **kwargs
+    kwargs
         Keyword arguments for :meth:`cellrank.ul.models.BaseModel.prepare`.
 
     Returns

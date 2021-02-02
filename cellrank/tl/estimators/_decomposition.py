@@ -1,10 +1,13 @@
-# -*- coding: utf-8 -*-
 """Matrix decomposition module."""
 from abc import ABC
 from typing import Any, Tuple, Union, Mapping, Optional
 from pathlib import Path
 
+from pygpcca import GPCCA as _GPCCA
+from pygpcca._sorted_schur import _check_conj_split
+
 import numpy as np
+from scipy.sparse import issparse
 from scipy.sparse.linalg import eigs
 
 import matplotlib.pyplot as plt
@@ -17,8 +20,6 @@ from cellrank.tl._utils import save_fig, _eigengap
 from cellrank.tl.estimators._utils import Metadata, _delegate
 from cellrank.tl.estimators._property import Property, KernelHolder, VectorPlottable
 from cellrank.tl.estimators._constants import A, F, P
-from cellrank._vendor.msmtools.util.sorted_schur import _check_conj_split
-from cellrank._vendor.msmtools.analysis.dense.gpcca import GPCCA as _GPCCA
 
 EPS = np.finfo(np.float64).eps
 
@@ -153,7 +154,7 @@ class Eigen(VectorPlottable, Decomposable):
         %(plot_vectors.returns)s
         """
 
-        eig = getattr(self, P.EIG.s)
+        eig = getattr(self, P.EIG.s, None)
 
         if eig is None:
             self._plot_vectors(None, P.EIG.s)
@@ -219,7 +220,7 @@ class Eigen(VectorPlottable, Decomposable):
         %(plotting)s
         marker
             Marker symbol used, valid options can be found in :mod:`matplotlib.markers`.
-        **kwargs
+        kwargs
             Keyword arguments for :func:`matplotlib.pyplot.scatter`.
 
         Returns
@@ -227,7 +228,7 @@ class Eigen(VectorPlottable, Decomposable):
         %(just_plots)s
         """
 
-        eig = getattr(self, P.EIG.s)
+        eig = getattr(self, P.EIG.s, None)
         if eig is None:
             raise RuntimeError(
                 f"Compute `.{P.EIG}` first as `.{F.COMPUTE.fmt(P.EIG)}()`."
@@ -419,8 +420,9 @@ class Schur(VectorPlottable, Decomposable):
             Input probability distribution over all cells. If `None`, uniform is chosen.
         method
             Method for calculating the Schur vectors. Valid options are: `'krylov'` or `'brandts'`.
-            For benefits of each method, see :class:`msmtools.analysis.dense.gpcca.GPCCA`. The former is
-            an iterative procedure that computes a partial, sorted Schur decomposition for large, sparse
+            For benefits of each method, see :class:`pygpcca.GPCCA`.
+
+            The former is an iterative procedure that computes a partial, sorted Schur decomposition for large, sparse
             matrices whereas the latter computes a full sorted Schur decomposition of a dense matrix.
         %(eigen)s
 
@@ -433,15 +435,32 @@ class Schur(VectorPlottable, Decomposable):
                 - :paramref:`{schur_matrix}`
                 - :paramref:`{eigendec}`
         """
-
         if n_components < 2:
             raise ValueError(
                 f"Number of components must be `>=2`, found `{n_components}`."
             )
 
-        self._gpcca = _GPCCA(
-            self.transition_matrix, eta=initial_distribution, z=which, method=method
-        )
+        if method not in ("brandts", "krylov"):
+            raise ValueError(
+                f"Invalid method `{method!r}`. Valid options are: 'brandts', 'krylov'."
+            )
+
+        try:
+            import petsc4py  # noqa
+            import slepc4py  # noqa
+        except ImportError:
+            method = "brandts"
+            logg.warning(
+                f"Unable to import `petsc4py` or `slepc4py`. Using `method={method!r}`"
+            )
+
+        if method == "brandts" and issparse(self.transition_matrix):
+            logg.warning("For `method='brandts'`, dense matrix is required. Densifying")
+            tmat = self.transition_matrix.A
+        else:
+            tmat = self.transition_matrix
+
+        self._gpcca = _GPCCA(tmat, eta=initial_distribution, z=which, method=method)
         start = logg.info("Computing Schur decomposition")
 
         try:
@@ -453,29 +472,30 @@ class Schur(VectorPlottable, Decomposable):
             )
             self._gpcca._do_schur_helper(n_components + 1)
 
-        # make it available for pl
-        setattr(self, A.SCHUR.s, self._gpcca.X)
-        setattr(self, A.SCHUR_MAT.s, self._gpcca.R)
+        # make it available for plotting
+        setattr(self, A.SCHUR.s, self._gpcca._p_X)
+        setattr(self, A.SCHUR_MAT.s, self._gpcca._p_R)
 
         self._invalid_n_states = np.array(
             [
                 i
-                for i in range(2, len(self._gpcca.eigenvalues))
-                if _check_conj_split(self._gpcca.eigenvalues[:i])
+                for i in range(2, len(self._gpcca._p_eigenvalues))
+                if _check_conj_split(self._gpcca._p_eigenvalues[:i])
             ]
         )
         if len(self._invalid_n_states):
+            # TODO: don't B-, B+
             logg.info(
                 f"When computing macrostates, choose a number of states NOT in `{list(self._invalid_n_states)}`"
             )
 
         self._write_eig_to_adata(
             {
-                "D": self._gpcca.eigenvalues,
-                "eigengap": _eigengap(self._gpcca.eigenvalues, alpha),
+                "D": self._gpcca._p_eigenvalues,
+                "eigengap": _eigengap(self._gpcca._p_eigenvalues, alpha),
                 "params": {
                     "which": which,
-                    "k": len(self._gpcca.eigenvalues),
+                    "k": len(self._gpcca._p_eigenvalues),
                     "alpha": alpha,
                 },
             },
@@ -505,7 +525,7 @@ class Schur(VectorPlottable, Decomposable):
         cmap
             Colormap to use.
         %(plotting)s
-        **kwargs
+        kwargs
             Keyword arguments for :func:`seaborn.heatmap`.
 
         Returns
@@ -515,7 +535,7 @@ class Schur(VectorPlottable, Decomposable):
 
         from seaborn import heatmap
 
-        schur_matrix = getattr(self, P.SCHUR_MAT.s)
+        schur_matrix = getattr(self, P.SCHUR_MAT.s, None)
 
         if schur_matrix is None:
             raise RuntimeError(
@@ -529,7 +549,7 @@ class Schur(VectorPlottable, Decomposable):
         divider = make_axes_locatable(ax)  # square=True make the colorbar a bit bigger
         cbar_ax = divider.append_axes("right", size="2%", pad=0.1)
 
-        mask = np.zeros_like(schur_matrix, dtype=np.bool)
+        mask = np.zeros_like(schur_matrix, dtype=np.bool_)
         mask[np.tril_indices_from(mask, k=-1)] = True
         mask[~np.isclose(schur_matrix, 0.0)] = False
 

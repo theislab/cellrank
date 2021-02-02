@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Clustering and Filtering of Left and Right Eigenvectors based on Markov chains."""
 from typing import List, Tuple, Union, Optional, Sequence
 
@@ -300,7 +299,7 @@ class CFLARE(BaseEstimator, Eigen):
         Parameters
         ----------
         %(fit)s
-        **kwargs
+        kwargs
             Keyword arguments for :meth:`compute_terminal_states`, such as ``n_cells``.
 
         Returns

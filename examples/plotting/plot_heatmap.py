@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Plot a heatmap of expression trends
 -----------------------------------

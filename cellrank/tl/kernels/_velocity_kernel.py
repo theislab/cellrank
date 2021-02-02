@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Velocity kernel module."""
 from sys import version_info
 from copy import copy
@@ -214,13 +213,19 @@ class VelocityKernel(Kernel):
             )
             mode = VelocityMode.DETERMINISTIC
 
-        if mode == VelocityMode.STOCHASTIC and not hasattr(scheme, "hessian"):
-            logg.warning(
-                f"Unable to detect a method for Hessian computation. If using predefined functions, consider "
-                f"installing `jax` as `pip install jax jaxlib`.\n"
-                f"Defaulting to mode `{VelocityMode.MONTE_CARLO.s!r}`"
-            )
-            mode = VelocityMode.MONTE_CARLO
+        if mode == VelocityMode.STOCHASTIC:
+            try:
+                if not hasattr(
+                    scheme, "hessian"
+                ):  # this can also raise in our velocity scheme definition
+                    raise NotImplementedError
+            except NotImplementedError:
+                logg.warning(
+                    f"Unable to detect a method for Hessian computation. If using predefined functions, consider "
+                    f"installing `jax` as `pip install jax jaxlib`\n"
+                    f"Defaulting to `mode={VelocityMode.MONTE_CARLO.s!r}` and `n_samples={n_samples}`"
+                )
+                mode = VelocityMode.MONTE_CARLO
 
         start = logg.info(
             f"Computing transition matrix based on logits using `{mode.s!r}` mode"
@@ -316,13 +321,13 @@ class VelocityKernel(Kernel):
         return self
 
     @property
-    def logits(self) -> csr_matrix:  # noqa
+    def logits(self) -> csr_matrix:
         """Array of shape ``(n_cells, n_cells)`` containing the logits."""
         return self._logits
 
     @d.dedent
-    def copy(self) -> "VelocityKernel":  # noqa
-        """%(copy)s"""
+    def copy(self) -> "VelocityKernel":
+        """%(copy)s"""  # noqa
         vk = VelocityKernel(
             self.adata,
             backward=self.backward,

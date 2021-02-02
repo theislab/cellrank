@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Kernel tricks
 -------------
 
 This example shows some niche, but useful functionalities of :class:`cellrank.tl.kernels.Kernel`.
 
-CellRank is split into :mod:`cellrank.tl.kernels` and :mod:`cellrank.tl.estimators:. Kernels compute transition matrices
+CellRank is split into :mod:`cellrank.tl.kernels` and :mod:`cellrank.tl.estimators`. Kernels compute transition matrices
 based on some inputs, like RNA velocity [Bergen20]_, [Manno18]_, while estimators perform inference based on a given
 kernel, e.g. they compute initial and terminal cells and fate probabilities.
 

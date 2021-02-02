@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module used for finding initial and terminal states."""
 from typing import Union, TypeVar, Optional, Sequence
 
@@ -28,7 +27,7 @@ cluster_key
 time_key
     Key in ``adata.obs`` where the pseudotime is stored.
 %(basis)s
-**kwargs
+kwargs
     Keyword arguments for :meth:`cellrank.tl.estimators.BaseEstimator.plot_terminal_states`.
 
 Returns
@@ -108,7 +107,7 @@ def _initial_terminal(
         title=TerminalStatesPlot.BACKWARD.s,
     )
 )
-def initial_states(
+def initial_states(  # noqa: D103
     adata: AnnData,
     discrete: bool = False,
     states: Optional[Union[str, Sequence[str]]] = None,
@@ -116,7 +115,7 @@ def initial_states(
     mode: str = "embedding",
     time_key: str = "latent_time",
     **kwargs,
-) -> Optional[AnnData]:  # noqa
+) -> Optional[AnnData]:
 
     return _initial_terminal(
         adata,
@@ -138,7 +137,7 @@ def initial_states(
         title=TerminalStatesPlot.FORWARD.s,
     )
 )
-def terminal_states(
+def terminal_states(  # noqa: D103
     adata: AnnData,
     discrete: bool = False,
     states: Optional[Union[str, Sequence[str]]] = None,
@@ -146,7 +145,7 @@ def terminal_states(
     mode: str = "embedding",
     time_key: str = "latent_time",
     **kwargs,
-) -> Optional[AnnData]:  # noqa
+) -> Optional[AnnData]:
 
     return _initial_terminal(
         adata,

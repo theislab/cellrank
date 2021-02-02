@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Color handling module."""
 
 from typing import Any, List, Tuple, Union, Iterable, Optional, Sequence
@@ -9,7 +8,7 @@ from scipy.stats import entropy
 from pandas._libs.lib import infer_dtype
 from pandas.core.dtypes.common import is_categorical_dtype
 
-from matplotlib import cm as cm
+from matplotlib import cm
 from matplotlib import colors as mcolors
 
 from cellrank import logging as logg

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Connectivity kernel module."""
 from copy import copy
 

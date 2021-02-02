@@ -8,8 +8,14 @@ Import CellRank as::
 Once velocities and the velocity graph have been computed using either `scvelo`_ or `velocyto`_,
 CellRank offers two modes to interact with its core functionality:
 
- - high level mode, essentially calling :func:`cellrank.tl.terminal_states`, :func:`cellrank.tl.initial_states` and :func:`cellrank.tl.lineages`. See our `high level tutorial <https://cellrank.readthedocs.io/en/latest/pancreas_basic.html>`_
- - low level mode, interacting directly with the kernels defined in :class:`cellrank.tl.kernels.Kernel` and the estimators :class:`cellrank.tl.estimators.GPCCA` or :class:`cellrank.tl.estimators.CFLARE`. The division into kernels and estimators ensures that CellRank in broadly applicable, no matter how you have computed your transition matrix.  See our `low level tutorial <https://cellrank.readthedocs.io/en/latest/pancreas_advanced.html>`_.
+- high level mode, essentially calling :func:`cellrank.tl.terminal_states`, :func:`cellrank.tl.initial_states` and
+  :func:`cellrank.tl.lineages`.
+  See our `high level tutorial  <https://cellrank.readthedocs.io/en/latest/pancreas_basic.html>`_
+- low level mode, interacting directly with the kernels defined in :class:`cellrank.tl.kernels.Kernel` and the
+  estimators :class:`cellrank.tl.estimators.GPCCA` or :class:`cellrank.tl.estimators.CFLARE`.
+  The division into kernels and estimators ensures that CellRank in broadly applicable, no matter how you have
+  computed your transition matrix.
+  See our `low level tutorial <https://cellrank.readthedocs.io/en/latest/pancreas_advanced.html>`_.
 
 Additionally, there is a set of plotting functions which can be used downstream of either analysis mode.
 
@@ -24,7 +30,7 @@ This module offers a high-level API to compute cell fates and driver genes.
 .. currentmodule:: cellrank
 
 .. autosummary::
-    :toctree: gen_modules
+    :toctree: api
 
     tl.transition_matrix
     tl.initial_states
@@ -42,7 +48,7 @@ Kernels are part of the low-level API and are used to estimate cell-to-cell tran
 .. currentmodule:: cellrank
 
 .. autosummary::
-    :toctree: gen_modules
+    :toctree: api
 
     tl.kernels.VelocityKernel
     tl.kernels.ConnectivityKernel
@@ -57,7 +63,7 @@ Estimators predict cell fates using the transitions derived from :ref:`Kernels`.
 .. currentmodule:: cellrank
 
 .. autosummary::
-    :toctree: gen_modules
+    :toctree: api
 
     tl.estimators.GPCCA
     tl.estimators.CFLARE
@@ -69,7 +75,7 @@ Plotting
 .. currentmodule:: cellrank
 
 .. autosummary::
-    :toctree: gen_modules
+    :toctree: api
 
     pl.initial_states
     pl.terminal_states
@@ -89,7 +95,7 @@ Utilities
 .. currentmodule:: cellrank
 
 .. autosummary::
-    :toctree: api/ul
+    :toctree: api
 
     ul.models.GAM
     ul.models.GAMR
@@ -114,7 +120,7 @@ Datasets
 .. currentmodule:: cellrank
 
 .. autosummary::
-    :toctree: api/datasets
+    :toctree: api
 
     datasets.pancreas
     datasets.lung

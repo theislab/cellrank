@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Graph pl module."""
 
 from copy import deepcopy
@@ -12,8 +11,8 @@ from scipy.sparse import issparse, spmatrix
 from pandas.api.types import is_categorical_dtype
 
 import matplotlib as mpl
-import matplotlib.cm as cm
 import matplotlib.pyplot as plt
+from matplotlib import cm
 from matplotlib.colors import ListedColormap
 from matplotlib.patches import ArrowStyle, FancyArrowPatch
 from matplotlib.collections import LineCollection
@@ -174,7 +173,7 @@ def graph(
                 X, Y = X[::-1], Y[::-1]
 
             mid = len(X) // 2
-            posA, posB = zip(X[mid : mid + 2], Y[mid : mid + 2])  # noqa
+            posA, posB = zip(X[mid : mid + 2], Y[mid : mid + 2])
 
             arrow = FancyArrowPatch(
                 posA=posA,

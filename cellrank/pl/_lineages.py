@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module for plotting lineage-related stuff."""
 from typing import Union, Optional, Sequence
 
@@ -43,7 +42,7 @@ def lineages(
     time_key
         Key in ``adata.obs`` where the pseudotime is stored.
     %(basis)s
-    **kwargs
+    kwargs
         Keyword arguments for :meth:`cellrank.tl.estimators.BaseEstimator.plot_absorption_probabilities`.
 
     Returns

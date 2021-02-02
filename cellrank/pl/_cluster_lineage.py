@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Cluster lineages module."""
 
 from types import MappingProxyType
@@ -109,7 +108,7 @@ def cluster_lineage(
     clustering_kwargs
         Keyword arguments for :func:`scanpy.tl.louvain` or :func:`scanpy.tl.leiden`.
     %(return_models)s
-    **kwargs:
+    kwargs:
         Keyword arguments for :meth:`cellrank.ul.models.BaseModel.prepare`.
 
     Returns

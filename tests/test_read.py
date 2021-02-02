@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from typing import Tuple, Callable
 from pathlib import Path
 

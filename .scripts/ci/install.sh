@@ -19,5 +19,3 @@ elif [[ "$OS" == "ubuntu-latest" ]]; then
 else
   exit 42
 fi
-
-python-vendorize

@@ -30,7 +30,6 @@ To stay up-to-date with the newest version, run::
     git clone https://github.com/theislab/cellrank
     cd cellrank
     pip install -e '.[dev]'
-    python-vendorize
 
 ``-e`` stands for ``--editable`` and makes sure that your environment is updated
 when you pull new changes from GitHub. The ``'[dev]'`` options installs requirements
@@ -77,8 +76,8 @@ but this doesn't matter if the installer finally tells you::
     Successfully installed [insert package name here]
 
 On Mac OS, install `MPICH`_ as a message passing interface and then proceed as above, using either pip or the
-installation instructions given on the `PETSc`_ and `SLEPc`_ websites. The `SLEPc`_ homepage even offers a video tutorial
-explaining the installation.
+installation instructions given on the `PETSc`_ and `SLEPc`_ websites. The `SLEPc`_ homepage even offers a video
+tutorial explaining the installation.
 
 If after reading this, you still can't proceed with the installation, feel free to open a `GitHub issue`_.
 

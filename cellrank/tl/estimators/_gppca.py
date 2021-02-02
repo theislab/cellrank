@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Generalized Perron Cluster Cluster Analysis [GPCCA18]_."""
 
 from types import MappingProxyType
@@ -98,7 +97,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
             Number of macrostates. If `None`, use the `eigengap` heuristic.
         %(n_cells)s
         use_min_chi
-            Whether to use :meth:`msmtools.analysis.dense.gpcca.GPCCA.minChi` to calculate the number of macrostates.
+            Whether to use :meth:`pygpcca.GPCCA.minChi` to calculate the number of macrostates.
             If `True`, ``n_states`` corresponds to a closed interval `[min, max]` inside of which the potentially
             optimal number of macrostates is searched.
         cluster_key
@@ -165,7 +164,8 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
             # if it were to split, it's automatically increased in `compute_schur`
             self.compute_schur(n_states + 1)
 
-        if self._gpcca.X.shape[1] < n_states:
+        # pre-computed X
+        if self._gpcca._p_X.shape[1] < n_states:
             logg.warning(
                 f"Requested more macrostates `{n_states}` than available "
                 f"Schur vectors `{self._gpcca.X.shape[1]}`. Recomputing the decomposition"
@@ -175,9 +175,9 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         try:
             self._gpcca = self._gpcca.optimize(m=n_states)
         except ValueError as e:
-            # this is the following cage - we have 4 Schur vectors, user requests 5 states, but it splits the conj. ev.
-            # in the try block, schur decomposition with 5 vectors is computed, but it fails (no way of knowing)
-            # so in this case, we increate it by 1
+            # this is the following case - we have 4 Schur vectors, user requests 5 states, but it splits the conj. ev.
+            # in the try block, Schur decomposition with 5 vectors is computed, but it fails (no way of knowing)
+            # so in this case, we increase it by 1
             n_states += 1
             logg.warning(f"{e}\nIncreasing `n_states` to `{n_states}`")
             self._gpcca = self._gpcca.optimize(m=n_states)
@@ -191,8 +191,8 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         )
 
         # cache the results and make sure we don't overwrite
-        self._set(A.SCHUR, self._gpcca.X)
-        self._set(A.SCHUR_MAT, self._gpcca.R)
+        self._set(A.SCHUR, self._gpcca._p_X)
+        self._set(A.SCHUR_MAT, self._gpcca._p_R)
 
         names = self._get(P.MACRO_MEMBER).names
 
@@ -385,7 +385,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
 
                 - :paramref:`{fsp}`
                 - :paramref:`{fs}`
-        """  # noqa
+        """
 
         if len(self._get(P.MACRO).cat.categories) == 1:
             logg.warning("Found only one macrostate. Making it the single main state")
@@ -445,7 +445,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
             Number of real Schur vectors to consider.
         key_added
             Key in :paramref:`adata` ``.obs`` where to save the pseudotime.
-        **kwargs
+        kwargs
             Keyword arguments for :meth:`cellrank.tl.GPCCA.compute_schur` if Schur decomposition is not found.
 
         Returns
@@ -553,7 +553,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         %(plotting)s
         text_kwargs
             Keyword arguments for :func:`matplotlib.pyplot.text`.
-        **kwargs
+        kwargs
             Keyword arguments for :func:`matplotlib.pyplot.imshow`.
 
         Returns
@@ -1064,7 +1064,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
             Method to use when computing the Schur decomposition. Valid options are: `'krylov'` or `'brandts'`.
         compute_absorption_probabilities
             Whether to compute the absorption probabilities or only the %(initial_or_terminal)s states.
-        **kwargs
+        kwargs
             Keyword arguments for :meth:`cellrank.tl.estimators.GPCCA.compute_macrostates`.
 
         Returns

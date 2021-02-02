@@ -13,7 +13,7 @@ GPCCA
 CFLARE
 ------
 
-.. autoclass:: cellrank.tl.estimator.CFLARE
+.. autoclass:: cellrank.tl.estimators.CFLARE
     :members:
     :inherited-members:
 

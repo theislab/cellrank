@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 import os
 import sys
 import logging
-import subprocess
 from pathlib import Path
 from datetime import datetime
 from collections import ChainMap, defaultdict
@@ -15,14 +13,7 @@ HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE.parent.parent))
 sys.path.insert(0, os.path.abspath("_ext"))
 
-# this must be called prior to importing CellRank
-if not os.path.exists(os.path.join(sys.path[1], "cellrank", "_vendor")):
-    config_path = os.path.join(HERE.parent.parent, "vendorize.toml")
-    print(f"Running vendorize using config: {config_path}")
-    subprocess.run(["python-vendorize", config_path])
-
-
-import cellrank  # noqa NOQA
+import cellrank
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +76,7 @@ intersphinx_mapping = dict(
     python=("https://docs.python.org/3", None),
     numpy=("https://docs.scipy.org/doc/numpy/", None),
     scipy=("https://docs.scipy.org/doc/scipy/reference/", None),
-    networkx=("https://networkx.github.io/documentation/stable/", None),
+    networkx=("https://networkx.org/documentation/stable/", None),
     pandas=("https://pandas.pydata.org/pandas-docs/stable/", None),
     statsmodels=("https://www.statsmodels.org/stable/", None),
     matplotlib=("https://matplotlib.org/", None),
@@ -94,7 +85,7 @@ intersphinx_mapping = dict(
     seaborn=("https://seaborn.pydata.org/", None),
     pygam=("https://pygam.readthedocs.io/en/latest/", None),
     jax=("https://jax.readthedocs.io/en/latest/", None),
-    # TODO: add msmtools once the docs are up
+    pygpcca=("https://pygpcca.readthedocs.io/en/latest/", None),
 )
 
 # Add any paths that contain templates here, relative to this directory.
@@ -106,7 +97,12 @@ pygments_style = "sphinx"
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ["**.ipynb_checkpoints"]
+exclude_patterns = [
+    "**.md5",
+    "**.py",
+    "**.ipynb_checkpoints",
+]  # ignore anything that isn't .rst
+suppress_warnings = ["ref.citation"]
 
 # -- Notebooks
 nbsphinx_execute_arguments = [

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """IO module."""
 
 from typing import Union, TypeVar, Callable, Optional
@@ -43,7 +42,7 @@ def read(
     read_callback
         Function that actually reads the :class:`anndata.AnnData` object, such as
         :func:`scvelo.read` (default) or :func:`scanpy.read`.
-    **kwargs
+    kwargs
         Keyword arguments for ``read_callback``.
 
     Returns

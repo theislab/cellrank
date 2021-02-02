@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from types import MappingProxyType
 from typing import Any, Tuple, Union, Mapping, Callable, Optional, Sequence
 from pathlib import Path
@@ -169,7 +168,7 @@ def circular_projection(
         Key in :attr:`anndata.AnnData.obsm` where to add the circular embedding. If `None`, it will be set to
         `'X_fate_simplex_{fwd,bwd}'`, based on ``backward``.
     %(plotting)s
-    **kwargs
+    kwargs
         Keyword arguments for :func:`scvelo.pl.scatter`.
 
     Returns

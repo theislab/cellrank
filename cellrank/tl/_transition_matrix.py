@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Transition matrix module."""
 
 from typing import TypeVar, Iterable, Optional
@@ -58,7 +57,7 @@ def transition_matrix(
         Whether to use density correction when computing the transition probabilities based on connectivities.
         Density correction is done as by [Haghverdi16]_.
     %(write_to_adata.parameters)s
-    **kwargs
+    kwargs
         Keyword arguments for :meth:`cellrank.tl.kernels.VelocityKernel.compute_transition_matrix`.
 
     Returns

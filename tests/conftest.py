@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import os
 from sys import version_info
 from typing import Tuple, Optional

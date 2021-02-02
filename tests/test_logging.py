@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # modified from: https://github.com/theislab/scanpy/blob/master/scanpy/tests/test_logging.py
 
 import sys

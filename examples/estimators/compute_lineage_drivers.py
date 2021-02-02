@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Compute potential lineage drivers
 ---------------------------------
