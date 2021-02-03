@@ -271,7 +271,7 @@ def circular_projection(
     _i = 0
     for _i, (k, ax) in enumerate(zip(keys, axes)):
 
-        set_lognorm = False
+        set_lognorm, colorbar = False, kwargs.pop("colorbar", True)
         try:
             k = SpecialKey(k)
             logg.debug(f"Calculating `{k}`")
@@ -304,9 +304,10 @@ def circular_projection(
             ax=ax,
             use_raw=use_raw,
             norm=LogNorm() if set_lognorm else None,
+            colorbar=colorbar,
             **kwargs,
         )
-        if set_lognorm:
+        if colorbar and set_lognorm:
             cbar = ax.collections[0].colorbar
             cax = cbar.locator.axis
             ticks = cax.minor.locator.tick_values(cbar.vmin, cbar.vmax)

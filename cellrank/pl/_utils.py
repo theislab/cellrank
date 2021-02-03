@@ -789,7 +789,7 @@ def _trends_helper(
             ticks=np.linspace(norm.vmin, norm.vmax, 5),
         )
 
-    if same_plot and lineage_names != [None] and legend_loc is not None:
+    if same_plot and lineage_names != [None] and legend_loc not in (None, "none"):
         handles = [
             mpl.lines.Line2D([], [], color=lineage_color_mapper[ln], label=ln)
             for ln in successful_models.keys()
@@ -817,9 +817,7 @@ def _position_legend(ax: mpl.axes.Axes, legend_loc: str, **kwargs) -> mpl.legend
     """
 
     if legend_loc == "center center out":
-        raise ValueError(
-            "Invalid option: `'center center out'`. Doesn't really make sense, does it?"
-        )
+        raise ValueError("Invalid option: `'center center out'`.")
     if legend_loc == "best":
         return ax.legend(loc="best", **kwargs)
 

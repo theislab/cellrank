@@ -144,7 +144,7 @@ class BaseModelMeta(ABCMeta):
         return obj
 
 
-@d.get_sectionsf("base_model", sections=["Parameters"])
+@d.get_sections(base="base_model", sections=["Parameters"])
 @d.dedent
 class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
     """
@@ -196,7 +196,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
 
         self._dtype = np.float32
 
-    @d.get_summaryf("base_model_prepared")
+    @d.get_summary(base="base_model_prepared")
     @property
     def prepared(self):
         """Whether the model is prepared for fitting."""
@@ -220,73 +220,73 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         return self._model
 
     @property
-    @d.get_summaryf("base_model_x_all")
+    @d.get_summary(base="base_model_x_all")
     def x_all(self) -> np.ndarray:
         """Unfiltered independent variables of shape `(n_cells, 1)`."""
         return self._x_all
 
     @property
-    @d.get_summaryf("base_model_y_all")
+    @d.get_summary(base="base_model_y_all")
     def y_all(self) -> np.ndarray:
         """Unfiltered dependent variables of shape `(n_cells, 1)`."""
         return self._y_all
 
     @property
-    @d.get_summaryf("base_model_w_all")
+    @d.get_summary(base="base_model_w_all")
     def w_all(self) -> np.ndarray:
         """Unfiltered weights of shape `(n_cells,)`."""
         return self._w_all
 
     @property
-    @d.get_summaryf("base_model_x")
+    @d.get_summary(base="base_model_x")
     def x(self) -> np.ndarray:
         """Filtered independent variables of shape `(n_filtered_cells, 1)` used for fitting."""  # noqa
         return self._x
 
     @property
-    @d.get_summaryf("base_model_y")
+    @d.get_summary(base="base_model_y")
     def y(self) -> np.ndarray:
         """Filtered dependent variables of shape `(n_filtered_cells, 1)` used for fitting."""  # noqa
         return self._y
 
     @property
-    @d.get_summaryf("base_model_w")
+    @d.get_summary(base="base_model_w")
     def w(self) -> np.ndarray:
         """Filtered weights of shape `(n_filtered_cells,)` used for fitting."""  # noqa
         return self._w
 
     @property
-    @d.get_summaryf("base_model_x_test")
+    @d.get_summary(base="base_model_x_test")
     def x_test(self) -> np.ndarray:
         """Independent variables of shape `(n_samples, 1)` used for prediction."""
         return self._x_test
 
     @property
-    @d.get_summaryf("base_model_y_test")
+    @d.get_summary(base="base_model_y_test")
     def y_test(self) -> np.ndarray:
         """Prediction values of shape `(n_samples,)` for :paramref:`x_test`."""
         return self._y_test
 
     @property
-    @d.get_summaryf("base_model_x_hat")
+    @d.get_summary(base="base_model_x_hat")
     def x_hat(self) -> np.ndarray:
         """Filtered independent variables used when calculating default confidence interval, usually same as :paramref:`x`."""  # noqa
         return self._x_hat
 
     @property
-    @d.get_summaryf("base_model_y_hat")
+    @d.get_summary(base="base_model_y_hat")
     def y_hat(self) -> np.ndarray:
         """Filtered dependent variables used when calculating default confidence interval, usually same as :paramref:`y`."""  # noqa
         return self._y_hat
 
     @property
-    @d.get_summaryf("base_model_conf_int")
+    @d.get_summary(base="base_model_conf_int")
     def conf_int(self) -> np.ndarray:
         """Array of shape `(n_samples, 2)` containing the lower and upper bounds of the confidence interval."""
         return self._conf_int
 
-    @d.get_sectionsf("base_model_prepare", sections=["Parameters", "Returns"])
-    @d.get_full_descriptionf("base_model_prepare")
+    @d.get_sections(base="base_model_prepare", sections=["Parameters", "Returns"])
+    @d.get_full_description(base="base_model_prepare")
     @d.dedent
     def prepare(
         self,
@@ -531,8 +531,8 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         return self
 
     @abstractmethod
-    @d.get_sectionsf("base_model_fit", sections=["Parameters"])
-    @d.get_full_descriptionf("base_model_fit")
+    @d.get_sections(base="base_model_fit", sections=["Parameters"])
+    @d.get_full_description(base="base_model_fit")
     def fit(
         self,
         x: Optional[np.ndarray] = None,
@@ -580,8 +580,8 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         return self
 
     @abstractmethod
-    @d.get_sectionsf("base_model_predict", sections=["Parameters", "Returns"])
-    @d.get_full_descriptionf("base_model_predict")
+    @d.get_sections(base="base_model_predict", sections=["Parameters", "Returns"])
+    @d.get_full_description(base="base_model_predict")
     @d.dedent
     def predict(
         self,
@@ -610,9 +610,9 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         """
 
     @abstractmethod
-    @d.get_sectionsf("base_model_ci", sections=["Parameters", "Returns"])
-    @d.get_summaryf("base_model_ci")
-    @d.get_full_descriptionf("base_model_ci")
+    @d.get_sections(base="base_model_ci", sections=["Parameters", "Returns"])
+    @d.get_summary(base="base_model_ci")
+    @d.get_full_description(base="base_model_ci")
     @d.dedent
     def confidence_interval(
         self, x_test: Optional[np.ndarray] = None, **kwargs
@@ -908,7 +908,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
                 label="probability",
             )
 
-            if kwargs.get("loc", "best") is not None:
+            if kwargs.get("loc", "best") not in (None, "none"):
                 ax.legend(handles=handle, **kwargs)
 
         if (

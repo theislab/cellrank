@@ -53,7 +53,6 @@ def wrap(numpy_func: Callable) -> Callable:
     -------
     :class:`Callable`
         Wrapped function which takes a :class:`cellrank.tl.Lineage` and return :class:`cellrank.tl.Lineage`.
-
     """
 
     @wraps(numpy_func)
@@ -79,15 +78,6 @@ def wrap(numpy_func: Callable) -> Callable:
         # handle expand_dim
         if res.ndim > 2:
             return array
-        if array.ndim < res.ndim:
-            names = (
-                array.names
-                if hasattr(array, "names")
-                and array.names is not None
-                and len(array.names) == res.shape[1]
-                else [f"Lineage {i}" for i in range(res.shape[1])]
-            )
-            return Lineage(res, names=names)
 
         # handle reductions
         if not res.shape:
@@ -110,7 +100,9 @@ def wrap(numpy_func: Callable) -> Callable:
             )
 
         if res.shape[1] == array.shape[1 - is_t]:
-            lin = Lineage(res, names=[f"{fname} of {n}" for n in array.names])
+            lin = Lineage(
+                res, names=[f"{fname} of {n}" for n in array.names], colors=array.colors
+            )
 
         if lin is not None:
             return lin.T if is_t else lin
@@ -784,7 +776,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
                 if not autopct_found:
                     at.set_text(f"{reduction[ix]:.4f}")
 
-        if legend_loc not in (None, "on data"):
+        if legend_loc not in (None, "none", "on data"):
             ax.legend(
                 wedges,
                 self.names,

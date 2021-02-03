@@ -165,7 +165,7 @@ class KernelExpression(Pickleable, ABC):
             Self.
         """
 
-    @d.get_sectionsf("write_to_adata", sections=["Parameters"])
+    @d.get_sections(base="write_to_adata", sections=["Parameters"])
     @inject_docs()  # get rid of {{}}
     @d.dedent
     def write_to_adata(self, key: Optional[str] = None) -> None:

@@ -504,7 +504,7 @@ def graph(
                 seen.add(v)
 
             nodes_kwargs = dict(cmap=cat_cmap, node_color=colors)  # noqa
-            if legend_loc is not None:
+            if legend_loc not in ("none", None):
                 x, y = pos[0]
                 for label in sorted(seen):
                     ax.plot([x], [y], label=label, color=mapper[label])

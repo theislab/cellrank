@@ -1133,7 +1133,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
             stat_dist[np.argsort(stat_dist)][:n_states].index, n_cells=n_cells
         )
 
-    @d.get_sectionsf("set_initial_states_from_macrostates", sections=["Returns"])
+    @d.get_sections(base="set_initial_states_from_macrostates", sections=["Returns"])
     @d.dedent
     @inject_docs(
         key=TermStatesKey.BACKWARD.s, probs_key=_probs(TermStatesKey.BACKWARD.s)

@@ -317,7 +317,8 @@ class Eigen(VectorPlottable, Decomposable):
             title = f"top {n} eigenvalues according to their {key}"
 
         ax.set_title(title)
-        ax.legend(loc=legend_loc)
+        if legend_loc not in (None, "none"):
+            ax.legend(loc=legend_loc)
 
         return fig
 
@@ -361,7 +362,7 @@ class Eigen(VectorPlottable, Decomposable):
 
         # add dashed line for the eigengap, ticks, labels, title and legend
         if show_eigengap and eig["eigengap"] < n:
-            ax.axvline(eig["eigengap"], label="eigengap", ls="--", lw=1)
+            ax.axvline(eig["eigengap"], label="eigengap", ls="--", lw=2, c="k")
 
         ax.set_xlabel("index")
         if show_all_xticks:
@@ -377,7 +378,8 @@ class Eigen(VectorPlottable, Decomposable):
             title = f"real part of top {n} eigenvalues according to their {key}"
 
         ax.set_title(title)
-        ax.legend(loc=legend_loc)
+        if legend_loc not in (None, "none"):
+            ax.legend(loc=legend_loc)
 
         return fig
 
