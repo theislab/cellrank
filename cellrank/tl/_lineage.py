@@ -776,7 +776,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
                 if not autopct_found:
                     at.set_text(f"{reduction[ix]:.4f}")
 
-        if legend_loc not in (None, "on data"):
+        if legend_loc not in (None, "none", "on data"):
             ax.legend(
                 wedges,
                 self.names,
