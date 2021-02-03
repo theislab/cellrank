@@ -203,7 +203,7 @@ def _reconstruct_one(
     probs.eliminate_zeros()
     cors.eliminate_zeros()
 
-    close_to_1 = np.isclose(probs.sum(1), 1.0)
+    close_to_1 = np.isclose(np.array(probs.sum(1)).squeeze(), 1.0)
     if not np.all(close_to_1):
         raise ValueError(
             f"Matrix is not row-stochastic. "

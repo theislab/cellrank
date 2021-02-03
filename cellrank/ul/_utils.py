@@ -18,8 +18,8 @@ AnnData = TypeVar("AnnData")
 class Pickleable:
     """Class which allows serialization and deserialization using :mod:pickle."""
 
-    @d.get_full_descriptionf("pickleable")
-    @d.get_sectionsf("pickleable", sections=["Parameters", "Returns"])
+    @d.get_full_description(base="pickleable")
+    @d.get_sections(base="pickleable", sections=["Parameters", "Returns"])
     def write(self, fname: Union[str, Path], ext: Optional[str] = "pickle") -> None:
         """
         Serialize self to a file.

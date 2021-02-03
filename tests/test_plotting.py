@@ -3013,3 +3013,9 @@ class TestCircularProjection:
         cr.pl.circular_projection(
             adata, keys="clusters", legend_loc="upper right", dpi=DPI, save=fpath
         )
+
+    @compare()
+    def test_proj_no_cbar(self, adata: AnnData, fpath: str):
+        cr.pl.circular_projection(
+            adata, keys=adata.var_names[0], colorbar=False, dpi=DPI, save=fpath
+        )

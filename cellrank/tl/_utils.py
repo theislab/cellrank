@@ -400,7 +400,7 @@ def _perm_test(
     return pvals, corr_bs
 
 
-@d.get_sectionsf("correlation_test", sections=["Returns"])
+@d.get_sections(base="correlation_test", sections=["Returns"])
 def _correlation_test(
     X: Union[np.ndarray, spmatrix],
     Y: "Lineage",  # noqa: F821

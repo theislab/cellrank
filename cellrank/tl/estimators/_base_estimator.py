@@ -61,7 +61,7 @@ _COMP_TERM_STATES_MSG = (
 )
 
 
-@d.get_sectionsf("base_estimator", sections=["Parameters"])
+@d.get_sections(base="base_estimator", sections=["Parameters"])
 @d.dedent
 class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
     """
@@ -555,10 +555,10 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
         self._write_absorption_probabilities(time=start, extra_msg=extra_msg)
 
-    @d.get_sectionsf(
-        "lineage_drivers", sections=["Parameters", "Returns", "References"]
+    @d.get_sections(
+        base="lineage_drivers", sections=["Parameters", "Returns", "References"]
     )
-    @d.get_full_descriptionf("lineage_drivers")
+    @d.get_full_description(base="lineage_drivers")
     @d.dedent
     @inject_docs(lin_drivers=P.LIN_DRIVERS, tm=TestMethod)
     def compute_lineage_drivers(
@@ -740,7 +740,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         if return_drivers:
             return drivers
 
-    @d.get_sectionsf("plot_lineage_drivers", sections=["Parameters"])
+    @d.get_sections(base="plot_lineage_drivers", sections=["Parameters"])
     @d.dedent
     def plot_lineage_drivers(
         self,

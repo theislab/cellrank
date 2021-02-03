@@ -75,7 +75,7 @@ def _load_dataset_from_url(
     return adata
 
 
-@d.get_sectionsf("dataset", sections=["Parameters"])
+@d.get_sections(base="dataset", sections=["Parameters"])
 @d.dedent
 def pancreas(
     path: Union[str, Path] = "datasets/endocrinogenesis_day15.5.h5ad",
