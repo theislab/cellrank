@@ -1,6 +1,5 @@
 |PyPI| |Bioconda| |Downloads| |CI| |Notebooks| |Docs| |Codecov|
 
-
 CellRank - Probabilistic Fate Mapping using RNA Velocity
 ========================================================
 
@@ -12,10 +11,12 @@ CellRank - Probabilistic Fate Mapping using RNA Velocity
 see `La Manno et al. (2018)`_ and `Bergen et al. (2020)`_. In short, CellRank models cellular dynamics as a
 Markov chain, where transition probabilities are computed based on **RNA velocity and transcriptomic similarity**,
 taking into account **uncertainty in the velocities** and the stochastic nature of cell fate decisions.
-The Markov chain is coarse-grained into a set of macrostates which represent initial & terminal states as well as
-transient intermediate states. For each transient cell, i.e. for each cell that's not assigned to a terminal state, we
-then compute its fate probability of it reaching any of the terminal states. We show an example of such a fate map in
-the figure above, which has been computed using the data of `pancreatic endocrinogenesis`_.
+The Markov chain is coarse-grained into a set of macrostates which represent initial and terminal states,
+as well as transient intermediate states using Generalized Perron Cluster Cluster Analysis (G-PCCA) [GPCCA18]_,
+implemented in the novel `pyGPCCA`_ package. For each transient cell, i.e. for each cell that's not assigned to a
+terminal state, we then compute its fate probability of it reaching any of the terminal states.
+We show an example of such a fate map in the figure above, which has been computed using the data
+of `pancreatic endocrinogenesis`_.
 
 CellRank scales to **large cell numbers**, is fully compatible with `scanpy`_ and `scvelo`_ and is **easy to use**.
 For **installation instructions**, **documentation** and **tutorials**, visit `cellrank.org`_.
@@ -108,3 +109,7 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
 .. _Theislab: https://www.helmholtz-muenchen.de/icb/research/groups/theis-lab/overview/index.html
 
 .. _Peerlab: https://www.mskcc.org/research/ski/labs/dana-pe-er
+
+.. _pyGPCCA: https://pygpcca.readthedocs.io/en/latest/
+
+.. _GPCCA18: https://doi.org/10.1021/acs.jctc.8b00079

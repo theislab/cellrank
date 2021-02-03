@@ -32,7 +32,7 @@ from cellrank.tl.estimators._base_estimator import BaseEstimator
 @d.dedent
 class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
     """
-    Generalized Perron Cluster Cluster Analysis [GPCCA18]_.
+    Generalized Perron Cluster Cluster Analysis [GPCCA18]_ as implemented in `pyGPCCA <https://pygpcca.readthedocs.io/en/latest/>`_.
 
     Coarse-grains a discrete Markov chain into a set of macrostates and computes coarse-grained transition probabilities
     among the macrostates. Each macrostate corresponds to an area of the state space, i.e. to a subset of cells. The
@@ -46,7 +46,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
     Parameters
     ----------
     %(base_estimator.parameters)s
-    """
+    """  # noqa: E501
 
     __prop_metadata__ = [
         Metadata(

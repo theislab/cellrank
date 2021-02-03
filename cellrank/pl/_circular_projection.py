@@ -113,7 +113,7 @@ def circular_projection(
     **kwargs,
 ):
     r"""
-    Plot absorption probabilities on a circular embedding.
+    Plot absorption probabilities on a circular embedding as done in [Velten17]_.
 
     Parameters
     ----------
