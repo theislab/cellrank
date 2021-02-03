@@ -91,7 +91,7 @@ jobs:
                 ./.scripts/ci/install.sh
 
         -   name: Testing
-            timeout-minutes: 20
+            timeout-minutes: 30
             run: |
                 python -m pytest --cov --cov-report=term-missing --cov-config=./.coveragerc --cov-report=xml -vv
 
