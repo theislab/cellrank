@@ -79,10 +79,9 @@ jobs:
             uses: actions/cache@v2
             with:
                 path: ${{ steps.pip-cache.outputs.dir }}
-          # not an ideal key, since 3.7.9 and 3.7.10 might share cache if an update on GA occurs
-                key: ${{ runner.os }}-{{ runner.python }}-pip-${{ hashFiles('**/requirements.txt') }}
+                key: pip-${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('**/requirements.txt') }}
                 restore-keys: |
-                    ${{ runner.os }}-{{ runner.python }}-pip-
+                    pip-${{ runner.os }}-${{ env.pythonLocation }}-
 
         -   name: Before install
             run: |
