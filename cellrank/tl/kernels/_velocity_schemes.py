@@ -139,8 +139,8 @@ def _predict_transition_probabilities_numpy(
 
 
 class Hessian(ABC):  # noqa: D101
-    @d.get_full_descriptionf("hessian")
-    @d.get_sectionsf("hessian", sections=["Parameters", "Returns"])
+    @d.get_full_description(base="hessian")
+    @d.get_sections(base="hessian", sections=["Parameters", "Returns"])
     @abstractmethod
     def hessian(
         self, v: np.ndarray, D: np.ndarray, softmax_scale: float = 1.0
@@ -177,8 +177,8 @@ class Hessian(ABC):  # noqa: D101
 class SimilaritySchemeABC(ABC):
     """Base class for all similarity schemes."""
 
-    @d.get_full_descriptionf("sim_scheme")
-    @d.get_sectionsf("sim_scheme", sections=["Parameters", "Returns"])
+    @d.get_full_description(base="sim_scheme")
+    @d.get_sections(base="sim_scheme", sections=["Parameters", "Returns"])
     @abstractmethod
     def __call__(
         self, v: np.ndarray, D: np.ndarray, softmax_scale: float = 1.0

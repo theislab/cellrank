@@ -277,7 +277,7 @@ class VectorPlottable(KernelHolder, Property):
         - :class:`cellrank.tool.estimators._decomposition.Schur`
     """
 
-    @d.get_sectionsf("plot_vectors", sections=["Parameters", "Returns"])
+    @d.get_sections(base="plot_vectors", sections=["Parameters", "Returns"])
     @d.dedent
     def _plot_vectors(
         self,
@@ -389,7 +389,7 @@ class Plottable(KernelHolder, Property):
         - :class:`cellrank.tool.estimators._property.AbsProbs`.
     """
 
-    @d.get_sectionsf("plot_discrete")
+    @d.get_sections(base="plot_discrete")
     @d.dedent
     def _plot_discrete(
         self,
@@ -520,7 +520,7 @@ class Plottable(KernelHolder, Property):
                     **_filter_kwargs(scv.pl.scatter, **kwargs),
                 )
 
-    @d.get_sectionsf("plot_continuous")
+    @d.get_sections(base="plot_continuous")
     @d.dedent
     def _plot_continuous(
         self,
