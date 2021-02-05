@@ -191,8 +191,8 @@ def _reconstruct_one(
 
     # strange bug happens when no copying and eliminating zeros from cors (it's no longer row-stochastic)
     # only happens when using numba
-    probs = csr_matrix((data[0], mat.indices, mat.indptr))
-    cors = csr_matrix((data[1], mat.indices, mat.indptr))
+    probs = csr_matrix((data[0].copy(), mat.indices, mat.indptr))
+    cors = csr_matrix((data[1].copy(), mat.indices, mat.indptr))
 
     if aixs is not None:
         assert (
