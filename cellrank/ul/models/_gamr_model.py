@@ -361,7 +361,7 @@ class GAMR(BaseModel):
 
 def _maybe_import_r_lib(
     name: str, raise_exc: bool = False
-) -> Optional[Tuple[Any, str]]:
+) -> Tuple[Optional[Any], Optional[str]]:
     global _r_lib, _r_lib_name
 
     if name == _r_lib_name and _r_lib is not None:
@@ -388,7 +388,7 @@ def _maybe_import_r_lib(
         return _r_lib, _r_lib_name
     except PackageNotInstalledError as e:
         if not raise_exc:
-            return
+            return None, None
         raise RuntimeError(
             f"Install R library `{name!r}` first as `install.packages({name!r}).`"
         ) from e

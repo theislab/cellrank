@@ -744,7 +744,7 @@ def _trends_helper(
             perc=perc,
             cbar=False,
             title=title,
-            hide_cells=cells_shown if not hide_cells else True,
+            hide_cells=True if hide_cells else cells_shown if same_plot else False,
             same_plot=same_plot,
             lineage_color=lineage_color_mapper[name],
             lineage_probability_color=lineage_probability_color,
