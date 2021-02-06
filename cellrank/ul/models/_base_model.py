@@ -7,14 +7,19 @@ from typing import Any, List, Tuple, Union, TypeVar, Callable, Optional
 
 import wrapt
 
+from scanpy.plotting._utils import add_colors_for_categorical_sample_annotation
+
 import numpy as np
 from scipy.sparse import spmatrix
 from scipy.ndimage import convolve
+from pandas.api.types import infer_dtype
+from pandas.core.dtypes.common import is_numeric_dtype, is_categorical_dtype
 
 import matplotlib as mpl
 from matplotlib import cm
 from matplotlib import colors as mcolors
 from matplotlib import pyplot as plt
+from matplotlib.colors import to_rgb
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from cellrank import logging as logg
@@ -173,6 +178,8 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         self._adata = adata
         self._model = model
         self._gene = None
+        self._use_raw = False
+        self._data_key = None
         self._lineage = None
         self._prepared = False
 
@@ -349,6 +356,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
                 - :paramref:`prepared` - %(base_model_prepared.summary)s
         """
 
+        self._use_raw = use_raw
         if use_raw:
             if self.adata.raw is None:
                 raise AttributeError("AnnData object has no attribute `.raw`.")
@@ -427,10 +435,13 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
 
         if data_key == "X":
             y = adata.X[:, gene_ix]
+            self._data_key = None
         elif data_key == "obs":
             y = adata.obs[gene].values
+            # don't set data_key, it's just when `cell_color = ...`
         elif data_key in adata.layers:
             y = adata.layers[data_key][:, gene_ix]
+            self._data_key = data_key
         else:
             raise NotImplementedError(f"Data key `{data_key!r}` is not implemented.")
 
@@ -736,7 +747,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         abs_prob_cmap
             Colormap to use when coloring in the absorption probabilities.
         cell_color
-            Color for the cells when not coloring absorption probabilities.
+            TODO.
         lineage_color
             Color for the lineage.
         alpha
@@ -822,11 +833,18 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
 
         vmin, vmax = None, None
         if not hide_cells:
-            vmin, vmax = _minmax(self.w_all, perc)
+            key, color, shown_cbar = self._get_colors(cell_color)
+            cbar = cbar and shown_cbar
+            if isinstance(color, np.ndarray):
+                vmin, vmax = _minmax(color, perc)
+            else:
+                vmin, vmax = _minmax(self.w_all, perc)
             _ = ax.scatter(
                 self.x_all.squeeze(),
                 scaler(self.y_all.squeeze()),
-                c=cell_color
+                c=color
+                if isinstance(color, np.ndarray)
+                else "black"
                 if same_plot or np.allclose(self.w_all, 1.0)
                 else self.w_all.squeeze(),
                 s=size,
@@ -1031,7 +1049,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
             setattr(dst, attr, _copy(getattr(self, attr)))
 
     def _shallowcopy_attributes(self, dst: "BaseModel") -> None:
-        for attr in ["_gene", "_lineage", "_is_bulk"]:
+        for attr in ["_gene", "_lineage", "_use_raw", "_data_key", "_is_bulk"]:
             setattr(dst, attr, _copy(getattr(self, attr)))
         # user is not exposed to this
         dst._obs_names = self._obs_names
@@ -1075,6 +1093,66 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
             if self.model is None
             else _dup_spaces.sub(" ", str(self.model).replace("\n", " ")).strip(),
         )
+
+    def _get_colors(
+        self, key: Optional[str]
+    ) -> Tuple[Optional[str], Optional[Union[str, np.ndarray]], bool]:
+        """
+        Get color array.
+
+        Parameters
+        ----------
+        key
+            Key in :attr:`anndata.obs`, :attr:`anndata.var_names`, :attr:`anndata.raw.var)names`.
+            Search first starts in `.obs`, then `.raw.var_names` and lastly `.layers`, using
+            :meth:`anndata.obs_vector`.
+        Returns
+        -------
+        Triple of the following:
+
+            - name of the colorbar label, if any.
+            - array of values to map, if any.
+            - whether to show the colorbar. `True` if plotting continous observations.
+        """
+        if key is None:
+            return None, None, True
+
+        if key in self.adata.obs:
+            if is_categorical_dtype(self.adata.obs[key]):
+                add_colors_for_categorical_sample_annotation(
+                    self.adata,
+                    key=key,
+                    force_update_colors=False,
+                    palette=None,
+                )
+                col_dict = dict(
+                    zip(
+                        self.adata.obs[key].cat.categories,
+                        [to_rgb(i) for i in self.adata.uns[f"{key}_colors"]],
+                    )
+                )
+                return key, np.array([col_dict[v] for v in self.adata.obs[key]]), False
+            if is_numeric_dtype(self.adata.obs[key]):
+                return key, self.adata.obs[key].values, True
+
+            logg.debug(
+                f"Unable to interpret cell color from type `{infer_dtype(self.adata.obs[key])}`"
+            )
+            return None, None, True
+
+        if self._use_raw and key in self.adata.raw.var_names:
+            return key, _densify_squeeze(self.adata.raw[:, key], np.float64), True
+
+        try:
+            # can in principle return data from `.obs`, in which case it's mostly invalid
+            return key, self.adata.obs_vector(key, layer=self._data_key), True
+        except KeyError:
+            logg.debug(
+                f"Key `{key!r}` not found in `adata.obs` or "
+                f"`adata{'.raw' if self._use_raw else ''}.var_names`. Ignoring`"
+            )
+
+        return None, None, True
 
     def _create_scaler(self, show_lineage_probability: bool, show_conf_int: bool):
         if not show_lineage_probability:

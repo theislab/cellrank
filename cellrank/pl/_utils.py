@@ -622,7 +622,6 @@ def _trends_helper(
     if same_plot:
         axes = [axes] * len(lineage_names)
 
-    fig.tight_layout()
     axes = np.ravel(axes)
 
     percs = kwargs.pop("perc", None)
@@ -765,9 +764,18 @@ def _trends_helper(
         ylabel_shown = True
         cells_shown = True
 
-    if not same_plot and same_perc and show_cbar and not hide_cells:
-        vmin = np.min([model.w_all for model in successful_models.values()])
-        vmax = np.max([model.w_all for model in successful_models.values()])
+    key, color, cbar = model._get_colors(kwargs.get("cell_color", None))
+    show_cbar = show_cbar and cbar
+
+    if same_perc and show_cbar and not hide_cells:
+        if cbar and isinstance(color, np.ndarray):
+            # plotting cont. observation other than lin. probs as a color
+            # can also be categorical obs
+            vmin = np.min(color)
+            vmax = np.max(color)
+        else:
+            vmin = np.min([model.w_all for model in successful_models.values()])
+            vmax = np.max([model.w_all for model in successful_models.values()])
         norm = mcolors.Normalize(vmin=vmin, vmax=vmax)
 
         for ax in axes:
@@ -785,7 +793,7 @@ def _trends_helper(
             cax,
             norm=norm,
             cmap=abs_prob_cmap,
-            label="absorption probability",
+            label=key if key is not None else "absorption probability",
             ticks=np.linspace(norm.vmin, norm.vmax, 5),
         )
 

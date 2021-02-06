@@ -113,7 +113,7 @@ def gene_trends(
         Continuous colormap to use when visualizing the absorption probabilities for each lineage.
         Only used when ``same_plot=False``.
     cell_color
-        Color of the cells when not visualizing absorption probabilities. Only used when ``same_plot=True``.
+        TODO.
     cell_alpha
         Alpha channel for cells.
     lineage_alpha
