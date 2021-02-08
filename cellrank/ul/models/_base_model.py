@@ -1372,6 +1372,11 @@ class FittedModel(BaseModel):
 
         self._prepared = True
 
+    def _get_colors(
+        self, key: Optional[str]
+    ) -> Tuple[Optional[str], Optional[Union[str, np.ndarray]], bool]:
+        return None, None, True
+
     def prepare(self, *_args, **_kwargs) -> "FittedModel":
         """Do nothing and return self."""
         return self
