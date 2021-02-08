@@ -1,8 +1,8 @@
 """Gene trend module."""
-
 from types import MappingProxyType
 from typing import List, Tuple, Union, Mapping, TypeVar, Optional, Sequence
 from pathlib import Path
+from collections import defaultdict
 
 import numpy as np
 import pandas as pd
@@ -49,7 +49,7 @@ def gene_trends(
     perc: Optional[Union[Tuple[float, float], Sequence[Tuple[float, float]]]] = None,
     lineage_cmap: Optional[matplotlib.colors.ListedColormap] = None,
     abs_prob_cmap: matplotlib.colors.ListedColormap = cm.viridis,
-    cell_color: str = "black",
+    cell_color: Optional[Union[str, Sequence[str]]] = None,
     cell_alpha: float = 0.6,
     lineage_alpha: float = 0.2,
     size: float = 15,
@@ -60,6 +60,7 @@ def gene_trends(
     sharey: Optional[Union[str, bool]] = None,
     gene_as_title: Optional[bool] = None,
     legend_loc: Optional[str] = "best",
+    obs_legend_loc: Optional[str] = "best",
     ncols: int = 2,
     suptitle: Optional[str] = None,
     return_models: bool = False,
@@ -113,7 +114,8 @@ def gene_trends(
         Continuous colormap to use when visualizing the absorption probabilities for each lineage.
         Only used when ``same_plot=False``.
     cell_color
-        TODO.
+        Key in :attr:`anndata.AnnData.obs` or :attr:`anndata.AnnData.var_names` used for coloring the cells.
+        Can also be specified as a :class:`dict`, similarly to ``model``.
     cell_alpha
         Alpha channel for cells.
     lineage_alpha
@@ -134,6 +136,8 @@ def gene_trends(
         Whether to show gene names as titles instead on y-axis.
     legend_loc
         Location of the legend displaying lineages. Only used when `same_plot=True`.
+    obs_legend_loc
+        Location of the legend when ``cell_color`` corresponds to a categorical variable.
     ncols
         Number of columns of the plot when plotting multiple genes. Only used when ``same_plot=True``.
     suptitle
@@ -169,11 +173,21 @@ def gene_trends(
         lineages = adata.obsm[ln_key].names
     elif isinstance(lineages, str):
         lineages = [lineages]
-    elif all(map(lambda ln: ln is None, lineages)):  # no lineage, all the weights are 1
+    elif all(ln is None for ln in lineages):  # no lineage, all the weights are 1
         lineages = [None]
         cbar = False
         logg.debug("All lineages are `None`, setting the weights to `1`")
     lineages = _unique_order_preserving(lineages)
+    if cell_color is None or isinstance(cell_color, str):
+        cell_color = {g: {ln: cell_color for ln in lineages} for g in genes}
+    if not isinstance(cell_color, dict):
+        raise ValueError(
+            f"Expected `cell_color` to be a dictionary, found `{type(cell_color)}`."
+        )
+
+    cell_color = defaultdict(lambda: defaultdict(lambda: None), cell_color)
+    for k, v in cell_color.items():
+        cell_color[k] = defaultdict(lambda: None, v)
 
     if isinstance(time_range, (tuple, float, int, type(None))):
         time_range = [time_range] * len(lineages)
@@ -215,6 +229,11 @@ def gene_trends(
         models = pd.DataFrame(models).T.to_dict()
         genes, lineages = lineages, genes
         hide_cells = same_plot or hide_cells
+
+        cell_color = {g: {ln: cell_color[ln][g] for ln in lineages} for g in genes}
+        cell_color = defaultdict(lambda: defaultdict(lambda: None), cell_color)
+        for k, v in cell_color.items():
+            cell_color[k] = defaultdict(lambda: None, v)
     else:
         # information overload otherwise
         plot_kwargs["lineage_probability"] = False
@@ -253,7 +272,7 @@ def gene_trends(
         sharex=sharex,
         sharey=sharey,
         figsize=(6 * ncols, 4 * nrows) if figsize is None else figsize,
-        constrained_layout=True,
+        tight_layout=True,
         dpi=dpi,
     )
     axes = np.reshape(axes, (nrows, ncols))
@@ -286,7 +305,7 @@ def gene_trends(
                 lineage_cmap=lineage_cmap,
                 abs_prob_cmap=abs_prob_cmap,
                 lineage_probability_color=lpc,
-                cell_color=cell_color,
+                cell_color=cell_color[gene],
                 alpha=cell_alpha,
                 lineage_alpha=lineage_alpha,
                 size=size,

@@ -33,6 +33,7 @@ from cellrank.ul.models import GAMR, BaseModel, FailedModel, SKLearnModel
 from cellrank.tl._colors import _create_categorical_colors
 from cellrank.tl._constants import _DEFAULT_BACKEND
 from cellrank.ul._parallelize import parallelize
+from cellrank.ul.models._base_model import ColorType
 
 AnnData = TypeVar("AnnData")
 Queue = TypeVar("Queue")
@@ -567,6 +568,7 @@ def _trends_helper(
     lineage_probability_color: Optional[str] = None,
     abs_prob_cmap=cm.viridis,
     gene_as_title: bool = False,
+    cell_color: Mapping[str, str] = None,
     legend_loc: Optional[str] = "best",
     fig: mpl.figure.Figure = None,
     axes: Union[mpl.axes.Axes, Sequence[mpl.axes.Axes]] = None,
@@ -710,6 +712,30 @@ def _trends_helper(
     ylabel_shown = False
     cells_shown = False
 
+    # determine if we only need a colorbar at the end of the row, all always if cont. obs is present
+    vals = {cell_color[ln] for ln in lineage_names}
+    model = models[gene][lineage_names[0]]
+    cbar = False
+    if len(vals) > 1:
+        cont_cnt, cat_cnt = 0, 0
+        for v in vals:
+            key, color, typp, mapper = model._get_colors(v, same_plot=same_plot)
+            cont_cnt += typp == ColorType.CONT
+            cat_cnt += typp in (ColorType.STR, ColorType.CAT)
+        if cat_cnt == len(vals):  # all values are categorical, we don't need colorbars
+            cbar = False
+            show_cbar = False
+        elif (
+            cont_cnt > 1
+        ):  # different values (by keys), plot colorbars for each and don't plot the extra cbar
+            cbar = show_cbar
+            show_cbar = False
+            kwargs["scaler"] = lambda _: _
+    else:
+        key, color, typp, mapper = model._get_colors(
+            next(iter(vals)), same_plot=same_plot
+        )
+
     for i, (name, ax, perc) in enumerate(zip(lineage_names, axes, percs)):
         model = models[gene][name]
         if isinstance(model, FailedModel):
@@ -740,7 +766,8 @@ def _trends_helper(
             ax=ax,
             fig=fig,
             perc=perc,
-            cbar=False,
+            cell_color=cell_color[name],
+            cbar=cbar,
             title=title,
             hide_cells=True if hide_cells else cells_shown if same_plot else False,
             same_plot=same_plot,
@@ -763,13 +790,9 @@ def _trends_helper(
         ylabel_shown = True
         cells_shown = True
 
-    key, color, cbar = model._get_colors(kwargs.get("cell_color", None))
-    show_cbar = show_cbar and cbar
-
     if same_perc and show_cbar and not hide_cells:
-        if cbar and isinstance(color, np.ndarray):
+        if isinstance(color, np.ndarray):
             # plotting cont. observation other than lin. probs as a color
-            # can also be categorical obs
             vmin = np.min(color)
             vmax = np.max(color)
         else:
@@ -792,7 +815,7 @@ def _trends_helper(
             cax,
             norm=norm,
             cmap=abs_prob_cmap,
-            label=key if key is not None else "absorption probability",
+            label=key,
             ticks=np.linspace(norm.vmin, norm.vmax, 5),
         )
 

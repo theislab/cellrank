@@ -3,7 +3,8 @@ import re
 from abc import ABC, ABCMeta, abstractmethod
 from copy import copy as _copy
 from copy import deepcopy
-from typing import Any, List, Tuple, Union, TypeVar, Callable, Optional
+from typing import Any, Dict, List, Tuple, Union, TypeVar, Callable, Optional
+from collections import defaultdict
 
 import wrapt
 
@@ -19,7 +20,7 @@ import matplotlib as mpl
 from matplotlib import cm
 from matplotlib import colors as mcolors
 from matplotlib import pyplot as plt
-from matplotlib.colors import to_rgb
+from matplotlib.colors import to_rgb, is_color_like
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from cellrank import logging as logg
@@ -45,6 +46,12 @@ class FailedReturnType(ModeEnum):  # noqa
     CONFIDENCE_INTERVAL = "confidence_interval"
     DEFAULT_CONFIDENCE_INTERVAL = "default_confidence_interval"
     PLOT = "plot"
+
+
+class ColorType(ModeEnum):  # noqa: D101
+    CONT = "cont"
+    CAT = "cat"
+    STR = "str"
 
 
 def _handle_exception(return_type: FailedReturnType, func: Callable) -> Callable:
@@ -709,7 +716,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         hide_cells: bool = False,
         perc: Tuple[float, float] = None,
         abs_prob_cmap: mcolors.ListedColormap = cm.viridis,
-        cell_color: str = "black",
+        cell_color: Optional[str] = None,
         lineage_color: str = "black",
         alpha: float = 0.8,
         lineage_alpha: float = 0.2,
@@ -724,6 +731,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         lineage_probability: bool = False,
         lineage_probability_conf_int: Union[bool, float] = False,
         lineage_probability_color: Optional[str] = None,
+        obs_legend_loc: Optional[str] = "best",
         dpi: int = None,
         fig: mpl.figure.Figure = None,
         ax: mpl.axes.Axes = None,
@@ -747,7 +755,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         abs_prob_cmap
             Colormap to use when coloring in the absorption probabilities.
         cell_color
-            TODO.
+            Key in :attr:`anndata.AnnData.obs` or :attr:`anndata.AnnData.var_names` used for coloring the cells.
         lineage_color
             Color for the lineage.
         alpha
@@ -780,6 +788,8 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         lineage_probability_color
             Color to use when plotting the smoothed ``lineage_probability``.
             If `None`, it's the same as ``lineage_color``. Only used when ``show_lineage_probability=True``.
+        obs_legend_loc
+            Location of the legend when ``cell_color`` corresponds to a categorical variable.
         dpi
             Dots per inch.
         fig
@@ -832,21 +842,17 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
                 ylabel = f"scaled {ylabel}"
 
         vmin, vmax = None, None
+        key, color, typp, mapper = self._get_colors(cell_color, same_plot=same_plot)
+
         if not hide_cells:
-            key, color, shown_cbar = self._get_colors(cell_color)
-            cbar = cbar and shown_cbar
-            if isinstance(color, np.ndarray):
+            cbar = cbar and (typp == ColorType.CONT)
+            if typp == ColorType.CONT:
                 vmin, vmax = _minmax(color, perc)
-            else:
-                vmin, vmax = _minmax(self.w_all, perc)
+
             _ = ax.scatter(
                 self.x_all.squeeze(),
                 scaler(self.y_all.squeeze()),
-                c=color
-                if isinstance(color, np.ndarray)
-                else "black"
-                if same_plot or np.allclose(self.w_all, 1.0)
-                else self.w_all.squeeze(),
+                c=color,
                 s=size,
                 cmap=abs_prob_cmap,
                 vmin=vmin,
@@ -944,6 +950,22 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
                 cmap=abs_prob_cmap,
                 ticks=np.linspace(norm.vmin, norm.vmax, 5),
             )
+            cax.set_ylabel(key)
+        elif typp == ColorType.CAT:
+            if obs_legend_loc not in (None, "none"):
+                from cellrank.pl._utils import _position_legend
+
+                handles = [
+                    ax.scatter([], [], label=name, color=color)
+                    for name, color in mapper.items()
+                ]
+                legend = _position_legend(
+                    ax,
+                    legend_loc=obs_legend_loc,
+                    handles=handles,
+                    title=key,
+                )
+                fig.add_artist(legend)
 
         if save is not None:
             save_fig(fig, save)
@@ -1095,8 +1117,16 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         )
 
     def _get_colors(
-        self, key: Optional[str]
-    ) -> Tuple[Optional[str], Optional[Union[str, np.ndarray]], bool]:
+        self,
+        key: Optional[str],
+        *,
+        same_plot: bool = False,
+    ) -> Tuple[
+        Optional[str],
+        Optional[Union[str, np.ndarray]],
+        ColorType,
+        Optional[Dict[str, Any]],
+    ]:
         """
         Get color array.
 
@@ -1110,12 +1140,13 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         -------
         Triple of the following:
 
-            - name of the colorbar label, if any.
-            - array of values to map, if any.
-            - whether to show the colorbar. `True` if plotting continous observations.
+            - name of the colorbar label.
+            - array of values to map.
+            - type of the color.
+            - color mapper for categorical colors.
         """
-        if key is None:
-            return None, None, True
+        if is_color_like(key):
+            return None, key, ColorType.STR, None
 
         if key in self.adata.obs:
             if is_categorical_dtype(self.adata.obs[key]):
@@ -1125,34 +1156,54 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
                     force_update_colors=False,
                     palette=None,
                 )
-                col_dict = dict(
+                col_dict = defaultdict(
+                    lambda: to_rgb("grey"),
                     zip(
                         self.adata.obs[key].cat.categories,
                         [to_rgb(i) for i in self.adata.uns[f"{key}_colors"]],
-                    )
+                    ),
                 )
-                return key, np.array([col_dict[v] for v in self.adata.obs[key]]), False
+                return (
+                    key,
+                    np.array([col_dict[v] for v in self.adata.obs[key]]),
+                    ColorType.CAT,
+                    col_dict,
+                )
+
             if is_numeric_dtype(self.adata.obs[key]):
-                return key, self.adata.obs[key].values, True
+                return key, self.adata.obs[key].values, ColorType.CONT, None
 
             logg.debug(
                 f"Unable to interpret cell color from type `{infer_dtype(self.adata.obs[key])}`"
             )
-            return None, None, True
+            return None, "black", ColorType.STR, None
 
         if self._use_raw and key in self.adata.raw.var_names:
-            return key, _densify_squeeze(self.adata.raw[:, key], np.float64), True
+            return (
+                key,
+                _densify_squeeze(self.adata.raw[:, key], np.float64),
+                ColorType.CONT,
+                None,
+            )
 
         try:
             # can in principle return data from `.obs`, in which case it's mostly invalid
-            return key, self.adata.obs_vector(key, layer=self._data_key), True
+            return (
+                key,
+                self.adata.obs_vector(key, layer=self._data_key),
+                ColorType.CONT,
+                None,
+            )
         except KeyError:
             logg.debug(
                 f"Key `{key!r}` not found in `adata.obs` or "
                 f"`adata{'.raw' if self._use_raw else ''}.var_names`. Ignoring`"
             )
 
-        return None, None, True
+        if same_plot or np.allclose(self.w_all, 1.0):
+            return None, "black", ColorType.STR, None
+
+        return "absorption probability", np.squeeze(self.w_all), ColorType.CONT, None
 
     def _create_scaler(self, show_lineage_probability: bool, show_conf_int: bool):
         if not show_lineage_probability:
@@ -1262,6 +1313,19 @@ class FailedModel(BaseModel):
         # retain the exception type and also the original exception
         raise type(self._exc)(f"Fatal model failure `{self}`.") from self._exc
 
+    def _get_colors(
+        self,
+        key: Optional[str],
+        *,
+        same_plot: bool = False,
+    ) -> Tuple[
+        Optional[str],
+        Optional[Union[str, np.ndarray]],
+        ColorType,
+        Optional[Dict[str, Any]],
+    ]:
+        return None, "black", ColorType.STR, None
+
     def _return_min_max(self, show_conf_int: bool):
         return np.inf, -np.inf
 
@@ -1363,7 +1427,7 @@ class FittedModel(BaseModel):
                     )
             else:
                 logg.debug("Setting `w_all` to an array of `1`")
-                self._w_all = np.ones_like(self.x_all).squeeze(1)
+                self._w_all = np.ones_like(self.x_all, dtype=np.float64).squeeze(1)
         else:
             logg.debug(
                 "None or partially incomplete `x_all` and `y_all` have been supplied, "
@@ -1373,9 +1437,20 @@ class FittedModel(BaseModel):
         self._prepared = True
 
     def _get_colors(
-        self, key: Optional[str]
-    ) -> Tuple[Optional[str], Optional[Union[str, np.ndarray]], bool]:
-        return None, None, True
+        self,
+        key: Optional[str],
+        *,
+        same_plot: bool = False,
+    ) -> Tuple[
+        Optional[str],
+        Optional[Union[str, np.ndarray]],
+        ColorType,
+        Optional[Dict[str, Any]],
+    ]:
+        # w_all does not need to be defined
+        if same_plot or self.w_all is None or np.allclose(self.w_all, 1.0):
+            return None, "black", ColorType.STR, None
+        return "absorption probability", np.squeeze(self.w_all), ColorType.CONT, None
 
     def prepare(self, *_args, **_kwargs) -> "FittedModel":
         """Do nothing and return self."""
