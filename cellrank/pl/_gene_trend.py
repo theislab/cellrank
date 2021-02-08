@@ -175,10 +175,6 @@ def gene_trends(
         logg.debug("All lineages are `None`, setting the weights to `1`")
     lineages = _unique_order_preserving(lineages)
 
-    tmp = adata.obsm[ln_key][lineages].colors
-    if lineage_cmap is None and not transpose:
-        lineage_cmap = tmp
-
     if isinstance(time_range, (tuple, float, int, type(None))):
         time_range = [time_range] * len(lineages)
     elif len(time_range) != len(lineages):
@@ -207,6 +203,11 @@ def gene_trends(
         },
         **kwargs,
     )
+
+    lineages = sorted(lineages)
+    tmp = adata.obsm[ln_key][lineages].colors
+    if lineage_cmap is None and not transpose:
+        lineage_cmap = tmp
 
     plot_kwargs = dict(plot_kwargs)
     if transpose:

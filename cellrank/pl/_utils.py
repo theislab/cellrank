@@ -651,7 +651,7 @@ def _trends_helper(
         else:
             # this should be fine w.r.t. to the missing genes, since they are in the same order AND
             # we're also passing the failed models (this is important)
-            # these are actually gene colors, bu w/e
+            # these are actually gene colors
             if lineage_cmap is not None:
                 lineage_colors = (
                     lineage_cmap.colors
@@ -671,7 +671,6 @@ def _trends_helper(
         )
 
     lineage_color_mapper = {ln: lineage_colors[i] for i, ln in enumerate(lineage_names)}
-
     successful_models = {
         ln: models[gene][ln] for ln in lineage_names if models[gene][ln]
     }
