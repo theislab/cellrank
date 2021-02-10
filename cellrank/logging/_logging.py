@@ -100,6 +100,7 @@ _DEPENDENCIES_NUMERICS = [
     "numba",
     "scipy",
     "pandas",
+    "pygpcca",
     ("sklearn", "scikit-learn"),
     "statsmodels",
     ("igraph", "python-igraph"),

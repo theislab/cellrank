@@ -18,5 +18,4 @@ scvelo>=0.2.2
 seaborn>=0.10.0
 setuptools>=41.0.1
 tzlocal>=1.5.1
-vendorize>=0.2.1
 wrapt>=1.12.1
