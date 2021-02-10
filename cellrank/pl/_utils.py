@@ -568,7 +568,7 @@ def _trends_helper(
     lineage_probability_color: Optional[str] = None,
     abs_prob_cmap=cm.viridis,
     gene_as_title: bool = False,
-    cell_color: Mapping[str, str] = None,
+    cell_color: Optional[str] = None,
     legend_loc: Optional[str] = "best",
     fig: mpl.figure.Figure = None,
     axes: Union[mpl.axes.Axes, Sequence[mpl.axes.Axes]] = None,
@@ -711,30 +711,7 @@ def _trends_helper(
     last_ax = None
     ylabel_shown = False
     cells_shown = False
-
-    # determine if we only need a colorbar at the end of the row, all always if cont. obs is present
-    vals = {cell_color[ln] for ln in lineage_names}
-    model = models[gene][lineage_names[0]]
-    cbar = False
-    if len(vals) > 1:
-        cont_cnt, cat_cnt = 0, 0
-        for v in vals:
-            key, color, typp, mapper = model._get_colors(v, same_plot=same_plot)
-            cont_cnt += typp == ColorType.CONT
-            cat_cnt += typp in (ColorType.STR, ColorType.CAT)
-        if cat_cnt == len(vals):  # all values are categorical, we don't need colorbars
-            cbar = False
-            show_cbar = False
-        elif (
-            cont_cnt > 1
-        ):  # different values (by keys), plot colorbars for each and don't plot the extra cbar
-            cbar = show_cbar
-            show_cbar = False
-            kwargs["scaler"] = lambda _: _
-    else:
-        key, color, typp, mapper = model._get_colors(
-            next(iter(vals)), same_plot=same_plot
-        )
+    obs_legend_loc = kwargs.pop("obs_legend_loc", "best")
 
     for i, (name, ax, perc) in enumerate(zip(lineage_names, axes, percs)):
         model = models[gene][name]
@@ -766,8 +743,9 @@ def _trends_helper(
             ax=ax,
             fig=fig,
             perc=perc,
-            cell_color=cell_color[name],
-            cbar=cbar,
+            cell_color=cell_color,
+            cbar=False,
+            obs_legend_loc=None,
             title=title,
             hide_cells=True if hide_cells else cells_shown if same_plot else False,
             same_plot=same_plot,
@@ -790,34 +768,41 @@ def _trends_helper(
         ylabel_shown = True
         cells_shown = True
 
-    if same_perc and show_cbar and not hide_cells:
-        if isinstance(color, np.ndarray):
-            # plotting cont. observation other than lin. probs as a color
-            vmin = np.min(color)
-            vmax = np.max(color)
-        else:
-            vmin = np.min([model.w_all for model in successful_models.values()])
-            vmax = np.max([model.w_all for model in successful_models.values()])
-        norm = mcolors.Normalize(vmin=vmin, vmax=vmax)
+    key, color, typp, mapper = model._get_colors(cell_color, same_plot=same_plot)
+    if typp == ColorType.CAT:
+        if not hide_cells:
+            model._maybe_add_legend(
+                fig, ax, title=key, mapper=mapper, legend_loc=obs_legend_loc
+            )
+    elif typp == ColorType.CONT:
+        if same_perc and show_cbar and not hide_cells:
+            if isinstance(color, np.ndarray):
+                # plotting cont. observation other than lin. probs as a color
+                vmin = np.min(color)
+                vmax = np.max(color)
+            else:
+                vmin = np.min([model.w_all for model in successful_models.values()])
+                vmax = np.max([model.w_all for model in successful_models.values()])
+            norm = mcolors.Normalize(vmin=vmin, vmax=vmax)
 
-        for ax in axes:
-            children = [
-                c
-                for c in ax.get_children()
-                if isinstance(c, mpl.collections.PathCollection)
-            ]
-            if len(children):
-                children[0].set_norm(norm)
+            for ax in axes:
+                children = [
+                    c
+                    for c in ax.get_children()
+                    if isinstance(c, mpl.collections.PathCollection)
+                ]
+                if len(children):
+                    children[0].set_norm(norm)
 
-        divider = make_axes_locatable(last_ax)
-        cax = divider.append_axes("right", size="2%", pad=0.1)
-        _ = mpl.colorbar.ColorbarBase(
-            cax,
-            norm=norm,
-            cmap=abs_prob_cmap,
-            label=key,
-            ticks=np.linspace(norm.vmin, norm.vmax, 5),
-        )
+            divider = make_axes_locatable(last_ax)
+            cax = divider.append_axes("right", size="2%", pad=0.1)
+            _ = mpl.colorbar.ColorbarBase(
+                cax,
+                norm=norm,
+                cmap=abs_prob_cmap,
+                label=key,
+                ticks=np.linspace(norm.vmin, norm.vmax, 5),
+            )
 
     if same_plot and lineage_names != [None] and legend_loc not in (None, "none"):
         handles = [

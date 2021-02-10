@@ -3,7 +3,7 @@ import re
 from abc import ABC, ABCMeta, abstractmethod
 from copy import copy as _copy
 from copy import deepcopy
-from typing import Any, Dict, List, Tuple, Union, TypeVar, Callable, Optional
+from typing import Any, Dict, List, Tuple, Union, Mapping, TypeVar, Callable, Optional
 from collections import defaultdict
 
 import wrapt
@@ -952,26 +952,38 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
             )
             cax.set_ylabel(key)
         elif typp == ColorType.CAT:
-            if obs_legend_loc not in (None, "none"):
-                from cellrank.pl._utils import _position_legend
-
-                handles = [
-                    ax.scatter([], [], label=name, color=color)
-                    for name, color in mapper.items()
-                ]
-                legend = _position_legend(
-                    ax,
-                    legend_loc=obs_legend_loc,
-                    handles=handles,
-                    title=key,
-                )
-                fig.add_artist(legend)
+            self._maybe_add_legend(fig, ax, key, mapper, obs_legend_loc)
 
         if save is not None:
             save_fig(fig, save)
 
         if return_fig:
             return fig
+
+    def _maybe_add_legend(
+        self,
+        fig: mpl.figure.Figure,
+        ax: mpl.axes.Axes,
+        title: str,
+        mapper: Mapping[str, Any],
+        legend_loc: Optional[str] = "best",
+    ) -> None:
+        from cellrank.pl._utils import _position_legend
+
+        if legend_loc in ("none", None):
+            return
+
+        handles = [
+            ax.scatter([], [], label=name, color=color)
+            for name, color in mapper.items()
+        ]
+        legend = _position_legend(
+            ax,
+            legend_loc=legend_loc,
+            handles=handles,
+            title=title,
+        )
+        fig.add_artist(legend)
 
     def _reshape_and_retype(self, arr: np.ndarray) -> np.ndarray:
         """

@@ -2,7 +2,6 @@
 from types import MappingProxyType
 from typing import List, Tuple, Union, Mapping, TypeVar, Optional, Sequence
 from pathlib import Path
-from collections import defaultdict
 
 import numpy as np
 import pandas as pd
@@ -49,7 +48,7 @@ def gene_trends(
     perc: Optional[Union[Tuple[float, float], Sequence[Tuple[float, float]]]] = None,
     lineage_cmap: Optional[matplotlib.colors.ListedColormap] = None,
     abs_prob_cmap: matplotlib.colors.ListedColormap = cm.viridis,
-    cell_color: Optional[Union[str, Sequence[str]]] = None,
+    cell_color: Optional[str] = None,
     cell_alpha: float = 0.6,
     lineage_alpha: float = 0.2,
     size: float = 15,
@@ -115,7 +114,6 @@ def gene_trends(
         Only used when ``same_plot=False``.
     cell_color
         Key in :attr:`anndata.AnnData.obs` or :attr:`anndata.AnnData.var_names` used for coloring the cells.
-        Can also be specified as a :class:`dict`, similarly to ``model``.
     cell_alpha
         Alpha channel for cells.
     lineage_alpha
@@ -178,16 +176,6 @@ def gene_trends(
         cbar = False
         logg.debug("All lineages are `None`, setting the weights to `1`")
     lineages = _unique_order_preserving(lineages)
-    if cell_color is None or isinstance(cell_color, str):
-        cell_color = {g: {ln: cell_color for ln in lineages} for g in genes}
-    if not isinstance(cell_color, dict):
-        raise ValueError(
-            f"Expected `cell_color` to be a dictionary, found `{type(cell_color)}`."
-        )
-
-    cell_color = defaultdict(lambda: defaultdict(lambda: None), cell_color)
-    for k, v in cell_color.items():
-        cell_color[k] = defaultdict(lambda: None, v)
 
     if isinstance(time_range, (tuple, float, int, type(None))):
         time_range = [time_range] * len(lineages)
@@ -224,16 +212,12 @@ def gene_trends(
         lineage_cmap = tmp
 
     plot_kwargs = dict(plot_kwargs)
+    plot_kwargs["obs_legend_loc"] = obs_legend_loc
     if transpose:
         all_models = pd.DataFrame(all_models).T.to_dict()
         models = pd.DataFrame(models).T.to_dict()
         genes, lineages = lineages, genes
         hide_cells = same_plot or hide_cells
-
-        cell_color = {g: {ln: cell_color[ln][g] for ln in lineages} for g in genes}
-        cell_color = defaultdict(lambda: defaultdict(lambda: None), cell_color)
-        for k, v in cell_color.items():
-            cell_color[k] = defaultdict(lambda: None, v)
     else:
         # information overload otherwise
         plot_kwargs["lineage_probability"] = False
@@ -277,9 +261,10 @@ def gene_trends(
     )
     axes = np.reshape(axes, (nrows, ncols))
 
-    logg.info("Plotting trends")
     cnt = 0
+    plot_kwargs["obs_legend_loc"] = None if same_plot else obs_legend_loc
 
+    logg.info("Plotting trends")
     for row in range(len(axes)):
         for col in range(len(axes[row])):
             if cnt >= len(genes):
@@ -294,6 +279,11 @@ def gene_trends(
             else:
                 lpc = None
 
+            if same_plot:
+                plot_kwargs["obs_legend_loc"] = (
+                    obs_legend_loc if row == 0 and col == len(axes[0]) - 1 else None
+                )
+
             _trends_helper(
                 models,
                 gene=gene,
@@ -305,7 +295,7 @@ def gene_trends(
                 lineage_cmap=lineage_cmap,
                 abs_prob_cmap=abs_prob_cmap,
                 lineage_probability_color=lpc,
-                cell_color=cell_color[gene],
+                cell_color=cell_color,
                 alpha=cell_alpha,
                 lineage_alpha=lineage_alpha,
                 size=size,
@@ -325,7 +315,11 @@ def gene_trends(
                 else (cnt == end_rows),
                 **plot_kwargs,
             )
+            # plot legend on the 1st plot
             cnt += 1
+
+            if not same_plot:
+                plot_kwargs["obs_legend_loc"] = None
 
     if same_plot and (col != ncols):
         for ax in np.ravel(axes)[cnt:]:
