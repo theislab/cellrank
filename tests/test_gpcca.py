@@ -90,7 +90,7 @@ def _check_abs_probs(mc: cr.tl.estimators.GPCCA, has_main_states: bool = True):
             mc._get(A.TERM_ABS_PROBS)[list(mc._get(P.TERM).cat.categories)].colors,
         )
 
-    assert isinstance(mc._get(P.DIFF_POT), pd.Series)
+    assert isinstance(mc._get(P.PRIME_DEG), pd.Series)
     assert isinstance(mc._get(P.ABS_PROBS), cr.tl.Lineage)
     np.testing.assert_array_almost_equal(mc._get(P.ABS_PROBS).sum(1), 1.0)
 
@@ -105,7 +105,7 @@ def _check_abs_probs(mc: cr.tl.estimators.GPCCA, has_main_states: bool = True):
     )
 
     np.testing.assert_array_equal(
-        mc.adata.obs[_dp(AbsProbKey.FORWARD)], mc._get(P.DIFF_POT)
+        mc.adata.obs[_dp(AbsProbKey.FORWARD)], mc._get(P.PRIME_DEG)
     )
 
     assert_array_nan_equal(mc.adata.obs[TermStatesKey.FORWARD.s], mc._get(P.TERM))

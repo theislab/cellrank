@@ -109,7 +109,7 @@ def _probs(k: Union[str, TermStatesKey]) -> str:
 
 
 def _dp(k: Union[str, AbsProbKey]) -> str:
-    return f"{k}_dp"
+    return f"{k}_prime_deg"
 
 
 def _pretty_raise_enum(cls, fun):

@@ -763,7 +763,7 @@ class Plottable(KernelHolder, Property):
             discrete = False
 
         if not discrete:
-            diff_potential = getattr(self, P.DIFF_POT.v, None)
+            diff_potential = getattr(self, P.PRIME_DEG.v, None)
             self._plot_continuous(data, prop, diff_potential, **kwargs)
         elif prop == P.ABS_PROBS.v:
             # for discrete and abs. probs, plot the terminal states
@@ -827,14 +827,14 @@ class AbsProbs(Plottable):
 
     __prop_metadata__ = [
         Metadata(
-            attr=A.ABS_PROBS,
+            attr=A.PRIME_EG,
             prop=P.ABS_PROBS,
             dtype=Lineage,
             doc="Absorption probabilities.",
         ),
         Metadata(
             attr=A.DIFF_POT,
-            prop=P.DIFF_POT,
+            prop=P.PRIME_DEG,
             dtype=pd.Series,
             doc="Differentiation potential.",
         ),

@@ -139,7 +139,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         self._set_or_debug(_probs(self._term_key), self.adata.obs, A.TERM_PROBS)
         self._set_or_debug(_colors(self._term_key), self.adata.uns, A.TERM_COLORS)
 
-        self._reconstruct_lineage(A.ABS_PROBS, self._abs_prob_key)
+        self._reconstruct_lineage(A.PRIME_EG, self._abs_prob_key)
         self._set_or_debug(_dp(self._abs_prob_key), self.adata.obs, A.DIFF_POT)
 
     def _reconstruct_lineage(self, attr: PrettyEnum, obsm_key: str):
@@ -291,7 +291,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
     @inject_docs(
         abs_prob=P.ABS_PROBS,
         fs=P.TERM.s,
-        diff_pot=P.DIFF_POT,
+        diff_pot=P.PRIME_DEG,
         lat=P.LIN_ABS_TIMES,
     )
     def compute_absorption_probabilities(
@@ -317,8 +317,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         Compute absorption probabilities of a Markov chain.
 
         For each cell, this computes the probability of it reaching any of the approximate recurrent classes defined
-        by :paramref:`{fs}`. This also computes the entropy over absorption probabilities, which is a measure of cell
-        plasticity, see [Setty19]_.
+        by :paramref:`{fs}`. This also computes the priming degree, see [Velten17]_.
 
         Parameters
         ----------
@@ -438,7 +437,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             logg.debug(f"Overwriting `.{P.ABS_PROBS}`")
 
         self._set(
-            A.ABS_PROBS,
+            A.PRIME_EG,
             Lineage(
                 np.empty((1, len(colors_))),
                 names=terminal_states_.cat.categories,
@@ -533,7 +532,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             abs_classes[cl_indices, col] = 1
 
         self._set(
-            A.ABS_PROBS,
+            A.PRIME_EG,
             Lineage(
                 abs_classes,
                 names=self._get(P.ABS_PROBS).names,
@@ -543,7 +542,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         self._set(
             A.DIFF_POT,
             pd.Series(
-                self._get(P.ABS_PROBS).entropy(axis=1).X.squeeze(axis=1),
+                self._get(P.ABS_PROBS).priming_degree,
                 index=self.adata.obs.index,
             ),
         )
@@ -952,7 +951,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         pass
 
     @d.dedent
-    @inject_docs(fs=P.TERM, fsp=P.TERM_PROBS, ap=P.ABS_PROBS, dp=P.DIFF_POT)
+    @inject_docs(fs=P.TERM, fsp=P.TERM_PROBS, ap=P.ABS_PROBS, pd=P.PRIME_DEG)
     def fit(
         self,
         keys: Optional[Sequence] = None,
@@ -979,7 +978,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 - :paramref:`{fsp}`
                 - :paramref:`{fs}`
                 - :paramref:`{ap}`
-                - :paramref:`{dp}`
+                - :paramref:`{pd}`
         """
         self._fit_terminal_states(**kwargs)
         if compute_absorption_probabilities:
@@ -991,7 +990,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         self.adata.obsm[self._abs_prob_key] = self._get(P.ABS_PROBS)
 
         abs_prob = self._get(P.ABS_PROBS)
-        self.adata.obs[_dp(self._abs_prob_key)] = self._get(P.DIFF_POT)
+        self.adata.obs[_dp(self._abs_prob_key)] = self._get(P.PRIME_DEG)
 
         self.adata.uns[_lin_names(self._abs_prob_key)] = abs_prob.names
         self.adata.uns[_colors(self._abs_prob_key)] = abs_prob.colors
@@ -1001,7 +1000,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             f"       `adata.obs[{_dp(self._abs_prob_key)!r}]`\n"
             f"{extra_msg}"
             f"       `.{P.ABS_PROBS}`\n"
-            f"       `.{P.DIFF_POT}`\n"
+            f"       `.{P.PRIME_DEG}`\n"
             "    Finish",
             time=time,
         )

@@ -243,10 +243,10 @@ class TestCFLARE:
         mc.compute_terminal_states(use=2)
         mc.compute_absorption_probabilities()
 
-        assert isinstance(mc._get(P.DIFF_POT), pd.Series)
+        assert isinstance(mc._get(P.PRIME_DEG), pd.Series)
         assert f"{AbsProbKey.FORWARD}_dp" in mc.adata.obs.keys()
         np.testing.assert_array_equal(
-            mc._get(P.DIFF_POT), mc.adata.obs[f"{AbsProbKey.FORWARD}_dp"]
+            mc._get(P.PRIME_DEG), mc.adata.obs[f"{AbsProbKey.FORWARD}_dp"]
         )
 
         assert isinstance(mc._get(P.ABS_PROBS), cr.tl.Lineage)
