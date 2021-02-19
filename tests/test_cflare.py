@@ -19,6 +19,7 @@ from cellrank.tl._constants import (
     DirPrefix,
     AbsProbKey,
     TermStatesKey,
+    _dp,
     _probs,
     _colors,
     _lin_names,
@@ -244,9 +245,9 @@ class TestCFLARE:
         mc.compute_absorption_probabilities()
 
         assert isinstance(mc._get(P.PRIME_DEG), pd.Series)
-        assert f"{AbsProbKey.FORWARD}_dp" in mc.adata.obs.keys()
+        assert _dp(AbsProbKey.FORWARD) in mc.adata.obs.keys()
         np.testing.assert_array_equal(
-            mc._get(P.PRIME_DEG), mc.adata.obs[f"{AbsProbKey.FORWARD}_dp"]
+            mc._get(P.PRIME_DEG), mc.adata.obs[_dp(AbsProbKey.FORWARD)]
         )
 
         assert isinstance(mc._get(P.ABS_PROBS), cr.tl.Lineage)

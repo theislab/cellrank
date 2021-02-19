@@ -317,7 +317,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         Compute absorption probabilities of a Markov chain.
 
         For each cell, this computes the probability of it reaching any of the approximate recurrent classes defined
-        by :paramref:`{fs}`. This also computes the priming degree, see [Velten17]_.
+        by :paramref:`{fs}`. This also computes the priming degree as defined in [Velten17]_, see
+        :func:`cellrank.pl.circular_projection` for more information.
 
         Parameters
         ----------

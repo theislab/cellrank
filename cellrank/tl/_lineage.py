@@ -712,13 +712,13 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         probs = self.X
         return np.nan_to_num(
             np.sum(probs * np.log2(probs / np.mean(probs, axis=0)), axis=1),
-            nan=0.0,
+            nan=1.0,
             copy=False,
         )
 
     @property
     def priming_direction(self) -> np.ndarray:
-        """Direction of the priming as described in [Velten17]_."""
+        """Direction of priming as described in [Velten17]_."""
         probs = self.X
         return self.names[np.argmax(probs / np.sum(probs, axis=0), axis=1)]
 
