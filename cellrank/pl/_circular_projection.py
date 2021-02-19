@@ -78,18 +78,6 @@ def _get_optimal_order(data: Lineage, metric: Metric_T) -> Tuple[float, np.ndarr
     return _held_karp(_get_distances(data, metric))
 
 
-def _priming_degree(probs: Union[np.ndarray, Lineage]) -> np.ndarray:
-    if isinstance(probs, Lineage):
-        probs = probs.X
-    return np.sum(probs * np.log2(probs / np.mean(probs, axis=0)), axis=1)
-
-
-def _priming_direction(probs: Union[np.ndarray, Lineage]) -> np.ndarray:
-    if isinstance(probs, Lineage):
-        probs = probs.X
-    return np.argmax(probs / np.sum(probs, axis=0), axis=1)
-
-
 @d.dedent
 def circular_projection(
     adata: AnnData,
@@ -219,7 +207,7 @@ def circular_projection(
     elif lineages is None:
         lineages = probs.names
 
-    probs = adata.obsm[lineage_key][lineages]
+    probs: Lineage = adata.obsm[lineage_key][lineages]
     n_lin = probs.shape[1]
     if n_lin <= 2:
         raise ValueError(f"Expected at least `3` lineages, found `{n_lin}`")
@@ -276,12 +264,10 @@ def circular_projection(
             k = SpecialKey(k)
             logg.debug(f"Calculating `{k}`")
             if k == SpecialKey.DEGREE:
-                val = _priming_degree(probs)
+                val = probs.priming_degree
                 set_lognorm = True
             elif k == SpecialKey.DIRECTION:
-                val = pd.Series(
-                    probs.names[_priming_direction(probs)], dtype="category"
-                )
+                val = pd.Series(probs.priming_direction, dtype="category")
                 color_mapper = dict(zip(probs.names, probs.colors))
                 adata.uns[f"{k.s}_{suffix}_colors"] = [
                     color_mapper[c] for c in val.cat.categories

@@ -11,7 +11,6 @@ from pandas import DataFrame
 
 import matplotlib.colors as colors
 
-import cellrank.tl._lineage as mocker
 from cellrank.tl import Lineage
 from cellrank.tl._colors import _compute_mean_color, _create_categorical_colors
 from cellrank.tl._lineage import _HT_CELLS, LineageView
@@ -1103,3 +1102,21 @@ class TestPickling:
         assert res._names_to_ixs == lineage._names_to_ixs
         assert res._n_lineages == lineage._n_lineages
         assert res._is_transposed == lineage._is_transposed
+
+
+class TestPriming:
+    def test_priming_degree(self, lineage: Lineage):
+        deg = lineage.priming_degree
+
+        assert isinstance(deg, np.ndarray)
+        assert deg.shape == (len(lineage),)
+        assert np.sum(np.isnan(deg)) == 0
+
+    def test_priming_direction(self, lineage: Lineage):
+        dir_ = lineage.priming_direction
+
+        assert isinstance(dir_, np.ndarray)
+        assert dir_.shape == (len(lineage),)
+
+        for val in set(dir_):
+            assert val in lineage.names
