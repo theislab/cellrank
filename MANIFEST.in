@@ -1,0 +1,5 @@
+prune tests/_ground_truth_*
+prune docs
+prune resources
+prune .scripts
+prune .github

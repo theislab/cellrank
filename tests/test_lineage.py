@@ -11,7 +11,6 @@ from pandas import DataFrame
 
 import matplotlib.colors as colors
 
-import cellrank.tl._lineage as mocker
 from cellrank.tl import Lineage
 from cellrank.tl._colors import _compute_mean_color, _create_categorical_colors
 from cellrank.tl._lineage import _HT_CELLS, LineageView

@@ -1,5 +1,4 @@
 """Gene trend module."""
-
 from types import MappingProxyType
 from typing import List, Tuple, Union, Mapping, TypeVar, Optional, Sequence
 from pathlib import Path
@@ -49,7 +48,7 @@ def gene_trends(
     perc: Optional[Union[Tuple[float, float], Sequence[Tuple[float, float]]]] = None,
     lineage_cmap: Optional[matplotlib.colors.ListedColormap] = None,
     abs_prob_cmap: matplotlib.colors.ListedColormap = cm.viridis,
-    cell_color: str = "black",
+    cell_color: Optional[str] = None,
     cell_alpha: float = 0.6,
     lineage_alpha: float = 0.2,
     size: float = 15,
@@ -60,6 +59,7 @@ def gene_trends(
     sharey: Optional[Union[str, bool]] = None,
     gene_as_title: Optional[bool] = None,
     legend_loc: Optional[str] = "best",
+    obs_legend_loc: Optional[str] = "best",
     ncols: int = 2,
     suptitle: Optional[str] = None,
     return_models: bool = False,
@@ -113,7 +113,7 @@ def gene_trends(
         Continuous colormap to use when visualizing the absorption probabilities for each lineage.
         Only used when ``same_plot=False``.
     cell_color
-        Color of the cells when not visualizing absorption probabilities. Only used when ``same_plot=True``.
+        Key in :attr:`anndata.AnnData.obs` or :attr:`anndata.AnnData.var_names` used for coloring the cells.
     cell_alpha
         Alpha channel for cells.
     lineage_alpha
@@ -134,6 +134,8 @@ def gene_trends(
         Whether to show gene names as titles instead on y-axis.
     legend_loc
         Location of the legend displaying lineages. Only used when `same_plot=True`.
+    obs_legend_loc
+        Location of the legend when ``cell_color`` corresponds to a categorical variable.
     ncols
         Number of columns of the plot when plotting multiple genes. Only used when ``same_plot=True``.
     suptitle
@@ -169,15 +171,11 @@ def gene_trends(
         lineages = adata.obsm[ln_key].names
     elif isinstance(lineages, str):
         lineages = [lineages]
-    elif all(map(lambda ln: ln is None, lineages)):  # no lineage, all the weights are 1
+    elif all(ln is None for ln in lineages):  # no lineage, all the weights are 1
         lineages = [None]
         cbar = False
         logg.debug("All lineages are `None`, setting the weights to `1`")
     lineages = _unique_order_preserving(lineages)
-
-    tmp = adata.obsm[ln_key][lineages].colors
-    if lineage_cmap is None and not transpose:
-        lineage_cmap = tmp
 
     if isinstance(time_range, (tuple, float, int, type(None))):
         time_range = [time_range] * len(lineages)
@@ -208,7 +206,13 @@ def gene_trends(
         **kwargs,
     )
 
+    lineages = sorted(lineages)
+    tmp = adata.obsm[ln_key][lineages].colors
+    if lineage_cmap is None and not transpose:
+        lineage_cmap = tmp
+
     plot_kwargs = dict(plot_kwargs)
+    plot_kwargs["obs_legend_loc"] = obs_legend_loc
     if transpose:
         all_models = pd.DataFrame(all_models).T.to_dict()
         models = pd.DataFrame(models).T.to_dict()
@@ -252,14 +256,15 @@ def gene_trends(
         sharex=sharex,
         sharey=sharey,
         figsize=(6 * ncols, 4 * nrows) if figsize is None else figsize,
-        constrained_layout=True,
+        tight_layout=True,
         dpi=dpi,
     )
     axes = np.reshape(axes, (nrows, ncols))
 
-    logg.info("Plotting trends")
     cnt = 0
+    plot_kwargs["obs_legend_loc"] = None if same_plot else obs_legend_loc
 
+    logg.info("Plotting trends")
     for row in range(len(axes)):
         for col in range(len(axes[row])):
             if cnt >= len(genes):
@@ -273,6 +278,11 @@ def gene_trends(
                 lpc = adata.obsm[ln_key][gene].colors[0]
             else:
                 lpc = None
+
+            if same_plot:
+                plot_kwargs["obs_legend_loc"] = (
+                    obs_legend_loc if row == 0 and col == len(axes[0]) - 1 else None
+                )
 
             _trends_helper(
                 models,
@@ -305,7 +315,11 @@ def gene_trends(
                 else (cnt == end_rows),
                 **plot_kwargs,
             )
+            # plot legend on the 1st plot
             cnt += 1
+
+            if not same_plot:
+                plot_kwargs["obs_legend_loc"] = None
 
     if same_plot and (col != ncols):
         for ax in np.ravel(axes)[cnt:]:
