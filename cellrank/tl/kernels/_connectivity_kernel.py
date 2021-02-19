@@ -11,6 +11,7 @@ from cellrank.tl.kernels._base_kernel import (
 )
 
 
+# TODO: change the docstrings (connectivities no longer based on transcriptomic sim.)
 @d.dedent
 class ConnectivityKernel(Kernel):
     """
@@ -29,6 +30,8 @@ class ConnectivityKernel(Kernel):
     ----------
     %(adata)s
     %(backward)s
+    conn_key
+        Key in :attr:`anndata.AnnData.obsp` where the connectivities are stored.
     compute_cond_num
         Whether to compute condition number of the transition matrix. Note that this might be costly,
         since it does not use sparse implementation.
@@ -40,6 +43,7 @@ class ConnectivityKernel(Kernel):
         self,
         adata: AnnData,
         backward: bool = False,
+        conn_key: str = "connectivities",
         compute_cond_num: bool = False,
         check_connectivity: bool = False,
     ):
@@ -48,7 +52,9 @@ class ConnectivityKernel(Kernel):
             backward=backward,
             compute_cond_num=compute_cond_num,
             check_connectivity=check_connectivity,
+            key=conn_key,
         )
+        self._key = conn_key
 
     def compute_transition_matrix(
         self, density_normalize: bool = True
@@ -71,9 +77,11 @@ class ConnectivityKernel(Kernel):
             Makes :paramref:`transition_matrix` available.
         """
 
-        start = logg.info("Computing transition matrix based on connectivities")
+        start = logg.info(
+            f"Computing transition matrix based on `adata.obsp[{self._key!r}]`"
+        )
 
-        params = {"dnorm": density_normalize}
+        params = {"dnorm": density_normalize, "key": self._key}
         if params == self.params:
             assert self.transition_matrix is not None, _ERROR_EMPTY_CACHE_MSG
             logg.debug(_LOG_USING_CACHE)

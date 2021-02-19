@@ -348,14 +348,14 @@ class TestInitializeKernel:
     def test_str(self, adata: AnnData):
         string = str(ConnectivityKernel(adata).compute_transition_matrix())
 
-        assert string == "<Conn[dnorm=True]>"
+        assert string == "<Conn[dnorm=True, key=connectivities]>"
 
     def test_str_inv(self, adata: AnnData):
         string = str(
             ConnectivityKernel(adata, backward=True).compute_transition_matrix()
         )
 
-        assert string == "~<Conn[dnorm=True]>"
+        assert string == "~<Conn[dnorm=True, key=connectivities]>"
 
     def test_combination_correct_parameters(self, adata: AnnData):
         from cellrank.tl.kernels import CosineScheme
@@ -734,6 +734,19 @@ class TestKernel:
         assert T_sc.shape == T_cr.shape
         assert len(T_sc.indices) == len(T_cr.indices)
         assert np.allclose((T_cr - T_sc).data, 0)
+
+    def test_connectivities_key_kernel(self, adata: AnnData):
+        key = "foobar"
+        assert key not in adata.obsp
+        adata.obsp[key] = np.eye(adata.n_obs)
+
+        ck = ConnectivityKernel(adata, conn_key=key).compute_transition_matrix()
+        T_cr = ck.transition_matrix
+
+        assert key == ck.params["key"]
+        np.testing.assert_array_equal(T_cr.A, adata.obsp[key])
+
+        del adata.obsp[key]
 
 
 class TestKernelAddition:

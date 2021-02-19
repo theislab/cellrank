@@ -12,6 +12,7 @@ from cellrank.tl.kernels._velocity_schemes import Scheme
 AnnData = TypeVar("AnnData")
 
 
+# TODO: change docstring (conn_key is not only transcriptomic sim.)
 @inject_docs(m=VelocityMode, b=BackwardMode, s=Scheme)  # don't swap the order
 @d.dedent
 def transition_matrix(
@@ -19,6 +20,7 @@ def transition_matrix(
     backward: bool = False,
     vkey: str = "velocity",
     xkey: str = "Ms",
+    conn_key: str = "connectivities",
     gene_subset: Optional[Iterable] = None,
     mode: str = VelocityMode.DETERMINISTIC.s,
     backward_mode: str = BackwardMode.TRANSPOSE.s,
@@ -44,6 +46,8 @@ def transition_matrix(
         Key from ``adata.layers`` to access the velocities.
     xkey
         Key in ``adata.layers`` where expected gene expression counts are stored.
+    conn_key
+        Key in ``adata.obsp`` where connectivities are stored. Only used when ``weight_connectivities > 0``.
     gene_subset
         List of genes to be used to compute transition probabilities.
         By default, genes from ``adata.var['velocity_genes']`` are used.
@@ -85,9 +89,9 @@ def transition_matrix(
             logg.info(
                 f"Using a connectivity kernel with weight `{weight_connectivities}`"
             )
-            ck = ConnectivityKernel(adata, backward=backward).compute_transition_matrix(
-                density_normalize=density_normalize
-            )
+            ck = ConnectivityKernel(
+                adata, backward=backward, conn_key=conn_key
+            ).compute_transition_matrix(density_normalize=density_normalize)
             final = (
                 (1 - weight_connectivities) * vk + weight_connectivities * ck
             ).compute_transition_matrix()
@@ -95,7 +99,9 @@ def transition_matrix(
             final = vk
         elif weight_connectivities == 1:
             final = ConnectivityKernel(
-                adata, backward=backward
+                adata,
+                backward=backward,
+                conn_key=conn_key,
             ).compute_transition_matrix(density_normalize=density_normalize)
         else:
             raise ValueError(

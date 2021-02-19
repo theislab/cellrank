@@ -573,13 +573,13 @@ class Kernel(UnaryKernelExpression, ABC):
         )
         self._read_from_adata(check_connectivity=check_connectivity, **kwargs)
 
-    def _read_from_adata(self, **kwargs):
+    def _read_from_adata(self, key: str = "connectivities", **kwargs):
         """Import the base-KNN graph and optionally check for symmetry and connectivity."""
 
         if not _has_neighs(self.adata):
             raise KeyError("Compute KNN graph first as `scanpy.pp.neighbors()`.")
 
-        self._conn = _get_neighs(self.adata, "connectivities").astype(_dtype)
+        self._conn = _get_neighs(self.adata, key).astype(_dtype)
 
         check_connectivity = kwargs.pop("check_connectivity", False)
         if check_connectivity:

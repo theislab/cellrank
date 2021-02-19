@@ -236,6 +236,10 @@ class TestTransitionMatrix:
         with pytest.raises(ValueError):
             cr.tl.transition_matrix(adata, weight_connectivities=-1)
 
+    def test_invalid_conn_key(self, adata: AnnData):
+        with pytest.raises(KeyError):
+            cr.tl.transition_matrix(adata, conn_key="foo")
+
     def test_forward(self, adata: AnnData):
         kernel_add = cr.tl.transition_matrix(adata, backward=False, softmax_scale=None)
 
@@ -246,6 +250,17 @@ class TestTransitionMatrix:
         ck = cr.tl.transition_matrix(adata, weight_connectivities=1)
 
         assert isinstance(ck, cr.tl.kernels.ConnectivityKernel)
+
+    def test_connectivities_conn_key(self, adata: AnnData):
+        key = "foobar"
+        assert key not in adata.obsp
+        adata.obsp[key] = np.eye(adata.n_obs)
+
+        ck = cr.tl.transition_matrix(adata, weight_connectivities=1, conn_key=key)
+
+        assert isinstance(ck, cr.tl.kernels.ConnectivityKernel)
+
+        np.testing.assert_array_equal(ck.transition_matrix.A, adata.obsp[key])
 
     def test_only_velocity(self, adata: AnnData):
         vk = cr.tl.transition_matrix(adata, weight_connectivities=0)

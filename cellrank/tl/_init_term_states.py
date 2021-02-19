@@ -19,6 +19,7 @@ from cellrank.tl.estimators._base_estimator import BaseEstimator
 AnnData = TypeVar("AnnData")
 
 
+# TODO: update docstring - weight_conn (not only transcriptomic sim.)
 _docstring = """\
 Find {direction} states of a dynamic process of single cells based on RNA velocity [Manno18]_.
 
