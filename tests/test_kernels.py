@@ -374,8 +374,8 @@ class TestInitializeKernel:
 
         assert isinstance(k.params, dict)
         assert len(k.params) == 3
-        assert {"dnorm": True} in k.params.values()
-        assert {"dnorm": False} in k.params.values()
+        assert {"dnorm": True, "key": "connectivities"} in k.params.values()
+        assert {"dnorm": False, "key": "connectivities"} in k.params.values()
         assert {
             "softmax_scale": 4,
             "mode": "deterministic",
