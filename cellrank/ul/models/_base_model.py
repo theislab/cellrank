@@ -3,7 +3,18 @@ import re
 from abc import ABC, ABCMeta, abstractmethod
 from copy import copy as _copy
 from copy import deepcopy
-from typing import Any, Dict, List, Tuple, Union, Mapping, TypeVar, Callable, Optional
+from typing import (
+    Any,
+    Dict,
+    List,
+    Tuple,
+    Union,
+    Mapping,
+    TypeVar,
+    Callable,
+    Optional,
+    Sequence,
+)
 from collections import defaultdict
 
 import wrapt
@@ -932,8 +943,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
                 label="probability",
             )
 
-            if kwargs.get("loc", "best") not in (None, "none"):
-                ax.legend(handles=handle, **kwargs)
+            self._maybe_add_legend(fig, ax, mapper=handle, title=None, **kwargs)
 
         if (
             cbar
@@ -952,7 +962,9 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
             )
             cax.set_ylabel(key)
         elif typp == ColorType.CAT:
-            self._maybe_add_legend(fig, ax, key, mapper, obs_legend_loc)
+            self._maybe_add_legend(
+                fig, ax, mapper, title=key, loc=obs_legend_loc, is_line=False
+            )
 
         if save is not None:
             save_fig(fig, save)
@@ -964,24 +976,33 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         self,
         fig: mpl.figure.Figure,
         ax: mpl.axes.Axes,
-        title: str,
-        mapper: Mapping[str, Any],
-        legend_loc: Optional[str] = "best",
+        mapper: Union[Sequence[Any], Mapping[str, Any]],
+        title: Optional[str] = None,
+        loc: Optional[str] = "best",
+        is_line: bool = True,
+        **kwargs: Any,
     ) -> None:
         from cellrank.pl._utils import _position_legend
 
-        if legend_loc in ("none", None):
+        if loc in ("none", None):
             return
 
-        handles = [
-            ax.scatter([], [], label=name, color=color)
-            for name, color in mapper.items()
-        ]
+        if isinstance(mapper, dict):
+            handles = [
+                ax.plot([], [], label=name, color=color)[0]
+                if is_line
+                else ax.scatter([], [], label=name, color=color)
+                for name, color in mapper.items()
+            ]
+        else:
+            handles = mapper
+
         legend = _position_legend(
             ax,
-            legend_loc=legend_loc,
+            legend_loc=loc,
             handles=handles,
             title=title,
+            **kwargs,
         )
         fig.add_artist(legend)
 

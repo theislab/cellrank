@@ -772,7 +772,7 @@ def _trends_helper(
     if typp == ColorType.CAT:
         if not hide_cells:
             model._maybe_add_legend(
-                fig, ax, title=key, mapper=mapper, legend_loc=obs_legend_loc
+                fig, ax, mapper=mapper, title=key, loc=obs_legend_loc, is_line=False
             )
     elif typp == ColorType.CONT:
         if same_perc and show_cbar and not hide_cells:
@@ -804,12 +804,13 @@ def _trends_helper(
                 ticks=np.linspace(norm.vmin, norm.vmax, 5),
             )
 
-    if same_plot and lineage_names != [None] and legend_loc not in (None, "none"):
-        handles = [
-            mpl.lines.Line2D([], [], color=lineage_color_mapper[ln], label=ln)
-            for ln in successful_models.keys()
-        ]
-        last_ax.legend(handles=handles, loc=legend_loc)
+    if same_plot and lineage_names != [None]:
+        model._maybe_add_legend(
+            fig,
+            ax,
+            mapper={ln: lineage_color_mapper[ln] for ln in successful_models.keys()},
+            loc=legend_loc,
+        )
 
 
 def _position_legend(ax: mpl.axes.Axes, legend_loc: str, **kwargs) -> mpl.legend.Legend:

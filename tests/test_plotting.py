@@ -1391,6 +1391,20 @@ class TestGeneTrend:
         )
 
     @compare()
+    def test_trends_gene_legend_out(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            GENES[:2],
+            same_plot=True,
+            legend_loc="bottom right out",
+            data_key="Ms",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
     def test_trends_no_cbar(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.gene_trends(
