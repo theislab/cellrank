@@ -11,18 +11,19 @@ from cellrank.tl.kernels._base_kernel import (
 )
 
 
-# TODO: change the docstrings (connectivities no longer based on transcriptomic sim.)
+# TODO: insert squidpy reference
 @d.dedent
 class ConnectivityKernel(Kernel):
     """
-    Kernel which computes transition probabilities based on transcriptomic similarities.
+    Kernel which computes transition probabilities based on similarities among cells.
 
-    As a measure for transcriptomic similarity, we use the weighted KNN graph computed using
-    :func:`scanpy.pp.neighbors`, see [Wolf18]_.
+    As a measure of similarity, we use either transcriptomic similarities computed using :func:`scanpy.pp.neighbors`,
+    see [Wolf18]_ or spatial similarities computed using SQUIDPY, CITE
+
     By definition, the resulting transition matrix is symmetric and cannot be used to learn about the direction of the
-    developmental process under consideration.
-    However, the velocity-derived transition matrix from :class:`cellrank.tl.kernels.VelocityKernel` can be combined
-    with the similarity-based transition matrix as a means of regularization.
+    developmental process under consideration. However, the velocity-derived transition matrix from
+    :class:`cellrank.tl.kernels.VelocityKernel` can be combined with the similarity-based transition matrix as a means
+    of regularization.
 
     %(density_correction)s
 
@@ -31,7 +32,8 @@ class ConnectivityKernel(Kernel):
     %(adata)s
     %(backward)s
     conn_key
-        Key in :attr:`anndata.AnnData.obsp` where the connectivities are stored.
+        Key in :attr:`anndata.AnnData.obsp` where the connectivities are stored. Depending on how this key is set,
+        either transcriptomic or spatial similarity will be used.
     compute_cond_num
         Whether to compute condition number of the transition matrix. Note that this might be costly,
         since it does not use sparse implementation.

@@ -24,14 +24,13 @@ _docstring = """\
 Find {direction} states of a dynamic process of single cells based on RNA velocity [Manno18]_.
 
 The function models dynamic cellular processes as a Markov chain, where the transition matrix is computed based
-on the velocity vectors of each individual cell. Based on this Markov chain, we provide two estimators
+on the velocity vector of each individual cell. Based on this Markov chain, we provide two estimators
 to compute {direction} states, both of which are based on spectral methods.
 
 For the estimator :class:`cellrank.tl.estimators.GPCCA`, cells are fuzzily clustered into macrostates,
-using Generalized Perron Cluster Cluster Analysis [GPCCA18]_.
-In short, this coarse-grains the Markov chain into a set of macrostates representing the slow
-time-scale dynamics, i.e. transitions between these macrostates are rare. The most stable ones of these will represent
-{direction}, while the others represent intermediate macrostates.
+using Generalized Perron Cluster Cluster Analysis [GPCCA18]_. In short, this coarse-grains the Markov chain into a set
+of macrostates representing the slow time-scale dynamics, i.e. transitions between these macrostates are rare.
+The most stable ones of these will represent {direction}, while the others represent intermediate macrostates.
 
 For the estimator :class:`cellrank.tl.estimators.CFLARE`, cells are filtered into transient/recurrent cells using the
 left eigenvectors of the transition matrix and clustered into distinct groups of {direction} states using the right
@@ -52,9 +51,8 @@ key
     Key in ``adata.obsp`` where the transition matrix is saved.
     If not found, compute a new one using :func:`cellrank.tl.transition_matrix`.
 weight_connectivities
-    Weight given to a transition matrix computed on the basis of the KNN connectivities. Must be in `[0, 1]`.
-    This can help in situations where we have noisy velocities and want to give some weight to transcriptomic
-    similarity.
+    Weight given to a transition matrix computed on the basis of KNN-graph connectivities. Must be in `[0, 1]`.
+    This can help in situations where we have noisy velocities and want to give some weight to similarity.
 show_plots
     Whether to show plots of the spectrum and eigenvectors in the embedding.
 %(n_jobs)s
