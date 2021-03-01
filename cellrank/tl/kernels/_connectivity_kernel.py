@@ -17,8 +17,9 @@ class ConnectivityKernel(Kernel):
     """
     Kernel which computes transition probabilities based on similarities among cells.
 
-    As a measure of similarity, we use either transcriptomic similarities computed using :func:`scanpy.pp.neighbors`,
-    see [Wolf18]_ or spatial similarities computed using SQUIDPY, CITE
+    As a measure of similarity, we currently support
+     - transcriptomic similarities, computed using e.g. :func:`scanpy.pp.neighbors`, see [Wolf18]_
+     - spatial similarities, computed using e.g. SQUIDPY, CITE
 
     By definition, the resulting transition matrix is symmetric and cannot be used to learn about the direction of the
     developmental process under consideration. However, the velocity-derived transition matrix from
@@ -32,8 +33,7 @@ class ConnectivityKernel(Kernel):
     %(adata)s
     %(backward)s
     conn_key
-        Key in :attr:`anndata.AnnData.obsp` where the connectivities are stored. Depending on how this key is set,
-        either transcriptomic or spatial similarity will be used.
+        Key in :attr:`anndata.AnnData.obsp` to obtain the connectivity matrix, describing cell-cell similarity.
     compute_cond_num
         Whether to compute condition number of the transition matrix. Note that this might be costly,
         since it does not use sparse implementation.
