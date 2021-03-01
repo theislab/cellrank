@@ -11,20 +11,18 @@ from cellrank.tl.kernels._base_kernel import (
 )
 
 
-# TODO: insert squidpy reference
 @d.dedent
 class ConnectivityKernel(Kernel):
     """
     Kernel which computes transition probabilities based on similarities among cells.
 
     As a measure of similarity, we currently support
-     - transcriptomic similarities, computed using e.g. :func:`scanpy.pp.neighbors`, see [Wolf18]_
-     - spatial similarities, computed using e.g. SQUIDPY, CITE
+     - transcriptomic similarities, e.g. computed with SCANPY using :func:`scanpy.pp.neighbors`, see [Wolf18]_
+     - spatial similarities, e.g. computed with SQUIDPY using :func:`squidpy.gr.spatial_neighbors`, see [Palla21]_
 
-    By definition, the resulting transition matrix is symmetric and cannot be used to learn about the direction of the
-    developmental process under consideration. However, the velocity-derived transition matrix from
-    :class:`cellrank.tl.kernels.VelocityKernel` can be combined with the similarity-based transition matrix as a means
-    of regularization.
+    The resulting transition matrix is symmetric and thus cannot be used to learn about the direction of the biological
+    process. To include this direction, consider combining with a velocity-derived transition matrix via
+    :class:`cellrank.tl.kernels.VelocityKernel`.
 
     %(density_correction)s
 
