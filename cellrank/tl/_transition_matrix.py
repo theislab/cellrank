@@ -46,8 +46,8 @@ def transition_matrix(
     xkey
         Key in ``adata.layers`` where expected gene expression counts are stored.
     conn_key
-        Key in ``adata.obsp`` where connectivities are stored. Only used when ``weight_connectivities > 0``.
-        Depending on how this key is set, either transcriptomic or spatial similarity will be used.
+        Key in :attr:`anndata.AnnData.obsp` to obtain the connectivity matrix, describing cell-cell similarity. Only
+        used when ``weight_connectivities > 0``.
     gene_subset
         List of genes to be used to compute transition probabilities.
         By default, genes from ``adata.var['velocity_genes']`` are used.
