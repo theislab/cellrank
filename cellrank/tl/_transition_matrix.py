@@ -12,7 +12,6 @@ from cellrank.tl.kernels._velocity_schemes import Scheme
 AnnData = TypeVar("AnnData")
 
 
-# TODO: change docstring (conn_key is not only transcriptomic sim.)
 @inject_docs(m=VelocityMode, b=BackwardMode, s=Scheme)  # don't swap the order
 @d.dedent
 def transition_matrix(
@@ -32,11 +31,11 @@ def transition_matrix(
     **kwargs,
 ) -> KernelExpression:
     """
-    Compute a transition matrix based on a combination of RNA Velocity and transcriptomic similarity.
+    Compute a transition matrix based on a combination of RNA Velocity and transcriptomic or spatial similarity.
 
     To learn more about the way in which the transition matrices are computed, see
     :class:`cellrank.tl.kernels.VelocityKernel` for the velocity-based transition matrix and
-    :class:`cellrank.tl.kernels.ConnectivityKernel` for the transcriptomic-similarity-based transition matrix.
+    :class:`cellrank.tl.kernels.ConnectivityKernel` for the similarity-based transition matrix.
 
     Parameters
     ----------
@@ -47,7 +46,8 @@ def transition_matrix(
     xkey
         Key in ``adata.layers`` where expected gene expression counts are stored.
     conn_key
-        Key in ``adata.obsp`` where connectivities are stored. Only used when ``weight_connectivities > 0``.
+        Key in :attr:`anndata.AnnData.obsp` to obtain the connectivity matrix, describing cell-cell similarity. Only
+        used when ``weight_connectivities > 0``.
     gene_subset
         List of genes to be used to compute transition probabilities.
         By default, genes from ``adata.var['velocity_genes']`` are used.
@@ -56,9 +56,9 @@ def transition_matrix(
     %(velocity_scheme)s
     %(softmax_scale)s
     weight_connectivities
-        Weight given to transcriptomic similarities as opposed to velocities. Must be in `[0, 1]`.
+        Weight given to similarities as opposed to velocities. Must be in `[0, 1]`.
     density_normalize
-        Whether to use density correction when computing the transition probabilities based on connectivities.
+        Whether to use density correction when computing the transition probabilities based on similarities.
         Density correction is done as by [Haghverdi16]_.
     %(write_to_adata.parameters)s
     kwargs

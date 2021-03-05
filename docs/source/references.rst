@@ -42,6 +42,10 @@ References
     *Single-cell mapping of lineage and identity in direct reprogramming.*,
     `Nature 564, 219–224 <https://doi.org/10.1038/s41586-018-0744-4>`__.
 
+.. [Palla21] Palla *et al.* (2021),
+    *Squidpy: a scalable framework for spatial single cell analysis*,
+    `bioRxiv <https://doi.org/10.1101/2021.02.19.431994>`__.
+
 .. [Panc19] Bastidas-Ponce *et al.* (2019),
     *Comprehensive single cell mRNA profiling reveals a detailed roadmap for pancreatic endocrinogenesis*,
     `Development <https://doi.org/10.1242/dev.173849>`__.
