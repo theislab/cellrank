@@ -14,14 +14,16 @@ from cellrank.tl.kernels._base_kernel import (
 @d.dedent
 class ConnectivityKernel(Kernel):
     """
-    Kernel which computes transition probabilities based on transcriptomic similarities.
+    Kernel which computes transition probabilities based on similarities among cells.
 
-    As a measure for transcriptomic similarity, we use the weighted KNN graph computed using
-    :func:`scanpy.pp.neighbors`, see [Wolf18]_.
-    By definition, the resulting transition matrix is symmetric and cannot be used to learn about the direction of the
-    developmental process under consideration.
-    However, the velocity-derived transition matrix from :class:`cellrank.tl.kernels.VelocityKernel` can be combined
-    with the similarity-based transition matrix as a means of regularization.
+    As a measure of similarity, we currently support:
+
+        - transcriptomic similarities, computed using e.g. :func:`scanpy.pp.neighbors`, see [Wolf18]_.
+        - spatial similarities, computed using e.g. :func:`squidpy.gr.spatial_neighbors`, see [Palla21]_.
+
+    The resulting transition matrix is symmetric and thus cannot be used to learn about the direction of the biological
+    process. To include this direction, consider combining with a velocity-derived transition matrix via
+    :class:`cellrank.tl.kernels.VelocityKernel`.
 
     %(density_correction)s
 
@@ -29,6 +31,8 @@ class ConnectivityKernel(Kernel):
     ----------
     %(adata)s
     %(backward)s
+    conn_key
+        Key in :attr:`anndata.AnnData.obsp` to obtain the connectivity matrix, describing cell-cell similarity.
     compute_cond_num
         Whether to compute condition number of the transition matrix. Note that this might be costly,
         since it does not use sparse implementation.
@@ -40,6 +44,7 @@ class ConnectivityKernel(Kernel):
         self,
         adata: AnnData,
         backward: bool = False,
+        conn_key: str = "connectivities",
         compute_cond_num: bool = False,
         check_connectivity: bool = False,
     ):
@@ -48,7 +53,9 @@ class ConnectivityKernel(Kernel):
             backward=backward,
             compute_cond_num=compute_cond_num,
             check_connectivity=check_connectivity,
+            key=conn_key,
         )
+        self._key = conn_key
 
     def compute_transition_matrix(
         self, density_normalize: bool = True
@@ -71,9 +78,11 @@ class ConnectivityKernel(Kernel):
             Makes :paramref:`transition_matrix` available.
         """
 
-        start = logg.info("Computing transition matrix based on connectivities")
+        start = logg.info(
+            f"Computing transition matrix based on `adata.obsp[{self._key!r}]`"
+        )
 
-        params = {"dnorm": density_normalize}
+        params = {"dnorm": density_normalize, "key": self._key}
         if params == self.params:
             assert self.transition_matrix is not None, _ERROR_EMPTY_CACHE_MSG
             logg.debug(_LOG_USING_CACHE)
