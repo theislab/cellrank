@@ -72,20 +72,20 @@ def transition_matrix(
         %(write_to_adata)s
     """
 
-    # initialise the velocity kernel and compute transition matrix
-    vk = VelocityKernel(
-        adata, backward=backward, vkey=vkey, xkey=xkey, gene_subset=gene_subset
-    )
-    vk.compute_transition_matrix(
-        softmax_scale=softmax_scale,
-        mode=mode,
-        backward_mode=backward_mode,
-        scheme=scheme,
-        **kwargs,
-    )
+    def compute_velocity_kernel() -> VelocityKernel:
+        return VelocityKernel(
+            adata, backward=backward, vkey=vkey, xkey=xkey, gene_subset=gene_subset
+        ).compute_transition_matrix(
+            softmax_scale=softmax_scale,
+            mode=mode,
+            backward_mode=backward_mode,
+            scheme=scheme,
+            **kwargs,
+        )
 
     if weight_connectivities is not None:
         if 0 < weight_connectivities < 1:
+            vk = compute_velocity_kernel()
             logg.info(
                 f"Using a connectivity kernel with weight `{weight_connectivities}`"
             )
@@ -96,7 +96,7 @@ def transition_matrix(
                 (1 - weight_connectivities) * vk + weight_connectivities * ck
             ).compute_transition_matrix()
         elif weight_connectivities == 0:
-            final = vk
+            final = compute_velocity_kernel()
         elif weight_connectivities == 1:
             final = ConnectivityKernel(
                 adata,
