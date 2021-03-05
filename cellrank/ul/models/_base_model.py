@@ -506,6 +506,11 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         x, y, w = x[ixs], y[ixs], w[ixs]
         self._obs_names = self._obs_names[ixs]
 
+        if np.allclose(w, w[0]):
+            # degenerate case
+            val_start = w[0] - 1
+            val_end = w[0] + 1
+
         if val_start is None:
             val_start = np.min(x)
         if val_end is None:
