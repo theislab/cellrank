@@ -16,9 +16,10 @@ class ConnectivityKernel(Kernel):
     """
     Kernel which computes transition probabilities based on similarities among cells.
 
-    As a measure of similarity, we currently support
-     - transcriptomic similarities, e.g. computed with SCANPY using :func:`scanpy.pp.neighbors`, see [Wolf18]_
-     - spatial similarities, e.g. computed with SQUIDPY using :func:`squidpy.gr.spatial_neighbors`, see [Palla21]_
+    As a measure of similarity, we currently support:
+
+        - transcriptomic similarities, computed using e.g. :func:`scanpy.pp.neighbors`, see [Wolf18]_.
+        - spatial similarities, computed using e.g. :func:`squidpy.gr.spatial_neighbors`, see [Palla21]_.
 
     The resulting transition matrix is symmetric and thus cannot be used to learn about the direction of the biological
     process. To include this direction, consider combining with a velocity-derived transition matrix via
