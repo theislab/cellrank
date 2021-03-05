@@ -24,6 +24,7 @@ from matplotlib.testing import setup
 from matplotlib.testing.compare import compare_images
 
 import cellrank as cr
+from cellrank.tl import Lineage
 from cellrank.ul.models import GAMR
 from cellrank.tl._constants import AbsProbKey
 from cellrank.tl.estimators import GPCCA, CFLARE
@@ -2743,6 +2744,17 @@ class TestModel:
             lineage_probability=True,
             lineage_probability_conf_int=True,
         )
+
+    @compare()
+    def test_model_1_lineage(self, adata: AnnData, fpath: str):
+        adata.obsm[AbsProbKey.FORWARD.s] = Lineage(
+            np.ones((adata.n_obs, 1)), names=["foo"]
+        )
+        model = create_model(adata)
+        model = model.prepare(adata.var_names[0], "foo", n_test_points=100).fit()
+        model.fit().predict()
+        model.confidence_interval()
+        model.plot(save=fpath, dpi=DPI, conf_int=True)
 
 
 @gamr_skip
