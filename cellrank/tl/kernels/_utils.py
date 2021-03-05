@@ -203,11 +203,11 @@ def _reconstruct_one(
     probs.eliminate_zeros()
     cors.eliminate_zeros()
 
-    close_to_1 = np.isclose(np.array(probs.sum(1)).squeeze(), 1.0)
+    row_sums = np.array(probs.sum(1).squeeze())
+    close_to_1 = np.isclose(row_sums, 1.0)
     if not np.all(close_to_1):
         raise ValueError(
-            f"Matrix is not row-stochastic. "
-            f"The following rows don't sum to 1: `{list(np.where(~close_to_1)[0])}`."
+            f"Matrix is not row-stochastic. The following rows don't sum to 1: `{row_sums[~close_to_1]}`."
         )
 
     return probs, cors
