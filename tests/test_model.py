@@ -13,7 +13,9 @@ from pygam import ExpectileGAM
 from scipy.stats import rankdata
 from sklearn.svm import SVR
 
+from cellrank.tl import Lineage
 from cellrank.ul.models import GAM, GAMR, FittedModel, SKLearnModel
+from cellrank.tl._constants import AbsProbKey
 from cellrank.ul.models._utils import (
     _OFFSET_KEY,
     NormMode,
@@ -99,6 +101,20 @@ class TestModel:
         assert isinstance(model.conf_int, np.ndarray)
         assert len(model.y_test) == len(model.conf_int)
         assert ci is model.conf_int
+
+    def test_model_1_lineage(self, adata_cflare):
+        adata_cflare.obsm[AbsProbKey.FORWARD.s] = Lineage(
+            np.ones((adata_cflare.n_obs, 1)), names=["foo"]
+        )
+        model = create_model(adata_cflare)
+        model = model.prepare(adata_cflare.var_names[0], "foo", n_test_points=100).fit()
+        _ = model.predict()
+
+        assert model.x_test.shape == (100, 1)
+        xtest, xall = model.x_test, model.x_all
+        np.testing.assert_allclose(
+            np.r_[xtest[0], xtest[-1]], np.r_[np.min(xall), np.max(xall)]
+        )
 
 
 class TestUtils:
