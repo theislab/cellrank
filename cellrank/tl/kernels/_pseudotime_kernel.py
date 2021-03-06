@@ -1,18 +1,24 @@
-"""Palantir kernel module."""
+"""Pseudotime kernel module."""
 from copy import copy
+from typing import Union, Callable
 
 import numpy as np
 
 from cellrank import logging as logg
 from cellrank.ul._docs import d
-from cellrank.tl._utils import _bias_knn, _connected
+from cellrank.tl._utils import _connected
 from cellrank.tl.kernels import Kernel
-from cellrank.tl._constants import Direction
+from cellrank.tl._constants import Direction, ThresholdScheme
 from cellrank.tl.kernels._base_kernel import (
     _LOG_USING_CACHE,
     _ERROR_EMPTY_CACHE_MSG,
     AnnData,
     _dtype,
+)
+from cellrank.tl.kernels._pseudotime_schemes import (
+    HardThresholdScheme,
+    SoftThresholdScheme,
+    CustomThresholdScheme,
 )
 
 
@@ -75,10 +81,15 @@ class PseudotimeKernel(Kernel):
         self._pseudotime = np.clip(self._pseudotime, 0, 1)
 
     def compute_transition_matrix(
-        self, k: int = 3, density_normalize: bool = True
+        self,
+        threshold_scheme: Union[str, Callable] = "hard",
+        k: int = 3,
+        density_normalize: bool = True,
     ) -> "PseudotimeKernel":
         """
         Compute transition matrix based on KNN graph and pseudotemporal ordering.
+
+        TODO: update the docstring.
 
         This is a re-implementation of the Palantir algorithm by [Setty19]_.
         Note that this won't exactly reproduce the original Palantir results, for three reasons:
@@ -103,6 +114,22 @@ class PseudotimeKernel(Kernel):
         :class:`cellrank.tl.kernels.PseudotimeKernel`
             Makes :paramref:`transition_matrix` available.
         """
+        if isinstance(threshold_scheme, str):
+            threshold_scheme = ThresholdScheme(threshold_scheme)
+            if threshold_scheme == ThresholdScheme.SOFT:
+                scheme = SoftThresholdScheme()
+            elif threshold_scheme == ThresholdScheme.HARD:
+                scheme = HardThresholdScheme()
+            else:
+                raise NotImplementedError(
+                    f"Threshold scheme `{threshold_scheme}` is not yet implemented."
+                )
+        elif callable(threshold_scheme):
+            scheme = CustomThresholdScheme(threshold_scheme)
+        else:
+            raise TypeError(
+                f"Expected `threshold_scheme` to be either a `str` or a `callable`, found `{type(threshold_scheme)}`."
+            )
 
         start = logg.info("Computing transition matrix based on Palantir-like kernel")
 
@@ -118,7 +145,13 @@ class PseudotimeKernel(Kernel):
             )
             n_neighbors = np.min(self._conn.sum(1))
 
-        params = dict(k=k, dnorm=density_normalize, n_neighs=n_neighbors)  # noqa
+        # TODO: add only relevant info for the scheme
+        params = {
+            # k=k,
+            # n_neighs=n_neighbors,
+            "dnorm": density_normalize,
+            "scheme": str(threshold_scheme),
+        }
         if params == self._params:
             assert self.transition_matrix is not None, _ERROR_EMPTY_CACHE_MSG
             logg.debug(_LOG_USING_CACHE)
@@ -129,12 +162,14 @@ class PseudotimeKernel(Kernel):
 
         # handle backward case and run biasing function
         pseudotime = (
-            np.max(self.pseudotime) - self.pseudotime
+            np.nanmax(self.pseudotime) - self.pseudotime
             if self._direction == Direction.BACKWARD
             else self.pseudotime
         )
-        biased_conn = _bias_knn(
-            conn=self._conn, pseudotime=pseudotime, n_neighbors=n_neighbors, k=k
+
+        # TODO: only pass relevant kwargs
+        biased_conn = scheme.bias_knn(
+            self._conn.copy(), pseudotime, n_neighs=n_neighbors, k=k
         ).astype(_dtype)
         # make sure the biased graph is still connected
         if not _connected(biased_conn):
@@ -167,5 +202,5 @@ class PseudotimeKernel(Kernel):
 
     def __invert__(self) -> "PseudotimeKernel":
         super().__invert__()
-        self._pseudotime = 1 - self.pseudotime
+        self._pseudotime = np.nanmax(self.pseudotime) - self.pseudotime
         return self

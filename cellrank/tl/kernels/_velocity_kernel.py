@@ -200,11 +200,6 @@ class VelocityKernel(Kernel):
             raise TypeError(
                 f"Expected `scheme` to be a function, found `{type(scheme)!r}`."
             )
-        elif isinstance(scheme, type):
-            raise TypeError(
-                f"Expected `scheme` to be a function object, found function type `{type(scheme)!r}`. "
-                f"Try instantiating the type."
-            )
 
         if self.backward and mode != VelocityMode.DETERMINISTIC:
             logg.warning(

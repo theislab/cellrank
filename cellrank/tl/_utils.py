@@ -277,63 +277,6 @@ def _complex_warning(
     return X_
 
 
-def _bias_knn(
-    conn: csr_matrix, pseudotime: np.ndarray, n_neighbors: int, k: int = 3
-) -> csr_matrix:
-    """
-    Palantir Kernel utility function.
-
-    This function takes in symmetric connectivities and a pseudotime and removes edges that point "against" pseudotime,
-    in this way creating a directed graph. For each node, it always keeps the closest neighbors, making sure the graph
-    remains connected.
-
-    Parameters
-    ----------
-    conn
-        The nearest neighbor connectivities.
-    pseudotime
-        Pseudotemporal ordering of cells.
-    n_neighbors
-        Number of neighbors to keep
-    k
-        Number, alongside with ``n_neighbors`` which determined the threshold for candidate indices.
-
-    Returns
-    -------
-    :class:`scipy.sparse.csr_matrix`.
-        Biased connectivities according to the ``pseudotime``.
-    """
-
-    # set a threshold for the neighbors to keep
-    k_thresh = np.min([int(np.floor(n_neighbors / k)) - 1, 30])
-    # TODO: make it so that user can supply smoothing scheme
-    # TODO: copy necessary?
-    conn_biased = conn.copy()
-
-    # loop over rows in the adjacency matrix
-    for i in range(conn.shape[0]):
-
-        # get indices, values and current pseudo t
-        row_data = conn[i, :].data
-        row_ixs = conn[i, :].indices
-        current_t = pseudotime[i]
-
-        # get the 'candidates' - ixs of nodes not in the k_thresh closest neighbors
-        # TODO: use argpartition
-        p = np.flip(np.argsort(row_data))
-        sorted_ixs = row_ixs[p]
-        cand_ixs = sorted_ixs[k_thresh:]
-
-        # compare pseudotimes and set indices to zero
-        cand_t = pseudotime[cand_ixs]
-        rem_ixs = cand_ixs[cand_t < current_t]
-        conn_biased[i, rem_ixs] = 0
-
-    conn_biased.eliminate_zeros()
-
-    return conn_biased
-
-
 def _mat_mat_corr_sparse(
     X: csr_matrix,
     Y: np.ndarray,
