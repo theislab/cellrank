@@ -1,6 +1,6 @@
 """Pseudotime kernel module."""
 from copy import copy
-from typing import Union, Callable
+from typing import Any, Union, Callable
 
 import numpy as np
 
@@ -84,7 +84,10 @@ class PseudotimeKernel(Kernel):
         self,
         threshold_scheme: Union[str, Callable] = "hard",
         k: int = 3,
+        b: float = 20.0,
+        nu: float = 0.5,
         density_normalize: bool = True,
+        **kwargs: Any,
     ) -> "PseudotimeKernel":
         """
         Compute transition matrix based on KNN graph and pseudotemporal ordering.
@@ -106,31 +109,19 @@ class PseudotimeKernel(Kernel):
         k
             Number of neighbors to keep for each node, regardless of pseudotime.
             This is done to ensure that the graph remains connected.
+        b
+            TODO: https://en.wikipedia.org/wiki/Generalised_logistic_function
+        nu
+            TODO: https://en.wikipedia.org/wiki/Generalised_logistic_function
         density_normalize
             Whether or not to use the underlying KNN graph for density normalization.
+
 
         Returns
         -------
         :class:`cellrank.tl.kernels.PseudotimeKernel`
             Makes :paramref:`transition_matrix` available.
         """
-        if isinstance(threshold_scheme, str):
-            threshold_scheme = ThresholdScheme(threshold_scheme)
-            if threshold_scheme == ThresholdScheme.SOFT:
-                scheme = SoftThresholdScheme()
-            elif threshold_scheme == ThresholdScheme.HARD:
-                scheme = HardThresholdScheme()
-            else:
-                raise NotImplementedError(
-                    f"Threshold scheme `{threshold_scheme}` is not yet implemented."
-                )
-        elif callable(threshold_scheme):
-            scheme = CustomThresholdScheme(threshold_scheme)
-        else:
-            raise TypeError(
-                f"Expected `threshold_scheme` to be either a `str` or a `callable`, found `{type(threshold_scheme)}`."
-            )
-
         start = logg.info("Computing transition matrix based on Palantir-like kernel")
 
         # get the connectivities and number of neighbors
@@ -145,12 +136,29 @@ class PseudotimeKernel(Kernel):
             )
             n_neighbors = np.min(self._conn.sum(1))
 
-        # TODO: add only relevant info for the scheme
+        if isinstance(threshold_scheme, str):
+            threshold_scheme = ThresholdScheme(threshold_scheme)
+            if threshold_scheme == ThresholdScheme.SOFT:
+                scheme = SoftThresholdScheme()
+                kwargs["b"], kwargs["nu"] = b, nu
+            elif threshold_scheme == ThresholdScheme.HARD:
+                scheme = HardThresholdScheme()
+                kwargs["k"], kwargs["n_neighs"] = k, n_neighbors
+            else:
+                raise NotImplementedError(
+                    f"Threshold scheme `{threshold_scheme}` is not yet implemented."
+                )
+        elif callable(threshold_scheme):
+            scheme = CustomThresholdScheme(threshold_scheme)
+        else:
+            raise TypeError(
+                f"Expected `threshold_scheme` to be either a `str` or a `callable`, found `{type(threshold_scheme)}`."
+            )
+
         params = {
-            # k=k,
-            # n_neighs=n_neighbors,
             "dnorm": density_normalize,
             "scheme": str(threshold_scheme),
+            **kwargs,
         }
         if params == self._params:
             assert self.transition_matrix is not None, _ERROR_EMPTY_CACHE_MSG
@@ -167,10 +175,10 @@ class PseudotimeKernel(Kernel):
             else self.pseudotime
         )
 
-        # TODO: only pass relevant kwargs
-        biased_conn = scheme.bias_knn(
-            self._conn.copy(), pseudotime, n_neighs=n_neighbors, k=k
-        ).astype(_dtype)
+        biased_conn = scheme.bias_knn(self._conn.copy(), pseudotime, **kwargs).astype(
+            _dtype
+        )
+
         # make sure the biased graph is still connected
         if not _connected(biased_conn):
             logg.warning("Biased KNN graph is disconnected")
@@ -178,7 +186,6 @@ class PseudotimeKernel(Kernel):
         self._compute_transition_matrix(
             matrix=biased_conn, density_normalize=density_normalize
         )
-
         logg.info("    Finish", time=start)
 
         return self

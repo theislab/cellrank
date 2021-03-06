@@ -89,7 +89,6 @@ class HardThresholdScheme(PseudotimeScheme):
         neigh_dist: np.ndarray,
         n_neighs: int,
         k: int = 3,
-        **_: Any,
     ) -> np.ndarray:
         """
         TODO.
@@ -131,7 +130,9 @@ class SoftThresholdScheme(PseudotimeScheme):
         cell_pseudotime: float,
         neigh_pseudotime: np.ndarray,
         neigh_dist: np.ndarray,
-        **kwargs: Any,
+        b: float = 20.0,
+        nu: float = 0.5,
+        perc: int = 95,
     ) -> np.ndarray:
         """
         TODO.
@@ -139,12 +140,28 @@ class SoftThresholdScheme(PseudotimeScheme):
         Parameters
         ----------
         %(pt_scheme.parameters)s
-        TODO: remove kwargs, determine which args we need.
 
         Returns
         -------
         %(pt_scheme.returns)s
         """
+        past_ixs = np.where(neigh_pseudotime < cell_pseudotime)[0]
+        if not len(past_ixs):
+            return neigh_dist * 0.5
+
+        # TODO: should all of them be clipped, or just the ones in the past?
+        neigh_dist[past_ixs] = np.clip(
+            neigh_dist[past_ixs],
+            np.percentile(neigh_dist[past_ixs], 100 - perc),
+            np.percentile(neigh_dist[past_ixs], perc),
+        )
+
+        weights = np.full_like(neigh_dist, fill_value=0.5)
+
+        dt = cell_pseudotime - neigh_pseudotime[past_ixs]
+        weights[past_ixs] = 1.0 / ((1.0 + np.exp(b * dt)) ** (1.0 / nu))
+
+        return neigh_dist * weights
 
 
 class CustomThresholdScheme(PseudotimeScheme):
