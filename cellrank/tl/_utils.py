@@ -306,6 +306,8 @@ def _bias_knn(
 
     # set a threshold for the neighbors to keep
     k_thresh = np.min([int(np.floor(n_neighbors / k)) - 1, 30])
+    # TODO: make it so that user can supply smoothing scheme
+    # TODO: copy necessary?
     conn_biased = conn.copy()
 
     # loop over rows in the adjacency matrix
@@ -317,6 +319,7 @@ def _bias_knn(
         current_t = pseudotime[i]
 
         # get the 'candidates' - ixs of nodes not in the k_thresh closest neighbors
+        # TODO: use argpartition
         p = np.flip(np.argsort(row_data))
         sorted_ixs = row_ixs[p]
         cand_ixs = sorted_ixs[k_thresh:]

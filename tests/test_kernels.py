@@ -19,8 +19,8 @@ from cellrank.tl._utils import _normalize
 from cellrank.ul._utils import _get_neighs, _get_neighs_params
 from cellrank.tl.kernels import (
     Constant,
-    PalantirKernel,
     VelocityKernel,
+    PseudotimeKernel,
     PrecomputedKernel,
     ConnectivityKernel,
 )
@@ -80,7 +80,7 @@ class TestInitializeKernel:
     def test_none_transition_matrix(self, adata: AnnData):
         vk = VelocityKernel(adata)
         ck = ConnectivityKernel(adata)
-        pk = PalantirKernel(adata, time_key="latent_time")
+        pk = PseudotimeKernel(adata, time_key="latent_time")
 
         assert vk._transition_matrix is None
         assert ck._transition_matrix is None
@@ -89,7 +89,7 @@ class TestInitializeKernel:
     def test_not_none_transition_matrix_compute(self, adata: AnnData):
         vk = VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata).compute_transition_matrix()
-        pk = PalantirKernel(adata, time_key="latent_time").compute_transition_matrix()
+        pk = PseudotimeKernel(adata, time_key="latent_time").compute_transition_matrix()
 
         assert vk.transition_matrix is not None
         assert ck.transition_matrix is not None
@@ -98,7 +98,7 @@ class TestInitializeKernel:
     def test_not_none_transition_matrix_accessor(self, adata: AnnData):
         vk = VelocityKernel(adata)
         ck = ConnectivityKernel(adata)
-        pk = PalantirKernel(adata, time_key="latent_time")
+        pk = PseudotimeKernel(adata, time_key="latent_time")
 
         assert vk.transition_matrix is not None
         assert ck.transition_matrix is not None
@@ -544,7 +544,7 @@ class TestKernel:
         conn_biased = bias_knn(conn, pseudotime, n_neighbors)
         T_1 = _normalize(conn_biased)
 
-        pk = PalantirKernel(adata, time_key="latent_time").compute_transition_matrix(
+        pk = PseudotimeKernel(adata, time_key="latent_time").compute_transition_matrix(
             density_normalize=False
         )
         T_2 = pk.transition_matrix
@@ -552,7 +552,7 @@ class TestKernel:
         np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
 
     def test_palantir_inverse(self, adata: AnnData):
-        pk = PalantirKernel(adata, time_key="latent_time")
+        pk = PseudotimeKernel(adata, time_key="latent_time")
         pt = pk.pseudotime.copy()
 
         pk_inv = ~pk
@@ -570,7 +570,7 @@ class TestKernel:
         T_1 = density_normalization(conn_biased, conn)
         T_1 = _normalize(T_1)
 
-        pk = PalantirKernel(adata, time_key="latent_time").compute_transition_matrix(
+        pk = PseudotimeKernel(adata, time_key="latent_time").compute_transition_matrix(
             density_normalize=True
         )
         T_2 = pk.transition_matrix
@@ -586,7 +586,7 @@ class TestKernel:
         T_1 = density_normalization(conn_biased, conn)
         T_1 = _normalize(T_1)
 
-        pk = PalantirKernel(adata, time_key="latent_time").compute_transition_matrix(
+        pk = PseudotimeKernel(adata, time_key="latent_time").compute_transition_matrix(
             density_normalize=False
         )
         T_2 = pk.transition_matrix
@@ -917,7 +917,7 @@ class TestKernelCopy:
         for KernelClass in [
             VelocityKernel,
             ConnectivityKernel,
-            PalantirKernel,
+            PseudotimeKernel,
             PrecomputedKernel,
         ]:
             if KernelClass is PrecomputedKernel:
@@ -955,7 +955,7 @@ class TestKernelCopy:
         assert ck1.backward == ck2.backward
 
     def test_copy_palantir_kernel(self, adata: AnnData):
-        pk1 = PalantirKernel(adata).compute_transition_matrix()
+        pk1 = PseudotimeKernel(adata).compute_transition_matrix()
         pk2 = pk1.copy()
 
         np.testing.assert_array_equal(pk1.transition_matrix.A, pk2.transition_matrix.A)

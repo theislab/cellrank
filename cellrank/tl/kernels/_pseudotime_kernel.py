@@ -17,7 +17,7 @@ from cellrank.tl.kernels._base_kernel import (
 
 
 @d.dedent
-class PalantirKernel(Kernel):
+class PseudotimeKernel(Kernel):
     """
     Kernel which computes transition probabilities in a similar way to *Palantir*, see [Setty19]_.
 
@@ -76,7 +76,7 @@ class PalantirKernel(Kernel):
 
     def compute_transition_matrix(
         self, k: int = 3, density_normalize: bool = True
-    ) -> "PalantirKernel":
+    ) -> "PseudotimeKernel":
         """
         Compute transition matrix based on KNN graph and pseudotemporal ordering.
 
@@ -100,7 +100,7 @@ class PalantirKernel(Kernel):
 
         Returns
         -------
-        :class:`cellrank.tl.kernels.PalantirKernel`
+        :class:`cellrank.tl.kernels.PseudotimeKernel`
             Makes :paramref:`transition_matrix` available.
         """
 
@@ -153,9 +153,11 @@ class PalantirKernel(Kernel):
         """Pseudotemporal ordering of cells."""
         return self._pseudotime
 
-    def copy(self) -> "PalantirKernel":
+    def copy(self) -> "PseudotimeKernel":
         """Return a copy of self."""
-        pk = PalantirKernel(self.adata, backward=self.backward, time_key=self._time_key)
+        pk = PseudotimeKernel(
+            self.adata, backward=self.backward, time_key=self._time_key
+        )
         pk._pseudotime = copy(self.pseudotime)
         pk._params = copy(self._params)
         pk._cond_num = self.condition_number
@@ -163,7 +165,7 @@ class PalantirKernel(Kernel):
 
         return pk
 
-    def __invert__(self) -> "PalantirKernel":
+    def __invert__(self) -> "PseudotimeKernel":
         super().__invert__()
         self._pseudotime = 1 - self.pseudotime
         return self
