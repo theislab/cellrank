@@ -111,7 +111,7 @@ class HardThresholdScheme(PseudotimeScheme):
         ixs = np.flip(np.argsort(neigh_dist))
         close_ixs, far_ixs = ixs[:k_thresh], ixs[k_thresh:]
 
-        mask_keep = cell_pseudotime < neigh_pseudotime[far_ixs]
+        mask_keep = cell_pseudotime <= neigh_pseudotime[far_ixs]
         far_ixs_keep = far_ixs[mask_keep]
 
         biased_dist = np.zeros_like(neigh_dist)
