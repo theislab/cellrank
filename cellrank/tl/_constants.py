@@ -92,13 +92,6 @@ class AbsProbKey(PrettyEnum):
     BACKWARD = f"{DirPrefix.BACKWARD}_{TermStatesKey.BACKWARD}"
 
 
-class PrimingDegree(PrettyEnum):
-    """Method for priming degree computation."""
-
-    ENTROPY = "entropy"
-    KL_DIVERERGENCE = "kl_divergence"
-
-
 def _transition(d: Union[str, Direction]) -> str:
     return f"T_{d}"
 
@@ -116,7 +109,7 @@ def _probs(k: Union[str, TermStatesKey]) -> str:
 
 
 def _pd(k: Union[str, AbsProbKey]) -> str:
-    return f"{k}_prime_deg"
+    return f"{k}_priming_degree"
 
 
 def _pretty_raise_enum(cls, fun):

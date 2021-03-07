@@ -708,23 +708,23 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
     def priming_degree(self, early_cells: Optional[np.ndarray] = None) -> np.ndarray:
         """
-        Degree of priming as described in [Velten17]_.
+        TODO.
 
         Parameters
         ----------
         early_cells
-            TODO.
+            Indices or a mask marking early cells. If `None`, use all cells.
 
         Returns
         -------
         The priming degree.
         """
         early_cells = (
-            np.ones((len(early_cells),), dtype=np.bool_)
+            np.ones((len(self),), dtype=np.bool_)
             if early_cells is None
             else np.asarray(early_cells)
         )
-        if not np.issubdtype(early_cells, np.bool_):
+        if not np.issubdtype(early_cells.dtype, np.bool_):
             early_cells = np.unique(early_cells)
 
         probs = self.X

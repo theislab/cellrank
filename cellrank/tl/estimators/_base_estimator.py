@@ -40,10 +40,10 @@ from cellrank.tl.kernels import PrecomputedKernel
 from cellrank.tl._lineage import Lineage
 from cellrank.tl._constants import (
     Macro,
+    ModeEnum,
     DirPrefix,
     AbsProbKey,
     PrettyEnum,
-    PrimingDegree,
     TermStatesKey,
     _pd,
     _probs,
@@ -318,8 +318,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         Compute absorption probabilities of a Markov chain.
 
         For each cell, this computes the probability of it reaching any of the approximate recurrent classes defined
-        by :paramref:`{fs}`. This also computes the priming degree as defined in [Velten17]_, see
-        :func:`cellrank.pl.circular_projection` for more information.
+        by :paramref:`{fs}`.
 
         Parameters
         ----------
@@ -544,29 +543,43 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         Parameters
         ----------
         method
-            TODO.
+            TODO. Valid options are:
+
+                - `'kl_divergence'` - TODO.
+                - `'entropy'` - TODO.
+
         early_cells
-            TODO.
+            Cell ids or a mask marking early cells. If `None`, use all cells. Only used when `method='kl_divergence'`.
 
         Returns
         -------
-        TODO
+        The priming degree.
         """
         method = PrimingDegree(method)
 
         if method == PrimingDegree.KL_DIVERERGENCE:
             if early_cells is not None:
                 early_cells = np.asarray(early_cells)
-                if not np.issubdtype(early_cells, np.bool_):
-                    early_cells = np.isin(early_cells, self.adata.obs_names)
+                if not np.issubdtype(early_cells.dtype, np.bool_):
+                    early_cells = np.isin(self.adata.obs_names, early_cells)
             values = self._get(P.ABS_PROBS).priming_degree(early_cells)
         elif method == PrimingDegree.ENTROPY:
-            values = self._get(P.ABS_PROBS).entropy(axis=1)
+            values = self._get(P.ABS_PROBS).entropy(axis=1).X.squeeze(1)
+            values = np.nanmax(values) - values
         else:
             raise NotImplementedError(f"Method `{method}` is not yet implemented")
 
+        minn, maxx = np.nanmin(values), np.nanmax(values)
+        values = (values - minn) / (maxx - minn)
         values = pd.Series(values, index=self.adata.obs_names)
+
         self._set(A.PRIME_DEG, values)
+        self.adata.obs[_pd(self._abs_prob_key)] = values
+
+        logg.info(
+            f"Adding `adata.obs[{_pd(self._abs_prob_key)!r}]`\n"
+            f"       `.{P.PRIME_DEG}`"
+        )
 
         return values
 
@@ -1089,3 +1102,10 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                     raise e
                 finally:
                     self._kernel = orig_kernel
+
+
+class PrimingDegree(ModeEnum):
+    """Method for priming degree computation."""
+
+    ENTROPY = "entropy"
+    KL_DIVERERGENCE = "kl_divergence"
