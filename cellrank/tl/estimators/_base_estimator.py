@@ -140,7 +140,6 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         self._set_or_debug(_probs(self._term_key), self.adata.obs, A.TERM_PROBS)
         self._set_or_debug(_colors(self._term_key), self.adata.uns, A.TERM_COLORS)
 
-        # TODO: validate?
         self._reconstruct_lineage(A.ABS_PROBS, self._abs_prob_key)
         self._set_or_debug(_pd(self._abs_prob_key), self.adata.obs, A.PRIME_DEG)
 
@@ -150,7 +149,6 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         names = self._set_or_debug(_lin_names(self._term_key), self.adata.uns)
         colors = self._set_or_debug(_colors(self._term_key), self.adata.uns)
 
-        # choosing this instead of property because GPCCA doesn't have property for FIN_ABS_PROBS
         probs = self._get(attr)
 
         if probs is not None:
@@ -549,7 +547,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 - `'entropy'` - TODO.
 
         early_cells
-            Cell ids or a mask marking early cells. If `None`, use all cells. Only used when `method='kl_divergence'`.
+            Cell ids or a mask marking early cells. If `None`, use all cells. Only used when ``method='kl_divergence'``.
 
         Returns
         -------
