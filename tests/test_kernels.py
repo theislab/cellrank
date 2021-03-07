@@ -1193,13 +1193,6 @@ class TestVelocityScheme:
         ):
             vk.compute_transition_matrix(scheme=1311)
 
-    def test_not_callable_object(self, adata: AnnData):
-        vk = VelocityKernel(adata)
-        with pytest.raises(
-            TypeError, match="Expected `scheme` to be a function object"
-        ):
-            vk.compute_transition_matrix(scheme=CustomFunc)
-
     def test_custom_function_not_sum_to_1(self, adata: AnnData):
         vk = VelocityKernel(adata)
         with pytest.raises(ValueError, match=r"Matrix is not row-stochastic."):
