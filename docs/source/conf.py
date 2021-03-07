@@ -44,7 +44,7 @@ for nb in ["pancreas_basic.ipynb", "pancreas_advanced.ipynb"]:
 
 project = "CellRank"
 author = cellrank.__author__
-copyright = f"{datetime.now():%Y}, {author}."
+copyright = f"{datetime.now():%Y}, {author}"
 release = "master"
 version = f"master ({cellrank.__version__})"
 

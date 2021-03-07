@@ -553,6 +553,11 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         -------
         The priming degree.
         """
+        abs_probs: Optional[Lineage] = self._get(P.ABS_PROBS)
+        if abs_probs is None:
+            raise RuntimeError(
+                "Compute absorption probabilities first as `.compute_absorption_probabilities()`."
+            )
         method = PrimingDegree(method)
 
         if method == PrimingDegree.KL_DIVERERGENCE:
@@ -560,9 +565,9 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 early_cells = np.asarray(early_cells)
                 if not np.issubdtype(early_cells.dtype, np.bool_):
                     early_cells = np.isin(self.adata.obs_names, early_cells)
-            values = self._get(P.ABS_PROBS).priming_degree(early_cells)
+            values = abs_probs.priming_degree(early_cells)
         elif method == PrimingDegree.ENTROPY:
-            values = self._get(P.ABS_PROBS).entropy(axis=1).X.squeeze(1)
+            values = abs_probs.entropy(axis=1).X.squeeze(1)
             values = np.nanmax(values) - values
         else:
             raise NotImplementedError(f"Method `{method}` is not yet implemented")

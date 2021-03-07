@@ -243,6 +243,7 @@ class TestCFLARE:
         mc.compute_eigendecomposition(k=5)
         mc.compute_terminal_states(use=2)
         mc.compute_absorption_probabilities()
+        mc.compute_lineage_priming()
 
         assert isinstance(mc._get(P.PRIME_DEG), pd.Series)
         assert _pd(AbsProbKey.FORWARD) in mc.adata.obs.keys()

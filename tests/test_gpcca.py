@@ -450,6 +450,7 @@ class TestGPCCA:
         mc.compute_macrostates(n_states=2, n_cells=5)
         mc.set_terminal_states_from_macrostates()
         mc.compute_absorption_probabilities()
+        mc.compute_lineage_priming()
 
         _check_abs_probs(mc)
 
@@ -511,6 +512,7 @@ class TestGPCCA:
         mc.compute_macrostates(n_states=2, n_cells=5)
         mc.set_terminal_states_from_macrostates({"0": "foo"})
         mc.compute_absorption_probabilities()
+        mc.compute_lineage_priming()
 
         _check_abs_probs(mc)
 
@@ -530,6 +532,7 @@ class TestGPCCA:
         mc.compute_macrostates(n_states=3, n_cells=5)
         mc.set_terminal_states_from_macrostates({"0, 1": "foo", "2": "bar"})
         mc.compute_absorption_probabilities()
+        mc.compute_lineage_priming()
 
         _check_abs_probs(mc)
 
@@ -623,6 +626,7 @@ class TestGPCCA:
         mc.compute_macrostates(n_states=2)
         mc.compute_terminal_states(n_cells=5, method="eigengap")
         mc.compute_absorption_probabilities()
+        mc.compute_lineage_priming()
 
         _check_abs_probs(mc)
 
@@ -637,6 +641,7 @@ class TestGPCCA:
         mc.compute_macrostates(n_states=2)
         mc.compute_terminal_states(n_cells=5, method="top_n", n_states=1)
         mc.compute_absorption_probabilities()
+        mc.compute_lineage_priming()
 
         _check_abs_probs(mc)
 
@@ -654,6 +659,7 @@ class TestGPCCA:
             n_cells=5, method="stability", stability_threshold=thresh
         )
         mc.compute_absorption_probabilities()
+        mc.compute_lineage_priming()
 
         coarse_T = mc._get(P.COARSE_T)
         self_probs = pd.Series(np.diag(coarse_T), index=coarse_T.columns)
@@ -699,6 +705,7 @@ class TestGPCCA:
         mc.compute_macrostates(n_states=2)
         mc.compute_terminal_states(n_cells=5)
         mc.compute_absorption_probabilities()
+        mc.compute_lineage_priming()
 
         _check_abs_probs(mc)
 
