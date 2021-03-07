@@ -1,4 +1,4 @@
-"""Module containing CellRank contants."""
+"""Module containing CellRank constants."""
 
 from abc import ABC, ABCMeta
 from enum import Enum, EnumMeta
@@ -92,6 +92,13 @@ class AbsProbKey(PrettyEnum):
     BACKWARD = f"{DirPrefix.BACKWARD}_{TermStatesKey.BACKWARD}"
 
 
+class PrimingDegree(PrettyEnum):
+    """Method for priming degree computation."""
+
+    ENTROPY = "entropy"
+    KL_DIVERERGENCE = "kl_divergence"
+
+
 def _transition(d: Union[str, Direction]) -> str:
     return f"T_{d}"
 
@@ -108,7 +115,7 @@ def _probs(k: Union[str, TermStatesKey]) -> str:
     return f"{k}_probs"
 
 
-def _dp(k: Union[str, AbsProbKey]) -> str:
+def _pd(k: Union[str, AbsProbKey]) -> str:
     return f"{k}_prime_deg"
 
 

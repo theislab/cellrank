@@ -706,12 +706,34 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
     def __copy__(self):
         return self.copy()
 
-    @property
-    def priming_degree(self) -> np.ndarray:
-        """Degree of priming as described in [Velten17]_."""
+    def priming_degree(self, early_cells: Optional[np.ndarray] = None) -> np.ndarray:
+        """
+        Degree of priming as described in [Velten17]_.
+
+        Parameters
+        ----------
+        early_cells
+            TODO.
+
+        Returns
+        -------
+        The priming degree.
+        """
+        early_cells = (
+            np.ones((len(early_cells),), dtype=np.bool_)
+            if early_cells is None
+            else np.asarray(early_cells)
+        )
+        if not np.issubdtype(early_cells, np.bool_):
+            early_cells = np.unique(early_cells)
+
         probs = self.X
+        early_subset = probs[early_cells, :]
+        if not len(early_cells):
+            raise ValueError("No early cells have been specified.")
+
         return np.nan_to_num(
-            np.sum(probs * np.log2(probs / np.mean(probs, axis=0)), axis=1),
+            np.sum(probs * np.log2(probs / np.mean(early_subset, axis=0)), axis=1),
             nan=1.0,
             copy=False,
         )

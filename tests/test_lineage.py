@@ -1106,7 +1106,7 @@ class TestPickling:
 
 class TestPriming:
     def test_priming_degree(self, lineage: Lineage):
-        deg = lineage.priming_degree
+        deg = lineage.priming_degree()
 
         assert isinstance(deg, np.ndarray)
         assert deg.shape == (len(lineage),)

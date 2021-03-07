@@ -827,16 +827,16 @@ class AbsProbs(Plottable):
 
     __prop_metadata__ = [
         Metadata(
-            attr=A.PRIME_EG,
+            attr=A.PRIME_DEG,
             prop=P.ABS_PROBS,
             dtype=Lineage,
             doc="Absorption probabilities.",
         ),
         Metadata(
-            attr=A.DIFF_POT,
+            attr=A.PRIME_DEG,
             prop=P.PRIME_DEG,
             dtype=pd.Series,
-            doc="Differentiation potential.",
+            doc="Priming degree.",
         ),
         Metadata(attr=A.LIN_ABS_TIMES, prop=P.LIN_ABS_TIMES, dtype=pd.DataFrame),
     ]

@@ -264,7 +264,7 @@ def circular_projection(
             k = SpecialKey(k)
             logg.debug(f"Calculating `{k}`")
             if k == SpecialKey.DEGREE:
-                val = probs.priming_degree
+                val = probs.priming_degree()
                 set_lognorm = True
             elif k == SpecialKey.DIRECTION:
                 val = pd.Series(probs.priming_direction, dtype="category")

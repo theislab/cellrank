@@ -43,8 +43,9 @@ from cellrank.tl._constants import (
     DirPrefix,
     AbsProbKey,
     PrettyEnum,
+    PrimingDegree,
     TermStatesKey,
-    _dp,
+    _pd,
     _probs,
     _colors,
     _lin_names,
@@ -139,8 +140,9 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         self._set_or_debug(_probs(self._term_key), self.adata.obs, A.TERM_PROBS)
         self._set_or_debug(_colors(self._term_key), self.adata.uns, A.TERM_COLORS)
 
-        self._reconstruct_lineage(A.PRIME_EG, self._abs_prob_key)
-        self._set_or_debug(_dp(self._abs_prob_key), self.adata.obs, A.DIFF_POT)
+        # TODO: validate?
+        self._reconstruct_lineage(A.TERM_ABS_PROBS, self._abs_prob_key)
+        self._set_or_debug(_pd(self._abs_prob_key), self.adata.obs, A.PRIME_DEG)
 
     def _reconstruct_lineage(self, attr: PrettyEnum, obsm_key: str):
 
@@ -291,7 +293,6 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
     @inject_docs(
         abs_prob=P.ABS_PROBS,
         fs=P.TERM.s,
-        diff_pot=P.PRIME_DEG,
         lat=P.LIN_ABS_TIMES,
     )
     def compute_absorption_probabilities(
@@ -371,7 +372,6 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             Nothing, but updates the following fields:
 
                 - :paramref:`{abs_prob}` - probabilities of being absorbed into the terminal states.
-                - :paramref:`{diff_pot}` - differentiation potential of cells.
                 - :paramref:`{lat}` - mean times until absorption to subset absorbing states and optionally
                   their variances saved as ``'{{lineage}} mean'`` and ``'{{lineage}} var'``, respectively,
                   for each subset of absorbing states specified in ``time_to_absorption``.
@@ -432,19 +432,6 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             # define the dimensions of this problem
         n_cells = t.shape[0]
         n_macrostates = len(terminal_states_.cat.categories)
-
-        #  create empty lineage object
-        if self._get(P.ABS_PROBS) is not None:
-            logg.debug(f"Overwriting `.{P.ABS_PROBS}`")
-
-        self._set(
-            A.PRIME_EG,
-            Lineage(
-                np.empty((1, len(colors_))),
-                names=terminal_states_.cat.categories,
-                colors=colors_,
-            ),
-        )
 
         # get indices corresponding to recurrent and transient states
         rec_indices, trans_indices, lookup_dict = _get_cat_and_null_indices(
@@ -533,18 +520,11 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             abs_classes[cl_indices, col] = 1
 
         self._set(
-            A.PRIME_EG,
+            A.ABS_PROBS,
             Lineage(
                 abs_classes,
-                names=self._get(P.ABS_PROBS).names,
-                colors=self._get(P.ABS_PROBS).colors,
-            ),
-        )
-        self._set(
-            A.DIFF_POT,
-            pd.Series(
-                self._get(P.ABS_PROBS).priming_degree,
-                index=self.adata.obs.index,
+                names=terminal_states_.cat.categories,
+                colors=colors_,
             ),
         )
 
@@ -554,6 +534,41 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             extra_msg = f"       `.{P.LIN_ABS_TIMES}`\n"
 
         self._write_absorption_probabilities(time=start, extra_msg=extra_msg)
+
+    def compute_lineage_priming(
+        self, method: str = "kl_divergence", early_cells: Optional[Sequence[str]] = None
+    ) -> pd.Series:
+        """
+        TODO.
+
+        Parameters
+        ----------
+        method
+            TODO.
+        early_cells
+            TODO.
+
+        Returns
+        -------
+        TODO
+        """
+        method = PrimingDegree(method)
+
+        if method == PrimingDegree.KL_DIVERERGENCE:
+            if early_cells is not None:
+                early_cells = np.asarray(early_cells)
+                if not np.issubdtype(early_cells, np.bool_):
+                    early_cells = np.isin(early_cells, self.adata.obs_names)
+            values = self._get(P.ABS_PROBS).priming_degree(early_cells)
+        elif method == PrimingDegree.ENTROPY:
+            values = self._get(P.ABS_PROBS).entropy(axis=1)
+        else:
+            raise NotImplementedError(f"Method `{method}` is not yet implemented")
+
+        values = pd.Series(values, index=self.adata.obs_names)
+        self._set(A.PRIME_DEG, values)
+
+        return values
 
     @d.get_sections(
         base="lineage_drivers", sections=["Parameters", "Returns", "References"]
@@ -991,17 +1006,14 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         self.adata.obsm[self._abs_prob_key] = self._get(P.ABS_PROBS)
 
         abs_prob = self._get(P.ABS_PROBS)
-        self.adata.obs[_dp(self._abs_prob_key)] = self._get(P.PRIME_DEG)
 
         self.adata.uns[_lin_names(self._abs_prob_key)] = abs_prob.names
         self.adata.uns[_colors(self._abs_prob_key)] = abs_prob.colors
 
         logg.info(
             f"Adding `adata.obsm[{self._abs_prob_key!r}]`\n"
-            f"       `adata.obs[{_dp(self._abs_prob_key)!r}]`\n"
             f"{extra_msg}"
             f"       `.{P.ABS_PROBS}`\n"
-            f"       `.{P.PRIME_DEG}`\n"
             "    Finish",
             time=time,
         )

@@ -18,8 +18,8 @@ class A(PrettyEnum):
     TERM_PROBS = "_terminal_states_probabilities"
     TERM_COLORS = "_terminal_colors"
     TERM_ABS_PROBS = "_terminal_abs_probabilities"  # Lineage object
-    PRIME_EG = "_priming_degree"
-    DIFF_POT = "_diff_potential"
+    ABS_PROBS = "_absorption_probabilities"
+    PRIME_DEG = "_priming_degree"
     COARSE_T = "_coarse_T"
     COARSE_INIT_D = "_coarse_init_dist"
     COARSE_STAT_D = "_coarse_stat_dist"

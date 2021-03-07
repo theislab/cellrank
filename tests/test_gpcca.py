@@ -18,7 +18,7 @@ from cellrank.tl._constants import (
     DirPrefix,
     AbsProbKey,
     TermStatesKey,
-    _dp,
+    _pd,
     _probs,
     _colors,
     _lin_names,
@@ -105,7 +105,7 @@ def _check_abs_probs(mc: cr.tl.estimators.GPCCA, has_main_states: bool = True):
     )
 
     np.testing.assert_array_equal(
-        mc.adata.obs[_dp(AbsProbKey.FORWARD)], mc._get(P.PRIME_DEG)
+        mc.adata.obs[_pd(AbsProbKey.FORWARD)], mc._get(P.PRIME_DEG)
     )
 
     assert_array_nan_equal(mc.adata.obs[TermStatesKey.FORWARD.s], mc._get(P.TERM))
