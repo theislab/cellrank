@@ -141,7 +141,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         self._set_or_debug(_colors(self._term_key), self.adata.uns, A.TERM_COLORS)
 
         # TODO: validate?
-        self._reconstruct_lineage(A.TERM_ABS_PROBS, self._abs_prob_key)
+        self._reconstruct_lineage(A.ABS_PROBS, self._abs_prob_key)
         self._set_or_debug(_pd(self._abs_prob_key), self.adata.obs, A.PRIME_DEG)
 
     def _reconstruct_lineage(self, attr: PrettyEnum, obsm_key: str):

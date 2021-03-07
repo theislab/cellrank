@@ -784,6 +784,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
 
         # reset all the things
         for key in (
+            A.ABS_PROBS,
             A.PRIME_DEG,
             A.SCHUR,
             A.SCHUR_MAT,
