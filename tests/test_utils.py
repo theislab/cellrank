@@ -192,6 +192,21 @@ class TestToolsUtils:
         assert _irreducible(test_matrix_1())
         assert not _irreducible(test_matrix_2())
 
+    def test_matrix_connectivity(self):
+
+        assert _connected(test_matrix_1())
+        assert not _connected(test_matrix_3())
+
+    def test_matrix_symmetry(self):
+
+        assert _symmetric(test_matrix_4())
+        assert not _symmetric(test_matrix_1())
+
+    def test_matrix_partition(self):
+
+        assert _symmetric(test_matrix_4())
+        assert not _symmetric(test_matrix_1())
+
 
 class TestProcessSeries:
     def test_not_categorical(self):
