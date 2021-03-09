@@ -642,7 +642,7 @@ class Kernel(UnaryKernelExpression, ABC):
         if len(problematic_indices):
             logg.warning(
                 f"Detected `{len(problematic_indices)}` absorbing states in the transition matrix. "
-                f"This matrix won't be reducible"
+                f"This matrix won't be irreducible."
             )
             matrix[problematic_indices, problematic_indices] = 1.0
 
