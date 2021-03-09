@@ -769,6 +769,16 @@ def _connected(c: Union[spmatrix, np.ndarray]) -> bool:
     return nx.is_connected(G)
 
 
+def _irreducible(d: Union[spmatrix, np.ndarray]) -> bool:
+    """Check whether the uirected graph encoded by d is irreducible."""
+
+    import networkx as nx
+
+    G = nx.DiGraph(d) if not isinstance(d, nx.DiGraph) else d
+
+    return len(list(nx.strongly_connected_components(G))) == 1
+
+
 def _symmetric(
     matrix: Union[spmatrix, np.ndarray],
     ord: str = "fro",

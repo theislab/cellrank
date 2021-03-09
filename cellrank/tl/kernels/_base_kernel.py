@@ -630,6 +630,7 @@ class Kernel(UnaryKernelExpression, ABC):
         self,
         matrix: spmatrix,
         density_normalize: bool = True,
+        check_irreducibility: bool = False,
     ):
         # density correction based on node degrees in the KNN graph
         matrix = csr_matrix(matrix) if not isspmatrix_csr(matrix) else matrix
