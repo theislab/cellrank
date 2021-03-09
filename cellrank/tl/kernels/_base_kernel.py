@@ -27,6 +27,7 @@ from cellrank.tl._utils import (
     _symmetric,
     _get_neighs,
     _has_neighs,
+    _irreducible,
 )
 from cellrank.ul._utils import Pickleable, _write_graph_data
 from cellrank.tl._constants import Direction, _transition
@@ -646,6 +647,13 @@ class Kernel(UnaryKernelExpression, ABC):
                 f"This matrix won't be irreducible."
             )
             matrix[problematic_indices, problematic_indices] = 1.0
+
+        if check_irreducibility:
+            start = logg.debug("Checking the transition matrix for irreducibility")
+            if not _irreducible(matrix):
+                logg.warning("Transition matrix is not irreducible", time=start)
+            else:
+                logg.debug("Transition matrix is irreducible", time=start)
 
         # setting this property automatically row-normalizes
         self.transition_matrix = matrix
