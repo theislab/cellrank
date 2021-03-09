@@ -204,8 +204,21 @@ class TestToolsUtils:
 
     def test_matrix_partition(self):
 
-        assert _symmetric(test_matrix_4())
-        assert not _symmetric(test_matrix_1())
+        np.testing.assert_array_equal(
+            _partition(test_matrix_1())[0][0], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+        )
+        np.testing.assert_array_equal(_partition(test_matrix_1())[1], [])
+
+        np.testing.assert_array_equal(_partition(test_matrix_2())[0][0], [12, 13])
+        np.testing.assert_array_equal(
+            _partition(test_matrix_2())[1][0], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+        )
+
+        np.testing.assert_array_equal(
+            _partition(test_matrix_3())[0][0], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+        )
+        np.testing.assert_array_equal(_partition(test_matrix_3())[0][1], [12, 13])
+        np.testing.assert_array_equal(_partition(test_matrix_3())[1], [])
 
 
 class TestProcessSeries:
