@@ -24,6 +24,7 @@ from cellrank.ul._docs import d, inject_docs
 from cellrank.tl._utils import (
     TestMethod,
     _pairwise,
+    _irreducible,
     _process_series,
     _correlation_test,
     _get_cat_and_null_indices,
@@ -457,11 +458,15 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         q = t[trans_indices, :][:, trans_indices]
         s = t[trans_indices, :][:, rec_indices]
 
+        # check for irreducibility
         if check_irred:
+            start = logg.debug("Checking the transition matrix for irreducibility")
             if self.is_irreducible is None:
-                self.compute_partition()
+                self._is_irreducible = _irreducible(self.transition_matrix)
             if not self.is_irreducible:
-                logg.warning("The transition matrix is not irreducible")
+                logg.warning("Transition matrix is not irreducible", time=start)
+            else:
+                logg.debug("Transition matrix is irreducible", time=start)
 
         # determine whether it makes sense you use a iterative solver
         if solver is None:
