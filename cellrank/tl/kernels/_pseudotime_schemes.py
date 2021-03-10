@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
 import numpy as np
 from scipy.sparse import csr_matrix
@@ -7,9 +7,10 @@ from scipy.sparse import csr_matrix
 from cellrank.ul._docs import d
 
 
-class PseudotimeScheme(ABC):
-    """TODO."""
+class PseudotimeSchemeABC(ABC):
+    """Base class for all connectivity-biasing schemes."""
 
+    @d.get_summary(base="pt_scheme")
     @d.get_sections(base="pt_scheme", sections=["Parameters", "Returns"])
     @abstractmethod
     def __call__(
@@ -20,7 +21,7 @@ class PseudotimeScheme(ABC):
         **kwargs: Any,
     ) -> np.ndarray:
         """
-        TODO.
+        Calculate biased connections for a given cell.
 
         Parameters
         ----------
@@ -40,13 +41,7 @@ class PseudotimeScheme(ABC):
         self, conn: csr_matrix, pseudotime: np.ndarray, **kwargs: Any
     ) -> csr_matrix:
         """
-        Palantir Kernel utility function.
-
-        TODO: update me.
-
-        This function takes in symmetric connectivities and a pseudotime and removes edges that point "against"
-        pseudotime, in this way creating a directed graph. For each node, it always keeps the closest neighbors,
-        making sure the graph remains connected.
+        Bias cell-cell connectivities of a KNN graph.
 
         Parameters
         ----------
@@ -54,12 +49,10 @@ class PseudotimeScheme(ABC):
             The nearest neighbor connectivities.
         pseudotime
             Pseudotemporal ordering of cells.
-        kwargs
-            TODO.
 
         Returns
         -------
-        TODO.
+        The biased connectivities.
         """
         conn_biased = conn.copy()
         for i in range(conn.shape[0]):
@@ -77,9 +70,24 @@ class PseudotimeScheme(ABC):
         conn_biased.eliminate_zeros()
         return conn_biased
 
+    def __repr__(self):
+        return f"<{self.__class__.__name__}>"
 
-class HardThresholdScheme(PseudotimeScheme):
-    """TODO."""
+    def __str__(self):
+        return repr(self)
+
+
+class HardThresholdScheme(PseudotimeSchemeABC):
+    """
+    Thresholding scheme inspired by Palantir [Setty18]_.
+
+    Note that this won't exactly reproduce the original Palantir results, for three reasons:
+
+        - Palantir computes the KNN graph in a scaled space of diffusion components.
+        - Palantir uses its own pseudotime to bias the KNN graph which is not implemented here.
+        - Palantir uses a slightly different mechanism to ensure the graph remains connected when removing edges
+          that point into the "pseudotime past".
+    """
 
     @d.dedent
     def __call__(
@@ -91,7 +99,11 @@ class HardThresholdScheme(PseudotimeScheme):
         k: int = 3,
     ) -> np.ndarray:
         """
-        TODO.
+        Bias connections by removing ones to past cells.
+
+        It takes in symmetric connectivities and a pseudotime and removes edges that point "against" pseudotime,
+        in this way creating a directed graph. For each node, it always keeps the closest neighbors,
+        making sure the graph remains connected.
 
         Parameters
         ----------
@@ -121,8 +133,8 @@ class HardThresholdScheme(PseudotimeScheme):
         return biased_dist
 
 
-class SoftThresholdScheme(PseudotimeScheme):
-    """TODO."""
+class SoftThresholdScheme(PseudotimeSchemeABC):
+    """Thresholding scheme inspired by [VIA21]_."""
 
     @d.dedent
     def __call__(
@@ -131,41 +143,46 @@ class SoftThresholdScheme(PseudotimeScheme):
         neigh_pseudotime: np.ndarray,
         neigh_dist: np.ndarray,
         b: float = 20.0,
-        nu: float = 0.5,
-        perc: int = 95,
+        nu: float = 1.0,
+        perc: Optional[int] = 95,
     ) -> np.ndarray:
         """
-        TODO.
+        Bias connections by weighting them proportionally to how far they are in the past, w.r.t. to current cell.
+
+        This function uses `generalized logistic regression
+        <https://en.wikipedia.org/wiki/Generalized_logistic_function>`_ to weight the past connectivities.
+        The further in the they are from current cell's position along pseudotime, the lower the weight.
 
         Parameters
         ----------
         %(pt_scheme.parameters)s
+        %(soft_scheme)s
 
         Returns
         -------
         %(pt_scheme.returns)s
         """
+        if perc is not None:
+            neigh_dist = np.clip(
+                neigh_dist,
+                np.percentile(neigh_dist, 100 - perc),
+                np.percentile(neigh_dist, perc),
+            )
+
         past_ixs = np.where(neigh_pseudotime < cell_pseudotime)[0]
         if not len(past_ixs):
-            return neigh_dist * 0.5
+            return neigh_dist
 
-        # TODO: should all of them be clipped, or just the ones in the past?
-        neigh_dist[past_ixs] = np.clip(
-            neigh_dist[past_ixs],
-            np.percentile(neigh_dist[past_ixs], 100 - perc),
-            np.percentile(neigh_dist[past_ixs], perc),
-        )
-
-        weights = np.full_like(neigh_dist, fill_value=0.5)
+        weights = np.ones_like(neigh_dist)
 
         dt = cell_pseudotime - neigh_pseudotime[past_ixs]
-        weights[past_ixs] = 1.0 / ((1.0 + np.exp(b * dt)) ** (1.0 / nu))
+        weights[past_ixs] = 2.0 / ((1.0 + np.exp(b * dt)) ** (1.0 / nu))
 
         return neigh_dist * weights
 
 
-class CustomThresholdScheme(PseudotimeScheme):
-    """TODO."""
+class CustomThresholdScheme(PseudotimeSchemeABC):
+    """Class that wraps a user supplied scheme."""
 
     def __init__(
         self,
@@ -176,6 +193,7 @@ class CustomThresholdScheme(PseudotimeScheme):
         super().__init__()
         self._callback = callback
 
+    @d.dedent
     def __call__(
         self,
         cell_pseudotime: float,
@@ -184,7 +202,7 @@ class CustomThresholdScheme(PseudotimeScheme):
         **kwargs: Any,
     ) -> np.ndarray:
         """
-        TODO.
+        %(pt_scheme.summary)s
 
         Parameters
         ----------
@@ -195,5 +213,5 @@ class CustomThresholdScheme(PseudotimeScheme):
         Returns
         -------
         %(pt_scheme.returns)s
-        """
+        """  # noqa: D400
         return self._callback(cell_pseudotime, neigh_pseudotime, neigh_dist, **kwargs)

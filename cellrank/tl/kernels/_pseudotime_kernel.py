@@ -1,6 +1,6 @@
 """Pseudotime kernel module."""
 from copy import copy
-from typing import Any, Union, Callable
+from typing import Any, Union, Callable, Optional
 
 import numpy as np
 
@@ -80,42 +80,28 @@ class PseudotimeKernel(Kernel):
         logg.debug("Clipping the pseudotime to 0-1 range")
         self._pseudotime = np.clip(self._pseudotime, 0, 1)
 
+    @d.dedent
     def compute_transition_matrix(
         self,
         threshold_scheme: Union[str, Callable] = "hard",
         k: int = 3,
         b: float = 20.0,
-        nu: float = 0.5,
+        nu: float = 1,
+        percentile: Optional[int] = 95,
         density_normalize: bool = True,
         **kwargs: Any,
     ) -> "PseudotimeKernel":
         """
         Compute transition matrix based on KNN graph and pseudotemporal ordering.
 
-        TODO: update the docstring.
-
-        This is a re-implementation of the Palantir algorithm by [Setty19]_.
-        Note that this won't exactly reproduce the original Palantir results, for three reasons:
-
-            - Palantir computes the KNN graph in a scaled space of diffusion components.
-            - Palantir uses its own pseudotime to bias the KNN graph which is not implemented here.
-            - Palantir uses a slightly different mechanism to ensure the graph remains connected when removing edges
-              that point into the "pseudotime past".
-
-        If you would like to reproduce the original results, please use the original Palantir algorithm.
-
         Parameters
         ----------
         k
             Number of neighbors to keep for each node, regardless of pseudotime.
-            This is done to ensure that the graph remains connected.
-        b
-            TODO: https://en.wikipedia.org/wiki/Generalised_logistic_function
-        nu
-            TODO: https://en.wikipedia.org/wiki/Generalised_logistic_function
+            This is done to ensure that the graph remains connected. Only used when `scheme='hard'`.
+        %(soft_scheme_kernel)s
         density_normalize
             Whether or not to use the underlying KNN graph for density normalization.
-
 
         Returns
         -------
