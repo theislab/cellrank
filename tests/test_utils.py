@@ -1,13 +1,5 @@
 import pytest
-from _helpers import (
-    create_model,
-    test_matrix_1,
-    test_matrix_2,
-    test_matrix_3,
-    test_matrix_4,
-    assert_array_nan_equal,
-    jax_not_installed_skip,
-)
+from _helpers import create_model, assert_array_nan_equal, jax_not_installed_skip
 
 import scanpy as sc
 from anndata import AnnData
