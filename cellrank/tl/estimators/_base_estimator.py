@@ -298,7 +298,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
     def compute_absorption_probabilities(
         self,
         keys: Optional[Sequence[str]] = None,
-        check_irred: bool = False,
+        check_irreducibility: bool = False,
         solver: Optional[str] = None,
         use_petsc: Optional[bool] = None,
         time_to_absorption: Optional[
@@ -325,7 +325,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         ----------
         keys
             Keys defining the recurrent classes.
-        check_irred
+        check_irreducibility:
             Check whether the transition matrix is irreducible.
         solver
             Solver to use for the linear problem. Options are `'direct', 'gmres', 'lgmres', 'bicgstab' or 'gcrotmk'`
@@ -459,7 +459,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         s = t[trans_indices, :][:, rec_indices]
 
         # check for irreducibility
-        if check_irred:
+        if check_irreducibility:
             if self.is_irreducible is None:
                 self._is_irreducible = _irreducible(self.transition_matrix)
             else:
