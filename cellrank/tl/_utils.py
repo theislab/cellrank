@@ -774,9 +774,17 @@ def _irreducible(d: Union[spmatrix, np.ndarray]) -> bool:
 
     import networkx as nx
 
-    G = nx.DiGraph(d) if not isinstance(d, nx.DiGraph) else d
+    start = logg.debug("Checking the transition matrix for irreducibility")
 
-    return len(list(nx.strongly_connected_components(G))) == 1
+    G = nx.DiGraph(d) if not isinstance(d, nx.DiGraph) else d
+    is_irreducible = len(list(nx.strongly_connected_components(G))) == 1
+
+    if not is_irreducible:
+        logg.warning("Transition matrix is not irreducible", time=start)
+    else:
+        logg.debug("Transition matrix is irreducible", time=start)
+
+    return is_irreducible
 
 
 def _symmetric(

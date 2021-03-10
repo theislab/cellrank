@@ -460,13 +460,13 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
         # check for irreducibility
         if check_irred:
-            start = logg.debug("Checking the transition matrix for irreducibility")
             if self.is_irreducible is None:
                 self._is_irreducible = _irreducible(self.transition_matrix)
-            if not self.is_irreducible:
-                logg.warning("Transition matrix is not irreducible", time=start)
             else:
-                logg.debug("Transition matrix is irreducible", time=start)
+                if not self.is_irreducible:
+                    logg.warning("Transition matrix is not irreducible")
+                else:
+                    logg.debug("Transition matrix is irreducible")
 
         # determine whether it makes sense you use a iterative solver
         if solver is None:

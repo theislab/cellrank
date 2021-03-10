@@ -649,11 +649,7 @@ class Kernel(UnaryKernelExpression, ABC):
             matrix[problematic_indices, problematic_indices] = 1.0
 
         if check_irreducibility:
-            start = logg.debug("Checking the transition matrix for irreducibility")
-            if not _irreducible(matrix):
-                logg.warning("Transition matrix is not irreducible", time=start)
-            else:
-                logg.debug("Transition matrix is irreducible", time=start)
+            _irreducible(matrix)
 
         # setting this property automatically row-normalizes
         self.transition_matrix = matrix
