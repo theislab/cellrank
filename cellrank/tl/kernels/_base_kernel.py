@@ -192,7 +192,11 @@ class KernelExpression(Pickleable, ABC):
         if key is None:
             key = _transition(self._direction)
 
-        self.adata.uns[f"{key}_params"] = str(self)
+        # retain the embedding info
+        self.adata.uns[f"{key}_params"] = {
+            **self.adata.uns.get(f"{key}_params", {}),
+            **{"params": self.params},
+        }
         _write_graph_data(self.adata, self.transition_matrix, key)
 
     @abstractmethod
@@ -286,11 +290,16 @@ class KernelExpression(Pickleable, ABC):
         if copy:
             return T_emb
 
-        key = (
-            _transition(self._direction) + "_" + basis
-            if key_added is None
-            else key_added
-        )
+        key = _transition(self._direction) if key_added is None else key_added
+        ukey = f"{key}_params"
+
+        embs = self.adata.uns.get(ukey, {}).get("embeddings", [])
+        if basis not in emb:
+            embs = list(embs) + [basis]
+            self.adata.uns[ukey] = self.adata.uns.get(ukey, {})
+            self.adata.uns[ukey]["embeddings"] = embs
+
+        key = key + "_" + basis
         logg.info(
             f"Adding `adata.obsm[{key!r}]`\n    Finish",
             time=start,
