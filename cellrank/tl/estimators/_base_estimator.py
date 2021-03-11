@@ -591,6 +591,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
                 - {tm.FISCHER.s!r} - use Fischer transformation [Fischer21]_.
                 - {tm.PERM_TEST.s!r} - use permutation test.
+
         cluster_key
             Key from :paramref:`adata` ``.obs`` to obtain cluster annotations. These are considered for ``clusters``.
         clusters

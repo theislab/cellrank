@@ -10,8 +10,6 @@ from cellrank.ul._docs import d
 
 try:
     from statot import OTKernel as OTKernel_
-
-    print("x")
 except ImportError:
     from cellrank.external.kernels._import_error_kernel import (
         ErroredKernel as OTKernel_,
@@ -60,7 +58,7 @@ class OTKernel(OTKernel_):
         dt: float,
         basis: str = "X_pca",
         cost_norm_method: Optional[str] = None,
-        method: Literal["ent", "quad", "unbal", "marginals"] = "ent",
+        method: Literal["ent", "quad", "unbal"] = "ent",
         tol: float = 0.0,
         thresh: float = 0.0,
         maxiter: int = 5000,
@@ -88,7 +86,6 @@ class OTKernel(OTKernel_):
                 - `"ent"` - entropy.
                 - `"quad"` - L2-norm.
                 - `"unbal"` - unbalanced transport (not yet implemented).
-                - `"marginals"` - marginals (returns just `mu` and `nu`).
 
         tol
             Relative tolerance for OT solver convergence.
