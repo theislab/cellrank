@@ -196,8 +196,8 @@ class TestToolsUtils:
         self, test_matrix_1: np.ndarray, test_matrix_4: np.ndarray
     ):
 
-        assert _symmetric(test_matrix_1)
-        assert not _symmetric(test_matrix_4)
+        assert not _symmetric(test_matrix_1)
+        assert _symmetric(test_matrix_4)
 
     def test_matrix_partition(
         self,
