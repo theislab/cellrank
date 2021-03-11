@@ -1,5 +1,5 @@
 """Kernel module."""
-
+import warnings
 from abc import ABC, abstractmethod
 from copy import copy
 from typing import (
@@ -222,6 +222,77 @@ class KernelExpression(Pickleable, ABC):
     def kernels(self) -> List["Kernel"]:
         """Get the kernels of the kernel expression, except for constants."""
         return list(set(self._get_kernels()))
+
+    def compute_projection(
+        self, basis: str = "umap", copy: bool = False, key_added: Optional[str] = None
+    ) -> Optional[np.ndarray]:
+        """
+        Compute a projection of the transition matrix in the embedding.
+
+        The projected matrix can be then visualized as::
+
+            scvelo.pl.velocity_embedding(adata, vkey='T_fwd_umap')
+
+        Parameters
+        ----------
+        basis
+            Basis for which to compute the projection.
+        copy
+            Whether to return the projection or modify :paramref:`adata` inplace.
+        key_added
+            If not `None` and ``copy=False``, save the result to :paramref:`adata` ``.obsm['{key_added}']``.
+            Otherwise, save the result to `'T_fwd_{basis}'` or `T_bwd_{basis}`, depending on the direction.
+
+        Returns
+        -------
+        If ``copy=True``, the projection array of shape `(n_cells, n_components)`.
+        Otherwise, it modifies :attr:`anndata.AnnData.obsm` with a key based on ``key_added``.
+        """
+        # modified from: https://github.com/theislab/scvelo/blob/master/scvelo/tools/velocity_embedding.py
+        from scvelo.tools.velocity_embedding import quiver_autoscale
+
+        if self._transition_matrix is None:
+            raise RuntimeError(
+                "Compute transition matrix first as `.compute_transition_matrix()`."
+            )
+
+        try:
+            emb = self.adata.obsm[f"X_{basis}"]
+        except KeyError:
+            try:
+                emb = self.adata.obsm[basis]  # e.g. 'spatial'
+            except KeyError:
+                raise KeyError(
+                    f"Unable to find a basis in `adata.obsm['X_{basis}']` or `adata.obsm[{basis!r}]`."
+                ) from None
+
+        start = logg.info(f"Projecting transition matrix onto `{basis}`")
+        T_emb = np.empty_like(emb)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            for i, row in enumerate(self.transition_matrix):
+                dX = emb[row.indices] - emb[i, None]
+                dX /= np.linalg.norm(dX, axis=1)[:, None]
+                dX[np.isnan(dX)] = 0
+                probs = row.data
+                T_emb[i] = probs.dot(dX) - probs.mean() * dX.sum(0)
+
+        T_emb /= 3 * quiver_autoscale(emb, T_emb)
+
+        if copy:
+            return T_emb
+
+        key = (
+            _transition(self._direction) + "_" + basis
+            if key_added is None
+            else key_added
+        )
+        logg.info(
+            f"Adding `adata.obsm[{key!r}]`\n    Finish",
+            time=start,
+        )
+        self.adata.obsm[key] = T_emb
 
     def __xor__(self, other: "KernelExpression") -> "KernelExpression":
         return self.__rxor__(other)

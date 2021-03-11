@@ -944,6 +944,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             f"{extra_msg}"
             f"       `.{P.TERM_PROBS}`\n"
             f"       `.{P.TERM}`",
+            "    Finish",
             time=time,
         )
 
