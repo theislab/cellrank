@@ -224,24 +224,27 @@ class KernelExpression(Pickleable, ABC):
         return list(set(self._get_kernels()))
 
     def compute_projection(
-        self, basis: str = "umap", copy: bool = False, key_added: Optional[str] = None
+        self,
+        basis: str = "umap",
+        key_added: Optional[str] = None,
+        copy: bool = False,
     ) -> Optional[np.ndarray]:
         """
         Compute a projection of the transition matrix in the embedding.
 
         The projected matrix can be then visualized as::
 
-            scvelo.pl.velocity_embedding(adata, vkey='T_fwd_umap')
+            scvelo.pl.velocity_embedding(adata, vkey='T_fwd', basis='umap')
 
         Parameters
         ----------
         basis
             Basis for which to compute the projection.
-        copy
-            Whether to return the projection or modify :paramref:`adata` inplace.
         key_added
             If not `None` and ``copy=False``, save the result to :paramref:`adata` ``.obsm['{key_added}']``.
             Otherwise, save the result to `'T_fwd_{basis}'` or `T_bwd_{basis}`, depending on the direction.
+        copy
+            Whether to return the projection or modify :paramref:`adata` inplace.
 
         Returns
         -------
