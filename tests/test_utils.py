@@ -179,38 +179,48 @@ class TestToolsUtils:
 
         np.testing.assert_array_equal(colors_merged, ["green", "yellow", "black"])
 
-    def test_matrix_irreducibility(self):
+    def test_matrix_irreducibility(
+        self, test_matrix_1: np.ndarray, test_matrix_2: np.ndarray
+    ):
+        assert _irreducible(test_matrix_1)
+        assert not _irreducible(test_matrix_2)
 
-        assert _irreducible(test_matrix_1())
-        assert not _irreducible(test_matrix_2())
+    def test_matrix_connectivity(
+        self, test_matrix_1: np.ndarray, test_matrix_3: np.ndarray
+    ):
 
-    def test_matrix_connectivity(self):
+        assert _connected(test_matrix_1)
+        assert not _connected(test_matrix_3)
 
-        assert _connected(test_matrix_1())
-        assert not _connected(test_matrix_3())
+    def test_matrix_symmetry(
+        self, test_matrix_1: np.ndarray, test_matrix_4: np.ndarray
+    ):
 
-    def test_matrix_symmetry(self):
+        assert _symmetric(test_matrix_1)
+        assert not _symmetric(test_matrix_4)
 
-        assert _symmetric(test_matrix_4())
-        assert not _symmetric(test_matrix_1())
-
-    def test_matrix_partition(self):
+    def test_matrix_partition(
+        self,
+        test_matrix_1: np.ndarray,
+        test_matrix_2: np.ndarray,
+        test_matrix_3: np.ndarray,
+    ):
 
         np.testing.assert_array_equal(
-            _partition(test_matrix_1())[0][0], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+            _partition(test_matrix_1)[0][0], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
         )
-        np.testing.assert_array_equal(_partition(test_matrix_1())[1], [])
+        np.testing.assert_array_equal(_partition(test_matrix_1)[1], [])
 
-        np.testing.assert_array_equal(_partition(test_matrix_2())[0][0], [12, 13])
+        np.testing.assert_array_equal(_partition(test_matrix_2)[0][0], [12, 13])
         np.testing.assert_array_equal(
-            _partition(test_matrix_2())[1][0], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+            _partition(test_matrix_2)[1][0], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
         )
 
         np.testing.assert_array_equal(
-            _partition(test_matrix_3())[0][0], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+            _partition(test_matrix_3)[0][0], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
         )
-        np.testing.assert_array_equal(_partition(test_matrix_3())[0][1], [12, 13])
-        np.testing.assert_array_equal(_partition(test_matrix_3())[1], [])
+        np.testing.assert_array_equal(_partition(test_matrix_3)[0][1], [12, 13])
+        np.testing.assert_array_equal(_partition(test_matrix_3)[1], [])
 
 
 class TestProcessSeries:
