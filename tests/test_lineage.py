@@ -1111,12 +1111,3 @@ class TestPriming:
         assert isinstance(deg, np.ndarray)
         assert deg.shape == (len(lineage),)
         assert np.sum(np.isnan(deg)) == 0
-
-    def test_priming_direction(self, lineage: Lineage):
-        dir_ = lineage.priming_direction
-
-        assert isinstance(dir_, np.ndarray)
-        assert dir_.shape == (len(lineage),)
-
-        for val in set(dir_):
-            assert val in lineage.names

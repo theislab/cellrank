@@ -267,7 +267,8 @@ def circular_projection(
                 val = probs.priming_degree()
                 set_lognorm = True
             elif k == SpecialKey.DIRECTION:
-                val = pd.Series(probs.priming_direction, dtype="category")
+                # TODO: remove the direction
+                val = probs.priming_degree()
                 color_mapper = dict(zip(probs.names, probs.colors))
                 adata.uns[f"{k.s}_{suffix}_colors"] = [
                     color_mapper[c] for c in val.cat.categories

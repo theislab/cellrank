@@ -7,6 +7,8 @@ from pathlib import Path
 from functools import wraps
 from itertools import combinations
 
+from typing_extensions import Literal
+
 import numpy as np
 import pandas as pd
 from scipy.stats import entropy
@@ -22,7 +24,7 @@ from cellrank.tl._colors import (
     _compute_mean_color,
     _create_categorical_colors,
 )
-from cellrank.tl._constants import Lin
+from cellrank.tl._constants import Lin, ModeEnum
 
 ColorLike = TypeVar("ColorLike")
 _ERROR_NOT_ITERABLE = "Expected `{}` to be iterable, found type `{}`."
@@ -32,6 +34,13 @@ _HT_CELLS = 10  # head and tail cells to show
 _HTML_REPR_THRESH = 100
 _DUMMY_CELL = "<td style='text-align: right;'>...</td>"
 _ORDER = "C"
+
+
+class PrimingDegree(ModeEnum):
+    """Priming degree method."""
+
+    KL_DIVERGENCE = "kl_divergence"
+    ENTROPY = "entropy"
 
 
 def _at_least_2d(array: np.ndarray, dim: int):
@@ -706,14 +715,32 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
     def __copy__(self):
         return self.copy()
 
-    def priming_degree(self, early_cells: Optional[np.ndarray] = None) -> np.ndarray:
+    @d.get_full_description(base="lin_pd")
+    @d.get_sections(base="lin_pd", sections=["Parameters", "Returns"])
+    def priming_degree(
+        self,
+        method: Literal["kl_divergence", "entropy"] = "kl_divergence",
+        early_cells: Optional[np.ndarray] = None,
+    ) -> np.ndarray:
         """
-        TODO.
+        Compute the lineage priming.
 
         Parameters
         ----------
+        method
+            The method used to compute the degree of lineage priming. Valid options are:
+
+                - `'kl_divergence'` - as in [Velten17]_, computes KL-divergence between the fate probabilities of a
+                   cell and the average fate probabilities. Computation of average fate probabilities can be restricted
+                   to a set of user-defined ``early_cells``.
+                   The further from average a cell's fate probabilities, the more committed it is.
+                - `'entropy'` - as in [Setty19]_, computes entropy over a cell's fate probabilities.
+                   The lower a cell's entropy over fate probabilities, the more committed it is.
+
         early_cells
-            Indices or a mask marking early cells. If `None`, use all cells.
+            Cell ids or a mask marking early cells. If `None`, use all cells. Only used when ``method='kl_divergence'``.
+            If a :class:`dict`, key species a cluster key in :attr:`anndata.AnnData.obs` and values the cluster labels
+            containing early cells.
 
         Returns
         -------
@@ -727,22 +754,30 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         if not np.issubdtype(early_cells.dtype, np.bool_):
             early_cells = np.unique(early_cells)
 
+        method = PrimingDegree(method)
         probs = self.X
         early_subset = probs[early_cells, :]
         if not len(early_cells):
             raise ValueError("No early cells have been specified.")
 
-        return np.nan_to_num(
-            np.sum(probs * np.log2(probs / np.mean(early_subset, axis=0)), axis=1),
-            nan=1.0,
-            copy=False,
-        )
+        if method == PrimingDegree.KL_DIVERERGENCE:
+            if early_cells is not None:
+                early_cells = np.asarray(early_cells)
+                if not np.issubdtype(early_cells.dtype, np.bool_):
+                    early_cells = np.isin(self.adata.obs_names, early_cells)
+            probs = np.nan_to_num(
+                np.sum(probs * np.log2(probs / np.mean(early_subset, axis=0)), axis=1),
+                nan=1.0,
+                copy=False,
+            )
+        elif method == PrimingDegree.ENTROPY:
+            probs = probs.entropy(axis=1).X.squeeze(1)
+            probs = np.max(probs) - probs
+        else:
+            raise NotImplementedError(f"Method `{method}` is not yet implemented")
 
-    @property
-    def priming_direction(self) -> np.ndarray:
-        """Direction of priming as described in [Velten17]_."""
-        probs = self.X
-        return self.names[np.argmax(probs / np.sum(probs, axis=0), axis=1)]
+        minn, maxx = np.min(probs), np.max(probs)
+        return (probs - minn) / (maxx - minn)
 
     @d.dedent
     def plot_pie(
@@ -836,8 +871,10 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         self,
         *keys: str,
         mode: str = "dist",
-        dist_measure: str = "mutual_info",
-        normalize_weights: str = "softmax",
+        dist_measure: Literal[
+            "cosine_sim", "wasserstein_dist", "kl_div", "js_div", "mutual_inf", "equal"
+        ] = "mutual_info",
+        normalize_weights: Literal["scale", "softmax"] = "softmax",
         softmax_scale: float = 1,
         return_weights: bool = False,
     ) -> Union["Lineage", Tuple["Lineage", Optional[pd.DataFrame]]]:
