@@ -545,6 +545,9 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         Parameters
         ----------
         %(lin_pd.parameters)s
+            Cell ids or a mask marking early cells. If `None`, use all cells. Only used when ``method='kl_divergence'``.
+            If a :class:`dict`, the key species a cluster key in :attr:`anndata.AnnData.obs` and the values
+            specify cluster labels containing early cells.
 
         Returns
         -------

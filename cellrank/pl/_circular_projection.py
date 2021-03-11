@@ -2,6 +2,8 @@ from types import MappingProxyType
 from typing import Any, Tuple, Union, Mapping, Callable, Optional, Sequence
 from pathlib import Path
 
+from typing_extensions import Literal
+
 import scvelo as scv
 from anndata import AnnData
 
@@ -19,17 +21,13 @@ from cellrank.ul._docs import d
 from cellrank.pl._utils import _held_karp
 from cellrank.tl._utils import save_fig, _unique_order_preserving
 from cellrank.ul._utils import _check_collection
-from cellrank.tl._constants import ModeEnum, AbsProbKey
+from cellrank.tl._lineage import PrimingDegree
+from cellrank.tl._constants import ModeEnum, AbsProbKey, _pd
 
 
 class LineageOrder(ModeEnum):  # noqa: D101
     DEFAULT = "default"
     OPTIMAL = "optimal"
-
-
-class SpecialKey(ModeEnum):  # noqa: D101
-    DEGREE = "priming_degree"
-    DIRECTION = "priming_direction"
 
 
 class LabelRot(ModeEnum):  # noqa: D101
@@ -84,7 +82,8 @@ def circular_projection(
     keys: Union[str, Sequence[str]],
     backward: bool = False,
     lineages: Optional[Union[str, Sequence[str]]] = None,
-    lineage_order: Optional[str] = None,
+    early_cells: Optional[Union[Mapping[str, Sequence[str]], Sequence[str]]] = None,
+    lineage_order: Optional[Literal["default", "optimal"]] = None,
     metric: Union[str, Callable, np.ndarray, pd.DataFrame] = "correlation",
     normalize_by_mean: bool = True,
     ncols: int = 4,
@@ -92,7 +91,7 @@ def circular_projection(
     use_raw: bool = False,
     text_kwargs: Mapping[str, Any] = MappingProxyType({}),
     labeldistance: float = 1.25,
-    labelrot: Union[str, float] = "best",
+    labelrot: Union[Literal["default", "best"], float] = "best",
     show_edges: bool = True,
     key_added: Optional[str] = None,
     figsize: Optional[Tuple[float, float]] = None,
@@ -107,18 +106,20 @@ def circular_projection(
     ----------
     %(adata)s
     keys
-        Keys in :attr:`anndata.AnnData.obs` or :attr:`anndata.AnnData.var_names`. Extra available keys:
+        Keys in :attr:`anndata.AnnData.obs` or :attr:`anndata.AnnData.var_names`. Extra available keys are:
 
-            - `'priming_degree'`: the entropy relative to the "average" cell, as described in [Velten17]_.
-              It follows  the formula :math:`\sum_{j} p_{i, j} \log \frac{p_{ij}}{\overline{p_j}}` where :math:`i`
-              corresponds to a cell, :math:`j` corresponds to a lineage and :math:`\overline{p_j}` is the average
-              probability for lineage :math:`j`.
-            - `'priming_direction'`: defined as :math:`d_i = argmax_j \frac{p_{ij}}{\overline{p_j}}` in [Velten17]_
-              where :math:`i`, :math:`j` and :math:`\overline{p_j}` are defined as above.
+            - `'kl_divergence'` - as in [Velten17]_, computes KL-divergence between the fate probabilities of a
+               cell and the average fate probabilities. Computation of average fate probabilities can be restricted
+               to a set of user-defined ``early_cells``.
+            - `'entropy'` - as in [Setty19]_, computes entropy over a cell's fate probabilities.
 
     %(backward)s
     lineages
         Lineages to plot. If `None`, plot all lineages.
+    early_cells
+        Cell ids or a mask marking early cells. If `None`, use all cells. Only used when `'kl_divergence'`
+        is in ``keys``. If a :class:`dict`, key species a cluster key in :attr:`anndata.AnnData.obs` and
+        the values specify cluster labels containing early cells.
     lineage_order
         Can be one of the following:
 
@@ -164,9 +165,9 @@ def circular_projection(
     %(just_plots)s
         Also updates ``adata`` with the following fields:
 
-            - :attr:`anndata.AnnData.obsm` ``[{key_added}]``: the circular projection.
-            - :attr:`anndata.AnnData.obs` ``['priming_degree_{fwd,bwd}']``: the priming degree, if in ``keys``.
-            - :attr:`anndata.AnnData.obs` ``['priming_direction_{fwd,bwd}']``: the priming direction, if in ``keys``.
+            - :attr:`anndata.AnnData.obsm` ``['{key_added}']``: the circular projection.
+            - :attr:`anndata.AnnData.obs` ``['{fwd,bwd}_priming_degree']``: the priming degree, if a method is present
+              in ``keys``.
     """
     if labeldistance is not None and labeldistance < 0:
         raise ValueError(f"Expected `delta` to be positive, found `{labeldistance}`.")
@@ -189,7 +190,7 @@ def circular_projection(
     ) + _check_collection(
         adata, keys, "var_names", key_name="Gene", raise_exc=False, use_raw=use_raw
     )
-    haystack = {s.s for s in SpecialKey}
+    haystack = {s.s for s in PrimingDegree}
     keys = keys_ + [k for k in keys if k in haystack]
     keys = _unique_order_preserving(keys)
 
@@ -261,25 +262,13 @@ def circular_projection(
 
         set_lognorm, colorbar = False, kwargs.pop("colorbar", True)
         try:
-            k = SpecialKey(k)
-            logg.debug(f"Calculating `{k}`")
-            if k == SpecialKey.DEGREE:
-                val = probs.priming_degree()
-                set_lognorm = True
-            elif k == SpecialKey.DIRECTION:
-                # TODO: remove the direction
-                val = probs.priming_degree()
-                color_mapper = dict(zip(probs.names, probs.colors))
-                adata.uns[f"{k.s}_{suffix}_colors"] = [
-                    color_mapper[c] for c in val.cat.categories
-                ]
-                val = val.values
-            else:
-                raise NotImplementedError(f"Special key `{k}` is not implemented.")
-            k = f"{k}_{suffix}"
-            if k in adata.obs:
-                logg.debug(f"Overwriting `adata.obs[{k!r}]`")
-            adata.obs[k] = val
+            k = PrimingDegree(k)
+            logg.debug(f"Calculating priming degree using `method={k}`")
+            val, k = (
+                probs.priming_degree(k, early_cells=early_cells),
+                f"priming degree[{k}]",
+            )
+            adata.obs[_pd(lineage_key)] = val
         except ValueError:
             pass
 

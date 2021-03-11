@@ -723,7 +723,10 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         early_cells: Optional[np.ndarray] = None,
     ) -> np.ndarray:
         """
-        Compute the lineage priming.
+        Compute the degree of lineage priming.
+
+        This method computes how naive vs. committed each individual cell is.
+        It returns a score where 0 stands for naive and 1 stands for committed.
 
         Parameters
         ----------
@@ -733,14 +736,10 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
                 - `'kl_divergence'` - as in [Velten17]_, computes KL-divergence between the fate probabilities of a
                    cell and the average fate probabilities. Computation of average fate probabilities can be restricted
                    to a set of user-defined ``early_cells``.
-                   The further from average a cell's fate probabilities, the more committed it is.
                 - `'entropy'` - as in [Setty19]_, computes entropy over a cell's fate probabilities.
-                   The lower a cell's entropy over fate probabilities, the more committed it is.
 
         early_cells
             Cell ids or a mask marking early cells. If `None`, use all cells. Only used when ``method='kl_divergence'``.
-            If a :class:`dict`, key species a cluster key in :attr:`anndata.AnnData.obs` and values the cluster labels
-            containing early cells.
 
         Returns
         -------
