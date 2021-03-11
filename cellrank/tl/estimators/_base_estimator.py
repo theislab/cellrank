@@ -943,7 +943,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             f"       `adata.obs[{self._term_key!r}]`\n"
             f"{extra_msg}"
             f"       `.{P.TERM_PROBS}`\n"
-            f"       `.{P.TERM}`",
+            f"       `.{P.TERM}`\n"
             "    Finish",
             time=time,
         )
