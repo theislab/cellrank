@@ -37,9 +37,7 @@ class PalantirKernel(Kernel):
     %(backward)s
     time_key
         Key in :paramref:`adata` ``.obs`` where the pseudotime is stored.
-    compute_cond_num
-        Whether to compute condition number of the transition matrix. Note that this might be costly,
-        since it does not use sparse implementation.
+    %(cond_num)s
     """
 
     def __init__(

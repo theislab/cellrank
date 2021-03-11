@@ -948,7 +948,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         )
 
     @abstractmethod
-    def _fit_terminal_states(self, *args, **kwargs):
+    def _fit_terminal_states(self, *args: Any, **kwargs: Any) -> None:
         pass
 
     @d.dedent
