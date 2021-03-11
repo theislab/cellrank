@@ -17,5 +17,6 @@ scipy>=1.2.0
 scvelo>=0.2.2
 seaborn>=0.10.0
 setuptools>=41.0.1
+typing_extensions
 tzlocal>=1.5.1
 wrapt>=1.12.1
