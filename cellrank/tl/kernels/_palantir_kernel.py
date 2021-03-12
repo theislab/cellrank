@@ -75,7 +75,10 @@ class PalantirKernel(Kernel):
         self._pseudotime = np.clip(self._pseudotime, 0, 1)
 
     def compute_transition_matrix(
-        self, k: int = 3, density_normalize: bool = True
+        self,
+        k: int = 3,
+        density_normalize: bool = True,
+        check_irreducibility: bool = False,
     ) -> "PalantirKernel":
         """
         Compute transition matrix based on KNN graph and pseudotemporal ordering.
@@ -97,6 +100,8 @@ class PalantirKernel(Kernel):
             This is done to ensure that the graph remains connected.
         density_normalize
             Whether or not to use the underlying KNN graph for density normalization.
+        check_irreducibility
+            Optional check for irreducibility of the final transition matrix.
 
         Returns
         -------
@@ -141,7 +146,9 @@ class PalantirKernel(Kernel):
             logg.warning("Biased KNN graph is disconnected")
 
         self._compute_transition_matrix(
-            matrix=biased_conn, density_normalize=density_normalize
+            matrix=biased_conn,
+            density_normalize=density_normalize,
+            check_irreducibility=check_irreducibility,
         )
 
         logg.info("    Finish", time=start)

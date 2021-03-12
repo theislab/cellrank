@@ -24,6 +24,7 @@ from matplotlib.testing import setup
 from matplotlib.testing.compare import compare_images
 
 import cellrank as cr
+from cellrank.tl import Lineage
 from cellrank.ul.models import GAMR
 from cellrank.tl._constants import AbsProbKey, _pd
 from cellrank.tl.estimators import GPCCA, CFLARE
@@ -1391,6 +1392,20 @@ class TestGeneTrend:
         )
 
     @compare()
+    def test_trends_gene_legend_out(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            GENES[:2],
+            same_plot=True,
+            legend_loc="bottom right out",
+            data_key="Ms",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
     def test_trends_no_cbar(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.gene_trends(
@@ -1443,6 +1458,51 @@ class TestGeneTrend:
             data_key="Ms",
             same_plot=True,
             cell_color="red",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_trends_lineage_cell_color_gene(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            GENES[0],
+            data_key="Ms",
+            same_plot=True,
+            cell_color=adata.var_names[0],
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_trends_lineage_cell_color_clusters(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            GENES[0],
+            data_key="Ms",
+            same_plot=True,
+            cell_color="clusters",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_trends_lineage_cell_color_clusters_obs_legend_loc(
+        self, adata: AnnData, fpath: str
+    ):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            GENES[0],
+            data_key="Ms",
+            same_plot=True,
+            cell_color="clusters",
+            obs_legend_loc="top left out",
             dpi=DPI,
             save=fpath,
         )
@@ -2684,6 +2744,17 @@ class TestModel:
             lineage_probability=True,
             lineage_probability_conf_int=True,
         )
+
+    @compare()
+    def test_model_1_lineage(self, adata: AnnData, fpath: str):
+        adata.obsm[AbsProbKey.FORWARD.s] = Lineage(
+            np.ones((adata.n_obs, 1)), names=["foo"]
+        )
+        model = create_model(adata)
+        model = model.prepare(adata.var_names[0], "foo", n_test_points=100).fit()
+        model.fit().predict()
+        model.confidence_interval()
+        model.plot(save=fpath, dpi=DPI, conf_int=True)
 
 
 @gamr_skip

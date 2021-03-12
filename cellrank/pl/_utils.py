@@ -33,6 +33,7 @@ from cellrank.ul.models import GAMR, BaseModel, FailedModel, SKLearnModel
 from cellrank.tl._colors import _create_categorical_colors
 from cellrank.tl._constants import _DEFAULT_BACKEND
 from cellrank.ul._parallelize import parallelize
+from cellrank.ul.models._base_model import ColorType
 
 AnnData = TypeVar("AnnData")
 Queue = TypeVar("Queue")
@@ -567,6 +568,7 @@ def _trends_helper(
     lineage_probability_color: Optional[str] = None,
     abs_prob_cmap=cm.viridis,
     gene_as_title: bool = False,
+    cell_color: Optional[str] = None,
     legend_loc: Optional[str] = "best",
     fig: mpl.figure.Figure = None,
     axes: Union[mpl.axes.Axes, Sequence[mpl.axes.Axes]] = None,
@@ -622,7 +624,6 @@ def _trends_helper(
     if same_plot:
         axes = [axes] * len(lineage_names)
 
-    fig.tight_layout()
     axes = np.ravel(axes)
 
     percs = kwargs.pop("perc", None)
@@ -652,7 +653,7 @@ def _trends_helper(
         else:
             # this should be fine w.r.t. to the missing genes, since they are in the same order AND
             # we're also passing the failed models (this is important)
-            # these are actually gene colors, bu w/e
+            # these are actually gene colors
             if lineage_cmap is not None:
                 lineage_colors = (
                     lineage_cmap.colors
@@ -672,7 +673,6 @@ def _trends_helper(
         )
 
     lineage_color_mapper = {ln: lineage_colors[i] for i, ln in enumerate(lineage_names)}
-
     successful_models = {
         ln: models[gene][ln] for ln in lineage_names if models[gene][ln]
     }
@@ -711,6 +711,7 @@ def _trends_helper(
     last_ax = None
     ylabel_shown = False
     cells_shown = False
+    obs_legend_loc = kwargs.pop("obs_legend_loc", "best")
 
     for i, (name, ax, perc) in enumerate(zip(lineage_names, axes, percs)):
         model = models[gene][name]
@@ -742,9 +743,11 @@ def _trends_helper(
             ax=ax,
             fig=fig,
             perc=perc,
+            cell_color=cell_color,
             cbar=False,
+            obs_legend_loc=None,
             title=title,
-            hide_cells=cells_shown if not hide_cells else True,
+            hide_cells=True if hide_cells else cells_shown if same_plot else False,
             same_plot=same_plot,
             lineage_color=lineage_color_mapper[name],
             lineage_probability_color=lineage_probability_color,
@@ -765,36 +768,49 @@ def _trends_helper(
         ylabel_shown = True
         cells_shown = True
 
-    if not same_plot and same_perc and show_cbar and not hide_cells:
-        vmin = np.min([model.w_all for model in successful_models.values()])
-        vmax = np.max([model.w_all for model in successful_models.values()])
-        norm = mcolors.Normalize(vmin=vmin, vmax=vmax)
+    key, color, typp, mapper = model._get_colors(cell_color, same_plot=same_plot)
+    if typp == ColorType.CAT:
+        if not hide_cells:
+            model._maybe_add_legend(
+                fig, ax, mapper=mapper, title=key, loc=obs_legend_loc, is_line=False
+            )
+    elif typp == ColorType.CONT:
+        if same_perc and show_cbar and not hide_cells:
+            if isinstance(color, np.ndarray):
+                # plotting cont. observation other than lin. probs as a color
+                vmin = np.min(color)
+                vmax = np.max(color)
+            else:
+                vmin = np.min([model.w_all for model in successful_models.values()])
+                vmax = np.max([model.w_all for model in successful_models.values()])
+            norm = mcolors.Normalize(vmin=vmin, vmax=vmax)
 
-        for ax in axes:
-            children = [
-                c
-                for c in ax.get_children()
-                if isinstance(c, mpl.collections.PathCollection)
-            ]
-            if len(children):
-                children[0].set_norm(norm)
+            for ax in axes:
+                children = [
+                    c
+                    for c in ax.get_children()
+                    if isinstance(c, mpl.collections.PathCollection)
+                ]
+                if len(children):
+                    children[0].set_norm(norm)
 
-        divider = make_axes_locatable(last_ax)
-        cax = divider.append_axes("right", size="2%", pad=0.1)
-        _ = mpl.colorbar.ColorbarBase(
-            cax,
-            norm=norm,
-            cmap=abs_prob_cmap,
-            label="absorption probability",
-            ticks=np.linspace(norm.vmin, norm.vmax, 5),
+            divider = make_axes_locatable(last_ax)
+            cax = divider.append_axes("right", size="2%", pad=0.1)
+            _ = mpl.colorbar.ColorbarBase(
+                cax,
+                norm=norm,
+                cmap=abs_prob_cmap,
+                label=key,
+                ticks=np.linspace(norm.vmin, norm.vmax, 5),
+            )
+
+    if same_plot and lineage_names != [None]:
+        model._maybe_add_legend(
+            fig,
+            ax,
+            mapper={ln: lineage_color_mapper[ln] for ln in successful_models.keys()},
+            loc=legend_loc,
         )
-
-    if same_plot and lineage_names != [None] and legend_loc not in (None, "none"):
-        handles = [
-            mpl.lines.Line2D([], [], color=lineage_color_mapper[ln], label=ln)
-            for ln in successful_models.keys()
-        ]
-        last_ax.legend(handles=handles, loc=legend_loc)
 
 
 def _position_legend(ax: mpl.axes.Axes, legend_loc: str, **kwargs) -> mpl.legend.Legend:

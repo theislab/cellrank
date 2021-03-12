@@ -27,6 +27,7 @@ from cellrank.tl._utils import (
     _symmetric,
     _get_neighs,
     _has_neighs,
+    _irreducible,
 )
 from cellrank.ul._utils import Pickleable, _write_graph_data
 from cellrank.tl._constants import Direction, _transition
@@ -573,13 +574,13 @@ class Kernel(UnaryKernelExpression, ABC):
         )
         self._read_from_adata(check_connectivity=check_connectivity, **kwargs)
 
-    def _read_from_adata(self, **kwargs):
+    def _read_from_adata(self, key: str = "connectivities", **kwargs):
         """Import the base-KNN graph and optionally check for symmetry and connectivity."""
 
         if not _has_neighs(self.adata):
             raise KeyError("Compute KNN graph first as `scanpy.pp.neighbors()`.")
 
-        self._conn = _get_neighs(self.adata, "connectivities").astype(_dtype)
+        self._conn = _get_neighs(self.adata, key).astype(_dtype)
 
         check_connectivity = kwargs.pop("check_connectivity", False)
         if check_connectivity:
@@ -630,6 +631,7 @@ class Kernel(UnaryKernelExpression, ABC):
         self,
         matrix: spmatrix,
         density_normalize: bool = True,
+        check_irreducibility: bool = False,
     ):
         # density correction based on node degrees in the KNN graph
         matrix = csr_matrix(matrix) if not isspmatrix_csr(matrix) else matrix
@@ -642,9 +644,12 @@ class Kernel(UnaryKernelExpression, ABC):
         if len(problematic_indices):
             logg.warning(
                 f"Detected `{len(problematic_indices)}` absorbing states in the transition matrix. "
-                f"This matrix won't be reducible"
+                f"This matrix won't be irreducible."
             )
             matrix[problematic_indices, problematic_indices] = 1.0
+
+        if check_irreducibility:
+            _irreducible(matrix)
 
         # setting this property automatically row-normalizes
         self.transition_matrix = matrix

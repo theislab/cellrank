@@ -26,6 +26,7 @@ from cellrank.ul._docs import d, inject_docs
 from cellrank.tl._utils import (
     TestMethod,
     _pairwise,
+    _irreducible,
     _process_series,
     _correlation_test,
     _get_cat_and_null_indices,
@@ -297,7 +298,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
     def compute_absorption_probabilities(
         self,
         keys: Optional[Sequence[str]] = None,
-        check_irred: bool = False,
+        check_irreducibility: bool = False,
         solver: Optional[str] = None,
         use_petsc: Optional[bool] = None,
         time_to_absorption: Optional[
@@ -323,7 +324,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         ----------
         keys
             Keys defining the recurrent classes.
-        check_irred
+        check_irreducibility:
             Check whether the transition matrix is irreducible.
         solver
             Solver to use for the linear problem. Options are `'direct', 'gmres', 'lgmres', 'bicgstab' or 'gcrotmk'`
@@ -442,11 +443,15 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         q = t[trans_indices, :][:, trans_indices]
         s = t[trans_indices, :][:, rec_indices]
 
-        if check_irred:
+        # check for irreducibility
+        if check_irreducibility:
             if self.is_irreducible is None:
-                self.compute_partition()
-            if not self.is_irreducible:
-                logg.warning("The transition matrix is not irreducible")
+                self._is_irreducible = _irreducible(self.transition_matrix)
+            else:
+                if not self.is_irreducible:
+                    logg.warning("Transition matrix is not irreducible")
+                else:
+                    logg.debug("Transition matrix is irreducible")
 
         # determine whether it makes sense you use a iterative solver
         if solver is None:

@@ -181,7 +181,7 @@ def _get_neighs(adata: AnnData, mode: str = "distances") -> Union[np.ndarray, sp
     try:
         return _read_graph_data(adata, mode)
     except KeyError:
-        return _read_graph_data(adata, "neighors")[mode]
+        return _read_graph_data(adata, "neighbors")[mode]
 
 
 def _get_neighs_params(adata: AnnData) -> Dict[str, Any]:

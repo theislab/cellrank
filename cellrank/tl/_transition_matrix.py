@@ -19,6 +19,7 @@ def transition_matrix(
     backward: bool = False,
     vkey: str = "velocity",
     xkey: str = "Ms",
+    conn_key: str = "connectivities",
     gene_subset: Optional[Iterable] = None,
     mode: str = VelocityMode.DETERMINISTIC.s,
     backward_mode: str = BackwardMode.TRANSPOSE.s,
@@ -30,11 +31,11 @@ def transition_matrix(
     **kwargs,
 ) -> KernelExpression:
     """
-    Compute a transition matrix based on a combination of RNA Velocity and transcriptomic similarity.
+    Compute a transition matrix based on a combination of RNA Velocity and transcriptomic or spatial similarity.
 
     To learn more about the way in which the transition matrices are computed, see
     :class:`cellrank.tl.kernels.VelocityKernel` for the velocity-based transition matrix and
-    :class:`cellrank.tl.kernels.ConnectivityKernel` for the transcriptomic-similarity-based transition matrix.
+    :class:`cellrank.tl.kernels.ConnectivityKernel` for the similarity-based transition matrix.
 
     Parameters
     ----------
@@ -44,6 +45,9 @@ def transition_matrix(
         Key from ``adata.layers`` to access the velocities.
     xkey
         Key in ``adata.layers`` where expected gene expression counts are stored.
+    conn_key
+        Key in :attr:`anndata.AnnData.obsp` to obtain the connectivity matrix, describing cell-cell similarity. Only
+        used when ``weight_connectivities > 0``.
     gene_subset
         List of genes to be used to compute transition probabilities.
         By default, genes from ``adata.var['velocity_genes']`` are used.
@@ -52,9 +56,9 @@ def transition_matrix(
     %(velocity_scheme)s
     %(softmax_scale)s
     weight_connectivities
-        Weight given to transcriptomic similarities as opposed to velocities. Must be in `[0, 1]`.
+        Weight given to similarities as opposed to velocities. Must be in `[0, 1]`.
     density_normalize
-        Whether to use density correction when computing the transition probabilities based on connectivities.
+        Whether to use density correction when computing the transition probabilities based on similarities.
         Density correction is done as by [Haghverdi16]_.
     %(write_to_adata.parameters)s
     kwargs
@@ -68,34 +72,36 @@ def transition_matrix(
         %(write_to_adata)s
     """
 
-    # initialise the velocity kernel and compute transition matrix
-    vk = VelocityKernel(
-        adata, backward=backward, vkey=vkey, xkey=xkey, gene_subset=gene_subset
-    )
-    vk.compute_transition_matrix(
-        softmax_scale=softmax_scale,
-        mode=mode,
-        backward_mode=backward_mode,
-        scheme=scheme,
-        **kwargs,
-    )
+    def compute_velocity_kernel() -> VelocityKernel:
+        return VelocityKernel(
+            adata, backward=backward, vkey=vkey, xkey=xkey, gene_subset=gene_subset
+        ).compute_transition_matrix(
+            softmax_scale=softmax_scale,
+            mode=mode,
+            backward_mode=backward_mode,
+            scheme=scheme,
+            **kwargs,
+        )
 
     if weight_connectivities is not None:
         if 0 < weight_connectivities < 1:
+            vk = compute_velocity_kernel()
             logg.info(
                 f"Using a connectivity kernel with weight `{weight_connectivities}`"
             )
-            ck = ConnectivityKernel(adata, backward=backward).compute_transition_matrix(
-                density_normalize=density_normalize
-            )
+            ck = ConnectivityKernel(
+                adata, backward=backward, conn_key=conn_key
+            ).compute_transition_matrix(density_normalize=density_normalize)
             final = (
                 (1 - weight_connectivities) * vk + weight_connectivities * ck
             ).compute_transition_matrix()
         elif weight_connectivities == 0:
-            final = vk
+            final = compute_velocity_kernel()
         elif weight_connectivities == 1:
             final = ConnectivityKernel(
-                adata, backward=backward
+                adata,
+                backward=backward,
+                conn_key=conn_key,
             ).compute_transition_matrix(density_normalize=density_normalize)
         else:
             raise ValueError(
