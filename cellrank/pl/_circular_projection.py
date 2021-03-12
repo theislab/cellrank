@@ -22,7 +22,7 @@ from cellrank.pl._utils import _held_karp
 from cellrank.tl._utils import save_fig, _unique_order_preserving
 from cellrank.ul._utils import _check_collection
 from cellrank.tl._lineage import PrimingDegree
-from cellrank.tl._constants import ModeEnum, AbsProbKey, _pd
+from cellrank.tl._constants import ModeEnum, AbsProbKey
 
 
 class LineageOrder(ModeEnum):  # noqa: D101
@@ -166,8 +166,8 @@ def circular_projection(
         Also updates ``adata`` with the following fields:
 
             - :attr:`anndata.AnnData.obsm` ``['{key_added}']``: the circular projection.
-            - :attr:`anndata.AnnData.obs` ``['{fwd,bwd}_priming_degree']``: the priming degree, if a method is present
-              in ``keys``.
+            - :attr:`anndata.AnnData.obs` ``['to_{initial,terminal}_states_{method}']``: the priming degree,
+              if a method is present in ``keys``.
     """
     if labeldistance is not None and labeldistance < 0:
         raise ValueError(f"Expected `delta` to be positive, found `{labeldistance}`.")
@@ -262,13 +262,11 @@ def circular_projection(
 
         set_lognorm, colorbar = False, kwargs.pop("colorbar", True)
         try:
-            k = PrimingDegree(k)
+            _ = PrimingDegree(k)
             logg.debug(f"Calculating priming degree using `method={k}`")
-            val, k = (
-                probs.priming_degree(k, early_cells=early_cells),
-                f"priming degree[{k}]",
-            )
-            adata.obs[_pd(lineage_key)] = val
+            val = probs.priming_degree(method=k, early_cells=early_cells)
+            k = f"{lineage_key}_{k}"
+            adata.obs[k] = val
         except ValueError:
             pass
 

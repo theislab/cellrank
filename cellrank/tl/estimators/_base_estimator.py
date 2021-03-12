@@ -567,6 +567,10 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             if key not in self.adata.obs:
                 raise KeyError(f"Unable to find clustering in `adata.obs[{key!r}]`.")
             early_cells = self.adata.obs[key].isin(early_cells[key])
+        elif early_cells is not None:
+            early_cells = np.asarray(early_cells)
+            if not np.issubdtype(early_cells.dtype, np.bool_):
+                early_cells = np.isin(self.adata.obs_names, early_cells)
 
         values = pd.Series(
             abs_probs.priming_degree(method, early_cells), index=self.adata.obs_names
@@ -618,6 +622,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
                 - {tm.FISCHER.s!r} - use Fischer transformation [Fischer21]_.
                 - {tm.PERM_TEST.s!r} - use permutation test.
+
         cluster_key
             Key from :paramref:`adata` ``.obs`` to obtain cluster annotations. These are considered for ``clusters``.
         clusters

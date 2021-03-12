@@ -13,7 +13,7 @@ import matplotlib.colors as colors
 
 from cellrank.tl import Lineage
 from cellrank.tl._colors import _compute_mean_color, _create_categorical_colors
-from cellrank.tl._lineage import _HT_CELLS, LineageView
+from cellrank.tl._lineage import _HT_CELLS, LineageView, PrimingDegree
 from cellrank.tl._constants import Lin
 
 
@@ -1105,8 +1105,9 @@ class TestPickling:
 
 
 class TestPriming:
-    def test_priming_degree(self, lineage: Lineage):
-        deg = lineage.priming_degree()
+    @pytest.mark.parametrize("method", list(PrimingDegree))
+    def test_priming_degree(self, lineage: Lineage, method: str):
+        deg = lineage.priming_degree(method=method)
 
         assert isinstance(deg, np.ndarray)
         assert deg.shape == (len(lineage),)

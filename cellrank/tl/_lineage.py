@@ -759,18 +759,14 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         if not len(early_cells):
             raise ValueError("No early cells have been specified.")
 
-        if method == PrimingDegree.KL_DIVERERGENCE:
-            if early_cells is not None:
-                early_cells = np.asarray(early_cells)
-                if not np.issubdtype(early_cells.dtype, np.bool_):
-                    early_cells = np.isin(self.adata.obs_names, early_cells)
+        if method == PrimingDegree.KL_DIVERGENCE:
             probs = np.nan_to_num(
                 np.sum(probs * np.log2(probs / np.mean(early_subset, axis=0)), axis=1),
                 nan=1.0,
                 copy=False,
             )
         elif method == PrimingDegree.ENTROPY:
-            probs = probs.entropy(axis=1).X.squeeze(1)
+            probs = entropy(probs, axis=1)
             probs = np.max(probs) - probs
         else:
             raise NotImplementedError(f"Method `{method}` is not yet implemented")
