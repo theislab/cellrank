@@ -21,7 +21,7 @@ class OTKernel(OTKernel_):
     """
     Stationary optimal transport kernel from [Zhang21]_.
 
-    This class requires the `statot` package, which can be installed as `pip install statot`.
+    This class requires the `statOT` package, which can be installed as `pip install statot`.
 
     Parameters
     ----------
@@ -36,7 +36,7 @@ class OTKernel(OTKernel_):
         Additional keyword arguments.
     """
 
-    __import_error_message__ = "Unable to import the kernel. Please install statOT first as `pip install statot`."
+    __import_error_message__ = "Unable to import the kernel. Please install `statOT` first as `pip install statot`."
 
     def __init__(
         self,
@@ -88,7 +88,7 @@ class OTKernel(OTKernel_):
         dt
             Choice of the time step over which to fit the model.
         basis
-            Key in :attr:`anndata.AnnData.obsm` where basis is stored.
+            Key in :attr:`anndata.AnnData.obsm` where the basis is stored.
         cost_norm_method
             Cost normalization method to use. Use "mean" to ensure `mean(C) = 1` or refer to
             :func:`ot.utils.cost_normalization` for more information.

@@ -103,17 +103,6 @@ Utilities
     ul.models.FittedModel
     ul.models.FailedModel
 
-External
-~~~~~~~~
-
-.. module:: cellrank.external
-.. currentmodule:: cellrank
-
-.. autosummary::
-    :toctree: api
-
-    external.kernels.OTKernel
-
 Reading
 ~~~~~~~
 .. module:: cellrank

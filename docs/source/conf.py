@@ -87,6 +87,8 @@ intersphinx_mapping = dict(
     pygam=("https://pygam.readthedocs.io/en/latest/", None),
     jax=("https://jax.readthedocs.io/en/latest/", None),
     pygpcca=("https://pygpcca.readthedocs.io/en/latest/", None),
+    # external
+    ot=("https://pythonot.github.io/", None),
 )
 
 # Add any paths that contain templates here, relative to this directory.
