@@ -243,7 +243,7 @@ class KernelExpression(Pickleable, ABC):
         Parameters
         ----------
         basis
-            Basis for which to compute the projection.
+            Basis in :attr:`anndata.AnnData.obsm` for which to compute the projection.
         key_added
             If not `None` and ``copy=False``, save the result to :paramref:`adata` ``.obsm['{key_added}']``.
             Otherwise, save the result to `'T_fwd_{basis}'` or `T_bwd_{basis}`, depending on the direction.
