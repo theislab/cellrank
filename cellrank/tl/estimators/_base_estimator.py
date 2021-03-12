@@ -568,7 +568,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 raise ValueError(
                     f"Expected a dictionary with only 1 key, found `{len(early_cells)}`."
                 )
-            key = next(early_cells.keys())
+            key = next(iter(early_cells.keys()))
             if key not in self.adata.obs:
                 raise KeyError(f"Unable to find clustering in `adata.obs[{key!r}]`.")
             early_cells = self.adata.obs[key].isin(early_cells[key])

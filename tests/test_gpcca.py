@@ -10,6 +10,7 @@ from anndata import AnnData
 
 import numpy as np
 import pandas as pd
+from pandas.testing import assert_series_equal
 
 import cellrank as cr
 from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
@@ -871,6 +872,33 @@ class TestGPCCA:
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
         mc.plot_lineage_drivers("0", use_raw=False)
+
+    def test_compute_priming_clusters(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        terminal_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc.compute_schur(n_components=10, method="krylov")
+        mc.compute_macrostates(n_states=2)
+        mc.set_terminal_states_from_macrostates()
+        mc.compute_absorption_probabilities()
+
+        cat = adata_large.obs["clusters"].cat.categories[0]
+        deg1 = mc.compute_lineage_priming(
+            method="kl_divergence", early_cells={"clusters": [cat]}
+        )
+        deg2 = mc.compute_lineage_priming(
+            method="kl_divergence",
+            early_cells=(adata_large.obs["clusters"] == cat).values,
+        )
+
+        assert_series_equal(deg1, deg2)
+        # because passing it to a dataframe changes its name
+        assert_series_equal(
+            adata_large.obs[_pd(mc._abs_prob_key)], deg1, check_names=False
+        )
+        assert_series_equal(mc._get(A.PRIME_DEG), deg1)
 
 
 class TestGPCCAIO:

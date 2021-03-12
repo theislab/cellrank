@@ -756,7 +756,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         method = PrimingDegree(method)
         probs = self.X
         early_subset = probs[early_cells, :]
-        if not len(early_cells):
+        if not len(early_subset):
             raise ValueError("No early cells have been specified.")
 
         if method == PrimingDegree.KL_DIVERGENCE:

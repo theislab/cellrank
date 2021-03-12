@@ -1105,6 +1105,10 @@ class TestPickling:
 
 
 class TestPriming:
+    def test_invalid_method(self, lineage: Lineage):
+        with pytest.raises(ValueError, match="foobar"):
+            lineage.priming_degree("foobar")
+
     @pytest.mark.parametrize("method", list(PrimingDegree))
     def test_priming_degree(self, lineage: Lineage, method: str):
         deg = lineage.priming_degree(method=method)
@@ -1112,3 +1116,32 @@ class TestPriming:
         assert isinstance(deg, np.ndarray)
         assert deg.shape == (len(lineage),)
         assert np.sum(np.isnan(deg)) == 0
+        assert np.min(deg) == 0.0
+        assert np.max(deg) == 1.0
+
+    def test_early_cells_empty(self, lineage: Lineage):
+        with pytest.raises(ValueError, match="No early cells have been specified."):
+            mask = np.zeros(
+                (
+                    len(
+                        lineage,
+                    )
+                ),
+                dtype=np.bool_,
+            )
+            lineage.priming_degree("kl_divergence", early_cells=mask)
+
+    def test_early_cells(self, lineage: Lineage):
+        deg1 = lineage.priming_degree("kl_divergence", early_cells=[0, 1, 2])
+        mask = np.zeros(
+            (
+                len(
+                    lineage,
+                )
+            ),
+            dtype=np.bool_,
+        )
+        mask[:3] = True
+        deg2 = lineage.priming_degree("kl_divergence", early_cells=mask)
+
+        np.testing.assert_array_equal(deg1, deg2)
