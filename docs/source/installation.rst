@@ -20,6 +20,8 @@ CellRank is also available on PyPI::
     pip install cellrank
     # or with extra libraries, useful for large datasets
     pip install 'cellrank[krylov]'
+    # or with external modules, see External API
+    pip install 'cellrank[external]'
 
 If an error occurs during ``pip install 'cellrank[krylov]'``, please consult the Dependencies_ section below.
 

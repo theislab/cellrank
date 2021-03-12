@@ -31,7 +31,7 @@ class OTKernel(OTKernel_):
     sink_idx
         Key in :attr:`anndata.AnnData.obs` containing boolean marking the sink indices or the mask itself.
     g
-        Key in :attr:`anndata.AnnData.obs` containing the relative growth rates for cells or the array itself.
+        Key in :attr:`anndata.AnnData.obs` containing relative growth rates for cells or the array itself.
     kwargs
         Additional keyword arguments.
     """
@@ -53,14 +53,14 @@ class OTKernel(OTKernel_):
         source_idx, sink_idx = np.asarray(source_idx), np.asarray(sink_idx)
         if not np.issubdtype(source_idx.dtype, np.bool_):
             raise TypeError(
-                f"Expected `source` to be a boolean array, found `{sink_idx.dtype}`."
+                f"Expected `source_idx` to be a boolean array, found `{source_idx.dtype}`."
             )
         if not np.issubdtype(sink_idx.dtype, np.bool_):
             raise TypeError(
                 f"Expected `sink_idx` to be a boolean array, found `{sink_idx.dtype}`."
             )
         if np.any(source_idx & sink_idx):
-            raise ValueError("Some cells are both source and a sink.")
+            raise ValueError("Some cells are marked as both source and sink.")
 
         super().__init__(adata, source_idx=source_idx, sink_idx=sink_idx, g=g, **kwargs)
 
@@ -122,7 +122,7 @@ class OTKernel(OTKernel_):
         if method == "unbal":
             raise NotImplementedError("Method `'unbal'` is not yet implemented.")
 
-        return super().compute_transition_matrix(
+        super().compute_transition_matrix(
             eps,
             dt,
             expr_key=basis,
@@ -135,3 +135,5 @@ class OTKernel(OTKernel_):
             verbose=verbose,
             **kwargs,
         )
+
+        return self
