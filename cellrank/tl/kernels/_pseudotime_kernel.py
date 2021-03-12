@@ -85,6 +85,7 @@ class PseudotimeKernel(Kernel):
         nu: float = 1,
         percentile: Optional[int] = 95,
         density_normalize: bool = True,
+        check_irreducibility: bool = False,
         **kwargs: Any,
     ) -> "PseudotimeKernel":
         """
@@ -111,6 +112,8 @@ class PseudotimeKernel(Kernel):
         %(soft_scheme_kernel)s
         density_normalize
             Whether or not to use the underlying KNN graph for density normalization.
+        check_irreducibility
+            Optional check for irreducibility of the final transition matrix.
 
         Returns
         -------
@@ -179,7 +182,9 @@ class PseudotimeKernel(Kernel):
             logg.warning("Biased KNN graph is disconnected")
 
         self._compute_transition_matrix(
-            matrix=biased_conn, density_normalize=density_normalize
+            matrix=biased_conn,
+            density_normalize=density_normalize,
+            check_irreducibility=check_irreducibility,
         )
         logg.info("    Finish", time=start)
 
