@@ -39,7 +39,8 @@ if __name__ == "__main__":
             )
         ),
         extras_require=dict(
-            external=["statot>=0.0.13"],
+            # `POT` is not requirement of `statot`
+            external=["statot>=0.0.13", "POT"],
             krylov=["pygpcca[slepc]"],
             test=[
                 "pytest>=6.1.1",

@@ -21,7 +21,7 @@ class OTKernel(OTKernel_):
     """
     Stationary optimal transport kernel from [Zhang21]_.
 
-    This class requires the `statOT` package, which can be installed as `pip install statot`.
+    This class requires the `statOT` package, which can be installed as `pip install statot POT`.
 
     Parameters
     ----------
@@ -36,7 +36,7 @@ class OTKernel(OTKernel_):
         Additional keyword arguments.
     """
 
-    __import_error_message__ = "Unable to import the kernel. Please install `statOT` first as `pip install statot`."
+    __import_error_message__ = "Unable to import the kernel. Please install `statOT` first as `pip install statot POT`."
 
     def __init__(
         self,
