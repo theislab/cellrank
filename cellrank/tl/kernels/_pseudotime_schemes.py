@@ -7,8 +7,8 @@ from scipy.sparse import csr_matrix
 from cellrank.ul._docs import d
 
 
-class PseudotimeSchemeABC(ABC):
-    """Base class for all connectivity-biasing schemes."""
+class ThresholdSchemeABC(ABC):
+    """Base class for all connectivity biasing schemes."""
 
     @d.get_summary(base="pt_scheme")
     @d.get_sections(base="pt_scheme", sections=["Parameters", "Returns"])
@@ -46,9 +46,9 @@ class PseudotimeSchemeABC(ABC):
         Parameters
         ----------
         conn
-            The nearest neighbor connectivities.
+            Sparse matrix of shape ``(n_cells, n_cells)`` containing the nearest neighbor connectivities.
         pseudotime
-            Pseudotemporal ordering of cells.
+            Pseudotemporal order of cells.
 
         Returns
         -------
@@ -77,9 +77,9 @@ class PseudotimeSchemeABC(ABC):
         return repr(self)
 
 
-class HardThresholdScheme(PseudotimeSchemeABC):
+class HardThresholdScheme(ThresholdSchemeABC):
     """
-    Thresholding scheme inspired by Palantir [Setty18]_.
+    Thresholding scheme inspired by Palantir [Setty19]_.
 
     Note that this won't exactly reproduce the original Palantir results, for three reasons:
 
@@ -99,7 +99,7 @@ class HardThresholdScheme(PseudotimeSchemeABC):
         k: int = 3,
     ) -> np.ndarray:
         """
-        Bias connections by removing ones to past cells.
+        Bias the connections by removing ones to past cells.
 
         It takes in symmetric connectivities and a pseudotime and removes edges that point "against" pseudotime,
         in this way creating a directed graph. For each node, it always keeps the closest neighbors,
@@ -111,7 +111,7 @@ class HardThresholdScheme(PseudotimeSchemeABC):
         n_neighs
             Number of neighbors to keep.
         k
-            Number, alongside with ``n_neighbors`` which determined the threshold for candidate indices.
+            Number, alongside with ``n_neighbors`` which determines the threshold for candidate indices.
 
         Returns
         -------
@@ -133,10 +133,11 @@ class HardThresholdScheme(PseudotimeSchemeABC):
         return biased_dist
 
 
-class SoftThresholdScheme(PseudotimeSchemeABC):
-    """Thresholding scheme inspired by [VIA21]_.
+class SoftThresholdScheme(ThresholdSchemeABC):
+    """
+    Thresholding scheme inspired by [VIA21]_.
 
-    The idea is to which down-weight edges that points against the direction of increasing pseudotime. Essentially, the
+    The idea is to downweight edges that points against the direction of increasing pseudotime. Essentially, the
     further "behind" a query cell is in pseudotime with respect to the current reference cell, the more penalized will
     be its graph-connectivity.
     """
@@ -152,12 +153,10 @@ class SoftThresholdScheme(PseudotimeSchemeABC):
         perc: Optional[int] = 95,
     ) -> np.ndarray:
         """
-        Bias connections by weighting them proportionally to how far they are in the past, w.r.t. to current cell.
+        Bias the connections by downweighting ones to past cells.
 
         This function uses `generalized logistic regression
-        <https://en.wikipedia.org/wiki/Generalized_logistic_function>`_ to weight the past connectivities.
-        The further in the pseudotime-past a cell is (with respect to the current reference), the lower will be its
-        graph weight.
+        <https://en.wikipedia.org/wiki/Generalized_logistic_function>`_ to do the weighting.
 
         Parameters
         ----------
@@ -187,8 +186,15 @@ class SoftThresholdScheme(PseudotimeSchemeABC):
         return neigh_dist * weights
 
 
-class CustomThresholdScheme(PseudotimeSchemeABC):
-    """Class that wraps a user supplied scheme."""
+class CustomThresholdScheme(ThresholdSchemeABC):
+    """
+    Class that wraps a user supplied scheme.
+
+    Parameters
+    ----------
+    callback
+        Function which returns the biased connectivities.
+    """
 
     def __init__(
         self,

@@ -142,8 +142,8 @@ scheme
         - `{s.COSINE.s!r}` - :class:`cellrank.tl.kernels.CosineScheme`.
         - `{s.CORRELATION.s!r}` - :class:`cellrank.tl.kernels.CorrelationScheme`.
 
-    Alternatively, any function can be passed as long as it follows the call signature of
-    :class:`cellrank.tl.kernels.SimilaritySchemeABC`."""
+    Alternatively, any function can be passed as long as it follows the signature of
+    :meth:`cellrank.tl.kernels.SimilaritySchemeABC.__call__`."""
 _soft_scheme_fmt = """\
 b
     The growth rate of generalized logistic function.{}

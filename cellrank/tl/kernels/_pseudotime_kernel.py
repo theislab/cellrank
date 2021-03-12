@@ -2,6 +2,8 @@
 from copy import copy
 from typing import Any, Union, Callable, Optional
 
+from typing_extensions import Literal
+
 import numpy as np
 
 from cellrank import logging as logg
@@ -16,6 +18,7 @@ from cellrank.tl.kernels._base_kernel import (
     _dtype,
 )
 from cellrank.tl.kernels._pseudotime_schemes import (
+    ThresholdSchemeABC,
     HardThresholdScheme,
     SoftThresholdScheme,
     CustomThresholdScheme,
@@ -28,8 +31,8 @@ class PseudotimeKernel(Kernel):
     Kernel which computes directed transition probabilities based on a KNN graph and pseudotime.
 
     The KNN graph contains information about the (undirected) connectivities among cells, reflecting their similarity.
-    Pseudotime can be used to either remove graph-edges that point against the direction of increasing pseudotime (see
-    [Setty19]_, or to down weigh them (see [VIA21]_).
+    Pseudotime can be used to either remove edges that point against the direction of increasing pseudotime (see
+    [Setty19]_, or to downweight them (see [VIA21]_).
 
     %(density_correction)s
 
@@ -79,7 +82,7 @@ class PseudotimeKernel(Kernel):
     @d.dedent
     def compute_transition_matrix(
         self,
-        threshold_scheme: Union[str, Callable] = "hard",
+        threshold_scheme: Union[Literal["soft", "hard"], Callable] = "hard",
         k: int = 3,
         b: float = 20.0,
         nu: float = 1,
@@ -99,7 +102,7 @@ class PseudotimeKernel(Kernel):
         remove all edges that point against the direction of increasing pseudotime but keeps the ones that point to
         cells inside a close radius. This radius is chosen according to the local cell density.
 
-        When using a `'soft'` thresholding scheme, this is based on ideas by *VIA* (see [VIA21]_) which down-weights
+        When using a `'soft'` thresholding scheme, this is based on ideas by *VIA* (see [VIA21]_) which downweights
         edges that points against the direction of increasing pseudotime. Essentially, the further "behind" a query
         cell is in pseudotime with respect to the current reference cell, the more penalized will be its
         graph-connectivity.
@@ -120,7 +123,7 @@ class PseudotimeKernel(Kernel):
         :class:`cellrank.tl.kernels.PseudotimeKernel`
             Makes :paramref:`transition_matrix` available.
         """
-        start = logg.info("Computing transition matrix based on Palantir-like kernel")
+        start = logg.info("Computing transition matrix based on pseudotime")
 
         # get the connectivities and number of neighbors
         n_neighbors = (
@@ -146,6 +149,8 @@ class PseudotimeKernel(Kernel):
                 raise NotImplementedError(
                     f"Threshold scheme `{threshold_scheme}` is not yet implemented."
                 )
+        elif isinstance(threshold_scheme, ThresholdSchemeABC):
+            pass
         elif callable(threshold_scheme):
             scheme = CustomThresholdScheme(threshold_scheme)
         else:
