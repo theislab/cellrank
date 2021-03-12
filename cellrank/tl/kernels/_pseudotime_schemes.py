@@ -134,7 +134,12 @@ class HardThresholdScheme(PseudotimeSchemeABC):
 
 
 class SoftThresholdScheme(PseudotimeSchemeABC):
-    """Thresholding scheme inspired by [VIA21]_."""
+    """Thresholding scheme inspired by [VIA21]_.
+
+    The idea is to which down-weight edges that points against the direction of increasing pseudotime. Essentially, the
+    further "behind" a query cell is in pseudotime with respect to the current reference cell, the more penalized will
+    be its graph-connectivity.
+    """
 
     @d.dedent
     def __call__(
@@ -151,7 +156,8 @@ class SoftThresholdScheme(PseudotimeSchemeABC):
 
         This function uses `generalized logistic regression
         <https://en.wikipedia.org/wiki/Generalized_logistic_function>`_ to weight the past connectivities.
-        The further in the they are from current cell's position along pseudotime, the lower the weight.
+        The further in the pseudotime-past a cell is (with respect to the current reference), the lower will be its
+        graph weight.
 
         Parameters
         ----------

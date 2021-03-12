@@ -100,7 +100,7 @@ class PseudotimeKernel(Kernel):
 
         When using a `'soft'` thresholding scheme, this is based on ideas by *VIA* (see [VIA21]_) which down-weights
         edges that points against the direction of increasing pseudotime. Essentially, the further "behind" a query
-        cell is in pseudotime with respect to the current reference cell, the more penalized will be it's
+        cell is in pseudotime with respect to the current reference cell, the more penalized will be its
         graph-connectivity.
 
         Parameters
