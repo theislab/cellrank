@@ -25,15 +25,11 @@ from cellrank.tl.kernels._pseudotime_schemes import (
 @d.dedent
 class PseudotimeKernel(Kernel):
     """
-    Kernel which computes transition probabilities in a similar way to *Palantir*, see [Setty19]_.
+    Kernel which computes directed transition probabilities based on a KNN graph and pseudotime.
 
-    *Palantir* computes a KNN graph in gene expression space and a pseudotime, which it then uses to direct the edges of
-    the KNN graph, such that they are more likely to point into the direction of increasing pseudotime. To avoid
-    disconnecting the graph, it does not remove all edges that point into the direction of decreasing pseudotime
-    but keeps the ones that point to nodes inside a close radius. This radius is chosen according to the local density.
-
-    The implementation presented here won't exactly reproduce the original *Palantir* algorithm (see below)
-    but the results are qualitatively very similar.
+    The KNN graph contains information about the (undirected) connectivities among cells, reflecting their similarity.
+    Pseudotime can be used to either remove graph-edges that point against the direction of increasing pseudotime (see
+    [Setty19]_, or to down weigh them (see [VIA21]_).
 
     %(density_correction)s
 
@@ -93,6 +89,19 @@ class PseudotimeKernel(Kernel):
     ) -> "PseudotimeKernel":
         """
         Compute transition matrix based on KNN graph and pseudotemporal ordering.
+
+        Depending on the choice of the `thresholding_scheme`, this is based on ideas by either Palantir (see [Setty19]_)
+        or VIA (see [VIA21]_).
+
+        When using a `'hard'` thresholding scheme, this based on ideas by *Palantir* (see [Setty19]_) which removes some
+        edges that point against the direction of increasing pseudotime. To avoid disconnecting the graph, it does not
+        remove all edges that point against the direction of increasing pseudotime but keeps the ones that point to
+        cells inside a close radius. This radius is chosen according to the local cell density.
+
+        When using a `'soft'` thresholding scheme, this is based on ideas by *VIA* (see [VIA21]_) which down-weights
+        edges that points against the direction of increasing pseudotime. Essentially, the further "behind" a query
+        cell is in pseudotime with respect to the current reference cell, the more penalized will be it's
+        graph-connectivity.
 
         Parameters
         ----------
