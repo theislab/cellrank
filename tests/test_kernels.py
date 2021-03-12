@@ -1269,3 +1269,48 @@ class TestVelocityScheme:
 
         assert vk.params["mode"] == "monte_carlo"
         assert vk.params["scheme"] == str(CustomFunc())
+
+
+class TestPseudotimeKernelScheme:
+    def test_invalid_scheme(self, adata: AnnData):
+        pk = PseudotimeKernel(adata)
+        with pytest.raises(ValueError, match="foo"):
+            pk.compute_transition_matrix(threshold_scheme="foo")
+
+    def test_invalid_custom_scheme(self, adata: AnnData):
+        pk = PseudotimeKernel(adata)
+        with pytest.raises(ValueError, match="Expected row of shape"):
+            pk.compute_transition_matrix(
+                threshold_scheme=lambda cpt, npt, ndist: np.ones(
+                    (len(ndist) - 1), dtype=np.float64
+                ),
+            )
+
+    def test_custom_scheme(self, adata: AnnData):
+        pk = PseudotimeKernel(adata)
+        pk.compute_transition_matrix(
+            threshold_scheme=lambda cpt, npt, ndist: np.ones(
+                (len(ndist)), dtype=np.float64
+            ),
+            density_normalize=False,
+        )
+
+        np.testing.assert_allclose(pk.transition_matrix.sum(1), 1.0)
+        for row in pk.transition_matrix:
+            np.testing.assert_allclose(row.data, 1 / len(row.data))
+
+    @pytest.mark.parametrize("scheme", ["hard", "soft"])
+    def test_scheme(self, adata: AnnData, scheme: str):
+        pk = PseudotimeKernel(adata)
+        pk.compute_transition_matrix(threshold_scheme=scheme, k=4, b=10, nu=0.5)
+
+        np.testing.assert_allclose(pk.transition_matrix.sum(1), 1.0)
+        assert pk.params["scheme"] == scheme
+        if scheme == "hard":
+            assert pk.params["k"] == 4
+            assert "b" not in pk.params
+            assert "nu" not in pk.params
+        elif scheme == "soft":
+            assert pk.params["b"] == 10
+            assert pk.params["nu"] == 0.5
+            assert "k" not in pk.params

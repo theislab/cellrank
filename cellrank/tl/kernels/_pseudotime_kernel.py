@@ -85,7 +85,7 @@ class PseudotimeKernel(Kernel):
         threshold_scheme: Union[Literal["soft", "hard"], Callable] = "hard",
         k: int = 3,
         b: float = 20.0,
-        nu: float = 1,
+        nu: float = 1.0,
         percentile: Optional[int] = 95,
         density_normalize: bool = True,
         check_irreducibility: bool = False,
@@ -111,7 +111,7 @@ class PseudotimeKernel(Kernel):
         ----------
         k
             Number of neighbors to keep for each node, regardless of pseudotime.
-            This is done to ensure that the graph remains connected. Only used when `scheme='hard'`.
+            This is done to ensure that the graph remains connected. Only used when `threshold_scheme='hard'`.
         %(soft_scheme_kernel)s
         density_normalize
             Whether or not to use the underlying KNN graph for density normalization.
