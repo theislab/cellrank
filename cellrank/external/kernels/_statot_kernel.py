@@ -50,6 +50,18 @@ class OTKernel(OTKernel_):
             source_idx = adata.obs[source_idx].values
         if isinstance(sink_idx, str):
             sink_idx = adata.obs[sink_idx].values
+        source_idx, sink_idx = np.asarray(source_idx), np.asarray(sink_idx)
+        if not np.issubdtype(source_idx.dtype, np.bool_):
+            raise TypeError(
+                f"Expected `source` to be a boolean array, found `{sink_idx.dtype}`."
+            )
+        if not np.issubdtype(sink_idx.dtype, np.bool_):
+            raise TypeError(
+                f"Expected `sink_idx` to be a boolean array, found `{sink_idx.dtype}`."
+            )
+        if np.any(source_idx & sink_idx):
+            raise ValueError("Some cells are both source and a sink.")
+
         super().__init__(adata, source_idx=source_idx, sink_idx=sink_idx, g=g, **kwargs)
 
     def compute_transition_matrix(
@@ -76,7 +88,7 @@ class OTKernel(OTKernel_):
         dt
             Choice of the time step over which to fit the model.
         basis
-            Key in :attr:`anndata.AnnData.obsm`.
+            Key in :attr:`anndata.AnnData.obsm` where basis is stored.
         cost_norm_method
             Cost normalization method to use. Use "mean" to ensure `mean(C) = 1` or refer to
             :func:`ot.utils.cost_normalization` for more information.
@@ -105,6 +117,11 @@ class OTKernel(OTKernel_):
         :class:`cellrank.external.kernels.OTKernel`
             Makes :paramref:`transition_matrix` available.
         """
+        if method not in ("ent", "quad", "unbal"):
+            raise ValueError(f"Invalid method `{method!r}`.")
+        if method == "unbal":
+            raise NotImplementedError("Method `'unbal'` is not yet implemented.")
+
         return super().compute_transition_matrix(
             eps,
             dt,
