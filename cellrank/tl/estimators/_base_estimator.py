@@ -8,6 +8,8 @@ from typing import Any, Dict, Union, Mapping, TypeVar, Optional, Sequence
 from pathlib import Path
 from datetime import datetime
 
+from typing_extensions import Literal
+
 import scvelo as scv
 
 import numpy as np
@@ -45,7 +47,7 @@ from cellrank.tl._constants import (
     AbsProbKey,
     PrettyEnum,
     TermStatesKey,
-    _dp,
+    _pd,
     _probs,
     _colors,
     _lin_names,
@@ -141,7 +143,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         self._set_or_debug(_colors(self._term_key), self.adata.uns, A.TERM_COLORS)
 
         self._reconstruct_lineage(A.ABS_PROBS, self._abs_prob_key)
-        self._set_or_debug(_dp(self._abs_prob_key), self.adata.obs, A.DIFF_POT)
+        self._set_or_debug(_pd(self._abs_prob_key), self.adata.obs, A.PRIME_DEG)
 
     def _reconstruct_lineage(self, attr: PrettyEnum, obsm_key: str):
 
@@ -149,7 +151,6 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         names = self._set_or_debug(_lin_names(self._term_key), self.adata.uns)
         colors = self._set_or_debug(_colors(self._term_key), self.adata.uns)
 
-        # choosing this instead of property because GPCCA doesn't have property for FIN_ABS_PROBS
         probs = self._get(attr)
 
         if probs is not None:
@@ -292,7 +293,6 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
     @inject_docs(
         abs_prob=P.ABS_PROBS,
         fs=P.TERM.s,
-        diff_pot=P.DIFF_POT,
         lat=P.LIN_ABS_TIMES,
     )
     def compute_absorption_probabilities(
@@ -318,8 +318,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         Compute absorption probabilities of a Markov chain.
 
         For each cell, this computes the probability of it reaching any of the approximate recurrent classes defined
-        by :paramref:`{fs}`. This also computes the entropy over absorption probabilities, which is a measure of cell
-        plasticity, see [Setty19]_.
+        by :paramref:`{fs}`.
 
         Parameters
         ----------
@@ -372,7 +371,6 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             Nothing, but updates the following fields:
 
                 - :paramref:`{abs_prob}` - probabilities of being absorbed into the terminal states.
-                - :paramref:`{diff_pot}` - differentiation potential of cells.
                 - :paramref:`{lat}` - mean times until absorption to subset absorbing states and optionally
                   their variances saved as ``'{{lineage}} mean'`` and ``'{{lineage}} var'``, respectively,
                   for each subset of absorbing states specified in ``time_to_absorption``.
@@ -433,19 +431,6 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             # define the dimensions of this problem
         n_cells = t.shape[0]
         n_macrostates = len(terminal_states_.cat.categories)
-
-        #  create empty lineage object
-        if self._get(P.ABS_PROBS) is not None:
-            logg.debug(f"Overwriting `.{P.ABS_PROBS}`")
-
-        self._set(
-            A.ABS_PROBS,
-            Lineage(
-                np.empty((1, len(colors_))),
-                names=terminal_states_.cat.categories,
-                colors=colors_,
-            ),
-        )
 
         # get indices corresponding to recurrent and transient states
         rec_indices, trans_indices, lookup_dict = _get_cat_and_null_indices(
@@ -541,15 +526,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             A.ABS_PROBS,
             Lineage(
                 abs_classes,
-                names=self._get(P.ABS_PROBS).names,
-                colors=self._get(P.ABS_PROBS).colors,
-            ),
-        )
-        self._set(
-            A.DIFF_POT,
-            pd.Series(
-                self._get(P.ABS_PROBS).entropy(axis=1).X.squeeze(axis=1),
-                index=self.adata.obs.index,
+                names=terminal_states_.cat.categories,
+                colors=colors_,
             ),
         )
 
@@ -559,6 +537,59 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             extra_msg = f"       `.{P.LIN_ABS_TIMES}`\n"
 
         self._write_absorption_probabilities(time=start, extra_msg=extra_msg)
+
+    @d.dedent
+    def compute_lineage_priming(
+        self,
+        method: Literal["kl_divergence", "entropy"] = "kl_divergence",
+        early_cells: Optional[Union[Mapping[str, Sequence[str]], Sequence[str]]] = None,
+    ) -> pd.Series:
+        """
+        %(lin_pd.full_desc)s
+
+        Parameters
+        ----------
+        %(lin_pd.parameters)s
+            Cell ids or a mask marking early cells. If `None`, use all cells. Only used when ``method='kl_divergence'``.
+            If a :class:`dict`, the key species a cluster key in :attr:`anndata.AnnData.obs` and the values
+            specify cluster labels containing early cells.
+
+        Returns
+        -------
+        %(lin_pd.returns)s
+        """  # noqa: D400
+        abs_probs: Optional[Lineage] = self._get(P.ABS_PROBS)
+        if abs_probs is None:
+            raise RuntimeError(
+                "Compute absorption probabilities first as `.compute_absorption_probabilities()`."
+            )
+        if isinstance(early_cells, dict):
+            if len(early_cells) != 1:
+                raise ValueError(
+                    f"Expected a dictionary with only 1 key, found `{len(early_cells)}`."
+                )
+            key = next(iter(early_cells.keys()))
+            if key not in self.adata.obs:
+                raise KeyError(f"Unable to find clustering in `adata.obs[{key!r}]`.")
+            early_cells = self.adata.obs[key].isin(early_cells[key])
+        elif early_cells is not None:
+            early_cells = np.asarray(early_cells)
+            if not np.issubdtype(early_cells.dtype, np.bool_):
+                early_cells = np.isin(self.adata.obs_names, early_cells)
+
+        values = pd.Series(
+            abs_probs.priming_degree(method, early_cells), index=self.adata.obs_names
+        )
+
+        self._set(A.PRIME_DEG, values)
+        self.adata.obs[_pd(self._abs_prob_key)] = values
+
+        logg.info(
+            f"Adding `adata.obs[{_pd(self._abs_prob_key)!r}]`\n"
+            f"       `.{P.PRIME_DEG}`"
+        )
+
+        return values
 
     @d.get_sections(
         base="lineage_drivers", sections=["Parameters", "Returns", "References"]
@@ -596,6 +627,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
                 - {tm.FISCHER.s!r} - use Fischer transformation [Fischer21]_.
                 - {tm.PERM_TEST.s!r} - use permutation test.
+
         cluster_key
             Key from :paramref:`adata` ``.obs`` to obtain cluster annotations. These are considered for ``clusters``.
         clusters
@@ -957,7 +989,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         pass
 
     @d.dedent
-    @inject_docs(fs=P.TERM, fsp=P.TERM_PROBS, ap=P.ABS_PROBS, dp=P.DIFF_POT)
+    @inject_docs(fs=P.TERM, fsp=P.TERM_PROBS, ap=P.ABS_PROBS, pd=P.PRIME_DEG)
     def fit(
         self,
         keys: Optional[Sequence] = None,
@@ -984,7 +1016,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 - :paramref:`{fsp}`
                 - :paramref:`{fs}`
                 - :paramref:`{ap}`
-                - :paramref:`{dp}`
+                - :paramref:`{pd}`
         """
         self._fit_terminal_states(**kwargs)
         if compute_absorption_probabilities:
@@ -996,17 +1028,14 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         self.adata.obsm[self._abs_prob_key] = self._get(P.ABS_PROBS)
 
         abs_prob = self._get(P.ABS_PROBS)
-        self.adata.obs[_dp(self._abs_prob_key)] = self._get(P.DIFF_POT)
 
         self.adata.uns[_lin_names(self._abs_prob_key)] = abs_prob.names
         self.adata.uns[_colors(self._abs_prob_key)] = abs_prob.colors
 
         logg.info(
             f"Adding `adata.obsm[{self._abs_prob_key!r}]`\n"
-            f"       `adata.obs[{_dp(self._abs_prob_key)!r}]`\n"
             f"{extra_msg}"
             f"       `.{P.ABS_PROBS}`\n"
-            f"       `.{P.DIFF_POT}`\n"
             "    Finish",
             time=time,
         )

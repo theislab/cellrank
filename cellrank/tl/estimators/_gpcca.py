@@ -785,6 +785,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         # reset all the things
         for key in (
             A.ABS_PROBS,
+            A.PRIME_DEG,
             A.SCHUR,
             A.SCHUR_MAT,
             A.COARSE_T,
@@ -1025,7 +1026,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         fs=P.TERM,
         fsp=P.TERM_PROBS,
         ap=P.ABS_PROBS,
-        dp=P.DIFF_POT,
+        pd=P.PRIME_DEG,
     )
     def fit(
         self,
@@ -1077,7 +1078,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
                 - :paramref:`{fsp}`
                 - :paramref:`{fs}`
                 - :paramref:`{ap}`
-                - :paramref:`{dp}`
+                - :paramref:`{pd}`
         """
 
         super().fit(

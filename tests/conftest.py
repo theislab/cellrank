@@ -214,6 +214,18 @@ def lineage():
     return x / x.sum(1)
 
 
+# removes overly verbose logging errors for rpy2
+# see: https://github.com/pytest-dev/pytest/issues/5502#issuecomment-647157873
+def pytest_sessionfinish(session, exitstatus):
+    import logging
+
+    loggers = [logging.getLogger()] + list(logging.Logger.manager.loggerDict.values())
+    for logger in loggers:
+        handlers = getattr(logger, "handlers", [])
+        for handler in handlers:
+            logger.removeHandler(handler)
+
+
 @pytest.fixture(scope="session")
 def test_matrix_1() -> np.ndarray:
     """

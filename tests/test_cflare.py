@@ -19,6 +19,7 @@ from cellrank.tl._constants import (
     DirPrefix,
     AbsProbKey,
     TermStatesKey,
+    _pd,
     _probs,
     _colors,
     _lin_names,
@@ -242,11 +243,12 @@ class TestCFLARE:
         mc.compute_eigendecomposition(k=5)
         mc.compute_terminal_states(use=2)
         mc.compute_absorption_probabilities()
+        mc.compute_lineage_priming()
 
-        assert isinstance(mc._get(P.DIFF_POT), pd.Series)
-        assert f"{AbsProbKey.FORWARD}_dp" in mc.adata.obs.keys()
+        assert isinstance(mc._get(P.PRIME_DEG), pd.Series)
+        assert _pd(AbsProbKey.FORWARD) in mc.adata.obs.keys()
         np.testing.assert_array_equal(
-            mc._get(P.DIFF_POT), mc.adata.obs[f"{AbsProbKey.FORWARD}_dp"]
+            mc._get(P.PRIME_DEG), mc.adata.obs[_pd(AbsProbKey.FORWARD)]
         )
 
         assert isinstance(mc._get(P.ABS_PROBS), cr.tl.Lineage)
