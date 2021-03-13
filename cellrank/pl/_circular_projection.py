@@ -108,8 +108,8 @@ def circular_projection(
     keys
         Keys in :attr:`anndata.AnnData.obs` or :attr:`anndata.AnnData.var_names`. Additional keys are:
 
-            - `'kl_divergence'` - as in [Velten17]_, computes KL-divergence between the fate probabilities of a
-               cell and the average fate probabilities. See ``early_cells`` for more information.
+            - `'kl_divergence'` - as in [Velten17]_, computes KL-divergence between the fate probabilities of a cell
+              and the average fate probabilities. See ``early_cells`` for more information.
             - `'entropy'` - as in [Setty19]_, computes entropy over a cells fate probabilities.
 
     %(backward)s
