@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 
 
 class ImportErrorMixin:
@@ -23,4 +23,8 @@ class ImportErrorMixin:
     __import_error_message__ = "Unable to import the kernel."
 
     def __init__(self, *args: Any, **kwargs: Any):
-        raise ImportError(self.__import_error_message__) from None
+        raise ImportError(self.__import_error_message__) from self.__error__
+
+    def __init_subclass__(cls, error: Optional[Exception] = None, **kwargs: Any):
+        super().__init_subclass__(**kwargs)
+        cls.__error__ = error

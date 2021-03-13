@@ -8,16 +8,19 @@ import numpy as np
 
 from cellrank.ul._docs import d
 
+_error = None
 try:
     from statot import OTKernel as OTKernel_
-except ImportError:
+except ImportError as e:
     from cellrank.external.kernels._import_error_kernel import (
         ErroredKernel as OTKernel_,
     )
 
+    _error = e
+
 
 @d.dedent
-class OTKernel(OTKernel_):
+class OTKernel(OTKernel_, error=_error):
     """
     Stationary optimal transport kernel from [Zhang21]_.
 
