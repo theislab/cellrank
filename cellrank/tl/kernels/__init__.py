@@ -1,4 +1,5 @@
 from cellrank.tl.kernels._base_kernel import Kernel, Constant
+from cellrank.tl.kernels._exp_time_kernel import ExperimentalTimeKernel
 from cellrank.tl.kernels._velocity_kernel import VelocityKernel
 from cellrank.tl.kernels._velocity_schemes import (
     CosineScheme,

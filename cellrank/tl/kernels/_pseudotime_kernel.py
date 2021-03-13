@@ -11,12 +11,7 @@ from cellrank.ul._docs import d
 from cellrank.tl._utils import _connected
 from cellrank.tl.kernels import Kernel
 from cellrank.tl._constants import Direction, ThresholdScheme
-from cellrank.tl.kernels._base_kernel import (
-    _LOG_USING_CACHE,
-    _ERROR_EMPTY_CACHE_MSG,
-    AnnData,
-    _dtype,
-)
+from cellrank.tl.kernels._base_kernel import AnnData, _dtype
 from cellrank.tl.kernels._pseudotime_schemes import (
     ThresholdSchemeABC,
     HardThresholdScheme,
@@ -113,10 +108,7 @@ class PseudotimeKernel(Kernel):
             Number of neighbors to keep for each node, regardless of pseudotime.
             This is done to ensure that the graph remains connected. Only used when `threshold_scheme='hard'`.
         %(soft_scheme_kernel)s
-        density_normalize
-            Whether or not to use the underlying KNN graph for density normalization.
-        check_irreducibility
-            Optional check for irreducibility of the final transition matrix.
+        %(dnorm_irred)s
 
         Returns
         -------
@@ -150,7 +142,7 @@ class PseudotimeKernel(Kernel):
                     f"Threshold scheme `{threshold_scheme}` is not yet implemented."
                 )
         elif isinstance(threshold_scheme, ThresholdSchemeABC):
-            pass
+            scheme = threshold_scheme
         elif callable(threshold_scheme):
             scheme = CustomThresholdScheme(threshold_scheme)
         else:
@@ -158,18 +150,10 @@ class PseudotimeKernel(Kernel):
                 f"Expected `threshold_scheme` to be either a `str` or a `callable`, found `{type(threshold_scheme)}`."
             )
 
-        params = {
-            "dnorm": density_normalize,
-            "scheme": str(threshold_scheme),
-            **kwargs,
-        }
-        if params == self._params:
-            assert self.transition_matrix is not None, _ERROR_EMPTY_CACHE_MSG
-            logg.debug(_LOG_USING_CACHE)
-            logg.info("    Finish", time=start)
+        # fmt: off
+        if self._reuse_cache({"dnorm": density_normalize, "scheme": str(threshold_scheme), **kwargs}, time=start):
             return self
-
-        self._params = params
+        # fmt: on
 
         # handle backward case and run biasing function
         pseudotime = (
@@ -178,9 +162,8 @@ class PseudotimeKernel(Kernel):
             else self.pseudotime
         )
 
-        biased_conn = scheme.bias_knn(self._conn.copy(), pseudotime, **kwargs).astype(
-            _dtype
-        )
+        biased_conn = scheme.bias_knn(self._conn.copy(), pseudotime, **kwargs)
+        biased_conn = biased_conn.astype(_dtype)
 
         # make sure the biased graph is still connected
         if not _connected(biased_conn):

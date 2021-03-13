@@ -4,11 +4,7 @@ from copy import copy
 from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.tl.kernels import Kernel
-from cellrank.tl.kernels._base_kernel import (
-    _LOG_USING_CACHE,
-    _ERROR_EMPTY_CACHE_MSG,
-    AnnData,
-)
+from cellrank.tl.kernels._base_kernel import AnnData
 
 
 @d.dedent
@@ -82,19 +78,13 @@ class ConnectivityKernel(Kernel):
             f"Computing transition matrix based on `adata.obsp[{self._key!r}]`"
         )
 
-        params = {"dnorm": density_normalize, "key": self._key}
-        if params == self.params:
-            assert self.transition_matrix is not None, _ERROR_EMPTY_CACHE_MSG
-            logg.debug(_LOG_USING_CACHE)
-            logg.info("    Finish", time=start)
+        # fmt: off
+        if self._reuse_cache({"dnorm": density_normalize, "key": self._key}, time=start):
             return self
 
-        self._params = params
-        self._compute_transition_matrix(
-            matrix=self._conn.copy(), density_normalize=density_normalize
-        )
-
+        self._compute_transition_matrix(matrix=self._conn.copy(), density_normalize=density_normalize)
         logg.info("    Finish", time=start)
+        # fmt: on
 
         return self
 

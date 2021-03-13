@@ -151,6 +151,11 @@ nu
     Affects near which asymptote maximum growth occurs.{}
 perc
     Percentile by which to clip the connectivities.{}"""
+_dnorm_irred = """\
+density_normalize
+    Whether or not to use the underlying KNN graph for density normalization.
+check_irreducibility
+    Optional check for irreducibility of the final transition matrix."""
 
 
 def inject_docs(**kwargs):  # noqa
@@ -204,4 +209,5 @@ d = DocstringProcessor(
     soft_scheme_kernel=_soft_scheme_fmt.format(
         *([" Only used when `scheme='soft'`."] * 3)
     ),
+    dnorm_irred=_dnorm_irred,
 )

@@ -71,6 +71,11 @@ Soft threshold scheme
     :members:
     :special-members: __call__
 
+Experimental Time Kernel
+------------------------
+
+.. autoclass:: cellrank.tl.kernels.ExperimentalTimeKernel
+    :members:
 
 Precomputed Kernel
 ------------------

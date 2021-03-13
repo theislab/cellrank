@@ -200,6 +200,18 @@ class KernelExpression(Pickleable, ABC):
     def copy(self) -> "KernelExpression":
         """Return a copy of itself. Note that the underlying :paramref:`adata` object is not copied."""
 
+    def _reuse_cache(
+        self, expected_params: Dict[str, Any], *, time: Optional[Any] = None
+    ) -> bool:
+        if expected_params == self._params:
+            assert self.transition_matrix is not None, _ERROR_EMPTY_CACHE_MSG
+            logg.debug(_LOG_USING_CACHE)
+            logg.info("    Finish", time=time)
+            return True
+
+        self._params = expected_params
+        return False
+
     def _maybe_compute_cond_num(self):
         if self._compute_cond_num and self._cond_num is None:
             logg.debug(f"Computing condition number of `{repr(self)}`")
