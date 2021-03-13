@@ -1,8 +1,9 @@
-"""Experimental kernel module."""
+"""Experimental time kernel module."""
 from copy import copy
 from typing import Any
 
 import pandas as pd
+from pandas.api.types import infer_dtype
 from pandas.core.dtypes.common import is_integer_dtype, is_categorical_dtype
 
 from cellrank import logging as logg
@@ -14,6 +15,7 @@ from cellrank.tl.kernels._base_kernel import AnnData, _dtype
 from cellrank.tl.kernels._pseudotime_schemes import HardThresholdScheme
 
 
+@d.dedent
 class ExperimentalTimeKernel(Kernel):
     """
     Kernel which computes directed transition probabilities based on a KNN graph and experimental time.
@@ -25,7 +27,8 @@ class ExperimentalTimeKernel(Kernel):
     %(adata)s
     %(backward)s
     time_key
-        Key in :paramref:`adata` ``.obs`` where the experimental time is stored. TODO.
+        Key in :paramref:`adata` ``.obs`` where the experimental time is stored. The experimental time can be of either
+        ordered categorical or integer type.
     compute_cond_num
         Whether to compute condition number of the transition matrix. Note that this might be costly,
         since it does not use sparse implementation.
@@ -51,20 +54,23 @@ class ExperimentalTimeKernel(Kernel):
     def _read_from_adata(self, **kwargs: Any):
         super()._read_from_adata(**kwargs)
 
-        time_key = kwargs.pop("time_key", "dpt_pseudotime")
+        time_key = kwargs.pop("time_key", "exp_time")
         if time_key not in self.adata.obs.keys():
             raise KeyError(f"Could not find time key in `adata.obs[{time_key!r}]`.")
 
         exp_time = self.adata.obs[time_key].copy()
         if is_integer_dtype(exp_time):
-            exp_time = pd.Categorical(
-                exp_time, categories=sorted(set(exp_time))[::-1], ordered=True
+            exp_time = pd.Series(
+                pd.Categorical(exp_time, categories=sorted(set(exp_time)), ordered=True)
             )
         if not is_categorical_dtype(exp_time):
-            raise TypeError()
+            raise TypeError(
+                f"Expected experimental time to be `categorical`, found `{infer_dtype(exp_time)}`."
+            )
 
-        if not exp_time.ordered:
-            exp_time = exp_time.as_ordered()
+        if not exp_time.cat.ordered:
+            logg.warning("Ordering categories")
+            exp_time.cat = exp_time.cat.as_ordered()
 
         self._exp_time = pd.Categorical(exp_time, ordered=True)
 
@@ -73,7 +79,7 @@ class ExperimentalTimeKernel(Kernel):
         self, density_normalize: bool = True, check_irreducibility: bool = False
     ) -> "ExperimentalTimeKernel":
         """
-        TODO.
+        Compute transition matrix based on KNN graph and experimental time.
 
         Parameters
         ----------
@@ -81,7 +87,8 @@ class ExperimentalTimeKernel(Kernel):
 
         Returns
         -------
-        :class:`cellrank.tl.kernels.ExperimentalTime`
+        :class:`cellrank.tl.kernels.ExperimentalTimeKernel`
+            Makes :paramref:`transition_matrix` available.
         """
         start = logg.info("Computing transition matrix based on experimental time")
 
