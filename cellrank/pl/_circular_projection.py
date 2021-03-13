@@ -123,10 +123,10 @@ def circular_projection(
     lineage_order
         Can be one of the following:
 
-            - `None`: it will determined automatically, based on the number of lineages.
-            - `'optimal'`: order the lineages optimally by solving the Travelling salesman problem (TSP).
+            - `None` - it will determined automatically, based on the number of lineages.
+            - `'optimal'` - order the lineages optimally by solving the Travelling salesman problem (TSP).
               Recommended for <= `20` lineages.
-            - `'default'`: use the order as specified in ``lineages``.
+            - `'default'` - use the order as specified in ``lineages``.
 
     metric
         Metric to use when constructing pairwise distance matrix when ``lineage_order = 'optimal'``. For available
@@ -146,9 +146,9 @@ def circular_projection(
     labelrot
         How to rotate the labels. Valid options are:
 
-            - `'best'`: rotate labels so that they are easily readable.
-            - `'default'`: use :mod:`matplotlib`'s default.
-            - `None`: same as `'default'`.
+            - `'best'` - rotate labels so that they are easily readable.
+            - `'default'` - use :mod:`matplotlib`'s default.
+            - `None` - same as `'default'`.
 
         If a :class:`float`, all labels will be rotated by this many degrees.
     show_edges
