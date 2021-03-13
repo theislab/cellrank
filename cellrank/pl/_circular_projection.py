@@ -106,20 +106,19 @@ def circular_projection(
     ----------
     %(adata)s
     keys
-        Keys in :attr:`anndata.AnnData.obs` or :attr:`anndata.AnnData.var_names`. Extra available keys are:
+        Keys in :attr:`anndata.AnnData.obs` or :attr:`anndata.AnnData.var_names`. Additional keys are:
 
             - `'kl_divergence'` - as in [Velten17]_, computes KL-divergence between the fate probabilities of a
-               cell and the average fate probabilities. Computation of average fate probabilities can be restricted
-               to a set of user-defined ``early_cells``.
-            - `'entropy'` - as in [Setty19]_, computes entropy over a cell's fate probabilities.
+               cell and the average fate probabilities. See ``early_cells`` for more information.
+            - `'entropy'` - as in [Setty19]_, computes entropy over a cells fate probabilities.
 
     %(backward)s
     lineages
         Lineages to plot. If `None`, plot all lineages.
     early_cells
-        Cell ids or a mask marking early cells. If `None`, use all cells. Only used when `'kl_divergence'`
-        is in ``keys``. If a :class:`dict`, key species a cluster key in :attr:`anndata.AnnData.obs` and
-        the values specify cluster labels containing early cells.
+        Cell ids or a mask marking early cells used to define the average fate probabilities. If `None`, use all cells.
+        Only used when `'kl_divergence'` is in ``keys``. If a :class:`dict`, key specifies a cluster key in
+        :attr:`anndata.AnnData.obs` and the values specify cluster labels containing early cells.
     lineage_order
         Can be one of the following:
 
