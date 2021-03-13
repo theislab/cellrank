@@ -29,7 +29,7 @@ CellRank's key applications
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 - compute **initial & terminal** as well as **intermediate** macrostates of your biological system
 - infer **fate probabilities** towards the terminal states for each individual cell
-- visualize **gene expression trends** along specific linegeages while accounting for the continous nature of fate
+- visualize **gene expression trends** along specific lineages while accounting for the continuous nature of fate
   determination
 - identify **potential driver genes** for each identified cellular trajectory
 

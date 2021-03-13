@@ -18,8 +18,8 @@ terminal state, we then compute its fate probability of it reaching any of the t
 We show an example of such a fate map in the figure above, which has been computed using the data
 of [Panc19]_.
 
-CellRank scales to large cell numbers, is fully compatible with `scanpy`_ and `scvelo`_ and is easy to use.
-To get started, see our `tutorial`_.
+CellRank scales to large cell numbers, is fully compatible with `scanpy`_ and `scvelo <https://scvelo.readthedocs.io/>`_
+and is easy to use. To get started, see our `tutorial`_.
 
 Manuscript
 ^^^^^^^^^^
@@ -34,7 +34,7 @@ CellRank's key applications
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 - compute initial & terminal as well as intermediate macrostates of your biological system
 - infer fate probabilities towards the terminal states for each individual cell
-- visualize gene expression trends along specific linegeages while accounting for the continuous nature of
+- visualize gene expression trends along specific lineages while accounting for the continuous nature of
   fate determination
 - identify potential driver genes for each identified cellular trajectory
 
@@ -114,8 +114,6 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
 .. _tutorial: https://cellrank.readthedocs.io/en/latest/pancreas_basic.html
 
 .. _scanpy: https://scanpy.readthedocs.io/en/latest/
-
-.. _scvelo: https://scvelo.readthedocs.io/
 
 .. _Theislab: https://www.helmholtz-muenchen.de/icb/research/groups/theis-lab/overview/index.html
 
