@@ -27,7 +27,7 @@ Clone CellRank from source as::
     git clone https://github.com/theislab/cellrank
     cd cellrank
 
-Install development requirements in editable mode, as well as pre-commit::
+Install development requirements in editable mode, as well as pre-commit as::
 
     pip install -e'.[dev]'
     pre-commit install
@@ -40,10 +40,15 @@ The CellRank is structured as follows:
 
   - `cellrank/datasets <cellrank/datasets>`_: contains datasets available for download.
   - `cellrank/external <cellrank/external>`_: contains all external kernels/estimators/models.
-  - `cellrank/pl <cellrank/pl>`_: contains high level plotting functions.
-  - `cellrank/tl/kernels <cellrank/tl/kernels>`_: contains classes that create transition matrices.
-  - `cellrank/tl/estimators <cellrank/tl/estimators>`_: contains classes which estimate fate probabilities based on kernels.
-  - `cellrank/ul/models <cellrank/ul/models>`_: contains classes that compute smoothed gene expression trends.
+  - `cellrank/pl <cellrank/pl>`_: the plotting module, containing high level plotting functions.
+  - `cellrank/tl <cellrank/tl>`_: the tools module, containing high-level tool functions, linear solvers, etc.
+
+    - `cellrank/tl/kernels <cellrank/tl/kernels>`_: contains classes that create transition matrices.
+    - `cellrank/tl/estimators <cellrank/tl/estimators>`_: contains classes which estimate fate probabilities based on kernels.
+
+  - `cellrank/ul <cellrank/ul>`_: the utilities modules, containing mostly models for gene trend smoothing, parallelization, etc.
+
+    - `cellrank/ul/models <cellrank/ul/models>`_: contains classes that compute smoothed gene expression trends.
 
 - `tests <tests>`_: unit tests, see `Running tests`_ for more information.
 - `docs <docs>`_: documentation, see `Building documentation`_ for more.
@@ -88,7 +93,8 @@ you would run::
 
     tox -e py38-linux
 
-To run only a subset of tests, run::
+Note that during the first invocation, it can take several minutes to start the testing. This is due to the fact that
+PETSc/SLEPc needs to be built. To run only a subset of tests, run::
 
     tox -e <environment> -- <name>
 
