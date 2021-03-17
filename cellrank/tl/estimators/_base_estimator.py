@@ -129,6 +129,9 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         if read_from_adata:
             self._read_from_adata()
 
+    def __init_subclass__(cls, **kwargs: Any):
+        super().__init_subclass__()
+
     def _read_from_adata(self) -> None:
         self._set_or_debug(f"eig_{self._direction}", self.adata.uns, "_eig")
 

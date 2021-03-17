@@ -13,9 +13,6 @@ class ErroredEstimator(ImportErrorMixin, BaseEstimator):
 
     __import_error_message__ = "Unable to import the estimator."
 
-    def __init__(self, *args: Any, **kwargs: Any):
-        raise ImportError(self.__import_error_message__) from None
-
     def _fit_terminal_states(self, *args: Any, **kwargs: Any) -> None:
         raise NotImplementedError
 
