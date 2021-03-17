@@ -8,6 +8,7 @@ from typing import (
     List,
     Tuple,
     Union,
+    Literal,
     TypeVar,
     Hashable,
     Iterable,
@@ -18,10 +19,12 @@ from itertools import tee, product, combinations
 
 from statsmodels.stats.multitest import multipletests
 
+from anndata import AnnData
+
 import numpy as np
 import pandas as pd
 from pandas import Series
-from scipy.stats import norm
+from scipy.stats import norm, gmean, hmean
 from numpy.linalg import norm as d_norm
 from scipy.sparse import eye as speye
 from scipy.sparse import diags, issparse, spmatrix, csr_matrix, isspmatrix_csr
@@ -44,7 +47,6 @@ from cellrank.ul._parallelize import parallelize
 from cellrank.tl._linear_solver import _solve_lin_system
 from cellrank.tl.kernels._utils import np_std, np_mean, _filter_kwargs
 
-AnnData = TypeVar("AnnData")
 ColorLike = TypeVar("ColorLike")
 GPCCA = TypeVar("GPCCA")
 CFLARE = TypeVar("CFLARE")
@@ -1620,3 +1622,114 @@ def _create_initial_terminal_annotations(
     # write to AnnData
     adata.obs[key_added] = cats_merged
     adata.uns[f"{key_added}_colors"] = colors_merged
+
+
+@d.dedent
+def cyto_trace(
+    adata: AnnData,
+    layer: str = "Ms",
+    aggregation: Literal["mean", "median", "hmean", "gmean"] = "mean",
+    use_raw: bool = True,
+) -> None:
+    """
+    Re-implementation of the CytoTRACE algorithm by *Gulati et al.* to infer cell plasticity.
+
+    Finds the top 200 genes correlated with #genes/cell and computes their (imputed) mean or median expression.
+    For more references, see [Cyto20]_.
+
+    Parameters
+    ----------
+    %(adata)s
+    aggregation
+        Valid options are:
+
+            - `'mean'`: arithmetic mean.
+            - `'median'`: median.
+            - `'gmean'`: geometric mean.
+            - `'hmean'`: harmonic mean.
+
+    use_raw
+        Whether to use the :attr:`anndata.AnnData.raw` or not.
+
+    Returns
+    -------
+    None
+        Nothing, just modifies the :attr:`anndata.AnnData.obs` with the following keys:
+
+            - `'gcs'`: the normalized cytotrace score.
+            - `'gcs_pseudotime'`: the pseudotime derived from the cytotrace score.
+            - TODO: the rest
+
+    Example
+    -------
+    Workflow::
+
+        import scvelo as scv
+        import cellrank as cr
+
+        adata = cr.datasets.pancreas()
+        scv.pp.moments(adata)
+        cr.tl.cyto_trace(adata)
+    """
+    # check use_raw
+    if use_raw and adata.raw is None:
+        logg.warning("`adata.raw` is `None`. Setting `use_raw=False`")
+        use_raw = False
+
+    adata_mraw = adata.raw if use_raw else adata
+    if layer != "X" and layer not in adata.layers:
+        raise KeyError(
+            f"Unable to find `{layer!r}` in `adata.layers`. "
+            f"Valid option are: `{sorted({'X'} | set(adata.layers.keys()))}`."
+        )
+
+    start = logg.info(f"Computing CytoTrace score with `{adata.n_vars}` genes")
+    if adata.n_vars < 10000:
+        logg.warning("Consider using more genes")
+
+    # compute number of expressed genes per cell
+    logg.debug(f"Computing number of genes expressed per cell with `use_raw={use_raw}`")
+    num_exp_genes = np.array((adata_mraw.X > 0).sum(axis=1)).reshape(-1)
+    adata.obs["num_exp_genes"] = num_exp_genes
+
+    # compute correlation with all genes
+    logg.debug("Correlating all genes with number of genes expressed per cell")
+    gene_corr, _, _, _ = _correlation_test_helper(
+        adata_mraw.X.T, num_exp_genes[:, None]
+    )
+
+    # annotate the top 200 genes in terms of correlation
+    logg.debug("Finding the top `200` most correlated genes")
+    adata.var["gene_corr"] = gene_corr
+    top_200 = adata.var.sort_values(by="gene_corr", ascending=False).index[:200]
+    adata.var["correlates"] = False
+    adata.var.loc[top_200, "correlates"] = True
+
+    # compute mean/median over top 200 genes, aggregate over genes and shift to [0, 1] range
+    logg.debug(
+        f"Aggregating imputed gene expression using aggregation `{aggregation}` in layer `{layer}`"
+    )
+    corr_mask = adata.var["correlates"]
+    imputed_exp = (
+        adata[:, corr_mask].X if layer == "X" else adata[:, corr_mask].layers[layer]
+    )
+
+    # aggregate across the top 200 genes
+    if aggregation == "mean":
+        gcs = np.mean(imputed_exp, axis=1)
+    elif aggregation == "median":
+        gcs = np.median(imputed_exp, axis=1)
+    elif aggregation == "gmean":
+        gcs = gmean(imputed_exp, axis=1)
+    elif aggregation == "hmean":
+        gcs = hmean(imputed_exp, axis=1)
+    else:
+        raise ValueError(f"Aggregation method `{aggregation}` not found. ")
+
+    # scale to 0-1 range
+    gcs -= np.min(gcs)
+    gcs /= np.max(gcs)
+    adata.obs["gcs"] = gcs
+    adata.obs["gcs_pseudotime"] = 1 - gcs
+
+    logg.info("    Finish", time=start)

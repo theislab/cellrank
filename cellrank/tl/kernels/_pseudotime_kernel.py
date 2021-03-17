@@ -54,6 +54,7 @@ class PseudotimeKernel(Kernel):
         time_key: str = "dpt_pseudotime",
         compute_cond_num: bool = False,
         check_connectivity: bool = False,
+        **kwargs: Any,
     ):
         super().__init__(
             adata,
@@ -61,6 +62,7 @@ class PseudotimeKernel(Kernel):
             time_key=time_key,
             compute_cond_num=compute_cond_num,
             check_connectivity=check_connectivity,
+            **kwargs,
         )
         self._time_key = time_key
 
