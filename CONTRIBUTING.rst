@@ -110,8 +110,9 @@ If you need to clean the artifacts from previous documentation builds, run::
     tox -e clean-docs
 
 Troubleshooting
----------------
+~~~~~~~~~~~~~~~
 - **I have problems with running some tox commands**
+
   Try recreating the environment as::
 
     tox -e <environment> --recreate
@@ -119,6 +120,7 @@ Troubleshooting
   If this didn't work, you can purge the whole ``.tox`` directory as ``rm -rf .tox``.
 
 - **I can't commit because of pre-commit**
+
   Sometimes, it can be hard to satisfy the linting step. You can temporarily bypass it by committing as::
 
     git commit --no-verify
