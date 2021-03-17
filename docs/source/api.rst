@@ -32,6 +32,7 @@ This module offers a high-level API to compute cell fates and driver genes.
 .. autosummary::
     :toctree: api
 
+    tl.cyto_trace
     tl.transition_matrix
     tl.initial_states
     tl.terminal_states
@@ -52,7 +53,8 @@ Kernels are part of the low-level API and are used to estimate cell-to-cell tran
 
     tl.kernels.VelocityKernel
     tl.kernels.ConnectivityKernel
-    tl.kernels.PalantirKernel
+    tl.kernels.PseudotimeKernel
+    tl.kernels.CytoTRACEKernel
     tl.kernels.PrecomputedKernel
 
 Estimators

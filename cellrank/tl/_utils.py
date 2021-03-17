@@ -1632,10 +1632,9 @@ def cyto_trace(
     use_raw: bool = True,
 ) -> None:
     """
-    Re-implementation of the CytoTRACE algorithm by *Gulati et al.* to infer cell plasticity.
+    Re-implementation of the CytoTRACE algorithm [Cyto20]_ to infer cell plasticity.
 
     Finds the top 200 genes correlated with #genes/cell and computes their (imputed) mean or median expression.
-    For more references, see [Cyto20]_.
 
     Parameters
     ----------
