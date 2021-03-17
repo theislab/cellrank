@@ -142,8 +142,15 @@ scheme
         - `{s.COSINE.s!r}` - :class:`cellrank.tl.kernels.CosineScheme`.
         - `{s.CORRELATION.s!r}` - :class:`cellrank.tl.kernels.CorrelationScheme`.
 
-    Alternatively, any function can be passed as long as it follows the call signature of
-    :class:`cellrank.tl.kernels.SimilaritySchemeABC`."""
+    Alternatively, any function can be passed as long as it follows the signature of
+    :meth:`cellrank.tl.kernels.SimilaritySchemeABC.__call__`."""
+_soft_scheme_fmt = """\
+b
+    The growth rate of generalized logistic function.{}
+nu
+    Affects near which asymptote maximum growth occurs.{}
+perc
+    Percentile by which to clip the connectivities.{}"""
 
 
 def inject_docs(**kwargs):  # noqa
@@ -193,4 +200,8 @@ d = DocstringProcessor(
     plots_or_returns_models=_plots_or_returns_models,
     basis=_basis,
     velocity_scheme=_velocity_scheme,
+    soft_scheme=_soft_scheme_fmt.format("", "", ""),
+    soft_scheme_kernel=_soft_scheme_fmt.format(
+        *([" Only used when `scheme='soft'`."] * 3)
+    ),
 )

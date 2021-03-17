@@ -7,6 +7,8 @@ from pathlib import Path
 from functools import wraps
 from itertools import combinations
 
+from typing_extensions import Literal
+
 import numpy as np
 import pandas as pd
 from scipy.stats import entropy
@@ -22,7 +24,7 @@ from cellrank.tl._colors import (
     _compute_mean_color,
     _create_categorical_colors,
 )
-from cellrank.tl._constants import Lin
+from cellrank.tl._constants import Lin, ModeEnum
 
 ColorLike = TypeVar("ColorLike")
 _ERROR_NOT_ITERABLE = "Expected `{}` to be iterable, found type `{}`."
@@ -32,6 +34,13 @@ _HT_CELLS = 10  # head and tail cells to show
 _HTML_REPR_THRESH = 100
 _DUMMY_CELL = "<td style='text-align: right;'>...</td>"
 _ORDER = "C"
+
+
+class PrimingDegree(ModeEnum):
+    """Priming degree method."""
+
+    KL_DIVERGENCE = "kl_divergence"
+    ENTROPY = "entropy"
 
 
 def _at_least_2d(array: np.ndarray, dim: int):
@@ -706,6 +715,65 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
     def __copy__(self):
         return self.copy()
 
+    @d.get_full_description(base="lin_pd")
+    @d.get_sections(base="lin_pd", sections=["Parameters", "Returns"])
+    def priming_degree(
+        self,
+        method: Literal["kl_divergence", "entropy"] = "kl_divergence",
+        early_cells: Optional[np.ndarray] = None,
+    ) -> np.ndarray:
+        """
+        Compute the degree of lineage priming.
+
+        This method computes how naive vs. committed each individual cell is.
+        It returns a score where 0 stands for naive and 1 stands for committed.
+
+        Parameters
+        ----------
+        method
+            The method used to compute the degree of lineage priming. Valid options are:
+
+                - `'kl_divergence'` - as in [Velten17]_, computes KL-divergence between the fate probabilities of a
+                   cell and the average fate probabilities. Computation of average fate probabilities can be restricted
+                   to a set of user-defined ``early_cells``.
+                - `'entropy'` - as in [Setty19]_, computes entropy over a cell's fate probabilities.
+
+        early_cells
+            Cell ids or a mask marking early cells. If `None`, use all cells. Only used when ``method='kl_divergence'``.
+
+        Returns
+        -------
+        The priming degree.
+        """
+        early_cells = (
+            np.ones((len(self),), dtype=np.bool_)
+            if early_cells is None
+            else np.asarray(early_cells)
+        )
+        if not np.issubdtype(early_cells.dtype, np.bool_):
+            early_cells = np.unique(early_cells)
+
+        method = PrimingDegree(method)
+        probs = self.X
+        early_subset = probs[early_cells, :]
+        if not len(early_subset):
+            raise ValueError("No early cells have been specified.")
+
+        if method == PrimingDegree.KL_DIVERGENCE:
+            probs = np.nan_to_num(
+                np.sum(probs * np.log2(probs / np.mean(early_subset, axis=0)), axis=1),
+                nan=1.0,
+                copy=False,
+            )
+        elif method == PrimingDegree.ENTROPY:
+            probs = entropy(probs, axis=1)
+            probs = np.max(probs) - probs
+        else:
+            raise NotImplementedError(f"Method `{method}` is not yet implemented")
+
+        minn, maxx = np.min(probs), np.max(probs)
+        return (probs - minn) / (maxx - minn)
+
     @d.dedent
     def plot_pie(
         self,
@@ -798,8 +866,10 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         self,
         *keys: str,
         mode: str = "dist",
-        dist_measure: str = "mutual_info",
-        normalize_weights: str = "softmax",
+        dist_measure: Literal[
+            "cosine_sim", "wasserstein_dist", "kl_div", "js_div", "mutual_inf", "equal"
+        ] = "mutual_info",
+        normalize_weights: Literal["scale", "softmax"] = "softmax",
         softmax_scale: float = 1,
         return_weights: bool = False,
     ) -> Union["Lineage", Tuple["Lineage", Optional[pd.DataFrame]]]:

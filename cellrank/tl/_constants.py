@@ -1,4 +1,4 @@
-"""Module containing CellRank contants."""
+"""Module containing CellRank constants."""
 
 from abc import ABC, ABCMeta
 from enum import Enum, EnumMeta
@@ -92,6 +92,13 @@ class AbsProbKey(PrettyEnum):
     BACKWARD = f"{DirPrefix.BACKWARD}_{TermStatesKey.BACKWARD}"
 
 
+class ThresholdScheme(PrettyEnum):
+    """Pseudotime thresholding scheme."""
+
+    SOFT = "soft"
+    HARD = "hard"
+
+
 def _transition(d: Union[str, Direction]) -> str:
     return f"T_{d}"
 
@@ -108,8 +115,8 @@ def _probs(k: Union[str, TermStatesKey]) -> str:
     return f"{k}_probs"
 
 
-def _dp(k: Union[str, AbsProbKey]) -> str:
-    return f"{k}_dp"
+def _pd(k: Union[str, AbsProbKey]) -> str:
+    return f"{k}_priming_degree"
 
 
 def _pretty_raise_enum(cls, fun):

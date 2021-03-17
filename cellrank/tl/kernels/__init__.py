@@ -1,5 +1,4 @@
 from cellrank.tl.kernels._base_kernel import Kernel, Constant
-from cellrank.tl.kernels._palantir_kernel import PalantirKernel
 from cellrank.tl.kernels._velocity_kernel import VelocityKernel
 from cellrank.tl.kernels._velocity_schemes import (
     CosineScheme,
@@ -7,5 +6,11 @@ from cellrank.tl.kernels._velocity_schemes import (
     CorrelationScheme,
     SimilaritySchemeABC,
 )
+from cellrank.tl.kernels._pseudotime_kernel import PseudotimeKernel
 from cellrank.tl.kernels._precomputed_kernel import PrecomputedKernel
+from cellrank.tl.kernels._pseudotime_schemes import (
+    ThresholdSchemeABC,
+    HardThresholdScheme,
+    SoftThresholdScheme,
+)
 from cellrank.tl.kernels._connectivity_kernel import ConnectivityKernel

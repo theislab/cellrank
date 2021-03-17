@@ -24,12 +24,12 @@ adata
 #   should be used in conjunction with e.g. :class:`cellrank.tl.kernels.VelocityKernel`.
 # - :class:`cellrank.tl.kernels.VelocityKernel` uses RNA velocity for the transition matrix computation [Manno18]_
 #   [Bergen20]_, but can also take into account uncertainty in RNA velocity.
-# - :class:`cellrank.tl.kernels.PalantirKernel` works similarly as in Palantir [Setty19]_ - it orients the edges of
+# - :class:`cellrank.tl.kernels.PseudotimeKernel` works similarly as in Palantir [Setty19]_ - it orients the edges of
 #   the KNN graph constructed in the expression space using the pseudotemporal ordering of cells, such as
 #   Diffusion Pseudotime (DPT) [Haghverdi16]_.
 ck = cr.tl.kernels.ConnectivityKernel(adata)
 vk = cr.tl.kernels.VelocityKernel(adata)
-pk = cr.tl.kernels.PalantirKernel(adata)
+pk = cr.tl.kernels.PseudotimeKernel(adata)
 
 # %%
 # Kernels can be easily combined with each other. All of the constants within parentheses

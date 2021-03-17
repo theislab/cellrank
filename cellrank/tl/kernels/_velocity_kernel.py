@@ -162,6 +162,7 @@ class VelocityKernel(Kernel):
         softmax_scale: Optional[float] = None,
         n_samples: int = 1000,
         seed: Optional[int] = None,
+        check_irreducibility: bool = False,
         **kwargs,
     ) -> "VelocityKernel":
         """
@@ -180,6 +181,8 @@ class VelocityKernel(Kernel):
             Number of bootstrap samples when ``mode={m.MONTE_CARLO.s!r}``.
         seed
             Set the seed for random state when the method requires ``n_samples``.
+        check_irreducibility
+            Optional check for irreducibility of the final transition matrix.
         %(parallel)s
 
         Returns
@@ -199,11 +202,6 @@ class VelocityKernel(Kernel):
         if not callable(scheme):
             raise TypeError(
                 f"Expected `scheme` to be a function, found `{type(scheme)!r}`."
-            )
-        elif isinstance(scheme, type):
-            raise TypeError(
-                f"Expected `scheme` to be a function object, found function type `{type(scheme)!r}`. "
-                f"Try instantiating the type."
             )
 
         if self.backward and mode != VelocityMode.DETERMINISTIC:
@@ -313,7 +311,9 @@ class VelocityKernel(Kernel):
             backend=backend,
             **kwargs,
         )
-        self._compute_transition_matrix(tmat, density_normalize=False)
+        self._compute_transition_matrix(
+            tmat, density_normalize=False, check_irreducibility=check_irreducibility
+        )
         self._logits = cmat
 
         logg.info("    Finish", time=start)

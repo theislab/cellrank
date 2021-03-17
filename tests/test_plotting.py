@@ -26,7 +26,7 @@ from matplotlib.testing.compare import compare_images
 import cellrank as cr
 from cellrank.tl import Lineage
 from cellrank.ul.models import GAMR
-from cellrank.tl._constants import AbsProbKey
+from cellrank.tl._constants import AbsProbKey, _pd
 from cellrank.tl.estimators import GPCCA, CFLARE
 
 setup()
@@ -3085,12 +3085,12 @@ class TestCircularProjection:
     @compare()
     def test_proj_extra_keys(self, adata: AnnData, fpath: str):
         cr.pl.circular_projection(
-            adata, keys=["priming_direction", "priming_degree"], dpi=DPI, save=fpath
+            adata, keys=["kl_divergence", "entropy"], dpi=DPI, save=fpath
         )
 
-        assert "priming_direction_fwd" in adata.obs
-        assert is_categorical_dtype(adata.obs["priming_direction_fwd"])
-        assert "priming_degree_fwd" in adata.obs
+        apk = AbsProbKey.FORWARD.s
+        assert f"{apk}_kl_divergence" in adata.obs
+        assert f"{apk}_entropy" in adata.obs
 
     @compare()
     def test_proj_scvelo_kwargs(self, adata: AnnData, fpath: str):

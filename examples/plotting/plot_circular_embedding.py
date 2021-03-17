@@ -27,5 +27,5 @@ cr.tl.lineages(adata)
 # indicate the probability of 1.0 for the lineages and the midpoints of the edges of the edges mark where the
 # probabilities of the lineages connected by an edge are equal.
 cr.pl.circular_projection(
-    adata, keys=["clusters", "to_terminal_states_dp"], legend_loc="upper right"
+    adata, keys=["clusters", "kl_divergence"], legend_loc="upper right"
 )

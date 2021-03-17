@@ -10,6 +10,7 @@ from anndata import AnnData
 
 import numpy as np
 import pandas as pd
+from pandas.testing import assert_series_equal
 
 import cellrank as cr
 from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
@@ -18,7 +19,7 @@ from cellrank.tl._constants import (
     DirPrefix,
     AbsProbKey,
     TermStatesKey,
-    _dp,
+    _pd,
     _probs,
     _colors,
     _lin_names,
@@ -90,7 +91,7 @@ def _check_abs_probs(mc: cr.tl.estimators.GPCCA, has_main_states: bool = True):
             mc._get(A.TERM_ABS_PROBS)[list(mc._get(P.TERM).cat.categories)].colors,
         )
 
-    assert isinstance(mc._get(P.DIFF_POT), pd.Series)
+    assert isinstance(mc._get(P.PRIME_DEG), pd.Series)
     assert isinstance(mc._get(P.ABS_PROBS), cr.tl.Lineage)
     np.testing.assert_array_almost_equal(mc._get(P.ABS_PROBS).sum(1), 1.0)
 
@@ -105,7 +106,7 @@ def _check_abs_probs(mc: cr.tl.estimators.GPCCA, has_main_states: bool = True):
     )
 
     np.testing.assert_array_equal(
-        mc.adata.obs[_dp(AbsProbKey.FORWARD)], mc._get(P.DIFF_POT)
+        mc.adata.obs[_pd(AbsProbKey.FORWARD)], mc._get(P.PRIME_DEG)
     )
 
     assert_array_nan_equal(mc.adata.obs[TermStatesKey.FORWARD.s], mc._get(P.TERM))
@@ -450,6 +451,7 @@ class TestGPCCA:
         mc.compute_macrostates(n_states=2, n_cells=5)
         mc.set_terminal_states_from_macrostates()
         mc.compute_absorption_probabilities()
+        mc.compute_lineage_priming()
 
         _check_abs_probs(mc)
 
@@ -511,6 +513,7 @@ class TestGPCCA:
         mc.compute_macrostates(n_states=2, n_cells=5)
         mc.set_terminal_states_from_macrostates({"0": "foo"})
         mc.compute_absorption_probabilities()
+        mc.compute_lineage_priming()
 
         _check_abs_probs(mc)
 
@@ -530,6 +533,7 @@ class TestGPCCA:
         mc.compute_macrostates(n_states=3, n_cells=5)
         mc.set_terminal_states_from_macrostates({"0, 1": "foo", "2": "bar"})
         mc.compute_absorption_probabilities()
+        mc.compute_lineage_priming()
 
         _check_abs_probs(mc)
 
@@ -623,6 +627,7 @@ class TestGPCCA:
         mc.compute_macrostates(n_states=2)
         mc.compute_terminal_states(n_cells=5, method="eigengap")
         mc.compute_absorption_probabilities()
+        mc.compute_lineage_priming()
 
         _check_abs_probs(mc)
 
@@ -637,6 +642,7 @@ class TestGPCCA:
         mc.compute_macrostates(n_states=2)
         mc.compute_terminal_states(n_cells=5, method="top_n", n_states=1)
         mc.compute_absorption_probabilities()
+        mc.compute_lineage_priming()
 
         _check_abs_probs(mc)
 
@@ -654,6 +660,7 @@ class TestGPCCA:
             n_cells=5, method="stability", stability_threshold=thresh
         )
         mc.compute_absorption_probabilities()
+        mc.compute_lineage_priming()
 
         coarse_T = mc._get(P.COARSE_T)
         self_probs = pd.Series(np.diag(coarse_T), index=coarse_T.columns)
@@ -699,6 +706,7 @@ class TestGPCCA:
         mc.compute_macrostates(n_states=2)
         mc.compute_terminal_states(n_cells=5)
         mc.compute_absorption_probabilities()
+        mc.compute_lineage_priming()
 
         _check_abs_probs(mc)
 
@@ -864,6 +872,33 @@ class TestGPCCA:
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
         mc.plot_lineage_drivers("0", use_raw=False)
+
+    def test_compute_priming_clusters(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        terminal_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc.compute_schur(n_components=10, method="krylov")
+        mc.compute_macrostates(n_states=2)
+        mc.set_terminal_states_from_macrostates()
+        mc.compute_absorption_probabilities()
+
+        cat = adata_large.obs["clusters"].cat.categories[0]
+        deg1 = mc.compute_lineage_priming(
+            method="kl_divergence", early_cells={"clusters": [cat]}
+        )
+        deg2 = mc.compute_lineage_priming(
+            method="kl_divergence",
+            early_cells=(adata_large.obs["clusters"] == cat).values,
+        )
+
+        assert_series_equal(deg1, deg2)
+        # because passing it to a dataframe changes its name
+        assert_series_equal(
+            adata_large.obs[_pd(mc._abs_prob_key)], deg1, check_names=False
+        )
+        assert_series_equal(mc._get(A.PRIME_DEG), deg1)
 
 
 class TestGPCCAIO:
