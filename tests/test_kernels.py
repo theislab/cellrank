@@ -19,8 +19,8 @@ from cellrank.tl._utils import _normalize
 from cellrank.ul._utils import _get_neighs, _get_neighs_params
 from cellrank.tl.kernels import (
     Constant,
-    PalantirKernel,
     VelocityKernel,
+    PseudotimeKernel,
     PrecomputedKernel,
     ConnectivityKernel,
 )
@@ -80,7 +80,7 @@ class TestInitializeKernel:
     def test_none_transition_matrix(self, adata: AnnData):
         vk = VelocityKernel(adata)
         ck = ConnectivityKernel(adata)
-        pk = PalantirKernel(adata, time_key="latent_time")
+        pk = PseudotimeKernel(adata, time_key="latent_time")
 
         assert vk._transition_matrix is None
         assert ck._transition_matrix is None
@@ -89,7 +89,7 @@ class TestInitializeKernel:
     def test_not_none_transition_matrix_compute(self, adata: AnnData):
         vk = VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata).compute_transition_matrix()
-        pk = PalantirKernel(adata, time_key="latent_time").compute_transition_matrix()
+        pk = PseudotimeKernel(adata, time_key="latent_time").compute_transition_matrix()
 
         assert vk.transition_matrix is not None
         assert ck.transition_matrix is not None
@@ -98,7 +98,7 @@ class TestInitializeKernel:
     def test_not_none_transition_matrix_accessor(self, adata: AnnData):
         vk = VelocityKernel(adata)
         ck = ConnectivityKernel(adata)
-        pk = PalantirKernel(adata, time_key="latent_time")
+        pk = PseudotimeKernel(adata, time_key="latent_time")
 
         assert vk.transition_matrix is not None
         assert ck.transition_matrix is not None
@@ -544,7 +544,7 @@ class TestKernel:
         conn_biased = bias_knn(conn, pseudotime, n_neighbors)
         T_1 = _normalize(conn_biased)
 
-        pk = PalantirKernel(adata, time_key="latent_time").compute_transition_matrix(
+        pk = PseudotimeKernel(adata, time_key="latent_time").compute_transition_matrix(
             density_normalize=False
         )
         T_2 = pk.transition_matrix
@@ -552,7 +552,7 @@ class TestKernel:
         np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
 
     def test_palantir_inverse(self, adata: AnnData):
-        pk = PalantirKernel(adata, time_key="latent_time")
+        pk = PseudotimeKernel(adata, time_key="latent_time")
         pt = pk.pseudotime.copy()
 
         pk_inv = ~pk
@@ -570,7 +570,7 @@ class TestKernel:
         T_1 = density_normalization(conn_biased, conn)
         T_1 = _normalize(T_1)
 
-        pk = PalantirKernel(adata, time_key="latent_time").compute_transition_matrix(
+        pk = PseudotimeKernel(adata, time_key="latent_time").compute_transition_matrix(
             density_normalize=True
         )
         T_2 = pk.transition_matrix
@@ -586,7 +586,7 @@ class TestKernel:
         T_1 = density_normalization(conn_biased, conn)
         T_1 = _normalize(T_1)
 
-        pk = PalantirKernel(adata, time_key="latent_time").compute_transition_matrix(
+        pk = PseudotimeKernel(adata, time_key="latent_time").compute_transition_matrix(
             density_normalize=False
         )
         T_2 = pk.transition_matrix
@@ -917,7 +917,7 @@ class TestKernelCopy:
         for KernelClass in [
             VelocityKernel,
             ConnectivityKernel,
-            PalantirKernel,
+            PseudotimeKernel,
             PrecomputedKernel,
         ]:
             if KernelClass is PrecomputedKernel:
@@ -955,7 +955,7 @@ class TestKernelCopy:
         assert ck1.backward == ck2.backward
 
     def test_copy_palantir_kernel(self, adata: AnnData):
-        pk1 = PalantirKernel(adata).compute_transition_matrix()
+        pk1 = PseudotimeKernel(adata).compute_transition_matrix()
         pk2 = pk1.copy()
 
         np.testing.assert_array_equal(pk1.transition_matrix.A, pk2.transition_matrix.A)
@@ -1193,13 +1193,6 @@ class TestVelocityScheme:
         ):
             vk.compute_transition_matrix(scheme=1311)
 
-    def test_not_callable_object(self, adata: AnnData):
-        vk = VelocityKernel(adata)
-        with pytest.raises(
-            TypeError, match="Expected `scheme` to be a function object"
-        ):
-            vk.compute_transition_matrix(scheme=CustomFunc)
-
     def test_custom_function_not_sum_to_1(self, adata: AnnData):
         vk = VelocityKernel(adata)
         with pytest.raises(ValueError, match=r"Matrix is not row-stochastic."):
@@ -1276,3 +1269,48 @@ class TestVelocityScheme:
 
         assert vk.params["mode"] == "monte_carlo"
         assert vk.params["scheme"] == str(CustomFunc())
+
+
+class TestPseudotimeKernelScheme:
+    def test_invalid_scheme(self, adata: AnnData):
+        pk = PseudotimeKernel(adata)
+        with pytest.raises(ValueError, match="foo"):
+            pk.compute_transition_matrix(threshold_scheme="foo")
+
+    def test_invalid_custom_scheme(self, adata: AnnData):
+        pk = PseudotimeKernel(adata)
+        with pytest.raises(ValueError, match="Expected row of shape"):
+            pk.compute_transition_matrix(
+                threshold_scheme=lambda cpt, npt, ndist: np.ones(
+                    (len(ndist) - 1), dtype=np.float64
+                ),
+            )
+
+    def test_custom_scheme(self, adata: AnnData):
+        pk = PseudotimeKernel(adata)
+        pk.compute_transition_matrix(
+            threshold_scheme=lambda cpt, npt, ndist: np.ones(
+                (len(ndist)), dtype=np.float64
+            ),
+            density_normalize=False,
+        )
+
+        np.testing.assert_allclose(pk.transition_matrix.sum(1), 1.0)
+        for row in pk.transition_matrix:
+            np.testing.assert_allclose(row.data, 1 / len(row.data))
+
+    @pytest.mark.parametrize("scheme", ["hard", "soft"])
+    def test_scheme(self, adata: AnnData, scheme: str):
+        pk = PseudotimeKernel(adata)
+        pk.compute_transition_matrix(threshold_scheme=scheme, k=4, b=10, nu=0.5)
+
+        np.testing.assert_allclose(pk.transition_matrix.sum(1), 1.0)
+        assert pk.params["scheme"] == scheme
+        if scheme == "hard":
+            assert pk.params["k"] == 4
+            assert "b" not in pk.params
+            assert "nu" not in pk.params
+        elif scheme == "soft":
+            assert pk.params["b"] == 10
+            assert pk.params["nu"] == 0.5
+            assert "k" not in pk.params

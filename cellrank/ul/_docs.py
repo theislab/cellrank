@@ -142,12 +142,19 @@ scheme
         - `{s.COSINE.s!r}` - :class:`cellrank.tl.kernels.CosineScheme`.
         - `{s.CORRELATION.s!r}` - :class:`cellrank.tl.kernels.CorrelationScheme`.
 
-    Alternatively, any function can be passed as long as it follows the call signature of
-    :class:`cellrank.tl.kernels.SimilaritySchemeABC`."""
+    Alternatively, any function can be passed as long as it follows the signature of
+    :meth:`cellrank.tl.kernels.SimilaritySchemeABC.__call__`."""
 _cond_num = """\
 compute_cond_num
     Whether to compute condition number of the transition matrix. Note that this might be costly,
     since it does not use sparse implementation."""
+_soft_scheme_fmt = """\
+b
+    The growth rate of generalized logistic function.{}
+nu
+    Affects near which asymptote maximum growth occurs.{}
+perc
+    Percentile by which to clip the connectivities.{}"""
 
 
 def inject_docs(**kwargs):  # noqa
@@ -198,4 +205,8 @@ d = DocstringProcessor(
     basis=_basis,
     velocity_scheme=_velocity_scheme,
     cond_num=_cond_num,
+    soft_scheme=_soft_scheme_fmt.format("", "", ""),
+    soft_scheme_kernel=_soft_scheme_fmt.format(
+        *([" Only used when `scheme='soft'`."] * 3)
+    ),
 )

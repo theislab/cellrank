@@ -526,12 +526,10 @@ class Plottable(KernelHolder, Property):
         self,
         probs: Optional[Lineage],
         prop: str,
-        diff_potential: Optional[pd.Series] = None,
         lineages: Optional[Union[str, Iterable[str]]] = None,
         cluster_key: Optional[str] = None,
         mode: str = "embedding",
         time_key: str = "latent_time",
-        show_dp: bool = True,
         title: Optional[str] = None,
         same_plot: bool = True,
         cmap: Union[str, mpl.colors.ListedColormap] = cm.viridis,
@@ -550,7 +548,7 @@ class Plottable(KernelHolder, Property):
         time_key
             Key from :paramref:`adata` ``.obs`` to use as a pseudotime ordering of the cells.
         title
-            Either `None`, in which case titles are ``'{to, from} {terminal, initial} {state}'``,
+            Either `None`, in which case titles are ``'{to,from} {terminal,initial} {state}'``,
             or an array of titles, one per lineage.
         same_plot
             Whether to plot the lineages on the same plot using color gradients when ``mode='embedding'``.
@@ -587,15 +585,6 @@ class Plottable(KernelHolder, Property):
         prefix = DirPrefix.BACKWARD if self.kernel.backward else DirPrefix.FORWARD
         same_plot = same_plot and mode == "embedding"  # set this silently
 
-        diff_potential = (
-            [diff_potential.values]
-            if show_dp
-            and not same_plot
-            and diff_potential is not None
-            and probs.shape[1] > 1
-            else []
-        )
-
         A = A.copy()  # the below code modifies stuff inplace
         X = A.X  # list(A.T) behaves differently, because it's Lineage
 
@@ -626,7 +615,7 @@ class Plottable(KernelHolder, Property):
                 )
             cluster_key = None
 
-        color = list(X.T) + diff_potential
+        color = list(X.T)
         if title is None:
             if same_plot:
                 title = [
@@ -634,9 +623,7 @@ class Plottable(KernelHolder, Property):
                     f"({DirectionPlot.BACKWARD if self.kernel.backward else Direction.FORWARD})"
                 ]
             else:
-                title = [f"{prefix} {lin}" for lin in lineages] + (
-                    ["differentiation potential"] if diff_potential else []
-                )
+                title = [f"{prefix} {lin}" for lin in lineages]
         elif isinstance(title, str):
             title = [title]
 
@@ -704,7 +691,6 @@ class Plottable(KernelHolder, Property):
         cluster_key: Optional[str] = None,
         mode: str = "embedding",
         time_key: str = "latent_time",
-        show_dp: bool = True,
         title: Optional[str] = None,
         same_plot: bool = False,
         cmap: Union[str, mpl.colors.ListedColormap] = "viridis",
@@ -738,7 +724,7 @@ class Plottable(KernelHolder, Property):
             self._plot_discrete(data, prop, **kwargs)
         elif prop == P.MACRO.v:  # GPCCA
             prop = P.MACRO_MEMBER.v
-            self._plot_continuous(getattr(self, prop, None), prop, None, **kwargs)
+            self._plot_continuous(getattr(self, prop, None), prop, **kwargs)
         elif prop == P.TERM.v:
             probs = getattr(self, A.TERM_ABS_PROBS.s, None)
             # we have this only in GPCCA
@@ -763,8 +749,7 @@ class Plottable(KernelHolder, Property):
             discrete = False
 
         if not discrete:
-            diff_potential = getattr(self, P.DIFF_POT.v, None)
-            self._plot_continuous(data, prop, diff_potential, **kwargs)
+            self._plot_continuous(data, prop, **kwargs)
         elif prop == P.ABS_PROBS.v:
             # for discrete and abs. probs, plot the terminal states
             prop = P.TERM.v
@@ -831,10 +816,10 @@ class AbsProbs(Plottable):
             doc="Absorption probabilities.",
         ),
         Metadata(
-            attr=A.DIFF_POT,
-            prop=P.DIFF_POT,
+            attr=A.PRIME_DEG,
+            prop=P.PRIME_DEG,
             dtype=pd.Series,
-            doc="Differentiation potential.",
+            doc="Priming degree.",
         ),
         Metadata(attr=A.LIN_ABS_TIMES, prop=P.LIN_ABS_TIMES, dtype=pd.DataFrame),
     ]

@@ -27,6 +27,7 @@ from cellrank.tl._utils import (
     _symmetric,
     _get_neighs,
     _has_neighs,
+    _irreducible,
 )
 from cellrank.ul._utils import Pickleable, _write_graph_data
 from cellrank.tl._constants import Direction, _transition
@@ -633,6 +634,7 @@ class Kernel(UnaryKernelExpression, ABC):
         self,
         matrix: spmatrix,
         density_normalize: bool = True,
+        check_irreducibility: bool = False,
     ):
         # density correction based on node degrees in the KNN graph
         matrix = csr_matrix(matrix) if not isspmatrix_csr(matrix) else matrix
@@ -648,6 +650,9 @@ class Kernel(UnaryKernelExpression, ABC):
                 f"This matrix won't be irreducible."
             )
             matrix[problematic_indices, problematic_indices] = 1.0
+
+        if check_irreducibility:
+            _irreducible(matrix)
 
         # setting this property automatically row-normalizes
         self.transition_matrix = matrix

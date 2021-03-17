@@ -30,19 +30,19 @@ Cosine similarity scheme
 ++++++++++++++++++++++++
 
 .. autoclass:: cellrank.tl.kernels.CosineScheme
-    :members:
+    :members: __call__, hessian
 
 Correlation scheme
 ++++++++++++++++++
 
 .. autoclass:: cellrank.tl.kernels.CorrelationScheme
-    :members:
+    :members: __call__, hessian
 
 Dot product scheme
 ++++++++++++++++++
 
 .. autoclass:: cellrank.tl.kernels.DotProductScheme
-    :members:
+    :members: __call__, hessian
 
 
 Connectivity Kernel
@@ -51,11 +51,26 @@ Connectivity Kernel
 .. autoclass:: cellrank.tl.kernels.ConnectivityKernel
     :members:
 
-Palantir Kernel
----------------
+Pseudotime Kernel
+-----------------
 
-.. autoclass:: cellrank.tl.kernels.PalantirKernel
+.. autoclass:: cellrank.tl.kernels.PseudotimeKernel
     :members:
+
+Hard threshold scheme
++++++++++++++++++++++
+
+.. autoclass:: cellrank.tl.kernels.HardThresholdScheme
+    :members:
+    :special-members: __call__
+
+Soft threshold scheme
++++++++++++++++++++++
+
+.. autoclass:: cellrank.tl.kernels.SoftThresholdScheme
+    :members:
+    :special-members: __call__
+
 
 Precomputed Kernel
 ------------------
@@ -105,11 +120,19 @@ Kernel
 
 Similarity scheme
 -----------------
+
 .. autoclass:: cellrank.tl.kernels.SimilaritySchemeABC
     :members:
     :special-members: __call__
     :inherited-members:
 
+
+Threshold scheme
+----------------
+.. autoclass:: cellrank.tl.kernels.ThresholdSchemeABC
+    :members:
+    :special-members: __call__
+    :inherited-members:
 
 BaseModel
 ---------

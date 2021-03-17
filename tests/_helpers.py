@@ -30,7 +30,7 @@ def _jax_not_installed() -> bool:
 
 
 def bias_knn(conn, pseudotime, n_neighbors, k=3):
-    k_thresh = np.min([int(np.floor(n_neighbors / k)) - 1, 30])
+    k_thresh = max(0, min(int(np.floor(n_neighbors / k)) - 1, 30))
     conn_biased = conn.copy()
 
     # check whether the original graph was connected

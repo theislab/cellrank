@@ -62,6 +62,10 @@ References
     *Characterization of cell fate probabilities in single-cell data with Palantir*,
     `Nature Biotechnology <https://doi.org/10.1038/s41587-019-0068-4>`__.
 
+.. [VIA21] Shobana V. Stassen *et al.* (2021),
+    *VIA: Generalized and scalable trajectory inference in single-cell omics data*,
+    `bioRxiv <https://doi.org/10.1101/2021.02.10.430705>`__.
+
 .. [Velten17] Velten, L. *et al.* (2017),
     *Human haematopoietic stem cell lineage commitment is a continuous process.*,
     `Nat Cell Biol 19, 271–281 <https://doi.org/10.1038/ncb3493>`__.

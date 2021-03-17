@@ -44,7 +44,7 @@ if __name__ == "__main__":
             krylov=["pygpcca[slepc]"],
             test=[
                 "pytest>=6.1.1",
-                "pytest-mock>=3.1.0",
+                "pytest-mock>=3.5.1",
                 "pytest-xdist>=2.1.0",
                 "Pillow",
                 "filelock",
