@@ -8,7 +8,6 @@ from typing import (
     List,
     Tuple,
     Union,
-    Literal,
     TypeVar,
     Hashable,
     Iterable,
@@ -17,6 +16,7 @@ from typing import (
 )
 from itertools import tee, product, combinations
 
+from typing_extensions import Literal
 from statsmodels.stats.multitest import multipletests
 
 from anndata import AnnData
