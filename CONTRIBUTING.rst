@@ -80,7 +80,8 @@ under:
 
 You can either open an `issue <https://github.com/theislab/cellrank/issues/new/choose>`_ with a suggestion or
 directly submit a `PR <https://github.com/theislab/cellrank/pulls>`_ containing the new addition.
-
+Furthermore, external package dependencies should be added to
+`setup.py's <setup.py>`_ ``'external'`` in ``extras_require``.
 
 Running tests
 ~~~~~~~~~~~~~

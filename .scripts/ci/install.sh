@@ -3,7 +3,7 @@
 set -ev
 
 python -m pip install --upgrade pip
-pip install pytest-cov codecov jax jaxlib
+pip install codecov
 
 if [[ "$OS" == "macos-latest" ]]; then
   pip install -e".[test,external]"
