@@ -1660,8 +1660,11 @@ def cyto_trace(
 
             - `'cytotrace'`: the normalized CytoTRACE score.
             - `'cytotrace_pseudotime'`: associated pseudotime, essentially (1 - CytoTRACE score).
+            - `'num_exp_genes'`: the number of genes expressed per cell, basis of the CytoTRACE score.
 
-        Also, modifies :attr:`anndata.AnnData.var` with the following keys:
+        Modifies :attr:`anndata.AnnData.var` with the following keys:
+            -  `'used_for_cytotrace'`: indication of the genes used to compute the CytoTRACE score, i.e. the ones that
+                correlated best with `'num_exp_genes'`.
 
     Example
     -------
@@ -1704,14 +1707,14 @@ def cyto_trace(
     logg.debug("Finding the top `200` most correlated genes")
     adata.var["gene_corr"] = gene_corr
     top_200 = adata.var.sort_values(by="gene_corr", ascending=False).index[:200]
-    adata.var["correlates"] = False
-    adata.var.loc[top_200, "correlates"] = True
+    adata.var["used_for_cytotrace"] = False
+    adata.var.loc[top_200, "used_for_cytotrace"] = True
 
     # compute mean/median over top 200 genes, aggregate over genes and shift to [0, 1] range
     logg.debug(
         f"Aggregating imputed gene expression using aggregation `{aggregation}` in layer `{layer}`"
     )
-    corr_mask = adata.var["correlates"]
+    corr_mask = adata.var["used_for_cytotrace"]
     imputed_exp = (
         adata[:, corr_mask].X if layer == "X" else adata[:, corr_mask].layers[layer]
     )
