@@ -1632,15 +1632,18 @@ def cyto_trace(
     use_raw: bool = True,
 ) -> None:
     """
-    Re-implementation of the CytoTRACE algorithm [Cyto20]_ to infer cell plasticity.
+    Re-implementation of the CytoTRACE algorithm [Cyto20]_ to estimate cellular plasticity.
 
-    Finds the top 200 genes correlated with #genes/cell and computes their (imputed) mean or median expression.
+    Computes the number of genes expressed per cell and ranks genes according to their correlation with this measure.
+    Next, it selects to top-correlating genes and aggregates their (imputed) expression to obtain the CytoTRACE score. A
+    high score stands for high differentiation potential (naive, plastic cells) and a low score stands for low
+    differentiation potential (mature, differentiation cells).
 
     Parameters
     ----------
     %(adata)s
     aggregation
-        Valid options are:
+        How to aggregate expression of the top-correlating genes. Valid options are:
 
             - `'mean'`: arithmetic mean.
             - `'median'`: median.
@@ -1653,11 +1656,12 @@ def cyto_trace(
     Returns
     -------
     None
-        Nothing, just modifies the :attr:`anndata.AnnData.obs` with the following keys:
+        Nothing, just modifies :attr:`anndata.AnnData.obs` with the following keys:
 
-            - `'gcs'`: the normalized cytotrace score.
-            - `'gcs_pseudotime'`: the pseudotime derived from the cytotrace score.
-            - TODO: the rest
+            - `'cytotrace'`: the normalized CytoTRACE score.
+            - `'cytotrace_pseudotime'`: associated pseudotime, essentially (1 - CytoTRACE score).
+
+        Also, modifies :attr:`anndata.AnnData.var` with the following keys:
 
     Example
     -------
@@ -1668,7 +1672,6 @@ def cyto_trace(
 
         adata = cr.datasets.pancreas()
         scv.pp.moments(adata)
-        cr.tl.cyto_trace(adata)
     """
     # check use_raw
     if use_raw and adata.raw is None:
@@ -1728,7 +1731,7 @@ def cyto_trace(
     # scale to 0-1 range
     gcs -= np.min(gcs)
     gcs /= np.max(gcs)
-    adata.obs["gcs"] = gcs
-    adata.obs["gcs_pseudotime"] = 1 - gcs
+    adata.obs["cytotrace"] = gcs
+    adata.obs["cytotrace_pseudotime"] = 1 - gcs
 
     logg.info("    Finish", time=start)
