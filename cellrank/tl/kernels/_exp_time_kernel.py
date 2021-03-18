@@ -105,7 +105,10 @@ class ExperimentalTimeKernel(Kernel):
         )
 
         biased_conn = HardThresholdScheme().bias_knn(
-            self._conn.copy(), exp_time, k=1, n_neighs=1
+            self._conn.copy(),
+            exp_time,
+            k=3,
+            n_neighs=30,
         )
         biased_conn = biased_conn.astype(_dtype)
 
