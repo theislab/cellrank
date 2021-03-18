@@ -103,7 +103,7 @@ under:
 - `cellrank/external/estimators <cellrank/external/estimators>`_: if adding an external estimator.
 - `cellrank/external/models <cellrank/external/models>`_: if adding an external model.
 
-You can either open an `issue <https://github.com/theislab/cellrank/issues/new/choose>`_ with a suggestion or
+You can either open an `issue <https://github.com/theislab/cellrank/issues/new/choose>`__ with a suggestion or
 directly submit a `PR <https://github.com/theislab/cellrank/pulls>`_ containing the new addition.
 Furthermore, external package dependencies should be added to
 `setup.py's <setup.py>`_ ``'external'`` in ``extras_require``.
@@ -181,10 +181,10 @@ Below is an example of how a docstring should look like::
 
 Making use of GitHub issues/discussions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Most discussions regarding CellRank takes place either through GitHub's
-`issues <https://github.com/theislab/cellrank/issues>`_ or `discussions <https://github.com/theislab/cellrank/discussions>`_.
-Issues are used mostly for feature requests or for fixing bugs, whereas both of them can be used to ask conceptual
-questions, question about applications or just to exchange ideas.
+Opening an `issue <https://github.com/theislab/cellrank/issues>`__ or
+starting a `discussion <https://github.com/theislab/cellrank/discussions>`_ is the primary way to get help.
+Issues are used mostly for feature requests or for fixing bugs, whereas discussions can be used to ask conceptual
+questions, algorithmic/biological questions or just to exchange ideas.
 
 Maintainer notes
 ~~~~~~~~~~~~~~~~
