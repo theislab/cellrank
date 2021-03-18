@@ -32,7 +32,6 @@ This module offers a high-level API to compute cell fates and driver genes.
 .. autosummary::
     :toctree: api
 
-    tl.cyto_trace
     tl.transition_matrix
     tl.initial_states
     tl.terminal_states

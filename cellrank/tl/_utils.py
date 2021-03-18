@@ -16,7 +16,6 @@ from typing import (
 )
 from itertools import tee, product, combinations
 
-from typing_extensions import Literal
 from statsmodels.stats.multitest import multipletests
 
 from anndata import AnnData
@@ -24,7 +23,7 @@ from anndata import AnnData
 import numpy as np
 import pandas as pd
 from pandas import Series
-from scipy.stats import norm, gmean, hmean
+from scipy.stats import norm
 from numpy.linalg import norm as d_norm
 from scipy.sparse import eye as speye
 from scipy.sparse import diags, issparse, spmatrix, csr_matrix, isspmatrix_csr
@@ -1622,113 +1621,3 @@ def _create_initial_terminal_annotations(
     # write to AnnData
     adata.obs[key_added] = cats_merged
     adata.uns[f"{key_added}_colors"] = colors_merged
-
-
-@d.dedent
-def cyto_trace(
-    adata: AnnData,
-    layer: str = "Ms",
-    aggregation: Literal["mean", "median", "hmean", "gmean"] = "mean",
-    use_raw: bool = True,
-) -> None:
-    """
-    Re-implementation of the CytoTRACE algorithm [Cyto20]_ to estimate cellular plasticity.
-
-    Computes the number of genes expressed per cell and ranks genes according to their correlation with this measure.
-    Next, it selects to top-correlating genes and aggregates their (imputed) expression to obtain the CytoTRACE score. A
-    high score stands for high differentiation potential (naive, plastic cells) and a low score stands for low
-    differentiation potential (mature, differentiation cells).
-
-    Note that this will not exactly reproduce the results of the original CytoTRACE algorithm [Cyto20]_ because we
-    allow for any normalization and imputation techniques whereae CytoTRACE has build-in specific methods for that.
-
-    Parameters
-    ----------
-    %(adata)s
-    aggregation
-        How to aggregate expression of the top-correlating genes. Valid options are:
-
-            - `'mean'`: arithmetic mean.
-            - `'median'`: median.
-            - `'gmean'`: geometric mean.
-            - `'hmean'`: harmonic mean.
-
-    use_raw
-        Whether to use the :attr:`anndata.AnnData.raw` to compute the number of genes expressed per cell (#genes/cell)
-        and the correlation of gene expression across cells with #genes/cell.
-
-    Returns
-    -------
-    None
-        Nothing, just modifies :attr:`anndata.AnnData.obs` with the following keys:
-
-            - `'cytotrace'`: the normalized CytoTRACE score.
-            - `'cytotrace_pseudotime'`: associated pseudotime, essentially (1 - CytoTRACE score).
-            - `'num_exp_genes'`: the number of genes expressed per cell, basis of the CytoTRACE score.
-
-        Modifies :attr:`anndata.AnnData.var` with the following keys:
-            -  `'used_for_cytotrace'`: indication of the genes used to compute the CytoTRACE score, i.e. the ones that
-                correlated best with `'num_exp_genes'`.
-    """
-    # check use_raw
-    if use_raw and adata.raw is None:
-        logg.warning("`adata.raw` is `None`. Setting `use_raw=False`")
-        use_raw = False
-
-    adata_mraw = adata.raw if use_raw else adata
-    if layer != "X" and layer not in adata.layers:
-        raise KeyError(
-            f"Unable to find `{layer!r}` in `adata.layers`. "
-            f"Valid option are: `{sorted({'X'} | set(adata.layers.keys()))}`."
-        )
-
-    start = logg.info(f"Computing CytoTrace score with `{adata.n_vars}` genes")
-    if adata.n_vars < 10000:
-        logg.warning("Consider using more genes")
-
-    # compute number of expressed genes per cell
-    logg.debug(f"Computing number of genes expressed per cell with `use_raw={use_raw}`")
-    num_exp_genes = np.array((adata_mraw.X > 0).sum(axis=1)).reshape(-1)
-    adata.obs["num_exp_genes"] = num_exp_genes
-
-    # compute correlation with all genes
-    logg.debug("Correlating all genes with number of genes expressed per cell")
-    gene_corr, _, _, _ = _correlation_test_helper(
-        adata_mraw.X.T, num_exp_genes[:, None]
-    )
-
-    # annotate the top 200 genes in terms of correlation
-    logg.debug("Finding the top `200` most correlated genes")
-    adata.var["gene_corr"] = gene_corr
-    top_200 = adata.var.sort_values(by="gene_corr", ascending=False).index[:200]
-    adata.var["used_for_cytotrace"] = False
-    adata.var.loc[top_200, "used_for_cytotrace"] = True
-
-    # compute mean/median over top 200 genes, aggregate over genes and shift to [0, 1] range
-    logg.debug(
-        f"Aggregating imputed gene expression using aggregation `{aggregation}` in layer `{layer}`"
-    )
-    corr_mask = adata.var["used_for_cytotrace"]
-    imputed_exp = (
-        adata[:, corr_mask].X if layer == "X" else adata[:, corr_mask].layers[layer]
-    )
-
-    # aggregate across the top 200 genes
-    if aggregation == "mean":
-        cytotrace_score = np.mean(imputed_exp, axis=1)
-    elif aggregation == "median":
-        cytotrace_score = np.median(imputed_exp, axis=1)
-    elif aggregation == "gmean":
-        cytotrace_score = gmean(imputed_exp, axis=1)
-    elif aggregation == "hmean":
-        cytotrace_score = hmean(imputed_exp, axis=1)
-    else:
-        raise ValueError(f"Aggregation method `{aggregation}` not found. ")
-
-    # scale to 0-1 range
-    cytotrace_score -= np.min(cytotrace_score)
-    cytotrace_score /= np.max(cytotrace_score)
-    adata.obs["cytotrace"] = cytotrace_score
-    adata.obs["cytotrace_pseudotime"] = 1 - cytotrace_score
-
-    logg.info("    Finish", time=start)
