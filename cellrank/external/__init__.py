@@ -1,3 +1,1 @@
-import cellrank.external.models
-import cellrank.external.kernels
-import cellrank.external.estimators
+from cellrank.external import models, kernels, estimators
