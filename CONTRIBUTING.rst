@@ -17,7 +17,7 @@ Table of Contents
 - `Documentation`_
 
   - `Building documentation`_
-  - `Writing docstrings`_
+  - `Writing documentation`_
 
 - `Making use of GitHub issues/discussions`_
 - `Maintainer notes`_
@@ -144,20 +144,73 @@ If you need to clean the artifacts from previous documentation builds, run::
 
     tox -e clean-docs
 
-Writing docstrings
-------------------
-TODO.
+Writing documentation
+---------------------
+We use ``numpy``-style docstrings for the documentation with the following additions and modifications:
+
+- no type hints in the docstring (optionally applies also for the return statement) are allowed,
+  since all functions are required to have the type hints in their signatures.
+- when referring to some argument within the same docstring, enclose that reference in \`\`.
+- when referring to an argument of a class from within that class, use ``:paramref:`attribute```.
+- optional, but recommended: when referring to attributes of a foreign class, use ``:attr:`qualified_name```, such as
+  ``:attr:`anndata.AnnData.obs```.
+- use ``docrep`` for repeating documentation.
+
+Below is an example of how a docstring should look like::
+
+    from cellrank.ul._docs import d
+
+    @d.dedent  # using docrep to interpolate %(adata)s
+    def some_function(adata: AnnData, key: str) -> float:
+        """
+        This is a short one-line header.
+
+        Here you can add multi-paragraph explanation, if needed.
+
+        Parameters
+        ----------
+        %(adata)s
+        key
+            Some key in :attr:`anndata.AnnData.obs`.
+
+        Returns
+        --------
+        Some return description.
+        """
 
 Making use of GitHub issues/discussions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-TODO.
+Most discussions regarding CellRank takes place either through GitHub's
+`issues <https://github.com/theislab/cellrank/issues>`_ or `discussions <https://github.com/theislab/cellrank/discussions>`_.
+Issues are used mostly for feature requests or for fixing bugs, whereas both of them can be used to ask conceptual
+questions, question about applications or just to exchange ideas.
 
 Maintainer notes
 ~~~~~~~~~~~~~~~~
 
 Making a new release
 --------------------
-TODO.
+New release is always created when new tag is pushed to GitHub. When that happens, a new CI job starts the
+testing machinery. If all the tests pass, new release will be created on PyPI. Bioconda will automatically pick-up that
+a new release has been made and an automatic PR will be made to
+`bioconda-recipes <https://github.com/bioconda/bioconda-recipes/pulls>`_.
+Extra care has to be taken when updating runtime dependencies - this is not automatically picked up by Bioconda
+and a separate PR with the updated ``recipe.yaml`` will have to be made.
+
+To make creating new release as easy as possible, we use ``bump2version``, which can be installed as::
+
+    pip install bump2version
+
+Depending on what part of the version you want to update, you can run::
+
+    bump2version {major,minor,patch}
+
+By default, this will create a new tag, automatically update the ``__version__`` wherever necessary and commit the
+changes. Afterwards, you can just push the changes to upstream by running::
+
+    git push --atomic <branch> <tag>
+
+or set ``push.followtags=true`` in your git config and do a regular ``git push``.
 
 Troubleshooting
 ~~~~~~~~~~~~~~~
@@ -175,6 +228,6 @@ Troubleshooting
 
     git commit --no-verify
 
-- **I have another unspecified issue**
+- **I have an issue which this section does not solve**
 
-  See `Making use of GitHub issues/discussions`_ on how to create a new issue/launch a discussion.
+  Please see `Making use of GitHub issues/discussions`_ on how to create a new issue or how to start a discussion.
