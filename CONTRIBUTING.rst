@@ -19,6 +19,7 @@ Table of Contents
   - `Building documentation`_
   - `Writing documentation`_
 
+- `Tutorials/examples`_
 - `Making use of GitHub issues/discussions`_
 - `Maintainer notes`_
 
@@ -47,7 +48,7 @@ The CellRank is structured as follows:
 
 - `cellrank <cellrank>`_: the root of the package.
 
-  - `cellrank/datasets <cellrank/datasets>`_: contains datasets available for download.
+  - `cellrank/datasets <cellrank/datasets>`__: contains datasets that are available for download.
   - `cellrank/external <cellrank/external>`_: contains all external kernels/estimators/models.
   - `cellrank/pl <cellrank/pl>`_: the plotting module, containing high level plotting functions.
   - `cellrank/tl <cellrank/tl>`_: the tools module, containing high-level tool functions, linear solvers, etc.
@@ -66,10 +67,9 @@ The CellRank is structured as follows:
 
 - `tests <tests>`_: unit tests, see `Running tests`_ for more information.
 - `docs <docs>`_: documentation, see `Documentation`_ for more.
-- `examples <examples>`_: the examples as seen in the
-  `documentation <https://cellrank.readthedocs.io/en/latest/auto_examples/index.html>`__.
-  While our tutorials focus on an entire workflow or module of CellRank, i.e. using RNA velocity and similarity
-  to compute terminal states, examples focus on a single function/method and show how it can be used in practice.
+- `examples <examples>`__: the examples as seen in the
+  `documentation <https://cellrank.readthedocs.io/en/latest/auto_examples/index.html>`__, see `Tutorials/examples`_
+  for more information.
 
 Adding new features
 ~~~~~~~~~~~~~~~~~~~
@@ -178,6 +178,7 @@ Below is an example of how a docstring should look like::
         Some return description.
         """
 
+
 Making use of GitHub issues/discussions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Most discussions regarding CellRank takes place either through GitHub's
@@ -211,6 +212,24 @@ changes. Afterwards, you can just push the changes to upstream by running::
     git push --atomic <branch> <tag>
 
 or set ``push.followtags=true`` in your git config and do a regular ``git push``.
+
+Tutorials/examples
+~~~~~~~~~~~~~~~~~~
+While our tutorials focus on an entire workflow or module of CellRank, i.e. using RNA velocity and similarity
+to compute terminal states, examples focus on a single function/method and show how it can be used in practice.
+
+The tutorials are hosted in a separate `repo <https://github.com/theislab/cellrank_notebooks>`_, whereas examples
+are hosted in this repo, under `examples <examples>`__. Both tutorials and examples use already preprocessed datasets
+from `cellrank/datasets <cellrank/datasets>`__, with precomputed attributes, such as velocities, pseudotime, etc.
+
+If you wish to contribute your own example (e.g. for an external kernel), you just need to write a ``.py`` file, similar
+to `this <cellrank/examples/other/compute_kernel_tricks.py>`_.
+The filenames should be prefixed with either ``compute_`` or ``plot_``, depending on what they do (i.e. they either show
+some computational functionality or a plotting functionality).
+
+Tutorials, on the other hand, are written as Jupyter notebooks. However, they are still tested on the CI to make sure
+they run properly with the newest version of CellRank. Since these require more effort than examples, it's best to first
+start a new issue/discussion before adding them, see also `Making use of GitHub issues/discussions`_.
 
 Troubleshooting
 ~~~~~~~~~~~~~~~
