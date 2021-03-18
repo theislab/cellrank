@@ -32,6 +32,27 @@ class CytoTRACEKernel(PseudotimeKernel):
         since it does not use sparse implementation.
     kwargs
         Keyword arguments for :func:`cellrank.tl.cyto_trace`.
+
+    Example
+    -------
+    Workflow::
+
+        import scvelo as scv
+        import cellrank as cr
+
+        adata = cr.datasets.pancreas()
+
+        sc.pp.filter_genes(adata, min_cells=10)
+        adata.raw = adata.copy()
+        sc.pp.normalize_total(adata)
+        sc.pp.log1p(adata)
+        sc.pp.highly_variable_genes(adata)
+
+        # if you don't have spliced/unspliced counts, use the following hack to get scvelo's moments function working:
+        adata.layers['spliced'] = adata.X
+        adata.layers['unspliced'] = adata.X
+
+        scv.pp.moments(adata, n_pcs=None, n_neighbors=None)
     """
 
     def __init__(

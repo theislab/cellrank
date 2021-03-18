@@ -1669,16 +1669,6 @@ def cyto_trace(
         Modifies :attr:`anndata.AnnData.var` with the following keys:
             -  `'used_for_cytotrace'`: indication of the genes used to compute the CytoTRACE score, i.e. the ones that
                 correlated best with `'num_exp_genes'`.
-
-    Example
-    -------
-    Workflow::
-
-        import scvelo as scv
-        import cellrank as cr
-
-        adata = cr.datasets.pancreas()
-        scv.pp.moments(adata)
     """
     # check use_raw
     if use_raw and adata.raw is None:
