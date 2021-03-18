@@ -325,17 +325,20 @@ class TestInitializeKernel:
     def test_repr(self, adata: AnnData):
         rpr = repr(VelocityKernel(adata))
 
-        assert rpr == "<Velo>"
+        assert rpr == f"<{VelocityKernel.__name__}>"
 
     def test_repr_inv(self, adata: AnnData):
         rpr = repr(~VelocityKernel(adata))
 
-        assert rpr == "~<Velo>"
+        assert rpr == f"~<{VelocityKernel.__name__}>"
 
     def test_repr_inv_comb(self, adata: AnnData):
         rpr = repr(~(VelocityKernel(adata) + ConnectivityKernel(adata)))
 
-        assert rpr == "~((1 * <Velo>) + (1 * <Conn>))"
+        assert (
+            rpr
+            == f"~((1 * <{VelocityKernel.__name__}>) + (1 * <{ConnectivityKernel.__name__}>))"
+        )
 
     def test_str_repr_equiv_no_transition_matrix(self, adata: AnnData):
         vk = VelocityKernel(adata)
@@ -343,19 +346,24 @@ class TestInitializeKernel:
         rpr = repr(vk)
 
         assert string == rpr
-        assert string == "<Velo>"
+        assert string == f"<{VelocityKernel.__name__}>"
 
     def test_str(self, adata: AnnData):
         string = str(ConnectivityKernel(adata).compute_transition_matrix())
 
-        assert string == "<Conn[dnorm=True, key=connectivities]>"
+        assert (
+            string == f"<{ConnectivityKernel.__name__}[dnorm=True, key=connectivities]>"
+        )
 
     def test_str_inv(self, adata: AnnData):
         string = str(
             ConnectivityKernel(adata, backward=True).compute_transition_matrix()
         )
 
-        assert string == "~<Conn[dnorm=True, key=connectivities]>"
+        assert (
+            string
+            == f"~<{ConnectivityKernel.__name__}[dnorm=True, key=connectivities]>"
+        )
 
     def test_combination_correct_parameters(self, adata: AnnData):
         from cellrank.tl.kernels import CosineScheme
@@ -431,7 +439,10 @@ class TestKernel:
         assert pk.adata.obs.shape == (50, 0)
         assert pk.adata.var.shape == (1, 0)
         assert "T_fwd_params" in pk.adata.uns.keys()
-        assert pk.adata.uns["T_fwd_params"] == "<Precomputed[origin='array']>"
+        assert (
+            pk.adata.uns["T_fwd_params"]
+            == f"<{PrecomputedKernel.__name__}[origin='array']>"
+        )
         np.testing.assert_array_equal(
             pk.adata.obsp["T_fwd"].toarray(), pk.transition_matrix.toarray()
         )
