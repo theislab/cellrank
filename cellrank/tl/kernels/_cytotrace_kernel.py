@@ -167,9 +167,10 @@ class CytoTRACEKernel(PseudotimeKernel):
                 f"Valid option are: `{sorted({'X'} | set(self.adata.layers.keys()))}`."
             )
 
-        start = logg.info(f"Computing CytoTRACE score with `{self.adata.n_vars}` genes")
+        msg = f"Computing CytoTRACE score with `{self.adata.n_vars}` genes"
         if self.adata.n_vars < 10000:
-            logg.warning("Consider using more than `10000` genes")
+            msg += ". Consider using more than `10000` genes"
+        start = logg.info(msg)
 
         # compute number of expressed genes per cell
         logg.debug(
@@ -214,4 +215,19 @@ class CytoTRACEKernel(PseudotimeKernel):
         self.adata.obs[_ct("score")] = cytotrace_score
         self.adata.obs[_ct("pseudotime")] = 1 - cytotrace_score
 
-        logg.info("    Finish", time=start)
+        self.adata.uns[_ct("params")] = {
+            "aggregation": aggregation.s,
+            "layer": layer,
+            "use_raw": use_raw,
+        }
+
+        logg.info(
+            f"Adding `adata.obs[{_ct('score')!r}]`\n"
+            f"       `adata.obs[{_ct('pseudotime')!r}]`\n"
+            f"       `adata.obs[{_ct('num_exp_genes')!r}]`\n"
+            f"       `adata.var[{_ct('gene_corr')!r}]`\n"
+            f"       `adata.var[{_ct('correlates')!r}]`\n"
+            f"       `adata.uns[{_ct('params')!r}]`\n"
+            f"    Finish",
+            time=start,
+        )
