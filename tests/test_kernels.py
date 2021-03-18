@@ -1,4 +1,4 @@
-from typing import Tuple, Callable
+from typing import Tuple, Callable, Optional
 
 import pytest
 from _helpers import (
@@ -24,6 +24,7 @@ from cellrank.tl.kernels import (
     PrecomputedKernel,
     ConnectivityKernel,
 )
+from cellrank.tl._constants import _transition
 from cellrank.tl.kernels._base_kernel import KernelAdd, KernelMul, _is_bin_mult
 
 _rtol = 1e-6
@@ -431,7 +432,7 @@ class TestKernel:
         assert pk.adata.obs.shape == (50, 0)
         assert pk.adata.var.shape == (1, 0)
         assert "T_fwd_params" in pk.adata.uns.keys()
-        assert pk.adata.uns["T_fwd_params"] == "<Precomputed[origin='array']>"
+        assert pk.adata.uns["T_fwd_params"] == {"params": pk.params}
         np.testing.assert_array_equal(
             pk.adata.obsp["T_fwd"].toarray(), pk.transition_matrix.toarray()
         )
@@ -1269,6 +1270,63 @@ class TestVelocityScheme:
 
         assert vk.params["mode"] == "monte_carlo"
         assert vk.params["scheme"] == str(CustomFunc())
+
+
+class TestComputeProjection:
+    def test_no_transition_matrix(self, adata: AnnData):
+        with pytest.raises(RuntimeError, match=r"Compute transition matrix first as"):
+            cr.tl.kernels.ConnectivityKernel(adata).compute_projection()
+
+    def test_no_basis(self, adata: AnnData):
+        ck = cr.tl.kernels.ConnectivityKernel(adata).compute_transition_matrix()
+        with pytest.raises(KeyError, match=r"Unable to find a basis in"):
+            ck.compute_projection(basis="foo")
+
+    def test_basis_prefix(self, adata: AnnData):
+        ck = cr.tl.kernels.ConnectivityKernel(adata).compute_transition_matrix()
+        ck.compute_projection(basis="X_umap")
+
+    @pytest.mark.parametrize("write_first", [True, False])
+    def test_write_to_adata(self, adata: AnnData, write_first: bool):
+        ck = cr.tl.kernels.ConnectivityKernel(adata).compute_transition_matrix()
+        if write_first:
+            ck.write_to_adata()
+            ck.compute_projection(basis="umap")
+        else:
+            ck.compute_projection(basis="umap")
+            ck.write_to_adata()
+
+        assert adata.uns[_transition(ck._direction) + "_params"] == {
+            "params": ck.params,
+            "embeddings": ["umap"],
+        }
+
+    @pytest.mark.parametrize("key_added", [None, "foo"])
+    def test_key_added(self, adata: AnnData, key_added: Optional[str]):
+        ck = cr.tl.kernels.ConnectivityKernel(adata).compute_transition_matrix()
+        ck.compute_projection(basis="umap", copy=False, key_added=key_added)
+
+        key = key_added if key_added is not None else _transition(ck._direction)
+        ukey = f"{key}_params"
+        key = f"{key}_umap"
+
+        assert adata.uns[ukey] == {"embeddings": ["umap"]}
+        np.testing.assert_array_equal(adata.obsm[key].shape, adata.obsm["X_umap"].shape)
+
+    @pytest.mark.parametrize("copy", [True, False])
+    def test_copy(self, adata: AnnData, copy: bool):
+        ck = cr.tl.kernels.ConnectivityKernel(adata).compute_transition_matrix()
+        res = ck.compute_projection(basis="umap", copy=copy)
+
+        if copy:
+            assert isinstance(res, np.ndarray)
+            np.testing.assert_array_equal(res.shape, adata.obsm["X_umap"].shape)
+        else:
+            assert res is None
+            key = _transition(ck._direction) + "_umap"
+            np.testing.assert_array_equal(
+                adata.obsm[key].shape, adata.obsm["X_umap"].shape
+            )
 
 
 class TestPseudotimeKernelScheme:
