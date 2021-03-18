@@ -12,7 +12,7 @@ class ImportErrorMixin:
     args
         Ignored.
     kwargs
-        Ignore.
+        Ignored.
 
     Raises
     ------
@@ -20,7 +20,7 @@ class ImportErrorMixin:
         Always.
     """
 
-    __import_error_message__ = "Unable to import the kernel."
+    __import_error_message__ = "Unable to import the class."
 
     def __init__(self, *args: Any, **kwargs: Any):
         raise ImportError(self.__import_error_message__) from self.__error__

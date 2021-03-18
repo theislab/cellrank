@@ -11,10 +11,19 @@ Table of Contents
 - `Adding new features`_
 
   - `Adding external tools`_
-  - `Creating new kernel`_
+  - `Creating a new kernel`_
 
 - `Running tests`_
-- `Building documentation`_
+- `Documentation`_
+
+  - `Building documentation`_
+  - `Writing docstrings`_
+
+- `Making use of GitHub issues/discussions`_
+- `Maintainer notes`_
+
+  - `Making a new release`_
+
 - `Troubleshooting`_
 
 Introduction
@@ -43,25 +52,41 @@ The CellRank is structured as follows:
   - `cellrank/pl <cellrank/pl>`_: the plotting module, containing high level plotting functions.
   - `cellrank/tl <cellrank/tl>`_: the tools module, containing high-level tool functions, linear solvers, etc.
 
-    - `cellrank/tl/kernels <cellrank/tl/kernels>`_: contains classes that create transition matrices.
-    - `cellrank/tl/estimators <cellrank/tl/estimators>`_: contains classes which estimate fate probabilities based on kernels.
+    - `cellrank/tl/kernels <cellrank/tl/kernels>`_: contains classes that create transition matrices based on
+      various input features, such as transcriptomic or spatial similarities, RNA velocity, pseudotime, etc.
+    - `cellrank/tl/estimators <cellrank/tl/estimators>`_: contains classes with perform computations on Markov chains
+      defined through the transition matrices obtained in the previous step through one or several kernels.
+      These computations usually involve high-level abstractions of the Markov chains, such as coarse-graining
+      into macrostates, finding initial and terminal states, estimating fate probabilities, etc.
 
-  - `cellrank/ul <cellrank/ul>`_: the utilities modules, containing mostly models for gene trend smoothing, parallelization, etc.
+  - `cellrank/ul <cellrank/ul>`_: the utilities modules, containing mostly models for gene trend smoothing,
+    parallelization, etc.
 
     - `cellrank/ul/models <cellrank/ul/models>`_: contains classes that compute smoothed gene expression trends.
 
 - `tests <tests>`_: unit tests, see `Running tests`_ for more information.
-- `docs <docs>`_: documentation, see `Building documentation`_ for more.
+- `docs <docs>`_: documentation, see `Documentation`_ for more.
 - `examples <examples>`_: the examples as seen in the
-  `documentation <https://cellrank.readthedocs.io/en/latest/auto_examples/index.html>`_.
+  `documentation <https://cellrank.readthedocs.io/en/latest/auto_examples/index.html>`__.
+  While our tutorials focus on an entire workflow or module of CellRank, i.e. using RNA velocity and similarity
+  to compute terminal states, examples focus on a single function/method and show how it can be used in practice.
 
 Adding new features
 ~~~~~~~~~~~~~~~~~~~
 We welcome every contribution to CellRank, whether it's a new kernel/estimator/model,
 or a new high-level function/modified functionality. Below, we mostly focus on kernels.
 
-Creating new kernel
--------------------
+Creating a new kernel
+---------------------
+Creating a new kernel is the primary way to interface with CellRank if you have created a method which computes a
+transition matrix among single-cells. This can be based on any input features that are measured in an experiment, such
+as transcriptional similarity, chromatin accessibility, RNA velocity, experimental timepoints, metabolic labeling, etc.
+
+If you have already implemented your method in a separate package, it can be wrapped in a CellRank kernel which will
+prompt the user to install you package upon initialization, hence boosting your package download numbers.
+Making your package available through a CellRank kernel will give it more visibility and allow users to benefit
+from all of CellRank's downstream functionalities available through estimators.
+
 If you'd like to contribute a new kernel to CellRank, either as a part of an external package or not,
 we have created a short, 5 minute `tutorial <https://cellrank.readthedocs.io/en/latest/creating_new_kernel.html>`_
 that shows you how to do it.
@@ -104,8 +129,11 @@ run only tests in the file::
 
     tox -e py38-linux -- tests/test_kernels.py
 
+Documentation
+~~~~~~~~~~~~~
+
 Building documentation
-~~~~~~~~~~~~~~~~~~~~~~
+----------------------
 In order to build the documentation, run one of the commands below,
 depending on whether you also want to build the examples::
 
@@ -115,6 +143,21 @@ depending on whether you also want to build the examples::
 If you need to clean the artifacts from previous documentation builds, run::
 
     tox -e clean-docs
+
+Writing docstrings
+------------------
+TODO.
+
+Making use of GitHub issues/discussions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+TODO.
+
+Maintainer notes
+~~~~~~~~~~~~~~~~
+
+Making a new release
+--------------------
+TODO.
 
 Troubleshooting
 ~~~~~~~~~~~~~~~
@@ -131,3 +174,7 @@ Troubleshooting
   Sometimes, it can be hard to satisfy the linting step. You can temporarily bypass it by committing as::
 
     git commit --no-verify
+
+- **I have another unspecified issue**
+
+  See `Making use of GitHub issues/discussions`_ on how to create a new issue/launch a discussion.
