@@ -1639,6 +1639,9 @@ def cyto_trace(
     high score stands for high differentiation potential (naive, plastic cells) and a low score stands for low
     differentiation potential (mature, differentiation cells).
 
+    Note that this will not exactly reproduce the results of the original CytoTRACE algorithm [Cyto20]_ because we
+    allow for any normalization and imputation techniques whereae CytoTRACE has build-in specific methods for that.
+
     Parameters
     ----------
     %(adata)s

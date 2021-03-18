@@ -12,7 +12,12 @@ from cellrank.tl.kernels._pseudotime_kernel import PseudotimeKernel
 @d.dedent
 class CytoTRACEKernel(PseudotimeKernel):
     """
-    TODO.
+    Kernel which computes directed transition probabilities based on a KNN graph and the CytoTRACE score [Cyto20]_.
+
+    The KNN graph contains information about the (undirected) connectivities among cells, reflecting their similarity.
+    CytoTRACE can be used to estimate cellular plasticity and in turn, a pseudotemporal ordering of cells from more
+    plactic to less plastic states. This kernel internally uses the `PseudotimeKernel` to direct the KNN graph on
+    the basis of the CytoTRACE-derived pseudotime.
 
     %(density_correction)s
 
