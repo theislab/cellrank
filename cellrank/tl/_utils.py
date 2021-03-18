@@ -1721,20 +1721,20 @@ def cyto_trace(
 
     # aggregate across the top 200 genes
     if aggregation == "mean":
-        gcs = np.mean(imputed_exp, axis=1)
+        cytotrace_score = np.mean(imputed_exp, axis=1)
     elif aggregation == "median":
-        gcs = np.median(imputed_exp, axis=1)
+        cytotrace_score = np.median(imputed_exp, axis=1)
     elif aggregation == "gmean":
-        gcs = gmean(imputed_exp, axis=1)
+        cytotrace_score = gmean(imputed_exp, axis=1)
     elif aggregation == "hmean":
-        gcs = hmean(imputed_exp, axis=1)
+        cytotrace_score = hmean(imputed_exp, axis=1)
     else:
         raise ValueError(f"Aggregation method `{aggregation}` not found. ")
 
     # scale to 0-1 range
-    gcs -= np.min(gcs)
-    gcs /= np.max(gcs)
-    adata.obs["cytotrace"] = gcs
-    adata.obs["cytotrace_pseudotime"] = 1 - gcs
+    cytotrace_score -= np.min(cytotrace_score)
+    cytotrace_score /= np.max(cytotrace_score)
+    adata.obs["cytotrace"] = cytotrace_score
+    adata.obs["cytotrace_pseudotime"] = 1 - cytotrace_score
 
     logg.info("    Finish", time=start)
