@@ -1651,7 +1651,8 @@ def cyto_trace(
             - `'hmean'`: harmonic mean.
 
     use_raw
-        Whether to use the :attr:`anndata.AnnData.raw` or not.
+        Whether to use the :attr:`anndata.AnnData.raw` to compute the number of genes expressed per cell (#genes/cell)
+        and the correlation of gene expression across cells with #genes/cell.
 
     Returns
     -------
