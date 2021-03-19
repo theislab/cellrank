@@ -1446,10 +1446,18 @@ class TestCytoTRACEKernel:
         pt = adata.obs[_ct("pseudotime")].values
         np.testing.assert_array_equal(np.max(pt) - pt, k.pseudotime)
 
-    def test_regression(self, adata_large: AnnData):
+    def test_regression_score(self, adata_large: AnnData):
         _ = CytoTRACEKernel(adata_large, use_raw=False)
 
         ct_score_expected = adata_large.obs["ct_score_ground_truth"].values
         ct_score_actual = adata_large.obs["ct_score"].values
 
         np.testing.assert_array_equal(ct_score_actual, ct_score_expected)
+
+    def test_regression_gene_corr(self, adata_large: AnnData):
+        _ = CytoTRACEKernel(adata_large, use_raw=False)
+
+        gene_corr_expected = adata_large.var["gene_corr_ground_truth"].values
+        gene_corr_actual = adata_large.var["gene_corr"].values
+
+        np.testing.assert_array_equal(gene_corr_actual, gene_corr_expected)
