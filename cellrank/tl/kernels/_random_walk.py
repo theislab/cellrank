@@ -1,7 +1,10 @@
 from typing import Any, List, Union, Optional, Sequence
+from itertools import chain
 
 import numpy as np
 from scipy.sparse import issparse, spmatrix
+
+from cellrank.ul._parallelize import parallelize
 
 
 class RandomWalk:
@@ -31,8 +34,8 @@ class RandomWalk:
     def _should_stop(self, ix: int) -> bool:
         return ix in self._barrier
 
-    def _sample(self, ix: int) -> int:
-        return np.random.choice(
+    def _sample(self, ix: int, *, rs: np.random.RandomState) -> int:
+        return rs.choice(
             self._ixs,
             p=self._tmat[ix].A.squeeze() if self._is_sparse else self._tmat[ix],
         )
@@ -47,7 +50,7 @@ class RandomWalk:
         sim, cnt = [ix], -1
 
         for _ in range(self._max_iter):
-            ix = self._sample(ix)
+            ix = self._sample(ix, rs=rs)
             sim.append(ix)
             cnt = (cnt + 1) if self._should_stop(ix) else -1
             if cnt >= threshold:
@@ -55,7 +58,43 @@ class RandomWalk:
 
         return np.array(sim)
 
+    def _simulate_many(
+        self,
+        sims: np.ndarray,
+        seed: Optional[int] = None,
+        threshold: int = 0,
+        queue: Optional[Any] = None,
+    ) -> List[np.ndarray]:
+        res = []
+        # fmt: off
+        for s in sims:
+            res.append(self.simulate_one(seed=None if seed is None else seed + s, threshold=threshold))
+            if queue is not None:
+                queue.put(1)
+        # fmt: on
+
+        queue.put(None)
+
+        return res
+
     def simulate_many(
-        self, n_sims: int, seed: Optional[int] = None, threshold: int = 0, **kwargs: Any
+        self,
+        n_sims: int,
+        seed: Optional[int] = None,
+        threshold: int = 0,
+        n_jobs: Optional[int] = None,
+        backend: str = "loky",
+        show_progress_bar: bool = True,
     ) -> List[np.ndarray]:
         """TODO."""
+        # TODO: logging
+        simss = parallelize(
+            self._simulate_many,
+            collection=np.arange(n_sims),
+            n_jobs=n_jobs,
+            backend=backend,
+            show_progress_bar=show_progress_bar,
+            unit="sim",
+        )(seed=seed, threshold=threshold)
+
+        return list(chain.from_iterable(simss))
