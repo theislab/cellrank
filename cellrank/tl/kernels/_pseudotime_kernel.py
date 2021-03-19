@@ -153,10 +153,8 @@ class PseudotimeKernel(Kernel):
                 f"Expected `threshold_scheme` to be either a `str` or a `callable`, found `{type(threshold_scheme)}`."
             )
 
-        if self._reuse_cache(
-            {"dnorm": density_normalize, "scheme": str(threshold_scheme), **kwargs},
-            time=start,
-        ):
+        # fmt: off
+        if self._reuse_cache({"dnorm": density_normalize, "scheme": str(threshold_scheme), **kwargs}, time=start):
             return self
 
         # handle backward case and run biasing function
@@ -166,9 +164,8 @@ class PseudotimeKernel(Kernel):
             else self.pseudotime
         )
 
-        biased_conn = scheme.bias_knn(self._conn.copy(), pseudotime, **kwargs).astype(
-            _dtype
-        )
+        biased_conn = scheme.bias_knn(self._conn, pseudotime, **kwargs).astype(_dtype)
+        # fmt: on
 
         # make sure the biased graph is still connected
         if not _connected(biased_conn):
