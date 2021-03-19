@@ -18,13 +18,17 @@ import cellrank as cr
 from cellrank.tl._utils import _normalize
 from cellrank.ul._utils import _get_neighs, _get_neighs_params
 from cellrank.tl.kernels import (
-    Constant,
     VelocityKernel,
     PseudotimeKernel,
     PrecomputedKernel,
     ConnectivityKernel,
 )
-from cellrank.tl.kernels._base_kernel import KernelAdd, KernelMul, _is_bin_mult
+from cellrank.tl.kernels._base_kernel import (
+    Constant,
+    KernelAdd,
+    KernelMul,
+    _is_bin_mult,
+)
 
 _rtol = 1e-6
 
