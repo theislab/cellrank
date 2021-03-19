@@ -91,7 +91,7 @@ class CytoTRACEKernel(PseudotimeKernel):
             aggregation=aggregation,
             use_raw=use_raw,
         )
-        self._time_key = "ct_pseudotime"  # quirk or PT kernel
+        self._time_key = _ct("pseudotime")  # quirk or PT kernel
 
     def _read_from_adata(
         self,
@@ -110,7 +110,7 @@ class CytoTRACEKernel(PseudotimeKernel):
         self,
         layer: str = "Ms",
         aggregation: Literal["mean", "median", "hmean", "gmean"] = "mean",
-        use_raw: bool = True,
+        use_raw: bool = False,
     ) -> None:
         """
         Re-implementation of the CytoTRACE algorithm [Cyto20]_ to estimate cellular plasticity.
@@ -158,6 +158,12 @@ class CytoTRACEKernel(PseudotimeKernel):
         aggregation = CytoTRACEAggregation(aggregation)
         if use_raw and self.adata.raw is None:
             logg.warning("`adata.raw` is `None`. Setting `use_raw=False`")
+            use_raw = False
+        if use_raw and self.adata.raw.n_vars != self.adata.n_vars:
+            logg.warning(
+                f"`adata.raw` has different number of genes ({self.adata.raw.n_vars}) "
+                f"than `adata` ({self.adata.n_vars}). Setting `use_raw=False`"
+            )
             use_raw = False
 
         adata_mraw = self.adata.raw if use_raw else self.adata

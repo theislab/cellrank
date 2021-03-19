@@ -1402,10 +1402,10 @@ class TestCytoTRACEKernel:
 
     @pytest.mark.parametrize("use_raw", [False, True])
     def test_raw(self, adata: AnnData, use_raw: bool):
-        if adata.raw is None:
-            adata.raw = adata
         _ = CytoTRACEKernel(adata, use_raw=use_raw)
-        assert adata.uns[_ct("params")]["use_raw"] == use_raw
+        assert adata.uns[_ct("params")]["use_raw"] == (
+            adata.raw.n_vars == adata.n_vars if use_raw else False
+        )
 
     def test_correct_class(self, adata: AnnData):
         k = CytoTRACEKernel(adata)
