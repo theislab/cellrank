@@ -98,15 +98,16 @@ If you already have/know of an external package that could be made available thr
 In short, external packages should be accessible through ``cellrank.external`` and a thin wrapper code should be placed
 under:
 
-- `cellrank/external/kernels <cellrank/external/kernels>`_: if adding an external kernel. For example,
-  see `OTKernel <cellrank/external/kernels/_statot_kernel.py>`_ from `statOT <https://github.com/zsteve/StationaryOT>`_.
+- `cellrank/external/kernels <cellrank/external/kernels>`_: if adding an external kernel. As an example, see the
+  `OTKernel <cellrank/external/kernels/_statot_kernel.py>`_ from `statOT <https://github.com/zsteve/StationaryOT>`_.
 - `cellrank/external/estimators <cellrank/external/estimators>`_: if adding an external estimator.
 - `cellrank/external/models <cellrank/external/models>`_: if adding an external model.
 
 You can either open an `issue <https://github.com/theislab/cellrank/issues/new/choose>`__ with a suggestion or
-directly submit a `PR <https://github.com/theislab/cellrank/pulls>`_ containing the new addition.
-Furthermore, external package dependencies should be added to
-`setup.py's <setup.py>`_ ``'external'`` in ``extras_require``.
+directly submit a `PR <https://github.com/theislab/cellrank/pulls>`_ containing the addition.
+Furthermore, external package dependencies should be added to `setup.py's <setup.py>`_ ``'external'``
+in ``extras_require`` and a corresponding entry should be made in the external API
+`documentation <docs/source/external_api.rst>`__.
 
 Running tests
 ~~~~~~~~~~~~~
@@ -122,22 +123,22 @@ you would run::
 Note that during the first invocation, it can take several minutes to start the testing. This is due to the fact that
 PETSc/SLEPc needs to be built. To run only a subset of tests, run::
 
-    tox -e <environment> -- <name>
+    tox -e <environment> -- -k <name>
 
-where ``<name>`` can be a path to a test file/directory or a name of a test function/class. In the example below, we'd
-run only tests in the file::
+where ``<name>`` can be a path to a test file/directory or a name of a test function/class, e.g.::
 
-    tox -e py38-linux -- tests/test_kernels.py
+    tox -e py38-linux -- -k tests/test_kernels.py  # run tests in the speciied file
+    tox -e py38-linux -- -k "TestExternal"  # run tests grouped in the `TestExternal` class
 
 Documentation
 ~~~~~~~~~~~~~
 
 Building documentation
 ----------------------
-In order to build the documentation, run one of the commands below,
-depending on whether you also want to build the examples::
+In order to build the documentation, run one of the commands below, depending on whether you also want to build the
+examples::
 
-    tox -e docs  # builds examples as well, takes longer
+    tox -e docs  # builds the examples, takes longer (~10 mins)
     tox -e shallow-docs  # does not build the examples
 
 If you need to clean the artifacts from previous documentation builds, run::
@@ -148,7 +149,7 @@ Writing documentation
 ---------------------
 We use ``numpy``-style docstrings for the documentation with the following additions and modifications:
 
-- no type hints in the docstring (optionally applies also for the return statement) are allowed,
+- no type hints in the docstring (optionally applies also for the return statement) should be used,
   since all functions are required to have the type hints in their signatures.
 - when referring to some argument within the same docstring, enclose that reference in \`\`.
 - when referring to an argument of a class from within that class, use ``:paramref:`attribute```.
@@ -191,8 +192,8 @@ Maintainer notes
 
 Making a new release
 --------------------
-New release is always created when new tag is pushed to GitHub. When that happens, a new CI job starts the
-testing machinery. If all the tests pass, new release will be created on PyPI. Bioconda will automatically pick-up that
+New release is always created when a new tag is pushed to GitHub. When that happens, a new CI job starts the
+testing machinery. If all the tests pass, new release will be created on PyPI. Bioconda will automatically notice that
 a new release has been made and an automatic PR will be made to
 `bioconda-recipes <https://github.com/bioconda/bioconda-recipes/pulls>`_.
 Extra care has to be taken when updating runtime dependencies - this is not automatically picked up by Bioconda
@@ -223,13 +224,13 @@ are hosted in this repo, under `examples <examples>`__. Both tutorials and examp
 from `cellrank/datasets <cellrank/datasets>`__, with precomputed attributes, such as velocities, pseudotime, etc.
 
 If you wish to contribute your own example (e.g. for an external kernel), you just need to write a ``.py`` file, similar
-to `this <cellrank/examples/other/compute_kernel_tricks.py>`_.
-The filenames should be prefixed with either ``compute_`` or ``plot_``, depending on what they do (i.e. they either show
-some computational functionality or a plotting functionality).
+to `this one <cellrank/examples/other/compute_kernel_tricks.py>`_.
+The filenames should be prefixed with either ``compute_`` or ``plot_``, depending on what they do, i.e. whether they
+show a computational or a plotting functionality.
 
 Tutorials, on the other hand, are written as Jupyter notebooks. However, they are still tested on the CI to make sure
-they run properly with the newest version of CellRank. Since these require more effort than examples, it's best to first
-start a new issue/discussion before adding them, see also `Making use of GitHub issues/discussions`_.
+they run properly with the newest version of CellRank. Since they require more effort to create than the examples,
+it's best to first start a new issue/discussion before adding them, see also `Making use of GitHub issues/discussions`_.
 
 Troubleshooting
 ~~~~~~~~~~~~~~~
