@@ -77,7 +77,7 @@ class PseudotimeKernel(Kernel):
     @d.dedent
     def compute_transition_matrix(
         self,
-        threshold_scheme: Union[Literal["soft", "hard"], Callable] = "hard",
+        threshold_scheme: Union[Literal["soft", "hard"], Callable] = "soft",
         k: int = 3,
         b: float = 20.0,
         nu: float = 1.0,
