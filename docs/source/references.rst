@@ -90,3 +90,7 @@ References
     *PAGA: Graph abstraction reconciles clustering with trajectory inference through a topology preserving map of
     single cells*,
     `Genome Biology <https://doi.org/10.1186/s13059-019-1663-x>`__.
+
+.. [Zhang21] Zhang, S. *et al.* (2021),
+    *Optimal transport analysis reveals trajectories in steady-state systems*,
+    `bioRxiv <https://doi.org/10.1101/2021.03.02.433630>`__.

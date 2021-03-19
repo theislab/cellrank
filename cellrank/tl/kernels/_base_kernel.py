@@ -69,6 +69,9 @@ class KernelExpression(Pickleable, ABC):
         self._normalize = True
         self._parent = None
 
+    def __init_subclass__(cls, **kwargs: Any):
+        super().__init_subclass__()
+
     @property
     def condition_number(self):
         """Condition number of the transition matrix."""

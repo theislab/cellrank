@@ -19,7 +19,6 @@ if __name__ == "__main__":
         setup_requires=["setuptools_scm"],
         author=__author__,
         author_email=__email__,
-        email=__email__,
         maintainer=__maintainer__,
         maintainer_email=__email__,
         version=__version__,
@@ -39,18 +38,22 @@ if __name__ == "__main__":
             )
         ),
         extras_require=dict(
+            # `POT` is not requirement of `statot`
+            external=["statot>=0.0.14", "POT"],
             krylov=["pygpcca[slepc]"],
             test=[
                 "pytest>=6.1.1",
                 "pytest-mock>=3.5.1",
                 "pytest-xdist>=2.1.0",
+                "pytest-cov",
                 "Pillow",
                 "filelock",
-                "mock>=4.0.2",
                 "python-igraph",
                 "louvain==0.6.1",
                 "leidenalg==0.8.1",
-                "bezier",  # curved edges for `cellrank.pl.graph`
+                "bezier",
+                "jax",
+                "jaxlib",
             ],
             docs=[
                 r
@@ -60,7 +63,7 @@ if __name__ == "__main__":
                 )
                 if "requirements.txt" not in r
             ],
-            dev=["pre-commit>=2.9.0"],
+            dev=["pre-commit>=2.9.3", "tox>=3.23.0"],
         ),
         zip_safe=False,
         packages=find_packages(),
