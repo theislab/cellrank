@@ -224,7 +224,7 @@ are hosted in this repo, under `examples <examples>`__. Both tutorials and examp
 from `cellrank/datasets <cellrank/datasets>`__, with precomputed attributes, such as velocities, pseudotime, etc.
 
 If you wish to contribute your own example (e.g. for an external kernel), you just need to write a ``.py`` file, similar
-to `this one <cellrank/examples/other/compute_kernel_tricks.py>`_.
+to `this one <examples/other/compute_kernel_tricks.py>`_.
 The filenames should be prefixed with either ``compute_`` or ``plot_``, depending on what they do, i.e. whether they
 show a computational or a plotting functionality.
 
