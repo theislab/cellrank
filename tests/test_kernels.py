@@ -20,12 +20,14 @@ from cellrank.ul._utils import _get_neighs, _get_neighs_params
 from cellrank.tl.kernels import (
     Constant,
     VelocityKernel,
+    CytoTRACEKernel,
     PseudotimeKernel,
     PrecomputedKernel,
     ConnectivityKernel,
 )
 from cellrank.tl._constants import _transition
 from cellrank.tl.kernels._base_kernel import KernelAdd, KernelMul, _is_bin_mult
+from cellrank.tl.kernels._cytotrace_kernel import CytoTRACEAggregation
 
 _rtol = 1e-6
 
@@ -1380,3 +1382,21 @@ class TestPseudotimeKernelScheme:
             assert pk.params["b"] == 10
             assert pk.params["nu"] == 0.5
             assert "k" not in pk.params
+
+
+class TestCytoTRACEKernel:
+    def test_layer(self, adata: AnnData):
+        pass
+
+    @pytest.mark.parametrize("agg", list(CytoTRACEAggregation))
+    def test_aggregation(self, adata: AnnData, agg: CytoTRACEAggregation):
+        pass
+
+    def test_raw(self, adata: AnnData):
+        pass
+
+    def test_pseudotime_is_normalized(self, adata: AnnData):
+        pass
+
+    def test_compute_transition_matrix(self, adata: AnnData):
+        pass
