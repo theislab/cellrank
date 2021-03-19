@@ -215,6 +215,18 @@ class KernelExpression(Pickleable, ABC):
             else:
                 logg.info(f"Condition number is `{self._cond_num:.2e}`")
 
+    def _reuse_cache(
+        self, expected_params: Dict[str, Any], *, time: Optional[Any] = None
+    ) -> bool:
+        if expected_params == self._params:
+            assert self.transition_matrix is not None, _ERROR_EMPTY_CACHE_MSG
+            logg.debug(_LOG_USING_CACHE)
+            logg.info("    Finish", time=time)
+            return True
+
+        self._params = expected_params
+        return False
+
     @abstractmethod
     def _get_kernels(self) -> Iterable["Kernel"]:
         pass
