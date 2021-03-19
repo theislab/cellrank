@@ -18,6 +18,8 @@ from itertools import tee, product, combinations
 
 from statsmodels.stats.multitest import multipletests
 
+from anndata import AnnData
+
 import numpy as np
 import pandas as pd
 from pandas import Series
@@ -44,7 +46,6 @@ from cellrank.ul._parallelize import parallelize
 from cellrank.tl._linear_solver import _solve_lin_system
 from cellrank.tl.kernels._utils import np_std, np_mean, _filter_kwargs
 
-AnnData = TypeVar("AnnData")
 ColorLike = TypeVar("ColorLike")
 GPCCA = TypeVar("GPCCA")
 CFLARE = TypeVar("CFLARE")

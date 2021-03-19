@@ -527,14 +527,14 @@ class UnaryKernelExpression(KernelExpression, ABC):
         self._adata = _adata
 
     def __repr__(self):
-        return f"{'~' if self.backward and self._parent is None else ''}<{self.__class__.__name__[:4]}>"
+        return f"{'~' if self.backward and self._parent is None else ''}<{self.__class__.__name__}>"
 
     def __str__(self):
         params_fmt = self._format_params()
         if params_fmt:
             return (
                 f"{'~' if self.backward and self._parent is None else ''}"
-                f"<{self.__class__.__name__[:4]}[{params_fmt}]>"
+                f"<{self.__class__.__name__}[{params_fmt}]>"
             )
         return repr(self)
 

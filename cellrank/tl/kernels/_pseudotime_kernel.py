@@ -49,6 +49,7 @@ class PseudotimeKernel(Kernel):
         time_key: str = "dpt_pseudotime",
         compute_cond_num: bool = False,
         check_connectivity: bool = False,
+        **kwargs: Any,
     ):
         super().__init__(
             adata,
@@ -56,13 +57,13 @@ class PseudotimeKernel(Kernel):
             time_key=time_key,
             compute_cond_num=compute_cond_num,
             check_connectivity=check_connectivity,
+            **kwargs,
         )
         self._time_key = time_key
 
-    def _read_from_adata(self, **kwargs):
+    def _read_from_adata(self, time_key: str, **kwargs):
         super()._read_from_adata(**kwargs)
 
-        time_key = kwargs.pop("time_key", "dpt_pseudotime")
         if time_key not in self.adata.obs.keys():
             raise KeyError(f"Could not find time key in `adata.obs[{time_key!r}]`.")
 
@@ -70,9 +71,6 @@ class PseudotimeKernel(Kernel):
 
         if np.any(np.isnan(self._pseudotime)):
             raise ValueError("Encountered NaN values in pseudotime.")
-
-        logg.debug("Clipping the pseudotime to 0-1 range")
-        self._pseudotime = np.clip(self._pseudotime, 0, 1)
 
     @d.dedent
     def compute_transition_matrix(
@@ -118,7 +116,7 @@ class PseudotimeKernel(Kernel):
         :class:`cellrank.tl.kernels.PseudotimeKernel`
             Makes :paramref:`transition_matrix` available.
         """
-        start = logg.info("Computing transition matrix based on pseudotime")
+        start = logg.info(f"Computing transition matrix based on `{self._time_key}`")
 
         # get the connectivities and number of neighbors
         n_neighbors = (
@@ -161,7 +159,7 @@ class PseudotimeKernel(Kernel):
 
         # handle backward case and run biasing function
         pseudotime = (
-            np.nanmax(self.pseudotime) - self.pseudotime
+            np.max(self.pseudotime) - self.pseudotime
             if self._direction == Direction.BACKWARD
             else self.pseudotime
         )
@@ -202,5 +200,5 @@ class PseudotimeKernel(Kernel):
 
     def __invert__(self) -> "PseudotimeKernel":
         super().__invert__()
-        self._pseudotime = np.nanmax(self.pseudotime) - self.pseudotime
+        self._pseudotime = np.max(self.pseudotime) - self.pseudotime
         return self

@@ -9,6 +9,10 @@ References
     *Geometric diffusions as a tool for harmonic analysis and structure definition of data: Diffusion maps*,
     `PNAS <https://doi.org/10.1073/pnas.0500334102>`__.
 
+.. [Cyto20] Gulati *et al.* (2020),
+   *Single-cell transcriptional diversity is a hallmark of developmental potential*,
+   `Science  <https://doi.org/10.1126/science.aax0249>`__.
+
 .. [GPCCA18] Reuter, B. *et al.* (2018),
    *Generalized Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on Amyloid β
    Conformational Dynamics Driven by an Oscillating Electric Field.*,
