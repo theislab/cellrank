@@ -1450,7 +1450,7 @@ class TestCytoTRACEKernel:
         _ = CytoTRACEKernel(adata_large, use_raw=False)
 
         ct_score_expected = adata_large.obs["ct_score_ground_truth"].values
-        ct_score_actual = adata_large.obs["ct_score"].values
+        ct_score_actual = adata_large.obs[_ct("score")].values
 
         np.testing.assert_array_equal(ct_score_actual, ct_score_expected)
 
@@ -1458,6 +1458,6 @@ class TestCytoTRACEKernel:
         _ = CytoTRACEKernel(adata_large, use_raw=False)
 
         gene_corr_expected = adata_large.var["gene_corr_ground_truth"].values
-        gene_corr_actual = adata_large.var["gene_corr"].values
+        gene_corr_actual = adata_large.var[_ct("gene_corr")].values
 
         np.testing.assert_array_equal(gene_corr_actual, gene_corr_expected)
