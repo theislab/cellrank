@@ -5,8 +5,11 @@ from typing_extensions import Literal
 from anndata import AnnData
 
 import numpy as np
+import pandas as pd
 
 from cellrank.ul._docs import d
+from cellrank.tl.estimators import GPCCA
+from cellrank.tl.kernels._precomputed_kernel import DummyKernel
 
 _error = None
 try:
@@ -29,12 +32,13 @@ class OTKernel(OTKernel_, error=_error):
     Parameters
     ----------
     %(adata)s
-    source_idx
-        Key in :attr:`anndata.AnnData.obs` containing boolean mask marking the source indices or the mask itself.
-    sink_idx
-        Key in :attr:`anndata.AnnData.obs` containing boolean marking the sink indices or the mask itself.
+    terminal_states
+        Categorical :class:`pandas.Series` where non-`NaN` values mark terminal states.
+        If `None`, terminal states are assumed to be already present in :paramref:`adata` `['terminal_states']`.
     g
         Key in :attr:`anndata.AnnData.obs` containing relative growth rates for cells or the array itself.
+    cluster_key
+        If a key to cluster labels is given, `terminal_states` will be associated with these for naming and colors.
     kwargs
         Additional keyword arguments.
     """
@@ -44,28 +48,20 @@ class OTKernel(OTKernel_, error=_error):
     def __init__(
         self,
         adata: AnnData,
-        source_idx: Union[str, np.ndarray],
-        sink_idx: Union[str, np.ndarray],
         g: Union[str, np.ndarray],
+        terminal_states: Optional[Union[str, pd.Series]] = None,
+        cluster_key: Optional[str] = None,
         **kwargs: Any,
     ):
-        if isinstance(source_idx, str):
-            source_idx = adata.obs[source_idx].values
-        if isinstance(sink_idx, str):
-            sink_idx = adata.obs[sink_idx].values
-        source_idx, sink_idx = np.asarray(source_idx), np.asarray(sink_idx)
-        if not np.issubdtype(source_idx.dtype, np.bool_):
-            raise TypeError(
-                f"Expected `source_idx` to be a boolean array, found `{source_idx.dtype}`."
-            )
-        if not np.issubdtype(sink_idx.dtype, np.bool_):
-            raise TypeError(
-                f"Expected `sink_idx` to be a boolean array, found `{sink_idx.dtype}`."
-            )
-        if np.any(source_idx & sink_idx):
-            raise ValueError("Some cells are marked as both source and sink.")
+        if terminal_states is not None:
+            dk = DummyKernel(adata, backward=False)
+            estim = GPCCA(dk, write_to_adata=True)
+            estim.set_terminal_states(terminal_states, cluster_key=cluster_key)
 
-        super().__init__(adata, source_idx=source_idx, sink_idx=sink_idx, g=g, **kwargs)
+        try:
+            super().__init__(adata, g=g, **kwargs)
+        except Exception as e:  # noqa: B902
+            raise RuntimeError("Unable to initialize the kernel.") from e
 
     def compute_transition_matrix(
         self,
@@ -98,9 +94,9 @@ class OTKernel(OTKernel_, error=_error):
         method
             Choice of regularization. Valid options are:
 
-                - `"ent"` - entropy.
-                - `"quad"` - L2-norm.
-                - `"unbal"` - unbalanced transport (not yet implemented).
+                - `'ent'` - entropy.
+                - `'quad'` - L2-norm.
+                - `'unbal'` - unbalanced transport (not yet implemented).
 
         tol
             Relative tolerance for OT solver convergence.

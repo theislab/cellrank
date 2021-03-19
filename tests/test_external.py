@@ -3,6 +3,7 @@ import pytest
 from anndata import AnnData
 
 import numpy as np
+import pandas as pd
 from scipy.sparse import spmatrix
 
 import cellrank.external as cre
@@ -10,12 +11,13 @@ import cellrank.external as cre
 
 class TestOTKernel:
     def test_method_not_implemented(self, adata_large: AnnData):
-        source = np.zeros((adata_large.n_obs,), dtype=np.bool_)
-        sink = np.zeros((adata_large.n_obs,), dtype=np.bool_)
+        terminal_states = np.full((adata_large.n_obs,), fill_value=np.nan, dtype=object)
+        ixs = np.where(adata_large.obs["clusters"] == "Granule immature")[0]
+        terminal_states[ixs] = "GI"
+
         ok = cre.kernels.OTKernel(
             adata_large,
-            source_idx=source,
-            sink_idx=sink,
+            terminal_states=pd.Series(terminal_states).astype("category"),
             g=np.ones((adata_large.n_obs,), dtype=np.float64),
         )
 
@@ -24,30 +26,21 @@ class TestOTKernel:
         ):
             ok.compute_transition_matrix(1, 0.001, method="unbal")
 
-    def test_some_both_source_sink(self, adata_large: AnnData):
-        source = np.zeros((adata_large.n_obs,), dtype=np.bool_)
-        source[0] = True
-        sink = np.zeros((adata_large.n_obs,), dtype=np.bool_)
-        sink[0] = True
-
-        with pytest.raises(
-            ValueError, match="Some cells are marked as both source and sink."
-        ):
+    def test_no_terminal_states(self, adata_large: AnnData):
+        with pytest.raises(RuntimeError, match="Unable to initialize the kernel."):
             cre.kernels.OTKernel(
                 adata_large,
-                source_idx=source,
-                sink_idx=sink,
                 g=np.ones((adata_large.n_obs,), dtype=np.float64),
             )
 
     def test_normal_run(self, adata_large: AnnData):
-        source = (adata_large.obs["clusters"] == "Granule immature").values
-        sink = (adata_large.obs["clusters"] == "Granule mature").values
+        terminal_states = np.full((adata_large.n_obs,), fill_value=np.nan, dtype=object)
+        ixs = np.where(adata_large.obs["clusters"] == "Granule immature")[0]
+        terminal_states[ixs] = "GI"
 
         ok = cre.kernels.OTKernel(
             adata_large,
-            source_idx=source,
-            sink_idx=sink,
+            terminal_states=pd.Series(terminal_states).astype("category"),
             g=np.ones((adata_large.n_obs,), dtype=np.float64),
         )
         ok = ok.compute_transition_matrix(1, 0.001)

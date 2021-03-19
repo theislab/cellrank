@@ -181,7 +181,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
     @inject_docs(fs=P.TERM.s, fsp=P.TERM_PROBS.s)
     def set_terminal_states(
         self,
-        labels: Union[Series, Dict[str, Any]],
+        labels: Union[Series, Dict[str, Sequence[Any]]],
         cluster_key: Optional[str] = None,
         en_cutoff: Optional[float] = None,
         p_thresh: Optional[float] = None,
@@ -198,7 +198,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             belonging to a transient state or a :class:`dict`, where each key is the name of the recurrent class and
             values are list of cell names.
         cluster_key
-            If a key to cluster labels is given, :paramref:`{fs}` will ge associated with these for naming and colors.
+            If a key to cluster labels is given, :paramref:`{fs}` will be associated with these for naming and colors.
         %(en_cutoff_p_thresh)s
         add_to_existing
             Whether to add thses categories to existing ones. Cells already belonging to recurrent classes will be
