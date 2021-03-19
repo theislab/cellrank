@@ -71,6 +71,11 @@ Soft threshold scheme
     :members:
     :special-members: __call__
 
+CytoTRACE Kernel
+----------------
+
+.. autoclass:: cellrank.tl.kernels.CytoTRACEKernel
+    :members:
 
 Precomputed Kernel
 ------------------

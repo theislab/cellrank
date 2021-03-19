@@ -129,7 +129,10 @@ class PrecomputedKernel(Kernel):
         return self
 
     def __repr__(self):
-        return f"{'~' if self.backward and self._parent is None else ''}<Precomputed[origin={self._origin}]>"
+        return (
+            f"{'~' if self.backward and self._parent is None else ''}"
+            f"<{self.__class__.__name__}[origin={self._origin}]>"
+        )
 
     def __str__(self):
         return repr(self)

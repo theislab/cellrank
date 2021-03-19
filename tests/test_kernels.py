@@ -13,12 +13,14 @@ from scanpy import Neighbors
 from anndata import AnnData
 
 import numpy as np
+from pandas.core.dtypes.common import is_bool_dtype, is_integer_dtype
 
 import cellrank as cr
 from cellrank.tl._utils import _normalize
 from cellrank.ul._utils import _get_neighs, _get_neighs_params
 from cellrank.tl.kernels import (
     VelocityKernel,
+    CytoTRACEKernel,
     PseudotimeKernel,
     PrecomputedKernel,
     ConnectivityKernel,
@@ -30,6 +32,7 @@ from cellrank.tl.kernels._base_kernel import (
     KernelMul,
     _is_bin_mult,
 )
+from cellrank.tl.kernels._cytotrace_kernel import CytoTRACEAggregation, _ct
 
 _rtol = 1e-6
 
@@ -330,17 +333,20 @@ class TestInitializeKernel:
     def test_repr(self, adata: AnnData):
         rpr = repr(VelocityKernel(adata))
 
-        assert rpr == "<Velo>"
+        assert rpr == f"<{VelocityKernel.__name__}>"
 
     def test_repr_inv(self, adata: AnnData):
         rpr = repr(~VelocityKernel(adata))
 
-        assert rpr == "~<Velo>"
+        assert rpr == f"~<{VelocityKernel.__name__}>"
 
     def test_repr_inv_comb(self, adata: AnnData):
         rpr = repr(~(VelocityKernel(adata) + ConnectivityKernel(adata)))
 
-        assert rpr == "~((1 * <Velo>) + (1 * <Conn>))"
+        assert (
+            rpr
+            == f"~((1 * <{VelocityKernel.__name__}>) + (1 * <{ConnectivityKernel.__name__}>))"
+        )
 
     def test_str_repr_equiv_no_transition_matrix(self, adata: AnnData):
         vk = VelocityKernel(adata)
@@ -348,19 +354,24 @@ class TestInitializeKernel:
         rpr = repr(vk)
 
         assert string == rpr
-        assert string == "<Velo>"
+        assert string == f"<{VelocityKernel.__name__}>"
 
     def test_str(self, adata: AnnData):
         string = str(ConnectivityKernel(adata).compute_transition_matrix())
 
-        assert string == "<Conn[dnorm=True, key=connectivities]>"
+        assert (
+            string == f"<{ConnectivityKernel.__name__}[dnorm=True, key=connectivities]>"
+        )
 
     def test_str_inv(self, adata: AnnData):
         string = str(
             ConnectivityKernel(adata, backward=True).compute_transition_matrix()
         )
 
-        assert string == "~<Conn[dnorm=True, key=connectivities]>"
+        assert (
+            string
+            == f"~<{ConnectivityKernel.__name__}[dnorm=True, key=connectivities]>"
+        )
 
     def test_combination_correct_parameters(self, adata: AnnData):
         from cellrank.tl.kernels import CosineScheme
@@ -1376,3 +1387,81 @@ class TestPseudotimeKernelScheme:
             assert pk.params["b"] == 10
             assert pk.params["nu"] == 0.5
             assert "k" not in pk.params
+
+
+class TestCytoTRACEKernel:
+    @pytest.mark.parametrize("layer", ["X", "Ms", "foo"])
+    def test_layer(self, adata: AnnData, layer: str):
+        if layer == "foo":
+            with pytest.raises(KeyError, match=layer):
+                _ = CytoTRACEKernel(adata, layer=layer)
+        else:
+            _ = CytoTRACEKernel(adata, layer=layer)
+            assert adata.uns[_ct("params")]["layer"] == layer
+
+    @pytest.mark.parametrize("agg", list(CytoTRACEAggregation))
+    def test_aggregation(self, adata: AnnData, agg: CytoTRACEAggregation):
+        _ = CytoTRACEKernel(adata, aggregation=agg)
+        assert adata.uns[_ct("params")]["aggregation"] == agg.s
+
+    @pytest.mark.parametrize("use_raw", [False, True])
+    def test_raw(self, adata: AnnData, use_raw: bool):
+        _ = CytoTRACEKernel(adata, use_raw=use_raw)
+        assert adata.uns[_ct("params")]["use_raw"] == (
+            adata.raw.n_vars == adata.n_vars if use_raw else False
+        )
+
+    def test_correct_class(self, adata: AnnData):
+        k = CytoTRACEKernel(adata)
+        assert isinstance(k, PseudotimeKernel)
+        assert k._time_key == _ct("pseudotime")
+
+    def test_writes_params(self, adata: AnnData):
+        k = CytoTRACEKernel(adata, use_raw=False, layer="X", aggregation="mean")
+
+        assert adata.uns[_ct("params")] == {
+            "layer": "X",
+            "aggregation": "mean",
+            "use_raw": False,
+        }
+
+        assert np.all(adata.var[_ct("gene_corr")] <= 1.0)
+        assert np.all(-1 <= adata.var[_ct("gene_corr")])
+        assert is_bool_dtype(adata.var[_ct("correlates")])
+        assert adata.var[_ct("correlates")].sum() == min(200, adata.n_vars)
+
+        assert _ct("score") in adata.obs
+        assert _ct("pseudotime") in adata.obs
+        assert _ct("num_exp_genes") in adata.obs
+        assert is_integer_dtype(adata.obs[_ct("num_exp_genes")])
+        np.testing.assert_array_equal(k.pseudotime, adata.obs[_ct("pseudotime")].values)
+        np.testing.assert_array_equal(k.pseudotime.min(), 0.0)
+        np.testing.assert_array_equal(k.pseudotime.max(), 1.0)
+
+    def test_compute_transition_matrix(self, adata: AnnData):
+        k = CytoTRACEKernel(adata, use_raw=False, layer="X", aggregation="mean")
+        k.compute_transition_matrix()
+
+        np.testing.assert_allclose(k.transition_matrix.sum(1), 1.0)
+
+    def test_inversion(self, adata: AnnData):
+        k = ~CytoTRACEKernel(adata, use_raw=False, layer="X", aggregation="mean")
+
+        pt = adata.obs[_ct("pseudotime")].values
+        np.testing.assert_array_equal(np.max(pt) - pt, k.pseudotime)
+
+    def test_regression_score(self, adata_large: AnnData):
+        _ = CytoTRACEKernel(adata_large, use_raw=False)
+
+        ct_score_expected = adata_large.obs["ct_score_ground_truth"].values
+        ct_score_actual = adata_large.obs[_ct("score")].values
+
+        np.testing.assert_array_equal(ct_score_actual, ct_score_expected)
+
+    def test_regression_gene_corr(self, adata_large: AnnData):
+        _ = CytoTRACEKernel(adata_large, use_raw=False)
+
+        gene_corr_expected = adata_large.var["gene_corr_ground_truth"].values
+        gene_corr_actual = adata_large.var[_ct("gene_corr")].values
+
+        np.testing.assert_array_equal(gene_corr_actual, gene_corr_expected)

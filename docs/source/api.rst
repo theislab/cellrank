@@ -52,7 +52,8 @@ Kernels are part of the low-level API and are used to estimate cell-to-cell tran
 
     tl.kernels.VelocityKernel
     tl.kernels.ConnectivityKernel
-    tl.kernels.PalantirKernel
+    tl.kernels.PseudotimeKernel
+    tl.kernels.CytoTRACEKernel
     tl.kernels.PrecomputedKernel
 
 Estimators
