@@ -13,6 +13,7 @@ from scanpy import Neighbors
 from anndata import AnnData
 
 import numpy as np
+from pandas.core.dtypes.common import is_bool_dtype, is_integer_dtype
 
 import cellrank as cr
 from cellrank.tl._utils import _normalize
@@ -1419,11 +1420,17 @@ class TestCytoTRACEKernel:
             "aggregation": "mean",
             "use_raw": False,
         }
+
+        assert np.all(adata.var[_ct("gene_corr")] <= 1.0)
+        assert np.all(-1 <= adata.var[_ct("gene_corr")])
+        assert is_bool_dtype(adata.var[_ct("correlates")])
+        assert adata.var[_ct("correlates")].sum() == min(200, adata.n_vars)
+
+        assert _ct("score") in adata.obs
+        assert _ct("pseudotime") in adata.obs
+        assert _ct("num_exp_genes") in adata.obs
+        assert is_integer_dtype(adata.obs[_ct("num_exp_genes")])
         np.testing.assert_array_equal(k.pseudotime, adata.obs[_ct("pseudotime")].values)
-
-    def test_pseudotime_is_normalized(self, adata: AnnData):
-        k = CytoTRACEKernel(adata, use_raw=False, layer="X", aggregation="mean")
-
         np.testing.assert_array_equal(k.pseudotime.min(), 0.0)
         np.testing.assert_array_equal(k.pseudotime.max(), 1.0)
 
