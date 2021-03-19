@@ -59,6 +59,7 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
     :hidden:
 
     installation
+    about
     api
     classes
     release_notes
