@@ -11,12 +11,7 @@ from cellrank.ul._docs import d
 from cellrank.tl._utils import _connected
 from cellrank.tl.kernels import Kernel
 from cellrank.tl._constants import Direction, ThresholdScheme
-from cellrank.tl.kernels._base_kernel import (
-    _LOG_USING_CACHE,
-    _ERROR_EMPTY_CACHE_MSG,
-    AnnData,
-    _dtype,
-)
+from cellrank.tl.kernels._base_kernel import AnnData, _dtype
 from cellrank.tl.kernels._pseudotime_schemes import (
     ThresholdSchemeABC,
     HardThresholdScheme,
@@ -158,18 +153,11 @@ class PseudotimeKernel(Kernel):
                 f"Expected `threshold_scheme` to be either a `str` or a `callable`, found `{type(threshold_scheme)}`."
             )
 
-        params = {
-            "dnorm": density_normalize,
-            "scheme": str(threshold_scheme),
-            **kwargs,
-        }
-        if params == self._params:
-            assert self.transition_matrix is not None, _ERROR_EMPTY_CACHE_MSG
-            logg.debug(_LOG_USING_CACHE)
-            logg.info("    Finish", time=start)
+        if self._reuse_cache(
+            {"dnorm": density_normalize, "scheme": str(threshold_scheme), **kwargs},
+            time=start,
+        ):
             return self
-
-        self._params = params
 
         # handle backward case and run biasing function
         pseudotime = (

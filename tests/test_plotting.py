@@ -2493,6 +2493,19 @@ class TestGPCCA:
             cluster_key="clusters", discrete=False, same_plot=False, dpi=DPI, save=fpath
         )
 
+    @compare(kind="gpcca")
+    def test_scvelo_transition_matrix_projection(self, mc: GPCCA, fpath: str):
+        mc.kernel.compute_projection(basis="umap")
+        scv.pl.velocity_embedding(
+            mc.kernel.adata,
+            vkey="T_fwd",
+            basis="umap",
+            arrow_length=6,
+            arrow_size=6,
+            dpi=DPI,
+            save=fpath,
+        )
+
 
 class TestLineages:
     @compare()

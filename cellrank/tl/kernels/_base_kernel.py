@@ -1,5 +1,5 @@
 """Kernel module."""
-
+import warnings
 from abc import ABC, abstractmethod
 from copy import copy
 from typing import (
@@ -196,7 +196,11 @@ class KernelExpression(Pickleable, ABC):
         if key is None:
             key = _transition(self._direction)
 
-        self.adata.uns[f"{key}_params"] = str(self)
+        # retain the embedding info
+        self.adata.uns[f"{key}_params"] = {
+            **self.adata.uns.get(f"{key}_params", {}),
+            **{"params": self.params},
+        }
         _write_graph_data(self.adata, self.transition_matrix, key)
 
     @abstractmethod
@@ -218,6 +222,18 @@ class KernelExpression(Pickleable, ABC):
             else:
                 logg.info(f"Condition number is `{self._cond_num:.2e}`")
 
+    def _reuse_cache(
+        self, expected_params: Dict[str, Any], *, time: Optional[Any] = None
+    ) -> bool:
+        if expected_params == self._params:
+            assert self.transition_matrix is not None, _ERROR_EMPTY_CACHE_MSG
+            logg.debug(_LOG_USING_CACHE)
+            logg.info("    Finish", time=time)
+            return True
+
+        self._params = expected_params
+        return False
+
     @abstractmethod
     def _get_kernels(self) -> Iterable["Kernel"]:
         pass
@@ -226,6 +242,85 @@ class KernelExpression(Pickleable, ABC):
     def kernels(self) -> List["Kernel"]:
         """Get the kernels of the kernel expression, except for constants."""
         return list(set(self._get_kernels()))
+
+    def compute_projection(
+        self,
+        basis: str = "umap",
+        key_added: Optional[str] = None,
+        copy: bool = False,
+    ) -> Optional[np.ndarray]:
+        """
+        Compute a projection of the transition matrix in the embedding.
+
+        The projected matrix can be then visualized as::
+
+            scvelo.pl.velocity_embedding(adata, vkey='T_fwd', basis='umap')
+
+        Parameters
+        ----------
+        basis
+            Basis in :attr:`anndata.AnnData.obsm` for which to compute the projection.
+        key_added
+            If not `None` and ``copy=False``, save the result to :paramref:`adata` ``.obsm['{key_added}']``.
+            Otherwise, save the result to `'T_fwd_{basis}'` or `T_bwd_{basis}`, depending on the direction.
+        copy
+            Whether to return the projection or modify :paramref:`adata` inplace.
+
+        Returns
+        -------
+        If ``copy=True``, the projection array of shape `(n_cells, n_components)`.
+        Otherwise, it modifies :attr:`anndata.AnnData.obsm` with a key based on ``key_added``.
+        """
+        # modified from: https://github.com/theislab/scvelo/blob/master/scvelo/tools/velocity_embedding.py
+        from scvelo.tools.velocity_embedding import quiver_autoscale
+
+        if self._transition_matrix is None:
+            raise RuntimeError(
+                "Compute transition matrix first as `.compute_transition_matrix()`."
+            )
+
+        try:
+            emb = self.adata.obsm[f"X_{basis}"]
+        except KeyError:
+            try:
+                emb = self.adata.obsm[basis]  # e.g. 'spatial'
+            except KeyError:
+                raise KeyError(
+                    f"Unable to find a basis in `adata.obsm['X_{basis}']` or `adata.obsm[{basis!r}]`."
+                ) from None
+
+        start = logg.info(f"Projecting transition matrix onto `{basis}`")
+        T_emb = np.empty_like(emb)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            for i, row in enumerate(self.transition_matrix):
+                dX = emb[row.indices] - emb[i, None]
+                dX /= np.linalg.norm(dX, axis=1)[:, None]
+                dX[np.isnan(dX)] = 0
+                probs = row.data
+                T_emb[i] = probs.dot(dX) - probs.mean() * dX.sum(0)
+
+        T_emb /= 3 * quiver_autoscale(emb, T_emb)
+
+        if copy:
+            return T_emb
+
+        key = _transition(self._direction) if key_added is None else key_added
+        ukey = f"{key}_params"
+
+        embs = self.adata.uns.get(ukey, {}).get("embeddings", [])
+        if basis not in emb:
+            embs = list(embs) + [basis]
+            self.adata.uns[ukey] = self.adata.uns.get(ukey, {})
+            self.adata.uns[ukey]["embeddings"] = embs
+
+        key = key + "_" + basis
+        logg.info(
+            f"Adding `adata.obsm[{key!r}]`\n    Finish",
+            time=start,
+        )
+        self.adata.obsm[key] = T_emb
 
     def __xor__(self, other: "KernelExpression") -> "KernelExpression":
         return self.__rxor__(other)
