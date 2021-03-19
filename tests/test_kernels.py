@@ -27,7 +27,7 @@ from cellrank.tl.kernels import (
 )
 from cellrank.tl._constants import _transition
 from cellrank.tl.kernels._base_kernel import KernelAdd, KernelMul, _is_bin_mult
-from cellrank.tl.kernels._cytotrace_kernel import CytoTRACEAggregation
+from cellrank.tl.kernels._cytotrace_kernel import CytoTRACEAggregation, _ct
 
 _rtol = 1e-6
 
@@ -1385,18 +1385,56 @@ class TestPseudotimeKernelScheme:
 
 
 class TestCytoTRACEKernel:
-    def test_layer(self, adata: AnnData):
-        pass
+    @pytest.mark.parametrize("layer", ["X", "Ms", "foo"])
+    def test_layer(self, adata: AnnData, layer: str):
+        if layer == "foo":
+            with pytest.raises(KeyError, match=layer):
+                _ = CytoTRACEKernel(adata, layer=layer)
+        else:
+            _ = CytoTRACEKernel(adata, layer=layer)
+            assert adata.uns[_ct("params")]["layer"] == layer
 
     @pytest.mark.parametrize("agg", list(CytoTRACEAggregation))
     def test_aggregation(self, adata: AnnData, agg: CytoTRACEAggregation):
-        pass
+        _ = CytoTRACEKernel(adata, aggregation=agg)
+        assert adata.uns[_ct("params")]["aggregation"] == agg.s
 
-    def test_raw(self, adata: AnnData):
-        pass
+    @pytest.mark.parametrize("use_raw", [False, True])
+    def test_raw(self, adata: AnnData, use_raw: bool):
+        if adata.raw is None:
+            adata.raw = adata
+        _ = CytoTRACEKernel(adata, use_raw=use_raw)
+        assert adata.uns[_ct("params")]["use_raw"] == use_raw
+
+    def test_correct_class(self, adata: AnnData):
+        k = CytoTRACEKernel(adata)
+        assert isinstance(k, PseudotimeKernel)
+        assert k._time_key == _ct("pseudotime")
+
+    def test_writes_params(self, adata: AnnData):
+        k = CytoTRACEKernel(adata, use_raw=False, layer="X", aggregation="mean")
+
+        assert adata.uns[_ct("params")] == {
+            "layer": "X",
+            "aggregation": "mean",
+            "use_raw": False,
+        }
+        np.testing.assert_array_equal(k.pseudotime, adata.obs[_ct("pseudotime")].values)
 
     def test_pseudotime_is_normalized(self, adata: AnnData):
-        pass
+        k = CytoTRACEKernel(adata, use_raw=False, layer="X", aggregation="mean")
+
+        np.testing.assert_array_equal(k.pseudotime.min(), 0.0)
+        np.testing.assert_array_equal(k.pseudotime.max(), 1.0)
 
     def test_compute_transition_matrix(self, adata: AnnData):
-        pass
+        k = CytoTRACEKernel(adata, use_raw=False, layer="X", aggregation="mean")
+        k.compute_transition_matrix()
+
+        np.testing.assert_allclose(k.transition_matrix.sum(1), 1.0)
+
+    def test_inversion(self, adata: AnnData):
+        k = ~CytoTRACEKernel(adata, use_raw=False, layer="X", aggregation="mean")
+
+        pt = adata.obs[_ct("pseudotime")].values
+        np.testing.assert_array_equal(np.max(pt) - pt, k.pseudotime)

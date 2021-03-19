@@ -77,7 +77,7 @@ class CytoTRACEKernel(PseudotimeKernel):
         backward: bool = False,
         layer: str = "Ms",
         aggregation: Literal["mean", "median", "hmean", "gmean"] = "mean",
-        use_raw: bool = True,
+        use_raw: bool = False,
         compute_cond_num: bool = False,
         check_connectivity: bool = False,
     ):
