@@ -2,6 +2,8 @@
 from typing import Tuple, Callable, Optional
 from inspect import signature
 
+from anndata import AnnData
+
 import numpy as np
 from numba import njit, prange
 from scipy.sparse import csr_matrix
@@ -233,3 +235,15 @@ def _calculate_starts(indptr: np.ndarray, ixs) -> np.ndarray:
 
     starts = np.cumsum(indptr[ixs + 1] - indptr[ixs])
     return np.hstack((np.array([0], dtype=starts.dtype), starts))
+
+
+def _get_basis(adata: AnnData, basis: str) -> np.ndarray:
+    try:
+        return adata.obsm[f"X_{basis}"]
+    except KeyError:
+        try:
+            return adata.obsm[basis]  # e.g. 'spatial'
+        except KeyError:
+            raise KeyError(
+                f"Unable to find a basis in `adata.obsm['X_{basis}']` or `adata.obsm[{basis!r}]`."
+            ) from None
