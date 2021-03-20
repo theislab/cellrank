@@ -4,17 +4,30 @@ from itertools import chain
 import numpy as np
 from scipy.sparse import issparse, spmatrix
 
+from cellrank.ul._docs import d
 from cellrank.ul._parallelize import parallelize
 
 
 class RandomWalk:
-    """TODO."""
+    """
+    Class that simulates a random walk on a Markov chain.
+
+    Parameters
+    ----------
+    transition_matrix
+        Row-stochastic transition matrix.
+    start_ixs
+        Indices from which to uniformly sample the starting points. If `None`, use all points.
+    stop_ixs
+        Indices ...
+        See ``successive_hits`` in :meth:`simulate_one`.
+    """
 
     def __init__(
         self,
         transition_matrix: Union[np.ndarray, spmatrix],
-        starting_ixs: Optional[Sequence[int]] = None,
-        barrier: Optional[Sequence[int]] = None,
+        start_ixs: Optional[Sequence[int]] = None,
+        stop_ixs: Optional[Sequence[int]] = None,
     ):
         if not np.allclose(transition_matrix.sum(1), 1.0):
             raise ValueError()
@@ -22,18 +35,18 @@ class RandomWalk:
         self._tmat = transition_matrix
         self._ixs = np.arange(self._tmat.shape[0])
         self._is_sparse = issparse(self._tmat)
-        self._barrier = set([] if barrier is None else barrier)
+        self._stop_ixs = set([] if stop_ixs is None else stop_ixs)
         self._starting_dist = (
             np.ones_like(self._ixs)
-            if starting_ixs is None
-            else np.isin(self._ixs, starting_ixs)
+            if start_ixs is None
+            else np.isin(self._ixs, start_ixs)
         )
         self._starting_dist = self._starting_dist.astype(np.float64) / np.sum(
             self._starting_dist
         )
 
     def _should_stop(self, ix: int) -> bool:
-        return ix in self._barrier
+        return ix in self._stop_ixs
 
     def _sample(self, ix: int, *, rs: np.random.RandomState) -> int:
         return rs.choice(
@@ -41,13 +54,30 @@ class RandomWalk:
             p=self._tmat[ix].A.squeeze() if self._is_sparse else self._tmat[ix],
         )
 
+    @d.get_sections(base="rw_sim", sections=["Parameters"])
     def simulate_one(
         self,
         max_iter: Union[int, float] = 0.25,
         seed: Optional[int] = None,
         successive_hits: int = 0,
     ) -> np.ndarray:
-        """TODO."""
+        """
+        Simulate one random walk.
+
+        Parameters
+        ----------
+        max_iter
+            Maximum number of steps of a random walk.
+        seed
+            Random seed.
+        successive_hits
+            Number of successive hits in the ``stop_ixs`` required to stop prematurely.
+
+        Returns
+        -------
+        Array of shape ``(max_iter,)`` of states that have been visited. If ``stop_ixs`` was specified, the array
+        may have smaller shape.
+        """
         if isinstance(max_iter, float):
             max_iter = int(np.ceil(max_iter * len(self._ixs)))
         if max_iter <= 0:
@@ -91,6 +121,7 @@ class RandomWalk:
 
         return res
 
+    @d.dedent
     def simulate_many(
         self,
         n_sims: int,
@@ -101,7 +132,21 @@ class RandomWalk:
         backend: str = "loky",
         show_progress_bar: bool = True,
     ) -> List[np.ndarray]:
-        """TODO."""
+        """
+        Simulate many random walks.
+
+        Parameters
+        ----------
+        n_sims
+            Number of random walks to simulate.
+        %(rw_sim.params)s
+        %(parallel)s
+
+        Returns
+        -------
+        List of arrays of shape ``(max_iter,)`` of states that have been visited. If ``stop_ixs`` was specified,
+        the arrays may have smaller shape.
+        """
         # TODO: logging
         simss = parallelize(
             self._simulate_many,

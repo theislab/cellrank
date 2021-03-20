@@ -323,18 +323,19 @@ class KernelExpression(Pickleable, ABC):
         )
         self.adata.obsm[key] = T_emb
 
+    @d.dedent
     def plot_random_walk(
         self,
         n_sims: int,
         max_iter: Union[int, float] = 0.25,
+        seed: Optional[int] = None,
+        successive_hits: int = 0,
         start_ixs: Indices_t = None,
         stop_ixs: Indices_t = None,
-        successive_hits: int = 0,
         basis: str = "umap",
         cmap: Union[str, LinearSegmentedColormap] = "gnuplot",
         linewidth: float = 1.0,
         linealpha: float = 0.3,
-        seed: Optional[int] = None,
         n_jobs: Optional[int] = None,
         backend: str = "loky",
         show_progress_bar: bool = True,
@@ -344,28 +345,36 @@ class KernelExpression(Pickleable, ABC):
         **kwargs: Any,
     ) -> None:
         """
-        TODO.
+        Plot random walks in an embedding.
 
         Parameters
         ----------
         n_sims
-        max_iter
+            Number of random walks.
+        %(rw_sim.parameters)s
         start_ixs
+            Cells from which to sample the starting points. If `None`, use all cells.
+            %(rw_ixs)s
         stop_ixs
-        successive_hits
+            Cells which when hit, the random walk is terminated. If `None`, terminate after ``max_iters``.
+            See also the ``successive_hits`` parameter.
+            %(rw_ixs)s
         basis
+            Basis in :attr:`anndata.AnnData.obsm` to use as an embedding.
         cmap
+            Colormap for the random walk lines.
         linewidth
+            Width of the random walk lines.
         linealpha
-        seed
-        figsize
-        dpi
-        save
+            Alpha value of the random walk lines.
+        %(parallel)s
+        %(plotting)s
         kwargs
+            Keyword arguments for :func:`scvelo.pl.scatter`.
 
         Returns
         -------
-        TODO.
+        %(just_plots)s
         """
 
         def create_ixs(ixs: Indices_t) -> Optional[np.ndarray]:
@@ -405,9 +414,7 @@ class KernelExpression(Pickleable, ABC):
             )
 
         start_ixs, stop_ixs = create_ixs(start_ixs), create_ixs(stop_ixs)
-        rw = RandomWalk(
-            self.transition_matrix, starting_ixs=start_ixs, barrier=stop_ixs
-        )
+        rw = RandomWalk(self.transition_matrix, start_ixs=start_ixs, stop_ixs=stop_ixs)
         sims = rw.simulate_many(
             n_sims=n_sims,
             max_iter=max_iter,

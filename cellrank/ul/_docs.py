@@ -151,6 +151,10 @@ nu
     Affects near which asymptote maximum growth occurs.{}
 perc
     Percentile by which to clip the connectivities.{}"""
+_rw_ixs = """\
+Can be specified as either a :class:`dict` with a key corresponding to cluster key in
+    :attr:`anndata.AnnData.obs` and values to clusters or just a sequence of cell ids
+    in :attr:`anndata.AnnData.obs_names`."""
 
 
 def inject_docs(**kwargs):  # noqa
@@ -204,4 +208,5 @@ d = DocstringProcessor(
     soft_scheme_kernel=_soft_scheme_fmt.format(
         *([" Only used when `scheme='soft'`."] * 3)
     ),
+    rw_ixs=_rw_ixs,
 )
