@@ -3108,7 +3108,7 @@ class TestCircularProjection:
 class TestPlotRandomWalk:
     @compare(kind="gpcca")
     def test_kernel_random_walk_params(self, mc: GPCCA, fpath: str):
-        mc.kernel.plot_random_walk(
+        mc.kernel.plot_random_walks(
             n_sims=100,
             max_iter=100,
             seed=42,
@@ -3119,30 +3119,42 @@ class TestPlotRandomWalk:
 
     @compare(kind="gpcca")
     def test_kernel_random_walk_basis(self, mc: GPCCA, fpath: str):
-        mc.kernel.plot_random_walk(
+        mc.kernel.plot_random_walks(
             n_sims=10, max_iter=100, seed=42, basis="pca", dpi=DPI, save=fpath
         )
 
     @compare(kind="gpcca")
     def test_kernel_random_walk_cmap(self, mc: GPCCA, fpath: str):
-        mc.kernel.plot_random_walk(
+        mc.kernel.plot_random_walks(
             n_sims=10, max_iter=100, seed=42, cmap="viridis", dpi=DPI, save=fpath
         )
 
     @compare(kind="gpcca")
     def test_kernel_random_walk_line_width(self, mc: GPCCA, fpath: str):
-        mc.kernel.plot_random_walk(
+        mc.kernel.plot_random_walks(
             n_sims=10, max_iter=100, seed=42, linewidth=2, dpi=DPI, save=fpath
         )
 
     @compare(kind="gpcca")
     def test_kernel_random_walk_line_alpha(self, mc: GPCCA, fpath: str):
-        mc.kernel.plot_random_walk(
+        mc.kernel.plot_random_walks(
             n_sims=10, max_iter=100, seed=42, linealpha=1, dpi=DPI, save=fpath
         )
 
     @compare(kind="gpcca")
     def test_kernel_random_walk_kwargs(self, mc: GPCCA, fpath: str):
-        mc.kernel.plot_random_walk(
+        mc.kernel.plot_random_walks(
             n_sims=10, max_iter=100, seed=42, color="none", dpi=DPI, save=fpath
+        )
+
+    @compare(kind="gpcca")
+    def test_kernel_random_walk_ixs_legend_loc(self, mc: GPCCA, fpath: str):
+        mc.kernel.plot_random_walks(
+            n_sims=10,
+            max_iter=100,
+            seed=42,
+            ixs_legend_loc="top right out",
+            legend_loc="upper left",
+            dpi=DPI,
+            save=fpath,
         )

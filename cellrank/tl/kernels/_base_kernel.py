@@ -62,7 +62,7 @@ _n_dec = 2
 _dtype = np.float64
 _cond_num_tolerance = 1e-15
 AnnData = TypeVar("AnnData")
-Indices_t = Optional[Union[Sequence[str], Dict[str, Sequence[str]]]]
+Indices_t = Optional[Union[Sequence[str], Dict[str, Union[str, Sequence[str]]]]]
 
 
 class KernelExpression(Pickleable, ABC):
@@ -328,7 +328,7 @@ class KernelExpression(Pickleable, ABC):
         self.adata.obsm[key] = T_emb
 
     @d.dedent
-    def plot_random_walk(
+    def plot_random_walks(
         self,
         n_sims: int,
         max_iter: Union[int, float] = 0.25,
@@ -340,6 +340,7 @@ class KernelExpression(Pickleable, ABC):
         cmap: Union[str, LinearSegmentedColormap] = "gnuplot",
         linewidth: float = 1.0,
         linealpha: float = 0.3,
+        ixs_legend_loc: Optional[str] = None,
         n_jobs: Optional[int] = None,
         backend: str = "loky",
         show_progress_bar: bool = True,
@@ -361,8 +362,9 @@ class KernelExpression(Pickleable, ABC):
             %(rw_ixs)s
         stop_ixs
             Cells which when hit, the random walk is terminated. If `None`, terminate after ``max_iters``.
-            See also the ``successive_hits`` parameter.
             %(rw_ixs)s
+            For example ``{'clusters': ['Alpha', 'Beta']}`` and ``succesive_hits=3`` means that the random walk will
+            stop prematurely after cells in the above specified clusters have been visited succesively 3 times in a row.
         basis
             Basis in :attr:`anndata.AnnData.obsm` to use as an embedding.
         cmap
@@ -371,6 +373,8 @@ class KernelExpression(Pickleable, ABC):
             Width of the random walk lines.
         linealpha
             Alpha value of the random walk lines.
+        ixs_legend_loc
+            Legend location for the start/top indices.
         %(parallel)s
         %(plotting)s
         kwargs
@@ -470,6 +474,16 @@ class KernelExpression(Pickleable, ABC):
                 ax=ax,
                 zorder=4,
             )
+
+        if ixs_legend_loc not in (None, "none"):
+            from cellrank.pl._utils import _position_legend
+
+            h1 = ax.scatter([], [], color=cmap(0.0), label="start")
+            h2 = ax.scatter([], [], color=cmap(1.0), label="stop")
+            legend = ax.get_legend()
+            if legend is not None:
+                ax.add_artist(legend)
+            _position_legend(ax, legend_loc=ixs_legend_loc, handles=[h1, h2])
 
         if save is not None:
             save_fig(fig, save)

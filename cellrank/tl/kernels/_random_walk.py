@@ -75,7 +75,7 @@ class RandomWalk:
         ----------
         max_iter
             Maximum number of steps of a random walk. If a :class:`float`, it can be specified
-            as a fraction of the number states.
+            as a fraction of the number of cells.
         seed
             Random seed.
         successive_hits
