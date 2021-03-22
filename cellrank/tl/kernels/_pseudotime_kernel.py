@@ -78,7 +78,7 @@ class PseudotimeKernel(Kernel):
     def compute_transition_matrix(
         self,
         threshold_scheme: Union[Literal["soft", "hard"], Callable] = "soft",
-        fract_to_keep: float = 1 / 3,
+        fract_to_keep: float = 0.3,
         b: float = 20.0,
         nu: float = 1.0,
         percentile: Optional[int] = 95,

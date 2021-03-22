@@ -97,7 +97,7 @@ class HardThresholdScheme(ThresholdSchemeABC):
         neigh_pseudotime: np.ndarray,
         neigh_conn: np.ndarray,
         n_neighs: int,
-        fract_to_keep: float = 1 / 3,
+        fract_to_keep: float = 0.3,
     ) -> np.ndarray:
         """
         Convert the undirected graph of cell-cell similarities into a directed one by removing "past" edges.
