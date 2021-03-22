@@ -207,6 +207,6 @@ d = DocstringProcessor(
     cond_num=_cond_num,
     soft_scheme=_soft_scheme_fmt.format("", "", ""),
     soft_scheme_kernel=_soft_scheme_fmt.format(
-        *([" Only used when `scheme='soft'`."] * 3)
+        *([" Only used when `threshold_scheme='soft'`."] * 3)
     ),
 )

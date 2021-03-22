@@ -75,7 +75,7 @@ CytoTRACE Kernel
 ----------------
 
 .. autoclass:: cellrank.tl.kernels.CytoTRACEKernel
-    :members:
+    :members: compute_cytotrace, compute_transition_matrix
 
 Precomputed Kernel
 ------------------

@@ -152,7 +152,7 @@ class CytoTRACEKernel(PseudotimeKernel):
 
             - `'ct_gene_corr'`: the correlation as specified above.
             - `'ct_correlates'`: indication of the genes used to compute the CytoTRACE score, i.e. the ones that
-               correlated best with `'num_exp_genes'`.
+              correlated best with `'num_exp_genes'`.
         """
         # check use_raw
         aggregation = CytoTRACEAggregation(aggregation)
