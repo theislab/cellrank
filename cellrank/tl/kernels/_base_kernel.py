@@ -438,7 +438,7 @@ class KernelExpression(Pickleable, ABC):
         )
 
         fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
-        scv.pl.scatter(self.adata, show=False, ax=ax, **kwargs)
+        scv.pl.scatter(self.adata, basis=basis, show=False, ax=ax, **kwargs)
 
         logg.info("Plotting random walks")
         for sim in sims:
