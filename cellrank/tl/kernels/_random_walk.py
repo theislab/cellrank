@@ -42,6 +42,9 @@ class RandomWalk:
             if start_ixs is None
             else np.isin(self._ixs, start_ixs)
         )
+        if np.sum(self._starting_dist):
+            raise ValueError("No starting indices have been selected.")
+
         self._starting_dist = self._starting_dist.astype(np.float64) / np.sum(
             self._starting_dist
         )
@@ -68,7 +71,8 @@ class RandomWalk:
         Parameters
         ----------
         max_iter
-            Maximum number of steps of a random walk.
+            Maximum number of steps of a random walk. If a :class:`float`, it can be specified
+            as a fraction of the number states.
         seed
             Random seed.
         successive_hits
