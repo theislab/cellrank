@@ -17,7 +17,7 @@ class ThresholdSchemeABC(ABC):
         self,
         cell_pseudotime: float,
         neigh_pseudotime: np.ndarray,
-        neigh_dist: np.ndarray,
+        neigh_conn: np.ndarray,
         **kwargs: Any,
     ) -> np.ndarray:
         """
@@ -28,13 +28,13 @@ class ThresholdSchemeABC(ABC):
         cell_pseudotime
             Pseudotime of the current cell.
         neigh_pseudotime
-            Array of shape ``(n_neighbors,)`` containing pseudotimes of neighbors
-        neigh_dist
-            Array of shape ``(n_neighbors,)`` containing distances from the current cells to its neighbors.
+            Array of shape ``(n_neighbors,)`` containing pseudotimes of neighbors.
+        neigh_conn
+            Array of shape ``(n_neighbors,)`` containing connectivities of the current cell and its neighbors.
 
         Returns
         -------
-        Array of shape ``(n_neighbors,)`` containing the biased distances.
+        Array of shape ``(n_neighbors,)`` containing the biased connectivities.
         """
 
     def bias_knn(
@@ -48,13 +48,14 @@ class ThresholdSchemeABC(ABC):
         conn
             Sparse matrix of shape ``(n_cells, n_cells)`` containing the nearest neighbor connectivities.
         pseudotime
-            Pseudotemporal order of cells.
+            Pseudotemporal ordering of cells.
 
         Returns
         -------
         The biased connectivities.
         """
         conn_biased = conn.copy()
+
         for i in range(conn.shape[0]):
             row, start, end = conn[i], conn.indptr[i], conn.indptr[i + 1]
 
@@ -94,43 +95,44 @@ class HardThresholdScheme(ThresholdSchemeABC):
         self,
         cell_pseudotime: float,
         neigh_pseudotime: np.ndarray,
-        neigh_dist: np.ndarray,
+        neigh_conn: np.ndarray,
         n_neighs: int,
-        k: int = 3,
+        frac_to_keep: float = 0.3,
     ) -> np.ndarray:
         """
-        Bias the connections by removing ones to past cells.
+        Convert the undirected graph of cell-cell similarities into a directed one by removing "past" edges.
 
-        It takes in symmetric connectivities and a pseudotime and removes edges that point "against" pseudotime,
-        in this way creating a directed graph. For each node, it always keeps the closest neighbors,
-        making sure the graph remains connected.
+        This uses a pseudotemporal measure to remove graph-edges that point into the pseudotime-past. For each cell,
+        it keeps the closest neighbors, even if they are in the pseudotime past, to make sure the graph remains
+        connected.
 
         Parameters
         ----------
         %(pt_scheme.parameters)s
         n_neighs
             Number of neighbors to keep.
-        k
-            Number, alongside with ``n_neighbors`` which determines the threshold for candidate indices.
+        frac_to_keep
+            The `fract_to_keep` * n_neighbors closest neighbors (according to graph connectivities) are kept, no matter
+            whether they lie in the pseudotemporal past or future.
 
         Returns
         -------
         %(pt_scheme.returns)s
         """
-        k_thresh = max(0, min(30, int(np.floor(n_neighs / k)) - 1))
+        k_thresh = max(0, min(30, int(np.floor(n_neighs * frac_to_keep)) - 1))
 
         # below code does not work with argpartition
-        ixs = np.flip(np.argsort(neigh_dist))
+        ixs = np.flip(np.argsort(neigh_conn))
         close_ixs, far_ixs = ixs[:k_thresh], ixs[k_thresh:]
 
         mask_keep = cell_pseudotime <= neigh_pseudotime[far_ixs]
         far_ixs_keep = far_ixs[mask_keep]
 
-        biased_dist = np.zeros_like(neigh_dist)
-        biased_dist[close_ixs] = neigh_dist[close_ixs]
-        biased_dist[far_ixs_keep] = neigh_dist[far_ixs_keep]
+        biased_conn = np.zeros_like(neigh_conn)
+        biased_conn[close_ixs] = neigh_conn[close_ixs]
+        biased_conn[far_ixs_keep] = neigh_conn[far_ixs_keep]
 
-        return biased_dist
+        return biased_conn
 
 
 class SoftThresholdScheme(ThresholdSchemeABC):
@@ -147,16 +149,16 @@ class SoftThresholdScheme(ThresholdSchemeABC):
         self,
         cell_pseudotime: float,
         neigh_pseudotime: np.ndarray,
-        neigh_dist: np.ndarray,
+        neigh_conn: np.ndarray,
         b: float = 20.0,
         nu: float = 1.0,
         perc: Optional[int] = 95,
     ) -> np.ndarray:
         """
-        Bias the connections by downweighting ones to past cells.
+        Bias the connectivities by downweighting ones to past cells.
 
         This function uses `generalized logistic regression
-        <https://en.wikipedia.org/wiki/Generalized_logistic_function>`_ to do the weighting.
+        <https://en.wikipedia.org/wiki/Generalized_logistic_function>`_ to weight the past connectivities.
 
         Parameters
         ----------
@@ -168,22 +170,22 @@ class SoftThresholdScheme(ThresholdSchemeABC):
         %(pt_scheme.returns)s
         """
         if perc is not None:
-            neigh_dist = np.clip(
-                neigh_dist,
-                np.percentile(neigh_dist, 100 - perc),
-                np.percentile(neigh_dist, perc),
+            neigh_conn = np.clip(
+                neigh_conn,
+                np.percentile(neigh_conn, 100 - perc),
+                np.percentile(neigh_conn, perc),
             )
 
         past_ixs = np.where(neigh_pseudotime < cell_pseudotime)[0]
         if not len(past_ixs):
-            return neigh_dist
+            return neigh_conn
 
-        weights = np.ones_like(neigh_dist)
+        weights = np.ones_like(neigh_conn)
 
         dt = cell_pseudotime - neigh_pseudotime[past_ixs]
         weights[past_ixs] = 2.0 / ((1.0 + np.exp(b * dt)) ** (1.0 / nu))
 
-        return neigh_dist * weights
+        return neigh_conn * weights
 
 
 class CustomThresholdScheme(ThresholdSchemeABC):
@@ -210,7 +212,7 @@ class CustomThresholdScheme(ThresholdSchemeABC):
         self,
         cell_pseudotime: float,
         neigh_pseudotime: np.ndarray,
-        neigh_dist: np.ndarray,
+        neigh_conn: np.ndarray,
         **kwargs: Any,
     ) -> np.ndarray:
         """
@@ -226,4 +228,4 @@ class CustomThresholdScheme(ThresholdSchemeABC):
         -------
         %(pt_scheme.returns)s
         """  # noqa: D400
-        return self._callback(cell_pseudotime, neigh_pseudotime, neigh_dist, **kwargs)
+        return self._callback(cell_pseudotime, neigh_pseudotime, neigh_conn, **kwargs)

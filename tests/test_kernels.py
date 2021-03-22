@@ -552,16 +552,23 @@ class TestKernel:
 
         np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
 
-    def test_palantir(self, adata: AnnData):
+    @pytest.mark.parametrize("dens_norm", [False, True])
+    def test_palantir(self, adata: AnnData, dens_norm: bool):
         conn = _get_neighs(adata, "connectivities")
         n_neighbors = _get_neighs_params(adata)["n_neighbors"]
         pseudotime = adata.obs["latent_time"]
 
         conn_biased = bias_knn(conn, pseudotime, n_neighbors)
-        T_1 = _normalize(conn_biased)
+        if dens_norm:
+            T_1 = density_normalization(conn_biased, conn)
+            T_1 = _normalize(T_1)
+        else:
+            T_1 = _normalize(conn_biased)
 
         pk = PseudotimeKernel(adata, time_key="latent_time").compute_transition_matrix(
-            density_normalize=False
+            density_normalize=dens_norm,
+            frac_to_keep=1 / 3.0,
+            threshold_scheme="hard",
         )
         T_2 = pk.transition_matrix
 
@@ -576,22 +583,6 @@ class TestKernel:
         assert pk_inv is pk
         assert pk_inv.backward
         np.testing.assert_allclose(pt, 1 - pk_inv.pseudotime)
-
-    def test_palantir_dense_norm(self, adata: AnnData):
-        conn = _get_neighs(adata, "connectivities")
-        n_neighbors = _get_neighs_params(adata)["n_neighbors"]
-        pseudotime = adata.obs["latent_time"]
-
-        conn_biased = bias_knn(conn, pseudotime, n_neighbors)
-        T_1 = density_normalization(conn_biased, conn)
-        T_1 = _normalize(T_1)
-
-        pk = PseudotimeKernel(adata, time_key="latent_time").compute_transition_matrix(
-            density_normalize=True
-        )
-        T_2 = pk.transition_matrix
-
-        np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
 
     def test_palantir_differ_dense_norm(self, adata: AnnData):
         conn = _get_neighs(adata, "connectivities")
@@ -1375,12 +1366,14 @@ class TestPseudotimeKernelScheme:
     @pytest.mark.parametrize("scheme", ["hard", "soft"])
     def test_scheme(self, adata: AnnData, scheme: str):
         pk = PseudotimeKernel(adata)
-        pk.compute_transition_matrix(threshold_scheme=scheme, k=4, b=10, nu=0.5)
+        pk.compute_transition_matrix(
+            threshold_scheme=scheme, frac_to_keep=0.3, b=10, nu=0.5
+        )
 
         np.testing.assert_allclose(pk.transition_matrix.sum(1), 1.0)
         assert pk.params["scheme"] == scheme
         if scheme == "hard":
-            assert pk.params["k"] == 4
+            assert pk.params["frac_to_keep"] == 0.3
             assert "b" not in pk.params
             assert "nu" not in pk.params
         elif scheme == "soft":
