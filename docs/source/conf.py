@@ -66,7 +66,6 @@ extensions = [
     "nbsphinx",
     "sphinx_copybutton",
     "sphinx_last_updated_by_git",
-    "edit_on_github",
 ]
 
 intersphinx_mapping = dict(
@@ -250,9 +249,8 @@ todo_include_todos = False
 html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
 html_theme_options = dict(navigation_depth=4, logo_only=True)
-github_repo = "cellrank"  # sets the html_context
-github_nb_repo = "cellrank_notebooks"
 html_show_sphinx = False
+html_show_sourcelink = False
 
 
 def setup(app):
