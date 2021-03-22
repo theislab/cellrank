@@ -100,11 +100,11 @@ class HardThresholdScheme(ThresholdSchemeABC):
         k: int = 3,
     ) -> np.ndarray:
         """
-        Bias the connectivities by removing ones to past cells.
+        Convert the undirected graph of cell-cell similarities into a directed one by removing "past" edges.
 
-        It takes in symmetric connectivities and a pseudotime and removes edges that point "against" pseudotime,
-        in this way creating a directed graph. For each node, it always keeps the closest neighbors,
-        making sure the graph remains connected.
+        This uses a pseudotemporal measure to remove graph-edges that point into the pseudotime-past. For each cell,
+        it keeps the closest neighbors, even if they are in the pseudotime past, to make sure the graph remains
+        connected.
 
         Parameters
         ----------
