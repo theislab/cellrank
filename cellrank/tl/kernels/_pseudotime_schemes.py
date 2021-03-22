@@ -97,7 +97,7 @@ class HardThresholdScheme(ThresholdSchemeABC):
         neigh_pseudotime: np.ndarray,
         neigh_conn: np.ndarray,
         n_neighs: int,
-        k: int = 3,
+        fract_to_keep: float = 1 / 3,
     ) -> np.ndarray:
         """
         Convert the undirected graph of cell-cell similarities into a directed one by removing "past" edges.
@@ -111,14 +111,15 @@ class HardThresholdScheme(ThresholdSchemeABC):
         %(pt_scheme.parameters)s
         n_neighs
             Number of neighbors to keep.
-        k
-            Number, alongside with ``n_neighbors`` which determines the threshold for candidate indices.
+        fract_to_keep
+            The `fract_to_keep` * n_neighbors closest neighbors (according to graph connectivities) are kept, no matter
+            whether they lie in the pseudoremporal past or future.
 
         Returns
         -------
         %(pt_scheme.returns)s
         """
-        k_thresh = max(0, min(30, int(np.floor(n_neighs / k)) - 1))
+        k_thresh = max(0, min(30, int(np.floor(n_neighs * fract_to_keep)) - 1))
 
         # below code does not work with argpartition
         ixs = np.flip(np.argsort(neigh_conn))
