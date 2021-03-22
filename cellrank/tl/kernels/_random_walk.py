@@ -20,8 +20,7 @@ class RandomWalk:
     start_ixs
         Indices from which to uniformly sample the starting points. If `None`, use all points.
     stop_ixs
-        Indices ...
-        See ``successive_hits`` in :meth:`simulate_one`.
+        Indices which when hit, the random walk is terminated.
     """
 
     def __init__(
@@ -30,19 +29,23 @@ class RandomWalk:
         start_ixs: Optional[Sequence[int]] = None,
         stop_ixs: Optional[Sequence[int]] = None,
     ):
+        if transition_matrix.ndim != 2 or (
+            transition_matrix.shape[0] != transition_matrix.shape[1]
+        ):
+            raise ValueError("Array is not a square matrix.")
         if not np.allclose(transition_matrix.sum(1), 1.0):
             raise ValueError("Transition matrix is not row-stochastic.")
 
         self._tmat = transition_matrix
         self._ixs = np.arange(self._tmat.shape[0])
         self._is_sparse = issparse(self._tmat)
-        self._stop_ixs = set([] if stop_ixs is None else stop_ixs)
+        self._stop_ixs = set([] if stop_ixs is None or not len(stop_ixs) else stop_ixs)
         self._starting_dist = (
             np.ones_like(self._ixs)
             if start_ixs is None
             else np.isin(self._ixs, start_ixs)
         )
-        if np.sum(self._starting_dist):
+        if np.sum(self._starting_dist) == 0:
             raise ValueError("No starting indices have been selected.")
 
         self._starting_dist = self._starting_dist.astype(np.float64) / np.sum(
@@ -80,14 +83,14 @@ class RandomWalk:
 
         Returns
         -------
-        Array of shape ``(max_iter,)`` of states that have been visited. If ``stop_ixs`` was specified, the array
+        Array of shape ``(max_iter + 1,)`` of states that have been visited. If ``stop_ixs`` was specified, the array
         may have smaller shape.
         """
         if isinstance(max_iter, float):
             max_iter = int(np.ceil(max_iter * len(self._ixs)))
         if max_iter <= 1:
             raise ValueError(
-                f"Expected number of iteration to be > 1, found `{max_iter}`."
+                f"Expected number of iterations to be > 1, found `{max_iter}`."
             )
         if successive_hits < 0:
             raise ValueError(
@@ -153,11 +156,13 @@ class RandomWalk:
 
         Returns
         -------
-        List of arrays of shape ``(max_iter,)`` of states that have been visited. If ``stop_ixs`` was specified,
+        List of arrays of shape ``(max_iter + 1,)`` of states that have been visited. If ``stop_ixs`` was specified,
         the arrays may have smaller shape.
         """
         if n_sims <= 0:
-            raise ValueError(f"Expected `n_sims` to be positive, found `{n_sims}`.")
+            raise ValueError(
+                f"Expected number of simulations to be positive, found `{n_sims}`."
+            )
         start = logg.info(
             f"Simulating `{n_sims}` random walks of maximum length `{max_iter}`"
         )

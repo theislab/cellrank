@@ -3105,7 +3105,7 @@ class TestCircularProjection:
         )
 
 
-class TestRandomWalk:
+class TestPlotRandomWalk:
     @compare(kind="gpcca")
     def test_kernel_random_walk_params(self, mc: GPCCA, fpath: str):
         pass
