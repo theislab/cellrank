@@ -3103,3 +3103,29 @@ class TestCircularProjection:
         cr.pl.circular_projection(
             adata, keys=adata.var_names[0], colorbar=False, dpi=DPI, save=fpath
         )
+
+
+class TestRandomWalk:
+    @compare(kind="gpcca")
+    def test_kernel_random_walk_params(self, mc: GPCCA, fpath: str):
+        pass
+
+    @compare(kind="gpcca")
+    def test_kernel_random_walk_basis(self, mc: GPCCA, fpath: str):
+        pass
+
+    @compare(kind="gpcca")
+    def test_kernel_random_walk_cmap(self, mc: GPCCA, fpath: str):
+        pass
+
+    @compare(kind="gpcca")
+    def test_kernel_random_walk_line_width(self, mc: GPCCA, fpath: str):
+        pass
+
+    @compare(kind="gpcca")
+    def test_kernel_random_walk_line_alpha(self, mc: GPCCA, fpath: str):
+        pass
+
+    @compare(kind="gpcca")
+    def test_kernel_random_walk_kwargs(self, mc: GPCCA, fpath: str):
+        pass
