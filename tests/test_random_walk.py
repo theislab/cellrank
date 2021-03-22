@@ -1,0 +1,2 @@
+class TestRandomWalks:
+    pass

@@ -23,6 +23,7 @@ from scvelo.plotting.utils import default_size, plot_outline
 
 import numpy as np
 from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix, isspmatrix_csr
+from pandas.api.types import infer_dtype
 from pandas.core.dtypes.common import is_categorical_dtype
 
 import matplotlib.pyplot as plt
@@ -380,43 +381,51 @@ class KernelExpression(Pickleable, ABC):
         %(just_plots)s
         """
 
-        def create_ixs(ixs: Indices_t) -> Optional[np.ndarray]:
+        def create_ixs(ixs: Indices_t, *, kind: str) -> Optional[np.ndarray]:
             if ixs is None:
                 return None
             if isinstance(ixs, dict):
+                # fmt: off
                 if len(ixs) != 1:
-                    raise ValueError()
+                    raise ValueError(f"Expected to find only 1 cluster key, found `{len(ixs)}`.")
                 cluster_key = next(iter(ixs.keys()))
                 if cluster_key not in self.adata.obs:
-                    raise KeyError()
+                    raise KeyError(f"Unable to find `adata.obs[{cluster_key!r}]`.")
                 if not is_categorical_dtype(self.adata.obs[cluster_key]):
-                    raise TypeError()
-                ixs = np.where(np.isin(self.adata.obs[cluster_key], ixs[cluster_key]))[
-                    0
-                ]
+                    raise TypeError(f"Expected `adata.obs[{cluster_key!r}]` to be categorical, "
+                                    f"found `{infer_dtype(self.adata.obs[cluster_key])}`.")
+                ixs = np.where(np.isin(self.adata.obs[cluster_key], ixs[cluster_key]))[0]
+                # fmt: on
+            elif isinstance(ixs, str):
+                ixs = np.where(self.adata.obs_names == ixs)[0]
             else:
                 ixs = np.where(np.isin(self.adata.obs_names, ixs))[0]
 
             if not len(ixs):
-                logg.warning("TODO")
+                logg.warning(f"No {kind} indices have been selected, using `None`")
                 return None
 
             return ixs
 
         if self._transition_matrix is None:
-            raise RuntimeError("TODO.")
+            raise RuntimeError(
+                "Compute transition matrix first as `.compute_transition_matrix()`."
+            )
         emb = _get_basis(self.adata, basis)
 
         if isinstance(cmap, str):
             cmap = plt.get_cmap(cmap)
         if not isinstance(cmap, LinearSegmentedColormap):
             if not hasattr(cmap, "colors"):
-                raise AttributeError()
+                raise AttributeError(
+                    "Unable to create a colormap, `cmap` does not have attribute `colors`."
+                )
             cmap = LinearSegmentedColormap.from_list(
                 "random_walk", colors=cmap.colors, N=max_iter
             )
 
-        start_ixs, stop_ixs = create_ixs(start_ixs), create_ixs(stop_ixs)
+        start_ixs = create_ixs(start_ixs, kind="start")
+        stop_ixs = create_ixs(stop_ixs, kind="stop")
         rw = RandomWalk(self.transition_matrix, start_ixs=start_ixs, stop_ixs=stop_ixs)
         sims = rw.simulate_many(
             n_sims=n_sims,
@@ -431,6 +440,7 @@ class KernelExpression(Pickleable, ABC):
         fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
         scv.pl.scatter(self.adata, show=False, ax=ax, **kwargs)
 
+        logg.info("Plotting random walks")
         for sim in sims:
             x = emb[sim][:, 0]
             y = emb[sim][:, 1]

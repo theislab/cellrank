@@ -4,6 +4,7 @@ from itertools import chain
 import numpy as np
 from scipy.sparse import issparse, spmatrix
 
+from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.ul._parallelize import parallelize
 
@@ -30,7 +31,7 @@ class RandomWalk:
         stop_ixs: Optional[Sequence[int]] = None,
     ):
         if not np.allclose(transition_matrix.sum(1), 1.0):
-            raise ValueError()
+            raise ValueError("Transition matrix is not row-stochastic.")
 
         self._tmat = transition_matrix
         self._ixs = np.arange(self._tmat.shape[0])
@@ -80,10 +81,14 @@ class RandomWalk:
         """
         if isinstance(max_iter, float):
             max_iter = int(np.ceil(max_iter * len(self._ixs)))
-        if max_iter <= 0:
-            raise ValueError()
+        if max_iter <= 1:
+            raise ValueError(
+                f"Expected number of iteration to be > 1, found `{max_iter}`."
+            )
         if successive_hits < 0:
-            raise ValueError()
+            raise ValueError(
+                f"Expected number of successive hits to be positive, found `{successive_hits}`."
+            )
 
         rs = np.random.RandomState(seed)
         ix = rs.choice(self._ixs, p=self._starting_dist)
@@ -147,7 +152,12 @@ class RandomWalk:
         List of arrays of shape ``(max_iter,)`` of states that have been visited. If ``stop_ixs`` was specified,
         the arrays may have smaller shape.
         """
-        # TODO: logging
+        if n_sims <= 0:
+            raise ValueError(f"Expected `n_sims` to be positive, found `{n_sims}`.")
+        start = logg.info(
+            f"Simulating `{n_sims}` random walks of maximum length `{max_iter}`"
+        )
+
         simss = parallelize(
             self._simulate_many,
             collection=np.arange(n_sims),
@@ -157,5 +167,8 @@ class RandomWalk:
             as_array=False,
             unit="sim",
         )(max_iter=max_iter, seed=seed, successive_hits=successive_hits)
+        simss = list(chain.from_iterable(simss))
 
-        return list(chain.from_iterable(simss))
+        logg.info("    Finish", time=start)
+
+        return simss
