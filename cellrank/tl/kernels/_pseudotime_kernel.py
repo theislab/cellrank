@@ -78,7 +78,7 @@ class PseudotimeKernel(Kernel):
     def compute_transition_matrix(
         self,
         threshold_scheme: Union[Literal["soft", "hard"], Callable] = "soft",
-        fract_to_keep: float = 0.3,
+        frac_to_keep: float = 0.3,
         b: float = 20.0,
         nu: float = 1.0,
         percentile: Optional[int] = 95,
@@ -104,9 +104,9 @@ class PseudotimeKernel(Kernel):
 
         Parameters
         ----------
-        fract_to_keep
+        frac_to_keep
             The `fract_to_keep` * n_neighbors closest neighbors (according to graph connectivities) are kept, no matter
-            whether they lie in the pseudoremporal past or future. This is done to ensure that the graph remains
+            whether they lie in the pseudotemporal past or future. This is done to ensure that the graph remains
             connected. Only used when `threshold_scheme='hard'`.
         %(soft_scheme_kernel)s
         density_normalize
@@ -140,7 +140,7 @@ class PseudotimeKernel(Kernel):
                 kwargs["b"], kwargs["nu"] = b, nu
             elif threshold_scheme == ThresholdScheme.HARD:
                 scheme = HardThresholdScheme()
-                kwargs["fract_to_keep"], kwargs["n_neighs"] = fract_to_keep, n_neighbors
+                kwargs["frac_to_keep"], kwargs["n_neighs"] = frac_to_keep, n_neighbors
             else:
                 raise NotImplementedError(
                     f"Threshold scheme `{threshold_scheme}` is not yet implemented."
