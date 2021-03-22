@@ -46,6 +46,8 @@ or via PyPI::
     pip install cellrank
     # or with extra libraries, useful for large datasets
     pip install 'cellrank[krylov]'
+    # or with external modules, see External API
+    pip install 'cellrank[external]'
 
 Why is it called "CellRank"?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -71,15 +73,15 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
     :alt: Bioconda
 
 .. |CI| image:: https://img.shields.io/github/workflow/status/theislab/cellrank/CI/master
-    :target: https://github.com/theislab/cellrank
+    :target: https://github.com/theislab/cellrank/actions
     :alt: CI
 
 .. |Notebooks| image:: https://img.shields.io/github/workflow/status/theislab/cellrank_notebooks/CI/master?label=notebooks
-    :target: https://github.com/theislab/cellrank_notebooks
+    :target: https://github.com/theislab/cellrank_notebooks/actions
     :alt: CI-Notebooks
 
 .. |Docs|  image:: https://img.shields.io/readthedocs/cellrank
-    :target: https://cellrank.readthedocs.io/en/latest
+    :target: https://cellrank.readthedocs.io/en/stable
     :alt: Documentation
 
 .. |Downloads| image:: https://pepy.tech/badge/cellrank
