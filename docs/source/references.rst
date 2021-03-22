@@ -9,6 +9,10 @@ References
     *Geometric diffusions as a tool for harmonic analysis and structure definition of data: Diffusion maps*,
     `PNAS <https://doi.org/10.1073/pnas.0500334102>`__.
 
+.. [Cyto20] Gulati *et al.* (2020),
+   *Single-cell transcriptional diversity is a hallmark of developmental potential*,
+   `Science  <https://doi.org/10.1126/science.aax0249>`__.
+
 .. [GPCCA18] Reuter, B. *et al.* (2018),
    *Generalized Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on Amyloid β
    Conformational Dynamics Driven by an Oscillating Electric Field.*,
@@ -86,3 +90,7 @@ References
     *PAGA: Graph abstraction reconciles clustering with trajectory inference through a topology preserving map of
     single cells*,
     `Genome Biology <https://doi.org/10.1186/s13059-019-1663-x>`__.
+
+.. [Zhang21] Zhang, S. *et al.* (2021),
+    *Optimal transport analysis reveals trajectories in steady-state systems*,
+    `bioRxiv <https://doi.org/10.1101/2021.03.02.433630>`__.

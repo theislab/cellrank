@@ -4,6 +4,7 @@ from copy import copy
 from math import fsum
 from typing import Any, Union, Callable, Iterable, Optional
 
+from anndata import AnnData
 from scvelo.preprocessing.moments import get_moments
 
 import numpy as np
@@ -24,7 +25,7 @@ from cellrank.tl.kernels._utils import (
     _calculate_starts,
     _get_probs_for_zero_vec,
 )
-from cellrank.tl.kernels._base_kernel import _RTOL, AnnData
+from cellrank.tl.kernels._base_kernel import _RTOL
 from cellrank.tl.kernels._velocity_schemes import Scheme, _get_scheme
 
 
@@ -62,9 +63,7 @@ class VelocityKernel(Kernel):
     gene_subset
         List of genes to be used to compute transition probabilities.
         By default, genes from :paramref:`adata` ``.var['velocity_genes']`` are used.
-    compute_cond_num
-        Whether to compute condition number of the transition matrix. Note that this might be costly,
-        since it does not use sparse implementation.
+    %(cond_num)s
     check_connectivity
         Check whether the underlying KNN graph is connected.
     """

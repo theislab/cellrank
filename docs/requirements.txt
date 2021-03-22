@@ -1,4 +1,4 @@
--r ../requirements.txt
+-r ../requirements.txt  # must include this because of examples
 bezier
 louvain>=0.6,!=0.6.2
 memory_profiler>=0.57.0

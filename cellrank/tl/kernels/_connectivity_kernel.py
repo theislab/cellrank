@@ -1,10 +1,11 @@
 """Connectivity kernel module."""
 from copy import copy
 
+from anndata import AnnData
+
 from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.tl.kernels import Kernel
-from cellrank.tl.kernels._base_kernel import AnnData
 
 
 @d.dedent
@@ -29,9 +30,7 @@ class ConnectivityKernel(Kernel):
     %(backward)s
     conn_key
         Key in :attr:`anndata.AnnData.obsp` to obtain the connectivity matrix, describing cell-cell similarity.
-    compute_cond_num
-        Whether to compute condition number of the transition matrix. Note that this might be costly,
-        since it does not use sparse implementation.
+    %(cond_num)s
     check_connectivity
         Check whether the underlying KNN graph is connected.
     """

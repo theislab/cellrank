@@ -143,7 +143,7 @@ def graph(
         Title of the figure(s), one for each ``key``.
     %(plotting)s
     layout_kwargs
-        Additional kwargs for ``layout``.
+        Additional keyword arguments for ``layout``.
 
     Returns
     -------

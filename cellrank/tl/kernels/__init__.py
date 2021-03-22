@@ -1,5 +1,6 @@
-from cellrank.tl.kernels._base_kernel import Kernel, Constant
+from cellrank.tl.kernels._base_kernel import Kernel
 from cellrank.tl.kernels._velocity_kernel import VelocityKernel
+from cellrank.tl.kernels._cytotrace_kernel import CytoTRACEKernel
 from cellrank.tl.kernels._velocity_schemes import (
     CosineScheme,
     DotProductScheme,

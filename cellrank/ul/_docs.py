@@ -144,6 +144,10 @@ scheme
 
     Alternatively, any function can be passed as long as it follows the signature of
     :meth:`cellrank.tl.kernels.SimilaritySchemeABC.__call__`."""
+_cond_num = """\
+compute_cond_num
+    Whether to compute condition number of the transition matrix. Note that this might be costly,
+    since it does not use sparse implementation."""
 _soft_scheme_fmt = """\
 b
     The growth rate of generalized logistic function.{}
@@ -151,6 +155,10 @@ nu
     Affects near which asymptote maximum growth occurs.{}
 perc
     Percentile by which to clip the connectivities.{}"""
+_rw_ixs = """\
+Can be specified as either a :class:`dict` with a key corresponding to cluster key in
+    :attr:`anndata.AnnData.obs` and values to clusters or just a sequence of cell ids
+    in :attr:`anndata.AnnData.obs_names`."""
 
 
 def inject_docs(**kwargs):  # noqa
@@ -200,8 +208,10 @@ d = DocstringProcessor(
     plots_or_returns_models=_plots_or_returns_models,
     basis=_basis,
     velocity_scheme=_velocity_scheme,
+    cond_num=_cond_num,
     soft_scheme=_soft_scheme_fmt.format("", "", ""),
     soft_scheme_kernel=_soft_scheme_fmt.format(
         *([" Only used when `scheme='soft'`."] * 3)
     ),
+    rw_ixs=_rw_ixs,
 )
