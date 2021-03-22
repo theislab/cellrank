@@ -390,6 +390,7 @@ class KernelExpression(Pickleable, ABC):
         Returns
         -------
         %(just_plots)s
+        For each random walk, the first (last) cell is marked though a black (yellow) dot.
         """
 
         def create_ixs(ixs: Indices_t, *, kind: str) -> Optional[np.ndarray]:
