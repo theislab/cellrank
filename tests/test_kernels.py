@@ -19,7 +19,6 @@ import cellrank as cr
 from cellrank.tl._utils import _normalize
 from cellrank.ul._utils import _get_neighs, _get_neighs_params
 from cellrank.tl.kernels import (
-    Constant,
     VelocityKernel,
     CytoTRACEKernel,
     PseudotimeKernel,
@@ -27,7 +26,12 @@ from cellrank.tl.kernels import (
     ConnectivityKernel,
 )
 from cellrank.tl._constants import _transition
-from cellrank.tl.kernels._base_kernel import KernelAdd, KernelMul, _is_bin_mult
+from cellrank.tl.kernels._base_kernel import (
+    Constant,
+    KernelAdd,
+    KernelMul,
+    _is_bin_mult,
+)
 from cellrank.tl.kernels._cytotrace_kernel import CytoTRACEAggregation, _ct
 
 _rtol = 1e-6

@@ -20,6 +20,8 @@ CellRank is also available on PyPI::
     pip install cellrank
     # or with extra libraries, useful for large datasets
     pip install 'cellrank[krylov]'
+    # or with external modules, see External API
+    pip install 'cellrank[external]'
 
 If an error occurs during ``pip install 'cellrank[krylov]'``, please consult the Dependencies_ section below.
 
@@ -27,13 +29,7 @@ Development Version
 ~~~~~~~~~~~~~~~~~~~
 To stay up-to-date with the newest version, run::
 
-    git clone https://github.com/theislab/cellrank
-    cd cellrank
-    pip install -e '.[dev]'
-
-``-e`` stands for ``--editable`` and makes sure that your environment is updated
-when you pull new changes from GitHub. The ``'[dev]'`` options installs requirements
-needed for development, because CellRank is bundled with an additional library.
+    pip install git+https://github.com/theislab/cellrank@dev
 
 Dependencies
 ~~~~~~~~~~~~

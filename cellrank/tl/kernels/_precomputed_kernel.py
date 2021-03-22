@@ -29,6 +29,7 @@ class PrecomputedKernel(Kernel):
         If `None`, try to determine the key based on ``backward``.
     %(adata)s
     %(backward)s
+    %(cond_num)s
     """
 
     def __init__(

@@ -119,6 +119,7 @@ def cluster_lineage(
 
             - ``key`` or ``lineage_{lineage}_trend`` - an :class:`anndata.AnnData` object of
               shape `(n_genes, n_points)` containing the clustered genes.
+
     """
 
     import scanpy as sc
