@@ -149,4 +149,4 @@ Lineage
 -------
 
 .. autoclass:: cellrank.tl.Lineage
-    :members: reduce, plot_pie, entropy, X, T, view, names, colors
+    :members: priming_degree, reduce, plot_pie, X, T, view, names, colors

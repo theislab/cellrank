@@ -138,9 +138,9 @@ _velocity_scheme = """\
 scheme
     Similarity scheme between cells as described in [Li2020]_. Can be one of the following:
 
-        - `{s.DOT_PRODUCT.s!r}` - :class:`cellrank.tl.kernels.DotProductScheme`.
-        - `{s.COSINE.s!r}` - :class:`cellrank.tl.kernels.CosineScheme`.
-        - `{s.CORRELATION.s!r}` - :class:`cellrank.tl.kernels.CorrelationScheme`.
+        - `{s.DOT_PRODUCT.s!r}`: :class:`cellrank.tl.kernels.DotProductScheme`.
+        - `{s.COSINE.s!r}`: :class:`cellrank.tl.kernels.CosineScheme`.
+        - `{s.CORRELATION.s!r}`: :class:`cellrank.tl.kernels.CorrelationScheme`.
 
     Alternatively, any function can be passed as long as it follows the signature of
     :meth:`cellrank.tl.kernels.SimilaritySchemeABC.__call__`."""
