@@ -352,19 +352,26 @@ class KernelExpression(Pickleable, ABC):
         """
         Plot random walks in an embedding.
 
+        This method simulates random walks on the Markov chain defined though the corresponding transition matrix. The
+        method is intended to give qualitative rather than quantitative insights into the transition matrix. Random
+        walks are simulated by iteratively choosing the next cell based on the current cell's transition probabilities.
+
         Parameters
         ----------
         n_sims
-            Number of random walks.
+            Number of random walks to simulate.
         %(rw_sim.parameters)s
         start_ixs
             Cells from which to sample the starting points. If `None`, use all cells.
             %(rw_ixs)s
+            For example ``{'clusters': ['Ngn3 low EP', 'Ngn3 high EP']}`` means that starting points for random walks
+            will be samples uniformly from the these clusters.
         stop_ixs
             Cells which when hit, the random walk is terminated. If `None`, terminate after ``max_iters``.
             %(rw_ixs)s
             For example ``{'clusters': ['Alpha', 'Beta']}`` and ``succesive_hits=3`` means that the random walk will
-            stop prematurely after cells in the above specified clusters have been visited succesively 3 times in a row.
+            stop prematurely after cells in the above specified clusters have been visited successively 3 times in a
+            row.
         basis
             Basis in :attr:`anndata.AnnData.obsm` to use as an embedding.
         cmap
