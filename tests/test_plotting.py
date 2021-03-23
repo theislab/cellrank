@@ -2665,16 +2665,27 @@ class TestLineage:
 
 class TestLineageDrivers:
     @compare()
-    def test_scvelo_drivers_n_genes(self, adata: AnnData, fpath: str):
+    def test_drivers_n_genes(self, adata: AnnData, fpath: str):
         cr.pl.lineage_drivers(adata, "0", n_genes=5, dpi=DPI, save=fpath)
 
     @compare(kind="bwd")
-    def test_scvelo_drivers_n_genes(self, adata: AnnData, fpath: str):
-        cr.pl.lineage_drivers(adata, "0", backward=True, n_genes=5, dpi=DPI, save=fpath)
+    def test_drivers_backward(self, adata: AnnData, fpath: str):
+        cr.pl.lineage_drivers(adata, "0", backward=True, ncols=2, dpi=DPI, save=fpath)
 
     @compare()
-    def test_scvelo_drivers_cmap(self, adata: AnnData, fpath: str):
+    def test_drivers_cmap(self, adata: AnnData, fpath: str):
         cr.pl.lineage_drivers(adata, "0", cmap="inferno", dpi=DPI, save=fpath)
+
+    @compare()
+    def test_drivers_title_fmt(self, adata: AnnData, fpath: str):
+        cr.pl.lineage_drivers(
+            adata,
+            "0",
+            cmap="inferno",
+            title_fmt="{gene} qval={qval} corr={corr}",
+            dpi=DPI,
+            save=fpath,
+        )
 
 
 class TestModel:
