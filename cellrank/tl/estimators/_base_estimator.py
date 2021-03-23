@@ -3,8 +3,7 @@ import pickle
 from abc import ABC, abstractmethod
 from sys import version_info
 from copy import copy, deepcopy
-from math import ceil
-from typing import Any, Dict, Union, Mapping, TypeVar, Optional, Sequence
+from typing import Any, Dict, Tuple, Union, Mapping, TypeVar, Optional, Sequence
 from pathlib import Path
 from datetime import datetime
 
@@ -19,12 +18,14 @@ from scipy.stats import ranksums
 from scipy.sparse import spmatrix
 from pandas.api.types import infer_dtype, is_categorical_dtype
 
+import matplotlib.pyplot as plt
 from matplotlib.colors import is_color_like
 
 from cellrank import logging as logg
 from cellrank.ul._docs import d, inject_docs
 from cellrank.tl._utils import (
     TestMethod,
+    save_fig,
     _pairwise,
     _irreducible,
     _process_series,
@@ -786,7 +787,12 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         self,
         lineage: str,
         n_genes: int = 8,
+        ncols: Optional[int] = None,
         use_raw: bool = False,
+        title_fmt: str = "{gene} qval={qval:.4e}",
+        figsize: Optional[Tuple[float, float]] = None,
+        dpi: Optional[int] = None,
+        save: Optional[Union[str, Path]] = None,
         **kwargs,
     ) -> None:
         """
@@ -797,9 +803,15 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         lineage
             Lineage for which to plot the driver genes.
         n_genes
-            Number of genes to plot.
+            Top most correlated genes to plot.
+        ncols
+            Number of columns.
         use_raw
             Whether to look in :paramref:`adata` ``.raw.var`` or :paramref:`adata` ``.var``.
+        title_fmt
+            Title format. Possible keywords include `{gene}`, `{pval}`, `{qval}`, `{corr}` for gene name,
+            p-value, q-value and correlation, respectively.
+        %(plotting)s
         kwargs
             Keyword arguments for :func:`scvelo.pl.scatter`.
 
@@ -807,6 +819,25 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         -------
         %(just_plots)s
         """
+
+        def prepare_format(
+            gene: str,
+            *,
+            pval: Optional[float],
+            qval: Optional[float],
+            corr: Optional[float],
+        ) -> Dict[str, Any]:
+            kwargs = {}
+            if "{gene" in title_fmt:
+                kwargs["gene"] = gene
+            if "{pval" in title_fmt:
+                kwargs["pval"] = float(pval)
+            if "{qval" in title_fmt:
+                kwargs["qval"] = float(qval)
+            if "{corr" in title_fmt:
+                kwargs["corr"] = float(corr)
+
+            return kwargs
 
         lin_drivers = self._get(P.LIN_DRIVERS)
 
@@ -824,33 +855,46 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         if n_genes <= 0:
             raise ValueError(f"Expected `n_genes` to be positive, found `{n_genes}`.")
 
-        cmap = kwargs.pop("cmap", "viridis")
-        ncols = kwargs.pop("ncols", None)
+        kwargs.pop("save", None)
+        genes = lin_drivers.sort_values(by=key, ascending=False).head(n_genes)
 
-        geness = lin_drivers.sort_values(by=key, ascending=False).head(n_genes)
-        kwargs.setdefault(
-            "title",
-            [
-                f"{g} q-value={q}"
-                for g, q in dict(geness[f"{lineage} qval"].map("{:.4e}".format)).items()
-            ],
+        ncols = 4 if ncols is None else ncols
+        nrows = int(np.ceil(len(genes) / ncols))
+
+        fig, axes = plt.subplots(
+            ncols=ncols,
+            nrows=nrows,
+            dpi=dpi,
+            figsize=(ncols * 6, nrows * 4) if figsize is None else figsize,
         )
+        axes = np.ravel([axes])
 
-        if ncols is None and len(geness) >= 8:
-            ncols = 4
-
-        # TODO: scvelo can handle only < 20 plots, see https://github.com/theislab/scvelo/issues/252
-        geness = filter(len, np.array_split(geness.index, int(ceil(len(geness) / 8))))
-
-        for genes in geness:
+        _i = 0
+        for _i, (gene, ax) in enumerate(zip(genes.index, axes)):
+            data = genes.loc[gene]
             scv.pl.scatter(
                 self.adata,
-                color=genes,
-                cmap=cmap,
+                color=gene,
                 ncols=ncols,
                 use_raw=use_raw,
+                ax=ax,
+                show=False,
+                title=title_fmt.format(
+                    **prepare_format(
+                        gene,
+                        pval=data.get(f"{lineage} pval", None),
+                        qval=data.get(f"{lineage} qval", None),
+                        corr=data.get(f"{lineage} corr", None),
+                    )
+                ),
                 **kwargs,
             )
+
+        for j in range(_i + 1, len(axes)):
+            axes[j].remove()
+
+        if save is not None:
+            save_fig(fig, save)
 
     def _detect_cc_stages(self, rc_labels: Series, p_thresh: float = 1e-15) -> None:
         """
