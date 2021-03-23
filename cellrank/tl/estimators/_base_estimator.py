@@ -809,8 +809,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         use_raw
             Whether to look in :paramref:`adata` ``.raw.var`` or :paramref:`adata` ``.var``.
         title_fmt
-            Title format. Possible keywords include `{gene}`, `{pval}`, `{qval}`, `{corr}` for gene name,
-            p-value, q-value and correlation, respectively.
+            Title format. Possible keywords include `{gene}`, `{qval}`, `{corr}` for gene name,
+            q-value and correlation, respectively.
         %(plotting)s
         kwargs
             Keyword arguments for :func:`scvelo.pl.scatter`.
@@ -831,11 +831,11 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             if "{gene" in title_fmt:
                 kwargs["gene"] = gene
             if "{pval" in title_fmt:
-                kwargs["pval"] = float(pval)
+                kwargs["pval"] = float(pval) if pval is not None else np.nan
             if "{qval" in title_fmt:
-                kwargs["qval"] = float(qval)
+                kwargs["qval"] = float(qval) if qval is not None else np.nan
             if "{corr" in title_fmt:
-                kwargs["corr"] = float(corr)
+                kwargs["corr"] = float(corr) if corr is not None else np.nan
 
             return kwargs
 
