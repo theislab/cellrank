@@ -301,12 +301,15 @@ class KernelExpression(Pickleable, ABC):
             warnings.simplefilter("ignore")
             for i, row in enumerate(self.transition_matrix):
                 dX = emb[row.indices] - emb[i, None]
-                dX /= np.linalg.norm(dX, axis=1)[:, None]
-                dX[np.isnan(dX)] = 0
-                probs = row.data
-                T_emb[i] = probs.dot(dX) - probs.mean() * dX.sum(0)
+                if np.any(np.isnan(dX)):
+                    T_emb[i] = np.nan
+                else:
+                    dX /= np.linalg.norm(dX, axis=1)[:, None]
+                    dX = np.nan_to_num(dX)
+                    probs = row.data
+                    T_emb[i] = probs.dot(dX) - probs.mean() * dX.sum(0)
 
-        T_emb /= 3 * quiver_autoscale(emb, T_emb)
+        T_emb /= 3 * quiver_autoscale(np.nan_to_num(emb), T_emb)
 
         if copy:
             return T_emb

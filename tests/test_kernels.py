@@ -1334,6 +1334,15 @@ class TestComputeProjection:
                 adata.obsm[key].shape, adata.obsm["X_umap"].shape
             )
 
+    def test_nan_in_embedding(self, adata: AnnData):
+        adata.obsm["X_umap"][-1] = np.nan
+
+        ck = cr.tl.kernels.ConnectivityKernel(adata).compute_transition_matrix()
+        res = ck.compute_projection(basis="umap", copy=True)
+
+        assert not np.all(np.isnan(res))
+        assert np.all(np.isnan(res[-1, :]))
+
 
 class TestPseudotimeKernelScheme:
     def test_invalid_scheme(self, adata: AnnData):
