@@ -264,8 +264,6 @@ class Eigen(VectorPlottable, Decomposable):
         if save:
             save_fig(fig, save)
 
-        fig.show()
-
     def _plot_complex_spectrum(
         self,
         n: int,
