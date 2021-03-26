@@ -33,7 +33,7 @@ class Decomposable(KernelHolder, Property, ABC):
         setattr(self, A.EIG.s, eig)
         self.adata.uns[f"eig_{self._direction}"] = eig
 
-        msg = f"Adding `.{P.EIG}`\n       `adata.uns['eig_{self._direction}']`"
+        msg = f"Adding `adata.uns['eig_{self._direction}']`\n       `.{P.EIG}`"
         if extra_msg is None:
             extra_msg = "\n    Finish"
 
@@ -263,8 +263,6 @@ class Eigen(VectorPlottable, Decomposable):
 
         if save:
             save_fig(fig, save)
-
-        fig.show()
 
     def _plot_complex_spectrum(
         self,

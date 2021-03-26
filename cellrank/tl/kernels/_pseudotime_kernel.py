@@ -4,6 +4,8 @@ from typing import Any, Union, Callable, Optional
 
 from typing_extensions import Literal
 
+from anndata import AnnData
+
 import numpy as np
 
 from cellrank import logging as logg
@@ -11,7 +13,7 @@ from cellrank.ul._docs import d
 from cellrank.tl._utils import _connected
 from cellrank.tl.kernels import Kernel
 from cellrank.tl._constants import Direction, ThresholdScheme
-from cellrank.tl.kernels._base_kernel import AnnData, _dtype
+from cellrank.tl.kernels._base_kernel import _dtype
 from cellrank.tl.kernels._pseudotime_schemes import (
     ThresholdSchemeABC,
     HardThresholdScheme,
@@ -75,8 +77,8 @@ class PseudotimeKernel(Kernel):
     @d.dedent
     def compute_transition_matrix(
         self,
-        threshold_scheme: Union[Literal["soft", "hard"], Callable] = "hard",
-        k: int = 3,
+        threshold_scheme: Union[Literal["soft", "hard"], Callable] = "soft",
+        frac_to_keep: float = 0.3,
         b: float = 20.0,
         nu: float = 1.0,
         percentile: Optional[int] = 95,
@@ -102,9 +104,10 @@ class PseudotimeKernel(Kernel):
 
         Parameters
         ----------
-        k
-            Number of neighbors to keep for each node, regardless of pseudotime.
-            This is done to ensure that the graph remains connected. Only used when `threshold_scheme='hard'`.
+        frac_to_keep
+            The `fract_to_keep` * n_neighbors closest neighbors (according to graph connectivities) are kept, no matter
+            whether they lie in the pseudotemporal past or future. This is done to ensure that the graph remains
+            connected. Only used when `threshold_scheme='hard'`.
         %(soft_scheme_kernel)s
         density_normalize
             Whether or not to use the underlying KNN graph for density normalization.
@@ -137,7 +140,7 @@ class PseudotimeKernel(Kernel):
                 kwargs["b"], kwargs["nu"] = b, nu
             elif threshold_scheme == ThresholdScheme.HARD:
                 scheme = HardThresholdScheme()
-                kwargs["k"], kwargs["n_neighs"] = k, n_neighbors
+                kwargs["frac_to_keep"], kwargs["n_neighs"] = frac_to_keep, n_neighbors
             else:
                 raise NotImplementedError(
                     f"Threshold scheme `{threshold_scheme}` is not yet implemented."
@@ -151,10 +154,8 @@ class PseudotimeKernel(Kernel):
                 f"Expected `threshold_scheme` to be either a `str` or a `callable`, found `{type(threshold_scheme)}`."
             )
 
-        if self._reuse_cache(
-            {"dnorm": density_normalize, "scheme": str(threshold_scheme), **kwargs},
-            time=start,
-        ):
+        # fmt: off
+        if self._reuse_cache({"dnorm": density_normalize, "scheme": str(threshold_scheme), **kwargs}, time=start):
             return self
 
         # handle backward case and run biasing function
@@ -164,9 +165,8 @@ class PseudotimeKernel(Kernel):
             else self.pseudotime
         )
 
-        biased_conn = scheme.bias_knn(self._conn.copy(), pseudotime, **kwargs).astype(
-            _dtype
-        )
+        biased_conn = scheme.bias_knn(self._conn, pseudotime, **kwargs).astype(_dtype)
+        # fmt: on
 
         # make sure the biased graph is still connected
         if not _connected(biased_conn):

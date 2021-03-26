@@ -2665,16 +2665,27 @@ class TestLineage:
 
 class TestLineageDrivers:
     @compare()
-    def test_scvelo_drivers_n_genes(self, adata: AnnData, fpath: str):
+    def test_drivers_n_genes(self, adata: AnnData, fpath: str):
         cr.pl.lineage_drivers(adata, "0", n_genes=5, dpi=DPI, save=fpath)
 
     @compare(kind="bwd")
-    def test_scvelo_drivers_n_genes(self, adata: AnnData, fpath: str):
-        cr.pl.lineage_drivers(adata, "0", backward=True, n_genes=5, dpi=DPI, save=fpath)
+    def test_drivers_backward(self, adata: AnnData, fpath: str):
+        cr.pl.lineage_drivers(adata, "0", backward=True, ncols=2, dpi=DPI, save=fpath)
 
     @compare()
-    def test_scvelo_drivers_cmap(self, adata: AnnData, fpath: str):
+    def test_drivers_cmap(self, adata: AnnData, fpath: str):
         cr.pl.lineage_drivers(adata, "0", cmap="inferno", dpi=DPI, save=fpath)
+
+    @compare()
+    def test_drivers_title_fmt(self, adata: AnnData, fpath: str):
+        cr.pl.lineage_drivers(
+            adata,
+            "0",
+            cmap="inferno",
+            title_fmt="{gene} qval={qval} corr={corr}",
+            dpi=DPI,
+            save=fpath,
+        )
 
 
 class TestModel:
@@ -3102,4 +3113,59 @@ class TestCircularProjection:
     def test_proj_no_cbar(self, adata: AnnData, fpath: str):
         cr.pl.circular_projection(
             adata, keys=adata.var_names[0], colorbar=False, dpi=DPI, save=fpath
+        )
+
+
+class TestPlotRandomWalk:
+    @compare(kind="gpcca")
+    def test_kernel_random_walk_params(self, mc: GPCCA, fpath: str):
+        mc.kernel.plot_random_walks(
+            n_sims=100,
+            max_iter=100,
+            seed=42,
+            start_ixs={"clusters": "OL"},
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare(kind="gpcca")
+    def test_kernel_random_walk_basis(self, mc: GPCCA, fpath: str):
+        mc.kernel.plot_random_walks(
+            n_sims=10, max_iter=100, seed=42, basis="pca", dpi=DPI, save=fpath
+        )
+
+    @compare(kind="gpcca")
+    def test_kernel_random_walk_cmap(self, mc: GPCCA, fpath: str):
+        mc.kernel.plot_random_walks(
+            n_sims=10, max_iter=100, seed=42, cmap="viridis", dpi=DPI, save=fpath
+        )
+
+    @compare(kind="gpcca")
+    def test_kernel_random_walk_line_width(self, mc: GPCCA, fpath: str):
+        mc.kernel.plot_random_walks(
+            n_sims=10, max_iter=100, seed=42, linewidth=2, dpi=DPI, save=fpath
+        )
+
+    @compare(kind="gpcca")
+    def test_kernel_random_walk_line_alpha(self, mc: GPCCA, fpath: str):
+        mc.kernel.plot_random_walks(
+            n_sims=10, max_iter=100, seed=42, linealpha=1, dpi=DPI, save=fpath
+        )
+
+    @compare(kind="gpcca")
+    def test_kernel_random_walk_kwargs(self, mc: GPCCA, fpath: str):
+        mc.kernel.plot_random_walks(
+            n_sims=10, max_iter=100, seed=42, color="none", dpi=DPI, save=fpath
+        )
+
+    @compare(kind="gpcca")
+    def test_kernel_random_walk_ixs_legend_loc(self, mc: GPCCA, fpath: str):
+        mc.kernel.plot_random_walks(
+            n_sims=10,
+            max_iter=100,
+            seed=42,
+            ixs_legend_loc="top right out",
+            legend_loc="upper left",
+            dpi=DPI,
+            save=fpath,
         )

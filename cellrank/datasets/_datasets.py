@@ -1,7 +1,7 @@
 """Datasets module."""
 
 import os
-from typing import Tuple, Union, TypeVar
+from typing import Any, Tuple, Union, TypeVar
 from pathlib import Path
 
 from scanpy import read
@@ -35,6 +35,10 @@ _datasets = {
     "reprogramming": (
         "https://ndownloader.figshare.com/files/25503773",
         (104679, 22630),
+    ),
+    "zebrafish": (
+        "https://ndownloader.figshare.com/files/27265280",
+        (2434, 23974),
     ),
 }
 
@@ -79,7 +83,7 @@ def _load_dataset_from_url(
 @d.dedent
 def pancreas(
     path: Union[str, Path] = "datasets/endocrinogenesis_day15.5.h5ad",
-    **kwargs,
+    **kwargs: Any,
 ) -> AnnData:
     """
     Development of the murine pancreas at E15.5 from [Panc19]_.
@@ -108,7 +112,7 @@ def pancreas(
 @d.dedent
 def pancreas_preprocessed(
     path: Union[str, Path] = "datasets/endocrinogenesis_day15.5_preprocessed.h5ad",
-    **kwargs,
+    **kwargs: Any,
 ) -> AnnData:
     """
     Development of the murine pancreas at E15.5 from [Panc19]_, preprocessed according to the \
@@ -129,7 +133,7 @@ def pancreas_preprocessed(
 @d.dedent
 def lung(
     path: Union[str, Path] = "datasets/lung_regeneration.h5ad",
-    **kwargs,
+    **kwargs: Any,
 ) -> AnnData:
     """
     Regeneration of murine lung epithelial cells at 13 time points from [Lung20]_.
@@ -159,7 +163,7 @@ def lung(
 def reprogramming(
     subset: str = ReprogrammingSubset.FULL.s,
     path: Union[str, Path] = "datasets/reprogramming.h5ad",
-    **kwargs,
+    **kwargs: Any,
 ) -> AnnData:
     """
     Reprogramming of mouse embryonic fibroblasts to induced endoderm progenitors at 8 time points from [Morris18]_.
@@ -206,3 +210,26 @@ def reprogramming(
     raise NotImplementedError(
         f"Subsetting option `{subset.s!r}` is not yet implemented."
     )
+
+
+@d.dedent
+def zebrafish(
+    path: Union[str, Path] = "datasets/zebrafish.h5ad",
+    **kwargs: Any,
+) -> AnnData:
+    """
+    Zebrafish embryogenesis assayed using drop-seq, restricted to the axial mesoderm lineage from [Farrel18]_.
+
+    scRNA-seq time-series dataset comprising `2434` cells
+    which contains 12 time-points spanning 3.3 - 12 hours past fertilization.
+
+    Parameters
+    ----------
+    %(dataset.parameters)s
+
+    Returns
+    -------
+    %(adata)s
+    """
+
+    return _load_dataset_from_url(path, *_datasets["zebrafish"], **kwargs)

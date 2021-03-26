@@ -73,7 +73,9 @@ def lineage_drivers(
     lineage: str,
     backward: bool = False,
     n_genes: int = 8,
+    ncols: Optional[int] = None,
     use_raw: bool = False,
+    title_fmt: str = "{gene} qval={qval:.4e}",
     **kwargs,
 ) -> None:
     """
@@ -114,4 +116,11 @@ def lineage_drivers(
     drivers.columns = [f"{lineage} corr", f"{lineage} qval"]
     mc._set(A.LIN_DRIVERS, drivers)
 
-    mc.plot_lineage_drivers(lineage, n_genes=n_genes, use_raw=use_raw, **kwargs)
+    mc.plot_lineage_drivers(
+        lineage,
+        n_genes=n_genes,
+        use_raw=use_raw,
+        ncols=ncols,
+        title_fmt=title_fmt,
+        **kwargs,
+    )

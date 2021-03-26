@@ -4,6 +4,7 @@ from copy import copy
 from math import fsum
 from typing import Any, Union, Callable, Iterable, Optional
 
+from anndata import AnnData
 from scvelo.preprocessing.moments import get_moments
 
 import numpy as np
@@ -24,7 +25,7 @@ from cellrank.tl.kernels._utils import (
     _calculate_starts,
     _get_probs_for_zero_vec,
 )
-from cellrank.tl.kernels._base_kernel import _RTOL, AnnData
+from cellrank.tl.kernels._base_kernel import _RTOL
 from cellrank.tl.kernels._velocity_schemes import Scheme, _get_scheme
 
 
