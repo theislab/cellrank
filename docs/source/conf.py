@@ -33,8 +33,9 @@ needs_sphinx = "3.0"
 
 notebooks_url = "https://github.com/theislab/cellrank_notebooks/raw/master/tutorials/"
 for nb in [
-    "pancreas_basic.ipynb",
-    "pancreas_advanced.ipynb",
+    "cellrank_basics.ipynb",
+    "kernels_and_estimators.ipynb",
+    "beyond_rna_velocity.ipynb",
     "creating_new_kernel.ipynb",
 ]:
     try:

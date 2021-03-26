@@ -93,7 +93,6 @@ binder button at the top of each tutorial.
 
 If you run into issues, feel free to open a `GitHub issue`_ or send us an `email <mailto:info@cellrank.org>`_ .
 
-
 .. _`Miniconda`: https://conda.pydata.org/miniconda.html
 .. _`GitHub issue`: https://github.com/theislab/cellrank/issues/new
 .. _`binder`: https://mybinder.org/
