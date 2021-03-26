@@ -2,25 +2,29 @@ References
 ----------
 
 .. [Bergen20] Bergen, V. *et al.* (2020),
-   *Generalizing RNA velocity to transient cell states through dynamical modeling*,
-   `Nature Biotechnology <https://doi.org/10.1038/s41587-020-0591-3>`__.
+    *Generalizing RNA velocity to transient cell states through dynamical modeling*,
+    `Nature Biotechnology <https://doi.org/10.1038/s41587-020-0591-3>`__.
 
 .. [Coifman05] Coifman *et al.* (2005),
     *Geometric diffusions as a tool for harmonic analysis and structure definition of data: Diffusion maps*,
     `PNAS <https://doi.org/10.1073/pnas.0500334102>`__.
 
 .. [Cyto20] Gulati *et al.* (2020),
-   *Single-cell transcriptional diversity is a hallmark of developmental potential*,
-   `Science  <https://doi.org/10.1126/science.aax0249>`__.
+    *Single-cell transcriptional diversity is a hallmark of developmental potential*,
+    `Science <https://doi.org/10.1126/science.aax0249>`__.
+
+.. [Farrel18] Farrel, J. A. *et al.* (2018),
+    *Single-cell reconstruction of developmental trajectories during zebrafish embryogenesis*,
+    `Science <https://doi.org/10.1126/science.aar3131>`__.
 
 .. [GPCCA18] Reuter, B. *et al.* (2018),
-   *Generalized Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on Amyloid β
-   Conformational Dynamics Driven by an Oscillating Electric Field.*,
-   `Journal of Chemical Theory and Computation <https://doi.org/10.1021/acs.jctc.8b00079>`__.
+    *Generalized Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on Amyloid β
+    Conformational Dynamics Driven by an Oscillating Electric Field.*,
+    `Journal of Chemical Theory and Computation <https://doi.org/10.1021/acs.jctc.8b00079>`__.
 
 .. [Haghverdi16] Haghverdi *et al.* (2016),
-   *Diffusion pseudotime robustly reconstructs branching cellular lineages*,
-   `Nature Methods <https://doi.org/10.1038/nmeth.3971>`__.
+    *Diffusion pseudotime robustly reconstructs branching cellular lineages*,
+    `Nature Methods <https://doi.org/10.1038/nmeth.3971>`__.
 
 .. [Li2020] Li, T. *et al.* (2020),
     *On the Mathematics of RNA Velocity I: Theoretical Analysis*,
