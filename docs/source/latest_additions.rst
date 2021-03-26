@@ -1,6 +1,6 @@
 .. role:: small
 
-1.3.0 :small:`2021-03-23`
+1.3.0 :small:`2021-03-29`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This release includes some major additions which make CellRank more applicable with and without RNA velocity
@@ -23,13 +23,15 @@ information. In particular, it includes:
   from :attr:`anndata.AnnData.obsp`, such as spatial similarities from :mod:`squidpy` [Palla21]_
   `PR 501 <https://github.com/theislab/cellrank/pull/501>`_.
 - Revamp `Pancreas Advanced <https://cellrank.readthedocs.io/en/latest/pancreas_advanced.html>`_ tutorial
-  to showcase CellRank's modular structure of kernels and estimators. `PR TODO <TODO>`_.
+  to showcase CellRank's modular structure of kernels and estimators.
+  `PR 32 <https://github.com/theislab/cellrank_notebooks/pull/32>`_.
 - Add 2 new tutorials:
 
   - `Beyond RNA velocity <https://cellrank.readthedocs.io/en/latest/beyond_rna_velocity.html>`_: shows how to use
-     CellRank when no RNA velocity information is available. `PR TODO <TODO>`_
+    CellRank when no RNA velocity information is available.
+    `PR 32 <https://github.com/theislab/cellrank_notebooks/pull/32>`_
   - `Creating a new kernel <https://cellrank.readthedocs.io/en/latest/creating_new_kernel.html>`_: explains how to
-     create your own custom kernel class that estimates cell-cell transition probabilities
+    create your own custom kernel class that estimates cell-cell transition probabilities
     `PR 31 <https://github.com/theislab/cellrank_notebooks/pull/31>`_.
 
 - Add projection of transition matrix onto an embedding :meth:`cellrank.tl.kernels.Kernel.compute_projection`
@@ -38,6 +40,8 @@ information. In particular, it includes:
 - Add :meth:`cellrank.tl.Lineage.priming_degree` `PR 502 <https://github.com/theislab/cellrank/pull/502>`_
   which estimates a cell's plasticity/differentiation potential based on ideas by [Setty19]_ and [Velten17]_.
 - Add checks for transition matrix irreducibility `PR 516 <https://github.com/theislab/cellrank/pull/516>`_.
+- Add Zebrafish development dataset from [Farrel18]_ `PR 539 <https://github.com/theislab/cellrank/pull/539>`_.
+- Speed-up stationary distribution calculation in :mod:`pygpcca` `PR 22 <https://github.com/msmdev/pyGPCCA/pull/22>`_.
 
 .. rubric:: Bugfixes
 

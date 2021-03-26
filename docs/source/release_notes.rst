@@ -23,7 +23,6 @@ This release includes:
   `PR 459 <https://github.com/theislab/cellrank/pull/459>`_.
 - Allow legends not to be plotted by passing ``legend_loc="none"``, as done in `scVelo <https://scvelo.org>`_
   `PR 470 <https://github.com/theislab/cellrank/pull/470>`_.
-- Add Zebrafish development dataset from [Farrel18]_ `PR 539 <https://github.com/theislab/cellrank/pull/539>`_.
 
 .. rubric:: Bugfixes
 
