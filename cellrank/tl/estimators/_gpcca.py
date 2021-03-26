@@ -744,8 +744,6 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         if save:
             save_fig(fig, save)
 
-        fig.show()
-
     def _compute_one_macrostate(
         self,
         n_cells: int,

@@ -61,6 +61,18 @@ class RandomWalk:
             p=self._tmat[ix].A.squeeze() if self._is_sparse else self._tmat[ix],
         )
 
+    def _max_iter(self, max_iter: Union[int, float]) -> int:
+        max_iter = (
+            int(np.ceil(max_iter * len(self._ixs)))
+            if isinstance(max_iter, float)
+            else max_iter
+        )
+        if max_iter <= 1:
+            raise ValueError(
+                f"Expected number of iterations to be > 1, found `{max_iter}`."
+            )
+        return max_iter
+
     @d.get_sections(base="rw_sim", sections=["Parameters"])
     def simulate_one(
         self,
@@ -86,12 +98,7 @@ class RandomWalk:
         Array of shape ``(max_iter + 1,)`` of states that have been visited. If ``stop_ixs`` was specified, the array
         may have smaller shape.
         """
-        if isinstance(max_iter, float):
-            max_iter = int(np.ceil(max_iter * len(self._ixs)))
-        if max_iter <= 1:
-            raise ValueError(
-                f"Expected number of iterations to be > 1, found `{max_iter}`."
-            )
+        max_iter = self._max_iter(max_iter)
         if successive_hits < 0:
             raise ValueError(
                 f"Expected number of successive hits to be positive, found `{successive_hits}`."
@@ -163,6 +170,7 @@ class RandomWalk:
             raise ValueError(
                 f"Expected number of simulations to be positive, found `{n_sims}`."
             )
+        max_iter = self._max_iter(max_iter)
         start = logg.info(
             f"Simulating `{n_sims}` random walks of maximum length `{max_iter}`"
         )
