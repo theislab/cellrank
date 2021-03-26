@@ -138,9 +138,9 @@ _velocity_scheme = """\
 scheme
     Similarity scheme between cells as described in [Li2020]_. Can be one of the following:
 
-        - `{s.DOT_PRODUCT.s!r}` - :class:`cellrank.tl.kernels.DotProductScheme`.
-        - `{s.COSINE.s!r}` - :class:`cellrank.tl.kernels.CosineScheme`.
-        - `{s.CORRELATION.s!r}` - :class:`cellrank.tl.kernels.CorrelationScheme`.
+        - `{s.DOT_PRODUCT.s!r}`: :class:`cellrank.tl.kernels.DotProductScheme`.
+        - `{s.COSINE.s!r}`: :class:`cellrank.tl.kernels.CosineScheme`.
+        - `{s.CORRELATION.s!r}`: :class:`cellrank.tl.kernels.CorrelationScheme`.
 
     Alternatively, any function can be passed as long as it follows the signature of
     :meth:`cellrank.tl.kernels.SimilaritySchemeABC.__call__`."""
@@ -211,7 +211,7 @@ d = DocstringProcessor(
     cond_num=_cond_num,
     soft_scheme=_soft_scheme_fmt.format("", "", ""),
     soft_scheme_kernel=_soft_scheme_fmt.format(
-        *([" Only used when `scheme='soft'`."] * 3)
+        *([" Only used when `threshold_scheme='soft'`."] * 3)
     ),
     rw_ixs=_rw_ixs,
 )

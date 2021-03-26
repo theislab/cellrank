@@ -32,12 +32,17 @@ logger = logging.getLogger(__name__)
 needs_sphinx = "3.0"
 
 notebooks_url = "https://github.com/theislab/cellrank_notebooks/raw/master/tutorials/"
-for nb in ["pancreas_basic.ipynb", "pancreas_advanced.ipynb"]:
+for nb in [
+    "cellrank_basics.ipynb",
+    "kernels_and_estimators.ipynb",
+    "beyond_rna_velocity.ipynb",
+    "creating_new_kernel.ipynb",
+]:
     try:
         url = urljoin(notebooks_url, nb)
         urlretrieve(url, nb)
     except Exception as e:
-        logger.error(f"Unable to retrieve notebook: `{url}`. Reason: `{e}`.")
+        logger.error(f"Unable to retrieve notebook: `{url}`. Reason: `{e}`")
 
 
 # -- Project information -----------------------------------------------------
