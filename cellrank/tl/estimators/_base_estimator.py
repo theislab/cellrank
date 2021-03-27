@@ -202,7 +202,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             If a key to cluster labels is given, :paramref:`{fs}` will be associated with these for naming and colors.
         %(en_cutoff_p_thresh)s
         add_to_existing
-            Whether to add thses categories to existing ones. Cells already belonging to recurrent classes will be
+            Whether to add these categories to existing ones. Cells already belonging to recurrent classes will be
             updated if there's an overlap.
             Throws an error if previous approximate recurrent classes have not been calculated.
 

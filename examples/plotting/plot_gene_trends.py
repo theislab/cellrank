@@ -74,7 +74,7 @@ cr.pl.gene_trends(
 )
 
 # %%
-# We can also return the models, which can be useful to inspect the fitted models more granularly or when the
+# We can also return the models, which can be useful to inspect the fitted models more granular or when the
 # fitting has failed - such models will be returned as :class:`cellrank.ul.models.FailedModel`.
 #
 # Below we show what would happen if a model were to fail for some arbitrary gene and lineage combination.

@@ -59,7 +59,7 @@ cluster_key
     Match computed states against pre-computed clusters to annotate the states.
     For this, provide a key from :paramref:`adata` ``.obs`` where cluster labels have been computed.
 keys
-    Determines which %(initial_or_terminal) states to use by passing their names.
+    Determines which %(initial_or_terminal)s states to use by passing their names.
     Further, %(initial_or_terminal)s states can be combined. If e.g. the %(terminal)s states are
     ['Neuronal_1', 'Neuronal_1', 'Astrocytes', 'OPC'], then passing ``keys=['Neuronal_1, Neuronal_2', 'OPC']``
     means that the two neuronal %(terminal)s states are treated as one and the 'Astrocyte' state is excluded."""
@@ -124,7 +124,7 @@ Updates the :paramref:`adata` with the following fields:
 _en_cutoff_p_thresh = """\
 en_cutoff
     If ``cluster_key`` is given, this parameter determines when an approximate recurrent class will
-    be labelled as *'Unknown'*, based on the entropy of the distribution of cells over transcriptomic clusters.
+    be labeled as *'Unknown'*, based on the entropy of the distribution of cells over transcriptomic clusters.
 p_thresh
     If cell cycle scores were provided, a *Wilcoxon rank-sum test* is conducted to identify cell-cycle states.
     If the test returns a positive statistic and a p-value smaller than ``p_thresh``, a warning will be issued."""
