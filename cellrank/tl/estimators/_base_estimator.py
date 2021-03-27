@@ -1034,7 +1034,27 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
     @abstractmethod
     def _fit_terminal_states(self, *args: Any, **kwargs: Any) -> None:
-        pass
+        """
+        High level API helper method called inside :meth:`fit` that should compute the terminal states.
+
+        This method would usually call :meth:`compute_terminal_states` after all the functions that required beforehand.
+
+        Parameters
+        ----------
+        args
+            Positional arguments.
+        kwargs
+            Keyword arguments.
+
+        Returns
+        -------
+        None
+            Nothing, just sets the terminal states.
+
+        See also
+        --------
+        See :meth:`cellrank.tl.estimators.GPCCA._fit_terminal_states` for an example implementation.
+        """
 
     @d.dedent
     @inject_docs(fs=P.TERM, fsp=P.TERM_PROBS, ap=P.ABS_PROBS, pd=P.PRIME_DEG)
