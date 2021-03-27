@@ -18,8 +18,8 @@ terminal state, we then compute its fate probability of it reaching any of the t
 We show an example of such a fate map in the figure above, which has been computed using the data
 of [Panc19]_.
 
-CellRank scales to large cell numbers, is fully compatible with `scanpy`_ and `scvelo`_ and is easy to use.
-To get started, see our `tutorial`_.
+CellRank scales to large cell numbers, is fully compatible with `scanpy`_ and `scvelo <https://scvelo.readthedocs.io/>`_
+and is easy to use. To get started, see our `tutorial`_.
 
 Manuscript
 ^^^^^^^^^^
@@ -114,7 +114,6 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
 .. _PageRank: https://en.wikipedia.org/wiki/PageRank#cite_note-1
 .. _tutorial: https://cellrank.readthedocs.io/en/stable/pancreas_basic.html
 .. _scanpy: https://scanpy.readthedocs.io/en/stable/
-.. _scvelo: https://scvelo.readthedocs.io/
 .. _Theislab: https://www.helmholtz-muenchen.de/icb/research/groups/theis-lab/overview/index.html
 .. _Peerlab: https://www.mskcc.org/research/ski/labs/dana-pe-er
 .. _pyGPCCA: https://pygpcca.readthedocs.io/en/latest/
