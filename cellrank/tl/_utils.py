@@ -388,7 +388,7 @@ def _correlation_test(
         Dataframe of shape ``(n_genes, n_lineages * 5)`` containing the following columns, 1 for each lineage:
 
             - ``{lineage} corr`` - correlation between the gene expression and absorption probabilities.
-            - ``{lineage} pval`` - calulated p-values for double-sided test.
+            - ``{lineage} pval`` - calculated p-values for double-sided test.
             - ``{lineage} qval`` - corrected p-values using Benjamini-Hochberg method at level `0.05`.
             - ``{lineage} ci low`` - lower bound of the ``confidence_level`` correlation confidence interval.
             - ``{lineage} ci high`` - upper bound of the ``confidence_level`` correlation confidence interval.

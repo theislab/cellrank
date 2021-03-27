@@ -202,7 +202,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             If a key to cluster labels is given, :paramref:`{fs}` will be associated with these for naming and colors.
         %(en_cutoff_p_thresh)s
         add_to_existing
-            Whether to add thses categories to existing ones. Cells already belonging to recurrent classes will be
+            Whether to add these categories to existing ones. Cells already belonging to recurrent classes will be
             updated if there's an overlap.
             Throws an error if previous approximate recurrent classes have not been calculated.
 
@@ -1034,7 +1034,27 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
     @abstractmethod
     def _fit_terminal_states(self, *args: Any, **kwargs: Any) -> None:
-        pass
+        """
+        High level API helper method called inside :meth:`fit` that should compute the terminal states.
+
+        This method would usually call :meth:`compute_terminal_states` after all the functions that required beforehand.
+
+        Parameters
+        ----------
+        args
+            Positional arguments.
+        kwargs
+            Keyword arguments.
+
+        Returns
+        -------
+        None
+            Nothing, just sets the terminal states.
+
+        See also
+        --------
+        See :meth:`cellrank.tl.estimators.GPCCA._fit_terminal_states` for an example implementation.
+        """
 
     @d.dedent
     @inject_docs(fs=P.TERM, fsp=P.TERM_PROBS, ap=P.ABS_PROBS, pd=P.PRIME_DEG)
