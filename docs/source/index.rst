@@ -112,7 +112,7 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
 
 .. _preprint: https://www.biorxiv.org/content/10.1101/2020.10.19.345983v1
 .. _PageRank: https://en.wikipedia.org/wiki/PageRank#cite_note-1
-.. _tutorial: https://cellrank.readthedocs.io/en/stable/pancreas_basic.html
+.. _tutorial: https://cellrank.readthedocs.io/en/stable/cellrank_basics.html
 .. _scanpy: https://scanpy.readthedocs.io/en/stable/
 .. _Theislab: https://www.helmholtz-muenchen.de/icb/research/groups/theis-lab/overview/index.html
 .. _Peerlab: https://www.mskcc.org/research/ski/labs/dana-pe-er
