@@ -60,6 +60,7 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
 
     installation
     api
+    external_api
     classes
     release_notes
     references
@@ -76,8 +77,10 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
    :maxdepth: 2
    :hidden:
 
-   pancreas_basic
-   pancreas_advanced
+   cellrank_basics
+   kernels_and_estimators
+   beyond_rna_velocity
+   creating_new_kernel
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/cellrank.svg
     :target: https://pypi.org/project/cellrank
@@ -88,15 +91,15 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
     :alt: Bioconda
 
 .. |CI| image:: https://img.shields.io/github/workflow/status/theislab/cellrank/CI/master
-    :target: https://github.com/theislab/cellrank
+    :target: https://github.com/theislab/cellrank/actions
     :alt: CI
 
 .. |Notebooks| image:: https://img.shields.io/github/workflow/status/theislab/cellrank_notebooks/CI/master?label=notebooks
-    :target: https://github.com/theislab/cellrank_notebooks
+    :target: https://github.com/theislab/cellrank_notebooks/actions
     :alt: CI-Notebooks
 
 .. |Docs|  image:: https://img.shields.io/readthedocs/cellrank
-    :target: https://cellrank.readthedocs.io/en/latest
+    :target: https://cellrank.readthedocs.io/en/stable
     :alt: Documentation
 
 .. |Downloads| image:: https://pepy.tech/badge/cellrank
@@ -108,15 +111,9 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
     :alt: Coverage
 
 .. _preprint: https://www.biorxiv.org/content/10.1101/2020.10.19.345983v1
-
 .. _PageRank: https://en.wikipedia.org/wiki/PageRank#cite_note-1
-
-.. _tutorial: https://cellrank.readthedocs.io/en/latest/pancreas_basic.html
-
-.. _scanpy: https://scanpy.readthedocs.io/en/latest/
-
+.. _tutorial: https://cellrank.readthedocs.io/en/stable/cellrank_basics.html
+.. _scanpy: https://scanpy.readthedocs.io/en/stable/
 .. _Theislab: https://www.helmholtz-muenchen.de/icb/research/groups/theis-lab/overview/index.html
-
 .. _Peerlab: https://www.mskcc.org/research/ski/labs/dana-pe-er
-
 .. _pyGPCCA: https://pygpcca.readthedocs.io/en/latest/

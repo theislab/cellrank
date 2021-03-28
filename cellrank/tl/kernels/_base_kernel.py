@@ -1,5 +1,5 @@
 """Kernel module."""
-
+import warnings
 from abc import ABC, abstractmethod
 from copy import copy
 from typing import (
@@ -13,15 +13,27 @@ from typing import (
     Callable,
     Iterable,
     Optional,
+    Sequence,
 )
+from pathlib import Path
 from functools import reduce
+
+import scvelo as scv
+from scvelo.plotting.utils import default_size, plot_outline
 
 import numpy as np
 from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix, isspmatrix_csr
+from pandas.api.types import infer_dtype
+from pandas.core.dtypes.common import is_categorical_dtype
+
+import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap, to_hex
+from matplotlib.collections import LineCollection
 
 from cellrank import logging as logg
 from cellrank.ul._docs import d, inject_docs
 from cellrank.tl._utils import (
+    save_fig,
     _connected,
     _normalize,
     _symmetric,
@@ -31,7 +43,8 @@ from cellrank.tl._utils import (
 )
 from cellrank.ul._utils import Pickleable, _write_graph_data
 from cellrank.tl._constants import Direction, _transition
-from cellrank.tl.kernels._utils import _filter_kwargs
+from cellrank.tl.kernels._utils import _get_basis, _filter_kwargs
+from cellrank.tl.kernels._random_walk import RandomWalk
 
 _ERROR_DIRECTION_MSG = "Can only combine kernels that have the same direction."
 _ERROR_EMPTY_CACHE_MSG = (
@@ -49,6 +62,7 @@ _n_dec = 2
 _dtype = np.float64
 _cond_num_tolerance = 1e-15
 AnnData = TypeVar("AnnData")
+Indices_t = Optional[Union[Sequence[str], Dict[str, Union[str, Sequence[str]]]]]
 
 
 class KernelExpression(Pickleable, ABC):
@@ -68,6 +82,9 @@ class KernelExpression(Pickleable, ABC):
         self._params = {}
         self._normalize = True
         self._parent = None
+
+    def __init_subclass__(cls, **kwargs: Any):
+        super().__init_subclass__()
 
     @property
     def condition_number(self):
@@ -193,7 +210,11 @@ class KernelExpression(Pickleable, ABC):
         if key is None:
             key = _transition(self._direction)
 
-        self.adata.uns[f"{key}_params"] = str(self)
+        # retain the embedding info
+        self.adata.uns[f"{key}_params"] = {
+            **self.adata.uns.get(f"{key}_params", {}),
+            **{"params": self.params},
+        }
         _write_graph_data(self.adata, self.transition_matrix, key)
 
     @abstractmethod
@@ -215,6 +236,18 @@ class KernelExpression(Pickleable, ABC):
             else:
                 logg.info(f"Condition number is `{self._cond_num:.2e}`")
 
+    def _reuse_cache(
+        self, expected_params: Dict[str, Any], *, time: Optional[Any] = None
+    ) -> bool:
+        if expected_params == self._params:
+            assert self.transition_matrix is not None, _ERROR_EMPTY_CACHE_MSG
+            logg.debug(_LOG_USING_CACHE)
+            logg.info("    Finish", time=time)
+            return True
+
+        self._params = expected_params
+        return False
+
     @abstractmethod
     def _get_kernels(self) -> Iterable["Kernel"]:
         pass
@@ -223,6 +256,248 @@ class KernelExpression(Pickleable, ABC):
     def kernels(self) -> List["Kernel"]:
         """Get the kernels of the kernel expression, except for constants."""
         return list(set(self._get_kernels()))
+
+    def compute_projection(
+        self,
+        basis: str = "umap",
+        key_added: Optional[str] = None,
+        copy: bool = False,
+    ) -> Optional[np.ndarray]:
+        """
+        Compute a projection of the transition matrix in the embedding.
+
+        The projected matrix can be then visualized as::
+
+            scvelo.pl.velocity_embedding(adata, vkey='T_fwd', basis='umap')
+
+        Parameters
+        ----------
+        basis
+            Basis in :attr:`anndata.AnnData.obsm` for which to compute the projection.
+        key_added
+            If not `None` and ``copy=False``, save the result to :paramref:`adata` ``.obsm['{key_added}']``.
+            Otherwise, save the result to `'T_fwd_{basis}'` or `T_bwd_{basis}`, depending on the direction.
+        copy
+            Whether to return the projection or modify :paramref:`adata` inplace.
+
+        Returns
+        -------
+        If ``copy=True``, the projection array of shape `(n_cells, n_components)`.
+        Otherwise, it modifies :attr:`anndata.AnnData.obsm` with a key based on ``key_added``.
+        """
+        # modified from: https://github.com/theislab/scvelo/blob/master/scvelo/tools/velocity_embedding.py
+        from scvelo.tools.velocity_embedding import quiver_autoscale
+
+        if self._transition_matrix is None:
+            raise RuntimeError(
+                "Compute transition matrix first as `.compute_transition_matrix()`."
+            )
+
+        start = logg.info(f"Projecting transition matrix onto `{basis}`")
+        emb = _get_basis(self.adata, basis)
+        T_emb = np.empty_like(emb)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            for i, row in enumerate(self.transition_matrix):
+                dX = emb[row.indices] - emb[i, None]
+                if np.any(np.isnan(dX)):
+                    T_emb[i] = np.nan
+                else:
+                    dX /= np.linalg.norm(dX, axis=1)[:, None]
+                    dX = np.nan_to_num(dX)
+                    probs = row.data
+                    T_emb[i] = probs.dot(dX) - probs.mean() * dX.sum(0)
+
+        T_emb /= 3 * quiver_autoscale(np.nan_to_num(emb), T_emb)
+
+        if copy:
+            return T_emb
+
+        key = _transition(self._direction) if key_added is None else key_added
+        ukey = f"{key}_params"
+
+        embs = self.adata.uns.get(ukey, {}).get("embeddings", [])
+        if basis not in emb:
+            embs = list(embs) + [basis]
+            self.adata.uns[ukey] = self.adata.uns.get(ukey, {})
+            self.adata.uns[ukey]["embeddings"] = embs
+
+        key = key + "_" + basis
+        logg.info(
+            f"Adding `adata.obsm[{key!r}]`\n    Finish",
+            time=start,
+        )
+        self.adata.obsm[key] = T_emb
+
+    @d.dedent
+    def plot_random_walks(
+        self,
+        n_sims: int,
+        max_iter: Union[int, float] = 0.25,
+        seed: Optional[int] = None,
+        successive_hits: int = 0,
+        start_ixs: Indices_t = None,
+        stop_ixs: Indices_t = None,
+        basis: str = "umap",
+        cmap: Union[str, LinearSegmentedColormap] = "gnuplot",
+        linewidth: float = 1.0,
+        linealpha: float = 0.3,
+        ixs_legend_loc: Optional[str] = None,
+        n_jobs: Optional[int] = None,
+        backend: str = "loky",
+        show_progress_bar: bool = True,
+        figsize: Optional[Tuple[float, float]] = None,
+        dpi: Optional[int] = None,
+        save: Optional[Union[str, Path]] = None,
+        **kwargs: Any,
+    ) -> None:
+        """
+        Plot random walks in an embedding.
+
+        This method simulates random walks on the Markov chain defined though the corresponding transition matrix. The
+        method is intended to give qualitative rather than quantitative insights into the transition matrix. Random
+        walks are simulated by iteratively choosing the next cell based on the current cell's transition probabilities.
+
+        Parameters
+        ----------
+        n_sims
+            Number of random walks to simulate.
+        %(rw_sim.parameters)s
+        start_ixs
+            Cells from which to sample the starting points. If `None`, use all cells.
+            %(rw_ixs)s
+            For example ``{'clusters': ['Ngn3 low EP', 'Ngn3 high EP']}`` means that starting points for random walks
+            will be samples uniformly from the these clusters.
+        stop_ixs
+            Cells which when hit, the random walk is terminated. If `None`, terminate after ``max_iters``.
+            %(rw_ixs)s
+            For example ``{'clusters': ['Alpha', 'Beta']}`` and ``succesive_hits=3`` means that the random walk will
+            stop prematurely after cells in the above specified clusters have been visited successively 3 times in a
+            row.
+        basis
+            Basis in :attr:`anndata.AnnData.obsm` to use as an embedding.
+        cmap
+            Colormap for the random walk lines.
+        linewidth
+            Width of the random walk lines.
+        linealpha
+            Alpha value of the random walk lines.
+        ixs_legend_loc
+            Legend location for the start/top indices.
+        %(parallel)s
+        %(plotting)s
+        kwargs
+            Keyword arguments for :func:`scvelo.pl.scatter`.
+
+        Returns
+        -------
+        %(just_plots)s
+        For each random walk, the first (last) cell is marked though a black (yellow) dot.
+        """
+
+        def create_ixs(ixs: Indices_t, *, kind: str) -> Optional[np.ndarray]:
+            if ixs is None:
+                return None
+            if isinstance(ixs, dict):
+                # fmt: off
+                if len(ixs) != 1:
+                    raise ValueError(f"Expected to find only 1 cluster key, found `{len(ixs)}`.")
+                cluster_key = next(iter(ixs.keys()))
+                if cluster_key not in self.adata.obs:
+                    raise KeyError(f"Unable to find `adata.obs[{cluster_key!r}]`.")
+                if not is_categorical_dtype(self.adata.obs[cluster_key]):
+                    raise TypeError(f"Expected `adata.obs[{cluster_key!r}]` to be categorical, "
+                                    f"found `{infer_dtype(self.adata.obs[cluster_key])}`.")
+                ixs = np.where(np.isin(self.adata.obs[cluster_key], ixs[cluster_key]))[0]
+                # fmt: on
+            elif isinstance(ixs, str):
+                ixs = np.where(self.adata.obs_names == ixs)[0]
+            else:
+                ixs = np.where(np.isin(self.adata.obs_names, ixs))[0]
+
+            if not len(ixs):
+                logg.warning(f"No {kind} indices have been selected, using `None`")
+                return None
+
+            return ixs
+
+        if self._transition_matrix is None:
+            raise RuntimeError(
+                "Compute transition matrix first as `.compute_transition_matrix()`."
+            )
+        emb = _get_basis(self.adata, basis)
+
+        if isinstance(cmap, str):
+            cmap = plt.get_cmap(cmap)
+        if not isinstance(cmap, LinearSegmentedColormap):
+            if not hasattr(cmap, "colors"):
+                raise AttributeError(
+                    "Unable to create a colormap, `cmap` does not have attribute `colors`."
+                )
+            cmap = LinearSegmentedColormap.from_list(
+                "random_walk", colors=cmap.colors, N=max_iter
+            )
+
+        start_ixs = create_ixs(start_ixs, kind="start")
+        stop_ixs = create_ixs(stop_ixs, kind="stop")
+        rw = RandomWalk(self.transition_matrix, start_ixs=start_ixs, stop_ixs=stop_ixs)
+        sims = rw.simulate_many(
+            n_sims=n_sims,
+            max_iter=max_iter,
+            seed=seed,
+            n_jobs=n_jobs,
+            backend=backend,
+            successive_hits=successive_hits,
+            show_progress_bar=show_progress_bar,
+        )
+
+        fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
+        scv.pl.scatter(self.adata, basis=basis, show=False, ax=ax, **kwargs)
+
+        logg.info("Plotting random walks")
+        for sim in sims:
+            x = emb[sim][:, 0]
+            y = emb[sim][:, 1]
+            points = np.array([x, y]).T.reshape(-1, 1, 2)
+            segments = np.concatenate([points[:-1], points[1:]], axis=1)
+            n_seg = len(segments)
+
+            lc = LineCollection(
+                segments,
+                linewidths=linewidth,
+                colors=[cmap(float(i) / n_seg) for i in range(n_seg)],
+                alpha=linealpha,
+                zorder=2,
+            )
+            ax.add_collection(lc)
+
+        for ix in [0, -1]:
+            ixs = [sim[ix] for sim in sims]
+            plot_outline(
+                x=emb[ixs][:, 0],
+                y=emb[ixs][:, 1],
+                outline_color=("black", to_hex(cmap(float(abs(ix))))),
+                kwargs={
+                    "s": kwargs.get("s", default_size(self.adata)) * 1.1,
+                    "alpha": 0.9,
+                },
+                ax=ax,
+                zorder=4,
+            )
+
+        if ixs_legend_loc not in (None, "none"):
+            from cellrank.pl._utils import _position_legend
+
+            h1 = ax.scatter([], [], color=cmap(0.0), label="start")
+            h2 = ax.scatter([], [], color=cmap(1.0), label="stop")
+            legend = ax.get_legend()
+            if legend is not None:
+                ax.add_artist(legend)
+            _position_legend(ax, legend_loc=ixs_legend_loc, handles=[h1, h2])
+
+        if save is not None:
+            save_fig(fig, save)
 
     def __xor__(self, other: "KernelExpression") -> "KernelExpression":
         return self.__rxor__(other)
@@ -432,14 +707,14 @@ class UnaryKernelExpression(KernelExpression, ABC):
         self._adata = _adata
 
     def __repr__(self):
-        return f"{'~' if self.backward and self._parent is None else ''}<{self.__class__.__name__[:4]}>"
+        return f"{'~' if self.backward and self._parent is None else ''}<{self.__class__.__name__}>"
 
     def __str__(self):
         params_fmt = self._format_params()
         if params_fmt:
             return (
                 f"{'~' if self.backward and self._parent is None else ''}"
-                f"<{self.__class__.__name__[:4]}[{params_fmt}]>"
+                f"<{self.__class__.__name__}[{params_fmt}]>"
             )
         return repr(self)
 

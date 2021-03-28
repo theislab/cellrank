@@ -793,17 +793,15 @@ class TerminalStates(Plottable):
     ]
 
     @abstractmethod
-    def set_terminal_states(self, *args, **kwargs) -> None:  # noqa
+    def set_terminal_states(self, *args: Any, **kwargs: Any) -> None:  # noqa
         pass
 
     @abstractmethod
-    def compute_terminal_states(self, *args, **kwargs) -> None:  # noqa
+    def compute_terminal_states(self, *args: Any, **kwargs: Any) -> None:  # noqa
         pass
 
-    # TODO: back compat
-
     @abstractmethod
-    def _write_terminal_states(self, *args, **kwargs) -> None:
+    def _write_terminal_states(self, *args: Any, **kwargs: Any) -> None:
         pass
 
 

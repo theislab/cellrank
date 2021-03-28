@@ -32,12 +32,17 @@ logger = logging.getLogger(__name__)
 needs_sphinx = "3.0"
 
 notebooks_url = "https://github.com/theislab/cellrank_notebooks/raw/master/tutorials/"
-for nb in ["pancreas_basic.ipynb", "pancreas_advanced.ipynb"]:
+for nb in [
+    "cellrank_basics.ipynb",
+    "kernels_and_estimators.ipynb",
+    "beyond_rna_velocity.ipynb",
+    "creating_new_kernel.ipynb",
+]:
     try:
         url = urljoin(notebooks_url, nb)
         urlretrieve(url, nb)
     except Exception as e:
-        logger.error(f"Unable to retrieve notebook: `{url}`. Reason: `{e}`.")
+        logger.error(f"Unable to retrieve notebook: `{url}`. Reason: `{e}`")
 
 
 # -- Project information -----------------------------------------------------
@@ -66,13 +71,12 @@ extensions = [
     "nbsphinx",
     "sphinx_copybutton",
     "sphinx_last_updated_by_git",
-    "edit_on_github",
 ]
 
 intersphinx_mapping = dict(
     anndata=("https://anndata.readthedocs.io/en/stable/", None),
     scanpy=("https://scanpy.readthedocs.io/en/stable/", None),
-    squidpy=("https://squidpy.readthedocs.io/", None),
+    squidpy=("https://squidpy.readthedocs.io/en/latest/", None),
     scvelo=("https://scvelo.readthedocs.io/", None),
     python=("https://docs.python.org/3", None),
     numpy=("https://docs.scipy.org/doc/numpy/", None),
@@ -87,6 +91,8 @@ intersphinx_mapping = dict(
     pygam=("https://pygam.readthedocs.io/en/latest/", None),
     jax=("https://jax.readthedocs.io/en/latest/", None),
     pygpcca=("https://pygpcca.readthedocs.io/en/latest/", None),
+    # external
+    ot=("https://pythonot.github.io/", None),
 )
 
 # Add any paths that contain templates here, relative to this directory.
@@ -248,9 +254,8 @@ todo_include_todos = False
 html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
 html_theme_options = dict(navigation_depth=4, logo_only=True)
-github_repo = "cellrank"  # sets the html_context
-github_nb_repo = "cellrank_notebooks"
 html_show_sphinx = False
+html_show_sourcelink = False
 
 
 def setup(app):

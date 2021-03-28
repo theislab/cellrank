@@ -1,14 +1,11 @@
 """Connectivity kernel module."""
 from copy import copy
 
+from anndata import AnnData
+
 from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.tl.kernels import Kernel
-from cellrank.tl.kernels._base_kernel import (
-    _LOG_USING_CACHE,
-    _ERROR_EMPTY_CACHE_MSG,
-    AnnData,
-)
 
 
 @d.dedent
@@ -33,9 +30,7 @@ class ConnectivityKernel(Kernel):
     %(backward)s
     conn_key
         Key in :attr:`anndata.AnnData.obsp` to obtain the connectivity matrix, describing cell-cell similarity.
-    compute_cond_num
-        Whether to compute condition number of the transition matrix. Note that this might be costly,
-        since it does not use sparse implementation.
+    %(cond_num)s
     check_connectivity
         Check whether the underlying KNN graph is connected.
     """
@@ -78,23 +73,15 @@ class ConnectivityKernel(Kernel):
             Makes :paramref:`transition_matrix` available.
         """
 
-        start = logg.info(
-            f"Computing transition matrix based on `adata.obsp[{self._key!r}]`"
-        )
+        # fmt: off
+        start = logg.info(f"Computing transition matrix based on `adata.obsp[{self._key!r}]`")
 
-        params = {"dnorm": density_normalize, "key": self._key}
-        if params == self.params:
-            assert self.transition_matrix is not None, _ERROR_EMPTY_CACHE_MSG
-            logg.debug(_LOG_USING_CACHE)
-            logg.info("    Finish", time=start)
+        if self._reuse_cache({"dnorm": density_normalize, "key": self._key}, time=start):
             return self
 
-        self._params = params
-        self._compute_transition_matrix(
-            matrix=self._conn.copy(), density_normalize=density_normalize
-        )
-
+        self._compute_transition_matrix(matrix=self._conn.copy(), density_normalize=density_normalize)
         logg.info("    Finish", time=start)
+        # fmt: on
 
         return self
 

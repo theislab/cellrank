@@ -2,21 +2,29 @@ References
 ----------
 
 .. [Bergen20] Bergen, V. *et al.* (2020),
-   *Generalizing RNA velocity to transient cell states through dynamical modeling*,
-   `Nature Biotechnology <https://doi.org/10.1038/s41587-020-0591-3>`__.
+    *Generalizing RNA velocity to transient cell states through dynamical modeling*,
+    `Nature Biotechnology <https://doi.org/10.1038/s41587-020-0591-3>`__.
 
 .. [Coifman05] Coifman *et al.* (2005),
     *Geometric diffusions as a tool for harmonic analysis and structure definition of data: Diffusion maps*,
     `PNAS <https://doi.org/10.1073/pnas.0500334102>`__.
 
+.. [Cyto20] Gulati *et al.* (2020),
+    *Single-cell transcriptional diversity is a hallmark of developmental potential*,
+    `Science <https://doi.org/10.1126/science.aax0249>`__.
+
+.. [Farrel18] Farrel, J. A. *et al.* (2018),
+    *Single-cell reconstruction of developmental trajectories during zebrafish embryogenesis*,
+    `Science <https://doi.org/10.1126/science.aar3131>`__.
+
 .. [GPCCA18] Reuter, B. *et al.* (2018),
-   *Generalized Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on Amyloid β
-   Conformational Dynamics Driven by an Oscillating Electric Field.*,
-   `Journal of Chemical Theory and Computation <https://doi.org/10.1021/acs.jctc.8b00079>`__.
+    *Generalized Markov State Modeling Method for Nonequilibrium Biomolecular Dynamics: Exemplified on Amyloid β
+    Conformational Dynamics Driven by an Oscillating Electric Field.*,
+    `Journal of Chemical Theory and Computation <https://doi.org/10.1021/acs.jctc.8b00079>`__.
 
 .. [Haghverdi16] Haghverdi *et al.* (2016),
-   *Diffusion pseudotime robustly reconstructs branching cellular lineages*,
-   `Nature Methods <https://doi.org/10.1038/nmeth.3971>`__.
+    *Diffusion pseudotime robustly reconstructs branching cellular lineages*,
+    `Nature Methods <https://doi.org/10.1038/nmeth.3971>`__.
 
 .. [Li2020] Li, T. *et al.* (2020),
     *On the Mathematics of RNA Velocity I: Theoretical Analysis*,
@@ -62,6 +70,10 @@ References
     *Characterization of cell fate probabilities in single-cell data with Palantir*,
     `Nature Biotechnology <https://doi.org/10.1038/s41587-019-0068-4>`__.
 
+.. [VIA21] Shobana V. Stassen *et al.* (2021),
+    *VIA: Generalized and scalable trajectory inference in single-cell omics data*,
+    `bioRxiv <https://doi.org/10.1101/2021.02.10.430705>`__.
+
 .. [Velten17] Velten, L. *et al.* (2017),
     *Human haematopoietic stem cell lineage commitment is a continuous process.*,
     `Nat Cell Biol 19, 271–281 <https://doi.org/10.1038/ncb3493>`__.
@@ -82,3 +94,7 @@ References
     *PAGA: Graph abstraction reconciles clustering with trajectory inference through a topology preserving map of
     single cells*,
     `Genome Biology <https://doi.org/10.1186/s13059-019-1663-x>`__.
+
+.. [Zhang21] Zhang, S. *et al.* (2021),
+    *Optimal transport analysis reveals trajectories in steady-state systems*,
+    `bioRxiv <https://doi.org/10.1101/2021.03.02.433630>`__.

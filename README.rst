@@ -46,6 +46,8 @@ or via PyPI::
     pip install cellrank
     # or with extra libraries, useful for large datasets
     pip install 'cellrank[krylov]'
+    # or with external modules, see External API
+    pip install 'cellrank[external]'
 
 Why is it called "CellRank"?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -71,15 +73,15 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
     :alt: Bioconda
 
 .. |CI| image:: https://img.shields.io/github/workflow/status/theislab/cellrank/CI/master
-    :target: https://github.com/theislab/cellrank
+    :target: https://github.com/theislab/cellrank/actions
     :alt: CI
 
 .. |Notebooks| image:: https://img.shields.io/github/workflow/status/theislab/cellrank_notebooks/CI/master?label=notebooks
-    :target: https://github.com/theislab/cellrank_notebooks
+    :target: https://github.com/theislab/cellrank_notebooks/actions
     :alt: CI-Notebooks
 
 .. |Docs|  image:: https://img.shields.io/readthedocs/cellrank
-    :target: https://cellrank.readthedocs.io/en/latest
+    :target: https://cellrank.readthedocs.io/en/stable
     :alt: Documentation
 
 .. |Downloads| image:: https://pepy.tech/badge/cellrank
@@ -91,25 +93,14 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
     :alt: Coverage
 
 .. _preprint: https://doi.org/10.1101/2020.10.19.345983
-
 .. _PageRank: https://en.wikipedia.org/wiki/PageRank#cite_note-1
-
 .. _La Manno et al. (2018): https://doi.org/10.1038/s41586-018-0414-6
-
 .. _Bergen et al. (2020): https://doi.org/10.1038/s41587-020-0591-3
-
 .. _pancreatic endocrinogenesis: https://doi.org/10.1242/dev.173849
-
 .. _scanpy: https://scanpy.readthedocs.io/en/latest/
-
 .. _scvelo: https://scvelo.readthedocs.io/
-
 .. _cellrank.org: https://cellrank.org
-
 .. _Theislab: https://www.helmholtz-muenchen.de/icb/research/groups/theis-lab/overview/index.html
-
 .. _Peerlab: https://www.mskcc.org/research/ski/labs/dana-pe-er
-
 .. _pyGPCCA: https://pygpcca.readthedocs.io/en/latest/
-
 .. _GPCCA18: https://doi.org/10.1021/acs.jctc.8b00079

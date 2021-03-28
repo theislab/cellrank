@@ -4,6 +4,7 @@ from copy import copy
 from math import fsum
 from typing import Any, Union, Callable, Iterable, Optional
 
+from anndata import AnnData
 from scvelo.preprocessing.moments import get_moments
 
 import numpy as np
@@ -24,12 +25,7 @@ from cellrank.tl.kernels._utils import (
     _calculate_starts,
     _get_probs_for_zero_vec,
 )
-from cellrank.tl.kernels._base_kernel import (
-    _RTOL,
-    _LOG_USING_CACHE,
-    _ERROR_EMPTY_CACHE_MSG,
-    AnnData,
-)
+from cellrank.tl.kernels._base_kernel import _RTOL
 from cellrank.tl.kernels._velocity_schemes import Scheme, _get_scheme
 
 
@@ -67,9 +63,7 @@ class VelocityKernel(Kernel):
     gene_subset
         List of genes to be used to compute transition probabilities.
         By default, genes from :paramref:`adata` ``.var['velocity_genes']`` are used.
-    compute_cond_num
-        Whether to compute condition number of the transition matrix. Note that this might be costly,
-        since it does not use sparse implementation.
+    %(cond_num)s
     check_connectivity
         Check whether the underlying KNN graph is connected.
     """
@@ -203,11 +197,6 @@ class VelocityKernel(Kernel):
             raise TypeError(
                 f"Expected `scheme` to be a function, found `{type(scheme)!r}`."
             )
-        elif isinstance(scheme, type):
-            raise TypeError(
-                f"Expected `scheme` to be a function object, found function type `{type(scheme)!r}`. "
-                f"Try instantiating the type."
-            )
 
         if self.backward and mode != VelocityMode.DETERMINISTIC:
             logg.warning(
@@ -236,29 +225,19 @@ class VelocityKernel(Kernel):
 
         if seed is None:
             seed = np.random.randint(0, 2 ** 16)
-        params = dict(  # noqa: C408
-            softmax_scale=softmax_scale, mode=mode.s, seed=seed, scheme=str(scheme)
-        )
+
+        # fmt: off
+        params = {"softmax_scale": softmax_scale, "mode": mode.s, "seed": seed, "scheme": str(scheme)}
         if self.backward:
             params["bwd_mode"] = backward_mode.s
-
-        # check whether we already computed such a transition matrix
-        if params == self._params:
-            assert self._transition_matrix is not None, _ERROR_EMPTY_CACHE_MSG
-            logg.debug(_LOG_USING_CACHE, time=start)
-            logg.info("    Finish", time=start)
+        if self._reuse_cache(params, time=start):
             return self
-
-        self._params = params
 
         # compute first and second order moments to model the distribution of the velocity vector
         np.random.seed(seed)
-        velocity_expectation = get_moments(
-            self.adata, self._velocity, second_order=False
-        ).astype(np.float64)
-        velocity_variance = get_moments(
-            self.adata, self._velocity, second_order=True
-        ).astype(np.float64)
+        velocity_expectation = get_moments(self.adata, self._velocity, second_order=False).astype(np.float64)
+        velocity_variance = get_moments(self.adata, self._velocity, second_order=True).astype(np.float64)
+        # fmt: on
 
         if mode == VelocityMode.MONTE_CARLO and n_samples == 1:
             logg.debug("Setting mode to sampling because `n_samples=1`")

@@ -3,6 +3,7 @@ import cellrank.tl
 import cellrank.ul
 import cellrank.logging
 import cellrank.datasets
+import cellrank.external
 from cellrank.settings import settings
 from cellrank.tl._read import read
 from cellrank.tl._constants import Lin

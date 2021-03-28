@@ -3,8 +3,7 @@ import pickle
 from abc import ABC, abstractmethod
 from sys import version_info
 from copy import copy, deepcopy
-from math import ceil
-from typing import Any, Dict, Union, Mapping, TypeVar, Optional, Sequence
+from typing import Any, Dict, Tuple, Union, Mapping, TypeVar, Optional, Sequence
 from pathlib import Path
 from datetime import datetime
 
@@ -19,12 +18,14 @@ from scipy.stats import ranksums
 from scipy.sparse import spmatrix
 from pandas.api.types import infer_dtype, is_categorical_dtype
 
+import matplotlib.pyplot as plt
 from matplotlib.colors import is_color_like
 
 from cellrank import logging as logg
 from cellrank.ul._docs import d, inject_docs
 from cellrank.tl._utils import (
     TestMethod,
+    save_fig,
     _pairwise,
     _irreducible,
     _process_series,
@@ -132,6 +133,9 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         if read_from_adata:
             self._read_from_adata()
 
+    def __init_subclass__(cls, **kwargs: Any):
+        super().__init_subclass__()
+
     def _read_from_adata(self) -> None:
         self._set_or_debug(f"eig_{self._direction}", self.adata.uns, "_eig")
 
@@ -178,7 +182,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
     @inject_docs(fs=P.TERM.s, fsp=P.TERM_PROBS.s)
     def set_terminal_states(
         self,
-        labels: Union[Series, Dict[str, Any]],
+        labels: Union[Series, Dict[str, Sequence[Any]]],
         cluster_key: Optional[str] = None,
         en_cutoff: Optional[float] = None,
         p_thresh: Optional[float] = None,
@@ -195,10 +199,10 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             belonging to a transient state or a :class:`dict`, where each key is the name of the recurrent class and
             values are list of cell names.
         cluster_key
-            If a key to cluster labels is given, :paramref:`{fs}` will ge associated with these for naming and colors.
+            If a key to cluster labels is given, :paramref:`{fs}` will be associated with these for naming and colors.
         %(en_cutoff_p_thresh)s
         add_to_existing
-            Whether to add thses categories to existing ones. Cells already belonging to recurrent classes will be
+            Whether to add these categories to existing ones. Cells already belonging to recurrent classes will be
             updated if there's an overlap.
             Throws an error if previous approximate recurrent classes have not been calculated.
 
@@ -783,7 +787,12 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         self,
         lineage: str,
         n_genes: int = 8,
+        ncols: Optional[int] = None,
         use_raw: bool = False,
+        title_fmt: str = "{gene} qval={qval:.4e}",
+        figsize: Optional[Tuple[float, float]] = None,
+        dpi: Optional[int] = None,
+        save: Optional[Union[str, Path]] = None,
         **kwargs,
     ) -> None:
         """
@@ -794,9 +803,15 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         lineage
             Lineage for which to plot the driver genes.
         n_genes
-            Number of genes to plot.
+            Top most correlated genes to plot.
+        ncols
+            Number of columns.
         use_raw
             Whether to look in :paramref:`adata` ``.raw.var`` or :paramref:`adata` ``.var``.
+        title_fmt
+            Title format. Possible keywords include `{gene}`, `{qval}`, `{corr}` for gene name,
+            q-value and correlation, respectively.
+        %(plotting)s
         kwargs
             Keyword arguments for :func:`scvelo.pl.scatter`.
 
@@ -804,6 +819,25 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         -------
         %(just_plots)s
         """
+
+        def prepare_format(
+            gene: str,
+            *,
+            pval: Optional[float],
+            qval: Optional[float],
+            corr: Optional[float],
+        ) -> Dict[str, Any]:
+            kwargs = {}
+            if "{gene" in title_fmt:
+                kwargs["gene"] = gene
+            if "{pval" in title_fmt:
+                kwargs["pval"] = float(pval) if pval is not None else np.nan
+            if "{qval" in title_fmt:
+                kwargs["qval"] = float(qval) if qval is not None else np.nan
+            if "{corr" in title_fmt:
+                kwargs["corr"] = float(corr) if corr is not None else np.nan
+
+            return kwargs
 
         lin_drivers = self._get(P.LIN_DRIVERS)
 
@@ -821,33 +855,46 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         if n_genes <= 0:
             raise ValueError(f"Expected `n_genes` to be positive, found `{n_genes}`.")
 
-        cmap = kwargs.pop("cmap", "viridis")
-        ncols = kwargs.pop("ncols", None)
+        kwargs.pop("save", None)
+        genes = lin_drivers.sort_values(by=key, ascending=False).head(n_genes)
 
-        geness = lin_drivers.sort_values(by=key, ascending=False).head(n_genes)
-        kwargs.setdefault(
-            "title",
-            [
-                f"{g} q-value={q}"
-                for g, q in dict(geness[f"{lineage} qval"].map("{:.4e}".format)).items()
-            ],
+        ncols = 4 if ncols is None else ncols
+        nrows = int(np.ceil(len(genes) / ncols))
+
+        fig, axes = plt.subplots(
+            ncols=ncols,
+            nrows=nrows,
+            dpi=dpi,
+            figsize=(ncols * 6, nrows * 4) if figsize is None else figsize,
         )
+        axes = np.ravel([axes])
 
-        if ncols is None and len(geness) >= 8:
-            ncols = 4
-
-        # TODO: scvelo can handle only < 20 plots, see https://github.com/theislab/scvelo/issues/252
-        geness = filter(len, np.array_split(geness.index, int(ceil(len(geness) / 8))))
-
-        for genes in geness:
+        _i = 0
+        for _i, (gene, ax) in enumerate(zip(genes.index, axes)):
+            data = genes.loc[gene]
             scv.pl.scatter(
                 self.adata,
-                color=genes,
-                cmap=cmap,
+                color=gene,
                 ncols=ncols,
                 use_raw=use_raw,
+                ax=ax,
+                show=False,
+                title=title_fmt.format(
+                    **prepare_format(
+                        gene,
+                        pval=data.get(f"{lineage} pval", None),
+                        qval=data.get(f"{lineage} qval", None),
+                        corr=data.get(f"{lineage} corr", None),
+                    )
+                ),
                 **kwargs,
             )
+
+        for j in range(_i + 1, len(axes)):
+            axes[j].remove()
+
+        if save is not None:
+            save_fig(fig, save)
 
     def _detect_cc_stages(self, rc_labels: Series, p_thresh: float = 1e-15) -> None:
         """
@@ -980,13 +1027,34 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             f"       `adata.obs[{self._term_key!r}]`\n"
             f"{extra_msg}"
             f"       `.{P.TERM_PROBS}`\n"
-            f"       `.{P.TERM}`",
+            f"       `.{P.TERM}`\n"
+            "    Finish",
             time=time,
         )
 
     @abstractmethod
-    def _fit_terminal_states(self, *args, **kwargs):
-        pass
+    def _fit_terminal_states(self, *args: Any, **kwargs: Any) -> None:
+        """
+        High level API helper method called inside :meth:`fit` that should compute the terminal states.
+
+        This method would usually call :meth:`compute_terminal_states` after all the functions that required beforehand.
+
+        Parameters
+        ----------
+        args
+            Positional arguments.
+        kwargs
+            Keyword arguments.
+
+        Returns
+        -------
+        None
+            Nothing, just sets the terminal states.
+
+        See also
+        --------
+        See :meth:`cellrank.tl.estimators.GPCCA._fit_terminal_states` for an example implementation.
+        """
 
     @d.dedent
     @inject_docs(fs=P.TERM, fsp=P.TERM_PROBS, ap=P.ABS_PROBS, pd=P.PRIME_DEG)

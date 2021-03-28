@@ -59,7 +59,7 @@ cluster_key
     Match computed states against pre-computed clusters to annotate the states.
     For this, provide a key from :paramref:`adata` ``.obs`` where cluster labels have been computed.
 keys
-    Determines which %(initial_or_terminal) states to use by passing their names.
+    Determines which %(initial_or_terminal)s states to use by passing their names.
     Further, %(initial_or_terminal)s states can be combined. If e.g. the %(terminal)s states are
     ['Neuronal_1', 'Neuronal_1', 'Astrocytes', 'OPC'], then passing ``keys=['Neuronal_1, Neuronal_2', 'OPC']``
     means that the two neuronal %(terminal)s states are treated as one and the 'Astrocyte' state is excluded."""
@@ -124,7 +124,7 @@ Updates the :paramref:`adata` with the following fields:
 _en_cutoff_p_thresh = """\
 en_cutoff
     If ``cluster_key`` is given, this parameter determines when an approximate recurrent class will
-    be labelled as *'Unknown'*, based on the entropy of the distribution of cells over transcriptomic clusters.
+    be labeled as *'Unknown'*, based on the entropy of the distribution of cells over transcriptomic clusters.
 p_thresh
     If cell cycle scores were provided, a *Wilcoxon rank-sum test* is conducted to identify cell-cycle states.
     If the test returns a positive statistic and a p-value smaller than ``p_thresh``, a warning will be issued."""
@@ -138,12 +138,27 @@ _velocity_scheme = """\
 scheme
     Similarity scheme between cells as described in [Li2020]_. Can be one of the following:
 
-        - `{s.DOT_PRODUCT.s!r}` - :class:`cellrank.tl.kernels.DotProductScheme`.
-        - `{s.COSINE.s!r}` - :class:`cellrank.tl.kernels.CosineScheme`.
-        - `{s.CORRELATION.s!r}` - :class:`cellrank.tl.kernels.CorrelationScheme`.
+        - `{s.DOT_PRODUCT.s!r}`: :class:`cellrank.tl.kernels.DotProductScheme`.
+        - `{s.COSINE.s!r}`: :class:`cellrank.tl.kernels.CosineScheme`.
+        - `{s.CORRELATION.s!r}`: :class:`cellrank.tl.kernels.CorrelationScheme`.
 
-    Alternatively, any function can be passed as long as it follows the call signature of
-    :class:`cellrank.tl.kernels.SimilaritySchemeABC`."""
+    Alternatively, any function can be passed as long as it follows the signature of
+    :meth:`cellrank.tl.kernels.SimilaritySchemeABC.__call__`."""
+_cond_num = """\
+compute_cond_num
+    Whether to compute condition number of the transition matrix. Note that this might be costly,
+    since it does not use sparse implementation."""
+_soft_scheme_fmt = """\
+b
+    The growth rate of generalized logistic function.{}
+nu
+    Affects near which asymptote maximum growth occurs.{}
+perc
+    Percentile by which to clip the connectivities.{}"""
+_rw_ixs = """\
+Can be specified as either a :class:`dict` with a key corresponding to cluster key in
+    :attr:`anndata.AnnData.obs` and values to clusters or just a sequence of cell ids
+    in :attr:`anndata.AnnData.obs_names`."""
 
 
 def inject_docs(**kwargs):  # noqa
@@ -193,4 +208,10 @@ d = DocstringProcessor(
     plots_or_returns_models=_plots_or_returns_models,
     basis=_basis,
     velocity_scheme=_velocity_scheme,
+    cond_num=_cond_num,
+    soft_scheme=_soft_scheme_fmt.format("", "", ""),
+    soft_scheme_kernel=_soft_scheme_fmt.format(
+        *([" Only used when `threshold_scheme='soft'`."] * 3)
+    ),
+    rw_ixs=_rw_ixs,
 )

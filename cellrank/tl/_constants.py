@@ -92,6 +92,13 @@ class AbsProbKey(PrettyEnum):
     BACKWARD = f"{DirPrefix.BACKWARD}_{TermStatesKey.BACKWARD}"
 
 
+class ThresholdScheme(PrettyEnum):
+    """Pseudotime thresholding scheme."""
+
+    SOFT = "soft"
+    HARD = "hard"
+
+
 def _transition(d: Union[str, Direction]) -> str:
     return f"T_{d}"
 

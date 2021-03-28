@@ -18,6 +18,8 @@ from itertools import tee, product, combinations
 
 from statsmodels.stats.multitest import multipletests
 
+from anndata import AnnData
+
 import numpy as np
 import pandas as pd
 from pandas import Series
@@ -44,7 +46,6 @@ from cellrank.ul._parallelize import parallelize
 from cellrank.tl._linear_solver import _solve_lin_system
 from cellrank.tl.kernels._utils import np_std, np_mean, _filter_kwargs
 
-AnnData = TypeVar("AnnData")
 ColorLike = TypeVar("ColorLike")
 GPCCA = TypeVar("GPCCA")
 CFLARE = TypeVar("CFLARE")
@@ -277,60 +278,6 @@ def _complex_warning(
     return X_
 
 
-def _bias_knn(
-    conn: csr_matrix, pseudotime: np.ndarray, n_neighbors: int, k: int = 3
-) -> csr_matrix:
-    """
-    Palantir Kernel utility function.
-
-    This function takes in symmetric connectivities and a pseudotime and removes edges that point "against" pseudotime,
-    in this way creating a directed graph. For each node, it always keeps the closest neighbors, making sure the graph
-    remains connected.
-
-    Parameters
-    ----------
-    conn
-        The nearest neighbor connectivities.
-    pseudotime
-        Pseudotemporal ordering of cells.
-    n_neighbors
-        Number of neighbors to keep
-    k
-        Number, alongside with ``n_neighbors`` which determined the threshold for candidate indices.
-
-    Returns
-    -------
-    :class:`scipy.sparse.csr_matrix`.
-        Biased connectivities according to the ``pseudotime``.
-    """
-
-    # set a threshold for the neighbors to keep
-    k_thresh = np.min([int(np.floor(n_neighbors / k)) - 1, 30])
-    conn_biased = conn.copy()
-
-    # loop over rows in the adjacency matrix
-    for i in range(conn.shape[0]):
-
-        # get indices, values and current pseudo t
-        row_data = conn[i, :].data
-        row_ixs = conn[i, :].indices
-        current_t = pseudotime[i]
-
-        # get the 'candidates' - ixs of nodes not in the k_thresh closest neighbors
-        p = np.flip(np.argsort(row_data))
-        sorted_ixs = row_ixs[p]
-        cand_ixs = sorted_ixs[k_thresh:]
-
-        # compare pseudotimes and set indices to zero
-        cand_t = pseudotime[cand_ixs]
-        rem_ixs = cand_ixs[cand_t < current_t]
-        conn_biased[i, rem_ixs] = 0
-
-    conn_biased.eliminate_zeros()
-
-    return conn_biased
-
-
 def _mat_mat_corr_sparse(
     X: csr_matrix,
     Y: np.ndarray,
@@ -441,7 +388,7 @@ def _correlation_test(
         Dataframe of shape ``(n_genes, n_lineages * 5)`` containing the following columns, 1 for each lineage:
 
             - ``{lineage} corr`` - correlation between the gene expression and absorption probabilities.
-            - ``{lineage} pval`` - calulated p-values for double-sided test.
+            - ``{lineage} pval`` - calculated p-values for double-sided test.
             - ``{lineage} qval`` - corrected p-values using Benjamini-Hochberg method at level `0.05`.
             - ``{lineage} ci low`` - lower bound of the ``confidence_level`` correlation confidence interval.
             - ``{lineage} ci high`` - upper bound of the ``confidence_level`` correlation confidence interval.
