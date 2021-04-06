@@ -10,7 +10,7 @@ from cellrank.tl._constants import Lin
 
 __author__ = ", ".join(["Marius Lange", "Michal Klein"])
 __maintainer__ = ", ".join(["Marius Lange", "Michal Klein"])
-__version__ = "1.2.0"
+__version__ = "1.3.0"
 __email__ = "info@cellrank.org"
 
 try:
