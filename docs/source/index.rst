@@ -1,19 +1,22 @@
 |PyPI| |Bioconda| |Downloads| |CI| |Notebooks| |Docs| |Codecov|
 
-CellRank - Probabilistic Fate Mapping using RNA Velocity
+CellRank for directed single-cell fate mapping
 ========================================================
 
 .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/cellrank_fate_map.png
    :width: 600px
    :align: center
 
-**CellRank** is a toolkit to uncover cellular dynamics based on scRNA-seq data with RNA velocity annotation,
-see [Manno18]_ and [Bergen20]_. In short, CellRank models cellular dynamics as a
-Markov chain, where transition probabilities are computed based on **RNA velocity and transcriptomic similarity**,
-taking into account **uncertainty in the velocities** and the stochastic nature of cell fate decisions.
-The Markov chain is coarse-grained into a set of macrostates which represent initial and terminal states,
-as well as transient intermediate states using Generalized Perron Cluster Cluster Analysis (G-PCCA) [GPCCA18]_,
-implemented in the novel `pyGPCCA`_ package. For each transient cell, i.e. for each cell that's not assigned to a
+**CellRank** is a toolkit to uncover cellular dynamics based on Markov state modelling of single-cell data,
+taking into account the stochastic nature of cellular fate decisions. It contains two main modules:
+**kernels** compute cell-cell transition probabilities and **estimators** generate hypothesis based on these
+transition probabilities. Our kernels work with a variety of input data including RNA velocity (see [Manno18]_
+and [Bergen20]_), transcriptomic similarity, spatial proximity and pseudotime. Our ``VelocityKernel`` takes into
+account **uncertainty in the velocities** and allows you to aggregate the short-range fate relations given by RNA
+velocity into longer trends: from initial to terminal states along the phenotypic manifold. Our main estimator
+is *Generalized Perron Cluster Cluster Analysis* (G-PCCA) [GPCCA18]_, implemented in the novel `pyGPCCA`_ package.
+GPCCA coarse-grains the Markov chain into a set of macrostates which represent initial and terminal states,
+as well as transient intermediate states. For each transient cell, i.e. for each cell that's not assigned to a
 terminal state, we then compute its fate probability of it reaching any of the terminal states.
 We show an example of such a fate map in the figure above, which has been computed using the data
 of [Panc19]_.
