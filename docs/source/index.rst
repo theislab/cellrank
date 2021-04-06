@@ -14,12 +14,11 @@ transition probabilities. Our kernels work with a variety of input data includin
 and [Bergen20]_), transcriptomic similarity, spatial proximity and pseudotime. Our ``VelocityKernel`` takes into
 account **uncertainty in the velocities** and allows you to aggregate the short-range fate relations given by RNA
 velocity into longer trends: from initial to terminal states along the phenotypic manifold. Our main estimator
-is *Generalized Perron Cluster Cluster Analysis* (G-PCCA) [GPCCA18]_, implemented in the novel `pyGPCCA`_ package.
-GPCCA coarse-grains the Markov chain into a set of macrostates which represent initial and terminal states,
-as well as transient intermediate states. For each transient cell, i.e. for each cell that's not assigned to a
-terminal state, we then compute its fate probability of it reaching any of the terminal states.
-We show an example of such a fate map in the figure above, which has been computed using the data
-of [Panc19]_.
+is *Generalized Perron Cluster Cluster Analysis* (G-PCCA) [GPCCA18]_ which coarse-grains the Markov chain into a
+set of macrostates which represent initial and terminal states, as well as transient intermediate states. For
+each transient cell, i.e. for each cell that's not assigned to a terminal state, we then compute its fate
+probability of it reaching any of the terminal states. We show an example of such a fate map in the figure above,
+which has been computed using the data of [Panc19]_.
 
 CellRank scales to large cell numbers, is fully compatible with `scanpy`_ and `scvelo <https://scvelo.readthedocs.io/>`_
 and is easy to use. To get started, see our `tutorial`_.
