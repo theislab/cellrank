@@ -195,6 +195,27 @@ class TestHighLevelPipeline:
 
         _assert_has_all_keys(adata, Direction.BACKWARD)
 
+    def test_multiple_read_write(self, adata: AnnData):
+        for n_states in range(2, 5):
+            cr.tl.terminal_states(
+                adata,
+                estimator=cr.tl.estimators.GPCCA,
+                cluster_key="clusters",
+                method="brandts",
+                show_plots=True,
+                n_states=n_states,
+                fit_kwargs={"n_cells": 5},
+            )
+            cr.tl.lineages(adata, backward=False)
+            cr.pl.lineages(adata)
+
+            _assert_has_all_keys(adata, Direction.FORWARD)
+            probs = adata.obsm[str(AbsProbKey.FORWARD)]
+
+            assert probs.shape[1] == n_states
+            for name in probs.names:
+                assert "Lineage" not in name, probs.names
+
 
 class TestLowLevelPipeline:
     def test_fwd_pipelne_cflare(self, adata: AnnData):
