@@ -640,6 +640,18 @@ class Plottable(KernelHolder, Property):
 
         if mode == "embedding":
             if same_plot:
+                # to complement: https://github.com/theislab/scvelo/blob/master/scvelo/plotting/scatter.py#L269
+                sorted_idx = np.argsort(X, axis=1)[:, ::-1][:, :2]
+                pairs, cnts = np.unique(
+                    np.sort(sorted_idx, axis=0), axis=0, return_counts=True
+                )
+                absent = set(A.names) - set(A.names[pairs[cnts > 1].flatten()])
+                if absent:
+                    # can't print which because it would be inaccurate, i.e. we would print the legend
+                    # is missing when in fact, it would be visible
+                    # this has been checked exactly according to scVelo's logic
+                    logg.warning("Legend for some lineages may be missing")
+
                 kwargs["color_gradients"] = A
                 if len(cluster_key):
                     logg.warning(
