@@ -126,29 +126,35 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
     :target: https://codecov.io/gh/theislab/cellrank
     :alt: Coverage
 
+
 .. _kernels: https://cellrank.readthedocs.io/en/stable/classes.html#kernels
 .. _estimators: https://cellrank.readthedocs.io/en/stable/classes.html#estimators
-.. _RNA velocity: https://cellrank.readthedocs.io/en/stable/classes.html#velocity-kernel
-.. _cellular similarity: https://cellrank.readthedocs.io/en/stable/classes.html#connectivity-kernel
-.. _pseudotime: https://cellrank.readthedocs.io/en/stable/classes.html#pseudotime-kernel
-.. _VelocityKernel: https://cellrank.readthedocs.io/en/stable/classes.html#velocity-kernel
-.. _gene expression trends: https://cellrank.readthedocs.io/en/stable/api/cellrank.pl.gene_trends.html#cellrank.pl.gene_trends
-.. _circular embeddings: https://cellrank.readthedocs.io/en/stable/api/cellrank.pl.circular_projection.html
-.. _preprint: https://www.biorxiv.org/content/10.1101/2020.10.19.345983v1
-.. _PageRank: https://en.wikipedia.org/wiki/PageRank#cite_note-1
-.. _basic tutorial: https://cellrank.readthedocs.io/en/stable/cellrank_basics.html
-.. _kernels and estimators tutorial: https://cellrank.readthedocs.io/en/stable/kernels_and_estimators.html
-.. _scanpy: https://scanpy.readthedocs.io/en/stable/
-.. _scvelo: https://scvelo.readthedocs.io/
-.. _Theislab: https://www.helmholtz-muenchen.de/icb/research/groups/theis-lab/overview/index.html
-.. _Peerlab: https://www.mskcc.org/research/ski/labs/dana-pe-er
-.. _pyGPCCA: https://pygpcca.readthedocs.io/en/latest/
-.. _gallery: https://cellrank.readthedocs.io/en/stable/auto_examples/index.html
-.. _contribution guide: https://github.com/theislab/cellrank/blob/master/CONTRIBUTING.rst
 .. _plotting API: https://cellrank.readthedocs.io/en/stable/api.html#module-cellrank.pl
 .. _external API: https://cellrank.readthedocs.io/en/stable/external_api.html
+.. _contribution guide: https://github.com/theislab/cellrank/blob/master/CONTRIBUTING.rst
+
+.. _RNA velocity: https://cellrank.readthedocs.io/en/stable/classes.html#velocity-kernel
+.. _VelocityKernel: https://cellrank.readthedocs.io/en/stable/classes.html#velocity-kernel
+.. _cellular similarity: https://cellrank.readthedocs.io/en/stable/classes.html#connectivity-kernel
+.. _pseudotime: https://cellrank.readthedocs.io/en/stable/classes.html#pseudotime-kernel
+
+.. _gene expression trends: https://cellrank.readthedocs.io/en/stable/api/cellrank.pl.gene_trends.html#cellrank.pl.gene_trends
+.. _circular embeddings: https://cellrank.readthedocs.io/en/stable/api/cellrank.pl.circular_projection.html
+
+.. _basic tutorial: https://cellrank.readthedocs.io/en/stable/cellrank_basics.html
 .. _kernel tutorial: https://cellrank.readthedocs.io/en/stable/creating_new_kernel.html
+.. _kernels and estimators tutorial: https://cellrank.readthedocs.io/en/stable/kernels_and_estimators.html
+
+.. _scanpy: https://scanpy.readthedocs.io/en/stable/
+.. _scvelo: https://scvelo.readthedocs.io/
+
+.. _Theislab: https://www.helmholtz-muenchen.de/icb/research/groups/theis-lab/overview/index.html
+.. _Peerlab: https://www.mskcc.org/research/ski/labs/dana-pe-er
 .. _`tweet`: https://twitter.com/MariusLange8
+.. _preprint: https://www.biorxiv.org/content/10.1101/2020.10.19.345983v1
+.. _PageRank: https://en.wikipedia.org/wiki/PageRank#cite_note-1
+
+.. _gallery: https://cellrank.readthedocs.io/en/stable/auto_examples/index.html
 .. _macrostates: https://cellrank.readthedocs.io/en/stable/auto_examples/estimators/compute_macrostates.html
 .. _fate probabilities: https://cellrank.readthedocs.io/en/stable/auto_examples/estimators/compute_abs_probs.html
 .. _driver genes: https://cellrank.readthedocs.io/en/stable/auto_examples/estimators/compute_lineage_drivers.html
