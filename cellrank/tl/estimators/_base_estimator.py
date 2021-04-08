@@ -308,8 +308,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         self,
         keys: Optional[Sequence[str]] = None,
         check_irreducibility: bool = False,
-        solver: Optional[str] = None,
-        use_petsc: Optional[bool] = None,
+        solver: str = "gmres",
+        use_petsc: bool = True,
         time_to_absorption: Optional[
             Union[
                 str,
@@ -341,12 +341,9 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
             Information on the :mod:`scipy` iterative solvers can be found in :func:`scipy.sparse.linalg` or for
             :mod:`petsc4py` solver `here <https://www.mcs.anl.gov/petsc/documentation/linearsolvertable.html>`__.
-
-            If is `None`, the solver is chosen automatically, depending on the problem size.
         use_petsc
             Whether to use solvers from :mod:`petsc4py` or :mod:`scipy`. Recommended for large problems.
-            If `None`, it is determined automatically. If no installation is found, defaults to
-            :func:`scipy.sparse.linalg.gmres`.
+            If no installation is found, defaults to :func:`scipy.sparse.linalg.gmres`.
         time_to_absorption
             Whether to compute mean time to absorption and its variance to specific absorbing states.
 
@@ -461,17 +458,6 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                     logg.warning("Transition matrix is not irreducible")
                 else:
                     logg.debug("Transition matrix is irreducible")
-
-        # determine whether it makes sense you use a iterative solver
-        if solver is None:
-            solver = (
-                "gmres"
-                if self.issparse
-                and (n_cells >= 3e5 or (n_cells >= 1e4 and s.shape[1] <= 100))
-                else "direct"
-            )
-        if use_petsc is None:
-            use_petsc = n_cells >= 3e5
 
         logg.debug(f"Found `{n_cells}` cells and `{s.shape[1]}` absorbing states")
 
