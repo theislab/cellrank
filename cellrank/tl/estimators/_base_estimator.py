@@ -320,7 +320,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         n_jobs: Optional[int] = None,
         backend: str = "loky",
         show_progress_bar: bool = True,
-        tol: float = 1e-5,
+        tol: float = 1e-6,
         preconditioner: Optional[str] = None,
     ) -> None:
         """
