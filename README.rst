@@ -110,7 +110,6 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
     :alt: Coverage
 
 
-
 .. _La Manno et al. (2018): https://doi.org/10.1038/s41586-018-0414-6
 .. _Bergen et al. (2020): https://doi.org/10.1038/s41587-020-0591-3
 .. _GPCCA18: https://doi.org/10.1021/acs.jctc.8b00079
