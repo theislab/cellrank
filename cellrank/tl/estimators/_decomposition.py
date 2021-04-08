@@ -484,7 +484,6 @@ class Schur(VectorPlottable, Decomposable):
             ]
         )
         if len(self._invalid_n_states):
-            # TODO: don't B-, B+
             logg.info(
                 f"When computing macrostates, choose a number of states NOT in `{list(self._invalid_n_states)}`"
             )

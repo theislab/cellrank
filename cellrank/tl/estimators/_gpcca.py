@@ -162,7 +162,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
             )
             # this cannot fail if splitting occurs
             # if it were to split, it's automatically increased in `compute_schur`
-            self.compute_schur(n_states + 1)
+            self.compute_schur(n_states)
 
         # pre-computed X
         if self._gpcca._p_X.shape[1] < n_states:
@@ -994,7 +994,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
                 n_lineages = self.eigendecomposition["eigengap"] + 1
 
         if n_lineages > 1:
-            self.compute_schur(n_lineages + 1, method=method)
+            self.compute_schur(n_lineages, method=method)
 
         try:
             self.compute_macrostates(
