@@ -56,7 +56,7 @@ def _create_cflare(*, backward: bool = False) -> Tuple[AnnData, CFLARE]:
         assert str(AbsProbKey.BACKWARD) in adata.obsm
     else:
         assert str(AbsProbKey.FORWARD) in adata.obsm
-    np.testing.assert_array_almost_equal(mc.absorption_probabilities.sum(1), 1)
+    np.testing.assert_allclose(mc.absorption_probabilities.X.sum(1), 1.0, rtol=1e-6)
 
     return adata, mc
 
@@ -87,7 +87,7 @@ def _create_gpcca(*, backward: bool = False) -> Tuple[AnnData, GPCCA]:
         assert str(AbsProbKey.BACKWARD) in adata.obsm
     else:
         assert str(AbsProbKey.FORWARD) in adata.obsm
-    np.testing.assert_array_almost_equal(mc.absorption_probabilities.sum(1), 1)
+    np.testing.assert_allclose(mc.absorption_probabilities.X.sum(1), 1.0, rtol=1e-6)
 
     return adata, mc
 
