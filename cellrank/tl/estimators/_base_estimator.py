@@ -150,7 +150,6 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         self._set_or_debug(_pd(self._abs_prob_key), self.adata.obs, A.PRIME_DEG)
 
     def _reconstruct_lineage(self, attr: PrettyEnum, obsm_key: str):
-
         self._set_or_debug(obsm_key, self.adata.obsm, attr)
         names = self._set_or_debug(_lin_names(self._term_key), self.adata.uns)
         colors = self._set_or_debug(_colors(self._term_key), self.adata.uns)
@@ -159,19 +158,25 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
         if probs is not None:
             if len(names) != probs.shape[1]:
-                logg.debug(
-                    f"Expected lineage names to be of length `{probs.shape[1]}`, found `{len(names)}`. "
-                    f"Creating new names"
-                )
-                names = [f"Lineage {i}" for i in range(probs.shape[1])]
+                if isinstance(probs, Lineage):
+                    names = probs.names
+                else:
+                    logg.warning(
+                        f"Expected lineage names to be of length `{probs.shape[1]}`, found `{len(names)}`. "
+                        f"Creating new names"
+                    )
+                    names = [f"Lineage {i}" for i in range(probs.shape[1])]
             if len(colors) != probs.shape[1] or not all(
                 map(lambda c: isinstance(c, str) and is_color_like(c), colors)
             ):
-                logg.debug(
-                    f"Expected lineage colors to be of length `{probs.shape[1]}`, found `{len(names)}`. "
-                    f"Creating new colors"
-                )
-                colors = _create_categorical_colors(probs.shape[1])
+                if isinstance(probs, Lineage):
+                    colors = probs.colors
+                else:
+                    logg.warning(
+                        f"Expected lineage colors to be of length `{probs.shape[1]}`, found `{len(names)}`. "
+                        f"Creating new colors"
+                    )
+                    colors = _create_categorical_colors(probs.shape[1])
             self._set(attr, Lineage(probs, names=names, colors=colors))
 
             self.adata.obsm[obsm_key] = self._get(attr)
@@ -303,8 +308,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         self,
         keys: Optional[Sequence[str]] = None,
         check_irreducibility: bool = False,
-        solver: Optional[str] = None,
-        use_petsc: Optional[bool] = None,
+        solver: str = "gmres",
+        use_petsc: bool = True,
         time_to_absorption: Optional[
             Union[
                 str,
@@ -315,7 +320,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         n_jobs: Optional[int] = None,
         backend: str = "loky",
         show_progress_bar: bool = True,
-        tol: float = 1e-5,
+        tol: float = 1e-6,
         preconditioner: Optional[str] = None,
     ) -> None:
         """
@@ -336,12 +341,9 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
             Information on the :mod:`scipy` iterative solvers can be found in :func:`scipy.sparse.linalg` or for
             :mod:`petsc4py` solver `here <https://www.mcs.anl.gov/petsc/documentation/linearsolvertable.html>`__.
-
-            If is `None`, the solver is chosen automatically, depending on the problem size.
         use_petsc
             Whether to use solvers from :mod:`petsc4py` or :mod:`scipy`. Recommended for large problems.
-            If `None`, it is determined automatically. If no installation is found, defaults to
-            :func:`scipy.sparse.linalg.gmres`.
+            If no installation is found, defaults to :func:`scipy.sparse.linalg.gmres`.
         time_to_absorption
             Whether to compute mean time to absorption and its variance to specific absorbing states.
 
@@ -456,17 +458,6 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                     logg.warning("Transition matrix is not irreducible")
                 else:
                     logg.debug("Transition matrix is irreducible")
-
-        # determine whether it makes sense you use a iterative solver
-        if solver is None:
-            solver = (
-                "gmres"
-                if self.issparse
-                and (n_cells >= 3e5 or (n_cells >= 1e4 and s.shape[1] <= 100))
-                else "direct"
-            )
-        if use_petsc is None:
-            use_petsc = n_cells >= 3e5
 
         logg.debug(f"Found `{n_cells}` cells and `{s.shape[1]}` absorbing states")
 

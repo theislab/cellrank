@@ -269,7 +269,7 @@ class TestCFLARE:
             mc._get(P.ABS_PROBS).colors,
             mc.adata.uns[_colors(AbsProbKey.FORWARD)],
         )
-        np.testing.assert_allclose(mc._get(P.ABS_PROBS).X.sum(1), 1)
+        np.testing.assert_allclose(mc._get(P.ABS_PROBS).X.sum(1), 1, rtol=1e-6)
 
     def test_compute_absorption_probabilities_solver(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
