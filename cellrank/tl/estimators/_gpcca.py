@@ -1208,3 +1208,25 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
             f"Adding `adata.obs[{_probs(key)!r}]`\n       `adata.obs[{key!r}]`\n",
             time=time,
         )
+
+    def _write_terminal_states(self, time=None) -> None:
+        super()._write_terminal_states(time=time)
+
+        term_abs_probs = self._get(A.TERM_ABS_PROBS)
+        if term_abs_probs is None:
+            # possibly remove previous value if it's inconsistent
+            term_abs_probs = self.adata.obsm.get(self._term_abs_prob_key, None)
+
+        if term_abs_probs is not None:
+            new = list(self._get(P.TERM).cat.categories)
+            old = list(term_abs_probs.names)
+            if term_abs_probs.shape[1] == len(new) and new == old:
+                self.adata.obsm[self._term_abs_prob_key] = term_abs_probs
+            else:
+                logg.warning(
+                    f"Removing previously computed `adata.obsm[{self._term_abs_prob_key!r}]` because the "
+                    f"names mismatch `{new}` (new), `{old}` (old)."
+                )
+
+                self._set(A.TERM_ABS_PROBS, None)
+                self.adata.obsm.pop(self._term_abs_prob_key, None)
