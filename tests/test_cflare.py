@@ -590,7 +590,7 @@ class TestCFLARE:
         assert (adata.obs[f"{TermStatesKey.FORWARD}"][zero_mask] == "foo").all()
         assert pd.isna(adata.obs[f"{TermStatesKey.FORWARD}"][~zero_mask]).all()
 
-    def test_abs_probs_negative(self, adata_large: AnnData, mocker):
+    def test_abs_probs_do_not_sum_to_1(self, adata_large: AnnData, mocker):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
@@ -615,7 +615,7 @@ class TestCFLARE:
         ):
             mc.compute_absorption_probabilities()
 
-    def test_abs_probs_do_not_sum_to_1(self, adata_large: AnnData, mocker):
+    def test_abs_probs_negative(self, adata_large: AnnData, mocker):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
