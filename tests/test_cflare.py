@@ -602,13 +602,15 @@ class TestCFLARE:
         n_term = np.sum(~pd.isnull(mc.terminal_states))
         abs_prob = np.zeros((adata_large.n_obs - n_term, n_term))
         abs_prob[:, 0] = 1.0
-        abs_prob[0, 0] = 1.001
+        abs_prob[0, 0] = 1.01
         mocker.patch(
             "cellrank.tl.estimators._base_estimator._solve_lin_system",
             return_value=abs_prob,
         )
 
-        with pytest.raises(ValueError, match=r"`1` value\(s\) do not sum to 1."):
+        with pytest.raises(
+            ValueError, match=r"`1` value\(s\) do not sum to 1 \(rtol=1e-3\)."
+        ):
             mc.compute_absorption_probabilities()
 
     def test_abs_probs_do_not_sum_to_1(self, adata_large: AnnData, mocker):
