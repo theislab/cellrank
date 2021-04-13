@@ -517,6 +517,13 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             abs_classes[trans_indices, col] = _abs_classes[:, col]
             abs_classes[cl_indices, col] = 1
 
+        mask = np.isclose(abs_classes.sum(1), 1.0)
+        if not np.all(mask):
+            raise ValueError(f"`{np.sum(mask)}` values to not sum to 1.")
+        mask = abs_classes >= 0
+        if not np.all(mask):
+            raise ValueError(f"`{np.sum(mask)}` values are negative.")
+
         self._set(
             A.ABS_PROBS,
             Lineage(
