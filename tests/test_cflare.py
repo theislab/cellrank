@@ -597,7 +597,9 @@ class TestCFLARE:
 
         mc = cr.tl.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
+        mc.set_terminal_states(
+            {"x": adata_large.obs_names[:3], "y": adata_large.obs_names[3:6]}
+        )
 
         n_term = np.sum(~pd.isnull(mc.terminal_states))
         abs_prob = np.zeros((adata_large.n_obs - n_term, n_term))
@@ -620,7 +622,9 @@ class TestCFLARE:
 
         mc = cr.tl.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
+        mc.set_terminal_states(
+            {"x": adata_large.obs_names[:3], "y": adata_large.obs_names[3:6]}
+        )
 
         n_term = np.sum(~pd.isnull(mc.terminal_states))
         abs_prob = np.zeros((adata_large.n_obs - n_term, n_term))
