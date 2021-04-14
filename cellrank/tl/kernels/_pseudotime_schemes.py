@@ -152,7 +152,7 @@ class SoftThresholdScheme(ThresholdSchemeABC):
         neigh_conn: np.ndarray,
         b: float = 20.0,
         nu: float = 1.0,
-        perc: Optional[int] = 95,
+        percentile: Optional[int] = 95,
     ) -> np.ndarray:
         """
         Bias the connectivities by downweighting ones to past cells.
@@ -169,11 +169,11 @@ class SoftThresholdScheme(ThresholdSchemeABC):
         -------
         %(pt_scheme.returns)s
         """
-        if perc is not None:
+        if percentile is not None:
             neigh_conn = np.clip(
                 neigh_conn,
-                np.percentile(neigh_conn, 100 - perc),
-                np.percentile(neigh_conn, perc),
+                np.percentile(neigh_conn, 100 - percentile),
+                np.percentile(neigh_conn, percentile),
             )
 
         past_ixs = np.where(neigh_pseudotime < cell_pseudotime)[0]
