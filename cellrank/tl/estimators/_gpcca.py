@@ -168,7 +168,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         if self._gpcca._p_X.shape[1] < n_states:
             logg.warning(
                 f"Requested more macrostates `{n_states}` than available "
-                f"Schur vectors `{self._gpcca.X.shape[1]}`. Recomputing the decomposition"
+                f"Schur vectors `{self._gpcca._p_X.shape[1]}`. Recomputing the decomposition"
             )
 
         start = logg.info(f"Computing `{n_states}` macrostates")
