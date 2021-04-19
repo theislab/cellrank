@@ -137,6 +137,23 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         super().__init_subclass__()
 
     def _read_from_adata(self) -> None:
+        def _check_term_states():
+            term_states = self._get(A.TERM)
+            colors = self._get(A.TERM_COLORS)
+
+            if term_states is None or colors is None:
+                return
+            if not is_categorical_dtype(term_states):
+                raise TypeError(
+                    f"Expected `adata.obs[{self._term_key!r}]` to be `categorical`, "
+                    f"found `{infer_dtype(term_states)}`."
+                )
+            if len(term_states.cat.categories) != len(colors):
+                raise ValueError(
+                    f"Expected `adata.uns[{_colors(self._term_key)}]` to have "
+                    f"`{len(term_states.cat.categories)}` colors, found `{len(colors)}`."
+                )
+
         self._set_or_debug(f"eig_{self._direction}", self.adata.uns, "_eig")
 
         self._set_or_debug(self._g2m_key, self.adata.obs, "_G2M_score")
@@ -145,18 +162,23 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         self._set_or_debug(self._term_key, self.adata.obs, A.TERM.s)
         self._set_or_debug(_probs(self._term_key), self.adata.obs, A.TERM_PROBS)
         self._set_or_debug(_colors(self._term_key), self.adata.uns, A.TERM_COLORS)
+        _check_term_states()
 
         self._reconstruct_lineage(A.ABS_PROBS, self._abs_prob_key)
         self._set_or_debug(_pd(self._abs_prob_key), self.adata.obs, A.PRIME_DEG)
 
     def _reconstruct_lineage(self, attr: PrettyEnum, obsm_key: str):
         self._set_or_debug(obsm_key, self.adata.obsm, attr)
-        names = self._set_or_debug(_lin_names(self._term_key), self.adata.uns)
-        colors = self._set_or_debug(_colors(self._term_key), self.adata.uns)
-
         probs = self._get(attr)
 
         if probs is not None:
+            names = self._set_or_debug(_lin_names(self._term_key), self.adata.uns)
+            colors = self._set_or_debug(_colors(self._term_key), self.adata.uns)
+            if len(names) != len(colors):
+                raise ValueError(
+                    f"Expected names and colors to be of same length, found `{names}` and `{colors}`."
+                )
+
             if len(names) != probs.shape[1]:
                 if isinstance(probs, Lineage):
                     names = probs.names
@@ -167,17 +189,40 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                     )
                     names = [f"Lineage {i}" for i in range(probs.shape[1])]
             if len(colors) != probs.shape[1] or not all(
-                map(lambda c: isinstance(c, str) and is_color_like(c), colors)
+                is_color_like(c) for c in colors
             ):
                 if isinstance(probs, Lineage):
                     colors = probs.colors
                 else:
                     logg.warning(
-                        f"Expected lineage colors to be of length `{probs.shape[1]}`, found `{len(names)}`. "
+                        f"Expected lineage colors to be of length `{probs.shape[1]}`, found `{len(colors)}`. "
                         f"Creating new colors"
                     )
                     colors = _create_categorical_colors(probs.shape[1])
+
+            colors = _convert_to_hex_colors(colors)
             self._set(attr, Lineage(probs, names=names, colors=colors))
+
+            # ensure that the cont. lineage names match with the categorical values
+            term_states = self._get(A.TERM)
+            if term_states is not None:
+                direction = "initial" if self.kernel.backward else "terminal"
+                if len(names) != len(term_states.cat.categories):
+                    self._set(attr, None)
+                    logg.warning(
+                        f"Expected to find `{len(names)}` {direction} states "
+                        f"(from adata.uns[{_lin_names(self._term_key)!r}]), "
+                        f"found `{len(term_states.cat.categories)}` (from adata.obsm[{obsm_key!r}]). Skipping`.{attr}`"
+                    )
+                    return
+                if tuple(term_states.cat.categories) != tuple(names):
+                    self._set(attr, None)
+                    logg.warning(
+                        f"Expected to find `{names}` {direction} states "
+                        f"(from adata.uns[{_lin_names(self._term_key)!r}]), "
+                        f"found `{term_states.cat.categories}` (from adata.obs[{obsm_key!r}). Skipping `{attr}`"
+                    )
+                    return
 
             self.adata.obsm[obsm_key] = self._get(attr)
             self.adata.uns[_lin_names(self._term_key)] = names
@@ -1019,19 +1064,9 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             self._get(P.TERM).cat.categories
         )
 
-        extra_msg = ""
-        if getattr(self, A.TERM_ABS_PROBS.s, None) is not None and hasattr(
-            self, "_term_abs_prob_key"
-        ):
-            # checking for None because terminal states can be set using `set_terminal_states`
-            # without the probabilities in GPCCA
-            self.adata.obsm[self._term_abs_prob_key] = self._get(A.TERM_ABS_PROBS)
-            extra_msg = f"       `adata.obsm[{self._term_abs_prob_key!r}]`\n"
-
         logg.info(
             f"Adding `adata.obs[{_probs(self._term_key)!r}]`\n"
             f"       `adata.obs[{self._term_key!r}]`\n"
-            f"{extra_msg}"
             f"       `.{P.TERM_PROBS}`\n"
             f"       `.{P.TERM}`\n"
             "    Finish",
