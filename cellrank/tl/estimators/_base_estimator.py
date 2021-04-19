@@ -208,6 +208,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             if term_states is not None:
                 direction = "initial" if self.kernel.backward else "terminal"
                 if len(names) != len(term_states.cat.categories):
+                    self._set(attr, None)
                     logg.warning(
                         f"Expected to find `{len(names)}` {direction} states "
                         f"(from adata.uns[{_lin_names(self._term_key)!r}]), "
@@ -215,6 +216,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                     )
                     return
                 if tuple(term_states.cat.categories) != tuple(names):
+                    self._set(attr, None)
                     logg.warning(
                         f"Expected to find `{names}` {direction} states "
                         f"(from adata.uns[{_lin_names(self._term_key)!r}]), "
