@@ -590,6 +590,55 @@ class TestCFLARE:
         assert (adata.obs[f"{TermStatesKey.FORWARD}"][zero_mask] == "foo").all()
         assert pd.isna(adata.obs[f"{TermStatesKey.FORWARD}"][~zero_mask]).all()
 
+    def test_abs_probs_do_not_sum_to_1(self, adata_large: AnnData, mocker):
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        terminal_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc.compute_eigendecomposition(k=5)
+        mc.set_terminal_states(
+            {"x": adata_large.obs_names[:3], "y": adata_large.obs_names[3:6]}
+        )
+
+        n_term = np.sum(~pd.isnull(mc.terminal_states))
+        abs_prob = np.zeros((adata_large.n_obs - n_term, n_term))
+        abs_prob[:, 0] = 1.0
+        abs_prob[0, 0] = 1.01
+        mocker.patch(
+            "cellrank.tl.estimators._base_estimator._solve_lin_system",
+            return_value=abs_prob,
+        )
+
+        with pytest.raises(
+            ValueError, match=r"`1` value\(s\) do not sum to 1 \(rtol=1e-3\)."
+        ):
+            mc.compute_absorption_probabilities()
+
+    def test_abs_probs_negative(self, adata_large: AnnData, mocker):
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        terminal_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc.compute_eigendecomposition(k=5)
+        mc.set_terminal_states(
+            {"x": adata_large.obs_names[:3], "y": adata_large.obs_names[3:6]}
+        )
+
+        n_term = np.sum(~pd.isnull(mc.terminal_states))
+        abs_prob = np.zeros((adata_large.n_obs - n_term, n_term))
+        abs_prob[:, 0] = 1.0
+        abs_prob[0, 0] = -0.5
+        abs_prob[0, 1] = -1.5
+        mocker.patch(
+            "cellrank.tl.estimators._base_estimator._solve_lin_system",
+            return_value=abs_prob,
+        )
+
+        with pytest.raises(ValueError, match=r"`1` value\(s\) are negative."):
+            mc.compute_absorption_probabilities()
+
 
 class TestCFLAREIO:
     def test_copy(self, adata_cflare_fwd: Tuple[AnnData, cr.tl.estimators.CFLARE]):

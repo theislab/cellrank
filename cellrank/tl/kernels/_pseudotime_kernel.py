@@ -137,7 +137,9 @@ class PseudotimeKernel(Kernel):
             threshold_scheme = ThresholdScheme(threshold_scheme)
             if threshold_scheme == ThresholdScheme.SOFT:
                 scheme = SoftThresholdScheme()
-                kwargs["b"], kwargs["nu"] = b, nu
+                kwargs["b"] = b
+                kwargs["nu"] = nu
+                kwargs["percentile"] = percentile
             elif threshold_scheme == ThresholdScheme.HARD:
                 scheme = HardThresholdScheme()
                 kwargs["frac_to_keep"], kwargs["n_neighs"] = frac_to_keep, n_neighbors

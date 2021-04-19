@@ -9,7 +9,7 @@ except ImportError:
     __author__ = "Marius Lange, Michal Klein"
     __maintainer__ = "Marius Lange, Michal Klein"
     __email__ = "info@cellrank.org"
-    __version__ = "1.3.0"
+    __version__ = "1.3.1"
 
 
 if __name__ == "__main__":
