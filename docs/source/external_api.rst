@@ -14,6 +14,7 @@ Kernels
     :toctree: api
 
     external.kernels.OTKernel
+    external.kernels.WOTKernel
 
 Estimators
 ~~~~~~~~~~

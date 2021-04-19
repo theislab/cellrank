@@ -66,6 +66,10 @@ References
     *A scaling normalization method for differential expression analysis of RNA-seq data*,
     `Genome Biology <https://doi.org/10.1186/gb-2010-11-3-r25>`__.
 
+.. [Schiebinger19] Schiebinger *et al.* (2019)
+    *Optimal-Transport Analysis of Single-Cell Gene Expression Identifies Developmental Trajectories in Reprogramming*,
+    `Cell <https://doi.org/10.1016/j.cell.2019.01.006>`__.
+
 .. [Setty19] Setty *et al.* (2019),
     *Characterization of cell fate probabilities in single-cell data with Palantir*,
     `Nature Biotechnology <https://doi.org/10.1038/s41587-019-0068-4>`__.

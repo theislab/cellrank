@@ -166,13 +166,15 @@ class KernelExpression(Pickleable, ABC):
             )
 
     @abstractmethod
-    def compute_transition_matrix(self, *args, **kwargs) -> "KernelExpression":
+    def compute_transition_matrix(
+        self, *args: Any, **kwargs: Any
+    ) -> "KernelExpression":
         """
         Compute a transition matrix.
 
         Parameters
         ----------
-        *args
+        args
             Positional arguments.
         kwargs
             Keyword arguments.
