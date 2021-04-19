@@ -112,14 +112,18 @@ Base Classes
 
 BaseEstimator
 -------------
-
 .. autoclass:: cellrank.tl.estimators.BaseEstimator
     :members:
 
 Kernel
 ------
-
 .. autoclass:: cellrank.tl.kernels.Kernel
+    :members:
+    :inherited-members:
+
+ExperimentalTimeKernel
+----------------------
+.. autoclass:: cellrank.tl.kernels.ExperimentalTimeKernel
     :members:
     :inherited-members:
 
