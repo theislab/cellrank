@@ -50,7 +50,7 @@ key
     Key in ``adata.obsp`` where the transition matrix is saved.
     If not found, compute a new one using :func:`cellrank.tl.transition_matrix`.
 force_recompute
-    Whether to always recompute the transition matrix even if one is present in :attr:`AnnData.obsp` ``['{key}']``.
+    Whether to always recompute the transition matrix even if one exists.
 show_plots
     Whether to show plots of the spectrum and eigenvectors in the embedding.
 %(n_jobs)s
