@@ -25,7 +25,7 @@ def transition_matrix(
     backward_mode: str = BackwardMode.TRANSPOSE.s,
     scheme: str = Scheme.CORRELATION.s,
     softmax_scale: Optional[float] = None,
-    weight_connectivities: Optional[float] = 0.2,
+    weight_connectivities: float = 0.2,
     density_normalize: bool = True,
     key: Optional[str] = None,
     **kwargs,
@@ -83,32 +83,27 @@ def transition_matrix(
             **kwargs,
         )
 
-    if weight_connectivities is not None:
-        if 0 < weight_connectivities < 1:
-            vk = compute_velocity_kernel()
-            logg.info(
-                f"Using a connectivity kernel with weight `{weight_connectivities}`"
-            )
-            ck = ConnectivityKernel(
-                adata, backward=backward, conn_key=conn_key
-            ).compute_transition_matrix(density_normalize=density_normalize)
-            final = (
-                (1 - weight_connectivities) * vk + weight_connectivities * ck
-            ).compute_transition_matrix()
-        elif weight_connectivities == 0:
-            final = compute_velocity_kernel()
-        elif weight_connectivities == 1:
-            final = ConnectivityKernel(
-                adata,
-                backward=backward,
-                conn_key=conn_key,
-            ).compute_transition_matrix(density_normalize=density_normalize)
-        else:
-            raise ValueError(
-                f"Parameter `weight_connectivities` must be in range `[0, 1]`, found `{weight_connectivities}`."
-            )
+    if 0 < weight_connectivities < 1:
+        vk = compute_velocity_kernel()
+        logg.info(f"Using a connectivity kernel with weight `{weight_connectivities}`")
+        ck = ConnectivityKernel(
+            adata, backward=backward, conn_key=conn_key
+        ).compute_transition_matrix(density_normalize=density_normalize)
+        final = (
+            (1 - weight_connectivities) * vk + weight_connectivities * ck
+        ).compute_transition_matrix()
+    elif weight_connectivities == 0:
+        final = compute_velocity_kernel()
+    elif weight_connectivities == 1:
+        final = ConnectivityKernel(
+            adata,
+            backward=backward,
+            conn_key=conn_key,
+        ).compute_transition_matrix(density_normalize=density_normalize)
     else:
-        final = vk
+        raise ValueError(
+            f"Parameter `weight_connectivities` must be in range `[0, 1]`, found `{weight_connectivities}`."
+        )
 
     final.write_to_adata(key=key)
 
