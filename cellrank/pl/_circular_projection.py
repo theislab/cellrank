@@ -97,7 +97,7 @@ def circular_projection(
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
     save: Optional[Union[str, Path]] = None,
-    **kwargs,
+    **kwargs: Any,
 ):
     r"""
     Plot absorption probabilities on a circular embedding as done in [Velten17]_.
@@ -123,7 +123,7 @@ def circular_projection(
         Can be one of the following:
 
             - `None` - it will determined automatically, based on the number of lineages.
-            - `'optimal'` - order the lineages optimally by solving the Travelling salesman problem (TSP).
+            - `'optimal'` - order lineages optimally by solving the Travelling salesman problem (TSP).
               Recommended for <= `20` lineages.
             - `'default'` - use the order as specified in ``lineages``.
 
@@ -164,8 +164,8 @@ def circular_projection(
     %(just_plots)s
         Also updates ``adata`` with the following fields:
 
-            - :attr:`anndata.AnnData.obsm` ``['{key_added}']``: the circular projection.
-            - :attr:`anndata.AnnData.obs` ``['to_{initial,terminal}_states_{method}']``: the priming degree,
+            - :attr:`anndata.AnnData.obsm` ``['{key_added}']`` - the circular projection.
+            - :attr:`anndata.AnnData.obs` ``['to_{initial,terminal}_states_{method}']`` - the priming degree,
               if a method is present in ``keys``.
     """
     if labeldistance is not None and labeldistance < 0:
@@ -209,8 +209,8 @@ def circular_projection(
 
     probs: Lineage = adata.obsm[lineage_key][lineages]
     n_lin = probs.shape[1]
-    if n_lin <= 2:
-        raise ValueError(f"Expected at least `3` lineages, found `{n_lin}`")
+    if n_lin < 3:
+        raise ValueError(f"Expected at least `3` lineages, found `{n_lin}`.")
 
     X = probs.X.copy()
     if normalize_by_mean:
@@ -220,7 +220,9 @@ def circular_projection(
         X = np.nan_to_num(X, nan=1.0 / n_lin, copy=False)
 
     if lineage_order is None:
-        lineage_order = LineageOrder.OPTIMAL if n_lin <= 15 else LineageOrder.DEFAULT
+        lineage_order = (
+            LineageOrder.OPTIMAL if 3 < n_lin <= 20 else LineageOrder.DEFAULT
+        )
         logg.debug(f"Set ordering to `{lineage_order}`")
     lineage_order = LineageOrder(lineage_order)
 
