@@ -552,13 +552,17 @@ class TestKernel:
 
         np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
 
+    # only to 15 because in kernel, if a row sums to 0, abs. states are created
+    # this happens because k_thresh = frac_to_keep = 0
+    @pytest.mark.parametrize("k", range(1, 15))
     @pytest.mark.parametrize("dens_norm", [False, True])
-    def test_palantir(self, adata: AnnData, dens_norm: bool):
+    def test_palantir_frac_to_keep(self, adata: AnnData, dens_norm: bool, k: int):
         conn = _get_neighs(adata, "connectivities")
         n_neighbors = _get_neighs_params(adata)["n_neighbors"]
         pseudotime = adata.obs["latent_time"]
+        k_thresh = max(0, min(int(np.floor(n_neighbors / k)) - 1, 30))
 
-        conn_biased = bias_knn(conn, pseudotime, n_neighbors)
+        conn_biased = bias_knn(conn.copy(), pseudotime, n_neighbors, k=k)
         if dens_norm:
             T_1 = density_normalization(conn_biased, conn)
             T_1 = _normalize(T_1)
@@ -567,7 +571,7 @@ class TestKernel:
 
         pk = PseudotimeKernel(adata, time_key="latent_time").compute_transition_matrix(
             density_normalize=dens_norm,
-            frac_to_keep=1 / 3.0,
+            frac_to_keep=k_thresh / float(n_neighbors),
             threshold_scheme="hard",
         )
         T_2 = pk.transition_matrix

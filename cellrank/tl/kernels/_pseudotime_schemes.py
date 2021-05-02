@@ -119,9 +119,7 @@ class HardThresholdScheme(ThresholdSchemeABC):
         -------
         %(pt_scheme.returns)s
         """
-        k_thresh = max(0, min(30, int(np.floor(n_neighs * frac_to_keep)) - 1))
-
-        # below code does not work with argpartition
+        k_thresh = max(0, min(30, int(np.floor(n_neighs * frac_to_keep))))
         ixs = np.flip(np.argsort(neigh_conn))
         close_ixs, far_ixs = ixs[:k_thresh], ixs[k_thresh:]
 
