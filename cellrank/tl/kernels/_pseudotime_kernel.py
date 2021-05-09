@@ -31,8 +31,6 @@ class PseudotimeKernel(Kernel):
     Pseudotime can be used to either remove edges that point against the direction of increasing pseudotime (see
     [Setty19]_, or to downweight them (see [VIA21]_).
 
-    %(density_correction)s
-
     Parameters
     ----------
     %(adata)s
