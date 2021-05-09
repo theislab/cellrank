@@ -54,7 +54,7 @@ k.kernels
 # since the handles point to the original objects.
 #
 # Note that in the 2nd :func:`print` statement, we access the private attribute - that's because accessing
-# :paramref:`cellrank.tl.kernels.Kernel.transition_matrix` computes the transition matrix with default values.
+# :attr:`cellrank.tl.kernels.Kernel.transition_matrix` computes the transition matrix with default values.
 # This happens only with basic kernels and not the kernel expressions and only if they are not part of a
 # larger expression.
 ck.compute_transition_matrix()

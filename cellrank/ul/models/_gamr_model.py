@@ -35,7 +35,7 @@ class GAMR(BaseModel):
         Number of knots.
     distribution
         Distribution family in `rpy2.robjects.r`, such as `'gaussian'` or `'nb'` for negative binomial.
-        If `'nb'`, raw count data in :paramref:`adata` ``.raw`` is always used.
+        If `'nb'`, raw count data in :attr:`adata` ``.raw`` is always used.
     basis
         Basis for the smoothing term.
         See `here <https://www.rdocumentation.org/packages/mgcv/versions/1.8-33/topics/s>`__ for valid options.
@@ -46,7 +46,7 @@ class GAMR(BaseModel):
             - `{kloc.DENSITY.s!r}` - position the knots based on the density of the pseudotime.
     offset
         Offset term for the GAM. Only available when ``distribution='nb'``. If `'default'`, it is calculated
-        according to [Robinson10]_. The values are saved in :paramref:`adata` ``.obs[{key!r}]``.
+        according to [Robinson10]_. The values are saved in :attr:`adata` ``.obs[{key!r}]``.
         If `None`, no offset is used.
     smoothing_penalty
         Penalty for the smoothing term. The larger the value, the smoother the fitted curve.
@@ -177,11 +177,11 @@ class GAMR(BaseModel):
         Returns
         -------
         :class:`cellrank.ul.models.GAMR`
-            Fits the model and returns self. Updates the following fields by filtering out `0` weights :paramref:`w`:
+            Fits the model and returns self. Updates the following fields by filtering out `0` weights :attr:`w`:
 
-                - :paramref:`x` - %(base_model_x.summary)s
-                - :paramref:`y` - %(base_model_y.summary)s
-                - :paramref:`w` - %(base_model_w.summary)s
+                - :attr:`x` - %(base_model_x.summary)s
+                - :attr:`y` - %(base_model_y.summary)s
+                - :attr:`w` - %(base_model_w.summary)s
         """  # noqa
 
         from rpy2.robjects import Formula, r, pandas2ri

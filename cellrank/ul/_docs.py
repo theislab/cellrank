@@ -57,7 +57,7 @@ n_lineages
     Number of lineages. If `None`, it will be determined automatically.
 cluster_key
     Match computed states against pre-computed clusters to annotate the states.
-    For this, provide a key from :paramref:`adata` ``.obs`` where cluster labels have been computed.
+    For this, provide a key from :attr:`adata` ``.obs`` where cluster labels have been computed.
 keys
     Determines which %(initial_or_terminal)s states to use by passing their names.
     Further, %(initial_or_terminal)s states can be combined. If e.g. the %(terminal)s states are
@@ -85,7 +85,7 @@ mode
         - `{m.SAMPLING.s!r}` - sample 1 transition matrix from the velocity distribution."""
 _velocity_backward_mode = """\
 backward_mode
-    Only matters if initialized as :paramref:`backward` `=True`.  Valid options are:
+    Only matters if initialized as :attr:`backward` ``=True``.  Valid options are:
 
         - `{b.TRANSPOSE.s!r}` - compute transitions from neighboring cells `j` to cell `i`.
         - `{b.NEGATE.s!r}` - negate the velocity vector."""
@@ -102,7 +102,7 @@ _model_callback = """\
 callback
     Function which takes a :class:`cellrank.ul.models.BaseModel` and some keyword arguments
     for :meth:`cellrank.ul.models.BaseModel.prepare` and returns the prepared model.
-    Can be specified in gene- and lineage-specific manner, similarly to :paramref:`model`."""
+    Can be specified in gene- and lineage-specific manner, similarly to :attr:`model`."""
 _genes = """\
 genes
     Genes in ``adata.var_names`` or in ``adata.raw.var_names``, if ``use_raw=True``."""
@@ -117,7 +117,7 @@ mode
         - `'embedding'` - plot the embedding while coloring in the absorption probabilities.
         - `'time'` - plot the pseudotime on x-axis and the absorption probabilities on y-axis."""
 _write_to_adata = """\
-Updates the :paramref:`adata` with the following fields:
+Updates the :attr:`adata` with the following fields:
 
         - ``.obsp['{{key}}']`` - the transition matrix.
         - ``.uns['{{key}}_params']`` - parameters used for calculation."""
