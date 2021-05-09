@@ -92,7 +92,7 @@ class VelocityKernel(Kernel):
         self._gene_subset = gene_subset
         self._logits = None
 
-    def _read_from_adata(self, **kwargs):
+    def _read_from_adata(self, **kwargs: Any) -> None:
         super()._read_from_adata(**kwargs)
 
         # check whether velocities have been computed

@@ -152,9 +152,7 @@ _soft_scheme_fmt = """\
 b
     The growth rate of generalized logistic function.{}
 nu
-    Affects near which asymptote maximum growth occurs.{}
-perc
-    Percentile by which to clip the connectivities.{}"""
+    Affects near which asymptote maximum growth occurs.{}"""
 _rw_ixs = """\
 Can be specified as either a :class:`dict` with a key corresponding to cluster key in
     :attr:`anndata.AnnData.obs` and values to clusters or just a sequence of cell ids

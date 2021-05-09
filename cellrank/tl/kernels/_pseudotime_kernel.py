@@ -1,6 +1,6 @@
 """Pseudotime kernel module."""
 from copy import copy
-from typing import Any, Union, Callable, Optional
+from typing import Any, Union, Callable
 
 from typing_extensions import Literal
 
@@ -12,7 +12,7 @@ from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.tl._utils import _connected
 from cellrank.tl.kernels import Kernel
-from cellrank.tl._constants import Direction, ThresholdScheme
+from cellrank.tl._constants import ThresholdScheme
 from cellrank.tl.kernels._base_kernel import _dtype
 from cellrank.tl.kernels._pseudotime_schemes import (
     ThresholdSchemeABC,
@@ -63,13 +63,15 @@ class PseudotimeKernel(Kernel):
         )
         self._time_key = time_key
 
-    def _read_from_adata(self, time_key: str, **kwargs):
+    def _read_from_adata(self, time_key: str, **kwargs: Any) -> None:
         super()._read_from_adata(**kwargs)
 
         if time_key not in self.adata.obs.keys():
             raise KeyError(f"Could not find time key in `adata.obs[{time_key!r}]`.")
 
         self._pseudotime = np.array(self.adata.obs[time_key]).astype(_dtype)
+        if self.backward:
+            self._pseudotime = np.max(self.pseudotime) - self.pseudotime
 
         if np.any(np.isnan(self._pseudotime)):
             raise ValueError("Encountered NaN values in pseudotime.")
@@ -77,12 +79,10 @@ class PseudotimeKernel(Kernel):
     @d.dedent
     def compute_transition_matrix(
         self,
-        threshold_scheme: Union[Literal["soft", "hard"], Callable] = "soft",
+        threshold_scheme: Union[Literal["soft", "hard"], Callable] = "hard",
         frac_to_keep: float = 0.3,
-        b: float = 20.0,
-        nu: float = 1.0,
-        percentile: Optional[int] = 95,
-        density_normalize: bool = True,
+        b: float = 10.0,
+        nu: float = 0.5,
         check_irreducibility: bool = False,
         **kwargs: Any,
     ) -> "PseudotimeKernel":
@@ -109,8 +109,6 @@ class PseudotimeKernel(Kernel):
             whether they lie in the pseudotemporal past or future. This is done to ensure that the graph remains
             connected. Only used when `threshold_scheme='hard'`.
         %(soft_scheme_kernel)s
-        density_normalize
-            Whether or not to use the underlying KNN graph for density normalization.
         check_irreducibility
             Optional check for irreducibility of the final transition matrix.
 
@@ -139,7 +137,6 @@ class PseudotimeKernel(Kernel):
                 scheme = SoftThresholdScheme()
                 kwargs["b"] = b
                 kwargs["nu"] = nu
-                kwargs["percentile"] = percentile
             elif threshold_scheme == ThresholdScheme.HARD:
                 scheme = HardThresholdScheme()
                 kwargs["frac_to_keep"], kwargs["n_neighs"] = frac_to_keep, n_neighbors
@@ -157,17 +154,10 @@ class PseudotimeKernel(Kernel):
             )
 
         # fmt: off
-        if self._reuse_cache({"dnorm": density_normalize, "scheme": str(threshold_scheme), **kwargs}, time=start):
+        if self._reuse_cache({"dnorm": False, "scheme": str(threshold_scheme), **kwargs}, time=start):
             return self
 
-        # handle backward case and run biasing function
-        pseudotime = (
-            np.max(self.pseudotime) - self.pseudotime
-            if self._direction == Direction.BACKWARD
-            else self.pseudotime
-        )
-
-        biased_conn = scheme.bias_knn(self._conn, pseudotime, **kwargs).astype(_dtype)
+        biased_conn = scheme.bias_knn(self._conn, self.pseudotime, **kwargs).astype(_dtype)
         # fmt: on
 
         # make sure the biased graph is still connected
@@ -176,7 +166,7 @@ class PseudotimeKernel(Kernel):
 
         self._compute_transition_matrix(
             matrix=biased_conn,
-            density_normalize=density_normalize,
+            density_normalize=False,
             check_irreducibility=check_irreducibility,
         )
         logg.info("    Finish", time=start)

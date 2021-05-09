@@ -100,7 +100,7 @@ class CytoTRACEKernel(PseudotimeKernel):
         aggregation: Literal["mean", "median", "hmean", "gmean"] = "mean",
         use_raw: bool = True,
         **kwargs: Any,
-    ):
+    ) -> None:
         self.compute_cytotrace(layer=layer, aggregation=aggregation, use_raw=use_raw)
 
         super()._read_from_adata(time_key=time_key, **kwargs)
