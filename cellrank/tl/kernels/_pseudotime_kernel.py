@@ -145,7 +145,7 @@ class PseudotimeKernel(Kernel):
                     f"Threshold scheme `{threshold_scheme}` is not yet implemented."
                 )
         elif isinstance(threshold_scheme, ThresholdSchemeABC):
-            pass
+            scheme = threshold_scheme
         elif callable(threshold_scheme):
             scheme = CustomThresholdScheme(threshold_scheme)
         else:

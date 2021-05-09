@@ -555,7 +555,6 @@ class TestKernel:
     # only to 15 because in kernel, if a row sums to 0, abs. states are created
     # this happens because k_thresh = frac_to_keep = 0
     @pytest.mark.parametrize("k", range(1, 15))
-    @pytest.mark.parametrize("dens_norm", [False, True])
     def test_palantir_frac_to_keep(self, adata: AnnData, dens_norm: bool, k: int):
         conn = _get_neighs(adata, "connectivities")
         n_neighbors = _get_neighs_params(adata)["n_neighbors"]
@@ -563,14 +562,9 @@ class TestKernel:
         k_thresh = max(0, min(int(np.floor(n_neighbors / k)) - 1, 30))
 
         conn_biased = bias_knn(conn.copy(), pseudotime, n_neighbors, k=k)
-        if dens_norm:
-            T_1 = density_normalization(conn_biased, conn)
-            T_1 = _normalize(T_1)
-        else:
-            T_1 = _normalize(conn_biased)
+        T_1 = _normalize(conn_biased)
 
         pk = PseudotimeKernel(adata, time_key="latent_time").compute_transition_matrix(
-            density_normalize=dens_norm,
             frac_to_keep=k_thresh / float(n_neighbors),
             threshold_scheme="hard",
         )
@@ -597,9 +591,7 @@ class TestKernel:
         T_1 = density_normalization(conn_biased, conn)
         T_1 = _normalize(T_1)
 
-        pk = PseudotimeKernel(adata, time_key="latent_time").compute_transition_matrix(
-            density_normalize=False
-        )
+        pk = PseudotimeKernel(adata, time_key="latent_time").compute_transition_matrix()
         T_2 = pk.transition_matrix
 
         assert not np.allclose(T_1.A, T_2.A, rtol=_rtol)
@@ -1369,7 +1361,6 @@ class TestPseudotimeKernelScheme:
             threshold_scheme=lambda cpt, npt, ndist: np.ones(
                 (len(ndist)), dtype=np.float64
             ),
-            density_normalize=False,
         )
 
         np.testing.assert_allclose(pk.transition_matrix.sum(1), 1.0)
