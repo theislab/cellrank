@@ -237,7 +237,6 @@ sphinx_gallery_conf = {
 
 autosummary_generate = True
 autodoc_member_order = "bysource"
-# autodoc_default_flags = ['members']
 typehints_fully_qualified = False
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True

@@ -555,7 +555,7 @@ class TestKernel:
     # only to 15 because in kernel, if a row sums to 0, abs. states are created
     # this happens because k_thresh = frac_to_keep = 0
     @pytest.mark.parametrize("k", range(1, 15))
-    def test_palantir_frac_to_keep(self, adata: AnnData, dens_norm: bool, k: int):
+    def test_palantir_frac_to_keep(self, adata: AnnData, k: int):
         conn = _get_neighs(adata, "connectivities")
         n_neighbors = _get_neighs_params(adata)["n_neighbors"]
         pseudotime = adata.obs["latent_time"]
