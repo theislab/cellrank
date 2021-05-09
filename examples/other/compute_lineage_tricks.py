@@ -33,7 +33,7 @@ lin /= lin.sum(1)
 
 # %%
 # In some cases, this behavior is not desirable or can have unintended consequences. To access the underlying
-# :class:`numpy` array, use the :paramref:`cellrank.tl.Lineage.X` attribute.
+# :class:`numpy` array, use the :attr:`cellrank.tl.Lineage.X` attribute.
 lin.X
 
 # %%
@@ -56,7 +56,7 @@ lin.entropy(axis=1)
 
 # %%
 # When subsetting the lineage and not selecting all of them, they will no longer sum to 1 and cannot be
-# interpreted as a probability distribution. We offer a method :paramref:`cellrank.tl.Lineage.reduce` which
+# interpreted as a probability distribution. We offer a method :attr:`cellrank.tl.Lineage.reduce` which
 # can be used to solve this issue. Below we show only one out of many normalization techniques.
 lin.reduce("foo, quux", "baz", normalize_weights="softmax")
 

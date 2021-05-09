@@ -24,7 +24,7 @@ class PrecomputedKernel(Kernel):
     Parameters
     ----------
     transition_matrix
-        Row-normalized transition matrix or a key in :paramref:`adata` ``.obsp``
+        Row-normalized transition matrix or a key in :attr:`adata` ``.obsp``
         or a :class:`cellrank.tl.kernels.KernelExpression` with the computed transition matrix.
         If `None`, try to determine the key based on ``backward``.
     %(adata)s

@@ -34,7 +34,7 @@ class OTKernel(OTKernel_, error=_error):
     %(adata)s
     terminal_states
         Categorical :class:`pandas.Series` where non-`NaN` values mark terminal states.
-        If `None`, terminal states are assumed to be already present in :paramref:`adata` ``['terminal_states']``.
+        If `None`, terminal states are assumed to be already present in :attr:`adata` ``['terminal_states']``.
     g
         Key in :attr:`anndata.AnnData.obs` containing relative growth rates for cells or the array itself.
     cluster_key
@@ -114,7 +114,7 @@ class OTKernel(OTKernel_, error=_error):
         Returns
         -------
         :class:`cellrank.external.kernels.OTKernel`
-            Makes :paramref:`transition_matrix` available.
+            Makes :attr:`transition_matrix` available.
         """
         if method not in ("ent", "quad", "unbal"):
             raise ValueError(f"Invalid method `{method!r}`.")
