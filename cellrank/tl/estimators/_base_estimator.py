@@ -77,18 +77,18 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         Either a :class:`cellrank.tl.kernels.Kernel` object, an :class:`anndata.AnnData` object which
         stores the transition matrix in ``.obsp`` attribute or :mod:`numpy` or :mod:`scipy` array.
     inplace
-        Whether to modify :paramref:`adata` object inplace or make a copy.
+        Whether to modify :attr:`adata` object inplace or make a copy.
     read_from_adata
-        Whether to read available attributes in :paramref:`adata`, if present.
+        Whether to read available attributes in :attr:`adata`, if present.
     obsp_key
         Key in ``obj.obsp`` when ``obj`` is an :class:`anndata.AnnData` object.
     g2m_key
-        Key in :paramref:`adata` ``.obs``. Can be used to detect cell-cycle driven start- or endpoints.
+        Key in :attr:`adata` ``.obs``. Can be used to detect cell-cycle driven start- or endpoints.
     s_key
-        Key in :paramref:`adata` ``.obs``. Can be used to detect cell-cycle driven start- or endpoints.
+        Key in :attr:`adata` ``.obs``. Can be used to detect cell-cycle driven start- or endpoints.
     write_to_adata
-        Whether to write the transition matrix to :paramref:`adata` ``.obsp`` and the parameters to
-        :paramref:`adata` ``.uns``.
+        Whether to write the transition matrix to :attr:`adata` ``.obsp`` and the parameters to
+        :attr:`adata` ``.uns``.
     %(write_to_adata.parameters)s
         Only used when ``write_to_adata=True``.
     """
@@ -249,7 +249,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             belonging to a transient state or a :class:`dict`, where each key is the name of the recurrent class and
             values are list of cell names.
         cluster_key
-            If a key to cluster labels is given, :paramref:`{fs}` will be associated with these for naming and colors.
+            If a key to cluster labels is given, :attr:`{fs}` will be associated with these for naming and colors.
         %(en_cutoff_p_thresh)s
         add_to_existing
             Whether to add these categories to existing ones. Cells already belonging to recurrent classes will be
@@ -261,8 +261,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         None
             Nothing, but updates the following fields:
 
-                - :paramref:`{fsp}`
-                - :paramref:`{fs}`
+                - :attr:`{fsp}`
+                - :attr:`{fs}`
         """
 
         self._set_categorical_labels(
@@ -283,19 +283,19 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         self, new_names: Mapping[str, str], update_adata: bool = True
     ) -> None:
         """
-        Rename the names of :paramref:`{ts}`.
+        Rename the names of :attr:`{ts}`.
 
         Parameters
         ----------
         new_names
             Mapping where keys are the old names and the values are the new names. New names must be unique.
         update_adata
-            Whether to update underlying :paramref:`adata` object as well or not.
+            Whether to update underlying :attr:`adata` object as well or not.
 
         Returns
         -------
         None
-            Nothing, just updates the names of :paramref:`{ts}`.
+            Nothing, just updates the names of :attr:`{ts}`.
         """
 
         term_states = self._get(P.TERM)
@@ -372,7 +372,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         Compute absorption probabilities of a Markov chain.
 
         For each cell, this computes the probability of it reaching any of the approximate recurrent classes defined
-        by :paramref:`{fs}`.
+        by :attr:`{fs}`.
 
         Parameters
         ----------
@@ -421,8 +421,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         None
             Nothing, but updates the following fields:
 
-                - :paramref:`{abs_prob}` - probabilities of being absorbed into the terminal states.
-                - :paramref:`{lat}` - mean times until absorption to subset absorbing states and optionally
+                - :attr:`{abs_prob}` - probabilities of being absorbed into the terminal states.
+                - :attr:`{lat}` - mean times until absorption to subset absorbing states and optionally
                   their variances saved as ``'{{lineage}} mean'`` and ``'{{lineage}} var'``, respectively,
                   for each subset of absorbing states specified in ``time_to_absorption``.
         """
@@ -675,7 +675,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         Parameters
         ----------
         lineages
-            Either a set of lineage names from :paramref:`absorption_probabilities` `.names` or `None`,
+            Either a set of lineage names from :attr:`absorption_probabilities` `.names` or `None`,
             in which case all lineages are considered.
         method
             Mode to use when calculating p-values and confidence intervals. Can be one of:
@@ -684,13 +684,13 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 - {tm.PERM_TEST.s!r} - use permutation test.
 
         cluster_key
-            Key from :paramref:`adata` ``.obs`` to obtain cluster annotations. These are considered for ``clusters``.
+            Key from :attr:`adata` ``.obs`` to obtain cluster annotations. These are considered for ``clusters``.
         clusters
             Restrict the correlations to these clusters.
         layer
-            Key from :paramref:`adata` ``.layers``.
+            Key from :attr:`adata` ``.layers``.
         use_raw
-            Whether or not to use :paramref:`adata` ``.raw`` to correlate gene expression.
+            Whether or not to use :attr:`adata` ``.raw`` to correlate gene expression.
             If using a layer other than ``.X``, this must be set to `False`.
         confidence_level
             Confidence level for the confidence interval calculation. Must be in `[0, 1]`.
@@ -709,14 +709,14 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             Only if ``return_drivers=True``.
 
         None
-            Updates :paramref:`adata` ``.var`` or :paramref:`adata` ``.raw.var``, depending ``use_raw`` with:
+            Updates :attr:`adata` ``.var`` or :attr:`adata` ``.raw.var``, depending ``use_raw`` with:
 
                 - ``'{{direction}} {{lineage}} corr'`` - the potential lineage drivers.
                 - ``'{{direction}} {{lineage}} qval'`` - the corrected p-values.
 
             Updates the following fields:
 
-                - :paramref:`{lin_drivers}` - same as the returned values.
+                - :attr:`{lin_drivers}` - same as the returned values.
 
         References
         ----------
@@ -858,7 +858,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         ncols
             Number of columns.
         use_raw
-            Whether to look in :paramref:`adata` ``.raw.var`` or :paramref:`adata` ``.var``.
+            Whether to look in :attr:`adata` ``.raw.var`` or :attr:`adata` ``.var``.
         title_fmt
             Title format. Possible keywords include `{gene}`, `{qval}`, `{corr}` for gene name,
             q-value and correlation, respectively.
@@ -1122,10 +1122,10 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         None
             Nothing, just makes available the following fields:
 
-                - :paramref:`{fsp}`
-                - :paramref:`{fs}`
-                - :paramref:`{ap}`
-                - :paramref:`{pd}`
+                - :attr:`{fsp}`
+                - :attr:`{fs}`
+                - :attr:`{ap}`
+                - :attr:`{pd}`
         """
         self._fit_terminal_states(**kwargs)
         if compute_absorption_probabilities:
@@ -1168,7 +1168,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             logg.debug(f"Unable to set attribute `.{attr}`, skipping")
 
     def copy(self) -> "BaseEstimator":
-        """Return a copy of self, including the underlying :paramref:`adata` object."""
+        """Return a copy of self, including the underlying :attr:`adata` object."""
         k = deepcopy(self.kernel)  # ensure we copy the adata object
         res = type(self)(k, read_from_adata=False)
         for k, v in self.__dict__.items():

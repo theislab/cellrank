@@ -153,7 +153,7 @@ class KernelExpression(Pickleable, ABC):
         Returns
         -------
         None
-            Nothing, just updates the :paramref:`transition_matrix` and optionally normalizes it.
+            Nothing, just updates the :attr:`transition_matrix` and optionally normalizes it.
         """
         should_norm = ~np.isclose(value.sum(1), 1.0, rtol=_RTOL).all()
 
@@ -188,13 +188,13 @@ class KernelExpression(Pickleable, ABC):
     @d.dedent
     def write_to_adata(self, key: Optional[str] = None) -> None:
         """
-        Write the transition matrix and parameters used for computation to the underlying :paramref:`adata` object.
+        Write the transition matrix and parameters used for computation to the underlying :attr:`adata` object.
 
         Parameters
         ----------
         key
-            Key used when writing transition matrix to :paramref:`adata`.
-            If `None`, the ``key`` is set to `'T_bwd'` if :paramref:`backward` is `True`, else `'T_fwd'`.
+            Key used when writing transition matrix to :attr:`adata`.
+            If `None`, the ``key`` is set to `'T_bwd'` if :attr:`backward` is `True`, else `'T_fwd'`.
 
         Returns
         -------
@@ -219,7 +219,7 @@ class KernelExpression(Pickleable, ABC):
 
     @abstractmethod
     def copy(self) -> "KernelExpression":
-        """Return a copy of itself. Note that the underlying :paramref:`adata` object is not copied."""
+        """Return a copy of itself. Note that the underlying :attr:`adata` object is not copied."""
 
     def _maybe_compute_cond_num(self):
         if self._compute_cond_num and self._cond_num is None:
@@ -275,10 +275,10 @@ class KernelExpression(Pickleable, ABC):
         basis
             Basis in :attr:`anndata.AnnData.obsm` for which to compute the projection.
         key_added
-            If not `None` and ``copy=False``, save the result to :paramref:`adata` ``.obsm['{key_added}']``.
+            If not `None` and ``copy=False``, save the result to :attr:`adata` ``.obsm['{key_added}']``.
             Otherwise, save the result to `'T_fwd_{basis}'` or `T_bwd_{basis}`, depending on the direction.
         copy
-            Whether to return the projection or modify :paramref:`adata` inplace.
+            Whether to return the projection or modify :attr:`adata` inplace.
 
         Returns
         -------
@@ -833,7 +833,7 @@ class Kernel(UnaryKernelExpression, ABC):
     check_connectivity
         Check whether the underlying KNN graph is connected.
     kwargs
-        Keyword arguments which can specify key to be read from :paramref:`adata` object.
+        Keyword arguments which can specify key to be read from :attr:`adata` object.
     """
 
     def __init__(

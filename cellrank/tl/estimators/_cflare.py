@@ -67,7 +67,7 @@ class CFLARE(BaseEstimator, Eigen):
         method
             Method to be used for clustering. Must be one of `'louvain'`, `'leiden'` or `'kmeans'`.
         cluster_key
-            If a key to cluster labels is given, :paramref:`{fs}` will get associated with these for naming and colors.
+            If a key to cluster labels is given, :attr:`{fs}` will get associated with these for naming and colors.
         n_clusters_kmeans
             If `None`, this is set to ``use + 1``.
         n_neighbors
@@ -94,8 +94,8 @@ class CFLARE(BaseEstimator, Eigen):
         None
             Nothing, but updates the following fields:
 
-                - :paramref:`{fsp}`
-                - :paramref:`{fs}`
+                - :attr:`{fsp}`
+                - :attr:`{fs}`
         """
 
         def _compute_macrostates_prob() -> Series:
@@ -301,10 +301,10 @@ class CFLARE(BaseEstimator, Eigen):
         None
             Nothing, just makes available the following fields:
 
-                - :paramref:`{fsp}`
-                - :paramref:`{fs}`
-                - :paramref:`{ap}`
-                - :paramref:`{pd}`
+                - :attr:`{fsp}`
+                - :attr:`{fs}`
+                - :attr:`{ap}`
+                - :attr:`{pd}`
         """
         super().fit(
             n_lineages=n_lineages,

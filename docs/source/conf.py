@@ -65,7 +65,6 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx_autodoc_typehints",
     "sphinx.ext.intersphinx",
-    "sphinx_paramlinks",
     "sphinx.ext.autosummary",
     "sphinx_gallery.gen_gallery",
     "nbsphinx",

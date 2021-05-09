@@ -38,7 +38,7 @@ class PseudotimeKernel(Kernel):
     %(adata)s
     %(backward)s
     time_key
-        Key in :paramref:`adata` ``.obs`` where the pseudotime is stored.
+        Key in :attr:`adata` ``.obs`` where the pseudotime is stored.
     compute_cond_num
         Whether to compute condition number of the transition matrix. Note that this might be costly,
         since it does not use sparse implementation.
@@ -115,7 +115,7 @@ class PseudotimeKernel(Kernel):
         Returns
         -------
         :class:`cellrank.tl.kernels.PseudotimeKernel`
-            Makes :paramref:`transition_matrix` available.
+            Makes :attr:`transition_matrix` available.
         """
         start = logg.info(f"Computing transition matrix based on `{self._time_key}`")
 

@@ -298,7 +298,7 @@ class VectorPlottable(KernelHolder, Property):
         abs_value
             Whether to take the absolute value before plotting.
         cluster_key
-            Key in :paramref:`adata` ``.obs`` for plotting categorical observations.
+            Key in :attr:`adata` ``.obs`` for plotting categorical observations.
         %(basis)s
         kwargs
             Keyword arguments for :func:`scvelo.pl.scatter`.
@@ -409,7 +409,7 @@ class Plottable(KernelHolder, Property):
         lineages
             Plot only these lineages. If `None`, plot all lineages.
         cluster_key
-            Key from :paramref:`adata` ``.obs`` for plotting categorical observations.
+            Key from :attr:`adata` ``.obs`` for plotting categorical observations.
         same_plot
             Whether to plot the lineages on the same plot or separately.
         title
@@ -543,10 +543,10 @@ class Plottable(KernelHolder, Property):
         lineages
             Plot only these lineages. If `None`, plot all lineages.
         cluster_key
-            Key from :paramref:`adata` ``.obs`` for plotting categorical observations.
+            Key from :attr:`adata` ``.obs`` for plotting categorical observations.
         %(time_mode)s
         time_key
-            Key from :paramref:`adata` ``.obs`` to use as a pseudotime ordering of the cells.
+            Key from :attr:`adata` ``.obs`` to use as a pseudotime ordering of the cells.
         title
             Either `None`, in which case titles are ``'{to,from} {terminal,initial} {state}'``,
             or an array of titles, one per lineage.
@@ -873,9 +873,9 @@ class Partitioner(KernelHolder, ABC):
         None
             Nothing, but updates the following fields:
 
-                - :paramref:`recurrent_classes`
-                - :paramref:`transient_classes`
-                - :paramref:`is_irreducible`
+                - :attr:`recurrent_classes`
+                - :attr:`transient_classes`
+                - :attr:`is_irreducible`
         """
 
         start = logg.info("Computing communication classes")

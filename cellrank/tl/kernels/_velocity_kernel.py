@@ -57,12 +57,12 @@ class VelocityKernel(Kernel):
     %(adata)s
     %(backward)s
     vkey
-        Key in :paramref:`adata` ``.uns`` where the velocities are stored.
+        Key in :attr:`adata` ``.uns`` where the velocities are stored.
     xkey
-        Key in :paramref:`adata` ``.layers`` where expected gene expression counts are stored.
+        Key in :attr:`adata` ``.layers`` where expected gene expression counts are stored.
     gene_subset
         List of genes to be used to compute transition probabilities.
-        By default, genes from :paramref:`adata` ``.var['velocity_genes']`` are used.
+        By default, genes from :attr:`adata` ``.var['velocity_genes']`` are used.
     %(cond_num)s
     check_connectivity
         Check whether the underlying KNN graph is connected.
@@ -184,8 +184,8 @@ class VelocityKernel(Kernel):
         :class:`cellrank.tl.kernels.VelocityKernel`
             Makes available the following fields:
 
-                - :paramref:`transition_matrix`.
-                - :paramref:`logits`.
+                - :attr:`transition_matrix`.
+                - :attr:`logits`.
         """
         mode = VelocityMode(mode)
         backward_mode = BackwardMode(backward_mode)
