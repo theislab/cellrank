@@ -1,3 +1,4 @@
+from copy import copy
 from typing import Tuple, Callable, Optional
 
 import pytest
@@ -13,6 +14,8 @@ from scanpy import Neighbors
 from anndata import AnnData
 
 import numpy as np
+from scipy.sparse import eye as speye
+from scipy.sparse import isspmatrix_csr
 from pandas.core.dtypes.common import is_bool_dtype, is_integer_dtype
 
 import cellrank as cr
@@ -27,9 +30,11 @@ from cellrank.tl.kernels import (
 )
 from cellrank.tl._constants import _transition
 from cellrank.tl.kernels._base_kernel import (
+    Kernel,
     Constant,
     KernelAdd,
     KernelMul,
+    _dtype,
     _is_bin_mult,
 )
 from cellrank.tl.kernels._cytotrace_kernel import CytoTRACEAggregation, _ct
@@ -55,6 +60,22 @@ class CustomFuncHessian(CustomFunc):
     ) -> np.ndarray:
         # should be either (n, g, g) or (n, g), will be (g, g)
         return np.zeros((D.shape[0], v.shape[0], v.shape[0]))
+
+
+class CustomKernel(Kernel):
+    def compute_transition_matrix(
+        self, sparse: bool = False, dnorm: bool = False
+    ) -> "KernelExpression":
+        if sparse:
+            tmat = speye(self.adata.n_obs, dtype=np.float32)
+        else:
+            tmat = np.eye(self.adata.n_obs, dtype=np.float32)
+
+        self._compute_transition_matrix(tmat, density_normalize=dnorm)
+        return self
+
+    def copy(self) -> "KernelExpression":
+        return copy(self)
 
 
 class InvalidFuncProbs(cr.tl.kernels.SimilaritySchemeABC):
@@ -497,6 +518,18 @@ class TestKernel:
             expected.toarray(), actual.transition_matrix.toarray()
         )
 
+    @pytest.mark.parametrize("dnorm", [False, True])
+    @pytest.mark.parametrize("sparse", [False, True])
+    def test_custom_preserves_type(self, adata: AnnData, sparse: bool, dnorm: bool):
+        c = CustomKernel(adata).compute_transition_matrix(sparse=sparse, dnorm=dnorm)
+
+        if sparse:
+            assert isspmatrix_csr(c.transition_matrix)
+        else:
+            assert isinstance(c.transition_matrix, np.ndarray)
+
+        assert c.transition_matrix.dtype == _dtype
+
     def test_write_adata(self, adata: AnnData):
         vk = VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
         vk.write_to_adata()
@@ -747,7 +780,7 @@ class TestKernel:
         T_cr = ck.transition_matrix
 
         assert key == ck.params["key"]
-        np.testing.assert_array_equal(T_cr.A, adata.obsp[key])
+        np.testing.assert_array_equal(T_cr, adata.obsp[key])
 
         del adata.obsp[key]
 
