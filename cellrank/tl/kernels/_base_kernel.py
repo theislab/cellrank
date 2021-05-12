@@ -849,7 +849,7 @@ class Kernel(UnaryKernelExpression, ABC):
         )
         self._read_from_adata(check_connectivity=check_connectivity, **kwargs)
 
-    def _read_from_adata(self, key: str = "connectivities", **kwargs):
+    def _read_from_adata(self, key: str = "connectivities", **kwargs: Any) -> None:
         """Import the base-KNN graph and optionally check for symmetry and connectivity."""
 
         if not _has_neighs(self.adata):
@@ -960,7 +960,7 @@ class Constant(Kernel):
         self._transition_matrix = value
         self._params = {"value": value}
 
-    def _read_from_adata(self, **kwargs):
+    def _read_from_adata(self, **kwargs: Any) -> None:
         pass
 
     def compute_transition_matrix(self, *args, **kwargs) -> "Constant":

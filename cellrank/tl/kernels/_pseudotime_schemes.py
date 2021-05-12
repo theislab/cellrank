@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 import numpy as np
 from scipy.sparse import csr_matrix
@@ -148,9 +148,8 @@ class SoftThresholdScheme(ThresholdSchemeABC):
         cell_pseudotime: float,
         neigh_pseudotime: np.ndarray,
         neigh_conn: np.ndarray,
-        b: float = 20.0,
-        nu: float = 1.0,
-        percentile: Optional[int] = 95,
+        b: float = 10.0,
+        nu: float = 0.5,
     ) -> np.ndarray:
         """
         Bias the connectivities by downweighting ones to past cells.
@@ -167,13 +166,6 @@ class SoftThresholdScheme(ThresholdSchemeABC):
         -------
         %(pt_scheme.returns)s
         """
-        if percentile is not None:
-            neigh_conn = np.clip(
-                neigh_conn,
-                np.percentile(neigh_conn, 100 - percentile),
-                np.percentile(neigh_conn, percentile),
-            )
-
         past_ixs = np.where(neigh_pseudotime < cell_pseudotime)[0]
         if not len(past_ixs):
             return neigh_conn

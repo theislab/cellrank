@@ -1,6 +1,6 @@
 """Precomputed kernel module."""
 from copy import copy
-from typing import Union, Optional
+from typing import Any, Union, Optional
 
 from anndata import AnnData
 
@@ -103,7 +103,7 @@ class PrecomputedKernel(Kernel):
         self._transition_matrix = csr_matrix(transition_matrix)
         self._maybe_compute_cond_num()
 
-    def _read_from_adata(self, **kwargs):
+    def _read_from_adata(self, **kwargs: Any) -> None:
         pass
 
     @d.dedent
