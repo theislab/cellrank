@@ -96,7 +96,7 @@ class KernelExpression(Pickleable, ABC):
         """
         Return row-normalized transition matrix.
 
-        If not present, it is computed, if all the underlying kernels have been initialized.
+        If not present, it is computed iff all underlying kernels have been initialized.
         """
 
         if self._parent is None and self._transition_matrix is None:
@@ -166,13 +166,15 @@ class KernelExpression(Pickleable, ABC):
             )
 
     @abstractmethod
-    def compute_transition_matrix(self, *args, **kwargs) -> "KernelExpression":
+    def compute_transition_matrix(
+        self, *args: Any, **kwargs: Any
+    ) -> "KernelExpression":
         """
         Compute a transition matrix.
 
         Parameters
         ----------
-        *args
+        args
             Positional arguments.
         kwargs
             Keyword arguments.
@@ -904,12 +906,13 @@ class Kernel(UnaryKernelExpression, ABC):
 
     def _compute_transition_matrix(
         self,
-        matrix: spmatrix,
+        matrix: Union[np.ndarray, spmatrix],
         density_normalize: bool = True,
         check_irreducibility: bool = False,
     ):
         # density correction based on node degrees in the KNN graph
-        matrix = csr_matrix(matrix) if not isspmatrix_csr(matrix) else matrix
+        if issparse(matrix) and not isspmatrix_csr(matrix):
+            matrix = csr_matrix(matrix)
 
         if density_normalize:
             matrix = self._density_normalize(matrix)
