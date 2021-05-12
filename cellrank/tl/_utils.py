@@ -769,7 +769,7 @@ def _normalize(X: Union[np.ndarray, spmatrix]) -> Union[np.ndarray, spmatrix]:
 
     Returns
     -------
-    :class:`numpy.ndarray` or :class:`scipy.sparse.spmatrx`
+    :class:`numpy.ndarray` or :class:`scipy.sparse.spmatrix`
         The normalized array.
     """
 

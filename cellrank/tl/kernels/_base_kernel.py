@@ -844,7 +844,7 @@ class Kernel(UnaryKernelExpression, ABC):
         backward: bool = False,
         compute_cond_num: bool = False,
         check_connectivity: bool = False,
-        **kwargs,
+        **kwargs: Any,
     ):
         super().__init__(
             adata, backward, op_name=None, compute_cond_num=compute_cond_num, **kwargs
@@ -893,11 +893,7 @@ class Kernel(UnaryKernelExpression, ABC):
         logg.debug("Density-normalizing the transition matrix")
 
         q = np.asarray(self._conn.sum(axis=0))
-
-        if not issparse(other):
-            Q = np.diag(1.0 / q)
-        else:
-            Q = spdiags(1.0 / q, 0, other.shape[0], other.shape[0])
+        Q = spdiags(1.0 / q, 0, other.shape[0], other.shape[0])
 
         return Q @ other @ Q
 
@@ -910,10 +906,11 @@ class Kernel(UnaryKernelExpression, ABC):
         density_normalize: bool = True,
         check_irreducibility: bool = False,
     ):
-        # density correction based on node degrees in the KNN graph
+        matrix = matrix.astype(_dtype)
         if issparse(matrix) and not isspmatrix_csr(matrix):
             matrix = csr_matrix(matrix)
 
+        # density correction based on node degrees in the KNN graph
         if density_normalize:
             matrix = self._density_normalize(matrix)
 
