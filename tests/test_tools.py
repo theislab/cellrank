@@ -279,7 +279,7 @@ class TestTransitionMatrix:
 
         assert isinstance(ck, cr.tl.kernels.ConnectivityKernel)
 
-        np.testing.assert_array_equal(ck.transition_matrix.A, adata.obsp[key])
+        np.testing.assert_array_equal(ck.transition_matrix, adata.obsp[key])
 
     def test_only_velocity(self, adata: AnnData):
         vk = cr.tl.transition_matrix(adata, weight_connectivities=0)

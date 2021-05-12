@@ -940,7 +940,7 @@ class Constant(Kernel):
     ----------
     %(adata)s
     value
-        Constant value by which to multiply Must be a positive number.
+        Constant value by which to multiply. Must be a positive number.
     %(backward)s
     """
 

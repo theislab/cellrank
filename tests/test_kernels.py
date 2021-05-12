@@ -780,7 +780,7 @@ class TestKernel:
         T_cr = ck.transition_matrix
 
         assert key == ck.params["key"]
-        np.testing.assert_array_equal(T_cr.A, adata.obsp[key])
+        np.testing.assert_array_equal(T_cr, adata.obsp[key])
 
         del adata.obsp[key]
 
