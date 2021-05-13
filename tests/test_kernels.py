@@ -588,7 +588,7 @@ class TestKernel:
     # only to 15 because in kernel, if a row sums to 0, abs. states are created
     # this happens because k_thresh = frac_to_keep = 0
     @pytest.mark.parametrize("k", range(1, 15))
-    def test_palantir_frac_to_keep(self, adata: AnnData, k: int):
+    def test_pseudotime_frac_to_keep(self, adata: AnnData, k: int):
         conn = _get_neighs(adata, "connectivities")
         n_neighbors = _get_neighs_params(adata)["n_neighbors"]
         pseudotime = adata.obs["latent_time"]
@@ -605,7 +605,19 @@ class TestKernel:
 
         np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
 
-    def test_palantir_inverse(self, adata: AnnData):
+    def test_pseudotime_parallelize(self, adata: AnnData):
+        pk1 = PseudotimeKernel(adata, time_key="latent_time").compute_transition_matrix(
+            n_jobs=None
+        )
+        pk2 = PseudotimeKernel(adata, time_key="latent_time").compute_transition_matrix(
+            n_jobs=2
+        )
+
+        np.testing.assert_allclose(
+            pk1.transition_matrix.A, pk2.transition_matrix.A, rtol=_rtol
+        )
+
+    def test_pseudotime_inverse(self, adata: AnnData):
         pk = PseudotimeKernel(adata, time_key="latent_time")
         pt = pk.pseudotime.copy()
 
@@ -615,7 +627,7 @@ class TestKernel:
         assert pk_inv.backward
         np.testing.assert_allclose(pt, 1 - pk_inv.pseudotime)
 
-    def test_palantir_differ_dense_norm(self, adata: AnnData):
+    def test_pseudotime_differ_dense_norm(self, adata: AnnData):
         conn = _get_neighs(adata, "connectivities")
         n_neighbors = _get_neighs_params(adata)["n_neighbors"]
         pseudotime = adata.obs["latent_time"]
