@@ -1,6 +1,6 @@
 """Pseudotime kernel module."""
 from copy import copy
-from typing import Any, Union, Callable
+from typing import Any, Union, Callable, Optional
 
 from typing_extensions import Literal
 
@@ -82,6 +82,9 @@ class PseudotimeKernel(Kernel):
         b: float = 10.0,
         nu: float = 0.5,
         check_irreducibility: bool = False,
+        n_jobs: Optional[int] = None,
+        backend: str = "loky",
+        show_progress_bar: bool = True,
         **kwargs: Any,
     ) -> "PseudotimeKernel":
         """
@@ -109,6 +112,7 @@ class PseudotimeKernel(Kernel):
         %(soft_scheme_kernel)s
         check_irreducibility
             Optional check for irreducibility of the final transition matrix.
+        %(parallel)s
 
         Returns
         -------
@@ -154,9 +158,16 @@ class PseudotimeKernel(Kernel):
         # fmt: off
         if self._reuse_cache({"dnorm": False, "scheme": str(threshold_scheme), **kwargs}, time=start):
             return self
-
-        biased_conn = scheme.bias_knn(self._conn, self.pseudotime, **kwargs).astype(_dtype)
         # fmt: on
+
+        biased_conn = scheme.bias_knn(
+            self._conn,
+            self.pseudotime,
+            n_jobs=n_jobs,
+            backend=backend,
+            show_progress_bar=show_progress_bar,
+            **kwargs,
+        )
 
         # make sure the biased graph is still connected
         if not _connected(biased_conn):
