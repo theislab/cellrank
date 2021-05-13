@@ -113,6 +113,8 @@ class PseudotimeKernel(Kernel):
         check_irreducibility
             Optional check for irreducibility of the final transition matrix.
         %(parallel)s
+        kwargs
+            Keyword arguments for ``threshold_scheme``.
 
         Returns
         -------
