@@ -29,7 +29,7 @@ class ConnectivityKernel(Kernel):
     %(adata)s
     %(backward)s
     conn_key
-        Key in :attr:`anndata.AnnData.obsp` to obtain the connectivity matrix, describing cell-cell similarity.
+        Key in :attr:`anndata.AnnData.obsp` to obtain the connectivity matrix describing cell-cell similarity.
     %(cond_num)s
     check_connectivity
         Check whether the underlying KNN graph is connected.
@@ -48,7 +48,7 @@ class ConnectivityKernel(Kernel):
             backward=backward,
             compute_cond_num=compute_cond_num,
             check_connectivity=check_connectivity,
-            key=conn_key,
+            conn_key=conn_key,
         )
         self._key = conn_key
 

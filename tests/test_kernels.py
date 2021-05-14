@@ -10,6 +10,7 @@ from _helpers import (
     random_transition_matrix,
 )
 
+import scanpy as sc
 from scanpy import Neighbors
 from anndata import AnnData
 
@@ -441,6 +442,45 @@ class TestKernel:
 
         with pytest.raises(ValueError):
             PrecomputedKernel(vk)
+
+    @pytest.mark.parametrize(
+        "clazz",
+        [
+            ConnectivityKernel,
+            VelocityKernel,
+            PseudotimeKernel,
+            CytoTRACEKernel,
+            PrecomputedKernel,
+        ],
+    )
+    @pytest.mark.parametrize("key_added", [None, "foo"])
+    def test_kernel_reads_correct_connectivities(
+        self, adata: AnnData, key_added: Optional[str], clazz: type
+    ):
+        del adata.uns["neighbors"]
+        del adata.obsp["connectivities"]
+        del adata.obsp["distances"]
+
+        sc.pp.neighbors(adata, key_added=key_added)
+        kwargs = {"adata": adata, "conn_key": key_added}
+
+        if clazz == PseudotimeKernel:
+            kwargs["time_key"] = "latent_time"
+        elif clazz == PrecomputedKernel:
+            adata.obsp["foo"] = np.eye(adata.n_obs)
+            kwargs["transition_matrix"] = "foo"
+        conn = (
+            adata.obsp["connectivities"]
+            if key_added is None
+            else adata.obsp[f"{key_added}_connectivities"]
+        )
+
+        k = clazz(**kwargs)
+
+        if isinstance(k, PrecomputedKernel):
+            assert k._conn is None
+        else:
+            np.testing.assert_array_equal(k._conn.A, conn.A)
 
     def test_precomputed_from_kernel(self, adata: AnnData):
         vk = VelocityKernel(adata).compute_transition_matrix(

@@ -37,9 +37,9 @@ class PseudotimeKernel(Kernel):
     %(backward)s
     time_key
         Key in :attr:`adata` ``.obs`` where the pseudotime is stored.
-    compute_cond_num
-        Whether to compute condition number of the transition matrix. Note that this might be costly,
-        since it does not use sparse implementation.
+    %(cond_num)s
+    kwargs
+        Keyword arguments for :class:`cellrank.tl.kernels.Kernel`.
     """
 
     def __init__(

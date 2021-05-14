@@ -106,6 +106,8 @@ def compare(
             fpath += ".png"
         if dirname is not None:
             for file in os.listdir(FIGS / dirname):
+                if "-diff" in file:
+                    continue
                 _compare_images(GT_FIGS / dirname / file, FIGS / dirname / file)
         else:
             _compare_images(GT_FIGS / fpath, FIGS / fpath)
