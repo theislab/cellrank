@@ -30,6 +30,8 @@ class PrecomputedKernel(Kernel):
     %(adata)s
     %(backward)s
     %(cond_num)s
+    kwargs
+        Keyword arguments for :class:`cellrank.tl.kernels.Kernel`.
     """
 
     def __init__(
@@ -40,6 +42,7 @@ class PrecomputedKernel(Kernel):
         adata: Optional[AnnData] = None,
         backward: bool = False,
         compute_cond_num: bool = False,
+        **kwargs: Any,
     ):
         from anndata import AnnData as _AnnData
 
@@ -97,14 +100,16 @@ class PrecomputedKernel(Kernel):
                 csr_matrix((transition_matrix.shape[0], 1), dtype=np.float32)
             )
 
-        super().__init__(adata, backward=backward, compute_cond_num=compute_cond_num)
+        super().__init__(
+            adata, backward=backward, compute_cond_num=compute_cond_num, **kwargs
+        )
 
         self._params = params
         self._transition_matrix = csr_matrix(transition_matrix)
         self._maybe_compute_cond_num()
 
     def _read_from_adata(self, **kwargs: Any) -> None:
-        pass
+        self._conn = None
 
     @d.dedent
     def copy(self) -> "PrecomputedKernel":

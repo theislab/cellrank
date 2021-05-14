@@ -38,7 +38,6 @@ from cellrank.tl._utils import (
     _normalize,
     _symmetric,
     _get_neighs,
-    _has_neighs,
     _irreducible,
 )
 from cellrank.ul._utils import Pickleable, _write_graph_data
@@ -830,8 +829,7 @@ class Kernel(UnaryKernelExpression, ABC):
     ----------
     %(adata)s
     %(backward)s
-    compute_cond_num
-        Whether to compute the condition number of the transition matrix. For large matrices, this can be very slow.
+    %(cond_num)s
     check_connectivity
         Check whether the underlying KNN graph is connected.
     kwargs
@@ -851,13 +849,14 @@ class Kernel(UnaryKernelExpression, ABC):
         )
         self._read_from_adata(check_connectivity=check_connectivity, **kwargs)
 
-    def _read_from_adata(self, key: str = "connectivities", **kwargs: Any) -> None:
+    def _read_from_adata(
+        self, conn_key: Optional[str] = "connectivities", **kwargs: Any
+    ) -> None:
         """Import the base-KNN graph and optionally check for symmetry and connectivity."""
 
-        if not _has_neighs(self.adata):
-            raise KeyError("Compute KNN graph first as `scanpy.pp.neighbors()`.")
-
-        self._conn = _get_neighs(self.adata, key).astype(_dtype)
+        self._conn = _get_neighs(
+            self.adata, mode="connectivities", key=conn_key
+        ).astype(_dtype)
 
         check_connectivity = kwargs.pop("check_connectivity", False)
         if check_connectivity:

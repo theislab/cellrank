@@ -66,6 +66,8 @@ class VelocityKernel(Kernel):
     %(cond_num)s
     check_connectivity
         Check whether the underlying KNN graph is connected.
+    kwargs
+        Keyword arguments for :class:`cellrank.tl.kernels.Kernel`.
     """
 
     def __init__(
@@ -77,6 +79,7 @@ class VelocityKernel(Kernel):
         gene_subset: Optional[Iterable] = None,
         compute_cond_num: bool = False,
         check_connectivity: bool = False,
+        **kwargs: Any,
     ):
         super().__init__(
             adata,
@@ -86,6 +89,7 @@ class VelocityKernel(Kernel):
             gene_subset=gene_subset,
             compute_cond_num=compute_cond_num,
             check_connectivity=check_connectivity,
+            **kwargs,
         )
         self._vkey = vkey  # for copy
         self._xkey = xkey

@@ -46,8 +46,7 @@ def transition_matrix(
     xkey
         Key in ``adata.layers`` where expected gene expression counts are stored.
     conn_key
-        Key in :attr:`anndata.AnnData.obsp` to obtain the connectivity matrix, describing cell-cell similarity. Only
-        used when ``weight_connectivities > 0``.
+        Key in :attr:`anndata.AnnData.obsp` to obtain the connectivity matrix, describing cell-cell similarity.
     gene_subset
         List of genes to be used to compute transition probabilities.
         By default, genes from ``adata.var['velocity_genes']`` are used.
@@ -74,7 +73,12 @@ def transition_matrix(
 
     def compute_velocity_kernel() -> VelocityKernel:
         return VelocityKernel(
-            adata, backward=backward, vkey=vkey, xkey=xkey, gene_subset=gene_subset
+            adata,
+            backward=backward,
+            vkey=vkey,
+            xkey=xkey,
+            gene_subset=gene_subset,
+            conn_key=conn_key,
         ).compute_transition_matrix(
             softmax_scale=softmax_scale,
             mode=mode,
