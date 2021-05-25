@@ -738,8 +738,10 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
 
         if annotate:
             annotate_heatmap(im)
-            annotate_dist_ax(stat_ax, coarse_stat_d.values)
-            annotate_dist_ax(init_ax, coarse_init_d)
+            if show_stationary_dist:
+                annotate_dist_ax(stat_ax, coarse_stat_d.values)
+            if show_initial_dist:
+                annotate_dist_ax(init_ax, coarse_init_d)
 
         if save:
             save_fig(fig, save)
