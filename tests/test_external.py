@@ -5,6 +5,7 @@ from anndata import AnnData
 import numpy as np
 import pandas as pd
 from scipy.sparse import spmatrix
+from pandas.core.dtypes.common import is_categorical_dtype
 
 import cellrank.external as cre
 
@@ -49,3 +50,77 @@ class TestOTKernel:
         assert isinstance(ok._transition_matrix, (np.ndarray, spmatrix))
         np.testing.assert_allclose(ok.transition_matrix.sum(1), 1.0)
         assert isinstance(ok.params, dict)
+
+
+class TestWOTKernel:
+    def test_inversion_updates_adata(self, adata_large: AnnData):
+        key = "age(days)"
+        ok = cre.kernels.WOTKernel(adata_large, time_key=key)
+        assert is_categorical_dtype(adata_large.obs[key])
+        assert adata_large.obs[key].cat.ordered
+        np.testing.assert_array_equal(ok.experimental_time, adata_large.obs[key])
+        orig_time = ok.experimental_time
+
+        ok = ~ok
+
+        inverted_time = ok.experimental_time
+        assert is_categorical_dtype(adata_large.obs[key])
+        assert adata_large.obs[key].cat.ordered
+        np.testing.assert_array_equal(ok.experimental_time, adata_large.obs[key])
+        np.testing.assert_array_equal(
+            orig_time.cat.categories, inverted_time.cat.categories
+        )
+        np.testing.assert_array_equal(orig_time.index, inverted_time.index)
+
+        with pytest.raises(AssertionError):
+            np.testing.assert_array_equal(orig_time, inverted_time)
+
+    @pytest.mark.parametrize("cmat", [None, "Ms", "X_pca", "good_shape", "bad_shape"])
+    def test_cost_matrices(self, adata_large: AnnData, cmat: str):
+        ok = cre.kernels.WOTKernel(adata_large, time_key="age(days)")
+        if isinstance(cmat, str) and "shape" in cmat:
+            cost_matrices = {
+                (12.0, 35.0): np.random.normal(size=(73 + ("bad" in cmat), 127))
+            }
+        else:
+            cost_matrices = cmat
+
+        if cmat == "bad_shape":
+            with pytest.raises(ValueError, match=r"Expected cost matrix for time pair"):
+                ok.compute_transition_matrix(cost_matrices=cost_matrices)
+        else:
+            ok = ok.compute_transition_matrix(cost_matrices=cost_matrices)
+            param = ok.params["cost_matrices"]
+            if cmat == "Ms":
+                assert param == "layer:Ms"
+            elif cmat == "X_pca":
+                assert param == "obsm:X_pca"
+            elif cmat == "good_shape":
+                # careful, param is `nstr`, which does not equal anything
+                assert str(param) == "precomputed"
+            else:
+                assert param == "default"
+
+    @pytest.mark.parametrize("n_iters", [3, 5])
+    def test_growth_rates(self, adata_large: AnnData, n_iters: int):
+        ok = cre.kernels.WOTKernel(adata_large, time_key="age(days)")
+        ok = ok.compute_transition_matrix(growth_iters=n_iters)
+
+        assert isinstance(ok.growth_rates, pd.DataFrame)
+        np.testing.assert_array_equal(adata_large.obs_names, ok.growth_rates.index)
+        np.testing.assert_array_equal(
+            ok.growth_rates.columns, [f"g{i}" for i in range(n_iters + 1)]
+        )
+        assert ok.params["growth_iters"] == n_iters
+
+    def test_normal_run(self, adata_large: AnnData):
+        ok = cre.kernels.WOTKernel(adata_large, time_key="age(days)")
+        ok = ok.compute_transition_matrix()
+
+        assert isinstance(ok, cre.kernels.WOTKernel)
+        assert isinstance(ok._transition_matrix, (np.ndarray, spmatrix))
+        np.testing.assert_allclose(ok.transition_matrix.sum(1), 1.0)
+        assert isinstance(ok.params, dict)
+        assert isinstance(ok.growth_rates, pd.DataFrame)
+        np.testing.assert_array_equal(adata_large.obs_names, ok.growth_rates.index)
+        np.testing.assert_array_equal(ok.growth_rates.columns, ["g0", "g1"])

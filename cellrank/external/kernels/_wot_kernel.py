@@ -95,7 +95,7 @@ class WOTKernel(Kernel, error=_error):
         growth_rate_key
             Key in :attr:`adata` ``.obs`` where initial cell growth rates are stored.
         kwargs
-            Keyword arguments for OT configuration.
+            Additional keyword arguments for OT configuration.
 
         Returns
         -------
@@ -110,10 +110,10 @@ class WOTKernel(Kernel, error=_error):
         kwargs.setdefault("epsilon", 0.05)
         kwargs.setdefault("lambda1", 1)
         kwargs.setdefault("lamdda2", 50)
-        kwargs["growth_iters"] = max(kwargs.get("growth_iters"), 1)
+        kwargs["growth_iters"] = max(kwargs.get("growth_iters", 1), 1)
 
         start = logg.info(
-            "Computing transition matrix using Waddington Optimal Transport"
+            "Computing transition matrix using Waddington optimal transport"
         )
 
         cost_matrices, cmat_param = self._generate_cost_matrices(cost_matrices)
@@ -199,6 +199,7 @@ class WOTKernel(Kernel, error=_error):
 
         n = self.adata.n_obs - nrows
         blocks[-1][-1] = spdiags([1] * n, 0, n, n)
+        # prevent from disappearing
         n = blocks[0][1].shape[0]
         blocks[0][0] = spdiags([], 0, n, n)
 
@@ -296,3 +297,9 @@ class WOTKernel(Kernel, error=_error):
     def growth_rates(self) -> Optional[pd.DataFrame]:
         """Estimated cell growth rates for each growth rate iteration."""
         return self._growth_rates
+
+    def __invert__(self) -> "WOTKernel":
+        super().__invert__()
+        # because WOT reads from `adata`
+        self.adata.obs[self._time_key] = self.experimental_time
+        return self

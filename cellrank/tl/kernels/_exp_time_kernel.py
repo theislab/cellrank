@@ -109,9 +109,12 @@ class ExperimentalTimeKernel(Kernel, ABC):
 
     def __invert__(self) -> "ExperimentalTimeKernel":
         super().__invert__()
-        if len(self.experimental_time.categories) > 1:
+        if len(self.experimental_time.cat.categories) > 1:
             minn, maxx = self.experimental_time.min(), self.experimental_time.max()
-            self._exp_time = pd.Categorical(
-                maxx - np.array(self.experimental_time) + minn, ordered=True
+            self._exp_time = pd.Series(
+                pd.Categorical(
+                    maxx - np.array(self.experimental_time) + minn, ordered=True
+                ),
+                index=self.experimental_time.index,
             )
         return self
