@@ -30,11 +30,9 @@ class ExperimentalTimeKernel(Kernel, ABC):
     %(adata)s
     %(backward)s
     time_key
-        Key in :paramref:`adata` ``.obs`` where the experimental time is stored.
-        The experimental time can be of either a numeric or an ordered categorical type.
-    compute_cond_num
-        Whether to compute condition number of the transition matrix. Note that this might be costly,
-        since it does not use sparse implementation.
+        Key in :attr:`adata` ``.obs`` where experimental time is stored.
+        The experimental time can be of either of a numeric or an ordered categorical type.
+    %(cond_num)s
     """
 
     def __init__(
@@ -43,14 +41,13 @@ class ExperimentalTimeKernel(Kernel, ABC):
         backward: bool = False,
         time_key: str = "exp_time",
         compute_cond_num: bool = False,
-        check_connectivity: bool = False,
     ):
         super().__init__(
             adata,
             backward=backward,
             time_key=time_key,
             compute_cond_num=compute_cond_num,
-            check_connectivity=check_connectivity,
+            check_connectivity=False,
         )
         self._time_key = time_key
 
@@ -84,13 +81,17 @@ class ExperimentalTimeKernel(Kernel, ABC):
             )
 
         if not exp_time.cat.ordered:
-            logg.warning("Ordering categories")
+            logg.warning("Time categories are not ordered. Using default order")
             exp_time.cat = exp_time.cat.as_ordered()
 
-        self._exp_time = pd.Categorical(exp_time, ordered=True)
+        self._exp_time = pd.Series(
+            pd.Categorical(exp_time, ordered=True), index=self.adata.obs_names
+        )
+        if self.experimental_time.isnull().any():
+            raise ValueError("Experimental time contains NaN values.")
 
     @property
-    def experimental_time(self) -> pd.Categorical:
+    def experimental_time(self) -> pd.Series:
         """Experimental time."""
         return self._exp_time
 

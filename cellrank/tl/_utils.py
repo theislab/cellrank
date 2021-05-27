@@ -758,7 +758,9 @@ def _symmetric(
     return d_norm((matrix - matrix.T), ord=ord) < eps
 
 
-def _normalize(X: Union[np.ndarray, spmatrix]) -> Union[np.ndarray, spmatrix]:
+def _normalize(
+    X: Union[np.ndarray, spmatrix], eps: float = 1e-12
+) -> Union[np.ndarray, spmatrix]:
     """
     Row-normalizes an array to sum to 1.
 
@@ -766,6 +768,8 @@ def _normalize(X: Union[np.ndarray, spmatrix]) -> Union[np.ndarray, spmatrix]:
     ----------
     X
         Array to be normalized.
+    eps
+        To avoid division by zero.
 
     Returns
     -------
@@ -776,9 +780,9 @@ def _normalize(X: Union[np.ndarray, spmatrix]) -> Union[np.ndarray, spmatrix]:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         if issparse(X):
-            return X.multiply(csr_matrix(1.0 / np.abs(X).sum(1)))
+            return X.multiply(csr_matrix(1.0 / (np.abs(X).sum(1) + eps)))
         X = np.array(X)
-        return X / X.sum(1)[:, None]
+        return X / (X.sum(1)[:, None] + eps)
 
 
 def _get_connectivities(

@@ -274,7 +274,7 @@ class KernelExpression(Pickleable, ABC):
         Parameters
         ----------
         basis
-            Basis in :attr:`anndata.AnnData.obsm` for which to compute the projection.
+            Basis in :attr:`adata` ``.obsm`` for which to compute the projection.
         key_added
             If not `None` and ``copy=False``, save the result to :attr:`adata` ``.obsm['{key_added}']``.
             Otherwise, save the result to `'T_fwd_{basis}'` or `T_bwd_{basis}`, depending on the direction.
@@ -905,6 +905,14 @@ class Kernel(UnaryKernelExpression, ABC):
         density_normalize: bool = True,
         check_irreducibility: bool = False,
     ):
+        if matrix.shape[0] != matrix.shape[1]:
+            raise ValueError(f"Expected a square matrix, found `{matrix.shape}`.")
+        if matrix.shape[0] != self.adata.n_obs:
+            raise ValueError(
+                f"Expected matrix to be of shape `{(self.adata.n_obs, self.adata.n_obs)}`, "
+                f"found `{matrix.shape}`."
+            )
+
         matrix = matrix.astype(_dtype)
         if issparse(matrix) and not isspmatrix_csr(matrix):
             matrix = csr_matrix(matrix)
