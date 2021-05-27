@@ -1,6 +1,6 @@
 """Precomputed kernel module."""
 from copy import copy
-from typing import Union, Optional
+from typing import Any, Union, Optional
 
 from anndata import AnnData
 
@@ -24,12 +24,14 @@ class PrecomputedKernel(Kernel):
     Parameters
     ----------
     transition_matrix
-        Row-normalized transition matrix or a key in :paramref:`adata` ``.obsp``
+        Row-normalized transition matrix or a key in :attr:`adata` ``.obsp``
         or a :class:`cellrank.tl.kernels.KernelExpression` with the computed transition matrix.
         If `None`, try to determine the key based on ``backward``.
     %(adata)s
     %(backward)s
     %(cond_num)s
+    kwargs
+        Keyword arguments for :class:`cellrank.tl.kernels.Kernel`.
     """
 
     def __init__(
@@ -40,6 +42,7 @@ class PrecomputedKernel(Kernel):
         adata: Optional[AnnData] = None,
         backward: bool = False,
         compute_cond_num: bool = False,
+        **kwargs: Any,
     ):
         from anndata import AnnData as _AnnData
 
@@ -97,14 +100,16 @@ class PrecomputedKernel(Kernel):
                 csr_matrix((transition_matrix.shape[0], 1), dtype=np.float32)
             )
 
-        super().__init__(adata, backward=backward, compute_cond_num=compute_cond_num)
+        super().__init__(
+            adata, backward=backward, compute_cond_num=compute_cond_num, **kwargs
+        )
 
         self._params = params
         self._transition_matrix = csr_matrix(transition_matrix)
         self._maybe_compute_cond_num()
 
-    def _read_from_adata(self, **kwargs):
-        pass
+    def _read_from_adata(self, **kwargs: Any) -> None:
+        self._conn = None
 
     @d.dedent
     def copy(self) -> "PrecomputedKernel":

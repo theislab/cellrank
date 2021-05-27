@@ -80,7 +80,7 @@ class Eigen(VectorPlottable, Decomposable):
         None
             Nothing, but updates the following field:
 
-                - :paramref:`{prop}`
+                - :attr:`{prop}`
         """
 
         def get_top_k_evals():
@@ -431,9 +431,9 @@ class Schur(VectorPlottable, Decomposable):
         None
             Nothing, but updates the following fields:
 
-                - :paramref:`{schur_vectors}`
-                - :paramref:`{schur_matrix}`
-                - :paramref:`{eigendec}`
+                - :attr:`{schur_vectors}`
+                - :attr:`{schur_matrix}`
+                - :attr:`{eigendec}`
         """
         if n_components < 2:
             raise ValueError(

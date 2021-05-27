@@ -173,34 +173,56 @@ def _minmax(
     return float(np.nanmin(data)), float(np.nanmax(data))
 
 
-def _has_neighs(adata: AnnData) -> bool:
-    return "neighbors" in adata.uns.keys()
+def _modify_neigh_key(key: Optional[str]) -> str:
+    if key in (None, "connectivities", "distances"):
+        return "neighbors"
+
+    if key.endswith("_connectivities"):
+        key = key[:-15]
+    elif key.endswith("_distances"):
+        key = key[:-10]
+
+    return key
 
 
-def _get_neighs(adata: AnnData, mode: str = "distances") -> Union[np.ndarray, spmatrix]:
-    try:
-        return _read_graph_data(adata, mode)
-    except KeyError:
-        return _read_graph_data(adata, "neighbors")[mode]
+def _has_neighs(adata: AnnData, key: Optional[str] = None) -> bool:
+    return _modify_neigh_key(key) in adata.uns.keys()
 
 
-def _get_neighs_params(adata: AnnData) -> Dict[str, Any]:
-    return adata.uns["neighbors"]["params"]
+def _get_neighs(
+    adata: AnnData, mode: str = "distances", key: Optional[str] = None
+) -> Union[np.ndarray, spmatrix]:
+    if key is None:
+        res = _read_graph_data(adata, mode)  # legacy behavior
+    else:
+        try:
+            res = _read_graph_data(adata, key)
+            assert isinstance(res, (np.ndarray, spmatrix))
+        except (KeyError, AssertionError):
+            res = _read_graph_data(adata, f"{_modify_neigh_key(key)}_{mode}")
+
+    if not isinstance(res, (np.ndarray, spmatrix)):
+        raise TypeError(
+            f"Expected to find `numpy.ndarray` or `scipy.sparse.spmatrix`, found `{type(res)}`."
+        )
+
+    return res
+
+
+def _get_neighs_params(adata: AnnData, key: str = "neighbors") -> Dict[str, Any]:
+    return adata.uns.get(key, {}).get("params")
 
 
 def _read_graph_data(adata: AnnData, key: str) -> Union[np.ndarray, spmatrix]:
     """
     Read graph data from :mod:`anndata`.
 
-    :module`AnnData` >=0.7 stores `(n_obs x n_obs)` matrices in `.obsp` rather than `.uns`.
-    This is for backward compatibility.
-
     Parameters
     ----------
     adata
         Annotated data object.
     key
-        Key from either ``adata.uns`` or ``adata.obsp``.
+        Key in ``adata.obsp``.
 
     Returns
     -------
@@ -208,15 +230,11 @@ def _read_graph_data(adata: AnnData, key: str) -> Union[np.ndarray, spmatrix]:
         The graph data.
     """
 
-    if hasattr(adata, "obsp") and adata.obsp is not None and key in adata.obsp.keys():
-        logg.debug(f"Reading key `{key!r}` from `adata.obsp`")
+    logg.debug(f"Reading key `{key!r}` from `adata.obsp`")
+    if key in adata.obsp.keys():
         return adata.obsp[key]
 
-    if key in adata.uns.keys():
-        logg.debug(f"Reading key `{key!r}` from `adata.uns`")
-        return adata.uns[key]
-
-    raise KeyError(f"Unable to find key `{key!r}` in `adata.obsp` or `adata.uns`.")
+    raise KeyError(f"Unable to find key `{key!r}` in `adata.obsp`.")
 
 
 def _write_graph_data(

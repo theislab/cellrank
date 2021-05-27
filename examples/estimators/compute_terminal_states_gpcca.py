@@ -62,7 +62,7 @@ g.set_terminal_states_from_macrostates(["Alpha, Beta", "Epsilon"])
 # Compute terminal states
 # ^^^^^^^^^^^^^^^^^^^^^^^
 # Lastly, :meth:`cellrank.tl.estimators.GPCCA.compute_terminal_states` which also makes use of the coarse-grained
-# transition matrix :paramref:`cellrank.tl.estimators.GPCCA.coarse_T` of the macrostates or the `eigengap`
+# transition matrix :attr:`cellrank.tl.estimators.GPCCA.coarse_T` of the macrostates or the `eigengap`
 # statistic.
 #
 # In the example below, we use ``method='eigenap'`` which selects the number of states based on the `eigengap`. The

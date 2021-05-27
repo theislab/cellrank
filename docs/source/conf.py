@@ -65,7 +65,6 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx_autodoc_typehints",
     "sphinx.ext.intersphinx",
-    "sphinx_paramlinks",
     "sphinx.ext.autosummary",
     "sphinx_gallery.gen_gallery",
     "nbsphinx",
@@ -237,7 +236,6 @@ sphinx_gallery_conf = {
 
 autosummary_generate = True
 autodoc_member_order = "bysource"
-# autodoc_default_flags = ['members']
 typehints_fully_qualified = False
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
@@ -259,4 +257,4 @@ html_show_sourcelink = False
 
 
 def setup(app):
-    app.add_stylesheet("css/custom.css")
+    app.add_css_file("css/custom.css")

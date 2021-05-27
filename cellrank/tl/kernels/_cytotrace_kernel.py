@@ -44,9 +44,11 @@ class CytoTRACEKernel(PseudotimeKernel):
     %(backward)s
     %(cytotrace.parameters)s
 
-    compute_cond_num
-        Whether to compute condition number of the transition matrix. Note that this might be costly,
-        since it does not use sparse implementation.
+    %(cond_num)s
+    check_connectivity
+        Check whether the underlying KNN graph is connected.
+    kwargs
+        Keyword arguments for :class:`cellrank.tl.kernels.PseudotimeKernel`.
 
     Examples
     --------
@@ -80,6 +82,7 @@ class CytoTRACEKernel(PseudotimeKernel):
         use_raw: bool = False,
         compute_cond_num: bool = False,
         check_connectivity: bool = False,
+        **kwargs: Any,
     ):
         super().__init__(
             adata,
@@ -90,6 +93,7 @@ class CytoTRACEKernel(PseudotimeKernel):
             layer=layer,
             aggregation=aggregation,
             use_raw=use_raw,
+            **kwargs,
         )
         self._time_key = _ct("pseudotime")  # quirk or PT kernel
 
@@ -100,7 +104,7 @@ class CytoTRACEKernel(PseudotimeKernel):
         aggregation: Literal["mean", "median", "hmean", "gmean"] = "mean",
         use_raw: bool = True,
         **kwargs: Any,
-    ):
+    ) -> None:
         self.compute_cytotrace(layer=layer, aggregation=aggregation, use_raw=use_raw)
 
         super()._read_from_adata(time_key=time_key, **kwargs)

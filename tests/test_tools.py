@@ -226,6 +226,25 @@ class TestRootFinal:
         with pytest.raises(ValueError):
             cr.tl.initial_states(adata, mode="foobar")
 
+    @pytest.mark.parametrize("force_recompute", [False, True])
+    def test_force_recompute(self, adata: AnnData, force_recompute: bool):
+        cr.tl.terminal_states(adata, n_states=5, fit_kwargs=dict(n_cells=5))
+        tmat1 = adata.obsp["T_fwd"]
+
+        cr.tl.terminal_states(
+            adata,
+            n_states=5,
+            fit_kwargs=dict(n_cells=5),
+            force_recompute=force_recompute,
+        )
+        tmat2 = adata.obsp["T_fwd"]
+        if force_recompute:
+            assert tmat1 is not tmat2
+            np.testing.assert_allclose(tmat1.A, tmat2.A)
+            np.testing.assert_allclose(tmat1.sum(1), 1.0)
+        else:
+            assert tmat1 is tmat2
+
 
 class TestTransitionMatrix:
     def test_invalid_velocity_key(self, adata: AnnData):
@@ -260,7 +279,7 @@ class TestTransitionMatrix:
 
         assert isinstance(ck, cr.tl.kernels.ConnectivityKernel)
 
-        np.testing.assert_array_equal(ck.transition_matrix.A, adata.obsp[key])
+        np.testing.assert_array_equal(ck.transition_matrix, adata.obsp[key])
 
     def test_only_velocity(self, adata: AnnData):
         vk = cr.tl.transition_matrix(adata, weight_connectivities=0)

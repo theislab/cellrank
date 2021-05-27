@@ -38,7 +38,6 @@ from cellrank.tl._utils import (
     _normalize,
     _symmetric,
     _get_neighs,
-    _has_neighs,
     _irreducible,
 )
 from cellrank.ul._utils import Pickleable, _write_graph_data
@@ -96,7 +95,7 @@ class KernelExpression(Pickleable, ABC):
         """
         Return row-normalized transition matrix.
 
-        If not present, it is computed, if all the underlying kernels have been initialized.
+        If not present, it is computed iff all underlying kernels have been initialized.
         """
 
         if self._parent is None and self._transition_matrix is None:
@@ -153,7 +152,7 @@ class KernelExpression(Pickleable, ABC):
         Returns
         -------
         None
-            Nothing, just updates the :paramref:`transition_matrix` and optionally normalizes it.
+            Nothing, just updates the :attr:`transition_matrix` and optionally normalizes it.
         """
         should_norm = ~np.isclose(value.sum(1), 1.0, rtol=_RTOL).all()
 
@@ -190,13 +189,13 @@ class KernelExpression(Pickleable, ABC):
     @d.dedent
     def write_to_adata(self, key: Optional[str] = None) -> None:
         """
-        Write the transition matrix and parameters used for computation to the underlying :paramref:`adata` object.
+        Write the transition matrix and parameters used for computation to the underlying :attr:`adata` object.
 
         Parameters
         ----------
         key
-            Key used when writing transition matrix to :paramref:`adata`.
-            If `None`, the ``key`` is set to `'T_bwd'` if :paramref:`backward` is `True`, else `'T_fwd'`.
+            Key used when writing transition matrix to :attr:`adata`.
+            If `None`, the ``key`` is set to `'T_bwd'` if :attr:`backward` is `True`, else `'T_fwd'`.
 
         Returns
         -------
@@ -221,7 +220,7 @@ class KernelExpression(Pickleable, ABC):
 
     @abstractmethod
     def copy(self) -> "KernelExpression":
-        """Return a copy of itself. Note that the underlying :paramref:`adata` object is not copied."""
+        """Return a copy of itself. Note that the underlying :attr:`adata` object is not copied."""
 
     def _maybe_compute_cond_num(self):
         if self._compute_cond_num and self._cond_num is None:
@@ -277,10 +276,10 @@ class KernelExpression(Pickleable, ABC):
         basis
             Basis in :attr:`anndata.AnnData.obsm` for which to compute the projection.
         key_added
-            If not `None` and ``copy=False``, save the result to :paramref:`adata` ``.obsm['{key_added}']``.
+            If not `None` and ``copy=False``, save the result to :attr:`adata` ``.obsm['{key_added}']``.
             Otherwise, save the result to `'T_fwd_{basis}'` or `T_bwd_{basis}`, depending on the direction.
         copy
-            Whether to return the projection or modify :paramref:`adata` inplace.
+            Whether to return the projection or modify :attr:`adata` inplace.
 
         Returns
         -------
@@ -830,12 +829,11 @@ class Kernel(UnaryKernelExpression, ABC):
     ----------
     %(adata)s
     %(backward)s
-    compute_cond_num
-        Whether to compute the condition number of the transition matrix. For large matrices, this can be very slow.
+    %(cond_num)s
     check_connectivity
         Check whether the underlying KNN graph is connected.
     kwargs
-        Keyword arguments which can specify key to be read from :paramref:`adata` object.
+        Keyword arguments which can specify key to be read from :attr:`adata` object.
     """
 
     def __init__(
@@ -844,20 +842,21 @@ class Kernel(UnaryKernelExpression, ABC):
         backward: bool = False,
         compute_cond_num: bool = False,
         check_connectivity: bool = False,
-        **kwargs,
+        **kwargs: Any,
     ):
         super().__init__(
             adata, backward, op_name=None, compute_cond_num=compute_cond_num, **kwargs
         )
         self._read_from_adata(check_connectivity=check_connectivity, **kwargs)
 
-    def _read_from_adata(self, key: str = "connectivities", **kwargs):
+    def _read_from_adata(
+        self, conn_key: Optional[str] = "connectivities", **kwargs: Any
+    ) -> None:
         """Import the base-KNN graph and optionally check for symmetry and connectivity."""
 
-        if not _has_neighs(self.adata):
-            raise KeyError("Compute KNN graph first as `scanpy.pp.neighbors()`.")
-
-        self._conn = _get_neighs(self.adata, key).astype(_dtype)
+        self._conn = _get_neighs(
+            self.adata, mode="connectivities", key=conn_key
+        ).astype(_dtype)
 
         check_connectivity = kwargs.pop("check_connectivity", False)
         if check_connectivity:
@@ -893,11 +892,7 @@ class Kernel(UnaryKernelExpression, ABC):
         logg.debug("Density-normalizing the transition matrix")
 
         q = np.asarray(self._conn.sum(axis=0))
-
-        if not issparse(other):
-            Q = np.diag(1.0 / q)
-        else:
-            Q = spdiags(1.0 / q, 0, other.shape[0], other.shape[0])
+        Q = spdiags(1.0 / q, 0, other.shape[0], other.shape[0])
 
         return Q @ other @ Q
 
@@ -906,13 +901,15 @@ class Kernel(UnaryKernelExpression, ABC):
 
     def _compute_transition_matrix(
         self,
-        matrix: spmatrix,
+        matrix: Union[np.ndarray, spmatrix],
         density_normalize: bool = True,
         check_irreducibility: bool = False,
     ):
-        # density correction based on node degrees in the KNN graph
-        matrix = csr_matrix(matrix) if not isspmatrix_csr(matrix) else matrix
+        matrix = matrix.astype(_dtype)
+        if issparse(matrix) and not isspmatrix_csr(matrix):
+            matrix = csr_matrix(matrix)
 
+        # density correction based on node degrees in the KNN graph
         if density_normalize:
             matrix = self._density_normalize(matrix)
 
@@ -942,7 +939,7 @@ class Constant(Kernel):
     ----------
     %(adata)s
     value
-        Constant value by which to multiply Must be a positive number.
+        Constant value by which to multiply. Must be a positive number.
     %(backward)s
     """
 
@@ -962,7 +959,7 @@ class Constant(Kernel):
         self._transition_matrix = value
         self._params = {"value": value}
 
-    def _read_from_adata(self, **kwargs):
+    def _read_from_adata(self, **kwargs: Any) -> None:
         pass
 
     def compute_transition_matrix(self, *args, **kwargs) -> "Constant":

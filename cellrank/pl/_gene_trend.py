@@ -97,7 +97,7 @@ def gene_trends(
         If ``same_plot=False``, show ``lineages`` in rows and ``genes`` in columns.
     %(model_callback)s
     conf_int
-        Whether to compute and show confidence interval. If the :paramref:`model` is :class:`cellrank.ul.models.GAMR`,
+        Whether to compute and show confidence interval. If the :attr:`model` is :class:`cellrank.ul.models.GAMR`,
         it can also specify the confidence level, the default is `0.95`.
     same_plot
         Whether to plot all lineages for each gene in the same plot.

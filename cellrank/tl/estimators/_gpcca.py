@@ -109,11 +109,11 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         None
             Nothing, but updates the following fields:
 
-                - :paramref:`{msp}`
-                - :paramref:`{ms}`
-                - :paramref:`{schur}`
-                - :paramref:`{coarse_T}`
-                - :paramref:`{coarse_stat}`
+                - :attr:`{msp}`
+                - :attr:`{ms}`
+                - :attr:`{schur}`
+                - :attr:`{coarse_T}`
+                - :attr:`{coarse_stat}`
         """
 
         was_from_eigengap = False
@@ -261,8 +261,8 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         None
             Nothing, just updates the following fields:
 
-                - :paramref:`{fsp}`
-                - :paramref:`{fs}`
+                - :attr:`{fsp}`
+                - :attr:`{fs}`
         """
 
         if not isinstance(n_cells, int):
@@ -383,8 +383,8 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         None
             Nothing, just updates the following fields:
 
-                - :paramref:`{fsp}`
-                - :paramref:`{fs}`
+                - :attr:`{fsp}`
+                - :attr:`{fs}`
         """
 
         if len(self._get(P.MACRO).cat.categories) == 1:
@@ -444,14 +444,14 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         n_components
             Number of real Schur vectors to consider.
         key_added
-            Key in :paramref:`adata` ``.obs`` where to save the pseudotime.
+            Key in :attr:`adata` ``.obs`` where to save the pseudotime.
         kwargs
             Keyword arguments for :meth:`cellrank.tl.GPCCA.compute_schur` if Schur decomposition is not found.
 
         Returns
         -------
         None
-            Nothing, just updates :paramref:`adata` ``.obs[key_added]`` with the computed pseudotime.
+            Nothing, just updates :attr:`adata` ``.obs[key_added]`` with the computed pseudotime.
         """
 
         def _get_dpt_row(e_vals: np.ndarray, e_vecs: np.ndarray, i: int):
@@ -738,8 +738,10 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
 
         if annotate:
             annotate_heatmap(im)
-            annotate_dist_ax(stat_ax, coarse_stat_d.values)
-            annotate_dist_ax(init_ax, coarse_init_d)
+            if show_stationary_dist:
+                annotate_dist_ax(stat_ax, coarse_stat_d.values)
+            if show_initial_dist:
+                annotate_dist_ax(init_ax, coarse_init_d)
 
         if save:
             save_fig(fig, save)
@@ -870,13 +872,13 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
             Fuzzy clustering.
         %(n_cells)s
         cluster_key
-            Key from :paramref:`adata` ``.obs`` to get reference cluster annotations.
+            Key from :attr:`adata` ``.obs`` to get reference cluster annotations.
         en_cutoff
             Threshold to decide when we we want to warn the user about an uncertain name mapping. This happens when
             one fuzzy state overlaps with several reference clusters, and the most likely cells are distributed almost
             evenly across the reference clusters.
         p_thresh
-            Only used to detect cell cycle stages. These have to be present in :paramref:`adata` ``.obs`` as
+            Only used to detect cell cycle stages. These have to be present in :attr:`adata` ``.obs`` as
             `'G2M_score'` and `'S_score'`.
         check_row_sums
             Check whether rows in `memberships` sum to `1`.
@@ -1071,12 +1073,12 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         None
             Nothing, just makes available the following fields:
 
-                - :paramref:`{msp}`
-                - :paramref:`{ms}`
-                - :paramref:`{fsp}`
-                - :paramref:`{fs}`
-                - :paramref:`{ap}`
-                - :paramref:`{pd}`
+                - :attr:`{msp}`
+                - :attr:`{ms}`
+                - :attr:`{fsp}`
+                - :attr:`{fs}`
+                - :attr:`{ap}`
+                - :attr:`{pd}`
         """
 
         super().fit(
@@ -1157,7 +1159,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         Returns
         -------
         None
-            Nothing, just writes to :paramref:`adata`:
+            Nothing, just writes to :attr:`adata`:
 
                 - ``.obs[{key!r}]`` - probability of being an initial state.
                 - ``.obs[{probs_key!r}]`` - top ``n_cells`` from each initial state.
@@ -1208,3 +1210,25 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
             f"Adding `adata.obs[{_probs(key)!r}]`\n       `adata.obs[{key!r}]`\n",
             time=time,
         )
+
+    def _write_terminal_states(self, time=None) -> None:
+        super()._write_terminal_states(time=time)
+
+        term_abs_probs = self._get(A.TERM_ABS_PROBS)
+        if term_abs_probs is None:
+            # possibly remove previous value if it's inconsistent
+            term_abs_probs = self.adata.obsm.get(self._term_abs_prob_key, None)
+
+        if term_abs_probs is not None:
+            new = list(self._get(P.TERM).cat.categories)
+            old = list(term_abs_probs.names)
+            if term_abs_probs.shape[1] == len(new) and new == old:
+                self.adata.obsm[self._term_abs_prob_key] = term_abs_probs
+            else:
+                logg.warning(
+                    f"Removing previously computed `adata.obsm[{self._term_abs_prob_key!r}]` because the "
+                    f"names mismatch `{new}` (new), `{old}` (old)."
+                )
+
+                self._set(A.TERM_ABS_PROBS, None)
+                self.adata.obsm.pop(self._term_abs_prob_key, None)

@@ -900,6 +900,25 @@ class TestGPCCA:
         )
         assert_series_equal(mc._get(A.PRIME_DEG), deg1)
 
+    def test_recompute_terminal_states_different_n_states(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        terminal_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc.compute_schur(n_components=10, method="krylov")
+        mc.compute_macrostates(n_states=2)
+        mc.set_terminal_states_from_macrostates()
+
+        assert len(mc.terminal_states.cat.categories) == 2
+        assert adata_large.obsm[mc._term_abs_prob_key].shape == (adata_large.n_obs, 2)
+
+        mc.set_terminal_states({"foo": adata_large.obs_names[:20]})
+
+        assert len(mc.terminal_states.cat.categories) == 1
+        assert mc._get(A.TERM_ABS_PROBS) is None
+        assert mc._term_abs_prob_key not in adata_large.obsm
+
 
 class TestGPCCAIO:
     def test_copy(self, adata_gpcca_fwd: Tuple[AnnData, cr.tl.estimators.GPCCA]):

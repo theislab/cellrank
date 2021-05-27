@@ -49,6 +49,8 @@ cluster_key
 key
     Key in ``adata.obsp`` where the transition matrix is saved.
     If not found, compute a new one using :func:`cellrank.tl.transition_matrix`.
+force_recompute
+    Whether to always recompute the transition matrix even if one exists.
 show_plots
     Whether to show plots of the spectrum and eigenvectors in the embedding.
 %(n_jobs)s
@@ -80,16 +82,18 @@ def _initial_terminal(
     n_states: Optional[int] = None,
     cluster_key: Optional[str] = None,
     key: Optional[str] = None,
+    force_recompute: bool = False,
     show_plots: bool = False,
     copy: bool = False,
     return_estimator: bool = False,
     fit_kwargs: Mapping = MappingProxyType({}),
     **kwargs,
 ) -> Optional[Union[AnnData, BaseEstimator]]:
-
     _check_estimator_type(estimator)
 
     try:
+        if force_recompute:
+            raise KeyError("Forcing transition matrix recomputation.")
         kernel = PrecomputedKernel(key, adata=adata, backward=backward)
         write_to_adata = False  # no need to write
         logg.info("Using precomputed transition matrix")
@@ -164,12 +168,13 @@ def initial_states(  # noqa: D103
     n_states: Optional[int] = None,
     cluster_key: Optional[str] = None,
     key: Optional[str] = None,
+    force_recompute: bool = False,
     show_plots: bool = False,
     copy: bool = False,
     return_estimator: bool = False,
     fit_kwargs: Mapping = MappingProxyType({}),
     **kwargs,
-) -> Optional[AnnData]:
+) -> Optional[Union[AnnData, BaseEstimator]]:
 
     return _initial_terminal(
         adata,
@@ -180,6 +185,7 @@ def initial_states(  # noqa: D103
         n_states=n_states,
         cluster_key=cluster_key,
         key=key,
+        force_recompute=force_recompute,
         show_plots=show_plots,
         copy=copy,
         return_estimator=return_estimator,
@@ -202,12 +208,13 @@ def terminal_states(  # noqa: D103
     n_states: Optional[int] = None,
     cluster_key: Optional[str] = None,
     key: Optional[str] = None,
+    force_recompute: bool = False,
     show_plots: bool = False,
     copy: bool = False,
     return_estimator: bool = False,
     fit_kwargs: Mapping = MappingProxyType({}),
     **kwargs,
-) -> Optional[AnnData]:
+) -> Optional[Union[AnnData, BaseEstimator]]:
 
     return _initial_terminal(
         adata,
@@ -217,6 +224,7 @@ def terminal_states(  # noqa: D103
         n_states=n_states,
         cluster_key=cluster_key,
         key=key,
+        force_recompute=force_recompute,
         show_plots=show_plots,
         copy=copy,
         return_estimator=return_estimator,
