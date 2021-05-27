@@ -52,6 +52,7 @@ class TestOTKernel:
         assert isinstance(ok.params, dict)
 
 
+@pytest.mark.skip("wot on PyPI doesn't support passing cost matrices")
 class TestWOTKernel:
     def test_inversion_updates_adata(self, adata_large: AnnData):
         key = "age(days)"

@@ -37,7 +37,7 @@ class WOTKernel(Kernel, error=_error):
     """
     Waddington optimal transport kernel from [Schiebinger19]_.
 
-    This class requires the `wot` package, which can be installed `pip install wot`.
+    This class requires the `wot` package, which can be installed `pip install git+https://github.com/broadinstitute/wot`.
 
     Parameters
     ----------
@@ -47,7 +47,7 @@ class WOTKernel(Kernel, error=_error):
         Key in :attr:`adata` ``.obs`` where experimental time is stored.
         The experimental time can be of either of a numeric or an ordered categorical type.
     %(cond_num)s
-    """
+    """  # noqa: E501
 
     def __init__(
         self,
