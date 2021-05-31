@@ -49,6 +49,11 @@ class WOTKernel(Kernel, error=_error):
     %(cond_num)s
     """  # noqa: E501
 
+    __import_error_message__ = (
+        "Unable to import the kernel. Please install `wot` first as "
+        "`pip install git+https://github.com/broadinstitute/wot`."
+    )
+
     def __init__(
         self,
         adata: AnnData,
@@ -70,6 +75,7 @@ class WOTKernel(Kernel, error=_error):
         )
         self.adata.obs[self._time_key] = self.experimental_time
         self._growth_rates = None
+        self._tmats = None
 
     def compute_transition_matrix(
         self,
@@ -88,8 +94,7 @@ class WOTKernel(Kernel, error=_error):
         cost_matrices
             Cost matrices for each consecutive time pair.
             If a :class:`str`, it specifies a key in :attr:`adata` ``.layers``: or :attr:`adata` ``.obsm``
-            containing cell features that are used to compute cost matrices.
-            If `None`, use `WOT`'s default.
+            containing cell features that are used to compute cost matrices. If `None`, use `WOT`'s default.
         solver
             Which solver to use.
         growth_rate_key
@@ -164,7 +169,7 @@ class WOTKernel(Kernel, error=_error):
             **kwargs,
         )
 
-        tmats: Dict[Tuple[float, float], AnnData] = {}
+        self._tmats: Dict[Tuple[float, float], AnnData] = {}
         start = logg.info(
             f"Computing transport maps for `{len(cost_matrices)}` time pairs"
         )
@@ -177,12 +182,11 @@ class WOTKernel(Kernel, error=_error):
                 raise ValueError(
                     f"Encountered `{nans}` NaN values for time pair `{tpair}`."
                 )
-            tmat.X = _normalize(tmat.X)
-            tmats[tpair] = tmat
+            self._tmats[tpair] = tmat
 
         logg.info("    Finish", time=start)
 
-        return tmats
+        return self._tmats
 
     def _restich_tmats(self, tmaps: Mapping[Union[float, float], AnnData]) -> spmatrix:
         blocks = [[None] * (len(tmaps) + 1) for _ in range(len(tmaps) + 1)]
@@ -190,7 +194,7 @@ class WOTKernel(Kernel, error=_error):
         obs_names, growth_rates = [], []
 
         for i, tmap in enumerate(tmaps.values()):
-            blocks[i][i + 1] = tmap.X
+            blocks[i][i + 1] = _normalize(tmap.X)
             nrows += tmap.n_obs
             ncols += tmap.n_vars
             obs_names.extend(tmap.obs_names)
@@ -198,8 +202,8 @@ class WOTKernel(Kernel, error=_error):
         obs_names.extend(tmap.var_names)
 
         n = self.adata.n_obs - nrows
-        blocks[-1][-1] = spdiags([1] * n, 0, n, n)
-        # prevent from disappearing
+        blocks[-1][-1] = np.ones((n, n)) / float(n)
+        # prevent block from disappearing
         n = blocks[0][1].shape[0]
         blocks[0][0] = spdiags([], 0, n, n)
 
@@ -297,6 +301,11 @@ class WOTKernel(Kernel, error=_error):
     def growth_rates(self) -> Optional[pd.DataFrame]:
         """Estimated cell growth rates for each growth rate iteration."""
         return self._growth_rates
+
+    @property
+    def transition_maps(self) -> Optional[Dict[Tuple[float, float], AnnData]]:
+        """Transition maps for each consecutive time pair."""
+        return self._tmats
 
     def __invert__(self) -> "WOTKernel":
         super().__invert__()

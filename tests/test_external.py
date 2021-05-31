@@ -52,7 +52,7 @@ class TestOTKernel:
         assert isinstance(ok.params, dict)
 
 
-@pytest.mark.skip("wot on PyPI doesn't support passing cost matrices")
+@pytest.mark.skipif("wot on PyPI doesn't support passing cost matrices")
 class TestWOTKernel:
     def test_inversion_updates_adata(self, adata_large: AnnData):
         key = "age(days)"
@@ -123,5 +123,7 @@ class TestWOTKernel:
         np.testing.assert_allclose(ok.transition_matrix.sum(1), 1.0)
         assert isinstance(ok.params, dict)
         assert isinstance(ok.growth_rates, pd.DataFrame)
+        assert isinstance(ok.transition_maps, dict)
         np.testing.assert_array_equal(adata_large.obs_names, ok.growth_rates.index)
         np.testing.assert_array_equal(ok.growth_rates.columns, ["g0", "g1"])
+        assert isinstance(ok.transition_maps[12.0, 35.0], AnnData)
