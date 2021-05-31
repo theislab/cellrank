@@ -77,6 +77,82 @@ class WOTKernel(Kernel, error=_error):
         self._growth_rates = None
         self._tmats = None
 
+    def compute_initial_growth_rates(
+        self,
+        proliferation_key: str,
+        apoptosis_key: str,
+        beta_min: float = 0.3,
+        beta_max: float = 1.7,
+        delta_min: float = 0.3,
+        delta_max: float = 1.7,
+        key_added: Optional[str] = None,
+    ) -> Optional[pd.Series]:
+        r"""
+        Estimate initial growth rates using Birth-death process as described in [Schiebinger19]_.
+
+        The doubling time is defined as :math:`\frac{\ln 2}{\beta - \delta}` (similarly defined for half-time).
+        Logistic function is used to transform the birth/death rate scores and smoothly interpolate between specified
+        minimum and maximum birth/death rates.
+
+        Parameters
+        ----------
+        proliferation_key
+            Key in :attr:`adata` ``.obs`` where birth rate scores are stored.
+        apoptosis_key
+            Key in :attr:`adata` ``.obs`` where death rate scores are stored.
+        beta_min
+            Minimum birth rate.
+        beta_max
+            Maximum birth rate.
+        delta_min
+            Minimum death rate.
+        delta_max
+            Maximum death rate.
+        key_added
+            Key in :attr:`adata` ``.obs`` where to add the estimated growth rates. If `None`, just return them.
+
+        Returns
+        -------
+        :class:`pandas.Series`
+            The estimated initial growth rates if ``key_added = None``, otherwise `None`.
+        """
+
+        def logistic(x: np.ndarray, L: float, k: float, x0: float = 0) -> np.ndarray:
+            return L / (1 + np.exp(-k * (x - x0)))
+
+        def gen_logistic(
+            p: np.ndarray, beta_max: float, beta_min: float, center: float, width: float
+        ) -> np.ndarray:
+            return beta_min + logistic(p, L=beta_max - beta_min, k=4 / width, x0=center)
+
+        def beta(
+            p: np.ndarray,
+            beta_max: float = 1.7,
+            beta_min: float = 0.3,
+            center: float = 0.25,
+        ) -> np.ndarray:
+            return gen_logistic(p, beta_max, beta_min, center, width=0.5)
+
+        def delta(
+            a: np.ndarray,
+            delta_max: float = 1.7,
+            delta_min: float = 0.3,
+            center: float = 0.1,
+        ) -> np.ndarray:
+            return gen_logistic(a, delta_max, delta_min, center, width=0.2)
+
+        birth = beta(
+            self.adata.obs[proliferation_key], beta_min=beta_min, beta_max=beta_max
+        )
+        death = delta(
+            self.adata.obs[apoptosis_key], delta_min=delta_min, delta_max=delta_max
+        )
+        gr = np.exp(birth - death)
+
+        if key_added is None:
+            return pd.Series(gr, index=self.adata.obs_names)
+        self.adata.obs[key_added] = gr
+
     def compute_transition_matrix(
         self,
         cost_matrices: Optional[

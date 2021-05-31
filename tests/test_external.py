@@ -1,3 +1,5 @@
+from typing import Optional
+
 import pytest
 
 from anndata import AnnData
@@ -116,6 +118,22 @@ class TestWOTKernel:
             adata_large.obs["estimated_growth_rates"], ok.growth_rates[f"g{n_iters}"]
         )
         assert ok.params["growth_iters"] == n_iters
+
+    @pytest.mark.parametrize("key_added", [None, "gr"])
+    def test_birth_death_process(self, adata_large: AnnData, key_added: Optional[str]):
+        np.random.seed(42)
+        adata_large.obs["foo"] = np.random.normal(size=(adata_large.n_obs,))
+        adata_large.obs["bar"] = np.random.normal(size=(adata_large.n_obs,))
+
+        ok = cre.kernels.WOTKernel(adata_large, time_key="age(days)")
+        gr = ok.compute_initial_growth_rates("foo", "bar", key_added=key_added)
+
+        if key_added is None:
+            assert isinstance(gr, pd.Series)
+            np.testing.assert_array_equal(gr.index, adata_large.obs_names)
+        else:
+            assert gr is None
+            assert "gr" in adata_large.obs
 
     def test_normal_run(self, adata_large: AnnData):
         ok = cre.kernels.WOTKernel(adata_large, time_key="age(days)")
