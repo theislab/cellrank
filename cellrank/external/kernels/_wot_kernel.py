@@ -119,6 +119,9 @@ class WOTKernel(Kernel, error=_error):
         -------
         :class:`cellrank.external.kernels.WOTKernel`
             Makes :attr:`transition_matrix`, :attr:`transition_maps` and :attr:`growth_rates` available.
+            It also  modifies :attr:`anndata.AnnData.obs` with the following key:
+
+                - `'estimated_growth_rates'` - the estimated growth rates based on ``growth_iters``.
 
         Notes
         -----
@@ -163,6 +166,7 @@ class WOTKernel(Kernel, error=_error):
             density_normalize=False,
             check_irreducibility=False,
         )
+        self.adata.obs["estimated_growth_rates"] = self.growth_rates[f"g{growth_iters}"]
 
         logg.info("    Finish", time=start)
 

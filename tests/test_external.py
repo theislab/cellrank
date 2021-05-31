@@ -112,6 +112,9 @@ class TestWOTKernel:
         np.testing.assert_array_equal(
             ok.growth_rates.columns, [f"g{i}" for i in range(n_iters + 1)]
         )
+        np.testing.assert_array_equal(
+            adata_large.obs["estimated_growth_rates"], ok.growth_rates[f"g{n_iters}"]
+        )
         assert ok.params["growth_iters"] == n_iters
 
     def test_normal_run(self, adata_large: AnnData):
