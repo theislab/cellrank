@@ -82,6 +82,10 @@ class WOTKernel(Kernel, error=_error):
         cost_matrices: Optional[
             Union[str, Mapping[Tuple[float, float], np.ndarray]]
         ] = None,
+        lambda1: float = 1,
+        lambda2: float = 50,
+        epsilon: float = 0.05,
+        growth_iters: int = 1,
         solver: Literal["fixed_iters", "duality_gap"] = "duality_gap",
         growth_rate_key: Optional[str] = None,
         **kwargs: Any,
@@ -95,6 +99,15 @@ class WOTKernel(Kernel, error=_error):
             Cost matrices for each consecutive time pair.
             If a :class:`str`, it specifies a key in :attr:`adata` ``.layers``: or :attr:`adata` ``.obsm``
             containing cell features that are used to compute cost matrices. If `None`, use `WOT`'s default.
+        lambda1
+            Regularization parameter for the marginal constraint on :math:`p`, the transport map row sums.
+            Smaller value is useful when precise information about the growth rate is not present.
+        lambda2
+            Regularization parameter for the marginal constraint on :math:`q`, the transport map column sums.
+        epsilon
+            Entropy regularization parameter. Larger value gives more entropic descendant distributions.
+        growth_iters
+            Number of iterations for growth rate estimates.
         solver
             Which solver to use.
         growth_rate_key
@@ -105,17 +118,21 @@ class WOTKernel(Kernel, error=_error):
         Returns
         -------
         :class:`cellrank.external.kernels.WOTKernel`
-            Makes :attr:`transition_matrix` and :attr:`growth_rates` available.
+            Makes :attr:`transition_matrix`, :attr:`transition_maps` and :attr:`growth_rates` available.
+
+        Notes
+        -----
+        For more information about WOT, see the official `tutorial <https://broadinstitute.github.io/wot/tutorial/>`_.
         """
         # disallow these params (because they e.g. subset the data)
         _ = kwargs.pop("cell_day_filter", None)
         _ = kwargs.pop("covariate_field", None)
         _ = kwargs.pop("ncounts", None)
         _ = kwargs.pop("ncells", None)
-        kwargs.setdefault("epsilon", 0.05)
-        kwargs.setdefault("lambda1", 1)
-        kwargs.setdefault("lamdda2", 50)
-        kwargs["growth_iters"] = max(kwargs.get("growth_iters", 1), 1)
+        kwargs["lambda1"] = lambda1
+        kwargs["lambda2"] = lambda2
+        kwargs["epsilon"] = epsilon
+        kwargs["growth_iters"] = max(growth_iters, 1)
 
         start = logg.info(
             "Computing transition matrix using Waddington optimal transport"
