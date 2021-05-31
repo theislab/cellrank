@@ -81,7 +81,7 @@ class ExperimentalTimeKernel(Kernel, ABC):
             )
 
         if not exp_time.cat.ordered:
-            logg.warning("Time categories are not ordered. Using default order")
+            logg.warning("Time categories are not ordered. Using ascending order")
             exp_time.cat = exp_time.cat.as_ordered()
 
         self._exp_time = pd.Series(
