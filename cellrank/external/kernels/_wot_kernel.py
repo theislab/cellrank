@@ -47,6 +47,34 @@ class WOTKernel(Kernel, error=_error):
         Key in :attr:`adata` ``.obs`` where experimental time is stored.
         The experimental time can be of either of a numeric or an ordered categorical type.
     %(cond_num)s
+
+    Examples
+    --------
+    Workflow::
+
+        import scanpy as sc
+        import cellrank as cr
+        from cellrank.external.kernels import WOTKernel
+
+        adata = cr.datasets.lung()
+
+        # filter, normalize and annotate hvg's
+        sc.pp.filter_genes(adata, min_cells=10)
+        sc.pp.normalize_total(adata)
+        sc.pp.log1p(adata)
+        sc.pp.highly_variable_genes(adata)
+
+        # estimate proliferation and apoptosis from gene sets (see. e.g. WOT tutorial for example lists)
+        sc.tl.score_genes(adata, gene_list=proliferation_genes, score_name='proliferation')
+        sc.tl.score_genes(adata, gene_list=apoptosis_genes, score_name='apoptosis')
+
+        # initialize kernel, estimate initial growth rate based on scores from above
+        ot = WOTKernel(adata, time_key='day')
+        ot.compute_initial_growth_rates(proliferation_key='proliferation', apoptosis_key='apoptosis',
+                                 key_added='initial_growth_rates')
+
+        # compute transport maps, aggregate into one single transition matrix
+        ot.compute_transition_matrix(growth_rate_key='initial_growth_rates', growth_iters=3)
     """  # noqa: E501
 
     __import_error_message__ = (
