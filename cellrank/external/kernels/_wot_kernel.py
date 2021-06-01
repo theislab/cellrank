@@ -37,7 +37,8 @@ class WOTKernel(Kernel, error=_error):
     """
     Waddington optimal transport kernel from [Schiebinger19]_.
 
-    This class requires the `wot` package, which can be installed `pip install git+https://github.com/broadinstitute/wot`.
+    This class requires the `wot` package, which can be installed as
+    `pip install git+https://github.com/broadinstitute/wot`.
 
     Parameters
     ----------
@@ -58,24 +59,27 @@ class WOTKernel(Kernel, error=_error):
 
         adata = cr.datasets.lung()
 
-        # filter, normalize and annotate hvg's
+        # filter, normalize and annotate HVGs
         sc.pp.filter_genes(adata, min_cells=10)
         sc.pp.normalize_total(adata)
         sc.pp.log1p(adata)
         sc.pp.highly_variable_genes(adata)
 
         # estimate proliferation and apoptosis from gene sets (see. e.g. WOT tutorial for example lists)
+        proliferation_genes = ...
+        apoptosis_genes = ...
         sc.tl.score_genes(adata, gene_list=proliferation_genes, score_name='proliferation')
         sc.tl.score_genes(adata, gene_list=apoptosis_genes, score_name='apoptosis')
 
         # initialize kernel, estimate initial growth rate based on scores from above
         ot = WOTKernel(adata, time_key='day')
-        ot.compute_initial_growth_rates(proliferation_key='proliferation', apoptosis_key='apoptosis',
-                                 key_added='initial_growth_rates')
+        ot.compute_initial_growth_rates(proliferation_key='proliferation',
+                                        apoptosis_key='apoptosis',
+                                        key_added='initial_growth_rates')
 
         # compute transport maps, aggregate into one single transition matrix
         ot.compute_transition_matrix(growth_rate_key='initial_growth_rates', growth_iters=3)
-    """  # noqa: E501
+    """
 
     __import_error_message__ = (
         "Unable to import the kernel. Please install `wot` first as "
@@ -150,7 +154,8 @@ class WOTKernel(Kernel, error=_error):
         be saved in :attr:`adata` ``.obs``. These rates are usually computed based on a gene set using a scoring
         function like :func:`scanpy.tl.score_genes`. If you don't have access to such gene sets, don't worry,
         you can use WOT without an estimate of initial growth rates.
-        To learn more, please see WOT's official `tutorial <https://broadinstitute.github.io/wot/tutorial/>`_.
+
+        For more information about WOT, see the official `tutorial <https://broadinstitute.github.io/wot/tutorial/>`_.
         """
 
         def logistic(x: np.ndarray, L: float, k: float, x0: float = 0) -> np.ndarray:
@@ -216,7 +221,7 @@ class WOTKernel(Kernel, error=_error):
         ----------
         cost_matrices
             Cost matrices for each consecutive pair of time points.
-            If a :class:`str`, it specifies a key in :attr:`adata` ``.layers``: or :attr:`adata` ``.obsm``
+            If a :class:`str`, it specifies a key in :attr:`adata` ``.layers`` or :attr:`adata` ``.obsm``
             containing cell features that are used to compute cost matrices. If `None`, use `WOT`'s default, i.e.
             compute distances in PCA space derived from :attr:`adata` ``.X`` for each time point pair separately.
         lambda1
@@ -233,12 +238,12 @@ class WOTKernel(Kernel, error=_error):
             Which solver to use.
         growth_rate_key
             Key in :attr:`adata` ``.obs`` where initial cell growth rates are stored.
-            See :meth:`cellrank.external.kernels.WOTKernel.compute_initial_growth_rates` to estimate them from data.
+            See :meth:`cellrank.external.kernels.WOTKernel.compute_initial_growth_rates` on how to estimate them.
         use_highly_variable
             Key in :attr:`adata` ``.var`` where highly variable genes are stored.
             If `True`, use `'highly_variable'`. If `None`, use all genes.
         uniform
-            If `True`, use normalized matrix of 1s for the transitions within the last time point.
+            If `True`, use row-normalized matrix of 1s for transitions within the last time point.
             Otherwise, use diagonal matrix with 1s on the diagonal.
         kwargs
             Additional keyword arguments for OT configuration.
@@ -247,7 +252,7 @@ class WOTKernel(Kernel, error=_error):
         -------
         :class:`cellrank.external.kernels.WOTKernel`
             Makes :attr:`transition_matrix`, :attr:`transition_maps` and :attr:`growth_rates` available.
-            It also  modifies :attr:`anndata.AnnData.obs` with the following key:
+            It also modifies :attr:`anndata.AnnData.obs` with the following key:
 
                 - `'estimated_growth_rates'` - the estimated final growth rates.
 
