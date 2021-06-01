@@ -115,6 +115,14 @@ class WOTKernel(Kernel, error=_error):
         -------
         :class:`pandas.Series`
             The estimated initial growth rates if ``key_added = None``, otherwise `None`.
+
+        Notes
+        -----
+        Note that to run this method, you need to have estimated cell-level proliferation/apoptosis rates which should
+        be saved in `adata.obs`. These rates are usually computed based on a gene set using a scoring
+        function like scanpy's :func:`sc.tl.score_genes`. If you don't have access to such gene sets, don't worry,
+        you can use WOT without an estimate of initial growth rates. To learn more, please see WOT's official
+        `tutorial <https://broadinstitute.github.io/wot/tutorial/>`_.
         """
 
         def logistic(x: np.ndarray, L: float, k: float, x0: float = 0) -> np.ndarray:
@@ -169,12 +177,18 @@ class WOTKernel(Kernel, error=_error):
         """
         Compute transition matrix using Waddington OT [Schiebinger19]_.
 
+        Computes transport maps linking together pairs of time-points for time-series single cell data using unbalanced
+        optimal transport, taking into account cell birth and death rates. From the sequence of transition maps linking
+        pairs of sequential time-points, we construct one large transition matrix which contains the transport maps as
+        blocks on the off-diagonal.
+
         Parameters
         ----------
         cost_matrices
-            Cost matrices for each consecutive time pair.
+            Cost matrices for each consecutive pair of time-points.
             If a :class:`str`, it specifies a key in :attr:`adata` ``.layers``: or :attr:`adata` ``.obsm``
-            containing cell features that are used to compute cost matrices. If `None`, use `WOT`'s default.
+            containing cell features that are used to compute cost matrices. If `None`, use `WOT`'s default, i.e.
+            compute PCA for pairs of time-points.
         lambda1
             Regularization parameter for the marginal constraint on :math:`p`, the transport map row sums.
             Smaller value is useful when precise information about the growth rate is not present.
@@ -183,11 +197,13 @@ class WOTKernel(Kernel, error=_error):
         epsilon
             Entropy regularization parameter. Larger value gives more entropic descendant distributions.
         growth_iters
-            Number of iterations for growth rate estimates.
+            Number of iterations for growth rate estimates. If growth rates are not known, consider using more
+            iterations.
         solver
             Which solver to use.
         growth_rate_key
             Key in :attr:`adata` ``.obs`` where initial cell growth rates are stored.
+            See :meth:`cellrank.external.kernels.WOTKernel.compute_initial_growth_rates` to estimate them from data.
         kwargs
             Additional keyword arguments for OT configuration.
 
