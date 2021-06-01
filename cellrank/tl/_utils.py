@@ -28,7 +28,7 @@ from numpy.linalg import norm as d_norm
 from scipy.sparse import eye as speye
 from scipy.sparse import diags, issparse, spmatrix, csr_matrix, isspmatrix_csr
 from sklearn.cluster import KMeans
-from pandas.api.types import infer_dtype, is_categorical_dtype
+from pandas.api.types import infer_dtype, is_bool_dtype, is_categorical_dtype
 from scipy.sparse.linalg import norm as sparse_norm
 
 import matplotlib.colors as mcolors
@@ -1625,3 +1625,25 @@ def _create_initial_terminal_annotations(
     # write to AnnData
     adata.obs[key_added] = cats_merged
     adata.uns[f"{key_added}_colors"] = colors_merged
+
+
+def _maybe_subset_hvgs(
+    adata: AnnData, use_highly_variable: Optional[Union[bool, str]]
+) -> AnnData:
+    if use_highly_variable in (None, False):
+        return adata
+    key = "highly_variable" if use_highly_variable is True else use_highly_variable
+
+    if key not in adata.var.keys():
+        logg.warning(f"Unable to find HVGs in `adata.var[{key!r}]`. Using all genes")
+        return adata
+
+    if not is_bool_dtype(adata.var[key]):
+        logg.warning(
+            f"Expected `adata.var[{key!r}]` to be of bool dtype, "
+            f"found `{infer_dtype(adata.var[key])}`. Using all genes"
+        )
+        return adata
+
+    logg.info(f"Using `{np.sum(adata.var[key])}` HVGs from `adata.var[{key!r}]`")
+    return adata[:, adata.var[key]]

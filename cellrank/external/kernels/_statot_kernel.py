@@ -23,7 +23,7 @@ except ImportError as e:
 
 
 @d.dedent
-class OTKernel(OTKernel_, error=_error):
+class StationaryOTKernel(OTKernel_, error=_error):
     """
     Stationary optimal transport kernel from [Zhang21]_.
 
@@ -76,7 +76,7 @@ class OTKernel(OTKernel_, error=_error):
         C: Optional[np.ndarray] = None,
         verbose: bool = False,
         **kwargs: Any,
-    ) -> "OTKernel":
+    ) -> "StationaryOTKernel":
         """
         Compute transition matrix using stationary OT [Zhang21]_.
 
@@ -113,7 +113,7 @@ class OTKernel(OTKernel_, error=_error):
 
         Returns
         -------
-        :class:`cellrank.external.kernels.OTKernel`
+        :class:`cellrank.external.kernels.StationaryOTKernel`
             Makes :attr:`transition_matrix` available.
         """
         if method not in ("ent", "quad", "unbal"):

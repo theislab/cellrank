@@ -11,7 +11,7 @@ from scipy.sparse import bmat, spdiags, spmatrix
 
 from cellrank import logging as logg
 from cellrank.ul._docs import d
-from cellrank.tl._utils import _normalize
+from cellrank.tl._utils import _normalize, _maybe_subset_hvgs
 
 _error = None
 try:
@@ -119,10 +119,10 @@ class WOTKernel(Kernel, error=_error):
         Notes
         -----
         Note that to run this method, you need to have estimated cell-level proliferation/apoptosis rates which should
-        be saved in `adata.obs`. These rates are usually computed based on a gene set using a scoring
-        function like scanpy's :func:`sc.tl.score_genes`. If you don't have access to such gene sets, don't worry,
-        you can use WOT without an estimate of initial growth rates. To learn more, please see WOT's official
-        `tutorial <https://broadinstitute.github.io/wot/tutorial/>`_.
+        be saved in :attr:`adata` ``.obs``. These rates are usually computed based on a gene set using a scoring
+        function like :func:`scanpy.tl.score_genes`. If you don't have access to such gene sets, don't worry,
+        you can use WOT without an estimate of initial growth rates.
+        To learn more, please see WOT's official `tutorial <https://broadinstitute.github.io/wot/tutorial/>`_.
         """
 
         def logistic(x: np.ndarray, L: float, k: float, x0: float = 0) -> np.ndarray:
@@ -172,23 +172,24 @@ class WOTKernel(Kernel, error=_error):
         growth_iters: int = 1,
         solver: Literal["fixed_iters", "duality_gap"] = "duality_gap",
         growth_rate_key: Optional[str] = None,
+        use_highly_variable: Optional[Union[str, bool]] = True,
         **kwargs: Any,
     ) -> "WOTKernel":
         """
         Compute transition matrix using Waddington OT [Schiebinger19]_.
 
-        Computes transport maps linking together pairs of time-points for time-series single cell data using unbalanced
+        Computes transport maps linking together pairs of time points for time-series single cell data using unbalanced
         optimal transport, taking into account cell birth and death rates. From the sequence of transition maps linking
-        pairs of sequential time-points, we construct one large transition matrix which contains the transport maps as
-        blocks on the off-diagonal.
+        pairs of sequential time points, we construct one large transition matrix which contains the normalized
+        transport maps as blocks on the 1st upper diagonal.
 
         Parameters
         ----------
         cost_matrices
-            Cost matrices for each consecutive pair of time-points.
+            Cost matrices for each consecutive pair of time points.
             If a :class:`str`, it specifies a key in :attr:`adata` ``.layers``: or :attr:`adata` ``.obsm``
             containing cell features that are used to compute cost matrices. If `None`, use `WOT`'s default, i.e.
-            compute PCA for pairs of time-points.
+            compute distances in PCA space derived from :attr:`adata` ``.X`` for each time point pair separately.
         lambda1
             Regularization parameter for the marginal constraint on :math:`p`, the transport map row sums.
             Smaller value is useful when precise information about the growth rate is not present.
@@ -204,6 +205,9 @@ class WOTKernel(Kernel, error=_error):
         growth_rate_key
             Key in :attr:`adata` ``.obs`` where initial cell growth rates are stored.
             See :meth:`cellrank.external.kernels.WOTKernel.compute_initial_growth_rates` to estimate them from data.
+        use_highly_variable
+            Key in :attr:`adata` ``.var`` where highly variable genes are stored.
+            If `True`, use `'highly_variable'`. If `None`, use all genes.
         kwargs
             Additional keyword arguments for OT configuration.
 
@@ -213,7 +217,7 @@ class WOTKernel(Kernel, error=_error):
             Makes :attr:`transition_matrix`, :attr:`transition_maps` and :attr:`growth_rates` available.
             It also  modifies :attr:`anndata.AnnData.obs` with the following key:
 
-                - `'estimated_growth_rates'` - the estimated growth rates based on ``growth_iters``.
+                - `'estimated_growth_rates'` - the estimated final growth rates.
 
         Notes
         -----
@@ -233,12 +237,14 @@ class WOTKernel(Kernel, error=_error):
             "Computing transition matrix using Waddington optimal transport"
         )
 
-        cost_matrices, cmat_param = self._generate_cost_matrices(cost_matrices)
+        adata = _maybe_subset_hvgs(self.adata, use_highly_variable=use_highly_variable)
+        cost_matrices, cmat_param = self._generate_cost_matrices(adata, cost_matrices)
         if self._reuse_cache(
             {
                 "cost_matrices": cmat_param,
                 "solver": solver,
                 "growth_rate_key": growth_rate_key,
+                "use_highly_variable": use_highly_variable,
                 **kwargs,
             },
             time=start,
@@ -246,6 +252,7 @@ class WOTKernel(Kernel, error=_error):
             return self
 
         tmat = self._compute_pairwise_tmats(
+            adata,
             cost_matrices=cost_matrices,
             solver=solver,
             growth_rate_field=growth_rate_key,
@@ -266,6 +273,7 @@ class WOTKernel(Kernel, error=_error):
 
     def _compute_pairwise_tmats(
         self,
+        adata: AnnData,
         cost_matrices: Optional[
             Union[str, Mapping[Tuple[float, float], np.ndarray]]
         ] = None,
@@ -274,7 +282,7 @@ class WOTKernel(Kernel, error=_error):
         **kwargs,
     ) -> Dict[Tuple[float, float], AnnData]:
         self._ot_model = wot.ot.OTModel(
-            self.adata,
+            adata,
             day_field=self._time_key,
             covariate_field=None,
             growth_rate_field=growth_rate_field,
@@ -301,7 +309,7 @@ class WOTKernel(Kernel, error=_error):
 
         return self._tmats
 
-    def _restich_tmats(self, tmaps: Mapping[Union[float, float], AnnData]) -> spmatrix:
+    def _restich_tmats(self, tmaps: Mapping[Tuple[float, float], AnnData]) -> spmatrix:
         blocks = [[None] * (len(tmaps) + 1) for _ in range(len(tmaps) + 1)]
         nrows, ncols = 0, 0
         obs_names, growth_rates = [], []
@@ -337,6 +345,7 @@ class WOTKernel(Kernel, error=_error):
 
     def _generate_cost_matrices(
         self,
+        adata: AnnData,
         cost_matrices: Optional[
             Union[str, Mapping[Tuple[float, float], np.ndarray]]
         ] = None,
@@ -382,11 +391,11 @@ class WOTKernel(Kernel, error=_error):
                 cost_matrices = None
 
             try:
-                features = self.adata._get_X(layer=cost_matrices)
+                features = adata._get_X(layer=cost_matrices)
                 modifier = "layer"
             except KeyError:
                 try:
-                    features = self.adata.obsm[cost_matrices]
+                    features = adata.obsm[cost_matrices]
                     modifier = "obsm"
                 except KeyError:
                     raise KeyError(
@@ -394,7 +403,7 @@ class WOTKernel(Kernel, error=_error):
                     ) from None
 
             cmats = {}
-            for tpair in timepoints:
+            for tpair in tqdm(timepoints, unit="cost matrix"):
                 start_ixs = np.where(self.experimental_time == tpair[0])[0]
                 end_ixs = np.where(self.experimental_time == tpair[1])[0]
 

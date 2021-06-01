@@ -13,7 +13,7 @@ Kernels
 .. autosummary::
     :toctree: api
 
-    external.kernels.OTKernel
+    external.kernels.StationaryOTKernel
     external.kernels.WOTKernel
 
 Estimators
