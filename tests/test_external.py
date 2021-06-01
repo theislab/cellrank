@@ -135,6 +135,19 @@ class TestWOTKernel:
             assert gr is None
             assert "gr" in adata_large.obs
 
+    @pytest.mark.parametrize("uniform", [False, True])
+    def test_uniform(self, adata_large: AnnData, uniform: bool):
+        ok = cre.kernels.WOTKernel(
+            adata_large, time_key="age(days)"
+        ).compute_transition_matrix(uniform=uniform)
+        ixs = np.where(adata_large.obs["age(days)"] == 35.0)[0]
+
+        T = ok.transition_matrix[ixs, :][:, ixs].A
+        if uniform:
+            np.testing.assert_allclose(T, np.ones_like(T) / float(len(ixs)))
+        else:
+            np.testing.assert_allclose(T, np.eye(len(ixs)))
+
     def test_normal_run(self, adata_large: AnnData):
         ok = cre.kernels.WOTKernel(adata_large, time_key="age(days)")
         ok = ok.compute_transition_matrix()

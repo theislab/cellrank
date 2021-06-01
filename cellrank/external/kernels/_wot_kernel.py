@@ -173,6 +173,7 @@ class WOTKernel(Kernel, error=_error):
         solver: Literal["fixed_iters", "duality_gap"] = "duality_gap",
         growth_rate_key: Optional[str] = None,
         use_highly_variable: Optional[Union[str, bool]] = True,
+        uniform: bool = False,
         **kwargs: Any,
     ) -> "WOTKernel":
         """
@@ -208,6 +209,9 @@ class WOTKernel(Kernel, error=_error):
         use_highly_variable
             Key in :attr:`adata` ``.var`` where highly variable genes are stored.
             If `True`, use `'highly_variable'`. If `None`, use all genes.
+        uniform
+            If `True`, use normalized matrix of 1s for the transitions within the last time point.
+            Otherwise, use diagonal matrix with 1s on the diagonal.
         kwargs
             Additional keyword arguments for OT configuration.
 
@@ -258,7 +262,7 @@ class WOTKernel(Kernel, error=_error):
             growth_rate_field=growth_rate_key,
             **kwargs,
         )
-        tmat = self._restich_tmats(tmat)
+        tmat = self._restich_tmats(tmat, uniform)
 
         self._compute_transition_matrix(
             matrix=tmat,
@@ -309,7 +313,9 @@ class WOTKernel(Kernel, error=_error):
 
         return self._tmats
 
-    def _restich_tmats(self, tmaps: Mapping[Tuple[float, float], AnnData]) -> spmatrix:
+    def _restich_tmats(
+        self, tmaps: Mapping[Tuple[float, float], AnnData], uniform: bool = False
+    ) -> spmatrix:
         blocks = [[None] * (len(tmaps) + 1) for _ in range(len(tmaps) + 1)]
         nrows, ncols = 0, 0
         obs_names, growth_rates = [], []
@@ -323,7 +329,9 @@ class WOTKernel(Kernel, error=_error):
         obs_names.extend(tmap.var_names)
 
         n = self.adata.n_obs - nrows
-        blocks[-1][-1] = np.ones((n, n)) / float(n)
+        blocks[-1][-1] = (
+            (np.ones((n, n)) / float(n)) if uniform else spdiags([1] * n, 0, n, n)
+        )
         # prevent block from disappearing
         n = blocks[0][1].shape[0]
         blocks[0][0] = spdiags([], 0, n, n)
@@ -354,11 +362,11 @@ class WOTKernel(Kernel, error=_error):
         timepoints = list(zip(timepoints[:-1], timepoints[1:]))
 
         if cost_matrices is None:
-            logg.debug("Using default cost matrices")
+            logg.info("Using default cost matrices")
             return {tpair: None for tpair in timepoints}, "default"
 
         if isinstance(cost_matrices, dict):
-            logg.debug("Using precomputed cost matrices")
+            logg.info("Using precomputed cost matrices")
 
             cmats = {}
             for tpair in timepoints:
@@ -386,7 +394,7 @@ class WOTKernel(Kernel, error=_error):
             return cmats, nstr("precomputed")
 
         if isinstance(cost_matrices, str):
-            logg.debug(f"Computing cost matrices using `{cost_matrices!r}` key")
+            logg.info(f"Computing cost matrices using `{cost_matrices!r}` key")
             if cost_matrices == "X":
                 cost_matrices = None
 
