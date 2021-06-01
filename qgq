@@ -1,0 +1,103 @@
+[1mdiff --git a/cellrank/external/kernels/_wot_kernel.py b/cellrank/external/kernels/_wot_kernel.py[m
+[1mindex c8b45bf..3ada518 100644[m
+[1m--- a/cellrank/external/kernels/_wot_kernel.py[m
+[1m+++ b/cellrank/external/kernels/_wot_kernel.py[m
+[36m@@ -173,6 +173,7 @@[m [mclass WOTKernel(Kernel, error=_error):[m
+         solver: Literal["fixed_iters", "duality_gap"] = "duality_gap",[m
+         growth_rate_key: Optional[str] = None,[m
+         use_highly_variable: Optional[Union[str, bool]] = True,[m
+[32m+[m[32m        uniform: bool = False,[m
+         **kwargs: Any,[m
+     ) -> "WOTKernel":[m
+         """[m
+[36m@@ -208,6 +209,9 @@[m [mclass WOTKernel(Kernel, error=_error):[m
+         use_highly_variable[m
+             Key in :attr:`adata` ``.var`` where highly variable genes are stored.[m
+             If `True`, use `'highly_variable'`. If `None`, use all genes.[m
+[32m+[m[32m        uniform[m
+[32m+[m[32m            If `True`, use normalized matrix of 1s for the transitions within the last time point.[m
+[32m+[m[32m            Otherwise, use diagonal matrix with 1s on the diagonal.[m
+         kwargs[m
+             Additional keyword arguments for OT configuration.[m
+ [m
+[36m@@ -258,7 +262,7 @@[m [mclass WOTKernel(Kernel, error=_error):[m
+             growth_rate_field=growth_rate_key,[m
+             **kwargs,[m
+         )[m
+[31m-        tmat = self._restich_tmats(tmat)[m
+[32m+[m[32m        tmat = self._restich_tmats(tmat, uniform)[m
+ [m
+         self._compute_transition_matrix([m
+             matrix=tmat,[m
+[36m@@ -309,7 +313,7 @@[m [mclass WOTKernel(Kernel, error=_error):[m
+ [m
+         return self._tmats[m
+ [m
+[31m-    def _restich_tmats(self, tmaps: Mapping[Tuple[float, float], AnnData]) -> spmatrix:[m
+[32m+[m[32m    def _restich_tmats(self, tmaps: Mapping[Tuple[float, float], AnnData], uniform: bool = False) -> spmatrix:[m
+         blocks = [[None] * (len(tmaps) + 1) for _ in range(len(tmaps) + 1)][m
+         nrows, ncols = 0, 0[m
+         obs_names, growth_rates = [], [][m
+[36m@@ -323,7 +327,7 @@[m [mclass WOTKernel(Kernel, error=_error):[m
+         obs_names.extend(tmap.var_names)[m
+ [m
+         n = self.adata.n_obs - nrows[m
+[31m-        blocks[-1][-1] = np.ones((n, n)) / float(n)[m
+[32m+[m[32m        blocks[-1][-1] = (np.ones((n, n)) / float(n)) if uniform else spdiags([1] * n, 0, n, n)[m
+         # prevent block from disappearing[m
+         n = blocks[0][1].shape[0][m
+         blocks[0][0] = spdiags([], 0, n, n)[m
+[36m@@ -354,11 +358,11 @@[m [mclass WOTKernel(Kernel, error=_error):[m
+         timepoints = list(zip(timepoints[:-1], timepoints[1:]))[m
+ [m
+         if cost_matrices is None:[m
+[31m-            logg.debug("Using default cost matrices")[m
+[32m+[m[32m            logg.info("Using default cost matrices")[m
+             return {tpair: None for tpair in timepoints}, "default"[m
+ [m
+         if isinstance(cost_matrices, dict):[m
+[31m-            logg.debug("Using precomputed cost matrices")[m
+[32m+[m[32m            logg.info("Using precomputed cost matrices")[m
+ [m
+             cmats = {}[m
+             for tpair in timepoints:[m
+[36m@@ -386,7 +390,7 @@[m [mclass WOTKernel(Kernel, error=_error):[m
+             return cmats, nstr("precomputed")[m
+ [m
+         if isinstance(cost_matrices, str):[m
+[31m-            logg.debug(f"Computing cost matrices using `{cost_matrices!r}` key")[m
+[32m+[m[32m            logg.info(f"Computing cost matrices using `{cost_matrices!r}` key")[m
+             if cost_matrices == "X":[m
+                 cost_matrices = None[m
+ [m
+[1mdiff --git a/tests/test_external.py b/tests/test_external.py[m
+[1mindex 2a0ed18..b96eec0 100644[m
+[1m--- a/tests/test_external.py[m
+[1m+++ b/tests/test_external.py[m
+[36m@@ -54,7 +54,7 @@[m [mclass TestOTKernel:[m
+         assert isinstance(ok.params, dict)[m
+ [m
+ [m
+[31m-@pytest.mark.skip("wot on PyPI doesn't support passing cost matrices")[m
+[32m+[m[32m#@pytest.mark.skip("wot on PyPI doesn't support passing cost matrices")[m
+ class TestWOTKernel:[m
+     def test_inversion_updates_adata(self, adata_large: AnnData):[m
+         key = "age(days)"[m
+[36m@@ -135,6 +135,17 @@[m [mclass TestWOTKernel:[m
+             assert gr is None[m
+             assert "gr" in adata_large.obs[m
+ [m
+[32m+[m[32m    @pytest.mark.parametrize("uniform", [False, True])[m
+[32m+[m[32m    def test_uniform(self, adata_large: AnnData, uniform: bool):[m
+[32m+[m[32m        ok = cre.kernels.WOTKernel(adata_large, time_key="age(days)").compute_transition_matrix(uniform=uniform)[m
+[32m+[m[32m        ixs = np.where(adata_large.obs["age(days)"] == 35.0)[0][m
+[32m+[m
+[32m+[m[32m        T = ok.transition_matrix[ixs, :][:, ixs].A[m
+[32m+[m[32m        if uniform:[m
+[32m+[m[32m            np.testing.assert_allclose(T, np.ones_like(T) / float(len(ixs)))[m
+[32m+[m[32m        else:[m
+[32m+[m[32m            np.testing.assert_allclose(T, np.eye(len(ixs)))[m
+[32m+[m
+     def test_normal_run(self, adata_large: AnnData):[m
+         ok = cre.kernels.WOTKernel(adata_large, time_key="age(days)")[m
+         ok = ok.compute_transition_matrix()[m
