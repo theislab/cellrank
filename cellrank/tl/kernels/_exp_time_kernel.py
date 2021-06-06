@@ -21,7 +21,7 @@ from cellrank.tl.kernels._base_kernel import AnnData
 @d.dedent
 class ExperimentalTimeKernel(Kernel, ABC):
     """
-    Base kernel class which computes directed transition probabilities based on experimental time.
+    Base class which computes directed transition probabilities based on experimental time.
 
     %(density_correction)s
 

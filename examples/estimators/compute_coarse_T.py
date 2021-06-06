@@ -4,9 +4,9 @@ Compute coarse-grained transition matrix
 
 This example shows how to compute and plot the coarse-grained transition matrix among the set of macrostates.
 
-We computed the macrostates using Generalized Perron Cluster Cluster Analysis [GPCCA18]_ [Reuter19]_, see the example
-:ref:`sphx_glr_auto_examples_estimators_compute_macrostates.py`. The coarse-grained transition matrix shows
-transitional behavior among the set of macrostates and may be used to classify these states as initial,
+We computed the macrostates using Generalized Perron Cluster Cluster Analysis :cite:`reuter:18` :cite:`reuter:19`,
+see the example :ref:`sphx_glr_auto_examples_estimators_compute_macrostates.py`. The coarse-grained transition matrix
+shows transitional behavior among the set of macrostates and may be used to classify these states as initial,
 intermediate or terminal.
 """
 

@@ -2,7 +2,7 @@
 Plot directed PAGA
 ------------------
 
-This example shows how to compute and plot a directed version of the popular PAGA algorithm [Wolf19]_.
+This example shows how to compute and plot a directed version of the popular PAGA algorithm :cite:`wolf:19`.
 
 In classical PAGA plot, nodes correspond to clusters and edge thickness denotes transcriptomic similarity.
 We introduce a new directed version of PAGA where directed edges reflect local velocity flow. We add the possibility

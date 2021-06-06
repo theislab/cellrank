@@ -59,7 +59,8 @@ def cluster_fates(
     Plot aggregate lineage probabilities at a cluster level.
 
     This can be used to investigate how likely a certain cluster is to go to the %(terminal)s states,or in turn to have
-    descended from the %(initial)s states. For mode `{m.PAGA.s!r}` and `{m.PAGA_PIE.s!r}`, we use *PAGA*, see [Wolf19]_.
+    descended from the %(initial)s states.
+    For mode `{m.PAGA.s!r}` and `{m.PAGA_PIE.s!r}`, we use *PAGA*, see :cite:`wolf:19`.
 
     Parameters
     ----------

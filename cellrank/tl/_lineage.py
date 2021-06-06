@@ -733,11 +733,10 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         method
             The method used to compute the degree of lineage priming. Valid options are:
 
-                - `'kl_divergence'`: as in [Velten17]_, computes KL-divergence between the fate probabilities of a
-                  cell and the average fate probabilities. Computation of average fate probabilities can be restricted
+                - `'kl_divergence'`: as in :cite:`velten:17`, computes KL-divergence between the fate probabilities of
+                  a cell and the average fate probabilities. Computation of average fate probabilities can be restricted
                   to a set of user-defined ``early_cells``.
-                - `'entropy'`: as in [Setty19]_, computes entropy over a cell's fate probabilities.
-
+                - `'entropy'`: as in :cite:`setty:19`, computes entropy over a cell's fate probabilities.
         early_cells
             Cell ids or a mask marking early cells. If `None`, use all cells. Only used when ``method='kl_divergence'``.
 

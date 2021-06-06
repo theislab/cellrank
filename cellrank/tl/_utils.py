@@ -359,7 +359,7 @@ def _correlation_test(
     **kwargs,
 ) -> pd.DataFrame:
     """
-    Perform a stastical test.
+    Perform a statistical test.
 
     Return NaN for genes which don't vary across cells.
 
@@ -384,14 +384,13 @@ def _correlation_test(
 
     Returns
     -------
-    :class:`pandas.DataFrame`
-        Dataframe of shape ``(n_genes, n_lineages * 5)`` containing the following columns, 1 for each lineage:
+    Dataframe of shape ``(n_genes, n_lineages * 5)`` containing the following columns, 1 for each lineage:
 
-            - ``{lineage} corr`` - correlation between the gene expression and absorption probabilities.
-            - ``{lineage} pval`` - calculated p-values for double-sided test.
-            - ``{lineage} qval`` - corrected p-values using Benjamini-Hochberg method at level `0.05`.
-            - ``{lineage} ci low`` - lower bound of the ``confidence_level`` correlation confidence interval.
-            - ``{lineage} ci high`` - upper bound of the ``confidence_level`` correlation confidence interval.
+        - ``{lineage} corr`` - correlation between the gene expression and absorption probabilities.
+        - ``{lineage} pval`` - calculated p-values for double-sided test.
+        - ``{lineage} qval`` - corrected p-values using Benjamini-Hochberg method at level `0.05`.
+        - ``{lineage} ci low`` - lower bound of the ``confidence_level`` correlation confidence interval.
+        - ``{lineage} ci high`` - upper bound of the ``confidence_level`` correlation confidence interval.
     """
 
     corr, pvals, ci_low, ci_high = _correlation_test_helper(
@@ -661,7 +660,7 @@ def _partition(
 
     If *G* describes the state space of a Markov chain, then communication classes are often
     characterized as either recurrent or transient. Intuitively, once the process enters a recurrent class, it will
-    never leave it again. See [Tolver16]_ for more formal definition.
+    never leave it again.
 
     Parameters
     ----------

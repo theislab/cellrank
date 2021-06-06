@@ -125,13 +125,13 @@ class ThresholdSchemeABC(ABC):
 
 class HardThresholdScheme(ThresholdSchemeABC):
     """
-    Thresholding scheme inspired by Palantir [Setty19]_.
+    Thresholding scheme inspired by *Palantir* :cite:`setty:19`.
 
-    Note that this won't exactly reproduce the original Palantir results, for three reasons:
+    Note that this won't exactly reproduce the original *Palantir* results, for three reasons:
 
-        - Palantir computes the KNN graph in a scaled space of diffusion components.
-        - Palantir uses its own pseudotime to bias the KNN graph which is not implemented here.
-        - Palantir uses a slightly different mechanism to ensure the graph remains connected when removing edges
+        - *Palantir* computes the KNN graph in a scaled space of diffusion components.
+        - *Palantir* uses its own pseudotime to bias the KNN graph which is not implemented here.
+        - *Palantir* uses a slightly different mechanism to ensure the graph remains connected when removing edges
           that point into the "pseudotime past".
     """
 
@@ -180,7 +180,7 @@ class HardThresholdScheme(ThresholdSchemeABC):
 
 class SoftThresholdScheme(ThresholdSchemeABC):
     """
-    Thresholding scheme inspired by [VIA21]_.
+    Thresholding scheme inspired by :cite:`stassen:21`.
 
     The idea is to downweight edges that points against the direction of increasing pseudotime. Essentially, the
     further "behind" a query cell is in pseudotime with respect to the current reference cell, the more penalized will

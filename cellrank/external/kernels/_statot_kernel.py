@@ -25,7 +25,7 @@ except ImportError as e:
 @d.dedent
 class StationaryOTKernel(OTKernel_, error=_error):
     """
-    Stationary optimal transport kernel from [Zhang21]_.
+    Stationary optimal transport kernel from :cite:`zhang:21`.
 
     This class requires the `statOT` package, which can be installed as `pip install statot POT`.
 
@@ -86,7 +86,7 @@ class StationaryOTKernel(OTKernel_, error=_error):
         **kwargs: Any,
     ) -> "StationaryOTKernel":
         """
-        Compute transition matrix using stationary OT [Zhang21]_.
+        Compute transition matrix using stationary OT :cite:`zhang:21`.
 
         Parameters
         ----------

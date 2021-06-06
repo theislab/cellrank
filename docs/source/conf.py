@@ -70,6 +70,7 @@ extensions = [
     "nbsphinx",
     "sphinx_copybutton",
     "sphinx_last_updated_by_git",
+    "sphinxcontrib.bibtex",
 ]
 
 intersphinx_mapping = dict(
@@ -90,7 +91,6 @@ intersphinx_mapping = dict(
     pygam=("https://pygam.readthedocs.io/en/latest/", None),
     jax=("https://jax.readthedocs.io/en/latest/", None),
     pygpcca=("https://pygpcca.readthedocs.io/en/latest/", None),
-    # external
     ot=("https://pythonot.github.io/", None),
 )
 
@@ -104,11 +104,16 @@ pygments_style = "sphinx"
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = [
-    "**.md5",
-    "**.py",
+    "auto_*/**.ipynb",
+    "auto_*/**.md5",
+    "auto_*/**.py",
     "**.ipynb_checkpoints",
-]  # ignore anything that isn't .rst
-suppress_warnings = ["ref.citation"]
+]
+
+# bibliography
+bibtex_bibfiles = ["references.bib"]
+bibtex_reference_style = "author_year"
+bibtex_default_style = "alpha"
 
 # -- Notebooks
 nbsphinx_execute_arguments = [

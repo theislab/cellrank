@@ -8,7 +8,6 @@ Version 1.0
 
 1.2.0 :small:`2021-02-02`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
-
 This release includes:
 
 .. rubric:: Additions
@@ -18,7 +17,7 @@ This release includes:
   ensure that one of the "engines" of CellRank is also easy to maintain to extend. Further, this will make CellRank's
   installation more convenient by not needing to vendorize additional dependencies
   `PR 472 <https://github.com/theislab/cellrank/pull/472>`_.
-- Add :func:`cellrank.pl.circular_projection` visualizing computed fate probabilities as done in [Velten17]_,
+- Add :func:`cellrank.pl.circular_projection` visualizing computed fate probabilities as done in :cite:`velten:17`,
   see :ref:`sphx_glr_auto_examples_plotting_plot_circular_embedding.py`.
   `PR 459 <https://github.com/theislab/cellrank/pull/459>`_.
 - Allow legends not to be plotted by passing ``legend_loc="none"``, as done in `scVelo <https://scvelo.org>`_
@@ -39,7 +38,6 @@ This release includes:
 
 1.1.0 :small:`2020-11-17`
 ~~~~~~~~~~~~~~~~~~~~~~~~~
-
 This release includes:
 
 .. rubric:: Additions
@@ -49,12 +47,12 @@ This release includes:
   or an exact, permutation based test. Corrects for multiple-testing.
 - :meth:`cellrank.tl.kernels.VelocityKernel.compute_transition_matrix` now allows different metrics to be used to
   compare velocity vectors with expression-differences across neighboring cells. We add cosine-correlation and
-  dot-product schemes and we allow the user to input their own scheme. It has been shown recently by [Li2020]_
+  dot-product schemes and we allow the user to input their own scheme. It has been shown recently by :cite:`li:20`
   that the choice of metric can lead to slightly different results. Users can now also supply their own scheme as long
   as it follows the signature of :class:`cellrank.tl.kernels.SimilaritySchemeABC`.
 - :func:`cellrank.datasets.reprogramming` has been added to allow for easy reproducibility of the time & memory
   benchmarking results in our `CellRank preprint <https://doi.org/10.1101/2020.10.19.345983>`_. This is a reprogramming
-  dataset from [Morris18]_.
+  dataset from :cite:`morris:18`.
 
 .. rubric:: Bugfixes
 
@@ -71,12 +69,10 @@ This release includes:
 - Add :class:`cellrank.ul.models.FailedModel` inspired by the maybe monad
 - Allow returning models when doing bulk fitting
 - Add ``transpose`` parameter for :func:`cellrank.pl.gene_trends`
-- Various other minor bugfixes
+- Various minor bugfixes
 
 1.0.0-rc.11 :small:`2020-09-25`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-- Rename ``metastable states`` to ``macrostates``
 - Rename ``final states`` to ``terminal states``
 - Fix pickling if :class:`cellrank.tl.estimators.BaseEstimator`
 - Fix various color bugs
@@ -86,25 +82,21 @@ This release includes:
 
 1.0.0-rc.0 :small:`2020-07-15`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-- Fix pickling of :class:`cellrank.tl.Lineage` improvements
+- Fix pickling of :class:`cellrank.tl.Lineage`
 - Add additional options to :func:`cellrank.pl.heatmap`
 - Updated documentation
 
 1.0.0-b.8 :small:`2020-07-12`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 - Add installation options for PETSc and SLEPc
-- Add iterative solver for absorption proabilities
+- Add iterative solver for absorption probabilities
 - Add minor :class:`cellrank.tl.Lineage` improvements
 - Fix docstring issues
 
 1.0.0-b.2 :small:`2020-07-02`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-- Fix installation by including future-fstrings.
+- Fix installation by including future-fstrings
 
 1.0.0-b.1 :small:`2020-07-02`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-- Initial beta pre-release.
+- Initial beta pre-release

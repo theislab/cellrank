@@ -28,7 +28,8 @@ class CytoTRACEAggregation(ModeEnum):  # noqa
 @d.dedent
 class CytoTRACEKernel(PseudotimeKernel):
     """
-    Kernel which computes directed transition probabilities based on a KNN graph and the CytoTRACE score [Cyto20]_.
+    Kernel which computes directed transition probabilities based on a KNN graph and the CytoTRACE score \
+    :cite:`gulati:20`.
 
     The KNN graph contains information about the (undirected) connectivities among cells, reflecting their similarity.
     CytoTRACE can be used to estimate cellular plasticity and in turn, a pseudotemporal ordering of cells from more
@@ -50,8 +51,8 @@ class CytoTRACEKernel(PseudotimeKernel):
     kwargs
         Keyword arguments for :class:`cellrank.tl.kernels.PseudotimeKernel`.
 
-    Examples
-    --------
+    Example
+    -------
     Workflow::
 
         import scvelo as scv
@@ -66,7 +67,7 @@ class CytoTRACEKernel(PseudotimeKernel):
         sc.pp.highly_variable_genes(adata)
 
         if 'spliced' not in adata.layers or 'unspliced' not in adata.layers:
-            # use the following trick to get scvelo's moments function working
+            # use the following trick to get scVelo's moments function working
             adata.layers['spliced'] = adata.X
             adata.layers['unspliced'] = adata.X
 
@@ -117,15 +118,12 @@ class CytoTRACEKernel(PseudotimeKernel):
         use_raw: bool = False,
     ) -> None:
         """
-        Re-implementation of the CytoTRACE algorithm [Cyto20]_ to estimate cellular plasticity.
+        Re-implementation of the CytoTRACE algorithm :cite:`gulati:20` to estimate cellular plasticity.
 
         Computes the number of genes expressed per cell and ranks genes according to their correlation with this
         measure. Next, it selects to top-correlating genes and aggregates their (imputed) expression to obtain
         the CytoTRACE score. A high score stands for high differentiation potential (naive, plastic cells) and
         a low score stands for low differentiation potential (mature, differentiation cells).
-
-        Note that this will not exactly reproduce the results of the original CytoTRACE algorithm [Cyto20]_ because we
-        allow for any normalization and imputation techniques whereas CytoTRACE has build-in specific methods for that.
 
         Parameters
         ----------
@@ -157,6 +155,11 @@ class CytoTRACEKernel(PseudotimeKernel):
             - `'ct_gene_corr'`: the correlation as specified above.
             - `'ct_correlates'`: indication of the genes used to compute the CytoTRACE score, i.e. the ones that
               correlated best with `'num_exp_genes'`.
+
+        Notes
+        -----
+        This will not exactly reproduce the results of the original CytoTRACE algorithm :cite:`gulati:20` because we
+        allow for any normalization and imputation techniques whereas CytoTRACE has built-in specific methods for that.
         """
         # check use_raw
         aggregation = CytoTRACEAggregation(aggregation)

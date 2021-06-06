@@ -9,18 +9,18 @@ information. In particular, it includes:
 .. rubric:: Additions
 
 - Add new kernel :class:`cellrank.tl.kernels.CytoTRACEKernel` which computes cell-cell transition probabilities based
-  on the CytoTRACE score [Cyto20]_, a measure of differentiation potential,
+  on the CytoTRACE score :cite:`gulati:20`, a measure of differentiation potential,
   `PR 527 <https://github.com/theislab/cellrank/pull/527>`_.
 - Add external API :mod:`cellrank.external` with a stationary optimal transport kernel
-  :class:`cellrank.external.kernels.OTKernel` contributed from [Zhang21]_, as well as a
+  :class:`cellrank.external.kernels.OTKernel` contributed from :cite:`zhang:21`, as well as a
   `contributing guide <https://github.com/theislab/cellrank/blob/master/CONTRIBUTING.rst>`_,
   `PR 522 <https://github.com/theislab/cellrank/pull/522>`_.
 - Rename ``cellrank.tl.kernels.PalantirKernel`` to :class:`cellrank.tl.kernels.PseudotimeKernel` and add
-  hard thresholding scheme inspired by [Setty19]_, a soft thresholding scheme inspired by [VIA21]_ and a custom scheme
-  when computing the transition matrix, see e.g. :class:`cellrank.tl.kernels.SoftThresholdScheme`
+  hard thresholding scheme inspired by :cite:`setty:19`, a soft thresholding scheme inspired by :cite:`stassen:21` and
+  a custom scheme when computing the transition matrix, see e.g. :class:`cellrank.tl.kernels.SoftThresholdScheme`
   `PR 514 <https://github.com/theislab/cellrank/pull/514>`_.
 - Add more flexibility to :class:`cellrank.tl.kernels.ConnectivityKernel`, allowing it to use any cell-cell similarities
-  from :attr:`anndata.AnnData.obsp`, such as spatial similarities from :mod:`squidpy` [Palla21]_
+  from :attr:`anndata.AnnData.obsp`, such as spatial similarities from :mod:`squidpy` :cite:`palla:21`
   `PR 501 <https://github.com/theislab/cellrank/pull/501>`_.
 - Revamp `Pancreas Advanced <https://cellrank.readthedocs.io/en/latest/pancreas_advanced.html>`_ tutorial
   to showcase CellRank's modular structure of kernels and estimators.
@@ -38,9 +38,10 @@ information. In particular, it includes:
 - Add random walk simulation and visualization in an embedding :meth:`cellrank.tl.kernels.Kernel.plot_random_walks`
   `PR 537 <https://github.com/theislab/cellrank/pull/537>`_.
 - Add :meth:`cellrank.tl.Lineage.priming_degree` `PR 502 <https://github.com/theislab/cellrank/pull/502>`_
-  which estimates a cell's plasticity/differentiation potential based on ideas by [Setty19]_ and [Velten17]_.
+  which estimates a cell's plasticity/differentiation potential based on ideas by :cite:`setty:19`
+  and :cite:`velten:17`.
 - Add checks for transition matrix irreducibility `PR 516 <https://github.com/theislab/cellrank/pull/516>`_.
-- Add Zebrafish development dataset from [Farrel18]_ `PR 539 <https://github.com/theislab/cellrank/pull/539>`_.
+- Add Zebrafish development dataset from :cite:`farrel:18` `PR 539 <https://github.com/theislab/cellrank/pull/539>`_.
 - Speed-up stationary distribution calculation in :mod:`pygpcca` `PR 22 <https://github.com/msmdev/pyGPCCA/pull/22>`_.
 
 .. rubric:: Bugfixes

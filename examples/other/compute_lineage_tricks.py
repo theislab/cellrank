@@ -51,7 +51,7 @@ lin[["bar, baz, quux"]]
 
 # %%
 # Most of the :mod:`numpy` methods are supported by the :class:`cellrank.tl.Lineage`. One can also calculate the
-# entropy, which in [Setty19]_ is defined as the differentiation potential of cells.
+# entropy, which in :cite:`setty:19` is defined as the differentiation potential of cells.
 lin.entropy(axis=1)
 
 # %%

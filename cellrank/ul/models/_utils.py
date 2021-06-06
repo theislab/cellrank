@@ -139,7 +139,7 @@ def _calculate_norm_factors(
     method
         One of following:
 
-            - method={m.TMM.s!r} - weighted trimmed mean of M-values from [Robinson10]_.
+            - method={m.TMM.s!r} - weighted trimmed mean of M-values from :cite:`robinson:10`.
             - method={m.RLE.s!r} - relative log expression from [Anders10]_.
             - method={m.UPPER_QUANT.s!r} - upper-quartile normalization method from [Bullard10]_.
             - method={m.NONE.s!r} - all the factors are set to 1.

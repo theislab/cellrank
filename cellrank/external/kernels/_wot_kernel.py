@@ -35,7 +35,7 @@ class nstr(str):  # used for params+cache (precomputed cost matrices)
 @d.dedent
 class WOTKernel(Kernel, error=_error):
     """
-    Waddington optimal transport kernel from [Schiebinger19]_.
+    Waddington optimal transport kernel from :cite:`schiebinger:19`.
 
     This class requires the `wot` package, which can be installed as
     `pip install git+https://github.com/broadinstitute/wot`.
@@ -128,7 +128,7 @@ class WOTKernel(Kernel, error=_error):
         key_added: Optional[str] = None,
     ) -> Optional[pd.Series]:
         r"""
-        Estimate initial growth rates using Birth-death process as described in [Schiebinger19]_.
+        Estimate initial growth rates using Birth-death process as described in :cite:`schiebinger:19`.
 
         The doubling time is defined as :math:`\frac{\ln 2}{\beta - \delta}` (similarly defined for half-time).
         Logistic function is used to transform the birth/death rate scores and smoothly interpolate between specified
@@ -218,7 +218,7 @@ class WOTKernel(Kernel, error=_error):
         **kwargs: Any,
     ) -> "WOTKernel":
         """
-        Compute transition matrix using Waddington OT [Schiebinger19]_.
+        Compute transition matrix using Waddington OT :cite:`schiebinger:19`.
 
         Computes transport maps linking together pairs of time points for time-series single cell data using unbalanced
         optimal transport, taking into account cell birth and death rates. From the sequence of transition maps linking

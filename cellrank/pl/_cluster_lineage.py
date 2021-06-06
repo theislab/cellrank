@@ -64,7 +64,7 @@ def cluster_lineage(
     """
     Cluster gene expression trends within a lineage and plot the clusters.
 
-    This function is based on Palantir, see [Setty19]_. It can be used to discover modules of genes that drive
+    This function is based on Palantir, see :cite:`setty:19`. It can be used to discover modules of genes that drive
     development along a given lineage. Consider running this function on a subset of genes which are potential
     lineage drivers, identified e.g. by running :func:`cellrank.tl.lineage_drivers`.
 
@@ -76,7 +76,7 @@ def cluster_lineage(
     lineage
         Name of the lineage for which to cluster the genes.
     %(backward)s
-    %(time_ranges)s
+    %(time_range)s
     clusters
         Cluster identifiers to plot. If `None`, all clusters will be considered. Useful when
         plotting previously computed clusters.
