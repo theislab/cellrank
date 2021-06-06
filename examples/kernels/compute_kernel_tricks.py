@@ -26,7 +26,7 @@ adata
 #   :cite:`bergen:20`, but can also take into account uncertainty in RNA velocity.
 # - :class:`cellrank.tl.kernels.PseudotimeKernel` works similarly as in Palantir :cite:`setty:19` - it orients the edges
 #   of the KNN graph constructed in the expression space using the pseudotemporal ordering of cells, such as
-#   Diffusion Pseudotime (DPT) :cite:`haghverdi:16`
+#   Diffusion Pseudotime (DPT) :cite:`haghverdi:16`.
 ck = cr.tl.kernels.ConnectivityKernel(adata)
 vk = cr.tl.kernels.VelocityKernel(adata)
 pk = cr.tl.kernels.PseudotimeKernel(adata)
