@@ -13,6 +13,22 @@ import cellrank.external as cre
 
 
 class TestOTKernel:
+    def test_no_connectivities(self, adata_large: AnnData):
+        del adata_large.obsp["connectivities"]
+        terminal_states = np.full((adata_large.n_obs,), fill_value=np.nan, dtype=object)
+        ixs = np.where(adata_large.obs["clusters"] == "Granule immature")[0]
+        terminal_states[ixs] = "GI"
+
+        ok = cre.kernels.StationaryOTKernel(
+            adata_large,
+            terminal_states=pd.Series(terminal_states).astype("category"),
+            g=np.ones((adata_large.n_obs,), dtype=np.float64),
+        )
+        ok = ok.compute_transition_matrix(1, 0.001)
+
+        assert ok._conn is None
+        np.testing.assert_allclose(ok.transition_matrix.sum(1), 1.0)
+
     def test_method_not_implemented(self, adata_large: AnnData):
         terminal_states = np.full((adata_large.n_obs,), fill_value=np.nan, dtype=object)
         ixs = np.where(adata_large.obs["clusters"] == "Granule immature")[0]
@@ -54,8 +70,17 @@ class TestOTKernel:
         assert isinstance(ok.params, dict)
 
 
-@pytest.mark.skip("wot on PyPI doesn't support passing cost matrices")
+# @pytest.mark.skip("wot on PyPI doesn't support passing cost matrices")
 class TestWOTKernel:
+    def test_no_connectivities(self, adata_large: AnnData):
+        del adata_large.obsp["connectivities"]
+        ok = cre.kernels.WOTKernel(
+            adata_large, time_key="age(days)"
+        ).compute_transition_matrix()
+
+        assert ok._conn is None
+        np.testing.assert_allclose(ok.transition_matrix.sum(1), 1.0)
+
     def test_inversion_updates_adata(self, adata_large: AnnData):
         key = "age(days)"
         ok = cre.kernels.WOTKernel(adata_large, time_key=key)

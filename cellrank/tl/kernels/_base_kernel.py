@@ -9,7 +9,6 @@ from typing import (
     Type,
     Tuple,
     Union,
-    TypeVar,
     Callable,
     Iterable,
     Optional,
@@ -19,6 +18,7 @@ from pathlib import Path
 from functools import reduce
 
 import scvelo as scv
+from anndata import AnnData
 from scvelo.plotting.utils import default_size, plot_outline
 
 import numpy as np
@@ -60,7 +60,6 @@ _RTOL = 1e-12
 _n_dec = 2
 _dtype = np.float64
 _cond_num_tolerance = 1e-15
-AnnData = TypeVar("AnnData")
 Indices_t = Optional[Union[Sequence[str], Dict[str, Union[str, Sequence[str]]]]]
 
 
@@ -86,7 +85,7 @@ class KernelExpression(Pickleable, ABC):
         super().__init_subclass__()
 
     @property
-    def condition_number(self):
+    def condition_number(self) -> Optional[int]:
         """Condition number of the transition matrix."""
         return self._cond_num
 
@@ -122,7 +121,7 @@ class KernelExpression(Pickleable, ABC):
 
     @adata.setter
     @abstractmethod
-    def adata(self, value):
+    def adata(self, value: AnnData) -> None:
         pass
 
     @property
@@ -222,7 +221,8 @@ class KernelExpression(Pickleable, ABC):
     def copy(self) -> "KernelExpression":
         """Return a copy of itself. Note that the underlying :attr:`adata` object is not copied."""
 
-    def _maybe_compute_cond_num(self):
+    def _maybe_compute_cond_num(self) -> None:
+        """Optionally compute condition number."""
         if self._compute_cond_num and self._cond_num is None:
             logg.debug(f"Computing condition number of `{repr(self)}`")
             self._cond_num = np.linalg.cond(
@@ -692,9 +692,7 @@ class UnaryKernelExpression(KernelExpression, ABC):
         return self._adata
 
     @adata.setter
-    def adata(self, _adata: AnnData):
-        from anndata import AnnData
-
+    def adata(self, _adata: AnnData) -> None:
         if not isinstance(_adata, AnnData):
             raise TypeError(
                 f"Expected argument of type `anndata.AnnData`, found `{type(_adata).__name__!r}`."
@@ -785,7 +783,7 @@ class NaryKernelExpression(KernelExpression, ABC):
         return self._kexprs[0].adata
 
     @adata.setter
-    def adata(self, _adata: AnnData):
+    def adata(self, _adata: AnnData) -> None:
         self._kexprs[0].adata = _adata
 
     def __invert__(self) -> "NaryKernelExpression":
@@ -849,10 +847,33 @@ class Kernel(UnaryKernelExpression, ABC):
         )
         self._read_from_adata(check_connectivity=check_connectivity, **kwargs)
 
+    # TODO: move to a mixin class
     def _read_from_adata(
-        self, conn_key: Optional[str] = "connectivities", **kwargs: Any
+        self,
+        conn_key: Optional[str] = "connectivities",
+        read_conn: bool = True,
+        **kwargs: Any,
     ) -> None:
-        """Import the base-KNN graph and optionally check for symmetry and connectivity."""
+        """
+        Import the base-KNN graph and optionally check for symmetry and connectivity.
+
+        Parameters
+        ----------
+        conn_key
+            Key in :attr:`anndata.AnnData.uns` where connectivities are stored.
+        read_conn
+            Whether to read connectivities or set them to `None`. Useful when not exposing density normalization or
+            when KNN connectivities are not used to compute the transition matrix.
+        kwargs
+            Additional keyword arguments.
+
+        Returns
+        -------
+        Nothing, just sets :attr:`_conn`.
+        """
+        if not read_conn:
+            self._conn = None
+            return
 
         self._conn = _get_neighs(
             self.adata, mode="connectivities", key=conn_key
@@ -880,14 +901,24 @@ class Kernel(UnaryKernelExpression, ABC):
 
         Parameters
         ----------
-        other:
+        other
             Matrix to normalize.
 
         Returns
         -------
         :class:`np.ndarray` or :class:`scipy.sparse.spmatrix`
             Density normalized transition matrix.
+
+        Raises
+        ------
+        ValueError
+            If KNN connectivities are not set.
         """
+        if self._conn is None:
+            raise ValueError(
+                "Unable to density normalize the transition matrix "
+                "because KNN connectivities are not set."
+            )
 
         logg.debug("Density-normalizing the transition matrix")
 
@@ -963,7 +994,7 @@ class Constant(Kernel):
             raise ValueError(f"Expected the constant to be positive, found `{value}`.")
         self._recalculate(value)
 
-    def _recalculate(self, value):
+    def _recalculate(self, value) -> None:
         self._transition_matrix = value
         self._params = {"value": value}
 
@@ -1176,7 +1207,7 @@ def _get_expr_and_constant(k: KernelMul) -> Tuple[KernelExpression, Union[int, f
         )
     if len(k) != 2:
         raise ValueError(
-            f"Expected expression to be binary, found, `{len(k)}` subexpressions."
+            f"Expected expression to be binary, found `{len(k)}` subexpressions."
         )
     e1, e2 = k[0], k[1]
 
