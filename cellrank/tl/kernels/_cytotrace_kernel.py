@@ -67,7 +67,7 @@ class CytoTRACEKernel(PseudotimeKernel):
         sc.pp.highly_variable_genes(adata)
 
         if 'spliced' not in adata.layers or 'unspliced' not in adata.layers:
-            # use the following trick to get scvelo's moments function working
+            # use the following trick to get scVelo's moments function working
             adata.layers['spliced'] = adata.X
             adata.layers['unspliced'] = adata.X
 

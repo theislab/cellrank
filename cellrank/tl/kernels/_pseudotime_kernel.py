@@ -28,7 +28,7 @@ class PseudotimeKernel(Kernel):
     Kernel which computes directed transition probabilities based on a KNN graph and pseudotime.
 
     The KNN graph contains information about the (undirected) connectivities among cells, reflecting their similarity.
-    Pseudotime can be used to either remove edges that point against the direction of increasing pseudotime (see
+    Pseudotime can be used to either remove edges that point against the direction of increasing pseudotime
     :cite:`setty:19`, or to downweight them :cite:`stassen:21`.
 
     Parameters

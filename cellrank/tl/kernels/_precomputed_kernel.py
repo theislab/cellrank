@@ -28,6 +28,7 @@ class PrecomputedKernel(Kernel):
         or a :class:`cellrank.tl.kernels.KernelExpression` with a precomputed transition matrix.
         If `None`, try to determine the key based on ``backward``.
     %(adata)s
+        If `None`, a temporary placeholder object is created.
     %(backward)s
     %(cond_num)s
     kwargs

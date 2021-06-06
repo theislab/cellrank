@@ -31,7 +31,7 @@ model
     Model based on :class:`cellrank.ul.models.BaseModel` to fit.
 
     If a :class:`dict`, gene and lineage specific models can be specified. Use ``'*'`` to indicate
-    all genes or lineages, for example ``{'Map2': {'*': ...}, 'Dcx': {'Alpha': ..., '*': ...}}``."""
+    all genes or lineages, for example ``{'gene_1': {'*': ...}, 'gene_2': {'lineage_1': ..., '*': ...}}``."""
 _just_plots = """\
 None
     Nothing, just plots the figure. Optionally saves it based on ``save``."""
