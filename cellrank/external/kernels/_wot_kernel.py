@@ -109,6 +109,14 @@ class WOTKernel(Kernel, error=_error):
         self._growth_rates = None
         self._tmats = None
 
+    def _read_from_adata(
+        self,
+        conn_key: Optional[str] = "connectivities",
+        read_conn: bool = True,
+        **kwargs: Any,
+    ) -> None:
+        super()._read_from_adata(conn_key=conn_key, read_conn=False, **kwargs)
+
     def compute_initial_growth_rates(
         self,
         proliferation_key: str,
