@@ -70,7 +70,7 @@ class TestOTKernel:
         assert isinstance(ok.params, dict)
 
 
-# @pytest.mark.skip("wot on PyPI doesn't support passing cost matrices")
+@pytest.mark.skip("wot on PyPI doesn't support passing cost matrices")
 class TestWOTKernel:
     def test_no_connectivities(self, adata_large: AnnData):
         del adata_large.obsp["connectivities"]
