@@ -2,7 +2,7 @@
 Plot circular embedding
 -----------------------
 
-This example shows how to plot absorption probabilities using circular a posteriori projection as used in [Velten17]_.
+This example shows how to plot absorption probabilities using circular a posteriori projection :cite:`velten:17`.
 """
 
 import cellrank as cr

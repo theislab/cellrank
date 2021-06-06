@@ -46,7 +46,7 @@ class GAMR(BaseModel):
             - `{kloc.DENSITY.s!r}` - position the knots based on the density of the pseudotime.
     offset
         Offset term for the GAM. Only available when ``distribution='nb'``. If `'default'`, it is calculated
-        according to [Robinson10]_. The values are saved in :attr:`adata` ``.obs[{key!r}]``.
+        according to :cite:`robinson:10`. The values are saved in :attr:`adata` ``.obs[{key!r}]``.
         If `None`, no offset is used.
     smoothing_penalty
         Penalty for the smoothing term. The larger the value, the smoother the fitted curve.

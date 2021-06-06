@@ -5,8 +5,8 @@ Fit estimator
 This example shows how to fit an estimator in order to compute the lineages.
 
 CellRank is composed of :mod:`cellrank.tl.kernels` and :mod:`cellrank.tl.estimators`. Kernels compute transition
-matrices on the basis of directed data, given by i.e. RNA velocity [Manno18]_ [Bergen20]_ while estimators perform
-inference making use of kernels.
+matrices on the basis of directed data, given by i.e. RNA velocity :cite:`manno:18` :cite:`bergen:20` while estimators
+perform inference making use of kernels.
 
 Here, we show how to fit an estimator, given a kernel. An estimator may be used e.g. to identify initial and terminal
 states or to compute lineage probabilities towards the terminal states, for each individual cell.

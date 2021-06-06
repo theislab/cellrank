@@ -678,11 +678,10 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             Either a set of lineage names from :attr:`absorption_probabilities` `.names` or `None`,
             in which case all lineages are considered.
         method
-            Mode to use when calculating p-values and confidence intervals. Can be one of:
+            Mode to use when calculating p-values and confidence intervals. Valid options are:
 
-                - {tm.FISCHER.s!r} - use Fischer transformation [Fischer21]_.
+                - {tm.FISCHER.s!r} - use Fischer transformation :cite:`fischer:21`.
                 - {tm.PERM_TEST.s!r} - use permutation test.
-
         cluster_key
             Key from :attr:`adata` ``.obs`` to obtain cluster annotations. These are considered for ``clusters``.
         clusters
@@ -706,23 +705,16 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         Returns
         -------
         %(correlation_test.returns)s
-            Only if ``return_drivers=True``.
+        Only if ``return_drivers=True``.
 
-        None
-            Updates :attr:`adata` ``.var`` or :attr:`adata` ``.raw.var``, depending ``use_raw`` with:
+        Otherwise, updates :attr:`adata` ``.var`` or :attr:`adata` ``.raw.var``, depending ``use_raw`` with:
 
-                - ``'{{direction}} {{lineage}} corr'`` - the potential lineage drivers.
-                - ``'{{direction}} {{lineage}} qval'`` - the corrected p-values.
+            - ``'{{direction}} {{lineage}} corr'`` - the potential lineage drivers.
+            - ``'{{direction}} {{lineage}} qval'`` - the corrected p-values.
 
-            Updates the following fields:
+        Also updates the following fields:
 
-                - :attr:`{lin_drivers}` - same as the returned values.
-
-        References
-        ----------
-        .. [Fischer21] Fisher, R. A. (1921),
-            *On the “probable error” of a coefficient of correlation deduced from a small sample.*,
-            `Metron 1 3–32 <http://hdl.handle.net/2440/15169>`__.
+            - :attr:`{lin_drivers}` - same as the returned values.
         """
 
         # check that lineage probs have been computed

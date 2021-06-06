@@ -1,4 +1,4 @@
-"""Generalized Perron Cluster Cluster Analysis [GPCCA18]_."""
+"""Generalized Perron Cluster Cluster Analysis :cite:`reuter:18`."""
 
 from types import MappingProxyType
 from typing import Any, Dict, List, Tuple, Union, Mapping, Iterable, Optional, Sequence
@@ -32,7 +32,7 @@ from cellrank.tl.estimators._base_estimator import BaseEstimator
 @d.dedent
 class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
     """
-    Generalized Perron Cluster Cluster Analysis [GPCCA18]_ as implemented in `pyGPCCA <https://pygpcca.readthedocs.io/en/latest/>`_.
+    Generalized Perron Cluster Cluster Analysis :cite:`reuter:18` as implemented in `pyGPCCA <https://pygpcca.readthedocs.io/en/latest/>`_.
 
     Coarse-grains a discrete Markov chain into a set of macrostates and computes coarse-grained transition probabilities
     among the macrostates. Each macrostate corresponds to an area of the state space, i.e. to a subset of cells. The
@@ -41,7 +41,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
     minimal overlap between macrostates in a certain inner-product sense. Once the macrostates have been computed,
     we project the large transition matrix onto a coarse-grained transition matrix among the macrostates via
     a Galerkin projection. This projection is based on invariant subspaces of the original transition matrix which
-    are obtained using the real Schur decomposition [GPCCA18]_.
+    are obtained using the real Schur decomposition :cite:`reuter:18`.
 
     Parameters
     ----------
@@ -437,7 +437,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         self, n_components: int = 10, key_added: str = "gdpt_pseudotime", **kwargs
     ):
         """
-        Compute generalized Diffusion pseudotime from [Haghverdi16]_ using the real Schur decomposition.
+        Compute generalized Diffusion pseudotime from :cite:`haghverdi:16` using the real Schur decomposition.
 
         Parameters
         ----------

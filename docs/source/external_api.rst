@@ -6,7 +6,6 @@ refer to our `contributing guide <https://github.com/theislab/cellrank/blob/mast
 
 Kernels
 ~~~~~~~
-
 .. module:: cellrank.external
 .. currentmodule:: cellrank
 
@@ -18,18 +17,10 @@ Kernels
 
 Estimators
 ~~~~~~~~~~
-
-.. module:: cellrank.external
-.. currentmodule:: cellrank
-
 .. autosummary::
     :toctree: api
 
 Models
 ~~~~~~
-
-.. module:: cellrank.external
-.. currentmodule:: cellrank
-
 .. autosummary::
     :toctree: api

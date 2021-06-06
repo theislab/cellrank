@@ -41,7 +41,7 @@ cr.pl.lineages(adata, ["Alpha", "Beta"], discrete=True)
 
 # %%
 # Lastly, we can also plot the absorption probabilities separately, one plot for each lineage.
-# By default this also shows the differentiation potential, defined in [Setty19]_ as the entropy over
+# By default this also shows the differentiation potential, defined in :cite:`setty:19` as the entropy over
 # the absorption probabilities.
 cr.pl.lineages(adata, same_plot=False)
 

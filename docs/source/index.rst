@@ -9,16 +9,16 @@ CellRank for directed single-cell fate mapping
 
 **CellRank** is a toolkit to uncover cellular dynamics based on Markov state modeling of single-cell data. It contains
 two main modules: `kernels`_ compute cell-cell transition probabilities and `estimators`_ generate hypothesis based on
-these. Our kernels work with a variety of input data including `RNA velocity`_ (see [Manno18]_ and [Bergen20]_),
+these. Our kernels work with a variety of input data including `RNA velocity`_ :cite:`manno:18` and :cite:`bergen:20`,
 `cellular similarity`_ (both transcriptomic and spatial) and `pseudotime`_, among others. Our `VelocityKernel`_
 takes into account **uncertainty in the velocities** and allows you to aggregate the short-range fate relations
 given by RNA velocity into longer trends along the phenotypic manifold. Our main estimator is
-*Generalized Perron Cluster Cluster Analysis* (G-PCCA) [GPCCA18]_ which coarse-grains the Markov chain
+*Generalized Perron Cluster Cluster Analysis* (G-PCCA) :cite:`reuter:18` which coarse-grains the Markov chain
 into a set of macrostates which represent initial, terminal and intermediate states. For each transient cell,
 we compute its fate probability towards any terminal state. We show an example of such a fate map in the figure above,
-which has been computed using the data of [Panc19]_. CellRank combines `kernels`_ and `estimators`_ with a powerful
-`plotting API`_, enabling you to visualize e.g. smooth `gene expression trends`_ along lineages or fate-informed
-`circular embeddings`_, to name just a few.
+which has been computed using the data of :cite:`bastidas-ponce:19`. CellRank combines `kernels`_ and `estimators`_
+with a powerful `plotting API`_, enabling you to visualize e.g. smooth `gene expression trends`_ along lineages
+or fate-informed `circular embeddings`_, to name just a few.
 
 CellRank scales to large cell numbers, is fully compatible with `scanpy`_ and `scvelo`_ and is easy to use.
 
@@ -31,7 +31,6 @@ which allows to unlock the full power of CellRank. If you want to see individual
 
 Latest additions
 ^^^^^^^^^^^^^^^^
-
 .. include:: latest_additions.rst
 
 Manuscript

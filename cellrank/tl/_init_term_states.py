@@ -20,15 +20,15 @@ AnnData = TypeVar("AnnData")
 
 
 _docstring = """\
-Find {direction} states of a dynamic process of single cells based on RNA velocity [Manno18]_.
+Find {direction} states of a dynamic process of single cells based on RNA velocity :cite:`manno:18`.
 
 The function models dynamic cellular processes as a Markov chain, where the transition matrix is computed based
 on the velocity vector of each individual cell. Based on this Markov chain, we provide two estimators
 to compute {direction} states, both of which are based on spectral methods.
 
 For the estimator :class:`cellrank.tl.estimators.GPCCA`, cells are fuzzily clustered into macrostates,
-using Generalized Perron Cluster Cluster Analysis [GPCCA18]_. In short, this coarse-grains the Markov chain into a set
-of macrostates representing the slow time-scale dynamics, i.e. transitions between these macrostates are rare.
+using Generalized Perron Cluster Cluster Analysis :cite:`reuter:18`. In short, this coarse-grains the Markov chain into
+a set of macrostates representing the slow time-scale dynamics, i.e. transitions between these macrostates are rare.
 The most stable ones of these will represent {direction}, while the others represent intermediate macrostates.
 
 For the estimator :class:`cellrank.tl.estimators.CFLARE`, cells are filtered into transient/recurrent cells using the

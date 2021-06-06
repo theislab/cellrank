@@ -58,7 +58,7 @@ def transition_matrix(
         Weight given to similarities as opposed to velocities. Must be in `[0, 1]`.
     density_normalize
         Whether to use density correction when computing the transition probabilities based on similarities.
-        Density correction is done as by [Haghverdi16]_.
+        Density correction is done as by :cite:`haghverdi:16`.
     %(write_to_adata.parameters)s
     kwargs
         Keyword arguments for :meth:`cellrank.tl.kernels.VelocityKernel.compute_transition_matrix`.

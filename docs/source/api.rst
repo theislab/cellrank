@@ -44,9 +44,6 @@ Kernels
 -------
 Kernels are part of the low-level API and are used to estimate cell-to-cell transitions.
 
-.. module:: cellrank.tl
-.. currentmodule:: cellrank
-
 .. autosummary::
     :toctree: api
 
@@ -59,9 +56,6 @@ Kernels are part of the low-level API and are used to estimate cell-to-cell tran
 Estimators
 ----------
 Estimators predict cell fates using the transitions derived from :ref:`Kernels`.
-
-.. module:: cellrank.tl
-.. currentmodule:: cellrank
 
 .. autosummary::
     :toctree: api

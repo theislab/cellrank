@@ -104,7 +104,9 @@ def heatmap(
             - `{m.GENES.s!r}` - group by ``lineages`` for each gene in ``genes``.
     time_key
         Key in ``adata.obs`` where the pseudotime is stored.
-    %(time_ranges)s
+    %(time_range)s
+
+        This can also be specified on per-lineage basis.
     %(model_callback)s
     cluster_key
         Key(s) in ``adata.obs`` containing categorical observations to be plotted on top of the heatmap.

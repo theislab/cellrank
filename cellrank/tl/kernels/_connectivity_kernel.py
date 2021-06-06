@@ -15,8 +15,8 @@ class ConnectivityKernel(Kernel):
 
     As a measure of similarity, we currently support:
 
-        - transcriptomic similarities, computed using e.g. :func:`scanpy.pp.neighbors`, see [Wolf18]_.
-        - spatial similarities, computed using e.g. :func:`squidpy.gr.spatial_neighbors`, see [Palla21]_.
+        - transcriptomic similarities, computed using e.g. :func:`scanpy.pp.neighbors`, see :cite:`wolf:18`.
+        - spatial similarities, computed using e.g. :func:`squidpy.gr.spatial_neighbors`, see :cite:`palla:21`.
 
     The resulting transition matrix is symmetric and thus cannot be used to learn about the direction of the biological
     process. To include this direction, consider combining with a velocity-derived transition matrix via

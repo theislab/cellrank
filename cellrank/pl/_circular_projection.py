@@ -100,7 +100,7 @@ def circular_projection(
     **kwargs: Any,
 ):
     r"""
-    Plot absorption probabilities on a circular embedding as done in [Velten17]_.
+    Plot absorption probabilities on a circular embedding as done in :cite:`velten:17`.
 
     Parameters
     ----------
@@ -108,9 +108,9 @@ def circular_projection(
     keys
         Keys in :attr:`anndata.AnnData.obs` or :attr:`anndata.AnnData.var_names`. Additional keys are:
 
-            - `'kl_divergence'` - as in [Velten17]_, computes KL-divergence between the fate probabilities of a cell
-              and the average fate probabilities. See ``early_cells`` for more information.
-            - `'entropy'` - as in [Setty19]_, computes entropy over a cells fate probabilities.
+            - `'kl_divergence'` - as in :cite:`velten:17`, computes KL-divergence between the fate probabilities
+              of a cell and the average fate probabilities. See ``early_cells`` for more information.
+            - `'entropy'` - as in :cite:`setty:19`, computes entropy over a cells fate probabilities.
 
     %(backward)s
     lineages
@@ -131,7 +131,7 @@ def circular_projection(
         Metric to use when constructing pairwise distance matrix when ``lineage_order = 'optimal'``. For available
         options, see :func:`sklearn.metrics.pairwise_distances`.
     normalize_by_mean
-        If `True`, normalize each lineage by its mean probability, as done in [Velten17]_.
+        If `True`, normalize each lineage by its mean probability, as done in :cite:`velten:17`.
     ncols
         Number of columns when plotting multiple ``keys``.
     space

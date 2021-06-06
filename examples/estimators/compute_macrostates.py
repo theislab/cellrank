@@ -4,9 +4,9 @@ Compute macrostates
 
 This example shows how to compute and plot the macrostates.
 
-For the computation of macrostates, we adapted the popular Generalized Perron Cluster Cluster Analysis [GPCCA18]_
-[Reuter19]_ method to the single cell context. We provide a scalable implementation which can decompose datasets of
-100k+ cells into their dominant dynamical macrostates in just a few minutes. GPCCA relies on the real Schur
+For the computation of macrostates, we adapted the popular Generalized Perron Cluster Cluster Analysis :cite:`reuter:18`
+:cite:`reuter:19` method to the single cell context. We provide a scalable implementation which can decompose datasets
+of 100k+ cells into their dominant dynamical macrostates in just a few minutes. GPCCA relies on the real Schur
 decomposition to handle non-symmetric transition matrices as they arise from RNA velocity information, see
 :ref:`sphx_glr_auto_examples_estimators_compute_schur_vectors.py` and
 :ref:`sphx_glr_auto_examples_estimators_compute_schur_matrix.py`.
@@ -35,7 +35,7 @@ g.compute_schur(n_components=4)
 # on the membership degree. By default, 30 cells are selected.
 #
 # Lastly, the parameter ``n_states`` can also be estimated by using either the `eigengap` or the `minChi` criterion from
-# [GPCCA18]_.
+# :cite:`reuter:18`.
 g.compute_macrostates(n_states=3, cluster_key="clusters")
 
 # %%

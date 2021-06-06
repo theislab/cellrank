@@ -64,8 +64,8 @@ keys
     ['Neuronal_1', 'Neuronal_1', 'Astrocytes', 'OPC'], then passing ``keys=['Neuronal_1, Neuronal_2', 'OPC']``
     means that the two neuronal %(terminal)s states are treated as one and the 'Astrocyte' state is excluded."""
 _density_correction = (
-    "Optionally, we apply a density correction as described in [Coifman05]_, "
-    "where we use the implementation of [Haghverdi16]_."
+    "Optionally, we apply a density correction as described in :cite:`coifman:05`, "
+    "where we use the implementation of :cite:`haghverdi:16`."
 )
 _time_range = """\
 time_range
@@ -74,7 +74,7 @@ time_range
         - If a :class:`tuple`, it specifies the minimum and maximum pseudotime. Both values can be `None`,
           in which case the minimum is the earliest pseudotime and the maximum is automatically determined.
         - If a :class:`float`, it specifies the maximum pseudotime."""
-_time_ranges = f"{_time_range}\n    This can also be specified on per-lineage basis."
+
 _velocity_mode = """\
 mode
     How to compute transition probabilities. Valid options are:
@@ -136,7 +136,7 @@ basis
     Basis to use when ``mode='embedding'``. If `None`, use `'umap'`."""
 _velocity_scheme = """\
 scheme
-    Similarity scheme between cells as described in [Li2020]_. Can be one of the following:
+    Similarity scheme between cells as described in :cite:`li:20`. Can be one of the following:
 
         - `{s.DOT_PRODUCT.s!r}`: :class:`cellrank.tl.kernels.DotProductScheme`.
         - `{s.COSINE.s!r}`: :class:`cellrank.tl.kernels.CosineScheme`.
@@ -192,7 +192,6 @@ d = DocstringProcessor(
     copy=_copy,
     density_correction=_density_correction,
     time_range=_time_range,
-    time_ranges=_time_ranges,
     velocity_mode=_velocity_mode,
     velocity_backward_mode=_velocity_backward_mode,
     velocity_backward_mode_high_lvl=_velocity_backward_mode_high_lvl,

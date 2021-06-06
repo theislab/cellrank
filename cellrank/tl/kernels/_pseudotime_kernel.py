@@ -29,7 +29,7 @@ class PseudotimeKernel(Kernel):
 
     The KNN graph contains information about the (undirected) connectivities among cells, reflecting their similarity.
     Pseudotime can be used to either remove edges that point against the direction of increasing pseudotime (see
-    [Setty19]_, or to downweight them (see [VIA21]_).
+    :cite:`setty:19`, or to downweight them :cite:`stassen:21`.
 
     Parameters
     ----------
@@ -90,15 +90,15 @@ class PseudotimeKernel(Kernel):
         """
         Compute transition matrix based on KNN graph and pseudotemporal ordering.
 
-        Depending on the choice of the `thresholding_scheme`, this is based on ideas by either Palantir (see [Setty19]_)
-        or VIA (see [VIA21]_).
+        Depending on the choice of the `thresholding_scheme`, this is based on ideas by either *Palantir*
+        :cite:`setty:19` or *VIA* :cite:`stassen:21`.
 
-        When using a `'hard'` thresholding scheme, this based on ideas by *Palantir* (see [Setty19]_) which removes some
+        When using a `'hard'` thresholding scheme, this based on ideas by *Palantir* :cite:`setty:19` which removes some
         edges that point against the direction of increasing pseudotime. To avoid disconnecting the graph, it does not
         remove all edges that point against the direction of increasing pseudotime but keeps the ones that point to
         cells inside a close radius. This radius is chosen according to the local cell density.
 
-        When using a `'soft'` thresholding scheme, this is based on ideas by *VIA* (see [VIA21]_) which downweights
+        When using a `'soft'` thresholding scheme, this is based on ideas by *VIA* :cite:`stassen:21` which downweights
         edges that points against the direction of increasing pseudotime. Essentially, the further "behind" a query
         cell is in pseudotime with respect to the current reference cell, the more penalized will be its
         graph-connectivity.

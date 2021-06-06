@@ -91,13 +91,15 @@ def gene_trends(
         Key in ``adata.layers`` or `'X'` for ``adata.X`` where the data is stored.
     time_key
         Key in ``adata.obs`` where the pseudotime is stored.
-    %(time_ranges)s
+    %(time_range)s
+
+        This can also be specified on per-lineage basis.
     transpose
         If ``same_plot=True``, group the trends by ``lineages`` instead of ``genes``. This enforces ``hide_cells=True``.
         If ``same_plot=False``, show ``lineages`` in rows and ``genes`` in columns.
     %(model_callback)s
     conf_int
-        Whether to compute and show confidence interval. If the :attr:`model` is :class:`cellrank.ul.models.GAMR`,
+        Whether to compute and show confidence interval. If the ``model`` is :class:`cellrank.ul.models.GAMR`,
         it can also specify the confidence level, the default is `0.95`.
     same_plot
         Whether to plot all lineages for each gene in the same plot.

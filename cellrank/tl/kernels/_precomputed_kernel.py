@@ -25,7 +25,7 @@ class PrecomputedKernel(Kernel):
     ----------
     transition_matrix
         Row-normalized transition matrix or a key in :attr:`adata` ``.obsp``
-        or a :class:`cellrank.tl.kernels.KernelExpression` with the computed transition matrix.
+        or a :class:`cellrank.tl.kernels.KernelExpression` with a precomputed transition matrix.
         If `None`, try to determine the key based on ``backward``.
     %(adata)s
     %(backward)s
