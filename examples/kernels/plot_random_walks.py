@@ -2,7 +2,7 @@
 Plot random walks
 -----------------
 
-This example shows how to plot random walks on Markov chain in an embedding.
+This example shows how to plot random walks on a Markov chain in an embedding.
 """
 
 import cellrank as cr
