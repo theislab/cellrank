@@ -53,13 +53,12 @@ class WOTKernel(Kernel, error=_error):
     --------
     Workflow::
 
+        # import packages, load data
         import scanpy as sc
         import cellrank as cr
-        from cellrank.external.kernels import WOTKernel
-
         adata = cr.datasets.lung()
 
-        # filter, normalize and annotate HVGs
+        # filter, normalize and annotate highly variable genes
         sc.pp.filter_genes(adata, min_cells=10)
         sc.pp.normalize_total(adata)
         sc.pp.log1p(adata)
@@ -72,6 +71,7 @@ class WOTKernel(Kernel, error=_error):
         sc.tl.score_genes(adata, gene_list=apoptosis_genes, score_name='apoptosis')
 
         # initialize kernel, estimate initial growth rate based on scores from above
+        from cellrank.external.kernels import WOTKernel
         ot = WOTKernel(adata, time_key='day')
         ot.compute_initial_growth_rates(proliferation_key='proliferation',
                                         apoptosis_key='apoptosis',
