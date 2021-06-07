@@ -12,7 +12,12 @@ from _helpers import (
 from packaging import version
 
 import scvelo as scv
+import cellrank as cr
 from anndata import AnnData
+from cellrank.tl import Lineage
+from cellrank.ul.models import GAMR
+from cellrank.tl._constants import AbsProbKey, _pd
+from cellrank.tl.estimators import GPCCA, CFLARE
 
 import numpy as np
 import pandas as pd
@@ -22,12 +27,6 @@ from pandas.api.types import is_categorical_dtype
 import matplotlib.cm as cm
 from matplotlib.testing import setup
 from matplotlib.testing.compare import compare_images
-
-import cellrank as cr
-from cellrank.tl import Lineage
-from cellrank.ul.models import GAMR
-from cellrank.tl._constants import AbsProbKey, _pd
-from cellrank.tl.estimators import GPCCA, CFLARE
 
 setup()
 

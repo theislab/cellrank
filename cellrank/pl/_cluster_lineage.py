@@ -5,11 +5,6 @@ from typing import Dict, Tuple, Union, TypeVar, Optional, Sequence
 from pathlib import Path
 from collections import Iterable
 
-import numpy as np
-from sklearn.preprocessing import StandardScaler
-
-import matplotlib.pyplot as plt
-
 from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.pl._utils import (
@@ -25,6 +20,11 @@ from cellrank.pl._utils import (
 from cellrank.tl._utils import save_fig, _unique_order_preserving
 from cellrank.ul._utils import _get_n_cores, _check_collection
 from cellrank.tl._constants import _DEFAULT_BACKEND, AbsProbKey
+
+import numpy as np
+from sklearn.preprocessing import StandardScaler
+
+import matplotlib.pyplot as plt
 
 AnnData = TypeVar("AnnData")
 Queue = TypeVar("Queue")

@@ -10,12 +10,12 @@ method for plotting some aggregate information for each column.
 
 We use it primarily to store either the fate probabilities or the macrostates memberships, see
 :ref:`sphx_glr_auto_examples_estimators_compute_abs_probs.py` or
-:ref:`sphx_glr_auto_examples_estimators_compute_macrostates.py`, to learn how to compute them.
+:ref:`sphx_glr_auto_examples_estimators_compute_macrostates.py` to learn how to compute them.
 """
 
-import numpy as np
-
 import cellrank as cr
+
+import numpy as np
 
 np.random.seed(42)
 

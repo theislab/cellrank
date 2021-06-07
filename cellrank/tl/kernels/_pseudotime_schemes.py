@@ -1,11 +1,11 @@
 from abc import ABC, abstractmethod
 from typing import Any, Tuple, Callable, Optional
 
-import numpy as np
-from scipy.sparse import csr_matrix
-
 from cellrank.ul._docs import d
 from cellrank.ul._parallelize import parallelize
+
+import numpy as np
+from scipy.sparse import csr_matrix
 
 
 class ThresholdSchemeABC(ABC):

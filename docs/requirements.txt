@@ -1,5 +1,7 @@
 -r ../requirements.txt  # must include this because of examples
 bezier
+ipython
+ipywidgets
 louvain>=0.6,!=0.6.2
 memory_profiler>=0.57.0
 nbsphinx>=0.7

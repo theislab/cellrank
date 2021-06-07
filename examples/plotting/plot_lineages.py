@@ -46,5 +46,5 @@ cr.pl.lineages(adata, ["Alpha", "Beta"], discrete=True)
 cr.pl.lineages(adata, same_plot=False)
 
 # %%
-# To see how to compute and plot the lineage driver genes,
+# To see how to compute and plot the lineage driver genes, please
 # refer to :ref:`sphx_glr_auto_examples_plotting_plot_lineage_drivers.py`.

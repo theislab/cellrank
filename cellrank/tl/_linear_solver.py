@@ -2,6 +2,11 @@
 from typing import List, Tuple, Union, TypeVar, Optional
 from functools import singledispatch
 
+from cellrank import logging as logg
+from cellrank.ul._utils import _get_n_cores
+from cellrank.tl._constants import _DEFAULT_BACKEND
+from cellrank.ul._parallelize import parallelize
+
 import numpy as np
 from scipy.linalg import solve
 from scipy.sparse import eye as speye
@@ -14,11 +19,6 @@ from scipy.sparse import (
     isspmatrix_csr,
 )
 from scipy.sparse.linalg import gmres, lgmres, gcrotmk, bicgstab
-
-from cellrank import logging as logg
-from cellrank.ul._utils import _get_n_cores
-from cellrank.tl._constants import _DEFAULT_BACKEND
-from cellrank.ul._parallelize import parallelize
 
 _DEFAULT_SOLVER = "gmres"
 _PETSC_ERROR_MSG_SHOWN = False

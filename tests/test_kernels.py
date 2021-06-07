@@ -11,15 +11,9 @@ from _helpers import (
 )
 
 import scanpy as sc
+import cellrank as cr
 from scanpy import Neighbors
 from anndata import AnnData
-
-import numpy as np
-from scipy.sparse import eye as speye
-from scipy.sparse import isspmatrix_csr
-from pandas.core.dtypes.common import is_bool_dtype, is_integer_dtype
-
-import cellrank as cr
 from cellrank.tl._utils import _normalize
 from cellrank.ul._utils import _get_neighs, _get_neighs_params
 from cellrank.tl.kernels import (
@@ -39,6 +33,11 @@ from cellrank.tl.kernels._base_kernel import (
     _is_bin_mult,
 )
 from cellrank.tl.kernels._cytotrace_kernel import CytoTRACEAggregation, _ct
+
+import numpy as np
+from scipy.sparse import eye as speye
+from scipy.sparse import isspmatrix_csr
+from pandas.core.dtypes.common import is_bool_dtype, is_integer_dtype
 
 _rtol = 1e-6
 

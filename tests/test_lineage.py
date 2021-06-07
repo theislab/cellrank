@@ -6,15 +6,15 @@ from html.parser import HTMLParser
 
 import pytest
 
-import numpy as np
-from pandas import DataFrame
-
-import matplotlib.colors as colors
-
 from cellrank.tl import Lineage
 from cellrank.tl._colors import _compute_mean_color, _create_categorical_colors
 from cellrank.tl._lineage import _HT_CELLS, LineageView, PrimingDegree
 from cellrank.tl._constants import Lin
+
+import numpy as np
+from pandas import DataFrame
+
+import matplotlib.colors as colors
 
 
 class SimpleHTMLValidator(HTMLParser):

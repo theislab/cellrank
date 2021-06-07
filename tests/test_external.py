@@ -2,14 +2,13 @@ from typing import Optional
 
 import pytest
 
+import cellrank.external as cre
 from anndata import AnnData
 
 import numpy as np
 import pandas as pd
 from scipy.sparse import spmatrix
 from pandas.core.dtypes.common import is_categorical_dtype
-
-import cellrank.external as cre
 
 
 class TestOTKernel:

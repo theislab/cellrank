@@ -6,18 +6,6 @@ from typing import Any, Dict, List, Tuple, Union, TypeVar, Optional, Sequence
 from pathlib import Path
 from collections import Iterable, defaultdict
 
-import numpy as np
-import pandas as pd
-from pandas.api.types import is_categorical_dtype
-from scipy.ndimage.filters import convolve
-
-import matplotlib as mpl
-import matplotlib.colors as mcolors
-import matplotlib.pyplot as plt
-from matplotlib import cm
-from matplotlib.ticker import FormatStrFormatter
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-
 from cellrank import logging as logg
 from cellrank.ul._docs import d, inject_docs
 from cellrank.pl._utils import (
@@ -34,6 +22,18 @@ from cellrank.tl._utils import save_fig, _min_max_scale, _unique_order_preservin
 from cellrank.ul._utils import _get_n_cores, valuedispatch, _check_collection
 from cellrank.tl._colors import _create_categorical_colors
 from cellrank.tl._constants import _DEFAULT_BACKEND, ModeEnum, AbsProbKey
+
+import numpy as np
+import pandas as pd
+from pandas.api.types import is_categorical_dtype
+from scipy.ndimage.filters import convolve
+
+import matplotlib as mpl
+import matplotlib.colors as mcolors
+import matplotlib.pyplot as plt
+from matplotlib import cm
+from matplotlib.ticker import FormatStrFormatter
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 _N_XTICKS = 10
 

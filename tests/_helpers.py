@@ -8,15 +8,14 @@ from PIL import Image
 
 import scanpy as sc
 import scvelo as scv
+import cellrank as cr
 from anndata import AnnData
+from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
 
 import numpy as np
 import pandas as pd
 from sklearn.svm import SVR
 from scipy.sparse import spdiags, issparse, csr_matrix
-
-import cellrank as cr
-from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
 
 
 def _jax_not_installed() -> bool:

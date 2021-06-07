@@ -3,13 +3,6 @@ from types import MappingProxyType
 from typing import List, Tuple, Union, Mapping, TypeVar, Optional, Sequence
 from pathlib import Path
 
-import numpy as np
-import pandas as pd
-
-import matplotlib
-import matplotlib.pyplot as plt
-from matplotlib import cm
-
 from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.pl._utils import (
@@ -26,6 +19,13 @@ from cellrank.pl._utils import (
 from cellrank.tl._utils import save_fig, _unique_order_preserving
 from cellrank.ul._utils import _get_n_cores, _check_collection
 from cellrank.tl._constants import _DEFAULT_BACKEND, AbsProbKey
+
+import numpy as np
+import pandas as pd
+
+import matplotlib
+import matplotlib.pyplot as plt
+from matplotlib import cm
 
 AnnData = TypeVar("AnnData")
 

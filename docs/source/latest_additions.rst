@@ -1,53 +1,38 @@
 .. role:: small
 
-1.3.0 :small:`2021-03-29`
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-This release includes some major additions which make CellRank more applicable with and without RNA velocity
-information. In particular, it includes:
+1.4.0 :small:`SOON`
+~~~~~~~~~~~~~~~~~~~
+This release includes:
 
 .. rubric:: Additions
 
-- Add new kernel :class:`cellrank.tl.kernels.CytoTRACEKernel` which computes cell-cell transition probabilities based
-  on the CytoTRACE score :cite:`gulati:20`, a measure of differentiation potential,
-  `PR 527 <https://github.com/theislab/cellrank/pull/527>`_.
-- Add external API :mod:`cellrank.external` with a stationary optimal transport kernel
-  :class:`cellrank.external.kernels.OTKernel` contributed from :cite:`zhang:21`, as well as a
-  `contributing guide <https://github.com/theislab/cellrank/blob/master/CONTRIBUTING.rst>`_,
-  `PR 522 <https://github.com/theislab/cellrank/pull/522>`_.
-- Rename ``cellrank.tl.kernels.PalantirKernel`` to :class:`cellrank.tl.kernels.PseudotimeKernel` and add
-  hard thresholding scheme inspired by :cite:`setty:19`, a soft thresholding scheme inspired by :cite:`stassen:21` and
-  a custom scheme when computing the transition matrix, see e.g. :class:`cellrank.tl.kernels.SoftThresholdScheme`
-  `PR 514 <https://github.com/theislab/cellrank/pull/514>`_.
-- Add more flexibility to :class:`cellrank.tl.kernels.ConnectivityKernel`, allowing it to use any cell-cell similarities
-  from :attr:`anndata.AnnData.obsp`, such as spatial similarities from :mod:`squidpy` :cite:`palla:21`
-  `PR 501 <https://github.com/theislab/cellrank/pull/501>`_.
-- Revamp `Pancreas Advanced <https://cellrank.readthedocs.io/en/latest/pancreas_advanced.html>`_ tutorial
-  to showcase CellRank's modular structure of kernels and estimators.
-  `PR 32 <https://github.com/theislab/cellrank_notebooks/pull/32>`_.
-- Add 2 new tutorials:
+- Add new external kernel based on Waddington optimal transport :cite:`schiebinger:19`
+  :class:`cellrank.external.kernels.WOTKernel` `PR 595 <https://github.com/theislab/cellrank/pull/595>`_.
+- Remove 4 technical examples and add 2 new examples `PR 602 <https://github.com/theislab/cellrank/pull/602>`_:
 
-  - `Beyond RNA velocity <https://cellrank.readthedocs.io/en/latest/beyond_rna_velocity.html>`_: shows how to use
-    CellRank when no RNA velocity information is available.
-    `PR 32 <https://github.com/theislab/cellrank_notebooks/pull/32>`_
-  - `Creating a new kernel <https://cellrank.readthedocs.io/en/latest/creating_new_kernel.html>`_: explains how to
-    create your own custom kernel class that estimates cell-cell transition probabilities
-    `PR 31 <https://github.com/theislab/cellrank_notebooks/pull/31>`_.
+  - :ref:`sphx_glr_auto_examples_kernels_plot_projection.py` - transition matrix project onto an embedding.
+  - :ref:`sphx_glr_auto_examples_kernels_plot_random_walks.py` - simulation of random walks on a Markov chain.
 
-- Add projection of transition matrix onto an embedding :meth:`cellrank.tl.kernels.Kernel.compute_projection`
-- Add random walk simulation and visualization in an embedding :meth:`cellrank.tl.kernels.Kernel.plot_random_walks`
-  `PR 537 <https://github.com/theislab/cellrank/pull/537>`_.
-- Add :meth:`cellrank.tl.Lineage.priming_degree` `PR 502 <https://github.com/theislab/cellrank/pull/502>`_
-  which estimates a cell's plasticity/differentiation potential based on ideas by :cite:`setty:19`
-  and :cite:`velten:17`.
-- Add checks for transition matrix irreducibility `PR 516 <https://github.com/theislab/cellrank/pull/516>`_.
-- Add Zebrafish development dataset from :cite:`farrel:18` `PR 539 <https://github.com/theislab/cellrank/pull/539>`_.
-- Speed-up stationary distribution calculation in :mod:`pygpcca` `PR 22 <https://github.com/msmdev/pyGPCCA/pull/22>`_.
+- Add option to force-recompute transition matrix in :func:`cellrank.tl.initial_states` and
+  :func:`cellrank.tl.terminal_states` `PR 577 <https://github.com/theislab/cellrank/pull/577>`_.
+- Change :class:`cellrank.tl.kernels.PseudotimeKernel` defaults and prune available parameters
+  of soft thresholding scheme `PR 583 <https://github.com/theislab/cellrank/pull/583>`_.
+- Parallelize transition matrix computation in :class:`cellrank.tl.kernels.PseudotimeKernel`
+  `PR 587 <https://github.com/theislab/cellrank/pull/587>`_.
+- Prune *requirements.txt* `PR 571 <https://github.com/theislab/cellrank/pull/571>`_.
+- Add small improvements to documentation `PR 584 <https://github.com/theislab/cellrank/pull/584>`_
+  `PR 601 <https://github.com/theislab/cellrank/pull/601>`_ `PR 605 <https://github.com/theislab/cellrank/pull/605>`_.
 
 .. rubric:: Bugfixes
 
-- Fix various bugs when plotting multiple gene trends `PR 487 <https://github.com/theislab/cellrank/pull/487>`_.
-- Fix gene trend smoothing not working for 1 lineage `PR 512 <https://github.com/theislab/cellrank/pull/512>`_.
-- Fix :mod:`pandas` error when computing macrostates `PR 513 <https://github.com/theislab/cellrank/pull/513>`_.
-- Remove malfunctioning *Edit on GitHub* from the documentation
-  `PR 538 <https://github.com/theislab/cellrank/pull/538>`_.
+- Fix estimator's incosistent state when reading from :class:`anndata.AnnData`
+  `PR 563 <https://github.com/theislab/cellrank/pull/563>`_.
+- Fix not checking whether probabilities sum to 1 in
+  :meth:`cellrank.tl.estimators.BaseEstimator.compute_absorption_probabilities`
+  `PR 566 <https://github.com/theislab/cellrank/pull/566>`_.
+- Fix always forcing sparse transition matrix in :class:`cellrank.tl.kernels.Kernel`
+  `PR 586 <https://github.com/theislab/cellrank/pull/586>`_.
+- Fix passing custom connectivities key in :class:`cellrank.tl.kernels.Kernel`
+  `PR 590 <https://github.com/theislab/cellrank/pull/590>`_.
+- Fix kernels in :mod:`cellrank.external` always requiring connectivities
+  `PR 600 <https://github.com/theislab/cellrank/pull/600>`_.

@@ -2,12 +2,12 @@
 from typing import Iterable, Optional
 from inspect import signature
 
-import numpy as np
-from sklearn.base import BaseEstimator
-
 from cellrank.ul._docs import d
 from cellrank.ul.models import BaseModel
 from cellrank.ul.models._base_model import AnnData
+
+import numpy as np
+from sklearn.base import BaseEstimator
 
 
 @d.dedent

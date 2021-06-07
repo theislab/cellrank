@@ -3,13 +3,12 @@ from typing import Any, Union, Optional
 from typing_extensions import Literal
 
 from anndata import AnnData
-
-import numpy as np
-import pandas as pd
-
 from cellrank.ul._docs import d
 from cellrank.tl.estimators import GPCCA
 from cellrank.tl.kernels._precomputed_kernel import DummyKernel
+
+import numpy as np
+import pandas as pd
 
 _error = None
 try:

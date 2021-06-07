@@ -10,17 +10,6 @@ from datetime import datetime
 from typing_extensions import Literal
 
 import scvelo as scv
-
-import numpy as np
-import pandas as pd
-from pandas import Series
-from scipy.stats import ranksums
-from scipy.sparse import spmatrix
-from pandas.api.types import infer_dtype, is_categorical_dtype
-
-import matplotlib.pyplot as plt
-from matplotlib.colors import is_color_like
-
 from cellrank import logging as logg
 from cellrank.ul._docs import d, inject_docs
 from cellrank.tl._utils import (
@@ -57,6 +46,16 @@ from cellrank.tl._linear_solver import _solve_lin_system
 from cellrank.tl.estimators._property import Partitioner, LineageEstimatorMixin
 from cellrank.tl.kernels._base_kernel import KernelExpression
 from cellrank.tl.estimators._constants import A, P
+
+import numpy as np
+import pandas as pd
+from pandas import Series
+from scipy.stats import ranksums
+from scipy.sparse import spmatrix
+from pandas.api.types import infer_dtype, is_categorical_dtype
+
+import matplotlib.pyplot as plt
+from matplotlib.colors import is_color_like
 
 AnnData = TypeVar("AnnData")
 _COMP_TERM_STATES_MSG = (

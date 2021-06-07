@@ -6,13 +6,8 @@ from tempfile import TemporaryDirectory
 import pytest
 from _helpers import assert_array_nan_equal, assert_estimators_equal
 
-from anndata import AnnData
-
-import numpy as np
-import pandas as pd
-from pandas.testing import assert_series_equal
-
 import cellrank as cr
+from anndata import AnnData
 from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tl._constants import (
     Direction,
@@ -25,6 +20,10 @@ from cellrank.tl._constants import (
     _lin_names,
 )
 from cellrank.tl.estimators._constants import A, P
+
+import numpy as np
+import pandas as pd
+from pandas.testing import assert_series_equal
 
 
 def _check_eigdecomposition(mc: cr.tl.estimators.GPCCA) -> None:

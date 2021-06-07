@@ -6,10 +6,10 @@ from multiprocessing import Manager
 
 import joblib as jl
 
+from cellrank.ul._utils import _get_n_cores
+
 import numpy as np
 from scipy.sparse import issparse, spmatrix
-
-from cellrank.ul._utils import _get_n_cores
 
 
 def parallelize(

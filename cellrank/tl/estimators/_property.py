@@ -5,17 +5,8 @@ from typing import Any, Dict, List, Tuple, Union, Iterable, Optional
 from inspect import isabstract
 
 import scvelo as scv
-from anndata import AnnData
-
-import numpy as np
-import pandas as pd
-from scipy.sparse import issparse, spmatrix
-from pandas.api.types import is_categorical_dtype
-
-import matplotlib as mpl
-from matplotlib import cm
-
 import cellrank.logging as logg
+from anndata import AnnData
 from cellrank.ul._docs import d, _initial, _terminal
 from cellrank.tl._utils import RandomKeys, _make_cat, _partition, _complex_warning
 from cellrank.ul._utils import Pickleable
@@ -33,6 +24,14 @@ from cellrank.tl.estimators._utils import (
 )
 from cellrank.tl.kernels._base_kernel import KernelExpression
 from cellrank.tl.estimators._constants import META_KEY, A, F, P
+
+import numpy as np
+import pandas as pd
+from scipy.sparse import issparse, spmatrix
+from pandas.api.types import is_categorical_dtype
+
+import matplotlib as mpl
+from matplotlib import cm
 
 
 def is_abstract(classname: str) -> bool:  # TODO: determine the necessity of this

@@ -1,12 +1,12 @@
 from typing import Any, List, Union, Optional, Sequence
 from itertools import chain
 
-import numpy as np
-from scipy.sparse import issparse, spmatrix
-
 from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.ul._parallelize import parallelize
+
+import numpy as np
+from scipy.sparse import issparse, spmatrix
 
 
 class RandomWalk:
@@ -136,7 +136,8 @@ class RandomWalk:
             if queue is not None:
                 queue.put(1)
 
-        queue.put(None)
+        if queue is not None:
+            queue.put(None)
 
         return res
 
