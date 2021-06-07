@@ -2,6 +2,8 @@
 
 from typing import Any, List, Tuple, Union, Iterable, Optional, Sequence
 
+from cellrank import logging as logg
+
 import numpy as np
 from pandas import Series, DataFrame, to_numeric
 from scipy.stats import entropy
@@ -10,8 +12,6 @@ from pandas.core.dtypes.common import is_categorical_dtype
 
 from matplotlib import cm
 from matplotlib import colors as mcolors
-
-from cellrank import logging as logg
 
 
 def _create_colors(

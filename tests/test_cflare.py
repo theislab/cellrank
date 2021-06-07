@@ -5,14 +5,9 @@ from tempfile import TemporaryDirectory
 import pytest
 from _helpers import assert_estimators_equal
 
-from anndata import AnnData
-
-import numpy as np
-import pandas as pd
-from pandas.api.types import is_categorical_dtype
-
 import cellrank as cr
 import cellrank.tl.kernels._precomputed_kernel
+from anndata import AnnData
 from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tl._constants import (
     Direction,
@@ -25,6 +20,10 @@ from cellrank.tl._constants import (
     _lin_names,
 )
 from cellrank.tl.estimators._constants import A, P
+
+import numpy as np
+import pandas as pd
+from pandas.api.types import is_categorical_dtype
 
 EPS = np.finfo(np.float64).eps
 

@@ -1,11 +1,7 @@
 import pytest
 
-from anndata import AnnData
-
-import numpy as np
-from pandas.api.types import is_categorical_dtype
-
 import cellrank as cr
+from anndata import AnnData
 from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tl._constants import (
     Direction,
@@ -18,6 +14,9 @@ from cellrank.tl._constants import (
     _transition,
 )
 from cellrank.tl.estimators._constants import P
+
+import numpy as np
+from pandas.api.types import is_categorical_dtype
 
 
 def _assert_has_all_keys(adata: AnnData, direction: Direction):

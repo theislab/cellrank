@@ -7,7 +7,6 @@ and how to visualize these in various ways.
 """
 
 import scanpy as sc
-
 import cellrank as cr
 
 adata = cr.datasets.pancreas_preprocessed("../example.h5ad")

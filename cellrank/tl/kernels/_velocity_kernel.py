@@ -5,11 +5,6 @@ from math import fsum
 from typing import Any, Union, Callable, Iterable, Optional
 
 from anndata import AnnData
-from scvelo.preprocessing.moments import get_moments
-
-import numpy as np
-from scipy.sparse import issparse, csr_matrix
-
 from cellrank import logging as logg
 from cellrank.ul._docs import d, inject_docs
 from cellrank.ul._utils import valuedispatch
@@ -25,8 +20,12 @@ from cellrank.tl.kernels._utils import (
     _calculate_starts,
     _get_probs_for_zero_vec,
 )
+from scvelo.preprocessing.moments import get_moments
 from cellrank.tl.kernels._base_kernel import _RTOL
 from cellrank.tl.kernels._velocity_schemes import Scheme, _get_scheme
+
+import numpy as np
+from scipy.sparse import issparse, csr_matrix
 
 
 class VelocityMode(ModeEnum):  # noqa

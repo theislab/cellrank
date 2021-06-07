@@ -4,13 +4,6 @@ from types import MappingProxyType
 from typing import Any, Dict, List, Tuple, Union, Mapping, Iterable, Optional, Sequence
 from pathlib import Path
 
-import numpy as np
-import pandas as pd
-
-import matplotlib as mpl
-import matplotlib.colors as mcolors
-import matplotlib.pyplot as plt
-
 from cellrank import logging as logg
 from cellrank.ul._docs import d, inject_docs
 from cellrank.tl._utils import (
@@ -27,6 +20,13 @@ from cellrank.tl.estimators._property import Macrostates
 from cellrank.tl.estimators._constants import A, F, P
 from cellrank.tl.estimators._decomposition import Eigen, Schur
 from cellrank.tl.estimators._base_estimator import BaseEstimator
+
+import numpy as np
+import pandas as pd
+
+import matplotlib as mpl
+import matplotlib.colors as mcolors
+import matplotlib.pyplot as plt
 
 
 @d.dedent

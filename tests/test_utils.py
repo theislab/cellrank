@@ -3,13 +3,6 @@ from _helpers import create_model, assert_array_nan_equal, jax_not_installed_ski
 
 import scanpy as sc
 from anndata import AnnData
-
-import numpy as np
-import pandas as pd
-from numba import njit
-from scipy.sparse import diags, random, csr_matrix
-from pandas.api.types import is_categorical_dtype
-
 from cellrank.tl import Lineage
 from cellrank.pl._utils import (
     _create_models,
@@ -45,6 +38,12 @@ from cellrank.tl.kernels._velocity_schemes import (
     _predict_transition_probabilities_jax,
     _predict_transition_probabilities_numpy,
 )
+
+import numpy as np
+import pandas as pd
+from numba import njit
+from scipy.sparse import diags, random, csr_matrix
+from pandas.api.types import is_categorical_dtype
 
 
 class TestToolsUtils:

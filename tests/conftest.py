@@ -13,16 +13,15 @@ import pytest
 from _helpers import create_model
 
 import scanpy as sc
+import cellrank as cr
 from anndata import AnnData
+from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
+from cellrank.tl._constants import AbsProbKey
+from cellrank.tl.estimators import GPCCA, CFLARE
 
 import numpy as np
 
 import matplotlib
-
-import cellrank as cr
-from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
-from cellrank.tl._constants import AbsProbKey
-from cellrank.tl.estimators import GPCCA, CFLARE
 
 matplotlib.use("Agg")
 np.random.seed(42)

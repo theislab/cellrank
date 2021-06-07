@@ -2,7 +2,6 @@
 from copy import copy
 
 from anndata import AnnData
-
 from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.tl.kernels import Kernel

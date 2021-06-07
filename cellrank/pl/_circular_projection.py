@@ -6,15 +6,6 @@ from typing_extensions import Literal
 
 import scvelo as scv
 from anndata import AnnData
-
-import numpy as np
-import pandas as pd
-from sklearn.metrics import pairwise_distances
-
-import matplotlib.pyplot as plt
-from matplotlib.colors import LogNorm, LinearSegmentedColormap
-from matplotlib.collections import LineCollection
-
 from cellrank import logging as logg
 from cellrank.tl import Lineage
 from cellrank.ul._docs import d
@@ -23,6 +14,14 @@ from cellrank.tl._utils import save_fig, _unique_order_preserving
 from cellrank.ul._utils import _check_collection
 from cellrank.tl._lineage import PrimingDegree
 from cellrank.tl._constants import ModeEnum, AbsProbKey
+
+import numpy as np
+import pandas as pd
+from sklearn.metrics import pairwise_distances
+
+import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm, LinearSegmentedColormap
+from matplotlib.collections import LineCollection
 
 
 class LineageOrder(ModeEnum):  # noqa: D101

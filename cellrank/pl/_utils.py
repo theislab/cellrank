@@ -16,6 +16,15 @@ from pathlib import Path
 from itertools import combinations
 from collections import namedtuple, defaultdict
 
+from cellrank import logging as logg
+from cellrank.ul._docs import d
+from cellrank.tl._utils import save_fig, _unique_order_preserving
+from cellrank.ul.models import GAMR, BaseModel, FailedModel, SKLearnModel
+from cellrank.tl._colors import _create_categorical_colors
+from cellrank.tl._constants import _DEFAULT_BACKEND
+from cellrank.ul._parallelize import parallelize
+from cellrank.ul.models._base_model import ColorType
+
 import numpy as np
 import pandas as pd
 from pandas.api.types import is_categorical_dtype
@@ -25,15 +34,6 @@ import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-
-from cellrank import logging as logg
-from cellrank.ul._docs import d
-from cellrank.tl._utils import save_fig, _unique_order_preserving
-from cellrank.ul.models import GAMR, BaseModel, FailedModel, SKLearnModel
-from cellrank.tl._colors import _create_categorical_colors
-from cellrank.tl._constants import _DEFAULT_BACKEND
-from cellrank.ul._parallelize import parallelize
-from cellrank.ul.models._base_model import ColorType
 
 AnnData = TypeVar("AnnData")
 Queue = TypeVar("Queue")

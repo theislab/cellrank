@@ -10,9 +10,9 @@ model non-linear gene trends as they often appear in single-cell data. Further, 
 relatively straightforward to derive a confidence interval around the main trend.
 """
 
-from sklearn.svm import SVR
-
 import cellrank as cr
+
+from sklearn.svm import SVR
 
 adata = cr.datasets.pancreas_preprocessed("../example.h5ad")
 adata

@@ -5,9 +5,6 @@ from typing import Any, Union, Callable, Optional
 from typing_extensions import Literal
 
 from anndata import AnnData
-
-import numpy as np
-
 from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.tl._utils import _connected
@@ -20,6 +17,8 @@ from cellrank.tl.kernels._pseudotime_schemes import (
     SoftThresholdScheme,
     CustomThresholdScheme,
 )
+
+import numpy as np
 
 
 @d.dedent

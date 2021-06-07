@@ -1,10 +1,6 @@
 """Clustering and Filtering of Left and Right Eigenvectors based on Markov chains."""
 from typing import List, Tuple, Union, Optional, Sequence
 
-import numpy as np
-from pandas import Series
-from scipy.stats import zscore
-
 from cellrank import logging as logg
 from cellrank.ul._docs import d, inject_docs
 from cellrank.tl._utils import (
@@ -16,6 +12,10 @@ from cellrank.tl._utils import (
 from cellrank.tl.estimators._constants import A, P
 from cellrank.tl.estimators._decomposition import Eigen
 from cellrank.tl.estimators._base_estimator import BaseEstimator
+
+import numpy as np
+from pandas import Series
+from scipy.stats import zscore
 
 
 @d.dedent

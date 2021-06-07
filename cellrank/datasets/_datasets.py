@@ -5,7 +5,6 @@ from typing import Any, Tuple, Union, TypeVar
 from pathlib import Path
 
 from scanpy import read
-
 from cellrank import logging as logg
 from cellrank.ul._docs import d, inject_docs
 from cellrank.tl._constants import ModeEnum

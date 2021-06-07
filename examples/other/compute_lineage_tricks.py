@@ -13,9 +13,9 @@ We use it primarily to store either the fate probabilities or the macrostates me
 :ref:`sphx_glr_auto_examples_estimators_compute_macrostates.py` to learn how to compute them.
 """
 
-import numpy as np
-
 import cellrank as cr
+
+import numpy as np
 
 np.random.seed(42)
 

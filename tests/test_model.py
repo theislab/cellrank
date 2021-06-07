@@ -7,12 +7,6 @@ import pytest
 from _helpers import gamr_skip, create_model, assert_models_equal
 
 from anndata import AnnData
-
-import numpy as np
-from pygam import ExpectileGAM
-from scipy.stats import rankdata
-from sklearn.svm import SVR
-
 from cellrank.tl import Lineage
 from cellrank.ul.models import GAM, GAMR, FittedModel, SKLearnModel
 from cellrank.tl._constants import AbsProbKey
@@ -26,6 +20,11 @@ from cellrank.ul.models._utils import (
 )
 from cellrank.ul.models._base_model import FailedModel, UnknownModelError
 from cellrank.ul.models._pygam_model import GamDistribution, GamLinkFunction, _gams
+
+import numpy as np
+from pygam import ExpectileGAM
+from scipy.stats import rankdata
+from sklearn.svm import SVR
 
 
 class TestModel:

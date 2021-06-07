@@ -1,12 +1,12 @@
 import pytest
 
+from cellrank.tl._colors import _map_names_and_colors, _create_categorical_colors
+
 import numpy as np
 import pandas as pd
 from pandas.api.types import is_categorical_dtype
 
 from matplotlib.colors import is_color_like
-
-from cellrank.tl._colors import _map_names_and_colors, _create_categorical_colors
 
 
 class TestColors:

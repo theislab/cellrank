@@ -165,7 +165,7 @@ class ExplicitSubsectionOrder(_SortKey):
     _order = ChainMap(
         {
             example_dir / "kernels" / "plot_projection.py": 0,
-            example_dir / "kernels" / "plot_random_walk.py": 10,
+            example_dir / "kernels" / "plot_random_walks.py": 10,
             example_dir / "kernels" / "compute_kernel_tricks.py": 30,
         },
         {

@@ -9,13 +9,6 @@ from itertools import combinations
 
 from typing_extensions import Literal
 
-import numpy as np
-import pandas as pd
-from scipy.stats import entropy
-
-import matplotlib.colors as c
-import matplotlib.pyplot as plt
-
 from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.tl._utils import save_fig, _convert_lineage_name, _unique_order_preserving
@@ -25,6 +18,13 @@ from cellrank.tl._colors import (
     _create_categorical_colors,
 )
 from cellrank.tl._constants import Lin, ModeEnum
+
+import numpy as np
+import pandas as pd
+from scipy.stats import entropy
+
+import matplotlib.colors as c
+import matplotlib.pyplot as plt
 
 ColorLike = TypeVar("ColorLike")
 _ERROR_NOT_ITERABLE = "Expected `{}` to be iterable, found type `{}`."

@@ -2,15 +2,15 @@
 from copy import copy, deepcopy
 from typing import Any, Tuple, Union, Optional
 
-import numpy as np
-import pandas as pd
-from scipy.stats import norm
-
 from cellrank.ul._docs import d, inject_docs
 from cellrank.ul.models import BaseModel
 from cellrank.tl._constants import ModeEnum
 from cellrank.ul.models._utils import _OFFSET_KEY, _get_offset, _get_knotlocs
 from cellrank.ul.models._base_model import AnnData, FailedModel
+
+import numpy as np
+import pandas as pd
+from scipy.stats import norm
 
 _r_lib = None
 _r_lib_name = None

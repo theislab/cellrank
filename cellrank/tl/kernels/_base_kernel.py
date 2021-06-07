@@ -19,17 +19,6 @@ from functools import reduce
 
 import scvelo as scv
 from anndata import AnnData
-from scvelo.plotting.utils import default_size, plot_outline
-
-import numpy as np
-from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix, isspmatrix_csr
-from pandas.api.types import infer_dtype
-from pandas.core.dtypes.common import is_categorical_dtype
-
-import matplotlib.pyplot as plt
-from matplotlib.colors import LinearSegmentedColormap, to_hex
-from matplotlib.collections import LineCollection
-
 from cellrank import logging as logg
 from cellrank.ul._docs import d, inject_docs
 from cellrank.tl._utils import (
@@ -41,9 +30,19 @@ from cellrank.tl._utils import (
     _irreducible,
 )
 from cellrank.ul._utils import Pickleable, _write_graph_data
+from scvelo.plotting.utils import default_size, plot_outline
 from cellrank.tl._constants import Direction, _transition
 from cellrank.tl.kernels._utils import _get_basis, _filter_kwargs
 from cellrank.tl.kernels._random_walk import RandomWalk
+
+import numpy as np
+from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix, isspmatrix_csr
+from pandas.api.types import infer_dtype
+from pandas.core.dtypes.common import is_categorical_dtype
+
+import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap, to_hex
+from matplotlib.collections import LineCollection
 
 _ERROR_DIRECTION_MSG = "Can only combine kernels that have the same direction."
 _ERROR_EMPTY_CACHE_MSG = (
