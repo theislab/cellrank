@@ -55,23 +55,30 @@ class CytoTRACEKernel(PseudotimeKernel):
     -------
     Workflow::
 
+        # import packages and load data
         import scvelo as scv
         import cellrank as cr
-
         adata = cr.datasets.pancreas()
 
+        # standard pre-processing
         sc.pp.filter_genes(adata, min_cells=10)
-        adata.raw = adata.copy()
         sc.pp.normalize_total(adata)
         sc.pp.log1p(adata)
         sc.pp.highly_variable_genes(adata)
 
+        # CytoTRACE by default uses imputed data - a simple way to compute KNN-imputed data is to use scVelo's moments
+        # function. However, note that this function expects `spliced` counts because it's designed for RNA velocity,
+        # so we're using a simple hack here:
         if 'spliced' not in adata.layers or 'unspliced' not in adata.layers:
-            # use the following trick to get scVelo's moments function working
             adata.layers['spliced'] = adata.X
             adata.layers['unspliced'] = adata.X
 
-        scv.pp.moments(adata, n_pcs=None, n_neighbors=None)
+        # compute KNN-imputation using scVelo's moments function
+        scv.pp.moments(adata)
+
+        # import and initialize the CytoTRACE kernel, compute transition matrix - done!
+        from cellrank.tl.kernels import CytoTRACEKernel
+        ctk = CytoTRACEKernel(adata).compute_transition_matrix()
     """
 
     def __init__(
