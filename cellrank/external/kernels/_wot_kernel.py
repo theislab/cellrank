@@ -1,12 +1,15 @@
+from types import MappingProxyType
 from typing import Any, Dict, Tuple, Union, Mapping, Optional
 
 from tqdm.auto import tqdm
 from typing_extensions import Literal
 
+import scanpy as sc
 from anndata import AnnData
 from cellrank import logging as logg
-from cellrank.ul._docs import d
+from cellrank.ul._docs import d, inject_docs
 from cellrank.tl._utils import _normalize, _maybe_subset_hvgs
+from cellrank.tl._constants import ModeEnum
 
 import numpy as np
 import pandas as pd
@@ -16,6 +19,7 @@ _error = None
 try:
     import wot
 
+    from cellrank.tl.kernels import ConnectivityKernel
     from cellrank.tl.kernels import ExperimentalTimeKernel as Kernel
 except ImportError as e:
     from cellrank.external.kernels._import_error_kernel import ErroredKernel as Kernel
@@ -29,6 +33,12 @@ class nstr(str):  # used for params+cache (precomputed cost matrices)
 
     def __eq__(self, other: str) -> bool:
         return False
+
+
+class LastTimePoint(ModeEnum):  # noqa
+    UNIFORM = "uniform"
+    DIAGONAL = "diagonal"
+    CONNECTIVITIES = "connectivities"
 
 
 @d.dedent
@@ -201,6 +211,7 @@ class WOTKernel(Kernel, error=_error):
             return pd.Series(gr, index=self.adata.obs_names)
         self.adata.obs[key_added] = gr
 
+    @inject_docs(ltp=LastTimePoint)
     def compute_transition_matrix(
         self,
         cost_matrices: Optional[
@@ -213,7 +224,8 @@ class WOTKernel(Kernel, error=_error):
         solver: Literal["fixed_iters", "duality_gap"] = "duality_gap",
         growth_rate_key: Optional[str] = None,
         use_highly_variable: Optional[Union[str, bool]] = True,
-        uniform: bool = False,
+        last_time_point: Literal["uniform", "diagonal", "connectivities"] = "uniform",
+        conn_kwargs: Mapping[str, Any] = MappingProxyType({}),
         **kwargs: Any,
     ) -> "WOTKernel":
         """
@@ -249,9 +261,17 @@ class WOTKernel(Kernel, error=_error):
         use_highly_variable
             Key in :attr:`adata` ``.var`` where highly variable genes are stored.
             If `True`, use `'highly_variable'`. If `None`, use all genes.
-        uniform
-            If `True`, use row-normalized matrix of 1s for transitions within the last time point.
-            Otherwise, use diagonal matrix with 1s on the diagonal.
+        last_time_point
+            How to define transitions within the last time point. Valid options are:
+
+                - `{ltp.UNIFORM.s!r}` - row-normalized matrix of 1s for transitions within the last time point.
+                - `{ltp.DIAGONAL.s!r}` - diagonal matrix with 1s on the diagonal.
+                - `{ltp.CONNECTIVITIES.s!r}` - use transitions from :class:`cellrank.tl.kernels.ConnectivityKernel`
+                  derived from the last time point subset of :attr:`adata`.
+        conn_kwargs
+            Keyword arguments for :func:`scanpy.pp.neighbors`, when using ``last_time_point={ltp.CONNECTIVITIES.s!r}``.
+            Can contain `'density_normalize'` for
+            :meth:`cellrank.tl.kernels.ConnectivityKernel.compute_transition_matrix`.
         kwargs
             Additional keyword arguments for OT configuration.
 
@@ -276,6 +296,7 @@ class WOTKernel(Kernel, error=_error):
         kwargs["lambda2"] = lambda2
         kwargs["epsilon"] = epsilon
         kwargs["growth_iters"] = max(growth_iters, 1)
+        last_time_point = LastTimePoint(last_time_point)
 
         start = logg.info(
             "Computing transition matrix using Waddington optimal transport"
@@ -289,6 +310,7 @@ class WOTKernel(Kernel, error=_error):
                 "solver": solver,
                 "growth_rate_key": growth_rate_key,
                 "use_highly_variable": use_highly_variable,
+                "last_time_point": last_time_point.s,
                 **kwargs,
             },
             time=start,
@@ -302,7 +324,7 @@ class WOTKernel(Kernel, error=_error):
             growth_rate_field=growth_rate_key,
             **kwargs,
         )
-        tmat = self._restich_tmats(tmat, uniform)
+        tmat = self._restich_tmats(tmat, last_time_point, conn_kwargs=conn_kwargs)
 
         self._compute_transition_matrix(
             matrix=tmat,
@@ -354,8 +376,16 @@ class WOTKernel(Kernel, error=_error):
         return self._tmats
 
     def _restich_tmats(
-        self, tmaps: Mapping[Tuple[float, float], AnnData], uniform: bool = False
+        self,
+        tmaps: Mapping[Tuple[float, float], AnnData],
+        last_time_point: LastTimePoint = LastTimePoint.DIAGONAL,
+        conn_kwargs: Mapping[str, Any] = MappingProxyType({}),
     ) -> spmatrix:
+        conn_kwargs = dict(conn_kwargs)
+        conn_kwargs["copy"] = False
+        _ = conn_kwargs.pop("key_added", None)
+        density_normalize = conn_kwargs.pop("density_normalize", True)
+
         blocks = [[None] * (len(tmaps) + 1) for _ in range(len(tmaps) + 1)]
         nrows, ncols = 0, 0
         obs_names, growth_rates = [], []
@@ -369,9 +399,23 @@ class WOTKernel(Kernel, error=_error):
         obs_names.extend(tmap.var_names)
 
         n = self.adata.n_obs - nrows
-        blocks[-1][-1] = (
-            (np.ones((n, n)) / float(n)) if uniform else spdiags([1] * n, 0, n, n)
-        )
+        if last_time_point == LastTimePoint.DIAGONAL:
+            blocks[-1][-1] = spdiags([1] * n, 0, n, n)
+        elif last_time_point == LastTimePoint.UNIFORM:
+            blocks[-1][-1] = np.ones((n, n)) / float(n)
+        elif last_time_point == LastTimePoint.CONNECTIVITIES:
+            adata_subset = self.adata[tmap.var_names].copy()
+            sc.pp.neighbors(adata_subset, **conn_kwargs)
+            blocks[-1][-1] = (
+                ConnectivityKernel(adata_subset)
+                .compute_transition_matrix(density_normalize)
+                .transition_matrix
+            )
+        else:
+            raise NotImplementedError(
+                f"Last time point mode `{last_time_point}` is not yet implemented."
+            )
+
         # prevent block from disappearing
         n = blocks[0][1].shape[0]
         blocks[0][0] = spdiags([], 0, n, n)

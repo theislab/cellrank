@@ -2,8 +2,11 @@ from typing import Optional
 
 import pytest
 
+import scanpy as sc
 import cellrank.external as cre
 from anndata import AnnData
+from cellrank.tl.kernels import ConnectivityKernel
+from cellrank.external.kernels._wot_kernel import LastTimePoint
 
 import numpy as np
 import pandas as pd
@@ -159,18 +162,28 @@ class TestWOTKernel:
             assert gr is None
             assert "gr" in adata_large.obs
 
-    @pytest.mark.parametrize("uniform", [False, True])
-    def test_uniform(self, adata_large: AnnData, uniform: bool):
-        ok = cre.kernels.WOTKernel(
-            adata_large, time_key="age(days)"
-        ).compute_transition_matrix(uniform=uniform)
-        ixs = np.where(adata_large.obs["age(days)"] == 35.0)[0]
+    @pytest.mark.parametrize("ltp", list(LastTimePoint))
+    def test_last_time_point(self, adata_large: AnnData, ltp: LastTimePoint):
+        key = "age(days)"
+        ok = cre.kernels.WOTKernel(adata_large, time_key=key).compute_transition_matrix(
+            last_time_point=ltp.s, conn_kwargs={"n_neighbors": 11}
+        )
+        ixs = np.where(adata_large.obs[key] == 35.0)[0]
 
         T = ok.transition_matrix[ixs, :][:, ixs].A
-        if uniform:
+        if ltp == LastTimePoint.UNIFORM:
             np.testing.assert_allclose(T, np.ones_like(T) / float(len(ixs)))
-        else:
+        elif ltp == LastTimePoint.DIAGONAL:
             np.testing.assert_allclose(T, np.eye(len(ixs)))
+        elif ltp == LastTimePoint.CONNECTIVITIES:
+            adata_subset = adata_large[adata_large.obs[key] == 35.0]
+            sc.pp.neighbors(adata_subset, n_neighbors=11)
+            T_actual = (
+                ConnectivityKernel(adata_subset)
+                .compute_transition_matrix()
+                .transition_matrix.A
+            )
+            np.testing.assert_allclose(T, T_actual)
 
     def test_normal_run(self, adata_large: AnnData):
         ok = cre.kernels.WOTKernel(adata_large, time_key="age(days)")
