@@ -239,21 +239,25 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         **kwargs,
     ) -> None:
         """
-        Set the approximate recurrent classes, if they are known a priori.
+        Manually define terminal states.
 
         Parameters
         ----------
         labels
-            Either a categorical :class:`pandas.Series` with index as cell names, where `NaN` marks marks a cell
-            belonging to a transient state or a :class:`dict`, where each key is the name of the recurrent class and
-            values are list of cell names.
+            Defines the terminal states. Can be either one of
+            - a categorical :class:`pandas.Series` where each category corresponds to one terminal state. `NaN` entries
+                denote cells that do not belong to any terminal state, i.e. these are either initial or transient cells.
+            - a :class:`dict` of the form `{'terminal_state_a': ['cell_1', 'cell_2', ...]}`, i.e. keys are terminal
+                states, values are lists of cell barcodes corresponding to annotations in :attr:`adata.obs_names`.
         cluster_key
-            If a key to cluster labels is given, :attr:`{fs}` will be associated with these for naming and colors.
+            Key from :attr:`adata.obs` where categorical cluster labels are stored. These are used to associate names
+            and colors with each terminal state. Each terminal state will be given the name and color corresponding to
+            the cluster it mostly overlaps with.
         %(en_cutoff_p_thresh)s
         add_to_existing
-            Whether to add these categories to existing ones. Cells already belonging to recurrent classes will be
-            updated if there's an overlap.
-            Throws an error if previous approximate recurrent classes have not been calculated.
+            Whether the new terminal states should be added to pre-existing ones. Cells already assigned to a terminal
+            state will be re-assigned to the new terminal state if there's a conflict between old and new annotations.
+            This throws an error if no previous annotations corresponding to terminal states have been found.
 
         Returns
         -------
