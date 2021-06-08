@@ -140,7 +140,7 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
 .. _Theislab: https://www.helmholtz-muenchen.de/icb/research/groups/theis-lab/overview/index.html
 .. _Peerlab: https://www.mskcc.org/research/ski/labs/dana-pe-er
 .. _`tweet`: https://twitter.com/MariusLange8
-.. _preprint: https://www.biorxiv.org/content/10.1101/2020.10.19.345983v1
+.. _preprint: https://www.biorxiv.org/content/10.1101/2020.10.19.345983v2
 .. _PageRank: https://en.wikipedia.org/wiki/PageRank#cite_note-1
 
 .. _gallery: https://cellrank.readthedocs.io/en/stable/auto_examples/index.html
