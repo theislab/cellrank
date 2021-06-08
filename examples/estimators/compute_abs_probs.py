@@ -11,7 +11,6 @@ efficient implementation of computing the absorption probabilities that scales t
 """
 
 import scvelo as scv
-
 import cellrank as cr
 
 adata = cr.datasets.pancreas_preprocessed("../example.h5ad")

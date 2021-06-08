@@ -3,6 +3,11 @@ from abc import ABC
 from copy import copy
 from typing import Any
 
+from cellrank import logging as logg
+from cellrank.ul._docs import d
+from cellrank.tl.kernels import Kernel
+from cellrank.tl.kernels._base_kernel import AnnData
+
 import numpy as np
 import pandas as pd
 from pandas.api.types import infer_dtype
@@ -11,11 +16,6 @@ from pandas.core.dtypes.common import (
     is_numeric_dtype,
     is_categorical_dtype,
 )
-
-from cellrank import logging as logg
-from cellrank.ul._docs import d
-from cellrank.tl.kernels import Kernel
-from cellrank.tl.kernels._base_kernel import AnnData
 
 
 @d.dedent

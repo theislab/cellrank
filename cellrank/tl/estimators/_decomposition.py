@@ -6,6 +6,13 @@ from pathlib import Path
 from pygpcca import GPCCA as _GPCCA
 from pygpcca._sorted_schur import _check_conj_split
 
+from cellrank import logging as logg
+from cellrank.ul._docs import d, inject_docs
+from cellrank.tl._utils import save_fig, _eigengap
+from cellrank.tl.estimators._utils import Metadata, _delegate
+from cellrank.tl.estimators._property import Property, KernelHolder, VectorPlottable
+from cellrank.tl.estimators._constants import A, F, P
+
 import numpy as np
 from scipy.sparse import issparse
 from scipy.sparse.linalg import eigs
@@ -13,13 +20,6 @@ from scipy.sparse.linalg import eigs
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-
-from cellrank import logging as logg
-from cellrank.ul._docs import d, inject_docs
-from cellrank.tl._utils import save_fig, _eigengap
-from cellrank.tl.estimators._utils import Metadata, _delegate
-from cellrank.tl.estimators._property import Property, KernelHolder, VectorPlottable
-from cellrank.tl.estimators._constants import A, F, P
 
 EPS = np.finfo(np.float64).eps
 

@@ -19,6 +19,12 @@ from collections import defaultdict
 
 import wrapt
 
+from cellrank import logging as logg
+from cellrank.tl import Lineage
+from cellrank.ul._docs import d
+from cellrank.tl._utils import save_fig
+from cellrank.ul._utils import Pickleable, _minmax, valuedispatch, _densify_squeeze
+from cellrank.tl._constants import ModeEnum, AbsProbKey
 from scanpy.plotting._utils import add_colors_for_categorical_sample_annotation
 
 import numpy as np
@@ -33,13 +39,6 @@ from matplotlib import colors as mcolors
 from matplotlib import pyplot as plt
 from matplotlib.colors import to_rgb, is_color_like
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-
-from cellrank import logging as logg
-from cellrank.tl import Lineage
-from cellrank.ul._docs import d
-from cellrank.tl._utils import save_fig
-from cellrank.ul._utils import Pickleable, _minmax, valuedispatch, _densify_squeeze
-from cellrank.tl._constants import ModeEnum, AbsProbKey
 
 AnnData = TypeVar("AnnData")
 _dup_spaces = re.compile(r" +")  # used on repr for underlying model's repr

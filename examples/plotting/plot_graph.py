@@ -5,9 +5,9 @@ Plot graph structures
 This functions show how to plot graph structures, such as the transition matrix.
 """
 
-import numpy as np
-
 import cellrank as cr
+
+import numpy as np
 
 adata = cr.datasets.pancreas_preprocessed("../example.h5ad")
 adata

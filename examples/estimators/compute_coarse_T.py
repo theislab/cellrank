@@ -23,8 +23,7 @@ k = cr.tl.transition_matrix(
 g = cr.tl.estimators.GPCCA(k)
 
 # %%
-# Next, we compute the Schur vectors. See :ref:`sphx_glr_auto_examples_estimators_compute_schur_vectors.py` for
-# more information.
+# Next, we compute the Schur vectors.
 g.compute_schur(n_components=6)
 
 # %%

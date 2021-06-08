@@ -6,11 +6,11 @@ from pathlib import Path
 from functools import wraps, update_wrapper
 from multiprocessing import cpu_count
 
-import numpy as np
-from scipy.sparse import issparse, spmatrix
-
 from cellrank import logging as logg
 from cellrank.ul._docs import d
+
+import numpy as np
+from scipy.sparse import issparse, spmatrix
 
 AnnData = TypeVar("AnnData")
 

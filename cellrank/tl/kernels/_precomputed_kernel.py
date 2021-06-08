@@ -3,17 +3,16 @@ from copy import copy
 from typing import Any, Union, Optional
 
 from anndata import AnnData
-
-import numpy as np
-from scipy.sparse import eye as speye
-from scipy.sparse import spmatrix, csr_matrix
-
 from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.ul._utils import _read_graph_data
 from cellrank.tl.kernels import Kernel
 from cellrank.tl._constants import Direction, _transition
 from cellrank.tl.kernels._base_kernel import _RTOL, KernelExpression
+
+import numpy as np
+from scipy.sparse import eye as speye
+from scipy.sparse import spmatrix, csr_matrix
 
 
 @d.dedent

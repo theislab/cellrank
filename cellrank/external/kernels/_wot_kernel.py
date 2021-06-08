@@ -4,14 +4,13 @@ from tqdm.auto import tqdm
 from typing_extensions import Literal
 
 from anndata import AnnData
+from cellrank import logging as logg
+from cellrank.ul._docs import d
+from cellrank.tl._utils import _normalize, _maybe_subset_hvgs
 
 import numpy as np
 import pandas as pd
 from scipy.sparse import bmat, spdiags, spmatrix
-
-from cellrank import logging as logg
-from cellrank.ul._docs import d
-from cellrank.tl._utils import _normalize, _maybe_subset_hvgs
 
 _error = None
 try:

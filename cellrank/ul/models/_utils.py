@@ -1,15 +1,15 @@
 from typing import Union, TypeVar, Optional, Sequence
 
-import numpy as np
-from numba import njit, prange
-from scipy.sparse import issparse, spmatrix
-from sklearn.utils.sparsefuncs import csc_median_axis_0
-
 import cellrank.logging as logg
 from cellrank.ul._docs import d, inject_docs
 from cellrank.ul._utils import valuedispatch
 from cellrank.tl._constants import ModeEnum
 from cellrank.ul._parallelize import parallelize
+
+import numpy as np
+from numba import njit, prange
+from scipy.sparse import issparse, spmatrix
+from sklearn.utils.sparsefuncs import csc_median_axis_0
 
 AnnData = TypeVar("AnnData")
 _OFFSET_KEY = "cellrank_offset"

@@ -7,9 +7,7 @@ This example shows how to compute and plot the macrostates.
 For the computation of macrostates, we adapted the popular Generalized Perron Cluster Cluster Analysis :cite:`reuter:18`
 :cite:`reuter:19` method to the single cell context. We provide a scalable implementation which can decompose datasets
 of 100k+ cells into their dominant dynamical macrostates in just a few minutes. GPCCA relies on the real Schur
-decomposition to handle non-symmetric transition matrices as they arise from RNA velocity information, see
-:ref:`sphx_glr_auto_examples_estimators_compute_schur_vectors.py` and
-:ref:`sphx_glr_auto_examples_estimators_compute_schur_matrix.py`.
+decomposition to handle non-symmetric transition matrices as they arise from RNA velocity information.
 """
 
 import cellrank as cr

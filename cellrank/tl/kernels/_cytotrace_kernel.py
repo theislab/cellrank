@@ -3,15 +3,14 @@ from typing import Any
 from typing_extensions import Literal
 
 from anndata import AnnData
-
-import numpy as np
-from scipy.stats import gmean, hmean
-
 from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.tl._utils import _correlation_test_helper
 from cellrank.tl._constants import ModeEnum
 from cellrank.tl.kernels._pseudotime_kernel import PseudotimeKernel
+
+import numpy as np
+from scipy.stats import gmean, hmean
 
 
 def _ct(key: str) -> str:

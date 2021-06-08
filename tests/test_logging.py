@@ -7,7 +7,6 @@ from datetime import datetime
 import pytest
 
 from scanpy import Verbosity
-
 from cellrank import logging as logg
 from cellrank import settings as settings
 

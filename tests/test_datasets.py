@@ -2,9 +2,8 @@ import sys
 
 import pytest
 
-from anndata import AnnData
-
 import cellrank as cr
+from anndata import AnnData
 
 
 @pytest.mark.skipif(

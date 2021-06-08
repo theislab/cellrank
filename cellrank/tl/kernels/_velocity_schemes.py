@@ -2,13 +2,13 @@ from abc import ABC, abstractmethod
 from typing import Any, Tuple
 from functools import partial
 
-import numpy as np
-from numba import njit
-
 from cellrank.ul._docs import d
 from cellrank.ul._utils import valuedispatch
 from cellrank.tl._constants import ModeEnum
 from cellrank.tl.kernels._utils import norm, np_mean, jit_kwargs
+
+import numpy as np
+from numba import njit
 
 
 class Scheme(ModeEnum):  # noqa: D101

@@ -1,13 +1,12 @@
 import pytest
 
+import cellrank as cr
 from anndata import AnnData
+from cellrank.tl._constants import AbsProbKey, TermStatesKey, _probs
+from cellrank.tl.kernels._base_kernel import KernelAdd
 
 import numpy as np
 import pandas as pd
-
-import cellrank as cr
-from cellrank.tl._constants import AbsProbKey, TermStatesKey, _probs
-from cellrank.tl.kernels._base_kernel import KernelAdd
 
 
 class TestLineages:

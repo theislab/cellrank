@@ -1,8 +1,8 @@
 import pytest
 
-import numpy as np
-
 from cellrank.tl.kernels._random_walk import RandomWalk
+
+import numpy as np
 
 
 class TestRandomWalk:
