@@ -3,7 +3,17 @@ import pickle
 from abc import ABC, abstractmethod
 from sys import version_info
 from copy import copy, deepcopy
-from typing import Any, Dict, Tuple, Union, Mapping, TypeVar, Optional, Sequence
+from typing import (
+    Any,
+    Dict,
+    Tuple,
+    Union,
+    Mapping,
+    TypeVar,
+    Iterable,
+    Optional,
+    Sequence,
+)
 from pathlib import Path
 from datetime import datetime
 
@@ -239,21 +249,30 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         **kwargs,
     ) -> None:
         """
-        Set the approximate recurrent classes, if they are known a priori.
+        Manually define terminal states.
 
         Parameters
         ----------
         labels
-            Either a categorical :class:`pandas.Series` with index as cell names, where `NaN` marks marks a cell
-            belonging to a transient state or a :class:`dict`, where each key is the name of the recurrent class and
-            values are list of cell names.
+            Defines the terminal states. Valid options are:
+
+                - categorical :class:`pandas.Series` where each category corresponds to one terminal state.
+                  `NaN` entries denote cells that do not belong to any terminal state, i.e. these are either initial or
+                  transient cells.
+                - :class:`dict` where keys are terminal states and values are lists of cell barcodes corresponding to
+                  annotations in :attr:`adata` ``.obs_names``.
+                  If only 1 key is provided, values should correspond to terminal state clusters if a categorical
+                  :class:`pandas.Series` can be found in :attr:`adata` ``.obs``.
+
         cluster_key
-            If a key to cluster labels is given, :attr:`{fs}` will be associated with these for naming and colors.
+            Key from :attr:`adata.obs` where categorical cluster labels are stored. These are used to associate names
+            and colors with each terminal state. Each terminal state will be given the name and color corresponding to
+            the cluster it mostly overlaps with.
         %(en_cutoff_p_thresh)s
         add_to_existing
-            Whether to add these categories to existing ones. Cells already belonging to recurrent classes will be
-            updated if there's an overlap.
-            Throws an error if previous approximate recurrent classes have not been calculated.
+            Whether the new terminal states should be added to pre-existing ones. Cells already assigned to a terminal
+            state will be re-assigned to the new terminal state if there's a conflict between old and new annotations.
+            This throws an error if no previous annotations corresponding to terminal states have been found.
 
         Returns
         -------
@@ -986,6 +1005,22 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         add_to_existing: bool = False,
     ) -> None:
         if isinstance(categories, dict):
+            if len(categories) == 1 and is_categorical_dtype(
+                self.adata.obs.get(next(iter(categories.keys())), None)
+            ):
+                key = next(iter(categories.keys()))
+                if isinstance(categories[key], str) or not isinstance(
+                    categories[key], Iterable
+                ):
+                    vals = (categories[key],)
+                else:
+                    vals = categories[key]
+
+                clusters = self.adata.obs[key]
+                categories = {
+                    cat: self.adata[clusters == cat].obs_names for cat in vals
+                }
+
             categories = _convert_to_categorical_series(
                 categories, list(self.adata.obs_names)
             )

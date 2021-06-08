@@ -1,6 +1,6 @@
 import os
 from copy import deepcopy
-from typing import Tuple
+from typing import List, Tuple, Union
 from tempfile import TemporaryDirectory
 
 import pytest
@@ -578,6 +578,27 @@ class TestGPCCA:
         mc.compute_macrostates(n_states=2)
         with pytest.raises(KeyError):
             mc.set_terminal_states_from_macrostates(names=["foobar"])
+
+    @pytest.mark.parametrize("values", ["Astrocytes", ["Astrocytes", "OPC"]])
+    def test_set_terminal_states_clusters(
+        self, adata_large: AnnData, values: Union[str, List[str]]
+    ):
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        terminal_kernel = 0.8 * vk + 0.2 * ck
+
+        to_remove = list(
+            set(adata_large.obs["clusters"].cat.categories)
+            - ({values} if isinstance(values, str) else set(values))
+        )
+        expected = adata_large.obs["clusters"].cat.remove_categories(to_remove)
+
+        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+
+        mc.set_terminal_states({"clusters": values})
+        pd.testing.assert_series_equal(
+            expected, mc.terminal_states, check_category_order=False, check_names=False
+        )
 
     def test_compute_terminal_states_invalid_method(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
