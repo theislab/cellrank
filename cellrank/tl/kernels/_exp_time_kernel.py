@@ -90,6 +90,10 @@ class ExperimentalTimeKernel(Kernel, ABC):
         if self.experimental_time.isnull().any():
             raise ValueError("Experimental time contains NaN values.")
 
+        n_cats = len(self.experimental_time.cat.categories)
+        if n_cats <= 1:
+            raise ValueError(f"Found `{n_cats}` time point.")
+
     @property
     def experimental_time(self) -> pd.Series:
         """Experimental time."""
