@@ -247,8 +247,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             Defines the terminal states. Can be either one of
             - a categorical :class:`pandas.Series` where each category corresponds to one terminal state. `NaN` entries
                 denote cells that do not belong to any terminal state, i.e. these are either initial or transient cells.
-            - a :class:`dict` of the form `{'terminal_state_a': ['cell_1', 'cell_2', ...]}`, i.e. keys are terminal
-                states, values are lists of cell barcodes corresponding to annotations in :attr:`adata.obs_names`.
+            - a :class:`dict` where keys are terminal states and values are lists of cell barcodes corresponding to
+                annotations in :attr:`adata.obs_names`.
         cluster_key
             Key from :attr:`adata.obs` where categorical cluster labels are stored. These are used to associate names
             and colors with each terminal state. Each terminal state will be given the name and color corresponding to
