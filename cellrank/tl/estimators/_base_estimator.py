@@ -3,7 +3,17 @@ import pickle
 from abc import ABC, abstractmethod
 from sys import version_info
 from copy import copy, deepcopy
-from typing import Any, Dict, Tuple, Union, Mapping, TypeVar, Optional, Sequence
+from typing import (
+    Any,
+    Dict,
+    Tuple,
+    Union,
+    Mapping,
+    TypeVar,
+    Iterable,
+    Optional,
+    Sequence,
+)
 from pathlib import Path
 from datetime import datetime
 
@@ -244,11 +254,16 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         Parameters
         ----------
         labels
-            Defines the terminal states. Can be either one of
-            - a categorical :class:`pandas.Series` where each category corresponds to one terminal state. `NaN` entries
-                denote cells that do not belong to any terminal state, i.e. these are either initial or transient cells.
-            - a :class:`dict` where keys are terminal states and values are lists of cell barcodes corresponding to
-                annotations in :attr:`adata.obs_names`.
+            Defines the terminal states. Valid options are:
+
+                - categorical :class:`pandas.Series` where each category corresponds to one terminal state.
+                  `NaN` entries denote cells that do not belong to any terminal state, i.e. these are either initial or
+                  transient cells.
+                - :class:`dict` where keys are terminal states and values are lists of cell barcodes corresponding to
+                  annotations in :attr:`adata` ``.obs_names``.
+                  If only 1 key is provided, values should correspond to terminal state clusters if a categorical
+                  :class:`pandas.Series` can be found in :attr:`adata` ``.obs``.
+
         cluster_key
             Key from :attr:`adata.obs` where categorical cluster labels are stored. These are used to associate names
             and colors with each terminal state. Each terminal state will be given the name and color corresponding to
@@ -990,6 +1005,22 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         add_to_existing: bool = False,
     ) -> None:
         if isinstance(categories, dict):
+            if len(categories) == 1 and is_categorical_dtype(
+                self.adata.obs.get(next(iter(categories.keys())), None)
+            ):
+                key = next(iter(categories.keys()))
+                if isinstance(categories[key], str) or not isinstance(
+                    categories[key], Iterable
+                ):
+                    vals = (categories[key],)
+                else:
+                    vals = categories[key]
+
+                clusters = self.adata.obs[key]
+                categories = {
+                    cat: self.adata[clusters == cat].obs_names for cat in vals
+                }
+
             categories = _convert_to_categorical_series(
                 categories, list(self.adata.obs_names)
             )

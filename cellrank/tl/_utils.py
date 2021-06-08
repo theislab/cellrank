@@ -906,15 +906,15 @@ def save_fig(
 
 
 def _convert_to_categorical_series(
-    rc_classes: Dict[Union[int, str], Sequence[Union[int, str]]], cell_names: List[str]
+    term_states: Dict[Union[int, str], Sequence[Union[int, str]]], cell_names: List[str]
 ) -> Series:
     """
-    Convert a mapping of recurrent classes to cells to a :class:`pandas.Series`.
+    Convert a mapping of terminal states to cells to a :class:`pandas.Series`.
 
     Parameters
     ----------
-    rc_classes
-        Recurrent classes in the following format: `{'rc_0': ['cell_0', 'cell_1', ...], ...}`.
+    term_states
+        Terminal states in the following format: `{'state_0': ['cell_0', 'cell_1', ...], ...}`.
     cell_names
         List of valid cell names, usually taken from ``adata.obs_names``.
 
@@ -926,28 +926,32 @@ def _convert_to_categorical_series(
 
     cnames = set(cell_names)
     mapper, expected_size = {}, 0
-    for rc, cells in rc_classes.items():
+    for ts, cells in term_states.items():
         if not len(cells):
-            logg.warning(f"No cells selected for category `{rc!r}`.")
+            logg.warning(f"No cells selected for category `{ts!r}`. Skipping")
             continue
         cells = [c if isinstance(c, str) else cell_names[c] for c in cells]
         rest = set(cells) - cnames
         if rest:
             raise ValueError(f"Invalid cell names `{list(rest)}`.")
-        mapper[str(rc)] = cells
+        mapper[str(ts)] = cells
         expected_size += 1
 
     if len(mapper) != expected_size:
         raise ValueError(
-            "All recurrent class labels are being converted to strings, ensure "
+            "All terminal states are being converted to strings, ensure "
             "that there are no conflicting keys, such as `0` and `'0'`."
         )
 
-    rc_labels = Series([np.nan] * len(cell_names), index=cell_names)
-    for rc, cells in mapper.items():
-        rc_labels[cells] = rc
+    term_states = Series([np.nan] * len(cell_names), index=cell_names)
+    for ts, cells in mapper.items():
+        term_states[cells] = ts
 
-    return rc_labels.astype("category")
+    term_states = term_states.astype("category")
+    if not len(term_states.cat.categories):
+        raise ValueError("No categories have been selected.")
+
+    return term_states
 
 
 def _merge_categorical_series(
