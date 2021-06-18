@@ -967,6 +967,20 @@ class Kernel(UnaryKernelExpression, ABC):
         self.transition_matrix = matrix
         self._maybe_compute_cond_num()
 
+    def plot_flow(self) -> None:
+        """
+        TODO.
+
+        Parameters
+        ----------
+        TODO
+            TODO.
+
+        Returns
+        -------
+        TODO
+        """
+
 
 @d.dedent
 class Constant(Kernel):
