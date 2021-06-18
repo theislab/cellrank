@@ -967,7 +967,9 @@ class Kernel(UnaryKernelExpression, ABC):
         self.transition_matrix = matrix
         self._maybe_compute_cond_num()
 
-    def plot_flow(self) -> None:
+    @d.get_full_description(base="plot_flow")
+    @d.get_sections(base="plot_flow", sections=["Parameters", "Returns"])
+    def plot_flow(self, cluster_key: str, time_key: str, *args: Any, **kwargs) -> None:
         """
         TODO.
 

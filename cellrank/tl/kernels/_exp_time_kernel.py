@@ -1,7 +1,7 @@
 """Experimental time kernel module."""
 from abc import ABC
 from copy import copy
-from typing import Any
+from typing import Any, Optional
 
 from cellrank import logging as logg
 from cellrank.ul._docs import d
@@ -93,6 +93,25 @@ class ExperimentalTimeKernel(Kernel, ABC):
         n_cats = len(self.experimental_time.cat.categories)
         if n_cats <= 1:
             raise ValueError(f"Found `{n_cats}` time point.")
+
+    @d.dedent
+    def plot_flow(
+        self, cluster_key: str, time_key: Optional[str] = None, *args: Any, **kwargs
+    ) -> None:
+        """
+        %(plot_flow.full_desc)s
+
+        Parameters
+        ----------
+        %(plot_flow.parameters)s
+
+        Returns
+        -------
+        %(plot_flow.returns)s
+        """  # noqa: D400
+        if time_key is None:
+            time_key = self._time_key
+        return super().plot_flow(cluster_key, time_key, *args, **kwargs)
 
     @property
     def experimental_time(self) -> pd.Series:
