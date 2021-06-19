@@ -33,6 +33,7 @@ from cellrank.ul._utils import Pickleable, _write_graph_data
 from scvelo.plotting.utils import default_size, plot_outline
 from cellrank.tl._constants import Direction, _transition
 from cellrank.tl.kernels._utils import _get_basis, _filter_kwargs
+from cellrank.tl.kernels._tmat_flow import _norm_cont, _plot_flow, _compute_flow
 from cellrank.tl.kernels._random_walk import RandomWalk
 
 import numpy as np
@@ -969,19 +970,41 @@ class Kernel(UnaryKernelExpression, ABC):
 
     @d.get_full_description(base="plot_flow")
     @d.get_sections(base="plot_flow", sections=["Parameters", "Returns"])
-    def plot_flow(self, cluster_key: str, time_key: str, *args: Any, **kwargs) -> None:
+    @d.dedent
+    def plot_flow(
+        self, cluster: str, cluster_key: str, time_key: str, *args: Any, **kwargs
+    ) -> None:
         """
-        TODO.
+        Visualize outgoing flow from a cluster of cells.
 
         Parameters
         ----------
-        TODO
-            TODO.
+        cluster
+            Cluster for which to visualize outgoing flow.
+        cluster_key
+            Key in :attr:`adata` ``.obs`` where clustering is stored.
+        time_key.
+            Key in :attr:`adata` ``.obs`` where experimental time is stored.
 
         Returns
         -------
-        TODO
+        %(just_plots)s
         """
+        if self._transition_matrix is None:
+            raise RuntimeError(
+                "Compute transition matrix first as `.compute_transition_matrix()`."
+            )
+
+        clusters = self.adata.obs[cluster_key]
+        time = self.adata.obs[time_key]
+        # TODO: check if ordered categorical
+        time_points = list(zip(time.cat.categories[:-1], time.cat.categories[1:]))
+
+        # TODO: cache?
+        type_agn = _norm_cont(self.adata, cluster_key, time_key)
+        type_flow = _compute_flow(self.transition_matrix, clusters, time, time_points)
+
+        _plot_flow(self.adata, cluster, cluster_key, time_key, type_agn, type_flow)
 
 
 @d.dedent
