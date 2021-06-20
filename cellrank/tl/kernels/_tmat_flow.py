@@ -127,7 +127,7 @@ def _plot_flow(
     time_key: str,
     type_agn: pd.DataFrame,
     type_flow: pd.DataFrame,
-    flow_threshold: float = 0,
+    min_flow: float = 0,
     legend_loc: Optional[str] = "upper right out",
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
@@ -139,7 +139,7 @@ def _plot_flow(
         for i in ixs:
             col_i = cols[i]
             fl = flow.loc[cluster, col_i]
-            if fl > flow_threshold:
+            if fl > min_flow:
                 fl = np.clip(fl, 0, 0.95)
                 ix2 = f"{float((x[j + 1])):.2f}"
                 ix3 = f"{float(x[j + 1] - fl - 0.05):.2f}"
@@ -164,7 +164,7 @@ def _plot_flow(
         for i in ixs:
             col_i = cols[i]
             fl = flow.loc[cluster, col_i]
-            if fl > flow_threshold:
+            if fl > min_flow:
                 fl = np.clip(fl, 0, 0.95)
                 ix2 = f"{float((x[j + 1])):.2f}"
                 ix3 = f"{float(x[j + 1] - fl - 0.05):.2f}"
