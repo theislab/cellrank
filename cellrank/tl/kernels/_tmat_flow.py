@@ -3,7 +3,6 @@ from typing import Any, Tuple, Union, Optional, Sequence
 from statsmodels.nonparametric.smoothers_lowess import lowess
 
 from anndata import AnnData
-from cellrank.pl._utils import _position_legend
 
 import numpy as np
 import pandas as pd
@@ -132,6 +131,8 @@ def _plot_flow(
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
 ) -> plt.Figure:
+    from cellrank.pl._utils import _position_legend
+
     # TODO: 1 function
     def plot_edges_bottom(j: int, t: Any, ixs: np.array):
         cum_y = float(smoo_y2[cluster][f"{float(t):.2f}"])
