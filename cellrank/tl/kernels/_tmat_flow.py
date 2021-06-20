@@ -108,7 +108,7 @@ def _draw_sig_edge(
     ys = np.c_[sy1, sy2, sy2t, sy1t]
     col = np.c_[
         (start_color * (1 - rs[:, None])) + (end_color * rs[:, None]),
-        np.linspace(0.33, 0.66, len(rs)),
+        np.linspace(0.15, 0.75, len(rs)),
     ]
 
     for x, y, c in zip(xs, ys, col):
@@ -208,6 +208,7 @@ def _plot_flow(
     fig, ax = plt.subplots(dpi=180)
 
     smoo_y2 = {}
+    # TODO: what if no colors present?
     cm = dict(
         zip(adata.obs[cluster_key].cat.categories, adata.uns[f"{cluster_key}_colors"])
     )
@@ -219,7 +220,7 @@ def _plot_flow(
         f = interp1d(x, y)
         fe = f(e)
         lo = lowess(fe, e, frac=0.3, is_sorted=True, return_sorted=False)
-        # TODO: find better way
+        # TODO: find cleaner way
         smoo_y2[c] = {f"{float(k):.2f}": v for k, v in zip(e, lo)}
 
         ax.fill_between(e, lo + base_y[c], -lo + base_y[c], color=cm[c], label=c)
@@ -237,4 +238,4 @@ def _plot_flow(
     ax.set_xticks(x)
     ax.set_yticks([])
     ax.set_ylabel(cluster_key)
-    ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))  # TODO: expose
+    ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))  # TODO: expose pos
