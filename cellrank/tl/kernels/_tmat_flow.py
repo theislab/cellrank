@@ -127,18 +127,19 @@ def _plot_flow(
     time_key: str,
     type_agn: pd.DataFrame,
     type_flow: pd.DataFrame,
+    flow_threshold: float = 0,
     legend_loc: Optional[str] = "upper right out",
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
 ) -> plt.Figure:
+    # TODO: 1 function
     def plot_edges_bottom(j: int, t: Any, ixs: np.array):
         cum_y = float(smoo_y2[cluster][f"{float(t):.2f}"])
         flow = type_flow[type_flow["t1"].astype(float) == float(t)]
         for i in ixs:
             col_i = cols[i]
             fl = flow.loc[cluster, col_i]
-            # TODO: threshold (+careful normalization)
-            if fl > 0:
+            if fl > flow_threshold:
                 fl = np.clip(fl, 0, 0.95)
                 ix2 = f"{float((x[j + 1])):.2f}"
                 ix3 = f"{float(x[j + 1] - fl - 0.05):.2f}"
@@ -163,8 +164,7 @@ def _plot_flow(
         for i in ixs:
             col_i = cols[i]
             fl = flow.loc[cluster, col_i]
-            # TODO: threshold (+careful normalization)
-            if fl > 0:
+            if fl > flow_threshold:
                 fl = np.clip(fl, 0, 0.95)
                 ix2 = f"{float((x[j + 1])):.2f}"
                 ix3 = f"{float(x[j + 1] - fl - 0.05):.2f}"
@@ -183,9 +183,10 @@ def _plot_flow(
                     end_color=cm[col_i],
                 )
 
-    # TODO: clean file, remove constant
+    # TODO: clean file, remove constants
     t1 = type_agn.columns[0]
     t2 = type_agn.columns[-1]
+    # TODO: remove?
     T_minflow_for_type = 0.005
     agg = type_flow.loc[cluster].select_dtypes(exclude=["object"]).sum()
     cols = agg.index[agg > T_minflow_for_type]
@@ -197,10 +198,10 @@ def _plot_flow(
 
     base_y = [0]
     for i in range(1, len(cols)):
-        # TODO: tweak
+        # TODO: cleaner impl.
         base_y.append(
             base_y[-1]
-            + 0.2  # TODO
+            + 0.2
             + np.max(foc_agn.loc[str(cols[i])] + foc_agn.loc[str(cols[i - 1])])
         )
     base_y = dict(zip(cols, base_y))
@@ -217,7 +218,6 @@ def _plot_flow(
     )
 
     base = [0]
-
     for i, c in enumerate(cols):
         y = foc_agn.loc[c, t1:t2]
         f = interp1d(x, y)
@@ -236,6 +236,7 @@ def _plot_flow(
         plot_edges_bottom(j, t, np.arange(foc_i)[::-1])
         plot_edges_top(j, t, np.arange(foc_i + 1, len(cols)))
 
+    ax.margins(0.025)
     ax.set_title(cluster)
     ax.set_xlabel(time_key)
     ax.set_xticks(x)

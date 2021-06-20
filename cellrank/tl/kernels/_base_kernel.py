@@ -977,6 +977,7 @@ class Kernel(UnaryKernelExpression, ABC):
         cluster: str,
         cluster_key: str,
         time_key: str,
+        flow_threshold: float = 0,
         legend_loc: Optional[str] = "upper right out",
         figsize: Optional[Tuple[float, float]] = None,
         dpi: Optional[int] = None,
@@ -991,8 +992,12 @@ class Kernel(UnaryKernelExpression, ABC):
             Cluster for which to visualize outgoing flow.
         cluster_key
             Key in :attr:`adata` ``.obs`` where clustering is stored.
-        time_key.
+        time_key
             Key in :attr:`adata` ``.obs`` where experimental time is stored.
+        flow_threshold
+            Only show flow edges with flow greater than this value.
+        legend_loc
+            Position of the legend. If `None`, do not show the legend.
         %(plotting)s
 
         Returns
@@ -1020,6 +1025,7 @@ class Kernel(UnaryKernelExpression, ABC):
             time_key,
             type_agn,
             type_flow,
+            flow_threshold=flow_threshold,
             legend_loc=legend_loc,
             figsize=figsize,
             dpi=dpi,
