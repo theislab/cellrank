@@ -968,11 +968,19 @@ class Kernel(UnaryKernelExpression, ABC):
         self.transition_matrix = matrix
         self._maybe_compute_cond_num()
 
+    # TODO: references
     @d.get_full_description(base="plot_flow")
     @d.get_sections(base="plot_flow", sections=["Parameters", "Returns"])
     @d.dedent
     def plot_flow(
-        self, cluster: str, cluster_key: str, time_key: str, *args: Any, **kwargs
+        self,
+        cluster: str,
+        cluster_key: str,
+        time_key: str,
+        legend_loc: Optional[str] = "upper right out",
+        figsize: Optional[Tuple[float, float]] = None,
+        dpi: Optional[int] = None,
+        save: Optional[Union[str, Path]] = None,
     ) -> None:
         """
         Visualize outgoing flow from a cluster of cells.
@@ -985,6 +993,7 @@ class Kernel(UnaryKernelExpression, ABC):
             Key in :attr:`adata` ``.obs`` where clustering is stored.
         time_key.
             Key in :attr:`adata` ``.obs`` where experimental time is stored.
+        %(plotting)s
 
         Returns
         -------
@@ -997,14 +1006,27 @@ class Kernel(UnaryKernelExpression, ABC):
 
         clusters = self.adata.obs[cluster_key]
         time = self.adata.obs[time_key]
-        # TODO: check if ordered categorical
+        # TODO: check if ordered, numeric and categorical
         time_points = list(zip(time.cat.categories[:-1], time.cat.categories[1:]))
 
         # TODO: cache?
         type_agn = _norm_cont(self.adata, cluster_key, time_key)
         type_flow = _compute_flow(self.transition_matrix, clusters, time, time_points)
 
-        _plot_flow(self.adata, cluster, cluster_key, time_key, type_agn, type_flow)
+        fig = _plot_flow(
+            self.adata,
+            cluster,
+            cluster_key,
+            time_key,
+            type_agn,
+            type_flow,
+            legend_loc=legend_loc,
+            figsize=figsize,
+            dpi=dpi,
+        )
+
+        if save is not None:
+            save_fig(fig, save)
 
 
 @d.dedent

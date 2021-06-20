@@ -1,8 +1,9 @@
-from typing import Any, Tuple, Union, Sequence
+from typing import Any, Tuple, Union, Optional, Sequence
 
 from statsmodels.nonparametric.smoothers_lowess import lowess
 
 from anndata import AnnData
+from cellrank.pl._utils import _position_legend
 
 import numpy as np
 import pandas as pd
@@ -32,7 +33,7 @@ def _compute_flow(
         else:
             df = pd.Datarame(subset)
         df = df.groupby(row_cls).sum().T.groupby(col_cls).sum()
-        # TODO: normalize? if not, how to handle offset when plotting?
+        # TODO: normalize (local/global options)? if not, how to handle offset when plotting?
         vals = df.values / df.values.sum(1)[:, None]
 
         res = pd.DataFrame(np.zeros((n, n)), index=categories, columns=categories)
@@ -45,7 +46,7 @@ def _compute_flow(
 
     for t1, t2 in time_points:
         type_flow = flow(t1, t2)
-        # TODO: (multi)index? (or at lea
+        # TODO: (multi)index? (or at least better name)
         type_flow["t1"] = str(t1)
         tfs.append(type_flow)
 
@@ -126,7 +127,10 @@ def _plot_flow(
     time_key: str,
     type_agn: pd.DataFrame,
     type_flow: pd.DataFrame,
-) -> None:
+    legend_loc: Optional[str] = "upper right out",
+    figsize: Optional[Tuple[float, float]] = None,
+    dpi: Optional[int] = None,
+) -> plt.Figure:
     def plot_edges_bottom(j: int, t: Any, ixs: np.array):
         cum_y = float(smoo_y2[cluster][f"{float(t):.2f}"])
         flow = type_flow[type_flow["t1"].astype(float) == float(t)]
@@ -204,8 +208,7 @@ def _plot_flow(
     x = np.array(type_agn.columns)
     length = int(1 + (t2 - t1) * 100)
     e = np.linspace(t1, t2, length)
-    # TODO: expose DPI
-    fig, ax = plt.subplots(dpi=180)
+    fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
 
     smoo_y2 = {}
     # TODO: what if no colors present?
@@ -238,4 +241,7 @@ def _plot_flow(
     ax.set_xticks(x)
     ax.set_yticks([])
     ax.set_ylabel(cluster_key)
-    ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))  # TODO: expose pos
+    if legend_loc not in (None, "none"):
+        _position_legend(ax, legend_loc)
+
+    return fig
