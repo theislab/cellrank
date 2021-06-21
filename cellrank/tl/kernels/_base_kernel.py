@@ -28,6 +28,7 @@ from cellrank.tl._utils import (
     _symmetric,
     _get_neighs,
     _irreducible,
+    _unique_order_preserving,
 )
 from cellrank.ul._utils import Pickleable, _write_graph_data
 from scvelo.plotting.utils import default_size, plot_outline
@@ -979,6 +980,7 @@ class Kernel(UnaryKernelExpression, ABC):
         time_key: str,
         min_flow: float = 0,
         clusters: Optional[Sequence[Any]] = None,
+        ascending: Optional[bool] = False,
         legend_loc: Optional[str] = "upper right out",
         figsize: Optional[Tuple[float, float]] = None,
         dpi: Optional[int] = None,
@@ -1021,6 +1023,7 @@ class Kernel(UnaryKernelExpression, ABC):
             tmat = self.transition_matrix
             clusters = adata.obs[cluster_key].cat.categories
         else:
+            clusters = _unique_order_preserving(list(clusters) + [cluster])
             mask = self.adata.obs[cluster_key].isin(clusters).values
             adata = self.adata[mask]
             if not adata.n_obs:
@@ -1045,6 +1048,7 @@ class Kernel(UnaryKernelExpression, ABC):
             cluster,
             cluster_key,
             clusters,
+            ascending,
             time_key,
             type_agn,
             type_flow,

@@ -123,7 +123,8 @@ def _plot_flow(
     cm,
     cluster: str,
     cluster_key: str,
-    clusters: Sequence[str],
+    clusters: Optional[Sequence[str]],
+    ascending: Optional[bool],
     time_key: str,
     type_agn: pd.DataFrame,
     type_flow: pd.DataFrame,
@@ -188,10 +189,26 @@ def _plot_flow(
     # TODO: clean file, remove constants
     t1 = type_agn.columns[0]
     t2 = type_agn.columns[-1]
-    cols = [c for c in clusters if c != cluster]
-    # TODO: sort left/right by total descending flow
-    cols = cols[: len(cols) // 2] + [cluster] + cols[len(cols) // 2 :]
+
+    # TODO: extract to function
+    if ascending is not None:
+        top_bottom = [[], []]
+        agg = (
+            type_flow.loc[cluster]
+            .select_dtypes(exclude=["object"])
+            .sum()
+            .sort_values(ascending=ascending)
+        )
+        for i, c in enumerate(c for c in agg.index if c != cluster):
+            top_bottom[i % 2].append(c)
+        # TODO: document
+        cols = top_bottom[0][::-1] + [cluster] + top_bottom[1]
+    else:
+        cols = [c for c in clusters if c != cluster]
+        # TODO: sort left/right by total descending flow
+        cols = cols[: len(cols) // 2] + [cluster] + cols[len(cols) // 2 :]
     cols = np.array(cols)
+
     foc_agn = type_agn.select_dtypes(exclude=["object"]).loc[list(cols), t1:t2]
 
     base_y = [0]
