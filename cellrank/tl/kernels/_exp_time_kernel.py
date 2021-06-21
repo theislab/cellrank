@@ -96,7 +96,12 @@ class ExperimentalTimeKernel(Kernel, ABC):
 
     @d.dedent
     def plot_flow(
-        self, cluster_key: str, time_key: Optional[str] = None, *args: Any, **kwargs
+        self,
+        cluster: str,
+        cluster_key: str,
+        time_key: Optional[str] = None,
+        *args: Any,
+        **kwargs: Any,
     ) -> None:
         """
         %(plot_flow.full_desc)s
@@ -111,7 +116,7 @@ class ExperimentalTimeKernel(Kernel, ABC):
         """  # noqa: D400
         if time_key is None:
             time_key = self._time_key
-        return super().plot_flow(cluster_key, time_key, *args, **kwargs)
+        return super().plot_flow(cluster, cluster_key, time_key, *args, **kwargs)
 
     @property
     def experimental_time(self) -> pd.Series:
