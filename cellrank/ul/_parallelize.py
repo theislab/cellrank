@@ -52,11 +52,18 @@ def parallelize(
 
     Returns
     -------
-        The result depending on ``callable``, ``extractor`` and ``as_array``.
+    The result depending on ``callable``, ``extractor`` and ``as_array``.
     """
 
     if show_progress_bar:
-        from tqdm.auto import tqdm
+        try:
+            import ipywidgets  # noqa: F401
+            from tqdm.auto import tqdm
+        except ImportError:
+            try:
+                from tqdm.std import tqdm
+            except ImportError:
+                tqdm = None
     else:
         tqdm = None
 
@@ -68,7 +75,7 @@ def parallelize(
             except EOFError as e:
                 if not n_finished != n_total:
                     raise RuntimeError(
-                        f"Finished only `{n_finished} out of `{n_total}` tasks.`"
+                        f"Finished only `{n_finished}` out of `{n_total}` tasks.`"
                     ) from e
                 break
             assert res in (None, (1, None), 1)  # (None, 1) means only 1 job
