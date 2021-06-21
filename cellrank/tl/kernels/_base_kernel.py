@@ -980,6 +980,7 @@ class Kernel(UnaryKernelExpression, ABC):
         time_key: str,
         min_flow: float = 0,
         clusters: Optional[Sequence[Any]] = None,
+        time_points: Optional[Sequence[Union[int, float]]] = None,
         ascending: Optional[bool] = False,
         legend_loc: Optional[str] = "upper right out",
         figsize: Optional[Tuple[float, float]] = None,
@@ -999,6 +1000,12 @@ class Kernel(UnaryKernelExpression, ABC):
             Key in :attr:`adata` ``.obs`` where experimental time is stored.
         min_flow
             Only show flow edges with flow greater than this value. TODO: mention that flow is in [0, 1].
+        clusters
+            TODO.
+        time_points
+            TODO.
+        ascending
+            TODO.
         legend_loc
             Position of the legend. If `None`, do not show the legend.
         %(plotting)s
@@ -1034,6 +1041,14 @@ class Kernel(UnaryKernelExpression, ABC):
             ]
         if len(clusters) <= 1:
             raise ValueError("TODO: too few clusters.")
+
+        if time_points is not None:
+            time_points = _unique_order_preserving(time_points)
+            if len(time_points) < 2:
+                raise ValueError("TODO: too few time points.")
+            adata = adata[adata.obs[time_key].isin(time_points)]
+            if not adata.n_obs:
+                raise ValueError("TODO: no valid time points have been selected.")
 
         time = adata.obs[time_key]
         # TODO: check if ordered, numeric and categorical
