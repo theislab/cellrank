@@ -20,7 +20,7 @@ try:
     import wot
 
     from cellrank.tl.kernels import ConnectivityKernel
-    from cellrank.tl.kernels import ExperimentalTimeKernel as Kernel
+    from cellrank.tl.kernels import TransportMapKernel as Kernel
 except ImportError as e:
     from cellrank.external.kernels._import_error_kernel import ErroredKernel as Kernel
 
@@ -278,7 +278,7 @@ class WOTKernel(Kernel, error=_error):
         Returns
         -------
         :class:`cellrank.external.kernels.WOTKernel`
-            Makes :attr:`transition_matrix`, :attr:`transition_maps` and :attr:`growth_rates` available.
+            Makes :attr:`transition_matrix`, :attr:`transport_maps` and :attr:`growth_rates` available.
             It also modifies :attr:`anndata.AnnData.obs` with the following key:
 
                 - `'estimated_growth_rates'` - the estimated final growth rates.
@@ -515,11 +515,6 @@ class WOTKernel(Kernel, error=_error):
     def growth_rates(self) -> Optional[pd.DataFrame]:
         """Estimated cell growth rates for each growth rate iteration."""
         return self._growth_rates
-
-    @property
-    def transition_maps(self) -> Optional[Dict[Tuple[float, float], AnnData]]:
-        """Transition maps for each consecutive time pair."""
-        return self._tmats
 
     def __invert__(self) -> "WOTKernel":
         super().__invert__()

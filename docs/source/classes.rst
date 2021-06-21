@@ -122,6 +122,12 @@ ExperimentalTime Kernel
     :members:
     :inherited-members:
 
+TransportMap Kernel
+-------------------
+.. autoclass:: cellrank.tl.kernels.TransportMapKernel
+    :members:
+    :inherited-members:
+
 Similarity Scheme
 -----------------
 .. autoclass:: cellrank.tl.kernels.SimilaritySchemeABC

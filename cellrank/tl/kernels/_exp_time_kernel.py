@@ -1,7 +1,7 @@
 """Experimental time kernel module."""
 from abc import ABC
 from copy import copy
-from typing import Any, Optional
+from typing import Any, Dict, Tuple, Optional
 
 from cellrank import logging as logg
 from cellrank.ul._docs import d
@@ -21,7 +21,7 @@ from pandas.core.dtypes.common import (
 @d.dedent
 class ExperimentalTimeKernel(Kernel, ABC):
     """
-    Base class which computes directed transition probabilities based on experimental time.
+    Kernel base class which computes directed transition probabilities based on experimental time.
 
     %(density_correction)s
 
@@ -94,6 +94,8 @@ class ExperimentalTimeKernel(Kernel, ABC):
         if n_cats <= 1:
             raise ValueError(f"Found `{n_cats}` time point.")
 
+        self.adata.obs[self._time_key] = self.experimental_time.values
+
     @d.dedent
     def plot_flow(
         self,
@@ -146,3 +148,49 @@ class ExperimentalTimeKernel(Kernel, ABC):
                 index=self.experimental_time.index,
             )
         return self
+
+
+class TransportMapKernel(ExperimentalTimeKernel, ABC):
+    """Kernel base class which computes transition matrix based on transport maps for consecutive time pairs."""
+
+    def __init__(self, *args: Any, **kwargs: Any):
+        super().__init__(*args, **kwargs)
+        self._tmats = None
+
+    @property
+    def transport_maps(self) -> Optional[Dict[Tuple[float, float], AnnData]]:
+        """Transport maps for consecutive time pairs."""
+        return self._tmats
+
+    @d.dedent
+    def plot_flow(
+        self,
+        cluster: str,
+        cluster_key: str,
+        time_key: Optional[str] = None,
+        transport_maps: bool = False,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
+        """
+        %(plot_flow.full_desc)s
+
+        Parameters
+        ----------
+        %(plot_flow.parameters)s
+        transport_maps
+            Whether to visualize :attr:`transport_maps` or :attr:`transition_matrix`.
+
+        Returns
+        -------
+        %(plot_flow.returns)s
+        """  # noqa: D400
+        if time_key is None:
+            time_key = self._time_key
+        # TODO
+        if transport_maps:
+            raise NotImplementedError(
+                "Visualizing transport maps is not yet implemented."
+            )
+
+        return super().plot_flow(cluster, cluster_key, time_key, *args, **kwargs)
