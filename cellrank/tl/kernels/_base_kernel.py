@@ -34,7 +34,7 @@ from cellrank.ul._utils import Pickleable, _write_graph_data
 from scvelo.plotting.utils import default_size, plot_outline
 from cellrank.tl._constants import Direction, _transition
 from cellrank.tl.kernels._utils import _get_basis, _filter_kwargs
-from cellrank.tl.kernels._tmat_flow import _norm_cont, _plot_flow, _compute_flow
+from cellrank.tl.kernels._tmat_flow import FlowPlotter, _plot_flow
 from cellrank.tl.kernels._random_walk import RandomWalk
 
 import numpy as np
@@ -983,10 +983,12 @@ class Kernel(UnaryKernelExpression, ABC):
         time_points: Optional[Sequence[Union[int, float]]] = None,
         ascending: Optional[bool] = False,
         legend_loc: Optional[str] = "upper right out",
+        alpha: Optional[float] = 0.8,
         figsize: Optional[Tuple[float, float]] = None,
         dpi: Optional[int] = None,
         save: Optional[Union[str, Path]] = None,
-    ) -> None:
+        show: bool = True,
+    ) -> Optional[plt.Axes]:
         """
         Visualize outgoing flow from a cluster of cells.
 
@@ -1006,12 +1008,15 @@ class Kernel(UnaryKernelExpression, ABC):
             TODO.
         ascending
             TODO.
+        alpha
+            TODO.
         legend_loc
             Position of the legend. If `None`, do not show the legend.
         %(plotting)s
 
         Returns
         -------
+        TODO
         %(just_plots)s
         """
         if self._transition_matrix is None:
@@ -1046,7 +1051,9 @@ class Kernel(UnaryKernelExpression, ABC):
             time_points = _unique_order_preserving(time_points)
             if len(time_points) < 2:
                 raise ValueError("TODO: too few time points.")
-            adata = adata[adata.obs[time_key].isin(time_points)]
+            mask = adata.obs[time_key].isin(time_points)
+            adata = adata[mask]
+            tmat = tmat[mask, :][:, mask]
             if not adata.n_obs:
                 raise ValueError("TODO: no valid time points have been selected.")
 
@@ -1055,10 +1062,11 @@ class Kernel(UnaryKernelExpression, ABC):
         time_points = list(zip(time.cat.categories[:-1], time.cat.categories[1:]))
 
         # TODO: cache?
-        type_agn = _norm_cont(adata, cluster_key, time_key)
-        type_flow = _compute_flow(tmat, adata.obs[cluster_key], time, time_points)
+        fp = FlowPlotter(adata, tmat, cluster_key, time_key)
+        type_agn = fp.contingency_matrix()
+        type_flow = fp.flow(time_points, cluster=cluster)
 
-        fig = _plot_flow(
+        fig, ax = _plot_flow(
             cm,
             cluster,
             cluster_key,
@@ -1068,6 +1076,7 @@ class Kernel(UnaryKernelExpression, ABC):
             type_agn,
             type_flow,
             min_flow=min_flow,
+            alpha=alpha,
             legend_loc=legend_loc,
             figsize=figsize,
             dpi=dpi,
@@ -1075,6 +1084,9 @@ class Kernel(UnaryKernelExpression, ABC):
 
         if save is not None:
             save_fig(fig, save)
+
+        if not show:
+            return ax
 
 
 @d.dedent
