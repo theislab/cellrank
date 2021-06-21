@@ -120,9 +120,10 @@ def _draw_sig_edge(
 # 2. cluster filtering tweak + flow filtering
 # 3. z-order (in case of potential overlap
 def _plot_flow(
-    adata: AnnData,
+    cm,
     cluster: str,
     cluster_key: str,
+    clusters: Sequence[str],
     time_key: str,
     type_agn: pd.DataFrame,
     type_flow: pd.DataFrame,
@@ -174,7 +175,7 @@ def _plot_flow(
                     ax,
                     x1=t + fl,
                     x2t=x[j + 1],
-                    x2=x[j + 1] - fl - 0.05,
+                    x2=x[j + 1] - 0.05,
                     y1=base_foc + cum_y,
                     y1t=base_foc + cum_y,
                     y2t=base_y[col_i] - smoo_y2[col_i][ix2],
@@ -187,11 +188,7 @@ def _plot_flow(
     # TODO: clean file, remove constants
     t1 = type_agn.columns[0]
     t2 = type_agn.columns[-1]
-    # TODO: remove?
-    T_minflow_for_type = 0.005
-    agg = type_flow.loc[cluster].select_dtypes(exclude=["object"]).sum()
-    cols = agg.index[agg > T_minflow_for_type]
-    cols = [c for c in cols if c != cluster]
+    cols = [c for c in clusters if c != cluster]
     # TODO: sort left/right by total descending flow
     cols = cols[: len(cols) // 2] + [cluster] + cols[len(cols) // 2 :]
     cols = np.array(cols)
@@ -213,10 +210,6 @@ def _plot_flow(
     fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
 
     smoo_y2 = {}
-    # TODO: what if no colors present?
-    cm = dict(
-        zip(adata.obs[cluster_key].cat.categories, adata.uns[f"{cluster_key}_colors"])
-    )
 
     base = [0]
     for i, c in enumerate(cols):

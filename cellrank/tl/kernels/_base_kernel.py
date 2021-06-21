@@ -978,6 +978,7 @@ class Kernel(UnaryKernelExpression, ABC):
         cluster_key: str,
         time_key: str,
         min_flow: float = 0,
+        clusters: Optional[Sequence[Any]] = None,
         legend_loc: Optional[str] = "upper right out",
         figsize: Optional[Tuple[float, float]] = None,
         dpi: Optional[int] = None,
@@ -1008,20 +1009,42 @@ class Kernel(UnaryKernelExpression, ABC):
             raise RuntimeError(
                 "Compute transition matrix first as `.compute_transition_matrix()`."
             )
+        # TODO: what if no colors present?
+        cm = dict(
+            zip(
+                self.adata.obs[cluster_key].cat.categories,
+                self.adata.uns[f"{cluster_key}_colors"],
+            )
+        )
+        if clusters is None:
+            adata = self.adata
+            tmat = self.transition_matrix
+            clusters = adata.obs[cluster_key].cat.categories
+        else:
+            mask = self.adata.obs[cluster_key].isin(clusters).values
+            adata = self.adata[mask]
+            if not adata.n_obs:
+                raise ValueError("TODO: no valid clusters have been selected.")
+            tmat = self.transition_matrix[mask, :][:, mask]
+            clusters = [
+                c for c in clusters if c in adata.obs[cluster_key].cat.categories
+            ]
+        if len(clusters) <= 1:
+            raise ValueError("TODO: too few clusters.")
 
-        clusters = self.adata.obs[cluster_key]
-        time = self.adata.obs[time_key]
+        time = adata.obs[time_key]
         # TODO: check if ordered, numeric and categorical
         time_points = list(zip(time.cat.categories[:-1], time.cat.categories[1:]))
 
         # TODO: cache?
-        type_agn = _norm_cont(self.adata, cluster_key, time_key)
-        type_flow = _compute_flow(self.transition_matrix, clusters, time, time_points)
+        type_agn = _norm_cont(adata, cluster_key, time_key)
+        type_flow = _compute_flow(tmat, adata.obs[cluster_key], time, time_points)
 
         fig = _plot_flow(
-            self.adata,
+            cm,
             cluster,
             cluster_key,
+            clusters,
             time_key,
             type_agn,
             type_flow,

@@ -94,7 +94,7 @@ class ExperimentalTimeKernel(Kernel, ABC):
         if n_cats <= 1:
             raise ValueError(f"Found `{n_cats}` time point.")
 
-        self.adata.obs[self._time_key] = self.experimental_time.values
+        self.adata.obs[time_key] = self.experimental_time.values
 
     @d.dedent
     def plot_flow(
