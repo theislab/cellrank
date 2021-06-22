@@ -28,7 +28,6 @@ from cellrank.tl._utils import (
     _symmetric,
     _get_neighs,
     _irreducible,
-    _unique_order_preserving,
 )
 from cellrank.ul._utils import Pickleable, _write_graph_data
 from scvelo.plotting.utils import default_size, plot_outline
@@ -984,6 +983,7 @@ class Kernel(UnaryKernelExpression, ABC):
         ascending: Optional[bool] = False,
         legend_loc: Optional[str] = "upper right out",
         alpha: Optional[float] = 0.8,
+        xticks_step_size: Optional[int] = 1,
         figsize: Optional[Tuple[float, float]] = None,
         dpi: Optional[int] = None,
         save: Optional[Union[str, Path]] = None,
@@ -1001,7 +1001,8 @@ class Kernel(UnaryKernelExpression, ABC):
         time_key
             Key in :attr:`adata` ``.obs`` where experimental time is stored.
         min_flow
-            Only show compute_flow edges with compute_flow greater than this value. TODO: mention that compute_flow is in [0, 1].
+            Only show compute_flow edges with compute_flow greater than this value.
+            TODO: mention that compute_flow is in [0, 1].
         clusters
             TODO.
         time_points
@@ -1009,6 +1010,8 @@ class Kernel(UnaryKernelExpression, ABC):
         ascending
             TODO.
         alpha
+            TODO.
+        xticks_step_size
             TODO.
         show
             TODO.
@@ -1033,6 +1036,7 @@ class Kernel(UnaryKernelExpression, ABC):
             ascending,
             min_flow=min_flow,
             alpha=alpha,
+            xticks_step_size=xticks_step_size,
             legend_loc=legend_loc,
             figsize=figsize,
             dpi=dpi,

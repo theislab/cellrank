@@ -139,6 +139,33 @@ class FlowPlotter:
         cmat = pd.crosstab(self.clusters, self.time)
         return (cmat / cmat.sum(0)[None, :]).fillna(0)
 
+    def plot(
+        self,
+        ascending: Optional[bool],
+        min_flow: float = 0,
+        alpha: float = 0.8,
+        xticks_step_size: Optional[int] = 1,
+        legend_loc: Optional[str] = "upper right out",
+        figsize: Optional[Tuple[float, float]] = None,
+        dpi: Optional[int] = None,
+    ) -> Tuple[plt.Figure, plt.Axes]:
+        flow, cmat = self._flow, self._cmat
+        try:
+            fig, ax = self._plot(
+                self._rename_times(),
+                ascending=ascending,
+                min_flow=min_flow,
+                alpha=alpha,
+                xticks_step_size=xticks_step_size,
+                legend_loc=legend_loc,
+                figsize=figsize,
+                dpi=dpi,
+            )
+            return fig, ax
+        finally:
+            self._flow = flow
+            self._cmat = cmat
+
     def _get_time_subset(
         self, t1: Any, t2: Any, cluster: Optional[str] = None
     ) -> Tuple[Union[np.ndarray, spmatrix], pd.Series, pd.Series]:
@@ -153,79 +180,17 @@ class FlowPlotter:
 
         return self._tmat[row_ixs, :][:, col_ixs], row_cls, col_cls
 
-    @property
-    def adata(self) -> AnnData:
-        return self._adata
-
-    @property
-    def clusters(self) -> pd.Series:
-        return self._adata.obs[self._ckey]
-
-    @property
-    def time(self) -> pd.Series:
-        return self._adata.obs[self._tkey]
-
-    @property
-    @lru_cache(1)
-    def cmap(self) -> Mapping[str, Any]:
-        return dict(
-            zip(
-                self.clusters.cat.categories,
-                self._adata.uns[f"{self._ckey}_colors"],
-            )
+    def _rename_times(self) -> Sequence[Any]:
+        old_times = self._cmat.columns
+        tmp = np.array(old_times)
+        tmp = (tmp - tmp.min()) / (tmp.max() - tmp.min())
+        tmp /= np.min(tmp[1:] - tmp[:-1])
+        time_mapper = dict(zip(old_times, tmp))
+        self._flow.index = pd.MultiIndex.from_tuples(
+            [(time_mapper[t], c) for t, c in self._flow.index]
         )
-
-    def _draw_flow_edge(
-        self,
-        ax,
-        x1: Point,
-        x2: Point,
-        y1: Point,
-        y2: Point,
-        start_color: Tuple[float, float, float],
-        end_color: Tuple[float, float, float],
-        flow: float,
-        alpha: float = 0.8,
-    ) -> None:
-        dx = x2.xt - x1.x
-        dy = y2.xt - y1.x
-        dxt = x2.x - x1.x
-        dyt = y2.x - y1.xt
-
-        start_color = np.asarray(to_rgb(start_color))
-        end_color = np.asarray(to_rgb(end_color))
-        delta = 0.05
-
-        beta0 = _lcdf(0)
-        beta_f = _lcdf(1) - _lcdf(0)
-
-        rs = np.arange(0, 1, delta)
-        beta = (_lcdf(rs) - beta0) / beta_f
-        beta5 = (_lcdf(rs + delta) - beta0) / beta_f
-
-        sx1 = x1.x + rs * dx
-        sy1 = y1.x + beta * dy
-        sx2 = x1.x + (rs + delta) * dx
-        sy2 = y1.x + beta5 * dy
-
-        sx1t = x1.x + flow + rs * dxt
-        sy1t = y1.xt + beta * dyt
-        sx2t = x1.x + flow + (rs + delta) * dxt
-        sy2t = y1.xt + beta5 * dyt
-
-        xs = np.c_[sx1, sx2, sx2t, sx1t]
-        ys = np.c_[sy1, sy2, sy2t, sy1t]
-
-        start_alpha, end_alpha = 0.2, alpha
-        if start_alpha > end_alpha:
-            start_alpha, end_alpha = end_alpha, start_alpha
-        col = np.c_[
-            (start_color * (1 - rs[:, None])) + (end_color * rs[:, None]),
-            np.linspace(start_alpha, end_alpha, len(rs)),
-        ]
-
-        for x, y, c in zip(xs, ys, col):
-            ax.fill(x, y, c=c, edgecolor=None)
+        self._cmat.columns = tmp
+        return old_times
 
     def _order_clusters(
         self, cluster: str, ascending: Optional[bool] = False
@@ -288,11 +253,65 @@ class FlowPlotter:
 
         return smoothed_proportion
 
-    def plot(
+    def _draw_flow_edge(
         self,
+        ax,
+        x1: Point,
+        x2: Point,
+        y1: Point,
+        y2: Point,
+        start_color: Tuple[float, float, float],
+        end_color: Tuple[float, float, float],
+        flow: float,
+        alpha: float = 0.8,
+    ) -> None:
+        dx = x2.xt - x1.x
+        dy = y2.xt - y1.x
+        dxt = x2.x - x1.x
+        dyt = y2.x - y1.xt
+
+        start_color = np.asarray(to_rgb(start_color))
+        end_color = np.asarray(to_rgb(end_color))
+        delta = 0.05
+
+        beta0 = _lcdf(0)
+        beta_f = _lcdf(1) - _lcdf(0)
+
+        rs = np.arange(0, 1, delta)
+        beta = (_lcdf(rs) - beta0) / beta_f
+        beta5 = (_lcdf(rs + delta) - beta0) / beta_f
+
+        sx1 = x1.x + rs * dx
+        sy1 = y1.x + beta * dy
+        sx2 = x1.x + (rs + delta) * dx
+        sy2 = y1.x + beta5 * dy
+
+        sx1t = x1.x + flow + rs * dxt
+        sy1t = y1.xt + beta * dyt
+        sx2t = x1.x + flow + (rs + delta) * dxt
+        sy2t = y1.xt + beta5 * dyt
+
+        xs = np.c_[sx1, sx2, sx2t, sx1t]
+        ys = np.c_[sy1, sy2, sy2t, sy1t]
+
+        start_alpha, end_alpha = 0.2, alpha
+        if start_alpha > end_alpha:
+            start_alpha, end_alpha = end_alpha, start_alpha
+        col = np.c_[
+            (start_color * (1 - rs[:, None])) + (end_color * rs[:, None]),
+            np.linspace(start_alpha, end_alpha, len(rs)),
+        ]
+
+        for x, y, c in zip(xs, ys, col):
+            ax.fill(x, y, c=c, edgecolor=None)
+
+    def _plot(
+        self,
+        old_times: Sequence[Any],
         ascending: Optional[bool],
         min_flow: float = 0,
         alpha: float = 0.8,
+        xticks_step_size: Optional[int] = 1,
         legend_loc: Optional[str] = "upper right out",
         figsize: Optional[Tuple[float, float]] = None,
         dpi: Optional[int] = None,
@@ -356,17 +375,9 @@ class FlowPlotter:
                             alpha=alpha,
                         )
 
-        old_times = times = self._cmat.columns
-        tmp = np.array(times)
-        tmp = (tmp - tmp.min()) / (tmp.max() - tmp.min())
-        tmp /= np.min(tmp[1:] - tmp[:-1])
-        time_mapper = dict(zip(times, tmp))
-        self._flow.index = pd.MultiIndex.from_tuples(
-            [(time_mapper[t], c) for t, c in self._flow.index]
-        )
-        self._cmat.columns = tmp
+        if xticks_step_size is not None:
+            xticks_step_size = max(1, xticks_step_size)
         times = self._cmat.columns
-
         fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
 
         clusters_bottom, clusters_top = self._order_clusters(self._cluster, ascending)
@@ -387,13 +398,35 @@ class FlowPlotter:
         ax.set_title(self._cluster)
         ax.set_xlabel(self._tkey)
         ax.set_ylabel(self._ckey)
-        ax.set_xticks(times)
-        ax.set_xticklabels(old_times)
+        if xticks_step_size is None:
+            ax.set_xticks([])
+        else:
+            ax.set_xticks(times[::xticks_step_size])
+            ax.set_xticklabels(old_times[::xticks_step_size])
         ax.set_yticks([])
+
         if legend_loc not in (None, "none"):
             _position_legend(ax, legend_loc)
 
         return fig, ax
+
+    @property
+    def clusters(self) -> pd.Series:
+        return self._adata.obs[self._ckey]
+
+    @property
+    def time(self) -> pd.Series:
+        return self._adata.obs[self._tkey]
+
+    @property
+    @lru_cache(1)
+    def cmap(self) -> Mapping[str, Any]:
+        return dict(
+            zip(
+                self.clusters.cat.categories,
+                self._adata.uns[f"{self._ckey}_colors"],
+            )
+        )
 
 
 def _lcdf(
