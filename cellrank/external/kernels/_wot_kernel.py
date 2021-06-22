@@ -17,7 +17,6 @@ _error = None
 try:
     import wot
 
-    from cellrank.tl.kernels import ConnectivityKernel
     from cellrank.tl.kernels import TransportMapKernel as Kernel
 except ImportError as e:
     from cellrank.external.kernels._import_error_kernel import ErroredKernel as Kernel
