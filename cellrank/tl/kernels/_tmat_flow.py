@@ -133,7 +133,7 @@ class FlowPlotter:
         # `[time point, 1] x clusters`
         flow /= flow.sum(1)[:, None]
 
-        return flow
+        return flow.fillna(0)
 
     def compute_contigency_matrix(self) -> pd.DataFrame:
         cmat = pd.crosstab(self.clusters, self.time)
@@ -262,27 +262,26 @@ class FlowPlotter:
         clusters: Sequence[Any],
         y_offset: Mapping[Any, float],
         alpha: float = 0.8,
-    ) -> Mapping[Any, Mapping[str, np.ndarray]]:
+    ) -> Mapping[Any, np.ndarray]:
         start_t, end_t = self._cmat.columns.min(), self._cmat.columns.max()
         x = np.array(self._cmat.columns)  # fitting
-        e = np.linspace(
-            start_t, end_t, int(1 + (end_t - start_t) * 100)
-        )  # extrapolation
+        # extrapolation
+        e = np.linspace(start_t, end_t, int(1 + (end_t - start_t) * 100))
 
         smoothed_proportion = {}
-        for i, c in enumerate(clusters):
-            y = self._cmat.loc[c]
+        for clust in clusters:
+            y = self._cmat.loc[clust]
             f = interp1d(x, y)
             fe = f(e)
             lo = lowess(fe, e, frac=0.3, is_sorted=True, return_sorted=False)
-            smoothed_proportion[c] = {f"{float(k):.2f}": v for k, v in zip(e, lo)}
+            smoothed_proportion[clust] = lo
 
             ax.fill_between(
                 e,
-                y_offset[c] + lo,
-                y_offset[c] - lo,
-                color=self.cmap[c],
-                label=c,
+                y_offset[clust] + lo,
+                y_offset[clust] - lo,
+                color=self.cmap[clust],
+                label=clust,
                 alpha=alpha,
                 edgecolor=None,
             )
@@ -300,27 +299,21 @@ class FlowPlotter:
     ) -> Tuple[plt.Figure, plt.Axes]:
         from cellrank.pl._utils import _position_legend
 
+        def r(num: float) -> int:
+            return int(round(num, 2) * 100)
+
         def draw_edges(
             curr_t: Any, next_t: Any, clusters: Sequence[Any], *, bottom: bool
         ):
-            smooth_cluster = float(
-                smoothed_proportions[self._cluster][f"{float(curr_t):.2f}"]
-            )
+            smooth_cluster = float(smoothed_proportions[self._cluster][r(curr_t)])
             flow = self._flow.loc[curr_t]
             for clust in clusters:
                 fl = flow.loc[self._cluster, clust]
                 if fl > min_flow:
                     fl = np.clip(fl, 0, 0.95)
-                    try:
-                        smooth_cluster_fl = float(
-                            smoothed_proportions[self._cluster][
-                                f"{float(curr_t) + fl:.2f}"
-                            ]
-                        )
-                    except:
-                        raise
-                    y_ix1 = f"{float(next_t):.2f}"
-                    y_ix2 = f"{float(next_t - fl - 0.05):.2f}"
+                    smooth_cluster_fl = smoothed_proportions[self._cluster][
+                        r(curr_t + fl)
+                    ]
 
                     if bottom:
                         self._draw_flow_edge(
@@ -332,8 +325,10 @@ class FlowPlotter:
                                 cluster_offset - smooth_cluster_fl,
                             ),
                             y2=Point(
-                                y_offset[clust] + smoothed_proportions[clust][y_ix1],
-                                y_offset[clust] + smoothed_proportions[clust][y_ix2],
+                                y_offset[clust]
+                                + smoothed_proportions[clust][r(next_t)],
+                                y_offset[clust]
+                                + smoothed_proportions[clust][r(next_t - fl - 0.05)],
                             ),
                             flow=fl,
                             start_color=self.cmap[self._cluster],
@@ -350,8 +345,10 @@ class FlowPlotter:
                                 cluster_offset + smooth_cluster,
                             ),
                             y2=Point(
-                                y_offset[clust] - smoothed_proportions[clust][y_ix2],
-                                y_offset[clust] - smoothed_proportions[clust][y_ix1],
+                                y_offset[clust]
+                                - smoothed_proportions[clust][r(next_t - fl - 0.05)],
+                                y_offset[clust]
+                                - smoothed_proportions[clust][r(next_t)],
                             ),
                             flow=-fl,
                             start_color=self.cmap[self._cluster],
