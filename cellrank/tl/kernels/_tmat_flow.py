@@ -300,7 +300,7 @@ class FlowPlotter:
         from cellrank.pl._utils import _position_legend
 
         def r(num: float) -> int:
-            return int(round(num, 2) * 100)
+            return max(0, int(round(num, 2) * 100) - 1)
 
         def draw_edges(
             curr_t: Any, next_t: Any, clusters: Sequence[Any], *, bottom: bool
