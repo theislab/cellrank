@@ -1,21 +1,32 @@
 """Experimental time kernel module."""
 from abc import ABC
 from copy import copy
-from typing import Any, Dict, Tuple, Optional
+from types import MappingProxyType
+from typing import Any, Dict, Tuple, Mapping, Optional
 
+import scanpy as sc
 from cellrank import logging as logg
 from cellrank.ul._docs import d
+from cellrank.tl._utils import _normalize
 from cellrank.tl.kernels import Kernel
+from cellrank.tl._constants import ModeEnum
 from cellrank.tl.kernels._base_kernel import AnnData
 
 import numpy as np
 import pandas as pd
+from scipy.sparse import bmat, spdiags
 from pandas.api.types import infer_dtype
 from pandas.core.dtypes.common import (
     is_object_dtype,
     is_numeric_dtype,
     is_categorical_dtype,
 )
+
+
+class LastTimePoint(ModeEnum):  # noqa
+    UNIFORM = "uniform"
+    DIAGONAL = "diagonal"
+    CONNECTIVITIES = "connectivities"
 
 
 @d.dedent
@@ -155,12 +166,75 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
 
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
-        self._tmats = None
+        self._tmaps = None
+
+    def _restich_tmaps(
+        self,
+        tmaps: Mapping[Tuple[float, float], AnnData],
+        last_time_point: LastTimePoint = LastTimePoint.DIAGONAL,
+        conn_kwargs: Mapping[str, Any] = MappingProxyType({}),
+        normalize: bool = True,
+    ) -> AnnData:
+        from cellrank.tl.kernels import ConnectivityKernel
+
+        conn_kwargs = dict(conn_kwargs)
+        conn_kwargs["copy"] = False
+        _ = conn_kwargs.pop("key_added", None)
+        density_normalize = conn_kwargs.pop("density_normalize", True)
+
+        blocks = [[None] * (len(tmaps) + 1) for _ in range(len(tmaps) + 1)]
+        nrows, ncols = 0, 0
+        obs_names, obs = [], []
+
+        for i, tmap in enumerate(tmaps.values()):
+            blocks[i][i + 1] = _normalize(tmap.X) if normalize else tmap.X
+            nrows += tmap.n_obs
+            ncols += tmap.n_vars
+            obs_names.extend(tmap.obs_names)
+            obs.append(tmap.obs)
+        obs_names.extend(tmap.var_names)
+
+        n = self.adata.n_obs - nrows
+        if last_time_point == LastTimePoint.DIAGONAL:
+            blocks[-1][-1] = spdiags([1] * n, 0, n, n)
+        elif last_time_point == LastTimePoint.UNIFORM:
+            blocks[-1][-1] = np.ones((n, n)) / float(n)
+        elif last_time_point == LastTimePoint.CONNECTIVITIES:
+            adata_subset = self.adata[tmap.var_names].copy()
+            sc.pp.neighbors(adata_subset, **conn_kwargs)
+            blocks[-1][-1] = (
+                ConnectivityKernel(adata_subset)
+                .compute_transition_matrix(density_normalize)
+                .transition_matrix
+            )
+        else:
+            raise NotImplementedError(
+                f"Last time point mode `{last_time_point}` is not yet implemented."
+            )
+
+        # prevent the last block from disappearing
+        n = blocks[0][1].shape[0]
+        blocks[0][0] = spdiags([], 0, n, n)
+
+        tmp = AnnData(bmat(blocks, format="csr"))
+        tmp.obs_names = obs_names
+        tmp.var_names = obs_names
+        tmp = tmp[self.adata.obs_names, :][:, self.adata.obs_names]
+
+        tmp.obs = pd.merge(
+            tmp.obs,
+            pd.concat(obs),
+            left_index=True,
+            right_index=True,
+            how="left",
+        )
+
+        return tmp
 
     @property
     def transport_maps(self) -> Optional[Dict[Tuple[float, float], AnnData]]:
         """Transport maps for consecutive time pairs."""
-        return self._tmats
+        return self._tmaps
 
     @d.dedent
     def plot_flow(
@@ -187,10 +261,20 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         """  # noqa: D400
         if time_key is None:
             time_key = self._time_key
-        # TODO
+
         if transport_maps:
-            raise NotImplementedError(
-                "Visualizing transport maps is not yet implemented."
-            )
+            if self.transport_maps is None:
+                raise RuntimeError("Compute transition maps first.")
+
+            T = self._transition_matrix
+            try:
+                self._transition_matrix = self._restich_tmaps(
+                    self.transport_maps, normalize=False
+                ).X
+                return super().plot_flow(
+                    cluster, cluster_key, time_key, *args, **kwargs
+                )
+            finally:
+                self._transition_matrix = T
 
         return super().plot_flow(cluster, cluster_key, time_key, *args, **kwargs)

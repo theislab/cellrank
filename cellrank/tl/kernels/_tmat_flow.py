@@ -1,8 +1,11 @@
-from typing import Any, Tuple, Union, Optional, Sequence
+from typing import Any, List, Tuple, Union, Mapping, Optional, Sequence
+from functools import lru_cache
+from dataclasses import dataclass
 
 from statsmodels.nonparametric.smoothers_lowess import lowess
 
 from anndata import AnnData
+from cellrank.tl._utils import _unique_order_preserving
 
 import numpy as np
 import pandas as pd
@@ -12,6 +15,12 @@ from scipy.interpolate import interp1d
 
 import matplotlib.pyplot as plt
 from matplotlib.colors import to_rgb
+
+
+@dataclass(frozen=True)
+class Point:
+    x: float
+    xt: float
 
 
 class FlowPlotter:
@@ -29,10 +38,60 @@ class FlowPlotter:
         self._ckey = cluster_key
         self._tkey = time_key
 
-    def prepare(self) -> "FlowPlotter":
+        self._cluster = None
+        self._clusters = None
+
+        self._flow = None
+        self._cmat = None
+
+    def prepare(
+        self,
+        cluster: str,
+        clusters: Optional[Sequence[Any]] = None,
+        time_points: Optional[Sequence[Tuple[Any, Any]]] = None,
+    ) -> "FlowPlotter":
+        if clusters is None:
+            self._clusters = self.clusters.cat.categories
+        else:
+            clusters = _unique_order_preserving([cluster] + list(clusters))
+            mask = self.clusters.isin(clusters).values
+
+            self._adata = self._adata[mask]
+            if not self._adata.n_obs:
+                raise ValueError("No valid clusters have been selected.")
+            self._tmat = self._tmat[mask, :][:, mask]
+            self._clusters = [c for c in clusters if c in self.clusters.cat.categories]
+
+        if len(self._clusters) < 2:
+            raise ValueError(
+                f"Expected at least `2` clusters, found `{len(clusters)}`."
+            )
+
+        if time_points is not None:
+            time_points = _unique_order_preserving(time_points)
+            if len(time_points) < 2:
+                raise ValueError(
+                    f"Expected at least `2` time points, found `{len(time_points)}`."
+                )
+
+            mask = self.time.isin(time_points)
+
+            self._adata = self._adata[mask]
+            if not self._adata.n_obs:
+                raise ValueError("No valid time points have been selected.")
+            self._tmat = self._tmat[mask, :][:, mask]
+
+        time_points = list(
+            zip(self.time.cat.categories[:-1], self.time.cat.categories[1:])
+        )
+
+        self._cluster = cluster
+        self._cmat = self.compute_contigency_matrix()
+        self._flow = self.compute_flow(time_points, cluster)
+
         return self
 
-    def flow(
+    def compute_flow(
         self, time_points: Sequence[Tuple[Any, Any]], cluster: Optional[str] = None
     ) -> pd.DataFrame:
         def default_helper(t1: Any, t2: Any) -> pd.DataFrame:
@@ -65,18 +124,18 @@ class FlowPlotter:
 
         for t1, t2 in time_points:
             flow = callback(t1, t2)
-            times.extend([str(t1)] * len(flow))
+            times.extend([t1] * len(flow))
             flows.append(flow)
 
         flow = pd.concat(flows)
         flow.set_index([times, flow.index], inplace=True)
 
-        # only normalization that makes sense
+        # `[time point, 1] x clusters`
         flow /= flow.sum(1)[:, None]
 
         return flow
 
-    def contingency_matrix(self) -> pd.DataFrame:
+    def compute_contigency_matrix(self) -> pd.DataFrame:
         cmat = pd.crosstab(self.clusters, self.time)
         return (cmat / cmat.sum(0)[None, :]).fillna(0)
 
@@ -95,6 +154,10 @@ class FlowPlotter:
         return self._tmat[row_ixs, :][:, col_ixs], row_cls, col_cls
 
     @property
+    def adata(self) -> AnnData:
+        return self._adata
+
+    @property
     def clusters(self) -> pd.Series:
         return self._adata.obs[self._ckey]
 
@@ -102,220 +165,241 @@ class FlowPlotter:
     def time(self) -> pd.Series:
         return self._adata.obs[self._tkey]
 
+    @property
+    @lru_cache(1)
+    def cmap(self) -> Mapping[str, Any]:
+        return dict(
+            zip(
+                self.clusters.cat.categories,
+                self._adata.uns[f"{self._ckey}_colors"],
+            )
+        )
+
+    def _draw_flow_edge(
+        self,
+        ax,
+        x1: Point,
+        x2: Point,
+        y1: Point,
+        y2: Point,
+        start_color: Tuple[float, float, float],
+        end_color: Tuple[float, float, float],
+        flow: float,
+        alpha: float = 0.8,
+    ) -> None:
+        dx = x2.xt - x1.x
+        dy = y2.xt - y1.x
+        dxt = x2.x - x1.x
+        dyt = y2.x - y1.xt
+
+        start_color = np.asarray(to_rgb(start_color))
+        end_color = np.asarray(to_rgb(end_color))
+        delta = 0.05
+
+        beta0 = _lcdf(0)
+        beta_f = _lcdf(1) - _lcdf(0)
+
+        rs = np.arange(0, 1, delta)
+        beta = (_lcdf(rs) - beta0) / beta_f
+        beta5 = (_lcdf(rs + delta) - beta0) / beta_f
+
+        sx1 = x1.x + rs * dx
+        sy1 = y1.x + beta * dy
+        sx2 = x1.x + (rs + delta) * dx
+        sy2 = y1.x + beta5 * dy
+
+        sx1t = x1.x + flow + rs * dxt
+        sy1t = y1.xt + beta * dyt
+        sx2t = x1.x + flow + (rs + delta) * dxt
+        sy2t = y1.xt + beta5 * dyt
+
+        xs = np.c_[sx1, sx2, sx2t, sx1t]
+        ys = np.c_[sy1, sy2, sy2t, sy1t]
+
+        start_alpha, end_alpha = 0.2, alpha
+        if start_alpha > end_alpha:
+            start_alpha, end_alpha = end_alpha, start_alpha
+        col = np.c_[
+            (start_color * (1 - rs[:, None])) + (end_color * rs[:, None]),
+            np.linspace(start_alpha, end_alpha, len(rs)),
+        ]
+
+        for x, y, c in zip(xs, ys, col):
+            ax.fill(x, y, c=c, edgecolor=None)
+
+    def _order_clusters(
+        self, cluster: str, ascending: Optional[bool] = False
+    ) -> Tuple[List[Any], List[Any]]:
+        if ascending is not None:
+            tmp = [[], []]
+            total_flow = (
+                self._flow.loc[(slice(None), cluster), :]
+                .sum()
+                .sort_values(ascending=ascending)
+            )
+            for i, c in enumerate(c for c in total_flow.index if c != cluster):
+                tmp[i % 2].append(c)
+            return tmp[0][::-1], tmp[1]
+
+        clusters = [c for c in self._clusters if c != cluster]
+        return clusters[: len(clusters) // 2], clusters[len(clusters) // 2 :]
+
+    def _calculate_y_offsets(
+        self, clusters: Sequence[Any], delta: float = 0.2
+    ) -> Mapping[Any, float]:
+        offset = [0]
+        for i in range(1, len(clusters)):
+            offset.append(
+                offset[-1]
+                + delta
+                + np.max(self._cmat.loc[clusters[i]] + self._cmat.loc[clusters[i - 1]])
+            )
+        return dict(zip(clusters, offset))
+
+    def _plot_smoothed_proportion(
+        self,
+        ax: plt.Axes,
+        clusters: Sequence[Any],
+        y_offset: Mapping[Any, float],
+        alpha: float = 0.8,
+    ) -> Mapping[Any, Mapping[str, np.ndarray]]:
+        start_t, end_t = self._cmat.columns.min(), self._cmat.columns.max()
+        x = np.array(self._cmat.columns)  # fitting
+        e = np.linspace(
+            start_t, end_t, int(1 + (end_t - start_t) * 100)
+        )  # extrapolation
+
+        smoothed_proportion = {}
+        for i, c in enumerate(clusters):
+            y = self._cmat.loc[c]
+            f = interp1d(x, y)
+            fe = f(e)
+            lo = lowess(fe, e, frac=0.3, is_sorted=True, return_sorted=False)
+            smoothed_proportion[c] = {f"{float(k):.2f}": v for k, v in zip(e, lo)}
+
+            ax.fill_between(
+                e,
+                y_offset[c] + lo,
+                y_offset[c] - lo,
+                color=self.cmap[c],
+                label=c,
+                alpha=alpha,
+                edgecolor=None,
+            )
+
+        return smoothed_proportion
+
+    def plot(
+        self,
+        ascending: Optional[bool],
+        min_flow: float = 0,
+        alpha: float = 0.8,
+        legend_loc: Optional[str] = "upper right out",
+        figsize: Optional[Tuple[float, float]] = None,
+        dpi: Optional[int] = None,
+    ) -> Tuple[plt.Figure, plt.Axes]:
+        from cellrank.pl._utils import _position_legend
+
+        def draw_edges(
+            curr_t: Any, next_t: Any, clusters: Sequence[Any], *, bottom: bool
+        ):
+            smooth_cluster = float(
+                smoothed_proportions[self._cluster][f"{float(curr_t):.2f}"]
+            )
+            flow = self._flow.loc[curr_t]
+            for clust in clusters:
+                fl = flow.loc[self._cluster, clust]
+                if fl > min_flow:
+                    fl = np.clip(fl, 0, 0.95)
+                    try:
+                        smooth_cluster_fl = float(
+                            smoothed_proportions[self._cluster][
+                                f"{float(curr_t) + fl:.2f}"
+                            ]
+                        )
+                    except:
+                        raise
+                    y_ix1 = f"{float(next_t):.2f}"
+                    y_ix2 = f"{float(next_t - fl - 0.05):.2f}"
+
+                    if bottom:
+                        self._draw_flow_edge(
+                            ax,
+                            x1=Point(curr_t, 0),
+                            x2=Point(next_t - fl, next_t - fl - 0.05),
+                            y1=Point(
+                                cluster_offset - smooth_cluster,
+                                cluster_offset - smooth_cluster_fl,
+                            ),
+                            y2=Point(
+                                y_offset[clust] + smoothed_proportions[clust][y_ix1],
+                                y_offset[clust] + smoothed_proportions[clust][y_ix2],
+                            ),
+                            flow=fl,
+                            start_color=self.cmap[self._cluster],
+                            end_color=self.cmap[clust],
+                            alpha=alpha,
+                        )
+                    else:
+                        self._draw_flow_edge(
+                            ax,
+                            x1=Point(curr_t + fl, 0),
+                            x2=Point(next_t - 0.05, next_t),
+                            y1=Point(
+                                cluster_offset + smooth_cluster_fl,
+                                cluster_offset + smooth_cluster,
+                            ),
+                            y2=Point(
+                                y_offset[clust] - smoothed_proportions[clust][y_ix2],
+                                y_offset[clust] - smoothed_proportions[clust][y_ix1],
+                            ),
+                            flow=-fl,
+                            start_color=self.cmap[self._cluster],
+                            end_color=self.cmap[clust],
+                            alpha=alpha,
+                        )
+
+        old_times = times = self._cmat.columns
+        tmp = np.array(times)
+        tmp = (tmp - tmp.min()) / (tmp.max() - tmp.min())
+        tmp /= np.min(tmp[1:] - tmp[:-1])
+        time_mapper = dict(zip(times, tmp))
+        self._flow.index = pd.MultiIndex.from_tuples(
+            [(time_mapper[t], c) for t, c in self._flow.index]
+        )
+        self._cmat.columns = tmp
+        times = self._cmat.columns
+
+        fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
+
+        clusters_bottom, clusters_top = self._order_clusters(self._cluster, ascending)
+        all_clusters = clusters_bottom + [self._cluster] + clusters_top
+
+        y_offset = self._calculate_y_offsets(all_clusters)
+        cluster_offset = y_offset[self._cluster]
+
+        smoothed_proportions = self._plot_smoothed_proportion(
+            ax, all_clusters, y_offset, alpha=alpha
+        )
+
+        for curr_t, next_t in zip(times[:-1], times[1:]):
+            draw_edges(curr_t, next_t, clusters_bottom, bottom=True)
+            draw_edges(curr_t, next_t, clusters_top, bottom=False)
+
+        ax.margins(0.025)
+        ax.set_title(self._cluster)
+        ax.set_xlabel(self._tkey)
+        ax.set_ylabel(self._ckey)
+        ax.set_xticks(times)
+        ax.set_xticklabels(old_times)
+        ax.set_yticks([])
+        if legend_loc not in (None, "none"):
+            _position_legend(ax, legend_loc)
+
+        return fig, ax
+
 
 def _lcdf(
     x: Union[int, float, np.ndarray], loc: float = 0.5, scale: float = 0.2
 ) -> float:
     return logistic.cdf(x, loc=loc, scale=scale)
-
-
-# TODO: bundle args, what are those?`
-def _draw_sig_edge(
-    ax,
-    x1: float,
-    x2: float,
-    x2t: float,
-    y1: float,
-    y1t: float,
-    y2: float,
-    y2t: float,
-    start_color: Tuple[float, float, float],
-    end_color: Tuple[float, float, float],
-    fl: float,
-    alpha: float = 0.8,
-) -> None:
-    dx = x2t - x1
-    dy = y2t - y1
-    dxt = x2 - x1
-    dyt = y2 - y1t
-
-    start_color = np.asarray(to_rgb(start_color))
-    end_color = np.asarray(to_rgb(end_color))
-    delta = 0.05
-
-    beta0 = _lcdf(0)
-    beta_f = _lcdf(1) - _lcdf(0)
-
-    rs = np.arange(0, 1, delta)
-    beta = (_lcdf(rs) - beta0) / beta_f
-    beta5 = (_lcdf(rs + delta) - beta0) / beta_f
-
-    sx1 = x1 + rs * dx
-    sy1 = y1 + beta * dy
-    sx2 = x1 + (rs + delta) * dx
-    sy2 = y1 + beta5 * dy
-
-    sx1t = x1 + fl + rs * dxt
-    sy1t = y1t + beta * dyt
-    sx2t = x1 + fl + (rs + delta) * dxt
-    sy2t = y1t + beta5 * dyt
-
-    xs = np.c_[sx1, sx2, sx2t, sx1t]
-    ys = np.c_[sy1, sy2, sy2t, sy1t]
-
-    start_alpha, end_alpha = 0.2, alpha
-    if start_alpha > end_alpha:
-        start_alpha, end_alpha = end_alpha, start_alpha
-    col = np.c_[
-        (start_color * (1 - rs[:, None])) + (end_color * rs[:, None]),
-        np.linspace(start_alpha, end_alpha, len(rs)),
-    ]
-
-    for x, y, c in zip(xs, ys, col):
-        ax.fill(x, y, c=c, edgecolor=None)
-
-
-# TODO:
-# 1. flow normalization?
-# 2. cluster filtering tweak + flow filtering
-# 3. z-order (in case of potential overlap
-def _plot_flow(
-    cm,
-    cluster: str,
-    cluster_key: str,
-    clusters: Optional[Sequence[str]],
-    ascending: Optional[bool],
-    time_key: str,
-    type_agn: pd.DataFrame,
-    type_flow: pd.DataFrame,
-    min_flow: float = 0,
-    alpha: float = 0.8,
-    legend_loc: Optional[str] = "upper right out",
-    figsize: Optional[Tuple[float, float]] = None,
-    dpi: Optional[int] = None,
-) -> Tuple[plt.Figure, plt.Axes]:
-    from cellrank.pl._utils import _position_legend
-
-    # TODO: 1 function
-    def plot_edges_bottom(j: int, t: Any, ixs: np.array):
-        cum_y = float(smoo_y2[cluster][f"{float(t):.2f}"])
-        flow = type_flow.loc[str(t)]
-        for i in ixs:
-            col_i = cols[i]
-            fl = flow.loc[cluster, col_i]
-            if fl > min_flow:
-                fl = np.clip(fl, 0, 0.95)
-                cum_yt = float(smoo_y2[cluster][f"{float(t)+fl:.2f}"])
-                ix2 = f"{float((x[j + 1])):.2f}"
-                ix3 = f"{float(x[j + 1] - fl - 0.05):.2f}"
-
-                _draw_sig_edge(
-                    ax,
-                    x1=t,
-                    x2=x[j + 1] - fl,
-                    x2t=x[j + 1] - fl - 0.05,
-                    fl=fl,
-                    y1=base_foc - cum_y,
-                    y1t=base_foc - cum_yt,
-                    y2=base_y[col_i] + smoo_y2[col_i][ix2],
-                    y2t=base_y[col_i] + smoo_y2[col_i][ix3],
-                    start_color=cm[cluster],
-                    end_color=cm[col_i],
-                    alpha=alpha,
-                )
-
-    def plot_edges_top(j: int, t: Any, ixs: np.array):
-        cum_y = float(smoo_y2[cluster][f"{float(t):.2f}"])
-        flow = type_flow.loc[str(t)]
-        for i in ixs:
-            col_i = cols[i]
-            fl = flow.loc[cluster, col_i]
-            if fl > min_flow:
-                fl = np.clip(fl, 0, 0.95)
-                cum_yt = float(smoo_y2[cluster][f"{float(t)+fl:.2f}"])
-                ix2 = f"{float((x[j + 1])):.2f}"
-                ix3 = f"{float(x[j + 1] - fl - 0.05):.2f}"
-
-                _draw_sig_edge(
-                    ax,
-                    x1=t + fl,
-                    x2t=x[j + 1],
-                    x2=x[j + 1] - 0.05,
-                    y1=base_foc + cum_yt,
-                    y1t=base_foc + cum_y,
-                    y2t=base_y[col_i] - smoo_y2[col_i][ix2],
-                    y2=base_y[col_i] - smoo_y2[col_i][ix3],
-                    fl=-fl,
-                    start_color=cm[cluster],
-                    end_color=cm[col_i],
-                    alpha=alpha,
-                )
-
-    # TODO: clean file, remove constants
-    t1 = type_agn.columns[0]
-    t2 = type_agn.columns[-1]
-
-    # TODO: extract to function
-    if ascending is not None:
-        top_bottom = [[], []]
-        agg = (
-            type_flow.loc[(slice(None), cluster), :]
-            .sum()
-            .sort_values(ascending=ascending)
-        )
-        for i, c in enumerate(c for c in agg.index if c != cluster):
-            top_bottom[i % 2].append(c)
-        # TODO: document
-        cols = top_bottom[0][::-1] + [cluster] + top_bottom[1]
-    else:
-        cols = [c for c in clusters if c != cluster]
-        # TODO: sort left/right by total descending flow
-        cols = cols[: len(cols) // 2] + [cluster] + cols[len(cols) // 2 :]
-    cols = np.array(cols)
-
-    foc_agn = type_agn.loc[list(cols), t1:t2]
-
-    base_y = [0]
-    for i in range(1, len(cols)):
-        # TODO: cleaner impl.
-        base_y.append(
-            base_y[-1]
-            + 0.2
-            + np.max(foc_agn.loc[str(cols[i])] + foc_agn.loc[str(cols[i - 1])])
-        )
-    base_y = dict(zip(cols, base_y))
-
-    x = np.array(type_agn.columns)
-    length = int(1 + (t2 - t1) * 100)
-    e = np.linspace(t1, t2, length)
-    fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
-
-    smoo_y2 = {}
-
-    base = [0]
-    for i, c in enumerate(cols):
-        y = foc_agn.loc[c, t1:t2]
-        f = interp1d(x, y)
-        fe = f(e)
-        lo = lowess(fe, e, frac=0.3, is_sorted=True, return_sorted=False)
-        # TODO: find cleaner way
-        smoo_y2[c] = {f"{float(k):.2f}": v for k, v in zip(e, lo)}
-
-        ax.fill_between(
-            e,
-            lo + base_y[c],
-            -lo + base_y[c],
-            color=cm[c],
-            label=c,
-            alpha=alpha,
-            edgecolor=None,
-        )
-        base.append(base[i] + 1)
-
-    foc_i = np.where(cols == cluster)[0][0]
-    base_foc = base_y[cluster]
-
-    for j, t in enumerate(x[:-1]):
-        plot_edges_bottom(j, t, np.arange(foc_i)[::-1])
-        plot_edges_top(j, t, np.arange(foc_i + 1, len(cols)))
-
-    ax.margins(0.025)
-    ax.set_title(cluster)
-    ax.set_xlabel(time_key)
-    ax.set_xticks(x)
-    ax.set_yticks([])
-    ax.set_ylabel(cluster_key)
-    if legend_loc not in (None, "none"):
-        _position_legend(ax, legend_loc)
-
-    return fig, ax

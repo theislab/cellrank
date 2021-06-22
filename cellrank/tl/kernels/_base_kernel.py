@@ -34,7 +34,7 @@ from cellrank.ul._utils import Pickleable, _write_graph_data
 from scvelo.plotting.utils import default_size, plot_outline
 from cellrank.tl._constants import Direction, _transition
 from cellrank.tl.kernels._utils import _get_basis, _filter_kwargs
-from cellrank.tl.kernels._tmat_flow import FlowPlotter, _plot_flow
+from cellrank.tl.kernels._tmat_flow import FlowPlotter
 from cellrank.tl.kernels._random_walk import RandomWalk
 
 import numpy as np
@@ -990,18 +990,18 @@ class Kernel(UnaryKernelExpression, ABC):
         show: bool = True,
     ) -> Optional[plt.Axes]:
         """
-        Visualize outgoing flow from a cluster of cells.
+        Visualize outgoing compute_flow from a cluster of cells.
 
         Parameters
         ----------
         cluster
-            Cluster for which to visualize outgoing flow.
+            Cluster for which to visualize outgoing compute_flow.
         cluster_key
             Key in :attr:`adata` ``.obs`` where clustering is stored.
         time_key
             Key in :attr:`adata` ``.obs`` where experimental time is stored.
         min_flow
-            Only show flow edges with flow greater than this value. TODO: mention that flow is in [0, 1].
+            Only show compute_flow edges with compute_flow greater than this value. TODO: mention that compute_flow is in [0, 1].
         clusters
             TODO.
         time_points
@@ -1009,6 +1009,8 @@ class Kernel(UnaryKernelExpression, ABC):
         ascending
             TODO.
         alpha
+            TODO.
+        show
             TODO.
         legend_loc
             Position of the legend. If `None`, do not show the legend.
@@ -1023,58 +1025,12 @@ class Kernel(UnaryKernelExpression, ABC):
             raise RuntimeError(
                 "Compute transition matrix first as `.compute_transition_matrix()`."
             )
-        # TODO: what if no colors present?
-        cm = dict(
-            zip(
-                self.adata.obs[cluster_key].cat.categories,
-                self.adata.uns[f"{cluster_key}_colors"],
-            )
-        )
-        if clusters is None:
-            adata = self.adata
-            tmat = self.transition_matrix
-            clusters = adata.obs[cluster_key].cat.categories
-        else:
-            clusters = _unique_order_preserving(list(clusters) + [cluster])
-            mask = self.adata.obs[cluster_key].isin(clusters).values
-            adata = self.adata[mask]
-            if not adata.n_obs:
-                raise ValueError("TODO: no valid clusters have been selected.")
-            tmat = self.transition_matrix[mask, :][:, mask]
-            clusters = [
-                c for c in clusters if c in adata.obs[cluster_key].cat.categories
-            ]
-        if len(clusters) <= 1:
-            raise ValueError("TODO: too few clusters.")
 
-        if time_points is not None:
-            time_points = _unique_order_preserving(time_points)
-            if len(time_points) < 2:
-                raise ValueError("TODO: too few time points.")
-            mask = adata.obs[time_key].isin(time_points)
-            adata = adata[mask]
-            tmat = tmat[mask, :][:, mask]
-            if not adata.n_obs:
-                raise ValueError("TODO: no valid time points have been selected.")
+        fp = FlowPlotter(self.adata, self.transition_matrix, cluster_key, time_key)
+        fp = fp.prepare(cluster, clusters, time_points)
 
-        time = adata.obs[time_key]
-        # TODO: check if ordered, numeric and categorical
-        time_points = list(zip(time.cat.categories[:-1], time.cat.categories[1:]))
-
-        # TODO: cache?
-        fp = FlowPlotter(adata, tmat, cluster_key, time_key)
-        type_agn = fp.contingency_matrix()
-        type_flow = fp.flow(time_points, cluster=cluster)
-
-        fig, ax = _plot_flow(
-            cm,
-            cluster,
-            cluster_key,
-            clusters,
+        fig, ax = fp.plot(
             ascending,
-            time_key,
-            type_agn,
-            type_flow,
             min_flow=min_flow,
             alpha=alpha,
             legend_loc=legend_loc,
