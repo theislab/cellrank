@@ -23,6 +23,9 @@ class Point:
     xt: float
 
 
+# TODO: docs
+# TODO: change Any -> Numeric for time point
+# TODO: log
 class FlowPlotter:
     TIME_KEY = "time"
 
@@ -33,6 +36,7 @@ class FlowPlotter:
         cluster_key: str,
         time_key: str,
     ):
+        # TODO: sanity checks (existence of keys) + ordered numeric for TP
         self._adata = adata
         self._tmat = tmat
         self._ckey = cluster_key
@@ -425,6 +429,7 @@ class FlowPlotter:
     @property
     @lru_cache(1)
     def cmap(self) -> Mapping[str, Any]:
+        # TODO: default colors?
         return dict(
             zip(
                 self.clusters.cat.categories,

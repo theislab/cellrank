@@ -990,7 +990,7 @@ class Kernel(UnaryKernelExpression, ABC):
         show: bool = True,
     ) -> Optional[plt.Axes]:
         """
-        Visualize outgoing compute_flow from a cluster of cells.
+        Visualize outgoing flow from a cluster of cells.
 
         Parameters
         ----------
@@ -1001,27 +1001,28 @@ class Kernel(UnaryKernelExpression, ABC):
         time_key
             Key in :attr:`adata` ``.obs`` where experimental time is stored.
         min_flow
-            Only show compute_flow edges with compute_flow greater than this value.
-            TODO: mention that compute_flow is in [0, 1].
+            Only show compute_flow edges with flow greater than this value. Flow values are always in `[0, 1]`.
         clusters
-            TODO.
+            Visualize flow only for these clusters. If `None`, use all clusters.
         time_points
-            TODO.
+            Visualize flow only for these time points. If `None`, use all time points.
         ascending
-            TODO.
+            Whether to sort the cluster by ascending incoming flow or not.
+            If `None`, use the order as in defined by ``clusters``.
         alpha
-            TODO.
+            Alpha value for cell proportions.
         xticks_step_size
-            TODO.
+            Show only every n-th ticks on x-axis.
         show
-            TODO.
+            If `True`, return :class:`matplotlib.pyplot.Axes`.
         legend_loc
             Position of the legend. If `None`, do not show the legend.
         %(plotting)s
 
         Returns
         -------
-        TODO
+        :class:`matplotlib.pyplot.Axes`
+            The axis object if``show=False``.
         %(just_plots)s
         """
         if self._transition_matrix is None:
