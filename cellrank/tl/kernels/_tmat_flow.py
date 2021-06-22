@@ -227,13 +227,13 @@ class FlowPlotter:
         clusters: Sequence[Any],
         y_offset: Mapping[Any, float],
         alpha: float = 0.8,
-    ) -> Mapping[Any, np.ndarray]:
+    ) -> Tuple[Mapping[Any, np.ndarray], Mapping[Any, Any]]:
         start_t, end_t = self._cmat.columns.min(), self._cmat.columns.max()
         x = np.array(self._cmat.columns)  # fitting
         # extrapolation
         e = np.linspace(start_t, end_t, int(1 + (end_t - start_t) * 100))
 
-        smoothed_proportion = {}
+        smoothed_proportion, handles = {}, {}
         for clust in clusters:
             y = self._cmat.loc[clust]
             f = interp1d(x, y)
@@ -241,7 +241,7 @@ class FlowPlotter:
             lo = lowess(fe, e, frac=0.3, is_sorted=True, return_sorted=False)
             smoothed_proportion[clust] = lo
 
-            ax.fill_between(
+            handles[clust] = ax.fill_between(
                 e,
                 y_offset[clust] + lo,
                 y_offset[clust] - lo,
@@ -251,7 +251,7 @@ class FlowPlotter:
                 edgecolor=None,
             )
 
-        return smoothed_proportion
+        return smoothed_proportion, handles
 
     def _draw_flow_edge(
         self,
@@ -386,7 +386,7 @@ class FlowPlotter:
         y_offset = self._calculate_y_offsets(all_clusters)
         cluster_offset = y_offset[self._cluster]
 
-        smoothed_proportions = self._plot_smoothed_proportion(
+        smoothed_proportions, handles = self._plot_smoothed_proportion(
             ax, all_clusters, y_offset, alpha=alpha
         )
 
@@ -406,7 +406,11 @@ class FlowPlotter:
         ax.set_yticks([])
 
         if legend_loc not in (None, "none"):
-            _position_legend(ax, legend_loc)
+            _position_legend(
+                ax,
+                legend_loc=legend_loc,
+                handles=[handles[c] for c in all_clusters[::-1]],
+            )
 
         return fig, ax
 
