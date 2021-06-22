@@ -968,7 +968,6 @@ class Kernel(UnaryKernelExpression, ABC):
         self.transition_matrix = matrix
         self._maybe_compute_cond_num()
 
-    # TODO: references
     @d.get_full_description(base="plot_flow")
     @d.get_sections(base="plot_flow", sections=["Parameters", "Returns"])
     @d.dedent
@@ -977,9 +976,10 @@ class Kernel(UnaryKernelExpression, ABC):
         cluster: str,
         cluster_key: str,
         time_key: str,
-        min_flow: float = 0,
         clusters: Optional[Sequence[Any]] = None,
         time_points: Optional[Sequence[Union[int, float]]] = None,
+        min_flow: float = 0,
+        remove_empty_clusters: bool = True,
         ascending: Optional[bool] = False,
         legend_loc: Optional[str] = "upper right out",
         alpha: Optional[float] = 0.8,
@@ -1033,6 +1033,7 @@ class Kernel(UnaryKernelExpression, ABC):
 
         ax = fp.plot(
             min_flow=min_flow,
+            remove_empty_clusters=remove_empty_clusters,
             ascending=ascending,
             alpha=alpha,
             xticks_step_size=xticks_step_size,

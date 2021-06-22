@@ -219,6 +219,7 @@ class FlowPlotter:
     def plot(
         self,
         min_flow: float = 0,
+        remove_empty_clusters: bool = True,
         ascending: Optional[bool] = False,
         alpha: float = 0.8,
         xticks_step_size: Optional[int] = 1,
@@ -233,8 +234,10 @@ class FlowPlotter:
         ----------
         min_flow
             Only show flow edges with flow greater than this value. Flow values are always in `[0, 1]`.
+        remove_empty_clusters
+            Whether to remove clusters with no incoming flow edges.
         ascending
-            Whether to sort the cluster by ascending incoming flow or not.
+            Whether to sort the cluster by ascending or descending incoming flow.
             If `None`, use the order as in defined by ``clusters``.
         alpha
             Alpha value for cell proportions.
@@ -254,7 +257,12 @@ class FlowPlotter:
 
         flow, cmat = self._flow, self._cmat
         try:
-            logg.info("Plotting outgoing flow")
+            if remove_empty_clusters:
+                self._remove_min_clusters(min_flow)
+            logg.info(
+                f"Plotting flow from `{self._cluster}` into `{len(self._flow.columns)}` clusters "
+                f"in `{len(self._cmat.columns) - 1}` time points"
+            )
             return self._plot(
                 self._rename_times(),
                 ascending=ascending,
@@ -282,6 +290,16 @@ class FlowPlotter:
         col_cls = self.clusters.values[col_ixs]
 
         return self._tmat[row_ixs, :][:, col_ixs], row_cls, col_cls
+
+    def _remove_min_clusters(self, min_flow: float) -> None:
+        logg.debug("Removing clusters with no incoming flow edges")
+        columns = (self._flow.loc[(slice(None), self._cluster), :] > min_flow).any()
+        columns = columns[columns].index
+        if not len(columns):
+            raise ValueError(
+                "After removing clusters with no incoming flow edges, none remain."
+            )
+        self._flow = self._flow[columns]
 
     def _rename_times(self) -> Sequence[Numeric_t]:
         # make sure we have enough horizontal space to draw the flow (i.e. time points are at least 1 unit apart)
