@@ -957,7 +957,7 @@ class Kernel(UnaryKernelExpression, ABC):
         if len(problematic_indices):
             logg.warning(
                 f"Detected `{len(problematic_indices)}` absorbing states in the transition matrix. "
-                f"This matrix won't be irreducible."
+                f"This matrix won't be irreducible"
             )
             matrix[problematic_indices, problematic_indices] = 1.0
 
@@ -990,7 +990,7 @@ class Kernel(UnaryKernelExpression, ABC):
         show: bool = True,
     ) -> Optional[plt.Axes]:
         """
-        Visualize outgoing flow from a cluster of cells.
+        Visualize outgoing flow from a cluster of cells :cite:`mittnenzweig:21`.
 
         Parameters
         ----------
@@ -1000,31 +1000,29 @@ class Kernel(UnaryKernelExpression, ABC):
             Key in :attr:`adata` ``.obs`` where clustering is stored.
         time_key
             Key in :attr:`adata` ``.obs`` where experimental time is stored.
-        min_flow
-            Only show compute_flow edges with flow greater than this value. Flow values are always in `[0, 1]`.
         clusters
             Visualize flow only for these clusters. If `None`, use all clusters.
         time_points
             Visualize flow only for these time points. If `None`, use all time points.
-        ascending
-            Whether to sort the cluster by ascending incoming flow or not.
-            If `None`, use the order as in defined by ``clusters``.
-        alpha
-            Alpha value for cell proportions.
-        xticks_step_size
-            Show only every n-th ticks on x-axis.
+        %(flow.parameters)s
+        %(plotting)s
         show
             If `True`, return :class:`matplotlib.pyplot.Axes`.
-        legend_loc
-            Position of the legend. If `None`, do not show the legend.
-        %(plotting)s
 
         Returns
         -------
         :class:`matplotlib.pyplot.Axes`
             The axis object if``show=False``.
         %(just_plots)s
-        """
+
+        Notes
+        -----
+        This function is a Python reimplementation of the following
+        `original R function <https://github.com/tanaylab/embflow/blob/main/scripts/generate_paper_figures/plot_vein.r>`_
+        with some minor stylistic differences.
+        This function will not recreate the results from :cite:`mittnenzweig:21`, because there the Metacell model
+        :cite:`baran:19` was used to compute the flow, whereas here the transition matrix is used.
+        """  # noqa: E501
         if self._transition_matrix is None:
             raise RuntimeError(
                 "Compute transition matrix first as `.compute_transition_matrix()`."
@@ -1033,9 +1031,9 @@ class Kernel(UnaryKernelExpression, ABC):
         fp = FlowPlotter(self.adata, self.transition_matrix, cluster_key, time_key)
         fp = fp.prepare(cluster, clusters, time_points)
 
-        fig, ax = fp.plot(
-            ascending,
+        ax = fp.plot(
             min_flow=min_flow,
+            ascending=ascending,
             alpha=alpha,
             xticks_step_size=xticks_step_size,
             legend_loc=legend_loc,
@@ -1044,7 +1042,7 @@ class Kernel(UnaryKernelExpression, ABC):
         )
 
         if save is not None:
-            save_fig(fig, save)
+            save_fig(ax.figure, save)
 
         if not show:
             return ax

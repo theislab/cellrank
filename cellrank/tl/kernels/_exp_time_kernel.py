@@ -5,22 +5,16 @@ from types import MappingProxyType
 from typing import Any, Dict, Tuple, Mapping, Optional
 
 import scanpy as sc
-from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.tl._utils import _normalize
 from cellrank.tl.kernels import Kernel
 from cellrank.tl._constants import ModeEnum
+from cellrank.tl.kernels._utils import _ensure_numeric_ordered
 from cellrank.tl.kernels._base_kernel import AnnData
 
 import numpy as np
 import pandas as pd
 from scipy.sparse import bmat, spdiags
-from pandas.api.types import infer_dtype
-from pandas.core.dtypes.common import (
-    is_object_dtype,
-    is_numeric_dtype,
-    is_categorical_dtype,
-)
 
 
 class LastTimePoint(ModeEnum):  # noqa
@@ -66,45 +60,7 @@ class ExperimentalTimeKernel(Kernel, ABC):
         super()._read_from_adata(**kwargs)
 
         time_key = kwargs.pop("time_key", "exp_time")
-        if time_key not in self.adata.obs.keys():
-            raise KeyError(f"Could not find time key in `adata.obs[{time_key!r}]`.")
-
-        exp_time = self.adata.obs[time_key].copy()
-        if not is_categorical_dtype(exp_time):
-            exp_time = np.array(exp_time)
-            if is_object_dtype(exp_time):
-                try:
-                    exp_time = exp_time.astype(float)
-                except ValueError as e:
-                    raise RuntimeError(
-                        f"Unable to convert `adata.obs[{time_key!r}]` to `float` dtype."
-                    ) from e
-            if not is_numeric_dtype(exp_time):
-                raise TypeError(
-                    f"Expected experimental time to be `numeric` or `categorical`, found `{infer_dtype(exp_time)}`."
-                )
-            exp_time = pd.Series(
-                pd.Categorical(
-                    exp_time,
-                    categories=sorted(set(exp_time[~np.isnan(exp_time)])),
-                    ordered=True,
-                )
-            )
-
-        if not exp_time.cat.ordered:
-            logg.warning("Time categories are not ordered. Using ascending order")
-            exp_time.cat = exp_time.cat.as_ordered()
-
-        self._exp_time = pd.Series(
-            pd.Categorical(exp_time, ordered=True), index=self.adata.obs_names
-        )
-        if self.experimental_time.isnull().any():
-            raise ValueError("Experimental time contains NaN values.")
-
-        n_cats = len(self.experimental_time.cat.categories)
-        if n_cats <= 1:
-            raise ValueError(f"Found `{n_cats}` time point.")
-
+        self._exp_time = _ensure_numeric_ordered(self.adata, time_key)
         self.adata.obs[time_key] = self.experimental_time.values
 
     @d.dedent
