@@ -64,7 +64,7 @@ class ExperimentalTimeKernel(Kernel, ABC):
         self.adata.obs[time_key] = self.experimental_time.values
 
     @d.dedent
-    def plot_flow(
+    def plot_single_flow(
         self,
         cluster: str,
         cluster_key: str,
@@ -73,19 +73,19 @@ class ExperimentalTimeKernel(Kernel, ABC):
         **kwargs: Any,
     ) -> None:
         """
-        %(plot_flow.full_desc)s
+        %(plot_single_flow.full_desc)s
 
         Parameters
         ----------
-        %(plot_flow.parameters)s
+        %(plot_single_flow.parameters)s
 
         Returns
         -------
-        %(plot_flow.returns)s
+        %(plot_single_flow.returns)s
         """  # noqa: D400
         if time_key is None:
             time_key = self._time_key
-        return super().plot_flow(cluster, cluster_key, time_key, *args, **kwargs)
+        return super().plot_single_flow(cluster, cluster_key, time_key, *args, **kwargs)
 
     @property
     def experimental_time(self) -> pd.Series:

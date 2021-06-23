@@ -968,10 +968,10 @@ class Kernel(UnaryKernelExpression, ABC):
         self.transition_matrix = matrix
         self._maybe_compute_cond_num()
 
-    @d.get_full_description(base="plot_flow")
-    @d.get_sections(base="plot_flow", sections=["Parameters", "Returns"])
+    @d.get_full_description(base="plot_single_flow")
+    @d.get_sections(base="plot_single_flow", sections=["Parameters", "Returns"])
     @d.dedent
-    def plot_flow(
+    def plot_single_flow(
         self,
         cluster: str,
         cluster_key: str,
@@ -1012,7 +1012,7 @@ class Kernel(UnaryKernelExpression, ABC):
         Returns
         -------
         :class:`matplotlib.pyplot.Axes`
-            The axis object if``show=False``.
+            The axis object if ``show=False``.
         %(just_plots)s
 
         Notes

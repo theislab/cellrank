@@ -3170,3 +3170,45 @@ class TestPlotRandomWalk:
             dpi=DPI,
             save=fpath,
         )
+
+
+class TestPlotSingleFlow:
+    @compare(kind="gpcca")
+    def test_plot_clusters_subset(self, mc: GPCCA):
+        pass
+
+    @compare(kind="gpcca")
+    def test_min_flow_remove_empty_clusters(self, mc: GPCCA):
+        pass
+
+    @compare(kind="gpcca")
+    def test_min_flow_keep_empty_clusters(self, mc: GPCCA):
+        pass
+
+    @compare(kind="gpcca")
+    def test_cluster_ascending(self, mc: GPCCA):
+        pass
+
+    @compare(kind="gpcca")
+    def test_cluster_descending(self, mc: GPCCA):
+        pass
+
+    @compare(kind="gpcca")
+    def test_explicit_cluster_order(self, mc: GPCCA):
+        pass
+
+    @compare(kind="gpcca")
+    def test_legend_loc(self, mc: GPCCA):
+        pass
+
+    @compare(kind="gpcca")
+    def test_alpha(self, mc: GPCCA):
+        pass
+
+    @compare(kind="gpcca")
+    def test_xticks_step_size(self, mc: GPCCA):
+        pass
+
+    @compare(kind="gpcca")
+    def test_return_ax(self, mc: GPCCA):
+        pass

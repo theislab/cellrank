@@ -213,6 +213,13 @@ def lineage():
     return x / x.sum(1)
 
 
+@pytest.fixture
+def kernel(adata_large: AnnData):
+    vk = VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
+    ck = ConnectivityKernel(adata).compute_transition_matrix()
+    return (0.8 * vk + 0.2 * ck).compute_transition_matrix()
+
+
 # removes overly verbose logging errors for rpy2
 # see: https://github.com/pytest-dev/pytest/issues/5502#issuecomment-647157873
 def pytest_sessionfinish(session, exitstatus):

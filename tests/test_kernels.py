@@ -1546,3 +1546,26 @@ class TestCytoTRACEKernel:
         gene_corr_actual = adata_large.var[_ct("gene_corr")].values
 
         np.testing.assert_array_equal(gene_corr_actual, gene_corr_expected)
+
+
+class TestPlotSingleFlow:
+    def test_no_transition_matrix(self, kernel: Kernel):
+        pass
+
+    def test_invalid_cluster_key(self, kernel: Kernel):
+        pass
+
+    def test_invalid_time_key(self, kernel: Kernel):
+        pass
+
+    def test_time_key_cannot_be_coerced_to_numeric(self, kernel: Kernel):
+        pass
+
+    def test_too_few_clusters_selected(self, kernel: Kernel):
+        pass
+
+    def test_too_few_time_points_selected(self, kernel: Kernel):
+        pass
+
+    def test_remove_empty_clusters_none_remain(self, kernel: Kernel):
+        pass
