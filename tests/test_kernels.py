@@ -1593,7 +1593,7 @@ class TestSingleFlow:
             )
 
     def test_time_key_cannot_be_coerced_to_numeric(self, kernel: Kernel):
-        with pytest.raises(TypeError, match=r"Unable to convert .* to `float` dtype."):
+        with pytest.raises(TypeError, match=r"Unable to convert .* to `float`."):
             kernel.plot_single_flow("Astrocytes", "clusters", "clusters")
 
     def test_remove_empty_clusters_none_remain(self, kernel: Kernel):
