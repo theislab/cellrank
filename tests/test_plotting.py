@@ -25,6 +25,7 @@ from scipy.sparse import issparse
 from pandas.api.types import is_categorical_dtype
 
 import matplotlib.cm as cm
+import matplotlib.pyplot as plt
 from matplotlib.testing import setup
 from matplotlib.testing.compare import compare_images
 
@@ -3170,3 +3171,124 @@ class TestPlotRandomWalk:
             dpi=DPI,
             save=fpath,
         )
+
+
+class TestPlotSingleFlow:
+    @compare(kind="gpcca")
+    def test_flow_source_clusters(self, mc: GPCCA, fpath: str):
+        mc.kernel.plot_single_flow(
+            "Neuroblast",
+            "clusters",
+            "age(days)",
+            clusters=["OPC", "Endothelial", "OL"],
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare(kind="gpcca")
+    def test_flow_clusters_subset(self, mc: GPCCA, fpath: str):
+        mc.kernel.plot_single_flow(
+            "Astrocytes",
+            "clusters",
+            "age(days)",
+            clusters=["OPC", "Endothelial", "OL"],
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare(kind="gpcca")
+    def test_flow_min_flow_remove_empty_clusters(self, mc: GPCCA, fpath: str):
+        mc.kernel.plot_single_flow(
+            "Astrocytes",
+            "clusters",
+            "age(days)",
+            min_flow=0.2,
+            remove_empty_clusters=True,
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare(kind="gpcca")
+    def test_flow_min_flow_keep_empty_clusters(self, mc: GPCCA, fpath: str):
+        mc.kernel.plot_single_flow(
+            "Astrocytes",
+            "clusters",
+            "age(days)",
+            min_flow=0.2,
+            remove_empty_clusters=False,
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare(kind="gpcca")
+    def test_flow_cluster_ascending(self, mc: GPCCA, fpath: str):
+        mc.kernel.plot_single_flow(
+            "Astrocytes", "clusters", "age(days)", ascending=True, dpi=DPI, save=fpath
+        )
+
+    @compare(kind="gpcca")
+    def test_flow_cluster_descending(self, mc: GPCCA, fpath: str):
+        mc.kernel.plot_single_flow(
+            "Astrocytes", "clusters", "age(days)", ascending=False, dpi=DPI, save=fpath
+        )
+
+    @compare(kind="gpcca")
+    def test_flow_explicit_cluster_order(self, mc: GPCCA, fpath: str):
+        mc.kernel.plot_single_flow(
+            "Astrocytes",
+            "clusters",
+            "age(days)",
+            ascending=None,
+            clusters=["OPC", "OL"],
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare(kind="gpcca")
+    def test_flow_legend_loc(self, mc: GPCCA, fpath: str):
+        mc.kernel.plot_single_flow(
+            "Astrocytes",
+            "clusters",
+            "age(days)",
+            legend_loc="upper left out",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare(kind="gpcca")
+    def test_flow_alpha(self, mc: GPCCA, fpath: str):
+        mc.kernel.plot_single_flow(
+            "Astrocytes", "clusters", "age(days)", alpha=0.3, dpi=DPI, save=fpath
+        )
+
+    @compare(kind="gpcca")
+    def test_flow_no_xticks(self, mc: GPCCA, fpath: str):
+        mc.kernel.plot_single_flow(
+            "Astrocytes",
+            "clusters",
+            "age(days)",
+            xticks_step_size=None,
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare(kind="gpcca")
+    def test_flow_time_categories_too_close(self, mc: GPCCA, fpath: str):
+        mc.adata.obs["day"] = (
+            mc.adata.obs["age(days)"]
+            .cat.rename_categories(
+                {
+                    "12": 0.1,
+                    "35": 0.291,
+                }
+            )
+            .values
+        )
+        mc.kernel.plot_single_flow("Astrocytes", "clusters", "day", dpi=DPI, save=fpath)
+
+    @compare(kind="gpcca")
+    def test_flow_return_ax(self, mc: GPCCA, fpath: str):
+        ax = mc.kernel.plot_single_flow(
+            "Astrocytes", "clusters", "age(days)", show=False, dpi=DPI, save=fpath
+        )
+        assert isinstance(ax, plt.Axes)

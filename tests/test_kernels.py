@@ -1546,3 +1546,62 @@ class TestCytoTRACEKernel:
         gene_corr_actual = adata_large.var[_ct("gene_corr")].values
 
         np.testing.assert_array_equal(gene_corr_actual, gene_corr_expected)
+
+
+class TestSingleFlow:
+    def test_no_transition_matrix(self, kernel: Kernel):
+        kernel._transition_matrix = None
+        with pytest.raises(RuntimeError, match=r"Compute transition matrix first as"):
+            kernel.plot_single_flow("Astrocytes", "clusters", "age(days)")
+
+    def test_invalid_cluster_key(self, kernel: Kernel):
+        with pytest.raises(KeyError, match=r"Unable to find clusters in"):
+            kernel.plot_single_flow("Astrocytes", "foo", "age(days)")
+
+    def test_invalid_source_cluster(self, kernel: Kernel):
+        with pytest.raises(ValueError, match=r"Invalid source cluster"):
+            kernel.plot_single_flow("foo", "clusters", "age(days)")
+
+    def test_too_few_invalid_clusters(self, kernel: Kernel):
+        with pytest.raises(ValueError, match=r"Expected at least `2` clusters"):
+            kernel.plot_single_flow(
+                "Astrocytes", "clusters", "age(days)", clusters=["foo", "bar", "baz"]
+            )
+
+    def test_all_invalid_clusters(self, kernel: Kernel):
+        with pytest.raises(ValueError, match=r"No valid clusters have been selected."):
+            kernel.plot_single_flow(
+                "quux", "clusters", "age(days)", clusters=["foo", "bar", "baz"]
+            )
+
+    def test_invalid_time_key(self, kernel: Kernel):
+        with pytest.raises(
+            KeyError, match=r"Unable to find data in `adata.obs\['foo'\]`."
+        ):
+            kernel.plot_single_flow("Astrocytes", "clusters", "foo")
+
+    def test_too_few_valid_timepoints(self, kernel: Kernel):
+        with pytest.raises(ValueError, match=r"Expected at least `2` time points"):
+            kernel.plot_single_flow(
+                "Astrocytes", "clusters", "age(days)", time_points=["35"]
+            )
+
+    def test_all_invalid_times(self, kernel: Kernel):
+        with pytest.raises(ValueError, match=r"No valid time points"):
+            kernel.plot_single_flow(
+                "Astrocytes", "clusters", "age(days)", time_points=[0, 1, 2]
+            )
+
+    def test_time_key_cannot_be_coerced_to_numeric(self, kernel: Kernel):
+        with pytest.raises(TypeError, match=r"Unable to convert .* to `float`."):
+            kernel.plot_single_flow("Astrocytes", "clusters", "clusters")
+
+    def test_remove_empty_clusters_none_remain(self, kernel: Kernel):
+        with pytest.raises(ValueError, match=r"After removing clusters with no"):
+            kernel.plot_single_flow(
+                "Astrocytes",
+                "clusters",
+                "age(days)",
+                min_flow=np.inf,
+                remove_empty_clusters=True,
+            )

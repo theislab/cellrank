@@ -105,7 +105,7 @@ def _create_categorical_colors(n_categories: Optional[int] = None):
         n_categories = max_cats
     if n_categories > max_cats:
         raise ValueError(
-            f"Maximum number of colors ({max_cats}) exceeded: `{n_categories}`."
+            f"Number of categories `{n_categories}` exceeded the maximum number of colors `{max_cats}`."
         )
 
     colors = []

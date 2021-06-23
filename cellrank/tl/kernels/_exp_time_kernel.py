@@ -1,27 +1,32 @@
 """Experimental time kernel module."""
 from abc import ABC
 from copy import copy
-from typing import Any
+from types import MappingProxyType
+from typing import Any, Dict, Tuple, Mapping, Optional
 
-from cellrank import logging as logg
+import scanpy as sc
 from cellrank.ul._docs import d
+from cellrank.tl._utils import _normalize
 from cellrank.tl.kernels import Kernel
+from cellrank.tl._constants import ModeEnum
+from cellrank.tl.kernels._utils import _ensure_numeric_ordered
 from cellrank.tl.kernels._base_kernel import AnnData
 
 import numpy as np
 import pandas as pd
-from pandas.api.types import infer_dtype
-from pandas.core.dtypes.common import (
-    is_object_dtype,
-    is_numeric_dtype,
-    is_categorical_dtype,
-)
+from scipy.sparse import bmat, spdiags
+
+
+class LastTimePoint(ModeEnum):  # noqa
+    UNIFORM = "uniform"
+    DIAGONAL = "diagonal"
+    CONNECTIVITIES = "connectivities"
 
 
 @d.dedent
 class ExperimentalTimeKernel(Kernel, ABC):
     """
-    Base class which computes directed transition probabilities based on experimental time.
+    Kernel base class which computes directed transition probabilities based on experimental time.
 
     %(density_correction)s
 
@@ -55,44 +60,32 @@ class ExperimentalTimeKernel(Kernel, ABC):
         super()._read_from_adata(**kwargs)
 
         time_key = kwargs.pop("time_key", "exp_time")
-        if time_key not in self.adata.obs.keys():
-            raise KeyError(f"Could not find time key in `adata.obs[{time_key!r}]`.")
+        self._exp_time = _ensure_numeric_ordered(self.adata, time_key)
+        self.adata.obs[time_key] = self.experimental_time.values
 
-        exp_time = self.adata.obs[time_key].copy()
-        if not is_categorical_dtype(exp_time):
-            exp_time = np.array(exp_time)
-            if is_object_dtype(exp_time):
-                try:
-                    exp_time = exp_time.astype(float)
-                except ValueError as e:
-                    raise RuntimeError(
-                        f"Unable to convert `adata.obs[{time_key!r}]` to `float` dtype."
-                    ) from e
-            if not is_numeric_dtype(exp_time):
-                raise TypeError(
-                    f"Expected experimental time to be `numeric` or `categorical`, found `{infer_dtype(exp_time)}`."
-                )
-            exp_time = pd.Series(
-                pd.Categorical(
-                    exp_time,
-                    categories=sorted(set(exp_time[~np.isnan(exp_time)])),
-                    ordered=True,
-                )
-            )
+    @d.dedent
+    def plot_single_flow(
+        self,
+        cluster: str,
+        cluster_key: str,
+        time_key: Optional[str] = None,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
+        """
+        %(plot_single_flow.full_desc)s
 
-        if not exp_time.cat.ordered:
-            logg.warning("Time categories are not ordered. Using ascending order")
-            exp_time.cat = exp_time.cat.as_ordered()
+        Parameters
+        ----------
+        %(plot_single_flow.parameters)s
 
-        self._exp_time = pd.Series(
-            pd.Categorical(exp_time, ordered=True), index=self.adata.obs_names
-        )
-        if self.experimental_time.isnull().any():
-            raise ValueError("Experimental time contains NaN values.")
-
-        n_cats = len(self.experimental_time.cat.categories)
-        if n_cats <= 1:
-            raise ValueError(f"Found `{n_cats}` time point.")
+        Returns
+        -------
+        %(plot_single_flow.returns)s
+        """  # noqa: D400
+        if time_key is None:
+            time_key = self._time_key
+        return super().plot_single_flow(cluster, cluster_key, time_key, *args, **kwargs)
 
     @property
     def experimental_time(self) -> pd.Series:
@@ -122,3 +115,79 @@ class ExperimentalTimeKernel(Kernel, ABC):
                 index=self.experimental_time.index,
             )
         return self
+
+
+class TransportMapKernel(ExperimentalTimeKernel, ABC):
+    """Kernel base class which computes transition matrix based on transport maps for consecutive time pairs."""
+
+    def __init__(self, *args: Any, **kwargs: Any):
+        super().__init__(*args, **kwargs)
+        self._tmaps = None
+
+    def _restich_tmaps(
+        self,
+        tmaps: Mapping[Tuple[float, float], AnnData],
+        last_time_point: LastTimePoint = LastTimePoint.DIAGONAL,
+        conn_kwargs: Mapping[str, Any] = MappingProxyType({}),
+        normalize: bool = True,
+    ) -> AnnData:
+        from cellrank.tl.kernels import ConnectivityKernel
+
+        conn_kwargs = dict(conn_kwargs)
+        conn_kwargs["copy"] = False
+        _ = conn_kwargs.pop("key_added", None)
+        density_normalize = conn_kwargs.pop("density_normalize", True)
+
+        blocks = [[None] * (len(tmaps) + 1) for _ in range(len(tmaps) + 1)]
+        nrows, ncols = 0, 0
+        obs_names, obs = [], []
+
+        for i, tmap in enumerate(tmaps.values()):
+            blocks[i][i + 1] = _normalize(tmap.X) if normalize else tmap.X
+            nrows += tmap.n_obs
+            ncols += tmap.n_vars
+            obs_names.extend(tmap.obs_names)
+            obs.append(tmap.obs)
+        obs_names.extend(tmap.var_names)
+
+        n = self.adata.n_obs - nrows
+        if last_time_point == LastTimePoint.DIAGONAL:
+            blocks[-1][-1] = spdiags([1] * n, 0, n, n)
+        elif last_time_point == LastTimePoint.UNIFORM:
+            blocks[-1][-1] = np.ones((n, n)) / float(n)
+        elif last_time_point == LastTimePoint.CONNECTIVITIES:
+            adata_subset = self.adata[tmap.var_names].copy()
+            sc.pp.neighbors(adata_subset, **conn_kwargs)
+            blocks[-1][-1] = (
+                ConnectivityKernel(adata_subset)
+                .compute_transition_matrix(density_normalize)
+                .transition_matrix
+            )
+        else:
+            raise NotImplementedError(
+                f"Last time point mode `{last_time_point}` is not yet implemented."
+            )
+
+        # prevent the last block from disappearing
+        n = blocks[0][1].shape[0]
+        blocks[0][0] = spdiags([], 0, n, n)
+
+        tmp = AnnData(bmat(blocks, format="csr"))
+        tmp.obs_names = obs_names
+        tmp.var_names = obs_names
+        tmp = tmp[self.adata.obs_names, :][:, self.adata.obs_names]
+
+        tmp.obs = pd.merge(
+            tmp.obs,
+            pd.concat(obs),
+            left_index=True,
+            right_index=True,
+            how="left",
+        )
+
+        return tmp
+
+    @property
+    def transport_maps(self) -> Optional[Dict[Tuple[float, float], AnnData]]:
+        """Transport maps for consecutive time pairs."""
+        return self._tmaps

@@ -3,10 +3,14 @@ from typing import Tuple, Callable, Optional
 from inspect import signature
 
 from anndata import AnnData
+from cellrank import logging as logg
 
 import numpy as np
+import pandas as pd
 from numba import njit, prange
 from scipy.sparse import csr_matrix
+from pandas.api.types import infer_dtype
+from pandas.core.dtypes.common import is_numeric_dtype, is_categorical_dtype
 
 jit_kwargs = {"nogil": True, "cache": True, "fastmath": True}
 
@@ -247,3 +251,41 @@ def _get_basis(adata: AnnData, basis: str) -> np.ndarray:
             raise KeyError(
                 f"Unable to find a basis in `adata.obsm['X_{basis}']` or `adata.obsm[{basis!r}]`."
             ) from None
+
+
+def _ensure_numeric_ordered(adata: AnnData, key: str) -> pd.Series:
+    if key not in adata.obs.keys():
+        raise KeyError(f"Unable to find data in `adata.obs[{key!r}]`.")
+
+    exp_time = adata.obs[key].copy()
+    if not is_numeric_dtype(np.asarray(exp_time)):
+        try:
+            exp_time = np.asarray(exp_time).astype(float)
+        except ValueError as e:
+            raise TypeError(
+                f"Unable to convert `adata.obs[{key!r}]` of type `{infer_dtype(adata.obs[key])}` to `float`."
+            ) from e
+
+    if not is_categorical_dtype(exp_time):
+        exp_time = np.asarray(exp_time)
+        exp_time = pd.Series(
+            pd.Categorical(
+                exp_time,
+                categories=sorted(set(exp_time[~np.isnan(exp_time)])),
+                ordered=True,
+            )
+        )
+
+    if not exp_time.cat.ordered:
+        logg.warning("Categories are not ordered. Using ascending order")
+        exp_time.cat = exp_time.cat.as_ordered()
+
+    exp_time = pd.Series(pd.Categorical(exp_time, ordered=True), index=adata.obs_names)
+    if exp_time.isnull().any():
+        raise ValueError("Series contains NaN value(s).")
+
+    n_cats = len(exp_time.cat.categories)
+    if n_cats < 2:
+        raise ValueError(f"Expected to find at least `2` categories, found `{n_cats}`.")
+
+    return exp_time

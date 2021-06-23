@@ -5,9 +5,9 @@ Plot directed PAGA
 This example shows how to compute and plot a directed version of the popular PAGA algorithm :cite:`wolf:19`.
 
 In classical PAGA plot, nodes correspond to clusters and edge thickness denotes transcriptomic similarity.
-We introduce a new directed version of PAGA where directed edges reflect local velocity flow. We add the possibility
-to include prior information in the form of a pseudotemporal ordering or initial/terminal state annotation to restrict
-the possible edge set. We further replace nodes by pie charts that show average CellRank fate probabilities.
+We introduce a new directed version of PAGA where directed edges reflect local velocity compute_flow. We add the
+possibility to include prior information in the form of a pseudotemporal ordering or initial/terminal state annotation
+to restrict the possible edge set. We further replace nodes by pie charts that show average CellRank fate probabilities.
 """
 
 import scvelo as scv

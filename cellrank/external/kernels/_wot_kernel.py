@@ -4,23 +4,20 @@ from typing import Any, Dict, Tuple, Union, Mapping, Optional
 from tqdm.auto import tqdm
 from typing_extensions import Literal
 
-import scanpy as sc
 from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.ul._docs import d, inject_docs
-from cellrank.tl._utils import _normalize, _maybe_subset_hvgs
-from cellrank.tl._constants import ModeEnum
+from cellrank.tl._utils import _maybe_subset_hvgs
+from cellrank.tl.kernels._exp_time_kernel import LastTimePoint
 
 import numpy as np
 import pandas as pd
-from scipy.sparse import bmat, spdiags, spmatrix
 
 _error = None
 try:
     import wot
 
-    from cellrank.tl.kernels import ConnectivityKernel
-    from cellrank.tl.kernels import ExperimentalTimeKernel as Kernel
+    from cellrank.tl.kernels import TransportMapKernel as Kernel
 except ImportError as e:
     from cellrank.external.kernels._import_error_kernel import ErroredKernel as Kernel
 
@@ -33,12 +30,6 @@ class nstr(str):  # used for params+cache (precomputed cost matrices)
 
     def __eq__(self, other: str) -> bool:
         return False
-
-
-class LastTimePoint(ModeEnum):  # noqa
-    UNIFORM = "uniform"
-    DIAGONAL = "diagonal"
-    CONNECTIVITIES = "connectivities"
 
 
 @d.dedent
@@ -116,7 +107,6 @@ class WOTKernel(Kernel, error=_error):
         )
         self.adata.obs[self._time_key] = self.experimental_time
         self._growth_rates = None
-        self._tmats = None
 
     def _read_from_adata(
         self,
@@ -278,7 +268,7 @@ class WOTKernel(Kernel, error=_error):
         Returns
         -------
         :class:`cellrank.external.kernels.WOTKernel`
-            Makes :attr:`transition_matrix`, :attr:`transition_maps` and :attr:`growth_rates` available.
+            Makes :attr:`transition_matrix`, :attr:`transport_maps` and :attr:`growth_rates` available.
             It also modifies :attr:`anndata.AnnData.obs` with the following key:
 
                 - `'estimated_growth_rates'` - the estimated final growth rates.
@@ -317,17 +307,18 @@ class WOTKernel(Kernel, error=_error):
         ):
             return self
 
-        tmat = self._compute_pairwise_tmats(
+        tmap = self._compute_pairwise_tmaps(
             adata,
             cost_matrices=cost_matrices,
             solver=solver,
             growth_rate_field=growth_rate_key,
             **kwargs,
         )
-        tmat = self._restich_tmats(tmat, last_time_point, conn_kwargs=conn_kwargs)
+        tmap = self._restich_tmaps(tmap, last_time_point, conn_kwargs=conn_kwargs)
+        self._growth_rates = tmap.obs
 
         self._compute_transition_matrix(
-            matrix=tmat,
+            matrix=tmap.X,
             density_normalize=False,
             check_irreducibility=False,
         )
@@ -337,7 +328,7 @@ class WOTKernel(Kernel, error=_error):
 
         return self
 
-    def _compute_pairwise_tmats(
+    def _compute_pairwise_tmaps(
         self,
         adata: AnnData,
         cost_matrices: Optional[
@@ -356,84 +347,24 @@ class WOTKernel(Kernel, error=_error):
             **kwargs,
         )
 
-        self._tmats: Dict[Tuple[float, float], AnnData] = {}
+        self._tmaps: Dict[Tuple[float, float], AnnData] = {}
         start = logg.info(
             f"Computing transport maps for `{len(cost_matrices)}` time pairs"
         )
         for tpair, cost_matrix in tqdm(cost_matrices.items(), unit="time pair"):
-            tmat: AnnData = self._ot_model.compute_transport_map(
+            tmap: AnnData = self._ot_model.compute_transport_map(
                 *tpair, cost_matrix=cost_matrix
             )
-            nans = int(np.sum(np.isnan(tmat.X)))
+            nans = int(np.sum(np.isnan(tmap.X)))
             if nans:
                 raise ValueError(
                     f"Encountered `{nans}` NaN values for time pair `{tpair}`."
                 )
-            self._tmats[tpair] = tmat
+            self._tmaps[tpair] = tmap
 
         logg.info("    Finish", time=start)
 
-        return self._tmats
-
-    def _restich_tmats(
-        self,
-        tmaps: Mapping[Tuple[float, float], AnnData],
-        last_time_point: LastTimePoint = LastTimePoint.DIAGONAL,
-        conn_kwargs: Mapping[str, Any] = MappingProxyType({}),
-    ) -> spmatrix:
-        conn_kwargs = dict(conn_kwargs)
-        conn_kwargs["copy"] = False
-        _ = conn_kwargs.pop("key_added", None)
-        density_normalize = conn_kwargs.pop("density_normalize", True)
-
-        blocks = [[None] * (len(tmaps) + 1) for _ in range(len(tmaps) + 1)]
-        nrows, ncols = 0, 0
-        obs_names, growth_rates = [], []
-
-        for i, tmap in enumerate(tmaps.values()):
-            blocks[i][i + 1] = _normalize(tmap.X)
-            nrows += tmap.n_obs
-            ncols += tmap.n_vars
-            obs_names.extend(tmap.obs_names)
-            growth_rates.append(tmap.obs)
-        obs_names.extend(tmap.var_names)
-
-        n = self.adata.n_obs - nrows
-        if last_time_point == LastTimePoint.DIAGONAL:
-            blocks[-1][-1] = spdiags([1] * n, 0, n, n)
-        elif last_time_point == LastTimePoint.UNIFORM:
-            blocks[-1][-1] = np.ones((n, n)) / float(n)
-        elif last_time_point == LastTimePoint.CONNECTIVITIES:
-            adata_subset = self.adata[tmap.var_names].copy()
-            sc.pp.neighbors(adata_subset, **conn_kwargs)
-            blocks[-1][-1] = (
-                ConnectivityKernel(adata_subset)
-                .compute_transition_matrix(density_normalize)
-                .transition_matrix
-            )
-        else:
-            raise NotImplementedError(
-                f"Last time point mode `{last_time_point}` is not yet implemented."
-            )
-
-        # prevent block from disappearing
-        n = blocks[0][1].shape[0]
-        blocks[0][0] = spdiags([], 0, n, n)
-
-        tmp = AnnData(bmat(blocks, format="csr"))
-        tmp.obs_names = obs_names
-        tmp.var_names = obs_names
-        tmp = tmp[self.adata.obs_names, :][:, self.adata.obs_names]
-
-        self._growth_rates = pd.merge(
-            tmp.obs,
-            pd.concat(growth_rates),
-            left_index=True,
-            right_index=True,
-            how="left",
-        )
-
-        return tmp.X
+        return self._tmaps
 
     def _generate_cost_matrices(
         self,
@@ -515,11 +446,6 @@ class WOTKernel(Kernel, error=_error):
     def growth_rates(self) -> Optional[pd.DataFrame]:
         """Estimated cell growth rates for each growth rate iteration."""
         return self._growth_rates
-
-    @property
-    def transition_maps(self) -> Optional[Dict[Tuple[float, float], AnnData]]:
-        """Transition maps for each consecutive time pair."""
-        return self._tmats
 
     def __invert__(self) -> "WOTKernel":
         super().__invert__()
