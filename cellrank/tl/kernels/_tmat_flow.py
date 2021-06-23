@@ -113,6 +113,9 @@ class FlowPlotter:
             self._tmat = self._tmat[mask, :][:, mask]
             self._clusters = [c for c in clusters if c in self.clusters.cat.categories]
 
+        if cluster not in self._clusters:
+            raise ValueError(f"Invalid source cluster `{cluster!r}`.")
+
         if len(self._clusters) < 2:
             raise ValueError(
                 f"Expected at least `2` clusters, found `{len(clusters)}`."
@@ -157,7 +160,7 @@ class FlowPlotter:
         Parameters
         ----------
         time_points
-            Time poin pair for which to calculate the flow.
+            Time point pair for which to calculate the flow.
         cluster
             Cluster for which to calculate the outgoing flow. If `None`, calculate the flow for all clusters.
 

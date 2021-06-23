@@ -10,11 +10,7 @@ import pandas as pd
 from numba import njit, prange
 from scipy.sparse import csr_matrix
 from pandas.api.types import infer_dtype
-from pandas.core.dtypes.common import (
-    is_object_dtype,
-    is_numeric_dtype,
-    is_categorical_dtype,
-)
+from pandas.core.dtypes.common import is_numeric_dtype, is_categorical_dtype
 
 jit_kwargs = {"nogil": True, "cache": True, "fastmath": True}
 
@@ -257,24 +253,21 @@ def _get_basis(adata: AnnData, basis: str) -> np.ndarray:
             ) from None
 
 
-def _ensure_numeric_ordered(adata: AnnData, time_key: str) -> pd.Series:
-    if time_key not in adata.obs.keys():
-        raise KeyError(f"Could not find key in `adata.obs[{time_key!r}]`.")
+def _ensure_numeric_ordered(adata: AnnData, key: str) -> pd.Series:
+    if key not in adata.obs.keys():
+        raise KeyError(f"Unable to find data in `adata.obs[{key!r}]`.")
 
-    exp_time = adata.obs[time_key].copy()
-    if not is_categorical_dtype(exp_time):
-        exp_time = np.array(exp_time)
-        if is_object_dtype(exp_time):
-            try:
-                exp_time = exp_time.astype(float)
-            except ValueError as e:
-                raise RuntimeError(
-                    f"Unable to convert `adata.obs[{time_key!r}]` to `float` dtype."
-                ) from e
-        if not is_numeric_dtype(exp_time):
+    exp_time = adata.obs[key].copy()
+    if not is_numeric_dtype(np.asarray(exp_time)):
+        try:
+            exp_time = np.asarray(exp_time).astype(float)
+        except ValueError as e:
             raise TypeError(
-                f"Expected data type to be `numeric` or `categorical`, found `{infer_dtype(exp_time)}`."
-            )
+                f"Unable to convert `adata.obs[{key!r}]` of type `{infer_dtype(adata.obs[key])}` to `float`."
+            ) from e
+
+    if not is_categorical_dtype(exp_time):
+        exp_time = np.asarray(exp_time)
         exp_time = pd.Series(
             pd.Categorical(
                 exp_time,

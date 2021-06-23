@@ -215,8 +215,8 @@ def lineage():
 
 @pytest.fixture
 def kernel(adata_large: AnnData):
-    vk = VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
-    ck = ConnectivityKernel(adata).compute_transition_matrix()
+    vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
+    ck = ConnectivityKernel(adata_large).compute_transition_matrix()
     return (0.8 * vk + 0.2 * ck).compute_transition_matrix()
 
 
