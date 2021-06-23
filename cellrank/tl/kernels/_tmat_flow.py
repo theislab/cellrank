@@ -137,7 +137,7 @@ class FlowPlotter:
         )
 
         logg.info(
-            f"Computing flow from `{cluster}` into `{len(self._clusters)}` clusters "
+            f"Computing flow from `{cluster}` into `{len(self._clusters) - 1}` cluster(s) "
             f"in `{len(time_points)}` time points"
         )
         self._cluster = cluster
@@ -260,7 +260,7 @@ class FlowPlotter:
             if remove_empty_clusters:
                 self._remove_min_clusters(min_flow)
             logg.info(
-                f"Plotting flow from `{self._cluster}` into `{len(self._flow.columns)}` clusters "
+                f"Plotting flow from `{self._cluster}` into `{len(self._flow.columns) - 1}` cluster(s) "
                 f"in `{len(self._cmat.columns) - 1}` time points"
             )
             return self._plot(

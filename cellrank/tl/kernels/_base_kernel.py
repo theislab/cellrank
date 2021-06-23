@@ -1007,7 +1007,7 @@ class Kernel(UnaryKernelExpression, ABC):
         %(flow.parameters)s
         %(plotting)s
         show
-            If `True`, return :class:`matplotlib.pyplot.Axes`.
+            If `False`, return :class:`matplotlib.pyplot.Axes`.
 
         Returns
         -------
