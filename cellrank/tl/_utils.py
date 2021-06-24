@@ -401,6 +401,9 @@ def _correlation_test(
         confidence_level=confidence_level,
         **kwargs,
     )
+    invalid = np.sum((corr < -1) | (corr > 1))
+    if invalid:
+        raise ValueError(f"Found `{invalid}` correlations that are not in `[0, 1]`.")
 
     res = pd.DataFrame(corr, index=gene_names, columns=[f"{c} corr" for c in Y.names])
     for idx, c in enumerate(Y.names):
