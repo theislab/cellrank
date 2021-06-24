@@ -198,3 +198,13 @@ class TestWOTKernel:
         np.testing.assert_array_equal(adata_large.obs_names, ok.growth_rates.index)
         np.testing.assert_array_equal(ok.growth_rates.columns, ["g0", "g1"])
         assert isinstance(ok.transport_maps[12.0, 35.0], AnnData)
+
+    def test_copy(self, adata_large: AnnData):
+        ok = cre.kernels.WOTKernel(adata_large, time_key="age(days)")
+        ok = ok.compute_transition_matrix()
+
+        ok2 = ok.copy()
+
+        assert isinstance(ok2, cre.kernels.WOTKernel)
+        assert ok is not ok2
+        np.testing.assert_array_equal(ok.transition_matrix.A, ok2.transition_matrix.A)

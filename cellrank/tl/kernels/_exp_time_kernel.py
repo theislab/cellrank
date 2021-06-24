@@ -94,9 +94,7 @@ class ExperimentalTimeKernel(Kernel, ABC):
 
     def copy(self) -> "ExperimentalTimeKernel":
         """Return a copy of self."""
-        pk = ExperimentalTimeKernel(
-            self.adata, backward=self.backward, time_key=self._time_key
-        )
+        pk = type(self)(self.adata, backward=self.backward, time_key=self._time_key)
         pk._exp_time = copy(self.experimental_time)
         pk._params = copy(self._params)
         pk._cond_num = self.condition_number
