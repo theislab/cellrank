@@ -807,9 +807,10 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             f"layer `{layer}` with `use_raw={use_raw}`"
         )
 
+        lin_probs = lin_probs[lineages]
         drivers = _correlation_test(
             data,
-            lin_probs[lineages],
+            lin_probs,
             gene_names=var_names,
             method=method,
             n_perms=n_perms,
@@ -819,8 +820,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         )
         self._set(A.LIN_DRIVERS, drivers)
 
-        corrs, qvals = [f"{lin} corr" for lin in lineages], [
-            f"{lin} qval" for lin in lineages
+        corrs, qvals = [f"{lin} corr" for lin in lin_probs.names], [
+            f"{lin} qval" for lin in lin_probs.names
         ]
         if use_raw:
             self.adata.raw.var[[f"{prefix} {col}" for col in corrs]] = drivers[corrs]
@@ -830,7 +831,9 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             self.adata.var[[f"{prefix} {col}" for col in qvals]] = drivers[qvals]
 
         field = "raw.var" if use_raw else "var"
-        keys_added = [f"`adata.{field}['{prefix} {lin} corr']`" for lin in lineages]
+        keys_added = [
+            f"`adata.{field}['{prefix} {lin} corr']`" for lin in lin_probs.names
+        ]
 
         logg.info(
             f"Adding `.{P.LIN_DRIVERS}`\n       "
