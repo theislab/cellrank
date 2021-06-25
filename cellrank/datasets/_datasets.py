@@ -31,7 +31,7 @@ _datasets = {
         "https://ndownloader.figshare.com/files/25038224",
         (24882, 24051),
     ),
-    "reprogramming": (
+    "reprogramming_morris": (
         "https://ndownloader.figshare.com/files/25503773",
         (104679, 22630),
     ),
@@ -39,6 +39,8 @@ _datasets = {
         "https://ndownloader.figshare.com/files/27265280",
         (2434, 23974),
     ),
+    # TODO(Marius1311)
+    "reprogramming_schiebinger": (None, (None, None)),
 }
 
 
@@ -156,9 +158,9 @@ def lung(
 
 @inject_docs(s=ReprogrammingSubset)
 @d.dedent
-def reprogramming(
+def reprogramming_morris(
     subset: str = ReprogrammingSubset.FULL.s,
-    path: Union[str, Path] = "datasets/reprogramming.h5ad",
+    path: Union[str, Path] = "datasets/reprogramming_morris.h5ad",
     **kwargs: Any,
 ) -> AnnData:
     """
@@ -195,7 +197,7 @@ def reprogramming(
     The dataset has approximately 1.5GiB and the subsetting is performed locally after the full download.
     """
     subset = ReprogrammingSubset(subset)
-    adata = _load_dataset_from_url(path, *_datasets["reprogramming"], **kwargs)
+    adata = _load_dataset_from_url(path, *_datasets["reprogramming_morris"], **kwargs)
 
     if subset == ReprogrammingSubset.FULL:
         return adata
@@ -206,6 +208,26 @@ def reprogramming(
 
     raise NotImplementedError(
         f"Subsetting option `{subset.s!r}` is not yet implemented."
+    )
+
+
+@d.dedent
+def reprogramming_schiebinger(
+    path: Union[str, Path] = "datasets/reprogramming_schiebinger.h5ad", **kwargs: Any
+) -> AnnData:
+    """
+    TODO.
+
+    Parameters
+    ----------
+    %(dataset.parameters)s
+
+    Returns
+    -------
+    %(adata)s
+    """
+    return _load_dataset_from_url(
+        path, *_datasets["reprogramming_schiebinger"], **kwargs
     )
 
 

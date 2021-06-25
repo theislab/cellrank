@@ -119,7 +119,8 @@ Datasets
 
     datasets.pancreas
     datasets.lung
-    datasets.reprogramming
+    datasets.reprogramming_morris
+    datasets.reprogramming_schiebinger
     datasets.zebrafish
     datasets.pancreas_preprocessed
 
