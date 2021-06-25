@@ -4,10 +4,12 @@ from typing import Any, Dict, Tuple, Union, Mapping, Optional
 from tqdm.auto import tqdm
 from typing_extensions import Literal
 
+import scanpy as sc
 from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.ul._docs import d, inject_docs
 from cellrank.tl._utils import _maybe_subset_hvgs
+from cellrank.external.kernels._utils import MarkerGenes
 from cellrank.tl.kernels._exp_time_kernel import LastTimePoint
 
 import numpy as np
@@ -118,13 +120,15 @@ class WOTKernel(Kernel, error=_error):
 
     def compute_initial_growth_rates(
         self,
-        proliferation_key: str,
-        apoptosis_key: str,
+        proliferation_key: Optional[str] = None,
+        apoptosis_key: Optional[str] = None,
+        organism: Optional[Literal["human", "mouse", "rat"]] = None,
         beta_min: float = 0.3,
         beta_max: float = 1.7,
         delta_min: float = 0.3,
         delta_max: float = 1.7,
         key_added: Optional[str] = None,
+        **kwargs: Any,
     ) -> Optional[pd.Series]:
         r"""
         Estimate initial growth rates using Birth-death process as described in :cite:`schiebinger:19`.
@@ -139,6 +143,9 @@ class WOTKernel(Kernel, error=_error):
             Key in :attr:`adata` ``.obs`` where birth rate scores are stored.
         apoptosis_key
             Key in :attr:`adata` ``.obs`` where death rate scores are stored.
+        organism
+            Organism for which to calculate the birth/death scores, if they cannot be found in :attr:`adata`.
+            :func:`scanpy.tl.score_genes` is used to calculate the scores.
         beta_min
             Minimum birth rate.
         beta_max
@@ -149,21 +156,48 @@ class WOTKernel(Kernel, error=_error):
             Maximum death rate.
         key_added
             Key in :attr:`adata` ``.obs`` where to add the estimated growth rates. If `None`, just return them.
+        kwargs
+            Keyword arguments for :func:`scanpy.tl.score_genes`. Only used when ``proliferation_key``
+            or ``apoptosis_key`` cannot be found in :attr:`adata` ``.obs``.
 
         Returns
         -------
         :class:`pandas.Series`
-            The estimated initial growth rates if ``key_added = None``, otherwise `None`.
+            The estimated initial growth rates if ``key_added=None``, otherwise `None`.
 
         Notes
         -----
-        Note that to run this method, you need to have estimated cell-level proliferation/apoptosis rates which should
-        be saved in :attr:`adata` ``.obs``. These rates are usually computed based on a gene set using a scoring
-        function like :func:`scanpy.tl.score_genes`. If you don't have access to such gene sets, don't worry,
-        you can use WOT without an estimate of initial growth rates.
+        If you don't have access to proliferation/apoptosis gene sets, you can use ones defined in :mod:`cellrank` for a
+        specific organism. Alternatively, you can also use WOT without an estimate of initial growth rates.
 
         For more information about WOT, see the official `tutorial <https://broadinstitute.github.io/wot/tutorial/>`_.
         """
+
+        def get_scores(
+            key: str,
+            *,
+            kind: Literal["proliferation", "apoptosis"],
+            organism: Optional[Literal["human", "mouse", "rat"]],
+        ) -> np.ndarray:
+            try:
+                return np.asarray(self.adata.obs[key])
+            except KeyError:
+                if organism is None:
+                    raise KeyError(
+                        f"Unable to find `{kind}` scores in `adata.obs[{kind!r}]`. Consider specifying `organism=...`."
+                    ) from None
+
+                logg.info(f"Computing `{kind}` scores")
+                score_name = f"{kind}_score" if key is None else key
+
+                sc.tl.score_genes(
+                    self.adata,
+                    gene_list=getattr(MarkerGenes, (f"{kind}_markers"))(organism),
+                    score_name=score_name,
+                    **kwargs,
+                )
+
+                return get_scores(score_name, kind=kind, organism=None)
 
         def logistic(x: np.ndarray, L: float, k: float, x0: float = 0) -> np.ndarray:
             return L / (1 + np.exp(-k * (x - x0)))
@@ -190,10 +224,14 @@ class WOTKernel(Kernel, error=_error):
             return gen_logistic(a, delta_max, delta_min, center, width=0.2)
 
         birth = beta(
-            self.adata.obs[proliferation_key], beta_min=beta_min, beta_max=beta_max
+            get_scores(proliferation_key, kind="proliferation", organism=organism),
+            beta_min=beta_min,
+            beta_max=beta_max,
         )
         death = delta(
-            self.adata.obs[apoptosis_key], delta_min=delta_min, delta_max=delta_max
+            get_scores(apoptosis_key, kind="apoptosis", organism=organism),
+            delta_min=delta_min,
+            delta_max=delta_max,
         )
         gr = np.exp(birth - death)
 

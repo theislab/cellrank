@@ -185,6 +185,14 @@ class TestWOTKernel:
             )
             np.testing.assert_allclose(T, T_actual)
 
+    @pytest.mark.parametrize("organism", ["human", "mouse", "rat", "foo"])
+    def test_compute_scores_default(self, adata_large: AnnData, organism: str):
+        ok = cre.kernels.WOTKernel(adata_large, time_key="age(days)")
+        # TODO(Marius1311): finish the test (assert correct keys are now in adata)
+        # maybe not necessary to parametrize over orgas (if no overlap)
+        # maybe add custom prolif/apop keys to test (instead)
+        # ok.compute_initial_growth_rates(organism=organism)
+
     def test_normal_run(self, adata_large: AnnData):
         ok = cre.kernels.WOTKernel(adata_large, time_key="age(days)")
         ok = ok.compute_transition_matrix()
