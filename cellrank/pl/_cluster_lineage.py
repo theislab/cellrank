@@ -1,10 +1,11 @@
 """Cluster lineages module."""
 
 from types import MappingProxyType
-from typing import Dict, Tuple, Union, TypeVar, Optional, Sequence
+from typing import Dict, Tuple, Union, Optional, Sequence
 from pathlib import Path
-from collections import Iterable
 
+import scanpy as sc
+from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.pl._utils import (
@@ -16,6 +17,7 @@ from cellrank.pl._utils import (
     _create_callbacks,
     _input_model_type,
     _return_model_type,
+    _get_sorted_categorical_colors,
 )
 from cellrank.tl._utils import save_fig, _unique_order_preserving
 from cellrank.ul._utils import _get_n_cores, _check_collection
@@ -25,9 +27,8 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler
 
 import matplotlib.pyplot as plt
-
-AnnData = TypeVar("AnnData")
-Queue = TypeVar("Queue")
+from matplotlib.colors import ListedColormap
+from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
 
 
 @d.dedent
@@ -41,6 +42,7 @@ def cluster_lineage(
     clusters: Optional[Sequence[str]] = None,
     n_points: int = 200,
     time_key: str = "latent_time",
+    cluster_key: Optional[str] = None,
     norm: bool = True,
     recompute: bool = False,
     callback: _callback_type = None,
@@ -84,6 +86,8 @@ def cluster_lineage(
         Number of points used for prediction.
     time_key
         Key in ``adata.obs`` where the pseudotime is stored.
+    cluster_key
+        Key in ``adata.obs`` containing categorical observations to be plotted at the bottom of each plot.
     norm
         Whether to z-normalize each trend to have zero mean, unit variance.
     recompute
@@ -121,9 +125,6 @@ def cluster_lineage(
               shape `(n_genes, n_points)` containing the clustered genes.
 
     """
-
-    import scanpy as sc
-    from anndata import AnnData as _AnnData
 
     lineage_key = str(AbsProbKey.BACKWARD if backward else AbsProbKey.FORWARD)
     if lineage_key not in adata.obsm:
@@ -165,7 +166,7 @@ def cluster_lineage(
             logg.debug("Normalizing trends")
             _ = StandardScaler(copy=False).fit_transform(trends)
 
-        trends = _AnnData(trends.T)
+        trends = AnnData(trends.T)
         trends.obs_names = genes
 
         # sanity check
@@ -223,24 +224,14 @@ def cluster_lineage(
                 f"Valid options are `{list(trends.obs['clusters'].cat.categories)}`."
             )
 
-    nrows = int(np.ceil(len(clusters) / ncols))
-    fig, axes = plt.subplots(
-        nrows,
-        ncols,
-        figsize=(ncols * 10, nrows * 10) if figsize is None else figsize,
-        sharey=sharey,
-        dpi=dpi,
-    )
+    def plot_cluster(row, col, cluster, sharey_ax: Optional[str] = None):
+        gss = GridSpecFromSubplotSpec(
+            2, 1, subplot_spec=gs[row : row + 2, col], hspace=0, height_ratios=[1, 0.05]
+        )
+        ax = fig.add_subplot(gss[0, 0], sharey=sharey_ax)
 
-    if not isinstance(axes, Iterable):
-        axes = [axes]
-    axes = np.ravel(axes)
-
-    j = 0
-    for j, (ax, c) in enumerate(zip(axes, clusters)):  # noqa
         data = trends[trends.obs["clusters"] == c].X
-        mean, sd = np.mean(data, axis=0), np.var(data, axis=0)
-        sd = np.sqrt(sd)
+        mean, sd = np.mean(data, axis=0), np.std(data, axis=0)
 
         for i in range(data.shape[0]):
             ax.plot(data[i], color="gray", lw=0.5)
@@ -252,14 +243,36 @@ def cluster_lineage(
             range(len(mean)), mean - sd, mean + sd, color="black", alpha=0.1
         )
 
-        ax.set_title(f"Cluster {c}")
+        ax.set_title(f"cluster {cluster}")
         ax.set_xticks([])
-
-        if not sharey:
+        if sharey:
             ax.set_yticks([])
+        ax.margins(0)
 
-    for j in range(j + 1, len(axes)):
-        axes[j].remove()
+        if cluster_key is not None:
+            ax_clusters = fig.add_subplot(gss[1, 0])
+            colors = _get_sorted_categorical_colors(adata, cluster_key, time_key)
+            cmap = ListedColormap(colors, N=len(colors))
+            ax_clusters.imshow(np.arange(cmap.N)[None, :], cmap=cmap, aspect="auto")
+            ax_clusters.set_xticks([])
+            ax_clusters.set_yticks([])
+            ax_clusters.get_position()
+
+        return ax if sharey else None
+
+    nrows = int(np.ceil(len(clusters) / ncols))
+    fig = plt.figure(
+        dpi=dpi,
+        figsize=(ncols * 10, nrows * 10) if figsize is None else figsize,
+        tight_layout=True,
+    )
+    gs = GridSpec(nrows=nrows * 2, ncols=ncols, figure=fig)
+
+    row, sharey_ax = 0, None
+    for i, c in enumerate(clusters):
+        if i == ncols:
+            row += 2
+        sharey_ax = plot_cluster(row, i % ncols, c, sharey_ax=sharey_ax)
 
     if save is not None:
         save_fig(fig, save)
