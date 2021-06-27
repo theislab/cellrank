@@ -166,8 +166,10 @@ def cluster_lineage(
             logg.debug("Normalizing trends")
             _ = StandardScaler(copy=False).fit_transform(trends)
 
+        mod = next(mod for tmp in all_models.values() for mod in tmp.values())
         trends = AnnData(trends.T)
         trends.obs_names = genes
+        trends.var["x_test"] = x_test = mod.x_test
 
         # sanity check
         if trends.n_obs != len(genes):
@@ -211,6 +213,7 @@ def cluster_lineage(
         all_models = None
         logg.info(f"Loading data from `adata.uns[{key!r}]`")
         trends = adata.uns[key]
+        x_test = trends.var["x_test"]
 
     if "clusters" not in trends.obs:
         raise KeyError("Unable to find the clustering in `trends.obs['clusters']`.")
@@ -251,12 +254,11 @@ def cluster_lineage(
 
         if cluster_key is not None:
             ax_clusters = fig.add_subplot(gss[1, 0])
-            colors = _get_sorted_categorical_colors(adata, cluster_key, time_key)
-            cmap = ListedColormap(colors, N=len(colors))
+            cmap = ListedColormap(cluster_colors, N=len(cluster_colors))
             ax_clusters.imshow(np.arange(cmap.N)[None, :], cmap=cmap, aspect="auto")
-            ax_clusters.set_xticks([])
+            ax_clusters.set_xticks([0, cmap.N])
+            ax_clusters.set_xticklabels([f"{tmin:.3f}", f"{tmax:.3f}"])
             ax_clusters.set_yticks([])
-            ax_clusters.get_position()
 
         return ax if sharey else None
 
@@ -268,6 +270,18 @@ def cluster_lineage(
     )
     gs = GridSpec(nrows=nrows * 2, ncols=ncols, figure=fig)
 
+    tmin, tmax = np.min(x_test), np.max(x_test)
+    cluster_colors = (
+        None
+        if cluster_key is None
+        else _get_sorted_categorical_colors(
+            adata,
+            cluster_key,
+            time_key,
+            tmin=tmin,
+            tmax=tmax,
+        )
+    )
     row, sharey_ax = 0, None
     for i, c in enumerate(clusters):
         if i == ncols:

@@ -1244,13 +1244,20 @@ def _get_sorted_categorical_colors(
     adata: AnnData,
     cluster_key: str,
     time_key: Optional[str] = None,
+    tmin: float = -np.inf,
+    tmax: float = np.inf,
 ) -> np.ndarray:
 
     colors, mapper = _get_categorical_colors(adata, cluster_key)
     if time_key is not None:
         if time_key not in adata.obs:
             raise KeyError(f"Unable to find time in `adata.obs[{time_key!r}]`.")
-        order = np.argsort(adata.obs[time_key])
+        adata = adata[(adata.obs[time_key] >= tmin) & (adata.obs[time_key] <= tmax)]
+        if not adata.n_obs:
+            raise ValueError(
+                f"Specified time range `{[tmin, tmax]}` does not contain any data."
+            )
+        order = np.argsort(adata.obs[time_key].values)
     else:
         order = np.arange(adata.n_obs)
 
