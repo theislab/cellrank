@@ -256,8 +256,11 @@ def cluster_lineage(
             ax_clusters = fig.add_subplot(gss[1, 0])
             cmap = ListedColormap(cluster_colors, N=len(cluster_colors))
             ax_clusters.imshow(np.arange(cmap.N)[None, :], cmap=cmap, aspect="auto")
-            ax_clusters.set_xticks([0, cmap.N])
-            ax_clusters.set_xticklabels([f"{tmin:.3f}", f"{tmax:.3f}"])
+            # TODO: _N_TICKS constant
+            ax_clusters.set_xticks(np.linspace(0, cmap.N, 5))
+            ax_clusters.set_xticklabels(
+                [f"{v:.3f}" for v in np.linspace(tmin, tmax, 5)]
+            )
             ax_clusters.set_yticks([])
 
         return ax if sharey else None
