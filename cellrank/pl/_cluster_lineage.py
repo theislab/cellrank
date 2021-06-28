@@ -42,7 +42,7 @@ def cluster_lineage(
     clusters: Optional[Sequence[str]] = None,
     n_points: int = 200,
     time_key: str = "latent_time",
-    covariate_key: Optional[str] = None,
+    covariate_key: Optional[Union[str, Sequence[str]]] = None,
     ratio: float = 0.05,
     cmap: Optional[str] = "viridis",
     norm: bool = True,
@@ -278,7 +278,6 @@ def cluster_lineage(
             ax_clusters.set_xticklabels(
                 [f"{v:.3f}" for v in np.linspace(tmin, tmax, 5)]
             )
-            ax_clusters.set_yticks([])
 
         return ax if sharey else None
 
