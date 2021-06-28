@@ -6,7 +6,6 @@ from pathlib import Path
 
 from cellrank import logging as logg
 from cellrank.ul._docs import d, inject_docs
-from cellrank.pl._utils import _position_legend
 from cellrank.tl._utils import (
     save_fig,
     _eigengap,
@@ -789,6 +788,8 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
             The axis object if ``show=False``.
         %(just_plots)s
         """
+        from cellrank.pl._utils import _position_legend
+
         macrostates = self._get(P.MACRO)
         if macrostates is None:
             raise RuntimeError("Compute macrostates first as `.compute_macrostates()`.")
