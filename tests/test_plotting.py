@@ -725,6 +725,53 @@ class TestClusterLineage:
         assert adata_cflare.uns["foobar"].shape == (10, 200)
         assert is_categorical_dtype(adata_cflare.uns["foobar"].obs["clusters"])
 
+    @compare()
+    def test_cluster_lineage_covariates(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.cluster_lineage(
+            adata,
+            model,
+            GENES[:10],
+            "1",
+            covariate_key=["clusters", "latent_time"],
+            random_state=0,
+            time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_cluster_lineage_covariates_cmap(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.cluster_lineage(
+            adata,
+            model,
+            GENES[:10],
+            "1",
+            covariate_key="latent_time",
+            cmap="inferno",
+            random_state=0,
+            time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_cluster_lineage_covariates_ratio(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.cluster_lineage(
+            adata,
+            model,
+            GENES[:10],
+            "1",
+            covariate_key="latent_time",
+            ratio=0.25,
+            random_state=0,
+            time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
+        )
+
 
 class TestHeatmap:
     @compare(dirname="heatmap_lineages")

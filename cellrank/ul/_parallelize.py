@@ -20,7 +20,7 @@ def parallelize(
     unit: str = "",
     as_array: bool = True,
     use_ixs: bool = False,
-    backend: str = "multiprocessing",
+    backend: str = "loky",
     extractor: Optional[Callable[[Any], Any]] = None,
     show_progress_bar: bool = True,
 ) -> Any:
@@ -126,11 +126,11 @@ def parallelize(
         n_split = n_jobs
 
     if issparse(collection):
+        n_split = max(1, min(n_split, collection.shape[0]))
         if n_split == collection.shape[0]:
             collections = [collection[[ix], :] for ix in range(collection.shape[0])]
         else:
             step = collection.shape[0] // n_split
-
             ixs = [
                 np.arange(i * step, min((i + 1) * step, collection.shape[0]))
                 for i in range(n_split)
@@ -143,6 +143,8 @@ def parallelize(
     else:
         collections = list(filter(len, np.array_split(collection, n_split)))
 
+    n_split = len(collections)
+    n_jobs = min(n_jobs, n_split)
     pass_queue = not hasattr(callback, "py_func")  # we'd be inside a numba function
 
     return wrapper
