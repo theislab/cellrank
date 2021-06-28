@@ -39,8 +39,10 @@ _datasets = {
         "https://ndownloader.figshare.com/files/27265280",
         (2434, 23974),
     ),
-    # TODO(Marius1311)
-    "reprogramming_schiebinger": (None, (None, None)),
+    "reprogramming_schiebinger": (
+        "https://ndownloader.figshare.com/files/28618734",
+        (236285, 19089),
+    ),
 }
 
 
@@ -216,7 +218,18 @@ def reprogramming_schiebinger(
     path: Union[str, Path] = "datasets/reprogramming_schiebinger.h5ad", **kwargs: Any
 ) -> AnnData:
     """
-    TODO.
+     Reprogramming of mouse embryonic fibroblasts to induced pluripotent stem cells at 39 time points from \
+    :cite:`schiebinger:19`.
+
+    scRNA-seq dataset comprising `236,285` cell recorded using 10X Chromium
+    at 39 time points spanning days 0-18 past reprogramming initiation.
+
+    Contains total-counts normalized, log-transformed counts and low-dimensional embedding coordinates (force-directed).
+     Moreover, it contains the following :attr:`anndata.AnnData.obs` annotations:
+
+        - `'day'` - time-point information.
+        - `'serum'`/`'2i'` - whether this cell comes from the serum/2i condition.
+        - `'cell_sets'` - cluster labels
 
     Parameters
     ----------
@@ -225,6 +238,10 @@ def reprogramming_schiebinger(
     Returns
     -------
     %(adata)s
+
+    Notes
+    -----
+    The dataset has approximately 1.4GiB.
     """
     return _load_dataset_from_url(
         path, *_datasets["reprogramming_schiebinger"], **kwargs
