@@ -218,18 +218,18 @@ def reprogramming_schiebinger(
     path: Union[str, Path] = "datasets/reprogramming_schiebinger.h5ad", **kwargs: Any
 ) -> AnnData:
     """
-     Reprogramming of mouse embryonic fibroblasts to induced pluripotent stem cells at 39 time points from \
+    Reprogramming of mouse embryonic fibroblasts to induced pluripotent stem cells at 39 time points from \
     :cite:`schiebinger:19`.
 
-    scRNA-seq dataset comprising `236,285` cell recorded using 10X Chromium
+    scRNA-seq dataset comprising `236 285` cell recorded using 10X Chromium
     at 39 time points spanning days 0-18 past reprogramming initiation.
 
     Contains total-counts normalized, log-transformed counts and low-dimensional embedding coordinates (force-directed).
-     Moreover, it contains the following :attr:`anndata.AnnData.obs` annotations:
+    Moreover, it contains the following :attr:`anndata.AnnData.obs` annotations:
 
         - `'day'` - time-point information.
         - `'serum'`/`'2i'` - whether this cell comes from the serum/2i condition.
-        - `'cell_sets'` - cluster labels
+        - `'cell_sets'` - cluster labels.
 
     Parameters
     ----------
