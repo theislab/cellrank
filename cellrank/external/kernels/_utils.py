@@ -1,4 +1,6 @@
-from typing import Literal, Mapping, Sequence
+from typing import Mapping, Sequence
+
+from typing_extensions import Literal
 
 
 class MarkerGenes:
@@ -7,17 +9,15 @@ class MarkerGenes:
     _proliferation_markers: Mapping[str, Sequence[str]] = {
         "human": (),
         "mouse": (),
-        "rat": (),
     }
     _apoptosis_markers: Mapping[str, Sequence[str]] = {
         "human": (),
         "mouse": (),
-        "rat": (),
     }
 
     @classmethod
     def proliferation_markers(
-        cls, organism: Literal["human", "mouse", "rat"]
+        cls, organism: Literal["human", "mouse"]
     ) -> Sequence[str]:
         """Get proliferation markers for ``organism``."""
         try:
@@ -28,9 +28,7 @@ class MarkerGenes:
             ) from None
 
     @classmethod
-    def apoptosis_markers(
-        cls, organism: Literal["human", "mouse", "rat"]
-    ) -> Sequence[str]:
+    def apoptosis_markers(cls, organism: Literal["human", "mouse"]) -> Sequence[str]:
         """Get apoptosis markers for ``organism``."""
         try:
             return cls._apoptosis_markers[organism]

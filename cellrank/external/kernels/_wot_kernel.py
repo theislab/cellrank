@@ -122,7 +122,7 @@ class WOTKernel(Kernel, error=_error):
         self,
         proliferation_key: Optional[str] = None,
         apoptosis_key: Optional[str] = None,
-        organism: Optional[Literal["human", "mouse", "rat"]] = None,
+        organism: Optional[Literal["human", "mouse"]] = None,
         beta_min: float = 0.3,
         beta_max: float = 1.7,
         delta_min: float = 0.3,
@@ -177,7 +177,7 @@ class WOTKernel(Kernel, error=_error):
             key: str,
             *,
             kind: Literal["proliferation", "apoptosis"],
-            organism: Optional[Literal["human", "mouse", "rat"]],
+            organism: Optional[Literal["human", "mouse"]],
         ) -> np.ndarray:
             try:
                 return np.asarray(self.adata.obs[key])
