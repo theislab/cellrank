@@ -170,8 +170,15 @@ class WOTKernel(Kernel, error=_error):
         If you don't have access to proliferation/apoptosis gene sets, you can use ones defined in :mod:`cellrank` for a
         specific organism. Alternatively, you can also use WOT without an estimate of initial growth rates.
 
+        The markers used here were taken from the following sources:
+
+            - human, proliferation - :cite:`tirosh:16:science`.
+            - human, apoptosis - `Hallmark Apoptosis, MSigDB <https://www.gsea-msigdb.org/gsea/msigdb/cards/HALLMARK_APOPTOSIS>`_.
+            - mouse, proliferation - :cite:`tirosh:16:nature`.
+            - mouse, apoptosis - `Hallmark P53 Pathway, MSigDB <https://www.gsea-msigdb.org/gsea/msigdb/cards/HALLMARK_P53_PATHWAY>`_.
+
         For more information about WOT, see the official `tutorial <https://broadinstitute.github.io/wot/tutorial/>`_.
-        """
+        """  # noqa: E501
 
         def get_scores(
             key: str,
