@@ -1,3 +1,5 @@
+from typing import Any
+
 import pytest
 from _helpers import create_model, assert_array_nan_equal, jax_not_installed_skip
 
@@ -23,6 +25,7 @@ from cellrank.tl._utils import (
 )
 from cellrank.ul.models import GAM, BaseModel
 from cellrank.tl._colors import _compute_mean_color
+from cellrank.ul._parallelize import parallelize
 from cellrank.tl.kernels._utils import (
     norm,
     np_max,
@@ -42,6 +45,7 @@ from cellrank.tl.kernels._velocity_schemes import (
 import numpy as np
 import pandas as pd
 from numba import njit
+from scipy.sparse import rand as srand
 from scipy.sparse import diags, random, csr_matrix
 from pandas.api.types import is_categorical_dtype
 
@@ -1070,3 +1074,23 @@ class TestKernelUtils:
         x = _random_normal(np.array([0]), np.array([1]), 1)
 
         assert x.shape == (1, 1)
+
+
+class TestParallelize:
+    @pytest.mark.parametrize("n_jobs", [1, 3, 4])
+    def test_more_jobs_than_work(self, n_jobs: int):
+        def callback(data, **_: Any):
+            assert isinstance(data, csr_matrix)
+            assert data.shape[1] == 100
+
+            return [42] * data.shape[0]
+
+        res = parallelize(
+            callback,
+            collection=srand(3, 100, format="csr"),
+            n_jobs=n_jobs,
+            show_progress_bar=False,
+            extractor=np.concatenate,
+        )()
+
+        np.testing.assert_array_equal(res, 42)
