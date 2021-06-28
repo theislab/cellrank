@@ -6,13 +6,14 @@ from pathlib import Path
 
 from cellrank import logging as logg
 from cellrank.ul._docs import d, inject_docs
+from cellrank.pl._utils import _position_legend
 from cellrank.tl._utils import (
     save_fig,
     _eigengap,
     _fuzzy_to_discrete,
     _series_from_one_hot_matrix,
 )
-from cellrank.tl._colors import _get_black_or_white
+from cellrank.tl._colors import _get_black_or_white, _create_categorical_colors
 from cellrank.tl._lineage import Lineage
 from cellrank.tl._constants import TermStatesKey, _probs, _colors, _lin_names
 from cellrank.tl.estimators._utils import Metadata, _print_insufficient_number_of_cells
@@ -23,10 +24,13 @@ from cellrank.tl.estimators._base_estimator import BaseEstimator
 
 import numpy as np
 import pandas as pd
+from pandas.api.types import infer_dtype
+from pandas.core.dtypes.common import is_categorical_dtype
 
 import matplotlib as mpl
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
 
 
 @d.dedent
@@ -745,6 +749,113 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
 
         if save:
             save_fig(fig, save)
+
+    @d.dedent
+    def plot_macrostate_composition(
+        self,
+        key: str,
+        width: float = 0.8,
+        show_title: bool = True,
+        labelrot: float = 45,
+        legend_loc: Optional[str] = "upper right out",
+        figsize: Optional[Tuple[float, float]] = None,
+        dpi: Optional[int] = None,
+        save: Optional[Union[str, Path]] = None,
+        show: bool = True,
+    ) -> Optional[Axes]:
+        """
+        Plot stacked histogram of macrostates over categorical annotations.
+
+        Parameters
+        ----------
+        %(adata)s
+        key
+            Key from :attr:`adata` ``.obs`` containing categorical annotations.
+        width
+            Bar width in `[0, 1]`.
+        show_title
+            Whether to show the title.
+        labelrot
+            Rotation of labels on x-axis.
+        legend_loc
+            Position of the legend. If `None`, don't show legend.
+        %(plotting)s
+        show
+            If `False`, return :class:`matplotlib.pyplot.Axes`.
+
+        Returns
+        -------
+        :class:`matplotlib.pyplot.Axes`
+            The axis object if ``show=False``.
+        %(just_plots)s
+        """
+        macrostates = self._get(P.MACRO)
+        if macrostates is None:
+            raise RuntimeError("Compute macrostates first as `.compute_macrostates()`.")
+        if key not in self.adata.obs:
+            raise KeyError(f"Key `{key}` not found in `adata.obs`.")
+        if not is_categorical_dtype(self.adata.obs[key]):
+            raise TypeError(
+                f"Expected `adata.obs[{key!r}]` to be `categorical`, "
+                f"found `{infer_dtype(self.adata.obs[key])}`."
+            )
+
+        mask = ~macrostates.isnull()
+        df = (
+            pd.DataFrame({"macrostates": macrostates, key: self.adata.obs[key]})[mask]
+            .groupby([key, "macrostates"])
+            .size()
+        )
+        try:
+            cats_colors = self.adata.uns[f"{key}_colors"]
+        except KeyError:
+            cats_colors = _create_categorical_colors(
+                len(self.adata.obs[key].cat.categories)
+            )
+        cat_color_mapper = dict(zip(self.adata.obs[key].cat.categories, cats_colors))
+        x_indices = np.arange(len(macrostates.cat.categories))
+        bottom = np.zeros_like(x_indices, dtype=np.float32)
+
+        width = min(1, max(0, width))
+        fig, ax = plt.subplots(figsize=figsize, dpi=dpi, tight_layout=True)
+        for cat, color in cat_color_mapper.items():
+            frequencies = df.loc[cat]
+            # do not add to legend if category is missing
+            if np.sum(frequencies) > 0:
+                ax.bar(
+                    x_indices,
+                    frequencies,
+                    width,
+                    label=cat,
+                    color=color,
+                    bottom=bottom,
+                    ec="black",
+                    lw=0.5,
+                )
+                bottom += np.array(frequencies)
+
+        ax.set_xticks(x_indices)
+        ax.set_xticklabels(
+            # assuming at least 1 category
+            frequencies.index,
+            rotation=labelrot,
+            ha="center" if labelrot in (0, 90) else "right",
+        )
+        y_max = bottom.max()
+        ax.set_ylim([0, y_max + 0.05 * y_max])
+
+        ax.set_xlabel("macrostate")
+        ax.set_ylabel("frequency")
+        if show_title:
+            ax.set_title(f"distribution over {key}")
+        if legend_loc not in (None, "none"):
+            _position_legend(ax, legend_loc=legend_loc)
+
+        if save is not None:
+            save_fig(fig, save)
+
+        if not show:
+            return ax
 
     def _compute_one_macrostate(
         self,
