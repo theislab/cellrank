@@ -16,8 +16,8 @@ from cellrank.pl._utils import (
     _time_range_type,
     _create_callbacks,
     _input_model_type,
+    _get_sorted_colors,
     _return_model_type,
-    _get_sorted_categorical_colors,
 )
 from cellrank.tl._utils import save_fig, _unique_order_preserving
 from cellrank.ul._utils import _get_n_cores, _check_collection
@@ -27,7 +27,7 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler
 
 import matplotlib.pyplot as plt
-from matplotlib.colors import ListedColormap
+from matplotlib.colors import ListedColormap, is_color_like
 from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
 
 
@@ -42,7 +42,9 @@ def cluster_lineage(
     clusters: Optional[Sequence[str]] = None,
     n_points: int = 200,
     time_key: str = "latent_time",
-    cluster_key: Optional[str] = None,
+    covariate_key: Optional[str] = None,
+    ratio: float = 0.05,
+    cmap: Optional[str] = "viridis",
     norm: bool = True,
     recompute: bool = False,
     callback: _callback_type = None,
@@ -86,8 +88,12 @@ def cluster_lineage(
         Number of points used for prediction.
     time_key
         Key in ``adata.obs`` where the pseudotime is stored.
-    cluster_key
-        Key in ``adata.obs`` containing categorical observations to be plotted at the bottom of each plot.
+    covariate_key
+        Key(s) in ``adata.obs`` containing observations to be plotted at the bottom of each plot.
+    ratio
+        Height ratio of each covariate in ``covariate_key``.
+    cmap
+        Colormap to use for continuous covariates in ``covariate_key``.
     norm
         Whether to z-normalize each trend to have zero mean, unit variance.
     recompute
@@ -229,7 +235,11 @@ def cluster_lineage(
 
     def plot_cluster(row, col, cluster, sharey_ax: Optional[str] = None):
         gss = GridSpecFromSubplotSpec(
-            2, 1, subplot_spec=gs[row : row + 2, col], hspace=0, height_ratios=[1, 0.05]
+            row_delta,
+            1,
+            subplot_spec=gs[row : row + row_delta, col],
+            hspace=0,
+            height_ratios=[1] + [ratio] * (row_delta - 1),
         )
         ax = fig.add_subplot(gss[0, 0], sharey=sharey_ax)
 
@@ -252,12 +262,19 @@ def cluster_lineage(
             ax.set_yticks([])
         ax.margins(0)
 
-        if cluster_key is not None:
-            ax_clusters = fig.add_subplot(gss[1, 0])
-            cmap = ListedColormap(cluster_colors, N=len(cluster_colors))
-            ax_clusters.imshow(np.arange(cmap.N)[None, :], cmap=cmap, aspect="auto")
-            # TODO: _N_TICKS constant
-            ax_clusters.set_xticks(np.linspace(0, cmap.N, 5))
+        if covariate_colors is not None:
+            for i, colors in enumerate(covariate_colors):
+                ax_clusters = fig.add_subplot(gss[i + 1, 0])
+                if is_color_like(colors[0]):  # e.g. categorical
+                    cm = ListedColormap(colors, N=len(colors))
+                    ax_clusters.imshow(np.arange(cm.N)[None, :], cmap=cm, aspect="auto")
+                else:
+                    cm = plt.get_cmap(cmap)
+                    ax_clusters.imshow(colors[None, :], cmap=cm, aspect="auto")
+                ax_clusters.set_xticks([])
+                ax_clusters.set_yticks([])
+
+            ax_clusters.set_xticks(np.linspace(0, len(colors), 5))
             ax_clusters.set_xticklabels(
                 [f"{v:.3f}" for v in np.linspace(tmin, tmax, 5)]
             )
@@ -271,24 +288,25 @@ def cluster_lineage(
         figsize=(ncols * 10, nrows * 10) if figsize is None else figsize,
         tight_layout=True,
     )
-    gs = GridSpec(nrows=nrows * 2, ncols=ncols, figure=fig)
 
-    tmin, tmax = np.min(x_test), np.max(x_test)
-    cluster_colors = (
-        None
-        if cluster_key is None
-        else _get_sorted_categorical_colors(
+    if covariate_key is None:
+        covariate_colors, row_delta = None, 1
+    else:
+        tmin, tmax = np.min(x_test), np.max(x_test)
+        covariate_colors = _get_sorted_colors(
             adata,
-            cluster_key,
+            covariate_key,
             time_key,
             tmin=tmin,
             tmax=tmax,
         )
-    )
+        row_delta = len(covariate_colors) + 1
+    gs = GridSpec(nrows=nrows * row_delta, ncols=ncols, figure=fig)
+
     row, sharey_ax = 0, None
     for i, c in enumerate(clusters):
         if i == ncols:
-            row += 2
+            row += row_delta
         sharey_ax = plot_cluster(row, i % ncols, c, sharey_ax=sharey_ax)
 
     if save is not None:
