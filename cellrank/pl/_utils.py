@@ -4,6 +4,7 @@ from copy import copy
 from typing import (
     Any,
     Dict,
+    List,
     Tuple,
     Union,
     Mapping,
@@ -27,7 +28,7 @@ from cellrank.ul.models._base_model import ColorType
 
 import numpy as np
 import pandas as pd
-from pandas.api.types import is_categorical_dtype
+from pandas.api.types import infer_dtype, is_numeric_dtype, is_categorical_dtype
 
 import matplotlib as mpl
 import matplotlib.colors as mcolors
@@ -1216,3 +1217,70 @@ def _held_karp(dists: np.ndarray) -> Tuple[float, np.ndarray]:
     path.append(0)
 
     return opt, np.array(path)[::-1]
+
+
+def _get_categorical_colors(
+    adata: AnnData, cluster_key: str
+) -> Tuple[np.ndarray, Mapping[str, str]]:
+    if cluster_key not in adata.obs:
+        raise KeyError(f"Unable to find clusters in `adata.obs[{cluster_key!r}].`")
+    if not is_categorical_dtype(adata.obs[cluster_key]):
+        raise TypeError(
+            f"Expected `adata.obs[{cluster_key!r}]` to be categorical, "
+            f"found `{infer_dtype(adata.obs[cluster_key])}`."
+        )
+
+    color_key = f"{cluster_key}_colors"
+    try:
+        colors = adata.uns[color_key]
+    except KeyError:
+        adata.uns[color_key] = colors = _create_categorical_colors(
+            len(adata.obs[cluster_key].cat.categories)
+        )
+    mapper = dict(zip(adata.obs[cluster_key].cat.categories, colors))
+    mapper[np.nan] = "gray"
+
+    return colors, mapper
+
+
+def _get_sorted_colors(
+    adata: AnnData,
+    cluster_key: Union[str, Sequence[str]],
+    time_key: Optional[str] = None,
+    tmin: float = -np.inf,
+    tmax: float = np.inf,
+) -> List[np.ndarray]:
+    if time_key is not None:
+        if time_key not in adata.obs:
+            raise KeyError(f"Unable to find time in `adata.obs[{time_key!r}]`.")
+        adata = adata[(adata.obs[time_key] >= tmin) & (adata.obs[time_key] <= tmax)]
+        if not adata.n_obs:
+            raise ValueError(
+                f"Specified time range `{[tmin, tmax]}` does not contain any data."
+            )
+        order = np.argsort(adata.obs[time_key].values)
+    else:
+        order = np.arange(adata.n_obs)
+
+    if isinstance(cluster_key, str):
+        cluster_key = (cluster_key,)
+    cluster_key = _unique_order_preserving(cluster_key)
+
+    res = []
+    for ck in cluster_key:
+        try:
+            colors, mapper = _get_categorical_colors(adata, ck)
+            res.append(
+                np.array(
+                    [mcolors.to_hex(mapper[v]) for v in adata.obs[ck].values[order]]
+                )
+            )
+        except TypeError:
+            if not is_numeric_dtype(adata.obs[ck]):
+                raise TypeError(
+                    f"Expected `adata.obs[{cluster_key!r}]` to be numeric, "
+                    f"found `{infer_dtype(adata.obs[cluster_key])}`."
+                )
+            res.append(np.asarray(adata.obs[ck])[order])
+
+    return res
