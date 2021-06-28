@@ -843,6 +843,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         )
         y_max = bottom.max()
         ax.set_ylim([0, y_max + 0.05 * y_max])
+        ax.margins(0.05)
 
         ax.set_xlabel("macrostate")
         ax.set_ylabel("frequency")
