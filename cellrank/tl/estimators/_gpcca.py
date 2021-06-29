@@ -773,7 +773,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         width
             Bar width in `[0, 1]`.
         title
-            Whether to show the title.
+            Title of the figure. If `None`, create one automatically.
         labelrot
             Rotation of labels on x-axis.
         legend_loc

@@ -3344,24 +3344,29 @@ class TestPlotSingleFlow:
 class TestMacrostateComposition:
     @compare(kind="gpcca")
     def test_msc_default(self, mc: GPCCA, fpath: str):
-        pass
+        mc.plot_macrostate_composition("clusters", dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_msc_width(self, mc: GPCCA, fpath: str):
-        pass
+        mc.plot_macrostate_composition("clusters", dpi=DPI, save=fpath, width=0.2)
 
     @compare(kind="gpcca")
     def test_msc_title(self, mc: GPCCA, fpath: str):
-        pass
+        mc.plot_macrostate_composition("clusters", dpi=DPI, save=fpath, title="foobar")
 
     @compare(kind="gpcca")
     def test_msc_labelrot(self, mc: GPCCA, fpath: str):
-        pass
+        mc.plot_macrostate_composition("clusters", dpi=DPI, save=fpath, labelrot=0)
 
     @compare(kind="gpcca")
     def test_msc_legend_loc(self, mc: GPCCA, fpath: str):
-        pass
+        mc.plot_macrostate_composition(
+            "clusters_enlarged", dpi=DPI, save=fpath, legend_loc="upper left out"
+        )
 
     @compare(kind="gpcca")
     def test_msc_return_ax(self, mc: GPCCA, fpath: str):
-        pass
+        ax = mc.plot_macrostate_composition(
+            "age(days)", dpi=DPI, save=fpath, show=False
+        )
+        assert isinstance(ax, plt.Axes)
