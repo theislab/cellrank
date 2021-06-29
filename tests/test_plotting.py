@@ -3339,3 +3339,61 @@ class TestPlotSingleFlow:
             "Astrocytes", "clusters", "age(days)", show=False, dpi=DPI, save=fpath
         )
         assert isinstance(ax, plt.Axes)
+
+
+class TestLogOdds:
+    @compare()
+    def test_log_odds(self, adata: AnnData, fpath: str):
+        pass
+
+    @compare(kind="bwd")
+    def test_log_odds_bwd(self, adata: AnnData, fpath: str):
+        pass
+
+    @compare()
+    def test_log_odds_rest(self, adata: AnnData, fpath: str):
+        pass
+
+    @compare()
+    def test_log_odds_continuous_keys(self, adata: AnnData, fpath: str):
+        pass
+
+    @compare()
+    def test_log_odds_categorical_keys(self, adata: AnnData, fpath: str):
+        pass
+
+    @compare()
+    def test_log_odds_threshold(self, adata: AnnData, fpath: str):
+        pass
+
+    @compare()
+    def test_log_odds_threshold_color(self, adata: AnnData, fpath: str):
+        pass
+
+    @compare()
+    def test_log_odds_layer(self, adata: AnnData, fpath: str):
+        pass
+
+    @compare()
+    def test_log_odds_use_raw(self, adata: AnnData, fpath: str):
+        pass
+
+    @compare()
+    def test_log_odds_size(self, adata: AnnData, fpath: str):
+        pass
+
+    @compare()
+    def test_log_odds_size(self, adata: AnnData, fpath: str):
+        pass
+
+    @compare()
+    def test_log_odds_alpha(self, adata: AnnData, fpath: str):
+        pass
+
+    @compare()
+    def test_log_odds_ncols(self, adata: AnnData, fpath: str):
+        pass
+
+    @compare()
+    def test_log_odds_kwargs(self, adata: AnnData, fpath: str):
+        pass
