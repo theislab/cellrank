@@ -267,7 +267,7 @@ def _ensure_numeric_ordered(adata: AnnData, key: str) -> pd.Series:
             ) from e
 
     if not is_categorical_dtype(exp_time):
-        logg.info(f"Converting `adata.obs[{key!r}]` to `categorical`")
+        logg.debug(f"Converting `adata.obs[{key!r}]` to `categorical`")
         exp_time = np.asarray(exp_time)
         categories = sorted(set(exp_time[~np.isnan(exp_time)]))
         if len(categories) > 100:
