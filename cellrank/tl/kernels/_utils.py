@@ -254,7 +254,7 @@ def _get_basis(adata: AnnData, basis: str) -> np.ndarray:
 
 
 def _ensure_numeric_ordered(
-    adata: AnnData, key: str, convert: bool = True
+    adata: AnnData, key: str, *, convert: bool = True
 ) -> pd.Series:
     if key not in adata.obs.keys():
         raise KeyError(f"Unable to find data in `adata.obs[{key!r}]`.")
@@ -270,7 +270,10 @@ def _ensure_numeric_ordered(
 
     if not is_categorical_dtype(exp_time):
         if not convert:
-            raise ValueError("TODO.")
+            raise ValueError(
+                f"Expected `adata.obs[{key!r}]` to be `categorical`, "
+                f"found `{infer_dtype(adata.obs[key])}`."
+            )
         exp_time = np.asarray(exp_time)
         exp_time = pd.Series(
             pd.Categorical(
