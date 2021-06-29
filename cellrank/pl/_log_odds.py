@@ -41,8 +41,9 @@ def log_odds(
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
     save: Optional[Union[str, Path]] = None,
+    show: bool = True,
     **kwargs: Any,
-) -> None:
+) -> Optional[Union[Axes, Sequence[Axes]]]:
     """
     Plot log-odds ratio between lineages.
 
@@ -83,11 +84,15 @@ def log_odds(
     seed
         Seed for ``jitter`` to ensure reproducibility.
     %(plotting)s
+    show
+        If `False`, return :class:`matplotlib.pyplot.Axes` or a sequence of them.
     kwargs
         Keyword arguments for :func:`seaborn.stripplot`.
 
     Returns
     -------
+    :class:`matplotlib.pyplot.Axes`
+        The axis object(s) if ``show=False``.
     %(just_plots)s
     """
     from cellrank.tl.kernels._utils import _ensure_numeric_ordered
@@ -206,7 +211,7 @@ def log_odds(
         decorate(ax)
         if save is not None:
             save_fig(fig, save)
-        return
+        return None if show else ax
 
     if isinstance(keys, str):
         keys = (keys,)
@@ -259,12 +264,12 @@ def log_odds(
                 jitter=jitter,
                 color=threshold_color,
                 palette=palette,
-                size=size * 1.5,
+                size=size * 2,
                 alpha=0.9,
                 ax=ax,
                 **kwargs,
             )
-            key = rf"${key} \geq {threshold}$"
+            key = rf"${key} \ge {threshold}$"
         if sm is not None:
             cax = ax.inset_axes([1.02, 0, 0.025, 1], transform=ax.transAxes)
             fig.colorbar(sm, ax=ax, cax=cax)
@@ -282,6 +287,9 @@ def log_odds(
 
     for ax in axes[i + 1 :]:
         ax.remove()
+    axes = axes[: i + 1]
 
     if save is not None:
         save_fig(fig, save)
+
+    return None if show else axes[0] if len(axes) == 1 else axes
