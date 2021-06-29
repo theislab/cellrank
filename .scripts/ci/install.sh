@@ -3,7 +3,7 @@
 set -ev
 
 python -m pip install --upgrade pip
-pip install codecov
+pip install codecov adjustText
 
 if [[ "$OS" == "macos-latest" ]]; then
   pip install -e".[test,external]"
@@ -17,7 +17,7 @@ elif [[ "$OS" == "ubuntu-latest" ]]; then
   fi
   # ensure correct umap-learn version is installed, see:
   # https://github.com/bioconda/bioconda-recipes/pull/28591
-  pip install "rpy2>=3.3.0" "umap-learn>=0.5.1"
+  pip install "rpy2>=3.3.0" "umap-learn>=0.5.1" adjustText
   Rscript --vanilla -e "library('mgcv')"
 else
   exit 42

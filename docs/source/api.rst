@@ -78,6 +78,7 @@ Plotting
     pl.lineage_drivers
     pl.circular_projection
     pl.gene_trends
+    pl.log_odds
     pl.heatmap
     pl.cluster_lineage
     pl.cluster_fates
