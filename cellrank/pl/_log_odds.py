@@ -35,6 +35,8 @@ def log_odds(
     alpha: Optional[float] = 0.8,
     ncols: Optional[int] = None,
     legend_loc: Optional[str] = "best",
+    jitter: Union[bool, float] = True,
+    seed: Optional[int] = None,
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
     save: Optional[Union[str, Path]] = None,
@@ -75,6 +77,10 @@ def log_odds(
         Number of columns.
     legend_loc
         Position of the legend. If `None`, do not show the legend.
+    jitter
+        Amount of jitter to apply along x-axis.
+    seed
+        Seed for ``jitter`` to ensure reproducibility.
     %(plotting)s
     kwargs
         Keyword arguments for :func:`seaborn.stripplot`.
@@ -108,6 +114,15 @@ def log_odds(
         try:
             _, palette = _get_categorical_colors(adata, key)
             df[key] = adata.obs[key].values[mask]
+            df[key] = df[key].cat.remove_unused_categories()
+            try:
+                # seaborn doesn't like numeric categories
+                df[key] = df[key].astype(float)
+                palette = {float(k): v for k, v in palette.items()}
+            except ValueError:
+                pass
+            # otherwise seaborn plots all
+            palette = {k: palette[k] for k in df[key].unique()}
             hue, thresh_mask, sm = key, None, None
         except TypeError:
             palette, hue, thresh_mask, sm = (
@@ -120,7 +135,7 @@ def log_odds(
             try:
                 # fmt: off
                 if threshold is None:
-                    values = (adata.raw if use_raw else adata).obs_vector(key, layer=layer)
+                    values = adata.raw.obs_vector(key) if use_raw else adata.obs_vector(key, layer=layer)
                     palette, sm = cont_palette(values)
                     hue, thresh_mask = None, None
                 else:
@@ -138,6 +153,8 @@ def log_odds(
 
         return hue, palette, thresh_mask, sm
 
+    np.random.seed(seed)
+    _ = kwargs.pop("orient", None)
     if use_raw and adata.raw is None:
         logg.warning("No raw attribute set. Setting `use_raw=False`")
         use_raw = False
@@ -146,9 +163,8 @@ def log_odds(
     ln_key = str(AbsProbKey.BACKWARD if backward else AbsProbKey.FORWARD)
     if ln_key not in adata.obsm:
         raise KeyError(f"Lineages key `{ln_key!r}` not found in `adata.obsm`.")
-    time = _ensure_numeric_ordered(adata, time_key, convert=False)
+    time = _ensure_numeric_ordered(adata, time_key)
     order = time.cat.categories[:: -1 if backward else 1]
-    jitter = np.nanmax(np.abs(time.cat.categories[:-1] - time.cat.categories[1:])) / 2.5
 
     fate1 = adata.obsm[ln_key][lineage_1].X.squeeze(-1)
     if lineage_2 is None:
@@ -172,7 +188,7 @@ def log_odds(
     if keys is None:
         if figsize is None:
             n_cats = len(time.cat.categories)
-            figsize = np.array([n_cats, n_cats * 4 / 6]) / 4
+            figsize = np.array([n_cats, n_cats * 4 / 6]) / 2
 
         fig, ax = plt.subplots(figsize=figsize, dpi=dpi, tight_layout=True)
         ax = sns.stripplot(
@@ -180,13 +196,15 @@ def log_odds(
             "log_odds",
             data=df,
             order=order,
-            jitter=0.4,
+            jitter=jitter,
             color="k",
             size=size,
             ax=ax,
             **kwargs,
         )
         decorate(ax)
+        if save is not None:
+            save_fig(fig, save)
         return
 
     if isinstance(keys, str):
@@ -199,7 +217,7 @@ def log_odds(
     nrows = int(np.ceil(len(keys) / ncols))
     if figsize is None:
         n_cats = len(time.cat.categories)
-        figsize = np.array([n_cats * ncols, n_cats * nrows * 4 / 6]) / 4
+        figsize = np.array([n_cats * ncols, n_cats * nrows * 4 / 6]) / 2
 
     fig, axes = plt.subplots(
         nrows=nrows,
@@ -254,9 +272,10 @@ def log_odds(
                 ax.get_legend().remove()
             else:
                 handles, labels = ax.get_legend_handles_labels()
-                _position_legend(
-                    ax, legend_loc=legend_loc, handles=handles, labels=labels
-                )
+                if len(handles):
+                    _position_legend(
+                        ax, legend_loc=legend_loc, handles=handles, labels=labels
+                    )
 
         decorate(ax, title=key, show_ylabel=show_ylabel)
 

@@ -1238,7 +1238,7 @@ def _get_categorical_colors(
             len(adata.obs[cluster_key].cat.categories)
         )
     mapper = dict(zip(adata.obs[cluster_key].cat.categories, colors))
-    mapper[np.nan] = "gray"
+    mapper[np.nan] = "grey"
 
     return colors, mapper
 

@@ -3344,56 +3344,247 @@ class TestPlotSingleFlow:
 class TestLogOdds:
     @compare()
     def test_log_odds(self, adata: AnnData, fpath: str):
-        pass
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            figsize=(4, 3),
+            size=10,
+            seed=42,
+        )
 
     @compare(kind="bwd")
     def test_log_odds_bwd(self, adata: AnnData, fpath: str):
-        pass
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            backward=True,
+            figsize=(4, 3),
+            size=10,
+            seed=42,
+        )
 
     @compare()
     def test_log_odds_rest(self, adata: AnnData, fpath: str):
-        pass
+        cr.pl.log_odds(
+            adata,
+            "2",
+            None,
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            figsize=(4, 3),
+            size=10,
+            seed=42,
+        )
 
     @compare()
     def test_log_odds_continuous_keys(self, adata: AnnData, fpath: str):
-        pass
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            keys=adata.var_names[:3],
+            figsize=(4, 3),
+            size=4,
+        )
 
     @compare()
     def test_log_odds_categorical_keys(self, adata: AnnData, fpath: str):
-        pass
+        import scanpy as sc
+
+        sc.write("/opt/projects/helmholtz/cellrank/tmp.h5ad", adata)
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            keys=["clusters", "clusters_enlarged"],
+            figsize=(4, 3),
+            size=10,
+            seed=42,
+        )
 
     @compare()
     def test_log_odds_threshold(self, adata: AnnData, fpath: str):
-        pass
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            keys=adata.var_names[:3],
+            threshold=0.5,
+            figsize=(4, 3),
+            size=10,
+            seed=42,
+        )
 
     @compare()
     def test_log_odds_threshold_color(self, adata: AnnData, fpath: str):
-        pass
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            keys=adata.var_names[:3],
+            threshold=0.5,
+            threshold_color="blue",
+            figsize=(4, 3),
+            size=10,
+            seed=42,
+        )
 
     @compare()
     def test_log_odds_layer(self, adata: AnnData, fpath: str):
-        pass
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            keys=adata.var_names[3:6],
+            layer="Ms",
+            figsize=(4, 3),
+            size=10,
+            seed=42,
+        )
 
     @compare()
     def test_log_odds_use_raw(self, adata: AnnData, fpath: str):
-        pass
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            keys=adata.raw.var_names[3:6],
+            use_raw=True,
+            figsize=(4, 3),
+            size=10,
+            seed=42,
+        )
 
     @compare()
     def test_log_odds_size(self, adata: AnnData, fpath: str):
-        pass
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            keys="clusters",
+            size=20,
+            figsize=(4, 3),
+        )
 
     @compare()
-    def test_log_odds_size(self, adata: AnnData, fpath: str):
-        pass
+    def test_log_odds_cmap(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            keys=adata.var_names[:2],
+            size=10,
+            cmap="inferno",
+            figsize=(4, 3),
+        )
 
     @compare()
     def test_log_odds_alpha(self, adata: AnnData, fpath: str):
-        pass
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            keys="clusters",
+            alpha=0.5,
+            figsize=(4, 3),
+            size=10,
+            seed=42,
+        )
 
     @compare()
     def test_log_odds_ncols(self, adata: AnnData, fpath: str):
-        pass
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            keys=["clusters", adata.var_names[-1]],
+            ncols=1,
+            figsize=(3, 4),
+            size=10,
+            seed=42,
+        )
+
+    @compare()
+    def test_log_odds_legend_loc(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            keys=["clusters", adata.var_names[-1]],
+            legend_loc="upper right out",
+            figsize=(4, 3),
+            size=10,
+            seed=42,
+        )
+
+    @compare()
+    def test_log_odds_jitter(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            figsize=(4, 3),
+            size=10,
+            seed=42,
+            jitter=1,
+        )
 
     @compare()
     def test_log_odds_kwargs(self, adata: AnnData, fpath: str):
-        pass
+        cr.pl.log_odds(
+            adata,
+            "1",
+            "2",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            linewidth=5,
+            edgecolor="red",
+            figsize=(4, 3),
+            size=4,
+        )
