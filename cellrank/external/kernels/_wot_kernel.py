@@ -131,21 +131,22 @@ class WOTKernel(Kernel, error=_error):
         **kwargs: Any,
     ) -> Optional[pd.Series]:
         r"""
-        Estimate initial growth rates using Birth-death process as described in :cite:`schiebinger:19`.
+        Estimate initial growth rates using a birth-death process as described in :cite:`schiebinger:19`.
 
         The doubling time is defined as :math:`\frac{\ln 2}{\beta - \delta}` (similarly defined for half-time).
-        Logistic function is used to transform the birth/death rate scores and smoothly interpolate between specified
-        minimum and maximum birth/death rates.
+        The logistic function is used to transform the birth/death rate scores and to smoothly interpolate between
+        specified minimum and maximum birth/death rates.
 
         Parameters
         ----------
         proliferation_key
-            Key in :attr:`adata` ``.obs`` where birth rate scores are stored.
+            Key in :attr:`adata` ``.obs`` where the birth rate score is saved.
         apoptosis_key
-            Key in :attr:`adata` ``.obs`` where death rate scores are stored.
+            Key in :attr:`adata` ``.obs`` where the death rate score is saved.
         organism
             Organism for which to calculate the birth/death scores, if they cannot be found in :attr:`adata`.
-            :func:`scanpy.tl.score_genes` is used to calculate the scores.
+            In this case, :func:`scanpy.tl.score_genes` is used to calculate the scores based on an organism-dependent
+            set of marker genes for proliferation and apoptosis.
         beta_min
             Minimum birth rate.
         beta_max
@@ -167,8 +168,11 @@ class WOTKernel(Kernel, error=_error):
 
         Notes
         -----
-        If you don't have access to proliferation/apoptosis gene sets, you can use ones defined in :mod:`cellrank` for a
-        specific organism. Alternatively, you can also use WOT without an estimate of initial growth rates.
+        If you don't have access to proliferation/apoptosis gene sets, you can use the ones defined in :mod:`cellrank`
+        for a specific organism. Alternatively, you can also use WOT without an estimate of initial growth rates. In
+        that case, make sure to use several iterations in
+        :meth:`cellrank.external.kernels.WOTKernel.compute_transition_matris` by increasing the `growth_iters`
+        parameter. A value around 3 works well in most cases.
 
         The markers used here were taken from the following sources:
 
