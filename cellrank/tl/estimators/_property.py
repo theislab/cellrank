@@ -142,9 +142,9 @@ class PropertyMeta(ABCMeta, type):
         elif len(compute_md) == 0:
             raise ValueError("No metadata found.")
         else:
-            compute_md, *metadata = [
+            compute_md, *metadata = (
                 Metadata(attr=md) if isinstance(md, str) else md for md in compute_md
-            ]
+            )
 
         prop_name = PropertyMeta.update_attributes(compute_md, attributedict)
         plot_name = str(compute_md.plot_fmt).format(prop_name)
