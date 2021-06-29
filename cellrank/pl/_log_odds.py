@@ -89,22 +89,27 @@ def log_odds(
         ax.set_title(title)
         ax.set_ylabel(ylabel if show_ylabel else "")
 
-    def cont_palette(values: np.ndarray) -> np.ndarray:
+    def cont_palette(values: np.ndarray) -> Tuple[np.ndarray, ScalarMappable]:
+        cm = plt.get_cmap(cmap).copy()
+        cm.set_bad("grey")
         sm = ScalarMappable(
-            cmap=cmap, norm=Normalize(vmin=np.nanmin(values), vmax=np.nanmax(values))
+            cmap=cm, norm=Normalize(vmin=np.nanmin(values), vmax=np.nanmax(values))
         )
-        return np.array([to_hex(v) for v in (sm.to_rgba(values))])
+        return np.array([to_hex(v) for v in (sm.to_rgba(values))]), sm
 
     def get_data(
         key: str,
-    ) -> Tuple[Optional[str], Optional[np.ndarray], Optional[np.ndarray]]:
+    ) -> Tuple[
+        Optional[str], Optional[np.ndarray], Optional[np.ndarray], ScalarMappable
+    ]:
         try:
             _, palette = _get_categorical_colors(adata, key)
             df[key] = adata.obs[key].values[mask]
-            hue, thresh_mask = key, None
+            hue, thresh_mask, sm = key, None, None
         except TypeError:
-            palette, hue, thresh_mask = (
-                cont_palette(adata.obs[key].values[mask]),
+            palette, hue, thresh_mask, sm = (
+                cont_palette(adata.obs[key].values[mask])[0],
+                None,
                 None,
                 None,
             )
@@ -113,7 +118,7 @@ def log_odds(
                 # fmt: off
                 if threshold is None:
                     values = (adata.raw if use_raw else adata).obs_vector(key, layer=layer)
-                    palette = cont_palette(values)
+                    palette, sm = cont_palette(values)
                     hue, thresh_mask = None, None
                 else:
                     if use_raw:
@@ -123,12 +128,12 @@ def log_odds(
                     else:
                         values = np.asarray(adata[:, key].X[mask].sum(1)).squeeze()
                     thresh_mask = values >= threshold
-                    hue, palette = None, None
+                    hue, palette, sm = None, None, None
                 # fmt: on
             except KeyError as e:
                 raise e from None
 
-        return hue, palette, thresh_mask
+        return hue, palette, thresh_mask, sm
 
     if use_raw and adata.raw is None:
         logg.warning("No raw attribute set. Setting `use_raw=False`")
@@ -198,14 +203,14 @@ def log_odds(
         ncols=ncols,
         figsize=figsize,
         dpi=dpi,
-        tight_layout=True,
+        constrained_layout=True,
         sharey="all",
     )
     axes = np.ravel([axes])
 
     i = 0
     for i, (key, ax) in enumerate(zip(keys, axes)):
-        hue, palette, thresh_mask = get_data(key)
+        hue, palette, thresh_mask, sm = get_data(key)
         show_ylabel = i % ncols == 0
 
         ax = sns.stripplot(
@@ -238,6 +243,9 @@ def log_odds(
                 **kwargs,
             )
             key = rf"${key} \geq {threshold}$"
+        if sm is not None:
+            cax = ax.inset_axes([1.02, 0, 0.025, 1], transform=ax.transAxes)
+            fig.colorbar(sm, ax=ax, cax=cax)
         decorate(ax, title=key, show_ylabel=show_ylabel)
 
     for ax in axes[i + 1 :]:
