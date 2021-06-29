@@ -3363,10 +3363,3 @@ class TestMacrostateComposition:
         mc.plot_macrostate_composition(
             "clusters_enlarged", dpi=DPI, save=fpath, legend_loc="upper left out"
         )
-
-    @compare(kind="gpcca")
-    def test_msc_return_ax(self, mc: GPCCA, fpath: str):
-        ax = mc.plot_macrostate_composition(
-            "age(days)", dpi=DPI, save=fpath, show=False
-        )
-        assert isinstance(ax, plt.Axes)
