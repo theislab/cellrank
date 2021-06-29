@@ -35,6 +35,7 @@ def log_odds(
     cmap: str = "viridis",
     alpha: Optional[float] = 0.8,
     ncols: Optional[int] = None,
+    fontsize: Optional[Union[float, str]] = None,
     legend_loc: Optional[str] = "best",
     jitter: Union[bool, float] = True,
     seed: Optional[int] = None,
@@ -78,6 +79,8 @@ def log_odds(
         Alpha values for the dots.
     ncols
         Number of columns.
+    fontsize
+        Size of the forn for the title and y-label.
     legend_loc
         Position of the legend. If `None`, do not show the legend.
     jitter
@@ -102,8 +105,8 @@ def log_odds(
         ax: Axes, *, title: Optional[str] = None, show_ylabel: bool = True
     ) -> None:
         ax.set_xlabel(time_key)
-        ax.set_title(title)
-        ax.set_ylabel(ylabel if show_ylabel else "")
+        ax.set_title(title, fontdict={"fontsize": fontsize})
+        ax.set_ylabel(ylabel if show_ylabel else "", fontsize=fontsize)
 
     def cont_palette(values: np.ndarray) -> Tuple[np.ndarray, ScalarMappable]:
         cm = copy(plt.get_cmap(cmap))
@@ -278,13 +281,15 @@ def log_odds(
                 ax=ax,
                 **kwargs,
             )
-            key = rf"${key} \ge {thresh}$"
+            key = rf"${key} > {thresh}$"
         if sm is not None:
             cax = ax.inset_axes([1.02, 0, 0.025, 1], transform=ax.transAxes)
             fig.colorbar(sm, ax=ax, cax=cax)
         else:
             if legend_loc in (None, "none"):
-                ax.get_legend().remove()
+                legend = ax.get_legend()
+                if legend is not None:
+                    legend.remove()
             else:
                 handles, labels = ax.get_legend_handles_labels()
                 if len(handles):
