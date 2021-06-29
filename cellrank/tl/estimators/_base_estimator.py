@@ -1012,6 +1012,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         %(plotting)s
         show
             If `False`, return :class:`matplotlib.pyplot.Axes`.
+        kwargs
+            Keyword arguments for :func:`scanpy.pl.scatter`.
 
         Returns
         -------
@@ -1072,9 +1074,9 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                     sets = list(gene_sets.keys())
                     gene_sets_colors = self.adata.obsm[self._abs_prob_key][sets].colors
                     # fmt: on
-                except KeyError as e:
+                except KeyError:
                     logg.warning(
-                        f"Unable to determine gene sets colors. Reason `{e}`. Using default colors"
+                        "Unable to determine gene sets colors from lineages. Using default colors"
                     )
                     gene_sets_colors = _create_categorical_colors(len(gene_sets))
             if len(gene_sets_colors) != len(gene_sets):
@@ -1110,8 +1112,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                         xy=(x, y),
                         va="top",
                         ha="left",
-                        arrowprops=arrowprops,
                         path_effects=path_effect,
+                        arrowprops=arrowprops,
                         size=fontsize,
                         c=color,
                     )
@@ -1123,15 +1125,14 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 try:
                     import adjustText
 
+                    start = logg.info("Adjusting text position")
                     adjustText.adjust_text(
                         annots,
                         x=adata.var[key1].values,
                         y=adata.var[key2].values,
                         ax=ax,
-                        avoid_text=True,
-                        avoid_points=False,
-                        avoid_self=False,
                     )
+                    logg.info("    Finish", time=start)
                 except ImportError:
                     logg.error(
                         "Please install `adjustText` first as `pip install adjustText`"
