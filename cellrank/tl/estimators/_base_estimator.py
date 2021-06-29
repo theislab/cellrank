@@ -1039,7 +1039,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             )
         # produce the actual scatter plot
         ax = sc.pl.scatter(
-            adata.to_adata(),
+            adata.to_adata() if hasattr(adata, "to_adata") else adata,
             x=key1,
             y=key2,
             color_map=cmap,
