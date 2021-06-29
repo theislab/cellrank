@@ -3339,3 +3339,41 @@ class TestPlotSingleFlow:
             "Astrocytes", "clusters", "age(days)", show=False, dpi=DPI, save=fpath
         )
         assert isinstance(ax, plt.Axes)
+
+
+class TestPlotDriverCorrelation:
+    @compare(kind="gpcca")
+    def test_driver_corr(self, mc: GPCCA, fpath: str):
+        pass
+
+    @compare(kind="gpcca")
+    def test_driver_corr_color(self, mc: GPCCA, fpath: str):
+        pass
+
+    @compare(kind="gpcca")
+    def test_driver_gene_sets(self, mc: GPCCA, fpath: str):
+        pass
+
+    @compare(kind="gpcca")
+    def test_driver_gene_sets_colors(self, mc: GPCCA, fpath: str):
+        pass
+
+    @compare(kind="gpcca")
+    def test_driver_corr_use_raw(self, mc: GPCCA, fpath: str):
+        pass
+
+    @compare(kind="gpcca")
+    def test_driver_corr_cmap(self, mc: GPCCA, fpath: str):
+        pass
+
+    @compare(kind="gpcca")
+    def test_driver_corr_fontsize(self, mc: GPCCA, fpath: str):
+        pass
+
+    @compare(kind="gpcca")
+    def test_driver_corr_no_adjust_text(self, mc: GPCCA, fpath: str):
+        pass
+
+    @compare(kind="gpcca")
+    def test_driver_corr_return_ax(self, mc: GPCCA, fpath: str):
+        pass
