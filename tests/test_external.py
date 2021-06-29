@@ -6,6 +6,7 @@ import scanpy as sc
 import cellrank.external as cre
 from anndata import AnnData
 from cellrank.tl.kernels import ConnectivityKernel
+from cellrank.external.kernels._utils import MarkerGenes
 from cellrank.external.kernels._wot_kernel import LastTimePoint
 
 import numpy as np
@@ -185,13 +186,22 @@ class TestWOTKernel:
             )
             np.testing.assert_allclose(T, T_actual)
 
-    @pytest.mark.parametrize("organism", ["human", "mouse", "rat", "foo"])
+    @pytest.mark.parametrize("organism", ["human", "mouse"])
     def test_compute_scores_default(self, adata_large: AnnData, organism: str):
+        pk, ak = "p_score", "a_score"
+        if organism == "human":
+            adata_large.var_names = adata_large.var_names.str.upper()
+
         ok = cre.kernels.WOTKernel(adata_large, time_key="age(days)")
-        # TODO(Marius1311): finish the test (assert correct keys are now in adata)
-        # maybe not necessary to parametrize over orgas (if no overlap)
-        # maybe add custom prolif/apop keys to test (instead)
-        # ok.compute_initial_growth_rates(organism=organism)
+        assert pk not in ok.adata.obs
+        assert ak not in ok.adata.obs
+
+        ok.compute_initial_growth_rates(
+            organism=organism, proliferation_key=pk, apoptosis_key=ak, use_raw=False
+        )
+
+        assert pk in ok.adata.obs
+        assert ak in ok.adata.obs
 
     def test_normal_run(self, adata_large: AnnData):
         ok = cre.kernels.WOTKernel(adata_large, time_key="age(days)")
@@ -216,3 +226,20 @@ class TestWOTKernel:
         assert isinstance(ok2, cre.kernels.WOTKernel)
         assert ok is not ok2
         np.testing.assert_array_equal(ok.transition_matrix.A, ok2.transition_matrix.A)
+
+
+class TestGetMarkers:
+    @pytest.mark.parametrize("kind", ["proliferation", "apoptosis"])
+    @pytest.mark.parametrize("organism", ["human", "mouse", "foo"])
+    def test_get_markers(self, organism: str, kind: str):
+        if organism == "foo":
+            with pytest.raises(NotImplementedError, match=r""):
+                getattr(MarkerGenes, f"{kind}_markers")(organism)
+        else:
+            markers = getattr(MarkerGenes, f"{kind}_markers")(organism)
+            assert isinstance(markers, tuple)
+            assert np.all([isinstance(marker, str) for marker in markers])
+            if organism == "human":
+                np.testing.assert_array_equal(
+                    markers, [marker.upper() for marker in markers]
+                )
