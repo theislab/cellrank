@@ -1117,9 +1117,9 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
             if adjust_text:
                 try:
-                    from adjustText import adjust_text as adjust
+                    import adjustText
 
-                    adjust(
+                    adjustText.adjust_text(
                         annots,
                         x=adata.var[key1].values,
                         y=adata.var[key2].values,
