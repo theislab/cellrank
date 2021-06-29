@@ -245,7 +245,7 @@ class FlowPlotter:
         alpha
             Alpha value for cell proportions.
         xticks_step_size
-            Show only every n-th ticks on x-axis. If `None`, show all ticks.
+            Show only every n-th ticks on x-axis. If `None`, don't show any ticks.
         legend_loc
             Position of the legend. If `None`, do not show the legend.
 
