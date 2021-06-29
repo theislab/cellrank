@@ -516,6 +516,15 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         q = t[trans_indices, :][:, trans_indices]
         s = t[trans_indices, :][:, rec_indices]
 
+        # take individual solutions and piece them together to get absorption probabilities towards the classes
+        macro_ix_helper = np.cumsum(
+            [0] + [len(indices) for indices in lookup_dict.values()]
+        )
+        s = np.concatenate(
+            [s[:, np.arange(a, b)].sum(axis=1) for a, b in _pairwise(macro_ix_helper)],
+            axis=1,
+        )
+
         # check for irreducibility
         if check_irreducibility:
             if self.is_irreducible is None:
@@ -529,7 +538,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         logg.debug(f"Found `{n_cells}` cells and `{s.shape[1]}` absorbing states")
 
         # solve the linear system of equations
-        mat_x = _solve_lin_system(
+        _abs_classes = _solve_lin_system(
             q,
             s,
             solver=solver,
@@ -561,18 +570,6 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             abs_time_means.index = self.adata.obs_names
         else:
             abs_time_means = None
-
-        # take individual solutions and piece them together to get absorption probabilities towards the classes
-        macro_ix_helper = np.cumsum(
-            [0] + [len(indices) for indices in lookup_dict.values()]
-        )
-        _abs_classes = np.concatenate(
-            [
-                mat_x[:, np.arange(a, b)].sum(1)[:, None]
-                for a, b in _pairwise(macro_ix_helper)
-            ],
-            axis=1,
-        )
 
         # for recurrent states, set their self-absorption probability to one
         abs_classes = np.zeros((len(self), n_macrostates))
