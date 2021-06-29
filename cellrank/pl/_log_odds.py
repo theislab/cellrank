@@ -1,3 +1,4 @@
+from copy import copy
 from typing import Any, Tuple, Union, Optional, Sequence
 from pathlib import Path
 
@@ -99,7 +100,7 @@ def log_odds(
         ax.set_ylabel(ylabel if show_ylabel else "")
 
     def cont_palette(values: np.ndarray) -> Tuple[np.ndarray, ScalarMappable]:
-        cm = plt.get_cmap(cmap).copy()
+        cm = copy(plt.get_cmap(cmap))
         cm.set_bad("grey")
         sm = ScalarMappable(
             cmap=cm, norm=Normalize(vmin=np.nanmin(values), vmax=np.nanmax(values))
