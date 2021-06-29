@@ -1,5 +1,5 @@
 from copy import copy
-from typing import Any, Tuple, Union, Optional, Sequence
+from typing import Any, Tuple, Union, Iterable, Optional, Sequence
 from pathlib import Path
 
 from anndata import AnnData
@@ -27,7 +27,7 @@ def log_odds(
     time_key: str = "exp_time",
     backward: bool = False,
     keys: Optional[Union[str, Sequence[str]]] = None,
-    threshold: Optional[float] = None,
+    threshold: Optional[Union[float, Sequence]] = None,
     threshold_color: str = "red",
     layer: Optional[str] = None,
     use_raw: bool = False,
@@ -63,8 +63,9 @@ def log_odds(
         Key in :attr:`anndata.AnnData.obs` or :attr:`anndata.AnnData.var_names`.
     threshold
         Visualize whether total expression per cell is greater than ``threshold``.
+        If a :class:`typing.Sequence`, it should be the same length as ``keys``.
     threshold_color
-        Color to use when plotting thresholded expression values. Only used when ``threshold!=None``.
+        Color to use when plotting thresholded expression values.
     layer
         Which layer to use to get expression values. If `None` or `'X'`, use :attr:`anndata.AnnData.X`.
     use_raw
@@ -114,6 +115,7 @@ def log_odds(
 
     def get_data(
         key: str,
+        thresh: Optional[float] = None,
     ) -> Tuple[
         Optional[str], Optional[np.ndarray], Optional[np.ndarray], ScalarMappable
     ]:
@@ -140,7 +142,7 @@ def log_odds(
         except KeyError:
             try:
                 # fmt: off
-                if threshold is None:
+                if thresh is None:
                     values = adata.raw.obs_vector(key) if use_raw else adata.obs_vector(key, layer=layer)
                     palette, sm = cont_palette(values)
                     hue, thresh_mask = None, None
@@ -151,7 +153,7 @@ def log_odds(
                         values = np.asarray(adata[:, key].layers[layer][mask].sum(1)).squeeze()
                     else:
                         values = np.asarray(adata[:, key].X[mask].sum(1)).squeeze()
-                    thresh_mask = values > threshold
+                    thresh_mask = values > thresh
                     hue, palette, sm = None, None, None
                 # fmt: on
             except KeyError as e:
@@ -219,6 +221,13 @@ def log_odds(
         raise ValueError("No keys have been selected.")
     keys = _unique_order_preserving(keys)
 
+    if not isinstance(threshold, Iterable):
+        threshold = (threshold,) * len(keys)
+    if len(threshold) != len(keys):
+        raise ValueError(
+            f"Expected `threshold` to be of length `{len(keys)}`, found `{len(threshold)}`."
+        )
+
     ncols = max(len(keys) if ncols is None else ncols, 1)
     nrows = int(np.ceil(len(keys) / ncols))
     if figsize is None:
@@ -236,8 +245,8 @@ def log_odds(
     axes = np.ravel([axes])
 
     i = 0
-    for i, (key, ax) in enumerate(zip(keys, axes)):
-        hue, palette, thresh_mask, sm = get_data(key)
+    for i, (key, ax, thresh) in enumerate(zip(keys, axes, threshold)):
+        hue, palette, thresh_mask, sm = get_data(key, thresh)
         show_ylabel = i % ncols == 0
 
         ax = sns.stripplot(
@@ -269,7 +278,7 @@ def log_odds(
                 ax=ax,
                 **kwargs,
             )
-            key = rf"${key} \ge {threshold}$"
+            key = rf"${key} \ge {thresh}$"
         if sm is not None:
             cax = ax.inset_axes([1.02, 0, 0.025, 1], transform=ax.transAxes)
             fig.colorbar(sm, ax=ax, cax=cax)
