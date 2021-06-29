@@ -4,7 +4,7 @@ from pathlib import Path
 from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.ul._docs import d
-from cellrank.pl._utils import _get_categorical_colors
+from cellrank.pl._utils import _position_legend, _get_categorical_colors
 from cellrank.tl._utils import save_fig, _unique_order_preserving
 from cellrank.tl._constants import AbsProbKey
 
@@ -34,6 +34,7 @@ def log_odds(
     cmap: str = "viridis",
     alpha: Optional[float] = 0.8,
     ncols: Optional[int] = None,
+    legend_loc: Optional[str] = "best",
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
     save: Optional[Union[str, Path]] = None,
@@ -72,6 +73,8 @@ def log_odds(
         Alpha values for the dots.
     ncols
         Number of columns.
+    legend_loc
+        Position of the legend. If `None`, do not show the legend.
     %(plotting)s
     kwargs
         Keyword arguments for :func:`seaborn.stripplot`.
@@ -228,7 +231,7 @@ def log_odds(
             **kwargs,
         )
         if thresh_mask is not None:
-            ax = sns.stripplot(
+            sns.stripplot(
                 time_key,
                 "log_odds",
                 data=df if thresh_mask is None else df[thresh_mask],
@@ -246,6 +249,15 @@ def log_odds(
         if sm is not None:
             cax = ax.inset_axes([1.02, 0, 0.025, 1], transform=ax.transAxes)
             fig.colorbar(sm, ax=ax, cax=cax)
+        else:
+            if legend_loc in (None, "none"):
+                ax.get_legend().remove()
+            else:
+                handles, labels = ax.get_legend_handles_labels()
+                _position_legend(
+                    ax, legend_loc=legend_loc, handles=handles, labels=labels
+                )
+
         decorate(ax, title=key, show_ylabel=show_ylabel)
 
     for ax in axes[i + 1 :]:
