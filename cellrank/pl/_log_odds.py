@@ -61,7 +61,7 @@ def log_odds(
     keys
         Key in :attr:`anndata.AnnData.obs` or :attr:`anndata.AnnData.var_names`.
     threshold
-        Visualize whether total expression per cell is greater or equal than ``threshold``.
+        Visualize whether total expression per cell is greater than ``threshold``.
     threshold_color
         Color to use when plotting thresholded expression values. Only used when ``threshold!=None``.
     layer
@@ -146,7 +146,7 @@ def log_odds(
                         values = np.asarray(adata[:, key].layers[layer][mask].sum(1)).squeeze()
                     else:
                         values = np.asarray(adata[:, key].X[mask].sum(1)).squeeze()
-                    thresh_mask = values >= threshold
+                    thresh_mask = values > threshold
                     hue, palette, sm = None, None, None
                 # fmt: on
             except KeyError as e:
