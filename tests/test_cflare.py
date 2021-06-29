@@ -635,7 +635,7 @@ class TestCFLARE:
             return_value=abs_prob,
         )
 
-        with pytest.raises(ValueError, match=r"`1` value\(s\) are negative."):
+        with pytest.raises(ValueError, match=r"`2` value\(s\) are negative."):
             mc.compute_absorption_probabilities()
 
 
