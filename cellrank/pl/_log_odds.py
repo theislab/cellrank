@@ -36,6 +36,7 @@ def log_odds(
     alpha: Optional[float] = 0.8,
     ncols: Optional[int] = None,
     fontsize: Optional[Union[float, str]] = None,
+    xticks_step_size: Optional[int] = None,
     legend_loc: Optional[str] = "best",
     jitter: Union[bool, float] = True,
     seed: Optional[int] = None,
@@ -80,7 +81,9 @@ def log_odds(
     ncols
         Number of columns.
     fontsize
-        Size of the forn for the title and y-label.
+        Size of the font for the title and y-label.
+    xticks_step_size
+        Show only every n-th ticks on x-axis. If `None`, show all ticks.
     legend_loc
         Position of the legend. If `None`, do not show the legend.
     jitter
@@ -107,6 +110,10 @@ def log_odds(
         ax.set_xlabel(time_key)
         ax.set_title(title, fontdict={"fontsize": fontsize})
         ax.set_ylabel(ylabel if show_ylabel else "", fontsize=fontsize)
+
+        step = max(1, 1 if xticks_step_size is None else xticks_step_size)
+        ax.set_xticks(np.arange(0, n_cats, step))
+        ax.set_xticklabels(df[time_key].cat.categories[::step])
 
     def cont_palette(values: np.ndarray) -> Tuple[np.ndarray, ScalarMappable]:
         cm = copy(plt.get_cmap(cmap))
@@ -194,11 +201,11 @@ def log_odds(
     )
     mask = (fate1 != 0) & (fate2 != 0)
     df = df[mask]
+    n_cats = len(df[time_key].cat.categories)
     # fmt: on
 
     if keys is None:
         if figsize is None:
-            n_cats = len(time.cat.categories)
             figsize = np.array([n_cats, n_cats * 4 / 6]) / 2
 
         fig, ax = plt.subplots(figsize=figsize, dpi=dpi, tight_layout=True)
@@ -234,7 +241,6 @@ def log_odds(
     ncols = max(len(keys) if ncols is None else ncols, 1)
     nrows = int(np.ceil(len(keys) / ncols))
     if figsize is None:
-        n_cats = len(time.cat.categories)
         figsize = np.array([n_cats * ncols, n_cats * nrows * 4 / 6]) / 2
 
     fig, axes = plt.subplots(
