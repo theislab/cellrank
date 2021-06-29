@@ -26,7 +26,7 @@ if __name__ == "__main__":
         long_description=Path("README.rst").read_text("utf-8"),
         url="https://github.com/theislab/cellrank",
         project_urls={
-            "Documentation": "https://cellrank.readthedocs.io/en/latest",
+            "Documentation": "https://cellrank.readthedocs.io/en/stable",
             "Source Code": "https://github.com/theislab/cellrank",
         },
         download_url="https://github.com/theislab/cellrank",
@@ -90,7 +90,6 @@ if __name__ == "__main__":
             "Operating System :: POSIX :: Linux",
             "Typing :: Typed",
             "Programming Language :: Python :: 3",
-            "Programming Language :: Python :: 3.6",
             "Programming Language :: Python :: 3.7",
             "Programming Language :: Python :: 3.8",
             "Programming Language :: Python :: 3.9",

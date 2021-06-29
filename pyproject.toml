@@ -2,13 +2,9 @@
 requires = ['setuptools', 'setuptools_scm', 'wheel']
 build-backend = 'setuptools.build_meta'
 
-[dev-dependencies]
-black = { version = "^19.10b0", python = "^3.6" }
-pytest = { version = "^5.3", python = "^3.6" }
-
 [tool.black]
 line-length = 88
-target-version = ['py36', 'py37', 'py38']
+target-version = ['py37', 'py38', 'py39']
 include = '\.pyi?$'
 exclude = '''
 
