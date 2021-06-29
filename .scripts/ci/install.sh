@@ -3,7 +3,7 @@
 set -ev
 
 python -m pip install --upgrade pip
-pip install codecov
+pip install codecov adjustText
 
 if [[ "$OS" == "macos-latest" ]]; then
   pip install -e".[test,external]"

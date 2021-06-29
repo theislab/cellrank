@@ -3341,6 +3341,90 @@ class TestPlotSingleFlow:
         assert isinstance(ax, plt.Axes)
 
 
+class TestPlotDriverCorrelation:
+    @compare(kind="gpcca")
+    def test_driver_corr(self, mc: GPCCA, fpath: str):
+        mc.plot_lineage_drivers_correlation(
+            "1", "2", dpi=DPI, save=fpath, title="bar", size=100
+        )
+
+    @compare(kind="gpcca")
+    def test_driver_corr_color(self, mc: GPCCA, fpath: str):
+        mc.plot_lineage_drivers_correlation(
+            "0", "1", dpi=DPI, save=fpath, color="to 2 corr"
+        )
+
+    @compare(kind="gpcca")
+    def test_driver_corr_gene_sets(self, mc: GPCCA, fpath: str):
+        mc.plot_lineage_drivers_correlation(
+            "0", "1", dpi=DPI, save=fpath, gene_sets={"0": mc.adata.var_names[:3]}
+        )
+
+    @compare(kind="gpcca")
+    def test_driver_corr_gene_sets_colors(self, mc: GPCCA, fpath: str):
+        mc.plot_lineage_drivers_correlation(
+            "0",
+            "1",
+            dpi=DPI,
+            save=fpath,
+            gene_sets={"0": mc.adata.var_names[:3], "1": [mc.adata.var_names[4]]},
+            gene_sets_colors=["red", "black"],
+        )
+
+    @compare(kind="gpcca")
+    def test_driver_corr_legend_loc(self, mc: GPCCA, fpath: str):
+        mc.plot_lineage_drivers_correlation(
+            "0",
+            "1",
+            dpi=DPI,
+            save=fpath,
+            gene_sets={"0": mc.adata.var_names[:3], "1": [mc.adata.var_names[4]]},
+            legend_loc="lower center out",
+        )
+
+    @compare(kind="gpcca")
+    def test_driver_corr_use_raw(self, mc: GPCCA, fpath: str):
+        mc.compute_lineage_drivers(cluster_key="clusters", use_raw=True)
+        mc.plot_lineage_drivers_correlation(
+            "0", "1", dpi=DPI, save=fpath, use_raw=True, color="to 1 qval"
+        )
+
+    @compare(kind="gpcca")
+    def test_driver_corr_cmap(self, mc: GPCCA, fpath: str):
+        mc.plot_lineage_drivers_correlation(
+            "0", "1", dpi=DPI, save=fpath, color="to 1 qval", cmap="inferno"
+        )
+
+    @compare(kind="gpcca")
+    def test_driver_corr_fontsize(self, mc: GPCCA, fpath: str):
+        mc.plot_lineage_drivers_correlation(
+            "0",
+            "1",
+            dpi=DPI,
+            save=fpath,
+            gene_sets={"foo": mc.adata.var_names[4:6]},
+            fontsize=20,
+        )
+
+    @compare(kind="gpcca")
+    def test_driver_corr_adjust_text(self, mc: GPCCA, fpath: str):
+        mc.plot_lineage_drivers_correlation(
+            "0",
+            "1",
+            dpi=DPI,
+            save=fpath,
+            gene_sets={"bar": mc.adata.var_names[:3]},
+            adjust_text=True,
+        )
+
+    @compare(kind="gpcca")
+    def test_driver_corr_return_ax(self, mc: GPCCA, fpath: str):
+        ax = mc.plot_lineage_drivers_correlation(
+            "2", "0", dpi=DPI, save=fpath, show=False
+        )
+        assert isinstance(ax, plt.Axes)
+
+
 class TestLogOdds:
     @compare()
     def test_log_odds(self, adata: AnnData, fpath: str):

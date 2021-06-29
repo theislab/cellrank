@@ -19,6 +19,7 @@ from datetime import datetime
 
 from typing_extensions import Literal
 
+import scanpy as sc
 import scvelo as scv
 from cellrank import logging as logg
 from cellrank.ul._docs import d, inject_docs
@@ -65,7 +66,10 @@ from scipy.sparse import spmatrix
 from pandas.api.types import infer_dtype, is_categorical_dtype
 
 import matplotlib.pyplot as plt
+from matplotlib import rc_context, patheffects
+from matplotlib.axes import Axes
 from matplotlib.colors import is_color_like
+from matplotlib.patches import ArrowStyle
 
 AnnData = TypeVar("AnnData")
 _COMP_TERM_STATES_MSG = (
@@ -901,7 +905,6 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             return kwargs
 
         lin_drivers = self._get(P.LIN_DRIVERS)
-
         if lin_drivers is None:
             raise RuntimeError(
                 f"Compute `.{P.LIN_DRIVERS}` first as `.compute_lineage_drivers()`."
@@ -956,6 +959,192 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
 
         if save is not None:
             save_fig(fig, save)
+
+    @d.dedent
+    def plot_lineage_drivers_correlation(
+        self,
+        lineage_x: str,
+        lineage_y: str,
+        color: Optional[str] = None,
+        gene_sets: Optional[Dict[str, Iterable]] = None,
+        gene_sets_colors: Optional[Iterable] = None,
+        use_raw: bool = False,
+        cmap: str = "RdYlBu_r",
+        fontsize: int = 12,
+        adjust_text: bool = False,
+        legend_loc: Optional[str] = "best",
+        figsize: Optional[Tuple[float, float]] = (4, 4),
+        dpi: Optional[int] = None,
+        save: Optional[Union[str, Path]] = None,
+        show: bool = True,
+        **kwargs: Any,
+    ) -> Optional[Axes]:
+        """
+        Show scatter plot of gene-correlations between two lineages.
+
+        Optionally, you can pass a :class:`dict` of gene names that will be annotated in the plot.
+
+        Parameters
+        ----------
+        lineage_x
+            Name of the lineage on the x-axis.
+        lineage_y
+            Name of the lineage on the y-axis.
+        color
+            Key in :attr:`adata` ``.var``.
+        gene_sets
+            Gene sets annotations of the form `{'gene_set_name': ['gene_1', 'gene_2'], ...}`.
+        gene_sets_colors
+            List of colors where each entry corresponds to a gene set from ``genes_sets``.
+            If `None` and keys in ``gene_sets`` correspond to lineage names, use the lineage colors.
+            Otherwise, use default colors.
+        use_raw
+            Whether to access :attr:`adata` ``.raw.var`` or :attr:`adata` ``.var``.
+        cmap
+            Colormap to use.
+        fontsize
+            Size of the text when plotting ``gene_sets``.
+        adjust_text
+            Whether to automatically adjust text in order to reduce overlap.
+        legend_loc
+            Position of the legend. If `None`, don't show the legend.
+            Only used when ``gene_sets!=None``.
+        %(plotting)s
+        show
+            If `False`, return :class:`matplotlib.pyplot.Axes`.
+        kwargs
+            Keyword arguments for :func:`scanpy.pl.scatter`.
+
+        Returns
+        -------
+        :class:`matplotlib.pyplot.Axes`
+            The axis object if ``show=False``.
+        %(just_plots)s
+
+        Notes
+        -----
+        This plot is based on the following
+        `notebook <https://github.com/theislab/gastrulation_analysis/blob/main/6_cellrank.ipynb>`_ by Maren Büttner.
+        """
+        from cellrank.pl._utils import _position_legend
+
+        if use_raw and self.adata.raw is None:
+            logg.warning("No raw attribute set. Setting `use_raw=False`")
+            use_raw = False
+        adata = self.adata.raw if use_raw else self.adata
+
+        # silent assumption: `.compute_lineage_drivers()` always writes to AnnData
+        key1, key2 = f"to {lineage_x} corr", f"to {lineage_y} corr"
+        if key1 not in adata.var or key2 not in adata.var:
+            haystack = "adata.raw.var" if use_raw else "adata.var"
+            raise RuntimeError(
+                f"Unable to find correlations in `{haystack}[{key1!r}]` or `{haystack}[{key2!r}]`."
+                f"Compute `.{P.LIN_DRIVERS}` first as "
+                f"`.compute_lineage_drivers([{lineage_x!r}, {lineage_y!r}], use_raw={use_raw})`."
+            )
+        # produce the actual scatter plot
+        ctx = {"figure.figsize": figsize, "figure.dpi": dpi}
+        for key in list(ctx.keys()):
+            if ctx[key] is None:
+                del ctx[key]
+        with rc_context(ctx):
+            ax = sc.pl.scatter(
+                adata.to_adata() if hasattr(adata, "to_adata") else adata,
+                x=key1,
+                y=key2,
+                color_map=cmap,
+                use_raw=False,
+                show=False,
+                color=color,
+                **kwargs,
+            )
+        fig = ax.figure
+
+        # add some lines to highlight the origin
+        xmin, xmax = np.nanmin(adata.var[key1]), np.nanmax(adata.var[key1])
+        ymin, ymax = np.nanmin(adata.var[key2]), np.nanmax(adata.var[key2])
+        ax.hlines(0, xmin=xmin, xmax=xmax, color="grey", alpha=0.5, zorder=-1)
+        ax.vlines(0, ymin=ymin, ymax=ymax, color="grey", alpha=0.5, zorder=-1)
+
+        # annotate the passed set of genes
+        if gene_sets is not None:
+            if gene_sets_colors is None:
+                try:
+                    # fmt: off
+                    sets = list(gene_sets.keys())
+                    gene_sets_colors = self.adata.obsm[self._abs_prob_key][sets].colors
+                    # fmt: on
+                except KeyError:
+                    logg.warning(
+                        "Unable to determine gene sets colors from lineages. Using default colors"
+                    )
+                    gene_sets_colors = _create_categorical_colors(len(gene_sets))
+            if len(gene_sets_colors) != len(gene_sets):
+                raise ValueError(
+                    f"Expected `gene_sets_colors` to be of length `{len(gene_sets)}`, "
+                    f"found `{len(gene_sets_colors)}`."
+                )
+
+            path_effect = [
+                patheffects.Stroke(linewidth=2, foreground="w", alpha=0.8),
+                patheffects.Normal(),
+            ]
+            annots = []
+            for (key, values), color in zip(gene_sets.items(), gene_sets_colors):
+                arrowprops = (
+                    {
+                        "arrowstyle": ArrowStyle.CurveFilledB(
+                            head_width=0.1, head_length=0.2
+                        ),
+                        "fc": color,
+                        "ec": color,
+                    }
+                    if adjust_text
+                    else None
+                )
+                values = set(values) & set(adata.var_names)
+                for value in values:
+                    x = adata.var.loc[value, key1]
+                    y = adata.var.loc[value, key2]
+
+                    annot = ax.annotate(
+                        value,
+                        xy=(x, y),
+                        va="top",
+                        ha="left",
+                        path_effects=path_effect,
+                        arrowprops=arrowprops,
+                        size=fontsize,
+                        c=color,
+                    )
+                    annots.append(annot)
+                if values:
+                    ax.scatter([], [], color=color, label=key)
+
+            if adjust_text:
+                try:
+                    import adjustText
+
+                    start = logg.info("Adjusting text position")
+                    adjustText.adjust_text(
+                        annots,
+                        x=adata.var[key1].values,
+                        y=adata.var[key2].values,
+                        ax=ax,
+                    )
+                    logg.info("    Finish", time=start)
+                except ImportError:
+                    logg.error(
+                        "Please install `adjustText` first as `pip install adjustText`"
+                    )
+            if len(annots) and legend_loc not in (None, "none"):
+                _position_legend(ax, legend_loc=legend_loc)
+
+        if save is not None:
+            save_fig(fig, path=save)
+
+        if not show:
+            return ax
 
     def _detect_cc_stages(self, rc_labels: Series, p_thresh: float = 1e-15) -> None:
         """
