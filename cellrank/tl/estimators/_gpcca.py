@@ -754,7 +754,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         self,
         key: str,
         width: float = 0.8,
-        show_title: bool = True,
+        title: Optional[str] = None,
         labelrot: float = 45,
         legend_loc: Optional[str] = "upper right out",
         figsize: Optional[Tuple[float, float]] = None,
@@ -772,7 +772,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
             Key from :attr:`adata` ``.obs`` containing categorical annotations.
         width
             Bar width in `[0, 1]`.
-        show_title
+        title
             Whether to show the title.
         labelrot
             Rotation of labels on x-axis.
@@ -848,8 +848,9 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
 
         ax.set_xlabel("macrostate")
         ax.set_ylabel("frequency")
-        if show_title:
-            ax.set_title(f"distribution over {key}")
+        if title is None:
+            title = f"distribution over {key}"
+        ax.set_title(title)
         if legend_loc not in (None, "none"):
             _position_legend(ax, legend_loc=legend_loc)
 
