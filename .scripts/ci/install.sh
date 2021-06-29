@@ -15,10 +15,14 @@ elif [[ "$OS" == "ubuntu-latest" ]]; then
   else
       pip install -e".[test,external]"
   fi
-  # ensure correct umap-learn version is installed, see:
-  # https://github.com/bioconda/bioconda-recipes/pull/28591
-  pip install "rpy2>=3.3.0" "umap-learn>=0.5.1" adjustText
+  pip install "rpy2>=3.3.0"
   Rscript --vanilla -e "library('mgcv')"
 else
   exit 42
 fi
+
+# TODO: remove once scVelo unpins umap-
+# TODO: remove once scVelo unpins umap-learn
+# ensure correct umap-learn version is installed, see:
+# https://github.com/bioconda/bioconda-recipes/pull/28591
+pip install "umap-learn>=0.5.1" adjustText

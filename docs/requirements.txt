@@ -15,3 +15,5 @@ sphinx_copybutton
 sphinx_last_updated_by_git
 sphinx_rtd_theme
 sphinxcontrib-bibtex>=2.3.0
+# TODO: remove once scVelo unpins umap-learn
+umap-learn>=0.5.1

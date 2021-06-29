@@ -50,7 +50,6 @@ jobs:
     test:
         needs: linting
         runs-on: ${{ matrix.os }}
-        continue-on-error: ${{ matrix.allow_failure }}
         strategy:
             fail-fast: false
             max-parallel: 4
@@ -101,6 +100,7 @@ jobs:
 
         -   name: Testing
             timeout-minutes: 60
+            continue-on-error: ${{ matrix.allow_failure }}
             run: |
                 python -m pytest --cov --cov-report=term-missing --cov-config=./.coveragerc --cov-report=xml -vv
 
