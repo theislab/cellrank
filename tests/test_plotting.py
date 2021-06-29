@@ -3339,3 +3339,27 @@ class TestPlotSingleFlow:
             "Astrocytes", "clusters", "age(days)", show=False, dpi=DPI, save=fpath
         )
         assert isinstance(ax, plt.Axes)
+
+
+class TestMacrostateComposition:
+    @compare(kind="gpcca")
+    def test_msc_default(self, mc: GPCCA, fpath: str):
+        mc.plot_macrostate_composition("clusters", dpi=DPI, save=fpath)
+
+    @compare(kind="gpcca")
+    def test_msc_width(self, mc: GPCCA, fpath: str):
+        mc.plot_macrostate_composition("clusters", dpi=DPI, save=fpath, width=0.2)
+
+    @compare(kind="gpcca")
+    def test_msc_title(self, mc: GPCCA, fpath: str):
+        mc.plot_macrostate_composition("clusters", dpi=DPI, save=fpath, title="foobar")
+
+    @compare(kind="gpcca")
+    def test_msc_labelrot(self, mc: GPCCA, fpath: str):
+        mc.plot_macrostate_composition("clusters", dpi=DPI, save=fpath, labelrot=0)
+
+    @compare(kind="gpcca")
+    def test_msc_legend_loc(self, mc: GPCCA, fpath: str):
+        mc.plot_macrostate_composition(
+            "clusters_enlarged", dpi=DPI, save=fpath, legend_loc="upper left out"
+        )
