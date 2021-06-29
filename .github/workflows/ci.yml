@@ -52,15 +52,21 @@ jobs:
         runs-on: ${{ matrix.os }}
         strategy:
             fail-fast: false
-            max-parallel: 3
+            max-parallel: 4
             matrix:
-                python: [3.7]
-                os: [ubuntu-latest, macos-latest]
+                python: [3.7, 3.9]
+                os: [ubuntu-latest]
                 use_slepc: [false]
+                allow_failure: [false]
                 include:
                 -   os: ubuntu-latest
                     python: 3.8
                     use_slepc: true
+                    allow_failure: false
+                -   os: macos-latest
+                    python: 3.8
+                    use_slepc: false
+                    allow_failure: true
         env:
             OS: ${{ matrix.os }}
             PYTHON: ${{ matrix.python }}
@@ -94,6 +100,7 @@ jobs:
 
         -   name: Testing
             timeout-minutes: 60
+            continue-on-error: ${{ matrix.allow_failure }}
             run: |
                 python -m pytest --cov --cov-report=term-missing --cov-config=./.coveragerc --cov-report=xml -vv
 

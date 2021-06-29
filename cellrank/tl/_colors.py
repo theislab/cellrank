@@ -140,7 +140,7 @@ def _get_black_or_white(value: float, cmap) -> str:
     if not (0.0 <= value <= 1.0):
         raise ValueError(f"Value must be in range `[0, 1]`, found `{value}`.")
 
-    r, g, b, *_ = [int(c * 255) for c in cmap(value)]
+    r, g, b, *_ = (int(c * 255) for c in cmap(value))
     return _contrasting_color(r, g, b)
 
 

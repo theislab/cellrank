@@ -680,12 +680,12 @@ def _trends_helper(
 
     if show_prob and same_plot:
         minns, maxxs = zip(
-            *[
+            *(
                 models[gene][n]._return_min_max(
                     show_conf_int=kwargs.get("conf_int", False),
                 )
                 for n in lineage_names
-            ]
+            )
         )
         minn, maxx = min(minns), max(maxxs)
         kwargs["loc"] = legend_loc
