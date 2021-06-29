@@ -66,7 +66,7 @@ from scipy.sparse import spmatrix
 from pandas.api.types import infer_dtype, is_categorical_dtype
 
 import matplotlib.pyplot as plt
-from matplotlib import patheffects
+from matplotlib import rc_context, patheffects
 from matplotlib.axes import Axes
 from matplotlib.colors import is_color_like
 from matplotlib.patches import ArrowStyle
@@ -971,10 +971,10 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         use_raw: bool = False,
         cmap: str = "RdYlBu_r",
         fontsize: int = 12,
-        adjust_text: bool = True,
-        legend_loc: Optional[str] = "upper right",
+        adjust_text: bool = False,
+        legend_loc: Optional[str] = "best",
         figsize: Optional[Tuple[float, float]] = (4, 4),
-        dpi: int = 180,
+        dpi: Optional[int] = None,
         save: Optional[Union[str, Path]] = None,
         show: bool = True,
         **kwargs: Any,
@@ -1007,7 +1007,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         adjust_text
             Whether to automatically adjust text in order to reduce overlap.
         legend_loc
-            Position of the legend. If `None`, don't show legend. Only used when ``gene_sets!=None``.
+            Position of the legend. If `None`, don't show the legend.
+            Only used when ``gene_sets!=None``.
         %(plotting)s
         show
             If `False`, return :class:`matplotlib.pyplot.Axes`.
@@ -1023,33 +1024,39 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         This plot is based on the following
         `notebook <https://github.com/theislab/gastrulation_analysis/blob/main/6_cellrank.ipynb>`_ by Maren Büttner.
         """
+        from cellrank.pl._utils import _position_legend
+
         if use_raw and self.adata.raw is None:
-            logg.warning("No raw attribute set. Using `.X` instead")
+            logg.warning("No raw attribute set. Setting `use_raw=False`")
             use_raw = False
         adata = self.adata.raw if use_raw else self.adata
 
         # silent assumption: `.compute_lineage_drivers()` always writes to AnnData
         key1, key2 = f"to {lineage_x} corr", f"to {lineage_y} corr"
         if key1 not in adata.var or key2 not in adata.var:
+            haystack = "adata.raw.var" if use_raw else "adata.var"
             raise RuntimeError(
-                f"Compute `.{P.LIN_DRIVERS}` first as `.compute_lineage_drivers(..., use_raw={use_raw})`."
+                f"Unable to find correlations in `{haystack}[{key1!r}]` or `{haystack}[{key2!r}]`."
+                f"Compute `.{P.LIN_DRIVERS}` first as "
+                f"`.compute_lineage_drivers([{lineage_x!r}, {lineage_y!r}], use_raw={use_raw})`."
             )
         # produce the actual scatter plot
-        ax = sc.pl.scatter(
-            adata.to_adata() if hasattr(adata, "to_adata") else adata,
-            x=key1,
-            y=key2,
-            color_map=cmap,
-            use_raw=False,
-            show=False,
-            color=color,
-            **kwargs,
-        )
+        ctx = {"figure.figsize": figsize, "figure.dpi": dpi}
+        for key in list(ctx.keys()):
+            if ctx[key] is None:
+                del ctx[key]
+        with rc_context(ctx):
+            ax = sc.pl.scatter(
+                adata.to_adata() if hasattr(adata, "to_adata") else adata,
+                x=key1,
+                y=key2,
+                color_map=cmap,
+                use_raw=False,
+                show=False,
+                color=color,
+                **kwargs,
+            )
         fig = ax.figure
-        if dpi is not None:
-            fig.dpi = dpi
-        if figsize is not None:
-            fig.set_size_inches(*figsize, forward=True)
 
         # add some lines to highlight the origin
         xmin, xmax = np.nanmin(adata.var[key1]), np.nanmax(adata.var[key1])
@@ -1126,11 +1133,11 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                         avoid_self=False,
                     )
                 except ImportError:
-                    logg.warning(
+                    logg.error(
                         "Please install `adjustText` first as `pip install adjustText`"
                     )
-            if legend_loc not in (None, "none"):
-                ax.legend(loc=legend_loc)
+            if len(annots) and legend_loc not in (None, "none"):
+                _position_legend(ax, legend_loc=legend_loc)
 
         if save is not None:
             save_fig(fig, path=save)

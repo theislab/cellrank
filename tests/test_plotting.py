@@ -3372,6 +3372,17 @@ class TestPlotDriverCorrelation:
         )
 
     @compare(kind="gpcca")
+    def test_driver_corr_legend_loc(self, mc: GPCCA, fpath: str):
+        mc.plot_lineage_drivers_correlation(
+            "0",
+            "1",
+            dpi=DPI,
+            save=fpath,
+            gene_sets={"0": mc.adata.var_names[:3], "1": [mc.adata.var_names[4]]},
+            legend_loc="lower center out",
+        )
+
+    @compare(kind="gpcca")
     def test_driver_corr_use_raw(self, mc: GPCCA, fpath: str):
         mc.compute_lineage_drivers(cluster_key="clusters", use_raw=True)
         mc.plot_lineage_drivers_correlation(
@@ -3396,14 +3407,14 @@ class TestPlotDriverCorrelation:
         )
 
     @compare(kind="gpcca")
-    def test_driver_corr_no_adjust_text(self, mc: GPCCA, fpath: str):
+    def test_driver_corr_adjust_text(self, mc: GPCCA, fpath: str):
         mc.plot_lineage_drivers_correlation(
             "0",
             "1",
             dpi=DPI,
             save=fpath,
             gene_sets={"bar": mc.adata.var_names[:3]},
-            adjust_text=False,
+            adjust_text=True,
         )
 
     @compare(kind="gpcca")
