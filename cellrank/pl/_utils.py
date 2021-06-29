@@ -1223,7 +1223,7 @@ def _get_categorical_colors(
     adata: AnnData, cluster_key: str
 ) -> Tuple[np.ndarray, Mapping[str, str]]:
     if cluster_key not in adata.obs:
-        raise KeyError(f"Unable to find clusters in `adata.obs[{cluster_key!r}].`")
+        raise KeyError(f"Unable to find data in `adata.obs[{cluster_key!r}].`")
     if not is_categorical_dtype(adata.obs[cluster_key]):
         raise TypeError(
             f"Expected `adata.obs[{cluster_key!r}]` to be categorical, "
@@ -1238,7 +1238,7 @@ def _get_categorical_colors(
             len(adata.obs[cluster_key].cat.categories)
         )
     mapper = dict(zip(adata.obs[cluster_key].cat.categories, colors))
-    mapper[np.nan] = "gray"
+    mapper[np.nan] = "grey"
 
     return colors, mapper
 

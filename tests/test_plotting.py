@@ -3341,6 +3341,336 @@ class TestPlotSingleFlow:
         assert isinstance(ax, plt.Axes)
 
 
+class TestLogOdds:
+    @compare()
+    def test_log_odds(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            figsize=(4, 3),
+            size=10,
+            seed=42,
+        )
+
+    @compare(kind="bwd")
+    def test_log_odds_bwd(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            backward=True,
+            figsize=(4, 3),
+            size=10,
+            seed=42,
+        )
+
+    @compare()
+    def test_log_odds_rest(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "2",
+            None,
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            figsize=(4, 3),
+            size=10,
+            seed=42,
+        )
+
+    @compare()
+    def test_log_odds_continuous_keys(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            keys=adata.var_names[:3],
+            figsize=(4, 3),
+            size=4,
+        )
+
+    @compare()
+    def test_log_odds_categorical_keys(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            keys=["clusters", "clusters_enlarged"],
+            figsize=(4, 3),
+            size=10,
+            seed=42,
+        )
+
+    @compare()
+    def test_log_odds_threshold(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            keys=adata.var_names[:3],
+            threshold=0.5,
+            figsize=(4, 3),
+            size=10,
+            seed=42,
+        )
+
+    @compare()
+    def test_log_odds_multiple_threshold(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            keys=adata.var_names[:3],
+            threshold=[0.7, 0.2, 0.3],
+            figsize=(4, 3),
+            size=10,
+            seed=42,
+        )
+
+    @compare()
+    def test_log_odds_threshold_color(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            keys=adata.var_names[:3],
+            threshold=0.5,
+            threshold_color="blue",
+            figsize=(4, 3),
+            size=10,
+            seed=42,
+        )
+
+    @compare()
+    def test_log_odds_layer(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            keys=adata.var_names[3:6],
+            layer="Ms",
+            figsize=(4, 3),
+            size=10,
+            seed=42,
+        )
+
+    @compare()
+    def test_log_odds_use_raw(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            keys=adata.raw.var_names[3:6],
+            use_raw=True,
+            figsize=(4, 3),
+            size=10,
+            seed=42,
+        )
+
+    @compare()
+    def test_log_odds_size(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            keys="clusters",
+            size=20,
+            figsize=(4, 3),
+        )
+
+    @compare()
+    def test_log_odds_cmap(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            keys=adata.var_names[:2],
+            size=10,
+            cmap="inferno",
+            figsize=(4, 3),
+        )
+
+    @compare()
+    def test_log_odds_alpha(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            keys="clusters",
+            alpha=0.5,
+            figsize=(4, 3),
+            size=10,
+            seed=42,
+        )
+
+    @compare()
+    def test_log_odds_ncols(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            keys=["clusters", adata.var_names[-1]],
+            ncols=1,
+            figsize=(3, 4),
+            size=10,
+            seed=42,
+        )
+
+    @compare()
+    def test_log_odds_fontsize(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            keys="clusters",
+            fontsize=25,
+            figsize=(3, 4),
+            size=10,
+            seed=42,
+        )
+
+    @compare()
+    def test_log_odds_xticks_steps_size(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            keys="clusters",
+            xticks_step_size=None,
+            figsize=(3, 4),
+            size=10,
+            seed=42,
+        )
+
+    @compare()
+    def test_log_odds_legend_loc(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            keys=["clusters", adata.var_names[-1]],
+            legend_loc="upper right out",
+            figsize=(4, 3),
+            size=10,
+            seed=42,
+        )
+
+    @compare()
+    def test_log_odds_jitter(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            figsize=(4, 3),
+            size=10,
+            seed=42,
+            jitter=1,
+        )
+
+    @compare()
+    def test_log_odds_kwargs_return_ax(self, adata: AnnData, fpath: str):
+        ax = cr.pl.log_odds(
+            adata,
+            "1",
+            "2",
+            "age(days)",
+            keys="clusters",
+            dpi=DPI,
+            save=fpath,
+            show=False,
+            edgecolor="red",
+            figsize=(4, 3),
+            size=4,
+        )
+        assert isinstance(ax, plt.Axes)
+
+    @compare()
+    def test_log_odds_kwargs_return_axes(self, adata: AnnData, fpath: str):
+        axes = cr.pl.log_odds(
+            adata,
+            "1",
+            "2",
+            "age(days)",
+            keys=adata.var_names[:3],
+            dpi=DPI,
+            save=fpath,
+            ncols=2,
+            show=False,
+            figsize=(4, 3),
+            size=4,
+        )
+        assert isinstance(axes, np.ndarray)
+        assert axes.shape == (3,)
+        assert np.all([isinstance(ax, plt.Axes) for ax in axes])
+
+    @compare()
+    def test_log_odds_kwargs(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "1",
+            "2",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            linewidth=5,
+            edgecolor="red",
+            figsize=(4, 3),
+            size=4,
+        )
+
+
 class TestMacrostateComposition:
     @compare(kind="gpcca")
     def test_msc_default(self, mc: GPCCA, fpath: str):
