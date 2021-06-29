@@ -15,7 +15,9 @@ elif [[ "$OS" == "ubuntu-latest" ]]; then
   else
       pip install -e".[test,external]"
   fi
-  pip install rpy2>=3.3.0
+  # ensure correct umap-learn version is installed, see:
+  # https://github.com/bioconda/bioconda-recipes/pull/28591
+  pip install "rpy2>=3.3.0" "umap-learn>=0.5.1"
   Rscript --vanilla -e "library('mgcv')"
 else
   exit 42
