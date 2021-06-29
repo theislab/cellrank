@@ -3401,9 +3401,6 @@ class TestLogOdds:
 
     @compare()
     def test_log_odds_categorical_keys(self, adata: AnnData, fpath: str):
-        import scanpy as sc
-
-        sc.write("/opt/projects/helmholtz/cellrank/tmp.h5ad", adata)
         cr.pl.log_odds(
             adata,
             "0",
