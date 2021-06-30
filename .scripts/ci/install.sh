@@ -21,7 +21,6 @@ else
   exit 42
 fi
 
-# TODO: remove once scVelo unpins umap-
 # TODO: remove once scVelo unpins umap-learn
 # ensure correct umap-learn version is installed, see:
 # https://github.com/bioconda/bioconda-recipes/pull/28591
