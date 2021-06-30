@@ -29,6 +29,9 @@ API. Most biological systems require a bit more control, so be sure to check out
 which allows to unlock the full power of CellRank. If you want to see individual functions in action, visit our
 `gallery`_.
 
+To use CellRank without RNA velocity information, check out the `beyond RNA velocity tutorial`_ as well as the
+`time-series tutorial`_.
+
 Latest additions
 ^^^^^^^^^^^^^^^^
 .. include:: latest_additions.rst
@@ -95,6 +98,7 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
    cellrank_basics
    kernels_and_estimators
    beyond_rna_velocity
+   real_time
    creating_new_kernel
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/cellrank.svg
@@ -143,6 +147,8 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
 .. _basic tutorial: https://cellrank.readthedocs.io/en/stable/cellrank_basics.html
 .. _kernel tutorial: https://cellrank.readthedocs.io/en/stable/creating_new_kernel.html
 .. _kernels and estimators tutorial: https://cellrank.readthedocs.io/en/stable/kernels_and_estimators.html
+.. _beyond RNA velocity tutorial: https://cellrank.readthedocs.io/en/stable/beyond_rna_velocity.html
+.. _time-series tutorial: https://cellrank.readthedocs.io/en/stable/real_time.html
 
 .. _scanpy: https://scanpy.readthedocs.io/en/stable/
 .. _scvelo: https://scvelo.readthedocs.io/
