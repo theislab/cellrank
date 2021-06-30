@@ -35,15 +35,15 @@ information. In particular, it includes:
 - Add more flexibility to :class:`cellrank.tl.kernels.ConnectivityKernel`, allowing it to use any cell-cell similarities
   from :attr:`anndata.AnnData.obsp`, such as spatial similarities from :mod:`squidpy` :cite:`palla:21`
   `PR 501 <https://github.com/theislab/cellrank/pull/501>`_.
-- Revamp `Pancreas Advanced <https://cellrank.readthedocs.io/en/latest/pancreas_advanced.html>`_ tutorial
+- Revamp `Pancreas Advanced <https://cellrank.readthedocs.io/en/stable/pancreas_advanced.html>`_ tutorial
   to showcase CellRank's modular structure of kernels and estimators.
   `PR 32 <https://github.com/theislab/cellrank_notebooks/pull/32>`_.
 - Add 2 new tutorials:
 
-  - `Beyond RNA velocity <https://cellrank.readthedocs.io/en/latest/beyond_rna_velocity.html>`_: shows how to use
+  - `Beyond RNA velocity <https://cellrank.readthedocs.io/en/stable/beyond_rna_velocity.html>`_: shows how to use
     CellRank when no RNA velocity information is available.
     `PR 32 <https://github.com/theislab/cellrank_notebooks/pull/32>`_
-  - `Creating a new kernel <https://cellrank.readthedocs.io/en/latest/creating_new_kernel.html>`_: explains how to
+  - `Creating a new kernel <https://cellrank.readthedocs.io/en/stable/creating_new_kernel.html>`_: explains how to
     create your own custom kernel class that estimates cell-cell transition probabilities
     `PR 31 <https://github.com/theislab/cellrank_notebooks/pull/31>`_.
 
@@ -54,7 +54,7 @@ information. In particular, it includes:
   which estimates a cell's plasticity/differentiation potential based on ideas by :cite:`setty:19`
   and :cite:`velten:17`.
 - Add checks for transition matrix irreducibility `PR 516 <https://github.com/theislab/cellrank/pull/516>`_.
-- Add Zebrafish development dataset from :cite:`farrel:18` `PR 539 <https://github.com/theislab/cellrank/pull/539>`_.
+- Add Zebrafish development dataset from :cite:`farrell:18` `PR 539 <https://github.com/theislab/cellrank/pull/539>`_.
 - Speed-up stationary distribution calculation in :mod:`pygpcca` `PR 22 <https://github.com/msmdev/pyGPCCA/pull/22>`_.
 
 .. rubric:: Bugfixes

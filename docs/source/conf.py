@@ -36,6 +36,7 @@ for nb in [
     "cellrank_basics.ipynb",
     "kernels_and_estimators.ipynb",
     "beyond_rna_velocity.ipynb",
+    "real_time.ipynb",
     "creating_new_kernel.ipynb",
 ]:
     try:

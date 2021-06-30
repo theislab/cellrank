@@ -54,7 +54,7 @@ jobs:
             fail-fast: false
             max-parallel: 4
             matrix:
-                python: [3.7, 3.9]
+                python: [3.7]  # , 3.9]
                 os: [ubuntu-latest]
                 use_slepc: [false]
                 allow_failure: [false]
@@ -87,8 +87,9 @@ jobs:
             uses: actions/cache@v2
             with:
                 path: ${{ steps.pip-cache.outputs.dir }}
-                key: pip-${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('**/requirements.txt') }}
+                key: pip-${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('**/requirements.txt') }}-${{ hashFiles('**/setup.py') }}
                 restore-keys: |
+                    pip-${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('**/requirements.txt') }}
                     pip-${{ runner.os }}-${{ env.pythonLocation }}-
 
         -   name: Before install

@@ -254,7 +254,7 @@ def zebrafish(
     **kwargs: Any,
 ) -> AnnData:
     """
-    Zebrafish embryogenesis assayed using drop-seq, restricted to the axial mesoderm lineage from :cite:`farrel:18`.
+    Zebrafish embryogenesis assayed using drop-seq, restricted to the axial mesoderm lineage from :cite:`farrell:18`.
 
     scRNA-seq time-series dataset comprising `2434` cells which contains 12 time-points spanning 3.3-12 hours
     past fertilization.
