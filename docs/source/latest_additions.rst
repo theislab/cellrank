@@ -8,8 +8,8 @@ This release includes:
 
 - Add new external kernel based on Waddington optimal transport :cite:`schiebinger:19`
   :class:`cellrank.external.kernels.WOTKernel` `PR 595 <https://github.com/theislab/cellrank/pull/595>`_.
-- Add new tutorial `CellRank for time-series datasets <https://cellrank.readthedocs.io/en/stable/real_time.html>`_ that
-  shows how TODO `PR TODO1 <TODO: PR that closes WOT tutorial (either in notebooks repo)>`_.
+- Add new tutorial `Time series datasets <https://cellrank.readthedocs.io/en/stable/real_time.html>`_ that
+  shows how to use the external Waddington OT kernel `PR 35 <https://github.com/theislab/cellrank_notebooks/pull/35>`_.
 - Add reprogramming dataset :func:`cellrank.datasets.reprogramming_schiebinger` from :cite:`schiebinger:19`
   `PR 631 <https://github.com/theislab/cellrank/pull/631>`_.
 - Add :func:`cellrank.pl.log_odds` to plot log-odds ratio between 2 lineages sorted by experimental time.
@@ -17,10 +17,10 @@ This release includes:
 - Add :meth:`cellrank.tl.estimators.GPCCA.plot_macrostate_composition` to visualize macrostate composition over a
   categorical variable `PR 641 <https://github.com/theislab/cellrank/pull/641>`_.
 - Add :meth:`cellrank.tl.estimators.BaseEstimator.plot_lineage_drivers_correlation` to plot lineage driver correlation
-  between 2 lineages `PR 640 <https://github.com/theislab/cellrank/pull/640>`_.
+  with 2 lineages in a scatter plot `PR 640 <https://github.com/theislab/cellrank/pull/640>`_.
 - Add :meth:`cellrank.tl.kernels.Kernel.plot_single_flow` based on :cite:`mittnenzweig:21` to visualize outgoing
   transition matrix flow in clusters across experimental time `PR 615 <https://github.com/theislab/cellrank/pull/615>`_.
-- Dramatically speed-up absorption probabilities calculation `PR 638 <https://github.com/theislab/cellrank/pull/638>`_.
+- Dramatically speed-up the computation of fate probabilities (>5x) `PR 638 <https://github.com/theislab/cellrank/pull/638>`_.
 - Remove 4 technical examples and add 2 new examples `PR 602 <https://github.com/theislab/cellrank/pull/602>`_:
 
   - :ref:`sphx_glr_auto_examples_kernels_plot_projection.py` - transition matrix project onto an embedding.
@@ -37,18 +37,18 @@ This release includes:
 - Prune *requirements.txt* `PR 571 <https://github.com/theislab/cellrank/pull/571>`_.
 - Add small improvements to documentation `PR 584 <https://github.com/theislab/cellrank/pull/584>`_
   `PR 601 <https://github.com/theislab/cellrank/pull/601>`_ `PR 605 <https://github.com/theislab/cellrank/pull/605>`_
-  `PR 639 <https://github.com/theislab/cellrank/issues/639>`_ `PR TODO2 <TODO: bibtex PR>`_.
+  `PR 639 <https://github.com/theislab/cellrank/issues/639>`_ `PR 35 <https://github.com/theislab/cellrank_notebooks/pull/35>`_.
 
 .. rubric:: Bugfixes
 
-- Fix estimator's incosistent state when reading from :class:`anndata.AnnData`
+- Fix estimator's inconsistent state when reading from :class:`anndata.AnnData`
   `PR 563 <https://github.com/theislab/cellrank/pull/563>`_.
 - Fix not checking whether probabilities sum to 1 in
   :meth:`cellrank.tl.estimators.BaseEstimator.compute_absorption_probabilities`
   `PR 566 <https://github.com/theislab/cellrank/pull/566>`_.
 - Fix always forcing sparse transition matrix in :class:`cellrank.tl.kernels.Kernel`
   `PR 586 <https://github.com/theislab/cellrank/pull/586>`_.
-- Fix passing custom connectivities key in :class:`cellrank.tl.kernels.Kernel`
+- Fix passing custom connectivity key in :class:`cellrank.tl.kernels.Kernel`
   `PR 590 <https://github.com/theislab/cellrank/pull/590>`_.
 - Fix kernels in :mod:`cellrank.external` always requiring connectivities
   `PR 600 <https://github.com/theislab/cellrank/pull/600>`_.
