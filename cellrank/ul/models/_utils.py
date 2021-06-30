@@ -1,15 +1,15 @@
 from typing import Union, TypeVar, Optional, Sequence
 
-import numpy as np
-from numba import njit, prange
-from scipy.sparse import issparse, spmatrix
-from sklearn.utils.sparsefuncs import csc_median_axis_0
-
 import cellrank.logging as logg
 from cellrank.ul._docs import d, inject_docs
 from cellrank.ul._utils import valuedispatch
 from cellrank.tl._constants import ModeEnum
 from cellrank.ul._parallelize import parallelize
+
+import numpy as np
+from numba import njit, prange
+from scipy.sparse import issparse, spmatrix
+from sklearn.utils.sparsefuncs import csc_median_axis_0
 
 AnnData = TypeVar("AnnData")
 _OFFSET_KEY = "cellrank_offset"
@@ -139,7 +139,7 @@ def _calculate_norm_factors(
     method
         One of following:
 
-            - method={m.TMM.s!r} - weighted trimmed mean of M-values from [Robinson10]_.
+            - method={m.TMM.s!r} - weighted trimmed mean of M-values from :cite:`robinson:10`.
             - method={m.RLE.s!r} - relative log expression from [Anders10]_.
             - method={m.UPPER_QUANT.s!r} - upper-quartile normalization method from [Bullard10]_.
             - method={m.NONE.s!r} - all the factors are set to 1.

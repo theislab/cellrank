@@ -1,15 +1,17 @@
 -r ../requirements.txt  # must include this because of examples
 bezier
+ipython
+ipywidgets
 louvain>=0.6,!=0.6.2
-memory_profiler>=0.57.0
-nbsphinx>=0.7
+memory_profiler>=0.58.0
+nbsphinx>=0.8
 pypandoc
 python-igraph
-sphinx>=3.2.1
+sphinx>=4
 sphinx-autodoc-annotation
 sphinx-autodoc-typehints>=1.10.3
 sphinx-gallery
-sphinx-paramlinks
 sphinx_copybutton
 sphinx_last_updated_by_git
 sphinx_rtd_theme
+sphinxcontrib-bibtex>=2.3.0

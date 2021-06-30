@@ -6,10 +6,10 @@ from multiprocessing import Manager
 
 import joblib as jl
 
+from cellrank.ul._utils import _get_n_cores
+
 import numpy as np
 from scipy.sparse import issparse, spmatrix
-
-from cellrank.ul._utils import _get_n_cores
 
 
 def parallelize(
@@ -20,7 +20,7 @@ def parallelize(
     unit: str = "",
     as_array: bool = True,
     use_ixs: bool = False,
-    backend: str = "multiprocessing",
+    backend: str = "loky",
     extractor: Optional[Callable[[Any], Any]] = None,
     show_progress_bar: bool = True,
 ) -> Any:
@@ -52,11 +52,18 @@ def parallelize(
 
     Returns
     -------
-        The result depending on ``callable``, ``extractor`` and ``as_array``.
+    The result depending on ``callable``, ``extractor`` and ``as_array``.
     """
 
     if show_progress_bar:
-        from tqdm.auto import tqdm
+        try:
+            import ipywidgets  # noqa: F401
+            from tqdm.auto import tqdm
+        except ImportError:
+            try:
+                from tqdm.std import tqdm
+            except ImportError:
+                tqdm = None
     else:
         tqdm = None
 
@@ -68,7 +75,7 @@ def parallelize(
             except EOFError as e:
                 if not n_finished != n_total:
                     raise RuntimeError(
-                        f"Finished only `{n_finished} out of `{n_total}` tasks.`"
+                        f"Finished only `{n_finished}` out of `{n_total}` tasks.`"
                     ) from e
                 break
             assert res in (None, (1, None), 1)  # (None, 1) means only 1 job
@@ -119,11 +126,11 @@ def parallelize(
         n_split = n_jobs
 
     if issparse(collection):
+        n_split = max(1, min(n_split, collection.shape[0]))
         if n_split == collection.shape[0]:
             collections = [collection[[ix], :] for ix in range(collection.shape[0])]
         else:
             step = collection.shape[0] // n_split
-
             ixs = [
                 np.arange(i * step, min((i + 1) * step, collection.shape[0]))
                 for i in range(n_split)
@@ -136,6 +143,8 @@ def parallelize(
     else:
         collections = list(filter(len, np.array_split(collection, n_split)))
 
+    n_split = len(collections)
+    n_jobs = min(n_jobs, n_split)
     pass_queue = not hasattr(callback, "py_func")  # we'd be inside a numba function
 
     return wrapper

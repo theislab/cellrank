@@ -6,6 +6,13 @@ from typing import Any, Tuple, Union, Mapping, TypeVar, Optional, Sequence
 from pathlib import Path
 from collections import OrderedDict as odict
 
+from cellrank import logging as logg
+from cellrank.ul._docs import d, inject_docs
+from cellrank.pl._utils import _position_legend
+from cellrank.tl._utils import RandomKeys, save_fig, _unique_order_preserving
+from cellrank.ul._utils import valuedispatch
+from cellrank.tl._constants import ModeEnum, DirPrefix, AbsProbKey, TerminalStatesPlot
+
 import numpy as np
 import pandas as pd
 from scipy.sparse import csr_matrix
@@ -14,13 +21,6 @@ import matplotlib as mpl
 import matplotlib.colors
 import matplotlib.pyplot as plt
 from matplotlib import cm
-
-from cellrank import logging as logg
-from cellrank.ul._docs import d, inject_docs
-from cellrank.pl._utils import _position_legend
-from cellrank.tl._utils import RandomKeys, save_fig, _unique_order_preserving
-from cellrank.ul._utils import valuedispatch
-from cellrank.tl._constants import ModeEnum, DirPrefix, AbsProbKey, TerminalStatesPlot
 
 AnnData = TypeVar("AnnData")
 
@@ -59,7 +59,8 @@ def cluster_fates(
     Plot aggregate lineage probabilities at a cluster level.
 
     This can be used to investigate how likely a certain cluster is to go to the %(terminal)s states,or in turn to have
-    descended from the %(initial)s states. For mode `{m.PAGA.s!r}` and `{m.PAGA_PIE.s!r}`, we use *PAGA*, see [Wolf19]_.
+    descended from the %(initial)s states.
+    For mode `{m.PAGA.s!r}` and `{m.PAGA_PIE.s!r}`, we use *PAGA*, see :cite:`wolf:19`.
 
     Parameters
     ----------

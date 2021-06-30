@@ -4,8 +4,8 @@ Compute terminal states using GPCCA
 
 This example shows how to compute and plot the terminal states using the :class:`cellrank.tl.estimators.GPCCA`.
 
-This estimator makes use of Generalized Perron Cluster Cluster Analysis [GPCCA18]_ [Reuter19]_ as implemented in
-`pyGPCCA <https://pygpcca.readthedocs.io/en/latest/>`_.
+This estimator makes use of Generalized Perron Cluster Cluster Analysis :cite:`reuter:18` :cite:`reuter:19`
+as implemented in `pyGPCCA <https://pygpcca.readthedocs.io/en/latest/>`_.
 """
 
 import cellrank as cr
@@ -62,7 +62,7 @@ g.set_terminal_states_from_macrostates(["Alpha, Beta", "Epsilon"])
 # Compute terminal states
 # ^^^^^^^^^^^^^^^^^^^^^^^
 # Lastly, :meth:`cellrank.tl.estimators.GPCCA.compute_terminal_states` which also makes use of the coarse-grained
-# transition matrix :paramref:`cellrank.tl.estimators.GPCCA.coarse_T` of the macrostates or the `eigengap`
+# transition matrix :attr:`cellrank.tl.estimators.GPCCA.coarse_T` of the macrostates or the `eigengap`
 # statistic.
 #
 # In the example below, we use ``method='eigenap'`` which selects the number of states based on the `eigengap`. The

@@ -25,7 +25,7 @@ def transition_matrix(
     backward_mode: str = BackwardMode.TRANSPOSE.s,
     scheme: str = Scheme.CORRELATION.s,
     softmax_scale: Optional[float] = None,
-    weight_connectivities: Optional[float] = 0.2,
+    weight_connectivities: float = 0.2,
     density_normalize: bool = True,
     key: Optional[str] = None,
     **kwargs,
@@ -46,8 +46,7 @@ def transition_matrix(
     xkey
         Key in ``adata.layers`` where expected gene expression counts are stored.
     conn_key
-        Key in :attr:`anndata.AnnData.obsp` to obtain the connectivity matrix, describing cell-cell similarity. Only
-        used when ``weight_connectivities > 0``.
+        Key in :attr:`anndata.AnnData.obsp` to obtain the connectivity matrix, describing cell-cell similarity.
     gene_subset
         List of genes to be used to compute transition probabilities.
         By default, genes from ``adata.var['velocity_genes']`` are used.
@@ -59,7 +58,7 @@ def transition_matrix(
         Weight given to similarities as opposed to velocities. Must be in `[0, 1]`.
     density_normalize
         Whether to use density correction when computing the transition probabilities based on similarities.
-        Density correction is done as by [Haghverdi16]_.
+        Density correction is done as by :cite:`haghverdi:16`.
     %(write_to_adata.parameters)s
     kwargs
         Keyword arguments for :meth:`cellrank.tl.kernels.VelocityKernel.compute_transition_matrix`.
@@ -74,7 +73,12 @@ def transition_matrix(
 
     def compute_velocity_kernel() -> VelocityKernel:
         return VelocityKernel(
-            adata, backward=backward, vkey=vkey, xkey=xkey, gene_subset=gene_subset
+            adata,
+            backward=backward,
+            vkey=vkey,
+            xkey=xkey,
+            gene_subset=gene_subset,
+            conn_key=conn_key,
         ).compute_transition_matrix(
             softmax_scale=softmax_scale,
             mode=mode,
@@ -83,32 +87,27 @@ def transition_matrix(
             **kwargs,
         )
 
-    if weight_connectivities is not None:
-        if 0 < weight_connectivities < 1:
-            vk = compute_velocity_kernel()
-            logg.info(
-                f"Using a connectivity kernel with weight `{weight_connectivities}`"
-            )
-            ck = ConnectivityKernel(
-                adata, backward=backward, conn_key=conn_key
-            ).compute_transition_matrix(density_normalize=density_normalize)
-            final = (
-                (1 - weight_connectivities) * vk + weight_connectivities * ck
-            ).compute_transition_matrix()
-        elif weight_connectivities == 0:
-            final = compute_velocity_kernel()
-        elif weight_connectivities == 1:
-            final = ConnectivityKernel(
-                adata,
-                backward=backward,
-                conn_key=conn_key,
-            ).compute_transition_matrix(density_normalize=density_normalize)
-        else:
-            raise ValueError(
-                f"Parameter `weight_connectivities` must be in range `[0, 1]`, found `{weight_connectivities}`."
-            )
+    if 0 < weight_connectivities < 1:
+        vk = compute_velocity_kernel()
+        logg.info(f"Using a connectivity kernel with weight `{weight_connectivities}`")
+        ck = ConnectivityKernel(
+            adata, backward=backward, conn_key=conn_key
+        ).compute_transition_matrix(density_normalize=density_normalize)
+        final = (
+            (1 - weight_connectivities) * vk + weight_connectivities * ck
+        ).compute_transition_matrix()
+    elif weight_connectivities == 0:
+        final = compute_velocity_kernel()
+    elif weight_connectivities == 1:
+        final = ConnectivityKernel(
+            adata,
+            backward=backward,
+            conn_key=conn_key,
+        ).compute_transition_matrix(density_normalize=density_normalize)
     else:
-        final = vk
+        raise ValueError(
+            f"Parameter `weight_connectivities` must be in range `[0, 1]`, found `{weight_connectivities}`."
+        )
 
     final.write_to_adata(key=key)
 

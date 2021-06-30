@@ -1,10 +1,11 @@
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Optional
+from typing import Any, Tuple, Callable, Optional
+
+from cellrank.ul._docs import d
+from cellrank.ul._parallelize import parallelize
 
 import numpy as np
 from scipy.sparse import csr_matrix
-
-from cellrank.ul._docs import d
 
 
 class ThresholdSchemeABC(ABC):
@@ -37,8 +38,50 @@ class ThresholdSchemeABC(ABC):
         Array of shape ``(n_neighbors,)`` containing the biased connectivities.
         """
 
+    def _bias_knn_helper(
+        self,
+        ixs: np.ndarray,
+        conn: csr_matrix,
+        pseudotime: np.ndarray,
+        queue=None,
+        **kwargs: Any,
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+
+        indices, indptr, data = [], [], []
+
+        for i in ixs:
+            row = conn[i]
+            biased_row = self(
+                pseudotime[i], pseudotime[row.indices], row.data, **kwargs
+            )
+            if np.shape(biased_row) != row.data.shape:
+                raise ValueError(
+                    f"Expected row of shape `{row.data.shape}`, found `{np.shape(biased_row)}`."
+                )
+
+            data.extend(biased_row)
+            indices.extend(row.indices)
+            indptr.append(conn.indptr[i])
+
+            if queue is not None:
+                queue.put(1)
+
+        if i == conn.shape[0] - 1:
+            indptr.append(conn.indptr[-1])
+        if queue is not None:
+            queue.put(None)
+
+        return np.array(data), np.array(indices), np.array(indptr)
+
+    @d.dedent
     def bias_knn(
-        self, conn: csr_matrix, pseudotime: np.ndarray, **kwargs: Any
+        self,
+        conn: csr_matrix,
+        pseudotime: np.ndarray,
+        n_jobs: Optional[int] = None,
+        backend: str = "loky",
+        show_progress_bar: bool = True,
+        **kwargs: Any,
     ) -> csr_matrix:
         """
         Bias cell-cell connectivities of a KNN graph.
@@ -49,27 +92,29 @@ class ThresholdSchemeABC(ABC):
             Sparse matrix of shape ``(n_cells, n_cells)`` containing the nearest neighbor connectivities.
         pseudotime
             Pseudotemporal ordering of cells.
+        %(parallel)s
 
         Returns
         -------
         The biased connectivities.
         """
-        conn_biased = conn.copy()
+        res = parallelize(
+            self._bias_knn_helper,
+            np.arange(conn.shape[0]),
+            as_array=False,
+            unit="cell",
+            n_jobs=n_jobs,
+            backend=backend,
+            show_progress_bar=show_progress_bar,
+        )(conn, pseudotime, **kwargs)
+        data, indices, indptr = zip(*res)
 
-        for i in range(conn.shape[0]):
-            row, start, end = conn[i], conn.indptr[i], conn.indptr[i + 1]
+        conn = csr_matrix(
+            (np.concatenate(data), np.concatenate(indices), np.concatenate(indptr))
+        )
+        conn.eliminate_zeros()
 
-            biased_row = self(
-                pseudotime[i], pseudotime[row.indices], row.data, **kwargs
-            )
-            if np.shape(biased_row) != row.data.shape:
-                raise ValueError(
-                    f"Expected row of shape `{row.data.shape}`, found `{np.shape(biased_row)}`."
-                )
-            conn_biased.data[start:end] = biased_row
-
-        conn_biased.eliminate_zeros()
-        return conn_biased
+        return conn
 
     def __repr__(self):
         return f"<{self.__class__.__name__}>"
@@ -80,13 +125,13 @@ class ThresholdSchemeABC(ABC):
 
 class HardThresholdScheme(ThresholdSchemeABC):
     """
-    Thresholding scheme inspired by Palantir [Setty19]_.
+    Thresholding scheme inspired by *Palantir* :cite:`setty:19`.
 
-    Note that this won't exactly reproduce the original Palantir results, for three reasons:
+    Note that this won't exactly reproduce the original *Palantir* results, for three reasons:
 
-        - Palantir computes the KNN graph in a scaled space of diffusion components.
-        - Palantir uses its own pseudotime to bias the KNN graph which is not implemented here.
-        - Palantir uses a slightly different mechanism to ensure the graph remains connected when removing edges
+        - *Palantir* computes the KNN graph in a scaled space of diffusion components.
+        - *Palantir* uses its own pseudotime to bias the KNN graph which is not implemented here.
+        - *Palantir* uses a slightly different mechanism to ensure the graph remains connected when removing edges
           that point into the "pseudotime past".
     """
 
@@ -119,9 +164,7 @@ class HardThresholdScheme(ThresholdSchemeABC):
         -------
         %(pt_scheme.returns)s
         """
-        k_thresh = max(0, min(30, int(np.floor(n_neighs * frac_to_keep)) - 1))
-
-        # below code does not work with argpartition
+        k_thresh = max(0, min(30, int(np.floor(n_neighs * frac_to_keep))))
         ixs = np.flip(np.argsort(neigh_conn))
         close_ixs, far_ixs = ixs[:k_thresh], ixs[k_thresh:]
 
@@ -137,7 +180,7 @@ class HardThresholdScheme(ThresholdSchemeABC):
 
 class SoftThresholdScheme(ThresholdSchemeABC):
     """
-    Thresholding scheme inspired by [VIA21]_.
+    Thresholding scheme inspired by :cite:`stassen:21`.
 
     The idea is to downweight edges that points against the direction of increasing pseudotime. Essentially, the
     further "behind" a query cell is in pseudotime with respect to the current reference cell, the more penalized will
@@ -150,9 +193,8 @@ class SoftThresholdScheme(ThresholdSchemeABC):
         cell_pseudotime: float,
         neigh_pseudotime: np.ndarray,
         neigh_conn: np.ndarray,
-        b: float = 20.0,
-        nu: float = 1.0,
-        perc: Optional[int] = 95,
+        b: float = 10.0,
+        nu: float = 0.5,
     ) -> np.ndarray:
         """
         Bias the connectivities by downweighting ones to past cells.
@@ -169,13 +211,6 @@ class SoftThresholdScheme(ThresholdSchemeABC):
         -------
         %(pt_scheme.returns)s
         """
-        if perc is not None:
-            neigh_conn = np.clip(
-                neigh_conn,
-                np.percentile(neigh_conn, 100 - perc),
-                np.percentile(neigh_conn, perc),
-            )
-
         past_ixs = np.where(neigh_pseudotime < cell_pseudotime)[0]
         if not len(past_ixs):
             return neigh_conn

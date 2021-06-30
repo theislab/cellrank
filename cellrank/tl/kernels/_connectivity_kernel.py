@@ -2,7 +2,6 @@
 from copy import copy
 
 from anndata import AnnData
-
 from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.tl.kernels import Kernel
@@ -15,8 +14,8 @@ class ConnectivityKernel(Kernel):
 
     As a measure of similarity, we currently support:
 
-        - transcriptomic similarities, computed using e.g. :func:`scanpy.pp.neighbors`, see [Wolf18]_.
-        - spatial similarities, computed using e.g. :func:`squidpy.gr.spatial_neighbors`, see [Palla21]_.
+        - transcriptomic similarities, computed using e.g. :func:`scanpy.pp.neighbors`, see :cite:`wolf:18`.
+        - spatial similarities, computed using e.g. :func:`squidpy.gr.spatial_neighbors`, see :cite:`palla:21`.
 
     The resulting transition matrix is symmetric and thus cannot be used to learn about the direction of the biological
     process. To include this direction, consider combining with a velocity-derived transition matrix via
@@ -29,7 +28,7 @@ class ConnectivityKernel(Kernel):
     %(adata)s
     %(backward)s
     conn_key
-        Key in :attr:`anndata.AnnData.obsp` to obtain the connectivity matrix, describing cell-cell similarity.
+        Key in :attr:`anndata.AnnData.obsp` to obtain the connectivity matrix describing cell-cell similarity.
     %(cond_num)s
     check_connectivity
         Check whether the underlying KNN graph is connected.
@@ -48,7 +47,7 @@ class ConnectivityKernel(Kernel):
             backward=backward,
             compute_cond_num=compute_cond_num,
             check_connectivity=check_connectivity,
-            key=conn_key,
+            conn_key=conn_key,
         )
         self._key = conn_key
 
@@ -70,7 +69,7 @@ class ConnectivityKernel(Kernel):
         Returns
         -------
         :class:`cellrank.tl.kernels.ConnectivityKernel`
-            Makes :paramref:`transition_matrix` available.
+            Makes :attr:`transition_matrix` available.
         """
 
         # fmt: off

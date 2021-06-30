@@ -5,6 +5,12 @@ from types import MappingProxyType
 from typing import Dict, Tuple, Union, TypeVar, Callable, Optional, Sequence
 from pathlib import Path
 
+from cellrank import logging as logg
+from cellrank.ul._docs import d
+from cellrank.tl._utils import save_fig
+from cellrank.ul._utils import _read_graph_data
+from cellrank.tl._constants import _colors
+
 import numpy as np
 import pandas as pd
 from scipy.sparse import issparse, spmatrix
@@ -17,12 +23,6 @@ from matplotlib.colors import ListedColormap
 from matplotlib.patches import ArrowStyle, FancyArrowPatch
 from matplotlib.collections import LineCollection
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-
-from cellrank import logging as logg
-from cellrank.ul._docs import d
-from cellrank.tl._utils import save_fig
-from cellrank.ul._utils import _read_graph_data
-from cellrank.tl._constants import _colors
 
 AnnData = TypeVar("AnnData")
 

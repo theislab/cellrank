@@ -19,20 +19,6 @@ from itertools import tee, product, combinations
 from statsmodels.stats.multitest import multipletests
 
 from anndata import AnnData
-
-import numpy as np
-import pandas as pd
-from pandas import Series
-from scipy.stats import norm
-from numpy.linalg import norm as d_norm
-from scipy.sparse import eye as speye
-from scipy.sparse import diags, issparse, spmatrix, csr_matrix, isspmatrix_csr
-from sklearn.cluster import KMeans
-from pandas.api.types import infer_dtype, is_categorical_dtype
-from scipy.sparse.linalg import norm as sparse_norm
-
-import matplotlib.colors as mcolors
-
 from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.ul._utils import _get_neighs, _has_neighs, _get_neighs_params
@@ -45,6 +31,19 @@ from cellrank.tl._constants import ModeEnum
 from cellrank.ul._parallelize import parallelize
 from cellrank.tl._linear_solver import _solve_lin_system
 from cellrank.tl.kernels._utils import np_std, np_mean, _filter_kwargs
+
+import numpy as np
+import pandas as pd
+from pandas import Series
+from scipy.stats import norm
+from numpy.linalg import norm as d_norm
+from scipy.sparse import eye as speye
+from scipy.sparse import diags, issparse, spmatrix, csr_matrix, isspmatrix_csr
+from sklearn.cluster import KMeans
+from pandas.api.types import infer_dtype, is_bool_dtype, is_categorical_dtype
+from scipy.sparse.linalg import norm as sparse_norm
+
+import matplotlib.colors as mcolors
 
 ColorLike = TypeVar("ColorLike")
 GPCCA = TypeVar("GPCCA")
@@ -359,7 +358,7 @@ def _correlation_test(
     **kwargs,
 ) -> pd.DataFrame:
     """
-    Perform a stastical test.
+    Perform a statistical test.
 
     Return NaN for genes which don't vary across cells.
 
@@ -384,14 +383,13 @@ def _correlation_test(
 
     Returns
     -------
-    :class:`pandas.DataFrame`
-        Dataframe of shape ``(n_genes, n_lineages * 5)`` containing the following columns, 1 for each lineage:
+    Dataframe of shape ``(n_genes, n_lineages * 5)`` containing the following columns, 1 for each lineage:
 
-            - ``{lineage} corr`` - correlation between the gene expression and absorption probabilities.
-            - ``{lineage} pval`` - calculated p-values for double-sided test.
-            - ``{lineage} qval`` - corrected p-values using Benjamini-Hochberg method at level `0.05`.
-            - ``{lineage} ci low`` - lower bound of the ``confidence_level`` correlation confidence interval.
-            - ``{lineage} ci high`` - upper bound of the ``confidence_level`` correlation confidence interval.
+        - ``{lineage} corr`` - correlation between the gene expression and absorption probabilities.
+        - ``{lineage} pval`` - calculated p-values for double-sided test.
+        - ``{lineage} qval`` - corrected p-values using Benjamini-Hochberg method at level `0.05`.
+        - ``{lineage} ci low`` - lower bound of the ``confidence_level`` correlation confidence interval.
+        - ``{lineage} ci high`` - upper bound of the ``confidence_level`` correlation confidence interval.
     """
 
     corr, pvals, ci_low, ci_high = _correlation_test_helper(
@@ -403,6 +401,9 @@ def _correlation_test(
         confidence_level=confidence_level,
         **kwargs,
     )
+    invalid = np.sum((corr < -1) | (corr > 1))
+    if invalid:
+        raise ValueError(f"Found `{invalid}` correlations that are not in `[0, 1]`.")
 
     res = pd.DataFrame(corr, index=gene_names, columns=[f"{c} corr" for c in Y.names])
     for idx, c in enumerate(Y.names):
@@ -661,7 +662,7 @@ def _partition(
 
     If *G* describes the state space of a Markov chain, then communication classes are often
     characterized as either recurrent or transient. Intuitively, once the process enters a recurrent class, it will
-    never leave it again. See [Tolver16]_ for more formal definition.
+    never leave it again.
 
     Parameters
     ----------
@@ -758,7 +759,9 @@ def _symmetric(
     return d_norm((matrix - matrix.T), ord=ord) < eps
 
 
-def _normalize(X: Union[np.ndarray, spmatrix]) -> Union[np.ndarray, spmatrix]:
+def _normalize(
+    X: Union[np.ndarray, spmatrix], eps: float = 1e-12
+) -> Union[np.ndarray, spmatrix]:
     """
     Row-normalizes an array to sum to 1.
 
@@ -766,19 +769,21 @@ def _normalize(X: Union[np.ndarray, spmatrix]) -> Union[np.ndarray, spmatrix]:
     ----------
     X
         Array to be normalized.
+    eps
+        To avoid division by zero.
 
     Returns
     -------
-    :class:`numpy.ndarray` or :class:`scipy.sparse.spmatrx`
+    :class:`numpy.ndarray` or :class:`scipy.sparse.spmatrix`
         The normalized array.
     """
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         if issparse(X):
-            return X.multiply(csr_matrix(1.0 / np.abs(X).sum(1)))
+            return X.multiply(csr_matrix(1.0 / (np.abs(X).sum(1) + eps)))
         X = np.array(X)
-        return X / X.sum(1)[:, None]
+        return X / (X.sum(1)[:, None] + eps)
 
 
 def _get_connectivities(
@@ -904,15 +909,15 @@ def save_fig(
 
 
 def _convert_to_categorical_series(
-    rc_classes: Dict[Union[int, str], Sequence[Union[int, str]]], cell_names: List[str]
+    term_states: Dict[Union[int, str], Sequence[Union[int, str]]], cell_names: List[str]
 ) -> Series:
     """
-    Convert a mapping of recurrent classes to cells to a :class:`pandas.Series`.
+    Convert a mapping of terminal states to cells to a :class:`pandas.Series`.
 
     Parameters
     ----------
-    rc_classes
-        Recurrent classes in the following format: `{'rc_0': ['cell_0', 'cell_1', ...], ...}`.
+    term_states
+        Terminal states in the following format: `{'state_0': ['cell_0', 'cell_1', ...], ...}`.
     cell_names
         List of valid cell names, usually taken from ``adata.obs_names``.
 
@@ -924,28 +929,32 @@ def _convert_to_categorical_series(
 
     cnames = set(cell_names)
     mapper, expected_size = {}, 0
-    for rc, cells in rc_classes.items():
+    for ts, cells in term_states.items():
         if not len(cells):
-            logg.warning(f"No cells selected for category `{rc!r}`.")
+            logg.warning(f"No cells selected for category `{ts!r}`. Skipping")
             continue
         cells = [c if isinstance(c, str) else cell_names[c] for c in cells]
         rest = set(cells) - cnames
         if rest:
             raise ValueError(f"Invalid cell names `{list(rest)}`.")
-        mapper[str(rc)] = cells
+        mapper[str(ts)] = cells
         expected_size += 1
 
     if len(mapper) != expected_size:
         raise ValueError(
-            "All recurrent class labels are being converted to strings, ensure "
+            "All terminal states are being converted to strings, ensure "
             "that there are no conflicting keys, such as `0` and `'0'`."
         )
 
-    rc_labels = Series([np.nan] * len(cell_names), index=cell_names)
-    for rc, cells in mapper.items():
-        rc_labels[cells] = rc
+    term_states = Series([np.nan] * len(cell_names), index=cell_names)
+    for ts, cells in mapper.items():
+        term_states[cells] = ts
 
-    return rc_labels.astype("category")
+    term_states = term_states.astype("category")
+    if not len(term_states.cat.categories):
+        raise ValueError("No categories have been selected.")
+
+    return term_states
 
 
 def _merge_categorical_series(
@@ -1621,3 +1630,25 @@ def _create_initial_terminal_annotations(
     # write to AnnData
     adata.obs[key_added] = cats_merged
     adata.uns[f"{key_added}_colors"] = colors_merged
+
+
+def _maybe_subset_hvgs(
+    adata: AnnData, use_highly_variable: Optional[Union[bool, str]]
+) -> AnnData:
+    if use_highly_variable in (None, False):
+        return adata
+    key = "highly_variable" if use_highly_variable is True else use_highly_variable
+
+    if key not in adata.var.keys():
+        logg.warning(f"Unable to find HVGs in `adata.var[{key!r}]`. Using all genes")
+        return adata
+
+    if not is_bool_dtype(adata.var[key]):
+        logg.warning(
+            f"Expected `adata.var[{key!r}]` to be of bool dtype, "
+            f"found `{infer_dtype(adata.var[key])}`. Using all genes"
+        )
+        return adata
+
+    logg.info(f"Using `{np.sum(adata.var[key])}` HVGs from `adata.var[{key!r}]`")
+    return adata[:, adata.var[key]]

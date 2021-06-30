@@ -9,7 +9,6 @@ from typing import (
     Type,
     Tuple,
     Union,
-    TypeVar,
     Callable,
     Iterable,
     Optional,
@@ -19,7 +18,23 @@ from pathlib import Path
 from functools import reduce
 
 import scvelo as scv
+from anndata import AnnData
+from cellrank import logging as logg
+from cellrank.ul._docs import d, inject_docs
+from cellrank.tl._utils import (
+    save_fig,
+    _connected,
+    _normalize,
+    _symmetric,
+    _get_neighs,
+    _irreducible,
+)
+from cellrank.ul._utils import Pickleable, _write_graph_data
 from scvelo.plotting.utils import default_size, plot_outline
+from cellrank.tl._constants import Direction, _transition
+from cellrank.tl.kernels._utils import _get_basis, _filter_kwargs
+from cellrank.tl.kernels._tmat_flow import FlowPlotter
+from cellrank.tl.kernels._random_walk import RandomWalk
 
 import numpy as np
 from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix, isspmatrix_csr
@@ -29,22 +44,6 @@ from pandas.core.dtypes.common import is_categorical_dtype
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap, to_hex
 from matplotlib.collections import LineCollection
-
-from cellrank import logging as logg
-from cellrank.ul._docs import d, inject_docs
-from cellrank.tl._utils import (
-    save_fig,
-    _connected,
-    _normalize,
-    _symmetric,
-    _get_neighs,
-    _has_neighs,
-    _irreducible,
-)
-from cellrank.ul._utils import Pickleable, _write_graph_data
-from cellrank.tl._constants import Direction, _transition
-from cellrank.tl.kernels._utils import _get_basis, _filter_kwargs
-from cellrank.tl.kernels._random_walk import RandomWalk
 
 _ERROR_DIRECTION_MSG = "Can only combine kernels that have the same direction."
 _ERROR_EMPTY_CACHE_MSG = (
@@ -61,7 +60,6 @@ _RTOL = 1e-12
 _n_dec = 2
 _dtype = np.float64
 _cond_num_tolerance = 1e-15
-AnnData = TypeVar("AnnData")
 Indices_t = Optional[Union[Sequence[str], Dict[str, Union[str, Sequence[str]]]]]
 
 
@@ -87,7 +85,7 @@ class KernelExpression(Pickleable, ABC):
         super().__init_subclass__()
 
     @property
-    def condition_number(self):
+    def condition_number(self) -> Optional[int]:
         """Condition number of the transition matrix."""
         return self._cond_num
 
@@ -96,7 +94,7 @@ class KernelExpression(Pickleable, ABC):
         """
         Return row-normalized transition matrix.
 
-        If not present, it is computed, if all the underlying kernels have been initialized.
+        If not present, it is computed iff all underlying kernels have been initialized.
         """
 
         if self._parent is None and self._transition_matrix is None:
@@ -123,7 +121,7 @@ class KernelExpression(Pickleable, ABC):
 
     @adata.setter
     @abstractmethod
-    def adata(self, value):
+    def adata(self, value: AnnData) -> None:
         pass
 
     @property
@@ -153,7 +151,7 @@ class KernelExpression(Pickleable, ABC):
         Returns
         -------
         None
-            Nothing, just updates the :paramref:`transition_matrix` and optionally normalizes it.
+            Nothing, just updates the :attr:`transition_matrix` and optionally normalizes it.
         """
         should_norm = ~np.isclose(value.sum(1), 1.0, rtol=_RTOL).all()
 
@@ -166,13 +164,15 @@ class KernelExpression(Pickleable, ABC):
             )
 
     @abstractmethod
-    def compute_transition_matrix(self, *args, **kwargs) -> "KernelExpression":
+    def compute_transition_matrix(
+        self, *args: Any, **kwargs: Any
+    ) -> "KernelExpression":
         """
         Compute a transition matrix.
 
         Parameters
         ----------
-        *args
+        args
             Positional arguments.
         kwargs
             Keyword arguments.
@@ -188,13 +188,13 @@ class KernelExpression(Pickleable, ABC):
     @d.dedent
     def write_to_adata(self, key: Optional[str] = None) -> None:
         """
-        Write the transition matrix and parameters used for computation to the underlying :paramref:`adata` object.
+        Write the transition matrix and parameters used for computation to the underlying :attr:`adata` object.
 
         Parameters
         ----------
         key
-            Key used when writing transition matrix to :paramref:`adata`.
-            If `None`, the ``key`` is set to `'T_bwd'` if :paramref:`backward` is `True`, else `'T_fwd'`.
+            Key used when writing transition matrix to :attr:`adata`.
+            If `None`, the ``key`` is set to `'T_bwd'` if :attr:`backward` is `True`, else `'T_fwd'`.
 
         Returns
         -------
@@ -219,9 +219,10 @@ class KernelExpression(Pickleable, ABC):
 
     @abstractmethod
     def copy(self) -> "KernelExpression":
-        """Return a copy of itself. Note that the underlying :paramref:`adata` object is not copied."""
+        """Return a copy of itself. Note that the underlying :attr:`adata` object is not copied."""
 
-    def _maybe_compute_cond_num(self):
+    def _maybe_compute_cond_num(self) -> None:
+        """Optionally compute condition number."""
         if self._compute_cond_num and self._cond_num is None:
             logg.debug(f"Computing condition number of `{repr(self)}`")
             self._cond_num = np.linalg.cond(
@@ -273,12 +274,12 @@ class KernelExpression(Pickleable, ABC):
         Parameters
         ----------
         basis
-            Basis in :attr:`anndata.AnnData.obsm` for which to compute the projection.
+            Basis in :attr:`adata` ``.obsm`` for which to compute the projection.
         key_added
-            If not `None` and ``copy=False``, save the result to :paramref:`adata` ``.obsm['{key_added}']``.
+            If not `None` and ``copy=False``, save the result to :attr:`adata` ``.obsm['{key_added}']``.
             Otherwise, save the result to `'T_fwd_{basis}'` or `T_bwd_{basis}`, depending on the direction.
         copy
-            Whether to return the projection or modify :paramref:`adata` inplace.
+            Whether to return the projection or modify :attr:`adata` inplace.
 
         Returns
         -------
@@ -393,7 +394,7 @@ class KernelExpression(Pickleable, ABC):
         Returns
         -------
         %(just_plots)s
-        For each random walk, the first (last) cell is marked though a black (yellow) dot.
+        For each random walk, the first/last cell is marked by the start/end colors of ``cmap``.
         """
 
         def create_ixs(ixs: Indices_t, *, kind: str) -> Optional[np.ndarray]:
@@ -498,6 +499,86 @@ class KernelExpression(Pickleable, ABC):
 
         if save is not None:
             save_fig(fig, save)
+
+    @d.get_full_description(base="plot_single_flow")
+    @d.get_sections(base="plot_single_flow", sections=["Parameters", "Returns"])
+    @d.dedent
+    def plot_single_flow(
+        self,
+        cluster: str,
+        cluster_key: str,
+        time_key: str,
+        clusters: Optional[Sequence[Any]] = None,
+        time_points: Optional[Sequence[Union[int, float]]] = None,
+        min_flow: float = 0,
+        remove_empty_clusters: bool = True,
+        ascending: Optional[bool] = False,
+        legend_loc: Optional[str] = "upper right out",
+        alpha: Optional[float] = 0.8,
+        xticks_step_size: Optional[int] = 1,
+        figsize: Optional[Tuple[float, float]] = None,
+        dpi: Optional[int] = None,
+        save: Optional[Union[str, Path]] = None,
+        show: bool = True,
+    ) -> Optional[plt.Axes]:
+        """
+        Visualize outgoing flow from a cluster of cells :cite:`mittnenzweig:21`.
+
+        Parameters
+        ----------
+        cluster
+            Cluster for which to visualize outgoing compute_flow.
+        cluster_key
+            Key in :attr:`adata` ``.obs`` where clustering is stored.
+        time_key
+            Key in :attr:`adata` ``.obs`` where experimental time is stored.
+        clusters
+            Visualize flow only for these clusters. If `None`, use all clusters.
+        time_points
+            Visualize flow only for these time points. If `None`, use all time points.
+        %(flow.parameters)s
+        %(plotting)s
+        show
+            If `False`, return :class:`matplotlib.pyplot.Axes`.
+
+        Returns
+        -------
+        :class:`matplotlib.pyplot.Axes`
+            The axis object if ``show=False``.
+        %(just_plots)s
+
+        Notes
+        -----
+        This function is a Python reimplementation of the following
+        `original R function <https://github.com/tanaylab/embflow/blob/main/scripts/generate_paper_figures/plot_vein.r>`_
+        with some minor stylistic differences.
+        This function will not recreate the results from :cite:`mittnenzweig:21`, because there the Metacell model
+        :cite:`baran:19` was used to compute the flow, whereas here the transition matrix is used.
+        """  # noqa: E501
+        if self._transition_matrix is None:
+            raise RuntimeError(
+                "Compute transition matrix first as `.compute_transition_matrix()`."
+            )
+
+        fp = FlowPlotter(self.adata, self.transition_matrix, cluster_key, time_key)
+        fp = fp.prepare(cluster, clusters, time_points)
+
+        ax = fp.plot(
+            min_flow=min_flow,
+            remove_empty_clusters=remove_empty_clusters,
+            ascending=ascending,
+            alpha=alpha,
+            xticks_step_size=xticks_step_size,
+            legend_loc=legend_loc,
+            figsize=figsize,
+            dpi=dpi,
+        )
+
+        if save is not None:
+            save_fig(ax.figure, save)
+
+        if not show:
+            return ax
 
     def __xor__(self, other: "KernelExpression") -> "KernelExpression":
         return self.__rxor__(other)
@@ -691,9 +772,7 @@ class UnaryKernelExpression(KernelExpression, ABC):
         return self._adata
 
     @adata.setter
-    def adata(self, _adata: AnnData):
-        from anndata import AnnData
-
+    def adata(self, _adata: AnnData) -> None:
         if not isinstance(_adata, AnnData):
             raise TypeError(
                 f"Expected argument of type `anndata.AnnData`, found `{type(_adata).__name__!r}`."
@@ -784,7 +863,7 @@ class NaryKernelExpression(KernelExpression, ABC):
         return self._kexprs[0].adata
 
     @adata.setter
-    def adata(self, _adata: AnnData):
+    def adata(self, _adata: AnnData) -> None:
         self._kexprs[0].adata = _adata
 
     def __invert__(self) -> "NaryKernelExpression":
@@ -828,12 +907,11 @@ class Kernel(UnaryKernelExpression, ABC):
     ----------
     %(adata)s
     %(backward)s
-    compute_cond_num
-        Whether to compute the condition number of the transition matrix. For large matrices, this can be very slow.
+    %(cond_num)s
     check_connectivity
         Check whether the underlying KNN graph is connected.
     kwargs
-        Keyword arguments which can specify key to be read from :paramref:`adata` object.
+        Keyword arguments which can specify key to be read from :attr:`adata` object.
     """
 
     def __init__(
@@ -842,20 +920,44 @@ class Kernel(UnaryKernelExpression, ABC):
         backward: bool = False,
         compute_cond_num: bool = False,
         check_connectivity: bool = False,
-        **kwargs,
+        **kwargs: Any,
     ):
         super().__init__(
             adata, backward, op_name=None, compute_cond_num=compute_cond_num, **kwargs
         )
         self._read_from_adata(check_connectivity=check_connectivity, **kwargs)
 
-    def _read_from_adata(self, key: str = "connectivities", **kwargs):
-        """Import the base-KNN graph and optionally check for symmetry and connectivity."""
+    # TODO: move to a mixin class
+    def _read_from_adata(
+        self,
+        conn_key: Optional[str] = "connectivities",
+        read_conn: bool = True,
+        **kwargs: Any,
+    ) -> None:
+        """
+        Import the base-KNN graph and optionally check for symmetry and connectivity.
 
-        if not _has_neighs(self.adata):
-            raise KeyError("Compute KNN graph first as `scanpy.pp.neighbors()`.")
+        Parameters
+        ----------
+        conn_key
+            Key in :attr:`anndata.AnnData.uns` where connectivities are stored.
+        read_conn
+            Whether to read connectivities or set them to `None`. Useful when not exposing density normalization or
+            when KNN connectivities are not used to compute the transition matrix.
+        kwargs
+            Additional keyword arguments.
 
-        self._conn = _get_neighs(self.adata, key).astype(_dtype)
+        Returns
+        -------
+        Nothing, just sets :attr:`_conn`.
+        """
+        if not read_conn:
+            self._conn = None
+            return
+
+        self._conn = _get_neighs(
+            self.adata, mode="connectivities", key=conn_key
+        ).astype(_dtype)
 
         check_connectivity = kwargs.pop("check_connectivity", False)
         if check_connectivity:
@@ -879,23 +981,29 @@ class Kernel(UnaryKernelExpression, ABC):
 
         Parameters
         ----------
-        other:
+        other
             Matrix to normalize.
 
         Returns
         -------
         :class:`np.ndarray` or :class:`scipy.sparse.spmatrix`
             Density normalized transition matrix.
+
+        Raises
+        ------
+        ValueError
+            If KNN connectivities are not set.
         """
+        if self._conn is None:
+            raise ValueError(
+                "Unable to density normalize the transition matrix "
+                "because KNN connectivities are not set."
+            )
 
         logg.debug("Density-normalizing the transition matrix")
 
         q = np.asarray(self._conn.sum(axis=0))
-
-        if not issparse(other):
-            Q = np.diag(1.0 / q)
-        else:
-            Q = spdiags(1.0 / q, 0, other.shape[0], other.shape[0])
+        Q = spdiags(1.0 / q, 0, other.shape[0], other.shape[0])
 
         return Q @ other @ Q
 
@@ -904,13 +1012,23 @@ class Kernel(UnaryKernelExpression, ABC):
 
     def _compute_transition_matrix(
         self,
-        matrix: spmatrix,
+        matrix: Union[np.ndarray, spmatrix],
         density_normalize: bool = True,
         check_irreducibility: bool = False,
     ):
-        # density correction based on node degrees in the KNN graph
-        matrix = csr_matrix(matrix) if not isspmatrix_csr(matrix) else matrix
+        if matrix.shape[0] != matrix.shape[1]:
+            raise ValueError(f"Expected a square matrix, found `{matrix.shape}`.")
+        if matrix.shape[0] != self.adata.n_obs:
+            raise ValueError(
+                f"Expected matrix to be of shape `{(self.adata.n_obs, self.adata.n_obs)}`, "
+                f"found `{matrix.shape}`."
+            )
 
+        matrix = matrix.astype(_dtype)
+        if issparse(matrix) and not isspmatrix_csr(matrix):
+            matrix = csr_matrix(matrix)
+
+        # density correction based on node degrees in the KNN graph
         if density_normalize:
             matrix = self._density_normalize(matrix)
 
@@ -919,7 +1037,7 @@ class Kernel(UnaryKernelExpression, ABC):
         if len(problematic_indices):
             logg.warning(
                 f"Detected `{len(problematic_indices)}` absorbing states in the transition matrix. "
-                f"This matrix won't be irreducible."
+                f"This matrix won't be irreducible"
             )
             matrix[problematic_indices, problematic_indices] = 1.0
 
@@ -940,7 +1058,7 @@ class Constant(Kernel):
     ----------
     %(adata)s
     value
-        Constant value by which to multiply Must be a positive number.
+        Constant value by which to multiply. Must be a positive number.
     %(backward)s
     """
 
@@ -956,11 +1074,11 @@ class Constant(Kernel):
             raise ValueError(f"Expected the constant to be positive, found `{value}`.")
         self._recalculate(value)
 
-    def _recalculate(self, value):
+    def _recalculate(self, value) -> None:
         self._transition_matrix = value
         self._params = {"value": value}
 
-    def _read_from_adata(self, **kwargs):
+    def _read_from_adata(self, **kwargs: Any) -> None:
         pass
 
     def compute_transition_matrix(self, *args, **kwargs) -> "Constant":
@@ -1169,7 +1287,7 @@ def _get_expr_and_constant(k: KernelMul) -> Tuple[KernelExpression, Union[int, f
         )
     if len(k) != 2:
         raise ValueError(
-            f"Expected expression to be binary, found, `{len(k)}` subexpressions."
+            f"Expected expression to be binary, found `{len(k)}` subexpressions."
         )
     e1, e2 = k[0], k[1]
 

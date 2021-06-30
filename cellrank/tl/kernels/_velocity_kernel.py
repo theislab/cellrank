@@ -5,11 +5,6 @@ from math import fsum
 from typing import Any, Union, Callable, Iterable, Optional
 
 from anndata import AnnData
-from scvelo.preprocessing.moments import get_moments
-
-import numpy as np
-from scipy.sparse import issparse, csr_matrix
-
 from cellrank import logging as logg
 from cellrank.ul._docs import d, inject_docs
 from cellrank.ul._utils import valuedispatch
@@ -25,8 +20,12 @@ from cellrank.tl.kernels._utils import (
     _calculate_starts,
     _get_probs_for_zero_vec,
 )
+from scvelo.preprocessing.moments import get_moments
 from cellrank.tl.kernels._base_kernel import _RTOL
 from cellrank.tl.kernels._velocity_schemes import Scheme, _get_scheme
+
+import numpy as np
+from scipy.sparse import issparse, csr_matrix
 
 
 class VelocityMode(ModeEnum):  # noqa
@@ -46,10 +45,10 @@ class VelocityKernel(Kernel):
     """
     Kernel which computes a transition matrix based on RNA velocity.
 
-    This borrows ideas from both [Manno18]_ and [Bergen20]_. In short, for each cell *i*, we compute transition
-    probabilities :math:`p_{i, j}` to each cell *j* in the neighborhood of *i*. The transition probabilities are
-    computed as a multinomial logistic regression where the weights :math:`w_j` (for all *j*) are given by the vector
-    that connects cell *i* with cell *j* in gene expression space, and the features :math:`x_i` are given
+    This borrows ideas from both :cite:`manno:18` and :cite:`bergen:20`. In short, for each cell *i*, we compute
+    transition probabilities :math:`p_{i, j}` to each cell *j* in the neighborhood of *i*. The transition probabilities
+    are computed as a multinomial logistic regression where the weights :math:`w_j` (for all *j*) are given
+    by the vector that connects cell *i* with cell *j* in gene expression space, and the features :math:`x_i` are given
     by the velocity vector :math:`v_i` of cell *i*.
 
     Parameters
@@ -57,15 +56,17 @@ class VelocityKernel(Kernel):
     %(adata)s
     %(backward)s
     vkey
-        Key in :paramref:`adata` ``.uns`` where the velocities are stored.
+        Key in :attr:`adata` ``.uns`` where the velocities are stored.
     xkey
-        Key in :paramref:`adata` ``.layers`` where expected gene expression counts are stored.
+        Key in :attr:`adata` ``.layers`` where expected gene expression counts are stored.
     gene_subset
         List of genes to be used to compute transition probabilities.
-        By default, genes from :paramref:`adata` ``.var['velocity_genes']`` are used.
+        By default, genes from :attr:`adata` ``.var['velocity_genes']`` are used.
     %(cond_num)s
     check_connectivity
         Check whether the underlying KNN graph is connected.
+    kwargs
+        Keyword arguments for :class:`cellrank.tl.kernels.Kernel`.
     """
 
     def __init__(
@@ -77,6 +78,7 @@ class VelocityKernel(Kernel):
         gene_subset: Optional[Iterable] = None,
         compute_cond_num: bool = False,
         check_connectivity: bool = False,
+        **kwargs: Any,
     ):
         super().__init__(
             adata,
@@ -86,13 +88,14 @@ class VelocityKernel(Kernel):
             gene_subset=gene_subset,
             compute_cond_num=compute_cond_num,
             check_connectivity=check_connectivity,
+            **kwargs,
         )
         self._vkey = vkey  # for copy
         self._xkey = xkey
         self._gene_subset = gene_subset
         self._logits = None
 
-    def _read_from_adata(self, **kwargs):
+    def _read_from_adata(self, **kwargs: Any) -> None:
         super()._read_from_adata(**kwargs)
 
         # check whether velocities have been computed
@@ -184,8 +187,8 @@ class VelocityKernel(Kernel):
         :class:`cellrank.tl.kernels.VelocityKernel`
             Makes available the following fields:
 
-                - :paramref:`transition_matrix`.
-                - :paramref:`logits`.
+                - :attr:`transition_matrix`.
+                - :attr:`logits`.
         """
         mode = VelocityMode(mode)
         backward_mode = BackwardMode(backward_mode)

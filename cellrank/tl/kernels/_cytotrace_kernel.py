@@ -3,15 +3,14 @@ from typing import Any
 from typing_extensions import Literal
 
 from anndata import AnnData
-
-import numpy as np
-from scipy.stats import gmean, hmean
-
 from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.tl._utils import _correlation_test_helper
 from cellrank.tl._constants import ModeEnum
 from cellrank.tl.kernels._pseudotime_kernel import PseudotimeKernel
+
+import numpy as np
+from scipy.stats import gmean, hmean
 
 
 def _ct(key: str) -> str:
@@ -28,7 +27,8 @@ class CytoTRACEAggregation(ModeEnum):  # noqa
 @d.dedent
 class CytoTRACEKernel(PseudotimeKernel):
     """
-    Kernel which computes directed transition probabilities based on a KNN graph and the CytoTRACE score [Cyto20]_.
+    Kernel which computes directed transition probabilities based on a KNN graph and the CytoTRACE score \
+    :cite:`gulati:20`.
 
     The KNN graph contains information about the (undirected) connectivities among cells, reflecting their similarity.
     CytoTRACE can be used to estimate cellular plasticity and in turn, a pseudotemporal ordering of cells from more
@@ -44,31 +44,40 @@ class CytoTRACEKernel(PseudotimeKernel):
     %(backward)s
     %(cytotrace.parameters)s
 
-    compute_cond_num
-        Whether to compute condition number of the transition matrix. Note that this might be costly,
-        since it does not use sparse implementation.
+    %(cond_num)s
+    check_connectivity
+        Check whether the underlying KNN graph is connected.
+    kwargs
+        Keyword arguments for :class:`cellrank.tl.kernels.PseudotimeKernel`.
 
-    Examples
-    --------
+    Example
+    -------
     Workflow::
 
+        # import packages and load data
         import scvelo as scv
         import cellrank as cr
-
         adata = cr.datasets.pancreas()
 
+        # standard pre-processing
         sc.pp.filter_genes(adata, min_cells=10)
-        adata.raw = adata.copy()
         sc.pp.normalize_total(adata)
         sc.pp.log1p(adata)
         sc.pp.highly_variable_genes(adata)
 
+        # CytoTRACE by default uses imputed data - a simple way to compute KNN-imputed data is to use scVelo's moments
+        # function. However, note that this function expects `spliced` counts because it's designed for RNA velocity,
+        # so we're using a simple hack here:
         if 'spliced' not in adata.layers or 'unspliced' not in adata.layers:
-            # use the following trick to get scvelo's moments function working
             adata.layers['spliced'] = adata.X
             adata.layers['unspliced'] = adata.X
 
-        scv.pp.moments(adata, n_pcs=None, n_neighbors=None)
+        # compute KNN-imputation using scVelo's moments function
+        scv.pp.moments(adata)
+
+        # import and initialize the CytoTRACE kernel, compute transition matrix - done!
+        from cellrank.tl.kernels import CytoTRACEKernel
+        ctk = CytoTRACEKernel(adata).compute_transition_matrix()
     """
 
     def __init__(
@@ -80,6 +89,7 @@ class CytoTRACEKernel(PseudotimeKernel):
         use_raw: bool = False,
         compute_cond_num: bool = False,
         check_connectivity: bool = False,
+        **kwargs: Any,
     ):
         super().__init__(
             adata,
@@ -90,6 +100,7 @@ class CytoTRACEKernel(PseudotimeKernel):
             layer=layer,
             aggregation=aggregation,
             use_raw=use_raw,
+            **kwargs,
         )
         self._time_key = _ct("pseudotime")  # quirk or PT kernel
 
@@ -100,7 +111,7 @@ class CytoTRACEKernel(PseudotimeKernel):
         aggregation: Literal["mean", "median", "hmean", "gmean"] = "mean",
         use_raw: bool = True,
         **kwargs: Any,
-    ):
+    ) -> None:
         self.compute_cytotrace(layer=layer, aggregation=aggregation, use_raw=use_raw)
 
         super()._read_from_adata(time_key=time_key, **kwargs)
@@ -113,15 +124,12 @@ class CytoTRACEKernel(PseudotimeKernel):
         use_raw: bool = False,
     ) -> None:
         """
-        Re-implementation of the CytoTRACE algorithm [Cyto20]_ to estimate cellular plasticity.
+        Re-implementation of the CytoTRACE algorithm :cite:`gulati:20` to estimate cellular plasticity.
 
         Computes the number of genes expressed per cell and ranks genes according to their correlation with this
         measure. Next, it selects to top-correlating genes and aggregates their (imputed) expression to obtain
         the CytoTRACE score. A high score stands for high differentiation potential (naive, plastic cells) and
         a low score stands for low differentiation potential (mature, differentiation cells).
-
-        Note that this will not exactly reproduce the results of the original CytoTRACE algorithm [Cyto20]_ because we
-        allow for any normalization and imputation techniques whereas CytoTRACE has build-in specific methods for that.
 
         Parameters
         ----------
@@ -153,6 +161,11 @@ class CytoTRACEKernel(PseudotimeKernel):
             - `'ct_gene_corr'`: the correlation as specified above.
             - `'ct_correlates'`: indication of the genes used to compute the CytoTRACE score, i.e. the ones that
               correlated best with `'num_exp_genes'`.
+
+        Notes
+        -----
+        This will not exactly reproduce the results of the original CytoTRACE algorithm :cite:`gulati:20` because we
+        allow for any normalization and imputation techniques whereas CytoTRACE has built-in specific methods for that.
         """
         # check use_raw
         aggregation = CytoTRACEAggregation(aggregation)

@@ -1,4 +1,3 @@
 Plotting
 --------
-
-Below are examples for :mod:`cellrank.pl` plotting module.
+Below are examples of :mod:`cellrank.pl` plotting module.

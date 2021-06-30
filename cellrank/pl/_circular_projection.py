@@ -6,15 +6,6 @@ from typing_extensions import Literal
 
 import scvelo as scv
 from anndata import AnnData
-
-import numpy as np
-import pandas as pd
-from sklearn.metrics import pairwise_distances
-
-import matplotlib.pyplot as plt
-from matplotlib.colors import LogNorm, LinearSegmentedColormap
-from matplotlib.collections import LineCollection
-
 from cellrank import logging as logg
 from cellrank.tl import Lineage
 from cellrank.ul._docs import d
@@ -23,6 +14,14 @@ from cellrank.tl._utils import save_fig, _unique_order_preserving
 from cellrank.ul._utils import _check_collection
 from cellrank.tl._lineage import PrimingDegree
 from cellrank.tl._constants import ModeEnum, AbsProbKey
+
+import numpy as np
+import pandas as pd
+from sklearn.metrics import pairwise_distances
+
+import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm, LinearSegmentedColormap
+from matplotlib.collections import LineCollection
 
 
 class LineageOrder(ModeEnum):  # noqa: D101
@@ -97,10 +96,10 @@ def circular_projection(
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
     save: Optional[Union[str, Path]] = None,
-    **kwargs,
+    **kwargs: Any,
 ):
     r"""
-    Plot absorption probabilities on a circular embedding as done in [Velten17]_.
+    Plot absorption probabilities on a circular embedding as in :cite:`velten:17`.
 
     Parameters
     ----------
@@ -108,9 +107,9 @@ def circular_projection(
     keys
         Keys in :attr:`anndata.AnnData.obs` or :attr:`anndata.AnnData.var_names`. Additional keys are:
 
-            - `'kl_divergence'` - as in [Velten17]_, computes KL-divergence between the fate probabilities of a cell
-              and the average fate probabilities. See ``early_cells`` for more information.
-            - `'entropy'` - as in [Setty19]_, computes entropy over a cells fate probabilities.
+            - `'kl_divergence'` - as in :cite:`velten:17`, computes KL-divergence between the fate probabilities
+              of a cell and the average fate probabilities. See ``early_cells`` for more information.
+            - `'entropy'` - as in :cite:`setty:19`, computes entropy over a cells fate probabilities.
 
     %(backward)s
     lineages
@@ -123,7 +122,7 @@ def circular_projection(
         Can be one of the following:
 
             - `None` - it will determined automatically, based on the number of lineages.
-            - `'optimal'` - order the lineages optimally by solving the Travelling salesman problem (TSP).
+            - `'optimal'` - order lineages optimally by solving the Travelling salesman problem (TSP).
               Recommended for <= `20` lineages.
             - `'default'` - use the order as specified in ``lineages``.
 
@@ -131,7 +130,7 @@ def circular_projection(
         Metric to use when constructing pairwise distance matrix when ``lineage_order = 'optimal'``. For available
         options, see :func:`sklearn.metrics.pairwise_distances`.
     normalize_by_mean
-        If `True`, normalize each lineage by its mean probability, as done in [Velten17]_.
+        If `True`, normalize each lineage by its mean probability, as done in :cite:`velten:17`.
     ncols
         Number of columns when plotting multiple ``keys``.
     space
@@ -164,8 +163,8 @@ def circular_projection(
     %(just_plots)s
         Also updates ``adata`` with the following fields:
 
-            - :attr:`anndata.AnnData.obsm` ``['{key_added}']``: the circular projection.
-            - :attr:`anndata.AnnData.obs` ``['to_{initial,terminal}_states_{method}']``: the priming degree,
+            - :attr:`anndata.AnnData.obsm` ``['{key_added}']`` - the circular projection.
+            - :attr:`anndata.AnnData.obs` ``['to_{initial,terminal}_states_{method}']`` - the priming degree,
               if a method is present in ``keys``.
     """
     if labeldistance is not None and labeldistance < 0:
@@ -209,8 +208,8 @@ def circular_projection(
 
     probs: Lineage = adata.obsm[lineage_key][lineages]
     n_lin = probs.shape[1]
-    if n_lin <= 2:
-        raise ValueError(f"Expected at least `3` lineages, found `{n_lin}`")
+    if n_lin < 3:
+        raise ValueError(f"Expected at least `3` lineages, found `{n_lin}`.")
 
     X = probs.X.copy()
     if normalize_by_mean:
@@ -220,7 +219,9 @@ def circular_projection(
         X = np.nan_to_num(X, nan=1.0 / n_lin, copy=False)
 
     if lineage_order is None:
-        lineage_order = LineageOrder.OPTIMAL if n_lin <= 15 else LineageOrder.DEFAULT
+        lineage_order = (
+            LineageOrder.OPTIMAL if 3 < n_lin <= 20 else LineageOrder.DEFAULT
+        )
         logg.debug(f"Set ordering to `{lineage_order}`")
     lineage_order = LineageOrder(lineage_order)
 

@@ -2,8 +2,6 @@
 
 from typing import Union, TypeVar, Optional, Sequence
 
-import pandas as pd
-
 from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.tl._utils import TestMethod
@@ -12,6 +10,8 @@ from cellrank.tl._constants import AbsProbKey, TermStatesKey, TerminalStatesPlot
 from cellrank.tl.estimators import GPCCA
 from cellrank.tl.estimators._constants import P
 from cellrank.tl.kernels._precomputed_kernel import DummyKernel
+
+import pandas as pd
 
 AnnData = TypeVar("AnnData")
 

@@ -3,7 +3,7 @@ import sys
 import logging
 from pathlib import Path
 from datetime import datetime
-from collections import ChainMap, defaultdict
+from collections import ChainMap
 from urllib.parse import urljoin
 from urllib.request import urlretrieve
 
@@ -36,6 +36,7 @@ for nb in [
     "cellrank_basics.ipynb",
     "kernels_and_estimators.ipynb",
     "beyond_rna_velocity.ipynb",
+    "real_time.ipynb",
     "creating_new_kernel.ipynb",
 ]:
     try:
@@ -65,12 +66,14 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx_autodoc_typehints",
     "sphinx.ext.intersphinx",
-    "sphinx_paramlinks",
     "sphinx.ext.autosummary",
     "sphinx_gallery.gen_gallery",
     "nbsphinx",
     "sphinx_copybutton",
     "sphinx_last_updated_by_git",
+    "sphinxcontrib.bibtex",
+    # https://github.com/spatialaudio/nbsphinx/issues/24
+    "IPython.sphinxext.ipython_console_highlighting",
 ]
 
 intersphinx_mapping = dict(
@@ -91,7 +94,6 @@ intersphinx_mapping = dict(
     pygam=("https://pygam.readthedocs.io/en/latest/", None),
     jax=("https://jax.readthedocs.io/en/latest/", None),
     pygpcca=("https://pygpcca.readthedocs.io/en/latest/", None),
-    # external
     ot=("https://pythonot.github.io/", None),
 )
 
@@ -105,11 +107,16 @@ pygments_style = "sphinx"
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = [
-    "**.md5",
-    "**.py",
+    "auto_*/**.ipynb",
+    "auto_*/**.md5",
+    "auto_*/**.py",
     "**.ipynb_checkpoints",
-]  # ignore anything that isn't .rst
-suppress_warnings = ["ref.citation"]
+]
+
+# bibliography
+bibtex_bibfiles = ["references.bib"]
+bibtex_reference_style = "author_year"
+bibtex_default_style = "alpha"
 
 # -- Notebooks
 nbsphinx_execute_arguments = [
@@ -158,15 +165,16 @@ class ExplicitSubsectionOrder(_SortKey):
 
     _order = ChainMap(
         {
-            example_dir / "estimators" / "compute_eigendecomposition.py": 0,
-            example_dir / "estimators" / "compute_schur_vectors.py": 10,
-            example_dir / "estimators" / "compute_schur_matrix.py": 20,
-            example_dir / "estimators" / "compute_macrostates.py": 30,
-            example_dir / "estimators" / "compute_coarse_T.py": 40,
-            example_dir / "estimators" / "compute_terminal_states_gpcca.py": 50,
-            example_dir / "estimators" / "compute_abs_probs.py": 60,
-            example_dir / "estimators" / "compute_lineage_drivers.py": 70,
-            example_dir / "estimators" / "compute_fit.py": 80,
+            example_dir / "kernels" / "plot_projection.py": 0,
+            example_dir / "kernels" / "plot_random_walks.py": 10,
+            example_dir / "kernels" / "compute_kernel_tricks.py": 30,
+        },
+        {
+            example_dir / "estimators" / "compute_macrostates.py": 0,
+            example_dir / "estimators" / "compute_coarse_T.py": 10,
+            example_dir / "estimators" / "compute_terminal_states_gpcca.py": 20,
+            example_dir / "estimators" / "compute_abs_probs.py": 30,
+            example_dir / "estimators" / "compute_lineage_drivers.py": 40,
         },
         {
             example_dir / "plotting" / "plot_initial_states.py": 0,
@@ -174,20 +182,17 @@ class ExplicitSubsectionOrder(_SortKey):
             example_dir / "plotting" / "plot_lineages.py": 20,
             example_dir / "plotting" / "plot_lineage_drivers.py": 30,
             example_dir / "plotting" / "plot_directed_paga.py": 40,
-            example_dir / "plotting" / "plot_gene_trends.py": 50,
-            example_dir / "plotting" / "plot_heatmap.py": 60,
-            example_dir / "plotting" / "plot_cluster_lineage.py": 70,
-            example_dir / "plotting" / "plot_cluster_fates.py": 80,
-            example_dir / "plotting" / "plot_graph.py": 90,
+            example_dir / "plotting" / "plot_circular_embedding.py": 50,
+            example_dir / "plotting" / "plot_gene_trends.py": 60,
+            example_dir / "plotting" / "plot_heatmap.py": 70,
+            example_dir / "plotting" / "plot_cluster_lineage.py": 80,
+            example_dir / "plotting" / "plot_cluster_fates.py": 90,
+            example_dir / "plotting" / "plot_graph.py": 100,
         },
-        defaultdict(
-            lambda: 1000,
-            {
-                example_dir / "other" / "plot_model.py": 0,
-                example_dir / "other" / "compute_lineage_tricks.py": 10,
-                example_dir / "other" / "compute_kernel_tricks.py": 20,
-            },
-        ),
+        {
+            example_dir / "other" / "plot_model.py": 0,
+            example_dir / "other" / "compute_lineage_tricks.py": 10,
+        },
     )
 
     def __call__(self, filename: str) -> int:
@@ -213,7 +218,8 @@ sphinx_gallery_conf = {
     "within_subsection_order": ExplicitSubsectionOrder,
     "subsection_order": ExplicitOrder(
         [
-            rel_example_dir / "estimators",  # really must be relative
+            rel_example_dir / "kernels",
+            rel_example_dir / "estimators",
             rel_example_dir / "plotting",
             rel_example_dir / "other",
         ]
@@ -237,7 +243,6 @@ sphinx_gallery_conf = {
 
 autosummary_generate = True
 autodoc_member_order = "bysource"
-# autodoc_default_flags = ['members']
 typehints_fully_qualified = False
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
@@ -259,4 +264,4 @@ html_show_sourcelink = False
 
 
 def setup(app):
-    app.add_stylesheet("css/custom.css")
+    app.add_css_file("css/custom.css")

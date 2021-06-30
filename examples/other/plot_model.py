@@ -10,9 +10,9 @@ model non-linear gene trends as they often appear in single-cell data. Further, 
 relatively straightforward to derive a confidence interval around the main trend.
 """
 
-from sklearn.svm import SVR
-
 import cellrank as cr
+
+from sklearn.svm import SVR
 
 adata = cr.datasets.pancreas_preprocessed("../example.h5ad")
 adata
@@ -46,11 +46,11 @@ model.prepare(
 )
 # %%
 # CellRank allows any pseudotime from ``adata.obs`` to be passed via the ``time_key``, e.g. Diffusion Pseudotime (DPT)
-# [Haghverdi16]_, :mod:`scvelo`’s latent time [Bergen20]_, Palantir’s pseudotime [Setty19]_, etc.
+# :cite:`haghverdi:16`, :mod:`scvelo`’s latent time :cite:`bergen:20`, Palantir’s pseudotime :cite:`setty:19`, etc.
 #
 # Further, CellRank accepts imputed gene expression values stored in ``adata.layers`` via the ``data_key``, i.e. you
-# can pass MAGIC [MAGIC18]_ imputed data, :func:`scvelo.pp.moments` [Bergen20]_ (used below) or any other form of
-# imputation.
+# can pass MAGIC :cite:`vandijk:18` imputed data, :func:`scvelo.pp.moments` :cite:`bergen:20` (used below) or any other
+# form of imputation.
 
 # %%
 # Once the model has been prepared, it is ready for fitting and prediction.

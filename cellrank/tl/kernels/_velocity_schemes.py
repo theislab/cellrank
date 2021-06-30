@@ -2,13 +2,13 @@ from abc import ABC, abstractmethod
 from typing import Any, Tuple
 from functools import partial
 
-import numpy as np
-from numba import njit
-
 from cellrank.ul._docs import d
 from cellrank.ul._utils import valuedispatch
 from cellrank.tl._constants import ModeEnum
 from cellrank.tl.kernels._utils import norm, np_mean, jit_kwargs
+
+import numpy as np
+from numba import njit
 
 
 class Scheme(ModeEnum):  # noqa: D101
@@ -212,7 +212,7 @@ class SimilaritySchemeABC(ABC):
 
 class SimilaritySchemeHessian(SimilaritySchemeABC, Hessian):
     """
-    Base class for all similarity schemes as defined in [Li2020]_.
+    Base class for all similarity schemes as defined in :cite:`li:20`.
 
     Parameters
     ----------
@@ -274,7 +274,7 @@ class SimilaritySchemeHessian(SimilaritySchemeABC, Hessian):
 
 class DotProductScheme(SimilaritySchemeHessian):
     r"""
-    Dot product scheme as defined in eq. (4.9) of [Li2020]_.
+    Dot product scheme as defined in eq. (4.9) :cite:`li:20`.
 
         :math:`v(s_i, s_j) = g(\delta_{i, j}^T v_i)`
 
@@ -288,7 +288,7 @@ class DotProductScheme(SimilaritySchemeHessian):
 
 class CosineScheme(SimilaritySchemeHessian):
     r"""
-    Cosine similarity scheme as defined in eq. (4.7) of [Li2020]_.
+    Cosine similarity scheme as defined in eq. (4.7) :cite:`li:20`.
 
         :math:`v(s_i, s_j) = g(cos(\delta_{i, j}, v_i))`
 
@@ -302,7 +302,7 @@ class CosineScheme(SimilaritySchemeHessian):
 
 class CorrelationScheme(SimilaritySchemeHessian):
     r"""
-    Pearson correlation scheme as defined in eq. (4.8) of [Li2020]_.
+    Pearson correlation scheme as defined in eq. (4.8) :cite:`li:20`.
 
         :math:`v(s_i, s_j) = g(corr(\delta_{i, j}, v_i))`
 

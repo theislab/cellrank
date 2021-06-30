@@ -41,10 +41,10 @@ cr.pl.lineages(adata, ["Alpha", "Beta"], discrete=True)
 
 # %%
 # Lastly, we can also plot the absorption probabilities separately, one plot for each lineage.
-# By default this also shows the differentiation potential, defined in [Setty19]_ as the entropy over
+# By default this also shows the differentiation potential, defined in :cite:`setty:19` as the entropy over
 # the absorption probabilities.
 cr.pl.lineages(adata, same_plot=False)
 
 # %%
-# To see how to compute and plot the lineage driver genes,
+# To see how to compute and plot the lineage driver genes, please
 # refer to :ref:`sphx_glr_auto_examples_plotting_plot_lineage_drivers.py`.

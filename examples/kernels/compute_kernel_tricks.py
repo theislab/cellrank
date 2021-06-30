@@ -5,8 +5,8 @@ Kernel tricks
 This example shows some niche, but useful functionalities of :class:`cellrank.tl.kernels.Kernel`.
 
 CellRank is split into :mod:`cellrank.tl.kernels` and :mod:`cellrank.tl.estimators`. Kernels compute transition matrices
-based on some inputs, like RNA velocity [Bergen20]_, [Manno18]_, while estimators perform inference based on a given
-kernel, e.g. they compute initial and terminal cells and fate probabilities.
+based on some inputs, like RNA velocity :cite:`manno:18` :cite:`bergen:20`, while estimators perform inference based on
+a given kernel, e.g. they compute initial and terminal cells and fate probabilities.
 
 Here, will will dive a bit deeper into the how these kernel objects work.
 """
@@ -20,13 +20,13 @@ adata
 # First, we create some kernels which will be used to compute the cell-to-cell transition matrix:
 #
 # - :class:`cellrank.tl.kernels.ConnectivityKernel` computes the transition matrix using the KNN graph from
-#   :func:`scanpy.pp.neighbors` [Wolf18]_. Note that this kernel is by itself directionless and
+#   :func:`scanpy.pp.neighbors` :cite:`wolf:18`. Note that this kernel is by itself directionless and
 #   should be used in conjunction with e.g. :class:`cellrank.tl.kernels.VelocityKernel`.
-# - :class:`cellrank.tl.kernels.VelocityKernel` uses RNA velocity for the transition matrix computation [Manno18]_
-#   [Bergen20]_, but can also take into account uncertainty in RNA velocity.
-# - :class:`cellrank.tl.kernels.PseudotimeKernel` works similarly as in Palantir [Setty19]_ - it orients the edges of
-#   the KNN graph constructed in the expression space using the pseudotemporal ordering of cells, such as
-#   Diffusion Pseudotime (DPT) [Haghverdi16]_.
+# - :class:`cellrank.tl.kernels.VelocityKernel` uses RNA velocity for the transition matrix computation :cite:`manno:18`
+#   :cite:`bergen:20`, but can also take into account uncertainty in RNA velocity.
+# - :class:`cellrank.tl.kernels.PseudotimeKernel` works similarly as in Palantir :cite:`setty:19` - it orients the edges
+#   of the KNN graph constructed in the expression space using the pseudotemporal ordering of cells, such as
+#   Diffusion Pseudotime (DPT) :cite:`haghverdi:16`.
 ck = cr.tl.kernels.ConnectivityKernel(adata)
 vk = cr.tl.kernels.VelocityKernel(adata)
 pk = cr.tl.kernels.PseudotimeKernel(adata)
@@ -54,7 +54,7 @@ k.kernels
 # since the handles point to the original objects.
 #
 # Note that in the 2nd :func:`print` statement, we access the private attribute - that's because accessing
-# :paramref:`cellrank.tl.kernels.Kernel.transition_matrix` computes the transition matrix with default values.
+# :attr:`cellrank.tl.kernels.Kernel.transition_matrix` computes the transition matrix with default values.
 # This happens only with basic kernels and not the kernel expressions and only if they are not part of a
 # larger expression.
 ck.compute_transition_matrix()

@@ -2,6 +2,7 @@ from cellrank.datasets._datasets import (
     lung,
     pancreas,
     zebrafish,
-    reprogramming,
+    reprogramming_morris,
     pancreas_preprocessed,
+    reprogramming_schiebinger,
 )

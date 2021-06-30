@@ -1,11 +1,7 @@
 import pytest
 
-from anndata import AnnData
-
-import numpy as np
-from pandas.api.types import is_categorical_dtype
-
 import cellrank as cr
+from anndata import AnnData
 from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tl._constants import (
     Direction,
@@ -18,6 +14,9 @@ from cellrank.tl._constants import (
     _transition,
 )
 from cellrank.tl.estimators._constants import P
+
+import numpy as np
+from pandas.api.types import is_categorical_dtype
 
 
 def _assert_has_all_keys(adata: AnnData, direction: Direction):
@@ -195,9 +194,9 @@ class TestHighLevelPipeline:
 
         _assert_has_all_keys(adata, Direction.BACKWARD)
 
-    def test_multiple_read_write(self, adata: AnnData):
+    def test_multiple_read_write_diff(self, adata: AnnData):
         for n_states in range(2, 5):
-            cr.tl.terminal_states(
+            e = cr.tl.terminal_states(
                 adata,
                 estimator=cr.tl.estimators.GPCCA,
                 cluster_key="clusters",
@@ -205,7 +204,10 @@ class TestHighLevelPipeline:
                 show_plots=True,
                 n_states=n_states,
                 fit_kwargs={"n_cells": 5},
+                return_estimator=True,
             )
+            assert e.absorption_probabilities is None
+
             cr.tl.lineages(adata, backward=False)
             cr.pl.lineages(adata)
 
@@ -215,6 +217,26 @@ class TestHighLevelPipeline:
             assert probs.shape[1] == n_states
             for name in probs.names:
                 assert "Lineage" not in name, probs.names
+
+    def test_multiple_read_write_same(self, adata: AnnData):
+        e = cr.tl.terminal_states(
+            adata,
+            estimator=cr.tl.estimators.GPCCA,
+            cluster_key="clusters",
+            method="brandts",
+            show_plots=True,
+            n_states=2,
+            fit_kwargs={"n_cells": 5},
+            return_estimator=True,
+        )
+        cr.tl.lineages(adata, backward=False)
+        cr.pl.lineages(adata)
+
+        e.set_terminal_states({"foo": adata.obs_names[:20]})
+
+        e = cr.tl.estimators.GPCCA(adata, read_from_adata=True, obsp_key="T_fwd")
+        assert e.macrostates is None
+        assert e.absorption_probabilities is None
 
 
 class TestLowLevelPipeline:

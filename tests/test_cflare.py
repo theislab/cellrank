@@ -5,14 +5,9 @@ from tempfile import TemporaryDirectory
 import pytest
 from _helpers import assert_estimators_equal
 
-from anndata import AnnData
-
-import numpy as np
-import pandas as pd
-from pandas.api.types import is_categorical_dtype
-
 import cellrank as cr
 import cellrank.tl.kernels._precomputed_kernel
+from anndata import AnnData
 from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tl._constants import (
     Direction,
@@ -25,6 +20,10 @@ from cellrank.tl._constants import (
     _lin_names,
 )
 from cellrank.tl.estimators._constants import A, P
+
+import numpy as np
+import pandas as pd
+from pandas.api.types import is_categorical_dtype
 
 EPS = np.finfo(np.float64).eps
 
@@ -589,6 +588,55 @@ class TestCFLARE:
 
         assert (adata.obs[f"{TermStatesKey.FORWARD}"][zero_mask] == "foo").all()
         assert pd.isna(adata.obs[f"{TermStatesKey.FORWARD}"][~zero_mask]).all()
+
+    def test_abs_probs_do_not_sum_to_1(self, adata_large: AnnData, mocker):
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        terminal_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc.compute_eigendecomposition(k=5)
+        mc.set_terminal_states(
+            {"x": adata_large.obs_names[:3], "y": adata_large.obs_names[3:6]}
+        )
+
+        n_term = np.sum(~pd.isnull(mc.terminal_states))
+        abs_prob = np.zeros((adata_large.n_obs - n_term, n_term))
+        abs_prob[:, 0] = 1.0
+        abs_prob[0, 0] = 1.01
+        mocker.patch(
+            "cellrank.tl.estimators._base_estimator._solve_lin_system",
+            return_value=abs_prob,
+        )
+
+        with pytest.raises(
+            ValueError, match=r"`1` value\(s\) do not sum to 1 \(rtol=1e-3\)."
+        ):
+            mc.compute_absorption_probabilities()
+
+    def test_abs_probs_negative(self, adata_large: AnnData, mocker):
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        terminal_kernel = 0.8 * vk + 0.2 * ck
+
+        mc = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc.compute_eigendecomposition(k=5)
+        mc.set_terminal_states(
+            {"x": adata_large.obs_names[:3], "y": adata_large.obs_names[3:6]}
+        )
+
+        n_term = np.sum(~pd.isnull(mc.terminal_states))
+        abs_prob = np.zeros((adata_large.n_obs - n_term, n_term))
+        abs_prob[:, 0] = 1.0
+        abs_prob[0, 0] = -0.5
+        abs_prob[0, 1] = -1.5
+        mocker.patch(
+            "cellrank.tl.estimators._base_estimator._solve_lin_system",
+            return_value=abs_prob,
+        )
+
+        with pytest.raises(ValueError, match=r"`2` value\(s\) are negative."):
+            mc.compute_absorption_probabilities()
 
 
 class TestCFLAREIO:

@@ -19,6 +19,12 @@ from collections import defaultdict
 
 import wrapt
 
+from cellrank import logging as logg
+from cellrank.tl import Lineage
+from cellrank.ul._docs import d
+from cellrank.tl._utils import save_fig
+from cellrank.ul._utils import Pickleable, _minmax, valuedispatch, _densify_squeeze
+from cellrank.tl._constants import ModeEnum, AbsProbKey
 from scanpy.plotting._utils import add_colors_for_categorical_sample_annotation
 
 import numpy as np
@@ -33,13 +39,6 @@ from matplotlib import colors as mcolors
 from matplotlib import pyplot as plt
 from matplotlib.colors import to_rgb, is_color_like
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-
-from cellrank import logging as logg
-from cellrank.tl import Lineage
-from cellrank.ul._docs import d
-from cellrank.tl._utils import save_fig
-from cellrank.ul._utils import Pickleable, _minmax, valuedispatch, _densify_squeeze
-from cellrank.tl._constants import ModeEnum, AbsProbKey
 
 AnnData = TypeVar("AnnData")
 _dup_spaces = re.compile(r" +")  # used on repr for underlying model's repr
@@ -289,19 +288,19 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
     @property
     @d.get_summary(base="base_model_y_test")
     def y_test(self) -> np.ndarray:
-        """Prediction values of shape `(n_samples,)` for :paramref:`x_test`."""
+        """Prediction values of shape `(n_samples,)` for :attr:`x_test`."""
         return self._y_test
 
     @property
     @d.get_summary(base="base_model_x_hat")
     def x_hat(self) -> np.ndarray:
-        """Filtered independent variables used when calculating default confidence interval, usually same as :paramref:`x`."""  # noqa
+        """Filtered independent variables used when calculating default confidence interval, usually same as :attr:`x`."""  # noqa
         return self._x_hat
 
     @property
     @d.get_summary(base="base_model_y_hat")
     def y_hat(self) -> np.ndarray:
-        """Filtered dependent variables used when calculating default confidence interval, usually same as :paramref:`y`."""  # noqa
+        """Filtered dependent variables used when calculating default confidence interval, usually same as :attr:`y`."""  # noqa
         return self._y_hat
 
     @property
@@ -333,18 +332,18 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         Parameters
         ----------
         gene
-            Gene in :paramref:`adata` ``.var_names`` or in :paramref:`adata` ``.raw.var_names``.
+            Gene in :attr:`adata` ``.var_names`` or in :attr:`adata` ``.raw.var_names``.
         lineage
-            Name of a lineage in :paramref:`adata` ``.obsm[lineage_key]``. If `None`, all weights will be set to `1`.
+            Name of a lineage in :attr:`adata` ``.obsm['{lineage_key}']``. If `None`, all weights will be set to `1`.
         %(backward)s
         %(time_range)s
         data_key
-            Key in :paramref:`adata` ``.layers`` or `'X'` for :paramref:`adata` ``.X``.
+            Key in :attr:`adata` ``.layers`` or `'X'` for :attr:`adata` ``.X``.
             If ``use_raw=True``, it's always set to `'X'`.
         time_key
-            Key in :paramref:`adata` ``.obs`` where the pseudotime is stored.
+            Key in :attr:`adata` ``.obs`` where the pseudotime is stored.
         use_raw
-            Whether to access :paramref:`adata` ``.raw`` or not.
+            Whether to access :attr:`adata` ``.raw`` or not.
         threshold
             Consider only cells with weights > ``threshold`` when estimating the test endpoint.
             If `None`, use the median of the weights.
@@ -361,17 +360,17 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         None
             Nothing, but updates the following fields:
 
-                - :paramref:`x` - %(base_model_x.summary)s
-                - :paramref:`y` - %(base_model_y.summary)s
-                - :paramref:`w` - %(base_model_w.summary)s
+                - :attr:`x` - %(base_model_x.summary)s
+                - :attr:`y` - %(base_model_y.summary)s
+                - :attr:`w` - %(base_model_w.summary)s
 
-                - :paramref:`x_all` - %(base_model_x_all.summary)s
-                - :paramref:`y_all` - %(base_model_y_all.summary)s
-                - :paramref:`w_all` - %(base_model_w_all.summary)s
+                - :attr:`x_all` - %(base_model_x_all.summary)s
+                - :attr:`y_all` - %(base_model_y_all.summary)s
+                - :attr:`w_all` - %(base_model_w_all.summary)s
 
-                - :paramref:`x_test` - %(base_model_x_test.summary)s
+                - :attr:`x_test` - %(base_model_x_test.summary)s
 
-                - :paramref:`prepared` - %(base_model_prepared.summary)s
+                - :attr:`prepared` - %(base_model_prepared.summary)s
         """
 
         self._use_raw = use_raw
@@ -580,13 +579,13 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         Parameters
         ----------
         x
-            Independent variables, array of shape `(n_samples, 1)`. If `None`, use :paramref:`x`.
+            Independent variables, array of shape `(n_samples, 1)`. If `None`, use :attr:`x`.
         y
-            Dependent variables, array of shape `(n_samples, 1)`. If `None`, use :paramref:`y`.
+            Dependent variables, array of shape `(n_samples, 1)`. If `None`, use :attr:`y`.
         w
-            Optional weights of :paramref:`x`, array of shape `(n_samples,)`. If `None`, use :paramref:`w`.
+            Optional weights of :attr:`x`, array of shape `(n_samples,)`. If `None`, use :attr:`w`.
         kwargs
-            Keyword arguments for underlying :paramref:`model`'s fitting function.
+            Keyword arguments for underlying :attr:`model`'s fitting function.
 
         Returns
         -------
@@ -629,18 +628,18 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         Parameters
         ----------
         x_test
-            Array of shape `(n_samples,)` used for prediction. If `None`, use :paramref:`x_test`.
+            Array of shape `(n_samples,)` used for prediction. If `None`, use :attr:`x_test`.
         key_added
-            Attribute name where to save the :paramref:`x_test` for later use. If `None`, don't save it.
+            Attribute name where to save the :attr:`x_test` for later use. If `None`, don't save it.
         kwargs
-            Keyword arguments for underlying :paramref:`model`'s prediction method.
+            Keyword arguments for underlying :attr:`model`'s prediction method.
 
         Returns
         -------
         :class:`numpy.ndarray`
             Updates and returns the following:
 
-                - :paramref:`y_test` - %(base_model_y_test.summary)s
+                - :attr:`y_test` - %(base_model_y_test.summary)s
         """
 
     @abstractmethod
@@ -654,15 +653,15 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         """
         Calculate the confidence interval.
 
-        Use :meth:`default_confidence_interval` function if underlying :paramref:`model` has not method
+        Use :meth:`default_confidence_interval` function if underlying :attr:`model` has not method
         for confidence interval calculation.
 
         Parameters
         ----------
         x_test
-            Array of shape `(n_samples,)` used for confidence interval calculation. If `None`, use :paramref:`x_test`.
+            Array of shape `(n_samples,)` used for confidence interval calculation. If `None`, use :attr:`x_test`.
         kwargs
-            Keyword arguments for underlying :paramref:`model`'s confidence method
+            Keyword arguments for underlying :attr:`model`'s confidence method
             or for :meth:`default_confidence_interval`.
 
         Returns
@@ -670,7 +669,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         :class:`numpy.ndarray`
             Updates the following fields:
 
-                - :paramref:`conf_int` - %(base_model_conf_int.summary)s
+                - :attr:`conf_int` - %(base_model_conf_int.summary)s
         """
 
     @d.dedent
@@ -680,9 +679,9 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         **kwargs,
     ) -> np.ndarray:
         """
-        Calculate the confidence interval, if the underlying :paramref:`model` has no method for it.
+        Calculate the confidence interval, if the underlying :attr:`model` has no method for it.
 
-        This formula is taken from [DeSalvo70]_, eq. 5.
+        This formula is taken from :cite:`desalvo:70`, eq. 5.
 
         Parameters
         ----------
@@ -691,14 +690,8 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         Returns
         -------
         %(base_model_ci.returns)s
-                - :paramref:`x_hat` - %(base_model_x_hat.summary)s
-                - :paramref:`y_hat` - %(base_model_y_hat.summary)s
-
-        References
-        ----------
-        .. [DeSalvo70] DeSalvo, J. S. (1970),
-            *Standard Error of Forecast in Multiple Regression: Proof of a Useful Result.*,
-            `RAND Corporation <https://www.rand.org/pubs/papers/P4365.html>`__.
+                - :attr:`x_hat` - %(base_model_x_hat.summary)s
+                - :attr:`y_hat` - %(base_model_y_hat.summary)s
         """
 
         use_ixs = self.w > 0
@@ -799,7 +792,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
             Note that this will require 1 additional model fit.
         lineage_probability_conf_int
             Whether to compute and show smoothed lineage probability confidence interval.
-            If :paramref:`self` is :class:`cellrank.ul.models.GAMR`, it can also specify the confidence level,
+            If :attr:`self` is :class:`cellrank.ul.models.GAMR`, it can also specify the confidence level,
             the default is `0.95`. Only used when ``show_lineage_probability=True``.
         lineage_probability_color
             Color to use when plotting the smoothed ``lineage_probability``.
@@ -1023,7 +1016,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         Returns
         -------
         :class:`np.ndarray`
-            Array of shape `(n, 1)` with dtype set to :paramref:`_dtype`.
+            Array of shape `(n, 1)` with dtype set to :attr:`_dtype`.
         """
 
         if arr.ndim not in (1, 2):
@@ -1269,14 +1262,14 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
 
 class FailedModel(BaseModel):
     """
-    Model representing a failure of the original :paramref:`model`.
+    Model representing a failure of the original :attr:`model`.
 
     Parameters
     ----------
     model
         The original model which has failed.
     exc
-        The exception that caused the :paramref:`model` to fail or a :class:`str` containing the message.
+        The exception that caused the :attr:`model` to fail or a :class:`str` containing the message.
         In the latter case, :meth:`cellrank.ul.models.FailedModel.reraise` a :class:`RuntimeError` with that message.
         If `None`, :class`UnknownModelError` will eventually be raised.
     """
@@ -1404,7 +1397,7 @@ class FittedModel(BaseModel):
         If `None`, always sets `hide_cells=True`` in :meth:`cellrank.ul.models.BaseModel.plot`.
     w_all
         %(base_model_w_all.summary)s
-        If `None` and :paramref:`x_all` and :paramref:`y_all` are present, it will be set an array of `1`.
+        If `None` and :attr:`x_all` and :attr:`y_all` are present, it will be set an array of `1`.
     """
 
     def __init__(

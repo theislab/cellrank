@@ -5,17 +5,8 @@ from typing import Any, Dict, List, Tuple, Union, Iterable, Optional
 from inspect import isabstract
 
 import scvelo as scv
-from anndata import AnnData
-
-import numpy as np
-import pandas as pd
-from scipy.sparse import issparse, spmatrix
-from pandas.api.types import is_categorical_dtype
-
-import matplotlib as mpl
-from matplotlib import cm
-
 import cellrank.logging as logg
+from anndata import AnnData
 from cellrank.ul._docs import d, _initial, _terminal
 from cellrank.tl._utils import RandomKeys, _make_cat, _partition, _complex_warning
 from cellrank.ul._utils import Pickleable
@@ -33,6 +24,14 @@ from cellrank.tl.estimators._utils import (
 )
 from cellrank.tl.kernels._base_kernel import KernelExpression
 from cellrank.tl.estimators._constants import META_KEY, A, F, P
+
+import numpy as np
+import pandas as pd
+from scipy.sparse import issparse, spmatrix
+from pandas.api.types import is_categorical_dtype
+
+import matplotlib as mpl
+from matplotlib import cm
 
 
 def is_abstract(classname: str) -> bool:  # TODO: determine the necessity of this
@@ -143,9 +142,9 @@ class PropertyMeta(ABCMeta, type):
         elif len(compute_md) == 0:
             raise ValueError("No metadata found.")
         else:
-            compute_md, *metadata = [
+            compute_md, *metadata = (
                 Metadata(attr=md) if isinstance(md, str) else md for md in compute_md
-            ]
+            )
 
         prop_name = PropertyMeta.update_attributes(compute_md, attributedict)
         plot_name = str(compute_md.plot_fmt).format(prop_name)
@@ -298,7 +297,7 @@ class VectorPlottable(KernelHolder, Property):
         abs_value
             Whether to take the absolute value before plotting.
         cluster_key
-            Key in :paramref:`adata` ``.obs`` for plotting categorical observations.
+            Key in :attr:`adata` ``.obs`` for plotting categorical observations.
         %(basis)s
         kwargs
             Keyword arguments for :func:`scvelo.pl.scatter`.
@@ -409,7 +408,7 @@ class Plottable(KernelHolder, Property):
         lineages
             Plot only these lineages. If `None`, plot all lineages.
         cluster_key
-            Key from :paramref:`adata` ``.obs`` for plotting categorical observations.
+            Key from :attr:`adata` ``.obs`` for plotting categorical observations.
         same_plot
             Whether to plot the lineages on the same plot or separately.
         title
@@ -543,10 +542,10 @@ class Plottable(KernelHolder, Property):
         lineages
             Plot only these lineages. If `None`, plot all lineages.
         cluster_key
-            Key from :paramref:`adata` ``.obs`` for plotting categorical observations.
+            Key from :attr:`adata` ``.obs`` for plotting categorical observations.
         %(time_mode)s
         time_key
-            Key from :paramref:`adata` ``.obs`` to use as a pseudotime ordering of the cells.
+            Key from :attr:`adata` ``.obs`` to use as a pseudotime ordering of the cells.
         title
             Either `None`, in which case titles are ``'{to,from} {terminal,initial} {state}'``,
             or an array of titles, one per lineage.
@@ -873,9 +872,9 @@ class Partitioner(KernelHolder, ABC):
         None
             Nothing, but updates the following fields:
 
-                - :paramref:`recurrent_classes`
-                - :paramref:`transient_classes`
-                - :paramref:`is_irreducible`
+                - :attr:`recurrent_classes`
+                - :attr:`transient_classes`
+                - :attr:`is_irreducible`
         """
 
         start = logg.info("Computing communication classes")

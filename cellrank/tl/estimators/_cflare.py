@@ -1,10 +1,6 @@
 """Clustering and Filtering of Left and Right Eigenvectors based on Markov chains."""
 from typing import List, Tuple, Union, Optional, Sequence
 
-import numpy as np
-from pandas import Series
-from scipy.stats import zscore
-
 from cellrank import logging as logg
 from cellrank.ul._docs import d, inject_docs
 from cellrank.tl._utils import (
@@ -16,6 +12,10 @@ from cellrank.tl._utils import (
 from cellrank.tl.estimators._constants import A, P
 from cellrank.tl.estimators._decomposition import Eigen
 from cellrank.tl.estimators._base_estimator import BaseEstimator
+
+import numpy as np
+from pandas import Series
+from scipy.stats import zscore
 
 
 @d.dedent
@@ -67,7 +67,7 @@ class CFLARE(BaseEstimator, Eigen):
         method
             Method to be used for clustering. Must be one of `'louvain'`, `'leiden'` or `'kmeans'`.
         cluster_key
-            If a key to cluster labels is given, :paramref:`{fs}` will get associated with these for naming and colors.
+            If a key to cluster labels is given, :attr:`{fs}` will get associated with these for naming and colors.
         n_clusters_kmeans
             If `None`, this is set to ``use + 1``.
         n_neighbors
@@ -94,8 +94,8 @@ class CFLARE(BaseEstimator, Eigen):
         None
             Nothing, but updates the following fields:
 
-                - :paramref:`{fsp}`
-                - :paramref:`{fs}`
+                - :attr:`{fsp}`
+                - :attr:`{fs}`
         """
 
         def _compute_macrostates_prob() -> Series:
@@ -301,10 +301,10 @@ class CFLARE(BaseEstimator, Eigen):
         None
             Nothing, just makes available the following fields:
 
-                - :paramref:`{fsp}`
-                - :paramref:`{fs}`
-                - :paramref:`{ap}`
-                - :paramref:`{pd}`
+                - :attr:`{fsp}`
+                - :attr:`{fs}`
+                - :attr:`{ap}`
+                - :attr:`{pd}`
         """
         super().fit(
             n_lineages=n_lineages,

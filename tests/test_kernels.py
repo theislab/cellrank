@@ -1,3 +1,4 @@
+from copy import copy
 from typing import Tuple, Callable, Optional
 
 import pytest
@@ -9,13 +10,10 @@ from _helpers import (
     random_transition_matrix,
 )
 
+import scanpy as sc
+import cellrank as cr
 from scanpy import Neighbors
 from anndata import AnnData
-
-import numpy as np
-from pandas.core.dtypes.common import is_bool_dtype, is_integer_dtype
-
-import cellrank as cr
 from cellrank.tl._utils import _normalize
 from cellrank.ul._utils import _get_neighs, _get_neighs_params
 from cellrank.tl.kernels import (
@@ -27,12 +25,19 @@ from cellrank.tl.kernels import (
 )
 from cellrank.tl._constants import _transition
 from cellrank.tl.kernels._base_kernel import (
+    Kernel,
     Constant,
     KernelAdd,
     KernelMul,
+    _dtype,
     _is_bin_mult,
 )
 from cellrank.tl.kernels._cytotrace_kernel import CytoTRACEAggregation, _ct
+
+import numpy as np
+from scipy.sparse import eye as speye
+from scipy.sparse import isspmatrix_csr
+from pandas.core.dtypes.common import is_bool_dtype, is_integer_dtype
 
 _rtol = 1e-6
 
@@ -55,6 +60,22 @@ class CustomFuncHessian(CustomFunc):
     ) -> np.ndarray:
         # should be either (n, g, g) or (n, g), will be (g, g)
         return np.zeros((D.shape[0], v.shape[0], v.shape[0]))
+
+
+class CustomKernel(Kernel):
+    def compute_transition_matrix(
+        self, sparse: bool = False, dnorm: bool = False
+    ) -> "KernelExpression":
+        if sparse:
+            tmat = speye(self.adata.n_obs, dtype=np.float32)
+        else:
+            tmat = np.eye(self.adata.n_obs, dtype=np.float32)
+
+        self._compute_transition_matrix(tmat, density_normalize=dnorm)
+        return self
+
+    def copy(self) -> "KernelExpression":
+        return copy(self)
 
 
 class InvalidFuncProbs(cr.tl.kernels.SimilaritySchemeABC):
@@ -421,6 +442,45 @@ class TestKernel:
         with pytest.raises(ValueError):
             PrecomputedKernel(vk)
 
+    @pytest.mark.parametrize(
+        "clazz",
+        [
+            ConnectivityKernel,
+            VelocityKernel,
+            PseudotimeKernel,
+            CytoTRACEKernel,
+            PrecomputedKernel,
+        ],
+    )
+    @pytest.mark.parametrize("key_added", [None, "foo"])
+    def test_kernel_reads_correct_connectivities(
+        self, adata: AnnData, key_added: Optional[str], clazz: type
+    ):
+        del adata.uns["neighbors"]
+        del adata.obsp["connectivities"]
+        del adata.obsp["distances"]
+
+        sc.pp.neighbors(adata, key_added=key_added)
+        kwargs = {"adata": adata, "conn_key": key_added}
+
+        if clazz == PseudotimeKernel:
+            kwargs["time_key"] = "latent_time"
+        elif clazz == PrecomputedKernel:
+            adata.obsp["foo"] = np.eye(adata.n_obs)
+            kwargs["transition_matrix"] = "foo"
+        conn = (
+            adata.obsp["connectivities"]
+            if key_added is None
+            else adata.obsp[f"{key_added}_connectivities"]
+        )
+
+        k = clazz(**kwargs)
+
+        if isinstance(k, PrecomputedKernel):
+            assert k._conn is None
+        else:
+            np.testing.assert_array_equal(k._conn.A, conn.A)
+
     def test_precomputed_from_kernel(self, adata: AnnData):
         vk = VelocityKernel(adata).compute_transition_matrix(
             mode="stochastic",
@@ -497,6 +557,18 @@ class TestKernel:
             expected.toarray(), actual.transition_matrix.toarray()
         )
 
+    @pytest.mark.parametrize("dnorm", [False, True])
+    @pytest.mark.parametrize("sparse", [False, True])
+    def test_custom_preserves_type(self, adata: AnnData, sparse: bool, dnorm: bool):
+        c = CustomKernel(adata).compute_transition_matrix(sparse=sparse, dnorm=dnorm)
+
+        if sparse:
+            assert isspmatrix_csr(c.transition_matrix)
+        else:
+            assert isinstance(c.transition_matrix, np.ndarray)
+
+        assert c.transition_matrix.dtype == _dtype
+
     def test_write_adata(self, adata: AnnData):
         vk = VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
         vk.write_to_adata()
@@ -552,29 +624,39 @@ class TestKernel:
 
         np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
 
-    @pytest.mark.parametrize("dens_norm", [False, True])
-    def test_palantir(self, adata: AnnData, dens_norm: bool):
+    # only to 15 because in kernel, if a row sums to 0, abs. states are created
+    # this happens because k_thresh = frac_to_keep = 0
+    @pytest.mark.parametrize("k", range(1, 15))
+    def test_pseudotime_frac_to_keep(self, adata: AnnData, k: int):
         conn = _get_neighs(adata, "connectivities")
         n_neighbors = _get_neighs_params(adata)["n_neighbors"]
         pseudotime = adata.obs["latent_time"]
+        k_thresh = max(0, min(int(np.floor(n_neighbors / k)) - 1, 30))
 
-        conn_biased = bias_knn(conn, pseudotime, n_neighbors)
-        if dens_norm:
-            T_1 = density_normalization(conn_biased, conn)
-            T_1 = _normalize(T_1)
-        else:
-            T_1 = _normalize(conn_biased)
+        conn_biased = bias_knn(conn.copy(), pseudotime, n_neighbors, k=k)
+        T_1 = _normalize(conn_biased)
 
         pk = PseudotimeKernel(adata, time_key="latent_time").compute_transition_matrix(
-            density_normalize=dens_norm,
-            frac_to_keep=1 / 3.0,
+            frac_to_keep=k_thresh / float(n_neighbors),
             threshold_scheme="hard",
         )
         T_2 = pk.transition_matrix
 
         np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
 
-    def test_palantir_inverse(self, adata: AnnData):
+    def test_pseudotime_parallelize(self, adata: AnnData):
+        pk1 = PseudotimeKernel(adata, time_key="latent_time").compute_transition_matrix(
+            n_jobs=None
+        )
+        pk2 = PseudotimeKernel(adata, time_key="latent_time").compute_transition_matrix(
+            n_jobs=2
+        )
+
+        np.testing.assert_allclose(
+            pk1.transition_matrix.A, pk2.transition_matrix.A, rtol=_rtol
+        )
+
+    def test_pseudotime_inverse(self, adata: AnnData):
         pk = PseudotimeKernel(adata, time_key="latent_time")
         pt = pk.pseudotime.copy()
 
@@ -584,7 +666,7 @@ class TestKernel:
         assert pk_inv.backward
         np.testing.assert_allclose(pt, 1 - pk_inv.pseudotime)
 
-    def test_palantir_differ_dense_norm(self, adata: AnnData):
+    def test_pseudotime_differ_dense_norm(self, adata: AnnData):
         conn = _get_neighs(adata, "connectivities")
         n_neighbors = _get_neighs_params(adata)["n_neighbors"]
         pseudotime = adata.obs["latent_time"]
@@ -593,9 +675,7 @@ class TestKernel:
         T_1 = density_normalization(conn_biased, conn)
         T_1 = _normalize(T_1)
 
-        pk = PseudotimeKernel(adata, time_key="latent_time").compute_transition_matrix(
-            density_normalize=False
-        )
+        pk = PseudotimeKernel(adata, time_key="latent_time").compute_transition_matrix()
         T_2 = pk.transition_matrix
 
         assert not np.allclose(T_1.A, T_2.A, rtol=_rtol)
@@ -751,7 +831,7 @@ class TestKernel:
         T_cr = ck.transition_matrix
 
         assert key == ck.params["key"]
-        np.testing.assert_array_equal(T_cr.A, adata.obsp[key])
+        np.testing.assert_array_equal(T_cr, adata.obsp[key])
 
         del adata.obsp[key]
 
@@ -1365,7 +1445,6 @@ class TestPseudotimeKernelScheme:
             threshold_scheme=lambda cpt, npt, ndist: np.ones(
                 (len(ndist)), dtype=np.float64
             ),
-            density_normalize=False,
         )
 
         np.testing.assert_allclose(pk.transition_matrix.sum(1), 1.0)
@@ -1467,3 +1546,62 @@ class TestCytoTRACEKernel:
         gene_corr_actual = adata_large.var[_ct("gene_corr")].values
 
         np.testing.assert_array_equal(gene_corr_actual, gene_corr_expected)
+
+
+class TestSingleFlow:
+    def test_no_transition_matrix(self, kernel: Kernel):
+        kernel._transition_matrix = None
+        with pytest.raises(RuntimeError, match=r"Compute transition matrix first as"):
+            kernel.plot_single_flow("Astrocytes", "clusters", "age(days)")
+
+    def test_invalid_cluster_key(self, kernel: Kernel):
+        with pytest.raises(KeyError, match=r"Unable to find clusters in"):
+            kernel.plot_single_flow("Astrocytes", "foo", "age(days)")
+
+    def test_invalid_source_cluster(self, kernel: Kernel):
+        with pytest.raises(ValueError, match=r"Invalid source cluster"):
+            kernel.plot_single_flow("foo", "clusters", "age(days)")
+
+    def test_too_few_invalid_clusters(self, kernel: Kernel):
+        with pytest.raises(ValueError, match=r"Expected at least `2` clusters"):
+            kernel.plot_single_flow(
+                "Astrocytes", "clusters", "age(days)", clusters=["foo", "bar", "baz"]
+            )
+
+    def test_all_invalid_clusters(self, kernel: Kernel):
+        with pytest.raises(ValueError, match=r"No valid clusters have been selected."):
+            kernel.plot_single_flow(
+                "quux", "clusters", "age(days)", clusters=["foo", "bar", "baz"]
+            )
+
+    def test_invalid_time_key(self, kernel: Kernel):
+        with pytest.raises(
+            KeyError, match=r"Unable to find data in `adata.obs\['foo'\]`."
+        ):
+            kernel.plot_single_flow("Astrocytes", "clusters", "foo")
+
+    def test_too_few_valid_timepoints(self, kernel: Kernel):
+        with pytest.raises(ValueError, match=r"Expected at least `2` time points"):
+            kernel.plot_single_flow(
+                "Astrocytes", "clusters", "age(days)", time_points=["35"]
+            )
+
+    def test_all_invalid_times(self, kernel: Kernel):
+        with pytest.raises(ValueError, match=r"No valid time points"):
+            kernel.plot_single_flow(
+                "Astrocytes", "clusters", "age(days)", time_points=[0, 1, 2]
+            )
+
+    def test_time_key_cannot_be_coerced_to_numeric(self, kernel: Kernel):
+        with pytest.raises(TypeError, match=r"Unable to convert .* to `float`."):
+            kernel.plot_single_flow("Astrocytes", "clusters", "clusters")
+
+    def test_remove_empty_clusters_none_remain(self, kernel: Kernel):
+        with pytest.raises(ValueError, match=r"After removing clusters with no"):
+            kernel.plot_single_flow(
+                "Astrocytes",
+                "clusters",
+                "age(days)",
+                min_flow=np.inf,
+                remove_empty_clusters=True,
+            )

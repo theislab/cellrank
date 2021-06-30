@@ -2,6 +2,8 @@
 
 from typing import Any, List, Tuple, Union, Iterable, Optional, Sequence
 
+from cellrank import logging as logg
+
 import numpy as np
 from pandas import Series, DataFrame, to_numeric
 from scipy.stats import entropy
@@ -10,8 +12,6 @@ from pandas.core.dtypes.common import is_categorical_dtype
 
 from matplotlib import cm
 from matplotlib import colors as mcolors
-
-from cellrank import logging as logg
 
 
 def _create_colors(
@@ -105,7 +105,7 @@ def _create_categorical_colors(n_categories: Optional[int] = None):
         n_categories = max_cats
     if n_categories > max_cats:
         raise ValueError(
-            f"Maximum number of colors ({max_cats}) exceeded: `{n_categories}`."
+            f"Number of categories `{n_categories}` exceeded the maximum number of colors `{max_cats}`."
         )
 
     colors = []
@@ -140,7 +140,7 @@ def _get_black_or_white(value: float, cmap) -> str:
     if not (0.0 <= value <= 1.0):
         raise ValueError(f"Value must be in range `[0, 1]`, found `{value}`.")
 
-    r, g, b, *_ = [int(c * 255) for c in cmap(value)]
+    r, g, b, *_ = (int(c * 255) for c in cmap(value))
     return _contrasting_color(r, g, b)
 
 

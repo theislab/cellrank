@@ -44,9 +44,6 @@ Kernels
 -------
 Kernels are part of the low-level API and are used to estimate cell-to-cell transitions.
 
-.. module:: cellrank.tl
-.. currentmodule:: cellrank
-
 .. autosummary::
     :toctree: api
 
@@ -59,9 +56,6 @@ Kernels are part of the low-level API and are used to estimate cell-to-cell tran
 Estimators
 ----------
 Estimators predict cell fates using the transitions derived from :ref:`Kernels`.
-
-.. module:: cellrank.tl
-.. currentmodule:: cellrank
 
 .. autosummary::
     :toctree: api
@@ -84,6 +78,7 @@ Plotting
     pl.lineage_drivers
     pl.circular_projection
     pl.gene_trends
+    pl.log_odds
     pl.heatmap
     pl.cluster_lineage
     pl.cluster_fates
@@ -125,7 +120,8 @@ Datasets
 
     datasets.pancreas
     datasets.lung
-    datasets.reprogramming
+    datasets.reprogramming_morris
+    datasets.reprogramming_schiebinger
     datasets.zebrafish
     datasets.pancreas_preprocessed
 

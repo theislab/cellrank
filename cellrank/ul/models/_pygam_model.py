@@ -5,6 +5,13 @@ from types import MappingProxyType
 from typing import Union, Mapping, Optional
 from collections import defaultdict
 
+from cellrank import logging as logg
+from cellrank.ul._docs import d
+from cellrank.ul.models import BaseModel
+from cellrank.tl._constants import ModeEnum
+from cellrank.tl.kernels._utils import _filter_kwargs
+from cellrank.ul.models._base_model import AnnData
+
 import numpy as np
 from pygam import GAM as pGAM
 from pygam import (
@@ -16,13 +23,6 @@ from pygam import (
     ExpectileGAM,
     s,
 )
-
-from cellrank import logging as logg
-from cellrank.ul._docs import d
-from cellrank.ul.models import BaseModel
-from cellrank.tl._constants import ModeEnum
-from cellrank.tl.kernels._utils import _filter_kwargs
-from cellrank.ul.models._base_model import AnnData
 
 _r_lib = None
 _r_lib_name = None

@@ -3,13 +3,6 @@ from types import MappingProxyType
 from typing import List, Tuple, Union, Mapping, TypeVar, Optional, Sequence
 from pathlib import Path
 
-import numpy as np
-import pandas as pd
-
-import matplotlib
-import matplotlib.pyplot as plt
-from matplotlib import cm
-
 from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.pl._utils import (
@@ -26,6 +19,13 @@ from cellrank.pl._utils import (
 from cellrank.tl._utils import save_fig, _unique_order_preserving
 from cellrank.ul._utils import _get_n_cores, _check_collection
 from cellrank.tl._constants import _DEFAULT_BACKEND, AbsProbKey
+
+import numpy as np
+import pandas as pd
+
+import matplotlib
+import matplotlib.pyplot as plt
+from matplotlib import cm
 
 AnnData = TypeVar("AnnData")
 
@@ -91,13 +91,15 @@ def gene_trends(
         Key in ``adata.layers`` or `'X'` for ``adata.X`` where the data is stored.
     time_key
         Key in ``adata.obs`` where the pseudotime is stored.
-    %(time_ranges)s
+    %(time_range)s
+
+        This can also be specified on per-lineage basis.
     transpose
         If ``same_plot=True``, group the trends by ``lineages`` instead of ``genes``. This enforces ``hide_cells=True``.
         If ``same_plot=False``, show ``lineages`` in rows and ``genes`` in columns.
     %(model_callback)s
     conf_int
-        Whether to compute and show confidence interval. If the :paramref:`model` is :class:`cellrank.ul.models.GAMR`,
+        Whether to compute and show confidence interval. If the ``model`` is :class:`cellrank.ul.models.GAMR`,
         it can also specify the confidence level, the default is `0.95`.
     same_plot
         Whether to plot all lineages for each gene in the same plot.

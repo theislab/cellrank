@@ -1,14 +1,14 @@
 import pytest
 
-import numpy as np
-from scipy.sparse import eye as speye
-from scipy.sparse import random, csr_matrix
-
 from cellrank.tl._linear_solver import (
     _petsc_mat_solve,
     _solve_lin_system,
     _create_petsc_matrix,
 )
+
+import numpy as np
+from scipy.sparse import eye as speye
+from scipy.sparse import random, csr_matrix
 
 
 def _petsc_not_installed() -> bool:

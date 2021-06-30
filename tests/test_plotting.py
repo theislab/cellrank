@@ -12,7 +12,12 @@ from _helpers import (
 from packaging import version
 
 import scvelo as scv
+import cellrank as cr
 from anndata import AnnData
+from cellrank.tl import Lineage
+from cellrank.ul.models import GAMR
+from cellrank.tl._constants import AbsProbKey, _pd
+from cellrank.tl.estimators import GPCCA, CFLARE
 
 import numpy as np
 import pandas as pd
@@ -20,14 +25,9 @@ from scipy.sparse import issparse
 from pandas.api.types import is_categorical_dtype
 
 import matplotlib.cm as cm
+import matplotlib.pyplot as plt
 from matplotlib.testing import setup
 from matplotlib.testing.compare import compare_images
-
-import cellrank as cr
-from cellrank.tl import Lineage
-from cellrank.ul.models import GAMR
-from cellrank.tl._constants import AbsProbKey, _pd
-from cellrank.tl.estimators import GPCCA, CFLARE
 
 setup()
 
@@ -106,6 +106,8 @@ def compare(
             fpath += ".png"
         if dirname is not None:
             for file in os.listdir(FIGS / dirname):
+                if "-diff" in file:
+                    continue
                 _compare_images(GT_FIGS / dirname / file, FIGS / dirname / file)
         else:
             _compare_images(GT_FIGS / fpath, FIGS / fpath)
@@ -722,6 +724,53 @@ class TestClusterLineage:
         assert isinstance(adata_cflare.uns["foobar"], AnnData)
         assert adata_cflare.uns["foobar"].shape == (10, 200)
         assert is_categorical_dtype(adata_cflare.uns["foobar"].obs["clusters"])
+
+    @compare()
+    def test_cluster_lineage_covariates(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.cluster_lineage(
+            adata,
+            model,
+            GENES[:10],
+            "1",
+            covariate_key=["clusters", "latent_time"],
+            random_state=0,
+            time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_cluster_lineage_covariates_cmap(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.cluster_lineage(
+            adata,
+            model,
+            GENES[:10],
+            "1",
+            covariate_key="latent_time",
+            cmap="inferno",
+            random_state=0,
+            time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_cluster_lineage_covariates_ratio(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.cluster_lineage(
+            adata,
+            model,
+            GENES[:10],
+            "1",
+            covariate_key="latent_time",
+            ratio=0.25,
+            random_state=0,
+            time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
+        )
 
 
 class TestHeatmap:
@@ -3168,4 +3217,563 @@ class TestPlotRandomWalk:
             legend_loc="upper left",
             dpi=DPI,
             save=fpath,
+        )
+
+
+class TestPlotSingleFlow:
+    @compare(kind="gpcca")
+    def test_flow_source_clusters(self, mc: GPCCA, fpath: str):
+        mc.kernel.plot_single_flow(
+            "Neuroblast",
+            "clusters",
+            "age(days)",
+            clusters=["OPC", "Endothelial", "OL"],
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare(kind="gpcca")
+    def test_flow_clusters_subset(self, mc: GPCCA, fpath: str):
+        mc.kernel.plot_single_flow(
+            "Astrocytes",
+            "clusters",
+            "age(days)",
+            clusters=["OPC", "Endothelial", "OL"],
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare(kind="gpcca")
+    def test_flow_min_flow_remove_empty_clusters(self, mc: GPCCA, fpath: str):
+        mc.kernel.plot_single_flow(
+            "Astrocytes",
+            "clusters",
+            "age(days)",
+            min_flow=0.2,
+            remove_empty_clusters=True,
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare(kind="gpcca")
+    def test_flow_min_flow_keep_empty_clusters(self, mc: GPCCA, fpath: str):
+        mc.kernel.plot_single_flow(
+            "Astrocytes",
+            "clusters",
+            "age(days)",
+            min_flow=0.2,
+            remove_empty_clusters=False,
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare(kind="gpcca")
+    def test_flow_cluster_ascending(self, mc: GPCCA, fpath: str):
+        mc.kernel.plot_single_flow(
+            "Astrocytes", "clusters", "age(days)", ascending=True, dpi=DPI, save=fpath
+        )
+
+    @compare(kind="gpcca")
+    def test_flow_cluster_descending(self, mc: GPCCA, fpath: str):
+        mc.kernel.plot_single_flow(
+            "Astrocytes", "clusters", "age(days)", ascending=False, dpi=DPI, save=fpath
+        )
+
+    @compare(kind="gpcca")
+    def test_flow_explicit_cluster_order(self, mc: GPCCA, fpath: str):
+        mc.kernel.plot_single_flow(
+            "Astrocytes",
+            "clusters",
+            "age(days)",
+            ascending=None,
+            clusters=["OPC", "OL"],
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare(kind="gpcca")
+    def test_flow_legend_loc(self, mc: GPCCA, fpath: str):
+        mc.kernel.plot_single_flow(
+            "Astrocytes",
+            "clusters",
+            "age(days)",
+            legend_loc="upper left out",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare(kind="gpcca")
+    def test_flow_alpha(self, mc: GPCCA, fpath: str):
+        mc.kernel.plot_single_flow(
+            "Astrocytes", "clusters", "age(days)", alpha=0.3, dpi=DPI, save=fpath
+        )
+
+    @compare(kind="gpcca")
+    def test_flow_no_xticks(self, mc: GPCCA, fpath: str):
+        mc.kernel.plot_single_flow(
+            "Astrocytes",
+            "clusters",
+            "age(days)",
+            xticks_step_size=None,
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare(kind="gpcca")
+    def test_flow_time_categories_too_close(self, mc: GPCCA, fpath: str):
+        mc.adata.obs["day"] = (
+            mc.adata.obs["age(days)"]
+            .cat.rename_categories(
+                {
+                    "12": 0.1,
+                    "35": 0.291,
+                }
+            )
+            .values
+        )
+        mc.kernel.plot_single_flow("Astrocytes", "clusters", "day", dpi=DPI, save=fpath)
+
+    @compare(kind="gpcca")
+    def test_flow_return_ax(self, mc: GPCCA, fpath: str):
+        ax = mc.kernel.plot_single_flow(
+            "Astrocytes", "clusters", "age(days)", show=False, dpi=DPI, save=fpath
+        )
+        assert isinstance(ax, plt.Axes)
+
+
+class TestPlotDriverCorrelation:
+    @compare(kind="gpcca")
+    def test_driver_corr(self, mc: GPCCA, fpath: str):
+        mc.plot_lineage_drivers_correlation(
+            "1", "2", dpi=DPI, save=fpath, title="bar", size=100
+        )
+
+    @compare(kind="gpcca")
+    def test_driver_corr_color(self, mc: GPCCA, fpath: str):
+        mc.plot_lineage_drivers_correlation(
+            "0", "1", dpi=DPI, save=fpath, color="to 2 corr"
+        )
+
+    @compare(kind="gpcca")
+    def test_driver_corr_gene_sets(self, mc: GPCCA, fpath: str):
+        mc.plot_lineage_drivers_correlation(
+            "0", "1", dpi=DPI, save=fpath, gene_sets={"0": mc.adata.var_names[:3]}
+        )
+
+    @compare(kind="gpcca")
+    def test_driver_corr_gene_sets_colors(self, mc: GPCCA, fpath: str):
+        mc.plot_lineage_drivers_correlation(
+            "0",
+            "1",
+            dpi=DPI,
+            save=fpath,
+            gene_sets={"0": mc.adata.var_names[:3], "1": [mc.adata.var_names[4]]},
+            gene_sets_colors=["red", "black"],
+        )
+
+    @compare(kind="gpcca")
+    def test_driver_corr_legend_loc(self, mc: GPCCA, fpath: str):
+        mc.plot_lineage_drivers_correlation(
+            "0",
+            "1",
+            dpi=DPI,
+            save=fpath,
+            gene_sets={"0": mc.adata.var_names[:3], "1": [mc.adata.var_names[4]]},
+            legend_loc="lower center out",
+        )
+
+    @compare(kind="gpcca")
+    def test_driver_corr_use_raw(self, mc: GPCCA, fpath: str):
+        mc.compute_lineage_drivers(cluster_key="clusters", use_raw=True)
+        mc.plot_lineage_drivers_correlation(
+            "0", "1", dpi=DPI, save=fpath, use_raw=True, color="to 1 qval"
+        )
+
+    @compare(kind="gpcca")
+    def test_driver_corr_cmap(self, mc: GPCCA, fpath: str):
+        mc.plot_lineage_drivers_correlation(
+            "0", "1", dpi=DPI, save=fpath, color="to 1 qval", cmap="inferno"
+        )
+
+    @compare(kind="gpcca")
+    def test_driver_corr_fontsize(self, mc: GPCCA, fpath: str):
+        mc.plot_lineage_drivers_correlation(
+            "0",
+            "1",
+            dpi=DPI,
+            save=fpath,
+            gene_sets={"foo": mc.adata.var_names[4:6]},
+            fontsize=20,
+        )
+
+    @compare(kind="gpcca")
+    def test_driver_corr_adjust_text(self, mc: GPCCA, fpath: str):
+        mc.plot_lineage_drivers_correlation(
+            "0",
+            "1",
+            dpi=DPI,
+            save=fpath,
+            gene_sets={"bar": mc.adata.var_names[:3]},
+            adjust_text=True,
+        )
+
+    @compare(kind="gpcca")
+    def test_driver_corr_return_ax(self, mc: GPCCA, fpath: str):
+        ax = mc.plot_lineage_drivers_correlation(
+            "2", "0", dpi=DPI, save=fpath, show=False
+        )
+        assert isinstance(ax, plt.Axes)
+
+
+class TestLogOdds:
+    @compare()
+    def test_log_odds(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            figsize=(4, 3),
+            size=10,
+            seed=42,
+        )
+
+    @compare(kind="bwd")
+    def test_log_odds_bwd(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            backward=True,
+            figsize=(4, 3),
+            size=10,
+            seed=42,
+        )
+
+    @compare()
+    def test_log_odds_rest(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "2",
+            None,
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            figsize=(4, 3),
+            size=10,
+            seed=42,
+        )
+
+    @compare()
+    def test_log_odds_continuous_keys(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            keys=adata.var_names[:3],
+            figsize=(4, 3),
+            size=4,
+        )
+
+    @compare()
+    def test_log_odds_categorical_keys(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            keys=["clusters", "clusters_enlarged"],
+            figsize=(4, 3),
+            size=10,
+            seed=42,
+        )
+
+    @compare()
+    def test_log_odds_threshold(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            keys=adata.var_names[:3],
+            threshold=0.5,
+            figsize=(4, 3),
+            size=10,
+            seed=42,
+        )
+
+    @compare()
+    def test_log_odds_multiple_threshold(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            keys=adata.var_names[:3],
+            threshold=[0.7, 0.2, 0.3],
+            figsize=(4, 3),
+            size=10,
+            seed=42,
+        )
+
+    @compare()
+    def test_log_odds_threshold_color(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            keys=adata.var_names[:3],
+            threshold=0.5,
+            threshold_color="blue",
+            figsize=(4, 3),
+            size=10,
+            seed=42,
+        )
+
+    @compare()
+    def test_log_odds_layer(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            keys=adata.var_names[3:6],
+            layer="Ms",
+            figsize=(4, 3),
+            size=10,
+            seed=42,
+        )
+
+    @compare()
+    def test_log_odds_use_raw(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            keys=adata.raw.var_names[3:6],
+            use_raw=True,
+            figsize=(4, 3),
+            size=10,
+            seed=42,
+        )
+
+    @compare()
+    def test_log_odds_size(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            keys="clusters",
+            size=20,
+            figsize=(4, 3),
+        )
+
+    @compare()
+    def test_log_odds_cmap(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            keys=adata.var_names[:2],
+            size=10,
+            cmap="inferno",
+            figsize=(4, 3),
+        )
+
+    @compare()
+    def test_log_odds_alpha(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            keys="clusters",
+            alpha=0.5,
+            figsize=(4, 3),
+            size=10,
+            seed=42,
+        )
+
+    @compare()
+    def test_log_odds_ncols(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            keys=["clusters", adata.var_names[-1]],
+            ncols=1,
+            figsize=(3, 4),
+            size=10,
+            seed=42,
+        )
+
+    @compare()
+    def test_log_odds_fontsize(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            keys="clusters",
+            fontsize=25,
+            figsize=(3, 4),
+            size=10,
+            seed=42,
+        )
+
+    @compare()
+    def test_log_odds_xticks_steps_size(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            keys="clusters",
+            xticks_step_size=None,
+            figsize=(3, 4),
+            size=10,
+            seed=42,
+        )
+
+    @compare()
+    def test_log_odds_legend_loc(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            keys=["clusters", adata.var_names[-1]],
+            legend_loc="upper right out",
+            figsize=(4, 3),
+            size=10,
+            seed=42,
+        )
+
+    @compare()
+    def test_log_odds_jitter(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "0",
+            "1",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            figsize=(4, 3),
+            size=10,
+            seed=42,
+            jitter=1,
+        )
+
+    @compare()
+    def test_log_odds_kwargs_return_ax(self, adata: AnnData, fpath: str):
+        ax = cr.pl.log_odds(
+            adata,
+            "1",
+            "2",
+            "age(days)",
+            keys="clusters",
+            dpi=DPI,
+            save=fpath,
+            show=False,
+            edgecolor="red",
+            figsize=(4, 3),
+            size=4,
+        )
+        assert isinstance(ax, plt.Axes)
+
+    @compare()
+    def test_log_odds_kwargs_return_axes(self, adata: AnnData, fpath: str):
+        axes = cr.pl.log_odds(
+            adata,
+            "1",
+            "2",
+            "age(days)",
+            keys=adata.var_names[:3],
+            dpi=DPI,
+            save=fpath,
+            ncols=2,
+            show=False,
+            figsize=(4, 3),
+            size=4,
+        )
+        assert isinstance(axes, np.ndarray)
+        assert axes.shape == (3,)
+        assert np.all([isinstance(ax, plt.Axes) for ax in axes])
+
+    @compare()
+    def test_log_odds_kwargs(self, adata: AnnData, fpath: str):
+        cr.pl.log_odds(
+            adata,
+            "1",
+            "2",
+            "age(days)",
+            dpi=DPI,
+            save=fpath,
+            linewidth=5,
+            edgecolor="red",
+            figsize=(4, 3),
+            size=4,
+        )
+
+
+class TestMacrostateComposition:
+    @compare(kind="gpcca")
+    def test_msc_default(self, mc: GPCCA, fpath: str):
+        mc.plot_macrostate_composition("clusters", dpi=DPI, save=fpath)
+
+    @compare(kind="gpcca")
+    def test_msc_width(self, mc: GPCCA, fpath: str):
+        mc.plot_macrostate_composition("clusters", dpi=DPI, save=fpath, width=0.2)
+
+    @compare(kind="gpcca")
+    def test_msc_title(self, mc: GPCCA, fpath: str):
+        mc.plot_macrostate_composition("clusters", dpi=DPI, save=fpath, title="foobar")
+
+    @compare(kind="gpcca")
+    def test_msc_labelrot(self, mc: GPCCA, fpath: str):
+        mc.plot_macrostate_composition("clusters", dpi=DPI, save=fpath, labelrot=0)
+
+    @compare(kind="gpcca")
+    def test_msc_legend_loc(self, mc: GPCCA, fpath: str):
+        mc.plot_macrostate_composition(
+            "clusters_enlarged", dpi=DPI, save=fpath, legend_loc="upper left out"
         )

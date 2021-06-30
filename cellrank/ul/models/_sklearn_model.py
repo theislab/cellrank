@@ -2,12 +2,12 @@
 from typing import Iterable, Optional
 from inspect import signature
 
-import numpy as np
-from sklearn.base import BaseEstimator
-
 from cellrank.ul._docs import d
 from cellrank.ul.models import BaseModel
 from cellrank.ul.models._base_model import AnnData
+
+import numpy as np
+from sklearn.base import BaseEstimator
 
 
 @d.dedent
@@ -21,10 +21,10 @@ class SKLearnModel(BaseModel):
     model
         Instance of the underlying :mod:`sklearn` estimator, such as :class:`sklearn.svm.SVR`.
     weight_name
-        Name of the weight argument for :paramref:`model` ``.fit``. If `None`, to determine it automatically.
+        Name of the weight argument for :attr:`model` ``.fit``. If `None`, to determine it automatically.
         If and empty string, no weights will be used.
     ignore_raise
-        Do not raise an exception if weight argument is not found in the fitting function of :paramref:`model`.
+        Do not raise an exception if weight argument is not found in the fitting function of :attr:`model`.
         This is useful in case when weight is passed in ``**kwargs`` and cannot be determined from signature.
     """
 
@@ -161,7 +161,7 @@ class SKLearnModel(BaseModel):
         default: Optional[str] = None,
     ) -> Optional[str]:
         """
-        Find a function in :paramref:`model` from given names.
+        Find a function in :attr:`model` from given names.
 
         If `None` is found, use :paramref;`default` or raise a :class:`RuntimeError`.
 
@@ -193,12 +193,12 @@ class SKLearnModel(BaseModel):
         self, func_name: Optional[str], param_names: Iterable[str]
     ) -> Optional[str]:
         """
-        Find an argument in :paramref:`model`'s ``func_name``.
+        Find an argument in :attr:`model`'s ``func_name``.
 
         Parameters
         ----------
         func_name
-            Function name of :paramref:`model`.
+            Function name of :attr:`model`.
         param_names
             Parameter names to search. The first one found is returned.
 

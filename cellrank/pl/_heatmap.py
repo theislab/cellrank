@@ -6,18 +6,7 @@ from typing import Any, Dict, List, Tuple, Union, TypeVar, Optional, Sequence
 from pathlib import Path
 from collections import Iterable, defaultdict
 
-import numpy as np
-import pandas as pd
-from pandas.api.types import is_categorical_dtype
-from scipy.ndimage.filters import convolve
-
-import matplotlib as mpl
-import matplotlib.colors as mcolors
-import matplotlib.pyplot as plt
-from matplotlib import cm
-from matplotlib.ticker import FormatStrFormatter
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-
+from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.ul._docs import d, inject_docs
 from cellrank.pl._utils import (
@@ -29,15 +18,25 @@ from cellrank.pl._utils import (
     _create_callbacks,
     _input_model_type,
     _return_model_type,
+    _get_categorical_colors,
 )
 from cellrank.tl._utils import save_fig, _min_max_scale, _unique_order_preserving
 from cellrank.ul._utils import _get_n_cores, valuedispatch, _check_collection
-from cellrank.tl._colors import _create_categorical_colors
 from cellrank.tl._constants import _DEFAULT_BACKEND, ModeEnum, AbsProbKey
+
+import numpy as np
+import pandas as pd
+from scipy.ndimage.filters import convolve
+
+import matplotlib as mpl
+import matplotlib.colors as mcolors
+import matplotlib.pyplot as plt
+from matplotlib import cm
+from matplotlib.ticker import FormatStrFormatter
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 _N_XTICKS = 10
 
-AnnData = TypeVar("AnnData")
 Cmap = TypeVar("Cmap")
 Norm = TypeVar("Norm")
 Ax = TypeVar("Ax")
@@ -104,10 +103,12 @@ def heatmap(
             - `{m.GENES.s!r}` - group by ``lineages`` for each gene in ``genes``.
     time_key
         Key in ``adata.obs`` where the pseudotime is stored.
-    %(time_ranges)s
+    %(time_range)s
+
+        This can also be specified on per-lineage basis.
     %(model_callback)s
     cluster_key
-        Key(s) in ``adata.obs`` containing categorical observations to be plotted on top of the heatmap.
+        Key(s) in ``adata.obs`` containing categorical observations to be plotted at the top of the heatmap.
         Only available when ``mode={m.LINEAGES.s!r}``.
     show_absorption_probabilities
         Whether to also plot absorption probabilities alongside the smoothed expression.
@@ -118,7 +119,7 @@ def heatmap(
         Whether to keep the gene order for later lineages after the first was sorted.
         Only available when ``cluster_genes=False`` and ``mode={m.LINEAGES.s!r}``.
     scale
-        Whether to normalize the gene expression `0-1` range.
+        Whether to normalize the gene expression `[0, 1]` range.
     n_convolve
         Size of the convolution window when smoothing absorption probabilities.
     show_all_genes
@@ -199,28 +200,8 @@ def heatmap(
         )
 
     def create_col_categorical_color(cluster_key: str, rng: np.ndarray) -> np.ndarray:
-        if not is_categorical_dtype(adata.obs[cluster_key]):
-            raise TypeError(
-                f"Expected `adata.obs[{cluster_key!r}]` to be categorical, "
-                f"found `{adata.obs[cluster_key].dtype.name!r}`."
-            )
-
-        color_key = f"{cluster_key}_colors"
-        if color_key not in adata.uns:
-            logg.warning(
-                f"Color key `{color_key!r}` not found in `adata.uns`. Creating new colors"
-            )
-            colors = _create_categorical_colors(
-                len(adata.obs[cluster_key].cat.categories)
-            )
-            adata.uns[color_key] = colors
-        else:
-            colors = adata.uns[color_key]
-
-        time_series = adata.obs[time_key]
-        ixs = find_indices(time_series, rng)
-
-        mapper = dict(zip(adata.obs[cluster_key].cat.categories, colors))
+        colors, mapper = _get_categorical_colors(adata, cluster_key)
+        ixs = find_indices(adata.obs[time_key], rng)
 
         return np.array(
             [mcolors.to_hex(mapper[v]) for v in adata[ixs, :].obs[cluster_key].values]

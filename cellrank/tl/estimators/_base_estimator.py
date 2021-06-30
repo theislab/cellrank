@@ -3,24 +3,24 @@ import pickle
 from abc import ABC, abstractmethod
 from sys import version_info
 from copy import copy, deepcopy
-from typing import Any, Dict, Tuple, Union, Mapping, TypeVar, Optional, Sequence
+from typing import (
+    Any,
+    Dict,
+    Tuple,
+    Union,
+    Mapping,
+    TypeVar,
+    Iterable,
+    Optional,
+    Sequence,
+)
 from pathlib import Path
 from datetime import datetime
 
 from typing_extensions import Literal
 
+import scanpy as sc
 import scvelo as scv
-
-import numpy as np
-import pandas as pd
-from pandas import Series
-from scipy.stats import ranksums
-from scipy.sparse import spmatrix
-from pandas.api.types import infer_dtype, is_categorical_dtype
-
-import matplotlib.pyplot as plt
-from matplotlib.colors import is_color_like
-
 from cellrank import logging as logg
 from cellrank.ul._docs import d, inject_docs
 from cellrank.tl._utils import (
@@ -58,6 +58,19 @@ from cellrank.tl.estimators._property import Partitioner, LineageEstimatorMixin
 from cellrank.tl.kernels._base_kernel import KernelExpression
 from cellrank.tl.estimators._constants import A, P
 
+import numpy as np
+import pandas as pd
+from pandas import Series
+from scipy.stats import ranksums
+from scipy.sparse import spmatrix
+from pandas.api.types import infer_dtype, is_categorical_dtype
+
+import matplotlib.pyplot as plt
+from matplotlib import rc_context, patheffects
+from matplotlib.axes import Axes
+from matplotlib.colors import is_color_like
+from matplotlib.patches import ArrowStyle
+
 AnnData = TypeVar("AnnData")
 _COMP_TERM_STATES_MSG = (
     "Compute terminal states first as `.compute_terminal_states()` or"
@@ -77,18 +90,18 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         Either a :class:`cellrank.tl.kernels.Kernel` object, an :class:`anndata.AnnData` object which
         stores the transition matrix in ``.obsp`` attribute or :mod:`numpy` or :mod:`scipy` array.
     inplace
-        Whether to modify :paramref:`adata` object inplace or make a copy.
+        Whether to modify :attr:`adata` object inplace or make a copy.
     read_from_adata
-        Whether to read available attributes in :paramref:`adata`, if present.
+        Whether to read available attributes in :attr:`adata`, if present.
     obsp_key
         Key in ``obj.obsp`` when ``obj`` is an :class:`anndata.AnnData` object.
     g2m_key
-        Key in :paramref:`adata` ``.obs``. Can be used to detect cell-cycle driven start- or endpoints.
+        Key in :attr:`adata` ``.obs``. Can be used to detect cell-cycle driven start- or endpoints.
     s_key
-        Key in :paramref:`adata` ``.obs``. Can be used to detect cell-cycle driven start- or endpoints.
+        Key in :attr:`adata` ``.obs``. Can be used to detect cell-cycle driven start- or endpoints.
     write_to_adata
-        Whether to write the transition matrix to :paramref:`adata` ``.obsp`` and the parameters to
-        :paramref:`adata` ``.uns``.
+        Whether to write the transition matrix to :attr:`adata` ``.obsp`` and the parameters to
+        :attr:`adata` ``.uns``.
     %(write_to_adata.parameters)s
         Only used when ``write_to_adata=True``.
     """
@@ -137,6 +150,23 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         super().__init_subclass__()
 
     def _read_from_adata(self) -> None:
+        def _check_term_states():
+            term_states = self._get(A.TERM)
+            colors = self._get(A.TERM_COLORS)
+
+            if term_states is None or colors is None:
+                return
+            if not is_categorical_dtype(term_states):
+                raise TypeError(
+                    f"Expected `adata.obs[{self._term_key!r}]` to be `categorical`, "
+                    f"found `{infer_dtype(term_states)}`."
+                )
+            if len(term_states.cat.categories) != len(colors):
+                raise ValueError(
+                    f"Expected `adata.uns[{_colors(self._term_key)}]` to have "
+                    f"`{len(term_states.cat.categories)}` colors, found `{len(colors)}`."
+                )
+
         self._set_or_debug(f"eig_{self._direction}", self.adata.uns, "_eig")
 
         self._set_or_debug(self._g2m_key, self.adata.obs, "_G2M_score")
@@ -145,18 +175,23 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         self._set_or_debug(self._term_key, self.adata.obs, A.TERM.s)
         self._set_or_debug(_probs(self._term_key), self.adata.obs, A.TERM_PROBS)
         self._set_or_debug(_colors(self._term_key), self.adata.uns, A.TERM_COLORS)
+        _check_term_states()
 
         self._reconstruct_lineage(A.ABS_PROBS, self._abs_prob_key)
         self._set_or_debug(_pd(self._abs_prob_key), self.adata.obs, A.PRIME_DEG)
 
     def _reconstruct_lineage(self, attr: PrettyEnum, obsm_key: str):
         self._set_or_debug(obsm_key, self.adata.obsm, attr)
-        names = self._set_or_debug(_lin_names(self._term_key), self.adata.uns)
-        colors = self._set_or_debug(_colors(self._term_key), self.adata.uns)
-
         probs = self._get(attr)
 
         if probs is not None:
+            names = self._set_or_debug(_lin_names(self._term_key), self.adata.uns)
+            colors = self._set_or_debug(_colors(self._term_key), self.adata.uns)
+            if len(names) != len(colors):
+                raise ValueError(
+                    f"Expected names and colors to be of same length, found `{names}` and `{colors}`."
+                )
+
             if len(names) != probs.shape[1]:
                 if isinstance(probs, Lineage):
                     names = probs.names
@@ -167,17 +202,40 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                     )
                     names = [f"Lineage {i}" for i in range(probs.shape[1])]
             if len(colors) != probs.shape[1] or not all(
-                map(lambda c: isinstance(c, str) and is_color_like(c), colors)
+                is_color_like(c) for c in colors
             ):
                 if isinstance(probs, Lineage):
                     colors = probs.colors
                 else:
                     logg.warning(
-                        f"Expected lineage colors to be of length `{probs.shape[1]}`, found `{len(names)}`. "
+                        f"Expected lineage colors to be of length `{probs.shape[1]}`, found `{len(colors)}`. "
                         f"Creating new colors"
                     )
                     colors = _create_categorical_colors(probs.shape[1])
+
+            colors = _convert_to_hex_colors(colors)
             self._set(attr, Lineage(probs, names=names, colors=colors))
+
+            # ensure that the cont. lineage names match with the categorical values
+            term_states = self._get(A.TERM)
+            if term_states is not None:
+                direction = "initial" if self.kernel.backward else "terminal"
+                if len(names) != len(term_states.cat.categories):
+                    self._set(attr, None)
+                    logg.warning(
+                        f"Expected to find `{len(names)}` {direction} states "
+                        f"(from adata.uns[{_lin_names(self._term_key)!r}]), "
+                        f"found `{len(term_states.cat.categories)}` (from adata.obsm[{obsm_key!r}]). Skipping`.{attr}`"
+                    )
+                    return
+                if tuple(term_states.cat.categories) != tuple(names):
+                    self._set(attr, None)
+                    logg.warning(
+                        f"Expected to find `{names}` {direction} states "
+                        f"(from adata.uns[{_lin_names(self._term_key)!r}]), "
+                        f"found `{term_states.cat.categories}` (from adata.obs[{obsm_key!r}). Skipping `{attr}`"
+                    )
+                    return
 
             self.adata.obsm[obsm_key] = self._get(attr)
             self.adata.uns[_lin_names(self._term_key)] = names
@@ -195,29 +253,38 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         **kwargs,
     ) -> None:
         """
-        Set the approximate recurrent classes, if they are known a priori.
+        Manually define terminal states.
 
         Parameters
         ----------
         labels
-            Either a categorical :class:`pandas.Series` with index as cell names, where `NaN` marks marks a cell
-            belonging to a transient state or a :class:`dict`, where each key is the name of the recurrent class and
-            values are list of cell names.
+            Defines the terminal states. Valid options are:
+
+                - categorical :class:`pandas.Series` where each category corresponds to one terminal state.
+                  `NaN` entries denote cells that do not belong to any terminal state, i.e. these are either initial or
+                  transient cells.
+                - :class:`dict` where keys are terminal states and values are lists of cell barcodes corresponding to
+                  annotations in :attr:`adata` ``.obs_names``.
+                  If only 1 key is provided, values should correspond to terminal state clusters if a categorical
+                  :class:`pandas.Series` can be found in :attr:`adata` ``.obs``.
+
         cluster_key
-            If a key to cluster labels is given, :paramref:`{fs}` will be associated with these for naming and colors.
+            Key from :attr:`adata.obs` where categorical cluster labels are stored. These are used to associate names
+            and colors with each terminal state. Each terminal state will be given the name and color corresponding to
+            the cluster it mostly overlaps with.
         %(en_cutoff_p_thresh)s
         add_to_existing
-            Whether to add these categories to existing ones. Cells already belonging to recurrent classes will be
-            updated if there's an overlap.
-            Throws an error if previous approximate recurrent classes have not been calculated.
+            Whether the new terminal states should be added to pre-existing ones. Cells already assigned to a terminal
+            state will be re-assigned to the new terminal state if there's a conflict between old and new annotations.
+            This throws an error if no previous annotations corresponding to terminal states have been found.
 
         Returns
         -------
         None
             Nothing, but updates the following fields:
 
-                - :paramref:`{fsp}`
-                - :paramref:`{fs}`
+                - :attr:`{fsp}`
+                - :attr:`{fs}`
         """
 
         self._set_categorical_labels(
@@ -238,19 +305,19 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         self, new_names: Mapping[str, str], update_adata: bool = True
     ) -> None:
         """
-        Rename the names of :paramref:`{ts}`.
+        Rename the names of :attr:`{ts}`.
 
         Parameters
         ----------
         new_names
             Mapping where keys are the old names and the values are the new names. New names must be unique.
         update_adata
-            Whether to update underlying :paramref:`adata` object as well or not.
+            Whether to update underlying :attr:`adata` object as well or not.
 
         Returns
         -------
         None
-            Nothing, just updates the names of :paramref:`{ts}`.
+            Nothing, just updates the names of :attr:`{ts}`.
         """
 
         term_states = self._get(P.TERM)
@@ -327,7 +394,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         Compute absorption probabilities of a Markov chain.
 
         For each cell, this computes the probability of it reaching any of the approximate recurrent classes defined
-        by :paramref:`{fs}`.
+        by :attr:`{fs}`.
 
         Parameters
         ----------
@@ -376,8 +443,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         None
             Nothing, but updates the following fields:
 
-                - :paramref:`{abs_prob}` - probabilities of being absorbed into the terminal states.
-                - :paramref:`{lat}` - mean times until absorption to subset absorbing states and optionally
+                - :attr:`{abs_prob}` - probabilities of being absorbed into the terminal states.
+                - :attr:`{lat}` - mean times until absorption to subset absorbing states and optionally
                   their variances saved as ``'{{lineage}} mean'`` and ``'{{lineage}} var'``, respectively,
                   for each subset of absorbing states specified in ``time_to_absorption``.
         """
@@ -449,6 +516,15 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         q = t[trans_indices, :][:, trans_indices]
         s = t[trans_indices, :][:, rec_indices]
 
+        # take individual solutions and piece them together to get absorption probabilities towards the classes
+        macro_ix_helper = np.cumsum(
+            [0] + [len(indices) for indices in lookup_dict.values()]
+        )
+        s = np.concatenate(
+            [s[:, np.arange(a, b)].sum(axis=1) for a, b in _pairwise(macro_ix_helper)],
+            axis=1,
+        )
+
         # check for irreducibility
         if check_irreducibility:
             if self.is_irreducible is None:
@@ -462,7 +538,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         logg.debug(f"Found `{n_cells}` cells and `{s.shape[1]}` absorbing states")
 
         # solve the linear system of equations
-        mat_x = _solve_lin_system(
+        _abs_classes = _solve_lin_system(
             q,
             s,
             solver=solver,
@@ -495,18 +571,6 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         else:
             abs_time_means = None
 
-        # take individual solutions and piece them together to get absorption probabilities towards the classes
-        macro_ix_helper = np.cumsum(
-            [0] + [len(indices) for indices in lookup_dict.values()]
-        )
-        _abs_classes = np.concatenate(
-            [
-                mat_x[:, np.arange(a, b)].sum(1)[:, None]
-                for a, b in _pairwise(macro_ix_helper)
-            ],
-            axis=1,
-        )
-
         # for recurrent states, set their self-absorption probability to one
         abs_classes = np.zeros((len(self), n_macrostates))
         rec_classes_full = {
@@ -516,6 +580,21 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         for col, cl_indices in enumerate(rec_classes_full.values()):
             abs_classes[trans_indices, col] = _abs_classes[:, col]
             abs_classes[cl_indices, col] = 1
+
+        mask = abs_classes >= 0
+        if not np.all(mask):
+            raise ValueError(
+                f"`{np.sum(~mask)}` value(s) are negative. Try decreasing the tolerance as `tol=...`, "
+                f"specifying a preconditioner as `preconditioner=...` or "
+                f"use a direct solver as `solver='direct'` if the matrix is small."
+            )
+        mask = np.isclose(abs_classes.sum(1), 1.0, rtol=1e-3)
+        if not np.all(mask):
+            raise ValueError(
+                f"`{np.sum(~mask)}` value(s) do not sum to 1 (rtol=1e-3). Try decreasing the tolerance as `tol=...`, "
+                f"specifying a preconditioner as `preconditioner=...` or "
+                f"use a direct solver as `solver='direct'` if the matrix is small."
+            )
 
         self._set(
             A.ABS_PROBS,
@@ -615,22 +694,21 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         Parameters
         ----------
         lineages
-            Either a set of lineage names from :paramref:`absorption_probabilities` `.names` or `None`,
+            Either a set of lineage names from :attr:`absorption_probabilities` `.names` or `None`,
             in which case all lineages are considered.
         method
-            Mode to use when calculating p-values and confidence intervals. Can be one of:
+            Mode to use when calculating p-values and confidence intervals. Valid options are:
 
-                - {tm.FISCHER.s!r} - use Fischer transformation [Fischer21]_.
+                - {tm.FISCHER.s!r} - use Fischer transformation :cite:`fischer:21`.
                 - {tm.PERM_TEST.s!r} - use permutation test.
-
         cluster_key
-            Key from :paramref:`adata` ``.obs`` to obtain cluster annotations. These are considered for ``clusters``.
+            Key from :attr:`adata` ``.obs`` to obtain cluster annotations. These are considered for ``clusters``.
         clusters
             Restrict the correlations to these clusters.
         layer
-            Key from :paramref:`adata` ``.layers``.
+            Key from :attr:`adata` ``.layers``.
         use_raw
-            Whether or not to use :paramref:`adata` ``.raw`` to correlate gene expression.
+            Whether or not to use :attr:`adata` ``.raw`` to correlate gene expression.
             If using a layer other than ``.X``, this must be set to `False`.
         confidence_level
             Confidence level for the confidence interval calculation. Must be in `[0, 1]`.
@@ -646,23 +724,16 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         Returns
         -------
         %(correlation_test.returns)s
-            Only if ``return_drivers=True``.
+        Only if ``return_drivers=True``.
 
-        None
-            Updates :paramref:`adata` ``.var`` or :paramref:`adata` ``.raw.var``, depending ``use_raw`` with:
+        Otherwise, updates :attr:`adata` ``.var`` or :attr:`adata` ``.raw.var``, depending ``use_raw`` with:
 
-                - ``'{{direction}} {{lineage}} corr'`` - the potential lineage drivers.
-                - ``'{{direction}} {{lineage}} qval'`` - the corrected p-values.
+            - ``'{{direction}} {{lineage}} corr'`` - the potential lineage drivers.
+            - ``'{{direction}} {{lineage}} qval'`` - the corrected p-values.
 
-            Updates the following fields:
+        Also updates the following fields:
 
-                - :paramref:`{lin_drivers}` - same as the returned values.
-
-        References
-        ----------
-        .. [Fischer21] Fisher, R. A. (1921),
-            *On the “probable error” of a coefficient of correlation deduced from a small sample.*,
-            `Metron 1 3–32 <http://hdl.handle.net/2440/15169>`__.
+            - :attr:`{lin_drivers}` - same as the returned values.
         """
 
         # check that lineage probs have been computed
@@ -737,9 +808,10 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             f"layer `{layer}` with `use_raw={use_raw}`"
         )
 
+        lin_probs = lin_probs[lineages]
         drivers = _correlation_test(
             data,
-            lin_probs[lineages],
+            lin_probs,
             gene_names=var_names,
             method=method,
             n_perms=n_perms,
@@ -749,8 +821,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         )
         self._set(A.LIN_DRIVERS, drivers)
 
-        corrs, qvals = [f"{lin} corr" for lin in lineages], [
-            f"{lin} qval" for lin in lineages
+        corrs, qvals = [f"{lin} corr" for lin in lin_probs.names], [
+            f"{lin} qval" for lin in lin_probs.names
         ]
         if use_raw:
             self.adata.raw.var[[f"{prefix} {col}" for col in corrs]] = drivers[corrs]
@@ -760,7 +832,9 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             self.adata.var[[f"{prefix} {col}" for col in qvals]] = drivers[qvals]
 
         field = "raw.var" if use_raw else "var"
-        keys_added = [f"`adata.{field}['{prefix} {lin} corr']`" for lin in lineages]
+        keys_added = [
+            f"`adata.{field}['{prefix} {lin} corr']`" for lin in lin_probs.names
+        ]
 
         logg.info(
             f"Adding `.{P.LIN_DRIVERS}`\n       "
@@ -798,7 +872,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         ncols
             Number of columns.
         use_raw
-            Whether to look in :paramref:`adata` ``.raw.var`` or :paramref:`adata` ``.var``.
+            Whether to look in :attr:`adata` ``.raw.var`` or :attr:`adata` ``.var``.
         title_fmt
             Title format. Possible keywords include `{gene}`, `{qval}`, `{corr}` for gene name,
             q-value and correlation, respectively.
@@ -831,7 +905,6 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             return kwargs
 
         lin_drivers = self._get(P.LIN_DRIVERS)
-
         if lin_drivers is None:
             raise RuntimeError(
                 f"Compute `.{P.LIN_DRIVERS}` first as `.compute_lineage_drivers()`."
@@ -887,6 +960,192 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         if save is not None:
             save_fig(fig, save)
 
+    @d.dedent
+    def plot_lineage_drivers_correlation(
+        self,
+        lineage_x: str,
+        lineage_y: str,
+        color: Optional[str] = None,
+        gene_sets: Optional[Dict[str, Iterable]] = None,
+        gene_sets_colors: Optional[Iterable] = None,
+        use_raw: bool = False,
+        cmap: str = "RdYlBu_r",
+        fontsize: int = 12,
+        adjust_text: bool = False,
+        legend_loc: Optional[str] = "best",
+        figsize: Optional[Tuple[float, float]] = (4, 4),
+        dpi: Optional[int] = None,
+        save: Optional[Union[str, Path]] = None,
+        show: bool = True,
+        **kwargs: Any,
+    ) -> Optional[Axes]:
+        """
+        Show scatter plot of gene-correlations between two lineages.
+
+        Optionally, you can pass a :class:`dict` of gene names that will be annotated in the plot.
+
+        Parameters
+        ----------
+        lineage_x
+            Name of the lineage on the x-axis.
+        lineage_y
+            Name of the lineage on the y-axis.
+        color
+            Key in :attr:`adata` ``.var``.
+        gene_sets
+            Gene sets annotations of the form `{'gene_set_name': ['gene_1', 'gene_2'], ...}`.
+        gene_sets_colors
+            List of colors where each entry corresponds to a gene set from ``genes_sets``.
+            If `None` and keys in ``gene_sets`` correspond to lineage names, use the lineage colors.
+            Otherwise, use default colors.
+        use_raw
+            Whether to access :attr:`adata` ``.raw.var`` or :attr:`adata` ``.var``.
+        cmap
+            Colormap to use.
+        fontsize
+            Size of the text when plotting ``gene_sets``.
+        adjust_text
+            Whether to automatically adjust text in order to reduce overlap.
+        legend_loc
+            Position of the legend. If `None`, don't show the legend.
+            Only used when ``gene_sets!=None``.
+        %(plotting)s
+        show
+            If `False`, return :class:`matplotlib.pyplot.Axes`.
+        kwargs
+            Keyword arguments for :func:`scanpy.pl.scatter`.
+
+        Returns
+        -------
+        :class:`matplotlib.pyplot.Axes`
+            The axis object if ``show=False``.
+        %(just_plots)s
+
+        Notes
+        -----
+        This plot is based on the following
+        `notebook <https://github.com/theislab/gastrulation_analysis/blob/main/6_cellrank.ipynb>`_ by Maren Büttner.
+        """
+        from cellrank.pl._utils import _position_legend
+
+        if use_raw and self.adata.raw is None:
+            logg.warning("No raw attribute set. Setting `use_raw=False`")
+            use_raw = False
+        adata = self.adata.raw if use_raw else self.adata
+
+        # silent assumption: `.compute_lineage_drivers()` always writes to AnnData
+        key1, key2 = f"to {lineage_x} corr", f"to {lineage_y} corr"
+        if key1 not in adata.var or key2 not in adata.var:
+            haystack = "adata.raw.var" if use_raw else "adata.var"
+            raise RuntimeError(
+                f"Unable to find correlations in `{haystack}[{key1!r}]` or `{haystack}[{key2!r}]`."
+                f"Compute `.{P.LIN_DRIVERS}` first as "
+                f"`.compute_lineage_drivers([{lineage_x!r}, {lineage_y!r}], use_raw={use_raw})`."
+            )
+        # produce the actual scatter plot
+        ctx = {"figure.figsize": figsize, "figure.dpi": dpi}
+        for key in list(ctx.keys()):
+            if ctx[key] is None:
+                del ctx[key]
+        with rc_context(ctx):
+            ax = sc.pl.scatter(
+                adata.to_adata() if hasattr(adata, "to_adata") else adata,
+                x=key1,
+                y=key2,
+                color_map=cmap,
+                use_raw=False,
+                show=False,
+                color=color,
+                **kwargs,
+            )
+        fig = ax.figure
+
+        # add some lines to highlight the origin
+        xmin, xmax = np.nanmin(adata.var[key1]), np.nanmax(adata.var[key1])
+        ymin, ymax = np.nanmin(adata.var[key2]), np.nanmax(adata.var[key2])
+        ax.hlines(0, xmin=xmin, xmax=xmax, color="grey", alpha=0.5, zorder=-1)
+        ax.vlines(0, ymin=ymin, ymax=ymax, color="grey", alpha=0.5, zorder=-1)
+
+        # annotate the passed set of genes
+        if gene_sets is not None:
+            if gene_sets_colors is None:
+                try:
+                    # fmt: off
+                    sets = list(gene_sets.keys())
+                    gene_sets_colors = self.adata.obsm[self._abs_prob_key][sets].colors
+                    # fmt: on
+                except KeyError:
+                    logg.warning(
+                        "Unable to determine gene sets colors from lineages. Using default colors"
+                    )
+                    gene_sets_colors = _create_categorical_colors(len(gene_sets))
+            if len(gene_sets_colors) != len(gene_sets):
+                raise ValueError(
+                    f"Expected `gene_sets_colors` to be of length `{len(gene_sets)}`, "
+                    f"found `{len(gene_sets_colors)}`."
+                )
+
+            path_effect = [
+                patheffects.Stroke(linewidth=2, foreground="w", alpha=0.8),
+                patheffects.Normal(),
+            ]
+            annots = []
+            for (key, values), color in zip(gene_sets.items(), gene_sets_colors):
+                arrowprops = (
+                    {
+                        "arrowstyle": ArrowStyle.CurveFilledB(
+                            head_width=0.1, head_length=0.2
+                        ),
+                        "fc": color,
+                        "ec": color,
+                    }
+                    if adjust_text
+                    else None
+                )
+                values = set(values) & set(adata.var_names)
+                for value in values:
+                    x = adata.var.loc[value, key1]
+                    y = adata.var.loc[value, key2]
+
+                    annot = ax.annotate(
+                        value,
+                        xy=(x, y),
+                        va="top",
+                        ha="left",
+                        path_effects=path_effect,
+                        arrowprops=arrowprops,
+                        size=fontsize,
+                        c=color,
+                    )
+                    annots.append(annot)
+                if values:
+                    ax.scatter([], [], color=color, label=key)
+
+            if adjust_text:
+                try:
+                    import adjustText
+
+                    start = logg.info("Adjusting text position")
+                    adjustText.adjust_text(
+                        annots,
+                        x=adata.var[key1].values,
+                        y=adata.var[key2].values,
+                        ax=ax,
+                    )
+                    logg.info("    Finish", time=start)
+                except ImportError:
+                    logg.error(
+                        "Please install `adjustText` first as `pip install adjustText`"
+                    )
+            if len(annots) and legend_loc not in (None, "none"):
+                _position_legend(ax, legend_loc=legend_loc)
+
+        if save is not None:
+            save_fig(fig, path=save)
+
+        if not show:
+            return ax
+
     def _detect_cc_stages(self, rc_labels: Series, p_thresh: float = 1e-15) -> None:
         """
         Detect cell-cycle driven start or endpoints.
@@ -935,6 +1194,22 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         add_to_existing: bool = False,
     ) -> None:
         if isinstance(categories, dict):
+            if len(categories) == 1 and is_categorical_dtype(
+                self.adata.obs.get(next(iter(categories.keys())), None)
+            ):
+                key = next(iter(categories.keys()))
+                if isinstance(categories[key], str) or not isinstance(
+                    categories[key], Iterable
+                ):
+                    vals = (categories[key],)
+                else:
+                    vals = categories[key]
+
+                clusters = self.adata.obs[key]
+                categories = {
+                    cat: self.adata[clusters == cat].obs_names for cat in vals
+                }
+
             categories = _convert_to_categorical_series(
                 categories, list(self.adata.obs_names)
             )
@@ -1004,19 +1279,9 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             self._get(P.TERM).cat.categories
         )
 
-        extra_msg = ""
-        if getattr(self, A.TERM_ABS_PROBS.s, None) is not None and hasattr(
-            self, "_term_abs_prob_key"
-        ):
-            # checking for None because terminal states can be set using `set_terminal_states`
-            # without the probabilities in GPCCA
-            self.adata.obsm[self._term_abs_prob_key] = self._get(A.TERM_ABS_PROBS)
-            extra_msg = f"       `adata.obsm[{self._term_abs_prob_key!r}]`\n"
-
         logg.info(
             f"Adding `adata.obs[{_probs(self._term_key)!r}]`\n"
             f"       `adata.obs[{self._term_key!r}]`\n"
-            f"{extra_msg}"
             f"       `.{P.TERM_PROBS}`\n"
             f"       `.{P.TERM}`\n"
             "    Finish",
@@ -1072,10 +1337,10 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
         None
             Nothing, just makes available the following fields:
 
-                - :paramref:`{fsp}`
-                - :paramref:`{fs}`
-                - :paramref:`{ap}`
-                - :paramref:`{pd}`
+                - :attr:`{fsp}`
+                - :attr:`{fs}`
+                - :attr:`{ap}`
+                - :attr:`{pd}`
         """
         self._fit_terminal_states(**kwargs)
         if compute_absorption_probabilities:
@@ -1118,7 +1383,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             logg.debug(f"Unable to set attribute `.{attr}`, skipping")
 
     def copy(self) -> "BaseEstimator":
-        """Return a copy of self, including the underlying :paramref:`adata` object."""
+        """Return a copy of self, including the underlying :attr:`adata` object."""
         k = deepcopy(self.kernel)  # ensure we copy the adata object
         res = type(self)(k, read_from_adata=False)
         for k, v in self.__dict__.items():

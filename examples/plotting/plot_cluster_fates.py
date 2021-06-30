@@ -7,14 +7,13 @@ and how to visualize these in various ways.
 """
 
 import scanpy as sc
-
 import cellrank as cr
 
 adata = cr.datasets.pancreas_preprocessed("../example.h5ad")
 adata
 
 # %%
-# First, we compute the terminal states and the lineages, as well as :mod:`scanpy`'s PAGA [Wolf19]_.
+# First, we compute the terminal states and the lineages, as well as :mod:`scanpy`'s PAGA :cite:`wolf:19`.
 cr.tl.terminal_states(
     adata,
     cluster_key="clusters",

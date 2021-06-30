@@ -1,13 +1,14 @@
+from typing import Optional, Sequence
+
 import pytest
 
+import cellrank as cr
 from anndata import AnnData
+from cellrank.tl._constants import AbsProbKey, TermStatesKey, _probs
+from cellrank.tl.kernels._base_kernel import KernelAdd
 
 import numpy as np
 import pandas as pd
-
-import cellrank as cr
-from cellrank.tl._constants import AbsProbKey, TermStatesKey, _probs
-from cellrank.tl.kernels._base_kernel import KernelAdd
 
 
 class TestLineages:
@@ -55,26 +56,22 @@ class TestLineageDrivers:
             assert np.all(adata_cflare.raw.var[f"to {name} qval"] >= 0)
             assert np.all(adata_cflare.raw.var[f"to {name} qval"] <= 1.0)
 
-    def test_return_drivers(self, adata_cflare):
+    @pytest.mark.parametrize("lineages", [None, ["0"], ["0, 1"]])
+    def test_return_drivers(self, adata_cflare, lineages: Optional[Sequence[str]]):
+        cr.tl.terminal_states(adata_cflare, n_states=3)
         cr.tl.lineages(adata_cflare)
-        res = cr.tl.lineage_drivers(adata_cflare, return_drivers=True, use_raw=False)
+        res = cr.tl.lineage_drivers(
+            adata_cflare, return_drivers=True, use_raw=False, lineages=lineages
+        )
+        exp_lineages = adata_cflare.obsm["to_terminal_states"]
+        if lineages is not None:
+            exp_lineages = exp_lineages[lineages]
+        exp_lineages = exp_lineages.names
 
         assert isinstance(res, pd.DataFrame)
         assert res.shape[0] == adata_cflare.n_vars
-        assert {
-            "0 corr",
-            "0 pval",
-            "0 qval",
-            "0 ci low",
-            "0 ci high",
-            "1 corr",
-            "1 pval",
-            "1 qval",
-            "1 ci low",
-            "1 ci high",
-        } == set(res.columns)
 
-        for name in ["0", "1"]:
+        for name in exp_lineages:
             assert np.all(adata_cflare.var[f"to {name} corr"] >= -1.0)
             assert np.all(adata_cflare.var[f"to {name} corr"] <= 1.0)
             # res is sorted
@@ -226,6 +223,25 @@ class TestRootFinal:
         with pytest.raises(ValueError):
             cr.tl.initial_states(adata, mode="foobar")
 
+    @pytest.mark.parametrize("force_recompute", [False, True])
+    def test_force_recompute(self, adata: AnnData, force_recompute: bool):
+        cr.tl.terminal_states(adata, n_states=5, fit_kwargs=dict(n_cells=5))
+        tmat1 = adata.obsp["T_fwd"]
+
+        cr.tl.terminal_states(
+            adata,
+            n_states=5,
+            fit_kwargs=dict(n_cells=5),
+            force_recompute=force_recompute,
+        )
+        tmat2 = adata.obsp["T_fwd"]
+        if force_recompute:
+            assert tmat1 is not tmat2
+            np.testing.assert_allclose(tmat1.A, tmat2.A)
+            np.testing.assert_allclose(tmat1.sum(1), 1.0)
+        else:
+            assert tmat1 is tmat2
+
 
 class TestTransitionMatrix:
     def test_invalid_velocity_key(self, adata: AnnData):
@@ -260,7 +276,7 @@ class TestTransitionMatrix:
 
         assert isinstance(ck, cr.tl.kernels.ConnectivityKernel)
 
-        np.testing.assert_array_equal(ck.transition_matrix.A, adata.obsp[key])
+        np.testing.assert_array_equal(ck.transition_matrix, adata.obsp[key])
 
     def test_only_velocity(self, adata: AnnData):
         vk = cr.tl.transition_matrix(adata, weight_connectivities=0)

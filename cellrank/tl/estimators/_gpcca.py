@@ -1,15 +1,8 @@
-"""Generalized Perron Cluster Cluster Analysis [GPCCA18]_."""
+"""Generalized Perron Cluster Cluster Analysis :cite:`reuter:18`."""
 
 from types import MappingProxyType
 from typing import Any, Dict, List, Tuple, Union, Mapping, Iterable, Optional, Sequence
 from pathlib import Path
-
-import numpy as np
-import pandas as pd
-
-import matplotlib as mpl
-import matplotlib.colors as mcolors
-import matplotlib.pyplot as plt
 
 from cellrank import logging as logg
 from cellrank.ul._docs import d, inject_docs
@@ -19,7 +12,7 @@ from cellrank.tl._utils import (
     _fuzzy_to_discrete,
     _series_from_one_hot_matrix,
 )
-from cellrank.tl._colors import _get_black_or_white
+from cellrank.tl._colors import _get_black_or_white, _create_categorical_colors
 from cellrank.tl._lineage import Lineage
 from cellrank.tl._constants import TermStatesKey, _probs, _colors, _lin_names
 from cellrank.tl.estimators._utils import Metadata, _print_insufficient_number_of_cells
@@ -28,11 +21,21 @@ from cellrank.tl.estimators._constants import A, F, P
 from cellrank.tl.estimators._decomposition import Eigen, Schur
 from cellrank.tl.estimators._base_estimator import BaseEstimator
 
+import numpy as np
+import pandas as pd
+from pandas.api.types import infer_dtype
+from pandas.core.dtypes.common import is_categorical_dtype
+
+import matplotlib as mpl
+import matplotlib.colors as mcolors
+import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
+
 
 @d.dedent
 class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
     """
-    Generalized Perron Cluster Cluster Analysis [GPCCA18]_ as implemented in `pyGPCCA <https://pygpcca.readthedocs.io/en/latest/>`_.
+    Generalized Perron Cluster Cluster Analysis :cite:`reuter:18` as implemented in `pyGPCCA <https://pygpcca.readthedocs.io/en/latest/>`_.
 
     Coarse-grains a discrete Markov chain into a set of macrostates and computes coarse-grained transition probabilities
     among the macrostates. Each macrostate corresponds to an area of the state space, i.e. to a subset of cells. The
@@ -41,7 +44,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
     minimal overlap between macrostates in a certain inner-product sense. Once the macrostates have been computed,
     we project the large transition matrix onto a coarse-grained transition matrix among the macrostates via
     a Galerkin projection. This projection is based on invariant subspaces of the original transition matrix which
-    are obtained using the real Schur decomposition [GPCCA18]_.
+    are obtained using the real Schur decomposition :cite:`reuter:18`.
 
     Parameters
     ----------
@@ -109,11 +112,11 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         None
             Nothing, but updates the following fields:
 
-                - :paramref:`{msp}`
-                - :paramref:`{ms}`
-                - :paramref:`{schur}`
-                - :paramref:`{coarse_T}`
-                - :paramref:`{coarse_stat}`
+                - :attr:`{msp}`
+                - :attr:`{ms}`
+                - :attr:`{schur}`
+                - :attr:`{coarse_T}`
+                - :attr:`{coarse_stat}`
         """
 
         was_from_eigengap = False
@@ -168,7 +171,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         if self._gpcca._p_X.shape[1] < n_states:
             logg.warning(
                 f"Requested more macrostates `{n_states}` than available "
-                f"Schur vectors `{self._gpcca.X.shape[1]}`. Recomputing the decomposition"
+                f"Schur vectors `{self._gpcca._p_X.shape[1]}`. Recomputing the decomposition"
             )
 
         start = logg.info(f"Computing `{n_states}` macrostates")
@@ -261,8 +264,8 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         None
             Nothing, just updates the following fields:
 
-                - :paramref:`{fsp}`
-                - :paramref:`{fs}`
+                - :attr:`{fsp}`
+                - :attr:`{fs}`
         """
 
         if not isinstance(n_cells, int):
@@ -383,8 +386,8 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         None
             Nothing, just updates the following fields:
 
-                - :paramref:`{fsp}`
-                - :paramref:`{fs}`
+                - :attr:`{fsp}`
+                - :attr:`{fs}`
         """
 
         if len(self._get(P.MACRO).cat.categories) == 1:
@@ -437,21 +440,21 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         self, n_components: int = 10, key_added: str = "gdpt_pseudotime", **kwargs
     ):
         """
-        Compute generalized Diffusion pseudotime from [Haghverdi16]_ using the real Schur decomposition.
+        Compute generalized Diffusion pseudotime from :cite:`haghverdi:16` using the real Schur decomposition.
 
         Parameters
         ----------
         n_components
             Number of real Schur vectors to consider.
         key_added
-            Key in :paramref:`adata` ``.obs`` where to save the pseudotime.
+            Key in :attr:`adata` ``.obs`` where to save the pseudotime.
         kwargs
             Keyword arguments for :meth:`cellrank.tl.GPCCA.compute_schur` if Schur decomposition is not found.
 
         Returns
         -------
         None
-            Nothing, just updates :paramref:`adata` ``.obs[key_added]`` with the computed pseudotime.
+            Nothing, just updates :attr:`adata` ``.obs[key_added]`` with the computed pseudotime.
         """
 
         def _get_dpt_row(e_vals: np.ndarray, e_vecs: np.ndarray, i: int):
@@ -738,11 +741,125 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
 
         if annotate:
             annotate_heatmap(im)
-            annotate_dist_ax(stat_ax, coarse_stat_d.values)
-            annotate_dist_ax(init_ax, coarse_init_d)
+            if show_stationary_dist:
+                annotate_dist_ax(stat_ax, coarse_stat_d.values)
+            if show_initial_dist:
+                annotate_dist_ax(init_ax, coarse_init_d)
 
         if save:
             save_fig(fig, save)
+
+    @d.dedent
+    def plot_macrostate_composition(
+        self,
+        key: str,
+        width: float = 0.8,
+        title: Optional[str] = None,
+        labelrot: float = 45,
+        legend_loc: Optional[str] = "upper right out",
+        figsize: Optional[Tuple[float, float]] = None,
+        dpi: Optional[int] = None,
+        save: Optional[Union[str, Path]] = None,
+        show: bool = True,
+    ) -> Optional[Axes]:
+        """
+        Plot stacked histogram of macrostates over categorical annotations.
+
+        Parameters
+        ----------
+        %(adata)s
+        key
+            Key from :attr:`adata` ``.obs`` containing categorical annotations.
+        width
+            Bar width in `[0, 1]`.
+        title
+            Title of the figure. If `None`, create one automatically.
+        labelrot
+            Rotation of labels on x-axis.
+        legend_loc
+            Position of the legend. If `None`, don't show legend.
+        %(plotting)s
+        show
+            If `False`, return :class:`matplotlib.pyplot.Axes`.
+
+        Returns
+        -------
+        :class:`matplotlib.pyplot.Axes`
+            The axis object if ``show=False``.
+        %(just_plots)s
+        """
+        from cellrank.pl._utils import _position_legend
+
+        macrostates = self._get(P.MACRO)
+        if macrostates is None:
+            raise RuntimeError("Compute macrostates first as `.compute_macrostates()`.")
+        if key not in self.adata.obs:
+            raise KeyError(f"Key `{key}` not found in `adata.obs`.")
+        if not is_categorical_dtype(self.adata.obs[key]):
+            raise TypeError(
+                f"Expected `adata.obs[{key!r}]` to be `categorical`, "
+                f"found `{infer_dtype(self.adata.obs[key])}`."
+            )
+
+        mask = ~macrostates.isnull()
+        df = (
+            pd.DataFrame({"macrostates": macrostates, key: self.adata.obs[key]})[mask]
+            .groupby([key, "macrostates"])
+            .size()
+        )
+        try:
+            cats_colors = self.adata.uns[f"{key}_colors"]
+        except KeyError:
+            cats_colors = _create_categorical_colors(
+                len(self.adata.obs[key].cat.categories)
+            )
+        cat_color_mapper = dict(zip(self.adata.obs[key].cat.categories, cats_colors))
+        x_indices = np.arange(len(macrostates.cat.categories))
+        bottom = np.zeros_like(x_indices, dtype=np.float32)
+
+        width = min(1, max(0, width))
+        fig, ax = plt.subplots(figsize=figsize, dpi=dpi, tight_layout=True)
+        for cat, color in cat_color_mapper.items():
+            frequencies = df.loc[cat]
+            # do not add to legend if category is missing
+            if np.sum(frequencies) > 0:
+                ax.bar(
+                    x_indices,
+                    frequencies,
+                    width,
+                    label=cat,
+                    color=color,
+                    bottom=bottom,
+                    ec="black",
+                    lw=0.5,
+                )
+                bottom += np.array(frequencies)
+
+        ax.set_xticks(x_indices)
+        ax.set_xticklabels(
+            # assuming at least 1 category
+            frequencies.index,
+            rotation=labelrot,
+            ha="center" if labelrot in (0, 90) else "right",
+        )
+        y_max = bottom.max()
+        ax.set_ylim([0, y_max + 0.05 * y_max])
+        ax.set_yticks(np.linspace(0, y_max, 5))
+        ax.margins(0.05)
+
+        ax.set_xlabel("macrostate")
+        ax.set_ylabel("frequency")
+        if title is None:
+            title = f"distribution over {key}"
+        ax.set_title(title)
+        if legend_loc not in (None, "none"):
+            _position_legend(ax, legend_loc=legend_loc)
+
+        if save is not None:
+            save_fig(fig, save)
+
+        if not show:
+            return ax
 
     def _compute_one_macrostate(
         self,
@@ -870,13 +987,13 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
             Fuzzy clustering.
         %(n_cells)s
         cluster_key
-            Key from :paramref:`adata` ``.obs`` to get reference cluster annotations.
+            Key from :attr:`adata` ``.obs`` to get reference cluster annotations.
         en_cutoff
             Threshold to decide when we we want to warn the user about an uncertain name mapping. This happens when
             one fuzzy state overlaps with several reference clusters, and the most likely cells are distributed almost
             evenly across the reference clusters.
         p_thresh
-            Only used to detect cell cycle stages. These have to be present in :paramref:`adata` ``.obs`` as
+            Only used to detect cell cycle stages. These have to be present in :attr:`adata` ``.obs`` as
             `'G2M_score'` and `'S_score'`.
         check_row_sums
             Check whether rows in `memberships` sum to `1`.
@@ -1071,12 +1188,12 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         None
             Nothing, just makes available the following fields:
 
-                - :paramref:`{msp}`
-                - :paramref:`{ms}`
-                - :paramref:`{fsp}`
-                - :paramref:`{fs}`
-                - :paramref:`{ap}`
-                - :paramref:`{pd}`
+                - :attr:`{msp}`
+                - :attr:`{ms}`
+                - :attr:`{fsp}`
+                - :attr:`{fs}`
+                - :attr:`{ap}`
+                - :attr:`{pd}`
         """
 
         super().fit(
@@ -1157,7 +1274,7 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         Returns
         -------
         None
-            Nothing, just writes to :paramref:`adata`:
+            Nothing, just writes to :attr:`adata`:
 
                 - ``.obs[{key!r}]`` - probability of being an initial state.
                 - ``.obs[{probs_key!r}]`` - top ``n_cells`` from each initial state.
@@ -1208,3 +1325,25 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
             f"Adding `adata.obs[{_probs(key)!r}]`\n       `adata.obs[{key!r}]`\n",
             time=time,
         )
+
+    def _write_terminal_states(self, time=None) -> None:
+        super()._write_terminal_states(time=time)
+
+        term_abs_probs = self._get(A.TERM_ABS_PROBS)
+        if term_abs_probs is None:
+            # possibly remove previous value if it's inconsistent
+            term_abs_probs = self.adata.obsm.get(self._term_abs_prob_key, None)
+
+        if term_abs_probs is not None:
+            new = list(self._get(P.TERM).cat.categories)
+            old = list(term_abs_probs.names)
+            if term_abs_probs.shape[1] == len(new) and new == old:
+                self.adata.obsm[self._term_abs_prob_key] = term_abs_probs
+            else:
+                logg.warning(
+                    f"Removing previously computed `adata.obsm[{self._term_abs_prob_key!r}]` because the "
+                    f"names mismatch `{new}` (new), `{old}` (old)."
+                )
+
+                self._set(A.TERM_ABS_PROBS, None)
+                self.adata.obsm.pop(self._term_abs_prob_key, None)

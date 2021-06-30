@@ -1,9 +1,9 @@
 from typing import Optional
 
-import numpy as np
-
 from cellrank.ul.models import BaseModel
 from cellrank.external._error_mixin import ImportErrorMixin
+
+import numpy as np
 
 
 class ErroredModel(ImportErrorMixin, BaseModel):

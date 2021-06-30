@@ -9,13 +9,6 @@ from itertools import combinations
 
 from typing_extensions import Literal
 
-import numpy as np
-import pandas as pd
-from scipy.stats import entropy
-
-import matplotlib.colors as c
-import matplotlib.pyplot as plt
-
 from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.tl._utils import save_fig, _convert_lineage_name, _unique_order_preserving
@@ -25,6 +18,13 @@ from cellrank.tl._colors import (
     _create_categorical_colors,
 )
 from cellrank.tl._constants import Lin, ModeEnum
+
+import numpy as np
+import pandas as pd
+from scipy.stats import entropy
+
+import matplotlib.colors as c
+import matplotlib.pyplot as plt
 
 ColorLike = TypeVar("ColorLike")
 _ERROR_NOT_ITERABLE = "Expected `{}` to be iterable, found type `{}`."
@@ -733,11 +733,10 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         method
             The method used to compute the degree of lineage priming. Valid options are:
 
-                - `'kl_divergence'`: as in [Velten17]_, computes KL-divergence between the fate probabilities of a
-                  cell and the average fate probabilities. Computation of average fate probabilities can be restricted
+                - `'kl_divergence'`: as in :cite:`velten:17`, computes KL-divergence between the fate probabilities of
+                  a cell and the average fate probabilities. Computation of average fate probabilities can be restricted
                   to a set of user-defined ``early_cells``.
-                - `'entropy'`: as in [Setty19]_, computes entropy over a cell's fate probabilities.
-
+                - `'entropy'`: as in :cite:`setty:19`, computes entropy over a cell's fate probabilities.
         early_cells
             Cell ids or a mask marking early cells. If `None`, use all cells. Only used when ``method='kl_divergence'``.
 

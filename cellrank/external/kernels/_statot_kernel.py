@@ -3,13 +3,12 @@ from typing import Any, Union, Optional
 from typing_extensions import Literal
 
 from anndata import AnnData
-
-import numpy as np
-import pandas as pd
-
 from cellrank.ul._docs import d
 from cellrank.tl.estimators import GPCCA
 from cellrank.tl.kernels._precomputed_kernel import DummyKernel
+
+import numpy as np
+import pandas as pd
 
 _error = None
 try:
@@ -23,9 +22,9 @@ except ImportError as e:
 
 
 @d.dedent
-class OTKernel(OTKernel_, error=_error):
+class StationaryOTKernel(OTKernel_, error=_error):
     """
-    Stationary optimal transport kernel from [Zhang21]_.
+    Stationary optimal transport kernel from :cite:`zhang:21`.
 
     This class requires the `statOT` package, which can be installed as `pip install statot POT`.
 
@@ -34,7 +33,7 @@ class OTKernel(OTKernel_, error=_error):
     %(adata)s
     terminal_states
         Categorical :class:`pandas.Series` where non-`NaN` values mark terminal states.
-        If `None`, terminal states are assumed to be already present in :paramref:`adata` ``['terminal_states']``.
+        If `None`, terminal states are assumed to be already present in :attr:`adata` ``['terminal_states']``.
     g
         Key in :attr:`anndata.AnnData.obs` containing relative growth rates for cells or the array itself.
     cluster_key
@@ -63,6 +62,14 @@ class OTKernel(OTKernel_, error=_error):
         except Exception as e:  # noqa: B902
             raise RuntimeError("Unable to initialize the kernel.") from e
 
+    def _read_from_adata(
+        self,
+        conn_key: Optional[str] = "connectivities",
+        read_conn: bool = True,
+        **kwargs: Any,
+    ) -> None:
+        super()._read_from_adata(conn_key=conn_key, read_conn=False, **kwargs)
+
     def compute_transition_matrix(
         self,
         eps: float,
@@ -76,9 +83,9 @@ class OTKernel(OTKernel_, error=_error):
         C: Optional[np.ndarray] = None,
         verbose: bool = False,
         **kwargs: Any,
-    ) -> "OTKernel":
+    ) -> "StationaryOTKernel":
         """
-        Compute transition matrix using stationary OT [Zhang21]_.
+        Compute transition matrix using stationary OT :cite:`zhang:21`.
 
         Parameters
         ----------
@@ -113,11 +120,13 @@ class OTKernel(OTKernel_, error=_error):
 
         Returns
         -------
-        :class:`cellrank.external.kernels.OTKernel`
-            Makes :paramref:`transition_matrix` available.
+        :class:`cellrank.external.kernels.StationaryOTKernel`
+            Makes :attr:`transition_matrix` available.
         """
         if method not in ("ent", "quad", "unbal"):
-            raise ValueError(f"Invalid method `{method!r}`.")
+            raise ValueError(
+                f"Invalid method `{method!r}`. Valid options are: `{['ent', 'quad', 'unbal']}`."
+            )
         if method == "unbal":
             raise NotImplementedError("Method `'unbal'` is not yet implemented.")
 

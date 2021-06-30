@@ -31,7 +31,7 @@ model
     Model based on :class:`cellrank.ul.models.BaseModel` to fit.
 
     If a :class:`dict`, gene and lineage specific models can be specified. Use ``'*'`` to indicate
-    all genes or lineages, for example ``{'Map2': {'*': ...}, 'Dcx': {'Alpha': ..., '*': ...}}``."""
+    all genes or lineages, for example ``{'gene_1': {'*': ...}, 'gene_2': {'lineage_1': ..., '*': ...}}``."""
 _just_plots = """\
 None
     Nothing, just plots the figure. Optionally saves it based on ``save``."""
@@ -57,15 +57,15 @@ n_lineages
     Number of lineages. If `None`, it will be determined automatically.
 cluster_key
     Match computed states against pre-computed clusters to annotate the states.
-    For this, provide a key from :paramref:`adata` ``.obs`` where cluster labels have been computed.
+    For this, provide a key from :attr:`adata` ``.obs`` where cluster labels have been computed.
 keys
     Determines which %(initial_or_terminal)s states to use by passing their names.
     Further, %(initial_or_terminal)s states can be combined. If e.g. the %(terminal)s states are
     ['Neuronal_1', 'Neuronal_1', 'Astrocytes', 'OPC'], then passing ``keys=['Neuronal_1, Neuronal_2', 'OPC']``
     means that the two neuronal %(terminal)s states are treated as one and the 'Astrocyte' state is excluded."""
 _density_correction = (
-    "Optionally, we apply a density correction as described in [Coifman05]_, "
-    "where we use the implementation of [Haghverdi16]_."
+    "Optionally, we apply a density correction as described in :cite:`coifman:05`, "
+    "where we use the implementation of :cite:`haghverdi:16`."
 )
 _time_range = """\
 time_range
@@ -74,7 +74,7 @@ time_range
         - If a :class:`tuple`, it specifies the minimum and maximum pseudotime. Both values can be `None`,
           in which case the minimum is the earliest pseudotime and the maximum is automatically determined.
         - If a :class:`float`, it specifies the maximum pseudotime."""
-_time_ranges = f"{_time_range}\n    This can also be specified on per-lineage basis."
+
 _velocity_mode = """\
 mode
     How to compute transition probabilities. Valid options are:
@@ -85,7 +85,7 @@ mode
         - `{m.SAMPLING.s!r}` - sample 1 transition matrix from the velocity distribution."""
 _velocity_backward_mode = """\
 backward_mode
-    Only matters if initialized as :paramref:`backward` `=True`.  Valid options are:
+    Only matters if initialized as :attr:`backward` ``=True``.  Valid options are:
 
         - `{b.TRANSPOSE.s!r}` - compute transitions from neighboring cells `j` to cell `i`.
         - `{b.NEGATE.s!r}` - negate the velocity vector."""
@@ -102,7 +102,7 @@ _model_callback = """\
 callback
     Function which takes a :class:`cellrank.ul.models.BaseModel` and some keyword arguments
     for :meth:`cellrank.ul.models.BaseModel.prepare` and returns the prepared model.
-    Can be specified in gene- and lineage-specific manner, similarly to :paramref:`model`."""
+    Can be specified in gene- and lineage-specific manner, similarly to :attr:`model`."""
 _genes = """\
 genes
     Genes in ``adata.var_names`` or in ``adata.raw.var_names``, if ``use_raw=True``."""
@@ -117,7 +117,7 @@ mode
         - `'embedding'` - plot the embedding while coloring in the absorption probabilities.
         - `'time'` - plot the pseudotime on x-axis and the absorption probabilities on y-axis."""
 _write_to_adata = """\
-Updates the :paramref:`adata` with the following fields:
+Updates the :attr:`adata` with the following fields:
 
         - ``.obsp['{{key}}']`` - the transition matrix.
         - ``.uns['{{key}}_params']`` - parameters used for calculation."""
@@ -136,7 +136,7 @@ basis
     Basis to use when ``mode='embedding'``. If `None`, use `'umap'`."""
 _velocity_scheme = """\
 scheme
-    Similarity scheme between cells as described in [Li2020]_. Can be one of the following:
+    Similarity scheme between cells as described in :cite:`li:20`. Can be one of the following:
 
         - `{s.DOT_PRODUCT.s!r}`: :class:`cellrank.tl.kernels.DotProductScheme`.
         - `{s.COSINE.s!r}`: :class:`cellrank.tl.kernels.CosineScheme`.
@@ -152,9 +152,7 @@ _soft_scheme_fmt = """\
 b
     The growth rate of generalized logistic function.{}
 nu
-    Affects near which asymptote maximum growth occurs.{}
-perc
-    Percentile by which to clip the connectivities.{}"""
+    Affects near which asymptote maximum growth occurs.{}"""
 _rw_ixs = """\
 Can be specified as either a :class:`dict` with a key corresponding to cluster key in
     :attr:`anndata.AnnData.obs` and values to clusters or just a sequence of cell ids
@@ -194,7 +192,6 @@ d = DocstringProcessor(
     copy=_copy,
     density_correction=_density_correction,
     time_range=_time_range,
-    time_ranges=_time_ranges,
     velocity_mode=_velocity_mode,
     velocity_backward_mode=_velocity_backward_mode,
     velocity_backward_mode_high_lvl=_velocity_backward_mode_high_lvl,

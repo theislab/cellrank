@@ -26,7 +26,7 @@ if __name__ == "__main__":
         long_description=Path("README.rst").read_text("utf-8"),
         url="https://github.com/theislab/cellrank",
         project_urls={
-            "Documentation": "https://cellrank.readthedocs.io/en/latest",
+            "Documentation": "https://cellrank.readthedocs.io/en/stable",
             "Source Code": "https://github.com/theislab/cellrank",
         },
         download_url="https://github.com/theislab/cellrank",
@@ -39,7 +39,7 @@ if __name__ == "__main__":
         ),
         extras_require=dict(
             # `POT` is not requirement of `statot`
-            external=["statot>=0.0.14", "POT"],
+            external=["statot>=0.0.14", "POT", "wot"],
             krylov=["pygpcca[slepc]"],
             test=[
                 "pytest>=6.1.1",
@@ -49,8 +49,8 @@ if __name__ == "__main__":
                 "Pillow",
                 "filelock",
                 "python-igraph",
-                "louvain==0.6.1",
-                "leidenalg==0.8.1",
+                "louvain>=0.6,!=0.6.2",
+                "leidenalg",
                 "bezier",
                 "jax",
                 "jaxlib",
@@ -90,7 +90,6 @@ if __name__ == "__main__":
             "Operating System :: POSIX :: Linux",
             "Typing :: Typed",
             "Programming Language :: Python :: 3",
-            "Programming Language :: Python :: 3.6",
             "Programming Language :: Python :: 3.7",
             "Programming Language :: Python :: 3.8",
             "Programming Language :: Python :: 3.9",

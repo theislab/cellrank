@@ -13,16 +13,15 @@ import pytest
 from _helpers import create_model
 
 import scanpy as sc
+import cellrank as cr
 from anndata import AnnData
+from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
+from cellrank.tl._constants import AbsProbKey
+from cellrank.tl.estimators import GPCCA, CFLARE
 
 import numpy as np
 
 import matplotlib
-
-import cellrank as cr
-from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
-from cellrank.tl._constants import AbsProbKey
-from cellrank.tl.estimators import GPCCA, CFLARE
 
 matplotlib.use("Agg")
 np.random.seed(42)
@@ -212,6 +211,13 @@ def lineage():
         names=["foo", "bar", "baz", "quux"],
     )
     return x / x.sum(1)
+
+
+@pytest.fixture
+def kernel(adata_large: AnnData):
+    vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
+    ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+    return (0.8 * vk + 0.2 * ck).compute_transition_matrix()
 
 
 # removes overly verbose logging errors for rpy2

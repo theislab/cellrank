@@ -1,8 +1,6 @@
 """Module for plotting lineage-related stuff."""
 from typing import Union, Optional, Sequence
 
-import pandas as pd
-
 import cellrank.logging as logg
 from cellrank.ul._docs import d
 from cellrank.pl._utils import AnnData
@@ -10,6 +8,8 @@ from cellrank.tl._constants import DirPrefix
 from cellrank.tl.estimators import GPCCA
 from cellrank.tl.estimators._constants import A, P
 from cellrank.tl.kernels._precomputed_kernel import DummyKernel
+
+import pandas as pd
 
 
 @d.dedent
