@@ -20,8 +20,3 @@ elif [[ "$OS" == "ubuntu-latest" ]]; then
 else
   exit 42
 fi
-
-# TODO: remove once scVelo unpins umap-learn
-# ensure correct umap-learn version is installed, see:
-# https://github.com/bioconda/bioconda-recipes/pull/28591
-pip install "umap-learn>=0.5.1" "numba>=0.53.1" adjustText

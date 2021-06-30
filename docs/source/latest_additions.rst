@@ -55,5 +55,3 @@ This release includes:
 - Fix parallelization of sparse matrix with too many jobs `PR 633 <https://github.com/theislab/cellrank/pull/633>`_.
 - Fix plotting coarse-grained transition matrix when no stationary distribution is found
   `Issue 594 <https://github.com/theislab/cellrank/issues/594>`_.
-- Update pre-commit and CI to include Python3.9 testing on Linux
-  `PR 645 <https://github.com/theislab/cellrank/pull/645>`_.
