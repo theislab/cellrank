@@ -88,9 +88,9 @@ jobs:
             with:
                 path: ${{ steps.pip-cache.outputs.dir }}
                 key: pip-${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('**/requirements.txt') }}-${{ hashFiles('**/setup.py') }}
-                restore-keys: |
-                    pip-${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('**/requirements.txt') }}
-                    pip-${{ runner.os }}-${{ env.pythonLocation }}-
+                # restore-keys: |
+                #    pip-${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('**/requirements.txt') }}
+                #    pip-${{ runner.os }}-${{ env.pythonLocation }}-
 
         -   name: Before install
             run: |
