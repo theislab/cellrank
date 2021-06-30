@@ -54,7 +54,7 @@ information. In particular, it includes:
   which estimates a cell's plasticity/differentiation potential based on ideas by :cite:`setty:19`
   and :cite:`velten:17`.
 - Add checks for transition matrix irreducibility `PR 516 <https://github.com/theislab/cellrank/pull/516>`_.
-- Add Zebrafish development dataset from :cite:`farrel:18` `PR 539 <https://github.com/theislab/cellrank/pull/539>`_.
+- Add Zebrafish development dataset from :cite:`farrell:18` `PR 539 <https://github.com/theislab/cellrank/pull/539>`_.
 - Speed-up stationary distribution calculation in :mod:`pygpcca` `PR 22 <https://github.com/msmdev/pyGPCCA/pull/22>`_.
 
 .. rubric:: Bugfixes
