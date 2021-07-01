@@ -73,7 +73,6 @@ class TestOTKernel:
         assert isinstance(ok.params, dict)
 
 
-@pytest.mark.skip("wot on PyPI doesn't support passing cost matrices")
 class TestWOTKernel:
     def test_no_connectivities(self, adata_large: AnnData):
         del adata_large.obsp["connectivities"]
@@ -216,6 +215,7 @@ class TestWOTKernel:
         np.testing.assert_array_equal(adata_large.obs_names, ok.growth_rates.index)
         np.testing.assert_array_equal(ok.growth_rates.columns, ["g0", "g1"])
         assert isinstance(ok.transport_maps[12.0, 35.0], AnnData)
+        assert ok.transport_maps[12.0, 35.0].X.dtype == np.float64
 
     def test_copy(self, adata_large: AnnData):
         ok = cre.kernels.WOTKernel(adata_large, time_key="age(days)")

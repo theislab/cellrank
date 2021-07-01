@@ -404,10 +404,11 @@ class WOTKernel(Kernel, error=_error):
             tmap: AnnData = self._ot_model.compute_transport_map(
                 *tpair, cost_matrix=cost_matrix
             )
-            nans = int(np.sum(np.isnan(tmap.X)))
+            tmap.X = tmap.X.astype(np.float64)
+            nans = int(np.sum(~np.isfinite(tmap.X)))
             if nans:
                 raise ValueError(
-                    f"Encountered `{nans}` NaN values for time pair `{tpair}`."
+                    f"Encountered `{nans}` non-finite values for time pair `{tpair}`."
                 )
             self._tmaps[tpair] = tmap
 
