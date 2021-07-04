@@ -3426,7 +3426,7 @@ class TestPlotDriverCorrelation:
 
 
 class TestLogOdds:
-    @compare()
+    @compare(tol=250)
     def test_log_odds(self, adata: AnnData, fpath: str):
         cr.pl.log_odds(
             adata,
@@ -3440,7 +3440,7 @@ class TestLogOdds:
             seed=42,
         )
 
-    @compare(kind="bwd")
+    @compare(kind="bwd", tol=250)
     def test_log_odds_bwd(self, adata: AnnData, fpath: str):
         cr.pl.log_odds(
             adata,
@@ -3688,7 +3688,7 @@ class TestLogOdds:
             seed=42,
         )
 
-    @compare()
+    @compare(tol=250)
     def test_log_odds_jitter(self, adata: AnnData, fpath: str):
         cr.pl.log_odds(
             adata,

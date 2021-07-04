@@ -127,7 +127,7 @@ def _versions_dependencies(dependencies):
 
 
 def print_versions():
-    """Print packageversions that might influence the numerical and plotting results."""
+    """Print package versions that might influence the numerical and plotting results."""
     from cellrank import settings
 
     modules = ["cellrank"] + _DEPENDENCIES_NUMERICS + _DEPENDENCIES_PLOTTING
