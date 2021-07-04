@@ -7,6 +7,8 @@ CellRank for directed single-cell fate mapping
    :width: 600px
    :align: center
 
+.. include:: contributors.rst
+
 **CellRank** is a toolkit to uncover cellular dynamics based on Markov state modeling of single-cell data. It contains
 two main modules: `kernels`_ compute cell-cell transition probabilities and `estimators`_ generate hypothesis based on
 these. Our kernels work with a variety of input data including `RNA velocity`_ :cite:`manno:18` and :cite:`bergen:20`,
