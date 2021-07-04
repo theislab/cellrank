@@ -306,7 +306,6 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         # we do this also here because if `rename_terminal_states` fails
         # invalid states would've been written to this object and nothing to adata
         new_names = {k: str(v) for k, v in names.items()}
-        # TODO: seems wrong
         names_after_renaming = [new_names.get(n, n) for n in probs.names]
         if len(set(names_after_renaming)) != probs.shape[1]:
             raise ValueError(
@@ -316,7 +315,12 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         if probs.shape[1] == 1:
             self._set(A.TERM, self._create_states(probs, n_cells=n_cells))
             self._set(A.TERM_COLORS, self._get(A.MACRO_COLORS))
-            self._set(A.TERM_PROBS, probs / probs.max())
+            self._set(
+                A.TERM_PROBS,
+                pd.Series(
+                    probs.X.squeeze() / probs.X.max(), index=self.adata.obs_names
+                ),
+            )
             self._set(A.TERM_ABS_PROBS, probs)
             if rename:
                 # access lineage renames join states, e.g. 'Alpha, Beta' becomes 'Alpha or Beta' + whitespace stripping
