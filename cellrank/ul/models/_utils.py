@@ -319,7 +319,8 @@ def _calc_factor_weighted(
     queue=None,
     **_,
 ) -> np.ndarray:
-    log_ref = np.log2(ref / ref_lib_size)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        log_ref = np.log2(ref / ref_lib_size)
     res = np.empty(shape=(len(ixs),))
 
     for i, ix in enumerate(ixs):

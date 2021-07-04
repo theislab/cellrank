@@ -1145,8 +1145,6 @@ def composition(
     if save is not None:
         save_fig(fig, save)
 
-    fig.show()
-
 
 # modified from: https://github.com/CarlEkerot/held-karp
 def _held_karp(dists: np.ndarray) -> Tuple[float, np.ndarray]:

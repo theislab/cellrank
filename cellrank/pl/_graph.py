@@ -535,5 +535,3 @@ def graph(
 
     if save is not None:
         save_fig(fig, save)
-
-    fig.show()

@@ -758,7 +758,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         if not len(early_subset):
             raise ValueError("No early cells have been specified.")
 
-        with np.errstate(divide="ignore"):
+        with np.errstate(divide="ignore", invalid="ignore"):
             if method == PrimingDegree.KL_DIVERGENCE:
                 probs = np.nan_to_num(
                     np.sum(
@@ -857,8 +857,6 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
         ax.set_title(title)
         ax.set_aspect("equal")
-
-        fig.show()
 
         if save is not None:
             save_fig(fig, save)

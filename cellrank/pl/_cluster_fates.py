@@ -511,5 +511,3 @@ def cluster_fates(
 
     if save is not None:
         save_fig(fig, save)
-
-    fig.show()
