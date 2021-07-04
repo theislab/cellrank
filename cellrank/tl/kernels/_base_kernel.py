@@ -319,7 +319,7 @@ class KernelExpression(Pickleable, ABC):
         ukey = f"{key}_params"
 
         embs = self.adata.uns.get(ukey, {}).get("embeddings", [])
-        if basis not in emb:
+        if basis not in embs:
             embs = list(embs) + [basis]
             self.adata.uns[ukey] = self.adata.uns.get(ukey, {})
             self.adata.uns[ukey]["embeddings"] = embs

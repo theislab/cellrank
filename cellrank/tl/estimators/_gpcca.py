@@ -572,8 +572,8 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
                 spine.set_visible(False)
 
             if xticks_labels is not None:
-                ax.set_xticklabels(xticks_labels)
                 ax.set_xticks(np.arange(data.shape[1]))
+                ax.set_xticklabels(xticks_labels)
                 plt.setp(
                     ax.get_xticklabels(),
                     rotation=xtick_rotation,
@@ -1008,18 +1008,15 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         if n_cells is None:
             logg.debug("Setting the macrostates using macrostate assignment")
 
+            # fmt: off
             max_assignment = np.argmax(memberships, axis=1)
-            _macro_assignment = pd.Series(
-                index=self.adata.obs_names, data=max_assignment, dtype="category"
-            )
+            _macro_assignment = pd.Series(index=self.adata.obs_names, data=max_assignment, dtype="category")
             # sometimes, the assignment can have a missing category and the Lineage creation therefore fails
             # keep it as ints when `n_cells != None`
-            _macro_assignment.cat.set_categories(
-                list(range(memberships.shape[1])), inplace=True
-            )
-
+            _macro_assignment = _macro_assignment.cat.set_categories(list(range(memberships.shape[1])))
             macrostates = _macro_assignment.astype(str).astype("category").copy()
             not_enough_cells = []
+            # fmt: on
         else:
             logg.debug("Setting the macrostates using macrostates memberships")
 

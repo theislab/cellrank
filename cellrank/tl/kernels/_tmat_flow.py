@@ -208,7 +208,7 @@ class FlowPlotter:
 
         flow = pd.concat(flows)
         flow.set_index([times, flow.index], inplace=True)
-        flow /= flow.sum(1)[:, None]
+        flow /= flow.sum(1).values[:, None]
         flow.fillna(0, inplace=True)
 
         return flow
@@ -216,7 +216,7 @@ class FlowPlotter:
     def compute_contingency_matrix(self) -> pd.DataFrame:
         """Row-normalized contingency matrix of shape ``(n_clusters, n_time_points)``."""
         cmat = pd.crosstab(self.clusters, self.time)
-        return (cmat / cmat.sum(0)[None, :]).fillna(0)
+        return (cmat / cmat.sum(0).values[None, :]).fillna(0)
 
     @d.get_sections(base="flow", sections=["Parameters"])
     def plot(

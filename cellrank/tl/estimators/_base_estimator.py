@@ -344,7 +344,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
                 f"After renaming, the names will not be unique: `{names_after_renaming}`."
             )
 
-        term_states.cat.rename_categories(new_names, inplace=True)
+        self._set(A.TERM, term_states.cat.rename_categories(new_names))
 
         memberships = (
             self._get(A.TERM_ABS_PROBS) if hasattr(self, A.TERM_ABS_PROBS.s) else None
@@ -359,12 +359,10 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             and self._term_key in self.adata.obs
             and _lin_names(self._term_key) in self.adata.uns
         ):
-            self.adata.obs[self._term_key].cat.rename_categories(
-                new_names, inplace=True
-            )
-            self.adata.uns[_lin_names(self._term_key)] = np.array(
-                self.adata.obs[self._term_key].cat.categories
-            )
+            # fmt: off
+            self.adata.obs[self._term_key] = self.adata.obs[self._term_key].cat.rename_categories(new_names)
+            self.adata.uns[_lin_names(self._term_key)] = np.array(self.adata.obs[self._term_key].cat.categories)
+            # fmt: on
 
     @inject_docs(
         abs_prob=P.ABS_PROBS,
@@ -745,12 +743,18 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             raise RuntimeError(
                 "Compute absorption probabilities first as `.compute_absorption_probabilities()`."
             )
-        elif abs_probs.shape[1] == 1:
+
+        if abs_probs.shape[1] == 1:
             logg.warning(
-                "There is only 1 lineage present. Using the stationary distribution instead"
+                "There is only 1 lineage present. Using stationary distribution instead"
             )
+            stat_dist = self._get(P.EIG).get("stationary_dist", None)
+            if stat_dist is None:
+                raise RuntimeError(
+                    f"No stationary distribution found in `.{P.EIG.s}['stationary_dist']`."
+                )
             abs_probs = Lineage(
-                self._get(P.TERM_PROBS).values,
+                stat_dist,
                 names=abs_probs.names,
                 colors=abs_probs.colors,
             )
@@ -1222,7 +1226,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             if getattr(self, attr_key) is None:
                 raise RuntimeError(add_to_existing_error_msg)
             categories = _merge_categorical_series(
-                getattr(self, attr_key), categories, inplace=False
+                old=getattr(self, attr_key),
+                new=categories,
             )
 
         if cluster_key is not None:

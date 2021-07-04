@@ -198,7 +198,7 @@ def log_odds(
     # fmt: off
     df = pd.DataFrame(
         {
-            "log_odds": np.log(np.divide(fate1, fate2, where=fate2 != 0, out=np.zeros_like(fate1))) + 1e-12,
+            "log_odds": np.log(np.divide(fate1, fate2, where=fate2 != 0, out=np.zeros_like(fate1)) + 1e-12),
             time_key: time,
         }
     )

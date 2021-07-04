@@ -11,6 +11,7 @@ from cellrank.tl.kernels._pseudotime_kernel import PseudotimeKernel
 
 import numpy as np
 from scipy.stats import gmean, hmean
+from scipy.sparse import issparse
 
 
 def _ct(key: str) -> str:
@@ -214,6 +215,8 @@ class CytoTRACEKernel(PseudotimeKernel):
         logg.debug(f"Aggregating imputed gene expression using aggregation `{aggregation}` in layer `{layer}`")
         corr_mask = self.adata.var[_ct("correlates")]
         imputed_exp = self.adata[:, corr_mask].X if layer == "X" else self.adata[:, corr_mask].layers[layer]
+        if issparse(imputed_exp):
+            imputed_exp = imputed_exp.A
 
         # aggregate across the top 200 genes
         if aggregation == CytoTRACEAggregation.MEAN:

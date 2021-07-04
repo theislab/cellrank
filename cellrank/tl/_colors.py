@@ -285,7 +285,7 @@ def _map_names_and_colors(
     # warnings: if it's categorical and assigning to `.cat.categories`, it will
     # take the categorical information, making the 2nd line below necessary
     names_query_new = names_query_new.astype("category")
-    names_query_new.cat.reorder_categories(np.array(names_query_new), inplace=True)
+    names_query_new = names_query_new.cat.reorder_categories(np.array(names_query_new))
 
     # issue a warning for mapping with high entropy
     if en_cutoff is not None:
