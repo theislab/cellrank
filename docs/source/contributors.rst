@@ -1,8 +1,8 @@
 .. sidebar:: Key Contributors
 
-    * `Marius Lange`_: TODO
-    * `Michal Klein`_: developer, maintainer
-    * `Philipp Weiler`_: TODO
+    * `Marius Lange`_: lead developer, initial cellrank conception, maintainer
+    * `Michal Klein`_: senior developer, software quality, design & architecture, maintainer
+    * `Philipp Weiler`_: developer
 
 .. _Marius Lange: https://twitter.com/MariusLange8
 .. _Michal Klein: https://github.com/michalk8
