@@ -1,7 +1,7 @@
 .. sidebar:: Key Contributors
 
-    * `Marius Lange`_: lead developer, initial cellrank conception, maintainer
-    * `Michal Klein`_: senior developer, software quality, design & architecture, maintainer
+    * `Marius Lange`_: lead developer, initial CellRank conception, maintainer
+    * `Michal Klein`_: senior developer, design & architecture, maintainer
     * `Philipp Weiler`_: developer
 
 .. _Marius Lange: https://twitter.com/MariusLange8
