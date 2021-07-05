@@ -5,8 +5,7 @@ set -ev
 python -m pip install --upgrade pip
 # TODO: enable 3.9 CI once new scVelo version is up on PyPI
 pip install numpy Cython  # 3.9 external (WOT)
-# TODO: add WOT to external once new version is up on PyPI
-pip install codecov adjustText git+https://github.com/broadinstitute/wot@master
+pip install codecov adjustText
 
 if [[ "$OS" == "macos-latest" ]]; then
   pip install -e".[test,external]"
