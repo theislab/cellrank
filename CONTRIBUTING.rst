@@ -128,7 +128,7 @@ PETSc/SLEPc needs to be built. To run only a subset of tests, run::
 where ``<name>`` can be a path to a test file/directory or a name of a test function/class, e.g.::
 
     tox -e py38-linux -- -k tests/test_kernels.py  # run tests in the speciied file
-    tox -e py38-linux -- -k "TestExternal"  # run tests grouped in the `TestExternal` class
+    tox -e py38-linux -- -k "TestGPCCA"  # run tests grouped in the `TestGPCCA` class
 
 Documentation
 ~~~~~~~~~~~~~
