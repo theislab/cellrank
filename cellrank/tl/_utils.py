@@ -761,6 +761,8 @@ def _normalize(
     ----------
     X
         Array to be normalized.
+    eps
+        To avoid division by zero.
 
     Returns
     -------
@@ -770,7 +772,7 @@ def _normalize(
 
     with np.errstate(divide="ignore"):
         if issparse(X):
-            return X.multiply(csr_matrix(1.0 / np.abs(X).sum(1)))
+            return X.multiply(csr_matrix(1.0 / (np.abs(X).sum(1) + eps)))
         X = np.array(X)
         return X / (X.sum(1)[:, None])
 
