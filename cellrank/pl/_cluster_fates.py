@@ -345,8 +345,8 @@ def cluster_fates(
             .astype("category")
             .values
         )
-        tmp.obs[points].cat.reorder_categories(
-            [f"{dir_prefix.lower()} {n}" for n in adata.obsm[lk].names], inplace=True
+        tmp.obs[points] = tmp.obs[points].cat.reorder_categories(
+            [f"{dir_prefix.lower()} {n}" for n in adata.obsm[lk].names]
         )
         tmp.uns[f"{points}_colors"] = adata.obsm[lk].colors
 
@@ -511,5 +511,3 @@ def cluster_fates(
 
     if save is not None:
         save_fig(fig, save)
-
-    fig.show()

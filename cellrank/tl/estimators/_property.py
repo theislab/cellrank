@@ -104,7 +104,7 @@ class PropertyMeta(ABCMeta, type):
             raise ValueError(f"Property name for attribute `{md.attr}` is empty.")
         if prop_name.startswith("_"):
             raise ValueError(
-                f"Property musn't start with an underscore: `{prop_name!r}`."
+                f"Property mustn't start with an underscore: `{prop_name!r}`."
             )
 
         attributedict[prop_name] = _create_property(
@@ -459,7 +459,7 @@ class Plottable(KernelHolder, Property):
 
             for state in to_remove:
                 data[data == state] = np.nan
-            data.cat.remove_categories(to_remove, inplace=True)
+            data = data.cat.remove_categories(to_remove)
 
         if cluster_key is None:
             cluster_key = []
@@ -499,7 +499,7 @@ class Plottable(KernelHolder, Property):
                 for key, cat in zip(keys, data.cat.categories):
                     d = data.copy()
                     d[data != cat] = None
-                    d.cat.set_categories([cat], inplace=True)
+                    d = d.cat.set_categories([cat])
 
                     self.adata.obs[key] = d
                     self.adata.uns[f"{key}_colors"] = [colors[cat]]

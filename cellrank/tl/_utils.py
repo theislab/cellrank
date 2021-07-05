@@ -1,7 +1,6 @@
 """Utility functions for CellRank tools."""
 
 import os
-import warnings
 from typing import (
     Any,
     Dict,
@@ -49,7 +48,6 @@ ColorLike = TypeVar("ColorLike")
 GPCCA = TypeVar("GPCCA")
 CFLARE = TypeVar("CFLARE")
 DiGraph = TypeVar("DiGraph")
-KernelDirection = TypeVar("KernelDirection")
 
 EPS = np.finfo(np.float64).eps
 
@@ -86,7 +84,7 @@ class RandomKeys:
     def __exit__(self, exc_type, exc_val, exc_tb):
         for key in self._keys:
             try:
-                del self._adata.obs[key]
+                self._adata.obs.drop(key, axis="columns", inplace=True)
             except KeyError:
                 pass
             if self._where == "obs":
@@ -214,7 +212,7 @@ def _process_series(
             for key in cat:
                 mask = np.logical_or(mask, series_temp == key)
                 remaining_cat.remove(key)
-            series_temp.cat.add_categories(new_cat_name, inplace=True)
+            series_temp = series_temp.cat.add_categories(new_cat_name)
             remaining_cat.append(new_cat_name)
             series_temp[mask] = new_cat_name
 
@@ -228,8 +226,8 @@ def _process_series(
             colors_mod[cat[0]] = np.array(colors_temp)[:n_remaining][color_mask][0]
 
     # Since we have just appended colors at the end, we must now delete the unused ones
-    series_temp.cat.remove_unused_categories(inplace=True)
-    series_temp.cat.reorder_categories(remaining_cat, inplace=True)
+    series_temp = series_temp.cat.remove_unused_categories()
+    series_temp = series_temp.cat.reorder_categories(remaining_cat)
 
     if process_colors:
         # original colors can still be present, convert to hex
@@ -291,10 +289,7 @@ def _mat_mat_corr_sparse(
     y_bar = np.reshape(np.mean(Y, axis=0), (1, -1))
     y_std = np.reshape(np.std(Y, axis=0), (1, -1))
 
-    with np.warnings.catch_warnings():
-        np.warnings.filterwarnings(
-            "ignore", r"invalid value encountered in true_divide"
-        )
+    with np.errstate(divide="ignore"):
         return (X @ Y - (n * X_bar * y_bar)) / ((n - 1) * X_std * y_std)
 
 
@@ -307,10 +302,7 @@ def _mat_mat_corr_dense(X: np.ndarray, Y: np.ndarray) -> np.ndarray:
     y_bar = np.reshape(np_mean(Y, axis=0), (1, -1))
     y_std = np.reshape(np_std(Y, axis=0), (1, -1))
 
-    with np.warnings.catch_warnings():
-        np.warnings.filterwarnings(
-            "ignore", r"invalid value encountered in true_divide"
-        )
+    with np.errstate(divide="ignore"):
         return (X @ Y - (n * X_bar * y_bar)) / ((n - 1) * X_std * y_std)
 
 
@@ -776,8 +768,7 @@ def _normalize(
         The normalized array.
     """
 
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
+    with np.errstate(divide="ignore"):
         if issparse(X):
             return X.multiply(csr_matrix(1.0 / np.abs(X).sum(1)))
         X = np.array(X)
@@ -960,9 +951,8 @@ def _merge_categorical_series(
     new: pd.Series,
     colors_old: Union[List[ColorLike], np.ndarray, Dict[Any, ColorLike]] = None,
     colors_new: Union[List[ColorLike], np.ndarray, Dict[Any, ColorLike]] = None,
-    inplace: bool = False,
     color_overwrite: bool = False,
-) -> Optional[Union[pd.Series, np.ndarray, Tuple[pd.Series, np.ndarray]]]:
+) -> Optional[Union[pd.Series, Tuple[pd.Series, np.ndarray]]]:
     """
     Update categorical :class:`pandas.Series.` with new information.
 
@@ -981,18 +971,13 @@ def _merge_categorical_series(
         Colors associated with new categories.
     color_overwrite
         If `True`, overwrite the old colors with new ones for overlapping categories.
-    inplace
-        Whether to update ``old`` or create a copy.
 
     Returns
     -------
     :class:`pandas.Series`
-        If ``inplace`` is `False`, returns the modified approximate recurrent classes and if
-        ``colors_old`` and ``colors_new`` are both `None`.
-    :class:`numpy.ndarray`
-        If ``inplace`` is `True` and any of ``colors_old``, ``colors_new`` containing the new colors.
+        Returns the modified approximate recurrent classes and if ``colors_old`` and ``colors_new`` are both `None`.
     :class:`pandas.Series`, :class:`numpy.ndarray`
-        The same as above, but with ``inplaces` is `False`.
+        If any of ``colors_old``, ``colors_new`` contain the new colors.
     """
 
     def get_color_mapper(
@@ -1033,13 +1018,10 @@ def _merge_categorical_series(
     if (old.index != new.index).any():
         raise ValueError("Index for old and new approx. recurrent classes differ.")
 
-    if not inplace:
-        old = old.copy()
-
+    old, new = old.copy(), new.copy()
     mask = ~new.isna()
-
     if np.sum(mask) == 0:
-        return old if not inplace else None
+        return old
 
     old_cats = old.cat.categories
     new_cats = new.cat.categories
@@ -1063,16 +1045,15 @@ def _merge_categorical_series(
     if colors_new:
         colors_new = get_color_mapper(new, colors_new)
 
-    old.cat.set_categories(old_cats | cats_to_add, inplace=True)
-    new.cat.set_categories(old_cats | cats_to_add, inplace=True)
+    tmp = pd.CategoricalIndex(old_cats).union(pd.CategoricalIndex(cats_to_add))
+    old = old.cat.set_categories(tmp)
+    new = new.cat.set_categories(tmp)
 
     old.loc[mask] = new.loc[mask]
-    old.cat.remove_unused_categories(inplace=True)
-
-    new.cat.set_categories(new_cats, inplace=True)  # return to previous state
+    old = old.cat.remove_unused_categories()
 
     if not colors_old and not colors_new:
-        return old if not inplace else None
+        return old
 
     colors_merged = (
         {**colors_old, **colors_new}
@@ -1081,7 +1062,7 @@ def _merge_categorical_series(
     )
     colors_merged = np.array([colors_merged[c] for c in old.cat.categories])
 
-    return (old, colors_merged) if not inplace else colors_merged
+    return old, colors_merged
 
 
 def _unique_order_preserving(iterable: Iterable[Hashable]) -> List[Hashable]:
@@ -1308,7 +1289,7 @@ def _series_from_one_hot_matrix(
 
     target_series = pd.Series(index=index, dtype="category")
     for vec, name in zip(membership.T, names):
-        target_series.cat.add_categories(name, inplace=True)
+        target_series = target_series.cat.add_categories(name)
         target_series[np.where(vec)[0]] = name
 
     return target_series
@@ -1614,7 +1595,10 @@ def _create_initial_terminal_annotations(
 
     # merge
     cats_merged, colors_merged = _merge_categorical_series(
-        cats_final, cats_root, list(colors_final), list(colors_root)
+        cats_final,
+        cats_root,
+        colors_old=list(colors_final),
+        colors_new=list(colors_root),
     )
 
     # adjust the names
@@ -1623,7 +1607,7 @@ def _create_initial_terminal_annotations(
         f"{terminal_prefix if key in final_names else initial_prefix}: {key}"
         for key in cats_merged.cat.categories
     ]
-    cats_merged.cat.rename_categories(final_labels, inplace=True)
+    cats_merged = cats_merged.cat.rename_categories(final_labels)
 
     # write to AnnData
     adata.obs[key_added] = cats_merged

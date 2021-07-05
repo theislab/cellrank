@@ -70,26 +70,16 @@ class TestToolsUtils:
         y = pd.Series(["b", np.nan, "a", "d", "a"]).astype("category")
         expected = pd.Series(["b", "b", "a", "d", "a"]).astype("category")
 
-        res = _merge_categorical_series(x, y, inplace=False)
+        res = _merge_categorical_series(x, y)
 
         np.testing.assert_array_equal(res.values, expected.values)
-
-    def test_merge_normal_run_inplace(self):
-        x = pd.Series(["a", "b", np.nan, "b", np.nan]).astype("category")
-        y = pd.Series(["b", np.nan, "a", "d", "a"]).astype("category")
-        expected = pd.Series(["b", "b", "a", "d", "a"]).astype("category")
-
-        _ = _merge_categorical_series(x, y, inplace=True)
-
-        assert _ is None
-        np.testing.assert_array_equal(x.values, expected.values)
 
     def test_merge_normal_run_completely_different_categories(self):
         x = pd.Series(["a", "a", "a"]).astype("category")
         y = pd.Series(["b", "b", "b"]).astype("category")
         expected = pd.Series(["b", "b", "b"]).astype("category")
 
-        res = _merge_categorical_series(x, y, inplace=False)
+        res = _merge_categorical_series(x, y)
 
         np.testing.assert_array_equal(res.values, expected.values)
         np.testing.assert_array_equal(res.cat.categories.values, ["b"])
@@ -100,7 +90,7 @@ class TestToolsUtils:
             y = pd.Series(["b", np.nan, "a", "d", "a"]).astype("category")
             colors_x = ["red", "foo"]
 
-            _ = _merge_categorical_series(x, y, colors_old=colors_x, inplace=True)
+            _ = _merge_categorical_series(x, y, colors_old=colors_x)
 
     def test_merge_colors_wrong_number_of_colors(self):
         with pytest.raises(ValueError):
@@ -108,7 +98,7 @@ class TestToolsUtils:
             y = pd.Series(["b", np.nan, "a", "d", "a"]).astype("category")
             colors_x = ["red"]
 
-            _ = _merge_categorical_series(x, y, colors_old=colors_x, inplace=True)
+            _ = _merge_categorical_series(x, y, colors_old=colors_x)
 
     def test_merge_colors_wrong_dict(self):
         with pytest.raises(ValueError):
@@ -116,28 +106,15 @@ class TestToolsUtils:
             y = pd.Series(["b", np.nan, "a", "d", "a"]).astype("category")
             colors_x = {"a": "red", "foo": "blue"}
 
-            _ = _merge_categorical_series(x, y, colors_old=colors_x, inplace=True)
+            _ = _merge_categorical_series(x, y, colors_old=colors_x)
 
     def test_merge_colors_simple_old(self):
-        x = pd.Series(["a", "b", np.nan, "b", np.nan]).astype("category")
-        y = pd.Series(["b", np.nan, "a", "d", "a"]).astype("category")
-        colors_x = ["red", "blue"]
-
-        colors_merged = _merge_categorical_series(
-            x, y, colors_old=colors_x, inplace=True
-        )
-
-        np.testing.assert_array_equal(colors_merged, ["red", "blue", "#279e68"])
-
-    def test_merge_colors_simple_old_no_inplace(self):
         x = pd.Series(["a", "b", np.nan, "b", np.nan]).astype("category")
         y = pd.Series(["b", np.nan, "a", "d", "a"]).astype("category")
         expected = pd.Series(["b", "b", "a", "d", "a"]).astype("category")
         colors_x = ["red", "blue"]
 
-        merged, colors_merged = _merge_categorical_series(
-            x, y, colors_old=colors_x, inplace=False
-        )
+        merged, colors_merged = _merge_categorical_series(x, y, colors_old=colors_x)
 
         np.testing.assert_array_equal(merged.values, expected.values)
         np.testing.assert_array_equal(colors_merged, ["red", "blue", "#279e68"])
@@ -147,9 +124,7 @@ class TestToolsUtils:
         y = pd.Series(["b", np.nan, "a", "d", "a"]).astype("category")
         colors_y = ["red", "blue", "green"]
 
-        colors_merged = _merge_categorical_series(
-            x, y, colors_new=colors_y, inplace=True
-        )
+        _, colors_merged = _merge_categorical_series(x, y, colors_new=colors_y)
 
         np.testing.assert_array_equal(colors_merged, ["#1f77b4", "#ff7f0e", "green"])
 
@@ -159,8 +134,8 @@ class TestToolsUtils:
         colors_x = ["red", "blue"]
         colors_y = ["green", "yellow", "black"]
 
-        colors_merged = _merge_categorical_series(
-            x, y, colors_old=colors_x, colors_new=colors_y, inplace=True
+        _, colors_merged = _merge_categorical_series(
+            x, y, colors_old=colors_x, colors_new=colors_y
         )
 
         np.testing.assert_array_equal(colors_merged, ["red", "blue", "black"])
@@ -171,13 +146,12 @@ class TestToolsUtils:
         colors_x = ["red", "blue"]
         colors_y = ["green", "yellow", "black"]
 
-        colors_merged = _merge_categorical_series(
+        _, colors_merged = _merge_categorical_series(
             x,
             y,
             colors_old=colors_x,
             colors_new=colors_y,
             color_overwrite=True,
-            inplace=True,
         )
 
         np.testing.assert_array_equal(colors_merged, ["green", "yellow", "black"])
@@ -521,7 +495,7 @@ class TestSeriesFromOneHotMatrix:
         actual_series = _series_from_one_hot_matrix(a)
 
         expected_series = pd.Series(index=range(6), dtype="category")
-        expected_series.cat.add_categories(["0", "1", "2"], inplace=True)
+        expected_series = expected_series.cat.add_categories(["0", "1", "2"])
         expected_series[0] = "2"
         expected_series[1] = "2"
         expected_series[3] = "0"

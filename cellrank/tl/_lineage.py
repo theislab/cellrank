@@ -758,20 +758,23 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         if not len(early_subset):
             raise ValueError("No early cells have been specified.")
 
-        if method == PrimingDegree.KL_DIVERGENCE:
-            probs = np.nan_to_num(
-                np.sum(probs * np.log2(probs / np.mean(early_subset, axis=0)), axis=1),
-                nan=1.0,
-                copy=False,
-            )
-        elif method == PrimingDegree.ENTROPY:
-            probs = entropy(probs, axis=1)
-            probs = np.max(probs) - probs
-        else:
-            raise NotImplementedError(f"Method `{method}` is not yet implemented")
+        with np.errstate(divide="ignore", invalid="ignore"):
+            if method == PrimingDegree.KL_DIVERGENCE:
+                probs = np.nan_to_num(
+                    np.sum(
+                        probs * np.log2(probs / np.mean(early_subset, axis=0)), axis=1
+                    ),
+                    nan=1.0,
+                    copy=False,
+                )
+            elif method == PrimingDegree.ENTROPY:
+                probs = entropy(probs, axis=1)
+                probs = np.max(probs) - probs
+            else:
+                raise NotImplementedError(f"Method `{method}` is not yet implemented")
 
-        minn, maxx = np.min(probs), np.max(probs)
-        return (probs - minn) / (maxx - minn)
+            minn, maxx = np.min(probs), np.max(probs)
+            return (probs - minn) / (maxx - minn)
 
     @d.dedent
     def plot_pie(
@@ -854,8 +857,6 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
         ax.set_title(title)
         ax.set_aspect("equal")
-
-        fig.show()
 
         if save is not None:
             save_fig(fig, save)

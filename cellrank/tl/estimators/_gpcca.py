@@ -306,7 +306,6 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         # we do this also here because if `rename_terminal_states` fails
         # invalid states would've been written to this object and nothing to adata
         new_names = {k: str(v) for k, v in names.items()}
-        # TODO: seems wrong
         names_after_renaming = [new_names.get(n, n) for n in probs.names]
         if len(set(names_after_renaming)) != probs.shape[1]:
             raise ValueError(
@@ -316,7 +315,12 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         if probs.shape[1] == 1:
             self._set(A.TERM, self._create_states(probs, n_cells=n_cells))
             self._set(A.TERM_COLORS, self._get(A.MACRO_COLORS))
-            self._set(A.TERM_PROBS, probs / probs.max())
+            self._set(
+                A.TERM_PROBS,
+                pd.Series(
+                    probs.X.squeeze() / probs.X.max(), index=self.adata.obs_names
+                ),
+            )
             self._set(A.TERM_ABS_PROBS, probs)
             if rename:
                 # access lineage renames join states, e.g. 'Alpha, Beta' becomes 'Alpha or Beta' + whitespace stripping
@@ -572,8 +576,8 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
                 spine.set_visible(False)
 
             if xticks_labels is not None:
-                ax.set_xticklabels(xticks_labels)
                 ax.set_xticks(np.arange(data.shape[1]))
+                ax.set_xticklabels(xticks_labels)
                 plt.setp(
                     ax.get_xticklabels(),
                     rotation=xtick_rotation,
@@ -1008,18 +1012,15 @@ class GPCCA(BaseEstimator, Macrostates, Schur, Eigen):
         if n_cells is None:
             logg.debug("Setting the macrostates using macrostate assignment")
 
+            # fmt: off
             max_assignment = np.argmax(memberships, axis=1)
-            _macro_assignment = pd.Series(
-                index=self.adata.obs_names, data=max_assignment, dtype="category"
-            )
+            _macro_assignment = pd.Series(index=self.adata.obs_names, data=max_assignment, dtype="category")
             # sometimes, the assignment can have a missing category and the Lineage creation therefore fails
             # keep it as ints when `n_cells != None`
-            _macro_assignment.cat.set_categories(
-                list(range(memberships.shape[1])), inplace=True
-            )
-
+            _macro_assignment = _macro_assignment.cat.set_categories(list(range(memberships.shape[1])))
             macrostates = _macro_assignment.astype(str).astype("category").copy()
             not_enough_cells = []
+            # fmt: on
         else:
             logg.debug("Setting the macrostates using macrostates memberships")
 
