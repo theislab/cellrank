@@ -105,9 +105,10 @@ class PseudotimeKernel(Kernel):
         Parameters
         ----------
         frac_to_keep
-            The `fract_to_keep` * n_neighbors closest neighbors (according to graph connectivities) are kept, no matter
+            The `frac_to_keep` * n_neighbors closest neighbors (according to graph connectivities) are kept, no matter
             whether they lie in the pseudotemporal past or future. This is done to ensure that the graph remains
-            connected. Only used when `threshold_scheme='hard'`.
+            connected. Only used when `threshold_scheme='hard'`. `frac_to_keep` needs to fall within the
+            interval `[0, 1]`.
         %(soft_scheme_kernel)s
         check_irreducibility
             Optional check for irreducibility of the final transition matrix.
