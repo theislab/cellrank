@@ -157,8 +157,9 @@ class HardThresholdScheme(ThresholdSchemeABC):
         n_neighs
             Number of neighbors to keep.
         frac_to_keep
-            The `fract_to_keep` * n_neighbors closest neighbors (according to graph connectivities) are kept, no matter
-            whether they lie in the pseudotemporal past or future.
+            The `frac_to_keep` * n_neighbors closest neighbors (according to graph connectivities) are kept, no matter
+            whether they lie in the pseudotemporal past or future. `frac_to_keep` needs to fall within the
+            interval `[0, 1]`.
 
         Returns
         -------
