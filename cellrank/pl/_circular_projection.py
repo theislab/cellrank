@@ -70,7 +70,9 @@ def _get_distances(data: Union[np.ndarray, Lineage], metric: Metric_T) -> np.nda
     return np.asarray(metric, dtype=np.float64)
 
 
-def _get_optimal_order(data: Lineage, metric: Metric_T) -> Tuple[float, np.ndarray]:
+def _get_optimal_order(
+    data: Union[np.ndarray, Lineage], metric: Metric_T
+) -> Tuple[float, np.ndarray]:
     """Solve the TSP using dynamic programming."""
     return _held_karp(_get_distances(data, metric))
 

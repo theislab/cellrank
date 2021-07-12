@@ -33,7 +33,7 @@ from cellrank.ul._utils import Pickleable, _write_graph_data
 from scvelo.plotting.utils import default_size, plot_outline
 from cellrank.tl._constants import Direction, _transition
 from cellrank.tl.kernels._utils import _get_basis, _filter_kwargs
-from cellrank.tl.kernels._tmat_flow import FlowPlotter
+from cellrank.tl.kernels._tmat_flow import MultiFlowPlotter, SingleFlowPlotter
 from cellrank.tl.kernels._random_walk import RandomWalk
 
 import numpy as np
@@ -560,8 +560,86 @@ class KernelExpression(Pickleable, ABC):
                 "Compute transition matrix first as `.compute_transition_matrix()`."
             )
 
-        fp = FlowPlotter(self.adata, self.transition_matrix, cluster_key, time_key)
+        fp = SingleFlowPlotter(
+            self.adata, self.transition_matrix, cluster_key, time_key
+        )
         fp = fp.prepare(cluster, clusters, time_points)
+
+        ax = fp.plot(
+            min_flow=min_flow,
+            remove_empty_clusters=remove_empty_clusters,
+            ascending=ascending,
+            alpha=alpha,
+            xticks_step_size=xticks_step_size,
+            legend_loc=legend_loc,
+            figsize=figsize,
+            dpi=dpi,
+        )
+
+        if save is not None:
+            save_fig(ax.figure, save)
+
+        if not show:
+            return ax
+
+    @d.get_full_description(base="plot_single_flow")
+    @d.get_sections(base="plot_single_flow", sections=["Parameters", "Returns"])
+    @d.dedent
+    def plot_multi_flow(
+        self,
+        cluster: str,
+        cluster_key: str,
+        time_key: str,
+        clusters: Optional[Sequence[Any]] = None,
+        time_points: Optional[Sequence[Union[int, float]]] = None,
+        min_flow: float = 0,
+        remove_empty_clusters: bool = True,
+        ascending: Optional[bool] = False,
+        legend_loc: Optional[str] = "upper right out",
+        alpha: Optional[float] = 0.8,
+        xticks_step_size: Optional[int] = 1,
+        figsize: Optional[Tuple[float, float]] = None,
+        dpi: Optional[int] = None,
+        save: Optional[Union[str, Path]] = None,
+        show: bool = True,
+    ) -> Optional[plt.Axes]:
+        """
+        Visualize outgoing flow from a cluster of cells :cite:`mittnenzweig:21`.
+
+        Parameters
+        ----------
+        cluster
+            Cluster for which to visualize outgoing compute_flow.
+        cluster_key
+            Key in :attr:`adata` ``.obs`` where clustering is stored.
+        time_key
+            Key in :attr:`adata` ``.obs`` where experimental time is stored.
+        clusters
+            Visualize flow only for these clusters. If `None`, use all clusters.
+        time_points
+            Visualize flow only for these time points. If `None`, use all time points.
+        %(flow.parameters)s
+        %(plotting)s
+        show
+            If `False`, return :class:`matplotlib.pyplot.Axes`.
+
+        Returns
+        -------
+        :class:`matplotlib.pyplot.Axes`
+            The axis object if ``show=False``.
+        %(just_plots)s
+
+        Notes
+        -----
+        This function is a Python reimplementation of the following
+        `original R function <https://github.com/tanaylab/embflow/blob/main/scripts/generate_paper_figures/plot_vein.r>`_
+        with some minor stylistic differences.
+        This function will not recreate the results from :cite:`mittnenzweig:21`, because there the Metacell model
+        :cite:`baran:19` was used to compute the flow, whereas here the transition matrix is used.
+        """  # noqa: E501
+
+        fp = MultiFlowPlotter(self.adata, self.transition_matrix, cluster_key, time_key)
+        fp = fp.prepare(cluster, clusters, time_points, all_clusters=True)
 
         ax = fp.plot(
             min_flow=min_flow,

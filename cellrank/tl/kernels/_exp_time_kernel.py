@@ -87,6 +87,30 @@ class ExperimentalTimeKernel(Kernel, ABC):
             time_key = self._time_key
         return super().plot_single_flow(cluster, cluster_key, time_key, *args, **kwargs)
 
+    @d.dedent
+    def plot_multi_flow(
+        self,
+        cluster: str,
+        cluster_key: str,
+        time_key: Optional[str] = None,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
+        """
+        %(plot_single_flow.full_desc)s
+
+        Parameters
+        ----------
+        %(plot_single_flow.parameters)s
+
+        Returns
+        -------
+        %(plot_single_flow.returns)s
+        """  # noqa: D400
+        if time_key is None:
+            time_key = self._time_key
+        return super().plot_multi_flow(cluster, cluster_key, time_key, *args, **kwargs)
+
     @property
     def experimental_time(self) -> pd.Series:
         """Experimental time."""

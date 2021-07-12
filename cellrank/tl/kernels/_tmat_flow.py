@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from typing import Any, List, Tuple, Union, Mapping, Optional, Sequence
 from functools import lru_cache
 from dataclasses import dataclass
@@ -32,8 +33,9 @@ class Point:  # noqa: D101
     xt: float
 
 
+@abstractmethod
 @d.dedent
-class FlowPlotter:
+class FlowPlotter(ABC):
     """
     Class that plots outgoing flow for a specific cluster :cite:`mittnenzweig:21`.
 
@@ -50,7 +52,8 @@ class FlowPlotter:
         Key in :attr:`adata` ``.obs`` where experimental time is stored.
     """
 
-    TIME_KEY = "time"
+    _TIME_KEY = "time"
+    _N = 100
 
     def __init__(
         self,
@@ -84,6 +87,7 @@ class FlowPlotter:
         cluster: str,
         clusters: Optional[Sequence[Any]] = None,
         time_points: Optional[Sequence[Numeric_t]] = None,
+        all_clusters: bool = False,
     ) -> "FlowPlotter":
         """
         Prepare itself for plotting by computing flow and contingency matrix.
@@ -145,7 +149,7 @@ class FlowPlotter:
         )
         self._cluster = cluster
         self._cmat = self.compute_contingency_matrix()
-        self._flow = self.compute_flow(time_points, cluster)
+        self._flow = self.compute_flow(time_points, None if all_clusters else cluster)
 
         return self
 
@@ -317,6 +321,7 @@ class FlowPlotter:
         self._cmat.columns = tmp
         return old_times
 
+    # TODO: abstract
     def _order_clusters(
         self, cluster: str, ascending: Optional[bool] = False
     ) -> Tuple[List[Any], List[Any]]:
@@ -334,49 +339,59 @@ class FlowPlotter:
         clusters = [c for c in self._clusters if c != cluster]
         return clusters[: len(clusters) // 2], clusters[len(clusters) // 2 :]
 
-    def _calculate_y_offsets(
-        self, clusters: Sequence[Any], delta: float = 0.2
-    ) -> Mapping[Any, float]:
-        offset = [0]
-        for i in range(1, len(clusters)):
-            offset.append(
-                offset[-1]
-                + delta
-                + np.max(self._cmat.loc[clusters[i]] + self._cmat.loc[clusters[i - 1]])
-            )
-        return dict(zip(clusters, offset))
-
-    def _plot_smoothed_proportion(
+    def _decorate(
         self,
         ax: plt.Axes,
-        clusters: Sequence[Any],
-        y_offset: Mapping[Any, float],
-        alpha: float = 0.8,
-    ) -> Tuple[Mapping[Any, np.ndarray], Mapping[Any, PolyCollection]]:
+        times: Sequence[Any],
+        old_times: Sequence[Any],
+        handles: Mapping[Any, Any],
+        step_size: Optional[int] = None,
+        legend_loc: Optional[str] = None,
+        xtime: bool = True,
+    ) -> plt.Axes:
+        from cellrank.pl._utils import _position_legend
+
+        ax.margins(0.025)
+        ax.set_title(self._cluster)
+        if xtime:
+            ax.set_xlabel(self._tkey)
+            ax.set_ylabel(self._ckey)
+            if step_size is None:
+                ax.set_xticks([])
+            else:
+                ax.set_xticks(times[::step_size])
+                ax.set_xticklabels(old_times[::step_size])
+            ax.set_yticks([])
+        else:
+            ax.set_ylabel(self._tkey)
+            ax.set_xlabel(self._ckey)
+            if step_size is None:
+                ax.set_yticks([])
+            else:
+                ax.set_yticks(times[::step_size])
+                ax.set_yticklabels(old_times[::step_size])
+            ax.set_xticks([])
+
+        if legend_loc not in (None, "none"):
+            _position_legend(
+                ax,
+                legend_loc=legend_loc,
+                handles=handles,
+            )
+
+        return ax
+
+    def _smooth(self, clust: Any) -> Tuple[np.ndarray, np.ndarray]:
         start_t, end_t = self._cmat.columns.min(), self._cmat.columns.max()
         x = np.array(self._cmat.columns)  # fitting
         # extrapolation
         e = np.linspace(start_t, end_t, int(1 + (end_t - start_t) * 100))
+        y = self._cmat.loc[clust]
+        f = interp1d(x, y)
+        fe = f(e)
+        lo = lowess(fe, e, frac=0.3, is_sorted=True, return_sorted=False)
 
-        smoothed_proportion, handles = {}, {}
-        for clust in clusters:
-            y = self._cmat.loc[clust]
-            f = interp1d(x, y)
-            fe = f(e)
-            lo = lowess(fe, e, frac=0.3, is_sorted=True, return_sorted=False)
-            smoothed_proportion[clust] = lo
-
-            handles[clust] = ax.fill_between(
-                e,
-                y_offset[clust] + lo,
-                y_offset[clust] - lo,
-                color=self.cmap[clust],
-                label=clust,
-                alpha=alpha,
-                edgecolor=None,
-            )
-
-        return smoothed_proportion, handles
+        return e, lo
 
     def _draw_flow_edge(
         self,
@@ -389,6 +404,7 @@ class FlowPlotter:
         end_color: Tuple[float, float, float],
         flow: float,
         alpha: float = 0.8,
+        swap: bool = False,
     ) -> None:
         # transcribed from: https://github.com/tanaylab/embflow/blob/main/scripts/generate_paper_figures/plot_vein.r
         dx = x2.xt - x1.x
@@ -427,9 +443,89 @@ class FlowPlotter:
             (start_color * (1 - rs[:, None])) + (end_color * rs[:, None]),
             np.linspace(start_alpha, end_alpha, len(rs)),
         ]
+        if swap:
+            xs, ys = ys, xs
 
         for x, y, c in zip(xs, ys, col):
             ax.fill(x, y, c=c, edgecolor=None)
+
+    @abstractmethod
+    def _plot(
+        self,
+        old_times: Sequence[Numeric_t],
+        ascending: Optional[bool],
+        min_flow: float = 0,
+        alpha: float = 0.8,
+        xticks_step_size: Optional[int] = 1,
+        legend_loc: Optional[str] = "upper right out",
+        figsize: Optional[Tuple[float, float]] = None,
+        dpi: Optional[int] = None,
+    ) -> plt.Axes:
+        pass
+
+    @property
+    def clusters(self) -> pd.Series:
+        """Clusters."""
+        return self._adata.obs[self._ckey]
+
+    @property
+    def time(self) -> pd.Series:
+        """Time points."""
+        return self._adata.obs[self._tkey]
+
+    @property
+    @lru_cache(1)
+    def cmap(self) -> Mapping[str, Any]:
+        """Colormap for :attr:`clusters`."""
+        return dict(
+            zip(
+                self.clusters.cat.categories,
+                self._adata.uns.get(
+                    f"{self._ckey}_colors",
+                    _create_categorical_colors(len(self.clusters.cat.categories)),
+                ),
+            )
+        )
+
+
+class SingleFlowPlotter(FlowPlotter):
+    """TODO."""
+
+    def _calculate_y_offsets(
+        self, clusters: Sequence[Any], delta: float = 0.2
+    ) -> Mapping[Any, float]:
+        offset = [0]
+        for i in range(1, len(clusters)):
+            offset.append(
+                offset[-1]
+                + delta
+                + np.max(self._cmat.loc[clusters[i]] + self._cmat.loc[clusters[i - 1]])
+            )
+        return dict(zip(clusters, offset))
+
+    def _plot_smoothed_proportion(
+        self,
+        ax: plt.Axes,
+        clusters: Sequence[Any],
+        y_offset: Mapping[Any, float],
+        alpha: float = 0.8,
+    ) -> Tuple[Mapping[Any, np.ndarray], Mapping[Any, PolyCollection]]:
+        smoothed_proportion, handles = {}, {}
+        for clust in clusters:
+            e, lo = self._smooth(clust)
+            smoothed_proportion[clust] = lo
+
+            handles[clust] = ax.fill_between(
+                e,
+                y_offset[clust] + lo,
+                y_offset[clust] - lo,
+                color=self.cmap[clust],
+                label=clust,
+                alpha=alpha,
+                edgecolor=None,
+            )
+
+        return smoothed_proportion, handles
 
     def _plot(
         self,
@@ -442,10 +538,8 @@ class FlowPlotter:
         figsize: Optional[Tuple[float, float]] = None,
         dpi: Optional[int] = None,
     ) -> plt.Axes:
-        from cellrank.pl._utils import _position_legend
-
         def r(num: float) -> int:
-            return max(0, int(round(num, 2) * 100) - 1)
+            return max(0, int(round(num, 2) * self._N) - 1)
 
         def draw_edges(
             curr_t: Numeric_t,
@@ -524,49 +618,257 @@ class FlowPlotter:
             draw_edges(curr_t, next_t, clusters_bottom, bottom=True)
             draw_edges(curr_t, next_t, clusters_top, bottom=False)
 
-        ax.margins(0.025)
-        ax.set_title(self._cluster)
-        ax.set_xlabel(self._tkey)
-        ax.set_ylabel(self._ckey)
-        if xticks_step_size is None:
-            ax.set_xticks([])
-        else:
-            ax.set_xticks(times[::xticks_step_size])
-            ax.set_xticklabels(old_times[::xticks_step_size])
-        ax.set_yticks([])
+        return self._decorate(
+            ax,
+            times,
+            old_times,
+            [handles[c] for c in all_clusters[::-1]],
+            step_size=xticks_step_size,
+            legend_loc=legend_loc,
+            xtime=True,
+        )
 
-        if legend_loc not in (None, "none"):
-            _position_legend(
-                ax,
-                legend_loc=legend_loc,
-                handles=[handles[c] for c in all_clusters[::-1]],
+
+class MultiFlowPlotter(FlowPlotter):
+    """TODO."""
+
+    # TODO
+    def _tmp_order_clusters(
+        self, cluster: str, ascending: Optional[bool] = False
+    ) -> Tuple[List[Any], List[Any]]:
+        if ascending is not None:
+            dmat = pd.DataFrame(
+                [
+                    self._flow.loc[(slice(None), c, slice(None))].sum()
+                    for c in self._clusters
+                ],
+                index=self._clusters,
             )
+            from cellrank.pl._circular_projection import _get_optimal_order
+
+            _, order = _get_optimal_order(dmat.values, dmat.values)
+
+            return list(dmat.columns.values[order])
+
+        clusters = [c for c in self._clusters if c != cluster]
+        return clusters[: len(clusters) // 2], clusters[len(clusters) // 2 :]
+
+    def _remove_min_clusters(self, min_flow: float) -> None:
+        # TODO
+        pass
+
+    def _persp_levels(
+        self,
+        ax: plt.Axes,
+        smoo_y1: Mapping[Any, np.ndarray],
+        smoo_y2: Mapping[Any, np.ndarray],
+        col_persp: Optional[Sequence[float]],
+        k_persp: float = 0.1,
+        level_step: int = 20,
+    ) -> None:
+        max_xi = len(smoo_y1.values())
+        min_y, max_y = ax.get_xlim()
+        if max_y < min_y:
+            max_y, min_y = min_y, max_y
+        yrange = int(np.floor((max_y - min_y) * self._N))
+        zs = np.zeros((max_xi, yrange))
+        if col_persp is None:
+            # TODO
+            col_persp = (
+                np.ones(
+                    len(smoo_y1),
+                )
+                * 1
+            )
+
+        for i, col in enumerate(smoo_y1.keys()):
+            z = col_persp[i]
+            y1 = smoo_y1[col]
+            y2 = smoo_y2[col]
+            if np.sum(y1) > np.sum(y2):
+                y1, y2 = y2, y1
+
+            tmp = np.c_[
+                np.arange(max_xi),
+                np.maximum(0, np.floor((y1 - min_y) * self._N)).astype(int),
+                np.floor((y2 - min_y) * self._N).astype(int),
+            ]
+            # TODO: more efficient
+            tmp = tmp[(tmp[:, 2] - tmp[:, 1]) >= 2]
+            for xi, y1bin, y2bin in tmp:
+                zs[xi, np.arange(y1bin - 2, y2bin + 2)] = z
+
+        ys = np.linspace(min_y, max_y, yrange)
+        for xi in np.arange(0, max_xi, level_step):
+            z = zs[xi]
+            # TODO
+            z_lo = z  # lowess(z, ys, frac=0.3, it=130, is_sorted=True, return_sorted=False)
+            sy = xi / 100 + z_lo * k_persp
+            ax.plot(ys, sy, lw=0.25, c="black", alpha=0.25)
+
+    def _plot(
+        self,
+        old_times: Sequence[Numeric_t],
+        ascending: Optional[bool],
+        min_flow: float = 0,
+        alpha: float = 0.8,
+        xticks_step_size: Optional[int] = 1,
+        legend_loc: Optional[str] = "upper right out",
+        figsize: Optional[Tuple[float, float]] = None,
+        dpi: Optional[int] = None,
+    ) -> plt.Axes:
+        def r(x):
+            return np.maximum(0, (np.round(x, 2) * 100).astype(int))
+
+        times = self._cmat.columns
+        start_t, end_t = times.min(), times.max()
+        clusters_left, clusters_right = self._order_clusters(self._cluster, ascending)
+        all_clusters = clusters_left + [self._cluster] + clusters_right
+
+        top_front = np.zeros((1 + int((end_t - start_t) * 100),))
+        bot_front = top_front.copy()
+
+        y_expand = np.linspace(1, 2, int(1 + (end_t - start_t) * 100))
+        prev_z, k_space_z = 0, 0.2
+
+        fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
+        ax.invert_yaxis()
+        ax.set_xticks([])
+
+        np.zeros(len(self._clusters))
+        k_persp = 0.2
+        smoo_y1, smoo_y2, handles = {}, {}, {}
+
+        for i, cls_i in enumerate([self._cluster] + clusters_right):
+            x, y = self._smooth(cls_i)
+            if i == 0:
+                smoo_y2[cls_i] = (y + top_front) * y_expand
+                smoo_y1[cls_i] = (-y + top_front) * y_expand
+                tmp = np.c_[(top_front + y) * y_expand, (top_front - y) * y_expand]
+            else:
+                smoo_y2[cls_i] = (2 * y + top_front) * y_expand
+                smoo_y1[cls_i] = top_front * y_expand
+                tmp = np.c_[(top_front + 2 * y) * y_expand, top_front * y_expand]
+            curr_z = 0  # col_persp[i]  # TODO
+            tmp += curr_z * k_persp
+
+            handles[cls_i] = ax.fill_betweenx(
+                x,
+                tmp[:, 0],
+                tmp[:, 1],
+                alpha=alpha,
+                color=self.cmap[cls_i],
+                label=cls_i,
+                edgecolor=None,
+            )
+            dz = max(0, curr_z - prev_z)
+            prev_z = curr_z
+
+            top_front += dz * k_space_z + lowess(
+                np.where(y > 0, 0.05 + 0.5 * np.max(y) + 2 * y, 0),
+                x,
+                frac=0.7,
+                is_sorted=True,
+                return_sorted=False,
+            )
+
+            if i == 0:
+                top_front /= 2
+                bot_front = -top_front
+
+        prev_z = 0
+        for cls_i in clusters_left[::-1]:
+            x, y = self._smooth(cls_i)
+            curr_z = 0  # col_persp[i]  # TODO
+            smoo_y2[cls_i] = bot_front * y_expand
+            smoo_y1[cls_i] = (-2 * y + bot_front) * y_expand
+            tmp = np.c_[(bot_front - 2 * y) * y_expand, bot_front * y_expand]
+            tmp += curr_z * k_persp
+
+            handles[cls_i] = ax.fill_betweenx(
+                x,
+                tmp[:, 0],
+                tmp[:, 1],
+                alpha=alpha,
+                color=self.cmap[cls_i],
+                label=cls_i,
+                edgecolor=None,
+            )
+            dz = max(0, curr_z - prev_z)
+            prev_z = curr_z
+            bot_front -= dz * k_space_z + lowess(
+                np.where(y > 0, 0.05 + 0.5 * np.max(y) + 2 * y, 0),
+                x,
+                frac=0.7,
+                is_sorted=True,
+                return_sorted=False,
+            )
+
+        for j in range(len(all_clusters)):
+            foc_cl = all_clusters[j]
+            for i in range(j - 1):
+                break
+                foc_i = all_clusters[i]
+                for curr_t, next_t in zip(times[:-1], times[1:]):
+                    flow = self._flow.loc[curr_t].loc[foc_cl, foc_i]
+                    if flow <= min_flow:
+                        continue
+                    self._draw_flow_edge(
+                        ax,
+                        x1=Point(curr_t, 0),
+                        x2=Point(next_t - flow, next_t - flow - 0.05),
+                        y1=Point(
+                            smoo_y1[foc_cl][r(curr_t)],
+                            smoo_y1[foc_cl][r(curr_t + flow)],
+                        ),
+                        y2=Point(
+                            smoo_y2[foc_i][r(next_t)],
+                            smoo_y2[foc_i][r(next_t - flow - 0.05)],
+                        ),
+                        start_color=self.cmap[foc_cl],
+                        end_color=self.cmap[foc_i],
+                        flow=flow,
+                        alpha=alpha,
+                        swap=True,
+                    )
+            for i in range(j + 1, len(all_clusters)):
+                foc_i = all_clusters[i]
+                for curr_t, next_t in zip(times[:-1], times[1:]):
+                    flow = self._flow.loc[curr_t].loc[foc_cl, foc_i]
+                    if flow <= min_flow:
+                        continue
+                    self._draw_flow_edge(
+                        ax,
+                        x1=Point(curr_t, 0),
+                        x2=Point(next_t - flow, next_t - flow - 0.05),
+                        y1=Point(
+                            smoo_y2[foc_cl][r(curr_t)],
+                            smoo_y2[foc_cl][r(curr_t + flow)],
+                        ),
+                        y2=Point(
+                            smoo_y1[foc_i][r(next_t)],
+                            smoo_y1[foc_i][r(next_t - flow - 0.05)],
+                        ),
+                        start_color=self.cmap[foc_cl],
+                        end_color=self.cmap[foc_i],
+                        flow=flow,
+                        alpha=alpha,
+                        swap=True,
+                    )
+
+        ax = self._decorate(
+            ax,
+            times,
+            old_times,
+            [handles[c] for c in all_clusters[::-1]],
+            step_size=xticks_step_size,
+            legend_loc=legend_loc,
+            xtime=False,
+        )
+        ax.set_title(self._ckey)
+        ax.set_xlabel(None)
 
         return ax
-
-    @property
-    def clusters(self) -> pd.Series:
-        """Clusters."""
-        return self._adata.obs[self._ckey]
-
-    @property
-    def time(self) -> pd.Series:
-        """Time points."""
-        return self._adata.obs[self._tkey]
-
-    @property
-    @lru_cache(1)
-    def cmap(self) -> Mapping[str, Any]:
-        """Colormap for :attr:`clusters`."""
-        return dict(
-            zip(
-                self.clusters.cat.categories,
-                self._adata.uns.get(
-                    f"{self._ckey}_colors",
-                    _create_categorical_colors(len(self.clusters.cat.categories)),
-                ),
-            )
-        )
 
 
 def _lcdf(
