@@ -267,7 +267,8 @@ class KernelExpression(Pickleable, ABC):
         """
         Compute a projection of the transition matrix in the embedding.
 
-        The projected matrix can be then visualized as::
+        Projections can only be calculated for kNN based kernels. The projected matrix
+        can be then visualized as::
 
             scvelo.pl.velocity_embedding(adata, vkey='T_fwd', basis='umap')
 
@@ -294,21 +295,36 @@ class KernelExpression(Pickleable, ABC):
                 "Compute transition matrix first as `.compute_transition_matrix()`."
             )
 
+        kernels_w_conn = [kernel for kernel in self.kernels if kernel._conn is not None]
+        if not len(kernels_w_conn):
+            raise AttributeError(
+                "Connectivity matrix not defined. As of now, the embedding projection "
+                "only works for kNN based kernels."
+            )
+
         start = logg.info(f"Projecting transition matrix onto `{basis}`")
         emb = _get_basis(self.adata, basis)
         T_emb = np.empty_like(emb)
 
+        conn = kernels_w_conn[0]._conn
+
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            for i, row in enumerate(self.transition_matrix):
-                dX = emb[row.indices] - emb[i, None]
+            for row_id, row in enumerate(self.transition_matrix):
+                conn_idxs = conn[row_id, :].indices
+
+                dX = emb[conn_idxs] - emb[row_id, None]
+
                 if np.any(np.isnan(dX)):
-                    T_emb[i] = np.nan
+                    T_emb[row_id, :] = np.nan
                 else:
+                    probs = row[:, conn_idxs]
+                    if issparse(probs):
+                        probs = probs.A.squeeze()
+
                     dX /= np.linalg.norm(dX, axis=1)[:, None]
                     dX = np.nan_to_num(dX)
-                    probs = row.data
-                    T_emb[i] = probs.dot(dX) - probs.mean() * dX.sum(0)
+                    T_emb[row_id, :] = probs.dot(dX) - dX.sum(0) / dX.shape[0]
 
         T_emb /= 3 * quiver_autoscale(np.nan_to_num(emb), T_emb)
 
