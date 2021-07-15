@@ -806,8 +806,7 @@ class MultiFlowPlotter(FlowPlotter):
 
         for j in range(len(all_clusters)):
             foc_cl = all_clusters[j]
-            for i in range(j - 1):
-                break
+            for i in range(j):
                 foc_i = all_clusters[i]
                 for curr_t, next_t in zip(times[:-1], times[1:]):
                     flow = self._flow.loc[curr_t].loc[foc_cl, foc_i]
