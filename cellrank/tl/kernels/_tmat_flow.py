@@ -765,7 +765,7 @@ class MultiFlowPlotter(FlowPlotter):
             prev_z = curr_z
 
             top_front += dz * k_space_z + lowess(
-                np.where(y > 0, 0.05 + 0.5 * np.max(y) + 2 * y, 0),
+                np.where(y > 0, 0.05 + 0.95 * np.max(y) + 2 * y, 0),
                 x,
                 frac=0.7,
                 is_sorted=True,
@@ -797,7 +797,7 @@ class MultiFlowPlotter(FlowPlotter):
             dz = max(0, curr_z - prev_z)
             prev_z = curr_z
             bot_front -= dz * k_space_z + lowess(
-                np.where(y > 0, 0.05 + 0.5 * np.max(y) + 2 * y, 0),
+                np.where(y > 0, 0.05 + 0.95 * np.max(y) + 2 * y, 0),
                 x,
                 frac=0.7,
                 is_sorted=True,
