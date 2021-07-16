@@ -46,6 +46,8 @@ class FlowPlotter(ABC):
     %(adata)s
     tmat
         Matrix of shape ``(adata.n_obs, adata.n_obs)``.
+    stat_dist
+        Stationary distribution of shape ``(adata.n_obs,)``.
     cluster_key
         Key in :attr:`adata` ``.obs`` where clustering is stored.
     time_key
@@ -59,11 +61,13 @@ class FlowPlotter(ABC):
         self,
         adata: AnnData,
         tmat: Union[np.ndarray, spmatrix],
+        # stat_dist: np.ndarray,
         cluster_key: str,
         time_key: str,
     ):
         self._adata = adata
         self._tmat = tmat
+        self._stat_dist = None  # stat_dist
         self._ckey = cluster_key
         self._tkey = time_key
 
@@ -176,7 +180,7 @@ class FlowPlotter(ABC):
         """
 
         def default_helper(t1: Numeric_t, t2: Numeric_t) -> pd.DataFrame:
-            subset, row_cls, col_cls = self._get_time_subset(t1, t2)
+            subset, _, row_cls, col_cls = self._get_time_subset(t1, t2)
 
             df = pd.DataFrame(subset.A if issparse(subset) else subset)
             df = df.groupby(row_cls).sum().T.groupby(col_cls).sum().T
@@ -188,7 +192,7 @@ class FlowPlotter(ABC):
             return res
 
         def cluster_helper(t1: Numeric_t, t2: Numeric_t) -> pd.DataFrame:
-            subset, row_cls, col_cls = self._get_time_subset(t1, t2, cluster=cluster)
+            subset, _, row_cls, col_cls = self._get_time_subset(t1, t2, cluster=cluster)
 
             df = pd.DataFrame(subset.A if issparse(subset) else subset).sum(0)
             df = df.groupby(col_cls).sum()
@@ -200,8 +204,27 @@ class FlowPlotter(ABC):
 
             return res
 
+        def coarsegrain_helper(t1: Numeric_t, t2: Numeric_t) -> pd.DataFrame:
+            subset, stat_dist, row_cls, col_cls = self._get_time_subset(
+                t1, t2, cluster=cluster
+            )
+            gs1 = pd.Series(np.arange(len(row_cls))).groupby(row_cls).groups.items()
+            gs2 = pd.Series(np.arange(len(col_cls))).groupby(col_cls).groups.items()
+
+            res = pd.DataFrame(np.zeros((n, n)), index=categories, columns=categories)
+            for g1, ix1 in gs1:
+                sd = stat_dist[ix1]
+                denom = sd.sum()
+                for g2, ix2 in gs2:
+                    res.loc[g1, g2] = (sd @ subset[ix1, :][:, ix2]).sum() / denom
+
+            res.fillna(0, inplace=True)
+
+            return res
+
         categories = self.clusters.cat.categories
         n = len(categories)
+        # callback = cluster_helper if cluster is not None else coarsegrain_helper
         callback = cluster_helper if cluster is not None else default_helper
         flows, times = [], []
 
@@ -212,8 +235,9 @@ class FlowPlotter(ABC):
 
         flow = pd.concat(flows)
         flow.set_index([times, flow.index], inplace=True)
-        flow /= flow.sum(1).values[:, None]
-        flow.fillna(0, inplace=True)
+        if callback is not coarsegrain_helper:
+            flow /= flow.sum(1).values[:, None]
+            flow.fillna(0, inplace=True)
 
         return flow
 
@@ -262,7 +286,7 @@ class FlowPlotter(ABC):
                 "Compute flow and contingency matrix first as `.prepare()`."
             )
 
-        flow, cmat = self._flow, self._cmat
+        flow, cmat = self._flow.copy(), self._cmat.copy()
         try:
             if remove_empty_clusters:
                 self._remove_min_clusters(min_flow)
@@ -286,7 +310,7 @@ class FlowPlotter(ABC):
 
     def _get_time_subset(
         self, t1: Numeric_t, t2: Numeric_t, cluster: Optional[str] = None
-    ) -> Tuple[Union[np.ndarray, spmatrix], pd.Series, pd.Series]:
+    ) -> Tuple[Union[np.ndarray, spmatrix], np.ndarray, pd.Series, pd.Series]:
         if cluster is None:
             row_ixs = np.where(self.time == t1)[0]
         else:
@@ -296,7 +320,8 @@ class FlowPlotter(ABC):
         row_cls = self.clusters.values[row_ixs]
         col_cls = self.clusters.values[col_ixs]
 
-        return self._tmat[row_ixs, :][:, col_ixs], row_cls, col_cls
+        sd = None  # self._stat_dist[row_ixs]
+        return self._tmat[row_ixs, :][:, col_ixs], sd, row_cls, col_cls
 
     def _remove_min_clusters(self, min_flow: float) -> None:
         logg.debug("Removing clusters with no incoming flow edges")
@@ -311,14 +336,17 @@ class FlowPlotter(ABC):
     def _rename_times(self) -> Sequence[Numeric_t]:
         # make sure we have enough horizontal space to draw the flow (i.e. time points are at least 1 unit apart)
         old_times = self._cmat.columns
+
         tmp = np.array(old_times)
         tmp = (tmp - tmp.min()) / (tmp.max() - tmp.min())
         tmp /= np.min(tmp[1:] - tmp[:-1])
+        self._cmat.columns = tmp
+
         time_mapper = dict(zip(old_times, tmp))
         self._flow.index = pd.MultiIndex.from_tuples(
             [(time_mapper[t], c) for t, c in self._flow.index]
         )
-        self._cmat.columns = tmp
+
         return old_times
 
     # TODO: abstract
@@ -620,9 +648,9 @@ class SingleFlowPlotter(FlowPlotter):
 
         return self._decorate(
             ax,
-            times,
-            old_times,
-            [handles[c] for c in all_clusters[::-1]],
+            times=times,
+            old_times=old_times,
+            handles=[handles[c] for c in all_clusters[::-1]],
             step_size=xticks_step_size,
             legend_loc=legend_loc,
             xtime=True,
@@ -718,7 +746,7 @@ class MultiFlowPlotter(FlowPlotter):
         dpi: Optional[int] = None,
     ) -> plt.Axes:
         def r(x):
-            return np.maximum(0, (np.round(x, 2) * 100).astype(int))
+            return np.maximum(0, (np.round(x, 2) * 100).astype(int) - 1)
 
         times = self._cmat.columns
         start_t, end_t = times.min(), times.max()
@@ -857,9 +885,9 @@ class MultiFlowPlotter(FlowPlotter):
 
         ax = self._decorate(
             ax,
-            times,
-            old_times,
-            [handles[c] for c in all_clusters[::-1]],
+            times=times,
+            old_times=old_times,
+            handles=[handles[c] for c in all_clusters[::-1]],
             step_size=xticks_step_size,
             legend_loc=legend_loc,
             xtime=False,
