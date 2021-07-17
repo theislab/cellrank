@@ -16,6 +16,7 @@ import cellrank as cr
 from anndata import AnnData
 from cellrank.tl import Lineage
 from cellrank.ul.models import GAMR
+from cellrank.tl.kernels import VelocityKernel, PseudotimeKernel, ConnectivityKernel
 from cellrank.tl._constants import AbsProbKey, _pd
 from cellrank.tl.estimators import GPCCA, CFLARE
 
@@ -3777,3 +3778,37 @@ class TestMacrostateComposition:
         mc.plot_macrostate_composition(
             "clusters_enlarged", dpi=DPI, save=fpath, legend_loc="upper left out"
         )
+
+
+class TestProjectionEmbedding:
+    @compare()
+    def test_scvelo_connectivity_kernel_emb_stream(self, adata: AnnData, fpath: str):
+        ck = ConnectivityKernel(adata)
+        ck.compute_transition_matrix()
+        ck.compute_projection()
+        scv.pl.velocity_embedding_stream(adata, vkey="T_fwd", dpi=DPI, save=fpath)
+
+    @compare()
+    def test_scvelo_pseudotime_kernel_hard_threshold_emb_stream(
+        self, adata: AnnData, fpath: str
+    ):
+        ptk = PseudotimeKernel(adata)
+        ptk.compute_transition_matrix(threshold_scheme="hard", frac_to_keep=0.3)
+        ptk.compute_projection()
+        scv.pl.velocity_embedding_stream(adata, vkey="T_fwd", dpi=DPI, save=fpath)
+
+    @compare()
+    def test_scvelo_pseudotime_kernel_soft_threshold_emb_stream(
+        self, adata: AnnData, fpath: str
+    ):
+        ptk = PseudotimeKernel(adata)
+        ptk.compute_transition_matrix(threshold_scheme="soft", frac_to_keep=0.3)
+        ptk.compute_projection()
+        scv.pl.velocity_embedding_stream(adata, vkey="T_fwd", dpi=DPI, save=fpath)
+
+    @compare()
+    def test_scvelo_velocity_kernel_emb_stream(self, adata: AnnData, fpath: str):
+        vk = VelocityKernel(adata)
+        vk.compute_transition_matrix()
+        vk.compute_projection()
+        scv.pl.velocity_embedding_stream(adata, vkey="T_fwd", dpi=DPI, save=fpath)
