@@ -108,6 +108,9 @@ venv.bak/
 # pycharm stuff
 **.idea/
 
+# vscode
+.vscode/
+
 # documentation
 docs/source/api
 docs/source/auto_examples
