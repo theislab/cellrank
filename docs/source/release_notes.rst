@@ -6,4 +6,4 @@ Release Notes
     :glob:
     :reversed:
 
-    changelog/*
+    release/*
