@@ -1,4 +1,9 @@
 Release Notes
 +++++++++++++
 
-.. towncrier release notes start
+.. toctree::
+    :maxdepth: 3
+    :glob:
+    :reversed:
+
+    changelog/*
