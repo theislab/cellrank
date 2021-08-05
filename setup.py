@@ -67,7 +67,7 @@ if __name__ == "__main__":
                 )
                 if "requirements.txt" not in r
             ],
-            dev=["pre-commit>=2.9.3", "tox>=3.23.0"],
+            dev=["pre-commit>=2.9.3", "tox>=3.23.0", "towncrier>=21.3.0"],
         ),
         zip_safe=False,
         packages=find_packages(),
