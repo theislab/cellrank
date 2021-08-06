@@ -48,7 +48,7 @@ def _parse_description(comment: str) -> str:
 
 
 def create_news_fragment(
-    issue_number: str, title: bool = False, sep: str = "~"
+    issue_number: str, use_title: bool = False, sep: str = "~"
 ) -> None:
     try:
         url = f"https://api.github.com/repos/theislab/cellrank/pulls/{issue_number}"
@@ -77,7 +77,7 @@ def create_news_fragment(
         description = _parse_description(data["body"])
 
         fragment = (
-            f"{title}\n{len(title) * sep}\n{description}" if title else description
+            f"{title}\n{len(title) * sep}\n{description}" if use_title else description
         )
         fpath = _root / f"{issue_number}.{typ}.rst"
 
@@ -109,4 +109,4 @@ if __name__ == "__main__":
     if args.verbose:
         logging.getLogger().setLevel(logging.INFO)
 
-    create_news_fragment(issue_number=args.issue_number, title=args.title)
+    create_news_fragment(issue_number=args.issue_number, use_title=args.title)
