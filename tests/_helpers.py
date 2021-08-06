@@ -28,6 +28,31 @@ def _jax_not_installed() -> bool:
         return True
 
 
+def _rpy2_mgcv_not_installed() -> bool:
+    try:
+        import rpy2
+        from packaging import version
+        from rpy2.robjects.packages import PackageNotInstalledError, importr
+
+        try:
+            from importlib_metadata import version as get_version
+        except ImportError:
+            # >=Python3.8
+            from importlib.metadata import version as get_version
+
+        try:
+            assert version.parse(get_version(rpy2.__name__)) >= version.parse("3.3.0")
+            _ = importr("mgcv")
+            return False
+        except (PackageNotInstalledError, AssertionError):
+            pass
+
+    except ImportError:
+        pass
+
+    return True
+
+
 def bias_knn(conn, pseudotime, n_neighbors, k=3):
     k_thresh = max(0, min(int(np.floor(n_neighbors / k)) - 1, 30))
     conn_biased = conn.copy()
@@ -135,7 +160,8 @@ def resize_images_to_same_sizes(
             expected_image.resize(actual_image.size).save(expected_image)
         else:
             raise ValueError(
-                f"Invalid kind of conversion `{kind!r}`. Valid options are `'actual_to_expected'`, `'expected_to_actual'`."
+                f"Invalid kind of conversion `{kind!r}`."
+                f"Valid options are `'actual_to_expected'`, `'expected_to_actual'`."
             )
 
 
@@ -321,8 +347,8 @@ def _create_dummy_adata(n_obs: int) -> AnnData:
     adata.uns["iroot"] = 0
     sc.tl.dpt(adata)
 
-    adata.uns["connectivity_variances"] = np.ones((n_obs, n_obs), dtype=np.float64)
-    adata.uns["velocity_variances"] = np.ones((n_obs, n_obs), dtype=np.float64)
+    adata.obsp["connectivity_variances"] = np.ones((n_obs, n_obs), dtype=np.float64)
+    adata.obsp["velocity_variances"] = np.ones((n_obs, n_obs), dtype=np.float64)
 
     sc.write(f"tests/_ground_truth_adatas/adata_{n_obs}.h5ad", adata)
 
@@ -332,38 +358,10 @@ def _create_dummy_adata(n_obs: int) -> AnnData:
 jax_not_installed_skip = pytest.mark.skipif(
     _jax_not_installed(), reason="JAX is not installed."
 )
-
+gamr_skip = pytest.mark.skipif(
+    _rpy2_mgcv_not_installed(), reason="Cannot import `rpy2` or R's `mgcv` package."
+)
 
 if __name__ == "__main__":
     for size in [50, 100, 200]:
         _ = _create_dummy_adata(size)
-
-
-def _import_rpy2_mgcv() -> bool:
-    try:
-        import rpy2
-        from packaging import version
-        from rpy2.robjects.packages import PackageNotInstalledError, importr
-
-        try:
-            from importlib_metadata import version as get_version
-        except ImportError:
-            # >=Python3.8
-            from importlib.metadata import version as get_version
-
-        try:
-            assert version.parse(get_version(rpy2.__name__)) >= version.parse("3.3.0")
-            _ = importr("mgcv")
-            return False
-        except (PackageNotInstalledError, AssertionError):
-            pass
-
-    except ImportError:
-        pass
-
-    return True
-
-
-gamr_skip = pytest.mark.skipif(
-    _import_rpy2_mgcv(), reason="Cannot import `rpy2` or R's `mgcv` package."
-)

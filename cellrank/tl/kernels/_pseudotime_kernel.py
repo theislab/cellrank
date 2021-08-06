@@ -8,6 +8,7 @@ from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.tl._utils import _connected
+from cellrank.ul._utils import _get_neighs_params
 from cellrank.tl.kernels import Kernel
 from cellrank.tl._constants import ThresholdScheme
 from cellrank.tl.kernels._base_kernel import _dtype
@@ -126,11 +127,7 @@ class PseudotimeKernel(Kernel):
         start = logg.info(f"Computing transition matrix based on `{self._time_key}`")
 
         # get the connectivities and number of neighbors
-        n_neighbors = (
-            self.adata.uns.get("neighbors", {})
-            .get("params", {})
-            .get("n_neighbors", None)
-        )
+        n_neighbors = _get_neighs_params(self.adata).get("n_neighbors", None)
         if n_neighbors is None:
             logg.warning(
                 "Could not find 'n_neighbors' in `adata.uns['neighbors']['params']`. Using an estimate"

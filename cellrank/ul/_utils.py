@@ -186,10 +186,6 @@ def _modify_neigh_key(key: Optional[str]) -> str:
     return key
 
 
-def _has_neighs(adata: AnnData, key: Optional[str] = None) -> bool:
-    return _modify_neigh_key(key) in adata.uns.keys()
-
-
 def _get_neighs(
     adata: AnnData, mode: str = "distances", key: Optional[str] = None
 ) -> Union[np.ndarray, spmatrix]:
@@ -210,8 +206,12 @@ def _get_neighs(
     return res
 
 
+def _has_neighs(adata: AnnData, key: Optional[str] = None) -> bool:
+    return _modify_neigh_key(key) in adata.uns.keys()
+
+
 def _get_neighs_params(adata: AnnData, key: str = "neighbors") -> Dict[str, Any]:
-    return adata.uns.get(key, {}).get("params")
+    return adata.uns.get(key, {}).get("params", {})
 
 
 def _read_graph_data(adata: AnnData, key: str) -> Union[np.ndarray, spmatrix]:
@@ -235,49 +235,7 @@ def _read_graph_data(adata: AnnData, key: str) -> Union[np.ndarray, spmatrix]:
     if key in adata.obsp.keys():
         return adata.obsp[key]
 
-    raise KeyError(f"Unable to find key `{key!r}` in `adata.obsp`.")
-
-
-def _write_graph_data(
-    adata: AnnData,
-    data: Union[np.ndarray, spmatrix],
-    key: str,
-):
-    """
-    Write graph data to :mod:`AnnData`.
-
-    :module`anndata` >=0.7 stores `(n_obs x n_obs)` matrices in `.obsp` rather than `.uns`.
-    This is for backward compatibility.
-
-    Parameters
-    ----------
-    adata
-        Annotated data object.
-    data
-        The graph data we want to write.
-    key
-        Key from either ``adata.uns`` or `adata.obsp``.
-
-    Returns
-    --------
-    None
-        Nothing, just writes the data.
-    """
-
-    try:
-        adata.obsp[key] = data
-        write_to = "obsp"
-
-        if data.shape[0] != data.shape[1]:
-            logg.warning(
-                f"`adata.obsp` attribute should only contain square matrices, found shape `{data.shape}`"
-            )
-
-    except AttributeError:
-        adata.uns[key] = data
-        write_to = "uns"
-
-    logg.debug(f"Writing graph data to `adata.{write_to}[{key!r}]`")
+    raise KeyError(f"Unable to find data in `adata.obsp[{key!r}]`.")
 
 
 def valuedispatch(func):

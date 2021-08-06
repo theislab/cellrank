@@ -30,7 +30,7 @@ from cellrank.tl._utils import (
     _get_neighs,
     _irreducible,
 )
-from cellrank.ul._utils import Pickleable, _write_graph_data
+from cellrank.ul._utils import Pickleable
 from scvelo.plotting.utils import default_size, plot_outline
 from cellrank.tl._constants import Direction, _transition
 from cellrank.tl.kernels._utils import _get_basis, _filter_kwargs
@@ -218,7 +218,7 @@ class KernelExpression(Pickleable, ABC):
             **self.adata.uns.get(f"{key}_params", {}),
             **{"params": self.params},
         }
-        _write_graph_data(self.adata, self.transition_matrix, key)
+        self.adata.obsp[key] = self.transition_matrix
 
     @abstractmethod
     def copy(self) -> "KernelExpression":
