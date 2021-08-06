@@ -1646,7 +1646,7 @@ def _deprecate(*, version: str) -> Callable:
             warnings.simplefilter("always", DeprecationWarning)
             warnings.warn(
                 f"`cellrank.tl.{wrapped.__name__}` will be removed in version `{version}`. "
-                f"Please use the kernel/estimator interface instead.",
+                f"Please use the `cellrank.kernels` or `cellrank.estimators` interface instead.",
                 stacklevel=2,
                 category=DeprecationWarning,
             )
