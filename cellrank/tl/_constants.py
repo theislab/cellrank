@@ -1,4 +1,4 @@
-"""Module containing CellRank constants."""
+"""Module containing constants."""
 
 from typing import Any, Union, Callable
 

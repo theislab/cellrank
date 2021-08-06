@@ -7,6 +7,7 @@ from typing import (
     Tuple,
     Union,
     TypeVar,
+    Callable,
     Hashable,
     Iterable,
     Optional,
@@ -14,6 +15,8 @@ from typing import (
 )
 
 import os
+import wrapt
+import warnings
 from itertools import tee, product, combinations
 from statsmodels.stats.multitest import multipletests
 
@@ -1634,3 +1637,19 @@ def _maybe_subset_hvgs(
 
     logg.info(f"Using `{np.sum(adata.var[key])}` HVGs from `adata.var[{key!r}]`")
     return adata[:, adata.var[key]]
+
+
+def _deprecate(*, version: str) -> Callable:
+    @wrapt.decorator
+    def wrapper(wrapped: Callable, instance: Any, args: Any, kwargs: Any) -> Any:
+        with warnings.catch_warnings():
+            warnings.simplefilter("always", DeprecationWarning)
+            warnings.warn(
+                f"`cellrank.tl.{wrapped.__name__}` will be removed in version `{version}`. "
+                f"Please use the kernel/estimator interface instead.",
+                stacklevel=2,
+                category=DeprecationWarning,
+            )
+        return wrapped(*args, **kwargs)
+
+    return wrapper

@@ -4,6 +4,7 @@ from typing import TypeVar, Iterable, Optional
 
 from cellrank import logging as logg
 from cellrank.ul._docs import d, inject_docs
+from cellrank.tl._utils import _deprecate
 from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tl.kernels._base_kernel import KernelExpression
 from cellrank.tl.kernels._velocity_kernel import BackwardMode, VelocityMode
@@ -12,6 +13,7 @@ from cellrank.tl.kernels._velocity_schemes import Scheme
 AnnData = TypeVar("AnnData")
 
 
+@_deprecate(version="2.0")
 @inject_docs(m=VelocityMode, b=BackwardMode, s=Scheme)  # don't swap the order
 @d.dedent
 def transition_matrix(

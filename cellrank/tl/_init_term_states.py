@@ -6,6 +6,7 @@ from types import MappingProxyType
 from cellrank import logging as logg
 from cellrank.ul._docs import d, _initial, _terminal, inject_docs
 from cellrank.tl._utils import (
+    _deprecate,
     _check_estimator_type,
     _info_if_obs_keys_categorical_present,
 )
@@ -152,6 +153,7 @@ def _initial_terminal(
     return mc.adata if copy else mc if return_estimator else None
 
 
+@_deprecate(version="2.0")
 @inject_docs(m=VelocityMode, b=BackwardMode)
 @d.dedent
 @inject_docs(
@@ -195,6 +197,7 @@ def initial_states(  # noqa: D103
     )
 
 
+@_deprecate(version="2.0")
 @inject_docs(m=VelocityMode, b=BackwardMode)
 @d.dedent
 @inject_docs(
