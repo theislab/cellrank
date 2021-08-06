@@ -58,13 +58,13 @@ def create_news_fragment(
         data = resp.json()
         types = data["labels"]
 
-        if "ignore-towncrier" in types:
+        if "ignore-towncrier" in [t["name"] for t in types]:
             logging.info(
                 f"Ignoring news fragment generation for issue `{issue_number}`"
             )
             return
 
-        typ = str(types[0] if len(types) else "bugfix").strip()
+        typ = str(types[0]["name"] if len(types) else "bugfix").strip()
         if typ not in _valid_types:
             raise ValueError(
                 f"Expected label to be on of `{_valid_types}`, found `{typ!r}`."
