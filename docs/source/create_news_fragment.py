@@ -77,7 +77,7 @@ def create_news_fragment(issue_number: str, sep: str = "~") -> None:
         fragment = f"{title}\n{len(title) * sep}\n{description}"
         fpath = _root / f"{issue_number}.{typ}.rst"
 
-        logging.info(f"Saving news fragment `{fragment}` into `{fpath}`")
+        logging.info(f"Saving news fragment into `{fpath}`")
         with open(fpath, "w") as fout:
             print(fragment, file=fout)
     except Exception as e:
@@ -94,7 +94,10 @@ if __name__ == "__main__":
         metavar="ISSUE_NUMBER",
         help="Issue from which to create the news fragment.",
     )
+    parser.add_argument("-v", "--verbose", action="count", help="Be verbose.")
 
     args = parser.parse_args()
+    if args.verbose:
+        logging.getLogger().setLevel(logging.INFO)
 
     create_news_fragment(issue_number=args.issue_number)
