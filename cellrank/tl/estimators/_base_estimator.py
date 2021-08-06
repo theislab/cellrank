@@ -8,6 +8,7 @@ from typing import (
     Dict,
     Tuple,
     Union,
+    Literal,
     Mapping,
     TypeVar,
     Iterable,
@@ -16,8 +17,6 @@ from typing import (
 )
 from pathlib import Path
 from datetime import datetime
-
-from typing_extensions import Literal
 
 import scanpy as sc
 import scvelo as scv

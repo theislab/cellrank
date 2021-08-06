@@ -1,13 +1,21 @@
 """Lineage class module."""
 
 from types import FunctionType, MappingProxyType
-from typing import List, Tuple, Union, Mapping, TypeVar, Callable, Iterable, Optional
+from typing import (
+    List,
+    Tuple,
+    Union,
+    Literal,
+    Mapping,
+    TypeVar,
+    Callable,
+    Iterable,
+    Optional,
+)
 from inspect import signature
 from pathlib import Path
 from functools import wraps
 from itertools import combinations
-
-from typing_extensions import Literal
 
 from cellrank import logging as logg
 from cellrank.ul._docs import d
