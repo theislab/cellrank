@@ -525,7 +525,7 @@ def _make_cat(
     return labels_new
 
 
-def _filter_cells(distances: np.ndarray, rc_labels: Series, n_matches_min: int):
+def _filter_cells(distances: spmatrix, rc_labels: Series, n_matches_min: int) -> Series:
     """Filter out some cells that look like transient states based on their neighbors."""
 
     if not is_categorical_dtype(rc_labels):

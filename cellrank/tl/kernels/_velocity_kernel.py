@@ -56,7 +56,7 @@ class VelocityKernel(Kernel):
     %(adata)s
     %(backward)s
     vkey
-        Key in :attr:`adata` ``.uns`` where the velocities are stored.
+        Key in :attr:`adata` ``.layers`` where velocities are stored.
     xkey
         Key in :attr:`adata` ``.layers`` where expected gene expression counts are stored.
     gene_subset
@@ -112,11 +112,11 @@ class VelocityKernel(Kernel):
         elif f"{vkey}_genes" in self.adata.var.keys():
             subset &= np.array(self.adata.var[f"{vkey}_genes"].values, dtype=bool)
 
-        # chose data representation to use for transcriptomic displacements
+        # choose data representation to use for transcriptomic displacements
         xkey = kwargs.pop("xkey", "Ms")
         xkey = xkey if xkey in self.adata.layers.keys() else "spliced"
 
-        # filter both the velocities and the gene expression profiles to the gene subset. Densify the matrices.
+        # filter both the velocities and the gene expression profiles to the gene subset and densify the matrices
         X = np.array(
             self.adata.layers[xkey].A[:, subset]
             if issparse(self.adata.layers[xkey])
@@ -136,10 +136,8 @@ class VelocityKernel(Kernel):
 
         # check the velocity parameters
         par_key = f"{vkey}_params"
-        if par_key in self.adata.uns.keys():
-            velocity_params = self.adata.uns[par_key]
-        else:
-            velocity_params = None
+        velocity_params = self.adata.uns.get(par_key, None)
+        if velocity_params is None:
             logg.debug(
                 f"Unable to load velocity parameters from `adata.uns[{par_key!r}]`"
             )
@@ -484,7 +482,7 @@ def _run_stochastic(
     queue=None,
 ) -> np.ndarray:
     if not hasattr(scheme, "hessian"):
-        raise AttributeError()
+        raise AttributeError("Velocity scheme doesn't have `hessian` attribute.")
 
     starts = _calculate_starts(indptr, ixs)
     probs_cors = np.empty((2, starts[-1]))
