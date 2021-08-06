@@ -47,7 +47,9 @@ def _parse_description(comment: str) -> str:
     raise ValueError("Unable to parse description from the issue comment.")
 
 
-def create_news_fragment(issue_number: str, sep: str = "~") -> None:
+def create_news_fragment(
+    issue_number: str, title: bool = False, sep: str = "~"
+) -> None:
     try:
         url = f"https://api.github.com/repos/theislab/cellrank/pulls/{issue_number}"
         resp = requests.get(url)
@@ -74,7 +76,9 @@ def create_news_fragment(issue_number: str, sep: str = "~") -> None:
         title = str(data["title"]).strip()
         description = _parse_description(data["body"])
 
-        fragment = f"{title}\n{len(title) * sep}\n{description}"
+        fragment = (
+            f"{title}\n{len(title) * sep}\n{description}" if title else description
+        )
         fpath = _root / f"{issue_number}.{typ}.rst"
 
         logging.info(f"Saving news fragment into `{fpath}`")
@@ -94,10 +98,15 @@ if __name__ == "__main__":
         metavar="ISSUE_NUMBER",
         help="Issue from which to create the news fragment.",
     )
+    parser.add_argument(
+        "--title",
+        action="store_true",
+        help="Whether to include the issue title in the fragment.",
+    )
     parser.add_argument("-v", "--verbose", action="count", help="Be verbose.")
 
     args = parser.parse_args()
     if args.verbose:
         logging.getLogger().setLevel(logging.INFO)
 
-    create_news_fragment(issue_number=args.issue_number)
+    create_news_fragment(issue_number=args.issue_number, title=args.title)

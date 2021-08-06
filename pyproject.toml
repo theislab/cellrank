@@ -51,7 +51,7 @@ directory = "docs/source/release/changelog"
 issue_format = "`#{issue} <https://github.com/theislab/cellrank/pull/{issue}>`__"
 template = "docs/source/release/changelog/template.rst"
 underlines = ["~", "-"]
-all_bullets = false
+all_bullets = true
 
 [[tool.towncrier.type]]
 directory = "feature"
