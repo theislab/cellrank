@@ -7,7 +7,7 @@ from pathlib import Path
 import requests
 
 _root = Path(__file__).parent / "release" / "changelog"
-_valid_types = ("feature", "bugfix", "doc", "ignore-towncrier")
+_valid_types = ("feature", "bugfix", "deprecation", "misc", "doc", "ignore-towncrier")
 
 
 class State(str, Enum):

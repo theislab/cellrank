@@ -64,6 +64,16 @@ name = "Bugfixes"
 showcontent = true
 
 [[tool.towncrier.type]]
+directory = "deprecation"
+name = "Deprecations (in next major release)"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "misc"
+name = "Miscellaneous"
+showcontent = true
+
+[[tool.towncrier.type]]
 directory = "doc"
 name = "Documentation"
 showcontent = true
