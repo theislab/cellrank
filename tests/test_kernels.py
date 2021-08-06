@@ -1124,7 +1124,7 @@ class TestTransitionProbabilities:
         backward = False
 
         # compute pearson correlations using scvelo
-        velo_graph = adata.uns["velocity_graph"] + adata.uns["velocity_graph_neg"]
+        velo_graph = adata.obsp["velocity_graph"] + adata.obsp["velocity_graph_neg"]
 
         # compute pearson correlations using cellrank
         vk = VelocityKernel(adata, backward=backward)
@@ -1141,7 +1141,7 @@ class TestTransitionProbabilities:
         backward = True
 
         # compute pearson correlations using scvelo
-        velo_graph = (adata.uns["velocity_graph"] + adata.uns["velocity_graph_neg"]).T
+        velo_graph = (adata.obsp["velocity_graph"] + adata.obsp["velocity_graph_neg"]).T
 
         # compute pearson correlations using cellrak
         vk = VelocityKernel(adata, backward=backward)

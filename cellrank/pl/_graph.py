@@ -1,10 +1,11 @@
-"""Graph pl module."""
+"""Graph plotting module."""
 
 from copy import deepcopy
 from types import MappingProxyType
-from typing import Dict, Tuple, Union, TypeVar, Callable, Optional, Sequence
+from typing import Dict, Tuple, Union, Callable, Optional, Sequence
 from pathlib import Path
 
+from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.tl._utils import save_fig
@@ -23,9 +24,6 @@ from matplotlib.colors import ListedColormap
 from matplotlib.patches import ArrowStyle, FancyArrowPatch
 from matplotlib.collections import LineCollection
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-
-AnnData = TypeVar("AnnData")
-
 
 KEYLOCS = str
 KEYS = str
@@ -149,9 +147,6 @@ def graph(
     -------
     %(just_plots)s
     """
-
-    from anndata import AnnData as _AnnData
-
     import networkx as nx
 
     def plot_arrows(curves, G, pos, ax, edge_weight_scale):
@@ -304,7 +299,7 @@ def graph(
             f"`Titles` and `keys` must be of the same shape, found `{len(title)}` and `{len(keys)}`."
         )
 
-    if isinstance(data, _AnnData):
+    if isinstance(data, AnnData):
         if graph_key is None:
             raise ValueError(
                 "Argument `graph_key` cannot be `None` when `data` is `anndata.Anndata` object."
