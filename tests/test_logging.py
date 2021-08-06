@@ -1,10 +1,9 @@
 # modified from: https://github.com/theislab/scanpy/blob/master/scanpy/tests/test_logging.py
 
 import sys
+import pytest
 from io import StringIO
 from datetime import datetime
-
-import pytest
 
 from scanpy import Verbosity
 from cellrank import logging as logg

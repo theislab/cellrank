@@ -1,4 +1,5 @@
-from typing import Any, Union, Literal, Optional
+from typing import Any, Union, Optional
+from typing_extensions import Literal
 
 from anndata import AnnData
 from cellrank.ul._docs import d

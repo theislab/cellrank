@@ -1,7 +1,8 @@
 """Velocity kernel module."""
+from typing import Any, Union, Callable, Iterable, Optional
+
 from copy import copy
 from math import fsum
-from typing import Any, Union, Callable, Iterable, Optional
 
 from anndata import AnnData
 from cellrank import logging as logg

@@ -1,8 +1,9 @@
 """Heatmap module."""
 
+from typing import Any, Dict, List, Tuple, Union, TypeVar, Optional, Sequence
+
 import os
 from math import fabs
-from typing import Any, Dict, List, Tuple, Union, TypeVar, Optional, Sequence
 from pathlib import Path
 from collections import Iterable, defaultdict
 

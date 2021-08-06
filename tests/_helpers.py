@@ -1,10 +1,10 @@
-import os
-from sys import version_info
 from typing import Tuple, Union, Optional
-from pathlib import Path
 
+import os
 import pytest
 from PIL import Image
+from sys import version_info
+from pathlib import Path
 
 import scanpy as sc
 import scvelo as scv

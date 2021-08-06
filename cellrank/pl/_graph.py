@@ -1,8 +1,9 @@
 """Graph pl module."""
 
+from typing import Dict, Tuple, Union, TypeVar, Callable, Optional, Sequence
+
 from copy import deepcopy
 from types import MappingProxyType
-from typing import Dict, Tuple, Union, TypeVar, Callable, Optional, Sequence
 from pathlib import Path
 
 from cellrank import logging as logg

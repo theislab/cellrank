@@ -1,9 +1,9 @@
-import os
 from typing import Tuple
-from tempfile import TemporaryDirectory
 
+import os
 import pytest
 from _helpers import assert_estimators_equal
+from tempfile import TemporaryDirectory
 
 import cellrank as cr
 import cellrank.tl.kernels._precomputed_kernel

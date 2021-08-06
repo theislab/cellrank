@@ -1,4 +1,5 @@
-from typing import Any, Literal
+from typing import Any
+from typing_extensions import Literal
 
 from anndata import AnnData
 from cellrank import logging as logg

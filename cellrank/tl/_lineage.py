@@ -1,17 +1,9 @@
 """Lineage class module."""
 
+from typing import List, Tuple, Union, Mapping, TypeVar, Callable, Iterable, Optional
+from typing_extensions import Literal
+
 from types import FunctionType, MappingProxyType
-from typing import (
-    List,
-    Tuple,
-    Union,
-    Literal,
-    Mapping,
-    TypeVar,
-    Callable,
-    Iterable,
-    Optional,
-)
 from inspect import signature
 from pathlib import Path
 from functools import wraps

@@ -1,10 +1,10 @@
 """Utility functions which deal with delegating methods."""
-import inspect
 from typing import *  # noqa
-from functools import partial, singledispatch, update_wrapper
-from collections import namedtuple
 
 import wrapt
+import inspect
+from functools import partial, singledispatch, update_wrapper
+from collections import namedtuple
 
 import cellrank.logging as logg
 from cellrank.tl.estimators._constants import F

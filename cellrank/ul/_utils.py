@@ -1,7 +1,8 @@
 """General utility functions module."""
+from typing import Any, Dict, List, Tuple, Union, TypeVar, Iterable, Optional
+
 import pickle
 from types import MappingProxyType
-from typing import Any, Dict, List, Tuple, Union, TypeVar, Iterable, Optional
 from pathlib import Path
 from functools import wraps, update_wrapper
 from multiprocessing import cpu_count

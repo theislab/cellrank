@@ -1,8 +1,8 @@
-import os
 from typing import Tuple, Union, Callable
-from pathlib import Path
 
+import os
 import pytest
+from pathlib import Path
 from _helpers import (
     gamr_skip,
     create_model,

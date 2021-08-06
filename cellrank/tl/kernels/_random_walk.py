@@ -1,4 +1,5 @@
 from typing import Any, List, Union, Optional, Sequence
+
 from itertools import chain
 
 from cellrank import logging as logg

@@ -1,6 +1,7 @@
 """Precomputed kernel module."""
-from copy import copy
 from typing import Any, Union, Optional
+
+from copy import copy
 
 from anndata import AnnData
 from cellrank import logging as logg

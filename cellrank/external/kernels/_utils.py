@@ -1,4 +1,5 @@
-from typing import Literal, Mapping, Sequence
+from typing import Mapping, Sequence
+from typing_extensions import Literal
 
 
 class MarkerGenes:

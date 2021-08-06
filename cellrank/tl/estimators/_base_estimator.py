@@ -1,18 +1,19 @@
 """Abstract base class for all kernel-holding estimators."""
-from abc import ABC, abstractmethod
-from copy import copy, deepcopy
 from typing import (
     Any,
     Dict,
     Tuple,
     Union,
-    Literal,
     Mapping,
     TypeVar,
     Iterable,
     Optional,
     Sequence,
 )
+from typing_extensions import Literal
+
+from abc import ABC, abstractmethod
+from copy import copy, deepcopy
 from pathlib import Path
 from datetime import datetime
 
