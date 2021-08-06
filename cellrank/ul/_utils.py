@@ -44,7 +44,7 @@ class Pickleable:
             if not fname.endswith(ext):
                 fname += ext
 
-        logg.debug(f"Writing to `{fname}`")
+        logg.info(f"Writing `{self}` to `{fname}`")
 
         with open(fname, "wb") as fout:
             pickle.dump(self, fout)
