@@ -1,5 +1,6 @@
-from copy import copy
 from typing import Any, Tuple, Union, Iterable, Optional, Sequence
+
+from copy import copy
 from pathlib import Path
 
 from anndata import AnnData

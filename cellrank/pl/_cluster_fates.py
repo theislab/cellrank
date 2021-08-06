@@ -1,8 +1,9 @@
 """Cluster fatess and similarity module."""
 
+from typing import Any, Tuple, Union, Mapping, TypeVar, Optional, Sequence
+
 from math import ceil
 from types import MappingProxyType
-from typing import Any, Tuple, Union, Mapping, TypeVar, Optional, Sequence
 from pathlib import Path
 from collections import OrderedDict as odict
 

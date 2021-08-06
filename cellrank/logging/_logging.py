@@ -1,7 +1,8 @@
 """Logging module."""
 
-import logging
 from typing import Optional
+
+import logging
 from logging import INFO, DEBUG, ERROR, WARNING, CRITICAL
 from datetime import datetime, timezone, timedelta
 from functools import partial, update_wrapper

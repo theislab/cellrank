@@ -1,6 +1,7 @@
 """IO module."""
 
 from typing import Union, TypeVar, Callable, Optional
+
 from pathlib import Path
 
 from scvelo import read as scv_read

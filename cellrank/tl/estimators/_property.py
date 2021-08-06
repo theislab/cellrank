@@ -1,7 +1,8 @@
 """Base properties used within the estimators."""
+from typing import Any, Dict, List, Tuple, Union, Iterable, Optional
+
 import sys
 from abc import ABC, ABCMeta, abstractmethod
-from typing import Any, Dict, List, Tuple, Union, Iterable, Optional
 from inspect import isabstract
 
 import scvelo as scv

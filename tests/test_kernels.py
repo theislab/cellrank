@@ -1,7 +1,7 @@
-from copy import copy
 from typing import Tuple, Callable, Optional
 
 import pytest
+from copy import copy
 from _helpers import (
     bias_knn,
     create_kernels,

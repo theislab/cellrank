@@ -1,7 +1,4 @@
 """Kernel module."""
-import warnings
-from abc import ABC, abstractmethod
-from copy import copy
 from typing import (
     Any,
     Dict,
@@ -14,6 +11,10 @@ from typing import (
     Optional,
     Sequence,
 )
+
+import warnings
+from abc import ABC, abstractmethod
+from copy import copy
 from pathlib import Path
 from functools import reduce
 

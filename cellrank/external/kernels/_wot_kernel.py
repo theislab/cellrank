@@ -1,8 +1,8 @@
-from types import MappingProxyType
 from typing import Any, Dict, Tuple, Union, Mapping, Optional
-
-from tqdm.auto import tqdm
 from typing_extensions import Literal
+
+from types import MappingProxyType
+from tqdm.auto import tqdm
 
 import scanpy as sc
 from anndata import AnnData

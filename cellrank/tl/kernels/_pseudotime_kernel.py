@@ -1,8 +1,8 @@
 """Pseudotime kernel module."""
-from copy import copy
 from typing import Any, Union, Callable, Optional
-
 from typing_extensions import Literal
+
+from copy import copy
 
 from anndata import AnnData
 from cellrank import logging as logg

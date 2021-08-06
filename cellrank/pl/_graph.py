@@ -1,8 +1,9 @@
 """Graph plotting module."""
 
+from typing import Dict, Tuple, Union, Callable, Optional, Sequence
+
 from copy import deepcopy
 from types import MappingProxyType
-from typing import Dict, Tuple, Union, Callable, Optional, Sequence
 from pathlib import Path
 
 from anndata import AnnData

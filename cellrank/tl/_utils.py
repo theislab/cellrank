@@ -1,6 +1,5 @@
 """Utility functions for CellRank tools."""
 
-import os
 from typing import (
     Any,
     Dict,
@@ -13,8 +12,9 @@ from typing import (
     Optional,
     Sequence,
 )
-from itertools import tee, product, combinations
 
+import os
+from itertools import tee, product, combinations
 from statsmodels.stats.multitest import multipletests
 
 from anndata import AnnData

@@ -1,6 +1,7 @@
 """Module containing all models interfacing R's mgcv package."""
-from copy import copy, deepcopy
 from typing import Any, Tuple, Union, Optional
+
+from copy import copy, deepcopy
 
 from cellrank.ul._docs import d, inject_docs
 from cellrank.ul.models import BaseModel
@@ -369,7 +370,6 @@ def _maybe_import_r_lib(
 
     try:
         from logging import ERROR
-
         from rpy2.robjects import r
         from rpy2.robjects.packages import PackageNotInstalledError, importr
         from rpy2.rinterface_lib.callbacks import logger

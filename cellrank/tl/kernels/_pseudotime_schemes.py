@@ -1,5 +1,6 @@
-from abc import ABC, abstractmethod
 from typing import Any, Tuple, Callable, Optional
+
+from abc import ABC, abstractmethod
 
 from cellrank.ul._docs import d
 from cellrank.ul._parallelize import parallelize

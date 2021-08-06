@@ -1,10 +1,10 @@
-import os
-from copy import deepcopy
 from typing import List, Tuple, Union
-from tempfile import TemporaryDirectory
 
+import os
 import pytest
+from copy import deepcopy
 from _helpers import assert_array_nan_equal, assert_estimators_equal
+from tempfile import TemporaryDirectory
 
 import cellrank as cr
 from anndata import AnnData

@@ -1,5 +1,6 @@
 """Module containing model which wraps around :mod:`sklearn` estimators."""
 from typing import Iterable, Optional
+
 from inspect import signature
 
 from cellrank.ul._docs import d

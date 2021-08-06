@@ -1,8 +1,8 @@
+from typing import Tuple, Optional
+
 import os
 from sys import version_info
-from typing import Tuple, Optional
 from pathlib import Path
-
 from filelock import FileLock
 
 from cellrank.ul.models import GAM, GAMR, SKLearnModel

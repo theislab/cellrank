@@ -6,7 +6,6 @@ from datetime import datetime
 from collections import ChainMap
 from urllib.parse import urljoin
 from urllib.request import urlretrieve
-
 from sphinx_gallery.sorting import ExplicitOrder, _SortKey
 
 HERE = Path(__file__).parent

@@ -1,6 +1,7 @@
 """Module used for finding initial and terminal states."""
-from types import MappingProxyType
 from typing import Union, Mapping, TypeVar, Optional
+
+from types import MappingProxyType
 
 from cellrank import logging as logg
 from cellrank.ul._docs import d, _initial, _terminal, inject_docs

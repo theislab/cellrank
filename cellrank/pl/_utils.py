@@ -1,6 +1,5 @@
 """Utility functions for CellRank plotting."""
 
-from copy import copy
 from typing import (
     Any,
     Dict,
@@ -13,6 +12,8 @@ from typing import (
     Optional,
     Sequence,
 )
+
+from copy import copy
 from pathlib import Path
 from itertools import combinations
 from collections import namedtuple, defaultdict

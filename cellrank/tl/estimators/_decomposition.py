@@ -1,8 +1,8 @@
 """Matrix decomposition module."""
-from abc import ABC
 from typing import Any, Tuple, Union, Mapping, Optional
-from pathlib import Path
 
+from abc import ABC
+from pathlib import Path
 from pygpcca import GPCCA as _GPCCA
 from pygpcca._sorted_schur import _check_conj_split
 

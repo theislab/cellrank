@@ -1,6 +1,7 @@
 """Gene trend module."""
-from types import MappingProxyType
 from typing import List, Tuple, Union, Mapping, TypeVar, Optional, Sequence
+
+from types import MappingProxyType
 from pathlib import Path
 
 from cellrank import logging as logg
