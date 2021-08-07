@@ -264,6 +264,7 @@ class WOTKernel(Kernel, error=_error):
         growth_rate_key: Optional[str] = None,
         use_highly_variable: Optional[Union[str, bool]] = True,
         last_time_point: Literal["uniform", "diagonal", "connectivities"] = "uniform",
+        threshold: Optional[float] = None,
         conn_kwargs: Mapping[str, Any] = MappingProxyType({}),
         **kwargs: Any,
     ) -> "WOTKernel":
@@ -307,6 +308,8 @@ class WOTKernel(Kernel, error=_error):
                 - `{ltp.DIAGONAL.s!r}` - diagonal matrix with 1s on the diagonal.
                 - `{ltp.CONNECTIVITIES.s!r}` - use transitions from :class:`cellrank.tl.kernels.ConnectivityKernel`
                   derived from the last time point subset of :attr:`adata`.
+        threshold
+            Set all values in the :attr:`transition_matrix` ``<= threshold`` to zero and renormalize the matrix.
         conn_kwargs
             Keyword arguments for :func:`scanpy.pp.neighbors`, when using ``last_time_point={ltp.CONNECTIVITIES.s!r}``.
             Can contain `'density_normalize'` for
@@ -371,6 +374,8 @@ class WOTKernel(Kernel, error=_error):
             density_normalize=False,
             check_irreducibility=False,
         )
+        if threshold is not None:
+            self._threshold_transition_matrix(threshold)
         self.adata.obs["estimated_growth_rates"] = self.growth_rates[f"g{growth_iters}"]
 
         logg.info("    Finish", time=start)
@@ -490,6 +495,30 @@ class WOTKernel(Kernel, error=_error):
         raise NotImplementedError(
             f"Specifying cost matrices as "
             f"`{type(cost_matrices).__name__}` is not yet implemented."
+        )
+
+    def _threshold_transition_matrix(self, threshold: float) -> None:
+        tmat = self.transition_matrix
+        tmat.data[tmat.data <= threshold] = 0.0
+
+        zero_ixs = np.where(np.array(tmat.sum(1)).flatten() == 0)[0]
+        # TODO(michalk8): determine whether this is the approach we want to take
+        # if yes, do nothing, if no, alt. is to set the problematic indices to self-transition with 1
+        # in the 2nd case, the code below can be removed (_compute_transition_matrix already does that)
+        # in both cases, this comment should be removed
+        if len(zero_ixs):
+            logg.warning(
+                f"After removing entries with values <= `{threshold}`, found `{len(zero_ixs)}` all 0 rows. "
+                f"Setting them to uniform distribution"
+            )
+            for start, end in zip(tmat.indptr[zero_ixs], tmat.indptr[zero_ixs + 1]):
+                tmat.data[start:end] = 1.0 / (end - start)
+
+        tmat.eliminate_zeros()
+        self._compute_transition_matrix(
+            matrix=tmat,
+            density_normalize=False,
+            check_irreducibility=False,
         )
 
     @property
