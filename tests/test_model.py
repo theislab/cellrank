@@ -1,10 +1,9 @@
 import pickle
+import pytest
 from io import BytesIO
 from copy import copy, deepcopy
-from itertools import product
-
-import pytest
 from _helpers import gamr_skip, create_model, assert_models_equal
+from itertools import product
 
 from anndata import AnnData
 from cellrank.tl import Lineage

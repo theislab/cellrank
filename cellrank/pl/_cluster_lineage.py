@@ -1,7 +1,8 @@
 """Cluster lineages module."""
 
-from types import MappingProxyType
 from typing import Dict, Tuple, Union, Optional, Sequence
+
+from types import MappingProxyType
 from pathlib import Path
 
 import scanpy as sc

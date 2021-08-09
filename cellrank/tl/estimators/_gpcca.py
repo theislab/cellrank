@@ -1,7 +1,8 @@
 """Generalized Perron Cluster Cluster Analysis :cite:`reuter:18`."""
 
-from types import MappingProxyType
 from typing import Any, Dict, List, Tuple, Union, Mapping, Iterable, Optional, Sequence
+
+from types import MappingProxyType
 from pathlib import Path
 
 from cellrank import logging as logg

@@ -1,7 +1,4 @@
 """Kernel module."""
-import warnings
-from abc import ABC, abstractmethod
-from copy import copy
 from typing import (
     Any,
     Dict,
@@ -14,6 +11,10 @@ from typing import (
     Optional,
     Sequence,
 )
+
+import warnings
+from abc import ABC, abstractmethod
+from copy import copy
 from pathlib import Path
 from functools import reduce
 
@@ -29,7 +30,7 @@ from cellrank.tl._utils import (
     _get_neighs,
     _irreducible,
 )
-from cellrank.ul._utils import Pickleable, _write_graph_data
+from cellrank.ul._utils import Pickleable
 from scvelo.plotting.utils import default_size, plot_outline
 from cellrank.tl._constants import Direction, _transition
 from cellrank.tl.kernels._utils import _get_basis, _filter_kwargs
@@ -38,7 +39,7 @@ from cellrank.tl.kernels._random_walk import RandomWalk
 
 import numpy as np
 from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix, isspmatrix_csr
-from pandas.api.types import infer_dtype
+from pandas.api.types import infer_dtype, is_numeric_dtype
 from pandas.core.dtypes.common import is_categorical_dtype
 
 import matplotlib.pyplot as plt
@@ -60,7 +61,9 @@ _RTOL = 1e-12
 _n_dec = 2
 _dtype = np.float64
 _cond_num_tolerance = 1e-15
-Indices_t = Optional[Union[Sequence[str], Dict[str, Union[str, Sequence[str]]]]]
+Indices_t = Optional[
+    Union[Sequence[str], Dict[str, Union[str, Sequence[str], Tuple[float, float]]]]
+]
 
 
 class KernelExpression(Pickleable, ABC):
@@ -215,7 +218,7 @@ class KernelExpression(Pickleable, ABC):
             **self.adata.uns.get(f"{key}_params", {}),
             **{"params": self.params},
         }
-        _write_graph_data(self.adata, self.transition_matrix, key)
+        self.adata.obsp[key] = self.transition_matrix
 
     @abstractmethod
     def copy(self) -> "KernelExpression":
@@ -384,12 +387,12 @@ class KernelExpression(Pickleable, ABC):
         start_ixs
             Cells from which to sample the starting points. If `None`, use all cells.
             %(rw_ixs)s
-            For example ``{'clusters': ['Ngn3 low EP', 'Ngn3 high EP']}`` means that starting points for random walks
-            will be samples uniformly from the these clusters.
+            For example ``{'dpt_pseudotime': [0, 0.1]}`` means that starting points for random walks
+            will be sampled uniformly from cells whose pseudotime is in `[0, 0.1]`.
         stop_ixs
             Cells which when hit, the random walk is terminated. If `None`, terminate after ``max_iters``.
             %(rw_ixs)s
-            For example ``{'clusters': ['Alpha', 'Beta']}`` and ``succesive_hits=3`` means that the random walk will
+            For example ``{'clusters': ['Alpha', 'Beta']}`` and ``successive_hits=3`` means that the random walk will
             stop prematurely after cells in the above specified clusters have been visited successively 3 times in a
             row.
         basis
@@ -420,13 +423,21 @@ class KernelExpression(Pickleable, ABC):
                 # fmt: off
                 if len(ixs) != 1:
                     raise ValueError(f"Expected to find only 1 cluster key, found `{len(ixs)}`.")
-                cluster_key = next(iter(ixs.keys()))
-                if cluster_key not in self.adata.obs:
-                    raise KeyError(f"Unable to find `adata.obs[{cluster_key!r}]`.")
-                if not is_categorical_dtype(self.adata.obs[cluster_key]):
-                    raise TypeError(f"Expected `adata.obs[{cluster_key!r}]` to be categorical, "
-                                    f"found `{infer_dtype(self.adata.obs[cluster_key])}`.")
-                ixs = np.where(np.isin(self.adata.obs[cluster_key], ixs[cluster_key]))[0]
+                key = next(iter(ixs.keys()))
+                if key not in self.adata.obs:
+                    raise KeyError(f"Unable to find data in `adata.obs[{key!r}]`.")
+
+                vals = self.adata.obs[key]
+                if is_categorical_dtype(vals):
+                    ixs = np.where(np.isin(vals, ixs[key]))[0]
+                elif is_numeric_dtype(vals):
+                    if len(ixs[key]) != 2:
+                        raise ValueError(f"Expected range to be of length `2`, found `{len(ixs[key])}`")
+                    minn, maxx = sorted(ixs[key])
+                    ixs = np.where((vals >= minn) & (vals <= maxx))[0]
+                else:
+                    raise TypeError(f"Expected `adata.obs[{key!r}]` to be numeric or categorical, "
+                                    f"found `{infer_dtype(vals)}`.")
                 # fmt: on
             elif isinstance(ixs, str):
                 ixs = np.where(self.adata.obs_names == ixs)[0]

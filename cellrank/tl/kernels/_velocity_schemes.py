@@ -1,5 +1,6 @@
-from abc import ABC, abstractmethod
 from typing import Any, Tuple
+
+from abc import ABC, abstractmethod
 from functools import partial
 
 from cellrank.ul._docs import d

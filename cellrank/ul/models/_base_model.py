@@ -1,8 +1,4 @@
 """Base class for all models."""
-import re
-from abc import ABC, ABCMeta, abstractmethod
-from copy import copy as _copy
-from copy import deepcopy
 from typing import (
     Any,
     Dict,
@@ -15,9 +11,13 @@ from typing import (
     Optional,
     Sequence,
 )
-from collections import defaultdict
 
+import re
 import wrapt
+from abc import ABC, ABCMeta, abstractmethod
+from copy import copy as _copy
+from copy import deepcopy
+from collections import defaultdict
 
 from cellrank import logging as logg
 from cellrank.tl import Lineage

@@ -1,8 +1,8 @@
-import os
 from typing import Tuple, Union, Callable
-from pathlib import Path
 
+import os
 import pytest
+from pathlib import Path
 from _helpers import (
     gamr_skip,
     create_model,
@@ -3174,6 +3174,18 @@ class TestPlotRandomWalk:
             max_iter=100,
             seed=42,
             start_ixs={"clusters": "OL"},
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare(kind="gpcca")
+    def test_kernel_random_walk_start_ixs_range(self, mc: GPCCA, fpath: str):
+        mc.kernel.plot_random_walks(
+            n_sims=10,
+            max_iter=100,
+            seed=42,
+            start_ixs={"dpt_pseudotime": [0, 0]},
+            color="dpt_pseudotime",
             dpi=DPI,
             save=fpath,
         )

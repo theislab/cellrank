@@ -1,10 +1,10 @@
 """Module used to parallelize model fitting."""
 
 from typing import Any, Union, Callable, Optional, Sequence
-from threading import Thread
-from multiprocessing import Manager
 
 import joblib as jl
+from threading import Thread
+from multiprocessing import Manager
 
 from cellrank.ul._utils import _get_n_cores
 

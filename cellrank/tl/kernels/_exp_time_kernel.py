@@ -1,8 +1,9 @@
 """Experimental time kernel module."""
+from typing import Any, Dict, Tuple, Mapping, Optional
+
 from abc import ABC
 from copy import copy
 from types import MappingProxyType
-from typing import Any, Dict, Tuple, Mapping, Optional
 
 import scanpy as sc
 from cellrank.ul._docs import d

@@ -1,7 +1,8 @@
 """Datasets module."""
 
-import os
 from typing import Any, Tuple, Union, TypeVar
+
+import os
 from pathlib import Path
 
 from scanpy import read

@@ -1,10 +1,9 @@
 import pickle
+import pytest
 from io import BytesIO
 from unittest import mock
 from collections import defaultdict
 from html.parser import HTMLParser
-
-import pytest
 
 from cellrank.tl import Lineage
 from cellrank.tl._colors import _compute_mean_color, _create_categorical_colors
