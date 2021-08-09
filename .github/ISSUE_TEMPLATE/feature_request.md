@@ -3,16 +3,8 @@ name: Feature Request
 about: Create a request for a new feature
 title: ""
 labels: enhancement
-assignees: ""
+assignees: "michalk8"
 ---
 
-<!-- What kind of feature would you like to request? -->
-- [ ] Additional function parameters, change functionality or change defaults?
-- [ ] New estimator in `cr.tl.estimators`?
-- [ ] New kernel in `cr.tl.kernels`?
-- [ ] New gene trend model in `cr.ul.models`?
-- [ ] New plotting function in `cr.pl`?
-- [ ] Other?
-
-<!-- Describe the feature requested below: -->
+<!-- Describe the feature request in the block below: -->
 ...
