@@ -1,10 +1,10 @@
+from typing import List
+
 import logging
 import argparse
-from enum import Enum
-from typing import List
-from pathlib import Path
-
 import requests
+from enum import Enum
+from pathlib import Path
 
 _root = Path(__file__).parent / "release" / "changelog"
 _valid_types = ("feature", "bugfix", "deprecation", "misc", "doc", "ignore-towncrier")
