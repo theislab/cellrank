@@ -11,6 +11,8 @@ jobs:
         runs-on: ubuntu-latest
         steps:
         -   uses: actions/checkout@v2
+            with:
+                ref: ${{ github.head_ref }}
         -   name: Set up Python 3.8
             uses: actions/setup-python@v2
             with:
@@ -32,6 +34,7 @@ jobs:
             uses: stefanzweifel/git-auto-commit-action@v4
             with:
                 commit_message: '[auto] Generate news fragment'
+                branch: ${{ github.base_ref }}
                 file_pattern: docs/source/release/changelog/*.rst
                 commit_user_name: CI
                 skip_dirty_check: false
