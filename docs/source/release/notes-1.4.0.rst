@@ -1,10 +1,26 @@
-.. role:: small
+CellRank 1.4.0 (2021-06-30)
+===========================
 
-1.4.0 :small:`2021-06-30`
-~~~~~~~~~~~~~~~~~~~~~~~~~
-This release includes:
+Bugfixes
+--------
 
-.. rubric:: Additions
+- Fix estimator's inconsistent state when reading from :class:`anndata.AnnData`
+  `PR 563 <https://github.com/theislab/cellrank/pull/563>`_.
+- Fix not checking whether probabilities sum to 1 in
+  :meth:`cellrank.tl.estimators.BaseEstimator.compute_absorption_probabilities`
+  `PR 566 <https://github.com/theislab/cellrank/pull/566>`_.
+- Fix always forcing sparse transition matrix in :class:`cellrank.tl.kernels.Kernel`
+  `PR 586 <https://github.com/theislab/cellrank/pull/586>`_.
+- Fix passing custom connectivity key in :class:`cellrank.tl.kernels.Kernel`
+  `PR 590 <https://github.com/theislab/cellrank/pull/590>`_.
+- Fix kernels in :mod:`cellrank.external` always requiring connectivities
+  `PR 600 <https://github.com/theislab/cellrank/pull/600>`_.
+- Fix parallelization of sparse matrix with too many jobs `PR 633 <https://github.com/theislab/cellrank/pull/633>`_.
+- Fix plotting coarse-grained transition matrix when no stationary distribution is found
+  `Issue 594 <https://github.com/theislab/cellrank/issues/594>`_.
+
+Features
+--------
 
 - Add new external kernel based on Waddington optimal transport :cite:`schiebinger:19`
   :class:`cellrank.external.kernels.WOTKernel` `PR 595 <https://github.com/theislab/cellrank/pull/595>`_.
@@ -38,20 +54,3 @@ This release includes:
 - Add small improvements to documentation `PR 584 <https://github.com/theislab/cellrank/pull/584>`_
   `PR 601 <https://github.com/theislab/cellrank/pull/601>`_ `PR 605 <https://github.com/theislab/cellrank/pull/605>`_
   `PR 648 <https://github.com/theislab/cellrank/issues/648>`_ `PR 35 <https://github.com/theislab/cellrank_notebooks/pull/35>`_.
-
-.. rubric:: Bugfixes
-
-- Fix estimator's inconsistent state when reading from :class:`anndata.AnnData`
-  `PR 563 <https://github.com/theislab/cellrank/pull/563>`_.
-- Fix not checking whether probabilities sum to 1 in
-  :meth:`cellrank.tl.estimators.BaseEstimator.compute_absorption_probabilities`
-  `PR 566 <https://github.com/theislab/cellrank/pull/566>`_.
-- Fix always forcing sparse transition matrix in :class:`cellrank.tl.kernels.Kernel`
-  `PR 586 <https://github.com/theislab/cellrank/pull/586>`_.
-- Fix passing custom connectivity key in :class:`cellrank.tl.kernels.Kernel`
-  `PR 590 <https://github.com/theislab/cellrank/pull/590>`_.
-- Fix kernels in :mod:`cellrank.external` always requiring connectivities
-  `PR 600 <https://github.com/theislab/cellrank/pull/600>`_.
-- Fix parallelization of sparse matrix with too many jobs `PR 633 <https://github.com/theislab/cellrank/pull/633>`_.
-- Fix plotting coarse-grained transition matrix when no stationary distribution is found
-  `Issue 594 <https://github.com/theislab/cellrank/issues/594>`_.
