@@ -871,35 +871,25 @@ class TestCreateCallbacks:
 
 
 class TestClusterX:
-    def test_normal_run_louvain(self):
-        # create some data
-        adata = sc.datasets.blobs(n_observations=100, n_variables=6)
-
-        # kmeans, louvain, leiden
-        labels_kmeans = _cluster_X(adata.X, n_clusters=5, method="kmeans")
-        labels_louvain = _cluster_X(adata.X, n_clusters=5, method="louvain")
-
-        assert len(labels_kmeans) == len(labels_louvain) == adata.n_obs
-
     def test_normal_run_leiden(self):
         # create some data
         adata = sc.datasets.blobs(n_observations=100, n_variables=6)
 
-        # kmeans, louvain, leiden
+        # kmeans, leiden
         labels_kmeans = _cluster_X(adata.X, n_clusters=5, method="kmeans")
-        labels_louvain = _cluster_X(adata.X, n_clusters=5, method="leiden")
+        labels_leiden = _cluster_X(adata.X, n_clusters=5, method="leiden")
 
-        assert len(labels_kmeans) == len(labels_louvain) == adata.n_obs
+        assert len(labels_kmeans) == len(labels_leiden) == adata.n_obs
 
     def test_one_feature(self):
         # create some data
         adata = sc.datasets.blobs(n_observations=100, n_variables=1)
 
-        # kmeans, louvain, leiden
+        # kmeans, leiden
         labels_kmeans = _cluster_X(adata.X, n_clusters=5, method="kmeans")
-        labels_louvain = _cluster_X(adata.X, n_clusters=5, method="louvain")
+        labels_leiden = _cluster_X(adata.X, n_clusters=5, method="leiden")
 
-        assert len(labels_kmeans) == len(labels_louvain) == adata.n_obs
+        assert len(labels_kmeans) == len(labels_leiden) == adata.n_obs
 
 
 class TestKernelUtils:

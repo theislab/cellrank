@@ -52,7 +52,6 @@ if __name__ == "__main__":
                 "Pillow",
                 "filelock",
                 "python-igraph",
-                "louvain>=0.6,!=0.6.2",
                 "leidenalg",
                 "bezier",
                 "jax",

@@ -24,6 +24,7 @@ import numpy as np
 import matplotlib
 
 matplotlib.use("Agg")
+matplotlib.rcParams["figure.max_open_warning"] = 30
 np.random.seed(42)
 
 _adata_small = sc.read("tests/_ground_truth_adatas/adata_50.h5ad")
