@@ -1,5 +1,4 @@
 """Utility functions for CellRank tools."""
-
 from typing import (
     Any,
     Dict,
@@ -15,6 +14,7 @@ from typing import (
 from typing_extensions import Literal
 
 import os
+import warnings
 from itertools import tee, product, combinations
 from statsmodels.stats.multitest import multipletests
 
@@ -117,7 +117,8 @@ def _min_max_scale(x: np.ndarray) -> np.ndarray:
         The scaled array.
     """
     minn, maxx = np.nanmin(x), np.nanmax(x)
-    with np.errstate(divide="ignore"):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
         return (x - minn) / (maxx - minn)
 
 

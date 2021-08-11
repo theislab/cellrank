@@ -559,7 +559,7 @@ class Schur(VectorPlottable, Decomposable):
 
         kwargs["fmt"] = kwargs.get("fmt", "0.2f")
         heatmap(
-            schur_matrix,
+            data=schur_matrix,
             cmap=cmap,
             square=True,
             annot=True,

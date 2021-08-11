@@ -32,6 +32,7 @@ from scipy.ndimage.filters import convolve
 import matplotlib as mpl
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
+from seaborn import clustermap
 from matplotlib import cm
 from matplotlib.ticker import FormatStrFormatter
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
@@ -152,8 +153,6 @@ def heatmap(
         If ``return_genes=True`` and ``mode={m.LINEAGES.s!r}``, returns :class:`pandas.DataFrame`
         containing the clustered or sorted genes.
     """
-
-    import seaborn as sns
 
     def find_indices(series: pd.Series, values) -> Tuple[Any]:
         def find_nearest(array: np.ndarray, value: float) -> int:
@@ -409,8 +408,8 @@ def heatmap(
             row_cluster = cluster_genes and df.shape[0] > 1
             show_clust = row_cluster and dendrogram
 
-            g = sns.clustermap(
-                df,
+            g = clustermap(
+                data=df,
                 cmap=cmap,
                 figsize=(10, min(len(genes) / 8 + 1, 10))
                 if figsize is None
