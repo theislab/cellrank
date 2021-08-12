@@ -636,7 +636,6 @@ class TestClusterLineage:
             "1",
             random_state=0,
             time_key="latent_time",
-            use_leiden=True,
             dpi=DPI,
             save=fpath,
         )

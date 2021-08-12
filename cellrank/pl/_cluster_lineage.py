@@ -53,7 +53,6 @@ def cluster_lineage(
     sharey: Union[str, bool] = False,
     key: Optional[str] = None,
     random_state: Optional[int] = None,
-    use_leiden: bool = False,
     show_progress_bar: bool = True,
     n_jobs: Optional[int] = 1,
     backend: str = _DEFAULT_BACKEND,
@@ -108,8 +107,6 @@ def cluster_lineage(
         Key in ``adata.uns`` where to save the results. If `None`, it will be saved as ``lineage_{lineage}_trend`` .
     random_state
         Random seed for reproducibility.
-    use_leiden
-        Whether to use :func:`scanpy.tl.leiden` for clustering or :func:`scanpy.tl.louvain`.
     %(parallel)s
     %(plotting)s
     pca_kwargs
@@ -117,7 +114,7 @@ def cluster_lineage(
     neighbors_kwargs
         Keyword arguments for :func:`scanpy.pp.neighbors`.
     clustering_kwargs
-        Keyword arguments for :func:`scanpy.tl.louvain` or :func:`scanpy.tl.leiden`.
+        Keyword arguments for :func:`scanpy.tl.leiden`.
     %(return_models)s
     kwargs:
         Keyword arguments for :meth:`cellrank.ul.models.BaseModel.prepare`.
@@ -202,17 +199,7 @@ def cluster_lineage(
         clustering_kwargs = dict(clustering_kwargs)
         clustering_kwargs["key_added"] = "clusters"
         clustering_kwargs.setdefault("random_state", random_state)
-        try:
-            if use_leiden:
-                sc.tl.leiden(trends, **clustering_kwargs)
-            else:
-                sc.tl.louvain(trends, **clustering_kwargs)
-        except ImportError as e:
-            logg.warning(str(e))
-            if use_leiden:
-                sc.tl.louvain(trends, **clustering_kwargs)
-            else:
-                sc.tl.leiden(trends, **clustering_kwargs)
+        sc.tl.leiden(trends, **clustering_kwargs)
 
         logg.info(f"Saving data to `adata.uns[{key!r}]`")
         adata.uns[key] = trends
