@@ -1,5 +1,1 @@
-I've added `DeprecationWarning` for all high-level `cellrank.tl` functions + added notes to API in docs saying that:
-1. high-level API will be removed in `2.0`
-2. `cellrank.tl.kernels` -> `cellrank.kernels`
-3. `cellrank.tl.estimators` -> `cellrank.estimators`
-4. `cellrank.ul.models` -> `cellrank.models`
+Deprecate :mod:`cellrank.tl`, high-level API and rename :mod:`cellrank.ul.models` to :mod:`cellrank.models`.
