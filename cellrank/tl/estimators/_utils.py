@@ -97,7 +97,7 @@ def argspec_factory(
         An adapter with the correct signature.
     """
     # for locals(), this is a whitelist of types we allow
-    import matplotlib  # noqa  this one seems to be missing, so whitelist it
+    import matplotlib  # this one seems to be missing, so whitelist it
 
     NoneType = type(None)
 

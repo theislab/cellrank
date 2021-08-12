@@ -86,7 +86,7 @@ class CFLARE(BaseEstimator, Eigen):
             Parameter for filtering cells. Cells are filtered out if they don't have at least ``n_matches_min``
             neighbors among their ``n_neighbors_filtering`` nearest cells.
         basis
-            Key from :paramref:`adata` ``.obsm`` to be used as additional features for the clustering.
+            Key from :attr:`adata` ``.obsm`` to be used as additional features for the clustering.
         n_comps
             Number of embedding components to be use when ``basis != None``.
         scale
