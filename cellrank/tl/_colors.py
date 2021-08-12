@@ -249,12 +249,10 @@ def _map_names_and_colors(
 
     # assign query colors
     if process_colors:
-        colors_query = []
-        for name in names_query:
-            mask = cats_reference == name
-            color = np.array(colors_reference)[mask][0]
-            colors_query.append(color)
-        association_df["color"] = colors_query
+        association_df["color"] = colors_query = [
+            colors_reference[np.where(cats_reference == name)[0][0]]
+            for name in names_query
+        ]
 
     # next, we need to make sure that we have unique names and colors. In a first step, compute how many repetitions
     # we have
