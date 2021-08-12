@@ -4,15 +4,10 @@ on:
     schedule:
     -   cron: 00 00 * * 1  # every Monday at 00:00
     push:
-        branches:
-        -   master
-        -   dev
-        tags:
-        -   v*
+        branches: [master, dev]
+        tags: [v*]
     pull_request:
-        branches:
-        -   master
-        -   dev
+        branches: [master, dev]
 
 jobs:
     init:
@@ -112,7 +107,8 @@ jobs:
                 codecov --no-color --required --flags unittests
 
     regenerate:
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        # TODO: modify so that notebooks regen with the appropriate ref
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/head')
         needs: test
         runs-on: ubuntu-latest
         steps:
@@ -130,6 +126,8 @@ jobs:
         runs-on: ubuntu-latest
         steps:
         -   uses: actions/checkout@v2
+            with:
+                token: ${{ secrets.TOWNCRIER_TOKEN }}
         -   name: Set up Python 3.8
             uses: actions/setup-python@v2
             with:
@@ -137,7 +135,21 @@ jobs:
         -   name: Install pypa/build
             run: |
                 python -m pip install --upgrade pip
-                pip install build
+                pip install build towncrier rstcheck
+
+        -   name: Generate release notes
+            run: |
+                towncrier build --yes
+                rstcheck docs/source/release -r
+        -   name: Commit release notes
+            id: auto-commit-action
+            uses: stefanzweifel/git-auto-commit-action@v4
+            with:
+                commit_message: '[auto] Generate release notes'
+                file_pattern: docs/source/release/**
+                commit_user_name: CI
+                skip_dirty_check: false
+
         -   name: Build a binary wheel and a source tarball
             run: |
                 python -m build --sdist --wheel --outdir dist/

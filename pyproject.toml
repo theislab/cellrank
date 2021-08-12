@@ -32,14 +32,49 @@ line_length = 88
 multi_line_output = 3
 include_trailing_comma = true
 use_parentheses = true
-known_stdlib="typing,typing_extensions"
-known_bio="scanpy,cellrank,scvelo,anndata"
-known_plot="mpl_toolkits,matplotlib,seaborn"
-known_num="numpy,numba,pandas,scipy,sklearn,statmodels,networkx,pygam"
+known_stdlib = "typing,typing_extensions"
+known_bio = "scanpy,cellrank,scvelo,anndata"
+known_plot = "mpl_toolkits,matplotlib,seaborn"
+known_num = "numpy,numba,pandas,scipy,sklearn,statmodels,networkx,pygam"
 sections = "FUTURE,STDLIB,THIRDPARTY,BIO,NUM,PLOT,FIRSTPARTY,LOCALFOLDER"
-no_lines_before="LOCALFOLDER"
+no_lines_before = "LOCALFOLDER"
 balanced_wrapping = true
 force_grid_wrap = 0
 length_sort = "1"
 indent = "    "
-skip_glob="examples/*.py"
+skip_glob = "examples/*.py"
+
+[tool.towncrier]
+package = "cellrank"
+single_file = true
+filename = "docs/source/release/notes-{version}.rst"
+directory = "docs/source/release/changelog"
+issue_format = "`#{issue} <https://github.com/theislab/cellrank/pull/{issue}>`__"
+template = "docs/source/release/changelog/template.rst"
+underlines = ["~", "-"]
+all_bullets = true
+
+[[tool.towncrier.type]]
+directory = "feature"
+name = "Features"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "bugfix"
+name = "Bugfixes"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "deprecation"
+name = "Deprecations (in next major release)"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "misc"
+name = "Miscellaneous"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "doc"
+name = "Documentation"
+showcontent = true

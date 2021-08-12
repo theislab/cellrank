@@ -1,6 +1,7 @@
 """Module containing model which wraps around :mod:`sklearn` estimators."""
 from typing import Iterable, Optional
 
+import warnings
 from inspect import signature
 
 from cellrank.ul._docs import d
@@ -9,6 +10,7 @@ from cellrank.ul.models._base_model import AnnData
 
 import numpy as np
 from sklearn.base import BaseEstimator
+from sklearn.utils import check_X_y
 
 
 @d.dedent
@@ -104,7 +106,16 @@ class SKLearnModel(BaseModel):
         if self._weight_name not in (None, ""):
             kwargs[self._weight_name] = self._w
 
-        self._model = self._fit_fn(self.x, self.y, **kwargs)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", UserWarning)
+            x, y = check_X_y(
+                X=self.x,
+                y=self.y,
+                force_all_finite="allow-nan",
+                copy=False,
+                estimator=self.model,
+            )
+        self._model = self._fit_fn(x, y, **kwargs)
 
         return self
 

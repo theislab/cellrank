@@ -28,7 +28,7 @@ model = cr.ul.models.GAM(adata)
 # Next, we can fit the model for some subset of genes for a specific lineage, as seen below. After the model
 # has been fitted, we use it to get the smoothed gene expression for the test points (by default, it is 200 points
 # uniformly spaced along the pseudotime). Afterwards, we reduce the dimension using `PCA` and cluster using the
-# `louvain` algorithm.
+# `leiden` algorithm.
 #
 # Note that calling this function twice will use the already computed values, unless ``recompute=True`` is specified.
 cr.pl.cluster_lineage(

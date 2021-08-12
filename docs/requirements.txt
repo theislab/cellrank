@@ -2,7 +2,7 @@
 bezier
 ipython
 ipywidgets
-louvain>=0.6,!=0.6.2
+leidenalg
 memory_profiler>=0.58.0
 nbsphinx>=0.8
 pypandoc

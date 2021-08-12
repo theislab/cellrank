@@ -14,6 +14,7 @@ from typing import (
 
 import re
 import wrapt
+import warnings
 from abc import ABC, ABCMeta, abstractmethod
 from copy import copy as _copy
 from copy import deepcopy
@@ -708,9 +709,11 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         )
         mean = np.mean(self.x)
 
-        stds = sigma_hat * np.sqrt(
-            1 + 1 / n + ((self.x_test - mean) ** 2) / ((self.x - mean) ** 2).sum()
-        )
+        # fmt: off
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            stds = sigma_hat * np.sqrt(1 + 1 / n + ((self.x_test - mean) ** 2) / ((self.x - mean) ** 2).sum())
+        # fmt: on
         stds = np.squeeze(stds)
 
         self._conf_int = np.c_[self._y_test - stds / 2.0, self._y_test + stds / 2.0]
