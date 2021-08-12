@@ -1,5 +1,4 @@
 """Utility functions for CellRank tools."""
-
 from typing import (
     Any,
     Dict,
@@ -13,6 +12,7 @@ from typing import (
     Optional,
     Sequence,
 )
+from typing_extensions import Literal
 
 import os
 import wrapt
@@ -20,6 +20,7 @@ import warnings
 from itertools import tee, product, combinations
 from statsmodels.stats.multitest import multipletests
 
+import scanpy as sc
 from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.ul._docs import d
@@ -118,7 +119,9 @@ def _min_max_scale(x: np.ndarray) -> np.ndarray:
         The scaled array.
     """
     minn, maxx = np.nanmin(x), np.nanmax(x)
-    return (x - minn) / (maxx - minn)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
+        return (x - minn) / (maxx - minn)
 
 
 def _process_series(
@@ -292,7 +295,8 @@ def _mat_mat_corr_sparse(
     y_bar = np.reshape(np.mean(Y, axis=0), (1, -1))
     y_std = np.reshape(np.std(Y, axis=0), (1, -1))
 
-    with np.errstate(divide="ignore"):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
         return (X @ Y - (n * X_bar * y_bar)) / ((n - 1) * X_std * y_std)
 
 
@@ -305,7 +309,8 @@ def _mat_mat_corr_dense(X: np.ndarray, Y: np.ndarray) -> np.ndarray:
     y_bar = np.reshape(np_mean(Y, axis=0), (1, -1))
     y_std = np.reshape(np_std(Y, axis=0), (1, -1))
 
-    with np.errstate(divide="ignore"):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
         return (X @ Y - (n * X_bar * y_bar)) / ((n - 1) * X_std * y_std)
 
 
@@ -566,7 +571,7 @@ def _filter_cells(distances: spmatrix, rc_labels: Series, n_matches_min: int) ->
 def _cluster_X(
     X: Union[np.ndarray, spmatrix],
     n_clusters: int,
-    method: str = "kmeans",
+    method: Literal["leiden", "kmeans"] = "kmeans",
     n_neighbors: int = 15,
     resolution: float = 1.0,
 ) -> List[Any]:
@@ -580,19 +585,17 @@ def _cluster_X(
     n_clusters
         Number of clusters to use.
     method
-        Method to use for clustering. Options are `'kmeans', 'louvain', 'leiden'`.
+        Method to use for clustering. Options are `'kmeans'`, `'leiden'`.
     n_neighbors
         If using a community-detection based clustering algorithm, number of neighbors for KNN construction.
     resolution
-        Resolution parameter for `'louvain', 'leiden'`.
+        Resolution parameter for `'leiden'` clustering.
 
     Returns
     -------
     :class:`list`
         List of cluster labels of length `n_samples`.
     """
-
-    import scanpy as sc
 
     # make sure data is at least 2D
     if X.ndim == 1:
@@ -601,17 +604,14 @@ def _cluster_X(
     if method == "kmeans":
         kmeans = KMeans(n_clusters=n_clusters).fit(X)
         labels = kmeans.labels_
-    elif method in ["louvain", "leiden"]:
+    elif method == "leiden":
         adata_dummy = sc.AnnData(X=X)
         sc.pp.neighbors(adata_dummy, use_rep="X", n_neighbors=n_neighbors)
-        if method == "louvain":
-            sc.tl.louvain(adata_dummy, resolution=resolution)
-        elif method == "leiden":
-            sc.tl.leiden(adata_dummy, resolution=resolution)
+        sc.tl.leiden(adata_dummy, resolution=resolution)
         labels = adata_dummy.obs[method]
     else:
         raise NotImplementedError(
-            f"Invalid method `{method!r}`. Valid options are: `'kmeans'`, `'louvain'` or `'leiden'`."
+            f"Invalid method `{method!r}`. Valid options are: `'kmeans'` or `'leiden'`."
         )
 
     return list(labels)

@@ -13,8 +13,8 @@ from cellrank.tl._constants import AbsProbKey
 import numpy as np
 import pandas as pd
 
-import seaborn as sns
 import matplotlib.pyplot as plt
+from seaborn import stripplot
 from matplotlib.cm import ScalarMappable
 from matplotlib.axes import Axes
 from matplotlib.colors import Normalize, to_hex
@@ -213,9 +213,9 @@ def log_odds(
             figsize = np.array([n_cats, n_cats * 4 / 6]) / 2
 
         fig, ax = plt.subplots(figsize=figsize, dpi=dpi, tight_layout=True)
-        ax = sns.stripplot(
-            time_key,
-            "log_odds",
+        ax = stripplot(
+            x=time_key,
+            y="log_odds",
             data=df,
             order=order,
             jitter=jitter,
@@ -262,9 +262,9 @@ def log_odds(
         hue, palette, thresh_mask, sm = get_data(key, thresh)
         show_ylabel = i % ncols == 0
 
-        ax = sns.stripplot(
-            time_key,
-            "log_odds",
+        ax = stripplot(
+            x=time_key,
+            y="log_odds",
             data=df if thresh_mask is None else df[~thresh_mask],
             hue=hue,
             order=order,
@@ -277,9 +277,9 @@ def log_odds(
             **kwargs,
         )
         if thresh_mask is not None:
-            sns.stripplot(
-                time_key,
-                "log_odds",
+            stripplot(
+                x=time_key,
+                y="log_odds",
                 data=df if thresh_mask is None else df[thresh_mask],
                 hue=hue,
                 order=order,

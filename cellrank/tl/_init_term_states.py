@@ -122,7 +122,7 @@ def _initial_terminal(
     if cluster_key is None:
         _info_if_obs_keys_categorical_present(
             adata,
-            keys=["louvain", "leiden", "clusters"],
+            keys=["leiden", "louvain", "cluster", "clusters"],
             msg_fmt="Found categorical observation in `adata.obs[{!r}]`. Consider specifying it as `cluster_key`.",
         )
 

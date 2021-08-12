@@ -34,10 +34,6 @@ which allows to unlock the full power of CellRank. If you want to see individual
 To use CellRank without RNA velocity information, check out the `beyond RNA velocity tutorial`_ as well as the
 `time-series tutorial`_.
 
-Latest additions
-^^^^^^^^^^^^^^^^
-.. include:: latest_additions.rst
-
 Manuscript
 ^^^^^^^^^^
 Please see our `preprint`_ on **bioRxiv** to learn more.

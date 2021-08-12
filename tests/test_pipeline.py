@@ -131,7 +131,7 @@ class TestHighLevelPipeline:
             adata,
             estimator=cr.tl.estimators.CFLARE,
             cluster_key="clusters",
-            method="louvain",
+            method="leiden",
             show_plots=True,
         )
         cr.pl.initial_states(adata)
