@@ -57,7 +57,7 @@ def parallelize(
 
     if show_progress_bar:
         try:
-            import ipywidgets  # noqa: F401
+            import ipywidgets
             from tqdm.auto import tqdm
         except ImportError:
             try:

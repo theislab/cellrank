@@ -4,7 +4,7 @@ from typing import Union, TypeVar, Optional, Sequence
 
 from cellrank import logging as logg
 from cellrank.ul._docs import d
-from cellrank.tl._utils import TestMethod
+from cellrank.tl._utils import TestMethod, _deprecate
 from cellrank.tl.kernels import PrecomputedKernel
 from cellrank.tl._constants import AbsProbKey, TermStatesKey, TerminalStatesPlot
 from cellrank.tl.estimators import GPCCA
@@ -16,6 +16,7 @@ import pandas as pd
 AnnData = TypeVar("AnnData")
 
 
+@_deprecate(version="2.0")
 @d.dedent
 def lineages(
     adata: AnnData,
@@ -90,6 +91,7 @@ def lineages(
     return mc.adata if copy else mc if return_estimator else None
 
 
+@_deprecate(version="2.0")
 @d.dedent
 def lineage_drivers(
     adata: AnnData,

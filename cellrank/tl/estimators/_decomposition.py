@@ -446,8 +446,8 @@ class Schur(VectorPlottable, Decomposable):
             )
 
         try:
-            import petsc4py  # noqa
-            import slepc4py  # noqa
+            import petsc4py
+            import slepc4py
         except ImportError:
             method = "brandts"
             logg.warning(
