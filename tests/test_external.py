@@ -224,6 +224,7 @@ class TestWOTKernel:
 
         assert isinstance(ok._transition_matrix, csr_matrix)
         np.testing.assert_allclose(ok.transition_matrix.sum(1), 1.0)
+        assert ok.params["threshold"] == threshold
 
         if threshold == 1.0:
             for row in ok.transition_matrix:

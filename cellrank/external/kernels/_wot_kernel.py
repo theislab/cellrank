@@ -353,6 +353,7 @@ class WOTKernel(Kernel, error=_error):
                 "growth_rate_key": growth_rate_key,
                 "use_highly_variable": use_highly_variable,
                 "last_time_point": last_time_point.s,
+                "threshold": threshold,
                 **kwargs,
             },
             time=start,
