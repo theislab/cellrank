@@ -502,10 +502,6 @@ class WOTKernel(Kernel, error=_error):
         tmat.data[tmat.data <= threshold] = 0.0
 
         zero_ixs = np.where(np.array(tmat.sum(1)).flatten() == 0)[0]
-        # TODO(michalk8): determine whether this is the approach we want to take
-        # if yes, do nothing, if no, alt. is to set the problematic indices to self-transition with 1
-        # in the 2nd case, the code below can be removed (_compute_transition_matrix already does that)
-        # in both cases, this comment should be removed
         if len(zero_ixs):
             logg.warning(
                 f"After removing entries with values <= `{threshold}`, found `{len(zero_ixs)}` all 0 rows. "
