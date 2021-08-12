@@ -124,13 +124,25 @@ nbsphinx_execute_arguments = [
     "--InlineBackend.rc={'figure.dpi': 96}",
 ]
 
-nbsphinx_prolog = r"""
-{% set docname = 'tutorials/' + env.doc2path(env.docname, base=None) %}
+_link_style = "vertical-align;text-bottom"
+_binder_link = (
+    '<a href="https://mybinder.org/v2/gh/theislab/cellrank_notebooks/{{ env.config.release|e }}'
+    '?filepath={{ docname|e }}"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" '
+    f"style={_link_style!r}></a>"
+)
+_colab_link = (
+    '<a href="https://colab.research.google.com/github/theislab/cellrank_notebooks/blob/'
+    '{{ env.config.release|e }}/{{ docname|e }}"><img alt="Colab badge" '
+    f'src="https://colab.research.google.com/assets/colab-badge.svg" style={_link_style!r}></a>'
+)
+nbsphinx_prolog = rf"""
+{{% set docname = 'tutorials/' + env.doc2path(env.docname, base=None) %}}
 .. raw:: html
 
-    <div class="note">
-      Interactive version
-      <a href="https://mybinder.org/v2/gh/theislab/cellrank_notebooks/{{ env.config.release|e }}?filepath={{ docname|e }}"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>
+    <div class="admonition note">
+        Interactive version
+        {_binder_link}
+        {_colab_link}
     </div>
 """
 
