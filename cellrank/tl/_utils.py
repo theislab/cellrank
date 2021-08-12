@@ -293,7 +293,8 @@ def _mat_mat_corr_sparse(
     y_bar = np.reshape(np.mean(Y, axis=0), (1, -1))
     y_std = np.reshape(np.std(Y, axis=0), (1, -1))
 
-    with np.errstate(divide="ignore"):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
         return (X @ Y - (n * X_bar * y_bar)) / ((n - 1) * X_std * y_std)
 
 
@@ -306,7 +307,8 @@ def _mat_mat_corr_dense(X: np.ndarray, Y: np.ndarray) -> np.ndarray:
     y_bar = np.reshape(np_mean(Y, axis=0), (1, -1))
     y_std = np.reshape(np_std(Y, axis=0), (1, -1))
 
-    with np.errstate(divide="ignore"):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
         return (X @ Y - (n * X_bar * y_bar)) / ((n - 1) * X_std * y_std)
 
 

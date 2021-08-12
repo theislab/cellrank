@@ -330,7 +330,7 @@ class TestFuzzyToDiscrete:
         a_fuzzy = np.random.standard_normal((100, 3))
         a_fuzzy = np.exp(a_fuzzy) / np.sum(np.exp(a_fuzzy), 1)[:, None]
 
-        # check with both overlap handlings
+        # check with both overlap handling
         _fuzzy_to_discrete(a_fuzzy=a_fuzzy)
         _fuzzy_to_discrete(a_fuzzy=a_fuzzy, n_most_likely=30, remove_overlap=True)
         _fuzzy_to_discrete(a_fuzzy=a_fuzzy, n_most_likely=30, remove_overlap=False)
@@ -503,7 +503,9 @@ class TestSeriesFromOneHotMatrix:
         expected_series[5] = "1"
 
         assert actual_series.equals(expected_series)
-        assert (actual_series.cat.categories == expected_series.cat.categories).all()
+        np.testing.assert_array_equal(
+            actual_series.cat.categories, expected_series.cat.categories
+        )
 
 
 class TestCreateModels:
@@ -893,63 +895,63 @@ class TestClusterX:
 
 
 class TestKernelUtils:
-    @pytest.mark.parametrize("seed", range(10))
+    @pytest.mark.parametrize("seed", range(5))
     def test_numba_mean_axis_0(self, seed):
         np.random.seed(seed)
         x = np.random.normal(size=(10, 10))
 
         np.testing.assert_allclose(np.mean(x, axis=0), np_mean(x, 0))
 
-    @pytest.mark.parametrize("seed", range(10))
+    @pytest.mark.parametrize("seed", range(5))
     def test_numba_mean_axis_1(self, seed):
         np.random.seed(seed)
         x = np.random.normal(size=(10, 10))
 
         np.testing.assert_allclose(np.mean(x, axis=1), np_mean(x, 1))
 
-    @pytest.mark.parametrize("seed", range(10))
+    @pytest.mark.parametrize("seed", range(5))
     def test_numba_max_axis_0(self, seed):
         np.random.seed(seed)
         x = np.random.normal(size=(10, 10))
 
         np.testing.assert_allclose(np.max(x, axis=0), np_max(x, 0))
 
-    @pytest.mark.parametrize("seed", range(10))
+    @pytest.mark.parametrize("seed", range(5))
     def test_numba_max_axis_1(self, seed):
         np.random.seed(seed)
         x = np.random.normal(size=(10, 10))
 
         np.testing.assert_allclose(np.max(x, axis=1), np_max(x, 1))
 
-    @pytest.mark.parametrize("seed", range(10))
+    @pytest.mark.parametrize("seed", range(5))
     def test_numba_sum_axis_0(self, seed):
         np.random.seed(seed)
         x = np.random.normal(size=(10, 10))
 
         np.testing.assert_allclose(np.sum(x, axis=0), np_sum(x, 0))
 
-    @pytest.mark.parametrize("seed", range(10))
+    @pytest.mark.parametrize("seed", range(5))
     def test_numba_sum_axis_1(self, seed):
         np.random.seed(seed)
         x = np.random.normal(size=(10, 10))
 
         np.testing.assert_allclose(np.sum(x, axis=1), np_sum(x, 1))
 
-    @pytest.mark.parametrize("seed", range(10))
+    @pytest.mark.parametrize("seed", range(5))
     def test_numba_norm_axis_0(self, seed):
         np.random.seed(seed)
         x = np.random.normal(size=(10, 10))
 
         np.testing.assert_allclose(np.linalg.norm(x, axis=0), norm(x, 0))
 
-    @pytest.mark.parametrize("seed", range(10))
+    @pytest.mark.parametrize("seed", range(5))
     def test_numba_norm_axis_1(self, seed):
         np.random.seed(seed)
         x = np.random.normal(size=(10, 10))
 
         np.testing.assert_allclose(np.linalg.norm(x, axis=1), norm(x, 1))
 
-    @pytest.mark.parametrize("seed", range(10))
+    @pytest.mark.parametrize("seed", range(5))
     def test_apply_along_axis(self, seed: int):
         np.random.seed(seed)
         x = np.random.normal(size=(10, 10))
@@ -981,9 +983,9 @@ class TestKernelUtils:
 
         np.testing.assert_array_equal(starts, np.arange(11))
 
-    @pytest.mark.parametrize("seed, shuffle", zip(range(10), [False] * 5 + [True] * 5))
+    @pytest.mark.parametrize("seed, shuffle", zip(range(4), [False] * 2 + [True] * 2))
     def test_reconstruct_one(self, seed: int, shuffle: bool):
-        m1 = random(100, 10, random_state=seed, density=0.5, format="csr")
+        m1 = random(100, 10, random_state=seed, density=0.5, format="lil")
         m1[:, 0] = 0.1
         m1 /= m1.sum(1)
         m1 = csr_matrix(m1)
