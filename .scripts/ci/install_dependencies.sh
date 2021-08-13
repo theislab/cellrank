@@ -2,7 +2,7 @@
 
 set -ev
 
-if [[ "$OS" == "ubuntu-latest" ]]; then
+if [[ "$RUNNER_OS" == "Linux" ]]; then
     echo "Installing APT dependencies"
     # https://github.com/yarnpkg/yarn/issues/7866
     curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
@@ -12,8 +12,12 @@ if [[ "$OS" == "ubuntu-latest" ]]; then
 
     sudo apt update -y
     sudo apt install libopenblas-base r-base r-base-dev r-cran-mgcv -y
-  if [[ "$USE_SLEPC" == "true" ]]; then
-    echo "Installing PETSc/SLEPc dependencies"
-    sudo apt install gcc gfortran libopenmpi-dev libblas-dev liblapack-dev petsc-dev slepc-dev -y
-  fi
+
+    if [[ "$USE_SLEPC" == "true" ]]; then
+        echo "Installing PETSc/SLEPc dependencies"
+        sudo apt install gcc gfortran libopenmpi-dev libblas-dev liblapack-dev petsc-dev slepc-dev -y
+    fi
+elif [[ "$RUNNER_OS" != "macOS" ]]; then
+    echo "Invalid OS for dependencie installations: $OS"
+    exit 42
 fi

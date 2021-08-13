@@ -50,8 +50,6 @@ jobs:
                 -   os: macos-latest
                     python: 3.8
                     use_slepc: false
-        env:
-            USE_SLEPC: ${{ matrix.use_slepc }}
 
         steps:
         -   uses: actions/checkout@v2
@@ -63,6 +61,8 @@ jobs:
                 python-version: ${{ matrix.python }}
 
         -   name: Install dependencies
+            env:
+                USE_SLEPC: ${{ matrix.use_slepc }}
             run: |
                 ./.scripts/ci/install_dependencies.sh
 
@@ -91,6 +91,7 @@ jobs:
             timeout-minutes: 60
             env:
                 PLATFORM: ${{ matrix.os }}
+                USE_SLEPC: ${{ matrix.use_slepc }}
             run: |
                 tox -vv
 
@@ -101,7 +102,7 @@ jobs:
                 codecov --no-color --required --flags unittests
 
     regenerate:
-        # TODO(michalk8): modify so that notebooks regen with the appropriate ref
+        # TODO(michalk8): modify so that notebooks regenerate with the appropriate ref
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/head')
         needs: [lint, test]
         runs-on: ubuntu-latest

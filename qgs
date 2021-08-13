@@ -1,0 +1,69 @@
+[1mdiff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml[m
+[1mindex a195c2c9..ea1545bf 100644[m
+[1m--- a/.github/workflows/ci.yml[m
+[1m+++ b/.github/workflows/ci.yml[m
+[36m@@ -50,8 +50,6 @@[m [mjobs:[m
+                 -   os: macos-latest[m
+                     python: 3.8[m
+                     use_slepc: false[m
+[31m-        env:[m
+[31m-            USE_SLEPC: ${{ matrix.use_slepc }}[m
+ [m
+         steps:[m
+         -   uses: actions/checkout@v2[m
+[36m@@ -63,6 +61,8 @@[m [mjobs:[m
+                 python-version: ${{ matrix.python }}[m
+ [m
+         -   name: Install dependencies[m
+[32m+[m[32m            env:[m
+[32m+[m[32m                USE_SLEPC: ${{ matrix.use_slepc }}[m
+             run: |[m
+                 ./.scripts/ci/install_dependencies.sh[m
+ [m
+[36m@@ -91,6 +91,7 @@[m [mjobs:[m
+             timeout-minutes: 60[m
+             env:[m
+                 PLATFORM: ${{ matrix.os }}[m
+[32m+[m[32m                USE_SLEPC: ${{ matrix.use_slepc }}[m
+             run: |[m
+                 tox -vv[m
+ [m
+[36m@@ -101,7 +102,7 @@[m [mjobs:[m
+                 codecov --no-color --required --flags unittests[m
+ [m
+     regenerate:[m
+[31m-        # TODO(michalk8): modify so that notebooks regen with the appropriate ref[m
+[32m+[m[32m        # TODO(michalk8): modify so that notebooks regenerate with the appropriate ref[m
+         if: github.event_name == 'push' && startsWith(github.ref, 'refs/head')[m
+         needs: [lint, test][m
+         runs-on: ubuntu-latest[m
+[1mdiff --git a/.scripts/ci/install_dependencies.sh b/.scripts/ci/install_dependencies.sh[m
+[1mindex 6b4f6c7b..14a8b796 100755[m
+[1m--- a/.scripts/ci/install_dependencies.sh[m
+[1m+++ b/.scripts/ci/install_dependencies.sh[m
+[36m@@ -2,7 +2,7 @@[m
+ [m
+ set -ev[m
+ [m
+[31m-if [[ "$OS" == "ubuntu-latest" ]]; then[m
+[32m+[m[32mif [[ "$RUNNER_OS" == "Linux" ]]; then[m
+     echo "Installing APT dependencies"[m
+     # https://github.com/yarnpkg/yarn/issues/7866[m
+     curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -[m
+[36m@@ -12,8 +12,12 @@[m [mif [[ "$OS" == "ubuntu-latest" ]]; then[m
+ [m
+     sudo apt update -y[m
+     sudo apt install libopenblas-base r-base r-base-dev r-cran-mgcv -y[m
+[31m-  if [[ "$USE_SLEPC" == "true" ]]; then[m
+[31m-    echo "Installing PETSc/SLEPc dependencies"[m
+[31m-    sudo apt install gcc gfortran libopenmpi-dev libblas-dev liblapack-dev petsc-dev slepc-dev -y[m
+[31m-  fi[m
+[32m+[m
+[32m+[m[32m    if [[ "$USE_SLEPC" == "true" ]]; then[m
+[32m+[m[32m        echo "Installing PETSc/SLEPc dependencies"[m
+[32m+[m[32m        sudo apt install gcc gfortran libopenmpi-dev libblas-dev liblapack-dev petsc-dev slepc-dev -y[m
+[32m+[m[32m    fi[m
+[32m+[m[32melif [[ "$RUNNER_OS" != "macOS" ]]; then[m
+[32m+[m[32m    echo "Invalid OS for dependencie installations: $OS"[m
+[32m+[m[32m    exit 42[m
+ fi[m
