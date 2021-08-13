@@ -38,3 +38,20 @@ jobs:
                 file_pattern: docs/source/release/changelog/*.rst
                 commit_user_name: CI
                 skip_dirty_check: false
+
+        -   name: Generate dev release notes
+            if: contains(github.base_ref, 'dev')
+            run: |
+                rm -f docs/source/release/notes-dev.rst
+                towncrier build --yes --version dev
+
+        -   name: Commit dev release notes
+            if: contains(github.base_ref, 'dev')
+            id: auto-commit-action
+            uses: stefanzweifel/git-auto-commit-action@v4
+            with:
+                commit_message: '[auto][ci-skip] Update dev release notes'
+                branch: ${{ github.base_ref }}
+                file_pattern: docs/source/release/notes-dev.rst
+                commit_user_name: CI
+                skip_dirty_check: false

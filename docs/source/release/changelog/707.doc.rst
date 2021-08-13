@@ -1,1 +1,1 @@
-Add Google colab links for tutorials.
+Add Google Colab links for tutorials.
