@@ -6,6 +6,7 @@ on:
         types: [closed]
 
 jobs:
+    # TODO(michalk8): once docs linting is up, use tox
     news:
         if: ${{ github.event.pull_request.merged }}
         runs-on: ubuntu-latest
@@ -18,10 +19,11 @@ jobs:
             with:
                 python-version: 3.8
 
-        -   name: Install rstcheck
+        -   name: Install dependencies
             run: |
                 python -m pip install --upgrade pip
                 pip install towncrier rstcheck requests
+                pip install -e'.'
         -   name: Generate news fragment
             env:
                 PR_NUMBER: ${{ github.event.number }}
@@ -33,13 +35,13 @@ jobs:
             id: auto-commit-action
             uses: stefanzweifel/git-auto-commit-action@v4
             with:
-                commit_message: '[auto][ci skip] Generate news fragment'
+                commit_message: ${{ format('[auto][ci skip] Generate news fragment (#{0})', github.event.number) }}
                 branch: ${{ github.base_ref }}
                 file_pattern: docs/source/release/changelog/*.rst
                 commit_user_name: CI
                 skip_dirty_check: false
 
-        -   name: Generate dev release notes
+        -   name: Update dev release notes
             if: ${{ steps.auto-commit-action.outputs.changes_detected == 'true' && contains(github.base_ref, 'dev') }}
             run: |
                 rm -f docs/source/release/notes-dev.rst
@@ -50,7 +52,7 @@ jobs:
             if: ${{ steps.auto-commit-action.outputs.changes_detected == 'true' && contains(github.base_ref, 'dev') }}
             uses: stefanzweifel/git-auto-commit-action@v4
             with:
-                commit_message: '[auto][ci skip] Update dev release notes'
+                commit_message: ${{ format('[auto][ci skip] Update dev release notes (#{0})', github.event.number) }}
                 branch: ${{ github.base_ref }}
                 file_pattern: docs/source/release/notes-dev.rst
                 commit_user_name: CI
