@@ -6,4 +6,5 @@ Release Notes
     :glob:
     :reversed:
 
-    release/*
+    release/notes-dev
+    release/notes-*.*.*

@@ -140,7 +140,7 @@ jobs:
         -   name: Generate release notes
             run: |
                 towncrier build --yes
-                rm docs/source/release/notes-dev.rst
+                rm -f docs/source/release/notes-dev.rst
                 towncrier build --yes --version dev
                 rstcheck -r docs/source/release
         -   name: Commit release notes

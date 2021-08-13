@@ -40,11 +40,13 @@ jobs:
                 skip_dirty_check: false
 
         -   name: Generate dev release notes
+            if: contains(github.base_ref, 'dev')
             run: |
-                rm docs/source/release/notes-dev.rst
+                rm -f docs/source/release/notes-dev.rst
                 towncrier build --yes --version dev
 
         -   name: Commit dev release notes
+            if: contains(github.base_ref, 'dev')
             id: auto-commit-action
             uses: stefanzweifel/git-auto-commit-action@v4
             with:
