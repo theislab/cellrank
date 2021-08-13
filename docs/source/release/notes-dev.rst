@@ -28,6 +28,9 @@ Miscellaneous
 - Speed-up testing by not using stochastic mode in :class:`cellrank.tl.kernels.VelocityKernel` where not necessary.
   `#705 <https://github.com/theislab/cellrank/pull/705>`__
 
+- Enable ``tox`` in CI.
+  `#713 <https://github.com/theislab/cellrank/pull/713>`__
+
 
 Documentation
 -------------
