@@ -144,7 +144,6 @@ jobs:
                 towncrier build --yes --version dev
                 rstcheck -r docs/source/release
         -   name: Commit release notes
-            id: auto-commit-action
             uses: stefanzweifel/git-auto-commit-action@v4
             with:
                 commit_message: '[auto][ci skip] Generate release notes'
