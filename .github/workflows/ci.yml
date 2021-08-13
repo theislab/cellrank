@@ -10,95 +10,89 @@ on:
         branches: [master, dev]
 
 jobs:
-    init:
+    lint:
         runs-on: ubuntu-latest
-        outputs:
-            skip: ${{ steps.ci-skip-step.outputs.ci-skip }}
         steps:
         -   uses: actions/checkout@v2
             with:
                 fetch-depth: 0
-        -   id: ci-skip-step
-            uses: mstachniuk/ci-skip@master
-            with:
-                commit-filter: '[ci skip];[ci-skip];[skip ci];[skip-ci]'
-                commit-filter-separator: ;
-
-    linting:
-        needs: init
-        if: ${{ github.event_name == 'schedule' || needs.init.outputs.skip == 'false' }}
-        runs-on: ubuntu-latest
-        steps:
-        -   uses: actions/checkout@v2
         -   name: Set up Python 3.8
             uses: actions/setup-python@v2
             with:
                 python-version: 3.8
+
+        -   uses: actions/cache@v2
+            with:
+                path: ~/.cache/pre-commit
+                key: precommit-${{ env.pythonLocation }}-${{ hashFiles('**/.pre-commit-config.yaml') }}
+
         -   name: Install dependencies
             run: |
                 python -m pip install --upgrade pip
-                pip install pre-commit
-        -   name: Run static analysis
+                pip install tox
+
+        -   name: Lint
             run: |
-                pre-commit run --all-files --show-diff-on-failure
+                tox -e lint
 
     test:
-        needs: linting
         runs-on: ${{ matrix.os }}
         strategy:
             fail-fast: false
-            max-parallel: 4
             matrix:
                 python: [3.7]  # , 3.9]
                 os: [ubuntu-latest]
                 use_slepc: [false]
-                allow_failure: [false]
                 include:
                 -   os: ubuntu-latest
                     python: 3.8
                     use_slepc: true
-                    allow_failure: false
                 -   os: macos-latest
                     python: 3.8
                     use_slepc: false
-                    allow_failure: true
         env:
-            OS: ${{ matrix.os }}
-            PYTHON: ${{ matrix.python }}
             USE_SLEPC: ${{ matrix.use_slepc }}
 
         steps:
         -   uses: actions/checkout@v2
+            with:
+                fetch-depth: 0
         -   name: Set up Python ${{ matrix.python }}
             uses: actions/setup-python@v2
             with:
                 python-version: ${{ matrix.python }}
 
+        -   name: Install dependencies
+            run: |
+                ./.scripts/ci/install_dependencies.sh
+
         -   name: Get pip cache dir
             id: pip-cache
             run: |
                 echo "::set-output name=dir::$(pip cache dir)"
-        -   name: Cache pip
+        -   name: Restore pip cache
             uses: actions/cache@v2
             with:
                 path: ${{ steps.pip-cache.outputs.dir }}
-                key: pip-${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('**/requirements.txt') }}-${{ hashFiles('**/setup.py') }}
-                restore-keys: |
-                    pip-${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('**/requirements.txt') }}
-                    pip-${{ runner.os }}-${{ env.pythonLocation }}-
+                key: pip-${{ runner.os }}-${{ env.pythonLocation }}
 
-        -   name: Before install
+        -   name: Install pip dependencies
             run: |
-                ./.scripts/ci/before_install.sh
-        -   name: Install
-            run: |
-                ./.scripts/ci/install.sh
+                python -m pip install --upgrade pip
+                pip install tox tox-gh-actions codecov
 
-        -   name: Testing
+        -   name: Restore tox cache
+            uses: actions/cache@v2
+            with:
+                path: .tox
+                key: tox-${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('**/requirements.txt', '**/setup.py', '**/tox.ini') }}
+
+        -   name: Test
             timeout-minutes: 60
-            continue-on-error: ${{ matrix.allow_failure }}
+            env:
+                PLATFORM: ${{ matrix.os }}
             run: |
-                python -m pytest --cov --cov-report=term-missing --cov-config=./.coveragerc --cov-report=xml -vv
+                tox -vv
 
         -   name: Upload coverage
             env:
@@ -107,9 +101,9 @@ jobs:
                 codecov --no-color --required --flags unittests
 
     regenerate:
-        # TODO: modify so that notebooks regen with the appropriate ref
+        # TODO(michalk8): modify so that notebooks regen with the appropriate ref
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/head')
-        needs: test
+        needs: [lint, test]
         runs-on: ubuntu-latest
         steps:
         -   name: Rebuild tutorials
@@ -122,17 +116,19 @@ jobs:
 
     deploy:
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
-        needs: test
+        needs: [lint, test]
         runs-on: ubuntu-latest
         steps:
         -   uses: actions/checkout@v2
             with:
                 token: ${{ secrets.TOWNCRIER_TOKEN }}
+                fetch-depth: 0
         -   name: Set up Python 3.8
             uses: actions/setup-python@v2
             with:
                 python-version: 3.8
-        -   name: Install pypa/build
+
+        -   name: Install dependencies
             run: |
                 python -m pip install --upgrade pip
                 pip install build towncrier rstcheck
