@@ -155,7 +155,7 @@ def _get_bg_fg_colors(color, sat_scale: Optional[float] = None) -> Tuple[str, st
 
     return (
         mcolors.to_hex(color),
-        _contrasting_color(*np.array(color * 255).astype(np.int)),
+        _contrasting_color(*np.array(color * 255).astype(int)),
     )
 
 
