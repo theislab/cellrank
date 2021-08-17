@@ -346,7 +346,7 @@ class TestLineageAccessor:
             colors=[(0, 0, 0), (0.5, 0.5, 0.5), (1, 1, 1)],
         )
 
-        mask = np.ones((x.shape[0]), dtype=np.bool)
+        mask = np.ones((x.shape[0]), dtype=bool)
         mask[:5] = False
         y = l[mask, :]
 
@@ -372,7 +372,7 @@ class TestLineageAccessor:
             colors=[(0, 0, 0), (0.5, 0.5, 0.5), (1, 1, 1)],
         )
 
-        mask = np.ones((x.shape[1]), dtype=np.bool)
+        mask = np.ones((x.shape[1]), dtype=bool)
         mask[0] = False
         y = l[:, mask]
 
@@ -410,7 +410,7 @@ class TestLineageAccessor:
             colors=[(0, 0, 0), (0.5, 0.5, 0.5), (1, 1, 1)],
         )
 
-        mask = np.ones((x.shape[1]), dtype=np.bool)
+        mask = np.ones((x.shape[1]), dtype=bool)
         mask[0] = False
         y = l[[0, 1], mask]
 
@@ -436,7 +436,7 @@ class TestLineageAccessor:
             colors=[(0, 0, 0), (0.5, 0.5, 0.5), (1, 1, 1)],
         )
 
-        mask = np.ones((x.shape[0]), dtype=np.bool)
+        mask = np.ones((x.shape[0]), dtype=bool)
         mask[5:] = False
         y = l[mask, 0]
 
@@ -450,9 +450,9 @@ class TestLineageAccessor:
             colors=[(0, 0, 0), (0.5, 0.5, 0.5), (1, 1, 1)],
         )
 
-        row_mask = np.ones((x.shape[0]), dtype=np.bool)
+        row_mask = np.ones((x.shape[0]), dtype=bool)
         row_mask[5:] = False
-        col_mask = np.ones((x.shape[1]), dtype=np.bool)
+        col_mask = np.ones((x.shape[1]), dtype=bool)
         y = l[row_mask, col_mask]
 
         np.testing.assert_array_equal(x[row_mask, :][:, col_mask], np.array(y))
@@ -465,7 +465,7 @@ class TestLineageAccessor:
             colors=[(0, 0, 0), (0.5, 0.5, 0.5), (1, 1, 1)],
         )
 
-        mask = np.ones((x.shape[0]), dtype=np.bool)
+        mask = np.ones((x.shape[0]), dtype=bool)
         mask[5:] = False
         y = l[mask, ["baz", "bar"]]
 
@@ -488,7 +488,7 @@ class TestLineageAccessor:
             x, names=["foo", "bar", "baz"], colors=["#ff0000", "#00ff00", "#0000ff"]
         )
 
-        mask = np.ones((x.shape[0]), dtype=np.bool)
+        mask = np.ones((x.shape[0]), dtype=bool)
         mask[5:] = False
         y = l[mask, :][:, ["baz", "bar", "foo"]]
 
@@ -502,7 +502,7 @@ class TestLineageAccessor:
             x, names=["foo", "bar", "baz"], colors=["#ff0000", "#00ff00", "#0000ff"]
         )
 
-        mask = np.ones((x.shape[0]), dtype=np.bool)
+        mask = np.ones((x.shape[0]), dtype=bool)
         mask[5:] = False
         y = l[mask, ["baz", "bar", "foo"]]
         z = l[mask, :][:, ["baz", "bar", "foo"]]
@@ -552,7 +552,7 @@ class TestLineageAccessor:
         x = np.random.random((10, 3))
         l = Lineage(x, names=["Beta", "Epsilon", "Alpha"])
         cmapper = dict(zip(l.names, l.colors))
-        mask = np.zeros(l.shape[0], dtype=np.bool)
+        mask = np.zeros(l.shape[0], dtype=bool)
         mask[0] = True
         mask[-1] = True
 
@@ -935,7 +935,7 @@ class TestTransposition:
         np.testing.assert_array_equal(x, y.T[:, ::-1])
 
     def test_boolean_accessor(self, lineage: Lineage):
-        mask = np.zeros(shape=lineage.shape[0], dtype=np.bool)
+        mask = np.zeros(shape=lineage.shape[0], dtype=bool)
         mask[[3, 5]] = True
 
         y = lineage.T[["baz", "bar"], mask]

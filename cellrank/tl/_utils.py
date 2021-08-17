@@ -1117,7 +1117,7 @@ def _one_hot(n, cat: Optional[int] = None) -> np.ndarray:
     If cat is `None`, return a vector of zeros.
     """
 
-    out = np.zeros(n, dtype=np.bool)
+    out = np.zeros(n, dtype=bool)
     if cat is not None:
         out[cat] = True
 
@@ -1207,7 +1207,7 @@ def _fuzzy_to_discrete(
 
     # create the one-hot encoded discrete clustering
     a_discrete = np.zeros(
-        a_fuzzy.shape, dtype=np.bool
+        a_fuzzy.shape, dtype=bool
     )  # don't use `zeros_like` - it also copies the dtype
     for ix in range(n_clusters):
         a_discrete[sample_assignment[ix], ix] = True
@@ -1270,7 +1270,7 @@ def _series_from_one_hot_matrix(
     membership = np.asarray(
         membership
     )  # change the type in case a lineage object was passed.
-    if membership.dtype != np.bool:
+    if membership.dtype != bool:
         raise TypeError(
             f"Expected `membership`'s elements to be boolean, found `{membership.dtype.name!r}`."
         )
