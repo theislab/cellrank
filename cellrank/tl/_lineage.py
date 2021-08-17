@@ -420,8 +420,8 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             item_0 = _at_least_2d(item_0, -1)
             item_1 = _at_least_2d(item_1, 0)
 
-            if item_1.dtype == np.bool:
-                if item_0.dtype != np.bool:
+            if item_1.dtype == bool:
+                if item_0.dtype != bool:
                     if not issubclass(item_0.dtype.type, np.integer):
                         raise TypeError(f"Invalid type `{item_0.dtype.type}`.")
                     row_order = (
@@ -433,8 +433,8 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
                 item = item_0 * item_1
                 shape = np.max(np.sum(item, axis=0)), np.max(np.sum(item, axis=1))
                 col = np.where(np.all(item_1, axis=0))[0]
-            elif item_0.dtype == np.bool:
-                if item_1.dtype != np.bool:
+            elif item_0.dtype == bool:
+                if item_1.dtype != bool:
                     if not issubclass(item_1.dtype.type, np.integer):
                         raise TypeError(f"Invalid type `{item_1.dtype.type}`.")
                     col_order = (
@@ -605,7 +605,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
     @property
     def _fmt(self) -> Callable:
-        if np.issubdtype(self.dtype, np.float):
+        if np.issubdtype(self.dtype, float):
             return "{:.06f}".format
         return "{}".format
 

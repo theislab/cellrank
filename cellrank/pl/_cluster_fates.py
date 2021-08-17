@@ -481,11 +481,11 @@ def cluster_fates(
     d = odict()
     for name in clusters:
         mask = (
-            np.ones((adata.n_obs,), dtype=np.bool)
+            np.ones((adata.n_obs,), dtype=bool)
             if is_all
             else (adata.obs[cluster_key] == name).values
         )
-        mask = np.array(mask, dtype=np.bool)
+        mask = np.array(mask, dtype=bool)
         data = adata.obsm[lk][mask, lin_names].X
         mean = np.nanmean(data, axis=0)
         std = np.nanstd(data, axis=0) / np.sqrt(data.shape[0])

@@ -537,9 +537,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
 
         if filter_cells is not None:
             tmp = y.squeeze()
-            fil = (tmp >= filter_cells) & (
-                ~np.isclose(tmp, filter_cells).astype(np.bool)
-            )
+            fil = (tmp >= filter_cells) & (~np.isclose(tmp, filter_cells).astype(bool))
             x, y, w = x[fil], y[fil], w[fil]
             self._obs_names = self._obs_names[fil]
 
