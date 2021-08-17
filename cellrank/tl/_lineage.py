@@ -605,7 +605,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
     @property
     def _fmt(self) -> Callable:
-        if np.issubdtype(self.dtype, np.float):
+        if np.issubdtype(self.dtype, float):
             return "{:.06f}".format
         return "{}".format
 
