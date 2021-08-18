@@ -234,6 +234,8 @@ class FlowPlotter(ABC):
 
         for t1, t2 in time_points:
             flow = callback(t1, t2)
+            if normalize == "time":
+                flow /= flow.values.max()
             times.extend([t1] * len(flow))
             flows.append(flow)
 
@@ -246,10 +248,9 @@ class FlowPlotter(ABC):
                 flow.fillna(0, inplace=True)
             elif normalize == "total":
                 flow /= flow.values.max()
-            else:
-                raise NotImplementedError(
-                    f"Normalization `{normalize}` is not yet implemented."
-                )
+            elif normalize == "cluster":
+                for c in flow.columns:
+                    flow.loc[slice(None), c] /= flow.loc[slice(None), c].max()
 
         return flow
 
