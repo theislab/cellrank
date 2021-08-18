@@ -234,6 +234,8 @@ class FlowPlotter(ABC):
 
         for t1, t2 in time_points:
             flow = callback(t1, t2)
+            for c in flow.columns:
+                flow.loc[c, c] = 0
             if normalize == "time":
                 flow /= flow.values.max()
             times.extend([t1] * len(flow))
