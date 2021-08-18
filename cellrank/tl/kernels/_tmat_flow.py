@@ -92,6 +92,7 @@ class FlowPlotter(ABC):
         clusters: Optional[Sequence[Any]] = None,
         time_points: Optional[Sequence[Numeric_t]] = None,
         all_clusters: bool = False,
+        normalize: str = "out",
     ) -> "FlowPlotter":
         """
         Prepare itself for plotting by computing flow and contingency matrix.
@@ -153,7 +154,9 @@ class FlowPlotter(ABC):
         )
         self._cluster = cluster
         self._cmat = self.compute_contingency_matrix()
-        self._flow = self.compute_flow(time_points, None if all_clusters else cluster)
+        self._flow = self.compute_flow(
+            time_points, None if all_clusters else cluster, normalize=normalize
+        )
 
         return self
 
@@ -161,6 +164,7 @@ class FlowPlotter(ABC):
         self,
         time_points: Sequence[Tuple[Numeric_t, Numeric_t]],
         cluster: Optional[str] = None,
+        normalize: str = "out",
     ) -> pd.DataFrame:
         """
         Compute outgoing flow.
@@ -174,7 +178,7 @@ class FlowPlotter(ABC):
 
         Returns
         -------
-        Dataframe of shape ``(n_time_points, n_clusters)`` if ``cluster!=None`` or
+        Dataframe of shape ``(n_time_points, n_clusters)`` if ``cluster != None`` or
         a dataframe of shape ``(n_time_points * n_clusters, n_clusters)`` otherwise.
         The dataframe's index is a multi-index and the 1st level corresponds to time, the 2nd level to source clusters.
         """
@@ -235,9 +239,17 @@ class FlowPlotter(ABC):
 
         flow = pd.concat(flows)
         flow.set_index([times, flow.index], inplace=True)
+        self._normalize = normalize
         if callback is not coarsegrain_helper:
-            flow /= flow.sum(1).values[:, None]
-            flow.fillna(0, inplace=True)
+            if normalize == "out":
+                flow /= flow.sum(1).values[:, None]
+                flow.fillna(0, inplace=True)
+            elif normalize == "total":
+                flow /= flow.values.max()
+            else:
+                raise NotImplementedError(
+                    f"Normalization `{normalize}` is not yet implemented."
+                )
 
         return flow
 

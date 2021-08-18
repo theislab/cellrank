@@ -590,6 +590,7 @@ class KernelExpression(Pickleable, ABC):
         cluster: str,
         cluster_key: str,
         time_key: str,
+        normalize: str = "out",
         clusters: Optional[Sequence[Any]] = None,
         time_points: Optional[Sequence[Union[int, float]]] = None,
         min_flow: float = 0,
@@ -639,7 +640,9 @@ class KernelExpression(Pickleable, ABC):
         """  # noqa: E501
 
         fp = MultiFlowPlotter(self.adata, self.transition_matrix, cluster_key, time_key)
-        fp = fp.prepare(cluster, clusters, time_points, all_clusters=True)
+        fp = fp.prepare(
+            cluster, clusters, time_points, all_clusters=True, normalize=normalize
+        )
 
         ax = fp.plot(
             min_flow=min_flow,
