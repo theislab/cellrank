@@ -14,6 +14,9 @@ import pandas as pd
 from scipy.sparse import spmatrix
 from pandas.core.dtypes.common import is_categorical_dtype
 
+from matplotlib.cm import get_cmap
+from matplotlib.colors import to_hex
+
 
 class TestOTKernel:
     def test_no_connectivities(self, adata_large: AnnData):
@@ -104,6 +107,18 @@ class TestWOTKernel:
 
         with pytest.raises(AssertionError):
             np.testing.assert_array_equal(orig_time, inverted_time)
+
+    @pytest.mark.parametrize("cmap", ["inferno", "viridis"])
+    def test_update_colors(self, adata_large: AnnData, cmap: str):
+        ckey = "age(days)_colors"
+        _ = cre.kernels.WOTKernel(adata_large, time_key="age(days)", cmap=cmap)
+
+        colors = adata_large.uns[ckey]
+        cmap = get_cmap(cmap)
+
+        assert isinstance(colors, np.ndarray)
+        assert colors.shape == (2,)
+        np.testing.assert_array_equal(colors, [to_hex(cmap(0)), to_hex(cmap(cmap.N))])
 
     @pytest.mark.parametrize("cmat", [None, "Ms", "X_pca", "good_shape", "bad_shape"])
     def test_cost_matrices(self, adata_large: AnnData, cmat: str):
