@@ -3,6 +3,7 @@ from abc import ABC
 from copy import copy
 from types import MappingProxyType
 from typing import Any, Dict, Tuple, Mapping, Optional
+from contextlib import contextmanager
 
 import scanpy as sc
 from cellrank.ul._docs import d
@@ -69,7 +70,6 @@ class ExperimentalTimeKernel(Kernel, ABC):
         cluster: str,
         cluster_key: str,
         time_key: Optional[str] = None,
-        *args: Any,
         **kwargs: Any,
     ) -> None:
         """
@@ -85,7 +85,7 @@ class ExperimentalTimeKernel(Kernel, ABC):
         """  # noqa: D400
         if time_key is None:
             time_key = self._time_key
-        return super().plot_single_flow(cluster, cluster_key, time_key, *args, **kwargs)
+        return super().plot_single_flow(cluster, cluster_key, time_key, **kwargs)
 
     @d.dedent
     def plot_multi_flow(
@@ -93,7 +93,6 @@ class ExperimentalTimeKernel(Kernel, ABC):
         cluster: str,
         cluster_key: str,
         time_key: Optional[str] = None,
-        *args: Any,
         **kwargs: Any,
     ) -> None:
         """
@@ -109,7 +108,7 @@ class ExperimentalTimeKernel(Kernel, ABC):
         """  # noqa: D400
         if time_key is None:
             time_key = self._time_key
-        return super().plot_multi_flow(cluster, cluster_key, time_key, *args, **kwargs)
+        return super().plot_multi_flow(cluster, cluster_key, time_key, **kwargs)
 
     @property
     def experimental_time(self) -> pd.Series:
@@ -208,6 +207,80 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         )
 
         return tmp
+
+    @contextmanager
+    def _tmap_as_tmat(self):
+        if self.transport_maps is None:
+            raise RuntimeError(
+                "Compute transport maps first as `.compute_transition_matrix()`."
+            )
+
+        tmat = self._transition_matrix
+        try:
+            self._transition_matrix = self._restich_tmaps(
+                self.transport_maps, normalize=False
+            ).X
+            yield
+        finally:
+            self._transition_matrix = tmat
+
+    @d.dedent
+    def plot_single_flow(
+        self,
+        cluster: str,
+        cluster_key: str,
+        time_key: Optional[str] = None,
+        use_transport_maps: bool = True,
+        **kwargs: Any,
+    ) -> None:
+        """
+        %(plot_single_flow.full_desc)s
+
+        Parameters
+        ----------
+        %(plot_single_flow.parameters)s
+
+        Returns
+        -------
+        %(plot_single_flow.returns)s
+        """  # noqa: D400
+        if use_transport_maps:
+            with self._tmap_as_tmat():
+                return super().plot_single_flow(
+                    cluster, cluster_key, time_key=time_key, **kwargs
+                )
+        return super().plot_single_flow(
+            cluster, cluster_key, time_key=time_key, **kwargs
+        )
+
+    @d.dedent
+    def plot_multi_flow(
+        self,
+        cluster: str,
+        cluster_key: str,
+        time_key: Optional[str] = None,
+        use_transport_maps: bool = True,
+        **kwargs: Any,
+    ) -> None:
+        """
+        %(plot_single_flow.full_desc)s
+
+        Parameters
+        ----------
+        %(plot_single_flow.parameters)s
+
+        Returns
+        -------
+        %(plot_single_flow.returns)s
+        """  # noqa: D400
+        if use_transport_maps:
+            with self._tmap_as_tmat():
+                return super().plot_multi_flow(
+                    cluster, cluster_key, time_key=time_key, **kwargs
+                )
+        return super().plot_multi_flow(
+            cluster, cluster_key, time_key=time_key, **kwargs
+        )
 
     @property
     def transport_maps(self) -> Optional[Dict[Tuple[float, float], AnnData]]:
