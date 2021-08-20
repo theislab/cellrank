@@ -17,7 +17,7 @@ jobs:
             with:
                 python-version: 3.8
 
-        -   name: Get the tag
+        -   name: Extract the tag
             id: vars
             run: |
                 echo ::set-output name=tag::${GITHUB_REF#refs/*/}
@@ -59,14 +59,9 @@ jobs:
                 skip_dirty_check: false
                 tagging_message: ${{ steps.vars.output.tag }}
 
-        -   name: Merge into master
-            uses: everlytic/branch-merge@1.1.2
+        -   name: Invoke test workflow
+            uses: benc-uk/workflow-dispatch@v1
             with:
-                target_branch: master
-                commit_message_template: "[auto][ci skip] Merge branch '{source_ref}' into {target_branch}"
-
-        -   name: Merge into dev
-            uses: everlytic/branch-merge@1.1.2
-            with:
-                target_branch: dev
-                commit_message_template: "[auto][ci skip] Merge branch '{source_ref}' into {target_branch}"
+                workflow: Test
+                token: ${{ secrets.RELEASE_DISPATCH_TOKEN }}
+                inputs: '{ "reason": "release" }'

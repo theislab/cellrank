@@ -7,10 +7,12 @@ on:
         branches: [master, dev]
     pull_request:
         branches: [feature/*, fix/*]
-    workflow_run:
-        workflows: [Release]
-        branches: [release/v*]
-        types: [completed]
+    workflow_dispatch:
+        inputs:
+            reason:
+                description: Reason for the workflow dispatch.
+                required: true
+                default: release
 
 jobs:
     lint:
@@ -99,18 +101,30 @@ jobs:
             env:
                 CODECOV_NAME: ${{ matrix.os }}-${{ matrix.python }}-{{ matrix.use_slepc }}
             run: |
-                codecov --no-color --required --flags unittests
+                codecov --no-color --required --flags unittestsggG
 
-    regenerate:
-        if: contains(['push', 'schedule', 'workflow_run'], github.event_name)
+    regenerate-notebooks:
+        if: contains(['push', 'schedule', 'workflow_dispatch'], github.event_name)
         needs: [lint, test]
         runs-on: ubuntu-latest
         steps:
-            # TODO(michalk8): version also cellrank_notebooks? (master/dev should suffice)
-        -   name: Request tutorials rebuild
+            # TODO(michalk8): version (master/dev) also cellrank_notebooks?
+        -   name: Request notebooks regeneration
             uses: peter-evans/repository-dispatch@v1
             with:
                 token: ${{ secrets.ACCESS_TOKEN }}
                 repository: theislab/cellrank_notebooks
                 event-type: rebuild
                 client-payload: '{"ref": "${{ github.ref }}", "sha": "${{ github.sha }}"}'
+
+    release:
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.reason == 'release' }}
+        needs: [lint, test]
+        runs-on: ubuntu-latest
+        steps:
+        -   name: Invoke deployment workflow
+            uses: benc-uk/workflow-dispatch@v1
+            with:
+                workflow: Deployment
+                token: ${{ secrets.RELEASE_DISPATCH_TOKEN }}
+                inputs: '{ "reason": "release" }'

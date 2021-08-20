@@ -4,14 +4,16 @@ on:
     push:
         branches: [master]
         tags: [v*]
-    workflow_run:
-        workflows: [Test]
-        branches: [release/v*]
-        types: [completed]
+    workflow_dispatch:
+        inputs:
+            reason:
+                description: Reason for the workflow dispatch.
+                required: true
+                default: release
 
 jobs:
     deploy:
-        if: ${{ (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags')) }}
+        if: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.reason == 'release') || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags')) }}
         runs-on: ubuntu-latest
         steps:
         -   uses: actions/checkout@v2
@@ -20,7 +22,7 @@ jobs:
             with:
                 python-version: 3.8
 
-        -   name: Install dependencies
+        -   name: Install pip dependencies
             run: |
                 python -m pip install --upgrade pip
                 pip install build
@@ -29,10 +31,28 @@ jobs:
             run: |
                 python -m build --sdist --wheel --outdir dist/
 
-        -   name: Publish package on PyPI
+        -   name: Publish CellRank on PyPI
             uses: pypa/gh-action-pypi-publish@master
             with:
                 user: __token__
                 password: ${{ secrets.PYPI_TOKEN }}
                 skip_existing: true
                 verbose: true
+
+    sync-branches:
+        if: github.event_name == 'workflow_dispatch'
+        needs: deploy
+        runs-on: ubuntu-latest
+        steps:
+        -   uses: actions/checkout@v2
+        -   name: Merge into master
+            uses: everlytic/branch-merge@1.1.2
+            with:
+                target_branch: master
+                commit_message_template: "[auto][ci skip] Merge branch '{source_ref}' into {target_branch}"
+
+        -   name: Merge into dev
+            uses: everlytic/branch-merge@1.1.2
+            with:
+                target_branch: dev
+                commit_message_template: "[auto][ci skip] Merge branch '{source_ref}' into {target_branch}"
