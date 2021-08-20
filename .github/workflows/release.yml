@@ -63,10 +63,10 @@ jobs:
             uses: everlytic/branch-merge@1.1.2
             with:
                 target_branch: master
-                commit_message_template: '[auto][ci skip] Merge {source_ref} -> {target_branch}'
+                commit_message_template: "[auto][ci skip] Merge branch '{source_ref}' into {target_branch}"
 
         -   name: Merge into dev
             uses: everlytic/branch-merge@1.1.2
             with:
                 target_branch: dev
-                commit_message_template: '[auto][ci skip] Merge {source_ref} -> {target_branch}'
+                commit_message_template: "[auto][ci skip] Merge branch '{source_ref}' into {target_branch}"
