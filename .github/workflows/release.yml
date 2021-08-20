@@ -20,6 +20,13 @@ jobs:
             run: |
                 echo ::set-output name=tag::${GITHUB_REF##*/}
 
+        -   name: Check tag validity
+            env:
+                VERSION: ${{ steps.vars.output.tag }}
+            run: |
+                tag=$(grep "^v[[:digit:]]\.[[:digit:]]\.[[:digit:]]$" <<< "$VERSION")
+                [[ -z "$tag" ]] && echo "Invalid version: '$VERSION'" && exit 42
+
         -   name: Install pip dependencies
             run: |
                 python -m pip install --upgrade pip
