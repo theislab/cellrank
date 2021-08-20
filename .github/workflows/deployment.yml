@@ -4,16 +4,20 @@ on:
     push:
         branches: [master]
         tags: [v*]
+    workflow_run:
+        workflows: [Test]
+        branches: [release/v*]
+        types: [completed]
 
 jobs:
     deploy:
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
-        needs: [lint, test]
+        if: ${{ (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags')) }}
         runs-on: ubuntu-latest
         steps:
         -   uses: actions/checkout@v2
             with:
                 fetch-depth: 0
+
         -   name: Set up Python 3.8
             uses: actions/setup-python@v2
             with:
@@ -22,8 +26,7 @@ jobs:
         -   name: Install dependencies
             run: |
                 python -m pip install --upgrade pip
-                pip install build towncrier rstcheck
-                pip install -e'.'
+                pip install build
 
         -   name: Build a binary wheel and a source tarball
             run: |
