@@ -104,7 +104,7 @@ jobs:
                 codecov --no-color --required --flags unittestsggG
 
     regenerate-notebooks:
-        if: contains(['push', 'schedule', 'workflow_dispatch'], github.event_name)
+        if: ${{ contains(['push', 'schedule', 'workflow_dispatch'], github.event_name) }}
         needs: [lint, test]
         runs-on: ubuntu-latest
         steps:

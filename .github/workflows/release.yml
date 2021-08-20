@@ -24,8 +24,7 @@ jobs:
             env:
                 VERSION: ${{ steps.vars.output.tag }}
             run: |
-                tag=$(grep "^v[[:digit:]]\.[[:digit:]]\.[[:digit:]]$" <<< "$VERSION")
-                [[ -z "$tag" ]] && echo "Invalid version: '$VERSION'" && exit 42
+                grep "^v[[:digit:]]\.[[:digit:]]\.[[:digit:]]$" <<< "$VERSION" || (echo "Invalid version: '$VERSION'" && exit 42)
 
         -   name: Install pip dependencies
             run: |
