@@ -11,7 +11,6 @@ jobs:
         -   uses: actions/checkout@v2
             with:
                 token: ${{ secrets.TOWNCRIER_TOKEN }}
-                fetch-depth: 0
 
         -   name: Set up Python 3.8
             uses: actions/setup-python@v2
@@ -26,7 +25,7 @@ jobs:
         -   name: Install dependencies
             run: |
                 python -m pip install --upgrade pip
-                pip install build towncrier rstcheck bump2version
+                pip install towncrier rstcheck bump2version
                 pip install -e'.'
 
         -   name: Generate release notes
@@ -45,10 +44,11 @@ jobs:
                 skip_dirty_check: false
 
         -   name: Bump the version
+            # the part (patch) doesn't matter when supplying --new-version
             env:
                 VERSION: ${{ steps.vars.output.tag }}
             run: |
-                bump2version minor --no-commit --no-tag --new-version "${VERSION/v/}"
+                bump2version patch --no-commit --no-tag --new-version "${VERSION/v/}"
 
         -   name: Commit version bump
             uses: stefanzweifel/git-auto-commit-action@v4
@@ -58,3 +58,15 @@ jobs:
                 commit_user_name: CI
                 skip_dirty_check: false
                 tagging_message: ${{ steps.vars.output.tag }}
+
+        -   name: Merge into master
+            uses: everlytic/branch-merge@1.1.2
+            with:
+                target_branch: master
+                commit_message_template: '[auto][ci skip] Merge {source_ref} -> {target_branch}'
+
+        -   name: Merge into dev
+            uses: everlytic/branch-merge@1.1.2
+            with:
+                target_branch: dev
+                commit_message_template: '[auto][ci skip] Merge {source_ref} -> {target_branch}'

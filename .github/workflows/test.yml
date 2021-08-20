@@ -4,20 +4,19 @@ on:
     schedule:
     -   cron: 00 00 * * 1  # every Monday at 00:00
     push:
-        branches: [master, dev, feature/*, fix/*]
+        branches: [master, dev]
     pull_request:
-        branches: [master, dev, feature/*, fix/*]
+        branches: [feature/*, fix/*]
     workflow_run:
         workflows: [Release]
         branches: [release/v*]
+        types: [completed]
 
 jobs:
     lint:
         runs-on: ubuntu-latest
         steps:
         -   uses: actions/checkout@v2
-            with:
-                fetch-depth: 0
         -   name: Set up Python 3.8
             uses: actions/setup-python@v2
             with:
@@ -55,8 +54,6 @@ jobs:
 
         steps:
         -   uses: actions/checkout@v2
-            with:
-                fetch-depth: 0
         -   name: Set up Python ${{ matrix.python }}
             uses: actions/setup-python@v2
             with:
@@ -72,6 +69,7 @@ jobs:
             id: pip-cache
             run: |
                 echo "::set-output name=dir::$(pip cache dir)"
+
         -   name: Restore pip cache
             uses: actions/cache@v2
             with:
@@ -104,12 +102,12 @@ jobs:
                 codecov --no-color --required --flags unittests
 
     regenerate:
-        # TODO(michalk8): modify so that notebooks regenerate with the appropriate ref
-        if: github.event_name == 'push'
+        if: contains(['push', 'schedule', 'workflow_run'], github.event_name)
         needs: [lint, test]
         runs-on: ubuntu-latest
         steps:
-        -   name: Rebuild tutorials
+            # TODO(michalk8): version also cellrank_notebooks? (master/dev should suffice)
+        -   name: Request tutorials rebuild
             uses: peter-evans/repository-dispatch@v1
             with:
                 token: ${{ secrets.ACCESS_TOKEN }}
