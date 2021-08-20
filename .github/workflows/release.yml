@@ -4,7 +4,7 @@ on: create
 
 jobs:
     release:
-        if: contains(github.ref, "refs/heads/release/v")
+        if: ${{ contains(github.ref, 'refs/heads/release/v') }}
         runs-on: ubuntu-latest
         steps:
         -   uses: actions/checkout@v2
