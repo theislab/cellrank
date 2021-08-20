@@ -114,6 +114,20 @@ class TestModel:
             np.r_[xtest[0], xtest[-1]], np.r_[np.min(xall), np.max(xall)]
         )
 
+    def test_prepare_resets_fields(self, adata_cflare: AnnData):
+        g = GAM(adata_cflare)
+
+        _ = g.prepare(adata_cflare.var_names[0], "0").fit()
+        _ = g.predict()
+        _ = g.confidence_interval()
+
+        _ = g.prepare(adata_cflare.var_names[1], "0").fit()
+        assert isinstance(g.x_test, np.ndarray)
+        assert g.y_test is None
+        assert g.x_hat is None
+        assert g.y_hat is None
+        assert g.conf_int is None
+
 
 class TestUtils:
     def test_extract_data_wrong_type(self):
