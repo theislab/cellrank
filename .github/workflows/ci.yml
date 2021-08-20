@@ -103,7 +103,7 @@ jobs:
 
     regenerate:
         # TODO(michalk8): modify so that notebooks regenerate with the appropriate ref
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/head')
+        if: github.event_name == 'push'
         needs: [lint, test]
         runs-on: ubuntu-latest
         steps:
