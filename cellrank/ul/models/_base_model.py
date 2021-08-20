@@ -547,6 +547,10 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
             self._reshape_and_retype(w).squeeze(-1),
         )
         self._x_test = self._reshape_and_retype(x_test)
+        self._y_test = None
+        self._x_hat = None
+        self._y_hat = None
+        self._conf_int = None
 
         if self.x.shape[0] == 0:
             raise RuntimeError("Unable to proceed, no values to fit.")
