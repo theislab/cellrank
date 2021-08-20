@@ -20,9 +20,9 @@ jobs:
         -   name: Extract the tag
             id: vars
             run: |
-                echo ::set-output name=tag::${GITHUB_REF#refs/*/}
+                echo ::set-output name=tag::${GITHUB_REF##*/}
 
-        -   name: Install dependencies
+        -   name: Install pip dependencies
             run: |
                 python -m pip install --upgrade pip
                 pip install towncrier rstcheck bump2version
@@ -48,7 +48,7 @@ jobs:
             env:
                 VERSION: ${{ steps.vars.output.tag }}
             run: |
-                bump2version patch --no-commit --no-tag --new-version "${VERSION/v/}"
+                bump2version patch --no-commit --no-tag --verbose --new-version "${VERSION/v/}"
 
         -   name: Commit version bump
             uses: stefanzweifel/git-auto-commit-action@v4
