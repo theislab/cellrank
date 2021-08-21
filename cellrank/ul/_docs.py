@@ -160,6 +160,10 @@ Can be specified as:
           `[min, max]` interval from which to select the indices.
         - :class:`typing.Sequence`: sequence of cell ids in :attr:`anndata.AnnData.obs_names`.
 """
+_gene_symbols = """\
+gene_symbols
+    Key in :attr:`anndata.AnnData.var` to use instead of :attr:`anndata.AnnData.var_names`.
+"""
 
 
 def inject_docs(**kwargs):  # noqa
@@ -214,4 +218,5 @@ d = DocstringProcessor(
         *([" Only used when `threshold_scheme='soft'`."] * 3)
     ),
     rw_ixs=_rw_ixs,
+    gene_symbols=_gene_symbols,
 )

@@ -280,8 +280,8 @@ def _densify_squeeze(x: Union[spmatrix, np.ndarray], dtype=np.float32) -> np.nda
 def _genesymbols(
     adata: AnnData,
     *,
-    key: str | None = None,
-    use_raw: bool = True,
+    key: Optional[str] = None,
+    use_raw: bool = False,
     make_unique: bool = False,
 ) -> AnnData:
     """
