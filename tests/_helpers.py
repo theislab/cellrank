@@ -10,7 +10,7 @@ import scanpy as sc
 import scvelo as scv
 import cellrank as cr
 from anndata import AnnData
-from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
+from cellrank.tl.kernels import VelocityKernel, CytoTRACEKernel, ConnectivityKernel
 
 import numpy as np
 import pandas as pd
@@ -357,6 +357,9 @@ def _create_dummy_adata(n_obs: int) -> AnnData:
     adata.uns["iroot"] = 0
     sc.tl.dpt(adata)
 
+    if "velocity_graph" in adata.uns:
+        adata.obsp["velocity_graph"] = adata.uns["velocity_graph"]
+        adata.obsp["velocity_graph_neg"] = adata.uns["velocity_graph_neg"]
     adata.obsp["connectivity_variances"] = np.ones((n_obs, n_obs), dtype=np.float64)
     adata.obsp["velocity_variances"] = np.ones((n_obs, n_obs), dtype=np.float64)
 
