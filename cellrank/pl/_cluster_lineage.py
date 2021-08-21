@@ -33,6 +33,7 @@ from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
 
 
 @d.dedent
+@_genesymbols
 def cluster_lineage(
     adata: AnnData,
     model: _input_model_type,
@@ -44,7 +45,6 @@ def cluster_lineage(
     n_points: int = 200,
     time_key: str = "latent_time",
     covariate_key: Optional[Union[str, Sequence[str]]] = None,
-    gene_symbols: Optional[str] = None,
     ratio: float = 0.05,
     cmap: Optional[str] = "viridis",
     norm: bool = True,
@@ -180,127 +180,126 @@ def cluster_lineage(
         return ax if sharey else None
 
     use_raw = kwargs.get("use_raw", False)
-    with _genesymbols(adata, key=gene_symbols, make_unique=True, use_raw=use_raw):
-        lineage_key = str(AbsProbKey.BACKWARD if backward else AbsProbKey.FORWARD)
-        if lineage_key not in adata.obsm:
-            raise KeyError(f"Lineages key `{lineage_key!r}` not found in `adata.obsm`.")
+    lineage_key = str(AbsProbKey.BACKWARD if backward else AbsProbKey.FORWARD)
+    if lineage_key not in adata.obsm:
+        raise KeyError(f"Lineages key `{lineage_key!r}` not found in `adata.obsm`.")
 
-        _ = adata.obsm[lineage_key][lineage]
+    _ = adata.obsm[lineage_key][lineage]
 
-        genes = _unique_order_preserving(genes)
-        _check_collection(adata, genes, "var_names", use_raw=use_raw)
+    genes = _unique_order_preserving(genes)
+    _check_collection(adata, genes, "var_names", use_raw=use_raw)
 
-        if key is None:
-            key = f"lineage_{lineage}_trend"
+    if key is None:
+        key = f"lineage_{lineage}_trend"
 
-        if recompute or key not in adata.uns:
-            kwargs["backward"] = backward
-            kwargs["time_key"] = time_key
-            kwargs["n_test_points"] = n_points
-            models = _create_models(model, genes, [lineage])
-            all_models, models, genes, _ = _fit_bulk(
-                models,
-                _create_callbacks(adata, callback, genes, [lineage], **kwargs),
-                genes,
-                lineage,
-                time_range,
-                return_models=True,  # always return (better error messages)
-                filter_all_failed=True,
-                parallel_kwargs={
-                    "show_progress_bar": show_progress_bar,
-                    "n_jobs": _get_n_cores(n_jobs, len(genes)),
-                    "backend": _get_backend(models, backend),
-                },
-                **kwargs,
-            )
-
-            # `n_genes, n_test_points`
-            trends = np.vstack([model[lineage].y_test for model in models.values()]).T
-
-            if norm:
-                logg.debug("Normalizing trends")
-                _ = StandardScaler(copy=False).fit_transform(trends)
-
-            mod = next(mod for tmp in all_models.values() for mod in tmp.values())
-            trends = AnnData(trends.T)
-            trends.obs_names = genes
-            trends.var["x_test"] = x_test = mod.x_test
-
-            # sanity check
-            if trends.n_obs != len(genes):
-                raise RuntimeError(
-                    f"Expected to find `{len(genes)}` genes, found `{trends.n_obs}`."
-                )
-            if trends.n_vars != n_points:
-                raise RuntimeError(
-                    f"Expected to find `{n_points}` points, found `{trends.n_vars}`."
-                )
-
-            random_state = np.random.mtrand.RandomState(random_state).randint(2 ** 16)
-
-            pca_kwargs = dict(pca_kwargs)
-            pca_kwargs.setdefault("n_comps", min(50, n_points, len(genes)) - 1)
-            pca_kwargs.setdefault("random_state", random_state)
-            sc.pp.pca(trends, **pca_kwargs)
-
-            neighbors_kwargs = dict(neighbors_kwargs)
-            neighbors_kwargs.setdefault("random_state", random_state)
-            sc.pp.neighbors(trends, **neighbors_kwargs)
-
-            clustering_kwargs = dict(clustering_kwargs)
-            clustering_kwargs["key_added"] = "clusters"
-            clustering_kwargs.setdefault("random_state", random_state)
-            sc.tl.leiden(trends, **clustering_kwargs)
-
-            logg.info(f"Saving data to `adata.uns[{key!r}]`")
-            adata.uns[key] = trends
-        else:
-            all_models = None
-            logg.info(f"Loading data from `adata.uns[{key!r}]`")
-            trends = adata.uns[key]
-            x_test = trends.var["x_test"]
-
-        if "clusters" not in trends.obs:
-            raise KeyError("Unable to find the clustering in `trends.obs['clusters']`.")
-
-        if clusters is None:
-            clusters = trends.obs["clusters"].cat.categories
-        for c in clusters:
-            if c not in trends.obs["clusters"].cat.categories:
-                raise ValueError(
-                    f"Invalid cluster name `{c!r}`. "
-                    f"Valid options are `{list(trends.obs['clusters'].cat.categories)}`."
-                )
-
-        nrows = int(np.ceil(len(clusters) / ncols))
-        fig = plt.figure(
-            dpi=dpi,
-            figsize=(ncols * 10, nrows * 10) if figsize is None else figsize,
-            tight_layout=True,
+    if recompute or key not in adata.uns:
+        kwargs["backward"] = backward
+        kwargs["time_key"] = time_key
+        kwargs["n_test_points"] = n_points
+        models = _create_models(model, genes, [lineage])
+        all_models, models, genes, _ = _fit_bulk(
+            models,
+            _create_callbacks(adata, callback, genes, [lineage], **kwargs),
+            genes,
+            lineage,
+            time_range,
+            return_models=True,  # always return (better error messages)
+            filter_all_failed=True,
+            parallel_kwargs={
+                "show_progress_bar": show_progress_bar,
+                "n_jobs": _get_n_cores(n_jobs, len(genes)),
+                "backend": _get_backend(models, backend),
+            },
+            **kwargs,
         )
 
-        if covariate_key is None:
-            covariate_colors, row_delta = None, 1
-        else:
-            tmin, tmax = np.min(x_test), np.max(x_test)
-            covariate_colors = _get_sorted_colors(
-                adata,
-                covariate_key,
-                time_key,
-                tmin=tmin,
-                tmax=tmax,
+        # `n_genes, n_test_points`
+        trends = np.vstack([model[lineage].y_test for model in models.values()]).T
+
+        if norm:
+            logg.debug("Normalizing trends")
+            _ = StandardScaler(copy=False).fit_transform(trends)
+
+        mod = next(mod for tmp in all_models.values() for mod in tmp.values())
+        trends = AnnData(trends.T)
+        trends.obs_names = genes
+        trends.var["x_test"] = x_test = mod.x_test
+
+        # sanity check
+        if trends.n_obs != len(genes):
+            raise RuntimeError(
+                f"Expected to find `{len(genes)}` genes, found `{trends.n_obs}`."
             )
-            row_delta = len(covariate_colors) + 1
-        gs = GridSpec(nrows=nrows * row_delta, ncols=ncols, figure=fig)
+        if trends.n_vars != n_points:
+            raise RuntimeError(
+                f"Expected to find `{n_points}` points, found `{trends.n_vars}`."
+            )
 
-        row, sharey_ax = 0, None
-        for i, c in enumerate(clusters):
-            if i == ncols:
-                row += row_delta
-            sharey_ax = plot_cluster(row, i % ncols, c, sharey_ax=sharey_ax)
+        random_state = np.random.mtrand.RandomState(random_state).randint(2 ** 16)
 
-        if save is not None:
-            save_fig(fig, save)
+        pca_kwargs = dict(pca_kwargs)
+        pca_kwargs.setdefault("n_comps", min(50, n_points, len(genes)) - 1)
+        pca_kwargs.setdefault("random_state", random_state)
+        sc.pp.pca(trends, **pca_kwargs)
 
-        if return_models:
-            return all_models
+        neighbors_kwargs = dict(neighbors_kwargs)
+        neighbors_kwargs.setdefault("random_state", random_state)
+        sc.pp.neighbors(trends, **neighbors_kwargs)
+
+        clustering_kwargs = dict(clustering_kwargs)
+        clustering_kwargs["key_added"] = "clusters"
+        clustering_kwargs.setdefault("random_state", random_state)
+        sc.tl.leiden(trends, **clustering_kwargs)
+
+        logg.info(f"Saving data to `adata.uns[{key!r}]`")
+        adata.uns[key] = trends
+    else:
+        all_models = None
+        logg.info(f"Loading data from `adata.uns[{key!r}]`")
+        trends = adata.uns[key]
+        x_test = trends.var["x_test"]
+
+    if "clusters" not in trends.obs:
+        raise KeyError("Unable to find the clustering in `trends.obs['clusters']`.")
+
+    if clusters is None:
+        clusters = trends.obs["clusters"].cat.categories
+    for c in clusters:
+        if c not in trends.obs["clusters"].cat.categories:
+            raise ValueError(
+                f"Invalid cluster name `{c!r}`. "
+                f"Valid options are `{list(trends.obs['clusters'].cat.categories)}`."
+            )
+
+    nrows = int(np.ceil(len(clusters) / ncols))
+    fig = plt.figure(
+        dpi=dpi,
+        figsize=(ncols * 10, nrows * 10) if figsize is None else figsize,
+        tight_layout=True,
+    )
+
+    if covariate_key is None:
+        covariate_colors, row_delta = None, 1
+    else:
+        tmin, tmax = np.min(x_test), np.max(x_test)
+        covariate_colors = _get_sorted_colors(
+            adata,
+            covariate_key,
+            time_key,
+            tmin=tmin,
+            tmax=tmax,
+        )
+        row_delta = len(covariate_colors) + 1
+    gs = GridSpec(nrows=nrows * row_delta, ncols=ncols, figure=fig)
+
+    row, sharey_ax = 0, None
+    for i, c in enumerate(clusters):
+        if i == ncols:
+            row += row_delta
+        sharey_ax = plot_cluster(row, i % ncols, c, sharey_ax=sharey_ax)
+
+    if save is not None:
+        save_fig(fig, save)
+
+    if return_models:
+        return all_models

@@ -162,8 +162,7 @@ Can be specified as:
 """
 _gene_symbols = """\
 gene_symbols
-    Key in :attr:`anndata.AnnData.var` to use instead of :attr:`anndata.AnnData.var_names`.
-"""
+    Key in :attr:`anndata.AnnData.var` to use instead of :attr:`anndata.AnnData.var_names`."""
 
 
 def inject_docs(**kwargs):  # noqa

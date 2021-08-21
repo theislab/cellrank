@@ -1,9 +1,10 @@
 """Gene trend module."""
-from typing import List, Tuple, Union, Mapping, TypeVar, Optional, Sequence
+from typing import List, Tuple, Union, Mapping, Optional, Sequence
 
 from types import MappingProxyType
 from pathlib import Path
 
+from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.pl._utils import (
@@ -18,7 +19,7 @@ from cellrank.pl._utils import (
     _return_model_type,
 )
 from cellrank.tl._utils import save_fig, _unique_order_preserving
-from cellrank.ul._utils import _get_n_cores, _check_collection
+from cellrank.ul._utils import _genesymbols, _get_n_cores, _check_collection
 from cellrank.tl._constants import _DEFAULT_BACKEND, AbsProbKey
 
 import numpy as np
@@ -28,10 +29,9 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib import cm
 
-AnnData = TypeVar("AnnData")
-
 
 @d.dedent
+@_genesymbols
 def gene_trends(
     adata: AnnData,
     model: _input_model_type,
@@ -40,8 +40,8 @@ def gene_trends(
     backward: bool = False,
     data_key: str = "X",
     time_key: str = "latent_time",
-    transpose: bool = False,
     time_range: Optional[Union[_time_range_type, List[_time_range_type]]] = None,
+    transpose: bool = False,
     callback: _callback_type = None,
     conf_int: Union[bool, float] = True,
     same_plot: bool = False,
@@ -95,6 +95,7 @@ def gene_trends(
     %(time_range)s
 
         This can also be specified on per-lineage basis.
+    %(gene_symbols)s
     transpose
         If ``same_plot=True``, group the trends by ``lineages`` instead of ``genes``. This enforces ``hide_cells=True``.
         If ``same_plot=False``, show ``lineages`` in rows and ``genes`` in columns.
@@ -155,16 +156,16 @@ def gene_trends(
     -------
     %(plots_or_returns_models)s
     """
-
     if isinstance(genes, str):
         genes = [genes]
     genes = _unique_order_preserving(genes)
-    if data_key != "obs":
-        _check_collection(
-            adata, genes, "var_names", use_raw=kwargs.get("use_raw", False)
-        )
-    else:
-        _check_collection(adata, genes, "obs", use_raw=kwargs.get("use_raw", False))
+
+    _check_collection(
+        adata,
+        genes,
+        "obs" if data_key == "obs" else "var_names",
+        use_raw=kwargs.get("use_raw", False),
+    )
 
     ln_key = str(AbsProbKey.BACKWARD if backward else AbsProbKey.FORWARD)
     if ln_key not in adata.obsm:

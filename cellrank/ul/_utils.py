@@ -1,6 +1,7 @@
 """General utility functions module."""
-from typing import Any, Dict, List, Tuple, Union, Iterable, Optional
+from typing import Any, Dict, List, Tuple, Union, Callable, Iterable, Optional
 
+import wrapt
 import pickle
 from types import MappingProxyType
 from pathlib import Path
@@ -277,7 +278,7 @@ def _densify_squeeze(x: Union[spmatrix, np.ndarray], dtype=np.float32) -> np.nda
 
 @contextmanager
 @d.dedent
-def _genesymbols(
+def _genesymbols_manager(
     adata: AnnData,
     *,
     key: Optional[str] = None,
@@ -333,3 +334,16 @@ def _genesymbols(
             adata.var_names = var_names
             if use_raw:
                 adata_orig.raw = adata
+
+
+@wrapt.decorator
+def _genesymbols(
+    wrapped: Callable[..., Any], instance: Any, args: Any, kwargs: Any
+) -> Any:
+    with _genesymbols_manager(
+        args[0],
+        key=kwargs.pop("gene_symbols", None),
+        make_unique=True,
+        use_raw=kwargs.get("use_raw", False),
+    ):
+        return wrapped(*args, **kwargs)
