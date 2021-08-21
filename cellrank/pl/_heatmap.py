@@ -240,8 +240,8 @@ def heatmap(
         return cax
 
     @valuedispatch
-    def _plot_heatmap(_mode: HeatmapMode) -> Fig:
-        pass
+    def _plot_heatmap(mode: HeatmapMode) -> Fig:
+        raise NotImplementedError(mode.value)
 
     @_plot_heatmap.register(HeatmapMode.GENES)
     def _() -> Tuple[Fig, None]:
