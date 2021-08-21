@@ -78,11 +78,26 @@ class RandomKeys:
     def __init__(self, adata: AnnData, n: Optional[int] = None, where: str = "obs"):
         self._adata = adata
         self._where = where
-        self._n = n
+        self._n = n or 1
         self._keys = []
 
+    def _generate_random_keys(self):
+        def generator():
+            return f"CELLRANK_RANDOM_COL_{np.random.randint(2 ** 16)}"
+
+        where = getattr(self._adata, self._where)
+        names, seen = [], set(where.keys())
+
+        while len(names) != self._n:
+            name = generator()
+            if name not in seen:
+                seen.add(name)
+                names.append(name)
+
+        return names
+
     def __enter__(self):
-        self._keys = _generate_random_keys(self._adata, self._where, self._n)
+        self._keys = self._generate_random_keys()
         return self._keys
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -1072,25 +1087,6 @@ def _unique_order_preserving(iterable: Iterable[Hashable]) -> List[Hashable]:
     """Remove items from an iterable while preserving the order."""
     seen = set()
     return [i for i in iterable if i not in seen and not seen.add(i)]
-
-
-def _generate_random_keys(adata: AnnData, where: str, n: Optional[int] = None):
-    def generator():
-        return f"CELLRANK_RANDOM_COL_{np.random.randint(2**16)}"
-
-    if n is None:
-        n = 1
-
-    where = getattr(adata, where)
-    names, seen = [], set(where.keys())
-
-    while len(names) != n:
-        name = generator()
-        if name not in seen:
-            seen.add(name)
-            names.append(name)
-
-    return names
 
 
 def _convert_lineage_name(names: str) -> Tuple[str, ...]:

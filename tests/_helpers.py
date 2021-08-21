@@ -10,7 +10,7 @@ import scanpy as sc
 import scvelo as scv
 import cellrank as cr
 from anndata import AnnData
-from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
+from cellrank.tl.kernels import VelocityKernel, CytoTRACEKernel, ConnectivityKernel
 
 import numpy as np
 import pandas as pd
@@ -301,6 +301,8 @@ def assert_estimators_equal(
 
 def random_transition_matrix(n: int) -> np.ndarray:
     """
+    Create a random transition matrix.
+
     Parameters
     ----------
     n
@@ -321,10 +323,10 @@ def _create_dummy_adata(n_obs: int) -> AnnData:
     """
     Create a testing :class:`anndata.AnnData` object.
 
-    Call this function to regenerate the above objects.
+    Call this function to regenerate the ground truth objects.
 
-    Params
-    ------
+    Parameters
+    ----------
     n_obs
         Number of cells.
 
@@ -336,8 +338,16 @@ def _create_dummy_adata(n_obs: int) -> AnnData:
 
     np.random.seed(42)
     adata = scv.datasets.toy_data(n_obs=n_obs)
+    adata.obs_names_make_unique()
+    adata.var_names_make_unique()
+
     scv.pp.filter_and_normalize(adata, min_shared_counts=20, n_top_genes=1000)
-    adata.raw = adata[:, 42 : 42 + 50].copy()
+    adata.var["symbol"] = adata.var_names.str.cat(["gs"] * adata.n_vars, sep=":")
+
+    raw = adata[:, 42 : 42 + 50].copy()
+    raw.var["symbol"] = raw.var_names.str.cat(["gs:raw"] * raw.n_vars, sep=":")
+    adata.raw = raw
+
     scv.pp.moments(adata, n_pcs=30, n_neighbors=30)
     scv.tl.recover_dynamics(adata)
     scv.tl.velocity(adata, mode="dynamical")
@@ -347,6 +357,9 @@ def _create_dummy_adata(n_obs: int) -> AnnData:
     adata.uns["iroot"] = 0
     sc.tl.dpt(adata)
 
+    if "velocity_graph" in adata.uns:
+        adata.obsp["velocity_graph"] = adata.uns["velocity_graph"]
+        adata.obsp["velocity_graph_neg"] = adata.uns["velocity_graph_neg"]
     adata.obsp["connectivity_variances"] = np.ones((n_obs, n_obs), dtype=np.float64)
     adata.obsp["velocity_variances"] = np.ones((n_obs, n_obs), dtype=np.float64)
 
