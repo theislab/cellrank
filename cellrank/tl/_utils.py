@@ -78,20 +78,17 @@ class RandomKeys:
     def __init__(self, adata: AnnData, n: Optional[int] = None, where: str = "obs"):
         self._adata = adata
         self._where = where
-        self._n = n
+        self._n = n or 1
         self._keys = []
 
     def _generate_random_keys(self):
         def generator():
             return f"CELLRANK_RANDOM_COL_{np.random.randint(2 ** 16)}"
 
-        if self._n is None:
-            n = 1
-
         where = getattr(self._adata, self._where)
         names, seen = [], set(where.keys())
 
-        while len(names) != n:
+        while len(names) != self._n:
             name = generator()
             if name not in seen:
                 seen.add(name)
