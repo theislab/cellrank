@@ -114,6 +114,7 @@ def heatmap(
     %(time_range)s
 
         This can also be specified on per-lineage basis.
+    %(gene_symbols)s
     %(model_callback)s
     cluster_key
         Key(s) in ``adata.obs`` containing categorical observations to be plotted at the top of the heatmap.

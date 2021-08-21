@@ -100,7 +100,7 @@ class RandomKeys:
         return names
 
     def __enter__(self):
-        self._keys = self.__generate_random_keys()
+        self._keys = self._generate_random_keys()
         return self._keys
 
     def __exit__(self, exc_type, exc_val, exc_tb):
