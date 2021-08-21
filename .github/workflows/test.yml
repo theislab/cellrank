@@ -104,7 +104,7 @@ jobs:
                 codecov --no-color --required --flags unittestsggG
 
     regenerate-notebooks:
-        if: (github.event_name == 'push' && startsWith(github.ref, 'refs/heads') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        if: (github.event_name == 'push' && startsWith(github.ref, 'refs/heads')) || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         needs: [lint, test]
         runs-on: ubuntu-latest
         steps:
