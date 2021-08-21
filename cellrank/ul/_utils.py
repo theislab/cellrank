@@ -11,6 +11,7 @@ from multiprocessing import cpu_count
 
 from anndata import AnnData
 from cellrank import logging as logg
+from anndata.utils import make_index_unique
 from cellrank.ul._docs import d
 
 import numpy as np
@@ -278,7 +279,7 @@ def _densify_squeeze(x: Union[spmatrix, np.ndarray], dtype=np.float32) -> np.nda
 
 @contextmanager
 @d.dedent
-def _genesymbols_manager(
+def _gene_symbols_ctx(
     adata: AnnData,
     *,
     key: Optional[str] = None,
@@ -308,7 +309,7 @@ def _genesymbols_manager(
                 raise AttributeError(
                     "No `.raw` attribute found. Try specifying `use_raw=False`."
                 )
-            return key in adata.raw._adata.var
+            return key in adata.raw.var
         return key in adata.var
 
     if key is None:
@@ -320,27 +321,26 @@ def _genesymbols_manager(
     else:
         adata_orig = adata
         if use_raw:
-            adata = adata.raw._adata
+            adata = adata.raw
 
-        var_names = adata.var_names
+        var_names = adata.var_names.copy()
         try:
-            adata.var_names = adata.var[key]
-            if make_unique:
-                adata.var_names_make_unique()
-            if use_raw:
-                adata_orig.raw = adata
+            # TODO(michalk8): doesn't update varm (niche)
+            adata.var.index = (
+                make_index_unique(adata.var[key]) if make_unique else adata.var[key]
+            )
             yield adata_orig
         finally:
-            adata.var_names = var_names
-            if use_raw:
-                adata_orig.raw = adata
+            # in principle we assume the callee doesn't change the index
+            # otherwise, would need to check whether it has been changed and add an option to determine what to do
+            adata.var.index = var_names
 
 
 @wrapt.decorator
 def _genesymbols(
     wrapped: Callable[..., Any], instance: Any, args: Any, kwargs: Any
 ) -> Any:
-    with _genesymbols_manager(
+    with _gene_symbols_ctx(
         args[0],
         key=kwargs.pop("gene_symbols", None),
         make_unique=True,

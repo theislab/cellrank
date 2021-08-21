@@ -329,6 +329,7 @@ class TestClusterFates:
             cluster_key="clusters",
             mode="paga_pie",
             save=fpath,
+            dpi=DPI,
             legend_kwargs=(dict(loc="top")),
         )
 
@@ -341,6 +342,7 @@ class TestClusterFates:
             mode="paga_pie",
             basis="umap",
             save=fpath,
+            dpi=DPI,
             legend_kwargs=(dict(loc="lower")),
             legend_loc="upper",
         )
@@ -354,6 +356,7 @@ class TestClusterFates:
             mode="paga_pie",
             basis="umap",
             save=fpath,
+            dpi=DPI,
             legend_kwargs=(dict(loc=None)),
             legend_loc=None,
         )
@@ -367,6 +370,7 @@ class TestClusterFates:
             mode="paga_pie",
             basis="umap",
             save=fpath,
+            dpi=DPI,
             legend_kwargs=(dict(loc="center")),
             legend_loc=None,
         )
@@ -380,6 +384,7 @@ class TestClusterFates:
             mode="paga_pie",
             basis="umap",
             save=fpath,
+            dpi=DPI,
             legend_kwargs=(dict(loc=None)),
             legend_loc="on data",
         )
@@ -393,13 +398,10 @@ class TestClusterFates:
             mode="paga_pie",
             basis="umap",
             save=fpath,
+            dpi=DPI,
             legend_kwargs=(dict(loc="lower left out")),
             legend_loc="center right out",
         )
-
-    @compare()
-    def test_cluster_fates_genesymbols(self, adata: AnnData, fpath: str):
-        pass
 
     def test_invalid_mode(self, adata_cflare_fwd):
         adata, _ = adata_cflare_fwd
@@ -770,6 +772,21 @@ class TestClusterLineage:
             "1",
             covariate_key="latent_time",
             ratio=0.25,
+            random_state=0,
+            time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_cluster_lineage_gene_symbols(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.cluster_lineage(
+            adata,
+            model,
+            [f"{g}:gs" for g in GENES[:10]],
+            "1",
+            gene_symbols="symbol",
             random_state=0,
             time_key="latent_time",
             dpi=DPI,
@@ -1178,6 +1195,19 @@ class TestHeatmap:
             {GENES[0]: fm, "*": fm.model},
             GENES[:10],
             mode="genes",
+            time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare(dirname="heatmap_gene_symbols")
+    def test_heatmap_gene_symbols(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.heatmap(
+            adata,
+            model,
+            [f"{g}:gs" for g in GENES[:10]],
+            gene_symbols="symbol",
             time_key="latent_time",
             dpi=DPI,
             save=fpath,
@@ -2007,6 +2037,19 @@ class TestGeneTrend:
             same_plot=True,
             data_key="Ms",
             time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_trends_gene_symbols(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            [f"{g}:gs" for g in GENES[:3]],
+            gene_symbols="symbol",
+            data_key="Ms",
             dpi=DPI,
             save=fpath,
         )
