@@ -4,7 +4,7 @@ on:
     schedule:
     -   cron: 00 00 * * 1  # every Monday at 00:00
     push:
-        branches: [master, dev, feature/*, fix/*]
+        branches: [master, dev]
     pull_request:
         branches: [master, dev]
     workflow_dispatch:
@@ -101,14 +101,14 @@ jobs:
             env:
                 CODECOV_NAME: ${{ matrix.os }}-${{ matrix.python }}-{{ matrix.use_slepc }}
             run: |
-                codecov --no-color --required --flags unittestsggG
+                codecov --no-color --required --flags unittest
 
     regenerate-notebooks:
-        if: (github.event_name == 'push' && startsWith(github.ref, 'refs/heads')) || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        # TODO(michalk8): version also cellrank_notebooks?
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/dev') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         needs: [lint, test]
         runs-on: ubuntu-latest
         steps:
-            # TODO(michalk8): version (master/dev) also cellrank_notebooks?
         -   name: Request notebooks regeneration
             uses: peter-evans/repository-dispatch@v1
             with:
