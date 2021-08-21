@@ -22,7 +22,12 @@ from cellrank.pl._utils import (
     _get_categorical_colors,
 )
 from cellrank.tl._utils import save_fig, _min_max_scale, _unique_order_preserving
-from cellrank.ul._utils import _get_n_cores, valuedispatch, _check_collection
+from cellrank.ul._utils import (
+    _genesymbols,
+    _get_n_cores,
+    valuedispatch,
+    _check_collection,
+)
 from cellrank.tl._constants import _DEFAULT_BACKEND, ModeEnum, AbsProbKey
 
 import numpy as np
@@ -52,6 +57,7 @@ class HeatmapMode(ModeEnum):  # noqa
 
 @d.dedent
 @inject_docs(m=HeatmapMode)
+@_genesymbols
 def heatmap(
     adata: AnnData,
     model: _input_model_type,
@@ -83,7 +89,7 @@ def heatmap(
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
     save: Optional[Union[str, Path]] = None,
-    **kwargs,
+    **kwargs: Any,
 ) -> Optional[
     Union[Dict[str, pd.DataFrame], Tuple[_return_model_type, Dict[str, pd.DataFrame]]]
 ]:

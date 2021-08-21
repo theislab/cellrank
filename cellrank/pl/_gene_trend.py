@@ -1,5 +1,5 @@
 """Gene trend module."""
-from typing import List, Tuple, Union, Mapping, Optional, Sequence
+from typing import Any, List, Tuple, Union, Mapping, Optional, Sequence
 
 from types import MappingProxyType
 from pathlib import Path
@@ -70,8 +70,8 @@ def gene_trends(
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
     save: Optional[Union[str, Path]] = None,
-    plot_kwargs: Mapping = MappingProxyType({}),
-    **kwargs,
+    plot_kwargs: Mapping[str, Any] = MappingProxyType({}),
+    **kwargs: Any,
 ) -> Optional[_return_model_type]:
     """
     Plot gene expression trends along lineages.
