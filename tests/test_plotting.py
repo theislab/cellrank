@@ -397,6 +397,10 @@ class TestClusterFates:
             legend_loc="center right out",
         )
 
+    @compare()
+    def test_cluster_fates_genesymbols(self, adata: AnnData, fpath: str):
+        pass
+
     def test_invalid_mode(self, adata_cflare_fwd):
         adata, _ = adata_cflare_fwd
         with pytest.raises(ValueError):
