@@ -265,6 +265,7 @@ class WOTKernel(Kernel, error=_error):
         use_highly_variable: Optional[Union[str, bool]] = True,
         last_time_point: Literal["uniform", "diagonal", "connectivities"] = "uniform",
         threshold: Optional[float] = None,
+        method: Literal["perc-local", "perc-global", "k", "fixed", "auto"] = "auto",
         conn_kwargs: Mapping[str, Any] = MappingProxyType({}),
         **kwargs: Any,
     ) -> "WOTKernel":
@@ -354,6 +355,7 @@ class WOTKernel(Kernel, error=_error):
                 "use_highly_variable": use_highly_variable,
                 "last_time_point": last_time_point.s,
                 "threshold": threshold,
+                "method": method,
                 **kwargs,
             },
             time=start,
@@ -375,8 +377,9 @@ class WOTKernel(Kernel, error=_error):
             density_normalize=False,
             check_irreducibility=False,
         )
-        if threshold is not None:
-            self._threshold_transition_matrix(threshold)
+        self._orig_tmat = self.transition_matrix.copy()
+        if threshold is not None or method == "auto":
+            self._threshold_transition_matrix(threshold, method=method)
         self.adata.obs["estimated_growth_rates"] = self.growth_rates[f"g{growth_iters}"]
 
         logg.info("    Finish", time=start)
@@ -498,9 +501,42 @@ class WOTKernel(Kernel, error=_error):
             f"`{type(cost_matrices).__name__}` is not yet implemented."
         )
 
-    def _threshold_transition_matrix(self, threshold: float) -> None:
-        tmat = self.transition_matrix
-        tmat.data[tmat.data <= threshold] = 0.0
+    def _threshold_transition_matrix(self, threshold: float, method: str) -> None:
+        tmat = self._orig_tmat.copy()
+        print("Using method", method)
+        if method == "perc-local":
+            assert 0 <= threshold <= 100
+            for i in range(tmat.shape[0]):
+                start, end = tmat.indptr[i], tmat.indptr[i + 1]
+                data = tmat.data[start:end]
+                t = np.percentile(data, threshold)
+                data[data <= t] = 0
+                print(t, data.shape, np.sum(data <= t), np.sum(data))
+                tmat.data[start:end] = data
+        elif method == "perc-global":
+            assert 0 <= threshold <= 100
+            threshold = np.percentile(tmat.data, threshold)
+            print("Threshold:", threshold)
+            tmat.data[tmat.data <= threshold] = 0.0
+        elif method == "fixed":
+            tmat.data[tmat.data <= threshold] = 0.0
+        elif method == "k":
+            assert isinstance(threshold, int)
+            assert 0 <= threshold <= tmat.shape[1]
+            for i in range(tmat.shape[0]):
+                start, end = tmat.indptr[i], tmat.indptr[i + 1]
+                data = tmat.data[start:end]
+                ixs = np.argsort(data)[::-1]
+                data[ixs[threshold:]] = 0
+                tmat.data[start:end] = data
+        elif method == "auto":
+            minn = np.inf
+            for i in range(tmat.shape[0]):
+                minn = min(minn, np.max(tmat[i].data))
+            print("Threshold:", minn)
+            tmat.data[tmat.data < minn] = 0.0
+        else:
+            raise NotImplementedError(method)
 
         zero_ixs = np.where(np.array(tmat.sum(1)).flatten() == 0)[0]
         if len(zero_ixs):
