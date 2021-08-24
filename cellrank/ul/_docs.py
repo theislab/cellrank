@@ -45,7 +45,10 @@ backward
     Direction of the process."""
 _eigen = """\
 which
-    Eigenvalues are in general complex. `'LR'` - largest real part, `'LM'` - largest magnitude.
+    How to sort the eigenvalues. Valid option are:
+
+        - `'LR'` - the largest real part.
+        - `'LM'` - the largest magnitude.
 alpha
     Used to compute the `eigengap`. ``alpha`` is the weight given to the deviation of an eigenvalue from one."""
 _n_cells = """\

@@ -48,3 +48,7 @@ class Key:
         @classmethod
         def colors(cls, key: str) -> str:
             return f"{key}_colors"
+
+        @classmethod
+        def eigen(cls, bwd: bool) -> str:
+            return Key.backward(bwd) + "_eigendecomposition"
