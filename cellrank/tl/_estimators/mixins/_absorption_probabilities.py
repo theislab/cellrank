@@ -5,14 +5,12 @@ from datetime import datetime
 from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.tl import Lineage
-from cellrank.ul._docs import inject_docs
 from cellrank.tl._utils import (
     _pairwise,
     _process_series,
     _get_cat_and_null_indices,
     _calculate_lineage_absorption_time_means,
 )
-from cellrank.tl._constants import _colors, _lin_names
 from cellrank.tl._linear_solver import _solve_lin_system
 from cellrank.tl._estimators.mixins._constants import Key
 
