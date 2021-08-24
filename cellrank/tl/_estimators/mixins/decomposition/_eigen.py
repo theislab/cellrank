@@ -34,11 +34,11 @@ class EigenProtocol(Protocol):
     def transition_matrix(self) -> Union[csr_matrix, np.ndarray]:
         ...
 
-    def _write_eigenecomposition(self, decomp: Dict[str, Any], time: datetime) -> None:
+    def _write_eigendecomposition(self, decomp: Dict[str, Any], time: datetime) -> None:
         ...
 
 
-class Eigen(VectorPlottable):
+class EigenMixin(VectorPlottable):
     """TODO."""
 
     def __init__(self):
@@ -94,7 +94,7 @@ class Eigen(VectorPlottable):
             logg.debug(f"Computing top `{k}` eigenvalues of a sparse matrix")
             D, V_l = eigs(self.transition_matrix.T, k=k, which=which, ncv=ncv)
             if only_evals:
-                self._write_eigenecomposition(
+                self._write_eigendecomposition(
                     {
                         "D": get_top_k_evals(),
                         "eigengap": _eigengap(get_top_k_evals().real, alpha),
@@ -110,7 +110,7 @@ class Eigen(VectorPlottable):
             )
             D, V_l = np.linalg.eig(self.transition_matrix.T)
             if only_evals:
-                self._write_eigenecomposition(
+                self._write_eigendecomposition(
                     {
                         "D": get_top_k_evals(),
                         "eigengap": _eigengap(D.real, alpha),
@@ -130,7 +130,7 @@ class Eigen(VectorPlottable):
         pi = np.abs(V_l[:, 0].real)
         pi /= np.sum(pi)
 
-        self._write_eigenecomposition(
+        self._write_eigendecomposition(
             {
                 "D": D,
                 "stationary_dist": pi,
@@ -143,15 +143,17 @@ class Eigen(VectorPlottable):
         )
 
     @d.dedent
-    def plot_eigendecomposition(self, left: bool = False, **kwargs: Any) -> None:
+    def plot_eigendecomposition(
+        self, *args: Any, left: bool = False, **kwargs: Any
+    ) -> None:
         """
         Plot eigenvectors in an embedding.
 
         Parameters
         ----------
+        %(plot_vectors.parameters)s
         left
             Whether to plot left or right eigenvectors.
-        %(plot_vectors.parameters)s
 
         Returns
         -------
@@ -182,7 +184,8 @@ class Eigen(VectorPlottable):
 
         self._plot_vectors(
             "eigen",
-            vectors=V,
+            V,
+            *args,
             D=D,
             **kwargs,
         )
@@ -385,11 +388,12 @@ class Eigen(VectorPlottable):
 
         return fig
 
-    def _write_eigenecomposition(
+    def _write_eigendecomposition(
         self: EigenProtocol, decomp: Dict[str, Any], time: datetime
     ) -> None:
-        key = Key.uns.eigen(self.backward)
         self._eigendecomposition = decomp
+
+        key = Key.uns.eigen(self.backward)
         self.adata.uns[key] = decomp
 
         logg.info(
@@ -401,4 +405,5 @@ class Eigen(VectorPlottable):
 
     @property
     def eigendecomposition(self) -> Optional[Dict[str, Any]]:
+        """TODO. docrep"""
         return self._eigendecomposition
