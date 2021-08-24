@@ -1440,10 +1440,10 @@ def _calculate_lineage_absorption_time_means(
     Q: csr_matrix,
     R: csr_matrix,
     trans_indices: np.ndarray,
-    n: int,
     ixs: Dict[str, np.ndarray],
     lineages: Dict[Sequence[str], str],
-    **kwargs,
+    index: pd.Index,
+    **kwargs: Any,
 ) -> pd.DataFrame:
     """
     Calculate the mean time until absorption and optionally its variance for specific lineages or their combinations.
@@ -1473,7 +1473,7 @@ def _calculate_lineage_absorption_time_means(
 
         Uses more efficient implementation if compute the time for all lineages.
     """
-
+    n = len(index)
     res = pd.DataFrame()
     if len(lineages) == 1 and set(next(iter(lineages.keys()))) == set(ixs.keys()):
         # use faster implementation in this case
@@ -1546,6 +1546,7 @@ def _calculate_lineage_absorption_time_means(
 
             res[f"{name} var"] = var
 
+    res.index = index
     return res
 
 
