@@ -1475,6 +1475,7 @@ def _calculate_lineage_absorption_time_means(
     """
     n = len(index)
     res = pd.DataFrame()
+
     if len(lineages) == 1 and set(next(iter(lineages.keys()))) == set(ixs.keys()):
         # use faster implementation in this case
         name = ", ".join(ixs.keys())
@@ -1539,8 +1540,7 @@ def _calculate_lineage_absorption_time_means(
             ).squeeze()
             assert np.all(v >= 0), f"Encountered negative variance: `{v[v < 0]}`."
 
-            var = np.empty(n, dtype=np.float64)
-            var[:] = np.inf
+            var = np.full(n, fill_value=np.nan, dtype=np.float64)
             var[ix] = 0
             var[trans_indices] = v
 

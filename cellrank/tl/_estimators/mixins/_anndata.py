@@ -19,10 +19,6 @@ class AnnDataMixin(ABC):
     def __len__(self) -> int:
         return len(self.adata)
 
-    def obs_names(self) -> pd.Index:
-        """TODO."""
-        return self.adata.obs_names
-
     @abstractmethod
     def to_adata(self) -> None:
         """TODO."""

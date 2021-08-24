@@ -20,24 +20,22 @@ from scipy.sparse import issparse, csr_matrix
 
 
 class AbsProbsProtocol(Protocol):
-    @property
-    def transition_matrix(self) -> Union[np.ndarray, csr_matrix]:
-        ...
+    _term_states_colors: np.ndarray
 
     @property
     def adata(self) -> AnnData:
         ...
 
     @property
-    def obs_names(self) -> pd.Index:
+    def backward(self) -> bool:
+        ...
+
+    @property
+    def transition_matrix(self) -> Union[np.ndarray, csr_matrix]:
         ...
 
     @property
     def terminal_states(self) -> pd.Series:
-        ...
-
-    @property
-    def backward(self) -> bool:
         ...
 
     @property
@@ -65,9 +63,6 @@ class AbsProbsProtocol(Protocol):
         show_progress_bar,
         preconditioner,
     ) -> np.ndarray:
-        ...
-
-    def _terminal_states_colors(self) -> pd.Series:
         ...
 
     def __len__(self) -> int:
@@ -110,7 +105,7 @@ def _normalize_abs_times(
     return res
 
 
-class AbsProbMixin:
+class AbsProbsMixin:
     def __init__(self):
         self._absorption_probabilities: Optional[Lineage] = None
         self._absorption_times: Optional[pd.DataFrame] = None
@@ -143,8 +138,6 @@ class AbsProbMixin:
         ----------
         keys
             Keys defining the recurrent classes.
-        check_irreducibility
-            Check whether the transition matrix is irreducible.
         solver
             Solver to use for the linear problem. Options are `'direct', 'gmres', 'lgmres', 'bicgstab' or 'gcrotmk'`
             when ``use_petsc=False`` or one of :class:`petsc4py.PETSc.KPS.Type` otherwise.
@@ -202,7 +195,7 @@ class AbsProbMixin:
 
         # process the current annotations according to `keys`
         term_states, colors = _process_series(
-            series=self.terminal_states, keys=keys, colors=self._terminal_states_colors
+            series=self.terminal_states, keys=keys, colors=self._term_states_colors
         )
         # warn in case only one state is left
         keys = list(term_states.cat.categories)
@@ -256,7 +249,7 @@ class AbsProbMixin:
                 tol=tol,
                 show_progress_bar=show_progress_bar,
                 preconditioner=preconditioner,
-                index=self.obs_names,
+                index=self.adata.obs_names,
             )
 
         self._absorption_probabilities = Lineage(abs_classes, names=keys, colors=colors)

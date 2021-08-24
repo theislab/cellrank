@@ -14,6 +14,10 @@ class Key:
     def backward(cls, bwd: bool) -> str:
         return "bwd" if bwd else "fwd"
 
+    @classmethod
+    def where(cls, bwd: bool) -> str:
+        return "from" if bwd else "to"
+
     class obs:
         @classmethod
         def probs(self, key: str) -> str:
