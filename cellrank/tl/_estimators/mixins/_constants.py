@@ -27,6 +27,10 @@ class Key:
         def term_states(cls, bwd: bool) -> str:
             return ("initial" if bwd else "terminal") + "_states"
 
+        @classmethod
+        def priming_degree(cls, bwd: bool) -> str:
+            return f"priming_degree_{Key.backward(bwd)}"
+
     class obsm:
         @classmethod
         def macrostates(cls, bwd: bool) -> str:

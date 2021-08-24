@@ -1,10 +1,12 @@
-from typing import Any, Dict, Tuple, Union, Optional, Protocol, Sequence
+from typing import Any, Dict, Tuple, Union, Mapping, Optional, Sequence
+from typing_extensions import Literal, Protocol
 
 from datetime import datetime
 
 from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.tl import Lineage
+from cellrank.ul._docs import d
 from cellrank.tl._utils import (
     _pairwise,
     _process_series,
@@ -255,6 +257,56 @@ class AbsProbsMixin:
         self._absorption_probabilities = Lineage(abs_classes, names=keys, colors=colors)
         self._absorption_times = abs_times
         self._write_absorption_probabilities(time=start)
+
+    @d.dedent
+    def compute_lineage_priming(
+        self: AbsProbsProtocol,
+        method: Literal["kl_divergence", "entropy"] = "kl_divergence",
+        early_cells: Optional[Union[Mapping[str, Sequence[str]], Sequence[str]]] = None,
+    ) -> pd.Series:
+        """
+        %(lin_pd.full_desc)s
+
+        Parameters
+        ----------
+        %(lin_pd.parameters)s
+            If a :class:`dict`, the key specifies a cluster key in :attr:`anndata.AnnData.obs` and the values
+            specify cluster labels containing early cells.
+
+        Returns
+        -------
+        %(lin_pd.returns)s
+        """  # noqa: D400
+        abs_probs = self.absorption_probabilities
+        if abs_probs is None:
+            raise RuntimeError(
+                "Compute absorption probabilities first as `.compute_absorption_probabilities()`."
+            )
+        if isinstance(early_cells, dict):
+            if len(early_cells) != 1:
+                raise ValueError(
+                    f"Expected a dictionary with only 1 key, found `{len(early_cells)}`."
+                )
+            key = next(iter(early_cells.keys()))
+            if key not in self.adata.obs:
+                raise KeyError(f"Unable to find clustering in `adata.obs[{key!r}]`.")
+            early_cells = self.adata.obs[key].isin(early_cells[key])
+        elif early_cells is not None:
+            early_cells = np.asarray(early_cells)
+            if not np.issubdtype(early_cells.dtype, np.bool_):
+                early_cells = np.isin(self.adata.obs_names, early_cells)
+
+        values = pd.Series(
+            abs_probs.priming_degree(method, early_cells), index=self.adata.obs_names
+        )
+
+        self._priming_degree = values
+        key = Key.obs.priming_degree(self.backward)
+        self.adata.obs[key] = values
+
+        logg.info(f"Adding `adata.obs[{key!r}]`\n" f"       `.priming_degree`")
+
+        return values
 
     # TODO(michalk8): type
     def _compute_absorption_probabilities(

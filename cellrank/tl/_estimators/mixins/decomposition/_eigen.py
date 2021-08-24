@@ -163,7 +163,7 @@ class EigenMixin(VectorPlottable):
         eig = self.eigendecomposition
         if eig is None:
             raise RuntimeError(
-                "Compute `.eigendecomposition` as `.compute_eigendecomposition()` first."
+                "Compute `.eigendecomposition` first as `.compute_eigendecomposition()`."
             )
 
         side = "left" if left else "right"
@@ -173,11 +173,11 @@ class EigenMixin(VectorPlottable):
         )
         if V is None:
             raise RuntimeError(
-                "Compute eigendecomposition as `.compute_eigendecomposition(..., only_evals=False)` first."
+                "Compute `.eigendecomposition` first as `.compute_eigendecomposition(..., only_evals=False)`."
             )
 
         # if irreducible, first right e-vec should be const.
-        if side == "right":
+        if not left:
             # quick check for irreducibility:
             if np.sum(np.isclose(D, 1, rtol=1e2 * EPS, atol=1e2 * EPS)) == 1:
                 V[:, 0] = 1.0
@@ -237,7 +237,7 @@ class EigenMixin(VectorPlottable):
         eig = self.eigendecomposition
         if eig is None:
             raise RuntimeError(
-                "Compute `.eigendecomposition` as `.compute_eigendecomposition()` first."
+                "Compute `.eigendecomposition` first as `.compute_eigendecomposition()`."
             )
 
         if n is None:

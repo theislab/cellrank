@@ -2,8 +2,6 @@ from abc import ABC, abstractmethod
 
 from anndata import AnnData
 
-import pandas as pd
-
 
 class AnnDataMixin(ABC):
     """TODO."""

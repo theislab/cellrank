@@ -126,7 +126,7 @@ class LinDriversMixin(AbsProbsMixin):
         abs_probs = self.absorption_probabilities
         if abs_probs is None:
             raise RuntimeError(
-                "Compute absorption probabilities first as `.compute_absorption_probabilities()`."
+                "Compute `.absorption_probabilities` first as `.compute_absorption_probabilities()`."
             )
 
         if abs_probs.shape[1] == 1:
