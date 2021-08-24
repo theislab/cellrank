@@ -1,0 +1,33 @@
+from abc import ABC, abstractmethod
+
+from anndata import AnnData
+
+import pandas as pd
+
+
+class AnnDataMixin(ABC):
+    """TODO."""
+
+    def __init__(self, adata: AnnData):
+        self._adata = adata
+
+    @property
+    def adata(self) -> AnnData:
+        """TODO."""
+        return self._adata
+
+    def __len__(self) -> int:
+        return len(self.adata)
+
+    def obs_names(self) -> pd.Index:
+        """TODO."""
+        return self.adata.obs_names
+
+    @abstractmethod
+    def to_adata(self) -> None:
+        """TODO."""
+
+    @classmethod
+    @abstractmethod
+    def from_adata(cls, adata: AnnData) -> "AnnDataMixin":
+        """TODO."""
