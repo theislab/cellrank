@@ -19,15 +19,21 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         obj: Union[AnnData, np.ndarray, spmatrix, KernelExpression],
         key: Optional[str] = None,
         obsp_key: Optional[str] = None,
+        **kwargs: Any,
     ):
-        super().__init__(obj=obj, key=key, obsp_key=obsp_key)
+        super().__init__(obj=obj, key=key, obsp_key=obsp_key, **kwargs)
 
         self._coarse_init_dist: Optional[pd.Series] = None
         self._coarse_stat_dist: Optional[pd.Series] = None
         self._coarse_tmat: Optional[pd.DataFrame] = None
 
         self._macrostates: Optional[Lineage] = None
+        # TODO: do we need this?
+        self._macrostates_probs: Optional[pd.Series] = None
         self._macrostates_colors: Optional[np.ndarray] = None
+
+    def compute_terminal_states(self, *args: Any, **kwargs: Any) -> None:
+        pass
 
     def fit(self, *args: Any, **kwargs: Any) -> None:
         # TOOO: call super + optionally abs prob?
@@ -50,4 +56,5 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
     @property
     def coarse_T(self) -> Optional[pd.DataFrame]:
+        """TODO."""
         return self._coarse_tmat

@@ -17,6 +17,7 @@ class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
         obj: Union[AnnData, np.ndarray, spmatrix, KernelExpression],
         key: Optional[str] = None,
         obsp_key: Optional[str] = None,
+        **kwargs: Any,
     ):
         if isinstance(obj, KernelExpression):
             kernel = obj
@@ -44,7 +45,7 @@ class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
                 "Compute transition matrix first as `.compute_transition_matrix()`."
             )
 
-        super().__init__(adata=kernel.adata, kernel=kernel)
+        super().__init__(adata=kernel.adata, kernel=kernel, **kwargs)
 
         self._params: Dict[str, Any] = {}
         # TODO: make sure tests pass
