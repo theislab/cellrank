@@ -106,7 +106,12 @@ class TermStatesEstimator(CCDetectorMixin, BaseEstimator, ABC):
             p_thresh=p_thresh,
             existing=existing,
         )
-        self._write_terminal_states(states, colors, time=kwargs.get("time", None))
+        self._write_terminal_states(
+            states,
+            colors,
+            probs=kwargs.get("probs", None),
+            time=kwargs.get("time", None),
+        )
 
     def rename_terminal_states(self, new_names: Mapping[str, str]) -> None:
         """

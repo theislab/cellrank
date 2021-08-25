@@ -1,4 +1,4 @@
-from typing import Any, Union, Callable, Optional, Sequence
+from typing import Any, Union, Mapping, Callable, Optional, Sequence
 from typing_extensions import Literal, Protocol
 
 from wrapt import decorator
@@ -175,6 +175,7 @@ def _plot_continuous(
     # TODO: can this even happen now?
     # e.g. a stationary distribution
     if is_singleton and not np.allclose(_data_X, 1.0):
+        # TODO: maybe use always?
         kwargs.setdefault("perc", [0, 95])
         kwargs["color"] = _data_X
         _ = kwargs.pop("color_gradients", None)
@@ -208,19 +209,21 @@ def register_plotter(
 ):
     @decorator()
     def wrapper(
-        wrapped: Callable[..., None], instance: Protocol, args: Any, kwargs: Any
+        wrapped: Callable[..., None],
+        instance: Protocol,
+        args: Any,
+        kwargs: Mapping[str, Any],
     ) -> None:
+        # fmt: off
         disc = kwargs.pop("discrete", False)
         if disc and discrete is None:
-            logg.warning(
-                f"Unable to plot `.{continuous}` in `discrete` mode. Using `continuous` mode"
-            )
+            # TODO: maybe lower the level
+            logg.warning(f"Unable to plot `.{continuous}` in `discrete` mode. Using `continuous` mode")
             disc = False
         if not disc and continuous is None:
-            logg.warning(
-                f"Unable to plot `.{discrete}` in `continuous` mode. Using `discrete` mode"
-            )
+            logg.warning(f"Unable to plot `.{discrete}` in `continuous` mode. Using `discrete` mode")
             disc = True
+        # fmt: on
 
         attr = discrete if disc else continuous
         data = getattr(instance, attr)
@@ -240,6 +243,6 @@ def register_plotter(
         )
 
     if discrete is None and continuous is None:
-        raise ValueError("TODO.")
+        raise ValueError("At least 1 of `discrete` or  `continuous` must be set.")
 
     return wrapper(_plot_dispatcher)

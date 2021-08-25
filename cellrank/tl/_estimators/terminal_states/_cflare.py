@@ -198,9 +198,9 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
             cluster_key=cluster_key,
             en_cutoff=en_cutoff,
             p_thresh=p_thresh,
+            probs=self._compute_term_states_probs(eig, use),
             time=start,
         )
-        self._term_states_probs = self._compute_term_states_probs(eig, use)
 
     def _compute_term_states_probs(
         self, eig: Dict[str, Any], use: List[int]
