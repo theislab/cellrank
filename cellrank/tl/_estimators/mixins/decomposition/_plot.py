@@ -80,22 +80,17 @@ class VectorPlottable:
             # fmt: on
         elif isinstance(use, int):
             use = list(range(is_schur, use + is_schur))
-        elif not isinstance(use, (range, np.ndarray, Sequence)):
+        elif not isinstance(use, (np.ndarray, Sequence)):
             raise TypeError(
-                f"Argument `use` must be either `int`, `range` or a `sequence`, "
-                f"found `{type(use).__name__}`."
+                f"Expected `use` to be `int` or a `Sequence`, found `{type(use).__name__!r}`."
             )
-        else:
-            if not all(map(lambda u: isinstance(u, int), use)):
-                raise TypeError("Not all values in `use` argument are integers.")
         use = list(use)
         if not use:
-            raise ValueError("Nothing to plot.")
+            raise ValueError("No vectors have been selected.")
 
-        muse = max(use)
-        if muse >= vectors.shape[1]:
+        if max(use) >= vectors.shape[1]:
             raise ValueError(
-                f"Maximum specified {name}vector ({muse}) is larger "
+                f"Maximum specified {name}vector ({max(use)}) is larger "
                 f"than the number of computed {name}vectors ({vectors.shape[1]})."
             )
         V_ = vectors[:, use]

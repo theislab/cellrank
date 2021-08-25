@@ -553,7 +553,8 @@ def _filter_cells(distances: spmatrix, rc_labels: Series, n_matches_min: int) ->
 
     if not is_categorical_dtype(rc_labels):
         raise TypeError(
-            f"Argument `categories` must be a categorical variable, found `{infer_dtype(rc_labels)}`."
+            f"Expected `categories` be a categorical variable, "
+            f"found `{infer_dtype(rc_labels).__name__!r}`."
         )
 
     # retrieve knn graph
@@ -574,10 +575,10 @@ def _filter_cells(distances: spmatrix, rc_labels: Series, n_matches_min: int) ->
 
     freqs_new = np.array([np.sum(rc_labels == cl) for cl in cls])
 
-    if any(freqs_new / freqs_orig < 0.5):
+    if np.any((freqs_new / freqs_orig) < 0.5):
         logg.warning(
             "Consider lowering  'n_matches_min' or "
-            "increasing 'n_neighbors_filtering'. This filters out too many cells."
+            "increasing 'n_neighbors_filtering'. This filters out too many cells"
         )
 
     return rc_labels

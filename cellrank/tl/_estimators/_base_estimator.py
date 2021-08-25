@@ -62,6 +62,7 @@ class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
         obj: Optional[Union[pd.DataFrame, Mapping[str, Any]]] = None,
         key: Optional[str] = None,
         value: Optional[Union[np.ndarray, pd.Series, pd.DataFrame, Lineage]] = None,
+        copy: bool = True,
     ):
         setattr(self, attr, value)
 
@@ -75,7 +76,7 @@ class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
                 except KeyError:
                     pass
             else:
-                obj[key] = value
+                obj[key] = value.copy() if copy else value
 
     def to_adata(self) -> None:
         self.adata.uns["TODO_kernel"] = self.params.copy()

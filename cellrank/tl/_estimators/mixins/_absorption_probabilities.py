@@ -207,6 +207,10 @@ class AbsProbsMixin:
             - :attr:`absorption_times` - mean times until absorption to subsets of absorbing states and
               optionally their variances saved as ``'{{lineage}} mean'`` and ``'{{lineage}} var'``, respectively.
         """
+        if self.terminal_states is None:
+            raise RuntimeError(
+                "Compute `.terminal_states` first as `.compute_terminal_states()`."
+            )
         if keys is not None:
             keys = sorted(set(keys))
 
@@ -226,7 +230,7 @@ class AbsProbsMixin:
         keys = list(term_states.cat.categories)
         if len(keys) == 1:
             logg.warning(
-                "There is only 1 recurrent class, all cells will have probability 1 of going there"
+                "There is only 1 terminal state, all cells will have probability 1 of going there"
             )
 
         # get indices corresponding to recurrent and transient states

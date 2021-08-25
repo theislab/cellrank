@@ -111,8 +111,7 @@ class LinDriversMixin(AbsProbsMixin):
         seed
             Random seed when ``method = {tm.PERM_TEST.s!r}``.
         return_drivers
-            TODO: remove me
-            Whether to return the drivers. This also contains the lower and upper ``confidence_level`` bounds.
+            Whether to return the lineage drivers.
         %(parallel)s
 
         Returns
@@ -120,7 +119,6 @@ class LinDriversMixin(AbsProbsMixin):
         %(correlation_test.returns)s
         Only if ``return_drivers = True``.
 
-        TODO: use varm
         Otherwise, updates :attr:`anndata.AnnData.varm` or :attr:`anndata.AnnData.raw.varm`, depending ``use_raw``:
 
             - ``['{{direction}}_{{lineage}}'] ['corr']`` - the potential lineage drivers.
@@ -219,7 +217,7 @@ class LinDriversMixin(AbsProbsMixin):
             confidence_level=confidence_level,
             **kwargs,
         )
-        self._write_lineage_drivers(drivers, use_raw=use_raw, time=start)
+        self._write_lineage_drivers(drivers.loc[var_names], use_raw=use_raw, time=start)
 
         if return_drivers:
             return drivers
@@ -233,16 +231,13 @@ class LinDriversMixin(AbsProbsMixin):
     ) -> None:
         self._lineage_drivers = drivers
 
+        # fmt: off
         key = Key.varm.lineage_drivers(self.backward)
-        if use_raw:
-            field = "raw.varm"
-            self.adata.raw.varm[key] = drivers
-        else:
-            field = "varm"
-            self.adata.varm[key] = drivers
+        self._set("_lineage_drivers", self.adata.raw.varm if use_raw else self.adata.varm, key=key, value=drivers)
+        # fmt: on
 
         logg.info(
-            f"Adding `adata.{field}[{key!r}]`\n"
+            f"Adding `adata.{'raw.' if use_raw else ''}varm[{key!r}]`\n"
             f"       `.lineage_drivers`\n"
             "    Finish",
             time=time,
@@ -274,7 +269,7 @@ class LinDriversMixin(AbsProbsMixin):
         ncols
             Number of columns.
         use_raw
-            Whether to look in :attr:`adata` ``.raw.var`` or :attr:`adata` ``.var``.
+            Whether to access in :attr:`anndata.AnnData.raw` or not.
         title_fmt
             Title format. Possible keywords include `{gene}`, `{qval}`, `{corr}` for gene name,
             q-value and correlation, respectively.
@@ -321,7 +316,7 @@ class LinDriversMixin(AbsProbsMixin):
         if n_genes <= 0:
             raise ValueError(f"Expected `n_genes` to be positive, found `{n_genes}`.")
 
-        kwargs.pop("save", None)
+        _ = kwargs.pop("save", None)
         genes = lin_drivers.sort_values(by=key, ascending=False).head(n_genes)
 
         ncols = 4 if ncols is None else ncols

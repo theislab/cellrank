@@ -73,8 +73,7 @@ class TermStatesEstimator(CCDetectorMixin, BaseEstimator, ABC):
                   :class:`pandas.Series` can be found in :attr:`anndata.AnnData.obs`.
 
         cluster_key
-            Key from :attr:`anndata.AnnData.obs` where categorical cluster labels are stored.
-            These are used to associate names and colors with each terminal state.
+            Key in :attr:`anndata.AnnData.obs` in order to associate names and colors with :attr:`terminal_states`.
             Each terminal state will be given the name and color corresponding to the cluster it mostly overlaps with.
         %(en_cutoff_p_thresh)s
         add_to_existing
