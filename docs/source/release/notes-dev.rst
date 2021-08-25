@@ -1,4 +1,4 @@
-CellRank dev (2021-08-21)
+CellRank dev (2021-08-25)
 =========================
 
 Features
@@ -37,6 +37,9 @@ Miscellaneous
 
 - Enable ``tox`` in CI.
   `#713 <https://github.com/theislab/cellrank/pull/713>`__
+
+- Update deployment CI and CONTRIBUTING.rst based on a new branching structure.
+  `#725 <https://github.com/theislab/cellrank/pull/725>`__
 
 
 Documentation
