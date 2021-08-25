@@ -192,7 +192,7 @@ class CFLARE(BaseEstimator, Eigen):
 
         # filter out cells which are in the lowest q percentile in abs value in each eigenvector
         if percentile is not None:
-            logg.debug("Filtering out cells according to percentile")
+            logg.debug(f"Filtering out cells according to `percentile={percentile}`")
             if percentile < 0 or percentile > 100:
                 raise ValueError(
                     f"Percentile must be in interval `[0, 100]`, found `{percentile}`."

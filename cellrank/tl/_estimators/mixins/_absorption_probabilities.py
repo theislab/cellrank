@@ -395,8 +395,6 @@ class AbsProbsMixin:
         time: Optional[datetime],
         log: bool = True,
     ) -> None:
-        super()._write_terminal_states(states, colors, probs, time=time, log=log)
-
         key = Key.obsm.abs_probs(self.backward)
         self._set("_absorption_probabilities", self.adata.obsm, key=key, value=None)
         key = Key.obsm.abs_times(self.backward)
@@ -412,12 +410,12 @@ class AbsProbsMixin:
         time: datetime,
         log: bool = True,
     ) -> None:
+        # fmt: off
         key1 = Key.obsm.abs_probs(self.backward)
-        self._set(
-            "_absorption_probabilities", self.adata.obsm, key=key1, value=abs_probs
-        )
+        self._set("_absorption_probabilities", self.adata.obsm, key=key1, value=abs_probs)
         key2 = Key.obsm.abs_times(self.backward)
         self._set("_absorption_times", self.adata.obsm, key=key2, value=abs_times)
+        # fmt: on
 
         if log:
             if abs_times is None:

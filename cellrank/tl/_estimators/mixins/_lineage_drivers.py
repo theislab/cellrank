@@ -119,9 +119,11 @@ class LinDriversMixin(AbsProbsMixin):
         %(correlation_test.returns)s
         Only if ``return_drivers = True``.
 
+        # TODO: CI low/high
         Otherwise, updates :attr:`anndata.AnnData.varm` or :attr:`anndata.AnnData.raw.varm`, depending ``use_raw``:
 
             - ``['{{direction}}_{{lineage}}'] ['corr']`` - the potential lineage drivers.
+            - ``['{{direction}}_{{lineage}}'] ['pval']`` - the p-values.
             - ``['{{direction}}_{{lineage}}'] ['qval']`` - the corrected p-values.
 
         Also updates the following fields:
@@ -388,7 +390,7 @@ class LinDriversMixin(AbsProbsMixin):
         lineage_y
             Name of the lineage on the y-axis.
         color
-            Key in :attr:`adata` ``.var``.
+            Key in :attr:`anndata.AnnData.var`.
         gene_sets
             Gene sets annotations of the form `{'gene_set_name': ['gene_1', 'gene_2'], ...}`.
         gene_sets_colors
@@ -396,7 +398,7 @@ class LinDriversMixin(AbsProbsMixin):
             If `None` and keys in ``gene_sets`` correspond to lineage names, use the lineage colors.
             Otherwise, use default colors.
         use_raw
-            Whether to access :attr:`adata` ``.raw.var`` or :attr:`adata` ``.var``.
+            Whether to access :attr:`anndata.AnnData.raw` or not.
         cmap
             Colormap to use.
         fontsize
@@ -404,8 +406,7 @@ class LinDriversMixin(AbsProbsMixin):
         adjust_text
             Whether to automatically adjust text in order to reduce overlap.
         legend_loc
-            Position of the legend. If `None`, don't show the legend.
-            Only used when ``gene_sets!=None``.
+            Position of the legend. If `None`, don't show the legend. Only used when ``gene_sets != None``.
         %(plotting)s
         show
             If `False`, return :class:`matplotlib.pyplot.Axes`.
@@ -415,7 +416,7 @@ class LinDriversMixin(AbsProbsMixin):
         Returns
         -------
         :class:`matplotlib.pyplot.Axes`
-            The axis object if ``show=False``.
+            The axis object if ``show = False``.
         %(just_plots)s
 
         Notes
@@ -566,12 +567,12 @@ class LinDriversMixin(AbsProbsMixin):
         time: datetime,
         log: bool = True,
     ) -> None:
-        super()._write_absorption_probabilities(
-            abs_probs, abs_times, time=time, log=log
-        )
+        # fmt: off
+        super()._write_absorption_probabilities(abs_probs, abs_times, time=time, log=log)
 
         key = Key.varm.lineage_drivers(self.backward)
         self._set("_lineage_drivers", self.adata.varm, key=key, value=None)
+        # fmt: on
 
     @property
     def lineage_drivers(self) -> Optional[pd.DataFrame]:
