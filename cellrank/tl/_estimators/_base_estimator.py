@@ -1,6 +1,6 @@
 from typing import Any, Dict, Union, Optional
 
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 
 from anndata import AnnData
 from cellrank.tl.kernels import PrecomputedKernel
@@ -11,7 +11,7 @@ import numpy as np
 from scipy.sparse import spmatrix
 
 
-class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin):
+class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
     def __init__(
         self,
         obj: Union[AnnData, np.ndarray, spmatrix, KernelExpression],

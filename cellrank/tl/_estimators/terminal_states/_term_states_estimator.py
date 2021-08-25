@@ -1,6 +1,6 @@
-from typing import Union, Optional
+from typing import Any, Union, Optional
 
-from abc import ABC
+from abc import ABC, abstractmethod
 
 from anndata import AnnData
 from cellrank.tl._estimators import BaseEstimator
@@ -21,21 +21,36 @@ class TermStatesEstimator(BaseEstimator, ABC):
     ):
         super().__init__(obj=obj, key=key, obsp_key=obsp_key)
         self._term_states: Optional[pd.Series] = None
+        self._term_states_probs: Optional[pd.Series] = None
         self._term_states_colors: Optional[np.ndarray] = None
-        # TODO: abstract compute_term_states
-        # TODO: implement fit here
         # TODO: set_terminal_states + rename_terminal_states
 
     def to_adata(self) -> None:
         super().to_adata()
 
         key = Key.obs.term_states(self.backward)
+        # TODO: set_or_debug
         if self.terminal_states is not None:
             self.adata.obs[key] = self.terminal_states
+        if self.terminal_states_probabilities is not None:
+            self.adata.obs[Key.obs.probs(key)] = self.terminal_states_probabilities
         if self._term_states_colors is not None:
             self.adata.uns[Key.uns.colors(key)] = self.terminal_states
+
+    def fit(self, *args: Any, **kwargs: Any) -> None:
+        # TODO: implement me
+        return NotImplemented
+
+    @abstractmethod
+    def compute_terminal_states(self, *args: Any, **kwargs: Any) -> None:
+        pass
 
     @property
     def terminal_states(self) -> Optional[pd.Series]:
         """TODO."""
         return self._term_states
+
+    @property
+    def terminal_states_probabilities(self) -> Optional[pd.Series]:
+        """TODO."""
+        return self._term_states_probs
