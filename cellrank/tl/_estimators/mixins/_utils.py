@@ -145,6 +145,7 @@ def _plot_continuous(
     color = _unique_order_preserving(color)
 
     if mode == "time":
+        kwargs.setdefault("legend_loc", "best")
         if title is None:
             title = [f"{Key.where(self.backward)} {lin}" for lin in lineages]
         if time_key not in self.adata.obs:
@@ -158,8 +159,9 @@ def _plot_continuous(
         kwargs["xlabel"] = [time_key] * len(lineages)
         kwargs["ylabel"] = ["probability"] * len(lineages)
     elif mode == "embedding":
+        kwargs.setdefault("legend_loc", "on data")
         if same_plot:
-            # TOOO: scvelo issue
+            # TOOO: create an scvelo issue
             if color:
                 logg.warning("Ignoring `cluster_key` when `mode='embedding'` and `same_plot=True`")
             title = [Key.initial(self.backward)] if title is None else title
@@ -170,6 +172,7 @@ def _plot_continuous(
             kwargs["color"] = color + list(_data_X.T)
     # fmt: on
 
+    # TODO: can this even happen now?
     # e.g. a stationary distribution
     if is_singleton and not np.allclose(_data_X, 1.0):
         kwargs.setdefault("perc", [0, 95])
