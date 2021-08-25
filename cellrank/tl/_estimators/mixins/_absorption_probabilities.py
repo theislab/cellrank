@@ -14,6 +14,7 @@ from cellrank.tl._utils import (
     _calculate_lineage_absorption_time_means,
 )
 from cellrank.tl._linear_solver import _solve_lin_system
+from cellrank.tl._estimators.mixins._utils import register_plotter
 from cellrank.tl._estimators.mixins._constants import Key
 
 import numpy as np
@@ -434,6 +435,10 @@ class AbsProbsMixin:
                     "    Finish",
                     time=time,
                 )
+
+    plot_absorption_probabilities = register_plotter(
+        continuous="absorption_probabilities"
+    )
 
     @property
     def absorption_probabilities(self) -> Optional[Lineage]:

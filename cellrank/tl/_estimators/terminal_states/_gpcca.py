@@ -4,6 +4,7 @@ from anndata import AnnData
 from cellrank.tl import Lineage
 from cellrank.tl._estimators.mixins import EigenMixin, SchurMixin, LinDriversMixin
 from cellrank.tl.kernels._base_kernel import KernelExpression
+from cellrank.tl._estimators.mixins._utils import register_plotter
 from cellrank.tl._estimators.terminal_states._term_states_estimator import (
     TermStatesEstimator,
 )
@@ -30,8 +31,17 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         self._macrostates_memberships: Optional[Lineage] = None
         self._macrostates_colors: Optional[np.ndarray] = None
 
+        self._term_states_cont: Optional[Lineage] = None
+
     def compute_terminal_states(self, *args: Any, **kwargs: Any) -> None:
         pass
+
+    plot_macrostates = register_plotter(
+        discrete="macrostates", continuous="macrostates_memberships"
+    )
+    plot_terminal_states = register_plotter(
+        discrete="terminal_states", continuous="_term_states_cont"
+    )
 
     def fit(self, *args: Any, **kwargs: Any) -> None:
         # TOOO: call super + optionally abs prob?

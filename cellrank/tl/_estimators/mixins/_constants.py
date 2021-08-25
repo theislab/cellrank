@@ -18,6 +18,10 @@ class Key:
     def where(cls, bwd: bool) -> str:
         return "from" if bwd else "to"
 
+    @classmethod
+    def initial(cls, bwd: bool) -> str:
+        return "initial" if bwd else "terminal"
+
     class obs:
         @classmethod
         def probs(self, key: str) -> str:
@@ -25,7 +29,7 @@ class Key:
 
         @classmethod
         def term_states(cls, bwd: bool) -> str:
-            return ("initial" if bwd else "terminal") + "_states"
+            return f"{Key.initial(bwd)}_states"
 
         @classmethod
         def priming_degree(cls, bwd: bool) -> str:

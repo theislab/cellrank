@@ -15,6 +15,7 @@ from cellrank.tl._colors import (
 from cellrank.tl._estimators import BaseEstimator
 from cellrank.tl._estimators.mixins import CCDetectorMixin
 from cellrank.tl.kernels._base_kernel import KernelExpression
+from cellrank.tl._estimators.mixins._utils import register_plotter
 from cellrank.tl._estimators.mixins._constants import Key
 
 import numpy as np
@@ -245,6 +246,10 @@ class TermStatesEstimator(CCDetectorMixin, BaseEstimator, ABC):
     @abstractmethod
     def compute_terminal_states(self, *args: Any, **kwargs: Any) -> None:
         pass
+
+    plot_terminal_states = register_plotter(
+        discrete="terminal_states", colors="_term_states_colors"
+    )
 
     @property
     def terminal_states(self) -> Optional[pd.Series]:
