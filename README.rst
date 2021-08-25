@@ -89,7 +89,7 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
     :target: https://bioconda.github.io/recipes/cellrank/README.html
     :alt: Bioconda
 
-.. |CI| image:: https://img.shields.io/github/workflow/status/theislab/cellrank/CI/master
+.. |CI| image:: https://img.shields.io/github/workflow/status/theislab/cellrank/Test/dev
     :target: https://github.com/theislab/cellrank/actions
     :alt: CI
 
