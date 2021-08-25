@@ -41,8 +41,8 @@ class EigenProtocol(Protocol):
 class EigenMixin(VectorPlottable):
     """TODO."""
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, **kwargs: Any):
+        super().__init__(**kwargs)
         self._eigendecomposition = None
 
     @d.dedent

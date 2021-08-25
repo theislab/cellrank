@@ -17,6 +17,9 @@ class VectorPlottableProtocol(Protocol):
 
 
 class VectorPlottable:
+    def __init__(self, **_: Any):
+        pass
+
     @d.get_sections(base="plot_vectors", sections=["Parameters", "Returns"])
     @d.dedent
     def _plot_vectors(

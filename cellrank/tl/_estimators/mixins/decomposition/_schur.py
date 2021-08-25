@@ -49,7 +49,9 @@ class SchurProtocol(Protocol):
 class SchurMixin(VectorPlottable):
     """TODO."""
 
-    def __init__(self):
+    def __init__(self, **kwargs: Any):
+        super().__init__(**kwargs)
+
         self._gpcca: Optional[GPCCA] = None
         self._invalid_n_states: Optional[np.ndarray] = None
 
@@ -186,7 +188,7 @@ class SchurMixin(VectorPlottable):
         """
         schur_matrix = self.schur_matrix
         if schur_matrix is None:
-            raise RuntimeError("Compute Schur matrix as `.compute_schur()` first.")
+            raise RuntimeError("Compute `.schur_matrix` first as `.compute_schur()`.")
 
         fig, ax = plt.subplots(
             figsize=schur_matrix.shape if figsize is None else figsize, dpi=dpi
@@ -264,7 +266,7 @@ class SchurMixin(VectorPlottable):
 
         vectors = self.schur_vectors
         if vectors is None:
-            raise RuntimeError("Compute `.schur_vectors` as `.compute_schur()` first.")
+            raise RuntimeError("Compute `.schur_vectors` first as `.compute_schur()`.")
 
         self._plot_vectors(
             "schur",

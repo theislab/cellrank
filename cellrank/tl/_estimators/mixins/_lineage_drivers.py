@@ -1,8 +1,7 @@
-from typing import Any, Dict, Tuple, Union, Optional, Protocol
+from typing import Any, Dict, Tuple, Union, Optional, Protocol, Sequence
 
 from pathlib import Path
 from datetime import datetime
-from collections import Sequence
 
 import scanpy as sc
 import scvelo as scv
@@ -52,8 +51,8 @@ class LinDriversProtocol(Protocol):
 
 
 class LinDriversMixin(AbsProbsMixin):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, **kwargs: Any):
+        super().__init__(**kwargs)
         self._lineage_drivers: Optional[pd.DataFrame] = None
 
     @d.dedent

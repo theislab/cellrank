@@ -1,3 +1,5 @@
+from typing import Any
+
 from abc import ABC, abstractmethod
 
 from anndata import AnnData
@@ -6,7 +8,9 @@ from anndata import AnnData
 class AnnDataMixin(ABC):
     """TODO."""
 
-    def __init__(self, adata: AnnData):
+    def __init__(self, adata: AnnData, **kwargs: Any):
+        super().__init__(**kwargs)
+
         self._adata = adata
 
     @property

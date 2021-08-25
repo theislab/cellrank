@@ -108,7 +108,9 @@ def _normalize_abs_times(
 
 
 class AbsProbsMixin:
-    def __init__(self):
+    def __init__(self, **kwargs: Any):
+        super().__init__(**kwargs)
+
         self._absorption_probabilities: Optional[Lineage] = None
         self._absorption_times: Optional[pd.DataFrame] = None
 

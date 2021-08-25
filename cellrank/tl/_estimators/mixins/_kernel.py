@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Any, Union
 
 from abc import ABC
 
@@ -11,7 +11,8 @@ from scipy.sparse import csr_matrix
 class KernelMixin(ABC):
     """TODO."""
 
-    def __init__(self, kernel: KernelExpression):
+    def __init__(self, kernel: KernelExpression, **kwargs: Any):
+        super().__init__(**kwargs)
         self._kernel = kernel
 
     @property

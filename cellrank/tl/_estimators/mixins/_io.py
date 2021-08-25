@@ -1,4 +1,4 @@
-from typing import Union, Optional
+from typing import Any, Union, Optional
 
 import pickle
 from pathlib import Path
@@ -10,6 +10,9 @@ from cellrank import logging as logg
 
 class IOMixin:
     """TODO."""
+
+    def __init__(self, **kwargs: Any):
+        super().__init__(**kwargs)
 
     @contextmanager
     def _maybe_remove_adata(self, remove: bool) -> None:
@@ -43,8 +46,7 @@ class IOMixin:
 
         Returns
         -------
-        None
-            Nothing, just writes itself to a file using :mod:`pickle`.
+        Nothing, just writes itself to a file using :mod:`pickle`.
         """
 
         fname = str(fname)
@@ -78,8 +80,7 @@ class IOMixin:
 
         Returns
         -------
-        :class:`typing.Any`
-            The deserialized object.
+        The deserialized object.
         """
 
         with open(fname, "rb") as fin:
