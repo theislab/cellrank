@@ -1,5 +1,12 @@
-CellRank dev (2021-08-13)
+CellRank dev (2021-08-21)
 =========================
+
+Features
+--------
+
+- Allow using a column from :attr:`anndata.AnnData.var` as gene symbols for some plotting functions.
+  `#726 <https://github.com/theislab/cellrank/pull/726>`__
+
 
 Bugfixes
 --------

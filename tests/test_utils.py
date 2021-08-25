@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 
 import pytest
 from _helpers import create_model, assert_array_nan_equal, jax_not_installed_skip
@@ -6,6 +6,7 @@ from _helpers import create_model, assert_array_nan_equal, jax_not_installed_ski
 import scanpy as sc
 from anndata import AnnData
 from cellrank.tl import Lineage
+from anndata.utils import make_index_unique
 from cellrank.pl._utils import (
     _create_models,
     _create_callbacks,
@@ -23,6 +24,7 @@ from cellrank.tl._utils import (
     _merge_categorical_series,
     _series_from_one_hot_matrix,
 )
+from cellrank.ul._utils import _gene_symbols_ctx
 from cellrank.ul.models import GAM, BaseModel
 from cellrank.tl._colors import _compute_mean_color
 from cellrank.ul._parallelize import parallelize
@@ -1060,3 +1062,44 @@ class TestParallelize:
         )()
 
         np.testing.assert_array_equal(res, 42)
+
+
+class TestGeneSymbolsCtxManager:
+    @pytest.mark.parametrize("use_raw", [False, True])
+    @pytest.mark.parametrize("key", ["symbol", "foo", None])
+    def test_gene_symbols_manager(
+        self, adata: AnnData, key: Optional[str], use_raw: bool
+    ):
+        if key == "foo":
+            with pytest.raises(KeyError):
+                with _gene_symbols_ctx(adata, key=key):
+                    pass
+        else:
+            raw = adata.raw
+            adata_orig = adata.copy().raw.to_adata() if use_raw else adata.copy()
+
+            with _gene_symbols_ctx(adata, key=key, use_raw=use_raw) as bdata:
+                assert adata is bdata
+                adata_mraw = adata.raw.to_adata() if use_raw else adata
+                np.testing.assert_array_equal(
+                    adata_mraw.var_names,
+                    adata_orig.var_names if key is None else adata_orig.var[key],
+                )
+
+            assert adata.raw is raw
+            adata_mraw = adata.raw.to_adata() if use_raw else adata
+            np.testing.assert_array_equal(adata_mraw.var_names, adata_orig.var_names)
+
+            if key is not None:
+                np.testing.assert_array_equal(adata_mraw.var[key], adata_orig.var[key])
+
+    def test_make_unique(self, adata: AnnData):
+        adata_orig = adata.copy()
+        adata.var["foo"] = "bar"
+
+        with _gene_symbols_ctx(adata, key="foo", make_unique=True):
+            np.testing.assert_array_equal(
+                adata.var_names, make_index_unique(adata.var["foo"])
+            )
+
+        np.testing.assert_array_equal(adata.var_names, adata_orig.var_names)

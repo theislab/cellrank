@@ -21,7 +21,7 @@ from cellrank.pl._utils import (
     _return_model_type,
 )
 from cellrank.tl._utils import save_fig, _unique_order_preserving
-from cellrank.ul._utils import _get_n_cores, _check_collection
+from cellrank.ul._utils import _genesymbols, _get_n_cores, _check_collection
 from cellrank.tl._constants import _DEFAULT_BACKEND, AbsProbKey
 
 import numpy as np
@@ -33,6 +33,7 @@ from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
 
 
 @d.dedent
+@_genesymbols
 def cluster_lineage(
     adata: AnnData,
     model: _input_model_type,
@@ -90,6 +91,7 @@ def cluster_lineage(
         Key in ``adata.obs`` where the pseudotime is stored.
     covariate_key
         Key(s) in ``adata.obs`` containing observations to be plotted at the bottom of each plot.
+    %(gene_symbols)s
     ratio
         Height ratio of each covariate in ``covariate_key``.
     cmap
@@ -127,9 +129,57 @@ def cluster_lineage(
 
             - ``key`` or ``lineage_{lineage}_trend`` - an :class:`anndata.AnnData` object of
               shape `(n_genes, n_points)` containing the clustered genes.
-
     """
 
+    def plot_cluster(row, col, cluster, sharey_ax: Optional[str] = None):
+        gss = GridSpecFromSubplotSpec(
+            row_delta,
+            1,
+            subplot_spec=gs[row : row + row_delta, col],
+            hspace=0,
+            height_ratios=[1] + [ratio] * (row_delta - 1),
+        )
+        ax = fig.add_subplot(gss[0, 0], sharey=sharey_ax)
+
+        data = trends[trends.obs["clusters"] == c].X
+        mean, sd = np.mean(data, axis=0), np.std(data, axis=0)
+
+        for i in range(data.shape[0]):
+            ax.plot(data[i], color="gray", lw=0.5)
+
+        ax.plot(mean, lw=2, color="black")
+        ax.plot(mean - sd, lw=1.5, color="black", linestyle="--")
+        ax.plot(mean + sd, lw=1.5, color="black", linestyle="--")
+        ax.fill_between(
+            range(len(mean)), mean - sd, mean + sd, color="black", alpha=0.1
+        )
+
+        ax.set_title(f"cluster {cluster}")
+        ax.set_xticks([])
+        if sharey:
+            ax.set_yticks([])
+        ax.margins(0)
+
+        if covariate_colors is not None:
+            for i, colors in enumerate(covariate_colors):
+                ax_clusters = fig.add_subplot(gss[i + 1, 0])
+                if is_color_like(colors[0]):  # e.g. categorical
+                    cm = ListedColormap(colors, N=len(colors))
+                    ax_clusters.imshow(np.arange(cm.N)[None, :], cmap=cm, aspect="auto")
+                else:
+                    cm = plt.get_cmap(cmap)
+                    ax_clusters.imshow(colors[None, :], cmap=cm, aspect="auto")
+                ax_clusters.set_xticks([])
+                ax_clusters.set_yticks([])
+
+            ax_clusters.set_xticks(np.linspace(0, len(colors), 5))
+            ax_clusters.set_xticklabels(
+                [f"{v:.3f}" for v in np.linspace(tmin, tmax, 5)]
+            )
+
+        return ax if sharey else None
+
+    use_raw = kwargs.get("use_raw", False)
     lineage_key = str(AbsProbKey.BACKWARD if backward else AbsProbKey.FORWARD)
     if lineage_key not in adata.obsm:
         raise KeyError(f"Lineages key `{lineage_key!r}` not found in `adata.obsm`.")
@@ -137,7 +187,7 @@ def cluster_lineage(
     _ = adata.obsm[lineage_key][lineage]
 
     genes = _unique_order_preserving(genes)
-    _check_collection(adata, genes, "var_names", kwargs.get("use_raw", False))
+    _check_collection(adata, genes, "var_names", use_raw=use_raw)
 
     if key is None:
         key = f"lineage_{lineage}_trend"
@@ -220,54 +270,6 @@ def cluster_lineage(
                 f"Invalid cluster name `{c!r}`. "
                 f"Valid options are `{list(trends.obs['clusters'].cat.categories)}`."
             )
-
-    def plot_cluster(row, col, cluster, sharey_ax: Optional[str] = None):
-        gss = GridSpecFromSubplotSpec(
-            row_delta,
-            1,
-            subplot_spec=gs[row : row + row_delta, col],
-            hspace=0,
-            height_ratios=[1] + [ratio] * (row_delta - 1),
-        )
-        ax = fig.add_subplot(gss[0, 0], sharey=sharey_ax)
-
-        data = trends[trends.obs["clusters"] == c].X
-        mean, sd = np.mean(data, axis=0), np.std(data, axis=0)
-
-        for i in range(data.shape[0]):
-            ax.plot(data[i], color="gray", lw=0.5)
-
-        ax.plot(mean, lw=2, color="black")
-        ax.plot(mean - sd, lw=1.5, color="black", linestyle="--")
-        ax.plot(mean + sd, lw=1.5, color="black", linestyle="--")
-        ax.fill_between(
-            range(len(mean)), mean - sd, mean + sd, color="black", alpha=0.1
-        )
-
-        ax.set_title(f"cluster {cluster}")
-        ax.set_xticks([])
-        if sharey:
-            ax.set_yticks([])
-        ax.margins(0)
-
-        if covariate_colors is not None:
-            for i, colors in enumerate(covariate_colors):
-                ax_clusters = fig.add_subplot(gss[i + 1, 0])
-                if is_color_like(colors[0]):  # e.g. categorical
-                    cm = ListedColormap(colors, N=len(colors))
-                    ax_clusters.imshow(np.arange(cm.N)[None, :], cmap=cm, aspect="auto")
-                else:
-                    cm = plt.get_cmap(cmap)
-                    ax_clusters.imshow(colors[None, :], cmap=cm, aspect="auto")
-                ax_clusters.set_xticks([])
-                ax_clusters.set_yticks([])
-
-            ax_clusters.set_xticks(np.linspace(0, len(colors), 5))
-            ax_clusters.set_xticklabels(
-                [f"{v:.3f}" for v in np.linspace(tmin, tmax, 5)]
-            )
-
-        return ax if sharey else None
 
     nrows = int(np.ceil(len(clusters) / ncols))
     fig = plt.figure(
