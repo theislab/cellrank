@@ -37,10 +37,10 @@ jobs:
             id: auto-commit-action
             uses: stefanzweifel/git-auto-commit-action@v4
             with:
-                commit_message: ${{ format('[auto][ci skip] Generate news fragment (#{0})', github.event.number) }}
                 branch: ${{ github.base_ref }}
                 file_pattern: docs/source/release/changelog/*.rst
                 commit_user_name: CI
+                commit_message: ${{ format('[auto][ci skip] Generate news fragment (#{0})', github.event.number) }}
                 skip_dirty_check: false
 
         -   name: Update dev release notes
@@ -59,8 +59,8 @@ jobs:
             if: steps.auto-commit-action.outputs.changes_detected == 'true'
             uses: stefanzweifel/git-auto-commit-action@v4
             with:
-                commit_message: ${{ format('[auto][ci skip] Update dev release notes (#{0})', github.event.number) }}
                 branch: ${{ github.base_ref }}
                 file_pattern: docs/source/release/notes-dev.rst
+                commit_message: ${{ format('[auto][ci skip] Update dev release notes (#{0})', github.event.number) }}
                 commit_user_name: CI
                 skip_dirty_check: false
