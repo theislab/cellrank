@@ -26,10 +26,6 @@ from matplotlib.patches import ArrowStyle, FancyArrowPatch
 from matplotlib.collections import LineCollection
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-KEYLOCS = str
-KEYS = str
-_msg_shown = False
-
 
 @d.dedent
 def graph(
@@ -37,8 +33,8 @@ def graph(
     graph_key: Optional[str] = None,
     ixs: Optional[Union[range, np.array]] = None,
     layout: Union[str, Dict, Callable] = "umap",
-    keys: Sequence[KEYS] = ("incoming",),
-    keylocs: Union[KEYLOCS, Sequence[KEYLOCS]] = "uns",
+    keys: Sequence[str] = ("incoming",),
+    keylocs: Union[str, Sequence[str]] = "uns",
     node_size: float = 400,
     labels: Optional[Union[Sequence[str], Sequence[Sequence[str]]]] = None,
     top_n_edges: Optional[Union[int, Tuple[int, bool, str]]] = None,
@@ -142,7 +138,7 @@ def graph(
         Title of the figure(s), one for each ``key``.
     %(plotting)s
     layout_kwargs
-        Additional keyword arguments for ``layout``.
+        Keyword arguments for ``layout``.
 
     Returns
     -------
@@ -213,7 +209,7 @@ def graph(
 
         if group_by not in ("incoming", "outgoing"):
             raise ValueError(
-                "Argument `groupby` in `top_n_edges` must be either `'incoming`' or `'outgoing'`."
+                f"Argument `groupby` in `top_n_edges` must be either `'incoming`' or `'outgoing'`, found `{group_by}`."
             )
 
         source, target = zip(*G.edges)
@@ -400,14 +396,11 @@ def graph(
                 ),
                 alpha=edge_alpha,
             )
-        except ImportError as e:
-            global _msg_shown
-            if not _msg_shown:
-                print(
-                    str(e)[:-1],
-                    "in order to use curved edges or specify `edge_use_curved=False`.",
-                )
-                _msg_shown = True
+        except ImportError:
+            logg.error(
+                "Unable to show curved edges. Please install `bezier` as `pip install bezier` or "
+                "use `edge_use_curved=False`"
+            )
 
     for ax, keyloc, title, key, labs, er in zip(
         axes, keylocs, title, keys, labels, edge_reductions

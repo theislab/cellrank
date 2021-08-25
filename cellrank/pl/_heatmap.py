@@ -22,7 +22,12 @@ from cellrank.pl._utils import (
     _get_categorical_colors,
 )
 from cellrank.tl._utils import save_fig, _min_max_scale, _unique_order_preserving
-from cellrank.ul._utils import _get_n_cores, valuedispatch, _check_collection
+from cellrank.ul._utils import (
+    _genesymbols,
+    _get_n_cores,
+    valuedispatch,
+    _check_collection,
+)
 from cellrank.tl._constants import _DEFAULT_BACKEND, ModeEnum, AbsProbKey
 
 import numpy as np
@@ -52,6 +57,7 @@ class HeatmapMode(ModeEnum):  # noqa
 
 @d.dedent
 @inject_docs(m=HeatmapMode)
+@_genesymbols
 def heatmap(
     adata: AnnData,
     model: _input_model_type,
@@ -83,7 +89,7 @@ def heatmap(
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
     save: Optional[Union[str, Path]] = None,
-    **kwargs,
+    **kwargs: Any,
 ) -> Optional[
     Union[Dict[str, pd.DataFrame], Tuple[_return_model_type, Dict[str, pd.DataFrame]]]
 ]:
@@ -108,6 +114,7 @@ def heatmap(
     %(time_range)s
 
         This can also be specified on per-lineage basis.
+    %(gene_symbols)s
     %(model_callback)s
     cluster_key
         Key(s) in ``adata.obs`` containing categorical observations to be plotted at the top of the heatmap.
@@ -234,8 +241,8 @@ def heatmap(
         return cax
 
     @valuedispatch
-    def _plot_heatmap(_mode: HeatmapMode) -> Fig:
-        pass
+    def _plot_heatmap(mode: HeatmapMode) -> Fig:
+        raise NotImplementedError(mode.value)
 
     @_plot_heatmap.register(HeatmapMode.GENES)
     def _() -> Tuple[Fig, None]:

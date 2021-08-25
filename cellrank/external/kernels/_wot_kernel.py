@@ -94,12 +94,14 @@ class WOTKernel(Kernel, error=_error):
         backward: bool = False,
         time_key: str = "exp_time",
         compute_cond_num: bool = False,
+        **kwargs: Any,
     ):
         super().__init__(
             adata,
             backward=backward,
             time_key=time_key,
             compute_cond_num=compute_cond_num,
+            **kwargs,
         )
 
         # WOT's requirements
@@ -410,9 +412,14 @@ class WOTKernel(Kernel, error=_error):
             f"Computing transport maps for `{len(cost_matrices)}` time pairs"
         )
         for tpair, cost_matrix in tqdm(cost_matrices.items(), unit="time pair"):
-            tmap: AnnData = self._ot_model.compute_transport_map(
+            tmap: Optional[AnnData] = self._ot_model.compute_transport_map(
                 *tpair, cost_matrix=cost_matrix
             )
+            if tmap is None:
+                raise TypeError(
+                    f"Unable to compute transport map for time pair `{tpair}`. "
+                    f"Please ensure `adata.obs[{self._time_key!r}]` has the correct dtype (float)."
+                )
             tmap.X = tmap.X.astype(np.float64)
             nans = int(np.sum(~np.isfinite(tmap.X)))
             if nans:

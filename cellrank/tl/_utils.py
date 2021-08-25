@@ -78,11 +78,26 @@ class RandomKeys:
     def __init__(self, adata: AnnData, n: Optional[int] = None, where: str = "obs"):
         self._adata = adata
         self._where = where
-        self._n = n
+        self._n = n or 1
         self._keys = []
 
+    def _generate_random_keys(self):
+        def generator():
+            return f"CELLRANK_RANDOM_COL_{np.random.randint(2 ** 16)}"
+
+        where = getattr(self._adata, self._where)
+        names, seen = [], set(where.keys())
+
+        while len(names) != self._n:
+            name = generator()
+            if name not in seen:
+                seen.add(name)
+                names.append(name)
+
+        return names
+
     def __enter__(self):
-        self._keys = _generate_random_keys(self._adata, self._where, self._n)
+        self._keys = self._generate_random_keys()
         return self._keys
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -1074,25 +1089,6 @@ def _unique_order_preserving(iterable: Iterable[Hashable]) -> List[Hashable]:
     return [i for i in iterable if i not in seen and not seen.add(i)]
 
 
-def _generate_random_keys(adata: AnnData, where: str, n: Optional[int] = None):
-    def generator():
-        return f"CELLRANK_RANDOM_COL_{np.random.randint(2**16)}"
-
-    if n is None:
-        n = 1
-
-    where = getattr(adata, where)
-    names, seen = [], set(where.keys())
-
-    while len(names) != n:
-        name = generator()
-        if name not in seen:
-            seen.add(name)
-            names.append(name)
-
-    return names
-
-
 def _convert_lineage_name(names: str) -> Tuple[str, ...]:
     sep = "or" if "or" in names else ","
     return tuple(
@@ -1117,7 +1113,7 @@ def _one_hot(n, cat: Optional[int] = None) -> np.ndarray:
     If cat is `None`, return a vector of zeros.
     """
 
-    out = np.zeros(n, dtype=np.bool)
+    out = np.zeros(n, dtype=bool)
     if cat is not None:
         out[cat] = True
 
@@ -1207,7 +1203,7 @@ def _fuzzy_to_discrete(
 
     # create the one-hot encoded discrete clustering
     a_discrete = np.zeros(
-        a_fuzzy.shape, dtype=np.bool
+        a_fuzzy.shape, dtype=bool
     )  # don't use `zeros_like` - it also copies the dtype
     for ix in range(n_clusters):
         a_discrete[sample_assignment[ix], ix] = True
@@ -1270,7 +1266,7 @@ def _series_from_one_hot_matrix(
     membership = np.asarray(
         membership
     )  # change the type in case a lineage object was passed.
-    if membership.dtype != np.bool:
+    if membership.dtype != bool:
         raise TypeError(
             f"Expected `membership`'s elements to be boolean, found `{membership.dtype.name!r}`."
         )
