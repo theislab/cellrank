@@ -26,9 +26,8 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         self._coarse_stat_dist: Optional[pd.Series] = None
         self._coarse_tmat: Optional[pd.DataFrame] = None
 
-        self._macrostates: Optional[Lineage] = None
-        # TODO: do we need this?
-        self._macrostates_probs: Optional[pd.Series] = None
+        self._macrostates: Optional[pd.Series] = None
+        self._macrostates_memberships: Optional[Lineage] = None
         self._macrostates_colors: Optional[np.ndarray] = None
 
     def compute_terminal_states(self, *args: Any, **kwargs: Any) -> None:
@@ -39,9 +38,14 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         return NotImplemented
 
     @property
-    def macrostates(self) -> Optional[Lineage]:
+    def macrostates(self) -> Optional[pd.Series]:
         """TODO."""
         return self._macrostates
+
+    @property
+    def macrostates_memberships(self) -> Optional[Lineage]:
+        """TODO."""
+        return self._macrostates_memberships
 
     @property
     def coarse_initial_distribution(self) -> Optional[pd.Series]:
