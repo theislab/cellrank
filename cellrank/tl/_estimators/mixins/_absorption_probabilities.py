@@ -67,6 +67,26 @@ class AbsProbsProtocol(Protocol):
     ) -> np.ndarray:
         ...
 
+    def _set(
+        self,
+        attr: str,
+        obj: Optional[Union[pd.DataFrame, Mapping[str, Any]]] = None,
+        key: Optional[str] = None,
+        value: Optional[Union[np.ndarray, pd.Series, pd.DataFrame, Lineage]] = None,
+    ):
+        ...
+
+    def _write_terminal_states(
+        self: "AbsProbsProtocol",
+        states: Optional[pd.Series],
+        colors: Optional[np.ndarray],
+        probs: Optional[pd.Series] = None,
+        *,
+        time: Optional[datetime],
+        log: bool = True,
+    ) -> None:
+        ...
+
     def __len__(self) -> int:
         ...
 
@@ -113,6 +133,7 @@ class AbsProbsMixin:
 
         self._absorption_probabilities: Optional[Lineage] = None
         self._absorption_times: Optional[pd.DataFrame] = None
+        self._priming_degree: Optional[pd.Series] = None
 
     def compute_absorption_probabilities(
         self: AbsProbsProtocol,
@@ -223,7 +244,7 @@ class AbsProbsMixin:
         s = np.concatenate([s[:, np.arange(a, b)].sum(axis=1) for a, b in _pairwise(macro_ix_helper)], axis=1)
         # fmt: on
 
-        abs_classes = self._compute_absorption_probabilities(
+        abs_probs = self._compute_absorption_probabilities(
             q=q,
             s=s,
             trans_indices=trans_indices,
@@ -236,6 +257,7 @@ class AbsProbsMixin:
             show_progress_bar=show_progress_bar,
             preconditioner=preconditioner,
         )
+        abs_probs = Lineage(abs_probs, names=keys, colors=colors)
 
         abs_times = None
         if time_to_absorption is not None:
@@ -256,9 +278,7 @@ class AbsProbsMixin:
                 index=self.adata.obs_names,
             )
 
-        self._absorption_probabilities = Lineage(abs_classes, names=keys, colors=colors)
-        self._absorption_times = abs_times
-        self._write_absorption_probabilities(time=start)
+        self._write_absorption_probabilities(abs_probs, abs_times, time=start)
 
     @d.dedent
     def compute_lineage_priming(
@@ -306,7 +326,7 @@ class AbsProbsMixin:
         key = Key.obs.priming_degree(self.backward)
         self.adata.obs[key] = values
 
-        logg.info(f"Adding `adata.obs[{key!r}]`\n" f"       `.priming_degree`")
+        logg.info(f"Adding `adata.obs[{key!r}]`\n       `.priming_degree`")
 
         return values
 
@@ -362,22 +382,56 @@ class AbsProbsMixin:
 
         return abs_classes
 
-    def _write_absorption_probabilities(self: AbsProbsProtocol, time: datetime) -> None:
+    def _write_terminal_states(
+        self: AbsProbsProtocol,
+        states: Optional[pd.Series],
+        colors: Optional[np.ndarray],
+        probs: Optional[pd.Series] = None,
+        *,
+        time: Optional[datetime],
+        log: bool = True,
+    ) -> None:
+        super()._write_terminal_states(states, colors, probs, time=time, log=log)
+
         key = Key.obsm.abs_probs(self.backward)
-        self.adata.obsm[key] = self.absorption_probabilities
-        self.adata.uns[Key.uns.names(key)] = self.absorption_probabilities.names
-        self.adata.uns[Key.uns.colors(key)] = self.absorption_probabilities.colors
+        self._set("_absorption_probabilities", self.adata.obsm, key=key, value=None)
+        key = Key.obsm.abs_times(self.backward)
+        self._set("_absorption_times", self.adata.obsm, key=key, value=None)
+        key = Key.obs.priming_degree(self.backward)
+        self._set("_priming_degree", self.adata.obs, key=key, value=None)
 
-        # extra_msg = ""  # TODO
-        if self.lineage_absorption_times is not None:
-            self.adata.obsm[Key.obsm.abs_times(key)] = self.absorption_times
-
-        logg.info(
-            f"Adding `adata.obsm[{key!r}]`\n"
-            f"       `.absorption_probabilities`\n"
-            "    Finish",
-            time=time,
+    def _write_absorption_probabilities(
+        self: AbsProbsProtocol,
+        abs_probs: Lineage,
+        abs_times: Optional[pd.DataFrame],
+        *,
+        time: datetime,
+        log: bool = True,
+    ) -> None:
+        key1 = Key.obsm.abs_probs(self.backward)
+        self._set(
+            "_absorption_probabilities", self.adata.obsm, key=key1, value=abs_probs
         )
+        key2 = Key.obsm.abs_times(self.backward)
+        self._set("_absorption_times", self.adata.obsm, key=key2, value=abs_times)
+
+        if log:
+            if abs_times is None:
+                logg.info(
+                    f"Adding `adata.obsm[{key1!r}]`\n"
+                    f"       `.absorption_probabilities`\n"
+                    "    Finish",
+                    time=time,
+                )
+            else:
+                logg.info(
+                    f"Adding `adata.obsm[{key1!r}]`\n"
+                    f"       `adata.obsm[{key2!r}]`\n"
+                    f"       `.absorption_probabilities`\n"
+                    f"       `.absorption_times`\n"
+                    "    Finish",
+                    time=time,
+                )
 
     @property
     def absorption_probabilities(self) -> Optional[Lineage]:

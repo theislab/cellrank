@@ -1,4 +1,4 @@
-from typing import Any, Dict, Tuple, Union, Optional, Protocol, Sequence
+from typing import Any, Dict, Tuple, Union, Mapping, Optional, Protocol, Sequence
 
 from pathlib import Path
 from datetime import datetime
@@ -47,6 +47,15 @@ class LinDriversProtocol(Protocol):
 
     @property
     def lineage_drivers(self) -> Optional[pd.DataFrame]:
+        ...
+
+    def _set(
+        self,
+        attr: str,
+        obj: Optional[Union[pd.DataFrame, Mapping[str, Any]]] = None,
+        key: Optional[str] = None,
+        value: Optional[Union[np.ndarray, pd.Series, pd.DataFrame, Lineage]] = None,
+    ):
         ...
 
 
@@ -102,6 +111,7 @@ class LinDriversMixin(AbsProbsMixin):
         seed
             Random seed when ``method = {tm.PERM_TEST.s!r}``.
         return_drivers
+            TODO: remove me
             Whether to return the drivers. This also contains the lower and upper ``confidence_level`` bounds.
         %(parallel)s
 
@@ -110,14 +120,15 @@ class LinDriversMixin(AbsProbsMixin):
         %(correlation_test.returns)s
         Only if ``return_drivers = True``.
 
-        Otherwise, updates :attr:`anndata.AnnData.var` or :attr:`anndata.AnnData.raw.var`, depending ``use_raw`` with:
+        TODO: use varm
+        Otherwise, updates :attr:`anndata.AnnData.varm` or :attr:`anndata.AnnData.raw.varm`, depending ``use_raw``:
 
-            - ``'{{direction}} {{lineage}} corr'`` - the potential lineage drivers.
-            - ``'{{direction}} {{lineage}} qval'`` - the corrected p-values.
+            - ``['{{direction}}_{{lineage}}'] ['corr']`` - the potential lineage drivers.
+            - ``['{{direction}}_{{lineage}}'] ['qval']`` - the corrected p-values.
 
         Also updates the following fields:
 
-            - :attr:`lineage_drivers` - same as the returned values.
+            - :attr:`lineage_drivers` - the same as described above.
         """
 
         # check that lineage probs have been computed
@@ -187,7 +198,8 @@ class LinDriversMixin(AbsProbsMixin):
             if layer not in self.adata.layers:
                 raise KeyError(f"Layer `{layer!r}` not found in `adata.layers`.")
             if use_raw:
-                logg.warning("For `use_raw=True`, layer must be `None`.")
+                logg.warning("If `use_raw=True`, layer must be `None`.")
+                use_raw = False
             data = adata_comp.layers[layer]
             var_names = adata_comp.var_names
 
@@ -207,35 +219,32 @@ class LinDriversMixin(AbsProbsMixin):
             confidence_level=confidence_level,
             **kwargs,
         )
-        self._lineage_drivers = drivers
-        self._write_lineage_drivers(lin_probs.names, use_raw=use_raw, time=start)
+        self._write_lineage_drivers(drivers, use_raw=use_raw, time=start)
 
         if return_drivers:
             return drivers
 
     def _write_lineage_drivers(
-        self: LinDriversProtocol, names: Sequence[str], use_raw: bool, time: datetime
+        self: LinDriversProtocol,
+        drivers: pd.DataFrame,
+        use_raw: bool,
+        *,
+        time: datetime,
     ) -> None:
-        drivers = self.lineage_drivers
+        self._lineage_drivers = drivers
 
-        prefix = Key.where(self.backward)
-        corrs = [f"{lin} corr" for lin in names]
-        qvals = [f"{lin} qval" for lin in names]
-
+        key = Key.varm.lineage_drivers(self.backward)
         if use_raw:
-            self.adata.raw.var[[f"{prefix} {col}" for col in corrs]] = drivers[corrs]
-            self.adata.raw.var[[f"{prefix} {col}" for col in qvals]] = drivers[qvals]
+            field = "raw.varm"
+            self.adata.raw.varm[key] = drivers
         else:
-            self.adata.var[[f"{prefix} {col}" for col in corrs]] = drivers[corrs]
-            self.adata.var[[f"{prefix} {col}" for col in qvals]] = drivers[qvals]
-
-        field = "raw.var" if use_raw else "var"
-        keys_added = [f"`adata.{field}['{prefix} {lin} corr']`" for lin in names]
+            field = "varm"
+            self.adata.varm[key] = drivers
 
         logg.info(
-            "Adding `.lineage_drivers`\n       "
-            + "\n       ".join(keys_added)
-            + "\n    Finish",
+            f"Adding `adata.{field}[{key!r}]`\n"
+            f"       `.lineage_drivers`\n"
+            "    Finish",
             time=time,
         )
 
@@ -539,6 +548,35 @@ class LinDriversMixin(AbsProbsMixin):
 
         if not show:
             return ax
+
+    def _write_terminal_states(
+        self: LinDriversProtocol,
+        states: Optional[pd.Series],
+        colors: Optional[np.ndarray],
+        probs: Optional[pd.Series] = None,
+        *,
+        time: Optional[datetime],
+        log: bool = True,
+    ) -> None:
+        super()._write_terminal_states(states, colors, probs, time=time, log=log)
+
+        key = Key.varm.lineage_drivers(self.backward)
+        self._set("_lineage_drivers", self.adata.varm, key=key, value=None)
+
+    def _write_absorption_probabilities(
+        self: LinDriversProtocol,
+        abs_probs: Lineage,
+        abs_times: Optional[pd.DataFrame],
+        *,
+        time: datetime,
+        log: bool = True,
+    ) -> None:
+        super()._write_absorption_probabilities(
+            abs_probs, abs_times, time=time, log=log
+        )
+
+        key = Key.varm.lineage_drivers(self.backward)
+        self._set("_lineage_drivers", self.adata.varm, key=key, value=None)
 
     @property
     def lineage_drivers(self) -> Optional[pd.DataFrame]:

@@ -27,11 +27,10 @@ class TermStatesEstimator(CCDetectorMixin, BaseEstimator, ABC):
     def __init__(
         self,
         obj: Union[AnnData, np.ndarray, spmatrix, KernelExpression],
-        key: Optional[str] = None,
         obsp_key: Optional[str] = None,
         **kwargs: Any,
     ):
-        super().__init__(obj=obj, key=key, obsp_key=obsp_key, **kwargs)
+        super().__init__(obj=obj, obsp_key=obsp_key, **kwargs)
         self._term_states: Optional[pd.Series] = None
         self._term_states_probs: Optional[pd.Series] = None
         self._term_states_colors: Optional[np.ndarray] = None
@@ -210,28 +209,35 @@ class TermStatesEstimator(CCDetectorMixin, BaseEstimator, ABC):
         # fmt: on
 
     def _write_terminal_states(
-        self, states: pd.Series, colors: np.ndarray, time: Optional[datetime]
+        self,
+        states: Optional[pd.Series],
+        colors: Optional[np.ndarray],
+        probs: Optional[pd.Series] = None,
+        *,
+        time: Optional[datetime],
+        log: bool = True,
     ) -> None:
-        self._term_states = states
-        self._term_states_colors = colors
-        self._term_states_probs = None
-
         key = Key.obs.term_states(self.backward)
-        self.adata.obs[key] = self.terminal_states
-        self.adata.uns[Key.uns.colors(key)] = self.terminal_states
-        try:
-            self.adata.obs.drop(Key.obs.probs(key), axis="columns", inplace=True)
-        except KeyError:
-            pass
-
-        logg.info(
-            f"Adding `adata.obs[{key!r}]`\n"
-            f"       `adata.obs[{Key.obs.probs(key)!r}]`\n"
-            f"       `.terminal_states`\n"
-            f"       `.terminal_states_probabilities`\n"
-            "    Finish",
-            time=time,
+        self._set("_term_states", self.adata.obs, key=key, value=states)
+        self._set(
+            "_term_states_probs",
+            self.adata.obs,
+            key=Key.obs.probs(key),
+            value=probs,
         )
+        self._set(
+            "_term_states_colors", self.adata.uns, key=Key.uns.colors(key), value=colors
+        )
+
+        if log:
+            logg.info(
+                f"Adding `adata.obs[{key!r}]`\n"
+                f"       `adata.obs[{Key.obs.probs(key)!r}]`\n"
+                f"       `.terminal_states`\n"
+                f"       `.terminal_states_probabilities`\n"
+                "    Finish",
+                time=time,
+            )
 
     def fit(self, *args: Any, **kwargs: Any) -> None:
         # TODO: implement me

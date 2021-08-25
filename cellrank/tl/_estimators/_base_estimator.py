@@ -1,13 +1,15 @@
-from typing import Any, Dict, Union, Optional
+from typing import Any, Dict, Union, Mapping, Optional
 
 from abc import ABC, abstractmethod
 
 from anndata import AnnData
+from cellrank.tl import Lineage
 from cellrank.tl.kernels import PrecomputedKernel
 from cellrank.tl._estimators.mixins import IOMixin, KernelMixin, AnnDataMixin
 from cellrank.tl.kernels._base_kernel import KernelExpression
 
 import numpy as np
+import pandas as pd
 from scipy.sparse import spmatrix
 
 
@@ -15,7 +17,6 @@ class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
     def __init__(
         self,
         obj: Union[AnnData, np.ndarray, spmatrix, KernelExpression],
-        key: Optional[str] = None,
         obsp_key: Optional[str] = None,
         **kwargs: Any,
     ):
@@ -50,10 +51,31 @@ class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
         self._params: Dict[str, Any] = {}
         # TODO: make sure tests pass
         # TODO: use this key for params/adata serialization
-        kernel.write_to_adata(key=key)
+        # kernel.write_to_adata(key=key)
 
     def __init_subclass__(cls, **kwargs: Any):
         super().__init_subclass__()
+
+    def _set(
+        self,
+        attr: str,
+        obj: Optional[Union[pd.DataFrame, Mapping[str, Any]]] = None,
+        key: Optional[str] = None,
+        value: Optional[Union[np.ndarray, pd.Series, pd.DataFrame, Lineage]] = None,
+    ):
+        setattr(self, attr, value)
+
+        if key is not None:
+            if value is None:
+                try:
+                    if isinstance(obj, pd.DataFrame):
+                        obj.drop(key, axis="columns", inplace=True)
+                    else:
+                        del obj[key]
+                except KeyError:
+                    pass
+            else:
+                obj[key] = value
 
     def to_adata(self) -> None:
         self.adata.uns["TODO_kernel"] = self.params.copy()

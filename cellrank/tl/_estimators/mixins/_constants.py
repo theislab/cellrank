@@ -41,8 +41,13 @@ class Key:
             return ("from" if bwd else "to") + "_" + Key.obs.term_states(bwd)
 
         @classmethod
-        def abs_times(cls, key: str) -> str:
-            return f"{key}_times"
+        def abs_times(cls, bwd: bool) -> str:
+            return f"absorption_times_{Key.backward(bwd)}"
+
+    class varm:
+        @classmethod
+        def lineage_drivers(cls, bwd: bool):
+            return ("initial" if bwd else "terminal") + "_lineage_drivers"
 
     class uns:
         @classmethod
@@ -55,4 +60,4 @@ class Key:
 
         @classmethod
         def eigen(cls, bwd: bool) -> str:
-            return Key.backward(bwd) + "_eigendecomposition"
+            return f"eigendecomposition_{Key.backward(bwd)}"
