@@ -7,6 +7,7 @@ Table of Contents
 
   - `Setup`_
   - `Codebase structure`_
+  - `Branching structure`_
 
 - `Adding new features`_
 
@@ -70,6 +71,17 @@ The CellRank is structured as follows:
 - `examples <examples>`__: the examples as seen in the
   `documentation <https://cellrank.readthedocs.io/en/latest/auto_examples/index.html>`__, see `Tutorials/examples`_
   for more information.
+
+Branching structure
+~~~~~~~~~~~~~~~~~~~
+We use sightly modified branching structured described
+`here <https://nvie.com/posts/a-successful-git-branching-model/>`_, in short:
+
+- ``feature/X``: for features, enhancements, etc.; it is based off the ``dev`` branch and squash merged into it again.
+- ``fix/X``: for bug fixes; is based off the ``dev`` branch and squash merged into it again.
+- ``release/vX.X.X``: prior to making a release; it is based off ``dev`` and then merged (using merge commit) into
+  ``master`` and ``dev``, after bumping the version and making release notes.
+  Both are usually done through CI, see `Making a new release`_.
 
 Adding new features
 ~~~~~~~~~~~~~~~~~~~
@@ -199,20 +211,30 @@ a new release has been made and an automatic PR will be made to
 Extra care has to be taken when updating runtime dependencies - this is not automatically picked up by Bioconda
 and a separate PR with the updated ``recipe.yaml`` will have to be made.
 
-To make creating new release as easy as possible, we use ``bump2version``, which can be installed as::
+Easiest way to create a new release it to create a branch named ``release/vX.X.X`` and push it onto GitHub. The CI
+will take care of the following:
+
+- create the new release notes (and empty the ``dev`` release notes)
+- bump the version and create a new tag
+- run tests on the ``release/vX.X.X`` branch
+- publish on PyPI after the tests have passed
+- merge ``release/vX.X.X`` into ``master`` and ``dev``
+
+Alternatively, it's possible to create a new release using ``bump2version``, which can be installed as::
 
     pip install bump2version
 
-Depending on what part of the version you want to update, you can run::
+Depending on what part of the version you want to update, you can run on ``master``::
 
     bump2version {major,minor,patch}
 
-By default, this will create a new tag, automatically update the ``__version__`` wherever necessary and commit the
-changes. Afterwards, you can just push the changes to upstream by running::
+By default, this will create a new tagged commit, automatically update the ``__version__`` wherever necessary.
+Afterwards, you can just push the changes to upstream by running::
 
     git push --atomic <branch> <tag>
 
-or set ``push.followtags=true`` in your git config and do a regular ``git push``.
+or set ``push.followtags=true`` in your git config and do a regular ``git push``. In this case, CI will not run
+create any release notes, run tests or do any merges.
 
 Tutorials/examples
 ~~~~~~~~~~~~~~~~~~
