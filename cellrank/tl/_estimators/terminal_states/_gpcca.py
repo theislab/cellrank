@@ -1,4 +1,5 @@
-from typing import Any, Tuple, Union, Optional, Sequence
+from typing import Any, Tuple, Union, Mapping, Optional, Sequence
+from typing_extensions import Literal
 
 from datetime import datetime
 
@@ -6,7 +7,11 @@ from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.tl import Lineage
 from cellrank.ul._docs import d
-from cellrank.tl._utils import _fuzzy_to_discrete, _series_from_one_hot_matrix
+from cellrank.tl._utils import (
+    _eigengap,
+    _fuzzy_to_discrete,
+    _series_from_one_hot_matrix,
+)
 from cellrank.tl._estimators.mixins import EigenMixin, SchurMixin, LinDriversMixin
 from cellrank.tl.kernels._base_kernel import KernelExpression
 from cellrank.tl._estimators.mixins._utils import register_plotter
@@ -53,7 +58,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         Parameters
         ----------
         n_states
-            Number of macrostates. If `None`, use the `eigengap` heuristic.
+            Number of macrostates. If `None`, use the *eigengap* heuristic.
         %(n_cells)s
         cluster_key
             If a key to cluster labels is given, names and colors of the states will be associated with the clusters.
@@ -96,12 +101,12 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         try:
             self._gpcca = self._gpcca.optimize(m=n_states)
         except ValueError as e:
-            # TODO: parse the error
+            # TODO: parse the error, optionally reraise
             # this is the following case - we have 4 Schur vectors, user requests 5 states, but it splits the conj. ev.
             # in the try block, Schur decomposition with 5 vectors is computed, but it fails (no way of knowing)
             # so in this case, we increase it by 1
             n_states += 1
-            logg.warning(f"{e}\nIncreasing `n_states={n_states}`")
+            logg.warning(f"{e}\nUsing `n_states={n_states}`")
             self._gpcca = self._gpcca.optimize(m=n_states)
 
         self._set_macrostates(
@@ -112,6 +117,209 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             en_cutoff=en_cutoff,
             time=start,
         )
+
+    @d.dedent
+    def compute_terminal_states(
+        self,
+        method: Literal[
+            "stability", "top_n", "eigengap", "eigengap_coarse"
+        ] = "stability",
+        n_cells: int = 30,
+        alpha: Optional[float] = 1,
+        stability_threshold: float = 0.96,
+        n_states: Optional[int] = None,
+    ):
+        """
+        Automatically select terminal states from macrostates.
+
+        Parameters
+        ----------
+        method
+            How to select the terminal states. Valid option are:
+
+                - `'eigengap'` - select the number of states based on the *eigengap* of :attr:`transition_matrix`.
+                - `'eigengap_coarse'` - select the number of states based on the `*eigengap* of the diagonal
+                  of :attr:`coarse_T`.
+                - `'top_n'` - select top ``n_states`` based on the probability of the diagonal of :attr:`coarse_T`.
+                - `'stability'` - select states which have a stability >= ``stability_threshold``.
+                  The stability is given by the diagonal elements of :attr:`coarse_T`.
+        %(n_cells)s
+        alpha
+            Weight given to the deviation of an eigenvalue from one.
+            Only used when ``method = 'eigengap'`` or ``method = 'eigengap_coarse'``.
+        stability_threshold
+            Threshold used when ``method = 'stability'``.
+        n_states
+            Number of states used when ``method = 'top_n'``.
+
+        Returns
+        -------
+        Nothing, just updates the following fields:
+
+            - :attr:`terminal_states` - TODO.
+            - :attr:`terminal_states_probabilities` - TODO.
+        """
+
+        # TODO: ModeEnum
+        if len(self._macrostates.cat.categories) == 1:
+            logg.warning(
+                "Found only one macrostate. Making it the single terminal state"
+            )
+            self.set_terminal_states_from_macrostates(None, n_cells=n_cells)
+            return
+
+        eig = self.eigendecomposition
+        coarse_T = self.coarse_T
+
+        # fmt: off
+        if method == "eigengap":
+            if eig is None:
+                raise RuntimeError("Compute eigendecomposition first as `.compute_eigendecomposition()`.")
+            n_states = _eigengap(eig["D"], alpha=alpha) + 1
+        elif method == "eigengap_coarse":
+            if coarse_T is None:
+                raise RuntimeError("Compute macrostates first as `.compute_macrostates()`.")
+            n_states = _eigengap(np.sort(np.diag(coarse_T)[::-1]), alpha=alpha)
+        elif method == "top_n":
+            if n_states is None:
+                raise ValueError("Expected `n_states != None` for `method='top_n'`.")
+            elif n_states <= 0:
+                raise ValueError(f"Expected `n_states` to be positive, found `{n_states}`.")
+        elif method == "stability":
+            if stability_threshold is None:
+                raise ValueError("Expected`stability_threshold != None` for `method='stability'`.")
+            stability = pd.Series(np.diag(coarse_T), index=coarse_T.columns)
+            names = stability[stability.values >= stability_threshold].index
+            self.set_terminal_states_from_macrostates(names, n_cells=n_cells)
+            return
+        else:
+            raise NotImplementedError(f"Method `{method}` is not yet implemented.")
+        # fmt: on
+
+        names = coarse_T.columns[np.argsort(np.diag(coarse_T))][-n_states:]
+        self.set_terminal_states_from_macrostates(names, n_cells=n_cells)
+
+    @d.dedent
+    def set_terminal_states_from_macrostates(
+        self,
+        names: Optional[Union[str, Sequence[str], Mapping[str, str]]] = None,
+        n_cells: int = 30,
+    ):
+        """
+        Manually select terminal states from macrostates.
+
+        Parameters
+        ----------
+        names
+            Names of the macrostates to be marked as terminal. Multiple states can be combined using `','`,
+            such as ``["Alpha, Beta", "Epsilon"]``.  If a :class:`dict`, keys correspond to the names
+            of the macrostates and the values to the new names.  If `None`, select all macrostates.
+        %(n_cells)s
+
+        Returns
+        -------
+        # TODO: docrep
+        Nothing, just updates the following fields:
+
+            - :attr:`terminal_states` - TODO.
+            - :attr:`terminal_states_probabilities` - TODO.
+        """
+        if n_cells <= 0:
+            raise ValueError(f"Expected `n_cells` to be positive, found `{n_cells}`.")
+
+        memberships = self.macrostates_memberships
+        if memberships is None:
+            raise RuntimeError("Compute macrostates first as `.compute_macrostates()`.")
+
+        rename = True
+        if names is None:
+            names = memberships.names
+            rename = False
+        if isinstance(names, str):
+            names = [names]
+            rename = False
+        if not isinstance(names, dict):
+            names = {n: n for n in names}
+            rename = False
+        if not len(names):
+            raise ValueError("No macrostates have been selected.")
+
+        # we do this also here because if `rename_terminal_states` fails
+        # invalid states would've been written to this object and nothing to adata
+        names = {str(k): str(v) for k, v in names.items()}
+        names_after_renaming = {names.get(n, n) for n in memberships.names}
+        if len(names_after_renaming) != memberships.shape[1]:
+            raise ValueError(
+                f"After renaming, terminal state namess will no longer be unique: `{names_after_renaming}`."
+            )
+
+        # this also checks that the names are correct before renaming
+        is_singleton = memberships.shape[1] == 1
+        memberships = memberships[list(names.keys())]
+
+        states = self._create_states(memberships, n_cells=n_cells, check_row_sums=False)
+        if is_singleton:
+            colors = self._macrostates_colors.copy()
+            probs = memberships.X.squeeze() / memberships.X.max()
+        else:
+            colors = memberships[list(states.cat.categories)].colors
+            probs = (memberships.X / memberships.X.max(0)).max(1)
+        probs = pd.Series(probs, index=self.adata.obs_names)
+
+        self._write_terminal_states(states, colors, probs)
+        if rename:
+            self.rename_terminal_states(names)
+
+    def fit(self, *args: Any, **kwargs: Any) -> None:
+        # TOOO: call super + optionally abs prob?
+        return NotImplemented
+
+    plot_macrostates = register_plotter(
+        discrete="macrostates", continuous="macrostates_memberships"
+    )
+    plot_terminal_states = register_plotter(
+        discrete="terminal_states", continuous="_term_states_cont"
+    )
+
+    def _n_states(self, n_states: Optional[Union[int, Sequence[int]]]) -> int:
+        if n_states is None:
+            if self.eigendecomposition is None:
+                raise RuntimeError(
+                    "Compute eigendecomposition first as `.compute_eigendecomposition()` or "
+                    "supply `n_states != None`."
+                )
+            return self.eigendecomposition["eigengap"] + 1
+
+        # fmt: off
+        if isinstance(n_states, int):
+            if n_states <= 0:
+                raise ValueError(f"Expected `n_states` to be positive, found `{n_states}`.")
+            return n_states
+
+        if self._gpcca is None:
+            raise RuntimeError("Compute Schur decomposition first as `.compute_schur()` when `use_min_chi=True`.")
+
+        if not isinstance(n_states, Sequence):
+            raise TypeError(f"Expected `n_states` to be a `Sequence`, found `{type(n_states).__name__!r}`.")
+        if len(n_states) != 2:
+            raise ValueError(f"Expected `n_states` to be of size `2`, found `{len(n_states)}`.")
+
+        minn, maxx = sorted(n_states)
+        if minn <= 1:
+            raise ValueError(f"Minimum value must be > `1`, found `{minn}`.")
+        elif minn == 2:
+            logg.warning(
+                "In most cases, 2 clusters will always be optimal. "
+                "If you really expect 2 clusters, use `n_states=2` and `use_min_chi=False`. "
+                "Setting the minimum to `3`"
+            )
+            minn = 3
+        # fmt: on
+        maxx = max(minn + 1, maxx)
+
+        logg.info(f"Calculating minChi criterion in interval `[{minn}, {maxx}]`")
+
+        return int(np.arange(minn, maxx + 1)[np.argmax(self._gpcca.minChi(minn, maxx))])
 
     def _create_states(
         self,
@@ -143,67 +351,12 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         if self._invalid_n_states is not None and n_states in self._invalid_n_states:
             logg.warning(
                 f"Unable to compute macrostates with `n_states={n_states}` because it will "
-                f"split the conjugate eigenvalues. Increasing `n_states={n_states + 1}`"
+                f"split the conjugate eigenvalues. Using `n_states={n_states + 1}`"
             )
             n_states += 1  # cannot force recomputation of the Schur decomposition
             assert n_states not in self._invalid_n_states, "Sanity check failed."
 
         return n_states
-
-    def compute_terminal_states(self, *args: Any, **kwargs: Any) -> None:
-        pass
-
-    plot_macrostates = register_plotter(
-        discrete="macrostates", continuous="macrostates_memberships"
-    )
-    plot_terminal_states = register_plotter(
-        discrete="terminal_states", continuous="_term_states_cont"
-    )
-
-    def fit(self, *args: Any, **kwargs: Any) -> None:
-        # TOOO: call super + optionally abs prob?
-        return NotImplemented
-
-    def _n_states(self, n_states: Optional[Union[int, Sequence[int]]]) -> int:
-        if n_states is None:
-            if self.eigendecomposition is None:
-                raise RuntimeError("TODO.")
-            return self.eigendecomposition["eigengap"] + 1
-
-        if isinstance(n_states, int):
-            if n_states <= 0:
-                raise ValueError("TODO")
-            return n_states
-
-        if self._gpcca is None:
-            raise RuntimeError(
-                "Compute Schur decomposition first as `.compute_schur()` when `use_min_chi=True`."
-            )
-
-        if not isinstance(n_states, Sequence):
-            raise TypeError(
-                f"Expected `n_states` to be a `Sequence`, found `{type(n_states).__name__!r}`."
-            )
-        if len(n_states) != 2:
-            raise ValueError(
-                f"Expected `n_states` to be of size `2`, found `{len(n_states)}`."
-            )
-
-        minn, maxx = sorted(n_states)
-        if minn <= 1:
-            raise ValueError(f"Minimum value must be > `1`, found `{minn}`.")
-        elif minn == 2:
-            logg.warning(
-                "In most cases, 2 clusters will always be optimal. "
-                "If you really expect 2 clusters, use `n_states=2` and `use_min_chi=False`. "
-                "Setting the minimum to `3`"
-            )
-            minn = 3
-        maxx = max(minn + 1, maxx)
-
-        logg.info(f"Calculating minChi criterion in interval `[{minn}, {maxx}]`")
-
-        return int(np.arange(minn, maxx + 1)[np.argmax(self._gpcca.minChi(minn, maxx))])
 
     def _compute_one_macrostate(
         self,
