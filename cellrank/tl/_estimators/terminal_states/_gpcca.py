@@ -317,19 +317,23 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         """
 
         def _get_dpt_row(e_vals: np.ndarray, e_vecs: np.ndarray, i: int) -> np.ndarray:
-            row = sum(
-                (
-                    np.abs(e_vals[eval_ix])
-                    / (1 - np.abs(e_vals[eval_ix]))
-                    * (e_vecs[i, eval_ix] - e_vecs[:, eval_ix])
-                )
-                ** 2
-                # account for float32 precision
-                for eval_ix in range(0, e_vals.size)
-                if np.abs(e_vals[eval_ix]) < 0.9994
+            # source: https://github.com/theislab/scanpy/blob/0ffa7870fe89b167595fac1a10bf61489e399044/
+            # scanpy/neighbors/__init__.py#L1031
+            row = np.array(
+                [
+                    (
+                        np.abs(e_vals[eval_ix])
+                        / (1 - np.abs(e_vals[eval_ix]))
+                        * (e_vecs[i, eval_ix] - e_vecs[:, eval_ix])
+                    )
+                    ** 2
+                    # account for float32 precision
+                    for eval_ix in range(0, e_vals.size)
+                    if np.abs(e_vals[eval_ix]) < 0.9994
+                ]
             )
 
-            return np.sqrt(row)
+            return np.sqrt(np.sum(row, axis=0))
 
         iroot = self.adata.uns.get("iroot", None)
         if iroot is None:
