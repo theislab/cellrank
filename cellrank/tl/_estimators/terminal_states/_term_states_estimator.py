@@ -13,7 +13,7 @@ from cellrank.tl._colors import (
 from cellrank.tl._estimators import BaseEstimator
 from cellrank.tl._estimators.mixins import CCDetectorMixin
 from cellrank.tl.kernels._base_kernel import KernelExpression
-from cellrank.tl._estimators.mixins._utils import logger, register_plotter
+from cellrank.tl._estimators.mixins._utils import logger, shadow, register_plotter
 from cellrank.tl._estimators.mixins._constants import Key
 
 import numpy as np
@@ -33,19 +33,6 @@ class TermStatesEstimator(CCDetectorMixin, BaseEstimator, ABC):
         self._term_states: Optional[pd.Series] = None
         self._term_states_probs: Optional[pd.Series] = None
         self._term_states_colors: Optional[np.ndarray] = None
-
-    @abstractmethod
-    def to_adata(self) -> AnnData:
-        adata = super().to_adata()
-
-        key = Key.obs.term_states(self.backward)
-        if self.terminal_states is not None:
-            adata.obs[key] = self.terminal_states.copy()
-            adata.uns[Key.uns.colors(key)] = self._term_states_colors.copy()
-        if self.terminal_states_probabilities is not None:
-            adata.obs[Key.obs.probs(key)] = self.terminal_states_probabilities.copy()
-
-        return adata
 
     @d.dedent
     def set_terminal_states(
@@ -221,6 +208,7 @@ class TermStatesEstimator(CCDetectorMixin, BaseEstimator, ABC):
         # fmt: on
 
     @logger
+    @shadow
     def _write_terminal_states(
         self,
         states: Optional[pd.Series],

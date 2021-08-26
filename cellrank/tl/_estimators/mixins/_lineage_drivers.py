@@ -11,7 +11,7 @@ from cellrank.tl import Lineage
 from cellrank.ul._docs import d, inject_docs
 from cellrank.tl._utils import TestMethod, save_fig, _correlation_test
 from cellrank.tl._colors import _create_categorical_colors
-from cellrank.tl._estimators.mixins._utils import logger
+from cellrank.tl._estimators.mixins._utils import logger, shadow
 from cellrank.tl._estimators.mixins._constants import Key
 from cellrank.tl._estimators.mixins._absorption_probabilities import AbsProbsMixin
 
@@ -209,7 +209,7 @@ class LinDriversMixin(AbsProbsMixin):
             var_names = adata_comp.var_names
 
         start = logg.info(
-            f"Computing correlations for lineages `{lineages}` restricted to clusters `{clusters}` in "
+            f"Computing correlations for lineages `{sorted(lineages)}` restricted to clusters `{clusters}` in "
             f"layer `{'X' if layer is None else layer}` with `use_raw={use_raw}`"
         )
 
@@ -530,6 +530,7 @@ class LinDriversMixin(AbsProbsMixin):
             return ax
 
     @logger
+    @shadow
     def _write_absorption_probabilities(
         self: LinDriversProtocol,
         abs_probs: Optional[Lineage],
@@ -543,6 +544,7 @@ class LinDriversMixin(AbsProbsMixin):
         return super()._write_absorption_probabilities(abs_probs, abs_times, log=False)
 
     @logger
+    @shadow
     def _write_lineage_drivers(
         self: LinDriversProtocol,
         drivers: Optional[pd.DataFrame],
@@ -560,14 +562,6 @@ class LinDriversMixin(AbsProbsMixin):
             f"       `.lineage_drivers`\n"
             "    Finish"
         )
-
-    def _serialize(self: LinDriversProtocol, adata: AnnData) -> AnnData:
-        adata = super()._serialize(adata)
-
-        return adata
-
-    def _deserialize(self, adata: AnnData) -> AnnData:
-        pass
 
     @property
     def lineage_drivers(self) -> Optional[pd.DataFrame]:

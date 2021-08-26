@@ -29,6 +29,17 @@ def logger(
     return msg
 
 
+@decorator()
+def shadow(
+    wrapped: Callable[..., str], instance: Any, args: Any, kwargs: Mapping[str, Any]
+) -> None:
+    res = wrapped(*args, **kwargs)
+    with instance._shadow:
+        _ = wrapped(*args, **kwargs)
+
+    return res
+
+
 class PlotterProtocol:
     @property
     def adata(self) -> AnnData:

@@ -12,7 +12,7 @@ from cellrank.tl._utils import (
     _calculate_lineage_absorption_time_means,
 )
 from cellrank.tl._linear_solver import _solve_lin_system
-from cellrank.tl._estimators.mixins._utils import logger, register_plotter
+from cellrank.tl._estimators.mixins._utils import logger, shadow, register_plotter
 from cellrank.tl._estimators.mixins._constants import Key
 
 import numpy as np
@@ -380,6 +380,7 @@ class AbsProbsMixin:
         return abs_classes
 
     @logger
+    @shadow
     def _write_absorption_probabilities(
         self: AbsProbsProtocol,
         abs_probs: Optional[Lineage],
@@ -408,32 +409,19 @@ class AbsProbsMixin:
         )
 
     @logger
+    @shadow
     def _write_lineage_priming(
-        self: AbsProbsProtocol, values: Optional[pd.Series]
+        self: AbsProbsProtocol, priming_degree: Optional[pd.Series]
     ) -> str:
-        self._priming_degree = values
+        self._priming_degree = priming_degree
         key = Key.obs.priming_degree(self.backward)
-        self.adata.obs[key] = values
+        self._set("_priming_degree", self.adata.obs, key=key, value=priming_degree)
 
         return f"Adding `adata.obs[{key!r}]`\n       `.priming_degree`\n    Finish"
 
     plot_absorption_probabilities = register_plotter(
         continuous="absorption_probabilities"
     )
-
-    def _serialize(self: AbsProbsProtocol, adata: AnnData) -> AnnData:
-        key = Key.obsm.abs_probs(self.backward)
-        self._set(obj=adata.obsm, key=key, value=self.absorption_probabilities)
-        key = Key.obsm.abs_probs(self.backward)
-        self._set(obj=adata.obsm, key=key, value=self.absorption_times)
-
-        key = Key.obs.priming_degree(self.backward)
-        self._set(obj=adata.obs, key=key, value=self.priming_degree)
-
-        return adata
-
-    def _deserialize(self, adata: AnnData) -> AnnData:
-        """TODO."""
 
     @property
     def absorption_probabilities(self) -> Optional[Lineage]:

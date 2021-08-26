@@ -1,7 +1,6 @@
 from typing import Any, Tuple, Union, Mapping, Optional, Sequence
 from typing_extensions import Literal
 
-from copy import deepcopy
 from types import MappingProxyType
 from pathlib import Path
 from datetime import datetime
@@ -19,7 +18,7 @@ from cellrank.tl._utils import (
 from cellrank.tl._colors import _get_black_or_white, _create_categorical_colors
 from cellrank.tl._estimators.mixins import EigenMixin, SchurMixin, LinDriversMixin
 from cellrank.tl.kernels._base_kernel import KernelExpression
-from cellrank.tl._estimators.mixins._utils import logger, register_plotter
+from cellrank.tl._estimators.mixins._utils import logger, shadow, register_plotter
 from cellrank.tl._estimators.mixins._constants import Key
 from cellrank.tl._estimators.terminal_states._term_states_estimator import (
     TermStatesEstimator,
@@ -300,7 +299,12 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         term_states_memberships.names = [
             new_names.get(n, n) for n in term_states_memberships.names
         ]
-        self._set("_term_states_memberships", value=term_states_memberships)
+        self._set(
+            "_term_states_memberships", value=term_states_memberships, shadow_only=True
+        )
+        with self._shadow:
+            key = Key.obsm.memberships(Key.obs.macrostates(self.backward))
+            self._set(obj=self.adata.obsm, key=key, value=term_states_memberships)
 
     def compute_gdpt(self, n_components: int = 10, **kwargs: Any) -> pd.Series:
         """
@@ -898,31 +902,44 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         self._write_macrostates(assignment, colors, memberships, time=time)
 
     @logger
+    @shadow
     def _write_macrostates(
         self, macrostates: pd.Series, colors: np.ndarray, memberships: Lineage
     ) -> str:
-        names = list(macrostates.cat.categories)
-        self._set("_macrostates", value=macrostates)
-        self._set("_macrostates_colors", value=colors)
-        self._set("_macrostates_memberships", value=memberships)
-
         # fmt: off
+        names = list(macrostates.cat.categories)
+
+        key = Key.obs.macrostates(self.backward)
+        self._set("_macrostates", obj=self.adata.obs, key=key, value=macrostates, shadow_only=True)
+        ckey = Key.uns.colors(key)
+        self._set("_macrostates_colors", obj=self.adata.uns, key=ckey, value=colors, shadow_only=True)
+        mkey = Key.uns.colors(key)
+        self._set("_macrostates_memberships", obj=self.adata.obsm, key=mkey, value=memberships, shadow_only=True)
+
         if len(names) > 1:
             # not using stationary distribution
             g = self._gpcca
-            self._set("_schur_vectors", value=g._p_X)
-            self._set("_schur_matrix", value=g._p_R)
             tmat = pd.DataFrame(g.coarse_grained_transition_matrix, index=names, columns=names)
-            self._set("_coarse_tmat", value=tmat)
-            self._set("_coarse_init_dist", value=pd.Series(g.coarse_grained_input_distribution, index=names))
-            if g.coarse_grained_stationary_probability is None:
-                self._set("_coarse_stat_dist", value=None)
-            else:
-                self._set("_coarse_stat_dist", value=pd.Series(g.coarse_grained_stationary_probability, index=names))
+            init_dist = pd.Series(g.coarse_grained_input_distribution, index=names)
+            stat_dist = g.coarse_grained_stationary_probability
+            dists = pd.DataFrame({"coarse_init_dist": init_dist})
+            if stat_dist is not None:
+                dists["coarse_stat_dist"] = pd.Series(stat_dist, index=names)
+
+            key = Key.obsm.schur_vectors(self.backward)
+            self._set("_schur_vectors", obj=self.adata.obsm, key=key, value=g._p_X, shadow_only=True)
+            key = Key.uns.schur_matrix(self.backward)
+            self._set("_schur_matrix", obj=self.adata.uns, key=key, value=g._p_R, shadow_only=True)
+            self._set("_coarse_tmat", value=tmat, shadow_only=True)
+            self._set("_coarse_init_dist", value=init_dist, shadow_only=True)
+            self._set("_coarse_stat_dist", value=stat_dist, shadow_only=True)
+            self._set(obj=self.adata.uns, key=Key.uns.coarse(self.backward), value=AnnData(tmat, obs=dists))
         else:
             for attr in ["_schur_vectors", "_schur_matrix", "_coarse_tmat", "_coarse_init_dist", "_coarse_stat_dist"]:
-                self._set(attr, value=None)
+                self._set(attr, value=None, shadow_only=True)
+            self._set(obj=self.adata.uns, key=Key.uns.coarse(self.backward), value=None)
         # fmt: on
+
         return (
             "Adding `.macrostates`\n"
             "       `.macrostates_memberships`\n"
@@ -936,6 +953,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         )
 
     @logger
+    @shadow
     def _write_terminal_states(
         self,
         states: Optional[pd.Series],
@@ -958,56 +976,6 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
     plot_terminal_states = register_plotter(
         discrete="terminal_states", continuous="terminal_states_memberships"
     )
-
-    def to_adata(self) -> AnnData:
-        adata = super().to_adata()
-
-        self._set(
-            obj=adata.uns,
-            key=Key.uns.eigen(self.backward),
-            value=deepcopy(self.eigendecomposition),
-            copy=False,
-        )
-        key = Key.obs.macrostates(self.backward)
-        self._set(obj=adata.obs, key=key, value=self.macrostates)
-        self._set(
-            obj=adata.uns, key=Key.uns.colors(key), value=self._macrostates_colors
-        )
-        self._set(
-            obj=adata.obsm,
-            key=Key.obsm.memberships(key),
-            value=self.macrostates_memberships,
-        )
-
-        self._set(
-            obj=adata.obsm,
-            key=Key.obsm.schur_vectors(self.backward),
-            value=self.schur_vectors,
-        )
-        self._set(
-            obj=adata.uns,
-            key=Key.uns.schur_matrix(self.backward),
-            value=self.schur_vectors,
-        )
-
-        key = Key.obs.term_states(self.backward)
-        self._set(
-            obj=adata.obsm,
-            key=Key.obsm.memberships(key),
-            value=self.terminal_states_memberships,
-        )
-
-        if self.coarse_T is not None:
-            dists = pd.DataFrame({"coarse_init_dist": self.coarse_initial_distribution})
-            if self.coarse_stationary_distribution is not None:
-                dists["coarse_stat_dist"] = self.coarse_stationary_distribution
-            self._set(
-                obj=adata.uns,
-                key=Key.uns.coarse(self.backward),
-                value=AnnData(self.coarse_T, obs=dists),
-            )
-
-        return super()._serialize(adata)
 
     @property
     def macrostates(self) -> Optional[pd.Series]:

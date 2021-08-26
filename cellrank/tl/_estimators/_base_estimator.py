@@ -1,6 +1,7 @@
 from typing import Any, Dict, Union, Mapping, Optional
 
 from abc import ABC, abstractmethod
+from contextlib import contextmanager
 
 from anndata import AnnData
 from cellrank.tl import Lineage
@@ -50,7 +51,12 @@ class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
         super().__init__(adata=kernel.adata, kernel=kernel, **kwargs)
 
         self._params: Dict[str, Any] = {}
-        self._shadow_adata = AnnData(X=self.adata.X)
+        self._shadow_adata = AnnData(
+            X=self.adata.X,
+            obs=self.adata.obs[[]],
+            var=self.adata.var[[]],
+            raw=self.adata.raw,
+        )
 
     def __init_subclass__(cls, **kwargs: Any):
         super().__init_subclass__()
@@ -64,11 +70,15 @@ class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
             Union[np.ndarray, pd.Series, pd.DataFrame, Lineage, AnnData]
         ] = None,
         copy: bool = True,
+        shadow_only: bool = False,
     ):
-        if attr is not None:
-            if not hasattr(self, attr):
-                raise AttributeError(attr)
-            setattr(self, attr, value)
+        if not self._in_shadow:
+            if attr is not None:
+                if not hasattr(self, attr):
+                    raise AttributeError(attr)
+                setattr(self, attr, value)
+            if shadow_only:
+                return
 
         if key is not None:
             if value is None:
@@ -82,20 +92,33 @@ class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
             else:
                 obj[key] = value.copy() if copy else value
 
-    def to_adata(self) -> AnnData:
-        return self._shadow_adata.copy()
-        # TODO: control which attrs are serialized
-        adata = AnnData(X=self.adata.X)
+    @property
+    @contextmanager
+    def _shadow(self) -> None:
+        if self._in_shadow:
+            yield
+        else:
+            adata = self.adata
+            try:
+                self._adata = self._shadow_adata
+                yield
+            finally:
+                self._adata = adata
 
+    @property
+    def _in_shadow(self) -> bool:
+        return self.adata is self._shadow_adata
+
+    def to_adata(self) -> AnnData:
+        adata = self._shadow_adata.copy()
         try:
             self.kernel.adata = adata
             self.kernel.write_to_adata(None)
         finally:
             self.kernel.adata = self.adata
-        adata.uns[
+        self._shadow_adata.uns[
             Key.uns.estimator(None, self.backward) + "_params"
         ] = self.params.copy()
-
         return adata
 
     @classmethod
