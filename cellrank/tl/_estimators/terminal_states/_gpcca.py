@@ -41,7 +41,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         self._macrostates_memberships: Optional[Lineage] = None
         self._macrostates_colors: Optional[np.ndarray] = None
 
-        self._term_states_cont: Optional[Lineage] = None
+        self._term_states_memberships: Optional[Lineage] = None
 
     @d.dedent
     def compute_macrostates(
@@ -74,6 +74,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
                 - :attr:`coarse_T` - TODO.
                 - :attr:`coarse_initial_distribution` - TODO.
                 - :attr:`coarse_stationary_distribution` - TODO.
+                - :attr:`eigendecomposition` - TODO.
         """
 
         n_states = self._n_states(n_states)
@@ -157,6 +158,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         Nothing, just updates the following fields:
 
             - :attr:`terminal_states` - TODO.
+            - :attr:`terminal_states_memberships` - TODO.
             - :attr:`terminal_states_probabilities` - TODO.
         """
 
@@ -250,12 +252,12 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         names_after_renaming = {names.get(n, n) for n in memberships.names}
         if len(names_after_renaming) != memberships.shape[1]:
             raise ValueError(
-                f"After renaming, terminal state namess will no longer be unique: `{names_after_renaming}`."
+                f"After renaming, terminal state names will no longer be unique: `{names_after_renaming}`."
             )
 
         # this also checks that the names are correct before renaming
         is_singleton = memberships.shape[1] == 1
-        memberships = memberships[list(names.keys())]
+        memberships = memberships[list(names.keys())].copy()
 
         states = self._create_states(memberships, n_cells=n_cells, check_row_sums=False)
         if is_singleton:
@@ -266,20 +268,13 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             probs = (memberships.X / memberships.X.max(0)).max(1)
         probs = pd.Series(probs, index=self.adata.obs_names)
 
-        self._write_terminal_states(states, colors, probs)
+        self._write_terminal_states(states, colors, probs, memberships)
         if rename:
             self.rename_terminal_states(names)
 
     def fit(self, *args: Any, **kwargs: Any) -> None:
         # TOOO: call super + optionally abs prob?
         return NotImplemented
-
-    plot_macrostates = register_plotter(
-        discrete="macrostates", continuous="macrostates_memberships"
-    )
-    plot_terminal_states = register_plotter(
-        discrete="terminal_states", continuous="_term_states_cont"
-    )
 
     def _n_states(self, n_states: Optional[Union[int, Sequence[int]]]) -> int:
         if n_states is None:
@@ -297,7 +292,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             return n_states
 
         if self._gpcca is None:
-            raise RuntimeError("Compute Schur decomposition first as `.compute_schur()` when `use_min_chi=True`.")
+            raise RuntimeError("Compute Schur decomposition first as `.compute_schur()`.")
 
         if not isinstance(n_states, Sequence):
             raise TypeError(f"Expected `n_states` to be a `Sequence`, found `{type(n_states).__name__!r}`.")
@@ -310,8 +305,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         elif minn == 2:
             logg.warning(
                 "In most cases, 2 clusters will always be optimal. "
-                "If you really expect 2 clusters, use `n_states=2` and `use_min_chi=False`. "
-                "Setting the minimum to `3`"
+                "If you really expect 2 clusters, use `n_states=2`. Setting the minimum to `3`"
             )
             minn = 3
         # fmt: on
@@ -365,7 +359,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         en_cutoff: Optional[float],
         p_thresh: float,
     ) -> None:
-        start = logg.warning("For 1 macrostate, stationary distribution is computed")
+        start = logg.info("For 1 macrostate, stationary distribution is computed")
 
         eig = self.eigendecomposition
         if (
@@ -447,7 +441,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             )
 
         # remove previous fields
-        self._write_terminal_states(None, None, None, log=False)
+        self._write_terminal_states(None, None, None, None, log=False)
 
         assignment, colors = self._set_categorical_labels(
             assignment, cluster_key=cluster_key, en_cutoff=en_cutoff, p_thresh=p_thresh
@@ -473,7 +467,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             else:
                 self._set("_coarse_stat_dist", value=pd.Series(g.coarse_grained_stationary_probability, index=names))
         else:
-            for attr in ["_schur_vectors", "_schur_matrix", "_coarse_tmat", "_course_init_dist", "_coarse_stat_dist"]:
+            for attr in ["_schur_vectors", "_schur_matrix", "_coarse_tmat", "_coarse_init_dist", "_coarse_stat_dist"]:
                 self._set(attr, value=None)
         # fmt: on
         # TODO: logg
@@ -486,6 +480,27 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         #    [name_mapper.get(n, n) for n in not_enough_cells], n_cells
         # )
 
+    def _write_terminal_states(
+        self,
+        states: Optional[pd.Series],
+        colors: Optional[np.ndarray],
+        probs: Optional[pd.Series] = None,
+        memberships: Optional[Lineage] = None,
+        *,
+        time: Optional[datetime] = None,
+        log: bool = True,
+    ) -> None:
+        super()._write_terminal_states(states, colors, probs, time=time, log=log)
+
+        self._set("_term_states_memberships", value=memberships)
+
+    plot_macrostates = register_plotter(
+        discrete="macrostates", continuous="macrostates_memberships"
+    )
+    plot_terminal_states = register_plotter(
+        discrete="terminal_states", continuous="terminal_states_memberships"
+    )
+
     @property
     def macrostates(self) -> Optional[pd.Series]:
         """TODO."""
@@ -495,6 +510,11 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
     def macrostates_memberships(self) -> Optional[Lineage]:
         """TODO."""
         return self._macrostates_memberships
+
+    @property
+    def terminal_states_memberships(self) -> Optional[Lineage]:
+        """TODO."""
+        return self._term_states_memberships
 
     @property
     def coarse_initial_distribution(self) -> Optional[pd.Series]:

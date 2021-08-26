@@ -5,6 +5,7 @@ from datetime import datetime
 
 from anndata import AnnData
 from cellrank import logging as logg
+from cellrank.tl import Lineage
 from cellrank.ul._docs import d
 from cellrank.tl._utils import _merge_categorical_series, _convert_to_categorical_series
 from cellrank.tl._colors import (
@@ -141,23 +142,30 @@ class TermStatesEstimator(CCDetectorMixin, BaseEstimator, ABC):
         if not len(new_names):
             return
 
-        new_names = {k: str(v) for k, v in new_names.items()}
-        mask = np.isin(list(new_names.keys()), term_states.cat.categories)
+        old_names = term_states.cat.categories
+        new_names = {str(k): str(v) for k, v in new_names.items()}
+        mask = np.isin(list(new_names.keys()), old_names)
         if not np.all(mask):
-            invalid = list(np.array(list(new_names.keys()))[~mask])
-            raise ValueError(f"Invalid old terminal states names: `{invalid}`.")
+            invalid = sorted(np.array(list(new_names.keys()))[~mask])
+            raise ValueError(f"Invalid terminal states names: `{invalid}`.")
 
-        names_after_renaming = [new_names.get(n, n) for n in term_states.cat.categories]
-        if len(set(names_after_renaming)) != len(term_states.cat.categories):
+        names_after_renaming = {new_names.get(n, n) for n in old_names}
+        if len(names_after_renaming) != len(old_names):
             raise ValueError(f"After renaming, the names will not be unique: `{names_after_renaming}`.")
-
-        self._term_states = term_states.cat.rename_categories(new_names)
-        memberships = getattr(self, "_macrostates", None)
-        if memberships is not None:  # GPCCA
-            memberships.names = [new_names.get(n, n) for n in memberships.names]
         # fmt: on
 
-        self.to_adata()
+        self._term_states = term_states.cat.rename_categories(new_names)
+        # TODO: alt is to subclass?
+        memberships = getattr(self, "terminal_states_memberships", None)
+        if memberships is not None:  # GPCCA
+            memberships.names = [new_names.get(n, n) for n in memberships.names]
+
+        self._write_terminal_states(
+            self.terminal_states,
+            self._term_states_colors,
+            self.terminal_states_probabilities,
+            log=False,
+        )
 
     def _set_categorical_labels(
         self,

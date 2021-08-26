@@ -49,9 +49,17 @@ class AbsProbsProtocol(Protocol):
     def absorption_times(self) -> Optional[pd.DataFrame]:
         ...
 
-    def _write_absorption_probabilities(self, time: datetime) -> None:
+    def _write_absorption_probabilities(
+        self,
+        abs_probs: Lineage,
+        abs_times: Optional[pd.DataFrame],
+        *,
+        time: Optional[datetime] = None,
+        log: bool = True,
+    ) -> None:
         ...
 
+    # TODO: type
     def _compute_absorption_probabilities(
         self,
         q,
@@ -166,7 +174,7 @@ class AbsProbsMixin:
             Keys defining the recurrent classes.
         solver
             Solver to use for the linear problem. Options are `'direct', 'gmres', 'lgmres', 'bicgstab' or 'gcrotmk'`
-            when ``use_petsc=False`` or one of :class:`petsc4py.PETSc.KPS.Type` otherwise.
+            when ``use_petsc = False`` or one of :class:`petsc4py.PETSc.KPS.Type` otherwise.
 
             Information on the :mod:`scipy` iterative solvers can be found in :func:`scipy.sparse.linalg` or for
             :mod:`petsc4py` solver `here <https://www.mcs.anl.gov/petsc/documentation/linearsolvertable.html>`__.
@@ -182,10 +190,9 @@ class AbsProbsMixin:
             Can be specified as ``'all'`` to compute it to any absorbing state in ``keys``, which is more efficient
             than listing all absorbing states.
 
-            It might be beneficial to disable the progress bar as ``show_progress_bar=False``, because many linear
-            systems are being solved.
+            It might be beneficial to disable the progress bar as ``show_progress_bar = False``.
         n_jobs
-            Number of parallel jobs to use when using an iterative solver. When ``use_petsc=True`` or for
+            Number of parallel jobs to use when using an iterative solver. When ``use_petsc = True`` or for
             quickly-solvable problems, we recommend higher number (>=8) of jobs in order to fully saturate the cores.
         backend
             Which backend to use for multiprocessing. See :class:`joblib.Parallel` for valid options.
@@ -195,7 +202,7 @@ class AbsProbsMixin:
             Convergence tolerance for the iterative solver. The default is fine for most cases, only consider
             decreasing this for severely ill-conditioned matrices.
         preconditioner
-            Preconditioner to use, only available when ``use_petsc=True``. For available values, see
+            Preconditioner to use, only available when ``use_petsc = True``. For valid options, see
             `here <https://www.mcs.anl.gov/petsc/petsc-current/docs/manualpages/PC/PCType.html#PCType>`__ or the values
             of `petsc4py.PETSc.PC.Type`.
             We recommended `'ilu'` preconditioner for badly conditioned problems.
@@ -408,7 +415,7 @@ class AbsProbsMixin:
         abs_probs: Lineage,
         abs_times: Optional[pd.DataFrame],
         *,
-        time: datetime,
+        time: Optional[datetime] = None,
         log: bool = True,
     ) -> None:
         # fmt: off

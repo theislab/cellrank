@@ -561,10 +561,10 @@ class LinDriversMixin(AbsProbsMixin):
 
     def _write_absorption_probabilities(
         self: LinDriversProtocol,
-        abs_probs: Lineage,
+        abs_probs: Optional[Lineage],
         abs_times: Optional[pd.DataFrame],
         *,
-        time: datetime,
+        time: Optional[datetime] = None,
         log: bool = True,
     ) -> None:
         # fmt: off
