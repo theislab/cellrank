@@ -318,6 +318,7 @@ class AbsProbsMixin:
             abs_probs.priming_degree(method, early_cells), index=self.adata.obs_names
         )
 
+        # TODO: extract
         self._priming_degree = values
         key = Key.obs.priming_degree(self.backward)
         self.adata.obs[key] = values

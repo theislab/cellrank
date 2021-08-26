@@ -74,6 +74,8 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
                 - :attr:`coarse_T` - TODO.
                 - :attr:`coarse_initial_distribution` - TODO.
                 - :attr:`coarse_stationary_distribution` - TODO.
+                - :attr:`schur_vectors` - TODO.
+                - :attr:`schur_matrix` - TODO.
                 - :attr:`eigendecomposition` - TODO.
         """
 
@@ -457,10 +459,26 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         assignment, colors = self._set_categorical_labels(
             assignment, cluster_key=cluster_key, en_cutoff=en_cutoff, p_thresh=p_thresh
         )
-        names = list(assignment.cat.categories)
-        memberships = Lineage(memberships, names=names, colors=colors)
+        memberships = Lineage(
+            memberships, names=list(assignment.cat.categories), colors=colors
+        )
 
-        self._set("_macrostates", value=assignment)
+        groups = pd.DataFrame(assignment).groupby(0).size()
+        groups = groups[groups != n_cells].to_dict()
+        if len(groups):
+            logg.warning(
+                f"The following terminal states have different number "
+                f"of cells than requested ({n_cells}): {groups}"
+            )
+
+        self._write_macrostates(assignment, colors, memberships, time=time)
+
+    @logger
+    def _write_macrostates(
+        self, macrostates: pd.Series, colors: np.ndarray, memberships: Lineage
+    ) -> str:
+        names = list(macrostates.cat.categories)
+        self._set("_macrostates", value=macrostates)
         self._set("_macrostates_colors", value=colors)
         self._set("_macrostates_memberships", value=memberships)
 
@@ -481,15 +499,17 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             for attr in ["_schur_vectors", "_schur_matrix", "_coarse_tmat", "_coarse_init_dist", "_coarse_stat_dist"]:
                 self._set(attr, value=None)
         # fmt: on
-        # TODO: logg
-
-        # _set_categorical_labels creates the names, we still need to remap the group names
-        # TODO
-        # orig_cats = macrostates.cat.categories
-        # name_mapper = dict(zip(orig_cats, self._get(P.MACRO).cat.categories))
-        # _print_insufficient_number_of_cells(
-        #    [name_mapper.get(n, n) for n in not_enough_cells], n_cells
-        # )
+        return (
+            "Adding `.macrostates`\n"
+            "       `.macrostates_memberships`\n"
+            "       `.coarse_T`\n"
+            "       `.coarse_initial_distribution\n"
+            "       `.coarse_stationary_distribution`\n"
+            "       `.schur_vectors`\n"
+            "       `.schur_matrix`\n"
+            "       `.eigendecomposition`\n"
+            "    Finish"
+        )
 
     @logger
     def _write_terminal_states(

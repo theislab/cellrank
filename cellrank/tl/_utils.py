@@ -1475,7 +1475,7 @@ def _calculate_lineage_absorption_time_means(
         Uses more efficient implementation if compute the time for all lineages.
     """
     n = len(index)
-    res = pd.DataFrame()
+    res = pd.DataFrame(index=index)
 
     if len(lineages) == 1 and set(next(iter(lineages.keys()))) == set(ixs.keys()):
         # use faster implementation in this case
@@ -1547,7 +1547,6 @@ def _calculate_lineage_absorption_time_means(
 
             res[f"{name} var"] = var
 
-    res.index = index
     return res
 
 
