@@ -11,6 +11,7 @@ from cellrank.tl import Lineage
 from cellrank.ul._docs import d, inject_docs
 from cellrank.tl._utils import TestMethod, save_fig, _correlation_test
 from cellrank.tl._colors import _create_categorical_colors
+from cellrank.tl._estimators._utils import SafeGetter
 from cellrank.tl._estimators.mixins._utils import logger, shadow
 from cellrank.tl._estimators.mixins._constants import Key
 from cellrank.tl._estimators.mixins._absorption_probabilities import AbsProbsMixin
@@ -562,6 +563,23 @@ class LinDriversMixin(AbsProbsMixin):
             f"       `.lineage_drivers`\n"
             "    Finish"
         )
+
+    def _deserialize(self: LinDriversProtocol, adata: AnnData) -> bool:
+        ok = super()._deserialize(adata)
+        if not ok:
+            return False
+
+        # fmt: off
+        with SafeGetter(self, allowed=(KeyError, AttributeError)) as sg:
+            key = Key.varm.lineage_drivers(self.backward)
+            # prefer raw
+            self._get("_lineage_drivers", self.adata.varm, key=key, where="varm", dtype=pd.DataFrame,
+                      allow_missing=True)
+            self._get("_lineage_drivers", self.adata.raw.varm, key=key, where="varm", dtype=pd.DataFrame,
+                      allow_missing=True)
+        # fmt: on
+
+        return sg.ok
 
     @property
     def lineage_drivers(self) -> Optional[pd.DataFrame]:

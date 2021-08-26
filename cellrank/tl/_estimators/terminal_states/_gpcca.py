@@ -16,6 +16,7 @@ from cellrank.tl._utils import (
     _series_from_one_hot_matrix,
 )
 from cellrank.tl._colors import _get_black_or_white, _create_categorical_colors
+from cellrank.tl._estimators._utils import SafeGetter
 from cellrank.tl._estimators.mixins import EigenMixin, SchurMixin, LinDriversMixin
 from cellrank.tl.kernels._base_kernel import KernelExpression
 from cellrank.tl._estimators.mixins._utils import logger, shadow, register_plotter
@@ -295,13 +296,12 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         term_states_memberships = self.terminal_states_memberships
         super().rename_terminal_states(new_names)
 
+        # fmt: off
         new_names = {str(k): str(v) for k, v in new_names.items()}
-        term_states_memberships.names = [
-            new_names.get(n, n) for n in term_states_memberships.names
-        ]
-        self._set(
-            "_term_states_memberships", value=term_states_memberships, shadow_only=True
-        )
+        term_states_memberships.names = [new_names.get(n, n) for n in term_states_memberships.names]
+        self._set("_term_states_memberships", value=term_states_memberships, shadow_only=True)
+        # fmt: on
+
         with self._shadow:
             key = Key.obsm.memberships(Key.obs.macrostates(self.backward))
             self._set(obj=self.adata.obsm, key=key, value=term_states_memberships)
@@ -913,7 +913,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         self._set("_macrostates", obj=self.adata.obs, key=key, value=macrostates, shadow_only=True)
         ckey = Key.uns.colors(key)
         self._set("_macrostates_colors", obj=self.adata.uns, key=ckey, value=colors, shadow_only=True)
-        mkey = Key.uns.colors(key)
+        mkey = Key.obsm.memberships(key)
         self._set("_macrostates_memberships", obj=self.adata.obsm, key=mkey, value=memberships, shadow_only=True)
 
         if len(names) > 1:
@@ -965,10 +965,54 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         msg = "\n".join(msg.split("\n")[:-1])
         msg += "\n       `.terminal_states_memberships\n    Finish`"
 
+        # fmt: off
         self._write_absorption_probabilities(None, None, log=False)
-        self._set("_term_states_memberships", value=memberships)
+        key = Key.obsm.memberships(Key.obs.term_states(self.backward))
+        self._set("_term_states_memberships", obj=self.adata.obsm, key=key, value=memberships, shadow_only=True)
+        # fmt: on
 
         return msg
+
+    def _read_from_adata(self, adata: AnnData, **kwargs: Any) -> bool:
+        # fmt: off
+        with SafeGetter(self, allowed=KeyError) as sg:
+            key = Key.obs.macrostates(self.backward)
+            self._get("_macrostates", self.adata.obs, key=key, where="obs", dtype=pd.Series)
+            ckey = Key.uns.colors(key)
+            self._get("_macrostates_colors", self.adata.uns, key=ckey, where="uns", dtype=(list, tuple, np.ndarray))
+            mkey = Key.obsm.memberships(key)
+            self._get("_macrostates_memberships", self.adata.obsm, key=mkey, where="obsm", dtype=Lineage)
+
+            # TODO: verify allow missing is ok
+            key = Key.obsm.schur_vectors(self.backward)
+            self._get("_schur_vectors", self.adata.obsm, key=key, where="obsm", dtype=np.ndarray, allow_missing=True)
+            key = Key.uns.schur_matrix(self.backward)
+            self._get("_schur_matrix", self.adata.uns, key=key, where="uns", dtype=np.ndarray, allow_missing=True)
+
+            # TODO: allow missing?
+            tmat: AnnData = self.adata.uns[Key.uns.coarse(self.backward)]
+            if not isinstance(tmat, AnnData):
+                raise TypeError(f"Expected coarse-grained transition matrix to be stored "
+                                f"as `anndata.AnnData`, found `{type(tmat).__name__}`.")
+            tmat = tmat.copy()
+            names = tmat.obs_names
+
+            self._coarse_tmat = pd.DataFrame(tmat.X, index=names, columns=names)
+            self._coarse_init_dist = tmat.obs["coarse_init_dist"]
+            self._coarse_stat_dist = tmat.obs.get("coarse_stat_dist", None)
+
+            self._set(obj=self._shadow_adata.uns, key=Key.uns.coarse(self.backward), value=tmat)
+
+        if not sg.ok:
+            return False
+
+        with SafeGetter(self, allowed=KeyError) as sg:
+            key = Key.obsm.memberships(Key.obs.term_states(self.backward))
+            self._get("_term_states_memberships", self.adata.obsm, key=key, where="obsm", dtype=Lineage)
+            ok = super()._read_from_adata(adata, **kwargs)
+        # fmt: on
+
+        return ok and sg.ok and self._deserialize(adata)
 
     plot_macrostates = register_plotter(
         discrete="macrostates", continuous="macrostates_memberships"

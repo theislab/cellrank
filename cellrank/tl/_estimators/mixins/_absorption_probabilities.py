@@ -12,6 +12,7 @@ from cellrank.tl._utils import (
     _calculate_lineage_absorption_time_means,
 )
 from cellrank.tl._linear_solver import _solve_lin_system
+from cellrank.tl._estimators._utils import SafeGetter
 from cellrank.tl._estimators.mixins._utils import logger, shadow, register_plotter
 from cellrank.tl._estimators.mixins._constants import Key
 
@@ -386,12 +387,12 @@ class AbsProbsMixin:
         abs_probs: Optional[Lineage],
         abs_times: Optional[pd.DataFrame],
     ) -> str:
-        self._write_lineage_priming(None, log=False)
         # fmt: off
         key1 = Key.obsm.abs_probs(self.backward)
         self._set("_absorption_probabilities", self.adata.obsm, key=key1, value=abs_probs)
         key2 = Key.obsm.abs_times(self.backward)
         self._set("_absorption_times", self.adata.obsm, key=key2, value=abs_times)
+        self._write_lineage_priming(None, log=False)
         # fmt: on
 
         if abs_times is None:
@@ -418,6 +419,20 @@ class AbsProbsMixin:
         self._set("_priming_degree", self.adata.obs, key=key, value=priming_degree)
 
         return f"Adding `adata.obs[{key!r}]`\n       `.priming_degree`\n    Finish"
+
+    def _deserialize(self: AbsProbsProtocol, anndata: AnnData) -> bool:
+        # fmt: off
+        with SafeGetter(self, allowed=KeyError) as sg:
+            key = Key.obsm.abs_probs(self.backward)
+            self._get("_absorption_probabilities", self.adata.obsm, key=key, where="obsm", dtype=Lineage)
+            key = Key.obsm.abs_times(self.backward)
+            self._get("_absorption_times", self.adata.obsm, key=key, where="obsm", dtype=pd.DataFrame,
+                      allow_missing=True)
+            key = Key.obs.priming_degree(self.backward)
+            self._get("_priming_degree", self.adata.obs, key=key, where="obs", dtype=pd.Series, allow_missing=True)
+        # fmt: on
+
+        return sg.ok
 
     plot_absorption_probabilities = register_plotter(
         continuous="absorption_probabilities"

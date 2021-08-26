@@ -1,4 +1,5 @@
 from typing import Any, Dict, Tuple, Union, Mapping, Optional
+from typing_extensions import Literal
 
 from abc import ABC, abstractmethod
 from copy import copy as copy_
@@ -13,7 +14,7 @@ from cellrank.tl._estimators.mixins._constants import Key
 
 import numpy as np
 import pandas as pd
-from scipy.sparse import spmatrix
+from scipy.sparse import spmatrix, csr_matrix
 
 
 class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
@@ -52,11 +53,13 @@ class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
         super().__init__(adata=kernel.adata, kernel=kernel, **kwargs)
 
         self._params: Dict[str, Any] = {}
+        # TODO: allow non-skeleton?
+        # TODO: bug - X=None, copy doesn't work
         self._shadow_adata = AnnData(
-            X=self.adata.X,
-            obs=self.adata.obs[[]],
-            var=self.adata.var[[]],
-            raw=self.adata.raw,
+            X=csr_matrix(self.adata.shape, dtype=self.adata.X.dtype),
+            obs=self.adata.obs[[]].copy(),
+            var=self.adata.var[[]].copy(),
+            raw=self.adata.raw,  # TODO: how to handle raw?
         )
 
     def __init_subclass__(cls, **kwargs: Any):
@@ -84,6 +87,7 @@ class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
         if key is not None:
             if value is None:
                 try:
+                    # TODO: necessary?
                     if isinstance(obj, pd.DataFrame):
                         obj.drop(key, axis="columns", inplace=True)
                     else:
@@ -98,6 +102,7 @@ class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
         attr: str,
         obj: Optional[Union[pd.DataFrame, Mapping[str, Any]]],
         key: str,
+        where: Optional[Literal["obs", "obsm", "var", "varm", "uns"]] = None,
         dtype: Optional[Union[type, Tuple[type, ...]]] = None,
         copy: bool = True,
         allow_missing: bool = False,
@@ -108,8 +113,14 @@ class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
         try:
             data = obj[key]
             if dtype is not None and not isinstance(data, dtype):
-                raise TypeError("TODO")
-            setattr(self, attr, copy_(data) if copy else data)
+                raise TypeError(
+                    f"Expected `.{attr}` to be of type `{dtype}`, found `{type(data).__name__}`."
+                )
+            if copy:
+                data = copy_(data)
+            setattr(self, attr, data)
+            if where is not None:
+                getattr(self._shadow_adata, where)[key] = data
         except KeyError:
             if not allow_missing:
                 raise

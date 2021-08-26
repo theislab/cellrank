@@ -218,17 +218,12 @@ class TermStatesEstimator(CCDetectorMixin, BaseEstimator, ABC):
         colors: Optional[np.ndarray],
         probs: Optional[pd.Series] = None,
     ) -> str:
+        # fmt: off
         key = Key.obs.term_states(self.backward)
         self._set("_term_states", self.adata.obs, key=key, value=states)
-        self._set(
-            "_term_states_probs",
-            self.adata.obs,
-            key=Key.obs.probs(key),
-            value=probs,
-        )
-        self._set(
-            "_term_states_colors", self.adata.uns, key=Key.uns.colors(key), value=colors
-        )
+        self._set("_term_states_probs", self.adata.obs, key=Key.obs.probs(key), value=probs)
+        self._set("_term_states_colors", self.adata.uns, key=Key.uns.colors(key), value=colors)
+        # fmt: on
 
         return (
             f"Adding `adata.obs[{key!r}]`\n"
@@ -246,9 +241,10 @@ class TermStatesEstimator(CCDetectorMixin, BaseEstimator, ABC):
         # fmt: off
         key = Key.obs.term_states(self.backward)
         with SafeGetter(self, allowed=KeyError) as sg:
-            self._get("_term_states", self.adata.obs, key=key, dtype=pd.Series)
-            self._get("_term_states_probs", self.adata.obs, key=Key.obs.probs(key), dtype=pd.Series)
-            self._get("_term_states_colors", self.adata.uns, key=Key.uns.colors(key), dtype=(list, tuple, np.ndarray))
+            self._get("_term_states", self.adata.obs, key=key, where="obs", dtype=pd.Series)
+            self._get("_term_states_probs", self.adata.obs, key=Key.obs.probs(key), where="obs", dtype=pd.Series)
+            self._get("_term_states_colors", self.adata.uns, key=Key.uns.colors(key), where="uns",
+                      dtype=(list, tuple, np.ndarray))
             self._term_states_colors = np.asarray([to_hex(c) for c in self._term_states_colors])
         # fmt: on
 
