@@ -83,7 +83,7 @@ class AbsProbsProtocol(Protocol):
         colors: Optional[np.ndarray],
         probs: Optional[pd.Series] = None,
         *,
-        time: Optional[datetime],
+        time: Optional[datetime] = None,
         log: bool = True,
     ) -> None:
         ...
@@ -393,7 +393,7 @@ class AbsProbsMixin:
         colors: Optional[np.ndarray],
         probs: Optional[pd.Series] = None,
         *,
-        time: Optional[datetime],
+        time: Optional[datetime] = None,
         log: bool = True,
     ) -> None:
         key = Key.obsm.abs_probs(self.backward)

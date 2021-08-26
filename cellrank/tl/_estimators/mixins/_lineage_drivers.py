@@ -551,7 +551,7 @@ class LinDriversMixin(AbsProbsMixin):
         colors: Optional[np.ndarray],
         probs: Optional[pd.Series] = None,
         *,
-        time: Optional[datetime],
+        time: Optional[datetime] = None,
         log: bool = True,
     ) -> None:
         super()._write_terminal_states(states, colors, probs, time=time, log=log)

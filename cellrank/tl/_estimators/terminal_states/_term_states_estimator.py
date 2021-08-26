@@ -180,7 +180,7 @@ class TermStatesEstimator(CCDetectorMixin, BaseEstimator, ABC):
 
             categories = _convert_to_categorical_series(categories, list(self.adata.obs_names))
         if not is_categorical_dtype(categories):
-            raise TypeError(f"Object must be `categorical`, found `{infer_dtype(categories).__name__}`.")
+            raise TypeError(f"Expected object to be `categorical`, found `{infer_dtype(categories).__name__!r}`.")
 
         if existing is not None:
             categories = _merge_categorical_series(old=existing, new=categories)
@@ -219,7 +219,7 @@ class TermStatesEstimator(CCDetectorMixin, BaseEstimator, ABC):
         colors: Optional[np.ndarray],
         probs: Optional[pd.Series] = None,
         *,
-        time: Optional[datetime],
+        time: Optional[datetime] = None,
         log: bool = True,
     ) -> None:
         key = Key.obs.term_states(self.backward)

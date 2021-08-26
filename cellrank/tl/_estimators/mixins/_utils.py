@@ -240,7 +240,7 @@ def register_plotter(
             _colors=getattr(instance, colors, None)
             if isinstance(colors, str)
             else None,
-            discrete=discrete,
+            discrete=disc,
             **kwargs,
         )
 

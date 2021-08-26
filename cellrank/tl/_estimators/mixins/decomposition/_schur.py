@@ -235,8 +235,8 @@ class SchurMixin(VectorPlottable):
         time: datetime,
     ) -> None:
         self._eigendecomposition = decomp
-        self._schur_vectors = vectors.copy()
-        self._schur_matrix = matrix.copy()
+        self._schur_vectors = vectors
+        self._schur_matrix = matrix
 
         key = Key.uns.eigen(self.backward)
         self.adata.uns[key] = decomp

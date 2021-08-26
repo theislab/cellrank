@@ -64,6 +64,8 @@ class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
         value: Optional[Union[np.ndarray, pd.Series, pd.DataFrame, Lineage]] = None,
         copy: bool = True,
     ):
+        if not hasattr(self, attr):
+            raise AttributeError(attr)
         setattr(self, attr, value)
 
         if key is not None:
