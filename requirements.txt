@@ -10,7 +10,7 @@ pygpcca>=1.0.2
 scanpy>=1.7.2
 scikit-learn>=0.24.0
 scipy>=1.2.0
-scvelo>=0.2.3
+scvelo>=0.2.4
 seaborn>=0.10.0
 setuptools>=41.0.1
 typing_extensions
