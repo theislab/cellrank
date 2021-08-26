@@ -1,6 +1,8 @@
 from typing import Any, Tuple, Union, Mapping, Optional, Sequence
 from typing_extensions import Literal
 
+from types import MappingProxyType
+from pathlib import Path
 from datetime import datetime
 
 from anndata import AnnData
@@ -8,10 +10,12 @@ from cellrank import logging as logg
 from cellrank.tl import Lineage
 from cellrank.ul._docs import d
 from cellrank.tl._utils import (
+    save_fig,
     _eigengap,
     _fuzzy_to_discrete,
     _series_from_one_hot_matrix,
 )
+from cellrank.tl._colors import _get_black_or_white, _create_categorical_colors
 from cellrank.tl._estimators.mixins import EigenMixin, SchurMixin, LinDriversMixin
 from cellrank.tl.kernels._base_kernel import KernelExpression
 from cellrank.tl._estimators.mixins._utils import logger, register_plotter
@@ -22,6 +26,13 @@ from cellrank.tl._estimators.terminal_states._term_states_estimator import (
 import numpy as np
 import pandas as pd
 from scipy.sparse import spmatrix
+from pandas.api.types import infer_dtype, is_categorical_dtype
+
+import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
+from matplotlib.colors import Normalize, ListedColormap
+from matplotlib.ticker import StrMethodFormatter
+from matplotlib.colorbar import ColorbarBase
 
 
 class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
@@ -288,6 +299,347 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             new_names.get(n, n) for n in term_states_memberships.names
         ]
         self._set("_term_states_memberships", value=term_states_memberships)
+
+    @d.dedent
+    def plot_coarse_T(
+        self,
+        show_stationary_dist: bool = True,
+        show_initial_dist: bool = False,
+        cmap: Union[str, ListedColormap] = "viridis",
+        xtick_rotation: float = 45,
+        annotate: bool = True,
+        show_cbar: bool = True,
+        title: Optional[str] = None,
+        figsize: Tuple[float, float] = (8, 8),
+        dpi: int = 80,
+        save: Optional[Union[Path, str]] = None,
+        text_kwargs: Mapping[str, Any] = MappingProxyType({}),
+        **kwargs: Any,
+    ) -> None:
+        """
+        Plot the coarse-grained transition matrix between macrostates.
+
+        Parameters
+        ----------
+        show_stationary_dist
+            Whether to show the stationary distribution, if present.
+        show_initial_dist
+            Whether to show the initial distribution.
+        cmap
+            Colormap to use.
+        xtick_rotation
+            Rotation of ticks on the x-axis.
+        annotate
+            Whether to display the text on each cell.
+        show_cbar
+            Whether to show colorbar.
+        title
+            Title of the figure.
+        %(plotting)s
+        text_kwargs
+            Keyword arguments for :func:`matplotlib.pyplot.text`.
+        kwargs
+            Keyword arguments for :func:`matplotlib.pyplot.imshow`.
+
+        Returns
+        -------
+        %(just_plots)s
+        """
+
+        def stylize_dist(ax, data: np.ndarray, xticks_labels: Sequence[str] = ()):
+            _ = ax.imshow(data, aspect="auto", cmap=cmap, norm=norm)
+            for spine in ax.spines.values():
+                spine.set_visible(False)
+
+            if xticks_labels is not None:
+                ax.set_xticks(np.arange(data.shape[1]))
+                ax.set_xticklabels(xticks_labels)
+                plt.setp(
+                    ax.get_xticklabels(),
+                    rotation=xtick_rotation,
+                    ha="right",
+                    rotation_mode="anchor",
+                )
+            else:
+                ax.set_xticks([])
+                ax.tick_params(
+                    which="both", top=False, right=False, bottom=False, left=False
+                )
+
+            ax.set_yticks([])
+
+        def annotate_heatmap(im, valfmt: str = "{x:.2f}"):
+            # modified from matplotlib's site
+
+            data = im.get_array()
+            kw = {"ha": "center", "va": "center"}
+            kw.update(**text_kwargs)
+
+            # Get the formatter in case a string is supplied
+            if isinstance(valfmt, str):
+                valfmt = StrMethodFormatter(valfmt)
+
+            # Loop over the data and create a `Text` for each "pixel".
+            # Change the text's color depending on the data.
+            texts = []
+            for i in range(data.shape[0]):
+                for j in range(data.shape[1]):
+                    kw.update(color=_get_black_or_white(im.norm(data[i, j]), cmap))
+                    text = im.axes.text(j, i, valfmt(data[i, j], None), **kw)
+                    texts.append(text)
+
+        def annotate_dist_ax(ax, data: np.ndarray, valfmt: str = "{x:.2f}"):
+            if ax is None:
+                return
+
+            if isinstance(valfmt, str):
+                valfmt = StrMethodFormatter(valfmt)
+
+            kw = {"ha": "center", "va": "center"}
+            kw.update(**text_kwargs)
+
+            for i, val in enumerate(data):
+                kw.update(color=_get_black_or_white(im.norm(val), cmap))
+                ax.text(
+                    i,
+                    0,
+                    valfmt(val, None),
+                    **kw,
+                )
+
+        coarse_T = self.coarse_T
+        coarse_init_d = self.coarse_initial_distribution
+        coarse_stat_d = self.coarse_stationary_distribution
+
+        if coarse_T is None:
+            raise RuntimeError(
+                "Compute coarse-grained transition matrix first as `.compute_macrostates()` with `n_states > 1`."
+            )
+
+        if show_stationary_dist and coarse_stat_d is None:
+            logg.warning("Coarse stationary distribution is `None`, ignoring")
+            show_stationary_dist = False
+        if show_initial_dist and coarse_init_d is None:
+            logg.warning("Coarse initial distribution is `None`, ignoring")
+            show_initial_dist = False
+
+        hrs, wrs = [1], [1]
+        if show_stationary_dist:
+            hrs += [0.05]
+        if show_initial_dist:
+            hrs += [0.05]
+        if show_cbar:
+            wrs += [0.025]
+
+        dont_show_dist = not show_initial_dist and not show_stationary_dist
+
+        fig = plt.figure(constrained_layout=False, figsize=figsize, dpi=dpi)
+        gs = plt.GridSpec(
+            1 + show_stationary_dist + show_initial_dist,
+            1 + show_cbar,
+            height_ratios=hrs,
+            width_ratios=wrs,
+            wspace=0.05,
+            hspace=0.05,
+        )
+        if isinstance(cmap, str):
+            cmap = plt.get_cmap(cmap)
+
+        ax = fig.add_subplot(gs[0, 0])
+        cax = fig.add_subplot(gs[:1, -1]) if show_cbar else None
+        init_ax, stat_ax = None, None
+
+        labels = list(self.coarse_T.columns)
+
+        tmp = coarse_T
+        if show_initial_dist:
+            tmp = np.c_[tmp, coarse_stat_d]
+        if show_initial_dist:
+            tmp = np.c_[tmp, coarse_init_d]
+
+        minn, maxx = np.nanmin(tmp), np.nanmax(tmp)
+        norm = Normalize(vmin=minn, vmax=maxx)
+
+        if show_stationary_dist:
+            stat_ax = fig.add_subplot(gs[1, 0])
+            stylize_dist(
+                stat_ax,
+                np.array(coarse_stat_d).reshape(1, -1),
+                xticks_labels=labels if not show_initial_dist else None,
+            )
+            stat_ax.yaxis.set_label_position("right")
+            stat_ax.set_ylabel("stationary dist", rotation=0, ha="left", va="center")
+
+        if show_initial_dist:
+            init_ax = fig.add_subplot(gs[show_stationary_dist + show_initial_dist, 0])
+            stylize_dist(
+                init_ax, np.array(coarse_init_d).reshape(1, -1), xticks_labels=labels
+            )
+
+            init_ax.yaxis.set_label_position("right")
+            init_ax.set_ylabel("initial dist", rotation=0, ha="left", va="center")
+
+        im = ax.imshow(coarse_T, aspect="auto", cmap=cmap, norm=norm, **kwargs)
+        ax.set_title("coarse-grained transition matrix" if title is None else title)
+
+        if cax is not None:
+            _ = ColorbarBase(
+                cax,
+                cmap=cmap,
+                norm=norm,
+                ticks=np.linspace(minn, maxx, 10),
+                format="%0.3f",
+            )
+
+        ax.set_yticks(np.arange(coarse_T.shape[0]))
+        ax.set_yticklabels(labels)
+
+        ax.tick_params(
+            top=False,
+            bottom=dont_show_dist,
+            labeltop=False,
+            labelbottom=dont_show_dist,
+        )
+
+        for spine in ax.spines.values():
+            spine.set_visible(False)
+
+        if dont_show_dist:
+            ax.set_xticks(np.arange(coarse_T.shape[1]))
+            ax.set_xticklabels(labels)
+            plt.setp(
+                ax.get_xticklabels(),
+                rotation=xtick_rotation,
+                ha="right",
+                rotation_mode="anchor",
+            )
+        else:
+            ax.set_xticks([])
+
+        ax.set_yticks(np.arange(coarse_T.shape[0] + 1) - 0.5, minor=True)
+        ax.tick_params(which="minor", bottom=dont_show_dist, left=False, top=False)
+
+        if annotate:
+            annotate_heatmap(im)
+            if show_stationary_dist:
+                annotate_dist_ax(stat_ax, coarse_stat_d.values)
+            if show_initial_dist:
+                annotate_dist_ax(init_ax, coarse_init_d)
+
+        if save:
+            save_fig(fig, save)
+
+    @d.dedent
+    def plot_macrostate_composition(
+        self,
+        key: str,
+        width: float = 0.8,
+        title: Optional[str] = None,
+        labelrot: float = 45,
+        legend_loc: Optional[str] = "upper right out",
+        figsize: Optional[Tuple[float, float]] = None,
+        dpi: Optional[int] = None,
+        save: Optional[Union[str, Path]] = None,
+        show: bool = True,
+    ) -> Optional[Axes]:
+        """
+        Plot stacked histogram of macrostates over categorical annotations.
+
+        Parameters
+        ----------
+        %(adata)s
+        key
+            Key from :attr:`anndata.AnnData.obs` containing categorical annotations.
+        width
+            Bar width in `[0, 1]`.
+        title
+            Title of the figure. If `None`, create one automatically.
+        labelrot
+            Rotation of labels on x-axis.
+        legend_loc
+            Position of the legend. If `None`, don't show legend.
+        %(plotting)s
+        show
+            If `False`, return :class:`matplotlib.pyplot.Axes`.
+
+        Returns
+        -------
+        :class:`matplotlib.pyplot.Axes`
+            The axis object if ``show = False``.
+        %(just_plots)s
+        """
+        from cellrank.pl._utils import _position_legend
+
+        macrostates = self.macrostates
+        if macrostates is None:
+            raise RuntimeError("Compute macrostates first as `.compute_macrostates()`.")
+        if key not in self.adata.obs:
+            raise KeyError(f"Data not found in `adata.obs[{key!r}]`.")
+        if not is_categorical_dtype(self.adata.obs[key]):
+            raise TypeError(
+                f"Expected `adata.obs[{key!r}]` to be `categorical`, "
+                f"found `{infer_dtype(self.adata.obs[key])}`."
+            )
+
+        mask = ~macrostates.isnull()
+        df = (
+            pd.DataFrame({"macrostates": macrostates, key: self.adata.obs[key]})[mask]
+            .groupby([key, "macrostates"])
+            .size()
+        )
+        try:
+            cats_colors = self.adata.uns[f"{key}_colors"]
+        except KeyError:
+            cats_colors = _create_categorical_colors(
+                len(self.adata.obs[key].cat.categories)
+            )
+        cat_color_mapper = dict(zip(self.adata.obs[key].cat.categories, cats_colors))
+        x_indices = np.arange(len(macrostates.cat.categories))
+        bottom = np.zeros_like(x_indices, dtype=np.float32)
+
+        width = min(1, max(0, width))
+        fig, ax = plt.subplots(figsize=figsize, dpi=dpi, tight_layout=True)
+        for cat, color in cat_color_mapper.items():
+            frequencies = df.loc[cat]
+            # do not add to legend if category is missing
+            if np.sum(frequencies) > 0:
+                ax.bar(
+                    x_indices,
+                    frequencies,
+                    width,
+                    label=cat,
+                    color=color,
+                    bottom=bottom,
+                    ec="black",
+                    lw=0.5,
+                )
+                bottom += np.array(frequencies)
+
+        ax.set_xticks(x_indices)
+        ax.set_xticklabels(
+            # assuming at least 1 category
+            frequencies.index,
+            rotation=labelrot,
+            ha="center" if labelrot in (0, 90) else "right",
+        )
+        y_max = bottom.max()
+        ax.set_ylim([0, y_max + 0.05 * y_max])
+        ax.set_yticks(np.linspace(0, y_max, 5))
+        ax.margins(0.05)
+
+        ax.set_xlabel("macrostate")
+        ax.set_ylabel("frequency")
+        if title is None:
+            title = f"distribution over {key}"
+        ax.set_title(title)
+        if legend_loc not in (None, "none"):
+            _position_legend(ax, legend_loc=legend_loc)
+
+        if save is not None:
+            save_fig(fig, save)
+
+        if not show:
+            return ax
 
     def _n_states(self, n_states: Optional[Union[int, Sequence[int]]]) -> int:
         if n_states is None:
