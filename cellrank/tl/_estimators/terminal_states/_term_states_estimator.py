@@ -11,6 +11,7 @@ from cellrank.tl._colors import (
     _create_categorical_colors,
 )
 from cellrank.tl._estimators import BaseEstimator
+from cellrank.tl._estimators._utils import SafeGetter
 from cellrank.tl._estimators.mixins import CCDetectorMixin
 from cellrank.tl.kernels._base_kernel import KernelExpression
 from cellrank.tl._estimators.mixins._utils import logger, shadow, register_plotter
@@ -20,6 +21,8 @@ import numpy as np
 import pandas as pd
 from scipy.sparse import spmatrix
 from pandas.api.types import infer_dtype, is_categorical_dtype
+
+from matplotlib.colors import to_hex
 
 
 class TermStatesEstimator(CCDetectorMixin, BaseEstimator, ABC):
@@ -234,6 +237,34 @@ class TermStatesEstimator(CCDetectorMixin, BaseEstimator, ABC):
             f"       `.terminal_states_probabilities`\n"
             "    Finish"
         )
+
+    def _read_from_adata(self, adata: AnnData, **kwargs: Any) -> bool:
+        ok = super()._read_from_adata(adata, **kwargs)
+        if not ok:
+            return False
+
+        key = Key.obs.term_states(self.backward)
+        with SafeGetter(self, allowed=KeyError) as sg:
+            self._get("_term_states", self.adata.obs, key=key, dtype=pd.Series)
+            self._get(
+                "_term_states_probs",
+                self.adata.obs,
+                key=Key.obs.probs(key),
+                dtype=pd.Series,
+            )
+            self._get(
+                "_term_states_colors",
+                self.adata.uns,
+                key=Key.uns.colors(key),
+                dtype=(list, tuple, np.ndarray),
+            )
+            self._term_states_colors = np.asarray(
+                [to_hex(c) for c in self._term_states_colors]
+            )
+
+        # TODO: log
+
+        return sg.ok
 
     def fit(self, *args: Any, **kwargs: Any) -> None:
         # TODO: implement me

@@ -1,6 +1,7 @@
-from typing import Any, Dict, Union, Mapping, Optional
+from typing import Any, Dict, Tuple, Union, Mapping, Optional
 
 from abc import ABC, abstractmethod
+from copy import copy as copy_
 from contextlib import contextmanager
 
 from anndata import AnnData
@@ -90,7 +91,28 @@ class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
                 except KeyError:
                     pass
             else:
-                obj[key] = value.copy() if copy else value
+                obj[key] = copy_(value) if copy else value
+
+    def _get(
+        self,
+        attr: str,
+        obj: Optional[Union[pd.DataFrame, Mapping[str, Any]]],
+        key: str,
+        dtype: Optional[Union[type, Tuple[type, ...]]] = None,
+        copy: bool = True,
+        allow_missing: bool = False,
+    ):
+        if not hasattr(self, attr):
+            raise AttributeError(attr)
+
+        try:
+            data = obj[key]
+            if dtype is not None and not isinstance(data, dtype):
+                raise TypeError("TODO")
+            setattr(self, attr, copy_(data) if copy else data)
+        except KeyError:
+            if not allow_missing:
+                raise
 
     @property
     @contextmanager
@@ -122,8 +144,11 @@ class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
         return adata
 
     @classmethod
-    def from_adata(cls, adata: AnnData, key: str) -> "BaseEstimator":
-        return NotImplemented
+    def from_adata(cls, adata: AnnData, obsp_key: str) -> "BaseEstimator":
+        obj = cls(adata, obsp_key=obsp_key)
+        obj._read_from_adata(adata)
+
+        return obj
 
     @property
     def params(self) -> Dict[str, Any]:

@@ -25,7 +25,11 @@ class AnnDataMixin(ABC):
     def to_adata(self) -> AnnData:
         """TODO."""
 
+    def _read_from_adata(self, adata: AnnData, **kwargs: Any) -> bool:
+        """TODO."""
+        return True
+
     @classmethod
     @abstractmethod
-    def from_adata(cls, adata: AnnData) -> "AnnDataMixin":
+    def from_adata(cls, adata: AnnData, **kwargs: Any) -> "AnnDataMixin":
         """TODO."""
