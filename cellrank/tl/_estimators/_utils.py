@@ -3,6 +3,8 @@ from typing import Any, Union, Optional, Sequence
 from copy import deepcopy
 from collections import Iterable
 
+from scanpy import logging as logg
+
 
 class SafeGetter:
     def __init__(self, obj: Any, allowed: Union[type, Sequence[type]] = ()):
@@ -22,8 +24,9 @@ class SafeGetter:
     def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
         # TODO: refactor using custom exc instead of passing flags?
         self._exc = exc_type
-        # TODO: log
+        # TODO: log properly
         if not self.ok:
+            logg.warning(exc_type(exc_val))
             self._obj.__dict__ = self._dict
             return self._exc in self._allowed
 
