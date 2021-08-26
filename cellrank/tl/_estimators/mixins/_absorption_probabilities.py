@@ -54,6 +54,12 @@ class AbsProbsProtocol(Protocol):
     ) -> str:
         ...
 
+    def _write_lineage_priming(
+        self,
+        priming_degree: Optional[pd.Series],
+    ) -> str:
+        ...
+
     # TODO: type
     def _compute_absorption_probabilities(
         self,
@@ -317,14 +323,7 @@ class AbsProbsMixin:
         values = pd.Series(
             abs_probs.priming_degree(method, early_cells), index=self.adata.obs_names
         )
-
-        # TODO: extract
-        self._priming_degree = values
-        key = Key.obs.priming_degree(self.backward)
-        self.adata.obs[key] = values
-
-        logg.info(f"Adding `adata.obs[{key!r}]`\n       `.priming_degree`")
-
+        self._write_lineage_priming(values)
         return values
 
     # TODO(michalk8): type
@@ -385,6 +384,7 @@ class AbsProbsMixin:
         abs_probs: Optional[Lineage],
         abs_times: Optional[pd.DataFrame],
     ) -> str:
+        self._write_lineage_priming(None, log=False)
         # fmt: off
         key1 = Key.obsm.abs_probs(self.backward)
         self._set("_absorption_probabilities", self.adata.obsm, key=key1, value=abs_probs)
@@ -406,6 +406,16 @@ class AbsProbsMixin:
             "    Finish"
         )
 
+    @logger
+    def _write_lineage_priming(
+        self: AbsProbsProtocol, values: Optional[pd.Series]
+    ) -> str:
+        self._priming_degree = values
+        key = Key.obs.priming_degree(self.backward)
+        self.adata.obs[key] = values
+
+        return f"Adding `adata.obs[{key!r}]`\n       `.priming_degree`\n    Finish"
+
     plot_absorption_probabilities = register_plotter(
         continuous="absorption_probabilities"
     )
@@ -419,3 +429,8 @@ class AbsProbsMixin:
     def absorption_times(self) -> Optional[pd.DataFrame]:
         """TODO."""
         return self._absorption_times
+
+    @property
+    def priming_degree(self) -> Optional[pd.Series]:
+        """TODO."""
+        return self._priming_degree
