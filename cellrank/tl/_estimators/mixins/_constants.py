@@ -1,4 +1,4 @@
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
 
 class cprop:
@@ -28,6 +28,10 @@ class Key:
             return f"{key}_probs"
 
         @classmethod
+        def macrostates(cls, bwd: bool) -> str:
+            return f"macrostates_{Key.backward(bwd)}"
+
+        @classmethod
         def term_states(cls, bwd: bool) -> str:
             return f"{Key.initial(bwd)}_states"
 
@@ -36,6 +40,14 @@ class Key:
             return f"priming_degree_{Key.backward(bwd)}"
 
     class obsm:
+        @classmethod
+        def memberships(cls, key: str) -> str:
+            return f"{key}_memberships"
+
+        @classmethod
+        def schur_vectors(cls, bwd: bool) -> str:
+            return f"schur_vectors_{Key.backward(bwd)}"
+
         @classmethod
         def macrostates(cls, bwd: bool) -> str:
             return f"macrostates_{Key.backward(bwd)}"
@@ -55,6 +67,14 @@ class Key:
 
     class uns:
         @classmethod
+        def kernel(cls, key: Optional[str], bwd: bool) -> str:
+            return key if key is not None else f"T_{Key.backward(bwd)}"
+
+        @classmethod
+        def estimator(cls, key: Optional[str], bwd: bool) -> str:
+            return key if key is not None else f"{Key.backward(bwd)}_estimator"
+
+        @classmethod
         def names(cls, key: str) -> str:
             return f"{key}_names"
 
@@ -65,3 +85,11 @@ class Key:
         @classmethod
         def eigen(cls, bwd: bool) -> str:
             return f"eigendecomposition_{Key.backward(bwd)}"
+
+        @classmethod
+        def schur_matrix(cls, bwd: bool) -> str:
+            return f"schur_matrix_{Key.backward(bwd)}"
+
+        @classmethod
+        def coarse(cls, bwd: bool) -> str:
+            return f"coarse_{Key.backward(bwd)}"

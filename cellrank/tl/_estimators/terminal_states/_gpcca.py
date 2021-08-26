@@ -1,6 +1,7 @@
 from typing import Any, Tuple, Union, Mapping, Optional, Sequence
 from typing_extensions import Literal
 
+from copy import deepcopy
 from types import MappingProxyType
 from pathlib import Path
 from datetime import datetime
@@ -19,6 +20,7 @@ from cellrank.tl._colors import _get_black_or_white, _create_categorical_colors
 from cellrank.tl._estimators.mixins import EigenMixin, SchurMixin, LinDriversMixin
 from cellrank.tl.kernels._base_kernel import KernelExpression
 from cellrank.tl._estimators.mixins._utils import logger, register_plotter
+from cellrank.tl._estimators.mixins._constants import Key
 from cellrank.tl._estimators.terminal_states._term_states_estimator import (
     TermStatesEstimator,
 )
@@ -956,6 +958,56 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
     plot_terminal_states = register_plotter(
         discrete="terminal_states", continuous="terminal_states_memberships"
     )
+
+    def to_adata(self) -> AnnData:
+        adata = super().to_adata()
+
+        self._set(
+            obj=adata.uns,
+            key=Key.uns.eigen(self.backward),
+            value=deepcopy(self.eigendecomposition),
+            copy=False,
+        )
+        key = Key.obs.macrostates(self.backward)
+        self._set(obj=adata.obs, key=key, value=self.macrostates)
+        self._set(
+            obj=adata.uns, key=Key.uns.colors(key), value=self._macrostates_colors
+        )
+        self._set(
+            obj=adata.obsm,
+            key=Key.obsm.memberships(key),
+            value=self.macrostates_memberships,
+        )
+
+        self._set(
+            obj=adata.obsm,
+            key=Key.obsm.schur_vectors(self.backward),
+            value=self.schur_vectors,
+        )
+        self._set(
+            obj=adata.uns,
+            key=Key.uns.schur_matrix(self.backward),
+            value=self.schur_vectors,
+        )
+
+        key = Key.obs.term_states(self.backward)
+        self._set(
+            obj=adata.obsm,
+            key=Key.obsm.memberships(key),
+            value=self.terminal_states_memberships,
+        )
+
+        if self.coarse_T is not None:
+            dists = pd.DataFrame({"coarse_init_dist": self.coarse_initial_distribution})
+            if self.coarse_stationary_distribution is not None:
+                dists["coarse_stat_dist"] = self.coarse_stationary_distribution
+            self._set(
+                obj=adata.uns,
+                key=Key.uns.coarse(self.backward),
+                value=AnnData(self.coarse_T, obs=dists),
+            )
+
+        return super()._serialize(adata)
 
     @property
     def macrostates(self) -> Optional[pd.Series]:

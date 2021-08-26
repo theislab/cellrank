@@ -22,7 +22,7 @@ class AnnDataMixin(ABC):
         return len(self.adata)
 
     @abstractmethod
-    def to_adata(self) -> None:
+    def to_adata(self) -> AnnData:
         """TODO."""
 
     @classmethod

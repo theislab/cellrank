@@ -561,6 +561,14 @@ class LinDriversMixin(AbsProbsMixin):
             "    Finish"
         )
 
+    def _serialize(self: LinDriversProtocol, adata: AnnData) -> AnnData:
+        adata = super()._serialize(adata)
+
+        return adata
+
+    def _deserialize(self, adata: AnnData) -> AnnData:
+        pass
+
     @property
     def lineage_drivers(self) -> Optional[pd.DataFrame]:
         """TODO."""

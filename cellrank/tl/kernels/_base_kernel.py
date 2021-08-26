@@ -196,23 +196,21 @@ class KernelExpression(Pickleable, ABC):
         Parameters
         ----------
         key
-            Key used when writing transition matrix to :attr:`adata`.
-            If `None`, the ``key`` is set to `'T_bwd'` if :attr:`backward` is `True`, else `'T_fwd'`.
+            Key used when writing transition matrix to :attr:`adata`. If `None`, determine the key automatically.
 
         Returns
         -------
         None
             %(write_to_adata)s
         """
+        from cellrank.tl._estimators.mixins._constants import Key
 
         if self._transition_matrix is None:
             raise ValueError(
                 "Compute transition matrix first as `.compute_transition_matrix()`."
             )
 
-        if key is None:
-            key = _transition(self._direction)
-
+        key = Key.uns.kernel(key, self.backward)
         # retain the embedding info
         self.adata.uns[f"{key}_params"] = {
             **self.adata.uns.get(f"{key}_params", {}),
@@ -799,18 +797,20 @@ class UnaryKernelExpression(KernelExpression, ABC):
         return self._adata
 
     @adata.setter
-    def adata(self, _adata: AnnData) -> None:
-        if not isinstance(_adata, AnnData):
+    def adata(self, adata: Optional[AnnData]) -> None:
+        if adata is None:
+            self._adata = None
+            return
+        if not isinstance(adata, AnnData):
             raise TypeError(
-                f"Expected argument of type `anndata.AnnData`, found `{type(_adata).__name__!r}`."
+                f"Expected argument of type `anndata.AnnData`, found `{type(adata).__name__!r}`."
             )
-        # otherwise, we'd have to reread bunch of attributes - it's better to initialize new object
-        if _adata.shape != self.adata.shape:
+        if adata.shape != self.adata.shape:
             raise ValueError(
                 f"Expected the new object to have same shape as previous object `{self.adata.shape}`, "
-                f"found `{_adata.shape}`."
+                f"found `{adata.shape}`."
             )
-        self._adata = _adata
+        self._adata = adata
 
     def __repr__(self):
         return f"{'~' if self.backward and self._parent is None else ''}<{self.__class__.__name__}>"
@@ -890,8 +890,9 @@ class NaryKernelExpression(KernelExpression, ABC):
         return self._kexprs[0].adata
 
     @adata.setter
-    def adata(self, _adata: AnnData) -> None:
-        self._kexprs[0].adata = _adata
+    def adata(self, adata: Optional[AnnData]) -> None:
+        for kexpr in self._kexprs:
+            kexpr.adata = adata
 
     def __invert__(self) -> "NaryKernelExpression":
         super().__invert__()

@@ -18,13 +18,23 @@ class IOMixin:
     def _maybe_remove_adata(self, remove: bool) -> None:
         adata = getattr(self, "_adata", None)
         should_remove = remove and adata is not None
+        setter = False
+
         try:
             if should_remove:
-                self._adata = None
+                try:
+                    # invoke setter if possible
+                    self.adata = None
+                    setter = True
+                except AttributeError:
+                    self._adata = None
             yield
         finally:
             if should_remove:
-                self._adata = adata
+                if setter:
+                    self.adata = adata
+                else:
+                    self._adata = adata
 
     def write(
         self,

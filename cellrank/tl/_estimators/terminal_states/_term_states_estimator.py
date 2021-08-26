@@ -3,8 +3,6 @@ from typing import Any, Dict, Tuple, Union, Mapping, Optional, Sequence
 from abc import ABC, abstractmethod
 
 from anndata import AnnData
-from cellrank import logging as logg
-from cellrank.tl import Lineage
 from cellrank.ul._docs import d
 from cellrank.tl._utils import _merge_categorical_series, _convert_to_categorical_series
 from cellrank.tl._colors import (
@@ -36,16 +34,18 @@ class TermStatesEstimator(CCDetectorMixin, BaseEstimator, ABC):
         self._term_states_probs: Optional[pd.Series] = None
         self._term_states_colors: Optional[np.ndarray] = None
 
-    def to_adata(self) -> None:
-        super().to_adata()
+    @abstractmethod
+    def to_adata(self) -> AnnData:
+        adata = super().to_adata()
 
         key = Key.obs.term_states(self.backward)
-        # TODO: set_or_debug
         if self.terminal_states is not None:
-            self.adata.obs[key] = self.terminal_states
-            self.adata.uns[Key.uns.colors(key)] = self._term_states_colors
+            adata.obs[key] = self.terminal_states.copy()
+            adata.uns[Key.uns.colors(key)] = self._term_states_colors.copy()
         if self.terminal_states_probabilities is not None:
-            self.adata.obs[Key.obs.probs(key)] = self.terminal_states_probabilities
+            adata.obs[Key.obs.probs(key)] = self.terminal_states_probabilities.copy()
+
+        return adata
 
     @d.dedent
     def set_terminal_states(

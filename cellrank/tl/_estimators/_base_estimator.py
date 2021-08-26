@@ -7,6 +7,7 @@ from cellrank.tl import Lineage
 from cellrank.tl.kernels import PrecomputedKernel
 from cellrank.tl._estimators.mixins import IOMixin, KernelMixin, AnnDataMixin
 from cellrank.tl.kernels._base_kernel import KernelExpression
+from cellrank.tl._estimators.mixins._constants import Key
 
 import numpy as np
 import pandas as pd
@@ -49,24 +50,25 @@ class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
         super().__init__(adata=kernel.adata, kernel=kernel, **kwargs)
 
         self._params: Dict[str, Any] = {}
-        # TODO: make sure tests pass
-        # TODO: use this key for params/adata serialization
-        # kernel.write_to_adata(key=key)
+        self._shadow_adata = AnnData(X=self.adata.X)
 
     def __init_subclass__(cls, **kwargs: Any):
         super().__init_subclass__()
 
     def _set(
         self,
-        attr: str,
+        attr: Optional[str] = None,
         obj: Optional[Union[pd.DataFrame, Mapping[str, Any]]] = None,
         key: Optional[str] = None,
-        value: Optional[Union[np.ndarray, pd.Series, pd.DataFrame, Lineage]] = None,
+        value: Optional[
+            Union[np.ndarray, pd.Series, pd.DataFrame, Lineage, AnnData]
+        ] = None,
         copy: bool = True,
     ):
-        if not hasattr(self, attr):
-            raise AttributeError(attr)
-        setattr(self, attr, value)
+        if attr is not None:
+            if not hasattr(self, attr):
+                raise AttributeError(attr)
+            setattr(self, attr, value)
 
         if key is not None:
             if value is None:
@@ -80,11 +82,24 @@ class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
             else:
                 obj[key] = value.copy() if copy else value
 
-    def to_adata(self) -> None:
-        self.adata.uns["TODO_kernel"] = self.params.copy()
+    def to_adata(self) -> AnnData:
+        return self._shadow_adata.copy()
+        # TODO: control which attrs are serialized
+        adata = AnnData(X=self.adata.X)
+
+        try:
+            self.kernel.adata = adata
+            self.kernel.write_to_adata(None)
+        finally:
+            self.kernel.adata = self.adata
+        adata.uns[
+            Key.uns.estimator(None, self.backward) + "_params"
+        ] = self.params.copy()
+
+        return adata
 
     @classmethod
-    def from_adata(cls, adata: AnnData) -> "BaseEstimator":
+    def from_adata(cls, adata: AnnData, key: str) -> "BaseEstimator":
         return NotImplemented
 
     @property

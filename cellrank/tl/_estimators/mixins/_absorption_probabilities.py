@@ -22,6 +22,7 @@ from scipy.sparse import issparse, csr_matrix
 
 class AbsProbsProtocol(Protocol):
     _term_states_colors: np.ndarray
+    priming_degree: pd.Series
 
     @property
     def adata(self) -> AnnData:
@@ -419,6 +420,20 @@ class AbsProbsMixin:
     plot_absorption_probabilities = register_plotter(
         continuous="absorption_probabilities"
     )
+
+    def _serialize(self: AbsProbsProtocol, adata: AnnData) -> AnnData:
+        key = Key.obsm.abs_probs(self.backward)
+        self._set(obj=adata.obsm, key=key, value=self.absorption_probabilities)
+        key = Key.obsm.abs_probs(self.backward)
+        self._set(obj=adata.obsm, key=key, value=self.absorption_times)
+
+        key = Key.obs.priming_degree(self.backward)
+        self._set(obj=adata.obs, key=key, value=self.priming_degree)
+
+        return adata
+
+    def _deserialize(self, adata: AnnData) -> AnnData:
+        """TODO."""
 
     @property
     def absorption_probabilities(self) -> Optional[Lineage]:

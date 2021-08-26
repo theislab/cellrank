@@ -1,6 +1,9 @@
 from typing import Any, Dict, List, Union, Optional, Sequence
 from typing_extensions import Literal
 
+from copy import deepcopy
+
+from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.tl._utils import (
@@ -11,6 +14,7 @@ from cellrank.tl._utils import (
 )
 from cellrank.tl.kernels._utils import _get_basis
 from cellrank.tl._estimators.mixins import EigenMixin, LinDriversMixin
+from cellrank.tl._estimators.mixins._constants import Key
 from cellrank.tl._estimators.terminal_states._term_states_estimator import (
     TermStatesEstimator,
 )
@@ -199,6 +203,13 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
             probs=self._compute_term_states_probs(eig, use),
             time=start,
         )
+
+    def to_adata(self) -> AnnData:
+        adata = super().to_adata()
+        if self.eigendecomposition is not None:
+            adata.uns[Key.uns.eigen(self.backward)] = deepcopy(self.eigendecomposition)
+
+        return super()._serialize(adata)
 
     def _compute_term_states_probs(
         self, eig: Dict[str, Any], use: List[int]
