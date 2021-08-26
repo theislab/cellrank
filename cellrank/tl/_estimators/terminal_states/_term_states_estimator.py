@@ -243,24 +243,14 @@ class TermStatesEstimator(CCDetectorMixin, BaseEstimator, ABC):
         if not ok:
             return False
 
+        # fmt: off
         key = Key.obs.term_states(self.backward)
         with SafeGetter(self, allowed=KeyError) as sg:
             self._get("_term_states", self.adata.obs, key=key, dtype=pd.Series)
-            self._get(
-                "_term_states_probs",
-                self.adata.obs,
-                key=Key.obs.probs(key),
-                dtype=pd.Series,
-            )
-            self._get(
-                "_term_states_colors",
-                self.adata.uns,
-                key=Key.uns.colors(key),
-                dtype=(list, tuple, np.ndarray),
-            )
-            self._term_states_colors = np.asarray(
-                [to_hex(c) for c in self._term_states_colors]
-            )
+            self._get("_term_states_probs", self.adata.obs, key=Key.obs.probs(key), dtype=pd.Series)
+            self._get("_term_states_colors", self.adata.uns, key=Key.uns.colors(key), dtype=(list, tuple, np.ndarray))
+            self._term_states_colors = np.asarray([to_hex(c) for c in self._term_states_colors])
+        # fmt: on
 
         # TODO: log
 
