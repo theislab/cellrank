@@ -191,7 +191,7 @@ def _plot_continuous(
 def _plot_dispatcher(
     self: PlotterProtocol,
     *args: Any,
-    discrete: bool = False,
+    discrete: Optional[bool] = None,
     **kwargs: Any,
 ) -> None:
     """TODO."""
@@ -215,7 +215,9 @@ def register_plotter(
         kwargs: Mapping[str, Any],
     ) -> None:
         # fmt: off
-        disc = kwargs.pop("discrete", False)
+        disc: Optional[bool] = kwargs.pop("discrete", None)
+        disc = continuous is None if disc is None else disc
+
         if disc and discrete is None:
             # TODO: maybe lower the level
             logg.warning(f"Unable to plot `.{continuous}` in `discrete` mode. Using `continuous` mode")
