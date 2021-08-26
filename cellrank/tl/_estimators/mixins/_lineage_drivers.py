@@ -11,6 +11,7 @@ from cellrank.tl import Lineage
 from cellrank.ul._docs import d, inject_docs
 from cellrank.tl._utils import TestMethod, save_fig, _correlation_test
 from cellrank.tl._colors import _create_categorical_colors
+from cellrank.tl._estimators.mixins._utils import logger
 from cellrank.tl._estimators.mixins._constants import Key
 from cellrank.tl._estimators.mixins._absorption_probabilities import AbsProbsMixin
 
@@ -25,7 +26,11 @@ from matplotlib.patches import ArrowStyle
 
 class LinDriversProtocol(Protocol):
     def _write_lineage_drivers(
-        self, names: Sequence[str], use_raw: bool, time: datetime
+        self,
+        drivers: Optional[pd.DataFrame],
+        use_raw: bool,
+        time: Optional[datetime] = None,
+        log: bool = True,
     ) -> None:
         ...
 
@@ -223,27 +228,6 @@ class LinDriversMixin(AbsProbsMixin):
 
         if return_drivers:
             return drivers
-
-    def _write_lineage_drivers(
-        self: LinDriversProtocol,
-        drivers: pd.DataFrame,
-        use_raw: bool,
-        *,
-        time: datetime,
-    ) -> None:
-        self._lineage_drivers = drivers
-
-        # fmt: off
-        key = Key.varm.lineage_drivers(self.backward)
-        self._set("_lineage_drivers", self.adata.raw.varm if use_raw else self.adata.varm, key=key, value=drivers)
-        # fmt: on
-
-        logg.info(
-            f"Adding `adata.{'raw.' if use_raw else ''}varm[{key!r}]`\n"
-            f"       `.lineage_drivers`\n"
-            "    Finish",
-            time=time,
-        )
 
     @d.get_sections(base="plot_lineage_drivers", sections=["Parameters"])
     @d.dedent
@@ -545,34 +529,37 @@ class LinDriversMixin(AbsProbsMixin):
         if not show:
             return ax
 
-    def _write_terminal_states(
-        self: LinDriversProtocol,
-        states: Optional[pd.Series],
-        colors: Optional[np.ndarray],
-        probs: Optional[pd.Series] = None,
-        *,
-        time: Optional[datetime] = None,
-        log: bool = True,
-    ) -> None:
-        super()._write_terminal_states(states, colors, probs, time=time, log=log)
-
-        key = Key.varm.lineage_drivers(self.backward)
-        self._set("_lineage_drivers", self.adata.varm, key=key, value=None)
-
+    @logger
     def _write_absorption_probabilities(
         self: LinDriversProtocol,
         abs_probs: Optional[Lineage],
         abs_times: Optional[pd.DataFrame],
-        *,
-        time: Optional[datetime] = None,
-        log: bool = True,
-    ) -> None:
-        # fmt: off
-        super()._write_absorption_probabilities(abs_probs, abs_times, time=time, log=log)
+    ) -> str:
+        self._write_lineage_drivers(None, use_raw=False, log=False)
+        try:
+            self._write_lineage_drivers(None, use_raw=True, log=False)
+        except AttributeError:
+            pass
+        return super()._write_absorption_probabilities(abs_probs, abs_times, log=False)
 
+    @logger
+    def _write_lineage_drivers(
+        self: LinDriversProtocol,
+        drivers: Optional[pd.DataFrame],
+        use_raw: bool,
+    ) -> str:
+        self._lineage_drivers = drivers
+
+        # fmt: off
         key = Key.varm.lineage_drivers(self.backward)
-        self._set("_lineage_drivers", self.adata.varm, key=key, value=None)
+        self._set("_lineage_drivers", self.adata.raw.varm if use_raw else self.adata.varm, key=key, value=drivers)
         # fmt: on
+
+        return (
+            f"Adding `adata.{'raw.' if use_raw else ''}varm[{key!r}]`\n"
+            f"       `.lineage_drivers`\n"
+            "    Finish"
+        )
 
     @property
     def lineage_drivers(self) -> Optional[pd.DataFrame]:

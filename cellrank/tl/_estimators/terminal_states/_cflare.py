@@ -1,8 +1,6 @@
 from typing import Any, Dict, List, Union, Optional, Sequence
 from typing_extensions import Literal
 
-from datetime import datetime
-
 from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.tl._utils import (
@@ -225,21 +223,6 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
         c /= np.max(c)
 
         return pd.Series(c, index=self.adata.obs_names)
-
-    def _write_terminal_states(
-        self,
-        states: Optional[pd.Series],
-        colors: Optional[np.ndarray],
-        probs: Optional[pd.Series] = None,
-        *,
-        time: Optional[datetime],
-        log: bool = True,
-    ) -> None:
-        super()._write_terminal_states(states, colors, probs, time=time, log=log)
-        # TODO: verify it's correct
-        super(TermStatesEstimator, self)._write_terminal_states(
-            states, colors, probs, time=time, log=log
-        )
 
     def fit(self, *args: Any, **kwargs: Any) -> None:
         return NotImplemented

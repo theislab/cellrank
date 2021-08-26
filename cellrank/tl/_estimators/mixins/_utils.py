@@ -16,6 +16,19 @@ import pandas as pd
 from pandas.api.types import infer_dtype, is_categorical_dtype
 
 
+@decorator()
+def logger(
+    wrapped: Callable[..., str], instance: Any, args: Any, kwargs: Mapping[str, Any]
+) -> str:
+    log, time = kwargs.pop("log", True), kwargs.pop("time", None)
+    msg = wrapped(*args, **kwargs)
+
+    if log:
+        logg.info(msg, time=time)
+
+    return msg
+
+
 class PlotterProtocol:
     @property
     def adata(self) -> AnnData:

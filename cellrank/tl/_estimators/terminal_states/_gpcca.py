@@ -14,7 +14,7 @@ from cellrank.tl._utils import (
 )
 from cellrank.tl._estimators.mixins import EigenMixin, SchurMixin, LinDriversMixin
 from cellrank.tl.kernels._base_kernel import KernelExpression
-from cellrank.tl._estimators.mixins._utils import register_plotter
+from cellrank.tl._estimators.mixins._utils import logger, register_plotter
 from cellrank.tl._estimators.terminal_states._term_states_estimator import (
     TermStatesEstimator,
 )
@@ -276,6 +276,17 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         # TOOO: call super + optionally abs prob?
         return NotImplemented
 
+    def rename_terminal_states(self, new_names: Mapping[str, str]) -> None:
+        """TODO: docrep."""
+        term_states_memberships = self.terminal_states_memberships
+        super().rename_terminal_states(new_names)
+
+        new_names = {str(k): str(v) for k, v in new_names.items()}
+        term_states_memberships.names = [
+            new_names.get(n, n) for n in term_states_memberships.names
+        ]
+        self._set("_term_states_memberships", value=term_states_memberships)
+
     def _n_states(self, n_states: Optional[Union[int, Sequence[int]]]) -> int:
         if n_states is None:
             if self.eigendecomposition is None:
@@ -480,19 +491,22 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         #    [name_mapper.get(n, n) for n in not_enough_cells], n_cells
         # )
 
+    @logger
     def _write_terminal_states(
         self,
         states: Optional[pd.Series],
         colors: Optional[np.ndarray],
         probs: Optional[pd.Series] = None,
         memberships: Optional[Lineage] = None,
-        *,
-        time: Optional[datetime] = None,
-        log: bool = True,
-    ) -> None:
-        super()._write_terminal_states(states, colors, probs, time=time, log=log)
+    ) -> str:
+        msg = super()._write_terminal_states(states, colors, probs, log=False)
+        msg = "\n".join(msg.split("\n")[:-1])
+        msg += "\n       `.terminal_states_memberships\n    Finish`"
 
+        self._write_absorption_probabilities(None, None, log=False)
         self._set("_term_states_memberships", value=memberships)
+
+        return msg
 
     plot_macrostates = register_plotter(
         discrete="macrostates", continuous="macrostates_memberships"

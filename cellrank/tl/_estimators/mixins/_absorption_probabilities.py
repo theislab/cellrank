@@ -1,8 +1,6 @@
 from typing import Any, Dict, Tuple, Union, Mapping, Optional, Sequence
 from typing_extensions import Literal, Protocol
 
-from datetime import datetime
-
 from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.tl import Lineage
@@ -14,7 +12,7 @@ from cellrank.tl._utils import (
     _calculate_lineage_absorption_time_means,
 )
 from cellrank.tl._linear_solver import _solve_lin_system
-from cellrank.tl._estimators.mixins._utils import register_plotter
+from cellrank.tl._estimators.mixins._utils import logger, register_plotter
 from cellrank.tl._estimators.mixins._constants import Key
 
 import numpy as np
@@ -51,12 +49,9 @@ class AbsProbsProtocol(Protocol):
 
     def _write_absorption_probabilities(
         self,
-        abs_probs: Lineage,
+        abs_probs: Optional[Lineage],
         abs_times: Optional[pd.DataFrame],
-        *,
-        time: Optional[datetime] = None,
-        log: bool = True,
-    ) -> None:
+    ) -> str:
         ...
 
     # TODO: type
@@ -83,17 +78,6 @@ class AbsProbsProtocol(Protocol):
         key: Optional[str] = None,
         value: Optional[Union[np.ndarray, pd.Series, pd.DataFrame, Lineage]] = None,
     ):
-        ...
-
-    def _write_terminal_states(
-        self: "AbsProbsProtocol",
-        states: Optional[pd.Series],
-        colors: Optional[np.ndarray],
-        probs: Optional[pd.Series] = None,
-        *,
-        time: Optional[datetime] = None,
-        log: bool = True,
-    ) -> None:
         ...
 
     def __len__(self) -> int:
@@ -394,30 +378,12 @@ class AbsProbsMixin:
 
         return abs_classes
 
-    def _write_terminal_states(
-        self: AbsProbsProtocol,
-        states: Optional[pd.Series],
-        colors: Optional[np.ndarray],
-        probs: Optional[pd.Series] = None,
-        *,
-        time: Optional[datetime] = None,
-        log: bool = True,
-    ) -> None:
-        key = Key.obsm.abs_probs(self.backward)
-        self._set("_absorption_probabilities", self.adata.obsm, key=key, value=None)
-        key = Key.obsm.abs_times(self.backward)
-        self._set("_absorption_times", self.adata.obsm, key=key, value=None)
-        key = Key.obs.priming_degree(self.backward)
-        self._set("_priming_degree", self.adata.obs, key=key, value=None)
-
+    @logger
     def _write_absorption_probabilities(
         self: AbsProbsProtocol,
-        abs_probs: Lineage,
+        abs_probs: Optional[Lineage],
         abs_times: Optional[pd.DataFrame],
-        *,
-        time: Optional[datetime] = None,
-        log: bool = True,
-    ) -> None:
+    ) -> str:
         # fmt: off
         key1 = Key.obsm.abs_probs(self.backward)
         self._set("_absorption_probabilities", self.adata.obsm, key=key1, value=abs_probs)
@@ -425,23 +391,19 @@ class AbsProbsMixin:
         self._set("_absorption_times", self.adata.obsm, key=key2, value=abs_times)
         # fmt: on
 
-        if log:
-            if abs_times is None:
-                logg.info(
-                    f"Adding `adata.obsm[{key1!r}]`\n"
-                    f"       `.absorption_probabilities`\n"
-                    "    Finish",
-                    time=time,
-                )
-            else:
-                logg.info(
-                    f"Adding `adata.obsm[{key1!r}]`\n"
-                    f"       `adata.obsm[{key2!r}]`\n"
-                    f"       `.absorption_probabilities`\n"
-                    f"       `.absorption_times`\n"
-                    "    Finish",
-                    time=time,
-                )
+        if abs_times is None:
+            return (
+                f"Adding `adata.obsm[{key1!r}]`\n"
+                f"       `.absorption_probabilities`\n"
+                "    Finish"
+            )
+        return (
+            f"Adding `adata.obsm[{key1!r}]`\n"
+            f"       `adata.obsm[{key2!r}]`\n"
+            f"       `.absorption_probabilities`\n"
+            f"       `.absorption_times`\n"
+            "    Finish"
+        )
 
     plot_absorption_probabilities = register_plotter(
         continuous="absorption_probabilities"

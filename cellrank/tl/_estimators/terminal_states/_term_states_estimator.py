@@ -1,7 +1,6 @@
 from typing import Any, Dict, Tuple, Union, Mapping, Optional, Sequence
 
 from abc import ABC, abstractmethod
-from datetime import datetime
 
 from anndata import AnnData
 from cellrank import logging as logg
@@ -16,7 +15,7 @@ from cellrank.tl._colors import (
 from cellrank.tl._estimators import BaseEstimator
 from cellrank.tl._estimators.mixins import CCDetectorMixin
 from cellrank.tl.kernels._base_kernel import KernelExpression
-from cellrank.tl._estimators.mixins._utils import register_plotter
+from cellrank.tl._estimators.mixins._utils import logger, register_plotter
 from cellrank.tl._estimators.mixins._constants import Key
 
 import numpy as np
@@ -149,9 +148,9 @@ class TermStatesEstimator(CCDetectorMixin, BaseEstimator, ABC):
             invalid = sorted(np.array(list(new_names.keys()))[~mask])
             raise ValueError(f"Invalid terminal states names: `{invalid}`.")
 
-        names_after_renaming = {new_names.get(n, n) for n in old_names}
-        if len(names_after_renaming) != len(old_names):
-            raise ValueError(f"After renaming, the names will not be unique: `{names_after_renaming}`.")
+        names_after_renaming = [new_names.get(n, n) for n in old_names]
+        if len(set(names_after_renaming)) != len(old_names):
+            raise ValueError(f"After renaming, terminal states will no longer unique: `{names_after_renaming}`.")
         # fmt: on
 
         self._term_states = term_states.cat.rename_categories(new_names)
@@ -221,15 +220,13 @@ class TermStatesEstimator(CCDetectorMixin, BaseEstimator, ABC):
         return categories, colors
         # fmt: on
 
+    @logger
     def _write_terminal_states(
         self,
         states: Optional[pd.Series],
         colors: Optional[np.ndarray],
         probs: Optional[pd.Series] = None,
-        *,
-        time: Optional[datetime] = None,
-        log: bool = True,
-    ) -> None:
+    ) -> str:
         key = Key.obs.term_states(self.backward)
         self._set("_term_states", self.adata.obs, key=key, value=states)
         self._set(
@@ -242,15 +239,13 @@ class TermStatesEstimator(CCDetectorMixin, BaseEstimator, ABC):
             "_term_states_colors", self.adata.uns, key=Key.uns.colors(key), value=colors
         )
 
-        if log:
-            logg.info(
-                f"Adding `adata.obs[{key!r}]`\n"
-                f"       `adata.obs[{Key.obs.probs(key)!r}]`\n"
-                f"       `.terminal_states`\n"
-                f"       `.terminal_states_probabilities`\n"
-                "    Finish",
-                time=time,
-            )
+        return (
+            f"Adding `adata.obs[{key!r}]`\n"
+            f"       `adata.obs[{Key.obs.probs(key)!r}]`\n"
+            f"       `.terminal_states`\n"
+            f"       `.terminal_states_probabilities`\n"
+            "    Finish"
+        )
 
     def fit(self, *args: Any, **kwargs: Any) -> None:
         # TODO: implement me
