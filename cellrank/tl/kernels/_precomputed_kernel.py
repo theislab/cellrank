@@ -24,7 +24,7 @@ class PrecomputedKernel(Kernel):
     Parameters
     ----------
     transition_matrix
-        Row-normalized transition matrix or a key in :attr:`adata` ``.obsp``
+        Row-normalized transition matrix or a key in :attr:`anndata.AnnData.obsp`.
         or a :class:`cellrank.tl.kernels.KernelExpression` with a precomputed transition matrix.
         If `None`, try to determine the key based on ``backward``.
     %(adata)s
@@ -45,12 +45,11 @@ class PrecomputedKernel(Kernel):
         compute_cond_num: bool = False,
         **kwargs: Any,
     ):
-        from anndata import AnnData as _AnnData
-
         self._origin = "'array'"
         params = {}
 
         if transition_matrix is None:
+            # TODO: use Key
             transition_matrix = _transition(
                 Direction.BACKWARD if backward else Direction.FORWARD
             )
@@ -62,6 +61,8 @@ class PrecomputedKernel(Kernel):
                     "When `transition_matrix` specifies a key to `adata.obsp`, `adata` cannot be None."
                 )
             self._origin = f"adata.obsp[{transition_matrix!r}]"
+            # TODO: use Key
+            backward = "bwd" in transition_matrix
             transition_matrix = _read_graph_data(adata, transition_matrix)
 
         elif isinstance(transition_matrix, KernelExpression):
@@ -97,7 +98,7 @@ class PrecomputedKernel(Kernel):
 
         if adata is None:
             logg.warning("Creating empty `AnnData` object")
-            adata = _AnnData(
+            adata = AnnData(
                 csr_matrix((transition_matrix.shape[0], 1), dtype=np.float32)
             )
 
@@ -127,7 +128,9 @@ class PrecomputedKernel(Kernel):
 
         return pk
 
-    def compute_transition_matrix(self, *args, **kwargs) -> "PrecomputedKernel":
+    def compute_transition_matrix(
+        self, *args: Any, **kwargs: Any
+    ) -> "PrecomputedKernel":
         """Return self."""
         return self
 

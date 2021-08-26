@@ -9,6 +9,8 @@ from cellrank import logging as logg
 from cellrank.tl import Lineage
 from cellrank.tl._utils import RandomKeys, _unique_order_preserving
 from cellrank.tl._colors import _create_categorical_colors
+from cellrank.tl._estimators.mixins._io import IOMixin
+from cellrank.tl._estimators.mixins._kernel import KernelMixin
 from cellrank.tl._estimators.mixins._constants import Key
 
 import numpy as np

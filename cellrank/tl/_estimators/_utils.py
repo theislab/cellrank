@@ -3,8 +3,6 @@ from typing import Any, Union, Optional, Sequence
 from copy import deepcopy
 from collections import Iterable
 
-from anndata import AnnData
-
 
 class SafeGetter:
     def __init__(self, obj: Any, allowed: Union[type, Sequence[type]] = ()):

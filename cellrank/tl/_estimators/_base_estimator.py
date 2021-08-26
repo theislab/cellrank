@@ -3,6 +3,7 @@ from typing_extensions import Literal
 
 from abc import ABC, abstractmethod
 from copy import copy as copy_
+from pathlib import Path
 from contextlib import contextmanager
 
 from anndata import AnnData
@@ -35,7 +36,7 @@ class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
                 )
             elif obsp_key not in obj.obsp.keys():
                 raise KeyError(
-                    f"Transition matrix not found in `adata.obsp[{obsp_key!r}]`."
+                    f"Unable to find transition matrix in `adata.obsp[{obsp_key!r}]`."
                 )
             kernel = PrecomputedKernel(obj.obsp[obsp_key], adata=obj)
         else:
@@ -54,12 +55,11 @@ class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
 
         self._params: Dict[str, Any] = {}
         # TODO: allow non-skeleton?
-        # TODO: bug - X=None, copy doesn't work
         self._shadow_adata = AnnData(
             X=csr_matrix(self.adata.shape, dtype=self.adata.X.dtype),
             obs=self.adata.obs[[]].copy(),
             var=self.adata.var[[]].copy(),
-            raw=self.adata.raw,  # TODO: how to handle raw?
+            raw=self.adata.raw.to_adata(),  # TODO: better way?
         )
 
     def __init_subclass__(cls, **kwargs: Any):
@@ -141,6 +141,27 @@ class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
     @property
     def _in_shadow(self) -> bool:
         return self.adata is self._shadow_adata
+
+    @property
+    @contextmanager
+    def _remove_adata(self) -> None:
+        # TODO: handle shadow?
+        with super()._remove_adata:
+            adata = self.kernel.adata
+            try:
+                self.kernel.adata = None
+                yield
+            finally:
+                self.kernel.adata = adata
+
+    @staticmethod
+    def read(
+        fname: Union[str, Path], adata: Optional[AnnData] = None, copy: bool = False
+    ) -> "BaseEstimator":
+        obj: BaseEstimator = IOMixin.read(fname, adata, copy=copy)
+        obj.kernel.adata = adata
+
+        return obj
 
     def to_adata(self) -> AnnData:
         adata = self._shadow_adata.copy()

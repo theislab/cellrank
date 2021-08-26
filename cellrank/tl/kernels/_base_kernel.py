@@ -805,11 +805,12 @@ class UnaryKernelExpression(KernelExpression, ABC):
             raise TypeError(
                 f"Expected argument of type `anndata.AnnData`, found `{type(adata).__name__!r}`."
             )
-        if adata.shape != self.adata.shape:
+        if self.adata is not None and adata.shape != self.adata.shape:
             raise ValueError(
                 f"Expected the new object to have same shape as previous object `{self.adata.shape}`, "
                 f"found `{adata.shape}`."
             )
+        # trusting the user not do to `k.adata = None; k.adata = bdata`
         self._adata = adata
 
     def __repr__(self):

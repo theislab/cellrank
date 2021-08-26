@@ -12,6 +12,7 @@ class AnnDataMixin(ABC):
         super().__init__(**kwargs)
 
         self._adata = adata
+        self._n_obs = len(adata)
 
     @property
     def adata(self) -> AnnData:
@@ -19,7 +20,7 @@ class AnnDataMixin(ABC):
         return self._adata
 
     def __len__(self) -> int:
-        return len(self.adata)
+        return self._n_obs
 
     @abstractmethod
     def to_adata(self) -> AnnData:

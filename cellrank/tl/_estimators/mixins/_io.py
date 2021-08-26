@@ -14,27 +14,18 @@ class IOMixin:
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
 
+    @property
     @contextmanager
-    def _maybe_remove_adata(self, remove: bool) -> None:
+    def _remove_adata(self) -> None:
         adata = getattr(self, "_adata", None)
-        should_remove = remove and adata is not None
-        setter = False
 
         try:
-            if should_remove:
-                try:
-                    # invoke setter if possible
-                    self.adata = None
-                    setter = True
-                except AttributeError:
-                    self._adata = None
+            if adata is not None:
+                self._adata = None
             yield
         finally:
-            if should_remove:
-                if setter:
-                    self.adata = adata
-                else:
-                    self._adata = adata
+            if adata is not None:
+                self._adata = adata
 
     def write(
         self,
@@ -68,7 +59,12 @@ class IOMixin:
 
         logg.info(f"Writing `{self}` to `{fname}`")
 
-        with self._maybe_remove_adata(not keep_adata):
+        if keep_adata:
+            with open(fname, "wb") as fout:
+                pickle.dump(self, fout)
+            return
+
+        with self._remove_adata:
             with open(fname, "wb") as fout:
                 pickle.dump(self, fout)
 
@@ -96,26 +92,26 @@ class IOMixin:
         with open(fname, "rb") as fin:
             obj = pickle.load(fin)
 
-        if adata is None:
-            return obj
-        if not isinstance(adata, AnnData):
-            raise TypeError("TODO")
-
         if hasattr(obj, "_adata"):
+            if not isinstance(adata, AnnData):
+                raise TypeError(
+                    "This object was saved without its `anndata.AnnData` object. "
+                    "Please supply one as `adata=...`."
+                )
             try:
-                assert len(obj) == len(adata)
-                if hasattr(obj, "obs_names"):
-                    adata = adata[obj.obs_names]
+                assert len(obj) == len(adata), "TODO."
+                # if hasattr(obj, "obs_names"):
+                #    adata = adata[obj.obs_names]
                 if copy or adata.is_view:
                     adata = adata.copy()
-            except AssertionError:
-                raise ValueError("TODO") from None
-            except TypeError:
-                raise AttributeError("TODO") from None
-            except KeyError:
-                raise KeyError("TODO") from None
+            except AssertionError as e:
+                raise ValueError(e) from None
+            except TypeError as e:
+                raise AttributeError(e) from None
+            except KeyError as e:
+                raise KeyError(e) from None
+
             obj._adata = adata
             return obj
 
-        logg.warning("TODO")
         return obj
