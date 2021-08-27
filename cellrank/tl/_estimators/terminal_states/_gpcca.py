@@ -135,7 +135,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         )
 
     @d.dedent
-    def compute_terminal_states(
+    def fit(
         self,
         method: Literal[
             "stability", "top_n", "eigengap", "eigengap_coarse"
@@ -287,10 +287,6 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         if rename:
             self.rename_terminal_states(names)
 
-    def fit(self, *args: Any, **kwargs: Any) -> None:
-        # TOOO: call super + optionally abs prob?
-        return NotImplemented
-
     def rename_terminal_states(self, new_names: Mapping[str, str]) -> None:
         """TODO: docrep."""
         term_states_memberships = self.terminal_states_memberships
@@ -422,7 +418,9 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         %(just_plots)s
         """
 
-        def stylize_dist(ax, data: np.ndarray, xticks_labels: Sequence[str] = ()):
+        def stylize_dist(
+            ax: Axes, data: np.ndarray, xticks_labels: Sequence[str] = ()
+        ) -> None:
             _ = ax.imshow(data, aspect="auto", cmap=cmap, norm=norm)
             for spine in ax.spines.values():
                 spine.set_visible(False)
@@ -444,7 +442,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
             ax.set_yticks([])
 
-        def annotate_heatmap(im, valfmt: str = "{x:.2f}"):
+        def annotate_heatmap(im, valfmt: str = "{x:.2f}") -> None:
             # modified from matplotlib's site
 
             data = im.get_array()
@@ -600,7 +598,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             if show_stationary_dist:
                 annotate_dist_ax(stat_ax, coarse_stat_d.values)
             if show_initial_dist:
-                annotate_dist_ax(init_ax, coarse_init_d)
+                annotate_dist_ax(init_ax, coarse_init_d.values)
 
         if save:
             save_fig(fig, save)

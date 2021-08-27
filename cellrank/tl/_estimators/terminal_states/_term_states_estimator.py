@@ -252,13 +252,13 @@ class TermStatesEstimator(CCDetectorMixin, BaseEstimator, ABC):
 
         return sg.ok
 
-    def fit(self, *args: Any, **kwargs: Any) -> None:
-        # TODO: implement me
-        return NotImplemented
-
     @abstractmethod
-    def compute_terminal_states(self, *args: Any, **kwargs: Any) -> None:
+    def fit(self, *args: Any, **kwargs: Any) -> None:
         pass
+
+    def compute_terminal_states(self, *args: Any, **kwargs: Any) -> None:
+        """TODO. Alias for meth:`fit`."""
+        return self.fit(*args, **kwargs)
 
     plot_terminal_states = register_plotter(
         discrete="terminal_states", colors="_term_states_colors"

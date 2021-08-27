@@ -12,8 +12,6 @@ from cellrank.tl._utils import (
 )
 from cellrank.tl.kernels._utils import _get_basis
 from cellrank.tl._estimators.mixins import EigenMixin, LinDriversMixin
-from cellrank.tl._estimators.mixins._utils import shadow
-from cellrank.tl._estimators.mixins._constants import Key
 from cellrank.tl._estimators.terminal_states._term_states_estimator import (
     TermStatesEstimator,
 )
@@ -25,7 +23,7 @@ from scipy.stats import zscore
 
 class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
     @d.dedent
-    def compute_terminal_states(
+    def fit(
         self,
         use: Optional[Union[int, Sequence[int]]] = None,
         percentile: Optional[int] = 98,
@@ -230,6 +228,3 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
     def _read_from_adata(self, adata: AnnData, **kwargs: Any) -> bool:
         ok = super()._read_from_adata(adata, **kwargs)
         return ok and self._deserialize(adata)
-
-    def fit(self, *args: Any, **kwargs: Any) -> None:
-        return NotImplemented
