@@ -63,7 +63,6 @@ def _create_cflare(*, backward: bool = False) -> Tuple[AnnData, CFLARE]:
 
     mc = CFLARE(final_kernel)
 
-    mc.compute_partition()
     mc.compute_eigendecomposition()
     mc.compute_terminal_states(use=2)
     mc.compute_absorption_probabilities(use_petsc=False)
@@ -88,7 +87,6 @@ def _create_gpcca(*, backward: bool = False) -> Tuple[AnnData, GPCCA]:
 
     mc = GPCCA(final_kernel)
 
-    mc.compute_partition()
     mc.compute_eigendecomposition()
     mc.compute_schur(method="krylov")
     mc.compute_macrostates(n_states=2)
@@ -108,7 +106,7 @@ def _create_gamr_model(_adata: AnnData) -> Optional[GAMR]:
         m.prepare(_adata.var_names[0], "0").fit()
         m.predict(level=0.95)
         return m
-    except:
+    except Exception:
         return None
 
 
