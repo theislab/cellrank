@@ -1,7 +1,6 @@
 from typing import Any, Dict, List, Union, Optional, Sequence
 from typing_extensions import Literal
 
-
 from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.ul._docs import d
@@ -38,8 +37,6 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
         basis: Optional[str] = None,
         n_comps: int = 5,
         scale: Optional[bool] = None,
-        en_cutoff: Optional[float] = 0.7,
-        p_thresh: float = 1e-15,
     ) -> None:
         """
         Find approximate recurrent classes of the Markov chain.
@@ -82,7 +79,6 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
             Number of embedding components to be use when ``basis != None``.
         scale
             Scale the values to z-scores. If `None`, scale the values if ``basis != None``.
-        %(en_cutoff_p_thresh)s
 
         Returns
         -------
@@ -196,8 +192,6 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
         self.set_terminal_states(
             labels=labels,
             cluster_key=cluster_key,
-            en_cutoff=en_cutoff,
-            p_thresh=p_thresh,
             probs=self._compute_term_states_probs(eig, use),
             params=self._create_params(),
             time=start,
@@ -228,7 +222,9 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
         return pd.Series(c, index=self.adata.obs_names)
 
     def _read_from_adata(self, adata: AnnData, **kwargs: Any) -> bool:
-        # fmt: off
         ok = super()._read_from_adata(adata, **kwargs)
-        return ok and self._read_eigendecomposition(adata, allow_missing=False) and self._read_absorption_probabilities(adata)
-        # fmt: on
+        return (
+            ok
+            and self._read_eigendecomposition(adata, allow_missing=False)
+            and self._read_absorption_probabilities(adata)
+        )

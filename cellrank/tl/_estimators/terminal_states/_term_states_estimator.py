@@ -13,7 +13,6 @@ from cellrank.tl._colors import (
 )
 from cellrank.tl._estimators import BaseEstimator
 from cellrank.tl._estimators._utils import SafeGetter
-from cellrank.tl._estimators.mixins import CCDetectorMixin
 from cellrank.tl.kernels._base_kernel import KernelExpression
 from cellrank.tl._estimators.mixins._utils import logger, shadow, register_plotter
 from cellrank.tl._estimators.mixins._constants import Key
@@ -26,7 +25,7 @@ from pandas.api.types import infer_dtype, is_categorical_dtype
 from matplotlib.colors import to_hex
 
 
-class TermStatesEstimator(CCDetectorMixin, BaseEstimator, ABC):
+class TermStatesEstimator(BaseEstimator, ABC):
     def __init__(
         self,
         obj: Union[AnnData, np.ndarray, spmatrix, KernelExpression],
@@ -43,8 +42,6 @@ class TermStatesEstimator(CCDetectorMixin, BaseEstimator, ABC):
         self,
         labels: Union[pd.Series, Dict[str, Sequence[Any]]],
         cluster_key: Optional[str] = None,
-        en_cutoff: Optional[float] = None,
-        p_thresh: Optional[float] = None,
         add_to_existing: bool = False,
         **kwargs: Any,
     ) -> None:
@@ -67,7 +64,6 @@ class TermStatesEstimator(CCDetectorMixin, BaseEstimator, ABC):
         cluster_key
             Key in :attr:`anndata.AnnData.obs` in order to associate names and colors with :attr:`terminal_states`.
             Each terminal state will be given the name and color corresponding to the cluster it mostly overlaps with.
-        %(en_cutoff_p_thresh)s
         add_to_existing
             Whether the new terminal states should be added to pre-existing ones. Cells already assigned to a terminal
             state will be re-assigned to the new terminal state if there's a conflict between old and new annotations.
@@ -93,8 +89,6 @@ class TermStatesEstimator(CCDetectorMixin, BaseEstimator, ABC):
         states, colors = self._set_categorical_labels(
             categories=labels,
             cluster_key=cluster_key,
-            en_cutoff=en_cutoff,
-            p_thresh=p_thresh,
             existing=existing,
         )
         self._write_terminal_states(
@@ -160,8 +154,6 @@ class TermStatesEstimator(CCDetectorMixin, BaseEstimator, ABC):
         self,
         categories: Union[pd.Series, Dict[str, Any]],
         cluster_key: Optional[str] = None,
-        en_cutoff: Optional[float] = None,
-        p_thresh: Optional[float] = None,
         existing: Optional[pd.Series] = None,
     ) -> Tuple[pd.Series, np.ndarray]:
         # fmt: off
@@ -198,14 +190,10 @@ class TermStatesEstimator(CCDetectorMixin, BaseEstimator, ABC):
                 series_reference=series_reference,
                 series_query=series_query,
                 colors_reference=colors_reference,
-                en_cutoff=en_cutoff,
             )
             categories.cat.categories = names
         else:
             colors = _create_categorical_colors(len(categories.cat.categories))
-
-        if p_thresh is not None:
-            self._detect_cc_stages(categories, p_thresh=p_thresh)
 
         return categories, colors
         # fmt: on

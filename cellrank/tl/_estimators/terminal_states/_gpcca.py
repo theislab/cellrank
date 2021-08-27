@@ -62,8 +62,6 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         n_states: Optional[Union[int, Sequence[int]]] = None,
         n_cells: Optional[int] = 30,
         cluster_key: Optional[str] = None,
-        en_cutoff: Optional[float] = 0.7,
-        p_thresh: float = 1e-15,
     ):
         """
         Compute the macrostates.
@@ -75,7 +73,6 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         %(n_cells)s
         cluster_key
             If a key to cluster labels is given, names and colors of the states will be associated with the clusters.
-        %(en_cutoff_p_thresh)s
 
         Returns
         -------
@@ -97,8 +94,6 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             self._compute_one_macrostate(
                 n_cells=n_cells,
                 cluster_key=cluster_key,
-                p_thresh=p_thresh,
-                en_cutoff=en_cutoff,
             )
             return
 
@@ -129,8 +124,6 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             memberships=self._gpcca.memberships,
             n_cells=n_cells,
             cluster_key=cluster_key,
-            p_thresh=p_thresh,
-            en_cutoff=en_cutoff,
             params=self._create_params(),
             time=start,
         )
@@ -804,8 +797,6 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         self,
         n_cells: Optional[int],
         cluster_key: Optional[str],
-        en_cutoff: Optional[float],
-        p_thresh: float,
     ) -> None:
         start = logg.info("For 1 macrostate, stationary distribution is computed")
 
@@ -825,8 +816,6 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             n_cells=n_cells,
             cluster_key=cluster_key,
             check_row_sums=False,
-            p_thresh=p_thresh,
-            en_cutoff=en_cutoff,
             time=start,
         )
 
@@ -836,8 +825,6 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         memberships: np.ndarray,
         n_cells: Optional[int] = 30,
         cluster_key: str = "clusters",
-        en_cutoff: Optional[float] = 0.7,
-        p_thresh: float = 1e-15,
         check_row_sums: bool = True,
         time: Optional[datetime] = None,
         params: Dict[str, Any] = MappingProxyType({}),
@@ -855,13 +842,6 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         %(n_cells)s
         cluster_key
             Key from :attr:`adata` ``.obs`` to get reference cluster annotations.
-        en_cutoff
-            Threshold to decide when we we want to warn the user about an uncertain name mapping. This happens when
-            one fuzzy state overlaps with several reference clusters, and the most likely cells are distributed almost
-            evenly across the reference clusters.
-        p_thresh
-            Only used to detect cell cycle stages. These have to be present in :attr:`adata` ``.obs`` as
-            `'G2M_score'` and `'S_score'`.
         check_row_sums
             Check whether rows in `memberships` sum to `1`.
         time
@@ -897,7 +877,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         self._write_terminal_states(None, None, None, None, log=False)
 
         assignment, colors = self._set_categorical_labels(
-            assignment, cluster_key=cluster_key, en_cutoff=en_cutoff, p_thresh=p_thresh
+            assignment, cluster_key=cluster_key
         )
         memberships = Lineage(
             memberships, names=list(assignment.cat.categories), colors=colors
