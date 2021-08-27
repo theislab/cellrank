@@ -1,15 +1,17 @@
-from typing import Any, Dict, Tuple, Union, Optional
+from typing import Any, Dict, Tuple, Union, Mapping, Optional
 from typing_extensions import Literal, Protocol
 
+from types import MappingProxyType
 from pathlib import Path
 from pygpcca import GPCCA
-from datetime import datetime
 from pygpcca._sorted_schur import _check_conj_split
 
 from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.tl._utils import save_fig, _eigengap
+from cellrank.tl._estimators._utils import SafeGetter
+from cellrank.tl._estimators.mixins._utils import logger, shadow
 from cellrank.tl._estimators.mixins._constants import Key
 from cellrank.tl._estimators.mixins.decomposition._plot import VectorPlottable
 
@@ -41,8 +43,8 @@ class SchurProtocol(Protocol):
         decomp: Dict[str, Any],
         vectors: np.ndarray,
         matrix: np.ndarray,
-        time: datetime,
-    ) -> None:
+        params: Mapping[str, Any] = MappingProxyType({}),
+    ) -> str:
         ...
 
 
@@ -156,6 +158,7 @@ class SchurMixin(VectorPlottable):
             },
             vectors=self._gpcca._p_X,
             matrix=self._gpcca._p_R,
+            params=self._create_params(),
             time=start,
         )
 
@@ -227,28 +230,64 @@ class SchurMixin(VectorPlottable):
         if save is not None:
             save_fig(fig, path=save)
 
+    @logger
+    @shadow
     def _write_schur_decomposition(
         self: SchurProtocol,
         decomp: Dict[str, Any],
         vectors: np.ndarray,
         matrix: np.ndarray,
-        time: datetime,
-    ) -> None:
-        self._eigendecomposition = decomp
-        self._schur_vectors = vectors
-        self._schur_matrix = matrix
-
+        params: Mapping[str, Any] = MappingProxyType({}),
+    ) -> str:
+        key = Key.uns.schur_matrix(self.backward)
+        self._set("_schur_matrix", self.adata.uns, key=key, value=matrix)
+        key = Key.obsm.schur_vectors(self.backward)
+        self._set("_schur_vectors", self.adata.obsm, key=key, value=vectors)
         key = Key.uns.eigen(self.backward)
-        self.adata.uns[key] = decomp
+        self._set("_eigendecomposition", self.adata.uns, key=key, value=decomp)
+        self.params[f"schur_decomposition_{Key.backward(self.backward)}"] = dict(params)
 
-        logg.info(
+        return (
             f"Adding `adata.uns[{key!r}]`\n"
             f"       `.schur_vectors`\n"
             f"       `.schur_matrix`\n"
             f"       `.eigendecomposition`\n"
-            "    Finish",
-            time=time,
+            "    Finish"
         )
+
+    def _read_schur_decomposition(
+        self, adata: AnnData, allow_missing: bool = True
+    ) -> bool:
+        with SafeGetter(self, allowed=KeyError) as sg:
+            key = Key.uns.eigen(self.backward)
+            self._get(
+                "_eigendecomposition",
+                adata.uns,
+                key=key,
+                where="uns",
+                dtype=dict,
+                allow_missing=allow_missing,
+            )
+            key = Key.obsm.schur_vectors(self.backward)
+            self._get(
+                "_schur_vectors",
+                self.adata.obsm,
+                key=key,
+                where="obsm",
+                dtype=np.ndarray,
+                allow_missing=allow_missing,
+            )
+            key = Key.uns.schur_matrix(self.backward)
+            self._get(
+                "_schur_matrix",
+                self.adata.uns,
+                key=key,
+                where="uns",
+                dtype=np.ndarray,
+                allow_missing=allow_missing,
+            )
+
+        return sg.ok
 
     @d.dedent
     def plot_schur(self, *args: Any, **kwargs: Any) -> None:

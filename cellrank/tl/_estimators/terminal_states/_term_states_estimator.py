@@ -1,6 +1,7 @@
 from typing import Any, Dict, Tuple, Union, Mapping, Optional, Sequence
 
 from abc import ABC, abstractmethod
+from types import MappingProxyType
 
 from anndata import AnnData
 from cellrank.ul._docs import d
@@ -99,8 +100,7 @@ class TermStatesEstimator(CCDetectorMixin, BaseEstimator, ABC):
         self._write_terminal_states(
             states,
             colors,
-            probs=kwargs.get("probs", None),
-            time=kwargs.get("time", None),
+            **kwargs,
         )
 
     def rename_terminal_states(self, new_names: Mapping[str, str]) -> None:
@@ -217,12 +217,14 @@ class TermStatesEstimator(CCDetectorMixin, BaseEstimator, ABC):
         states: Optional[pd.Series],
         colors: Optional[np.ndarray],
         probs: Optional[pd.Series] = None,
+        params: Dict[str, Any] = MappingProxyType({}),
     ) -> str:
         # fmt: off
         key = Key.obs.term_states(self.backward)
         self._set("_term_states", self.adata.obs, key=key, value=states)
         self._set("_term_states_probs", self.adata.obs, key=Key.obs.probs(key), value=probs)
         self._set("_term_states_colors", self.adata.uns, key=Key.uns.colors(key), value=colors)
+        self.params[key] = dict(params)
         # fmt: on
 
         return (

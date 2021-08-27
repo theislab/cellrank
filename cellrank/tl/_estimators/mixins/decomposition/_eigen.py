@@ -1,13 +1,15 @@
-from typing import Any, Dict, Tuple, Union, Optional
+from typing import Any, Dict, Tuple, Union, Mapping, Optional
 from typing_extensions import Literal, Protocol
 
+from types import MappingProxyType
 from pathlib import Path
-from datetime import datetime
 
 from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.tl._utils import save_fig, _eigengap
+from cellrank.tl._estimators._utils import SafeGetter
+from cellrank.tl._estimators.mixins._utils import logger, shadow
 from cellrank.tl._estimators.mixins._constants import Key
 from cellrank.tl._estimators.mixins.decomposition._plot import VectorPlottable
 
@@ -27,6 +29,10 @@ class EigenProtocol(Protocol):
         ...
 
     @property
+    def params(self) -> Dict[str, Any]:
+        ...
+
+    @property
     def backward(self) -> bool:
         ...
 
@@ -34,7 +40,9 @@ class EigenProtocol(Protocol):
     def transition_matrix(self) -> Union[csr_matrix, np.ndarray]:
         ...
 
-    def _write_eigendecomposition(self, decomp: Dict[str, Any], time: datetime) -> None:
+    def _write_eigendecomposition(
+        self, decomp: Dict[str, Any], params: Mapping[str, Any]
+    ) -> str:
         ...
 
 
@@ -388,20 +396,36 @@ class EigenMixin(VectorPlottable):
 
         return fig
 
+    @logger
+    @shadow
     def _write_eigendecomposition(
-        self: EigenProtocol, decomp: Dict[str, Any], time: datetime
-    ) -> None:
-        self._eigendecomposition = decomp
+        self: EigenProtocol,
+        decomp: Dict[str, Any],
+        params: Mapping[str, Any] = MappingProxyType({}),
+    ) -> str:
 
         key = Key.uns.eigen(self.backward)
-        self.adata.uns[key] = decomp
+        self._set("_eigendecomposition", self.adata.uns, key=key, value=decomp)
+        if not params:
+            params = decomp.get("params", {})
+        self.params[key] = dict(params)
 
-        logg.info(
+        return (
             f"Adding `adata.uns[{key!r}]`\n"
             f"       `.eigendecomposition`\n"
-            "    Finish",
-            time=time,
+            "    Finish"
         )
+
+    def _read_eigendecomposition(
+        self, adata: AnnData, allow_missing: bool = True
+    ) -> bool:
+        # fmt: off
+        key = Key.uns.eigen(self.backward)
+        with SafeGetter(self, allowed=KeyError) as sg:
+            self._get("_eigendecomposition", adata.uns, key=key, where="uns", dtype=dict, allow_missing=allow_missing)
+        # fmt: on
+
+        return sg.ok
 
     @property
     def eigendecomposition(self) -> Optional[Dict[str, Any]]:

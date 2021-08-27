@@ -1,6 +1,7 @@
 from typing import Any, Dict, Tuple, Union, Mapping, Optional, Sequence
 from typing_extensions import Protocol
 
+from types import MappingProxyType
 from pathlib import Path
 from datetime import datetime
 
@@ -45,6 +46,10 @@ class LinDriversProtocol(Protocol):
         ...
 
     @property
+    def params(self) -> Dict[str, Any]:
+        pass
+
+    @property
     def eigendecomposition(self) -> Dict[str, Any]:
         ...
 
@@ -84,7 +89,6 @@ class LinDriversMixin(AbsProbsMixin):
         confidence_level: float = 0.95,
         n_perms: int = 1000,
         seed: Optional[int] = None,
-        return_drivers: bool = True,
         **kwargs: Any,
     ) -> Optional[pd.DataFrame]:
         """
@@ -168,6 +172,7 @@ class LinDriversMixin(AbsProbsMixin):
             _ = abs_probs[lineages]
         else:
             lineages = abs_probs.names
+        lineages = list(lineages)
 
         if not len(lineages):
             raise ValueError("No lineages have been selected.")
@@ -226,10 +231,12 @@ class LinDriversMixin(AbsProbsMixin):
             confidence_level=confidence_level,
             **kwargs,
         )
-        self._write_lineage_drivers(drivers.loc[var_names], use_raw=use_raw, time=start)
+        params = self._create_params()
+        self._write_lineage_drivers(
+            drivers.loc[var_names], use_raw=use_raw, params=params, time=start
+        )
 
-        if return_drivers:
-            return drivers
+        return drivers
 
     @d.get_sections(base="plot_lineage_drivers", sections=["Parameters"])
     @d.dedent
@@ -537,13 +544,16 @@ class LinDriversMixin(AbsProbsMixin):
         self: LinDriversProtocol,
         abs_probs: Optional[Lineage],
         abs_times: Optional[pd.DataFrame],
+        params: Mapping[str, Any] = MappingProxyType({}),
     ) -> str:
         self._write_lineage_drivers(None, use_raw=False, log=False)
         try:
             self._write_lineage_drivers(None, use_raw=True, log=False)
         except AttributeError:
             pass
-        return super()._write_absorption_probabilities(abs_probs, abs_times, log=False)
+        return super()._write_absorption_probabilities(
+            abs_probs, abs_times, params=params, log=False
+        )
 
     @logger
     @shadow
@@ -551,12 +561,14 @@ class LinDriversMixin(AbsProbsMixin):
         self: LinDriversProtocol,
         drivers: Optional[pd.DataFrame],
         use_raw: bool,
+        params: Mapping[str, Any] = MappingProxyType({}),
     ) -> str:
         self._lineage_drivers = drivers
 
         # fmt: off
         key = Key.varm.lineage_drivers(self.backward)
         self._set("_lineage_drivers", self.adata.raw.varm if use_raw else self.adata.varm, key=key, value=drivers)
+        self.params[key] = dict(params)
         # fmt: on
 
         return (
@@ -565,8 +577,10 @@ class LinDriversMixin(AbsProbsMixin):
             "    Finish"
         )
 
-    def _deserialize(self: LinDriversProtocol, adata: AnnData) -> bool:
-        ok = super()._deserialize(adata)
+    def _read_absorption_probabilities(
+        self: LinDriversProtocol, adata: AnnData
+    ) -> bool:
+        ok = super()._read_absorption_probabilities(adata)
         if not ok:
             return False
 

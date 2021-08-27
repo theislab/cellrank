@@ -1,8 +1,9 @@
-from typing import Any, Dict, Tuple, Union, Mapping, Optional
+from typing import Any, Dict, Tuple, Union, Mapping, Callable, Optional, Sequence
 from typing_extensions import Literal
 
 from abc import ABC, abstractmethod
 from copy import copy as copy_
+from inspect import Parameter, signature, getmembers, currentframe
 from pathlib import Path
 from contextlib import contextmanager
 
@@ -34,11 +35,11 @@ class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
                 raise ValueError(
                     "Specify `obsp_key=...` when supplying an `AnnData` object."
                 )
-            elif obsp_key not in obj.obsp.keys():
+            elif obsp_key not in obj.obsp:
                 raise KeyError(
                     f"Unable to find transition matrix in `adata.obsp[{obsp_key!r}]`."
                 )
-            kernel = PrecomputedKernel(obj.obsp[obsp_key], adata=obj)
+            kernel = PrecomputedKernel(obsp_key, adata=obj)
         else:
             raise TypeError(
                 f"Expected an object of type `KernelExpression`, `numpy.ndarray`, `scipy.sparse.spmatrix` "
@@ -76,6 +77,7 @@ class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
         copy: bool = True,
         shadow_only: bool = False,
     ):
+        """TODO: docs."""
         if not self._in_shadow:
             if attr is not None:
                 if not hasattr(self, attr):
@@ -107,6 +109,7 @@ class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
         copy: bool = True,
         allow_missing: bool = False,
     ):
+        """TODO: docs."""
         if not hasattr(self, attr):
             raise AttributeError(attr)
 
@@ -145,7 +148,7 @@ class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
     @property
     @contextmanager
     def _remove_adata(self) -> None:
-        # TODO: handle shadow?
+        # shadow is kept (should be very small)
         with super()._remove_adata:
             adata = self.kernel.adata
             try:
@@ -154,31 +157,70 @@ class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
             finally:
                 self.kernel.adata = adata
 
+    def _create_params(
+        self,
+        locs: Optional[Mapping[str, Any]] = None,
+        func: Optional[Callable] = None,
+        remove: Sequence[str] = (),
+    ) -> Dict[str, Any]:
+        frame = currentframe()
+        try:
+            if locs is None:
+                locs = frame.f_back.f_locals
+            if func is None or True:
+                name = frame.f_back.f_code.co_name
+                func = dict(getmembers(self)).get(name, None)
+            if not callable(func):
+                raise TypeError("TODO")
+
+            params = {}
+            for name, param in signature(func).parameters.items():
+                if param.kind in (Parameter.VAR_POSITIONAL, Parameter.VAR_KEYWORD):
+                    continue
+                if name in remove:
+                    continue
+                if name in locs:
+                    params[name] = locs[name]
+
+            return params
+        except AttributeError:
+            # frame can be None
+            return {}
+        except TypeError:
+            # TODO: parse error and log
+            return {}
+        finally:
+            del frame
+
     @staticmethod
     def read(
         fname: Union[str, Path], adata: Optional[AnnData] = None, copy: bool = False
     ) -> "BaseEstimator":
+        """TODO: docrep."""
         obj: BaseEstimator = IOMixin.read(fname, adata, copy=copy)
         obj.kernel.adata = adata
 
         return obj
 
     def to_adata(self) -> AnnData:
+        """TODO: docrep."""
         adata = self._shadow_adata.copy()
         try:
             self.kernel.adata = adata
             self.kernel.write_to_adata(None)
         finally:
             self.kernel.adata = self.adata
-        self._shadow_adata.uns[
-            Key.uns.estimator(None, self.backward) + "_params"
-        ] = self.params.copy()
+        key = Key.uns.estimator(None, self.backward) + "_params"
+        self._shadow_adata.uns[key] = self.params.copy()
         return adata
 
     @classmethod
     def from_adata(cls, adata: AnnData, obsp_key: str) -> "BaseEstimator":
+        """TODO: docrep."""
         obj = cls(adata, obsp_key=obsp_key)
         obj._read_from_adata(adata)
+        # TODO
+        # obj._params
 
         return obj
 

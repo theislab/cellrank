@@ -1,6 +1,8 @@
 from typing import Any, Dict, Tuple, Union, Mapping, Optional, Sequence
 from typing_extensions import Literal, Protocol
 
+from types import MappingProxyType
+
 from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.tl import Lineage
@@ -31,6 +33,10 @@ class AbsProbsProtocol(Protocol):
 
     @property
     def backward(self) -> bool:
+        ...
+
+    @property
+    def params(self) -> Dict[str, Any]:
         ...
 
     @property
@@ -282,7 +288,12 @@ class AbsProbsMixin:
                 index=self.adata.obs_names,
             )
 
-        self._write_absorption_probabilities(abs_probs, abs_times, time=start)
+        params = self._create_params(
+            remove=["use_petsc", "n_jobs", "backend", "show_progress_bar"]
+        )
+        self._write_absorption_probabilities(
+            abs_probs, abs_times, params=params, time=start
+        )
 
     @d.dedent
     def compute_lineage_priming(
@@ -386,6 +397,7 @@ class AbsProbsMixin:
         self: AbsProbsProtocol,
         abs_probs: Optional[Lineage],
         abs_times: Optional[pd.DataFrame],
+        params: Mapping[str, Any] = MappingProxyType({}),
     ) -> str:
         # fmt: off
         key1 = Key.obsm.abs_probs(self.backward)
@@ -393,6 +405,7 @@ class AbsProbsMixin:
         key2 = Key.obsm.abs_times(self.backward)
         self._set("_absorption_times", self.adata.obsm, key=key2, value=abs_times)
         self._write_lineage_priming(None, log=False)
+        self.params[key1] = dict(params)
         # fmt: on
 
         if abs_times is None:
@@ -420,7 +433,9 @@ class AbsProbsMixin:
 
         return f"Adding `adata.obs[{key!r}]`\n       `.priming_degree`\n    Finish"
 
-    def _deserialize(self: AbsProbsProtocol, anndata: AnnData) -> bool:
+    def _read_absorption_probabilities(
+        self: AbsProbsProtocol, anndata: AnnData
+    ) -> bool:
         # fmt: off
         with SafeGetter(self, allowed=KeyError) as sg:
             key = Key.obsm.abs_probs(self.backward)

@@ -1,4 +1,4 @@
-from typing import Any, Tuple, Union, Mapping, Optional, Sequence
+from typing import Any, Dict, Tuple, Union, Mapping, Optional, Sequence
 from typing_extensions import Literal
 
 from types import MappingProxyType
@@ -131,6 +131,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             cluster_key=cluster_key,
             p_thresh=p_thresh,
             en_cutoff=en_cutoff,
+            params=self._create_params(),
             time=start,
         )
 
@@ -176,13 +177,16 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             - :attr:`terminal_states_memberships` - TODO.
             - :attr:`terminal_states_probabilities` - TODO.
         """
-
+        if self.macrostates is None:
+            raise RuntimeError("Compute macrostates first as `.compute_macrostates()`.")
         # TODO: ModeEnum
         if len(self._macrostates.cat.categories) == 1:
             logg.warning(
                 "Found only one macrostate. Making it the single terminal state"
             )
-            self.set_terminal_states_from_macrostates(None, n_cells=n_cells)
+            self.set_terminal_states_from_macrostates(
+                None, n_cells=n_cells, params=self._create_params()
+            )
             return
 
         eig = self.eigendecomposition
@@ -207,20 +211,23 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
                 raise ValueError("Expected`stability_threshold != None` for `method='stability'`.")
             stability = pd.Series(np.diag(coarse_T), index=coarse_T.columns)
             names = stability[stability.values >= stability_threshold].index
-            self.set_terminal_states_from_macrostates(names, n_cells=n_cells)
+            self.set_terminal_states_from_macrostates(names, n_cells=n_cells, params=self._create_params())
             return
         else:
             raise NotImplementedError(f"Method `{method}` is not yet implemented.")
         # fmt: on
 
         names = coarse_T.columns[np.argsort(np.diag(coarse_T))][-n_states:]
-        self.set_terminal_states_from_macrostates(names, n_cells=n_cells)
+        self.set_terminal_states_from_macrostates(
+            names, n_cells=n_cells, params=self._create_params()
+        )
 
     @d.dedent
     def set_terminal_states_from_macrostates(
         self,
         names: Optional[Union[str, Sequence[str], Mapping[str, str]]] = None,
         n_cells: int = 30,
+        **kwargs: Any,
     ):
         """
         Manually select terminal states from macrostates.
@@ -283,7 +290,9 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             probs = (memberships.X / memberships.X.max(0)).max(1)
         probs = pd.Series(probs, index=self.adata.obs_names)
 
-        self._write_terminal_states(states, colors, probs, memberships)
+        self._write_terminal_states(
+            states, colors, probs, memberships, params=kwargs.pop("params", {})
+        )
         if rename:
             self.rename_terminal_states(names)
 
@@ -831,6 +840,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         p_thresh: float = 1e-15,
         check_row_sums: bool = True,
         time: Optional[datetime] = None,
+        params: Dict[str, Any] = MappingProxyType({}),
     ) -> None:
         """
         Map fuzzy clustering to pre-computed annotations to get names and colors.
@@ -854,6 +864,10 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             `'G2M_score'` and `'S_score'`.
         check_row_sums
             Check whether rows in `memberships` sum to `1`.
+        time
+            TODO.
+        params
+            TODO.
 
         Returns
         -------
@@ -897,12 +911,18 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
                 f"of cells than requested ({n_cells}): {groups}"
             )
 
-        self._write_macrostates(assignment, colors, memberships, time=time)
+        self._write_macrostates(
+            assignment, colors, memberships, time=time, params=params
+        )
 
     @logger
     @shadow
     def _write_macrostates(
-        self, macrostates: pd.Series, colors: np.ndarray, memberships: Lineage
+        self,
+        macrostates: pd.Series,
+        colors: np.ndarray,
+        memberships: Lineage,
+        params: Dict[str, Any] = MappingProxyType({}),
     ) -> str:
         # fmt: off
         names = list(macrostates.cat.categories)
@@ -913,6 +933,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         self._set("_macrostates_colors", obj=self.adata.uns, key=ckey, value=colors, shadow_only=True)
         mkey = Key.obsm.memberships(key)
         self._set("_macrostates_memberships", obj=self.adata.obsm, key=mkey, value=memberships, shadow_only=True)
+        self.params[key] = dict(params)
 
         if len(names) > 1:
             # not using stationary distribution
@@ -958,8 +979,11 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         colors: Optional[np.ndarray],
         probs: Optional[pd.Series] = None,
         memberships: Optional[Lineage] = None,
+        params: Dict[str, Any] = MappingProxyType({}),
     ) -> str:
-        msg = super()._write_terminal_states(states, colors, probs, log=False)
+        msg = super()._write_terminal_states(
+            states, colors, probs, params=params, log=False
+        )
         msg = "\n".join(msg.split("\n")[:-1])
         msg += "\n       `.terminal_states_memberships\n    Finish`"
 
@@ -972,6 +996,10 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         return msg
 
     def _read_from_adata(self, adata: AnnData, **kwargs: Any) -> bool:
+        ok = self._read_schur_decomposition(adata, allow_missing=True)
+        if not ok:
+            return False
+
         # fmt: off
         with SafeGetter(self, allowed=KeyError) as sg:
             key = Key.obs.macrostates(self.backward)
@@ -980,12 +1008,6 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             self._get("_macrostates_colors", self.adata.uns, key=ckey, where="uns", dtype=(list, tuple, np.ndarray))
             mkey = Key.obsm.memberships(key)
             self._get("_macrostates_memberships", self.adata.obsm, key=mkey, where="obsm", dtype=Lineage)
-
-            # TODO: verify allow missing is ok
-            key = Key.obsm.schur_vectors(self.backward)
-            self._get("_schur_vectors", self.adata.obsm, key=key, where="obsm", dtype=np.ndarray, allow_missing=True)
-            key = Key.uns.schur_matrix(self.backward)
-            self._get("_schur_matrix", self.adata.uns, key=key, where="uns", dtype=np.ndarray, allow_missing=True)
 
             # TODO: allow missing?
             tmat: AnnData = self.adata.uns[Key.uns.coarse(self.backward)]
@@ -1010,7 +1032,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             ok = super()._read_from_adata(adata, **kwargs)
         # fmt: on
 
-        return ok and sg.ok and self._deserialize(adata)
+        return ok and sg.ok and self._read_absorption_probabilities(adata)
 
     plot_macrostates = register_plotter(
         discrete="macrostates", continuous="macrostates_memberships"
