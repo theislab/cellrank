@@ -6,7 +6,7 @@ from pathlib import Path
 
 from anndata import AnnData
 from cellrank import logging as logg
-from cellrank.tl._key import Key
+from cellrank._key import Key
 from cellrank.ul._docs import d
 from cellrank.tl._utils import save_fig, _eigengap
 from cellrank.tl.estimators._utils import SafeGetter

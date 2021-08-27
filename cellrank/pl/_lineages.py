@@ -2,7 +2,7 @@ from typing import Any, Union, Optional, Sequence
 from typing_extensions import Literal
 
 import cellrank.logging as logg
-from cellrank.tl._key import Key
+from cellrank._key import Key
 from cellrank.ul._docs import d
 from cellrank.pl._utils import AnnData
 from cellrank.tl.estimators import GPCCA

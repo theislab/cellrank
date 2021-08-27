@@ -9,7 +9,7 @@ from pathlib import Path
 from contextlib import contextmanager
 
 from anndata import AnnData
-from cellrank.tl._key import Key
+from cellrank._key import Key
 from cellrank.tl.kernels import PrecomputedKernel
 from cellrank.tl._lineage import Lineage
 from cellrank.tl.estimators.mixins import IOMixin, KernelMixin, AnnDataMixin

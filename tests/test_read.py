@@ -6,7 +6,7 @@ from pathlib import Path
 import scanpy as sc
 import cellrank as cr
 from anndata import AnnData
-from cellrank.tl._key import Key
+from cellrank._key import Key
 from cellrank.tl._colors import _create_categorical_colors
 from cellrank.tl._lineage import Lineage
 from cellrank.tl.estimators import CFLARE

@@ -2,7 +2,7 @@ import pytest
 
 import cellrank as cr
 from anndata import AnnData
-from cellrank.tl._key import Key
+from cellrank._key import Key
 from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
 
 import numpy as np

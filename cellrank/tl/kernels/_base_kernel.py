@@ -202,7 +202,7 @@ class KernelExpression(Pickleable, ABC):
         None
             %(write_to_adata)s
         """
-        from cellrank.tl._key import Key
+        from cellrank._key import Key
 
         if self._transition_matrix is None:
             raise ValueError(
@@ -288,7 +288,7 @@ class KernelExpression(Pickleable, ABC):
         Otherwise, it modifies :attr:`anndata.AnnData.obsm` with a key based on ``key_added``.
         """
         # modified from: https://github.com/theislab/scvelo/blob/master/scvelo/tools/velocity_embedding.py
-        from cellrank.tl._key import Key
+        from cellrank._key import Key
         from scvelo.tools.velocity_embedding import quiver_autoscale
 
         if self._transition_matrix is None:

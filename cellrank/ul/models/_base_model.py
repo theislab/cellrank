@@ -359,7 +359,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
 
                 - :attr:`prepared` - %(base_model_prepared.summary)s
         """
-        from cellrank.tl._key import Key
+        from cellrank._key import Key
 
         self._use_raw = use_raw
         if use_raw:

@@ -5,7 +5,7 @@ import pytest
 import cellrank as cr
 from anndata import AnnData
 from cellrank.tl import Lineage
-from cellrank.tl._key import Key
+from cellrank._key import Key
 from cellrank.tl.kernels._base_kernel import KernelAdd
 
 import numpy as np

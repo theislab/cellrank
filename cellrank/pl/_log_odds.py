@@ -5,7 +5,7 @@ from pathlib import Path
 
 from anndata import AnnData
 from cellrank import logging as logg
-from cellrank.tl._key import Key
+from cellrank._key import Key
 from cellrank.ul._docs import d
 from cellrank.pl._utils import _position_legend, _get_categorical_colors
 from cellrank.tl._utils import save_fig, _unique_order_preserving

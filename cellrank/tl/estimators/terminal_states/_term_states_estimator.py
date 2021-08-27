@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from types import MappingProxyType
 
 from anndata import AnnData
-from cellrank.tl._key import Key
+from cellrank._key import Key
 from cellrank.ul._docs import d
 from cellrank.tl._utils import _merge_categorical_series, _convert_to_categorical_series
 from cellrank.tl._colors import (

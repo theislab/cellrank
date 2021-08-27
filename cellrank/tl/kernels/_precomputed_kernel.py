@@ -5,7 +5,7 @@ from copy import copy
 
 from anndata import AnnData
 from cellrank import logging as logg
-from cellrank.tl._key import Key
+from cellrank._key import Key
 from cellrank.ul._docs import d
 from cellrank.ul._utils import _read_graph_data
 from cellrank.tl.kernels import Kernel

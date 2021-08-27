@@ -2,7 +2,7 @@ from typing import Any, Union, Optional, Sequence
 
 from anndata import AnnData
 from cellrank import logging as logg
-from cellrank.tl._key import Key
+from cellrank._key import Key
 from cellrank.ul._docs import d
 from cellrank.tl._utils import TestMethod, _deprecate
 from cellrank.tl.kernels import PrecomputedKernel

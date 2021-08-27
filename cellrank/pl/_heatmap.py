@@ -8,7 +8,7 @@ from collections import Iterable, defaultdict
 
 from anndata import AnnData
 from cellrank import logging as logg
-from cellrank.tl._key import Key
+from cellrank._key import Key
 from cellrank.tl._enum import _DEFAULT_BACKEND, ModeEnum
 from cellrank.ul._docs import d, inject_docs
 from cellrank.pl._utils import (

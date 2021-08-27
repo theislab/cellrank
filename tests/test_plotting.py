@@ -15,7 +15,7 @@ import scvelo as scv
 import cellrank as cr
 from anndata import AnnData
 from cellrank.tl import Lineage
-from cellrank.tl._key import Key
+from cellrank._key import Key
 from cellrank.ul.models import GAMR
 from cellrank.tl.kernels import VelocityKernel, PseudotimeKernel, ConnectivityKernel
 from cellrank.tl.estimators import GPCCA, CFLARE

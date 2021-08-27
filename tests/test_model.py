@@ -7,7 +7,7 @@ from itertools import product
 
 from anndata import AnnData
 from cellrank.tl import Lineage
-from cellrank.tl._key import Key
+from cellrank._key import Key
 from cellrank.ul.models import GAM, GAMR, FittedModel, SKLearnModel
 from cellrank.ul.models._utils import (
     _OFFSET_KEY,

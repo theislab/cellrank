@@ -5,7 +5,7 @@ from pathlib import Path
 from scvelo import read as scv_read
 from anndata import AnnData
 from cellrank import logging as logg
-from cellrank.tl._key import Key
+from cellrank._key import Key
 from cellrank.ul._docs import d
 from cellrank.tl._colors import _create_categorical_colors
 from cellrank.tl._lineage import Lineage

@@ -14,7 +14,7 @@ import scanpy as sc
 import cellrank as cr
 from scanpy import Neighbors
 from anndata import AnnData
-from cellrank.tl._key import Key
+from cellrank._key import Key
 from cellrank.tl._utils import _normalize
 from cellrank.ul._utils import _get_neighs, _get_neighs_params
 from cellrank.tl.kernels import (
