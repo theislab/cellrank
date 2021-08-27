@@ -5,10 +5,10 @@ from pathlib import Path
 
 from anndata import AnnData
 from cellrank import logging as logg
+from cellrank.tl._key import Key
 from cellrank.ul._docs import d
 from cellrank.pl._utils import _position_legend, _get_categorical_colors
 from cellrank.tl._utils import save_fig, _unique_order_preserving
-from cellrank.tl._constants import AbsProbKey
 
 import numpy as np
 import pandas as pd
@@ -182,7 +182,7 @@ def log_odds(
         use_raw = False
 
     # define log-odds
-    ln_key = str(AbsProbKey.BACKWARD if backward else AbsProbKey.FORWARD)
+    ln_key = Key.obsm.abs_probs(backward)
     if ln_key not in adata.obsm:
         raise KeyError(f"Lineages key `{ln_key!r}` not found in `adata.obsm`.")
     time = _ensure_numeric_ordered(adata, time_key)

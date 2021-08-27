@@ -1,8 +1,8 @@
-"""Module used for finding initial and terminal states."""
-from typing import Union, Mapping, TypeVar, Optional
+from typing import Union, Mapping, Optional
 
 from types import MappingProxyType
 
+from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.ul._docs import d, _initial, _terminal, inject_docs
 from cellrank.tl._utils import (
@@ -11,14 +11,10 @@ from cellrank.tl._utils import (
     _info_if_obs_keys_categorical_present,
 )
 from cellrank.tl.kernels import PrecomputedKernel
-from cellrank.tl._constants import TermStatesKey
 from cellrank.tl.estimators import GPCCA, CFLARE
 from cellrank.tl._transition_matrix import transition_matrix
 from cellrank.tl.kernels._velocity_kernel import BackwardMode, VelocityMode
 from cellrank.tl.estimators._base_estimator import BaseEstimator
-
-AnnData = TypeVar("AnnData")
-
 
 _docstring = """\
 Find {direction} states of a dynamic process of single cells based on RNA velocity :cite:`manno:18`.
@@ -158,7 +154,7 @@ def _initial_terminal(
 @inject_docs(
     __doc__=_docstring.format(
         direction=_initial,
-        key_added=TermStatesKey.BACKWARD.s,
+        key_added="initial_states",
         bwd_mode="\n%(velocity_backward_mode_high_lvl)s",
     )
 )
@@ -201,7 +197,7 @@ def initial_states(  # noqa: D103
 @d.dedent
 @inject_docs(
     __doc__=_docstring.format(
-        direction=_terminal, key_added=TermStatesKey.FORWARD.s, bwd_mode=""
+        direction=_terminal, key_added="terminal_states", bwd_mode=""
     )
 )
 def terminal_states(  # noqa: D103

@@ -23,6 +23,7 @@ from statsmodels.stats.multitest import multipletests
 import scanpy as sc
 from anndata import AnnData
 from cellrank import logging as logg
+from cellrank.tl._enum import ModeEnum
 from cellrank.ul._docs import d
 from cellrank.ul._utils import _get_neighs, _has_neighs, _get_neighs_params
 from cellrank.tl._colors import (
@@ -30,7 +31,6 @@ from cellrank.tl._colors import (
     _convert_to_hex_colors,
     _insert_categorical_colors,
 )
-from cellrank.tl._constants import ModeEnum
 from cellrank.ul._parallelize import parallelize
 from cellrank.tl._linear_solver import _solve_lin_system
 from cellrank.tl.kernels._utils import np_std, np_mean, _filter_kwargs

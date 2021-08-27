@@ -1,6 +1,5 @@
-"""Graph plotting module."""
-
 from typing import Dict, Tuple, Union, Callable, Optional, Sequence
+from typing_extensions import Literal
 
 from copy import deepcopy
 from types import MappingProxyType
@@ -8,10 +7,10 @@ from pathlib import Path
 
 from anndata import AnnData
 from cellrank import logging as logg
+from cellrank.tl._key import Key
 from cellrank.ul._docs import d
 from cellrank.tl._utils import save_fig
 from cellrank.ul._utils import _read_graph_data
-from cellrank.tl._constants import _colors
 
 import numpy as np
 import pandas as pd
@@ -33,7 +32,9 @@ def graph(
     graph_key: Optional[str] = None,
     ixs: Optional[Union[range, np.array]] = None,
     layout: Union[str, Dict, Callable] = "umap",
-    keys: Sequence[str] = ("incoming",),
+    keys: Sequence[Union[str, Literal["incoming", "outgoing", "self_loops"]]] = (
+        "incoming",
+    ),
     keylocs: Union[str, Sequence[str]] = "uns",
     node_size: float = 400,
     labels: Optional[Union[Sequence[str], Sequence[Sequence[str]]]] = None,
@@ -477,7 +478,7 @@ def graph(
             if keyloc in ("obs", "obsm"):
                 values = values[ixs]
             categories = values.cat.categories
-            color_key = _colors(key)
+            color_key = Key.uns.colors(key)
             if color_key in data.uns:
                 mapper = dict(zip(categories, data.uns[color_key]))
             else:

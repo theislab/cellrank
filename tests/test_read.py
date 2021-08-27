@@ -6,9 +6,9 @@ from pathlib import Path
 import scanpy as sc
 import cellrank as cr
 from anndata import AnnData
+from cellrank.tl._key import Key
 from cellrank.tl._colors import _create_categorical_colors
 from cellrank.tl._lineage import Lineage
-from cellrank.tl._constants import AbsProbKey, _colors, _lin_names
 from cellrank.tl.estimators import CFLARE
 
 import numpy as np
@@ -23,12 +23,13 @@ def test_fwd():
             dirname = func.__name__
             path = tmpdir.mkdir(dirname).join("tmp.h5ad")
 
+            key = Key.obsm.abs_probs(False)
             return func(
                 self,
                 adata,
                 path,
-                str(AbsProbKey.FORWARD),
-                adata.obsm[str(AbsProbKey.FORWARD)].shape[1],
+                key,
+                adata.obsm[key].shape[1],
             )
 
         return decorator
@@ -49,7 +50,7 @@ class TestRead:
 
     @test_fwd()
     def test_no_names(self, adata: AnnData, path: Path, lin_key: str, n_lins: int):
-        names_key = _lin_names(lin_key)
+        names_key = "FIXME"  # TODO
         del adata.uns[names_key]
 
         sc.write(path, adata)
@@ -64,7 +65,7 @@ class TestRead:
 
     @test_fwd()
     def test_no_colors(self, adata: AnnData, path: Path, lin_key: str, n_lins: int):
-        colors_key = _colors(lin_key)
+        colors_key = Key.uns.colors(lin_key)
         del adata.uns[colors_key]
 
         sc.write(path, adata)
@@ -79,7 +80,7 @@ class TestRead:
     def test_wrong_names_length(
         self, adata: AnnData, path: Path, lin_key: str, n_lins: int
     ):
-        names_key = _lin_names(lin_key)
+        names_key = "FIXME"  # TODO
         adata.uns[names_key] = list(adata.uns[names_key])
         adata.uns[names_key] += ["foo", "bar", "baz"]
 
@@ -95,7 +96,7 @@ class TestRead:
 
     @test_fwd()
     def test_non_unique_names(self, adata: AnnData, path: Path, lin_key: str, _: int):
-        names_key = _lin_names(lin_key)
+        names_key = "FIXME"  # TODO
         adata.uns[names_key][0] = adata.uns[names_key][1]
 
         sc.write(path, adata)
@@ -106,7 +107,7 @@ class TestRead:
     def test_wrong_colors_length(
         self, adata: AnnData, path: Path, lin_key: str, n_lins: int
     ):
-        colors_key = _colors(lin_key)
+        colors_key = Key.uns.colors(lin_key)
         adata.uns[colors_key] = list(adata.uns[colors_key])
         adata.uns[colors_key] += [adata.uns[colors_key][0]]
 
@@ -122,7 +123,7 @@ class TestRead:
     def test_colors_not_colorlike(
         self, adata: AnnData, path: Path, lin_key: str, n_lins: int
     ):
-        colors_key = _colors(lin_key)
+        colors_key = Key.uns.colors(lin_key)
         adata.uns[colors_key][0] = "foo"
 
         sc.write(path, adata)
@@ -135,11 +136,12 @@ class TestRead:
 
     @test_fwd()
     def test_normal_run(self, adata: AnnData, path: Path, lin_key: str, n_lins: int):
+        # TODO
         colors = _create_categorical_colors(10)[-n_lins:]
         names = [f"foo {i}" for i in range(n_lins)]
 
-        adata.uns[_colors(lin_key)] = colors
-        adata.uns[_lin_names(lin_key)] = names
+        adata.uns[Key.uns.colors(lin_key)] = colors
+        adata.uns["FIXME"] = names  # TODO
 
         sc.write(path, adata)
         adata_new = cr.read(path)

@@ -15,9 +15,9 @@ import scvelo as scv
 import cellrank as cr
 from anndata import AnnData
 from cellrank.tl import Lineage
+from cellrank.tl._key import Key
 from cellrank.ul.models import GAMR
 from cellrank.tl.kernels import VelocityKernel, PseudotimeKernel, ConnectivityKernel
-from cellrank.tl._constants import AbsProbKey, _pd
 from cellrank.tl.estimators import GPCCA, CFLARE
 
 import numpy as np
@@ -1229,7 +1229,7 @@ class TestHeatmapReturns:
 
         assert isinstance(df, pd.DataFrame)
         np.testing.assert_array_equal(
-            df.columns, adata_cflare.obsm[AbsProbKey.FORWARD.s].names
+            df.columns, adata_cflare.obsm[Key.obsm.abs_probs(False)].names
         )
         assert len(df) == 10
         assert set(df.iloc[:, 0].values) == set(GENES[:10])
@@ -1249,7 +1249,7 @@ class TestHeatmapReturns:
         models = pd.DataFrame(models).T
         np.testing.assert_array_equal(models.index, GENES[:10])
         np.testing.assert_array_equal(
-            models.columns, adata_cflare.obsm[AbsProbKey.FORWARD.s].names
+            models.columns, adata_cflare.obsm[Key.obsm.abs_probs(False)].names
         )
         assert np.all(models.astype(bool))
 
@@ -1266,7 +1266,7 @@ class TestHeatmapReturns:
             dpi=DPI,
         )
 
-        lnames = adata_cflare.obsm[AbsProbKey.FORWARD.s].names
+        lnames = adata_cflare.obsm[Key.obsm.abs_probs(False)].names
 
         models = pd.DataFrame(models).T
         np.testing.assert_array_equal(models.index, GENES[:10])
@@ -1293,7 +1293,7 @@ class TestHeatmapReturns:
 
         assert isinstance(df, pd.DataFrame)
         np.testing.assert_array_equal(
-            df.columns, adata_cflare.obsm[AbsProbKey.FORWARD.s].names
+            df.columns, adata_cflare.obsm[Key.obsm.abs_probs(False)].names
         )
         assert len(df) == len(genes)
         assert set(df.iloc[:, 0].values) == set(genes)
@@ -1313,7 +1313,7 @@ class TestHeatmapReturns:
 
         assert isinstance(df, pd.DataFrame)
         np.testing.assert_array_equal(
-            df.columns, adata_cflare.obsm[AbsProbKey.FORWARD.s].names
+            df.columns, adata_cflare.obsm[Key.obsm.abs_probs(False)].names
         )
         assert len(df) == 10
         assert set(df.iloc[:, 0].values) == set(GENES[:10])
@@ -2867,7 +2867,7 @@ class TestModel:
 
     @compare()
     def test_model_1_lineage(self, adata: AnnData, fpath: str):
-        adata.obsm[AbsProbKey.FORWARD.s] = Lineage(
+        adata.obsm[Key.obsm.abs_probs(False)] = Lineage(
             np.ones((adata.n_obs, 1)), names=["foo"]
         )
         model = create_model(adata)
@@ -3112,7 +3112,7 @@ class TestFittedModel:
 class TestCircularProjection:
     def test_proj_too_few_lineages(self, adata_gpcca_fwd):
         adata, _ = adata_gpcca_fwd
-        lineages = adata.obsm[AbsProbKey.FORWARD.s].names[:2]
+        lineages = adata.obsm[Key.obsm.abs_probs(False)].names[:2]
 
         with pytest.raises(ValueError, match=r"Expected at least `3` lineages"):
             cr.pl.circular_projection(
@@ -3168,13 +3168,13 @@ class TestCircularProjection:
     @compare()
     def test_proj_labelrot(self, adata: AnnData, fpath: str):
         cr.pl.circular_projection(
-            adata, keys="clusters", labelrot="default", dpi=DPI, save=fpath
+            adata, keys="clusters", label_rot="default", dpi=DPI, save=fpath
         )
 
     @compare()
     def test_proj_labeldistance(self, adata: AnnData, fpath: str):
         cr.pl.circular_projection(
-            adata, keys="clusters", labeldistance=1.5, dpi=DPI, save=fpath
+            adata, keys="clusters", label_distance=1.5, dpi=DPI, save=fpath
         )
 
     @compare()
@@ -3195,7 +3195,7 @@ class TestCircularProjection:
             adata, keys=["kl_divergence", "entropy"], dpi=DPI, save=fpath
         )
 
-        apk = AbsProbKey.FORWARD.s
+        apk = Key.obsm.abs_probs(False)
         assert f"{apk}_kl_divergence" in adata.obs
         assert f"{apk}_entropy" in adata.obs
 

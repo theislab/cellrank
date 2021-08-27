@@ -1,4 +1,3 @@
-"""Gene trend module."""
 from typing import Any, List, Tuple, Union, Mapping, Optional, Sequence
 
 from types import MappingProxyType
@@ -6,6 +5,8 @@ from pathlib import Path
 
 from anndata import AnnData
 from cellrank import logging as logg
+from cellrank.tl._key import Key
+from cellrank.tl._enum import _DEFAULT_BACKEND
 from cellrank.ul._docs import d
 from cellrank.pl._utils import (
     _fit_bulk,
@@ -20,7 +21,6 @@ from cellrank.pl._utils import (
 )
 from cellrank.tl._utils import save_fig, _unique_order_preserving
 from cellrank.ul._utils import _genesymbols, _get_n_cores, _check_collection
-from cellrank.tl._constants import _DEFAULT_BACKEND, AbsProbKey
 
 import numpy as np
 import pandas as pd
@@ -167,7 +167,7 @@ def gene_trends(
         use_raw=kwargs.get("use_raw", False),
     )
 
-    ln_key = str(AbsProbKey.BACKWARD if backward else AbsProbKey.FORWARD)
+    ln_key = Key.obsm.abs_probs(backward)
     if ln_key not in adata.obsm:
         raise KeyError(f"Lineages key `{ln_key!r}` not found in `adata.obsm`.")
 

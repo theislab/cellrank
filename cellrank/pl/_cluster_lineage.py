@@ -1,6 +1,4 @@
-"""Cluster lineages module."""
-
-from typing import Dict, Tuple, Union, Optional, Sequence
+from typing import Any, Dict, Tuple, Union, Optional, Sequence
 
 from types import MappingProxyType
 from pathlib import Path
@@ -8,6 +6,8 @@ from pathlib import Path
 import scanpy as sc
 from anndata import AnnData
 from cellrank import logging as logg
+from cellrank.tl._key import Key
+from cellrank.tl._enum import _DEFAULT_BACKEND
 from cellrank.ul._docs import d
 from cellrank.pl._utils import (
     _fit_bulk,
@@ -22,7 +22,6 @@ from cellrank.pl._utils import (
 )
 from cellrank.tl._utils import save_fig, _unique_order_preserving
 from cellrank.ul._utils import _genesymbols, _get_n_cores, _check_collection
-from cellrank.tl._constants import _DEFAULT_BACKEND, AbsProbKey
 
 import numpy as np
 from sklearn.preprocessing import StandardScaler
@@ -64,7 +63,7 @@ def cluster_lineage(
     neighbors_kwargs: Dict = MappingProxyType({"use_rep": "X"}),
     clustering_kwargs: Dict = MappingProxyType({}),
     return_models: bool = False,
-    **kwargs,
+    **kwargs: Any,
 ) -> Optional[_return_model_type]:
     """
     Cluster gene expression trends within a lineage and plot the clusters.
@@ -137,7 +136,7 @@ def cluster_lineage(
             1,
             subplot_spec=gs[row : row + row_delta, col],
             hspace=0,
-            height_ratios=[1] + [ratio] * (row_delta - 1),
+            height_ratios=[1.0] + [ratio] * (row_delta - 1),
         )
         ax = fig.add_subplot(gss[0, 0], sharey=sharey_ax)
 
@@ -180,7 +179,7 @@ def cluster_lineage(
         return ax if sharey else None
 
     use_raw = kwargs.get("use_raw", False)
-    lineage_key = str(AbsProbKey.BACKWARD if backward else AbsProbKey.FORWARD)
+    lineage_key = Key.obsm.abs_probs(backward)
     if lineage_key not in adata.obsm:
         raise KeyError(f"Lineages key `{lineage_key!r}` not found in `adata.obsm`.")
 

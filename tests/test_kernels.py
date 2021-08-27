@@ -14,6 +14,7 @@ import scanpy as sc
 import cellrank as cr
 from scanpy import Neighbors
 from anndata import AnnData
+from cellrank.tl._key import Key
 from cellrank.tl._utils import _normalize
 from cellrank.ul._utils import _get_neighs, _get_neighs_params
 from cellrank.tl.kernels import (
@@ -23,7 +24,6 @@ from cellrank.tl.kernels import (
     PrecomputedKernel,
     ConnectivityKernel,
 )
-from cellrank.tl._constants import _transition
 from cellrank.tl.kernels._base_kernel import (
     Kernel,
     Constant,
@@ -1330,7 +1330,7 @@ class TestComputeProjection:
             ck.compute_projection(basis="umap")
             ck.write_to_adata()
 
-        assert adata.uns[_transition(ck._direction) + "_params"] == {
+        assert adata.uns[Key.uns.kernel(ck.backward) + "_params"] == {
             "params": ck.params,
             "embeddings": ["umap"],
         }
@@ -1340,7 +1340,7 @@ class TestComputeProjection:
         ck = cr.tl.kernels.ConnectivityKernel(adata).compute_transition_matrix()
         ck.compute_projection(basis="umap", copy=False, key_added=key_added)
 
-        key = key_added if key_added is not None else _transition(ck._direction)
+        key = Key.uns.kernel(ck.backward, key=key_added)
         ukey = f"{key}_params"
         key = f"{key}_umap"
 
@@ -1357,7 +1357,7 @@ class TestComputeProjection:
             np.testing.assert_array_equal(res.shape, adata.obsm["X_umap"].shape)
         else:
             assert res is None
-            key = _transition(ck._direction) + "_umap"
+            key = Key.uns.kernel(ck.backward) + "_umap"
             np.testing.assert_array_equal(
                 adata.obsm[key].shape, adata.obsm["X_umap"].shape
             )

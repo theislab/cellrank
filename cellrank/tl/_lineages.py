@@ -1,18 +1,15 @@
-"""Lineages module."""
+from typing import Any, Union, Optional, Sequence
 
-from typing import Union, TypeVar, Optional, Sequence
-
+from anndata import AnnData
 from cellrank import logging as logg
+from cellrank.tl._key import Key
 from cellrank.ul._docs import d
 from cellrank.tl._utils import TestMethod, _deprecate
 from cellrank.tl.kernels import PrecomputedKernel
-from cellrank.tl._constants import AbsProbKey, TermStatesKey, TerminalStatesPlot
 from cellrank.tl.estimators import GPCCA
 from cellrank.tl.kernels._precomputed_kernel import DummyKernel
 
 import pandas as pd
-
-AnnData = TypeVar("AnnData")
 
 
 @_deprecate(version="2.0")
@@ -22,7 +19,7 @@ def lineages(
     backward: bool = False,
     copy: bool = False,
     return_estimator: bool = False,
-    **kwargs,
+    **kwargs: Any,
 ) -> Optional[AnnData]:
     """
     Compute probabilistic lineage assignment using RNA velocity.
@@ -57,14 +54,9 @@ def lineages(
         returns its copy or returns the estimator.
     """
 
-    if backward:
-        lin_key = AbsProbKey.BACKWARD
-        fs_key = TermStatesKey.BACKWARD
-        fs_key_pretty = TerminalStatesPlot.BACKWARD
-    else:
-        lin_key = AbsProbKey.FORWARD
-        fs_key = TermStatesKey.FORWARD
-        fs_key_pretty = TerminalStatesPlot.FORWARD
+    lin_key = Key.obsm.abs_probs(backward)
+    fs_key = Key.obs.term_states(backward)
+    fs_key_pretty = fs_key.replace("_", " ")
 
     try:
         pk = PrecomputedKernel(adata=adata, backward=backward)
@@ -73,19 +65,19 @@ def lineages(
             f"Compute transition matrix first as `cellrank.tl.transition_matrix(..., backward={backward})`."
         ) from e
 
-    start = logg.info(f"Computing lineage probabilities towards {fs_key_pretty.s}")
+    start = logg.info(f"Computing lineage probabilities towards {fs_key_pretty}")
     mc = GPCCA(
         pk, read_from_adata=True, inplace=not copy
     )  # GPCCA is more general than CFLARE, in terms of what is saves
     if mc.terminal_states is None:
         raise RuntimeError(
-            f"Compute the states first as `cellrank.tl.{fs_key.s}(..., backward={backward})`."
+            f"Compute the states first as `cellrank.tl.{fs_key}(..., backward={backward})`."
         )
 
     # compute the absorption probabilities
     mc.compute_absorption_probabilities(**kwargs)
 
-    logg.info(f"Adding lineages to `adata.obsm[{lin_key.s!r}]`\n    Finish", time=start)
+    logg.info(f"Adding lineages to `adata.obsm[{lin_key!r}]`\n    Finish", time=start)
 
     return mc.adata if copy else mc if return_estimator else None
 

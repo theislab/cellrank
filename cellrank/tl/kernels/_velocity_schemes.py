@@ -3,9 +3,9 @@ from typing import Any, Tuple
 from abc import ABC, abstractmethod
 from functools import partial
 
+from cellrank.tl._enum import ModeEnum
 from cellrank.ul._docs import d
 from cellrank.ul._utils import valuedispatch
-from cellrank.tl._constants import ModeEnum
 from cellrank.tl.kernels._utils import norm, np_mean, jit_kwargs
 
 import numpy as np

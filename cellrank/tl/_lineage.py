@@ -1,5 +1,3 @@
-"""Lineage class module."""
-
 from typing import List, Tuple, Union, Mapping, TypeVar, Callable, Iterable, Optional
 from typing_extensions import Literal
 
@@ -10,6 +8,7 @@ from functools import wraps
 from itertools import combinations
 
 from cellrank import logging as logg
+from cellrank.tl._enum import Lin, ModeEnum
 from cellrank.ul._docs import d
 from cellrank.tl._utils import save_fig, _convert_lineage_name, _unique_order_preserving
 from cellrank.tl._colors import (
@@ -17,7 +16,6 @@ from cellrank.tl._colors import (
     _compute_mean_color,
     _create_categorical_colors,
 )
-from cellrank.tl._constants import Lin, ModeEnum
 
 import numpy as np
 import pandas as pd

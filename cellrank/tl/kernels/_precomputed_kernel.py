@@ -5,10 +5,10 @@ from copy import copy
 
 from anndata import AnnData
 from cellrank import logging as logg
+from cellrank.tl._key import Key
 from cellrank.ul._docs import d
 from cellrank.ul._utils import _read_graph_data
 from cellrank.tl.kernels import Kernel
-from cellrank.tl._constants import Direction, _transition
 from cellrank.tl.kernels._base_kernel import _RTOL, KernelExpression
 
 import numpy as np
@@ -49,10 +49,7 @@ class PrecomputedKernel(Kernel):
         params = {}
 
         if transition_matrix is None:
-            # TODO: use Key
-            transition_matrix = _transition(
-                Direction.BACKWARD if backward else Direction.FORWARD
-            )
+            transition_matrix = Key.uns.kernel(backward)
             logg.debug(f"Setting transition matrix key to `{transition_matrix!r}`")
 
         if isinstance(transition_matrix, str):
@@ -61,8 +58,7 @@ class PrecomputedKernel(Kernel):
                     "When `transition_matrix` specifies a key to `adata.obsp`, `adata` cannot be None."
                 )
             self._origin = f"adata.obsp[{transition_matrix!r}]"
-            # TODO: use Key
-            backward = "bwd" in transition_matrix
+            backward = Key.uns.kernel(bwd=True) == transition_matrix
             transition_matrix = _read_graph_data(adata, transition_matrix)
 
         elif isinstance(transition_matrix, KernelExpression):
@@ -136,7 +132,7 @@ class PrecomputedKernel(Kernel):
 
     def __invert__(self) -> "PrecomputedKernel":
         # do not call parent's invert, since it removes the transition matrix
-        self._direction = Direction.FORWARD if self.backward else Direction.BACKWARD
+        self._backward = not self.backward
         return self
 
     def __repr__(self):

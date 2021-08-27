@@ -9,8 +9,8 @@ import cellrank.datasets
 import cellrank.external
 import cellrank.estimators
 from cellrank.settings import settings
+from cellrank.tl._enum import Lin
 from cellrank.tl._read import read
-from cellrank.tl._constants import Lin
 
 __author__ = ", ".join(["Marius Lange", "Michal Klein"])
 __maintainer__ = ", ".join(["Marius Lange", "Michal Klein"])

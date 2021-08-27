@@ -1,14 +1,12 @@
-"""Module for plotting lineage-related stuff."""
 from typing import Any, Union, Optional, Sequence
+from typing_extensions import Literal
 
 import cellrank.logging as logg
+from cellrank.tl._key import Key
 from cellrank.ul._docs import d
 from cellrank.pl._utils import AnnData
-from cellrank.tl._constants import DirPrefix
 from cellrank.tl.estimators import GPCCA
 from cellrank.tl.kernels._precomputed_kernel import DummyKernel
-
-import pandas as pd
 
 
 @d.dedent
@@ -17,7 +15,7 @@ def lineages(
     lineages: Optional[Union[str, Sequence[str]]] = None,
     backward: bool = False,
     cluster_key: Optional[str] = None,
-    mode: str = "embedding",
+    mode: Literal["embedding", "time"] = "embedding",
     time_key: str = "latent_time",
     **kwargs: Any,
 ) -> None:
@@ -98,24 +96,18 @@ def lineage_drivers(
         logg.warning("No raw attribute set. Using `adata.var` instead")
         use_raw = False
 
-    direction = DirPrefix.BACKWARD if backward else DirPrefix.FORWARD
-    needle = f"{direction} {lineage} corr"
+    key = Key.varm.lineage_drivers(backward)
+    haystack = (adata.raw if use_raw else adata).varm
 
-    haystack = adata.raw.var if use_raw else adata.var
-
-    if needle not in haystack:
+    if key not in haystack:
         raise RuntimeError(
             f"Unable to find lineage drivers in "
-            f"`{'adata.raw.var' if use_raw else 'adata.var'}[{needle!r}]`. "
+            f"`{'adata.raw.varm' if use_raw else 'adata.varm'}[{key!r}]`. "
             f"Compute lineage drivers first as `cellrank.tl.lineage_drivers(lineages={lineage!r}, "
             f"use_raw={use_raw}, backward={backward}).`"
         )
 
-    drivers = pd.DataFrame(haystack[[needle, f"{direction} {lineage} qval"]])
-    drivers.columns = [f"{lineage} corr", f"{lineage} qval"]
-    # TODO: verify if it's needed/correct with the new changes
-    mc._lineage_drivers = drivers
-
+    mc._lineage_drivers = haystack[key]
     mc.plot_lineage_drivers(
         lineage,
         n_genes=n_genes,

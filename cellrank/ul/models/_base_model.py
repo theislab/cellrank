@@ -1,16 +1,4 @@
-"""Base class for all models."""
-from typing import (
-    Any,
-    Dict,
-    List,
-    Tuple,
-    Union,
-    Mapping,
-    TypeVar,
-    Callable,
-    Optional,
-    Sequence,
-)
+from typing import Any, Dict, List, Tuple, Union, Mapping, Callable, Optional, Sequence
 
 import re
 import wrapt
@@ -20,12 +8,13 @@ from copy import copy as _copy
 from copy import deepcopy
 from collections import defaultdict
 
+from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.tl import Lineage
+from cellrank.tl._enum import ModeEnum
 from cellrank.ul._docs import d
 from cellrank.tl._utils import save_fig
 from cellrank.ul._utils import Pickleable, _minmax, valuedispatch, _densify_squeeze
-from cellrank.tl._constants import ModeEnum, AbsProbKey
 from scanpy.plotting._utils import add_colors_for_categorical_sample_annotation
 
 import numpy as np
@@ -41,7 +30,6 @@ from matplotlib import pyplot as plt
 from matplotlib.colors import to_rgb, is_color_like
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-AnnData = TypeVar("AnnData")
 _dup_spaces = re.compile(r" +")  # used on repr for underlying model's repr
 ArrayLike = Union[np.ndarray, spmatrix, List, Tuple]
 
@@ -185,9 +173,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         adata: AnnData,
         model: Any,
     ):
-        from anndata import AnnData as _AnnData
-
-        if not isinstance(adata, _AnnData) and not isinstance(self, FittedModel):
+        if not isinstance(adata, AnnData) and not isinstance(self, FittedModel):
             # FittedModel doesn't need it
             raise TypeError(
                 f"Expected `adata` to be of type `anndata.AnnData`, found `{type(adata).__name__!r}`."
@@ -373,6 +359,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
 
                 - :attr:`prepared` - %(base_model_prepared.summary)s
         """
+        from cellrank.tl._key import Key
 
         self._use_raw = use_raw
         if use_raw:
@@ -387,7 +374,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
                 f"`adata.X` or `adata.obs`."
             )
 
-        lineage_key = str(AbsProbKey.BACKWARD if backward else AbsProbKey.FORWARD)
+        lineage_key = Key.obsm.abs_probs(backward)
         if lineage_key not in self.adata.obsm:
             raise KeyError(f"Lineage key `{lineage_key!r}` not found in `adata.obsm`.")
         if not isinstance(self.adata.obsm[lineage_key], Lineage):

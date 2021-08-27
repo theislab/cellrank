@@ -8,12 +8,13 @@ import scvelo as scv
 from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.tl import Lineage
+from cellrank.tl._key import Key
+from cellrank.tl._enum import ModeEnum
 from cellrank.ul._docs import d
 from cellrank.pl._utils import _held_karp
 from cellrank.tl._utils import save_fig, _unique_order_preserving
 from cellrank.ul._utils import _check_collection
 from cellrank.tl._lineage import PrimingDegree
-from cellrank.tl._constants import ModeEnum, AbsProbKey
 
 import numpy as np
 import pandas as pd
@@ -44,22 +45,11 @@ def _get_distances(data: Union[np.ndarray, Lineage], metric: Metric_T) -> np.nda
 
     if isinstance(metric, str) or callable(metric):
         metric = pairwise_distances(data.T, metric=metric)
-    elif isinstance(metric, np.ndarray):
+    elif isinstance(metric, (pd.DataFrame, np.ndarray)):
         shape = (data.shape[1], data.shape[1])
         if metric.shape != shape:
             raise ValueError(
-                f"Expected a `numpy.ndarray` of shape `{shape}`, found `{metric.shape}`."
-            )
-    elif isinstance(metric, pd.DataFrame):
-        if np.any(metric.index != data.names):
-            raise ValueError(
-                f"Expected `pandas.DataFrame` to have the following index `{list(data.names)}`, "
-                f"found `{list(metric.columns)}`."
-            )
-        if np.any(metric.columns != data.names):
-            raise ValueError(
-                f"Expected `pandas.DataFrame` to have the following columns `{list(data.names)}`, "
-                f"found `{list(metric.columns)}`."
+                f"Expected an array/dataframe of shape `{shape}`, found `{metric.shape}`."
             )
     else:
         raise TypeError(
@@ -89,8 +79,8 @@ def circular_projection(
     space: float = 0.25,
     use_raw: bool = False,
     text_kwargs: Mapping[str, Any] = MappingProxyType({}),
-    labeldistance: float = 1.25,
-    labelrot: Union[Literal["default", "best"], float] = "best",
+    label_distance: float = 1.25,
+    label_rot: Union[Literal["default", "best"], float] = "best",
     show_edges: bool = True,
     key_added: Optional[str] = None,
     figsize: Optional[Tuple[float, float]] = None,
@@ -139,9 +129,9 @@ def circular_projection(
         Whether to access :attr:`anndata.AnnData.raw` when there are ``keys`` in :attr:`anndata.AnnData.var_names`.
     text_kwargs
         Keyword arguments for :func:`matplotlib.pyplot.text`.
-    labeldistance
+    label_distance
         Distance at which the lineage labels will be drawn.
-    labelrot
+    label_rot
         How to rotate the labels. Valid options are:
 
             - `'best'` - rotate labels so that they are easily readable.
@@ -167,13 +157,15 @@ def circular_projection(
             - :attr:`anndata.AnnData.obs` ``['to_{initial,terminal}_states_{method}']`` - the priming degree,
               if a method is present in ``keys``.
     """
-    if labeldistance is not None and labeldistance < 0:
-        raise ValueError(f"Expected `delta` to be positive, found `{labeldistance}`.")
+    if label_distance is not None and label_distance < 0:
+        raise ValueError(
+            f"Expected `label_distance` to be positive, found `{label_distance}`."
+        )
 
-    if labelrot is None:
-        labelrot = LabelRot.DEFAULT
-    if isinstance(labelrot, str):
-        labelrot = LabelRot(labelrot)
+    if label_rot is None:
+        label_rot = LabelRot.DEFAULT
+    if isinstance(label_rot, str):
+        label_rot = LabelRot(label_rot)
 
     suffix = "bwd" if backward else "fwd"
     if key_added is None:
@@ -195,18 +187,18 @@ def circular_projection(
     if not len(keys):
         raise ValueError("No valid keys have been selected.")
 
-    lineage_key = str(AbsProbKey.BACKWARD if backward else AbsProbKey.FORWARD)
+    lineage_key = Key.obsm.abs_probs(backward)
     if lineage_key not in adata.obsm:
         raise KeyError(f"Lineages key `{lineage_key!r}` not found in `adata.obsm`.")
 
-    probs = adata.obsm[lineage_key]
+    probs: Lineage = adata.obsm[lineage_key]
 
     if isinstance(lineages, str):
         lineages = (lineages,)
     elif lineages is None:
         lineages = probs.names
 
-    probs: Lineage = adata.obsm[lineage_key][lineages]
+    probs = adata.obsm[lineage_key][lineages]
     n_lin = probs.shape[1]
     if n_lin < 3:
         raise ValueError(f"Expected at least `3` lineages, found `{n_lin}`.")
@@ -292,7 +284,7 @@ def circular_projection(
 
         patches, texts = ax.pie(
             np.ones_like(angle_vec),
-            labeldistance=labeldistance,
+            labeldistance=label_distance,
             rotatelabels=True,
             labels=probs.names[::-1],
             startangle=-360 / len(angle_vec) / 2,
@@ -305,14 +297,14 @@ def circular_projection(
 
         # clockwise
         for color, text in zip(probs.colors[::-1], texts):
-            if isinstance(labelrot, (int, float)):
-                text.set_rotation(labelrot)
-            elif labelrot == LabelRot.BEST:
+            if isinstance(label_rot, (int, float)):
+                text.set_rotation(label_rot)
+            elif label_rot == LabelRot.BEST:
                 rot = text.get_rotation()
                 text.set_rotation(rot + 90 + (1 - rot // 180) * 180)
-            elif labelrot != LabelRot.DEFAULT:
+            elif label_rot != LabelRot.DEFAULT:
                 raise NotImplementedError(
-                    f"Label rotation `{labelrot}` is not yet implemented."
+                    f"Label rotation `{label_rot}` is not yet implemented."
                 )
             text.set_color(color)
 

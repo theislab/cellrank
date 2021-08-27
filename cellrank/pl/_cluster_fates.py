@@ -1,20 +1,21 @@
-"""Cluster fatess and similarity module."""
-
-from typing import Any, Tuple, Union, Mapping, TypeVar, Optional, Sequence
+from typing import Any, Tuple, Union, Mapping, Optional, Sequence
+from typing_extensions import Literal
 
 from math import ceil
 from types import MappingProxyType
 from pathlib import Path
 from collections import OrderedDict as odict
 
+from anndata import AnnData
 from cellrank import logging as logg
 from scanpy.plotting import violin
 from scvelo.plotting import paga
+from cellrank.tl._key import Key
+from cellrank.tl._enum import ModeEnum
 from cellrank.ul._docs import d, inject_docs
 from cellrank.pl._utils import _position_legend
 from cellrank.tl._utils import RandomKeys, save_fig, _unique_order_preserving
 from cellrank.ul._utils import valuedispatch
-from cellrank.tl._constants import ModeEnum, DirPrefix, AbsProbKey, TerminalStatesPlot
 
 import numpy as np
 import pandas as pd
@@ -25,8 +26,6 @@ import matplotlib.colors
 import matplotlib.pyplot as plt
 from seaborn import heatmap, clustermap
 from matplotlib import cm
-
-AnnData = TypeVar("AnnData")
 
 
 class ClusterFatesMode(ModeEnum):  # noqa
@@ -42,7 +41,9 @@ class ClusterFatesMode(ModeEnum):  # noqa
 @inject_docs(m=ClusterFatesMode)
 def cluster_fates(
     adata: AnnData,
-    mode: str = ClusterFatesMode.PAGA_PIE.s,
+    mode: Literal[
+        "bar", "paga", "paga_pie", "violin", "heatmap", "clustermap"
+    ] = ClusterFatesMode.PAGA_PIE.s,
     backward: bool = False,
     lineages: Optional[Union[str, Sequence[str]]] = None,
     cluster_key: Optional[str] = "clusters",
@@ -431,14 +432,10 @@ def cluster_fates(
             f"`{ClusterFatesMode.BAR!r}` and `{ClusterFatesMode.VIOLIN!r}`, found `mode={mode!r}`."
         )
 
-    if backward:
-        lk = AbsProbKey.BACKWARD.s
-        points = TerminalStatesPlot.BACKWARD.s
-        dir_prefix = DirPrefix.BACKWARD.s
-    else:
-        lk = AbsProbKey.FORWARD.s
-        points = TerminalStatesPlot.FORWARD.s
-        dir_prefix = DirPrefix.FORWARD.s
+    # TODO: rename vars
+    lk = Key.obsm.abs_probs(backward)
+    points = Key.obs.term_states(backward)
+    dir_prefix = Key.where(backward)
 
     if cluster_key is not None:
         is_all = False

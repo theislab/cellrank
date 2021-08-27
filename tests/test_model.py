@@ -7,8 +7,8 @@ from itertools import product
 
 from anndata import AnnData
 from cellrank.tl import Lineage
+from cellrank.tl._key import Key
 from cellrank.ul.models import GAM, GAMR, FittedModel, SKLearnModel
-from cellrank.tl._constants import AbsProbKey
 from cellrank.ul.models._utils import (
     _OFFSET_KEY,
     NormMode,
@@ -101,7 +101,7 @@ class TestModel:
         assert ci is model.conf_int
 
     def test_model_1_lineage(self, adata_cflare):
-        adata_cflare.obsm[AbsProbKey.FORWARD.s] = Lineage(
+        adata_cflare.obsm[Key.obsm.abs_probs(False)] = Lineage(
             np.ones((adata_cflare.n_obs, 1)), names=["foo"]
         )
         model = create_model(adata_cflare)

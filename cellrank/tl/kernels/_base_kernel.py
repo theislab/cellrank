@@ -32,7 +32,6 @@ from cellrank.tl._utils import (
 )
 from cellrank.ul._utils import Pickleable
 from scvelo.plotting.utils import default_size, plot_outline
-from cellrank.tl._constants import Direction, _transition
 from cellrank.tl.kernels._utils import _get_basis, _filter_kwargs
 from cellrank.tl.kernels._tmat_flow import FlowPlotter
 from cellrank.tl.kernels._random_walk import RandomWalk
@@ -77,7 +76,7 @@ class KernelExpression(Pickleable, ABC):
     ):
         self._op_name = op_name
         self._transition_matrix = None
-        self._direction = Direction.BACKWARD if backward else Direction.FORWARD
+        self._backward = backward
         self._compute_cond_num = compute_cond_num
         self._cond_num = None
         self._params = {}
@@ -108,7 +107,7 @@ class KernelExpression(Pickleable, ABC):
     @property
     def backward(self) -> bool:
         """Direction of the process."""
-        return self._direction == Direction.BACKWARD
+        return self._backward
 
     @property
     @abstractmethod
@@ -289,6 +288,7 @@ class KernelExpression(Pickleable, ABC):
         Otherwise, it modifies :attr:`anndata.AnnData.obsm` with a key based on ``key_added``.
         """
         # modified from: https://github.com/theislab/scvelo/blob/master/scvelo/tools/velocity_embedding.py
+        from cellrank.tl._key import Key
         from scvelo.tools.velocity_embedding import quiver_autoscale
 
         if self._transition_matrix is None:
@@ -332,7 +332,7 @@ class KernelExpression(Pickleable, ABC):
         if copy:
             return T_emb
 
-        key = _transition(self._direction) if key_added is None else key_added
+        key = Key.uns.kernel(self.backward, key=key_added)
         ukey = f"{key}_params"
 
         embs = self.adata.uns.get(ukey, {}).get("embeddings", [])
@@ -751,7 +751,7 @@ class KernelExpression(Pickleable, ABC):
         # mustn't return a copy because transition matrix
         self._transition_matrix = None
         self._params = {}
-        self._direction = Direction.FORWARD if self.backward else Direction.BACKWARD
+        self._backward = not self.backward
 
         return self
 
@@ -1121,7 +1121,7 @@ class Constant(Kernel):
 
     def __invert__(self) -> "Constant":
         # do not call parent's invert, since it removes the transition matrix
-        self._direction = Direction.FORWARD if self.backward else Direction.BACKWARD
+        self._backward = not self.backward
         return self
 
     def __repr__(self) -> str:
@@ -1178,7 +1178,7 @@ class ConstantMatrix(Kernel):
 
     def __invert__(self) -> "ConstantMatrix":
         # do not call parent's invert, since it removes the transition matrix
-        self._direction = Direction.FORWARD if self.backward else Direction.BACKWARD
+        self._backward = not self.backward
         return self
 
     def __repr__(self) -> str:

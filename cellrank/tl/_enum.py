@@ -1,12 +1,8 @@
-"""Module containing constants."""
-
-from typing import Any, Union, Callable
+from typing import Any, Callable
 
 from abc import ABC, ABCMeta
 from enum import Enum, EnumMeta
 from functools import wraps
-
-from cellrank.ul._docs import _initial, _terminal
 
 _DEFAULT_BACKEND = "loky"
 
@@ -43,82 +39,11 @@ class Lin(PrettyEnum):
     OTHERS = "others"
 
 
-# TODO: remove these useless things
-class Direction(PrettyEnum):
-    """Direction of the process."""
-
-    FORWARD = "fwd"
-    BACKWARD = "bwd"
-
-
-class DirectionPlot(PrettyEnum):
-    """Pretty direction names for plotting."""
-
-    FORWARD = "forward"
-    BACKWARD = "backward"
-
-
-class DirPrefix(PrettyEnum):
-    """Direction prefix."""
-
-    FORWARD = "to"
-    BACKWARD = "from"
-
-
-class TermStatesKey(PrettyEnum):
-    """State key in `adata.obs`."""
-
-    FORWARD = f"{_terminal}_states"
-    BACKWARD = f"{_initial}_states"
-
-
-class TerminalStatesPlot(PrettyEnum):
-    """Pretty state names for pl."""
-
-    FORWARD = TermStatesKey.FORWARD.s.replace("_", " ")
-    BACKWARD = TermStatesKey.BACKWARD.s.replace("_", " ")
-
-
-class Macro(PrettyEnum):
-    """Key for scaled, subsampled macrostates in `adata.obsm`."""
-
-    FORWARD = f"macrostates_{Direction.FORWARD}"
-    BACKWARD = f"macrostates_{Direction.BACKWARD}"
-
-
-# TermStatesKey and AbsProbKey must have the same suffix `_..._states` because of model.prepare
-class AbsProbKey(PrettyEnum):
-    """Lineage key in `adata.obsm`."""
-
-    FORWARD = f"{DirPrefix.FORWARD}_{TermStatesKey.FORWARD}"
-    BACKWARD = f"{DirPrefix.BACKWARD}_{TermStatesKey.BACKWARD}"
-
-
 class ThresholdScheme(PrettyEnum):
     """Pseudotime thresholding scheme."""
 
     SOFT = "soft"
     HARD = "hard"
-
-
-def _transition(d: Union[str, Direction]) -> str:
-    return f"T_{d}"
-
-
-def _lin_names(k: Union[str, AbsProbKey]) -> str:
-    return f"{k}_names"
-
-
-def _colors(k: Union[str, AbsProbKey, TermStatesKey]) -> str:
-    return f"{k}_colors"
-
-
-def _probs(k: Union[str, TermStatesKey]) -> str:
-    return f"{k}_probs"
-
-
-def _pd(k: Union[str, AbsProbKey]) -> str:
-    return f"{k}_priming_degree"
 
 
 def _pretty_raise_enum(cls, fun):

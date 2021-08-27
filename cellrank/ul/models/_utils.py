@@ -2,9 +2,9 @@ from typing import Union, Optional, Sequence
 
 import cellrank.logging as logg
 from anndata import AnnData
+from cellrank.tl._enum import ModeEnum
 from cellrank.ul._docs import d, inject_docs
 from cellrank.ul._utils import valuedispatch
-from cellrank.tl._constants import ModeEnum
 from cellrank.ul._parallelize import parallelize
 
 import numpy as np

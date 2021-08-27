@@ -4,8 +4,8 @@ from typing import List, Tuple, Union, TypeVar, Optional
 from functools import singledispatch
 
 from cellrank import logging as logg
+from cellrank.tl._enum import _DEFAULT_BACKEND
 from cellrank.ul._utils import _get_n_cores
-from cellrank.tl._constants import _DEFAULT_BACKEND
 from cellrank.ul._parallelize import parallelize
 
 import numpy as np

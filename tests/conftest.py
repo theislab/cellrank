@@ -17,7 +17,6 @@ import scanpy as sc
 import cellrank as cr
 from anndata import AnnData
 from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
-from cellrank.tl._constants import AbsProbKey
 from cellrank.tl.estimators import GPCCA, CFLARE
 
 import numpy as np
@@ -71,10 +70,6 @@ def _create_cflare(*, backward: bool = False) -> Tuple[AnnData, CFLARE]:
     mc.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
 
     assert adata is mc.adata
-    if backward:
-        assert str(AbsProbKey.BACKWARD) in adata.obsm
-    else:
-        assert str(AbsProbKey.FORWARD) in adata.obsm
     np.testing.assert_allclose(mc.absorption_probabilities.X.sum(1), 1.0, rtol=1e-6)
 
     return adata, mc
@@ -102,10 +97,6 @@ def _create_gpcca(*, backward: bool = False) -> Tuple[AnnData, GPCCA]:
     mc.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
 
     assert adata is mc.adata
-    if backward:
-        assert str(AbsProbKey.BACKWARD) in adata.obsm
-    else:
-        assert str(AbsProbKey.FORWARD) in adata.obsm
     np.testing.assert_allclose(mc.absorption_probabilities.X.sum(1), 1.0, rtol=1e-6)
 
     return adata, mc

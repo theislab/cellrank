@@ -8,9 +8,9 @@ from types import MappingProxyType
 from collections import defaultdict
 
 from cellrank import logging as logg
+from cellrank.tl._enum import ModeEnum
 from cellrank.ul._docs import d
 from cellrank.ul.models import BaseModel
-from cellrank.tl._constants import ModeEnum
 from cellrank.tl.kernels._utils import _filter_kwargs
 from cellrank.ul.models._base_model import AnnData
 

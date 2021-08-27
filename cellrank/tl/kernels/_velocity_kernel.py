@@ -6,10 +6,10 @@ from math import fsum
 
 from anndata import AnnData
 from cellrank import logging as logg
+from cellrank.tl._enum import _DEFAULT_BACKEND, ModeEnum
 from cellrank.ul._docs import d, inject_docs
 from cellrank.ul._utils import valuedispatch
 from cellrank.tl.kernels import Kernel
-from cellrank.tl._constants import _DEFAULT_BACKEND, ModeEnum
 from cellrank.ul._parallelize import parallelize
 from cellrank.tl.kernels._utils import (
     prange,

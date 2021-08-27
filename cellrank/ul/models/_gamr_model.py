@@ -3,9 +3,9 @@ from typing import Any, Tuple, Union, Optional
 
 from copy import copy, deepcopy
 
+from cellrank.tl._enum import ModeEnum
 from cellrank.ul._docs import d, inject_docs
 from cellrank.ul.models import BaseModel
-from cellrank.tl._constants import ModeEnum
 from cellrank.ul.models._utils import _OFFSET_KEY, _get_offset, _get_knotlocs
 from cellrank.ul.models._base_model import AnnData, FailedModel
 

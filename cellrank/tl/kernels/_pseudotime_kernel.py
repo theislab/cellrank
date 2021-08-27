@@ -6,11 +6,11 @@ from copy import copy
 
 from anndata import AnnData
 from cellrank import logging as logg
+from cellrank.tl._enum import ThresholdScheme
 from cellrank.ul._docs import d
 from cellrank.tl._utils import _connected
 from cellrank.ul._utils import _get_neighs_params
 from cellrank.tl.kernels import Kernel
-from cellrank.tl._constants import ThresholdScheme
 from cellrank.tl.kernels._base_kernel import _dtype
 from cellrank.tl.kernels._pseudotime_schemes import (
     ThresholdSchemeABC,

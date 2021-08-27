@@ -6,9 +6,9 @@ from collections import defaultdict
 from html.parser import HTMLParser
 
 from cellrank.tl import Lineage
+from cellrank.tl._enum import Lin
 from cellrank.tl._colors import _compute_mean_color, _create_categorical_colors
 from cellrank.tl._lineage import _HT_CELLS, LineageView, PrimingDegree
-from cellrank.tl._constants import Lin
 
 import numpy as np
 from pandas import DataFrame

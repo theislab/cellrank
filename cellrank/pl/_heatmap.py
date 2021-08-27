@@ -1,6 +1,5 @@
-"""Heatmap module."""
-
 from typing import Any, Dict, List, Tuple, Union, TypeVar, Optional, Sequence
+from typing_extensions import Literal
 
 import os
 from math import fabs
@@ -9,6 +8,8 @@ from collections import Iterable, defaultdict
 
 from anndata import AnnData
 from cellrank import logging as logg
+from cellrank.tl._key import Key
+from cellrank.tl._enum import _DEFAULT_BACKEND, ModeEnum
 from cellrank.ul._docs import d, inject_docs
 from cellrank.pl._utils import (
     _fit_bulk,
@@ -28,7 +29,6 @@ from cellrank.ul._utils import (
     valuedispatch,
     _check_collection,
 )
-from cellrank.tl._constants import _DEFAULT_BACKEND, ModeEnum, AbsProbKey
 
 import numpy as np
 import pandas as pd
@@ -44,6 +44,7 @@ from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 _N_XTICKS = 10
 
+# TODO: type this properly
 Cmap = TypeVar("Cmap")
 Norm = TypeVar("Norm")
 Ax = TypeVar("Ax")
@@ -64,7 +65,7 @@ def heatmap(
     genes: Sequence[str],
     lineages: Optional[Union[str, Sequence[str]]] = None,
     backward: bool = False,
-    mode: str = HeatmapMode.LINEAGES.s,
+    mode: Literal["genes", "lineages"] = HeatmapMode.LINEAGES.s,
     time_key: str = "latent_time",
     time_range: Optional[Union[_time_range_type, List[_time_range_type]]] = None,
     callback: _callback_type = None,
@@ -168,8 +169,8 @@ def heatmap(
                 ix == len(array)
                 or fabs(value - array[ix - 1]) < fabs(value - array[ix])
             ):
-                return ix - 1
-            return ix
+                return int(ix - 1)
+            return int(ix)
 
         series = series[np.argsort(series.values)]
 
@@ -511,7 +512,7 @@ def heatmap(
 
     mode = HeatmapMode(mode)
 
-    lineage_key = str(AbsProbKey.BACKWARD if backward else AbsProbKey.FORWARD)
+    lineage_key = Key.obsm.abs_probs(backward)
     if lineage_key not in adata.obsm:
         raise KeyError(f"Lineages key `{lineage_key!r}` not found in `adata.obsm`.")
 
