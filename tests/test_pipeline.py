@@ -13,7 +13,6 @@ from cellrank.tl._constants import (
     _lin_names,
     _transition,
 )
-from cellrank.tl.estimators._constants import P
 
 import numpy as np
 from pandas.api.types import is_categorical_dtype
@@ -325,7 +324,7 @@ class TestLowLevelPipeline:
         # select a subset of states
         estimator_fwd.set_terminal_states_from_macrostates(
             n_cells=16,
-            names=estimator_fwd._get(P.MACRO).cat.categories[:2],
+            names=estimator_fwd.macrostates.cat.categories[:2],
         )
         estimator_fwd.plot_terminal_states()
 
@@ -367,7 +366,7 @@ class TestLowLevelPipeline:
         # select a subset of states
         estimator_bwd.set_terminal_states_from_macrostates(
             n_cells=16,
-            names=estimator_bwd._get(P.MACRO).cat.categories[:2],
+            names=estimator_bwd.macrostates.cat.categories[:2],
         )
         estimator_bwd.plot_terminal_states()
 

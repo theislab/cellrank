@@ -19,7 +19,6 @@ from cellrank.tl._constants import (
     _colors,
     _lin_names,
 )
-from cellrank.tl.estimators._constants import A, P
 
 import numpy as np
 import pandas as pd
@@ -56,7 +55,7 @@ class TestCFLARE:
         mc.compute_eigendecomposition(k=2)
 
         assert isinstance(mc.eigendecomposition, dict)
-        assert set(mc._get(P.EIG).keys()) == {
+        assert set(mc.eigendecomposition.keys()) == {
             "D",
             "V_l",
             "V_r",
@@ -94,8 +93,8 @@ class TestCFLARE:
         mc.compute_eigendecomposition(k=5)
         mc.compute_terminal_states(use=2)
 
-        assert is_categorical_dtype(mc._get(P.TERM))
-        assert mc._get(P.TERM_PROBS) is not None
+        assert is_categorical_dtype(mc.terminal_states)
+        assert mc.terminal_states_probabilities is not None
 
         assert TermStatesKey.FORWARD.s in mc.adata.obs.keys()
         assert _probs(TermStatesKey.FORWARD) in mc.adata.obs.keys()
@@ -153,10 +152,10 @@ class TestCFLARE:
         mc.compute_eigendecomposition(k=5)
         mc.compute_terminal_states(use=2)
 
-        orig_cats = list(mc._get(P.TERM).cat.categories)
+        orig_cats = list(mc.terminal_states.cat.categories)
         mc.rename_terminal_states({})
 
-        np.testing.assert_array_equal(mc._get(P.TERM).cat.categories, orig_cats)
+        np.testing.assert_array_equal(mc.terminal_states.cat.categories, orig_cats)
 
     def test_rename_terminal_states_normal_run(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -169,7 +168,7 @@ class TestCFLARE:
 
         mc.rename_terminal_states({"0": "foo", "1": "bar"})
 
-        np.testing.assert_array_equal(mc._get(P.TERM).cat.categories, ["foo", "bar"])
+        np.testing.assert_array_equal(mc.terminal_states.cat.categories, ["foo", "bar"])
 
     def test_rename_terminal_states_non_string_new_names(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -183,7 +182,7 @@ class TestCFLARE:
         mc.rename_terminal_states({"0": 42, "1": object})
 
         np.testing.assert_array_equal(
-            mc._get(P.TERM).cat.categories, ["42", str(object)]
+            mc.terminal_states.cat.categories, ["42", str(object)]
         )
 
     def test_rename_terminal_states_update_adata(self, adata_large: AnnData):
@@ -197,7 +196,7 @@ class TestCFLARE:
 
         mc.rename_terminal_states({"0": "foo", "1": "bar"})
 
-        np.testing.assert_array_equal(mc._get(P.TERM).cat.categories, ["foo", "bar"])
+        np.testing.assert_array_equal(mc.terminal_states.cat.categories, ["foo", "bar"])
         np.testing.assert_array_equal(
             mc.adata.obs[TermStatesKey.FORWARD.s].cat.categories, ["foo", "bar"]
         )
@@ -216,7 +215,7 @@ class TestCFLARE:
 
         mc.rename_terminal_states({"0": "foo", "1": "bar"}, update_adata=False)
 
-        np.testing.assert_array_equal(mc._get(P.TERM).cat.categories, ["foo", "bar"])
+        np.testing.assert_array_equal(mc.terminal_states.cat.categories, ["foo", "bar"])
         np.testing.assert_array_equal(
             mc.adata.obs[TermStatesKey.FORWARD.s].cat.categories, ["0", "1"]
         )
@@ -244,31 +243,31 @@ class TestCFLARE:
         mc.compute_absorption_probabilities()
         mc.compute_lineage_priming()
 
-        assert isinstance(mc._get(P.PRIME_DEG), pd.Series)
+        assert isinstance(mc.priming_degree, pd.Series)
         assert _pd(AbsProbKey.FORWARD) in mc.adata.obs.keys()
         np.testing.assert_array_equal(
-            mc._get(P.PRIME_DEG), mc.adata.obs[_pd(AbsProbKey.FORWARD)]
+            mc.priming_degree, mc.adata.obs[_pd(AbsProbKey.FORWARD)]
         )
 
-        assert isinstance(mc._get(P.ABS_PROBS), cr.tl.Lineage)
-        assert mc._get(P.ABS_PROBS).shape == (mc.adata.n_obs, 2)
+        assert isinstance(mc.absorption_probabilities, cr.tl.Lineage)
+        assert mc.absorption_probabilities.shape == (mc.adata.n_obs, 2)
         assert f"{AbsProbKey.FORWARD}" in mc.adata.obsm.keys()
         np.testing.assert_array_equal(
-            mc._get(P.ABS_PROBS).X, mc.adata.obsm[f"{AbsProbKey.FORWARD}"]
+            mc.absorption_probabilities.X, mc.adata.obsm[f"{AbsProbKey.FORWARD}"]
         )
 
         assert _lin_names(AbsProbKey.FORWARD) in mc.adata.uns.keys()
         np.testing.assert_array_equal(
-            mc._get(P.ABS_PROBS).names,
+            mc.absorption_probabilities.names,
             mc.adata.uns[_lin_names(AbsProbKey.FORWARD)],
         )
 
         assert _colors(AbsProbKey.FORWARD) in mc.adata.uns.keys()
         np.testing.assert_array_equal(
-            mc._get(P.ABS_PROBS).colors,
+            mc.absorption_probabilities.colors,
             mc.adata.uns[_colors(AbsProbKey.FORWARD)],
         )
-        np.testing.assert_allclose(mc._get(P.ABS_PROBS).X.sum(1), 1, rtol=1e-6)
+        np.testing.assert_allclose(mc.absorption_probabilities.X.sum(1), 1, rtol=1e-6)
 
     def test_compute_absorption_probabilities_solver(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -282,11 +281,11 @@ class TestCFLARE:
 
         # compute lin probs using direct solver
         mc.compute_absorption_probabilities(solver="direct")
-        l_direct = mc._get(P.ABS_PROBS).copy()
+        l_direct = mc.absorption_probabilities.copy()
 
         # compute lin probs using iterative solver
         mc.compute_absorption_probabilities(solver="gmres", tol=tol)
-        l_iterative = mc._get(P.ABS_PROBS).copy()
+        l_iterative = mc.absorption_probabilities.copy()
 
         assert not np.shares_memory(l_direct.X, l_iterative.X)  # sanity check
         np.testing.assert_allclose(l_direct.X, l_iterative.X, rtol=0, atol=tol)
@@ -303,11 +302,11 @@ class TestCFLARE:
 
         # compute lin probs using direct solver
         mc.compute_absorption_probabilities(solver="gmres", use_petsc=False, tol=tol)
-        l_iter = mc._get(P.ABS_PROBS).copy()
+        l_iter = mc.absorption_probabilities.copy()
 
         # compute lin probs using petsc iterative solver
         mc.compute_absorption_probabilities(solver="gmres", use_petsc=True, tol=tol)
-        l_iter_petsc = mc._get(P.ABS_PROBS).copy()
+        l_iter_petsc = mc.absorption_probabilities.copy()
 
         assert not np.shares_memory(l_iter.X, l_iter_petsc.X)  # sanity check
         np.testing.assert_allclose(l_iter.X, l_iter_petsc.X, rtol=0, atol=tol)
@@ -331,7 +330,7 @@ class TestCFLARE:
             tol=tol,
             time_to_absorption="0",
         )
-        at = mc._get(P.LIN_ABS_TIMES)
+        at = mc.absorption_times
 
         assert isinstance(at, pd.DataFrame)
         np.testing.assert_array_equal(at.index, adata_large.obs_names)
@@ -353,7 +352,7 @@ class TestCFLARE:
         mc.compute_absorption_probabilities(
             solver="gmres", use_petsc=False, tol=tol, time_to_absorption={"0": "var"}
         )
-        at = mc._get(P.LIN_ABS_TIMES)
+        at = mc.absorption_times
 
         assert isinstance(at, pd.DataFrame)
         np.testing.assert_array_equal(at.index, adata_large.obs_names)
@@ -375,8 +374,8 @@ class TestCFLARE:
         mc.compute_absorption_probabilities(
             solver="gmres", use_petsc=False, tol=tol, time_to_absorption={"all": "var"}
         )
-        name = ", ".join(mc._get(P.ABS_PROBS).names)
-        at = mc._get(P.LIN_ABS_TIMES)
+        name = ", ".join(mc.absorption_probabilities.names)
+        at = mc.absorption_times
 
         assert isinstance(at, pd.DataFrame)
         np.testing.assert_array_equal(at.index, adata_large.obs_names)
@@ -505,17 +504,17 @@ class TestCFLARE:
         arc_colors = [
             c
             for arc, c in zip(
-                mc_fwd._get(P.TERM).cat.categories, mc_fwd._get(A.TERM_COLORS)
+                mc_fwd.terminal_states.cat.categories, mc_fwd._term_states_colors
             )
             if arc in arcs
         ]
 
         mc_fwd.compute_absorption_probabilities(keys=arcs)
-        lin_colors = mc_fwd._get(P.ABS_PROBS)[arcs].colors
+        lin_colors = mc_fwd.absorption_probabilities[arcs].colors
 
         np.testing.assert_array_equal(arc_colors, lin_colors)
 
-    def compare_absorption_probabilites_with_reference(self):
+    def test_compare_absorption_probabilites_with_reference(self):
         # define a reference transition matrix. This is an absorbing MC with 2 absorbing states
         transition_matrix = np.array(
             [
@@ -556,15 +555,17 @@ class TestCFLARE:
         )
 
         # define the set of macrostates
-        state_annotation = pd.Series(index=range(p.shape[0]))
+        state_annotation = pd.Series(index=range(len(c)))
         state_annotation[7] = "terminal_1"
         state_annotation[10] = "terminal_2"
         state_annotation = state_annotation.astype("category")
-        c._set(A.TERM, state_annotation)
+        c._term_states = state_annotation
 
         # compute absorption probabilities
         c.compute_absorption_probabilities()
-        absorption_probabilities_query = c.get(P.ABS_PROBS)[state_annotation.isna()]
+        absorption_probabilities_query = c.absorption_probabilities[
+            state_annotation.isna()
+        ]
 
         # check whether these two agree
         np.allclose(absorption_probabilities_query, absorption_probabilities_reference)
