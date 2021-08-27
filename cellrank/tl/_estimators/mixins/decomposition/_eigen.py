@@ -423,6 +423,7 @@ class EigenMixin(VectorPlottable):
         key = Key.uns.eigen(self.backward)
         with SafeGetter(self, allowed=KeyError) as sg:
             self._get("_eigendecomposition", adata.uns, key=key, where="uns", dtype=dict, allow_missing=allow_missing)
+            self.params[key] = self._read_params(key)
         # fmt: on
 
         return sg.ok

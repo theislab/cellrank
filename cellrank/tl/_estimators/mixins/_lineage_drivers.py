@@ -592,6 +592,7 @@ class LinDriversMixin(AbsProbsMixin):
                       allow_missing=True)
             self._get("_lineage_drivers", self.adata.raw.varm, key=key, where="varm", dtype=pd.DataFrame,
                       allow_missing=True)
+            self.params[key] = self._read_params(key)
         # fmt: on
 
         return sg.ok

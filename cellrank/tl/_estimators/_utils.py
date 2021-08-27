@@ -26,7 +26,7 @@ class SafeGetter:
         self._exc = exc_type
         # TODO: log properly
         if not self.ok:
-            logg.warning(exc_type(exc_val))
+            logg.warning(f"TODO: lower verbosity. The estimator will be incompletely initialized, reason: {exc_type(exc_val)}")
             self._obj.__dict__ = self._dict
             return self._exc in self._allowed
 

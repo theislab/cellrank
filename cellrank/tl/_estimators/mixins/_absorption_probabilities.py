@@ -438,13 +438,14 @@ class AbsProbsMixin:
     ) -> bool:
         # fmt: off
         with SafeGetter(self, allowed=KeyError) as sg:
-            key = Key.obsm.abs_probs(self.backward)
-            self._get("_absorption_probabilities", self.adata.obsm, key=key, where="obsm", dtype=Lineage)
+            key1 = Key.obsm.abs_probs(self.backward)
+            self._get("_absorption_probabilities", self.adata.obsm, key=key1, where="obsm", dtype=Lineage)
             key = Key.obsm.abs_times(self.backward)
             self._get("_absorption_times", self.adata.obsm, key=key, where="obsm", dtype=pd.DataFrame,
                       allow_missing=True)
             key = Key.obs.priming_degree(self.backward)
             self._get("_priming_degree", self.adata.obs, key=key, where="obs", dtype=pd.Series, allow_missing=True)
+            self.params[key1] = self._read_params(key1)
         # fmt: on
 
         return sg.ok

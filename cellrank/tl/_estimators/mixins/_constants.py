@@ -67,11 +67,11 @@ class Key:
 
     class uns:
         @classmethod
-        def kernel(cls, key: Optional[str], bwd: bool) -> str:
+        def kernel(cls, bwd: bool, key: Optional[str] = None) -> str:
             return key if key is not None else f"T_{Key.backward(bwd)}"
 
         @classmethod
-        def estimator(cls, key: Optional[str], bwd: bool) -> str:
+        def estimator(cls, bwd: bool, key: Optional[str] = None) -> str:
             return key if key is not None else f"{Key.backward(bwd)}_estimator"
 
         @classmethod

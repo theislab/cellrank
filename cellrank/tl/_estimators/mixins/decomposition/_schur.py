@@ -258,34 +258,19 @@ class SchurMixin(VectorPlottable):
     def _read_schur_decomposition(
         self, adata: AnnData, allow_missing: bool = True
     ) -> bool:
+        # fmt: off
         with SafeGetter(self, allowed=KeyError) as sg:
             key = Key.uns.eigen(self.backward)
-            self._get(
-                "_eigendecomposition",
-                adata.uns,
-                key=key,
-                where="uns",
-                dtype=dict,
-                allow_missing=allow_missing,
-            )
+            self._get("_eigendecomposition", adata.uns, key=key, where="uns", dtype=dict, allow_missing=allow_missing)
             key = Key.obsm.schur_vectors(self.backward)
-            self._get(
-                "_schur_vectors",
-                self.adata.obsm,
-                key=key,
-                where="obsm",
-                dtype=np.ndarray,
-                allow_missing=allow_missing,
-            )
+            self._get("_schur_vectors", self.adata.obsm, key=key, where="obsm", dtype=np.ndarray,
+                      allow_missing=allow_missing)
             key = Key.uns.schur_matrix(self.backward)
-            self._get(
-                "_schur_matrix",
-                self.adata.uns,
-                key=key,
-                where="uns",
-                dtype=np.ndarray,
-                allow_missing=allow_missing,
-            )
+            self._get("_schur_matrix", self.adata.uns, key=key, where="uns", dtype=np.ndarray,
+                      allow_missing=allow_missing)
+            key = f"schur_decomposition_{Key.backward(self.backward)}"
+            self.params[key] = self._read_params(key)
+        # fmt: on
 
         return sg.ok
 

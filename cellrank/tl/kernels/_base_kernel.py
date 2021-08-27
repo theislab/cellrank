@@ -210,7 +210,7 @@ class KernelExpression(Pickleable, ABC):
                 "Compute transition matrix first as `.compute_transition_matrix()`."
             )
 
-        key = Key.uns.kernel(key, self.backward)
+        key = Key.uns.kernel(self.backward, key=key)
         # retain the embedding info
         self.adata.uns[f"{key}_params"] = {
             **self.adata.uns.get(f"{key}_params", {}),

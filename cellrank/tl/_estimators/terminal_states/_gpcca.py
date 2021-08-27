@@ -172,20 +172,17 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         """
         if self.macrostates is None:
             raise RuntimeError("Compute macrostates first as `.compute_macrostates()`.")
-        # TODO: ModeEnum
+
+        # fmt: off
         if len(self._macrostates.cat.categories) == 1:
-            logg.warning(
-                "Found only one macrostate. Making it the single terminal state"
-            )
-            self.set_terminal_states_from_macrostates(
-                None, n_cells=n_cells, params=self._create_params()
-            )
+            logg.warning("Found only one macrostate. Making it the single terminal state")
+            self.set_terminal_states_from_macrostates(None, n_cells=n_cells, params=self._create_params())
             return
 
+        # TODO: ModeEnum
         eig = self.eigendecomposition
         coarse_T = self.coarse_T
 
-        # fmt: off
         if method == "eigengap":
             if eig is None:
                 raise RuntimeError("Compute eigendecomposition first as `.compute_eigendecomposition()`.")
@@ -961,13 +958,11 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         memberships: Optional[Lineage] = None,
         params: Dict[str, Any] = MappingProxyType({}),
     ) -> str:
-        msg = super()._write_terminal_states(
-            states, colors, probs, params=params, log=False
-        )
+        # fmt: off
+        msg = super()._write_terminal_states(states, colors, probs, params=params, log=False)
         msg = "\n".join(msg.split("\n")[:-1])
         msg += "\n       `.terminal_states_memberships\n    Finish`"
 
-        # fmt: off
         self._write_absorption_probabilities(None, None, log=False)
         key = Key.obsm.memberships(Key.obs.term_states(self.backward))
         self._set("_term_states_memberships", obj=self.adata.obsm, key=key, value=memberships, shadow_only=True)
@@ -976,6 +971,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         return msg
 
     def _read_from_adata(self, adata: AnnData, **kwargs: Any) -> bool:
+        _ = self._read_eigendecomposition(adata, allow_missing=True)
         ok = self._read_schur_decomposition(adata, allow_missing=True)
         if not ok:
             return False
@@ -988,6 +984,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             self._get("_macrostates_colors", self.adata.uns, key=ckey, where="uns", dtype=(list, tuple, np.ndarray))
             mkey = Key.obsm.memberships(key)
             self._get("_macrostates_memberships", self.adata.obsm, key=mkey, where="obsm", dtype=Lineage)
+            self.params[key] = self._read_params(key)
 
             # TODO: allow missing?
             tmat: AnnData = self.adata.uns[Key.uns.coarse(self.backward)]

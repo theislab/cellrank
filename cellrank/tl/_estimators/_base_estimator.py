@@ -2,7 +2,7 @@ from typing import Any, Dict, Tuple, Union, Mapping, Callable, Optional, Sequenc
 from typing_extensions import Literal
 
 from abc import ABC, abstractmethod
-from copy import copy as copy_
+from copy import copy as copy_, deepcopy
 from inspect import Parameter, signature, getmembers, currentframe
 from pathlib import Path
 from contextlib import contextmanager
@@ -192,6 +192,10 @@ class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
         finally:
             del frame
 
+    def _read_params(self, key: str) -> Dict[str, Any]:
+        ekey = Key.uns.estimator(self.backward) + "_params"
+        return dict(self.adata.uns.get(ekey, {}).get(key, {}))
+
     @staticmethod
     def read(
         fname: Union[str, Path], adata: Optional[AnnData] = None, copy: bool = False
@@ -207,11 +211,11 @@ class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
         adata = self._shadow_adata.copy()
         try:
             self.kernel.adata = adata
-            self.kernel.write_to_adata(None)
+            self.kernel.write_to_adata()
         finally:
             self.kernel.adata = self.adata
-        key = Key.uns.estimator(None, self.backward) + "_params"
-        self._shadow_adata.uns[key] = self.params.copy()
+        key = Key.uns.estimator(self.backward) + "_params"
+        adata.uns[key] = deepcopy(self.params)
         return adata
 
     @classmethod
@@ -219,8 +223,6 @@ class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
         """TODO: docrep."""
         obj = cls(adata, obsp_key=obsp_key)
         obj._read_from_adata(adata)
-        # TODO
-        # obj._params
 
         return obj
 

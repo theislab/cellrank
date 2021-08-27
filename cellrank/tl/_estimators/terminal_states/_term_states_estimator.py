@@ -236,6 +236,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
             self._get("_term_states_colors", self.adata.uns, key=Key.uns.colors(key), where="uns",
                       dtype=(list, tuple, np.ndarray))
             self._term_states_colors = np.asarray([to_hex(c) for c in self._term_states_colors])
+            self.params[key] = self._read_params(key)
         # fmt: on
 
         # TODO: log
