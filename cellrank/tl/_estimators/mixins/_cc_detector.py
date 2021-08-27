@@ -9,7 +9,7 @@ from scipy.stats import ranksums
 from pandas.api.types import infer_dtype, is_categorical_dtype
 
 
-class CCDetectorProtocol:
+class CCDetectorProtocol(Protocol):
     @property
     def adata(self) -> AnnData:
         ...

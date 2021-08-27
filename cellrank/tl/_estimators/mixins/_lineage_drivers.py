@@ -1,4 +1,5 @@
-from typing import Any, Dict, Tuple, Union, Mapping, Optional, Protocol, Sequence
+from typing import Any, Dict, Tuple, Union, Mapping, Optional, Sequence
+from typing_extensions import Protocol
 
 from pathlib import Path
 from datetime import datetime
