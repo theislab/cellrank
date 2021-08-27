@@ -4,7 +4,6 @@ from typing import Union, TypeVar, Optional, Sequence
 from cellrank.ul._docs import d, _initial, _terminal, inject_docs
 from cellrank.tl._constants import TermStatesKey, TerminalStatesPlot
 from cellrank.tl.estimators import GPCCA
-from cellrank.tl.estimators._constants import P
 from cellrank.tl.kernels._precomputed_kernel import DummyKernel
 
 AnnData = TypeVar("AnnData")
@@ -50,13 +49,13 @@ def _initial_terminal(
     pk = DummyKernel(adata=adata, backward=backward)
     mc = GPCCA(pk, read_from_adata=True, write_to_adata=False)
 
-    if mc._get(P.TERM) is None:
+    if mc.terminal_states is None:
         raise RuntimeError(
             f"Compute {_initial if backward else _terminal} states first as "
             f"`cellrank.tl.compute_{TermStatesKey.BACKWARD if backward else TermStatesKey.FORWARD}()`."
         )
 
-    n_states = len(mc._get(P.TERM).cat.categories)
+    n_states = len(mc.terminal_states.cat.categories)
     if n_states == 1 or (
         states is not None and (isinstance(states, str) or len(states) == 1)
     ):

@@ -6,7 +6,6 @@ from cellrank.ul._docs import d
 from cellrank.pl._utils import AnnData
 from cellrank.tl._constants import DirPrefix
 from cellrank.tl.estimators import GPCCA
-from cellrank.tl.estimators._constants import A, P
 from cellrank.tl.kernels._precomputed_kernel import DummyKernel
 
 import pandas as pd
@@ -52,7 +51,7 @@ def lineages(
 
     pk = DummyKernel(adata, backward=backward)
     mc = GPCCA(pk, read_from_adata=True, write_to_adata=False)
-    if mc._get(P.ABS_PROBS) is None:
+    if mc.absorption_probabilities is None:
         raise RuntimeError(
             f"Compute absorption probabilities first as `cellrank.tl.lineages(..., backward={backward})`."
         )
@@ -114,7 +113,8 @@ def lineage_drivers(
 
     drivers = pd.DataFrame(haystack[[needle, f"{direction} {lineage} qval"]])
     drivers.columns = [f"{lineage} corr", f"{lineage} qval"]
-    mc._set(A.LIN_DRIVERS, drivers)
+    # TODO: verify if it's needed/correct with the new changes
+    mc._lineage_drivers = drivers
 
     mc.plot_lineage_drivers(
         lineage,

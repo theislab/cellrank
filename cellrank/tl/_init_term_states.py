@@ -14,7 +14,6 @@ from cellrank.tl.kernels import PrecomputedKernel
 from cellrank.tl._constants import TermStatesKey
 from cellrank.tl.estimators import GPCCA, CFLARE
 from cellrank.tl._transition_matrix import transition_matrix
-from cellrank.tl.estimators._constants import P
 from cellrank.tl.kernels._velocity_kernel import BackwardMode, VelocityMode
 from cellrank.tl.estimators._base_estimator import BaseEstimator
 
@@ -139,7 +138,7 @@ def _initial_terminal(
             mc.plot_eigendecomposition(abs_value=True, perc=[0, 98], use=n_states)
             mc.plot_terminal_states(discrete=True, same_plot=False)
         elif isinstance(mc, GPCCA):
-            n_states = len(mc._get(P.MACRO).cat.categories)
+            n_states = len(mc.macrostates.cat.categories)
             if n_states > 1:
                 mc.plot_schur()
             mc.plot_terminal_states(discrete=True, same_plot=False)

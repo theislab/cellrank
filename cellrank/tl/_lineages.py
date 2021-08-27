@@ -8,7 +8,6 @@ from cellrank.tl._utils import TestMethod, _deprecate
 from cellrank.tl.kernels import PrecomputedKernel
 from cellrank.tl._constants import AbsProbKey, TermStatesKey, TerminalStatesPlot
 from cellrank.tl.estimators import GPCCA
-from cellrank.tl.estimators._constants import P
 from cellrank.tl.kernels._precomputed_kernel import DummyKernel
 
 import pandas as pd
@@ -78,7 +77,7 @@ def lineages(
     mc = GPCCA(
         pk, read_from_adata=True, inplace=not copy
     )  # GPCCA is more general than CFLARE, in terms of what is saves
-    if mc._get(P.TERM) is None:
+    if mc.terminal_states is None:
         raise RuntimeError(
             f"Compute the states first as `cellrank.tl.{fs_key.s}(..., backward={backward})`."
         )
@@ -129,7 +128,7 @@ def lineage_drivers(
     # create dummy kernel and estimator
     pk = DummyKernel(adata, backward=backward)
     g = GPCCA(pk, read_from_adata=True, write_to_adata=False)
-    if g._get(P.ABS_PROBS) is None:
+    if g.absorption_probabilities is None:
         raise RuntimeError(
             f"Compute absorption probabilities first as `cellrank.tl.lineages(..., backward={backward})`."
         )

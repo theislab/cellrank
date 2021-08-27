@@ -11,8 +11,8 @@ from cellrank.tl._utils import (
     _get_connectivities,
 )
 from cellrank.tl.kernels._utils import _get_basis
-from cellrank.tl._estimators.mixins import EigenMixin, LinDriversMixin
-from cellrank.tl._estimators.terminal_states._term_states_estimator import (
+from cellrank.tl.estimators.mixins import EigenMixin, LinDriversMixin
+from cellrank.tl.estimators.terminal_states._term_states_estimator import (
     TermStatesEstimator,
 )
 

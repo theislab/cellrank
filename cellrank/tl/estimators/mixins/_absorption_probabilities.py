@@ -5,7 +5,6 @@ from types import MappingProxyType
 
 from anndata import AnnData
 from cellrank import logging as logg
-from cellrank.tl import Lineage
 from cellrank.tl._key import Key
 from cellrank.ul._docs import d
 from cellrank.tl._utils import (
@@ -14,9 +13,10 @@ from cellrank.tl._utils import (
     _get_cat_and_null_indices,
     _calculate_lineage_absorption_time_means,
 )
+from cellrank.tl._lineage import Lineage
 from cellrank.tl._linear_solver import _solve_lin_system
-from cellrank.tl._estimators._utils import SafeGetter
-from cellrank.tl._estimators.mixins._utils import logger, shadow, register_plotter
+from cellrank.tl.estimators._utils import SafeGetter
+from cellrank.tl.estimators.mixins._utils import logger, shadow, register_plotter
 
 import numpy as np
 import pandas as pd

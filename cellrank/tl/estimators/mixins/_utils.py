@@ -6,10 +6,10 @@ from wrapt import decorator
 import scvelo as scv
 from anndata import AnnData
 from cellrank import logging as logg
-from cellrank.tl import Lineage
 from cellrank.tl._key import Key
 from cellrank.tl._utils import RandomKeys, _unique_order_preserving
 from cellrank.tl._colors import _create_categorical_colors
+from cellrank.tl._lineage import Lineage
 
 import numpy as np
 import pandas as pd

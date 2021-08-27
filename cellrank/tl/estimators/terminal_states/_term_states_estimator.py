@@ -12,10 +12,10 @@ from cellrank.tl._colors import (
     _convert_to_hex_colors,
     _create_categorical_colors,
 )
-from cellrank.tl._estimators import BaseEstimator
-from cellrank.tl._estimators._utils import SafeGetter
+from cellrank.tl.estimators import BaseEstimator
+from cellrank.tl.estimators._utils import SafeGetter
 from cellrank.tl.kernels._base_kernel import KernelExpression
-from cellrank.tl._estimators.mixins._utils import logger, shadow, register_plotter
+from cellrank.tl.estimators.mixins._utils import logger, shadow, register_plotter
 
 import numpy as np
 import pandas as pd
