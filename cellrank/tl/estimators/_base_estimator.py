@@ -13,7 +13,7 @@ from cellrank._key import Key
 from cellrank.tl.kernels import PrecomputedKernel
 from cellrank.tl._lineage import Lineage
 from cellrank.tl.estimators.mixins import IOMixin, KernelMixin, AnnDataMixin
-from cellrank.tl.kernels._base_kernel import KernelExpression
+from cellrank.tl.kernels._base_kernel import Kernel, KernelExpression
 
 import numpy as np
 import pandas as pd
@@ -27,8 +27,15 @@ class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
         obsp_key: Optional[str] = None,
         **kwargs: Any,
     ):
-        if isinstance(obj, KernelExpression):
+        if isinstance(obj, Kernel):
+            if obj._transition_matrix is None:
+                raise ValueError(
+                    "Compute transition matrix first as `.compute_transition_matrix()`."
+                )
             kernel = obj
+        elif isinstance(obj, KernelExpression):
+            # this will fail if not all kernels have transition matrix computed
+            kernel = obj.compute_transition_matrix()
         elif isinstance(obj, (np.ndarray, spmatrix)):
             kernel = PrecomputedKernel(obj)
         elif isinstance(obj, AnnData):
@@ -47,16 +54,9 @@ class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
                 f"or `anndata.AnnData`, got `{type(obj).__name__}`."
             )
 
-        if kernel._transition_matrix is None:
-            # TODO: make sure tests pass
-            raise ValueError(
-                "Compute transition matrix first as `.compute_transition_matrix()`."
-            )
-
         super().__init__(adata=kernel.adata, kernel=kernel, **kwargs)
 
         self._params: Dict[str, Any] = {}
-        # TODO: allow non-skeleton?
         self._shadow_adata = AnnData(
             X=csr_matrix(self.adata.shape, dtype=self.adata.X.dtype),
             obs=self.adata.obs[[]].copy(),
