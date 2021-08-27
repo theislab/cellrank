@@ -6,11 +6,11 @@ from pathlib import Path
 
 from anndata import AnnData
 from cellrank import logging as logg
+from cellrank.tl._key import Key
 from cellrank.ul._docs import d
 from cellrank.tl._utils import save_fig, _eigengap
 from cellrank.tl._estimators._utils import SafeGetter
 from cellrank.tl._estimators.mixins._utils import logger, shadow
-from cellrank.tl._estimators.mixins._constants import Key
 from cellrank.tl._estimators.mixins.decomposition._plot import VectorPlottable
 
 import numpy as np

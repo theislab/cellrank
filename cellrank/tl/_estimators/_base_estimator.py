@@ -2,17 +2,18 @@ from typing import Any, Dict, Tuple, Union, Mapping, Callable, Optional, Sequenc
 from typing_extensions import Literal
 
 from abc import ABC, abstractmethod
-from copy import copy as copy_, deepcopy
+from copy import copy as copy_
+from copy import deepcopy
 from inspect import Parameter, signature, getmembers, currentframe
 from pathlib import Path
 from contextlib import contextmanager
 
 from anndata import AnnData
 from cellrank.tl import Lineage
+from cellrank.tl._key import Key
 from cellrank.tl.kernels import PrecomputedKernel
 from cellrank.tl._estimators.mixins import IOMixin, KernelMixin, AnnDataMixin
 from cellrank.tl.kernels._base_kernel import KernelExpression
-from cellrank.tl._estimators.mixins._constants import Key
 
 import numpy as np
 import pandas as pd

@@ -203,7 +203,7 @@ class KernelExpression(Pickleable, ABC):
         None
             %(write_to_adata)s
         """
-        from cellrank.tl._estimators.mixins._constants import Key
+        from cellrank.tl._key import Key
 
         if self._transition_matrix is None:
             raise ValueError(

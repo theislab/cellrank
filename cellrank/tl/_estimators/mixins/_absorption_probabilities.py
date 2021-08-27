@@ -6,6 +6,7 @@ from types import MappingProxyType
 from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.tl import Lineage
+from cellrank.tl._key import Key
 from cellrank.ul._docs import d
 from cellrank.tl._utils import (
     _pairwise,
@@ -16,7 +17,6 @@ from cellrank.tl._utils import (
 from cellrank.tl._linear_solver import _solve_lin_system
 from cellrank.tl._estimators._utils import SafeGetter
 from cellrank.tl._estimators.mixins._utils import logger, shadow, register_plotter
-from cellrank.tl._estimators.mixins._constants import Key
 
 import numpy as np
 import pandas as pd

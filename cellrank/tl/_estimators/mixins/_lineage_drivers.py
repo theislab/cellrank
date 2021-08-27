@@ -10,12 +10,12 @@ import scvelo as scv
 from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.tl import Lineage
+from cellrank.tl._key import Key
 from cellrank.ul._docs import d, inject_docs
 from cellrank.tl._utils import TestMethod, save_fig, _correlation_test
 from cellrank.tl._colors import _create_categorical_colors
 from cellrank.tl._estimators._utils import SafeGetter
 from cellrank.tl._estimators.mixins._utils import logger, shadow
-from cellrank.tl._estimators.mixins._constants import Key
 from cellrank.tl._estimators.mixins._absorption_probabilities import AbsProbsMixin
 
 import numpy as np

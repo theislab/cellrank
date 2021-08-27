@@ -8,6 +8,7 @@ from datetime import datetime
 from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.tl import Lineage
+from cellrank.tl._key import Key
 from cellrank.ul._docs import d
 from cellrank.tl._utils import (
     save_fig,
@@ -20,7 +21,6 @@ from cellrank.tl._estimators._utils import SafeGetter
 from cellrank.tl._estimators.mixins import EigenMixin, SchurMixin, LinDriversMixin
 from cellrank.tl.kernels._base_kernel import KernelExpression
 from cellrank.tl._estimators.mixins._utils import logger, shadow, register_plotter
-from cellrank.tl._estimators.mixins._constants import Key
 from cellrank.tl._estimators.terminal_states._term_states_estimator import (
     TermStatesEstimator,
 )
