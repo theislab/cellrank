@@ -1,5 +1,6 @@
 """Module containing :mod:`pygam` model implementation."""
-from typing import Union, Mapping, Optional
+from typing import Any, Union, Mapping, Optional
+from typing_extensions import Literal
 
 from copy import copy as _copy
 from copy import deepcopy
@@ -95,13 +96,15 @@ class GAM(BaseModel):
         adata: AnnData,
         n_knots: Optional[int] = 6,
         spline_order: int = 3,
-        distribution: str = "gamma",
-        link: str = "log",
+        distribution: Literal[
+            "normal", "binomial", "poisson", "gamma", "gaussian", "inv_gauss"
+        ] = "gamma",
+        link: Literal["identity", "logit", "inverse", "log", "inverse-squared"] = "log",
         max_iter: int = 2000,
         expectile: Optional[float] = None,
-        grid: Optional[Union[str, Mapping]] = None,
-        spline_kwargs: Mapping = MappingProxyType({}),
-        **kwargs,
+        grid: Optional[Union[str, Mapping[str, Any]]] = None,
+        spline_kwargs: Mapping[str, Any] = MappingProxyType({}),
+        **kwargs: Any,
     ):
         term = s(
             0,

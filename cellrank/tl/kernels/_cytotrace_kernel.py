@@ -13,6 +13,7 @@ from scipy.stats import gmean, hmean
 from scipy.sparse import issparse
 
 
+# TODO: Key.obs.ct()
 def _ct(key: str) -> str:
     return f"ct_{key}"
 

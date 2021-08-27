@@ -8,17 +8,8 @@ from tempfile import TemporaryDirectory
 import cellrank as cr
 import cellrank.tl.kernels._precomputed_kernel
 from anndata import AnnData
+from cellrank.tl._key import Key
 from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
-from cellrank.tl._constants import (
-    Direction,
-    DirPrefix,
-    AbsProbKey,
-    TermStatesKey,
-    _pd,
-    _probs,
-    _colors,
-    _lin_names,
-)
 
 import numpy as np
 import pandas as pd
@@ -28,24 +19,6 @@ EPS = np.finfo(np.float64).eps
 
 
 class TestCFLARE:
-    def test_compute_partition(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
-        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        terminal_kernel = 0.8 * vk + 0.2 * ck
-
-        mc = cr.tl.estimators.CFLARE(terminal_kernel)
-        mc.compute_partition()
-
-        assert isinstance(mc.is_irreducible, bool)
-        if not mc.is_irreducible:
-            assert isinstance(mc.recurrent_classes, list)
-            assert isinstance(mc.transient_classes, list)
-            assert f"{TermStatesKey.FORWARD}_rec_classes" in mc.adata.obs
-            assert f"{TermStatesKey.FORWARD}_trans_classes" in mc.adata.obs
-        else:
-            assert mc.recurrent_classes is None
-            assert mc.transient_classes is None
-
     def test_compute_eigendecomposition(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
@@ -63,7 +36,7 @@ class TestCFLARE:
             "params",
             "stationary_dist",
         }
-        assert f"eig_{Direction.FORWARD}" in mc.adata.uns.keys()
+        assert Key.uns.eigen(mc.backward) in mc.adata.uns
 
     def test_compute_terminal_states_no_eig(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -96,9 +69,10 @@ class TestCFLARE:
         assert is_categorical_dtype(mc.terminal_states)
         assert mc.terminal_states_probabilities is not None
 
-        assert TermStatesKey.FORWARD.s in mc.adata.obs.keys()
-        assert _probs(TermStatesKey.FORWARD) in mc.adata.obs.keys()
-        assert _colors(TermStatesKey.FORWARD) in mc.adata.uns.keys()
+        key = Key.obs.term_states(mc.backward)
+        assert key in mc.adata.obs
+        assert Key.obs.probs(key) in mc.adata.obs
+        assert Key.uns.colors(key) in mc.adata.uns
 
     def test_rename_terminal_states_no_terminal_states(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -165,62 +139,12 @@ class TestCFLARE:
         mc = cr.tl.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.compute_terminal_states(use=2)
-
-        mc.rename_terminal_states({"0": "foo", "1": "bar"})
-
-        np.testing.assert_array_equal(mc.terminal_states.cat.categories, ["foo", "bar"])
-
-    def test_rename_terminal_states_non_string_new_names(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
-        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        terminal_kernel = 0.8 * vk + 0.2 * ck
-
-        mc = cr.tl.estimators.CFLARE(terminal_kernel)
-        mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
-
-        mc.rename_terminal_states({"0": 42, "1": object})
-
-        np.testing.assert_array_equal(
-            mc.terminal_states.cat.categories, ["42", str(object)]
-        )
-
-    def test_rename_terminal_states_update_adata(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
-        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        terminal_kernel = 0.8 * vk + 0.2 * ck
-
-        mc = cr.tl.estimators.CFLARE(terminal_kernel)
-        mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
-
         mc.rename_terminal_states({"0": "foo", "1": "bar"})
 
         np.testing.assert_array_equal(mc.terminal_states.cat.categories, ["foo", "bar"])
         np.testing.assert_array_equal(
-            mc.adata.obs[TermStatesKey.FORWARD.s].cat.categories, ["foo", "bar"]
-        )
-        np.testing.assert_array_equal(
-            mc.adata.uns[_lin_names(TermStatesKey.FORWARD.s)], ["foo", "bar"]
-        )
-
-    def test_rename_terminal_states_dont_update_adata(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
-        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        terminal_kernel = 0.8 * vk + 0.2 * ck
-
-        mc = cr.tl.estimators.CFLARE(terminal_kernel)
-        mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
-
-        mc.rename_terminal_states({"0": "foo", "1": "bar"}, update_adata=False)
-
-        np.testing.assert_array_equal(mc.terminal_states.cat.categories, ["foo", "bar"])
-        np.testing.assert_array_equal(
-            mc.adata.obs[TermStatesKey.FORWARD.s].cat.categories, ["0", "1"]
-        )
-        np.testing.assert_array_equal(
-            mc.adata.uns[_lin_names(TermStatesKey.FORWARD.s)], ["0", "1"]
+            mc.adata.obs[Key.obs.term_states(mc.backward)].cat.categories,
+            ["foo", "bar"],
         )
 
     def test_compute_absorption_probabilities_no_args(self, adata_large: AnnData):
@@ -243,30 +167,29 @@ class TestCFLARE:
         mc.compute_absorption_probabilities()
         mc.compute_lineage_priming()
 
+        key = Key.obs.priming_degree(mc.backward)
         assert isinstance(mc.priming_degree, pd.Series)
-        assert _pd(AbsProbKey.FORWARD) in mc.adata.obs.keys()
-        np.testing.assert_array_equal(
-            mc.priming_degree, mc.adata.obs[_pd(AbsProbKey.FORWARD)]
-        )
+        assert key in mc.adata.obs
+        np.testing.assert_array_equal(mc.priming_degree, mc.adata.obs[key])
 
+        key = Key.obsm.abs_probs(mc.backward)
         assert isinstance(mc.absorption_probabilities, cr.tl.Lineage)
         assert mc.absorption_probabilities.shape == (mc.adata.n_obs, 2)
-        assert f"{AbsProbKey.FORWARD}" in mc.adata.obsm.keys()
-        np.testing.assert_array_equal(
-            mc.absorption_probabilities.X, mc.adata.obsm[f"{AbsProbKey.FORWARD}"]
-        )
+        assert key in mc.adata.obsm
+        assert isinstance(mc.adata.obsm[key], cr.tl.Lineage)
+        np.testing.assert_array_equal(mc.absorption_probabilities.X, mc.adata.obsm[key])
 
-        assert _lin_names(AbsProbKey.FORWARD) in mc.adata.uns.keys()
         np.testing.assert_array_equal(
             mc.absorption_probabilities.names,
-            mc.adata.uns[_lin_names(AbsProbKey.FORWARD)],
+            mc.adata.obs[Key.obs.term_states(mc.backward)].cat.categories,
         )
 
-        assert _colors(AbsProbKey.FORWARD) in mc.adata.uns.keys()
+        key = Key.uns.colors(Key.obs.term_states(mc.backward))
+        assert key in mc.adata.uns
         np.testing.assert_array_equal(
-            mc.absorption_probabilities.colors,
-            mc.adata.uns[_colors(AbsProbKey.FORWARD)],
+            mc.absorption_probabilities.colors, mc.adata.uns[key]
         )
+        np.testing.assert_array_equal(mc._term_states_colors, mc.adata.uns[key])
         np.testing.assert_allclose(mc.absorption_probabilities.X.sum(1), 1, rtol=1e-6)
 
     def test_compute_absorption_probabilities_solver(self, adata_large: AnnData):
@@ -429,12 +352,14 @@ class TestCFLARE:
         mc.compute_absorption_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
+        key = Key.varm.lineage_drivers(False)
+        direction = Key.where(mc.backward)
         for lineage in ["0", "1"]:
-            assert np.all(mc.adata.var[f"{DirPrefix.FORWARD} {lineage} corr"] >= -1.0)
-            assert np.all(mc.adata.var[f"{DirPrefix.FORWARD} {lineage} corr"] <= 1.0)
+            assert np.all(mc.adata.varm[key][f"{direction} {lineage} corr"] >= -1.0)
+            assert np.all(mc.adata.varm[key][f"{direction} {lineage} corr"] <= 1.0)
 
-            assert np.all(mc.adata.var[f"{DirPrefix.FORWARD} {lineage} qval"] >= 0)
-            assert np.all(mc.adata.var[f"{DirPrefix.FORWARD} {lineage} qval"] <= 1.0)
+            assert np.all(mc.adata.varm[key][f"{direction} {lineage} qval"] >= 0)
+            assert np.all(mc.adata.varm[key][f"{direction} {lineage} qval"] <= 1.0)
 
     def test_plot_lineage_drivers_not_computed(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -496,7 +421,6 @@ class TestCFLARE:
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
         mc_fwd = cr.tl.estimators.CFLARE(terminal_kernel)
-        mc_fwd.compute_partition()
         mc_fwd.compute_eigendecomposition()
         mc_fwd.compute_terminal_states(use=3)
 
@@ -514,7 +438,7 @@ class TestCFLARE:
 
         np.testing.assert_array_equal(arc_colors, lin_colors)
 
-    def test_compare_absorption_probabilites_with_reference(self):
+    def test_compare_absorption_probabilities_with_reference(self):
         # define a reference transition matrix. This is an absorbing MC with 2 absorbing states
         transition_matrix = np.array(
             [
@@ -577,18 +501,18 @@ class TestCFLARE:
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
         mc_fwd = cr.tl.estimators.CFLARE(terminal_kernel)
-        mc_fwd.compute_partition()
         mc_fwd.compute_eigendecomposition()
+        key = Key.obs.term_states(mc_fwd.backward)
 
         mc_fwd.compute_terminal_states(use=3)
-        original = np.array(adata.obs[f"{TermStatesKey.FORWARD}"].copy())
+        original = np.array(adata.obs[key].copy())
         zero_mask = original == "0"
 
         cells = list(adata[zero_mask].obs_names)
         mc_fwd.set_terminal_states({"foo": cells})
 
-        assert (adata.obs[f"{TermStatesKey.FORWARD}"][zero_mask] == "foo").all()
-        assert pd.isna(adata.obs[f"{TermStatesKey.FORWARD}"][~zero_mask]).all()
+        assert (adata.obs[key][zero_mask] == "foo").all()
+        assert pd.isna(adata.obs[key][~zero_mask]).all()
 
     def test_abs_probs_do_not_sum_to_1(self, adata_large: AnnData, mocker):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -643,6 +567,7 @@ class TestCFLARE:
 class TestCFLAREIO:
     def test_copy(self, adata_cflare_fwd: Tuple[AnnData, cr.tl.estimators.CFLARE]):
         _, mc1 = adata_cflare_fwd
+        # TODO
         mc2 = mc1.copy()
 
         assert_estimators_equal(mc1, mc2, copy=True)

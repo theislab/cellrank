@@ -132,12 +132,12 @@ class TestModel:
 class TestUtils:
     def test_extract_data_wrong_type(self):
         with pytest.raises(TypeError):
-            _extract_data(None)
+            _ = _extract_data(None)
 
     def test_extract_data_raw_None(self, adata: AnnData):
         adata = AnnData(adata.X, raw=None)
         with pytest.raises(ValueError):
-            _extract_data(adata, use_raw=True)
+            _ = _extract_data(adata, use_raw=True)
 
     def test_extract_data_invalid_layer(self, adata: AnnData):
         with pytest.raises(KeyError):
@@ -450,7 +450,7 @@ class TestGAM:
 
     def test_invalid_grid_type(self, adata: AnnData):
         with pytest.raises(TypeError):
-            GAM(adata, grid=1311)
+            _ = GAM(adata, grid=1311)
 
     def test_default_grid(self, adata_cflare: AnnData):
         g = GAM(adata_cflare, grid="default")
@@ -775,7 +775,7 @@ class TestFittedModel:
             fm.default_confidence_interval(), [[4, 5], [6, 7]]
         )
 
-    def from_model_wrong_type(self, adata_cflare):
+    def test_from_model_wrong_type(self, adata_cflare):
         m = create_model(adata_cflare)
         with pytest.raises(TypeError):
             FittedModel.from_model(m.model)

@@ -867,7 +867,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         *keys: str,
         mode: str = "dist",
         dist_measure: Literal[
-            "cosine_sim", "wasserstein_dist", "kl_div", "js_div", "mutual_inf", "equal"
+            "cosine_sim", "wasserstein_dist", "kl_div", "js_div", "mutual_info", "equal"
         ] = "mutual_info",
         normalize_weights: Literal["scale", "softmax"] = "softmax",
         softmax_scale: float = 1,
@@ -890,7 +890,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
                 - `'wasserstein_dist'` - Wasserstein distance.
                 - `'kl_div'` - Kullback–Leibler divergence.
                 - `'js_div'` - Jensen–Shannon divergence.
-                - `'mutual_inf'` - mutual information.
+                - `'mutual_info'` - mutual information.
                 - `'equal'` - equally redistribute the mass among the rest.
         normalize_weights
             How to row-normalize the weights. Valid options are:

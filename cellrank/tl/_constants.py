@@ -43,6 +43,7 @@ class Lin(PrettyEnum):
     OTHERS = "others"
 
 
+# TODO: remove these useless things
 class Direction(PrettyEnum):
     """Direction of the process."""
 

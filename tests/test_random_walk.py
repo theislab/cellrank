@@ -64,7 +64,7 @@ class TestRandomWalk:
         assert res[-1] == 1
         assert res[-2] != 1
 
-    def successive_hits(self, test_matrix_1: np.ndarray):
+    def test_successive_hits(self, test_matrix_1: np.ndarray):
         res = RandomWalk(test_matrix_1, stop_ixs=[1]).simulate_one(
             max_iter=1000, seed=42, successive_hits=2
         )
