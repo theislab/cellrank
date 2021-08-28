@@ -747,13 +747,14 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
         minn, maxx = sorted(n_states)
         if minn <= 1:
-            raise ValueError(f"Minimum value must be > `1`, found `{minn}`.")
-        elif minn == 2:
-            logg.warning(
-                "In most cases, 2 clusters will always be optimal. "
-                "If you really expect 2 clusters, use `n_states=2`. Setting the minimum to `3`"
-            )
+            minn = 2
+            logg.warning(f"Minimum value must be larger than `1`, found `{minn}`. Setting `min={minn}`")
+        if minn == 2:
             minn = 3
+            logg.warning(
+                f"In most cases, 2 clusters will always be optimal. "
+                f"If you really expect 2 clusters, use `n_states=2`. Setting `min={minn}`"
+            )
         # fmt: on
         maxx = max(minn + 1, maxx)
 
