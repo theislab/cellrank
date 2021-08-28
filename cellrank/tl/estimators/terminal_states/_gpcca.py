@@ -8,6 +8,7 @@ from datetime import datetime
 from anndata import AnnData
 from cellrank import logging as logg
 from cellrank._key import Key
+from cellrank.tl._enum import ModeEnum
 from cellrank.ul._docs import d
 from cellrank.tl._utils import (
     save_fig,
@@ -35,6 +36,13 @@ from matplotlib.axes import Axes
 from matplotlib.colors import Normalize, ListedColormap
 from matplotlib.ticker import StrMethodFormatter
 from matplotlib.colorbar import ColorbarBase
+
+
+class TermStatesMethod(ModeEnum):
+    EIGENGAP = "eigengap"
+    EIGENGAP_COARSE = "eigengap_coarse"
+    TOP_N = "top_n"
+    STABILITY = "stability"
 
 
 class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
@@ -179,24 +187,24 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             self.set_terminal_states_from_macrostates(None, n_cells=n_cells, params=self._create_params())
             return
 
-        # TODO: ModeEnum
+        method = TermStatesMethod(method)
         eig = self.eigendecomposition
         coarse_T = self.coarse_T
 
-        if method == "eigengap":
+        if method == TermStatesMethod.EIGENGAP:
             if eig is None:
                 raise RuntimeError("Compute eigendecomposition first as `.compute_eigendecomposition()`.")
             n_states = _eigengap(eig["D"], alpha=alpha) + 1
-        elif method == "eigengap_coarse":
+        elif method == TermStatesMethod.EIGENGAP_COARSE:
             if coarse_T is None:
                 raise RuntimeError("Compute macrostates first as `.compute_macrostates()`.")
             n_states = _eigengap(np.sort(np.diag(coarse_T)[::-1]), alpha=alpha)
-        elif method == "top_n":
+        elif method == TermStatesMethod.TOP_N:
             if n_states is None:
                 raise ValueError("Expected `n_states != None` for `method='top_n'`.")
             elif n_states <= 0:
                 raise ValueError(f"Expected `n_states` to be positive, found `{n_states}`.")
-        elif method == "stability":
+        elif method == TermStatesMethod.STABILITY:
             if stability_threshold is None:
                 raise ValueError("Expected`stability_threshold != None` for `method='stability'`.")
             stability = pd.Series(np.diag(coarse_T), index=coarse_T.columns)

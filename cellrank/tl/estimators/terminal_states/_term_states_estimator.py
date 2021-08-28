@@ -130,17 +130,17 @@ class TermStatesEstimator(BaseEstimator, ABC):
         mask = np.isin(list(new_names.keys()), old_names)
         if not np.all(mask):
             invalid = sorted(np.array(list(new_names.keys()))[~mask])
-            raise ValueError(f"Invalid terminal states names: `{invalid}`.")
+            raise ValueError(f"Invalid terminal states names: `{invalid}`. Valid names are: `{sorted(old_names)}`")
 
         names_after_renaming = [new_names.get(n, n) for n in old_names]
         if len(set(names_after_renaming)) != len(old_names):
             raise ValueError(f"After renaming, terminal states will no longer unique: `{names_after_renaming}`.")
         # fmt: on
 
+        # GPCCA; alt. is to subclass
         self._term_states = term_states.cat.rename_categories(new_names)
-        # TODO: alt is to subclass?
         memberships = getattr(self, "terminal_states_memberships", None)
-        if memberships is not None:  # GPCCA
+        if memberships is not None:
             memberships.names = [new_names.get(n, n) for n in memberships.names]
 
         self._write_terminal_states(

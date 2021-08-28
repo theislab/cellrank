@@ -106,7 +106,7 @@ class TestCFLARE:
         with pytest.raises(ValueError):
             mc.rename_terminal_states({"0": "1"})
 
-    def test_rename_terminal_states_try_joinining_states(self, adata_large: AnnData):
+    def test_rename_terminal_states_try_joining_states(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
