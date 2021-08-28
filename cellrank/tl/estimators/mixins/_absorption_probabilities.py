@@ -255,8 +255,8 @@ class AbsProbsMixin:
         # fmt: on
 
         abs_probs = self._compute_absorption_probabilities(
-            q=q,
-            s=s,
+            q,
+            s,
             trans_indices=trans_indices,
             term_states=term_states,
             solver=solver,
@@ -366,13 +366,13 @@ class AbsProbsMixin:
             show_progress_bar=show_progress_bar,
             preconditioner=preconditioner,
         )
-        abs_classes = np.zeros((len(self), len(term_states.cat.categories)))
-        rec_classes_full = {
-            cl: np.where(term_states == cl)[0] for cl in term_states.cat.categories
-        }
-        for col, cl_indices in enumerate(rec_classes_full.values()):
+        abs_classes = np.zeros(
+            shape=(len(self), len(term_states.cat.categories)), dtype=np.float64
+        )
+        for col, rec_class in enumerate(term_states.cat.categories):
+            rec_indices = np.where(term_states == rec_class)[0]
             abs_classes[trans_indices, col] = _abs_classes[:, col]
-            abs_classes[cl_indices, col] = 1
+            abs_classes[rec_indices, col] = 1.0
 
         mask = abs_classes >= 0
         if not np.all(mask):

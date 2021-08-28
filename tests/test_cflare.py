@@ -163,7 +163,7 @@ class TestCFLARE:
 
         mc = cr.tl.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
+        mc.compute_terminal_states(use=2, method="kmeans")
         mc.compute_absorption_probabilities()
         mc.compute_lineage_priming()
 
@@ -221,7 +221,7 @@ class TestCFLARE:
 
         mc = cr.tl.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
+        mc.compute_terminal_states(use=2, method="kmeans")
 
         # compute lin probs using direct solver
         mc.compute_absorption_probabilities(solver="gmres", use_petsc=False, tol=tol)

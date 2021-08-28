@@ -261,7 +261,7 @@ def _solve_many_sparse_problems(
     return np.stack(x_list, axis=1), n_converged
 
 
-def _petsc_mat_solve(
+def _petsc_direct_solve(
     mat_a: Union[np.ndarray, spmatrix],
     mat_b: Optional[Union[spmatrix, np.ndarray]] = None,
     tol: float = 1e-5,
@@ -298,7 +298,7 @@ def _petsc_mat_solve(
                     f"did not converge"
                 )
 
-            return res
+            return res[:, None]
 
         B = _create_petsc_matrix(mat_b, as_dense=True)
 
@@ -430,7 +430,7 @@ def _solve_lin_system(
     if solver == "direct":
         if use_petsc:
             logg.debug("Solving the linear system directly using `PETSc`")
-            return _petsc_mat_solve(
+            return _petsc_direct_solve(
                 mat_a, mat_b, solver=solver, preconditioner=preconditioner, tol=tol
             )
 
@@ -461,7 +461,6 @@ def _solve_lin_system(
             f"`tol={tol}`"
         )
 
-        # can't pass PETSc matrix - not pickleable
         mat_x, n_converged = parallelize(
             _solve_many_sparse_problems_petsc,
             mat_b,

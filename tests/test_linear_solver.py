@@ -1,8 +1,8 @@
 import pytest
 
 from cellrank.tl._linear_solver import (
-    _petsc_mat_solve,
     _solve_lin_system,
+    _petsc_direct_solve,
     _create_petsc_matrix,
 )
 
@@ -51,7 +51,7 @@ class TestScipyLinearSolver:
         with pytest.raises(ValueError):
             _solve_lin_system(A, B, solver="foobar", use_petsc=False)
 
-    @pytest.mark.parametrize("seed, sparse", zip(range(10), [False] * 5 + [True] * 5))
+    @pytest.mark.parametrize("seed,sparse", zip(range(10), [False] * 5 + [True] * 5))
     def test_gmres(self, seed: int, sparse: bool):
         A, B = _create_a_b_matrices(seed, sparse)
 
@@ -64,6 +64,7 @@ class TestScipyLinearSolver:
             show_progress_bar=False,
             tol=1e-6,
         )
+        assert sol.ndim == 2
 
         if sparse:
             A = A.A
@@ -72,7 +73,7 @@ class TestScipyLinearSolver:
         np.testing.assert_allclose(A @ sol, B, rtol=1e-6, atol=1e-10)
 
     @pytest.mark.parametrize(
-        "seed, sparse", zip(range(10, 20), [False] * 5 + [True] * 5)
+        "seed,sparse", zip(range(10, 20), [False] * 5 + [True] * 5)
     )
     def test_direct_solver_dense(self, seed: int, sparse: bool):
         A, B = _create_a_b_matrices(seed, sparse)
@@ -86,6 +87,7 @@ class TestScipyLinearSolver:
             show_progress_bar=False,
             tol=1e-6,
         )
+        assert sol.ndim == 2
 
         if sparse:
             A = A.A
@@ -94,7 +96,7 @@ class TestScipyLinearSolver:
         np.testing.assert_allclose(A @ sol, B, rtol=1e-6, atol=1e-10)
 
     @pytest.mark.parametrize(
-        "seed, sparse", zip(range(30, 40), [False] * 5 + [True] * 5)
+        "seed,sparse", zip(range(30, 40), [False] * 5 + [True] * 5)
     )
     def test_eye(self, seed: int, sparse: bool):
         A, B = _create_a_b_matrices(seed, sparse)
@@ -108,6 +110,7 @@ class TestScipyLinearSolver:
             show_progress_bar=False,
             tol=1e-6,
         )
+        assert sol.ndim == 2
 
         if sparse:
             A = A.A
@@ -213,6 +216,8 @@ class TestLinearSolverPETSc:
             show_progress_bar=False,
             tol=1e-6,
         )
+        assert sol_petsc.ndim == 2
+        assert sol_scipy.ndim == 2
         if sparse:
             A = A.A
             B = B.A
@@ -222,7 +227,7 @@ class TestLinearSolverPETSc:
         np.testing.assert_allclose(A @ sol_petsc, B, rtol=1e-6, atol=1e-8)
         np.testing.assert_allclose(sol_petsc, sol_scipy, rtol=1e-6, atol=1e-8)
 
-    @pytest.mark.parametrize("seed, sparse", zip(range(10), [False] * 5 + [True] * 5))
+    @pytest.mark.parametrize("seed,sparse", zip(range(10), [False] * 5 + [True] * 5))
     def test_gmres(self, seed: int, sparse: bool):
         A, B = _create_a_b_matrices(seed, sparse)
 
@@ -236,6 +241,7 @@ class TestLinearSolverPETSc:
             preconditioner="lu",
             tol=1e-6,
         )
+        assert sol.ndim == 2
 
         if sparse:
             A = A.A
@@ -245,7 +251,7 @@ class TestLinearSolverPETSc:
         np.testing.assert_allclose(A @ sol, B, rtol=1e-6, atol=1e-8)
 
     @pytest.mark.parametrize(
-        "seed, sparse", zip(range(10, 20), [False] * 5 + [True] * 5)
+        "seed,sparse", zip(range(10, 20), [False] * 5 + [True] * 5)
     )
     def test_direct_solver(self, seed: int, sparse: bool):
         A, B = _create_a_b_matrices(seed, sparse)
@@ -259,6 +265,7 @@ class TestLinearSolverPETSc:
             show_progress_bar=False,
             tol=1e-6,
         )
+        assert sol.ndim == 2
 
         if sparse:
             A = A.A
@@ -268,13 +275,14 @@ class TestLinearSolverPETSc:
         np.testing.assert_allclose(A @ sol, B, rtol=1e-6, atol=1e-10)
 
     @pytest.mark.parametrize(
-        "seed, sparse", zip(range(10, 20), [False] * 5 + [True] * 5)
+        "seed,sparse", zip(range(10, 20), [False] * 5 + [True] * 5)
     )
     def test_mat_solve(self, seed: int, sparse: bool):
         A, B = _create_a_b_matrices(seed, sparse)
         A = (speye(*A.shape) if sparse else np.eye(*A.shape)) - A
 
-        X = _petsc_mat_solve(A, B, tol=1e-8)
+        X = _petsc_direct_solve(A, B, tol=1e-8)
+        assert X.ndim == 2
         if sparse:
             A = A.A
             B = B.A
@@ -282,28 +290,31 @@ class TestLinearSolverPETSc:
         np.testing.assert_allclose(A @ X, B, rtol=1e-6)
 
     @pytest.mark.parametrize(
-        "seed, sparse", zip(range(10, 20), [False] * 5 + [True] * 5)
+        "seed,sparse", zip(range(10, 20), [False] * 5 + [True] * 5)
     )
     def test_mat_solve_1_dim_b(self, seed: int, sparse: bool):
         A, B = _create_a_b_matrices(seed, sparse)
         A = (speye(*A.shape) if sparse else np.eye(*A.shape)) - A
         B = B[:, 0]
 
-        X = _petsc_mat_solve(A, B, tol=1e-8)
+        X = _petsc_direct_solve(A, B, tol=1e-8)
+        assert X.ndim == 2
+        assert X.shape[1] == 1
         if sparse:
             A = A.A
             B = B.A
 
-        np.testing.assert_allclose(A @ X, B.squeeze(), rtol=1e-6)
+        np.testing.assert_allclose(((A @ X).squeeze()), B.squeeze(), rtol=1e-6)
 
     @pytest.mark.parametrize(
-        "seed, sparse", zip(range(10, 20), [False] * 5 + [True] * 5)
+        "seed,sparse", zip(range(10, 20), [False] * 5 + [True] * 5)
     )
     def test_mat_solve_inversion(self, seed: int, sparse: bool):
         A, _ = _create_a_b_matrices(seed, sparse)
         A = (speye(*A.shape) if sparse else np.eye(*A.shape)) - A
 
-        X = _petsc_mat_solve(A, tol=1e-8)
+        X = _petsc_direct_solve(A, tol=1e-8)
+        assert X.ndim == 2
         if sparse:
             A = A.A
 
