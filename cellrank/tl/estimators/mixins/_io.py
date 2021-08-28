@@ -93,9 +93,16 @@ class IOMixin:
             obj = pickle.load(fin)
 
         if hasattr(obj, "_adata"):
+            if isinstance(obj._adata, AnnData):
+                if adata is not None:
+                    logg.warning(
+                        "Ignoring supplied `adata` object because it's already present"
+                    )
+                return obj
+
             if not isinstance(adata, AnnData):
                 raise TypeError(
-                    "This object was saved without its `anndata.AnnData` object. "
+                    "This object was saved without its `adata` object. "
                     "Please supply one as `adata=...`."
                 )
             try:
