@@ -917,7 +917,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             g = self._gpcca
             tmat = pd.DataFrame(g.coarse_grained_transition_matrix, index=names, columns=names)
             init_dist = pd.Series(g.coarse_grained_input_distribution, index=names)
-            stat_dist = g.coarse_grained_stationary_probability
+            stat_dist = pd.Series(g.coarse_grained_stationary_probability, index=names)
             dists = pd.DataFrame({"coarse_init_dist": init_dist})
             if stat_dist is not None:
                 dists["coarse_stat_dist"] = pd.Series(stat_dist, index=names)
