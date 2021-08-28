@@ -102,7 +102,7 @@ class TestCFLARE:
 
         mc = cr.tl.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
+        mc.compute_terminal_states(use=2, method="kmeans")
         with pytest.raises(ValueError):
             mc.rename_terminal_states({"0": "1"})
 

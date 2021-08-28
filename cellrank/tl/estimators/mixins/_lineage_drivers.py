@@ -7,7 +7,7 @@ from datetime import datetime
 
 import scanpy as sc
 import scvelo as scv
-from anndata import AnnData
+from anndata import Raw, AnnData
 from cellrank import logging as logg
 from cellrank._key import Key
 from cellrank.ul._docs import d, inject_docs
@@ -258,8 +258,12 @@ class LinDriversMixin(AbsProbsMixin):
         use_raw
             Whether to access in :attr:`anndata.AnnData.raw` or not.
         title_fmt
-            Title format. Possible keywords include `{gene}`, `{qval}`, `{corr}` for gene name,
-            q-value and correlation, respectively.
+            Title format. Possible keywords can include:
+
+                - `{gene}` - gene name.
+                - `{pval}` - p-value.
+                - `{qval}` - q-value.
+                - `{corr}` - correlation.
         %(plotting)s
         kwargs
             Keyword arguments for :func:`scvelo.pl.scatter`.
@@ -277,13 +281,13 @@ class LinDriversMixin(AbsProbsMixin):
             corr: Optional[float],
         ) -> Dict[str, Any]:
             kwargs: Dict[str, Optional[Union[str, float]]] = {}
-            if "{gene}" in title_fmt:
+            if "{gene" in title_fmt:
                 kwargs["gene"] = gene
-            if "{pval}" in title_fmt:
+            if "{pval" in title_fmt:
                 kwargs["pval"] = float(pval) if pval is not None else np.nan
-            if "{qval}" in title_fmt:
+            if "{qval" in title_fmt:
                 kwargs["qval"] = float(qval) if qval is not None else np.nan
-            if "{corr}" in title_fmt:
+            if "{corr" in title_fmt:
                 kwargs["corr"] = float(corr) if corr is not None else np.nan
 
             return kwargs
@@ -416,6 +420,9 @@ class LinDriversMixin(AbsProbsMixin):
             use_raw = False
         adata = self.adata.raw if use_raw else self.adata
         dkey = Key.varm.lineage_drivers(self.backward)
+        # this makes a useless copy, wish there was another way
+        if isinstance(adata, Raw):
+            adata = adata.to_adata()
 
         if color is not None:
             if not isinstance(color, str):
@@ -443,7 +450,7 @@ class LinDriversMixin(AbsProbsMixin):
         for key in list(ctx.keys()):
             if ctx[key] is None:
                 del ctx[key]
-        with rc_context(ctx), RandomKeys(self.adata, n=3, where="var") as keys:
+        with rc_context(ctx), RandomKeys(adata, n=3, where="var") as keys:
             adata.var[keys[0]] = adata.varm[dkey][key1]
             adata.var[keys[1]] = adata.varm[dkey][key2]
             if color is not None:
