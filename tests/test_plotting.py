@@ -3410,7 +3410,7 @@ class TestPlotDriverCorrelation:
     @compare(kind="gpcca")
     def test_driver_corr_color(self, mc: GPCCA, fpath: str):
         mc.plot_lineage_drivers_correlation(
-            "0", "1", dpi=DPI, save=fpath, color="to 2 corr"
+            "0", "1", dpi=DPI, save=fpath, color="2_corr"
         )
 
     @compare(kind="gpcca")
@@ -3445,13 +3445,13 @@ class TestPlotDriverCorrelation:
     def test_driver_corr_use_raw(self, mc: GPCCA, fpath: str):
         mc.compute_lineage_drivers(cluster_key="clusters", use_raw=True)
         mc.plot_lineage_drivers_correlation(
-            "0", "1", dpi=DPI, save=fpath, use_raw=True, color="to 1 qval"
+            "0", "1", dpi=DPI, save=fpath, use_raw=True, color="1_qval"
         )
 
     @compare(kind="gpcca")
     def test_driver_corr_cmap(self, mc: GPCCA, fpath: str):
         mc.plot_lineage_drivers_correlation(
-            "0", "1", dpi=DPI, save=fpath, color="to 1 qval", cmap="inferno"
+            "0", "1", dpi=DPI, save=fpath, color="1_qval", cmap="inferno"
         )
 
     @compare(kind="gpcca")
