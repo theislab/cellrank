@@ -276,14 +276,14 @@ class LinDriversMixin(AbsProbsMixin):
             qval: Optional[float],
             corr: Optional[float],
         ) -> Dict[str, Any]:
-            kwargs = {}
-            if "{gene" in title_fmt:
+            kwargs: Dict[str, Optional[Union[str, float]]] = {}
+            if "{gene}" in title_fmt:
                 kwargs["gene"] = gene
-            if "{pval" in title_fmt:
+            if "{pval}" in title_fmt:
                 kwargs["pval"] = float(pval) if pval is not None else np.nan
-            if "{qval" in title_fmt:
+            if "{qval}" in title_fmt:
                 kwargs["qval"] = float(qval) if qval is not None else np.nan
-            if "{corr" in title_fmt:
+            if "{corr}" in title_fmt:
                 kwargs["corr"] = float(corr) if corr is not None else np.nan
 
             return kwargs
@@ -294,7 +294,7 @@ class LinDriversMixin(AbsProbsMixin):
                 "Compute `.lineage_drivers` first as `.compute_lineage_drivers()`."
             )
 
-        key = f"{lineage} corr"
+        key = f"{lineage}_corr"
         if key not in lin_drivers:
             raise KeyError(
                 f"Lineage `{key!r}` not found in `{list(lin_drivers.columns)}`."
@@ -330,9 +330,9 @@ class LinDriversMixin(AbsProbsMixin):
                 title=title_fmt.format(
                     **prepare_format(
                         gene,
-                        pval=data.get(f"{lineage} pval", None),
-                        qval=data.get(f"{lineage} qval", None),
-                        corr=data.get(f"{lineage} corr", None),
+                        pval=data.get(f"{lineage}_pval", None),
+                        qval=data.get(f"{lineage}_qval", None),
+                        corr=data.get(f"{lineage}_corr", None),
                     )
                 ),
                 **kwargs,
