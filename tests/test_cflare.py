@@ -530,7 +530,7 @@ class TestCFLARE:
         abs_prob[:, 0] = 1.0
         abs_prob[0, 0] = 1.01
         mocker.patch(
-            "cellrank.tl.estimators._base_estimator._solve_lin_system",
+            "cellrank.tl.estimators.mixins._absorption_probabilities._solve_lin_system",
             return_value=abs_prob,
         )
 
@@ -556,7 +556,7 @@ class TestCFLARE:
         abs_prob[0, 0] = -0.5
         abs_prob[0, 1] = -1.5
         mocker.patch(
-            "cellrank.tl.estimators._base_estimator._solve_lin_system",
+            "cellrank.tl.estimators.mixins._absorption_probabilities._solve_lin_system",
             return_value=abs_prob,
         )
 

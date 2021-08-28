@@ -48,7 +48,7 @@ def lineages(
     """
 
     pk = DummyKernel(adata, backward=backward)
-    mc = GPCCA(pk, read_from_adata=True, write_to_adata=False)
+    mc = GPCCA(pk)
     if mc.absorption_probabilities is None:
         raise RuntimeError(
             f"Compute absorption probabilities first as `cellrank.tl.lineages(..., backward={backward})`."
@@ -90,7 +90,7 @@ def lineage_drivers(
     """
 
     pk = DummyKernel(adata, backward=backward)
-    mc = GPCCA(pk, read_from_adata=True, write_to_adata=False)
+    mc = GPCCA(pk)
 
     if use_raw and adata.raw is None:
         logg.warning("No raw attribute set. Using `adata.var` instead")

@@ -61,7 +61,7 @@ class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
             X=csr_matrix(self.adata.shape, dtype=self.adata.X.dtype),
             obs=self.adata.obs[[]].copy(),
             var=self.adata.var[[]].copy(),
-            raw=self.adata.raw.to_adata(),  # TODO: better way?
+            raw=None if self.adata.raw is None else self.adata.raw.to_adata(),
         )
 
     def __init_subclass__(cls, **kwargs: Any):

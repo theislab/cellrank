@@ -83,7 +83,7 @@ class RandomKeys:
 
     def _generate_random_keys(self):
         def generator():
-            return f"CELLRANK_RANDOM_COL_{np.random.randint(2 ** 16)}"
+            return f"RNG_COL_{np.random.randint(2 ** 16)}"
 
         where = getattr(self._adata, self._where)
         names, seen = [], set(where.keys())
@@ -103,7 +103,9 @@ class RandomKeys:
     def __exit__(self, exc_type, exc_val, exc_tb):
         for key in self._keys:
             try:
-                self._adata.obs.drop(key, axis="columns", inplace=True)
+                getattr(self._adata, self._where).drop(
+                    key, axis="columns", inplace=True
+                )
             except KeyError:
                 pass
             if self._where == "obs":
@@ -362,6 +364,7 @@ def _perm_test(
 
 
 @d.get_sections(base="correlation_test", sections=["Returns"])
+@d.dedent
 def _correlation_test(
     X: Union[np.ndarray, spmatrix],
     Y: "Lineage",  # noqa: F821
@@ -370,7 +373,7 @@ def _correlation_test(
     confidence_level: float = 0.95,
     n_perms: Optional[int] = None,
     seed: Optional[int] = None,
-    **kwargs,
+    **kwargs: Any,
 ) -> pd.DataFrame:
     """
     Perform a statistical test.
@@ -390,21 +393,20 @@ def _correlation_test(
     confidence_level
         Confidence level for the confidence interval calculation. Must be in `[0, 1]`.
     n_perms
-        Number of permutations if ``method='perm_test'``.
+        Number of permutations if ``method = 'perm_test'``.
     seed
-        Random seed if ``method='perm_test'``.
-    kwargs
-        Keyword arguments for :func:`cellrank.ul._parallelize.parallelize`.
+        Random seed if ``method = 'perm_test'``.
+    %(parallel)s
 
     Returns
     -------
-    Dataframe of shape ``(n_genes, n_lineages * 5)`` containing the following columns, 1 for each lineage:
+    Dataframe of shape ``(n_genes, n_lineages * 5)`` containing the following columns, one for each lineage:
 
-        - ``{lineage} corr`` - correlation between the gene expression and absorption probabilities.
-        - ``{lineage} pval`` - calculated p-values for double-sided test.
-        - ``{lineage} qval`` - corrected p-values using Benjamini-Hochberg method at level `0.05`.
-        - ``{lineage} ci low`` - lower bound of the ``confidence_level`` correlation confidence interval.
-        - ``{lineage} ci high`` - upper bound of the ``confidence_level`` correlation confidence interval.
+        - ``{lineage}_corr`` - correlation between the gene expression and absorption probabilities.
+        - ``{lineage}_pval`` - calculated p-values for double-sided test.
+        - ``{lineage}_qval`` - corrected p-values using Benjamini-Hochberg method at level `0.05`.
+        - ``{lineage}_ci low`` - lower bound of the ``confidence_level`` correlation confidence interval.
+        - ``{lineage}_ci high`` - upper bound of the ``confidence_level`` correlation confidence interval.
     """
 
     corr, pvals, ci_low, ci_high = _correlation_test_helper(
@@ -420,23 +422,17 @@ def _correlation_test(
     if invalid:
         raise ValueError(f"Found `{invalid}` correlations that are not in `[0, 1]`.")
 
-    res = pd.DataFrame(corr, index=gene_names, columns=[f"{c} corr" for c in Y.names])
+    res = pd.DataFrame(corr, index=gene_names, columns=[f"{c}_corr" for c in Y.names])
     for idx, c in enumerate(Y.names):
-        res[f"{c} pval"] = pvals[:, idx]
-        res[f"{c} qval"] = multipletests(pvals[:, idx], alpha=0.05, method="fdr_bh")[1]
-        res[f"{c} ci low"] = ci_low[:, idx]
-        res[f"{c} ci high"] = ci_high[:, idx]
+        res[f"{c}_pval"] = pvals[:, idx]
+        res[f"{c}_qval"] = multipletests(pvals[:, idx], alpha=0.05, method="fdr_bh")[1]
+        res[f"{c}_ci_low"] = ci_low[:, idx]
+        res[f"{c}_ci_high"] = ci_high[:, idx]
 
-    res = res[
-        [
-            f"{c} {stat}"
-            for c in Y.names
-            for stat in ("corr", "pval", "qval", "ci low", "ci high")
-        ]
-    ]
-    res.sort_values(by=[f"{c} corr" for c in Y.names], ascending=False, inplace=True)
-
-    return res
+    # fmt: off
+    res = res[[f"{c}_{stat}" for c in Y.names for stat in ("corr", "pval", "qval", "ci_low", "ci_high")]]
+    return res.sort_values(by=[f"{c}_corr" for c in Y.names], ascending=False)
+    # fmt: on
 
 
 def _correlation_test_helper(

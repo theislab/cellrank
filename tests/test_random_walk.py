@@ -60,7 +60,7 @@ class TestRandomWalk:
             max_iter=1000, seed=42
         )
 
-        assert len(res) <= 1000
+        assert len(res) <= 1001
         assert res[-1] == 1
         assert res[-2] != 1
 
@@ -69,7 +69,7 @@ class TestRandomWalk:
             max_iter=1000, seed=42, successive_hits=2
         )
 
-        assert len(res) <= 1000
+        assert len(res) <= 1001
         assert res[-1] == 1
         assert res[-2] == 1
         assert res[-3] == 1

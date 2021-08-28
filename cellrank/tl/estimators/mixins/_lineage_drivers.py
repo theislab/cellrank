@@ -11,7 +11,7 @@ from anndata import AnnData
 from cellrank import logging as logg
 from cellrank._key import Key
 from cellrank.ul._docs import d, inject_docs
-from cellrank.tl._utils import TestMethod, save_fig, _correlation_test
+from cellrank.tl._utils import RandomKeys, TestMethod, save_fig, _correlation_test
 from cellrank.tl._colors import _create_categorical_colors
 from cellrank.tl._lineage import Lineage
 from cellrank.tl.estimators._utils import SafeGetter
@@ -121,21 +121,11 @@ class LinDriversMixin(AbsProbsMixin):
             Number of permutations to use when ``method = {tm.PERM_TEST.s!r}``.
         seed
             Random seed when ``method = {tm.PERM_TEST.s!r}``.
-        return_drivers
-            Whether to return the lineage drivers.
         %(parallel)s
 
         Returns
         -------
         %(correlation_test.returns)s
-        Only if ``return_drivers = True``.
-
-        # TODO: CI low/high
-        Otherwise, updates :attr:`anndata.AnnData.varm` or :attr:`anndata.AnnData.raw.varm`, depending ``use_raw``:
-
-            - ``['{{direction}}_{{lineage}}'] ['corr']`` - the potential lineage drivers.
-            - ``['{{direction}}_{{lineage}}'] ['pval']`` - the p-values.
-            - ``['{{direction}}_{{lineage}}'] ['qval']`` - the corrected p-values.
 
         Also updates the following fields:
 
@@ -180,7 +170,9 @@ class LinDriversMixin(AbsProbsMixin):
         # use `cluster_key` and clusters to subset the data
         if clusters is not None:
             if cluster_key not in self.adata.obs.keys():
-                raise KeyError(f"Key `{cluster_key!r}` not found in `adata.obs`.")
+                raise KeyError(
+                    f"Unable to find clusters in `adata.obs[{cluster_key!r}]`."
+                )
             if isinstance(clusters, str):
                 clusters = [clusters]
 
@@ -383,7 +375,7 @@ class LinDriversMixin(AbsProbsMixin):
         lineage_y
             Name of the lineage on the y-axis.
         color
-            Key in :attr:`anndata.AnnData.var`.
+            Key in :attr:`anndata.AnnData.var` or :attr:`anndata.AnnData.varm`, preferring for the former.
         gene_sets
             Gene sets annotations of the form `{'gene_set_name': ['gene_1', 'gene_2'], ...}`.
         gene_sets_colors
@@ -423,11 +415,24 @@ class LinDriversMixin(AbsProbsMixin):
             logg.warning("No raw attribute set. Setting `use_raw=False`")
             use_raw = False
         adata = self.adata.raw if use_raw else self.adata
+        dkey = Key.varm.lineage_drivers(self.backward)
+
+        if color is not None:
+            if not isinstance(color, str):
+                raise TypeError(
+                    "Expected `color` to be either of type `str` or `None`, "
+                    f"found `{type(color).__name__}`."
+                )
+            if color not in adata.var and color not in adata.varm[dkey]:
+                raise KeyError(
+                    f"Unable to find key `{color!r}` in `adata{'.raw' if use_raw else ''}.var` "
+                    f"or `adata.{'.raw' if use_raw else ''}varm[{dkey!r}]`."
+                )
 
         # silent assumption: `.compute_lineage_drivers()` always writes to AnnData
-        key1, key2 = f"to {lineage_x} corr", f"to {lineage_y} corr"
-        if key1 not in adata.var or key2 not in adata.var:
-            haystack = "adata.raw.var" if use_raw else "adata.var"
+        key1, key2 = f"{lineage_x}_corr", f"{lineage_y}_corr"
+        if key1 not in adata.varm[dkey] or key2 not in adata.varm[dkey]:
+            haystack = "adata.raw.varm" if use_raw else "adata.varm"
             raise RuntimeError(
                 f"Unable to find correlations in `{haystack}[{key1!r}]` or `{haystack}[{key2!r}]`."
                 f"Compute `.lineage_drivers` first as "
@@ -438,25 +443,37 @@ class LinDriversMixin(AbsProbsMixin):
         for key in list(ctx.keys()):
             if ctx[key] is None:
                 del ctx[key]
-        with rc_context(ctx):
+        with rc_context(ctx), RandomKeys(self.adata, n=3, where="var") as keys:
+            adata.var[keys[0]] = adata.varm[dkey][key1]
+            adata.var[keys[1]] = adata.varm[dkey][key2]
+            if color is not None:
+                if color in adata.var:
+                    ckey = color
+                else:
+                    adata.var[keys[2]] = adata.varm[dkey][color]
+                    ckey = keys[2]
+
             ax = sc.pl.scatter(
-                # TODO(michalk8): why?
-                adata.to_adata() if adata.is_view else adata,
-                x=key1,
-                y=key2,
+                adata,
+                x=keys[0],
+                y=keys[1],
                 color_map=cmap,
                 use_raw=False,
                 show=False,
-                color=color,
+                color=None if color is None else ckey,
                 **kwargs,
             )
-        fig = ax.figure
 
-        # add some lines to highlight the origin
-        xmin, xmax = np.nanmin(adata.var[key1]), np.nanmax(adata.var[key1])
-        ymin, ymax = np.nanmin(adata.var[key2]), np.nanmax(adata.var[key2])
-        ax.hlines(0, xmin=xmin, xmax=xmax, color="grey", alpha=0.5, zorder=-1)
-        ax.vlines(0, ymin=ymin, ymax=ymax, color="grey", alpha=0.5, zorder=-1)
+            # add some lines to highlight the origin
+            xmin, xmax = np.nanmin(adata.var[keys[0]]), np.nanmax(adata.var[keys[0]])
+            ymin, ymax = np.nanmin(adata.var[keys[1]]), np.nanmax(adata.var[keys[1]])
+            ax.hlines(0, xmin=xmin, xmax=xmax, color="grey", alpha=0.5, zorder=-1)
+            ax.vlines(0, ymin=ymin, ymax=ymax, color="grey", alpha=0.5, zorder=-1)
+
+        fig = ax.figure
+        ax.set_xlabel(key1)
+        ax.set_ylabel(key2)
+        ax.set_title(color)
 
         # annotate the passed set of genes
         if gene_sets is not None:
@@ -496,8 +513,8 @@ class LinDriversMixin(AbsProbsMixin):
                 )
                 values = set(values) & set(adata.var_names)
                 for value in values:
-                    x = adata.var.loc[value, key1]
-                    y = adata.var.loc[value, key2]
+                    x = adata.varm[dkey].loc[value, key1]
+                    y = adata.varm[dkey].loc[value, key2]
 
                     annot = ax.annotate(
                         value,
@@ -520,8 +537,8 @@ class LinDriversMixin(AbsProbsMixin):
                     start = logg.info("Adjusting text position")
                     adjustText.adjust_text(
                         annots,
-                        x=adata.var[key1].values,
-                        y=adata.var[key2].values,
+                        x=adata.varm[dkey][key1].values,
+                        y=adata.varm[dkey][key2].values,
                         ax=ax,
                     )
                     logg.info("    Finish", time=start)
