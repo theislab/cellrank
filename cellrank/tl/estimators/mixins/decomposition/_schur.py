@@ -130,7 +130,7 @@ class SchurMixin(VectorPlottable):
         except ValueError:
             logg.warning(
                 f"Using `{n_components}` components would split a block of complex conjugates. "
-                f"Increasing `n_components` to `{n_components + 1}`"
+                f"Using `n_components={n_components + 1}`"
             )
             self._gpcca._do_schur_helper(n_components + 1)
 

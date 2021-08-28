@@ -102,7 +102,7 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
                 use = list(range(use))
             elif not isinstance(use, (np.ndarray, Sequence)):
                 raise TypeError(
-                    f"Expected `use` to be `int` or a `Sequence`, found `{type(use).__name__!r}`."
+                    f"Expected `use` to be `int` or a `Sequence`, found `{type(use).__name__}`."
                 )
             use = list(use)
 

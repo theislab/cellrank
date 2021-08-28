@@ -65,7 +65,7 @@ def _create_cflare(*, backward: bool = False) -> Tuple[AnnData, CFLARE]:
     final_kernel.write_to_adata()
 
     mc.compute_eigendecomposition()
-    mc.compute_terminal_states(use=2)
+    mc.compute_terminal_states(use=2, method="kmeans")
     mc.compute_absorption_probabilities(use_petsc=False)
     mc.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
 
@@ -93,7 +93,7 @@ def _create_gpcca(*, backward: bool = False) -> Tuple[AnnData, GPCCA]:
     mc.compute_schur(method="krylov")
     mc.compute_macrostates(n_states=2)
     mc.set_terminal_states_from_macrostates()
-    mc.compute_absorption_probabilities()
+    mc.compute_absorption_probabilities(use_petsc=False)
     mc.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
 
     assert adata is mc.adata

@@ -550,7 +550,7 @@ def _filter_cells(distances: spmatrix, rc_labels: Series, n_matches_min: int) ->
     if not is_categorical_dtype(rc_labels):
         raise TypeError(
             f"Expected `categories` be a categorical variable, "
-            f"found `{infer_dtype(rc_labels).__name__!r}`."
+            f"found `{infer_dtype(rc_labels).__name__}`."
         )
 
     # retrieve knn graph
@@ -609,10 +609,7 @@ def _cluster_X(
         List of cluster labels of length `n_samples`.
     """
 
-    # make sure data is at least 2D
-    if X.ndim == 1:
-        X = X.reshape((1, -1))
-
+    X = np.atleast_2d(X)
     if method == "kmeans":
         kmeans = KMeans(n_clusters=n_clusters).fit(X)
         labels = kmeans.labels_
@@ -623,7 +620,7 @@ def _cluster_X(
         labels = adata_dummy.obs[method]
     else:
         raise NotImplementedError(
-            f"Invalid method `{method!r}`. Valid options are: `'kmeans'` or `'leiden'`."
+            f"Invalid method `{method}`. Valid options are `kmeans` or `leiden`."
         )
 
     return list(labels)
