@@ -1,4 +1,3 @@
-"""Velocity kernel module."""
 from typing import Any, Union, Callable, Iterable, Optional
 
 from copy import copy
@@ -173,7 +172,7 @@ class VelocityKernel(Kernel):
         %(softmax_scale)s
         %(velocity_scheme)s
         n_samples
-            Number of bootstrap samples when ``mode={m.MONTE_CARLO.s!r}``.
+            Number of bootstrap samples when ``mode = {m.MONTE_CARLO.s!r}``.
         seed
             Set the seed for random state when the method requires ``n_samples``.
         check_irreducibility

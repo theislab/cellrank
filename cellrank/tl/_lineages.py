@@ -43,7 +43,7 @@ def lineages(
     copy
         Whether to update the existing ``adata`` object or to return a copy.
     return_estimator
-        Whether to return the estimator. Only available when ``copy=False``.
+        Whether to return the estimator. Only available when ``copy = False``.
     kwargs
         Keyword arguments for :meth:`cellrank.tl.estimators.BaseEstimator.compute_absorption_probabilities`.
 

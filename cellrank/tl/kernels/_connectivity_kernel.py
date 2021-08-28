@@ -1,4 +1,3 @@
-"""Connectivity kernel module."""
 from copy import copy
 
 from anndata import AnnData

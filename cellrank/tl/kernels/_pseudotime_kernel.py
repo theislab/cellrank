@@ -1,4 +1,3 @@
-"""Pseudotime kernel module."""
 from typing import Any, Union, Callable, Optional
 from typing_extensions import Literal
 
