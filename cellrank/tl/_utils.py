@@ -583,8 +583,8 @@ def _filter_cells(distances: spmatrix, rc_labels: Series, n_matches_min: int) ->
 def _cluster_X(
     X: Union[np.ndarray, spmatrix],
     n_clusters: int,
-    method: Literal["leiden", "kmeans"] = "kmeans",
-    n_neighbors: int = 15,
+    method: Literal["leiden", "kmeans"] = "leiden",
+    n_neighbors: int = 20,
     resolution: float = 1.0,
 ) -> List[Any]:
     """
@@ -593,7 +593,7 @@ def _cluster_X(
     Parameters
     ----------
     X
-        Data matrix of shape `n_samples x n_features`.
+        Matrix of shape ``n_samples x n_features``.
     n_clusters
         Number of clusters to use.
     method
@@ -608,8 +608,12 @@ def _cluster_X(
     :class:`list`
         List of cluster labels of length `n_samples`.
     """
+    if X.shape[0] == 1:
+        # sc.tl.leiden issue
+        return [0]
+    if X.ndim == 1:
+        X = X[:, None]
 
-    X = np.atleast_2d(X)
     if method == "kmeans":
         kmeans = KMeans(n_clusters=n_clusters).fit(X)
         labels = kmeans.labels_

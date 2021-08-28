@@ -230,6 +230,7 @@ class TestGPCCA:
 
         mc = cr.tl.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
+        mc.compute_macrostates(n_states=[1, 1])
 
         _check_compute_macro(mc)
 
@@ -788,7 +789,7 @@ class TestGPCCA:
         mc.compute_absorption_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
-        key = Key.where(False)
+        key = Key.varm.lineage_drivers(False)
         for lineage in ["0", "1"]:
             assert np.all(mc.adata.varm[key][f"{lineage} corr"] >= -1.0)
             assert np.all(mc.adata.varm[key][f"{lineage} corr"] <= 1.0)

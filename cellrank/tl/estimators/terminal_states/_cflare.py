@@ -146,7 +146,7 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
                     f"Expected `percentile` to be in interval `[0, 100]`, found `{percentile}`."
                 )
             cutoffs = np.percentile(np.abs(V_l), percentile, axis=0)
-            ixs = np.sum(np.abs(V_l) < cutoffs, axis=1) < V_l.shape[1]
+            ixs = np.any(cutoffs <= np.abs(V_l), axis=1)
             X = X[ixs, :]
 
         if scale is None:

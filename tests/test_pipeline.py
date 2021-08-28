@@ -12,11 +12,6 @@ from pandas.api.types import is_categorical_dtype
 
 def _assert_has_all_keys(adata: AnnData, bwd: bool = False) -> None:
     # fmt: off
-    # kernel
-    key = Key.uns.kernel(bwd)
-    assert key in adata.obsp.keys()
-    assert f"{key}_params" in adata.uns.keys()
-
     # term states
     key = Key.obs.term_states(bwd)
     assert is_categorical_dtype(adata.obs[key])
@@ -211,7 +206,7 @@ class TestHighLevelPipeline:
 
 
 class TestLowLevelPipeline:
-    def test_fwd_pipelne_cflare(self, adata: AnnData):
+    def test_fwd_pipeline_cflare(self, adata: AnnData):
         vk = VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
@@ -224,7 +219,7 @@ class TestLowLevelPipeline:
         estimator_fwd.plot_eigendecomposition()
         estimator_fwd.plot_eigendecomposition(left=False)
 
-        estimator_fwd.compute_terminal_states(use=1)
+        estimator_fwd.compute_terminal_states(use=1, method="leiden")
         estimator_fwd.plot_terminal_states()
 
         estimator_fwd.compute_absorption_probabilities()
@@ -234,7 +229,7 @@ class TestLowLevelPipeline:
 
         _assert_has_all_keys(adata)
 
-    def test_bwd_pipelne_cflare(self, adata: AnnData):
+    def test_bwd_pipeline_cflare(self, adata: AnnData):
         vk = VelocityKernel(adata, backward=True).compute_transition_matrix(
             softmax_scale=4
         )
@@ -249,7 +244,7 @@ class TestLowLevelPipeline:
         estimator_bwd.plot_eigendecomposition()
         estimator_bwd.plot_eigendecomposition(left=False)
 
-        estimator_bwd.compute_terminal_states(use=1)
+        estimator_bwd.compute_terminal_states(use=1, method="kmeans")
         estimator_bwd.plot_terminal_states()
 
         estimator_bwd.compute_absorption_probabilities()
@@ -259,7 +254,7 @@ class TestLowLevelPipeline:
 
         _assert_has_all_keys(adata, bwd=True)
 
-    def test_fwd_pipelne_gpcca(self, adata: AnnData):
+    def test_fwd_pipeline_gpcca(self, adata: AnnData):
         vk = VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
@@ -299,7 +294,7 @@ class TestLowLevelPipeline:
 
         _assert_has_all_keys(adata)
 
-    def test_bwd_pipelne_gpcca(self, adata: AnnData):
+    def test_bwd_pipeline_gpcca(self, adata: AnnData):
         vk = VelocityKernel(adata, backward=True).compute_transition_matrix(
             softmax_scale=4
         )

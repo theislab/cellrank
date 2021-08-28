@@ -169,7 +169,7 @@ def _(
 
     ksp.solve(b, x)
 
-    return x.getArray().copy().squeeze(), int(ksp.converged)
+    return np.atleast_1d(x.getArray().copy().squeeze()), int(ksp.converged)
 
 
 @_solve_many_sparse_problems_petsc.register(csc_matrix)
@@ -192,7 +192,7 @@ def _(
 
         ksp.solve(b, x)
 
-        xs.append(x.getArray().copy().squeeze())
+        xs.append(np.atleast_1d(x.getArray().copy().squeeze()))
         converged += ksp.converged
 
         if queue is not None:
@@ -249,7 +249,7 @@ def _solve_many_sparse_problems(
         x, info = solver(mat_a, b.toarray().flatten(), tol=tol, x0=None, **kwargs)
 
         # append solution and info
-        x_list.append(x)
+        x_list.append(np.atleast_1d(x))
         n_converged += info == 0
 
         if queue is not None:
