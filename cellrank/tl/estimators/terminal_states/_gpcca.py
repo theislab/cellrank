@@ -882,12 +882,10 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         # remove previous fields
         self._write_terminal_states(None, None, None, None, log=False)
 
-        assignment, colors = self._set_categorical_labels(
-            assignment, cluster_key=cluster_key
-        )
-        memberships = Lineage(
-            memberships, names=list(assignment.cat.categories), colors=colors
-        )
+        # fmt: off
+        assignment, colors = self._set_categorical_labels(assignment, cluster_key=cluster_key)
+        memberships = Lineage(memberships, names=list(assignment.cat.categories), colors=colors)
+        # fmt: on
 
         groups = pd.DataFrame(assignment).groupby(0).size()
         groups = groups[groups != n_cells].to_dict()
@@ -974,7 +972,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
         self._write_absorption_probabilities(None, None, log=False)
         key = Key.obsm.memberships(Key.obs.term_states(self.backward))
-        self._set("_term_states_memberships", obj=self.adata.obsm, key=key, value=memberships, shadow_only=True)
+        self._set("_term_states_memberships", obj=self.adata.obsm, key=key, value=memberships)
         # fmt: on
 
         return msg
@@ -1012,13 +1010,15 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         if not sg.ok:
             return False
 
+        if not super()._read_from_adata(adata, **kwargs):
+            return False
+
         with SafeGetter(self, allowed=KeyError) as sg:
             key = Key.obsm.memberships(Key.obs.term_states(self.backward))
             self._get("_term_states_memberships", self.adata.obsm, key=key, where="obsm", dtype=Lineage)
-            ok = super()._read_from_adata(adata, **kwargs)
         # fmt: on
 
-        return ok and sg.ok and self._read_absorption_probabilities(adata)
+        return sg.ok and self._read_absorption_probabilities(adata)
 
     plot_macrostates = register_plotter(
         discrete="macrostates", continuous="macrostates_memberships"

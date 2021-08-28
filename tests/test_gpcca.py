@@ -729,8 +729,10 @@ class TestGPCCA:
 
         mc = cr.tl.estimators.GPCCA(terminal_kernel)
 
-        with pytest.raises(ValueError):
-            mc.compute_gdpt(n_components=1)
+        # auto-bumped to 2
+        res = mc.compute_gdpt(n_components=1)
+        assert isinstance(res, pd.Series)
+        np.testing.assert_array_equal(res.index, adata_large.obs_names)
 
     def test_compute_gdpt_cellname_iroot(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
