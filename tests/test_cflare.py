@@ -138,7 +138,7 @@ class TestCFLARE:
 
         mc = cr.tl.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
+        mc.compute_terminal_states(use=2, method="kmeans")
         mc.rename_terminal_states({"0": "foo", "1": "bar"})
 
         np.testing.assert_array_equal(mc.terminal_states.cat.categories, ["foo", "bar"])
@@ -348,7 +348,7 @@ class TestCFLARE:
 
         mc = cr.tl.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
+        mc.compute_terminal_states(use=2, method="kmeans")
         mc.compute_absorption_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
@@ -479,6 +479,7 @@ class TestCFLARE:
         state_annotation[10] = "terminal_2"
         state_annotation = state_annotation.astype("category")
         c._term_states = state_annotation
+        c._term_states_colors = np.array(["#000000", "#ffffff"])
 
         # compute absorption probabilities
         c.compute_absorption_probabilities()

@@ -791,11 +791,11 @@ class TestGPCCA:
 
         key = Key.varm.lineage_drivers(False)
         for lineage in ["0", "1"]:
-            assert np.all(mc.adata.varm[key][f"{lineage} corr"] >= -1.0)
-            assert np.all(mc.adata.varm[key][f"{lineage} corr"] <= 1.0)
+            assert np.all(mc.adata.varm[key][f"{lineage}_corr"] >= -1.0)
+            assert np.all(mc.adata.varm[key][f"{lineage}_corr"] <= 1.0)
 
-            assert np.all(mc.adata.varm[key][f"{lineage} qval"] >= 0)
-            assert np.all(mc.adata.varm[key][f"{lineage} qval"] <= 1.0)
+            assert np.all(mc.adata.varm[key][f"{lineage}_qval"] >= 0)
+            assert np.all(mc.adata.varm[key][f"{lineage}_qval"] <= 1.0)
 
     def test_plot_lineage_drivers_not_computed(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
