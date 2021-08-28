@@ -96,8 +96,7 @@ def lineage_drivers(
     confidence_level: float = 0.95,
     n_perms: int = 1000,
     seed: Optional[int] = None,
-    return_drivers: bool = True,
-    **kwargs,
+    **kwargs: Any,
 ) -> Optional[pd.DataFrame]:
     """
     %(lineage_drivers.full_desc)s
@@ -136,6 +135,5 @@ def lineage_drivers(
         confidence_level=confidence_level,
         n_perms=n_perms,
         seed=seed,
-        return_drivers=return_drivers,
         **kwargs,
     )

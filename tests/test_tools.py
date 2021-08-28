@@ -1,5 +1,3 @@
-from typing import Optional, Sequence
-
 import pytest
 
 import cellrank as cr
@@ -44,56 +42,17 @@ class TestLineageDrivers:
 
         bwd = False
         key = Key.varm.lineage_drivers(bwd)
-        direction = Key.where(bwd)
         names = adata_cflare.obsm[Key.obsm.abs_probs(bwd)].names
 
         if use_raw:
             adata_cflare = adata_cflare.raw
         assert isinstance(adata_cflare.varm[key], pd.DataFrame)
         for name in names:
-            assert np.all(adata_cflare.varm[key][f"{direction} {name} corr"] >= -1.0)
-            assert np.all(adata_cflare.varm[key][f"{direction} {name} corr"] <= 1.0)
+            assert np.all(adata_cflare.varm[key][f"{name}_corr"] >= -1.0)
+            assert np.all(adata_cflare.varm[key][f"{name}_corr"] <= 1.0)
 
-            assert np.all(adata_cflare.varm[key][f"{direction} {name} qval"] >= 0)
-            assert np.all(adata_cflare.varm[key][f"{direction} {name} qval"] <= 1.0)
-
-    @pytest.mark.parametrize("lineages", [None, ["0"], ["0, 1"]])
-    def test_return_drivers(self, adata_cflare, lineages: Optional[Sequence[str]]):
-        cr.tl.terminal_states(adata_cflare, n_states=3)
-        cr.tl.lineages(adata_cflare)
-        res = cr.tl.lineage_drivers(
-            adata_cflare, return_drivers=True, use_raw=False, lineages=lineages
-        )
-        exp_lineages = adata_cflare.obsm["to_terminal_states"]
-        if lineages is not None:
-            exp_lineages = exp_lineages[lineages]
-        exp_lineages = exp_lineages.names
-
-        assert isinstance(res, pd.DataFrame)
-        assert res.shape[0] == adata_cflare.n_vars
-
-        for name in exp_lineages:
-            assert np.all(adata_cflare.var[f"to {name} corr"] >= -1.0)
-            assert np.all(adata_cflare.var[f"to {name} corr"] <= 1.0)
-            # res is sorted
-            np.testing.assert_allclose(
-                adata_cflare.var[f"to {name} corr"],
-                res[f"{name} corr"].loc[adata_cflare.var_names],
-            )
-
-            assert np.all(res[f"{name} pval"] >= 0)
-            assert np.all(res[f"{name} pval"] <= 1.0)
-
-            assert np.all(adata_cflare.var[f"to {name} qval"] >= 0)
-            assert np.all(adata_cflare.var[f"to {name} qval"] <= 1.0)
-            # res is sorted
-            np.testing.assert_allclose(
-                adata_cflare.var[f"to {name} qval"],
-                res[f"{name} qval"].loc[adata_cflare.var_names],
-            )
-
-            assert np.all(res[f"{name} corr"] >= res[f"{name} ci low"])
-            assert np.all(res[f"{name} corr"] <= res[f"{name} ci high"])
+            assert np.all(adata_cflare.varm[key][f"{name}_qval"] >= 0)
+            assert np.all(adata_cflare.varm[key][f"{name}_qval"] <= 1.0)
 
     def test_invalid_mode(self, adata_cflare: AnnData):
         cr.tl.lineages(adata_cflare)
@@ -188,8 +147,8 @@ class TestLineageDrivers:
         )
 
         for name in ["0", "1"]:
-            assert np.all(res_narrow[f"{name} ci low"] >= res_wide[f"{name} ci low"])
-            assert np.all(res_narrow[f"{name} ci high"] <= res_wide[f"{name} ci high"])
+            assert np.all(res_narrow[f"{name}_ci_low"] >= res_wide[f"{name}_ci_low"])
+            assert np.all(res_narrow[f"{name}_ci_high"] <= res_wide[f"{name}_ci_high"])
 
 
 class TestRootFinal:
