@@ -1,6 +1,6 @@
 from typing import Any, Union, Optional, Sequence
 
-from copy import deepcopy
+from copy import copy, deepcopy
 from collections import Iterable
 
 from scanpy import logging as logg
@@ -15,8 +15,14 @@ class SafeGetter:
         self._allowed = allowed
 
         # TODO: better way?
-        # deepcopy to be safe (e.g. `_shadow_adata`)
-        self._dict = deepcopy(obj.__dict__)
+        self._dict = copy(obj.__dict__)
+        if "_shadow_adata" in self._dict:
+            # deepcopy `_shadow_adata` to easily revert changes
+            # do not run deepcopy on the full `__dict__`: if an
+            # incomplete read occurs, Estimator.from_adata(adata).adata
+            # will not be supplied adata
+            # silently assumes readers do not modify the adata
+            self._dict["_shadow_adata"] = deepcopy(self._dict["_shadow_adata"])
 
     def __enter__(self) -> "SafeGetter":
         return self
@@ -26,8 +32,8 @@ class SafeGetter:
         self._exc = exc_type
         # TODO: log properly
         if not self.ok:
-            logg.warning(
-                f"TODO: lower verbosity. The estimator will be incompletely initialized, reason: {exc_type(exc_val)}"
+            logg.debug(
+                f"The estimator will be incompletely initialized, reason: {exc_type(exc_val)}"
             )
             self._obj.__dict__ = self._dict
             return self._exc in self._allowed

@@ -37,8 +37,7 @@ def _check_compute_macro(mc: cr.tl.estimators.GPCCA) -> None:
     if "stationary_dist" in mc.eigendecomposition:  # one state
         assert isinstance(mc.macrostates_memberships, cr.tl.Lineage)
         assert mc.macrostates_memberships.shape[1] == 1
-        # TODO: is this correct?
-        np.testing.assert_array_almost_equal(mc.macrostates_memberships.X.sum(), 1.0)
+        np.testing.assert_allclose(mc.macrostates_memberships.X.sum(), 1.0)
 
         assert mc.schur_matrix is None
         assert mc.schur_vectors is None
@@ -48,7 +47,7 @@ def _check_compute_macro(mc: cr.tl.estimators.GPCCA) -> None:
     else:
         assert isinstance(mc.macrostates_memberships, cr.tl.Lineage)
         if mc.macrostates_memberships.shape[1] > 1:
-            np.testing.assert_array_almost_equal(mc.macrostates_memberships.sum(1), 1.0)
+            np.testing.assert_allclose(mc.macrostates_memberships.sum(1), 1.0)
 
         assert isinstance(mc.schur_matrix, np.ndarray)
         assert isinstance(mc.schur_vectors, np.ndarray)
@@ -505,7 +504,7 @@ class TestGPCCA:
 
         np.testing.assert_array_equal(mc.terminal_states.cat.categories, ["foo", "bar"])
         np.testing.assert_array_equal(
-            mc.terminal_states_probabilities.names, ["foo", "bar"]
+            mc.terminal_states_memberships.names, ["foo", "bar"]
         )
 
     def test_set_terminal_states_from_macrostates_no_cells(self, adata_large: AnnData):

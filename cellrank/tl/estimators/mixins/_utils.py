@@ -158,7 +158,8 @@ def _plot_continuous(
 
     _data_X = _data.X  # list(_data.T) behaves differently than a numpy.array
     if _data_X.shape[1] == 1:
-        same_plot = False  # color grad looks empty
+        # https://github.com/theislab/scvelo/issues/673
+        same_plot = False
         if np.allclose(_data_X, 1.0):
             # matplotlib shows even tiny perturbations in the colormap
             _data_X = np.ones_like(_data_X)
@@ -185,7 +186,6 @@ def _plot_continuous(
     elif mode == "embedding":
         kwargs.setdefault("legend_loc", "on data")
         if same_plot:
-            # TOOO: create an scvelo issue
             if color:
                 logg.warning("Ignoring `cluster_key` when `mode='embedding'` and `same_plot=True`")
             title = [Key.initial(self.backward)] if title is None else title
@@ -199,9 +199,8 @@ def _plot_continuous(
     # TODO: can this even happen now?
     # e.g. a stationary distribution
     if is_singleton and not np.allclose(_data_X, 1.0):
-        # TODO: maybe use always?
+        # TODO: maybe use always instead of max scale above?
         kwargs.setdefault("perc", [0, 95])
-        kwargs["color"] = _data_X
         _ = kwargs.pop("color_gradients", None)
 
     scv.pl.scatter(
@@ -221,6 +220,9 @@ def _plot_dispatcher(
     """TODO."""
     # TODO: expand kwargs for autocomplete
     if discrete:
+        _ = kwargs.pop("mode", None)
+        _ = kwargs.pop("time_key", None)
+
         return _plot_discrete(self, *args, **kwargs)
     return _plot_continuous(self, *args, **kwargs)
 

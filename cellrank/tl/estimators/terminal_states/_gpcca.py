@@ -292,7 +292,11 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             states, colors, probs, memberships, params=kwargs.pop("params", {})
         )
         if rename:
-            self.rename_terminal_states(names)
+            # TODO: remove this Lineage behavior
+            # access lineage renames join states, e.g. 'Alpha, Beta' becomes 'Alpha or Beta' + whitespace stripping
+            self.rename_terminal_states(
+                dict(zip(self.terminal_states.cat.categories, names.values()))
+            )
 
     def rename_terminal_states(self, new_names: Mapping[str, str]) -> None:
         """TODO: docrep."""
@@ -1007,8 +1011,9 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
             self._set(obj=self._shadow_adata.uns, key=Key.uns.coarse(self.backward), value=tmat)
 
-        if not sg.ok:
-            return False
+        # TODO: reintroduce this in 2.0 - this is done for high-level plotting only
+        # if not sg.ok:
+        #    return False
 
         if not super()._read_from_adata(adata, **kwargs):
             return False

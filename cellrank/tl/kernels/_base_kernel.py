@@ -224,7 +224,7 @@ class KernelExpression(Pickleable, ABC):
     def _maybe_compute_cond_num(self) -> None:
         """Optionally compute condition number."""
         if self._compute_cond_num and self._cond_num is None:
-            logg.debug(f"Computing condition number")
+            logg.debug("Computing condition number")
             self._cond_num = np.linalg.cond(
                 self._transition_matrix.toarray()
                 if issparse(self._transition_matrix)
@@ -232,7 +232,7 @@ class KernelExpression(Pickleable, ABC):
             )
             if self._cond_num > _cond_num_tolerance:
                 logg.warning(
-                    f"`{repr(self)}` may be ill-conditioned, its condition number is `{self._cond_num:.2e}`"
+                    f"Transition matrix may be ill-conditioned, its condition number is `{self._cond_num:.2e}`"
                 )
             else:
                 logg.info(f"Condition number is `{self._cond_num:.2e}`")

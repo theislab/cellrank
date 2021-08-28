@@ -207,7 +207,7 @@ class LinDriversMixin(AbsProbsMixin):
             data = adata_comp.layers[layer]
             var_names = adata_comp.var_names
 
-        start = logg.info(
+        start = logg.debug(
             f"Computing correlations for lineages `{sorted(lineages)}` restricted to clusters `{clusters}` in "
             f"layer `{'X' if layer is None else layer}` with `use_raw={use_raw}`"
         )

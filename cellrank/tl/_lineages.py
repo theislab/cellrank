@@ -5,9 +5,7 @@ from cellrank import logging as logg
 from cellrank._key import Key
 from cellrank.ul._docs import d
 from cellrank.tl._utils import TestMethod, _deprecate
-from cellrank.tl.kernels import PrecomputedKernel
-from cellrank.tl.estimators import GPCCA
-from cellrank.tl.kernels._precomputed_kernel import DummyKernel
+from cellrank.tl.estimators import CFLARE
 
 import pandas as pd
 
@@ -53,31 +51,25 @@ def lineages(
         Depending on ``copy`` and ``return_estimator``, either updates the existing ``adata`` object,
         returns its copy or returns the estimator.
     """
-
-    lin_key = Key.obsm.abs_probs(backward)
-    fs_key = Key.obs.term_states(backward)
-    fs_key_pretty = fs_key.replace("_", " ")
+    if copy:
+        adata = adata.copy()
 
     try:
-        pk = PrecomputedKernel(adata=adata, backward=backward)
+        mc = CFLARE.from_adata(adata, obsp_key=Key.uns.kernel(backward))
+        assert mc.adata is adata
     except KeyError as e:
         raise RuntimeError(
             f"Compute transition matrix first as `cellrank.tl.transition_matrix(..., backward={backward})`."
         ) from e
 
-    start = logg.info(f"Computing lineage probabilities towards {fs_key_pretty}")
-    mc = GPCCA(
-        pk, read_from_adata=True, inplace=not copy
-    )  # GPCCA is more general than CFLARE, in terms of what is saves
     if mc.terminal_states is None:
+        fs_key = Key.obs.term_states(backward)
         raise RuntimeError(
             f"Compute the states first as `cellrank.tl.{fs_key}(..., backward={backward})`."
         )
 
     # compute the absorption probabilities
     mc.compute_absorption_probabilities(**kwargs)
-
-    logg.info(f"Adding lineages to `adata.obsm[{lin_key!r}]`\n    Finish", time=start)
 
     return mc.adata if copy else mc if return_estimator else None
 
@@ -97,7 +89,7 @@ def lineage_drivers(
     n_perms: int = 1000,
     seed: Optional[int] = None,
     **kwargs: Any,
-) -> Optional[pd.DataFrame]:
+) -> pd.DataFrame:
     """
     %(lineage_drivers.full_desc)s
 
@@ -117,8 +109,7 @@ def lineage_drivers(
     """  # noqa: D400
 
     # create dummy kernel and estimator
-    pk = DummyKernel(adata, backward=backward)
-    g = GPCCA(pk, read_from_adata=True, write_to_adata=False)
+    g = CFLARE.from_adata(adata, obsp_key=Key.uns.kernel(backward))
     if g.absorption_probabilities is None:
         raise RuntimeError(
             f"Compute absorption probabilities first as `cellrank.tl.lineages(..., backward={backward})`."

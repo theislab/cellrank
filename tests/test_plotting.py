@@ -2622,7 +2622,7 @@ class TestLineages:
 
     @compare()
     def test_scvelo_lineages_subset(self, adata: AnnData, fpath: str):
-        cr.pl.lineages(adata, cluster_key="clusters", dpi=DPI, save=fpath)
+        cr.pl.lineages(adata, color="clusters", dpi=DPI, save=fpath)
 
 
 class TestHighLvlStates:

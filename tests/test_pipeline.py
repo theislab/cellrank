@@ -23,7 +23,7 @@ def _assert_has_all_keys(adata: AnnData, bwd: bool = False) -> None:
     assert isinstance(abs_probs, cr.tl.Lineage)
     np.testing.assert_array_equal(abs_probs.names, adata.obs[key].cat.categories)
     np.testing.assert_array_equal(abs_probs.colors, adata.uns[Key.uns.colors(key)])
-    np.testing.assert_allclose(abs_probs.X.sum(1), 1.0)
+    np.testing.assert_allclose(abs_probs.X.sum(1), 1.0, rtol=1e-3)
 
     # drivers
     assert isinstance(adata.varm[Key.varm.lineage_drivers(bwd)], pd.DataFrame)
@@ -32,9 +32,9 @@ def _assert_has_all_keys(adata: AnnData, bwd: bool = False) -> None:
 
 class TestHighLevelPipeline:
     def test_plot_states_not_computed(self, adata: AnnData):
-        with pytest.raises(RuntimeError):
+        with pytest.raises(KeyError):
             cr.pl.initial_states(adata)
-        with pytest.raises(RuntimeError):
+        with pytest.raises(KeyError):
             cr.pl.terminal_states(adata)
 
     def test_write_transition_matrix(self, adata: AnnData):
@@ -47,7 +47,7 @@ class TestHighLevelPipeline:
     def test_states_no_precomputed_transition_matrix(self, adata: AnnData):
         cr.tl.terminal_states(adata, key="foo")
 
-        np.testing.assert_allclose(adata.obsp[Key.uns.kernel(False)].X.sum(1), 1.0)
+        np.testing.assert_allclose(adata.obsp[Key.uns.kernel(False)].A.sum(1), 1.0)
 
     def test_states_use_precomputed_transition_matrix(self, adata: AnnData):
         cr.tl.transition_matrix(adata, key="foo")

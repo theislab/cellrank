@@ -6,7 +6,6 @@ from cellrank._key import Key
 from cellrank.ul._docs import d
 from cellrank.pl._utils import AnnData
 from cellrank.tl.estimators import GPCCA
-from cellrank.tl.kernels._precomputed_kernel import DummyKernel
 
 
 @d.dedent
@@ -14,7 +13,7 @@ def lineages(
     adata: AnnData,
     lineages: Optional[Union[str, Sequence[str]]] = None,
     backward: bool = False,
-    cluster_key: Optional[str] = None,
+    color: Optional[str] = None,
     mode: Literal["embedding", "time"] = "embedding",
     time_key: str = "latent_time",
     **kwargs: Any,
@@ -33,7 +32,7 @@ def lineages(
     lineages
         Plot only these lineages. If `None`, plot all lineages.
     %(backward)s
-    cluster_key
+    color
         If given, plot cluster annotations left of the lineage probabilities.
     %(time_mode)s
     time_key
@@ -47,17 +46,17 @@ def lineages(
     %(just_plots)s
     """
 
-    pk = DummyKernel(adata, backward=backward)
-    mc = GPCCA(pk)
+    mc = GPCCA.from_adata(adata, obsp_key=Key.uns.kernel(backward))
     if mc.absorption_probabilities is None:
         raise RuntimeError(
             f"Compute absorption probabilities first as `cellrank.tl.lineages(..., backward={backward})`."
         )
 
     # plot using the MC object
+    color = kwargs.pop("cluster_key", color)
     mc.plot_absorption_probabilities(
         lineages=lineages,
-        cluster_key=cluster_key,
+        color=color,
         mode=mode,
         time_key=time_key,
         **kwargs,
@@ -89,8 +88,7 @@ def lineage_drivers(
     %(just_plots)s
     """
 
-    pk = DummyKernel(adata, backward=backward)
-    mc = GPCCA(pk)
+    mc = GPCCA.from_adata(adata, obsp_key=Key.uns.kernel(backward))
 
     if use_raw and adata.raw is None:
         logg.warning("No raw attribute set. Using `use_raw=False`")

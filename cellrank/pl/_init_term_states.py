@@ -3,9 +3,9 @@ from typing import Union, Optional, Sequence
 from typing_extensions import Literal
 
 from anndata import AnnData
+from cellrank._key import Key
 from cellrank.ul._docs import d, _initial, _terminal, inject_docs
 from cellrank.tl.estimators import GPCCA
-from cellrank.tl.kernels._precomputed_kernel import DummyKernel
 
 _find_docs = """\
 Plot {direction} states uncovered by :class:`cellrank.tl.{fn_name}`.
@@ -39,14 +39,14 @@ def _initial_terminal(
     backward: bool = False,
     discrete: bool = False,
     states: Optional[Union[str, Sequence[str]]] = None,
-    cluster_key: Optional[str] = None,
+    color: Optional[str] = None,
     mode: Literal["embedding", "time"] = "embedding",
     time_key: str = "latent_time",
     **kwargs,
 ) -> None:
 
-    pk = DummyKernel(adata=adata, backward=backward)
-    mc = GPCCA(pk, read_from_adata=True, write_to_adata=False)
+    mc = GPCCA.from_adata(adata, obsp_key=Key.uns.kernel(backward))
+    color = kwargs.pop("cluster_key", color)
 
     if mc.terminal_states is None:
         raise RuntimeError(
@@ -81,7 +81,7 @@ def _initial_terminal(
 
     mc.plot_terminal_states(
         lineages=states,
-        cluster_key=cluster_key,
+        color=color,
         mode=mode,
         time_key=time_key,
         discrete=discrete,
@@ -101,7 +101,7 @@ def initial_states(  # noqa: D103
     adata: AnnData,
     discrete: bool = False,
     states: Optional[Union[str, Sequence[str]]] = None,
-    cluster_key: Optional[str] = None,
+    color: Optional[str] = None,
     mode: Literal["embedding", "time"] = "embedding",
     time_key: str = "latent_time",
     **kwargs,
@@ -112,7 +112,7 @@ def initial_states(  # noqa: D103
         backward=True,
         discrete=discrete,
         states=states,
-        cluster_key=cluster_key,
+        color=color,
         mode=mode,
         time_key=time_key,
         **kwargs,
@@ -131,7 +131,7 @@ def terminal_states(  # noqa: D103
     adata: AnnData,
     discrete: bool = False,
     states: Optional[Union[str, Sequence[str]]] = None,
-    cluster_key: Optional[str] = None,
+    color: Optional[str] = None,
     mode: Literal["embedding", "time"] = "embedding",
     time_key: str = "latent_time",
     **kwargs,
@@ -142,7 +142,7 @@ def terminal_states(  # noqa: D103
         backward=False,
         discrete=discrete,
         states=states,
-        cluster_key=cluster_key,
+        color=color,
         mode=mode,
         time_key=time_key,
         **kwargs,

@@ -30,7 +30,7 @@ class TestLineages:
 
 class TestLineageDrivers:
     def test_no_abs_probs(self, adata: AnnData):
-        with pytest.raises(RuntimeError):
+        with pytest.raises(KeyError):
             cr.tl.lineage_drivers(adata)
 
     @pytest.mark.parametrize("use_raw", [False, True])
@@ -71,7 +71,6 @@ class TestLineageDrivers:
         res_a = cr.tl.lineage_drivers(
             adata_cflare,
             use_raw=False,
-            return_drivers=True,
             n_perms=10,
             n_jobs=1,
             seed=0,
@@ -80,7 +79,6 @@ class TestLineageDrivers:
         res_b = cr.tl.lineage_drivers(
             adata_cflare,
             use_raw=False,
-            return_drivers=True,
             n_perms=10,
             n_jobs=1,
             seed=0,
@@ -89,7 +87,6 @@ class TestLineageDrivers:
         res_diff_seed = cr.tl.lineage_drivers(
             adata_cflare,
             use_raw=False,
-            return_drivers=True,
             n_perms=10,
             n_jobs=1,
             seed=1,
@@ -108,7 +105,6 @@ class TestLineageDrivers:
         res_a = cr.tl.lineage_drivers(
             adata_cflare,
             use_raw=False,
-            return_drivers=True,
             n_perms=10,
             n_jobs=2,
             backend="threading",
@@ -118,7 +114,6 @@ class TestLineageDrivers:
         res_b = cr.tl.lineage_drivers(
             adata_cflare,
             use_raw=False,
-            return_drivers=True,
             n_perms=10,
             n_jobs=2,
             backend="threading",
@@ -136,13 +131,11 @@ class TestLineageDrivers:
         res_narrow = cr.tl.lineage_drivers(
             adata_cflare,
             use_raw=False,
-            return_drivers=True,
             confidence_level=0.95,
         )
         res_wide = cr.tl.lineage_drivers(
             adata_cflare,
             use_raw=False,
-            return_drivers=True,
             confidence_level=0.99,
         )
 
