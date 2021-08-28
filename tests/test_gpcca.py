@@ -707,9 +707,9 @@ class TestGPCCA:
 
         mc = cr.tl.estimators.GPCCA(terminal_kernel)
 
-        mc.compute_gdpt(method="krylov")
-
-        assert "gdpt_pseudotime" in mc.adata.obs
+        res = mc.compute_gdpt(method="krylov")
+        assert isinstance(res, pd.Series)
+        np.testing.assert_array_equal(res.index, adata_large.obs_names)
 
     def test_compute_gdpt_no_iroot(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -732,18 +732,6 @@ class TestGPCCA:
         with pytest.raises(ValueError):
             mc.compute_gdpt(n_components=1)
 
-    def test_compute_gdpt_cellname_key_added(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
-        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        terminal_kernel = 0.8 * vk + 0.2 * ck
-
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
-        mc.compute_schur(n_components=10, method="krylov")
-
-        mc.compute_gdpt(key_added="foobar")
-
-        assert "foobar" in mc.adata.obs
-
     def test_compute_gdpt_cellname_iroot(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
@@ -752,9 +740,9 @@ class TestGPCCA:
         mc = cr.tl.estimators.GPCCA(terminal_kernel)
         mc.adata.uns["iroot"] = mc.adata.obs_names[0]
 
-        mc.compute_gdpt()
-
-        assert "gdpt_pseudotime" in mc.adata.obs
+        res = mc.compute_gdpt()
+        assert isinstance(res, pd.Series)
+        np.testing.assert_array_equal(res.index, adata_large.obs_names)
 
     def test_compute_lineage_drivers_invalid_lineages(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
