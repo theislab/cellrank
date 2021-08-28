@@ -93,7 +93,7 @@ def lineage_drivers(
     mc = GPCCA(pk)
 
     if use_raw and adata.raw is None:
-        logg.warning("No raw attribute set. Using `adata.var` instead")
+        logg.warning("No raw attribute set. Using `use_raw=False`")
         use_raw = False
 
     key = Key.varm.lineage_drivers(backward)

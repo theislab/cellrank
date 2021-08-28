@@ -422,7 +422,7 @@ class TestCFLARE:
 
         mc_fwd = cr.tl.estimators.CFLARE(terminal_kernel)
         mc_fwd.compute_eigendecomposition()
-        mc_fwd.compute_terminal_states(use=3)
+        mc_fwd.compute_terminal_states(use=3, method="kmeans")
 
         arcs = ["0", "2"]
         arc_colors = [
@@ -473,12 +473,8 @@ class TestCFLARE:
             ]
         )
 
-        # initialise a pre-computed kernel and CFLARE estimator object
-        c = cr.tl.estimators.CFLARE(
-            cellrank.tl.kernels._precomputed_kernel.PrecomputedKernel(transition_matrix)
-        )
+        c = cr.tl.estimators.CFLARE(cr.tl.kernels.PrecomputedKernel(transition_matrix))
 
-        # define the set of macrostates
         state_annotation = pd.Series(index=range(len(c)))
         state_annotation[7] = "terminal_1"
         state_annotation[10] = "terminal_2"
@@ -491,7 +487,6 @@ class TestCFLARE:
             state_annotation.isna()
         ]
 
-        # check whether these two agree
         np.allclose(absorption_probabilities_query, absorption_probabilities_reference)
 
     def test_manual_approx_rc_set(self, adata_large):
