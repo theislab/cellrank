@@ -2,6 +2,7 @@ from typing import Any, Dict, Tuple, Union, Mapping, Callable, Optional, Sequenc
 from typing_extensions import Literal
 
 from abc import ABC, abstractmethod
+from copy import copy
 from copy import copy as copy_
 from copy import deepcopy
 from inspect import Parameter, signature, getmembers, currentframe
@@ -226,6 +227,26 @@ class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
         obj._read_from_adata(adata)
 
         return obj
+
+    def copy(self, *, deep: bool = False) -> "BaseEstimator":
+        k = deepcopy(self.kernel) if deep else copy(self.kernel)
+        res = type(self)(k)
+        for k, v in self.__dict__.items():
+            if isinstance(v, Mapping):
+                res.__dict__[k] = deepcopy(v)
+            elif k not in ("_kernel", "_adata"):
+                res.__dict__[k] = deepcopy(v) if deep else copy(v)
+
+        return res
+
+    def __copy__(self) -> "BaseEstimator":
+        return self.copy(deep=False)
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}[n={len(self)}, kernel={repr(self.kernel)}]"
+
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__}[n={len(self)}, kernel={str(self.kernel)}]"
 
     @property
     def params(self) -> Dict[str, Any]:
