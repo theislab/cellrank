@@ -1032,6 +1032,122 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         discrete="terminal_states", continuous="terminal_states_memberships"
     )
 
+    # TODO: revisit/refactor/remove?
+    @d.dedent
+    def _compute_initial_states(self, n_states: int = 1, n_cells: int = 30) -> None:
+        """
+        Compute initial states from macrostates.
+
+        Parameters
+        ----------
+        n_states
+            Number of initial states.
+        %(n_cells)s
+
+        Returns
+        -------
+        %(set_initial_states_from_macrostates.returns)s
+        """
+
+        if n_states <= 0:
+            raise ValueError(f"Expected `n_states` to be positive, found `{n_states}`.")
+
+        if n_cells <= 0:
+            raise ValueError(f"Expected `n_cells` to be positive, found `{n_cells}`.")
+
+        probs = self.macrostates_memberships
+        if probs is None:
+            raise RuntimeError("Compute macrostates first as `.compute_macrostates()`.")
+
+        if n_states > probs.shape[1]:
+            raise ValueError(
+                f"Requested `{n_states}` initial states, but only `{probs.shape[1]}` macrostates have been computed."
+            )
+
+        if probs.shape[1] == 1:
+            self._set_initial_states_from_macrostates(n_cells=n_cells)
+            return
+
+        stat_dist = self.coarse_stationary_distribution
+        if stat_dist is None:
+            raise RuntimeError("No coarse-grained stationary distribution found.")
+
+        self._set_initial_states_from_macrostates(
+            stat_dist[np.argsort(stat_dist)][:n_states].index, n_cells=n_cells
+        )
+
+    @d.get_sections(base="set_initial_states_from_macrostates", sections=["Returns"])
+    @d.dedent
+    def _set_initial_states_from_macrostates(
+        self,
+        names: Optional[Union[str, Sequence[str]]] = None,
+        n_cells: int = 30,
+    ) -> None:
+        """
+        Manually select initial states from macrostates.
+
+        Note that no check is performed to ensure initial and terminal states are distinct.
+
+        Parameters
+        ----------
+        names
+            Names of the macrostates to be marked as initial states. Multiple states can be combined using `','`,
+            such as `["Alpha, Beta", "Epsilon"]`.
+        %(n_cells)s
+
+        Returns
+        -------
+        # TODO: rephrase + verify
+        Nothing, just writes to :attr:`anndata.AnnData.obs`:
+
+            - `'initial_states'` - top ``n_cells`` from each initial state.
+            - `'initial_states_probs'` - probability of being an initial state.
+        """
+
+        if not isinstance(n_cells, int):
+            raise TypeError(
+                f"Expected `n_cells` to be of type `int`, found `{type(n_cells).__name__!r}`."
+            )
+
+        if n_cells <= 0:
+            raise ValueError(f"Expected `n_cells` to be positive, found `{n_cells}`.")
+
+        probs = self.macrostates_memberships
+        if probs is None:
+            raise RuntimeError("Compute macrostates first as `.compute_macrostates()`.")
+        elif probs.shape[1] == 1:
+            categorical = self._create_states(probs, n_cells=n_cells)
+            scaled = probs / probs.max()
+        else:
+            if names is None:
+                names = probs.names
+            if isinstance(names, str):
+                names = [names]
+
+            probs = probs[list(names)]
+            categorical = self._create_states(probs, n_cells=n_cells)
+            probs /= probs.max(0)
+
+            # compute the aggregated probability of being a initial/terminal state (no matter which)
+            scaled = probs.X.max(1)
+
+        self._write_initial_states(membership=probs, probs=scaled, cats=categorical)
+
+    def _write_initial_states(
+        self, membership: Lineage, probs: pd.Series, cats: pd.Series, time=None
+    ) -> None:
+        key = Key.obs.term_states(not self.backward)
+
+        self.adata.obs[key] = cats
+        self.adata.obs[Key.obs.probs(key)] = probs
+
+        self.adata.uns[Key.uns.colors(key)] = membership.colors
+
+        logg.info(
+            f"Adding `adata.obs[{key!r}]`\n       `adata.obs[{Key.uns.colors(key)!r}]`\n",
+            time=time,
+        )
+
     @property
     def macrostates(self) -> Optional[pd.Series]:
         """TODO."""
