@@ -176,6 +176,7 @@ class TestHighLevelPipeline:
 
             cr.tl.lineages(adata, backward=False)
             cr.pl.lineages(adata)
+            cr.tl.lineage_drivers(adata)
 
             _assert_has_all_keys(adata)
             probs = adata.obsm[Key.obsm.abs_probs(False)]
