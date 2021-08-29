@@ -244,17 +244,16 @@ def register_plotter(
         disc: Optional[bool] = kwargs.pop("discrete", None)
         disc = continuous is None if disc is None else disc
 
-        if disc and discrete is None:
-            # TODO: maybe lower the level
+        if disc and (discrete is None or getattr(instance, discrete) is None):
             logg.warning(f"Unable to plot `.{continuous}` in `discrete` mode. Using `continuous` mode")
             disc = False
-        if not disc and continuous is None:
+        if not disc and (continuous is None or getattr(instance, continuous) is None):
             logg.warning(f"Unable to plot `.{discrete}` in `continuous` mode. Using `discrete` mode")
             disc = True
         # fmt: on
 
         attr = discrete if disc else continuous
-        data = getattr(instance, attr)
+        data = getattr(instance, attr, None)
         if data is None:
             # prefer `continuous` for a prettier format
             attr = continuous if continuous is not None else discrete

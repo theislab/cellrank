@@ -225,16 +225,14 @@ def _read_graph_data(adata: AnnData, key: str) -> Union[np.ndarray, spmatrix]:
     adata
         Annotated data object.
     key
-        Key in ``adata.obsp``.
+        Key in :attr:`anndata.AnnData.obsp`.
 
     Returns
     -------
     :class:`numpy.ndarray` or :class:`scipy.sparse.spmatrix`
         The graph data.
     """
-
-    logg.debug(f"Reading key `{key!r}` from `adata.obsp`")
-    if key in adata.obsp.keys():
+    if key in adata.obsp:
         return adata.obsp[key]
 
     raise KeyError(f"Unable to find data in `adata.obsp[{key!r}]`.")

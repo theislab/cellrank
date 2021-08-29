@@ -49,7 +49,7 @@ class PrecomputedKernel(Kernel):
 
         if transition_matrix is None:
             transition_matrix = Key.uns.kernel(backward)
-            logg.debug(f"Setting `obsp_key={transition_matrix!r}`")
+            logg.info(f"Accessing `adata.obsp[{transition_matrix!r}]`")
 
         if isinstance(transition_matrix, str):
             if adata is None:

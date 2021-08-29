@@ -206,7 +206,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
                 raise ValueError(f"Expected `n_states` to be positive, found `{n_states}`.")
         elif method == TermStatesMethod.STABILITY:
             if stability_threshold is None:
-                raise ValueError("Expected`stability_threshold != None` for `method='stability'`.")
+                raise ValueError("Expected `stability_threshold != None` for `method='stability'`.")
             stability = pd.Series(np.diag(coarse_T), index=coarse_T.columns)
             names = stability[stability.values >= stability_threshold].index
             self.set_terminal_states_from_macrostates(names, n_cells=n_cells, params=self._create_params())
@@ -1011,7 +1011,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
             self._set(obj=self._shadow_adata.uns, key=Key.uns.coarse(self.backward), value=tmat)
 
-        # TODO: reintroduce this in 2.0 - this is done for high-level plotting only
+        # TODO: reintroduce this in 2.0 - this is done for high-level plotting of init/term states only
         # if not sg.ok:
         #    return False
 

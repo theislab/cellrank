@@ -5,7 +5,7 @@ import cellrank.logging as logg
 from cellrank._key import Key
 from cellrank.ul._docs import d
 from cellrank.pl._utils import AnnData
-from cellrank.tl.estimators import GPCCA
+from cellrank.tl.estimators import CFLARE
 
 
 @d.dedent
@@ -46,7 +46,8 @@ def lineages(
     %(just_plots)s
     """
 
-    mc = GPCCA.from_adata(adata, obsp_key=Key.uns.kernel(backward))
+    # use CFLARE (no macrostates required)
+    mc = CFLARE.from_adata(adata, obsp_key=Key.uns.kernel(backward))
     if mc.absorption_probabilities is None:
         raise RuntimeError(
             f"Compute absorption probabilities first as `cellrank.tl.lineages(..., backward={backward})`."
@@ -88,7 +89,7 @@ def lineage_drivers(
     %(just_plots)s
     """
 
-    mc = GPCCA.from_adata(adata, obsp_key=Key.uns.kernel(backward))
+    mc = CFLARE.from_adata(adata, obsp_key=Key.uns.kernel(backward))
 
     if use_raw and adata.raw is None:
         logg.warning("No raw attribute set. Using `use_raw=False`")
