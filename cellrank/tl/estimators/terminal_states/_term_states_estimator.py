@@ -169,7 +169,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
 
             categories = _convert_to_categorical_series(categories, list(self.adata.obs_names))
         if not is_categorical_dtype(categories):
-            raise TypeError(f"Expected object to be `categorical`, found `{infer_dtype(categories).__name__!r}`.")
+            raise TypeError(f"Expected object to be `categorical`, found `{infer_dtype(categories)}`.")
 
         if existing is not None:
             categories = _merge_categorical_series(old=existing, new=categories)

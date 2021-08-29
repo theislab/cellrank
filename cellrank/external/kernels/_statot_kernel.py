@@ -2,6 +2,7 @@ from typing import Any, Union, Optional
 from typing_extensions import Literal
 
 from anndata import AnnData
+from cellrank._key import Key
 from cellrank.ul._docs import d
 from cellrank.tl.estimators import GPCCA
 from cellrank.tl.kernels._precomputed_kernel import DummyKernel
@@ -32,7 +33,7 @@ class StationaryOTKernel(OTKernel_, error=_error):
     %(adata)s
     terminal_states
         Categorical :class:`pandas.Series` where non-`NaN` values mark terminal states.
-        If `None`, terminal states are assumed to be already present in :attr:`adata` ``['terminal_states']``.
+        If `None`, terminal states are assumed to be present in :attr:`anndata.AnnData.obs` ``['terminal_states']``.
     g
         Key in :attr:`anndata.AnnData.obs` containing relative growth rates for cells or the array itself.
     cluster_key
@@ -51,9 +52,11 @@ class StationaryOTKernel(OTKernel_, error=_error):
         cluster_key: Optional[str] = None,
         **kwargs: Any,
     ):
-        if terminal_states is not None:
+        if isinstance(terminal_states, str):
+            adata.obs[Key.obs.term_states(bwd=False)] = adata.obs[terminal_states]
+        elif terminal_states is not None:
             dk = DummyKernel(adata, backward=False)
-            estim = GPCCA(dk, write_to_adata=True)
+            estim = GPCCA(dk)
             estim.set_terminal_states(terminal_states, cluster_key=cluster_key)
 
         try:
@@ -100,9 +103,9 @@ class StationaryOTKernel(OTKernel_, error=_error):
         method
             Choice of regularization. Valid options are:
 
-                - `'ent'`: entropy.
-                - `'quad'`: L2-norm.
-                - `'unbal'`: unbalanced transport (not yet implemented).
+                - `'ent'` - entropy.
+                - `'quad'` - L2-norm.
+                - `'unbal'` - unbalanced transport (not yet implemented).
 
         tol
             Relative tolerance for OT solver convergence.
