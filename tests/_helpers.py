@@ -251,10 +251,13 @@ def assert_estimators_equal(
     deep: bool = False,
 ) -> None:
     assert actual is not expected
-    if copy and deep:
-        assert actual.adata is not expected.adata
+    if copy:
+        if deep:
+            assert actual.adata is not expected.adata
+        else:
+            assert actual.adata is expected.adata
     else:
-        assert actual.adata is expected.adata
+        assert actual.adata is not expected.adata
     assert actual.kernel is not expected.kernel
     assert isinstance(actual.kernel, type(expected.kernel))
 
@@ -266,7 +269,9 @@ def assert_estimators_equal(
         actual.transition_matrix.A, expected.transition_matrix.A
     )
 
-    assert expected.__dict__.keys() == actual.__dict__.keys()
+    k1 = sorted(expected.__dict__.keys())
+    k2 = sorted(actual.__dict__.keys())
+    np.testing.assert_array_equal(k1, k2)
 
     for attr in expected.__dict__.keys():
         val2, val1 = getattr(actual, attr), getattr(expected, attr)

@@ -92,8 +92,8 @@ class IOMixin:
         with open(fname, "rb") as fin:
             obj = pickle.load(fin)
 
-        if hasattr(obj, "_adata"):
-            if isinstance(obj._adata, AnnData):
+        if hasattr(obj, "adata"):
+            if isinstance(obj.adata, AnnData):
                 if adata is not None:
                     logg.warning(
                         "Ignoring supplied `adata` object because it's already present"
@@ -106,9 +106,9 @@ class IOMixin:
                     "Please supply one as `adata=...`."
                 )
             try:
-                assert len(obj) == len(adata), "TODO."
-                # if hasattr(obj, "obs_names"):
-                #    adata = adata[obj.obs_names]
+                assert len(obj) == len(
+                    adata
+                ), f"Expected `adata` to be of length `{len(adata)}`, found `{len(obj)}`."
                 if copy or adata.is_view:
                     adata = adata.copy()
             except AssertionError as e:
@@ -118,7 +118,7 @@ class IOMixin:
             except KeyError as e:
                 raise KeyError(e) from None
 
-            obj._adata = adata
+            obj.adata = adata
             return obj
 
         return obj

@@ -6,7 +6,6 @@ from copy import copy
 from copy import copy as copy_
 from copy import deepcopy
 from inspect import Parameter, signature, getmembers, currentframe
-from pathlib import Path
 from contextlib import contextmanager
 
 from anndata import AnnData
@@ -21,7 +20,7 @@ import pandas as pd
 from scipy.sparse import spmatrix, csr_matrix
 
 
-class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
+class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
     def __init__(
         self,
         obj: Union[AnnData, np.ndarray, spmatrix, KernelExpression],
@@ -55,7 +54,7 @@ class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
                 f"or `anndata.AnnData`, got `{type(obj).__name__}`."
             )
 
-        super().__init__(adata=kernel.adata, kernel=kernel, **kwargs)
+        super().__init__(kernel=kernel, **kwargs)
 
         self._params: Dict[str, Any] = {}
         self._shadow_adata = AnnData(
@@ -138,10 +137,10 @@ class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
         else:
             adata = self.adata
             try:
-                self._adata = self._shadow_adata
+                self.adata = self._shadow_adata
                 yield
             finally:
-                self._adata = adata
+                self.adata = adata
 
     @property
     def _in_shadow(self) -> bool:
@@ -198,24 +197,15 @@ class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
         ekey = Key.uns.estimator(self.backward) + "_params"
         return dict(self.adata.uns.get(ekey, {}).get(key, {}))
 
-    @staticmethod
-    def read(
-        fname: Union[str, Path], adata: Optional[AnnData] = None, copy: bool = False
-    ) -> "BaseEstimator":
-        """TODO: docrep."""
-        obj: BaseEstimator = IOMixin.read(fname, adata, copy=copy)
-        obj.kernel.adata = adata
-
-        return obj
-
     def to_adata(self) -> AnnData:
         """TODO: docrep."""
         adata = self._shadow_adata.copy()
         try:
-            self.kernel.adata = adata
+            # kernel and estimator share the adata
+            self.adata = adata
             self.kernel.write_to_adata()
         finally:
-            self.kernel.adata = self.adata
+            self.adata = self.adata
         key = Key.uns.estimator(self.backward) + "_params"
         adata.uns[key] = deepcopy(self.params)
         return adata
@@ -223,10 +213,7 @@ class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
     @classmethod
     def from_adata(cls, adata: AnnData, obsp_key: str) -> "BaseEstimator":
         """TODO: docrep."""
-        obj = cls(adata, obsp_key=obsp_key)
-        obj._read_from_adata(adata)
-
-        return obj
+        return super().from_adata(adata, obsp_key=obsp_key)
 
     def copy(self, *, deep: bool = False) -> "BaseEstimator":
         k = deepcopy(self.kernel) if deep else copy(self.kernel)
@@ -234,7 +221,7 @@ class BaseEstimator(IOMixin, AnnDataMixin, KernelMixin, ABC):
         for k, v in self.__dict__.items():
             if isinstance(v, Mapping):
                 res.__dict__[k] = deepcopy(v)
-            elif k not in ("_kernel", "_adata"):
+            elif k != "_kernel":
                 res.__dict__[k] = deepcopy(v) if deep else copy(v)
 
         return res
