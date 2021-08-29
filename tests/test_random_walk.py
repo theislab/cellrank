@@ -65,15 +65,16 @@ class TestRandomWalk:
         assert res[-2] != 1
 
     def test_successive_hits(self, test_matrix_1: np.ndarray):
-        res = RandomWalk(test_matrix_1, stop_ixs=[1]).simulate_one(
-            max_iter=1000, seed=42, successive_hits=2
+        test_matrix_1[0, 0] = 0.2
+        test_matrix_1[0, 2] = 0.0
+        res = RandomWalk(test_matrix_1, stop_ixs=[0]).simulate_one(
+            max_iter=1000, seed=42, successive_hits=1
         )
 
         assert len(res) <= 1001
-        assert res[-1] == 1
-        assert res[-2] == 1
-        assert res[-3] == 1
-        assert res[-4] != 1
+        assert res[-1] == 0
+        assert res[-2] == 0
+        assert res[-3] != 0
 
     @pytest.mark.parametrize("n_jobs", [1, 2])
     @pytest.mark.parametrize("backend", ["threading", "loky"])
