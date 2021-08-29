@@ -560,12 +560,14 @@ class TestCFLARE:
 
 
 class TestCFLAREIO:
-    def test_copy(self, adata_cflare_fwd: Tuple[AnnData, cr.tl.estimators.CFLARE]):
+    @pytest.mark.parametrize("deep", [False, True])
+    def test_copy(
+        self, adata_cflare_fwd: Tuple[AnnData, cr.tl.estimators.CFLARE], deep: bool
+    ):
         _, mc1 = adata_cflare_fwd
-        # TODO
-        mc2 = mc1.copy()
+        mc2 = mc1.copy(deep=deep)
 
-        assert_estimators_equal(mc1, mc2, copy=True)
+        assert_estimators_equal(mc1, mc2, copy=True, deep=deep)
 
     def test_read(self, adata_cflare_fwd: Tuple[AnnData, cr.tl.estimators.CFLARE]):
         _, mc1 = adata_cflare_fwd

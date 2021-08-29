@@ -3,7 +3,6 @@ from typing import Tuple, Union, Optional
 import os
 import pytest
 from PIL import Image
-from sys import version_info
 from pathlib import Path
 
 import scanpy as sc
@@ -249,18 +248,15 @@ def assert_estimators_equal(
     expected: cr.tl.estimators.BaseEstimator,
     actual: cr.tl.estimators.BaseEstimator,
     copy: bool = False,
+    deep: bool = False,
 ) -> None:
     assert actual is not expected
-    assert actual.adata is not expected.adata
-    assert actual.kernel is not expected.kernel
-    if copy or version_info[:2] > (3, 6):
-        # pickling of Enums doesn't work in Python3.6
-        assert isinstance(actual.kernel, type(expected.kernel)), (
-            type(actual.kernel),
-            type(expected.kernel),
-        )
+    if copy and deep:
+        assert actual.adata is not expected.adata
     else:
-        assert isinstance(actual.kernel, cr.tl.kernels.PrecomputedKernel)
+        assert actual.adata is expected.adata
+    assert actual.kernel is not expected.kernel
+    assert isinstance(actual.kernel, type(expected.kernel))
 
     assert actual.adata.shape == expected.adata.shape
     assert actual.adata is actual.kernel.adata
@@ -292,10 +288,9 @@ def assert_estimators_equal(
                     np.testing.assert_array_equal(v2, v1)
                 else:
                     assert v2 == v1, (v2, v1, attr)
-        elif attr not in ("_kernel", "_gpcca"):
+        elif attr not in ("_kernel", "_gpcca", "_adata", "_shadow_adata"):
             assert val2 == val1, (val2, val1, attr)
-        elif copy or version_info[:2] > (3, 6):
-            # we can compare the kernel types, but for 3.6, it's saved as Precomputed
+        else:
             assert isinstance(val2, type(val1)), (val2, val1, attr)
 
 

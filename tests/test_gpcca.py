@@ -902,12 +902,14 @@ class TestGPCCA:
 
 
 class TestGPCCAIO:
-    def test_copy(self, adata_gpcca_fwd: Tuple[AnnData, cr.tl.estimators.GPCCA]):
+    @pytest.mark.parametrize("deep", [False, True])
+    def test_copy(
+        self, adata_gpcca_fwd: Tuple[AnnData, cr.tl.estimators.GPCCA], deep: bool
+    ):
         _, mc1 = adata_gpcca_fwd
-        # TODO
-        mc2 = mc1.copy()
+        mc2 = mc1.copy(deep=deep)
 
-        assert_estimators_equal(mc1, mc2, copy=True)
+        assert_estimators_equal(mc1, mc2, copy=True, deep=deep)
 
     def test_write_ext(self, adata_gpcca_fwd: Tuple[AnnData, cr.tl.estimators.GPCCA]):
         _, mc = adata_gpcca_fwd
