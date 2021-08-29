@@ -142,27 +142,3 @@ class PrecomputedKernel(Kernel):
 
     def __str__(self):
         return repr(self)
-
-
-@d.dedent
-class DummyKernel(PrecomputedKernel):
-    """
-    Kernel with 1s on the diagonal.
-
-    Parameters
-    ----------
-    %(adata)s
-    %(backward)s
-    """
-
-    def __init__(
-        self,
-        adata: AnnData,
-        backward: bool = False,
-    ):
-        super().__init__(
-            speye(adata.n_obs, format="csr"),
-            adata,
-            backward=backward,
-            compute_cond_num=False,
-        )
