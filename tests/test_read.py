@@ -1,6 +1,5 @@
 from typing import Tuple, Callable
 
-import pytest
 from pathlib import Path
 
 import scanpy as sc
@@ -22,14 +21,14 @@ def test_fwd():
 
             dirname = func.__name__
             path = tmpdir.mkdir(dirname).join("tmp.h5ad")
+            key = Key.obs.term_states(False)
 
-            key = Key.obsm.abs_probs(False)
             return func(
                 self,
                 adata,
                 path,
-                key,
-                adata.obsm[key].shape[1],
+                Key.obsm.abs_probs(False),
+                len(adata.obs[key].cat.categories),
             )
 
         return decorator
@@ -49,23 +48,8 @@ class TestRead:
         assert lin_key not in adata_new.obsm.keys()
 
     @test_fwd()
-    def test_no_names(self, adata: AnnData, path: Path, lin_key: str, n_lins: int):
-        names_key = "FIXME"  # TODO
-        del adata.uns[names_key]
-
-        sc.write(path, adata)
-        adata_new = cr.read(path)
-        lins = adata_new.obsm[lin_key]
-
-        assert isinstance(lins, Lineage)
-        np.testing.assert_array_equal(
-            lins.names, [f"Lineage {i}" for i in range(n_lins)]
-        )
-        np.testing.assert_array_equal(lins.names, adata_new.uns[names_key])
-
-    @test_fwd()
     def test_no_colors(self, adata: AnnData, path: Path, lin_key: str, n_lins: int):
-        colors_key = Key.uns.colors(lin_key)
+        colors_key = Key.uns.colors(Key.obs.term_states(False))
         del adata.uns[colors_key]
 
         sc.write(path, adata)
@@ -77,37 +61,10 @@ class TestRead:
         np.testing.assert_array_equal(lins.colors, adata_new.uns[colors_key])
 
     @test_fwd()
-    def test_wrong_names_length(
-        self, adata: AnnData, path: Path, lin_key: str, n_lins: int
-    ):
-        names_key = "FIXME"  # TODO
-        adata.uns[names_key] = list(adata.uns[names_key])
-        adata.uns[names_key] += ["foo", "bar", "baz"]
-
-        sc.write(path, adata)
-        adata_new = cr.read(path)
-        lins = adata_new.obsm[lin_key]
-
-        assert isinstance(lins, Lineage)
-        np.testing.assert_array_equal(
-            lins.names, [f"Lineage {i}" for i in range(n_lins)]
-        )
-        np.testing.assert_array_equal(lins.names, adata_new.uns[names_key])
-
-    @test_fwd()
-    def test_non_unique_names(self, adata: AnnData, path: Path, lin_key: str, _: int):
-        names_key = "FIXME"  # TODO
-        adata.uns[names_key][0] = adata.uns[names_key][1]
-
-        sc.write(path, adata)
-        with pytest.raises(ValueError):
-            _ = cr.read(path)
-
-    @test_fwd()
     def test_wrong_colors_length(
         self, adata: AnnData, path: Path, lin_key: str, n_lins: int
     ):
-        colors_key = Key.uns.colors(lin_key)
+        colors_key = Key.uns.colors(Key.obs.term_states(False))
         adata.uns[colors_key] = list(adata.uns[colors_key])
         adata.uns[colors_key] += [adata.uns[colors_key][0]]
 
@@ -123,7 +80,7 @@ class TestRead:
     def test_colors_not_colorlike(
         self, adata: AnnData, path: Path, lin_key: str, n_lins: int
     ):
-        colors_key = Key.uns.colors(lin_key)
+        colors_key = Key.uns.colors(Key.obs.term_states(False))
         adata.uns[colors_key][0] = "foo"
 
         sc.write(path, adata)
@@ -136,16 +93,14 @@ class TestRead:
 
     @test_fwd()
     def test_normal_run(self, adata: AnnData, path: Path, lin_key: str, n_lins: int):
-        # TODO
+        key = Key.obs.term_states(False)
         colors = _create_categorical_colors(10)[-n_lins:]
-        names = [f"foo {i}" for i in range(n_lins)]
-
-        adata.uns[Key.uns.colors(lin_key)] = colors
-        adata.uns["FIXME"] = names  # TODO
+        names = adata.obs[key].cat.categories
+        adata.uns[Key.uns.colors(key)] = colors
 
         sc.write(path, adata)
         adata_new = cr.read(path)
         lins_new = adata_new.obsm[lin_key]
 
-        np.testing.assert_array_equal(lins_new.colors, colors)
         np.testing.assert_array_equal(lins_new.names, names)
+        np.testing.assert_array_equal(lins_new.colors, colors)
