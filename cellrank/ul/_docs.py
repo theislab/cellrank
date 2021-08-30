@@ -107,17 +107,17 @@ callback
     Can be specified in gene- and lineage-specific manner, similarly to :attr:`model`."""
 _genes = """\
 genes
-    Genes in ``adata.var_names`` or in ``adata.raw.var_names``, if ``use_raw=True``."""
+    Genes in ``adata.var_names`` or in ``adata.raw.var_names``, if ``use_raw = True``."""
 _softmax_scale = """\
 softmax_scale
     Scaling parameter for the softmax. If `None`, it will be estimated using ``1 / median(correlations)``.
     The idea behind this is to scale the softmax to counteract everything tending to orthogonality in high dimensions."""  # noqa
 _time_mode = """\
 mode
-    Can be either `'embedding'` or `'time'`:
+    Valid options are:
 
-        - `'embedding'` - plot the embedding while coloring in the absorption probabilities.
-        - `'time'` - plot the pseudotime on x-axis and the absorption probabilities on y-axis."""
+        - `'embedding'` - plot the embedding while coloring in continuous or categorical observations.
+        - `'time'` - plot the pseudotime on x-axis and the probabilities/memberships on y-axis."""
 _write_to_adata = """\
 Updates the :attr:`adata` with the following fields:
 

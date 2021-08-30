@@ -3,7 +3,6 @@ from typing_extensions import Protocol
 
 from types import MappingProxyType
 from pathlib import Path
-from datetime import datetime
 
 import scanpy as sc
 import scvelo as scv
@@ -15,7 +14,7 @@ from cellrank.tl._utils import RandomKeys, TestMethod, save_fig, _correlation_te
 from cellrank.tl._colors import _create_categorical_colors
 from cellrank.tl._lineage import Lineage
 from cellrank.tl.estimators._utils import SafeGetter
-from cellrank.tl.estimators.mixins._utils import logger, shadow
+from cellrank.tl.estimators.mixins._utils import BaseProtocol, logger, shadow
 from cellrank.tl.estimators.mixins._absorption_probabilities import AbsProbsMixin
 
 import numpy as np
@@ -27,51 +26,31 @@ from matplotlib.axes import Axes
 from matplotlib.patches import ArrowStyle
 
 
-class LinDriversProtocol(Protocol):
+class LinDriversProtocol(BaseProtocol):  # noqa: D101
     def _write_lineage_drivers(
         self,
         drivers: Optional[pd.DataFrame],
         use_raw: bool,
-        time: Optional[datetime] = None,
-        log: bool = True,
+        params: Mapping[str, Any] = MappingProxyType({}),
     ) -> None:
         ...
 
     @property
-    def adata(self) -> AnnData:
+    def eigendecomposition(self) -> Dict[str, Any]:  # noqa: D102
         ...
 
     @property
-    def backward(self) -> bool:
+    def absorption_probabilities(self) -> Optional[Lineage]:  # noqa: D102
         ...
 
     @property
-    def params(self) -> Dict[str, Any]:
-        pass
-
-    @property
-    def eigendecomposition(self) -> Dict[str, Any]:
-        ...
-
-    @property
-    def absorption_probabilities(self) -> Optional[Lineage]:
-        ...
-
-    @property
-    def lineage_drivers(self) -> Optional[pd.DataFrame]:
-        ...
-
-    def _set(
-        self,
-        attr: str,
-        obj: Optional[Union[pd.DataFrame, Mapping[str, Any]]] = None,
-        key: Optional[str] = None,
-        value: Optional[Union[np.ndarray, pd.Series, pd.DataFrame, Lineage]] = None,
-    ):
+    def lineage_drivers(self) -> Optional[pd.DataFrame]:  # noqa: D102
         ...
 
 
 class LinDriversMixin(AbsProbsMixin):
+    """Mixin that computes driver genes for lineages."""
+
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
         self._lineage_drivers: Optional[pd.DataFrame] = None
@@ -90,7 +69,7 @@ class LinDriversMixin(AbsProbsMixin):
         n_perms: int = 1000,
         seed: Optional[int] = None,
         **kwargs: Any,
-    ) -> Optional[pd.DataFrame]:
+    ) -> pd.DataFrame:
         """
         Compute driver genes per lineage.
 
@@ -129,7 +108,7 @@ class LinDriversMixin(AbsProbsMixin):
 
         Also updates the following fields:
 
-            - :attr:`lineage_drivers` - the same as described above.
+            - :attr:`lineage_drivers` - the same :class:`pandas.DataFrame` as described above.
         """
 
         # check that lineage probs have been computed
@@ -258,12 +237,8 @@ class LinDriversMixin(AbsProbsMixin):
         use_raw
             Whether to access in :attr:`anndata.AnnData.raw` or not.
         title_fmt
-            Title format. Possible keywords can include:
-
-                - `{gene}` - gene name.
-                - `{pval}` - p-value.
-                - `{qval}` - q-value.
-                - `{corr}` - correlation.
+            Title format. Can include `{gene}`, `{pval}`, `{qval}` or `{corr}`, which will be substituted
+            with the actual values.
         %(plotting)s
         kwargs
             Keyword arguments for :func:`scvelo.pl.scatter`.
@@ -622,6 +597,13 @@ class LinDriversMixin(AbsProbsMixin):
         return sg.ok
 
     @property
+    @d.dedent
     def lineage_drivers(self) -> Optional[pd.DataFrame]:
-        """TODO."""
+        """
+        Lineage drivers.
+
+        Returns
+        -------
+        %(correlation_test.returns)s
+        """
         return self._lineage_drivers

@@ -94,7 +94,7 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
         ] = None,
         copy: bool = True,
         shadow_only: bool = False,
-    ):
+    ) -> None:
         """
         Set an attribute and optionally update ``obj[key]``.
 
