@@ -201,7 +201,7 @@ class TestHighLevelPipeline:
 
         e.set_terminal_states({"foo": adata.obs_names[:20]})
 
-        e = cr.tl.estimators.GPCCA(adata, read_from_adata=True, obsp_key="T_fwd")
+        e = cr.tl.estimators.GPCCA(adata, obsp_key="T_fwd")
         assert e.macrostates is None
         assert e.absorption_probabilities is None
 

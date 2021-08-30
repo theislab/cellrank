@@ -42,9 +42,24 @@ class TermStatesEstimator(BaseEstimator, ABC):
         **kwargs: Any,
     ):
         super().__init__(obj=obj, obsp_key=obsp_key, **kwargs)
+
         self._term_states: Optional[pd.Series] = None
         self._term_states_probs: Optional[pd.Series] = None
         self._term_states_colors: Optional[np.ndarray] = None
+
+    # TODO(Marius1311): improve docs
+    @property
+    @d.get_summary(base="tse_term_states")
+    def terminal_states(self) -> Optional[pd.Series]:
+        """Terminal states."""
+        return self._term_states
+
+    # TODO(Marius1311): improve docs
+    @property
+    @d.get_summary(base="tse_term_states_probs")
+    def terminal_states_probabilities(self) -> Optional[pd.Series]:
+        """Probabilities of being a terminal state."""
+        return self._term_states_probs
 
     @d.dedent
     def set_terminal_states(
@@ -262,11 +277,12 @@ class TermStatesEstimator(BaseEstimator, ABC):
         """Prepare self for terminal states prediction."""
         return self
 
+    @d.dedent
     def compute_terminal_states(self, *args: Any, **kwargs: Any) -> None:
         """
         Compute terminal states of the process.
 
-        Alias for meth:`predict`.
+        This is an alias for meth:`predict`.
 
         Parameters
         ----------
@@ -280,22 +296,10 @@ class TermStatesEstimator(BaseEstimator, ABC):
         Nothing, just updates the following fields:
 
             - :attr:`terminal_states` - %(tse_term_states.summary)s
-            - :attr:`terminal_states_probabilities` - %(tse_term_states_pros.summary)s
+            - :attr:`terminal_states_probabilities` - %(tse_term_states_probs.summary)s
         """
         return self.predict(*args, **kwargs)
 
     plot_terminal_states = register_plotter(
         discrete="terminal_states", colors="_term_states_colors"
     )
-
-    @property
-    @d.get_summary(base="tse_term_states")
-    def terminal_states(self) -> Optional[pd.Series]:
-        """Terminal states."""
-        return self._term_states
-
-    @property
-    @d.get_summary(base="tse_term_states_probs")
-    def terminal_states_probabilities(self) -> Optional[pd.Series]:
-        """Probabilities of being a terminal state."""
-        return self._term_states_probs

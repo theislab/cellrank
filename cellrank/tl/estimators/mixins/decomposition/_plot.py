@@ -39,7 +39,7 @@ class VectorPlotter:
         Parameters
         ----------
         use
-            Which or how many vectors are to be plotted.
+            Which or how many vectors are to plot.
         abs_value
             Whether to take the absolute value before plotting.
         cluster_key

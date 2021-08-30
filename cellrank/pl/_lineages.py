@@ -56,7 +56,7 @@ def lineages(
     # plot using the MC object
     color = kwargs.pop("cluster_key", color)
     mc.plot_absorption_probabilities(
-        lineages=lineages,
+        states=lineages,
         color=color,
         mode=mode,
         time_key=time_key,

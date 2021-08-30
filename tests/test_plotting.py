@@ -2395,7 +2395,7 @@ class TestCFLARE:
 
     @compare(kind="cflare")
     def test_scvelo_lin_probs_lineages(self, mc: CFLARE, fpath: str):
-        mc.plot_absorption_probabilities(lineages=["0"], dpi=DPI, save=fpath)
+        mc.plot_absorption_probabilities(states=["0"], dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
     def test_scvelo_lin_probs_time(self, mc: CFLARE, fpath: str):
@@ -2501,7 +2501,7 @@ class TestGPCCA:
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_meta_states_lineages(self, mc: GPCCA, fpath: str):
-        mc.plot_macrostates(lineages=["0"], dpi=DPI, save=fpath)
+        mc.plot_macrostates(states=["0"], dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_meta_states_discrete(self, mc: GPCCA, fpath: str):
@@ -2533,7 +2533,7 @@ class TestGPCCA:
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_final_states_lineages(self, mc: GPCCA, fpath: str):
-        mc.plot_terminal_states(lineages=["0"], dpi=DPI, save=fpath)
+        mc.plot_terminal_states(states=["0"], dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_final_states_discrete(self, mc: GPCCA, fpath: str):

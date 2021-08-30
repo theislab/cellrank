@@ -9,9 +9,6 @@ from cellrank.ul._docs import d
 class AnnDataMixin(ABC):
     """Mixin that allows for serialization from/to :class:`anndata.AnnData`."""
 
-    def __init__(self, *args: Any, **kwargs: Any):
-        super().__init__(*args, **kwargs)
-
     @abstractmethod
     @d.dedent
     def _read_from_adata(self, adata: AnnData, **kwargs: Any) -> bool:

@@ -83,6 +83,45 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
         self._term_states_memberships: Optional[Lineage] = None
 
+    # TODO(Marius1311): improve
+    @property
+    @d.get_summary(base="gpcca_macro")
+    def macrostates(self) -> Optional[pd.Series]:
+        """Macrostates."""
+        return self._macrostates
+
+    # TODO(Marius1311): improve
+    @property
+    @d.get_summary(base="gpcca_macro_memberships")
+    def macrostates_memberships(self) -> Optional[Lineage]:
+        """Macrostates memberships."""
+        return self._macrostates_memberships
+
+    # TODO(Marius1311): improve
+    @property
+    @d.get_summary(base="gpcca_term_states_memberships")
+    def terminal_states_memberships(self) -> Optional[Lineage]:
+        """Terminal states memberships."""
+        return self._term_states_memberships
+
+    @property
+    @d.get_summary(base="gpcca_coarse_init")
+    def coarse_initial_distribution(self) -> Optional[pd.Series]:
+        """Coarse-grained initial distribution."""
+        return self._coarse_init_dist
+
+    @property
+    @d.get_summary(base="gpcca_coarse_stat")
+    def coarse_stationary_distribution(self) -> Optional[pd.Series]:
+        """Coarse-grained stationary distribution."""
+        return self._coarse_stat_dist
+
+    @property
+    @d.get_summary(base="gpcca_coarse_tmat")
+    def coarse_T(self) -> Optional[pd.DataFrame]:
+        """Coarse-grained transition matrix."""
+        return self._coarse_tmat
+
     @d.get_sections(base="gpcca_compute_macro", sections=["Parameters", "Returns"])
     @d.dedent
     def compute_macrostates(
@@ -1143,42 +1182,3 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             f"Adding `adata.obs[{key!r}]`\n       `adata.obs[{Key.uns.colors(key)!r}]`\n",
             time=time,
         )
-
-    # TODO(Marius1311): improve
-    @property
-    @d.get_summary(base="gpcca_macro")
-    def macrostates(self) -> Optional[pd.Series]:
-        """Macrostates."""
-        return self._macrostates
-
-    # TODO(Marius1311): improve
-    @property
-    @d.get_summary(base="gpcca_macro_memberships")
-    def macrostates_memberships(self) -> Optional[Lineage]:
-        """Macrostates memberships."""
-        return self._macrostates_memberships
-
-    # TODO(Marius1311): improve
-    @property
-    @d.get_summary(base="gpcca_term_states_memberships")
-    def terminal_states_memberships(self) -> Optional[Lineage]:
-        """Terminal states memberships."""
-        return self._term_states_memberships
-
-    @property
-    @d.get_summary(base="gpcca_coarse_init")
-    def coarse_initial_distribution(self) -> Optional[pd.Series]:
-        """Coarse-grained initial distribution."""
-        return self._coarse_init_dist
-
-    @property
-    @d.get_summary(base="gpcca_coarse_stat")
-    def coarse_stationary_distribution(self) -> Optional[pd.Series]:
-        """Coarse-grained stationary distribution."""
-        return self._coarse_stat_dist
-
-    @property
-    @d.get_summary(base="gpcca_coarse_tmat")
-    def coarse_T(self) -> Optional[pd.DataFrame]:
-        """Coarse-grained transition matrix."""
-        return self._coarse_tmat

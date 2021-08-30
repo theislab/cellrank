@@ -6,7 +6,6 @@ from _helpers import assert_estimators_equal
 from tempfile import TemporaryDirectory
 
 import cellrank as cr
-import cellrank.tl.kernels._precomputed_kernel
 from anndata import AnnData
 from cellrank._key import Key
 from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel

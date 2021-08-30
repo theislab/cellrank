@@ -105,7 +105,7 @@ class LinDriversMixin(AbsProbsMixin):
         -------
         %(correlation_test.returns)s
 
-        Also updates the following fields:
+        Also updates the following field:
 
             - :attr:`lineage_drivers` - the same :class:`pandas.DataFrame` as described above.
         """

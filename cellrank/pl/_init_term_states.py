@@ -77,10 +77,10 @@ def _initial_terminal(
         ):
             kwargs["title"] = "initial states" if backward else "terminal states"
 
-    _ = kwargs.pop("lineages", None)
+    _ = kwargs.pop("states", None)
 
     mc.plot_terminal_states(
-        lineages=states,
+        states=states,
         color=color,
         mode=mode,
         time_key=time_key,

@@ -123,8 +123,9 @@ class TestGPCCA:
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.estimators.GPCCA(terminal_kernel)
-        with pytest.raises(ValueError):
-            mc.compute_schur(n_components=1, method="krylov")
+        mc.compute_schur(n_components=1, method="krylov")
+
+        assert mc.schur_vectors.shape[1] == 2
 
     def test_compute_schur_invalid_method(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)

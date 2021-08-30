@@ -34,15 +34,12 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
     obsp_key
         Key in :attr:`anndata.AnnData.obsp` where the transition matrix is stored.
         Only used when ``obj`` is an :class:`anndata.AnnData` object.
-    kwargs
-        Additional keyword arguments.
     """
 
     def __init__(
         self,
         obj: Union[AnnData, np.ndarray, spmatrix, KernelExpression],
         obsp_key: Optional[str] = None,
-        **kwargs: Any,
     ):
         if isinstance(obj, Kernel):
             if obj._transition_matrix is None:
@@ -71,7 +68,7 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
                 f"or `anndata.AnnData`, got `{type(obj).__name__}`."
             )
 
-        super().__init__(kernel=kernel, **kwargs)
+        super().__init__(kernel=kernel)
 
         self._params: Dict[str, Any] = {}
         self._shadow_adata = AnnData(
