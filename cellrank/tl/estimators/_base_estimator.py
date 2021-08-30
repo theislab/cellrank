@@ -21,6 +21,7 @@ import pandas as pd
 from scipy.sparse import spmatrix, csr_matrix
 
 
+@d.get_sections(base="base_estimator", sections=["Parameters"])
 class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
     """
     Base class for all estimators.
@@ -116,7 +117,7 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
 
         Returns
         -------
-        Nothing, just optionally updates the attribute ``attr`` and/or ``obj[{key}]``.
+        Nothing, just optionally updates ``attr`` and/or ``obj[key]``.
 
         Raises
         ------
@@ -378,4 +379,21 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
         Returns
         -------
         Self.
+        """
+
+    @abstractmethod
+    def predict(self, *args: Any, **kwargs: Any) -> None:
+        """
+        Run a prediction.
+
+        Parameters
+        ----------
+        args
+            Positional arguments.
+        kwargs
+            Keyword arguments.
+
+        Returns
+        -------
+        Nothing.
         """

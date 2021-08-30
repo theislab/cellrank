@@ -21,9 +21,42 @@ import pandas as pd
 from scipy.stats import zscore
 
 
+@d.dedent
 class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
+    """
+    Compute the initial/terminal states of a Markov chain via spectral heuristics.
+
+    This estimator uses the left eigenvectors of the transition matrix to filter to a set of recurrent cells
+    and the right eigenvectors to cluster this set of cells into discrete groups.
+
+    Parameters
+    ----------
+    %(base_estimator.parameters)s
+    """
+
     @d.dedent
-    def fit(
+    def fit(self, k: int = 20, **kwargs: Any) -> "TermStatesEstimator":
+        """
+        %(tse_fit.full_desc)s
+
+        Parameters
+        ----------
+        k
+            Number of eigenvectors to compute.
+        kwargs
+            Keyword arguments for :meth:`compute_eigendecomposition`.
+
+        Returns
+        -------
+        Self and modifies the following fields:
+
+            - :attr:`eigendecomposition` - %(eigen.summary)s
+        """  # noqa: D400
+        self.compute_eigendecomposition(k=k, only_evals=False, **kwargs)
+        return self
+
+    @d.dedent
+    def predict(
         self,
         use: Optional[Union[int, Sequence[int]]] = None,
         percentile: Optional[int] = 98,
@@ -37,7 +70,7 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
         basis: Optional[str] = None,
         n_comps: int = 5,
         scale: Optional[bool] = None,
-    ) -> "CFLARE":
+    ) -> None:
         """
         Find approximate recurrent classes of the Markov chain.
 
@@ -84,8 +117,8 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
         -------
         Nothing, just updates the following fields:
 
-            - :attr:`terminal_states` - TODO.
-            - :attr:`terminal_states_probabilities` - TODO.
+            - :attr:`terminal_states` - %(tse_term_states.summary)s.
+            - :attr:`terminal_states_probabilities` - %(tse_term_states_probs)s.
         """
 
         def convert_use(
@@ -196,8 +229,6 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
             params=self._create_params(),
             time=start,
         )
-
-        return self
 
     def _compute_term_states_probs(
         self, eig: Dict[str, Any], use: List[int]

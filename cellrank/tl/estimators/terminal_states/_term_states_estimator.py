@@ -1,6 +1,6 @@
 from typing import Any, Dict, Tuple, Union, Mapping, Optional, Sequence
 
-from abc import ABC, abstractmethod
+from abc import ABC
 from types import MappingProxyType
 
 from anndata import AnnData
@@ -25,7 +25,16 @@ from pandas.api.types import infer_dtype, is_categorical_dtype
 from matplotlib.colors import to_hex
 
 
+@d.dedent
 class TermStatesEstimator(BaseEstimator, ABC):
+    """
+    Base class for all estimators predicting terminal states.
+
+    Parameters
+    ----------
+    %(base_estimator.parameters)s
+    """
+
     def __init__(
         self,
         obj: Union[AnnData, np.ndarray, spmatrix, KernelExpression],
@@ -73,8 +82,8 @@ class TermStatesEstimator(BaseEstimator, ABC):
         -------
         Nothing, just updates the following fields:
 
-            - :attr:`terminal_states` - TODO.
-            - :attr:`terminal_states_probabilities` - TODO.
+            - :attr:`terminal_states` - %(tse_term_states.summary)s
+            - :attr:`terminal_states_probabilities` - %(tse_term_states_probs.summary)s
         """
         if add_to_existing:
             existing = self.terminal_states
@@ -97,9 +106,12 @@ class TermStatesEstimator(BaseEstimator, ABC):
             **kwargs,
         )
 
+    @d.get_sections(base="tse_rename_term_states", sections=["Parameters", "Returns"])
+    @d.get_full_description(base="tse_rename_term_states")
+    @d.dedent
     def rename_terminal_states(self, new_names: Mapping[str, str]) -> None:
         """
-        Rename the :attr:`terminal_states`.
+        Rename categories in :attr:`terminal_states`.
 
         Parameters
         ----------
@@ -109,7 +121,9 @@ class TermStatesEstimator(BaseEstimator, ABC):
 
         Returns
         -------
-        Nothing, just updates the names of :attr:`terminal_states`.
+        Nothing, just updates the names of:
+
+            - :attr:`terminal_states` - %(tse_term_states.summary)s
         """
 
         term_states = self.terminal_states
@@ -239,28 +253,49 @@ class TermStatesEstimator(BaseEstimator, ABC):
             self.params[key] = self._read_params(key)
         # fmt: on
 
-        # TODO: log
+        # TODO(michalk8): log
 
         return sg.ok
 
-    @abstractmethod
-    def fit(self, *args: Any, **kwargs: Any) -> None:
-        pass
+    @d.get_full_description(base="tse_fit")
+    def fit(self, *args: Any, **kwargs: Any) -> "TermStatesEstimator":
+        """Prepare self for terminal states prediction."""
+        return self
 
     def compute_terminal_states(self, *args: Any, **kwargs: Any) -> None:
-        """TODO. Alias for meth:`fit`."""
-        return self.fit(*args, **kwargs)
+        """
+        Compute terminal states of the process.
+
+        Alias for meth:`predict`.
+
+        Parameters
+        ----------
+        args
+            Positional arguments.
+        kwargs
+            Keyword arguments arguments.
+
+        Return
+        ------
+        Nothing, just updates the following fields:
+
+            - :attr:`terminal_states` - %(tse_term_states.summary)s
+            - :attr:`terminal_states_probabilities` - %(tse_term_states_pros.summary)s
+        """
+        return self.predict(*args, **kwargs)
 
     plot_terminal_states = register_plotter(
         discrete="terminal_states", colors="_term_states_colors"
     )
 
     @property
+    @d.get_summary(base="tse_term_states")
     def terminal_states(self) -> Optional[pd.Series]:
-        """TODO."""
+        """Terminal states."""
         return self._term_states
 
     @property
+    @d.get_summary(base="tse_term_states_probs")
     def terminal_states_probabilities(self) -> Optional[pd.Series]:
-        """TODO."""
+        """Probabilities of being a terminal state."""
         return self._term_states_probs

@@ -299,18 +299,20 @@ class SchurMixin(VectorPlottable):
             **kwargs,
         )
 
-    # TODO: use docrep
     @property
+    @d.get_summary(base="schur_vectors")
     def schur_vectors(self) -> Optional[np.ndarray]:
-        """TODO."""
+        """Schur vectors."""
         return self._schur_vectors
 
     @property
+    @d.get_summary(base="schur_matrix")
     def schur_matrix(self) -> Optional[np.ndarray]:
-        """TODO."""
+        """Schur matrix."""
         return self._schur_matrix
 
     @property
+    @d.get_summary(base="eigen")
     def eigendecomposition(self) -> Optional[Dict[str, Any]]:
-        """TODO."""
+        """Eigendecomposition of the transition matrix."""
         return self._eigendecomposition

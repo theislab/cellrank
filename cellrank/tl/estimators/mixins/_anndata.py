@@ -26,7 +26,7 @@ class AnnDataMixin(ABC):
 
         Returns
         -------
-        `True` if deserialization should continue, otherwise `False`.
+        `True` if deserialization should continue/was successful, otherwise `False`.
         """
         return True
 
@@ -45,13 +45,13 @@ class AnnDataMixin(ABC):
         ...
 
     @abstractmethod
-    @d.get_full_descriptionf("to_adata")
+    @d.get_full_description(base="to_adata")
     def to_adata(self) -> AnnData:
         """Serialize self to :class:`anndata.Anndata`."""
 
     @classmethod
-    @d.get_full_descriptionf("from_adata")
-    @d.get_sectionsf("from_adata", sections=["Returns"])
+    @d.get_full_description(base="from_adata")
+    @d.get_sections(base="from_adata", sections=["Returns"])
     @d.dedent
     def from_adata(cls, adata: AnnData, **kwargs: Any) -> "AnnDataMixin":
         """

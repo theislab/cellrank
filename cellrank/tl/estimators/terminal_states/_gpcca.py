@@ -38,14 +38,33 @@ from matplotlib.ticker import StrMethodFormatter
 from matplotlib.colorbar import ColorbarBase
 
 
-class TermStatesMethod(ModeEnum):
+class TermStatesMethod(ModeEnum):  # noqa: D101
     EIGENGAP = "eigengap"
     EIGENGAP_COARSE = "eigengap_coarse"
     TOP_N = "top_n"
     STABILITY = "stability"
 
 
+@d.dedent
 class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
+    """
+    Generalized Perron Cluster Cluster Analysis :cite:`reuter:18` as implemented in \
+    `pyGPCCA <https://pygpcca.readthedocs.io/en/latest/>`_.
+
+    Coarse-grains a discrete Markov chain into a set of macrostates and computes coarse-grained transition probabilities
+    among the macrostates. Each macrostate corresponds to an area of the state space, i.e. to a subset of cells. The
+    assignment is soft, i.e. each cell is assigned to every macrostate with a certain weight, where weights sum to
+    one per cell. Macrostates are computed by maximizing the 'crispness' which can be thought of as a measure for
+    minimal overlap between macrostates in a certain inner-product sense. Once the macrostates have been computed,
+    we project the large transition matrix onto a coarse-grained transition matrix among the macrostates via
+    a Galerkin projection. This projection is based on invariant subspaces of the original transition matrix which
+    are obtained using the real Schur decomposition :cite:`reuter:18`.
+
+    Parameters
+    ----------
+    %(base_estimator.parameters)s
+    """
+
     def __init__(
         self,
         obj: Union[AnnData, np.ndarray, spmatrix, KernelExpression],
@@ -64,37 +83,41 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
         self._term_states_memberships: Optional[Lineage] = None
 
+    @d.get_sections(base="gpcca_compute_macro", sections=["Parameters", "Returns"])
     @d.dedent
     def compute_macrostates(
         self,
         n_states: Optional[Union[int, Sequence[int]]] = None,
         n_cells: Optional[int] = 30,
         cluster_key: Optional[str] = None,
-    ):
+        **kwargs: Any,
+    ) -> None:
         """
         Compute the macrostates.
 
         Parameters
         ----------
         n_states
-            Number of macrostates. If `None`, use the *eigengap* heuristic.
+            Number of macrostates. If a :class:`typing.Sequence`, use the minChi criterion :cite:`reuter18`.
+            If `None`, use the *eigengap* heuristic.
         %(n_cells)s
         cluster_key
             If a key to cluster labels is given, names and colors of the states will be associated with the clusters.
+        kwargs
+            Keyword arguments for :meth:`compute_schur`.
 
         Returns
         -------
-        None
-            Nothing, but updates the following fields:
+        Updates the following fields:
 
-                - :attr:`macrostates` - TODO.
-                - :attr:`macrostates_memberships` - TODO.
-                - :attr:`coarse_T` - TODO.
-                - :attr:`coarse_initial_distribution` - TODO.
-                - :attr:`coarse_stationary_distribution` - TODO.
-                - :attr:`schur_vectors` - TODO.
-                - :attr:`schur_matrix` - TODO.
-                - :attr:`eigendecomposition` - TODO.
+            - :attr:`macrostates` - %(gpcca_macro.summary)s
+            - :attr:`macrostates_memberships` - %(gpcca_macro_memberships.summary)s
+            - :attr:`coarse_T` - %(gpcca_coarse_tmat.summary)s
+            - :attr:`coarse_initial_distribution` - %(gpcca_coarse_init.summary)s
+            - :attr:`coarse_stationary_distribution` - %(gpcca_coarse_stat.summary)s
+            - :attr:`schur_vectors` - %(schur_vectors.summary)s
+            - :attr:`schur_matrix` - %(schur_matrix.summary)s
+            - :attr:`eigendecomposition` - %(eigen.summary)s
         """
 
         n_states = self._n_states(n_states)
@@ -105,8 +128,8 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             )
             return
 
-        if self._gpcca is None:
-            self.compute_schur(n_states)
+        if self._gpcca is None or kwargs:
+            self.compute_schur(n_states, **kwargs)
         n_states = self._validate_n_states(n_states)
 
         if self._gpcca._p_X.shape[1] < n_states:
@@ -120,7 +143,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         try:
             self._gpcca = self._gpcca.optimize(m=n_states)
         except ValueError as e:
-            # TODO: parse the error, optionally reraise
+            # TODO(michalk8): parse the error and re-raise if not the one we expect
             # this is the following case - we have 4 Schur vectors, user requests 5 states, but it splits the conj. ev.
             # in the try block, Schur decomposition with 5 vectors is computed, but it fails (no way of knowing)
             # so in this case, we increase it by 1
@@ -137,7 +160,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         )
 
     @d.dedent
-    def fit(
+    def predict(
         self,
         method: Literal[
             "stability", "top_n", "eigengap", "eigengap_coarse"
@@ -146,7 +169,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         alpha: Optional[float] = 1,
         stability_threshold: float = 0.96,
         n_states: Optional[int] = None,
-    ) -> "GPCCA":
+    ) -> None:
         """
         Automatically select terminal states from macrostates.
 
@@ -174,9 +197,9 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         -------
         Nothing, just updates the following fields:
 
-            - :attr:`terminal_states` - TODO.
-            - :attr:`terminal_states_memberships` - TODO.
-            - :attr:`terminal_states_probabilities` - TODO.
+            - :attr:`terminal_states` - %(tse_term_states.summary)s
+            - :attr:`terminal_states_memberships` - %(gpcca_term_states_memberships.summary)s
+            - :attr:`terminal_states_probabilities` - %(tse_term_states_probs.summary)s
         """
         if self.macrostates is None:
             raise RuntimeError("Compute macrostates first as `.compute_macrostates()`.")
@@ -220,7 +243,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             names, n_cells=n_cells, params=self._create_params()
         )
 
-        return self
+        return
 
     @d.dedent
     def set_terminal_states_from_macrostates(
@@ -242,11 +265,11 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
         Returns
         -------
-        # TODO: docrep
         Nothing, just updates the following fields:
 
-            - :attr:`terminal_states` - TODO.
-            - :attr:`terminal_states_probabilities` - TODO.
+            - :attr:`terminal_states` - %(tse_term_states.summary)s
+            - :attr:`terminal_states_probabilities` - %(tse_term_states_probs.summary)s
+            - :attr:`terminal_states_probabilities_memberships` - %(gpcca_term_states_memberships.summary)s
         """
         if n_cells <= 0:
             raise ValueError(f"Expected `n_cells` to be positive, found `{n_cells}`.")
@@ -294,14 +317,26 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             states, colors, probs, memberships, params=kwargs.pop("params", {})
         )
         if rename:
-            # TODO: remove this Lineage behavior
+            # TODO(michalk8): in a future PR, remove this behavior in Lineage
             # access lineage renames join states, e.g. 'Alpha, Beta' becomes 'Alpha or Beta' + whitespace stripping
             self.rename_terminal_states(
                 dict(zip(self.terminal_states.cat.categories, names.values()))
             )
 
+    @d.dedent
     def rename_terminal_states(self, new_names: Mapping[str, str]) -> None:
-        """TODO: docrep."""
+        """
+        %(tse_rename_term_states.full_desc)s
+
+        Parameters
+        ----------
+        %(tse_rename_term_states.parameters)s
+
+        Returns
+        -------
+        %(tse_rename_term_states.returns)s
+            - :attr:`terminal_states_memberships` - %(gpcca_term_states_memberships.summary)s
+        """  # noqa: D400
         term_states_memberships = self.terminal_states_memberships
         super().rename_terminal_states(new_names)
 
@@ -314,6 +349,35 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         with self._shadow:
             key = Key.obsm.memberships(Key.obs.macrostates(self.backward))
             self._set(obj=self.adata.obsm, key=key, value=term_states_memberships)
+
+    @d.dedent
+    def fit(
+        self,
+        n_states: Optional[Union[int, Sequence[int]]] = None,
+        n_cells: Optional[int] = 30,
+        cluster_key: Optional[str] = None,
+        **kwargs: Any,
+    ) -> "GPCCA":
+        """
+        %(tse_fit.full_desc)s
+
+        Parameters
+        ----------
+        %(gpcca_compute_macro.parameters)s
+
+        Returns
+        -------
+        %(gpcca_compute_macro.returns)s
+        """  # noqa: D400
+        if n_states is None:
+            self.compute_eigendecomposition()
+            n_states = self.eigendecomposition["eigengap"] + 1
+        if isinstance(n_states, int) and n_states == 1:
+            self.compute_eigendecomposition()
+
+        self.compute_macrostates(n_states=n_states, cluster_key=cluster_key, **kwargs)
+
+        return self
 
     @d.dedent
     def plot_coarse_T(
@@ -337,9 +401,9 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         Parameters
         ----------
         show_stationary_dist
-            Whether to show the stationary distribution, if present.
+            Whether to show :attr:`coarse_stationary_distribution`, if present.
         show_initial_dist
-            Whether to show the initial distribution.
+            Whether to show :attr:`coarse_initial_distribution`.
         cmap
             Colormap to use.
         xtick_rotation
@@ -787,13 +851,13 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         check_row_sums
             Check whether rows in `memberships` sum to `1`.
         time
-            TODO.
+            Start time of macrostates computation.
         params
-            TODO.
+            Parameters used in macrotates computation.
 
         Returns
         -------
-        TODO.
+        Nothing, just update the field as described in :meth:`compute_macrostates`.
         """
 
         if n_cells is None:
@@ -929,7 +993,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             self._get("_macrostates_memberships", self.adata.obsm, key=mkey, where="obsm", dtype=Lineage)
             self.params[key] = self._read_params(key)
 
-            # TODO: allow missing?
+            # TODO(michalk8): allow missing?
             tmat: AnnData = self.adata.uns[Key.uns.coarse(self.backward)]
             if not isinstance(tmat, AnnData):
                 raise TypeError(f"Expected coarse-grained transition matrix to be stored "
@@ -943,7 +1007,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
             self._set(obj=self._shadow_adata.uns, key=Key.uns.coarse(self.backward), value=tmat)
 
-        # TODO: reintroduce this in 2.0 - this is done for high-level plotting of init/term states only
+        # TODO(michalk8): reintroduce this in 2.0 - this is done for high-level plotting of init/term states only
         # if not sg.ok:
         #    return False
 
@@ -964,7 +1028,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         discrete="terminal_states", continuous="terminal_states_memberships"
     )
 
-    # TODO: revisit/refactor/remove?
+    # TODO(michalk8): revisit/refactor/remove?
     @d.dedent
     def _compute_initial_states(self, n_states: int = 1, n_cells: int = 30) -> None:
         """
@@ -1029,7 +1093,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
         Returns
         -------
-        # TODO: rephrase + verify
+        # TODO(michalk8): rephrase + verify it's still correct
         Nothing, just writes to :attr:`anndata.AnnData.obs`:
 
             - `'initial_states'` - top ``n_cells`` from each initial state.
@@ -1080,32 +1144,41 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             time=time,
         )
 
+    # TODO(Marius1311): improve
     @property
+    @d.get_summary(base="gpcca_macro")
     def macrostates(self) -> Optional[pd.Series]:
-        """TODO."""
+        """Macrostates."""
         return self._macrostates
 
+    # TODO(Marius1311): improve
     @property
+    @d.get_summary(base="gpcca_macro_memberships")
     def macrostates_memberships(self) -> Optional[Lineage]:
-        """TODO."""
+        """Macrostates memberships."""
         return self._macrostates_memberships
 
+    # TODO(Marius1311): improve
     @property
+    @d.get_summary(base="gpcca_term_states_memberships")
     def terminal_states_memberships(self) -> Optional[Lineage]:
-        """TODO."""
+        """Terminal states memberships."""
         return self._term_states_memberships
 
     @property
+    @d.get_summary(base="gpcca_coarse_init")
     def coarse_initial_distribution(self) -> Optional[pd.Series]:
-        """TODO."""
+        """Coarse-grained initial distribution."""
         return self._coarse_init_dist
 
     @property
+    @d.get_summary(base="gpcca_coarse_stat")
     def coarse_stationary_distribution(self) -> Optional[pd.Series]:
-        """TODO."""
+        """Coarse-grained stationary distribution."""
         return self._coarse_stat_dist
 
     @property
+    @d.get_summary(base="gpcca_coarse_tmat")
     def coarse_T(self) -> Optional[pd.DataFrame]:
-        """TODO."""
+        """Coarse-grained transition matrix."""
         return self._coarse_tmat
