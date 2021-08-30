@@ -1,4 +1,4 @@
-CellRank dev (2021-08-25)
+CellRank dev (2021-08-30)
 =========================
 
 Features
@@ -40,6 +40,9 @@ Miscellaneous
 
 - Update deployment CI and CONTRIBUTING.rst based on a new branching structure.
   `#725 <https://github.com/theislab/cellrank/pull/725>`__
+
+- Add Python 3.9 CI testing.
+  `#730 <https://github.com/theislab/cellrank/pull/730>`__
 
 
 Documentation
