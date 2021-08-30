@@ -68,9 +68,22 @@ class SchurMixin(VectorPlotter):
 
     # TODO(Marius1311): improve docstring
     @property
-    @d.get_summary(base="eigen")
+    @d.get_full_description(base="eigen")
     def eigendecomposition(self) -> Optional[Dict[str, Any]]:
-        """Eigendecomposition of the transition matrix."""
+        """
+        Eigendecomposition of the transition matrix.
+
+        Returns
+        -------
+        A dictionary with the following keys:
+
+            - `'D'` - the eigenvalues.
+            - `'eigengap'` - the eigengap.
+            - `'params'] - parameters used for the computation.
+            - `'V_l'` - left eigenvectors (optional).
+            - `'V_r'` - right eigenvectors (optional).
+            - `'stationary_dist'` - stationary distribution of :attr:`transition_matrix` (optional).
+        """
         return self._eigendecomposition
 
     @d.dedent
@@ -107,7 +120,7 @@ class SchurMixin(VectorPlotter):
 
             - :attr:`schur_vectors` - %(schur_vectors.summary)s
             - :attr:`schur_matrix` -  %(schur_matrix.summary)s
-            - :attr:`eigendecomposition` - %(eigen.summary)s
+            - :attr:`eigendecomposition` - %(eigen.full_desc)s
         """
         if n_components < 2:
             logg.warning(

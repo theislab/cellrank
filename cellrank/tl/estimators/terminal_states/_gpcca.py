@@ -117,7 +117,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             - :attr:`coarse_stationary_distribution` - %(gpcca_coarse_stat.summary)s
             - :attr:`schur_vectors` - %(schur_vectors.summary)s
             - :attr:`schur_matrix` - %(schur_matrix.summary)s
-            - :attr:`eigendecomposition` - %(eigen.summary)s
+            - :attr:`eigendecomposition` - %(eigen.full_desc)s
         """
 
         n_states = self._n_states(n_states)

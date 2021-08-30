@@ -50,7 +50,7 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
         -------
         Self and modifies the following fields:
 
-            - :attr:`eigendecomposition` - %(eigen.summary)s
+            - :attr:`eigendecomposition` - %(eigen.full_desc)s
         """  # noqa: D400
         self.compute_eigendecomposition(k=k, only_evals=False, **kwargs)
         return self

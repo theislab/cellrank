@@ -1,5 +1,5 @@
 from typing import Any, Dict, Tuple, Union, Mapping, Optional
-from typing_extensions import Literal, Protocol
+from typing_extensions import Literal
 
 from types import MappingProxyType
 from pathlib import Path
@@ -10,11 +10,11 @@ from cellrank._key import Key
 from cellrank.ul._docs import d
 from cellrank.tl._utils import save_fig, _eigengap
 from cellrank.tl.estimators._utils import SafeGetter
-from cellrank.tl.estimators.mixins._utils import logger, shadow
+from cellrank.tl.estimators.mixins._utils import BaseProtocol, logger, shadow
 from cellrank.tl.estimators.mixins.decomposition._plot import VectorPlotter
 
 import numpy as np
-from scipy.sparse import issparse, csr_matrix
+from scipy.sparse import issparse, spmatrix
 from scipy.sparse.linalg import eigs
 
 import matplotlib.pyplot as plt
@@ -23,35 +23,43 @@ from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 EPS = np.finfo(np.float64).eps
 
 
-class EigenProtocol(Protocol):
+class EigenProtocol(BaseProtocol):  # noqa: D101
     @property
-    def adata(self) -> AnnData:
-        ...
-
-    @property
-    def params(self) -> Dict[str, Any]:
-        ...
-
-    @property
-    def backward(self) -> bool:
-        ...
-
-    @property
-    def transition_matrix(self) -> Union[csr_matrix, np.ndarray]:
+    def transition_matrix(self) -> Union[np.ndarray, spmatrix]:  # noqa: D102
         ...
 
     def _write_eigendecomposition(
-        self, decomp: Dict[str, Any], params: Mapping[str, Any]
+        self, decomp: Dict[str, Any], params: Mapping[str, Any] = MappingProxyType({})
     ) -> str:
         ...
 
 
 class EigenMixin(VectorPlotter):
-    """TODO."""
+    """Mixin that computes Schur decomposition."""
 
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
+
         self._eigendecomposition = None
+
+    @property
+    @d.get_full_description(base="eigen")
+    def eigendecomposition(self) -> Optional[Dict[str, Any]]:
+        """
+        Eigendecomposition of :attr:`transition matrix`.
+
+        Returns
+        -------
+        A dictionary with the following keys:
+
+            - `'D'` - the eigenvalues.
+            - `'eigengap'` - the eigengap.
+            - `'params'] - parameters used for the computation.
+            - `'V_l'` - left eigenvectors (optional).
+            - `'V_r'` - right eigenvectors (optional).
+            - `'stationary_dist'` - stationary distribution of :attr:`transition_matrix` (optional).
+        """
+        return self._eigendecomposition
 
     @d.dedent
     def compute_eigendecomposition(
@@ -63,7 +71,7 @@ class EigenMixin(VectorPlotter):
         ncv: Optional[int] = None,
     ) -> None:
         """
-        Compute eigendecomposition of transition matrix.
+        Compute eigendecomposition of :attr:`transition_matrix`.
 
         Uses a sparse implementation, if possible, and only computes the top :math:`k` eigenvectors
         to speed up the computation. Computes both left and right eigenvectors.
@@ -71,26 +79,18 @@ class EigenMixin(VectorPlotter):
         Parameters
         ----------
         k
-            Number of eigenvalues/vectors to compute.
+            Number of eigenvectors or eigenvalues to compute.
         %(eigen)s
         only_evals
-            Compute only eigenvalues.
+            Whether to compute only eigenvalues.
         ncv
             Number of Lanczos vectors generated.
 
         Returns
         -------
-        Nothing, but updates the following field:
+        Nothing, just updates the following field:
 
-            - :attr:`eigendecomposition` ``['D']`` - the eigenvalues.
-            - :attr:`eigendecomposition` ``['eigengap']`` - the eigengap.
-            - :attr:`eigendecomposition` ``['params']`` - parameters used for the computation.
-
-        If ``only_evals = False``, also updates:
-
-            - :attr:`eigendecomposition` ``['V_l']`` - left eigenvectors.
-            - :attr:`eigendecomposition` ``['V_r']`` - right eigenvectors.
-            - :attr:`eigendecomposition` ``['stationary_dist']`` - stationary distribution of :attr:`transition_matrix`.
+            - :attr:`eigendecomposition` - %(eigen.full_desc)s
         """
 
         def get_top_k_evals() -> np.ndarray:
@@ -171,7 +171,7 @@ class EigenMixin(VectorPlotter):
         eig = self.eigendecomposition
         if eig is None:
             raise RuntimeError(
-                "Compute `.eigendecomposition` first as `.compute_eigendecomposition()`."
+                "Compute eigendecomposition first as `.compute_eigendecomposition()`."
             )
 
         side = "left" if left else "right"
@@ -181,7 +181,7 @@ class EigenMixin(VectorPlotter):
         )
         if V is None:
             raise RuntimeError(
-                "Compute `.eigendecomposition` first as `.compute_eigendecomposition(..., only_evals=False)`."
+                "Compute eigendecomposition first as `.compute_eigendecomposition(..., only_evals=False)`."
             )
 
         # if irreducible, first right e-vec should be const.
@@ -245,7 +245,7 @@ class EigenMixin(VectorPlotter):
         eig = self.eigendecomposition
         if eig is None:
             raise RuntimeError(
-                "Compute `.eigendecomposition` first as `.compute_eigendecomposition()`."
+                "Compute eigendecomposition first as `.compute_eigendecomposition()`."
             )
 
         if n is None:
@@ -403,11 +403,9 @@ class EigenMixin(VectorPlotter):
         decomp: Dict[str, Any],
         params: Mapping[str, Any] = MappingProxyType({}),
     ) -> str:
-
         key = Key.uns.eigen(self.backward)
         self._set("_eigendecomposition", self.adata.uns, key=key, value=decomp)
-        if not params:
-            params = decomp.get("params", {})
+        params = params or decomp.get("params", {})
         self.params[key] = dict(params)
 
         return (
@@ -417,7 +415,7 @@ class EigenMixin(VectorPlotter):
         )
 
     def _read_eigendecomposition(
-        self, adata: AnnData, allow_missing: bool = True
+        self: EigenProtocol, adata: AnnData, allow_missing: bool = True
     ) -> bool:
         # fmt: off
         key = Key.uns.eigen(self.backward)
@@ -427,8 +425,3 @@ class EigenMixin(VectorPlotter):
         # fmt: on
 
         return sg.ok
-
-    @property
-    def eigendecomposition(self) -> Optional[Dict[str, Any]]:
-        """TODO. docrep"""
-        return self._eigendecomposition
