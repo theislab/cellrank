@@ -28,7 +28,7 @@ cr.tl.lineages(adata)
 model = cr.ul.models.GAM(adata)
 
 # %%
-# We can now plot the heatmap. By default, the model is fitted for all specified genes and all lineages. Paramterer
+# We can now plot the heatmap. By default, the model is fitted for all specified genes and all lineages. Parameter
 # ``show_absorption_probabilities`` is used to create a bar on top of the heatmap.
 #
 # Apart from the default gene sorting, we can use hierarchical clustering to cluster the genes by specifying

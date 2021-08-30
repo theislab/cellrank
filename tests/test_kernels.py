@@ -32,7 +32,7 @@ from cellrank.tl.kernels._base_kernel import (
     _dtype,
     _is_bin_mult,
 )
-from cellrank.tl.kernels._cytotrace_kernel import CytoTRACEAggregation, _ct
+from cellrank.tl.kernels._cytotrace_kernel import CytoTRACEAggregation
 
 import numpy as np
 from scipy.sparse import eye as speye
@@ -826,10 +826,10 @@ class TestKernelAddition:
         np.testing.assert_allclose(k.transition_matrix.A, expected)
 
     def test_addition_adaptive(self, adata: AnnData):
-        adata.uns["velocity_variances"] = vv = np.random.random(
+        adata.obsp["velocity_variances"] = vv = np.random.random(
             size=(adata.n_obs, adata.n_obs)
         )
-        adata.uns["connectivity_variances"] = cv = np.random.random(
+        adata.obsp["connectivity_variances"] = cv = np.random.random(
             size=(adata.n_obs, adata.n_obs)
         )
         vk, ck = create_kernels(
@@ -848,10 +848,10 @@ class TestKernelAddition:
     def test_addition_adaptive_constants(self, adata: AnnData):
         a, b = np.random.uniform(0, 10, 2)
         s = a + b
-        adata.uns["velocity_variances"] = vv = np.random.random(
+        adata.obsp["velocity_variances"] = vv = np.random.random(
             size=(adata.n_obs, adata.n_obs)
         )
-        adata.uns["connectivity_variances"] = cv = np.random.random(
+        adata.obsp["connectivity_variances"] = cv = np.random.random(
             size=(adata.n_obs, adata.n_obs)
         )
         vk, ck = create_kernels(
@@ -870,10 +870,10 @@ class TestKernelAddition:
     def test_addition_adaptive_wrong_variances(self, adata: AnnData):
         a, b = np.random.uniform(0, 10, 2)
         s = a + b
-        adata.uns["velocity_variances"] = np.random.random(
+        adata.obsp["velocity_variances"] = np.random.random(
             size=(adata.n_obs, adata.n_obs)
         )
-        adata.uns["connectivity_variances"] = np.random.random(
+        adata.obsp["connectivity_variances"] = np.random.random(
             size=(adata.n_obs, adata.n_obs)
         )
         vk, ck = create_kernels(
@@ -892,10 +892,10 @@ class TestKernelAddition:
     def test_addition_adaptive_4_kernels(self, adata: AnnData):
         a, b, c, d = np.random.uniform(0, 10, 4)
         s = a + b + c + d
-        adata.uns["velocity_variances"] = vv = np.random.random(
+        adata.obsp["velocity_variances"] = vv = np.random.random(
             size=(adata.n_obs, adata.n_obs)
         )
-        adata.uns["connectivity_variances"] = cv = np.random.random(
+        adata.obsp["connectivity_variances"] = cv = np.random.random(
             size=(adata.n_obs, adata.n_obs)
         )
         vk, ck = create_kernels(
@@ -1426,44 +1426,46 @@ class TestCytoTRACEKernel:
                 _ = CytoTRACEKernel(adata, layer=layer)
         else:
             _ = CytoTRACEKernel(adata, layer=layer)
-            assert adata.uns[_ct("params")]["layer"] == layer
+            assert adata.uns[Key.cytotrace("params")]["layer"] == layer
 
     @pytest.mark.parametrize("agg", list(CytoTRACEAggregation))
     def test_aggregation(self, adata: AnnData, agg: CytoTRACEAggregation):
         _ = CytoTRACEKernel(adata, aggregation=agg)
-        assert adata.uns[_ct("params")]["aggregation"] == agg.s
+        assert adata.uns[Key.cytotrace("params")]["aggregation"] == agg.s
 
     @pytest.mark.parametrize("use_raw", [False, True])
     def test_raw(self, adata: AnnData, use_raw: bool):
         _ = CytoTRACEKernel(adata, use_raw=use_raw)
-        assert adata.uns[_ct("params")]["use_raw"] == (
+        assert adata.uns[Key.cytotrace("params")]["use_raw"] == (
             adata.raw.n_vars == adata.n_vars if use_raw else False
         )
 
     def test_correct_class(self, adata: AnnData):
         k = CytoTRACEKernel(adata)
         assert isinstance(k, PseudotimeKernel)
-        assert k._time_key == _ct("pseudotime")
+        assert k._time_key == Key.cytotrace("pseudotime")
 
     def test_writes_params(self, adata: AnnData):
         k = CytoTRACEKernel(adata, use_raw=False, layer="X", aggregation="mean")
 
-        assert adata.uns[_ct("params")] == {
+        assert adata.uns[Key.cytotrace("params")] == {
             "layer": "X",
             "aggregation": "mean",
             "use_raw": False,
         }
 
-        assert np.all(adata.var[_ct("gene_corr")] <= 1.0)
-        assert np.all(-1 <= adata.var[_ct("gene_corr")])
-        assert is_bool_dtype(adata.var[_ct("correlates")])
-        assert adata.var[_ct("correlates")].sum() == min(200, adata.n_vars)
+        assert np.all(adata.var[Key.cytotrace("gene_corr")] <= 1.0)
+        assert np.all(-1 <= adata.var[Key.cytotrace("gene_corr")])
+        assert is_bool_dtype(adata.var[Key.cytotrace("correlates")])
+        assert adata.var[Key.cytotrace("correlates")].sum() == min(200, adata.n_vars)
 
-        assert _ct("score") in adata.obs
-        assert _ct("pseudotime") in adata.obs
-        assert _ct("num_exp_genes") in adata.obs
-        assert is_integer_dtype(adata.obs[_ct("num_exp_genes")])
-        np.testing.assert_array_equal(k.pseudotime, adata.obs[_ct("pseudotime")].values)
+        assert Key.cytotrace("score") in adata.obs
+        assert Key.cytotrace("pseudotime") in adata.obs
+        assert Key.cytotrace("num_exp_genes") in adata.obs
+        assert is_integer_dtype(adata.obs[Key.cytotrace("num_exp_genes")])
+        np.testing.assert_array_equal(
+            k.pseudotime, adata.obs[Key.cytotrace("pseudotime")].values
+        )
         np.testing.assert_array_equal(k.pseudotime.min(), 0.0)
         np.testing.assert_array_equal(k.pseudotime.max(), 1.0)
 
@@ -1476,7 +1478,7 @@ class TestCytoTRACEKernel:
     def test_inversion(self, adata: AnnData):
         k = ~CytoTRACEKernel(adata, use_raw=False, layer="X", aggregation="mean")
 
-        pt = adata.obs[_ct("pseudotime")].values
+        pt = adata.obs[Key.cytotrace("pseudotime")].values
         np.testing.assert_array_equal(np.max(pt) - pt, k.pseudotime)
 
 

@@ -22,6 +22,10 @@ class Key:
     def initial(cls, bwd: bool) -> str:
         return "initial" if bwd else "terminal"
 
+    @classmethod
+    def cytotrace(cls, key: str) -> str:
+        return f"ct_{key}"
+
     class obs:
         @classmethod
         def probs(self, key: str) -> str:

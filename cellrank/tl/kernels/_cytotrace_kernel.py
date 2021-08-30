@@ -3,6 +3,7 @@ from typing_extensions import Literal
 
 from anndata import AnnData
 from cellrank import logging as logg
+from cellrank._key import Key
 from cellrank.tl._enum import ModeEnum
 from cellrank.ul._docs import d
 from cellrank.tl._utils import _correlation_test_helper
@@ -11,11 +12,6 @@ from cellrank.tl.kernels._pseudotime_kernel import PseudotimeKernel
 import numpy as np
 from scipy.stats import gmean, hmean
 from scipy.sparse import issparse
-
-
-# TODO: Key.obs.ct()
-def _ct(key: str) -> str:
-    return f"ct_{key}"
 
 
 class CytoTRACEAggregation(ModeEnum):  # noqa
@@ -95,7 +91,7 @@ class CytoTRACEKernel(PseudotimeKernel):
         super().__init__(
             adata,
             backward=backward,
-            time_key=_ct("pseudotime"),
+            time_key=Key.cytotrace("pseudotime"),
             compute_cond_num=compute_cond_num,
             check_connectivity=check_connectivity,
             layer=layer,
@@ -103,7 +99,7 @@ class CytoTRACEKernel(PseudotimeKernel):
             use_raw=use_raw,
             **kwargs,
         )
-        self._time_key = _ct("pseudotime")  # quirk or PT kernel
+        self._time_key = Key.cytotrace("pseudotime")  # quirk or PT kernel
 
     def _read_from_adata(
         self,
@@ -140,10 +136,10 @@ class CytoTRACEKernel(PseudotimeKernel):
         aggregation
             How to aggregate expression of the top-correlating genes. Valid options are:
 
-                - `'mean'`: arithmetic mean.
-                - `'median'`: median.
-                - `'gmean'`: geometric mean.
-                - `'hmean'`: harmonic mean.
+                - `'mean'` - arithmetic mean.
+                - `'median'` - median.
+                - `'gmean'` - geometric mean.
+                - `'hmean'` - harmonic mean.
 
         use_raw
             Whether to use the :attr:`anndata.AnnData.raw` to compute the number of genes expressed per cell
@@ -153,14 +149,14 @@ class CytoTRACEKernel(PseudotimeKernel):
         -------
         Nothing, just modifies :attr:`anndata.AnnData.obs` with the following keys:
 
-            - `'ct_score'`: the normalized CytoTRACE score.
-            - `'ct_pseudotime'`: associated pseudotime, essentially `1 - CytoTRACE score`.
-            - `'ct_num_exp_genes'`: the number of genes expressed per cell, basis of the CytoTRACE score.
+            - `'ct_score'` - the normalized CytoTRACE score.
+            - `'ct_pseudotime'` - associated pseudotime, essentially `1 - CytoTRACE score`.
+            - `'ct_num_exp_genes'` - the number of genes expressed per cell, basis of the CytoTRACE score.
 
         It also modifies :attr:`anndata.AnnData.var` with the following keys:
 
-            - `'ct_gene_corr'`: the correlation as specified above.
-            - `'ct_correlates'`: indication of the genes used to compute the CytoTRACE score, i.e. the ones that
+            - `'ct_gene_corr'` - the correlation as specified above.
+            - `'ct_correlates'` - indication of the genes used to compute the CytoTRACE score, i.e. the ones that
               correlated best with `'num_exp_genes'`.
 
         Notes
@@ -197,7 +193,7 @@ class CytoTRACEKernel(PseudotimeKernel):
             f"Computing number of genes expressed per cell with `use_raw={use_raw}`"
         )
         num_exp_genes = np.array((adata_mraw.X > 0).sum(axis=1)).reshape(-1)
-        self.adata.obs[_ct("num_exp_genes")] = num_exp_genes
+        self.adata.obs[Key.cytotrace("num_exp_genes")] = num_exp_genes
 
         # fmt: off
         # compute correlation with all genes
@@ -206,14 +202,14 @@ class CytoTRACEKernel(PseudotimeKernel):
 
         # annotate the top 200 genes in terms of correlation
         logg.debug("Finding the top `200` most correlated genes")
-        self.adata.var[_ct("gene_corr")] = gene_corr
-        top_200 = self.adata.var.sort_values(by=_ct("gene_corr"), ascending=False).index[:200]
-        self.adata.var[_ct("correlates")] = False
-        self.adata.var.loc[top_200, _ct("correlates")] = True
+        self.adata.var[Key.cytotrace("gene_corr")] = gene_corr
+        top_200 = self.adata.var.sort_values(by=Key.cytotrace("gene_corr"), ascending=False).index[:200]
+        self.adata.var[Key.cytotrace("correlates")] = False
+        self.adata.var.loc[top_200, Key.cytotrace("correlates")] = True
 
         # compute mean/median over top 200 genes, aggregate over genes and shift to [0, 1] range
         logg.debug(f"Aggregating imputed gene expression using aggregation `{aggregation}` in layer `{layer}`")
-        corr_mask = self.adata.var[_ct("correlates")]
+        corr_mask = self.adata.var[Key.cytotrace("correlates")]
         imputed_exp = self.adata[:, corr_mask].X if layer == "X" else self.adata[:, corr_mask].layers[layer]
         if issparse(imputed_exp):
             imputed_exp = imputed_exp.A
@@ -234,22 +230,22 @@ class CytoTRACEKernel(PseudotimeKernel):
         # scale to 0-1 range
         cytotrace_score -= np.min(cytotrace_score)
         cytotrace_score /= np.max(cytotrace_score)
-        self.adata.obs[_ct("score")] = cytotrace_score
-        self.adata.obs[_ct("pseudotime")] = 1 - cytotrace_score
+        self.adata.obs[Key.cytotrace("score")] = cytotrace_score
+        self.adata.obs[Key.cytotrace("pseudotime")] = 1 - cytotrace_score
 
-        self.adata.uns[_ct("params")] = {
+        self.adata.uns[Key.cytotrace("params")] = {
             "aggregation": aggregation.s,
             "layer": layer,
             "use_raw": use_raw,
         }
 
         logg.info(
-            f"Adding `adata.obs[{_ct('score')!r}]`\n"
-            f"       `adata.obs[{_ct('pseudotime')!r}]`\n"
-            f"       `adata.obs[{_ct('num_exp_genes')!r}]`\n"
-            f"       `adata.var[{_ct('gene_corr')!r}]`\n"
-            f"       `adata.var[{_ct('correlates')!r}]`\n"
-            f"       `adata.uns[{_ct('params')!r}]`\n"
+            f"Adding `adata.obs[{Key.cytotrace('score')!r}]`\n"
+            f"       `adata.obs[{Key.cytotrace('pseudotime')!r}]`\n"
+            f"       `adata.obs[{Key.cytotrace('num_exp_genes')!r}]`\n"
+            f"       `adata.var[{Key.cytotrace('gene_corr')!r}]`\n"
+            f"       `adata.var[{Key.cytotrace('correlates')!r}]`\n"
+            f"       `adata.uns[{Key.cytotrace('params')!r}]`\n"
             f"    Finish",
             time=start,
         )

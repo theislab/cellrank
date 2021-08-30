@@ -110,12 +110,12 @@ def create_kernels(
     connectivity_variances: Optional[str] = None,
 ) -> Tuple[VelocityKernel, ConnectivityKernel]:
     vk = VelocityKernel(adata)
-    vk._mat_scaler = adata.uns.get(
+    vk._mat_scaler = adata.obsp.get(
         velocity_variances, np.random.normal(size=(adata.n_obs, adata.n_obs))
     )
 
     ck = ConnectivityKernel(adata)
-    ck._mat_scaler = adata.uns.get(
+    ck._mat_scaler = adata.obsp.get(
         connectivity_variances, np.random.normal(size=(adata.n_obs, adata.n_obs))
     )
 
@@ -358,8 +358,8 @@ def _create_dummy_adata(n_obs: int) -> AnnData:
     sc.tl.dpt(adata)
 
     if "velocity_graph" in adata.uns:
-        adata.obsp["velocity_graph"] = adata.uns["velocity_graph"]
-        adata.obsp["velocity_graph_neg"] = adata.uns["velocity_graph_neg"]
+        adata.obsp["velocity_graph"] = adata.uns.pop("velocity_graph")
+        adata.obsp["velocity_graph_neg"] = adata.uns.pop("velocity_graph_neg")
     adata.obsp["connectivity_variances"] = np.ones((n_obs, n_obs), dtype=np.float64)
     adata.obsp["velocity_variances"] = np.ones((n_obs, n_obs), dtype=np.float64)
 
