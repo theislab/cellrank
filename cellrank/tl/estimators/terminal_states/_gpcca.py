@@ -146,7 +146,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         alpha: Optional[float] = 1,
         stability_threshold: float = 0.96,
         n_states: Optional[int] = None,
-    ):
+    ) -> "GPCCA":
         """
         Automatically select terminal states from macrostates.
 
@@ -219,6 +219,8 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         self.set_terminal_states_from_macrostates(
             names, n_cells=n_cells, params=self._create_params()
         )
+
+        return self
 
     @d.dedent
     def set_terminal_states_from_macrostates(

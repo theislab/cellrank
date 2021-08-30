@@ -3,37 +3,70 @@ from typing import Any, Optional
 from abc import ABC, abstractmethod
 
 from anndata import AnnData
+from cellrank.ul._docs import d
 
 
 class AnnDataMixin(ABC):
-    """TODO."""
+    """Mixin that allows for serialization from/to :class:`anndata.AnnData`."""
 
+    def __init__(self, *args: Any, **kwargs: Any):
+        super().__init__(*args, **kwargs)
+
+    @abstractmethod
+    @d.dedent
     def _read_from_adata(self, adata: AnnData, **kwargs: Any) -> bool:
-        """TODO."""
+        """
+        Populate attributes of self from :class:`anndata.AnnData`.
+
+        Parameters
+        ----------
+        %(adata)s
+        kwargs
+            Additional keyword arguments.
+
+        Returns
+        -------
+        `True` if deserialization should continue, otherwise `False`.
+        """
         return True
 
     @property
     @abstractmethod
     def adata(self) -> AnnData:
-        """TODO."""
+        """Annotated data object."""
 
     @adata.setter
     @abstractmethod
     def adata(self, adata: Optional[AnnData]) -> None:
-        """TODO."""
+        ...
 
     @abstractmethod
     def __len__(self) -> int:
-        """TODO."""
+        ...
 
     @abstractmethod
+    @d.get_full_descriptionf("to_adata")
     def to_adata(self) -> AnnData:
-        """TODO."""
+        """Serialize self to :class:`anndata.Anndata`."""
 
     @classmethod
-    @abstractmethod
+    @d.get_full_descriptionf("from_adata")
+    @d.get_sectionsf("from_adata", sections=["Returns"])
+    @d.dedent
     def from_adata(cls, adata: AnnData, **kwargs: Any) -> "AnnDataMixin":
-        """TODO."""
+        """
+        Deserialize self from :class:`anndata.AnnData`.
+
+        Parameters
+        ----------
+        %(adata)s
+        kwargs
+            Additional keyword arguments.
+
+        Returns
+        -------
+        The deserialized object.
+        """
         obj = cls(adata, **kwargs)
         obj._read_from_adata(adata)
 

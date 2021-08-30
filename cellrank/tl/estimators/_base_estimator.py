@@ -10,6 +10,7 @@ from contextlib import contextmanager
 
 from anndata import AnnData
 from cellrank._key import Key
+from cellrank.ul._docs import d
 from cellrank.tl.kernels import PrecomputedKernel
 from cellrank.tl._lineage import Lineage
 from cellrank.tl.estimators.mixins import IOMixin, KernelMixin, AnnDataMixin
@@ -21,6 +22,21 @@ from scipy.sparse import spmatrix, csr_matrix
 
 
 class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
+    """
+    Base class for all estimators.
+
+    Parameters
+    ----------
+    obj
+        Either a :class:`cellrank.tl.kernels.Kernel` object, an :class:`anndata.AnnData` object which
+        stores the transition matrix in ``.obsp`` attribute or :mod:`numpy` or :mod:`scipy` array.
+    obsp_key
+        Key in :attr:`anndata.AnnData.obsp` where the transition matrix is stored.
+        Only used when ``obj`` is an :class:`anndata.AnnData` object.
+    kwargs
+        Additional keyword arguments.
+    """
+
     def __init__(
         self,
         obj: Union[AnnData, np.ndarray, spmatrix, KernelExpression],
@@ -78,7 +94,35 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
         copy: bool = True,
         shadow_only: bool = False,
     ):
-        """TODO: docs."""
+        """
+        Set an attribute and optionally update ``obj[key]``.
+
+        Parameters
+        ----------
+        attr
+            Attribute to set. Only updated when we're not in the shadow. If `None`, don't update anything.
+            See :attr:`_in_shadow` and ``obj`` for more information.
+        obj
+            Object which to update with ``value`` alongside the ``attr`.
+            Usually, an attribute of :attr:`adata` is passed here.
+        key
+            Key in ``obj`` to update with ``value``. Only used when ``obj != None``.
+        value
+            Value to set. If `None` and ``key != None``, it removes the values under ``obj[key]``, if present.
+        copy
+            Whether to copy the ``value`` before setting it in ``obj``.
+        shadow_only
+            Whether or not to update the ``obj`` if we are not in the shadow.
+
+        Returns
+        -------
+        Nothing, just optionally updates the attribute ``attr`` and/or ``obj[{key}]``.
+
+        Raises
+        ------
+        AttributeError
+            If ``attr`` doesn't exist.
+        """
         if not self._in_shadow:
             if attr is not None:
                 if not hasattr(self, attr):
@@ -87,14 +131,13 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
             if shadow_only:
                 return
 
+        if obj is None:
+            return
+
         if key is not None:
             if value is None:
                 try:
-                    # TODO: necessary?
-                    if isinstance(obj, pd.DataFrame):
-                        obj.drop(key, axis="columns", inplace=True)
-                    else:
-                        del obj[key]
+                    del obj[key]
                 except KeyError:
                     pass
             else:
@@ -103,14 +146,46 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
     def _get(
         self,
         attr: str,
-        obj: Optional[Union[pd.DataFrame, Mapping[str, Any]]],
+        obj: Union[pd.DataFrame, Mapping[str, Any]],
         key: str,
         where: Optional[Literal["obs", "obsm", "var", "varm", "uns"]] = None,
         dtype: Optional[Union[type, Tuple[type, ...]]] = None,
         copy: bool = True,
         allow_missing: bool = False,
-    ):
-        """TODO: docs."""
+    ) -> None:
+        """
+        Get data from an object and set an attribute.
+
+        Parameters
+        ----------
+        attr
+            Attribute to set.
+        obj
+            Object from which to extract the data.
+        key
+            Key in ``obj`` where the data is stored.
+        where
+            Attribute of :attr:`_shadow_adata` where to save the extracted data. If `None`, don't update it.
+        dtype
+            Valid type(s) of the extracted data.
+        copy
+            Copy the data before setting the ``attr``.
+        allow_missing
+            Whether or not to allow ``key`` to be missing in ``obj``.
+
+        Returns
+        -------
+        Nothing, just updates ``attr`` with the extracted values and optionally :attr:`_shadow_adata`.
+
+        Raises
+        ------
+        AttributeError
+            If ``attr`` doesn't exist.
+        TypeError
+            If ``dtype != None`` and the extracted values are not instances of ``dtype``.
+        KeyError
+            If ``allow_missing = False`` and ``key`` was not found in ``obj``.
+        """
         if not hasattr(self, attr):
             raise AttributeError(attr)
 
@@ -132,6 +207,11 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
     @property
     @contextmanager
     def _shadow(self) -> None:
+        """
+        Temporarily set :attr:`adata` to :attr:`_shadow_adata`.
+
+        Used to construct the serialization object in :meth:`to_adata`.
+        """
         if self._in_shadow:
             yield
         else:
@@ -144,19 +224,8 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
 
     @property
     def _in_shadow(self) -> bool:
+        """Return `True` if :attr:`adata` is :attr:`_shadow_adata`."""
         return self.adata is self._shadow_adata
-
-    @property
-    @contextmanager
-    def _remove_adata(self) -> None:
-        # shadow is kept (should be very small)
-        with super()._remove_adata:
-            adata = self.kernel.adata
-            try:
-                self.kernel.adata = None
-                yield
-            finally:
-                self.kernel.adata = adata
 
     def _create_params(
         self,
@@ -164,6 +233,26 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
         func: Optional[Callable] = None,
         remove: Sequence[str] = (),
     ) -> Dict[str, Any]:
+        """
+        Create parameters of interest from a function call.
+
+        Parameters
+        ----------
+        locs
+            Environment from which to get the parameters. If `None`, get the caller's environment.
+        func
+            Function of interest. If `None`, use the caller.
+        remove
+            Keys in ``locs`` which should not be included in the result.
+
+        Returns
+        -------
+        The parameters as a :class:`dict`.
+
+        Notes
+        -----
+        *args/**kwargs are always ignored and the values in ``locs`` are not copied.
+        """
         frame = currentframe()
         try:
             if locs is None:
@@ -172,7 +261,9 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
                 name = frame.f_back.f_code.co_name
                 func = dict(getmembers(self)).get(name, None)
             if not callable(func):
-                raise TypeError("TODO")
+                raise TypeError(
+                    f"Expected `func` to be `callable`, found `{type(func).__name__}`."
+                )
 
             params = {}
             for name, param in signature(func).parameters.items():
@@ -188,17 +279,23 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
             # frame can be None
             return {}
         except TypeError:
-            # TODO: parse error and log
             return {}
         finally:
             del frame
 
     def _read_params(self, key: str) -> Dict[str, Any]:
+        """
+        Read ``key`` from estimator params in :attr:`adata`.
+
+        Usually called in :meth:`_read_adata` during :meth:`from_adata`.
+        """
         ekey = Key.uns.estimator(self.backward) + "_params"
         return dict(self.adata.uns.get(ekey, {}).get(key, {}))
 
+    # TODO: allow for keys to be copied from original?
+    @d.dedent
     def to_adata(self) -> AnnData:
-        """TODO: docrep."""
+        """%(to_adata.full_desc)s"""  # noqa: D400
         adata = self._shadow_adata.copy()
         try:
             # kernel and estimator share the adata
@@ -211,11 +308,37 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
         return adata
 
     @classmethod
+    @d.dedent
     def from_adata(cls, adata: AnnData, obsp_key: str) -> "BaseEstimator":
-        """TODO: docrep."""
+        """
+        %(from_adata.full_desc)s
+
+        Parameters
+        ----------
+        %(adata)s
+        obsp_key
+            Key in :attr:`anndata.AnnData.obsp` where the transition matrix is stored.
+
+        Returns
+        -------
+        %(from_adata.returns)s
+        """  # noqa: D400
         return super().from_adata(adata, obsp_key=obsp_key)
 
+    @d.dedent
     def copy(self, *, deep: bool = False) -> "BaseEstimator":
+        """
+        Return a copy of self.
+
+        Parameters
+        ----------
+        deep
+            Whether to return a deep copy or not. If `True`, this also copies the :attr:`adata`.
+
+        Returns
+        -------
+        A copy of self.
+        """
         k = deepcopy(self.kernel) if deep else copy(self.kernel)
         res = type(self)(k)
         for k, v in self.__dict__.items():
@@ -237,9 +360,22 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
 
     @property
     def params(self) -> Dict[str, Any]:
-        """TODO."""
+        """Estimator parameters."""
         return self._params
 
     @abstractmethod
-    def fit(self, *args: Any, **kwargs: Any) -> None:
-        """TODO."""
+    def fit(self, *args: Any, **kwargs: Any) -> "BaseEstimator":
+        """
+        Fit an estimator.
+
+        Parameters
+        ----------
+        args
+            Positional arguments.
+        kwargs
+            Keyword arguments.
+
+        Returns
+        -------
+        Self.
+        """

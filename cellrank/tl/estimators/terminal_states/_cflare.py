@@ -37,7 +37,7 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
         basis: Optional[str] = None,
         n_comps: int = 5,
         scale: Optional[bool] = None,
-    ) -> None:
+    ) -> "CFLARE":
         """
         Find approximate recurrent classes of the Markov chain.
 
@@ -196,6 +196,8 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
             params=self._create_params(),
             time=start,
         )
+
+        return self
 
     def _compute_term_states_probs(
         self, eig: Dict[str, Any], use: List[int]

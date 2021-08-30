@@ -9,7 +9,7 @@ from cellrank import logging as logg
 
 
 class IOMixin:
-    """TODO."""
+    """Mixin that allows for serialization from/to files using :mod:`pickle`."""
 
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
@@ -17,15 +17,16 @@ class IOMixin:
     @property
     @contextmanager
     def _remove_adata(self) -> None:
-        adata = getattr(self, "_adata", None)
+        """Temporarily remove :attr:`adata`, if present."""
+        adata = getattr(self, "adata", None)
 
         try:
             if adata is not None:
-                self._adata = None
+                self.adata = None
             yield
         finally:
             if adata is not None:
-                self._adata = adata
+                self.adata = adata
 
     def write(
         self,
@@ -41,7 +42,7 @@ class IOMixin:
         fname
             Filename where to save the object.
         keep_adata
-            TODO.
+            Whether to save :attr:`adata` object or not, if present.
         ext
             Filename extension to use. If `None`, don't append any extension.
 
@@ -80,9 +81,10 @@ class IOMixin:
         fname
             Filename from which to read the object.
         adata
-            TODO.
+            :class:`anndata.AnnData` object to assign to the saved object.
+            Only used when the saved object has :attr:`adata` and it was saved without it.
         copy
-            TODO.
+            Whether to copy ``adata`` before assigning it or not. If ``adata`` is a view, it is always copied.
 
         Returns
         -------
@@ -96,7 +98,7 @@ class IOMixin:
             if isinstance(obj.adata, AnnData):
                 if adata is not None:
                     logg.warning(
-                        "Ignoring supplied `adata` object because it's already present"
+                        "Ignoring supplied `adata` object because it is already present"
                     )
                 return obj
 
@@ -115,8 +117,6 @@ class IOMixin:
                 raise ValueError(e) from None
             except TypeError as e:
                 raise AttributeError(e) from None
-            except KeyError as e:
-                raise KeyError(e) from None
 
             obj.adata = adata
             return obj

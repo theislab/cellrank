@@ -111,15 +111,8 @@ class KernelExpression(Pickleable, ABC):
 
     @property
     @abstractmethod
-    @d.dedent
     def adata(self) -> AnnData:
-        """
-        Annotated data object.
-
-        Returns
-        -------
-        %(adata_ret)s
-        """
+        """Annotated data object."""
 
     @adata.setter
     @abstractmethod
