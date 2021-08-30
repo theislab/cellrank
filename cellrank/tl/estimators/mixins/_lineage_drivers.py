@@ -1,5 +1,4 @@
 from typing import Any, Dict, Tuple, Union, Mapping, Optional, Sequence
-from typing_extensions import Protocol
 
 from types import MappingProxyType
 from pathlib import Path
@@ -49,7 +48,7 @@ class LinDriversProtocol(BaseProtocol):  # noqa: D101
 
 
 class LinDriversMixin(AbsProbsMixin):
-    """Mixin that computes driver genes for lineages."""
+    """Mixin that computes potential driver genes for lineages."""
 
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
@@ -584,12 +583,17 @@ class LinDriversMixin(AbsProbsMixin):
             return False
 
         # fmt: off
+        key = Key.varm.lineage_drivers(self.backward)
         with SafeGetter(self, allowed=(KeyError, AttributeError)) as sg:
-            key = Key.varm.lineage_drivers(self.backward)
             # prefer raw
-            self._get("_lineage_drivers", self.adata.varm, key=key, where="varm", dtype=pd.DataFrame,
-                      allow_missing=True)
             self._get("_lineage_drivers", self.adata.raw.varm, key=key, where="varm", dtype=pd.DataFrame,
+                      allow_missing=True)
+            self.params[key] = self._read_params(key)
+        if sg.ok:
+            return True
+
+        with SafeGetter(self, allowed=KeyError) as sg:
+            self._get("_lineage_drivers", self.adata.varm, key=key, where="varm", dtype=pd.DataFrame,
                       allow_missing=True)
             self.params[key] = self._read_params(key)
         # fmt: on

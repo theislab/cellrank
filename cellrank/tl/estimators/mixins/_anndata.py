@@ -26,7 +26,7 @@ class AnnDataMixin(ABC):
 
         Returns
         -------
-        `True` if deserialization should continue/was successful, otherwise `False`.
+        `True` if the deserialization was successful, otherwise `False`.
         """
         return True
 

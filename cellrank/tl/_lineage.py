@@ -736,7 +736,8 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
                   to a set of user-defined ``early_cells``.
                 - `'entropy'`: as in :cite:`setty:19`, computes entropy over a cell's fate probabilities.
         early_cells
-            Cell ids or a mask marking early cells. If `None`, use all cells. Only used when ``method='kl_divergence'``.
+            Cell ids or a mask marking early cells. If `None`, use all cells.
+            Only used when ``method = 'kl_divergence'``.
 
         Returns
         -------

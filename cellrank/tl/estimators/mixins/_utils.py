@@ -6,7 +6,7 @@ from wrapt import decorator
 import scvelo as scv
 from anndata import AnnData
 from cellrank import logging as logg
-from cellrank.ul._docs import d, inject_docs
+from cellrank.ul._docs import d
 from cellrank.tl._utils import RandomKeys, _unique_order_preserving
 from cellrank.tl._colors import _create_categorical_colors
 from cellrank.tl._lineage import Lineage
@@ -286,7 +286,7 @@ def _plot_dispatcher(
     **kwargs: Any,
 ) -> None:
     """
-    Plot {which} in an embedding or along pseudotime.
+    Plot continuous or categorical observations in an embedding or along pseudotime.
 
     Parameters
     ----------
@@ -403,6 +403,4 @@ def register_plotter(
     if discrete is None and continuous is None:
         raise ValueError("At least 1 of `discrete` or  `continuous` must be set.")
 
-    which = (discrete or continuous).replace("_", " ")
-
-    return inject_docs(which=which)(wrapper(_plot_dispatcher))
+    return wrapper(_plot_dispatcher)

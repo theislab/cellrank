@@ -1,5 +1,5 @@
 from typing import Any, Dict, Tuple, Union, Mapping, Optional, Sequence
-from typing_extensions import Literal, Protocol
+from typing_extensions import Literal
 
 from types import MappingProxyType
 
@@ -16,43 +16,59 @@ from cellrank.tl._utils import (
 from cellrank.tl._lineage import Lineage
 from cellrank.tl._linear_solver import _solve_lin_system
 from cellrank.tl.estimators._utils import SafeGetter
-from cellrank.tl.estimators.mixins._utils import logger, shadow, register_plotter
+from cellrank.tl.estimators.mixins._utils import (
+    BaseProtocol,
+    logger,
+    shadow,
+    register_plotter,
+)
 
 import numpy as np
 import pandas as pd
-from scipy.sparse import issparse, csr_matrix
+from scipy.sparse import issparse, spmatrix
+from pandas.api.types import infer_dtype, is_categorical_dtype
 
 
-class AbsProbsProtocol(Protocol):
+class AbsProbsProtocol(BaseProtocol):  # noqa: D101
     _term_states_colors: np.ndarray
-    priming_degree: pd.Series
 
     @property
-    def adata(self) -> AnnData:
+    def transition_matrix(self) -> Union[np.ndarray, spmatrix]:  # noqa: D102
         ...
 
     @property
-    def backward(self) -> bool:
+    def terminal_states(self) -> pd.Series:  # noqa: D102
         ...
 
     @property
-    def params(self) -> Dict[str, Any]:
+    def absorption_probabilities(self) -> Optional[Lineage]:  # noqa: D102
         ...
 
     @property
-    def transition_matrix(self) -> Union[np.ndarray, csr_matrix]:
+    def absorption_times(self) -> Optional[pd.DataFrame]:  # noqa: D102
         ...
 
     @property
-    def terminal_states(self) -> pd.Series:
+    def priming_degree(self) -> Optional[pd.Series]:  # noqa: D102
         ...
 
-    @property
-    def absorption_probabilities(self) -> Optional[Lineage]:
+    def __len__(self) -> int:
         ...
 
-    @property
-    def absorption_times(self) -> Optional[pd.DataFrame]:
+    def _compute_absorption_probabilities(
+        self,
+        q: Union[np.ndarray, spmatrix],
+        s: Union[np.ndarray, spmatrix],
+        trans_indices: np.ndarray,
+        term_states: np.ndim,
+        solver: str,
+        use_petsc: bool,
+        n_jobs: Optional[int],
+        backend: str,
+        tol: float,
+        show_progress_bar: bool,
+        preconditioner: str,
+    ) -> np.ndarray:
         ...
 
     def _write_absorption_probabilities(
@@ -68,39 +84,10 @@ class AbsProbsProtocol(Protocol):
     ) -> str:
         ...
 
-    # TODO: type
-    def _compute_absorption_probabilities(
-        self,
-        q,
-        s,
-        trans_indices,
-        term_states,
-        solver,
-        use_petsc,
-        n_jobs,
-        backend,
-        tol,
-        show_progress_bar,
-        preconditioner,
-    ) -> np.ndarray:
-        ...
-
-    def _set(
-        self,
-        attr: str,
-        obj: Optional[Union[pd.DataFrame, Mapping[str, Any]]] = None,
-        key: Optional[str] = None,
-        value: Optional[Union[np.ndarray, pd.Series, pd.DataFrame, Lineage]] = None,
-    ):
-        ...
-
-    def __len__(self) -> int:
-        ...
-
 
 def _normalize_abs_times(
     keys: Sequence[str], time_to_absorption: Any = None
-) -> Dict[Tuple[str, ...], str]:
+) -> Dict[Tuple[str, ...], Literal["mean", "var"]]:
     if time_to_absorption is None:
         return {}
 
@@ -113,7 +100,7 @@ def _normalize_abs_times(
     for ln, moment in time_to_absorption.items():
         if moment not in ("mean", "var"):
             raise ValueError(
-                f"Moment must be either `'mean'` or `'var'`, found `{moment!r}` for `{ln!r}`."
+                f"Moment must be either `'mean'` or `'var'`, found `{moment!r}` in `{ln}`."
             )
 
         seen = set()
@@ -126,7 +113,7 @@ def _normalize_abs_times(
             for lin in ln:
                 if lin not in keys:
                     raise ValueError(
-                        f"Invalid absorbing state `{lin!r}` for `{ln}`. "
+                        f"Invalid absorbing state `{lin!r}` in `{ln}`. "
                         f"Valid options are `{list(keys)}`."
                     )
             res[tuple(ln)] = moment
@@ -135,6 +122,8 @@ def _normalize_abs_times(
 
 
 class AbsProbsMixin:
+    """Mixin that supports computation of absorption probabilities and mean times to absorption."""
+
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
 
@@ -142,21 +131,45 @@ class AbsProbsMixin:
         self._absorption_times: Optional[pd.DataFrame] = None
         self._priming_degree: Optional[pd.Series] = None
 
+    # TODO(Marius1311): improve docstring
+    @property
+    @d.get_summary(base="abs_probs")
+    def absorption_probabilities(self) -> Optional[Lineage]:
+        """Absorption probabilities."""
+        return self._absorption_probabilities
+
+    # TODO(Marius1311): improve docstring
+    @property
+    @d.get_summary(base="abs_times")
+    def absorption_times(self) -> Optional[pd.DataFrame]:
+        """Mean time and variance until absorption."""
+        return self._absorption_times
+
+    # TODO(Marius1311): improve docstring
+    @property
+    @d.get_summary(base="priming_degree")
+    def priming_degree(self) -> Optional[pd.Series]:
+        """Priming degree."""
+        return self._priming_degree
+
+    # TODO(Marius1311): improve docstring
+    @d.dedent
     def compute_absorption_probabilities(
         self: AbsProbsProtocol,
         keys: Optional[Sequence[str]] = None,
-        # check_irreducibility: bool = False,  # TODO
-        solver: str = "gmres",
+        solver: Union[
+            str, Literal["direct", "gmres", "lgmres", "bicgstab", "gcrotmk"]
+        ] = "gmres",
         use_petsc: bool = True,
         time_to_absorption: Optional[
             Union[
-                str,
+                Literal["all"],
                 Sequence[Union[str, Sequence[str]]],
-                Dict[Union[str, Sequence[str]], str],
+                Dict[Union[str, Sequence[str]], Literal["mean", "var"]],
             ]
         ] = None,
         n_jobs: Optional[int] = None,
-        backend: str = "loky",
+        backend: Literal["multiprocessing", "threading", "loky"] = "loky",
         show_progress_bar: bool = True,
         tol: float = 1e-6,
         preconditioner: Optional[str] = None,
@@ -164,12 +177,13 @@ class AbsProbsMixin:
         """
         Compute absorption probabilities.
 
-        For each cell, this computes the probability of being absorbed in the by :attr:`terminal_states`.
+        For each cell, this computes the probability of being absorbed in the :attr:`terminal_states`.
 
         Parameters
         ----------
         keys
-            Keys defining the recurrent classes.
+            Terminal states for which to compute the absorption probabilities.
+            If `None`, use all states defined in :attr:`terminal_states`.
         solver
             Solver to use for the linear problem. Options are `'direct', 'gmres', 'lgmres', 'bicgstab' or 'gcrotmk'`
             when ``use_petsc = False`` or one of :class:`petsc4py.PETSc.KPS.Type` otherwise.
@@ -195,7 +209,7 @@ class AbsProbsMixin:
         backend
             Which backend to use for multiprocessing. See :class:`joblib.Parallel` for valid options.
         show_progress_bar
-            Whether to show progress bar. Only used when the solver isn't a direct one.
+            Whether to show progress bar. Only used when ``solver != 'direct'``.
         tol
             Convergence tolerance for the iterative solver. The default is fine for most cases, only consider
             decreasing this for severely ill-conditioned matrices.
@@ -209,13 +223,12 @@ class AbsProbsMixin:
         -------
         Nothing, just updates the following fields:
 
-            - :attr:`absorption_probabilities` - probabilities of being absorbed into the :attr:`terminal_states`.
-            - :attr:`absorption_times` - mean times until absorption to subsets of absorbing states and
-              optionally their variances saved as ``'{{lineage}} mean'`` and ``'{{lineage}} var'``, respectively.
+            - :attr:`absorption_probabilities` - %(abs_probs.summary)s
+            - :attr:`absorption_times` - %(abs_times.summary)s Only if ``time_to_absorption`` is specified.
         """
         if self.terminal_states is None:
             raise RuntimeError(
-                "Compute `.terminal_states` first as `.compute_terminal_states()`."
+                "Compute terminal states first as `.compute_terminal_states()`."
             )
         if keys is not None:
             keys = sorted(set(keys))
@@ -236,7 +249,7 @@ class AbsProbsMixin:
         keys = list(term_states.cat.categories)
         if len(keys) == 1:
             logg.warning(
-                "There is only 1 terminal state, all cells will have probability 1 of going there"
+                "There is only `1` terminal state, all cells will have probability `1` of going there"
             )
 
         # get indices corresponding to recurrent and transient states
@@ -313,6 +326,10 @@ class AbsProbsMixin:
         Returns
         -------
         %(lin_pd.returns)s
+
+        Also update the following field:
+
+            - :attr:`priming_degree` - %(priming_degree.summary)s
         """  # noqa: D400
         abs_probs = self.absorption_probabilities
         if abs_probs is None:
@@ -326,7 +343,12 @@ class AbsProbsMixin:
                 )
             key = next(iter(early_cells.keys()))
             if key not in self.adata.obs:
-                raise KeyError(f"Unable to find clustering in `adata.obs[{key!r}]`.")
+                raise KeyError(f"Unable to find clusters in `adata.obs[{key!r}]`.")
+            if not is_categorical_dtype(self.adata.obs[key]):
+                raise TypeError(
+                    f"Expected `adata.obs[{key!r}]` to be categorical, "
+                    f"found `{infer_dtype(self.adata.obs[key])}`."
+                )
             early_cells = self.adata.obs[key].isin(early_cells[key])
         elif early_cells is not None:
             early_cells = np.asarray(early_cells)
@@ -337,22 +359,22 @@ class AbsProbsMixin:
             abs_probs.priming_degree(method, early_cells), index=self.adata.obs_names
         )
         self._write_lineage_priming(values)
+
         return values
 
-    # TODO(michalk8): type
     def _compute_absorption_probabilities(
         self: AbsProbsProtocol,
-        q,
-        s,
-        trans_indices,
-        term_states,
-        solver,
-        use_petsc,
-        n_jobs,
-        backend,
-        tol,
-        show_progress_bar,
-        preconditioner,
+        q: Union[np.ndarray, spmatrix],
+        s: Union[np.ndarray, spmatrix],
+        trans_indices: np.ndarray,
+        term_states: np.ndim,
+        solver: str,
+        use_petsc: bool,
+        n_jobs: Optional[int],
+        backend: str,
+        tol: float,
+        show_progress_bar: bool,
+        preconditioner: str,
     ) -> np.ndarray:
         _abs_classes = _solve_lin_system(
             q,
@@ -453,18 +475,3 @@ class AbsProbsMixin:
     plot_absorption_probabilities = register_plotter(
         continuous="absorption_probabilities"
     )
-
-    @property
-    def absorption_probabilities(self) -> Optional[Lineage]:
-        """TODO."""
-        return self._absorption_probabilities
-
-    @property
-    def absorption_times(self) -> Optional[pd.DataFrame]:
-        """TODO."""
-        return self._absorption_times
-
-    @property
-    def priming_degree(self) -> Optional[pd.Series]:
-        """TODO."""
-        return self._priming_degree

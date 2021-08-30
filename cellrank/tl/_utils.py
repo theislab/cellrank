@@ -405,8 +405,8 @@ def _correlation_test(
         - ``{lineage}_corr`` - correlation between the gene expression and absorption probabilities.
         - ``{lineage}_pval`` - calculated p-values for double-sided test.
         - ``{lineage}_qval`` - corrected p-values using Benjamini-Hochberg method at level `0.05`.
-        - ``{lineage}_ci low`` - lower bound of the ``confidence_level`` correlation confidence interval.
-        - ``{lineage}_ci high`` - upper bound of the ``confidence_level`` correlation confidence interval.
+        - ``{lineage}_ci_low`` - lower bound of the ``confidence_level`` correlation confidence interval.
+        - ``{lineage}_ci_high`` - upper bound of the ``confidence_level`` correlation confidence interval.
     """
 
     corr, pvals, ci_low, ci_high = _correlation_test_helper(
