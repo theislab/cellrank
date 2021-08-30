@@ -11,7 +11,7 @@ from cellrank.ul._docs import d
 from cellrank.tl._utils import save_fig, _eigengap
 from cellrank.tl.estimators._utils import SafeGetter
 from cellrank.tl.estimators.mixins._utils import logger, shadow
-from cellrank.tl.estimators.mixins.decomposition._plot import VectorPlottable
+from cellrank.tl.estimators.mixins.decomposition._plot import VectorPlotter
 
 import numpy as np
 from scipy.sparse import issparse, csr_matrix
@@ -46,7 +46,7 @@ class EigenProtocol(Protocol):
         ...
 
 
-class EigenMixin(VectorPlottable):
+class EigenMixin(VectorPlotter):
     """TODO."""
 
     def __init__(self, **kwargs: Any):

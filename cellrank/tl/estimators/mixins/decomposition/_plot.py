@@ -10,22 +10,24 @@ from cellrank.tl._utils import _complex_warning
 import numpy as np
 
 
-class VectorPlottableProtocol(Protocol):
+class VectorPlotterProtocol(Protocol):  # noqa: D101
     @property
-    def adata(self) -> AnnData:
+    def adata(self) -> AnnData:  # noqa: D102
         ...
 
 
-class VectorPlottable:
-    def __init__(self, **_: Any):
-        pass
+class VectorPlotter:
+    """Class that allow plotting of eigen- or Schur vectors in an embedding."""
+
+    def __init__(self, **kwargs: Any):
+        super().__init__(**kwargs)
 
     @d.get_sections(base="plot_vectors", sections=["Parameters", "Returns"])
     @d.dedent
     def _plot_vectors(
-        self: VectorPlottableProtocol,
-        which: Literal["eigen", "schur"],
-        vectors: np.ndarray,
+        self: VectorPlotterProtocol,
+        _which: Literal["eigen", "schur"],
+        _vectors: np.ndarray,
         use: Optional[Union[int, Sequence[int]]] = None,
         abs_value: bool = False,
         cluster_key: Optional[str] = None,
@@ -51,11 +53,11 @@ class VectorPlottable:
         %(just_plots)s
         """
 
-        if which not in ("eigen", "schur"):
+        if _which not in ("eigen", "schur"):
             raise ValueError(
-                f"Invalid kind `{which!r}`. Valid options are `eigen` or `schur`."
+                f"Invalid kind `{_which!r}`. Valid options are: `eigen` or `schur`."
             )
-        if which == "schur":
+        if _which == "schur":
             is_schur = True
             name = "Schur "
         else:
@@ -63,18 +65,18 @@ class VectorPlottable:
             name = "eigen"
 
         # check whether dimensions are consistent
-        if self.adata.n_obs != vectors.shape[0]:
+        if self.adata.n_obs != _vectors.shape[0]:
             raise ValueError(
                 f"Number of cells ({self.adata.n_obs}) is inconsistent with the first"
-                f"dimension of vectors ({vectors.shape[0]})."
+                f"dimension of vectors ({_vectors.shape[0]})."
             )
 
         if use is None:
             # fmt: off
             m = (
-                getattr(self, "eigendecomposition").get("eigengap", vectors.shape[1]) + 1
+                getattr(self, "eigendecomposition").get("eigengap", _vectors.shape[1]) + 1
                 if not is_schur and getattr(self, "eigendecomposition", None) is not None
-                else vectors.shape[1]
+                else _vectors.shape[1]
             )
             use = list(range(is_schur, m))
             # fmt: on
@@ -88,12 +90,12 @@ class VectorPlottable:
         if not use:
             raise ValueError("No vectors have been selected.")
 
-        if max(use) >= vectors.shape[1]:
+        if max(use) >= _vectors.shape[1]:
             raise ValueError(
                 f"Maximum specified {name}vector ({max(use)}) is larger "
-                f"than the number of computed {name}vectors ({vectors.shape[1]})."
+                f"than the number of computed {name}vectors ({_vectors.shape[1]})."
             )
-        V_ = vectors[:, use]
+        V_ = _vectors[:, use]
 
         if is_schur:
             title = [f"{name}vector {i}" for i in use]
