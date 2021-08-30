@@ -1,5 +1,5 @@
 from typing import Any, Dict, Tuple, Union, Mapping, Optional
-from typing_extensions import Literal, Protocol
+from typing_extensions import Literal
 
 from types import MappingProxyType
 from pathlib import Path
@@ -12,11 +12,11 @@ from cellrank._key import Key
 from cellrank.ul._docs import d
 from cellrank.tl._utils import save_fig, _eigengap
 from cellrank.tl.estimators._utils import SafeGetter
-from cellrank.tl.estimators.mixins._utils import logger, shadow
+from cellrank.tl.estimators.mixins._utils import BaseProtocol, logger, shadow
 from cellrank.tl.estimators.mixins.decomposition._plot import VectorPlottable
 
 import numpy as np
-from scipy.sparse import issparse, csr_matrix
+from scipy.sparse import issparse, spmatrix
 
 import matplotlib.pyplot as plt
 from seaborn import heatmap
@@ -25,17 +25,8 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 EPS = np.finfo(np.float64).eps
 
 
-class SchurProtocol(Protocol):
-    @property
-    def adata(self) -> AnnData:
-        ...
-
-    @property
-    def backward(self) -> bool:
-        ...
-
-    @property
-    def transition_matrix(self) -> Union[csr_matrix, np.ndarray]:
+class SchurProtocol(BaseProtocol):  # noqa: D101
+    def transition_matrix(self) -> Union[np.ndarray, spmatrix]:  # noqa: D102
         ...
 
     def _write_schur_decomposition(
@@ -49,7 +40,7 @@ class SchurProtocol(Protocol):
 
 
 class SchurMixin(VectorPlottable):
-    """TODO."""
+    """Mixin that computes Schur decomposition."""
 
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
@@ -61,6 +52,27 @@ class SchurMixin(VectorPlottable):
         self._schur_matrix: Optional[np.ndarray] = None
         self._eigendecomposition: Optional[Dict[str, Any]] = None
 
+    # TODO(Marius1311): improve docstring
+    @property
+    @d.get_summary(base="schur_vectors")
+    def schur_vectors(self) -> Optional[np.ndarray]:
+        """Schur vectors."""
+        return self._schur_vectors
+
+    # TODO(Marius1311): improve docstring
+    @property
+    @d.get_summary(base="schur_matrix")
+    def schur_matrix(self) -> Optional[np.ndarray]:
+        """Schur matrix."""
+        return self._schur_matrix
+
+    # TODO(Marius1311): improve docstring
+    @property
+    @d.get_summary(base="eigen")
+    def eigendecomposition(self) -> Optional[Dict[str, Any]]:
+        """Eigendecomposition of the transition matrix."""
+        return self._eigendecomposition
+
     @d.dedent
     def compute_schur(
         self: SchurProtocol,
@@ -71,14 +83,14 @@ class SchurMixin(VectorPlottable):
         alpha: float = 1.0,
     ):
         """
-        Compute the Schur decomposition.
+        Compute Schur decomposition.
 
         Parameters
         ----------
         n_components
-            Number of vectors to compute.
+            Number of Schur vectors to compute.
         initial_distribution
-            Input probability distribution over all cells. If `None`, uniform is used.
+            Input distribution over all cells. If `None`, uniform distribution is used.
         method
             Method for calculating the Schur vectors. Valid options are:
 
@@ -91,21 +103,22 @@ class SchurMixin(VectorPlottable):
 
         Returns
         -------
-        None
-            Nothing, but updates the following fields:
+        Nothing, just updates the following fields:
 
-                - :attr:`schur_vectors` - TODO.
-                - :attr:`schur_matrix` -  TODO.
-                - :attr:`eigendecomposition` - TODO.
+            - :attr:`schur_vectors` - %(schur_vectors.summary)s
+            - :attr:`schur_matrix` -  %(schur_matrix.summary)s
+            - :attr:`eigendecomposition` - %(eigen.summary)s
         """
         if n_components < 2:
-            raise ValueError(
-                f"Number of components must be `>=2`, found `{n_components}`."
+            logg.warning(
+                f"Number of Schur vectors `>=2`, but only `{n_components}` "
+                f"were requested. Using `n_components=2`"
             )
+            n_components = 2
 
         if method not in ("brandts", "krylov"):
             raise ValueError(
-                f"Invalid method `{method!r}`. Valid options are `'brandts'` or `'krylov'`."
+                f"Invalid method `{method!r}`. Valid options are:`'brandts'` or `'krylov'`."
             )
 
         try:
@@ -191,7 +204,7 @@ class SchurMixin(VectorPlottable):
         """
         schur_matrix = self.schur_matrix
         if schur_matrix is None:
-            raise RuntimeError("Compute `.schur_matrix` first as `.compute_schur()`.")
+            raise RuntimeError("Compute Schur matrix first as `.compute_schur()`.")
 
         fig, ax = plt.subplots(
             figsize=schur_matrix.shape if figsize is None else figsize, dpi=dpi
@@ -230,6 +243,31 @@ class SchurMixin(VectorPlottable):
         if save is not None:
             save_fig(fig, path=save)
 
+    @d.dedent
+    def plot_schur(self, *args: Any, **kwargs: Any) -> None:
+        """
+        Plot Schur vectors in an embedding.
+
+        Parameters
+        ----------
+        %(plot_vectors.parameters)s
+
+        Returns
+        -------
+        %(plot_vectors.returns)s
+        """
+
+        vectors = self.schur_vectors
+        if vectors is None:
+            raise RuntimeError("Compute Schur vectors first as `.compute_schur()`.")
+
+        self._plot_vectors(
+            "schur",
+            vectors,
+            *args,
+            **kwargs,
+        )
+
     @logger
     @shadow
     def _write_schur_decomposition(
@@ -256,7 +294,7 @@ class SchurMixin(VectorPlottable):
         )
 
     def _read_schur_decomposition(
-        self, adata: AnnData, allow_missing: bool = True
+        self: SchurProtocol, adata: AnnData, allow_missing: bool = True
     ) -> bool:
         # fmt: off
         with SafeGetter(self, allowed=KeyError) as sg:
@@ -273,46 +311,3 @@ class SchurMixin(VectorPlottable):
         # fmt: on
 
         return sg.ok
-
-    @d.dedent
-    def plot_schur(self, *args: Any, **kwargs: Any) -> None:
-        """
-        Plot Schur vectors in an embedding.
-
-        Parameters
-        ----------
-        %(plot_vectors.parameters)s
-
-        Returns
-        -------
-        %(plot_vectors.returns)s
-        """
-
-        vectors = self.schur_vectors
-        if vectors is None:
-            raise RuntimeError("Compute `.schur_vectors` first as `.compute_schur()`.")
-
-        self._plot_vectors(
-            "schur",
-            vectors,
-            *args,
-            **kwargs,
-        )
-
-    @property
-    @d.get_summary(base="schur_vectors")
-    def schur_vectors(self) -> Optional[np.ndarray]:
-        """Schur vectors."""
-        return self._schur_vectors
-
-    @property
-    @d.get_summary(base="schur_matrix")
-    def schur_matrix(self) -> Optional[np.ndarray]:
-        """Schur matrix."""
-        return self._schur_matrix
-
-    @property
-    @d.get_summary(base="eigen")
-    def eigendecomposition(self) -> Optional[Dict[str, Any]]:
-        """Eigendecomposition of the transition matrix."""
-        return self._eigendecomposition

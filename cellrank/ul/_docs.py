@@ -50,7 +50,7 @@ which
         - `'LR'` - the largest real part.
         - `'LM'` - the largest magnitude.
 alpha
-    Used to compute the `eigengap`. ``alpha`` is the weight given to the deviation of an eigenvalue from one."""
+    Used to compute the *eigengap*. ``alpha`` is the weight given to the deviation of an eigenvalue from one."""
 _n_cells = """\
 n_cells
     Number of most likely cells from each macrostate to select."""

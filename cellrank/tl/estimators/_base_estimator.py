@@ -90,7 +90,7 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
         obj: Optional[Union[pd.DataFrame, Mapping[str, Any]]] = None,
         key: Optional[str] = None,
         value: Optional[
-            Union[np.ndarray, pd.Series, pd.DataFrame, Lineage, AnnData]
+            Union[np.ndarray, pd.Series, pd.DataFrame, Lineage, AnnData, Dict[str, Any]]
         ] = None,
         copy: bool = True,
         shadow_only: bool = False,
