@@ -33,7 +33,7 @@ from pandas.api.types import infer_dtype, is_categorical_dtype
 
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
-from matplotlib.colors import Normalize, ListedColormap
+from matplotlib.colors import Normalize, ListedColormap, to_hex
 from matplotlib.ticker import StrMethodFormatter
 from matplotlib.colorbar import ColorbarBase
 
@@ -1018,6 +1018,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
     def _read_from_adata(self, adata: AnnData, **kwargs: Any) -> bool:
         _ = self._read_eigendecomposition(adata, allow_missing=True)
+        # TODO(michalk8): reintroduce in 2.0
         ok = self._read_schur_decomposition(adata, allow_missing=True)
         if not ok:
             return False
@@ -1028,8 +1029,10 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             self._get("_macrostates", self.adata.obs, key=key, where="obs", dtype=pd.Series)
             ckey = Key.uns.colors(key)
             self._get("_macrostates_colors", self.adata.uns, key=ckey, where="uns", dtype=(list, tuple, np.ndarray))
+            self._macrostates_colors = np.asarray([to_hex(c) for c in self._macrostates_colors])
             mkey = Key.obsm.memberships(key)
             self._get("_macrostates_memberships", self.adata.obsm, key=mkey, where="obsm", dtype=Lineage)
+            # TODO(michalk8): reconstruct lineage? at this point we have all the info needed
             self.params[key] = self._read_params(key)
 
             # TODO(michalk8): allow missing?

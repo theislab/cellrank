@@ -328,7 +328,11 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
                     adata.X = deepcopy(self.adata.X) if copy else self.adata.X
                     return
                 if attr == "raw":
-                    adata.raw = deepcopy(self.adata.raw) if copy else self.adata.raw
+                    adata.raw = (
+                        self.adata.raw.to_adata()
+                        if self.adata.raw is not None
+                        else None
+                    )
                     return
 
                 old = getattr(self.adata, attr)
@@ -339,9 +343,12 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
                 # fmt: off
                 if isinstance(new, pd.DataFrame):
                     old = old[keys]
+                    # avoid duplicates
+                    old = old[old.columns.difference(new.columns)]
                     setattr(adata, attr, pd.merge(new, old, how="inner", left_index=True, right_index=True, copy=copy))
                 elif isinstance(new, Mapping):
                     old = {k: old[k] for k in keys}
+                    # old has preference, since it's user supplied
                     setattr(adata, attr, {**new, **(deepcopy(old) if copy else old)})
                 else:
                     raise TypeError(f"Expected `adata.{attr}` to be either `Mapping` or `pandas. DataFrame`, "

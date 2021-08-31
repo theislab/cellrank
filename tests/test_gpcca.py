@@ -1,19 +1,133 @@
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, Optional, Sequence
 
 import os
 import pytest
 from copy import deepcopy
+from enum import Enum
 from _helpers import assert_array_nan_equal, assert_estimators_equal
 from tempfile import TemporaryDirectory
 
 import cellrank as cr
 from anndata import AnnData
+from cellrank.tl import Lineage
 from cellrank._key import Key
 from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
 
 import numpy as np
 import pandas as pd
-from pandas.testing import assert_series_equal
+from scipy.sparse import issparse
+from pandas.testing import assert_frame_equal, assert_series_equal
+
+
+# fmt: off
+class State(str, Enum):
+    SCHUR = "schur"
+    MACRO = "macro"
+    TERM = "term"
+    ABS = "abs"
+    LIN = "lin"
+
+    @property
+    def prev(self) -> Optional["State"]:
+        if self.value == "schur":
+            return None
+        if self.value == "macro":
+            return State.SCHUR
+        if self.value == "term":
+            return State.MACRO
+        if self.value == "abs":
+            return State.TERM
+        if self.value == "lin":
+            return State.ABS
+        return None
+
+    @property
+    def next(self) -> Optional["State"]:
+        if self.value == "schur":
+            return State.MACRO
+        if self.value == "macro":
+            return State.TERM
+        if self.value == "term":
+            return State.ABS
+        if self.value == "abs":
+            return State.LIN
+        if self.value == "lin":
+            return None
+        return None
+
+    @property
+    def key(self) -> Optional[str]:
+        bwd = False
+        if self.value == "schur":
+            return f"schur_decomposition_{Key.backward(bwd)}"
+        if self.value == "macro":
+            return Key.obs.macrostates(bwd)
+        if self.value == "term":
+            return Key.obs.term_states(bwd)
+        if self.value == "abs":
+            return Key.obsm.abs_probs(bwd)
+        if self.value == "lin":
+            return Key.varm.lineage_drivers(bwd)
+        return None
+
+    @property
+    def attr_keys(self) -> Optional[Sequence[Tuple[str, str]]]:
+        bwd = False
+        if self.value == "schur":
+            key1 = Key.uns.eigen(bwd)
+            key2 = Key.obsm.schur_vectors(bwd)
+            key3 = Key.uns.schur_matrix(bwd)
+            return ("uns", key1), ("obsm", key2), ("uns", key3)
+        if self.value == "macro":
+            key1 = Key.obs.macrostates(bwd)
+            key2 = Key.uns.colors(key1)
+            key3 = Key.obsm.memberships(key1)
+            return ("obs", key1), ("uns", key2), ("obsm", key3)
+        if self.value == "term":
+            key1 = Key.obs.term_states(bwd)
+            key2 = Key.obs.probs(key1)
+            key3 = Key.uns.colors(key1)
+            return ("obs", key1), ("obs", key2), ("uns", key3)
+        if self.value == "abs":
+            key1 = Key.obsm.abs_probs(bwd)
+            key2 = Key.obsm.abs_times(bwd)
+            key3 = Key.obs.priming_degree(bwd)
+            return ("obsm", key1), ("obsm", key2), ("obs", key3)
+        if self.value == "lin":
+            key1 = Key.varm.lineage_drivers(bwd)
+            return ("varm", key1),
+        return None
+
+    @property
+    def attrs(self) -> Optional[Sequence[Tuple[str, type]]]:
+        if self.value == "schur":
+            return ("_eigendecomposition", dict), ("_schur_vectors", np.ndarray), ("_schur_matrix", np.ndarray)
+        if self.value == "macro":
+            return (
+                ("_macrostates", pd.Series), ("_macrostates_colors", np.ndarray),
+                ("_macrostates_memberships", Lineage), ("_coarse_tmat", pd.DataFrame),
+                ("_coarse_init_dist", pd.Series), ("_coarse_stat_dist", pd.Series)
+            )
+        if self.value == "term":
+            return ("_term_states", pd.Series), ("_term_states_probs", pd.Series), ("_term_states_colors", np.ndarray)
+        if self.value == "abs":
+            return (
+                ("_absorption_probabilities", Lineage), ("_absorption_times", pd.DataFrame),
+                ("_priming_degree", pd.Series)
+            )
+        if self.value == "lin":
+            return ("_lineage_drivers", pd.DataFrame),
+        return None
+
+# fmt: on
+
+
+def shares_mem(x, y) -> bool:
+    if isinstance(x, Lineage):
+        return np.shares_memory(x.X, y.X)
+    if issparse(x):
+        return np.shares_memory(x.data, y.data)
+    return np.shares_memory(x, y)
 
 
 def _check_eigdecomposition(mc: cr.tl.estimators.GPCCA) -> None:
@@ -85,7 +199,7 @@ def _check_abs_probs(mc: cr.tl.estimators.GPCCA) -> None:
     # term states
     key = Key.obs.term_states(mc.backward)
     assert isinstance(mc.terminal_states, pd.Series)
-    # TODO: assert series equal
+    # TODO(michalk8): assert series equal from pandas
     assert_array_nan_equal(mc.adata.obs[key], mc.terminal_states)
     np.testing.assert_array_equal(mc.adata.uns[Key.uns.colors(key)], mc.absorption_probabilities.colors)
     np.testing.assert_array_equal(mc.adata.uns[Key.uns.colors(key)], mc._term_states_colors)
@@ -104,6 +218,102 @@ def _check_abs_probs(mc: cr.tl.estimators.GPCCA) -> None:
     assert isinstance(mc.priming_degree, pd.Series)
     np.testing.assert_array_equal(mc.adata.obs[key], mc.priming_degree)
     # fmt: on
+
+
+def _fit_gpcca(adata, state: str) -> cr.estimators.GPCCA:
+    vk = VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
+    ck = ConnectivityKernel(adata).compute_transition_matrix()
+    terminal_kernel = 0.8 * vk + 0.2 * ck
+
+    mc = cr.tl.estimators.GPCCA(terminal_kernel)
+    mc.compute_eigendecomposition()
+    mc.compute_schur(n_components=10, method="krylov")
+    if state == State.SCHUR:
+        return mc
+    mc.compute_macrostates(n_states=2)
+    if state == State.MACRO:
+        return mc
+    mc.set_terminal_states_from_macrostates()
+    if state == State.TERM:
+        return mc
+    mc.compute_absorption_probabilities(time_to_absorption="all")
+    mc.compute_lineage_priming()
+    if state == State.ABS:
+        return mc
+    mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
+    if state == State.LIN:
+        return mc
+
+    raise NotImplementedError(state)
+
+
+def _assert_params(
+    g: cr.tl.estimators.GPCCA,
+    state: Optional[State],
+    fwd: bool = False,
+    init: bool = True,
+) -> None:
+    if state is None:
+        return
+
+    key = state.key
+    if fwd:
+        if init:
+            assert isinstance(g.params[key], dict), state
+        else:
+            assert g.params.get(key, {}) == {}, state
+        _assert_params(g, state.next, fwd=True, init=False)
+    else:
+        assert isinstance(g.params[key], dict), state
+        _assert_params(g, state.prev, fwd=False)
+
+
+def _assert_adata(
+    adata: AnnData, state: Optional[State], fwd: bool = False, init: bool = True
+) -> None:
+    if state is None:
+        return
+
+    if fwd:
+        if init:
+            for attr, key in state.attr_keys:
+                obj = getattr(adata, attr)
+                assert key in obj, sorted(obj.keys())
+        else:
+            for attr, key in state.attr_keys:
+                obj = getattr(adata, attr)
+                assert key not in obj, sorted(obj.keys())
+        _assert_adata(adata, state.next, fwd=True, init=False)
+    else:
+        for attr, key in state.attr_keys:
+            obj = getattr(adata, attr)
+            assert key in obj, sorted(obj.keys())
+        _assert_adata(adata, state.prev, fwd=False)
+
+
+def _assert_gpcca_attrs(
+    g: cr.tl.estimators.GPCCA,
+    state: Optional[State] = None,
+    fwd: bool = False,
+    init: bool = True,
+) -> None:
+    if state is None:
+        return
+    if fwd:
+        if init:
+            for attr, dtype in state.attrs:
+                obj = getattr(g, attr)
+                assert isinstance(obj, dtype)
+        else:
+            for attr, dtype in state.attrs:
+                obj = getattr(g, attr)
+                assert obj is None, attr
+        _assert_gpcca_attrs(g, state.next, fwd=True, init=False)
+    else:
+        for attr, dtype in state.attrs:
+            obj = getattr(g, attr)
+            assert isinstance(obj, dtype), attr
+        _assert_gpcca_attrs(g, state.prev, fwd=False)
 
 
 class TestGPCCA:
@@ -855,13 +1065,101 @@ class TestGPCCA:
         assert mc.terminal_states_memberships is None
         assert key not in adata_large.obsm
 
+    def test_fit_predict(self, adata_large: AnnData):
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        terminal_kernel = 0.8 * vk + 0.2 * ck
 
-class TestGPCCAParams:
-    pass
+        g = cr.tl.estimators.GPCCA(terminal_kernel)
+        tmp = g.fit(n_states=2)
+
+        assert tmp is g
+        _assert_params(g, State.MACRO, fwd=False)
+        _assert_params(g, State.MACRO, fwd=True)
+
+        res = g.predict()
+        assert res is None
+        _assert_params(g, State.TERM, fwd=False)
+        _assert_params(g, State.TERM, fwd=True)
+
+    @pytest.mark.parametrize("state", list(State))
+    def test_params(self, adata_large: AnnData, state: State):
+        g = _fit_gpcca(adata_large, state)
+        _assert_params(g, state, fwd=False)
+        _assert_params(g, state, fwd=True)
 
 
-class TestGPCCAAnnDataSerialization:
-    pass
+class TestGPCCASerialization:
+    @pytest.mark.parametrize("state", list(State))
+    def test_to_adata(self, adata_large: AnnData, state: State):
+        g = _fit_gpcca(adata_large, state)
+        adata = g.to_adata()
+        _assert_adata(adata, state, fwd=False)
+        _assert_adata(adata, state, fwd=True)
+
+    @pytest.mark.parametrize("copy", [False, True])
+    @pytest.mark.parametrize("keep", ["X", ("obs", "obsm"), ("layers")])
+    def test_to_adata_keep(
+        self, adata_large: AnnData, keep: Union[str, Sequence[str]], copy: bool
+    ):
+        g = _fit_gpcca(adata_large, State.MACRO)
+        adata = g.to_adata(keep=keep, copy=copy)
+        if "X" in keep:
+            res = shares_mem(adata.X, g.adata.X)
+            assert not res if copy else res
+        if "obs" in keep:
+            # we don't save macrostates in the underlying object, only during serialization
+            key = Key.obs.macrostates(g.backward)
+            cols = [c for c in adata.obs.columns if c != key]
+            obs = adata.obs[cols]
+            np.testing.assert_array_equal(obs.shape, g.adata.obs.shape)
+            assert_frame_equal(obs, g.adata.obs[cols])
+        if "obsm" in keep:
+            for key in g.adata.obsm.keys():
+                res = shares_mem(adata.obsm[key], g.adata.obsm[key])
+                assert not res if copy else res, key
+        if "layers" in keep:
+            for key in g.adata.layers.keys():
+                res = shares_mem(adata.layers[key], g.adata.layers[key])
+                assert not res if copy else res, key
+
+    @pytest.mark.parametrize("copy", [False, True])
+    def test_to_adata_copy_finegrained(self, adata_large: AnnData, copy):
+        g = _fit_gpcca(adata_large, State.MACRO)
+        adata = g.to_adata(keep=["obsp", "varm", "var"], copy=["obsp"])
+
+        assert_frame_equal(adata.var, g.adata.var)
+        for key in g.adata.obsp.keys():
+            assert not shares_mem(adata.obsp[key], g.adata.obsp[key]), key
+        for key in g.adata.varm.keys():
+            assert shares_mem(adata.varm[key], g.adata.varm[key]), key
+
+    @pytest.mark.parametrize("state", list(State))
+    def test_from_adata(self, adata_large: AnnData, state: State):
+        g1 = _fit_gpcca(adata_large, state)
+        adata = g1.to_adata()
+        g2 = cr.tl.estimators.GPCCA.from_adata(adata, obsp_key="T_fwd")
+
+        _assert_adata(g2.adata, state, fwd=False)
+        _assert_adata(g2.adata, state, fwd=True)
+        assert_estimators_equal(g1, g2, from_adata=True)
+
+    @pytest.mark.parametrize("state", list(State))
+    def test_from_adata_incomplete(self, adata_large: AnnData, state: State):
+        if state in (State.SCHUR, State.MACRO):
+            pytest.skip("See the reintroduce TODO in GPCCA")
+        g_orig = _fit_gpcca(adata_large, State.LIN)
+        adata = g_orig.to_adata()
+
+        for attr, key in state.attr_keys:
+            obj = getattr(adata, attr)
+            del obj[key]
+
+        g = cr.tl.estimators.GPCCA.from_adata(adata, obsp_key="T_fwd")
+        _assert_gpcca_attrs(g, state, fwd=True, init=False)
+        _assert_gpcca_attrs(g, state.prev, fwd=False)
+        _assert_adata(g._shadow_adata, state, fwd=True, init=False)
+        _assert_adata(g._shadow_adata, state.prev, fwd=False)
 
 
 class TestGPCCAIO:

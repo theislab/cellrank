@@ -79,7 +79,7 @@ class SchurMixin(VectorPlotter):
 
             - `'D'` - the eigenvalues.
             - `'eigengap'` - the eigengap.
-            - `'params'] - parameters used for the computation.
+            - `'params'` - parameters used for the computation.
             - `'V_l'` - left eigenvectors (optional).
             - `'V_r'` - right eigenvectors (optional).
             - `'stationary_dist'` - stationary distribution of :attr:`transition_matrix` (optional).
@@ -310,8 +310,8 @@ class SchurMixin(VectorPlotter):
         self: SchurProtocol, adata: AnnData, allow_missing: bool = True
     ) -> bool:
         # fmt: off
+        key = Key.uns.eigen(self.backward)
         with SafeGetter(self, allowed=KeyError) as sg:
-            key = Key.uns.eigen(self.backward)
             self._get("_eigendecomposition", adata.uns, key=key, where="uns", dtype=dict, allow_missing=allow_missing)
             key = Key.obsm.schur_vectors(self.backward)
             self._get("_schur_vectors", self.adata.obsm, key=key, where="obsm", dtype=np.ndarray,

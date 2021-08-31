@@ -434,14 +434,14 @@ class AbsProbsMixin:
             return (
                 f"Adding `adata.obsm[{key1!r}]`\n"
                 f"       `.absorption_probabilities`\n"
-                "    Finish"
+                f"    Finish"
             )
         return (
             f"Adding `adata.obsm[{key1!r}]`\n"
             f"       `adata.obsm[{key2!r}]`\n"
             f"       `.absorption_probabilities`\n"
             f"       `.absorption_times`\n"
-            "    Finish"
+            f"    Finish"
         )
 
     @logger

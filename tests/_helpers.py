@@ -9,12 +9,13 @@ import scanpy as sc
 import scvelo as scv
 import cellrank as cr
 from anndata import AnnData
-from cellrank.tl.kernels import VelocityKernel, CytoTRACEKernel, ConnectivityKernel
+from cellrank.tl.kernels import VelocityKernel, PrecomputedKernel, ConnectivityKernel
 
 import numpy as np
 import pandas as pd
 from sklearn.svm import SVR
 from scipy.sparse import spdiags, issparse, csr_matrix
+from pandas.testing import assert_frame_equal, assert_series_equal
 
 
 def _jax_not_installed() -> bool:
@@ -249,7 +250,19 @@ def assert_estimators_equal(
     actual: cr.tl.estimators.BaseEstimator,
     copy: bool = False,
     deep: bool = False,
+    from_adata: bool = False,
 ) -> None:
+    def check_arrays(x, y):
+        if isinstance(x, (np.ndarray, list, tuple)):
+            try:
+                np.testing.assert_array_compare(np.array_equal, x, y, equal_nan=True)
+            except:
+                np.testing.assert_array_compare(np.allclose, x, y, equal_nan=True)
+        elif isinstance(x, pd.Series):
+            assert_series_equal(x, y, check_names=False)
+        elif isinstance(x, pd.DataFrame):
+            assert_frame_equal(x, y, check_dtype=False)
+
     assert actual is not expected
     if copy:
         if deep:
@@ -259,7 +272,10 @@ def assert_estimators_equal(
     else:
         assert actual.adata is not expected.adata
     assert actual.kernel is not expected.kernel
-    assert isinstance(actual.kernel, type(expected.kernel))
+    if from_adata:
+        assert isinstance(actual.kernel, PrecomputedKernel)
+    else:
+        assert isinstance(actual.kernel, type(expected.kernel))
 
     assert actual.adata.shape == expected.adata.shape
     assert actual.adata is actual.kernel.adata
@@ -274,29 +290,47 @@ def assert_estimators_equal(
     np.testing.assert_array_equal(k1, k2)
 
     for attr in expected.__dict__.keys():
-        val2, val1 = getattr(actual, attr), getattr(expected, attr)
-        if isinstance(val1, cr.tl.Lineage):
-            assert val2 is not val1, attr
-            assert_array_nan_equal(val2.X, val1.X)
-        elif isinstance(val1, (np.ndarray, pd.Series, pd.DataFrame)):
-            assert val2 is not val1, attr
-            try:
-                # can be array of strings, can't get NaN
-                assert_array_nan_equal(val2, val1)
-            except:
-                np.testing.assert_array_equal(val2, val1)
-        elif isinstance(val1, dict):
-            assert val2.keys() == val1.keys()
-            for v2, v1 in zip(val2.values(), val1.values()):
-                if isinstance(v2, np.ndarray):
-                    assert v2 is not v1, attr
-                    np.testing.assert_array_equal(v2, v1)
-                else:
-                    assert v2 == v1, (v2, v1, attr)
+        if attr == "_invalid_n_states" and from_adata:
+            continue
+        actual_val, expected_val = getattr(actual, attr), getattr(expected, attr)
+        if isinstance(actual_val, cr.tl.Lineage):
+            assert actual_val is not expected_val, attr
+            assert_array_nan_equal(actual_val.X, expected_val.X)
+        elif isinstance(actual_val, (np.ndarray, pd.Series, pd.DataFrame, list, tuple)):
+            assert actual_val is not expected_val, attr
+            check_arrays(actual_val, expected_val)
+        elif isinstance(actual_val, dict):
+            if from_adata:
+                # _params can sometimes contain extra empty dict if initialized from `adata`
+                for k in set(actual_val.keys()) | set(expected_val.keys()):
+                    v2, v1 = actual_val.get(k, {}), expected_val.get(k, {})
+                    if isinstance(v1, (np.ndarray, pd.Series, pd.DataFrame)):
+                        check_arrays(v2, v1)
+                    else:
+                        assert v2 == v1, (v2, v1, attr, k)
+            else:
+                np.testing.assert_array_equal(
+                    sorted(actual_val.keys()), sorted(expected_val.keys())
+                )
+                for k in sorted(actual_val.keys()):
+                    v2, v1 = actual_val[k], expected_val[k]
+                    if isinstance(v1, (np.ndarray, pd.Series, pd.DataFrame)):
+                        check_arrays(v2, v1)
+                    else:
+                        assert v2 == v1, (v2, v1, attr, k)
         elif attr not in ("_kernel", "_gpcca", "_adata", "_shadow_adata"):
-            assert val2 == val1, (val2, val1, attr)
+            assert actual_val == expected_val, (actual_val, expected_val, attr)
         else:
-            assert isinstance(val2, type(val1)), (val2, val1, attr)
+            try:
+                assert isinstance(actual_val, type(expected_val)), (
+                    actual_val,
+                    expected_val,
+                    attr,
+                )
+            except AssertionError:
+                # objects initialized from `adata` don't have `_gpcca`
+                if attr != "_gpcca" and not from_adata:
+                    raise
 
 
 def random_transition_matrix(n: int) -> np.ndarray:
