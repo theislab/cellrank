@@ -1191,7 +1191,7 @@ class TestMonteCarlo:
         val = np.mean(
             np.abs(vk_mc.transition_matrix.data - vk_s.transition_matrix.data)
         )
-        assert val < 1e-6, val
+        assert val < 1e-5, val
 
     @jax_not_installed_skip
     def test_monte_carlo_and_stochastic(self, adata: AnnData):
