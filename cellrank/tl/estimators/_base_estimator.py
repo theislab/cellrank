@@ -1,8 +1,7 @@
-from typing import Any, Dict, Tuple, Union, Mapping, Callable, Optional, Sequence
+from typing import Any, Dict, List, Tuple, Union, Mapping, Callable, Optional, Sequence
 from typing_extensions import Literal
 
 from abc import ABC, abstractmethod
-from copy import copy
 from copy import copy as copy_
 from copy import deepcopy
 from inspect import Parameter, signature, getmembers, currentframe
@@ -19,6 +18,10 @@ from cellrank.tl.kernels._base_kernel import Kernel, KernelExpression
 import numpy as np
 import pandas as pd
 from scipy.sparse import spmatrix, csr_matrix
+
+Attr_t = (
+    Literal["X", "raw", "layers", "obs", "var", "obsm", "varm", "obsp", "varp", "uns"],
+)
 
 
 @d.get_sections(base="base_estimator", sections=["Parameters"])
@@ -290,19 +293,102 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
         ekey = Key.uns.estimator(self.backward) + "_params"
         return dict(self.adata.uns.get(ekey, {}).get(key, {}))
 
-    # TODO: allow for keys to be copied from original?
     @d.dedent
-    def to_adata(self) -> AnnData:
-        """%(to_adata.full_desc)s"""  # noqa: D400
+    def to_adata(
+        self,
+        keep: Union[Literal["all"], Sequence[Attr_t]] = ("X", "raw"),
+        *,
+        copy: Union[bool, Sequence[Attr_t]] = True,
+    ) -> AnnData:
+        """
+        %(to_adata.full_desc)s
+
+        Parameters
+        ----------
+        keep
+            Which attributes to keep from the underlying :attr:`adata`. Valid options are:
+
+                - `'all'` - keep all attributes specified in the signature.
+                - :class:`typing.Sequence` - keep only subset of these attributes.
+                - :class:`dict` - the keys correspond the attribute names and values to a subset of keys
+                  which to keep from this attribute. If the values are specified either as `True` or `'all'`,
+                  everything from this attribute will be kept.
+        copy
+            Whether to copy the data. Can be specified on per-attribute basis. Useful for attributes that store arrays.
+            Attributes not specified here will not be copied.
+
+        Returns
+        -------
+        %(adata)s
+        """  # noqa: D400
+
+        def handle_attribute(attr: Attr_t, keys: List[str], *, copy: bool) -> None:
+            try:
+                if attr == "X":
+                    adata.X = deepcopy(self.adata.X) if copy else self.adata.X
+                    return
+                if attr == "raw":
+                    adata.raw = deepcopy(self.adata.raw) if copy else self.adata.raw
+                    return
+
+                old = getattr(self.adata, attr)
+                new = getattr(adata, attr)
+                if keys == ["all"]:
+                    keys = list(old.keys())
+
+                # fmt: off
+                if isinstance(new, pd.DataFrame):
+                    old = old[keys]
+                    setattr(adata, attr, pd.merge(new, old, how="inner", left_index=True, right_index=True, copy=copy))
+                elif isinstance(new, Mapping):
+                    old = {k: old[k] for k in keys}
+                    setattr(adata, attr, {**new, **(deepcopy(old) if copy else old)})
+                else:
+                    raise TypeError(f"Expected `adata.{attr}` to be either `Mapping` or `pandas. DataFrame`, "
+                                    f"found `{type(new).__name__}`.")
+                # fmt: on
+            except KeyError:
+                missing = sorted(k for k in keys if k not in old)
+                raise KeyError(
+                    f"Unable to find key(s) `{missing}` in `adata.{attr}`."
+                ) from None
+
         adata = self._shadow_adata.copy()
+        _adata = self.adata
         try:
             # kernel and estimator share the adata
             self.adata = adata
             self.kernel.write_to_adata()
         finally:
-            self.adata = self.adata
+            self.adata = _adata
         key = Key.uns.estimator(self.backward) + "_params"
         adata.uns[key] = deepcopy(self.params)
+
+        # fmt: off
+        if isinstance(keep, str):
+            if keep == 'all':
+                keep = ["X", "raw", "layers", "obs", "var", "obsm", "varm", "obsp", "varp", "uns"]
+            else:
+                keep = [keep]
+        if not isinstance(keep, Mapping):
+            keep = {attr: True for attr in keep}
+        if isinstance(copy, bool):
+            copy = {attr: copy for attr in keep}
+        elif isinstance(copy, str):
+            copy = [copy]
+        if not isinstance(copy, Mapping):
+            copy = {attr: True for attr in copy}
+        # fmt: on
+
+        for attr, keys in keep.items():
+            if keys is True:
+                keys = ["all"]
+            elif isinstance(keys, str):
+                keys = [keys]
+            if keys is False or not len(keys):
+                continue
+            handle_attribute(attr, keys=list(keys), copy=copy.get(attr, False))
+
         return adata
 
     @classmethod
@@ -337,13 +423,13 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
         -------
         A copy of self.
         """
-        k = deepcopy(self.kernel) if deep else copy(self.kernel)
+        k = deepcopy(self.kernel) if deep else copy_(self.kernel)
         res = type(self)(k)
         for k, v in self.__dict__.items():
             if isinstance(v, Mapping):
                 res.__dict__[k] = deepcopy(v)
             elif k != "_kernel":
-                res.__dict__[k] = deepcopy(v) if deep else copy(v)
+                res.__dict__[k] = deepcopy(v) if deep else copy_(v)
 
         return res
 

@@ -43,7 +43,7 @@ class AnnDataMixin(ABC):
 
     @abstractmethod
     @d.get_full_description(base="to_adata")
-    def to_adata(self) -> AnnData:
+    def to_adata(self, **kwargs: Any) -> AnnData:
         """Serialize self to :class:`anndata.Anndata`."""
 
     @classmethod
