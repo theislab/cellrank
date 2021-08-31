@@ -856,6 +856,14 @@ class TestGPCCA:
         assert key not in adata_large.obsm
 
 
+class TestGPCCAParams:
+    pass
+
+
+class TestGPCCAAnnDataSerialization:
+    pass
+
+
 class TestGPCCAIO:
     @pytest.mark.parametrize("deep", [False, True])
     def test_copy(
@@ -905,3 +913,46 @@ class TestGPCCAIO:
             mc2 = cr.tl.estimators.GPCCA.read(os.path.join(tmpdir, "foo.pickle"))
 
         assert_estimators_equal(mc1, mc2)
+
+    @pytest.mark.parametrize("copy", [False, True])
+    def test_write_no_adata(
+        self, adata_gpcca_fwd: Tuple[AnnData, cr.tl.estimators.GPCCA], copy: bool
+    ):
+        adata, mc1 = adata_gpcca_fwd
+
+        with TemporaryDirectory() as tmpdir:
+            mc1.write(os.path.join(tmpdir, "foo"), write_adata=False)
+            mc2 = cr.tl.estimators.GPCCA.read(
+                os.path.join(tmpdir, "foo.pickle"), adata=adata, copy=copy
+            )
+
+        if copy:
+            assert adata is not mc2.adata
+        else:
+            assert adata is mc2.adata
+        assert_estimators_equal(mc1, mc2)
+
+    def test_write_no_adata_read_none_supplied(
+        self, adata_gpcca_fwd: Tuple[AnnData, cr.tl.estimators.GPCCA]
+    ):
+        _, mc1 = adata_gpcca_fwd
+
+        with TemporaryDirectory() as tmpdir:
+            mc1.write(os.path.join(tmpdir, "foo"), write_adata=False)
+            with pytest.raises(TypeError, match="This object was saved without"):
+                _ = cr.tl.estimators.GPCCA.read(
+                    os.path.join(tmpdir, "foo.pickle"), adata=None
+                )
+
+    def test_write_no_adata_read_n(
+        self, adata_gpcca_fwd: Tuple[AnnData, cr.tl.estimators.GPCCA]
+    ):
+        _, mc1 = adata_gpcca_fwd
+        adata = AnnData(np.random.normal(size=(len(mc1) + 1, 1)))
+
+        with TemporaryDirectory() as tmpdir:
+            mc1.write(os.path.join(tmpdir, "foo"), write_adata=False)
+            with pytest.raises(ValueError, match="Expected `adata` to be of length"):
+                _ = cr.tl.estimators.GPCCA.read(
+                    os.path.join(tmpdir, "foo.pickle"), adata=adata
+                )

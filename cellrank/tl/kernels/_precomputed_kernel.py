@@ -11,7 +11,6 @@ from cellrank.tl.kernels import Kernel
 from cellrank.tl.kernels._base_kernel import _RTOL, KernelExpression
 
 import numpy as np
-from scipy.sparse import eye as speye
 from scipy.sparse import spmatrix, csr_matrix
 
 
@@ -69,7 +68,7 @@ class PrecomputedKernel(Kernel):
                     "Ignoring supplied `adata` object because it differs from the kernel's `adata` object."
                 )
 
-            # use `str` rather than `repr` because it captures the params
+            # use `str` rather than `repr` because it captures the parameters
             origin = str(transition_matrix).strip("~<>")
             params = transition_matrix.params.copy()
             backward = transition_matrix.backward

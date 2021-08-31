@@ -31,7 +31,7 @@ class IOMixin:
     def write(
         self,
         fname: Union[str, Path],
-        keep_adata: bool = True,
+        write_adata: bool = True,
         ext: Optional[str] = "pickle",
     ) -> None:
         """
@@ -41,7 +41,7 @@ class IOMixin:
         ----------
         fname
             Filename where to save the object.
-        keep_adata
+        write_adata
             Whether to save :attr:`adata` object or not, if present.
         ext
             Filename extension to use. If `None`, don't append any extension.
@@ -60,7 +60,7 @@ class IOMixin:
 
         logg.info(f"Writing `{self}` to `{fname}`")
 
-        if keep_adata:
+        if write_adata:
             with open(fname, "wb") as fout:
                 pickle.dump(self, fout)
             return
