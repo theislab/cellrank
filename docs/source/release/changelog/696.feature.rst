@@ -1,0 +1,1 @@
+Add ``threshold`` to :meth:`cellrank.external.WOTKernel.compute_transition_matrix` to increase sparsity/speed up GPCCA.
