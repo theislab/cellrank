@@ -1143,20 +1143,6 @@ class TestTransitionProbabilities:
 
 
 class TestMonteCarlo:
-    @pytest.mark.parametrize("backend", ["multiprocessing", "threading", "loky"])
-    def test_backend_runs(self, adata: AnnData, backend: str):
-        vk_mc = VelocityKernel(adata, backward=False)
-        vk_mc.compute_transition_matrix(
-            mode="monte_carlo",
-            show_progress_bar=False,
-            n_samples=10,
-            n_jobs=2,
-            softmax_scale=4,
-            backend=backend,
-        )
-
-        assert isspmatrix_csr(vk_mc.transition_matrix)
-
     def test_mc_and_mc_fwd_1k(self, adata: AnnData):
         vk_mc = VelocityKernel(adata, backward=False)
         vk_mc.compute_transition_matrix(
