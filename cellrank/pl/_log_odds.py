@@ -182,18 +182,18 @@ def log_odds(
         use_raw = False
 
     # define log-odds
-    ln_key = Key.obsm.abs_probs(backward)
-    if ln_key not in adata.obsm:
-        raise KeyError(f"Lineages key `{ln_key!r}` not found in `adata.obsm`.")
+    lineage_key = Key.obsm.abs_probs(backward)
+    if lineage_key not in adata.obsm:
+        raise KeyError(f"Lineages key `{lineage_key!r}` not found in `adata.obsm`.")
     time = _ensure_numeric_ordered(adata, time_key)
     order = time.cat.categories[:: -1 if backward else 1]
 
-    fate1 = adata.obsm[ln_key][lineage_1].X.squeeze(-1)
+    fate1 = adata.obsm[lineage_key][lineage_1].X.squeeze(-1)
     if lineage_2 is None:
         fate2 = 1 - fate1
         ylabel = rf"$\log{{\frac{{{lineage_1}}}{{rest}}}}$"
     else:
-        fate2 = adata.obsm[ln_key][lineage_2].X.squeeze(-1)
+        fate2 = adata.obsm[lineage_key][lineage_2].X.squeeze(-1)
         ylabel = rf"$\log{{\frac{{{lineage_1}}}{{{lineage_2}}}}}$"
 
     # fmt: off

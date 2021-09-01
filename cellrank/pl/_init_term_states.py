@@ -3,8 +3,9 @@ from typing_extensions import Literal
 
 from anndata import AnnData
 from cellrank._key import Key
+from scanpy._utils import deprecated_arg_names
 from cellrank.ul._docs import d, _initial, _terminal, inject_docs
-from cellrank.tl.estimators import GPCCA
+from cellrank.tl.estimators import GPCCA, CFLARE
 
 _find_docs = """\
 Plot {direction} states uncovered by :class:`cellrank.tl.{fn_name}`.
@@ -17,7 +18,7 @@ discrete
     Only available when {direction} were estimated by :class:`cellrank.tl.estimators.GPCCA`.
 states
     Subset of {direction} states to plot. If `None`, plot all {direction} states.
-cluster_key
+color
     If given, plot cluster annotations left of the {direction} states.
 %(time_mode)s
 time_key
@@ -32,6 +33,7 @@ Returns
 """
 
 
+@deprecated_arg_names({"cluster_key": "color"})
 def _initial_terminal(
     adata: AnnData,
     backward: bool = False,
@@ -42,9 +44,10 @@ def _initial_terminal(
     time_key: str = "latent_time",
     **kwargs,
 ) -> None:
-
     mc = GPCCA.from_adata(adata, obsp_key=Key.uns.kernel(backward))
-    color = kwargs.pop("cluster_key", color)
+    # in case there are no term. states memberships
+    if mc.terminal_states_memberships is None:
+        mc = CFLARE.from_adata(adata, obsp_key=Key.uns.kernel(backward))
 
     if mc.terminal_states is None:
         raise RuntimeError(

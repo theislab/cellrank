@@ -115,7 +115,7 @@ def gene_trends(
         use the corresponding colors in ``adata.uns``, otherwise use `'black'`.
     abs_prob_cmap
         Continuous colormap to use when visualizing the absorption probabilities for each lineage.
-        Only used when ``same_plot=False``.
+        Only used when ``same_plot = False``.
     cell_color
         Key in :attr:`anndata.AnnData.obs` or :attr:`anndata.AnnData.var_names` used for coloring the cells.
     cell_alpha
@@ -167,12 +167,12 @@ def gene_trends(
         use_raw=kwargs.get("use_raw", False),
     )
 
-    ln_key = Key.obsm.abs_probs(backward)
-    if ln_key not in adata.obsm:
-        raise KeyError(f"Lineages key `{ln_key!r}` not found in `adata.obsm`.")
+    lineage_key = Key.obsm.abs_probs(backward)
+    if lineage_key not in adata.obsm:
+        raise KeyError(f"Lineages key `{lineage_key!r}` not found in `adata.obsm`.")
 
     if lineages is None:
-        lineages = adata.obsm[ln_key].names
+        lineages = adata.obsm[lineage_key].names
     elif isinstance(lineages, str):
         lineages = [lineages]
     elif all(ln is None for ln in lineages):  # no lineage, all the weights are 1
@@ -211,7 +211,7 @@ def gene_trends(
     )
 
     lineages = sorted(lineages)
-    tmp = adata.obsm[ln_key][lineages].colors
+    tmp = adata.obsm[lineage_key][lineages].colors
     if lineage_cmap is None and not transpose:
         lineage_cmap = tmp
 
@@ -279,7 +279,7 @@ def gene_trends(
                 and plot_kwargs.get("lineage_probability", False)
                 and transpose
             ):
-                lpc = adata.obsm[ln_key][gene].colors[0]
+                lpc = adata.obsm[lineage_key][gene].colors[0]
             else:
                 lpc = None
 

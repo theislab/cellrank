@@ -7,6 +7,7 @@ from wrapt import decorator
 import scvelo as scv
 from anndata import AnnData
 from cellrank import logging as logg
+from scanpy._utils import deprecated_arg_names
 from cellrank.tl._enum import ModeEnum
 from cellrank.ul._docs import d, inject_docs
 from cellrank.tl._utils import RandomKeys, _unique_order_preserving
@@ -232,7 +233,7 @@ def _plot_continuous(
     color = [] if color is None else (color,) if isinstance(color, str) else color
     color = _unique_order_preserving(color)
 
-    if mode == PlotMode.EMBEDDING:
+    if mode == PlotMode.TIME:
         kwargs.setdefault("legend_loc", "best")
         if title is None:
             title = [f"{_title} {state}" for state in states]
@@ -246,7 +247,7 @@ def _plot_continuous(
         kwargs["color"] = color if len(color) else None
         kwargs["xlabel"] = [time_key] * len(states)
         kwargs["ylabel"] = ["probability"] * len(states)
-    elif mode == PlotMode.TIME:
+    elif mode == PlotMode.EMBEDDING:
         kwargs.setdefault("legend_loc", "on data")
         if same_plot:
             if color:
@@ -278,8 +279,10 @@ def _plot_continuous(
     )
 
 
+# TODO(michalk8): in 2.0, remove %(time_mode)s and the deprecation
 @d.dedent
 @inject_docs(m=PlotMode)
+@deprecated_arg_names({"cluster_key": "color"})
 def _plot_dispatcher(
     self: PlotterProtocol,
     states: Optional[Union[str, Sequence[str]]] = None,
@@ -381,12 +384,13 @@ def register_plotter(
     ) -> None:
         # fmt: off
         disc: Optional[bool] = kwargs.pop("discrete", None)
+        # prefer `continuous`
         disc = continuous is None if disc is None else disc
 
-        if disc and (discrete is None or getattr(instance, discrete) is None):
+        if disc and discrete is None:
             logg.warning(f"Unable to plot `.{continuous}` in `discrete` mode. Using `continuous` mode")
             disc = False
-        if not disc and (continuous is None or getattr(instance, continuous) is None):
+        if not disc and continuous is None:
             logg.warning(f"Unable to plot `.{discrete}` in `continuous` mode. Using `discrete` mode")
             disc = True
         # fmt: on

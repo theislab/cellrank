@@ -131,7 +131,7 @@ def cluster_fates(
         gs = plt.GridSpec(n_rows, cols, figure=fig, wspace=0.5, hspace=0.5)
 
         ax = None
-        colors = list(adata.obsm[lk][:, lin_names].colors)
+        colors = list(adata.obsm[lineage_key][:, lin_names].colors)
 
         for g, k in zip(gs, d.keys()):
             current_ax = fig.add_subplot(g, sharey=ax)
@@ -150,7 +150,7 @@ def cluster_fates(
             current_ax.set_xticks(np.arange(len(lin_names)))
             current_ax.set_xticklabels(lin_names, rotation=xrot)
             if not is_all:
-                current_ax.set_xlabel(points)
+                current_ax.set_xlabel(term_states)
             current_ax.set_ylabel("absorption probability")
             current_ax.set_title(k)
 
@@ -187,7 +187,7 @@ def cluster_fates(
             colors = [v[0][i] for v in d.values()]
             kwargs["ax"] = ax
             kwargs["colors"] = tuple(colors)
-            kwargs["title"] = f"{dir_prefix} {lineage_name}"
+            kwargs["title"] = f"{direction} {lineage_name}"
 
             vmin = np.min(colors + [vmin])
             vmax = np.max(colors + [vmax])
@@ -212,7 +212,7 @@ def cluster_fates(
 
     @plot.register(ClusterFatesMode.PAGA_PIE)
     def _():
-        colors = list(adata.obsm[lk][:, lin_names].colors)
+        colors = list(adata.obsm[lineage_key][:, lin_names].colors)
         colors = {i: odict(zip(colors, mean)) for i, (mean, _) in enumerate(d.values())}
 
         fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
@@ -265,7 +265,7 @@ def cluster_fates(
             handles = []
             for lineage_name, color in zip(lin_names, colors[0].keys()):
                 handles += [ax.scatter([], [], label=lineage_name, c=color)]
-            if len(colors[0].keys()) != len(adata.obsm[lk].names):
+            if len(colors[0].keys()) != len(adata.obsm[lineage_key].names):
                 handles += [ax.scatter([], [], label="Rest", c="grey")]
 
             second_legend = _position_legend(
@@ -273,7 +273,7 @@ def cluster_fates(
                 legend_loc=legend_kwargs["loc"],
                 handles=handles,
                 **{k: v for k, v in legend_kwargs.items() if k != "loc"},
-                title=points,
+                title=term_states,
             )
             fig.add_artist(second_legend)
 
@@ -309,8 +309,8 @@ def cluster_fates(
         with RandomKeys(adata, len(lin_names), where="obs") as keys:
             _i = 0
             for _i, (name, key, ax) in enumerate(zip(lin_names, keys, axes)):
-                adata.obs[key] = adata.obsm[lk][name].X
-                ax.set_title(f"{dir_prefix} {name}")
+                adata.obs[key] = adata.obsm[lineage_key][name].X
+                ax.set_title(f"{direction} {name}")
                 violin(
                     adata, ylabel="absorption probability", keys=key, ax=ax, **kwargs
                 )
@@ -320,41 +320,39 @@ def cluster_fates(
         return fig
 
     def plot_violin_no_cluster_key():
-        from anndata import AnnData as _AnnData
-
         kwargs.pop("ax", None)
         kwargs.pop("keys", None)  # don't care
         kwargs.pop("save", None)
 
         kwargs["show"] = False
-        kwargs["groupby"] = points
+        kwargs["groupby"] = term_states
         kwargs["xlabel"] = None
         kwargs["rotation"] = xrot
 
-        data = np.ravel(adata.obsm[lk].X.T)[..., np.newaxis]
-        tmp = _AnnData(csr_matrix(data.shape, dtype=np.float32))
+        data = np.ravel(adata.obsm[lineage_key].X.T)[..., np.newaxis]
+        tmp = AnnData(csr_matrix(data.shape, dtype=np.float32))
         tmp.obs["absorption probability"] = data
-        tmp.obs[points] = (
+        tmp.obs[term_states] = (
             pd.Series(
                 np.concatenate(
                     [
-                        [f"{dir_prefix.lower()} {n}"] * adata.n_obs
-                        for n in adata.obsm[lk].names
+                        [f"{direction.lower()} {n}"] * adata.n_obs
+                        for n in adata.obsm[lineage_key].names
                     ]
                 )
             )
             .astype("category")
             .values
         )
-        tmp.obs[points] = tmp.obs[points].cat.reorder_categories(
-            [f"{dir_prefix.lower()} {n}" for n in adata.obsm[lk].names]
+        tmp.obs[term_states] = tmp.obs[term_states].cat.reorder_categories(
+            [f"{direction.lower()} {n}" for n in adata.obsm[lineage_key].names]
         )
-        tmp.uns[f"{points}_colors"] = adata.obsm[lk].colors
+        tmp.uns[f"{term_states}_colors"] = adata.obsm[lineage_key].colors
 
         fig, ax = plt.subplots(
             figsize=figsize if figsize is not None else (8, 6), dpi=dpi
         )
-        ax.set_title(points.capitalize())
+        ax.set_title(term_states.capitalize())
 
         violin(tmp, keys=["absorption probability"], ax=ax, **kwargs)
 
@@ -385,7 +383,7 @@ def cluster_fates(
                 vmin=vmin,
                 vmax=vmax,
                 fmt=fmt,
-                row_colors=adata.obsm[lk][lin_names].colors,
+                row_colors=adata.obsm[lineage_key][lin_names].colors,
                 dendrogram_ratio=(
                     0.15 * data.shape[0] / max_size,
                     0.15 * data.shape[1] / max_size,
@@ -433,10 +431,9 @@ def cluster_fates(
             f"`{ClusterFatesMode.BAR!r}` and `{ClusterFatesMode.VIOLIN!r}`, found `mode={mode!r}`."
         )
 
-    # TODO: rename vars
-    lk = Key.obsm.abs_probs(backward)
-    points = Key.obs.term_states(backward)
-    dir_prefix = Key.where(backward)
+    lineage_key = Key.obsm.abs_probs(backward)
+    term_states = Key.obs.term_states(backward)
+    direction = Key.where(backward)
 
     if cluster_key is not None:
         is_all = False
@@ -459,10 +456,10 @@ def cluster_fates(
             clusters = list(adata.obs[cluster_key].cat.categories)
     else:
         is_all = True
-        clusters = [points]
+        clusters = [term_states]
 
-    if lk not in adata.obsm:
-        raise KeyError(f"Lineage key `{lk!r}` not found in `adata.obsm`.")
+    if lineage_key not in adata.obsm:
+        raise KeyError(f"Lineage key `{lineage_key!r}` not found in `adata.obsm`.")
 
     if lineages is not None:
         if isinstance(lineages, str):
@@ -470,8 +467,8 @@ def cluster_fates(
         lin_names = _unique_order_preserving(lineages)
     else:
         # must be list for `sc.pl.violin`, else cats str
-        lin_names = list(adata.obsm[lk].names)
-    _ = adata.obsm[lk][lin_names]
+        lin_names = list(adata.obsm[lineage_key].names)
+    _ = adata.obsm[lineage_key][lin_names]
 
     if mode == mode.VIOLIN and not is_all:
         adata = adata[np.isin(adata.obs[cluster_key], clusters)].copy()
@@ -484,7 +481,7 @@ def cluster_fates(
             else (adata.obs[cluster_key] == name).values
         )
         mask = np.array(mask, dtype=bool)
-        data = adata.obsm[lk][mask, lin_names].X
+        data = adata.obsm[lineage_key][mask, lin_names].X
         mean = np.nanmean(data, axis=0)
         std = np.nanstd(data, axis=0) / np.sqrt(data.shape[0])
         d[name] = [mean, std]
