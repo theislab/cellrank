@@ -1,9 +1,8 @@
-from typing import Any, Union, Optional
+from typing import Any, Tuple, Union, Optional
 
 from abc import ABC
 
 from anndata import AnnData
-from cellrank.tl.kernels._base_kernel import KernelExpression
 
 import numpy as np
 from scipy.sparse import spmatrix
@@ -12,13 +11,13 @@ from scipy.sparse import spmatrix
 class KernelMixin(ABC):
     """Mixin that exposes various properties of :class:`cellrank.kernels.KernelExpression`."""
 
-    def __init__(self, kernel: KernelExpression, **kwargs: Any):
+    def __init__(self, kernel: "KernelExpression", **kwargs: Any):  # noqa: F821
         super().__init__(**kwargs)
         self._kernel = kernel
         self._n_obs = self.kernel.adata.n_obs
 
     @property
-    def kernel(self) -> "KernelExpression":
+    def kernel(self) -> "KernelExpression":  # noqa: F821
         """Underlying kernel."""
         return self._kernel
 
@@ -26,6 +25,11 @@ class KernelMixin(ABC):
     def adata(self) -> AnnData:
         """Annotated data object."""
         return self.kernel.adata
+
+    @property
+    def shape(self) -> Tuple[int, int]:
+        """Shape of the kernel."""
+        return self.kernel.shape
 
     @adata.setter
     def adata(self, adata: Optional[AnnData]) -> None:

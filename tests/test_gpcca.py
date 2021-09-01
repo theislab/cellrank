@@ -5,7 +5,6 @@ import pytest
 from copy import deepcopy
 from enum import Enum
 from _helpers import assert_array_nan_equal, assert_estimators_equal
-from tempfile import TemporaryDirectory
 
 import cellrank as cr
 from anndata import AnnData
@@ -1172,57 +1171,62 @@ class TestGPCCAIO:
 
         assert_estimators_equal(mc1, mc2, copy=True, deep=deep)
 
-    def test_write_ext(self, adata_gpcca_fwd: Tuple[AnnData, cr.tl.estimators.GPCCA]):
+    def test_write_ext(
+        self, adata_gpcca_fwd: Tuple[AnnData, cr.tl.estimators.GPCCA], tmpdir
+    ):
         _, mc = adata_gpcca_fwd
 
-        with TemporaryDirectory() as tmpdir:
-            fname = "foo"
-            mc.write(os.path.join(tmpdir, fname), ext="bar")
+        fname = "foo"
+        mc.write(os.path.join(tmpdir, fname), ext="bar")
 
-            assert os.path.isfile(os.path.join(tmpdir, f"foo.bar"))
+        assert os.path.isfile(os.path.join(tmpdir, f"foo.bar"))
 
     def test_write_no_ext(
-        self, adata_gpcca_fwd: Tuple[AnnData, cr.tl.estimators.GPCCA]
+        self,
+        adata_gpcca_fwd: Tuple[AnnData, cr.tl.estimators.GPCCA],
+        tmpdir,
     ):
         _, mc = adata_gpcca_fwd
+        fname = "foo"
+        mc.write(os.path.join(tmpdir, fname), ext=None)
 
-        with TemporaryDirectory() as tmpdir:
-            fname = "foo"
-            mc.write(os.path.join(tmpdir, fname), ext=None)
-
-            assert os.path.isfile(os.path.join(tmpdir, f"foo"))
+        assert os.path.isfile(os.path.join(tmpdir, f"foo"))
 
     def test_write_ext_with_dot(
-        self, adata_gpcca_fwd: Tuple[AnnData, cr.tl.estimators.GPCCA]
+        self,
+        adata_gpcca_fwd: Tuple[AnnData, cr.tl.estimators.GPCCA],
+        tmpdir,
     ):
         _, mc = adata_gpcca_fwd
 
-        with TemporaryDirectory() as tmpdir:
-            fname = "foo"
-            mc.write(os.path.join(tmpdir, fname), ext=".bar")
+        fname = "foo"
+        mc.write(os.path.join(tmpdir, fname), ext=".bar")
 
-            assert os.path.isfile(os.path.join(tmpdir, f"foo.bar"))
+        assert os.path.isfile(os.path.join(tmpdir, f"foo.bar"))
 
-    def test_read(self, adata_gpcca_fwd: Tuple[AnnData, cr.tl.estimators.GPCCA]):
+    def test_read(
+        self, adata_gpcca_fwd: Tuple[AnnData, cr.tl.estimators.GPCCA], tmpdir
+    ):
         _, mc1 = adata_gpcca_fwd
 
-        with TemporaryDirectory() as tmpdir:
-            mc1.write(os.path.join(tmpdir, "foo"))
-            mc2 = cr.tl.estimators.GPCCA.read(os.path.join(tmpdir, "foo.pickle"))
+        mc1.write(os.path.join(tmpdir, "foo"))
+        mc2 = cr.tl.estimators.GPCCA.read(os.path.join(tmpdir, "foo.pickle"))
 
         assert_estimators_equal(mc1, mc2)
 
     @pytest.mark.parametrize("copy", [False, True])
     def test_write_no_adata(
-        self, adata_gpcca_fwd: Tuple[AnnData, cr.tl.estimators.GPCCA], copy: bool
+        self,
+        adata_gpcca_fwd: Tuple[AnnData, cr.tl.estimators.GPCCA],
+        copy: bool,
+        tmpdir,
     ):
         adata, mc1 = adata_gpcca_fwd
 
-        with TemporaryDirectory() as tmpdir:
-            mc1.write(os.path.join(tmpdir, "foo"), write_adata=False)
-            mc2 = cr.tl.estimators.GPCCA.read(
-                os.path.join(tmpdir, "foo.pickle"), adata=adata, copy=copy
-            )
+        mc1.write(os.path.join(tmpdir, "foo"), write_adata=False)
+        mc2 = cr.tl.estimators.GPCCA.read(
+            os.path.join(tmpdir, "foo.pickle"), adata=adata, copy=copy
+        )
 
         if copy:
             assert adata is not mc2.adata
@@ -1231,26 +1235,24 @@ class TestGPCCAIO:
         assert_estimators_equal(mc1, mc2)
 
     def test_write_no_adata_read_none_supplied(
-        self, adata_gpcca_fwd: Tuple[AnnData, cr.tl.estimators.GPCCA]
+        self, adata_gpcca_fwd: Tuple[AnnData, cr.tl.estimators.GPCCA], tmpdir
     ):
         _, mc1 = adata_gpcca_fwd
 
-        with TemporaryDirectory() as tmpdir:
-            mc1.write(os.path.join(tmpdir, "foo"), write_adata=False)
-            with pytest.raises(TypeError, match="This object was saved without"):
-                _ = cr.tl.estimators.GPCCA.read(
-                    os.path.join(tmpdir, "foo.pickle"), adata=None
-                )
+        mc1.write(os.path.join(tmpdir, "foo"), write_adata=False)
+        with pytest.raises(TypeError, match="This object was saved without"):
+            _ = cr.tl.estimators.GPCCA.read(
+                os.path.join(tmpdir, "foo.pickle"), adata=None
+            )
 
-    def test_write_no_adata_read_n(
-        self, adata_gpcca_fwd: Tuple[AnnData, cr.tl.estimators.GPCCA]
+    def test_write_no_adata_read_wrong_length(
+        self, adata_gpcca_fwd: Tuple[AnnData, cr.tl.estimators.GPCCA], tmpdir
     ):
         _, mc1 = adata_gpcca_fwd
         adata = AnnData(np.random.normal(size=(len(mc1) + 1, 1)))
 
-        with TemporaryDirectory() as tmpdir:
-            mc1.write(os.path.join(tmpdir, "foo"), write_adata=False)
-            with pytest.raises(ValueError, match="Expected `adata` to be of length"):
-                _ = cr.tl.estimators.GPCCA.read(
-                    os.path.join(tmpdir, "foo.pickle"), adata=adata
-                )
+        mc1.write(os.path.join(tmpdir, "foo"), write_adata=False)
+        with pytest.raises(ValueError, match="Expected `adata` to be of length"):
+            _ = cr.tl.estimators.GPCCA.read(
+                os.path.join(tmpdir, "foo.pickle"), adata=adata
+            )

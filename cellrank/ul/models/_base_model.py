@@ -11,12 +11,13 @@ from collections import defaultdict
 
 from anndata import AnnData
 from cellrank import logging as logg
-from cellrank.tl import Lineage
 from cellrank.tl._enum import ModeEnum
 from cellrank.ul._docs import d
 from cellrank.tl._utils import save_fig
-from cellrank.ul._utils import Pickleable, _minmax, valuedispatch, _densify_squeeze
+from cellrank.ul._utils import _minmax, valuedispatch, _densify_squeeze
+from cellrank.tl._lineage import Lineage
 from scanpy.plotting._utils import add_colors_for_categorical_sample_annotation
+from cellrank.tl._mixins._io import IOMixin
 
 import numpy as np
 from scipy.sparse import spmatrix
@@ -131,7 +132,9 @@ def _handle_exception(return_type: FailedReturnType, func: Callable) -> Callable
 class BaseModelMeta(ABCMeta):
     """Metaclass for all base models."""
 
-    def __new__(cls, clsname, superclasses, attributedict):
+    def __new__(
+        cls, clsname: str, superclasses: Tuple[type, ...], attributedict: Dict[str, Any]
+    ):
         """
         Create a new instance.
 
@@ -158,7 +161,7 @@ class BaseModelMeta(ABCMeta):
 
 @d.get_sections(base="base_model", sections=["Parameters"])
 @d.dedent
-class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
+class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
     """
     Base class for all model classes.
 
@@ -171,16 +174,18 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
 
     def __init__(
         self,
-        adata: AnnData,
+        adata: Optional[AnnData],
         model: Any,
     ):
         if not isinstance(adata, AnnData) and not isinstance(self, FittedModel):
             # FittedModel doesn't need it
             raise TypeError(
-                f"Expected `adata` to be of type `anndata.AnnData`, found `{type(adata).__name__!r}`."
+                f"Expected `adata` to be of type `anndata.AnnData`, found `{type(adata).__name__}`."
             )
+        super().__init__()
 
         self._adata = adata
+        self._n_obs = 0 if adata is None else adata.n_obs
         self._model = model
         self._gene = None
         self._use_raw = False
@@ -226,9 +231,18 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         """
         return self._adata
 
+    @adata.setter
+    def adata(self, adata: Optional[AnnData]) -> None:
+        self._adata = adata
+
+    @property
+    def shape(self) -> Tuple[int]:
+        """Number of cells in :attr:`adata`."""  # noqa: D401
+        return (self._n_obs,)
+
     @property
     def model(self) -> Any:
-        """The underlying model."""  # noqa
+        """Underlying model."""
         return self._model
 
     @property

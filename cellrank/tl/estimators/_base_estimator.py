@@ -10,9 +10,9 @@ from contextlib import contextmanager
 from anndata import AnnData
 from cellrank._key import Key
 from cellrank.ul._docs import d
+from cellrank.tl._mixins import IOMixin, KernelMixin, AnnDataMixin
 from cellrank.tl.kernels import PrecomputedKernel
 from cellrank.tl._lineage import Lineage
-from cellrank.tl.estimators.mixins import IOMixin, KernelMixin, AnnDataMixin
 from cellrank.tl.kernels._base_kernel import Kernel, KernelExpression
 
 import numpy as np
@@ -32,8 +32,13 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
     Parameters
     ----------
     obj
-        Either a :class:`cellrank.tl.kernels.Kernel` object, an :class:`anndata.AnnData` object which
-        stores the transition matrix in ``.obsp`` attribute or :mod:`numpy` or :mod:`scipy` array.
+        Can be one of the following:
+
+            - :class:`cellrank.tl.kernels.Kernel` - kernel object.
+            - :class:`anndata.AnnData` - annotated data object containing transition matrix in
+              :attr:`anndata.AnnData.obsp`.
+            - :class:`np.ndarray` - row-normalized sparse transition matrix.
+            - :class:`scipy.sparse.spmatrix` - row-normalized sparse transition matrix.
     obsp_key
         Key in :attr:`anndata.AnnData.obsp` where the transition matrix is stored.
         Only used when ``obj`` is an :class:`anndata.AnnData` object.

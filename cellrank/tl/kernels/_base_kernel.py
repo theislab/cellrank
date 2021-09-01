@@ -30,8 +30,8 @@ from cellrank.tl._utils import (
     _get_neighs,
     _irreducible,
 )
-from cellrank.ul._utils import Pickleable
 from scvelo.plotting.utils import default_size, plot_outline
+from cellrank.tl._mixins._io import IOMixin
 from cellrank.tl.kernels._utils import _get_basis, _filter_kwargs
 from cellrank.tl.kernels._tmat_flow import FlowPlotter
 from cellrank.tl.kernels._random_walk import RandomWalk
@@ -65,7 +65,7 @@ Indices_t = Optional[
 ]
 
 
-class KernelExpression(Pickleable, ABC):
+class KernelExpression(IOMixin, ABC):
     """Base class for all kernels and kernel expressions."""
 
     def __init__(
@@ -118,6 +118,11 @@ class KernelExpression(Pickleable, ABC):
     @abstractmethod
     def adata(self, value: AnnData) -> None:
         pass
+
+    @property
+    @abstractmethod
+    def shape(self) -> Tuple[int, int]:
+        """`(n_cells, n_cells)`."""
 
     @property
     def params(self) -> Dict[str, Any]:
@@ -776,6 +781,7 @@ class UnaryKernelExpression(KernelExpression, ABC):
             op_name is None
         ), "Unary kernel does not support any kind operation associated with it."
         self._adata = adata
+        self._n_obs = adata.n_obs
 
     @property
     @d.dedent
@@ -789,6 +795,11 @@ class UnaryKernelExpression(KernelExpression, ABC):
         """
         return self._adata
 
+    @property
+    def shape(self) -> Tuple[int, int]:
+        """`(n_cells, n_cells)`."""
+        return self._n_obs, self._n_obs
+
     @adata.setter
     def adata(self, adata: Optional[AnnData]) -> None:
         if adata is None:
@@ -798,12 +809,12 @@ class UnaryKernelExpression(KernelExpression, ABC):
             raise TypeError(
                 f"Expected argument of type `anndata.AnnData`, found `{type(adata).__name__!r}`."
             )
-        if self.adata is not None and adata.shape != self.adata.shape:
+        shape = (adata.n_obs, adata.n_obs)
+        if self.shape != shape:
             raise ValueError(
-                f"Expected the new object to have same shape as previous object `{self.adata.shape}`, "
-                f"found `{adata.shape}`."
+                f"Expected the new object to have same shape as previous object `{self.shape}`, "
+                f"found `{shape}`."
             )
-        # trusting the user not do to `k.adata = None; k.adata = bdata`
         self._adata = adata
 
     def __repr__(self):
@@ -841,6 +852,11 @@ class NaryKernelExpression(KernelExpression, ABC):
         for kexprs in self._kexprs:
             kexprs._parent = self
 
+    @property
+    def shape(self) -> Tuple[int, int]:
+        """`(n_cells, n_cells)`."""
+        return self.kernels[0].shape
+
     def _maybe_recalculate_constants(self, type_: Type):
         if type_ == Constant:
             accessor = "transition_matrix"
@@ -848,7 +864,7 @@ class NaryKernelExpression(KernelExpression, ABC):
             accessor = "_value"
         else:
             raise RuntimeError(
-                f"Unable to determine accessor for type `{type.__name__!r}`."
+                f"Unable to determine accessor for type `{type(type_).__name__}`."
             )
 
         constants = [_is_bin_mult(k, type_) for k in self]

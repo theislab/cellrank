@@ -2,6 +2,7 @@ import pickle
 import pytest
 from io import BytesIO
 from copy import copy, deepcopy
+from pathlib import Path
 from _helpers import gamr_skip, create_model, assert_models_equal
 from itertools import product
 
@@ -625,6 +626,30 @@ class TestModelsIO:
         actual_model = pickle.load(fp)
 
         assert_models_equal(pygam_model, actual_model, pickled=True)
+
+    @pytest.mark.parametrize("copy", [False, True])
+    @pytest.mark.parametrize("write_adata", [False, True])
+    def test_read_write(
+        self, sklearn_model: SKLearnModel, tmpdir, write_adata: bool, copy: bool
+    ):
+        path = Path(tmpdir) / "model.pickle"
+        sklearn_model.write(path, write_adata=write_adata)
+
+        if write_adata:
+            model = SKLearnModel.read(path)
+            assert model.adata is not None
+        else:
+            with open(path, "rb") as fin:
+                model: SKLearnModel = pickle.load(fin)
+                assert model.adata is None
+                assert model.shape == (sklearn_model.adata.n_obs,)
+            model = SKLearnModel.read(path, adata=sklearn_model.adata, copy=copy)
+            if copy:
+                assert model.adata is not sklearn_model.adata
+            else:
+                assert model.adata is sklearn_model.adata
+            model.adata = model.adata.copy()
+        assert_models_equal(sklearn_model, model, pickled=True)
 
 
 class TestFittedModel:

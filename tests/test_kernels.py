@@ -1,7 +1,9 @@
 from typing import Tuple, Callable, Optional
 
+import pickle
 import pytest
 from copy import copy
+from pathlib import Path
 from _helpers import (
     bias_knn,
     create_kernels,
@@ -201,7 +203,7 @@ class TestInitializeKernel:
 
     def test_invalid_constant(self, adata: AnnData):
         with pytest.raises(TypeError):
-            _ = Constant(None, None)
+            _ = Constant(adata, None)
 
     def test_inversion(self, adata: AnnData):
         c = ConnectivityKernel(adata, backward=False)
@@ -1539,3 +1541,27 @@ class TestSingleFlow:
                 min_flow=np.inf,
                 remove_empty_clusters=True,
             )
+
+
+class TestKernelIO:
+    @pytest.mark.parametrize("copy", [False, True])
+    @pytest.mark.parametrize("write_adata", [False, True])
+    def test_read_write(self, kernel: Kernel, tmpdir, write_adata: bool, copy: bool):
+        path = Path(tmpdir) / "kernel.pickle"
+        kernel.write(path, write_adata=write_adata)
+
+        if write_adata:
+            k: Kernel = type(kernel).read(path)
+            assert k.adata is not None
+        else:
+            with open(path, "rb") as fin:
+                k: Kernel = pickle.load(fin)
+                assert k.adata is None
+                assert k.shape == (kernel.adata.n_obs, kernel.adata.n_obs)
+            k: Kernel = type(kernel).read(path, adata=kernel.adata, copy=copy)
+            if copy:
+                assert k.adata is not kernel.adata
+            else:
+                assert k.adata is kernel.adata
+
+        np.testing.assert_array_equal(k.transition_matrix.A, kernel.transition_matrix.A)

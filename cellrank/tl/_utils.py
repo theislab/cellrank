@@ -1,4 +1,3 @@
-"""Utility functions for CellRank tools."""
 from typing import (
     Any,
     Dict,

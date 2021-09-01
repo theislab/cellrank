@@ -1,4 +1,4 @@
-from typing import Any, Union, Optional
+from typing import Any, Tuple, Union, Optional, Protocol
 
 import pickle
 from pathlib import Path
@@ -6,6 +6,20 @@ from contextlib import contextmanager
 
 from anndata import AnnData
 from cellrank import logging as logg
+
+
+class IOMixinProtocol(Protocol):  # noqa: D101
+    @property
+    def shape(self) -> Tuple[int, ...]:  # noqa: D102
+        ...
+
+    @property
+    def adata(self) -> AnnData:  # noqa: D102
+        ...
+
+    @adata.setter
+    def adata(self, adata: AnnData) -> None:
+        ...
 
 
 class IOMixin:
@@ -92,7 +106,7 @@ class IOMixin:
         """
 
         with open(fname, "rb") as fin:
-            obj = pickle.load(fin)
+            obj: IOMixinProtocol = pickle.load(fin)
 
         if hasattr(obj, "adata"):
             if isinstance(obj.adata, AnnData):
@@ -107,16 +121,13 @@ class IOMixin:
                     "This object was saved without its `adata` object. "
                     "Please supply one as `adata=...`."
                 )
-            try:
-                assert len(obj) == len(
-                    adata
-                ), f"Expected `adata` to be of length `{len(adata)}`, found `{len(obj)}`."
-                if copy or adata.is_view:
-                    adata = adata.copy()
-            except AssertionError as e:
-                raise ValueError(e) from None
-            except TypeError as e:
-                raise AttributeError(e) from None
+
+            if obj.shape[0] != len(adata):
+                raise ValueError(
+                    f"Expected `adata` to be of length `{len(adata)}`, found `{obj.shape[0]}`."
+                )
+            if copy or adata.is_view:
+                adata = adata.copy()
 
             obj.adata = adata
             return obj

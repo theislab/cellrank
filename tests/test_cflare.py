@@ -3,7 +3,6 @@ from typing import Tuple
 import os
 import pytest
 from _helpers import assert_estimators_equal
-from tempfile import TemporaryDirectory
 
 import cellrank as cr
 from anndata import AnnData
@@ -568,11 +567,12 @@ class TestCFLAREIO:
 
         assert_estimators_equal(mc1, mc2, copy=True, deep=deep)
 
-    def test_read(self, adata_cflare_fwd: Tuple[AnnData, cr.tl.estimators.CFLARE]):
+    def test_read(
+        self, adata_cflare_fwd: Tuple[AnnData, cr.tl.estimators.CFLARE], tmpdir
+    ):
         _, mc1 = adata_cflare_fwd
 
-        with TemporaryDirectory() as tmpdir:
-            mc1.write(os.path.join(tmpdir, "foo"))
-            mc2 = cr.tl.estimators.CFLARE.read(os.path.join(tmpdir, "foo.pickle"))
+        mc1.write(os.path.join(tmpdir, "foo.pickle"))
+        mc2 = cr.tl.estimators.CFLARE.read(os.path.join(tmpdir, "foo.pickle"))
 
         assert_estimators_equal(mc1, mc2)

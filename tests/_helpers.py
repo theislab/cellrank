@@ -199,11 +199,12 @@ def assert_models_equal(
     deepcopy: bool = True,
 ) -> None:
     assert actual is not expected
-    if not pickled:
-        assert actual.adata is expected.adata
-    else:
+    if pickled:
         assert actual.adata is not expected.adata
+    else:
+        assert actual.adata is expected.adata
 
+    assert actual.shape == expected.shape
     assert actual.adata.shape == expected.adata.shape
 
     assert expected.__dict__.keys() == actual.__dict__.keys()

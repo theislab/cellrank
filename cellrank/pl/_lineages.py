@@ -5,7 +5,7 @@ import cellrank.logging as logg
 from cellrank._key import Key
 from cellrank.ul._docs import d
 from cellrank.pl._utils import AnnData
-from cellrank.tl.estimators import CFLARE
+from cellrank.tl.estimators.terminal_states._cflare import CFLARE
 
 
 @d.dedent
