@@ -1,4 +1,5 @@
-from typing import Any, Tuple, Union, Optional, Protocol
+from typing import Any, Tuple, Union, Optional
+from typing_extensions import Protocol
 
 import pickle
 from pathlib import Path
