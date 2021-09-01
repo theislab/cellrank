@@ -1,8 +1,11 @@
-CellRank dev (2021-08-30)
+CellRank dev (2021-09-01)
 =========================
 
 Features
 --------
+
+- Add ``threshold`` to :meth:`cellrank.external.WOTKernel.compute_transition_matrix` to increase sparsity/speed up GPCCA.
+  `#696 <https://github.com/theislab/cellrank/pull/696>`__
 
 - Allow using a column from :attr:`anndata.AnnData.var` as gene symbols for some plotting functions.
   `#726 <https://github.com/theislab/cellrank/pull/726>`__
