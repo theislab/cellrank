@@ -265,7 +265,9 @@ class WOTKernel(Kernel, error=_error):
         solver: Literal["fixed_iters", "duality_gap"] = "duality_gap",
         growth_rate_key: Optional[str] = None,
         use_highly_variable: Optional[Union[str, bool]] = True,
-        last_time_point: Literal["uniform", "diagonal", "connectivities"] = "uniform",
+        last_time_point: Literal[
+            "uniform", "diagonal", "connectivities"
+        ] = LastTimePoint.UNIFORM,
         conn_kwargs: Mapping[str, Any] = MappingProxyType({}),
         **kwargs: Any,
     ) -> "WOTKernel":
@@ -305,12 +307,12 @@ class WOTKernel(Kernel, error=_error):
         last_time_point
             How to define transitions within the last time point. Valid options are:
 
-                - `{ltp.UNIFORM.s!r}` - row-normalized matrix of 1s for transitions within the last time point.
-                - `{ltp.DIAGONAL.s!r}` - diagonal matrix with 1s on the diagonal.
-                - `{ltp.CONNECTIVITIES.s!r}` - use transitions from :class:`cellrank.tl.kernels.ConnectivityKernel`
+                - `{ltp.UNIFORM!r}` - row-normalized matrix of 1s for transitions within the last time point.
+                - `{ltp.DIAGONAL!r}` - diagonal matrix with 1s on the diagonal.
+                - `{ltp.CONNECTIVITIES!r}` - use transitions from :class:`cellrank.tl.kernels.ConnectivityKernel`
                   derived from the last time point subset of :attr:`adata`.
         conn_kwargs
-            Keyword arguments for :func:`scanpy.pp.neighbors`, when using ``last_time_point={ltp.CONNECTIVITIES.s!r}``.
+            Keyword arguments for :func:`scanpy.pp.neighbors`, when using ``last_time_point = {ltp.CONNECTIVITIES!r}``.
             Can contain `'density_normalize'` for
             :meth:`cellrank.tl.kernels.ConnectivityKernel.compute_transition_matrix`.
         kwargs
@@ -351,7 +353,7 @@ class WOTKernel(Kernel, error=_error):
                 "solver": solver,
                 "growth_rate_key": growth_rate_key,
                 "use_highly_variable": use_highly_variable,
-                "last_time_point": last_time_point.s,
+                "last_time_point": last_time_point,
                 **kwargs,
             },
             time=start,

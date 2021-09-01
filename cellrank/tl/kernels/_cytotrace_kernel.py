@@ -1,11 +1,13 @@
 from typing import Any
 from typing_extensions import Literal
 
+from enum import auto
+
 from anndata import AnnData
 from cellrank import logging as logg
 from cellrank._key import Key
 from cellrank.tl._enum import ModeEnum
-from cellrank.ul._docs import d
+from cellrank.ul._docs import d, inject_docs
 from cellrank.tl._utils import _correlation_test_helper
 from cellrank.tl.kernels._pseudotime_kernel import PseudotimeKernel
 
@@ -14,11 +16,11 @@ from scipy.stats import gmean, hmean
 from scipy.sparse import issparse
 
 
-class CytoTRACEAggregation(ModeEnum):  # noqa
-    MEAN = "mean"
-    MEDIAN = "median"
-    GMEAN = "gmean"
-    HMEAN = "hmean"
+class CytoTRACEAggregation(ModeEnum):  # noqa: D101
+    MEAN = auto()
+    MEDIAN = auto()
+    GMEAN = auto()
+    HMEAN = auto()
 
 
 @d.dedent
@@ -82,7 +84,9 @@ class CytoTRACEKernel(PseudotimeKernel):
         adata: AnnData,
         backward: bool = False,
         layer: str = "Ms",
-        aggregation: Literal["mean", "median", "hmean", "gmean"] = "mean",
+        aggregation: Literal[
+            "mean", "median", "hmean", "gmean"
+        ] = CytoTRACEAggregation.MEAN,
         use_raw: bool = False,
         compute_cond_num: bool = False,
         check_connectivity: bool = False,
@@ -105,7 +109,9 @@ class CytoTRACEKernel(PseudotimeKernel):
         self,
         time_key: str,
         layer: str = "Ms",
-        aggregation: Literal["mean", "median", "hmean", "gmean"] = "mean",
+        aggregation: Literal[
+            "mean", "median", "hmean", "gmean"
+        ] = CytoTRACEAggregation.MEAN,
         use_raw: bool = True,
         **kwargs: Any,
     ) -> None:
@@ -114,10 +120,13 @@ class CytoTRACEKernel(PseudotimeKernel):
         super()._read_from_adata(time_key=time_key, **kwargs)
 
     @d.get_sections(base="cytotrace", sections=["Parameters"])
+    @inject_docs(ct=CytoTRACEAggregation)
     def compute_cytotrace(
         self,
         layer: str = "Ms",
-        aggregation: Literal["mean", "median", "hmean", "gmean"] = "mean",
+        aggregation: Literal[
+            "mean", "median", "hmean", "gmean"
+        ] = CytoTRACEAggregation.MEAN,
         use_raw: bool = False,
     ) -> None:
         """
@@ -136,10 +145,10 @@ class CytoTRACEKernel(PseudotimeKernel):
         aggregation
             How to aggregate expression of the top-correlating genes. Valid options are:
 
-                - `'mean'` - arithmetic mean.
-                - `'median'` - median.
-                - `'gmean'` - geometric mean.
-                - `'hmean'` - harmonic mean.
+                - `{ct.MEAN!r}` - arithmetic mean.
+                - `{ct.MEDIAN!r}` - median.
+                - `{ct.HMEAN!r}` - harmonic mean.
+                - `{ct.GMEAN!r}` - geometric mean.
 
         use_raw
             Whether to use the :attr:`anndata.AnnData.raw` to compute the number of genes expressed per cell
@@ -234,7 +243,7 @@ class CytoTRACEKernel(PseudotimeKernel):
         self.adata.obs[Key.cytotrace("pseudotime")] = 1 - cytotrace_score
 
         self.adata.uns[Key.cytotrace("params")] = {
-            "aggregation": aggregation.s,
+            "aggregation": aggregation,
             "layer": layer,
             "use_raw": use_raw,
         }

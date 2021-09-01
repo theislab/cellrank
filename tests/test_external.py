@@ -181,7 +181,7 @@ class TestWOTKernel:
     def test_last_time_point(self, adata_large: AnnData, ltp: LastTimePoint):
         key = "age(days)"
         ok = cre.kernels.WOTKernel(adata_large, time_key=key).compute_transition_matrix(
-            last_time_point=ltp.s, conn_kwargs={"n_neighbors": 11}
+            last_time_point=ltp, conn_kwargs={"n_neighbors": 11}
         )
         ixs = np.where(adata_large.obs[key] == 35.0)[0]
 

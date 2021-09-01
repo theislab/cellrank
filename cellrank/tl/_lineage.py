@@ -1,6 +1,7 @@
 from typing import List, Tuple, Union, Mapping, TypeVar, Callable, Iterable, Optional
 from typing_extensions import Literal
 
+from enum import auto
 from types import FunctionType, MappingProxyType
 from inspect import signature
 from pathlib import Path
@@ -8,7 +9,7 @@ from functools import wraps
 from itertools import combinations
 
 from cellrank import logging as logg
-from cellrank.tl._enum import Lin, ModeEnum
+from cellrank.tl._enum import ModeEnum
 from cellrank.ul._docs import d
 from cellrank.tl._utils import save_fig, _convert_lineage_name, _unique_order_preserving
 from cellrank.tl._colors import (
@@ -34,11 +35,14 @@ _DUMMY_CELL = "<td style='text-align: right;'>...</td>"
 _ORDER = "C"
 
 
-class PrimingDegree(ModeEnum):
-    """Priming degree method."""
+class PrimingDegree(ModeEnum):  # noqa: D101
+    KL_DIVERGENCE = auto()
+    ENTROPY = auto()
 
-    KL_DIVERGENCE = "kl_divergence"
-    ENTROPY = "entropy"
+
+class Lin(ModeEnum):  # noqa: D101
+    REST = auto()
+    OTHERS = auto()
 
 
 def _at_least_2d(array: np.ndarray, dim: int):
@@ -274,7 +278,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         lin_kind = [_ for _ in mixtures if isinstance(_, Lin)]
         if len(lin_kind) > 1:
             raise ValueError(
-                f"`Lin` enum is allowed only once in the expression, found `{lin_kind}`."
+                f"`Lin` enum is allowed only once in the expression, found `{len(lin_kind)}`."
             )
 
         keys = [
@@ -317,7 +321,9 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
                 if keys:
                     names[-1] = str(lin_kind)
             else:
-                raise ValueError(f"Invalid `Lin` enum `{lin_kind}`.")
+                raise NotImplementedError(
+                    f"Mixing `{lin_kind}` is not yet implemented."
+                )
 
         res = np.stack(res, axis=-1)
         return Lineage(res, names=names, colors=colors)

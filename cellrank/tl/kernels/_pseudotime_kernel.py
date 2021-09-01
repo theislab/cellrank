@@ -2,10 +2,11 @@ from typing import Any, Union, Callable, Optional
 from typing_extensions import Literal
 
 from copy import copy
+from enum import auto
 
 from anndata import AnnData
 from cellrank import logging as logg
-from cellrank.tl._enum import ThresholdScheme
+from cellrank.tl._enum import _DEFAULT_BACKEND, ModeEnum, Backend_t
 from cellrank.ul._docs import d
 from cellrank.tl._utils import _connected
 from cellrank.ul._utils import _get_neighs_params
@@ -19,6 +20,11 @@ from cellrank.tl.kernels._pseudotime_schemes import (
 )
 
 import numpy as np
+
+
+class ThresholdScheme(ModeEnum):  # noqa: D101
+    SOFT = auto()
+    HARD = auto()
 
 
 @d.dedent
@@ -82,7 +88,7 @@ class PseudotimeKernel(Kernel):
         nu: float = 0.5,
         check_irreducibility: bool = False,
         n_jobs: Optional[int] = None,
-        backend: str = "loky",
+        backend: Backend_t = _DEFAULT_BACKEND,
         show_progress_bar: bool = True,
         **kwargs: Any,
     ) -> "PseudotimeKernel":
@@ -109,8 +115,7 @@ class PseudotimeKernel(Kernel):
         frac_to_keep
             The `frac_to_keep` * number of the closest neighbors (according to graph connectivities) are kept, no matter
             whether they lie in the pseudotemporal past or future. This is done to ensure that the graph remains
-            connected. Only used when `threshold_scheme='hard'`. `frac_to_keep` needs to fall within the
-            interval `[0, 1]`.
+            connected. Only used when `threshold_scheme = 'hard'`. Needs to fall within the interval `[0, 1]`.
         %(soft_scheme_kernel)s
         check_irreducibility
             Optional check for irreducibility of the final transition matrix.

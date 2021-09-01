@@ -54,7 +54,7 @@ class EigenMixin(VectorPlotter):
 
             - `'D'` - the eigenvalues.
             - `'eigengap'` - the eigengap.
-            - `'params'] - parameters used for the computation.
+            - `'params'` - parameters used for the computation.
             - `'V_l'` - left eigenvectors (optional).
             - `'V_r'` - right eigenvectors (optional).
             - `'stationary_dist'` - stationary distribution of :attr:`transition_matrix` (optional).
@@ -299,7 +299,7 @@ class EigenMixin(VectorPlotter):
         eig = self.eigendecomposition
         D, params = eig["D"][:n], eig["params"]
 
-        # create fiture and axes
+        # create figure and axes
         fig, ax = plt.subplots(nrows=1, ncols=1, dpi=dpi, figsize=figsize)
 
         # get the original data ranges

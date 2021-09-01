@@ -1,4 +1,3 @@
-"""Module used for finding initial and terminal states."""
 from typing import Union, Optional, Sequence
 from typing_extensions import Literal
 
@@ -33,7 +32,6 @@ Returns
 """
 
 
-# TODO: refactor me
 def _initial_terminal(
     adata: AnnData,
     backward: bool = False,

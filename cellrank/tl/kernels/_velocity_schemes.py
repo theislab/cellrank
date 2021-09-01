@@ -1,6 +1,7 @@
 from typing import Any, Tuple
 
 from abc import ABC, abstractmethod
+from enum import auto
 from functools import partial
 
 from cellrank.tl._enum import ModeEnum
@@ -13,9 +14,9 @@ from numba import njit
 
 
 class Scheme(ModeEnum):  # noqa: D101
-    DOT_PRODUCT = "dot_product"
-    COSINE = "cosine"
-    CORRELATION = "correlation"
+    DOT_PRODUCT = auto()
+    COSINE = auto()
+    CORRELATION = auto()
 
 
 try:

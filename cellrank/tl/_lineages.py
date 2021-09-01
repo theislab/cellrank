@@ -80,7 +80,7 @@ def lineage_drivers(
     adata: AnnData,
     backward: bool = False,
     lineages: Optional[Union[Sequence, str]] = None,
-    method: str = TestMethod.FISCHER.s,
+    method: str = TestMethod.FISCHER,
     cluster_key: Optional[str] = None,
     clusters: Optional[Union[Sequence, str]] = None,
     layer: str = "X",

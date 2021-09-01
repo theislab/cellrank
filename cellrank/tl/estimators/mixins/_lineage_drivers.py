@@ -1,4 +1,5 @@
 from typing import Any, Dict, Tuple, Union, Mapping, Optional, Sequence
+from typing_extensions import Literal
 
 from types import MappingProxyType
 from pathlib import Path
@@ -59,7 +60,7 @@ class LinDriversMixin(AbsProbsMixin):
     def compute_lineage_drivers(
         self: LinDriversProtocol,
         lineages: Optional[Union[str, Sequence]] = None,
-        method: str = TestMethod.FISCHER.s,
+        method: Literal["fischer", "perm_test"] = TestMethod.FISCHER,
         cluster_key: Optional[str] = None,
         clusters: Optional[Union[str, Sequence]] = None,
         layer: Optional[str] = None,
@@ -82,8 +83,8 @@ class LinDriversMixin(AbsProbsMixin):
         method
             Mode to use when calculating p-values and confidence intervals. Valid options are:
 
-                - `{tm.FISCHER.s!r}` - use Fischer transformation :cite:`fischer:21`.
-                - `{tm.PERM_TEST.s!r}` - use permutation test.
+                - `{tm.FISCHER!r}` - use Fischer transformation :cite:`fischer:21`.
+                - `{tm.PERM_TEST!r}` - use permutation test.
         cluster_key
             Key from :attr:`anndata.AnnData.obs` to obtain cluster annotations. These are considered for ``clusters``.
         clusters
@@ -96,9 +97,9 @@ class LinDriversMixin(AbsProbsMixin):
         confidence_level
             Confidence level for the confidence interval calculation. Must be in interval `[0, 1]`.
         n_perms
-            Number of permutations to use when ``method = {tm.PERM_TEST.s!r}``.
+            Number of permutations to use when ``method = {tm.PERM_TEST!r}``.
         seed
-            Random seed when ``method = {tm.PERM_TEST.s!r}``.
+            Random seed when ``method = {tm.PERM_TEST!r}``.
         %(parallel)s
 
         Returns

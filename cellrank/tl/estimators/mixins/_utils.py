@@ -1,12 +1,14 @@
 from typing import Any, Dict, Tuple, Union, Mapping, Callable, Optional, Sequence
 from typing_extensions import Literal, Protocol
 
+from enum import auto
 from wrapt import decorator
 
 import scvelo as scv
 from anndata import AnnData
 from cellrank import logging as logg
-from cellrank.ul._docs import d
+from cellrank.tl._enum import ModeEnum
+from cellrank.ul._docs import d, inject_docs
 from cellrank.tl._utils import RandomKeys, _unique_order_preserving
 from cellrank.tl._colors import _create_categorical_colors
 from cellrank.tl._lineage import Lineage
@@ -14,6 +16,11 @@ from cellrank.tl._lineage import Lineage
 import numpy as np
 import pandas as pd
 from pandas.api.types import infer_dtype, is_categorical_dtype
+
+
+class PlotMode(ModeEnum):  # noqa: D101
+    EMBEDDING = auto()
+    TIME = auto()
 
 
 class BaseProtocol(Protocol):  # noqa: D101
@@ -187,17 +194,14 @@ def _plot_continuous(
     _title: Optional[str] = None,
     states: Optional[Union[str, Sequence[str]]] = None,
     color: Optional[str] = None,
-    mode: Literal["embedding", "time"] = "embedding",
+    mode: Literal["embedding", "time"] = PlotMode.EMBEDDING,
     time_key: str = "latent_time",
     title: Optional[Union[str, Sequence[str]]] = None,
     same_plot: bool = True,
     cmap: str = "viridis",
     **kwargs: Any,
 ) -> None:
-    if mode not in ("embedding", "time"):
-        raise ValueError(
-            f"Invalid mode `{mode!r}`. Valid options are: `'embedding'` or `'time'`."
-        )
+    mode = PlotMode(mode)
     if not isinstance(_data, Lineage):
         raise TypeError(
             f"Expected data to be of type `Lineage`, found `{type(_data).__name__}`."
@@ -228,7 +232,7 @@ def _plot_continuous(
     color = [] if color is None else (color,) if isinstance(color, str) else color
     color = _unique_order_preserving(color)
 
-    if mode == "time":
+    if mode == PlotMode.EMBEDDING:
         kwargs.setdefault("legend_loc", "best")
         if title is None:
             title = [f"{_title} {state}" for state in states]
@@ -242,7 +246,7 @@ def _plot_continuous(
         kwargs["color"] = color if len(color) else None
         kwargs["xlabel"] = [time_key] * len(states)
         kwargs["ylabel"] = ["probability"] * len(states)
-    elif mode == "embedding":
+    elif mode == PlotMode.TIME:
         kwargs.setdefault("legend_loc", "on data")
         if same_plot:
             if color:
@@ -256,6 +260,8 @@ def _plot_continuous(
                 title = [title]
             title = color + title
             kwargs["color"] = color + list(_data_X.T)
+    else:
+        raise NotImplementedError(f"Mode `{mode}` is not yet implemented.")
     # fmt: on
 
     # e.g. a stationary distribution
@@ -273,12 +279,13 @@ def _plot_continuous(
 
 
 @d.dedent
+@inject_docs(m=PlotMode)
 def _plot_dispatcher(
     self: PlotterProtocol,
     states: Optional[Union[str, Sequence[str]]] = None,
     color: Optional[str] = None,
     discrete: bool = False,
-    mode: Literal["embedding", "time"] = "embedding",
+    mode: Literal["embedding", "time"] = PlotMode.EMBEDDING,
     time_key: str = "latent_time",
     same_plot: bool = True,
     title: Optional[Union[str, Sequence[str]]] = None,
@@ -299,11 +306,11 @@ def _plot_dispatcher(
         If the data cannot be plotted as continuous observations, it will be plotted as discrete.
     %(time_mode)s
     time_key
-        Key in :attr:`anndata.AnnData.obs` where pseudotime is stored. Only used when ``mode = 'time'``.
+        Key in :attr:`anndata.AnnData.obs` where pseudotime is stored. Only used when ``mode = {m.TIME!r}``.
     title
         Title of the plot(s).
     same_plot
-        Whether to plot the data on the same plot or not. Only use when ``mode = 'embedding'``.
+        Whether to plot the data on the same plot or not. Only use when ``mode = {m.EMBEDDING!r}``.
         If `True` and ``discrete = False``, ``color`` is ignored.
     cmap
         Colormap for continuous data.

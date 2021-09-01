@@ -1,9 +1,9 @@
-"""Module containing :mod:`pygam` model implementation."""
 from typing import Any, Union, Mapping, Optional
 from typing_extensions import Literal
 
 from copy import copy as _copy
 from copy import deepcopy
+from enum import auto
 from types import MappingProxyType
 from collections import defaultdict
 
@@ -26,25 +26,22 @@ from pygam import (
     s,
 )
 
-_r_lib = None
-_r_lib_name = None
 
-
-class GamLinkFunction(ModeEnum):  # noqa
-    IDENTITY = "identity"
-    LOGIT = "logit"
-    INV = "inverse"
-    LOG = "log"
+class GamLinkFunction(ModeEnum):  # noqa: D101
+    IDENTITY = auto()
+    LOGIT = auto()
+    INVERSE = auto()
+    LOG = auto()
     INV_SQUARED = "inverse-squared"
 
 
-class GamDistribution(ModeEnum):  # noqa
-    NORMAL = "normal"
-    BINOMIAL = "binomial"
-    POISSON = "poisson"
-    GAMMA = "gamma"
-    GAUSS = "gaussian"
-    INV_GAUSS = "inv_gauss"
+class GamDistribution(ModeEnum):  # noqa: D101
+    NORMAL = auto()
+    BINOMIAL = auto()
+    POISSON = auto()
+    GAMMA = auto()
+    GAUSSIAN = auto()
+    INV_GAUSS = auto()
 
 
 _gams = defaultdict(
@@ -115,7 +112,7 @@ class GAM(BaseModel):
         )
         link = GamLinkFunction(link)
         distribution = GamDistribution(distribution)
-        if distribution == GamDistribution.GAUSS:
+        if distribution == GamDistribution.GAUSSIAN:
             distribution = GamDistribution.NORMAL
 
         if expectile is not None:
@@ -142,8 +139,8 @@ class GAM(BaseModel):
                     f"for `{type(gam).__name__!r}`."
                 )
 
-            filtered_kwargs["link"] = link.s
-            filtered_kwargs["distribution"] = distribution.s
+            filtered_kwargs["link"] = link
+            filtered_kwargs["distribution"] = distribution
 
             model = gam(
                 term,

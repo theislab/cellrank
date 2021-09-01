@@ -6,7 +6,7 @@ from pathlib import Path
 from anndata import AnnData
 from cellrank import logging as logg
 from cellrank._key import Key
-from cellrank.tl._enum import _DEFAULT_BACKEND
+from cellrank.tl._enum import _DEFAULT_BACKEND, Backend_t
 from cellrank.ul._docs import d
 from cellrank.pl._utils import (
     _fit_bulk,
@@ -65,7 +65,7 @@ def gene_trends(
     suptitle: Optional[str] = None,
     return_models: bool = False,
     n_jobs: Optional[int] = 1,
-    backend: str = _DEFAULT_BACKEND,
+    backend: Backend_t = _DEFAULT_BACKEND,
     show_progress_bar: bool = True,
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,

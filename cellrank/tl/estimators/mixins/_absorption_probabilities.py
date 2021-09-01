@@ -6,6 +6,7 @@ from types import MappingProxyType
 from anndata import AnnData
 from cellrank import logging as logg
 from cellrank._key import Key
+from cellrank.tl._enum import _DEFAULT_BACKEND, Backend_t
 from cellrank.ul._docs import d
 from cellrank.tl._utils import (
     _pairwise,
@@ -169,7 +170,7 @@ class AbsProbsMixin:
             ]
         ] = None,
         n_jobs: Optional[int] = None,
-        backend: Literal["multiprocessing", "threading", "loky"] = "loky",
+        backend: Backend_t = _DEFAULT_BACKEND,
         show_progress_bar: bool = True,
         tol: float = 1e-6,
         preconditioner: Optional[str] = None,

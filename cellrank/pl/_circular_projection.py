@@ -1,6 +1,7 @@
 from typing import Any, Tuple, Union, Mapping, Callable, Optional, Sequence
 from typing_extensions import Literal
 
+from enum import auto
 from types import MappingProxyType
 from pathlib import Path
 
@@ -27,13 +28,13 @@ from matplotlib.collections import LineCollection
 
 
 class LineageOrder(ModeEnum):  # noqa: D101
-    DEFAULT = "default"
-    OPTIMAL = "optimal"
+    DEFAULT = auto()
+    OPTIMAL = auto()
 
 
 class LabelRot(ModeEnum):  # noqa: D101
-    DEFAULT = "default"
-    BEST = "best"
+    DEFAULT = auto()
+    BEST = auto()
 
 
 Metric_T = Union[str, Callable, np.ndarray, pd.DataFrame]
@@ -166,8 +167,7 @@ def circular_projection(
 
     if label_rot is None:
         label_rot = LabelRot.DEFAULT
-    if isinstance(label_rot, str):
-        label_rot = LabelRot(label_rot)
+    label_rot = LabelRot(label_rot)
 
     suffix = "bwd" if backward else "fwd"
     if key_added is None:
@@ -182,7 +182,7 @@ def circular_projection(
     ) + _check_collection(
         adata, keys, "var_names", key_name="Gene", raise_exc=False, use_raw=use_raw
     )
-    haystack = {s.s for s in PrimingDegree}
+    haystack = set(PrimingDegree)
     keys = keys_ + [k for k in keys if k in haystack]
     keys = _unique_order_preserving(keys)
 

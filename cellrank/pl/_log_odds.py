@@ -100,7 +100,7 @@ def log_odds(
     Returns
     -------
     :class:`matplotlib.pyplot.Axes`
-        The axis object(s) if ``show=False``.
+        The axis object(s) if ``show = False``.
     %(just_plots)s
     """
     from cellrank.tl.kernels._utils import _ensure_numeric_ordered

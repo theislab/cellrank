@@ -1,6 +1,7 @@
 from typing import Any, Dict, Tuple, Union, Mapping, Optional, Sequence
 from typing_extensions import Literal
 
+from enum import auto
 from types import MappingProxyType
 from pathlib import Path
 from datetime import datetime
@@ -39,10 +40,10 @@ from matplotlib.colorbar import ColorbarBase
 
 
 class TermStatesMethod(ModeEnum):  # noqa: D101
-    EIGENGAP = "eigengap"
-    EIGENGAP_COARSE = "eigengap_coarse"
-    TOP_N = "top_n"
-    STABILITY = "stability"
+    EIGENGAP = auto()
+    EIGENGAP_COARSE = auto()
+    TOP_N = auto()
+    STABILITY = auto()
 
 
 @d.dedent
@@ -137,7 +138,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         Parameters
         ----------
         n_states
-            Number of macrostates. If a :class:`typing.Sequence`, use the minChi criterion :cite:`reuter18`.
+            Number of macrostates. If a :class:`typing.Sequence`, use the minChi criterion :cite:`reuter:18`.
             If `None`, use the *eigengap* heuristic.
         %(n_cells)s
         cluster_key
@@ -203,7 +204,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         self,
         method: Literal[
             "stability", "top_n", "eigengap", "eigengap_coarse"
-        ] = "stability",
+        ] = TermStatesMethod.STABILITY,
         n_cells: int = 30,
         alpha: Optional[float] = 1,
         stability_threshold: float = 0.96,
@@ -886,13 +887,13 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             Fuzzy clustering.
         %(n_cells)s
         cluster_key
-            Key from :attr:`adata` ``.obs`` to get reference cluster annotations.
+            Key from :attr:`anndata.AnnData.obs` to get reference cluster annotations.
         check_row_sums
             Check whether rows in `memberships` sum to `1`.
         time
             Start time of macrostates computation.
         params
-            Parameters used in macrotates computation.
+            Parameters used in macrostates computation.
 
         Returns
         -------

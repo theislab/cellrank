@@ -1,6 +1,7 @@
 from typing import Any, Tuple, Union, Mapping, Optional, Sequence
 from typing_extensions import Literal
 
+from enum import auto
 from math import ceil
 from types import MappingProxyType
 from pathlib import Path
@@ -28,13 +29,13 @@ from seaborn import heatmap, clustermap
 from matplotlib import cm
 
 
-class ClusterFatesMode(ModeEnum):  # noqa
-    BAR = "bar"
-    PAGA = "paga"
-    PAGA_PIE = "paga_pie"
-    VIOLIN = "violin"
-    HEATMAP = "heatmap"
-    CLUSTERMAP = "clustermap"
+class ClusterFatesMode(ModeEnum):  # noqa: D101
+    BAR = auto()
+    PAGA = auto()
+    PAGA_PIE = auto()
+    VIOLIN = auto()
+    HEATMAP = auto()
+    CLUSTERMAP = auto()
 
 
 @d.dedent
@@ -43,7 +44,7 @@ def cluster_fates(
     adata: AnnData,
     mode: Literal[
         "bar", "paga", "paga_pie", "violin", "heatmap", "clustermap"
-    ] = ClusterFatesMode.PAGA_PIE.s,
+    ] = ClusterFatesMode.PAGA_PIE,
     backward: bool = False,
     lineages: Optional[Union[str, Sequence[str]]] = None,
     cluster_key: Optional[str] = "clusters",
@@ -65,7 +66,7 @@ def cluster_fates(
 
     This can be used to investigate how likely a certain cluster is to go to the %(terminal)s states, or in turn to have
     descended from the %(initial)s states.
-    For mode `{m.PAGA.s!r}` and `{m.PAGA_PIE.s!r}`, we use *PAGA*, see :cite:`wolf:19`.
+    For mode `{m.PAGA!r}` and `{m.PAGA_PIE!r}`, we use *PAGA*, see :cite:`wolf:19`.
 
     Parameters
     ----------
@@ -73,12 +74,12 @@ def cluster_fates(
     mode
         Type of plot to show. Valid options are:
 
-            - `{m.BAR.s!r}` - barplot, one panel per cluster. The whiskers correspond to the standard error of the mean.
-            - `{m.PAGA.s!r}` - scanpy's PAGA, one per %(initial_or_terminal)s state, colored in by fate.
-            - `{m.PAGA_PIE.s!r}` - scanpy's PAGA with pie charts indicating aggregated fates.
-            - `{m.VIOLIN.s!r}` - violin plots, one per %(initial_or_terminal)s state.
-            - `{m.HEATMAP.s!r}` - a heatmap, showing average fates per cluster.
-            - `{m.CLUSTERMAP.s!r}` - same as a heatmap, but with a dendrogram.
+            - `{m.BAR!r}` - barplot, one panel per cluster. The whiskers correspond to the standard error of the mean.
+            - `{m.PAGA!r}` - scanpy's PAGA, one per %(initial_or_terminal)s state, colored in by fate.
+            - `{m.PAGA_PIE!r}` - scanpy's PAGA with pie charts indicating aggregated fates.
+            - `{m.VIOLIN!r}` - violin plots, one per %(initial_or_terminal)s state.
+            - `{m.HEATMAP!r}` - a heatmap, showing average fates per cluster.
+            - `{m.CLUSTERMAP!r}` - same as a heatmap, but with a dendrogram.
     %(backward)s
     lineages
         Lineages for which to visualize absorption probabilities. If `None`, use all lineages.
@@ -87,22 +88,22 @@ def cluster_fates(
     clusters
         Clusters to visualize. If `None`, all clusters will be plotted.
     basis
-        Basis for scatterplot to use when ``mode={m.PAGA_PIE.s!r}``. If `None`, don't show the scatterplot.
+        Basis for scatterplot to use when ``mode = {m.PAGA_PIE!r}``. If `None`, don't show the scatterplot.
     cbar
-        Whether to show colorbar when ``mode={m.PAGA_PIE.s!r}``.
+        Whether to show colorbar when ``mode = {m.PAGA_PIE!r}``.
     ncols
-        Number of columns when ``mode={m.BAR.s!r}`` or ``mode={m.PAGA.s!r}``.
+        Number of columns when ``mode = {m.BAR!r}`` or ``mode = {m.PAGA!r}``.
     sharey
-        Whether to share y-axis when ``mode={m.BAR.s!r}``.
+        Whether to share y-axis when ``mode = {m.BAR!r}``.
     fmt
-        Format when using ``mode={m.HEATMAP.s!r}`` or ``mode={m.CLUSTERMAP.s!r}``.
+        Format when using ``mode = {m.HEATMAP!r}`` or ``mode = {m.CLUSTERMAP!r}``.
     xrot
         Rotation of the labels on the x-axis.
     figsize
         Size of the figure.
     legend_kwargs
         Keyword arguments for :func:`matplotlib.axes.Axes.legend`, such as `'loc'` for legend position.
-        For ``mode={m.PAGA_PIE.s!r}`` and ``basis='...'``, this controls the placement of the
+        For ``mode = {m.PAGA_PIE!r}`` and ``basis = '...'``, this controls the placement of the
         absorption probabilities legend.
     %(plotting)s
     kwargs

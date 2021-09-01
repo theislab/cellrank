@@ -7,7 +7,7 @@ import scanpy as sc
 from anndata import AnnData
 from cellrank import logging as logg
 from cellrank._key import Key
-from cellrank.tl._enum import _DEFAULT_BACKEND
+from cellrank.tl._enum import _DEFAULT_BACKEND, Backend_t
 from cellrank.ul._docs import d
 from cellrank.pl._utils import (
     _fit_bulk,
@@ -55,7 +55,7 @@ def cluster_lineage(
     random_state: Optional[int] = None,
     show_progress_bar: bool = True,
     n_jobs: Optional[int] = 1,
-    backend: str = _DEFAULT_BACKEND,
+    backend: Backend_t = _DEFAULT_BACKEND,
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
     save: Optional[Union[str, Path]] = None,
@@ -87,9 +87,9 @@ def cluster_lineage(
     n_points
         Number of points used for prediction.
     time_key
-        Key in ``adata.obs`` where the pseudotime is stored.
+        Key in :attr:`anndata.AnnData.obs` where the pseudotime is stored.
     covariate_key
-        Key(s) in ``adata.obs`` containing observations to be plotted at the bottom of each plot.
+        Key(s) in :attr:`anndata.AnnData.obs` containing observations to be plotted at the bottom of each plot.
     %(gene_symbols)s
     ratio
         Height ratio of each covariate in ``covariate_key``.
@@ -105,7 +105,8 @@ def cluster_lineage(
     sharey
         Whether to share y-axis across multiple plots.
     key
-        Key in ``adata.uns`` where to save the results. If `None`, it will be saved as ``lineage_{lineage}_trend`` .
+        Key in :attr:`anndata.AnnData.uns` where to save the results.
+        If `None`, it will be saved as ``'lineage_{lineage}_trend'`` .
     random_state
         Random seed for reproducibility.
     %(parallel)s
@@ -130,7 +131,9 @@ def cluster_lineage(
               shape `(n_genes, n_points)` containing the clustered genes.
     """
 
-    def plot_cluster(row, col, cluster, sharey_ax: Optional[str] = None):
+    def plot_cluster(
+        row: int, col: int, cluster: str, sharey_ax: Optional[str] = None
+    ) -> Optional[plt.Axes]:
         gss = GridSpecFromSubplotSpec(
             row_delta,
             1,

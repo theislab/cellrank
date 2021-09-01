@@ -6,6 +6,7 @@ import warnings
 from abc import ABC, ABCMeta, abstractmethod
 from copy import copy as _copy
 from copy import deepcopy
+from enum import auto
 from collections import defaultdict
 
 from anndata import AnnData
@@ -38,19 +39,19 @@ class UnknownModelError(RuntimeError):  # noqa
     pass
 
 
-class FailedReturnType(ModeEnum):  # noqa
-    PREPARE = "prepare"
-    FIT = "fit"
-    PREDICT = "predict"
-    CONFIDENCE_INTERVAL = "confidence_interval"
-    DEFAULT_CONFIDENCE_INTERVAL = "default_confidence_interval"
-    PLOT = "plot"
+class FailedReturnType(ModeEnum):  # noqa: D101
+    PREPARE = auto()
+    FIT = auto()
+    PREDICT = auto()
+    CONFIDENCE_INTERVAL = auto()
+    DEFAULT_CONFIDENCE_INTERVAL = auto()
+    PLOT = auto()
 
 
 class ColorType(ModeEnum):  # noqa: D101
-    CONT = "cont"
-    CAT = "cat"
-    STR = "str"
+    CONT = auto()
+    CAT = auto()
+    STR = auto()
 
 
 def _handle_exception(return_type: FailedReturnType, func: Callable) -> Callable:
@@ -148,8 +149,8 @@ class BaseModelMeta(ABCMeta):
         for fun_name in list(FailedReturnType):
             setattr(
                 obj,
-                fun_name.s,
-                _handle_exception(FailedReturnType(fun_name), getattr(obj, fun_name.s)),
+                fun_name,
+                _handle_exception(FailedReturnType(fun_name), getattr(obj, fun_name)),
             )
 
         return obj
@@ -305,7 +306,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         lineage: Optional[str],
         backward: bool = False,
         time_range: Optional[Union[float, Tuple[float, float]]] = None,
-        data_key: str = "X",
+        data_key: Optional[str] = "X",
         time_key: str = "latent_time",
         use_raw: bool = False,
         threshold: Optional[float] = None,
@@ -319,18 +320,19 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         Parameters
         ----------
         gene
-            Gene in :attr:`adata` ``.var_names`` or in :attr:`adata` ``.raw.var_names``.
+            Gene in :attr:`anndata.AnnData.var_names`.
         lineage
-            Name of a lineage in :attr:`adata` ``.obsm['{lineage_key}']``. If `None`, all weights will be set to `1`.
+            Name of a lineage in :attr:`anndata.AnnData.obsm` ``['{lineage_key}']``.
+            If `None`, all weights will be set to `1`.
         %(backward)s
         %(time_range)s
         data_key
-            Key in :attr:`adata` ``.layers`` or `'X'` for :attr:`adata` ``.X``.
-            If ``use_raw=True``, it's always set to `'X'`.
+            Key in :attr:`anndata.AnnData.layers` or `'X'` for :attr:`anndata.AnnData.X`.
+            If ``use_raw = True``, it's always set to `'X'`.
         time_key
-            Key in :attr:`adata` ``.obs`` where the pseudotime is stored.
+            Key in :attr:`anndata.AnnData.obs` where the pseudotime is stored.
         use_raw
-            Whether to access :attr:`adata` ``.raw`` or not.
+            Whether to access :attr:`anndata.AnnData.raw`.
         threshold
             Consider only cells with weights > ``threshold`` when estimating the test endpoint.
             If `None`, use the median of the weights.
@@ -344,31 +346,30 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
 
         Returns
         -------
-        None
-            Nothing, but updates the following fields:
+        Nothing, but updates the following fields:
 
-                - :attr:`x` - %(base_model_x.summary)s
-                - :attr:`y` - %(base_model_y.summary)s
-                - :attr:`w` - %(base_model_w.summary)s
+            - :attr:`x` - %(base_model_x.summary)s
+            - :attr:`y` - %(base_model_y.summary)s
+            - :attr:`w` - %(base_model_w.summary)s
 
-                - :attr:`x_all` - %(base_model_x_all.summary)s
-                - :attr:`y_all` - %(base_model_y_all.summary)s
-                - :attr:`w_all` - %(base_model_w_all.summary)s
+            - :attr:`x_all` - %(base_model_x_all.summary)s
+            - :attr:`y_all` - %(base_model_y_all.summary)s
+            - :attr:`w_all` - %(base_model_w_all.summary)s
 
-                - :attr:`x_test` - %(base_model_x_test.summary)s
+            - :attr:`x_test` - %(base_model_x_test.summary)s
 
-                - :attr:`prepared` - %(base_model_prepared.summary)s
+            - :attr:`prepared` - %(base_model_prepared.summary)s
         """
         from cellrank._key import Key
 
-        self._use_raw = use_raw
         if use_raw:
             if self.adata.raw is None:
                 raise AttributeError("AnnData object has no attribute `.raw`.")
             if data_key != "X":
                 data_key = "X"
+        self._use_raw = use_raw
 
-        if data_key not in ["X", "obs"] + list(self.adata.layers.keys()):
+        if data_key not in ["X", "obs", None] + list(self.adata.layers.keys()):
             raise KeyError(
                 f"Data key must be a key of `adata.layers`: `{list(self.adata.layers.keys())}`, "
                 f"`adata.X` or `adata.obs`."
@@ -391,7 +392,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
 
         if data_key == "obs":
             if gene not in self.adata.obs:
-                raise KeyError(f"Unable to find key `{gene!r}` in `adata.obs`.")
+                raise KeyError(f"Unable to find data in `adata.obs[{gene!r}]`.")
         else:
             if use_raw and gene not in self.adata.raw.var_names:
                 raise KeyError(f"Gene `{gene!r}` not found in `adata.raw.var_names`.")
@@ -438,7 +439,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         adata = self.adata.raw.to_adata() if use_raw else self.adata
         gene_ix = np.where(adata.var_names == gene)[0]
 
-        if data_key == "X":
+        if data_key in ("X", None):
             y = adata.X[:, gene_ix]
             self._data_key = None
         elif data_key == "obs":
