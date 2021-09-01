@@ -266,6 +266,7 @@ class WOTKernel(Kernel, error=_error):
         growth_rate_key: Optional[str] = None,
         use_highly_variable: Optional[Union[str, bool]] = True,
         last_time_point: Literal["uniform", "diagonal", "connectivities"] = "uniform",
+        threshold: Optional[Union[float, Literal["auto"]]] = "auto",
         conn_kwargs: Mapping[str, Any] = MappingProxyType({}),
         **kwargs: Any,
     ) -> "WOTKernel":
@@ -309,6 +310,14 @@ class WOTKernel(Kernel, error=_error):
                 - `{ltp.DIAGONAL.s!r}` - diagonal matrix with 1s on the diagonal.
                 - `{ltp.CONNECTIVITIES.s!r}` - use transitions from :class:`cellrank.tl.kernels.ConnectivityKernel`
                   derived from the last time point subset of :attr:`adata`.
+        threshold
+            How to remove small non-zero values from the transition matrix. Valid options are:
+
+                - `'auto'` - find the maximum threshold value which will not remove every non-zero value from any row.
+                - :class:`float` - value in `[0, 100]` corresponding to a percentage of non-zeros to remove.
+                  Rows where all values are removed will have uniform distribution.
+                - `None` - do not threshold.
+
         conn_kwargs
             Keyword arguments for :func:`scanpy.pp.neighbors`, when using ``last_time_point={ltp.CONNECTIVITIES.s!r}``.
             Can contain `'density_normalize'` for
@@ -352,6 +361,7 @@ class WOTKernel(Kernel, error=_error):
                 "growth_rate_key": growth_rate_key,
                 "use_highly_variable": use_highly_variable,
                 "last_time_point": last_time_point.s,
+                "threshold": threshold,
                 **kwargs,
             },
             time=start,
@@ -373,6 +383,8 @@ class WOTKernel(Kernel, error=_error):
             density_normalize=False,
             check_irreducibility=False,
         )
+        if threshold:
+            self._threshold_transition_matrix(threshold)
         self.adata.obs["estimated_growth_rates"] = self.growth_rates[f"g{growth_iters}"]
 
         logg.info("    Finish", time=start)
@@ -497,6 +509,31 @@ class WOTKernel(Kernel, error=_error):
         raise NotImplementedError(
             f"Specifying cost matrices as "
             f"`{type(cost_matrices).__name__}` is not yet implemented."
+        )
+
+    def _threshold_transition_matrix(
+        self, threshold: Union[float, Literal["auto"]]
+    ) -> None:
+        tmat = self.transition_matrix
+        if threshold == "auto":
+            threshold = min(np.max(tmat[i].data) for i in range(tmat.shape[0]))
+            logg.info(f"Using `threshold={threshold}`")
+            tmat.data[tmat.data < threshold] = 0.0
+        else:
+            if not (0 <= threshold <= 100):
+                raise ValueError(
+                    f"Expected `threshold to be in `[0, 100]`, found `{threshold}`.`"
+                )
+            threshold = np.percentile(tmat.data, threshold)
+            logg.info(f"Using `threshold={threshold}`")
+            tmat.data[tmat.data <= threshold] = 0.0
+
+        tmat.eliminate_zeros()
+
+        self._compute_transition_matrix(
+            matrix=tmat,
+            density_normalize=False,
+            check_irreducibility=False,
         )
 
     @property

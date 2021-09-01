@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Union, Optional
 
 import pytest
 
@@ -11,7 +11,7 @@ from cellrank.external.kernels._wot_kernel import LastTimePoint
 
 import numpy as np
 import pandas as pd
-from scipy.sparse import spmatrix
+from scipy.sparse import spmatrix, csr_matrix
 from pandas.core.dtypes.common import is_categorical_dtype
 
 from matplotlib.cm import get_cmap
@@ -71,7 +71,7 @@ class TestOTKernel:
         ok = ok.compute_transition_matrix(1, 0.001)
 
         assert isinstance(ok, cre.kernels.StationaryOTKernel)
-        assert isinstance(ok._transition_matrix, (np.ndarray, spmatrix))
+        assert isinstance(ok._transition_matrix, csr_matrix)
         np.testing.assert_allclose(ok.transition_matrix.sum(1), 1.0)
         assert isinstance(ok.params, dict)
 
@@ -181,7 +181,9 @@ class TestWOTKernel:
     def test_last_time_point(self, adata_large: AnnData, ltp: LastTimePoint):
         key = "age(days)"
         ok = cre.kernels.WOTKernel(adata_large, time_key=key).compute_transition_matrix(
-            last_time_point=ltp.s, conn_kwargs={"n_neighbors": 11}
+            last_time_point=ltp.s,
+            conn_kwargs={"n_neighbors": 11},
+            threshold=None,
         )
         ixs = np.where(adata_large.obs[key] == 35.0)[0]
 
@@ -222,7 +224,7 @@ class TestWOTKernel:
         ok = ok.compute_transition_matrix()
 
         assert isinstance(ok, cre.kernels.WOTKernel)
-        assert isinstance(ok._transition_matrix, (np.ndarray, spmatrix))
+        assert isinstance(ok._transition_matrix, csr_matrix)
         np.testing.assert_allclose(ok.transition_matrix.sum(1), 1.0)
         assert isinstance(ok.params, dict)
         assert isinstance(ok.growth_rates, pd.DataFrame)
@@ -231,6 +233,19 @@ class TestWOTKernel:
         np.testing.assert_array_equal(ok.growth_rates.columns, ["g0", "g1"])
         assert isinstance(ok.transport_maps[12.0, 35.0], AnnData)
         assert ok.transport_maps[12.0, 35.0].X.dtype == np.float64
+
+    @pytest.mark.parametrize("threshold", [None, 90, 100, "auto"])
+    def test_threshold(self, adata_large, threshold: Optional[Union[int, str]]):
+        ok = cre.kernels.WOTKernel(adata_large, time_key="age(days)")
+        ok = ok.compute_transition_matrix(threshold=threshold)
+
+        assert isinstance(ok._transition_matrix, csr_matrix)
+        np.testing.assert_allclose(ok.transition_matrix.sum(1), 1.0)
+        assert ok.params["threshold"] == threshold
+
+        if threshold == 100:
+            for row in ok.transition_matrix:
+                np.testing.assert_allclose(row.data, 1.0 / len(row.data))
 
     def test_copy(self, adata_large: AnnData):
         ok = cre.kernels.WOTKernel(adata_large, time_key="age(days)")
