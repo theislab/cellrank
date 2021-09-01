@@ -1116,13 +1116,15 @@ def composition(
     """
 
     if key not in adata.obs:
-        raise KeyError(f"Key `{key!r}` not found in `adata.obs`.")
+        raise KeyError(f"Data not found in `adata.obs[{key!r}]`.")
     if not is_categorical_dtype(adata.obs[key]):
-        raise TypeError(f"Observation `adata.obs[{key!r}]` is not categorical.")
+        raise TypeError(
+            f"Expected `adata.obs[{key!r}]` is not `categorical`, "
+            f"found `{infer_dtype(adata.obs[key])}`."
+        )
 
-    adata.obs[key].cat.categories
     colors = adata.uns.get(f"{key}_colors", None)
-    x = pd.DataFrame({0: adata.obs[key]}).groupby(0).size()
+    x = adata.obs[key].value_counts()
 
     # plot these fractions in a pie plot
     fig, ax = plt.subplots(figsize=figsize, dpi=dpi)

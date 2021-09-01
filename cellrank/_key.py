@@ -2,6 +2,8 @@ from typing import Any, Callable, Optional
 
 
 class cprop:
+    """Class property."""
+
     def __init__(self, f: Callable[..., str]):
         self.f = f
 
@@ -10,6 +12,8 @@ class cprop:
 
 
 class Key:
+    """Class which manages keys in :class:`anndata.AnnData`."""
+
     @classmethod
     def backward(cls, bwd: bool) -> str:
         return "bwd" if bwd else "fwd"
@@ -28,7 +32,7 @@ class Key:
 
     class obs:
         @classmethod
-        def probs(self, key: str) -> str:
+        def probs(cls, key: str) -> str:
             return f"{key}_probs"
 
         @classmethod

@@ -9,6 +9,7 @@ from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.tl import Lineage
 from cellrank._key import Key
+from scanpy._utils import deprecated_arg_names
 from cellrank.tl._enum import ModeEnum
 from cellrank.ul._docs import d
 from cellrank.pl._utils import _held_karp
@@ -49,7 +50,7 @@ def _get_distances(data: Union[np.ndarray, Lineage], metric: Metric_T) -> np.nda
         shape = (data.shape[1], data.shape[1])
         if metric.shape != shape:
             raise ValueError(
-                f"Expected an array/dataframe of shape `{shape}`, found `{metric.shape}`."
+                f"Expected an `numpy.array` or `pandas.DataFrame` of shape `{shape}`, found `{metric.shape}`."
             )
     else:
         raise TypeError(
@@ -66,6 +67,7 @@ def _get_optimal_order(data: Lineage, metric: Metric_T) -> Tuple[float, np.ndarr
 
 
 @d.dedent
+@deprecated_arg_names({"labeldistance": "label_distance", "labelrot": "label_rot"})
 def circular_projection(
     adata: AnnData,
     keys: Union[str, Sequence[str]],

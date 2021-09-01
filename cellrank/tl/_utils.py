@@ -549,8 +549,7 @@ def _filter_cells(distances: spmatrix, rc_labels: Series, n_matches_min: int) ->
 
     if not is_categorical_dtype(rc_labels):
         raise TypeError(
-            f"Expected `categories` be a categorical variable, "
-            f"found `{infer_dtype(rc_labels).__name__}`."
+            f"Expected `categories` be `categorical`, found `{infer_dtype(rc_labels)}`."
         )
 
     # retrieve knn graph
