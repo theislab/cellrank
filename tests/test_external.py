@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Union, Optional
 
 import pytest
 
@@ -232,8 +232,8 @@ class TestWOTKernel:
         assert isinstance(ok.transport_maps[12.0, 35.0], AnnData)
         assert ok.transport_maps[12.0, 35.0].X.dtype == np.float64
 
-    @pytest.mark.parametrize("threshold", [0.1, 0.5, 1.0])
-    def test_threshold(self, adata_large, threshold: float):
+    @pytest.mark.parametrize("threshold", [None, 90, 100, "auto"])
+    def test_threshold(self, adata_large, threshold: Optional[Union[int, str]]):
         ok = cre.kernels.WOTKernel(adata_large, time_key="age(days)")
         ok = ok.compute_transition_matrix(threshold=threshold)
 
@@ -241,7 +241,7 @@ class TestWOTKernel:
         np.testing.assert_allclose(ok.transition_matrix.sum(1), 1.0)
         assert ok.params["threshold"] == threshold
 
-        if threshold == 1.0:
+        if threshold == 100:
             for row in ok.transition_matrix:
                 np.testing.assert_allclose(row.data, 1.0 / len(row.data))
 

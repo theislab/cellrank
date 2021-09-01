@@ -266,8 +266,7 @@ class WOTKernel(Kernel, error=_error):
         growth_rate_key: Optional[str] = None,
         use_highly_variable: Optional[Union[str, bool]] = True,
         last_time_point: Literal["uniform", "diagonal", "connectivities"] = "uniform",
-        threshold: Optional[float] = None,
-        method: Literal["perc-local", "perc-global", "k", "fixed", "auto"] = "auto",
+        threshold: Optional[Union[float, Literal["auto"]]] = "auto",
         conn_kwargs: Mapping[str, Any] = MappingProxyType({}),
         **kwargs: Any,
     ) -> "WOTKernel":
@@ -312,7 +311,13 @@ class WOTKernel(Kernel, error=_error):
                 - `{ltp.CONNECTIVITIES.s!r}` - use transitions from :class:`cellrank.tl.kernels.ConnectivityKernel`
                   derived from the last time point subset of :attr:`adata`.
         threshold
-            Set all values in the :attr:`transition_matrix` ``<= threshold`` to zero and renormalize the matrix.
+            How to remove small non-zero values from the transition matrix. Valid options are:
+
+                - `'auto'` - find the maximum threshold value which will not remove every non-zero value from any row.
+                - :class:`float` - value in `[0, 100]` corresponding to a percentage of non-zeros to remove.
+                  Rows where all values are removed will have uniform distribution.
+                - `None` - do not threshold.
+
         conn_kwargs
             Keyword arguments for :func:`scanpy.pp.neighbors`, when using ``last_time_point={ltp.CONNECTIVITIES.s!r}``.
             Can contain `'density_normalize'` for
@@ -357,7 +362,6 @@ class WOTKernel(Kernel, error=_error):
                 "use_highly_variable": use_highly_variable,
                 "last_time_point": last_time_point.s,
                 "threshold": threshold,
-                "method": method,
                 **kwargs,
             },
             time=start,
@@ -379,9 +383,8 @@ class WOTKernel(Kernel, error=_error):
             density_normalize=False,
             check_irreducibility=False,
         )
-        self._orig_tmat = self.transition_matrix.copy()
-        if threshold is not None or method == "auto":
-            self._threshold_transition_matrix(threshold, method=method)
+        if threshold:
+            self._threshold_transition_matrix(threshold)
         self.adata.obs["estimated_growth_rates"] = self.growth_rates[f"g{growth_iters}"]
 
         logg.info("    Finish", time=start)
@@ -508,53 +511,23 @@ class WOTKernel(Kernel, error=_error):
             f"`{type(cost_matrices).__name__}` is not yet implemented."
         )
 
-    def _threshold_transition_matrix(self, threshold: float, method: str) -> None:
-        tmat = self._orig_tmat.copy()
-        print("Using method", method)
-        if method == "perc-local":
-            assert 0 <= threshold <= 100
-            for i in range(tmat.shape[0]):
-                start, end = tmat.indptr[i], tmat.indptr[i + 1]
-                data = tmat.data[start:end]
-                t = np.percentile(data, threshold)
-                data[data <= t] = 0
-                print(t, data.shape, np.sum(data <= t), np.sum(data))
-                tmat.data[start:end] = data
-        elif method == "perc-global":
-            assert 0 <= threshold <= 100
-            threshold = np.percentile(tmat.data, threshold)
-            print("Threshold:", threshold)
-            tmat.data[tmat.data <= threshold] = 0.0
-        elif method == "fixed":
-            tmat.data[tmat.data <= threshold] = 0.0
-        elif method == "k":
-            assert isinstance(threshold, int)
-            assert 0 <= threshold <= tmat.shape[1]
-            for i in range(tmat.shape[0]):
-                start, end = tmat.indptr[i], tmat.indptr[i + 1]
-                data = tmat.data[start:end]
-                ixs = np.argsort(data)[::-1]
-                data[ixs[threshold:]] = 0
-                tmat.data[start:end] = data
-        elif method == "auto":
-            minn = np.inf
-            for i in range(tmat.shape[0]):
-                minn = min(minn, np.max(tmat[i].data))
-            print("Threshold:", minn)
-            tmat.data[tmat.data < minn] = 0.0
+    def _threshold_transition_matrix(
+        self, threshold: Union[float, Literal["auto"]]
+    ) -> None:
+        tmat = self.transition_matrix
+        if threshold == "auto":
+            threshold = min(np.max(tmat[i].data) for i in range(tmat.shape[0]))
         else:
-            raise NotImplementedError(method)
+            if not (0 <= threshold <= 100):
+                raise ValueError(
+                    f"Expected `threshold to be in `[0, 100]`, found `{threshold}`.`"
+                )
+            threshold = np.percentile(tmat.data, threshold)
 
-        zero_ixs = np.where(np.array(tmat.sum(1)).flatten() == 0)[0]
-        if len(zero_ixs):
-            logg.warning(
-                f"After removing entries with values <= `{threshold}`, found `{len(zero_ixs)}` all 0 rows. "
-                f"Setting them to uniform distribution"
-            )
-            for start, end in zip(tmat.indptr[zero_ixs], tmat.indptr[zero_ixs + 1]):
-                tmat.data[start:end] = 1.0 / (end - start)
-
+        logg.info(f"Using `threshold={threshold}`")
+        tmat.data[tmat.data <= threshold] = 0.0
         tmat.eliminate_zeros()
+
         self._compute_transition_matrix(
             matrix=tmat,
             density_normalize=False,
