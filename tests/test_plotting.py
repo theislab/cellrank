@@ -2358,22 +2358,6 @@ class TestCFLARE:
         mc.plot_spectrum(2, real_only=False, dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
-    def test_scvelo_eigendecomposition_clusters(self, mc: CFLARE, fpath: str):
-        mc.plot_eigendecomposition(cluster_key="clusters", dpi=DPI, save=fpath)
-
-    @compare(kind="cflare")
-    def test_scvelo_eigendecomposition_left(self, mc: CFLARE, fpath: str):
-        mc.plot_eigendecomposition(dpi=DPI, save=fpath)
-
-    @compare(kind="cflare")
-    def test_scvelo_eigendecomposition_right(self, mc: CFLARE, fpath: str):
-        mc.plot_eigendecomposition(left=False, dpi=DPI, save=fpath)
-
-    @compare(kind="cflare")
-    def test_scvelo_eigendecomposition_use_2(self, mc: CFLARE, fpath: str):
-        mc.plot_eigendecomposition(use=2, dpi=DPI, save=fpath)
-
-    @compare(kind="cflare")
     def test_scvelo_final_states(self, mc: CFLARE, fpath: str):
         mc.plot_terminal_states(dpi=DPI, save=fpath)
 

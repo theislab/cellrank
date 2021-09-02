@@ -217,8 +217,6 @@ class TestLowLevelPipeline:
         estimator_fwd.compute_eigendecomposition()
         estimator_fwd.plot_spectrum()
         estimator_fwd.plot_spectrum(real_only=True)
-        estimator_fwd.plot_eigendecomposition()
-        estimator_fwd.plot_eigendecomposition(left=False)
 
         estimator_fwd.compute_terminal_states(use=1, method="leiden")
         estimator_fwd.plot_terminal_states()
@@ -242,8 +240,6 @@ class TestLowLevelPipeline:
         estimator_bwd.compute_eigendecomposition()
         estimator_bwd.plot_spectrum()
         estimator_bwd.plot_spectrum(real_only=True)
-        estimator_bwd.plot_eigendecomposition()
-        estimator_bwd.plot_eigendecomposition(left=False)
 
         estimator_bwd.compute_terminal_states(use=1, method="kmeans")
         estimator_bwd.plot_terminal_states()

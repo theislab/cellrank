@@ -151,54 +151,6 @@ class EigenMixin(VectorPlotter):
         )
 
     @d.dedent
-    def plot_eigendecomposition(
-        self, *args: Any, left: bool = False, **kwargs: Any
-    ) -> None:
-        """
-        Plot eigenvectors in an embedding.
-
-        Parameters
-        ----------
-        %(plot_vectors.parameters)s
-        left
-            Whether to plot left or right eigenvectors.
-
-        Returns
-        -------
-        %(plot_vectors.returns)s
-        """
-
-        eig = self.eigendecomposition
-        if eig is None:
-            raise RuntimeError(
-                "Compute eigendecomposition first as `.compute_eigendecomposition()`."
-            )
-
-        side = "left" if left else "right"
-        D, V = (
-            eig["D"],
-            eig.get(f"V_{side[0]}", None),
-        )
-        if V is None:
-            raise RuntimeError(
-                "Compute eigendecomposition first as `.compute_eigendecomposition(..., only_evals=False)`."
-            )
-
-        # if irreducible, first right e-vec should be const.
-        if not left:
-            # quick check for irreducibility:
-            if np.sum(np.isclose(D, 1, rtol=1e2 * EPS, atol=1e2 * EPS)) == 1:
-                V[:, 0] = 1.0
-
-        self._plot_vectors(
-            "eigen",
-            V,
-            *args,
-            D=D,
-            **kwargs,
-        )
-
-    @d.dedent
     def plot_spectrum(
         self,
         n: Optional[int] = None,

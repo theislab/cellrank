@@ -182,7 +182,6 @@ def _initial_terminal(
     if show_plots:
         mc.plot_spectrum(real_only=True)
         if isinstance(mc, CFLARE):
-            mc.plot_eigendecomposition(abs_value=True, perc=[0, 98], use=n_states)
             mc.plot_terminal_states(discrete=True, same_plot=False)
         elif isinstance(mc, GPCCA):
             n_states = len(mc.macrostates.cat.categories)
