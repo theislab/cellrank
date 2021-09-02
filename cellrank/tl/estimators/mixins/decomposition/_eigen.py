@@ -11,7 +11,6 @@ from cellrank.ul._docs import d
 from cellrank.tl._utils import save_fig, _eigengap
 from cellrank.tl.estimators._utils import SafeGetter
 from cellrank.tl.estimators.mixins._utils import BaseProtocol, logger, shadow
-from cellrank.tl.estimators.mixins.decomposition._plot import VectorPlotter
 
 import numpy as np
 from scipy.sparse import issparse, spmatrix
@@ -34,7 +33,7 @@ class EigenProtocol(BaseProtocol):  # noqa: D101
         ...
 
 
-class EigenMixin(VectorPlotter):
+class EigenMixin:
     """Mixin that computes Schur decomposition."""
 
     def __init__(self, **kwargs: Any):
