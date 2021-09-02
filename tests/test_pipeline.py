@@ -263,7 +263,6 @@ class TestLowLevelPipeline:
         estimator_fwd.plot_spectrum(real_only=True)
 
         estimator_fwd.compute_schur(5, method="brandts")
-        estimator_fwd.plot_schur()
 
         estimator_fwd.compute_macrostates(3, n_cells=10)
         estimator_fwd.plot_macrostates()
@@ -305,7 +304,6 @@ class TestLowLevelPipeline:
         estimator_bwd.plot_spectrum(real_only=True)
 
         estimator_bwd.compute_schur(5, method="brandts")
-        estimator_bwd.plot_schur()
 
         estimator_bwd.compute_macrostates(3, n_cells=16)
         estimator_bwd.plot_macrostates()

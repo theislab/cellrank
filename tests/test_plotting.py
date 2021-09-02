@@ -2424,22 +2424,6 @@ class TestGPCCA:
         mc.plot_schur_matrix(cmap=cm.inferno, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
-    def test_scvelo_gpcca_schur_emb(self, mc: GPCCA, fpath: str):
-        mc.plot_schur(dpi=DPI, save=fpath)
-
-    @compare(kind="gpcca")
-    def test_scvelo_gpcca_schur_emb_use_2(self, mc: GPCCA, fpath: str):
-        mc.plot_schur(use=1, dpi=DPI, save=fpath)
-
-    @compare(kind="gpcca")
-    def test_scvelo_gpcca_schur_emb_abs(self, mc: GPCCA, fpath: str):
-        mc.plot_schur(abs_value=True, dpi=DPI, save=fpath)
-
-    @compare(kind="gpcca")
-    def test_scvelo_gpcca_schur_cluster_key(self, mc: GPCCA, fpath: str):
-        mc.plot_schur(cluster_key="clusters", dpi=DPI, save=fpath)
-
-    @compare(kind="gpcca")
     def test_gpcca_coarse_T(self, mc: GPCCA, fpath: str):
         mc.plot_coarse_T(
             show_initial_dist=False, show_stationary_dist=False, dpi=DPI, save=fpath

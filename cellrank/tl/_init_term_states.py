@@ -185,8 +185,6 @@ def _initial_terminal(
             mc.plot_terminal_states(discrete=True, same_plot=False)
         elif isinstance(mc, GPCCA):
             n_states = len(mc.macrostates.cat.categories)
-            if n_states > 1:
-                mc.plot_schur()
             mc.plot_terminal_states(discrete=True, same_plot=False)
             if n_states > 1:
                 mc.plot_coarse_T()

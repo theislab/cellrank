@@ -256,31 +256,6 @@ class SchurMixin(VectorPlotter):
         if save is not None:
             save_fig(fig, path=save)
 
-    @d.dedent
-    def plot_schur(self, *args: Any, **kwargs: Any) -> None:
-        """
-        Plot Schur vectors in an embedding.
-
-        Parameters
-        ----------
-        %(plot_vectors.parameters)s
-
-        Returns
-        -------
-        %(plot_vectors.returns)s
-        """
-
-        vectors = self.schur_vectors
-        if vectors is None:
-            raise RuntimeError("Compute Schur vectors first as `.compute_schur()`.")
-
-        self._plot_vectors(
-            "schur",
-            vectors,
-            *args,
-            **kwargs,
-        )
-
     @logger
     @shadow
     def _write_schur_decomposition(
