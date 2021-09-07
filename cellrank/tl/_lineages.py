@@ -1,7 +1,7 @@
 from typing import Any, Union, Optional, Sequence
+from typing_extensions import Literal
 
 from anndata import AnnData
-from cellrank import logging as logg
 from cellrank._key import Key
 from cellrank.ul._docs import d
 from cellrank.tl._utils import TestMethod, _deprecate
@@ -79,10 +79,10 @@ def lineages(
 def lineage_drivers(
     adata: AnnData,
     backward: bool = False,
-    lineages: Optional[Union[Sequence, str]] = None,
-    method: str = TestMethod.FISCHER,
+    lineages: Optional[Union[str, Sequence[str]]] = None,
+    method: Literal["fischer", "perm_test"] = TestMethod.FISCHER,
     cluster_key: Optional[str] = None,
-    clusters: Optional[Union[Sequence, str]] = None,
+    clusters: Optional[Union[str, Sequence[str]]] = None,
     layer: str = "X",
     use_raw: bool = False,
     confidence_level: float = 0.95,

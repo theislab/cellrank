@@ -1,4 +1,5 @@
-from typing import Iterable, Optional
+from typing import Union, Callable, Iterable, Optional
+from typing_extensions import Literal
 
 from anndata import AnnData
 from cellrank import logging as logg
@@ -20,9 +21,13 @@ def transition_matrix(
     xkey: str = "Ms",
     conn_key: str = "connectivities",
     gene_subset: Optional[Iterable] = None,
-    mode: str = VelocityMode.DETERMINISTIC,
-    backward_mode: str = BackwardMode.TRANSPOSE,
-    scheme: str = Scheme.CORRELATION,
+    mode: Literal[
+        "deterministic", "stochastic", "sampling", "monte_carlo"
+    ] = VelocityMode.DETERMINISTIC,
+    backward_mode: Literal["transpose", "negate"] = BackwardMode.TRANSPOSE,
+    scheme: Union[
+        Literal["dot_product", "cosine", "correlation"], Callable
+    ] = Scheme.CORRELATION,
     softmax_scale: Optional[float] = None,
     weight_connectivities: float = 0.2,
     density_normalize: bool = True,

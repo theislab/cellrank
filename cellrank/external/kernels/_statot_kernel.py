@@ -30,7 +30,7 @@ class StationaryOTKernel(OTKernel_, error=_error):
     ----------
     %(adata)s
     terminal_states
-        Key in :attr:`anndata.AnnData.obs` or a Categorical :class:`pandas.Series` where non-`NaN` values
+        Key in :attr:`anndata.AnnData.obs` or a categorical :class:`pandas.Series` where non-`NaN` values
         mark terminal states.
         If `None`, terminal states are assumed to be present in :attr:`anndata.AnnData.obs` ``['terminal_states']``.
     g

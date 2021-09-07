@@ -100,7 +100,7 @@ def lineage_drivers(
 
     if key not in haystack:
         raise RuntimeError(
-            f"Unable to find lineage drivers in "
+            "Unable to find lineage drivers in "
             f"`{'adata.raw.varm' if use_raw else 'adata.varm'}[{key!r}]`. "
             f"Compute lineage drivers first as `cellrank.tl.lineage_drivers(lineages={lineage!r}, "
             f"use_raw={use_raw}, backward={backward}).`"

@@ -234,7 +234,7 @@ class EigenMixin:
         self,
         n: int,
         dpi: int = 100,
-        figsize: Optional[Tuple[float, float]] = (None, None),
+        figsize: Optional[Tuple[float, float]] = None,
         legend_loc: Optional[str] = None,
         title: Optional[str] = None,
         marker: str = ".",
