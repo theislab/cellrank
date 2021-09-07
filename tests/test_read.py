@@ -1,7 +1,7 @@
 from typing import Tuple, Callable
-from pathlib import Path
 
 import pytest
+from pathlib import Path
 
 import scanpy as sc
 import cellrank as cr

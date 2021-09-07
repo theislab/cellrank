@@ -1,9 +1,11 @@
 """IO module."""
 
-from typing import Union, TypeVar, Callable, Optional
+from typing import Union, Callable, Optional
+
 from pathlib import Path
 
 from scvelo import read as scv_read
+from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.tl._colors import _create_categorical_colors
@@ -17,8 +19,6 @@ from cellrank.tl._constants import (
 )
 
 from matplotlib.colors import is_color_like
-
-AnnData = TypeVar("AnnData")
 
 
 @d.dedent

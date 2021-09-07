@@ -1,7 +1,7 @@
 from typing import Any, List, Tuple, Union, Mapping, Optional, Sequence
+
 from functools import lru_cache
 from dataclasses import dataclass
-
 from statsmodels.nonparametric.smoothers_lowess import lowess
 
 from anndata import AnnData

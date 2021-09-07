@@ -1,5 +1,6 @@
 """Clustering and Filtering of Left and Right Eigenvectors based on Markov chains."""
 from typing import List, Tuple, Union, Optional, Sequence
+from typing_extensions import Literal
 
 from cellrank import logging as logg
 from cellrank.ul._docs import d, inject_docs
@@ -37,7 +38,7 @@ class CFLARE(BaseEstimator, Eigen):
         self,
         use: Optional[Union[int, Tuple[int], List[int], range]] = None,
         percentile: Optional[int] = 98,
-        method: str = "kmeans",
+        method: Literal["leiden", "means"] = "kmeans",
         cluster_key: Optional[str] = None,
         n_clusters_kmeans: Optional[int] = None,
         n_neighbors: int = 20,
@@ -65,16 +66,19 @@ class CFLARE(BaseEstimator, Eigen):
             Threshold used for filtering out cells which are most likely transient states. Cells which are in the
             lower ``percentile`` percent of each eigenvector will be removed from the data matrix.
         method
-            Method to be used for clustering. Must be one of `'louvain'`, `'leiden'` or `'kmeans'`.
+            Method to be used for clustering. Valid option are:
+
+                - `'kmeans'` - :class:`sklearn.cluster.KMeans`.
+                - `'leiden'` - :func:`scanpy.tl.leiden`.
         cluster_key
             If a key to cluster labels is given, :attr:`{fs}` will get associated with these for naming and colors.
         n_clusters_kmeans
             If `None`, this is set to ``use + 1``.
         n_neighbors
-            If we use `'louvain'` or `'leiden'` for clustering cells, we need to build a KNN graph.
-            This is the :math:`K` parameter for that, the number of neighbors for each cell.
+            Number of neighbors in a KNN graph. This is the :math:`K` parameter for that,
+            the number of neighbors for each cell. Only used when ``method = 'leiden'``.
         resolution
-            Resolution parameter for `'louvain'` or `'leiden'` clustering. Should be chosen relatively small.
+            Resolution parameter for :func:`scanpy.tl.leiden`. Should be chosen relatively small.
         n_matches_min
             Filters out cells which don't have at least n_matches_min neighbors from the same class.
             This filters out some cells which are transient but have been misassigned.
@@ -82,9 +86,9 @@ class CFLARE(BaseEstimator, Eigen):
             Parameter for filtering cells. Cells are filtered out if they don't have at least ``n_matches_min``
             neighbors among their ``n_neighbors_filtering`` nearest cells.
         basis
-            Key from :paramref`adata` ``.obsm`` to be used as additional features for the clustering.
+            Key from :attr:`adata` ``.obsm`` to be used as additional features for the clustering.
         n_comps
-            Number of embedding components to be use when ``basis`` is not `None`.
+            Number of embedding components to be use when ``basis != None``.
         scale
             Scale to z-scores. Consider using this if appending embedding to features.
         %(en_cutoff_p_thresh)s
@@ -123,9 +127,9 @@ class CFLARE(BaseEstimator, Eigen):
             return Series(c, index=self.adata.obs_names)
 
         def check_use(use) -> List[int]:
-            if method not in ["kmeans", "louvain", "leiden"]:
+            if method not in ["kmeans", "leiden"]:
                 raise ValueError(
-                    f"Invalid method `{method!r}`. Valid options are `'louvain'`, `'leiden'` or `'kmeans'`."
+                    f"Invalid method `{method!r}`. Valid options are `'leiden'` or `'kmeans'`."
                 )
 
             if use is None:

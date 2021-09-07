@@ -1,10 +1,10 @@
 """Utility functions which deal with delegating methods."""
-import inspect
 from typing import *  # noqa
-from functools import partial, singledispatch, update_wrapper
-from collections import namedtuple
 
 import wrapt
+import inspect
+from functools import partial, singledispatch, update_wrapper
+from collections import namedtuple
 
 import cellrank.logging as logg
 from cellrank.tl.estimators._constants import F
@@ -97,7 +97,7 @@ def argspec_factory(
         An adapter with the correct signature.
     """
     # for locals(), this is a whitelist of types we allow
-    import matplotlib  # noqa  this one seems to be missing, so whitelist it
+    import matplotlib  # this one seems to be missing, so whitelist it
 
     NoneType = type(None)
 

@@ -1,5 +1,6 @@
 """Utility functions for kernels, mostly VelocityKernel."""
 from typing import Tuple, Callable, Optional
+
 from inspect import signature
 
 from anndata import AnnData

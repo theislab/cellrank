@@ -1,8 +1,8 @@
-import os
 from typing import Tuple, Union, Callable
-from pathlib import Path
 
+import os
 import pytest
+from pathlib import Path
 from _helpers import (
     gamr_skip,
     create_model,
@@ -16,6 +16,7 @@ import cellrank as cr
 from anndata import AnnData
 from cellrank.tl import Lineage
 from cellrank.ul.models import GAMR
+from cellrank.tl.kernels import VelocityKernel, PseudotimeKernel, ConnectivityKernel
 from cellrank.tl._constants import AbsProbKey, _pd
 from cellrank.tl.estimators import GPCCA, CFLARE
 
@@ -328,6 +329,7 @@ class TestClusterFates:
             cluster_key="clusters",
             mode="paga_pie",
             save=fpath,
+            dpi=DPI,
             legend_kwargs=(dict(loc="top")),
         )
 
@@ -340,6 +342,7 @@ class TestClusterFates:
             mode="paga_pie",
             basis="umap",
             save=fpath,
+            dpi=DPI,
             legend_kwargs=(dict(loc="lower")),
             legend_loc="upper",
         )
@@ -353,6 +356,7 @@ class TestClusterFates:
             mode="paga_pie",
             basis="umap",
             save=fpath,
+            dpi=DPI,
             legend_kwargs=(dict(loc=None)),
             legend_loc=None,
         )
@@ -366,6 +370,7 @@ class TestClusterFates:
             mode="paga_pie",
             basis="umap",
             save=fpath,
+            dpi=DPI,
             legend_kwargs=(dict(loc="center")),
             legend_loc=None,
         )
@@ -379,6 +384,7 @@ class TestClusterFates:
             mode="paga_pie",
             basis="umap",
             save=fpath,
+            dpi=DPI,
             legend_kwargs=(dict(loc=None)),
             legend_loc="on data",
         )
@@ -392,6 +398,7 @@ class TestClusterFates:
             mode="paga_pie",
             basis="umap",
             save=fpath,
+            dpi=DPI,
             legend_kwargs=(dict(loc="lower left out")),
             legend_loc="center right out",
         )
@@ -635,7 +642,6 @@ class TestClusterLineage:
             "1",
             random_state=0,
             time_key="latent_time",
-            use_leiden=True,
             dpi=DPI,
             save=fpath,
         )
@@ -766,6 +772,21 @@ class TestClusterLineage:
             "1",
             covariate_key="latent_time",
             ratio=0.25,
+            random_state=0,
+            time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_cluster_lineage_gene_symbols(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.cluster_lineage(
+            adata,
+            model,
+            [f"{g}:gs" for g in GENES[:10]],
+            "1",
+            gene_symbols="symbol",
             random_state=0,
             time_key="latent_time",
             dpi=DPI,
@@ -1174,6 +1195,19 @@ class TestHeatmap:
             {GENES[0]: fm, "*": fm.model},
             GENES[:10],
             mode="genes",
+            time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare(dirname="heatmap_gene_symbols")
+    def test_heatmap_gene_symbols(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.heatmap(
+            adata,
+            model,
+            [f"{g}:gs" for g in GENES[:10]],
+            gene_symbols="symbol",
             time_key="latent_time",
             dpi=DPI,
             save=fpath,
@@ -2003,6 +2037,19 @@ class TestGeneTrend:
             same_plot=True,
             data_key="Ms",
             time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_trends_gene_symbols(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            [f"{g}:gs" for g in GENES[:3]],
+            gene_symbols="symbol",
+            data_key="Ms",
             dpi=DPI,
             save=fpath,
         )
@@ -3178,6 +3225,18 @@ class TestPlotRandomWalk:
         )
 
     @compare(kind="gpcca")
+    def test_kernel_random_walk_start_ixs_range(self, mc: GPCCA, fpath: str):
+        mc.kernel.plot_random_walks(
+            n_sims=10,
+            max_iter=100,
+            seed=42,
+            start_ixs={"dpt_pseudotime": [0, 0]},
+            color="dpt_pseudotime",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare(kind="gpcca")
     def test_kernel_random_walk_basis(self, mc: GPCCA, fpath: str):
         mc.kernel.plot_random_walks(
             n_sims=10, max_iter=100, seed=42, basis="pca", dpi=DPI, save=fpath
@@ -3777,3 +3836,37 @@ class TestMacrostateComposition:
         mc.plot_macrostate_composition(
             "clusters_enlarged", dpi=DPI, save=fpath, legend_loc="upper left out"
         )
+
+
+class TestProjectionEmbedding:
+    @compare()
+    def test_scvelo_connectivity_kernel_emb_stream(self, adata: AnnData, fpath: str):
+        ck = ConnectivityKernel(adata)
+        ck.compute_transition_matrix()
+        ck.compute_projection()
+        scv.pl.velocity_embedding_stream(adata, vkey="T_fwd", dpi=DPI, save=fpath)
+
+    @compare()
+    def test_scvelo_pseudotime_kernel_hard_threshold_emb_stream(
+        self, adata: AnnData, fpath: str
+    ):
+        ptk = PseudotimeKernel(adata)
+        ptk.compute_transition_matrix(threshold_scheme="hard", frac_to_keep=0.3)
+        ptk.compute_projection()
+        scv.pl.velocity_embedding_stream(adata, vkey="T_fwd", dpi=DPI, save=fpath)
+
+    @compare()
+    def test_scvelo_pseudotime_kernel_soft_threshold_emb_stream(
+        self, adata: AnnData, fpath: str
+    ):
+        ptk = PseudotimeKernel(adata)
+        ptk.compute_transition_matrix(threshold_scheme="soft", frac_to_keep=0.3)
+        ptk.compute_projection()
+        scv.pl.velocity_embedding_stream(adata, vkey="T_fwd", dpi=DPI, save=fpath)
+
+    @compare()
+    def test_scvelo_velocity_kernel_emb_stream(self, adata: AnnData, fpath: str):
+        vk = VelocityKernel(adata)
+        vk.compute_transition_matrix()
+        vk.compute_projection()
+        scv.pl.velocity_embedding_stream(adata, vkey="T_fwd", dpi=DPI, save=fpath)

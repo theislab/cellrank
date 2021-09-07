@@ -1,7 +1,7 @@
-from copy import copy
 from typing import Tuple, Callable, Optional
 
 import pytest
+from copy import copy
 from _helpers import (
     bias_knn,
     create_kernels,
@@ -483,7 +483,7 @@ class TestKernel:
 
     def test_precomputed_from_kernel(self, adata: AnnData):
         vk = VelocityKernel(adata).compute_transition_matrix(
-            mode="stochastic",
+            mode="deterministic",
             softmax_scale=4,
         )
 
@@ -514,7 +514,7 @@ class TestKernel:
 
     def test_precomputed_different_adata(self, adata: AnnData):
         vk = VelocityKernel(adata).compute_transition_matrix(
-            mode="stochastic", softmax_scale=4
+            mode="deterministic", softmax_scale=4
         )
         bdata = adata.copy()
 
@@ -526,7 +526,7 @@ class TestKernel:
 
     def test_precomputed_adata_origin(self, adata: AnnData):
         vk = VelocityKernel(adata).compute_transition_matrix(
-            mode="stochastic", softmax_scale=4
+            mode="deterministic", softmax_scale=4
         )
         vk.write_to_adata("foo")
 
@@ -589,43 +589,18 @@ class TestKernel:
             adata.obsp["foo"].toarray(), vk.transition_matrix.toarray()
         )
 
-    def test_row_normalized(self, adata: AnnData):
-        vk = VelocityKernel(adata)
-
-        vk.compute_transition_matrix(density_normalize=False, softmax_scale=4)
-        T = vk.transition_matrix
-        np.testing.assert_allclose(T.sum(1), 1, rtol=_rtol)
-
-    @jax_not_installed_skip
-    def test_row_normalized_dense_norm_stoch(self, adata: AnnData):
+    @pytest.mark.parametrize("mode", ["deterministic", "stochastic"])
+    def test_vk_row_normalized(self, adata: AnnData, mode: str):
+        if mode == "stochastic":
+            pytest.importorskip("jax")
+            pytest.importorskip("jaxlib")
         vk = VelocityKernel(adata)
         vk.compute_transition_matrix(mode="stochastic", softmax_scale=4)
-        T_stoch = vk.transition_matrix
 
-        np.testing.assert_allclose(T_stoch.sum(1), 1, rtol=_rtol)
-
-    @jax_not_installed_skip
-    def test_transition_forward_stoch_high_lvl(self, adata: AnnData):
-        backward = False
-
-        vk = VelocityKernel(adata, backward=backward).compute_transition_matrix(
-            mode="stochastic",
-            softmax_scale=4,
-        )
-        T_1 = vk.transition_matrix
-
-        T_2 = cr.tl.transition_matrix(
-            adata,
-            mode="stochastic",
-            backward=backward,
-            softmax_scale=4,
-            weight_connectivities=0,
-        ).transition_matrix
-
-        np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
+        np.testing.assert_allclose(vk.transition_matrix.sum(1), 1, rtol=_rtol)
 
     # only to 15 because in kernel, if a row sums to 0, abs. states are created
-    # this happens because k_thresh = frac_to_keep = 0
+    # this happens because `k_thresh = frac_to_keep = 0`
     @pytest.mark.parametrize("k", range(1, 15))
     def test_pseudotime_frac_to_keep(self, adata: AnnData, k: int):
         conn = _get_neighs(adata, "connectivities")
@@ -680,40 +655,11 @@ class TestKernel:
 
         assert not np.allclose(T_1.A, T_2.A, rtol=_rtol)
 
-    def test_manual_combination_det(self, adata: AnnData):
-        mode = "deterministic"
-
-        vk = VelocityKernel(adata).compute_transition_matrix(mode=mode, softmax_scale=4)
-        ck = ConnectivityKernel(adata).compute_transition_matrix()
-
-        T_vk = vk.transition_matrix
-        T_ck = ck.transition_matrix
-        T_comb_manual = 0.8 * T_vk + 0.2 * T_ck
-
-        comb_kernel = 0.8 * vk + 0.2 * ck
-        T_comb_kernel = comb_kernel.transition_matrix
-
-        np.testing.assert_allclose(T_comb_kernel.A, T_comb_manual.A, rtol=_rtol)
-
-    @jax_not_installed_skip
-    def test_manual_combination_stoch(self, adata: AnnData):
-        mode = "stochastic"
-
-        vk = VelocityKernel(adata).compute_transition_matrix(mode=mode, softmax_scale=4)
-        ck = ConnectivityKernel(adata).compute_transition_matrix()
-
-        T_vk = vk.transition_matrix
-        T_ck = ck.transition_matrix
-        T_comb_manual = 0.8 * T_vk + 0.2 * T_ck
-
-        comb_kernel = 0.8 * vk + 0.2 * ck
-        T_comb_kernel = comb_kernel.transition_matrix
-
-        np.testing.assert_allclose(T_comb_kernel.A, T_comb_manual.A, rtol=_rtol)
-
-    def test_manual_combination_sam(self, adata: AnnData):
-        mode = "sampling"
-
+    @pytest.mark.parametrize("mode", ["deterministic", "stochastic", "sampling"])
+    def test_manual_combination(self, adata: AnnData, mode: str):
+        if mode == "stochastic":
+            pytest.importorskip("jax")
+            pytest.importorskip("jaxlib")
         vk = VelocityKernel(adata).compute_transition_matrix(mode=mode, softmax_scale=4)
         ck = ConnectivityKernel(adata).compute_transition_matrix()
 
@@ -1124,7 +1070,7 @@ class TestTransitionProbabilities:
         backward = False
 
         # compute pearson correlations using scvelo
-        velo_graph = adata.uns["velocity_graph"] + adata.uns["velocity_graph_neg"]
+        velo_graph = adata.obsp["velocity_graph"] + adata.obsp["velocity_graph_neg"]
 
         # compute pearson correlations using cellrank
         vk = VelocityKernel(adata, backward=backward)
@@ -1141,7 +1087,7 @@ class TestTransitionProbabilities:
         backward = True
 
         # compute pearson correlations using scvelo
-        velo_graph = (adata.uns["velocity_graph"] + adata.uns["velocity_graph_neg"]).T
+        velo_graph = (adata.obsp["velocity_graph"] + adata.obsp["velocity_graph_neg"]).T
 
         # compute pearson correlations using cellrak
         vk = VelocityKernel(adata, backward=backward)
@@ -1221,32 +1167,34 @@ class TestMonteCarlo:
         )
         assert val < 1e-5, val
 
-    def test_mc_and_mc_fwd_10k(self, adata: AnnData):
+    def test_monte_carlo_5k(self, adata: AnnData):
         vk_mc = VelocityKernel(adata, backward=False)
         vk_mc.compute_transition_matrix(
             mode="monte_carlo",
             show_progress_bar=False,
-            n_samples=10000,
+            n_samples=5000,
             n_jobs=4,
             softmax_scale=4,
+            seed=42,
         )
 
         vk_s = VelocityKernel(adata, backward=False)
         vk_s.compute_transition_matrix(
             mode="monte_carlo",
             show_progress_bar=False,
-            n_samples=10000,
+            n_samples=5000,
             n_jobs=4,
             softmax_scale=4,
+            seed=43,
         )
 
         val = np.mean(
             np.abs(vk_mc.transition_matrix.data - vk_s.transition_matrix.data)
         )
-        assert val < 1e-6, val
+        assert val < 1e-5, val
 
     @jax_not_installed_skip
-    def test_mc_and_second_order_fwd(self, adata: AnnData):
+    def test_monte_carlo_and_stochastic(self, adata: AnnData):
         vk_mc = VelocityKernel(adata, backward=False)
         vk_mc.compute_transition_matrix(
             mode="monte_carlo",
@@ -1530,22 +1478,6 @@ class TestCytoTRACEKernel:
 
         pt = adata.obs[_ct("pseudotime")].values
         np.testing.assert_array_equal(np.max(pt) - pt, k.pseudotime)
-
-    def test_regression_score(self, adata_large: AnnData):
-        _ = CytoTRACEKernel(adata_large, use_raw=False)
-
-        ct_score_expected = adata_large.obs["ct_score_ground_truth"].values
-        ct_score_actual = adata_large.obs[_ct("score")].values
-
-        np.testing.assert_array_equal(ct_score_actual, ct_score_expected)
-
-    def test_regression_gene_corr(self, adata_large: AnnData):
-        _ = CytoTRACEKernel(adata_large, use_raw=False)
-
-        gene_corr_expected = adata_large.var["gene_corr_ground_truth"].values
-        gene_corr_actual = adata_large.var[_ct("gene_corr")].values
-
-        np.testing.assert_array_equal(gene_corr_actual, gene_corr_expected)
 
 
 class TestSingleFlow:

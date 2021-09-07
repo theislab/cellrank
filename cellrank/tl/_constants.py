@@ -1,8 +1,9 @@
-"""Module containing CellRank constants."""
+"""Module containing constants."""
+
+from typing import Any, Union, Callable
 
 from abc import ABC, ABCMeta
 from enum import Enum, EnumMeta
-from typing import Any, Union, Callable
 from functools import wraps
 
 from cellrank.ul._docs import _initial, _terminal

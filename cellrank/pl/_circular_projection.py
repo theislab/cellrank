@@ -1,8 +1,8 @@
-from types import MappingProxyType
 from typing import Any, Tuple, Union, Mapping, Callable, Optional, Sequence
-from pathlib import Path
-
 from typing_extensions import Literal
+
+from types import MappingProxyType
+from pathlib import Path
 
 import scvelo as scv
 from anndata import AnnData

@@ -1,8 +1,4 @@
 """Base class for all models."""
-import re
-from abc import ABC, ABCMeta, abstractmethod
-from copy import copy as _copy
-from copy import deepcopy
 from typing import (
     Any,
     Dict,
@@ -15,9 +11,14 @@ from typing import (
     Optional,
     Sequence,
 )
-from collections import defaultdict
 
+import re
 import wrapt
+import warnings
+from abc import ABC, ABCMeta, abstractmethod
+from copy import copy as _copy
+from copy import deepcopy
+from collections import defaultdict
 
 from cellrank import logging as logg
 from cellrank.tl import Lineage
@@ -536,9 +537,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
 
         if filter_cells is not None:
             tmp = y.squeeze()
-            fil = (tmp >= filter_cells) & (
-                ~np.isclose(tmp, filter_cells).astype(np.bool)
-            )
+            fil = (tmp >= filter_cells) & (~np.isclose(tmp, filter_cells).astype(bool))
             x, y, w = x[fil], y[fil], w[fil]
             self._obs_names = self._obs_names[fil]
 
@@ -548,6 +547,10 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
             self._reshape_and_retype(w).squeeze(-1),
         )
         self._x_test = self._reshape_and_retype(x_test)
+        self._y_test = None
+        self._x_hat = None
+        self._y_hat = None
+        self._conf_int = None
 
         if self.x.shape[0] == 0:
             raise RuntimeError("Unable to proceed, no values to fit.")
@@ -708,9 +711,11 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         )
         mean = np.mean(self.x)
 
-        stds = sigma_hat * np.sqrt(
-            1 + 1 / n + ((self.x_test - mean) ** 2) / ((self.x - mean) ** 2).sum()
-        )
+        # fmt: off
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            stds = sigma_hat * np.sqrt(1 + 1 / n + ((self.x_test - mean) ** 2) / ((self.x - mean) ** 2).sum())
+        # fmt: on
         stds = np.squeeze(stds)
 
         self._conf_int = np.c_[self._y_test - stds / 2.0, self._y_test + stds / 2.0]

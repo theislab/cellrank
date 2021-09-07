@@ -6,7 +6,6 @@ from datetime import datetime
 from collections import ChainMap
 from urllib.parse import urljoin
 from urllib.request import urlretrieve
-
 from sphinx_gallery.sorting import ExplicitOrder, _SortKey
 
 HERE = Path(__file__).parent
@@ -110,6 +109,7 @@ exclude_patterns = [
     "auto_*/**.ipynb",
     "auto_*/**.md5",
     "auto_*/**.py",
+    "release/changelog/*",
     "**.ipynb_checkpoints",
 ]
 
@@ -124,13 +124,25 @@ nbsphinx_execute_arguments = [
     "--InlineBackend.rc={'figure.dpi': 96}",
 ]
 
-nbsphinx_prolog = r"""
-{% set docname = 'tutorials/' + env.doc2path(env.docname, base=None) %}
+_link_style = "vertical-align;text-bottom"
+_binder_link = (
+    '<a href="https://mybinder.org/v2/gh/theislab/cellrank_notebooks/{{ env.config.release|e }}'
+    '?filepath={{ docname|e }}"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" '
+    f"style={_link_style!r}></a>"
+)
+_colab_link = (
+    '<a href="https://colab.research.google.com/github/theislab/cellrank_notebooks/blob/'
+    '{{ env.config.release|e }}/{{ docname|e }}"><img alt="Colab badge" '
+    f'src="https://colab.research.google.com/assets/colab-badge.svg" style={_link_style!r}></a>'
+)
+nbsphinx_prolog = rf"""
+{{% set docname = 'tutorials/' + env.doc2path(env.docname, base=None) %}}
 .. raw:: html
 
-    <div class="note">
-      Interactive version
-      <a href="https://mybinder.org/v2/gh/theislab/cellrank_notebooks/{{ env.config.release|e }}?filepath={{ docname|e }}"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>
+    <div class="admonition note">
+        Interactive version
+        {_binder_link}
+        {_colab_link}
     </div>
 """
 
@@ -258,7 +270,7 @@ todo_include_todos = False
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
-html_theme_options = dict(navigation_depth=4, logo_only=True)
+html_theme_options = {"navigation_depth": 4, "logo_only": True}
 html_show_sphinx = False
 html_show_sourcelink = False
 

@@ -1,5 +1,5 @@
 """Module for plotting lineage-related stuff."""
-from typing import Union, Optional, Sequence
+from typing import Any, Union, Optional, Sequence
 
 import cellrank.logging as logg
 from cellrank.ul._docs import d
@@ -20,7 +20,7 @@ def lineages(
     cluster_key: Optional[str] = None,
     mode: str = "embedding",
     time_key: str = "latent_time",
-    **kwargs,
+    **kwargs: Any,
 ) -> None:
     """
     Plot lineages that were uncovered using :func:`cellrank.tl.lineages`.
@@ -76,7 +76,7 @@ def lineage_drivers(
     ncols: Optional[int] = None,
     use_raw: bool = False,
     title_fmt: str = "{gene} qval={qval:.4e}",
-    **kwargs,
+    **kwargs: Any,
 ) -> None:
     """
     Plot lineage drivers that were uncovered using :func:`cellrank.tl.lineage_drivers`.

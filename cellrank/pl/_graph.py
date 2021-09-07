@@ -1,10 +1,12 @@
-"""Graph pl module."""
+"""Graph plotting module."""
+
+from typing import Dict, Tuple, Union, Callable, Optional, Sequence
 
 from copy import deepcopy
 from types import MappingProxyType
-from typing import Dict, Tuple, Union, TypeVar, Callable, Optional, Sequence
 from pathlib import Path
 
+from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.tl._utils import save_fig
@@ -24,13 +26,6 @@ from matplotlib.patches import ArrowStyle, FancyArrowPatch
 from matplotlib.collections import LineCollection
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-AnnData = TypeVar("AnnData")
-
-
-KEYLOCS = str
-KEYS = str
-_msg_shown = False
-
 
 @d.dedent
 def graph(
@@ -38,8 +33,8 @@ def graph(
     graph_key: Optional[str] = None,
     ixs: Optional[Union[range, np.array]] = None,
     layout: Union[str, Dict, Callable] = "umap",
-    keys: Sequence[KEYS] = ("incoming",),
-    keylocs: Union[KEYLOCS, Sequence[KEYLOCS]] = "uns",
+    keys: Sequence[str] = ("incoming",),
+    keylocs: Union[str, Sequence[str]] = "uns",
     node_size: float = 400,
     labels: Optional[Union[Sequence[str], Sequence[Sequence[str]]]] = None,
     top_n_edges: Optional[Union[int, Tuple[int, bool, str]]] = None,
@@ -143,15 +138,12 @@ def graph(
         Title of the figure(s), one for each ``key``.
     %(plotting)s
     layout_kwargs
-        Additional keyword arguments for ``layout``.
+        Keyword arguments for ``layout``.
 
     Returns
     -------
     %(just_plots)s
     """
-
-    from anndata import AnnData as _AnnData
-
     import networkx as nx
 
     def plot_arrows(curves, G, pos, ax, edge_weight_scale):
@@ -217,7 +209,7 @@ def graph(
 
         if group_by not in ("incoming", "outgoing"):
             raise ValueError(
-                "Argument `groupby` in `top_n_edges` must be either `'incoming`' or `'outgoing'`."
+                f"Argument `groupby` in `top_n_edges` must be either `'incoming`' or `'outgoing'`, found `{group_by}`."
             )
 
         source, target = zip(*G.edges)
@@ -304,7 +296,7 @@ def graph(
             f"`Titles` and `keys` must be of the same shape, found `{len(title)}` and `{len(keys)}`."
         )
 
-    if isinstance(data, _AnnData):
+    if isinstance(data, AnnData):
         if graph_key is None:
             raise ValueError(
                 "Argument `graph_key` cannot be `None` when `data` is `anndata.Anndata` object."
@@ -404,14 +396,11 @@ def graph(
                 ),
                 alpha=edge_alpha,
             )
-        except ImportError as e:
-            global _msg_shown
-            if not _msg_shown:
-                print(
-                    str(e)[:-1],
-                    "in order to use curved edges or specify `edge_use_curved=False`.",
-                )
-                _msg_shown = True
+        except ImportError:
+            logg.error(
+                "Unable to show curved edges. Please install `bezier` as `pip install bezier` or "
+                "use `edge_use_curved=False`"
+            )
 
     for ax, keyloc, title, key, labs, er in zip(
         axes, keylocs, title, keys, labels, edge_reductions

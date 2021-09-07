@@ -1,12 +1,15 @@
 """Cluster fatess and similarity module."""
 
+from typing import Any, Tuple, Union, Mapping, TypeVar, Optional, Sequence
+
 from math import ceil
 from types import MappingProxyType
-from typing import Any, Tuple, Union, Mapping, TypeVar, Optional, Sequence
 from pathlib import Path
 from collections import OrderedDict as odict
 
 from cellrank import logging as logg
+from scanpy.plotting import violin
+from scvelo.plotting import paga
 from cellrank.ul._docs import d, inject_docs
 from cellrank.pl._utils import _position_legend
 from cellrank.tl._utils import RandomKeys, save_fig, _unique_order_preserving
@@ -20,6 +23,7 @@ from scipy.sparse import csr_matrix
 import matplotlib as mpl
 import matplotlib.colors
 import matplotlib.pyplot as plt
+from seaborn import heatmap, clustermap
 from matplotlib import cm
 
 AnnData = TypeVar("AnnData")
@@ -53,12 +57,12 @@ def cluster_fates(
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
     save: Optional[Union[str, Path]] = None,
-    **kwargs,
+    **kwargs: Any,
 ) -> None:
     """
     Plot aggregate lineage probabilities at a cluster level.
 
-    This can be used to investigate how likely a certain cluster is to go to the %(terminal)s states,or in turn to have
+    This can be used to investigate how likely a certain cluster is to go to the %(terminal)s states, or in turn to have
     descended from the %(initial)s states.
     For mode `{m.PAGA.s!r}` and `{m.PAGA_PIE.s!r}`, we use *PAGA*, see :cite:`wolf:19`.
 
@@ -108,11 +112,6 @@ def cluster_fates(
     -------
     %(just_plots)s
     """
-
-    from scanpy.plotting import violin
-    from scvelo.plotting import paga
-
-    from seaborn import heatmap, clustermap
 
     @valuedispatch
     def plot(mode: ClusterFatesMode, *_args, **_kwargs):
@@ -379,7 +378,7 @@ def cluster_fates(
             max_size = float(max(data.shape))
 
             g = clustermap(
-                data,
+                data=data,
                 annot=True,
                 vmin=vmin,
                 vmax=vmax,
@@ -402,7 +401,7 @@ def cluster_fates(
         else:
             fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
             g = heatmap(
-                data,
+                data=data,
                 vmin=vmin,
                 vmax=vmax,
                 annot=True,
@@ -482,11 +481,11 @@ def cluster_fates(
     d = odict()
     for name in clusters:
         mask = (
-            np.ones((adata.n_obs,), dtype=np.bool)
+            np.ones((adata.n_obs,), dtype=bool)
             if is_all
             else (adata.obs[cluster_key] == name).values
         )
-        mask = np.array(mask, dtype=np.bool)
+        mask = np.array(mask, dtype=bool)
         data = adata.obsm[lk][mask, lin_names].X
         mean = np.nanmean(data, axis=0)
         std = np.nanstd(data, axis=0) / np.sqrt(data.shape[0])

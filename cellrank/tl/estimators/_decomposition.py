@@ -1,8 +1,8 @@
 """Matrix decomposition module."""
-from abc import ABC
 from typing import Any, Tuple, Union, Mapping, Optional
-from pathlib import Path
 
+from abc import ABC
+from pathlib import Path
 from pygpcca import GPCCA as _GPCCA
 from pygpcca._sorted_schur import _check_conj_split
 
@@ -446,8 +446,8 @@ class Schur(VectorPlottable, Decomposable):
             )
 
         try:
-            import petsc4py  # noqa
-            import slepc4py  # noqa
+            import petsc4py
+            import slepc4py
         except ImportError:
             method = "brandts"
             logg.warning(
@@ -559,7 +559,7 @@ class Schur(VectorPlottable, Decomposable):
 
         kwargs["fmt"] = kwargs.get("fmt", "0.2f")
         heatmap(
-            schur_matrix,
+            data=schur_matrix,
             cmap=cmap,
             square=True,
             annot=True,

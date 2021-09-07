@@ -1,5 +1,6 @@
 """Module containing anything related to linear solvers."""
 from typing import List, Tuple, Union, TypeVar, Optional
+
 from functools import singledispatch
 
 from cellrank import logging as logg
@@ -412,7 +413,7 @@ def _solve_lin_system(
 
     if use_petsc:
         try:
-            from petsc4py import PETSc  # noqa
+            from petsc4py import PETSc
         except ImportError:
             global _PETSC_ERROR_MSG_SHOWN
             if not _PETSC_ERROR_MSG_SHOWN:

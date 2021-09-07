@@ -1,8 +1,9 @@
 """Heatmap module."""
 
+from typing import Any, Dict, List, Tuple, Union, TypeVar, Optional, Sequence
+
 import os
 from math import fabs
-from typing import Any, Dict, List, Tuple, Union, TypeVar, Optional, Sequence
 from pathlib import Path
 from collections import Iterable, defaultdict
 
@@ -21,7 +22,12 @@ from cellrank.pl._utils import (
     _get_categorical_colors,
 )
 from cellrank.tl._utils import save_fig, _min_max_scale, _unique_order_preserving
-from cellrank.ul._utils import _get_n_cores, valuedispatch, _check_collection
+from cellrank.ul._utils import (
+    _genesymbols,
+    _get_n_cores,
+    valuedispatch,
+    _check_collection,
+)
 from cellrank.tl._constants import _DEFAULT_BACKEND, ModeEnum, AbsProbKey
 
 import numpy as np
@@ -31,6 +37,7 @@ from scipy.ndimage.filters import convolve
 import matplotlib as mpl
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
+from seaborn import clustermap
 from matplotlib import cm
 from matplotlib.ticker import FormatStrFormatter
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
@@ -50,6 +57,7 @@ class HeatmapMode(ModeEnum):  # noqa
 
 @d.dedent
 @inject_docs(m=HeatmapMode)
+@_genesymbols
 def heatmap(
     adata: AnnData,
     model: _input_model_type,
@@ -81,7 +89,7 @@ def heatmap(
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
     save: Optional[Union[str, Path]] = None,
-    **kwargs,
+    **kwargs: Any,
 ) -> Optional[
     Union[Dict[str, pd.DataFrame], Tuple[_return_model_type, Dict[str, pd.DataFrame]]]
 ]:
@@ -106,6 +114,7 @@ def heatmap(
     %(time_range)s
 
         This can also be specified on per-lineage basis.
+    %(gene_symbols)s
     %(model_callback)s
     cluster_key
         Key(s) in ``adata.obs`` containing categorical observations to be plotted at the top of the heatmap.
@@ -151,8 +160,6 @@ def heatmap(
         If ``return_genes=True`` and ``mode={m.LINEAGES.s!r}``, returns :class:`pandas.DataFrame`
         containing the clustered or sorted genes.
     """
-
-    import seaborn as sns
 
     def find_indices(series: pd.Series, values) -> Tuple[Any]:
         def find_nearest(array: np.ndarray, value: float) -> int:
@@ -234,8 +241,8 @@ def heatmap(
         return cax
 
     @valuedispatch
-    def _plot_heatmap(_mode: HeatmapMode) -> Fig:
-        pass
+    def _plot_heatmap(mode: HeatmapMode) -> Fig:
+        raise NotImplementedError(mode.value)
 
     @_plot_heatmap.register(HeatmapMode.GENES)
     def _() -> Tuple[Fig, None]:
@@ -408,8 +415,8 @@ def heatmap(
             row_cluster = cluster_genes and df.shape[0] > 1
             show_clust = row_cluster and dendrogram
 
-            g = sns.clustermap(
-                df,
+            g = clustermap(
+                data=df,
                 cmap=cmap,
                 figsize=(10, min(len(genes) / 8 + 1, 10))
                 if figsize is None

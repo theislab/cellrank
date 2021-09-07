@@ -1,5 +1,6 @@
-from abc import ABC, abstractmethod
 from typing import Any, Tuple, Callable, Optional
+
+from abc import ABC, abstractmethod
 
 from cellrank.ul._docs import d
 from cellrank.ul._parallelize import parallelize
@@ -157,13 +158,19 @@ class HardThresholdScheme(ThresholdSchemeABC):
         n_neighs
             Number of neighbors to keep.
         frac_to_keep
-            The `fract_to_keep` * n_neighbors closest neighbors (according to graph connectivities) are kept, no matter
-            whether they lie in the pseudotemporal past or future.
+            The `frac_to_keep` * n_neighbors closest neighbors (according to graph connectivities) are kept, no matter
+            whether they lie in the pseudotemporal past or future. `frac_to_keep` needs to fall within the
+            interval `[0, 1]`.
 
         Returns
         -------
         %(pt_scheme.returns)s
         """
+        if not (0 <= frac_to_keep <= 1):
+            raise ValueError(
+                f"Expected `frac_to_keep` to be in `[0, 1]`, found `{frac_to_keep}`."
+            )
+
         k_thresh = max(0, min(30, int(np.floor(n_neighs * frac_to_keep))))
         ixs = np.flip(np.argsort(neigh_conn))
         close_ixs, far_ixs = ixs[:k_thresh], ixs[k_thresh:]

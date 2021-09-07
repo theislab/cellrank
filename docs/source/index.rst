@@ -34,10 +34,6 @@ which allows to unlock the full power of CellRank. If you want to see individual
 To use CellRank without RNA velocity information, check out the `beyond RNA velocity tutorial`_ as well as the
 `time-series tutorial`_.
 
-Latest additions
-^^^^^^^^^^^^^^^^
-.. include:: latest_additions.rst
-
 Manuscript
 ^^^^^^^^^^
 Please see our `preprint`_ on **bioRxiv** to learn more.
@@ -111,7 +107,7 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
     :target: https://bioconda.github.io/recipes/cellrank/README.html
     :alt: Bioconda
 
-.. |CI| image:: https://img.shields.io/github/workflow/status/theislab/cellrank/CI/master
+.. |CI| image:: https://img.shields.io/github/workflow/status/theislab/cellrank/Test/dev
     :target: https://github.com/theislab/cellrank/actions
     :alt: CI
 

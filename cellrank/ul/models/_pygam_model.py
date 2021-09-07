@@ -1,8 +1,9 @@
 """Module containing :mod:`pygam` model implementation."""
+from typing import Union, Mapping, Optional
+
 from copy import copy as _copy
 from copy import deepcopy
 from types import MappingProxyType
-from typing import Union, Mapping, Optional
 from collections import defaultdict
 
 from cellrank import logging as logg

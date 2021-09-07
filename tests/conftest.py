@@ -1,8 +1,9 @@
-import os
-from sys import version_info
 from typing import Tuple, Optional
-from pathlib import Path
 
+import os
+import warnings
+from sys import version_info
+from pathlib import Path
 from filelock import FileLock
 
 from cellrank.ul.models import GAM, GAMR, SKLearnModel
@@ -20,15 +21,34 @@ from cellrank.tl._constants import AbsProbKey
 from cellrank.tl.estimators import GPCCA, CFLARE
 
 import numpy as np
+from numba.core.errors import NumbaPerformanceWarning
 
 import matplotlib
-
-matplotlib.use("Agg")
-np.random.seed(42)
 
 _adata_small = sc.read("tests/_ground_truth_adatas/adata_50.h5ad")
 _adata_medium = sc.read("tests/_ground_truth_adatas/adata_100.h5ad")
 _adata_large = sc.read("tests/_ground_truth_adatas/adata_200.h5ad")
+
+
+def pytest_sessionstart(session) -> None:
+    matplotlib.use("Agg")
+    matplotlib.rcParams["figure.max_open_warning"] = 0
+    np.random.seed(42)
+
+    # https://github.com/theislab/cellrank/issues/683
+    warnings.simplefilter("ignore", NumbaPerformanceWarning)
+
+
+# removes overly verbose and useless logging errors for rpy2
+# see: https://github.com/pytest-dev/pytest/issues/5502#issuecomment-647157873
+def pytest_sessionfinish(session, exitstatus) -> None:
+    import logging
+
+    loggers = [logging.getLogger()] + list(logging.Logger.manager.loggerDict.values())
+    for logger in loggers:
+        handlers = getattr(logger, "handlers", [])
+        for handler in handlers:
+            logger.removeHandler(handler)
 
 
 def _create_cflare(*, backward: bool = False) -> Tuple[AnnData, CFLARE]:
@@ -218,18 +238,6 @@ def kernel(adata_large: AnnData):
     vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
     ck = ConnectivityKernel(adata_large).compute_transition_matrix()
     return (0.8 * vk + 0.2 * ck).compute_transition_matrix()
-
-
-# removes overly verbose logging errors for rpy2
-# see: https://github.com/pytest-dev/pytest/issues/5502#issuecomment-647157873
-def pytest_sessionfinish(session, exitstatus):
-    import logging
-
-    loggers = [logging.getLogger()] + list(logging.Logger.manager.loggerDict.values())
-    for logger in loggers:
-        handlers = getattr(logger, "handlers", [])
-        for handler in handlers:
-            logger.removeHandler(handler)
 
 
 @pytest.fixture(scope="session")

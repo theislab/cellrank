@@ -1,10 +1,10 @@
 """Module used to parallelize model fitting."""
 
 from typing import Any, Union, Callable, Optional, Sequence
-from threading import Thread
-from multiprocessing import Manager
 
 import joblib as jl
+from threading import Thread
+from multiprocessing import Manager
 
 from cellrank.ul._utils import _get_n_cores
 
@@ -57,7 +57,7 @@ def parallelize(
 
     if show_progress_bar:
         try:
-            import ipywidgets  # noqa: F401
+            import ipywidgets
             from tqdm.auto import tqdm
         except ImportError:
             try:

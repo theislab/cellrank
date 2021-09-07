@@ -1,16 +1,16 @@
-import os
-from sys import version_info
 from typing import Tuple, Union, Optional
-from pathlib import Path
 
+import os
 import pytest
 from PIL import Image
+from sys import version_info
+from pathlib import Path
 
 import scanpy as sc
 import scvelo as scv
 import cellrank as cr
 from anndata import AnnData
-from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
+from cellrank.tl.kernels import VelocityKernel, CytoTRACEKernel, ConnectivityKernel
 
 import numpy as np
 import pandas as pd
@@ -26,6 +26,31 @@ def _jax_not_installed() -> bool:
         return False
     except ImportError:
         return True
+
+
+def _rpy2_mgcv_not_installed() -> bool:
+    try:
+        import rpy2
+        from packaging import version
+        from rpy2.robjects.packages import PackageNotInstalledError, importr
+
+        try:
+            from importlib_metadata import version as get_version
+        except ImportError:
+            # >=Python3.8
+            from importlib.metadata import version as get_version
+
+        try:
+            assert version.parse(get_version(rpy2.__name__)) >= version.parse("3.3.0")
+            _ = importr("mgcv")
+            return False
+        except (PackageNotInstalledError, AssertionError):
+            pass
+
+    except ImportError:
+        pass
+
+    return True
 
 
 def bias_knn(conn, pseudotime, n_neighbors, k=3):
@@ -135,7 +160,8 @@ def resize_images_to_same_sizes(
             expected_image.resize(actual_image.size).save(expected_image)
         else:
             raise ValueError(
-                f"Invalid kind of conversion `{kind!r}`. Valid options are `'actual_to_expected'`, `'expected_to_actual'`."
+                f"Invalid kind of conversion `{kind!r}`."
+                f"Valid options are `'actual_to_expected'`, `'expected_to_actual'`."
             )
 
 
@@ -275,6 +301,8 @@ def assert_estimators_equal(
 
 def random_transition_matrix(n: int) -> np.ndarray:
     """
+    Create a random transition matrix.
+
     Parameters
     ----------
     n
@@ -295,10 +323,10 @@ def _create_dummy_adata(n_obs: int) -> AnnData:
     """
     Create a testing :class:`anndata.AnnData` object.
 
-    Call this function to regenerate the above objects.
+    Call this function to regenerate the ground truth objects.
 
-    Params
-    ------
+    Parameters
+    ----------
     n_obs
         Number of cells.
 
@@ -310,8 +338,16 @@ def _create_dummy_adata(n_obs: int) -> AnnData:
 
     np.random.seed(42)
     adata = scv.datasets.toy_data(n_obs=n_obs)
+    adata.obs_names_make_unique()
+    adata.var_names_make_unique()
+
     scv.pp.filter_and_normalize(adata, min_shared_counts=20, n_top_genes=1000)
-    adata.raw = adata[:, 42 : 42 + 50].copy()
+    adata.var["symbol"] = adata.var_names.str.cat(["gs"] * adata.n_vars, sep=":")
+
+    raw = adata[:, 42 : 42 + 50].copy()
+    raw.var["symbol"] = raw.var_names.str.cat(["gs:raw"] * raw.n_vars, sep=":")
+    adata.raw = raw
+
     scv.pp.moments(adata, n_pcs=30, n_neighbors=30)
     scv.tl.recover_dynamics(adata)
     scv.tl.velocity(adata, mode="dynamical")
@@ -321,8 +357,11 @@ def _create_dummy_adata(n_obs: int) -> AnnData:
     adata.uns["iroot"] = 0
     sc.tl.dpt(adata)
 
-    adata.uns["connectivity_variances"] = np.ones((n_obs, n_obs), dtype=np.float64)
-    adata.uns["velocity_variances"] = np.ones((n_obs, n_obs), dtype=np.float64)
+    if "velocity_graph" in adata.uns:
+        adata.obsp["velocity_graph"] = adata.uns["velocity_graph"]
+        adata.obsp["velocity_graph_neg"] = adata.uns["velocity_graph_neg"]
+    adata.obsp["connectivity_variances"] = np.ones((n_obs, n_obs), dtype=np.float64)
+    adata.obsp["velocity_variances"] = np.ones((n_obs, n_obs), dtype=np.float64)
 
     sc.write(f"tests/_ground_truth_adatas/adata_{n_obs}.h5ad", adata)
 
@@ -332,38 +371,10 @@ def _create_dummy_adata(n_obs: int) -> AnnData:
 jax_not_installed_skip = pytest.mark.skipif(
     _jax_not_installed(), reason="JAX is not installed."
 )
-
+gamr_skip = pytest.mark.skipif(
+    _rpy2_mgcv_not_installed(), reason="Cannot import `rpy2` or R's `mgcv` package."
+)
 
 if __name__ == "__main__":
     for size in [50, 100, 200]:
         _ = _create_dummy_adata(size)
-
-
-def _import_rpy2_mgcv() -> bool:
-    try:
-        import rpy2
-        from packaging import version
-        from rpy2.robjects.packages import PackageNotInstalledError, importr
-
-        try:
-            from importlib_metadata import version as get_version
-        except ImportError:
-            # >=Python3.8
-            from importlib.metadata import version as get_version
-
-        try:
-            assert version.parse(get_version(rpy2.__name__)) >= version.parse("3.3.0")
-            _ = importr("mgcv")
-            return False
-        except (PackageNotInstalledError, AssertionError):
-            pass
-
-    except ImportError:
-        pass
-
-    return True
-
-
-gamr_skip = pytest.mark.skipif(
-    _import_rpy2_mgcv(), reason="Cannot import `rpy2` or R's `mgcv` package."
-)
