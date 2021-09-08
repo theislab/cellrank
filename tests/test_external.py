@@ -115,6 +115,11 @@ class TestWOTKernel:
         assert ok._conn is None
         np.testing.assert_allclose(ok.transition_matrix.sum(1), 1.0)
 
+    def test_invalid_solver_kwargs(self, adata_large: AnnData):
+        ok = cre.kernels.WOTKernel(adata_large, time_key="age(days)")
+        with pytest.raises(TypeError, match="unexpected keyword argument 'foo'"):
+            ok.compute_transition_matrix(foo="bar")
+
     def test_inversion_updates_adata(self, adata_large: AnnData):
         key = "age(days)"
         ok = cre.kernels.WOTKernel(adata_large, time_key=key)

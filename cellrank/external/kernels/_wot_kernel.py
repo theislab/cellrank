@@ -342,6 +342,7 @@ class WOTKernel(Kernel, error=_error):
         _ = kwargs.pop("covariate_field", None)
         _ = kwargs.pop("ncounts", None)
         _ = kwargs.pop("ncells", None)
+        _ = kwargs.pop("parameters", None)  # parameters file
         kwargs["lambda1"] = lambda1
         kwargs["lambda2"] = lambda2
         kwargs["epsilon"] = epsilon
@@ -399,8 +400,18 @@ class WOTKernel(Kernel, error=_error):
         ] = None,
         solver: Literal["fixed_iters", "duality_gap"] = "duality_gap",
         growth_rate_field: Optional[str] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> Dict[Tuple[float, float], AnnData]:
+        _ = wot.ot.OTModel(
+            adata,
+            day_field=self._time_key,
+            covariate_field=None,
+            growth_rate_field=growth_rate_field,
+        )
+        for k in kwargs:
+            if k not in _.ot_config:
+                raise TypeError(f"WOT got an unexpected keyword argument {k!r}.")
+
         self._ot_model = wot.ot.OTModel(
             adata,
             day_field=self._time_key,
