@@ -1,4 +1,4 @@
-CellRank dev (2021-09-01)
+CellRank dev (2021-09-08)
 =========================
 
 Features
@@ -20,6 +20,9 @@ Bugfixes
 
 - Update towncrier to display development release notes.
   `#709 <https://github.com/theislab/cellrank/pull/709>`__
+
+- Restricts computation of embedding projection to kNN based kernels.
+  `#733 <https://github.com/theislab/cellrank/pull/733>`__
 
 
 Deprecations (in next major release)

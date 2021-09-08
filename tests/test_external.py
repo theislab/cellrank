@@ -75,6 +75,35 @@ class TestOTKernel:
         np.testing.assert_allclose(ok.transition_matrix.sum(1), 1.0)
         assert isinstance(ok.params, dict)
 
+    @pytest.mark.parametrize("connectivity_kernel", (None, ConnectivityKernel))
+    def test_compute_projection(
+        self, adata_large: AnnData, connectivity_kernel: Optional[ConnectivityKernel]
+    ):
+        terminal_states = np.full((adata_large.n_obs,), fill_value=np.nan, dtype=object)
+        ixs = np.where(adata_large.obs["clusters"] == "Granule immature")[0]
+        terminal_states[ixs] = "GI"
+
+        ok = cre.kernels.StationaryOTKernel(
+            adata_large,
+            terminal_states=pd.Series(terminal_states).astype("category"),
+            g=np.ones((adata_large.n_obs,), dtype=np.float64),
+        )
+        ok = ok.compute_transition_matrix(1, 0.001)
+
+        if connectivity_kernel is not None:
+            ck = connectivity_kernel(adata_large).compute_transition_matrix()
+            combined_kernel = 0.9 * ok + 0.1 * ck
+            combined_kernel.compute_transition_matrix()
+        else:
+            combined_kernel = ok
+
+        expected_error = (
+            r"<StationaryOTKernel> is not a kNN based kernel. The embedding projection "
+            r"only works for kNN based kernels."
+        )
+        with pytest.raises(AttributeError, match=expected_error):
+            combined_kernel.compute_projection()
+
 
 class TestWOTKernel:
     def test_no_connectivities(self, adata_large: AnnData):
@@ -85,6 +114,11 @@ class TestWOTKernel:
 
         assert ok._conn is None
         np.testing.assert_allclose(ok.transition_matrix.sum(1), 1.0)
+
+    def test_invalid_solver_kwargs(self, adata_large: AnnData):
+        ok = cre.kernels.WOTKernel(adata_large, time_key="age(days)")
+        with pytest.raises(TypeError, match="unexpected keyword argument 'foo'"):
+            ok.compute_transition_matrix(foo="bar")
 
     def test_inversion_updates_adata(self, adata_large: AnnData):
         key = "age(days)"
@@ -256,6 +290,27 @@ class TestWOTKernel:
         assert isinstance(ok2, cre.kernels.WOTKernel)
         assert ok is not ok2
         np.testing.assert_array_equal(ok.transition_matrix.A, ok2.transition_matrix.A)
+
+    @pytest.mark.parametrize("connectivity_kernel", (None, ConnectivityKernel))
+    def test_compute_projection(
+        self, adata_large: AnnData, connectivity_kernel: Optional[ConnectivityKernel]
+    ):
+        ok = cre.kernels.WOTKernel(adata_large, time_key="age(days)")
+        ok = ok.compute_transition_matrix()
+
+        if connectivity_kernel is not None:
+            ck = connectivity_kernel(adata_large).compute_transition_matrix()
+            combined_kernel = 0.9 * ok + 0.1 * ck
+            combined_kernel.compute_transition_matrix()
+        else:
+            combined_kernel = ok
+
+        expected_error = (
+            r"<WOTKernel> is not a kNN based kernel. The embedding projection only "
+            r"works for kNN based kernels."
+        )
+        with pytest.raises(AttributeError, match=expected_error):
+            combined_kernel.compute_projection()
 
 
 class TestGetMarkers:

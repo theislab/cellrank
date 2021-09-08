@@ -294,18 +294,18 @@ class KernelExpression(IOMixin, ABC):
                 "Compute transition matrix first as `.compute_transition_matrix()`."
             )
 
-        kernels_w_conn = [kernel for kernel in self.kernels if kernel._conn is not None]
-        if not len(kernels_w_conn):
-            raise AttributeError(
-                "Connectivity matrix not defined. As of now, the embedding projection "
-                "only works for kNN based kernels."
-            )
+        for kernel in self.kernels:
+            if kernel._conn is None:
+                raise AttributeError(
+                    f"{kernel!r} is not a kNN based kernel. The embedding projection "
+                    "only works for kNN based kernels."
+                )
 
         start = logg.info(f"Projecting transition matrix onto `{basis}`")
         emb = _get_basis(self.adata, basis)
         T_emb = np.empty_like(emb)
 
-        conn = kernels_w_conn[0]._conn
+        conn = self.kernels[0]._conn
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
