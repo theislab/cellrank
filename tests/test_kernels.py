@@ -607,12 +607,15 @@ class TestKernel:
         n_neighbors = _get_neighs_params(adata)["n_neighbors"]
         pseudotime = adata.obs["latent_time"]
         k_thresh = max(0, min(int(np.floor(n_neighbors / k)) - 1, 30))
+        frac_to_keep = k_thresh / float(n_neighbors)
 
-        conn_biased = bias_knn(conn.copy(), pseudotime, n_neighbors, k=k)
+        conn_biased = bias_knn(
+            conn.copy(), pseudotime, n_neighbors, k=k, frac_to_keep=frac_to_keep
+        )
         T_1 = _normalize(conn_biased)
 
         pk = PseudotimeKernel(adata, time_key="latent_time").compute_transition_matrix(
-            frac_to_keep=k_thresh / float(n_neighbors),
+            frac_to_keep=frac_to_keep,
             threshold_scheme="hard",
         )
         T_2 = pk.transition_matrix
@@ -640,20 +643,6 @@ class TestKernel:
         assert pk_inv is pk
         assert pk_inv.backward
         np.testing.assert_allclose(pt, 1 - pk_inv.pseudotime)
-
-    def test_pseudotime_differ_dense_norm(self, adata: AnnData):
-        conn = _get_neighs(adata, "connectivities")
-        n_neighbors = _get_neighs_params(adata)["n_neighbors"]
-        pseudotime = adata.obs["latent_time"]
-
-        conn_biased = bias_knn(conn, pseudotime, n_neighbors)
-        T_1 = density_normalization(conn_biased, conn)
-        T_1 = _normalize(T_1)
-
-        pk = PseudotimeKernel(adata, time_key="latent_time").compute_transition_matrix()
-        T_2 = pk.transition_matrix
-
-        assert not np.allclose(T_1.A, T_2.A, rtol=_rtol)
 
     @pytest.mark.parametrize("mode", ["deterministic", "stochastic", "sampling"])
     def test_manual_combination(self, adata: AnnData, mode: str):

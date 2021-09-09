@@ -142,7 +142,6 @@ class HardThresholdScheme(ThresholdSchemeABC):
         cell_pseudotime: float,
         neigh_pseudotime: np.ndarray,
         neigh_conn: np.ndarray,
-        n_neighs: int,
         frac_to_keep: float = 0.3,
     ) -> np.ndarray:
         """
@@ -155,8 +154,6 @@ class HardThresholdScheme(ThresholdSchemeABC):
         Parameters
         ----------
         %(pt_scheme.parameters)s
-        n_neighs
-            Number of neighbors to keep.
         frac_to_keep
             The `frac_to_keep` * n_neighbors closest neighbors (according to graph connectivities) are kept, no matter
             whether they lie in the pseudotemporal past or future. `frac_to_keep` needs to fall within the
@@ -171,7 +168,7 @@ class HardThresholdScheme(ThresholdSchemeABC):
                 f"Expected `frac_to_keep` to be in `[0, 1]`, found `{frac_to_keep}`."
             )
 
-        k_thresh = max(0, min(30, int(np.floor(n_neighs * frac_to_keep))))
+        k_thresh = max(0, min(30, int(np.floor(len(neigh_conn) * frac_to_keep))))
         ixs = np.flip(np.argsort(neigh_conn))
         close_ixs, far_ixs = ixs[:k_thresh], ixs[k_thresh:]
 
