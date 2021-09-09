@@ -1,6 +1,7 @@
 from typing import List, Tuple, Union, Mapping, TypeVar, Callable, Iterable, Optional
 from typing_extensions import Literal
 
+from copy import copy
 from enum import auto
 from types import FunctionType, MappingProxyType
 from inspect import signature
@@ -8,7 +9,9 @@ from pathlib import Path
 from functools import wraps
 from itertools import combinations
 
+from anndata import AnnData
 from cellrank import logging as logg
+from cellrank._key import Key
 from cellrank.tl._enum import ModeEnum
 from cellrank.ul._docs import d, inject_docs
 from cellrank.tl._utils import save_fig, _convert_lineage_name, _unique_order_preserving
@@ -21,6 +24,7 @@ from cellrank.tl._colors import (
 import numpy as np
 import pandas as pd
 from scipy.stats import entropy
+from pandas.api.types import infer_dtype, is_categorical_dtype
 
 import matplotlib.colors as c
 import matplotlib.pyplot as plt
@@ -1056,6 +1060,79 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             return reference, None
 
         return reference
+
+    @classmethod
+    @d.dedent
+    def from_adata(
+        cls, adata: AnnData, backward: bool = False, macrostates: bool = False
+    ) -> "Lineage":
+        """
+        Reconstruct :class:`cellrank.tl.Lineage` from :class:`anndata.AnnData`.
+
+        Parameters
+        ----------
+        %(adata)s
+        %(backward)s
+        macrostates
+            Whether to reconstruct macrostates memberships from :class:`cellrank.estimators.GPCCA`
+            or absorption probabilities.
+
+        Returns
+        -------
+        The lineage object.
+        """
+        if macrostates:
+            key = Key.obsm.memberships(Key.obs.term_states(backward))
+            nkey = Key.obs.macrostates(backward)
+            default_name = f"macrostate {Key.backward(backward)}"
+        else:
+            key = Key.obsm.abs_probs(backward)
+            nkey = Key.obs.term_states(backward)
+            default_name = f"{Key.initial(backward)} state"
+        ckey = Key.uns.colors(nkey)
+
+        data: Optional[Union[np.ndarray, Lineage]] = copy(adata.obsm.get(key, None))
+        if data is None:
+            raise KeyError(f"Unable to find lineage data in `adata.obsm[{key!r}]`.")
+        if isinstance(data, Lineage):
+            return data
+        if data.ndim != 2:
+            raise ValueError(f"Expected 2 dimensional data, found `{data.ndim}`.")
+
+        states = adata.obs.get(nkey, None)
+        if states is None:
+            logg.warning(
+                f"Unable to find states in `adata.obs[{nkey!r}]`. Using default names"
+            )
+        elif not is_categorical_dtype(states):
+            logg.warning(
+                f"Expected `adata.obs[{key!r}]` to be `categorical`, "
+                f"found `{infer_dtype(adata.obs[nkey])}`. Using default names"
+            )
+        else:
+            states = list(states.cat.categories)
+            if len(states) != data.shape[1]:
+                logg.warning(
+                    f"Expected to find `{data.shape[1]}` names, found `{len(states)}`. "
+                    f"Using default names"
+                )
+        if states is None or len(states) != data.shape[1]:
+            states = [f"{default_name} {i}" for i in range(data.shape[1])]
+
+        colors = adata.uns.get(ckey, None)
+        if colors is None:
+            logg.warning(
+                f"Unable to find colors in `adata.uns[{ckey!r}]`. "
+                f"Using default colors"
+            )
+        elif len(colors) != data.shape[1]:
+            logg.warning(
+                f"Expected to find `{data.shape[1]}` colors, found `{len(colors)}`. "
+                f"Using default colors"
+            )
+            colors = None
+
+        return Lineage(data, names=states, colors=colors)
 
 
 class LineageView(Lineage):
