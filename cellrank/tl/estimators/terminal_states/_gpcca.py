@@ -34,7 +34,7 @@ from pandas.api.types import infer_dtype, is_categorical_dtype
 
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
-from matplotlib.colors import Normalize, ListedColormap, to_hex
+from matplotlib.colors import Normalize, ListedColormap
 from matplotlib.ticker import StrMethodFormatter
 from matplotlib.colorbar import ColorbarBase
 
@@ -1029,6 +1029,8 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             key = Key.obs.macrostates(self.backward)
             # TODO(michalk8): in the future, be more stringent and ensure the categories match the macro memberships
             self._get("_macrostates", self.adata.obs, key=key, where="obs", dtype=pd.Series)
+            ckey = Key.uns.colors(key)
+            self._get("_macrostates_colors", self.adata.uns, key=ckey, where="uns", dtype=(list, tuple, np.ndarray))
             mkey = Key.obsm.memberships(key)
             self._get("_macrostates_memberships", self.adata.obsm, key=mkey, where="obsm", dtype=(Lineage, np.ndarray))
             self._ensure_lineage_object("_macrostates_memberships", kind="macrostates")
