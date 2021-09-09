@@ -219,9 +219,11 @@ def _check_abs_probs(mc: cr.tl.estimators.GPCCA) -> None:
     # fmt: on
 
 
-def _fit_gpcca(adata, state: str) -> cr.estimators.GPCCA:
-    vk = VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
-    ck = ConnectivityKernel(adata).compute_transition_matrix()
+def _fit_gpcca(adata, state: str, backward: bool = False) -> cr.estimators.GPCCA:
+    vk = VelocityKernel(adata, backward=backward).compute_transition_matrix(
+        softmax_scale=4
+    )
+    ck = ConnectivityKernel(adata, backward=backward).compute_transition_matrix()
     terminal_kernel = 0.8 * vk + 0.2 * ck
 
     mc = cr.tl.estimators.GPCCA(terminal_kernel)
@@ -1159,6 +1161,37 @@ class TestGPCCASerialization:
         _assert_gpcca_attrs(g, state.prev, fwd=False)
         _assert_adata(g._shadow_adata, state, fwd=True, init=False)
         _assert_adata(g._shadow_adata, state.prev, fwd=False)
+
+    @pytest.mark.parametrize("bwd", [False, True])
+    def test_reconstruct_lineage(self, adata_large: AnnData, bwd: bool):
+        g_orig = _fit_gpcca(adata_large, State.LIN, backward=bwd)
+        adata = g_orig.to_adata()
+        bdata = adata.copy()
+        keys = [
+            Key.obsm.memberships(Key.obs.macrostates(bwd)),
+            Key.obsm.memberships(Key.obs.term_states(bwd)),
+            Key.obsm.abs_probs(bwd),
+        ]
+        attrs = [
+            "macrostates_memberships",
+            "terminal_states_memberships",
+            "absorption_probabilities",
+        ]
+
+        for key in keys:
+            assert isinstance(adata.obsm[key], Lineage)
+            adata.obsm[key] = np.array(adata.obsm[key])
+            assert isinstance(adata.obsm[key], np.ndarray)
+
+        g = cr.tl.estimators.GPCCA.from_adata(adata, obsp_key=Key.uns.kernel(bwd))
+        for attr, key in zip(attrs, keys):
+            obj = getattr(g, attr)
+            assert isinstance(obj, Lineage)
+            np.testing.assert_allclose(obj.X, bdata.obsm[key].X)
+            np.testing.assert_array_equal(obj.names, bdata.obsm[key].names)
+            np.testing.assert_array_equal(obj.colors, bdata.obsm[key].colors)
+
+        assert_estimators_equal(g_orig, g, from_adata=True)
 
 
 class TestGPCCAIO:

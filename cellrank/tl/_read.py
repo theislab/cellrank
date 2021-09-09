@@ -7,6 +7,7 @@ from anndata import AnnData
 from cellrank import logging as logg
 from cellrank._key import Key
 from cellrank.ul._docs import d
+from cellrank.tl._utils import _deprecate
 from cellrank.tl._colors import _create_categorical_colors
 from cellrank.tl._lineage import Lineage
 
@@ -14,9 +15,9 @@ from matplotlib.colors import is_color_like
 
 
 @d.dedent
+@_deprecate(version="2.0")
 def read(
     path: Union[Path, str],
-    key: Optional[str] = None,
     read_callback: Callable = scv_read,
     **kwargs: Any,
 ) -> AnnData:
@@ -27,9 +28,6 @@ def read(
     ----------
     path
         Path to the annotated data object.
-    key
-        Key in ``adata.obsm`` where the :class:`cellrank.tl.Lineage` is stored.
-        If `None`, it is determined automatically.
     read_callback
         Function that actually reads the :class:`anndata.AnnData` object, such as
         :func:`scvelo.read` (default) or :func:`scanpy.read`.
@@ -41,7 +39,6 @@ def read(
     %(adata)s
     """
 
-    # TODO: refactor me
     def maybe_create_lineage(backward: bool, pretty_name: Optional[str] = None) -> None:
         lin_key = Key.obsm.abs_probs(backward)
         pretty_name = "" if pretty_name is None else (pretty_name + " ")
@@ -95,10 +92,7 @@ def read(
 
     adata = read_callback(path, **kwargs)
 
-    if key is None:
-        maybe_create_lineage(False, pretty_name="forward")
-        maybe_create_lineage(True, pretty_name="backward")
-    else:
-        maybe_create_lineage(key)
+    maybe_create_lineage(False, pretty_name="forward")
+    maybe_create_lineage(True, pretty_name="backward")
 
     return adata
