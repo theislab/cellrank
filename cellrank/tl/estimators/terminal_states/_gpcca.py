@@ -1027,13 +1027,13 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         # fmt: off
         with SafeGetter(self, allowed=KeyError) as sg:
             key = Key.obs.macrostates(self.backward)
+            # TODO(michalk8): in the future, be more stringent and ensure the categories match the macro memberships
             self._get("_macrostates", self.adata.obs, key=key, where="obs", dtype=pd.Series)
-            ckey = Key.uns.colors(key)
-            self._get("_macrostates_colors", self.adata.uns, key=ckey, where="uns", dtype=(list, tuple, np.ndarray))
-            self._macrostates_colors = np.asarray([to_hex(c) for c in self._macrostates_colors])
             mkey = Key.obsm.memberships(key)
-            self._get("_macrostates_memberships", self.adata.obsm, key=mkey, where="obsm", dtype=Lineage)
-            # TODO(michalk8): reconstruct lineage? at this point we have all the info needed
+            self._get("_macrostates_memberships", self.adata.obsm, key=mkey, where="obsm", dtype=(Lineage, np.ndarray))
+            self._ensure_lineage_object("_macrostates_memberships", kind="macrostates")
+
+            self._macrostates_colors = self.macrostates_memberships.colors.copy()
             self.params[key] = self._read_params(key)
 
             # TODO(michalk8): allow missing?
@@ -1059,7 +1059,8 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
         with SafeGetter(self, allowed=KeyError) as sg:
             key = Key.obsm.memberships(Key.obs.term_states(self.backward))
-            self._get("_term_states_memberships", self.adata.obsm, key=key, where="obsm", dtype=Lineage)
+            self._get("_term_states_memberships", self.adata.obsm, key=key, where="obsm", dtype=(np.ndarray, Lineage))
+            self._ensure_lineage_object("_term_states_memberships", kind="term_states")
         # fmt: on
 
         return sg.ok and self._read_absorption_probabilities(adata)

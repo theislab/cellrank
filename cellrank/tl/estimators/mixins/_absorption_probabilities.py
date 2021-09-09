@@ -72,6 +72,9 @@ class AbsProbsProtocol(BaseProtocol):  # noqa: D101
     ) -> np.ndarray:
         ...
 
+    def _ensure_lineage_object(self, attr: str, **kwargs: Any) -> None:
+        ...
+
     def _write_absorption_probabilities(
         self,
         abs_probs: Optional[Lineage],
@@ -445,6 +448,21 @@ class AbsProbsMixin:
             f"    Finish"
         )
 
+    def _ensure_lineage_object(
+        self: AbsProbsProtocol, attr: str, **kwargs: Any
+    ) -> None:
+        if isinstance(getattr(self, attr), np.ndarray):
+            try:
+                setattr(
+                    self,
+                    attr,
+                    Lineage.from_adata(self.adata, backward=self.backward, **kwargs),
+                )
+            except Exception as e:  # noqa: B902
+                raise RuntimeError(
+                    f"Unable to reconstruct `.absorption_probabilities`. Reason: `{e}`."
+                ) from None
+
     @logger
     @shadow
     def _write_lineage_priming(
@@ -462,7 +480,8 @@ class AbsProbsMixin:
         # fmt: off
         with SafeGetter(self, allowed=KeyError) as sg:
             key1 = Key.obsm.abs_probs(self.backward)
-            self._get("_absorption_probabilities", self.adata.obsm, key=key1, where="obsm", dtype=Lineage)
+            self._get("_absorption_probabilities", self.adata.obsm, key=key1, where="obsm", dtype=(np.ndarray, Lineage))
+            self._ensure_lineage_object("_absorption_probabilities", kind="abs_probs")
             key = Key.obsm.abs_times(self.backward)
             self._get("_absorption_times", self.adata.obsm, key=key, where="obsm", dtype=pd.DataFrame,
                       allow_missing=True)

@@ -68,6 +68,12 @@ class Reduction(ModeEnum):  # noqa: D101
     SCALE = auto()
 
 
+class LinKind(ModeEnum):  # noqa: D101
+    MACROSTATES = auto()
+    TERM_STATES = auto()
+    ABS_PROBS = auto()
+
+
 def _at_least_2d(array: np.ndarray, dim: int):
     return np.expand_dims(array, dim) if array.ndim < 2 else array
 
@@ -1063,8 +1069,12 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
     @classmethod
     @d.dedent
+    @inject_docs(lk=LinKind)
     def from_adata(
-        cls, adata: AnnData, backward: bool = False, macrostates: bool = False
+        cls,
+        adata: AnnData,
+        backward: bool = False,
+        kind: Literal["macrostates", "term_states", "abs_probs"] = LinKind.ABS_PROBS,
     ) -> "Lineage":
         """
         Reconstruct :class:`cellrank.tl.Lineage` from :class:`anndata.AnnData`.
@@ -1073,22 +1083,30 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         ----------
         %(adata)s
         %(backward)s
-        macrostates
-            Whether to reconstruct macrostates memberships from :class:`cellrank.estimators.GPCCA`
-            or absorption probabilities.
+        kind
+            Which kind of object to reconstruct. Valid options are:
+
+                - `{lk.MACROSTATES!r}`- macrostates memberships from :class:`cellrank.tl.estimators.GPCCA`.
+                - `{lk.TERM_STATES!r}`- terminal states memberships from :class:`cellrank.tl.estimators.GPCCA`.
+                - `{lk.ABS_PROBS!r}`- the absorption probabilities.
 
         Returns
         -------
-        The lineage object.
+        The reconstructed lineage object.
         """
-        if macrostates:
-            key = Key.obsm.memberships(Key.obs.term_states(backward))
+        kind = LinKind(kind)
+        if kind == LinKind.MACROSTATES:
             nkey = Key.obs.macrostates(backward)
-            default_name = f"macrostate {Key.backward(backward)}"
-        else:
-            key = Key.obsm.abs_probs(backward)
+            key = Key.obsm.memberships(nkey)
+        elif kind == LinKind.TERM_STATES:
             nkey = Key.obs.term_states(backward)
-            default_name = f"{Key.initial(backward)} state"
+            key = Key.obsm.memberships(nkey)
+        elif kind == LinKind.ABS_PROBS:
+            nkey = Key.obs.term_states(backward)
+            key = Key.obsm.abs_probs(backward)
+        else:
+            raise NotImplementedError(f"Lineage kind `{kind}` is not yet implemented.")
+
         ckey = Key.uns.colors(nkey)
 
         data: Optional[Union[np.ndarray, Lineage]] = copy(adata.obsm.get(key, None))
@@ -1117,7 +1135,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
                     f"Using default names"
                 )
         if states is None or len(states) != data.shape[1]:
-            states = [f"{default_name} {i}" for i in range(data.shape[1])]
+            states = [str(i) for i in range(data.shape[1])]
 
         colors = adata.uns.get(ckey, None)
         if colors is None:
