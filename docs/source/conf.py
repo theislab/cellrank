@@ -86,7 +86,7 @@ intersphinx_mapping = dict(
     networkx=("https://networkx.org/documentation/stable/", None),
     pandas=("https://pandas.pydata.org/pandas-docs/stable/", None),
     statsmodels=("https://www.statsmodels.org/stable/", None),
-    matplotlib=("https://matplotlib.org/", None),
+    matplotlib=("https://matplotlib.org/stable/", None),
     joblib=("https://joblib.readthedocs.io/en/latest/", None),
     sklearn=("https://scikit-learn.org/stable/", None),
     seaborn=("https://seaborn.pydata.org/", None),
@@ -117,6 +117,11 @@ exclude_patterns = [
 bibtex_bibfiles = ["references.bib"]
 bibtex_reference_style = "author_year"
 bibtex_default_style = "alpha"
+
+# linkcheck
+user_agent = "Mozilla/5.0 (X11; Linux x86_64; rv:25.0) Gecko/20100101 Firefox/25.0"
+# Twitter (used for handles in contributors.rst) doesn't like the above user-agent
+linkcheck_ignore = [r"https://twitter\.com/.*", r"https://mobile\.twitter\.com/.*"]
 
 # -- Notebooks
 nbsphinx_execute_arguments = [

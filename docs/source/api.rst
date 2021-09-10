@@ -1,6 +1,5 @@
 API
 ===
-
 Import CellRank as::
 
     import cellrank as cr

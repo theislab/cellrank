@@ -101,7 +101,7 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
         shadow_only: bool = False,
     ) -> None:
         """
-        Set an attribute and optionally update ``obj[key]``.
+        Set an attribute and optionally update ``obj[{key}]``.
 
         Parameters
         ----------
@@ -122,7 +122,7 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
 
         Returns
         -------
-        Nothing, just optionally updates ``attr`` and/or ``obj[key]``.
+        Nothing, just optionally updates ``attr`` and/or ``obj[{key}]``.
 
         Raises
         ------

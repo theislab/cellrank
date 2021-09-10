@@ -193,7 +193,7 @@ class AbsProbsMixin:
             when ``use_petsc = False`` or one of :class:`petsc4py.PETSc.KPS.Type` otherwise.
 
             Information on the :mod:`scipy` iterative solvers can be found in :func:`scipy.sparse.linalg` or for
-            :mod:`petsc4py` solver `here <https://www.mcs.anl.gov/petsc/documentation/linearsolvertable.html>`__.
+            :mod:`petsc4py` solver `here <https://petsc.org/release/overview/linear_solve_table/>`__.
         use_petsc
             Whether to use solvers from :mod:`petsc4py` or :mod:`scipy`. Recommended for large problems.
             If no installation is found, defaults to :func:`scipy.sparse.linalg.gmres`.
@@ -204,12 +204,11 @@ class AbsProbsMixin:
             In case when states are a :class:`tuple`, time to absorption will be computed to the subset of these states,
             such as ``[('Alpha', 'Beta'), ...]`` or ``{{('Alpha', 'Beta'): 'mean', ...}}``.
             Can be specified as ``'all'`` to compute it to any absorbing state in ``keys``, which is more efficient
-            than listing all absorbing states.
+            than listing all absorbing states explicitly.
 
-            It might be beneficial to disable the progress bar as ``show_progress_bar = False``.
+            It might be beneficial to disable the progress bar as ``show_progress_bar = False`` because of many solves.
         n_jobs
-            Number of parallel jobs to use when using an iterative solver. When ``use_petsc = True`` or for
-            quickly-solvable problems, we recommend higher number (>=8) of jobs in order to fully saturate the cores.
+            Number of parallel jobs to use when using an iterative solver.
         backend
             Which backend to use for multiprocessing. See :class:`joblib.Parallel` for valid options.
         show_progress_bar
@@ -219,9 +218,8 @@ class AbsProbsMixin:
             decreasing this for severely ill-conditioned matrices.
         preconditioner
             Preconditioner to use, only available when ``use_petsc = True``. For valid options, see
-            `here <https://www.mcs.anl.gov/petsc/petsc-current/docs/manualpages/PC/PCType.html#PCType>`__ or the values
-            of `petsc4py.PETSc.PC.Type`.
-            We recommended `'ilu'` preconditioner for badly conditioned problems.
+            `here <https://petsc.org/release/docs/manual/ksp/?highlight=pctype#preconditioners>`__.
+            We recommend the `'ilu'` preconditioner for badly conditioned problems.
 
         Returns
         -------

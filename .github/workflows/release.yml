@@ -11,47 +11,51 @@ jobs:
             with:
                 token: ${{ secrets.TOWNCRIER_TOKEN }}
 
-        -   name: Set up Python 3.8
+        -   name: Set up Python 3.9
             uses: actions/setup-python@v2
             with:
-                python-version: 3.8
+                python-version: 3.9
 
         -   name: Extract the tag
             id: vars
             run: |
-                echo ::set-output name=tag::${GITHUB_REF##*/}
+                echo "::set-output name=tag::${GITHUB_REF##*/}"
 
         -   name: Check tag validity
             env:
-                VERSION: ${{ steps.vars.output.tag }}
+                VERSION: ${{ steps.vars.outputs.tag }}
             run: |
                 grep "^v[[:digit:]]\.[[:digit:]]\.[[:digit:]]$" <<< "$VERSION" || (echo "Invalid version: '$VERSION'" && exit 42)
 
-        -   name: Install pip dependencies
+        -   name: Install dependencies
             run: |
+                sudo apt install pandoc
                 python -m pip install --upgrade pip
-                pip install towncrier rstcheck bump2version
+                pip install tox bump2version
                 pip install -e'.'
 
         -   name: Generate release notes
+            env:
+                VERSION: ${{ steps.vars.outputs.tag }}
             run: |
-                towncrier build --yes
-                rm -f docs/source/release/notes-dev.rst
-                towncrier build --yes --version dev
-                rstcheck -r docs/source/release
+                tox -e build-release-notes -- --version "${VERSION/v/}"
+
+        -   name: Check generated docs
+            run: |
+                tox -e check-docs
 
         -   name: Commit release notes
             uses: stefanzweifel/git-auto-commit-action@v4
             with:
                 file_pattern: docs/source/release/**
                 commit_user_name: CI
-                commit_message: ${{ format('[auto][ci skip] Generate {0} release notes', steps.vars.output.tag) }}
+                commit_message: ${{ format('[auto][ci skip] Generate {0} release notes', steps.vars.outputs.tag) }}
                 skip_dirty_check: false
 
         -   name: Bump the version
             # the part (patch) doesn't matter when supplying --new-version
             env:
-                VERSION: ${{ steps.vars.output.tag }}
+                VERSION: ${{ steps.vars.outputs.tag }}
             run: |
                 bump2version patch --no-commit --no-tag --verbose --new-version "${VERSION/v/}"
 
@@ -60,13 +64,15 @@ jobs:
             with:
                 file_pattern: setup.py cellrank/__init__.py .bumpversion.cfg
                 commit_user_name: CI
-                commit_message: ${{ format('[auto][ci skip] Release {0}', steps.vars.output.tag) }}
-                tagging_message: ${{ steps.vars.output.tag }}
+                commit_message: ${{ format('[auto][ci skip] Release {0}', steps.vars.outputs.tag) }}
+                tagging_message: ${{ steps.vars.outputs.tag }}
                 skip_dirty_check: false
 
-        -   name: Invoke test workflow
+        # TODO(michalk8): bug on GitHub's side: doesn't seem to register `Test` as WD workflow
+        # `Test` triggers `Deployment`
+        -   name: Invoke deployment workflow
             uses: benc-uk/workflow-dispatch@v1
             with:
-                workflow: Test
+                workflow: Deployment
                 token: ${{ secrets.RELEASE_DISPATCH_TOKEN }}
                 inputs: '{ "reason": "release" }'
