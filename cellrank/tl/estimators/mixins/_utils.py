@@ -213,7 +213,7 @@ def _plot_continuous(
     if not len(states):
         raise ValueError("No lineages have been selected.")
     is_singleton = _data.shape[1] == 1
-    _data = _data[states]
+    _data = _data[states].copy()
 
     if mode == "time" and same_plot:
         logg.warning(
@@ -228,7 +228,12 @@ def _plot_continuous(
             # matplotlib shows even tiny perturbations in the colormap
             _data_X = np.ones_like(_data_X)
 
-    # TODO(michalk8): reintroduce max scale? if yes, copy _data
+    for col in _data_X.T:
+        mask = ~np.isclose(col, 1.0)
+        # change the maximum value - the 1 is artificial and obscures the color scaling
+        if np.any(mask):
+            col[~mask] = np.nanmax(col[mask])
+
     # fmt: off
     color = [] if color is None else (color,) if isinstance(color, str) else color
     color = _unique_order_preserving(color)
@@ -267,7 +272,6 @@ def _plot_continuous(
 
     # e.g. a stationary distribution
     if is_singleton and not np.allclose(_data_X, 1.0):
-        # TODO(michalk8): maybe use always instead of max scale mentioned above?
         kwargs.setdefault("perc", [0, 95])
         _ = kwargs.pop("color_gradients", None)
 
