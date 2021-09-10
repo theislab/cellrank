@@ -27,7 +27,7 @@ Features
 - Add more flexibility to :class:`cellrank.tl.kernels.ConnectivityKernel`, allowing it to use any cell-cell similarities
   from :attr:`anndata.AnnData.obsp`, such as spatial similarities from :mod:`squidpy` :cite:`palla:21`
   `PR 501 <https://github.com/theislab/cellrank/pull/501>`_.
-- Revamp `Pancreas Advanced <https://cellrank.readthedocs.io/en/stable/pancreas_advanced.html>`_ tutorial
+- Revamp `Pancreas Advanced <https://cellrank.readthedocs.io/en/stable/kernels_and_estimators.html>`_ tutorial
   to showcase CellRank's modular structure of kernels and estimators.
   `PR 32 <https://github.com/theislab/cellrank_notebooks/pull/32>`_.
 - Add 2 new tutorials:

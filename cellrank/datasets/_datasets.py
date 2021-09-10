@@ -119,7 +119,7 @@ def pancreas_preprocessed(
 ) -> AnnData:
     """
     Development of the murine pancreas at E15.5 from :cite:`bastidas-ponce:19`, preprocessed according to the \
-    `basic tutorial <https://cellrank.readthedocs.io/en/latest/pancreas_basic.html>`__.
+    `basic tutorial <https://cellrank.readthedocs.io/en/stable/cellrank_basics.html>`__.
 
     Parameters
     ----------
