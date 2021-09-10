@@ -183,13 +183,16 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         try:
             self._gpcca = self._gpcca.optimize(m=n_states)
         except ValueError as e:
-            # TODO(michalk8): parse the error and re-raise if not the one we expect
+            if "will split complex conjugate eigenvalues" not in str(e):
+                raise
             # this is the following case - we have 4 Schur vectors, user requests 5 states, but it splits the conj. ev.
             # in the try block, Schur decomposition with 5 vectors is computed, but it fails (no way of knowing)
             # so in this case, we increase it by 1
-            n_states += 1
-            logg.warning(f"{e}\nUsing `n_states={n_states}`")
-            self._gpcca = self._gpcca.optimize(m=n_states)
+            logg.warning(
+                f"Unable to compute macrostates with `n_states={n_states}` because it will "
+                f"split complex conjugate eigenvalues. Using `n_states={n_states + 1}`"
+            )
+            self._gpcca = self._gpcca.optimize(m=n_states + 1)
 
         self._set_macrostates(
             memberships=self._gpcca.memberships,
@@ -832,7 +835,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         if self._invalid_n_states is not None and n_states in self._invalid_n_states:
             logg.warning(
                 f"Unable to compute macrostates with `n_states={n_states}` because it will "
-                f"split the conjugate eigenvalues. Using `n_states={n_states + 1}`"
+                f"split complex conjugate eigenvalues. Using `n_states={n_states + 1}`"
             )
             n_states += 1  # cannot force recomputation of the Schur decomposition
             assert n_states not in self._invalid_n_states, "Sanity check failed."
@@ -1074,11 +1077,10 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         discrete="terminal_states", continuous="terminal_states_memberships"
     )
 
-    # TODO(michalk8): revisit/refactor/remove?
     @d.dedent
     def _compute_initial_states(self, n_states: int = 1, n_cells: int = 30) -> None:
         """
-        Compute initial states from macrostates.
+        Compute initial states from macrostates using :attr:`coarse_stationary_distribution`.
 
         Parameters
         ----------
@@ -1139,16 +1141,12 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
         Returns
         -------
-        # TODO(michalk8): rephrase + verify it's still correct
-        Nothing, just writes to :attr:`anndata.AnnData.obs`:
-
-            - `'initial_states'` - top ``n_cells`` from each initial state.
-            - `'initial_states_probs'` - probability of being an initial state.
+        Nothing, just modifies :attr:`anndata.AnnData.obs`. The actual keys depend of :attr:`backward`.
         """
 
         if not isinstance(n_cells, int):
             raise TypeError(
-                f"Expected `n_cells` to be of type `int`, found `{type(n_cells).__name__!r}`."
+                f"Expected `n_cells` to be of type `int`, found `{type(n_cells).__name__}`."
             )
 
         if n_cells <= 0:

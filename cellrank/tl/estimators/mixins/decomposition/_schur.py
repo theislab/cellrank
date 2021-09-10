@@ -152,9 +152,11 @@ class SchurMixin:
 
         try:
             self._gpcca._do_schur_helper(n_components)
-        except ValueError:
+        except ValueError as e:
+            if "will split complex conjugate eigenvalues" not in str(e):
+                raise
             logg.warning(
-                f"Using `{n_components}` components would split a block of complex conjugates. "
+                f"Using `{n_components}` components would split a block of complex conjugate eigenvalues. "
                 f"Using `n_components={n_components + 1}`"
             )
             self._gpcca._do_schur_helper(n_components + 1)
