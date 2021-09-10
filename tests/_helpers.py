@@ -53,7 +53,14 @@ def _rpy2_mgcv_not_installed() -> bool:
     return True
 
 
-def bias_knn(conn, pseudotime, n_neighbors, k=3):
+def bias_knn(
+    conn: csr_matrix,
+    pseudotime: np.ndarray,
+    n_neighbors: int,
+    k: int = 3,
+    frac_to_keep: Optional[float] = None,
+) -> csr_matrix:
+    # frac_to_keep=None mimics original impl. (which mimics Palantir)
     k_thresh = max(0, min(int(np.floor(n_neighbors / k)) - 1, 30))
     conn_biased = conn.copy()
 
@@ -65,6 +72,9 @@ def bias_knn(conn, pseudotime, n_neighbors, k=3):
         row_data = conn[i, :].data
         row_ixs = conn[i, :].indices
         current_t = pseudotime[i]
+
+        if frac_to_keep is not None:
+            k_thresh = max(0, min(30, int(np.floor(len(row_data) * frac_to_keep))))
 
         # get the 'candidates' - ixs of nodes not in the k_thresh closest neighbors
         p = np.flip(np.argsort(row_data))

@@ -1,4 +1,4 @@
-CellRank dev (2021-09-08)
+CellRank dev (2021-09-10)
 =========================
 
 Features
@@ -23,6 +23,10 @@ Bugfixes
 
 - Restricts computation of embedding projection to kNN based kernels.
   `#733 <https://github.com/theislab/cellrank/pull/733>`__
+
+- Use actual number of nearest neighbors in :class`cellrank.tl.kernels.PseudotimeKernel`
+  when using hard thresholding scheme.
+  `#738 <https://github.com/theislab/cellrank/pull/738>`__
 
 
 Deprecations (in next major release)
