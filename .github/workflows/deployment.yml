@@ -7,7 +7,7 @@ on:
     workflow_dispatch:
         inputs:
             reason:
-                description: Reason for the workflow dispatch.
+                description: Reason for the workflow dispatch. Only "release" is valid.
                 required: true
                 default: release
 
@@ -17,10 +17,12 @@ jobs:
         runs-on: ubuntu-latest
         steps:
         -   uses: actions/checkout@v2
-        -   name: Set up Python 3.8
+            with:
+                fetch-depth: 0
+        -   name: Set up Python 3.9
             uses: actions/setup-python@v2
             with:
-                python-version: 3.8
+                python-version: 3.9
 
         -   name: Install pip dependencies
             run: |
@@ -32,7 +34,7 @@ jobs:
             run: |
                 python -m build --sdist --wheel --outdir dist/
 
-        -   name: Publish CellRank on PyPI
+        -   name: Publish on PyPI
             uses: pypa/gh-action-pypi-publish@master
             with:
                 user: __token__
@@ -41,31 +43,26 @@ jobs:
                 verbose: true
 
     sync-branches:
-        if: github.event_name == 'workflow_dispatch'
+        if: ${{ github.event_name == 'workflow_dispatch' }}
         needs: deploy
         runs-on: ubuntu-latest
         steps:
         -   uses: actions/checkout@v2
-            with:
-                token: ${{ secrets.TOWNCRIER_TOKEN }}
-
-        -   name: Extract the branch name
+        -   name: Extract branch name
             id: vars
             run: |
                 echo ::set-output name=branch::${GITHUB_REF#refs/*/}
 
-        -   name: Merge release into dev
-            uses: stefanzweifel/git-auto-commit-action@v4
-            with:
-                branch: dev
-                commit_user_name: CI
-                commit_message: ${{ format('[auto][ci skip] Merge branch '{0}' into dev', steps.vars.output.branch) }}
-                commit_options: --no-ff
-
         -   name: Merge release into master
-            uses: stefanzweifel/git-auto-commit-action@v4
+            uses: everlytic/branch-merge@1.1.2
             with:
-                branch: master
-                commit_user_name: CI
-                commit_message: ${{ format('[auto][ci skip] Merge branch '{0}' into master', steps.vars.output.branch) }}
-                commit_options: --no-ff
+                github_token: ${{ secrets.RELEASE_DISPATCH_TOKEN }}
+                target_branch: master
+                commit_message_template: ${{ format('[auto][ci skip] Merge branch ''{0}'' into master', steps.vars.outputs.branch) }}
+
+        -   name: Merge release into dev
+            uses: everlytic/branch-merge@1.1.2
+            with:
+                github_token: ${{ secrets.RELEASE_DISPATCH_TOKEN }}
+                target_branch: dev
+                commit_message_template: ${{ format('[auto][ci skip] Merge branch ''{0}'' into dev', steps.vars.outputs.branch) }}

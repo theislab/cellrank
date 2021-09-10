@@ -402,7 +402,7 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             when ``use_petsc=False`` or one of :class:`petsc4py.PETSc.KPS.Type` otherwise.
 
             Information on the :mod:`scipy` iterative solvers can be found in :func:`scipy.sparse.linalg` or for
-            :mod:`petsc4py` solver `here <https://www.mcs.anl.gov/petsc/documentation/linearsolvertable.html>`__.
+            :mod:`petsc4py` solver `here <https://petsc.org/release/overview/linear_solve_table/>`__.
         use_petsc
             Whether to use solvers from :mod:`petsc4py` or :mod:`scipy`. Recommended for large problems.
             If no installation is found, defaults to :func:`scipy.sparse.linalg.gmres`.
@@ -429,9 +429,8 @@ class BaseEstimator(LineageEstimatorMixin, Partitioner, ABC):
             decreasing this for severely ill-conditioned matrices.
         preconditioner
             Preconditioner to use, only available when ``use_petsc=True``. For available values, see
-            `here <https://www.mcs.anl.gov/petsc/petsc-current/docs/manualpages/PC/PCType.html#PCType>`__ or the values
-            of `petsc4py.PETSc.PC.Type`.
-            We recommended `'ilu'` preconditioner for badly conditioned problems.
+            `here <https://petsc.org/release/docs/manual/ksp/?highlight=pctype#preconditioners>`__.
+            We recommended the `'ilu'` preconditioner for badly conditioned problems.
 
         Returns
         -------
