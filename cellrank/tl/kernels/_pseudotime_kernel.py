@@ -1,4 +1,3 @@
-"""Pseudotime kernel module."""
 from typing import Any, Union, Callable, Optional
 from typing_extensions import Literal
 
@@ -8,7 +7,6 @@ from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.tl._utils import _connected
-from cellrank.ul._utils import _get_neighs_params
 from cellrank.tl.kernels import Kernel
 from cellrank.tl._constants import ThresholdScheme
 from cellrank.tl.kernels._base_kernel import _dtype
@@ -125,15 +123,6 @@ class PseudotimeKernel(Kernel):
             Makes :attr:`transition_matrix` available.
         """
         start = logg.info(f"Computing transition matrix based on `{self._time_key}`")
-
-        # get the connectivities and number of neighbors
-        n_neighbors = _get_neighs_params(self.adata).get("n_neighbors", None)
-        if n_neighbors is None:
-            logg.warning(
-                "Could not find 'n_neighbors' in `adata.uns['neighbors']['params']`. Using an estimate"
-            )
-            n_neighbors = np.min(self._conn.sum(1))
-
         if isinstance(threshold_scheme, str):
             threshold_scheme = ThresholdScheme(threshold_scheme)
             if threshold_scheme == ThresholdScheme.SOFT:
@@ -142,7 +131,7 @@ class PseudotimeKernel(Kernel):
                 kwargs["nu"] = nu
             elif threshold_scheme == ThresholdScheme.HARD:
                 scheme = HardThresholdScheme()
-                kwargs["frac_to_keep"], kwargs["n_neighs"] = frac_to_keep, n_neighbors
+                kwargs["frac_to_keep"] = frac_to_keep
             else:
                 raise NotImplementedError(
                     f"Threshold scheme `{threshold_scheme}` is not yet implemented."
