@@ -1,1 +1,1 @@
-Speed-up testing by not using stochastic mode in :class:`cellrank.tl.kernels.VelocityKernel` where not necessary.
+Speed-up testing by not using stochastic mode in :class:`cellrank.kernels.VelocityKernel` where not necessary.
