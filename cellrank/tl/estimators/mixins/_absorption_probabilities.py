@@ -135,28 +135,41 @@ class AbsProbsMixin:
         self._absorption_times: Optional[pd.DataFrame] = None
         self._priming_degree: Optional[pd.Series] = None
 
-    # TODO(Marius1311): improve docstring
     @property
     @d.get_summary(base="abs_probs")
     def absorption_probabilities(self) -> Optional[Lineage]:
-        """Absorption probabilities."""
+        """Absorption probabilities.
+
+        Informally, given a (finite, discrete) Markov chain with a set of transient states T and a set of absorbing
+        states A, the absorption probability for cell i from T to reach cell j from R is the probability that a random
+        walk initialized in i will reach absorbing state j.
+
+        In our context, states correspond to cells, in particular, absorbing states correspond to cells in terminal
+        states.
+        """
         return self._absorption_probabilities
 
-    # TODO(Marius1311): improve docstring
     @property
     @d.get_summary(base="abs_times")
     def absorption_times(self) -> Optional[pd.DataFrame]:
-        """Mean time and variance until absorption."""
+        """Mean and variance of the time until absorption.
+
+        Related to conditional mean first passage times. Corresponds to the expectation of the time until absorption,
+        depending on initialization, and the variance.
+        """
         return self._absorption_times
 
-    # TODO(Marius1311): improve docstring
     @property
     @d.get_summary(base="priming_degree")
     def priming_degree(self) -> Optional[pd.Series]:
-        """Priming degree."""
+        """Priming degree.
+
+        Given a cell i and a set of terminal states, this quantifies how committed vs. naive cell i is, i.e. its
+        degree of pluripotency. Low values correspond to naive cells (high degree of pluripotency), high values
+        correspond to committed cells (low degree of pluripotency).
+        """
         return self._priming_degree
 
-    # TODO(Marius1311): improve docstring
     @d.dedent
     def compute_absorption_probabilities(
         self: AbsProbsProtocol,
@@ -181,7 +194,9 @@ class AbsProbsMixin:
         """
         Compute absorption probabilities.
 
-        For each cell, this computes the probability of being absorbed in the :attr:`terminal_states`.
+        For each cell, this computes the probability of being absorbed in any of the :attr:`terminal_states`. In
+        particular, this corresponds to the probability that a random walk initialized in transient cell i will reach
+        any cell from a fixed transient state before reaching a cell from any other transient state.
 
         Parameters
         ----------

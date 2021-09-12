@@ -595,12 +595,14 @@ class LinDriversMixin(AbsProbsMixin):
 
         return sg.ok
 
-    # TODO(Marius1311): improve docstring
     @property
     @d.dedent
     def lineage_drivers(self) -> Optional[pd.DataFrame]:
         """
-        Lineage drivers.
+        Potential lineage drivers.
+
+        Computes Pearson correlation of each gene with fate probabilities for every terminal state. High Pearson
+        correlation indicates potential lineage drivers. Also computes p-values and confidence intervals.
 
         Returns
         -------

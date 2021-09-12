@@ -47,18 +47,19 @@ class TermStatesEstimator(BaseEstimator, ABC):
         self._term_states_probs: Optional[pd.Series] = None
         self._term_states_colors: Optional[np.ndarray] = None
 
-    # TODO(Marius1311): improve docs
     @property
     @d.get_summary(base="tse_term_states")
     def terminal_states(self) -> Optional[pd.Series]:
-        """Terminal states."""
+        """Categorical annotation of terminal states.
+
+        By default, all cells in transient cells will be labelled `NaN`.
+        """
         return self._term_states
 
-    # TODO(Marius1311): improve docs
     @property
     @d.get_summary(base="tse_term_states_probs")
     def terminal_states_probabilities(self) -> Optional[pd.Series]:
-        """Probabilities of being a terminal state."""
+        """Aggregated probability of cells to be in terminal states."""  # noqa: D401
         return self._term_states_probs
 
     @d.dedent

@@ -51,26 +51,38 @@ class SchurMixin:
         self._schur_matrix: Optional[np.ndarray] = None
         self._eigendecomposition: Optional[Dict[str, Any]] = None
 
-    # TODO(Marius1311): improve docstring
     @property
     @d.get_summary(base="schur_vectors")
     def schur_vectors(self) -> Optional[np.ndarray]:
-        """Schur vectors."""
+        """Real Schur vectors of the transition matrix.
+
+        The real Schur decomposition is a generalization of the Eigendecomposition and can be computed for any
+        real-valued, square matrix A. It is given by A = Q R Q^T, where Q contains the real Schur vectors and R is the
+        Schur matrix. Q is orthogonal and R is quasi-upper triangular with 1x1 and 2x2 blocks on the diagonal. If PETSc
+        and SLEPc are installed, only the leading Schur vectors are computed.
+        """
         return self._schur_vectors
 
-    # TODO(Marius1311): improve docstring
     @property
     @d.get_summary(base="schur_matrix")
     def schur_matrix(self) -> Optional[np.ndarray]:
-        """Schur matrix."""
+        """Schur matrix.
+
+        The real Schur decomposition is a generalization of the Eigendecomposition and can be computed for any
+        real-valued, square matrix A. It is given by A = Q R Q^T, where Q contains the real Schur vectors and R is the
+        Schur matrix. Q is orthogonal and R is quasi-upper triangular with 1x1 and 2x2 blocks on the diagonal. If PETSc
+        and SLEPc are installed, only the leading Schur vectors are computed.
+        """
         return self._schur_matrix
 
-    # TODO(Marius1311): improve docstring
     @property
     @d.get_full_description(base="eigen")
     def eigendecomposition(self) -> Optional[Dict[str, Any]]:
         """
         Eigendecomposition of the transition matrix.
+
+        For non-symmetric real matrices, left and right eigenvectors will in general be different and complex. We
+        compute both left and right eigenvectors.
 
         Returns
         -------
