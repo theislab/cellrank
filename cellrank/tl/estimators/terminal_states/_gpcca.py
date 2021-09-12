@@ -84,25 +84,28 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
         self._term_states_memberships: Optional[Lineage] = None
 
-    # TODO(Marius1311): improve
     @property
     @d.get_summary(base="gpcca_macro")
     def macrostates(self) -> Optional[pd.Series]:
-        """Macrostates."""
+        """Macrostates of the transition matrix."""
         return self._macrostates
 
-    # TODO(Marius1311): improve
     @property
     @d.get_summary(base="gpcca_macro_memberships")
     def macrostates_memberships(self) -> Optional[Lineage]:
-        """Macrostates memberships."""
+        """Macrostate membership matrix.
+
+        Soft assignment of microstates (cells) to macrostates.
+        """
         return self._macrostates_memberships
 
-    # TODO(Marius1311): improve
     @property
     @d.get_summary(base="gpcca_term_states_memberships")
     def terminal_states_memberships(self) -> Optional[Lineage]:
-        """Terminal states memberships."""
+        """Terminal state membership matrix.
+
+        Soft assignment of cells to terminal states.
+        """
         return self._term_states_memberships
 
     @property
