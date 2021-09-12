@@ -69,7 +69,6 @@ extensions = [
     "sphinx_gallery.gen_gallery",
     "nbsphinx",
     "sphinx_copybutton",
-    "sphinx_last_updated_by_git",
     "typed_returns",
     "sphinxcontrib.bibtex",
     # https://github.com/spatialaudio/nbsphinx/issues/24
