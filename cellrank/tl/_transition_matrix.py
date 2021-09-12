@@ -69,10 +69,9 @@ def transition_matrix(
 
     Returns
     -------
-    :class:`cellrank.tl.KernelExpression`
-        A kernel expression object containing the computed transition matrix.
+    A kernel expression object containing the computed transition matrix.
 
-        %(write_to_adata)s
+    %(write_to_adata)s
     """
 
     def compute_velocity_kernel() -> VelocityKernel:

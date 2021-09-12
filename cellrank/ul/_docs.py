@@ -32,8 +32,7 @@ model
     If a :class:`dict`, gene and lineage specific models can be specified. Use ``'*'`` to indicate
     all genes or lineages, for example ``{'gene_1': {'*': ...}, 'gene_2': {'lineage_1': ..., '*': ...}}``."""
 _just_plots = """\
-None
-    Nothing, just plots the figure. Optionally saves it based on ``save``."""
+Nothing, just plots the figure. Optionally saves it based on ``save``."""
 _plots_or_returns_models = """\
 None
     If ``return_models = False``, just plots the figure and optionally saves it based on ``save``.

@@ -187,11 +187,10 @@ class VelocityKernel(Kernel):
 
         Returns
         -------
-        :class:`cellrank.tl.kernels.VelocityKernel`
-            Makes available the following fields:
+        Self and updates the following fields:
 
-                - :attr:`transition_matrix`.
-                - :attr:`logits`.
+            - :attr:`transition_matrix`.
+            - :attr:`logits`.
         """
         mode = VelocityMode(mode)
         backward_mode = BackwardMode(backward_mode)

@@ -62,11 +62,10 @@ kwargs
 
 Returns
 -------
-:class:`anndata.AnnData`, :class:`cellrank.tl.estimators.BaseEstimator` or :obj:`None`
-    Depending on ``copy`` and ``return_estimator``, either updates the existing ``adata`` object,
-    returns its copy or returns the estimator.
+Depending on ``copy`` and ``return_estimator``, either updates the existing ``adata`` object,
+returns its copy or returns the estimator.
 
-    Marked cells are added to ``adata.obs[{key_added!r}]``.
+Marked cells are added to ``adata.obs[{key_added!r}]``.
 """
 
 

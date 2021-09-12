@@ -179,12 +179,11 @@ class GAMR(BaseModel):
 
         Returns
         -------
-        :class:`cellrank.ul.models.GAMR`
-            Fits the model and returns self. Updates the following fields by filtering out `0` weights :attr:`w`:
+        Fits the model and returns self. Updates the following fields by filtering out `0` weights :attr:`w`:
 
-                - :attr:`x` - %(base_model_x.summary)s
-                - :attr:`y` - %(base_model_y.summary)s
-                - :attr:`w` - %(base_model_w.summary)s
+            - :attr:`x` - %(base_model_x.summary)s
+            - :attr:`y` - %(base_model_y.summary)s
+            - :attr:`w` - %(base_model_w.summary)s
         """  # noqa
 
         from rpy2.robjects import Formula, r, pandas2ri

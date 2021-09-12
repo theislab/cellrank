@@ -67,8 +67,7 @@ class ConnectivityKernel(Kernel):
 
         Returns
         -------
-        :class:`cellrank.tl.kernels.ConnectivityKernel`
-            Makes :attr:`transition_matrix` available.
+        Self and updated :attr:`transition_matrix`.
         """
 
         # fmt: off

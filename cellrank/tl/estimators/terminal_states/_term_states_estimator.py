@@ -269,14 +269,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
             self.params[key] = self._read_params(key)
         # fmt: on
 
-        # TODO(michalk8): log
-
         return sg.ok
-
-    @d.get_full_description(base="tse_fit")
-    def fit(self, *args: Any, **kwargs: Any) -> "TermStatesEstimator":
-        """Prepare self for terminal states prediction."""
-        return self
 
     @d.dedent
     def compute_terminal_states(self, *args: Any, **kwargs: Any) -> None:

@@ -99,7 +99,7 @@ class FlowPlotter:
 
         Returns
         -------
-        Modifies and return self.
+        Returns self and modifies internal internal attributes.
         """
         if clusters is None:
             self._clusters = self.clusters.cat.categories

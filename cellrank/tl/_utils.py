@@ -609,8 +609,6 @@ def _cluster_X(
     if X.shape[0] == 1:
         # sc.tl.leiden issue
         return [0]
-    if X.ndim == 1:
-        X = X[:, None]
 
     if method == "kmeans":
         kmeans = KMeans(n_clusters=n_clusters).fit(X)

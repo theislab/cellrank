@@ -381,8 +381,7 @@ class LinDriversMixin(AbsProbsMixin):
 
         Returns
         -------
-        :class:`matplotlib.pyplot.Axes`
-            The axis object if ``show = False``.
+        The axes object, if ``show = False``.
         %(just_plots)s
 
         Notes

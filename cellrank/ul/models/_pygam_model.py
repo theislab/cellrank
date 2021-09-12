@@ -178,8 +178,7 @@ class GAM(BaseModel):
 
         Returns
         -------
-        :class:`cellrank.ul.models.GAM`
-            Fits the model and returns self.
+        Fits the model and returns self.
         """  # noqa
 
         super().fit(x, y, w, **kwargs)

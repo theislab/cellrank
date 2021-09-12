@@ -37,7 +37,7 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
     @d.dedent
     def fit(self, k: int = 20, **kwargs: Any) -> "TermStatesEstimator":
         """
-        %(tse_fit.full_desc)s
+        Prepare self for terminal states prediction.
 
         Parameters
         ----------
@@ -48,11 +48,10 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
 
         Returns
         -------
-        Self.
-        Also modifies the following field:
+        Self and modifies the following field:
 
             - :attr:`eigendecomposition` - %(eigen.summary)s
-        """  # noqa: D400
+        """
         self.compute_eigendecomposition(k=k, only_evals=False, **kwargs)
         return self
 
