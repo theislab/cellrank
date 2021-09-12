@@ -1,19 +1,13 @@
-"""Lineages module."""
+from typing import Any, Union, Optional, Sequence
+from typing_extensions import Literal
 
-from typing import Union, TypeVar, Optional, Sequence
-
-from cellrank import logging as logg
+from anndata import AnnData
+from cellrank._key import Key
 from cellrank.ul._docs import d
 from cellrank.tl._utils import TestMethod, _deprecate
-from cellrank.tl.kernels import PrecomputedKernel
-from cellrank.tl._constants import AbsProbKey, TermStatesKey, TerminalStatesPlot
-from cellrank.tl.estimators import GPCCA
-from cellrank.tl.estimators._constants import P
-from cellrank.tl.kernels._precomputed_kernel import DummyKernel
+from cellrank.tl.estimators import CFLARE
 
 import pandas as pd
-
-AnnData = TypeVar("AnnData")
 
 
 @_deprecate(version="2.0")
@@ -23,7 +17,7 @@ def lineages(
     backward: bool = False,
     copy: bool = False,
     return_estimator: bool = False,
-    **kwargs,
+    **kwargs: Any,
 ) -> Optional[AnnData]:
     """
     Compute probabilistic lineage assignment using RNA velocity.
@@ -47,7 +41,7 @@ def lineages(
     copy
         Whether to update the existing ``adata`` object or to return a copy.
     return_estimator
-        Whether to return the estimator. Only available when ``copy=False``.
+        Whether to return the estimator. Only available when ``copy = False``.
     kwargs
         Keyword arguments for :meth:`cellrank.tl.estimators.BaseEstimator.compute_absorption_probabilities`.
 
@@ -57,36 +51,25 @@ def lineages(
         Depending on ``copy`` and ``return_estimator``, either updates the existing ``adata`` object,
         returns its copy or returns the estimator.
     """
-
-    if backward:
-        lin_key = AbsProbKey.BACKWARD
-        fs_key = TermStatesKey.BACKWARD
-        fs_key_pretty = TerminalStatesPlot.BACKWARD
-    else:
-        lin_key = AbsProbKey.FORWARD
-        fs_key = TermStatesKey.FORWARD
-        fs_key_pretty = TerminalStatesPlot.FORWARD
+    if copy:
+        adata = adata.copy()
 
     try:
-        pk = PrecomputedKernel(adata=adata, backward=backward)
+        mc = CFLARE.from_adata(adata, obsp_key=Key.uns.kernel(backward))
+        assert mc.adata is adata
     except KeyError as e:
         raise RuntimeError(
             f"Compute transition matrix first as `cellrank.tl.transition_matrix(..., backward={backward})`."
         ) from e
 
-    start = logg.info(f"Computing lineage probabilities towards {fs_key_pretty.s}")
-    mc = GPCCA(
-        pk, read_from_adata=True, inplace=not copy
-    )  # GPCCA is more general than CFLARE, in terms of what is saves
-    if mc._get(P.TERM) is None:
+    if mc.terminal_states is None:
+        fs_key = Key.obs.term_states(backward)
         raise RuntimeError(
-            f"Compute the states first as `cellrank.tl.{fs_key.s}(..., backward={backward})`."
+            f"Compute the states first as `cellrank.tl.{fs_key}(..., backward={backward})`."
         )
 
     # compute the absorption probabilities
     mc.compute_absorption_probabilities(**kwargs)
-
-    logg.info(f"Adding lineages to `adata.obsm[{lin_key.s!r}]`\n    Finish", time=start)
 
     return mc.adata if copy else mc if return_estimator else None
 
@@ -96,18 +79,17 @@ def lineages(
 def lineage_drivers(
     adata: AnnData,
     backward: bool = False,
-    lineages: Optional[Union[Sequence, str]] = None,
-    method: str = TestMethod.FISCHER.s,
+    lineages: Optional[Union[str, Sequence[str]]] = None,
+    method: Literal["fischer", "perm_test"] = TestMethod.FISCHER,
     cluster_key: Optional[str] = None,
-    clusters: Optional[Union[Sequence, str]] = None,
+    clusters: Optional[Union[str, Sequence[str]]] = None,
     layer: str = "X",
     use_raw: bool = False,
     confidence_level: float = 0.95,
     n_perms: int = 1000,
     seed: Optional[int] = None,
-    return_drivers: bool = True,
-    **kwargs,
-) -> Optional[pd.DataFrame]:
+    **kwargs: Any,
+) -> pd.DataFrame:
     """
     %(lineage_drivers.full_desc)s
 
@@ -120,16 +102,10 @@ def lineage_drivers(
     Returns
     -------
     %(lineage_drivers.returns)s
-
-    References
-    ----------
-    %(lineage_drivers.references)s
     """  # noqa: D400
 
-    # create dummy kernel and estimator
-    pk = DummyKernel(adata, backward=backward)
-    g = GPCCA(pk, read_from_adata=True, write_to_adata=False)
-    if g._get(P.ABS_PROBS) is None:
+    g = CFLARE.from_adata(adata, obsp_key=Key.uns.kernel(backward))
+    if g.absorption_probabilities is None:
         raise RuntimeError(
             f"Compute absorption probabilities first as `cellrank.tl.lineages(..., backward={backward})`."
         )
@@ -145,6 +121,5 @@ def lineage_drivers(
         confidence_level=confidence_level,
         n_perms=n_perms,
         seed=seed,
-        return_drivers=return_drivers,
         **kwargs,
     )

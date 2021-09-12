@@ -63,11 +63,8 @@ class RandomWalk:
         )
 
     def _max_iter(self, max_iter: Union[int, float]) -> int:
-        max_iter = (
-            int(np.ceil(max_iter * len(self._ixs)))
-            if isinstance(max_iter, float)
-            else max_iter
-        )
+        if isinstance(max_iter, float):
+            max_iter = int(np.ceil(max_iter * len(self._ixs)))
         if max_iter <= 1:
             raise ValueError(
                 f"Expected number of iterations to be > 1, found `{max_iter}`."

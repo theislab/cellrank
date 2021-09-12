@@ -17,7 +17,6 @@ import scanpy as sc
 import cellrank as cr
 from anndata import AnnData
 from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
-from cellrank.tl._constants import AbsProbKey
 from cellrank.tl.estimators import GPCCA, CFLARE
 
 import numpy as np
@@ -63,18 +62,14 @@ def _create_cflare(*, backward: bool = False) -> Tuple[AnnData, CFLARE]:
     final_kernel = 0.8 * vk + 0.2 * ck
 
     mc = CFLARE(final_kernel)
+    final_kernel.write_to_adata()
 
-    mc.compute_partition()
     mc.compute_eigendecomposition()
-    mc.compute_terminal_states(use=2)
+    mc.compute_terminal_states(use=2, method="kmeans")
     mc.compute_absorption_probabilities(use_petsc=False)
     mc.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
 
     assert adata is mc.adata
-    if backward:
-        assert str(AbsProbKey.BACKWARD) in adata.obsm
-    else:
-        assert str(AbsProbKey.FORWARD) in adata.obsm
     np.testing.assert_allclose(mc.absorption_probabilities.X.sum(1), 1.0, rtol=1e-6)
 
     return adata, mc
@@ -92,20 +87,16 @@ def _create_gpcca(*, backward: bool = False) -> Tuple[AnnData, GPCCA]:
     final_kernel = 0.8 * vk + 0.2 * ck
 
     mc = GPCCA(final_kernel)
+    final_kernel.write_to_adata()
 
-    mc.compute_partition()
     mc.compute_eigendecomposition()
     mc.compute_schur(method="krylov")
     mc.compute_macrostates(n_states=2)
     mc.set_terminal_states_from_macrostates()
-    mc.compute_absorption_probabilities()
+    mc.compute_absorption_probabilities(use_petsc=False)
     mc.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
 
     assert adata is mc.adata
-    if backward:
-        assert str(AbsProbKey.BACKWARD) in adata.obsm
-    else:
-        assert str(AbsProbKey.FORWARD) in adata.obsm
     np.testing.assert_allclose(mc.absorption_probabilities.X.sum(1), 1.0, rtol=1e-6)
 
     return adata, mc
@@ -117,7 +108,7 @@ def _create_gamr_model(_adata: AnnData) -> Optional[GAMR]:
         m.prepare(_adata.var_names[0], "0").fit()
         m.predict(level=0.95)
         return m
-    except:
+    except Exception:
         return None
 
 

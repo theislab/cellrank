@@ -30,9 +30,8 @@ from cellrank.tl._utils import (
     _get_neighs,
     _irreducible,
 )
-from cellrank.ul._utils import Pickleable
 from scvelo.plotting.utils import default_size, plot_outline
-from cellrank.tl._constants import Direction, _transition
+from cellrank.tl._mixins._io import IOMixin
 from cellrank.tl.kernels._utils import _get_basis, _filter_kwargs
 from cellrank.tl.kernels._tmat_flow import FlowPlotter
 from cellrank.tl.kernels._random_walk import RandomWalk
@@ -66,7 +65,7 @@ Indices_t = Optional[
 ]
 
 
-class KernelExpression(Pickleable, ABC):
+class KernelExpression(IOMixin, ABC):
     """Base class for all kernels and kernel expressions."""
 
     def __init__(
@@ -77,7 +76,7 @@ class KernelExpression(Pickleable, ABC):
     ):
         self._op_name = op_name
         self._transition_matrix = None
-        self._direction = Direction.BACKWARD if backward else Direction.FORWARD
+        self._backward = backward
         self._compute_cond_num = compute_cond_num
         self._cond_num = None
         self._params = {}
@@ -108,24 +107,22 @@ class KernelExpression(Pickleable, ABC):
     @property
     def backward(self) -> bool:
         """Direction of the process."""
-        return self._direction == Direction.BACKWARD
+        return self._backward
 
     @property
     @abstractmethod
-    @d.dedent
     def adata(self) -> AnnData:
-        """
-        Annotated data object.
-
-        Returns
-        -------
-        %(adata_ret)s
-        """
+        """Annotated data object."""
 
     @adata.setter
     @abstractmethod
     def adata(self, value: AnnData) -> None:
         pass
+
+    @property
+    @abstractmethod
+    def shape(self) -> Tuple[int, int]:
+        """`(n_cells, n_cells)`."""
 
     @property
     def params(self) -> Dict[str, Any]:
@@ -196,23 +193,21 @@ class KernelExpression(Pickleable, ABC):
         Parameters
         ----------
         key
-            Key used when writing transition matrix to :attr:`adata`.
-            If `None`, the ``key`` is set to `'T_bwd'` if :attr:`backward` is `True`, else `'T_fwd'`.
+            Key used when writing transition matrix to :attr:`adata`. If `None`, determine the key automatically.
 
         Returns
         -------
         None
             %(write_to_adata)s
         """
+        from cellrank._key import Key
 
         if self._transition_matrix is None:
             raise ValueError(
                 "Compute transition matrix first as `.compute_transition_matrix()`."
             )
 
-        if key is None:
-            key = _transition(self._direction)
-
+        key = Key.uns.kernel(self.backward, key=key)
         # retain the embedding info
         self.adata.uns[f"{key}_params"] = {
             **self.adata.uns.get(f"{key}_params", {}),
@@ -227,7 +222,7 @@ class KernelExpression(Pickleable, ABC):
     def _maybe_compute_cond_num(self) -> None:
         """Optionally compute condition number."""
         if self._compute_cond_num and self._cond_num is None:
-            logg.debug(f"Computing condition number of `{repr(self)}`")
+            logg.debug("Computing condition number")
             self._cond_num = np.linalg.cond(
                 self._transition_matrix.toarray()
                 if issparse(self._transition_matrix)
@@ -235,7 +230,7 @@ class KernelExpression(Pickleable, ABC):
             )
             if self._cond_num > _cond_num_tolerance:
                 logg.warning(
-                    f"`{repr(self)}` may be ill-conditioned, its condition number is `{self._cond_num:.2e}`"
+                    f"Transition matrix may be ill-conditioned, its condition number is `{self._cond_num:.2e}`"
                 )
             else:
                 logg.info(f"Condition number is `{self._cond_num:.2e}`")
@@ -278,9 +273,9 @@ class KernelExpression(Pickleable, ABC):
         Parameters
         ----------
         basis
-            Basis in :attr:`adata` ``.obsm`` for which to compute the projection.
+            Basis in :attr:`anndata.AnnData.obsm` for which to compute the projection.
         key_added
-            If not `None` and ``copy=False``, save the result to :attr:`adata` ``.obsm['{key_added}']``.
+            If not `None` and ``copy = False``, save the result to :attr:`anndata.AnnData.obsm` ``['{key_added}']``.
             Otherwise, save the result to `'T_fwd_{basis}'` or `T_bwd_{basis}`, depending on the direction.
         copy
             Whether to return the projection or modify :attr:`adata` inplace.
@@ -291,6 +286,7 @@ class KernelExpression(Pickleable, ABC):
         Otherwise, it modifies :attr:`anndata.AnnData.obsm` with a key based on ``key_added``.
         """
         # modified from: https://github.com/theislab/scvelo/blob/master/scvelo/tools/velocity_embedding.py
+        from cellrank._key import Key
         from scvelo.tools.velocity_embedding import quiver_autoscale
 
         if self._transition_matrix is None:
@@ -334,7 +330,7 @@ class KernelExpression(Pickleable, ABC):
         if copy:
             return T_emb
 
-        key = _transition(self._direction) if key_added is None else key_added
+        key = Key.uns.kernel(self.backward, key=key_added)
         ukey = f"{key}_params"
 
         embs = self.adata.uns.get(ukey, {}).get("embeddings", [])
@@ -392,7 +388,7 @@ class KernelExpression(Pickleable, ABC):
         stop_ixs
             Cells which when hit, the random walk is terminated. If `None`, terminate after ``max_iters``.
             %(rw_ixs)s
-            For example ``{'clusters': ['Alpha', 'Beta']}`` and ``successive_hits=3`` means that the random walk will
+            For example ``{'clusters': ['Alpha', 'Beta']}`` and ``successive_hits = 3`` means that the random walk will
             stop prematurely after cells in the above specified clusters have been visited successively 3 times in a
             row.
         basis
@@ -554,11 +550,11 @@ class KernelExpression(Pickleable, ABC):
         Parameters
         ----------
         cluster
-            Cluster for which to visualize outgoing compute_flow.
+            Cluster for which to visualize outgoing flow.
         cluster_key
-            Key in :attr:`adata` ``.obs`` where clustering is stored.
+            Key in :attr:`anndata.AnnData.obs` where clustering is stored.
         time_key
-            Key in :attr:`adata` ``.obs`` where experimental time is stored.
+            Key in :attr:`anndata.AnnData.obs` where experimental time is stored.
         clusters
             Visualize flow only for these clusters. If `None`, use all clusters.
         time_points
@@ -571,7 +567,7 @@ class KernelExpression(Pickleable, ABC):
         Returns
         -------
         :class:`matplotlib.pyplot.Axes`
-            The axis object if ``show=False``.
+            The axis object if ``show = False``.
         %(just_plots)s
 
         Notes
@@ -753,7 +749,7 @@ class KernelExpression(Pickleable, ABC):
         # mustn't return a copy because transition matrix
         self._transition_matrix = None
         self._params = {}
-        self._direction = Direction.FORWARD if self.backward else Direction.BACKWARD
+        self._backward = not self.backward
 
         return self
 
@@ -785,6 +781,7 @@ class UnaryKernelExpression(KernelExpression, ABC):
             op_name is None
         ), "Unary kernel does not support any kind operation associated with it."
         self._adata = adata
+        self._n_obs = adata.n_obs
 
     @property
     @d.dedent
@@ -798,19 +795,27 @@ class UnaryKernelExpression(KernelExpression, ABC):
         """
         return self._adata
 
+    @property
+    def shape(self) -> Tuple[int, int]:
+        """`(n_cells, n_cells)`."""
+        return self._n_obs, self._n_obs
+
     @adata.setter
-    def adata(self, _adata: AnnData) -> None:
-        if not isinstance(_adata, AnnData):
+    def adata(self, adata: Optional[AnnData]) -> None:
+        if adata is None:
+            self._adata = None
+            return
+        if not isinstance(adata, AnnData):
             raise TypeError(
-                f"Expected argument of type `anndata.AnnData`, found `{type(_adata).__name__!r}`."
+                f"Expected argument of type `anndata.AnnData`, found `{type(adata).__name__!r}`."
             )
-        # otherwise, we'd have to reread bunch of attributes - it's better to initialize new object
-        if _adata.shape != self.adata.shape:
+        shape = (adata.n_obs, adata.n_obs)
+        if self.shape != shape:
             raise ValueError(
-                f"Expected the new object to have same shape as previous object `{self.adata.shape}`, "
-                f"found `{_adata.shape}`."
+                f"Expected the new object to have same shape as previous object `{self.shape}`, "
+                f"found `{shape}`."
             )
-        self._adata = _adata
+        self._adata = adata
 
     def __repr__(self):
         return f"{'~' if self.backward and self._parent is None else ''}<{self.__class__.__name__}>"
@@ -847,6 +852,11 @@ class NaryKernelExpression(KernelExpression, ABC):
         for kexprs in self._kexprs:
             kexprs._parent = self
 
+    @property
+    def shape(self) -> Tuple[int, int]:
+        """`(n_cells, n_cells)`."""
+        return self.kernels[0].shape
+
     def _maybe_recalculate_constants(self, type_: Type):
         if type_ == Constant:
             accessor = "transition_matrix"
@@ -854,7 +864,7 @@ class NaryKernelExpression(KernelExpression, ABC):
             accessor = "_value"
         else:
             raise RuntimeError(
-                f"Unable to determine accessor for type `{type.__name__!r}`."
+                f"Unable to determine accessor for type `{type(type_).__name__}`."
             )
 
         constants = [_is_bin_mult(k, type_) for k in self]
@@ -890,8 +900,9 @@ class NaryKernelExpression(KernelExpression, ABC):
         return self._kexprs[0].adata
 
     @adata.setter
-    def adata(self, _adata: AnnData) -> None:
-        self._kexprs[0].adata = _adata
+    def adata(self, adata: Optional[AnnData]) -> None:
+        for kexpr in self._kexprs:
+            kexpr.adata = adata
 
     def __invert__(self) -> "NaryKernelExpression":
         super().__invert__()
@@ -1119,7 +1130,7 @@ class Constant(Kernel):
 
     def __invert__(self) -> "Constant":
         # do not call parent's invert, since it removes the transition matrix
-        self._direction = Direction.FORWARD if self.backward else Direction.BACKWARD
+        self._backward = not self.backward
         return self
 
     def __repr__(self) -> str:
@@ -1176,7 +1187,7 @@ class ConstantMatrix(Kernel):
 
     def __invert__(self) -> "ConstantMatrix":
         # do not call parent's invert, since it removes the transition matrix
-        self._direction = Direction.FORWARD if self.backward else Direction.BACKWARD
+        self._backward = not self.backward
         return self
 
     def __repr__(self) -> str:

@@ -3,19 +3,19 @@ from typing import Tuple, Union, Optional
 import os
 import pytest
 from PIL import Image
-from sys import version_info
 from pathlib import Path
 
 import scanpy as sc
 import scvelo as scv
 import cellrank as cr
 from anndata import AnnData
-from cellrank.tl.kernels import VelocityKernel, CytoTRACEKernel, ConnectivityKernel
+from cellrank.tl.kernels import VelocityKernel, PrecomputedKernel, ConnectivityKernel
 
 import numpy as np
 import pandas as pd
 from sklearn.svm import SVR
 from scipy.sparse import spdiags, issparse, csr_matrix
+from pandas.testing import assert_frame_equal, assert_series_equal
 
 
 def _jax_not_installed() -> bool:
@@ -121,12 +121,12 @@ def create_kernels(
     connectivity_variances: Optional[str] = None,
 ) -> Tuple[VelocityKernel, ConnectivityKernel]:
     vk = VelocityKernel(adata)
-    vk._mat_scaler = adata.uns.get(
+    vk._mat_scaler = adata.obsp.get(
         velocity_variances, np.random.normal(size=(adata.n_obs, adata.n_obs))
     )
 
     ck = ConnectivityKernel(adata)
-    ck._mat_scaler = adata.uns.get(
+    ck._mat_scaler = adata.obsp.get(
         connectivity_variances, np.random.normal(size=(adata.n_obs, adata.n_obs))
     )
 
@@ -209,11 +209,12 @@ def assert_models_equal(
     deepcopy: bool = True,
 ) -> None:
     assert actual is not expected
-    if not pickled:
-        assert actual.adata is expected.adata
-    else:
+    if pickled:
         assert actual.adata is not expected.adata
+    else:
+        assert actual.adata is expected.adata
 
+    assert actual.shape == expected.shape
     assert actual.adata.shape == expected.adata.shape
 
     assert expected.__dict__.keys() == actual.__dict__.keys()
@@ -259,18 +260,33 @@ def assert_estimators_equal(
     expected: cr.tl.estimators.BaseEstimator,
     actual: cr.tl.estimators.BaseEstimator,
     copy: bool = False,
+    deep: bool = False,
+    from_adata: bool = False,
 ) -> None:
+    def check_arrays(x, y):
+        if isinstance(x, (np.ndarray, list, tuple)):
+            try:
+                np.testing.assert_array_compare(np.array_equal, x, y, equal_nan=True)
+            except:
+                np.testing.assert_array_compare(np.allclose, x, y, equal_nan=True)
+        elif isinstance(x, pd.Series):
+            assert_series_equal(x, y, check_names=False)
+        elif isinstance(x, pd.DataFrame):
+            assert_frame_equal(x, y, check_dtype=False)
+
     assert actual is not expected
-    assert actual.adata is not expected.adata
-    assert actual.kernel is not expected.kernel
-    if copy or version_info[:2] > (3, 6):
-        # pickling of Enums doesn't work in Python3.6
-        assert isinstance(actual.kernel, type(expected.kernel)), (
-            type(actual.kernel),
-            type(expected.kernel),
-        )
+    if copy:
+        if deep:
+            assert actual.adata is not expected.adata
+        else:
+            assert actual.adata is expected.adata
     else:
-        assert isinstance(actual.kernel, cr.tl.kernels.PrecomputedKernel)
+        assert actual.adata is not expected.adata
+    assert actual.kernel is not expected.kernel
+    if from_adata:
+        assert isinstance(actual.kernel, PrecomputedKernel)
+    else:
+        assert isinstance(actual.kernel, type(expected.kernel))
 
     assert actual.adata.shape == expected.adata.shape
     assert actual.adata is actual.kernel.adata
@@ -280,33 +296,52 @@ def assert_estimators_equal(
         actual.transition_matrix.A, expected.transition_matrix.A
     )
 
-    assert expected.__dict__.keys() == actual.__dict__.keys()
+    k1 = sorted(expected.__dict__.keys())
+    k2 = sorted(actual.__dict__.keys())
+    np.testing.assert_array_equal(k1, k2)
 
     for attr in expected.__dict__.keys():
-        val2, val1 = getattr(actual, attr), getattr(expected, attr)
-        if isinstance(val1, cr.tl.Lineage):
-            assert val2 is not val1, attr
-            assert_array_nan_equal(val2.X, val1.X)
-        elif isinstance(val1, (np.ndarray, pd.Series, pd.DataFrame)):
-            assert val2 is not val1, attr
+        if attr == "_invalid_n_states" and from_adata:
+            continue
+        actual_val, expected_val = getattr(actual, attr), getattr(expected, attr)
+        if isinstance(actual_val, cr.tl.Lineage):
+            assert actual_val is not expected_val, attr
+            assert_array_nan_equal(actual_val.X, expected_val.X)
+        elif isinstance(actual_val, (np.ndarray, pd.Series, pd.DataFrame, list, tuple)):
+            assert actual_val is not expected_val, attr
+            check_arrays(actual_val, expected_val)
+        elif isinstance(actual_val, dict):
+            if from_adata:
+                # _params can sometimes contain extra empty dict if initialized from `adata`
+                for k in set(actual_val.keys()) | set(expected_val.keys()):
+                    v2, v1 = actual_val.get(k, {}), expected_val.get(k, {})
+                    if isinstance(v1, (np.ndarray, pd.Series, pd.DataFrame)):
+                        check_arrays(v2, v1)
+                    else:
+                        assert v2 == v1, (v2, v1, attr, k)
+            else:
+                np.testing.assert_array_equal(
+                    sorted(actual_val.keys()), sorted(expected_val.keys())
+                )
+                for k in sorted(actual_val.keys()):
+                    v2, v1 = actual_val[k], expected_val[k]
+                    if isinstance(v1, (np.ndarray, pd.Series, pd.DataFrame)):
+                        check_arrays(v2, v1)
+                    else:
+                        assert v2 == v1, (v2, v1, attr, k)
+        elif attr not in ("_kernel", "_gpcca", "_adata", "_shadow_adata"):
+            assert actual_val == expected_val, (actual_val, expected_val, attr)
+        else:
             try:
-                # can be array of strings, can't get NaN
-                assert_array_nan_equal(val2, val1)
-            except:
-                np.testing.assert_array_equal(val2, val1)
-        elif isinstance(val1, dict):
-            assert val2.keys() == val1.keys()
-            for v2, v1 in zip(val2.values(), val1.values()):
-                if isinstance(v2, np.ndarray):
-                    assert v2 is not v1, attr
-                    np.testing.assert_array_equal(v2, v1)
-                else:
-                    assert v2 == v1, (v2, v1, attr)
-        elif attr not in ("_kernel", "_gpcca"):
-            assert val2 == val1, (val2, val1, attr)
-        elif copy or version_info[:2] > (3, 6):
-            # we can compare the kernel types, but for 3.6, it's saved as Precomputed
-            assert isinstance(val2, type(val1)), (val2, val1, attr)
+                assert isinstance(actual_val, type(expected_val)), (
+                    actual_val,
+                    expected_val,
+                    attr,
+                )
+            except AssertionError:
+                # objects initialized from `adata` don't have `_gpcca`
+                if attr != "_gpcca" and not from_adata:
+                    raise
 
 
 def random_transition_matrix(n: int) -> np.ndarray:
@@ -368,8 +403,8 @@ def _create_dummy_adata(n_obs: int) -> AnnData:
     sc.tl.dpt(adata)
 
     if "velocity_graph" in adata.uns:
-        adata.obsp["velocity_graph"] = adata.uns["velocity_graph"]
-        adata.obsp["velocity_graph_neg"] = adata.uns["velocity_graph_neg"]
+        adata.obsp["velocity_graph"] = adata.uns.pop("velocity_graph")
+        adata.obsp["velocity_graph_neg"] = adata.uns.pop("velocity_graph_neg")
     adata.obsp["connectivity_variances"] = np.ones((n_obs, n_obs), dtype=np.float64)
     adata.obsp["velocity_variances"] = np.ones((n_obs, n_obs), dtype=np.float64)
 

@@ -1,4 +1,3 @@
-"""Utility functions for CellRank tools."""
 from typing import (
     Any,
     Dict,
@@ -23,6 +22,7 @@ from statsmodels.stats.multitest import multipletests
 import scanpy as sc
 from anndata import AnnData
 from cellrank import logging as logg
+from cellrank.tl._enum import ModeEnum
 from cellrank.ul._docs import d
 from cellrank.ul._utils import _get_neighs, _has_neighs, _get_neighs_params
 from cellrank.tl._colors import (
@@ -30,7 +30,6 @@ from cellrank.tl._colors import (
     _convert_to_hex_colors,
     _insert_categorical_colors,
 )
-from cellrank.tl._constants import ModeEnum
 from cellrank.ul._parallelize import parallelize
 from cellrank.tl._linear_solver import _solve_lin_system
 from cellrank.tl.kernels._utils import np_std, np_mean, _filter_kwargs
@@ -83,7 +82,7 @@ class RandomKeys:
 
     def _generate_random_keys(self):
         def generator():
-            return f"CELLRANK_RANDOM_COL_{np.random.randint(2 ** 16)}"
+            return f"RNG_COL_{np.random.randint(2 ** 16)}"
 
         where = getattr(self._adata, self._where)
         names, seen = [], set(where.keys())
@@ -103,7 +102,9 @@ class RandomKeys:
     def __exit__(self, exc_type, exc_val, exc_tb):
         for key in self._keys:
             try:
-                self._adata.obs.drop(key, axis="columns", inplace=True)
+                getattr(self._adata, self._where).drop(
+                    key, axis="columns", inplace=True
+                )
             except KeyError:
                 pass
             if self._where == "obs":
@@ -362,6 +363,7 @@ def _perm_test(
 
 
 @d.get_sections(base="correlation_test", sections=["Returns"])
+@d.dedent
 def _correlation_test(
     X: Union[np.ndarray, spmatrix],
     Y: "Lineage",  # noqa: F821
@@ -370,7 +372,7 @@ def _correlation_test(
     confidence_level: float = 0.95,
     n_perms: Optional[int] = None,
     seed: Optional[int] = None,
-    **kwargs,
+    **kwargs: Any,
 ) -> pd.DataFrame:
     """
     Perform a statistical test.
@@ -390,21 +392,20 @@ def _correlation_test(
     confidence_level
         Confidence level for the confidence interval calculation. Must be in `[0, 1]`.
     n_perms
-        Number of permutations if ``method='perm_test'``.
+        Number of permutations if ``method = 'perm_test'``.
     seed
-        Random seed if ``method='perm_test'``.
-    kwargs
-        Keyword arguments for :func:`cellrank.ul._parallelize.parallelize`.
+        Random seed if ``method = 'perm_test'``.
+    %(parallel)s
 
     Returns
     -------
-    Dataframe of shape ``(n_genes, n_lineages * 5)`` containing the following columns, 1 for each lineage:
+    Dataframe of shape ``(n_genes, n_lineages * 5)`` containing the following columns, one for each lineage:
 
-        - ``{lineage} corr`` - correlation between the gene expression and absorption probabilities.
-        - ``{lineage} pval`` - calculated p-values for double-sided test.
-        - ``{lineage} qval`` - corrected p-values using Benjamini-Hochberg method at level `0.05`.
-        - ``{lineage} ci low`` - lower bound of the ``confidence_level`` correlation confidence interval.
-        - ``{lineage} ci high`` - upper bound of the ``confidence_level`` correlation confidence interval.
+        - ``{lineage}_corr`` - correlation between the gene expression and absorption probabilities.
+        - ``{lineage}_pval`` - calculated p-values for double-sided test.
+        - ``{lineage}_qval`` - corrected p-values using Benjamini-Hochberg method at level `0.05`.
+        - ``{lineage}_ci_low`` - lower bound of the ``confidence_level`` correlation confidence interval.
+        - ``{lineage}_ci_high`` - upper bound of the ``confidence_level`` correlation confidence interval.
     """
 
     corr, pvals, ci_low, ci_high = _correlation_test_helper(
@@ -420,23 +421,17 @@ def _correlation_test(
     if invalid:
         raise ValueError(f"Found `{invalid}` correlations that are not in `[0, 1]`.")
 
-    res = pd.DataFrame(corr, index=gene_names, columns=[f"{c} corr" for c in Y.names])
+    res = pd.DataFrame(corr, index=gene_names, columns=[f"{c}_corr" for c in Y.names])
     for idx, c in enumerate(Y.names):
-        res[f"{c} pval"] = pvals[:, idx]
-        res[f"{c} qval"] = multipletests(pvals[:, idx], alpha=0.05, method="fdr_bh")[1]
-        res[f"{c} ci low"] = ci_low[:, idx]
-        res[f"{c} ci high"] = ci_high[:, idx]
+        res[f"{c}_pval"] = pvals[:, idx]
+        res[f"{c}_qval"] = multipletests(pvals[:, idx], alpha=0.05, method="fdr_bh")[1]
+        res[f"{c}_ci_low"] = ci_low[:, idx]
+        res[f"{c}_ci_high"] = ci_high[:, idx]
 
-    res = res[
-        [
-            f"{c} {stat}"
-            for c in Y.names
-            for stat in ("corr", "pval", "qval", "ci low", "ci high")
-        ]
-    ]
-    res.sort_values(by=[f"{c} corr" for c in Y.names], ascending=False, inplace=True)
-
-    return res
+    # fmt: off
+    res = res[[f"{c}_{stat}" for c in Y.names for stat in ("corr", "pval", "qval", "ci_low", "ci_high")]]
+    return res.sort_values(by=[f"{c}_corr" for c in Y.names], ascending=False)
+    # fmt: on
 
 
 def _correlation_test_helper(
@@ -553,7 +548,7 @@ def _filter_cells(distances: spmatrix, rc_labels: Series, n_matches_min: int) ->
 
     if not is_categorical_dtype(rc_labels):
         raise TypeError(
-            f"Argument `categories` must be a categorical variable, found `{infer_dtype(rc_labels)}`."
+            f"Expected `categories` be `categorical`, found `{infer_dtype(rc_labels)}`."
         )
 
     # retrieve knn graph
@@ -574,10 +569,10 @@ def _filter_cells(distances: spmatrix, rc_labels: Series, n_matches_min: int) ->
 
     freqs_new = np.array([np.sum(rc_labels == cl) for cl in cls])
 
-    if any(freqs_new / freqs_orig < 0.5):
+    if np.any((freqs_new / freqs_orig) < 0.5):
         logg.warning(
             "Consider lowering  'n_matches_min' or "
-            "increasing 'n_neighbors_filtering'. This filters out too many cells."
+            "increasing 'n_neighbors_filtering'. This filters out too many cells"
         )
 
     return rc_labels
@@ -586,8 +581,8 @@ def _filter_cells(distances: spmatrix, rc_labels: Series, n_matches_min: int) ->
 def _cluster_X(
     X: Union[np.ndarray, spmatrix],
     n_clusters: int,
-    method: Literal["leiden", "kmeans"] = "kmeans",
-    n_neighbors: int = 15,
+    method: Literal["leiden", "kmeans"] = "leiden",
+    n_neighbors: int = 20,
     resolution: float = 1.0,
 ) -> List[Any]:
     """
@@ -596,7 +591,7 @@ def _cluster_X(
     Parameters
     ----------
     X
-        Data matrix of shape `n_samples x n_features`.
+        Matrix of shape ``n_samples x n_features``.
     n_clusters
         Number of clusters to use.
     method
@@ -611,10 +606,11 @@ def _cluster_X(
     :class:`list`
         List of cluster labels of length `n_samples`.
     """
-
-    # make sure data is at least 2D
+    if X.shape[0] == 1:
+        # sc.tl.leiden issue
+        return [0]
     if X.ndim == 1:
-        X = X.reshape((1, -1))
+        X = X[:, None]
 
     if method == "kmeans":
         kmeans = KMeans(n_clusters=n_clusters).fit(X)
@@ -626,7 +622,7 @@ def _cluster_X(
         labels = adata_dummy.obs[method]
     else:
         raise NotImplementedError(
-            f"Invalid method `{method!r}`. Valid options are: `'kmeans'` or `'leiden'`."
+            f"Invalid method `{method}`. Valid options are `kmeans` or `leiden`."
         )
 
     return list(labels)
@@ -1440,10 +1436,10 @@ def _calculate_lineage_absorption_time_means(
     Q: csr_matrix,
     R: csr_matrix,
     trans_indices: np.ndarray,
-    n: int,
     ixs: Dict[str, np.ndarray],
     lineages: Dict[Sequence[str], str],
-    **kwargs,
+    index: pd.Index,
+    **kwargs: Any,
 ) -> pd.DataFrame:
     """
     Calculate the mean time until absorption and optionally its variance for specific lineages or their combinations.
@@ -1473,8 +1469,9 @@ def _calculate_lineage_absorption_time_means(
 
         Uses more efficient implementation if compute the time for all lineages.
     """
+    n = len(index)
+    res = pd.DataFrame(index=index)
 
-    res = pd.DataFrame()
     if len(lineages) == 1 and set(next(iter(lineages.keys()))) == set(ixs.keys()):
         # use faster implementation in this case
         name = ", ".join(ixs.keys())
@@ -1539,8 +1536,7 @@ def _calculate_lineage_absorption_time_means(
             ).squeeze()
             assert np.all(v >= 0), f"Encountered negative variance: `{v[v < 0]}`."
 
-            var = np.empty(n, dtype=np.float64)
-            var[:] = np.inf
+            var = np.full(n, fill_value=np.nan, dtype=np.float64)
             var[ix] = 0
             var[trans_indices] = v
 

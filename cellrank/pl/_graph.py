@@ -1,6 +1,5 @@
-"""Graph plotting module."""
-
-from typing import Dict, Tuple, Union, Callable, Optional, Sequence
+from typing import Any, Dict, Tuple, Union, Callable, Optional, Sequence
+from typing_extensions import Literal
 
 from copy import deepcopy
 from types import MappingProxyType
@@ -8,10 +7,10 @@ from pathlib import Path
 
 from anndata import AnnData
 from cellrank import logging as logg
+from cellrank._key import Key
 from cellrank.ul._docs import d
-from cellrank.tl._utils import save_fig
+from cellrank.tl._utils import save_fig, _unique_order_preserving
 from cellrank.ul._utils import _read_graph_data
-from cellrank.tl._constants import _colors
 
 import numpy as np
 import pandas as pd
@@ -32,8 +31,10 @@ def graph(
     data: Union[AnnData, np.ndarray, spmatrix],
     graph_key: Optional[str] = None,
     ixs: Optional[Union[range, np.array]] = None,
-    layout: Union[str, Dict, Callable] = "umap",
-    keys: Sequence[str] = ("incoming",),
+    layout: Union[str, Dict[str, Any], Callable[..., np.ndarray]] = "umap",
+    keys: Sequence[
+        Union[str, Literal["incoming", "outgoing", "self_loops"]]
+    ] = "incoming",
     keylocs: Union[str, Sequence[str]] = "uns",
     node_size: float = 400,
     labels: Optional[Union[Sequence[str], Sequence[Sequence[str]]]] = None,
@@ -59,7 +60,7 @@ def graph(
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
     save: Optional[Union[str, Path]] = None,
-    layout_kwargs: Dict = MappingProxyType({}),
+    layout_kwargs: Dict[str, Any] = MappingProxyType({}),
 ) -> None:
     """
     Plot a graph, visualizing incoming and outgoing edges or self-transitions.
@@ -74,22 +75,23 @@ def graph(
     data
         The graph data to be plotted.
     graph_key
-        Key in ``adata.obsp`` or ``adata.uns`` where the graph is stored. Only used
-        when ``data`` is :class:`~anndata.Anndata` object.
+        Key in :attr:`anndata.AnnData.obsp` where the graph is stored.
+        Only used when ``data`` is :class:`anndata.Anndata` object.
     ixs
         Subset of indices of the graph to visualize.
     layout
         Layout to use for graph drawing.
 
-        - If :class:`str`, search for embedding in ``adata.obsm['X_{layout}']``.
+        - If :class:`str`, search for embedding in :attr:`anndata.AnnData.obsm` ``['X_{layout}']``.
           Use ``layout_kwargs={'components': [0, 1]}`` to select components.
-        - If :class:`dict`, keys should be values in interval ``[0, len(ixs))``
+        - If :class:`dict`, keys should be values in interval `[0, len(ixs))`
           and values `(x, y)` pairs corresponding to node positions.
     keys
-        Keys in ``adata.obs``, ``adata.obsm`` or ``adata.obsp`` to color the nodes.
+        Keys in :attr:`anndata.AnnData.obs`, :attr:`anndata.AnnData.obsm` or :attr:`anndata.AnnData.obsm`
+        used to color the nodes.
 
-        - If `'incoming'`, `'outgoing'` or `'self_loops'`, visualize reduction (see ``edge_reductions``)
-          for each node based on incoming or outgoing edges, respectively.
+        If `'incoming'`, `'outgoing'` or `'self_loops'`, visualize reduction (see ``edge_reductions``)
+        for each node based on incoming or outgoing edges, respectively.
     keylocs
         Locations of ``keys``. Can be any attribute of ``data`` if it's :class:`anndata.AnnData` object.
     node_size
@@ -261,8 +263,9 @@ def graph(
         )
         logg.debug(f"Setting self loop radius fraction to `{self_loop_radius_frac}`")
 
-    if not isinstance(keys, (tuple, list)):
+    if isinstance(keys, str):
         keys = [keys]
+    keys = _unique_order_preserving(keys)
 
     if not isinstance(keylocs, (tuple, list)):
         keylocs = [keylocs] * len(keys)
@@ -477,7 +480,7 @@ def graph(
             if keyloc in ("obs", "obsm"):
                 values = values[ixs]
             categories = values.cat.categories
-            color_key = _colors(key)
+            color_key = Key.uns.colors(key)
             if color_key in data.uns:
                 mapper = dict(zip(categories, data.uns[color_key]))
             else:

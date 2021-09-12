@@ -1,10 +1,12 @@
 from typing import Union, Optional, Sequence
 
+from enum import auto
+
 import cellrank.logging as logg
 from anndata import AnnData
+from cellrank.tl._enum import ModeEnum
 from cellrank.ul._docs import d, inject_docs
 from cellrank.ul._utils import valuedispatch
-from cellrank.tl._constants import ModeEnum
 from cellrank.ul._parallelize import parallelize
 
 import numpy as np
@@ -15,11 +17,11 @@ from sklearn.utils.sparsefuncs import csc_median_axis_0
 _OFFSET_KEY = "cellrank_offset"
 
 
-class NormMode(ModeEnum):  # noqa
-    TMM = "tmm"
-    RLE = "rle"
-    UPPER_QUANT = "upper_quant"
-    NONE = "none"
+class NormMode(ModeEnum):  # noqa: D101
+    TMM = auto()
+    RLE = auto()
+    UPPER_QUANT = auto()
+    NONE = auto()
 
 
 @d.dedent
@@ -34,7 +36,8 @@ def _extract_data(
     data
         Annotated data object or an array.
     layer
-        Key in ``adata.layers`` accessed when ``use_raw=False``. Only used when ``data`` is :class:`anndata.AnnData`.
+        Key in :attr:`anndata.AnnData.layers` accessed when ``use_raw = False``.
+        Only used when ``data`` is :class:`anndata.AnnData`.
     use_raw
         Whether to access ``adata.raw``. Only used when ``data`` is :class:`anndata.AnnData`.
 
@@ -114,7 +117,7 @@ def _rankdata(a: np.ndarray, method: str = "average") -> np.ndarray:
 @inject_docs(m=NormMode)
 def _calculate_norm_factors(
     data: Union[AnnData, np.ndarray, spmatrix],
-    method: str = NormMode.TMM.s,
+    method: str = NormMode.TMM,
     layer: Optional[str] = None,
     use_raw: bool = True,
     library_size: Optional[np.ndarray] = None,
@@ -126,7 +129,7 @@ def _calculate_norm_factors(
     perc: float = 0.75,
 ) -> np.ndarray:
     """
-    Calculate normalization factors according to
+    Calculate normalization factors according to \
     `edgeR <https://www.rdocumentation.org/packages/edgeR/versions/3.14.0/topics/calcNormFactors>`__.
 
     Parameters
@@ -134,30 +137,31 @@ def _calculate_norm_factors(
     data
         Data of shape `(n_cells, n_genes)` containing e.g. the counts.
     method
-        One of following:
+        Which method to use. Valid options are:
 
-            - method={m.TMM.s!r} - weighted trimmed mean of M-values from :cite:`robinson:10`.
-            - method={m.RLE.s!r} - relative log expression from [Anders10]_.
-            - method={m.UPPER_QUANT.s!r} - upper-quartile normalization method from [Bullard10]_.
-            - method={m.NONE.s!r} - all the factors are set to 1.
+            - `{m.TMM!r}` - weighted trimmed mean of M-values from :cite:`robinson:10`.
+            - `{m.RLE!r}` - relative log expression from [Anders10]_.
+            - `{m.UPPER_QUANT!r}` - upper-quartile normalization method from [Bullard10]_.
+            - `{m.NONE!r}` - all the factors are set to 1.
     layer
-        Layer in ``adata.layers`` or `None` for ``adata.X``. Only used when ``use_raw=False``.
+        Layer in :attr:`anndata.AnnData.layers` or `None` for :attr:`anndata.AnnData.X`.
+        Only used when ``use_raw = False``.
     use_raw
-        Whether to access ``adata.raw``.
+        Whether to access :attr:`anndata.AnnData.raw` or not.
     library_size
         Library size. If `None`, it will be set as the sum of values for each cell.
     ref_ix
         Index of a reference cell. If `None`, it will be determined automatically.
     logratio_trim
-        Amount of trim to use on log-ratios ('M' values) when ``method={m.TMM.s!r}``.
+        Amount of trim to use on log-ratios ('M' values) when ``method={m.TMM!r}``.
     sum_trim
-        Amount of trim to use on the combined absolute levels ('A' values) when ``method={m.TMM.s!r}``.
+        Amount of trim to use on the combined absolute levels ('A' values) when ``method = {m.TMM!r}``.
     weight
-        Whether to compute asymptotic binomial precision weights when ``method={m.TMM.s!r}``.
+        Whether to compute asymptotic binomial precision weights when ``method = {m.TMM!r}``.
     a_cutoff
-        Cutoff on 'A' values to use before trimming when ``method={m.TMM.s!r}``.
+        Cutoff on 'A' values to use before trimming when ``method = {m.TMM!r}``.
     perc
-        Percentile of the counts that is aligned when ``method={m.UPPER_QUANT.s!r}``.
+        Percentile of the counts that is aligned when ``method = {m.UPPER_QUANT!r}``.
 
     Returns
     -------
@@ -172,7 +176,7 @@ def _calculate_norm_factors(
     .. [Bullard10] Bullard, J. H. *et al.* (2010),
         *Evaluation of statistical methods for normalization and differential expression in mRNA-Seq experiments*,
         `BMC Bioinformatics <https://doi.org/10.1186/1471-2105-11-94>`__.
-    """  # noqa
+    """
 
     method = NormMode(method)
 

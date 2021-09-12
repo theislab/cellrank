@@ -1,32 +1,25 @@
-"""IO module."""
-
-from typing import Union, Callable, Optional
+from typing import Any, Union, Callable, Optional
 
 from pathlib import Path
 
 from scvelo import read as scv_read
 from anndata import AnnData
 from cellrank import logging as logg
+from cellrank._key import Key
 from cellrank.ul._docs import d
+from cellrank.tl._utils import _deprecate
 from cellrank.tl._colors import _create_categorical_colors
 from cellrank.tl._lineage import Lineage
-from cellrank.tl._constants import (
-    Direction,
-    AbsProbKey,
-    DirectionPlot,
-    _colors,
-    _lin_names,
-)
 
 from matplotlib.colors import is_color_like
 
 
 @d.dedent
+@_deprecate(version="2.0")
 def read(
     path: Union[Path, str],
-    key: Optional[str] = None,
     read_callback: Callable = scv_read,
-    **kwargs,
+    **kwargs: Any,
 ) -> AnnData:
     """
     Read file and return :class:`anndata.AnnData` object.
@@ -35,9 +28,6 @@ def read(
     ----------
     path
         Path to the annotated data object.
-    key
-        Key in ``adata.obsm`` where the :class:`cellrank.tl.Lineage` is stored.
-        If `None`, it is determined automatically.
     read_callback
         Function that actually reads the :class:`anndata.AnnData` object, such as
         :func:`scvelo.read` (default) or :func:`scanpy.read`.
@@ -49,40 +39,31 @@ def read(
     %(adata)s
     """
 
-    def maybe_create_lineage(
-        direction: Union[str, Direction], pretty_name: Optional[str] = None
-    ):
-        if isinstance(direction, Direction):
-            lin_key = str(
-                AbsProbKey.FORWARD
-                if direction == Direction.FORWARD
-                else AbsProbKey.BACKWARD
-            )
-        else:
-            lin_key = direction
-
+    def maybe_create_lineage(backward: bool, pretty_name: Optional[str] = None) -> None:
+        lin_key = Key.obsm.abs_probs(backward)
         pretty_name = "" if pretty_name is None else (pretty_name + " ")
-        names_key, colors_key = _lin_names(lin_key), _colors(lin_key)
+        names_key = Key.obs.term_states(backward)
+        colors_key = Key.uns.colors(names_key)
 
         if lin_key in adata.obsm.keys():
             n_cells, n_lineages = adata.obsm[lin_key].shape
             logg.info(f"Creating {pretty_name}`Lineage` from `adata.obsm[{lin_key!r}]`")
 
-            if names_key not in adata.uns.keys():
+            if names_key not in adata.obs:
                 logg.warning(
                     f"    Lineage names not found in `adata.uns[{names_key!r}]`, creating new names"
                 )
                 names = [f"Lineage {i}" for i in range(n_lineages)]
-            elif len(adata.uns[names_key]) != n_lineages:
+            elif len(adata.obs[names_key].cat.categories) != n_lineages:
                 logg.warning(
                     f"    Lineage names are don't have the required length ({n_lineages}), creating new names"
                 )
                 names = [f"Lineage {i}" for i in range(n_lineages)]
             else:
                 logg.info("    Successfully loaded names")
-                names = adata.uns[names_key]
+                names = list(adata.obs[names_key].cat.categories)
 
-            if colors_key not in adata.uns.keys():
+            if colors_key not in adata.uns:
                 logg.warning(
                     f"    Lineage colors not found in `adata.uns[{colors_key!r}]`, creating new colors"
                 )
@@ -111,10 +92,7 @@ def read(
 
     adata = read_callback(path, **kwargs)
 
-    if key is None:
-        maybe_create_lineage(Direction.FORWARD, pretty_name=DirectionPlot.FORWARD.s)
-        maybe_create_lineage(Direction.BACKWARD, pretty_name=DirectionPlot.BACKWARD.s)
-    else:
-        maybe_create_lineage(key)
+    maybe_create_lineage(False, pretty_name="forward")
+    maybe_create_lineage(True, pretty_name="backward")
 
     return adata
