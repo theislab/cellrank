@@ -566,8 +566,7 @@ class KernelExpression(IOMixin, ABC):
 
         Returns
         -------
-        :class:`matplotlib.pyplot.Axes`
-            The axis object if ``show = False``.
+        The axes object, if ``show = False``.
         %(just_plots)s
 
         Notes
@@ -575,7 +574,7 @@ class KernelExpression(IOMixin, ABC):
         This function is a Python reimplementation of the following
         `original R function <https://github.com/tanaylab/embflow/blob/main/scripts/generate_paper_figures/plot_vein.r>`_
         with some minor stylistic differences.
-        This function will not recreate the results from :cite:`mittnenzweig:21`, because there the Metacell model
+        This function will not recreate the results from :cite:`mittnenzweig:21`, because there, the Metacell model
         :cite:`baran:19` was used to compute the flow, whereas here the transition matrix is used.
         """  # noqa: E501
         if self._transition_matrix is None:

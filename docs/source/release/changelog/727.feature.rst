@@ -15,4 +15,5 @@ Completely refactor :mod:`cellrank.estimators`. This includes the following chan
     - improve docstrings in various places.
     - write lineage drivers to :attr:`anndata.AnnData.varm` instead of :attr:`anndata.AnnData.var`.
     - fix various corner cases when solving linear systems (e.g. only 1 variable).
-    - internally reconstruct :class:`cellrank.tl.Lineage` using :meth:`cellrank.tl.Lineage.from_adata`.
+
+In addition, add :meth:`cellrank.tl.Lineage.from_adata` to allow easy reconstruction of lineage objects.

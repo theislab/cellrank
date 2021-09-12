@@ -166,7 +166,7 @@ class FlowPlotter:
 
         Returns
         -------
-        Dataframe of shape ``(n_time_points, n_clusters)`` if ``cluster!=None`` or
+        Dataframe of shape ``(n_time_points, n_clusters)`` if ``cluster != None`` or
         a dataframe of shape ``(n_time_points * n_clusters, n_clusters)`` otherwise.
         The dataframe's index is a multi-index and the 1st level corresponds to time, the 2nd level to source clusters.
         """

@@ -1,4 +1,4 @@
-CellRank dev (2021-09-10)
+CellRank dev (2021-09-13)
 =========================
 
 Features
@@ -10,6 +10,27 @@ Features
 
 - Allow using a column from :attr:`anndata.AnnData.var` as gene symbols for some plotting functions.
   `#726 <https://github.com/theislab/cellrank/pull/726>`__
+
+- Completely refactor :mod:`cellrank.estimators`. This includes the following changes:
+
+      - define less coupled, more extensible class hierarchy.
+      - follow more closely fit/predict paradigm of :mod:`sklearn`, see e.g.
+        :meth:`cellrank.estimators.GPCCA.fit` and :meth:`cellrank.estimators.GPCCA.predict`.
+      - make estimators implicitly maintain a more consistent state.
+      - remove plotting of Schur vectors  and eigenvectors in an embedding.
+      - remove cell-cycle warning for terminal states.
+      - remove ``is_irreducible``, ``recurrent_classes`` and ``transient_classes`` properties.
+      - remove optional irreducibility check from :meth:`cellrank.estimators.GPCCA.compute_absorption_probabilities`
+      - normalize estimator attribute names and key names when writing to :class:`anndata.AnnData`.
+      - allow estimators to serialize self from/to :class:`anndata.AnnData`, see
+        :meth:`cellrank.estimators.BaseEstimator.from_adata` or :meth:`cellrank.estimators.BaseEstimator.to_adata`.
+      - allow estimators to be saved to a file without it :class:`anndata.AnnData`.
+      - improve docstrings in various places.
+      - write lineage drivers to :attr:`anndata.AnnData.varm` instead of :attr:`anndata.AnnData.var`.
+      - fix various corner cases when solving linear systems (e.g. only 1 variable).
+
+  In addition, add :meth:`cellrank.tl.Lineage.from_adata` to allow easy reconstruction of lineage objects.
+  `#727 <https://github.com/theislab/cellrank/pull/727>`__
 
 
 Bugfixes
@@ -27,6 +48,9 @@ Bugfixes
 - Use actual number of nearest neighbors in :class`cellrank.tl.kernels.PseudotimeKernel`
   when using hard thresholding scheme.
   `#738 <https://github.com/theislab/cellrank/pull/738>`__
+
+- Fix :func:`cellrank.pl.cluster_lineage` sometimes reusing the same ax.
+  `#742 <https://github.com/theislab/cellrank/pull/742>`__
 
 
 Deprecations (in next major release)
