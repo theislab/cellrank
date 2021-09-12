@@ -182,7 +182,7 @@ def cluster_lineage(
     use_raw = kwargs.get("use_raw", False)
     lineage_key = str(AbsProbKey.BACKWARD if backward else AbsProbKey.FORWARD)
     if lineage_key not in adata.obsm:
-        raise KeyError(f"Lineages key `{lineage_key!r}` not found in `adata.obsm`.")
+        raise KeyError(f"Lineages not found in `adata.obsm[{lineage_key!r}]`.")
 
     _ = adata.obsm[lineage_key][lineage]
 
@@ -292,9 +292,9 @@ def cluster_lineage(
         row_delta = len(covariate_colors) + 1
     gs = GridSpec(nrows=nrows * row_delta, ncols=ncols, figure=fig)
 
-    row, sharey_ax = 0, None
+    row, sharey_ax = -row_delta, None
     for i, c in enumerate(clusters):
-        if i == ncols:
+        if i % ncols == 0:
             row += row_delta
         sharey_ax = plot_cluster(row, i % ncols, c, sharey_ax=sharey_ax)
 
