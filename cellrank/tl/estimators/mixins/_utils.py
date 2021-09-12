@@ -406,16 +406,22 @@ def register_plotter(
             attr = continuous if continuous is not None else discrete
             raise RuntimeError(f"Compute `.{attr}` first as `.compute_{attr}()`.")
 
+        if colors is None:
+            # extract colors from Lineage object, if present
+            _colors = getattr(getattr(instance, continuous, None), "colors", None)
+        else:
+            _colors = getattr(instance, colors, None)
+
         return wrapped(
             *args,
             _data=data,
-            _colors=getattr(instance, colors, None) if colors is not None else None,
+            _colors=_colors,
             _title=attr,
             discrete=disc,
             **kwargs,
         )
 
     if discrete is None and continuous is None:
-        raise ValueError("At least 1 of `discrete` or  `continuous` must be set.")
+        raise ValueError("At least 1 of `discrete` or `continuous` must be set.")
 
     return wrapper(_plot_dispatcher)
