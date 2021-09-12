@@ -37,7 +37,7 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
             - :class:`cellrank.tl.kernels.Kernel` - kernel object.
             - :class:`anndata.AnnData` - annotated data object containing transition matrix in
               :attr:`anndata.AnnData.obsp`.
-            - :class:`np.ndarray` - row-normalized sparse transition matrix.
+            - :class:`numpy.ndarray` - row-normalized sparse transition matrix.
             - :class:`scipy.sparse.spmatrix` - row-normalized sparse transition matrix.
     obsp_key
         Key in :attr:`anndata.AnnData.obsp` where the transition matrix is stored.

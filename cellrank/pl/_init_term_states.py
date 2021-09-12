@@ -22,10 +22,10 @@ color
     If given, plot cluster annotations left of the {direction} states.
 %(time_mode)s
 time_key
-    Key in ``adata.obs`` where the pseudotime is stored.
+    Key in :attr:`anndata.AnnData.obs` where the pseudotime is stored.
 %(basis)s
 kwargs
-    Keyword arguments for :meth:`cellrank.tl.estimators.BaseEstimator.plot_terminal_states`.
+    Keyword arguments for :meth:`cellrank.tl.estimators.GPCCA.plot_terminal_states`.
 
 Returns
 -------

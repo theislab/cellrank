@@ -102,13 +102,8 @@ def lineage_drivers(
     Returns
     -------
     %(lineage_drivers.returns)s
-
-    References
-    ----------
-    %(lineage_drivers.references)s
     """  # noqa: D400
 
-    # create dummy kernel and estimator
     g = CFLARE.from_adata(adata, obsp_key=Key.uns.kernel(backward))
     if g.absorption_probabilities is None:
         raise RuntimeError(

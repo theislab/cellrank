@@ -758,18 +758,17 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         """
         Compute the degree of lineage priming.
 
-        This method computes how naive vs. committed each individual cell is.
-        It returns a score where 0 stands for naive and 1 stands for committed.
+        It returns a score in `[0, 1]` where `0` stands for naive and `1` stands for committed.
 
         Parameters
         ----------
         method
             The method used to compute the degree of lineage priming. Valid options are:
 
-                - `'kl_divergence'`: as in :cite:`velten:17`, computes KL-divergence between the fate probabilities of
+                - `'kl_divergence'` - as in :cite:`velten:17`, computes KL-divergence between the fate probabilities of
                   a cell and the average fate probabilities. Computation of average fate probabilities can be restricted
                   to a set of user-defined ``early_cells``.
-                - `'entropy'`: as in :cite:`setty:19`, computes entropy over a cell's fate probabilities.
+                - `'entropy'` - as in :cite:`setty:19`, computes entropy over a cell's fate probabilities.
         early_cells
             Cell IDs or a mask marking early cells. If `None`, use all cells.
             Only used when ``method = 'kl_divergence'``.

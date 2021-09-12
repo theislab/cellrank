@@ -113,7 +113,7 @@ def heatmap(
     %(gene_symbols)s
     %(model_callback)s
     cluster_key
-        Key(s) in ``adata.obs`` containing categorical observations to be plotted at the top of the heatmap.
+        Key(s) in :attr:`anndata.AnnData.obs` containing categorical observations to be plotted on the top of heatmap.
         Only available when ``mode = {m.LINEAGES!r}``.
     show_absorption_probabilities
         Whether to also plot absorption probabilities alongside the smoothed expression.

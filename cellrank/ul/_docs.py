@@ -87,7 +87,7 @@ mode
         - `{m.SAMPLING!r}` - sample 1 transition matrix from the velocity distribution."""
 _velocity_backward_mode = """\
 backward_mode
-    Only matters if initialized as :attr:`backward` ``=True``.  Valid options are:
+    Only matters if initialized as :attr:`backward` ``= True``.  Valid options are:
 
         - `{b.TRANSPOSE!r}` - compute transitions from neighboring cells :math:`j` to cell :math:`i`.
         - `{b.NEGATE!r}` - negate the velocity vector."""
@@ -107,7 +107,7 @@ callback
     Can be specified in gene- and lineage-specific manner, similarly to :attr:`model`."""
 _genes = """\
 genes
-    Genes in :attr:`anndata.AnnData.var_names`` or in :attr:`anndata.AnnData.raw.var_names`, if ``use_raw = True``."""
+    Genes in :attr:`anndata.AnnData.var_names` or in :attr:`anndata.AnnData.raw.var_names`, if ``use_raw = True``."""
 _softmax_scale = """\
 softmax_scale
     Scaling parameter for the softmax. If `None`, it will be estimated using ``1 / median(correlations)``.
@@ -217,7 +217,7 @@ d = DocstringProcessor(
     cond_num=_cond_num,
     soft_scheme=_soft_scheme_fmt.format("", "", ""),
     soft_scheme_kernel=_soft_scheme_fmt.format(
-        *([" Only used when `threshold_scheme='soft'`."] * 3)
+        *([" Only used when ``threshold_scheme = 'soft'``."] * 3)
     ),
     rw_ixs=_rw_ixs,
     gene_symbols=_gene_symbols,

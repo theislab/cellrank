@@ -273,9 +273,9 @@ class KernelExpression(IOMixin, ABC):
         Parameters
         ----------
         basis
-            Basis in :attr:`adata` ``.obsm`` for which to compute the projection.
+            Basis in :attr:`anndata.AnnData.obsm` for which to compute the projection.
         key_added
-            If not `None` and ``copy=False``, save the result to :attr:`adata` ``.obsm['{key_added}']``.
+            If not `None` and ``copy = False``, save the result to :attr:`anndata.AnnData.obsm` ``['{key_added}']``.
             Otherwise, save the result to `'T_fwd_{basis}'` or `T_bwd_{basis}`, depending on the direction.
         copy
             Whether to return the projection or modify :attr:`adata` inplace.
@@ -388,7 +388,7 @@ class KernelExpression(IOMixin, ABC):
         stop_ixs
             Cells which when hit, the random walk is terminated. If `None`, terminate after ``max_iters``.
             %(rw_ixs)s
-            For example ``{'clusters': ['Alpha', 'Beta']}`` and ``successive_hits=3`` means that the random walk will
+            For example ``{'clusters': ['Alpha', 'Beta']}`` and ``successive_hits = 3`` means that the random walk will
             stop prematurely after cells in the above specified clusters have been visited successively 3 times in a
             row.
         basis
@@ -550,11 +550,11 @@ class KernelExpression(IOMixin, ABC):
         Parameters
         ----------
         cluster
-            Cluster for which to visualize outgoing compute_flow.
+            Cluster for which to visualize outgoing flow.
         cluster_key
-            Key in :attr:`adata` ``.obs`` where clustering is stored.
+            Key in :attr:`anndata.AnnData.obs` where clustering is stored.
         time_key
-            Key in :attr:`adata` ``.obs`` where experimental time is stored.
+            Key in :attr:`anndata.AnnData.obs` where experimental time is stored.
         clusters
             Visualize flow only for these clusters. If `None`, use all clusters.
         time_points
@@ -567,7 +567,7 @@ class KernelExpression(IOMixin, ABC):
         Returns
         -------
         :class:`matplotlib.pyplot.Axes`
-            The axis object if ``show=False``.
+            The axis object if ``show = False``.
         %(just_plots)s
 
         Notes

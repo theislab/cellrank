@@ -48,9 +48,10 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
 
         Returns
         -------
-        Self and modifies the following fields:
+        Self.
+        Also modifies the following field:
 
-            - :attr:`eigendecomposition` - %(eigen.full_desc)s
+            - :attr:`eigendecomposition` - %(eigen.summary)s
         """  # noqa: D400
         self.compute_eigendecomposition(k=k, only_evals=False, **kwargs)
         return self
@@ -117,8 +118,8 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
         -------
         Nothing, just updates the following fields:
 
-            - :attr:`terminal_states` - %(tse_term_states.summary)s.
-            - :attr:`terminal_states_probabilities` - %(tse_term_states_probs)s.
+            - :attr:`terminal_states` - %(tse_term_states.summary)s
+            - :attr:`terminal_states_probabilities` - %(tse_term_states_probs.summary)s
         """
 
         def convert_use(

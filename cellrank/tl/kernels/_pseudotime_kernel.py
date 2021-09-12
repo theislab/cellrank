@@ -102,19 +102,19 @@ class PseudotimeKernel(Kernel):
         threshold_scheme
             Which method to use when biasing the graph. Valid options are:
 
-                - `'hard'`: based on *Palantir* :cite:`setty:19` which removes some edges that point against
+                - `'hard'` - based on *Palantir* :cite:`setty:19` which removes some edges that point against
                   the direction of increasing pseudotime. To avoid disconnecting the graph, it does not
                   remove all edges that point against the direction of increasing pseudotime, but keeps the ones
                   that point to cells inside a close radius. This radius is chosen according to the local cell density.
-                - `'soft'`: based on *VIA* :cite:`stassen:21` which downweights edges that points against the direction
+                - `'soft'` - based on *VIA* :cite:`stassen:21` which downweights edges that points against the direction
                   of increasing pseudotime. Essentially, the further "behind" a query cell is in pseudotime with respect
                   to the current reference cell, the more penalized will be its graph-connectivity.
-                - :class:`callable`: any function conforming to the signature of
+                - :class:`callable` - any function conforming to the signature of
                   :func:`cellrank.tl.kernels.ThresholdSchemeABC.__call__`.
         frac_to_keep
             The `frac_to_keep` * number of the closest neighbors (according to graph connectivities) are kept, no matter
             whether they lie in the pseudotemporal past or future. This is done to ensure that the graph remains
-            connected. Only used when `threshold_scheme = 'hard'`. Needs to fall within the interval `[0, 1]`.
+            connected. Only used when ``threshold_scheme = 'hard'``. Needs to fall within the interval `[0, 1]`.
         %(soft_scheme_kernel)s
         check_irreducibility
             Optional check for irreducibility of the final transition matrix.

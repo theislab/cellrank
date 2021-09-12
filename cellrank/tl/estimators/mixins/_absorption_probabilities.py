@@ -140,9 +140,10 @@ class AbsProbsMixin:
     def absorption_probabilities(self) -> Optional[Lineage]:
         """Absorption probabilities.
 
-        Informally, given a (finite, discrete) Markov chain with a set of transient states T and a set of absorbing
-        states A, the absorption probability for cell i from T to reach cell j from R is the probability that a random
-        walk initialized in i will reach absorbing state j.
+        Informally, given a (finite, discrete) Markov chain with a set of transient states :math:`T` and
+        a set of absorbing states :math:`A`, the absorption probability for cell :math:`i` from :math:`T`
+        to reach cell :math:`j` from :math:`R` is the probability that a random walk initialized in :math:`i`
+        will reach absorbing state :math:`j`.
 
         In our context, states correspond to cells, in particular, absorbing states correspond to cells in terminal
         states.
@@ -164,8 +165,8 @@ class AbsProbsMixin:
     def priming_degree(self) -> Optional[pd.Series]:
         """Priming degree.
 
-        Given a cell i and a set of terminal states, this quantifies how committed vs. naive cell i is, i.e. its
-        degree of pluripotency. Low values correspond to naive cells (high degree of pluripotency), high values
+        Given a cell :math:`i` and a set of terminal states, this quantifies how committed vs. naive cell :math:`i` is,
+        i.e. its degree of pluripotency. Low values correspond to naive cells (high degree of pluripotency), high values
         correspond to committed cells (low degree of pluripotency).
         """
         return self._priming_degree
@@ -195,8 +196,8 @@ class AbsProbsMixin:
         Compute absorption probabilities.
 
         For each cell, this computes the probability of being absorbed in any of the :attr:`terminal_states`. In
-        particular, this corresponds to the probability that a random walk initialized in transient cell i will reach
-        any cell from a fixed transient state before reaching a cell from any other transient state.
+        particular, this corresponds to the probability that a random walk initialized in transient cell :math:`i`
+        will reach any cell from a fixed transient state before reaching a cell from any other transient state.
 
         Parameters
         ----------
@@ -344,7 +345,7 @@ class AbsProbsMixin:
         -------
         %(lin_pd.returns)s
 
-        Also update the following field:
+        Also updates the following field:
 
             - :attr:`priming_degree` - %(priming_degree.summary)s
         """  # noqa: D400

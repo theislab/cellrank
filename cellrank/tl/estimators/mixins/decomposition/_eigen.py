@@ -42,10 +42,12 @@ class EigenMixin:
         self._eigendecomposition = None
 
     @property
-    @d.get_full_description(base="eigen")
+    @d.get_summary(base="eigen")
     def eigendecomposition(self) -> Optional[Dict[str, Any]]:
-        """
-        Eigendecomposition of :attr:`transition matrix`.
+        """Eigendecomposition of :attr:`transition_matrix`.
+
+        For non-symmetric real matrices, left and right eigenvectors will in general be different and complex. We
+        compute both left and right eigenvectors.
 
         Returns
         -------
@@ -56,7 +58,7 @@ class EigenMixin:
             - `'params'` - parameters used for the computation.
             - `'V_l'` - left eigenvectors (optional).
             - `'V_r'` - right eigenvectors (optional).
-            - `'stationary_dist'` - stationary distribution of :attr:`transition_matrix` (optional).
+            - `'stationary_dist'` - stationary distribution of :attr:`transition_matrix`, if present.
         """
         return self._eigendecomposition
 
@@ -89,7 +91,7 @@ class EigenMixin:
         -------
         Nothing, just updates the following field:
 
-            - :attr:`eigendecomposition` - %(eigen.full_desc)s
+            - :attr:`eigendecomposition` - %(eigen.summary)s
         """
 
         def get_top_k_evals() -> np.ndarray:

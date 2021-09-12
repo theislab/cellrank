@@ -117,7 +117,7 @@ def circular_projection(
             - `None` - it will determined automatically, based on the number of lineages.
             - `'optimal'` - order lineages optimally by solving the Travelling salesman problem (TSP).
               Recommended for <= `20` lineages.
-            - `'default'` - use the order as specified in ``lineages``.
+            - `'default'` - use the order as specified by ``lineages``.
 
     metric
         Metric to use when constructing pairwise distance matrix when ``lineage_order = 'optimal'``. For available

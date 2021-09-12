@@ -1,4 +1,4 @@
-from typing import Any, Tuple, Union, Optional
+from typing import Any, Tuple, Union, TypeVar, Optional
 
 from abc import ABC
 
@@ -7,18 +7,20 @@ from anndata import AnnData
 import numpy as np
 from scipy.sparse import spmatrix
 
+KernelExpression = TypeVar("KernelExpression")
+
 
 class KernelMixin(ABC):
     """Mixin that exposes various properties of :class:`cellrank.kernels.KernelExpression`."""
 
-    def __init__(self, kernel: "KernelExpression", **kwargs: Any):  # noqa: F821
+    def __init__(self, kernel: "KernelExpression", **kwargs: Any):
         super().__init__(**kwargs)
         self._kernel = kernel
         self._n_obs = self.kernel.adata.n_obs
 
     @property
-    def kernel(self) -> "KernelExpression":  # noqa: F821
-        """Underlying kernel."""
+    def kernel(self) -> "KernelExpression":
+        """Underlying kernel expression."""
         return self._kernel
 
     @property

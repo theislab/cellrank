@@ -141,7 +141,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         Parameters
         ----------
         n_states
-            Number of macrostates. If a :class:`typing.Sequence`, use the minChi criterion :cite:`reuter:18`.
+            Number of macrostates. If a :class:`typing.Sequence`, use the *minChi* criterion :cite:`reuter:18`.
             If `None`, use the *eigengap* heuristic.
         %(n_cells)s
         cluster_key
@@ -160,7 +160,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             - :attr:`coarse_stationary_distribution` - %(gpcca_coarse_stat.summary)s
             - :attr:`schur_vectors` - %(schur_vectors.summary)s
             - :attr:`schur_matrix` - %(schur_matrix.summary)s
-            - :attr:`eigendecomposition` - %(eigen.full_desc)s
+            - :attr:`eigendecomposition` - %(eigen.summary)s
         """
 
         n_states = self._n_states(n_states)
@@ -225,7 +225,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             How to select the terminal states. Valid option are:
 
                 - `'eigengap'` - select the number of states based on the *eigengap* of :attr:`transition_matrix`.
-                - `'eigengap_coarse'` - select the number of states based on the `*eigengap* of the diagonal
+                - `'eigengap_coarse'` - select the number of states based on the *eigengap* of the diagonal
                   of :attr:`coarse_T`.
                 - `'top_n'` - select top ``n_states`` based on the probability of the diagonal of :attr:`coarse_T`.
                 - `'stability'` - select states which have a stability >= ``stability_threshold``.

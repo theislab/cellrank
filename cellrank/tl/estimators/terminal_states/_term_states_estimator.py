@@ -52,7 +52,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
     def terminal_states(self) -> Optional[pd.Series]:
         """Categorical annotation of terminal states.
 
-        By default, all cells in transient cells will be labelled `NaN`.
+        By default, all cells in transient cells will be labelled as `NaN`.
         """
         return self._term_states
 
@@ -283,7 +283,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
         """
         Compute terminal states of the process.
 
-        This is an alias for meth:`predict`.
+        This is an alias for :meth:`predict`.
 
         Parameters
         ----------

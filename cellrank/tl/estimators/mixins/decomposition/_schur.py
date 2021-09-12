@@ -53,33 +53,32 @@ class SchurMixin:
 
     @property
     @d.get_summary(base="schur_vectors")
+    @d.get_extended_summary(base="schur_vectors")
     def schur_vectors(self) -> Optional[np.ndarray]:
         """Real Schur vectors of the transition matrix.
 
         The real Schur decomposition is a generalization of the Eigendecomposition and can be computed for any
-        real-valued, square matrix A. It is given by A = Q R Q^T, where Q contains the real Schur vectors and R is the
-        Schur matrix. Q is orthogonal and R is quasi-upper triangular with 1x1 and 2x2 blocks on the diagonal. If PETSc
-        and SLEPc are installed, only the leading Schur vectors are computed.
+        real-valued, square matrix :math:`A`. It is given by :math:`A = Q R Q^T`, where :math:`Q` contains the
+        real Schur vectors and :math:`R` is the Schur matrix. :math:`Q` is orthogonal and :math:`R` is quasi-upper
+        triangular with 1x1 and 2x2 blocks on the diagonal.
+        If PETSc and SLEPc are installed, only the leading Schur vectors are computed.
         """
         return self._schur_vectors
 
     @property
     @d.get_summary(base="schur_matrix")
+    @d.dedent
     def schur_matrix(self) -> Optional[np.ndarray]:
         """Schur matrix.
 
-        The real Schur decomposition is a generalization of the Eigendecomposition and can be computed for any
-        real-valued, square matrix A. It is given by A = Q R Q^T, where Q contains the real Schur vectors and R is the
-        Schur matrix. Q is orthogonal and R is quasi-upper triangular with 1x1 and 2x2 blocks on the diagonal. If PETSc
-        and SLEPc are installed, only the leading Schur vectors are computed.
+        %(schur_vectors.summary_ext)s
         """
         return self._schur_matrix
 
     @property
-    @d.get_full_description(base="eigen")
+    @d.get_summary(base="eigen")
     def eigendecomposition(self) -> Optional[Dict[str, Any]]:
-        """
-        Eigendecomposition of the transition matrix.
+        """Eigendecomposition of :attr:`transition_matrix`.
 
         For non-symmetric real matrices, left and right eigenvectors will in general be different and complex. We
         compute both left and right eigenvectors.
@@ -93,7 +92,7 @@ class SchurMixin:
             - `'params'` - parameters used for the computation.
             - `'V_l'` - left eigenvectors (optional).
             - `'V_r'` - right eigenvectors (optional).
-            - `'stationary_dist'` - stationary distribution of :attr:`transition_matrix` (optional).
+            - `'stationary_dist'` - stationary distribution of :attr:`transition_matrix`, if present.
         """
         return self._eigendecomposition
 
@@ -131,7 +130,7 @@ class SchurMixin:
 
             - :attr:`schur_vectors` - %(schur_vectors.summary)s
             - :attr:`schur_matrix` -  %(schur_matrix.summary)s
-            - :attr:`eigendecomposition` - %(eigen.full_desc)s
+            - :attr:`eigendecomposition` - %(eigen.summary)s
         """
         if n_components < 2:
             logg.warning(

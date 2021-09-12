@@ -55,6 +55,8 @@ class LinDriversMixin(AbsProbsMixin):
         super().__init__(**kwargs)
         self._lineage_drivers: Optional[pd.DataFrame] = None
 
+    @d.get_full_description(base="lineage_drivers")
+    @d.get_sections(base="lineage_drivers", sections=["Parameters", "Returns"])
     @d.dedent
     @inject_docs(tm=TestMethod)
     def compute_lineage_drivers(
@@ -79,7 +81,7 @@ class LinDriversMixin(AbsProbsMixin):
         Parameters
         ----------
         lineages
-            Set of lineage names from :attr:`absorption_probabilities`. If `None`, use all lineages.
+            Lineage names from :attr:`absorption_probabilities`. If `None`, use all lineages.
         method
             Mode to use when calculating p-values and confidence intervals. Valid options are:
 

@@ -82,16 +82,16 @@ def graph(
     layout
         Layout to use for graph drawing.
 
-        - If :class:`str`, search for embedding in ``adata.obsm['X_{layout}']``.
+        - If :class:`str`, search for embedding in :attr:`anndata.AnnData.obsm` ``['X_{layout}']``.
           Use ``layout_kwargs={'components': [0, 1]}`` to select components.
-        - If :class:`dict`, keys should be values in interval ``[0, len(ixs))``
+        - If :class:`dict`, keys should be values in interval `[0, len(ixs))`
           and values `(x, y)` pairs corresponding to node positions.
     keys
         Keys in :attr:`anndata.AnnData.obs`, :attr:`anndata.AnnData.obsm` or :attr:`anndata.AnnData.obsm`
         used to color the nodes.
 
-        - If `'incoming'`, `'outgoing'` or `'self_loops'`, visualize reduction (see ``edge_reductions``)
-          for each node based on incoming or outgoing edges, respectively.
+        If `'incoming'`, `'outgoing'` or `'self_loops'`, visualize reduction (see ``edge_reductions``)
+        for each node based on incoming or outgoing edges, respectively.
     keylocs
         Locations of ``keys``. Can be any attribute of ``data`` if it's :class:`anndata.AnnData` object.
     node_size

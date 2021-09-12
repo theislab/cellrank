@@ -39,7 +39,7 @@ def lineages(
         Key in ``adata.obs`` where the pseudotime is stored.
     %(basis)s
     kwargs
-        Keyword arguments for :meth:`cellrank.tl.estimators.BaseEstimator.plot_absorption_probabilities`.
+        Keyword arguments for :meth:`cellrank.tl.estimators.GPCCA.plot_absorption_probabilities`.
 
     Returns
     -------

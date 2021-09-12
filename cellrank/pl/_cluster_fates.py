@@ -108,7 +108,7 @@ def cluster_fates(
     %(plotting)s
     kwargs
         Keyword arguments for :func:`scvelo.pl.paga`, :func:`scanpy.pl.violin` or :func:`matplotlib.pyplot.bar`,
-        depending on the value of ``mode``.
+        depending on the ``mode``.
 
     Returns
     -------

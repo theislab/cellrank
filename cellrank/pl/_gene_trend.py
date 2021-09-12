@@ -89,16 +89,17 @@ def gene_trends(
         Names of the lineages to plot. If `None`, plot all lineages.
     %(backward)s
     data_key
-        Key in ``adata.layers`` or `'X'` for ``adata.X`` where the data is stored.
+        Key in :attr:`anndata.AnnData.layers` or `'X'` for :attr:`anndata.AnnData.X` where the data is stored.
     time_key
-        Key in ``adata.obs`` where the pseudotime is stored.
+        Key in :attr:`anndata.AnnData.obs` where the pseudotime is stored.
     %(time_range)s
 
         This can also be specified on per-lineage basis.
     %(gene_symbols)s
     transpose
-        If ``same_plot=True``, group the trends by ``lineages`` instead of ``genes``. This enforces ``hide_cells=True``.
-        If ``same_plot=False``, show ``lineages`` in rows and ``genes`` in columns.
+        If ``same_plot = True``, group the trends by ``lineages`` instead of ``genes``.
+        This forces ``hide_cells = True``.
+        If ``same_plot = False``, show ``lineages`` in rows and ``genes`` in columns.
     %(model_callback)s
     conf_int
         Whether to compute and show confidence interval. If the ``model`` is :class:`cellrank.ul.models.GAMR`,
@@ -112,7 +113,7 @@ def gene_trends(
         This can improve visualization. Can be specified individually for each lineage.
     lineage_cmap
         Categorical colormap to use when coloring in the lineages. If `None` and ``same_plot``,
-        use the corresponding colors in ``adata.uns``, otherwise use `'black'`.
+        use the corresponding colors in :attr:`anndata.AnnData.uns`, otherwise use `'black'`.
     abs_prob_cmap
         Continuous colormap to use when visualizing the absorption probabilities for each lineage.
         Only used when ``same_plot = False``.
@@ -127,7 +128,8 @@ def gene_trends(
     lw
         Line width of the smoothed values.
     cbar
-        Whether to show colorbar. Always shown when percentiles for lineages differ. Only used when ``same_plot=False``.
+        Whether to show colorbar. Always shown when percentiles for lineages differ.
+        Only used when ``same_plot = False``.
     margins
         Margins around the plot.
     sharex
@@ -137,11 +139,11 @@ def gene_trends(
     gene_as_title
         Whether to show gene names as titles instead on y-axis.
     legend_loc
-        Location of the legend displaying lineages. Only used when `same_plot=True`.
+        Location of the legend displaying lineages. Only used when `same_plot = True`.
     obs_legend_loc
         Location of the legend when ``cell_color`` corresponds to a categorical variable.
     ncols
-        Number of columns of the plot when plotting multiple genes. Only used when ``same_plot=True``.
+        Number of columns of the plot when plotting multiple genes. Only used when ``same_plot = True``.
     suptitle
         Suptitle of the figure.
     %(return_models)s

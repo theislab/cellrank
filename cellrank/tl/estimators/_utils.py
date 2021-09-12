@@ -6,7 +6,6 @@ from collections import Iterable
 from scanpy import logging as logg
 
 
-# TODO(michalk8): better name?
 class SafeGetter:
     """
     Context manager that does a simple rollback on :attr:`object.__dict__`.
@@ -46,7 +45,7 @@ class SafeGetter:
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
         self._exc_type = exc_type
-        # TODO: log properly
+        # TODO(michalk8): log properly
         if not self.ok:
             logg.debug(
                 f"The estimator will not be completely initialized, reason: {exc_type(exc_val)}"
