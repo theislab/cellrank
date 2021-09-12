@@ -1,1 +1,1 @@
-Fix towncrier release generation CI.
+Fix ``towncrier`` release generation CI.
