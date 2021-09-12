@@ -24,9 +24,14 @@ except ImportError:
 
 from packaging.version import parse
 
-__full_version__ = parse(version(__name__))
-__full_version__ = (
-    f"{__version__}+{__full_version__.local}" if __full_version__.local else __version__
-)
+try:
+    __full_version__ = parse(version(__name__))
+    __full_version__ = (
+        f"{__version__}+{__full_version__.local}"
+        if __full_version__.local
+        else __version__
+    )
+except ImportError:
+    __full_version__ = __version__
 
 del version, parse
