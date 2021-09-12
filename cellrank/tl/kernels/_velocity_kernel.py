@@ -1,15 +1,16 @@
-"""Velocity kernel module."""
 from typing import Any, Union, Callable, Iterable, Optional
+from typing_extensions import Literal
 
 from copy import copy
+from enum import auto
 from math import fsum
 
 from anndata import AnnData
 from cellrank import logging as logg
+from cellrank.tl._enum import _DEFAULT_BACKEND, ModeEnum
 from cellrank.ul._docs import d, inject_docs
 from cellrank.ul._utils import valuedispatch
 from cellrank.tl.kernels import Kernel
-from cellrank.tl._constants import _DEFAULT_BACKEND, ModeEnum
 from cellrank.ul._parallelize import parallelize
 from cellrank.tl.kernels._utils import (
     prange,
@@ -28,16 +29,16 @@ import numpy as np
 from scipy.sparse import issparse, csr_matrix
 
 
-class VelocityMode(ModeEnum):  # noqa
-    DETERMINISTIC = "deterministic"
-    STOCHASTIC = "stochastic"
-    SAMPLING = "sampling"
-    MONTE_CARLO = "monte_carlo"
+class VelocityMode(ModeEnum):  # noqa: D101
+    DETERMINISTIC = auto()
+    STOCHASTIC = auto()
+    SAMPLING = auto()
+    MONTE_CARLO = auto()
 
 
-class BackwardMode(ModeEnum):  # noqa
-    TRANSPOSE = "transpose"
-    NEGATE = "negate"
+class BackwardMode(ModeEnum):  # noqa: D101
+    TRANSPOSE = auto()
+    NEGATE = auto()
 
 
 @d.dedent
@@ -56,12 +57,12 @@ class VelocityKernel(Kernel):
     %(adata)s
     %(backward)s
     vkey
-        Key in :attr:`adata` ``.layers`` where velocities are stored.
+        Key in :attr:`anndata.AnnData.layers` where velocities are stored.
     xkey
-        Key in :attr:`adata` ``.layers`` where expected gene expression counts are stored.
+        Key in :attr:`anndata.AnnData.layers` where expected gene expression counts are stored.
     gene_subset
         List of genes to be used to compute transition probabilities.
-        By default, genes from :attr:`adata` ``.var['velocity_genes']`` are used.
+        By default, genes from :attr:`anndata.AnnData.var` ``['velocity_genes']`` are used.
     %(cond_num)s
     check_connectivity
         Check whether the underlying KNN graph is connected.
@@ -101,7 +102,7 @@ class VelocityKernel(Kernel):
         # check whether velocities have been computed
         vkey = kwargs.pop("vkey", "velocity")
         if vkey not in self.adata.layers.keys():
-            raise KeyError("Compute RNA velocity first as `scv.tl.velocity()`.")
+            raise KeyError("Compute RNA velocity first as `scvelo.tl.velocity()`.")
 
         # restrict genes to a subset, i.e. velocity genes or user provided list
         gene_subset = kwargs.pop("gene_subset", None)
@@ -151,14 +152,18 @@ class VelocityKernel(Kernel):
     @d.dedent
     def compute_transition_matrix(
         self,
-        mode: str = VelocityMode.DETERMINISTIC.s,
-        backward_mode: str = BackwardMode.TRANSPOSE.s,
-        scheme: Union[str, Callable] = Scheme.CORRELATION.s,
+        mode: Literal[
+            "deterministic", "stochastic", "sampling", "monte_carlo"
+        ] = VelocityMode.DETERMINISTIC,
+        backward_mode: Literal["transpose", "negate"] = BackwardMode.TRANSPOSE,
+        scheme: Union[
+            Literal["dot_product", "cosine", "correlation"], Callable
+        ] = Scheme.CORRELATION,
         softmax_scale: Optional[float] = None,
         n_samples: int = 1000,
         seed: Optional[int] = None,
         check_irreducibility: bool = False,
-        **kwargs,
+        **kwargs: Any,
     ) -> "VelocityKernel":
         """
         Compute transition matrix based on velocity directions on the local manifold.
@@ -173,7 +178,7 @@ class VelocityKernel(Kernel):
         %(softmax_scale)s
         %(velocity_scheme)s
         n_samples
-            Number of bootstrap samples when ``mode={m.MONTE_CARLO.s!r}``.
+            Number of bootstrap samples when ``mode = {m.MONTE_CARLO!r}``.
         seed
             Set the seed for random state when the method requires ``n_samples``.
         check_irreducibility
@@ -201,8 +206,8 @@ class VelocityKernel(Kernel):
 
         if self.backward and mode != VelocityMode.DETERMINISTIC:
             logg.warning(
-                f"Mode `{mode.s!r}` is currently not supported for the backward process. "
-                f"Defaulting to mode `{VelocityMode.DETERMINISTIC.s!r}`"
+                f"Mode `{mode!r}` is currently not supported for the backward process. "
+                f"Defaulting to mode `{VelocityMode.DETERMINISTIC!r}`"
             )
             mode = VelocityMode.DETERMINISTIC
 
@@ -216,21 +221,21 @@ class VelocityKernel(Kernel):
                 logg.warning(
                     f"Unable to detect a method for Hessian computation. If using predefined functions, consider "
                     f"installing `jax` as `pip install jax jaxlib`\n"
-                    f"Defaulting to `mode={VelocityMode.MONTE_CARLO.s!r}` and `n_samples={n_samples}`"
+                    f"Defaulting to `mode={VelocityMode.MONTE_CARLO!r}` and `n_samples={n_samples}`"
                 )
                 mode = VelocityMode.MONTE_CARLO
 
         start = logg.info(
-            f"Computing transition matrix based on logits using `{mode.s!r}` mode"
+            f"Computing transition matrix based on logits using `{mode!r}` mode"
         )
 
         if seed is None:
             seed = np.random.randint(0, 2 ** 16)
 
         # fmt: off
-        params = {"softmax_scale": softmax_scale, "mode": mode.s, "seed": seed, "scheme": str(scheme)}
+        params = {"softmax_scale": softmax_scale, "mode": mode, "seed": seed, "scheme": str(scheme)}
         if self.backward:
-            params["bwd_mode"] = backward_mode.s
+            params["bwd_mode"] = backward_mode
         if self._reuse_cache(params, time=start):
             return self
 
@@ -248,14 +253,14 @@ class VelocityKernel(Kernel):
         if mode != VelocityMode.STOCHASTIC and backend == "multiprocessing":
             # this is because on jitting and pickling (cloudpickle, used by loky, handles it correctly)
             logg.warning(
-                f"Multiprocessing backend is supported only for mode `{VelocityMode.STOCHASTIC.s!r}`. "
-                f"Defaulting to `{_DEFAULT_BACKEND}`"
+                f"Multiprocessing backend is supported only for mode `{VelocityMode.STOCHASTIC!r}`. "
+                f"Defaulting to `{_DEFAULT_BACKEND!r}`"
             )
             backend = _DEFAULT_BACKEND
 
         if softmax_scale is None:
             logg.info(
-                f"Estimating `softmax_scale` using `{VelocityMode.DETERMINISTIC.s!r}` mode"
+                f"Estimating `softmax_scale` using `{VelocityMode.DETERMINISTIC!r}` mode"
             )
             _, cmat = _dispatch_computation(
                 VelocityMode.DETERMINISTIC,

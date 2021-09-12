@@ -6,10 +6,10 @@ from copy import copy
 from types import MappingProxyType
 
 import scanpy as sc
+from cellrank.tl._enum import ModeEnum
 from cellrank.ul._docs import d
 from cellrank.tl._utils import _normalize
 from cellrank.tl.kernels import Kernel
-from cellrank.tl._constants import ModeEnum
 from cellrank.tl.kernels._utils import _ensure_numeric_ordered
 from cellrank.tl.kernels._base_kernel import AnnData
 

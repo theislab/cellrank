@@ -3,23 +3,11 @@ from typing import Tuple
 import os
 import pytest
 from _helpers import assert_estimators_equal
-from tempfile import TemporaryDirectory
 
 import cellrank as cr
-import cellrank.tl.kernels._precomputed_kernel
 from anndata import AnnData
+from cellrank._key import Key
 from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
-from cellrank.tl._constants import (
-    Direction,
-    DirPrefix,
-    AbsProbKey,
-    TermStatesKey,
-    _pd,
-    _probs,
-    _colors,
-    _lin_names,
-)
-from cellrank.tl.estimators._constants import A, P
 
 import numpy as np
 import pandas as pd
@@ -29,24 +17,6 @@ EPS = np.finfo(np.float64).eps
 
 
 class TestCFLARE:
-    def test_compute_partition(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
-        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        terminal_kernel = 0.8 * vk + 0.2 * ck
-
-        mc = cr.tl.estimators.CFLARE(terminal_kernel)
-        mc.compute_partition()
-
-        assert isinstance(mc.is_irreducible, bool)
-        if not mc.is_irreducible:
-            assert isinstance(mc.recurrent_classes, list)
-            assert isinstance(mc.transient_classes, list)
-            assert f"{TermStatesKey.FORWARD}_rec_classes" in mc.adata.obs
-            assert f"{TermStatesKey.FORWARD}_trans_classes" in mc.adata.obs
-        else:
-            assert mc.recurrent_classes is None
-            assert mc.transient_classes is None
-
     def test_compute_eigendecomposition(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
@@ -56,7 +26,7 @@ class TestCFLARE:
         mc.compute_eigendecomposition(k=2)
 
         assert isinstance(mc.eigendecomposition, dict)
-        assert set(mc._get(P.EIG).keys()) == {
+        assert set(mc.eigendecomposition.keys()) == {
             "D",
             "V_l",
             "V_r",
@@ -64,7 +34,7 @@ class TestCFLARE:
             "params",
             "stationary_dist",
         }
-        assert f"eig_{Direction.FORWARD}" in mc.adata.uns.keys()
+        assert Key.uns.eigen(mc.backward) in mc.adata.uns
 
     def test_compute_terminal_states_no_eig(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -94,12 +64,13 @@ class TestCFLARE:
         mc.compute_eigendecomposition(k=5)
         mc.compute_terminal_states(use=2)
 
-        assert is_categorical_dtype(mc._get(P.TERM))
-        assert mc._get(P.TERM_PROBS) is not None
+        assert is_categorical_dtype(mc.terminal_states)
+        assert mc.terminal_states_probabilities is not None
 
-        assert TermStatesKey.FORWARD.s in mc.adata.obs.keys()
-        assert _probs(TermStatesKey.FORWARD) in mc.adata.obs.keys()
-        assert _colors(TermStatesKey.FORWARD) in mc.adata.uns.keys()
+        key = Key.obs.term_states(mc.backward)
+        assert key in mc.adata.obs
+        assert Key.obs.probs(key) in mc.adata.obs
+        assert Key.uns.colors(key) in mc.adata.uns
 
     def test_rename_terminal_states_no_terminal_states(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -129,11 +100,11 @@ class TestCFLARE:
 
         mc = cr.tl.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
+        mc.compute_terminal_states(use=2, method="kmeans")
         with pytest.raises(ValueError):
             mc.rename_terminal_states({"0": "1"})
 
-    def test_rename_terminal_states_try_joinining_states(self, adata_large: AnnData):
+    def test_rename_terminal_states_try_joining_states(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
@@ -153,10 +124,10 @@ class TestCFLARE:
         mc.compute_eigendecomposition(k=5)
         mc.compute_terminal_states(use=2)
 
-        orig_cats = list(mc._get(P.TERM).cat.categories)
+        orig_cats = list(mc.terminal_states.cat.categories)
         mc.rename_terminal_states({})
 
-        np.testing.assert_array_equal(mc._get(P.TERM).cat.categories, orig_cats)
+        np.testing.assert_array_equal(mc.terminal_states.cat.categories, orig_cats)
 
     def test_rename_terminal_states_normal_run(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -165,63 +136,13 @@ class TestCFLARE:
 
         mc = cr.tl.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
-
+        mc.compute_terminal_states(use=2, method="kmeans")
         mc.rename_terminal_states({"0": "foo", "1": "bar"})
 
-        np.testing.assert_array_equal(mc._get(P.TERM).cat.categories, ["foo", "bar"])
-
-    def test_rename_terminal_states_non_string_new_names(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
-        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        terminal_kernel = 0.8 * vk + 0.2 * ck
-
-        mc = cr.tl.estimators.CFLARE(terminal_kernel)
-        mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
-
-        mc.rename_terminal_states({"0": 42, "1": object})
-
+        np.testing.assert_array_equal(mc.terminal_states.cat.categories, ["foo", "bar"])
         np.testing.assert_array_equal(
-            mc._get(P.TERM).cat.categories, ["42", str(object)]
-        )
-
-    def test_rename_terminal_states_update_adata(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
-        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        terminal_kernel = 0.8 * vk + 0.2 * ck
-
-        mc = cr.tl.estimators.CFLARE(terminal_kernel)
-        mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
-
-        mc.rename_terminal_states({"0": "foo", "1": "bar"})
-
-        np.testing.assert_array_equal(mc._get(P.TERM).cat.categories, ["foo", "bar"])
-        np.testing.assert_array_equal(
-            mc.adata.obs[TermStatesKey.FORWARD.s].cat.categories, ["foo", "bar"]
-        )
-        np.testing.assert_array_equal(
-            mc.adata.uns[_lin_names(TermStatesKey.FORWARD.s)], ["foo", "bar"]
-        )
-
-    def test_rename_terminal_states_dont_update_adata(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
-        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        terminal_kernel = 0.8 * vk + 0.2 * ck
-
-        mc = cr.tl.estimators.CFLARE(terminal_kernel)
-        mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
-
-        mc.rename_terminal_states({"0": "foo", "1": "bar"}, update_adata=False)
-
-        np.testing.assert_array_equal(mc._get(P.TERM).cat.categories, ["foo", "bar"])
-        np.testing.assert_array_equal(
-            mc.adata.obs[TermStatesKey.FORWARD.s].cat.categories, ["0", "1"]
-        )
-        np.testing.assert_array_equal(
-            mc.adata.uns[_lin_names(TermStatesKey.FORWARD.s)], ["0", "1"]
+            mc.adata.obs[Key.obs.term_states(mc.backward)].cat.categories,
+            ["foo", "bar"],
         )
 
     def test_compute_absorption_probabilities_no_args(self, adata_large: AnnData):
@@ -240,35 +161,34 @@ class TestCFLARE:
 
         mc = cr.tl.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
+        mc.compute_terminal_states(use=2, method="kmeans")
         mc.compute_absorption_probabilities()
         mc.compute_lineage_priming()
 
-        assert isinstance(mc._get(P.PRIME_DEG), pd.Series)
-        assert _pd(AbsProbKey.FORWARD) in mc.adata.obs.keys()
+        key = Key.obs.priming_degree(mc.backward)
+        assert isinstance(mc.priming_degree, pd.Series)
+        assert key in mc.adata.obs
+        np.testing.assert_array_equal(mc.priming_degree, mc.adata.obs[key])
+
+        key = Key.obsm.abs_probs(mc.backward)
+        assert isinstance(mc.absorption_probabilities, cr.tl.Lineage)
+        assert mc.absorption_probabilities.shape == (mc.adata.n_obs, 2)
+        assert key in mc.adata.obsm
+        assert isinstance(mc.adata.obsm[key], cr.tl.Lineage)
+        np.testing.assert_array_equal(mc.absorption_probabilities.X, mc.adata.obsm[key])
+
         np.testing.assert_array_equal(
-            mc._get(P.PRIME_DEG), mc.adata.obs[_pd(AbsProbKey.FORWARD)]
+            mc.absorption_probabilities.names,
+            mc.adata.obs[Key.obs.term_states(mc.backward)].cat.categories,
         )
 
-        assert isinstance(mc._get(P.ABS_PROBS), cr.tl.Lineage)
-        assert mc._get(P.ABS_PROBS).shape == (mc.adata.n_obs, 2)
-        assert f"{AbsProbKey.FORWARD}" in mc.adata.obsm.keys()
+        key = Key.uns.colors(Key.obs.term_states(mc.backward))
+        assert key in mc.adata.uns
         np.testing.assert_array_equal(
-            mc._get(P.ABS_PROBS).X, mc.adata.obsm[f"{AbsProbKey.FORWARD}"]
+            mc.absorption_probabilities.colors, mc.adata.uns[key]
         )
-
-        assert _lin_names(AbsProbKey.FORWARD) in mc.adata.uns.keys()
-        np.testing.assert_array_equal(
-            mc._get(P.ABS_PROBS).names,
-            mc.adata.uns[_lin_names(AbsProbKey.FORWARD)],
-        )
-
-        assert _colors(AbsProbKey.FORWARD) in mc.adata.uns.keys()
-        np.testing.assert_array_equal(
-            mc._get(P.ABS_PROBS).colors,
-            mc.adata.uns[_colors(AbsProbKey.FORWARD)],
-        )
-        np.testing.assert_allclose(mc._get(P.ABS_PROBS).X.sum(1), 1, rtol=1e-6)
+        np.testing.assert_array_equal(mc._term_states_colors, mc.adata.uns[key])
+        np.testing.assert_allclose(mc.absorption_probabilities.X.sum(1), 1, rtol=1e-6)
 
     def test_compute_absorption_probabilities_solver(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -282,11 +202,11 @@ class TestCFLARE:
 
         # compute lin probs using direct solver
         mc.compute_absorption_probabilities(solver="direct")
-        l_direct = mc._get(P.ABS_PROBS).copy()
+        l_direct = mc.absorption_probabilities.copy()
 
         # compute lin probs using iterative solver
         mc.compute_absorption_probabilities(solver="gmres", tol=tol)
-        l_iterative = mc._get(P.ABS_PROBS).copy()
+        l_iterative = mc.absorption_probabilities.copy()
 
         assert not np.shares_memory(l_direct.X, l_iterative.X)  # sanity check
         np.testing.assert_allclose(l_direct.X, l_iterative.X, rtol=0, atol=tol)
@@ -299,15 +219,15 @@ class TestCFLARE:
 
         mc = cr.tl.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
+        mc.compute_terminal_states(use=2, method="kmeans")
 
         # compute lin probs using direct solver
         mc.compute_absorption_probabilities(solver="gmres", use_petsc=False, tol=tol)
-        l_iter = mc._get(P.ABS_PROBS).copy()
+        l_iter = mc.absorption_probabilities.copy()
 
         # compute lin probs using petsc iterative solver
         mc.compute_absorption_probabilities(solver="gmres", use_petsc=True, tol=tol)
-        l_iter_petsc = mc._get(P.ABS_PROBS).copy()
+        l_iter_petsc = mc.absorption_probabilities.copy()
 
         assert not np.shares_memory(l_iter.X, l_iter_petsc.X)  # sanity check
         np.testing.assert_allclose(l_iter.X, l_iter_petsc.X, rtol=0, atol=tol)
@@ -331,7 +251,7 @@ class TestCFLARE:
             tol=tol,
             time_to_absorption="0",
         )
-        at = mc._get(P.LIN_ABS_TIMES)
+        at = mc.absorption_times
 
         assert isinstance(at, pd.DataFrame)
         np.testing.assert_array_equal(at.index, adata_large.obs_names)
@@ -353,7 +273,7 @@ class TestCFLARE:
         mc.compute_absorption_probabilities(
             solver="gmres", use_petsc=False, tol=tol, time_to_absorption={"0": "var"}
         )
-        at = mc._get(P.LIN_ABS_TIMES)
+        at = mc.absorption_times
 
         assert isinstance(at, pd.DataFrame)
         np.testing.assert_array_equal(at.index, adata_large.obs_names)
@@ -375,8 +295,8 @@ class TestCFLARE:
         mc.compute_absorption_probabilities(
             solver="gmres", use_petsc=False, tol=tol, time_to_absorption={"all": "var"}
         )
-        name = ", ".join(mc._get(P.ABS_PROBS).names)
-        at = mc._get(P.LIN_ABS_TIMES)
+        name = ", ".join(mc.absorption_probabilities.names)
+        at = mc.absorption_times
 
         assert isinstance(at, pd.DataFrame)
         np.testing.assert_array_equal(at.index, adata_large.obs_names)
@@ -426,16 +346,17 @@ class TestCFLARE:
 
         mc = cr.tl.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
+        mc.compute_terminal_states(use=2, method="kmeans")
         mc.compute_absorption_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
+        key = Key.varm.lineage_drivers(False)
         for lineage in ["0", "1"]:
-            assert np.all(mc.adata.var[f"{DirPrefix.FORWARD} {lineage} corr"] >= -1.0)
-            assert np.all(mc.adata.var[f"{DirPrefix.FORWARD} {lineage} corr"] <= 1.0)
+            assert np.all(mc.adata.varm[key][f"{lineage}_corr"] >= -1.0)
+            assert np.all(mc.adata.varm[key][f"{lineage}_corr"] <= 1.0)
 
-            assert np.all(mc.adata.var[f"{DirPrefix.FORWARD} {lineage} qval"] >= 0)
-            assert np.all(mc.adata.var[f"{DirPrefix.FORWARD} {lineage} qval"] <= 1.0)
+            assert np.all(mc.adata.varm[key][f"{lineage}_qval"] >= 0)
+            assert np.all(mc.adata.varm[key][f"{lineage}_qval"] <= 1.0)
 
     def test_plot_lineage_drivers_not_computed(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -497,25 +418,24 @@ class TestCFLARE:
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
         mc_fwd = cr.tl.estimators.CFLARE(terminal_kernel)
-        mc_fwd.compute_partition()
         mc_fwd.compute_eigendecomposition()
-        mc_fwd.compute_terminal_states(use=3)
+        mc_fwd.compute_terminal_states(use=3, method="kmeans")
 
         arcs = ["0", "2"]
         arc_colors = [
             c
             for arc, c in zip(
-                mc_fwd._get(P.TERM).cat.categories, mc_fwd._get(A.TERM_COLORS)
+                mc_fwd.terminal_states.cat.categories, mc_fwd._term_states_colors
             )
             if arc in arcs
         ]
 
         mc_fwd.compute_absorption_probabilities(keys=arcs)
-        lin_colors = mc_fwd._get(P.ABS_PROBS)[arcs].colors
+        lin_colors = mc_fwd.absorption_probabilities[arcs].colors
 
         np.testing.assert_array_equal(arc_colors, lin_colors)
 
-    def compare_absorption_probabilites_with_reference(self):
+    def test_compare_absorption_probabilities_with_reference(self):
         # define a reference transition matrix. This is an absorbing MC with 2 absorbing states
         transition_matrix = np.array(
             [
@@ -550,23 +470,21 @@ class TestCFLARE:
             ]
         )
 
-        # initialise a pre-computed kernel and CFLARE estimator object
-        c = cr.tl.estimators.CFLARE(
-            cellrank.tl.kernels._precomputed_kernel.PrecomputedKernel(transition_matrix)
-        )
+        c = cr.tl.estimators.CFLARE(cr.tl.kernels.PrecomputedKernel(transition_matrix))
 
-        # define the set of macrostates
-        state_annotation = pd.Series(index=range(p.shape[0]))
+        state_annotation = pd.Series(index=range(len(c)))
         state_annotation[7] = "terminal_1"
         state_annotation[10] = "terminal_2"
         state_annotation = state_annotation.astype("category")
-        c._set(A.TERM, state_annotation)
+        c._term_states = state_annotation
+        c._term_states_colors = np.array(["#000000", "#ffffff"])
 
         # compute absorption probabilities
         c.compute_absorption_probabilities()
-        absorption_probabilities_query = c.get(P.ABS_PROBS)[state_annotation.isna()]
+        absorption_probabilities_query = c.absorption_probabilities[
+            state_annotation.isna()
+        ]
 
-        # check whether these two agree
         np.allclose(absorption_probabilities_query, absorption_probabilities_reference)
 
     def test_manual_approx_rc_set(self, adata_large):
@@ -576,18 +494,18 @@ class TestCFLARE:
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
         mc_fwd = cr.tl.estimators.CFLARE(terminal_kernel)
-        mc_fwd.compute_partition()
         mc_fwd.compute_eigendecomposition()
+        key = Key.obs.term_states(mc_fwd.backward)
 
         mc_fwd.compute_terminal_states(use=3)
-        original = np.array(adata.obs[f"{TermStatesKey.FORWARD}"].copy())
+        original = np.array(adata.obs[key].copy())
         zero_mask = original == "0"
 
         cells = list(adata[zero_mask].obs_names)
         mc_fwd.set_terminal_states({"foo": cells})
 
-        assert (adata.obs[f"{TermStatesKey.FORWARD}"][zero_mask] == "foo").all()
-        assert pd.isna(adata.obs[f"{TermStatesKey.FORWARD}"][~zero_mask]).all()
+        assert (adata.obs[key][zero_mask] == "foo").all()
+        assert pd.isna(adata.obs[key][~zero_mask]).all()
 
     def test_abs_probs_do_not_sum_to_1(self, adata_large: AnnData, mocker):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -605,7 +523,7 @@ class TestCFLARE:
         abs_prob[:, 0] = 1.0
         abs_prob[0, 0] = 1.01
         mocker.patch(
-            "cellrank.tl.estimators._base_estimator._solve_lin_system",
+            "cellrank.tl.estimators.mixins._absorption_probabilities._solve_lin_system",
             return_value=abs_prob,
         )
 
@@ -631,7 +549,7 @@ class TestCFLARE:
         abs_prob[0, 0] = -0.5
         abs_prob[0, 1] = -1.5
         mocker.patch(
-            "cellrank.tl.estimators._base_estimator._solve_lin_system",
+            "cellrank.tl.estimators.mixins._absorption_probabilities._solve_lin_system",
             return_value=abs_prob,
         )
 
@@ -640,17 +558,21 @@ class TestCFLARE:
 
 
 class TestCFLAREIO:
-    def test_copy(self, adata_cflare_fwd: Tuple[AnnData, cr.tl.estimators.CFLARE]):
+    @pytest.mark.parametrize("deep", [False, True])
+    def test_copy(
+        self, adata_cflare_fwd: Tuple[AnnData, cr.tl.estimators.CFLARE], deep: bool
+    ):
         _, mc1 = adata_cflare_fwd
-        mc2 = mc1.copy()
+        mc2 = mc1.copy(deep=deep)
 
-        assert_estimators_equal(mc1, mc2, copy=True)
+        assert_estimators_equal(mc1, mc2, copy=True, deep=deep)
 
-    def test_read(self, adata_cflare_fwd: Tuple[AnnData, cr.tl.estimators.CFLARE]):
+    def test_read(
+        self, adata_cflare_fwd: Tuple[AnnData, cr.tl.estimators.CFLARE], tmpdir
+    ):
         _, mc1 = adata_cflare_fwd
 
-        with TemporaryDirectory() as tmpdir:
-            mc1.write(os.path.join(tmpdir, "foo"))
-            mc2 = cr.tl.estimators.CFLARE.read(os.path.join(tmpdir, "foo.pickle"))
+        mc1.write(os.path.join(tmpdir, "foo.pickle"))
+        mc2 = cr.tl.estimators.CFLARE.read(os.path.join(tmpdir, "foo.pickle"))
 
         assert_estimators_equal(mc1, mc2)

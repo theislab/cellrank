@@ -1,20 +1,19 @@
-"""Datasets module."""
-
-from typing import Any, Tuple, Union, TypeVar
+from typing import Any, Tuple, Union
+from typing_extensions import Literal
 
 import os
+from enum import auto
 from pathlib import Path
 
 from scanpy import read
+from anndata import AnnData
 from cellrank import logging as logg
+from cellrank.tl._enum import ModeEnum
 from cellrank.ul._docs import d, inject_docs
-from cellrank.tl._constants import ModeEnum
-
-AnnData = TypeVar("AnnData")
 
 
 class ReprogrammingSubset(ModeEnum):  # noqa: D101
-    FULL = "full"
+    FULL = auto()
     K48 = "48k"
     K85 = "85k"
 
@@ -162,7 +161,7 @@ def lung(
 @inject_docs(s=ReprogrammingSubset)
 @d.dedent
 def reprogramming_morris(
-    subset: str = ReprogrammingSubset.FULL.s,
+    subset: Literal["full", "48k", "85k"] = ReprogrammingSubset.FULL,
     path: Union[str, Path] = "datasets/reprogramming_morris.h5ad",
     **kwargs: Any,
 ) -> AnnData:
@@ -170,7 +169,7 @@ def reprogramming_morris(
     Reprogramming of mouse embryonic fibroblasts to induced endoderm progenitors at 8 time points from \
     :cite:`morris:18`.
 
-    scRNA-seq dataset comprising `104,887` cell recorded using 10X Chromium and Dropseq :cite:`macosko:15`
+    scRNA-seq dataset comprising `104 887` cell recorded using 10X Chromium and Dropseq :cite:`macosko:15`
     at 8 time points spanning days 0-28 past reprogramming initiation.
 
     Contains raw spliced and un-spliced count data, low-dimensional embedding coordinates as well as clonal information
@@ -185,9 +184,9 @@ def reprogramming_morris(
     subset
         Whether to return the full object or just a subset. Can be one of:
 
-            - `{s.FULL.s!r}` - return the complete dataset containing `104 887` cells.
-            - `{s.K85.s!r}` - return the subset as described in :cite:`morris:18` Fig. 1, containing `85 010` cells.
-            - `{s.K48.s!r}` - return the subset as described in :cite:`morris:18` Fig. 3, containing `48 515` cells.
+            - `{s.FULL!r}` - return the complete dataset containing `104 887` cells.
+            - `{s.K85!r}` - return the subset as described in :cite:`morris:18` Fig. 1, containing `85 010` cells.
+            - `{s.K48!r}` - return the subset as described in :cite:`morris:18` Fig. 3, containing `48 515` cells.
 
     %(dataset.parameters)s
 
@@ -209,9 +208,7 @@ def reprogramming_morris(
     if subset == ReprogrammingSubset.K85:
         return adata[~adata.obs["timecourse"].isnull()].copy()
 
-    raise NotImplementedError(
-        f"Subsetting option `{subset.s!r}` is not yet implemented."
-    )
+    raise NotImplementedError(f"Subsetting option `{subset!r}` is not yet implemented.")
 
 
 @d.dedent

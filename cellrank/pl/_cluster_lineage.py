@@ -1,6 +1,4 @@
-"""Cluster lineages module."""
-
-from typing import Dict, Tuple, Union, Optional, Sequence
+from typing import Any, Dict, Tuple, Union, Optional, Sequence
 
 from types import MappingProxyType
 from pathlib import Path
@@ -8,6 +6,8 @@ from pathlib import Path
 import scanpy as sc
 from anndata import AnnData
 from cellrank import logging as logg
+from cellrank._key import Key
+from cellrank.tl._enum import _DEFAULT_BACKEND, Backend_t
 from cellrank.ul._docs import d
 from cellrank.pl._utils import (
     _fit_bulk,
@@ -22,7 +22,6 @@ from cellrank.pl._utils import (
 )
 from cellrank.tl._utils import save_fig, _unique_order_preserving
 from cellrank.ul._utils import _genesymbols, _get_n_cores, _check_collection
-from cellrank.tl._constants import _DEFAULT_BACKEND, AbsProbKey
 
 import numpy as np
 from sklearn.preprocessing import StandardScaler
@@ -56,7 +55,7 @@ def cluster_lineage(
     random_state: Optional[int] = None,
     show_progress_bar: bool = True,
     n_jobs: Optional[int] = 1,
-    backend: str = _DEFAULT_BACKEND,
+    backend: Backend_t = _DEFAULT_BACKEND,
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
     save: Optional[Union[str, Path]] = None,
@@ -64,7 +63,7 @@ def cluster_lineage(
     neighbors_kwargs: Dict = MappingProxyType({"use_rep": "X"}),
     clustering_kwargs: Dict = MappingProxyType({}),
     return_models: bool = False,
-    **kwargs,
+    **kwargs: Any,
 ) -> Optional[_return_model_type]:
     """
     Cluster gene expression trends within a lineage and plot the clusters.
@@ -88,9 +87,9 @@ def cluster_lineage(
     n_points
         Number of points used for prediction.
     time_key
-        Key in ``adata.obs`` where the pseudotime is stored.
+        Key in :attr:`anndata.AnnData.obs` where the pseudotime is stored.
     covariate_key
-        Key(s) in ``adata.obs`` containing observations to be plotted at the bottom of each plot.
+        Key(s) in :attr:`anndata.AnnData.obs` containing observations to be plotted at the bottom of each plot.
     %(gene_symbols)s
     ratio
         Height ratio of each covariate in ``covariate_key``.
@@ -106,7 +105,8 @@ def cluster_lineage(
     sharey
         Whether to share y-axis across multiple plots.
     key
-        Key in ``adata.uns`` where to save the results. If `None`, it will be saved as ``lineage_{lineage}_trend`` .
+        Key in :attr:`anndata.AnnData.uns` where to save the results.
+        If `None`, it will be saved as ``'lineage_{lineage}_trend'`` .
     random_state
         Random seed for reproducibility.
     %(parallel)s
@@ -131,13 +131,15 @@ def cluster_lineage(
               shape `(n_genes, n_points)` containing the clustered genes.
     """
 
-    def plot_cluster(row, col, cluster, sharey_ax: Optional[str] = None):
+    def plot_cluster(
+        row: int, col: int, cluster: str, sharey_ax: Optional[str] = None
+    ) -> Optional[plt.Axes]:
         gss = GridSpecFromSubplotSpec(
             row_delta,
             1,
             subplot_spec=gs[row : row + row_delta, col],
             hspace=0,
-            height_ratios=[1] + [ratio] * (row_delta - 1),
+            height_ratios=[1.0] + [ratio] * (row_delta - 1),
         )
         ax = fig.add_subplot(gss[0, 0], sharey=sharey_ax)
 
@@ -180,7 +182,7 @@ def cluster_lineage(
         return ax if sharey else None
 
     use_raw = kwargs.get("use_raw", False)
-    lineage_key = str(AbsProbKey.BACKWARD if backward else AbsProbKey.FORWARD)
+    lineage_key = Key.obsm.abs_probs(backward)
     if lineage_key not in adata.obsm:
         raise KeyError(f"Lineages key `{lineage_key!r}` not found in `adata.obsm`.")
 

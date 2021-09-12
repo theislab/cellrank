@@ -1,3 +1,4 @@
+# TODO: in 2.0, remove .tl
 import cellrank.pl
 import cellrank.tl
 import cellrank.ul
@@ -9,7 +10,7 @@ import cellrank.external
 import cellrank.estimators
 from cellrank.settings import settings
 from cellrank.tl._read import read
-from cellrank.tl._constants import Lin
+from cellrank.tl._lineage import Lin
 
 __author__ = ", ".join(["Marius Lange", "Michal Klein"])
 __maintainer__ = ", ".join(["Marius Lange", "Michal Klein"])

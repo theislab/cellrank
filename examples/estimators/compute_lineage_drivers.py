@@ -39,7 +39,7 @@ g.absorption_probabilities
 # parameters.
 # We also compute the corrected p-values (qval) and the 95% confidence intervals for the correlations.
 g.compute_lineage_drivers(lineages="Alpha")
-g.lineage_drivers.sort_values("Alpha corr", ascending=False)
+g.lineage_drivers.sort_values("Alpha_corr", ascending=False)
 
 # %%
 # Lastly, we plot the top 3 potential driver genes for the `"Alpha"` lineage.

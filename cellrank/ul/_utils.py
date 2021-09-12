@@ -1,10 +1,7 @@
-"""General utility functions module."""
 from typing import Any, Dict, List, Tuple, Union, Callable, Iterable, Optional
 
 import wrapt
-import pickle
 from types import MappingProxyType
-from pathlib import Path
 from functools import wraps, update_wrapper
 from contextlib import contextmanager
 from multiprocessing import cpu_count
@@ -16,60 +13,6 @@ from cellrank.ul._docs import d
 
 import numpy as np
 from scipy.sparse import issparse, spmatrix
-
-
-class Pickleable:
-    """Class which allows serialization and deserialization using :mod:pickle."""
-
-    @d.get_full_description(base="pickleable")
-    @d.get_sections(base="pickleable", sections=["Parameters", "Returns"])
-    def write(self, fname: Union[str, Path], ext: Optional[str] = "pickle") -> None:
-        """
-        Serialize self to a file.
-
-        Parameters
-        ----------
-        fname
-            Filename where to save the object.
-        ext
-            Filename extension to use. If `None`, don't append any extension.
-
-        Returns
-        -------
-        None
-            Nothing, just writes itself to a file using :mod:`pickle`.
-        """
-
-        fname = str(fname)
-        if ext is not None:
-            if not ext.startswith("."):
-                ext = "." + ext
-            if not fname.endswith(ext):
-                fname += ext
-
-        logg.info(f"Writing `{self}` to `{fname}`")
-
-        with open(fname, "wb") as fout:
-            pickle.dump(self, fout)
-
-    @staticmethod
-    def read(fname: Union[str, Path]) -> Any:
-        """
-        Deserialize self from a file.
-
-        Parameters
-        ----------
-        fname
-            Filename from which to read the object.
-
-        Returns
-        -------
-        :class:`typing.Any`
-            The deserialized object.
-        """
-
-        with open(fname, "rb") as fin:
-            return pickle.load(fin)
 
 
 def _check_collection(
@@ -225,16 +168,14 @@ def _read_graph_data(adata: AnnData, key: str) -> Union[np.ndarray, spmatrix]:
     adata
         Annotated data object.
     key
-        Key in ``adata.obsp``.
+        Key in :attr:`anndata.AnnData.obsp`.
 
     Returns
     -------
     :class:`numpy.ndarray` or :class:`scipy.sparse.spmatrix`
         The graph data.
     """
-
-    logg.debug(f"Reading key `{key!r}` from `adata.obsp`")
-    if key in adata.obsp.keys():
+    if key in adata.obsp:
         return adata.obsp[key]
 
     raise KeyError(f"Unable to find data in `adata.obsp[{key!r}]`.")

@@ -1,4 +1,3 @@
-"""Gene trend module."""
 from typing import Any, List, Tuple, Union, Mapping, Optional, Sequence
 
 from types import MappingProxyType
@@ -6,6 +5,8 @@ from pathlib import Path
 
 from anndata import AnnData
 from cellrank import logging as logg
+from cellrank._key import Key
+from cellrank.tl._enum import _DEFAULT_BACKEND, Backend_t
 from cellrank.ul._docs import d
 from cellrank.pl._utils import (
     _fit_bulk,
@@ -20,7 +21,6 @@ from cellrank.pl._utils import (
 )
 from cellrank.tl._utils import save_fig, _unique_order_preserving
 from cellrank.ul._utils import _genesymbols, _get_n_cores, _check_collection
-from cellrank.tl._constants import _DEFAULT_BACKEND, AbsProbKey
 
 import numpy as np
 import pandas as pd
@@ -65,7 +65,7 @@ def gene_trends(
     suptitle: Optional[str] = None,
     return_models: bool = False,
     n_jobs: Optional[int] = 1,
-    backend: str = _DEFAULT_BACKEND,
+    backend: Backend_t = _DEFAULT_BACKEND,
     show_progress_bar: bool = True,
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
@@ -89,16 +89,17 @@ def gene_trends(
         Names of the lineages to plot. If `None`, plot all lineages.
     %(backward)s
     data_key
-        Key in ``adata.layers`` or `'X'` for ``adata.X`` where the data is stored.
+        Key in :attr:`anndata.AnnData.layers` or `'X'` for :attr:`anndata.AnnData.X` where the data is stored.
     time_key
-        Key in ``adata.obs`` where the pseudotime is stored.
+        Key in :attr:`anndata.AnnData.obs` where the pseudotime is stored.
     %(time_range)s
 
         This can also be specified on per-lineage basis.
     %(gene_symbols)s
     transpose
-        If ``same_plot=True``, group the trends by ``lineages`` instead of ``genes``. This enforces ``hide_cells=True``.
-        If ``same_plot=False``, show ``lineages`` in rows and ``genes`` in columns.
+        If ``same_plot = True``, group the trends by ``lineages`` instead of ``genes``.
+        This forces ``hide_cells = True``.
+        If ``same_plot = False``, show ``lineages`` in rows and ``genes`` in columns.
     %(model_callback)s
     conf_int
         Whether to compute and show confidence interval. If the ``model`` is :class:`cellrank.ul.models.GAMR`,
@@ -112,10 +113,10 @@ def gene_trends(
         This can improve visualization. Can be specified individually for each lineage.
     lineage_cmap
         Categorical colormap to use when coloring in the lineages. If `None` and ``same_plot``,
-        use the corresponding colors in ``adata.uns``, otherwise use `'black'`.
+        use the corresponding colors in :attr:`anndata.AnnData.uns`, otherwise use `'black'`.
     abs_prob_cmap
         Continuous colormap to use when visualizing the absorption probabilities for each lineage.
-        Only used when ``same_plot=False``.
+        Only used when ``same_plot = False``.
     cell_color
         Key in :attr:`anndata.AnnData.obs` or :attr:`anndata.AnnData.var_names` used for coloring the cells.
     cell_alpha
@@ -127,7 +128,8 @@ def gene_trends(
     lw
         Line width of the smoothed values.
     cbar
-        Whether to show colorbar. Always shown when percentiles for lineages differ. Only used when ``same_plot=False``.
+        Whether to show colorbar. Always shown when percentiles for lineages differ.
+        Only used when ``same_plot = False``.
     margins
         Margins around the plot.
     sharex
@@ -137,11 +139,11 @@ def gene_trends(
     gene_as_title
         Whether to show gene names as titles instead on y-axis.
     legend_loc
-        Location of the legend displaying lineages. Only used when `same_plot=True`.
+        Location of the legend displaying lineages. Only used when `same_plot = True`.
     obs_legend_loc
         Location of the legend when ``cell_color`` corresponds to a categorical variable.
     ncols
-        Number of columns of the plot when plotting multiple genes. Only used when ``same_plot=True``.
+        Number of columns of the plot when plotting multiple genes. Only used when ``same_plot = True``.
     suptitle
         Suptitle of the figure.
     %(return_models)s
@@ -167,12 +169,12 @@ def gene_trends(
         use_raw=kwargs.get("use_raw", False),
     )
 
-    ln_key = str(AbsProbKey.BACKWARD if backward else AbsProbKey.FORWARD)
-    if ln_key not in adata.obsm:
-        raise KeyError(f"Lineages key `{ln_key!r}` not found in `adata.obsm`.")
+    lineage_key = Key.obsm.abs_probs(backward)
+    if lineage_key not in adata.obsm:
+        raise KeyError(f"Lineages key `{lineage_key!r}` not found in `adata.obsm`.")
 
     if lineages is None:
-        lineages = adata.obsm[ln_key].names
+        lineages = adata.obsm[lineage_key].names
     elif isinstance(lineages, str):
         lineages = [lineages]
     elif all(ln is None for ln in lineages):  # no lineage, all the weights are 1
@@ -211,7 +213,7 @@ def gene_trends(
     )
 
     lineages = sorted(lineages)
-    tmp = adata.obsm[ln_key][lineages].colors
+    tmp = adata.obsm[lineage_key][lineages].colors
     if lineage_cmap is None and not transpose:
         lineage_cmap = tmp
 
@@ -279,7 +281,7 @@ def gene_trends(
                 and plot_kwargs.get("lineage_probability", False)
                 and transpose
             ):
-                lpc = adata.obsm[ln_key][gene].colors[0]
+                lpc = adata.obsm[lineage_key][gene].colors[0]
             else:
                 lpc = None
 
