@@ -45,6 +45,9 @@ Bugfixes
 - Restricts computation of embedding projection to kNN based kernels.
   `#733 <https://github.com/theislab/cellrank/pull/733>`__
 
+- Fix :meth:`cellrank.external.kernels.WOTKernel.compute_transition_matrix` silently ignoring unexpected kwargs.
+  `#737 <https://github.com/theislab/cellrank/pull/737>`__
+
 - Use actual number of nearest neighbors in :class`cellrank.tl.kernels.PseudotimeKernel`
   when using hard thresholding scheme.
   `#738 <https://github.com/theislab/cellrank/pull/738>`__
