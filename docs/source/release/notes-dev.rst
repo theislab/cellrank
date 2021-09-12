@@ -5,25 +5,25 @@ Features
 --------
 
 - Add ``threshold`` to :meth:`cellrank.external.kernels.WOTKernel.compute_transition_matrix` to increase sparsity and
-  speed up :class:`cellrank.estimators.GPCCA`.
+  speed up :class:`cellrank.tl.estimators.GPCCA`.
   `#696 <https://github.com/theislab/cellrank/pull/696>`__
 
 - Allow using columns from :attr:`anndata.AnnData.var` as gene symbols for some plotting functions.
   `#726 <https://github.com/theislab/cellrank/pull/726>`__
 
-- Completely refactor :mod:`cellrank.estimators`. This includes the following changes:
+- Completely refactor :mod:`cellrank.tl.estimators`. This includes the following changes:
 
       - define less coupled, more extensible class hierarchy.
       - follow more closely fit/predict paradigm of :mod:`sklearn`, see e.g.
-        :meth:`cellrank.estimators.GPCCA.fit` and :meth:`cellrank.estimators.GPCCA.predict`.
+        :meth:`cellrank.tl.estimators.GPCCA.fit` and :meth:`cellrank.tl.estimators.GPCCA.predict`.
       - make estimators implicitly maintain a more consistent state.
       - remove plotting of Schur vectors  and eigenvectors in an embedding.
       - remove cell-cycle warning for terminal states.
       - remove ``is_irreducible``, ``recurrent_classes`` and ``transient_classes`` properties.
-      - remove optional irreducibility check from :meth:`cellrank.estimators.GPCCA.compute_absorption_probabilities`
+      - remove optional irreducibility check from :meth:`cellrank.tl.estimators.GPCCA.compute_absorption_probabilities`
       - normalize estimator attribute names and key names when writing to :class:`anndata.AnnData`.
       - allow estimators to serialize self from/to :class:`anndata.AnnData`, see
-        :meth:`cellrank.estimators.BaseEstimator.from_adata` or :meth:`cellrank.estimators.BaseEstimator.to_adata`.
+        :meth:`cellrank.tl.estimators.BaseEstimator.from_adata` or :meth:`cellrank.tl.estimators.BaseEstimator.to_adata`.
       - allow estimators to be saved to a file without it :class:`anndata.AnnData`.
       - improve docstrings in various places.
       - write lineage drivers to :attr:`anndata.AnnData.varm` instead of :attr:`anndata.AnnData.var`.
@@ -48,7 +48,7 @@ Bugfixes
 - Fix :meth:`cellrank.external.kernels.WOTKernel.compute_transition_matrix` silently ignoring unexpected kwargs.
   `#737 <https://github.com/theislab/cellrank/pull/737>`__
 
-- Use actual number of nearest neighbors in :class:`cellrank.kernels.PseudotimeKernel`
+- Use actual number of nearest neighbors in :class:`cellrank.tl.kernels.PseudotimeKernel`
   when using hard thresholding scheme.
   `#738 <https://github.com/theislab/cellrank/pull/738>`__
 
