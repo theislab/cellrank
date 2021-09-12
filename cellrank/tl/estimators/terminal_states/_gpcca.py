@@ -151,7 +151,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
         Returns
         -------
-        Updates the following fields:
+        Nothing, just updates the following fields:
 
             - :attr:`macrostates` - %(gpcca_macro.summary)s
             - :attr:`macrostates_memberships` - %(gpcca_macro_memberships.summary)s
@@ -297,7 +297,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         names: Optional[Union[str, Sequence[str], Mapping[str, str]]] = None,
         n_cells: int = 30,
         **kwargs: Any,
-    ):
+    ) -> None:
         """
         Manually select terminal states from macrostates.
 
@@ -405,7 +405,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         **kwargs: Any,
     ) -> "GPCCA":
         """
-        %(tse_fit.full_desc)s
+        Prepare self for terminal states prediction.
 
         Parameters
         ----------
@@ -414,7 +414,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         Returns
         -------
         %(gpcca_compute_macro.returns)s
-        """  # noqa: D400
+        """
         if n_states is None:
             self.compute_eigendecomposition()
             n_states = self.eigendecomposition["eigengap"] + 1
@@ -691,8 +691,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
         Returns
         -------
-        :class:`matplotlib.pyplot.Axes`
-            The axis object if ``show = False``.
+        The axes object, if ``show = False``.
         %(just_plots)s
         """
         from cellrank.pl._utils import _position_legend
@@ -903,7 +902,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
         Returns
         -------
-        Nothing, just update the field as described in :meth:`compute_macrostates`.
+        Nothing, just updates the field as described in :meth:`compute_macrostates`.
         """
 
         if n_cells is None:

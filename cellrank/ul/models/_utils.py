@@ -43,8 +43,7 @@ def _extract_data(
 
     Returns
     -------
-    :class:`numpy.ndarray` or :class`scipy.sparse.spmatrix`
-        The extracted expression data.
+    The extracted expression data.
     """
     if isinstance(data, AnnData):
         if use_raw:
@@ -165,8 +164,7 @@ def _calculate_norm_factors(
 
     Returns
     -------
-    :class:`numpy.ndarray`
-        Array of shape `(data.shape[0],)` containing the factors.
+    Array of shape `(data.shape[0],)` containing the factors.
 
     References
     ----------
@@ -429,8 +427,7 @@ def _get_knotlocs(
 
     Returns
     -------
-    :class:`numpy.ndarray`
-        Array of shape `(n_knots,)` containing the locations of knots along the pseudotime.
+    Array of shape `(n_knots,)` containing the locations of knots along the pseudotime.
     """
 
     if n_knots <= 0:
@@ -513,8 +510,7 @@ def _get_offset(
 
     Returns
     -------
-    :class:`numpy.ndarray`
-        Array of shape `(adata.n_obs,)` containing the offset.
+    Array of shape `(adata.n_obs,)` containing the offset.
     """
     with np.errstate(divide="ignore", invalid="ignore"):
         if not recompute and isinstance(adata, AnnData) and _OFFSET_KEY in adata.obs:

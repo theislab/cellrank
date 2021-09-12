@@ -162,9 +162,8 @@ class Hessian(ABC):  # noqa: D101
 
         Returns
         -------
-        :class:`numpy.ndarray`
-            The full Hessian of shape ``(n_neighbors, n_genes, n_genes)`` or only its diagonal of shape
-            ``(n_neighbors, n_genes)``.
+        The full Hessian of shape ``(n_neighbors, n_genes, n_genes)`` or only its diagonal of shape
+        ``(n_neighbors, n_genes)``.
 
         Developer notes
         ---------------
@@ -201,8 +200,7 @@ class SimilaritySchemeABC(ABC):
 
         Returns
         -------
-        :class:`numpy.ndarray`, :class:`numpy.ndarray`
-            The probability and logits arrays of shape ``(n_neighbors,)``.
+        The probability and logits arrays of shape ``(n_neighbors,)``.
         """
 
     def __repr__(self):

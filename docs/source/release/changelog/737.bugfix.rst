@@ -1,0 +1,1 @@
+Fix :meth:`cellrank.external.kernels.WOTKernel.compute_transition_matrix` silently ignoring unexpected kwargs.

@@ -48,8 +48,7 @@ def _create_colors(
 
     Returns
     -------
-    :class:`list`
-        List of colors, either as a hex string or an RGB array.
+    List of colors, either as a hex string or an RGB array.
     """
 
     if not mcolors.is_color_like(base_color):
@@ -182,8 +181,7 @@ def _map_names_and_colors(
 
     Returns
     -------
-    :class:`pandas.Series`, :class:`list`
-        Series with updated category names and a corresponding array of colors.
+    Series with updated category names and a corresponding array of colors.
     """
 
     # checks: dtypes, matching indices, make sure colors match the categories
@@ -335,8 +333,7 @@ def _colors_in_order(
 
     Returns
     -------
-    list
-        List of colors in order defined by `clusters`.
+    List of colors in order defined by `clusters`.
     """
 
     assert (

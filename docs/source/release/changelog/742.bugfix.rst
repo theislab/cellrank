@@ -1,0 +1,1 @@
+Fix :func:`cellrank.pl.cluster_lineage` sometimes reusing the same ax.

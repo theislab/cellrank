@@ -81,8 +81,7 @@ def _curved_edges(
 
     Returns
     -------
-    :class:`np.ndarray`
-        Array of shape ``(n_edges, bezier_precision, 2)`` containing the curved edges.
+    Array of shape ``(n_edges, bezier_precision, 2)`` containing the curved edges.
     """
 
     try:
@@ -196,8 +195,7 @@ def _is_any_gam_mgcv(models: Union[BaseModel, Dict[str, Dict[str, BaseModel]]]) 
 
     Returns
     -------
-    bool
-        `True` if any of the models is from R's mgcv package, else `False`.
+    `True` if any of the models is from R's mgcv package, else `False`.
     """
 
     return isinstance(models, GAMR) or (
@@ -221,7 +219,7 @@ def _create_models(
 
     Returns
     -------
-        The created models.
+    The created models.
     """
 
     def process_lineages(
@@ -358,9 +356,9 @@ def _fit_bulk_helper(
 
     Returns
     -------
-        The fitted models, optionally containing the confidence interval in the
-        form of `{'gene1': {'lineage1': <model11>, ...}, ...}`.
-        If any step has failed, the model will be of type :class:`cellrank.ul.models.FailedModel`.
+    The fitted models, optionally containing the confidence interval in the form of
+    `{'gene1': {'lineage1': <model11>, ...}, ...}`.
+    If any step has failed, the model will be of type :class:`cellrank.ul.models.FailedModel`.
     """
     if len(lineages) != len(time_range):
         raise ValueError(
@@ -439,18 +437,17 @@ def _fit_bulk(
 
     Returns
     -------
-    :class:`dict`
-        All the models, including the failed ones. It is a nested dictionary where keys are the ``genes`` and the values
-        is again a :class:`dict`, where keys are ``lineages`` and values are the failed or fitted models or
-        the :class:`collections.namedtuple`, based on ``return_models=True``.
-    :class:`dict`
-        Same as above, but can contain failed models if ``filter_all_failed=False``. In that case, it is guaranteed
-        that this dictionary will contain only genes which have been successfully fitted for at least 1 lineage.
-        If ``return_models=True``, the models are just a :class:`collections.namedtuple` of `(x_test, y_test)`.
-    :class:`tuple`
-        All the genes of the filtered models.
-    :class:`tuple`
-        All the lineage of the filtered models.
+    All the models, including the failed ones. It is a nested dictionary where keys are the ``genes`` and the values
+    is again a :class:`dict`, where keys are ``lineages`` and values are the failed or fitted models or
+    the :class:`collections.namedtuple`, based on ``return_models = True``.
+
+    Same as above, but can contain failed models if ``filter_all_failed=False``. In that case, it is guaranteed
+    that this dictionary will contain only genes which have been successfully fitted for at least 1 lineage.
+    If ``return_models = True``, the models are just a :class:`collections.namedtuple` of `(x_test, y_test)`.
+
+    All the genes of the filtered models.
+
+    All the lineage of the filtered models.
     """
 
     if isinstance(genes, str):
@@ -828,8 +825,7 @@ def _position_legend(ax: mpl.axes.Axes, legend_loc: str, **kwargs) -> mpl.legend
 
     Returns
     -------
-    :class: `matplotlib.legend.Legend`
-        The created legend.
+    The created legend.
     """
 
     if legend_loc == "center center out":
@@ -928,7 +924,7 @@ def _create_callbacks(
 
     Returns
     -------
-        The created callbacks.
+    The created callbacks.
     """
 
     def process_lineages(
@@ -1156,8 +1152,7 @@ def _held_karp(dists: np.ndarray) -> Tuple[float, np.ndarray]:
 
     Returns
     -------
-    :class:`tuple`
-        The cost and the path.
+    The cost and the path.
     """
     n = len(dists)
 

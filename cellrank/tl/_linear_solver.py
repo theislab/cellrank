@@ -56,12 +56,10 @@ def _create_petsc_matrix(
 
     Returns
     -------
-    :class:`petsc4py.PETSc.Mat`
-        The converted matrix.
+    The converted matrix.
     """
 
-    # TODO:
-    # for some solvers, we need to set the diagonal entries explicitly, even if they are zeros
+    # TODO(michalk8): for some solvers, we need to set the diagonal entries explicitly, even if they are zeros
     # see: https://lists.mcs.anl.gov/mailman/htdig/petsc-users/2014-October/023212.html
 
     from petsc4py import PETSc
@@ -105,7 +103,7 @@ def _create_solver(
 
     Returns
     -------
-        Triple containing the solver, vector ``x`` and vector ``b`` in ``A * x = b``.
+    Triple containing the solver, vector ``x`` and vector ``b`` in ``A * x = b``.
     """
 
     from petsc4py import PETSc
@@ -233,11 +231,10 @@ def _solve_many_sparse_problems(
 
     Returns
     -------
-    :class:`numpy.ndarray`
-        Matrix of shape `n x m`. Each column in the resulting matrix corresponds to the solution
-        of one of the sub-problems defined via columns in ``mat_b``.
-    int
-        Number of converged solutions.
+    Matrix of shape `n x m`. Each column in the resulting matrix corresponds to the solution
+    of one of the sub-problems defined via columns in ``mat_b``.
+
+    Number of converged solutions.
     """
 
     # initialise solution list and info list
@@ -398,9 +395,8 @@ def _solve_lin_system(
 
     Returns
     --------
-    :class:`numpy.ndarray`
-        Matrix of shape `n x m`. Each column corresponds to the solution of one of the sub-problems
-        defined via columns in ``mat_b``.
+    Matrix of shape `n x m`. Each column corresponds to the solution of one of the sub-problems
+    defined via columns in ``mat_b``.
     """
 
     def extractor(

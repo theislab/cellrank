@@ -124,8 +124,7 @@ class PseudotimeKernel(Kernel):
 
         Returns
         -------
-        :class:`cellrank.tl.kernels.PseudotimeKernel`
-            Makes :attr:`transition_matrix` available.
+        Self and updated :attr:`transition_matrix`.
         """
         start = logg.info(f"Computing transition matrix based on `{self._time_key}`")
         if isinstance(threshold_scheme, str):

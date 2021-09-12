@@ -31,8 +31,7 @@ def _np_apply_along_axis(func1d, axis: int, arr: np.ndarray) -> np.ndarray:
 
     Returns
     -------
-    :class:`numpy.ndarray`
-        The reduced array.
+    The reduced array.
     """
 
     assert arr.ndim == 2

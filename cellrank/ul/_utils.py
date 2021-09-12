@@ -41,8 +41,7 @@ def _check_collection(
 
     Returns
     -------
-    None
-        Nothing, but raises and :class:`KeyError` if one of the needles is not found.
+    Nothing, but raises and :class:`KeyError` if one of the needles is not found.
     """
     adata_name = "adata"
 
@@ -82,8 +81,7 @@ def _get_n_cores(n_cores: Optional[int], n_jobs: Optional[int]) -> int:
 
     Returns
     -------
-    int
-        Positive integer corresponding to how many cores to use.
+    Positive integer corresponding to how many cores to use.
     """
     if n_cores == 0:
         raise ValueError("Number of cores cannot be `0`.")
@@ -110,8 +108,7 @@ def _minmax(
 
     Returns
     -------
-    :class:`tuple`
-        Minimum and maximum values, respectively.
+    Minimum and maximum values, respectively.
     """
     if perc is not None:
         data = np.clip(data, *np.percentile(data, sorted(perc)))
@@ -172,8 +169,7 @@ def _read_graph_data(adata: AnnData, key: str) -> Union[np.ndarray, spmatrix]:
 
     Returns
     -------
-    :class:`numpy.ndarray` or :class:`scipy.sparse.spmatrix`
-        The graph data.
+    The graph data.
     """
     if key in adata.obsp:
         return adata.obsp[key]

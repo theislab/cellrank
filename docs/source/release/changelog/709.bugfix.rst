@@ -1,1 +1,1 @@
-Update towncrier to display development release notes.
+Update ``towncrier`` to display development release notes.

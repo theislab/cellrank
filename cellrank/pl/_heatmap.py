@@ -152,9 +152,9 @@ def heatmap(
     Returns
     -------
     %(plots_or_returns_models)s
-    :class:`pandas.DataFrame`
-        If ``return_genes = True`` and ``mode = {m.LINEAGES!r}``, returns :class:`pandas.DataFrame`
-        containing the clustered or sorted genes.
+
+    If ``return_genes = True`` and ``mode = {m.LINEAGES!r}``, returns :class:`pandas.DataFrame`
+    containing the clustered or sorted genes.
     """
 
     def find_indices(series: pd.Series, values) -> Tuple[Any]:

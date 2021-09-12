@@ -360,7 +360,7 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
 
         Returns
         -------
-        Nothing, but updates the following fields:
+        Nothing, just updates the following fields:
 
             - :attr:`x` - %(base_model_x.summary)s
             - :attr:`y` - %(base_model_y.summary)s
@@ -594,8 +594,7 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
 
         Returns
         -------
-        :class:`cellrank.ul.models.BaseModel`
-            Fits the model and returns self.
+        Fits the :attr:`model` and returns self.
         """
         if not self.prepared:
             raise RuntimeError(
@@ -641,10 +640,9 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
 
         Returns
         -------
-        :class:`numpy.ndarray`
-            Updates and returns the following:
+        Updates and returns the following field:
 
-                - :attr:`y_test` - %(base_model_y_test.summary)s
+            - :attr:`y_test` - %(base_model_y_test.summary)s
         """
 
     @abstractmethod
@@ -671,10 +669,9 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
 
         Returns
         -------
-        :class:`numpy.ndarray`
-            Updates the following fields:
+        Updates and returns the following field:
 
-                - :attr:`conf_int` - %(base_model_conf_int.summary)s
+            - :attr:`conf_int` - %(base_model_conf_int.summary)s
         """
 
     @d.dedent
@@ -695,6 +692,9 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
         Returns
         -------
         %(base_model_ci.returns)s
+
+        Also update the following fields:
+
                 - :attr:`x_hat` - %(base_model_x_hat.summary)s
                 - :attr:`y_hat` - %(base_model_y_hat.summary)s
         """
@@ -1022,8 +1022,7 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
 
         Returns
         -------
-        :class:`np.ndarray`
-            Array of shape `(n, 1)` with dtype set to :attr:`_dtype`.
+        Array of shape `(n, 1)` with dtype set to :attr:`_dtype`.
         """
 
         if arr.ndim not in (1, 2):
@@ -1054,8 +1053,7 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
 
         Returns
         -------
-        :class:`numpy.ndarray`
-            The attribute under ``attr_name``.
+        The attribute under ``attr_name``.
         """
 
         if attr_name is None:
@@ -1174,6 +1172,7 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
             Key in :attr:`anndata.obs`, :attr:`anndata.var_names`, :attr:`anndata.raw.var)names`.
             Search first starts in `.obs`, then `.raw.var_names` and lastly `.layers`, using
             :meth:`anndata.obs_vector`.
+
         Returns
         -------
         Triple of the following:

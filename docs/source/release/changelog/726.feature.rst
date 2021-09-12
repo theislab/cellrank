@@ -1,1 +1,1 @@
-Allow using a column from :attr:`anndata.AnnData.var` as gene symbols for some plotting functions.
+Allow using columns from :attr:`anndata.AnnData.var` as gene symbols for some plotting functions.

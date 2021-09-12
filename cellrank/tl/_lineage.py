@@ -91,8 +91,7 @@ def wrap(numpy_func: Callable) -> Callable:
 
     Returns
     -------
-    :class:`Callable`
-        Wrapped function which takes a :class:`cellrank.tl.Lineage` and return :class:`cellrank.tl.Lineage`.
+    Wrapped function which takes a :class:`cellrank.tl.Lineage` and return :class:`cellrank.tl.Lineage`.
     """
 
     @wraps(numpy_func)
@@ -946,7 +945,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
         Returns
         -------
-        Lineage object, reduced to the %(initial_or_terminal)s states.
+        The lineage object, reduced to the %(initial_or_terminal)s states.
         The weights used for the projection of shape ``(n_query, n_reference)``, if ``return_weights = True``.
         """
 
