@@ -1,1 +1,0 @@
-Restricts computation of embedding projection to kNN based kernels.

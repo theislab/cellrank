@@ -8,7 +8,7 @@ except ImportError:
     __author__ = "Marius Lange, Michal Klein"
     __maintainer__ = "Marius Lange, Michal Klein"
     __email__ = "info@cellrank.org"
-    __version__ = "1.4.0"
+    __version__ = "1.5.0"
 
 
 if __name__ == "__main__":
@@ -38,11 +38,7 @@ if __name__ == "__main__":
         ),
         extras_require=dict(
             # `POT` is not requirement of `statot`
-            external=[
-                "statot>=0.0.14",
-                "POT",
-                "wot @ git+https://github.com/broadinstitute/wot@master",
-            ],
+            external=["statot>=0.0.14", "POT"],
             krylov=["pygpcca[slepc]"],
             test=[
                 "pytest>=6.1.1",

@@ -1,2 +1,0 @@
-Deprecate :mod:`cellrank.tl`, including the high level API and rename
-:mod:`cellrank.ul.models` to :mod:`cellrank.models`.
