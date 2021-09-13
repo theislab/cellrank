@@ -1,1 +1,0 @@
-Update deployment CI and CONTRIBUTING.rst based on a new branching structure.
