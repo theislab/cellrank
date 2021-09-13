@@ -29,6 +29,7 @@ jobs:
                 grep "^v[[:digit:]]\.[[:digit:]]\.[[:digit:]]$" <<< "$VERSION" || (echo "Invalid version: '$VERSION'" && exit 42)
 
         -   name: Install dependencies
+            # TODO(michalk8): pip install -e'.' necessary?
             run: |
                 sudo apt install pandoc
                 python -m pip install --upgrade pip
