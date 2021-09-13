@@ -1,14 +1,16 @@
-"""Module containing :mod:`pygam` model implementation."""
+from typing import Any, Union, Mapping, Optional
+from typing_extensions import Literal
+
 from copy import copy as _copy
 from copy import deepcopy
+from enum import auto
 from types import MappingProxyType
-from typing import Union, Mapping, Optional
 from collections import defaultdict
 
 from cellrank import logging as logg
+from cellrank.tl._enum import ModeEnum
 from cellrank.ul._docs import d
 from cellrank.ul.models import BaseModel
-from cellrank.tl._constants import ModeEnum
 from cellrank.tl.kernels._utils import _filter_kwargs
 from cellrank.ul.models._base_model import AnnData
 
@@ -24,25 +26,22 @@ from pygam import (
     s,
 )
 
-_r_lib = None
-_r_lib_name = None
 
-
-class GamLinkFunction(ModeEnum):  # noqa
-    IDENTITY = "identity"
-    LOGIT = "logit"
-    INV = "inverse"
-    LOG = "log"
+class GamLinkFunction(ModeEnum):  # noqa: D101
+    IDENTITY = auto()
+    LOGIT = auto()
+    INVERSE = auto()
+    LOG = auto()
     INV_SQUARED = "inverse-squared"
 
 
-class GamDistribution(ModeEnum):  # noqa
-    NORMAL = "normal"
-    BINOMIAL = "binomial"
-    POISSON = "poisson"
-    GAMMA = "gamma"
-    GAUSS = "gaussian"
-    INV_GAUSS = "inv_gauss"
+class GamDistribution(ModeEnum):  # noqa: D101
+    NORMAL = auto()
+    BINOMIAL = auto()
+    POISSON = auto()
+    GAMMA = auto()
+    GAUSSIAN = auto()
+    INV_GAUSS = auto()
 
 
 _gams = defaultdict(
@@ -94,13 +93,15 @@ class GAM(BaseModel):
         adata: AnnData,
         n_knots: Optional[int] = 6,
         spline_order: int = 3,
-        distribution: str = "gamma",
-        link: str = "log",
+        distribution: Literal[
+            "normal", "binomial", "poisson", "gamma", "gaussian", "inv_gauss"
+        ] = "gamma",
+        link: Literal["identity", "logit", "inverse", "log", "inverse-squared"] = "log",
         max_iter: int = 2000,
         expectile: Optional[float] = None,
-        grid: Optional[Union[str, Mapping]] = None,
-        spline_kwargs: Mapping = MappingProxyType({}),
-        **kwargs,
+        grid: Optional[Union[str, Mapping[str, Any]]] = None,
+        spline_kwargs: Mapping[str, Any] = MappingProxyType({}),
+        **kwargs: Any,
     ):
         term = s(
             0,
@@ -111,7 +112,7 @@ class GAM(BaseModel):
         )
         link = GamLinkFunction(link)
         distribution = GamDistribution(distribution)
-        if distribution == GamDistribution.GAUSS:
+        if distribution == GamDistribution.GAUSSIAN:
             distribution = GamDistribution.NORMAL
 
         if expectile is not None:
@@ -138,8 +139,8 @@ class GAM(BaseModel):
                     f"for `{type(gam).__name__!r}`."
                 )
 
-            filtered_kwargs["link"] = link.s
-            filtered_kwargs["distribution"] = distribution.s
+            filtered_kwargs["link"] = link
+            filtered_kwargs["distribution"] = distribution
 
             model = gam(
                 term,
@@ -177,8 +178,7 @@ class GAM(BaseModel):
 
         Returns
         -------
-        :class:`cellrank.ul.models.GAM`
-            Fits the model and returns self.
+        Fits the model and returns self.
         """  # noqa
 
         super().fit(x, y, w, **kwargs)

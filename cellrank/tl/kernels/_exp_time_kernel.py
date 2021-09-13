@@ -1,20 +1,24 @@
 """Experimental time kernel module."""
+from typing import Any, Dict, Tuple, Mapping, Optional
+
 from abc import ABC
 from copy import copy
 from types import MappingProxyType
-from typing import Any, Dict, Tuple, Mapping, Optional
 
 import scanpy as sc
+from cellrank.tl._enum import ModeEnum
 from cellrank.ul._docs import d
 from cellrank.tl._utils import _normalize
 from cellrank.tl.kernels import Kernel
-from cellrank.tl._constants import ModeEnum
 from cellrank.tl.kernels._utils import _ensure_numeric_ordered
 from cellrank.tl.kernels._base_kernel import AnnData
 
 import numpy as np
 import pandas as pd
 from scipy.sparse import bmat, spdiags
+
+from matplotlib.colors import Normalize, to_hex
+from matplotlib.pyplot import get_cmap
 
 
 class LastTimePoint(ModeEnum):  # noqa
@@ -46,6 +50,7 @@ class ExperimentalTimeKernel(Kernel, ABC):
         backward: bool = False,
         time_key: str = "exp_time",
         compute_cond_num: bool = False,
+        **kwargs: Any,
     ):
         super().__init__(
             adata,
@@ -53,6 +58,7 @@ class ExperimentalTimeKernel(Kernel, ABC):
             time_key=time_key,
             compute_cond_num=compute_cond_num,
             check_connectivity=False,
+            **kwargs,
         )
         self._time_key = time_key
 
@@ -62,6 +68,13 @@ class ExperimentalTimeKernel(Kernel, ABC):
         time_key = kwargs.pop("time_key", "exp_time")
         self._exp_time = _ensure_numeric_ordered(self.adata, time_key)
         self.adata.obs[time_key] = self.experimental_time.values
+
+        # fmt: off
+        cmap = get_cmap(kwargs.pop("cmap", "gnuplot"))
+        cats = self.experimental_time.cat.categories
+        norm = Normalize(vmin=cats.min(), vmax=cats.max())
+        self.adata.uns[f"{time_key}_colors"] = np.array([to_hex(c) for c in cmap(norm(cats) * cmap.N)])
+        # fmt: on
 
     @d.dedent
     def plot_single_flow(

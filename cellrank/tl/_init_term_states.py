@@ -1,23 +1,20 @@
-"""Module used for finding initial and terminal states."""
-from types import MappingProxyType
-from typing import Union, Mapping, TypeVar, Optional
+from typing import Any, Union, Mapping, Optional, Sequence
 
+from types import MappingProxyType
+
+from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.ul._docs import d, _initial, _terminal, inject_docs
 from cellrank.tl._utils import (
+    _deprecate,
     _check_estimator_type,
     _info_if_obs_keys_categorical_present,
 )
 from cellrank.tl.kernels import PrecomputedKernel
-from cellrank.tl._constants import TermStatesKey
-from cellrank.tl.estimators import GPCCA, CFLARE
+from cellrank.tl.estimators import GPCCA, CFLARE, TermStatesEstimator
 from cellrank.tl._transition_matrix import transition_matrix
-from cellrank.tl.estimators._constants import P
 from cellrank.tl.kernels._velocity_kernel import BackwardMode, VelocityMode
 from cellrank.tl.estimators._base_estimator import BaseEstimator
-
-AnnData = TypeVar("AnnData")
-
 
 _docstring = """\
 Find {direction} states of a dynamic process of single cells based on RNA velocity :cite:`manno:18`.
@@ -65,20 +62,76 @@ kwargs
 
 Returns
 -------
-:class:`anndata.AnnData`, :class:`cellrank.tl.estimators.BaseEstimator` or :obj:`None`
-    Depending on ``copy`` and ``return_estimator``, either updates the existing ``adata`` object,
-    returns its copy or returns the estimator.
+Depending on ``copy`` and ``return_estimator``, either updates the existing ``adata`` object,
+returns its copy or returns the estimator.
 
-    Marked cells are added to ``adata.obs[{key_added!r}]``.
+Marked cells are added to ``adata.obs[{key_added!r}]``.
 """
+
+
+def _fit(
+    estim: TermStatesEstimator,
+    n_lineages: Optional[int] = None,
+    keys: Optional[Sequence[str]] = None,
+    cluster_key: Optional[str] = None,
+    compute_absorption_probabilities: bool = True,
+    **kwargs: Any,
+) -> TermStatesEstimator:
+    if isinstance(estim, CFLARE):
+        estim.compute_eigendecomposition(k=20 if n_lineages is None else n_lineages + 1)
+        if n_lineages is None:
+            n_lineages = estim.eigendecomposition["eigengap"] + 1
+
+        estim.compute_terminal_states(
+            use=n_lineages,
+            cluster_key=cluster_key,
+            n_clusters_kmeans=n_lineages,
+            method=kwargs.pop("method", "kmeans"),
+            **kwargs,
+        )
+    elif isinstance(estim, GPCCA):
+        if n_lineages is None or n_lineages == 1:
+            estim.compute_eigendecomposition()
+            if n_lineages is None:
+                n_lineages = estim.eigendecomposition["eigengap"] + 1
+
+        if n_lineages > 1:
+            estim.compute_schur(n_lineages, method=kwargs.pop("method", "krylov"))
+
+        try:
+            estim.compute_macrostates(
+                n_states=n_lineages, cluster_key=cluster_key, **kwargs
+            )
+        except ValueError:
+            logg.warning(
+                f"Computing `{n_lineages}` macrostates cuts through a block of complex conjugates. "
+                f"Increasing `n_lineages` to {n_lineages + 1}"
+            )
+            estim.compute_macrostates(
+                n_states=n_lineages + 1, cluster_key=cluster_key, **kwargs
+            )
+
+        fs_kwargs = {"n_cells": kwargs["n_cells"]} if "n_cells" in kwargs else {}
+
+        if n_lineages is None:
+            estim.compute_terminal_states(method="eigengap", **fs_kwargs)
+        else:
+            estim.set_terminal_states_from_macrostates(**fs_kwargs)
+    else:
+        raise NotImplementedError(type(estim))
+
+    if compute_absorption_probabilities:
+        estim.compute_absorption_probabilities(keys=keys)
+
+    return estim
 
 
 def _initial_terminal(
     adata: AnnData,
     estimator: type(BaseEstimator) = GPCCA,
     backward: bool = False,
-    mode: str = VelocityMode.DETERMINISTIC.s,
-    backward_mode: str = BackwardMode.TRANSPOSE.s,
+    mode: str = VelocityMode.DETERMINISTIC,
+    backward_mode: str = BackwardMode.TRANSPOSE,
     n_states: Optional[int] = None,
     cluster_key: Optional[str] = None,
     key: Optional[str] = None,
@@ -91,11 +144,12 @@ def _initial_terminal(
 ) -> Optional[Union[AnnData, BaseEstimator]]:
     _check_estimator_type(estimator)
 
+    if copy:
+        adata = adata.copy()
     try:
         if force_recompute:
             raise KeyError("Forcing transition matrix recomputation.")
         kernel = PrecomputedKernel(key, adata=adata, backward=backward)
-        write_to_adata = False  # no need to write
         logg.info("Using precomputed transition matrix")
     except KeyError:
         # compute kernel object
@@ -106,25 +160,18 @@ def _initial_terminal(
             backward_mode=backward_mode,
             **kwargs,
         )
-        write_to_adata = True
 
-    # create estimator object
-    mc = estimator(
-        kernel,
-        read_from_adata=False,
-        inplace=not copy,
-        key=key,
-        write_to_adata=write_to_adata,
-    )
+    mc = estimator(kernel)
 
     if cluster_key is None:
         _info_if_obs_keys_categorical_present(
             adata,
-            keys=["louvain", "leiden", "clusters"],
+            keys=["leiden", "louvain", "cluster", "clusters"],
             msg_fmt="Found categorical observation in `adata.obs[{!r}]`. Consider specifying it as `cluster_key`.",
         )
 
-    mc.fit(
+    _fit(
+        mc,
         n_lineages=n_states,
         cluster_key=cluster_key,
         compute_absorption_probabilities=False,
@@ -134,12 +181,9 @@ def _initial_terminal(
     if show_plots:
         mc.plot_spectrum(real_only=True)
         if isinstance(mc, CFLARE):
-            mc.plot_eigendecomposition(abs_value=True, perc=[0, 98], use=n_states)
             mc.plot_terminal_states(discrete=True, same_plot=False)
         elif isinstance(mc, GPCCA):
-            n_states = len(mc._get(P.MACRO).cat.categories)
-            if n_states > 1:
-                mc.plot_schur()
+            n_states = len(mc.macrostates.cat.categories)
             mc.plot_terminal_states(discrete=True, same_plot=False)
             if n_states > 1:
                 mc.plot_coarse_T()
@@ -151,20 +195,21 @@ def _initial_terminal(
     return mc.adata if copy else mc if return_estimator else None
 
 
+@_deprecate(version="2.0")
 @inject_docs(m=VelocityMode, b=BackwardMode)
 @d.dedent
 @inject_docs(
     __doc__=_docstring.format(
         direction=_initial,
-        key_added=TermStatesKey.BACKWARD.s,
+        key_added="initial_states",
         bwd_mode="\n%(velocity_backward_mode_high_lvl)s",
     )
 )
 def initial_states(  # noqa: D103
     adata: AnnData,
     estimator: type(BaseEstimator) = GPCCA,
-    mode: str = VelocityMode.DETERMINISTIC.s,
-    backward_mode: str = BackwardMode.TRANSPOSE.s,
+    mode: str = VelocityMode.DETERMINISTIC,
+    backward_mode: str = BackwardMode.TRANSPOSE,
     n_states: Optional[int] = None,
     cluster_key: Optional[str] = None,
     key: Optional[str] = None,
@@ -194,17 +239,18 @@ def initial_states(  # noqa: D103
     )
 
 
+@_deprecate(version="2.0")
 @inject_docs(m=VelocityMode, b=BackwardMode)
 @d.dedent
 @inject_docs(
     __doc__=_docstring.format(
-        direction=_terminal, key_added=TermStatesKey.FORWARD.s, bwd_mode=""
+        direction=_terminal, key_added="terminal_states", bwd_mode=""
     )
 )
 def terminal_states(  # noqa: D103
     adata: AnnData,
     estimator: type(BaseEstimator) = GPCCA,
-    mode: str = VelocityMode.DETERMINISTIC.s,
+    mode: str = VelocityMode.DETERMINISTIC,
     n_states: Optional[int] = None,
     cluster_key: Optional[str] = None,
     key: Optional[str] = None,

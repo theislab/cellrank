@@ -1,27 +1,30 @@
-"""Lineage class module."""
-
-from types import FunctionType, MappingProxyType
 from typing import List, Tuple, Union, Mapping, TypeVar, Callable, Iterable, Optional
+from typing_extensions import Literal
+
+from copy import copy
+from enum import auto
+from types import FunctionType, MappingProxyType
 from inspect import signature
 from pathlib import Path
 from functools import wraps
 from itertools import combinations
 
-from typing_extensions import Literal
-
+from anndata import AnnData
 from cellrank import logging as logg
-from cellrank.ul._docs import d
+from cellrank._key import Key
+from cellrank.tl._enum import ModeEnum
+from cellrank.ul._docs import d, inject_docs
 from cellrank.tl._utils import save_fig, _convert_lineage_name, _unique_order_preserving
 from cellrank.tl._colors import (
     _get_bg_fg_colors,
     _compute_mean_color,
     _create_categorical_colors,
 )
-from cellrank.tl._constants import Lin, ModeEnum
 
 import numpy as np
 import pandas as pd
 from scipy.stats import entropy
+from pandas.api.types import infer_dtype, is_categorical_dtype
 
 import matplotlib.colors as c
 import matplotlib.pyplot as plt
@@ -36,11 +39,39 @@ _DUMMY_CELL = "<td style='text-align: right;'>...</td>"
 _ORDER = "C"
 
 
-class PrimingDegree(ModeEnum):
-    """Priming degree method."""
+class PrimingDegree(ModeEnum):  # noqa: D101
+    KL_DIVERGENCE = auto()
+    ENTROPY = auto()
 
-    KL_DIVERGENCE = "kl_divergence"
-    ENTROPY = "entropy"
+
+class Lin(ModeEnum):  # noqa: D101
+    REST = auto()
+    OTHERS = auto()
+
+
+class DistanceMeasure(ModeEnum):  # noqa: D101
+    COSINE_SIM = auto()
+    WASSERSTEIN_DIST = auto()
+    KL_DIV = auto()
+    JS_DIV = auto()
+    MUTUAL_INFO = auto()
+    EQUAL = auto()
+
+
+class NormWeights(ModeEnum):  # noqa: D101
+    SCALE = auto()
+    SOFTMAX = auto()
+
+
+class Reduction(ModeEnum):  # noqa: D101
+    DIST = auto()
+    SCALE = auto()
+
+
+class LinKind(ModeEnum):  # noqa: D101
+    MACROSTATES = auto()
+    TERM_STATES = auto()
+    ABS_PROBS = auto()
 
 
 def _at_least_2d(array: np.ndarray, dim: int):
@@ -60,8 +91,7 @@ def wrap(numpy_func: Callable) -> Callable:
 
     Returns
     -------
-    :class:`Callable`
-        Wrapped function which takes a :class:`cellrank.tl.Lineage` and return :class:`cellrank.tl.Lineage`.
+    Wrapped function which takes a :class:`cellrank.tl.Lineage` and return :class:`cellrank.tl.Lineage`.
     """
 
     @wraps(numpy_func)
@@ -276,7 +306,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         lin_kind = [_ for _ in mixtures if isinstance(_, Lin)]
         if len(lin_kind) > 1:
             raise ValueError(
-                f"`Lin` enum is allowed only once in the expression, found `{lin_kind}`."
+                f"`Lin` enum is allowed only once in the expression, found `{len(lin_kind)}`."
             )
 
         keys = [
@@ -319,7 +349,9 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
                 if keys:
                     names[-1] = str(lin_kind)
             else:
-                raise ValueError(f"Invalid `Lin` enum `{lin_kind}`.")
+                raise NotImplementedError(
+                    f"Mixing `{lin_kind}` is not yet implemented."
+                )
 
         res = np.stack(res, axis=-1)
         return Lineage(res, names=names, colors=colors)
@@ -420,8 +452,8 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             item_0 = _at_least_2d(item_0, -1)
             item_1 = _at_least_2d(item_1, 0)
 
-            if item_1.dtype == np.bool:
-                if item_0.dtype != np.bool:
+            if item_1.dtype == bool:
+                if item_0.dtype != bool:
                     if not issubclass(item_0.dtype.type, np.integer):
                         raise TypeError(f"Invalid type `{item_0.dtype.type}`.")
                     row_order = (
@@ -433,8 +465,8 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
                 item = item_0 * item_1
                 shape = np.max(np.sum(item, axis=0)), np.max(np.sum(item, axis=1))
                 col = np.where(np.all(item_1, axis=0))[0]
-            elif item_0.dtype == np.bool:
-                if item_1.dtype != np.bool:
+            elif item_0.dtype == bool:
+                if item_1.dtype != bool:
                     if not issubclass(item_1.dtype.type, np.integer):
                         raise TypeError(f"Invalid type `{item_1.dtype.type}`.")
                     col_order = (
@@ -605,7 +637,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
     @property
     def _fmt(self) -> Callable:
-        if np.issubdtype(self.dtype, np.float):
+        if np.issubdtype(self.dtype, float):
             return "{:.06f}".format
         return "{}".format
 
@@ -725,20 +757,20 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         """
         Compute the degree of lineage priming.
 
-        This method computes how naive vs. committed each individual cell is.
-        It returns a score where 0 stands for naive and 1 stands for committed.
+        It returns a score in `[0, 1]` where `0` stands for naive and `1` stands for committed.
 
         Parameters
         ----------
         method
             The method used to compute the degree of lineage priming. Valid options are:
 
-                - `'kl_divergence'`: as in :cite:`velten:17`, computes KL-divergence between the fate probabilities of
+                - `'kl_divergence'` - as in :cite:`velten:17`, computes KL-divergence between the fate probabilities of
                   a cell and the average fate probabilities. Computation of average fate probabilities can be restricted
                   to a set of user-defined ``early_cells``.
-                - `'entropy'`: as in :cite:`setty:19`, computes entropy over a cell's fate probabilities.
+                - `'entropy'` - as in :cite:`setty:19`, computes entropy over a cell's fate probabilities.
         early_cells
-            Cell ids or a mask marking early cells. If `None`, use all cells. Only used when ``method='kl_divergence'``.
+            Cell IDs or a mask marking early cells. If `None`, use all cells.
+            Only used when ``method = 'kl_divergence'``.
 
         Returns
         -------
@@ -862,14 +894,15 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             save_fig(fig, save)
 
     @d.dedent
+    @inject_docs(m=Reduction, dm=DistanceMeasure, nw=NormWeights)
     def reduce(
         self,
         *keys: str,
-        mode: str = "dist",
+        mode: Literal["dist", "scale"] = Reduction.DIST,
         dist_measure: Literal[
-            "cosine_sim", "wasserstein_dist", "kl_div", "js_div", "mutual_inf", "equal"
-        ] = "mutual_info",
-        normalize_weights: Literal["scale", "softmax"] = "softmax",
+            "cosine_sim", "wasserstein_dist", "kl_div", "js_div", "mutual_info", "equal"
+        ] = DistanceMeasure.MUTUAL_INFO,
+        normalize_weights: Literal["scale", "softmax"] = NormWeights.SOFTMAX,
         softmax_scale: float = 1,
         return_weights: bool = False,
     ) -> Union["Lineage", Tuple["Lineage", Optional[pd.DataFrame]]]:
@@ -882,33 +915,43 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             List of keys that define the states, to which this object will be reduced by projecting the values
             of the other states.
         mode
-            Whether to use a distance measure to compute weights - `'dist'`, or just rescale - `'scale'`.
+            Reduction mode to use. Valid options are:
+
+                - `{m.DIST!r}` - use a distance measure ``dist_measure`` to compute weights.
+                - `{m.SCALE!r}` - just rescale the values.
         dist_measure
             Used to quantify similarity between query and reference states. Valid options are:
 
-                - `'cosine_sim'` - cosine similarity.
-                - `'wasserstein_dist'` - Wasserstein distance.
-                - `'kl_div'` - Kullback–Leibler divergence.
-                - `'js_div'` - Jensen–Shannon divergence.
-                - `'mutual_inf'` - mutual information.
-                - `'equal'` - equally redistribute the mass among the rest.
+                - `{dm.COSINE_SIM!r}` - cosine similarity.
+                - `{dm.WASSERSTEIN_DIST!r}` - Wasserstein distance.
+                - `{dm.KL_DIV!r}` - Kullback–Leibler divergence.
+                - `{dm.JS_DIV!r}` - Jensen–Shannon divergence.
+                - `{dm.MUTUAL_INFO!r}` - mutual information.
+                - `{dm.EQUAL!r}` - equally redistribute the mass among the rest.
+
+            Only use when ``mode = {m.DIST!r}``.
         normalize_weights
             How to row-normalize the weights. Valid options are:
 
-                - `'scale'` - divide by the sum.
-                - `'softmax'`- use a softmax.
+                - `{nw.SCALE!r}` - divide by the sum.
+                - `{nw.SOFTMAX!r}`- use a softmax.
+
+            Only use when ``mode = {m.DIST!r}``.
         softmax_scale
             Scaling factor in the softmax, used for normalizing the weights to sum to `1`.
         return_weights
-            If `True`, a :class:`pandas.DataFrame` of the weights used for the projection is returned.
+            If `True`, a :class:`pandas.DataFrame` of the weights used for the projection is also returned.
+            If ``mode = {m.SCALE!r}``, the weights will be `None`.
 
         Returns
         -------
-        :class:`cellrank.tl.Lineage`, :class:`pandas.DataFrame`
-            Lineage object, reduced to the %(initial_or_terminal)s states. If a reduction is not possible,
-            returns just a copy of self.The weights used for the projection of shape
-            ``(n_query, n_reference)``, if ``return_weights=True``.
+        The lineage object, reduced to the %(initial_or_terminal)s states.
+        The weights used for the projection of shape ``(n_query, n_reference)``, if ``return_weights = True``.
         """
+
+        mode = Reduction(mode)
+        dist_measure = DistanceMeasure(dist_measure)
+        normalize_weights = NormWeights(normalize_weights)
 
         if self._is_transposed:
             raise RuntimeError("This method works only on non-transposed lineages.")
@@ -929,9 +972,9 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             )
 
         # check input parameters
-        if return_weights and mode == "scale":
+        if return_weights and mode == Reduction.SCALE:
             logg.warning(
-                "If `mode=='scale'`, no weights are computed. Returning `None`"
+                f"If `mode={mode!r}`, no weights are computed. Returning `None`"
             )
 
         reference = self[:, keys]
@@ -946,22 +989,26 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
         query = self[:, rest]
 
-        if mode == "dist":
+        if mode == Reduction.SCALE:
+            reference = _row_normalize(reference)
+        elif mode == Reduction.DIST:
             # compute a set of weights of shape (n_query x n_reference)
-            if dist_measure == "cosine_sim":
+            if dist_measure == DistanceMeasure.COSINE_SIM:
                 weights = _cosine_sim(reference.X, query.X)
-            elif dist_measure == "wasserstein_dist":
+            elif dist_measure == DistanceMeasure.WASSERSTEIN_DIST:
                 weights = _wasserstein_dist(reference.X, query.X)
-            elif dist_measure == "kl_div":
+            elif dist_measure == DistanceMeasure.KL_DIV:
                 weights = _kl_div(reference.X, query.X)
-            elif dist_measure == "js_div":
+            elif dist_measure == DistanceMeasure.JS_DIV:
                 weights = _js_div(reference.X, query.X)
-            elif dist_measure == "mutual_info":
+            elif dist_measure == DistanceMeasure.MUTUAL_INFO:
                 weights = _mutual_info(reference.X, query.X)
-            elif dist_measure == "equal":
+            elif dist_measure == DistanceMeasure.EQUAL:
                 weights = _row_normalize(np.ones((query.shape[1], reference.shape[1])))
             else:
-                raise ValueError(f"Invalid distance measure `{dist_measure!r}`.")
+                raise NotImplementedError(
+                    f"Distance measure `{dist_measure}` is not yet implemented."
+                )
 
             # make some checks on the weights
             if weights.shape != (query.shape[1], reference.shape[1]):
@@ -980,13 +1027,13 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
                 logg.warning("Weights matrix contains exact zeros.")
 
             # normalize the weights to row-sum to one
-            if normalize_weights == "scale":
+            if normalize_weights == NormWeights.SCALE:
                 weights_n = _row_normalize(weights)
-            elif normalize_weights == "softmax":
+            elif normalize_weights == NormWeights.SOFTMAX:
                 weights_n = _softmax(_row_normalize(weights), softmax_scale)
             else:
-                raise ValueError(
-                    f"Normalization method `{normalize_weights!r}` not found. Valid options are: `'scale', 'softmax'`."
+                raise NotImplementedError(
+                    f"Normalization method `{normalize_weights}` is yet implemented."
                 )
 
             # check that the weights row-sum to one now
@@ -996,12 +1043,9 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             # use the weights to re-distribute probability mass form query to reference
             for i, w in enumerate(weights_n):
                 reference += np.dot(query[:, i].X, w[None, :])
-
-        elif mode == "scale":
-            reference = _row_normalize(reference)
         else:
-            raise ValueError(
-                f"Invalid mode `{mode!r}`. Valid options are: `'dist', 'scale'`."
+            raise NotImplementedError(
+                f"Reduction mode `{mode}` is not yet implemented."
             )
 
         # check that the lineages row-sum to one now
@@ -1010,7 +1054,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
         # potentially create a weights-df and return everything
         if return_weights:
-            if mode == "dist":
+            if mode == Reduction.DIST:
                 return (
                     reference,
                     pd.DataFrame(
@@ -1020,6 +1064,91 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             return reference, None
 
         return reference
+
+    @classmethod
+    @d.dedent
+    @inject_docs(lk=LinKind)
+    def from_adata(
+        cls,
+        adata: AnnData,
+        backward: bool = False,
+        kind: Literal["macrostates", "term_states", "abs_probs"] = LinKind.ABS_PROBS,
+    ) -> "Lineage":
+        """
+        Reconstruct :class:`cellrank.tl.Lineage` from :class:`anndata.AnnData`.
+
+        Parameters
+        ----------
+        %(adata)s
+        %(backward)s
+        kind
+            Which kind of object to reconstruct. Valid options are:
+
+                - `{lk.MACROSTATES!r}`- macrostates memberships from :class:`cellrank.tl.estimators.GPCCA`.
+                - `{lk.TERM_STATES!r}`- terminal states memberships from :class:`cellrank.tl.estimators.GPCCA`.
+                - `{lk.ABS_PROBS!r}`- the absorption probabilities.
+
+        Returns
+        -------
+        The reconstructed lineage object.
+        """
+        kind = LinKind(kind)
+        if kind == LinKind.MACROSTATES:
+            nkey = Key.obs.macrostates(backward)
+            key = Key.obsm.memberships(nkey)
+        elif kind == LinKind.TERM_STATES:
+            nkey = Key.obs.term_states(backward)
+            key = Key.obsm.memberships(nkey)
+        elif kind == LinKind.ABS_PROBS:
+            nkey = Key.obs.term_states(backward)
+            key = Key.obsm.abs_probs(backward)
+        else:
+            raise NotImplementedError(f"Lineage kind `{kind}` is not yet implemented.")
+
+        ckey = Key.uns.colors(nkey)
+
+        data: Optional[Union[np.ndarray, Lineage]] = copy(adata.obsm.get(key, None))
+        if data is None:
+            raise KeyError(f"Unable to find lineage data in `adata.obsm[{key!r}]`.")
+        if isinstance(data, Lineage):
+            return data
+        if data.ndim != 2:
+            raise ValueError(f"Expected 2 dimensional data, found `{data.ndim}`.")
+
+        states = adata.obs.get(nkey, None)
+        if states is None:
+            logg.warning(
+                f"Unable to find states in `adata.obs[{nkey!r}]`. Using default names"
+            )
+        elif not is_categorical_dtype(states):
+            logg.warning(
+                f"Expected `adata.obs[{key!r}]` to be `categorical`, "
+                f"found `{infer_dtype(adata.obs[nkey])}`. Using default names"
+            )
+        else:
+            states = list(states.cat.categories)
+            if len(states) != data.shape[1]:
+                logg.warning(
+                    f"Expected to find `{data.shape[1]}` names, found `{len(states)}`. "
+                    f"Using default names"
+                )
+        if states is None or len(states) != data.shape[1]:
+            states = [str(i) for i in range(data.shape[1])]
+
+        colors = adata.uns.get(ckey, None)
+        if colors is None:
+            logg.warning(
+                f"Unable to find colors in `adata.uns[{ckey!r}]`. "
+                f"Using default colors"
+            )
+        elif len(colors) != data.shape[1]:
+            logg.warning(
+                f"Expected to find `{data.shape[1]}` colors, found `{len(colors)}`. "
+                f"Using default colors"
+            )
+            colors = None
+
+        return Lineage(data, names=states, colors=colors)
 
 
 class LineageView(Lineage):

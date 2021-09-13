@@ -1,19 +1,20 @@
-from copy import copy
 from typing import Any, Tuple, Union, Iterable, Optional, Sequence
+
+from copy import copy
 from pathlib import Path
 
 from anndata import AnnData
 from cellrank import logging as logg
+from cellrank._key import Key
 from cellrank.ul._docs import d
 from cellrank.pl._utils import _position_legend, _get_categorical_colors
 from cellrank.tl._utils import save_fig, _unique_order_preserving
-from cellrank.tl._constants import AbsProbKey
 
 import numpy as np
 import pandas as pd
 
-import seaborn as sns
 import matplotlib.pyplot as plt
+from seaborn import stripplot
 from matplotlib.cm import ScalarMappable
 from matplotlib.axes import Axes
 from matplotlib.colors import Normalize, to_hex
@@ -98,8 +99,7 @@ def log_odds(
 
     Returns
     -------
-    :class:`matplotlib.pyplot.Axes`
-        The axis object(s) if ``show=False``.
+    The axes object(s), if ``show = False``.
     %(just_plots)s
     """
     from cellrank.tl.kernels._utils import _ensure_numeric_ordered
@@ -181,18 +181,18 @@ def log_odds(
         use_raw = False
 
     # define log-odds
-    ln_key = str(AbsProbKey.BACKWARD if backward else AbsProbKey.FORWARD)
-    if ln_key not in adata.obsm:
-        raise KeyError(f"Lineages key `{ln_key!r}` not found in `adata.obsm`.")
+    lineage_key = Key.obsm.abs_probs(backward)
+    if lineage_key not in adata.obsm:
+        raise KeyError(f"Lineages key `{lineage_key!r}` not found in `adata.obsm`.")
     time = _ensure_numeric_ordered(adata, time_key)
     order = time.cat.categories[:: -1 if backward else 1]
 
-    fate1 = adata.obsm[ln_key][lineage_1].X.squeeze(-1)
+    fate1 = adata.obsm[lineage_key][lineage_1].X.squeeze(-1)
     if lineage_2 is None:
         fate2 = 1 - fate1
         ylabel = rf"$\log{{\frac{{{lineage_1}}}{{rest}}}}$"
     else:
-        fate2 = adata.obsm[ln_key][lineage_2].X.squeeze(-1)
+        fate2 = adata.obsm[lineage_key][lineage_2].X.squeeze(-1)
         ylabel = rf"$\log{{\frac{{{lineage_1}}}{{{lineage_2}}}}}$"
 
     # fmt: off
@@ -212,9 +212,9 @@ def log_odds(
             figsize = np.array([n_cats, n_cats * 4 / 6]) / 2
 
         fig, ax = plt.subplots(figsize=figsize, dpi=dpi, tight_layout=True)
-        ax = sns.stripplot(
-            time_key,
-            "log_odds",
+        ax = stripplot(
+            x=time_key,
+            y="log_odds",
             data=df,
             order=order,
             jitter=jitter,
@@ -261,9 +261,9 @@ def log_odds(
         hue, palette, thresh_mask, sm = get_data(key, thresh)
         show_ylabel = i % ncols == 0
 
-        ax = sns.stripplot(
-            time_key,
-            "log_odds",
+        ax = stripplot(
+            x=time_key,
+            y="log_odds",
             data=df if thresh_mask is None else df[~thresh_mask],
             hue=hue,
             order=order,
@@ -276,9 +276,9 @@ def log_odds(
             **kwargs,
         )
         if thresh_mask is not None:
-            sns.stripplot(
-                time_key,
-                "log_odds",
+            stripplot(
+                x=time_key,
+                y="log_odds",
                 data=df if thresh_mask is None else df[thresh_mask],
                 hue=hue,
                 order=order,

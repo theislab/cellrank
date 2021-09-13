@@ -1,0 +1,2 @@
+Use actual number of nearest neighbors in :class:`cellrank.tl.kernels.PseudotimeKernel`
+when using hard thresholding scheme.

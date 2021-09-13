@@ -1,15 +1,14 @@
 import pickle
+import pytest
 from io import BytesIO
 from unittest import mock
 from collections import defaultdict
 from html.parser import HTMLParser
 
-import pytest
-
+from cellrank import Lin
 from cellrank.tl import Lineage
 from cellrank.tl._colors import _compute_mean_color, _create_categorical_colors
 from cellrank.tl._lineage import _HT_CELLS, LineageView, PrimingDegree
-from cellrank.tl._constants import Lin
 
 import numpy as np
 from pandas import DataFrame
@@ -194,7 +193,7 @@ class TestLineageCreation:
 class TestLineageAccessor:
     def test_too_large_tuple(self, lineage: Lineage):
         with pytest.raises(ValueError):
-            lineage[0, 0, 0]
+            _ = lineage[0, 0, 0]
 
     def test_none(self, lineage: Lineage):
         y = lineage[None, None]
@@ -302,7 +301,7 @@ class TestLineageAccessor:
         )
 
         with pytest.raises(KeyError):
-            l["quux"]
+            _ = l["quux"]
 
     def test_row_subset_with_ints(self):
         x = np.random.random((10, 3))
@@ -337,7 +336,7 @@ class TestLineageAccessor:
         )
 
         with pytest.raises(IndexError):
-            y = l[:, [True]]
+            _ = l[:, [True]]
 
     def test_row_subset_with_mask(self):
         x = np.random.random((10, 3))
@@ -347,7 +346,7 @@ class TestLineageAccessor:
             colors=[(0, 0, 0), (0.5, 0.5, 0.5), (1, 1, 1)],
         )
 
-        mask = np.ones((x.shape[0]), dtype=np.bool)
+        mask = np.ones((x.shape[0]), dtype=bool)
         mask[:5] = False
         y = l[mask, :]
 
@@ -373,7 +372,7 @@ class TestLineageAccessor:
             colors=[(0, 0, 0), (0.5, 0.5, 0.5), (1, 1, 1)],
         )
 
-        mask = np.ones((x.shape[1]), dtype=np.bool)
+        mask = np.ones((x.shape[1]), dtype=bool)
         mask[0] = False
         y = l[:, mask]
 
@@ -411,7 +410,7 @@ class TestLineageAccessor:
             colors=[(0, 0, 0), (0.5, 0.5, 0.5), (1, 1, 1)],
         )
 
-        mask = np.ones((x.shape[1]), dtype=np.bool)
+        mask = np.ones((x.shape[1]), dtype=bool)
         mask[0] = False
         y = l[[0, 1], mask]
 
@@ -437,7 +436,7 @@ class TestLineageAccessor:
             colors=[(0, 0, 0), (0.5, 0.5, 0.5), (1, 1, 1)],
         )
 
-        mask = np.ones((x.shape[0]), dtype=np.bool)
+        mask = np.ones((x.shape[0]), dtype=bool)
         mask[5:] = False
         y = l[mask, 0]
 
@@ -451,9 +450,9 @@ class TestLineageAccessor:
             colors=[(0, 0, 0), (0.5, 0.5, 0.5), (1, 1, 1)],
         )
 
-        row_mask = np.ones((x.shape[0]), dtype=np.bool)
+        row_mask = np.ones((x.shape[0]), dtype=bool)
         row_mask[5:] = False
-        col_mask = np.ones((x.shape[1]), dtype=np.bool)
+        col_mask = np.ones((x.shape[1]), dtype=bool)
         y = l[row_mask, col_mask]
 
         np.testing.assert_array_equal(x[row_mask, :][:, col_mask], np.array(y))
@@ -466,7 +465,7 @@ class TestLineageAccessor:
             colors=[(0, 0, 0), (0.5, 0.5, 0.5), (1, 1, 1)],
         )
 
-        mask = np.ones((x.shape[0]), dtype=np.bool)
+        mask = np.ones((x.shape[0]), dtype=bool)
         mask[5:] = False
         y = l[mask, ["baz", "bar"]]
 
@@ -489,7 +488,7 @@ class TestLineageAccessor:
             x, names=["foo", "bar", "baz"], colors=["#ff0000", "#00ff00", "#0000ff"]
         )
 
-        mask = np.ones((x.shape[0]), dtype=np.bool)
+        mask = np.ones((x.shape[0]), dtype=bool)
         mask[5:] = False
         y = l[mask, :][:, ["baz", "bar", "foo"]]
 
@@ -503,7 +502,7 @@ class TestLineageAccessor:
             x, names=["foo", "bar", "baz"], colors=["#ff0000", "#00ff00", "#0000ff"]
         )
 
-        mask = np.ones((x.shape[0]), dtype=np.bool)
+        mask = np.ones((x.shape[0]), dtype=bool)
         mask[5:] = False
         y = l[mask, ["baz", "bar", "foo"]]
         z = l[mask, :][:, ["baz", "bar", "foo"]]
@@ -553,7 +552,7 @@ class TestLineageAccessor:
         x = np.random.random((10, 3))
         l = Lineage(x, names=["Beta", "Epsilon", "Alpha"])
         cmapper = dict(zip(l.names, l.colors))
-        mask = np.zeros(l.shape[0], dtype=np.bool)
+        mask = np.zeros(l.shape[0], dtype=bool)
         mask[0] = True
         mask[-1] = True
 
@@ -918,7 +917,7 @@ class TestTransposition:
     def test_simple_access(self, lineage: Lineage):
         y = lineage.T["foo"]
         with pytest.raises(TypeError):
-            lineage.T[:, "foo"]
+            _ = lineage.T[:, "foo"]
 
         assert y.shape == (1, lineage.shape[0])
         np.testing.assert_array_equal(y.T, lineage["foo"])
@@ -936,7 +935,7 @@ class TestTransposition:
         np.testing.assert_array_equal(x, y.T[:, ::-1])
 
     def test_boolean_accessor(self, lineage: Lineage):
-        mask = np.zeros(shape=lineage.shape[0], dtype=np.bool)
+        mask = np.zeros(shape=lineage.shape[0], dtype=bool)
         mask[[3, 5]] = True
 
         y = lineage.T[["baz", "bar"], mask]
@@ -1107,10 +1106,10 @@ class TestPickling:
 class TestPriming:
     def test_invalid_method(self, lineage: Lineage):
         with pytest.raises(ValueError, match="foobar"):
-            lineage.priming_degree("foobar")
+            _ = lineage.priming_degree("foobar")
 
     @pytest.mark.parametrize("method", list(PrimingDegree))
-    def test_priming_degree(self, lineage: Lineage, method: str):
+    def test_priming_degree(self, lineage: Lineage, method: PrimingDegree):
         deg = lineage.priming_degree(method=method)
 
         assert isinstance(deg, np.ndarray)
@@ -1121,26 +1120,12 @@ class TestPriming:
 
     def test_early_cells_empty(self, lineage: Lineage):
         with pytest.raises(ValueError, match="No early cells have been specified."):
-            mask = np.zeros(
-                (
-                    len(
-                        lineage,
-                    )
-                ),
-                dtype=np.bool_,
-            )
+            mask = np.zeros(shape=(len(lineage),), dtype=bool)
             lineage.priming_degree("kl_divergence", early_cells=mask)
 
     def test_early_cells(self, lineage: Lineage):
         deg1 = lineage.priming_degree("kl_divergence", early_cells=[0, 1, 2])
-        mask = np.zeros(
-            (
-                len(
-                    lineage,
-                )
-            ),
-            dtype=np.bool_,
-        )
+        mask = np.zeros(shape=(len(lineage),), dtype=bool)
         mask[:3] = True
         deg2 = lineage.priming_degree("kl_divergence", early_cells=mask)
 

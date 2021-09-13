@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Union, Optional
 
 import pytest
 
@@ -11,8 +11,11 @@ from cellrank.external.kernels._wot_kernel import LastTimePoint
 
 import numpy as np
 import pandas as pd
-from scipy.sparse import spmatrix
+from scipy.sparse import spmatrix, csr_matrix
 from pandas.core.dtypes.common import is_categorical_dtype
+
+from matplotlib.cm import get_cmap
+from matplotlib.colors import to_hex
 
 
 class TestOTKernel:
@@ -68,9 +71,38 @@ class TestOTKernel:
         ok = ok.compute_transition_matrix(1, 0.001)
 
         assert isinstance(ok, cre.kernels.StationaryOTKernel)
-        assert isinstance(ok._transition_matrix, (np.ndarray, spmatrix))
+        assert isinstance(ok._transition_matrix, csr_matrix)
         np.testing.assert_allclose(ok.transition_matrix.sum(1), 1.0)
         assert isinstance(ok.params, dict)
+
+    @pytest.mark.parametrize("connectivity_kernel", (None, ConnectivityKernel))
+    def test_compute_projection(
+        self, adata_large: AnnData, connectivity_kernel: Optional[ConnectivityKernel]
+    ):
+        terminal_states = np.full((adata_large.n_obs,), fill_value=np.nan, dtype=object)
+        ixs = np.where(adata_large.obs["clusters"] == "Granule immature")[0]
+        terminal_states[ixs] = "GI"
+
+        ok = cre.kernels.StationaryOTKernel(
+            adata_large,
+            terminal_states=pd.Series(terminal_states).astype("category"),
+            g=np.ones((adata_large.n_obs,), dtype=np.float64),
+        )
+        ok = ok.compute_transition_matrix(1, 0.001)
+
+        if connectivity_kernel is not None:
+            ck = connectivity_kernel(adata_large).compute_transition_matrix()
+            combined_kernel = 0.9 * ok + 0.1 * ck
+            combined_kernel.compute_transition_matrix()
+        else:
+            combined_kernel = ok
+
+        expected_error = (
+            r"<StationaryOTKernel> is not a kNN based kernel. The embedding projection "
+            r"only works for kNN based kernels."
+        )
+        with pytest.raises(AttributeError, match=expected_error):
+            combined_kernel.compute_projection()
 
 
 class TestWOTKernel:
@@ -82,6 +114,11 @@ class TestWOTKernel:
 
         assert ok._conn is None
         np.testing.assert_allclose(ok.transition_matrix.sum(1), 1.0)
+
+    def test_invalid_solver_kwargs(self, adata_large: AnnData):
+        ok = cre.kernels.WOTKernel(adata_large, time_key="age(days)")
+        with pytest.raises(TypeError, match="unexpected keyword argument 'foo'"):
+            ok.compute_transition_matrix(foo="bar")
 
     def test_inversion_updates_adata(self, adata_large: AnnData):
         key = "age(days)"
@@ -104,6 +141,18 @@ class TestWOTKernel:
 
         with pytest.raises(AssertionError):
             np.testing.assert_array_equal(orig_time, inverted_time)
+
+    @pytest.mark.parametrize("cmap", ["inferno", "viridis"])
+    def test_update_colors(self, adata_large: AnnData, cmap: str):
+        ckey = "age(days)_colors"
+        _ = cre.kernels.WOTKernel(adata_large, time_key="age(days)", cmap=cmap)
+
+        colors = adata_large.uns[ckey]
+        cmap = get_cmap(cmap)
+
+        assert isinstance(colors, np.ndarray)
+        assert colors.shape == (2,)
+        np.testing.assert_array_equal(colors, [to_hex(cmap(0)), to_hex(cmap(cmap.N))])
 
     @pytest.mark.parametrize("cmat", [None, "Ms", "X_pca", "good_shape", "bad_shape"])
     def test_cost_matrices(self, adata_large: AnnData, cmat: str):
@@ -166,7 +215,9 @@ class TestWOTKernel:
     def test_last_time_point(self, adata_large: AnnData, ltp: LastTimePoint):
         key = "age(days)"
         ok = cre.kernels.WOTKernel(adata_large, time_key=key).compute_transition_matrix(
-            last_time_point=ltp.s, conn_kwargs={"n_neighbors": 11}
+            last_time_point=ltp,
+            conn_kwargs={"n_neighbors": 11},
+            threshold=None,
         )
         ixs = np.where(adata_large.obs[key] == 35.0)[0]
 
@@ -207,7 +258,7 @@ class TestWOTKernel:
         ok = ok.compute_transition_matrix()
 
         assert isinstance(ok, cre.kernels.WOTKernel)
-        assert isinstance(ok._transition_matrix, (np.ndarray, spmatrix))
+        assert isinstance(ok._transition_matrix, csr_matrix)
         np.testing.assert_allclose(ok.transition_matrix.sum(1), 1.0)
         assert isinstance(ok.params, dict)
         assert isinstance(ok.growth_rates, pd.DataFrame)
@@ -216,6 +267,19 @@ class TestWOTKernel:
         np.testing.assert_array_equal(ok.growth_rates.columns, ["g0", "g1"])
         assert isinstance(ok.transport_maps[12.0, 35.0], AnnData)
         assert ok.transport_maps[12.0, 35.0].X.dtype == np.float64
+
+    @pytest.mark.parametrize("threshold", [None, 90, 100, "auto"])
+    def test_threshold(self, adata_large, threshold: Optional[Union[int, str]]):
+        ok = cre.kernels.WOTKernel(adata_large, time_key="age(days)")
+        ok = ok.compute_transition_matrix(threshold=threshold)
+
+        assert isinstance(ok._transition_matrix, csr_matrix)
+        np.testing.assert_allclose(ok.transition_matrix.sum(1), 1.0)
+        assert ok.params["threshold"] == threshold
+
+        if threshold == 100:
+            for row in ok.transition_matrix:
+                np.testing.assert_allclose(row.data, 1.0 / len(row.data))
 
     def test_copy(self, adata_large: AnnData):
         ok = cre.kernels.WOTKernel(adata_large, time_key="age(days)")
@@ -226,6 +290,27 @@ class TestWOTKernel:
         assert isinstance(ok2, cre.kernels.WOTKernel)
         assert ok is not ok2
         np.testing.assert_array_equal(ok.transition_matrix.A, ok2.transition_matrix.A)
+
+    @pytest.mark.parametrize("connectivity_kernel", (None, ConnectivityKernel))
+    def test_compute_projection(
+        self, adata_large: AnnData, connectivity_kernel: Optional[ConnectivityKernel]
+    ):
+        ok = cre.kernels.WOTKernel(adata_large, time_key="age(days)")
+        ok = ok.compute_transition_matrix()
+
+        if connectivity_kernel is not None:
+            ck = connectivity_kernel(adata_large).compute_transition_matrix()
+            combined_kernel = 0.9 * ok + 0.1 * ck
+            combined_kernel.compute_transition_matrix()
+        else:
+            combined_kernel = ok
+
+        expected_error = (
+            r"<WOTKernel> is not a kNN based kernel. The embedding projection only "
+            r"works for kNN based kernels."
+        )
+        with pytest.raises(AttributeError, match=expected_error):
+            combined_kernel.compute_projection()
 
 
 class TestGetMarkers:

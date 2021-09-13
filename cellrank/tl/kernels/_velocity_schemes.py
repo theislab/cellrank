@@ -1,10 +1,12 @@
-from abc import ABC, abstractmethod
 from typing import Any, Tuple
+
+from abc import ABC, abstractmethod
+from enum import auto
 from functools import partial
 
+from cellrank.tl._enum import ModeEnum
 from cellrank.ul._docs import d
 from cellrank.ul._utils import valuedispatch
-from cellrank.tl._constants import ModeEnum
 from cellrank.tl.kernels._utils import norm, np_mean, jit_kwargs
 
 import numpy as np
@@ -12,9 +14,9 @@ from numba import njit
 
 
 class Scheme(ModeEnum):  # noqa: D101
-    DOT_PRODUCT = "dot_product"
-    COSINE = "cosine"
-    CORRELATION = "correlation"
+    DOT_PRODUCT = auto()
+    COSINE = auto()
+    CORRELATION = auto()
 
 
 try:
@@ -160,9 +162,8 @@ class Hessian(ABC):  # noqa: D101
 
         Returns
         -------
-        :class:`numpy.ndarray`
-            The full Hessian of shape ``(n_neighbors, n_genes, n_genes)`` or only its diagonal of shape
-            ``(n_neighbors, n_genes)``.
+        The full Hessian of shape ``(n_neighbors, n_genes, n_genes)`` or only its diagonal of shape
+        ``(n_neighbors, n_genes)``.
 
         Developer notes
         ---------------
@@ -199,8 +200,7 @@ class SimilaritySchemeABC(ABC):
 
         Returns
         -------
-        :class:`numpy.ndarray`, :class:`numpy.ndarray`
-            The probability and logits arrays of shape ``(n_neighbors,)``.
+        The probability and logits arrays of shape ``(n_neighbors,)``.
         """
 
     def __repr__(self):

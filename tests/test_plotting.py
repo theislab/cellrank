@@ -1,8 +1,8 @@
-import os
 from typing import Tuple, Union, Callable
-from pathlib import Path
 
+import os
 import pytest
+from pathlib import Path
 from _helpers import (
     gamr_skip,
     create_model,
@@ -15,8 +15,9 @@ import scvelo as scv
 import cellrank as cr
 from anndata import AnnData
 from cellrank.tl import Lineage
+from cellrank._key import Key
 from cellrank.ul.models import GAMR
-from cellrank.tl._constants import AbsProbKey, _pd
+from cellrank.tl.kernels import VelocityKernel, PseudotimeKernel, ConnectivityKernel
 from cellrank.tl.estimators import GPCCA, CFLARE
 
 import numpy as np
@@ -328,6 +329,7 @@ class TestClusterFates:
             cluster_key="clusters",
             mode="paga_pie",
             save=fpath,
+            dpi=DPI,
             legend_kwargs=(dict(loc="top")),
         )
 
@@ -340,6 +342,7 @@ class TestClusterFates:
             mode="paga_pie",
             basis="umap",
             save=fpath,
+            dpi=DPI,
             legend_kwargs=(dict(loc="lower")),
             legend_loc="upper",
         )
@@ -353,6 +356,7 @@ class TestClusterFates:
             mode="paga_pie",
             basis="umap",
             save=fpath,
+            dpi=DPI,
             legend_kwargs=(dict(loc=None)),
             legend_loc=None,
         )
@@ -366,6 +370,7 @@ class TestClusterFates:
             mode="paga_pie",
             basis="umap",
             save=fpath,
+            dpi=DPI,
             legend_kwargs=(dict(loc="center")),
             legend_loc=None,
         )
@@ -379,6 +384,7 @@ class TestClusterFates:
             mode="paga_pie",
             basis="umap",
             save=fpath,
+            dpi=DPI,
             legend_kwargs=(dict(loc=None)),
             legend_loc="on data",
         )
@@ -392,6 +398,7 @@ class TestClusterFates:
             mode="paga_pie",
             basis="umap",
             save=fpath,
+            dpi=DPI,
             legend_kwargs=(dict(loc="lower left out")),
             legend_loc="center right out",
         )
@@ -635,7 +642,6 @@ class TestClusterLineage:
             "1",
             random_state=0,
             time_key="latent_time",
-            use_leiden=True,
             dpi=DPI,
             save=fpath,
         )
@@ -766,6 +772,21 @@ class TestClusterLineage:
             "1",
             covariate_key="latent_time",
             ratio=0.25,
+            random_state=0,
+            time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare()
+    def test_cluster_lineage_gene_symbols(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.cluster_lineage(
+            adata,
+            model,
+            [f"{g}:gs" for g in GENES[:10]],
+            "1",
+            gene_symbols="symbol",
             random_state=0,
             time_key="latent_time",
             dpi=DPI,
@@ -1179,6 +1200,19 @@ class TestHeatmap:
             save=fpath,
         )
 
+    @compare(dirname="heatmap_gene_symbols")
+    def test_heatmap_gene_symbols(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.heatmap(
+            adata,
+            model,
+            [f"{g}:gs" for g in GENES[:10]],
+            gene_symbols="symbol",
+            time_key="latent_time",
+            dpi=DPI,
+            save=fpath,
+        )
+
 
 class TestHeatmapReturns:
     def test_heatmap_lineages_return_genes(self, adata_cflare: AnnData):
@@ -1195,7 +1229,7 @@ class TestHeatmapReturns:
 
         assert isinstance(df, pd.DataFrame)
         np.testing.assert_array_equal(
-            df.columns, adata_cflare.obsm[AbsProbKey.FORWARD.s].names
+            df.columns, adata_cflare.obsm[Key.obsm.abs_probs(False)].names
         )
         assert len(df) == 10
         assert set(df.iloc[:, 0].values) == set(GENES[:10])
@@ -1215,7 +1249,7 @@ class TestHeatmapReturns:
         models = pd.DataFrame(models).T
         np.testing.assert_array_equal(models.index, GENES[:10])
         np.testing.assert_array_equal(
-            models.columns, adata_cflare.obsm[AbsProbKey.FORWARD.s].names
+            models.columns, adata_cflare.obsm[Key.obsm.abs_probs(False)].names
         )
         assert np.all(models.astype(bool))
 
@@ -1232,7 +1266,7 @@ class TestHeatmapReturns:
             dpi=DPI,
         )
 
-        lnames = adata_cflare.obsm[AbsProbKey.FORWARD.s].names
+        lnames = adata_cflare.obsm[Key.obsm.abs_probs(False)].names
 
         models = pd.DataFrame(models).T
         np.testing.assert_array_equal(models.index, GENES[:10])
@@ -1259,7 +1293,7 @@ class TestHeatmapReturns:
 
         assert isinstance(df, pd.DataFrame)
         np.testing.assert_array_equal(
-            df.columns, adata_cflare.obsm[AbsProbKey.FORWARD.s].names
+            df.columns, adata_cflare.obsm[Key.obsm.abs_probs(False)].names
         )
         assert len(df) == len(genes)
         assert set(df.iloc[:, 0].values) == set(genes)
@@ -1279,7 +1313,7 @@ class TestHeatmapReturns:
 
         assert isinstance(df, pd.DataFrame)
         np.testing.assert_array_equal(
-            df.columns, adata_cflare.obsm[AbsProbKey.FORWARD.s].names
+            df.columns, adata_cflare.obsm[Key.obsm.abs_probs(False)].names
         )
         assert len(df) == 10
         assert set(df.iloc[:, 0].values) == set(GENES[:10])
@@ -2007,6 +2041,19 @@ class TestGeneTrend:
             save=fpath,
         )
 
+    @compare()
+    def test_trends_gene_symbols(self, adata: AnnData, fpath: str):
+        model = create_model(adata)
+        cr.pl.gene_trends(
+            adata,
+            model,
+            [f"{g}:gs" for g in GENES[:3]],
+            gene_symbols="symbol",
+            data_key="Ms",
+            dpi=DPI,
+            save=fpath,
+        )
+
 
 class TestGraph:
     @compare()
@@ -2311,28 +2358,12 @@ class TestCFLARE:
         mc.plot_spectrum(2, real_only=False, dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
-    def test_scvelo_eigendecomposition_clusters(self, mc: CFLARE, fpath: str):
-        mc.plot_eigendecomposition(cluster_key="clusters", dpi=DPI, save=fpath)
-
-    @compare(kind="cflare")
-    def test_scvelo_eigendecomposition_left(self, mc: CFLARE, fpath: str):
-        mc.plot_eigendecomposition(dpi=DPI, save=fpath)
-
-    @compare(kind="cflare")
-    def test_scvelo_eigendecomposition_right(self, mc: CFLARE, fpath: str):
-        mc.plot_eigendecomposition(left=False, dpi=DPI, save=fpath)
-
-    @compare(kind="cflare")
-    def test_scvelo_eigendecomposition_use_2(self, mc: CFLARE, fpath: str):
-        mc.plot_eigendecomposition(use=2, dpi=DPI, save=fpath)
-
-    @compare(kind="cflare")
     def test_scvelo_final_states(self, mc: CFLARE, fpath: str):
         mc.plot_terminal_states(dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
     def test_scvelo_final_states_clusters(self, mc: CFLARE, fpath: str):
-        mc.plot_terminal_states(cluster_key="clusters", dpi=DPI, save=fpath)
+        mc.plot_terminal_states(color="clusters", dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
     def test_scvelo_lin_probs(self, mc: CFLARE, fpath: str):
@@ -2340,7 +2371,7 @@ class TestCFLARE:
 
     @compare(kind="cflare")
     def test_scvelo_lin_probs_clusters(self, mc: CFLARE, fpath: str):
-        mc.plot_absorption_probabilities(cluster_key="clusters", dpi=DPI, save=fpath)
+        mc.plot_absorption_probabilities(color="clusters", dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
     def test_scvelo_lin_probs_cmap(self, mc: CFLARE, fpath: str):
@@ -2348,7 +2379,7 @@ class TestCFLARE:
 
     @compare(kind="cflare")
     def test_scvelo_lin_probs_lineages(self, mc: CFLARE, fpath: str):
-        mc.plot_absorption_probabilities(lineages=["0"], dpi=DPI, save=fpath)
+        mc.plot_absorption_probabilities(states=["0"], dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
     def test_scvelo_lin_probs_time(self, mc: CFLARE, fpath: str):
@@ -2391,22 +2422,6 @@ class TestGPCCA:
     @compare(kind="gpcca")
     def test_gpcca_schur_matrix_cmap(self, mc: GPCCA, fpath: str):
         mc.plot_schur_matrix(cmap=cm.inferno, dpi=DPI, save=fpath)
-
-    @compare(kind="gpcca")
-    def test_scvelo_gpcca_schur_emb(self, mc: GPCCA, fpath: str):
-        mc.plot_schur(dpi=DPI, save=fpath)
-
-    @compare(kind="gpcca")
-    def test_scvelo_gpcca_schur_emb_use_2(self, mc: GPCCA, fpath: str):
-        mc.plot_schur(use=1, dpi=DPI, save=fpath)
-
-    @compare(kind="gpcca")
-    def test_scvelo_gpcca_schur_emb_abs(self, mc: GPCCA, fpath: str):
-        mc.plot_schur(abs_value=True, dpi=DPI, save=fpath)
-
-    @compare(kind="gpcca")
-    def test_scvelo_gpcca_schur_cluster_key(self, mc: GPCCA, fpath: str):
-        mc.plot_schur(cluster_key="clusters", dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_gpcca_coarse_T(self, mc: GPCCA, fpath: str):
@@ -2454,7 +2469,7 @@ class TestGPCCA:
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_meta_states_lineages(self, mc: GPCCA, fpath: str):
-        mc.plot_macrostates(lineages=["0"], dpi=DPI, save=fpath)
+        mc.plot_macrostates(states=["0"], dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_meta_states_discrete(self, mc: GPCCA, fpath: str):
@@ -2462,7 +2477,7 @@ class TestGPCCA:
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_meta_states_cluster_key(self, mc: GPCCA, fpath: str):
-        mc.plot_macrostates(cluster_key="clusters", dpi=DPI, save=fpath)
+        mc.plot_macrostates(color="clusters", dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_meta_states_no_same_plot(self, mc: GPCCA, fpath: str):
@@ -2486,7 +2501,7 @@ class TestGPCCA:
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_final_states_lineages(self, mc: GPCCA, fpath: str):
-        mc.plot_terminal_states(lineages=["0"], dpi=DPI, save=fpath)
+        mc.plot_terminal_states(states=["0"], dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_final_states_discrete(self, mc: GPCCA, fpath: str):
@@ -2494,7 +2509,7 @@ class TestGPCCA:
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_final_states_cluster_key(self, mc: GPCCA, fpath: str):
-        mc.plot_terminal_states(cluster_key="clusters", dpi=DPI, save=fpath)
+        mc.plot_terminal_states(color="clusters", dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_final_states_no_same_plot(self, mc: GPCCA, fpath: str):
@@ -2515,13 +2530,13 @@ class TestGPCCA:
     @compare(kind="gpcca")
     def test_scvelo_gpcca_abs_probs_disc_same(self, mc: GPCCA, fpath: str):
         mc.plot_absorption_probabilities(
-            cluster_key="clusters", discrete=True, same_plot=True, dpi=DPI, save=fpath
+            color="clusters", discrete=True, same_plot=True, dpi=DPI, save=fpath
         )
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_abs_probs_disc_not_same(self, mc: GPCCA, fpath: str):
         mc.plot_absorption_probabilities(
-            cluster_key="clusters", discrete=True, same_plot=False, dpi=DPI, save=fpath
+            color="clusters", discrete=True, same_plot=False, dpi=DPI, save=fpath
         )
 
     @compare(kind="gpcca")
@@ -2533,13 +2548,13 @@ class TestGPCCA:
     @compare(kind="gpcca")
     def test_scvelo_gpcca_abs_probs_cont_same_clusters(self, mc: GPCCA, fpath: str):
         mc.plot_absorption_probabilities(
-            cluster_key="clusters", discrete=False, same_plot=True, dpi=DPI, save=fpath
+            color="clusters", discrete=False, same_plot=True, dpi=DPI, save=fpath
         )
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_abs_probs_cont_not_same(self, mc: GPCCA, fpath: str):
         mc.plot_absorption_probabilities(
-            cluster_key="clusters", discrete=False, same_plot=False, dpi=DPI, save=fpath
+            color="clusters", discrete=False, same_plot=False, dpi=DPI, save=fpath
         )
 
     @compare(kind="gpcca")
@@ -2575,7 +2590,7 @@ class TestLineages:
 
     @compare()
     def test_scvelo_lineages_subset(self, adata: AnnData, fpath: str):
-        cr.pl.lineages(adata, cluster_key="clusters", dpi=DPI, save=fpath)
+        cr.pl.lineages(adata, color="clusters", dpi=DPI, save=fpath)
 
 
 class TestHighLvlStates:
@@ -2820,7 +2835,7 @@ class TestModel:
 
     @compare()
     def test_model_1_lineage(self, adata: AnnData, fpath: str):
-        adata.obsm[AbsProbKey.FORWARD.s] = Lineage(
+        adata.obsm[Key.obsm.abs_probs(False)] = Lineage(
             np.ones((adata.n_obs, 1)), names=["foo"]
         )
         model = create_model(adata)
@@ -3065,7 +3080,7 @@ class TestFittedModel:
 class TestCircularProjection:
     def test_proj_too_few_lineages(self, adata_gpcca_fwd):
         adata, _ = adata_gpcca_fwd
-        lineages = adata.obsm[AbsProbKey.FORWARD.s].names[:2]
+        lineages = adata.obsm[Key.obsm.abs_probs(False)].names[:2]
 
         with pytest.raises(ValueError, match=r"Expected at least `3` lineages"):
             cr.pl.circular_projection(
@@ -3121,13 +3136,13 @@ class TestCircularProjection:
     @compare()
     def test_proj_labelrot(self, adata: AnnData, fpath: str):
         cr.pl.circular_projection(
-            adata, keys="clusters", labelrot="default", dpi=DPI, save=fpath
+            adata, keys="clusters", label_rot="default", dpi=DPI, save=fpath
         )
 
     @compare()
     def test_proj_labeldistance(self, adata: AnnData, fpath: str):
         cr.pl.circular_projection(
-            adata, keys="clusters", labeldistance=1.5, dpi=DPI, save=fpath
+            adata, keys="clusters", label_distance=1.5, dpi=DPI, save=fpath
         )
 
     @compare()
@@ -3148,7 +3163,7 @@ class TestCircularProjection:
             adata, keys=["kl_divergence", "entropy"], dpi=DPI, save=fpath
         )
 
-        apk = AbsProbKey.FORWARD.s
+        apk = Key.obsm.abs_probs(False)
         assert f"{apk}_kl_divergence" in adata.obs
         assert f"{apk}_entropy" in adata.obs
 
@@ -3173,6 +3188,18 @@ class TestPlotRandomWalk:
             max_iter=100,
             seed=42,
             start_ixs={"clusters": "OL"},
+            dpi=DPI,
+            save=fpath,
+        )
+
+    @compare(kind="gpcca")
+    def test_kernel_random_walk_start_ixs_range(self, mc: GPCCA, fpath: str):
+        mc.kernel.plot_random_walks(
+            n_sims=10,
+            max_iter=100,
+            seed=42,
+            start_ixs={"dpt_pseudotime": [0, 0]},
+            color="dpt_pseudotime",
             dpi=DPI,
             save=fpath,
         )
@@ -3351,7 +3378,7 @@ class TestPlotDriverCorrelation:
     @compare(kind="gpcca")
     def test_driver_corr_color(self, mc: GPCCA, fpath: str):
         mc.plot_lineage_drivers_correlation(
-            "0", "1", dpi=DPI, save=fpath, color="to 2 corr"
+            "0", "1", dpi=DPI, save=fpath, color="2_corr"
         )
 
     @compare(kind="gpcca")
@@ -3386,13 +3413,13 @@ class TestPlotDriverCorrelation:
     def test_driver_corr_use_raw(self, mc: GPCCA, fpath: str):
         mc.compute_lineage_drivers(cluster_key="clusters", use_raw=True)
         mc.plot_lineage_drivers_correlation(
-            "0", "1", dpi=DPI, save=fpath, use_raw=True, color="to 1 qval"
+            "0", "1", dpi=DPI, save=fpath, use_raw=True, color="1_qval"
         )
 
     @compare(kind="gpcca")
     def test_driver_corr_cmap(self, mc: GPCCA, fpath: str):
         mc.plot_lineage_drivers_correlation(
-            "0", "1", dpi=DPI, save=fpath, color="to 1 qval", cmap="inferno"
+            "0", "1", dpi=DPI, save=fpath, color="1_qval", cmap="inferno"
         )
 
     @compare(kind="gpcca")
@@ -3777,3 +3804,37 @@ class TestMacrostateComposition:
         mc.plot_macrostate_composition(
             "clusters_enlarged", dpi=DPI, save=fpath, legend_loc="upper left out"
         )
+
+
+class TestProjectionEmbedding:
+    @compare()
+    def test_scvelo_connectivity_kernel_emb_stream(self, adata: AnnData, fpath: str):
+        ck = ConnectivityKernel(adata)
+        ck.compute_transition_matrix()
+        ck.compute_projection()
+        scv.pl.velocity_embedding_stream(adata, vkey="T_fwd", dpi=DPI, save=fpath)
+
+    @compare()
+    def test_scvelo_pseudotime_kernel_hard_threshold_emb_stream(
+        self, adata: AnnData, fpath: str
+    ):
+        ptk = PseudotimeKernel(adata)
+        ptk.compute_transition_matrix(threshold_scheme="hard", frac_to_keep=0.3)
+        ptk.compute_projection()
+        scv.pl.velocity_embedding_stream(adata, vkey="T_fwd", dpi=DPI, save=fpath)
+
+    @compare()
+    def test_scvelo_pseudotime_kernel_soft_threshold_emb_stream(
+        self, adata: AnnData, fpath: str
+    ):
+        ptk = PseudotimeKernel(adata)
+        ptk.compute_transition_matrix(threshold_scheme="soft", frac_to_keep=0.3)
+        ptk.compute_projection()
+        scv.pl.velocity_embedding_stream(adata, vkey="T_fwd", dpi=DPI, save=fpath)
+
+    @compare()
+    def test_scvelo_velocity_kernel_emb_stream(self, adata: AnnData, fpath: str):
+        vk = VelocityKernel(adata)
+        vk.compute_transition_matrix()
+        vk.compute_projection()
+        scv.pl.velocity_embedding_stream(adata, vkey="T_fwd", dpi=DPI, save=fpath)

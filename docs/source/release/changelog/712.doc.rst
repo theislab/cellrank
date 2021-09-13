@@ -1,0 +1,1 @@
+Allow ``towncrier`` to generate bleeding-edge development notes.

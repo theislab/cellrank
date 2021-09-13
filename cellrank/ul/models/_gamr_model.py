@@ -1,10 +1,13 @@
 """Module containing all models interfacing R's mgcv package."""
-from copy import copy, deepcopy
 from typing import Any, Tuple, Union, Optional
+from typing_extensions import Literal
 
+from copy import copy, deepcopy
+from enum import auto
+
+from cellrank.tl._enum import ModeEnum
 from cellrank.ul._docs import d, inject_docs
 from cellrank.ul.models import BaseModel
-from cellrank.tl._constants import ModeEnum
 from cellrank.ul.models._utils import _OFFSET_KEY, _get_offset, _get_knotlocs
 from cellrank.ul.models._base_model import AnnData, FailedModel
 
@@ -16,9 +19,9 @@ _r_lib = None
 _r_lib_name = None
 
 
-class KnotLocs(ModeEnum):  # noqa
-    AUTO = "auto"
-    DENSITY = "density"
+class KnotLocs(ModeEnum):  # noqa: D101
+    AUTO = auto()
+    DENSITY = auto()
 
 
 @inject_docs(key=_OFFSET_KEY, kloc=KnotLocs)
@@ -42,8 +45,8 @@ class GAMR(BaseModel):
     knotlocs
         Position of the knots. Can be one of the following:
 
-            - `{kloc.AUTO.s!r}` - let `mgcv` handle the knot positions.
-            - `{kloc.DENSITY.s!r}` - position the knots based on the density of the pseudotime.
+            - `{kloc.AUTO!r}` - let `mgcv` handle the knot positions.
+            - `{kloc.DENSITY!r}` - position the knots based on the density of the pseudotime.
     offset
         Offset term for the GAM. Only available when ``distribution='nb'``. If `'default'`, it is calculated
         according to :cite:`robinson:10`. The values are saved in :attr:`adata` ``.obs[{key!r}]``.
@@ -61,8 +64,8 @@ class GAMR(BaseModel):
         n_knots: int = 5,
         distribution: str = "gaussian",
         basis: str = "cr",
-        knotlocs: str = KnotLocs.AUTO.s,
-        offset: Optional[Union[np.ndarray, str]] = "default",
+        knotlocs: Literal["auto", "density"] = KnotLocs.AUTO,
+        offset: Optional[Union[np.ndarray, Literal["default"]]] = "default",
         smoothing_penalty: float = 1.0,
         **kwargs,
     ):
@@ -176,12 +179,11 @@ class GAMR(BaseModel):
 
         Returns
         -------
-        :class:`cellrank.ul.models.GAMR`
-            Fits the model and returns self. Updates the following fields by filtering out `0` weights :attr:`w`:
+        Fits the model and returns self. Updates the following fields by filtering out `0` weights :attr:`w`:
 
-                - :attr:`x` - %(base_model_x.summary)s
-                - :attr:`y` - %(base_model_y.summary)s
-                - :attr:`w` - %(base_model_w.summary)s
+            - :attr:`x` - %(base_model_x.summary)s
+            - :attr:`y` - %(base_model_y.summary)s
+            - :attr:`w` - %(base_model_w.summary)s
         """  # noqa
 
         from rpy2.robjects import Formula, r, pandas2ri
@@ -333,7 +335,7 @@ class GAMR(BaseModel):
             self._n_knots,
             distribution=self._family,
             offset=self._offset,
-            knotlocs=self._knotslocs.s,
+            knotlocs=self._knotslocs,
             perform_import_check=False,
         )
         self._shallowcopy_attributes(
@@ -369,7 +371,6 @@ def _maybe_import_r_lib(
 
     try:
         from logging import ERROR
-
         from rpy2.robjects import r
         from rpy2.robjects.packages import PackageNotInstalledError, importr
         from rpy2.rinterface_lib.callbacks import logger

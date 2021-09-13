@@ -1,17 +1,22 @@
-"""Cluster fatess and similarity module."""
+from typing import Any, Tuple, Union, Mapping, Optional, Sequence
+from typing_extensions import Literal
 
+from enum import auto
 from math import ceil
 from types import MappingProxyType
-from typing import Any, Tuple, Union, Mapping, TypeVar, Optional, Sequence
 from pathlib import Path
 from collections import OrderedDict as odict
 
+from anndata import AnnData
 from cellrank import logging as logg
+from cellrank._key import Key
+from scanpy.plotting import violin
+from scvelo.plotting import paga
+from cellrank.tl._enum import ModeEnum
 from cellrank.ul._docs import d, inject_docs
 from cellrank.pl._utils import _position_legend
 from cellrank.tl._utils import RandomKeys, save_fig, _unique_order_preserving
 from cellrank.ul._utils import valuedispatch
-from cellrank.tl._constants import ModeEnum, DirPrefix, AbsProbKey, TerminalStatesPlot
 
 import numpy as np
 import pandas as pd
@@ -20,25 +25,26 @@ from scipy.sparse import csr_matrix
 import matplotlib as mpl
 import matplotlib.colors
 import matplotlib.pyplot as plt
+from seaborn import heatmap, clustermap
 from matplotlib import cm
 
-AnnData = TypeVar("AnnData")
 
-
-class ClusterFatesMode(ModeEnum):  # noqa
-    BAR = "bar"
-    PAGA = "paga"
-    PAGA_PIE = "paga_pie"
-    VIOLIN = "violin"
-    HEATMAP = "heatmap"
-    CLUSTERMAP = "clustermap"
+class ClusterFatesMode(ModeEnum):  # noqa: D101
+    BAR = auto()
+    PAGA = auto()
+    PAGA_PIE = auto()
+    VIOLIN = auto()
+    HEATMAP = auto()
+    CLUSTERMAP = auto()
 
 
 @d.dedent
 @inject_docs(m=ClusterFatesMode)
 def cluster_fates(
     adata: AnnData,
-    mode: str = ClusterFatesMode.PAGA_PIE.s,
+    mode: Literal[
+        "bar", "paga", "paga_pie", "violin", "heatmap", "clustermap"
+    ] = ClusterFatesMode.PAGA_PIE,
     backward: bool = False,
     lineages: Optional[Union[str, Sequence[str]]] = None,
     cluster_key: Optional[str] = "clusters",
@@ -53,14 +59,14 @@ def cluster_fates(
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
     save: Optional[Union[str, Path]] = None,
-    **kwargs,
+    **kwargs: Any,
 ) -> None:
     """
     Plot aggregate lineage probabilities at a cluster level.
 
-    This can be used to investigate how likely a certain cluster is to go to the %(terminal)s states,or in turn to have
+    This can be used to investigate how likely a certain cluster is to go to the %(terminal)s states, or in turn to have
     descended from the %(initial)s states.
-    For mode `{m.PAGA.s!r}` and `{m.PAGA_PIE.s!r}`, we use *PAGA*, see :cite:`wolf:19`.
+    For mode `{m.PAGA!r}` and `{m.PAGA_PIE!r}`, we use *PAGA*, see :cite:`wolf:19`.
 
     Parameters
     ----------
@@ -68,12 +74,12 @@ def cluster_fates(
     mode
         Type of plot to show. Valid options are:
 
-            - `{m.BAR.s!r}` - barplot, one panel per cluster. The whiskers correspond to the standard error of the mean.
-            - `{m.PAGA.s!r}` - scanpy's PAGA, one per %(initial_or_terminal)s state, colored in by fate.
-            - `{m.PAGA_PIE.s!r}` - scanpy's PAGA with pie charts indicating aggregated fates.
-            - `{m.VIOLIN.s!r}` - violin plots, one per %(initial_or_terminal)s state.
-            - `{m.HEATMAP.s!r}` - a heatmap, showing average fates per cluster.
-            - `{m.CLUSTERMAP.s!r}` - same as a heatmap, but with a dendrogram.
+            - `{m.BAR!r}` - barplot, one panel per cluster. The whiskers correspond to the standard error of the mean.
+            - `{m.PAGA!r}` - scanpy's PAGA, one per %(initial_or_terminal)s state, colored in by fate.
+            - `{m.PAGA_PIE!r}` - scanpy's PAGA with pie charts indicating aggregated fates.
+            - `{m.VIOLIN!r}` - violin plots, one per %(initial_or_terminal)s state.
+            - `{m.HEATMAP!r}` - a heatmap, showing average fates per cluster.
+            - `{m.CLUSTERMAP!r}` - same as a heatmap, but with a dendrogram.
     %(backward)s
     lineages
         Lineages for which to visualize absorption probabilities. If `None`, use all lineages.
@@ -82,37 +88,32 @@ def cluster_fates(
     clusters
         Clusters to visualize. If `None`, all clusters will be plotted.
     basis
-        Basis for scatterplot to use when ``mode={m.PAGA_PIE.s!r}``. If `None`, don't show the scatterplot.
+        Basis for scatterplot to use when ``mode = {m.PAGA_PIE!r}``. If `None`, don't show the scatterplot.
     cbar
-        Whether to show colorbar when ``mode={m.PAGA_PIE.s!r}``.
+        Whether to show colorbar when ``mode = {m.PAGA_PIE!r}``.
     ncols
-        Number of columns when ``mode={m.BAR.s!r}`` or ``mode={m.PAGA.s!r}``.
+        Number of columns when ``mode = {m.BAR!r}`` or ``mode = {m.PAGA!r}``.
     sharey
-        Whether to share y-axis when ``mode={m.BAR.s!r}``.
+        Whether to share y-axis when ``mode = {m.BAR!r}``.
     fmt
-        Format when using ``mode={m.HEATMAP.s!r}`` or ``mode={m.CLUSTERMAP.s!r}``.
+        Format when using ``mode = {m.HEATMAP!r}`` or ``mode = {m.CLUSTERMAP!r}``.
     xrot
         Rotation of the labels on the x-axis.
     figsize
         Size of the figure.
     legend_kwargs
         Keyword arguments for :func:`matplotlib.axes.Axes.legend`, such as `'loc'` for legend position.
-        For ``mode={m.PAGA_PIE.s!r}`` and ``basis='...'``, this controls the placement of the
+        For ``mode = {m.PAGA_PIE!r}`` and ``basis = '...'``, this controls the placement of the
         absorption probabilities legend.
     %(plotting)s
     kwargs
         Keyword arguments for :func:`scvelo.pl.paga`, :func:`scanpy.pl.violin` or :func:`matplotlib.pyplot.bar`,
-        depending on the value of ``mode``.
+        depending on the ``mode``.
 
     Returns
     -------
     %(just_plots)s
     """
-
-    from scanpy.plotting import violin
-    from scvelo.plotting import paga
-
-    from seaborn import heatmap, clustermap
 
     @valuedispatch
     def plot(mode: ClusterFatesMode, *_args, **_kwargs):
@@ -130,7 +131,7 @@ def cluster_fates(
         gs = plt.GridSpec(n_rows, cols, figure=fig, wspace=0.5, hspace=0.5)
 
         ax = None
-        colors = list(adata.obsm[lk][:, lin_names].colors)
+        colors = list(adata.obsm[lineage_key][:, lin_names].colors)
 
         for g, k in zip(gs, d.keys()):
             current_ax = fig.add_subplot(g, sharey=ax)
@@ -149,7 +150,7 @@ def cluster_fates(
             current_ax.set_xticks(np.arange(len(lin_names)))
             current_ax.set_xticklabels(lin_names, rotation=xrot)
             if not is_all:
-                current_ax.set_xlabel(points)
+                current_ax.set_xlabel(term_states)
             current_ax.set_ylabel("absorption probability")
             current_ax.set_title(k)
 
@@ -186,7 +187,7 @@ def cluster_fates(
             colors = [v[0][i] for v in d.values()]
             kwargs["ax"] = ax
             kwargs["colors"] = tuple(colors)
-            kwargs["title"] = f"{dir_prefix} {lineage_name}"
+            kwargs["title"] = f"{direction} {lineage_name}"
 
             vmin = np.min(colors + [vmin])
             vmax = np.max(colors + [vmax])
@@ -211,7 +212,7 @@ def cluster_fates(
 
     @plot.register(ClusterFatesMode.PAGA_PIE)
     def _():
-        colors = list(adata.obsm[lk][:, lin_names].colors)
+        colors = list(adata.obsm[lineage_key][:, lin_names].colors)
         colors = {i: odict(zip(colors, mean)) for i, (mean, _) in enumerate(d.values())}
 
         fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
@@ -264,7 +265,7 @@ def cluster_fates(
             handles = []
             for lineage_name, color in zip(lin_names, colors[0].keys()):
                 handles += [ax.scatter([], [], label=lineage_name, c=color)]
-            if len(colors[0].keys()) != len(adata.obsm[lk].names):
+            if len(colors[0].keys()) != len(adata.obsm[lineage_key].names):
                 handles += [ax.scatter([], [], label="Rest", c="grey")]
 
             second_legend = _position_legend(
@@ -272,7 +273,7 @@ def cluster_fates(
                 legend_loc=legend_kwargs["loc"],
                 handles=handles,
                 **{k: v for k, v in legend_kwargs.items() if k != "loc"},
-                title=points,
+                title=term_states,
             )
             fig.add_artist(second_legend)
 
@@ -308,8 +309,8 @@ def cluster_fates(
         with RandomKeys(adata, len(lin_names), where="obs") as keys:
             _i = 0
             for _i, (name, key, ax) in enumerate(zip(lin_names, keys, axes)):
-                adata.obs[key] = adata.obsm[lk][name].X
-                ax.set_title(f"{dir_prefix} {name}")
+                adata.obs[key] = adata.obsm[lineage_key][name].X
+                ax.set_title(f"{direction} {name}")
                 violin(
                     adata, ylabel="absorption probability", keys=key, ax=ax, **kwargs
                 )
@@ -319,41 +320,39 @@ def cluster_fates(
         return fig
 
     def plot_violin_no_cluster_key():
-        from anndata import AnnData as _AnnData
-
         kwargs.pop("ax", None)
         kwargs.pop("keys", None)  # don't care
         kwargs.pop("save", None)
 
         kwargs["show"] = False
-        kwargs["groupby"] = points
+        kwargs["groupby"] = term_states
         kwargs["xlabel"] = None
         kwargs["rotation"] = xrot
 
-        data = np.ravel(adata.obsm[lk].X.T)[..., np.newaxis]
-        tmp = _AnnData(csr_matrix(data.shape, dtype=np.float32))
+        data = np.ravel(adata.obsm[lineage_key].X.T)[..., np.newaxis]
+        tmp = AnnData(csr_matrix(data.shape, dtype=np.float32))
         tmp.obs["absorption probability"] = data
-        tmp.obs[points] = (
+        tmp.obs[term_states] = (
             pd.Series(
                 np.concatenate(
                     [
-                        [f"{dir_prefix.lower()} {n}"] * adata.n_obs
-                        for n in adata.obsm[lk].names
+                        [f"{direction.lower()} {n}"] * adata.n_obs
+                        for n in adata.obsm[lineage_key].names
                     ]
                 )
             )
             .astype("category")
             .values
         )
-        tmp.obs[points] = tmp.obs[points].cat.reorder_categories(
-            [f"{dir_prefix.lower()} {n}" for n in adata.obsm[lk].names]
+        tmp.obs[term_states] = tmp.obs[term_states].cat.reorder_categories(
+            [f"{direction.lower()} {n}" for n in adata.obsm[lineage_key].names]
         )
-        tmp.uns[f"{points}_colors"] = adata.obsm[lk].colors
+        tmp.uns[f"{term_states}_colors"] = adata.obsm[lineage_key].colors
 
         fig, ax = plt.subplots(
             figsize=figsize if figsize is not None else (8, 6), dpi=dpi
         )
-        ax.set_title(points.capitalize())
+        ax.set_title(term_states.capitalize())
 
         violin(tmp, keys=["absorption probability"], ax=ax, **kwargs)
 
@@ -379,12 +378,12 @@ def cluster_fates(
             max_size = float(max(data.shape))
 
             g = clustermap(
-                data,
+                data=data,
                 annot=True,
                 vmin=vmin,
                 vmax=vmax,
                 fmt=fmt,
-                row_colors=adata.obsm[lk][lin_names].colors,
+                row_colors=adata.obsm[lineage_key][lin_names].colors,
                 dendrogram_ratio=(
                     0.15 * data.shape[0] / max_size,
                     0.15 * data.shape[1] / max_size,
@@ -402,7 +401,7 @@ def cluster_fates(
         else:
             fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
             g = heatmap(
-                data,
+                data=data,
                 vmin=vmin,
                 vmax=vmax,
                 annot=True,
@@ -432,14 +431,9 @@ def cluster_fates(
             f"`{ClusterFatesMode.BAR!r}` and `{ClusterFatesMode.VIOLIN!r}`, found `mode={mode!r}`."
         )
 
-    if backward:
-        lk = AbsProbKey.BACKWARD.s
-        points = TerminalStatesPlot.BACKWARD.s
-        dir_prefix = DirPrefix.BACKWARD.s
-    else:
-        lk = AbsProbKey.FORWARD.s
-        points = TerminalStatesPlot.FORWARD.s
-        dir_prefix = DirPrefix.FORWARD.s
+    lineage_key = Key.obsm.abs_probs(backward)
+    term_states = Key.obs.term_states(backward)
+    direction = Key.where(backward)
 
     if cluster_key is not None:
         is_all = False
@@ -462,10 +456,10 @@ def cluster_fates(
             clusters = list(adata.obs[cluster_key].cat.categories)
     else:
         is_all = True
-        clusters = [points]
+        clusters = [term_states]
 
-    if lk not in adata.obsm:
-        raise KeyError(f"Lineage key `{lk!r}` not found in `adata.obsm`.")
+    if lineage_key not in adata.obsm:
+        raise KeyError(f"Lineage key `{lineage_key!r}` not found in `adata.obsm`.")
 
     if lineages is not None:
         if isinstance(lineages, str):
@@ -473,8 +467,8 @@ def cluster_fates(
         lin_names = _unique_order_preserving(lineages)
     else:
         # must be list for `sc.pl.violin`, else cats str
-        lin_names = list(adata.obsm[lk].names)
-    _ = adata.obsm[lk][lin_names]
+        lin_names = list(adata.obsm[lineage_key].names)
+    _ = adata.obsm[lineage_key][lin_names]
 
     if mode == mode.VIOLIN and not is_all:
         adata = adata[np.isin(adata.obs[cluster_key], clusters)].copy()
@@ -482,12 +476,12 @@ def cluster_fates(
     d = odict()
     for name in clusters:
         mask = (
-            np.ones((adata.n_obs,), dtype=np.bool)
+            np.ones((adata.n_obs,), dtype=bool)
             if is_all
             else (adata.obs[cluster_key] == name).values
         )
-        mask = np.array(mask, dtype=np.bool)
-        data = adata.obsm[lk][mask, lin_names].X
+        mask = np.array(mask, dtype=bool)
+        data = adata.obsm[lineage_key][mask, lin_names].X
         mean = np.nanmean(data, axis=0)
         std = np.nanstd(data, axis=0) / np.sqrt(data.shape[0])
         d[name] = [mean, std]

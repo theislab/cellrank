@@ -1,6 +1,3 @@
-"""Utility functions for CellRank plotting."""
-
-from copy import copy
 from typing import (
     Any,
     Dict,
@@ -13,16 +10,19 @@ from typing import (
     Optional,
     Sequence,
 )
+
+from copy import copy
 from pathlib import Path
 from itertools import combinations
 from collections import namedtuple, defaultdict
 
+from anndata import AnnData
 from cellrank import logging as logg
+from cellrank.tl._enum import _DEFAULT_BACKEND
 from cellrank.ul._docs import d
 from cellrank.tl._utils import save_fig, _unique_order_preserving
 from cellrank.ul.models import GAMR, BaseModel, FailedModel, SKLearnModel
 from cellrank.tl._colors import _create_categorical_colors
-from cellrank.tl._constants import _DEFAULT_BACKEND
 from cellrank.ul._parallelize import parallelize
 from cellrank.ul.models._base_model import ColorType
 
@@ -36,7 +36,6 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-AnnData = TypeVar("AnnData")
 Queue = TypeVar("Queue")
 Graph = TypeVar("Graph")
 
@@ -82,8 +81,7 @@ def _curved_edges(
 
     Returns
     -------
-    :class:`np.ndarray`
-        Array of shape ``(n_edges, bezier_precision, 2)`` containing the curved edges.
+    Array of shape ``(n_edges, bezier_precision, 2)`` containing the curved edges.
     """
 
     try:
@@ -197,8 +195,7 @@ def _is_any_gam_mgcv(models: Union[BaseModel, Dict[str, Dict[str, BaseModel]]]) 
 
     Returns
     -------
-    bool
-        `True` if any of the models is from R's mgcv package, else `False`.
+    `True` if any of the models is from R's mgcv package, else `False`.
     """
 
     return isinstance(models, GAMR) or (
@@ -222,7 +219,7 @@ def _create_models(
 
     Returns
     -------
-        The created models.
+    The created models.
     """
 
     def process_lineages(
@@ -359,9 +356,9 @@ def _fit_bulk_helper(
 
     Returns
     -------
-        The fitted models, optionally containing the confidence interval in the
-        form of `{'gene1': {'lineage1': <model11>, ...}, ...}`.
-        If any step has failed, the model will be of type :class:`cellrank.ul.models.FailedModel`.
+    The fitted models, optionally containing the confidence interval in the form of
+    `{'gene1': {'lineage1': <model11>, ...}, ...}`.
+    If any step has failed, the model will be of type :class:`cellrank.ul.models.FailedModel`.
     """
     if len(lineages) != len(time_range):
         raise ValueError(
@@ -440,18 +437,17 @@ def _fit_bulk(
 
     Returns
     -------
-    :class:`dict`
-        All the models, including the failed ones. It is a nested dictionary where keys are the ``genes`` and the values
-        is again a :class:`dict`, where keys are ``lineages`` and values are the failed or fitted models or
-        the :class:`collections.namedtuple`, based on ``return_models=True``.
-    :class:`dict`
-        Same as above, but can contain failed models if ``filter_all_failed=False``. In that case, it is guaranteed
-        that this dictionary will contain only genes which have been successfully fitted for at least 1 lineage.
-        If ``return_models=True``, the models are just a :class:`collections.namedtuple` of `(x_test, y_test)`.
-    :class:`tuple`
-        All the genes of the filtered models.
-    :class:`tuple`
-        All the lineage of the filtered models.
+    All the models, including the failed ones. It is a nested dictionary where keys are the ``genes`` and the values
+    is again a :class:`dict`, where keys are ``lineages`` and values are the failed or fitted models or
+    the :class:`collections.namedtuple`, based on ``return_models = True``.
+
+    Same as above, but can contain failed models if ``filter_all_failed=False``. In that case, it is guaranteed
+    that this dictionary will contain only genes which have been successfully fitted for at least 1 lineage.
+    If ``return_models = True``, the models are just a :class:`collections.namedtuple` of `(x_test, y_test)`.
+
+    All the genes of the filtered models.
+
+    All the lineage of the filtered models.
     """
 
     if isinstance(genes, str):
@@ -573,7 +569,7 @@ def _trends_helper(
     legend_loc: Optional[str] = "best",
     fig: mpl.figure.Figure = None,
     axes: Union[mpl.axes.Axes, Sequence[mpl.axes.Axes]] = None,
-    **kwargs,
+    **kwargs: Any,
 ) -> None:
     """
     Plot an expression gene for some lineages.
@@ -829,8 +825,7 @@ def _position_legend(ax: mpl.axes.Axes, legend_loc: str, **kwargs) -> mpl.legend
 
     Returns
     -------
-    :class: `matplotlib.legend.Legend`
-        The created legend.
+    The created legend.
     """
 
     if legend_loc == "center center out":
@@ -929,7 +924,7 @@ def _create_callbacks(
 
     Returns
     -------
-        The created callbacks.
+    The created callbacks.
     """
 
     def process_lineages(
@@ -1095,25 +1090,21 @@ def composition(
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[float] = None,
     save: Optional[Union[str, Path]] = None,
-    **kwargs,
+    **kwargs: Any,
 ) -> None:
     """
     Plot a pie chart for categorical annotation.
-
-    .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/composition.png
-       :width: 400px
-       :align: center
 
     Parameters
     ----------
     %(adata)s
     key
-        Key in ``adata.obs`` containing categorical observation.
+        Key in :attr:`anndata.AnnData.obs` containing categorical observation.
     fontsize
         Font size for the pie chart labels.
     %(plotting)s
-    **kwargs
-        Keyworded arguments for :func:`matplotlib.pyplot.pie`.
+    kwargs
+        Keyword arguments for :func:`matplotlib.pyplot.pie`.
 
     Returns
     -------
@@ -1121,21 +1112,22 @@ def composition(
     """
 
     if key not in adata.obs:
-        raise KeyError(f"Key `{key!r}` not found in `adata.obs`.")
+        raise KeyError(f"Data not found in `adata.obs[{key!r}]`.")
     if not is_categorical_dtype(adata.obs[key]):
-        raise TypeError(f"Observation `adata.obs[{key!r}]` is not categorical.")
+        raise TypeError(
+            f"Expected `adata.obs[{key!r}]` is not `categorical`, "
+            f"found `{infer_dtype(adata.obs[key])}`."
+        )
 
-    cats = adata.obs[key].cat.categories
     colors = adata.uns.get(f"{key}_colors", None)
-    x = [np.sum(adata.obs[key] == cl) for cl in cats]
-    cats_frac = x / np.sum(x)
+    x = adata.obs[key].value_counts()
 
     # plot these fractions in a pie plot
     fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
 
     ax.pie(
-        x=cats_frac,
-        labels=cats,
+        x=x,
+        labels=x.index,
         colors=colors,
         textprops={"fontsize": fontsize},
         **kwargs,
@@ -1160,8 +1152,7 @@ def _held_karp(dists: np.ndarray) -> Tuple[float, np.ndarray]:
 
     Returns
     -------
-    :class:`tuple`
-        The cost and the path.
+    The cost and the path.
     """
     n = len(dists)
 

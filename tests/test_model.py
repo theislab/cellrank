@@ -1,15 +1,15 @@
 import pickle
+import pytest
 from io import BytesIO
 from copy import copy, deepcopy
-from itertools import product
-
-import pytest
+from pathlib import Path
 from _helpers import gamr_skip, create_model, assert_models_equal
+from itertools import product
 
 from anndata import AnnData
 from cellrank.tl import Lineage
+from cellrank._key import Key
 from cellrank.ul.models import GAM, GAMR, FittedModel, SKLearnModel
-from cellrank.tl._constants import AbsProbKey
 from cellrank.ul.models._utils import (
     _OFFSET_KEY,
     NormMode,
@@ -102,7 +102,7 @@ class TestModel:
         assert ci is model.conf_int
 
     def test_model_1_lineage(self, adata_cflare):
-        adata_cflare.obsm[AbsProbKey.FORWARD.s] = Lineage(
+        adata_cflare.obsm[Key.obsm.abs_probs(False)] = Lineage(
             np.ones((adata_cflare.n_obs, 1)), names=["foo"]
         )
         model = create_model(adata_cflare)
@@ -115,16 +115,30 @@ class TestModel:
             np.r_[xtest[0], xtest[-1]], np.r_[np.min(xall), np.max(xall)]
         )
 
+    def test_prepare_resets_fields(self, adata_cflare: AnnData):
+        g = GAM(adata_cflare)
+
+        _ = g.prepare(adata_cflare.var_names[0], "0").fit()
+        _ = g.predict()
+        _ = g.confidence_interval()
+
+        _ = g.prepare(adata_cflare.var_names[1], "0").fit()
+        assert isinstance(g.x_test, np.ndarray)
+        assert g.y_test is None
+        assert g.x_hat is None
+        assert g.y_hat is None
+        assert g.conf_int is None
+
 
 class TestUtils:
     def test_extract_data_wrong_type(self):
         with pytest.raises(TypeError):
-            _extract_data(None)
+            _ = _extract_data(None)
 
     def test_extract_data_raw_None(self, adata: AnnData):
         adata = AnnData(adata.X, raw=None)
         with pytest.raises(ValueError):
-            _extract_data(adata, use_raw=True)
+            _ = _extract_data(adata, use_raw=True)
 
     def test_extract_data_invalid_layer(self, adata: AnnData):
         with pytest.raises(KeyError):
@@ -437,7 +451,7 @@ class TestGAM:
 
     def test_invalid_grid_type(self, adata: AnnData):
         with pytest.raises(TypeError):
-            GAM(adata, grid=1311)
+            _ = GAM(adata, grid=1311)
 
     def test_default_grid(self, adata_cflare: AnnData):
         g = GAM(adata_cflare, grid="default")
@@ -613,6 +627,30 @@ class TestModelsIO:
 
         assert_models_equal(pygam_model, actual_model, pickled=True)
 
+    @pytest.mark.parametrize("copy", [False, True])
+    @pytest.mark.parametrize("write_adata", [False, True])
+    def test_read_write(
+        self, sklearn_model: SKLearnModel, tmpdir, write_adata: bool, copy: bool
+    ):
+        path = Path(tmpdir) / "model.pickle"
+        sklearn_model.write(path, write_adata=write_adata)
+
+        if write_adata:
+            model = SKLearnModel.read(path)
+            assert model.adata is not None
+        else:
+            with open(path, "rb") as fin:
+                model: SKLearnModel = pickle.load(fin)
+                assert model.adata is None
+                assert model.shape == (sklearn_model.adata.n_obs,)
+            model = SKLearnModel.read(path, adata=sklearn_model.adata, copy=copy)
+            if copy:
+                assert model.adata is not sklearn_model.adata
+            else:
+                assert model.adata is sklearn_model.adata
+            model.adata = model.adata.copy()
+        assert_models_equal(sklearn_model, model, pickled=True)
+
 
 class TestFittedModel:
     def test_wrong_xt_yt_shape(self):
@@ -762,7 +800,7 @@ class TestFittedModel:
             fm.default_confidence_interval(), [[4, 5], [6, 7]]
         )
 
-    def from_model_wrong_type(self, adata_cflare):
+    def test_from_model_wrong_type(self, adata_cflare):
         m = create_model(adata_cflare)
         with pytest.raises(TypeError):
             FittedModel.from_model(m.model)

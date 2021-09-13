@@ -58,11 +58,9 @@ g.plot_absorption_probabilities()
 # absorption to all terminal states. To compute the mean and the variance only for the `"Alpha"` absorbing state,
 # one specify the following ``time_to_absorption={"Alpha": "var"}``.
 g.compute_absorption_probabilities(time_to_absorption="all")
-g.lineage_absorption_times
+g.absorption_times
 
 # %%
 # Lastly, we plot the above computed time.
-adata.obs["mean_time_to_absorption"] = g.lineage_absorption_times[
-    "Alpha, Beta, Epsilon mean"
-]
+adata.obs["mean_time_to_absorption"] = g.absorption_times["Alpha, Beta, Epsilon mean"]
 scv.pl.scatter(adata, color="mean_time_to_absorption")

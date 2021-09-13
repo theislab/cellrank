@@ -1,7 +1,7 @@
 from typing import Any, List, Tuple, Union, Mapping, Optional, Sequence
+
 from functools import lru_cache
 from dataclasses import dataclass
-
 from statsmodels.nonparametric.smoothers_lowess import lowess
 
 from anndata import AnnData
@@ -99,7 +99,7 @@ class FlowPlotter:
 
         Returns
         -------
-        Modifies and return self.
+        Returns self and modifies internal internal attributes.
         """
         if clusters is None:
             self._clusters = self.clusters.cat.categories
@@ -166,7 +166,7 @@ class FlowPlotter:
 
         Returns
         -------
-        Dataframe of shape ``(n_time_points, n_clusters)`` if ``cluster!=None`` or
+        Dataframe of shape ``(n_time_points, n_clusters)`` if ``cluster != None`` or
         a dataframe of shape ``(n_time_points * n_clusters, n_clusters)`` otherwise.
         The dataframe's index is a multi-index and the 1st level corresponds to time, the 2nd level to source clusters.
         """

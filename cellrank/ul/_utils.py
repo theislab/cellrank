@@ -1,72 +1,18 @@
-"""General utility functions module."""
-import pickle
+from typing import Any, Dict, List, Tuple, Union, Callable, Iterable, Optional
+
+import wrapt
 from types import MappingProxyType
-from typing import Any, Dict, List, Tuple, Union, TypeVar, Iterable, Optional
-from pathlib import Path
 from functools import wraps, update_wrapper
+from contextlib import contextmanager
 from multiprocessing import cpu_count
 
+from anndata import AnnData
 from cellrank import logging as logg
+from anndata.utils import make_index_unique
 from cellrank.ul._docs import d
 
 import numpy as np
 from scipy.sparse import issparse, spmatrix
-
-AnnData = TypeVar("AnnData")
-
-
-class Pickleable:
-    """Class which allows serialization and deserialization using :mod:pickle."""
-
-    @d.get_full_description(base="pickleable")
-    @d.get_sections(base="pickleable", sections=["Parameters", "Returns"])
-    def write(self, fname: Union[str, Path], ext: Optional[str] = "pickle") -> None:
-        """
-        Serialize self to a file.
-
-        Parameters
-        ----------
-        fname
-            Filename where to save the object.
-        ext
-            Filename extension to use. If `None`, don't append any extension.
-
-        Returns
-        -------
-        None
-            Nothing, just writes itself to a file using :mod:`pickle`.
-        """
-
-        fname = str(fname)
-        if ext is not None:
-            if not ext.startswith("."):
-                ext = "." + ext
-            if not fname.endswith(ext):
-                fname += ext
-
-        logg.debug(f"Writing to `{fname}`")
-
-        with open(fname, "wb") as fout:
-            pickle.dump(self, fout)
-
-    @staticmethod
-    def read(fname: Union[str, Path]) -> Any:
-        """
-        Deserialize self from a file.
-
-        Parameters
-        ----------
-        fname
-            Filename from which to read the object.
-
-        Returns
-        -------
-        :class:`typing.Any`
-            The deserialized object.
-        """
-
-        with open(fname, "rb") as fin:
-            return pickle.load(fin)
 
 
 def _check_collection(
@@ -95,8 +41,7 @@ def _check_collection(
 
     Returns
     -------
-    None
-        Nothing, but raises and :class:`KeyError` if one of the needles is not found.
+    Nothing, but raises and :class:`KeyError` if one of the needles is not found.
     """
     adata_name = "adata"
 
@@ -136,8 +81,7 @@ def _get_n_cores(n_cores: Optional[int], n_jobs: Optional[int]) -> int:
 
     Returns
     -------
-    int
-        Positive integer corresponding to how many cores to use.
+    Positive integer corresponding to how many cores to use.
     """
     if n_cores == 0:
         raise ValueError("Number of cores cannot be `0`.")
@@ -164,8 +108,7 @@ def _minmax(
 
     Returns
     -------
-    :class:`tuple`
-        Minimum and maximum values, respectively.
+    Minimum and maximum values, respectively.
     """
     if perc is not None:
         data = np.clip(data, *np.percentile(data, sorted(perc)))
@@ -183,10 +126,6 @@ def _modify_neigh_key(key: Optional[str]) -> str:
         key = key[:-10]
 
     return key
-
-
-def _has_neighs(adata: AnnData, key: Optional[str] = None) -> bool:
-    return _modify_neigh_key(key) in adata.uns.keys()
 
 
 def _get_neighs(
@@ -209,8 +148,12 @@ def _get_neighs(
     return res
 
 
+def _has_neighs(adata: AnnData, key: Optional[str] = None) -> bool:
+    return _modify_neigh_key(key) in adata.uns.keys()
+
+
 def _get_neighs_params(adata: AnnData, key: str = "neighbors") -> Dict[str, Any]:
-    return adata.uns.get(key, {}).get("params")
+    return adata.uns.get(key, {}).get("params", {})
 
 
 def _read_graph_data(adata: AnnData, key: str) -> Union[np.ndarray, spmatrix]:
@@ -222,61 +165,16 @@ def _read_graph_data(adata: AnnData, key: str) -> Union[np.ndarray, spmatrix]:
     adata
         Annotated data object.
     key
-        Key in ``adata.obsp``.
+        Key in :attr:`anndata.AnnData.obsp`.
 
     Returns
     -------
-    :class:`numpy.ndarray` or :class:`scipy.sparse.spmatrix`
-        The graph data.
+    The graph data.
     """
-
-    logg.debug(f"Reading key `{key!r}` from `adata.obsp`")
-    if key in adata.obsp.keys():
+    if key in adata.obsp:
         return adata.obsp[key]
 
-    raise KeyError(f"Unable to find key `{key!r}` in `adata.obsp`.")
-
-
-def _write_graph_data(
-    adata: AnnData,
-    data: Union[np.ndarray, spmatrix],
-    key: str,
-):
-    """
-    Write graph data to :mod:`AnnData`.
-
-    :module`anndata` >=0.7 stores `(n_obs x n_obs)` matrices in `.obsp` rather than `.uns`.
-    This is for backward compatibility.
-
-    Parameters
-    ----------
-    adata
-        Annotated data object.
-    data
-        The graph data we want to write.
-    key
-        Key from either ``adata.uns`` or `adata.obsp``.
-
-    Returns
-    --------
-    None
-        Nothing, just writes the data.
-    """
-
-    try:
-        adata.obsp[key] = data
-        write_to = "obsp"
-
-        if data.shape[0] != data.shape[1]:
-            logg.warning(
-                f"`adata.obsp` attribute should only contain square matrices, found shape `{data.shape}`"
-            )
-
-    except AttributeError:
-        adata.uns[key] = data
-        write_to = "uns"
-
-    logg.debug(f"Writing graph data to `adata.{write_to}[{key!r}]`")
+    raise KeyError(f"Unable to find data in `adata.obsp[{key!r}]`.")
 
 
 def valuedispatch(func):
@@ -314,3 +212,75 @@ def _densify_squeeze(x: Union[spmatrix, np.ndarray], dtype=np.float32) -> np.nda
         x = np.squeeze(x, axis=1)
 
     return x
+
+
+@contextmanager
+@d.dedent
+def _gene_symbols_ctx(
+    adata: AnnData,
+    *,
+    key: Optional[str] = None,
+    use_raw: bool = False,
+    make_unique: bool = False,
+) -> AnnData:
+    """
+    Set gene names from a column in :attr:`anndata.AnnData.var`.
+
+    Parameters
+    ----------
+    %(adata)s
+    key
+        Key in :attr:`anndata.AnnData.var` where the gene symbols are stored. If `None`, this operation is a no-op.
+    use_raw
+        Whether to change the gene names in :attr:`anndata.AnnData.raw`.
+    make_unique
+        Whether to make the newly assigned gene names unique.
+    Yields
+    ------
+    The same ``adata`` with modified :attr:`anndata.AnnData.var_names`, depending on ``use_raw``.
+    """
+
+    def key_present() -> bool:
+        if use_raw:
+            if adata.raw is None:
+                raise AttributeError(
+                    "No `.raw` attribute found. Try specifying `use_raw=False`."
+                )
+            return key in adata.raw.var
+        return key in adata.var
+
+    if key is None:
+        yield adata
+    elif not key_present():
+        raise KeyError(
+            f"Unable to find gene symbols in `adata.{'raw.' if use_raw else ''}var[{key!r}]`."
+        )
+    else:
+        adata_orig = adata
+        if use_raw:
+            adata = adata.raw
+
+        var_names = adata.var_names.copy()
+        try:
+            # TODO(michalk8): doesn't update varm (niche)
+            adata.var.index = (
+                make_index_unique(adata.var[key]) if make_unique else adata.var[key]
+            )
+            yield adata_orig
+        finally:
+            # in principle we assume the callee doesn't change the index
+            # otherwise, would need to check whether it has been changed and add an option to determine what to do
+            adata.var.index = var_names
+
+
+@wrapt.decorator
+def _genesymbols(
+    wrapped: Callable[..., Any], instance: Any, args: Any, kwargs: Any
+) -> Any:
+    with _gene_symbols_ctx(
+        args[0],
+        key=kwargs.pop("gene_symbols", None),
+        make_unique=True,
+        use_raw=kwargs.get("use_raw", False),
+    ):
+        return wrapped(*args, **kwargs)

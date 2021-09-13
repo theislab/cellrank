@@ -1,15 +1,11 @@
-"""Module for plotting lineage-related stuff."""
-from typing import Union, Optional, Sequence
+from typing import Any, Union, Optional, Sequence
+from typing_extensions import Literal
 
 import cellrank.logging as logg
+from cellrank._key import Key
 from cellrank.ul._docs import d
 from cellrank.pl._utils import AnnData
-from cellrank.tl._constants import DirPrefix
-from cellrank.tl.estimators import GPCCA
-from cellrank.tl.estimators._constants import A, P
-from cellrank.tl.kernels._precomputed_kernel import DummyKernel
-
-import pandas as pd
+from cellrank.tl.estimators.terminal_states._cflare import CFLARE
 
 
 @d.dedent
@@ -17,10 +13,10 @@ def lineages(
     adata: AnnData,
     lineages: Optional[Union[str, Sequence[str]]] = None,
     backward: bool = False,
-    cluster_key: Optional[str] = None,
-    mode: str = "embedding",
+    color: Optional[str] = None,
+    mode: Literal["embedding", "time"] = "embedding",
     time_key: str = "latent_time",
-    **kwargs,
+    **kwargs: Any,
 ) -> None:
     """
     Plot lineages that were uncovered using :func:`cellrank.tl.lineages`.
@@ -36,31 +32,32 @@ def lineages(
     lineages
         Plot only these lineages. If `None`, plot all lineages.
     %(backward)s
-    cluster_key
+    color
         If given, plot cluster annotations left of the lineage probabilities.
     %(time_mode)s
     time_key
         Key in ``adata.obs`` where the pseudotime is stored.
     %(basis)s
     kwargs
-        Keyword arguments for :meth:`cellrank.tl.estimators.BaseEstimator.plot_absorption_probabilities`.
+        Keyword arguments for :meth:`cellrank.tl.estimators.GPCCA.plot_absorption_probabilities`.
 
     Returns
     -------
     %(just_plots)s
     """
 
-    pk = DummyKernel(adata, backward=backward)
-    mc = GPCCA(pk, read_from_adata=True, write_to_adata=False)
-    if mc._get(P.ABS_PROBS) is None:
+    # use CFLARE (no macrostates required)
+    mc = CFLARE.from_adata(adata, obsp_key=Key.uns.kernel(backward))
+    if mc.absorption_probabilities is None:
         raise RuntimeError(
             f"Compute absorption probabilities first as `cellrank.tl.lineages(..., backward={backward})`."
         )
 
     # plot using the MC object
+    color = kwargs.pop("cluster_key", color)
     mc.plot_absorption_probabilities(
-        lineages=lineages,
-        cluster_key=cluster_key,
+        states=lineages,
+        color=color,
         mode=mode,
         time_key=time_key,
         **kwargs,
@@ -76,7 +73,7 @@ def lineage_drivers(
     ncols: Optional[int] = None,
     use_raw: bool = False,
     title_fmt: str = "{gene} qval={qval:.4e}",
-    **kwargs,
+    **kwargs: Any,
 ) -> None:
     """
     Plot lineage drivers that were uncovered using :func:`cellrank.tl.lineage_drivers`.
@@ -92,30 +89,24 @@ def lineage_drivers(
     %(just_plots)s
     """
 
-    pk = DummyKernel(adata, backward=backward)
-    mc = GPCCA(pk, read_from_adata=True, write_to_adata=False)
+    mc = CFLARE.from_adata(adata, obsp_key=Key.uns.kernel(backward))
 
     if use_raw and adata.raw is None:
-        logg.warning("No raw attribute set. Using `adata.var` instead")
+        logg.warning("No raw attribute set. Using `use_raw=False`")
         use_raw = False
 
-    direction = DirPrefix.BACKWARD if backward else DirPrefix.FORWARD
-    needle = f"{direction} {lineage} corr"
+    key = Key.varm.lineage_drivers(backward)
+    haystack = (adata.raw if use_raw else adata).varm
 
-    haystack = adata.raw.var if use_raw else adata.var
-
-    if needle not in haystack:
+    if key not in haystack:
         raise RuntimeError(
-            f"Unable to find lineage drivers in "
-            f"`{'adata.raw.var' if use_raw else 'adata.var'}[{needle!r}]`. "
+            "Unable to find lineage drivers in "
+            f"`{'adata.raw.varm' if use_raw else 'adata.varm'}[{key!r}]`. "
             f"Compute lineage drivers first as `cellrank.tl.lineage_drivers(lineages={lineage!r}, "
             f"use_raw={use_raw}, backward={backward}).`"
         )
 
-    drivers = pd.DataFrame(haystack[[needle, f"{direction} {lineage} qval"]])
-    drivers.columns = [f"{lineage} corr", f"{lineage} qval"]
-    mc._set(A.LIN_DRIVERS, drivers)
-
+    mc._lineage_drivers = haystack[key]
     mc.plot_lineage_drivers(
         lineage,
         n_genes=n_genes,

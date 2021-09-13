@@ -1,10 +1,11 @@
 """Module containing anything related to linear solvers."""
 from typing import List, Tuple, Union, TypeVar, Optional
+
 from functools import singledispatch
 
 from cellrank import logging as logg
+from cellrank.tl._enum import _DEFAULT_BACKEND
 from cellrank.ul._utils import _get_n_cores
-from cellrank.tl._constants import _DEFAULT_BACKEND
 from cellrank.ul._parallelize import parallelize
 
 import numpy as np
@@ -55,12 +56,10 @@ def _create_petsc_matrix(
 
     Returns
     -------
-    :class:`petsc4py.PETSc.Mat`
-        The converted matrix.
+    The converted matrix.
     """
 
-    # TODO:
-    # for some solvers, we need to set the diagonal entries explicitly, even if they are zeros
+    # TODO(michalk8): for some solvers, we need to set the diagonal entries explicitly, even if they are zeros
     # see: https://lists.mcs.anl.gov/mailman/htdig/petsc-users/2014-October/023212.html
 
     from petsc4py import PETSc
@@ -104,7 +103,7 @@ def _create_solver(
 
     Returns
     -------
-        Triple containing the solver, vector ``x`` and vector ``b`` in ``A * x = b``.
+    Triple containing the solver, vector ``x`` and vector ``b`` in ``A * x = b``.
     """
 
     from petsc4py import PETSc
@@ -168,7 +167,7 @@ def _(
 
     ksp.solve(b, x)
 
-    return x.getArray().copy().squeeze(), int(ksp.converged)
+    return np.atleast_1d(x.getArray().copy().squeeze()), int(ksp.converged)
 
 
 @_solve_many_sparse_problems_petsc.register(csc_matrix)
@@ -191,7 +190,7 @@ def _(
 
         ksp.solve(b, x)
 
-        xs.append(x.getArray().copy().squeeze())
+        xs.append(np.atleast_1d(x.getArray().copy().squeeze()))
         converged += ksp.converged
 
         if queue is not None:
@@ -232,11 +231,10 @@ def _solve_many_sparse_problems(
 
     Returns
     -------
-    :class:`numpy.ndarray`
-        Matrix of shape `n x m`. Each column in the resulting matrix corresponds to the solution
-        of one of the sub-problems defined via columns in ``mat_b``.
-    int
-        Number of converged solutions.
+    Matrix of shape `n x m`. Each column in the resulting matrix corresponds to the solution
+    of one of the sub-problems defined via columns in ``mat_b``.
+
+    Number of converged solutions.
     """
 
     # initialise solution list and info list
@@ -248,7 +246,7 @@ def _solve_many_sparse_problems(
         x, info = solver(mat_a, b.toarray().flatten(), tol=tol, x0=None, **kwargs)
 
         # append solution and info
-        x_list.append(x)
+        x_list.append(np.atleast_1d(x))
         n_converged += info == 0
 
         if queue is not None:
@@ -260,7 +258,7 @@ def _solve_many_sparse_problems(
     return np.stack(x_list, axis=1), n_converged
 
 
-def _petsc_mat_solve(
+def _petsc_direct_solve(
     mat_a: Union[np.ndarray, spmatrix],
     mat_b: Optional[Union[spmatrix, np.ndarray]] = None,
     tol: float = 1e-5,
@@ -297,7 +295,7 @@ def _petsc_mat_solve(
                     f"did not converge"
                 )
 
-            return res
+            return res[:, None]
 
         B = _create_petsc_matrix(mat_b, as_dense=True)
 
@@ -397,9 +395,8 @@ def _solve_lin_system(
 
     Returns
     --------
-    :class:`numpy.ndarray`
-        Matrix of shape `n x m`. Each column corresponds to the solution of one of the sub-problems
-        defined via columns in ``mat_b``.
+    Matrix of shape `n x m`. Each column corresponds to the solution of one of the sub-problems
+    defined via columns in ``mat_b``.
     """
 
     def extractor(
@@ -412,7 +409,7 @@ def _solve_lin_system(
 
     if use_petsc:
         try:
-            from petsc4py import PETSc  # noqa
+            from petsc4py import PETSc
         except ImportError:
             global _PETSC_ERROR_MSG_SHOWN
             if not _PETSC_ERROR_MSG_SHOWN:
@@ -429,7 +426,7 @@ def _solve_lin_system(
     if solver == "direct":
         if use_petsc:
             logg.debug("Solving the linear system directly using `PETSc`")
-            return _petsc_mat_solve(
+            return _petsc_direct_solve(
                 mat_a, mat_b, solver=solver, preconditioner=preconditioner, tol=tol
             )
 
@@ -460,7 +457,6 @@ def _solve_lin_system(
             f"`tol={tol}`"
         )
 
-        # can't pass PETSc matrix - not pickleable
         mat_x, n_converged = parallelize(
             _solve_many_sparse_problems_petsc,
             mat_b,

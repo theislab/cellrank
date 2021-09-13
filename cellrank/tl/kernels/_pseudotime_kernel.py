@@ -1,15 +1,15 @@
-"""Pseudotime kernel module."""
-from copy import copy
 from typing import Any, Union, Callable, Optional
-
 from typing_extensions import Literal
+
+from copy import copy
+from enum import auto
 
 from anndata import AnnData
 from cellrank import logging as logg
+from cellrank.tl._enum import _DEFAULT_BACKEND, ModeEnum, Backend_t
 from cellrank.ul._docs import d
 from cellrank.tl._utils import _connected
 from cellrank.tl.kernels import Kernel
-from cellrank.tl._constants import ThresholdScheme
 from cellrank.tl.kernels._base_kernel import _dtype
 from cellrank.tl.kernels._pseudotime_schemes import (
     ThresholdSchemeABC,
@@ -19,6 +19,11 @@ from cellrank.tl.kernels._pseudotime_schemes import (
 )
 
 import numpy as np
+
+
+class ThresholdScheme(ModeEnum):  # noqa: D101
+    SOFT = auto()
+    HARD = auto()
 
 
 @d.dedent
@@ -82,7 +87,7 @@ class PseudotimeKernel(Kernel):
         nu: float = 0.5,
         check_irreducibility: bool = False,
         n_jobs: Optional[int] = None,
-        backend: str = "loky",
+        backend: Backend_t = _DEFAULT_BACKEND,
         show_progress_bar: bool = True,
         **kwargs: Any,
     ) -> "PseudotimeKernel":
@@ -92,22 +97,24 @@ class PseudotimeKernel(Kernel):
         Depending on the choice of the `thresholding_scheme`, this is based on ideas by either *Palantir*
         :cite:`setty:19` or *VIA* :cite:`stassen:21`.
 
-        When using a `'hard'` thresholding scheme, this based on ideas by *Palantir* :cite:`setty:19` which removes some
-        edges that point against the direction of increasing pseudotime. To avoid disconnecting the graph, it does not
-        remove all edges that point against the direction of increasing pseudotime but keeps the ones that point to
-        cells inside a close radius. This radius is chosen according to the local cell density.
-
-        When using a `'soft'` thresholding scheme, this is based on ideas by *VIA* :cite:`stassen:21` which downweights
-        edges that points against the direction of increasing pseudotime. Essentially, the further "behind" a query
-        cell is in pseudotime with respect to the current reference cell, the more penalized will be its
-        graph-connectivity.
-
         Parameters
         ----------
+        threshold_scheme
+            Which method to use when biasing the graph. Valid options are:
+
+                - `'hard'` - based on *Palantir* :cite:`setty:19` which removes some edges that point against
+                  the direction of increasing pseudotime. To avoid disconnecting the graph, it does not
+                  remove all edges that point against the direction of increasing pseudotime, but keeps the ones
+                  that point to cells inside a close radius. This radius is chosen according to the local cell density.
+                - `'soft'` - based on *VIA* :cite:`stassen:21` which downweights edges that points against the direction
+                  of increasing pseudotime. Essentially, the further "behind" a query cell is in pseudotime with respect
+                  to the current reference cell, the more penalized will be its graph-connectivity.
+                - :class:`callable` - any function conforming to the signature of
+                  :func:`cellrank.tl.kernels.ThresholdSchemeABC.__call__`.
         frac_to_keep
-            The `fract_to_keep` * n_neighbors closest neighbors (according to graph connectivities) are kept, no matter
+            The `frac_to_keep` * number of the closest neighbors (according to graph connectivities) are kept, no matter
             whether they lie in the pseudotemporal past or future. This is done to ensure that the graph remains
-            connected. Only used when `threshold_scheme='hard'`.
+            connected. Only used when ``threshold_scheme = 'hard'``. Needs to fall within the interval `[0, 1]`.
         %(soft_scheme_kernel)s
         check_irreducibility
             Optional check for irreducibility of the final transition matrix.
@@ -117,23 +124,9 @@ class PseudotimeKernel(Kernel):
 
         Returns
         -------
-        :class:`cellrank.tl.kernels.PseudotimeKernel`
-            Makes :attr:`transition_matrix` available.
+        Self and updated :attr:`transition_matrix`.
         """
         start = logg.info(f"Computing transition matrix based on `{self._time_key}`")
-
-        # get the connectivities and number of neighbors
-        n_neighbors = (
-            self.adata.uns.get("neighbors", {})
-            .get("params", {})
-            .get("n_neighbors", None)
-        )
-        if n_neighbors is None:
-            logg.warning(
-                "Could not find 'n_neighbors' in `adata.uns['neighbors']['params']`. Using an estimate"
-            )
-            n_neighbors = np.min(self._conn.sum(1))
-
         if isinstance(threshold_scheme, str):
             threshold_scheme = ThresholdScheme(threshold_scheme)
             if threshold_scheme == ThresholdScheme.SOFT:
@@ -142,7 +135,7 @@ class PseudotimeKernel(Kernel):
                 kwargs["nu"] = nu
             elif threshold_scheme == ThresholdScheme.HARD:
                 scheme = HardThresholdScheme()
-                kwargs["frac_to_keep"], kwargs["n_neighs"] = frac_to_keep, n_neighbors
+                kwargs["frac_to_keep"] = frac_to_keep
             else:
                 raise NotImplementedError(
                     f"Threshold scheme `{threshold_scheme}` is not yet implemented."
