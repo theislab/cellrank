@@ -14,7 +14,7 @@ from cellrank.tl._lineage import Lin
 
 __author__ = ", ".join(["Marius Lange", "Michal Klein"])
 __maintainer__ = ", ".join(["Marius Lange", "Michal Klein"])
-__version__ = "1.4.0"
+__version__ = "1.5.0"
 __email__ = "info@cellrank.org"
 
 try:
