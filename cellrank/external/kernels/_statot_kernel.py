@@ -116,8 +116,7 @@ class StationaryOTKernel(OTKernel_, error=_error):
 
         Returns
         -------
-        :class:`cellrank.external.kernels.StationaryOTKernel`
-            Makes :attr:`transition_matrix` available.
+        Self and makes :attr:`transition_matrix` available.
         """
         if method not in ("ent", "quad", "unbal"):
             raise ValueError(
