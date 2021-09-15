@@ -319,7 +319,6 @@ class WOTKernel(Kernel, error=_error):
                 - :class:`float` - value in `[0, 100]` corresponding to a percentage of non-zeros to remove.
                   Rows where all values are removed will have uniform distribution.
                 - `None` - do not threshold.
-
         conn_kwargs
             Keyword arguments for :func:`scanpy.pp.neighbors`, when using ``last_time_point = {ltp.CONNECTIVITIES!r}``.
             Can contain `'density_normalize'` for
@@ -329,11 +328,15 @@ class WOTKernel(Kernel, error=_error):
 
         Returns
         -------
-        :class:`cellrank.external.kernels.WOTKernel`
-            Makes :attr:`transition_matrix`, :attr:`transport_maps` and :attr:`growth_rates` available.
-            Also modifies :attr:`anndata.AnnData.obs` with the following key:
+        Self and makes available the following attributes:
 
-                - `'estimated_growth_rates'` - the estimated final growth rates.
+            - :attr:`transition_matrix` - transition matrix.
+            - :attr:`transport_maps` - transport maps between consecutive time points.
+            - :attr:`growth_rates` - estimated growth rates.
+
+        Also modifies :attr:`anndata.AnnData.obs` with the following key:
+
+            - `'estimated_growth_rates'` - the estimated final growth rates.
 
         Notes
         -----
