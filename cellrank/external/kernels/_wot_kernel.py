@@ -47,7 +47,7 @@ class WOTKernel(Kernel, error=_error):
     %(adata)s
     %(backward)s
     time_key
-        Key in :attr:`adata` ``.obs`` where experimental time is stored.
+        Key in :attr:`anndata.AnnData.obs` where experimental time is stored.
         The experimental time can be of either of a numeric or an ordered categorical type.
     %(cond_num)s
 
@@ -414,7 +414,7 @@ class WOTKernel(Kernel, error=_error):
             if k not in _.ot_config:
                 raise TypeError(f"WOT got an unexpected keyword argument {k!r}.")
 
-        self._ot_model = wot.ot.OTModel(
+        ot_model = wot.ot.OTModel(
             adata,
             day_field=self._time_key,
             covariate_field=None,
@@ -428,7 +428,7 @@ class WOTKernel(Kernel, error=_error):
             f"Computing transport maps for `{len(cost_matrices)}` time pairs"
         )
         for tpair, cost_matrix in tqdm(cost_matrices.items(), unit="time pair"):
-            tmap: Optional[AnnData] = self._ot_model.compute_transport_map(
+            tmap: Optional[AnnData] = ot_model.compute_transport_map(
                 *tpair, cost_matrix=cost_matrix
             )
             if tmap is None:

@@ -312,6 +312,19 @@ class TestWOTKernel:
         with pytest.raises(AttributeError, match=expected_error):
             combined_kernel.compute_projection()
 
+    def test_wot_write(self, adata_large: AnnData, tmpdir):
+        path = str(tmpdir / "wot.pickle")
+        ok = cre.kernels.WOTKernel(adata_large, time_key="age(days)")
+        ok = ok.compute_transition_matrix()
+        ok.write(path)
+
+        ok2 = cre.kernels.WOTKernel.read(path)
+        assert ok.params == ok2.params
+        np.testing.assert_array_equal(
+            sorted(ok.transport_maps.keys()), sorted(ok2.transport_maps.keys())
+        )
+        np.testing.assert_array_equal(ok.transition_matrix.A, ok2.transition_matrix.A)
+
 
 class TestGetMarkers:
     @pytest.mark.parametrize("kind", ["proliferation", "apoptosis"])
