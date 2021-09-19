@@ -79,9 +79,10 @@ jobs:
                 key: pip-${{ runner.os }}-${{ env.pythonLocation }}
 
         -   name: Install pip dependencies
+            # TODO(michalk8): Cython because of WOT, remove when not needed
             run: |
                 python -m pip install --upgrade pip
-                pip install tox tox-gh-actions codecov
+                pip install tox tox-gh-actions codecov Cython
 
         -   name: Restore tox cache
             uses: actions/cache@v2
