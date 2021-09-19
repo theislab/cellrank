@@ -174,15 +174,15 @@ def _process_series(
     # determine whether we want to process colors as well
     process_colors = colors is not None
 
+    # assert dtype of the series
+    if not is_categorical_dtype(series):
+        raise TypeError(f"Series must be `categorical`, found `{infer_dtype(series)}`.")
+
     # if keys is None, just return
     if keys is None:
         if process_colors:
             return series, colors
         return series
-
-    # assert dtype of the series
-    if not is_categorical_dtype(series):
-        raise TypeError(f"Series must be `categorical`, found `{infer_dtype(series)}`.")
 
     # initialize a copy of the series object
     series_in = series.copy()
@@ -509,7 +509,7 @@ def _correlation_test_helper(
     elif method == TestMethod.PERM_TEST:
         if not isinstance(n_perms, int):
             raise TypeError(
-                f"Expected `n_perms` to be an integer, found `{type(n_perms).__name__!r}`."
+                f"Expected `n_perms` to be an integer, found `{type(n_perms).__name__}`."
             )
         if n_perms <= 0:
             raise ValueError(f"Expcted `n_perms` to be positive, found `{n_perms}`.")
@@ -722,7 +722,7 @@ def _connected(c: Union[spmatrix, np.ndarray]) -> bool:
 
 
 def _irreducible(d: Union[spmatrix, np.ndarray]) -> bool:
-    """Check whether the unirected graph encoded by d is irreducible."""
+    """Check whether the undirected graph encoded by d is irreducible."""
 
     import networkx as nx
 
@@ -1160,14 +1160,14 @@ def _fuzzy_to_discrete(
     -------
     :class:`numpy.ndarray`m :class:`numpy.ndarray`
         Boolean matrix of the same shape as `a_fuzzy`, assigning a subset of the samples to clusters and
-        an rray of clusters with less than `n_most_likely` samples assigned, respectively.
+        an array of clusters with less than `n_most_likely` samples assigned, respectively.
     """
 
     # check the inputs
     n_samples, n_clusters = a_fuzzy.shape
     if not isinstance(a_fuzzy, np.ndarray):
         raise TypeError(
-            f"Expected `a_fuzzy` to be of type `numpy.ndarray`, got `{type(a_fuzzy).__name__!r}`."
+            f"Expected `a_fuzzy` to be of type `numpy.ndarray`, got `{type(a_fuzzy).__name__}`."
         )
     a_fuzzy = np.asarray(a_fuzzy)  # convert to array from lineage classs, don't copy
     if check_row_sums:
@@ -1255,7 +1255,7 @@ def _series_from_one_hot_matrix(
     n_samples, n_clusters = membership.shape
     if not isinstance(membership, np.ndarray):
         raise TypeError(
-            f"Expected `membership` to be of type `numpy.ndarray`, found `{type(membership).__name__!r}`."
+            f"Expected `membership` to be of type `numpy.ndarray`, found `{type(membership).__name__}`."
         )
     membership = np.asarray(
         membership
@@ -1354,13 +1354,13 @@ def _check_estimator_type(estimator: Any) -> None:
 
     if not isinstance(estimator, type):
         raise TypeError(
-            f"Expected estimator to be a class, found `{type(estimator).__name__!r}`."
+            f"Expected estimator to be a class, found `{type(estimator).__name__}`."
         )
 
     if not issubclass(estimator, BaseEstimator):
         raise TypeError(
             f"Expected estimator to be a subclass of `cellrank.tl.estimators.BaseEstimator`, "
-            f"found `{type(estimator).__name__!r}`."
+            f"found `{type(estimator).__name__}`."
         )
 
 
@@ -1541,70 +1541,6 @@ def _calculate_lineage_absorption_time_means(
             res[f"{name} var"] = var
 
     return res
-
-
-def _create_initial_terminal_annotations(
-    adata: AnnData,
-    terminal_key: str = "terminal_states",
-    initial_key: str = "initial_states",
-    terminal_prefix: Optional[str] = "terminal",
-    initial_prefix: Optional[str] = "initial",
-    key_added: Optional[str] = "initial_terminal",
-) -> None:
-    """
-    Create categorical annotations of both initial and terminal states.
-
-    This is a utility function for creating a categorical :class:`pandas.Series` object which combines
-    the information about initial and terminal states. The :class:`pandas.Series` is written directly
-    to the :class:`anndata.AnnData`object. This can for example be used to create a scatter plot in :mod:`scvelo`.
-
-    Parameters
-    ----------
-    adata
-        AnnData object to write to ``.obs[key_added]``.
-    terminal_key
-        Key from ``adata.obs`` where terminal states have been saved.
-    initial_key
-        Key from ``adata.obs`` where initial states have been saved.
-    terminal_prefix
-        Forward direction prefix used in the annotations.
-    initial_prefix
-        Backward direction prefix used in the annotations.
-    key_added
-        Key added to ``adata.obs``.
-
-    Returns
-    -------
-    None
-        Nothing, just writes to ``adata``.
-    """
-
-    # get both Series objects
-    cats_final, colors_final = (
-        adata.obs[terminal_key],
-        adata.uns[f"{terminal_key}_colors"],
-    )
-    cats_root, colors_root = adata.obs[initial_key], adata.uns[f"{initial_key}_colors"]
-
-    # merge
-    cats_merged, colors_merged = _merge_categorical_series(
-        cats_final,
-        cats_root,
-        colors_old=list(colors_final),
-        colors_new=list(colors_root),
-    )
-
-    # adjust the names
-    final_names = cats_final.cat.categories
-    final_labels = [
-        f"{terminal_prefix if key in final_names else initial_prefix}: {key}"
-        for key in cats_merged.cat.categories
-    ]
-    cats_merged = cats_merged.cat.rename_categories(final_labels)
-
-    # write to AnnData
-    adata.obs[key_added] = cats_merged
-    adata.uns[f"{key_added}_colors"] = colors_merged
 
 
 def _maybe_subset_hvgs(

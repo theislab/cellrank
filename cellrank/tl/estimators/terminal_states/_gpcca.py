@@ -932,7 +932,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         memberships = Lineage(memberships, names=list(assignment.cat.categories), colors=colors)
         # fmt: on
 
-        groups = pd.DataFrame(assignment).groupby(0).size()
+        groups = assignment.value_counts()
         groups = groups[groups != n_cells].to_dict()
         if len(groups):
             logg.warning(
