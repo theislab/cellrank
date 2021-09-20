@@ -11,7 +11,7 @@ from cellrank.external.kernels._wot_kernel import LastTimePoint
 
 import numpy as np
 import pandas as pd
-from scipy.sparse import spmatrix, csr_matrix
+from scipy.sparse import csr_matrix
 from pandas.core.dtypes.common import is_categorical_dtype
 
 from matplotlib.cm import get_cmap
@@ -105,6 +105,7 @@ class TestOTKernel:
             combined_kernel.compute_projection()
 
 
+@pytest.importorskip("wot")
 class TestWOTKernel:
     def test_no_connectivities(self, adata_large: AnnData):
         del adata_large.obsp["connectivities"]
