@@ -11,13 +11,40 @@ from cellrank.external.kernels._wot_kernel import LastTimePoint
 
 import numpy as np
 import pandas as pd
-from scipy.sparse import spmatrix, csr_matrix
+from scipy.sparse import csr_matrix
 from pandas.core.dtypes.common import is_categorical_dtype
 
 from matplotlib.cm import get_cmap
 from matplotlib.colors import to_hex
 
 
+def _wot_not_installed() -> bool:
+    try:
+        import wot
+
+        return False
+    except ImportError:
+        return True
+
+
+def _statot_not_installed() -> bool:
+    try:
+        import statot
+
+        return False
+    except ImportError:
+        return True
+
+
+wot_not_installed_skip = pytest.mark.skipif(
+    _wot_not_installed(), reason="WOT is not installed."
+)
+statot_not_installed_skip = pytest.mark.skipif(
+    _statot_not_installed(), reason="statOT is not installed."
+)
+
+
+@statot_not_installed_skip
 class TestOTKernel:
     def test_no_connectivities(self, adata_large: AnnData):
         del adata_large.obsp["connectivities"]
@@ -105,6 +132,7 @@ class TestOTKernel:
             combined_kernel.compute_projection()
 
 
+@wot_not_installed_skip
 class TestWOTKernel:
     def test_no_connectivities(self, adata_large: AnnData):
         del adata_large.obsp["connectivities"]

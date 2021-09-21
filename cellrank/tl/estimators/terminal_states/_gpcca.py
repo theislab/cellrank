@@ -932,7 +932,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         memberships = Lineage(memberships, names=list(assignment.cat.categories), colors=colors)
         # fmt: on
 
-        groups = pd.DataFrame(assignment).groupby(0).size()
+        groups = assignment.value_counts()
         groups = groups[groups != n_cells].to_dict()
         if len(groups):
             logg.warning(
@@ -969,10 +969,13 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             g = self._gpcca
             tmat = pd.DataFrame(g.coarse_grained_transition_matrix, index=names, columns=names)
             init_dist = pd.Series(g.coarse_grained_input_distribution, index=names)
-            stat_dist = pd.Series(g.coarse_grained_stationary_probability, index=names)
-            dists = pd.DataFrame({"coarse_init_dist": init_dist})
+            if g.coarse_grained_stationary_probability is None:
+                stat_dist = None
+            else:
+                stat_dist = pd.Series(g.coarse_grained_stationary_probability, index=names)
+            dists = pd.DataFrame({"coarse_init_dist": init_dist}, index=names)
             if stat_dist is not None:
-                dists["coarse_stat_dist"] = pd.Series(stat_dist, index=names)
+                dists["coarse_stat_dist"] = stat_dist
 
             key = Key.obsm.schur_vectors(self.backward)
             self._set("_schur_vectors", obj=self.adata.obsm, key=key, value=g._p_X, shadow_only=True)
