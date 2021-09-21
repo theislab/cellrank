@@ -27,11 +27,24 @@ def _wot_not_installed() -> bool:
         return True
 
 
+def _statot_not_installed() -> bool:
+    try:
+        import statot
+
+        return False
+    except ImportError:
+        return True
+
+
 wot_not_installed_skip = pytest.mark.skipif(
     _wot_not_installed(), reason="WOT is not installed."
 )
+statot_not_installed_skip = pytest.mark.skipif(
+    _statot_not_installed(), reason="statOT is not installed."
+)
 
 
+@statot_not_installed_skip
 class TestOTKernel:
     def test_no_connectivities(self, adata_large: AnnData):
         del adata_large.obsp["connectivities"]
