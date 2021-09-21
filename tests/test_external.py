@@ -18,6 +18,20 @@ from matplotlib.cm import get_cmap
 from matplotlib.colors import to_hex
 
 
+def _wot_not_installed() -> bool:
+    try:
+        import wot
+
+        return False
+    except ImportError:
+        return True
+
+
+wot_not_installed_skip = pytest.mark.skipif(
+    _wot_not_installed(), reason="WOT is not installed."
+)
+
+
 class TestOTKernel:
     def test_no_connectivities(self, adata_large: AnnData):
         del adata_large.obsp["connectivities"]
@@ -105,7 +119,7 @@ class TestOTKernel:
             combined_kernel.compute_projection()
 
 
-@pytest.importorskip("wot")
+@wot_not_installed_skip
 class TestWOTKernel:
     def test_no_connectivities(self, adata_large: AnnData):
         del adata_large.obsp["connectivities"]
