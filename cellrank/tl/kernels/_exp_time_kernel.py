@@ -221,6 +221,7 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         return tmp
 
     @contextmanager
+    @property
     def _tmap_as_tmat(self):
         if self.transport_maps is None:
             raise RuntimeError(
@@ -257,7 +258,7 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         %(plot_single_flow.returns)s
         """  # noqa: D400
         if use_transport_maps:
-            with self._tmap_as_tmat():
+            with self._tmap_as_tmat:
                 return super().plot_single_flow(
                     cluster, cluster_key, time_key=time_key, **kwargs
                 )
@@ -286,7 +287,7 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         %(plot_single_flow.returns)s
         """  # noqa: D400
         if use_transport_maps:
-            with self._tmap_as_tmat():
+            with self._tmap_as_tmat:
                 return super().plot_multi_flow(
                     cluster, cluster_key, time_key=time_key, **kwargs
                 )
