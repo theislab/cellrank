@@ -1,4 +1,5 @@
-from typing import Any, Dict, Tuple, Mapping, Optional
+from typing import Any, Dict, Tuple, Union, Mapping, Optional
+from typing_extensions import Literal
 
 from abc import ABC
 from copy import copy
@@ -6,6 +7,7 @@ from types import MappingProxyType
 from contextlib import contextmanager
 
 import scanpy as sc
+from cellrank import logging as logg
 from cellrank.tl._enum import ModeEnum
 from cellrank.ul._docs import d
 from cellrank.tl._utils import _normalize
@@ -39,7 +41,7 @@ class ExperimentalTimeKernel(Kernel, ABC):
     %(adata)s
     %(backward)s
     time_key
-        Key in :attr:`adata` ``.obs`` where experimental time is stored.
+        Key in :attr:`anndata.AnnData.obs` where experimental time is stored.
         The experimental time can be of either of a numeric or an ordered categorical type.
     %(cond_num)s
     """
@@ -220,9 +222,39 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
 
         return tmp
 
+    def _threshold_transition_matrix(
+        self,
+        threshold: Union[float, Literal["auto"]],
+        *,
+        normalize: bool = True,
+    ) -> None:
+        tmat = self.transition_matrix
+        if threshold == "auto":
+            threshold = min(np.max(tmat[i].data) for i in range(tmat.shape[0]))
+            logg.info(f"Using `threshold={threshold}`")
+            tmat.data[tmat.data < threshold] = 0.0
+        else:
+            if not (0 <= threshold <= 100):
+                raise ValueError(
+                    f"Expected `threshold to be in `[0, 100]`, found `{threshold}`.`"
+                )
+            threshold = np.percentile(tmat.data, threshold)
+            logg.info(f"Using `threshold={threshold}`")
+            tmat.data[tmat.data <= threshold] = 0.0
+
+        tmat.eliminate_zeros()
+
+        if normalize:
+            self._compute_transition_matrix(
+                matrix=tmat,
+                density_normalize=False,
+                check_irreducibility=False,
+            )
+        else:
+            self._transition_matrix = tmat
+
     @contextmanager
-    @property
-    def _tmap_as_tmat(self):
+    def _tmap_as_tmat(self, threshold: Optional[Union[float, Literal["auto"]]] = None):
         if self.transport_maps is None:
             raise RuntimeError(
                 "Compute transport maps first as `.compute_transition_matrix()`."
@@ -233,6 +265,8 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
             self._transition_matrix = self._restich_tmaps(
                 self.transport_maps, normalize=False
             ).X
+            if threshold is not None:
+                self._threshold_transition_matrix(threshold, normalize=False)
             yield
         finally:
             self._transition_matrix = tmat
@@ -244,6 +278,7 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         cluster_key: str,
         time_key: Optional[str] = None,
         use_transport_maps: bool = True,
+        threshold: Optional[Union[float, Literal["auto"]]] = None,
         **kwargs: Any,
     ) -> None:
         """
@@ -258,7 +293,7 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         %(plot_single_flow.returns)s
         """  # noqa: D400
         if use_transport_maps:
-            with self._tmap_as_tmat:
+            with self._tmap_as_tmat(threshold):
                 return super().plot_single_flow(
                     cluster, cluster_key, time_key=time_key, **kwargs
                 )
@@ -273,6 +308,7 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         cluster_key: str,
         time_key: Optional[str] = None,
         use_transport_maps: bool = True,
+        threshold: Optional[Union[float, Literal["auto"]]] = None,
         **kwargs: Any,
     ) -> None:
         """
@@ -287,7 +323,7 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         %(plot_single_flow.returns)s
         """  # noqa: D400
         if use_transport_maps:
-            with self._tmap_as_tmat:
+            with self._tmap_as_tmat(threshold):
                 return super().plot_multi_flow(
                     cluster, cluster_key, time_key=time_key, **kwargs
                 )

@@ -527,31 +527,6 @@ class WOTKernel(Kernel, error=_error):
             f"`{type(cost_matrices).__name__}` is not yet implemented."
         )
 
-    def _threshold_transition_matrix(
-        self, threshold: Union[float, Literal["auto"]]
-    ) -> None:
-        tmat = self.transition_matrix
-        if threshold == "auto":
-            threshold = min(np.max(tmat[i].data) for i in range(tmat.shape[0]))
-            logg.info(f"Using `threshold={threshold}`")
-            tmat.data[tmat.data < threshold] = 0.0
-        else:
-            if not (0 <= threshold <= 100):
-                raise ValueError(
-                    f"Expected `threshold to be in `[0, 100]`, found `{threshold}`.`"
-                )
-            threshold = np.percentile(tmat.data, threshold)
-            logg.info(f"Using `threshold={threshold}`")
-            tmat.data[tmat.data <= threshold] = 0.0
-
-        tmat.eliminate_zeros()
-
-        self._compute_transition_matrix(
-            matrix=tmat,
-            density_normalize=False,
-            check_irreducibility=False,
-        )
-
     @property
     def growth_rates(self) -> Optional[pd.DataFrame]:
         """Estimated cell growth rates for each growth rate iteration."""
