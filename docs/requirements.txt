@@ -2,9 +2,10 @@
 bezier
 ipython
 ipywidgets
-louvain>=0.6,!=0.6.2
+leidenalg
 memory_profiler>=0.58.0
-nbsphinx>=0.8
+# 0.8.7 is really slow
+nbsphinx>=0.8,<0.8.7
 pypandoc
 python-igraph
 sphinx>=4
@@ -12,6 +13,5 @@ sphinx-autodoc-annotation
 sphinx-autodoc-typehints>=1.10.3
 sphinx-gallery
 sphinx_copybutton
-sphinx_last_updated_by_git
 sphinx_rtd_theme
 sphinxcontrib-bibtex>=2.3.0

@@ -196,3 +196,7 @@ span[id^="sphx-glr-auto-examples"] {
     min-height: 24px !important;
     display: block !important;
 }
+
+.rst-content .note .admonition-title {
+    background: #E0560096;
+}

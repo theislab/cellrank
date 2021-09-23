@@ -1,5 +1,7 @@
 """Module containing model which wraps around :mod:`sklearn` estimators."""
 from typing import Iterable, Optional
+
+import warnings
 from inspect import signature
 
 from cellrank.ul._docs import d
@@ -8,6 +10,7 @@ from cellrank.ul.models._base_model import AnnData
 
 import numpy as np
 from sklearn.base import BaseEstimator
+from sklearn.utils import check_X_y
 
 
 @d.dedent
@@ -94,16 +97,24 @@ class SKLearnModel(BaseModel):
 
         Returns
         -------
-        :class:`cellrank.ul.models.SKLearnModel`
-            Fits the model and returns self.
-        """  # noqa
+        Fits the model and returns self.
+        """  # noqa: D400
 
         super().fit(x, y, w, **kwargs)
 
         if self._weight_name not in (None, ""):
             kwargs[self._weight_name] = self._w
 
-        self._model = self._fit_fn(self.x, self.y, **kwargs)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", UserWarning)
+            x, y = check_X_y(
+                X=self.x,
+                y=self.y,
+                force_all_finite="allow-nan",
+                copy=False,
+                estimator=self.model,
+            )
+        self._model = self._fit_fn(x, y, **kwargs)
 
         return self
 
@@ -163,21 +174,20 @@ class SKLearnModel(BaseModel):
         """
         Find a function in :attr:`model` from given names.
 
-        If `None` is found, use :paramref;`default` or raise a :class:`RuntimeError`.
+        If `None` is found, use ``default`` or raise a :class:`RuntimeError`.
 
         Parameters
         ----------
         func_names
             Function names to search. The first one found is returned.
         use_default
-            Whether to return the default is it's `None` or raise :class:`RuntimeError`.
+            Whether to return the ``default`` if it is `None` or raise :class:`RuntimeError`.
         default
-            The default functional name to use if `None` was found.
+            The default function name to use if `None` was found.
 
         Returns
         -------
-        str or None
-            Name of the function or the default name.
+        Name of the function or the default name.
         """
 
         for name in func_names:
@@ -204,8 +214,7 @@ class SKLearnModel(BaseModel):
 
         Returns
         -------
-        str or None
-            The parameter name or `None`, if `None` was found or ``func_name`` was `None`.
+        The parameter name or `None`, if `None` was found or ``func_name`` was `None`.
         """
 
         if func_name is None:

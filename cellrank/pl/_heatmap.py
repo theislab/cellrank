@@ -1,13 +1,16 @@
-"""Heatmap module."""
+from typing import Any, Dict, List, Tuple, Union, Optional, Sequence
+from typing_extensions import Literal
 
 import os
+from enum import auto
 from math import fabs
-from typing import Any, Dict, List, Tuple, Union, TypeVar, Optional, Sequence
 from pathlib import Path
 from collections import Iterable, defaultdict
 
 from anndata import AnnData
 from cellrank import logging as logg
+from cellrank._key import Key
+from cellrank.tl._enum import _DEFAULT_BACKEND, ModeEnum, Backend_t
 from cellrank.ul._docs import d, inject_docs
 from cellrank.pl._utils import (
     _fit_bulk,
@@ -21,8 +24,12 @@ from cellrank.pl._utils import (
     _get_categorical_colors,
 )
 from cellrank.tl._utils import save_fig, _min_max_scale, _unique_order_preserving
-from cellrank.ul._utils import _get_n_cores, valuedispatch, _check_collection
-from cellrank.tl._constants import _DEFAULT_BACKEND, ModeEnum, AbsProbKey
+from cellrank.ul._utils import (
+    _genesymbols,
+    _get_n_cores,
+    valuedispatch,
+    _check_collection,
+)
 
 import numpy as np
 import pandas as pd
@@ -31,32 +38,29 @@ from scipy.ndimage.filters import convolve
 import matplotlib as mpl
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
+from seaborn import clustermap
 from matplotlib import cm
 from matplotlib.ticker import FormatStrFormatter
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 _N_XTICKS = 10
 
-Cmap = TypeVar("Cmap")
-Norm = TypeVar("Norm")
-Ax = TypeVar("Ax")
-Fig = TypeVar("Fig")
 
-
-class HeatmapMode(ModeEnum):  # noqa
-    GENES = "genes"
-    LINEAGES = "lineages"
+class HeatmapMode(ModeEnum):  # noqa: D101
+    GENES = auto()
+    LINEAGES = auto()
 
 
 @d.dedent
 @inject_docs(m=HeatmapMode)
+@_genesymbols
 def heatmap(
     adata: AnnData,
     model: _input_model_type,
     genes: Sequence[str],
     lineages: Optional[Union[str, Sequence[str]]] = None,
     backward: bool = False,
-    mode: str = HeatmapMode.LINEAGES.s,
+    mode: Literal["genes", "lineages"] = HeatmapMode.LINEAGES,
     time_key: str = "latent_time",
     time_range: Optional[Union[_time_range_type, List[_time_range_type]]] = None,
     callback: _callback_type = None,
@@ -76,12 +80,12 @@ def heatmap(
     return_genes: bool = False,
     return_models: bool = False,
     n_jobs: Optional[int] = 1,
-    backend: str = _DEFAULT_BACKEND,
+    backend: Backend_t = _DEFAULT_BACKEND,
     show_progress_bar: bool = True,
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
     save: Optional[Union[str, Path]] = None,
-    **kwargs,
+    **kwargs: Any,
 ) -> Optional[
     Union[Dict[str, pd.DataFrame], Tuple[_return_model_type, Dict[str, pd.DataFrame]]]
 ]:
@@ -99,25 +103,26 @@ def heatmap(
     mode
         Valid options are:
 
-            - `{m.LINEAGES.s!r}` - group by ``genes`` for each lineage in ``lineages``.
-            - `{m.GENES.s!r}` - group by ``lineages`` for each gene in ``genes``.
+            - `{m.LINEAGES!r}` - group by ``genes`` for each lineage in ``lineages``.
+            - `{m.GENES!r}` - group by ``lineages`` for each gene in ``genes``.
     time_key
-        Key in ``adata.obs`` where the pseudotime is stored.
+        Key in attr:`anndata.AnnData.obs` where the pseudotime is stored.
     %(time_range)s
 
         This can also be specified on per-lineage basis.
+    %(gene_symbols)s
     %(model_callback)s
     cluster_key
-        Key(s) in ``adata.obs`` containing categorical observations to be plotted at the top of the heatmap.
-        Only available when ``mode={m.LINEAGES.s!r}``.
+        Key(s) in :attr:`anndata.AnnData.obs` containing categorical observations to be plotted on the top of heatmap.
+        Only available when ``mode = {m.LINEAGES!r}``.
     show_absorption_probabilities
         Whether to also plot absorption probabilities alongside the smoothed expression.
-        Only available when ``mode={m.LINEAGES.s!r}``.
+        Only available when ``mode = {m.LINEAGES!r}``.
     cluster_genes
-        Whether to cluster genes using :func:`seaborn.clustermap` when ``mode='lineages'``.
+        Whether to cluster genes using :func:`seaborn.clustermap` when ``mode = 'lineages'``.
     keep_gene_order
         Whether to keep the gene order for later lineages after the first was sorted.
-        Only available when ``cluster_genes=False`` and ``mode={m.LINEAGES.s!r}``.
+        Only available when ``cluster_genes = False`` and ``mode = {m.LINEAGES!r}``.
     scale
         Whether to normalize the gene expression `[0, 1]` range.
     n_convolve
@@ -127,7 +132,7 @@ def heatmap(
     cbar
         Whether to show the colorbar.
     lineage_height
-        Height of a bar when ``mode={m.GENES.s!r}``.
+        Height of a bar when ``mode = {m.GENES!r}``.
     fontsize
         Size of the title's font.
     xlabel
@@ -135,9 +140,9 @@ def heatmap(
     cmap
         Colormap to use when visualizing the smoothed expression.
     dendrogram
-        Whether to show dendrogram when ``cluster_genes=True``.
+        Whether to show dendrogram when ``cluster_genes = True``.
     return_genes
-        Whether to return the sorted or clustered genes. Only available when ``mode={m.LINEAGES.s!r}``.
+        Whether to return the sorted or clustered genes. Only available when ``mode = {m.LINEAGES!r}``.
     %(return_models)s
     %(parallel)s
     %(plotting)s
@@ -147,12 +152,10 @@ def heatmap(
     Returns
     -------
     %(plots_or_returns_models)s
-    :class:`pandas.DataFrame`
-        If ``return_genes=True`` and ``mode={m.LINEAGES.s!r}``, returns :class:`pandas.DataFrame`
-        containing the clustered or sorted genes.
-    """
 
-    import seaborn as sns
+    If ``return_genes = True`` and ``mode = {m.LINEAGES!r}``, returns :class:`pandas.DataFrame`
+    containing the clustered or sorted genes.
+    """
 
     def find_indices(series: pd.Series, values) -> Tuple[Any]:
         def find_nearest(array: np.ndarray, value: float) -> int:
@@ -161,8 +164,8 @@ def heatmap(
                 ix == len(array)
                 or fabs(value - array[ix - 1]) < fabs(value - array[ix])
             ):
-                return ix - 1
-            return ix
+                return int(ix - 1)
+            return int(ix)
 
         series = series[np.argsort(series.values)]
 
@@ -180,7 +183,9 @@ def heatmap(
 
         return lin
 
-    def create_col_colors(lname: str, rng: np.ndarray) -> Tuple[np.ndarray, Cmap, Norm]:
+    def create_col_colors(
+        lname: str, rng: np.ndarray
+    ) -> Tuple[np.ndarray, mcolors.Colormap, mcolors.Normalize]:
         color = adata.obsm[lineage_key][lname].colors[0]
         lin = subset_lineage(lname, rng)
 
@@ -210,10 +215,10 @@ def heatmap(
     def create_cbar(
         ax,
         x_delta: float,
-        cmap: Cmap,
-        norm: Norm,
+        cmap: mcolors.Colormap,
+        norm: mcolors.Normalize,
         label: Optional[str] = None,
-    ) -> Ax:
+    ) -> plt.Axes:
         cax = inset_axes(
             ax,
             width="1%",
@@ -234,11 +239,11 @@ def heatmap(
         return cax
 
     @valuedispatch
-    def _plot_heatmap(_mode: HeatmapMode) -> Fig:
-        pass
+    def _plot_heatmap(mode: HeatmapMode) -> plt.Figure:
+        raise NotImplementedError(mode.value)
 
     @_plot_heatmap.register(HeatmapMode.GENES)
-    def _() -> Tuple[Fig, None]:
+    def _() -> Tuple[plt.Figure, None]:
         def color_fill_rec(ax, xs, y1, y2, colors=None, cmap=cmap, **kwargs) -> None:
             colors = colors if cmap is None else cmap(colors)
 
@@ -356,7 +361,7 @@ def heatmap(
         return fig, None
 
     @_plot_heatmap.register(HeatmapMode.LINEAGES)
-    def _() -> Tuple[List[Fig], pd.DataFrame]:
+    def _() -> Tuple[List[plt.Figure], pd.DataFrame]:
         data_t = defaultdict(dict)  # transpose
         for gene, lns in data.items():
             for ln, y in lns.items():
@@ -408,8 +413,8 @@ def heatmap(
             row_cluster = cluster_genes and df.shape[0] > 1
             show_clust = row_cluster and dendrogram
 
-            g = sns.clustermap(
-                df,
+            g = clustermap(
+                data=df,
                 cmap=cmap,
                 figsize=(10, min(len(genes) / 8 + 1, 10))
                 if figsize is None
@@ -504,7 +509,7 @@ def heatmap(
 
     mode = HeatmapMode(mode)
 
-    lineage_key = str(AbsProbKey.BACKWARD if backward else AbsProbKey.FORWARD)
+    lineage_key = Key.obsm.abs_probs(backward)
     if lineage_key not in adata.obsm:
         raise KeyError(f"Lineages key `{lineage_key!r}` not found in `adata.obsm`.")
 
@@ -547,7 +552,7 @@ def heatmap(
 
     xlabel = time_key if xlabel is None else xlabel
 
-    logg.debug(f"Plotting `{mode.s!r}` heatmap")
+    logg.debug(f"Plotting `{mode!r}` heatmap")
     fig, genes = _plot_heatmap(mode)
 
     if save is not None and fig is not None:
@@ -565,11 +570,11 @@ def heatmap(
         return all_models
 
 
-def _get_ax_bbox(fig: Fig, ax: Ax):
+def _get_ax_bbox(fig: plt.Figure, ax: plt.Axes):
     return ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
 
 
-def _set_ax_height_to_cm(fig: Fig, ax: Ax, height: float) -> None:
+def _set_ax_height_to_cm(fig: plt.Figure, ax: plt.Axes, height: float) -> None:
     from mpl_toolkits.axes_grid1 import Size, Divider
 
     height /= 2.54  # cm to inches

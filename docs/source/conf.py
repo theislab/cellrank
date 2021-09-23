@@ -6,7 +6,6 @@ from datetime import datetime
 from collections import ChainMap
 from urllib.parse import urljoin
 from urllib.request import urlretrieve
-
 from sphinx_gallery.sorting import ExplicitOrder, _SortKey
 
 HERE = Path(__file__).parent
@@ -70,7 +69,7 @@ extensions = [
     "sphinx_gallery.gen_gallery",
     "nbsphinx",
     "sphinx_copybutton",
-    "sphinx_last_updated_by_git",
+    "typed_returns",
     "sphinxcontrib.bibtex",
     # https://github.com/spatialaudio/nbsphinx/issues/24
     "IPython.sphinxext.ipython_console_highlighting",
@@ -87,7 +86,7 @@ intersphinx_mapping = dict(
     networkx=("https://networkx.org/documentation/stable/", None),
     pandas=("https://pandas.pydata.org/pandas-docs/stable/", None),
     statsmodels=("https://www.statsmodels.org/stable/", None),
-    matplotlib=("https://matplotlib.org/", None),
+    matplotlib=("https://matplotlib.org/stable/", None),
     joblib=("https://joblib.readthedocs.io/en/latest/", None),
     sklearn=("https://scikit-learn.org/stable/", None),
     seaborn=("https://seaborn.pydata.org/", None),
@@ -110,6 +109,7 @@ exclude_patterns = [
     "auto_*/**.ipynb",
     "auto_*/**.md5",
     "auto_*/**.py",
+    "release/changelog/*",
     "**.ipynb_checkpoints",
 ]
 
@@ -118,19 +118,36 @@ bibtex_bibfiles = ["references.bib"]
 bibtex_reference_style = "author_year"
 bibtex_default_style = "alpha"
 
+# linkcheck
+user_agent = "Mozilla/5.0 (X11; Linux x86_64; rv:25.0) Gecko/20100101 Firefox/25.0"
+# Twitter (used for handles in contributors.rst) doesn't like the above user-agent
+linkcheck_ignore = [r"https://twitter\.com/.*", r"https://mobile\.twitter\.com/.*"]
+
 # -- Notebooks
 nbsphinx_execute_arguments = [
     "--InlineBackend.figure_formats={'png', 'pdf'}",  # correct figure resize
     "--InlineBackend.rc={'figure.dpi': 96}",
 ]
 
-nbsphinx_prolog = r"""
-{% set docname = 'tutorials/' + env.doc2path(env.docname, base=None) %}
+_link_style = "vertical-align;text-bottom"
+_binder_link = (
+    '<a href="https://mybinder.org/v2/gh/theislab/cellrank_notebooks/{{ env.config.release|e }}'
+    '?filepath={{ docname|e }}"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" '
+    f"style={_link_style!r}></a>"
+)
+_colab_link = (
+    '<a href="https://colab.research.google.com/github/theislab/cellrank_notebooks/blob/'
+    '{{ env.config.release|e }}/{{ docname|e }}"><img alt="Colab badge" '
+    f'src="https://colab.research.google.com/assets/colab-badge.svg" style={_link_style!r}></a>'
+)
+nbsphinx_prolog = rf"""
+{{% set docname = 'tutorials/' + env.doc2path(env.docname, base=None) %}}
 .. raw:: html
 
-    <div class="note">
-      Interactive version
-      <a href="https://mybinder.org/v2/gh/theislab/cellrank_notebooks/{{ env.config.release|e }}?filepath={{ docname|e }}"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>
+    <div class="admonition note">
+        Interactive version
+        {_binder_link}
+        {_colab_link}
     </div>
 """
 
@@ -258,7 +275,7 @@ todo_include_todos = False
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
-html_theme_options = dict(navigation_depth=4, logo_only=True)
+html_theme_options = {"navigation_depth": 4, "logo_only": True}
 html_show_sphinx = False
 html_show_sourcelink = False
 

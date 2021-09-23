@@ -48,8 +48,7 @@ def _create_colors(
 
     Returns
     -------
-    :class:`list`
-        List of colors, either as a hex string or an RGB array.
+    List of colors, either as a hex string or an RGB array.
     """
 
     if not mcolors.is_color_like(base_color):
@@ -155,7 +154,7 @@ def _get_bg_fg_colors(color, sat_scale: Optional[float] = None) -> Tuple[str, st
 
     return (
         mcolors.to_hex(color),
-        _contrasting_color(*np.array(color * 255).astype(np.int)),
+        _contrasting_color(*np.array(color * 255).astype(int)),
     )
 
 
@@ -182,8 +181,7 @@ def _map_names_and_colors(
 
     Returns
     -------
-    :class:`pandas.Series`, :class:`list`
-        Series with updated category names and a corresponding array of colors.
+    Series with updated category names and a corresponding array of colors.
     """
 
     # checks: dtypes, matching indices, make sure colors match the categories
@@ -249,12 +247,10 @@ def _map_names_and_colors(
 
     # assign query colors
     if process_colors:
-        colors_query = []
-        for name in names_query:
-            mask = cats_reference == name
-            color = np.array(colors_reference)[mask][0]
-            colors_query.append(color)
-        association_df["color"] = colors_query
+        association_df["color"] = colors_query = [
+            colors_reference[np.where(cats_reference == name)[0][0]]
+            for name in names_query
+        ]
 
     # next, we need to make sure that we have unique names and colors. In a first step, compute how many repetitions
     # we have
@@ -337,8 +333,7 @@ def _colors_in_order(
 
     Returns
     -------
-    list
-        List of colors in order defined by `clusters`.
+    List of colors in order defined by `clusters`.
     """
 
     assert (

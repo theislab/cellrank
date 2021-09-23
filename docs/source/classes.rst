@@ -150,4 +150,4 @@ BaseModel
 Lineage
 -------
 .. autoclass:: cellrank.tl.Lineage
-    :members: priming_degree, reduce, plot_pie, X, T, view, names, colors
+    :members: priming_degree, reduce, plot_pie, from_adata, X, T, view, names, colors

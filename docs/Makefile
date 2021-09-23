@@ -21,6 +21,7 @@ help:
 
 clean:
 	@rm -rf $(BUILDDIR)/*
+	@rm -f $(SOURCEDIR)/*.ipynb
 	@rm -rf $(SOURCEDIR)/api/
 	@rm -rf $(SOURCEDIR)/gen_modules/
 	@rm -rf $(SOURCEDIR)/auto_examples/

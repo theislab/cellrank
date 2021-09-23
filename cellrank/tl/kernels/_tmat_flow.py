@@ -1,8 +1,8 @@
-from abc import ABC, abstractmethod
 from typing import Any, List, Tuple, Union, Mapping, Optional, Sequence
+
+from abc import ABC, abstractmethod
 from functools import lru_cache
 from dataclasses import dataclass
-
 from statsmodels.nonparametric.smoothers_lowess import lowess
 
 from anndata import AnnData
@@ -108,7 +108,7 @@ class FlowPlotter(ABC):
 
         Returns
         -------
-        Modifies and return self.
+        Returns self and modifies internal internal attributes.
         """
         if clusters is None:
             self._clusters = self.clusters.cat.categories

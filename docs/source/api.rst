@@ -1,6 +1,5 @@
 API
 ===
-
 Import CellRank as::
 
     import cellrank as cr
@@ -26,6 +25,10 @@ Tools
 ~~~~~
 This module offers a high-level API to compute cell fates and driver genes.
 
+.. note::
+    High-level API is deprecated and will be removed in version *2.0*.
+    Please use :mod:`cellrank.kernels` and :mod:`cellrank.estimators` instead.
+
 .. module:: cellrank.tl
 .. currentmodule:: cellrank
 
@@ -44,6 +47,9 @@ Kernels
 -------
 Kernels are part of the low-level API and are used to estimate cell-to-cell transitions.
 
+.. note::
+    :mod:`cellrank.tl.kernels` will be renamed to :mod:`cellrank.kernels` in version *2.0*.
+
 .. autosummary::
     :toctree: api
 
@@ -56,6 +62,9 @@ Kernels are part of the low-level API and are used to estimate cell-to-cell tran
 Estimators
 ----------
 Estimators predict cell fates using the transitions derived from :ref:`Kernels`.
+
+.. note::
+    :mod:`cellrank.tl.estimators` will be renamed to :mod:`cellrank.estimators` in version *2.0*.
 
 .. autosummary::
     :toctree: api
@@ -86,6 +95,9 @@ Plotting
 
 Utilities
 ~~~~~~~~~
+
+.. note::
+    :mod:`cellrank.ul.models` will be renamed to :mod:`cellrank.models` in version *2.0*.
 
 .. module:: cellrank.ul
 .. currentmodule:: cellrank

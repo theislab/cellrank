@@ -1,31 +1,23 @@
-"""Base class for all models."""
+from typing import Any, Dict, List, Tuple, Union, Mapping, Callable, Optional, Sequence
+
 import re
+import wrapt
+import warnings
 from abc import ABC, ABCMeta, abstractmethod
 from copy import copy as _copy
 from copy import deepcopy
-from typing import (
-    Any,
-    Dict,
-    List,
-    Tuple,
-    Union,
-    Mapping,
-    TypeVar,
-    Callable,
-    Optional,
-    Sequence,
-)
+from enum import auto
 from collections import defaultdict
 
-import wrapt
-
+from anndata import AnnData
 from cellrank import logging as logg
-from cellrank.tl import Lineage
+from cellrank.tl._enum import ModeEnum
 from cellrank.ul._docs import d
 from cellrank.tl._utils import save_fig
-from cellrank.ul._utils import Pickleable, _minmax, valuedispatch, _densify_squeeze
-from cellrank.tl._constants import ModeEnum, AbsProbKey
+from cellrank.ul._utils import _minmax, valuedispatch, _densify_squeeze
+from cellrank.tl._lineage import Lineage
 from scanpy.plotting._utils import add_colors_for_categorical_sample_annotation
+from cellrank.tl._mixins._io import IOMixin
 
 import numpy as np
 from scipy.sparse import spmatrix
@@ -40,7 +32,6 @@ from matplotlib import pyplot as plt
 from matplotlib.colors import to_rgb, is_color_like
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-AnnData = TypeVar("AnnData")
 _dup_spaces = re.compile(r" +")  # used on repr for underlying model's repr
 ArrayLike = Union[np.ndarray, spmatrix, List, Tuple]
 
@@ -49,19 +40,19 @@ class UnknownModelError(RuntimeError):  # noqa
     pass
 
 
-class FailedReturnType(ModeEnum):  # noqa
-    PREPARE = "prepare"
-    FIT = "fit"
-    PREDICT = "predict"
-    CONFIDENCE_INTERVAL = "confidence_interval"
-    DEFAULT_CONFIDENCE_INTERVAL = "default_confidence_interval"
-    PLOT = "plot"
+class FailedReturnType(ModeEnum):  # noqa: D101
+    PREPARE = auto()
+    FIT = auto()
+    PREDICT = auto()
+    CONFIDENCE_INTERVAL = auto()
+    DEFAULT_CONFIDENCE_INTERVAL = auto()
+    PLOT = auto()
 
 
 class ColorType(ModeEnum):  # noqa: D101
-    CONT = "cont"
-    CAT = "cat"
-    STR = "str"
+    CONT = auto()
+    CAT = auto()
+    STR = auto()
 
 
 def _handle_exception(return_type: FailedReturnType, func: Callable) -> Callable:
@@ -141,7 +132,9 @@ def _handle_exception(return_type: FailedReturnType, func: Callable) -> Callable
 class BaseModelMeta(ABCMeta):
     """Metaclass for all base models."""
 
-    def __new__(cls, clsname, superclasses, attributedict):
+    def __new__(
+        cls, clsname: str, superclasses: Tuple[type, ...], attributedict: Dict[str, Any]
+    ):
         """
         Create a new instance.
 
@@ -159,8 +152,8 @@ class BaseModelMeta(ABCMeta):
         for fun_name in list(FailedReturnType):
             setattr(
                 obj,
-                fun_name.s,
-                _handle_exception(FailedReturnType(fun_name), getattr(obj, fun_name.s)),
+                fun_name,
+                _handle_exception(FailedReturnType(fun_name), getattr(obj, fun_name)),
             )
 
         return obj
@@ -168,7 +161,7 @@ class BaseModelMeta(ABCMeta):
 
 @d.get_sections(base="base_model", sections=["Parameters"])
 @d.dedent
-class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
+class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
     """
     Base class for all model classes.
 
@@ -181,18 +174,18 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
 
     def __init__(
         self,
-        adata: AnnData,
+        adata: Optional[AnnData],
         model: Any,
     ):
-        from anndata import AnnData as _AnnData
-
-        if not isinstance(adata, _AnnData) and not isinstance(self, FittedModel):
+        if not isinstance(adata, AnnData) and not isinstance(self, FittedModel):
             # FittedModel doesn't need it
             raise TypeError(
-                f"Expected `adata` to be of type `anndata.AnnData`, found `{type(adata).__name__!r}`."
+                f"Expected `adata` to be of type `anndata.AnnData`, found `{type(adata).__name__}`."
             )
+        super().__init__()
 
         self._adata = adata
+        self._n_obs = 0 if adata is None else adata.n_obs
         self._model = model
         self._gene = None
         self._use_raw = False
@@ -238,9 +231,18 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         """
         return self._adata
 
+    @adata.setter
+    def adata(self, adata: Optional[AnnData]) -> None:
+        self._adata = adata
+
+    @property
+    def shape(self) -> Tuple[int]:
+        """Number of cells in :attr:`adata`."""  # noqa: D401
+        return (self._n_obs,)
+
     @property
     def model(self) -> Any:
-        """The underlying model."""  # noqa
+        """Underlying model."""
         return self._model
 
     @property
@@ -318,7 +320,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         lineage: Optional[str],
         backward: bool = False,
         time_range: Optional[Union[float, Tuple[float, float]]] = None,
-        data_key: str = "X",
+        data_key: Optional[str] = "X",
         time_key: str = "latent_time",
         use_raw: bool = False,
         threshold: Optional[float] = None,
@@ -332,18 +334,19 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         Parameters
         ----------
         gene
-            Gene in :attr:`adata` ``.var_names`` or in :attr:`adata` ``.raw.var_names``.
+            Gene in :attr:`anndata.AnnData.var_names`.
         lineage
-            Name of a lineage in :attr:`adata` ``.obsm['{lineage_key}']``. If `None`, all weights will be set to `1`.
+            Name of a lineage in :attr:`anndata.AnnData.obsm` ``['{lineage_key}']``.
+            If `None`, all weights will be set to `1`.
         %(backward)s
         %(time_range)s
         data_key
-            Key in :attr:`adata` ``.layers`` or `'X'` for :attr:`adata` ``.X``.
-            If ``use_raw=True``, it's always set to `'X'`.
+            Key in :attr:`anndata.AnnData.layers` or `'X'` for :attr:`anndata.AnnData.X`.
+            If ``use_raw = True``, it's always set to `'X'`.
         time_key
-            Key in :attr:`adata` ``.obs`` where the pseudotime is stored.
+            Key in :attr:`anndata.AnnData.obs` where the pseudotime is stored.
         use_raw
-            Whether to access :attr:`adata` ``.raw`` or not.
+            Whether to access :attr:`anndata.AnnData.raw`.
         threshold
             Consider only cells with weights > ``threshold`` when estimating the test endpoint.
             If `None`, use the median of the weights.
@@ -357,36 +360,36 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
 
         Returns
         -------
-        None
-            Nothing, but updates the following fields:
+        Nothing, just updates the following fields:
 
-                - :attr:`x` - %(base_model_x.summary)s
-                - :attr:`y` - %(base_model_y.summary)s
-                - :attr:`w` - %(base_model_w.summary)s
+            - :attr:`x` - %(base_model_x.summary)s
+            - :attr:`y` - %(base_model_y.summary)s
+            - :attr:`w` - %(base_model_w.summary)s
 
-                - :attr:`x_all` - %(base_model_x_all.summary)s
-                - :attr:`y_all` - %(base_model_y_all.summary)s
-                - :attr:`w_all` - %(base_model_w_all.summary)s
+            - :attr:`x_all` - %(base_model_x_all.summary)s
+            - :attr:`y_all` - %(base_model_y_all.summary)s
+            - :attr:`w_all` - %(base_model_w_all.summary)s
 
-                - :attr:`x_test` - %(base_model_x_test.summary)s
+            - :attr:`x_test` - %(base_model_x_test.summary)s
 
-                - :attr:`prepared` - %(base_model_prepared.summary)s
+            - :attr:`prepared` - %(base_model_prepared.summary)s
         """
+        from cellrank._key import Key
 
-        self._use_raw = use_raw
         if use_raw:
             if self.adata.raw is None:
                 raise AttributeError("AnnData object has no attribute `.raw`.")
             if data_key != "X":
                 data_key = "X"
+        self._use_raw = use_raw
 
-        if data_key not in ["X", "obs"] + list(self.adata.layers.keys()):
+        if data_key not in ["X", "obs", None] + list(self.adata.layers.keys()):
             raise KeyError(
                 f"Data key must be a key of `adata.layers`: `{list(self.adata.layers.keys())}`, "
                 f"`adata.X` or `adata.obs`."
             )
 
-        lineage_key = str(AbsProbKey.BACKWARD if backward else AbsProbKey.FORWARD)
+        lineage_key = Key.obsm.abs_probs(backward)
         if lineage_key not in self.adata.obsm:
             raise KeyError(f"Lineage key `{lineage_key!r}` not found in `adata.obsm`.")
         if not isinstance(self.adata.obsm[lineage_key], Lineage):
@@ -403,7 +406,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
 
         if data_key == "obs":
             if gene not in self.adata.obs:
-                raise KeyError(f"Unable to find key `{gene!r}` in `adata.obs`.")
+                raise KeyError(f"Unable to find data in `adata.obs[{gene!r}]`.")
         else:
             if use_raw and gene not in self.adata.raw.var_names:
                 raise KeyError(f"Gene `{gene!r}` not found in `adata.raw.var_names`.")
@@ -450,7 +453,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         adata = self.adata.raw.to_adata() if use_raw else self.adata
         gene_ix = np.where(adata.var_names == gene)[0]
 
-        if data_key == "X":
+        if data_key in ("X", None):
             y = adata.X[:, gene_ix]
             self._data_key = None
         elif data_key == "obs":
@@ -536,9 +539,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
 
         if filter_cells is not None:
             tmp = y.squeeze()
-            fil = (tmp >= filter_cells) & (
-                ~np.isclose(tmp, filter_cells).astype(np.bool)
-            )
+            fil = (tmp >= filter_cells) & (~np.isclose(tmp, filter_cells).astype(bool))
             x, y, w = x[fil], y[fil], w[fil]
             self._obs_names = self._obs_names[fil]
 
@@ -548,6 +549,10 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
             self._reshape_and_retype(w).squeeze(-1),
         )
         self._x_test = self._reshape_and_retype(x_test)
+        self._y_test = None
+        self._x_hat = None
+        self._y_hat = None
+        self._conf_int = None
 
         if self.x.shape[0] == 0:
             raise RuntimeError("Unable to proceed, no values to fit.")
@@ -589,8 +594,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
 
         Returns
         -------
-        :class:`cellrank.ul.models.BaseModel`
-            Fits the model and returns self.
+        Fits the :attr:`model` and returns self.
         """
         if not self.prepared:
             raise RuntimeError(
@@ -636,10 +640,9 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
 
         Returns
         -------
-        :class:`numpy.ndarray`
-            Updates and returns the following:
+        Updates and returns the following field:
 
-                - :attr:`y_test` - %(base_model_y_test.summary)s
+            - :attr:`y_test` - %(base_model_y_test.summary)s
         """
 
     @abstractmethod
@@ -666,10 +669,9 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
 
         Returns
         -------
-        :class:`numpy.ndarray`
-            Updates the following fields:
+        Updates and returns the following field:
 
-                - :attr:`conf_int` - %(base_model_conf_int.summary)s
+            - :attr:`conf_int` - %(base_model_conf_int.summary)s
         """
 
     @d.dedent
@@ -690,6 +692,9 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         Returns
         -------
         %(base_model_ci.returns)s
+
+        Also update the following fields:
+
                 - :attr:`x_hat` - %(base_model_x_hat.summary)s
                 - :attr:`y_hat` - %(base_model_y_hat.summary)s
         """
@@ -708,9 +713,11 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
         )
         mean = np.mean(self.x)
 
-        stds = sigma_hat * np.sqrt(
-            1 + 1 / n + ((self.x_test - mean) ** 2) / ((self.x - mean) ** 2).sum()
-        )
+        # fmt: off
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            stds = sigma_hat * np.sqrt(1 + 1 / n + ((self.x_test - mean) ** 2) / ((self.x - mean) ** 2).sum())
+        # fmt: on
         stds = np.squeeze(stds)
 
         self._conf_int = np.c_[self._y_test - stds / 2.0, self._y_test + stds / 2.0]
@@ -1015,8 +1022,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
 
         Returns
         -------
-        :class:`np.ndarray`
-            Array of shape `(n, 1)` with dtype set to :attr:`_dtype`.
+        Array of shape `(n, 1)` with dtype set to :attr:`_dtype`.
         """
 
         if arr.ndim not in (1, 2):
@@ -1047,8 +1053,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
 
         Returns
         -------
-        :class:`numpy.ndarray`
-            The attribute under ``attr_name``.
+        The attribute under ``attr_name``.
         """
 
         if attr_name is None:
@@ -1167,6 +1172,7 @@ class BaseModel(Pickleable, ABC, metaclass=BaseModelMeta):
             Key in :attr:`anndata.obs`, :attr:`anndata.var_names`, :attr:`anndata.raw.var)names`.
             Search first starts in `.obs`, then `.raw.var_names` and lastly `.layers`, using
             :meth:`anndata.obs_vector`.
+
         Returns
         -------
         Triple of the following:

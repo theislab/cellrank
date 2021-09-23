@@ -1,0 +1,1 @@
+Fix :class:`cellrank.external.kernels.WOTKernel` saving OTModel and being unable to pickle itself.

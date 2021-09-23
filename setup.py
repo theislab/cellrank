@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-
 from setuptools import setup, find_packages
 
 try:
@@ -9,7 +8,7 @@ except ImportError:
     __author__ = "Marius Lange, Michal Klein"
     __maintainer__ = "Marius Lange, Michal Klein"
     __email__ = "info@cellrank.org"
-    __version__ = "1.4.0"
+    __version__ = "1.5.0"
 
 
 if __name__ == "__main__":
@@ -39,11 +38,7 @@ if __name__ == "__main__":
         ),
         extras_require=dict(
             # `POT` is not requirement of `statot`
-            external=[
-                "statot>=0.0.14",
-                "POT",
-                "wot @ git+https://github.com/broadinstitute/wot@master",
-            ],
+            external=["Cython", "POT", "statot>=0.0.14"],
             krylov=["pygpcca[slepc]"],
             test=[
                 "pytest>=6.1.1",
@@ -53,7 +48,6 @@ if __name__ == "__main__":
                 "Pillow",
                 "filelock",
                 "python-igraph",
-                "louvain>=0.6,!=0.6.2",
                 "leidenalg",
                 "bezier",
                 "jax",
@@ -67,17 +61,16 @@ if __name__ == "__main__":
                 )
                 if "requirements.txt" not in r
             ],
-            dev=["pre-commit>=2.9.3", "tox>=3.23.0"],
+            dev=["pre-commit>=2.9.3", "tox>=3.23.0", "towncrier>=21.3.0"],
         ),
         zip_safe=False,
         packages=find_packages(),
-        python_requires=">=3.6",
+        python_requires=">=3.7",
         platforms=["Linux", "MacOs", "Windows"],
         keywords=sorted(
             [
                 "single-cell",
                 "bio-informatics",
-                "single-cell",
                 "RNA velocity",
                 "Markov chain",
                 "GPCCA",
@@ -89,9 +82,9 @@ if __name__ == "__main__":
             "Intended Audience :: Science/Research",
             "Natural Language :: English",
             "Framework :: Jupyter",
+            "Operating System :: POSIX :: Linux",
             "Operating System :: MacOS :: MacOS X",
             "Operating System :: Microsoft :: Windows",
-            "Operating System :: POSIX :: Linux",
             "Typing :: Typed",
             "Programming Language :: Python :: 3",
             "Programming Language :: Python :: 3.7",

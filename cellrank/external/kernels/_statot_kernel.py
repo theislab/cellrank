@@ -1,11 +1,9 @@
 from typing import Any, Union, Optional
-
 from typing_extensions import Literal
 
 from anndata import AnnData
+from cellrank._key import Key
 from cellrank.ul._docs import d
-from cellrank.tl.estimators import GPCCA
-from cellrank.tl.kernels._precomputed_kernel import DummyKernel
 
 import numpy as np
 import pandas as pd
@@ -32,12 +30,11 @@ class StationaryOTKernel(OTKernel_, error=_error):
     ----------
     %(adata)s
     terminal_states
-        Categorical :class:`pandas.Series` where non-`NaN` values mark terminal states.
-        If `None`, terminal states are assumed to be already present in :attr:`adata` ``['terminal_states']``.
+        Key in :attr:`anndata.AnnData.obs` or a categorical :class:`pandas.Series` where non-`NaN` values
+        mark terminal states.
+        If `None`, terminal states are assumed to be present in :attr:`anndata.AnnData.obs` ``['terminal_states']``.
     g
         Key in :attr:`anndata.AnnData.obs` containing relative growth rates for cells or the array itself.
-    cluster_key
-        If a key to cluster labels is given, `terminal_states` will be associated with these for naming and colors.
     kwargs
         Additional keyword arguments.
     """
@@ -49,13 +46,12 @@ class StationaryOTKernel(OTKernel_, error=_error):
         adata: AnnData,
         g: Union[str, np.ndarray],
         terminal_states: Optional[Union[str, pd.Series]] = None,
-        cluster_key: Optional[str] = None,
         **kwargs: Any,
     ):
-        if terminal_states is not None:
-            dk = DummyKernel(adata, backward=False)
-            estim = GPCCA(dk, write_to_adata=True)
-            estim.set_terminal_states(terminal_states, cluster_key=cluster_key)
+        if isinstance(terminal_states, str):
+            adata.obs[Key.obs.term_states(bwd=False)] = adata.obs[terminal_states]
+        elif isinstance(terminal_states, pd.Series):
+            adata.obs[Key.obs.term_states(bwd=False)] = terminal_states
 
         try:
             super().__init__(adata, g=g, **kwargs)
@@ -101,9 +97,9 @@ class StationaryOTKernel(OTKernel_, error=_error):
         method
             Choice of regularization. Valid options are:
 
-                - `'ent'`: entropy.
-                - `'quad'`: L2-norm.
-                - `'unbal'`: unbalanced transport (not yet implemented).
+                - `'ent'` - entropy.
+                - `'quad'` - L2-norm.
+                - `'unbal'` - unbalanced transport (not yet implemented).
 
         tol
             Relative tolerance for OT solver convergence.
@@ -120,8 +116,7 @@ class StationaryOTKernel(OTKernel_, error=_error):
 
         Returns
         -------
-        :class:`cellrank.external.kernels.StationaryOTKernel`
-            Makes :attr:`transition_matrix` available.
+        Self and makes :attr:`transition_matrix` available.
         """
         if method not in ("ent", "quad", "unbal"):
             raise ValueError(

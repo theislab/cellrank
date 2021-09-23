@@ -1,7 +1,7 @@
 ---
 name: Bug Report
 about: Create a bug report to help us improve CellRank
-title: "[FEATURE NAME]"
+title: ""
 labels: bug
 assignees: "michalk8"
 ---

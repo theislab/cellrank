@@ -1,8 +1,8 @@
-from types import MappingProxyType
 from typing import Any, Dict, Tuple, Union, Mapping, Optional
-
-from tqdm.auto import tqdm
 from typing_extensions import Literal
+
+from types import MappingProxyType
+from tqdm.auto import tqdm
 
 import scanpy as sc
 from anndata import AnnData
@@ -47,7 +47,7 @@ class WOTKernel(Kernel, error=_error):
     %(adata)s
     %(backward)s
     time_key
-        Key in :attr:`adata` ``.obs`` where experimental time is stored.
+        Key in :attr:`anndata.AnnData.obs` where experimental time is stored.
         The experimental time can be of either of a numeric or an ordered categorical type.
     %(cond_num)s
 
@@ -94,12 +94,14 @@ class WOTKernel(Kernel, error=_error):
         backward: bool = False,
         time_key: str = "exp_time",
         compute_cond_num: bool = False,
+        **kwargs: Any,
     ):
         super().__init__(
             adata,
             backward=backward,
             time_key=time_key,
             compute_cond_num=compute_cond_num,
+            **kwargs,
         )
 
         # WOT's requirements
@@ -140,9 +142,9 @@ class WOTKernel(Kernel, error=_error):
         Parameters
         ----------
         proliferation_key
-            Key in :attr:`adata` ``.obs`` where the birth rate score is saved.
+            Key in :attr:`anndata.AnnData.obs` where the birth rate score is saved.
         apoptosis_key
-            Key in :attr:`adata` ``.obs`` where the death rate score is saved.
+            Key in :attr:`anndata.AnnData.obs` where the death rate score is saved.
         organism
             Organism for which to calculate the birth/death scores, if they cannot be found in :attr:`adata`.
             In this case, :func:`scanpy.tl.score_genes` is used to calculate the scores based on an organism-dependent
@@ -159,19 +161,19 @@ class WOTKernel(Kernel, error=_error):
             Key in :attr:`adata` ``.obs`` where to add the estimated growth rates. If `None`, just return them.
         kwargs
             Keyword arguments for :func:`scanpy.tl.score_genes`. Only used when ``proliferation_key``
-            or ``apoptosis_key`` cannot be found in :attr:`adata` ``.obs``.
+            or ``apoptosis_key`` cannot be found in :attr:`adata.AnnData.obs`.
 
         Returns
         -------
         :class:`pandas.Series`
-            The estimated initial growth rates if ``key_added=None``, otherwise `None`.
+            The estimated initial growth rates if ``key_added = None``, otherwise `None`.
 
         Notes
         -----
         If you don't have access to proliferation/apoptosis gene sets, you can use the ones defined in :mod:`cellrank`
         for a specific organism. Alternatively, you can also use WOT without an estimate of initial growth rates. In
         that case, make sure to use several iterations in
-        :meth:`cellrank.external.kernels.WOTKernel.compute_transition_matris` by increasing the `growth_iters`
+        :meth:`cellrank.external.kernels.WOTKernel.compute_transition_matrix` by increasing the ``growth_iters``
         parameter. A value around 3 works well in most cases.
 
         The markers used here were taken from the following sources:
@@ -203,7 +205,7 @@ class WOTKernel(Kernel, error=_error):
 
                 sc.tl.score_genes(
                     self.adata,
-                    gene_list=getattr(MarkerGenes, (f"{kind}_markers"))(organism),
+                    gene_list=getattr(MarkerGenes, f"{kind}_markers")(organism),
                     score_name=score_name,
                     **kwargs,
                 )
@@ -263,7 +265,10 @@ class WOTKernel(Kernel, error=_error):
         solver: Literal["fixed_iters", "duality_gap"] = "duality_gap",
         growth_rate_key: Optional[str] = None,
         use_highly_variable: Optional[Union[str, bool]] = True,
-        last_time_point: Literal["uniform", "diagonal", "connectivities"] = "uniform",
+        last_time_point: Literal[
+            "uniform", "diagonal", "connectivities"
+        ] = LastTimePoint.UNIFORM,
+        threshold: Optional[Union[float, Literal["auto"]]] = "auto",
         conn_kwargs: Mapping[str, Any] = MappingProxyType({}),
         **kwargs: Any,
     ) -> "WOTKernel":
@@ -279,9 +284,9 @@ class WOTKernel(Kernel, error=_error):
         ----------
         cost_matrices
             Cost matrices for each consecutive pair of time points.
-            If a :class:`str`, it specifies a key in :attr:`adata` ``.layers`` or :attr:`adata` ``.obsm``
+            If a :class:`str`, it specifies a key in :attr:`anndata.AnnData.layers` or :attr:`anndata.AnnData.obsm`.
             containing cell features that are used to compute cost matrices. If `None`, use `WOT`'s default, i.e.
-            compute distances in PCA space derived from :attr:`adata` ``.X`` for each time point pair separately.
+            compute distances in PCA space derived from :attr:`anndata.AnnData.X` for each time point pair separately.
         lambda1
             Regularization parameter for the marginal constraint on :math:`p`, the transport map row sums.
             Smaller value is useful when precise information about the growth rate is not present.
@@ -295,32 +300,43 @@ class WOTKernel(Kernel, error=_error):
         solver
             Which solver to use.
         growth_rate_key
-            Key in :attr:`adata` ``.obs`` where initial cell growth rates are stored.
-            See :meth:`cellrank.external.kernels.WOTKernel.compute_initial_growth_rates` on how to estimate them.
+            Key in :attr:`anndata.AnnData.obs` where initial cell growth rates are stored.
+            See :meth:`compute_initial_growth_rates` on how to estimate them.
         use_highly_variable
-            Key in :attr:`adata` ``.var`` where highly variable genes are stored.
+            Key in :attr:`anndata.AnnData.var` where highly variable genes are stored.
             If `True`, use `'highly_variable'`. If `None`, use all genes.
         last_time_point
             How to define transitions within the last time point. Valid options are:
 
-                - `{ltp.UNIFORM.s!r}` - row-normalized matrix of 1s for transitions within the last time point.
-                - `{ltp.DIAGONAL.s!r}` - diagonal matrix with 1s on the diagonal.
-                - `{ltp.CONNECTIVITIES.s!r}` - use transitions from :class:`cellrank.tl.kernels.ConnectivityKernel`
+                - `{ltp.UNIFORM!r}` - row-normalized matrix of 1s for transitions within the last time point.
+                - `{ltp.DIAGONAL!r}` - diagonal matrix with 1s on the diagonal.
+                - `{ltp.CONNECTIVITIES!r}` - use transitions from :class:`cellrank.tl.kernels.ConnectivityKernel`
                   derived from the last time point subset of :attr:`adata`.
+        threshold
+            How to remove small non-zero values from the transition matrix. Valid options are:
+
+                - `'auto'` - find the maximum threshold value which will not remove every non-zero value from any row.
+                - :class:`float` - value in `[0, 100]` corresponding to a percentage of non-zeros to remove.
+                  Rows where all values are removed will have uniform distribution.
+                - `None` - do not threshold.
         conn_kwargs
-            Keyword arguments for :func:`scanpy.pp.neighbors`, when using ``last_time_point={ltp.CONNECTIVITIES.s!r}``.
+            Keyword arguments for :func:`scanpy.pp.neighbors`, when using ``last_time_point = {ltp.CONNECTIVITIES!r}``.
             Can contain `'density_normalize'` for
             :meth:`cellrank.tl.kernels.ConnectivityKernel.compute_transition_matrix`.
         kwargs
-            Additional keyword arguments for OT configuration.
+            Additional keyword arguments for optimal transport configuration.
 
         Returns
         -------
-        :class:`cellrank.external.kernels.WOTKernel`
-            Makes :attr:`transition_matrix`, :attr:`transport_maps` and :attr:`growth_rates` available.
-            It also modifies :attr:`anndata.AnnData.obs` with the following key:
+        Self and makes available the following attributes:
 
-                - `'estimated_growth_rates'` - the estimated final growth rates.
+            - :attr:`transition_matrix` - transition matrix.
+            - :attr:`transport_maps` - transport maps between consecutive time points.
+            - :attr:`growth_rates` - estimated growth rates.
+
+        Also modifies :attr:`anndata.AnnData.obs` with the following key:
+
+            - `'estimated_growth_rates'` - the estimated final growth rates.
 
         Notes
         -----
@@ -331,6 +347,7 @@ class WOTKernel(Kernel, error=_error):
         _ = kwargs.pop("covariate_field", None)
         _ = kwargs.pop("ncounts", None)
         _ = kwargs.pop("ncells", None)
+        _ = kwargs.pop("parameters", None)  # parameters file
         kwargs["lambda1"] = lambda1
         kwargs["lambda2"] = lambda2
         kwargs["epsilon"] = epsilon
@@ -349,7 +366,8 @@ class WOTKernel(Kernel, error=_error):
                 "solver": solver,
                 "growth_rate_key": growth_rate_key,
                 "use_highly_variable": use_highly_variable,
-                "last_time_point": last_time_point.s,
+                "last_time_point": last_time_point,
+                "threshold": threshold,
                 **kwargs,
             },
             time=start,
@@ -371,6 +389,8 @@ class WOTKernel(Kernel, error=_error):
             density_normalize=False,
             check_irreducibility=False,
         )
+        if threshold:
+            self._threshold_transition_matrix(threshold)
         self.adata.obs["estimated_growth_rates"] = self.growth_rates[f"g{growth_iters}"]
 
         logg.info("    Finish", time=start)
@@ -385,9 +405,19 @@ class WOTKernel(Kernel, error=_error):
         ] = None,
         solver: Literal["fixed_iters", "duality_gap"] = "duality_gap",
         growth_rate_field: Optional[str] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> Dict[Tuple[float, float], AnnData]:
-        self._ot_model = wot.ot.OTModel(
+        _ = wot.ot.OTModel(
+            adata,
+            day_field=self._time_key,
+            covariate_field=None,
+            growth_rate_field=growth_rate_field,
+        )
+        for k in kwargs:
+            if k not in _.ot_config:
+                raise TypeError(f"WOT got an unexpected keyword argument {k!r}.")
+
+        ot_model = wot.ot.OTModel(
             adata,
             day_field=self._time_key,
             covariate_field=None,
@@ -401,9 +431,14 @@ class WOTKernel(Kernel, error=_error):
             f"Computing transport maps for `{len(cost_matrices)}` time pairs"
         )
         for tpair, cost_matrix in tqdm(cost_matrices.items(), unit="time pair"):
-            tmap: AnnData = self._ot_model.compute_transport_map(
+            tmap: Optional[AnnData] = ot_model.compute_transport_map(
                 *tpair, cost_matrix=cost_matrix
             )
+            if tmap is None:
+                raise TypeError(
+                    f"Unable to compute transport map for time pair `{tpair}`. "
+                    f"Please ensure `adata.obs[{self._time_key!r}]` has the correct dtype (float)."
+                )
             tmap.X = tmap.X.astype(np.float64)
             nans = int(np.sum(~np.isfinite(tmap.X)))
             if nans:
@@ -490,6 +525,31 @@ class WOTKernel(Kernel, error=_error):
         raise NotImplementedError(
             f"Specifying cost matrices as "
             f"`{type(cost_matrices).__name__}` is not yet implemented."
+        )
+
+    def _threshold_transition_matrix(
+        self, threshold: Union[float, Literal["auto"]]
+    ) -> None:
+        tmat = self.transition_matrix
+        if threshold == "auto":
+            threshold = min(np.max(tmat[i].data) for i in range(tmat.shape[0]))
+            logg.info(f"Using `threshold={threshold}`")
+            tmat.data[tmat.data < threshold] = 0.0
+        else:
+            if not (0 <= threshold <= 100):
+                raise ValueError(
+                    f"Expected `threshold to be in `[0, 100]`, found `{threshold}`.`"
+                )
+            threshold = np.percentile(tmat.data, threshold)
+            logg.info(f"Using `threshold={threshold}`")
+            tmat.data[tmat.data <= threshold] = 0.0
+
+        tmat.eliminate_zeros()
+
+        self._compute_transition_matrix(
+            matrix=tmat,
+            density_normalize=False,
+            check_irreducibility=False,
         )
 
     @property

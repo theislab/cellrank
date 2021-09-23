@@ -1,8 +1,7 @@
-"""Module for documentation helper function."""
-
-from textwrap import dedent
+from typing import Any
 
 from docrep import DocstringProcessor
+from textwrap import dedent
 
 _adata = """\
 adata : :class:`anndata.AnnData`
@@ -33,11 +32,10 @@ model
     If a :class:`dict`, gene and lineage specific models can be specified. Use ``'*'`` to indicate
     all genes or lineages, for example ``{'gene_1': {'*': ...}, 'gene_2': {'lineage_1': ..., '*': ...}}``."""
 _just_plots = """\
-None
-    Nothing, just plots the figure. Optionally saves it based on ``save``."""
+Nothing, just plots the figure. Optionally saves it based on ``save``."""
 _plots_or_returns_models = """\
 None
-    If ``return_models=False``, just plots the figure and optionally saves it based on ``save``.
+    If ``return_models = False``, just plots the figure and optionally saves it based on ``save``.
 Dict[str, Dict[str, :class:`cellrank.ul.models.BaseModel`]]
     Otherwise returns the fitted models as ``{'gene_1': {'lineage_1': <model_11>, ...}, ...}``.
     Models which have failed will be instances of :class:`cellrank.ul.models.FailedModel`."""
@@ -46,9 +44,12 @@ backward
     Direction of the process."""
 _eigen = """\
 which
-    Eigenvalues are in general complex. `'LR'` - largest real part, `'LM'` - largest magnitude.
+    How to sort the eigenvalues. Valid option are:
+
+        - `'LR'` - the largest real part.
+        - `'LM'` - the largest magnitude.
 alpha
-    Used to compute the `eigengap`. ``alpha`` is the weight given to the deviation of an eigenvalue from one."""
+    Used to compute the *eigengap*. ``alpha`` is the weight given to the deviation of an eigenvalue from one."""
 _n_cells = """\
 n_cells
     Number of most likely cells from each macrostate to select."""
@@ -79,22 +80,22 @@ _velocity_mode = """\
 mode
     How to compute transition probabilities. Valid options are:
 
-        - `{m.DETERMINISTIC.s!r}` - deterministic computation that doesn't propagate uncertainty.
-        - `{m.MONTE_CARLO.s!r}` - Monte Carlo average of randomly sampled velocity vectors.
-        - `{m.STOCHASTIC.s!r}` - second order approximation, only available when :mod:`jax` is installed.
-        - `{m.SAMPLING.s!r}` - sample 1 transition matrix from the velocity distribution."""
+        - `{m.DETERMINISTIC!r}` - deterministic computation that doesn't propagate uncertainty.
+        - `{m.MONTE_CARLO!r}` - Monte Carlo average of randomly sampled velocity vectors.
+        - `{m.STOCHASTIC!r}` - second order approximation, only available when :mod:`jax` is installed.
+        - `{m.SAMPLING!r}` - sample 1 transition matrix from the velocity distribution."""
 _velocity_backward_mode = """\
 backward_mode
-    Only matters if initialized as :attr:`backward` ``=True``.  Valid options are:
+    Only matters if initialized as :attr:`backward` ``= True``.  Valid options are:
 
-        - `{b.TRANSPOSE.s!r}` - compute transitions from neighboring cells `j` to cell `i`.
-        - `{b.NEGATE.s!r}` - negate the velocity vector."""
+        - `{b.TRANSPOSE!r}` - compute transitions from neighboring cells :math:`j` to cell :math:`i`.
+        - `{b.NEGATE!r}` - negate the velocity vector."""
 _velocity_backward_mode_high_lvl = """\
 backward_mode
     How to compute the backward transitions. Valid options are:
 
-        - `{b.TRANSPOSE.s!r}` - compute transitions from neighboring cells `j` to cell `i`.
-        - `{b.NEGATE.s!r}` - negate the velocity vector."""
+        - `{b.TRANSPOSE!r}` - compute transitions from neighboring cells :math:`j` to cell :math:`i`.
+        - `{b.NEGATE!r}` - negate the velocity vector."""
 _copy = """Return a copy of self."""
 _initial = "initial"
 _terminal = "terminal"
@@ -105,17 +106,17 @@ callback
     Can be specified in gene- and lineage-specific manner, similarly to :attr:`model`."""
 _genes = """\
 genes
-    Genes in ``adata.var_names`` or in ``adata.raw.var_names``, if ``use_raw=True``."""
+    Genes in :attr:`anndata.AnnData.var_names` or in :attr:`anndata.AnnData.raw.var_names`, if ``use_raw = True``."""
 _softmax_scale = """\
 softmax_scale
     Scaling parameter for the softmax. If `None`, it will be estimated using ``1 / median(correlations)``.
-    The idea behind this is to scale the softmax to counteract everything tending to orthogonality in high dimensions."""  # noqa
+    The idea behind this is to scale the softmax to counter everything tending to orthogonality in high dimensions."""
 _time_mode = """\
 mode
-    Can be either `'embedding'` or `'time'`:
+    Valid options are:
 
-        - `'embedding'` - plot the embedding while coloring in the absorption probabilities.
-        - `'time'` - plot the pseudotime on x-axis and the absorption probabilities on y-axis."""
+        - `'embedding'` - plot the embedding while coloring in continuous or categorical observations.
+        - `'time'` - plot the pseudotime on x-axis and the probabilities/memberships on y-axis."""
 _write_to_adata = """\
 Updates the :attr:`adata` with the following fields:
 
@@ -133,14 +134,14 @@ return_models
     If `True`, return the fitted models for each gene in ``genes`` and lineage in ``lineages``."""
 _basis = """\
 basis
-    Basis to use when ``mode='embedding'``. If `None`, use `'umap'`."""
+    Basis to use when ``mode = 'embedding'``. If `None`, use `'umap'`."""
 _velocity_scheme = """\
 scheme
     Similarity scheme between cells as described in :cite:`li:20`. Can be one of the following:
 
-        - `{s.DOT_PRODUCT.s!r}`: :class:`cellrank.tl.kernels.DotProductScheme`.
-        - `{s.COSINE.s!r}`: :class:`cellrank.tl.kernels.CosineScheme`.
-        - `{s.CORRELATION.s!r}`: :class:`cellrank.tl.kernels.CorrelationScheme`.
+        - `{s.DOT_PRODUCT!r}` - :class:`cellrank.tl.kernels.DotProductScheme`.
+        - `{s.COSINE!r}` - :class:`cellrank.tl.kernels.CosineScheme`.
+        - `{s.CORRELATION!r}` - :class:`cellrank.tl.kernels.CorrelationScheme`.
 
     Alternatively, any function can be passed as long as it follows the signature of
     :meth:`cellrank.tl.kernels.SimilaritySchemeABC.__call__`."""
@@ -154,12 +155,19 @@ b
 nu
     Affects near which asymptote maximum growth occurs.{}"""
 _rw_ixs = """\
-Can be specified as either a :class:`dict` with a key corresponding to cluster key in
-    :attr:`anndata.AnnData.obs` and values to clusters or just a sequence of cell ids
-    in :attr:`anndata.AnnData.obs_names`."""
+Can be specified as:
+
+        - :class:`dict` - dictionary with 1 key in :attr:`anndata.AnnData.obs` with values corresponding
+          to either 1 or more clusters (if the column is categorical) or a :class:`tuple` specifying
+          `[min, max]` interval from which to select the indices.
+        - :class:`typing.Sequence` - sequence of cell ids in :attr:`anndata.AnnData.obs_names`.
+"""
+_gene_symbols = """\
+gene_symbols
+    Key in :attr:`anndata.AnnData.var` to use instead of :attr:`anndata.AnnData.var_names`."""
 
 
-def inject_docs(**kwargs):  # noqa
+def inject_docs(**kwargs: Any):  # noqa
     def decorator(obj):
         obj.__doc__ = dedent(obj.__doc__).format(**kwargs)
         return obj
@@ -208,7 +216,8 @@ d = DocstringProcessor(
     cond_num=_cond_num,
     soft_scheme=_soft_scheme_fmt.format("", "", ""),
     soft_scheme_kernel=_soft_scheme_fmt.format(
-        *([" Only used when `threshold_scheme='soft'`."] * 3)
+        *([" Only used when ``threshold_scheme = 'soft'``."] * 3)
     ),
     rw_ixs=_rw_ixs,
+    gene_symbols=_gene_symbols,
 )

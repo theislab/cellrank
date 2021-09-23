@@ -1,17 +1,17 @@
-"""Transition matrix module."""
+from typing import Union, Callable, Iterable, Optional
+from typing_extensions import Literal
 
-from typing import TypeVar, Iterable, Optional
-
+from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.ul._docs import d, inject_docs
+from cellrank.tl._utils import _deprecate
 from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tl.kernels._base_kernel import KernelExpression
 from cellrank.tl.kernels._velocity_kernel import BackwardMode, VelocityMode
 from cellrank.tl.kernels._velocity_schemes import Scheme
 
-AnnData = TypeVar("AnnData")
 
-
+@_deprecate(version="2.0")
 @inject_docs(m=VelocityMode, b=BackwardMode, s=Scheme)  # don't swap the order
 @d.dedent
 def transition_matrix(
@@ -21,9 +21,13 @@ def transition_matrix(
     xkey: str = "Ms",
     conn_key: str = "connectivities",
     gene_subset: Optional[Iterable] = None,
-    mode: str = VelocityMode.DETERMINISTIC.s,
-    backward_mode: str = BackwardMode.TRANSPOSE.s,
-    scheme: str = Scheme.CORRELATION.s,
+    mode: Literal[
+        "deterministic", "stochastic", "sampling", "monte_carlo"
+    ] = VelocityMode.DETERMINISTIC,
+    backward_mode: Literal["transpose", "negate"] = BackwardMode.TRANSPOSE,
+    scheme: Union[
+        Literal["dot_product", "cosine", "correlation"], Callable
+    ] = Scheme.CORRELATION,
     softmax_scale: Optional[float] = None,
     weight_connectivities: float = 0.2,
     density_normalize: bool = True,
@@ -65,10 +69,9 @@ def transition_matrix(
 
     Returns
     -------
-    :class:`cellrank.tl.KernelExpression`
-        A kernel expression object containing the computed transition matrix.
+    A kernel expression object containing the computed transition matrix.
 
-        %(write_to_adata)s
+    %(write_to_adata)s
     """
 
     def compute_velocity_kernel() -> VelocityKernel:
