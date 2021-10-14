@@ -1,4 +1,3 @@
-"""Experimental time kernel module."""
 from typing import Any, Dict, Tuple, Mapping, Optional
 
 from abc import ABC
@@ -39,7 +38,7 @@ class ExperimentalTimeKernel(Kernel, ABC):
     %(adata)s
     %(backward)s
     time_key
-        Key in :attr:`adata` ``.obs`` where experimental time is stored.
+        Key in :attr:`anndata.AnnData` where experimental time is stored.
         The experimental time can be of either of a numeric or an ordered categorical type.
     %(cond_num)s
     """
@@ -133,7 +132,7 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
 
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
-        self._tmaps = None
+        self._tmaps: Optional[Dict[Tuple[float, float], AnnData]] = None
 
     def _restich_tmaps(
         self,
