@@ -1427,9 +1427,7 @@ class TestCytoTRACEKernel:
     @pytest.mark.parametrize("use_raw", [False, True])
     def test_raw(self, adata: AnnData, use_raw: bool):
         _ = CytoTRACEKernel(adata, use_raw=use_raw)
-        assert adata.uns[Key.cytotrace("params")]["use_raw"] == (
-            adata.raw.n_vars == adata.n_vars if use_raw else False
-        )
+        assert adata.uns[Key.cytotrace("params")]["use_raw"] == use_raw
 
     def test_correct_class(self, adata: AnnData):
         k = CytoTRACEKernel(adata)
@@ -1442,6 +1440,7 @@ class TestCytoTRACEKernel:
         assert adata.uns[Key.cytotrace("params")] == {
             "layer": "X",
             "aggregation": "mean",
+            "n_top_genes": 143,
             "use_raw": False,
         }
 
@@ -1459,6 +1458,28 @@ class TestCytoTRACEKernel:
         )
         np.testing.assert_array_equal(k.pseudotime.min(), 0.0)
         np.testing.assert_array_equal(k.pseudotime.max(), 1.0)
+
+    def test_raw_less_genes(self, adata: AnnData):
+        adata.raw = adata.raw.to_adata()[:, :20]
+        _ = CytoTRACEKernel(adata, use_raw=True, n_top_genes=31)
+        assert adata.uns[Key.cytotrace("params")] == {
+            "layer": "Ms",
+            "aggregation": "mean",
+            "n_top_genes": 20,
+            "use_raw": True,
+        }
+
+    @pytest.mark.parametrize("n_top_genes", [0, 10, 300])
+    @pytest.mark.parametrize("use_raw", [False, True])
+    def test_n_top_genes(self, adata: AnnData, use_raw: bool, n_top_genes: int):
+        n_genes = 50 if use_raw else 143
+        if n_top_genes < 0:
+            with pytest.raises(ValueError, match=r"Expected `n_top_genes`"):
+                _ = CytoTRACEKernel(adata, use_raw=use_raw, n_top_genes=n_top_genes)
+        else:
+            _ = CytoTRACEKernel(adata, use_raw=use_raw, n_top_genes=n_top_genes)
+            assert adata.var[Key.cytotrace("correlates")].sum() == n_genes
+            assert adata.uns[Key.cytotrace("params")]["n_top_genes"] == n_genes
 
     def test_compute_transition_matrix(self, adata: AnnData):
         k = CytoTRACEKernel(adata, use_raw=False, layer="X", aggregation="mean")

@@ -417,7 +417,7 @@ def _correlation_test(
         confidence_level=confidence_level,
         **kwargs,
     )
-    invalid = np.sum((corr < -1) | (corr > 1))
+    invalid = np.sum(np.isnan(corr) | (corr < -1) | (corr > 1))
     if invalid:
         raise ValueError(f"Found `{invalid}` correlations that are not in `[0, 1]`.")
 
