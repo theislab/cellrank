@@ -204,18 +204,22 @@ class CytoTRACEKernel(PseudotimeKernel):
         num_exp_genes = np.asarray((adata_mraw.X > 0).sum(axis=1)).squeeze()
 
         logg.debug("Correlating all genes with number of genes expressed per cell")
-        # TODO(michalk8): filter NaN if anything is constant?
         gene_corr = _correlation_test(
             adata_mraw.X,
             Lineage(num_exp_genes[:, None], names=["gene"]),
             gene_names=adata_mraw.var_names,
         )["gene_corr"]
+
         # fmt: off
         top_genes = [g for g in gene_corr.sort_values(ascending=False).index if g in self.adata.var_names]
         top_genes = top_genes[:n_top_genes]
+        null_genes = int(gene_corr.loc[top_genes].isnull().sum())
+        if null_genes:
+            raise ValueError(f"Top `{len(top_genes)}` correlated genes contain `{null_genes}` NaN values.")
         if len(top_genes) != n_top_genes:
             logg.warning(f"Unable to get requested top correlated `{n_top_genes}`. "
                          f"Using top `{len(top_genes)}` genes")
+
         logg.debug(
             f"Aggregating imputed gene expression using "
             f"`{aggregation}` top `{len(top_genes)}` in layer `{layer}`"
