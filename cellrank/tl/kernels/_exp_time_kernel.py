@@ -23,7 +23,7 @@ from matplotlib.colors import Normalize, to_hex
 from matplotlib.pyplot import get_cmap
 
 
-class LastTimePoint(ModeEnum):  # noqa
+class LastTimePoint(ModeEnum):  # noqa: D101
     UNIFORM = "uniform"
     DIAGONAL = "diagonal"
     CONNECTIVITIES = "connectivities"
@@ -137,13 +137,33 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         super().__init__(*args, **kwargs)
         self._tmaps: Optional[Dict[Tuple[Any, Any], AnnData]] = None
 
+    @d.get_sections(base="tmk_tmat", sections=["Parameters"])
     def compute_transition_matrix(
         self,
         last_time_point: LastTimePoint = LastTimePoint.DIAGONAL,
         conn_kwargs: Mapping[str, Any] = MappingProxyType({}),
         **kwargs: Any,
     ) -> KernelExpression:
-        """TODO - ltp/conn kwargs docrep."""
+        """
+        Compute transition matrix using transport maps.
+
+        Parameters
+        ----------
+        last_time_point
+            How to define transitions within the last time point. Valid options are:
+
+                - `{ltp.UNIFORM!r}` - row-normalized matrix of 1s for transitions within the last time point.
+                - `{ltp.DIAGONAL!r}` - diagonal matrix with 1s on the diagonal.
+                - `{ltp.CONNECTIVITIES!r}` - use transitions from :class:`cellrank.tl.kernels.ConnectivityKernel`
+                  derived from the last time point subset of :attr:`adata`.
+        conn_kwargs
+            Keyword arguments for :func:`scanpy.pp.neighbors` when using ``last_time_point = {ltp.CONNECTIVITIES!r}``.
+            Can have `'density_normalize'` for :meth:`cellrank.tl.kernels.ConnectivityKernel.compute_transition_matrix`.
+
+        Returns
+        -------
+        Self and updated :attr:`transition_matrix`.
+        """
         timepoints = self.experimental_time.cat.categories
         timepoints = list(zip(timepoints[:-1], timepoints[1:]))
 
@@ -164,19 +184,24 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
     @abstractmethod
     def _compute_tmap(self, t1: Any, t2: Any, **kwargs: Any) -> AnnData:
         """
-        TODO.
+        Compute transport matrix for a time point pair.
 
         Parameters
         ----------
         t1
+            Earlier time point in :attr:`experimental_time`.
         t2
+            Later time point in :attr:`experimental_time`.
         kwargs
+            Additional keyword arguments.
 
         Returns
         -------
-        TODO.
+        Annotated data object of shape ``(n_cells_early, n_cells_late)`` with :attr:`anndata.AnnData.obs_names` and
+        :attr:`anndata.AnnData.var_names` corresponding to subsets of observation names from :attr:`adata`.
         """
 
+    @d.dedent
     @inject_docs(ltp=LastTimePoint)
     def _restich_tmaps(
         self,
@@ -186,25 +211,13 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         normalize: bool = True,
     ) -> AnnData:
         """
-        TODO - intro + ltp/conn kwargs docrep.
+        Group individual transport maps into 1 matrix aligned with :attr:`adata`.
 
         Parameters
         ----------
         tmaps
             Sorted transport maps as ``{{(t1, t2): tmat_2, (t2, t3): tmat_2, ...}}``.
-            :attr:`anndata.AnnData.var_names` at the current time-point must be the same as
-            :attr:`anndata.AnnData.obs_names` at the next time-point.
-        last_time_point
-            How to define transitions within the last time point. Valid options are:
-
-                - `{ltp.UNIFORM!r}` - row-normalized matrix of 1s for transitions within the last time point.
-                - `{ltp.DIAGONAL!r}` - diagonal matrix with 1s on the diagonal.
-                - `{ltp.CONNECTIVITIES!r}` - use transitions from :class:`cellrank.tl.kernels.ConnectivityKernel`
-                  derived from the last time point subset of :attr:`adata`.
-        conn_kwargs
-            Keyword arguments for :func:`scanpy.pp.neighbors`, when using ``last_time_point = {ltp.CONNECTIVITIES!r}``.
-            Can contain `'density_normalize'` for
-            :meth:`cellrank.tl.kernels.ConnectivityKernel.compute_transition_matrix`.
+        %(tmk_tmat.parameters)s
         normalize
             Whether to normalize the transition matrix so that rows sum to `1`.
 
@@ -225,7 +238,6 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         nrows, ncols = 0, 0
         obs_names, obs = [], []
 
-        # TODO(michalk8): what happens in bwd case or if not sorted?
         for i, tmap in enumerate(tmaps.values()):
             blocks[i][i + 1] = _normalize(tmap.X) if normalize else tmap.X
             nrows += tmap.n_obs
@@ -244,7 +256,7 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
             sc.pp.neighbors(adata_subset, **conn_kwargs)
             blocks[-1][-1] = (
                 ConnectivityKernel(adata_subset)
-                .compute_transition_matrix(density_normalize)
+                .compute_transition_matrix(density_normalize=density_normalize)
                 .transition_matrix
             )
         else:
@@ -271,6 +283,7 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
 
         return tmp
 
+    @d.get_sections(base="tmk_thresh", sections=["Parameters"])
     def _threshold_transition_matrix(
         self, threshold: Union[float, Literal["auto"]]
     ) -> None:
@@ -314,9 +327,77 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         )
 
     def _validate_tmaps(
-        self, tmaps: Mapping[Tuple[Any, Any], AnnData]
+        self,
+        tmaps: Mapping[Tuple[Any, Any], AnnData],
+        allow_reorder: bool = True,
     ) -> Mapping[Tuple[Any, Any], AnnData]:
-        """TODO."""
+        """
+        Validate that transport maps conform to various invariants.
+
+        Parameters
+        ----------
+        tmaps
+            Transport maps where :attr:`anndata.AnnData.var_names` in the earlier time point must correspond to
+            :attr:`anndata.AnnData.obs_names` in the later time point.
+        allow_reorder
+            Whether the target cells in the earlier transport map can be used to reorder
+            the source cells of the later transport map.
+
+        Returns
+        -------
+        Possibly reordered transport maps.
+
+        Raises
+        ------
+        ValueError
+            If ``allow_subset = False`` and the target/source cell names on earlier/later transport map don't match.
+        KeyError
+            If ``allow_subset = True`` and the target cells in earlier transport map are not found in the later one or
+            if the transport maps haven't been computed for all cells in :attr:`adata`.
+        """
+        tps, tmap2 = list(tmaps.keys()), None
+        seen_obs = []
+
+        for (t1, t2), (t3, t4) in enumerate(zip(tps[:-1], tps[1:])):
+            tmap1, tmap2 = tmaps[t1, t2], tmaps[t3, t4]
+            try:
+                np.testing.assert_array_equal(tmap1.var_names, tmap2.obs_names)
+            except AssertionError:
+                if not allow_reorder:
+                    raise ValueError(
+                        f"Target cells of coupling with shape `{tmap1.shape}` at `{(t1, t2)}` does not "
+                        f"match the source cells of coupling with shape `{tmap2.shape}` at `{(t3, t4)}`"
+                    ) from None
+                try:
+                    # if a subset happens, we still assume that the transport maps cover all cells from `adata`
+                    # i.e. the transport maps define a superset
+                    tmaps[t3, t4] = tmap2 = tmap2[tmap1.var_names]  # keep the view
+                except KeyError:
+                    raise KeyError(
+                        f"Unable to subset transport map at `{(t3, t4)}` "
+                        f"using transport map at `{(t1, t2)}`."
+                    ) from None
+            seen_obs.extend(tmap1.obs_names)
+        else:
+            tmap2 = tmaps[tps[0]]  # if only 1 transport map
+
+        seen_obs.extend(tmap2.obs_names)
+        seen_obs.extend(tmap2.var_names)
+
+        try:
+            pd.testing.assert_series_equal(
+                pd.Series(sorted(seen_obs)),
+                pd.Series(sorted(self.adata.obs_names)),
+                check_names=False,
+                check_flags=False,
+                check_index=True,
+            )
+        except AssertionError:
+            raise KeyError(
+                "Observations from transport maps don't match"
+                "the observations from the underlying `AnnData` object."
+            ) from None
+
         return tmaps
 
     @property

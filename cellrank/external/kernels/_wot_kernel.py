@@ -252,6 +252,7 @@ class WOTKernel(Kernel, error=_error):
             return pd.Series(gr, index=self.adata.obs_names)
         self.adata.obs[key_added] = gr
 
+    @d.dedent
     @inject_docs(ltp=LastTimePoint)
     def compute_transition_matrix(
         self,
@@ -305,7 +306,8 @@ class WOTKernel(Kernel, error=_error):
         use_highly_variable
             Key in :attr:`anndata.AnnData.var` where highly variable genes are stored.
             If `True`, use `'highly_variable'`. If `None`, use all genes.
-        TODO: threshold, ltp, conn_kwargs
+        %(tmk_thresh.parameters)s
+        %(tmk_tmat.parameters)s
         kwargs
             Additional keyword arguments for optimal transport configuration.
 
