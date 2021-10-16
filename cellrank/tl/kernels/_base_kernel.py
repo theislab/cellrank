@@ -153,15 +153,19 @@ class KernelExpression(IOMixin, ABC):
         None
             Nothing, just updates the :attr:`transition_matrix` and optionally normalizes it.
         """
-        should_norm = ~np.isclose(value.sum(1), 1.0, rtol=_RTOL).all()
+        # fmt: off
+        should_norm = ~np.isclose(np.asarray(value.sum(1)).squeeze(), 1.0, rtol=_RTOL).all()
+        # fmt: on
 
         if self._parent is None:
-            self._transition_matrix = _normalize(value) if should_norm else value
+            value = _normalize(value) if should_norm else value
         else:
             # it's AND, not OR, because of combinations
-            self._transition_matrix = (
-                _normalize(value) if self._normalize and should_norm else value
-            )
+            value = _normalize(value) if self._normalize and should_norm else value
+
+        if not np.all(np.isfinite(value.data if issparse(value) else value)):
+            raise ValueError("Not all values are finite.")
+        self._transition_matrix = value
 
     @abstractmethod
     def compute_transition_matrix(
@@ -238,14 +242,20 @@ class KernelExpression(IOMixin, ABC):
     def _reuse_cache(
         self, expected_params: Dict[str, Any], *, time: Optional[Any] = None
     ) -> bool:
-        if expected_params == self._params:
-            assert self.transition_matrix is not None, _ERROR_EMPTY_CACHE_MSG
-            logg.debug(_LOG_USING_CACHE)
-            logg.info("    Finish", time=time)
-            return True
-
-        self._params = expected_params
-        return False
+        try:
+            if expected_params == self._params:
+                assert self.transition_matrix is not None, _ERROR_EMPTY_CACHE_MSG
+                logg.debug(_LOG_USING_CACHE)
+                logg.info("    Finish", time=time)
+                return True
+            return False
+        except AssertionError:
+            raise
+        except Exception as e:  # noqa: B902
+            logg.error(f"Unable to load the cache, reason: `{e}`")
+            return False
+        finally:
+            self._params = expected_params
 
     @abstractmethod
     def _get_kernels(self) -> Iterable["Kernel"]:

@@ -7,7 +7,7 @@ from tqdm.auto import tqdm
 import scanpy as sc
 from anndata import AnnData
 from cellrank import logging as logg
-from cellrank.ul._docs import d, inject_docs
+from cellrank.ul._docs import d
 from cellrank.tl._utils import _maybe_subset_hvgs
 from cellrank.external.kernels._utils import MarkerGenes
 from cellrank.tl.kernels._exp_time_kernel import LastTimePoint
@@ -253,7 +253,6 @@ class WOTKernel(Kernel, error=_error):
         self.adata.obs[key_added] = gr
 
     @d.dedent
-    @inject_docs(ltp=LastTimePoint)
     def compute_transition_matrix(
         self,
         cost_matrices: Optional[
@@ -306,7 +305,6 @@ class WOTKernel(Kernel, error=_error):
         use_highly_variable
             Key in :attr:`anndata.AnnData.var` where highly variable genes are stored.
             If `True`, use `'highly_variable'`. If `None`, use all genes.
-        %(tmk_thresh.parameters)s
         %(tmk_tmat.parameters)s
         kwargs
             Additional keyword arguments for optimal transport configuration.
