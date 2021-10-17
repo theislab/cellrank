@@ -30,7 +30,7 @@ class ThresholdSchemeABC(ABC):
         cell_pseudotime
             Pseudotime of the current cell.
         neigh_pseudotime
-            Array of shape ``(n_neighbors,)`` containing pseudotimes of neighbors.
+            Array of shape ``(n_neighbors,)`` containing pseudotime of neighbors.
         neigh_conn
             Array of shape ``(n_neighbors,)`` containing connectivities of the current cell and its neighbors.
 

@@ -7,7 +7,7 @@ from tqdm.auto import tqdm
 import scanpy as sc
 from anndata import AnnData
 from cellrank import logging as logg
-from cellrank.ul._docs import d, inject_docs
+from cellrank.ul._docs import d
 from cellrank.tl._utils import _maybe_subset_hvgs
 from cellrank.external.kernels._utils import MarkerGenes
 from cellrank.tl.kernels._exp_time_kernel import LastTimePoint
@@ -252,7 +252,7 @@ class WOTKernel(Kernel, error=_error):
             return pd.Series(gr, index=self.adata.obs_names)
         self.adata.obs[key_added] = gr
 
-    @inject_docs(ltp=LastTimePoint)
+    @d.dedent
     def compute_transition_matrix(
         self,
         cost_matrices: Optional[
@@ -265,10 +265,10 @@ class WOTKernel(Kernel, error=_error):
         solver: Literal["fixed_iters", "duality_gap"] = "duality_gap",
         growth_rate_key: Optional[str] = None,
         use_highly_variable: Optional[Union[str, bool]] = True,
+        threshold: Optional[Union[float, Literal["auto"]]] = "auto",
         last_time_point: Literal[
             "uniform", "diagonal", "connectivities"
         ] = LastTimePoint.UNIFORM,
-        threshold: Optional[Union[float, Literal["auto"]]] = "auto",
         conn_kwargs: Mapping[str, Any] = MappingProxyType({}),
         **kwargs: Any,
     ) -> "WOTKernel":
@@ -305,24 +305,7 @@ class WOTKernel(Kernel, error=_error):
         use_highly_variable
             Key in :attr:`anndata.AnnData.var` where highly variable genes are stored.
             If `True`, use `'highly_variable'`. If `None`, use all genes.
-        last_time_point
-            How to define transitions within the last time point. Valid options are:
-
-                - `{ltp.UNIFORM!r}` - row-normalized matrix of 1s for transitions within the last time point.
-                - `{ltp.DIAGONAL!r}` - diagonal matrix with 1s on the diagonal.
-                - `{ltp.CONNECTIVITIES!r}` - use transitions from :class:`cellrank.tl.kernels.ConnectivityKernel`
-                  derived from the last time point subset of :attr:`adata`.
-        threshold
-            How to remove small non-zero values from the transition matrix. Valid options are:
-
-                - `'auto'` - find the maximum threshold value which will not remove every non-zero value from any row.
-                - :class:`float` - value in `[0, 100]` corresponding to a percentage of non-zeros to remove.
-                  Rows where all values are removed will have uniform distribution.
-                - `None` - do not threshold.
-        conn_kwargs
-            Keyword arguments for :func:`scanpy.pp.neighbors`, when using ``last_time_point = {ltp.CONNECTIVITIES!r}``.
-            Can contain `'density_normalize'` for
-            :meth:`cellrank.tl.kernels.ConnectivityKernel.compute_transition_matrix`.
+        %(tmk_tmat.parameters)s
         kwargs
             Additional keyword arguments for optimal transport configuration.
 
@@ -374,7 +357,7 @@ class WOTKernel(Kernel, error=_error):
         ):
             return self
 
-        tmap = self._compute_pairwise_tmaps(
+        tmap = self._compute_tmaps(
             adata,
             cost_matrices=cost_matrices,
             solver=solver,
@@ -397,11 +380,34 @@ class WOTKernel(Kernel, error=_error):
 
         return self
 
-    def _compute_pairwise_tmaps(
+    def _compute_tmap(self, t1: Any, t2: Any, **kwargs: Any) -> AnnData:
+        ot_model: wot.ot.OTModel = kwargs.pop("ot_model")
+        cost_matrix: Optional[Union[str, np.ndarray]] = kwargs.pop("cost_matrix")
+
+        tmap: Optional[AnnData] = ot_model.compute_transport_map(
+            t1,
+            t2,
+            cost_matrix=cost_matrix,
+        )
+        if tmap is None:
+            raise TypeError(
+                f"Unable to compute transport map for time pair `{(t1, t2)}`. "
+                f"Please ensure `adata.obs[{self._time_key!r}]` has the correct dtype (float)."
+            )
+        tmap.X = tmap.X.astype(np.float64)
+        nans = int(np.sum(~np.isfinite(tmap.X)))
+        if nans:
+            raise ValueError(
+                f"Encountered `{nans}` non-finite values for time pair `{(t1, t2)}`."
+            )
+
+        return tmap
+
+    def _compute_tmaps(
         self,
         adata: AnnData,
         cost_matrices: Optional[
-            Union[str, Mapping[Tuple[float, float], np.ndarray]]
+            Mapping[Tuple[float, float], Optional[np.ndarray]]
         ] = None,
         solver: Literal["fixed_iters", "duality_gap"] = "duality_gap",
         growth_rate_field: Optional[str] = None,
@@ -430,22 +436,13 @@ class WOTKernel(Kernel, error=_error):
         start = logg.info(
             f"Computing transport maps for `{len(cost_matrices)}` time pairs"
         )
-        for tpair, cost_matrix in tqdm(cost_matrices.items(), unit="time pair"):
-            tmap: Optional[AnnData] = ot_model.compute_transport_map(
-                *tpair, cost_matrix=cost_matrix
+        for (t1, t2), cost_matrix in tqdm(cost_matrices.items(), unit="time pair"):
+            self._tmaps[t1, t2] = self._compute_tmap(
+                t1,
+                t2,
+                ot_model=ot_model,
+                cost_matrix=cost_matrix,
             )
-            if tmap is None:
-                raise TypeError(
-                    f"Unable to compute transport map for time pair `{tpair}`. "
-                    f"Please ensure `adata.obs[{self._time_key!r}]` has the correct dtype (float)."
-                )
-            tmap.X = tmap.X.astype(np.float64)
-            nans = int(np.sum(~np.isfinite(tmap.X)))
-            if nans:
-                raise ValueError(
-                    f"Encountered `{nans}` non-finite values for time pair `{tpair}`."
-                )
-            self._tmaps[tpair] = tmap
 
         logg.info("    Finish", time=start)
 
@@ -525,31 +522,6 @@ class WOTKernel(Kernel, error=_error):
         raise NotImplementedError(
             f"Specifying cost matrices as "
             f"`{type(cost_matrices).__name__}` is not yet implemented."
-        )
-
-    def _threshold_transition_matrix(
-        self, threshold: Union[float, Literal["auto"]]
-    ) -> None:
-        tmat = self.transition_matrix
-        if threshold == "auto":
-            threshold = min(np.max(tmat[i].data) for i in range(tmat.shape[0]))
-            logg.info(f"Using `threshold={threshold}`")
-            tmat.data[tmat.data < threshold] = 0.0
-        else:
-            if not (0 <= threshold <= 100):
-                raise ValueError(
-                    f"Expected `threshold to be in `[0, 100]`, found `{threshold}`.`"
-                )
-            threshold = np.percentile(tmat.data, threshold)
-            logg.info(f"Using `threshold={threshold}`")
-            tmat.data[tmat.data <= threshold] = 0.0
-
-        tmat.eliminate_zeros()
-
-        self._compute_transition_matrix(
-            matrix=tmat,
-            density_normalize=False,
-            check_irreducibility=False,
         )
 
     @property
