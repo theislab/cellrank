@@ -1,8 +1,5 @@
 from cellrank.tl.kernels._base_kernel import Kernel
-from cellrank.tl.kernels._exp_time_kernel import (
-    TransportMapKernel,
-    ExperimentalTimeKernel,
-)
+from cellrank.tl.kernels._exp_time_kernel import ExperimentalTimeKernel
 from cellrank.tl.kernels._velocity_kernel import VelocityKernel
 from cellrank.tl.kernels._cytotrace_kernel import CytoTRACEKernel
 from cellrank.tl.kernels._velocity_schemes import (
@@ -19,3 +16,4 @@ from cellrank.tl.kernels._pseudotime_schemes import (
     SoftThresholdScheme,
 )
 from cellrank.tl.kernels._connectivity_kernel import ConnectivityKernel
+from cellrank.tl.kernels._transport_map_kernel import TransportMapKernel

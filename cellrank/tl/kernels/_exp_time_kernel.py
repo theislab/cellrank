@@ -1,26 +1,22 @@
-from typing import Any, Dict, Tuple, Mapping, Optional
+from typing import Any, Optional
 
 from abc import ABC
 from copy import copy
-from types import MappingProxyType
 
-import scanpy as sc
+from anndata import AnnData
 from cellrank.tl._enum import ModeEnum
 from cellrank.ul._docs import d
-from cellrank.tl._utils import _normalize
 from cellrank.tl.kernels import Kernel
 from cellrank.tl.kernels._utils import _ensure_numeric_ordered
-from cellrank.tl.kernels._base_kernel import AnnData
 
 import numpy as np
 import pandas as pd
-from scipy.sparse import bmat, spdiags
 
 from matplotlib.colors import Normalize, to_hex
 from matplotlib.pyplot import get_cmap
 
 
-class LastTimePoint(ModeEnum):  # noqa
+class LastTimePoint(ModeEnum):  # noqa: D101
     UNIFORM = "uniform"
     DIAGONAL = "diagonal"
     CONNECTIVITIES = "connectivities"
@@ -38,7 +34,7 @@ class ExperimentalTimeKernel(Kernel, ABC):
     %(adata)s
     %(backward)s
     time_key
-        Key in :attr:`anndata.AnnData` where experimental time is stored.
+        Key in :attr:`anndata.AnnData.obs` where experimental time is stored.
         The experimental time can be of either of a numeric or an ordered categorical type.
     %(cond_num)s
     """
@@ -125,79 +121,3 @@ class ExperimentalTimeKernel(Kernel, ABC):
                 index=self.experimental_time.index,
             )
         return self
-
-
-class TransportMapKernel(ExperimentalTimeKernel, ABC):
-    """Kernel base class which computes transition matrix based on transport maps for consecutive time pairs."""
-
-    def __init__(self, *args: Any, **kwargs: Any):
-        super().__init__(*args, **kwargs)
-        self._tmaps: Optional[Dict[Tuple[float, float], AnnData]] = None
-
-    def _restich_tmaps(
-        self,
-        tmaps: Mapping[Tuple[float, float], AnnData],
-        last_time_point: LastTimePoint = LastTimePoint.DIAGONAL,
-        conn_kwargs: Mapping[str, Any] = MappingProxyType({}),
-        normalize: bool = True,
-    ) -> AnnData:
-        from cellrank.tl.kernels import ConnectivityKernel
-
-        conn_kwargs = dict(conn_kwargs)
-        conn_kwargs["copy"] = False
-        _ = conn_kwargs.pop("key_added", None)
-        density_normalize = conn_kwargs.pop("density_normalize", True)
-
-        blocks = [[None] * (len(tmaps) + 1) for _ in range(len(tmaps) + 1)]
-        nrows, ncols = 0, 0
-        obs_names, obs = [], []
-
-        for i, tmap in enumerate(tmaps.values()):
-            blocks[i][i + 1] = _normalize(tmap.X) if normalize else tmap.X
-            nrows += tmap.n_obs
-            ncols += tmap.n_vars
-            obs_names.extend(tmap.obs_names)
-            obs.append(tmap.obs)
-        obs_names.extend(tmap.var_names)
-
-        n = self.adata.n_obs - nrows
-        if last_time_point == LastTimePoint.DIAGONAL:
-            blocks[-1][-1] = spdiags([1] * n, 0, n, n)
-        elif last_time_point == LastTimePoint.UNIFORM:
-            blocks[-1][-1] = np.ones((n, n)) / float(n)
-        elif last_time_point == LastTimePoint.CONNECTIVITIES:
-            adata_subset = self.adata[tmap.var_names].copy()
-            sc.pp.neighbors(adata_subset, **conn_kwargs)
-            blocks[-1][-1] = (
-                ConnectivityKernel(adata_subset)
-                .compute_transition_matrix(density_normalize)
-                .transition_matrix
-            )
-        else:
-            raise NotImplementedError(
-                f"Last time point mode `{last_time_point}` is not yet implemented."
-            )
-
-        # prevent the last block from disappearing
-        n = blocks[0][1].shape[0]
-        blocks[0][0] = spdiags([], 0, n, n)
-
-        tmp = AnnData(bmat(blocks, format="csr"))
-        tmp.obs_names = obs_names
-        tmp.var_names = obs_names
-        tmp = tmp[self.adata.obs_names, :][:, self.adata.obs_names]
-
-        tmp.obs = pd.merge(
-            tmp.obs,
-            pd.concat(obs),
-            left_index=True,
-            right_index=True,
-            how="left",
-        )
-
-        return tmp
-
-    @property
-    def transport_maps(self) -> Optional[Dict[Tuple[float, float], AnnData]]:
-        """Transport maps for consecutive time pairs."""
-        return self._tmaps
