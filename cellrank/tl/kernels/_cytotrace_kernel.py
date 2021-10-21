@@ -27,7 +27,8 @@ class CytoTRACEAggregation(ModeEnum):  # noqa: D101
 class CytoTRACEKernel(PseudotimeKernel):
     """
     Kernel which computes directed transition probabilities based on a KNN graph and the CytoTRACE score \
-    :cite:`gulati:20`.
+    :cite:`gulati:20`. CytoTRACE relies on the assumption that differentiated cells express, on average \
+    less genes than naive cells
 
     The KNN graph contains information about the (undirected) connectivities among cells, reflecting their similarity.
     CytoTRACE can be used to estimate cellular plasticity and in turn, a pseudotemporal ordering of cells from more
@@ -46,6 +47,8 @@ class CytoTRACEKernel(PseudotimeKernel):
     %(cond_num)s
     check_connectivity
         Check whether the underlying KNN graph is connected.
+    top_n
+        Number of genes used to compute the CytoTRACE score    
     kwargs
         Keyword arguments for :class:`cellrank.tl.kernels.PseudotimeKernel`.
 
@@ -90,6 +93,7 @@ class CytoTRACEKernel(PseudotimeKernel):
         use_raw: bool = False,
         compute_cond_num: bool = False,
         check_connectivity: bool = False,
+        top_n: int = 200,
         **kwargs: Any,
     ):
         super().__init__(
@@ -194,6 +198,8 @@ class CytoTRACEKernel(PseudotimeKernel):
 
         msg = f"Computing CytoTRACE score with `{self.adata.n_vars}` genes"
         if self.adata.n_vars < 10000:
+            # this is true for smart-seq experiments, on other platforms
+            # one typically has less than 10k genes (e.g. 10x)
             msg += ". Consider using more than `10000` genes"
         start = logg.info(msg)
 
@@ -209,21 +215,21 @@ class CytoTRACEKernel(PseudotimeKernel):
         logg.debug("Correlating all genes with number of genes expressed per cell")
         gene_corr, _, _, _ = _correlation_test_helper(adata_mraw.X.T, num_exp_genes[:, None])
 
-        # annotate the top 200 genes in terms of correlation
-        logg.debug("Finding the top `200` most correlated genes")
+        # annotate the top top_n genes in terms of correlation
+        logg.debug(f"Finding the top {top_n} most correlated genes")
         self.adata.var[Key.cytotrace("gene_corr")] = gene_corr
-        top_200 = self.adata.var.sort_values(by=Key.cytotrace("gene_corr"), ascending=False).index[:200]
+        top_N = self.adata.var.sort_values(by=Key.cytotrace("gene_corr"), ascending=False).index[:top_n]
         self.adata.var[Key.cytotrace("correlates")] = False
-        self.adata.var.loc[top_200, Key.cytotrace("correlates")] = True
+        self.adata.var.loc[top_N, Key.cytotrace("correlates")] = True
 
-        # compute mean/median over top 200 genes, aggregate over genes and shift to [0, 1] range
+        # compute mean/median over top top_n genes, aggregate over genes and shift to [0, 1] range
         logg.debug(f"Aggregating imputed gene expression using aggregation `{aggregation}` in layer `{layer}`")
         corr_mask = self.adata.var[Key.cytotrace("correlates")]
         imputed_exp = self.adata[:, corr_mask].X if layer == "X" else self.adata[:, corr_mask].layers[layer]
         if issparse(imputed_exp):
             imputed_exp = imputed_exp.A
 
-        # aggregate across the top 200 genes
+        # aggregate across the top top_n genes
         if aggregation == CytoTRACEAggregation.MEAN:
             cytotrace_score = np.mean(imputed_exp, axis=1)
         elif aggregation == CytoTRACEAggregation.MEDIAN:
@@ -246,6 +252,7 @@ class CytoTRACEKernel(PseudotimeKernel):
             "aggregation": aggregation,
             "layer": layer,
             "use_raw": use_raw,
+            "top_n": top_n,
         }
 
         logg.info(
