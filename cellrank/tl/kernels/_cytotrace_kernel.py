@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 from typing_extensions import Literal
 
 from enum import auto
@@ -8,7 +8,7 @@ from cellrank import logging as logg
 from cellrank._key import Key
 from cellrank.tl._enum import ModeEnum
 from cellrank.ul._docs import d, inject_docs
-from cellrank.tl._utils import _correlation_test_helper
+from cellrank.tl._utils import _correlation_test, _correlation_test_helper
 from cellrank.tl.kernels._pseudotime_kernel import PseudotimeKernel
 
 import numpy as np
@@ -31,7 +31,8 @@ class CytoTRACEKernel(PseudotimeKernel):
 
     The KNN graph contains information about the (undirected) connectivities among cells, reflecting their similarity.
     CytoTRACE can be used to estimate cellular plasticity and in turn, a pseudotemporal ordering of cells from more
-    plastic to less plastic states.
+    plastic to less plastic states. It relies on the assumption that differentiated cells express, on average,
+    less genes than naive cells.
     This kernel internally uses the :class:`cellrank.tl.kernels.PseudotimeKernel` to direct the KNN graph
     on the basis of the CytoTRACE-derived pseudotime.
 
@@ -42,7 +43,6 @@ class CytoTRACEKernel(PseudotimeKernel):
     %(adata)s
     %(backward)s
     %(cytotrace.parameters)s
-
     %(cond_num)s
     check_connectivity
         Check whether the underlying KNN graph is connected.
@@ -83,11 +83,12 @@ class CytoTRACEKernel(PseudotimeKernel):
         self,
         adata: AnnData,
         backward: bool = False,
-        layer: str = "Ms",
+        layer: Optional[str] = "Ms",
         aggregation: Literal[
             "mean", "median", "hmean", "gmean"
         ] = CytoTRACEAggregation.MEAN,
         use_raw: bool = False,
+        n_top_genes: int = 200,
         compute_cond_num: bool = False,
         check_connectivity: bool = False,
         **kwargs: Any,
@@ -100,15 +101,17 @@ class CytoTRACEKernel(PseudotimeKernel):
             check_connectivity=check_connectivity,
             layer=layer,
             aggregation=aggregation,
+            n_top_genes=n_top_genes,
             use_raw=use_raw,
             **kwargs,
         )
-        self._time_key = Key.cytotrace("pseudotime")  # quirk or PT kernel
+        # TODO(michlak8): needed by the PT kernel?
+        self._time_key = Key.cytotrace("pseudotime")
 
     def _read_from_adata(
         self,
         time_key: str,
-        layer: str = "Ms",
+        layer: Optional[str] = "Ms",
         aggregation: Literal[
             "mean", "median", "hmean", "gmean"
         ] = CytoTRACEAggregation.MEAN,
@@ -123,11 +126,12 @@ class CytoTRACEKernel(PseudotimeKernel):
     @inject_docs(ct=CytoTRACEAggregation)
     def compute_cytotrace(
         self,
-        layer: str = "Ms",
+        layer: Optional[str] = "Ms",
         aggregation: Literal[
             "mean", "median", "hmean", "gmean"
         ] = CytoTRACEAggregation.MEAN,
         use_raw: bool = False,
+        n_top_genes: int = 200,
     ) -> None:
         """
         Re-implementation of the CytoTRACE algorithm :cite:`gulati:20` to estimate cellular plasticity.
@@ -149,10 +153,11 @@ class CytoTRACEKernel(PseudotimeKernel):
                 - `{ct.MEDIAN!r}` - median.
                 - `{ct.HMEAN!r}` - harmonic mean.
                 - `{ct.GMEAN!r}` - geometric mean.
-
         use_raw
             Whether to use the :attr:`anndata.AnnData.raw` to compute the number of genes expressed per cell
             (#genes/cell) and the correlation of gene expression across cells with #genes/cell.
+        n_top_genes
+            Number of genes used to compute the CytoTRACE score.
 
         Returns
         -------
@@ -173,57 +178,61 @@ class CytoTRACEKernel(PseudotimeKernel):
         This will not exactly reproduce the results of the original CytoTRACE algorithm :cite:`gulati:20` because we
         allow for any normalization and imputation techniques whereas CytoTRACE has built-in specific methods for that.
         """
-        # check use_raw
+        from cellrank.tl import Lineage
+
         aggregation = CytoTRACEAggregation(aggregation)
+
+        if n_top_genes <= 0:
+            raise ValueError(
+                f"Expected `n_top_genes` to be `> 0`, found `{n_top_genes}`."
+            )
         if use_raw and self.adata.raw is None:
             logg.warning("`adata.raw` is `None`. Setting `use_raw=False`")
             use_raw = False
-        if use_raw and self.adata.raw.n_vars != self.adata.n_vars:
-            logg.warning(
-                f"`adata.raw` has different number of genes ({self.adata.raw.n_vars}) "
-                f"than `adata` ({self.adata.n_vars}). Setting `use_raw=False`"
-            )
-            use_raw = False
-
-        adata_mraw = self.adata.raw if use_raw else self.adata
-        if layer != "X" and layer not in self.adata.layers:
+        if layer not in (None, "X") and layer not in self.adata.layers:
             raise KeyError(
                 f"Unable to find `{layer!r}` in `adata.layers`. "
                 f"Valid option are: `{sorted({'X'} | set(self.adata.layers.keys()))}`."
             )
 
-        msg = f"Computing CytoTRACE score with `{self.adata.n_vars}` genes"
-        if self.adata.n_vars < 10000:
+        adata_mraw = self.adata.raw if use_raw else self.adata
+        msg = f"Computing CytoTRACE score with `{adata_mraw.n_vars}` genes"
+        if adata_mraw.n_vars < 10000:
             msg += ". Consider using more than `10000` genes"
         start = logg.info(msg)
 
         # compute number of expressed genes per cell
-        logg.debug(
-            f"Computing number of genes expressed per cell with `use_raw={use_raw}`"
-        )
-        num_exp_genes = np.array((adata_mraw.X > 0).sum(axis=1)).reshape(-1)
-        self.adata.obs[Key.cytotrace("num_exp_genes")] = num_exp_genes
+        num_exp_genes = np.asarray((adata_mraw.X > 0).sum(axis=1)).squeeze()
+
+        logg.debug("Correlating all genes with number of genes expressed per cell")
+        gene_corr = _correlation_test(
+            adata_mraw.X,
+            Lineage(num_exp_genes[:, None], names=["gene"]),
+            gene_names=adata_mraw.var_names,
+        )["gene_corr"]
 
         # fmt: off
-        # compute correlation with all genes
-        logg.debug("Correlating all genes with number of genes expressed per cell")
-        gene_corr, _, _, _ = _correlation_test_helper(adata_mraw.X.T, num_exp_genes[:, None])
+        top_genes = [g for g in gene_corr.sort_values(ascending=False).index if g in self.adata.var_names]
+        top_genes = top_genes[:n_top_genes]
+        null_genes = int(gene_corr.loc[top_genes].isnull().sum())
+        if null_genes:
+            raise ValueError(f"Top `{len(top_genes)}` correlated genes contain `{null_genes}` NaN values.")
+        if len(top_genes) != n_top_genes:
+            logg.warning(f"Unable to get requested top correlated `{n_top_genes}`. "
+                         f"Using top `{len(top_genes)}` genes")
 
-        # annotate the top 200 genes in terms of correlation
-        logg.debug("Finding the top `200` most correlated genes")
-        self.adata.var[Key.cytotrace("gene_corr")] = gene_corr
-        top_200 = self.adata.var.sort_values(by=Key.cytotrace("gene_corr"), ascending=False).index[:200]
-        self.adata.var[Key.cytotrace("correlates")] = False
-        self.adata.var.loc[top_200, Key.cytotrace("correlates")] = True
-
-        # compute mean/median over top 200 genes, aggregate over genes and shift to [0, 1] range
-        logg.debug(f"Aggregating imputed gene expression using aggregation `{aggregation}` in layer `{layer}`")
-        corr_mask = self.adata.var[Key.cytotrace("correlates")]
-        imputed_exp = self.adata[:, corr_mask].X if layer == "X" else self.adata[:, corr_mask].layers[layer]
+        logg.debug(
+            f"Aggregating imputed gene expression using "
+            f"`{aggregation}` top `{len(top_genes)}` in layer `{layer}`"
+        )
+        # compute mean/median over top n genes, aggregate over genes
+        if layer == "X":
+            imputed_exp = self.adata[:, top_genes].X
+        else:
+            imputed_exp = self.adata[:, top_genes].layers[layer]
         if issparse(imputed_exp):
             imputed_exp = imputed_exp.A
 
-        # aggregate across the top 200 genes
         if aggregation == CytoTRACEAggregation.MEAN:
             cytotrace_score = np.mean(imputed_exp, axis=1)
         elif aggregation == CytoTRACEAggregation.MEDIAN:
@@ -236,16 +245,19 @@ class CytoTRACEKernel(PseudotimeKernel):
             raise NotImplementedError(f"Aggregation method `{aggregation}` is not yet implemented.")
         # fmt: on
 
-        # scale to 0-1 range
+        self.adata.obs[Key.cytotrace("num_exp_genes")] = num_exp_genes
+        self.adata.var[Key.cytotrace("gene_corr")] = gene_corr
+        self.adata.var[Key.cytotrace("correlates")] = False
+        self.adata.var.loc[top_genes, Key.cytotrace("correlates")] = True
         cytotrace_score -= np.min(cytotrace_score)
         cytotrace_score /= np.max(cytotrace_score)
         self.adata.obs[Key.cytotrace("score")] = cytotrace_score
         self.adata.obs[Key.cytotrace("pseudotime")] = 1 - cytotrace_score
-
         self.adata.uns[Key.cytotrace("params")] = {
             "aggregation": aggregation,
             "layer": layer,
             "use_raw": use_raw,
+            "n_top_genes": len(top_genes),
         }
 
         logg.info(

@@ -68,7 +68,7 @@ class PseudotimeKernel(Kernel):
     def _read_from_adata(self, time_key: str, **kwargs: Any) -> None:
         super()._read_from_adata(**kwargs)
 
-        if time_key not in self.adata.obs.keys():
+        if time_key not in self.adata.obs:
             raise KeyError(f"Could not find time key in `adata.obs[{time_key!r}]`.")
 
         self._pseudotime = np.array(self.adata.obs[time_key]).astype(_dtype)
