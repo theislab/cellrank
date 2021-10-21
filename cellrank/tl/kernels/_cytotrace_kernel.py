@@ -31,7 +31,8 @@ class CytoTRACEKernel(PseudotimeKernel):
 
     The KNN graph contains information about the (undirected) connectivities among cells, reflecting their similarity.
     CytoTRACE can be used to estimate cellular plasticity and in turn, a pseudotemporal ordering of cells from more
-    plastic to less plastic states.
+    plastic to less plastic states. It relies on the assumption that differentiated cells express, on average,
+    less genes than naive cells.
     This kernel internally uses the :class:`cellrank.tl.kernels.PseudotimeKernel` to direct the KNN graph
     on the basis of the CytoTRACE-derived pseudotime.
 
@@ -156,7 +157,7 @@ class CytoTRACEKernel(PseudotimeKernel):
             Whether to use the :attr:`anndata.AnnData.raw` to compute the number of genes expressed per cell
             (#genes/cell) and the correlation of gene expression across cells with #genes/cell.
         n_top_genes
-            How many top correlated genes to use for the score calculation.
+            Number of genes used to compute the CytoTRACE score.
 
         Returns
         -------
