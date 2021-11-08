@@ -7,7 +7,7 @@ import cellrank.external as cre
 from anndata import AnnData
 from cellrank.tl.kernels import ConnectivityKernel
 from cellrank.external.kernels._utils import MarkerGenes
-from cellrank.external.kernels._wot_kernel import LastTimePoint
+from cellrank.tl.kernels._transport_map_kernel import LastTimePoint
 
 import numpy as np
 import pandas as pd

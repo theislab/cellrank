@@ -4,7 +4,6 @@ from abc import ABC
 from copy import copy
 
 from anndata import AnnData
-from cellrank.tl._enum import ModeEnum
 from cellrank.ul._docs import d
 from cellrank.tl.kernels import Kernel
 from cellrank.tl.kernels._utils import _ensure_numeric_ordered
@@ -14,12 +13,6 @@ import pandas as pd
 
 from matplotlib.colors import Normalize, to_hex
 from matplotlib.pyplot import get_cmap
-
-
-class LastTimePoint(ModeEnum):  # noqa: D101
-    UNIFORM = "uniform"
-    DIAGONAL = "diagonal"
-    CONNECTIVITIES = "connectivities"
 
 
 @d.dedent

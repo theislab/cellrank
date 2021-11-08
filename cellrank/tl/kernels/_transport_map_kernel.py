@@ -3,18 +3,25 @@ from typing_extensions import Literal
 
 from abc import ABC, abstractmethod
 from types import MappingProxyType
+from contextlib import contextmanager
 
 import scanpy as sc
 from anndata import AnnData
 from cellrank import logging as logg
+from cellrank.tl._enum import ModeEnum
 from cellrank.ul._docs import d, inject_docs
 from cellrank.tl.kernels import ExperimentalTimeKernel
 from cellrank.tl.kernels._base_kernel import KernelExpression
-from cellrank.tl.kernels._exp_time_kernel import LastTimePoint
 
 import numpy as np
 import pandas as pd
 from scipy.sparse import bmat, spdiags, spmatrix
+
+
+class LastTimePoint(ModeEnum):  # noqa: D101
+    UNIFORM = "uniform"
+    DIAGONAL = "diagonal"
+    CONNECTIVITIES = "connectivities"
 
 
 class TransportMapKernel(ExperimentalTimeKernel, ABC):
@@ -48,7 +55,9 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
 
     @d.get_sections(base="tmk_thresh", sections=["Parameters"])
     def _threshold_transition_matrix(
-        self, threshold: Union[float, Literal["auto"]]
+        self,
+        threshold: Union[float, Literal["auto"]],
+        normalize: bool = True,
     ) -> None:
         """
         Remove small non-zero values from :attr:`transition_matrix`.
@@ -70,30 +79,34 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         tmat = self.transition_matrix
         if threshold == "auto":
             threshold = min(np.max(tmat[i].data) for i in range(tmat.shape[0]))
-            logg.info(f"Using `threshold={threshold}`")
-            tmat.data[tmat.data < threshold] = 0.0
         else:
             if not (0 <= threshold <= 100):
                 raise ValueError(
-                    f"Expected `threshold to be in `[0, 100]`, found `{threshold}`.`"
+                    f"Expected `threshold` to be in `[0, 100]`, found `{threshold}`.`"
                 )
             threshold = np.percentile(tmat.data, threshold)
-            logg.info(f"Using `threshold={threshold}`")
-            tmat.data[tmat.data <= threshold] = 0.0
-
+        logg.info(f"Using `threshold={threshold}`")
+        tmat.data[tmat.data <= threshold] = 0.0
         tmat.eliminate_zeros()
-        self._compute_transition_matrix(
-            matrix=tmat,
-            density_normalize=False,
-            check_irreducibility=False,
-        )
+
+        if normalize:
+            self._compute_transition_matrix(
+                matrix=tmat,
+                density_normalize=False,
+                check_irreducibility=False,
+            )
+        else:
+            # e.g. when in `_tmap_as_tmat`
+            self._transition_matrix = tmat
 
     @d.get_sections(base="tmk_tmat", sections=["Parameters"])
     @d.dedent
     def compute_transition_matrix(
         self,
         threshold: Optional[Union[float, Literal["auto"]]] = "auto",
-        last_time_point: LastTimePoint = LastTimePoint.DIAGONAL,
+        last_time_point: Literal[
+            "uniform", "diagonal", "connectivities"
+        ] = LastTimePoint.DIAGONAL,
         conn_kwargs: Mapping[str, Any] = MappingProxyType({}),
         **kwargs: Any,
     ) -> KernelExpression:
@@ -168,11 +181,13 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         """
         from cellrank.tl.kernels import ConnectivityKernel
 
+        last_time_point = LastTimePoint(last_time_point)
         tmaps = self._validate_tmaps(tmaps)
 
         conn_kwargs = dict(conn_kwargs)
         conn_kwargs["copy"] = False
         _ = conn_kwargs.pop("key_added", None)
+        # same default as in `ConnectivityKernel`
         density_normalize = conn_kwargs.pop("density_normalize", True)
 
         blocks = [[None] * (len(tmaps) + 1) for _ in range(len(tmaps) + 1)]
@@ -299,9 +314,11 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
 
         return tmaps
 
+    # TODO(michalk8): change t1/t2 to numeric/ordered (everywhere)
     def _tmat_to_adata(
         self, t1: Any, t2: Any, tmat: Union[np.ndarray, spmatrix, AnnData]
     ) -> AnnData:
+        """Convert transport map ``tmat`` to :class:`anndata.AnnData`."""
         if isinstance(tmat, AnnData):
             return tmat
 
@@ -310,6 +327,57 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         tmat.var_names = self.adata[self.adata.obs[self._time_key] == t2].obs_names
 
         return tmat
+
+    @contextmanager
+    def _tmap_as_tmat(
+        self, threshold: Optional[Union[float, Literal["auto"]]] = None, **kwargs: Any
+    ) -> None:
+        """Temporarily set :attr:`transport_maps` as :attr:`transition_matrix`."""
+        if self.transport_maps is None:
+            raise RuntimeError(
+                "Compute transport maps first as `.compute_transition_matrix()`."
+            )
+
+        tmat = self._transition_matrix
+        try:
+            self._transition_matrix = self._restich_tmaps(
+                self.transport_maps, normalize=False, **kwargs
+            ).X
+            if threshold is not None:
+                self._threshold_transition_matrix(threshold, normalize=False)
+            yield
+        finally:
+            self._transition_matrix = tmat
+
+    @d.dedent
+    def plot_single_flow(
+        self,
+        cluster: str,
+        cluster_key: str,
+        time_key: Optional[str] = None,
+        use_transport_maps: bool = False,
+        threshold: Optional[Union[float, Literal["auto"]]] = None,
+        **kwargs: Any,
+    ) -> None:
+        """
+        %(plot_single_flow.full_desc)s
+
+        Parameters
+        ----------
+        %(plot_single_flow.parameters)s
+
+        Returns
+        -------
+        %(plot_single_flow.returns)s
+        """  # noqa: D400
+        if use_transport_maps:
+            with self._tmap_as_tmat(threshold):
+                return super().plot_single_flow(
+                    cluster, cluster_key, time_key=time_key, **kwargs
+                )
+        return super().plot_single_flow(
+            cluster, cluster_key, time_key=time_key, **kwargs
+        )
 
     @property
     def transport_maps(self) -> Optional[Dict[Tuple[Any, Any], AnnData]]:

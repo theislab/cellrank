@@ -10,7 +10,7 @@ from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.tl._utils import _maybe_subset_hvgs
 from cellrank.external.kernels._utils import MarkerGenes
-from cellrank.tl.kernels._exp_time_kernel import LastTimePoint
+from cellrank.tl.kernels._transport_map_kernel import LastTimePoint
 
 import numpy as np
 import pandas as pd
