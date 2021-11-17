@@ -1,4 +1,4 @@
-:github_url: {{ fullname }}
+:github_url: {{ fullname | modurl }}
 
 {{ fullname | escape | underline}}
 
@@ -34,6 +34,6 @@
 
    .. _sphx_glr_backref_{{fullname}}:
 
-.. minigallery:: {{fullname}}
+.. minigallery:: {{ fullname }}
    :add-heading: Examples
    :heading-level: -
