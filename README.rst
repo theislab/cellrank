@@ -13,7 +13,7 @@ these. Our kernels work with a variety of input data including `RNA velocity`_ (
 `Bergen et al. (2020)`_), `cellular similarity`_ (both transcriptomic and spatial) and `pseudotime`_, among others.
 Our `VelocityKernel`_ takes into account **uncertainty in the velocities** and allows you to aggregate the short-range
 fate relations given by RNA velocity into longer trends along the phenotypic manifold. Our main estimator is
-*Generalized Perron Cluster Cluster Analysis* (G-PCCA) [GPCCA18]_ which coarse-grains the Markov chain
+*Generalized Perron Cluster Cluster Analysis* (`Reuter et al. (2018)`_) which coarse-grains the Markov chain
 into a set of macrostates which represent initial, terminal and intermediate states. For each transient cell,
 we compute its fate probability towards any terminal state. We show an example of such a fate map in the figure above,
 which has been computed using the data of `pancreatic endocrinogenesis`_. CellRank combines `kernels`_ and `estimators`_
@@ -112,7 +112,7 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
 
 .. _La Manno et al. (2018): https://doi.org/10.1038/s41586-018-0414-6
 .. _Bergen et al. (2020): https://doi.org/10.1038/s41587-020-0591-3
-.. _GPCCA18: https://doi.org/10.1021/acs.jctc.8b00079
+.. _Reuter et al. (2018): https://doi.org/10.1021/acs.jctc.8b00079
 .. _pancreatic endocrinogenesis: https://doi.org/10.1242/dev.173849
 .. _cellrank.org: https://cellrank.org
 
