@@ -42,7 +42,6 @@ class CytoTRACEKernel(PseudotimeKernel):
     ----------
     %(adata)s
     %(backward)s
-    %(cytotrace.parameters)s
     %(cond_num)s
     check_connectivity
         Check whether the underlying KNN graph is connected.
@@ -76,51 +75,38 @@ class CytoTRACEKernel(PseudotimeKernel):
 
         # import and initialize the CytoTRACE kernel, compute transition matrix - done!
         from cellrank.tl.kernels import CytoTRACEKernel
-        ctk = CytoTRACEKernel(adata).compute_transition_matrix()
+        ctk = CytoTRACEKernel(adata).compute_cytotrace().compute_transition_matrix()
     """
 
     def __init__(
         self,
         adata: AnnData,
         backward: bool = False,
-        layer: Optional[str] = "Ms",
-        aggregation: Literal[
-            "mean", "median", "hmean", "gmean"
-        ] = CytoTRACEAggregation.MEAN,
-        use_raw: bool = False,
-        n_top_genes: int = 200,
         compute_cond_num: bool = False,
         check_connectivity: bool = False,
         **kwargs: Any,
     ):
+        _ = kwargs.pop("time_key", None)
         super().__init__(
             adata,
             backward=backward,
             time_key=Key.cytotrace("pseudotime"),
             compute_cond_num=compute_cond_num,
             check_connectivity=check_connectivity,
-            layer=layer,
-            aggregation=aggregation,
-            n_top_genes=n_top_genes,
-            use_raw=use_raw,
             **kwargs,
         )
-        # TODO(michlak8): needed by the PT kernel?
-        self._time_key = Key.cytotrace("pseudotime")
 
     def _read_from_adata(
         self,
         time_key: str,
-        layer: Optional[str] = "Ms",
-        aggregation: Literal[
-            "mean", "median", "hmean", "gmean"
-        ] = CytoTRACEAggregation.MEAN,
-        use_raw: bool = True,
         **kwargs: Any,
     ) -> None:
-        self.compute_cytotrace(layer=layer, aggregation=aggregation, use_raw=use_raw)
-
-        super()._read_from_adata(time_key=time_key, **kwargs)
+        try:
+            super()._read_from_adata(time_key=time_key, **kwargs)
+        except KeyError as e:
+            if "Unable to find pseudotime" not in str(e):
+                raise
+            super(PseudotimeKernel, self)._read_from_adata(**kwargs)
 
     @d.get_sections(base="cytotrace", sections=["Parameters"])
     @inject_docs(ct=CytoTRACEAggregation)
@@ -132,7 +118,7 @@ class CytoTRACEKernel(PseudotimeKernel):
         ] = CytoTRACEAggregation.MEAN,
         use_raw: bool = False,
         n_top_genes: int = 200,
-    ) -> None:
+    ) -> "CytoTRACEKernel":
         """
         Re-implementation of the CytoTRACE algorithm :cite:`gulati:20` to estimate cellular plasticity.
 
@@ -252,7 +238,8 @@ class CytoTRACEKernel(PseudotimeKernel):
         cytotrace_score -= np.min(cytotrace_score)
         cytotrace_score /= np.max(cytotrace_score)
         self.adata.obs[Key.cytotrace("score")] = cytotrace_score
-        self.adata.obs[Key.cytotrace("pseudotime")] = 1 - cytotrace_score
+        self._pseudotime = 1 - cytotrace_score
+        self.adata.obs[Key.cytotrace("pseudotime")] = self._pseudotime
         self.adata.uns[Key.cytotrace("params")] = {
             "aggregation": aggregation,
             "layer": layer,
@@ -270,3 +257,5 @@ class CytoTRACEKernel(PseudotimeKernel):
             f"    Finish",
             time=start,
         )
+
+        return self

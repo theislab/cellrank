@@ -1471,28 +1471,35 @@ class TestCytoTRACEKernel:
     def test_layer(self, adata: AnnData, layer: str):
         if layer == "foo":
             with pytest.raises(KeyError, match=layer):
-                _ = CytoTRACEKernel(adata, layer=layer)
+                _ = CytoTRACEKernel(adata).compute_cytotrace(layer=layer)
         else:
-            _ = CytoTRACEKernel(adata, layer=layer)
+            _ = CytoTRACEKernel(adata).compute_cytotrace(layer=layer)
             assert adata.uns[Key.cytotrace("params")]["layer"] == layer
 
     @pytest.mark.parametrize("agg", list(CytoTRACEAggregation))
     def test_aggregation(self, adata: AnnData, agg: CytoTRACEAggregation):
-        _ = CytoTRACEKernel(adata, aggregation=agg)
+        _ = CytoTRACEKernel(adata).compute_cytotrace(aggregation=agg)
         assert adata.uns[Key.cytotrace("params")]["aggregation"] == agg
 
     @pytest.mark.parametrize("use_raw", [False, True])
     def test_raw(self, adata: AnnData, use_raw: bool):
-        _ = CytoTRACEKernel(adata, use_raw=use_raw)
+        _ = CytoTRACEKernel(adata).compute_cytotrace(use_raw=use_raw)
         assert adata.uns[Key.cytotrace("params")]["use_raw"] == use_raw
 
-    def test_correct_class(self, adata: AnnData):
+    @pytest.mark.parametrize("copy", [False, True])
+    def test_correct_class(self, adata: AnnData, copy: bool):
         k = CytoTRACEKernel(adata)
-        assert isinstance(k, PseudotimeKernel)
+        if copy:
+            k = k.copy()
+
+        assert isinstance(k, CytoTRACEKernel)
         assert k._time_key == Key.cytotrace("pseudotime")
+        assert k.pseudotime is None
 
     def test_writes_params(self, adata: AnnData):
-        k = CytoTRACEKernel(adata, use_raw=False, layer="X", aggregation="mean")
+        k = CytoTRACEKernel(adata).compute_cytotrace(
+            use_raw=False, layer="X", aggregation="mean"
+        )
 
         assert adata.uns[Key.cytotrace("params")] == {
             "layer": "X",
@@ -1518,7 +1525,7 @@ class TestCytoTRACEKernel:
 
     def test_raw_less_genes(self, adata: AnnData):
         adata.raw = adata.raw.to_adata()[:, :20]
-        _ = CytoTRACEKernel(adata, use_raw=True, n_top_genes=31)
+        _ = CytoTRACEKernel(adata).compute_cytotrace(use_raw=True, n_top_genes=31)
         assert adata.uns[Key.cytotrace("params")] == {
             "layer": "Ms",
             "aggregation": "mean",
@@ -1529,23 +1536,45 @@ class TestCytoTRACEKernel:
     @pytest.mark.parametrize("n_top_genes", [0, 10, 300])
     @pytest.mark.parametrize("use_raw", [False, True])
     def test_n_top_genes(self, adata: AnnData, use_raw: bool, n_top_genes: int):
-        n_genes = 50 if use_raw else 143
-        if n_top_genes < 0:
+        n_genes = min(n_top_genes, adata.raw.n_vars if use_raw else adata.n_vars)
+        if n_top_genes <= 0:
             with pytest.raises(ValueError, match=r"Expected `n_top_genes`"):
-                _ = CytoTRACEKernel(adata, use_raw=use_raw, n_top_genes=n_top_genes)
+                _ = CytoTRACEKernel(adata).compute_cytotrace(
+                    use_raw=use_raw, n_top_genes=n_top_genes
+                )
         else:
-            _ = CytoTRACEKernel(adata, use_raw=use_raw, n_top_genes=n_top_genes)
+            _ = CytoTRACEKernel(adata).compute_cytotrace(
+                use_raw=use_raw, n_top_genes=n_top_genes
+            )
             assert adata.var[Key.cytotrace("correlates")].sum() == n_genes
             assert adata.uns[Key.cytotrace("params")]["n_top_genes"] == n_genes
 
+    def test_rereads_pseudotime(self, adata: AnnData):
+        k1 = CytoTRACEKernel(adata).compute_cytotrace(
+            use_raw=False, layer="X", aggregation="mean"
+        )
+        k2 = CytoTRACEKernel(adata)
+
+        assert k1.pseudotime is not k2.pseudotime
+        np.testing.assert_array_equal(k1.pseudotime, k2.pseudotime)
+
+    def test_compute_transition_matrix_no_pt(self, adata: AnnData):
+        k = CytoTRACEKernel(adata)
+        with pytest.raises(ValueError, match=r"Compute `.pseudotime`"):
+            k.compute_transition_matrix()
+
     def test_compute_transition_matrix(self, adata: AnnData):
-        k = CytoTRACEKernel(adata, use_raw=False, layer="X", aggregation="mean")
+        k = CytoTRACEKernel(adata).compute_cytotrace(
+            use_raw=False, layer="X", aggregation="mean"
+        )
         k.compute_transition_matrix()
 
         np.testing.assert_allclose(k.transition_matrix.sum(1), 1.0)
 
     def test_inversion(self, adata: AnnData):
-        k = ~CytoTRACEKernel(adata, use_raw=False, layer="X", aggregation="mean")
+        k = ~CytoTRACEKernel(adata).compute_cytotrace(
+            use_raw=False, layer="X", aggregation="mean"
+        )
 
         pt = adata.obs[Key.cytotrace("pseudotime")].values
         np.testing.assert_array_equal(np.max(pt) - pt, k.pseudotime)

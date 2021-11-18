@@ -33,14 +33,14 @@ class PseudotimeKernel(Kernel):
 
     The KNN graph contains information about the (undirected) connectivities among cells, reflecting their similarity.
     Pseudotime can be used to either remove edges that point against the direction of increasing pseudotime
-    :cite:`setty:19`, or to downweight them :cite:`stassen:21`.
+    :cite:`setty:19` or to downweight them :cite:`stassen:21`.
 
     Parameters
     ----------
     %(adata)s
     %(backward)s
     time_key
-        Key in :attr:`adata` ``.obs`` where the pseudotime is stored.
+        Key in :attr:`anndata.AnnData.obs` where the pseudotime is stored.
     %(cond_num)s
     kwargs
         Keyword arguments for :class:`cellrank.tl.kernels.Kernel`.
@@ -55,6 +55,8 @@ class PseudotimeKernel(Kernel):
         check_connectivity: bool = False,
         **kwargs: Any,
     ):
+        self._time_key = time_key
+        self._pseudotime: Optional[np.ndarray] = None
         super().__init__(
             adata,
             backward=backward,
@@ -63,20 +65,19 @@ class PseudotimeKernel(Kernel):
             check_connectivity=check_connectivity,
             **kwargs,
         )
-        self._time_key = time_key
 
     def _read_from_adata(self, time_key: str, **kwargs: Any) -> None:
         super()._read_from_adata(**kwargs)
 
         if time_key not in self.adata.obs:
-            raise KeyError(f"Could not find time key in `adata.obs[{time_key!r}]`.")
+            raise KeyError(f"Unable to find pseudotime in `adata.obs[{time_key!r}]`.")
 
         self._pseudotime = np.array(self.adata.obs[time_key]).astype(_dtype)
+        if np.any(np.isnan(self.pseudotime)):
+            raise ValueError("Encountered NaN values in pseudotime.")
+
         if self.backward:
             self._pseudotime = np.max(self.pseudotime) - self.pseudotime
-
-        if np.any(np.isnan(self._pseudotime)):
-            raise ValueError("Encountered NaN values in pseudotime.")
 
     @d.dedent
     def compute_transition_matrix(
@@ -94,7 +95,7 @@ class PseudotimeKernel(Kernel):
         """
         Compute transition matrix based on KNN graph and pseudotemporal ordering.
 
-        Depending on the choice of the `thresholding_scheme`, this is based on ideas by either *Palantir*
+        Depending on the choice of the ``threshold_scheme``, it is based on ideas by either *Palantir*
         :cite:`setty:19` or *VIA* :cite:`stassen:21`.
 
         Parameters
@@ -112,9 +113,9 @@ class PseudotimeKernel(Kernel):
                 - :class:`callable` - any function conforming to the signature of
                   :func:`cellrank.tl.kernels.ThresholdSchemeABC.__call__`.
         frac_to_keep
-            The `frac_to_keep` * number of the closest neighbors (according to graph connectivities) are kept, no matter
-            whether they lie in the pseudotemporal past or future. This is done to ensure that the graph remains
-            connected. Only used when ``threshold_scheme = 'hard'``. Needs to fall within the interval `[0, 1]`.
+            Fraction of the closest neighbors (according to graph connectivities) are kept, no matter whether they lie
+            in the pseudotemporal past or future. This is done to ensure that the graph remains connected.
+            Only used when ``threshold_scheme = 'hard'``. Needs to fall within the interval `[0, 1]`.
         %(soft_scheme_kernel)s
         check_irreducibility
             Optional check for irreducibility of the final transition matrix.
@@ -126,7 +127,10 @@ class PseudotimeKernel(Kernel):
         -------
         Self and updated :attr:`transition_matrix`.
         """
-        start = logg.info(f"Computing transition matrix based on `{self._time_key}`")
+        if self.pseudotime is None:
+            raise ValueError("Compute `.pseudotime` first.")
+
+        start = logg.info("Computing transition matrix based on pseudotime`")
         if isinstance(threshold_scheme, str):
             threshold_scheme = ThresholdScheme(threshold_scheme)
             if threshold_scheme == ThresholdScheme.SOFT:
@@ -177,15 +181,13 @@ class PseudotimeKernel(Kernel):
         return self
 
     @property
-    def pseudotime(self) -> np.array:
+    def pseudotime(self) -> Optional[np.array]:
         """Pseudotemporal ordering of cells."""
         return self._pseudotime
 
     def copy(self) -> "PseudotimeKernel":
         """Return a copy of self."""
-        pk = PseudotimeKernel(
-            self.adata, backward=self.backward, time_key=self._time_key
-        )
+        pk = type(self)(self.adata, backward=self.backward, time_key=self._time_key)
         pk._pseudotime = copy(self.pseudotime)
         pk._params = copy(self._params)
         pk._cond_num = self.condition_number
@@ -195,5 +197,6 @@ class PseudotimeKernel(Kernel):
 
     def __invert__(self) -> "PseudotimeKernel":
         super().__invert__()
-        self._pseudotime = np.max(self.pseudotime) - self.pseudotime
+        if self.pseudotime is not None:
+            self._pseudotime = np.max(self.pseudotime) - self.pseudotime
         return self
