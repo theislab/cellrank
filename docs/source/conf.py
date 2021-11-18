@@ -1,3 +1,5 @@
+from typing import Any, Dict
+
 import os
 import sys
 import logging
@@ -6,13 +8,18 @@ from datetime import datetime
 from collections import ChainMap
 from urllib.parse import urljoin
 from urllib.request import urlretrieve
+from jinja2.defaults import DEFAULT_FILTERS
+from sphinx.application import Sphinx
 from sphinx_gallery.sorting import ExplicitOrder, _SortKey
 
 HERE = Path(__file__).parent
+sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parent.parent))
 sys.path.insert(0, os.path.abspath("_ext"))
 
 import cellrank
+
+from docs.source.modurl import modurl
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +59,7 @@ author = cellrank.__author__
 copyright = f"{datetime.now():%Y}, {author}"
 release = "master"
 version = f"master ({cellrank.__version__})"
+github_repo = "cellrank"
 
 
 # -- General configuration ---------------------------------------------------
@@ -70,31 +78,32 @@ extensions = [
     "nbsphinx",
     "sphinx_copybutton",
     "typed_returns",
+    "edit_on_github",
     "sphinxcontrib.bibtex",
     # https://github.com/spatialaudio/nbsphinx/issues/24
     "IPython.sphinxext.ipython_console_highlighting",
 ]
 
-intersphinx_mapping = dict(
-    anndata=("https://anndata.readthedocs.io/en/stable/", None),
-    scanpy=("https://scanpy.readthedocs.io/en/stable/", None),
-    squidpy=("https://squidpy.readthedocs.io/en/latest/", None),
-    scvelo=("https://scvelo.readthedocs.io/", None),
-    python=("https://docs.python.org/3", None),
-    numpy=("https://docs.scipy.org/doc/numpy/", None),
-    scipy=("https://docs.scipy.org/doc/scipy/reference/", None),
-    networkx=("https://networkx.org/documentation/stable/", None),
-    pandas=("https://pandas.pydata.org/pandas-docs/stable/", None),
-    statsmodels=("https://www.statsmodels.org/stable/", None),
-    matplotlib=("https://matplotlib.org/stable/", None),
-    joblib=("https://joblib.readthedocs.io/en/latest/", None),
-    sklearn=("https://scikit-learn.org/stable/", None),
-    seaborn=("https://seaborn.pydata.org/", None),
-    pygam=("https://pygam.readthedocs.io/en/latest/", None),
-    jax=("https://jax.readthedocs.io/en/latest/", None),
-    pygpcca=("https://pygpcca.readthedocs.io/en/latest/", None),
-    ot=("https://pythonot.github.io/", None),
-)
+intersphinx_mapping = {
+    "anndata": ("https://anndata.readthedocs.io/en/stable/", None),
+    "scanpy": ("https://scanpy.readthedocs.io/en/stable/", None),
+    "squidpy": ("https://squidpy.readthedocs.io/en/latest/", None),
+    "scvelo": ("https://scvelo.readthedocs.io/", None),
+    "python": ("https://docs.python.org/3", None),
+    "numpy": ("https://docs.scipy.org/doc/numpy/", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy/reference/", None),
+    "networkx": ("https://networkx.org/documentation/stable/", None),
+    "pandas": ("https://pandas.pydata.org/pandas-docs/stable/", None),
+    "statsmodels": ("https://www.statsmodels.org/stable/", None),
+    "matplotlib": ("https://matplotlib.org/stable/", None),
+    "joblib": ("https://joblib.readthedocs.io/en/latest/", None),
+    "sklearn": ("https://scikit-learn.org/stable/", None),
+    "seaborn": ("https://seaborn.pydata.org/", None),
+    "pygam": ("https://pygam.readthedocs.io/en/latest/", None),
+    "jax": ("https://jax.readthedocs.io/en/latest/", None),
+    "pygpcca": ("https://pygpcca.readthedocs.io/en/latest/", None),
+    "ot": ("https://pythonot.github.io/", None),
+}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates", "_build"]
@@ -154,7 +163,7 @@ nbsphinx_prolog = rf"""
 # -- sphinx gallery
 
 
-def reset_scvelo(gallery_conf, fname):
+def reset_scvelo(gallery_conf: Dict[str, Any], fname: str) -> None:
     import scvelo as scv
 
     scv.set_figure_params(
@@ -162,7 +171,7 @@ def reset_scvelo(gallery_conf, fname):
     )
 
 
-def reset_matplotlib(gallery_conf, fname):
+def reset_matplotlib(gallery_conf: Dict[str, Any], fname: str) -> None:
     import matplotlib as mpl
 
     mpl.use("agg")
@@ -269,7 +278,6 @@ napoleon_use_param = True
 napoleon_custom_sections = [("Params", "Parameters")]
 todo_include_todos = False
 
-
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
@@ -277,8 +285,10 @@ html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
 html_theme_options = {"navigation_depth": 4, "logo_only": True}
 html_show_sphinx = False
-html_show_sourcelink = False
+html_show_sourcelink = True
+
+DEFAULT_FILTERS.update(modurl=modurl)
 
 
-def setup(app):
+def setup(app: Sphinx) -> None:
     app.add_css_file("css/custom.css")
