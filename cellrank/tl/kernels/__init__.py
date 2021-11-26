@@ -1,3 +1,4 @@
+from cellrank.tl.kernels import _bk as new
 from cellrank.tl.kernels._base_kernel import Kernel
 from cellrank.tl.kernels._exp_time_kernel import ExperimentalTimeKernel
 from cellrank.tl.kernels._velocity_kernel import VelocityKernel
