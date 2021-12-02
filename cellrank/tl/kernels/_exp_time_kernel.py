@@ -68,7 +68,7 @@ class ExperimentalTimeKernel(Kernel, ABC):
         cmap = get_cmap(kwargs.pop("cmap", "gnuplot"))
         cats = self.experimental_time.cat.categories
         norm = Normalize(vmin=cats.min(), vmax=cats.max())
-        self.adata.uns[f"{time_key}_colors"] = np.array([to_hex(c) for c in cmap(norm(cats) * cmap.N)])
+        self.adata.uns[f"{time_key}_colors"] = np.array([to_hex(c) for c in cmap(norm(cats))])
         # fmt: on
 
     @d.dedent
