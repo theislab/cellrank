@@ -2732,6 +2732,10 @@ class TestLineageDrivers:
     def test_drivers_n_genes(self, adata: AnnData, fpath: str):
         cr.pl.lineage_drivers(adata, "0", n_genes=5, dpi=DPI, save=fpath)
 
+    @compare()
+    def test_drivers_ascending(self, adata: AnnData, fpath: str):
+        cr.pl.lineage_drivers(adata, "0", ascending=True, dpi=DPI, save=fpath)
+
     @compare(kind="bwd")
     def test_drivers_backward(self, adata: AnnData, fpath: str):
         cr.pl.lineage_drivers(adata, "0", backward=True, ncols=2, dpi=DPI, save=fpath)
