@@ -6,7 +6,6 @@ from functools import partial
 
 from cellrank.tl._enum import ModeEnum
 from cellrank.ul._docs import d
-from cellrank.ul._utils import valuedispatch
 from cellrank.tl.kernels._utils import norm, np_mean, jit_kwargs
 
 import numpy as np
@@ -203,6 +202,16 @@ class SimilaritySchemeABC(ABC):
         The probability and logits arrays of shape ``(n_neighbors,)``.
         """
 
+    @staticmethod
+    def create(scheme: Scheme) -> "SimilaritySchemeABC":
+        if scheme == Scheme.CORRELATION:
+            return CorrelationScheme()
+        if scheme == Scheme.COSINE:
+            return CosineScheme()
+        if scheme == Scheme.DOT_PRODUCT:
+            return DotProductScheme()
+        raise NotImplementedError(scheme)
+
     def __repr__(self):
         return f"<{self.__class__.__name__}>"
 
@@ -312,23 +321,3 @@ class CorrelationScheme(SimilaritySchemeHessian):
 
     def __init__(self):
         super().__init__(center_mean=True, scale_by_norm=True)
-
-
-@valuedispatch
-def _get_scheme(scheme: Scheme, *_args, **_kwargs) -> SimilaritySchemeABC:
-    raise NotImplementedError(scheme)
-
-
-@_get_scheme.register(Scheme.DOT_PRODUCT)
-def _():
-    return DotProductScheme()
-
-
-@_get_scheme.register(Scheme.COSINE)
-def _():
-    return CosineScheme()
-
-
-@_get_scheme.register(Scheme.CORRELATION)
-def _():
-    return CorrelationScheme()

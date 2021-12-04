@@ -816,7 +816,7 @@ class UnaryKernelExpression(KernelExpression, ABC):
             return
         if not isinstance(adata, AnnData):
             raise TypeError(
-                f"Expected argument of type `anndata.AnnData`, found `{type(adata).__name__!r}`."
+                f"Expected argument of type `anndata.AnnData`, found `{type(adata).__name__}`."
             )
         shape = (adata.n_obs, adata.n_obs)
         if self.shape != shape:

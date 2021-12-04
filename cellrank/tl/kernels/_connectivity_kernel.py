@@ -19,7 +19,7 @@ class ConnectivityKernel(ConnectivityMixin, UnidirectionalKernel):
 
     The resulting transition matrix is symmetric and thus cannot be used to learn about the direction of the biological
     process. To include this direction, consider combining with a velocity-derived transition matrix via
-    :class:`cellrank.tl.kernels.VelocityKernel`.
+    :class:`cellrank.tl.kernels.DisplacementKernel`.
 
     %(density_correction)s
 
@@ -62,7 +62,7 @@ class ConnectivityKernel(ConnectivityMixin, UnidirectionalKernel):
 
         Returns
         -------
-        Self and updated :attr:`transition_matrix`.
+        Self and updates :attr:`transition_matrix` and :attr:`params`.
         """
 
         # fmt: off

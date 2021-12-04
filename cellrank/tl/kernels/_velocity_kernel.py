@@ -164,7 +164,7 @@ class VelocityKernel(Kernel):
         seed: Optional[int] = None,
         check_irreducibility: bool = False,
         **kwargs: Any,
-    ) -> "VelocityKernel":
+    ) -> "DisplacementKernel":
         """
         Compute transition matrix based on velocity directions on the local manifold.
 
@@ -312,7 +312,7 @@ class VelocityKernel(Kernel):
         return self._logits
 
     @d.dedent
-    def copy(self) -> "VelocityKernel":
+    def copy(self) -> "DisplacementKernel":
         """%(copy)s"""  # noqa
         vk = VelocityKernel(
             self.adata,
