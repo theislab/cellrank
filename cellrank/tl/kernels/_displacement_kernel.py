@@ -10,20 +10,10 @@ from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.tl._enum import _DEFAULT_BACKEND, ModeEnum
 from cellrank.ul._docs import d, inject_docs
-from cellrank.ul._utils import valuedispatch
 from cellrank.tl.kernels._bk import BidirectionalKernel
 from cellrank.ul._parallelize import parallelize
-from cellrank.tl.kernels._utils import (
-    prange,
-    np_mean,
-    _filter_kwargs,
-    _random_normal,
-    _reconstruct_one,
-    _calculate_starts,
-    _get_probs_for_zero_vec,
-)
+from cellrank.tl.kernels._utils import prange, _random_normal, _calculate_starts
 from cellrank.tl.kernels._mixins import ConnectivityMixin
-from scvelo.preprocessing.moments import get_moments
 from cellrank.tl.kernels._base_kernel import _RTOL
 from cellrank.tl.kernels._velocity_schemes import Scheme, SimilaritySchemeABC
 
@@ -43,7 +33,6 @@ class BackwardMode(ModeEnum):  # noqa: D101
     NEGATE = auto()
 
 
-@d.dedent
 class DisplacementKernel(ConnectivityMixin, BidirectionalKernel):
     def __init__(
         self,
@@ -270,40 +259,129 @@ class TmatCalculator(ABC):
         conn: spmatrix,
         x: np.ndarray,
         v: np.ndarray,
+        similarity: Callable,
         backward_mode: Optional[BackwardMode] = None,
         softmax_scale: float = 1.0,
     ):
         self._conn = conn
         self._x = x
         self._v = v
-        self._similarity = ...
+        self._similarity = similarity
         self._backward_mode = backward_mode
         self._softmax_scale = softmax_scale
 
-    # TODO: reconstruct one
+    def _recontruct_transition_matrix(
+        self,
+        data: np.ndarray,
+        ixs: Optional[np.ndarray] = None,
+    ) -> csr_matrix:
+        """
+        Transform :class:`numpy.ndarray` into :class:`scipy.sparse.csr_matrix`.
+
+        Parameters
+        ----------
+        data
+            Array of shape `(nnz,)`.
+        ixs
+            Indices that were used to sort the data.
+
+        Returns
+        -------
+        TODO.
+        """
+
+        if data.shape != (self._conn.nnz,):
+            raise ValueError(
+                f"Dimension or shape mismatch: `{data.shape}`, `{self._conn.nnz}`."
+            )
+
+        if ixs is None:
+            aixs, conn = None, self._conn
+        else:
+            aixs = np.argsort(ixs)
+            conn = self._conn[ixs]
+
+        # strange bug happens when no copying and eliminating zeros from cors (it's no longer row-stochastic)
+        # only happens when using numba
+        probs = csr_matrix(
+            (
+                np.array(data, copy=True),
+                np.array(conn.indices, copy=True),
+                np.array(conn.indptr, copy=True),
+            )
+        )
+
+        if aixs is not None:
+            probs = probs[aixs]
+        probs.eliminate_zeros()
+        if not np.allclose(probs.sum(1), 1.0, rtol=_RTOL):
+            # TODO: row ixs
+            raise ValueError(f"Matrix is not row-stochastic.")
+
+        return probs
 
     @abstractmethod
-    def _compute_transtion_matrix(
-        self, ix: int, neighs_ixs: np.ndarray
-    ) -> Union[np.ndarray, spmatrix]:
+    def _compute(self, ix: int, neighs_ixs: np.ndarray, **kwargs: Any) -> np.ndarray:
         pass
 
     def __call__(
         self,
-        *args: Any,
         n_jobs: Optional[int] = None,
         backend: str = _DEFAULT_BACKEND,
         **kwargs: Any,
     ) -> np.ndarray:
-        tmat = self._compute_transtion_matrix(*args, **kwargs)
-        # TODO
-        return tmat
+        ixs = self._ixs
+        return parallelize(
+            self._compute_many,
+            ixs,
+            n_jobs=n_jobs,
+            backend=backend,
+            as_array=False,
+            extractor=lambda data: self._recontruct_transition_matrix(
+                np.concatenate(data, axis=-1), ixs
+            ),
+            unit=self._unit,
+        )(**kwargs)
+
+    def _compute_many(self, ixs: np.ndarray, queue=None, **kwargs) -> np.ndarray:
+        indptr, indices = self._conn.indptr, self._conn.indices
+        starts = _calculate_starts(indptr, ixs)
+        probs = np.empty((starts[-1],), dtype=np.float64)
+
+        for i, ix in enumerate(ixs):
+            start, end = indptr[ix], indptr[ix + 1]
+            neigh_ixs = indices[start:end]
+            n_neigh = len(neigh_ixs)
+
+            tmp = self._compute(ix, neigh_ixs, **kwargs)
+            if np.shape(tmp) != (n_neigh,):
+                raise ValueError(
+                    f"Expected row of shape `{(n_neigh,)}`, found `{np.shape(tmp)}`."
+                )
+
+            probs[starts[i] : starts[i] + n_neigh] = tmp
+            if queue is not None:
+                queue.put(1)
+
+        if queue is not None:
+            queue.put(None)
+
+        return probs
+
+    @property
+    def _ixs(self) -> np.ndarray:
+        ixs = np.arange(self._conn.shape[0])
+        np.random.shuffle(ixs)
+        return ixs
+
+    @property
+    def _unit(self) -> str:
+        return "cell"
 
 
 class Deterministic(TmatCalculator):
-    def _compute_transtion_matrix(
-        self, ix: int, neigh_ixs: np.ndarray
-    ) -> Union[np.ndarray, spmatrix]:
+    def _compute(self, ix: int, neigh_ixs: np.ndarray, **_: Any) -> np.ndarray:
+        n_neigh = len(neigh_ixs)
         W = self._x[neigh_ixs, :] - self._v[ix, :]
 
         if self._backward_mode not in (None, BackwardMode.NEGATE):
@@ -311,8 +389,7 @@ class Deterministic(TmatCalculator):
 
         v = self._v[ix]
         if np.all(v == 0):
-            # TODO: make a method
-            return _get_probs_for_zero_vec(len(neigh_ixs))
+            return np.ones(n_neigh, dtype=np.float64) / n_neigh
 
         if self._backward_mode == BackwardMode.NEGATE:
             v *= -1.0
@@ -334,14 +411,12 @@ class Stochastic(TmatCalculator):
             raise AttributeError("Similarity scheme doesn't have a `hessian` function.")
         self._var = var
 
-    def _compute_transtion_matrix(
-        self, ix: int, nbhs_ixs: np.ndarray
-    ) -> Union[np.ndarray, spmatrix]:
+    def _compute(self, ix: int, nbhs_ixs: np.ndarray, **_: Any) -> np.ndarray:
         v = self._v[ix]
         n_neigh, n_feat = len(nbhs_ixs), self._x.shape[1]
 
         if np.all(v == 0):
-            return _get_probs_for_zero_vec(n_neigh)
+            return np.ones(n_neigh, dtype=np.float64) / n_neigh
         # compute the Hessian tensor, and turn it into a matrix that has the diagonal elements in its rows
         W = self._x[nbhs_ixs, :] - self._x[ix, :]
 
@@ -357,27 +432,26 @@ class Stochastic(TmatCalculator):
             )
 
         # compute zero order term
-        p_0, c = self._similarity(v[None, :], W, self._softmax_scale)
+        p_0 = self._similarity(v[None, :], W, self._softmax_scale)
 
         # compute second order term (note that the first order term cancels)
         p_2 = 0.5 * H_diag.dot(self._var[ix])
 
-        # combine both to give the second order Taylor approximation. Can sometimes be negative because we
-        # neglected higher order terms, so force it to be non-negative
+        # combine both to give the second order Taylor approximation.
+        # Can sometimes be negative because we neglected higher order terms, so force it to be non-negative
         p = np.clip(p_0 + p_2, a_min=0, a_max=1)
 
-        mask = np.isnan(p)
-        p[mask] = 0
-        c[mask] = 0
+        nan_mask = np.isnan(p)
+        p[nan_mask] = 0
 
         if np.all(p == 0):
-            return _get_probs_for_zero_vec(n_neigh)
+            return np.ones(n_neigh, dtype=np.float64) / n_neigh
 
         sum_ = fsum(p)
         if not np.isclose(sum_, 1.0, rtol=_RTOL):
-            p[~mask] = p[~mask] / sum_
+            p[~nan_mask] = p[~nan_mask] / sum_
 
-        return p, c
+        return p
 
 
 class Markov(TmatCalculator):
@@ -394,24 +468,19 @@ class Markov(TmatCalculator):
         self._var = var
         self._n_samples = n_samples
 
-    def _compute_transtion_matrix(
-        self, ix: int, nbhs_ixs: np.ndarray
-    ) -> Union[np.ndarray, spmatrix]:
+    def _compute(self, ix: int, nbhs_ixs: np.ndarray, **_: Any) -> np.ndarray:
+        # fmt: off
         n_neigh = len(nbhs_ixs)
         W = self._x[nbhs_ixs, :] - self._x[ix, :]
 
-        # much faster (1.8x than sampling only 1 if average)
-        samples = _random_normal(
-            self._x[ix],
-            self._var[ix],
-            n_samples=self._n_samples,
-        )
+        samples = _random_normal(self._x[ix], self._var[ix], n_samples=self._n_samples)
 
-        probs = np.empty((self._n_samples, n_neigh), dtype=np.float64)
-        cors = np.empty((self._n_samples, n_neigh), dtype=np.float64)
+        probs = np.zeros((n_neigh,), dtype=np.float64)
         for j in prange(self._n_samples):
-            probs[j], cors[j] = self._similarity(
-                np.atleast_2d(samples[j]), W, self._softmax_scale
-            )
+            probs += self._similarity(np.atleast_2d(samples[j]), W, self._softmax_scale)
 
-        return np_mean(probs, axis=0), np_mean(cors, axis=0)
+        return probs / self._n_samples
+        # fmt: on
+
+    def _unit(self) -> str:
+        return "sample"
