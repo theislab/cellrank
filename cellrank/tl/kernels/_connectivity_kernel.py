@@ -3,11 +3,12 @@ from copy import copy
 from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.ul._docs import d
-from cellrank.tl.kernels import Kernel
+from cellrank.tl.kernels._bk import UnidirectionalKernel
+from cellrank.tl.kernels._mixins import ConnectivityMixin
 
 
 @d.dedent
-class ConnectivityKernel(Kernel):
+class ConnectivityKernel(ConnectivityMixin, UnidirectionalKernel):
     """
     Kernel which computes transition probabilities based on similarities among cells.
 
@@ -25,10 +26,8 @@ class ConnectivityKernel(Kernel):
     Parameters
     ----------
     %(adata)s
-    %(backward)s
     conn_key
         Key in :attr:`anndata.AnnData.obsp` to obtain the connectivity matrix describing cell-cell similarity.
-    %(cond_num)s
     check_connectivity
         Check whether the underlying KNN graph is connected.
     """
@@ -36,17 +35,13 @@ class ConnectivityKernel(Kernel):
     def __init__(
         self,
         adata: AnnData,
-        backward: bool = False,
         conn_key: str = "connectivities",
-        compute_cond_num: bool = False,
         check_connectivity: bool = False,
     ):
         super().__init__(
             adata,
-            backward=backward,
-            compute_cond_num=compute_cond_num,
-            check_connectivity=check_connectivity,
             conn_key=conn_key,
+            check_connectivity=check_connectivity,
         )
         self._key = conn_key
 
@@ -76,17 +71,20 @@ class ConnectivityKernel(Kernel):
         if self._reuse_cache({"dnorm": density_normalize, "key": self._key}, time=start):
             return self
 
-        self._compute_transition_matrix(matrix=self._conn.copy(), density_normalize=density_normalize)
+        print("h", self.params)
+        self.transition_matrix = self._density_normalize(self._conn) if density_normalize else self._conn
+
         logg.info("    Finish", time=start)
         # fmt: on
 
         return self
 
-    def copy(self) -> "ConnectivityKernel":
+    def copy(self, deep: bool = False) -> "ConnectivityKernel":
         """Return a copy of self."""
-        ck = ConnectivityKernel(self.adata, backward=self.backward)
+        adata = self.adata.copy() if deep else self.adata
+        ck = ConnectivityKernel(adata, conn_key=self._key, check_connectivity=False)
+        ck._conn = copy(self._conn)
         ck._params = copy(self.params)
-        ck._cond_num = self.condition_number
-        ck._transition_matrix = copy(self._transition_matrix)
+        ck._transition_matrix = copy(self.transition_matrix)
 
         return ck

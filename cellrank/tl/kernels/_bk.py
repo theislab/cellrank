@@ -157,7 +157,7 @@ class KernelExpression(ABC):
     @d.get_sections(base="write_to_adata", sections=["Parameters"])
     @inject_docs()  # get rid of {{}}
     @d.dedent
-    def write_to_adata(self, key: Optional[str] = None) -> None:
+    def write_to_adata(self, key: Optional[str] = None, copy: bool = False) -> None:
         """
         Write the transition matrix and parameters used for computation to the underlying :attr:`adata` object.
 
@@ -173,7 +173,7 @@ class KernelExpression(ABC):
         """
         from cellrank._key import Key
 
-        if self._transition_matrix is None:
+        if self.transition_matrix is None:
             raise ValueError(
                 "Compute transition matrix first as `.compute_transition_matrix()`."
             )
@@ -185,7 +185,9 @@ class KernelExpression(ABC):
             **self.adata.uns.get(f"{key}_params", {}),
             **{"params": self.params},
         }
-        self.adata.obsp[key] = self.transition_matrix
+        self.adata.obsp[key] = (
+            self.transition_matrix.copy() if copy else self.transition_matrix
+        )
 
     @property
     def transition_matrix(self) -> Union[np.ndarray, csr_matrix]:
@@ -228,7 +230,6 @@ class KernelExpression(ABC):
             raise ValueError("Not all values are finite.")
 
         self._transition_matrix = matrix
-        self._params = {}
 
     @property
     def params(self) -> Dict[str, Any]:
@@ -239,7 +240,7 @@ class KernelExpression(ABC):
 
     def _format_params(self) -> 3:
         return ", ".join(
-            f"{k}={round(v, 3) if isinstance(v, float) else v}"
+            f"{k}={round(v, 3) if isinstance(v, float) else v!r}"
             for k, v in self.params.items()
         )
 
@@ -262,6 +263,18 @@ class KernelExpression(ABC):
             return False
         finally:
             self._params = expected_params
+
+    def __repr__(self) -> str:
+        return f"{'~' if self.backward and self._parent is None else ''}<{self.__class__.__name__}>"
+
+    def __str__(self) -> str:
+        params_fmt = self._format_params()
+        if params_fmt:
+            return (
+                f"{'~' if self.backward and self._parent is None else ''}"
+                f"<{self.__class__.__name__}[{params_fmt}]>"
+            )
+        return repr(self)
 
 
 class Kernel(KernelExpression, ABC):
