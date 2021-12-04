@@ -449,7 +449,8 @@ class NaryKernelExpression(BidirectionalMixin, KernelExpression):
         self._backward = (
             True if True in directions else False if False in directions else None
         )
-        self._kexprs = tuple(k if k._parent is None else k.copy() for k in kexprs)
+        # self._kexprs = tuple(k if k._parent is None else k.copy() for k in kexprs)
+        self._kexprs = kexprs
         for kexpr in self:
             kexpr._parent = self
 
@@ -499,6 +500,7 @@ class NaryKernelExpression(BidirectionalMixin, KernelExpression):
         kexprs = tuple(
             ~k if isinstance(k, BidirectionalMixin) else k.copy() for k in self
         )
+        # TODO(michalk8): remove?
         for k in kexprs:
             k._parent = None
         return type(self)(*kexprs)
