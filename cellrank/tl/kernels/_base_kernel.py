@@ -33,8 +33,8 @@ from cellrank.tl._utils import (
 from scvelo.plotting.utils import default_size, plot_outline
 from cellrank.tl._mixins._io import IOMixin
 from cellrank.tl.kernels._utils import _get_basis, _filter_kwargs
-from cellrank.tl.kernels._tmat_flow import FlowPlotter
-from cellrank.tl.kernels._random_walk import RandomWalk
+from cellrank.tl.kernels.utils._tmat_flow import FlowPlotter
+from cellrank.tl.kernels.utils._random_walk import RandomWalk
 
 import numpy as np
 from scipy.sparse import spdiags, issparse, spmatrix, csr_matrix, isspmatrix_csr

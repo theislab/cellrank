@@ -11,8 +11,10 @@ from cellrank.tl.kernels._utils import norm, np_mean, jit_kwargs
 import numpy as np
 from numba import njit
 
+__all__ = ("DotProduct", "Cosine", "Correlation")
 
-class Scheme(ModeEnum):  # noqa: D101
+
+class Scheme(ModeEnum):
     DOT_PRODUCT = auto()
     COSINE = auto()
     CORRELATION = auto()
@@ -79,7 +81,7 @@ except ImportError:
 def _softmax(x: np.ndarray, softmax_scale: float) -> np.ndarray:
     numerator = x * softmax_scale
     numerator = np.exp(numerator - np.max(numerator))
-    return numerator / np.sum(numerator)
+    return numerator / np.sum(numerator), x
 
 
 @njit(**jit_kwargs)
@@ -90,7 +92,7 @@ def _softmax_masked(
     numerator = np.exp(numerator - np.nanmax(numerator))
     numerator = np.where(mask, 0, numerator)  # essential
 
-    return numerator / np.nansum(numerator)
+    return numerator / np.nansum(numerator), x
 
 
 @njit(parallel=False, **jit_kwargs)
@@ -139,7 +141,7 @@ def _predict_transition_probabilities_numpy(
     )
 
 
-class Hessian(ABC):  # noqa: D101
+class Hessian(ABC):
     @d.get_full_description(base="hessian")
     @d.get_sections(base="hessian", sections=["Parameters", "Returns"])
     @abstractmethod
@@ -174,7 +176,7 @@ class Hessian(ABC):  # noqa: D101
         """
 
 
-class SimilaritySchemeABC(ABC):
+class Similarity(ABC):
     """Base class for all similarity schemes."""
 
     @d.get_full_description(base="sim_scheme")
@@ -203,13 +205,13 @@ class SimilaritySchemeABC(ABC):
         """
 
     @staticmethod
-    def create(scheme: Scheme) -> "SimilaritySchemeABC":
+    def create(scheme: Scheme) -> "Similarity":
         if scheme == Scheme.CORRELATION:
-            return CorrelationScheme()
+            return Correlation()
         if scheme == Scheme.COSINE:
-            return CosineScheme()
+            return Cosine()
         if scheme == Scheme.DOT_PRODUCT:
-            return DotProductScheme()
+            return DotProduct()
         raise NotImplementedError(scheme)
 
     def __repr__(self):
@@ -219,7 +221,7 @@ class SimilaritySchemeABC(ABC):
         return repr(self)
 
 
-class SimilaritySchemeHessian(SimilaritySchemeABC, Hessian):
+class SimilarityHessian(Similarity, Hessian):
     """
     Base class for all similarity schemes as defined in :cite:`li:20`.
 
@@ -281,7 +283,7 @@ class SimilaritySchemeHessian(SimilaritySchemeABC, Hessian):
         return super().__getattribute__(name)
 
 
-class DotProductScheme(SimilaritySchemeHessian):
+class DotProduct(SimilarityHessian):
     r"""
     Dot product scheme as defined in eq. (4.9) :cite:`li:20`.
 
@@ -295,7 +297,7 @@ class DotProductScheme(SimilaritySchemeHessian):
         super().__init__(center_mean=False, scale_by_norm=False)
 
 
-class CosineScheme(SimilaritySchemeHessian):
+class Cosine(SimilarityHessian):
     r"""
     Cosine similarity scheme as defined in eq. (4.7) :cite:`li:20`.
 
@@ -309,7 +311,7 @@ class CosineScheme(SimilaritySchemeHessian):
         super().__init__(center_mean=False, scale_by_norm=True)
 
 
-class CorrelationScheme(SimilaritySchemeHessian):
+class Correlation(SimilarityHessian):
     r"""
     Pearson correlation scheme as defined in eq. (4.8) :cite:`li:20`.
 

@@ -23,11 +23,13 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import to_rgb
 from matplotlib.collections import PolyCollection
 
+__all__ = ("FlowPlotter",)
+
 Numeric_t = Union[float, int]
 
 
 @dataclass(frozen=True)
-class Point:  # noqa: D101
+class Point:
     x: float
     xt: float
 

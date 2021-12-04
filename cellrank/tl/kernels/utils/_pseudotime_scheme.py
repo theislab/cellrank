@@ -8,6 +8,8 @@ from cellrank.ul._parallelize import parallelize
 import numpy as np
 from scipy.sparse import csr_matrix
 
+__all__ = ("HardThresholdScheme", "SoftThresholdScheme", "CustomThresholdScheme")
+
 
 class ThresholdSchemeABC(ABC):
     """Base class for all connectivity biasing schemes."""

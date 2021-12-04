@@ -219,7 +219,7 @@ def _reconstruct_one(
 
 
 @njit(**jit_kwargs)
-def _calculate_starts(indptr: np.ndarray, ixs) -> np.ndarray:
+def _calculate_starts(indptr: np.ndarray, ixs: np.ndarray) -> np.ndarray:
     """
     Get the position where to put the data.
 

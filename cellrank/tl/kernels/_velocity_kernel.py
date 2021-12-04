@@ -23,7 +23,7 @@ from cellrank.tl.kernels._utils import (
 )
 from scvelo.preprocessing.moments import get_moments
 from cellrank.tl.kernels._base_kernel import _RTOL
-from cellrank.tl.kernels._velocity_schemes import Scheme
+from cellrank.tl.kernels.utils._similarity_scheme import Scheme
 
 import numpy as np
 from scipy.sparse import issparse, csr_matrix

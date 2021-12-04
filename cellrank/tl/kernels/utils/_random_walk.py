@@ -9,6 +9,8 @@ from cellrank.ul._parallelize import parallelize
 import numpy as np
 from scipy.sparse import issparse, spmatrix
 
+__all__ = ("RandomWalk",)
+
 
 class RandomWalk:
     """

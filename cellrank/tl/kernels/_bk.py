@@ -1,20 +1,24 @@
 from typing import Any, Dict, List, Tuple, Union, Optional, Sequence
 
 from abc import ABC, abstractmethod
+from copy import deepcopy
 
 from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.ul._docs import d, inject_docs
 from cellrank.tl._utils import _normalize
+from cellrank.tl._mixins import IOMixin
 from cellrank.tl.kernels._mixins import BidirectionalMixin, UnidirectionalMixin
 
 import numpy as np
 from scipy.sparse import issparse, spmatrix, csr_matrix, isspmatrix_csr
 
+__all__ = ("Kernel",)
+
 Tmat_t = Union[np.ndarray, spmatrix]
 
 
-class KernelExpression(ABC):
+class KernelExpression(IOMixin, ABC):
     def __init__(
         self,
         parent: Optional["KernelExpression"] = None,
@@ -30,7 +34,7 @@ class KernelExpression(ABC):
         self, *args: Any, **kwargs: Any
     ) -> "KernelExpression":
         """
-        Compute a transition matrix.
+        Compute transition matrix.
 
         Parameters
         ----------
@@ -306,6 +310,12 @@ class Kernel(KernelExpression, ABC):
                 f"Expected the new object to have same shape as the previous `{self.shape}`, found `{shape}`."
             )
         self._adata = adata
+
+    def copy(self, *, deep: bool = False) -> "Kernel":
+        with self._remove_adata:
+            k = deepcopy(self)
+        k.adata = self.adata.copy() if deep else self.adata
+        return k
 
     @property
     def kernels(self) -> Tuple["KernelExpression", ...]:

@@ -16,8 +16,10 @@ import pandas as pd
 from scipy.stats import gmean, hmean
 from scipy.sparse import issparse
 
+__all__ = ("CytoTRACEKernel",)
 
-class CytoTRACEAggregation(ModeEnum):  # noqa: D101
+
+class CytoTRACEAggregation(ModeEnum):
     MEAN = auto()
     MEDIAN = auto()
     GMEAN = auto()

@@ -10,15 +10,17 @@ from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.tl._enum import ModeEnum
 from cellrank.ul._docs import d, inject_docs
-from cellrank.tl.kernels import ExperimentalTimeKernel
 from cellrank.tl.kernels._base_kernel import KernelExpression
+from cellrank.tl.kernels._experimental_time_kernel import ExperimentalTimeKernel
 
 import numpy as np
 import pandas as pd
 from scipy.sparse import bmat, spdiags, spmatrix
 
+__all__ = ("TransportMapKernel",)
 
-class LastTimePoint(ModeEnum):  # noqa: D101
+
+class LastTimePoint(ModeEnum):
     UNIFORM = "uniform"
     DIAGONAL = "diagonal"
     CONNECTIVITIES = "connectivities"

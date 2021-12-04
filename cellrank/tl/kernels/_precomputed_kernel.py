@@ -12,6 +12,8 @@ from cellrank.tl.kernels._base_kernel import _RTOL, Kernel, KernelExpression
 import numpy as np
 from scipy.sparse import spmatrix, csr_matrix
 
+__all__ = ("PrecomputedKernel",)
+
 
 @d.dedent
 class PrecomputedKernel(Kernel):

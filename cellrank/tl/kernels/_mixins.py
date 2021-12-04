@@ -1,4 +1,4 @@
-from typing import Any, Union, Optional
+from typing import Any, Union
 
 from abc import ABC, abstractmethod
 
@@ -7,7 +7,9 @@ from cellrank.tl._utils import _connected, _symmetric
 from cellrank.ul._utils import _get_neighs
 
 import numpy as np
-from scipy.sparse import spdiags, spmatrix
+from scipy.sparse import spdiags, spmatrix, csr_matrix
+
+__all__ = ("ConnectivityMixin", "UnidirectionalMixin", "BidirectionalMixin")
 
 
 class ConnectivityMixin:
@@ -18,10 +20,10 @@ class ConnectivityMixin:
         **kwargs: Any,
     ) -> None:
         super()._read_from_adata(**kwargs)
-
-        self._conn = _get_neighs(
-            self.adata, mode="connectivities", key=conn_key
-        ).astype(np.float64)
+        # fmt: off
+        self._conn = _get_neighs(self.adata, mode="connectivities", key=conn_key)
+        self._conn = csr_matrix(self._conn).astype(np.float64, copy=False)
+        # fmt: on
         if check_connectivity:
             if not _connected(self._conn):
                 logg.warning("KNN graph is not connected")
@@ -64,11 +66,17 @@ class UnidirectionalMixin:
 
 
 class BidirectionalMixin(ABC):
+    def __init__(self, *args: Any, backward: bool = False, **kwargs: Any):
+        super().__init__(*args, **kwargs)
+        if not isinstance(backward, bool):
+            raise TypeError("TODO")
+        self._backward = backward
+
     @abstractmethod
     def __invert__(self) -> "BidirectionalMixin":
         pass
 
     @property
-    def backward(self) -> Optional[bool]:
+    def backward(self) -> bool:
         """Direction of the process."""
         return self._backward

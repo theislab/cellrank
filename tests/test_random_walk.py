@@ -1,6 +1,6 @@
 import pytest
 
-from cellrank.tl.kernels._random_walk import RandomWalk
+from cellrank.tl.kernels.utils._random_walk import RandomWalk
 
 import numpy as np
 

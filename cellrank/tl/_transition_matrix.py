@@ -8,7 +8,7 @@ from cellrank.tl._utils import _deprecate
 from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tl.kernels._base_kernel import KernelExpression
 from cellrank.tl.kernels._velocity_kernel import BackwardMode, VelocityMode
-from cellrank.tl.kernels._velocity_schemes import Scheme
+from cellrank.tl.kernels.utils._similarity_scheme import Scheme
 
 
 @_deprecate(version="2.0")
@@ -22,7 +22,7 @@ def transition_matrix(
     conn_key: str = "connectivities",
     gene_subset: Optional[Iterable] = None,
     mode: Literal[
-        "deterministic", "stochastic", "sampling", "monte_carlo"
+        "deterministic", "stochastic", "monte_carlo"
     ] = VelocityMode.DETERMINISTIC,
     backward_mode: Literal["transpose", "negate"] = BackwardMode.TRANSPOSE,
     scheme: Union[

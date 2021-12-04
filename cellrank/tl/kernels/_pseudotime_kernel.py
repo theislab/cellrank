@@ -11,7 +11,7 @@ from cellrank.ul._docs import d
 from cellrank.tl._utils import _connected
 from cellrank.tl.kernels import Kernel
 from cellrank.tl.kernels._base_kernel import _dtype
-from cellrank.tl.kernels._pseudotime_schemes import (
+from cellrank.tl.kernels.utils._pseudotime_scheme import (
     ThresholdSchemeABC,
     HardThresholdScheme,
     SoftThresholdScheme,
@@ -20,8 +20,10 @@ from cellrank.tl.kernels._pseudotime_schemes import (
 
 import numpy as np
 
+__all__ = ("PseudotimeKernel",)
 
-class ThresholdScheme(ModeEnum):  # noqa: D101
+
+class ThresholdScheme(ModeEnum):
     SOFT = auto()
     HARD = auto()
 

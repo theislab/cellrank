@@ -47,7 +47,7 @@ from pandas.core.dtypes.common import is_bool_dtype, is_integer_dtype
 _rtol = 1e-6
 
 
-class CustomFunc(cr.tl.kernels.SimilaritySchemeABC):
+class CustomFunc(cr.tl.kernels.Similarity):
     def __call__(
         self, v: np.ndarray, D: np.ndarray, softmax_scale: float = 1.0
     ) -> Tuple[np.ndarray, np.ndarray]:
@@ -83,7 +83,7 @@ class CustomKernel(Kernel):
         return copy(self)
 
 
-class InvalidFuncProbs(cr.tl.kernels.SimilaritySchemeABC):
+class InvalidFuncProbs(cr.tl.kernels.Similarity):
     def __call__(
         self, v: np.ndarray, D: np.ndarray, _softmax_scale: float = 1.0
     ) -> Tuple[np.ndarray, np.ndarray]:
@@ -454,7 +454,7 @@ class TestInitializeKernel:
         )
 
     def test_combination_correct_parameters(self, adata: AnnData):
-        from cellrank.tl.kernels import CosineScheme
+        from cellrank.tl.kernels import Cosine
 
         k = VelocityKernel(adata).compute_transition_matrix(
             softmax_scale=4,
@@ -476,7 +476,7 @@ class TestInitializeKernel:
             "softmax_scale": 4,
             "mode": "deterministic",
             "seed": 42,
-            "scheme": str(CosineScheme()),
+            "scheme": str(Cosine()),
         } in k.params.values()
 
 
@@ -1316,9 +1316,9 @@ class TestVelocityScheme:
         zip(
             ["dot_product", "cosine", "correlation"],
             [
-                cr.tl.kernels.DotProductScheme(),
-                cr.tl.kernels.CosineScheme(),
-                cr.tl.kernels.CorrelationScheme(),
+                cr.tl.kernels.DotProduct(),
+                cr.tl.kernels.Cosine(),
+                cr.tl.kernels.Correlation(),
             ],
         ),
     )

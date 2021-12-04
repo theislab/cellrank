@@ -6,6 +6,8 @@ from cellrank.ul._docs import d
 from cellrank.tl.kernels._bk import UnidirectionalKernel
 from cellrank.tl.kernels._mixins import ConnectivityMixin
 
+__all__ = ("ConnectivityKernel",)
+
 
 @d.dedent
 class ConnectivityKernel(ConnectivityMixin, UnidirectionalKernel):

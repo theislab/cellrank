@@ -14,6 +14,8 @@ import pandas as pd
 from matplotlib.colors import Normalize, to_hex
 from matplotlib.pyplot import get_cmap
 
+__all__ = ("ExperimentalTimeKernel",)
+
 
 @d.dedent
 class ExperimentalTimeKernel(Kernel, ABC):
