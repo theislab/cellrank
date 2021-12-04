@@ -55,52 +55,6 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         and :attr:`anndata.AnnData.var_names` correspond to subsets of observations from :attr:`adata`.
         """
 
-    @d.get_sections(base="tmk_thresh", sections=["Parameters"])
-    def _threshold_transition_matrix(
-        self,
-        threshold: Union[float, Literal["auto"]],
-        normalize: bool = True,
-    ) -> None:
-        """
-        Remove small non-zero values from :attr:`transition_matrix`.
-
-        Parameters
-        ----------
-        threshold
-            How to remove small non-zero values from the transition matrix. Valid options are:
-
-                - `'auto'` - find the maximum threshold value which will not remove every non-zero value from any row.
-                - :class:`float` - value in `[0, 100]` corresponding to a percentage of non-zeros to remove.
-                  Rows where all values are removed will have uniform distribution.
-                - `None` - do not threshold.
-
-        Returns
-        -------
-        Nothing, just updates :attr:`transition_matrix`.
-        """
-        tmat = self.transition_matrix
-        if threshold == "auto":
-            threshold = min(np.max(tmat[i].data) for i in range(tmat.shape[0]))
-        else:
-            if not (0 <= threshold <= 100):
-                raise ValueError(
-                    f"Expected `threshold` to be in `[0, 100]`, found `{threshold}`.`"
-                )
-            threshold = np.percentile(tmat.data, threshold)
-        logg.info(f"Using `threshold={threshold}`")
-        tmat.data[tmat.data <= threshold] = 0.0
-        tmat.eliminate_zeros()
-
-        if normalize:
-            self._compute_transition_matrix(
-                matrix=tmat,
-                density_normalize=False,
-                check_irreducibility=False,
-            )
-        else:
-            # e.g. when in `_tmap_as_tmat`
-            self._transition_matrix = tmat
-
     @d.get_sections(base="tmk_tmat", sections=["Parameters"])
     @d.dedent
     def compute_transition_matrix(
@@ -127,11 +81,11 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
                   derived from the last time point subset of :attr:`adata`.
         conn_kwargs
             Keyword arguments for :func:`scanpy.pp.neighbors` when using ``last_time_point = {ltp.CONNECTIVITIES!r}``.
-            Can have `'density_normalize'` for :meth:`cellrank.tl.kernels.ConnectivityKernel.compute_transition_matrix`.
+            Can have `'density_normalize'` for :meth:`cellrank.kernels.ConnectivityKernel.compute_transition_matrix`.
 
         Returns
         -------
-        Self and updated :attr:`transition_matrix`.
+        Self and updates :attr:`transition_matrix` and :attr:`params`.
         """
         ckwargs = dict(kwargs)
         ckwargs["threshold"] = threshold
@@ -149,12 +103,7 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
             conn_kwargs=conn_kwargs,
         )
         # fmt: on
-
-        self._compute_transition_matrix(
-            matrix=tmap.X,
-            density_normalize=False,
-            check_irreducibility=False,
-        )
+        self.transition_matrix = tmap.X
         if threshold:
             self._threshold_transition_matrix(threshold)
 
@@ -315,6 +264,52 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
             ) from e
 
         return tmaps
+
+    @d.get_sections(base="tmk_thresh", sections=["Parameters"])
+    def _threshold_transition_matrix(
+        self,
+        threshold: Union[float, Literal["auto"]],
+        normalize: bool = True,
+    ) -> None:
+        """
+        Remove small non-zero values from :attr:`transition_matrix`.
+
+        Parameters
+        ----------
+        threshold
+            How to remove small non-zero values from the transition matrix. Valid options are:
+
+                - `'auto'` - find the maximum threshold value which will not remove every non-zero value from any row.
+                - :class:`float` - value in `[0, 100]` corresponding to a percentage of non-zeros to remove.
+                  Rows where all values are removed will have uniform distribution.
+                - `None` - do not threshold.
+
+        Returns
+        -------
+        Nothing, just updates :attr:`transition_matrix`.
+        """
+        tmat = self.transition_matrix
+        if threshold == "auto":
+            threshold = min(np.max(tmat[i].data) for i in range(tmat.shape[0]))
+        else:
+            if not (0 <= threshold <= 100):
+                raise ValueError(
+                    f"Expected `threshold` to be in `[0, 100]`, found `{threshold}`.`"
+                )
+            threshold = np.percentile(tmat.data, threshold)
+        logg.info(f"Using `threshold={threshold}`")
+        tmat.data[tmat.data <= threshold] = 0.0
+        tmat.eliminate_zeros()
+
+        if normalize:
+            self._compute_transition_matrix(
+                matrix=tmat,
+                density_normalize=False,
+                check_irreducibility=False,
+            )
+        else:
+            # e.g. when in `_tmap_as_tmat`
+            self._transition_matrix = tmat
 
     # TODO(michalk8): change t1/t2 to numeric/ordered (everywhere)
     def _tmat_to_adata(

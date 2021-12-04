@@ -36,7 +36,7 @@ class CytoTRACEKernel(PseudotimeKernel):
     CytoTRACE can be used to estimate cellular plasticity and in turn, a pseudotemporal ordering of cells from more
     plastic to less plastic states. It relies on the assumption that differentiated cells express, on average,
     less genes than naive cells.
-    This kernel internally uses the :class:`cellrank.tl.kernels.PseudotimeKernel` to direct the KNN graph
+    This kernel internally uses the :class:`cellrank.kernels.PseudotimeKernel` to direct the KNN graph
     on the basis of the CytoTRACE-derived pseudotime.
 
     %(density_correction)s
@@ -45,11 +45,8 @@ class CytoTRACEKernel(PseudotimeKernel):
     ----------
     %(adata)s
     %(backward)s
-    %(cond_num)s
-    check_connectivity
-        Check whether the underlying KNN graph is connected.
     kwargs
-        Keyword arguments for :class:`cellrank.tl.kernels.PseudotimeKernel`.
+        Keyword arguments for :class:`cellrank.kernels.PseudotimeKernel`.
 
     Example
     -------
@@ -77,7 +74,7 @@ class CytoTRACEKernel(PseudotimeKernel):
         scv.pp.moments(adata)
 
         # import and initialize the CytoTRACE kernel, compute transition matrix - done!
-        from cellrank.tl.kernels import CytoTRACEKernel
+        from cellrank.kernels import CytoTRACEKernel
         ctk = CytoTRACEKernel(adata).compute_cytotrace().compute_transition_matrix()
     """
 
@@ -85,8 +82,6 @@ class CytoTRACEKernel(PseudotimeKernel):
         self,
         adata: AnnData,
         backward: bool = False,
-        compute_cond_num: bool = False,
-        check_connectivity: bool = False,
         **kwargs: Any,
     ):
         _ = kwargs.pop("time_key", None)
@@ -94,14 +89,12 @@ class CytoTRACEKernel(PseudotimeKernel):
             adata,
             backward=backward,
             time_key=Key.cytotrace("pseudotime"),
-            compute_cond_num=compute_cond_num,
-            check_connectivity=check_connectivity,
             **kwargs,
         )
 
     def _read_from_adata(
         self,
-        time_key: str,
+        time_key: str = Key.cytotrace("pseudotime"),
         **kwargs: Any,
     ) -> None:
         try:
@@ -109,7 +102,6 @@ class CytoTRACEKernel(PseudotimeKernel):
         except KeyError as e:
             if "Unable to find pseudotime" not in str(e):
                 raise
-            self._pseudotime: Optional[np.ndarray] = None
             super(PseudotimeKernel, self)._read_from_adata(**kwargs)
 
     def _compute_score(
@@ -311,3 +303,12 @@ class CytoTRACEKernel(PseudotimeKernel):
         )
 
         return self
+
+    def __invert__(self) -> "CytoTRACEKernel":
+        ck = self.copy()
+        if ck.pseudotime is not None:
+            ck._pseudotime = np.max(ck.pseudotime) - ck.pseudotime
+        ck._backward = not self.backward
+        ck._params = {}
+        ck._transition_matrix = None
+        return ck

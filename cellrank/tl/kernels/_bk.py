@@ -29,6 +29,9 @@ class KernelExpression(IOMixin, ABC):
         self._transition_matrix = None
         self._params: Dict[str, Any] = {}
 
+    def __init_subclass__(cls, **_: Any) -> None:
+        super().__init_subclass__()
+
     @abstractmethod
     def compute_transition_matrix(
         self, *args: Any, **kwargs: Any
@@ -206,7 +209,7 @@ class KernelExpression(IOMixin, ABC):
         Parameters
         ----------
         matrix
-            Transition matrix. If the expression has no parent, the matrix is normalized if needed.
+            Transition matrix. If this expression has no parent, the matrix is normalized if necessary.
 
         Returns
         -------
@@ -261,6 +264,7 @@ class KernelExpression(IOMixin, ABC):
                 return True
             return False
         except AssertionError as e:
+            # TODO(michalk8): clear params?
             raise ValueError(str(e)) from None
         except Exception as e:  # noqa: B902
             logg.error(f"Unable to load the cache, reason: `{e}`")

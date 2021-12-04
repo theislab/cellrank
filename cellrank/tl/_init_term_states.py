@@ -13,8 +13,8 @@ from cellrank.tl._utils import (
 from cellrank.tl.kernels import PrecomputedKernel
 from cellrank.tl.estimators import GPCCA, CFLARE, TermStatesEstimator
 from cellrank.tl._transition_matrix import transition_matrix
-from cellrank.tl.kernels._velocity_kernel import BackwardMode, VelocityMode
 from cellrank.tl.estimators._base_estimator import BaseEstimator
+from cellrank.tl.kernels.utils._velocity_model import BackwardMode, VelocityModel
 
 _docstring = """\
 Find {direction} states of a dynamic process of single cells based on RNA velocity :cite:`manno:18`.
@@ -130,7 +130,7 @@ def _initial_terminal(
     adata: AnnData,
     estimator: type(BaseEstimator) = GPCCA,
     backward: bool = False,
-    mode: str = VelocityMode.DETERMINISTIC,
+    mode: str = VelocityModel.DETERMINISTIC,
     backward_mode: str = BackwardMode.TRANSPOSE,
     n_states: Optional[int] = None,
     cluster_key: Optional[str] = None,
@@ -196,7 +196,7 @@ def _initial_terminal(
 
 
 @_deprecate(version="2.0")
-@inject_docs(m=VelocityMode, b=BackwardMode)
+@inject_docs(m=VelocityModel, b=BackwardMode)
 @d.dedent
 @inject_docs(
     __doc__=_docstring.format(
@@ -208,7 +208,7 @@ def _initial_terminal(
 def initial_states(  # noqa: D103
     adata: AnnData,
     estimator: type(BaseEstimator) = GPCCA,
-    mode: str = VelocityMode.DETERMINISTIC,
+    mode: str = VelocityModel.DETERMINISTIC,
     backward_mode: str = BackwardMode.TRANSPOSE,
     n_states: Optional[int] = None,
     cluster_key: Optional[str] = None,
@@ -240,7 +240,7 @@ def initial_states(  # noqa: D103
 
 
 @_deprecate(version="2.0")
-@inject_docs(m=VelocityMode, b=BackwardMode)
+@inject_docs(m=VelocityModel, b=BackwardMode)
 @d.dedent
 @inject_docs(
     __doc__=_docstring.format(
@@ -250,7 +250,7 @@ def initial_states(  # noqa: D103
 def terminal_states(  # noqa: D103
     adata: AnnData,
     estimator: type(BaseEstimator) = GPCCA,
-    mode: str = VelocityMode.DETERMINISTIC,
+    mode: str = VelocityModel.DETERMINISTIC,
     n_states: Optional[int] = None,
     cluster_key: Optional[str] = None,
     key: Optional[str] = None,

@@ -7,12 +7,12 @@ from cellrank.ul._docs import d, inject_docs
 from cellrank.tl._utils import _deprecate
 from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tl.kernels._base_kernel import KernelExpression
-from cellrank.tl.kernels._velocity_kernel import BackwardMode, VelocityMode
+from cellrank.tl.kernels.utils._velocity_model import BackwardMode, VelocityModel
 from cellrank.tl.kernels.utils._similarity_scheme import Scheme
 
 
 @_deprecate(version="2.0")
-@inject_docs(m=VelocityMode, b=BackwardMode, s=Scheme)  # don't swap the order
+@inject_docs(m=VelocityModel, b=BackwardMode, s=Scheme)  # don't swap the order
 @d.dedent
 def transition_matrix(
     adata: AnnData,
@@ -23,7 +23,7 @@ def transition_matrix(
     gene_subset: Optional[Iterable] = None,
     mode: Literal[
         "deterministic", "stochastic", "monte_carlo"
-    ] = VelocityMode.DETERMINISTIC,
+    ] = VelocityModel.DETERMINISTIC,
     backward_mode: Literal["transpose", "negate"] = BackwardMode.TRANSPOSE,
     scheme: Union[
         Literal["dot_product", "cosine", "correlation"], Callable

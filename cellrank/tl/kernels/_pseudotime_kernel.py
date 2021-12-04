@@ -1,16 +1,14 @@
 from typing import Any, Union, Callable, Optional
 from typing_extensions import Literal
 
-from copy import copy
 from enum import auto
 
 from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.tl._enum import _DEFAULT_BACKEND, ModeEnum, Backend_t
 from cellrank.ul._docs import d
-from cellrank.tl._utils import _connected
-from cellrank.tl.kernels import Kernel
-from cellrank.tl.kernels._base_kernel import _dtype
+from cellrank.tl.kernels._bk import BidirectionalKernel
+from cellrank.tl.kernels._mixins import ConnectivityMixin
 from cellrank.tl.kernels.utils._pseudotime_scheme import (
     ThresholdSchemeABC,
     HardThresholdScheme,
@@ -29,7 +27,7 @@ class ThresholdScheme(ModeEnum):
 
 
 @d.dedent
-class PseudotimeKernel(Kernel):
+class PseudotimeKernel(ConnectivityMixin, BidirectionalKernel):
     """
     Kernel which computes directed transition probabilities based on a KNN graph and pseudotime.
 
@@ -43,9 +41,8 @@ class PseudotimeKernel(Kernel):
     %(backward)s
     time_key
         Key in :attr:`anndata.AnnData.obs` where the pseudotime is stored.
-    %(cond_num)s
     kwargs
-        Keyword arguments for :class:`cellrank.tl.kernels.Kernel`.
+        Keyword arguments for :class:`cellrank.kernels.Kernel`.
     """
 
     def __init__(
@@ -53,38 +50,35 @@ class PseudotimeKernel(Kernel):
         adata: AnnData,
         backward: bool = False,
         time_key: str = "dpt_pseudotime",
-        compute_cond_num: bool = False,
-        check_connectivity: bool = False,
         **kwargs: Any,
     ):
-        self._time_key = time_key
-        self._pseudotime: Optional[np.ndarray] = None
         super().__init__(
             adata,
             backward=backward,
             time_key=time_key,
-            compute_cond_num=compute_cond_num,
-            check_connectivity=check_connectivity,
             **kwargs,
         )
 
-    def _read_from_adata(self, time_key: str, **kwargs: Any) -> None:
+    def _read_from_adata(self, time_key: str = "dpt_pseudotime", **kwargs: Any) -> None:
         super()._read_from_adata(**kwargs)
 
+        self._time_key = time_key
         if time_key not in self.adata.obs:
             raise KeyError(f"Unable to find pseudotime in `adata.obs[{time_key!r}]`.")
 
-        self._pseudotime = np.array(self.adata.obs[time_key]).astype(_dtype)
+        self._pseudotime = np.array(self.adata.obs[time_key]).astype(
+            np.float64, copy=True
+        )
         if np.any(np.isnan(self.pseudotime)):
             raise ValueError("Encountered NaN values in pseudotime.")
 
-        if self.backward:
-            self._pseudotime = np.max(self.pseudotime) - self.pseudotime
-
+    # TODO(michalk8): check callable's signature
     @d.dedent
     def compute_transition_matrix(
         self,
-        threshold_scheme: Union[Literal["soft", "hard"], Callable] = "hard",
+        threshold_scheme: Union[
+            Literal["soft", "hard"], Callable[[np.ndarray], np.ndarray]
+        ] = "hard",
         frac_to_keep: float = 0.3,
         b: float = 10.0,
         nu: float = 0.5,
@@ -127,7 +121,7 @@ class PseudotimeKernel(Kernel):
 
         Returns
         -------
-        Self and updated :attr:`transition_matrix`.
+        Self and updates :attr:`transition_matrix` and :attr:`params`.
         """
         if self.pseudotime is None:
             raise ValueError("Compute `.pseudotime` first.")
@@ -173,11 +167,8 @@ class PseudotimeKernel(Kernel):
         if not _connected(biased_conn):
             logg.warning("Biased KNN graph is disconnected")
 
-        self._compute_transition_matrix(
-            matrix=biased_conn,
-            density_normalize=False,
-            check_irreducibility=check_irreducibility,
-        )
+        # TODO(michalk8): check irred
+        self.transition_matrix = biased_conn
         logg.info("    Finish", time=start)
 
         return self
@@ -187,18 +178,10 @@ class PseudotimeKernel(Kernel):
         """Pseudotemporal ordering of cells."""
         return self._pseudotime
 
-    def copy(self) -> "PseudotimeKernel":
-        """Return a copy of self."""
-        pk = type(self)(self.adata, backward=self.backward, time_key=self._time_key)
-        pk._pseudotime = copy(self.pseudotime)
-        pk._params = copy(self._params)
-        pk._cond_num = self.condition_number
-        pk._transition_matrix = copy(self._transition_matrix)
-
-        return pk
-
     def __invert__(self) -> "PseudotimeKernel":
-        super().__invert__()
-        if self.pseudotime is not None:
-            self._pseudotime = np.max(self.pseudotime) - self.pseudotime
-        return self
+        pk = self.copy()
+        pk._pseudotime = np.max(pk.pseudotime) - pk.pseudotime
+        pk._backward = not self.backward
+        pk._params = {}
+        pk._transition_matrix = None
+        return pk

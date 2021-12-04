@@ -1,5 +1,3 @@
-from copy import copy
-
 from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.ul._docs import d
@@ -21,7 +19,7 @@ class ConnectivityKernel(ConnectivityMixin, UnidirectionalKernel):
 
     The resulting transition matrix is symmetric and thus cannot be used to learn about the direction of the biological
     process. To include this direction, consider combining with a velocity-derived transition matrix via
-    :class:`cellrank.tl.kernels.DisplacementKernel`.
+    :class:`cellrank.kernels.VelocityKernel`.
 
     %(density_correction)s
 
@@ -29,11 +27,12 @@ class ConnectivityKernel(ConnectivityMixin, UnidirectionalKernel):
     ----------
     %(adata)s
     conn_key
-        Key in :attr:`anndata.AnnData.obsp` to obtain the connectivity matrix describing cell-cell similarity.
+        Key in :attr:`anndata.AnnData.obsp` where connectivity matrix describing cell-cell similarity is stored.
     check_connectivity
         Check whether the underlying KNN graph is connected.
     """
 
+    # TODO(michalk8): chk conn docrep
     def __init__(
         self,
         adata: AnnData,
@@ -45,7 +44,6 @@ class ConnectivityKernel(ConnectivityMixin, UnidirectionalKernel):
             conn_key=conn_key,
             check_connectivity=check_connectivity,
         )
-        self._key = conn_key
 
     def compute_transition_matrix(
         self, density_normalize: bool = True
@@ -66,27 +64,13 @@ class ConnectivityKernel(ConnectivityMixin, UnidirectionalKernel):
         -------
         Self and updates :attr:`transition_matrix` and :attr:`params`.
         """
-
         # fmt: off
-        start = logg.info(f"Computing transition matrix based on `adata.obsp[{self._key!r}]`")
-
-        if self._reuse_cache({"dnorm": density_normalize, "key": self._key}, time=start):
+        start = logg.info(f"Computing transition matrix based on `adata.obsp[{self._conn_key!r}]`")
+        if self._reuse_cache({"dnorm": density_normalize, "key": self._conn_key}, time=start):
             return self
 
-        print("h", self.params)
         self.transition_matrix = self._density_normalize(self._conn) if density_normalize else self._conn
-
         logg.info("    Finish", time=start)
         # fmt: on
 
         return self
-
-    def copy(self, deep: bool = False) -> "ConnectivityKernel":
-        """Return a copy of self."""
-        adata = self.adata.copy() if deep else self.adata
-        ck = ConnectivityKernel(adata, conn_key=self._key, check_connectivity=False)
-        ck._conn = copy(self._conn)
-        ck._params = copy(self.params)
-        ck._transition_matrix = copy(self.transition_matrix)
-
-        return ck

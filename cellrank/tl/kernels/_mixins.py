@@ -21,6 +21,7 @@ class ConnectivityMixin:
     ) -> None:
         super()._read_from_adata(**kwargs)
         # fmt: off
+        self._conn_key = conn_key
         self._conn = _get_neighs(self.adata, mode="connectivities", key=conn_key)
         self._conn = csr_matrix(self._conn).astype(np.float64, copy=False)
         # fmt: on
@@ -50,7 +51,7 @@ class ConnectivityMixin:
         -------
         Density normalized transition matrix.
         """
-        logg.debug("Density-normalizing the transition matrix")
+        logg.debug("Density normalizing the transition matrix")
 
         q = np.asarray(self._conn.sum(axis=0))
         Q = spdiags(1.0 / q, 0, matrix.shape[0], matrix.shape[0])

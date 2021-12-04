@@ -292,7 +292,7 @@ class KernelExpression(IOMixin, ABC):
 
         Returns
         -------
-        If ``copy=True``, the projection array of shape `(n_cells, n_components)`.
+        If ``copy = True``, the projection array of shape `(n_cells, n_components)`.
         Otherwise, it modifies :attr:`anndata.AnnData.obsm` with a key based on ``key_added``.
         """
         # modified from: https://github.com/theislab/scvelo/blob/master/scvelo/tools/velocity_embedding.py
