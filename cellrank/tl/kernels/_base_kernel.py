@@ -5,13 +5,11 @@ from abc import ABC, abstractmethod
 from copy import deepcopy
 from pathlib import Path
 
-import scvelo as scv
 from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.ul._docs import d, inject_docs
 from cellrank.tl._utils import save_fig, _normalize
 from cellrank.tl._mixins import IOMixin
-from scvelo.plotting.utils import default_size, plot_outline
 from cellrank.tl.kernels.utils import RandomWalk, FlowPlotter
 from cellrank.tl.kernels._utils import _get_basis
 from cellrank.tl.kernels._mixins import (
@@ -19,21 +17,17 @@ from cellrank.tl.kernels._mixins import (
     BidirectionalMixin,
     UnidirectionalMixin,
 )
+from cellrank.tl.kernels.utils._random_walk import Indices_t
 
 import numpy as np
 from scipy.sparse import issparse, spmatrix, csr_matrix, isspmatrix_csr
-from pandas.api.types import infer_dtype, is_numeric_dtype, is_categorical_dtype
 
 import matplotlib.pyplot as plt
-from matplotlib.colors import LinearSegmentedColormap, to_hex
-from matplotlib.collections import LineCollection
+from matplotlib.colors import LinearSegmentedColormap
 
 __all__ = ("Kernel",)
 
 Tmat_t = Union[np.ndarray, spmatrix]
-Indices_t = Optional[
-    Union[Sequence[str], Dict[str, Union[str, Sequence[str], Tuple[float, float]]]]
-]
 # TODO(michalk8): add to constants
 _RTOL = 1e-12
 _dtype = np.float64
@@ -43,8 +37,9 @@ class KernelExpression(IOMixin, ABC):
     def __init__(
         self,
         parent: Optional["KernelExpression"] = None,
-        **_: Any,
+        **kwargs: Any,
     ):
+        super().__init__()
         self._parent = parent
         self._normalize = parent is None
         self._transition_matrix = None
@@ -191,7 +186,7 @@ class KernelExpression(IOMixin, ABC):
     @d.dedent
     def plot_random_walks(
         self,
-        n_sims: int,
+        n_sims: int = 100,
         max_iter: Union[int, float] = 0.25,
         seed: Optional[int] = None,
         successive_hits: int = 0,
@@ -254,60 +249,13 @@ class KernelExpression(IOMixin, ABC):
         For each random walk, the first/last cell is marked by the start/end colors of ``cmap``.
         """
 
-        def create_ixs(ixs: Indices_t, *, kind: str) -> Optional[np.ndarray]:
-            if ixs is None:
-                return None
-            if isinstance(ixs, dict):
-                # fmt: off
-                if len(ixs) != 1:
-                    raise ValueError(f"Expected to find only 1 cluster key, found `{len(ixs)}`.")
-                key = next(iter(ixs.keys()))
-                if key not in self.adata.obs:
-                    raise KeyError(f"Unable to find data in `adata.obs[{key!r}]`.")
-
-                vals = self.adata.obs[key]
-                if is_categorical_dtype(vals):
-                    ixs = np.where(np.isin(vals, ixs[key]))[0]
-                elif is_numeric_dtype(vals):
-                    if len(ixs[key]) != 2:
-                        raise ValueError(f"Expected range to be of length `2`, found `{len(ixs[key])}`")
-                    minn, maxx = sorted(ixs[key])
-                    ixs = np.where((vals >= minn) & (vals <= maxx))[0]
-                else:
-                    raise TypeError(f"Expected `adata.obs[{key!r}]` to be numeric or categorical, "
-                                    f"found `{infer_dtype(vals)}`.")
-                # fmt: on
-            elif isinstance(ixs, str):
-                ixs = np.where(self.adata.obs_names == ixs)[0]
-            else:
-                ixs = np.where(np.isin(self.adata.obs_names, ixs))[0]
-
-            if not len(ixs):
-                logg.warning(f"No {kind} indices have been selected, using `None`")
-                return None
-
-            return ixs
-
         if self._transition_matrix is None:
             raise RuntimeError(
                 "Compute transition matrix first as `.compute_transition_matrix()`."
             )
-        emb = _get_basis(self.adata, basis)
-
-        if isinstance(cmap, str):
-            cmap = plt.get_cmap(cmap)
-        if not isinstance(cmap, LinearSegmentedColormap):
-            if not hasattr(cmap, "colors"):
-                raise AttributeError(
-                    "Unable to create a colormap, `cmap` does not have attribute `colors`."
-                )
-            cmap = LinearSegmentedColormap.from_list(
-                "random_walk", colors=cmap.colors, N=max_iter
-            )
-
-        start_ixs = create_ixs(start_ixs, kind="start")
-        stop_ixs = create_ixs(stop_ixs, kind="stop")
-        rw = RandomWalk(self.transition_matrix, start_ixs=start_ixs, stop_ixs=stop_ixs)
+        rw = RandomWalk(
+            self.adata, self.transition_matrix, start_ixs=start_ixs, stop_ixs=stop_ixs
+        )
         sims = rw.simulate_many(
             n_sims=n_sims,
             max_iter=max_iter,
@@ -318,53 +266,18 @@ class KernelExpression(IOMixin, ABC):
             show_progress_bar=show_progress_bar,
         )
 
-        # TODO(michalk8): make a RW method
-        fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
-        scv.pl.scatter(self.adata, basis=basis, show=False, ax=ax, **kwargs)
-
-        logg.info("Plotting random walks")
-        for sim in sims:
-            x = emb[sim][:, 0]
-            y = emb[sim][:, 1]
-            points = np.array([x, y]).T.reshape(-1, 1, 2)
-            segments = np.concatenate([points[:-1], points[1:]], axis=1)
-            n_seg = len(segments)
-
-            lc = LineCollection(
-                segments,
-                linewidths=linewidth,
-                colors=[cmap(float(i) / n_seg) for i in range(n_seg)],
-                alpha=linealpha,
-                zorder=2,
-            )
-            ax.add_collection(lc)
-
-        for ix in [0, -1]:
-            ixs = [sim[ix] for sim in sims]
-            plot_outline(
-                x=emb[ixs][:, 0],
-                y=emb[ixs][:, 1],
-                outline_color=("black", to_hex(cmap(float(abs(ix))))),
-                kwargs={
-                    "s": kwargs.get("s", default_size(self.adata)) * 1.1,
-                    "alpha": 0.9,
-                },
-                ax=ax,
-                zorder=4,
-            )
-
-        if ixs_legend_loc not in (None, "none"):
-            from cellrank.pl._utils import _position_legend
-
-            h1 = ax.scatter([], [], color=cmap(0.0), label="start")
-            h2 = ax.scatter([], [], color=cmap(1.0), label="stop")
-            legend = ax.get_legend()
-            if legend is not None:
-                ax.add_artist(legend)
-            _position_legend(ax, legend_loc=ixs_legend_loc, handles=[h1, h2])
-
-        if save is not None:
-            save_fig(fig, save)
+        rw.plot(
+            sims,
+            basis=basis,
+            cmap=cmap,
+            linewidth=linewidth,
+            linealpha=linealpha,
+            ixs_legend_loc=ixs_legend_loc,
+            figsize=figsize,
+            dpi=dpi,
+            save=save,
+            **kwargs,
+        )
 
     # TODO(michalk8): plot_projection + recompute
     def compute_projection(

@@ -1,15 +1,29 @@
-from typing import Any, List, Union, Optional, Sequence
+from typing import Any, List, Tuple, Union, Mapping, Optional, Sequence
+from typing_extensions import Literal
 
+from pathlib import Path
 from itertools import chain
 
+import scvelo as scv
+from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.ul._docs import d
+from cellrank.tl._utils import save_fig
 from cellrank.ul._parallelize import parallelize
+from cellrank.tl.kernels._utils import _get_basis
 
 import numpy as np
 from scipy.sparse import issparse, spmatrix
+from pandas.api.types import infer_dtype, is_numeric_dtype, is_categorical_dtype
+
+import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap, to_hex
+from matplotlib.collections import LineCollection
 
 __all__ = ("RandomWalk",)
+Indices_t = Optional[
+    Union[Sequence[str], Mapping[str, Union[str, Sequence[str], Tuple[float, float]]]]
+]
 
 
 class RandomWalk:
@@ -28,6 +42,7 @@ class RandomWalk:
 
     def __init__(
         self,
+        adata: AnnData,
         transition_matrix: Union[np.ndarray, spmatrix],
         start_ixs: Optional[Sequence[int]] = None,
         stop_ixs: Optional[Sequence[int]] = None,
@@ -39,39 +54,24 @@ class RandomWalk:
         if not np.allclose(transition_matrix.sum(1), 1.0):
             raise ValueError("Transition matrix is not row-stochastic.")
 
+        self._adata = adata
         self._tmat = transition_matrix
         self._ixs = np.arange(self._tmat.shape[0])
         self._is_sparse = issparse(self._tmat)
+
+        start_ixs = self._normalize_ixs(start_ixs, kind="start")
+        stop_ixs = self._normalize_ixs(stop_ixs, kind="stop")
         self._stop_ixs = set([] if stop_ixs is None or not len(stop_ixs) else stop_ixs)
         self._starting_dist = (
             np.ones_like(self._ixs)
             if start_ixs is None
             else np.isin(self._ixs, start_ixs)
         )
-        if np.sum(self._starting_dist) == 0:
+        _sum = np.sum(self._starting_dist)
+        if _sum == 0:
             raise ValueError("No starting indices have been selected.")
 
-        self._starting_dist = self._starting_dist.astype(np.float64) / np.sum(
-            self._starting_dist
-        )
-
-    def _should_stop(self, ix: int) -> bool:
-        return ix in self._stop_ixs
-
-    def _sample(self, ix: int, *, rs: np.random.RandomState) -> int:
-        return rs.choice(
-            self._ixs,
-            p=self._tmat[ix].A.squeeze() if self._is_sparse else self._tmat[ix],
-        )
-
-    def _max_iter(self, max_iter: Union[int, float]) -> int:
-        if isinstance(max_iter, float):
-            max_iter = int(np.ceil(max_iter * len(self._ixs)))
-        if max_iter <= 1:
-            raise ValueError(
-                f"Expected number of iterations to be > 1, found `{max_iter}`."
-            )
-        return max_iter
+        self._starting_dist = self._starting_dist.astype(np.float64) / _sum
 
     @d.get_sections(base="rw_sim", sections=["Parameters"])
     def simulate_one(
@@ -190,3 +190,134 @@ class RandomWalk:
         logg.info("    Finish", time=start)
 
         return simss
+
+    def plot(
+        self,
+        sims: List[np.ndarray],
+        basis: str = "umap",
+        cmap: Union[str, LinearSegmentedColormap] = "gnuplot",
+        linewidth: float = 1.0,
+        linealpha: float = 0.3,
+        ixs_legend_loc: Optional[str] = None,
+        figsize: Optional[Tuple[float, float]] = None,
+        dpi: Optional[int] = None,
+        save: Optional[Union[str, Path]] = None,
+        **kwargs: Any,
+    ) -> None:
+        emb = _get_basis(self._adata, basis)
+        if isinstance(cmap, str):
+            cmap = plt.get_cmap(cmap)
+        if not isinstance(cmap, LinearSegmentedColormap):
+            if not hasattr(cmap, "colors"):
+                raise AttributeError(
+                    "Unable to create a colormap, `cmap` does not have attribute `colors`."
+                )
+            cmap = LinearSegmentedColormap.from_list(
+                "random_walk",
+                colors=cmap.colors,
+                N=max(map(len, sims)),
+            )
+
+        fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
+        scv.pl.scatter(self._adata, basis=basis, show=False, ax=ax, **kwargs)
+
+        logg.info("Plotting random walks")
+        for sim in sims:
+            x = emb[sim][:, 0]
+            y = emb[sim][:, 1]
+            points = np.array([x, y]).T.reshape(-1, 1, 2)
+            segments = np.concatenate([points[:-1], points[1:]], axis=1)
+            n_seg = len(segments)
+
+            lc = LineCollection(
+                segments,
+                linewidths=linewidth,
+                colors=[cmap(float(i) / n_seg) for i in range(n_seg)],
+                alpha=linealpha,
+                zorder=2,
+            )
+            ax.add_collection(lc)
+
+        for ix in [0, -1]:
+            ixs = [sim[ix] for sim in sims]
+            from scvelo.plotting.utils import default_size, plot_outline
+
+            plot_outline(
+                x=emb[ixs][:, 0],
+                y=emb[ixs][:, 1],
+                outline_color=("black", to_hex(cmap(float(abs(ix))))),
+                kwargs={
+                    "s": kwargs.get("s", default_size(self._adata)) * 1.1,
+                    "alpha": 0.9,
+                },
+                ax=ax,
+                zorder=4,
+            )
+
+        if ixs_legend_loc not in (None, "none"):
+            from cellrank.pl._utils import _position_legend
+
+            h1 = ax.scatter([], [], color=cmap(0.0), label="start")
+            h2 = ax.scatter([], [], color=cmap(1.0), label="stop")
+            legend = ax.get_legend()
+            if legend is not None:
+                ax.add_artist(legend)
+            _position_legend(ax, legend_loc=ixs_legend_loc, handles=[h1, h2])
+
+        if save is not None:
+            save_fig(fig, save)
+
+    def _normalize_ixs(
+        self, ixs: Indices_t, *, kind: Literal["start", "stop"]
+    ) -> Optional[np.ndarray]:
+        if ixs is None:
+            return None
+
+        if isinstance(ixs, dict):
+            # fmt: off
+            if len(ixs) != 1:
+                raise ValueError(f"Expected to find only 1 cluster key, found `{len(ixs)}`.")
+            key = next(iter(ixs.keys()))
+            if key not in self._adata.obs:
+                raise KeyError(f"Unable to find data in `adata.obs[{key!r}]`.")
+
+            vals = self._adata.obs[key]
+            if is_categorical_dtype(vals):
+                ixs = np.where(np.isin(vals, ixs[key]))[0]
+            elif is_numeric_dtype(vals):
+                if len(ixs[key]) != 2:
+                    raise ValueError(f"Expected range to be of length `2`, found `{len(ixs[key])}`")
+                minn, maxx = sorted(ixs[key])
+                ixs = np.where((vals >= minn) & (vals <= maxx))[0]
+            else:
+                raise TypeError(f"Expected `adata.obs[{key!r}]` to be numeric or categorical, "
+                                f"found `{infer_dtype(vals)}`.")
+            # fmt: on
+        elif isinstance(ixs, str):
+            ixs = np.where(self._adata.obs_names == ixs)[0]
+        else:
+            ixs = np.where(np.isin(self._adata.obs_names, ixs))[0]
+
+        if not len(ixs):
+            logg.warning(f"No {kind} indices have been selected, using `None`")
+            return None
+
+        return ixs
+
+    def _should_stop(self, ix: int) -> bool:
+        return ix in self._stop_ixs
+
+    def _sample(self, ix: int, *, rs: np.random.RandomState) -> int:
+        return rs.choice(
+            self._ixs,
+            p=self._tmat[ix].A.squeeze() if self._is_sparse else self._tmat[ix],
+        )
+
+    def _max_iter(self, max_iter: Union[int, float]) -> int:
+        if isinstance(max_iter, float):
+            max_iter = int(np.ceil(max_iter * len(self._ixs)))
+        if max_iter <= 1:
+            raise ValueError(
+                f"Expected number of iterations to be > 1, found `{max_iter}`."
+            )
+        return max_iter
