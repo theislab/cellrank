@@ -7,8 +7,9 @@ from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.tl._enum import _DEFAULT_BACKEND, ModeEnum, Backend_t
 from cellrank.ul._docs import d
-from cellrank.tl.kernels._bk import BidirectionalKernel
+from cellrank.tl._utils import _connected
 from cellrank.tl.kernels._mixins import ConnectivityMixin
+from cellrank.tl.kernels._base_kernel import BidirectionalKernel
 from cellrank.tl.kernels.utils._pseudotime_scheme import (
     ThresholdSchemeABC,
     HardThresholdScheme,

@@ -1,8 +1,8 @@
 from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.ul._docs import d
-from cellrank.tl.kernels._bk import UnidirectionalKernel
 from cellrank.tl.kernels._mixins import ConnectivityMixin
+from cellrank.tl.kernels._base_kernel import UnidirectionalKernel
 
 __all__ = ("ConnectivityKernel",)
 

@@ -100,6 +100,7 @@ class CytoTRACEKernel(PseudotimeKernel):
         try:
             super()._read_from_adata(time_key=time_key, **kwargs)
         except KeyError as e:
+            self._pseudotime: Optional[np.ndarray] = None
             if "Unable to find pseudotime" not in str(e):
                 raise
             super(PseudotimeKernel, self)._read_from_adata(**kwargs)

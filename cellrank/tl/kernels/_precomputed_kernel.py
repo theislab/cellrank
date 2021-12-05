@@ -5,8 +5,11 @@ from cellrank import logging as logg
 from cellrank._key import Key
 from cellrank.ul._docs import d
 from cellrank.ul._utils import _read_graph_data
-from cellrank.tl.kernels._bk import UnidirectionalKernel
-from cellrank.tl.kernels._base_kernel import _RTOL, KernelExpression
+from cellrank.tl.kernels._base_kernel import (
+    _RTOL,
+    KernelExpression,
+    UnidirectionalKernel,
+)
 
 import numpy as np
 from scipy.sparse import spmatrix, csr_matrix

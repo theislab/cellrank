@@ -4,8 +4,8 @@ from abc import ABC
 
 from anndata import AnnData
 from cellrank.ul._docs import d
-from cellrank.tl.kernels._bk import BidirectionalKernel
 from cellrank.tl.kernels._utils import _ensure_numeric_ordered
+from cellrank.tl.kernels._base_kernel import BidirectionalKernel
 
 import numpy as np
 import pandas as pd

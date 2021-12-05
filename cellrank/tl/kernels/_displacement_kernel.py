@@ -7,10 +7,10 @@ from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.tl._enum import _DEFAULT_BACKEND, Backend_t
 from cellrank.ul._docs import d, inject_docs
-from cellrank.tl.kernels._bk import BidirectionalKernel
 from cellrank.tl.kernels.utils import MonteCarlo, Stochastic, Deterministic
 from cellrank.tl.kernels._mixins import ConnectivityMixin
 from scvelo.preprocessing.moments import get_moments
+from cellrank.tl.kernels._base_kernel import BidirectionalKernel
 from cellrank.tl.kernels.utils._velocity_model import BackwardMode, VelocityModel
 from cellrank.tl.kernels.utils._similarity_scheme import Scheme, Similarity
 
