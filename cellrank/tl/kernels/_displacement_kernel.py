@@ -244,10 +244,6 @@ class DisplacementKernel(ConnectivityMixin, BidirectionalKernel, ABC):
     def __invert__(self) -> "DisplacementKernel":
         # fmt: off
         dk = self.copy()
-        # TODO(michalk8): how to best handle this?
-        dk._vdata = -dk._vdata
-        dk._vexp = get_moments(dk.adata, dk._vdata, second_order=False).astype(np.float64, copy=False)
-        dk._vvar = get_moments(dk.adata, dk._vdata, second_order=True).astype(np.float64, copy=False)
         dk._backward = not self.backward
         dk._params = {}
         dk._transition_matrix = None
