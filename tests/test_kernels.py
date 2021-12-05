@@ -1357,25 +1357,25 @@ class TestVelocityScheme:
 class TestComputeProjection:
     def test_no_transition_matrix(self, adata: AnnData):
         with pytest.raises(RuntimeError, match=r"Compute transition matrix first as"):
-            cr.tl.kernels.ConnectivityKernel(adata).compute_projection()
+            cr.tl.kernels.ConnectivityKernel(adata).plot_projection()
 
     def test_no_basis(self, adata: AnnData):
         ck = cr.tl.kernels.ConnectivityKernel(adata).compute_transition_matrix()
         with pytest.raises(KeyError, match=r"Unable to find a basis in"):
-            ck.compute_projection(basis="foo")
+            ck.plot_projection(basis="foo")
 
     def test_basis_prefix(self, adata: AnnData):
         ck = cr.tl.kernels.ConnectivityKernel(adata).compute_transition_matrix()
-        ck.compute_projection(basis="X_umap")
+        ck.plot_projection(basis="X_umap")
 
     @pytest.mark.parametrize("write_first", [True, False])
     def test_write_to_adata(self, adata: AnnData, write_first: bool):
         ck = cr.tl.kernels.ConnectivityKernel(adata).compute_transition_matrix()
         if write_first:
             ck.write_to_adata()
-            ck.compute_projection(basis="umap")
+            ck.plot_projection(basis="umap")
         else:
-            ck.compute_projection(basis="umap")
+            ck.plot_projection(basis="umap")
             ck.write_to_adata()
 
         assert adata.uns[Key.uns.kernel(ck.backward) + "_params"] == {
@@ -1386,7 +1386,7 @@ class TestComputeProjection:
     @pytest.mark.parametrize("key_added", [None, "foo"])
     def test_key_added(self, adata: AnnData, key_added: Optional[str]):
         ck = cr.tl.kernels.ConnectivityKernel(adata).compute_transition_matrix()
-        ck.compute_projection(basis="umap", copy=False, key_added=key_added)
+        ck.plot_projection(basis="umap", copy=False, key_added=key_added)
 
         key = Key.uns.kernel(ck.backward, key=key_added)
         ukey = f"{key}_params"
@@ -1398,7 +1398,7 @@ class TestComputeProjection:
     @pytest.mark.parametrize("copy", [True, False])
     def test_copy(self, adata: AnnData, copy: bool):
         ck = cr.tl.kernels.ConnectivityKernel(adata).compute_transition_matrix()
-        res = ck.compute_projection(basis="umap", copy=copy)
+        res = ck.plot_projection(basis="umap", copy=copy)
 
         if copy:
             assert isinstance(res, np.ndarray)
@@ -1414,7 +1414,7 @@ class TestComputeProjection:
         adata.obsm["X_umap"][-1] = np.nan
 
         ck = cr.tl.kernels.ConnectivityKernel(adata).compute_transition_matrix()
-        res = ck.compute_projection(basis="umap", copy=True)
+        res = ck.plot_projection(basis="umap", copy=True)
 
         assert not np.all(np.isnan(res))
         assert np.all(np.isnan(res[-1, :]))

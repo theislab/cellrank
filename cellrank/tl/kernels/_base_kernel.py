@@ -1,6 +1,5 @@
 from typing import Any, Dict, List, Tuple, Union, Optional, Sequence
 
-import warnings
 from abc import ABC, abstractmethod
 from copy import deepcopy
 from pathlib import Path
@@ -11,12 +10,8 @@ from cellrank.ul._docs import d, inject_docs
 from cellrank.tl._utils import save_fig, _normalize
 from cellrank.tl._mixins import IOMixin
 from cellrank.tl.kernels.utils import RandomWalk, FlowPlotter
-from cellrank.tl.kernels._utils import _get_basis
-from cellrank.tl.kernels._mixins import (
-    ConnectivityMixin,
-    BidirectionalMixin,
-    UnidirectionalMixin,
-)
+from cellrank.tl.kernels._mixins import BidirectionalMixin, UnidirectionalMixin
+from cellrank.tl.kernels.utils._projection import Projector
 from cellrank.tl.kernels.utils._random_walk import Indices_t
 
 import numpy as np
@@ -279,96 +274,38 @@ class KernelExpression(IOMixin, ABC):
             **kwargs,
         )
 
-    # TODO(michalk8): plot_projection + recompute
-    def compute_projection(
+    def plot_projection(
         self,
         basis: str = "umap",
         key_added: Optional[str] = None,
-        copy: bool = False,
-    ) -> Optional[np.ndarray]:
+        force_recompute: bool = False,
+        **kwargs: Any,
+    ) -> None:
         """
-        Compute a projection of the transition matrix in the embedding.
-
-        Projections can only be calculated for kNN based kernels. The projected matrix
-        can be then visualized as::
-
-            scvelo.pl.velocity_embedding(adata, vkey='T_fwd', basis='umap')
+        Plot :attr:`transition_matrix` in a streamplot.
 
         Parameters
         ----------
         basis
-            Basis in :attr:`anndata.AnnData.obsm` for which to compute the projection.
+            Key in :attr:`anndata.AnnData.obsm` containing the basis onto which to project.
         key_added
-            If not `None` and ``copy = False``, save the result to :attr:`anndata.AnnData.obsm` ``['{key_added}']``.
+            If not `None`, save the result to :attr:`anndata.AnnData.obsm` ``['{key_added}']``.
             Otherwise, save the result to `'T_fwd_{basis}'` or `T_bwd_{basis}`, depending on the direction.
-        copy
-            Whether to return the projection or modify :attr:`adata` inplace.
+        force_recompute
+            TODO
 
         Returns
         -------
-        If ``copy = True``, the projection array of shape `(n_cells, n_components)`.
-        Otherwise, it modifies :attr:`anndata.AnnData.obsm` with a key based on ``key_added``.
+        Nothing, just modifies :attr:`anndata.AnnData.obsm` with a key based on ``key_added``.
         """
-        # modified from: https://github.com/theislab/scvelo/blob/master/scvelo/tools/velocity_embedding.py
-        from cellrank._key import Key
-        from scvelo.tools.velocity_embedding import quiver_autoscale
-
         if self._transition_matrix is None:
             raise RuntimeError(
                 "Compute transition matrix first as `.compute_transition_matrix()`."
             )
 
-        for kernel in self.kernels:
-            if not isinstance(kernel, ConnectivityMixin):
-                raise AttributeError(
-                    f"{kernel!r} is not a kNN based kernel. The embedding projection "
-                    "only works for kNN based kernels."
-                )
-
-        start = logg.info(f"Projecting transition matrix onto `{basis}`")
-        emb = _get_basis(self.adata, basis)
-        T_emb = np.empty_like(emb)
-
-        conn = self.kernels[0]._conn
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            for row_id, row in enumerate(self.transition_matrix):
-                conn_idxs = conn[row_id, :].indices
-
-                dX = emb[conn_idxs] - emb[row_id, None]
-
-                if np.any(np.isnan(dX)):
-                    T_emb[row_id, :] = np.nan
-                else:
-                    probs = row[:, conn_idxs]
-                    if issparse(probs):
-                        probs = probs.A.squeeze()
-
-                    dX /= np.linalg.norm(dX, axis=1)[:, None]
-                    dX = np.nan_to_num(dX)
-                    T_emb[row_id, :] = probs.dot(dX) - dX.sum(0) / dX.shape[0]
-
-        T_emb /= 3 * quiver_autoscale(np.nan_to_num(emb), T_emb)
-
-        if copy:
-            return T_emb
-
-        key = Key.uns.kernel(self.backward, key=key_added)
-        ukey = f"{key}_params"
-
-        embs = self.adata.uns.get(ukey, {}).get("embeddings", [])
-        if basis not in embs:
-            embs = list(embs) + [basis]
-            self.adata.uns[ukey] = self.adata.uns.get(ukey, {})
-            self.adata.uns[ukey]["embeddings"] = embs
-
-        key = key + "_" + basis
-        logg.info(
-            f"Adding `adata.obsm[{key!r}]`\n    Finish",
-            time=start,
-        )
-        self.adata.obsm[key] = T_emb
+        proj = Projector(self)
+        proj.project(basis=basis, key_added=key_added, force_recompute=force_recompute)
+        proj.plot(**kwargs)
 
     def __add__(self, other: "KernelExpression") -> "KernelExpression":
         return self.__radd__(other)

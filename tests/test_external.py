@@ -129,7 +129,7 @@ class TestOTKernel:
             r"only works for kNN based kernels."
         )
         with pytest.raises(AttributeError, match=expected_error):
-            combined_kernel.compute_projection()
+            combined_kernel.plot_projection()
 
 
 @wot_not_installed_skip
@@ -338,7 +338,7 @@ class TestWOTKernel:
             r"works for kNN based kernels."
         )
         with pytest.raises(AttributeError, match=expected_error):
-            combined_kernel.compute_projection()
+            combined_kernel.plot_projection()
 
     def test_wot_write(self, adata_large: AnnData, tmpdir):
         path = str(tmpdir / "wot.pickle")
