@@ -147,7 +147,7 @@ class DisplacementKernel(ConnectivityMixin, BidirectionalKernel, ABC):
         **kwargs: Any,
     ):
         model = VelocityModel(model)
-        backward_mode = BackwardMode(backward_mode)
+        backward_mode = BackwardMode(backward_mode) if self.backward else None
 
         if isinstance(similarity, str):
             similarity = Similarity.create(Scheme(similarity))

@@ -48,7 +48,9 @@ class ModelABC(ABC):
         self._dtype = dtype
 
     @abstractmethod
-    def _compute(self, ix: int, neighs_ixs: np.ndarray, **kwargs: Any) -> np.ndarray:
+    def _compute(
+        self, ix: int, neighs_ixs: np.ndarray, **kwargs: Any
+    ) -> Tuple[np.ndarray, np.ndarray]:
         pass
 
     def __call__(
@@ -82,13 +84,14 @@ class ModelABC(ABC):
             neigh_ixs = indices[start:end]
             n_neigh = len(neigh_ixs)
 
-            tmp = self._compute(ix, neigh_ixs, **kwargs)
-            if np.shape(tmp) != (2, n_neigh):
+            p, l = self._compute(ix, neigh_ixs, **kwargs)
+            if np.shape(p) != (n_neigh,):
                 raise ValueError(
                     f"Expected row of shape `{(2, n_neigh)}`, found `{np.shape(tmp)}`."
                 )
 
-            probs_logits[:, starts[i] : starts[i] + n_neigh] = tmp
+            probs_logits[0, starts[i] : starts[i] + n_neigh] = p
+            probs_logits[1, starts[i] : starts[i] + n_neigh] = l
             if queue is not None:
                 queue.put(1)
 
@@ -170,7 +173,7 @@ class ModelABC(ABC):
 
 class Deterministic(ModelABC):
     def _compute(self, ix: int, neigh_ixs: np.ndarray, **_: Any) -> np.ndarray:
-        W = self._x[neigh_ixs, :] - self._v[ix, :]
+        W = self._x[neigh_ixs, :] - self._x[ix, :]
 
         if self._backward_mode not in (None, BackwardMode.NEGATE):
             return self._similarity(self._v[neigh_ixs, :], -1 * W, self._softmax_scale)
@@ -195,7 +198,7 @@ class Stochastic(ModelABC):
         dtype: np.dtype = np.float64,
         **kwargs: Any,
     ):
-        super().__init__(conn, x, exp, **kwargs)
+        super().__init__(conn, x, exp, dtype=dtype, **kwargs)
         if not hasattr(self._similarity, "hessian"):
             raise AttributeError("Similarity scheme doesn't have a `hessian` function.")
         self._var = var.astype(dtype, copy=False)
@@ -263,8 +266,8 @@ class MonteCarlo(ModelABC):
         dtype: np.dtype = np.float64,
         **kwargs: Any,
     ):
-        super().__init__(conn, x, exp, **kwargs)
-        self._var = var.astype(dtype, np.float64)
+        super().__init__(conn, x, exp, dtype=dtype, **kwargs)
+        self._var = var.astype(dtype, copy=False)
         self._n_samples = n_samples
         np.random.seed(seed)
 
@@ -275,7 +278,8 @@ class MonteCarlo(ModelABC):
         n_neigh = len(nbhs_ixs)
         W = self._x[nbhs_ixs, :] - self._x[ix, :]
 
-        samples = _random_normal(self._x[ix], self._var[ix], n_samples=self._n_samples)
+        # TODO(michalk8): don't store this?
+        samples = _random_normal(self._v[ix], self._var[ix], n_samples=self._n_samples)
 
         probs = np.zeros((n_neigh,), dtype=np.float64)
         logits = np.zeros((n_neigh,), dtype=np.float64)
@@ -287,5 +291,6 @@ class MonteCarlo(ModelABC):
         return probs / self._n_samples, logits / self._n_samples
         # fmt: on
 
+    @property
     def _unit(self) -> str:
         return "sample"
