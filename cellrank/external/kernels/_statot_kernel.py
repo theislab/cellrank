@@ -4,6 +4,7 @@ from typing_extensions import Literal
 from anndata import AnnData
 from cellrank._key import Key
 from cellrank.ul._docs import d
+from cellrank.tl.kernels._mixins import UnidirectionalMixin
 
 import numpy as np
 import pandas as pd
@@ -20,7 +21,7 @@ except ImportError as e:
 
 
 @d.dedent
-class StationaryOTKernel(OTKernel_, error=_error):
+class StationaryOTKernel(UnidirectionalMixin, OTKernel_, error=_error):
     """
     Stationary optimal transport kernel from :cite:`zhang:21`.
 
@@ -92,7 +93,7 @@ class StationaryOTKernel(OTKernel_, error=_error):
         basis
             Key in :attr:`anndata.AnnData.obsm` where the basis is stored.
         cost_norm_method
-            Cost normalization method to use. Use "mean" to ensure `mean(C) = 1` or refer to
+            Cost normalization method to use. Use "mean" to ensure ``mean(C) = 1`` or refer to
             :func:`ot.utils.cost_normalization` for more information.
         method
             Choice of regularization. Valid options are:

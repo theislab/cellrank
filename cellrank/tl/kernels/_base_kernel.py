@@ -543,7 +543,7 @@ class Kernel(KernelExpression, ABC):
         return k
 
     def _copy_ignore(self, *attrs: str) -> "Kernel":
-        sentinel = object()
+        sentinel, attrs = object(), set(attrs)
         objects = [
             (a, o)
             for a, o in ((attr, getattr(self, attr, sentinel)) for attr in attrs)
@@ -554,8 +554,8 @@ class Kernel(KernelExpression, ABC):
                 setattr(self, attr, None)
             return self.copy(deep=False)
         finally:
-            for attr, object in objects:
-                setattr(self, attr, object)
+            for attr, obj in objects:
+                setattr(self, attr, obj)
 
     @property
     def kernels(self) -> Tuple["KernelExpression", ...]:

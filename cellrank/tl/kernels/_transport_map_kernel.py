@@ -379,3 +379,8 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
     def transport_maps(self) -> Optional[Dict[Pair_t, AnnData]]:
         """Transport maps for consecutive time pairs."""
         return self._tmaps
+
+    def __invert__(self) -> "TransportMapKernel":
+        tk = super().__invert__("_tmaps")
+        tk._tmaps = {}
+        return tk

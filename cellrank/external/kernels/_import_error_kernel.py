@@ -1,11 +1,10 @@
 from typing import Any
 
-from cellrank.tl.kernels import Kernel
 from cellrank.external._error_mixin import ImportErrorMixin
-from cellrank.tl.kernels._base_kernel import KernelExpression
+from cellrank.tl.kernels._base_kernel import KernelExpression, UnidirectionalKernel
 
 
-class ErroredKernel(ImportErrorMixin, Kernel):
+class ErroredKernel(ImportErrorMixin, UnidirectionalKernel):
     """
     Utility kernel class which always throw :class:`ImportError` when instantiated.
 
@@ -19,5 +18,5 @@ class ErroredKernel(ImportErrorMixin, Kernel):
     ) -> KernelExpression:
         raise NotImplementedError
 
-    def copy(self) -> KernelExpression:  # noqa: D102
+    def copy(self, deep: bool = False) -> KernelExpression:  # noqa: D102
         raise NotImplementedError

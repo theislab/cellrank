@@ -91,8 +91,8 @@ class ExperimentalTimeKernel(BidirectionalKernel, ABC):
         """Experimental time."""
         return self._exp_time
 
-    def __invert__(self) -> "ExperimentalTimeKernel":
-        etk = self.copy()
+    def __invert__(self, *args: str) -> "ExperimentalTimeKernel":
+        etk = self._copy_ignore(("_transition_matrix",) + args)
         minn, maxx = etk.experimental_time.min(), etk.experimental_time.max()
         etk._exp_time = pd.Series(
             pd.Categorical(maxx - np.array(etk.experimental_time) + minn, ordered=True),
@@ -100,5 +100,4 @@ class ExperimentalTimeKernel(BidirectionalKernel, ABC):
         )
         etk._backward = not self.backward
         etk._params = {}
-        etk._transition_matrix = None
         return etk
