@@ -197,7 +197,7 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
 
     def _validate_tmaps(
         self,
-        tmaps: Mapping[Pair_t, AnnData],
+        tmaps: Dict[Pair_t, AnnData],
         allow_reorder: bool = True,
     ) -> Mapping[Pair_t, AnnData]:
         """
@@ -306,11 +306,7 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         tmat.eliminate_zeros()
 
         if normalize:
-            self._compute_transition_matrix(
-                matrix=tmat,
-                density_normalize=False,
-                check_irreducibility=False,
-            )
+            self.transition_matrix = tmat
         else:
             # e.g. when in `_tmap_as_tmat`
             self._transition_matrix = tmat

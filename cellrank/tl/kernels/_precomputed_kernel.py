@@ -28,7 +28,7 @@ class PrecomputedKernel(UnidirectionalKernel):
         Row-normalized transition matrix or a key in :attr:`anndata.AnnData.obsp`.
         or a :class:`cellrank.tl.kernels.KernelExpression` with a precomputed transition matrix.
     %(adata)s
-        If `None`, a temporary placeholder object is created.
+        If `None`, a temporary placeholder :class:`anndata.AnnData` object is created.
     %(backward)s
     kwargs
         Keyword arguments for :class:`cellrank.kernels.Kernel`.

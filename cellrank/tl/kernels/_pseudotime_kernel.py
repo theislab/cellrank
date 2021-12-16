@@ -7,7 +7,7 @@ from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.tl._enum import _DEFAULT_BACKEND, ModeEnum, Backend_t
 from cellrank.ul._docs import d
-from cellrank.tl._utils import _connected
+from cellrank.tl._utils import _connected, _irreducible
 from cellrank.tl.kernels._mixins import ConnectivityMixin
 from cellrank.tl.kernels._base_kernel import BidirectionalKernel
 from cellrank.tl.kernels.utils._pseudotime_scheme import (
@@ -62,23 +62,22 @@ class PseudotimeKernel(ConnectivityMixin, BidirectionalKernel):
 
     def _read_from_adata(self, time_key: str = "dpt_pseudotime", **kwargs: Any) -> None:
         super()._read_from_adata(**kwargs)
-
+        # fmt: off
         self._time_key = time_key
         if time_key not in self.adata.obs:
             raise KeyError(f"Unable to find pseudotime in `adata.obs[{time_key!r}]`.")
 
-        self._pseudotime = np.array(self.adata.obs[time_key]).astype(
-            np.float64, copy=True
-        )
+        self._pseudotime = np.array(self.adata.obs[time_key]).astype(np.float64, copy=True)
         if np.any(np.isnan(self.pseudotime)):
             raise ValueError("Encountered NaN values in pseudotime.")
+        # fmt: on
 
-    # TODO(michalk8): check callable's signature
     @d.dedent
     def compute_transition_matrix(
         self,
         threshold_scheme: Union[
-            Literal["soft", "hard"], Callable[[np.ndarray], np.ndarray]
+            Literal["soft", "hard"],
+            Callable[[float, np.ndarray, np.ndarray], np.ndarray],
         ] = "hard",
         frac_to_keep: float = 0.3,
         b: float = 10.0,
@@ -125,7 +124,7 @@ class PseudotimeKernel(ConnectivityMixin, BidirectionalKernel):
         Self and updates :attr:`transition_matrix` and :attr:`params`.
         """
         if self.pseudotime is None:
-            raise ValueError("Compute `.pseudotime` first.")
+            raise ValueError("Compute pseudotime first.")  # CytoTraceKernel
 
         start = logg.info("Computing transition matrix based on pseudotime`")
         if isinstance(threshold_scheme, str):
@@ -167,8 +166,9 @@ class PseudotimeKernel(ConnectivityMixin, BidirectionalKernel):
         # make sure the biased graph is still connected
         if not _connected(biased_conn):
             logg.warning("Biased KNN graph is disconnected")
+        if check_irreducibility and not _irreducible(biased_conn):
+            logg.warning("Biased KNN graph is not irreducible")
 
-        # TODO(michalk8): check irred
         self.transition_matrix = biased_conn
         logg.info("    Finish", time=start)
 
