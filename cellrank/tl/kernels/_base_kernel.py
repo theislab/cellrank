@@ -378,7 +378,7 @@ class KernelExpression(IOMixin, ABC):
         return KernelMul(s, o)
 
     @d.get_sections(base="write_to_adata", sections=["Parameters"])
-    @inject_docs()  # get rid of {{}}
+    @inject_docs()  # gets rid of {{}}
     @d.dedent
     def write_to_adata(self, key: Optional[str] = None, copy: bool = False) -> None:
         """
@@ -387,8 +387,7 @@ class KernelExpression(IOMixin, ABC):
         Parameters
         ----------
         key
-            Key used when writing transition matrix to :attr:`adata`.
-            If `None`, determine the key automatically.
+            Key used when writing transition matrix to :attr:`adata`. If `None`, the key automatically automatically.
 
         Returns
         -------
@@ -401,7 +400,6 @@ class KernelExpression(IOMixin, ABC):
                 "Compute transition matrix first as `.compute_transition_matrix()`."
             )
 
-        # TODO
         key = Key.uns.kernel(self.backward, key=key)
         # retain the embedding info
         self.adata.uns[f"{key}_params"] = {
@@ -438,19 +436,22 @@ class KernelExpression(IOMixin, ABC):
                 f"Expected matrix to be of shape `{self.shape}`, found `{matrix.shape}`."
             )
 
+        def should_norm(mat: Union[np.ndarray, spmatrix]) -> bool:
+            return not np.isclose(
+                np.asarray(mat.sum(1)).squeeze(), 1.0, rtol=1e-12
+            ).all()
+
+        # fmt: off
         if issparse(matrix) and not isspmatrix_csr(matrix):
             matrix = csr_matrix(matrix)
         matrix = matrix.astype(np.float64, copy=False)
 
-        # fmt: off
-        should_norm = ~np.isclose(np.asarray(matrix.sum(1)).squeeze(), 1.0, rtol=1e-12).all()
+        normalize = (self._parent is None or self._normalize) and should_norm(matrix)
+        matrix = _normalize(matrix) if normalize else matrix
+        if normalize and should_norm(matrix):  # some rows are all 0s/contain invalid values
+            n_inv = np.sum(~np.isclose(np.asarray(matrix.sum(1)).squeeze(), 1.0, rtol=1e-12))
+            raise ValueError(f"Transition matrix is not row stochastic, {n_inv}/{matrix.shape[0]} do not sum to 1.")
         # fmt: on
-        if self._parent is None:
-            matrix = _normalize(matrix) if should_norm else matrix
-        else:
-            matrix = _normalize(matrix) if self._normalize and should_norm else matrix
-        if not np.all(np.isfinite(matrix.data if issparse(matrix) else matrix)):
-            raise ValueError("Not all values are finite.")
 
         self._transition_matrix = matrix
 
@@ -464,23 +465,24 @@ class KernelExpression(IOMixin, ABC):
     def _reuse_cache(
         self, expected_params: Dict[str, Any], *, time: Optional[Any] = None
     ) -> bool:
+        # fmt: off
         try:
             if expected_params == self._params:
                 assert self.transition_matrix is not None
-                logg.debug("Using cached version")
+                logg.debug("Using cached transition matrix")
                 logg.info("    Finish", time=time)
                 return True
             return False
         except AssertionError:
-            logg.warning(
-                f"Transition matrix doesn't exist for the given parameters. Recomputing"
-            )
+            logg.warning("Transition matrix does not exist for the given parameters. Recomputing")
             return False
-        except Exception:
+        except Exception as e:  # e.g. the dict is not comparable
+            logg.warning(f"Expected and actually parameters are not comparable, reason `{e}`. Recomputing")
             expected_params = {}  # clear the params
-            raise
+            return False
         finally:
             self._params = expected_params
+        # fmt: on
 
 
 class Kernel(KernelExpression, ABC):
@@ -557,7 +559,9 @@ class Kernel(KernelExpression, ABC):
     def shape(self) -> Tuple[int, int]:
         return self._n_obs, self._n_obs
 
-    def __getitem__(self, item: int) -> "Kernel":
+    def __getitem__(self, ix: int) -> "Kernel":
+        if ix != 0:
+            raise IndexError(ix)
         return self
 
     def __len__(self) -> int:
@@ -782,8 +786,7 @@ class KernelAdd(NaryKernelExpression):
             total = sum((c.transition_matrix for c in constants), 0.0)
             for c in constants:
                 c.transition_matrix = c.transition_matrix / total
-
-            for kexpr in self._kexprs:  # don't normalize  (c * x)
+            for kexpr in self:  # don't normalize  (c * x)
                 kexpr._normalize = False
 
     @property
