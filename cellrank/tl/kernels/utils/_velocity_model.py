@@ -7,7 +7,6 @@ from math import fsum
 from cellrank.tl._enum import _DEFAULT_BACKEND, ModeEnum, Backend_t
 from cellrank.ul._parallelize import parallelize
 from cellrank.tl.kernels._utils import _random_normal, _calculate_starts
-from cellrank.tl.kernels._base_kernel import _RTOL
 from cellrank.tl.kernels.utils._similarity_scheme import Similarity
 
 import numpy as np
@@ -147,7 +146,7 @@ class ModelABC(ABC):
         # only happens when using numba
         probs = reconstruct(data[0])
         logits = reconstruct(data[1])
-        if not np.allclose(probs.sum(1), 1.0, rtol=_RTOL):
+        if not np.allclose(probs.sum(1), 1.0, rtol=1e-12):
             # TODO: row ixs?
             raise ValueError(f"Matrix is not row-stochastic.")
 
@@ -242,7 +241,7 @@ class Stochastic(ModelABC):
             return self._uniform(n_neigh)
 
         sum_ = fsum(p)
-        if not np.isclose(sum_, 1.0, rtol=_RTOL):
+        if not np.isclose(sum_, 1.0, rtol=1e-12):
             p[~nan_mask] = p[~nan_mask] / sum_
 
         return p, c

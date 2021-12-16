@@ -27,14 +27,7 @@ from cellrank.tl.kernels import (
     ConnectivityKernel,
     TransportMapKernel,
 )
-from cellrank.tl.kernels._base_kernel import (
-    Kernel,
-    Constant,
-    KernelAdd,
-    KernelMul,
-    _dtype,
-    _is_bin_mult,
-)
+from cellrank.tl.kernels._base_kernel import Kernel, Constant, KernelAdd, KernelMul
 from cellrank.tl.kernels._cytotrace_kernel import CytoTRACEAggregation
 
 import numpy as np
@@ -626,7 +619,7 @@ class TestKernel:
         else:
             assert isinstance(c.transition_matrix, np.ndarray)
 
-        assert c.transition_matrix.dtype == _dtype
+        assert c.transition_matrix.dtype == np.float64
 
     def test_write_adata(self, adata: AnnData):
         vk = VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)

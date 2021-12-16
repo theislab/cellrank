@@ -23,9 +23,6 @@ from matplotlib.colors import LinearSegmentedColormap
 __all__ = ("Kernel",)
 
 Tmat_t = Union[np.ndarray, spmatrix]
-# TODO(michalk8): add to constants
-_RTOL = 1e-12
-_dtype = np.float64
 
 
 class KernelExpression(IOMixin, ABC):
@@ -292,7 +289,7 @@ class KernelExpression(IOMixin, ABC):
             If not `None`, save the result to :attr:`anndata.AnnData.obsm` ``['{key_added}']``.
             Otherwise, save the result to `'T_fwd_{basis}'` or `T_bwd_{basis}`, depending on the direction.
         recompute
-            TODO
+            Whether to recompute the projection if it already exists.
 
         Returns
         -------
@@ -443,8 +440,7 @@ class KernelExpression(IOMixin, ABC):
 
         if issparse(matrix) and not isspmatrix_csr(matrix):
             matrix = csr_matrix(matrix)
-        # TODO
-        matrix = matrix.astype(np.float64)
+        matrix = matrix.astype(np.float64, copy=False)
 
         # fmt: off
         should_norm = ~np.isclose(np.asarray(matrix.sum(1)).squeeze(), 1.0, rtol=1e-12).all()
@@ -453,7 +449,6 @@ class KernelExpression(IOMixin, ABC):
             matrix = _normalize(matrix) if should_norm else matrix
         else:
             matrix = _normalize(matrix) if self._normalize and should_norm else matrix
-        # TODO
         if not np.all(np.isfinite(matrix.data if issparse(matrix) else matrix)):
             raise ValueError("Not all values are finite.")
 
@@ -471,19 +466,19 @@ class KernelExpression(IOMixin, ABC):
     ) -> bool:
         try:
             if expected_params == self._params:
-                # TODO
                 assert self.transition_matrix is not None
-                # assert self.transition_matrix is not None, _ERROR_EMPTY_CACHE_MSG
-                # logg.debug(_LOG_USING_CACHE)
+                logg.debug("Using cached version")
                 logg.info("    Finish", time=time)
                 return True
             return False
-        except AssertionError as e:
-            # TODO(michalk8): clear params?
-            raise ValueError(str(e)) from None
-        except Exception as e:  # noqa: B902
-            logg.error(f"Unable to load the cache, reason: `{e}`")
+        except AssertionError:
+            logg.warning(
+                f"Transition matrix doesn't exist for the given parameters. Recomputing"
+            )
             return False
+        except Exception:
+            expected_params = {}  # clear the params
+            raise
         finally:
             self._params = expected_params
 
@@ -624,7 +619,9 @@ class Constant(UnidirectionalKernel):
             other = Constant(self.adata, other)
         if isinstance(other, Constant):
             if self.shape != other.shape:
-                raise ValueError("TODO")
+                raise ValueError(
+                    f"Expected kernel shape to be `{self.shape}`, found `{other.shape}`."
+                )
             return Constant(
                 self.adata, self.transition_matrix + other.transition_matrix
             )
@@ -638,7 +635,9 @@ class Constant(UnidirectionalKernel):
             other = Constant(self.adata, other)
         if isinstance(other, Constant):
             if self.shape != other.shape:
-                raise ValueError("TODO")
+                raise ValueError(
+                    f"Expected kernel shape to be `{self.shape}`, found `{other.shape}`."
+                )
             return Constant(
                 self.adata, self.transition_matrix * other.transition_matrix
             )
@@ -689,16 +688,17 @@ class NaryKernelExpression(BidirectionalMixin, KernelExpression):
 
         shapes = {kexpr.shape for kexpr in kexprs}
         if len(shapes) > 1:
-            raise ValueError("TODO")
+            raise ValueError(
+                f"Expected all kernels to be of same shape, found `{sorted(shapes)}`."
+            )
 
         directions = {kexpr.backward for kexpr in kexprs}
         if True in directions and False in directions:
-            raise ValueError("TODO")
+            raise ValueError("Unable to combine both forward and backward kernels.")
 
         self._backward = (
             True if True in directions else False if False in directions else None
         )
-        # self._kexprs = tuple(k if k._parent is None else k.copy() for k in kexprs)
         self._kexprs = kexprs
         for kexpr in self:
             kexpr._parent = self
