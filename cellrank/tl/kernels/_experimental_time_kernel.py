@@ -4,7 +4,7 @@ from abc import ABC
 
 from anndata import AnnData
 from cellrank.ul._docs import d
-from cellrank.tl.kernels._utils import _ensure_numeric_ordered
+from cellrank.tl.kernels._utils import require_tmat, _ensure_numeric_ordered
 from cellrank.tl.kernels._base_kernel import BidirectionalKernel
 
 import numpy as np
@@ -63,6 +63,7 @@ class ExperimentalTimeKernel(BidirectionalKernel, ABC):
         # fmt: on
 
     @d.dedent
+    @require_tmat
     def plot_single_flow(
         self,
         cluster: str,

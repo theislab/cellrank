@@ -10,6 +10,7 @@ from cellrank.ul._docs import d, inject_docs
 from cellrank.tl._utils import save_fig, _normalize
 from cellrank.tl._mixins import IOMixin
 from cellrank.tl.kernels.utils import RandomWalk, FlowPlotter
+from cellrank.tl.kernels._utils import require_tmat
 from cellrank.tl.kernels._mixins import BidirectionalMixin, UnidirectionalMixin
 from cellrank.tl.kernels.utils._projection import Projector
 from cellrank.tl.kernels.utils._random_walk import Indices_t
@@ -20,7 +21,7 @@ from scipy.sparse import issparse, spmatrix, csr_matrix, isspmatrix_csr
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 
-__all__ = ("Kernel",)
+__all__ = ("UnidirectionalKernel", "BidirectionalKernel")
 
 Tmat_t = Union[np.ndarray, spmatrix]
 
@@ -99,6 +100,7 @@ class KernelExpression(IOMixin, ABC):
     @d.get_full_description(base="plot_single_flow")
     @d.get_sections(base="plot_single_flow", sections=["Parameters", "Returns"])
     @d.dedent
+    @require_tmat
     def plot_single_flow(
         self,
         cluster: str,
@@ -150,11 +152,6 @@ class KernelExpression(IOMixin, ABC):
         This function will not recreate the results from :cite:`mittnenzweig:21`, because there, the Metacell model
         :cite:`baran:19` was used to compute the flow, whereas here the transition matrix is used.
         """  # noqa: E501
-        if self._transition_matrix is None:
-            raise RuntimeError(
-                "Compute transition matrix first as `.compute_transition_matrix()`."
-            )
-
         fp = FlowPlotter(self.adata, self.transition_matrix, cluster_key, time_key)
         fp = fp.prepare(cluster, clusters, time_points)
 
@@ -176,6 +173,7 @@ class KernelExpression(IOMixin, ABC):
             return ax
 
     @d.dedent
+    @require_tmat
     def plot_random_walks(
         self,
         n_sims: int = 100,
@@ -240,11 +238,6 @@ class KernelExpression(IOMixin, ABC):
         %(just_plots)s
         For each random walk, the first/last cell is marked by the start/end colors of ``cmap``.
         """
-
-        if self._transition_matrix is None:
-            raise RuntimeError(
-                "Compute transition matrix first as `.compute_transition_matrix()`."
-            )
         rw = RandomWalk(
             self.adata, self.transition_matrix, start_ixs=start_ixs, stop_ixs=stop_ixs
         )
@@ -271,6 +264,7 @@ class KernelExpression(IOMixin, ABC):
             **kwargs,
         )
 
+    @require_tmat
     def plot_projection(
         self,
         basis: str = "umap",
@@ -295,11 +289,6 @@ class KernelExpression(IOMixin, ABC):
         -------
         Nothing, just modifies :attr:`anndata.AnnData.obsm` with a key based on ``key_added``.
         """
-        if self._transition_matrix is None:
-            raise RuntimeError(
-                "Compute transition matrix first as `.compute_transition_matrix()`."
-            )
-
         proj = Projector(self)
         proj.project(basis=basis, key_added=key_added, recompute=recompute)
         proj.plot(**kwargs)
@@ -380,6 +369,7 @@ class KernelExpression(IOMixin, ABC):
     @d.get_sections(base="write_to_adata", sections=["Parameters"])
     @inject_docs()  # gets rid of {{}}
     @d.dedent
+    @require_tmat
     def write_to_adata(self, key: Optional[str] = None, copy: bool = False) -> None:
         """
         Write the transition matrix and parameters used for computation to the underlying :attr:`adata` object.
@@ -394,11 +384,6 @@ class KernelExpression(IOMixin, ABC):
         %(write_to_adata)s
         """
         from cellrank._key import Key
-
-        if self.transition_matrix is None:
-            raise ValueError(
-                "Compute transition matrix first as `.compute_transition_matrix()`."
-            )
 
         key = Key.uns.kernel(self.backward, key=key)
         # retain the embedding info
@@ -425,23 +410,21 @@ class KernelExpression(IOMixin, ABC):
         Parameters
         ----------
         matrix
-            Transition matrix. If this expression has no parent, the matrix is normalized if necessary.
+            Transition matrix. The matrix is row-normalized if necessary.
 
         Returns
         -------
         Nothing, just updates the :attr:`transition_matrix` and optionally normalizes it.
         """
+        # fmt: off
         if matrix.shape != self.shape:
             raise ValueError(
                 f"Expected matrix to be of shape `{self.shape}`, found `{matrix.shape}`."
             )
 
         def should_norm(mat: Union[np.ndarray, spmatrix]) -> bool:
-            return not np.isclose(
-                np.asarray(mat.sum(1)).squeeze(), 1.0, rtol=1e-12
-            ).all()
+            return not np.isclose(np.asarray(mat.sum(1)).squeeze(), 1.0, rtol=1e-12).all()
 
-        # fmt: off
         if issparse(matrix) and not isspmatrix_csr(matrix):
             matrix = csr_matrix(matrix)
         matrix = matrix.astype(np.float64, copy=False)
@@ -511,7 +494,7 @@ class Kernel(KernelExpression, ABC):
         shape = (adata.n_obs, adata.n_obs)
         if self.shape != shape:
             raise ValueError(
-                f"Expected the new object to have same shape as the previous `{self.shape}`, found `{shape}`."
+                f"Expected new object to have same shape as the previous `{self.shape}`, found `{shape}`."
             )
         self._adata = adata
 
@@ -522,11 +505,12 @@ class Kernel(KernelExpression, ABC):
         return k
 
     def _copy_ignore(self, *attrs: str) -> "Kernel":
+        # prevent copying attributes that are not necessary, e.g. during inversion
         sentinel, attrs = object(), set(attrs)
         objects = [
-            (a, o)
-            for a, o in ((attr, getattr(self, attr, sentinel)) for attr in attrs)
-            if o is not sentinel
+            (attr, obj)
+            for attr, obj in ((attr, getattr(self, attr, sentinel)) for attr in attrs)
+            if obj is not sentinel
         ]
         try:
             for attr, _ in objects:
@@ -616,37 +600,27 @@ class Constant(UnidirectionalKernel):
     def copy(self, *, deep: bool = False) -> "KernelExpression":
         return Constant(self.adata, self.transition_matrix)
 
-    def __radd__(
-        self, other: Union[int, float, "KernelExpression"]
-    ) -> "KernelExpression":
+    # fmt: off
+    def __radd__(self, other: Union[int, float, "KernelExpression"]) -> "KernelExpression":
         if isinstance(other, (int, float, np.integer, np.floating)):
             other = Constant(self.adata, other)
         if isinstance(other, Constant):
             if self.shape != other.shape:
-                raise ValueError(
-                    f"Expected kernel shape to be `{self.shape}`, found `{other.shape}`."
-                )
-            return Constant(
-                self.adata, self.transition_matrix + other.transition_matrix
-            )
+                raise ValueError(f"Expected kernel shape to be `{self.shape}`, found `{other.shape}`.")
+            return Constant(self.adata, self.transition_matrix + other.transition_matrix)
 
-        return super().__rmul__(other)
+        return super().__radd__(other)
 
-    def __rmul__(
-        self, other: Union[int, float, "KernelExpression"]
-    ) -> "KernelExpression":
+    def __rmul__(self, other: Union[int, float, "KernelExpression"]) -> "KernelExpression":
         if isinstance(other, (int, float, np.integer, np.floating)):
             other = Constant(self.adata, other)
         if isinstance(other, Constant):
             if self.shape != other.shape:
-                raise ValueError(
-                    f"Expected kernel shape to be `{self.shape}`, found `{other.shape}`."
-                )
-            return Constant(
-                self.adata, self.transition_matrix * other.transition_matrix
-            )
+                raise ValueError(f"Expected kernel shape to be `{self.shape}`, found `{other.shape}`.")
+            return Constant(self.adata, self.transition_matrix * other.transition_matrix)
 
         return super().__rmul__(other)
+    # fmt: on
 
     def __repr__(self) -> str:
         return repr(round(self.transition_matrix, 3))
@@ -667,6 +641,11 @@ class NaryKernelExpression(BidirectionalMixin, KernelExpression):
     @property
     @abstractmethod
     def _initial_value(self) -> Union[int, float, Tmat_t]:
+        pass
+
+    @property
+    @abstractmethod
+    def _combiner(self) -> str:
         pass
 
     def compute_transition_matrix(self) -> "KernelExpression":
@@ -693,7 +672,7 @@ class NaryKernelExpression(BidirectionalMixin, KernelExpression):
         shapes = {kexpr.shape for kexpr in kexprs}
         if len(shapes) > 1:
             raise ValueError(
-                f"Expected all kernels to be of same shape, found `{sorted(shapes)}`."
+                f"Expected all kernels to have the same shapes, found `{sorted(shapes)}`."
             )
 
         directions = {kexpr.backward for kexpr in kexprs}
@@ -713,7 +692,7 @@ class NaryKernelExpression(BidirectionalMixin, KernelExpression):
 
     @adata.setter
     def adata(self, adata: Optional[AnnData]) -> None:
-        # allow re-setting (use for temp. pickling without adata)
+        # allow resetting (use for temp. pickling without adata)
         if adata is None or all(kexpr.adata is None for kexpr in self):
             for kexpr in self:
                 kexpr.adata = adata
@@ -727,22 +706,26 @@ class NaryKernelExpression(BidirectionalMixin, KernelExpression):
             if isinstance(kexpr, Kernel) and not isinstance(kexpr, Constant):
                 kernels.append(kexpr)
             elif isinstance(kexpr, NaryKernelExpression):
+                # recurse
                 kernels.extend(kexpr.kernels)
 
         return tuple(kernels)
 
     def copy(self, *, deep: bool = False) -> "KernelExpression":
-        kexprs = tuple(k.copy(deep=deep) for k in self)
+        kexprs = (k.copy(deep=deep) for k in self)
         return type(self)(*kexprs)
 
     @property
     def shape(self) -> Tuple[int, int]:
+        # all kernels have the same shape
         return self[0].shape
 
-    @property
-    @abstractmethod
-    def _operator(self) -> str:
-        pass
+    def _format(self, formatter: Callable[[KernelExpression], str]) -> str:
+        return (
+            f"{'~' if self.backward and self._parent is None else ''}("
+            + f" {self._combiner} ".join(formatter(kexpr) for kexpr in self)
+            + ")"
+        )
 
     def __getitem__(self, ix: int) -> "KernelExpression":
         return self._kexprs[ix]
@@ -757,13 +740,6 @@ class NaryKernelExpression(BidirectionalMixin, KernelExpression):
             ~k if isinstance(k, BidirectionalMixin) else k.copy() for k in self
         )
         return type(self)(*kexprs)
-
-    def _format(self, formatter: Callable[[KernelExpression], str]) -> str:
-        return (
-            f"{'~' if self.backward and self._parent is None else ''}("
-            + f" {self._operator} ".join(formatter(kexpr) for kexpr in self)
-            + ")"
-        )
 
     def __repr__(self) -> str:
         return self._format(repr)
@@ -794,7 +770,7 @@ class KernelAdd(NaryKernelExpression):
         return [c for k in self if isinstance(k, KernelMul) for c in k._bin_consts]
 
     @property
-    def _operator(self) -> str:
+    def _combiner(self) -> str:
         return "+"
 
     @property
@@ -809,6 +785,16 @@ class KernelMul(NaryKernelExpression):
         if issparse(t2):
             return t2.multiply(t1)
         return t1 * t2
+
+    def _format(self, formatter: Callable[[KernelExpression], str]) -> str:
+        fmt = super()._format(formatter)
+        if fmt[0] == "~" or not self._bin_consts:
+            return fmt
+        if fmt.startswith("("):
+            fmt = fmt[1:]
+        if fmt.endswith(")"):
+            fmt = fmt[:-1]
+        return fmt
 
     @property
     def _bin_consts(self) -> List[KernelExpression]:
@@ -827,16 +813,9 @@ class KernelMul(NaryKernelExpression):
         return k2, k1
 
     @property
-    def _operator(self) -> str:
+    def _combiner(self) -> str:
         return "*"
 
     @property
     def _initial_value(self) -> Union[int, float, Tmat_t]:
         return 1.0
-
-    def _format(self, formatter: Callable[[KernelExpression], str]) -> str:
-        fmt = super()._format(formatter)
-        if fmt[0] == "~" or not self._bin_consts:
-            return fmt
-
-        return fmt[1:-1]

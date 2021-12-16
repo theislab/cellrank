@@ -32,7 +32,6 @@ class ConnectivityKernel(ConnectivityMixin, UnidirectionalKernel):
         Check whether the underlying KNN graph is connected.
     """
 
-    # TODO(michalk8): chk conn docrep
     def __init__(
         self,
         adata: AnnData,
