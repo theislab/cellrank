@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Tuple, Union, Optional, Sequence
+from typing import Any, Dict, List, Tuple, Union, Callable, Optional, Sequence
 
 from abc import ABC, abstractmethod
 from copy import deepcopy
@@ -494,14 +494,14 @@ class KernelExpression(IOMixin, ABC):
             self._params = expected_params
 
     def __repr__(self) -> str:
-        return f"{'~' if self.backward and self._parent is None else ''}<{self.__class__.__name__}>"
+        return f"{'~' if self.backward and self._parent is None else ''}{self.__class__.__name__}"
 
     def __str__(self) -> str:
         params_fmt = self._format_params()
         if params_fmt:
             return (
                 f"{'~' if self.backward and self._parent is None else ''}"
-                f"<{self.__class__.__name__}[{params_fmt}]>"
+                f"{self.__class__.__name__}[{params_fmt}]"
             )
         return repr(self)
 
@@ -558,6 +558,15 @@ class Kernel(KernelExpression, ABC):
                 setattr(self, attr, obj)
 
     @property
+    def transition_matrix(self) -> Union[np.ndarray, csr_matrix]:
+        """Row-normalized transition matrix."""
+        return self._transition_matrix
+
+    @transition_matrix.setter
+    def transition_matrix(self, matrix: Any) -> None:
+        KernelExpression.transition_matrix.fset(self, matrix)
+
+    @property
     def kernels(self) -> Tuple["KernelExpression", ...]:
         return (self,)
 
@@ -599,10 +608,8 @@ class Constant(UnidirectionalKernel):
             raise TypeError(
                 f"Value must be a `float` or `int`, found `{type(value).__name__}`."
             )
-        if value < 0:
-            raise ValueError(
-                f"Expected the scalar to be non-negative, found `{value}`."
-            )
+        if value <= 0:
+            raise ValueError(f"Expected the scalar to be positive, found `{value}`.")
 
         self._transition_matrix = value
         self._params = {"value": value}
@@ -637,6 +644,12 @@ class Constant(UnidirectionalKernel):
             )
 
         return super().__rmul__(other)
+
+    def __repr__(self) -> str:
+        return repr(round(self.transition_matrix, 3))
+
+    def __str__(self) -> str:
+        return str(round(self.transition_matrix, 3))
 
 
 class NaryKernelExpression(BidirectionalMixin, KernelExpression):
@@ -716,13 +729,16 @@ class NaryKernelExpression(BidirectionalMixin, KernelExpression):
 
     def copy(self, *, deep: bool = False) -> "KernelExpression":
         kexprs = tuple(k.copy(deep=deep) for k in self)
-        for k in kexprs:
-            k._parent = None
         return type(self)(*kexprs)
 
     @property
     def shape(self) -> Tuple[int, int]:
         return self[0].shape
+
+    @property
+    @abstractmethod
+    def _operator(self) -> str:
+        pass
 
     def __getitem__(self, ix: int) -> "KernelExpression":
         return self._kexprs[ix]
@@ -736,29 +752,39 @@ class NaryKernelExpression(BidirectionalMixin, KernelExpression):
         kexprs = tuple(
             ~k if isinstance(k, BidirectionalMixin) else k.copy() for k in self
         )
-        # TODO(michalk8): remove?
-        for k in kexprs:
-            k._parent = None
         return type(self)(*kexprs)
+
+    def _format(self, formatter: Callable[[KernelExpression], str]) -> str:
+        return (
+            f"{'~' if self.backward and self._parent is None else ''}("
+            + f" {self._operator} ".join(formatter(kexpr) for kexpr in self)
+            + ")"
+        )
+
+    def __repr__(self) -> str:
+        return self._format(repr)
+
+    def __str__(self) -> str:
+        return self._format(str)
 
 
 class KernelAdd(NaryKernelExpression):
+    def _combine_transition_matrices(self, t1: Tmat_t, t2: Tmat_t) -> Tmat_t:
+        return t1 + t2
+
+    @property
+    def _operator(self) -> str:
+        return "+"
+
     @property
     def _initial_value(self) -> Union[int, float, Tmat_t]:
         return 0.0
-
-    def _combine_transition_matrices(self, t1: Tmat_t, t2: Tmat_t) -> Tmat_t:
-        return t1 + t2
 
 
 class KernelMul(NaryKernelExpression):
     def compute_transition_matrix(self) -> "KernelExpression":
         self._maybe_recalculate_constants()
         return super().compute_transition_matrix()
-
-    @property
-    def _initial_value(self) -> Union[int, float, Tmat_t]:
-        return 1.0
 
     def _combine_transition_matrices(self, t1: Tmat_t, t2: Tmat_t) -> Tmat_t:
         if issparse(t1):
@@ -792,3 +818,11 @@ class KernelMul(NaryKernelExpression):
         if isinstance(k1, Constant):
             return k1, k2
         return k2, k1
+
+    @property
+    def _operator(self) -> str:
+        return "*"
+
+    @property
+    def _initial_value(self) -> Union[int, float, Tmat_t]:
+        return 1.0

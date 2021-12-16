@@ -1,10 +1,12 @@
 from typing import Any
 
+from abc import ABC
+
 from cellrank.external._error_mixin import ImportErrorMixin
-from cellrank.tl.kernels._base_kernel import KernelExpression, UnidirectionalKernel
+from cellrank.tl.kernels._base_kernel import Kernel, KernelExpression
 
 
-class ErroredKernel(ImportErrorMixin, UnidirectionalKernel):
+class ErroredKernel(ImportErrorMixin, Kernel, ABC):
     """
     Utility kernel class which always throw :class:`ImportError` when instantiated.
 
