@@ -3,7 +3,6 @@ from typing import Any, Union, Optional
 from anndata import AnnData
 from cellrank import logging as logg
 from cellrank._key import Key
-from cellrank.ul._docs import d
 from cellrank.ul._utils import _read_graph_data
 from cellrank.tl.kernels._base_kernel import KernelExpression, UnidirectionalKernel
 
@@ -54,7 +53,6 @@ class PrecomputedKernel(UnidirectionalKernel):
         raise TypeError("TODO")
 
     @classmethod
-    @d.dedent
     def from_adata(
         cls,
         adata: AnnData,
