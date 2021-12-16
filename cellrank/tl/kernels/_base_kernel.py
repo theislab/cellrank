@@ -312,7 +312,7 @@ class KernelExpression(IOMixin, ABC):
 
     def __radd__(self, other: "KernelExpression") -> "KernelExpression":
         def same_level_add(k1: "KernelExpression", k2: "KernelExpression") -> bool:
-            if not isinstance(k1, KernelAdd) and not isinstance(k2, KernelMul):
+            if not (isinstance(k1, KernelAdd) and isinstance(k2, KernelMul)):
                 return False
 
             for kexpr in k1:
@@ -466,12 +466,6 @@ class KernelExpression(IOMixin, ABC):
             return self._params
         return {f"{repr(k)}:{i}": k.params for i, k in enumerate(self.kernels)}
 
-    def _format_params(self) -> 3:
-        return ", ".join(
-            f"{k}={round(v, 3) if isinstance(v, float) else v!r}"
-            for k, v in self.params.items()
-        )
-
     def _reuse_cache(
         self, expected_params: Dict[str, Any], *, time: Optional[Any] = None
     ) -> bool:
@@ -492,18 +486,6 @@ class KernelExpression(IOMixin, ABC):
             return False
         finally:
             self._params = expected_params
-
-    def __repr__(self) -> str:
-        return f"{'~' if self.backward and self._parent is None else ''}{self.__class__.__name__}"
-
-    def __str__(self) -> str:
-        params_fmt = self._format_params()
-        if params_fmt:
-            return (
-                f"{'~' if self.backward and self._parent is None else ''}"
-                f"{self.__class__.__name__}[{params_fmt}]"
-            )
-        return repr(self)
 
 
 class Kernel(KernelExpression, ABC):
@@ -557,6 +539,12 @@ class Kernel(KernelExpression, ABC):
             for attr, obj in objects:
                 setattr(self, attr, obj)
 
+    def _format_params(self) -> 3:
+        return ", ".join(
+            f"{k}={round(v, 3) if isinstance(v, float) else v!r}"
+            for k, v in self.params.items()
+        )
+
     @property
     def transition_matrix(self) -> Union[np.ndarray, csr_matrix]:
         """Row-normalized transition matrix."""
@@ -579,6 +567,18 @@ class Kernel(KernelExpression, ABC):
 
     def __len__(self) -> int:
         return 1
+
+    def __repr__(self) -> str:
+        return f"{'~' if self.backward and self._parent is None else ''}{self.__class__.__name__}"
+
+    def __str__(self) -> str:
+        params_fmt = self._format_params()
+        if params_fmt:
+            return (
+                f"{'~' if self.backward and self._parent is None else ''}"
+                f"{self.__class__.__name__}[{params_fmt}]"
+            )
+        return repr(self)
 
 
 class UnidirectionalKernel(UnidirectionalMixin, Kernel, ABC):
@@ -769,8 +769,26 @@ class NaryKernelExpression(BidirectionalMixin, KernelExpression):
 
 
 class KernelAdd(NaryKernelExpression):
+    def compute_transition_matrix(self) -> "KernelExpression":
+        self._maybe_recalculate_constants()
+        return super().compute_transition_matrix()
+
     def _combine_transition_matrices(self, t1: Tmat_t, t2: Tmat_t) -> Tmat_t:
         return t1 + t2
+
+    def _maybe_recalculate_constants(self) -> None:
+        constants = self._bin_consts
+        if constants:
+            total = sum((c.transition_matrix for c in constants), 0.0)
+            for c in constants:
+                c.transition_matrix = c.transition_matrix / total
+
+            for kexpr in self._kexprs:  # don't normalize  (c * x)
+                kexpr._normalize = False
+
+    @property
+    def _bin_consts(self) -> List[KernelExpression]:
+        return [c for k in self if isinstance(k, KernelMul) for c in k._bin_consts]
 
     @property
     def _operator(self) -> str:
@@ -782,26 +800,12 @@ class KernelAdd(NaryKernelExpression):
 
 
 class KernelMul(NaryKernelExpression):
-    def compute_transition_matrix(self) -> "KernelExpression":
-        self._maybe_recalculate_constants()
-        return super().compute_transition_matrix()
-
     def _combine_transition_matrices(self, t1: Tmat_t, t2: Tmat_t) -> Tmat_t:
         if issparse(t1):
             return t1.multiply(t2)
         if issparse(t2):
             return t2.multiply(t1)
         return t1 * t2
-
-    def _maybe_recalculate_constants(self) -> None:
-        constants = self._bin_consts
-        if constants:
-            total = sum((c.transition_matrix for c in constants), 0.0)
-            for c in constants:
-                c.transition_matrix = c.transition_matrix / total
-
-            for kexpr in self._kexprs:  # don't normalize  (c * x)
-                kexpr._normalize = False
 
     @property
     def _bin_consts(self) -> List[KernelExpression]:
@@ -826,3 +830,10 @@ class KernelMul(NaryKernelExpression):
     @property
     def _initial_value(self) -> Union[int, float, Tmat_t]:
         return 1.0
+
+    def _format(self, formatter: Callable[[KernelExpression], str]) -> str:
+        fmt = super()._format(formatter)
+        if fmt[0] == "~" or not self._bin_consts:
+            return fmt
+
+        return fmt[1:-1]
