@@ -70,7 +70,9 @@ class BidirectionalMixin(ABC):
     def __init__(self, *args: Any, backward: bool = False, **kwargs: Any):
         super().__init__(*args, **kwargs)
         if not isinstance(backward, bool):
-            raise TypeError("TODO")
+            raise TypeError(
+                f"Expected `backward` to be `bool`, found `{type(backward).__name__}`."
+            )
         self._backward = backward
 
     @abstractmethod

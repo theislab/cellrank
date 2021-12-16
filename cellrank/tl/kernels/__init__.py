@@ -1,4 +1,4 @@
-import cellrank.tl.kernels._displacement_kernel
+import cellrank.tl.kernels._velocity_kernel
 from cellrank.tl.kernels import _base_kernel as new
 from cellrank.tl.kernels._base_kernel import Kernel
 from cellrank.tl.kernels._velocity_kernel import VelocityKernel
