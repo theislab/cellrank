@@ -542,6 +542,21 @@ class Kernel(KernelExpression, ABC):
         k.adata = self.adata.copy() if deep else self.adata
         return k
 
+    def _copy_ignore(self, *attrs: str) -> "Kernel":
+        sentinel = object()
+        objects = [
+            (a, o)
+            for a, o in ((attr, getattr(self, attr, sentinel)) for attr in attrs)
+            if o is not sentinel
+        ]
+        try:
+            for attr, _ in objects:
+                setattr(self, attr, None)
+            return self.copy(deep=False)
+        finally:
+            for attr, object in objects:
+                setattr(self, attr, object)
+
     @property
     def kernels(self) -> Tuple["KernelExpression", ...]:
         return (self,)

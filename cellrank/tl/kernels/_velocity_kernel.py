@@ -265,8 +265,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel, ABC):
         return data.toarray() if issparse(data) else data
 
     def __invert__(self) -> "VelocityKernel":
-        dk = self.copy()
+        dk = self._copy_ignore("_transition_matrix")
         dk._backward = not self.backward
         dk._params = {}
-        dk._transition_matrix = None
         return dk

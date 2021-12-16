@@ -180,9 +180,8 @@ class PseudotimeKernel(ConnectivityMixin, BidirectionalKernel):
         return self._pseudotime
 
     def __invert__(self) -> "PseudotimeKernel":
-        pk = self.copy()
+        pk = self._copy_ignore("_transition_matrix")
         pk._pseudotime = np.max(pk.pseudotime) - pk.pseudotime
         pk._backward = not self.backward
         pk._params = {}
-        pk._transition_matrix = None
         return pk

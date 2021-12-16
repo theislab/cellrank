@@ -305,12 +305,10 @@ class CytoTRACEKernel(PseudotimeKernel):
 
         return self
 
-    # TODO(michalk8): don't copy tmat
     def __invert__(self) -> "CytoTRACEKernel":
-        ck = self.copy()
-        if ck.pseudotime is not None:
+        ck = self._copy_ignore("_transition_matrix")
+        if ck.pseudotime is not None:  # already computed
             ck._pseudotime = np.max(ck.pseudotime) - ck.pseudotime
         ck._backward = not self.backward
         ck._params = {}
-        ck._transition_matrix = None
         return ck
