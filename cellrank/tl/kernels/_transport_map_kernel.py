@@ -26,16 +26,20 @@ class LastTimePoint(ModeEnum):
     CONNECTIVITIES = "connectivities"
 
 
+Numeric_t = Union[int, float]
+Pair_t = Tuple[Numeric_t, Numeric_t]
+
+
 class TransportMapKernel(ExperimentalTimeKernel, ABC):
     """Kernel base class which computes transition matrix based on transport maps for consecutive time pairs."""
 
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
-        self._tmaps: Optional[Dict[Tuple[Any, Any], AnnData]] = None
+        self._tmaps: Optional[Dict[Pair_t, AnnData]] = None
 
     @abstractmethod
     def _compute_tmap(
-        self, t1: Any, t2: Any, **kwargs: Any
+        self, t1: Numeric_t, t2: Numeric_t, **kwargs: Any
     ) -> Union[np.ndarray, spmatrix, AnnData]:
         """
         Compute transport matrix for a time point pair.
@@ -113,7 +117,7 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
     @inject_docs(ltp=LastTimePoint)
     def _restich_tmaps(
         self,
-        tmaps: Mapping[Tuple[Any, Any], AnnData],
+        tmaps: Mapping[Pair_t, AnnData],
         last_time_point: LastTimePoint = LastTimePoint.DIAGONAL,
         conn_kwargs: Mapping[str, Any] = MappingProxyType({}),
     ) -> AnnData:
@@ -193,9 +197,9 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
 
     def _validate_tmaps(
         self,
-        tmaps: Mapping[Tuple[Any, Any], AnnData],
+        tmaps: Mapping[Pair_t, AnnData],
         allow_reorder: bool = True,
-    ) -> Mapping[Tuple[Any, Any], AnnData]:
+    ) -> Mapping[Pair_t, AnnData]:
         """
         Validate that transport maps conform to various invariants.
 
@@ -311,9 +315,8 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
             # e.g. when in `_tmap_as_tmat`
             self._transition_matrix = tmat
 
-    # TODO(michalk8): change t1/t2 to numeric/ordered (everywhere)
     def _tmat_to_adata(
-        self, t1: Any, t2: Any, tmat: Union[np.ndarray, spmatrix, AnnData]
+        self, t1: Numeric_t, t2: Numeric_t, tmat: Union[np.ndarray, spmatrix, AnnData]
     ) -> AnnData:
         """Convert transport map ``tmat`` to :class:`anndata.AnnData`."""
         if isinstance(tmat, AnnData):
@@ -377,6 +380,6 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         )
 
     @property
-    def transport_maps(self) -> Optional[Dict[Tuple[Any, Any], AnnData]]:
+    def transport_maps(self) -> Optional[Dict[Pair_t, AnnData]]:
         """Transport maps for consecutive time pairs."""
         return self._tmaps
