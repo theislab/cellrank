@@ -47,9 +47,9 @@ class FlowPlotter:
     tmat
         Matrix of shape ``(adata.n_obs, adata.n_obs)``.
     cluster_key
-        Key in :attr:`adata` ``.obs`` where clustering is stored.
+        Key in :attr:`anndata.AnnData.obs` where clustering is stored.
     time_key
-        Key in :attr:`adata` ``.obs`` where experimental time is stored.
+        Key in :attr:`anndata.AnnData.obs` where experimental time is stored.
     """
 
     TIME_KEY = "time"

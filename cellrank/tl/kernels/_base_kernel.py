@@ -278,7 +278,7 @@ class KernelExpression(IOMixin, ABC):
         self,
         basis: str = "umap",
         key_added: Optional[str] = None,
-        force_recompute: bool = False,
+        recompute: bool = False,
         **kwargs: Any,
     ) -> None:
         """
@@ -291,7 +291,7 @@ class KernelExpression(IOMixin, ABC):
         key_added
             If not `None`, save the result to :attr:`anndata.AnnData.obsm` ``['{key_added}']``.
             Otherwise, save the result to `'T_fwd_{basis}'` or `T_bwd_{basis}`, depending on the direction.
-        force_recompute
+        recompute
             TODO
 
         Returns
@@ -304,7 +304,7 @@ class KernelExpression(IOMixin, ABC):
             )
 
         proj = Projector(self)
-        proj.project(basis=basis, key_added=key_added, force_recompute=force_recompute)
+        proj.project(basis=basis, key_added=key_added, recompute=recompute)
         proj.plot(**kwargs)
 
     def __add__(self, other: "KernelExpression") -> "KernelExpression":

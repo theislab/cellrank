@@ -28,13 +28,9 @@ class ConnectivityMixin:
         if check_connectivity:
             if not _connected(self._conn):
                 logg.warning("KNN graph is not connected")
-            else:
-                logg.debug("KNN graph is connected")
 
         if not _symmetric(self._conn):
             logg.warning("KNN graph is not symmetric")
-        else:
-            logg.debug("KNN graph is symmetric")
 
     def _density_normalize(
         self, matrix: Union[np.ndarray, spmatrix]
@@ -49,7 +45,7 @@ class ConnectivityMixin:
 
         Returns
         -------
-        Density normalized transition matrix.
+        Density normalized matrix.
         """
         logg.debug("Density normalizing the transition matrix")
 

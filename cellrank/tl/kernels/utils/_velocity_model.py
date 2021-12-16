@@ -11,7 +11,6 @@ from cellrank.tl.kernels._base_kernel import _RTOL
 from cellrank.tl.kernels.utils._similarity_scheme import Similarity
 
 import numpy as np
-from numba import prange
 from scipy.sparse import spmatrix, csr_matrix
 
 __all__ = ("Deterministic", "Stochastic", "MonteCarlo")
@@ -283,7 +282,7 @@ class MonteCarlo(ModelABC):
 
         probs = np.zeros((n_neigh,), dtype=np.float64)
         logits = np.zeros((n_neigh,), dtype=np.float64)
-        for j in prange(self._n_samples):
+        for j in range(self._n_samples):
             p, l = self._similarity(np.atleast_2d(samples[j]), W, self._softmax_scale)
             probs += p
             logits += l

@@ -1,15 +1,11 @@
-from typing import Any, Dict, Union, Optional
+from typing import Any, Union, Optional
 
 from anndata import AnnData
 from cellrank import logging as logg
 from cellrank._key import Key
 from cellrank.ul._docs import d
 from cellrank.ul._utils import _read_graph_data
-from cellrank.tl.kernels._base_kernel import (
-    _RTOL,
-    KernelExpression,
-    UnidirectionalKernel,
-)
+from cellrank.tl.kernels._base_kernel import KernelExpression, UnidirectionalKernel
 
 import numpy as np
 from scipy.sparse import spmatrix, csr_matrix
@@ -17,90 +13,84 @@ from scipy.sparse import spmatrix, csr_matrix
 __all__ = ("PrecomputedKernel",)
 
 
-@d.dedent
 class PrecomputedKernel(UnidirectionalKernel):
     """
     Kernel which contains a precomputed transition matrix.
 
     Parameters
     ----------
-    transition_matrix
-        Row-normalized transition matrix or a key in :attr:`anndata.AnnData.obsp`.
-        or a :class:`cellrank.tl.kernels.KernelExpression` with a precomputed transition matrix.
-    %(adata)s
-        If `None`, a temporary placeholder :class:`anndata.AnnData` object is created.
-    %(backward)s
+    args
+        Positional arguments for :class:`cellrank.kernels.UnidirectionalKernel`.
     kwargs
-        Keyword arguments for :class:`cellrank.kernels.Kernel`.
+        Keyword arguments for :class:`cellrank.kernels.UnidirectionalKernel`.
     """
 
-    # TODO(michalk8): adata first?
-    def __init__(
-        self,
-        transition_matrix: Optional[
-            Union[str, np.ndarray, spmatrix, KernelExpression]
-        ] = None,
-        adata: Optional[AnnData] = None,
+    def __init__(self, *args: Any, **kwargs: Any):
+        super().__init__(*args, **kwargs)
+        self._origin: Optional[str] = None
+
+    @classmethod
+    def from_object(
+        cls,
+        object: Union[str, bool, np.ndarray, spmatrix, AnnData, KernelExpression],
         **kwargs: Any,
     ):
-        origin = "'array'"
-        params: Dict[str, Any] = {}
+        if isinstance(object, AnnData):
+            return cls.from_adata(object, **kwargs)
+        if isinstance(object, KernelExpression):
+            return cls.from_kernel(object)
+        if isinstance(object, (np.ndarray, spmatrix)):
+            return cls.from_matrix(object, **kwargs)
+        adata = kwargs.pop("adata", None)
+        if isinstance(adata, AnnData):
+            if isinstance(object, str):
+                return cls.from_adata(adata, obsp_key=object)
+            if object is None or isinstance(object, bool):
+                return cls.from_adata(adata, backward=object)
+        raise TypeError("TODO")
 
-        if transition_matrix is None:
-            transition_matrix = Key.uns.kernel()
-            logg.info(f"Accessing `adata.obsp[{transition_matrix!r}]`")
+    @classmethod
+    @d.dedent
+    def from_adata(
+        cls,
+        adata: AnnData,
+        obsp_key: Optional[str] = None,
+        backward: Optional[bool] = None,
+    ) -> "PrecomputedKernel":
+        """
+        TODO.
 
-        if isinstance(transition_matrix, str):
-            # TODO(michalk8): update message
-            if adata is None:
-                raise ValueError(
-                    "When `transition_matrix` specifies a key to `adata.obsp`, `adata` cannot be None."
-                )
-            origin = f"adata.obsp[{transition_matrix!r}]"
-            transition_matrix = _read_graph_data(adata, transition_matrix)
-        elif isinstance(transition_matrix, KernelExpression):
-            # TODO(michalk8): use .transition_matrix
-            if transition_matrix._transition_matrix is None:
-                raise ValueError(
-                    "Compute transition matrix first as `.compute_transition_matrix()`."
-                )
-            if adata is not None and adata is not transition_matrix.adata:
-                logg.warning(
-                    "Ignoring supplied `adata` object because it differs from the kernel's `adata` object."
-                )
+        Parameters
+        ----------
+        %(adats)s
+        """
+        if obsp_key is None:
+            obsp_key = Key.uns.kernel(backward)
+        tmat = _read_graph_data(adata, obsp_key)
+        kernel = cls.from_matrix(tmat, adata=adata)
+        kernel._origin = f"adata.obsp[{obsp_key!r}]"
+        return kernel
 
-            # use `str` rather than `repr` because it captures the parameters
-            origin = str(transition_matrix).strip("~<>")
-            params = transition_matrix.params.copy()
-            adata = transition_matrix.adata
-            transition_matrix = transition_matrix.transition_matrix
+    @classmethod
+    def from_kernel(cls, kernel: KernelExpression) -> "PrecomputedKernel":
+        if isinstance(kernel.transition_matrix, None):
+            raise RuntimeError()
+        kernel = cls.from_matrix(kernel.transition_matrix, adata=kernel.adata)
+        kernel._origin = str(kernel).strip("~<>")
+        kernel._params = kernel.params.copy()
+        return kernel
 
-        if not isinstance(transition_matrix, (np.ndarray, spmatrix)):
-            raise TypeError(
-                f"Expected transition matrix to be of type `numpy.ndarray` or `scipy.sparse.spmatrix`, "
-                f"found `{type(transition_matrix).__name__}`."
-            )
-
-        if transition_matrix.shape[0] != transition_matrix.shape[1]:
-            raise ValueError(
-                f"Expected transition matrix to be square, found `{transition_matrix.shape}`."
-            )
-
-        if not np.allclose(np.sum(transition_matrix, axis=1), 1.0, rtol=_RTOL):
-            # TODO(michalk8): update message
-            raise ValueError("Not a valid transition matrix, not all rows sum to 1.")
-
+    @classmethod
+    def from_matrix(
+        cls, matrix: Union[np.ndarray, spmatrix], adata: Optional[AnnData] = None
+    ) -> "PrecomputedKernel":
         if adata is None:
             logg.warning("Creating empty `AnnData` object")
-            adata = AnnData(
-                csr_matrix((transition_matrix.shape[0], 1), dtype=np.float64)
-            )
-
-        super().__init__(adata, **kwargs)
-
-        self._transition_matrix = csr_matrix(transition_matrix)
-        self._params = params
-        self._origin = origin
+            adata = AnnData(csr_matrix((matrix.shape[0], 1), dtype=np.float64))
+        kernel = super().__init__(adata)
+        kernel.transition_matrix = matrix
+        kernel._origin = "array"
+        return kernel
 
     def compute_transition_matrix(self, *_: Any, **__: Any) -> "PrecomputedKernel":
         """Return self."""

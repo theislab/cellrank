@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional
 
 import warnings
 
@@ -18,7 +18,7 @@ class Projector:
 
         for kernel in kexpr.kernels:
             if not isinstance(kernel, ConnectivityMixin):
-                raise AttributeError(
+                raise TypeError(
                     f"{kernel!r} is not a kNN based kernel. The embedding projection "
                     "only works for kNN based kernels."
                 )
@@ -30,8 +30,24 @@ class Projector:
         self,
         basis: str = "umap",
         key_added: Optional[str] = None,
-        force_recompute: bool = False,
+        recompute: bool = False,
     ) -> None:
+        """
+        Project transition matrix onto an embedding.
+
+        Parameters
+        ----------
+        basis
+            TODO
+        key_added
+            TODO
+        recompute
+            Whether to recompute the projection if it already exists.
+
+        Returns
+        -------
+        Nothing, just updates TODO.
+        """
         # modified from: https://github.com/theislab/scvelo/blob/master/scvelo/tools/velocity_embedding.py
 
         self._key = Key.uns.kernel(self._kexpr.backward, key=key_added)
@@ -39,7 +55,8 @@ class Projector:
         ukey = f"{self._key}_params"
         key = self._key + "_" + basis
 
-        if not force_recompute and key in self._kexpr.adata.obsm:
+        if not recompute and key in self._kexpr.adata.obsm:
+            logg.debug(f"Using precomputed projection `adata.obsm[{key!r}]`")
             return
 
         start = logg.info(f"Projecting transition matrix onto `{basis}`")
@@ -80,8 +97,24 @@ class Projector:
         )
         self._kexpr.adata.obsm[key] = T_emb
 
-    def plot(self, **kwargs) -> None:
-        # TODO: catch errors
-        scv.pl.velocity_embedding_stream(
-            self._kexpr.adata, basis=self._basis, vkey=self._key, **kwargs
+    def plot(self, *args: Any, stream: bool = True, **kwargs: Any) -> None:
+        """
+        Plot projected transition matrix in a embedding.
+
+        Parameters
+        ----------
+        args
+            Positional argument for the plotting function.
+        stream
+            If ``True``, use :func:`scvelo.pl.velocity_emebedding_stream`.
+            Otherwise, use :func:`scvelo.pl.velocity_embedding_grid`.
+        kwargs
+            Keyword argument for the plotting function.
+        """
+        if stream:
+            return scv.pl.velocity_embedding_stream(
+                self._kexpr.adata, *args, basis=self._basis, vkey=self._key, **kwargs
+            )
+        return scv.pl.velocity_embedding_grid(
+            self._kexpr.adata, *args, basis=self._basis, vkey=self._key, **kwargs
         )
