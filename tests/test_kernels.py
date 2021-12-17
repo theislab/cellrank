@@ -27,6 +27,7 @@ from cellrank.tl.kernels import (
     ConnectivityKernel,
     TransportMapKernel,
 )
+from cellrank.tl.kernels._mixins import ConnectivityMixin
 from cellrank.tl.kernels._base_kernel import Kernel, Constant, KernelAdd, KernelMul
 from cellrank.tl.kernels._cytotrace_kernel import CytoTRACEAggregation
 
@@ -40,7 +41,7 @@ from pandas.core.dtypes.common import is_bool_dtype, is_integer_dtype
 _rtol = 1e-6
 
 
-class CustomFunc(cr.tl.kernels.Similarity):
+class CustomFunc(cr.tl.kernels.similarity.Similarity):
     def __call__(
         self, v: np.ndarray, D: np.ndarray, softmax_scale: float = 1.0
     ) -> Tuple[np.ndarray, np.ndarray]:
@@ -76,7 +77,7 @@ class CustomKernel(Kernel):
         return copy(self)
 
 
-class InvalidFuncProbs(cr.tl.kernels.Similarity):
+class InvalidFuncProbs(cr.tl.kernels.similarity.Similarity):
     def __call__(
         self, v: np.ndarray, D: np.ndarray, _softmax_scale: float = 1.0
     ) -> Tuple[np.ndarray, np.ndarray]:
@@ -176,25 +177,25 @@ class TestInitializeKernel:
         assert ck.transition_matrix is not None
         assert pk.transition_matrix is not None
 
-    def test_not_none_transition_matrix_accessor(self, adata: AnnData):
+    def test_none_transition_matrix_accessor(self, adata: AnnData):
         vk = VelocityKernel(adata)
         ck = ConnectivityKernel(adata)
         pk = PseudotimeKernel(adata, time_key="latent_time")
 
-        assert vk.transition_matrix is not None
-        assert ck.transition_matrix is not None
-        assert pk.transition_matrix is not None
+        assert vk.transition_matrix is None
+        assert ck.transition_matrix is None
+        assert pk.transition_matrix is None
 
     def test_adding_hidden_constants(self, adata: AnnData):
         k = VelocityKernel(adata) + ConnectivityKernel(adata)
 
-        assert _is_bin_mult(k[0])
+        assert k[0]._bin_consts
         assert isinstance(k[0], KernelMul)
         assert isinstance(k[0][0], Constant)
         assert isinstance(k[0][1], VelocityKernel)
         assert k[0][0].transition_matrix == 1.0
 
-        assert _is_bin_mult(k[1])
+        assert k[1]._bin_consts
         assert isinstance(k[1], KernelMul)
         assert isinstance(k[1][0], Constant)
         assert isinstance(k[1][1], ConnectivityKernel)
@@ -256,44 +257,45 @@ class TestInitializeKernel:
             _ = Constant(adata, None)
 
     def test_inversion(self, adata: AnnData):
-        c = ConnectivityKernel(adata, backward=False)
-        assert not c.backward
+        c = ConnectivityKernel(adata)
+        assert c.backward is None
 
-        nc = ~c
-        assert nc.backward
-
-    def test_inversion_inplace(self, adata: AnnData):
-        c = ConnectivityKernel(adata, backward=False)
+    def test_inversion_not_inplace(self, adata: AnnData):
+        c = VelocityKernel(adata, backward=False)
 
         assert not c.backward
-        _ = ~c
-        assert c.backward
+        k = ~c
+        assert k is not c
+        assert k.adata is c.adata
+        assert not c.backward
+        assert k.backward
 
     def test_inversion_propagation(self, adata: AnnData):
-        c = ConnectivityKernel(adata, backward=False)
+        c = ConnectivityKernel(adata)
         v = VelocityKernel(adata, backward=False)
         k = ~(c + v)
 
-        assert c.backward
-        assert v.backward
+        assert not c.backward
+        assert not v.backward
         assert k.backward
 
     def test_inversion_recalculation(self, adata: AnnData):
         c = ConnectivityKernel(adata).compute_transition_matrix()
         z = ~(c + c)
-        with pytest.raises(RuntimeError):
-            z.compute_transition_matrix()
 
-    def test_inversion_preservation_of_constants(self, adata: AnnData):
+        assert z._transition_matrix is None
+        # since Connectivities are directionless, this is allowed
+        assert z.transition_matrix is not None
+
+    def test_inversion_no_recalculation(self, adata: AnnData):
         c = ConnectivityKernel(adata).compute_transition_matrix()
-        a = (3 * c + 1 * c).compute_transition_matrix()
-        b = ~a
-        c.compute_transition_matrix()
+        v = VelocityKernel(adata).compute_transition_matrix(softmax_scale=1)
+        z = ~(v + c)
 
-        assert a[0][0].transition_matrix == 3 / 4
-        assert b[0][0].transition_matrix == 3 / 4
-        assert a[1][0].transition_matrix == 1 / 4
-        assert b[1][0].transition_matrix == 1 / 4
+        assert z._transition_matrix is None
+        with pytest.raises(RuntimeError, match=f"`{~v}` is uninitialized"):
+            # not allowed because VK is reset
+            assert z.transition_matrix is not None
 
     def test_addition_simple(self, adata: AnnData):
         k = VelocityKernel(adata) + ConnectivityKernel(adata)
@@ -302,20 +304,21 @@ class TestInitializeKernel:
 
     def test_multiplication_simple(self, adata: AnnData):
         k = 10 * VelocityKernel(adata)
-        c = _is_bin_mult(k)
+        c, _ = k._split_const
 
         assert isinstance(c, Constant)
         assert c.transition_matrix == 10
 
     def test_multiplication_simple_normalization(self, adata: AnnData):
         k = 10 * VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
-        c = _is_bin_mult(k)
+        c, _ = k._split_const
 
         assert c.transition_matrix == 10
 
     def test_constant(self, adata: AnnData):
         k = 9 * VelocityKernel(adata) + 1 * ConnectivityKernel(adata)
-        c1, c2 = _is_bin_mult(k[0]), _is_bin_mult(k[1])
+        c1, _ = k[0]._split_const
+        c2, _ = k[1]._split_const
 
         assert c1.transition_matrix == 9
         assert c2.transition_matrix == 1
@@ -326,7 +329,8 @@ class TestInitializeKernel:
             + 1 * ConnectivityKernel(adata).compute_transition_matrix()
         )
         k.compute_transition_matrix()
-        c1, c2 = _is_bin_mult(k[0]), _is_bin_mult(k[1])
+        c1, _ = k[0]._split_const
+        c2, _ = k[1]._split_const
 
         assert c1.transition_matrix == 9 / 10
         assert c2.transition_matrix == 1 / 10
@@ -338,7 +342,9 @@ class TestInitializeKernel:
             + ConnectivityKernel(adata).compute_transition_matrix()
         )
         k.compute_transition_matrix()
-        c1, c2, c3 = _is_bin_mult(k[0]), _is_bin_mult(k[1]), _is_bin_mult(k[2])
+        c1, _ = k[0]._split_const
+        c2, _ = k[1]._split_const
+        c3, _ = k[2]._split_const
 
         assert c1.transition_matrix == 1 / 3
         assert c2.transition_matrix == 1 / 3
@@ -350,7 +356,9 @@ class TestInitializeKernel:
             + ConnectivityKernel(adata).compute_transition_matrix()
         )
         k.compute_transition_matrix()
-        c1, c2, c3 = _is_bin_mult(k[0]), _is_bin_mult(k[1]), _is_bin_mult(k[2])
+        c1, _ = k[0]._split_const
+        c2, _ = k[1]._split_const
+        c3, _ = k[2]._split_const
 
         assert c1.transition_matrix == 1 / 3
         assert c2.transition_matrix == 1 / 3
@@ -362,97 +370,49 @@ class TestInitializeKernel:
             + ConnectivityKernel(adata).compute_transition_matrix()
         )
         k.compute_transition_matrix()
-        c1, c2, c3 = (
-            _is_bin_mult(k[0]),
-            _is_bin_mult(k[1][1][0]),
-            _is_bin_mult(k[1][1][1]),
-        )
+        c1, _ = k[0]._split_const
+        c2, _ = k[1][1][0]._split_const
+        c3, _ = k[1][1][1]._split_const
 
         assert c1.transition_matrix == 1 / 2
         assert c2.transition_matrix == 1 / 2
         assert c3.transition_matrix == 1 / 2
 
-    def test_adaptive_kernel_constants(self, adata: AnnData):
-        ck1 = ConnectivityKernel(adata).compute_transition_matrix()
-        ck1._mat_scaler = np.random.normal(size=(adata.n_obs, adata.n_obs))
-
-        ck2 = ConnectivityKernel(adata).compute_transition_matrix()
-        ck2._mat_scaler = np.random.normal(size=(adata.n_obs, adata.n_obs))
-
-        k = (3 * ck1) ^ (1 * ck2)
-        k.compute_transition_matrix()
-
-        assert k[0][0]._value == 3 / 4
-        assert k[1][0]._value == 1 / 4
-
-    def test_adaptive_kernel_complex(self, adata: AnnData):
-        ck1 = ConnectivityKernel(adata).compute_transition_matrix()
-        ck1._mat_scaler = np.random.normal(size=(adata.n_obs, adata.n_obs))
-
-        ck2 = ConnectivityKernel(adata).compute_transition_matrix()
-        ck2._mat_scaler = np.random.normal(size=(adata.n_obs, adata.n_obs))
-
-        ck3 = ConnectivityKernel(adata).compute_transition_matrix()
-        ck3._mat_scaler = np.random.normal(size=(adata.n_obs, adata.n_obs))
-
-        k = 4 * ((3 * ck1) ^ (1 * ck2)) + 2 * ck3
-        k.compute_transition_matrix()
-
-        assert k[0][0].transition_matrix == 4 / 6
-        assert k[1][0].transition_matrix == 2 / 6
-        assert k[0][1][0][0]._value == 3 / 4
-        assert k[0][1][1][0]._value == 1 / 4
-
     def test_repr(self, adata: AnnData):
         rpr = repr(VelocityKernel(adata))
 
-        assert rpr == f"<{VelocityKernel.__name__}>"
+        assert rpr == f"{VelocityKernel.__name__}"
 
     def test_repr_inv(self, adata: AnnData):
         rpr = repr(~VelocityKernel(adata))
 
-        assert rpr == f"~<{VelocityKernel.__name__}>"
+        assert rpr == f"~{VelocityKernel.__name__}"
 
     def test_repr_inv_comb(self, adata: AnnData):
         rpr = repr(~(VelocityKernel(adata) + ConnectivityKernel(adata)))
 
         assert (
             rpr
-            == f"~((1 * <{VelocityKernel.__name__}>) + (1 * <{ConnectivityKernel.__name__}>))"
+            == f"~(1.0 * {VelocityKernel.__name__} + 1.0 * {ConnectivityKernel.__name__})"
         )
 
     def test_str_repr_equiv_no_transition_matrix(self, adata: AnnData):
         vk = VelocityKernel(adata)
-        string = str(vk)
-        rpr = repr(vk)
 
-        assert string == rpr
-        assert string == f"<{VelocityKernel.__name__}>"
+        assert repr(vk) == str(vk)
 
     def test_str(self, adata: AnnData):
         string = str(ConnectivityKernel(adata).compute_transition_matrix())
 
         assert (
-            string == f"<{ConnectivityKernel.__name__}[dnorm=True, key=connectivities]>"
-        )
-
-    def test_str_inv(self, adata: AnnData):
-        string = str(
-            ConnectivityKernel(adata, backward=True).compute_transition_matrix()
-        )
-
-        assert (
-            string
-            == f"~<{ConnectivityKernel.__name__}[dnorm=True, key=connectivities]>"
+            string == f"{ConnectivityKernel.__name__}[dnorm=True, key='connectivities']"
         )
 
     def test_combination_correct_parameters(self, adata: AnnData):
-        from cellrank.tl.kernels import Cosine
-
         k = VelocityKernel(adata).compute_transition_matrix(
             softmax_scale=4,
             seed=42,
-            scheme="cosine",
+            similarity="cosine",
         ) + (
             ConnectivityKernel(adata).compute_transition_matrix(density_normalize=False)
             + ConnectivityKernel(adata).compute_transition_matrix(
@@ -467,9 +427,8 @@ class TestInitializeKernel:
         assert {"dnorm": False, "key": "connectivities"} in k.params.values()
         assert {
             "softmax_scale": 4,
-            "mode": "deterministic",
-            "seed": 42,
-            "scheme": str(Cosine()),
+            "model": "deterministic",
+            "similarity": "cosine",
         } in k.params.values()
 
 
@@ -528,10 +487,10 @@ class TestKernel:
 
         k = clazz(**kwargs)
 
-        if isinstance(k, PrecomputedKernel):
-            assert k._conn is None
-        else:
+        if isinstance(k, ConnectivityMixin):
             np.testing.assert_array_equal(k._conn.A, conn.A)
+        else:
+            assert not hasattr(k, "_conn")
 
     def test_precomputed_from_kernel(self, adata: AnnData):
         vk = VelocityKernel(adata).compute_transition_matrix(
@@ -1309,9 +1268,9 @@ class TestVelocityScheme:
         zip(
             ["dot_product", "cosine", "correlation"],
             [
-                cr.tl.kernels.DotProduct(),
-                cr.tl.kernels.Cosine(),
-                cr.tl.kernels.Correlation(),
+                cr.tl.kernels.similarity.DotProduct(),
+                cr.tl.kernels.similarity.Cosine(),
+                cr.tl.kernels.similarity.Correlation(),
             ],
         ),
     )

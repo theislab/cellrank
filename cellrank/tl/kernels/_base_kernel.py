@@ -358,10 +358,10 @@ class KernelExpression(IOMixin, ABC):
         # at this point, only KernelMul and Constant is possible (two constants are not possible)
         # (c1 * k) * c2 => (c1 * c2) * k
         if same_level_mul(s, o):
-            c, expr = s._bin_const_exprs
+            c, expr = s._split_const
             return KernelMul(c * o, expr)
         if same_level_mul(o, s):
-            c, expr = o._bin_const_exprs
+            c, expr = o._split_const
             return KernelMul(c * s, expr)
 
         return KernelMul(s, o)
@@ -459,7 +459,8 @@ class KernelExpression(IOMixin, ABC):
         except AssertionError:
             logg.warning("Transition matrix does not exist for the given parameters. Recomputing")
             return False
-        except Exception as e:  # e.g. the dict is not comparable
+        except Exception as e:  # noqa: B902
+            # e.g. the dict is not comparable
             logg.warning(f"Expected and actually parameters are not comparable, reason `{e}`. Recomputing")
             expected_params = {}  # clear the params
             return False
@@ -630,8 +631,10 @@ class Constant(UnidirectionalKernel):
 
 
 class NaryKernelExpression(BidirectionalMixin, KernelExpression):
-    def __init__(self, *kexprs: KernelExpression):
-        super().__init__(parent=None)
+    def __init__(
+        self, *kexprs: KernelExpression, parent: Optional[KernelExpression] = None
+    ):
+        super().__init__(parent=parent)
         self._validate(kexprs)
 
     @abstractmethod
@@ -653,8 +656,8 @@ class NaryKernelExpression(BidirectionalMixin, KernelExpression):
             if kexpr.transition_matrix is None:
                 if isinstance(kexpr, Kernel):
                     raise RuntimeError(
-                        f"Kernel `{kexpr}` is uninitialized. "
-                        f"Compute its transition matrix first as `.compute_transition_matrix()`."
+                        f"`{kexpr}` is uninitialized. Compute its"
+                        f"transition matrix first as `.compute_transition_matrix()`."
                     )
                 kexpr.compute_transition_matrix()
 
@@ -713,7 +716,7 @@ class NaryKernelExpression(BidirectionalMixin, KernelExpression):
 
     def copy(self, *, deep: bool = False) -> "KernelExpression":
         kexprs = (k.copy(deep=deep) for k in self)
-        return type(self)(*kexprs)
+        return type(self)(*kexprs, parent=self._parent)
 
     @property
     def shape(self) -> Tuple[int, int]:
@@ -739,7 +742,9 @@ class NaryKernelExpression(BidirectionalMixin, KernelExpression):
         kexprs = tuple(
             ~k if isinstance(k, BidirectionalMixin) else k.copy() for k in self
         )
-        return type(self)(*kexprs)
+        kexpr = type(self)(*kexprs, parent=self._parent)
+        kexpr._transition_matrix = None
+        return kexpr
 
     def __repr__(self) -> str:
         return self._format(repr)
@@ -804,7 +809,7 @@ class KernelMul(NaryKernelExpression):
         return [k for k in self if isinstance(k, Constant)]
 
     @property
-    def _bin_const_exprs(self) -> Tuple[Optional[Constant], Optional[KernelExpression]]:
+    def _split_const(self) -> Tuple[Optional[Constant], Optional[KernelExpression]]:
         if not self._bin_consts:
             return None, None
         k1, k2 = self
