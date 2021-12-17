@@ -897,66 +897,18 @@ class TestClusterX:
 
 
 class TestKernelUtils:
-    @pytest.mark.parametrize("seed", range(5))
-    def test_numba_mean_axis_0(self, seed):
-        np.random.seed(seed)
-        x = np.random.normal(size=(10, 10))
+    @pytest.mark.parametrize("fn", ["mean", "max", "sum", "norm"])
+    @pytest.mark.parametrize("axis", [0, 1])
+    def numba_function(self, fn: str, axis: int):
+        numpy_fn = getattr(np, fn)
+        numba_fn = globals()[f"np_{fn}"]
 
-        np.testing.assert_allclose(np.mean(x, axis=0), np_mean(x, 0))
+        x = np.random.RandomState(42).normal(size=(10, 10))
 
-    @pytest.mark.parametrize("seed", range(5))
-    def test_numba_mean_axis_1(self, seed):
-        np.random.seed(seed)
-        x = np.random.normal(size=(10, 10))
+        np.testing.assert_allclose(numpy_fn(x, axis=axis), numba_fn(x, axis))
 
-        np.testing.assert_allclose(np.mean(x, axis=1), np_mean(x, 1))
-
-    @pytest.mark.parametrize("seed", range(5))
-    def test_numba_max_axis_0(self, seed):
-        np.random.seed(seed)
-        x = np.random.normal(size=(10, 10))
-
-        np.testing.assert_allclose(np.max(x, axis=0), np_max(x, 0))
-
-    @pytest.mark.parametrize("seed", range(5))
-    def test_numba_max_axis_1(self, seed):
-        np.random.seed(seed)
-        x = np.random.normal(size=(10, 10))
-
-        np.testing.assert_allclose(np.max(x, axis=1), np_max(x, 1))
-
-    @pytest.mark.parametrize("seed", range(5))
-    def test_numba_sum_axis_0(self, seed):
-        np.random.seed(seed)
-        x = np.random.normal(size=(10, 10))
-
-        np.testing.assert_allclose(np.sum(x, axis=0), np_sum(x, 0))
-
-    @pytest.mark.parametrize("seed", range(5))
-    def test_numba_sum_axis_1(self, seed):
-        np.random.seed(seed)
-        x = np.random.normal(size=(10, 10))
-
-        np.testing.assert_allclose(np.sum(x, axis=1), np_sum(x, 1))
-
-    @pytest.mark.parametrize("seed", range(5))
-    def test_numba_norm_axis_0(self, seed):
-        np.random.seed(seed)
-        x = np.random.normal(size=(10, 10))
-
-        np.testing.assert_allclose(np.linalg.norm(x, axis=0), norm(x, 0))
-
-    @pytest.mark.parametrize("seed", range(5))
-    def test_numba_norm_axis_1(self, seed):
-        np.random.seed(seed)
-        x = np.random.normal(size=(10, 10))
-
-        np.testing.assert_allclose(np.linalg.norm(x, axis=1), norm(x, 1))
-
-    @pytest.mark.parametrize("seed", range(5))
-    def test_apply_along_axis(self, seed: int):
-        np.random.seed(seed)
-        x = np.random.normal(size=(10, 10))
+    def test_apply_along_axis(self):
+        x = np.random.RandomState(42).normal(size=(10, 10))
 
         def _create_numba_fn(fn):
             @njit
@@ -1010,7 +962,7 @@ class TestKernelUtils:
 
     @jax_not_installed_skip
     @pytest.mark.parametrize(
-        "seed,c,s",
+        "seed, c, s",
         zip(range(4), [True, True, False, False], [True, False, True, False]),
     )
     def test_numpy_and_jax(self, seed: int, c: bool, s: bool):
