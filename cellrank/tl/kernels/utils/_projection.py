@@ -13,7 +13,7 @@ from scipy.sparse import issparse
 
 
 class Projector:
-    def __init__(self, kexpr: "ExpernelExpression"):
+    def __init__(self, kexpr: "ExpernelExpression", basis: str = "umap"):
         from cellrank.tl.kernels._mixins import ConnectivityMixin
 
         for kernel in kexpr.kernels:
@@ -23,12 +23,11 @@ class Projector:
                     "only works for kNN based kernels."
                 )
         self._kexpr = kexpr
+        self._basis = basis[2:] if basis.startswith("X_") else basis
         self._key: Optional[str] = None
-        self._basis: Optional[str] = None
 
     def project(
         self,
-        basis: str = "umap",
         key_added: Optional[str] = None,
         recompute: bool = False,
     ) -> None:
@@ -37,8 +36,6 @@ class Projector:
 
         Parameters
         ----------
-        basis
-            TODO
         key_added
             TODO
         recompute
@@ -51,18 +48,17 @@ class Projector:
         # modified from: https://github.com/theislab/scvelo/blob/master/scvelo/tools/velocity_embedding.py
 
         self._key = Key.uns.kernel(self._kexpr.backward, key=key_added)
-        self._basis = basis
         ukey = f"{self._key}_params"
-        key = self._key + "_" + basis
+        key = self._key + "_" + self._basis
 
         if not recompute and key in self._kexpr.adata.obsm:
             logg.debug(f"Using precomputed projection `adata.obsm[{key!r}]`")
             return
 
-        start = logg.info(f"Projecting transition matrix onto `{basis}`")
-        emb = _get_basis(self._kexpr.adata, basis)
-        T_emb = np.empty_like(emb)
+        start = logg.info(f"Projecting transition matrix onto `{self._basis}`")
 
+        emb = _get_basis(self._kexpr.adata, self._basis)
+        T_emb = np.empty_like(emb)
         conn = self._kexpr.kernels[0]._conn
 
         with warnings.catch_warnings():
@@ -86,8 +82,8 @@ class Projector:
         T_emb /= 3 * quiver_autoscale(np.nan_to_num(emb), T_emb)
 
         embs = self._kexpr.adata.uns.get(ukey, {}).get("embeddings", [])
-        if basis not in embs:
-            embs = list(embs) + [basis]
+        if self._basis not in embs:
+            embs = list(embs) + [self._basis]
             self._kexpr.adata.uns[ukey] = self._kexpr.adata.uns.get(ukey, {})
             self._kexpr.adata.uns[ukey]["embeddings"] = embs
 

@@ -270,6 +270,7 @@ class KernelExpression(IOMixin, ABC):
         basis: str = "umap",
         key_added: Optional[str] = None,
         recompute: bool = False,
+        stream: bool = True,
         **kwargs: Any,
     ) -> None:
         """
@@ -289,9 +290,9 @@ class KernelExpression(IOMixin, ABC):
         -------
         Nothing, just modifies :attr:`anndata.AnnData.obsm` with a key based on ``key_added``.
         """
-        proj = Projector(self)
-        proj.project(basis=basis, key_added=key_added, recompute=recompute)
-        proj.plot(**kwargs)
+        proj = Projector(self, basis=basis)
+        proj.project(key_added=key_added, recompute=recompute)
+        proj.plot(stream=stream, **kwargs)
 
     def __add__(self, other: "KernelExpression") -> "KernelExpression":
         return self.__radd__(other)
@@ -712,7 +713,8 @@ class NaryKernelExpression(BidirectionalMixin, KernelExpression):
                 # recurse
                 kernels.extend(kexpr.kernels)
 
-        return tuple(kernels)
+        # return only unique kernels
+        return tuple(set(kernels))
 
     def copy(self, *, deep: bool = False) -> "KernelExpression":
         kexprs = (k.copy(deep=deep) for k in self)

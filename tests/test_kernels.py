@@ -1135,9 +1135,9 @@ class TestComputeProjection:
         with pytest.raises(KeyError, match=r"Unable to find a basis in"):
             ck.plot_projection(basis="foo")
 
-    def test_basis_prefix(self, adata: AnnData):
+    def test_normal_run(self, adata: AnnData):
         ck = cr.tl.kernels.ConnectivityKernel(adata).compute_transition_matrix()
-        ck.plot_projection(basis="X_umap")
+        ck.plot_projection(basis="umap")
 
     @pytest.mark.parametrize("write_first", [True, False])
     def test_write_to_adata(self, adata: AnnData, write_first: bool):
@@ -1157,7 +1157,7 @@ class TestComputeProjection:
     @pytest.mark.parametrize("key_added", [None, "foo"])
     def test_key_added(self, adata: AnnData, key_added: Optional[str]):
         ck = cr.tl.kernels.ConnectivityKernel(adata).compute_transition_matrix()
-        ck.plot_projection(basis="umap", copy=False, key_added=key_added)
+        ck.plot_projection(basis="umap", key_added=key_added)
 
         key = Key.uns.kernel(ck.backward, key=key_added)
         ukey = f"{key}_params"
@@ -1166,29 +1166,11 @@ class TestComputeProjection:
         assert adata.uns[ukey] == {"embeddings": ["umap"]}
         np.testing.assert_array_equal(adata.obsm[key].shape, adata.obsm["X_umap"].shape)
 
-    @pytest.mark.parametrize("copy", [True, False])
-    def test_copy(self, adata: AnnData, copy: bool):
-        ck = cr.tl.kernels.ConnectivityKernel(adata).compute_transition_matrix()
-        res = ck.plot_projection(basis="umap", copy=copy)
+    def test_nan_in_embedding(self, adata_large: AnnData):
+        adata_large.obsm["X_umap"][0, :] = np.nan
 
-        if copy:
-            assert isinstance(res, np.ndarray)
-            np.testing.assert_array_equal(res.shape, adata.obsm["X_umap"].shape)
-        else:
-            assert res is None
-            key = Key.uns.kernel(ck.backward) + "_umap"
-            np.testing.assert_array_equal(
-                adata.obsm[key].shape, adata.obsm["X_umap"].shape
-            )
-
-    def test_nan_in_embedding(self, adata: AnnData):
-        adata.obsm["X_umap"][-1] = np.nan
-
-        ck = cr.tl.kernels.ConnectivityKernel(adata).compute_transition_matrix()
-        res = ck.plot_projection(basis="umap", copy=True)
-
-        assert not np.all(np.isnan(res))
-        assert np.all(np.isnan(res[-1, :]))
+        ck = cr.tl.kernels.ConnectivityKernel(adata_large).compute_transition_matrix()
+        ck.plot_projection(basis="umap")
 
 
 class TestPseudotimeKernelScheme:
@@ -1231,7 +1213,7 @@ class TestPseudotimeKernelScheme:
             assert pk.params["frac_to_keep"] == 0.3
             assert "b" not in pk.params
             assert "nu" not in pk.params
-        elif scheme == "soft":
+        else:
             assert pk.params["b"] == 10
             assert pk.params["nu"] == 0.5
             assert "k" not in pk.params
