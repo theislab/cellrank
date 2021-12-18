@@ -358,11 +358,7 @@ class WOTKernel(Kernel, error=_error):
         tmap = self._restich_tmaps(tmap, last_time_point, conn_kwargs=conn_kwargs)
         self._growth_rates = tmap.obs
 
-        self._compute_transition_matrix(
-            matrix=tmap.X,
-            density_normalize=False,
-            check_irreducibility=False,
-        )
+        self.transition_matrix = tmap.X
         if threshold:
             self._threshold_transition_matrix(threshold)
         self.adata.obs["estimated_growth_rates"] = self.growth_rates[f"g{growth_iters}"]
@@ -517,7 +513,7 @@ class WOTKernel(Kernel, error=_error):
         return self._growth_rates
 
     def __invert__(self) -> "WOTKernel":
-        wk = ~self
+        wk = super().__invert__()
         # needed for WOT
         wk.adata.obs[wk._time_key] = wk.experimental_time
         return wk

@@ -309,9 +309,10 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
             logg.warning(
                 f"After thresholding, `{len(zeros_mask)}` row(s) are forced to be uniform"
             )
-            for row_ix in zeros_mask:
-                data = tmat[row_ix].data
-                tmat[row_ix].data = np.ones_like(data) / len(data)
+            for ix in zeros_mask:
+                start, end = tmat.indptr[ix], tmat.indptr[ix + 1]
+                size = end - start
+                tmat.data[start:end] = np.ones(size, dtype=tmat.dtype) / size
         tmat.eliminate_zeros()
 
         if normalize:

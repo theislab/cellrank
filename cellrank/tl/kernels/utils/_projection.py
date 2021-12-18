@@ -19,7 +19,7 @@ class Projector:
         for kernel in kexpr.kernels:
             if not isinstance(kernel, ConnectivityMixin):
                 raise TypeError(
-                    f"{kernel!r} is not a kNN based kernel. The embedding projection "
+                    f"{kernel!r} is not a KNN based kernel. The embedding projection "
                     "only works for kNN based kernels."
                 )
         self._kexpr = kexpr

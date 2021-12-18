@@ -46,22 +46,6 @@ statot_not_installed_skip = pytest.mark.skipif(
 
 @statot_not_installed_skip
 class TestOTKernel:
-    def test_no_connectivities(self, adata_large: AnnData):
-        del adata_large.obsp["connectivities"]
-        terminal_states = np.full((adata_large.n_obs,), fill_value=np.nan, dtype=object)
-        ixs = np.where(adata_large.obs["clusters"] == "Granule immature")[0]
-        terminal_states[ixs] = "GI"
-
-        ok = cre.kernels.StationaryOTKernel(
-            adata_large,
-            terminal_states=pd.Series(terminal_states).astype("category"),
-            g=np.ones((adata_large.n_obs,), dtype=np.float64),
-        )
-        ok = ok.compute_transition_matrix(1, 0.001)
-
-        assert ok._conn is None
-        np.testing.assert_allclose(ok.transition_matrix.sum(1), 1.0)
-
     def test_method_not_implemented(self, adata_large: AnnData):
         terminal_states = np.full((adata_large.n_obs,), fill_value=np.nan, dtype=object)
         ixs = np.where(adata_large.obs["clusters"] == "Granule immature")[0]
@@ -124,25 +108,14 @@ class TestOTKernel:
         else:
             combined_kernel = ok
 
-        expected_error = (
-            r"<StationaryOTKernel> is not a kNN based kernel. The embedding projection "
-            r"only works for kNN based kernels."
-        )
-        with pytest.raises(AttributeError, match=expected_error):
+        with pytest.raises(
+            TypeError, match=r"StationaryOTKernel is not a KNN based kernel"
+        ):
             combined_kernel.plot_projection()
 
 
 @wot_not_installed_skip
 class TestWOTKernel:
-    def test_no_connectivities(self, adata_large: AnnData):
-        del adata_large.obsp["connectivities"]
-        ok = cre.kernels.WOTKernel(
-            adata_large, time_key="age(days)"
-        ).compute_transition_matrix()
-
-        assert ok._conn is None
-        np.testing.assert_allclose(ok.transition_matrix.sum(1), 1.0)
-
     def test_invalid_solver_kwargs(self, adata_large: AnnData):
         ok = cre.kernels.WOTKernel(adata_large, time_key="age(days)")
         with pytest.raises(TypeError, match="unexpected keyword argument 'foo'"):
@@ -333,11 +306,7 @@ class TestWOTKernel:
         else:
             combined_kernel = ok
 
-        expected_error = (
-            r"<WOTKernel> is not a kNN based kernel. The embedding projection only "
-            r"works for kNN based kernels."
-        )
-        with pytest.raises(AttributeError, match=expected_error):
+        with pytest.raises(TypeError, match=r"WOTKernel is not a KNN based kernel"):
             combined_kernel.plot_projection()
 
     def test_wot_write(self, adata_large: AnnData, tmpdir):
