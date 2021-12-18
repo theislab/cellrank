@@ -283,14 +283,14 @@ class AbsProbsMixin:
         macro_ix_helper = np.cumsum(
             [0] + [len(indices) for indices in lookup_dict.values()]
         )
-        # s can be sparse or dense, ensure the correct shape
-        s = [
-            s[:, np.arange(a, b)].sum(axis=1).reshape(-1, 1)
-            for a, b in _pairwise(macro_ix_helper)
-        ]
-        s = np.concatenate(s, axis=1)
-        # fmt: on
-
+        # `s` can be sparse or dense, ensure the correct shape
+        s = np.concatenate(
+            [
+                s[:, np.arange(a, b)].sum(axis=1).reshape(-1, 1)
+                for a, b in _pairwise(macro_ix_helper)
+            ],
+            axis=1,
+        )
         abs_probs = self._compute_absorption_probabilities(
             q,
             s,
@@ -304,9 +304,7 @@ class AbsProbsMixin:
             show_progress_bar=show_progress_bar,
             preconditioner=preconditioner,
         )
-        abs_probs = Lineage(abs_probs, names=keys, colors=colors)
 
-        abs_times = None
         if time_to_absorption is not None:
             lineages = _normalize_abs_times(keys, time_to_absorption=time_to_absorption)
             abs_times = _calculate_lineage_absorption_time_means(
@@ -324,12 +322,17 @@ class AbsProbsMixin:
                 preconditioner=preconditioner,
                 index=self.adata.obs_names,
             )
+        else:
+            abs_times = None
 
         params = self._create_params(
             remove=["use_petsc", "n_jobs", "backend", "show_progress_bar"]
         )
         self._write_absorption_probabilities(
-            abs_probs, abs_times, params=params, time=start
+            Lineage(abs_probs, names=keys, colors=colors),
+            abs_times,
+            params=params,
+            time=start,
         )
 
     @d.dedent
