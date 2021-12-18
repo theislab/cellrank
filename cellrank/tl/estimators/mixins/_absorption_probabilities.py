@@ -26,7 +26,7 @@ from cellrank.tl.estimators.mixins._utils import (
 
 import numpy as np
 import pandas as pd
-from scipy.sparse import issparse, spmatrix
+from scipy.sparse import issparse, spmatrix, csr_matrix
 from pandas.api.types import infer_dtype, is_categorical_dtype
 
 
@@ -280,9 +280,15 @@ class AbsProbsMixin:
         s = self.transition_matrix[trans_indices, :][:, rec_indices]
 
         # take individual solutions and piece them together to get absorption probabilities towards the classes
-        # fmt: off
-        macro_ix_helper = np.cumsum([0] + [len(indices) for indices in lookup_dict.values()])
-        s = np.concatenate([s[:, np.arange(a, b)].sum(axis=1) for a, b in _pairwise(macro_ix_helper)], axis=1)
+        macro_ix_helper = np.cumsum(
+            [0] + [len(indices) for indices in lookup_dict.values()]
+        )
+        # s can be sparse or dense, ensure the correct shape
+        s = [
+            s[:, np.arange(a, b)].sum(axis=1).reshape(-1, 1)
+            for a, b in _pairwise(macro_ix_helper)
+        ]
+        s = np.concatenate(s, axis=1)
         # fmt: on
 
         abs_probs = self._compute_absorption_probabilities(
