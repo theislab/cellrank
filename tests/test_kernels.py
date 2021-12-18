@@ -466,7 +466,6 @@ class TestKernel:
             VelocityKernel,
             PseudotimeKernel,
             CytoTRACEKernel,
-            PrecomputedKernel,
         ],
     )
     @pytest.mark.parametrize("key_added", [None, "foo"])
@@ -914,7 +913,7 @@ class TestTransitionProbabilities:
         # compute pearson correlations using cellrank
         vk = VelocityKernel(adata, backward=backward)
         vk.compute_transition_matrix(
-            model="deterministic", backward_model="transpose", softmax_scale=4
+            model="deterministic", backward_mode="transpose", softmax_scale=4
         )
         pearson_correlations_cr = vk.logits
 
@@ -1387,6 +1386,7 @@ class TestTransportMapKernel:
 
 class TestSingleFlow:
     def test_no_transition_matrix(self, kernel: Kernel):
+        kernel = kernel.kernels[0][0]
         kernel._transition_matrix = None
         with pytest.raises(RuntimeError, match=r"Compute transition matrix first as"):
             kernel.plot_single_flow("Astrocytes", "clusters", "age(days)")
