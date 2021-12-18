@@ -142,7 +142,9 @@ class DummyTMapKernel(TransportMapKernel):
         tmat = sprandom(
             n, m, density=0.5, dtype=np.float64, format="csr", random_state=42
         )
+        tmat[:, 0] = 1e-3
         tmat.data[:] = np.abs(tmat.data)
+
         if dtype is spmatrix:
             return tmat
         if dtype is np.ndarray:
@@ -822,7 +824,6 @@ class TestKernelCopy:
         vk2 = vk1.copy()
 
         np.testing.assert_array_equal(vk1.transition_matrix.A, vk2.transition_matrix.A)
-        np.testing.assert_array_equal(vk1.logits.A, vk2.logits.A)
 
         assert vk1.params == vk2.params
         assert vk1.backward == vk2.backward
@@ -1325,7 +1326,7 @@ class TestCytoTRACEKernel:
 
     def test_compute_transition_matrix_no_pt(self, adata: AnnData):
         k = CytoTRACEKernel(adata)
-        with pytest.raises(ValueError, match=r"Compute `.pseudotime`"):
+        with pytest.raises(ValueError, match=r"Compute pseudotime"):
             k.compute_transition_matrix()
 
     def test_compute_transition_matrix(self, adata: AnnData):

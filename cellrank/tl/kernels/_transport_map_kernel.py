@@ -285,8 +285,8 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
 
                 - `'auto'` - find the maximum threshold value which will not remove every non-zero value from any row.
                 - :class:`float` - value in `[0, 100]` corresponding to a percentage of non-zeros to remove.
-                  Rows where all values are removed will have uniform distribution.
-                - `None` - do not threshold.
+
+            Rows where all values are removed will have uniform distribution and a warning will be issued.
 
         Returns
         -------
@@ -302,7 +302,16 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
                 )
             threshold = np.percentile(tmat.data, threshold)
         logg.info(f"Using `threshold={threshold}`")
-        tmat.data[tmat.data <= threshold] = 0.0
+
+        tmat.data[tmat.data < threshold] = 0.0
+        zeros_mask = np.where(np.asarray(tmat.sum(1)).squeeze() == 0)[0]
+        if len(zeros_mask):
+            logg.warning(
+                f"After thresholding, `{len(zeros_mask)}` row(s) are forced to be uniform"
+            )
+            for row_ix in zeros_mask:
+                data = tmat[row_ix].data
+                tmat[row_ix].data = np.ones_like(data) / len(data)
         tmat.eliminate_zeros()
 
         if normalize:

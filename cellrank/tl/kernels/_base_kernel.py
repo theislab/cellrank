@@ -424,7 +424,7 @@ class KernelExpression(IOMixin, ABC):
             )
 
         def should_norm(mat: Union[np.ndarray, spmatrix]) -> bool:
-            return not np.isclose(np.asarray(mat.sum(1)).squeeze(), 1.0, rtol=1e-12).all()
+            return not np.all(np.isclose(np.asarray(mat.sum(1)).squeeze(), 1.0, rtol=1e-12))
 
         if issparse(matrix) and not isspmatrix_csr(matrix):
             matrix = csr_matrix(matrix)
@@ -434,7 +434,7 @@ class KernelExpression(IOMixin, ABC):
         matrix = _normalize(matrix) if normalize else matrix
         if normalize and should_norm(matrix):  # some rows are all 0s/contain invalid values
             n_inv = np.sum(~np.isclose(np.asarray(matrix.sum(1)).squeeze(), 1.0, rtol=1e-12))
-            raise ValueError(f"Transition matrix is not row stochastic, {n_inv}/{matrix.shape[0]} do not sum to 1.")
+            raise ValueError(f"Transition matrix is not row stochastic, {n_inv} rows do not sum to 1.")
         # fmt: on
 
         self._transition_matrix = matrix

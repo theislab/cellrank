@@ -55,6 +55,7 @@ class ModelABC(ABC):
         self,
         n_jobs: Optional[int] = None,
         backend: Backend_t = _DEFAULT_BACKEND,
+        show_progress_bar: bool = True,
         **kwargs: Any,
     ) -> Tuple[np.ndarray, np.ndarray]:
         ixs = self._ixs
@@ -63,6 +64,7 @@ class ModelABC(ABC):
             ixs,
             n_jobs=n_jobs,
             backend=backend,
+            show_progress_bar=show_progress_bar,
             as_array=False,
             extractor=lambda data: self._reconstruct_output(
                 np.concatenate(data, axis=-1), ixs
