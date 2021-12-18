@@ -2559,11 +2559,9 @@ class TestGPCCA:
 
     @compare(kind="gpcca")
     def test_scvelo_transition_matrix_projection(self, mc: GPCCA, fpath: str):
-        mc.kernel.plot_projection(basis="umap")
-        scv.pl.velocity_embedding(
-            mc.kernel.adata,
-            vkey="T_fwd",
+        mc.kernel.plot_projection(
             basis="umap",
+            stream=False,
             arrow_length=6,
             arrow_size=6,
             dpi=DPI,

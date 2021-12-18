@@ -26,12 +26,14 @@ Indices_t = Optional[
 ]
 
 
+@d.dedent
 class RandomWalk:
     """
     Class that simulates a random walk on a Markov chain.
 
     Parameters
     ----------
+    %(adata)s
     transition_matrix
         Row-stochastic transition matrix.
     start_ixs

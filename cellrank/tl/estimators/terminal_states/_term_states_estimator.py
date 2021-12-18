@@ -38,10 +38,9 @@ class TermStatesEstimator(BaseEstimator, ABC):
     def __init__(
         self,
         obj: Union[AnnData, np.ndarray, spmatrix, KernelExpression],
-        obsp_key: Optional[str] = None,
         **kwargs: Any,
     ):
-        super().__init__(obj=obj, obsp_key=obsp_key, **kwargs)
+        super().__init__(obj=obj, **kwargs)
 
         self._term_states: Optional[pd.Series] = None
         self._term_states_probs: Optional[pd.Series] = None

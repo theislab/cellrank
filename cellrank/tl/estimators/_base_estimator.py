@@ -49,10 +49,11 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
         obj: Union[AnnData, np.ndarray, spmatrix, KernelExpression],
         **kwargs: Any,
     ):
-        if isinstance(obj, KernelExpression) and obj.transition_matrix is None:
-            raise RuntimeError(
-                "Compute transition matrix first as `.compute_transition_matrix()`."
-            )
+        if isinstance(obj, KernelExpression):
+            if obj.transition_matrix is None:
+                raise RuntimeError(
+                    "Compute transition matrix first as `.compute_transition_matrix()`."
+                )
         else:
             obj = PrecomputedKernel(obj, copy=False, **kwargs)
         super().__init__(kernel=obj)

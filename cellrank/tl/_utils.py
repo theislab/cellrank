@@ -726,12 +726,12 @@ def _irreducible(d: Union[spmatrix, np.ndarray]) -> bool:
 
     import networkx as nx
 
-    logg.debug("Checking the transition matrix for irreducibility")
-
     G = nx.DiGraph(d) if not isinstance(d, nx.DiGraph) else d
-
     try:
-        _ = next(next(iter(nx.strongly_connected_components(G))))
+        it = iter(nx.strongly_connected_components(G))
+        _ = next(it)
+        _ = next(it)
+        return False
     except StopIteration:
         return True
 
