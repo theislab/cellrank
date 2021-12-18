@@ -50,7 +50,7 @@ class RandomWalk:
         if transition_matrix.ndim != 2 or (
             transition_matrix.shape[0] != transition_matrix.shape[1]
         ):
-            raise ValueError("Array is not a square matrix.")
+            raise ValueError("Transition matrix is not a square matrix.")
         if not np.allclose(transition_matrix.sum(1), 1.0):
             raise ValueError("Transition matrix is not row-stochastic.")
 
