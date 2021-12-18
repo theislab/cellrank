@@ -49,7 +49,7 @@ class ConnectivityMixin:
         """
         logg.debug("Density normalizing the transition matrix")
 
-        q = np.asarray(self._conn.sum(axis=0))
+        q = np.asarray(self._conn.sum(axis=0)).squeeze()
         Q = spdiags(1.0 / q, 0, matrix.shape[0], matrix.shape[0])
 
         return Q @ matrix @ Q

@@ -261,7 +261,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel, ABC):
         if np.issubdtype(subset.dtype, bool) and subset.shape == (data.shape[1],):
             data = data[:, subset]
         else:
-            data = data[:, self.adata.var_names.isin(subset)]
+            data = data[:, np.isin(self.adata.var_names, subset)]
 
         data = data.astype(dtype, copy=False)
         return data.toarray() if issparse(data) else data

@@ -21,11 +21,11 @@ def transition_matrix(
     xkey: str = "Ms",
     conn_key: str = "connectivities",
     gene_subset: Optional[Iterable] = None,
-    mode: Literal[
+    model: Literal[
         "deterministic", "stochastic", "monte_carlo"
     ] = VelocityModel.DETERMINISTIC,
     backward_mode: Literal["transpose", "negate"] = BackwardMode.TRANSPOSE,
-    scheme: Union[
+    similarity: Union[
         Literal["dot_product", "cosine", "correlation"], Callable
     ] = Scheme.CORRELATION,
     softmax_scale: Optional[float] = None,
@@ -84,18 +84,18 @@ def transition_matrix(
             conn_key=conn_key,
         ).compute_transition_matrix(
             softmax_scale=softmax_scale,
-            mode=mode,
+            model=model,
             backward_mode=backward_mode,
-            scheme=scheme,
+            similarity=similarity,
             **kwargs,
         )
 
     if 0 < weight_connectivities < 1:
         vk = compute_velocity_kernel()
         logg.info(f"Using a connectivity kernel with weight `{weight_connectivities}`")
-        ck = ConnectivityKernel(
-            adata, backward=backward, conn_key=conn_key
-        ).compute_transition_matrix(density_normalize=density_normalize)
+        ck = ConnectivityKernel(adata, conn_key=conn_key).compute_transition_matrix(
+            density_normalize=density_normalize
+        )
         final = (
             (1 - weight_connectivities) * vk + weight_connectivities * ck
         ).compute_transition_matrix()
@@ -104,7 +104,6 @@ def transition_matrix(
     elif weight_connectivities == 1:
         final = ConnectivityKernel(
             adata,
-            backward=backward,
             conn_key=conn_key,
         ).compute_transition_matrix(density_normalize=density_normalize)
     else:

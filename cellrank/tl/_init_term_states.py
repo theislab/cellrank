@@ -130,7 +130,7 @@ def _initial_terminal(
     adata: AnnData,
     estimator: type(BaseEstimator) = GPCCA,
     backward: bool = False,
-    mode: str = VelocityModel.DETERMINISTIC,
+    model: str = VelocityModel.DETERMINISTIC,
     backward_mode: str = BackwardMode.TRANSPOSE,
     n_states: Optional[int] = None,
     cluster_key: Optional[str] = None,
@@ -156,7 +156,7 @@ def _initial_terminal(
         kernel = transition_matrix(
             adata,
             backward=backward,
-            mode=mode,
+            model=model,
             backward_mode=backward_mode,
             **kwargs,
         )
@@ -208,7 +208,7 @@ def _initial_terminal(
 def initial_states(  # noqa: D103
     adata: AnnData,
     estimator: type(BaseEstimator) = GPCCA,
-    mode: str = VelocityModel.DETERMINISTIC,
+    model: str = VelocityModel.DETERMINISTIC,
     backward_mode: str = BackwardMode.TRANSPOSE,
     n_states: Optional[int] = None,
     cluster_key: Optional[str] = None,
@@ -218,13 +218,13 @@ def initial_states(  # noqa: D103
     copy: bool = False,
     return_estimator: bool = False,
     fit_kwargs: Mapping = MappingProxyType({}),
-    **kwargs,
+    **kwargs: Any,
 ) -> Optional[Union[AnnData, BaseEstimator]]:
 
     return _initial_terminal(
         adata,
         estimator=estimator,
-        mode=mode,
+        model=model,
         backward_mode=backward_mode,
         backward=True,
         n_states=n_states,
@@ -250,7 +250,7 @@ def initial_states(  # noqa: D103
 def terminal_states(  # noqa: D103
     adata: AnnData,
     estimator: type(BaseEstimator) = GPCCA,
-    mode: str = VelocityModel.DETERMINISTIC,
+    model: str = VelocityModel.DETERMINISTIC,
     n_states: Optional[int] = None,
     cluster_key: Optional[str] = None,
     key: Optional[str] = None,
@@ -259,13 +259,13 @@ def terminal_states(  # noqa: D103
     copy: bool = False,
     return_estimator: bool = False,
     fit_kwargs: Mapping = MappingProxyType({}),
-    **kwargs,
+    **kwargs: Any,
 ) -> Optional[Union[AnnData, BaseEstimator]]:
 
     return _initial_terminal(
         adata,
         estimator=estimator,
-        mode=mode,
+        model=model,
         backward=False,
         n_states=n_states,
         cluster_key=cluster_key,
