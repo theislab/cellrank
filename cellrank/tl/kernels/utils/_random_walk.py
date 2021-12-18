@@ -52,7 +52,14 @@ class RandomWalk:
         if transition_matrix.ndim != 2 or (
             transition_matrix.shape[0] != transition_matrix.shape[1]
         ):
-            raise ValueError("Transition matrix is not a square matrix.")
+            raise ValueError(
+                f"Expected transition matrix to be a square matrix, found `{transition_matrix.ndim}`."
+            )
+        if transition_matrix.shape[0] != adata.n_obs:
+            raise ValueError(
+                f"Expected transition matrix to be of shape `{adata.n_obs, adata.n_obs}`,"
+                f"found `{transition_matrix.shape}`."
+            )
         if not np.allclose(transition_matrix.sum(1), 1.0):
             raise ValueError("Transition matrix is not row-stochastic.")
 
@@ -73,7 +80,7 @@ class RandomWalk:
         if _sum == 0:
             raise ValueError("No starting indices have been selected.")
 
-        self._starting_dist = self._starting_dist.astype(np.float64) / _sum
+        self._starting_dist = self._starting_dist.astype(transition_matrix.dtype) / _sum
 
     @d.get_sections(base="rw_sim", sections=["Parameters"])
     def simulate_one(
@@ -297,12 +304,29 @@ class RandomWalk:
             # fmt: on
         elif isinstance(ixs, str):
             ixs = np.where(self._adata.obs_names == ixs)[0]
-        else:
+        elif isinstance(ixs[0], str):
             ixs = np.where(np.isin(self._adata.obs_names, ixs))[0]
+        elif isinstance(ixs[0], bool):
+            if len(ixs) != self._adata.n_obs:
+                raise ValueError(
+                    f"Expected `bool` {kind} indices of length"
+                    f"`{self._adata.n_obs}`, found `{len(ixs)}`."
+                )
+            ixs = np.where(ixs)[0]
+        elif isinstance(ixs[0], int):
+            ixs = list(set(ixs))
+            if max(ixs) >= self._adata.n_obs:
+                raise IndexError(max(ixs))
+            if min(ixs) < -self._adata.n_obs:
+                raise IndexError(min(ixs))
+        else:
+            raise TypeError(
+                f"Expected {kind} indices to be either `dict` or a sequence of "
+                f"`int`, `str`, `bool`, found `{type(ixs).__nam__}`."
+            )
 
         if not len(ixs):
-            logg.warning(f"No {kind} indices have been selected, using `None`")
-            return None
+            raise ValueError(f"No {kind} indices have been selected.")
 
         return ixs
 
