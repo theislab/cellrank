@@ -11,8 +11,8 @@ from cellrank.tl.kernels.utils import MonteCarlo, Stochastic, Deterministic
 from cellrank.tl.kernels._mixins import ConnectivityMixin
 from scvelo.preprocessing.moments import get_moments
 from cellrank.tl.kernels._base_kernel import BidirectionalKernel
+from cellrank.tl.kernels.utils._similarity import Scheme, Similarity
 from cellrank.tl.kernels.utils._velocity_model import BackwardMode, VelocityModel
-from cellrank.tl.kernels.utils._similarity_scheme import Scheme, Similarity
 
 import numpy as np
 from scipy.sparse import issparse
@@ -42,7 +42,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel, ABC):
         List of genes to be used to compute transition probabilities.
         If not specified, genes from :attr:`anndata.AnnData.var` ``['{vkey}_genes']`` are used.
     kwargs
-        Keyword arguments for :class:`cellrank.kernels.VelocityKernel`.
+        Keyword arguments for :class:`cellrank.kernels.Kernel`.
     """
 
     def __init__(
@@ -76,7 +76,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel, ABC):
         self._xdata = self._extract_layer(xkey, subset=gene_subset)
         self._vdata = self._extract_layer(vkey, subset=gene_subset)
 
-        # TODO(Marius1311): why not nans = np.any(np.isnan(self._vdata), axis=0)?
+        # TODO(michalk8): why not nans = np.any(np.isnan(self._vdata), axis=0)?
         nans = np.isnan(np.sum(self._vdata, axis=0))
         if np.any(nans):
             self._xdata = self._xdata[:, ~nans]
@@ -86,7 +86,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel, ABC):
         self._vvar = get_moments(self.adata, self._vdata, second_order=True).astype(np.float64, copy=False)
         # fmt: on
 
-    # TODO(michalk8): check callable signature
+    # TODO(michalk8): remove the docrep in 2.0
     @inject_docs(m=VelocityModel, b=BackwardMode, s=Scheme)  # don't swap the order
     @d.dedent
     def compute_transition_matrix(
@@ -97,7 +97,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel, ABC):
         backward_mode: Literal["transpose", "negate"] = BackwardMode.TRANSPOSE,
         similarity: Union[
             Literal["correlation", "cosine", "dot_product"],
-            Callable[[np.ndarray], np.ndarray],
+            Callable[[np.ndarray, np.ndarray, float], np.ndarray],
         ] = Scheme.CORRELATION,
         softmax_scale: Optional[float] = None,
         n_samples: int = 1000,
@@ -121,6 +121,8 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel, ABC):
         seed
             Random seed when ``mode = {m.MONTE_CARLO!r}``.
         %(parallel)s
+        kwargs
+            TODO(michalk8): mention the model class?
 
         Returns
         -------

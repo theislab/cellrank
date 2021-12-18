@@ -7,7 +7,7 @@ from math import fsum
 from cellrank.tl._enum import _DEFAULT_BACKEND, ModeEnum, Backend_t
 from cellrank.ul._parallelize import parallelize
 from cellrank.tl.kernels._utils import _random_normal, _calculate_starts
-from cellrank.tl.kernels.utils._similarity_scheme import Similarity
+from cellrank.tl.kernels.utils._similarity import Similarity
 
 import numpy as np
 from scipy.sparse import spmatrix, csr_matrix
@@ -82,14 +82,14 @@ class ModelABC(ABC):
             neigh_ixs = indices[start:end]
             n_neigh = len(neigh_ixs)
 
-            p, l = self._compute(ix, neigh_ixs, **kwargs)
-            if np.shape(p) != (n_neigh,):
+            ps, ls = self._compute(ix, neigh_ixs, **kwargs)
+            if np.shape(ps) != (n_neigh,):
                 raise ValueError(
-                    f"Expected row of shape `{(2, n_neigh)}`, found `{np.shape(tmp)}`."
+                    f"Expected row of shape `{(2, n_neigh)}`, found `{np.shape(ps)}`."
                 )
 
-            probs_logits[0, starts[i] : starts[i] + n_neigh] = p
-            probs_logits[1, starts[i] : starts[i] + n_neigh] = l
+            probs_logits[0, starts[i] : starts[i] + n_neigh] = ps
+            probs_logits[1, starts[i] : starts[i] + n_neigh] = ls
             if queue is not None:
                 queue.put(1)
 
@@ -147,8 +147,8 @@ class ModelABC(ABC):
         probs = reconstruct(data[0])
         logits = reconstruct(data[1])
         if not np.allclose(probs.sum(1), 1.0, rtol=1e-12):
-            # TODO: row ixs?
-            raise ValueError(f"Matrix is not row-stochastic.")
+            # TODO(michalk8): row ixs?
+            raise ValueError("Matrix is not row-stochastic.")
 
         return probs, logits
 
@@ -170,7 +170,7 @@ class ModelABC(ABC):
 
 
 class Deterministic(ModelABC):
-    def _compute(self, ix: int, neigh_ixs: np.ndarray, **_: Any) -> np.ndarray:
+    def _compute(self, ix: int, neigh_ixs: np.ndarray) -> np.ndarray:
         W = self._x[neigh_ixs, :] - self._x[ix, :]
 
         if self._backward_mode not in (None, BackwardMode.NEGATE):
@@ -202,7 +202,9 @@ class Stochastic(ModelABC):
         self._var = var.astype(dtype, copy=False)
 
     def _compute(
-        self, ix: int, nbhs_ixs: np.ndarray, **_: Any
+        self,
+        ix: int,
+        nbhs_ixs: np.ndarray,
     ) -> Tuple[np.ndarray, np.ndarray]:
         v = self._v[ix]
         n_neigh, n_feat = len(nbhs_ixs), self._x.shape[1]
@@ -270,7 +272,9 @@ class MonteCarlo(ModelABC):
         np.random.seed(seed)
 
     def _compute(
-        self, ix: int, nbhs_ixs: np.ndarray, **_: Any
+        self,
+        ix: int,
+        nbhs_ixs: np.ndarray,
     ) -> Tuple[np.ndarray, np.ndarray]:
         # fmt: off
         n_neigh = len(nbhs_ixs)
@@ -282,9 +286,9 @@ class MonteCarlo(ModelABC):
         probs = np.zeros((n_neigh,), dtype=np.float64)
         logits = np.zeros((n_neigh,), dtype=np.float64)
         for j in range(self._n_samples):
-            p, l = self._similarity(np.atleast_2d(samples[j]), W, self._softmax_scale)
-            probs += p
-            logits += l
+            ps, ls = self._similarity(np.atleast_2d(samples[j]), W, self._softmax_scale)
+            probs += ps
+            logits += ls
 
         return probs / self._n_samples, logits / self._n_samples
         # fmt: on
