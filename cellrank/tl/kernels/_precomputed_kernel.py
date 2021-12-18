@@ -68,6 +68,10 @@ class PrecomputedKernel(UnidirectionalKernel):
             obsp_key = Key.uns.kernel(backward)
         tmat = _read_graph_data(adata, obsp_key)
         self._from_matrix(tmat, adata=adata, copy=copy)
+        if obsp_key == Key.uns.kernel(bwd=False):
+            self._backward = False
+        elif obsp_key == Key.uns.kernel(bwd=True):
+            self._backward = True
         self.params["origin"] = f"adata.obsp[{obsp_key!r}]"
 
     def _from_kernel(self, kernel: KernelExpression, copy: bool = True) -> None:
@@ -75,11 +79,10 @@ class PrecomputedKernel(UnidirectionalKernel):
             raise RuntimeError(
                 "Compute transition matrix first as `.compute_transition_matrix()`."
             )
-        origin = repr(kernel)
-        params = kernel.params.copy()
         self._from_matrix(kernel.transition_matrix, adata=kernel.adata, copy=copy)
-        self._params = params
-        self.params["origin"] = origin
+        self._params = kernel.params.copy()
+        self._backward = kernel.backward
+        self.params["origin"] = repr(kernel)
 
     def _from_matrix(
         self,
@@ -92,6 +95,7 @@ class PrecomputedKernel(UnidirectionalKernel):
             logg.warning(f"Creating empty `AnnData` object of shape `{matrix.shape[0], 1}`")
             adata = AnnData(csr_matrix((matrix.shape[0], 1), dtype=np.float64))
         super().__init__(adata)
+        self._backward: Optional[bool] = None
         self.transition_matrix = matrix.copy() if copy else matrix
         self.params['origin'] = "array"
         # fmt: on
@@ -99,3 +103,7 @@ class PrecomputedKernel(UnidirectionalKernel):
     def compute_transition_matrix(self, *_: Any, **__: Any) -> "PrecomputedKernel":
         """Do nothing and return self."""
         return self
+
+    @property
+    def backward(self) -> Optional[bool]:
+        return self._backward

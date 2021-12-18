@@ -47,36 +47,15 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
     def __init__(
         self,
         obj: Union[AnnData, np.ndarray, spmatrix, KernelExpression],
-        obsp_key: Optional[str] = None,
+        **kwargs: Any,
     ):
-        if isinstance(obj, Kernel):
-            if obj._transition_matrix is None:
-                raise ValueError(
-                    "Compute transition matrix first as `.compute_transition_matrix()`."
-                )
-            kernel = obj
-        elif isinstance(obj, KernelExpression):
-            # this will fail if not all kernels have transition matrix computed
-            kernel = obj.compute_transition_matrix()
-        elif isinstance(obj, (np.ndarray, spmatrix)):
-            kernel = PrecomputedKernel(obj)
-        elif isinstance(obj, AnnData):
-            if obsp_key is None:
-                raise ValueError(
-                    "Specify `obsp_key=...` when supplying an `AnnData` object."
-                )
-            elif obsp_key not in obj.obsp:
-                raise KeyError(
-                    f"Unable to find transition matrix in `adata.obsp[{obsp_key!r}]`."
-                )
-            kernel = PrecomputedKernel(obsp_key, adata=obj)
-        else:
-            raise TypeError(
-                f"Expected an object of type `KernelExpression`, `numpy.ndarray`, `scipy.sparse.spmatrix` "
-                f"or `anndata.AnnData`, got `{type(obj).__name__}`."
+        if isinstance(obj, KernelExpression) and obj.transition_matrix is None:
+            raise RuntimeError(
+                "Compute transition matrix first as `.compute_transition_matrix()`."
             )
-
-        super().__init__(kernel=kernel)
+        else:
+            obj = PrecomputedKernel(obj, copy=False, **kwargs)
+        super().__init__(kernel=obj)
 
         self._params: Dict[str, Any] = {}
         self._shadow_adata = AnnData(
