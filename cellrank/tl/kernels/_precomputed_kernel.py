@@ -13,93 +13,88 @@ __all__ = ("PrecomputedKernel",)
 
 
 class PrecomputedKernel(UnidirectionalKernel):
-    @classmethod
-    def from_object(
-        cls,
+    """
+    TODO.
+
+    Parameters
+    ----------
+    object
+        Can be one of the following types:
+
+            - :class:`anndata.AnnData`
+            - :class:`scipy.sparse.ndarray`, :class:`numpy.ndarray`
+            - :class:`cellrank.kernels.KernelExpression`
+            - :class:`str`
+            - :class:`bool`
+    kwargs
+        TODO.
+
+    """
+
+    def __init__(
+        self,
         object: Union[str, bool, np.ndarray, spmatrix, AnnData, KernelExpression],
         copy: bool = True,
         **kwargs: Any,
     ):
-        """
-        Parameters
-        ----------
-        object
-            Can be one of the following types:
-
-                - :class:`anndata.AnnData`
-                - :class:`scipy.sparse.ndarray`, :class:`numpy.ndarray`
-                - :class:`cellrank.kernels.KernelExpression`
-                - :class:`str`
-                - :class:`kwargs`
-        kwargs
-            TODO.
-
-        Returns
-        -------
-        Kernel with supplied transition matrix.
-        """
         if isinstance(object, AnnData):
-            return cls.from_adata(object, copy=copy, **kwargs)
-        if isinstance(object, KernelExpression):
-            return cls.from_kernel(object, copy=copy)
-        if isinstance(object, (np.ndarray, spmatrix)):
-            return cls.from_matrix(object, copy=copy, **kwargs)
-        adata = kwargs.pop("adata", None)
-        if isinstance(adata, AnnData):
-            if isinstance(object, str):
-                return cls.from_adata(adata, obsp_key=object, copy=copy)
-            if object is None or isinstance(object, bool):
-                return cls.from_adata(adata, backward=object, copy=copy)
-        raise TypeError("TODO")
+            self._from_adata(object, copy=copy, **kwargs)
+        elif isinstance(object, KernelExpression):
+            self._from_kernel(object, copy=copy)
+        elif isinstance(object, (np.ndarray, spmatrix)):
+            self._from_matrix(object, copy=copy, **kwargs)
+        else:
+            adata = kwargs.pop("adata", None)
+            if isinstance(adata, AnnData):
+                if isinstance(object, str):
+                    self._from_adata(adata, obsp_key=object, copy=copy)
+                if object is None or isinstance(object, bool):
+                    self._from_adata(adata, backward=object, copy=copy)
+                return
+            raise TypeError(
+                f"Expected object to be either `str`, `bool`, `numpy.ndarray`, "
+                f"`scipy.sparse.spmatrix`, `AnnData` or `KernelExpression`, "
+                f"found `{type(object).__name__}`"
+            )
 
-    @classmethod
-    def from_adata(
-        cls,
+    def _from_adata(
+        self,
         adata: AnnData,
         obsp_key: Optional[str] = None,
         backward: Optional[bool] = None,
         copy: bool = True,
-    ) -> "PrecomputedKernel":
+    ) -> None:
         if obsp_key is None:
             obsp_key = Key.uns.kernel(backward)
         tmat = _read_graph_data(adata, obsp_key)
-        kernel = cls.from_matrix(tmat, adata=adata, copy=copy)
-        kernel.params["origin"] = f"adata.obsp[{obsp_key!r}]"
-        return kernel
+        self._from_matrix(tmat, adata=adata, copy=copy)
+        self.params["origin"] = f"adata.obsp[{obsp_key!r}]"
 
-    @classmethod
-    def from_kernel(
-        cls, kernel: KernelExpression, copy: bool = True
-    ) -> "PrecomputedKernel":
+    def _from_kernel(self, kernel: KernelExpression, copy: bool = True) -> None:
         if kernel.transition_matrix is None:
             raise RuntimeError(
-                f"Compute transition matrix first as `.compute_transition_matrix()`."
+                "Compute transition matrix first as `.compute_transition_matrix()`."
             )
-        origin = repr(kernel).strip("~<>")
+        origin = repr(kernel)
         params = kernel.params.copy()
-        kernel = cls.from_matrix(
-            kernel.transition_matrix, adata=kernel.adata, copy=copy
-        )
-        kernel._params = params
-        kernel.params["origin"] = origin
-        return kernel
+        self._from_matrix(kernel.transition_matrix, adata=kernel.adata, copy=copy)
+        self._params = params
+        self.params["origin"] = origin
 
-    @classmethod
-    def from_matrix(
-        cls,
+    def _from_matrix(
+        self,
         matrix: Union[np.ndarray, spmatrix],
         adata: Optional[AnnData] = None,
         copy: bool = True,
-    ) -> "PrecomputedKernel":
+    ) -> None:
         # fmt: off
         if adata is None:
             logg.warning(f"Creating empty `AnnData` object of shape `{matrix.shape[0], 1}`")
             adata = AnnData(csr_matrix((matrix.shape[0], 1), dtype=np.float64))
-        kernel = cls(adata)
-        kernel.transition_matrix = matrix.copy() if copy else matrix
-        kernel.params['origin'] = "array"
+        super().__init__(adata)
+        self.transition_matrix = matrix.copy() if copy else matrix
+        self.params['origin'] = "array"
         # fmt: on
-        return kernel
 
     def compute_transition_matrix(self, *_: Any, **__: Any) -> "PrecomputedKernel":
         """Do nothing and return self."""

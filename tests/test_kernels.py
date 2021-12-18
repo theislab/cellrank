@@ -440,23 +440,27 @@ class TestInitializeKernel:
 
 class TestKernel:
     def test_precomputed_not_array(self):
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match=r"Expected object"):
             _ = PrecomputedKernel([[1, 0], [0, 1]])
 
     def test_precomputed_not_square(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(
+            ValueError, match=r"Expected matrix to be of shape `\(10, 10\)`"
+        ):
             _ = PrecomputedKernel(np.random.normal(size=(10, 9)))
 
     def test_precomputed_not_a_transition_matrix(self):
         mat = random_transition_matrix(100)
-        mat[0, 0] = 0xDEADBEEF
-        with pytest.raises(ValueError):
+        mat[0, 0] = -1e-3
+        with pytest.raises(
+            ValueError, match=r"Unable to normalize matrix with negative values."
+        ):
             _ = PrecomputedKernel(mat)
 
     def test_precomputed_from_kernel_no_transition(self, adata: AnnData):
         vk = VelocityKernel(adata)
 
-        with pytest.raises(ValueError):
+        with pytest.raises(RuntimeError, match="Compute transition matrix"):
             PrecomputedKernel(vk)
 
     @pytest.mark.parametrize(
@@ -507,8 +511,8 @@ class TestKernel:
         pk.write_to_adata()
 
         assert pk.adata is vk.adata
-        assert pk._origin == str(vk).strip("~<>")
         assert pk.params is not vk.params
+        assert pk.params.pop("origin") == repr(vk)
         assert pk.params == vk.params
         assert pk.transition_matrix is not vk.transition_matrix
         np.testing.assert_array_equal(pk.transition_matrix.A, vk.transition_matrix.A)
@@ -518,15 +522,13 @@ class TestKernel:
         pk.write_to_adata()
 
         assert isinstance(pk.adata, AnnData)
-        assert pk._origin == "'array'"
+        assert pk.params["origin"] == "array"
         assert pk.adata.shape == (50, 1)
         assert pk.adata.obs.shape == (50, 0)
         assert pk.adata.var.shape == (1, 0)
         assert "T_fwd_params" in pk.adata.uns.keys()
         assert pk.adata.uns["T_fwd_params"] == {"params": pk.params}
-        np.testing.assert_array_equal(
-            pk.adata.obsp["T_fwd"].toarray(), pk.transition_matrix.toarray()
-        )
+        np.testing.assert_array_equal(pk.adata.obsp["T_fwd"], pk.transition_matrix)
 
     def test_precomputed_different_adata(self, adata: AnnData):
         vk = VelocityKernel(adata).compute_transition_matrix(
@@ -548,7 +550,7 @@ class TestKernel:
 
         pk = PrecomputedKernel("foo", adata=adata)
 
-        assert pk._origin == "adata.obsp['foo']"
+        assert pk.params["origin"] == "adata.obsp['foo']"
 
     def test_precomputed_adata(self, adata: AnnData):
         pk = PrecomputedKernel(random_transition_matrix(adata.n_obs), adata=adata)
@@ -559,7 +561,7 @@ class TestKernel:
         mat = random_transition_matrix(adata.n_obs)
         pk = PrecomputedKernel(mat)
 
-        np.testing.assert_array_equal(mat, pk.transition_matrix.toarray())
+        np.testing.assert_array_equal(mat, pk.transition_matrix)
 
     def test_precomputed_sum(self, adata: AnnData):
         mat = random_transition_matrix(adata.n_obs)
@@ -569,9 +571,7 @@ class TestKernel:
         expected = (0.5 * vk.transition_matrix) + (0.5 * pk.transition_matrix)
         actual = (pk + vk).compute_transition_matrix()
 
-        np.testing.assert_array_almost_equal(
-            expected.toarray(), actual.transition_matrix.toarray()
-        )
+        np.testing.assert_array_almost_equal(expected, actual.transition_matrix)
 
     @pytest.mark.parametrize("sparse", [False, True])
     def test_custom_preserves_type(self, adata: AnnData, sparse: bool):
@@ -883,84 +883,6 @@ class TestGeneral:
 
         assert len(v.kernels) == 1
         assert v.kernels[0] is vk
-
-
-class TestTransitionProbabilities:
-    def test_pearson_correlations_fwd(self, adata: AnnData):
-        # test whether pearson correlations in cellrank match those from scvelo, forward case
-        backward = False
-
-        # compute pearson correlations using scvelo
-        velo_graph = adata.obsp["velocity_graph"] + adata.obsp["velocity_graph_neg"]
-
-        # compute pearson correlations using cellrank
-        vk = VelocityKernel(adata, backward=backward)
-        vk.compute_transition_matrix(model="deterministic", softmax_scale=4)
-        pearson_correlations_cr = vk.logits
-
-        pc_r = velo_graph.copy()
-        pc_r.data = np.array(pearson_correlations_cr[(velo_graph != 0)]).squeeze()
-
-        assert np.max(np.abs((pc_r - velo_graph).data)) < _rtol
-
-    def test_pearson_correlations_bwd(self, adata: AnnData):
-        # test whether pearson correlations in cellrank match those from scvelo, backward case
-        backward = True
-
-        # compute pearson correlations using scvelo
-        velo_graph = (adata.obsp["velocity_graph"] + adata.obsp["velocity_graph_neg"]).T
-
-        # compute pearson correlations using cellrank
-        vk = VelocityKernel(adata, backward=backward)
-        vk.compute_transition_matrix(
-            model="deterministic", backward_mode="transpose", softmax_scale=4
-        )
-        pearson_correlations_cr = vk.logits
-
-        pc_r = velo_graph.copy()
-        pc_r.data = np.array(pearson_correlations_cr[(velo_graph != 0)]).squeeze()
-
-        assert np.max(np.abs((pc_r - velo_graph.T).data)) < _rtol
-
-    def test_transition_probabilities_fwd(self, adata: AnnData):
-        # test whether transition probabilities in cellrank match those from scvelo, forward case
-        sigma_test = 3
-
-        # compute transition probabilities using cellrank
-        vk = VelocityKernel(adata)
-        vk.compute_transition_matrix(softmax_scale=sigma_test, model="deterministic")
-        T_cr = vk.transition_matrix
-
-        pearson_correlation = vk.logits
-        T_exp = np.expm1(pearson_correlation * sigma_test)
-        T_exp.data += 1
-        T_exp = _normalize(T_exp)
-
-        np.testing.assert_allclose(T_exp.A, T_cr.A)  # don't use data, can be reordered
-
-    def test_transition_probabilities_bwd(self, adata: AnnData):
-        # test whether transition probabilities in cellrank match those from scvelo, backward case
-        sigma_test = 3
-
-        # compute transition probabilities using cellrank
-        vk = VelocityKernel(adata, backward=True)
-        vk.compute_transition_matrix(softmax_scale=sigma_test, model="deterministic")
-        T_cr = vk.transition_matrix
-
-        pearson_correlation = vk.logits
-        T_exp = np.expm1(pearson_correlation * sigma_test)
-        T_exp.data += 1
-        T_exp = _normalize(T_exp)
-
-        np.testing.assert_allclose(T_exp.A, T_cr.A)  # don't use data, can be reordered
-
-    def test_estimate_softmax_scale(self, adata: AnnData):
-        vk = VelocityKernel(adata)
-        vk.compute_transition_matrix(
-            model="deterministic", show_progress_bar=False, softmax_scale=None
-        )
-
-        assert isinstance(vk.params["softmax_scale"], float)
 
 
 class TestMonteCarlo:

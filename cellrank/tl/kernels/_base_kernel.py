@@ -430,9 +430,12 @@ class KernelExpression(IOMixin, ABC):
             matrix = csr_matrix(matrix)
         matrix = matrix.astype(np.float64, copy=False)
 
-        normalize = (self._parent is None or self._normalize) and should_norm(matrix)
-        matrix = _normalize(matrix) if normalize else matrix
-        if normalize and should_norm(matrix):  # some rows are all 0s/contain invalid values
+        force_normalize = (self._parent is None or self._normalize) and should_norm(matrix)
+        if force_normalize:
+            if np.any((matrix.data if issparse(matrix) else matrix) < 0):
+                raise ValueError("Unable to normalize matrix with negative values.")
+            matrix = _normalize(matrix)
+        if force_normalize and should_norm(matrix):  # some rows are all 0s/contain invalid values
             n_inv = np.sum(~np.isclose(np.asarray(matrix.sum(1)).squeeze(), 1.0, rtol=1e-12))
             raise ValueError(f"Transition matrix is not row stochastic, {n_inv} rows do not sum to 1.")
         # fmt: on
