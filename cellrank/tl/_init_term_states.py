@@ -73,6 +73,7 @@ def _fit(
     estim: TermStatesEstimator,
     n_lineages: Optional[int] = None,
     keys: Optional[Sequence[str]] = None,
+    method: Optional[str] = None,
     cluster_key: Optional[str] = None,
     compute_absorption_probabilities: bool = True,
     **kwargs: Any,
@@ -86,7 +87,7 @@ def _fit(
             use=n_lineages,
             cluster_key=cluster_key,
             n_clusters_kmeans=n_lineages,
-            method=kwargs.pop("method", "kmeans"),
+            method=method or "kmeans",
             **kwargs,
         )
     elif isinstance(estim, GPCCA):
@@ -96,7 +97,7 @@ def _fit(
                 n_lineages = estim.eigendecomposition["eigengap"] + 1
 
         if n_lineages > 1:
-            estim.compute_schur(n_lineages, method=kwargs.pop("method", "krylov"))
+            estim.compute_schur(n_lineages, method=method or "krylov")
 
         try:
             estim.compute_macrostates(
@@ -134,13 +135,14 @@ def _initial_terminal(
     backward_mode: str = BackwardMode.TRANSPOSE,
     n_states: Optional[int] = None,
     cluster_key: Optional[str] = None,
+    method: Optional[str] = None,
     key: Optional[str] = None,
     force_recompute: bool = False,
     show_plots: bool = False,
     copy: bool = False,
     return_estimator: bool = False,
     fit_kwargs: Mapping = MappingProxyType({}),
-    **kwargs,
+    **kwargs: Any,
 ) -> Optional[Union[AnnData, BaseEstimator]]:
     _check_estimator_type(estimator)
 
@@ -175,6 +177,7 @@ def _initial_terminal(
         n_lineages=n_states,
         cluster_key=cluster_key,
         compute_absorption_probabilities=False,
+        method=method,
         **fit_kwargs,
     )
 
