@@ -217,8 +217,9 @@ class LinDriversMixin(AbsProbsMixin):
         self: LinDriversProtocol,
         lineage: str,
         n_genes: int = 8,
-        ncols: Optional[int] = None,
         use_raw: bool = False,
+        ascending: bool = False,
+        ncols: Optional[int] = None,
         title_fmt: str = "{gene} qval={qval:.4e}",
         figsize: Optional[Tuple[float, float]] = None,
         dpi: Optional[int] = None,
@@ -234,10 +235,12 @@ class LinDriversMixin(AbsProbsMixin):
             Lineage for which to plot the driver genes.
         n_genes
             Top most correlated genes to plot.
-        ncols
-            Number of columns.
         use_raw
             Whether to access in :attr:`anndata.AnnData.raw` or not.
+        ascending
+            Whether to sort the genes in ascending order.
+        ncols
+            Number of columns.
         title_fmt
             Title format. Can include `{gene}`, `{pval}`, `{qval}` or `{corr}`, which will be substituted
             with the actual values.
@@ -285,7 +288,7 @@ class LinDriversMixin(AbsProbsMixin):
             raise ValueError(f"Expected `n_genes` to be positive, found `{n_genes}`.")
 
         _ = kwargs.pop("save", None)
-        genes = lin_drivers.sort_values(by=key, ascending=False).head(n_genes)
+        genes = lin_drivers.sort_values(by=key, ascending=ascending).head(n_genes)
 
         ncols = 4 if ncols is None else ncols
         nrows = int(np.ceil(len(genes) / ncols))

@@ -1,0 +1,1 @@
+Allow plotting negatively correlated genes in :func:`cellrank.pl.lineage_drivers`.

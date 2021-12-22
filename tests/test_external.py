@@ -14,6 +14,7 @@ import pandas as pd
 from scipy.sparse import csr_matrix
 from pandas.core.dtypes.common import is_categorical_dtype
 
+import matplotlib.pyplot as plt
 from matplotlib.cm import get_cmap
 from matplotlib.colors import to_hex
 
@@ -321,6 +322,23 @@ class TestWOTKernel:
             sorted(ok.transport_maps.keys()), sorted(ok2.transport_maps.keys())
         )
         np.testing.assert_array_equal(ok.transition_matrix.A, ok2.transition_matrix.A)
+
+    @pytest.mark.parametrize("cmap", ["viridis", "inferno"])
+    @pytest.mark.parametrize("size", [5, 10])
+    def test_colormap(self, adata_large: AnnData, cmap: str, size: int):
+        dummy_time = pd.cut(adata_large.obs["latent_time"], size).cat.rename_categories(
+            range(13, 13 + size)
+        )
+        adata_large.obs["dummy_time"] = dummy_time
+        expected_colors = [
+            to_hex(c) for c in plt.get_cmap(cmap)(np.linspace(0.0, 1.0, size))
+        ]
+
+        _ = cre.kernels.WOTKernel(adata_large, time_key="dummy_time", cmap=cmap)
+
+        np.testing.assert_array_equal(
+            adata_large.uns["dummy_time_colors"], expected_colors
+        )
 
 
 class TestGetMarkers:

@@ -70,8 +70,9 @@ def lineage_drivers(
     lineage: str,
     backward: bool = False,
     n_genes: int = 8,
-    ncols: Optional[int] = None,
     use_raw: bool = False,
+    ascending: bool = False,
+    ncols: Optional[int] = None,
     title_fmt: str = "{gene} qval={qval:.4e}",
     **kwargs: Any,
 ) -> None:
@@ -111,6 +112,7 @@ def lineage_drivers(
         lineage,
         n_genes=n_genes,
         use_raw=use_raw,
+        ascending=ascending,
         ncols=ncols,
         title_fmt=title_fmt,
         **kwargs,
