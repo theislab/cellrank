@@ -13,7 +13,7 @@ these. Our kernels work with a variety of input data including `RNA velocity`_ (
 `Bergen et al. (2020)`_), `cellular similarity`_ (both transcriptomic and spatial) and `pseudotime`_, among others.
 Our `VelocityKernel`_ takes into account **uncertainty in the velocities** and allows you to aggregate the short-range
 fate relations given by RNA velocity into longer trends along the phenotypic manifold. Our main estimator is
-*Generalized Perron Cluster Cluster Analysis* (G-PCCA) [GPCCA18]_ which coarse-grains the Markov chain
+*Generalized Perron Cluster Cluster Analysis* (G-PCCA) GPCCA18_ which coarse-grains the Markov chain
 into a set of macrostates which represent initial, terminal and intermediate states. For each transient cell,
 we compute its fate probability towards any terminal state. We show an example of such a fate map in the figure above,
 which has been computed using the data of `pancreatic endocrinogenesis`_. CellRank combines `kernels`_ and `estimators`_
@@ -23,16 +23,16 @@ fate-informed `circular embeddings`_, to name just a few.
 CellRank scales to large cell numbers, is fully compatible with `scanpy`_ and `scvelo`_ and is easy to use.
 For **installation instructions**, **documentation** and **tutorials**, visit `cellrank.org`_.
 
+Manuscript
+^^^^^^^^^^
+Please check out our manuscript `Lange et al. (2022)`_ in **Nature Methods** to learn more.
+
 Getting started with CellRank
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 If you're new to CellRank, make sure to go though the `basic tutorial`_ which introduces you to CellRank's high-level
 API. Most biological systems require a bit more control, so be sure to check out the `kernels and estimators tutorial`_
 which allows to unlock the full power of CellRank. If you want to see individual functions in action, visit our
 `gallery`_.
-
-Manuscript
-^^^^^^^^^^
-Please see our `preprint`_ on **bioRxiv** to learn more.
 
 CellRank's key applications
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -140,7 +140,7 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
 .. _Theislab: https://www.helmholtz-muenchen.de/icb/research/groups/theis-lab/overview/index.html
 .. _Peerlab: https://www.mskcc.org/research/ski/labs/dana-pe-er
 .. _`tweet`: https://twitter.com/MariusLange8
-.. _preprint: https://www.biorxiv.org/content/10.1101/2020.10.19.345983v2
+.. _Lange et al. (2022): https://www.nature.com/articles/s41592-021-01346-6
 .. _PageRank: https://en.wikipedia.org/wiki/PageRank#cite_note-1
 
 .. _gallery: https://cellrank.readthedocs.io/en/stable/auto_examples/index.html
