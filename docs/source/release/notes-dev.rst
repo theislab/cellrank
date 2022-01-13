@@ -1,3 +1,3 @@
-CellRank dev (2021-09-13)
+CellRank dev (2022-01-13)
 =========================
 No significant changes.
