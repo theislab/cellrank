@@ -10,8 +10,7 @@ from collections import OrderedDict as odict
 from anndata import AnnData
 from cellrank import logging as logg
 from cellrank._key import Key
-from scanpy.plotting import violin
-from scvelo.plotting import paga
+from scanpy.plotting import paga, violin
 from cellrank.tl._enum import ModeEnum
 from cellrank.ul._docs import d, inject_docs
 from cellrank.pl._utils import _position_legend
@@ -495,7 +494,9 @@ def cluster_fates(
         mode in (ClusterFatesMode.PAGA, ClusterFatesMode.PAGA_PIE)
         and "paga" not in adata.uns
     ):
-        raise KeyError("Compute PAGA first as `scvelo.tl.paga()`.")
+        raise KeyError(
+            "Compute PAGA first as `scvelo.tl.paga()` or `scanpy.tl.paga()`."
+        )
 
     fig = (
         plot_violin_no_cluster_key()
