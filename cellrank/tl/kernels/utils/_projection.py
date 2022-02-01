@@ -5,6 +5,7 @@ import warnings
 import scvelo as scv
 from cellrank import logging as logg
 from cellrank._key import Key
+from cellrank.ul._docs import d
 from cellrank.tl.kernels._utils import _get_basis
 from scvelo.tools.velocity_embedding import quiver_autoscale
 
@@ -19,7 +20,7 @@ class Projector:
         for kernel in kexpr.kernels:
             if not isinstance(kernel, ConnectivityMixin):
                 raise TypeError(
-                    f"{kernel!r} is not a KNN based kernel. The embedding projection "
+                    f"{kernel!r} is not a kNN based kernel. The embedding projection "
                     "only works for kNN based kernels."
                 )
         self._kexpr = kexpr
@@ -52,7 +53,7 @@ class Projector:
         key = self._key + "_" + self._basis
 
         if not recompute and key in self._kexpr.adata.obsm:
-            logg.debug(f"Using precomputed projection `adata.obsm[{key!r}]`")
+            logg.info(f"Using precomputed projection `adata.obsm[{key!r}]`")
             return
 
         start = logg.info(f"Projecting transition matrix onto `{self._basis}`")
@@ -93,6 +94,7 @@ class Projector:
         )
         self._kexpr.adata.obsm[key] = T_emb
 
+    @d.dedent
     def plot(self, *args: Any, stream: bool = True, **kwargs: Any) -> None:
         """
         Plot projected transition matrix in a embedding.
@@ -102,10 +104,14 @@ class Projector:
         args
             Positional argument for the plotting function.
         stream
-            If ``True``, use :func:`scvelo.pl.velocity_emebedding_stream`.
+            If ``True``, use :func:`scvelo.pl.velocity_embedding_stream`.
             Otherwise, use :func:`scvelo.pl.velocity_embedding_grid`.
         kwargs
             Keyword argument for the plotting function.
+
+        Returns
+        -------
+        %(just_plots)s
         """
         if stream:
             return scv.pl.velocity_embedding_stream(
