@@ -172,6 +172,8 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
         The underlying model that is used for fitting and prediction.
     """
 
+    _dtype = np.float64
+
     def __init__(
         self,
         adata: Optional[AnnData],
@@ -210,8 +212,6 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
         self._y_hat = None
 
         self._conf_int = None
-
-        self._dtype = np.float32
 
     @d.get_summary(base="base_model_prepared")
     @property
