@@ -1185,17 +1185,14 @@ class TestCytoTRACEKernel:
         assert adata.uns[Key.cytotrace("params")] == {
             "layer": "X",
             "aggregation": "mean",
-            "n_pos_genes": 143,
-            "n_neg_genes": 0,
+            "n_genes": 143,
             "use_raw": False,
         }
 
         assert np.all(adata.var[Key.cytotrace("gene_corr")] <= 1.0)
         assert np.all(-1 <= adata.var[Key.cytotrace("gene_corr")])
-        assert is_bool_dtype(adata.var[Key.cytotrace("pos_correlates")])
-        assert adata.var[Key.cytotrace("pos_correlates")].sum() == min(
-            200, adata.n_vars
-        )
+        assert is_bool_dtype(adata.var[Key.cytotrace("correlates")])
+        assert adata.var[Key.cytotrace("correlates")].sum() == min(200, adata.n_vars)
 
         assert Key.cytotrace("score") in adata.obs
         assert Key.cytotrace("pseudotime") in adata.obs
@@ -1209,34 +1206,29 @@ class TestCytoTRACEKernel:
 
     def test_raw_less_genes(self, adata: AnnData):
         adata.raw = adata.raw.to_adata()[:, :20]
-        _ = CytoTRACEKernel(adata).compute_cytotrace(
-            use_raw=True, n_pos_genes=31, n_neg_genes=42
-        )
+        _ = CytoTRACEKernel(adata).compute_cytotrace(use_raw=True, n_genes=31)
         assert adata.uns[Key.cytotrace("params")] == {
             "layer": "Ms",
             "aggregation": "mean",
-            "n_pos_genes": 20,
-            "n_neg_genes": 20,
+            "n_genes": 20,
             "use_raw": True,
         }
 
-    @pytest.mark.parametrize("pos", [False, True])
-    @pytest.mark.parametrize("n_top_genes", [0, 10, 300])
+    @pytest.mark.parametrize("n_genes", [0, 10, 300])
     @pytest.mark.parametrize("use_raw", [False, True])
-    def test_n_top_genes(
-        self, adata: AnnData, use_raw: bool, n_top_genes: int, pos: bool
-    ):
-        mod = "pos" if pos else "neg"
-        kwargs = {f"n_{mod}_genes": n_top_genes}
-
-        n_genes = min(adata.raw.n_vars if use_raw else adata.n_vars, n_top_genes)
-        if n_top_genes <= 0:
+    def test_n_top_genes(self, adata: AnnData, use_raw: bool, n_genes: int):
+        n_genes = min(adata.raw.n_vars if use_raw else adata.n_vars, n_genes)
+        if n_genes <= 0:
             with pytest.raises(ValueError, match=r"Expected .* genes to be positive"):
-                _ = CytoTRACEKernel(adata).compute_cytotrace(use_raw=use_raw, **kwargs)
+                _ = CytoTRACEKernel(adata).compute_cytotrace(
+                    use_raw=use_raw, n_genes=n_genes
+                )
         else:
-            _ = CytoTRACEKernel(adata).compute_cytotrace(use_raw=use_raw, **kwargs)
-            assert adata.var[Key.cytotrace(f"{mod}_correlates")].sum() == n_genes
-            assert adata.uns[Key.cytotrace("params")][f"n_{mod}_genes"] == n_genes
+            _ = CytoTRACEKernel(adata).compute_cytotrace(
+                use_raw=use_raw, n_genes=n_genes
+            )
+            assert adata.var[Key.cytotrace("correlates")].sum() == n_genes
+            assert adata.uns[Key.cytotrace("params")]["n_genes"] == n_genes
 
     def test_rereads_pseudotime(self, adata: AnnData):
         k1 = CytoTRACEKernel(adata).compute_cytotrace(

@@ -112,16 +112,16 @@ class CytoTRACEKernel(PseudotimeKernel):
         layer: Optional[str] = None,
         aggregation: CytoTRACEAggregation.MEAN,
         ascending: bool = False,
-        n_top_genes: int = 200,
+        n_genes: int = 200,
     ) -> Tuple[np.ndarray, List[str]]:
         from sklearn.utils.sparsefuncs import csc_median_axis_0
 
         # fmt: off
         modifier = "negatively" if ascending else "positively"
-        if n_top_genes <= 0:
-            raise ValueError(f"Expected number of {modifier} correlated genes to be positive, found `{n_top_genes}`.")
+        if n_genes <= 0:
+            raise ValueError(f"Expected number of {modifier} correlated genes to be positive, found `{n_genes}`.")
         top_genes = [g for g in gene_corr.sort_values(ascending=ascending).index if g in self.adata.var_names]
-        top_genes = top_genes[:n_top_genes]
+        top_genes = top_genes[:n_genes]
         invalid_genes = int(gene_corr.loc[top_genes].isnull().sum())
         # fmt: on
 
@@ -132,9 +132,9 @@ class CytoTRACEKernel(PseudotimeKernel):
         if not len(top_genes):
             raise ValueError("No genes have been selected.")
 
-        if len(top_genes) != n_top_genes:
+        if len(top_genes) != n_genes:
             logg.warning(
-                f"Unable to get requested top {modifier} correlated `{n_top_genes}`. "
+                f"Unable to get requested top {modifier} correlated `{n_genes}`. "
                 f"Using top `{len(top_genes)}` genes"
             )
 
@@ -171,8 +171,7 @@ class CytoTRACEKernel(PseudotimeKernel):
             "mean", "median", "hmean", "gmean"
         ] = CytoTRACEAggregation.MEAN,
         use_raw: bool = False,
-        n_pos_genes: int = 200,
-        n_neg_genes: Optional[int] = None,
+        n_genes: int = 200,
     ) -> "CytoTRACEKernel":
         """
         Re-implementation of the CytoTRACE algorithm :cite:`gulati:20` to estimate cellular plasticity.
@@ -197,11 +196,8 @@ class CytoTRACEKernel(PseudotimeKernel):
         use_raw
             Whether to use the :attr:`anndata.AnnData.raw` to compute the number of genes expressed per cell
             (#genes/cell) and the correlation of gene expression across cells with #genes/cell.
-        n_pos_genes
-            Number of positively correlated genes used to compute the CytoTRACE score.
-        n_neg_genes
-            Number of negatively correlated genes used to compute the CytoTRACE score.
-            If `None`, use only positively correlated genes.
+        n_genes
+            Number of top positively correlated genes to compute the CytoTRACE score.
 
         Returns
         -------
@@ -214,10 +210,8 @@ class CytoTRACEKernel(PseudotimeKernel):
         It also modifies :attr:`anndata.AnnData.var` with the following keys:
 
             - `'ct_gene_corr'` - the correlation as specified above.
-            - `'ct_pos_correlates'` - indication of the genes used to compute the CytoTRACE score, i.e. the ones that
+            - `'ct_correlates'` - indication of the genes used to compute the CytoTRACE score, i.e. the ones that
               correlated positively with `'ct_num_exp_genes'`.
-            - `'ct_neg_correlates'` - indication of the genes used to compute the CytoTRACE score, i.e. the ones that
-              correlated negatively with `'ct_num_exp_genes'`.
 
         Notes
         -----
@@ -258,17 +252,8 @@ class CytoTRACEKernel(PseudotimeKernel):
             layer=layer,
             aggregation=aggregation,
             ascending=False,
-            n_top_genes=n_pos_genes,
+            n_genes=n_genes,
         )
-        if n_neg_genes is not None:
-            inv_score, neg_top_genes = self._compute_score(
-                gene_corr,
-                layer=layer,
-                aggregation=aggregation,
-                ascending=True,
-                n_top_genes=n_neg_genes,
-            )
-            cytotrace_score = cytotrace_score + (np.max(inv_score) - inv_score)
         cytotrace_score -= cytotrace_score.min()
         cytotrace_score /= cytotrace_score.max()
 
@@ -278,17 +263,13 @@ class CytoTRACEKernel(PseudotimeKernel):
         )
         self.adata.obs[Key.cytotrace("num_exp_genes")] = num_exp_genes
         self.adata.var[Key.cytotrace("gene_corr")] = gene_corr
-        self.adata.var[Key.cytotrace("pos_correlates")] = False
-        self.adata.var.loc[pos_top_genes, Key.cytotrace("pos_correlates")] = True
-        self.adata.var[Key.cytotrace("neg_correlates")] = False
-        if n_neg_genes is not None:
-            self.adata.var.loc[neg_top_genes, Key.cytotrace("neg_correlates")] = True
+        self.adata.var[Key.cytotrace("correlates")] = False
+        self.adata.var.loc[pos_top_genes, Key.cytotrace("correlates")] = True
         self.adata.uns[Key.cytotrace("params")] = {
             "aggregation": aggregation,
             "layer": layer,
             "use_raw": use_raw,
-            "n_pos_genes": len(pos_top_genes),
-            "n_neg_genes": 0 if n_neg_genes is None else len(neg_top_genes),
+            "n_genes": len(pos_top_genes),
         }
 
         logg.info(
@@ -296,8 +277,7 @@ class CytoTRACEKernel(PseudotimeKernel):
             f"       `adata.obs[{Key.cytotrace('pseudotime')!r}]`\n"
             f"       `adata.obs[{Key.cytotrace('num_exp_genes')!r}]`\n"
             f"       `adata.var[{Key.cytotrace('gene_corr')!r}]`\n"
-            f"       `adata.var[{Key.cytotrace('pos_correlates')!r}]`\n"
-            f"       `adata.var[{Key.cytotrace('neg_correlates')!r}]`\n"
+            f"       `adata.var[{Key.cytotrace('correlates')!r}]`\n"
             f"       `adata.uns[{Key.cytotrace('params')!r}]`\n"
             f"    Finish",
             time=start,
