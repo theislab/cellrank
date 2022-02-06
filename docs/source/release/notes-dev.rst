@@ -1,4 +1,4 @@
-CellRank dev (2021-12-02)
+CellRank dev (2022-02-02)
 =========================
 
 Features
@@ -25,3 +25,10 @@ Bugfixes
 
 - Fix color creating in :class:`cellrank.tl.kernels.ExperimentalTimeKernel`.
   `#784 <https://github.com/theislab/cellrank/pull/784>`__
+
+
+Miscellaneous
+-------------
+
+- Ignore :mod:`pygam` deprecation warnings.
+  `#798 <https://github.com/theislab/cellrank/pull/798>`__
