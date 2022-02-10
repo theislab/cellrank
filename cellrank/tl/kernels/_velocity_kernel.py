@@ -60,6 +60,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel, ABC):
             vkey=vkey,
             **kwargs,
         )
+        self._logits: Optional[np.ndarray] = None
 
     def _read_from_adata(
         self,
@@ -156,7 +157,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel, ABC):
         )
         if isinstance(model, Stochastic):
             kwargs["backend"] = _DEFAULT_BACKEND
-        self.transition_matrix, _ = model(**kwargs)
+        self.transition_matrix, self._logits = model(**kwargs)
 
         logg.info("    Finish", time=start)
 
@@ -266,8 +267,13 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel, ABC):
         data = data.astype(dtype, copy=False)
         return data.toarray() if issparse(data) else data
 
+    @property
+    def logits(self) -> Optional[np.ndarray]:
+        """Array of shape ``(n_cells, n_cells)`` containing unnormalized transition matrix."""
+        return self._logits
+
     def __invert__(self) -> "VelocityKernel":
-        dk = self._copy_ignore("_transition_matrix")
+        dk = self._copy_ignore("_transition_matrix", "_logits")
         dk._backward = not self.backward
         dk._params = {}
         return dk

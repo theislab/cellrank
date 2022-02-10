@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Tuple
 
 from abc import ABC, abstractmethod
 from enum import auto
@@ -47,7 +47,7 @@ try:
         softmax_scale: float = 1.0,
         center_mean: bool = True,
         scale_by_norm: bool = True,
-    ):
+    ) -> np.ndarray:
         if center_mean:
             # pearson correlation, otherwise cosine
             W -= W.mean(axis=1)[:, None]
@@ -78,7 +78,7 @@ except ImportError:
 
 
 @njit(**jit_kwargs)
-def _softmax(x: np.ndarray, softmax_scale: float) -> np.ndarray:
+def _softmax(x: np.ndarray, softmax_scale: float) -> Tuple[np.ndarray, np.ndarray]:
     numerator = x * softmax_scale
     numerator = np.exp(numerator - np.max(numerator))
     return numerator / np.sum(numerator), x
@@ -87,7 +87,7 @@ def _softmax(x: np.ndarray, softmax_scale: float) -> np.ndarray:
 @njit(**jit_kwargs)
 def _softmax_masked(
     x: np.ndarray, mask: np.ndarray, softmax_scale: float
-) -> np.ndarray:
+) -> Tuple[np.ndarray, np.ndarray]:
     numerator = x * softmax_scale
     numerator = np.exp(numerator - np.nanmax(numerator))
     numerator = np.where(mask, 0, numerator)  # essential
@@ -102,7 +102,7 @@ def _predict_transition_probabilities_numpy(
     softmax_scale: float = 1.0,
     center_mean: bool = True,
     scale_by_norm: bool = True,
-) -> np.ndarray:
+) -> Tuple[np.ndarray, np.ndarray]:
     if center_mean:
         # pearson correlation
         W -= np.expand_dims(np_mean(W, axis=1), axis=1)
@@ -184,7 +184,7 @@ class Similarity(ABC):
     @abstractmethod
     def __call__(
         self, v: np.ndarray, D: np.ndarray, softmax_scale: float = 1.0
-    ) -> np.ndarray:
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Compute transition probability of a cell to its nearest neighbors using RNA velocity.
 
@@ -201,7 +201,7 @@ class Similarity(ABC):
 
         Returns
         -------
-        The probability array of shape ``(n_neighbors,)``.
+        The probability and unscaled logits arrays of shape ``(n_neighbors,)``.
         """
 
     @staticmethod
@@ -242,7 +242,7 @@ class SimilarityHessian(Similarity, Hessian):
     @d.dedent
     def __call__(
         self, v: np.ndarray, D: np.ndarray, softmax_scale: float = 1.0
-    ) -> np.ndarray:
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """
         %(sim_scheme.full_desc)s
 
