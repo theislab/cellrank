@@ -100,13 +100,15 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         timepoints = self.experimental_time.cat.categories
         timepoints = list(zip(timepoints[:-1], timepoints[1:]))
 
-        # fmt: off
+        self._tmaps = {
+            (t1, t2): self._tmat_to_adata(t1, t2, self._compute_tmap(t1, t2, **kwargs))
+            for t1, t2 in timepoints
+        }
         tmap = self._restich_tmaps(
-            {(t1, t2): self._tmat_to_adata(t1, t2, self._compute_tmap(t1, t2, **kwargs)) for t1, t2 in timepoints},
+            self._tmaps,
             last_time_point=last_time_point,
             conn_kwargs=conn_kwargs,
         )
-        # fmt: on
         self.transition_matrix = tmap.X
         if threshold:
             self._threshold_transition_matrix(threshold)
