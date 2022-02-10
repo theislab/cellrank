@@ -117,7 +117,7 @@ class ModelABC(ABC):
 
         Returns
         -------
-        TODO.
+        The reconstructed CSR matrix.
         """
 
         def reconstruct(data: np.ndarray) -> Tuple[csr_matrix, csr_matrix]:
@@ -144,13 +144,12 @@ class ModelABC(ABC):
             aixs = np.argsort(ixs)
             conn = self._conn[ixs]
 
-        # strange bug happens when no copying and eliminating zeros from cors (it's no longer row-stochastic)
-        # only happens when using numba
-        probs = reconstruct(data[0])
-        logits = reconstruct(data[1])
-        if not np.allclose(probs.sum(1), 1.0, rtol=1e-12):
-            # TODO(michalk8): row ixs?
-            raise ValueError("Matrix is not row-stochastic.")
+        probs, logits = reconstruct(data[0]), reconstruct(data[1])
+        close_to_1 = np.isclose(probs.sum(1), 1.0)
+        if not np.all(close_to_1):
+            raise ValueError(
+                f"Matrix is not row-stochastic, `{(~close_to_1).sum()}` do not sum to 1."
+            )
 
         return probs, logits
 
@@ -172,6 +171,8 @@ class ModelABC(ABC):
 
 
 class Deterministic(ModelABC):
+    """Deterministic model."""
+
     def _compute(self, ix: int, neigh_ixs: np.ndarray) -> np.ndarray:
         W = self._x[neigh_ixs, :] - self._x[ix, :]
 
@@ -189,19 +190,38 @@ class Deterministic(ModelABC):
 
 
 class Stochastic(ModelABC):
+    """
+    Stochastic model.
+
+    Parameters
+    ----------
+    conn
+        The connectivity matrix of shape ``(n_cells, n_cells)``.
+    x
+        Array of shape ``(n_cells, n_features)``, such as imputed RNA expression used to calculate the displacement.
+    vmean
+        Array of shape ``(n_cells, n_features)`` containing the velocity mean.
+    vvar
+        Array of shape ``(n_cells, n_features)`` containing the velocity variance.
+    dtype
+        The data type to convert the arrays.
+    kwargs
+        Additional keyword arguments for the parent class.
+    """
+
     def __init__(
         self,
         conn: spmatrix,
         x: np.ndarray,
-        exp: np.ndarray,
-        var: np.ndarray,
+        vmean: np.ndarray,
+        vvar: np.ndarray,
         dtype: np.dtype = np.float64,
         **kwargs: Any,
     ):
-        super().__init__(conn, x, exp, dtype=dtype, **kwargs)
+        super().__init__(conn, x, vmean, dtype=dtype, **kwargs)
         if not hasattr(self._similarity, "hessian"):
             raise AttributeError("Similarity scheme doesn't have a `hessian` function.")
-        self._var = var.astype(dtype, copy=False)
+        self._var = vvar.astype(dtype, copy=False)
 
     def _compute(
         self,
@@ -257,19 +277,40 @@ class Stochastic(ModelABC):
 
 
 class MonteCarlo(ModelABC):
+    """
+    Stochastic model.
+
+    Parameters
+    ----------
+    conn
+        The connectivity matrix of shape ``(n_cells, n_cells)``.
+    x
+        Array of shape ``(n_cells, n_features)``, such as imputed RNA expression used to calculate the displacement.
+    vmean
+        Array of shape ``(n_cells, n_features)`` containing the velocity mean.
+    vvar
+        Array of shape ``(n_cells, n_features)`` containing the velocity variance.
+    n_samples
+        Number of samples to generate from MVN distribution using ``exp`` and ``var``.
+    dtype
+        The data type used to convert the arrays.
+    kwargs
+        Additional keyword arguments for the parent class.
+    """
+
     def __init__(
         self,
         conn: spmatrix,
         x: np.ndarray,
-        exp: np.ndarray,
-        var: np.ndarray,
+        vmean: np.ndarray,
+        vvar: np.ndarray,
         n_samples: int = 1,
         seed: Optional[int] = None,
         dtype: np.dtype = np.float64,
         **kwargs: Any,
     ):
-        super().__init__(conn, x, exp, dtype=dtype, **kwargs)
-        self._var = var.astype(dtype, copy=False)
+        super().__init__(conn, x, vmean, dtype=dtype, **kwargs)
+        self._var = vvar.astype(dtype, copy=False)
         self._n_samples = n_samples
         np.random.seed(seed)
 

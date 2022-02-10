@@ -173,8 +173,8 @@ class RandomWalk:
 
         Returns
         -------
-        List of arrays of shape ``(max_iter + 1,)`` of states that have been visited. If ``stop_ixs`` was specified,
-        the arrays may have smaller shape.
+        List of arrays of shape ``(max_iter + 1,)`` of states that have been visited.
+        If ``stop_ixs`` was specified, the arrays may have smaller shape.
         """
         if n_sims <= 0:
             raise ValueError(
@@ -200,6 +200,7 @@ class RandomWalk:
 
         return simss
 
+    @d.dedent
     def plot(
         self,
         sims: List[np.ndarray],
@@ -213,6 +214,31 @@ class RandomWalk:
         save: Optional[Union[str, Path]] = None,
         **kwargs: Any,
     ) -> None:
+        """
+        Plot simulated random walks.
+
+        Parameters
+        ----------
+        sims
+            The simulated random walks.
+        basis
+            Basis used for plotting.
+        cmap
+            Colormap for the random walks.
+        linewidth
+            Line width for the random walks.
+        linealpha
+            Line alpha.
+        ixs_legend_loc
+            Position of the legend describing start- and endpoints.
+        %(plotting)s
+        kwargs
+            Keyword arguments for :func:`scvelo.pl.scatter`.
+
+        Returns
+        -------
+        %(just_plots)s
+        """
         emb = _get_basis(self._adata, basis)
         if isinstance(cmap, str):
             cmap = plt.get_cmap(cmap)

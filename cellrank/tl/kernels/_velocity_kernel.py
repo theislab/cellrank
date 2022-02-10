@@ -126,7 +126,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel, ABC):
 
         Returns
         -------
-        Self and updates :attr:`transition_matrix` and :attr:`params`.
+        Self and updates :attr:`transition_matrix`, :attr:`logits` and :attr:`params`.
         """
         start = logg.info(f"Computing transition matrix using `{model!r}` model")
 

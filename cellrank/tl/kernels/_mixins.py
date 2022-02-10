@@ -13,6 +13,8 @@ __all__ = ("ConnectivityMixin", "UnidirectionalMixin", "BidirectionalMixin")
 
 
 class ConnectivityMixin:
+    """Mixin class that reads kNN connectivities and allows for density normalization."""
+
     def _read_from_adata(
         self,
         conn_key: str = "connectivities",
@@ -27,16 +29,16 @@ class ConnectivityMixin:
         # fmt: on
         if check_connectivity:
             if not _connected(self._conn):
-                logg.warning("KNN graph is not connected")
+                logg.warning("kNN graph is not connected")
 
         if not _symmetric(self._conn):
-            logg.warning("KNN graph is not symmetric")
+            logg.warning("kNN graph is not symmetric")
 
     def _density_normalize(
         self, matrix: Union[np.ndarray, spmatrix]
     ) -> Union[np.ndarray, spmatrix]:
         """
-        Density normalization by the underlying KNN graph.
+        Density normalization by the underlying kNN graph.
 
         Parameters
         ----------
@@ -56,6 +58,8 @@ class ConnectivityMixin:
 
 
 class UnidirectionalMixin:
+    """Mixin specifying that its kernel doesn't have a direction."""
+
     @property
     def backward(self) -> None:
         """None."""
@@ -63,6 +67,8 @@ class UnidirectionalMixin:
 
 
 class BidirectionalMixin(ABC):
+    """Mixin specifying that its kernel has forward or backward directions."""
+
     def __init__(self, *args: Any, backward: bool = False, **kwargs: Any):
         super().__init__(*args, **kwargs)
         if not isinstance(backward, bool):

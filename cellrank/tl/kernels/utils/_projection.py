@@ -14,7 +14,20 @@ from scipy.sparse import issparse
 
 
 class Projector:
-    def __init__(self, kexpr: "ExpernelExpression", basis: str = "umap"):
+    """
+    Project transition matrix onto a low-dimensional embedding.
+
+    Should be used for visualization purposes.
+
+    Parameters
+    ----------
+    kexpr
+        Kernel that contains a transition matrix.
+    basis
+        Key in :attr:`anndata.AnnData.obsm` where the basis is stored.
+    """
+
+    def __init__(self, kexpr: "ExpernelExpression", basis: str = "umap"):  # noqa: F821
         from cellrank.tl.kernels._mixins import ConnectivityMixin
 
         for kernel in kexpr.kernels:
@@ -38,13 +51,13 @@ class Projector:
         Parameters
         ----------
         key_added
-            TODO
+            Key in :attr:`anndata.AnnData.obsm` where to store the projection.
         recompute
             Whether to recompute the projection if it already exists.
 
         Returns
         -------
-        Nothing, just updates TODO.
+        Nothing, just updates :attr:`anndata.AnnData` with the projection and the parameters used for computation.
         """
         # modified from: https://github.com/theislab/scvelo/blob/master/scvelo/tools/velocity_embedding.py
 

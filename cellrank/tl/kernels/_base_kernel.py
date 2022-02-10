@@ -570,11 +570,11 @@ class Kernel(KernelExpression, ABC):
 
 
 class UnidirectionalKernel(UnidirectionalMixin, Kernel, ABC):
-    pass
+    """Kernel with no directionality."""
 
 
 class BidirectionalKernel(BidirectionalMixin, Kernel, ABC):
-    pass
+    """Kernel with either forward or backward direction that can be inverted using :meth:`__invert__`."""
 
 
 class Constant(UnidirectionalKernel):

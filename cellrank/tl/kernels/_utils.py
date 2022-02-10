@@ -300,8 +300,12 @@ def _ensure_numeric_ordered(adata: AnnData, key: str) -> pd.Series:
 
 @wrapt.decorator
 def require_tmat(
-    wrapped: Callable[..., Any], instance: "KernelExpression", args: Any, kwargs: Any
+    wrapped: Callable[..., Any],
+    instance: "KernelExpression",  # noqa: F821
+    args: Any,
+    kwargs: Any,
 ) -> Any:
+    """Require that the transition matrix is computed before calling the wrapped function."""
     # this can trigger combinations, but not individual kernels
     if instance.transition_matrix is None:
         raise RuntimeError(
