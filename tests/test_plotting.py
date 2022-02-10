@@ -2464,6 +2464,10 @@ class TestGPCCA:
         mc.plot_coarse_T(xtick_rotation=0, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
+    def test_gpcca_coarse_T_no_order(self, mc: GPCCA, fpath: str):
+        mc.plot_coarse_T(order=None, dpi=DPI, save=fpath)
+
+    @compare(kind="gpcca")
     def test_scvelo_gpcca_meta_states(self, mc: GPCCA, fpath: str):
         mc.plot_macrostates(dpi=DPI, save=fpath)
 

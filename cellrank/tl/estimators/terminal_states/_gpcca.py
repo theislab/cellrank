@@ -437,9 +437,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         self,
         show_stationary_dist: bool = True,
         show_initial_dist: bool = False,
-        order: Optional[
-            Literal["stability", "incoming", "outgoing", "stat_dist"]
-        ] = "stability",
+        order: Optional[Literal["stability", "incoming", "stat_dist"]] = "stability",
         cmap: Union[str, ListedColormap] = "viridis",
         xtick_rotation: float = 45,
         annotate: bool = True,
