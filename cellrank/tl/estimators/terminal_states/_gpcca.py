@@ -49,7 +49,6 @@ class TermStatesMethod(ModeEnum):  # noqa: D101
 class CoarseTOrder(ModeEnum):  # noqa: D101
     STABILITY = auto()  # diagonal
     INCOMING = auto()
-    OUTGOING = auto()
     STAT_DIST = auto()
 
 
@@ -466,8 +465,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
                 - `{o.STABILITY!r}` - order by the values on the diagonal.
                 - `{o.INCOMING!r}` - order by the incoming mass, excluding the diagonal.
-                - `{o.OUTGOING!r}` - order by the outgoing mass, excluding the diagonal.
-                - `{o.STAT_DIST!r}` - order by coarse stationary distribution.
+                - `{o.STAT_DIST!r}` - order by coarse stationary distribution. If not present, use `{o.STABILITY!r}`.
         cmap
             Colormap to use.
         xtick_rotation
@@ -507,10 +505,8 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
                     f"Using `order={order}`"
                 )
 
-            if order in (CoarseTOrder.INCOMING, CoarseTOrder.OUTGOING):
-                values = (
-                    coarse_T.sum(order == CoarseTOrder.OUTGOING) - np.diag(coarse_T)
-                ).argsort(kind="stable")
+            if order == CoarseTOrder.INCOMING:
+                values = (coarse_T.sum(0) - np.diag(coarse_T)).argsort(kind="stable")
                 names = values.index[values][::-1]
             elif order == CoarseTOrder.STABILITY:
                 names = coarse_T.index[
