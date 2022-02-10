@@ -77,7 +77,6 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel, ABC):
         self._xdata = self._extract_layer(xkey, subset=gene_subset)
         self._vdata = self._extract_layer(vkey, subset=gene_subset)
 
-        # TODO(michalk8): why not nans = np.any(np.isnan(self._vdata), axis=0)?
         nans = np.isnan(np.sum(self._vdata, axis=0))
         if np.any(nans):
             self._xdata = self._xdata[:, ~nans]
@@ -123,7 +122,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel, ABC):
             Random seed when ``mode = {m.MONTE_CARLO!r}``.
         %(parallel)s
         kwargs
-            TODO(michalk8): mention the model class?
+            Keyword arguments for the underlying ``model``.
 
         Returns
         -------
