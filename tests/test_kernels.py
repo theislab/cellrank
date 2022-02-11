@@ -439,30 +439,6 @@ class TestInitializeKernel:
 
 
 class TestKernel:
-    def test_precomputed_not_array(self):
-        with pytest.raises(TypeError, match=r"Expected object"):
-            _ = PrecomputedKernel([[1, 0], [0, 1]])
-
-    def test_precomputed_not_square(self):
-        with pytest.raises(
-            ValueError, match=r"Expected matrix to be of shape `\(10, 10\)`"
-        ):
-            _ = PrecomputedKernel(np.random.normal(size=(10, 9)))
-
-    def test_precomputed_not_a_transition_matrix(self):
-        mat = random_transition_matrix(100)
-        mat[0, 0] = -1e-3
-        with pytest.raises(
-            ValueError, match=r"Unable to normalize matrix with negative values."
-        ):
-            _ = PrecomputedKernel(mat)
-
-    def test_precomputed_from_kernel_no_transition(self, adata: AnnData):
-        vk = VelocityKernel(adata)
-
-        with pytest.raises(RuntimeError, match="Compute transition matrix"):
-            PrecomputedKernel(vk)
-
     @pytest.mark.parametrize(
         "clazz",
         [
@@ -502,78 +478,6 @@ class TestKernel:
             np.testing.assert_array_equal(k._conn.A, conn.A)
         else:
             assert not hasattr(k, "_conn")
-
-    def test_precomputed_from_kernel(self, adata: AnnData):
-        vk = VelocityKernel(adata).compute_transition_matrix(
-            model="deterministic",
-            softmax_scale=4,
-        )
-
-        pk = PrecomputedKernel(vk)
-        pk.write_to_adata()
-
-        assert pk.adata is vk.adata
-        assert pk.params is not vk.params
-        assert pk.params.pop("origin") == repr(vk)
-        assert pk.params == vk.params
-        assert pk.transition_matrix is not vk.transition_matrix
-        np.testing.assert_array_equal(pk.transition_matrix.A, vk.transition_matrix.A)
-
-    def test_precomputed_no_adata(self):
-        pk = PrecomputedKernel(random_transition_matrix(50))
-        pk.write_to_adata()
-
-        assert isinstance(pk.adata, AnnData)
-        assert pk.params["origin"] == "array"
-        assert pk.adata.shape == (50, 1)
-        assert pk.adata.obs.shape == (50, 0)
-        assert pk.adata.var.shape == (1, 0)
-        assert "T_fwd_params" in pk.adata.uns.keys()
-        assert pk.adata.uns["T_fwd_params"] == {"params": pk.params}
-        np.testing.assert_array_equal(pk.adata.obsp["T_fwd"], pk.transition_matrix)
-
-    def test_precomputed_different_adata(self, adata: AnnData):
-        vk = VelocityKernel(adata).compute_transition_matrix(
-            model="deterministic", softmax_scale=4
-        )
-        bdata = adata.copy()
-
-        pk = PrecomputedKernel(vk, adata=bdata)
-
-        assert pk.adata is adata
-        assert pk.adata is vk.adata
-        assert pk.adata is not bdata
-
-    def test_precomputed_adata_origin(self, adata: AnnData):
-        vk = VelocityKernel(adata).compute_transition_matrix(
-            model="deterministic", softmax_scale=4
-        )
-        vk.write_to_adata("foo")
-
-        pk = PrecomputedKernel("foo", adata=adata)
-
-        assert pk.params["origin"] == "adata.obsp['foo']"
-
-    def test_precomputed_adata(self, adata: AnnData):
-        pk = PrecomputedKernel(random_transition_matrix(adata.n_obs), adata=adata)
-
-        assert pk.adata is adata
-
-    def test_precomputed_transition_matrix(self, adata: AnnData):
-        mat = random_transition_matrix(adata.n_obs)
-        pk = PrecomputedKernel(mat)
-
-        np.testing.assert_array_equal(mat, pk.transition_matrix)
-
-    def test_precomputed_sum(self, adata: AnnData):
-        mat = random_transition_matrix(adata.n_obs)
-        pk = PrecomputedKernel(mat)
-        vk = VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
-
-        expected = (0.5 * vk.transition_matrix) + (0.5 * pk.transition_matrix)
-        actual = (pk + vk).compute_transition_matrix()
-
-        np.testing.assert_array_almost_equal(expected, actual.transition_matrix)
 
     @pytest.mark.parametrize("sparse", [False, True])
     def test_custom_preserves_type(self, adata: AnnData, sparse: bool):
@@ -1361,6 +1265,135 @@ class TestSingleFlow:
                 min_flow=np.inf,
                 remove_empty_clusters=True,
             )
+
+
+class TestPrecomputedKernel:
+    def test_precomputed_not_array(self):
+        with pytest.raises(TypeError, match=r"Expected `object`"):
+            _ = PrecomputedKernel([[1, 0], [0, 1]])
+
+    def test_precomputed_not_square(self):
+        with pytest.raises(
+            ValueError, match=r"Expected matrix to be of shape `\(10, 10\)`"
+        ):
+            _ = PrecomputedKernel(np.random.normal(size=(10, 9)))
+
+    def test_precomputed_not_a_transition_matrix(self):
+        mat = random_transition_matrix(100)
+        mat[0, 0] = -1e-3
+        with pytest.raises(
+            ValueError, match=r"Unable to normalize matrix with negative values."
+        ):
+            _ = PrecomputedKernel(mat)
+
+    def test_precomputed_from_kernel_no_transition(self, adata: AnnData):
+        vk = VelocityKernel(adata)
+
+        with pytest.raises(RuntimeError, match="Compute transition matrix"):
+            PrecomputedKernel(vk)
+
+    def test_precomputed_from_kernel(self, adata: AnnData):
+        vk = VelocityKernel(adata).compute_transition_matrix(
+            model="deterministic",
+            softmax_scale=4,
+        )
+
+        pk = PrecomputedKernel(vk)
+        pk.write_to_adata()
+
+        assert pk.adata is vk.adata
+        assert pk.params is not vk.params
+        assert pk.params.pop("origin") == repr(vk)
+        assert pk.params == vk.params
+        assert pk.transition_matrix is vk.transition_matrix
+
+    def test_precomputed_no_adata(self):
+        pk = PrecomputedKernel(random_transition_matrix(50))
+        pk.write_to_adata()
+
+        assert isinstance(pk.adata, AnnData)
+        assert pk.params["origin"] == "array"
+        assert pk.adata.shape == (50, 1)
+        assert pk.adata.obs.shape == (50, 0)
+        assert pk.adata.var.shape == (1, 0)
+        assert "T_fwd_params" in pk.adata.uns.keys()
+        assert pk.adata.uns["T_fwd_params"] == {"params": pk.params}
+        np.testing.assert_array_equal(pk.adata.obsp["T_fwd"], pk.transition_matrix)
+
+    def test_precomputed_different_adata(self, adata: AnnData):
+        vk = VelocityKernel(adata).compute_transition_matrix(
+            model="deterministic", softmax_scale=4
+        )
+        bdata = adata.copy()
+
+        pk = PrecomputedKernel(vk, adata=bdata)
+
+        assert pk.adata is adata
+        assert pk.adata is vk.adata
+        assert pk.adata is not bdata
+
+    def test_precomputed_adata_origin(self, adata: AnnData):
+        vk = VelocityKernel(adata).compute_transition_matrix(
+            model="deterministic", softmax_scale=4
+        )
+        vk.write_to_adata("foo")
+
+        pk = PrecomputedKernel("foo", adata=adata)
+
+        assert pk.params["origin"] == "adata.obsp['foo']"
+
+    def test_precomputed_adata(self, adata: AnnData):
+        pk = PrecomputedKernel(random_transition_matrix(adata.n_obs), adata=adata)
+
+        assert pk.adata is adata
+
+    @pytest.mark.parametrize("backward", [False, True, None])
+    def test_precomputed_transition_matrix(self, adata: AnnData, backward: bool):
+        mat = random_transition_matrix(adata.n_obs)
+        pk = PrecomputedKernel(mat, backward=backward)
+
+        np.testing.assert_array_equal(mat, pk.transition_matrix)
+        assert pk.backward is backward
+
+    @pytest.mark.parametrize("backward", [False, True, None])
+    def test_precomputed_bool(self, adata: AnnData, backward: bool):
+        adata.obsp[Key.uns.kernel(backward)] = mat = random_transition_matrix(
+            adata.n_obs
+        )
+        pk = PrecomputedKernel(backward, adata=adata)
+
+        np.testing.assert_array_equal(mat, pk.transition_matrix)
+        assert pk.backward is backward
+
+    @pytest.mark.parametrize("backward", [None, True])
+    def test_precomputed_str(self, adata: AnnData, backward: bool):
+        key = Key.uns.kernel(backward)
+        adata.obsp[key] = mat = random_transition_matrix(adata.n_obs)
+        pk = PrecomputedKernel(key, adata=adata)
+
+        np.testing.assert_array_equal(mat, pk.transition_matrix)
+        # directionality inferred from key, will not work for `False` (same as `None`)
+        assert pk.backward is backward
+
+    @pytest.mark.parametrize("backward", [False, True, None])
+    def test_precomputed_obsp(self, adata: AnnData, backward: bool):
+        key = "foo"
+        adata.obsp[key] = mat = random_transition_matrix(adata.n_obs)
+        pk = PrecomputedKernel(adata, obsp_key=key, backward=backward)
+
+        np.testing.assert_array_equal(mat, pk.transition_matrix)
+        # directionality inferred from key
+        assert pk.backward is backward
+
+    def test_precomputed_sum(self, adata: AnnData):
+        mat = random_transition_matrix(adata.n_obs)
+        pk = PrecomputedKernel(mat)
+        vk = VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
+
+        expected = (0.5 * vk.transition_matrix) + (0.5 * pk.transition_matrix)
+        actual = (pk + vk).compute_transition_matrix()
+
+        np.testing.assert_array_almost_equal(expected, actual.transition_matrix)
 
 
 class TestKernelIO:
