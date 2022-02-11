@@ -42,7 +42,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel, ABC):
         List of genes to be used to compute transition probabilities.
         If not specified, genes from :attr:`anndata.AnnData.var` ``['{vkey}_genes']`` are used.
     kwargs
-        Keyword arguments for :class:`cellrank.kernels.Kernel`.
+        Keyword arguments for the parent class.
     """
 
     def __init__(
@@ -64,8 +64,8 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel, ABC):
 
     def _read_from_adata(
         self,
-        xkey: str = "Ms",
-        vkey: str = "velocity",
+        xkey: Optional[str] = "Ms",
+        vkey: Optional[str] = "velocity",
         gene_subset: Optional[Union[str, Sequence[str]]] = None,
         **kwargs: Any,
     ) -> None:

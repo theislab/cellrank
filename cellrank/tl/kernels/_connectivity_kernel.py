@@ -29,7 +29,7 @@ class ConnectivityKernel(ConnectivityMixin, UnidirectionalKernel):
     conn_key
         Key in :attr:`anndata.AnnData.obsp` where connectivity matrix describing cell-cell similarity is stored.
     check_connectivity
-        Check whether the underlying KNN graph is connected.
+        Check whether the underlying kNN graph is connected.
     """
 
     def __init__(
@@ -50,14 +50,14 @@ class ConnectivityKernel(ConnectivityMixin, UnidirectionalKernel):
         """
         Compute transition matrix based on transcriptomic similarity.
 
-        Uses symmetric, weighted KNN graph to compute symmetric transition matrix. The connectivities are computed
+        Uses symmetric, weighted kNN graph to compute symmetric transition matrix. The connectivities are computed
         using :func:`scanpy.pp.neighbors`. Depending on the parameters used there, they can be UMAP connectivities or
         gaussian-kernel-based connectivities with adaptive kernel width.
 
         Parameters
         ----------
         density_normalize
-            Whether or not to use the underlying KNN graph for density normalization.
+            Whether or not to use the underlying kNN graph for density normalization.
 
         Returns
         -------

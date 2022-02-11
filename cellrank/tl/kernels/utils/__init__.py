@@ -7,6 +7,7 @@ from cellrank.tl.kernels.utils._velocity_model import (
     Deterministic,
 )
 from cellrank.tl.kernels.utils._pseudotime_scheme import (
+    ThresholdSchemeABC,
     HardThresholdScheme,
     SoftThresholdScheme,
     CustomThresholdScheme,

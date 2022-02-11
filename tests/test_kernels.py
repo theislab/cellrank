@@ -1282,6 +1282,9 @@ class TestTransportMapKernel:
         tmk = DummyTMapKernel(adata).compute_transition_matrix(dtype=dtype)
 
         np.testing.assert_allclose(tmk.transition_matrix.sum(1), 1.0)
+        assert isinstance(tmk.transport_maps, dict)
+        for v in tmk.transport_maps.values():
+            assert isinstance(v, AnnData)
 
     @pytest.mark.parametrize("kind", ["source", "target"])
     def test_wrong_shape(self, adata: AnnData, kind: str):

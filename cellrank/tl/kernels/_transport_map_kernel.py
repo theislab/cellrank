@@ -10,7 +10,6 @@ from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.tl._enum import ModeEnum
 from cellrank.ul._docs import d, inject_docs
-from cellrank.tl.kernels._base_kernel import KernelExpression
 from cellrank.tl.kernels._experimental_time_kernel import ExperimentalTimeKernel
 
 import numpy as np
@@ -69,7 +68,7 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         ] = LastTimePoint.DIAGONAL,
         conn_kwargs: Mapping[str, Any] = MappingProxyType({}),
         **kwargs: Any,
-    ) -> KernelExpression:
+    ) -> "TransportMapKernel":
         """
         Compute transition matrix using transport maps.
 
@@ -134,7 +133,7 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
 
         Returns
         -------
-        Merged transport maps into 1 :class:`anndata.AnnData` object.
+        Merged transport maps into one :class:`anndata.AnnData` object.
         """
         from cellrank.tl.kernels import ConnectivityKernel
 
@@ -265,7 +264,7 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
             )
         except AssertionError as e:
             raise KeyError(
-                "Observations from transport maps don't match"
+                "Observations from transport maps don't match "
                 "the observations from the underlying `AnnData` object."
             ) from e
 
@@ -393,6 +392,6 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         return self._tmaps
 
     def __invert__(self) -> "TransportMapKernel":
-        tk = super().__invert__("_tmaps")
+        tk = super().__invert__("_tmaps")  # don't copy transport maps
         tk._tmaps = {}
         return tk

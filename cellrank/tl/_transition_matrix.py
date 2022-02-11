@@ -38,7 +38,7 @@ def transition_matrix(
     Compute a transition matrix based on a combination of RNA Velocity and transcriptomic or spatial similarity.
 
     To learn more about the way in which the transition matrices are computed, see
-    :class:`cellrank.tl.kernels.DisplacementKernel` for the velocity-based transition matrix and
+    :class:`cellrank.tl.kernels.VelocityKernel` for the velocity-based transition matrix and
     :class:`cellrank.tl.kernels.ConnectivityKernel` for the similarity-based transition matrix.
 
     Parameters
@@ -65,7 +65,7 @@ def transition_matrix(
         Density correction is done as by :cite:`haghverdi:16`.
     %(write_to_adata.parameters)s
     kwargs
-        Keyword arguments for :meth:`cellrank.tl.kernels.DisplacementKernel.compute_transition_matrix`.
+        Keyword arguments for :meth:`cellrank.tl.kernels.VelocityKernel.compute_transition_matrix`.
 
     Returns
     -------

@@ -107,7 +107,7 @@ class PseudotimeKernel(ConnectivityMixin, BidirectionalKernel):
                   of increasing pseudotime. Essentially, the further "behind" a query cell is in pseudotime with respect
                   to the current reference cell, the more penalized will be its graph-connectivity.
                 - :class:`callable` - any function conforming to the signature of
-                  :func:`cellrank.tl.kernels.ThresholdSchemeABC.__call__`.
+                  :func:`cellrank.kernels.utils.ThresholdSchemeABC.__call__`.
         frac_to_keep
             Fraction of the closest neighbors (according to graph connectivities) are kept, no matter whether they lie
             in the pseudotemporal past or future. This is done to ensure that the graph remains connected.

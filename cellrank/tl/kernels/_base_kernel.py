@@ -274,7 +274,7 @@ class KernelExpression(IOMixin, ABC):
         **kwargs: Any,
     ) -> None:
         """
-        Plot :attr:`transition_matrix` in a streamplot.
+        Plot :attr:`transition_matrix` as a stream or a grid plot.
 
         Parameters
         ----------
@@ -285,10 +285,15 @@ class KernelExpression(IOMixin, ABC):
             Otherwise, save the result to `'T_fwd_{basis}'` or `T_bwd_{basis}`, depending on the direction.
         recompute
             Whether to recompute the projection if it already exists.
+        stream
+            If ``True``, use :func:`scvelo.pl.velocity_embedding_stream`.
+            Otherwise, use :func:`scvelo.pl.velocity_embedding_grid`.
+        kwargs
+            Keyword argument for the plotting function.
 
         Returns
         -------
-        Nothing, just modifies :attr:`anndata.AnnData.obsm` with a key based on ``key_added``.
+        Nothing, just plots and modifies :attr:`anndata.AnnData.obsm` with a key based on ``key_added``.
         """
         proj = Projector(self, basis=basis)
         proj.project(key_added=key_added, recompute=recompute)
@@ -435,9 +440,9 @@ class KernelExpression(IOMixin, ABC):
             if np.any((matrix.data if issparse(matrix) else matrix) < 0):
                 raise ValueError("Unable to normalize matrix with negative values.")
             matrix = _normalize(matrix)
-        if force_normalize and should_norm(matrix):  # some rows are all 0s/contain invalid values
-            n_inv = np.sum(~np.isclose(np.asarray(matrix.sum(1)).squeeze(), 1.0, rtol=1e-12))
-            raise ValueError(f"Transition matrix is not row stochastic, {n_inv} rows do not sum to 1.")
+            if should_norm(matrix):  # some rows are all 0s/contain invalid values
+                n_inv = np.sum(~np.isclose(np.asarray(matrix.sum(1)).squeeze(), 1.0, rtol=1e-12))
+                raise ValueError(f"Transition matrix is not row stochastic, {n_inv} rows do not sum to 1.")
         # fmt: on
 
         self._transition_matrix = matrix
@@ -447,7 +452,7 @@ class KernelExpression(IOMixin, ABC):
         """Parameters which are used to compute the transition matrix."""
         if len(self.kernels) == 1:
             return self._params
-        return {f"{repr(k)}:{i}": k.params for i, k in enumerate(self.kernels)}
+        return {f"{k!r}:{i}": k.params for i, k in enumerate(self.kernels)}
 
     def _reuse_cache(
         self, expected_params: Dict[str, Any], *, time: Optional[Any] = None
@@ -485,6 +490,7 @@ class Kernel(KernelExpression, ABC):
 
     @property
     def adata(self) -> AnnData:
+        """Annotated data object."""
         return self._adata
 
     @adata.setter
@@ -525,7 +531,7 @@ class Kernel(KernelExpression, ABC):
             for attr, obj in objects:
                 setattr(self, attr, obj)
 
-    def _format_params(self) -> 3:
+    def _format_params(self) -> str:
         return ", ".join(
             f"{k}={round(v, 3) if isinstance(v, float) else v!r}"
             for k, v in self.params.items()
@@ -546,6 +552,7 @@ class Kernel(KernelExpression, ABC):
 
     @property
     def shape(self) -> Tuple[int, int]:
+        """``(n_cells, n_cells)``."""
         return self._n_obs, self._n_obs
 
     def __getitem__(self, ix: int) -> "Kernel":
@@ -582,7 +589,7 @@ class Constant(UnidirectionalKernel):
         super().__init__(adata)
         self.transition_matrix = value
 
-    def compute_transition_matrix(self, value: Union[int, float]) -> "KernelExpression":
+    def compute_transition_matrix(self, value: Union[int, float]) -> "Constant":
         self.transition_matrix = value
         return self
 
@@ -602,11 +609,11 @@ class Constant(UnidirectionalKernel):
         self._transition_matrix = value
         self._params = {"value": value}
 
-    def copy(self, *, deep: bool = False) -> "KernelExpression":
+    def copy(self, *, deep: bool = False) -> "Constant":
         return Constant(self.adata, self.transition_matrix)
 
     # fmt: off
-    def __radd__(self, other: Union[int, float, "KernelExpression"]) -> "KernelExpression":
+    def __radd__(self, other: Union[int, float, "KernelExpression"]) -> "Constant":
         if isinstance(other, (int, float, np.integer, np.floating)):
             other = Constant(self.adata, other)
         if isinstance(other, Constant):
@@ -616,7 +623,7 @@ class Constant(UnidirectionalKernel):
 
         return super().__radd__(other)
 
-    def __rmul__(self, other: Union[int, float, "KernelExpression"]) -> "KernelExpression":
+    def __rmul__(self, other: Union[int, float, "KernelExpression"]) -> "Constant":
         if isinstance(other, (int, float, np.integer, np.floating)):
             other = Constant(self.adata, other)
         if isinstance(other, Constant):
@@ -655,12 +662,12 @@ class NaryKernelExpression(BidirectionalMixin, KernelExpression):
     def _combiner(self) -> str:
         pass
 
-    def compute_transition_matrix(self) -> "KernelExpression":
+    def compute_transition_matrix(self) -> "NaryKernelExpression":
         for kexpr in self:
             if kexpr.transition_matrix is None:
                 if isinstance(kexpr, Kernel):
                     raise RuntimeError(
-                        f"`{kexpr}` is uninitialized. Compute its"
+                        f"`{kexpr}` is uninitialized. Compute its "
                         f"transition matrix first as `.compute_transition_matrix()`."
                     )
                 kexpr.compute_transition_matrix()
@@ -695,6 +702,7 @@ class NaryKernelExpression(BidirectionalMixin, KernelExpression):
 
     @property
     def adata(self) -> AnnData:
+        """Annotated data object."""
         return self[0].adata
 
     @adata.setter
@@ -708,12 +716,12 @@ class NaryKernelExpression(BidirectionalMixin, KernelExpression):
 
     @property
     def kernels(self) -> Tuple["KernelExpression", ...]:
+        """Underlying unique basic kernels."""
         kernels = []
         for kexpr in self:
             if isinstance(kexpr, Kernel) and not isinstance(kexpr, Constant):
                 kernels.append(kexpr)
-            elif isinstance(kexpr, NaryKernelExpression):
-                # recurse
+            elif isinstance(kexpr, NaryKernelExpression):  # recurse
                 kernels.extend(kexpr.kernels)
 
         # return only unique kernels
@@ -725,6 +733,7 @@ class NaryKernelExpression(BidirectionalMixin, KernelExpression):
 
     @property
     def shape(self) -> Tuple[int, int]:
+        """``(n_cells, n_cells)``."""
         # all kernels have the same shape
         return self[0].shape
 
@@ -759,7 +768,7 @@ class NaryKernelExpression(BidirectionalMixin, KernelExpression):
 
 
 class KernelAdd(NaryKernelExpression):
-    def compute_transition_matrix(self) -> "KernelExpression":
+    def compute_transition_matrix(self) -> "KernelAdd":
         self._maybe_recalculate_constants()
         return super().compute_transition_matrix()
 
@@ -767,6 +776,7 @@ class KernelAdd(NaryKernelExpression):
         return t1 + t2
 
     def _maybe_recalculate_constants(self) -> None:
+        """Normalize constants to sum to 1."""
         constants = self._bin_consts
         if constants:
             total = sum((c.transition_matrix for c in constants), 0.0)
@@ -777,6 +787,7 @@ class KernelAdd(NaryKernelExpression):
 
     @property
     def _bin_consts(self) -> List[KernelExpression]:
+        """Return constant expressions for each binary multiplication children with at least 1 constant."""
         return [c for k in self if isinstance(k, KernelMul) for c in k._bin_consts]
 
     @property
@@ -808,6 +819,7 @@ class KernelMul(NaryKernelExpression):
 
     @property
     def _bin_consts(self) -> List[KernelExpression]:
+        """Return all constants if this expression contains only 2 subexpressions."""
         if len(self) != 2:
             return []
 
@@ -815,6 +827,7 @@ class KernelMul(NaryKernelExpression):
 
     @property
     def _split_const(self) -> Tuple[Optional[Constant], Optional[KernelExpression]]:
+        """Return a constant and the other expression, iff this expression is of length 2 and contains a constant."""
         if not self._bin_consts:
             return None, None
         k1, k2 = self
