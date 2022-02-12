@@ -28,6 +28,10 @@ except ImportError as e:
     wot = None
 
 
+__all__ = ("WOTKernel",)
+
+
+# TODO(michalk8): remove me
 class nstr(str):  # used for params + cache (precomputed cost matrices)
     """String class that is not equal to any other string."""
 
@@ -35,6 +39,7 @@ class nstr(str):  # used for params + cache (precomputed cost matrices)
         return False
 
 
+# TODO(michalk8): refactor me
 @d.dedent
 class WOTKernel(Kernel, error=_error):
     """
@@ -50,7 +55,8 @@ class WOTKernel(Kernel, error=_error):
     time_key
         Key in :attr:`anndata.AnnData.obs` where experimental time is stored.
         The experimental time can be of either of a numeric or an ordered categorical type.
-    %(cond_num)s
+    kwargs
+        Keyword arguments for the parent class.
 
     Examples
     --------
@@ -94,14 +100,12 @@ class WOTKernel(Kernel, error=_error):
         adata: AnnData,
         backward: bool = False,
         time_key: str = "exp_time",
-        compute_cond_num: bool = False,
         **kwargs: Any,
     ):
         super().__init__(
             adata,
             backward=backward,
             time_key=time_key,
-            compute_cond_num=compute_cond_num,
             **kwargs,
         )
 
@@ -302,7 +306,7 @@ class WOTKernel(Kernel, error=_error):
 
         Returns
         -------
-        Self and makes available the following attributes:
+        Self and updates the following attributes:
 
             - :attr:`transition_matrix` - transition matrix.
             - :attr:`transport_maps` - transport maps between consecutive time points.
@@ -310,7 +314,7 @@ class WOTKernel(Kernel, error=_error):
 
         Also modifies :attr:`anndata.AnnData.obs` with the following key:
 
-            - `'estimated_growth_rates'` - the estimated final growth rates.
+            - `'estimated_growth_rates'` - the final estimated growth rates.
 
         Notes
         -----

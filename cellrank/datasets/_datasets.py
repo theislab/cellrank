@@ -11,8 +11,17 @@ from cellrank import logging as logg
 from cellrank.tl._enum import ModeEnum
 from cellrank.ul._docs import d, inject_docs
 
+__all__ = (
+    "pancreas",
+    "pancreas_preprocessed",
+    "lung",
+    "reprogramming_morris",
+    "reprogramming_schiebinger",
+    "zebrafish",
+)
 
-class ReprogrammingSubset(ModeEnum):  # noqa: D101
+
+class ReprogrammingSubset(ModeEnum):
     FULL = auto()
     K48 = "48k"
     K85 = "85k"
@@ -47,9 +56,8 @@ _datasets = {
 
 
 def _load_dataset_from_url(
-    fpath: Union[os.PathLike, str], url: str, expected_shape: Tuple[int, int], **kwargs
+    fpath: Union[str, Path], url: str, expected_shape: Tuple[int, int], **kwargs: Any
 ) -> AnnData:
-
     fpath = str(fpath)
     if not fpath.endswith(".h5ad"):
         fpath += ".h5ad"
@@ -101,7 +109,7 @@ def pancreas(
     ----------
     path
         Path where to save the dataset.
-    **kwargs
+    kwargs
         Keyword arguments for :func:`scanpy.read`.
 
     Returns

@@ -505,7 +505,7 @@ class Kernel(KernelExpression, ABC):
         shape = (adata.n_obs, adata.n_obs)
         if self.shape != shape:
             raise ValueError(
-                f"Expected new object to have same shape as the previous `{self.shape}`, found `{shape}`."
+                f"Expected new `AnnData` object to have same shape as the previous `{self.shape}`, found `{shape}`."
             )
         self._adata = adata
 
@@ -708,11 +708,8 @@ class NaryKernelExpression(BidirectionalMixin, KernelExpression):
     @adata.setter
     def adata(self, adata: Optional[AnnData]) -> None:
         # allow resetting (use for temp. pickling without adata)
-        if adata is None or all(kexpr.adata is None for kexpr in self):
-            for kexpr in self:
-                kexpr.adata = adata
-        else:
-            self[0].adata = adata
+        for kexpr in self:
+            kexpr.adata = adata
 
     @property
     def kernels(self) -> Tuple["KernelExpression", ...]:

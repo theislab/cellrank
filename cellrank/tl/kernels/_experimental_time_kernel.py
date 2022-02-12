@@ -30,6 +30,8 @@ class ExperimentalTimeKernel(BidirectionalKernel, ABC):
     time_key
         Key in :attr:`anndata.AnnData.obs` where experimental time is stored.
         The experimental time can be of either of a numeric or an ordered categorical type.
+    kwargs
+        Keyword arguments for the parent class.
     """
 
     def __init__(

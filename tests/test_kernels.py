@@ -220,10 +220,16 @@ class TestInitializeKernel:
     def test_parent(self, adata: AnnData):
         vk = VelocityKernel(adata)
         ck = ConnectivityKernel(adata)
-        k = vk + ck
+        k_old = vk + ck
+        k = k_old.copy()
 
-        assert vk._parent._parent is k  # invisible constants
-        assert ck._parent._parent is k
+        assert vk._parent._parent is k_old
+        assert ck._parent._parent is k_old
+        assert k_old._parent is None
+
+        k1, k2 = k.kernels
+        assert k1._parent._parent is k
+        assert k2._parent._parent is k
         assert k._parent is None
 
     def test_uninitialized_both(self, adata: AnnData):
@@ -320,6 +326,15 @@ class TestInitializeKernel:
         c, _ = k._split_const
 
         assert c.transition_matrix == 10
+
+    def test_kernel_kernel_multiplication(self, adata: AnnData):
+        vk = VelocityKernel(adata).compute_transition_matrix()
+        ck = ConnectivityKernel(adata).compute_transition_matrix()
+
+        actual = (vk * ck).transition_matrix
+        expected = _normalize(vk.transition_matrix.A * ck.transition_matrix.A)
+
+        np.testing.assert_allclose(actual.A, expected)
 
     def test_constant(self, adata: AnnData):
         k = 9 * VelocityKernel(adata) + 1 * ConnectivityKernel(adata)
@@ -563,6 +578,39 @@ class TestKernel:
         assert pk_inv is not pk
         assert pk_inv.backward
         np.testing.assert_allclose(pk.pseudotime, 1 - pk_inv.pseudotime)
+
+    @pytest.mark.parametrize("empty", [False, True])
+    def test_set_adata(self, adata: AnnData, empty: bool):
+        data = None if empty else adata.copy()
+        ck1 = ConnectivityKernel(adata).compute_transition_matrix()
+        ck2 = ConnectivityKernel(adata).compute_transition_matrix()
+        ck = ck1 + ck2
+
+        ck.adata = data
+
+        assert ck.adata is data
+        for k in ck:
+            assert k.adata is data
+
+    def test_set_adata_wrong_shape(self, adata: AnnData):
+        ck = ConnectivityKernel(adata)
+        with pytest.raises(
+            ValueError, match="Expected new `AnnData` .* to have same shape"
+        ):
+            ck.adata = adata[:2].copy()
+
+    def test_forward_backward_combination(self, adata: AnnData):
+        vkf = VelocityKernel(adata, backward=False)
+        vkb = VelocityKernel(adata, backward=True)
+        with pytest.raises(ValueError, match="Unable to combine both forward"):
+            _ = vkf + vkb
+
+    def test_unidirectional_combination(self, adata: AnnData):
+        ck1 = ConnectivityKernel(adata).compute_transition_matrix()
+        ck2 = ConnectivityKernel(adata).compute_transition_matrix()
+        ck = ck1 + ck2
+
+        assert ck.backward is None
 
     @pytest.mark.parametrize("model", ["deterministic", "stochastic", "monte_carlo"])
     def test_manual_combination(self, adata: AnnData, model: str):
@@ -1182,7 +1230,7 @@ class TestTransportMapKernel:
         np.testing.assert_allclose(tmk.transition_matrix.sum(1), 1.0)
 
     @pytest.mark.parametrize("dtype", [spmatrix, np.ndarray, AnnData])
-    def test_returned_type(self, adata: AnnData, dtype: type):
+    def test_returned_dtype(self, adata: AnnData, dtype: type):
         tmk = DummyTMapKernel(adata).compute_transition_matrix(dtype=dtype)
 
         np.testing.assert_allclose(tmk.transition_matrix.sum(1), 1.0)

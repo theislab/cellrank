@@ -43,7 +43,7 @@ class PseudotimeKernel(ConnectivityMixin, BidirectionalKernel):
     time_key
         Key in :attr:`anndata.AnnData.obs` where the pseudotime is stored.
     kwargs
-        Keyword arguments for :class:`cellrank.kernels.Kernel`.
+        Keyword arguments for the parent class.
     """
 
     def __init__(

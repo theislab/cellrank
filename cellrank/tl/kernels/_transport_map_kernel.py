@@ -30,7 +30,7 @@ Pair_t = Tuple[Numeric_t, Numeric_t]
 
 
 class TransportMapKernel(ExperimentalTimeKernel, ABC):
-    """Kernel base class which computes transition matrix based on transport maps for consecutive time pairs."""
+    """Kernel base class which computes transition matrix based on transport maps for consecutive time point pairs."""
 
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
@@ -393,5 +393,5 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
 
     def __invert__(self) -> "TransportMapKernel":
         tk = super().__invert__("_tmaps")  # don't copy transport maps
-        tk._tmaps = {}
+        tk._tmaps = None
         return tk

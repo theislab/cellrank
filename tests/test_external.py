@@ -110,7 +110,7 @@ class TestOTKernel:
             combined_kernel = ok
 
         with pytest.raises(
-            TypeError, match=r"StationaryOTKernel is not a KNN based kernel"
+            TypeError, match=r"StationaryOTKernel is not a kNN based kernel"
         ):
             combined_kernel.plot_projection()
 
@@ -131,6 +131,9 @@ class TestWOTKernel:
         orig_time = ok.experimental_time
 
         ok = ~ok
+
+        assert ok.transition_matrix is None
+        assert ok.transport_maps is None
 
         inverted_time = ok.experimental_time
         assert is_categorical_dtype(adata_large.obs[key])
@@ -265,6 +268,8 @@ class TestWOTKernel:
         assert isinstance(ok.params, dict)
         assert isinstance(ok.growth_rates, pd.DataFrame)
         assert isinstance(ok.transport_maps, dict)
+        for v in ok.transport_maps.values():
+            assert isinstance(v, AnnData)
         np.testing.assert_array_equal(adata_large.obs_names, ok.growth_rates.index)
         np.testing.assert_array_equal(ok.growth_rates.columns, ["g0", "g1"])
         assert isinstance(ok.transport_maps[12.0, 35.0], AnnData)
@@ -307,7 +312,7 @@ class TestWOTKernel:
         else:
             combined_kernel = ok
 
-        with pytest.raises(TypeError, match=r"WOTKernel is not a KNN based kernel"):
+        with pytest.raises(TypeError, match=r"WOTKernel is not a kNN based kernel"):
             combined_kernel.plot_projection()
 
     def test_wot_write(self, adata_large: AnnData, tmpdir):

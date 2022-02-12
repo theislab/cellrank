@@ -20,6 +20,9 @@ except ImportError as e:
     _error = e
 
 
+__all__ = ("StationaryOTKernel",)
+
+
 @d.dedent
 class StationaryOTKernel(UnidirectionalMixin, OTKernel_, error=_error):
     """
@@ -32,12 +35,12 @@ class StationaryOTKernel(UnidirectionalMixin, OTKernel_, error=_error):
     %(adata)s
     terminal_states
         Key in :attr:`anndata.AnnData.obs` or a categorical :class:`pandas.Series` where non-`NaN` values
-        mark terminal states.
+        mark the terminal states.
         If `None`, terminal states are assumed to be present in :attr:`anndata.AnnData.obs` ``['terminal_states']``.
     g
         Key in :attr:`anndata.AnnData.obs` containing relative growth rates for cells or the array itself.
     kwargs
-        Additional keyword arguments.
+        Keyword arguments for the parent class.
     """
 
     __import_error_message__ = "Unable to import the kernel. Please install `statOT` first as `pip install statot POT`."
@@ -58,14 +61,6 @@ class StationaryOTKernel(UnidirectionalMixin, OTKernel_, error=_error):
             super().__init__(adata, g=g, **kwargs)
         except Exception as e:  # noqa: B902
             raise RuntimeError("Unable to initialize the kernel.") from e
-
-    def _read_from_adata(
-        self,
-        conn_key: Optional[str] = "connectivities",
-        read_conn: bool = True,
-        **kwargs: Any,
-    ) -> None:
-        super()._read_from_adata(conn_key=conn_key, read_conn=False, **kwargs)
 
     def compute_transition_matrix(
         self,
@@ -101,7 +96,6 @@ class StationaryOTKernel(UnidirectionalMixin, OTKernel_, error=_error):
                 - `'ent'` - entropy.
                 - `'quad'` - L2-norm.
                 - `'unbal'` - unbalanced transport (not yet implemented).
-
         tol
             Relative tolerance for OT solver convergence.
         thresh
@@ -117,7 +111,7 @@ class StationaryOTKernel(UnidirectionalMixin, OTKernel_, error=_error):
 
         Returns
         -------
-        Self and makes :attr:`transition_matrix` available.
+        Self and updates :attr:`transition_matrix` and :attr:`params`.
         """
         if method not in ("ent", "quad", "unbal"):
             raise ValueError(
