@@ -7,7 +7,7 @@ from math import fsum
 from cellrank.tl._enum import _DEFAULT_BACKEND, ModeEnum, Backend_t
 from cellrank.ul._parallelize import parallelize
 from cellrank.tl.kernels._utils import _random_normal, _calculate_starts
-from cellrank.tl.kernels.utils._similarity import Similarity
+from cellrank.tl.kernels.utils._similarity import SimilarityABC
 
 import numpy as np
 from scipy.sparse import spmatrix, csr_matrix
@@ -32,7 +32,10 @@ class ModelABC(ABC):
         conn: spmatrix,
         x: np.ndarray,
         v: np.ndarray,
-        similarity: Union[Similarity, Callable[[np.ndarray], np.ndarray]],
+        similarity: Union[
+            SimilarityABC,
+            Callable[[np.ndarray, np.ndarray, float], Tuple[np.ndarray, np.ndarray]],
+        ],
         backward_mode: Optional[BackwardMode] = None,
         softmax_scale: float = 1.0,
         dtype: np.dtype = np.float64,
@@ -173,7 +176,7 @@ class ModelABC(ABC):
 class Deterministic(ModelABC):
     """Deterministic model."""
 
-    def _compute(self, ix: int, neigh_ixs: np.ndarray) -> np.ndarray:
+    def _compute(self, ix: int, neigh_ixs: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         W = self._x[neigh_ixs, :] - self._x[ix, :]
 
         if self._backward_mode not in (None, BackwardMode.NEGATE):
@@ -220,7 +223,9 @@ class Stochastic(ModelABC):
     ):
         super().__init__(conn, x, vmean, dtype=dtype, **kwargs)
         if not hasattr(self._similarity, "hessian"):
-            raise AttributeError("Similarity scheme doesn't have a `hessian` function.")
+            raise AttributeError(
+                "SimilarityABC scheme doesn't have a `hessian` function."
+            )
         self._var = vvar.astype(dtype, copy=False)
 
     def _compute(
@@ -319,7 +324,6 @@ class MonteCarlo(ModelABC):
         ix: int,
         nbhs_ixs: np.ndarray,
     ) -> Tuple[np.ndarray, np.ndarray]:
-        # fmt: off
         n_neigh = len(nbhs_ixs)
         W = self._x[nbhs_ixs, :] - self._x[ix, :]
 
@@ -334,7 +338,6 @@ class MonteCarlo(ModelABC):
             logits += ls
 
         return probs / self._n_samples, logits / self._n_samples
-        # fmt: on
 
     @property
     def _unit(self) -> str:

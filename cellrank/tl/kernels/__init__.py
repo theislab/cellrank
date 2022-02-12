@@ -1,5 +1,4 @@
-from cellrank.tl.kernels.utils import _similarity as similarity
-from cellrank.tl.kernels.utils import _pseudotime_scheme as pseudotime_scheme
+from cellrank.tl.kernels import utils
 from cellrank.tl.kernels._base_kernel import Kernel
 from cellrank.tl.kernels._velocity_kernel import VelocityKernel
 from cellrank.tl.kernels._cytotrace_kernel import CytoTRACEKernel

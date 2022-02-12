@@ -373,7 +373,7 @@ class KernelExpression(IOMixin, ABC):
         return KernelMul(s, o)
 
     @d.get_sections(base="write_to_adata", sections=["Parameters"])
-    @inject_docs()  # gets rid of {{}}
+    @inject_docs()  # gets rid of {{}} in %(write_to_adata)s
     @d.dedent
     @require_tmat
     def write_to_adata(self, key: Optional[str] = None, copy: bool = False) -> None:
@@ -383,13 +383,17 @@ class KernelExpression(IOMixin, ABC):
         Parameters
         ----------
         key
-            Key used when writing transition matrix to :attr:`adata`. If `None`, the key automatically automatically.
+            Key used when writing transition matrix to :attr:`adata`.
+            If `None`, the key will be determined automatically.
 
         Returns
         -------
         %(write_to_adata)s
         """
         from cellrank._key import Key
+
+        if self.adata is None:
+            raise ValueError("Underlying annotated data object is not set.")
 
         key = Key.uns.kernel(self.backward, key=key)
         # retain the embedding info

@@ -14,7 +14,7 @@ from numba import njit
 __all__ = ("DotProduct", "Cosine", "Correlation")
 
 
-class Scheme(ModeEnum):
+class Similarity(ModeEnum):
     DOT_PRODUCT = auto()
     COSINE = auto()
     CORRELATION = auto()
@@ -176,7 +176,7 @@ class Hessian(ABC):
         """
 
 
-class Similarity(ABC):
+class SimilarityABC(ABC):
     """Base class for all similarity schemes."""
 
     @d.get_full_description(base="sim_scheme")
@@ -205,12 +205,12 @@ class Similarity(ABC):
         """
 
     @staticmethod
-    def create(scheme: Scheme) -> "Similarity":
-        if scheme == Scheme.CORRELATION:
+    def create(scheme: Similarity) -> "SimilarityABC":
+        if scheme == Similarity.CORRELATION:
             return Correlation()
-        if scheme == Scheme.COSINE:
+        if scheme == Similarity.COSINE:
             return Cosine()
-        if scheme == Scheme.DOT_PRODUCT:
+        if scheme == Similarity.DOT_PRODUCT:
             return DotProduct()
         raise NotImplementedError(scheme)
 
@@ -221,7 +221,7 @@ class Similarity(ABC):
         return repr(self)
 
 
-class SimilarityHessian(Similarity, Hessian):
+class SimilarityHessian(SimilarityABC, Hessian):
     """
     Base class for all similarity schemes as defined in :cite:`li:20`.
 

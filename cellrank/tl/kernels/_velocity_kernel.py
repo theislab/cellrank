@@ -1,4 +1,4 @@
-from typing import Any, Union, Callable, Optional, Sequence
+from typing import Any, Tuple, Union, Callable, Optional, Sequence
 from typing_extensions import Literal
 
 from abc import ABC
@@ -11,7 +11,7 @@ from cellrank.tl.kernels.utils import MonteCarlo, Stochastic, Deterministic
 from cellrank.tl.kernels._mixins import ConnectivityMixin
 from scvelo.preprocessing.moments import get_moments
 from cellrank.tl.kernels._base_kernel import BidirectionalKernel
-from cellrank.tl.kernels.utils._similarity import Scheme, Similarity
+from cellrank.tl.kernels.utils._similarity import Similarity, SimilarityABC
 from cellrank.tl.kernels.utils._velocity_model import BackwardMode, VelocityModel
 
 import numpy as np
@@ -87,7 +87,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel, ABC):
         # fmt: on
 
     # TODO(michalk8): remove the docrep in 2.0
-    @inject_docs(m=VelocityModel, b=BackwardMode, s=Scheme)  # don't swap the order
+    @inject_docs(m=VelocityModel, b=BackwardMode, s=Similarity)  # don't swap the order
     @d.dedent
     def compute_transition_matrix(
         self,
@@ -97,8 +97,8 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel, ABC):
         backward_mode: Literal["transpose", "negate"] = BackwardMode.TRANSPOSE,
         similarity: Union[
             Literal["correlation", "cosine", "dot_product"],
-            Callable[[np.ndarray, np.ndarray, float], np.ndarray],
-        ] = Scheme.CORRELATION,
+            Callable[[np.ndarray, np.ndarray, float], Tuple[np.ndarray, np.ndarray]],
+        ] = Similarity.CORRELATION,
         softmax_scale: Optional[float] = None,
         n_samples: int = 1000,
         seed: Optional[int] = None,
@@ -117,7 +117,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel, ABC):
         %(softmax_scale)s
         %(velocity_scheme)s
         n_samples
-            Number of bootstrap samples when ``mode = {m.MONTE_CARLO!r}``.
+            Number of samples when ``mode = {m.MONTE_CARLO!r}``.
         seed
             Random seed when ``mode = {m.MONTE_CARLO!r}``.
         %(parallel)s
@@ -166,7 +166,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel, ABC):
         self,
         model: Union[str, VelocityModel],
         backward_mode: Literal["negate", "transpose"],
-        similarity: Union[str, Scheme, Callable],
+        similarity: Union[str, Similarity, Callable],
         n_samples: int = 1000,
         seed: Optional[int] = None,
         **kwargs: Any,
@@ -175,7 +175,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel, ABC):
         backward_mode = BackwardMode(backward_mode) if self.backward else None
 
         if isinstance(similarity, str):
-            similarity = Similarity.create(Scheme(similarity))
+            similarity = SimilarityABC.create(Similarity(similarity))
         elif not callable(similarity):
             raise TypeError(
                 f"Expected `scheme` to be a function, found `{type(similarity).__name__}`."

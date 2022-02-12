@@ -47,7 +47,7 @@ from pandas.core.dtypes.common import is_bool_dtype, is_integer_dtype
 _rtol = 1e-6
 
 
-class CustomFunc(cr.tl.kernels.similarity.Similarity):
+class CustomFunc(cr.tl.kernels.utils.SimilarityABC):
     def __call__(
         self, v: np.ndarray, D: np.ndarray, softmax_scale: float = 1.0
     ) -> Tuple[np.ndarray, np.ndarray]:
@@ -81,7 +81,7 @@ class CustomKernel(UnidirectionalKernel):
         return copy(self)
 
 
-class InvalidFuncProbs(cr.tl.kernels.similarity.Similarity):
+class InvalidFuncProbs(cr.tl.kernels.utils.SimilarityABC):
     def __call__(
         self, v: np.ndarray, D: np.ndarray, _softmax_scale: float = 1.0
     ) -> Tuple[np.ndarray, np.ndarray]:
