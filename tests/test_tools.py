@@ -8,6 +8,7 @@ from cellrank.tl.kernels._base_kernel import KernelAdd
 
 import numpy as np
 import pandas as pd
+from scipy.sparse import isspmatrix_csr
 
 
 class TestLineages:
@@ -54,7 +55,7 @@ class TestLineageDrivers:
             assert np.all(adata_cflare.varm[key][f"{name}_qval"] >= 0)
             assert np.all(adata_cflare.varm[key][f"{name}_qval"] <= 1.0)
 
-    def test_invalid_mode(self, adata_cflare: AnnData):
+    def test_invalid_method(self, adata_cflare: AnnData):
         cr.tl.lineages(adata_cflare)
         with pytest.raises(ValueError):
             cr.tl.lineage_drivers(adata_cflare, use_raw=False, method="foobar")
@@ -167,9 +168,9 @@ class TestRootFinal:
         with pytest.raises(ValueError):
             cr.tl.initial_states(adata, weight_connectivities=10)
 
-    def test_invalid_invalid_mode(self, adata: AnnData):
+    def test_invalid_invalid_model(self, adata: AnnData):
         with pytest.raises(ValueError):
-            cr.tl.initial_states(adata, mode="foobar")
+            cr.tl.initial_states(adata, model="foobar")
 
     @pytest.mark.parametrize("force_recompute", [False, True])
     def test_force_recompute(self, adata: AnnData, force_recompute: bool):
@@ -223,8 +224,9 @@ class TestTransitionMatrix:
         ck = cr.tl.transition_matrix(adata, weight_connectivities=1, conn_key=key)
 
         assert isinstance(ck, cr.tl.kernels.ConnectivityKernel)
+        assert isspmatrix_csr(ck.transition_matrix)
 
-        np.testing.assert_array_equal(ck.transition_matrix, adata.obsp[key])
+        np.testing.assert_array_equal(ck.transition_matrix.A, adata.obsp[key])
 
     def test_only_velocity(self, adata: AnnData):
         vk = cr.tl.transition_matrix(adata, weight_connectivities=0)

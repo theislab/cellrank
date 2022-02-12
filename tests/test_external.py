@@ -7,7 +7,7 @@ import cellrank.external as cre
 from anndata import AnnData
 from cellrank.tl.kernels import ConnectivityKernel
 from cellrank.external.kernels._utils import MarkerGenes
-from cellrank.external.kernels._wot_kernel import LastTimePoint
+from cellrank.tl.kernels._transport_map_kernel import LastTimePoint
 
 import numpy as np
 import pandas as pd
@@ -47,22 +47,6 @@ statot_not_installed_skip = pytest.mark.skipif(
 
 @statot_not_installed_skip
 class TestOTKernel:
-    def test_no_connectivities(self, adata_large: AnnData):
-        del adata_large.obsp["connectivities"]
-        terminal_states = np.full((adata_large.n_obs,), fill_value=np.nan, dtype=object)
-        ixs = np.where(adata_large.obs["clusters"] == "Granule immature")[0]
-        terminal_states[ixs] = "GI"
-
-        ok = cre.kernels.StationaryOTKernel(
-            adata_large,
-            terminal_states=pd.Series(terminal_states).astype("category"),
-            g=np.ones((adata_large.n_obs,), dtype=np.float64),
-        )
-        ok = ok.compute_transition_matrix(1, 0.001)
-
-        assert ok._conn is None
-        np.testing.assert_allclose(ok.transition_matrix.sum(1), 1.0)
-
     def test_method_not_implemented(self, adata_large: AnnData):
         terminal_states = np.full((adata_large.n_obs,), fill_value=np.nan, dtype=object)
         ixs = np.where(adata_large.obs["clusters"] == "Granule immature")[0]
@@ -125,25 +109,14 @@ class TestOTKernel:
         else:
             combined_kernel = ok
 
-        expected_error = (
-            r"<StationaryOTKernel> is not a kNN based kernel. The embedding projection "
-            r"only works for kNN based kernels."
-        )
-        with pytest.raises(AttributeError, match=expected_error):
-            combined_kernel.compute_projection()
+        with pytest.raises(
+            TypeError, match=r"StationaryOTKernel is not a kNN based kernel"
+        ):
+            combined_kernel.plot_projection()
 
 
 @wot_not_installed_skip
 class TestWOTKernel:
-    def test_no_connectivities(self, adata_large: AnnData):
-        del adata_large.obsp["connectivities"]
-        ok = cre.kernels.WOTKernel(
-            adata_large, time_key="age(days)"
-        ).compute_transition_matrix()
-
-        assert ok._conn is None
-        np.testing.assert_allclose(ok.transition_matrix.sum(1), 1.0)
-
     def test_invalid_solver_kwargs(self, adata_large: AnnData):
         ok = cre.kernels.WOTKernel(adata_large, time_key="age(days)")
         with pytest.raises(TypeError, match="unexpected keyword argument 'foo'"):
@@ -158,6 +131,9 @@ class TestWOTKernel:
         orig_time = ok.experimental_time
 
         ok = ~ok
+
+        assert ok.transition_matrix is None
+        assert ok.transport_maps is None
 
         inverted_time = ok.experimental_time
         assert is_categorical_dtype(adata_large.obs[key])
@@ -292,6 +268,8 @@ class TestWOTKernel:
         assert isinstance(ok.params, dict)
         assert isinstance(ok.growth_rates, pd.DataFrame)
         assert isinstance(ok.transport_maps, dict)
+        for v in ok.transport_maps.values():
+            assert isinstance(v, AnnData)
         np.testing.assert_array_equal(adata_large.obs_names, ok.growth_rates.index)
         np.testing.assert_array_equal(ok.growth_rates.columns, ["g0", "g1"])
         assert isinstance(ok.transport_maps[12.0, 35.0], AnnData)
@@ -334,12 +312,8 @@ class TestWOTKernel:
         else:
             combined_kernel = ok
 
-        expected_error = (
-            r"<WOTKernel> is not a kNN based kernel. The embedding projection only "
-            r"works for kNN based kernels."
-        )
-        with pytest.raises(AttributeError, match=expected_error):
-            combined_kernel.compute_projection()
+        with pytest.raises(TypeError, match=r"WOTKernel is not a kNN based kernel"):
+            combined_kernel.plot_projection()
 
     def test_wot_write(self, adata_large: AnnData, tmpdir):
         path = str(tmpdir / "wot.pickle")

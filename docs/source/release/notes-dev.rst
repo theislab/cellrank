@@ -4,7 +4,7 @@ CellRank dev (2022-02-10)
 Features
 --------
 
-- Update CytoTRACE calculation to check inf vals
+- Update CytoTRACE calculation to check for infinite values.
   `#761 <https://github.com/theislab/cellrank/pull/761>`__
 
 - Refactor :class:`cellrank.tl.kernels.TransportMapKernel` for easier definition of extensions.

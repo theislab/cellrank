@@ -23,16 +23,16 @@ fate-informed `circular embeddings`_, to name just a few.
 CellRank scales to large cell numbers, is fully compatible with `scanpy`_ and `scvelo`_ and is easy to use.
 For **installation instructions**, **documentation** and **tutorials**, visit `cellrank.org`_.
 
+Manuscript
+^^^^^^^^^^
+Please check out our manuscript `Lange et al. (2022)`_ in **Nature Methods** to learn more.
+
 Getting started with CellRank
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 If you're new to CellRank, make sure to go though the `basic tutorial`_ which introduces you to CellRank's high-level
 API. Most biological systems require a bit more control, so be sure to check out the `kernels and estimators tutorial`_
 which allows to unlock the full power of CellRank. If you want to see individual functions in action, visit our
 `gallery`_.
-
-Manuscript
-^^^^^^^^^^
-Please see our `preprint`_ on **bioRxiv** to learn more.
 
 CellRank's key applications
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -140,7 +140,7 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
 .. _Theislab: https://www.helmholtz-muenchen.de/icb/research/groups/theis-lab/overview/index.html
 .. _Peerlab: https://www.mskcc.org/research/ski/labs/dana-pe-er
 .. _`tweet`: https://twitter.com/MariusLange8
-.. _preprint: https://www.biorxiv.org/content/10.1101/2020.10.19.345983v2
+.. _Lange et al. (2022): https://www.nature.com/articles/s41592-021-01346-6
 .. _PageRank: https://en.wikipedia.org/wiki/PageRank#cite_note-1
 
 .. _gallery: https://cellrank.readthedocs.io/en/stable/auto_examples/index.html

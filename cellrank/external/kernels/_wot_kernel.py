@@ -10,7 +10,8 @@ from cellrank import logging as logg
 from cellrank.ul._docs import d
 from cellrank.tl._utils import _maybe_subset_hvgs
 from cellrank.external.kernels._utils import MarkerGenes
-from cellrank.tl.kernels._exp_time_kernel import LastTimePoint
+from cellrank.tl.kernels.utils._tmat_flow import Numeric_t
+from cellrank.tl.kernels._transport_map_kernel import Pair_t, LastTimePoint
 
 import numpy as np
 import pandas as pd
@@ -27,13 +28,18 @@ except ImportError as e:
     wot = None
 
 
-class nstr(str):  # used for params+cache (precomputed cost matrices)
+__all__ = ("WOTKernel",)
+
+
+# TODO(michalk8): remove me
+class nstr(str):  # used for params + cache (precomputed cost matrices)
     """String class that is not equal to any other string."""
 
     def __eq__(self, other: str) -> bool:
         return False
 
 
+# TODO(michalk8): refactor me
 @d.dedent
 class WOTKernel(Kernel, error=_error):
     """
@@ -49,7 +55,8 @@ class WOTKernel(Kernel, error=_error):
     time_key
         Key in :attr:`anndata.AnnData.obs` where experimental time is stored.
         The experimental time can be of either of a numeric or an ordered categorical type.
-    %(cond_num)s
+    kwargs
+        Keyword arguments for the parent class.
 
     Examples
     --------
@@ -93,14 +100,12 @@ class WOTKernel(Kernel, error=_error):
         adata: AnnData,
         backward: bool = False,
         time_key: str = "exp_time",
-        compute_cond_num: bool = False,
         **kwargs: Any,
     ):
         super().__init__(
             adata,
             backward=backward,
             time_key=time_key,
-            compute_cond_num=compute_cond_num,
             **kwargs,
         )
 
@@ -111,14 +116,6 @@ class WOTKernel(Kernel, error=_error):
         )
         self.adata.obs[self._time_key] = self.experimental_time
         self._growth_rates = None
-
-    def _read_from_adata(
-        self,
-        conn_key: Optional[str] = "connectivities",
-        read_conn: bool = True,
-        **kwargs: Any,
-    ) -> None:
-        super()._read_from_adata(conn_key=conn_key, read_conn=False, **kwargs)
 
     def compute_initial_growth_rates(
         self,
@@ -255,9 +252,7 @@ class WOTKernel(Kernel, error=_error):
     @d.dedent
     def compute_transition_matrix(
         self,
-        cost_matrices: Optional[
-            Union[str, Mapping[Tuple[float, float], np.ndarray]]
-        ] = None,
+        cost_matrices: Optional[Union[str, Mapping[Pair_t, np.ndarray]]] = None,
         lambda1: float = 1,
         lambda2: float = 50,
         epsilon: float = 0.05,
@@ -311,7 +306,7 @@ class WOTKernel(Kernel, error=_error):
 
         Returns
         -------
-        Self and makes available the following attributes:
+        Self and updates the following attributes:
 
             - :attr:`transition_matrix` - transition matrix.
             - :attr:`transport_maps` - transport maps between consecutive time points.
@@ -319,7 +314,7 @@ class WOTKernel(Kernel, error=_error):
 
         Also modifies :attr:`anndata.AnnData.obs` with the following key:
 
-            - `'estimated_growth_rates'` - the estimated final growth rates.
+            - `'estimated_growth_rates'` - the final estimated growth rates.
 
         Notes
         -----
@@ -367,11 +362,7 @@ class WOTKernel(Kernel, error=_error):
         tmap = self._restich_tmaps(tmap, last_time_point, conn_kwargs=conn_kwargs)
         self._growth_rates = tmap.obs
 
-        self._compute_transition_matrix(
-            matrix=tmap.X,
-            density_normalize=False,
-            check_irreducibility=False,
-        )
+        self.transition_matrix = tmap.X
         if threshold:
             self._threshold_transition_matrix(threshold)
         self.adata.obs["estimated_growth_rates"] = self.growth_rates[f"g{growth_iters}"]
@@ -380,7 +371,7 @@ class WOTKernel(Kernel, error=_error):
 
         return self
 
-    def _compute_tmap(self, t1: Any, t2: Any, **kwargs: Any) -> AnnData:
+    def _compute_tmap(self, t1: Numeric_t, t2: Numeric_t, **kwargs: Any) -> AnnData:
         ot_model: wot.ot.OTModel = kwargs.pop("ot_model")
         cost_matrix: Optional[Union[str, np.ndarray]] = kwargs.pop("cost_matrix")
 
@@ -392,7 +383,7 @@ class WOTKernel(Kernel, error=_error):
         if tmap is None:
             raise TypeError(
                 f"Unable to compute transport map for time pair `{(t1, t2)}`. "
-                f"Please ensure `adata.obs[{self._time_key!r}]` has the correct dtype (float)."
+                f"Please ensure that `adata.obs[{self._time_key!r}]` has the correct dtype (float)."
             )
         tmap.X = tmap.X.astype(np.float64)
         nans = int(np.sum(~np.isfinite(tmap.X)))
@@ -406,9 +397,7 @@ class WOTKernel(Kernel, error=_error):
     def _compute_tmaps(
         self,
         adata: AnnData,
-        cost_matrices: Optional[
-            Mapping[Tuple[float, float], Optional[np.ndarray]]
-        ] = None,
+        cost_matrices: Optional[Mapping[Pair_t, Optional[np.ndarray]]] = None,
         solver: Literal["fixed_iters", "duality_gap"] = "duality_gap",
         growth_rate_field: Optional[str] = None,
         **kwargs: Any,
@@ -451,10 +440,8 @@ class WOTKernel(Kernel, error=_error):
     def _generate_cost_matrices(
         self,
         adata: AnnData,
-        cost_matrices: Optional[
-            Union[str, Mapping[Tuple[float, float], np.ndarray]]
-        ] = None,
-    ) -> Tuple[Mapping[Tuple[float, float], Optional[np.ndarray]], str]:
+        cost_matrices: Optional[Union[str, Mapping[Pair_t, np.ndarray]]] = None,
+    ) -> Tuple[Mapping[Pair_t, Optional[np.ndarray]], str]:
         timepoints = self.experimental_time.cat.categories
         timepoints = list(zip(timepoints[:-1], timepoints[1:]))
 
@@ -530,7 +517,7 @@ class WOTKernel(Kernel, error=_error):
         return self._growth_rates
 
     def __invert__(self) -> "WOTKernel":
-        super().__invert__()
-        # because WOT reads from `adata`
-        self.adata.obs[self._time_key] = self.experimental_time
-        return self
+        wk = super().__invert__()
+        # needed for WOT
+        wk.adata.obs[wk._time_key] = wk.experimental_time
+        return wk

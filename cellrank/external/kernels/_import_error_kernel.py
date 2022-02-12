@@ -1,10 +1,12 @@
-from typing import Any
+from typing import Any, Optional
 
-from cellrank.tl.kernels import Kernel
 from cellrank.external._error_mixin import ImportErrorMixin
-from cellrank.tl.kernels._base_kernel import KernelExpression
+from cellrank.tl.kernels._base_kernel import Kernel
+
+__all__ = ("ErroredKernel",)
 
 
+# can't subclass UnidirectionalKernel since StationaryOTKernel have to use it
 class ErroredKernel(ImportErrorMixin, Kernel):
     """
     Utility kernel class which always throw :class:`ImportError` when instantiated.
@@ -12,12 +14,17 @@ class ErroredKernel(ImportErrorMixin, Kernel):
     Subclasses can modify the message by overriding `__import_error_message__`.
     """
 
-    __import_error_message__ = "Unable to import the kernel."
+    __import_error_message__ = "Unable to import external kernel."
 
-    def compute_transition_matrix(  # noqa: D102
-        self, *args: Any, **kwargs: Any
-    ) -> KernelExpression:
+    def compute_transition_matrix(self, *args: Any, **kwargs: Any) -> "ErroredKernel":
+        """Not implemented."""
         raise NotImplementedError
 
-    def copy(self) -> KernelExpression:  # noqa: D102
+    def copy(self, deep: bool = False) -> "ErroredKernel":
+        """Not implemented."""
         raise NotImplementedError
+
+    @property
+    def backward(self) -> Optional[bool]:
+        """None."""
+        return None

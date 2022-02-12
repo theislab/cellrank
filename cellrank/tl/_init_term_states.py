@@ -13,8 +13,8 @@ from cellrank.tl._utils import (
 from cellrank.tl.kernels import PrecomputedKernel
 from cellrank.tl.estimators import GPCCA, CFLARE, TermStatesEstimator
 from cellrank.tl._transition_matrix import transition_matrix
-from cellrank.tl.kernels._velocity_kernel import BackwardMode, VelocityMode
 from cellrank.tl.estimators._base_estimator import BaseEstimator
+from cellrank.tl.kernels.utils._velocity_model import BackwardMode, VelocityModel
 
 _docstring = """\
 Find {direction} states of a dynamic process of single cells based on RNA velocity :cite:`manno:18`.
@@ -73,6 +73,7 @@ def _fit(
     estim: TermStatesEstimator,
     n_lineages: Optional[int] = None,
     keys: Optional[Sequence[str]] = None,
+    method: Optional[str] = None,
     cluster_key: Optional[str] = None,
     compute_absorption_probabilities: bool = True,
     **kwargs: Any,
@@ -86,7 +87,7 @@ def _fit(
             use=n_lineages,
             cluster_key=cluster_key,
             n_clusters_kmeans=n_lineages,
-            method=kwargs.pop("method", "kmeans"),
+            method=method or "kmeans",
             **kwargs,
         )
     elif isinstance(estim, GPCCA):
@@ -96,7 +97,7 @@ def _fit(
                 n_lineages = estim.eigendecomposition["eigengap"] + 1
 
         if n_lineages > 1:
-            estim.compute_schur(n_lineages, method=kwargs.pop("method", "krylov"))
+            estim.compute_schur(n_lineages, method=method or "krylov")
 
         try:
             estim.compute_macrostates(
@@ -130,17 +131,18 @@ def _initial_terminal(
     adata: AnnData,
     estimator: type(BaseEstimator) = GPCCA,
     backward: bool = False,
-    mode: str = VelocityMode.DETERMINISTIC,
+    model: str = VelocityModel.DETERMINISTIC,
     backward_mode: str = BackwardMode.TRANSPOSE,
     n_states: Optional[int] = None,
     cluster_key: Optional[str] = None,
+    method: Optional[str] = None,
     key: Optional[str] = None,
     force_recompute: bool = False,
     show_plots: bool = False,
     copy: bool = False,
     return_estimator: bool = False,
     fit_kwargs: Mapping = MappingProxyType({}),
-    **kwargs,
+    **kwargs: Any,
 ) -> Optional[Union[AnnData, BaseEstimator]]:
     _check_estimator_type(estimator)
 
@@ -149,14 +151,14 @@ def _initial_terminal(
     try:
         if force_recompute:
             raise KeyError("Forcing transition matrix recomputation.")
-        kernel = PrecomputedKernel(key, adata=adata, backward=backward)
+        kernel = PrecomputedKernel(adata, obsp_key=key, backward=backward)
         logg.info("Using precomputed transition matrix")
     except KeyError:
         # compute kernel object
         kernel = transition_matrix(
             adata,
             backward=backward,
-            mode=mode,
+            model=model,
             backward_mode=backward_mode,
             **kwargs,
         )
@@ -175,6 +177,7 @@ def _initial_terminal(
         n_lineages=n_states,
         cluster_key=cluster_key,
         compute_absorption_probabilities=False,
+        method=method,
         **fit_kwargs,
     )
 
@@ -196,7 +199,7 @@ def _initial_terminal(
 
 
 @_deprecate(version="2.0")
-@inject_docs(m=VelocityMode, b=BackwardMode)
+@inject_docs(m=VelocityModel, b=BackwardMode)
 @d.dedent
 @inject_docs(
     __doc__=_docstring.format(
@@ -208,7 +211,7 @@ def _initial_terminal(
 def initial_states(  # noqa: D103
     adata: AnnData,
     estimator: type(BaseEstimator) = GPCCA,
-    mode: str = VelocityMode.DETERMINISTIC,
+    model: str = VelocityModel.DETERMINISTIC,
     backward_mode: str = BackwardMode.TRANSPOSE,
     n_states: Optional[int] = None,
     cluster_key: Optional[str] = None,
@@ -218,13 +221,13 @@ def initial_states(  # noqa: D103
     copy: bool = False,
     return_estimator: bool = False,
     fit_kwargs: Mapping = MappingProxyType({}),
-    **kwargs,
+    **kwargs: Any,
 ) -> Optional[Union[AnnData, BaseEstimator]]:
 
     return _initial_terminal(
         adata,
         estimator=estimator,
-        mode=mode,
+        model=model,
         backward_mode=backward_mode,
         backward=True,
         n_states=n_states,
@@ -240,7 +243,7 @@ def initial_states(  # noqa: D103
 
 
 @_deprecate(version="2.0")
-@inject_docs(m=VelocityMode, b=BackwardMode)
+@inject_docs(m=VelocityModel, b=BackwardMode)
 @d.dedent
 @inject_docs(
     __doc__=_docstring.format(
@@ -250,7 +253,7 @@ def initial_states(  # noqa: D103
 def terminal_states(  # noqa: D103
     adata: AnnData,
     estimator: type(BaseEstimator) = GPCCA,
-    mode: str = VelocityMode.DETERMINISTIC,
+    model: str = VelocityModel.DETERMINISTIC,
     n_states: Optional[int] = None,
     cluster_key: Optional[str] = None,
     key: Optional[str] = None,
@@ -259,13 +262,13 @@ def terminal_states(  # noqa: D103
     copy: bool = False,
     return_estimator: bool = False,
     fit_kwargs: Mapping = MappingProxyType({}),
-    **kwargs,
+    **kwargs: Any,
 ) -> Optional[Union[AnnData, BaseEstimator]]:
 
     return _initial_terminal(
         adata,
         estimator=estimator,
-        mode=mode,
+        model=model,
         backward=False,
         n_states=n_states,
         cluster_key=cluster_key,

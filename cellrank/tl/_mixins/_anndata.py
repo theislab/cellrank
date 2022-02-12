@@ -58,7 +58,7 @@ class AnnDataMixin(ABC):
         ----------
         %(adata)s
         kwargs
-            Additional keyword arguments.
+            Additional keyword arguments for :meth:`__init__`.
 
         Returns
         -------

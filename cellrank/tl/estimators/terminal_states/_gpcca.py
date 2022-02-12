@@ -74,11 +74,10 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
     def __init__(
         self,
-        obj: Union[AnnData, np.ndarray, spmatrix, KernelExpression],
-        obsp_key: Optional[str] = None,
+        object: Union[str, bool, np.ndarray, spmatrix, AnnData, KernelExpression],
         **kwargs: Any,
     ):
-        super().__init__(obj=obj, obsp_key=obsp_key, **kwargs)
+        super().__init__(object=object, **kwargs)
 
         self._coarse_init_dist: Optional[pd.Series] = None
         self._coarse_stat_dist: Optional[pd.Series] = None
@@ -427,7 +426,9 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         if isinstance(n_states, int) and n_states == 1:
             self.compute_eigendecomposition()
 
-        self.compute_macrostates(n_states=n_states, cluster_key=cluster_key, **kwargs)
+        self.compute_macrostates(
+            n_states=n_states, cluster_key=cluster_key, n_cells=n_cells, **kwargs
+        )
 
         return self
 

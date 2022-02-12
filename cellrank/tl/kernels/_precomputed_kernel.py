@@ -1,142 +1,134 @@
-from typing import Any, Dict, Union, Optional
-
-from copy import copy
+from typing import Any, Union, Optional
 
 from anndata import AnnData
 from cellrank import logging as logg
 from cellrank._key import Key
 from cellrank.ul._docs import d
 from cellrank.ul._utils import _read_graph_data
-from cellrank.tl.kernels._base_kernel import _RTOL, Kernel, KernelExpression
+from cellrank.tl.kernels._base_kernel import KernelExpression, UnidirectionalKernel
 
 import numpy as np
 from scipy.sparse import spmatrix, csr_matrix
 
+__all__ = ("PrecomputedKernel",)
+
 
 @d.dedent
-class PrecomputedKernel(Kernel):
+class PrecomputedKernel(UnidirectionalKernel):
     """
     Kernel which contains a precomputed transition matrix.
 
     Parameters
     ----------
-    transition_matrix
-        Row-normalized transition matrix or a key in :attr:`anndata.AnnData.obsp`.
-        or a :class:`cellrank.tl.kernels.KernelExpression` with a precomputed transition matrix.
-        If `None`, try to determine the key based on ``backward``.
+    object
+        Can be one of the following types:
+
+            - :class:`anndata.AnnData` - annotated data object.
+            - :class:`scipy.sparse.spmatrix`, :class:`numpy.ndarray` - row-normalized transition matrix.
+            - :class:`cellrank.tl.kernels.KernelExpression` - kernel expression.
+            - :class:`str` - key in :attr:`anndata.AnnData.obsp` where the transition matrix is stored.
+              ``adata`` must be provided in this case.
+            - :class:`bool` - directionality of the transition matrix that will be used to infer its storage location.
+              If `None`, the directionality will be determined automatically. ``adata`` must be provided in this case.
     %(adata)s
-        If `None`, a temporary placeholder object is created.
-    %(backward)s
-    %(cond_num)s
-    kwargs
-        Keyword arguments for :class:`cellrank.tl.kernels.Kernel`.
+        Must be provided when ``object`` is :class:`str` or :class:`bool`.
+    obsp_key
+        Key in :attr:`anndata.AnnData.obsp` where the transition matrix is stored.
+        If `None`, it will be determined automatically. Only used when ``object`` is :class:`anndata.AnnData`.
+    copy
+        Whether or not to copy the stored transition matrix.
+    backward
+        Hint whether this is a forward, backward or a unidirectional kernel. Only used when ``object`` is
+        :class:`anndata.AnnData`.
     """
+
+    _SENTINEL = object()
 
     def __init__(
         self,
-        transition_matrix: Optional[
-            Union[np.ndarray, spmatrix, KernelExpression, str]
-        ] = None,
+        object: Union[str, bool, np.ndarray, spmatrix, AnnData, KernelExpression],
         adata: Optional[AnnData] = None,
-        backward: bool = False,
-        compute_cond_num: bool = False,
+        obsp_key: Optional[str] = None,
         **kwargs: Any,
     ):
-        origin = "'array'"
-        params: Dict[str, Any] = {}
-
-        if transition_matrix is None:
-            transition_matrix = Key.uns.kernel(backward)
-            logg.info(f"Accessing `adata.obsp[{transition_matrix!r}]`")
-
-        if isinstance(transition_matrix, str):
-            if adata is None:
-                raise ValueError(
-                    "When `transition_matrix` specifies a key to `adata.obsp`, `adata` cannot be None."
-                )
-            origin = f"adata.obsp[{transition_matrix!r}]"
-            backward = Key.uns.kernel(bwd=True) == transition_matrix
-            transition_matrix = _read_graph_data(adata, transition_matrix)
-        elif isinstance(transition_matrix, KernelExpression):
-            if transition_matrix._transition_matrix is None:
-                raise ValueError(
-                    "Compute transition matrix first as `.compute_transition_matrix()`."
-                )
-            if adata is not None and adata is not transition_matrix.adata:
-                logg.warning(
-                    "Ignoring supplied `adata` object because it differs from the kernel's `adata` object."
-                )
-
-            # use `str` rather than `repr` because it captures the parameters
-            origin = str(transition_matrix).strip("~<>")
-            params = transition_matrix.params.copy()
-            backward = transition_matrix.backward
-            adata = transition_matrix.adata
-            transition_matrix = transition_matrix.transition_matrix
-
-        if not isinstance(transition_matrix, (np.ndarray, spmatrix)):
+        if isinstance(object, AnnData):
+            self._from_adata(object, obsp_key=obsp_key, **kwargs)
+        elif isinstance(object, KernelExpression):
+            self._from_kernel(object, copy=kwargs.get("copy", False))
+        elif isinstance(object, (np.ndarray, spmatrix)):
+            self._from_matrix(object, adata=adata, **kwargs)
+        elif isinstance(adata, AnnData):
+            if isinstance(object, str):
+                self._from_adata(adata, obsp_key=object, **kwargs)
+            elif object is None or isinstance(object, bool):
+                kwargs["backward"] = object
+                self._from_adata(adata, **kwargs)
+            else:
+                raise ValueError("Unable to interpret the data.")
+        else:
             raise TypeError(
-                f"Expected transition matrix to be of type `numpy.ndarray` or `scipy.sparse.spmatrix`, "
-                f"found `{type(transition_matrix).__name__}`."
+                f"Expected `object` to be either `str`, `bool`, `numpy.ndarray`, "
+                f"`scipy.sparse.spmatrix`, `AnnData` or `KernelExpression`, "
+                f"found `{type(object).__name__}`"
             )
 
-        if transition_matrix.shape[0] != transition_matrix.shape[1]:
-            raise ValueError(
-                f"Expected transition matrix to be square, found `{transition_matrix.shape}`."
+    def _from_adata(
+        self,
+        adata: AnnData,
+        obsp_key: Optional[str] = None,
+        backward: Optional[bool] = _SENTINEL,
+        copy: bool = False,
+    ) -> None:
+        if obsp_key is None:
+            obsp_key = Key.uns.kernel(backward)
+        tmat = _read_graph_data(adata, obsp_key)
+        if backward is PrecomputedKernel._SENTINEL:
+            # not ideal, since None/False share the same key, we prefer False
+            if obsp_key == Key.uns.kernel(bwd=False):
+                backward = False
+            elif obsp_key == Key.uns.kernel(bwd=True):
+                backward = True
+            else:
+                backward = None
+        self._from_matrix(tmat, adata=adata, backward=backward, copy=copy)
+        self.params["origin"] = f"adata.obsp[{obsp_key!r}]"
+
+    def _from_kernel(self, kernel: KernelExpression, copy: bool = False) -> None:
+        if kernel.transition_matrix is None:
+            raise RuntimeError(
+                "Compute transition matrix first as `.compute_transition_matrix()`."
             )
+        self._from_matrix(
+            kernel.transition_matrix,
+            backward=kernel.backward,
+            adata=kernel.adata,
+            copy=copy,
+        )
+        self._params = kernel.params.copy()
+        self.params["origin"] = repr(kernel)
 
-        if not np.allclose(np.sum(transition_matrix, axis=1), 1.0, rtol=_RTOL):
-            raise ValueError("Not a valid transition matrix, not all rows sum to 1.")
-
+    def _from_matrix(
+        self,
+        matrix: Union[np.ndarray, spmatrix],
+        adata: Optional[AnnData] = None,
+        backward: Optional[bool] = None,
+        copy: bool = False,
+    ) -> None:
+        # fmt: off
         if adata is None:
-            logg.warning("Creating empty `AnnData` object")
-            adata = AnnData(
-                csr_matrix((transition_matrix.shape[0], 1), dtype=np.float32)
-            )
+            logg.warning(f"Creating empty `AnnData` object of shape `{matrix.shape[0], 1}`")
+            adata = AnnData(csr_matrix((matrix.shape[0], 1), dtype=np.float64))
+        super().__init__(adata)
+        self._backward: Optional[bool] = backward
+        self.transition_matrix = matrix.copy() if copy else matrix
+        self.params['origin'] = "array"
+        # fmt: on
 
-        super().__init__(
-            adata, backward=backward, compute_cond_num=compute_cond_num, **kwargs
-        )
-
-        self._transition_matrix = csr_matrix(transition_matrix)
-        self._maybe_compute_cond_num()
-        self._params = params
-        self._origin = origin
-
-    def _read_from_adata(self, **kwargs: Any) -> None:
-        self._conn = None
-
-    @d.dedent
-    def copy(self) -> "PrecomputedKernel":
-        """%(copy)s"""  # noqa
-        pk = PrecomputedKernel(
-            copy(self.transition_matrix),
-            adata=self.adata,
-            backward=self.backward,
-            compute_cond_num=False,
-        )
-        pk._cond_num = self.condition_number
-        pk._origin = self._origin
-        pk._params = self._params.copy()
-
-        return pk
-
-    def compute_transition_matrix(
-        self, *args: Any, **kwargs: Any
-    ) -> "PrecomputedKernel":
-        """Return self."""
+    def compute_transition_matrix(self, *_: Any, **__: Any) -> "PrecomputedKernel":
+        """Do nothing and return self."""
         return self
 
-    def __invert__(self) -> "PrecomputedKernel":
-        # do not call parent's invert, since it removes the transition matrix
-        self._backward = not self.backward
-        return self
-
-    def __repr__(self):
-        return (
-            f"{'~' if self.backward and self._parent is None else ''}"
-            f"<{self.__class__.__name__}[origin={self._origin}]>"
-        )
-
-    def __str__(self):
-        return repr(self)
+    @property
+    def backward(self) -> Optional[bool]:
+        """Direction of the process."""
+        return self._backward

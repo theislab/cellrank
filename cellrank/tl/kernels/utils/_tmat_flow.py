@@ -23,11 +23,13 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import to_rgb
 from matplotlib.collections import PolyCollection
 
+__all__ = ("FlowPlotter",)
+
 Numeric_t = Union[float, int]
 
 
 @dataclass(frozen=True)
-class Point:  # noqa: D101
+class Point:
     x: float
     xt: float
 
@@ -45,9 +47,9 @@ class FlowPlotter:
     tmat
         Matrix of shape ``(adata.n_obs, adata.n_obs)``.
     cluster_key
-        Key in :attr:`adata` ``.obs`` where clustering is stored.
+        Key in :attr:`anndata.AnnData.obs` where clustering is stored.
     time_key
-        Key in :attr:`adata` ``.obs`` where experimental time is stored.
+        Key in :attr:`anndata.AnnData.obs` where experimental time is stored.
     """
 
     TIME_KEY = "time"

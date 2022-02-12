@@ -1,5 +1,6 @@
-from typing import Tuple, Callable, Optional
+from typing import Any, Tuple, Callable, Optional
 
+import wrapt
 from inspect import signature
 
 from anndata import AnnData
@@ -219,7 +220,7 @@ def _reconstruct_one(
 
 
 @njit(**jit_kwargs)
-def _calculate_starts(indptr: np.ndarray, ixs) -> np.ndarray:
+def _calculate_starts(indptr: np.ndarray, ixs: np.ndarray) -> np.ndarray:
     """
     Get the position where to put the data.
 
@@ -295,3 +296,19 @@ def _ensure_numeric_ordered(adata: AnnData, key: str) -> pd.Series:
         raise ValueError(f"Expected to find at least `2` categories, found `{n_cats}`.")
 
     return exp_time
+
+
+@wrapt.decorator
+def require_tmat(
+    wrapped: Callable[..., Any],
+    instance: "KernelExpression",  # noqa: F821
+    args: Any,
+    kwargs: Any,
+) -> Any:
+    """Require that the transition matrix is computed before calling the wrapped function."""
+    # this can trigger combinations, but not individual kernels
+    if instance.transition_matrix is None:
+        raise RuntimeError(
+            "Compute transition matrix first as `.compute_transition_matrix()`."
+        )
+    return wrapped(*args, **kwargs)

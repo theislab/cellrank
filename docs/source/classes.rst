@@ -29,17 +29,17 @@ Velocity Kernel
 
 Cosine Similarity Scheme
 ++++++++++++++++++++++++
-.. autoclass:: cellrank.tl.kernels.CosineScheme
+.. autoclass:: cellrank.tl.kernels.utils.Cosine
     :members: __call__, hessian
 
 Correlation Scheme
 ++++++++++++++++++
-.. autoclass:: cellrank.tl.kernels.CorrelationScheme
+.. autoclass:: cellrank.tl.kernels.utils.Correlation
     :members: __call__, hessian
 
 Dot Product Scheme
 ++++++++++++++++++
-.. autoclass:: cellrank.tl.kernels.DotProductScheme
+.. autoclass:: cellrank.tl.kernels.utils.DotProduct
     :members: __call__, hessian
 
 Connectivity Kernel
@@ -56,13 +56,13 @@ Pseudotime Kernel
 
 Hard Threshold Scheme
 +++++++++++++++++++++
-.. autoclass:: cellrank.tl.kernels.HardThresholdScheme
+.. autoclass:: cellrank.tl.kernels.utils.HardThresholdScheme
     :members:
     :special-members: __call__
 
 Soft Threshold Scheme
 +++++++++++++++++++++
-.. autoclass:: cellrank.tl.kernels.SoftThresholdScheme
+.. autoclass:: cellrank.tl.kernels.utils.SoftThresholdScheme
     :members:
     :special-members: __call__
 
@@ -130,14 +130,14 @@ TransportMap Kernel
 
 Similarity Scheme
 -----------------
-.. autoclass:: cellrank.tl.kernels.SimilaritySchemeABC
+.. autoclass:: cellrank.tl.kernels.utils.SimilarityABC
     :members:
     :special-members: __call__
     :inherited-members:
 
 Threshold Scheme
 ----------------
-.. autoclass:: cellrank.tl.kernels.ThresholdSchemeABC
+.. autoclass:: cellrank.tl.kernels.utils.ThresholdSchemeABC
     :members:
     :special-members: __call__
     :inherited-members:
