@@ -1,10 +1,10 @@
-CellRank dev (2022-02-10)
+CellRank dev (2022-02-12)
 =========================
 
 Features
 --------
 
-- Update CytoTRACE calculation to check for infinite values.
+- Update CytoTRACE calculation to check inf vals
   `#761 <https://github.com/theislab/cellrank/pull/761>`__
 
 - Refactor :class:`cellrank.tl.kernels.TransportMapKernel` for easier definition of extensions.
@@ -12,6 +12,24 @@ Features
 
 - Allow plotting negatively correlated genes in :func:`cellrank.pl.lineage_drivers`.
   `#779 <https://github.com/theislab/cellrank/pull/779>`__
+
+- Refactor kernel module. These changes include:
+  - allow kernel elementwise multiplication
+  - decouple CytoTRACE computation from kernel initialization, see :meth:`cellrank.tl.kernels.CytoTRACEKernel.compute_cytottrace`
+  - change argument ``mode`` to ``model`` in :class:`cellrank.tl.kernels.VelocityKernel`
+  - change argument ``scheme`` to ``similarity`` in :class:`cellrank.tl.kernels.VelocityKernel`
+  - remove ``'sampling'`` option in :class:`cellrank.tl.kernels.VelocityKernel`
+  - distinguish between unidirectional and bidirectional kernels
+  - bidirectional kernel inversion is no longer inplace, returns a new object
+  - add more memory efficient way of copying kernels
+  - improve :class:`cellrank.kernels.PrecomputedKernel`
+  - abstract kernel-related plotting functions (projection and random walks)
+  - temporarily remove kernel tricks examples
+  - fix various typos in docstrings
+  - fix corner-case bug when computing absorption probabilities
+  - fix not setting transport maps in :class:`cellrank.tl.kernels.TransportMapKernel`
+  - fix automatic threshold removing 1 row in :class:`cellrank.tl.kernels.TransportMapKernel`
+  `#791 <https://github.com/theislab/cellrank/pull/791>`__
 
 
 Bugfixes
