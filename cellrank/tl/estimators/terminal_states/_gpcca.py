@@ -10,7 +10,7 @@ from anndata import AnnData
 from cellrank import logging as logg
 from cellrank._key import Key
 from cellrank.tl._enum import ModeEnum
-from cellrank.ul._docs import d
+from cellrank.ul._docs import d, inject_docs
 from cellrank.tl._utils import (
     save_fig,
     _eigengap,
@@ -44,6 +44,12 @@ class TermStatesMethod(ModeEnum):  # noqa: D101
     EIGENGAP_COARSE = auto()
     TOP_N = auto()
     STABILITY = auto()
+
+
+class CoarseTOrder(ModeEnum):  # noqa: D101
+    STABILITY = auto()  # diagonal
+    INCOMING = auto()
+    STAT_DIST = auto()
 
 
 @d.dedent
@@ -427,10 +433,12 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         return self
 
     @d.dedent
+    @inject_docs(o=CoarseTOrder)
     def plot_coarse_T(
         self,
         show_stationary_dist: bool = True,
         show_initial_dist: bool = False,
+        order: Optional[Literal["stability", "incoming", "stat_dist"]] = "stability",
         cmap: Union[str, ListedColormap] = "viridis",
         xtick_rotation: float = 45,
         annotate: bool = True,
@@ -451,6 +459,12 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             Whether to show :attr:`coarse_stationary_distribution`, if present.
         show_initial_dist
             Whether to show :attr:`coarse_initial_distribution`.
+        order
+            How to order the coarse-grained transition matrix. Valid options are:
+
+                - `{o.STABILITY!r}` - order by the values on the diagonal.
+                - `{o.INCOMING!r}` - order by the incoming mass, excluding the diagonal.
+                - `{o.STAT_DIST!r}` - order by coarse stationary distribution. If not present, use `{o.STABILITY!r}`.
         cmap
             Colormap to use.
         xtick_rotation
@@ -471,6 +485,44 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         -------
         %(just_plots)s
         """
+
+        def order_matrix(
+            order: Optional[CoarseTOrder],
+        ) -> Tuple[pd.DataFrame, Optional[pd.Series], Optional[pd.Series]]:
+            coarse_T = self.coarse_T
+            init_d = self.coarse_initial_distribution
+            stat_d = self.coarse_stationary_distribution
+
+            if order is None:
+                return coarse_T, init_d, stat_d
+
+            order = CoarseTOrder(order)
+            if order == CoarseTOrder.STAT_DIST and stat_d is None:
+                order = CoarseTOrder.STABILITY
+                logg.warning(
+                    f"Unable to order by `{CoarseTOrder.STAT_DIST}`, no coarse stationary distribution. "
+                    f"Using `order={order}`"
+                )
+
+            if order == CoarseTOrder.INCOMING:
+                values = (coarse_T.sum(0) - np.diag(coarse_T)).argsort(kind="stable")
+                names = values.index[values][::-1]
+            elif order == CoarseTOrder.STABILITY:
+                names = coarse_T.index[
+                    np.argsort(np.diag(coarse_T), kind="stable")[::-1]
+                ]
+            elif order == CoarseTOrder.STAT_DIST:
+                names = stat_d.index[stat_d.argsort(kind="stable")][::-1]
+            else:
+                raise NotImplementedError(f"Order `{order}` is not yet implemented.")
+
+            coarse_T = coarse_T.loc[names][names]
+            if init_d is not None:
+                init_d = init_d[names]
+            if stat_d is not None:
+                stat_d = stat_d[names]
+
+            return coarse_T, init_d, stat_d
 
         def stylize_dist(
             ax: Axes, data: np.ndarray, xticks_labels: Sequence[str] = ()
@@ -516,7 +568,9 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
                     text = im.axes.text(j, i, valfmt(data[i, j], None), **kw)
                     texts.append(text)
 
-        def annotate_dist_ax(ax, data: np.ndarray, valfmt: str = "{x:.2f}"):
+        def annotate_dist_ax(
+            ax: Axes, data: np.ndarray, valfmt: str = "{x:.2f}"
+        ) -> None:
             if ax is None:
                 return
 
@@ -535,15 +589,12 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
                     **kw,
                 )
 
-        coarse_T = self.coarse_T
-        coarse_init_d = self.coarse_initial_distribution
-        coarse_stat_d = self.coarse_stationary_distribution
-
-        if coarse_T is None:
+        if self.coarse_T is None:
             raise RuntimeError(
                 "Compute coarse-grained transition matrix first as `.compute_macrostates()` with `n_states > 1`."
             )
 
+        coarse_T, coarse_init_d, coarse_stat_d = order_matrix(order)
         if show_stationary_dist and coarse_stat_d is None:
             logg.warning("Coarse stationary distribution is `None`, ignoring")
             show_stationary_dist = False
@@ -577,7 +628,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         cax = fig.add_subplot(gs[:1, -1]) if show_cbar else None
         init_ax, stat_ax = None, None
 
-        labels = list(self.coarse_T.columns)
+        labels = list(coarse_T.columns)
 
         tmp = coarse_T
         if show_initial_dist:
