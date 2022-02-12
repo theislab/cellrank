@@ -805,6 +805,18 @@ class TestKernelCopy:
         assert ck1.transition_matrix is not None
         assert ck2.transition_matrix is None
 
+    @pytest.mark.parametrize(
+        "ignored", (("_transition_matrix",), ("_params", "foobar"))
+    )
+    def test_copy_ignore(self, adata: AnnData, ignored: Tuple[str, ...]):
+        ck1 = ConnectivityKernel(adata).compute_transition_matrix()
+        ck2 = ck1._copy_ignore(*ignored)
+
+        for attr in ignored:
+            assert getattr(ck2, attr, None) is None
+        assert ck2._conn is not None
+        assert ck2._conn_key == ck1._conn_key
+
 
 class TestGeneral:
     def test_kernels(self, adata: AnnData):
