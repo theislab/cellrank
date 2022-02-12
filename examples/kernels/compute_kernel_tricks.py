@@ -21,7 +21,7 @@ adata
 #
 # - :class:`cellrank.tl.kernels.ConnectivityKernel` computes the transition matrix using the KNN graph from
 #   :func:`scanpy.pp.neighbors` :cite:`wolf:18`. Note that this kernel is by itself directionless and
-#   should be used in conjunction with e.g. :class:`cellrank.tl.kernels.DisplacementKernel`.
+#   should be used in conjunction with e.g. :class:`cellrank.tl.kernels.VelocityKernel`.
 # - :class:`cellrank.tl.kernels.VelocityKernel` uses RNA velocity for the transition matrix computation :cite:`manno:18`
 #   :cite:`bergen:20`, but can also take into account uncertainty in RNA velocity.
 # - :class:`cellrank.tl.kernels.PseudotimeKernel` works similarly as in Palantir :cite:`setty:19` - it orients the edges
