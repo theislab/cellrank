@@ -151,7 +151,7 @@ def _initial_terminal(
     try:
         if force_recompute:
             raise KeyError("Forcing transition matrix recomputation.")
-        kernel = PrecomputedKernel(key, adata=adata, backward=backward)
+        kernel = PrecomputedKernel(adata, obsp_key=key, backward=backward)
         logg.info("Using precomputed transition matrix")
     except KeyError:
         # compute kernel object

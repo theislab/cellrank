@@ -20,10 +20,10 @@ adata
 cr.tl.terminal_states(
     adata,
     cluster_key="clusters",
-    n_cells=30,
     softmax_scale=4,
     n_states=3,
     show_progress_bar=False,
+    fit_kwargs={"n_cells": 30},
 )
 
 # %%

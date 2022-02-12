@@ -23,7 +23,6 @@ adata
 cr.tl.terminal_states(
     adata,
     cluster_key="clusters",
-    n_cells=30,
     n_states=3,
     softmax_scale=4,
     show_progress_bar=False,

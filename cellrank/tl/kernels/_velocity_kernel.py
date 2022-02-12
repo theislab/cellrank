@@ -20,6 +20,7 @@ from scipy.sparse import issparse
 __all__ = ("VelocityKernel",)
 
 
+@d.dedent
 class VelocityKernel(ConnectivityMixin, BidirectionalKernel, ABC):
     """
     Kernel which computes a transition matrix based on RNA velocity.

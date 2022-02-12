@@ -35,14 +35,14 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
         Can be one of the following types:
 
             - :class:`anndata.AnnData` - annotated data object.
-            - :class:`scipy.sparse.ndarray`, :class:`numpy.ndarray` - row-normalized transition matrix.
-            - :class:`cellrank.kernels.KernelExpression` - kernel expression.
+            - :class:`scipy.sparse.spmatrix`, :class:`numpy.ndarray` - row-normalized transition matrix.
+            - :class:`cellrank.tl.kernels.KernelExpression` - kernel expression.
             - :class:`str` - key in :attr:`anndata.AnnData.obsp` where the transition matrix is stored.
               ``adata`` must be provided in this case.
             - :class:`bool` - directionality of the transition matrix that will be used to infer its storage location.
               If `None`, the directionality will be determined automatically. ``adata`` must be provided in this case.
     kwargs
-        Keyword arguments for :class:`cellrank.kernels.PrecomputedKernel`.
+        Keyword arguments for :class:`cellrank.tl.kernels.PrecomputedKernel`.
     """
 
     def __init__(
