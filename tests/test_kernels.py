@@ -979,9 +979,9 @@ class TestVelocityScheme:
         zip(
             ["dot_product", "cosine", "correlation"],
             [
-                cr.tl.kernels.similarity.DotProduct(),
-                cr.tl.kernels.similarity.Cosine(),
-                cr.tl.kernels.similarity.Correlation(),
+                cr.tl.kernels.utils.DotProduct(),
+                cr.tl.kernels.utils.Cosine(),
+                cr.tl.kernels.utils.Correlation(),
             ],
         ),
     )
