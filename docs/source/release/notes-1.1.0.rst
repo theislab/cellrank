@@ -19,5 +19,4 @@ Features
   that the choice of metric can lead to slightly different results. Users can now also supply their own scheme as long
   as it follows the signature of :class:`cellrank.tl.kernels.SimilaritySchemeABC`.
 - :func:`cellrank.datasets.reprogramming` has been added to allow for easy reproducibility of the time & memory
-  benchmarking results in our `CellRank preprint <https://doi.org/10.1101/2020.10.19.345983>`_. This is a reprogramming
-  dataset from :cite:`morris:18`.
+  benchmarking results in our manuscript :cite:`lange:22`. This is a reprogramming dataset from :cite:`morris:18`.
