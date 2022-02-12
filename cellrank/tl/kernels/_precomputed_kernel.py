@@ -83,10 +83,8 @@ class PrecomputedKernel(UnidirectionalKernel):
             obsp_key = Key.uns.kernel(backward)
         tmat = _read_graph_data(adata, obsp_key)
         if backward is PrecomputedKernel._SENTINEL:
-            # not ideal, assume we wan't to estimate
-            if obsp_key == Key.uns.kernel(bwd=None):
-                backward = None
-            elif obsp_key == Key.uns.kernel(bwd=False):
+            # not ideal, since None/False share the same key, we prefer False
+            if obsp_key == Key.uns.kernel(bwd=False):
                 backward = False
             elif obsp_key == Key.uns.kernel(bwd=True):
                 backward = True

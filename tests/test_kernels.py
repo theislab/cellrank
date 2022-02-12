@@ -1425,14 +1425,14 @@ class TestPrecomputedKernel:
         np.testing.assert_array_equal(mat, pk.transition_matrix)
         assert pk.backward is backward
 
-    @pytest.mark.parametrize("backward", [None, True])
+    @pytest.mark.parametrize("backward", [False, True])
     def test_precomputed_str(self, adata: AnnData, backward: bool):
         key = Key.uns.kernel(backward)
         adata.obsp[key] = mat = random_transition_matrix(adata.n_obs)
         pk = PrecomputedKernel(key, adata=adata)
 
         np.testing.assert_array_equal(mat, pk.transition_matrix)
-        # directionality inferred from key, will not work for `False` (same as `None`)
+        # directionality inferred from key, will not work for `None` (same as key `False`)
         assert pk.backward is backward
 
     @pytest.mark.parametrize("backward", [False, True, None])

@@ -68,10 +68,10 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
     def __init__(
         self,
-        obj: Union[AnnData, np.ndarray, spmatrix, KernelExpression],
+        object: Union[str, bool, np.ndarray, spmatrix, AnnData, KernelExpression],
         **kwargs: Any,
     ):
-        super().__init__(obj=obj, **kwargs)
+        super().__init__(object=object, **kwargs)
 
         self._coarse_init_dist: Optional[pd.Series] = None
         self._coarse_stat_dist: Optional[pd.Series] = None
