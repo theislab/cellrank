@@ -1,4 +1,4 @@
-from typing import Any, Dict, Tuple, Union, Mapping, Optional
+from typing import Any, Dict, Tuple, Union, Mapping, Iterable, Optional, Sequence
 from typing_extensions import Literal
 
 from abc import ABC, abstractmethod
@@ -8,6 +8,7 @@ from contextlib import contextmanager
 import scanpy as sc
 from anndata import AnnData
 from cellrank import logging as logg
+from cellrank import settings
 from cellrank.tl._enum import ModeEnum
 from cellrank.ul._docs import d, inject_docs
 from cellrank.tl._utils import _normalize
@@ -20,7 +21,7 @@ from scipy.sparse import bmat, spdiags, spmatrix
 __all__ = ("TransportMapKernel",)
 
 
-class LastTimePoint(ModeEnum):
+class SelfTransitions(ModeEnum):
     UNIFORM = "uniform"
     DIAGONAL = "diagonal"
     CONNECTIVITIES = "connectivities"
@@ -62,12 +63,14 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
 
     @d.get_sections(base="tmk_tmat", sections=["Parameters"])
     @d.dedent
+    @inject_docs(st=SelfTransitions)
     def compute_transition_matrix(
         self,
         threshold: Optional[Union[float, Literal["auto"]]] = "auto",
-        last_time_point: Literal[
-            "uniform", "diagonal", "all", "connectivities"  # TODO
-        ] = LastTimePoint.DIAGONAL,
+        self_transitions: Union[
+            Literal["uniform", "diagonal", "connectivities", "all"],
+            Sequence[Union[Numeric_t]],
+        ] = SelfTransitions.CONNECTIVITIES,
         conn_weight: Optional[float] = None,
         conn_kwargs: Mapping[str, Any] = MappingProxyType({}),
         **kwargs: Any,
@@ -78,19 +81,24 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         Parameters
         ----------
         %(tmk_thresh.parameters)s
-        last_time_point
-            How to define transitions within the last time point. Valid options are:
+        self_transitions
+            How to define transitions within the diagonal blocks that correspond to transitions within the same
+            time point. Valid options are:
 
-                - `{ltp.UNIFORM!r}` - row-normalized matrix of 1s for transitions within the last time point.
-                - `{ltp.DIAGONAL!r}` - diagonal matrix with 1s on the diagonal.
-                - `{ltp.ALL!r}` - TODO.
-                - `{ltp.CONNECTIVITIES!r}` - use transitions from :class:`cellrank.tl.kernels.ConnectivityKernel`
-                  derived from the last time point subset of :attr:`adata`.
+                - `{st.UNIFORM!r}` - row-normalized matrix of 1s for transitions. Only applied to the last time point.
+                - `{st.DIAGONAL!r}` - diagonal matrix with 1s on the diagonal. Only applied to the last time point.
+                - `{st.CONNECTIVITIES!r}` - use transition matrix from :class:`cellrank.tl.kernels.ConnectivityKernel`.
+                  Only applied to the last time point.
+                - :class:`typing.Sequence` - sequence of source time point defining for which blocks
+                  Always applied to the last time point.
+                - `{st.ALL!r}` - same as above, but for all time points.
         conn_weight
-            TODO.
+            Weight of connectivities self transitions. Only used when ``self_transitions = {st.ALL!r}`` or a specific
+            sequence of time point pairs is passed.
         conn_kwargs
-            Keyword arguments for :func:`scanpy.pp.neighbors` when using ``last_time_point = {ltp.CONNECTIVITIES!r}``.
-            Can have `'density_normalize'` for :meth:`cellrank.kernels.ConnectivityKernel.compute_transition_matrix`.
+            Keyword arguments for :func:`scanpy.pp.neighbors` when using ``self_transitions`` use
+            :class:`cellrank.tl.kernels.ConnectivityKernel`. Can contain `'density_normalize'` for
+            :meth:`cellrank.kernels.ConnectivityKernel.compute_transition_matrix`.
 
         Returns
         -------
@@ -98,7 +106,9 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         """
         ckwargs = dict(kwargs)
         ckwargs["threshold"] = threshold
-        ckwargs["last_time_point"] = last_time_point
+        ckwargs["self_transitions"] = self_transitions
+        if SelfTransitions(self_transitions) == SelfTransitions.ALL:
+            conn_kwargs["conn_weight"] = conn_weight
         if self._reuse_cache(ckwargs):
             return self
 
@@ -111,7 +121,7 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         }
         tmap = self._restich_tmaps(
             self._tmaps,
-            last_time_point=last_time_point,
+            self_transitions=self_transitions,
             conn_weight=conn_weight,
             conn_kwargs=conn_kwargs,
         )
@@ -122,11 +132,12 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         return self
 
     @d.dedent
-    @inject_docs(ltp=LastTimePoint)
     def _restich_tmaps(
         self,
         tmaps: Mapping[Pair_t, AnnData],
-        last_time_point: LastTimePoint = LastTimePoint.DIAGONAL,
+        self_transitions: Union[
+            str, SelfTransitions, Sequence[Numeric_t]
+        ] = SelfTransitions.DIAGONAL,
         conn_weight: Optional[float] = None,
         conn_kwargs: Mapping[str, Any] = MappingProxyType({}),
     ) -> AnnData:
@@ -143,7 +154,17 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         -------
         Merged transport maps into one :class:`anndata.AnnData` object.
         """
-        last_time_point = LastTimePoint(last_time_point)
+        if isinstance(self_transitions, (str, SelfTransitions)):
+            self_transitions = SelfTransitions(self_transitions)
+            if self_transitions == SelfTransitions.ALL:
+                self_transitions = tuple(t1 for (t1, _) in tmaps.keys())
+        elif isinstance(self_transitions, Iterable):
+            self_transitions = tuple(self_transitions)
+        else:
+            raise TypeError(
+                f"Expected `self_transitions` to be a `str` or a `Sequence`, "
+                f"found `{type(self_transitions).__name__}`."
+            )
         tmaps = self._validate_tmaps(tmaps)
 
         conn_kwargs = dict(conn_kwargs)
@@ -163,33 +184,43 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         obs_names.extend(tmap.var_names)
 
         n = self.adata.n_obs - nrows
-        if last_time_point == LastTimePoint.DIAGONAL:
+        if self_transitions == SelfTransitions.DIAGONAL:
             blocks[-1][-1] = spdiags([1] * n, 0, n, n)
-        elif last_time_point == LastTimePoint.UNIFORM:
+        elif self_transitions == SelfTransitions.UNIFORM:
             blocks[-1][-1] = np.ones((n, n)) / float(n)
-        elif last_time_point == LastTimePoint.CONNECTIVITIES:
+        elif self_transitions == SelfTransitions.CONNECTIVITIES:
             blocks[-1][-1] = self._compute_connectivity_tmat(
                 self.adata[tmap.var_names], **conn_kwargs
             )
-        elif last_time_point == LastTimePoint.ALL:
-            if conn_weight is None or not (0 < conn_weight < 1):
-                raise ValueError("Please specify `conn_weight` in interval `(0, 1)`.")
-            for i, tmap in enumerate(tmaps.values()):
-                blocks[i][i] = conn_weight * self._compute_connectivity_tmat(
-                    self.adata[tmap.obs_names], **conn_kwargs
+        elif isinstance(self_transitions, tuple):
+            verbosity = settings.verbosity
+            try:  # ignore overly verbose logging
+                settings.verbosity = 0
+                if conn_weight is None or not (0 < conn_weight < 1):
+                    raise ValueError(
+                        "Please specify `conn_weight` in interval `(0, 1)`."
+                    )
+                for i, ((t1, _), tmap) in enumerate(tmaps.items()):
+                    if t1 not in self_transitions:
+                        continue
+                    blocks[i][i] = conn_weight * self._compute_connectivity_tmat(
+                        self.adata[tmap.obs_names], **conn_kwargs
+                    )
+                    blocks[i][i + 1] = (1 - conn_weight) * _normalize(blocks[i][i + 1])
+                blocks[-1][-1] = self._compute_connectivity_tmat(
+                    self.adata[tmap.var_names], **conn_kwargs
                 )
-                blocks[i][i + 1] = (1 - conn_weight) * _normalize(blocks[i][i + 1])
-            blocks[-1][-1] = self._compute_connectivity_tmat(
-                self.adata[tmap.var_names], **conn_kwargs
-            )
+            finally:
+                settings.verbosity = verbosity
         else:
             raise NotImplementedError(
-                f"Last time point mode `{last_time_point}` is not yet implemented."
+                f"Self transitions' mode `{self_transitions}` is not yet implemented."
             )
 
-        # prevent the last block from disappearing
-        n = blocks[0][1].shape[0]
-        blocks[0][0] = spdiags([], 0, n, n)
+        if not isinstance(self_transitions, tuple):
+            # prevent the last block from disappearing
+            n = blocks[0][1].shape[0]
+            blocks[0][0] = spdiags([], 0, n, n)
 
         tmp = AnnData(bmat(blocks, format="csr"))
         tmp.obs_names = obs_names
@@ -373,8 +404,7 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         from cellrank.tl.kernels import ConnectivityKernel
 
         if adata.is_view:
-            # TODO
-            adata._init_as_actual()
+            adata = adata.copy()  # TODO
 
         # same default as in `ConnectivityKernel`
         density_normalize = kwargs.pop("density_normalize", True)

@@ -7,7 +7,7 @@ import cellrank.external as cre
 from anndata import AnnData
 from cellrank.tl.kernels import ConnectivityKernel
 from cellrank.external.kernels._utils import MarkerGenes
-from cellrank.tl.kernels._transport_map_kernel import LastTimePoint
+from cellrank.tl.kernels._transport_map_kernel import SelfTransitions
 
 import numpy as np
 import pandas as pd
@@ -216,22 +216,22 @@ class TestWOTKernel:
             assert gr is None
             assert "gr" in adata_large.obs
 
-    @pytest.mark.parametrize("ltp", list(LastTimePoint))
-    def test_last_time_point(self, adata_large: AnnData, ltp: LastTimePoint):
+    @pytest.mark.parametrize("ltp", list(SelfTransitions))
+    def test_last_time_point(self, adata_large: AnnData, ltp: SelfTransitions):
         key = "age(days)"
         ok = cre.kernels.WOTKernel(adata_large, time_key=key).compute_transition_matrix(
-            last_time_point=ltp,
+            self_transitions=ltp,
             conn_kwargs={"n_neighbors": 11},
             threshold=None,
         )
         ixs = np.where(adata_large.obs[key] == 35.0)[0]
 
         T = ok.transition_matrix[ixs, :][:, ixs].A
-        if ltp == LastTimePoint.UNIFORM:
+        if ltp == SelfTransitions.UNIFORM:
             np.testing.assert_allclose(T, np.ones_like(T) / float(len(ixs)))
-        elif ltp == LastTimePoint.DIAGONAL:
+        elif ltp == SelfTransitions.DIAGONAL:
             np.testing.assert_allclose(T, np.eye(len(ixs)))
-        elif ltp == LastTimePoint.CONNECTIVITIES:
+        elif ltp == SelfTransitions.CONNECTIVITIES:
             adata_subset = adata_large[adata_large.obs[key] == 35.0]
             sc.pp.neighbors(adata_subset, n_neighbors=11)
             T_actual = (
