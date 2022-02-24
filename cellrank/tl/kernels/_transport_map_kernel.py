@@ -66,8 +66,9 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         self,
         threshold: Optional[Union[float, Literal["auto"]]] = "auto",
         last_time_point: Literal[
-            "uniform", "diagonal", "connectivities"
+            "uniform", "diagonal", "all", "connectivities"  # TODO
         ] = LastTimePoint.DIAGONAL,
+        conn_weight: Optional[float] = None,
         conn_kwargs: Mapping[str, Any] = MappingProxyType({}),
         **kwargs: Any,
     ) -> "TransportMapKernel":
@@ -82,8 +83,11 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
 
                 - `{ltp.UNIFORM!r}` - row-normalized matrix of 1s for transitions within the last time point.
                 - `{ltp.DIAGONAL!r}` - diagonal matrix with 1s on the diagonal.
+                - `{ltp.ALL!r}` - TODO.
                 - `{ltp.CONNECTIVITIES!r}` - use transitions from :class:`cellrank.tl.kernels.ConnectivityKernel`
                   derived from the last time point subset of :attr:`adata`.
+        conn_weight
+            TODO.
         conn_kwargs
             Keyword arguments for :func:`scanpy.pp.neighbors` when using ``last_time_point = {ltp.CONNECTIVITIES!r}``.
             Can have `'density_normalize'` for :meth:`cellrank.kernels.ConnectivityKernel.compute_transition_matrix`.
@@ -108,6 +112,7 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         tmap = self._restich_tmaps(
             self._tmaps,
             last_time_point=last_time_point,
+            conn_weight=conn_weight,
             conn_kwargs=conn_kwargs,
         )
         self.transition_matrix = tmap.X
@@ -122,6 +127,7 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         self,
         tmaps: Mapping[Pair_t, AnnData],
         last_time_point: LastTimePoint = LastTimePoint.DIAGONAL,
+        conn_weight: Optional[float] = None,
         conn_kwargs: Mapping[str, Any] = MappingProxyType({}),
     ) -> AnnData:
         """
@@ -147,10 +153,8 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         blocks = [[None] * (len(tmaps) + 1) for _ in range(len(tmaps) + 1)]
         nrows, ncols = 0, 0
         obs_names, obs = [], []
-        conn_weight = 0.2  # TODO
 
         for i, tmap in enumerate(tmaps.values()):
-            # tmap.X can be a view, shouldn't matter
             blocks[i][i + 1] = tmap.X
             nrows += tmap.n_obs
             ncols += tmap.n_vars
@@ -168,6 +172,8 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
                 self.adata[tmap.var_names], **conn_kwargs
             )
         elif last_time_point == LastTimePoint.ALL:
+            if conn_weight is None or not (0 < conn_weight < 1):
+                raise ValueError("Please specify `conn_weight` in interval `(0, 1)`.")
             for i, tmap in enumerate(tmaps.values()):
                 blocks[i][i] = conn_weight * self._compute_connectivity_tmat(
                     self.adata[tmap.obs_names], **conn_kwargs

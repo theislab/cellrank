@@ -264,6 +264,7 @@ class WOTKernel(Kernel, error=_error):
         last_time_point: Literal[
             "uniform", "diagonal", "connectivities"
         ] = LastTimePoint.UNIFORM,
+        conn_weight: Optional[float] = None,
         conn_kwargs: Mapping[str, Any] = MappingProxyType({}),
         **kwargs: Any,
     ) -> "WOTKernel":
@@ -359,7 +360,9 @@ class WOTKernel(Kernel, error=_error):
             growth_rate_field=growth_rate_key,
             **kwargs,
         )
-        tmap = self._restich_tmaps(tmap, last_time_point, conn_kwargs=conn_kwargs)
+        tmap = self._restich_tmaps(
+            tmap, last_time_point, conn_weight=conn_weight, conn_kwargs=conn_kwargs
+        )
         self._growth_rates = tmap.obs
 
         self.transition_matrix = tmap.X
