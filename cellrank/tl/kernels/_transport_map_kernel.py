@@ -10,6 +10,7 @@ from anndata import AnnData
 from cellrank import logging as logg
 from cellrank.tl._enum import ModeEnum
 from cellrank.ul._docs import d, inject_docs
+from cellrank.tl._utils import _normalize
 from cellrank.tl.kernels._experimental_time_kernel import ExperimentalTimeKernel
 
 import numpy as np
@@ -23,6 +24,7 @@ class LastTimePoint(ModeEnum):
     UNIFORM = "uniform"
     DIAGONAL = "diagonal"
     CONNECTIVITIES = "connectivities"
+    ALL = "all"
 
 
 Numeric_t = Union[int, float]
@@ -135,20 +137,17 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         -------
         Merged transport maps into one :class:`anndata.AnnData` object.
         """
-        from cellrank.tl.kernels import ConnectivityKernel
-
         last_time_point = LastTimePoint(last_time_point)
         tmaps = self._validate_tmaps(tmaps)
 
         conn_kwargs = dict(conn_kwargs)
         conn_kwargs["copy"] = False
         _ = conn_kwargs.pop("key_added", None)
-        # same default as in `ConnectivityKernel`
-        density_normalize = conn_kwargs.pop("density_normalize", True)
 
         blocks = [[None] * (len(tmaps) + 1) for _ in range(len(tmaps) + 1)]
         nrows, ncols = 0, 0
         obs_names, obs = [], []
+        conn_weight = 0.2  # TODO
 
         for i, tmap in enumerate(tmaps.values()):
             # tmap.X can be a view, shouldn't matter
@@ -165,12 +164,17 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         elif last_time_point == LastTimePoint.UNIFORM:
             blocks[-1][-1] = np.ones((n, n)) / float(n)
         elif last_time_point == LastTimePoint.CONNECTIVITIES:
-            adata_subset = self.adata[tmap.var_names].copy()
-            sc.pp.neighbors(adata_subset, **conn_kwargs)
-            blocks[-1][-1] = (
-                ConnectivityKernel(adata_subset)
-                .compute_transition_matrix(density_normalize=density_normalize)
-                .transition_matrix
+            blocks[-1][-1] = self._compute_connectivity_tmat(
+                self.adata[tmap.var_names], **conn_kwargs
+            )
+        elif last_time_point == LastTimePoint.ALL:
+            for i, tmap in enumerate(tmaps.values()):
+                blocks[i][i] = conn_weight * self._compute_connectivity_tmat(
+                    self.adata[tmap.obs_names], **conn_kwargs
+                )
+                blocks[i][i + 1] = (1 - conn_weight) * _normalize(blocks[i][i + 1])
+            blocks[-1][-1] = self._compute_connectivity_tmat(
+                self.adata[tmap.var_names], **conn_kwargs
             )
         else:
             raise NotImplementedError(
@@ -355,6 +359,26 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
             yield
         finally:
             self._transition_matrix = tmat
+
+    @staticmethod
+    def _compute_connectivity_tmat(
+        adata: AnnData, **kwargs: Any
+    ) -> Union[np.ndarray, spmatrix]:
+        from cellrank.tl.kernels import ConnectivityKernel
+
+        if adata.is_view:
+            # TODO
+            adata._init_as_actual()
+
+        # same default as in `ConnectivityKernel`
+        density_normalize = kwargs.pop("density_normalize", True)
+        sc.pp.neighbors(adata, **kwargs)
+
+        return (
+            ConnectivityKernel(adata)
+            .compute_transition_matrix(density_normalize=density_normalize)
+            .transition_matrix
+        )
 
     @d.dedent
     def plot_single_flow(
