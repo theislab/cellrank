@@ -423,8 +423,15 @@ def _correlation_test(
 
     res = pd.DataFrame(corr, index=gene_names, columns=[f"{c}_corr" for c in Y.names])
     for idx, c in enumerate(Y.names):
-        res[f"{c}_pval"] = pvals[:, idx]
-        res[f"{c}_qval"] = multipletests(pvals[:, idx], alpha=0.05, method="fdr_bh")[1]
+        p = pvals[:, idx]
+        valid_mask = ~np.isnan(p)
+
+        res[f"{c}_pval"] = p
+        res[f"{c}_qval"] = np.nan
+        if np.any(valid_mask):
+            res.loc[gene_names[valid_mask], f"{c}_qval"] = multipletests(
+                p[valid_mask], alpha=0.05, method="fdr_bh"
+            )[1]
         res[f"{c}_ci_low"] = ci_low[:, idx]
         res[f"{c}_ci_high"] = ci_high[:, idx]
 
