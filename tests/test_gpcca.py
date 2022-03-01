@@ -1087,6 +1087,21 @@ class TestGPCCA:
         _assert_params(g, state, fwd=False)
         _assert_params(g, state, fwd=True)
 
+    def test_drivers_constant_gene_qvalues(self, adata_large: AnnData):
+        ix = 0
+        gene = adata_large.var_names[ix]
+        adata_large.X[:, ix] = 0
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        g = cr.tl.estimators.GPCCA(ck)
+        g.fit(n_states=2)
+        g.predict()
+        g.compute_absorption_probabilities()
+
+        drivers = g.compute_lineage_drivers(use_raw=False)
+
+        np.testing.assert_array_equal(drivers.loc[gene], np.nan)
+        assert np.asarray(drivers.iloc[drivers.index != gene].isnull()).sum() == 0
+
 
 class TestGPCCASerialization:
     @pytest.mark.parametrize("state", list(State))

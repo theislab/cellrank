@@ -417,9 +417,17 @@ def _correlation_test(
         confidence_level=confidence_level,
         **kwargs,
     )
-    invalid = np.sum((corr < -1) | (corr > 1))
-    if invalid:
-        raise ValueError(f"Found `{invalid}` correlations that are not in `[0, 1]`.")
+    invalid = (corr < -1) | (corr > 1)
+    if np.any(invalid):
+        logg.warning(
+            f"Found `{np.sum(invalid)}` correlation(s) that are not in `[0, 1]`. "
+            f"This usually happens when gene expression is constant across all cells. "
+            f"Setting to `NaN`"
+        )
+        corr[invalid] = np.nan
+        pvals[invalid] = np.nan
+        ci_low[invalid] = np.nan
+        ci_high[invalid] = np.nan
 
     res = pd.DataFrame(corr, index=gene_names, columns=[f"{c}_corr" for c in Y.names])
     for idx, c in enumerate(Y.names):
