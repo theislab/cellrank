@@ -216,30 +216,49 @@ class TestWOTKernel:
             assert gr is None
             assert "gr" in adata_large.obs
 
-    @pytest.mark.parametrize("ltp", list(SelfTransitions))
-    def test_last_time_point(self, adata_large: AnnData, ltp: SelfTransitions):
+    @pytest.mark.parametrize("st", list(SelfTransitions))
+    def test_self_transitions(self, adata_large: AnnData, st: SelfTransitions):
+        et, lt = 12.0, 35.0
         key = "age(days)"
+        conn_kwargs = {"n_neighbors": 11}
+
         ok = cre.kernels.WOTKernel(adata_large, time_key=key).compute_transition_matrix(
-            self_transitions=ltp,
-            conn_kwargs={"n_neighbors": 11},
+            self_transitions=st,
+            conn_weight=0.2,
+            conn_kwargs=conn_kwargs,
             threshold=None,
         )
-        ixs = np.where(adata_large.obs[key] == 35.0)[0]
 
+        ixs = np.where(adata_large.obs[key] == lt)[0]
         T = ok.transition_matrix[ixs, :][:, ixs].A
-        if ltp == SelfTransitions.UNIFORM:
+
+        assert ok.params["self_transitions"] == str(st)
+        if st == SelfTransitions.UNIFORM:
             np.testing.assert_allclose(T, np.ones_like(T) / float(len(ixs)))
-        elif ltp == SelfTransitions.DIAGONAL:
+        elif st == SelfTransitions.DIAGONAL:
             np.testing.assert_allclose(T, np.eye(len(ixs)))
-        elif ltp == SelfTransitions.CONNECTIVITIES:
-            adata_subset = adata_large[adata_large.obs[key] == 35.0]
-            sc.pp.neighbors(adata_subset, n_neighbors=11)
+        elif st in (SelfTransitions.CONNECTIVITIES, SelfTransitions.ALL):
+            adata_subset = adata_large[adata_large.obs[key] == lt]
+            sc.pp.neighbors(adata_subset, **conn_kwargs)
             T_actual = (
                 ConnectivityKernel(adata_subset)
                 .compute_transition_matrix()
                 .transition_matrix.A
             )
             np.testing.assert_allclose(T, T_actual)
+            if st == SelfTransitions.ALL:
+                ixs = np.where(adata_large.obs[key] == et)[0]
+                T = ok.transition_matrix[ixs, :][:, ixs].A
+                adata_subset = adata_large[adata_large.obs[key] == et]
+                sc.pp.neighbors(adata_subset, **conn_kwargs)
+                T_actual = (
+                    ConnectivityKernel(adata_subset)
+                    .compute_transition_matrix()
+                    .transition_matrix.A
+                )
+                np.testing.assert_allclose(T, 0.2 * T_actual)
+        else:
+            raise NotImplementedError(st)
 
     @pytest.mark.parametrize("organism", ["human", "mouse"])
     def test_compute_scores_default(self, adata_large: AnnData, organism: str):

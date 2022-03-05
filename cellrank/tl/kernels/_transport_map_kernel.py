@@ -8,7 +8,7 @@ from contextlib import contextmanager
 import scanpy as sc
 from anndata import AnnData
 from cellrank import logging as logg
-from cellrank import settings
+from cellrank.settings import settings
 from cellrank.tl._enum import ModeEnum
 from cellrank.ul._docs import d, inject_docs
 from cellrank.tl._utils import _normalize
@@ -89,12 +89,12 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
                 - `{st.DIAGONAL!r}` - diagonal matrix with 1s on the diagonal. Only applied to the last time point.
                 - `{st.CONNECTIVITIES!r}` - use transition matrix from :class:`cellrank.tl.kernels.ConnectivityKernel`.
                   Only applied to the last time point.
-                - :class:`typing.Sequence` - sequence of source time point defining for which blocks
-                  Always applied to the last time point.
+                - :class:`typing.Sequence` - sequence of source time points defining which blocks should be weighted
+                  by connectivities. Always applied to the last time point.
                 - `{st.ALL!r}` - same as above, but for all time points.
         conn_weight
-            Weight of connectivities self transitions. Only used when ``self_transitions = {st.ALL!r}`` or a specific
-            sequence of time point pairs is passed.
+            Weight of connectivities self transitions. Only used when ``self_transitions = {st.ALL!r}`` or a sequence
+            of source time points is passed.
         conn_kwargs
             Keyword arguments for :func:`scanpy.pp.neighbors` when using ``self_transitions`` use
             :class:`cellrank.tl.kernels.ConnectivityKernel`. Can contain `'density_normalize'` for
