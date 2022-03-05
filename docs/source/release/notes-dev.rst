@@ -1,4 +1,4 @@
-CellRank dev (2022-02-12)
+CellRank dev (2022-03-02)
 =========================
 
 Features
@@ -43,6 +43,9 @@ Bugfixes
 
 - Fix color creating in :class:`cellrank.tl.kernels.ExperimentalTimeKernel`.
   `#784 <https://github.com/theislab/cellrank/pull/784>`__
+
+- Fix all q-values being NaN if 1 p-value was NaN. Also warn and set to NaN instead of raise when correlations are not in ``[0, 1]]`` interval.
+  `#835 <https://github.com/theislab/cellrank/pull/835>`__
 
 
 Miscellaneous
