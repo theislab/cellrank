@@ -69,7 +69,7 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         threshold: Optional[Union[float, Literal["auto"]]] = "auto",
         self_transitions: Union[
             Literal["uniform", "diagonal", "connectivities", "all"],
-            Sequence[Union[Numeric_t]],
+            Sequence[Numeric_t],
         ] = SelfTransitions.CONNECTIVITIES,
         conn_weight: Optional[float] = None,
         conn_kwargs: Mapping[str, Any] = MappingProxyType({}),
