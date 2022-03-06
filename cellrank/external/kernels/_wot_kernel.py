@@ -11,7 +11,11 @@ from cellrank.ul._docs import d
 from cellrank.tl._utils import _maybe_subset_hvgs
 from cellrank.external.kernels._utils import MarkerGenes
 from cellrank.tl.kernels.utils._tmat_flow import Numeric_t
-from cellrank.tl.kernels._transport_map_kernel import Pair_t, SelfTransitions
+from cellrank.tl.kernels._transport_map_kernel import (
+    Pair_t,
+    Threshold_t,
+    SelfTransitions,
+)
 
 import numpy as np
 import pandas as pd
@@ -260,7 +264,7 @@ class WOTKernel(Kernel, error=_error):
         solver: Literal["fixed_iters", "duality_gap"] = "duality_gap",
         growth_rate_key: Optional[str] = None,
         use_highly_variable: Optional[Union[str, bool]] = True,
-        threshold: Optional[Union[float, Literal["auto"]]] = "auto",
+        threshold: Optional[Threshold_t] = "auto",
         self_transitions: Union[
             Literal["uniform", "diagonal", "connectivities", "all"],
             Sequence[Union[Numeric_t]],
@@ -354,15 +358,19 @@ class WOTKernel(Kernel, error=_error):
         ):
             return self
 
-        tmap = self._compute_tmaps(
+        logg.info(f"Computing transport maps for `{len(cost_matrices)}` time pairs")
+        self._tmaps = self._compute_tmaps(
             adata,
             cost_matrices=cost_matrices,
             solver=solver,
             growth_rate_field=growth_rate_key,
             **kwargs,
         )
+        if threshold is not None:
+            self._threshold_transport_maps(self._tmaps, threshold=threshold, copy=False)
+
         tmap = self._restich_tmaps(
-            tmap,
+            self._tmaps,
             self_transitions=self_transitions,
             conn_weight=conn_weight,
             conn_kwargs=conn_kwargs,
@@ -370,8 +378,6 @@ class WOTKernel(Kernel, error=_error):
         self._growth_rates = tmap.obs
 
         self.transition_matrix = tmap.X
-        if threshold:
-            self._threshold_transition_matrix(threshold)
         self.adata.obs["estimated_growth_rates"] = self.growth_rates[f"g{growth_iters}"]
 
         logg.info("    Finish", time=start)
@@ -428,21 +434,16 @@ class WOTKernel(Kernel, error=_error):
             **kwargs,
         )
 
-        self._tmaps: Dict[Tuple[float, float], AnnData] = {}
-        start = logg.info(
-            f"Computing transport maps for `{len(cost_matrices)}` time pairs"
-        )
+        tmaps: Dict[Tuple[float, float], AnnData] = {}
         for (t1, t2), cost_matrix in tqdm(cost_matrices.items(), unit="time pair"):
-            self._tmaps[t1, t2] = self._compute_tmap(
+            tmaps[t1, t2] = self._compute_tmap(
                 t1,
                 t2,
                 ot_model=ot_model,
                 cost_matrix=cost_matrix,
             )
 
-        logg.info("    Finish", time=start)
-
-        return self._tmaps
+        return tmaps
 
     def _generate_cost_matrices(
         self,
