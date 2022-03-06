@@ -223,7 +223,7 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
             n = blocks[0][1].shape[0]
             blocks[0][0] = spdiags([], 0, n, n)
 
-        tmp = AnnData(bmat(blocks, format="csr"))
+        tmp = AnnData(bmat(blocks, format="csr"), dtype="float64")
         tmp.obs_names = obs_names
         tmp.var_names = obs_names
         tmp = tmp[self.adata.obs_names, :][:, self.adata.obs_names]
@@ -361,15 +361,11 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
                 thresh = min(tmat[i].max() for i in range(tmat.shape[0]))
                 logg.debug(f"Using `threshold={thresh}` at `{key}`")
             elif isinstance(threshold, (int, float)):
-                thresh = np.percentile(tmat.data if issparse(tmat) else tmat, threshold)
+                thresh = np.percentile(tmat.data, threshold)
                 logg.debug(f"Using `threshold={thresh}` at `{key}`")
 
-            if issparse(tmaps):
-                tmat.data[tmat.data < thresh] = 0.0
-            else:
-                tmat[tmat < thresh] = 0.0
-            tmat = csr_matrix(tmat)
-
+            tmat = csr_matrix(tmat, dtype=tmat.dtype)
+            tmat.data[tmat.data < thresh] = 0.0
             zeros_mask = np.where(np.asarray(tmat.sum(1)).squeeze() == 0)[0]
             if np.any(zeros_mask):
                 logg.warning(
@@ -382,9 +378,9 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
 
             # after `zeros_mask` has been handled, to have access to removed row indices
             tmat.eliminate_zeros()
-            tmaps[key] = AnnData(tmat, obs=adata.obs, var=adata.var)
+            tmaps[key] = AnnData(tmat, obs=adata.obs, var=adata.var, dtype=tmat.dtype)
 
-        return tmat if copy else None
+        return tmaps if copy else None
 
     def _tmat_to_adata(
         self, t1: Numeric_t, t2: Numeric_t, tmat: Union[np.ndarray, spmatrix, AnnData]
@@ -393,7 +389,7 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         if isinstance(tmat, AnnData):
             return tmat
 
-        tmat = AnnData(X=tmat)
+        tmat = AnnData(X=tmat, dtype=tmat.dtype)
         tmat.obs_names = self.adata[self.adata.obs[self._time_key] == t1].obs_names
         tmat.var_names = self.adata[self.adata.obs[self._time_key] == t2].obs_names
 

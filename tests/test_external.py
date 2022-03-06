@@ -11,7 +11,7 @@ from cellrank.tl.kernels._transport_map_kernel import SelfTransitions
 
 import numpy as np
 import pandas as pd
-from scipy.sparse import csr_matrix
+from scipy.sparse import issparse, csr_matrix
 from pandas.core.dtypes.common import is_categorical_dtype
 
 import matplotlib.pyplot as plt
@@ -302,10 +302,8 @@ class TestWOTKernel:
         assert isinstance(ok._transition_matrix, csr_matrix)
         np.testing.assert_allclose(ok.transition_matrix.sum(1), 1.0)
         assert ok.params["threshold"] == threshold
-
-        if threshold == 100:
-            for row in ok.transition_matrix:
-                np.testing.assert_allclose(row.data, 1.0 / len(row.data))
+        if threshold is not None:
+            assert issparse(ok.transport_maps[12.0, 35.0].X)
 
     def test_copy(self, adata_large: AnnData):
         ok = cre.kernels.WOTKernel(adata_large, time_key="age(days)")
