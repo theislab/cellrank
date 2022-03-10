@@ -506,13 +506,11 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
             if order == CoarseTOrder.INCOMING:
                 values = (coarse_T.sum(0) - np.diag(coarse_T)).argsort(kind="stable")
-                names = values.index[values][::-1]
+                names = values.index[values]
             elif order == CoarseTOrder.STABILITY:
-                names = coarse_T.index[
-                    np.argsort(np.diag(coarse_T), kind="stable")[::-1]
-                ]
+                names = coarse_T.index[np.argsort(np.diag(coarse_T), kind="stable")]
             elif order == CoarseTOrder.STAT_DIST:
-                names = stat_d.index[stat_d.argsort(kind="stable")][::-1]
+                names = stat_d.index[stat_d.argsort(kind="stable")]
             else:
                 raise NotImplementedError(f"Order `{order}` is not yet implemented.")
 
