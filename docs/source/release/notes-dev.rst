@@ -1,4 +1,4 @@
-CellRank dev (2022-03-15)
+CellRank dev (2022-03-18)
 =========================
 
 Features
@@ -30,6 +30,9 @@ Features
   - fix not setting transport maps in :class:`cellrank.tl.kernels.TransportMapKernel`
   - fix automatic threshold removing 1 row in :class:`cellrank.tl.kernels.TransportMapKernel`
   `#791 <https://github.com/theislab/cellrank/pull/791>`__
+
+- Allow local block-diagonal connectivities in :class:`cellrank.tl.kernels.TransportMapKernel`. Rename ``last_time_point`` argument to ``self_transitions`` and add ``conn_weight``. ``self_transitions`` can also be applied to specific diagonal blocks only.
+  `#828 <https://github.com/theislab/cellrank/pull/828>`__
 
 
 Bugfixes
