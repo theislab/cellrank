@@ -256,13 +256,14 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel, ABC):
         else:
             raise KeyError(f"Unable to find data in `adata.layers[{key}]`.")
 
-        if isinstance(subset, str):
-            subset = self.adata.var[subset]
-        subset = np.asarray(subset)
-        if np.issubdtype(subset.dtype, bool) and subset.shape == (data.shape[1],):
-            data = data[:, subset]
-        else:
-            data = data[:, np.isin(self.adata.var_names, subset)]
+        if subset is not None:
+            if isinstance(subset, str):
+                subset = self.adata.var[subset]
+            subset = np.asarray(subset)
+            if np.issubdtype(subset.dtype, bool) and subset.shape == (data.shape[1],):
+                data = data[:, subset]
+            else:
+                data = data[:, np.isin(self.adata.var_names, subset)]
 
         data = data.astype(dtype, copy=False)
         return data.toarray() if issparse(data) else data

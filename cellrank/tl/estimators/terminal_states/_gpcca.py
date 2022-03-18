@@ -49,6 +49,7 @@ class TermStatesMethod(ModeEnum):  # noqa: D101
 class CoarseTOrder(ModeEnum):  # noqa: D101
     STABILITY = auto()  # diagonal
     INCOMING = auto()
+    OUTGOING = auto()
     STAT_DIST = auto()
 
 
@@ -438,7 +439,9 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         self,
         show_stationary_dist: bool = True,
         show_initial_dist: bool = False,
-        order: Optional[Literal["stability", "incoming", "stat_dist"]] = "stability",
+        order: Optional[
+            Literal["stability", "incoming", "outgoing", "stat_dist"]
+        ] = "stability",
         cmap: Union[str, ListedColormap] = "viridis",
         xtick_rotation: float = 45,
         annotate: bool = True,
@@ -464,6 +467,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
                 - `{o.STABILITY!r}` - order by the values on the diagonal.
                 - `{o.INCOMING!r}` - order by the incoming mass, excluding the diagonal.
+                - `{o.OUTGOING!r}` - order by the outgoing mass, excluding the diagonal.
                 - `{o.STAT_DIST!r}` - order by coarse stationary distribution. If not present, use `{o.STABILITY!r}`.
         cmap
             Colormap to use.
@@ -506,13 +510,14 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
             if order == CoarseTOrder.INCOMING:
                 values = (coarse_T.sum(0) - np.diag(coarse_T)).argsort(kind="stable")
-                names = values.index[values][::-1]
+                names = values.index[values]
+            elif order == CoarseTOrder.OUTGOING:
+                values = (coarse_T.sum(1) - np.diag(coarse_T)).argsort(kind="stable")
+                names = values.index[values]
             elif order == CoarseTOrder.STABILITY:
-                names = coarse_T.index[
-                    np.argsort(np.diag(coarse_T), kind="stable")[::-1]
-                ]
+                names = coarse_T.index[np.argsort(np.diag(coarse_T), kind="stable")]
             elif order == CoarseTOrder.STAT_DIST:
-                names = stat_d.index[stat_d.argsort(kind="stable")][::-1]
+                names = stat_d.index[stat_d.argsort(kind="stable")]
             else:
                 raise NotImplementedError(f"Order `{order}` is not yet implemented.")
 
