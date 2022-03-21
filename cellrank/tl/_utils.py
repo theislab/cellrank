@@ -305,7 +305,7 @@ def _mat_mat_corr_sparse(
 
     X_bar = np.reshape(np.array(X.mean(axis=1)), (-1, 1))
     X_std = np.reshape(
-        np.sqrt(np.array(X.power(2).mean(axis=1)) - (X_bar ** 2)), (-1, 1)
+        np.sqrt(np.array(X.power(2).mean(axis=1)) - (X_bar**2)), (-1, 1)
     )
 
     y_bar = np.reshape(np.mean(Y, axis=0), (1, -1))
@@ -1423,7 +1423,7 @@ def _calculate_absorption_time_moments(
 
         logg.debug("Solving equation (1/2)")
         X = _solve_lin_system(A_t, B_t, n_jobs=n_jobs, **kwargs).T
-        y = m - X @ (m ** 2)
+        y = m - X @ (m**2)
 
         logg.debug("Solving equation (2/2)")
         v = _solve_lin_system(X, y, use_eye=False, n_jobs=1, **solve_kwargs).squeeze()
@@ -1531,7 +1531,7 @@ def _calculate_lineage_absorption_time_means(
 
             logg.debug("Solving equation (1/2)")
             X = _solve_lin_system(D_j + Q @ D_j, N_inv @ D_j, use_eye=False, **kwargs)
-            y = m - X @ (m ** 2)
+            y = m - X @ (m**2)
 
             logg.debug("Solving equation (2/2)")
             v = _solve_lin_system(

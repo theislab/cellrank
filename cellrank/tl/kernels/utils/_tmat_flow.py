@@ -1,6 +1,5 @@
 from typing import Any, List, Tuple, Union, Mapping, Optional, Sequence
 
-from functools import lru_cache
 from dataclasses import dataclass
 from statsmodels.nonparametric.smoothers_lowess import lowess
 
@@ -557,7 +556,6 @@ class FlowPlotter:
         return self._adata.obs[self._tkey]
 
     @property
-    @lru_cache(1)
     def cmap(self) -> Mapping[str, Any]:
         """Colormap for :attr:`clusters`."""
         return dict(
