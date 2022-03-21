@@ -77,11 +77,11 @@ Branching structure
 We use sightly modified branching structured described
 `here <https://nvie.com/posts/a-successful-git-branching-model/>`_, in short:
 
-- ``feature/X``: for features, enhancements, etc.; it is based off the ``dev`` branch and squash merged into it again.
-- ``fix/X``: for bug fixes; is based off the ``dev`` branch and squash merged into it again.
-- ``release/vX.X.X``: prior to making a release; it is based off ``dev`` and then merged (using merge commit) into
-  ``master`` and ``dev``, after bumping the version and making release notes.
-  Both are usually done through CI, see `Making a new release`_.
+- ``feature/X``: for features, enhancements, etc. it is based off the ``master`` branch and squash merged into it again.
+- ``fix/X``: for bug fixes; is based off the ``master`` branch and squash merged into it again.
+- ``release/vX.X.X``: prior to making a release; it is based off ``master`` and then merged (using merge commit) into
+  ``master``, after bumping the version and making release notes. Both are usually done through CI,
+  see `Making a new release`_.
 
 Adding new features
 ~~~~~~~~~~~~~~~~~~~
@@ -214,11 +214,11 @@ and a separate PR with the updated ``recipe.yaml`` will have to be made.
 Easiest way to create a new release it to create a branch named ``release/vX.X.X`` and push it onto GitHub. The CI
 will take care of the following:
 
-- create the new release notes (and empty the ``dev`` release notes)
+- create the new release notes (and empty the development release notes)
 - bump the version and create a new tag
 - run tests on the ``release/vX.X.X`` branch
 - publish on PyPI after the tests have passed
-- merge ``release/vX.X.X`` into ``master`` and ``dev``
+- merge ``release/vX.X.X`` into ``master``
 
 Alternatively, it's possible to create a new release using ``bump2version``, which can be installed as::
 
