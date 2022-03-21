@@ -237,7 +237,7 @@ def cluster_lineage(
                 f"Expected to find `{n_points}` points, found `{trends.n_vars}`."
             )
 
-        random_state = np.random.mtrand.RandomState(random_state).randint(2 ** 16)
+        random_state = np.random.mtrand.RandomState(random_state).randint(2**16)
 
         pca_kwargs = dict(pca_kwargs)
         pca_kwargs.setdefault("n_comps", min(50, n_points, len(genes)) - 1)

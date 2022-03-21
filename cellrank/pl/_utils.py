@@ -142,14 +142,14 @@ def _curved_edges(
     m2 = -1 / m1
 
     # Temporary points along the line which connects two nodes
-    t1 = dist / np.sqrt(1 + m1 ** 2)
+    t1 = dist / np.sqrt(1 + m1**2)
     v1 = np.array([np.ones(n_edges), m1])
     coords_node1_displace = coords_node1 + (v1 * t1).T
     coords_node2_displace = coords_node2 - (v1 * t1).T
 
     # Control points, same distance but along perpendicular line
     # rnd gives the 'polarity' to determine which side of the line the curve should arc
-    t2 = dist / np.sqrt(1 + m2 ** 2)
+    t2 = dist / np.sqrt(1 + m2**2)
     v2 = np.array([np.ones(len(edges)), m2])
     coords_node1_ctrl = coords_node1_displace + (rnd * v2 * t2).T
     coords_node2_ctrl = coords_node2_displace + (rnd * v2 * t2).T
@@ -1186,7 +1186,7 @@ def _held_karp(dists: np.ndarray) -> Tuple[float, np.ndarray]:
                 C[bits, k] = min(res)
 
     # We're interested in all bits but the least significant (the start state)
-    bits = (2 ** n - 1) - 1
+    bits = (2**n - 1) - 1
 
     # Calculate optimal cost
     res = []
