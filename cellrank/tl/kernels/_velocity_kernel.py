@@ -132,7 +132,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel, ABC):
         start = logg.info(f"Computing transition matrix using `{model!r}` model")
 
         # fmt: off
-        params = {"model": model, "similarity": str(similarity), "softmax_scale": softmax_scale}
+        params = {"model": str(model), "similarity": str(similarity), "softmax_scale": softmax_scale}
         if self.backward:
             params["bwd_mode"] = str(backward_mode)
         if VelocityModel(model) == VelocityModel.MONTE_CARLO:

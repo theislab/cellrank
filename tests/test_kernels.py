@@ -17,6 +17,7 @@ import cellrank as cr
 from scanpy import Neighbors
 from anndata import AnnData
 from cellrank._key import Key
+from cellrank.tl._enum import ModeEnum
 from cellrank.tl._utils import _normalize
 from cellrank.ul._utils import _get_neighs, _get_neighs_params
 from cellrank.tl.kernels import (
@@ -36,6 +37,7 @@ from cellrank.tl.kernels._base_kernel import (
     UnidirectionalKernel,
 )
 from cellrank.tl.kernels._cytotrace_kernel import CytoTRACEAggregation
+from cellrank.tl.kernels.utils._velocity_model import VelocityModel
 
 import numpy as np
 import pandas as pd
@@ -1015,6 +1017,24 @@ class TestVelocityScheme:
 
         assert vk.params["model"] == "stochastic"
         assert vk.params["similarity"] == str(CustomFunc())
+
+    def test_save_to_anndata(self, adata: AnnData, tmpdir):
+        path = Path(tmpdir) / "adata.h5ad"
+        key = "vk"
+
+        vk = VelocityKernel(adata).compute_transition_matrix(
+            model=VelocityModel.DETERMINISTIC
+        )
+        vk.write_to_adata(key=key)
+
+        assert isinstance(vk.params["model"], str)
+        assert not isinstance(vk.params["model"], ModeEnum)
+        assert vk.params == adata.uns[f"{key}_params"]["params"]
+
+        sc.write(path, adata)
+
+        bdata = sc.read(path)
+        assert vk.params == bdata.uns[f"{key}_params"]["params"]
 
 
 class TestComputeProjection:
