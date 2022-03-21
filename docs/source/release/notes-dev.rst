@@ -1,4 +1,4 @@
-CellRank dev (2022-03-18)
+CellRank dev (2022-03-21)
 =========================
 
 Features
@@ -49,6 +49,9 @@ Bugfixes
 
 - Fix all q-values being NaN if 1 p-value was NaN. Also warn and set to NaN instead of raise when correlations are not in ``[0, 1]]`` interval.
   `#835 <https://github.com/theislab/cellrank/pull/835>`__
+
+- Do not save enums in :class:`anndata.AnnData`.
+  `#842 <https://github.com/theislab/cellrank/pull/842>`__
 
 
 Miscellaneous
