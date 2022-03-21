@@ -1,4 +1,4 @@
-CellRank dev (2022-01-13)
+CellRank dev (2022-03-21)
 =========================
 
 Features
