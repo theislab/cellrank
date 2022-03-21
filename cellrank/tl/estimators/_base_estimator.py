@@ -13,7 +13,7 @@ from cellrank.ul._docs import d
 from cellrank.tl._mixins import IOMixin, KernelMixin, AnnDataMixin
 from cellrank.tl.kernels import PrecomputedKernel
 from cellrank.tl._lineage import Lineage
-from cellrank.tl.kernels._base_kernel import Kernel, KernelExpression
+from cellrank.tl.kernels._base_kernel import KernelExpression
 
 import numpy as np
 import pandas as pd
@@ -31,52 +31,33 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
 
     Parameters
     ----------
-    obj
-        Can be one of the following:
+    object
+        Can be one of the following types:
 
-            - :class:`cellrank.tl.kernels.Kernel` - kernel object.
-            - :class:`anndata.AnnData` - annotated data object containing transition matrix in
-              :attr:`anndata.AnnData.obsp`.
-            - :class:`numpy.ndarray` - row-normalized sparse transition matrix.
-            - :class:`scipy.sparse.spmatrix` - row-normalized sparse transition matrix.
-    obsp_key
-        Key in :attr:`anndata.AnnData.obsp` where the transition matrix is stored.
-        Only used when ``obj`` is an :class:`anndata.AnnData` object.
+            - :class:`anndata.AnnData` - annotated data object.
+            - :class:`scipy.sparse.spmatrix`, :class:`numpy.ndarray` - row-normalized transition matrix.
+            - :class:`cellrank.tl.kernels.KernelExpression` - kernel expression.
+            - :class:`str` - key in :attr:`anndata.AnnData.obsp` where the transition matrix is stored.
+              ``adata`` must be provided in this case.
+            - :class:`bool` - directionality of the transition matrix that will be used to infer its storage location.
+              If `None`, the directionality will be determined automatically. ``adata`` must be provided in this case.
+    kwargs
+        Keyword arguments for :class:`cellrank.tl.kernels.PrecomputedKernel`.
     """
 
     def __init__(
         self,
-        obj: Union[AnnData, np.ndarray, spmatrix, KernelExpression],
-        obsp_key: Optional[str] = None,
+        object: Union[str, bool, np.ndarray, spmatrix, AnnData, KernelExpression],
+        **kwargs: Any,
     ):
-        if isinstance(obj, Kernel):
-            if obj._transition_matrix is None:
-                raise ValueError(
+        if isinstance(object, KernelExpression):
+            if object.transition_matrix is None:
+                raise RuntimeError(
                     "Compute transition matrix first as `.compute_transition_matrix()`."
                 )
-            kernel = obj
-        elif isinstance(obj, KernelExpression):
-            # this will fail if not all kernels have transition matrix computed
-            kernel = obj.compute_transition_matrix()
-        elif isinstance(obj, (np.ndarray, spmatrix)):
-            kernel = PrecomputedKernel(obj)
-        elif isinstance(obj, AnnData):
-            if obsp_key is None:
-                raise ValueError(
-                    "Specify `obsp_key=...` when supplying an `AnnData` object."
-                )
-            elif obsp_key not in obj.obsp:
-                raise KeyError(
-                    f"Unable to find transition matrix in `adata.obsp[{obsp_key!r}]`."
-                )
-            kernel = PrecomputedKernel(obsp_key, adata=obj)
         else:
-            raise TypeError(
-                f"Expected an object of type `KernelExpression`, `numpy.ndarray`, `scipy.sparse.spmatrix` "
-                f"or `anndata.AnnData`, got `{type(obj).__name__}`."
-            )
-
-        super().__init__(kernel=kernel)
+            object = PrecomputedKernel(object, copy=False, **kwargs)
+        super().__init__(kernel=object)
 
         self._params: Dict[str, Any] = {}
         self._shadow_adata = AnnData(

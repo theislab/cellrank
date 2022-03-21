@@ -1,0 +1,1 @@
+Ignore :mod:`pygam` deprecation warnings.

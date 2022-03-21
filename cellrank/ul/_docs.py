@@ -82,8 +82,7 @@ mode
 
         - `{m.DETERMINISTIC!r}` - deterministic computation that doesn't propagate uncertainty.
         - `{m.MONTE_CARLO!r}` - Monte Carlo average of randomly sampled velocity vectors.
-        - `{m.STOCHASTIC!r}` - second order approximation, only available when :mod:`jax` is installed.
-        - `{m.SAMPLING!r}` - sample 1 transition matrix from the velocity distribution."""
+        - `{m.STOCHASTIC!r}` - second order approximation, only available when :mod:`jax` is installed."""
 _velocity_backward_mode = """\
 backward_mode
     Only matters if initialized as :attr:`backward` ``= True``.  Valid options are:
@@ -121,7 +120,7 @@ _write_to_adata = """\
 Updates the :attr:`adata` with the following fields:
 
         - ``.obsp['{{key}}']`` - the transition matrix.
-        - ``.uns['{{key}}_params']`` - parameters used for calculation."""
+        - ``.uns['{{key}}_params']`` - parameters used for the calculation."""
 _en_cutoff_p_thresh = """\
 en_cutoff
     If ``cluster_key`` is given, this parameter determines when an approximate recurrent class will
@@ -137,14 +136,14 @@ basis
     Basis to use when ``mode = 'embedding'``. If `None`, use `'umap'`."""
 _velocity_scheme = """\
 scheme
-    Similarity scheme between cells as described in :cite:`li:20`. Can be one of the following:
+    Similarity measure between cells as described in :cite:`li:20`. Can be one of the following:
 
-        - `{s.DOT_PRODUCT!r}` - :class:`cellrank.tl.kernels.DotProductScheme`.
-        - `{s.COSINE!r}` - :class:`cellrank.tl.kernels.CosineScheme`.
-        - `{s.CORRELATION!r}` - :class:`cellrank.tl.kernels.CorrelationScheme`.
+        - `{s.CORRELATION!r}` - :class:`cellrank.tl.kernels.utils.Correlation`.
+        - `{s.COSINE!r}` - :class:`cellrank.tl.kernels.utils.Cosine`.
+        - `{s.DOT_PRODUCT!r}` - :class:`cellrank.tl.kernels.utils.DotProduct`.
 
     Alternatively, any function can be passed as long as it follows the signature of
-    :meth:`cellrank.tl.kernels.SimilaritySchemeABC.__call__`."""
+    :meth:`cellrank.tl.kernels.utils.SimilarityABC.__call__`."""
 _cond_num = """\
 compute_cond_num
     Whether to compute condition number of the transition matrix. Note that this might be costly,

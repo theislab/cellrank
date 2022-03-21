@@ -1,0 +1,1 @@
+Refactor :class:`cellrank.tl.kernels.TransportMapKernel` for easier definition of extensions.

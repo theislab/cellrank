@@ -37,11 +37,10 @@ class TermStatesEstimator(BaseEstimator, ABC):
 
     def __init__(
         self,
-        obj: Union[AnnData, np.ndarray, spmatrix, KernelExpression],
-        obsp_key: Optional[str] = None,
+        object: Union[AnnData, np.ndarray, spmatrix, KernelExpression],
         **kwargs: Any,
     ):
-        super().__init__(obj=obj, obsp_key=obsp_key, **kwargs)
+        super().__init__(object=object, **kwargs)
 
         self._term_states: Optional[pd.Series] = None
         self._term_states_probs: Optional[pd.Series] = None
@@ -195,6 +194,8 @@ class TermStatesEstimator(BaseEstimator, ABC):
                     vals = (categories[key],)
 
                 clusters = self.adata.obs[key]
+                clusters = clusters.cat.rename_categories({c: str(c) for c in clusters.cat.categories})
+                vals = tuple(str(v) for v in vals)
                 categories = {cat: self.adata[clusters == cat].obs_names for cat in vals}
 
             categories = _convert_to_categorical_series(categories, list(self.adata.obs_names))
@@ -209,6 +210,9 @@ class TermStatesEstimator(BaseEstimator, ABC):
             if cluster_key not in self.adata.obs:
                 raise KeyError(f"Unable to find clusters in `adata.obs[{cluster_key!r}]`.")
             series_query, series_reference = categories, self.adata.obs[cluster_key]
+            series_reference = series_reference.cat.rename_categories(
+                {c: str(c) for c in series_reference.cat.categories}
+            )
 
             # load the reference colors if they exist
             if Key.uns.colors(cluster_key) in self.adata.uns:

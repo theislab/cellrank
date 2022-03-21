@@ -1,6 +1,7 @@
 from typing import Any, Dict, Tuple, Union, Mapping, Optional, Sequence
 from typing_extensions import Literal
 
+from copy import deepcopy
 from enum import auto
 from types import MappingProxyType
 from pathlib import Path
@@ -10,7 +11,7 @@ from anndata import AnnData
 from cellrank import logging as logg
 from cellrank._key import Key
 from cellrank.tl._enum import ModeEnum
-from cellrank.ul._docs import d
+from cellrank.ul._docs import d, inject_docs
 from cellrank.tl._utils import (
     save_fig,
     _eigengap,
@@ -46,6 +47,13 @@ class TermStatesMethod(ModeEnum):  # noqa: D101
     STABILITY = auto()
 
 
+class CoarseTOrder(ModeEnum):  # noqa: D101
+    STABILITY = auto()  # diagonal
+    INCOMING = auto()
+    OUTGOING = auto()
+    STAT_DIST = auto()
+
+
 @d.dedent
 class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
     """
@@ -68,11 +76,10 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
     def __init__(
         self,
-        obj: Union[AnnData, np.ndarray, spmatrix, KernelExpression],
-        obsp_key: Optional[str] = None,
+        object: Union[str, bool, np.ndarray, spmatrix, AnnData, KernelExpression],
         **kwargs: Any,
     ):
-        super().__init__(obj=obj, obsp_key=obsp_key, **kwargs)
+        super().__init__(object=object, **kwargs)
 
         self._coarse_init_dist: Optional[pd.Series] = None
         self._coarse_stat_dist: Optional[pd.Series] = None
@@ -421,15 +428,21 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         if isinstance(n_states, int) and n_states == 1:
             self.compute_eigendecomposition()
 
-        self.compute_macrostates(n_states=n_states, cluster_key=cluster_key, **kwargs)
+        self.compute_macrostates(
+            n_states=n_states, cluster_key=cluster_key, n_cells=n_cells, **kwargs
+        )
 
         return self
 
     @d.dedent
+    @inject_docs(o=CoarseTOrder)
     def plot_coarse_T(
         self,
         show_stationary_dist: bool = True,
         show_initial_dist: bool = False,
+        order: Optional[
+            Literal["stability", "incoming", "outgoing", "stat_dist"]
+        ] = "stability",
         cmap: Union[str, ListedColormap] = "viridis",
         xtick_rotation: float = 45,
         annotate: bool = True,
@@ -450,6 +463,13 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             Whether to show :attr:`coarse_stationary_distribution`, if present.
         show_initial_dist
             Whether to show :attr:`coarse_initial_distribution`.
+        order
+            How to order the coarse-grained transition matrix. Valid options are:
+
+                - `{o.STABILITY!r}` - order by the values on the diagonal.
+                - `{o.INCOMING!r}` - order by the incoming mass, excluding the diagonal.
+                - `{o.OUTGOING!r}` - order by the outgoing mass, excluding the diagonal.
+                - `{o.STAT_DIST!r}` - order by coarse stationary distribution. If not present, use `{o.STABILITY!r}`.
         cmap
             Colormap to use.
         xtick_rotation
@@ -470,6 +490,45 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         -------
         %(just_plots)s
         """
+
+        def order_matrix(
+            order: Optional[CoarseTOrder],
+        ) -> Tuple[pd.DataFrame, Optional[pd.Series], Optional[pd.Series]]:
+            coarse_T = self.coarse_T
+            init_d = self.coarse_initial_distribution
+            stat_d = self.coarse_stationary_distribution
+
+            if order is None:
+                return coarse_T, init_d, stat_d
+
+            order = CoarseTOrder(order)
+            if order == CoarseTOrder.STAT_DIST and stat_d is None:
+                order = CoarseTOrder.STABILITY
+                logg.warning(
+                    f"Unable to order by `{CoarseTOrder.STAT_DIST}`, no coarse stationary distribution. "
+                    f"Using `order={order}`"
+                )
+
+            if order == CoarseTOrder.INCOMING:
+                values = (coarse_T.sum(0) - np.diag(coarse_T)).argsort(kind="stable")
+                names = values.index[values]
+            elif order == CoarseTOrder.OUTGOING:
+                values = (coarse_T.sum(1) - np.diag(coarse_T)).argsort(kind="stable")
+                names = values.index[values]
+            elif order == CoarseTOrder.STABILITY:
+                names = coarse_T.index[np.argsort(np.diag(coarse_T), kind="stable")]
+            elif order == CoarseTOrder.STAT_DIST:
+                names = stat_d.index[stat_d.argsort(kind="stable")]
+            else:
+                raise NotImplementedError(f"Order `{order}` is not yet implemented.")
+
+            coarse_T = coarse_T.loc[names][names]
+            if init_d is not None:
+                init_d = init_d[names]
+            if stat_d is not None:
+                stat_d = stat_d[names]
+
+            return coarse_T, init_d, stat_d
 
         def stylize_dist(
             ax: Axes, data: np.ndarray, xticks_labels: Sequence[str] = ()
@@ -515,7 +574,9 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
                     text = im.axes.text(j, i, valfmt(data[i, j], None), **kw)
                     texts.append(text)
 
-        def annotate_dist_ax(ax, data: np.ndarray, valfmt: str = "{x:.2f}"):
+        def annotate_dist_ax(
+            ax: Axes, data: np.ndarray, valfmt: str = "{x:.2f}"
+        ) -> None:
             if ax is None:
                 return
 
@@ -534,15 +595,12 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
                     **kw,
                 )
 
-        coarse_T = self.coarse_T
-        coarse_init_d = self.coarse_initial_distribution
-        coarse_stat_d = self.coarse_stationary_distribution
-
-        if coarse_T is None:
+        if self.coarse_T is None:
             raise RuntimeError(
                 "Compute coarse-grained transition matrix first as `.compute_macrostates()` with `n_states > 1`."
             )
 
+        coarse_T, coarse_init_d, coarse_stat_d = order_matrix(order)
         if show_stationary_dist and coarse_stat_d is None:
             logg.warning("Coarse stationary distribution is `None`, ignoring")
             show_stationary_dist = False
@@ -576,7 +634,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         cax = fig.add_subplot(gs[:1, -1]) if show_cbar else None
         init_ax, stat_ax = None, None
 
-        labels = list(self.coarse_T.columns)
+        labels = list(coarse_T.columns)
 
         tmp = coarse_T
         if show_initial_dist:
@@ -932,7 +990,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         memberships = Lineage(memberships, names=list(assignment.cat.categories), colors=colors)
         # fmt: on
 
-        groups = pd.DataFrame(assignment).groupby(0).size()
+        groups = assignment.value_counts()
         groups = groups[groups != n_cells].to_dict()
         if len(groups):
             logg.warning(
@@ -969,10 +1027,13 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             g = self._gpcca
             tmat = pd.DataFrame(g.coarse_grained_transition_matrix, index=names, columns=names)
             init_dist = pd.Series(g.coarse_grained_input_distribution, index=names)
-            stat_dist = pd.Series(g.coarse_grained_stationary_probability, index=names)
-            dists = pd.DataFrame({"coarse_init_dist": init_dist})
+            if g.coarse_grained_stationary_probability is None:
+                stat_dist = None
+            else:
+                stat_dist = pd.Series(g.coarse_grained_stationary_probability, index=names)
+            dists = pd.DataFrame({"coarse_init_dist": init_dist}, index=names)
             if stat_dist is not None:
-                dists["coarse_stat_dist"] = pd.Series(stat_dist, index=names)
+                dists["coarse_stat_dist"] = stat_dist
 
             key = Key.obsm.schur_vectors(self.backward)
             self._set("_schur_vectors", obj=self.adata.obsm, key=key, value=g._p_X, shadow_only=True)
@@ -981,7 +1042,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             self._set("_coarse_tmat", value=tmat, shadow_only=True)
             self._set("_coarse_init_dist", value=init_dist, shadow_only=True)
             self._set("_coarse_stat_dist", value=stat_dist, shadow_only=True)
-            self._set(obj=self.adata.uns, key=Key.uns.coarse(self.backward), value=AnnData(tmat, obs=dists))
+            self._set(obj=self.adata.uns, key=Key.uns.coarse(self.backward), value={"coarse_tmat": tmat, **dists})
         else:
             for attr in ["_schur_vectors", "_schur_matrix", "_coarse_tmat", "_coarse_init_dist", "_coarse_stat_dist"]:
                 self._set(attr, value=None, shadow_only=True)
@@ -1043,17 +1104,14 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             self._macrostates_colors = self.macrostates_memberships.colors.copy()
             self.params[key] = self._read_params(key)
 
-            # TODO(michalk8): allow missing?
-            tmat: AnnData = self.adata.uns[Key.uns.coarse(self.backward)]
-            if not isinstance(tmat, AnnData):
+            tmat = deepcopy(self.adata.uns[Key.uns.coarse(self.backward)])
+            if not isinstance(tmat, dict):
                 raise TypeError(f"Expected coarse-grained transition matrix to be stored "
-                                f"as `anndata.AnnData`, found `{type(tmat).__name__}`.")
-            tmat = tmat.copy()
-            names = tmat.obs_names
+                                f"as `dict`, found `{type(tmat).__name__}`.")
 
-            self._coarse_tmat = pd.DataFrame(tmat.X, index=names, columns=names)
-            self._coarse_init_dist = tmat.obs["coarse_init_dist"]
-            self._coarse_stat_dist = tmat.obs.get("coarse_stat_dist", None)
+            self._coarse_tmat = tmat["coarse_tmat"]
+            self._coarse_init_dist = tmat["coarse_init_dist"]
+            self._coarse_stat_dist = tmat.get("coarse_stat_dist", None)
 
             self._set(obj=self._shadow_adata.uns, key=Key.uns.coarse(self.backward), value=tmat)
 

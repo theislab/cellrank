@@ -174,15 +174,15 @@ def _process_series(
     # determine whether we want to process colors as well
     process_colors = colors is not None
 
+    # assert dtype of the series
+    if not is_categorical_dtype(series):
+        raise TypeError(f"Series must be `categorical`, found `{infer_dtype(series)}`.")
+
     # if keys is None, just return
     if keys is None:
         if process_colors:
             return series, colors
         return series
-
-    # assert dtype of the series
-    if not is_categorical_dtype(series):
-        raise TypeError(f"Series must be `categorical`, found `{infer_dtype(series)}`.")
 
     # initialize a copy of the series object
     series_in = series.copy()
@@ -305,7 +305,7 @@ def _mat_mat_corr_sparse(
 
     X_bar = np.reshape(np.array(X.mean(axis=1)), (-1, 1))
     X_std = np.reshape(
-        np.sqrt(np.array(X.power(2).mean(axis=1)) - (X_bar ** 2)), (-1, 1)
+        np.sqrt(np.array(X.power(2).mean(axis=1)) - (X_bar**2)), (-1, 1)
     )
 
     y_bar = np.reshape(np.mean(Y, axis=0), (1, -1))
@@ -417,14 +417,29 @@ def _correlation_test(
         confidence_level=confidence_level,
         **kwargs,
     )
-    invalid = np.sum((corr < -1) | (corr > 1))
-    if invalid:
-        raise ValueError(f"Found `{invalid}` correlations that are not in `[0, 1]`.")
+    invalid = (corr < -1) | (corr > 1)
+    if np.any(invalid):
+        logg.warning(
+            f"Found `{np.sum(invalid)}` correlation(s) that are not in `[0, 1]`. "
+            f"This usually happens when gene expression is constant across all cells. "
+            f"Setting to `NaN`"
+        )
+        corr[invalid] = np.nan
+        pvals[invalid] = np.nan
+        ci_low[invalid] = np.nan
+        ci_high[invalid] = np.nan
 
     res = pd.DataFrame(corr, index=gene_names, columns=[f"{c}_corr" for c in Y.names])
     for idx, c in enumerate(Y.names):
-        res[f"{c}_pval"] = pvals[:, idx]
-        res[f"{c}_qval"] = multipletests(pvals[:, idx], alpha=0.05, method="fdr_bh")[1]
+        p = pvals[:, idx]
+        valid_mask = ~np.isnan(p)
+
+        res[f"{c}_pval"] = p
+        res[f"{c}_qval"] = np.nan
+        if np.any(valid_mask):
+            res.loc[gene_names[valid_mask], f"{c}_qval"] = multipletests(
+                p[valid_mask], alpha=0.05, method="fdr_bh"
+            )[1]
         res[f"{c}_ci_low"] = ci_low[:, idx]
         res[f"{c}_ci_high"] = ci_high[:, idx]
 
@@ -509,7 +524,7 @@ def _correlation_test_helper(
     elif method == TestMethod.PERM_TEST:
         if not isinstance(n_perms, int):
             raise TypeError(
-                f"Expected `n_perms` to be an integer, found `{type(n_perms).__name__!r}`."
+                f"Expected `n_perms` to be an integer, found `{type(n_perms).__name__}`."
             )
         if n_perms <= 0:
             raise ValueError(f"Expcted `n_perms` to be positive, found `{n_perms}`.")
@@ -722,28 +737,18 @@ def _connected(c: Union[spmatrix, np.ndarray]) -> bool:
 
 
 def _irreducible(d: Union[spmatrix, np.ndarray]) -> bool:
-    """Check whether the unirected graph encoded by d is irreducible."""
+    """Check whether the undirected graph encoded by d is irreducible."""
 
     import networkx as nx
 
-    start = logg.debug("Checking the transition matrix for irreducibility")
-
     G = nx.DiGraph(d) if not isinstance(d, nx.DiGraph) else d
-
     try:
         it = iter(nx.strongly_connected_components(G))
         _ = next(it)
         _ = next(it)
-        is_irreducible = False
+        return False
     except StopIteration:
-        is_irreducible = True
-
-    if not is_irreducible:
-        logg.warning("Transition matrix is not irreducible", time=start)
-    else:
-        logg.debug("Transition matrix is irreducible", time=start)
-
-    return is_irreducible
+        return True
 
 
 def _symmetric(
@@ -1160,14 +1165,14 @@ def _fuzzy_to_discrete(
     -------
     :class:`numpy.ndarray`m :class:`numpy.ndarray`
         Boolean matrix of the same shape as `a_fuzzy`, assigning a subset of the samples to clusters and
-        an rray of clusters with less than `n_most_likely` samples assigned, respectively.
+        an array of clusters with less than `n_most_likely` samples assigned, respectively.
     """
 
     # check the inputs
     n_samples, n_clusters = a_fuzzy.shape
     if not isinstance(a_fuzzy, np.ndarray):
         raise TypeError(
-            f"Expected `a_fuzzy` to be of type `numpy.ndarray`, got `{type(a_fuzzy).__name__!r}`."
+            f"Expected `a_fuzzy` to be of type `numpy.ndarray`, got `{type(a_fuzzy).__name__}`."
         )
     a_fuzzy = np.asarray(a_fuzzy)  # convert to array from lineage classs, don't copy
     if check_row_sums:
@@ -1255,7 +1260,7 @@ def _series_from_one_hot_matrix(
     n_samples, n_clusters = membership.shape
     if not isinstance(membership, np.ndarray):
         raise TypeError(
-            f"Expected `membership` to be of type `numpy.ndarray`, found `{type(membership).__name__!r}`."
+            f"Expected `membership` to be of type `numpy.ndarray`, found `{type(membership).__name__}`."
         )
     membership = np.asarray(
         membership
@@ -1354,13 +1359,13 @@ def _check_estimator_type(estimator: Any) -> None:
 
     if not isinstance(estimator, type):
         raise TypeError(
-            f"Expected estimator to be a class, found `{type(estimator).__name__!r}`."
+            f"Expected estimator to be a class, found `{type(estimator).__name__}`."
         )
 
     if not issubclass(estimator, BaseEstimator):
         raise TypeError(
             f"Expected estimator to be a subclass of `cellrank.tl.estimators.BaseEstimator`, "
-            f"found `{type(estimator).__name__!r}`."
+            f"found `{type(estimator).__name__}`."
         )
 
 
@@ -1418,7 +1423,7 @@ def _calculate_absorption_time_moments(
 
         logg.debug("Solving equation (1/2)")
         X = _solve_lin_system(A_t, B_t, n_jobs=n_jobs, **kwargs).T
-        y = m - X @ (m ** 2)
+        y = m - X @ (m**2)
 
         logg.debug("Solving equation (2/2)")
         v = _solve_lin_system(X, y, use_eye=False, n_jobs=1, **solve_kwargs).squeeze()
@@ -1526,7 +1531,7 @@ def _calculate_lineage_absorption_time_means(
 
             logg.debug("Solving equation (1/2)")
             X = _solve_lin_system(D_j + Q @ D_j, N_inv @ D_j, use_eye=False, **kwargs)
-            y = m - X @ (m ** 2)
+            y = m - X @ (m**2)
 
             logg.debug("Solving equation (2/2)")
             v = _solve_lin_system(
@@ -1541,70 +1546,6 @@ def _calculate_lineage_absorption_time_means(
             res[f"{name} var"] = var
 
     return res
-
-
-def _create_initial_terminal_annotations(
-    adata: AnnData,
-    terminal_key: str = "terminal_states",
-    initial_key: str = "initial_states",
-    terminal_prefix: Optional[str] = "terminal",
-    initial_prefix: Optional[str] = "initial",
-    key_added: Optional[str] = "initial_terminal",
-) -> None:
-    """
-    Create categorical annotations of both initial and terminal states.
-
-    This is a utility function for creating a categorical :class:`pandas.Series` object which combines
-    the information about initial and terminal states. The :class:`pandas.Series` is written directly
-    to the :class:`anndata.AnnData`object. This can for example be used to create a scatter plot in :mod:`scvelo`.
-
-    Parameters
-    ----------
-    adata
-        AnnData object to write to ``.obs[key_added]``.
-    terminal_key
-        Key from ``adata.obs`` where terminal states have been saved.
-    initial_key
-        Key from ``adata.obs`` where initial states have been saved.
-    terminal_prefix
-        Forward direction prefix used in the annotations.
-    initial_prefix
-        Backward direction prefix used in the annotations.
-    key_added
-        Key added to ``adata.obs``.
-
-    Returns
-    -------
-    None
-        Nothing, just writes to ``adata``.
-    """
-
-    # get both Series objects
-    cats_final, colors_final = (
-        adata.obs[terminal_key],
-        adata.uns[f"{terminal_key}_colors"],
-    )
-    cats_root, colors_root = adata.obs[initial_key], adata.uns[f"{initial_key}_colors"]
-
-    # merge
-    cats_merged, colors_merged = _merge_categorical_series(
-        cats_final,
-        cats_root,
-        colors_old=list(colors_final),
-        colors_new=list(colors_root),
-    )
-
-    # adjust the names
-    final_names = cats_final.cat.categories
-    final_labels = [
-        f"{terminal_prefix if key in final_names else initial_prefix}: {key}"
-        for key in cats_merged.cat.categories
-    ]
-    cats_merged = cats_merged.cat.rename_categories(final_labels)
-
-    # write to AnnData
-    adata.obs[key_added] = cats_merged
-    adata.uns[f"{key_added}_colors"] = colors_merged
 
 
 def _maybe_subset_hvgs(

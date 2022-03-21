@@ -7,12 +7,12 @@ from cellrank.ul._docs import d, inject_docs
 from cellrank.tl._utils import _deprecate
 from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
 from cellrank.tl.kernels._base_kernel import KernelExpression
-from cellrank.tl.kernels._velocity_kernel import BackwardMode, VelocityMode
-from cellrank.tl.kernels._velocity_schemes import Scheme
+from cellrank.tl.kernels.utils._similarity import Similarity
+from cellrank.tl.kernels.utils._velocity_model import BackwardMode, VelocityModel
 
 
 @_deprecate(version="2.0")
-@inject_docs(m=VelocityMode, b=BackwardMode, s=Scheme)  # don't swap the order
+@inject_docs(m=VelocityModel, b=BackwardMode, s=Similarity)  # don't swap the order
 @d.dedent
 def transition_matrix(
     adata: AnnData,
@@ -21,13 +21,13 @@ def transition_matrix(
     xkey: str = "Ms",
     conn_key: str = "connectivities",
     gene_subset: Optional[Iterable] = None,
-    mode: Literal[
-        "deterministic", "stochastic", "sampling", "monte_carlo"
-    ] = VelocityMode.DETERMINISTIC,
+    model: Literal[
+        "deterministic", "stochastic", "monte_carlo"
+    ] = VelocityModel.DETERMINISTIC,
     backward_mode: Literal["transpose", "negate"] = BackwardMode.TRANSPOSE,
-    scheme: Union[
+    similarity: Union[
         Literal["dot_product", "cosine", "correlation"], Callable
-    ] = Scheme.CORRELATION,
+    ] = Similarity.CORRELATION,
     softmax_scale: Optional[float] = None,
     weight_connectivities: float = 0.2,
     density_normalize: bool = True,
@@ -84,18 +84,18 @@ def transition_matrix(
             conn_key=conn_key,
         ).compute_transition_matrix(
             softmax_scale=softmax_scale,
-            mode=mode,
+            model=model,
             backward_mode=backward_mode,
-            scheme=scheme,
+            similarity=similarity,
             **kwargs,
         )
 
     if 0 < weight_connectivities < 1:
         vk = compute_velocity_kernel()
         logg.info(f"Using a connectivity kernel with weight `{weight_connectivities}`")
-        ck = ConnectivityKernel(
-            adata, backward=backward, conn_key=conn_key
-        ).compute_transition_matrix(density_normalize=density_normalize)
+        ck = ConnectivityKernel(adata, conn_key=conn_key).compute_transition_matrix(
+            density_normalize=density_normalize
+        )
         final = (
             (1 - weight_connectivities) * vk + weight_connectivities * ck
         ).compute_transition_matrix()
@@ -104,7 +104,6 @@ def transition_matrix(
     elif weight_connectivities == 1:
         final = ConnectivityKernel(
             adata,
-            backward=backward,
             conn_key=conn_key,
         ).compute_transition_matrix(density_normalize=density_normalize)
     else:

@@ -2464,6 +2464,10 @@ class TestGPCCA:
         mc.plot_coarse_T(xtick_rotation=0, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
+    def test_gpcca_coarse_T_no_order(self, mc: GPCCA, fpath: str):
+        mc.plot_coarse_T(order=None, dpi=DPI, save=fpath)
+
+    @compare(kind="gpcca")
     def test_scvelo_gpcca_meta_states(self, mc: GPCCA, fpath: str):
         mc.plot_macrostates(dpi=DPI, save=fpath)
 
@@ -2559,11 +2563,9 @@ class TestGPCCA:
 
     @compare(kind="gpcca")
     def test_scvelo_transition_matrix_projection(self, mc: GPCCA, fpath: str):
-        mc.kernel.compute_projection(basis="umap")
-        scv.pl.velocity_embedding(
-            mc.kernel.adata,
-            vkey="T_fwd",
+        mc.kernel.plot_projection(
             basis="umap",
+            stream=False,
             arrow_length=6,
             arrow_size=6,
             dpi=DPI,
@@ -2731,6 +2733,10 @@ class TestLineageDrivers:
     @compare()
     def test_drivers_n_genes(self, adata: AnnData, fpath: str):
         cr.pl.lineage_drivers(adata, "0", n_genes=5, dpi=DPI, save=fpath)
+
+    @compare()
+    def test_drivers_ascending(self, adata: AnnData, fpath: str):
+        cr.pl.lineage_drivers(adata, "0", ascending=True, dpi=DPI, save=fpath)
 
     @compare(kind="bwd")
     def test_drivers_backward(self, adata: AnnData, fpath: str):
@@ -3811,8 +3817,7 @@ class TestProjectionEmbedding:
     def test_scvelo_connectivity_kernel_emb_stream(self, adata: AnnData, fpath: str):
         ck = ConnectivityKernel(adata)
         ck.compute_transition_matrix()
-        ck.compute_projection()
-        scv.pl.velocity_embedding_stream(adata, vkey="T_fwd", dpi=DPI, save=fpath)
+        ck.plot_projection(dpi=DPI, save=fpath)
 
     @compare()
     def test_scvelo_pseudotime_kernel_hard_threshold_emb_stream(
@@ -3820,8 +3825,7 @@ class TestProjectionEmbedding:
     ):
         ptk = PseudotimeKernel(adata)
         ptk.compute_transition_matrix(threshold_scheme="hard", frac_to_keep=0.3)
-        ptk.compute_projection()
-        scv.pl.velocity_embedding_stream(adata, vkey="T_fwd", dpi=DPI, save=fpath)
+        ptk.plot_projection(dpi=DPI, save=fpath)
 
     @compare()
     def test_scvelo_pseudotime_kernel_soft_threshold_emb_stream(
@@ -3829,12 +3833,10 @@ class TestProjectionEmbedding:
     ):
         ptk = PseudotimeKernel(adata)
         ptk.compute_transition_matrix(threshold_scheme="soft", frac_to_keep=0.3)
-        ptk.compute_projection()
-        scv.pl.velocity_embedding_stream(adata, vkey="T_fwd", dpi=DPI, save=fpath)
+        ptk.plot_projection(dpi=DPI, save=fpath)
 
     @compare()
     def test_scvelo_velocity_kernel_emb_stream(self, adata: AnnData, fpath: str):
         vk = VelocityKernel(adata)
         vk.compute_transition_matrix()
-        vk.compute_projection()
-        scv.pl.velocity_embedding_stream(adata, vkey="T_fwd", dpi=DPI, save=fpath)
+        vk.plot_projection(dpi=DPI, save=fpath)

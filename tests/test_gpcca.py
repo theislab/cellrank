@@ -223,7 +223,7 @@ def _fit_gpcca(adata, state: str, backward: bool = False) -> cr.estimators.GPCCA
     vk = VelocityKernel(adata, backward=backward).compute_transition_matrix(
         softmax_scale=4
     )
-    ck = ConnectivityKernel(adata, backward=backward).compute_transition_matrix()
+    ck = ConnectivityKernel(adata).compute_transition_matrix()
     terminal_kernel = 0.8 * vk + 0.2 * ck
 
     mc = cr.tl.estimators.GPCCA(terminal_kernel)
@@ -505,7 +505,7 @@ class TestGPCCA:
         vk = VelocityKernel(adata_large, backward=False).compute_transition_matrix(
             softmax_scale=4
         )
-        ck = ConnectivityKernel(adata_large, backward=False).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.estimators.GPCCA(terminal_kernel)
@@ -530,7 +530,7 @@ class TestGPCCA:
         vk = VelocityKernel(adata_large, backward=False).compute_transition_matrix(
             softmax_scale=4
         )
-        ck = ConnectivityKernel(adata_large, backward=False).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.estimators.GPCCA(terminal_kernel)
@@ -543,10 +543,8 @@ class TestGPCCA:
     def test_compute_initial_states_from_forward_too_many_states(
         self, adata_large: AnnData
     ):
-        vk = VelocityKernel(adata_large, backward=False).compute_transition_matrix(
-            softmax_scale=4
-        )
-        ck = ConnectivityKernel(adata_large, backward=False).compute_transition_matrix()
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.estimators.GPCCA(terminal_kernel)
@@ -562,7 +560,7 @@ class TestGPCCA:
         vk = VelocityKernel(adata_large, backward=False).compute_transition_matrix(
             softmax_scale=4
         )
-        ck = ConnectivityKernel(adata_large, backward=False).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.estimators.GPCCA(terminal_kernel)
@@ -578,7 +576,7 @@ class TestGPCCA:
         vk = VelocityKernel(adata_large, backward=False).compute_transition_matrix(
             softmax_scale=4
         )
-        ck = ConnectivityKernel(adata_large, backward=False).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.estimators.GPCCA(terminal_kernel)
@@ -594,7 +592,7 @@ class TestGPCCA:
         vk = VelocityKernel(adata_large, backward=False).compute_transition_matrix(
             softmax_scale=4
         )
-        ck = ConnectivityKernel(adata_large, backward=False).compute_transition_matrix()
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.tl.estimators.GPCCA(terminal_kernel)
@@ -1088,6 +1086,21 @@ class TestGPCCA:
         g = _fit_gpcca(adata_large, state)
         _assert_params(g, state, fwd=False)
         _assert_params(g, state, fwd=True)
+
+    def test_drivers_constant_gene_qvalues(self, adata_large: AnnData):
+        ix = 0
+        gene = adata_large.var_names[ix]
+        adata_large.X[:, ix] = 0
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        g = cr.tl.estimators.GPCCA(ck)
+        g.fit(n_states=2)
+        g.predict()
+        g.compute_absorption_probabilities()
+
+        drivers = g.compute_lineage_drivers(use_raw=False)
+
+        np.testing.assert_array_equal(drivers.loc[gene], np.nan)
+        assert np.asarray(drivers.iloc[drivers.index != gene].isnull()).sum() == 0
 
 
 class TestGPCCASerialization:

@@ -232,7 +232,7 @@ class TestLowLevelPipeline:
         vk = VelocityKernel(adata, backward=True).compute_transition_matrix(
             softmax_scale=4
         )
-        ck = ConnectivityKernel(adata, backward=True).compute_transition_matrix()
+        ck = ConnectivityKernel(adata).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
         estimator_bwd = cr.tl.estimators.CFLARE(final_kernel)
@@ -294,7 +294,7 @@ class TestLowLevelPipeline:
         vk = VelocityKernel(adata, backward=True).compute_transition_matrix(
             softmax_scale=4
         )
-        ck = ConnectivityKernel(adata, backward=True).compute_transition_matrix()
+        ck = ConnectivityKernel(adata).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
         estimator_bwd = cr.tl.estimators.GPCCA(final_kernel)

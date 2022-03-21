@@ -495,7 +495,9 @@ def cluster_fates(
         mode in (ClusterFatesMode.PAGA, ClusterFatesMode.PAGA_PIE)
         and "paga" not in adata.uns
     ):
-        raise KeyError("Compute PAGA first as `scvelo.tl.paga()`.")
+        raise KeyError(
+            "Compute PAGA first as `scvelo.tl.paga()` or `scanpy.tl.paga()`."
+        )
 
     fig = (
         plot_violin_no_cluster_key()

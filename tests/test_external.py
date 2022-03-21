@@ -7,34 +7,46 @@ import cellrank.external as cre
 from anndata import AnnData
 from cellrank.tl.kernels import ConnectivityKernel
 from cellrank.external.kernels._utils import MarkerGenes
-from cellrank.external.kernels._wot_kernel import LastTimePoint
+from cellrank.tl.kernels._transport_map_kernel import SelfTransitions
 
 import numpy as np
 import pandas as pd
-from scipy.sparse import spmatrix, csr_matrix
+from scipy.sparse import issparse, csr_matrix
 from pandas.core.dtypes.common import is_categorical_dtype
 
+import matplotlib.pyplot as plt
 from matplotlib.cm import get_cmap
 from matplotlib.colors import to_hex
 
 
+def _wot_not_installed() -> bool:
+    try:
+        import wot
+
+        return False
+    except ImportError:
+        return True
+
+
+def _statot_not_installed() -> bool:
+    try:
+        import statot
+
+        return False
+    except ImportError:
+        return True
+
+
+wot_not_installed_skip = pytest.mark.skipif(
+    _wot_not_installed(), reason="WOT is not installed."
+)
+statot_not_installed_skip = pytest.mark.skipif(
+    _statot_not_installed(), reason="statOT is not installed."
+)
+
+
+@statot_not_installed_skip
 class TestOTKernel:
-    def test_no_connectivities(self, adata_large: AnnData):
-        del adata_large.obsp["connectivities"]
-        terminal_states = np.full((adata_large.n_obs,), fill_value=np.nan, dtype=object)
-        ixs = np.where(adata_large.obs["clusters"] == "Granule immature")[0]
-        terminal_states[ixs] = "GI"
-
-        ok = cre.kernels.StationaryOTKernel(
-            adata_large,
-            terminal_states=pd.Series(terminal_states).astype("category"),
-            g=np.ones((adata_large.n_obs,), dtype=np.float64),
-        )
-        ok = ok.compute_transition_matrix(1, 0.001)
-
-        assert ok._conn is None
-        np.testing.assert_allclose(ok.transition_matrix.sum(1), 1.0)
-
     def test_method_not_implemented(self, adata_large: AnnData):
         terminal_states = np.full((adata_large.n_obs,), fill_value=np.nan, dtype=object)
         ixs = np.where(adata_large.obs["clusters"] == "Granule immature")[0]
@@ -97,24 +109,14 @@ class TestOTKernel:
         else:
             combined_kernel = ok
 
-        expected_error = (
-            r"<StationaryOTKernel> is not a kNN based kernel. The embedding projection "
-            r"only works for kNN based kernels."
-        )
-        with pytest.raises(AttributeError, match=expected_error):
-            combined_kernel.compute_projection()
+        with pytest.raises(
+            TypeError, match=r"StationaryOTKernel is not a kNN based kernel"
+        ):
+            combined_kernel.plot_projection()
 
 
+@wot_not_installed_skip
 class TestWOTKernel:
-    def test_no_connectivities(self, adata_large: AnnData):
-        del adata_large.obsp["connectivities"]
-        ok = cre.kernels.WOTKernel(
-            adata_large, time_key="age(days)"
-        ).compute_transition_matrix()
-
-        assert ok._conn is None
-        np.testing.assert_allclose(ok.transition_matrix.sum(1), 1.0)
-
     def test_invalid_solver_kwargs(self, adata_large: AnnData):
         ok = cre.kernels.WOTKernel(adata_large, time_key="age(days)")
         with pytest.raises(TypeError, match="unexpected keyword argument 'foo'"):
@@ -129,6 +131,9 @@ class TestWOTKernel:
         orig_time = ok.experimental_time
 
         ok = ~ok
+
+        assert ok.transition_matrix is None
+        assert ok.transport_maps is None
 
         inverted_time = ok.experimental_time
         assert is_categorical_dtype(adata_large.obs[key])
@@ -211,30 +216,49 @@ class TestWOTKernel:
             assert gr is None
             assert "gr" in adata_large.obs
 
-    @pytest.mark.parametrize("ltp", list(LastTimePoint))
-    def test_last_time_point(self, adata_large: AnnData, ltp: LastTimePoint):
+    @pytest.mark.parametrize("st", list(SelfTransitions))
+    def test_self_transitions(self, adata_large: AnnData, st: SelfTransitions):
+        et, lt = 12.0, 35.0
         key = "age(days)"
+        conn_kwargs = {"n_neighbors": 11}
+
         ok = cre.kernels.WOTKernel(adata_large, time_key=key).compute_transition_matrix(
-            last_time_point=ltp,
-            conn_kwargs={"n_neighbors": 11},
+            self_transitions=st,
+            conn_weight=0.2,
+            conn_kwargs=conn_kwargs,
             threshold=None,
         )
-        ixs = np.where(adata_large.obs[key] == 35.0)[0]
 
+        ixs = np.where(adata_large.obs[key] == lt)[0]
         T = ok.transition_matrix[ixs, :][:, ixs].A
-        if ltp == LastTimePoint.UNIFORM:
+
+        assert ok.params["self_transitions"] == str(st)
+        if st == SelfTransitions.UNIFORM:
             np.testing.assert_allclose(T, np.ones_like(T) / float(len(ixs)))
-        elif ltp == LastTimePoint.DIAGONAL:
+        elif st == SelfTransitions.DIAGONAL:
             np.testing.assert_allclose(T, np.eye(len(ixs)))
-        elif ltp == LastTimePoint.CONNECTIVITIES:
-            adata_subset = adata_large[adata_large.obs[key] == 35.0]
-            sc.pp.neighbors(adata_subset, n_neighbors=11)
+        elif st in (SelfTransitions.CONNECTIVITIES, SelfTransitions.ALL):
+            adata_subset = adata_large[adata_large.obs[key] == lt]
+            sc.pp.neighbors(adata_subset, **conn_kwargs)
             T_actual = (
                 ConnectivityKernel(adata_subset)
                 .compute_transition_matrix()
                 .transition_matrix.A
             )
             np.testing.assert_allclose(T, T_actual)
+            if st == SelfTransitions.ALL:
+                ixs = np.where(adata_large.obs[key] == et)[0]
+                T = ok.transition_matrix[ixs, :][:, ixs].A
+                adata_subset = adata_large[adata_large.obs[key] == et]
+                sc.pp.neighbors(adata_subset, **conn_kwargs)
+                T_actual = (
+                    ConnectivityKernel(adata_subset)
+                    .compute_transition_matrix()
+                    .transition_matrix.A
+                )
+                np.testing.assert_allclose(T, 0.2 * T_actual)
+        else:
+            raise NotImplementedError(st)
 
     @pytest.mark.parametrize("organism", ["human", "mouse"])
     def test_compute_scores_default(self, adata_large: AnnData, organism: str):
@@ -263,6 +287,8 @@ class TestWOTKernel:
         assert isinstance(ok.params, dict)
         assert isinstance(ok.growth_rates, pd.DataFrame)
         assert isinstance(ok.transport_maps, dict)
+        for v in ok.transport_maps.values():
+            assert isinstance(v, AnnData)
         np.testing.assert_array_equal(adata_large.obs_names, ok.growth_rates.index)
         np.testing.assert_array_equal(ok.growth_rates.columns, ["g0", "g1"])
         assert isinstance(ok.transport_maps[12.0, 35.0], AnnData)
@@ -276,10 +302,8 @@ class TestWOTKernel:
         assert isinstance(ok._transition_matrix, csr_matrix)
         np.testing.assert_allclose(ok.transition_matrix.sum(1), 1.0)
         assert ok.params["threshold"] == threshold
-
-        if threshold == 100:
-            for row in ok.transition_matrix:
-                np.testing.assert_allclose(row.data, 1.0 / len(row.data))
+        if threshold is not None:
+            assert issparse(ok.transport_maps[12.0, 35.0].X)
 
     def test_copy(self, adata_large: AnnData):
         ok = cre.kernels.WOTKernel(adata_large, time_key="age(days)")
@@ -305,12 +329,38 @@ class TestWOTKernel:
         else:
             combined_kernel = ok
 
-        expected_error = (
-            r"<WOTKernel> is not a kNN based kernel. The embedding projection only "
-            r"works for kNN based kernels."
+        with pytest.raises(TypeError, match=r"WOTKernel is not a kNN based kernel"):
+            combined_kernel.plot_projection()
+
+    def test_wot_write(self, adata_large: AnnData, tmpdir):
+        path = str(tmpdir / "wot.pickle")
+        ok = cre.kernels.WOTKernel(adata_large, time_key="age(days)")
+        ok = ok.compute_transition_matrix()
+        ok.write(path)
+
+        ok2 = cre.kernels.WOTKernel.read(path)
+        assert ok.params == ok2.params
+        np.testing.assert_array_equal(
+            sorted(ok.transport_maps.keys()), sorted(ok2.transport_maps.keys())
         )
-        with pytest.raises(AttributeError, match=expected_error):
-            combined_kernel.compute_projection()
+        np.testing.assert_array_equal(ok.transition_matrix.A, ok2.transition_matrix.A)
+
+    @pytest.mark.parametrize("cmap", ["viridis", "inferno"])
+    @pytest.mark.parametrize("size", [5, 10])
+    def test_colormap(self, adata_large: AnnData, cmap: str, size: int):
+        dummy_time = pd.cut(adata_large.obs["latent_time"], size).cat.rename_categories(
+            range(13, 13 + size)
+        )
+        adata_large.obs["dummy_time"] = dummy_time
+        expected_colors = [
+            to_hex(c) for c in plt.get_cmap(cmap)(np.linspace(0.0, 1.0, size))
+        ]
+
+        _ = cre.kernels.WOTKernel(adata_large, time_key="dummy_time", cmap=cmap)
+
+        np.testing.assert_array_equal(
+            adata_large.uns["dummy_time_colors"], expected_colors
+        )
 
 
 class TestGetMarkers:

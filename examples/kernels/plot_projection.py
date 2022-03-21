@@ -22,7 +22,7 @@ k
 # %%
 # Next, we compute the projection of the transition matrix onto an embedding, in this case UMAP.
 # The projected transition matrix can be found in ``adata.obsm['T_fwd_umap']``.
-k.compute_projection(basis="umap")
+k.plot_projection(basis="umap")
 
 # %%
 # The projected transition matrix can now be visualized using :mod:`scvelo`.

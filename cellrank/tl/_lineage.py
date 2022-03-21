@@ -198,7 +198,7 @@ _HANDLED_FUNCTIONS = _register_handled_functions()
 
 class LineageMeta(type):
     """
-    Metaclass for Lineaage.
+    Metaclass for Lineage.
 
     Registers functions which are handled by us and overloads common attributes, such as `.sum` with these functions.
     """

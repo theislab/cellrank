@@ -1,0 +1,1 @@
+Allow local block-diagonal connectivities in :class:`cellrank.tl.kernels.TransportMapKernel`. Rename ``last_time_point`` argument to ``self_transitions`` and add ``conn_weight``. ``self_transitions`` can also be applied to specific diagonal blocks only.
