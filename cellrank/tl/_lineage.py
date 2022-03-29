@@ -30,13 +30,7 @@ from cellrank.tl._colors import (
     _compute_mean_color,
     _create_categorical_colors,
 )
-from anndata._io.specs.methods import (
-    H5Array,
-    H5Group,
-    ZarrArray,
-    ZarrGroup,
-    write_basic,
-)
+from anndata._io.specs.methods import H5Group, ZarrGroup, write_basic
 from anndata._io.specs.registry import _REGISTRY, IOSpec
 
 import numpy as np
@@ -1323,7 +1317,7 @@ def _mutual_info(reference, query):
     return weights
 
 
-_SPEC = IOSpec("array", "0.1.0")
+_SPEC = IOSpec("array", "0.2.0")
 
 
 @_REGISTRY.register_write(H5Group, Lineage, _SPEC)
@@ -1337,9 +1331,3 @@ def _write_lineage(
     dataset_kwargs: Mapping[str, Any] = MappingProxyType({}),
 ) -> None:
     write_basic(f, k, elem=elem.X, dataset_kwargs=dataset_kwargs)
-
-
-@_REGISTRY.register_read(H5Array, _SPEC)
-@_REGISTRY.register_read(ZarrArray, _SPEC)
-def _read_lineage(elem: Union[H5Array, ZarrArray]):
-    return elem[()]
