@@ -260,6 +260,7 @@ sphinx_gallery_conf = {
     "doc_module": "cellrank",
     "download_all_examples": False,
     "pypandoc": True,  # convert rST to md when downloading notebooks
+    "plot_gallery": "'True'",  # https://github.com/sphinx-gallery/sphinx-gallery/issues/913
 }
 
 # -- Options for HTML output -------------------------------------------------
