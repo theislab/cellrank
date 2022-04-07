@@ -32,11 +32,3 @@ pushd "$HOME"
 install_petsc
 install_slepc
 popd
-
-# echo "Installing numpy"
-# python -m pip install --upgrade pip
-# pip install "numpy<1.22"
-
-# echo "Symlinking numpy"
-# NUMPY_INCLUDE="$(python -c 'import numpy; print(numpy.get_include())')"
-# ln -sfv "$NUMPY_INCLUDE/numpy" "$PETSC_DIR/$PETSC_ARCH/include"
