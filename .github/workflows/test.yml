@@ -71,7 +71,7 @@ jobs:
                 ./.scripts/ci/install_dependencies.sh
 
         -   name: Export PETSc/SLEPc environment variables
-            if: ${{ runner.os == "Linux" && matrix.use_slepc == true }}
+            if: ${{ runner.os == 'Linux' && matrix.use_slepc == true }}
             run: |
                 echo "PETSC_DIR=$HOME/petsc-$PC_VERSION" >> $GITHUB_ENV
                 echo "SLEPC_DIR=$HOME/slepc-$SC_VERSION" >> $GITHUB_ENV
