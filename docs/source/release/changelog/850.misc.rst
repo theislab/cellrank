@@ -1,0 +1,1 @@
+Fix PETSc/SLEPc in CI for Linux. For now, macOS PETSc/SLEPc remains disabled.
