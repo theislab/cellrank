@@ -70,12 +70,16 @@ jobs:
             run: |
                 ./.scripts/ci/install_dependencies.sh
 
-        -   name: Install PETSc/SLEPc environment variables
+        -   name: Export PETSc/SLEPc environment variables
             if: ${{ runner.os == 'Linux' && matrix.use_slepc == true }}
             run: |
-                export PETSC_DIR="$HOME/petsc-$PC_VERSION"
-                export SLEPC_DIR="$HOME/slepc-$SC_VERSION"
-                export PETSC_ARCH="arch-$RUNNER_OS-c-opt"
+                echo "PETSC_DIR=$HOME/petsc-$PC_VERSION" >> $GITHUB_ENV
+                echo "SLEPC_DIR=$HOME/slepc-$SC_VERSION" >> $GITHUB_ENV
+                echo "PETSC_ARCH=arch-$RUNNER_OS-c-opt" >> $GITHUB_ENV
+
+        -   name: Install PETSc/SLEPc dependencies
+            if: ${{ runner.os == 'Linux' && matrix.use_slepc == true }}
+            run: |
                 ./.scripts/ci/install_petsc_linux.sh
 
         -   name: Get pip cache dir
