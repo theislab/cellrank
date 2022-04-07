@@ -62,6 +62,76 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         and :attr:`anndata.AnnData.var_names` correspond to subsets of observations from :attr:`adata`.
         """
 
+    @d.get_sections(base="tmk_thresh", sections=["Parameters"])
+    def _threshold_transport_maps(
+        self,
+        tmaps: Dict[Pair_t, AnnData],
+        threshold: Threshold_t,
+        copy: bool = False,
+    ) -> Optional[Mapping[Pair_t, AnnData]]:
+        """
+        Remove small non-zero values from :attr:`transition_matrix`.
+
+        Parameters
+        ----------
+        threshold
+            How to remove small non-zero values from the transition matrix. Valid options are:
+
+                - `'auto'` - find the maximum threshold value which will not remove every non-zero value from any row.
+                - `'auto_local'` - same as above, but done for each transport separately.
+                - :class:`float` - value in `[0, 100]` corresponding to a percentage of non-zeros to remove in each
+                  transport map.
+
+            Rows where all values are removed will have uniform distribution and a warning will be issued.
+        copy
+            Whether to return a copy of thresholded ``tmaps`` or modify inplace.
+
+        Returns
+        -------
+        If ``copy = True``, returns a thresholded transport maps. Otherwise, modifies ``tmaps`` inplace.
+        """
+        if threshold == "auto":
+            thresh = min(
+                adata.X[i].max() for adata in tmaps.values() for i in range(adata.n_obs)
+            )
+            logg.info(f"Using automatic `threshold={thresh}`")
+        elif threshold == "auto_local":
+            logg.info("Using automatic `threshold` for each time point pair separately")
+        elif not (0 <= threshold <= 100):
+            raise ValueError(
+                f"Expected `threshold` to be in `[0, 100]`, found `{threshold}`.`"
+            )
+
+        for key, adata in tmaps.items():
+            if copy:
+                adata = adata.copy()
+            tmat = adata.X
+
+            if threshold == "auto_local":
+                thresh = min(tmat[i].max() for i in range(tmat.shape[0]))
+                logg.debug(f"Using `threshold={thresh}` at `{key}`")
+            elif isinstance(threshold, (int, float)):
+                thresh = np.percentile(tmat.data, threshold)
+                logg.debug(f"Using `threshold={thresh}` at `{key}`")
+
+            tmat = csr_matrix(tmat, dtype=tmat.dtype)
+            tmat.data[tmat.data < thresh] = 0.0
+            zeros_mask = np.where(np.asarray(tmat.sum(1)).squeeze() == 0)[0]
+            if np.any(zeros_mask):
+                logg.warning(
+                    f"After thresholding, `{len(zeros_mask)}` row(s) of transport at `{key}` are forced to be uniform"
+                )
+                for ix in zeros_mask:
+                    start, end = tmat.indptr[ix], tmat.indptr[ix + 1]
+                    size = end - start
+                    tmat.data[start:end] = np.ones(size, dtype=tmat.dtype) / size
+
+            # after `zeros_mask` has been handled, to have access to removed row indices
+            tmat.eliminate_zeros()
+            tmaps[key] = AnnData(tmat, obs=adata.obs, var=adata.var, dtype=tmat.dtype)
+
+        return tmaps if copy else None
+
     @d.get_sections(base="tmk_tmat", sections=["Parameters"])
     @d.dedent
     @inject_docs(st=SelfTransitions)
@@ -99,11 +169,14 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         conn_kwargs
             Keyword arguments for :func:`scanpy.pp.neighbors` when using ``self_transitions`` use
             :class:`cellrank.tl.kernels.ConnectivityKernel`. Can contain `'density_normalize'` for
-            :meth:`cellrank.kernels.ConnectivityKernel.compute_transition_matrix`.
+            :meth:`cellrank.tl.kernels.ConnectivityKernel.compute_transition_matrix`.
 
         Returns
         -------
-        Self and updates :attr:`transition_matrix` and :attr:`params`.
+        Self and updates the following attributes:
+
+            - :attr:`transition_matrix` - transition matrix.
+            - :attr:`transport_maps` - transport maps between consecutive time points.
         """
         cache_params = dict(kwargs)
         cache_params["threshold"] = threshold
@@ -311,76 +384,6 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
             ) from e
 
         return tmaps
-
-    @d.get_sections(base="tmk_thresh", sections=["Parameters"])
-    def _threshold_transport_maps(
-        self,
-        tmaps: Dict[Pair_t, AnnData],
-        threshold: Threshold_t,
-        copy: bool = False,
-    ) -> Optional[Mapping[Pair_t, AnnData]]:
-        """
-        Remove small non-zero values from :attr:`transition_matrix`.
-
-        Parameters
-        ----------
-        threshold
-            How to remove small non-zero values from the transition matrix. Valid options are:
-
-                - `'auto'` - find the maximum threshold value which will not remove every non-zero value from any row.
-                - `'auto_local'` - same as above, but done for each transport separately.
-                - :class:`float` - value in `[0, 100]` corresponding to a percentage of non-zeros to remove in each
-                  transport map.
-
-            Rows where all values are removed will have uniform distribution and a warning will be issued.
-        copy
-            Whether to return a copy of thresholded ``tmaps`` or modify inplace.
-
-        Returns
-        -------
-        If ``copy = True``, returns a thresholded transport maps. Otherwise, modifies ``tmaps`` inplace.
-        """
-        if threshold == "auto":
-            thresh = min(
-                adata.X[i].max() for adata in tmaps.values() for i in range(adata.n_obs)
-            )
-            logg.info(f"Using automatic `threshold={thresh}`")
-        elif threshold == "auto_local":
-            logg.info("Using automatic `threshold` for each time point pair separately")
-        elif not (0 <= threshold <= 100):
-            raise ValueError(
-                f"Expected `threshold` to be in `[0, 100]`, found `{threshold}`.`"
-            )
-
-        for key, adata in tmaps.items():
-            if copy:
-                adata = adata.copy()
-            tmat = adata.X
-
-            if threshold == "auto_local":
-                thresh = min(tmat[i].max() for i in range(tmat.shape[0]))
-                logg.debug(f"Using `threshold={thresh}` at `{key}`")
-            elif isinstance(threshold, (int, float)):
-                thresh = np.percentile(tmat.data, threshold)
-                logg.debug(f"Using `threshold={thresh}` at `{key}`")
-
-            tmat = csr_matrix(tmat, dtype=tmat.dtype)
-            tmat.data[tmat.data < thresh] = 0.0
-            zeros_mask = np.where(np.asarray(tmat.sum(1)).squeeze() == 0)[0]
-            if np.any(zeros_mask):
-                logg.warning(
-                    f"After thresholding, `{len(zeros_mask)}` row(s) of transport at `{key}` are forced to be uniform"
-                )
-                for ix in zeros_mask:
-                    start, end = tmat.indptr[ix], tmat.indptr[ix + 1]
-                    size = end - start
-                    tmat.data[start:end] = np.ones(size, dtype=tmat.dtype) / size
-
-            # after `zeros_mask` has been handled, to have access to removed row indices
-            tmat.eliminate_zeros()
-            tmaps[key] = AnnData(tmat, obs=adata.obs, var=adata.var, dtype=tmat.dtype)
-
-        return tmaps if copy else None
 
     def _tmat_to_adata(
         self, t1: Numeric_t, t2: Numeric_t, tmat: Union[np.ndarray, spmatrix, AnnData]
