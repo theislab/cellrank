@@ -9,10 +9,12 @@ formats:
 -   htmlzip
 
 build:
-    image: latest
+    image: testing
+    apt_packages:
+    -   pandoc
 
 python:
-    version: 3.8
+    version: 3.9
     install:
     -   method: pip
         path: .
