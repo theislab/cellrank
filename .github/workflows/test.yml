@@ -53,6 +53,10 @@ jobs:
                 -   os: macos-latest
                     python: 3.8
                     use_slepc: false
+            env:
+                # make sure to pin this in tox.ini as well
+                PC_VERSION: 3.15.4  # PETSc version
+                SC_VERSION: 3.15.2  # SLEPc version
 
         steps:
         -   uses: actions/checkout@v2
@@ -61,11 +65,18 @@ jobs:
             with:
                 python-version: ${{ matrix.python }}
 
-        -   name: Install dependencies
-            env:
-                USE_SLEPC: ${{ matrix.use_slepc }}
+        -   name: Install Linux dependencies
+            if: ${{ runner.os == "Linux" }}
             run: |
                 ./.scripts/ci/install_dependencies.sh
+
+        -   name: Export PETSc/SLEPc environment variables
+            if: ${{ runner.os == "Linux" && matrix.use_slepc == true }}
+            run: |
+                echo "PETSC_DIR=$HOME/petsc-$PC_VERSION" >> $GITHUB_ENV
+                echo "SLEPC_DIR=$HOME/slepc-$SC_VERSION" >> $GITHUB_ENV
+                echo "PETSC_ARCH=arch-$RUNNER_OS-c-opt" >> $GITHUB_ENV
+                ./.scripts/ci/install_petsc_linux.sh
 
         -   name: Get pip cache dir
             id: pip-cache
