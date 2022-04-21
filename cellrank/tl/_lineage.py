@@ -24,7 +24,7 @@ from cellrank import logging as logg
 from cellrank._key import Key
 from cellrank.tl._enum import ModeEnum
 from cellrank.ul._docs import d, inject_docs
-from cellrank.tl._utils import save_fig, _convert_lineage_name, _unique_order_preserving
+from cellrank.tl._utils import save_fig, _unique_order_preserving
 from cellrank.tl._colors import (
     _get_bg_fg_colors,
     _compute_mean_color,
@@ -301,21 +301,14 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         self._colors = getattr(obj, "colors", None)
         self._is_transposed = getattr(obj, "_is_transposed", False)
 
-    def _mixer(self, rows, mixtures):
-        def update_entries(key):
-            if key:
-                res.append(self[rows, key].X.sum(1))
-                # item = (key, rows) if self._is_transposed else (rows, key)
-                # res.append(self[item].X.sum(int(not self._is_transposed)))
-                names.append(" or ".join(self.names[key]))
-                colors.append(_compute_mean_color(self.colors[key]))
+    def _mixer(self, rows, mixtures: Iterable[Union[str, Any]]) -> "Lineage":
+        def unsplit(names: str) -> Tuple[str, ...]:
+            return tuple(
+                sorted({name.strip(" ") for name in names.strip(" ,").split(",")})
+            )
 
         keys = [
-            tuple(
-                self._maybe_convert_names(
-                    _convert_lineage_name(mixture), default=mixture
-                )
-            )
+            tuple(self._maybe_convert_names(unsplit(mixture), default=mixture))
             if isinstance(mixture, str)
             else (mixture,)
             for mixture in mixtures
@@ -331,14 +324,14 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
                     f"Found overlapping keys: `{self.names[list(overlap)]}`."
                 )
 
-        seen = set()
         names, colors, res = [], [], []
         for key in map(list, keys):
-            seen.update(self.names[key])
-            update_entries(key)
+            if key:
+                res.append(self[rows, key].X.sum(1))
+                names.append(", ".join(self.names[key]))
+                colors.append(_compute_mean_color(self.colors[key]))
 
-        res = np.stack(res, axis=-1)
-        return Lineage(res, names=names, colors=colors)
+        return Lineage(np.stack(res, axis=-1), names=names, colors=colors)
 
     def __getitem__(self, item) -> "Lineage":
         was_transposed = False
@@ -375,10 +368,8 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         )
         if is_tuple_len_2:
             rows, col = item
-
             if isinstance(col, (int, np.integer, str)):
                 col = [col]
-
             try:
                 # slicing an array where row/col are like 2D indices
                 if 1 < len(col) == len(rows) and len(rows) == self.shape[0]:
@@ -393,31 +384,18 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
                 pass
 
             if isinstance(col, (list, tuple, np.ndarray)):
-                # TODO(michalk8)
-                if any(
-                    map(
-                        lambda i: isinstance(i, str) and ("," in i or "or" in i),
-                        col,
-                    )
-                ):
+                if any(isinstance(i, str) and "," in i for i in col):
                     return self._mixer(rows, col)
                 col = self._maybe_convert_names(col)
                 item = rows, col
         else:
             if isinstance(item, (int, np.integer, str)):
                 item = [item]
-
             col = range(len(self.names))
             if isinstance(item, (tuple, list, np.ndarray)):
-                # TODO(michalk8)
-                if any(
-                    map(
-                        lambda i: isinstance(i, str) and ("," in i or "or" in i),
-                        item,
-                    )
-                ):
+                if any(isinstance(i, str) and "," in i for i in item):
                     return self._mixer(slice(None, None, None), item)
-                elif any(map(lambda i: isinstance(i, str), item)):
+                elif any(isinstance(i, str) for i in item):
                     item = (slice(None, None, None), self._maybe_convert_names(item))
                     col = item[1]
 
@@ -468,13 +446,16 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
         obj = super().__getitem__(item)
 
-        if shape is not None:  # keep the resulting shape
+        # keep the resulting shape
+        if shape is not None:
             obj = obj.reshape(shape)
+        # correctly reorder
         if row_order is not None:
             obj = obj[row_order, :]
         if col_order is not None:
             obj = obj[:, col_order]
 
+        # correctly set names and colors
         if isinstance(obj, Lineage):
             obj._names = np.atleast_1d(self.names[col])
             obj._colors = np.atleast_1d(self.colors[col])
@@ -541,7 +522,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         default: Optional[Union[int, str]] = None,
         make_unique: bool = True,
     ) -> Union[int, List[int], List[bool]]:
-        if all(map(lambda n: isinstance(n, (bool, np.bool_)), names)):
+        if all(isinstance(n, (bool, np.bool_)) for n in names):
             return list(names)
         res = []
         for name in names:
@@ -560,8 +541,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
                         name = default
                 else:
                     raise KeyError(
-                        f"Invalid lineage name `{name}`. "
-                        f"Valid names are: `{list(self.names)}`."
+                        f"Invalid lineage name `{name!r}`. Valid names are: `{list(self.names)}`."
                     )
             res.append(name)
 
@@ -579,19 +559,18 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
         return array
 
+    @staticmethod
     def _prepare_annotation(
-        self,
         array: List[str],
         checker: Optional[Callable] = None,
         transformer: Optional[Callable] = None,
         checker_msg: Optional[str] = None,
     ) -> np.ndarray:
-        if checker:
+        if checker is not None:
             assert checker_msg, "Please provide a message when `checker` is not `None`."
             for v in array:
                 if not checker(v):
                     raise ValueError(checker_msg.format(v))
-
         if transformer is not None:
             array = np.array([transformer(v) for v in array])
 
@@ -962,10 +941,8 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             )
 
         reference = self[:, keys]
-        rest = [
-            k for k in self.names if all(map(lambda rk: k not in rk, reference.names))
-        ]
-        if not len(rest):
+        rest = [k for k in self.names if all(k not in rk for rk in reference.names)]
+        if not rest:
             logg.warning(
                 "Unable to perform reduction because all keys have been selected. Returning combined object only"
             )

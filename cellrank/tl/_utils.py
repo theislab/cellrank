@@ -1088,13 +1088,6 @@ def _unique_order_preserving(iterable: Iterable[Hashable]) -> List[Hashable]:
     return [i for i in iterable if i not in seen and not seen.add(i)]
 
 
-def _convert_lineage_name(names: str) -> Tuple[str, ...]:
-    sep = "or" if "or" in names else ","
-    return tuple(
-        sorted({name.strip(" ") for name in names.strip(f" {sep}").split(sep)})
-    )
-
-
 def _info_if_obs_keys_categorical_present(
     adata: AnnData, keys: Iterable[str], msg_fmt: str, warn_once: bool = True
 ) -> None:

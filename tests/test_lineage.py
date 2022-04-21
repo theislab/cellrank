@@ -614,7 +614,7 @@ class TestLineageMixing:
 
         assert y.shape == (10, 1)
         np.testing.assert_array_equal(y.X, expected)
-        np.testing.assert_array_equal(y.names, ["bar or foo"])
+        np.testing.assert_array_equal(y.names, ["bar, foo"])
         np.testing.assert_array_equal(y.colors, [_compute_mean_color(x.colors[:2])])
 
     def test_row_subset(self):
@@ -625,7 +625,7 @@ class TestLineageMixing:
 
         assert y.shape == (5, 1)
         np.testing.assert_array_equal(y.X, expected)
-        np.testing.assert_array_equal(y.names, ["bar or foo"])
+        np.testing.assert_array_equal(y.names, ["bar, foo"])
         np.testing.assert_array_equal(y.colors, [_compute_mean_color(x.colors[:2])])
 
 
@@ -692,7 +692,7 @@ class TestLineageNormalization:
 
         assert lin.shape == (10, 2)
         np.testing.assert_allclose(np.sum(lin, axis=1), 1.0)
-        np.testing.assert_array_equal(lin.names, ["bar or foo", "baz"])
+        np.testing.assert_array_equal(lin.names, ["bar, foo", "baz"])
         np.testing.assert_array_equal(lin.colors, lineage[["foo, bar", "baz"]].colors)
 
     def test_normal_run_combination_only_1(self, lineage: Lineage):
@@ -700,7 +700,7 @@ class TestLineageNormalization:
 
         assert lin.shape == (10, 1)
         np.testing.assert_allclose(np.sum(lin, axis=1), 1.0)
-        np.testing.assert_array_equal(lin.names, ["bar or foo"])
+        np.testing.assert_array_equal(lin.names, ["bar, foo"])
         np.testing.assert_array_equal(lin.colors, lineage[["foo, bar"]].colors)
 
     def test_normal_run_combination_all(self, lineage: Lineage):
@@ -709,9 +709,9 @@ class TestLineageNormalization:
 
         assert lin.shape == (10, 2)
         np.testing.assert_allclose(np.sum(lin, axis=1), 1.0)
-        np.testing.assert_array_equal(lin.names, ["bar or foo", "baz or quux"])
+        np.testing.assert_array_equal(lin.names, ["bar, foo", "baz, quux"])
         np.testing.assert_array_equal(
-            lin.colors, lineage[["foo, bar", "baz or quux"]].colors
+            lin.colors, lineage[["foo, bar", "baz, quux"]].colors
         )
 
     @mock.patch("cellrank.tl._lineage._cosine_sim")
