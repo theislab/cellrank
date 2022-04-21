@@ -528,6 +528,11 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         obj._is_transposed = not self._is_transposed
         return obj
 
+    @property
+    def nlin(self) -> int:
+        """The number of lineages."""  # noqa: D401
+        return self.shape[1]
+
     @d.get_full_description(base="lin_pd")
     @d.get_sections(base="lin_pd", sections=["Parameters", "Returns"])
     def priming_degree(
