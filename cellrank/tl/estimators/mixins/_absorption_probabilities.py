@@ -479,7 +479,9 @@ class AbsProbsMixin:
                 setattr(
                     self,
                     attr,
-                    Lineage.from_adata(self.adata, backward=self.backward, **kwargs),
+                    Lineage.from_adata(
+                        self.adata, backward=self.backward, copy=True, **kwargs
+                    ),
                 )
             except Exception as e:  # noqa: B902
                 raise RuntimeError(

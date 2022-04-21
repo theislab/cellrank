@@ -11,7 +11,7 @@ from typing import (
 )
 from typing_extensions import Literal
 
-from copy import copy
+from copy import copy as copy_
 from enum import auto
 from types import FunctionType, MappingProxyType
 from inspect import signature
@@ -852,6 +852,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         adata: AnnData,
         backward: bool = False,
         kind: Literal["macrostates", "term_states", "abs_probs"] = LinKind.ABS_PROBS,
+        copy: bool = False,
     ) -> "Lineage":
         """
         Reconstruct :class:`cellrank.tl.Lineage` from :class:`anndata.AnnData`.
@@ -866,6 +867,8 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
                 - `{lk.MACROSTATES!r}`- macrostates memberships from :class:`cellrank.tl.estimators.GPCCA`.
                 - `{lk.TERM_STATES!r}`- terminal states memberships from :class:`cellrank.tl.estimators.GPCCA`.
                 - `{lk.ABS_PROBS!r}`- the absorption probabilities.
+        copy
+            Whether to return a copy of the underlying array.
 
         Returns
         -------
@@ -886,9 +889,11 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
         ckey = Key.uns.colors(nkey)
 
-        data: Optional[Union[np.ndarray, Lineage]] = copy(adata.obsm.get(key, None))
-        if data is None:
+        if key not in adata.obsm:
             raise KeyError(f"Unable to find lineage data in `adata.obsm[{key!r}]`.")
+        data: Union[np.ndarray, Lineage] = adata.obsm[key]
+        if copy:
+            data = copy_(data)
         if isinstance(data, Lineage):
             return data
         if data.ndim != 2:
