@@ -56,11 +56,6 @@ class PrimingDegree(ModeEnum):  # noqa: D101
     ENTROPY = auto()
 
 
-class Lin(ModeEnum):  # noqa: D101
-    REST = auto()
-    OTHERS = auto()
-
-
 class DistanceMeasure(ModeEnum):  # noqa: D101
     COSINE_SIM = auto()
     WASSERSTEIN_DIST = auto()
@@ -315,12 +310,6 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
                 names.append(" or ".join(self.names[key]))
                 colors.append(_compute_mean_color(self.colors[key]))
 
-        lin_kind = [_ for _ in mixtures if isinstance(_, Lin)]
-        if len(lin_kind) > 1:
-            raise ValueError(
-                f"`Lin` enum is allowed only once in the expression, found `{len(lin_kind)}`."
-            )
-
         keys = [
             tuple(
                 self._maybe_convert_names(
@@ -330,7 +319,6 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             if isinstance(mixture, str)
             else (mixture,)
             for mixture in mixtures
-            if not (isinstance(mixture, Lin))
         ]
         keys = _unique_order_preserving(keys)
 
@@ -348,22 +336,6 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         for key in map(list, keys):
             seen.update(self.names[key])
             update_entries(key)
-
-        if len(lin_kind) == 1:
-            lin_kind = lin_kind[0]
-            keys = [i for i, n in enumerate(self.names) if n not in seen]
-
-            if lin_kind == Lin.OTHERS:
-                for key in keys:
-                    update_entries([key])
-            elif lin_kind == Lin.REST:
-                update_entries(keys)
-                if keys:
-                    names[-1] = str(lin_kind)
-            else:
-                raise NotImplementedError(
-                    f"Mixing `{lin_kind}` is not yet implemented."
-                )
 
         res = np.stack(res, axis=-1)
         return Lineage(res, names=names, colors=colors)
@@ -421,10 +393,10 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
                 pass
 
             if isinstance(col, (list, tuple, np.ndarray)):
+                # TODO(michalk8)
                 if any(
                     map(
-                        lambda i: isinstance(i, Lin)
-                        or (isinstance(i, str) and ("," in i or "or" in i)),
+                        lambda i: isinstance(i, str) and ("," in i or "or" in i),
                         col,
                     )
                 ):
@@ -437,10 +409,10 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
             col = range(len(self.names))
             if isinstance(item, (tuple, list, np.ndarray)):
+                # TODO(michalk8)
                 if any(
                     map(
-                        lambda i: isinstance(i, Lin)
-                        or (isinstance(i, str) and ("," in i or "or" in i)),
+                        lambda i: isinstance(i, str) and ("," in i or "or" in i),
                         item,
                     )
                 ):

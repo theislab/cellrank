@@ -5,7 +5,6 @@ from unittest import mock
 from collections import defaultdict
 from html.parser import HTMLParser
 
-from cellrank import Lin
 from cellrank.tl import Lineage
 from cellrank.tl._colors import _compute_mean_color, _create_categorical_colors
 from cellrank.tl._lineage import _HT_CELLS, LineageView, PrimingDegree
@@ -607,39 +606,6 @@ class TestLineageMixing:
         with pytest.raises(ValueError):
             _ = x[["foo, bar", 0]]
 
-    def test_ellipsis_and_none(self):
-        x = Lineage(np.random.random((10, 4)), names=["foo", "bar", "baz", "quux"])
-
-        with pytest.raises(ValueError):
-            _ = x[["foo, bar", Lin.REST, Lin.REST]]
-
-    def test_rest(self):
-        x = Lineage(np.random.random((10, 4)), names=["foo", "bar", "baz", "quux"])
-        y = x[["foo, bar", Lin.REST]]
-
-        expected = np.c_[np.sum(x.X[:, [0, 1]], axis=1), np.sum(x.X[:, [2, 3]], axis=1)]
-
-        assert y.shape == (10, 2)
-        np.testing.assert_array_equal(y.X, expected)
-        np.testing.assert_array_equal(y.names, ["bar or foo", "rest"])
-        np.testing.assert_array_equal(
-            y.colors,
-            [_compute_mean_color(x.colors[:2]), _compute_mean_color(x.colors[2:])],
-        )
-
-    def test_no_mixing(self):
-        x = Lineage(np.random.random((10, 4)), names=["foo", "bar", "baz", "quux"])
-        y = x[["foo", Lin.REST]]
-
-        expected = np.c_[np.sum(x.X[:, [0]], axis=1), np.sum(x.X[:, [1, 2, 3]], axis=1)]
-
-        assert y.shape == (10, 2)
-        np.testing.assert_array_equal(y.X, expected)
-        np.testing.assert_array_equal(y.names, ["foo", "rest"])
-        np.testing.assert_array_equal(
-            y.colors, [x.colors[0], _compute_mean_color(x.colors[1:])]
-        )
-
     def test_no_rest_or_none(self):
         x = Lineage(np.random.random((10, 4)), names=["foo", "bar", "baz", "quux"])
         y = x[["foo, bar"]]
@@ -651,14 +617,6 @@ class TestLineageMixing:
         np.testing.assert_array_equal(y.names, ["bar or foo"])
         np.testing.assert_array_equal(y.colors, [_compute_mean_color(x.colors[:2])])
 
-    def test_rest_all(self):
-        x = Lineage(np.random.random((10, 4)), names=["foo", "bar", "baz", "quux"])
-        y = x[[Lin.REST]]
-
-        assert y.shape == (10, 1)
-        np.testing.assert_array_equal(y.X[:, 0], np.sum(x.X, axis=1))
-        np.testing.assert_array_equal(y.names, ["rest"])
-
     def test_row_subset(self):
         x = Lineage(np.random.random((10, 4)), names=["foo", "bar", "baz", "quux"])
         y = x[:5, ["foo, bar"]]
@@ -669,47 +627,6 @@ class TestLineageMixing:
         np.testing.assert_array_equal(y.X, expected)
         np.testing.assert_array_equal(y.names, ["bar or foo"])
         np.testing.assert_array_equal(y.colors, [_compute_mean_color(x.colors[:2])])
-
-    def test_rest_no_effect(self):
-        names = ["foo", "bar", "baz", "quux"]
-        x = Lineage(np.random.random((10, 4)), names=names)
-
-        y = x[names + [Lin.REST]]
-
-        np.testing.assert_array_equal(x.X, y.X)
-        np.testing.assert_array_equal(x.names, y.names)
-        np.testing.assert_array_equal(x.colors, y.colors)
-
-    def test_others_all(self):
-        names = ["foo", "bar", "baz", "quux"]
-        x = Lineage(np.random.random((10, 4)), names=names)
-
-        y = x[[Lin.OTHERS]]
-
-        np.testing.assert_array_equal(x.X, y.X)
-        np.testing.assert_array_equal(x.names, y.names)
-        np.testing.assert_array_equal(x.colors, y.colors)
-
-    def test_others(self):
-        names = ["foo", "bar", "baz", "quux"]
-        x = Lineage(np.random.random((10, 4)), names=names)
-
-        y = x[["foo, baz"] + [Lin.OTHERS]]
-        expected = x[["foo, baz", "bar", "quux"]]
-
-        np.testing.assert_array_equal(y.X, expected.X)
-        np.testing.assert_array_equal(y.names, expected.names)
-        np.testing.assert_array_equal(y.colors, expected.colors)
-
-    def test_others_no_effect(self):
-        names = ["foo", "bar", "baz", "quux"]
-        x = Lineage(np.random.random((10, 4)), names=names)
-
-        y = x[names + [Lin.OTHERS]]
-
-        np.testing.assert_array_equal(x.X, y.X)
-        np.testing.assert_array_equal(x.names, y.names)
-        np.testing.assert_array_equal(x.colors, y.colors)
 
 
 class TestLineageNormalization:
