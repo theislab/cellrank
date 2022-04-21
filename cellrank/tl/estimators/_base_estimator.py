@@ -244,7 +244,7 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
         try:
             if locs is None:
                 locs = frame.f_back.f_locals
-            if func is None or True:
+            if func is None:
                 name = frame.f_back.f_code.co_name
                 func = dict(getmembers(self)).get(name, None)
             if not callable(func):
