@@ -191,39 +191,38 @@ def circular_projection(
 
     probs = Lineage.from_adata(adata, backward=backward)
     if isinstance(lineages, str):
-        lineages = (lineages,)
+        lineages = [lineages]
     elif lineages is None:
         lineages = probs.names
-
+    lineages = _unique_order_preserving(lineages)
     probs = probs[lineages]
-    n_lin = probs.shape[1]
-    if n_lin < 3:
-        raise ValueError(f"Expected at least `3` lineages, found `{n_lin}`.")
+    if probs.nlin < 3:
+        raise ValueError(f"Expected at least `3` lineages, found `{probs.nlin}`.")
 
     X = probs.X.copy()
     if normalize_by_mean:
         X /= np.mean(X, axis=0)[None, :]
         X /= X.sum(1)[:, None]
         # this happens when cells for sel. lineages sum to 1 (or when the lineage average is 0, which is unlikely)
-        X = np.nan_to_num(X, nan=1.0 / n_lin, copy=False)
+        X = np.nan_to_num(X, nan=1.0 / probs.nlin, copy=False)
 
     if lineage_order is None:
         lineage_order = (
-            LineageOrder.OPTIMAL if 3 < n_lin <= 20 else LineageOrder.DEFAULT
+            LineageOrder.OPTIMAL if 3 < probs.nlin <= 20 else LineageOrder.DEFAULT
         )
         logg.debug(f"Set ordering to `{lineage_order}`")
     lineage_order = LineageOrder(lineage_order)
 
     if lineage_order == LineageOrder.OPTIMAL:
-        logg.info(f"Solving TSP for `{n_lin}` states")
+        logg.info(f"Solving TSP for `{probs.nlin}` states")
         _, order = _get_optimal_order(X, metric=metric)
     else:
-        order = np.arange(n_lin)
+        order = np.arange(probs.nlin)
 
     probs = probs[:, order]
     X = X[:, order]
 
-    angle_vec = np.linspace(0, 2 * np.pi, n_lin, endpoint=False)
+    angle_vec = np.linspace(0, 2 * np.pi, probs.nlin, endpoint=False)
     angle_vec_sin = np.cos(angle_vec)
     angle_vec_cos = np.sin(angle_vec)
 
@@ -310,7 +309,7 @@ def circular_projection(
             continue
 
         for i, color in enumerate(probs.colors):
-            next = (i + 1) % n_lin
+            next = (i + 1) % probs.nlin
             x = 1.04 * np.linspace(angle_vec_sin[i], angle_vec_sin[next], _N)
             y = 1.04 * np.linspace(angle_vec_cos[i], angle_vec_cos[next], _N)
             points = np.array([x, y]).T.reshape(-1, 1, 2)

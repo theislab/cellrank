@@ -334,7 +334,7 @@ def cluster_fates(
         kwargs["xlabel"] = None
         kwargs["rotation"] = xrot
 
-        data = np.ravel(probs.X.T)[..., np.newaxis]
+        data = np.ravel(probs.X.T)[..., None]
         tmp = AnnData(csr_matrix(data.shape, dtype=data.dtype), dtype=data.dtype)
         tmp.obs["absorption probability"] = data
         tmp.obs[term_states] = (
