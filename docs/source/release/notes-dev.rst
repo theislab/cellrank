@@ -1,4 +1,4 @@
-CellRank dev (2022-03-21)
+CellRank dev (2022-04-21)
 =========================
 
 Features
@@ -59,3 +59,6 @@ Miscellaneous
 
 - Ignore :mod:`pygam` deprecation warnings.
   `#798 <https://github.com/theislab/cellrank/pull/798>`__
+
+- Fix PETSc/SLEPc in CI for Linux. For now, macOS PETSc/SLEPc remains disabled.
+  `#850 <https://github.com/theislab/cellrank/pull/850>`__

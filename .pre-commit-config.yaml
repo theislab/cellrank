@@ -7,7 +7,7 @@ default_stages:
 minimum_pre_commit_version: 2.9.3
 repos:
 -   repo: https://github.com/psf/black
-    rev: 22.1.0
+    rev: 22.3.0
     hooks:
     -   id: black
         additional_dependencies: [toml]
@@ -28,7 +28,7 @@ repos:
     -   id: pretty-format-yaml
         args: [--autofix, --indent, '4']
 -   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.1.0
+    rev: v4.2.0
     hooks:
     -   id: detect-private-key
     -   id: check-merge-conflict
@@ -87,6 +87,6 @@ repos:
     -   id: rst-directive-colons
     -   id: rst-inline-touching-normal
 -   repo: https://github.com/PyCQA/doc8
-    rev: 0.10.1
+    rev: 0.11.1
     hooks:
     -   id: doc8
