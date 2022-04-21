@@ -157,7 +157,7 @@ def heatmap(
     containing the clustered or sorted genes.
     """
 
-    def find_indices(series: pd.Series, values) -> np.ndarray:
+    def find_indices(series: pd.Series, values) -> List[int]:
         def find_nearest(array: np.ndarray, value: float) -> int:
             ix = np.searchsorted(array, value, side="left")
             if ix > 0 and (
@@ -167,19 +167,17 @@ def heatmap(
                 return int(ix - 1)
             return int(ix)
 
-        series = series[np.argsort(series.values)]
-        return adata.obs_names.isin(
-            series[[find_nearest(series.values, v) for v in values]].index
-        )
+        series = series.sort_values(ascending=True)
+        return list(series[[find_nearest(series.values, v) for v in values]].index)
 
     def subset_lineage(lname: str, rng: np.ndarray) -> np.ndarray:
         time_series = adata.obs[time_key]
         ixs = find_indices(time_series, rng)
-        lin = probs[ixs, lname].X.squeeze(1).copy()
-        if n_convolve is not None:
-            lin = convolve(lin, np.ones(n_convolve) / n_convolve, mode="nearest")
-
-        return lin
+        lin = Lineage.from_adata(adata[ixs], backward=backward)
+        lin = lin[lname].X.squeeze(1).copy()
+        if n_convolve is None:
+            return lin.copy()
+        return convolve(lin, np.ones(n_convolve) / n_convolve, mode="nearest")
 
     def create_col_colors(
         lname: str, rng: np.ndarray
