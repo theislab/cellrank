@@ -189,18 +189,13 @@ def circular_projection(
     if not len(keys):
         raise ValueError("No valid keys have been selected.")
 
-    lineage_key = Key.obsm.abs_probs(backward)
-    if lineage_key not in adata.obsm:
-        raise KeyError(f"Lineages key `{lineage_key!r}` not found in `adata.obsm`.")
-
-    probs: Lineage = adata.obsm[lineage_key]
-
+    probs = Lineage.from_adata(adata, backward=backward)
     if isinstance(lineages, str):
         lineages = (lineages,)
     elif lineages is None:
         lineages = probs.names
 
-    probs = adata.obsm[lineage_key][lineages]
+    probs = probs[lineages]
     n_lin = probs.shape[1]
     if n_lin < 3:
         raise ValueError(f"Expected at least `3` lineages, found `{n_lin}`.")
@@ -251,7 +246,7 @@ def circular_projection(
     text_kwargs["ha"] = "center"
     text_kwargs["va"] = "center"
 
-    _i = 0
+    _i, lineage_key = 0, Key.obsm.abs_probs(backward)
     for _i, (k, ax) in enumerate(zip(keys, axes)):
 
         set_lognorm, colorbar = False, kwargs.pop("colorbar", True)
@@ -262,6 +257,7 @@ def circular_projection(
             k = f"{lineage_key}_{k}"
             adata.obs[k] = val
         except ValueError:
+            # TODO(michalk8): parse the exception
             pass
 
         scv.pl.scatter(
