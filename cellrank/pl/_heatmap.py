@@ -9,7 +9,7 @@ from collections import Iterable, defaultdict
 
 from anndata import AnnData
 from cellrank import logging as logg
-from cellrank._key import Key
+from cellrank.tl import Lineage
 from cellrank.tl._enum import _DEFAULT_BACKEND, ModeEnum, Backend_t
 from cellrank.ul._docs import d, inject_docs
 from cellrank.pl._utils import (
@@ -168,16 +168,14 @@ def heatmap(
             return int(ix)
 
         series = series[np.argsort(series.values)]
-
-        return tuple(series[[find_nearest(series.values, v) for v in values]].index)
+        return adata.obs_names.isin(
+            series[[find_nearest(series.values, v) for v in values]].index
+        )
 
     def subset_lineage(lname: str, rng: np.ndarray) -> np.ndarray:
         time_series = adata.obs[time_key]
         ixs = find_indices(time_series, rng)
-
-        lin = adata[ixs, :].obsm[lineage_key][lname]
-
-        lin = lin.X.copy().squeeze()
+        lin = probs[ixs][lname].X.copy().squeeze()
         if n_convolve is not None:
             lin = convolve(lin, np.ones(n_convolve) / n_convolve, mode="nearest")
 
@@ -186,7 +184,7 @@ def heatmap(
     def create_col_colors(
         lname: str, rng: np.ndarray
     ) -> Tuple[np.ndarray, mcolors.Colormap, mcolors.Normalize]:
-        color = adata.obsm[lineage_key][lname].colors[0]
+        color = probs[lname].colors[0]
         lin = subset_lineage(lname, rng)
 
         h, _, v = mcolors.rgb_to_hsv(mcolors.to_rgb(color))
@@ -509,17 +507,13 @@ def heatmap(
 
     mode = HeatmapMode(mode)
 
-    lineage_key = Key.obsm.abs_probs(backward)
-    if lineage_key not in adata.obsm:
-        raise KeyError(f"Lineages key `{lineage_key!r}` not found in `adata.obsm`.")
-
+    probs = Lineage.from_adata(adata, backward=backward)
     if lineages is None:
-        lineages = adata.obsm[lineage_key].names
+        lineages = probs.names
     elif isinstance(lineages, str):
         lineages = [lineages]
     lineages = _unique_order_preserving(lineages)
-
-    _ = adata.obsm[lineage_key][lineages]
+    probs = probs[lineages]
 
     if cluster_key is not None:
         if isinstance(cluster_key, str):
