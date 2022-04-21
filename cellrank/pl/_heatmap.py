@@ -157,7 +157,7 @@ def heatmap(
     containing the clustered or sorted genes.
     """
 
-    def find_indices(series: pd.Series, values) -> Tuple[Any]:
+    def find_indices(series: pd.Series, values) -> np.ndarray:
         def find_nearest(array: np.ndarray, value: float) -> int:
             ix = np.searchsorted(array, value, side="left")
             if ix > 0 and (
@@ -175,7 +175,7 @@ def heatmap(
     def subset_lineage(lname: str, rng: np.ndarray) -> np.ndarray:
         time_series = adata.obs[time_key]
         ixs = find_indices(time_series, rng)
-        lin = probs[ixs][lname].X.copy().squeeze()
+        lin = probs[ixs, lname].X.squeeze(1).copy()
         if n_convolve is not None:
             lin = convolve(lin, np.ones(n_convolve) / n_convolve, mode="nearest")
 
