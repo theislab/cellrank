@@ -5,7 +5,7 @@ from pathlib import Path
 
 from anndata import AnnData
 from cellrank import logging as logg
-from cellrank._key import Key
+from cellrank.tl import Lineage
 from cellrank.tl._enum import _DEFAULT_BACKEND, Backend_t
 from cellrank.ul._docs import d
 from cellrank.pl._utils import (
@@ -169,12 +169,9 @@ def gene_trends(
         use_raw=kwargs.get("use_raw", False),
     )
 
-    lineage_key = Key.obsm.abs_probs(backward)
-    if lineage_key not in adata.obsm:
-        raise KeyError(f"Lineages key `{lineage_key!r}` not found in `adata.obsm`.")
-
+    probs = Lineage.from_adata(adata, backward=backward)
     if lineages is None:
-        lineages = adata.obsm[lineage_key].names
+        lineages = probs.names
     elif isinstance(lineages, str):
         lineages = [lineages]
     elif all(ln is None for ln in lineages):  # no lineage, all the weights are 1
@@ -182,6 +179,7 @@ def gene_trends(
         cbar = False
         logg.debug("All lineages are `None`, setting the weights to `1`")
     lineages = _unique_order_preserving(lineages)
+    probs = probs[lineages]
 
     if isinstance(time_range, (tuple, float, int, type(None))):
         time_range = [time_range] * len(lineages)
@@ -213,9 +211,8 @@ def gene_trends(
     )
 
     lineages = sorted(lineages)
-    tmp = adata.obsm[lineage_key][lineages].colors
     if lineage_cmap is None and not transpose:
-        lineage_cmap = tmp
+        lineage_cmap = probs.colors
 
     plot_kwargs = dict(plot_kwargs)
     plot_kwargs["obs_legend_loc"] = obs_legend_loc
@@ -281,7 +278,7 @@ def gene_trends(
                 and plot_kwargs.get("lineage_probability", False)
                 and transpose
             ):
-                lpc = adata.obsm[lineage_key][gene].colors[0]
+                lpc = probs[gene].colors[0]
             else:
                 lpc = None
 
@@ -321,8 +318,7 @@ def gene_trends(
                 else (cnt == end_rows),
                 **plot_kwargs,
             )
-            # plot legend on the 1st plot
-            cnt += 1
+            cnt += 1  # plot legend on the 1st plot
 
             if not same_plot:
                 plot_kwargs["obs_legend_loc"] = None
