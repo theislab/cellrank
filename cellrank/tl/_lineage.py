@@ -180,7 +180,6 @@ def wrap(numpy_func: Callable) -> Callable:
 
 def _register_handled_functions():
     handled_fns = {}
-
     for attrname in dir(np):
         fn = getattr(np, attrname)
         if isinstance(fn, FunctionType):
@@ -301,7 +300,29 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         self._colors = getattr(obj, "colors", None)
         self._is_transposed = getattr(obj, "_is_transposed", False)
 
-    def _mixer(self, rows, mixtures: Iterable[Union[str, Any]]) -> "Lineage":
+    def __array_function__(self, func, types, args, kwargs):
+        if func not in _HANDLED_FUNCTIONS:
+            return NotImplemented
+        # Note: this allows subclasses that don't override
+        # __array_function__ to handle MyArray objects
+        if not all(issubclass(t, type(self)) for t in types):
+            return NotImplemented
+
+        return _HANDLED_FUNCTIONS[func](*args, **kwargs)
+
+    def __getitem__(self, item) -> "Lineage":
+        was_transposed = False
+        if self._is_transposed:
+            was_transposed = True
+            self = self.T
+            if isinstance(item, tuple):
+                item = item[::-1]
+
+        obj = self.__getitem(item)
+
+        return obj.T if was_transposed else obj
+
+    def _mix_lineages(self, rows, mixtures: Iterable[Union[str, Any]]) -> "Lineage":
         def unsplit(names: str) -> Tuple[str, ...]:
             return tuple(
                 sorted({name.strip(" ") for name in names.strip(" ,").split(",")})
@@ -332,18 +353,6 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
                 colors.append(_compute_mean_color(self.colors[key]))
 
         return Lineage(np.stack(res, axis=-1), names=names, colors=colors)
-
-    def __getitem__(self, item) -> "Lineage":
-        was_transposed = False
-        if self._is_transposed:
-            was_transposed = True
-            self = self.T
-            if isinstance(item, tuple):
-                item = item[::-1]
-
-        obj = self.__getitem(item)
-
-        return obj.T if was_transposed else obj
 
     def __getitem(self, item):
         if isinstance(item, tuple):
@@ -385,7 +394,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
             if isinstance(col, (list, tuple, np.ndarray)):
                 if any(isinstance(i, str) and "," in i for i in col):
-                    return self._mixer(rows, col)
+                    return self._mix_lineages(rows, col)
                 col = self._maybe_convert_names(col)
                 item = rows, col
         else:
@@ -394,7 +403,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             col = range(len(self.names))
             if isinstance(item, (tuple, list, np.ndarray)):
                 if any(isinstance(i, str) and "," in i for i in item):
-                    return self._mixer(slice(None, None, None), item)
+                    return self._mix_lineages(slice(None, None, None), item)
                 elif any(isinstance(i, str) for i in item):
                     item = (slice(None, None, None), self._maybe_convert_names(item))
                     col = item[1]
@@ -414,6 +423,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             item_0 = _at_least_2d(item_0, -1)
             item_1 = _at_least_2d(item_1, 0)
 
+            # handle boolean indexing
             if item_1.dtype == bool:
                 if item_0.dtype != bool:
                     if not issubclass(item_0.dtype.type, np.integer):
@@ -442,6 +452,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
                 shape = np.max(np.sum(item, axis=0)), np.max(np.sum(item, axis=1))
                 col = np.where(np.all(item_1, axis=0))[0]
             else:
+                # defer to numpy
                 item = (item_0, item_1)
 
         obj = super().__getitem__(item)
@@ -466,28 +477,18 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
         return obj
 
-    def __array_function__(self, func, types, args, kwargs):
-        if func not in _HANDLED_FUNCTIONS:
-            return NotImplemented
-        # Note: this allows subclasses that don't override
-        # __array_function__ to handle MyArray objects
-        if not all(issubclass(t, type(self)) for t in types):
-            return NotImplemented
-
-        return _HANDLED_FUNCTIONS[func](*args, **kwargs)
-
     @property
     def names(self) -> np.ndarray:
         """Lineage names. Must be unique."""
         return self._names
 
     @names.setter
-    def names(self, value: Iterable[str]):
+    def names(self, value: Iterable[str]) -> None:
         if not isinstance(value, Iterable):
             raise TypeError(_ERROR_NOT_ITERABLE.format("names", type(value).__name__))
 
-        value = [v if isinstance(v, str) else str(v) for v in value]
-        value = self._check_shape(value, _ERROR_WRONG_SIZE.format("names"))
+        value = [str(v) for v in value]
+        value = self._check_axis1_shape(value, _ERROR_WRONG_SIZE.format("names"))
 
         if len(set(value)) != len(value):
             raise ValueError(f"Not all lineage names are unique: `{value}`.")
@@ -501,80 +502,19 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         return self._colors
 
     @colors.setter
-    def colors(self, value: Optional[Iterable[ColorLike]]):
+    def colors(self, value: Optional[Iterable[ColorLike]]) -> None:
         if value is None:
             value = _create_categorical_colors(self._n_lineages)
         elif not isinstance(value, Iterable):
             raise TypeError(_ERROR_NOT_ITERABLE.format("colors", type(value).__name__))
 
-        value = self._check_shape(value, _ERROR_WRONG_SIZE.format("colors"))
+        value = self._check_axis1_shape(value, _ERROR_WRONG_SIZE.format("colors"))
         self._colors = self._prepare_annotation(
             value,
             checker=c.is_color_like,
             transformer=c.to_hex,
             checker_msg="Value `{}` is not a valid color.",
         )
-
-    def _maybe_convert_names(
-        self,
-        names: Iterable[Union[int, str, bool]],
-        is_singleton: bool = False,
-        default: Optional[Union[int, str]] = None,
-        make_unique: bool = True,
-    ) -> Union[int, List[int], List[bool]]:
-        if all(isinstance(n, (bool, np.bool_)) for n in names):
-            return list(names)
-        res = []
-        for name in names:
-            if isinstance(name, str):
-                if name in self._names_to_ixs:
-                    name = self._names_to_ixs[name]
-                elif default is not None:
-                    if isinstance(default, str):
-                        if default not in self._names_to_ixs:
-                            raise KeyError(
-                                f"Invalid lineage name: `{name}`. "
-                                f"Valid names are: `{list(self.names)}`."
-                            )
-                        name = self._names_to_ixs[default]
-                    else:
-                        name = default
-                else:
-                    raise KeyError(
-                        f"Invalid lineage name `{name!r}`. Valid names are: `{list(self.names)}`."
-                    )
-            res.append(name)
-
-        if make_unique:
-            res = _unique_order_preserving(res)
-
-        return res[0] if is_singleton else res
-
-    def _check_shape(
-        self, array: Iterable[Union[str, ColorLike]], msg: str
-    ) -> List[Union[str, ColorLike]]:
-        array = list(array)
-        if len(array) != self._n_lineages:
-            raise ValueError(msg.format(self._n_lineages, len(array)))
-
-        return array
-
-    @staticmethod
-    def _prepare_annotation(
-        array: List[str],
-        checker: Optional[Callable] = None,
-        transformer: Optional[Callable] = None,
-        checker_msg: Optional[str] = None,
-    ) -> np.ndarray:
-        if checker is not None:
-            assert checker_msg, "Please provide a message when `checker` is not `None`."
-            for v in array:
-                if not checker(v):
-                    raise ValueError(checker_msg.format(v))
-        if transformer is not None:
-            array = np.array([transformer(v) for v in array])
-
-        return np.array(array)
 
     @property
     def X(self) -> np.ndarray:
@@ -587,128 +527,6 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         obj = self.transpose()
         obj._is_transposed = not self._is_transposed
         return obj
-
-    def view(self, dtype=None, type=None) -> "LineageView":
-        """Return a view of self."""
-        return LineageView(self)
-
-    def __repr__(self) -> str:
-        return f'{super().__repr__()[:-1]},\n  names([{", ".join(self.names)}]))'
-
-    def __str__(self):
-        return f'{super().__str__()}\n names=[{", ".join(self.names)}]'
-
-    @property
-    def _fmt(self) -> Callable:
-        if np.issubdtype(self.dtype, float):
-            return "{:.06f}".format
-        return "{}".format
-
-    def _repr_html_(self) -> str:
-        def format_row(r):
-            rng = (
-                range(self.shape[1])
-                if not self._is_transposed
-                or (self._is_transposed and self.shape[1] <= _HTML_REPR_THRESH)
-                else list(range(_HT_CELLS))
-                + [...]
-                + list(range(self.shape[1] - _HT_CELLS - 1, self.shape[1] - 1))
-            )
-
-            cells = "".join(
-                f"<td style='text-align: right;'>" f"{self._fmt(self.X[r, c])}" f"</td>"
-                if isinstance(c, int)
-                else _DUMMY_CELL
-                for c in rng
-            )
-            return f"<tr>{(names[r] if self._is_transposed else '') + cells}</tr>"
-
-        def dummy_row():
-            values = "".join(_DUMMY_CELL for _ in range(self.shape[1]))
-            return f"<tr>{values}</tr>"
-
-        if self.names is None or self.colors is None:
-            raise RuntimeError(
-                f"Name or colors are `None`. This can happen when running `array.view({type(self).__name__}`."
-            )
-
-        if self.ndim != 2:
-            return repr(self)
-
-        styles = [
-            f"'background-color: {bg}; color: {fg}; text-align: center; word-wrap: break-word; max-width: 100px'"
-            for bg, fg in map(_get_bg_fg_colors, self.colors)
-        ]
-        names = [f"<th style={style}>{n}</th>" for n, style in zip(self.names, styles)]
-        header = f"<tr>{''.join(names)}</tr>"
-
-        if self.shape[0] > _HTML_REPR_THRESH:
-            body = "".join(format_row(i) for i in range(_HT_CELLS))
-            body += dummy_row()
-            body += "".join(
-                format_row(i)
-                for i in range(self.shape[0] - _HT_CELLS - 1, self.shape[0] - 1)
-            )
-        else:
-            body = "".join(format_row(i) for i in range(self.shape[0]))
-
-        cells = "cells" if self.shape[0] > 1 else "cell"
-        lineages = "lineages" if self.shape[1] > 1 else "lineage"
-        if self._is_transposed:
-            cells, lineages = lineages, cells
-        metadata = f"<p>{self.shape[0]} {cells} x {self.shape[1]} {lineages}</p>"
-
-        if self._is_transposed:
-            header = ""
-        return (
-            f"<div style='scoped' class='rendered_html'>"
-            f"<table class='dataframe'>{header}{body}</table>{metadata}"
-            f"</div>"
-        )
-
-    def __format__(self, format_spec):
-        if self.shape == (1, 1):
-            return format_spec.format(self.X[0, 0])
-        if self.shape == (1,):
-            return format_spec.format(self.X[0])
-        return NotImplemented
-
-    def __setstate__(self, state):
-        *state, names, colors, is_t = state
-        names = names[-1]
-        colors = colors[-1]
-
-        self._names = np.empty(names[1])
-        self._colors = np.empty(colors[1])
-
-        super().__setstate__(tuple(state))
-        self._names.__setstate__(tuple(names))
-        self._colors.__setstate__(tuple(colors))
-
-        self._is_transposed = is_t
-        self._n_lineages = len(self.names)
-        self._names_to_ixs = {name: ix for ix, name in enumerate(self.names)}
-
-    def __reduce__(self):
-        res = list(super().__reduce__())
-
-        names = self.names.__reduce__()
-        colors = self.colors.__reduce__()
-        res[-1] += (names, colors, self._is_transposed)
-
-        return tuple(res)
-
-    def copy(self, _="C") -> "Lineage":
-        """Return a copy of itself."""
-        obj = Lineage(
-            self.T if self._is_transposed else self,
-            names=np.array(self.names, copy=True, order=_ORDER),
-            colors=np.array(self.colors, copy=True, order=_ORDER),
-        )
-        return obj.T if self._is_transposed else obj
-
-    def __copy__(self):
-        return self.copy()
 
     @d.get_full_description(base="lin_pd")
     @d.get_sections(base="lin_pd", sections=["Parameters", "Returns"])
@@ -1110,6 +928,189 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             colors = None
 
         return Lineage(data, names=states, colors=colors)
+
+    def view(self, dtype=None, type=None) -> "LineageView":
+        """Return a view of self."""
+        return LineageView(self)
+
+    def __repr__(self) -> str:
+        return f'{super().__repr__()[:-1]},\n  names([{", ".join(self.names)}]))'
+
+    def __str__(self):
+        return f'{super().__str__()}\n names=[{", ".join(self.names)}]'
+
+    @property
+    def _fmt(self) -> Callable[[Any], str]:
+        return "{:.06f}".format if np.issubdtype(self.dtype, float) else "{}".format
+
+    def _repr_html_(self) -> str:
+        def format_row(r):
+            rng = (
+                range(self.shape[1])
+                if not self._is_transposed
+                or (self._is_transposed and self.shape[1] <= _HTML_REPR_THRESH)
+                else list(range(_HT_CELLS))
+                + [...]
+                + list(range(self.shape[1] - _HT_CELLS - 1, self.shape[1] - 1))
+            )
+
+            cells = "".join(
+                f"<td style='text-align: right;'>" f"{self._fmt(self.X[r, c])}" f"</td>"
+                if isinstance(c, int)
+                else _DUMMY_CELL
+                for c in rng
+            )
+            return f"<tr>{(names[r] if self._is_transposed else '') + cells}</tr>"
+
+        def dummy_row() -> str:
+            values = "".join(_DUMMY_CELL for _ in range(self.shape[1]))
+            return f"<tr>{values}</tr>"
+
+        if self.names is None or self.colors is None:
+            raise RuntimeError(
+                f"Name or colors are `None`. This can happen when running `array.view({type(self).__name__}`."
+            )
+
+        if self.ndim != 2:
+            return repr(self)
+
+        styles = [
+            f"'background-color: {bg}; color: {fg}; text-align: center; word-wrap: break-word; max-width: 100px'"
+            for bg, fg in map(_get_bg_fg_colors, self.colors)
+        ]
+        names = [f"<th style={style}>{n}</th>" for n, style in zip(self.names, styles)]
+        header = f"<tr>{''.join(names)}</tr>"
+
+        if self.shape[0] > _HTML_REPR_THRESH:
+            body = "".join(format_row(i) for i in range(_HT_CELLS))
+            body += dummy_row()
+            body += "".join(
+                format_row(i)
+                for i in range(self.shape[0] - _HT_CELLS - 1, self.shape[0] - 1)
+            )
+        else:
+            body = "".join(format_row(i) for i in range(self.shape[0]))
+
+        cells = "cells" if self.shape[0] > 1 else "cell"
+        lineages = "lineages" if self.shape[1] > 1 else "lineage"
+        if self._is_transposed:
+            cells, lineages = lineages, cells
+        metadata = f"<p>{self.shape[0]} {cells} x {self.shape[1]} {lineages}</p>"
+
+        if self._is_transposed:
+            header = ""
+        return (
+            f"<div style='scoped' class='rendered_html'>"
+            f"<table class='dataframe'>{header}{body}</table>{metadata}"
+            f"</div>"
+        )
+
+    def __format__(self, format_spec):
+        if self.shape == (1, 1):
+            return format_spec.format(self.X[0, 0])
+        if self.shape == (1,):
+            return format_spec.format(self.X[0])
+        return NotImplemented
+
+    def __setstate__(self, state):
+        *state, names, colors, is_t = state
+        names = names[-1]
+        colors = colors[-1]
+
+        self._names = np.empty(names[1])
+        self._colors = np.empty(colors[1])
+
+        super().__setstate__(tuple(state))
+        self._names.__setstate__(tuple(names))
+        self._colors.__setstate__(tuple(colors))
+
+        self._is_transposed = is_t
+        self._n_lineages = len(self.names)
+        self._names_to_ixs = {name: ix for ix, name in enumerate(self.names)}
+
+    def __reduce__(self):
+        res = list(super().__reduce__())
+
+        names = self.names.__reduce__()
+        colors = self.colors.__reduce__()
+        res[-1] += (names, colors, self._is_transposed)
+
+        return tuple(res)
+
+    def copy(self, _="C") -> "Lineage":
+        """Return a copy of itself."""
+        obj = Lineage(
+            self.T if self._is_transposed else self,
+            names=np.array(self.names, copy=True, order=_ORDER),
+            colors=np.array(self.colors, copy=True, order=_ORDER),
+        )
+        return obj.T if self._is_transposed else obj
+
+    def __copy__(self):
+        return self.copy()
+
+    def _check_axis1_shape(
+        self, array: Iterable[Union[str, ColorLike]], msg: str
+    ) -> List[Union[str, ColorLike]]:
+        """Check whether the size of the 1D array has the correct length."""
+        array = list(array)
+        if len(array) != self._n_lineages:
+            raise ValueError(msg.format(self._n_lineages, len(array)))
+
+        return array
+
+    def _maybe_convert_names(
+        self,
+        names: Iterable[Union[int, str, bool]],
+        is_singleton: bool = False,
+        default: Optional[Union[int, str]] = None,
+        make_unique: bool = True,
+    ) -> Union[int, List[int], List[bool]]:
+        """Convert string indices to their corresponding int indices."""
+        if all(isinstance(n, (bool, np.bool_)) for n in names):
+            return list(names)
+        res = []
+        for name in names:
+            if isinstance(name, str):
+                if name in self._names_to_ixs:
+                    name = self._names_to_ixs[name]
+                elif default is not None:
+                    if isinstance(default, str):
+                        if default not in self._names_to_ixs:
+                            raise KeyError(
+                                f"Invalid lineage name: `{name}`. "
+                                f"Valid names are: `{list(self.names)}`."
+                            )
+                        name = self._names_to_ixs[default]
+                    else:
+                        name = default
+                else:
+                    raise KeyError(
+                        f"Invalid lineage name `{name!r}`. Valid names are: `{list(self.names)}`."
+                    )
+            res.append(name)
+
+        if make_unique:
+            res = _unique_order_preserving(res)
+
+        return res[0] if is_singleton else res
+
+    @staticmethod
+    def _prepare_annotation(
+        array: List[str],
+        checker: Optional[Callable] = None,
+        transformer: Optional[Callable] = None,
+        checker_msg: Optional[str] = None,
+    ) -> np.ndarray:
+        if checker is not None:
+            assert checker_msg, "Please provide a message when `checker` is not `None`."
+            for v in array:
+                if not checker(v):
+                    raise ValueError(checker_msg.format(v))
+        if transformer is not None:
+            array = np.array([transformer(v) for v in array])
+
+        return np.array(array)
 
 
 class LineageView(Lineage):
