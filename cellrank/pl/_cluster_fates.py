@@ -213,8 +213,9 @@ def cluster_fates(
 
     @plot.register(ClusterFatesMode.PAGA_PIE)
     def _():
-        colors = list(probs.colors)
-        colors = {i: odict(zip(colors, mean)) for i, (mean, _) in enumerate(d.values())}
+        colors = {
+            i: odict(zip(probs.colors, mean)) for i, (mean, _) in enumerate(d.values())
+        }
 
         fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
         fig.tight_layout()
@@ -266,8 +267,9 @@ def cluster_fates(
             handles = []
             for lineage_name, color in zip(probs.names, colors[0].keys()):
                 handles += [ax.scatter([], [], label=lineage_name, c=color)]
-            if len(colors[0].keys()) != len(
-                Lineage.from_adata(adata, backward=backward).shape[1]
+            if (
+                len(colors[0].keys())
+                != Lineage.from_adata(adata, backward=backward).nlin
             ):
                 handles += [ax.scatter([], [], label="Rest", c="grey")]
 
@@ -333,7 +335,7 @@ def cluster_fates(
         kwargs["rotation"] = xrot
 
         data = np.ravel(probs.X.T)[..., np.newaxis]
-        tmp = AnnData(csr_matrix(data.shape, dtype=np.float32))
+        tmp = AnnData(csr_matrix(data.shape, dtype=data.dtype), dtype=data.dtype)
         tmp.obs["absorption probability"] = data
         tmp.obs[term_states] = (
             pd.Series(
@@ -433,7 +435,6 @@ def cluster_fates(
 
     term_states = Key.obs.term_states(backward)
     direction = Key.where(backward)
-
     if cluster_key is not None:
         is_all = False
         if clusters is not None:
