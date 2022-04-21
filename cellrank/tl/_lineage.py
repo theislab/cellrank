@@ -1,4 +1,14 @@
-from typing import List, Tuple, Union, Mapping, TypeVar, Callable, Iterable, Optional
+from typing import (
+    Any,
+    List,
+    Tuple,
+    Union,
+    Mapping,
+    TypeVar,
+    Callable,
+    Iterable,
+    Optional,
+)
 from typing_extensions import Literal
 
 from copy import copy
@@ -20,6 +30,8 @@ from cellrank.tl._colors import (
     _compute_mean_color,
     _create_categorical_colors,
 )
+from anndata._io.specs.methods import H5Group, ZarrGroup, write_basic
+from anndata._io.specs.registry import _REGISTRY, IOSpec
 
 import numpy as np
 import pandas as pd
@@ -1303,3 +1315,19 @@ def _mutual_info(reference, query):
         weights[i, :] = mutual_info_regression(reference, target)
 
     return weights
+
+
+_SPEC = IOSpec("array", "0.2.0")
+
+
+@_REGISTRY.register_write(H5Group, Lineage, _SPEC)
+@_REGISTRY.register_write(H5Group, LineageView, _SPEC)
+@_REGISTRY.register_write(ZarrGroup, Lineage, _SPEC)
+@_REGISTRY.register_write(ZarrGroup, LineageView, _SPEC)
+def _write_lineage(
+    f: Any,
+    k: str,
+    elem: Union[Lineage, LineageView],
+    dataset_kwargs: Mapping[str, Any] = MappingProxyType({}),
+) -> None:
+    write_basic(f, k, elem=elem.X, dataset_kwargs=dataset_kwargs)
