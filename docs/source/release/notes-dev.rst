@@ -1,4 +1,4 @@
-CellRank dev (2022-04-21)
+CellRank dev (2022-04-28)
 =========================
 
 Features
@@ -52,6 +52,9 @@ Bugfixes
 
 - Do not save enums in :class:`anndata.AnnData`.
   `#842 <https://github.com/theislab/cellrank/pull/842>`__
+
+- Fix :class:`cellrank.tl.Lineage` subsetting (non-existent overlapping keys) and refactor the implementation.
+  `#861 <https://github.com/theislab/cellrank/pull/861>`__
 
 
 Miscellaneous
