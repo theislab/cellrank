@@ -5,7 +5,7 @@ from pathlib import Path
 
 from anndata import AnnData
 from cellrank import logging as logg
-from cellrank._key import Key
+from cellrank.tl import Lineage
 from cellrank.ul._docs import d
 from cellrank.pl._utils import _position_legend, _get_categorical_colors
 from cellrank.tl._utils import save_fig, _unique_order_preserving
@@ -180,19 +180,16 @@ def log_odds(
         logg.warning("No raw attribute set. Setting `use_raw=False`")
         use_raw = False
 
-    # define log-odds
-    lineage_key = Key.obsm.abs_probs(backward)
-    if lineage_key not in adata.obsm:
-        raise KeyError(f"Lineages key `{lineage_key!r}` not found in `adata.obsm`.")
+    probs = Lineage.from_adata(adata, backward=backward)
     time = _ensure_numeric_ordered(adata, time_key)
     order = time.cat.categories[:: -1 if backward else 1]
 
-    fate1 = adata.obsm[lineage_key][lineage_1].X.squeeze(-1)
+    fate1 = probs[lineage_1].X.squeeze(-1)
     if lineage_2 is None:
         fate2 = 1 - fate1
         ylabel = rf"$\log{{\frac{{{lineage_1}}}{{rest}}}}$"
     else:
-        fate2 = adata.obsm[lineage_key][lineage_2].X.squeeze(-1)
+        fate2 = probs[lineage_2].X.squeeze(-1)
         ylabel = rf"$\log{{\frac{{{lineage_1}}}{{{lineage_2}}}}}$"
 
     # fmt: off

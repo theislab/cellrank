@@ -336,8 +336,7 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
         gene
             Gene in :attr:`anndata.AnnData.var_names`.
         lineage
-            Name of a lineage in :attr:`anndata.AnnData.obsm` ``['{lineage_key}']``.
-            If `None`, all weights will be set to `1`.
+            Name of the lineage. If `None`, all weights will be set to `1`.
         %(backward)s
         %(time_range)s
         data_key
@@ -389,17 +388,9 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
                 f"`adata.X` or `adata.obs`."
             )
 
-        lineage_key = Key.obsm.abs_probs(backward)
-        if lineage_key not in self.adata.obsm:
-            raise KeyError(f"Lineage key `{lineage_key!r}` not found in `adata.obsm`.")
-        if not isinstance(self.adata.obsm[lineage_key], Lineage):
-            raise TypeError(
-                f"Expected `adata.obsm[{lineage_key!r}]` to be of type `cellrank.tl.Lineage`, "
-                f"found `{type(self.adata.obsm[lineage_key]).__name__!r}`."
-            )
-
+        probs = Lineage.from_adata(self.adata, backward=backward)
         if lineage is not None:
-            _ = self.adata.obsm[lineage_key][lineage]
+            probs = probs[lineage]
 
         if time_key not in self.adata.obs:
             raise KeyError(f"Time key `{time_key!r}` not found in `adata.obs`.")
@@ -443,9 +434,6 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
                 f"Expected `weight_threshold` to be of size `2`, found `{len(weight_threshold)}`."
             )
 
-        if lineage is not None:
-            _ = self.adata.obsm[lineage_key][lineage]
-
         self._obs_names = self.adata.obs_names.values[:]
 
         x = np.array(self.adata.obs[time_key]).astype(self._dtype)
@@ -467,7 +455,7 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
 
         if lineage is not None:
             weight_threshold, val = weight_threshold
-            w = _densify_squeeze(self.adata.obsm[lineage_key][lineage].X, self._dtype)
+            w = _densify_squeeze(probs.X, self._dtype)
             w[w < weight_threshold] = val
         else:
             w = np.ones(len(x), dtype=self._dtype)

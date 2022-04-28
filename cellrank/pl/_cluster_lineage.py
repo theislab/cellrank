@@ -6,7 +6,7 @@ from pathlib import Path
 import scanpy as sc
 from anndata import AnnData
 from cellrank import logging as logg
-from cellrank._key import Key
+from cellrank.tl import Lineage
 from cellrank.tl._enum import _DEFAULT_BACKEND, Backend_t
 from cellrank.ul._docs import d
 from cellrank.pl._utils import (
@@ -182,11 +182,7 @@ def cluster_lineage(
         return ax if sharey else None
 
     use_raw = kwargs.get("use_raw", False)
-    lineage_key = Key.obsm.abs_probs(backward)
-    if lineage_key not in adata.obsm:
-        raise KeyError(f"Lineages not found in `adata.obsm[{lineage_key!r}]`.")
-
-    _ = adata.obsm[lineage_key][lineage]
+    _ = Lineage.from_adata(adata, backward=backward)[lineage]  # sanity check
 
     genes = _unique_order_preserving(genes)
     _check_collection(adata, genes, "var_names", use_raw=use_raw)
@@ -237,7 +233,7 @@ def cluster_lineage(
                 f"Expected to find `{n_points}` points, found `{trends.n_vars}`."
             )
 
-        random_state = np.random.mtrand.RandomState(random_state).randint(2**16)
+        random_state = np.random.RandomState(random_state).randint(2**16)
 
         pca_kwargs = dict(pca_kwargs)
         pca_kwargs.setdefault("n_comps", min(50, n_points, len(genes)) - 1)
