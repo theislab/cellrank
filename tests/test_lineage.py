@@ -592,6 +592,14 @@ class TestLineageAccessor:
         np.testing.assert_array_equal(res.colors, lin.colors[[3, 7, 1, 5]])
         np.testing.assert_array_equal(res.X, lin[mask, :][:, [3, 7, 1, 5]])
 
+    def test_common_name(self):
+        l1 = Lineage(np.random.random((10, 2)), names=["EN", "Posterior EN"])
+        l2 = l1[["EN", "Posterior EN"]]
+
+        np.testing.assert_equal(l1.X, l2.X)
+        np.testing.assert_array_equal(l1.names, l2.names)
+        np.testing.assert_array_equal(l1.colors, l2.colors)
+
 
 class TestLineageMixing:
     def test_overlap(self):
