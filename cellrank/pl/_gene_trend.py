@@ -70,6 +70,7 @@ def gene_trends(
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
     save: Optional[Union[str, Path]] = None,
+    return_figure: bool = False,
     plot_kwargs: Mapping[str, Any] = MappingProxyType({}),
     **kwargs: Any,
 ) -> Optional[_return_model_type]:
@@ -146,6 +147,8 @@ def gene_trends(
         Number of columns of the plot when plotting multiple genes. Only used when ``same_plot = True``.
     suptitle
         Suptitle of the figure.
+    return_figure
+        Whether to return the figure object.
     %(return_models)s
     %(parallel)s
     %(plotting)s
@@ -328,6 +331,9 @@ def gene_trends(
             ax.remove()
 
     fig.suptitle(suptitle, y=1.05)
+    
+    if return_figure:
+        return fig
 
     if save is not None:
         save_fig(fig, save)
