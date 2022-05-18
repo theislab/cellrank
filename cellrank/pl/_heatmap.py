@@ -158,8 +158,8 @@ def heatmap(
 
     If ``return_genes = True`` and ``mode = {m.LINEAGES!r}``, returns :class:`pandas.DataFrame`
     containing the clustered or sorted genes.
-    
-    If ``return_figure = True``, returns a tuple containing the figure and genes. 
+
+    If ``return_figure = True``, returns a tuple containing the figure and genes.
     """
 
     def find_indices(series: pd.Series, values) -> List[int]:
@@ -554,7 +554,7 @@ def heatmap(
 
     if return_figure:
         return (fig, genes)
-    
+
     if save is not None and fig is not None:
         if not isinstance(fig, Iterable):
             save_fig(fig, save)

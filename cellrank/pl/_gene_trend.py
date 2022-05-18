@@ -331,7 +331,7 @@ def gene_trends(
             ax.remove()
 
     fig.suptitle(suptitle, y=1.05)
-    
+
     if return_figure:
         return fig
 
