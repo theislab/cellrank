@@ -79,6 +79,7 @@ def heatmap(
     dendrogram: bool = True,
     return_genes: bool = False,
     return_models: bool = False,
+    return_figure: bool = False,
     n_jobs: Optional[int] = 1,
     backend: Backend_t = _DEFAULT_BACKEND,
     show_progress_bar: bool = True,
@@ -144,6 +145,8 @@ def heatmap(
     return_genes
         Whether to return the sorted or clustered genes. Only available when ``mode = {m.LINEAGES!r}``.
     %(return_models)s
+    return_figure
+        Whether to return the figure object. Sets ``return_genes = True``
     %(parallel)s
     %(plotting)s
     kwargs
@@ -155,6 +158,8 @@ def heatmap(
 
     If ``return_genes = True`` and ``mode = {m.LINEAGES!r}``, returns :class:`pandas.DataFrame`
     containing the clustered or sorted genes.
+
+    If ``return_figure = True``, returns a tuple containing the figure and genes.
     """
 
     def find_indices(series: pd.Series, values) -> List[int]:
@@ -546,6 +551,9 @@ def heatmap(
 
     logg.debug(f"Plotting `{mode!r}` heatmap")
     fig, genes = _plot_heatmap(mode)
+
+    if return_figure:
+        return (fig, genes)
 
     if save is not None and fig is not None:
         if not isinstance(fig, Iterable):
