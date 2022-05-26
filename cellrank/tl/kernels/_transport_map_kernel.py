@@ -270,10 +270,6 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
             verbosity = settings.verbosity
             try:  # ignore overly verbose logging
                 settings.verbosity = 0
-                if conn_weight is None or not (0 < conn_weight < 1):
-                    raise ValueError(
-                        "Please specify `conn_weight` in interval `(0, 1)`."
-                    )
                 for i, ((t1, _), tmap) in enumerate(tmaps.items()):
                     if t1 not in self_transitions:
                         continue
