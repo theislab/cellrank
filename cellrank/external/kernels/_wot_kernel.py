@@ -338,6 +338,15 @@ class WOTKernel(Kernel, error=_error):
         kwargs["growth_iters"] = max(growth_iters, 1)
         self_transitions = SelfTransitions(self_transitions)
 
+        if (
+            (self_transitions is not None)
+            and (conn_weight is None)
+            or not (0 < conn_weight < 1)
+        ):
+            raise ValueError(
+                "If `self_transitions` is used, `conn_weight` needs to be specified as well."
+            )
+
         start = logg.info(
             "Computing transition matrix using Waddington optimal transport"
         )
