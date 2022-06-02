@@ -2,12 +2,9 @@
 import cellrank.pl
 import cellrank.tl
 import cellrank.ul
-import cellrank.models
-import cellrank.kernels
 import cellrank.logging
 import cellrank.datasets
 import cellrank.external
-import cellrank.estimators
 from cellrank.settings import settings
 
 __author__ = ", ".join(["Marius Lange", "Michal Klein"])
