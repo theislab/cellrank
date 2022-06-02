@@ -1,9 +1,7 @@
-import pytest
-
 import cellrank as cr
 from anndata import AnnData
-from cellrank._key import Key
-from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
+from cellrank.kernels import VelocityKernel, ConnectivityKernel
+from cellrank._utils._key import Key
 
 import numpy as np
 import pandas as pd
@@ -20,7 +18,7 @@ def _assert_has_all_keys(adata: AnnData, bwd: bool = False) -> None:
 
     # lineages
     abs_probs = adata.obsm[Key.obsm.abs_probs(bwd)]
-    assert isinstance(abs_probs, cr.tl.Lineage)
+    assert isinstance(abs_probs, cr._utils.Lineage)
     np.testing.assert_array_equal(abs_probs.names, adata.obs[key].cat.categories)
     np.testing.assert_array_equal(abs_probs.colors, adata.uns[Key.uns.colors(key)])
     np.testing.assert_allclose(abs_probs.X.sum(1), 1.0, rtol=1e-3)
@@ -36,7 +34,7 @@ class TestLowLevelPipeline:
         ck = ConnectivityKernel(adata).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        estimator_fwd = cr.tl.estimators.CFLARE(final_kernel)
+        estimator_fwd = cr.estimators.CFLARE(final_kernel)
 
         estimator_fwd.compute_eigendecomposition()
         estimator_fwd.plot_spectrum()
@@ -59,7 +57,7 @@ class TestLowLevelPipeline:
         ck = ConnectivityKernel(adata).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        estimator_bwd = cr.tl.estimators.CFLARE(final_kernel)
+        estimator_bwd = cr.estimators.CFLARE(final_kernel)
 
         estimator_bwd.compute_eigendecomposition()
         estimator_bwd.plot_spectrum()
@@ -80,7 +78,7 @@ class TestLowLevelPipeline:
         ck = ConnectivityKernel(adata).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        estimator_fwd = cr.tl.estimators.GPCCA(final_kernel)
+        estimator_fwd = cr.estimators.GPCCA(final_kernel)
 
         estimator_fwd.compute_eigendecomposition()
         estimator_fwd.plot_spectrum()
@@ -121,7 +119,7 @@ class TestLowLevelPipeline:
         ck = ConnectivityKernel(adata).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        estimator_bwd = cr.tl.estimators.GPCCA(final_kernel)
+        estimator_bwd = cr.estimators.GPCCA(final_kernel)
 
         estimator_bwd.compute_eigendecomposition()
         estimator_bwd.plot_spectrum()

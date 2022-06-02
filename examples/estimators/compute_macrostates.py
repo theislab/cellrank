@@ -17,12 +17,12 @@ adata
 
 # %%
 # First, we prepare the kernel and the :class:`cellrank.tl.estimators.GPCCA` estimator.
-vk = cr.tl.kernels.VelocityKernel(adata).compute_transition_matrix(
+vk = cr._utils.kernels.VelocityKernel(adata).compute_transition_matrix(
     softmax_scale=4, show_progress_bar=False
 )
-ck = cr.tl.kernels.ConnectivityKernel(adata).compute_transition_matrix()
+ck = cr._utils.kernels.ConnectivityKernel(adata).compute_transition_matrix()
 k = 0.8 * vk + 0.2 * ck
-g = cr.tl.estimators.GPCCA(k)
+g = cr.estimators.GPCCA(k)
 
 # %%
 # First, we need to compute the Schur vectors. By default, the first 10 vectors are computed.

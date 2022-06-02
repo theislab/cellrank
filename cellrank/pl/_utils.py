@@ -18,13 +18,13 @@ from collections import namedtuple, defaultdict
 
 from anndata import AnnData
 from cellrank import logging as logg
-from cellrank.tl._enum import _DEFAULT_BACKEND
-from cellrank.ul._docs import d
-from cellrank.tl._utils import save_fig, _unique_order_preserving
-from cellrank.ul.models import GAMR, BaseModel, FailedModel, SKLearnModel
-from cellrank.tl._colors import _create_categorical_colors
-from cellrank.ul._parallelize import parallelize
-from cellrank.ul.models._base_model import ColorType
+from cellrank.models import GAMR, BaseModel, FailedModel, SKLearnModel
+from cellrank._utils._docs import d
+from cellrank._utils._enum import _DEFAULT_BACKEND
+from cellrank._utils._utils import save_fig, _unique_order_preserving
+from cellrank._utils._colors import _create_categorical_colors
+from cellrank.models._base_model import ColorType
+from cellrank._utils._parallelize import parallelize
 
 import numpy as np
 import pandas as pd
@@ -352,13 +352,13 @@ def _fit_bulk_helper(
     queue
         Signalling queue in the parent process/thread used to update the progress bar.
     kwargs
-        Keyword arguments for :func:`cellrank.ul.models.BaseModel.prepare`.
+        Keyword arguments for :func:`cellrank.models.BaseModel.prepare`.
 
     Returns
     -------
     The fitted models, optionally containing the confidence interval in the form of
     `{'gene1': {'lineage1': <model11>, ...}, ...}`.
-    If any step has failed, the model will be of type :class:`cellrank.ul.models.FailedModel`.
+    If any step has failed, the model will be of type :class:`cellrank.models.FailedModel`.
     """
     if len(lineages) != len(time_range):
         raise ValueError(
@@ -428,7 +428,7 @@ def _fit_bulk(
     time_range
         Possibly ``lineages`` specific start- and endtimes.
     parallel_kwargs
-        Keyword arguments for :func:`cellrank.ul._utils.parallelize`.
+        Keyword arguments for :func:`cellrank._utils._parallelize.parallelize`.
     return_models
         Whether to return the full models or just a dictionary of dictionaries of :class:`collections.namedtuple`,
         `(x_test, y_test)`. This is highly discouraged because no meaningful error messages will be produced.
@@ -610,7 +610,7 @@ def _trends_helper(
     ax
         Ax to use.
     kwargs
-        Keyword arguments for :meth:`cellrank.ul.models.BaseModel.plot`.
+        Keyword arguments for :meth:`cellrank.models.BaseModel.plot`.
 
     Returns
     -------

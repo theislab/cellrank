@@ -1,18 +1,18 @@
 from typing import Any, Optional
 
-from cellrank.ul.models import BaseModel
+from cellrank.models import BaseModel
 from cellrank.external._error_mixin import ImportErrorMixin
 
 import numpy as np
 
-__all__ = ("ErroredModel",)
+__all__ = ["ErroredModel"]
 
 
 class ErroredModel(ImportErrorMixin, BaseModel):
     """
     Utility model class which always throw :class:`ImportError` when instantiated.
 
-    Subclasses can modify the message by overriding `__import_error_message__`.
+    Subclasses can modify the message by overriding the class attribute ``__import_error_message__``.
     """
 
     __import_error_message__ = "Unable to import external model."

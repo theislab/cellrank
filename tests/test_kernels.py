@@ -7,7 +7,6 @@ from pathlib import Path
 from _helpers import (
     bias_knn,
     create_kernels,
-    density_normalization,
     jax_not_installed_skip,
     random_transition_matrix,
 )
@@ -16,11 +15,7 @@ import scanpy as sc
 import cellrank as cr
 from scanpy import Neighbors
 from anndata import AnnData
-from cellrank._key import Key
-from cellrank.tl._enum import ModeEnum
-from cellrank.tl._utils import _normalize
-from cellrank.ul._utils import _get_neighs, _get_neighs_params
-from cellrank.tl.kernels import (
+from cellrank.kernels import (
     VelocityKernel,
     CytoTRACEKernel,
     PseudotimeKernel,
@@ -28,16 +23,19 @@ from cellrank.tl.kernels import (
     ConnectivityKernel,
     TransportMapKernel,
 )
-from cellrank.tl.kernels._mixins import ConnectivityMixin
-from cellrank.tl.kernels._base_kernel import (
+from cellrank._utils._key import Key
+from cellrank._utils._enum import ModeEnum
+from cellrank._utils._utils import _normalize, _get_neighs, _get_neighs_params
+from cellrank.kernels._base_kernel import (
     Kernel,
     Constant,
     KernelAdd,
     KernelMul,
     UnidirectionalKernel,
 )
-from cellrank.tl.kernels._cytotrace_kernel import CytoTRACEAggregation
-from cellrank.tl.kernels.utils._velocity_model import VelocityModel
+from cellrank.kernels.mixins._kernel import ConnectivityMixin
+from cellrank.kernels._cytotrace_kernel import CytoTRACEAggregation
+from cellrank.kernels.utils._velocity_model import VelocityModel
 
 import numpy as np
 import pandas as pd
@@ -49,7 +47,7 @@ from pandas.core.dtypes.common import is_bool_dtype, is_integer_dtype
 _rtol = 1e-6
 
 
-class CustomFunc(cr.tl.kernels.utils.SimilarityABC):
+class CustomFunc(cr.kernels.utils.SimilarityABC):
     def __call__(
         self, v: np.ndarray, D: np.ndarray, softmax_scale: float = 1.0
     ) -> Tuple[np.ndarray, np.ndarray]:
@@ -83,7 +81,7 @@ class CustomKernel(UnidirectionalKernel):
         return copy(self)
 
 
-class InvalidFuncProbs(cr.tl.kernels.utils.SimilarityABC):
+class InvalidFuncProbs(cr._utils.kernels.utils.SimilarityABC):
     def __call__(
         self, v: np.ndarray, D: np.ndarray, _softmax_scale: float = 1.0
     ) -> Tuple[np.ndarray, np.ndarray]:
@@ -981,9 +979,9 @@ class TestVelocityScheme:
         zip(
             ["dot_product", "cosine", "correlation"],
             [
-                cr.tl.kernels.utils.DotProduct(),
-                cr.tl.kernels.utils.Cosine(),
-                cr.tl.kernels.utils.Correlation(),
+                cr._utils.kernels.utils.DotProduct(),
+                cr._utils.kernels.utils.Cosine(),
+                cr._utils.kernels.utils.Correlation(),
             ],
         ),
     )
@@ -1040,20 +1038,20 @@ class TestVelocityScheme:
 class TestComputeProjection:
     def test_no_transition_matrix(self, adata: AnnData):
         with pytest.raises(RuntimeError, match=r"Compute transition matrix first as"):
-            cr.tl.kernels.ConnectivityKernel(adata).plot_projection()
+            cr._utils.kernels.ConnectivityKernel(adata).plot_projection()
 
     def test_no_basis(self, adata: AnnData):
-        ck = cr.tl.kernels.ConnectivityKernel(adata).compute_transition_matrix()
+        ck = cr._utils.kernels.ConnectivityKernel(adata).compute_transition_matrix()
         with pytest.raises(KeyError, match=r"Unable to find a basis in"):
             ck.plot_projection(basis="foo")
 
     def test_normal_run(self, adata: AnnData):
-        ck = cr.tl.kernels.ConnectivityKernel(adata).compute_transition_matrix()
+        ck = cr._utils.kernels.ConnectivityKernel(adata).compute_transition_matrix()
         ck.plot_projection(basis="umap")
 
     @pytest.mark.parametrize("write_first", [True, False])
     def test_write_to_adata(self, adata: AnnData, write_first: bool):
-        ck = cr.tl.kernels.ConnectivityKernel(adata).compute_transition_matrix()
+        ck = cr._utils.kernels.ConnectivityKernel(adata).compute_transition_matrix()
         if write_first:
             ck.write_to_adata()
             ck.plot_projection(basis="umap")
@@ -1068,7 +1066,7 @@ class TestComputeProjection:
 
     @pytest.mark.parametrize("key_added", [None, "foo"])
     def test_key_added(self, adata: AnnData, key_added: Optional[str]):
-        ck = cr.tl.kernels.ConnectivityKernel(adata).compute_transition_matrix()
+        ck = cr._utils.kernels.ConnectivityKernel(adata).compute_transition_matrix()
         ck.plot_projection(basis="umap", key_added=key_added)
 
         key = Key.uns.kernel(ck.backward, key=key_added)
@@ -1081,7 +1079,9 @@ class TestComputeProjection:
     def test_nan_in_embedding(self, adata_large: AnnData):
         adata_large.obsm["X_umap"][0, :] = np.nan
 
-        ck = cr.tl.kernels.ConnectivityKernel(adata_large).compute_transition_matrix()
+        ck = cr._utils.kernels.ConnectivityKernel(
+            adata_large
+        ).compute_transition_matrix()
         ck.plot_projection(basis="umap")
 
 

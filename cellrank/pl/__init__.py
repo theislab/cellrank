@@ -1,4 +1,4 @@
-from cellrank.pl._graph import graph
+# from cellrank.pl._graph import graph
 from cellrank.pl._heatmap import heatmap
 from cellrank.pl._lineages import lineages, lineage_drivers
 from cellrank.pl._log_odds import log_odds

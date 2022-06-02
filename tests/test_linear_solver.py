@@ -1,6 +1,6 @@
 import pytest
 
-from cellrank.tl._linear_solver import (
+from cellrank._utils._linear_solver import (
     _solve_lin_system,
     _petsc_direct_solve,
     _create_petsc_matrix,

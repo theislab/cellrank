@@ -7,10 +7,9 @@ from pathlib import Path
 
 from anndata import AnnData
 from cellrank import logging as logg
-from cellrank._key import Key
-from cellrank.ul._docs import d
-from cellrank.tl._utils import save_fig, _unique_order_preserving
-from cellrank.ul._utils import _read_graph_data
+from cellrank._utils._key import Key
+from cellrank._utils._docs import d
+from cellrank._utils._utils import save_fig, _read_graph_data, _unique_order_preserving
 
 import numpy as np
 import pandas as pd
@@ -24,6 +23,8 @@ from matplotlib.colors import ListedColormap
 from matplotlib.patches import ArrowStyle, FancyArrowPatch
 from matplotlib.collections import LineCollection
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+__all__ = ["graph"]
 
 
 @d.dedent
@@ -271,7 +272,7 @@ def graph(
         keylocs = [keylocs] * len(keys)
     elif len(keylocs) == 1:
         keylocs = keylocs * 3
-    elif all(map(lambda k: k in ("incoming", "outgoing", "self_loops"), keys)):
+    elif all(k in ("in", "outgoing", "self_loops") for k in keys):
         # don't care about keylocs since they are irrelevant
         logg.debug("Ignoring key locations")
         keylocs = [None] * len(keys)

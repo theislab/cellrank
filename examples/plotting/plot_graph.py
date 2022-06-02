@@ -15,10 +15,10 @@ adata
 
 # %%
 # First, we create the kernel.
-vk = cr.tl.kernels.VelocityKernel(adata).compute_transition_matrix(
+vk = cr._utils.kernels.VelocityKernel(adata).compute_transition_matrix(
     softmax_scale=4, show_progress_bar=False
 )
-ck = cr.tl.kernels.ConnectivityKernel(adata).compute_transition_matrix()
+ck = cr._utils.kernels.ConnectivityKernel(adata).compute_transition_matrix()
 k = 0.8 * vk + 0.2 * ck
 
 # %%

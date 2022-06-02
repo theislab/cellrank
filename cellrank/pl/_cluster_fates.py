@@ -9,15 +9,19 @@ from collections import OrderedDict as odict
 
 from anndata import AnnData
 from cellrank import logging as logg
-from cellrank.tl import Lineage
-from cellrank._key import Key
+from cellrank._utils import Lineage
 from scanpy.plotting import violin
 from scvelo.plotting import paga
-from cellrank.tl._enum import ModeEnum
-from cellrank.ul._docs import d, inject_docs
 from cellrank.pl._utils import _position_legend
-from cellrank.tl._utils import RandomKeys, save_fig, _unique_order_preserving
-from cellrank.ul._utils import valuedispatch
+from cellrank._utils._key import Key
+from cellrank._utils._docs import d, inject_docs
+from cellrank._utils._enum import ModeEnum
+from cellrank._utils._utils import (
+    RandomKeys,
+    save_fig,
+    valuedispatch,
+    _unique_order_preserving,
+)
 
 import numpy as np
 import pandas as pd
@@ -29,8 +33,10 @@ import matplotlib.pyplot as plt
 from seaborn import heatmap, clustermap
 from matplotlib import cm
 
+__all__ = ["cluster_fates"]
 
-class ClusterFatesMode(ModeEnum):  # noqa: D101
+
+class ClusterFatesMode(ModeEnum):
     BAR = auto()
     PAGA = auto()
     PAGA_PIE = auto()

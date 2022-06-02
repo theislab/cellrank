@@ -2,20 +2,23 @@ from typing import Union, Optional, Sequence
 from typing_extensions import Literal
 
 from anndata import AnnData
-from cellrank._key import Key
 from scanpy._utils import deprecated_arg_names
-from cellrank.ul._docs import d, _initial, _terminal, inject_docs
-from cellrank.tl.estimators import GPCCA, CFLARE
+from cellrank.estimators import GPCCA, CFLARE
+from cellrank._utils._key import Key
+from cellrank._utils._docs import d, _initial, _terminal, inject_docs
+
+__all__ = ["initial_states", "terminal_states"]
+
 
 _find_docs = """\
-Plot {direction} states uncovered by :class:`cellrank.tl.{fn_name}`.
+Plot {direction} states.
 
 Parameters
 ----------
 %(adata)s
 discrete
     If `True`, plot probability distribution of {direction} states.
-    Only available when {direction} were estimated by :class:`cellrank.tl.estimators.GPCCA`.
+    Only available when {direction} were estimated by :class:`cellrank.estimators.GPCCA`.
 states
     Subset of {direction} states to plot. If `None`, plot all {direction} states.
 color
@@ -25,7 +28,7 @@ time_key
     Key in :attr:`anndata.AnnData.obs` where the pseudotime is stored.
 %(basis)s
 kwargs
-    Keyword arguments for :meth:`cellrank.tl.estimators.GPCCA.plot_terminal_states`.
+    Keyword arguments for :meth:`cellrank.estimators.GPCCA.plot_terminal_states`.
 
 Returns
 -------
@@ -51,8 +54,7 @@ def _initial_terminal(
 
     if mc.terminal_states is None:
         raise RuntimeError(
-            f"Compute {_initial if backward else _terminal} states first as "
-            f"`cellrank.tl.{'initial' if backward else 'terminal'}_states()`."
+            f"Compute {_initial if backward else _terminal} states first."
         )
 
     n_states = len(mc.terminal_states.cat.categories)

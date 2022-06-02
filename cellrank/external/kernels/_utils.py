@@ -1,6 +1,8 @@
 from typing import Mapping, Sequence
 from typing_extensions import Literal
 
+__all__ = ["MarkerGenes"]
+
 
 class MarkerGenes:
     """Helper class for :class:`cellrank.external.kernels.WOT` to get proliferation/apoptosis genes."""

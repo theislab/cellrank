@@ -6,9 +6,7 @@ from pathlib import Path
 import scanpy as sc
 from anndata import AnnData
 from cellrank import logging as logg
-from cellrank.tl import Lineage
-from cellrank.tl._enum import _DEFAULT_BACKEND, Backend_t
-from cellrank.ul._docs import d
+from cellrank._utils import Lineage
 from cellrank.pl._utils import (
     _fit_bulk,
     _get_backend,
@@ -20,8 +18,15 @@ from cellrank.pl._utils import (
     _get_sorted_colors,
     _return_model_type,
 )
-from cellrank.tl._utils import save_fig, _unique_order_preserving
-from cellrank.ul._utils import _genesymbols, _get_n_cores, _check_collection
+from cellrank._utils._docs import d
+from cellrank._utils._enum import _DEFAULT_BACKEND, Backend_t
+from cellrank._utils._utils import (
+    save_fig,
+    _genesymbols,
+    _check_collection,
+    _unique_order_preserving,
+)
+from cellrank._utils._parallelize import _get_n_cores
 
 import numpy as np
 from sklearn.preprocessing import StandardScaler
@@ -29,6 +34,8 @@ from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, is_color_like
 from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
+
+__all__ = ["cluster_lineage"]
 
 
 @d.dedent
@@ -70,7 +77,7 @@ def cluster_lineage(
 
     This function is based on Palantir, see :cite:`setty:19`. It can be used to discover modules of genes that drive
     development along a given lineage. Consider running this function on a subset of genes which are potential
-    lineage drivers, identified e.g. by running :func:`cellrank.tl.lineage_drivers`.
+    lineage drivers.
 
     Parameters
     ----------
@@ -119,7 +126,7 @@ def cluster_lineage(
         Keyword arguments for :func:`scanpy.tl.leiden`.
     %(return_models)s
     kwargs:
-        Keyword arguments for :meth:`cellrank.ul.models.BaseModel.prepare`.
+        Keyword arguments for :meth:`cellrank.models.BaseModel.prepare`.
 
     Returns
     -------

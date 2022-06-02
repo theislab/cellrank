@@ -7,40 +7,27 @@ from tqdm.auto import tqdm
 import scanpy as sc
 from anndata import AnnData
 from cellrank import logging as logg
-from cellrank.ul._docs import d
-from cellrank.tl._utils import _maybe_subset_hvgs
+from cellrank._utils._docs import d
+from cellrank._utils._utils import _maybe_subset_hvgs
 from cellrank.external.kernels._utils import MarkerGenes
-from cellrank.tl.kernels.utils._tmat_flow import Numeric_t
-from cellrank.tl.kernels._transport_map_kernel import (
-    Pair_t,
-    Threshold_t,
-    SelfTransitions,
-)
+from cellrank.kernels.utils._tmat_flow import Numeric_t
+from cellrank.kernels._transport_map_kernel import Pair_t, Threshold_t, SelfTransitions
 
 import numpy as np
 import pandas as pd
+
+__all__ = ["WOTKernel"]
 
 _error = None
 try:
     import wot
 
-    from cellrank.tl.kernels import TransportMapKernel as Kernel
+    from cellrank.kernels import TransportMapKernel as Kernel
 except ImportError as e:
     from cellrank.external.kernels._import_error_kernel import ErroredKernel as Kernel
 
     _error = e
     wot = None
-
-
-__all__ = ("WOTKernel",)
-
-
-# TODO(michalk8): remove me
-class nstr(str):  # used for params + cache (precomputed cost matrices)
-    """String class that is not equal to any other string."""
-
-    def __eq__(self, other: str) -> bool:
-        return False
 
 
 # TODO(michalk8): refactor me properly using TransportMapKernel
@@ -483,7 +470,7 @@ class WOTKernel(Kernel, error=_error):
                         )
 
             # prevent equality comparison when comparing with cache
-            return cmats, nstr("precomputed")
+            return cmats, "precomputed"
 
         if isinstance(cost_matrices, str):
             logg.info(f"Computing cost matrices using `{cost_matrices!r}` key")

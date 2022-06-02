@@ -1,7 +1,7 @@
 import pytest
 
-from cellrank._key import Key
-from cellrank.tl.estimators import GPCCA
+from cellrank.estimators import GPCCA
+from cellrank._utils._key import Key
 
 import numpy as np
 import pandas as pd

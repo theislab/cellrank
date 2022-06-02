@@ -1,9 +1,9 @@
 from typing import Any, Optional
 
+from cellrank.kernels._base_kernel import Kernel
 from cellrank.external._error_mixin import ImportErrorMixin
-from cellrank.tl.kernels._base_kernel import Kernel
 
-__all__ = ("ErroredKernel",)
+__all__ = ["ErroredKernel"]
 
 
 # can't subclass UnidirectionalKernel since StationaryOTKernel have to use it
@@ -11,7 +11,7 @@ class ErroredKernel(ImportErrorMixin, Kernel):
     """
     Utility kernel class which always throw :class:`ImportError` when instantiated.
 
-    Subclasses can modify the message by overriding `__import_error_message__`.
+    Subclasses can modify the message by overriding the class attribute ``__import_error_message__``.
     """
 
     __import_error_message__ = "Unable to import external kernel."

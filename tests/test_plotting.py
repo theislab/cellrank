@@ -9,16 +9,15 @@ from _helpers import (
     create_failed_model,
     resize_images_to_same_sizes,
 )
-from packaging import version
 
 import scvelo as scv
 import cellrank as cr
 from anndata import AnnData
-from cellrank.tl import Lineage
-from cellrank._key import Key
-from cellrank.ul.models import GAMR
-from cellrank.tl.kernels import VelocityKernel, PseudotimeKernel, ConnectivityKernel
-from cellrank.tl.estimators import GPCCA, CFLARE
+from cellrank._utils import Lineage
+from cellrank.models import GAMR
+from cellrank.kernels import VelocityKernel, PseudotimeKernel, ConnectivityKernel
+from cellrank.estimators import GPCCA, CFLARE
+from cellrank._utils._key import Key
 
 import numpy as np
 import pandas as pd
@@ -30,6 +29,7 @@ import matplotlib.pyplot as plt
 from matplotlib.testing import setup
 from matplotlib.testing.compare import compare_images
 
+# TODO(michalk8): move to sessionstart
 setup()
 
 HERE: str = Path(__file__).parent
@@ -67,20 +67,6 @@ RAW_GENES = [
 cr.settings.figdir = FIGS
 scv.settings.figdir = str(FIGS)
 scv.set_figure_params(transparent=True)
-
-
-try:
-    from importlib_metadata import version as get_version
-except ImportError:
-    # >=Python3.8
-    from importlib.metadata import version as get_version
-
-scvelo_paga_skip = pytest.mark.skipif(
-    version.parse(get_version(scv.__name__)) < version.parse("0.1.26.dev189+gc441c72"),
-    reason="scVelo < `0.1.26.dev189+gc441c72` supports new PAGA, including node colors and confidence",
-)
-
-del version, get_version
 
 
 def compare(
@@ -253,7 +239,6 @@ class TestClusterFates:
             save=fpath,
         )
 
-    @scvelo_paga_skip
     @compare()
     def test_paga_pie_embedding(self, adata: AnnData, fpath: str):
         cr.pl.cluster_fates(
@@ -265,14 +250,12 @@ class TestClusterFates:
             save=fpath,
         )
 
-    @scvelo_paga_skip
     @compare()
     def test_paga(self, adata: AnnData, fpath: str):
         cr.pl.cluster_fates(
             adata, cluster_key="clusters", mode="paga", dpi=DPI, save=fpath
         )
 
-    @scvelo_paga_skip
     @compare()
     def test_paga_lineage_subset(self, adata: AnnData, fpath: str):
         cr.pl.cluster_fates(
@@ -333,7 +316,6 @@ class TestClusterFates:
             legend_kwargs=(dict(loc="top")),
         )
 
-    @scvelo_paga_skip
     @compare()
     def test_paga_pie_legend_position(self, adata: AnnData, fpath: str):
         cr.pl.cluster_fates(
@@ -347,7 +329,6 @@ class TestClusterFates:
             legend_loc="upper",
         )
 
-    @scvelo_paga_skip
     @compare()
     def test_paga_pie_no_legend(self, adata: AnnData, fpath: str):
         cr.pl.cluster_fates(
@@ -361,7 +342,6 @@ class TestClusterFates:
             legend_loc=None,
         )
 
-    @scvelo_paga_skip
     @compare()
     def test_paga_pie_only_abs_prob(self, adata: AnnData, fpath: str):
         cr.pl.cluster_fates(
@@ -375,7 +355,6 @@ class TestClusterFates:
             legend_loc=None,
         )
 
-    @scvelo_paga_skip
     @compare()
     def test_paga_pie_only_clusters(self, adata: AnnData, fpath: str):
         cr.pl.cluster_fates(
@@ -389,7 +368,6 @@ class TestClusterFates:
             legend_loc="on data",
         )
 
-    @scvelo_paga_skip
     @compare()
     def test_paga_pie_legend_position_out(self, adata: AnnData, fpath: str):
         cr.pl.cluster_fates(
@@ -679,7 +657,7 @@ class TestClusterLineage:
         models = pd.DataFrame(models).T
         np.testing.assert_array_equal(models.index, GENES[:10])
         np.testing.assert_array_equal(models.columns, ["1"])
-        assert isinstance(models.loc[GENES[0], "1"], cr.ul.models.FailedModel)
+        assert isinstance(models.loc[GENES[0], "1"], cr.models.FailedModel)
 
         mask = models.astype(bool)
         assert not mask.loc[GENES[0], "1"]
@@ -1869,7 +1847,7 @@ class TestGeneTrend:
         models = pd.DataFrame(models).T
         np.testing.assert_array_equal(models.index, GENES[:10])
         np.testing.assert_array_equal(models.columns, [str(i) for i in range(2)])
-        assert isinstance(models.loc[GENES[0], "0"], cr.ul.models.FailedModel)
+        assert isinstance(models.loc[GENES[0], "0"], cr.models.FailedModel)
 
         mask = models.astype(bool)
         assert not mask.loc[GENES[0], "0"]
@@ -2686,40 +2664,40 @@ class TestHighLvlStates:
 
 
 class TestLineage:
-    def test_pie(self, lineage: cr.tl.Lineage):
+    def test_pie(self, lineage: cr._utils.Lineage):
         with pytest.raises(ValueError):
             lineage[:, 0].plot_pie(dpi=DPI)
 
     @compare(kind="lineage")
-    def test_pie(self, lineage: cr.tl.Lineage, fpath: str):
+    def test_pie(self, lineage: cr._utils.Lineage, fpath: str):
         lineage.plot_pie(np.mean, dpi=DPI, save=fpath)
 
     @compare(kind="lineage")
-    def test_pie_reduction(self, lineage: cr.tl.Lineage, fpath: str):
+    def test_pie_reduction(self, lineage: cr._utils.Lineage, fpath: str):
         lineage.plot_pie(np.var, dpi=DPI, save=fpath)
 
     @compare(kind="lineage")
-    def test_pie_title(self, lineage: cr.tl.Lineage, fpath: str):
+    def test_pie_title(self, lineage: cr._utils.Lineage, fpath: str):
         lineage.plot_pie(np.mean, title="FOOBAR", dpi=DPI, save=fpath)
 
     @compare(kind="lineage")
-    def test_pie_t(self, lineage: cr.tl.Lineage, fpath: str):
+    def test_pie_t(self, lineage: cr._utils.Lineage, fpath: str):
         lineage.T.plot_pie(np.mean, dpi=DPI, save=fpath)
 
     @compare(kind="lineage")
-    def test_pie_autopct_none(self, lineage: cr.tl.Lineage, fpath: str):
+    def test_pie_autopct_none(self, lineage: cr._utils.Lineage, fpath: str):
         lineage.T.plot_pie(np.mean, dpi=DPI, save=fpath, autopct=None)
 
     @compare(kind="lineage")
-    def test_pie_legend_loc(self, lineage: cr.tl.Lineage, fpath: str):
+    def test_pie_legend_loc(self, lineage: cr._utils.Lineage, fpath: str):
         lineage.plot_pie(np.mean, dpi=DPI, save=fpath, legend_loc="best")
 
     @compare(kind="lineage")
-    def test_pie_legend_loc_one(self, lineage: cr.tl.Lineage, fpath: str):
+    def test_pie_legend_loc_one(self, lineage: cr._utils.Lineage, fpath: str):
         lineage.plot_pie(np.mean, dpi=DPI, save=fpath, legend_loc=None)
 
     @compare(kind="lineage")
-    def test_pie_legend_kwargs(self, lineage: cr.tl.Lineage, fpath: str):
+    def test_pie_legend_kwargs(self, lineage: cr._utils.Lineage, fpath: str):
         lineage.plot_pie(
             np.mean,
             dpi=DPI,
@@ -2946,7 +2924,7 @@ class TestFittedModel:
     @compare()
     def test_fitted_empty_model(self, _adata: AnnData, fpath: str):
         np.random.seed(42)
-        fm = cr.ul.models.FittedModel(np.arange(100), np.random.normal(size=100))
+        fm = cr.models.FittedModel(np.arange(100), np.random.normal(size=100))
         fm.plot(dpi=DPI, save=fpath)
 
     @compare()
@@ -2954,7 +2932,7 @@ class TestFittedModel:
         np.random.seed(43)
         y_test = np.random.normal(size=100)
 
-        fm = cr.ul.models.FittedModel(
+        fm = cr.models.FittedModel(
             np.arange(100), y_test, conf_int=np.c_[y_test - 1, y_test + 1]
         )
         fm.plot(conf_int=True, dpi=DPI, save=fpath)
@@ -2965,7 +2943,7 @@ class TestFittedModel:
     ):
         np.random.seed(44)
 
-        fm = cr.ul.models.FittedModel(
+        fm = cr.models.FittedModel(
             np.arange(100),
             np.random.normal(size=100),
         )
@@ -2975,7 +2953,7 @@ class TestFittedModel:
     def test_fitted_model_cells_with_weights(self, _adata: AnnData, fpath: str):
         np.random.seed(45)
 
-        fm = cr.ul.models.FittedModel(
+        fm = cr.models.FittedModel(
             np.arange(100),
             np.random.normal(size=100),
             x_all=np.random.normal(size=200),
@@ -2988,7 +2966,7 @@ class TestFittedModel:
     def test_fitted_model_weights(self, _adata: AnnData, fpath: str):
         np.random.seed(46)
 
-        fm = cr.ul.models.FittedModel(
+        fm = cr.models.FittedModel(
             np.arange(100),
             np.random.normal(size=100),
             x_all=np.random.normal(size=200),
@@ -3002,7 +2980,7 @@ class TestFittedModel:
     def test_fitted_ignore_plot_smoothed_lineage(self, _adata: AnnData, fpath: str):
         np.random.seed(47)
 
-        fm = cr.ul.models.FittedModel(
+        fm = cr.models.FittedModel(
             np.arange(100),
             np.random.normal(size=100),
             x_all=np.random.normal(size=200),
@@ -3021,14 +2999,14 @@ class TestFittedModel:
     def test_fitted_gene_trends(self, adata: AnnData, fpath: str):
         np.random.seed(48)
 
-        fm1 = cr.ul.models.FittedModel(
+        fm1 = cr.models.FittedModel(
             np.arange(100),
             np.random.normal(size=100),
             x_all=np.random.normal(size=200),
             y_all=np.random.normal(size=200),
             w_all=np.random.normal(size=200),
         )
-        fm2 = cr.ul.models.FittedModel(
+        fm2 = cr.models.FittedModel(
             np.arange(100),
             np.random.normal(size=100),
             x_all=np.random.normal(size=200),
@@ -3048,7 +3026,7 @@ class TestFittedModel:
     def test_fitted_cluster_fates(self, adata: AnnData, fpath: str):
         np.random.seed(49)
 
-        model = cr.ul.models.FittedModel(
+        model = cr.models.FittedModel(
             np.arange(100),
             np.random.normal(size=100),
         )
@@ -3068,7 +3046,7 @@ class TestFittedModel:
     def test_fitted_heatmap(self, adata: AnnData, fpath: str):
         np.random.seed(49)
 
-        fm = cr.ul.models.FittedModel(
+        fm = cr.models.FittedModel(
             np.arange(100),
             np.random.normal(size=100),
         )

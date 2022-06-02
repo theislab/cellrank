@@ -5,14 +5,15 @@ from _helpers import create_model, assert_array_nan_equal, jax_not_installed_ski
 
 import scanpy as sc
 from anndata import AnnData
-from cellrank.tl import Lineage
 from anndata.utils import make_index_unique
+from cellrank._utils import Lineage
+from cellrank.models import GAM, BaseModel
 from cellrank.pl._utils import (
     _create_models,
     _create_callbacks,
     _default_model_callback,
 )
-from cellrank.tl._utils import (
+from cellrank._utils._utils import (
     _one_hot,
     _cluster_X,
     _connected,
@@ -20,26 +21,21 @@ from cellrank.tl._utils import (
     _symmetric,
     _irreducible,
     _process_series,
+    _gene_symbols_ctx,
     _fuzzy_to_discrete,
     _merge_categorical_series,
     _series_from_one_hot_matrix,
 )
-from cellrank.ul._utils import _gene_symbols_ctx
-from cellrank.ul.models import GAM, BaseModel
-from cellrank.tl._colors import _compute_mean_color
-from cellrank.ul._parallelize import parallelize
-from cellrank.tl.kernels._utils import (
-    norm,
-    np_max,
-    np_sum,
-    np_mean,
+from cellrank._utils._colors import _compute_mean_color
+from cellrank.kernels._utils import (
     _random_normal,
     _reconstruct_one,
     _calculate_starts,
     _np_apply_along_axis,
     _get_probs_for_zero_vec,
 )
-from cellrank.tl.kernels.utils._similarity import (
+from cellrank._utils._parallelize import parallelize
+from cellrank.kernels.utils._similarity import (
     _predict_transition_probabilities_jax,
     _predict_transition_probabilities_numpy,
 )

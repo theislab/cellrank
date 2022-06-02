@@ -8,8 +8,8 @@ from pathlib import Path
 from scanpy import read
 from anndata import AnnData
 from cellrank import logging as logg
-from cellrank.tl._enum import ModeEnum
-from cellrank.ul._docs import d, inject_docs
+from cellrank._utils._docs import d, inject_docs
+from cellrank._utils._enum import ModeEnum
 
 __all__ = (
     "pancreas",

@@ -1,7 +1,7 @@
 import pytest
 
 from anndata import AnnData
-from cellrank.tl.kernels.utils._random_walk import RandomWalk
+from cellrank.kernels.utils import RandomWalk
 
 import numpy as np
 

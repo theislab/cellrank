@@ -2,12 +2,14 @@ from typing import Any, Union, Optional
 from typing_extensions import Literal
 
 from anndata import AnnData
-from cellrank._key import Key
-from cellrank.ul._docs import d
-from cellrank.tl.kernels._mixins import UnidirectionalMixin
+from cellrank._utils._key import Key
+from cellrank._utils._docs import d
+from cellrank.kernels.mixins import UnidirectionalMixin
 
 import numpy as np
 import pandas as pd
+
+__all__ = ["StationaryOTKernel"]
 
 _error = None
 try:
@@ -18,9 +20,6 @@ except ImportError as e:
     )
 
     _error = e
-
-
-__all__ = ("StationaryOTKernel",)
 
 
 @d.dedent

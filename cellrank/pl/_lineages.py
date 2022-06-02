@@ -2,10 +2,12 @@ from typing import Any, Union, Optional, Sequence
 from typing_extensions import Literal
 
 import cellrank.logging as logg
-from cellrank._key import Key
-from cellrank.ul._docs import d
 from cellrank.pl._utils import AnnData
-from cellrank.tl.estimators.terminal_states._cflare import CFLARE
+from cellrank.estimators import CFLARE
+from cellrank._utils._key import Key
+from cellrank._utils._docs import d
+
+__all__ = ["lineages"]
 
 
 @d.dedent
@@ -19,7 +21,7 @@ def lineages(
     **kwargs: Any,
 ) -> None:
     """
-    Plot lineages that were uncovered using :func:`cellrank.tl.lineages`.
+    Plot lineages.
 
     For each lineage, we show all cells in an embedding (default is UMAP) and color them by their probability of
     belonging to this lineage. For cells that are already committed, this probability will be one for  their respective
@@ -39,7 +41,7 @@ def lineages(
         Key in ``adata.obs`` where the pseudotime is stored.
     %(basis)s
     kwargs
-        Keyword arguments for :meth:`cellrank.tl.estimators.GPCCA.plot_absorption_probabilities`.
+        Keyword arguments for :meth:`cellrank.estimators.GPCCA.plot_absorption_probabilities`.
 
     Returns
     -------
@@ -49,9 +51,7 @@ def lineages(
     # use CFLARE (no macrostates required)
     mc = CFLARE.from_adata(adata, obsp_key=Key.uns.kernel(backward))
     if mc.absorption_probabilities is None:
-        raise RuntimeError(
-            f"Compute absorption probabilities first as `cellrank.tl.lineages(..., backward={backward})`."
-        )
+        raise RuntimeError("Compute absorption probabilities first.")
 
     # plot using the MC object
     color = kwargs.pop("cluster_key", color)
@@ -77,7 +77,7 @@ def lineage_drivers(
     **kwargs: Any,
 ) -> None:
     """
-    Plot lineage drivers that were uncovered using :func:`cellrank.tl.lineage_drivers`.
+    Plot potential lineage drivers.
 
     Parameters
     ----------
@@ -101,10 +101,7 @@ def lineage_drivers(
 
     if key not in haystack:
         raise RuntimeError(
-            "Unable to find lineage drivers in "
-            f"`{'adata.raw.varm' if use_raw else 'adata.varm'}[{key!r}]`. "
-            f"Compute lineage drivers first as `cellrank.tl.lineage_drivers(lineages={lineage!r}, "
-            f"use_raw={use_raw}, backward={backward}).`"
+            f"Unable to find lineage drivers in `{'adata.raw.varm' if use_raw else 'adata.varm'}[{key!r}]`."
         )
 
     mc._lineage_drivers = haystack[key]

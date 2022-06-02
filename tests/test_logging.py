@@ -7,7 +7,7 @@ from datetime import datetime
 
 from scanpy import Verbosity
 from cellrank import logging as logg
-from cellrank import settings as settings
+from cellrank import settings
 
 
 @pytest.fixture
