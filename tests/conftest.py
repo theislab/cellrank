@@ -147,6 +147,11 @@ def adata_cflare(adata_cflare=_create_cflare(backward=False)) -> AnnData:
     return adata_cflare[0].copy()
 
 
+@pytest.fixture
+def g(adata_gpcca=_create_gpcca(backward=False)) -> Tuple[AnnData, GPCCA]:
+    return adata_gpcca[1].copy()
+
+
 @pytest.fixture(scope="session")
 def adata_gamr(adata_cflare=_create_cflare(backward=False)) -> AnnData:
     return adata_cflare[0].copy()
