@@ -12,24 +12,6 @@ import pandas as pd
 from scipy.sparse import isspmatrix_csr
 
 
-class TestLineages:
-    def test_no_root_cells(self, adata: AnnData):
-        with pytest.raises(RuntimeError):
-            cr.tl.lineages(adata)
-
-    def test_normal_run(self, adata_cflare):
-        cr.tl.lineages(adata_cflare)
-
-        key = Key.obsm.abs_probs(False)
-        assert isinstance(adata_cflare.obsm[key], Lineage)
-
-    def test_normal_run_copy(self, adata_cflare):
-        adata_cr2 = cr.tl.lineages(adata_cflare, copy=True)
-
-        assert isinstance(adata_cr2, AnnData)
-        assert adata_cflare is not adata_cr2
-
-
 class TestLineageDrivers:
     @pytest.mark.parametrize("use_raw", [False, True])
     def test_normal_run(self, g: GPCCA, use_raw: bool):
