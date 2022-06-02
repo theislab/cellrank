@@ -97,53 +97,6 @@ class TestLineageDrivers:
             assert np.all(res_narrow[f"{name}_ci_high"] <= res_wide[f"{name}_ci_high"])
 
 
-class TestRootFinal:
-    def test_find_root(self, adata: AnnData):
-        cr.tl.initial_states(adata)
-
-        key = Key.obs.term_states(True)
-        assert key in adata.obs
-        assert Key.obs.probs(key) in adata.obs
-
-    def test_find_final(self, adata: AnnData):
-        cr.tl.terminal_states(adata, n_states=5, fit_kwargs=dict(n_cells=5))
-
-        key = Key.obs.term_states(False)
-        assert key in adata.obs
-        assert Key.obs.probs(key) in adata.obs
-
-    def test_invalid_cluster_key(self, adata: AnnData):
-        with pytest.raises(KeyError):
-            cr.tl.initial_states(adata, cluster_key="foo")
-
-    def test_invalid_weight(self, adata: AnnData):
-        with pytest.raises(ValueError):
-            cr.tl.initial_states(adata, weight_connectivities=10)
-
-    def test_invalid_invalid_model(self, adata: AnnData):
-        with pytest.raises(ValueError):
-            cr.tl.initial_states(adata, model="foobar")
-
-    @pytest.mark.parametrize("force_recompute", [False, True])
-    def test_force_recompute(self, adata: AnnData, force_recompute: bool):
-        cr.tl.terminal_states(adata, n_states=5, fit_kwargs=dict(n_cells=5))
-        tmat1 = adata.obsp["T_fwd"]
-
-        cr.tl.terminal_states(
-            adata,
-            n_states=5,
-            fit_kwargs=dict(n_cells=5),
-            force_recompute=force_recompute,
-        )
-        tmat2 = adata.obsp["T_fwd"]
-        if force_recompute:
-            assert tmat1 is not tmat2
-            np.testing.assert_allclose(tmat1.A, tmat2.A)
-            np.testing.assert_allclose(tmat1.sum(1), 1.0)
-        else:
-            assert tmat1 is tmat2
-
-
 class TestTransitionMatrix:
     def test_invalid_velocity_key(self, adata: AnnData):
         with pytest.raises(KeyError):
