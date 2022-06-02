@@ -14,10 +14,12 @@ adata
 
 
 # %%
-# First, we create a forward transition matrix using the high-level pipeline.
-cr.tl.transition_matrix(
-    adata, show_progress_bar=False, weight_connectivities=0.2, softmax_scale=4
+# First, we create the kernel.
+vk = cr.tl.kernels.VelocityKernel(adata).compute_transition_matrix(
+    softmax_scale=4, show_progress_bar=False
 )
+ck = cr.tl.kernels.ConnectivityKernel(adata).compute_transition_matrix()
+k = 0.8 * vk + 0.2 * ck
 
 # %%
 # We can now plot the transition matrix. Below we don't show any arrows, which dramatically speeds up the plotting.

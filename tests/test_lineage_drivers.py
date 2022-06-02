@@ -1,15 +1,10 @@
 import pytest
 
-import cellrank as cr
-from anndata import AnnData
-from cellrank.tl import Lineage
 from cellrank._key import Key
 from cellrank.tl.estimators import GPCCA
-from cellrank.tl.kernels._base_kernel import KernelAdd
 
 import numpy as np
 import pandas as pd
-from scipy.sparse import isspmatrix_csr
 
 
 class TestLineageDrivers:
@@ -95,51 +90,3 @@ class TestLineageDrivers:
         for name in ["0", "1"]:
             assert np.all(res_narrow[f"{name}_ci_low"] >= res_wide[f"{name}_ci_low"])
             assert np.all(res_narrow[f"{name}_ci_high"] <= res_wide[f"{name}_ci_high"])
-
-
-class TestTransitionMatrix:
-    def test_invalid_velocity_key(self, adata: AnnData):
-        with pytest.raises(KeyError):
-            cr.tl.transition_matrix(adata, vkey="foo")
-
-    def test_invalid_weight(self, adata: AnnData):
-        with pytest.raises(ValueError):
-            cr.tl.transition_matrix(adata, weight_connectivities=-1)
-
-    def test_invalid_conn_key(self, adata: AnnData):
-        with pytest.raises(KeyError):
-            cr.tl.transition_matrix(adata, conn_key="foo")
-
-    def test_forward(self, adata: AnnData):
-        kernel_add = cr.tl.transition_matrix(adata, backward=False, softmax_scale=None)
-
-        assert isinstance(kernel_add, KernelAdd)
-        assert not kernel_add.backward
-
-    def test_only_connectivities(self, adata: AnnData):
-        ck = cr.tl.transition_matrix(adata, weight_connectivities=1)
-
-        assert isinstance(ck, cr.tl.kernels.ConnectivityKernel)
-
-    def test_connectivities_conn_key(self, adata: AnnData):
-        key = "foobar"
-        assert key not in adata.obsp
-        adata.obsp[key] = np.eye(adata.n_obs)
-
-        ck = cr.tl.transition_matrix(adata, weight_connectivities=1, conn_key=key)
-
-        assert isinstance(ck, cr.tl.kernels.ConnectivityKernel)
-        assert isspmatrix_csr(ck.transition_matrix)
-
-        np.testing.assert_array_equal(ck.transition_matrix.A, adata.obsp[key])
-
-    def test_only_velocity(self, adata: AnnData):
-        vk = cr.tl.transition_matrix(adata, weight_connectivities=0)
-
-        assert isinstance(vk, cr.tl.kernels.VelocityKernel)
-
-    def test_backward(self, adata: AnnData):
-        kernel_add = cr.tl.transition_matrix(adata, backward=True, softmax_scale=None)
-
-        assert isinstance(kernel_add, KernelAdd)
-        assert kernel_add.backward
