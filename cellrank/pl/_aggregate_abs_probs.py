@@ -33,10 +33,10 @@ import matplotlib.pyplot as plt
 from seaborn import heatmap, clustermap
 from matplotlib import cm
 
-__all__ = ["cluster_fates"]
+__all__ = ["aggregate_absorption_probabilities"]
 
 
-class ClusterFatesMode(ModeEnum):
+class AggregationMode(ModeEnum):
     BAR = auto()
     PAGA = auto()
     PAGA_PIE = auto()
@@ -46,12 +46,12 @@ class ClusterFatesMode(ModeEnum):
 
 
 @d.dedent
-@inject_docs(m=ClusterFatesMode)
-def cluster_fates(
+@inject_docs(m=AggregationMode)
+def aggregate_absorption_probabilities(
     adata: AnnData,
     mode: Literal[
         "bar", "paga", "paga_pie", "violin", "heatmap", "clustermap"
-    ] = ClusterFatesMode.PAGA_PIE,
+    ] = AggregationMode.PAGA_PIE,
     backward: bool = False,
     lineages: Optional[Union[str, Sequence[str]]] = None,
     cluster_key: Optional[str] = "clusters",
@@ -71,9 +71,9 @@ def cluster_fates(
     """
     Plot aggregate lineage probabilities at a cluster level.
 
-    This can be used to investigate how likely a certain cluster is to go to the %(terminal)s states, or in turn to have
-    descended from the %(initial)s states.
-    For mode `{m.PAGA!r}` and `{m.PAGA_PIE!r}`, we use *PAGA*, see :cite:`wolf:19`.
+    This can be used to investigate how likely a certain cluster is to go to the %(terminal)s states,
+    or in turn to have descended from the %(initial)s states.
+    For mode `{m.PAGA!r}` and `{m.PAGA_PIE!r}`, we use *PAGA* :cite:`wolf:19`.
 
     Parameters
     ----------
@@ -123,10 +123,10 @@ def cluster_fates(
     """
 
     @valuedispatch
-    def plot(mode: ClusterFatesMode, *_args, **_kwargs):
+    def plot(mode: AggregationMode, *_args, **_kwargs):
         raise NotImplementedError(mode.value)
 
-    @plot.register(ClusterFatesMode.BAR)
+    @plot.register(AggregationMode.BAR)
     def _():
         cols = 4 if ncols is None else ncols
         n_rows = math.ceil(len(clusters) / cols)
@@ -163,7 +163,7 @@ def cluster_fates(
 
         return fig
 
-    @plot.register(ClusterFatesMode.PAGA)
+    @plot.register(AggregationMode.PAGA)
     def _():
         kwargs["save"] = None
         kwargs["show"] = False
@@ -217,7 +217,7 @@ def cluster_fates(
 
         return fig
 
-    @plot.register(ClusterFatesMode.PAGA_PIE)
+    @plot.register(AggregationMode.PAGA_PIE)
     def _():
         colors = {
             i: odict(zip(probs.colors, mean)) for i, (mean, _) in enumerate(d.values())
@@ -290,7 +290,7 @@ def cluster_fates(
 
         return fig
 
-    @plot.register(ClusterFatesMode.VIOLIN)
+    @plot.register(AggregationMode.VIOLIN)
     def _():
         kwargs.pop("ax", None)
         kwargs.pop("keys", None)
@@ -366,7 +366,7 @@ def cluster_fates(
 
         return fig
 
-    @plot.register(ClusterFatesMode.HEATMAP)
+    @plot.register(AggregationMode.HEATMAP)
     def _():
         data = pd.DataFrame(
             [mean for mean, _ in d.values()], columns=probs.names, index=clusters
@@ -428,7 +428,7 @@ def cluster_fates(
 
         return fig
 
-    mode = ClusterFatesMode(mode)
+    mode = AggregationMode(mode)
 
     if cluster_key is not None:
         if cluster_key not in adata.obs:
@@ -436,7 +436,7 @@ def cluster_fates(
     elif mode not in (mode.BAR, mode.VIOLIN):
         raise ValueError(
             f"Not specifying cluster key is only available for modes "
-            f"`{ClusterFatesMode.BAR!r}` and `{ClusterFatesMode.VIOLIN!r}`, found `mode={mode!r}`."
+            f"`{AggregationMode.BAR!r}` and `{AggregationMode.VIOLIN!r}`, found `mode={mode!r}`."
         )
 
     term_states = Key.obs.term_states(backward)
@@ -495,7 +495,7 @@ def cluster_fates(
         use_clustermap = True
         mode = mode.HEATMAP
     elif (
-        mode in (ClusterFatesMode.PAGA, ClusterFatesMode.PAGA_PIE)
+        mode in (AggregationMode.PAGA, AggregationMode.PAGA_PIE)
         and "paga" not in adata.uns
     ):
         raise KeyError(
@@ -504,7 +504,7 @@ def cluster_fates(
 
     fig = (
         plot_violin_no_cluster_key()
-        if mode == ClusterFatesMode.VIOLIN and cluster_key is None
+        if mode == AggregationMode.VIOLIN and cluster_key is None
         else plot(mode)
     )
 

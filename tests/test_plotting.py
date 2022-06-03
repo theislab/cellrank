@@ -178,16 +178,16 @@ def compare(
     raise NotImplementedError(f"Invalid kind `{kind!r}`.")
 
 
-class TestClusterFates:
+class TestAggregateAbsorptionProbabilities:
     @compare()
     def test_bar(self, adata: AnnData, fpath: str):
-        cr.pl.cluster_fates(
+        cr.pl.aggregate_absorption_probabilities(
             adata, cluster_key="clusters", mode="bar", dpi=DPI, save=fpath
         )
 
     @compare(kind="bwd")
     def test_bar_bwd(self, adata: AnnData, fpath: str):
-        cr.pl.cluster_fates(
+        cr.pl.aggregate_absorption_probabilities(
             adata,
             cluster_key="clusters",
             backward=True,
@@ -198,7 +198,7 @@ class TestClusterFates:
 
     @compare()
     def test_bar_cluster_subset(self, adata: AnnData, fpath: str):
-        cr.pl.cluster_fates(
+        cr.pl.aggregate_absorption_probabilities(
             adata,
             cluster_key="clusters",
             mode="bar",
@@ -209,7 +209,7 @@ class TestClusterFates:
 
     @compare()
     def test_bar_lineage_subset(self, adata: AnnData, fpath: str):
-        cr.pl.cluster_fates(
+        cr.pl.aggregate_absorption_probabilities(
             adata,
             cluster_key="clusters",
             mode="bar",
@@ -220,13 +220,13 @@ class TestClusterFates:
 
     @compare(tol=250)
     def test_paga_pie(self, adata: AnnData, fpath: str):
-        cr.pl.cluster_fates(
+        cr.pl.aggregate_absorption_probabilities(
             adata, cluster_key="clusters", mode="paga_pie", dpi=DPI, save=fpath
         )
 
     @compare(tol=250)
     def test_paga_pie_title(self, adata: AnnData, fpath: str):
-        cr.pl.cluster_fates(
+        cr.pl.aggregate_absorption_probabilities(
             adata,
             cluster_key="clusters",
             mode="paga_pie",
@@ -237,7 +237,7 @@ class TestClusterFates:
 
     @compare()
     def test_paga_pie_embedding(self, adata: AnnData, fpath: str):
-        cr.pl.cluster_fates(
+        cr.pl.aggregate_absorption_probabilities(
             adata,
             cluster_key="clusters",
             mode="paga_pie",
@@ -248,13 +248,13 @@ class TestClusterFates:
 
     @compare()
     def test_paga(self, adata: AnnData, fpath: str):
-        cr.pl.cluster_fates(
+        cr.pl.aggregate_absorption_probabilities(
             adata, cluster_key="clusters", mode="paga", dpi=DPI, save=fpath
         )
 
     @compare()
     def test_paga_lineage_subset(self, adata: AnnData, fpath: str):
-        cr.pl.cluster_fates(
+        cr.pl.aggregate_absorption_probabilities(
             adata,
             cluster_key="clusters",
             mode="paga",
@@ -265,23 +265,25 @@ class TestClusterFates:
 
     @compare()
     def test_violin(self, adata: AnnData, fpath: str):
-        cr.pl.cluster_fates(
+        cr.pl.aggregate_absorption_probabilities(
             adata, cluster_key="clusters", mode="violin", dpi=DPI, save=fpath
         )
 
     @compare()
     def test_violin_no_cluster_key(self, adata: AnnData, fpath: str):
-        cr.pl.cluster_fates(adata, mode="violin", cluster_key=None, dpi=DPI, save=fpath)
+        cr.pl.aggregate_absorption_probabilities(
+            adata, mode="violin", cluster_key=None, dpi=DPI, save=fpath
+        )
 
     @compare()
     def test_violin_cluster_subset(self, adata: AnnData, fpath: str):
-        cr.pl.cluster_fates(
+        cr.pl.aggregate_absorption_probabilities(
             adata, cluster_key="clusters", mode="violin", dpi=DPI, save=fpath
         )
 
     @compare()
     def test_violin_lineage_subset(self, adata: AnnData, fpath: str):
-        cr.pl.cluster_fates(
+        cr.pl.aggregate_absorption_probabilities(
             adata,
             cluster_key="clusters",
             mode="violin",
@@ -292,7 +294,7 @@ class TestClusterFates:
 
     @compare()
     def test_violin_lineage_subset(self, adata: AnnData, fpath: str):
-        cr.pl.cluster_fates(
+        cr.pl.aggregate_absorption_probabilities(
             adata,
             cluster_key="clusters",
             mode="violin",
@@ -303,7 +305,7 @@ class TestClusterFates:
 
     @compare()
     def test_paga_pie_legend_simple(self, adata: AnnData, fpath: str):
-        cr.pl.cluster_fates(
+        cr.pl.aggregate_absorption_probabilities(
             adata,
             cluster_key="clusters",
             mode="paga_pie",
@@ -314,7 +316,7 @@ class TestClusterFates:
 
     @compare()
     def test_paga_pie_legend_position(self, adata: AnnData, fpath: str):
-        cr.pl.cluster_fates(
+        cr.pl.aggregate_absorption_probabilities(
             adata,
             cluster_key="clusters",
             mode="paga_pie",
@@ -327,7 +329,7 @@ class TestClusterFates:
 
     @compare()
     def test_paga_pie_no_legend(self, adata: AnnData, fpath: str):
-        cr.pl.cluster_fates(
+        cr.pl.aggregate_absorption_probabilities(
             adata,
             cluster_key="clusters",
             mode="paga_pie",
@@ -340,7 +342,7 @@ class TestClusterFates:
 
     @compare()
     def test_paga_pie_only_abs_prob(self, adata: AnnData, fpath: str):
-        cr.pl.cluster_fates(
+        cr.pl.aggregate_absorption_probabilities(
             adata,
             cluster_key="clusters",
             mode="paga_pie",
@@ -353,7 +355,7 @@ class TestClusterFates:
 
     @compare()
     def test_paga_pie_only_clusters(self, adata: AnnData, fpath: str):
-        cr.pl.cluster_fates(
+        cr.pl.aggregate_absorption_probabilities(
             adata,
             cluster_key="clusters",
             mode="paga_pie",
@@ -366,7 +368,7 @@ class TestClusterFates:
 
     @compare()
     def test_paga_pie_legend_position_out(self, adata: AnnData, fpath: str):
-        cr.pl.cluster_fates(
+        cr.pl.aggregate_absorption_probabilities(
             adata,
             cluster_key="clusters",
             mode="paga_pie",
@@ -380,7 +382,7 @@ class TestClusterFates:
     def test_invalid_mode(self, adata_cflare_fwd):
         adata, _ = adata_cflare_fwd
         with pytest.raises(ValueError):
-            cr.pl.cluster_fates(
+            cr.pl.aggregate_absorption_probabilities(
                 adata,
                 cluster_key="clusters",
                 mode="foobar",
@@ -389,7 +391,7 @@ class TestClusterFates:
     def test_paga_pie_wrong_legend_kind_1(self, adata_cflare_fwd):
         adata, _ = adata_cflare_fwd
         with pytest.raises(ValueError):
-            cr.pl.cluster_fates(
+            cr.pl.aggregate_absorption_probabilities(
                 adata,
                 cluster_key="clusters",
                 mode="paga_pie",
@@ -399,7 +401,7 @@ class TestClusterFates:
     def test_paga_pie_wrong_legend_kind_2(self, adata_cflare_fwd):
         adata, _ = adata_cflare_fwd
         with pytest.raises(ValueError):
-            cr.pl.cluster_fates(
+            cr.pl.aggregate_absorption_probabilities(
                 adata,
                 cluster_key="clusters",
                 mode="paga_pie",
@@ -409,7 +411,7 @@ class TestClusterFates:
     def test_paga_pie_wrong_legend_kind_3(self, adata_cflare_fwd):
         adata, _ = adata_cflare_fwd
         with pytest.raises(ValueError):
-            cr.pl.cluster_fates(
+            cr.pl.aggregate_absorption_probabilities(
                 adata,
                 cluster_key="clusters",
                 mode="paga_pie",
@@ -419,7 +421,7 @@ class TestClusterFates:
     def test_paga_pie_wrong_legend_kind_4(self, adata_cflare_fwd):
         adata, _ = adata_cflare_fwd
         with pytest.raises(ValueError):
-            cr.pl.cluster_fates(
+            cr.pl.aggregate_absorption_probabilities(
                 adata,
                 cluster_key="clusters",
                 mode="paga_pie",
@@ -428,13 +430,13 @@ class TestClusterFates:
 
     @compare()
     def test_mode_heatmap(self, adata: AnnData, fpath: str):
-        cr.pl.cluster_fates(
+        cr.pl.aggregate_absorption_probabilities(
             adata, cluster_key="clusters", mode="heatmap", dpi=DPI, save=fpath
         )
 
     @compare()
     def test_mode_heatmap_format(self, adata: AnnData, fpath: str):
-        cr.pl.cluster_fates(
+        cr.pl.aggregate_absorption_probabilities(
             adata,
             cluster_key="clusters",
             mode="heatmap",
@@ -445,7 +447,7 @@ class TestClusterFates:
 
     @compare()
     def test_mode_heatmap_title(self, adata: AnnData, fpath: str):
-        cr.pl.cluster_fates(
+        cr.pl.aggregate_absorption_probabilities(
             adata,
             cluster_key="clusters",
             mode="heatmap",
@@ -456,7 +458,7 @@ class TestClusterFates:
 
     @compare()
     def test_mode_heatmap_cmap(self, adata: AnnData, fpath: str):
-        cr.pl.cluster_fates(
+        cr.pl.aggregate_absorption_probabilities(
             adata,
             cluster_key="clusters",
             mode="heatmap",
@@ -467,7 +469,7 @@ class TestClusterFates:
 
     @compare()
     def test_mode_heatmap_xticks_rotation(self, adata: AnnData, fpath: str):
-        cr.pl.cluster_fates(
+        cr.pl.aggregate_absorption_probabilities(
             adata,
             cluster_key="clusters",
             mode="heatmap",
@@ -478,7 +480,7 @@ class TestClusterFates:
 
     @compare()
     def test_mode_heatmap_clusters(self, adata: AnnData, fpath: str):
-        cr.pl.cluster_fates(
+        cr.pl.aggregate_absorption_probabilities(
             adata,
             cluster_key="clusters",
             mode="heatmap",
@@ -489,7 +491,7 @@ class TestClusterFates:
 
     @compare()
     def test_mode_heatmap_lineages(self, adata: AnnData, fpath: str):
-        cr.pl.cluster_fates(
+        cr.pl.aggregate_absorption_probabilities(
             adata,
             cluster_key="clusters",
             mode="heatmap",
@@ -500,13 +502,13 @@ class TestClusterFates:
 
     @compare()
     def test_mode_clustermap(self, adata: AnnData, fpath: str):
-        cr.pl.cluster_fates(
+        cr.pl.aggregate_absorption_probabilities(
             adata, cluster_key="clusters", mode="clustermap", dpi=DPI, save=fpath
         )
 
     @compare()
     def test_mode_clustermap_format(self, adata: AnnData, fpath: str):
-        cr.pl.cluster_fates(
+        cr.pl.aggregate_absorption_probabilities(
             adata,
             cluster_key="clusters",
             mode="clustermap",
