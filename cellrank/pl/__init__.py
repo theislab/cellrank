@@ -1,4 +1,3 @@
-from cellrank.pl._graph import graph
 from cellrank.pl._heatmap import heatmap
 from cellrank.pl._log_odds import log_odds
 from cellrank.pl._gene_trend import gene_trends

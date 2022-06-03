@@ -49,7 +49,6 @@ if __name__ == "__main__":
                 "filelock",
                 "python-igraph",
                 "leidenalg",
-                "bezier",
                 "jax",
                 "jaxlib",
             ],
