@@ -256,8 +256,8 @@ def assert_models_equal(
 
 
 def assert_estimators_equal(
-    expected: cellrank.estimators.BaseEstimator,
-    actual: cellrank.estimators.BaseEstimator,
+    expected: cr.estimators.BaseEstimator,
+    actual: cr.estimators.BaseEstimator,
     copy: bool = False,
     deep: bool = False,
     from_adata: bool = False,

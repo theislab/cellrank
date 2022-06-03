@@ -148,7 +148,7 @@ def _check_compute_macro(mc: cr.estimators.GPCCA) -> None:
     assert len(mc._macrostates_colors) == len(mc.macrostates.cat.categories)
 
     if "stationary_dist" in mc.eigendecomposition:  # one state
-        assert isinstance(mc.macrostates_memberships, cr._utils.Lineage)
+        assert isinstance(mc.macrostates_memberships, cr.Lineage)
         assert mc.macrostates_memberships.shape[1] == 1
         np.testing.assert_allclose(mc.macrostates_memberships.X.sum(), 1.0)
 
@@ -158,7 +158,7 @@ def _check_compute_macro(mc: cr.estimators.GPCCA) -> None:
         assert mc.coarse_stationary_distribution is None
         assert mc.coarse_T is None
     else:
-        assert isinstance(mc.macrostates_memberships, cr._utils.Lineage)
+        assert isinstance(mc.macrostates_memberships, cr.Lineage)
         if mc.macrostates_memberships.shape[1] > 1:
             np.testing.assert_allclose(mc.macrostates_memberships.sum(1), 1.0)
 
@@ -192,7 +192,7 @@ def _check_abs_probs(mc: cr.estimators.GPCCA) -> None:
     # fmt: off
     # macrostates
     assert isinstance(mc.macrostates, pd.Series)
-    assert isinstance(mc.macrostates_memberships, cr._utils.Lineage)
+    assert isinstance(mc.macrostates_memberships, cr.Lineage)
     np.testing.assert_array_equal(mc._macrostates_colors, mc.macrostates_memberships.colors)
 
     # term states
@@ -207,9 +207,9 @@ def _check_abs_probs(mc: cr.estimators.GPCCA) -> None:
 
     # abs probs
     key = Key.obsm.abs_probs(mc.backward)
-    assert isinstance(mc.absorption_probabilities, cr._utils.Lineage)
+    assert isinstance(mc.absorption_probabilities, cr.Lineage)
     np.testing.assert_array_almost_equal(mc.absorption_probabilities.sum(1), 1.0)
-    assert isinstance(mc.adata.obsm[key], cr._utils.Lineage)
+    assert isinstance(mc.adata.obsm[key], cr.Lineage)
     np.testing.assert_array_equal(mc.adata.obsm[key], mc.absorption_probabilities.X)
 
     # priming

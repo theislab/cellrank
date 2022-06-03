@@ -2289,40 +2289,40 @@ class TestGPCCA:
 
 
 class TestLineage:
-    def test_pie(self, lineage: cr._utils.Lineage):
+    def test_pie(self, lineage: cr.Lineage):
         with pytest.raises(ValueError):
             lineage[:, 0].plot_pie(dpi=DPI)
 
     @compare(kind="lineage")
-    def test_pie(self, lineage: cr._utils.Lineage, fpath: str):
+    def test_pie(self, lineage: cr.Lineage, fpath: str):
         lineage.plot_pie(np.mean, dpi=DPI, save=fpath)
 
     @compare(kind="lineage")
-    def test_pie_reduction(self, lineage: cr._utils.Lineage, fpath: str):
+    def test_pie_reduction(self, lineage: cr.Lineage, fpath: str):
         lineage.plot_pie(np.var, dpi=DPI, save=fpath)
 
     @compare(kind="lineage")
-    def test_pie_title(self, lineage: cr._utils.Lineage, fpath: str):
+    def test_pie_title(self, lineage: cr.Lineage, fpath: str):
         lineage.plot_pie(np.mean, title="FOOBAR", dpi=DPI, save=fpath)
 
     @compare(kind="lineage")
-    def test_pie_t(self, lineage: cr._utils.Lineage, fpath: str):
+    def test_pie_t(self, lineage: cr.Lineage, fpath: str):
         lineage.T.plot_pie(np.mean, dpi=DPI, save=fpath)
 
     @compare(kind="lineage")
-    def test_pie_autopct_none(self, lineage: cr._utils.Lineage, fpath: str):
+    def test_pie_autopct_none(self, lineage: cr.Lineage, fpath: str):
         lineage.T.plot_pie(np.mean, dpi=DPI, save=fpath, autopct=None)
 
     @compare(kind="lineage")
-    def test_pie_legend_loc(self, lineage: cr._utils.Lineage, fpath: str):
+    def test_pie_legend_loc(self, lineage: cr.Lineage, fpath: str):
         lineage.plot_pie(np.mean, dpi=DPI, save=fpath, legend_loc="best")
 
     @compare(kind="lineage")
-    def test_pie_legend_loc_one(self, lineage: cr._utils.Lineage, fpath: str):
+    def test_pie_legend_loc_one(self, lineage: cr.Lineage, fpath: str):
         lineage.plot_pie(np.mean, dpi=DPI, save=fpath, legend_loc=None)
 
     @compare(kind="lineage")
-    def test_pie_legend_kwargs(self, lineage: cr._utils.Lineage, fpath: str):
+    def test_pie_legend_kwargs(self, lineage: cr.Lineage, fpath: str):
         lineage.plot_pie(
             np.mean,
             dpi=DPI,

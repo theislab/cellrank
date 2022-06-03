@@ -81,7 +81,7 @@ class CustomKernel(UnidirectionalKernel):
         return copy(self)
 
 
-class InvalidFuncProbs(cr._utils.kernels.utils.SimilarityABC):
+class InvalidFuncProbs(cr.kernels.utils.SimilarityABC):
     def __call__(
         self, v: np.ndarray, D: np.ndarray, _softmax_scale: float = 1.0
     ) -> Tuple[np.ndarray, np.ndarray]:
@@ -979,9 +979,9 @@ class TestVelocityScheme:
         zip(
             ["dot_product", "cosine", "correlation"],
             [
-                cr._utils.kernels.utils.DotProduct(),
-                cr._utils.kernels.utils.Cosine(),
-                cr._utils.kernels.utils.Correlation(),
+                cr.kernels.utils.DotProduct(),
+                cr.kernels.utils.Cosine(),
+                cr.kernels.utils.Correlation(),
             ],
         ),
     )
@@ -1038,20 +1038,20 @@ class TestVelocityScheme:
 class TestComputeProjection:
     def test_no_transition_matrix(self, adata: AnnData):
         with pytest.raises(RuntimeError, match=r"Compute transition matrix first as"):
-            cr._utils.kernels.ConnectivityKernel(adata).plot_projection()
+            _ = cr.kernels.ConnectivityKernel(adata).plot_projection()
 
     def test_no_basis(self, adata: AnnData):
-        ck = cr._utils.kernels.ConnectivityKernel(adata).compute_transition_matrix()
+        ck = cr.kernels.ConnectivityKernel(adata).compute_transition_matrix()
         with pytest.raises(KeyError, match=r"Unable to find a basis in"):
             ck.plot_projection(basis="foo")
 
     def test_normal_run(self, adata: AnnData):
-        ck = cr._utils.kernels.ConnectivityKernel(adata).compute_transition_matrix()
+        ck = cr.kernels.ConnectivityKernel(adata).compute_transition_matrix()
         ck.plot_projection(basis="umap")
 
     @pytest.mark.parametrize("write_first", [True, False])
     def test_write_to_adata(self, adata: AnnData, write_first: bool):
-        ck = cr._utils.kernels.ConnectivityKernel(adata).compute_transition_matrix()
+        ck = cr.kernels.ConnectivityKernel(adata).compute_transition_matrix()
         if write_first:
             ck.write_to_adata()
             ck.plot_projection(basis="umap")
@@ -1066,7 +1066,7 @@ class TestComputeProjection:
 
     @pytest.mark.parametrize("key_added", [None, "foo"])
     def test_key_added(self, adata: AnnData, key_added: Optional[str]):
-        ck = cr._utils.kernels.ConnectivityKernel(adata).compute_transition_matrix()
+        ck = cr.kernels.ConnectivityKernel(adata).compute_transition_matrix()
         ck.plot_projection(basis="umap", key_added=key_added)
 
         key = Key.uns.kernel(ck.backward, key=key_added)
@@ -1079,9 +1079,7 @@ class TestComputeProjection:
     def test_nan_in_embedding(self, adata_large: AnnData):
         adata_large.obsm["X_umap"][0, :] = np.nan
 
-        ck = cr._utils.kernels.ConnectivityKernel(
-            adata_large
-        ).compute_transition_matrix()
+        ck = cr.kernels.ConnectivityKernel(adata_large).compute_transition_matrix()
         ck.plot_projection(basis="umap")
 
 

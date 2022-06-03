@@ -36,6 +36,8 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+__all__ = ["composition"]
+
 Queue = TypeVar("Queue")
 Graph = TypeVar("Graph")
 

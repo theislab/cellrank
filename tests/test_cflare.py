@@ -171,10 +171,10 @@ class TestCFLARE:
         np.testing.assert_array_equal(mc.priming_degree, mc.adata.obs[key])
 
         key = Key.obsm.abs_probs(mc.backward)
-        assert isinstance(mc.absorption_probabilities, cr._utils.Lineage)
+        assert isinstance(mc.absorption_probabilities, cr.Lineage)
         assert mc.absorption_probabilities.shape == (mc.adata.n_obs, 2)
         assert key in mc.adata.obsm
-        assert isinstance(mc.adata.obsm[key], cr._utils.Lineage)
+        assert isinstance(mc.adata.obsm[key], cr.Lineage)
         np.testing.assert_array_equal(mc.absorption_probabilities.X, mc.adata.obsm[key])
 
         np.testing.assert_array_equal(
@@ -470,7 +470,7 @@ class TestCFLARE:
             ]
         )
 
-        c = cr.estimators.CFLARE(cr._utils.kernels.PrecomputedKernel(transition_matrix))
+        c = cr.estimators.CFLARE(cr.kernels.PrecomputedKernel(transition_matrix))
 
         state_annotation = pd.Series(index=range(len(c)))
         state_annotation[7] = "terminal_1"

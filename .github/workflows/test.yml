@@ -110,7 +110,7 @@ jobs:
                 PLATFORM: ${{ matrix.os }}
                 USE_SLEPC: ${{ matrix.use_slepc }}
             run: |
-                tox -vv
+                tox -vv -- -n auto
 
         -   name: Upload coverage
             env:
