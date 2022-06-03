@@ -16,7 +16,7 @@ adata = cr.datasets.pancreas_preprocessed("../example.h5ad")
 adata
 
 # %%
-# First, we prepare the kernel and the :class:`cellrank.tl.estimators.GPCCA` estimator.
+# First, we prepare the kernel and the :class:`cellrank.estimators.GPCCA` estimator.
 vk = cr._utils.kernels.VelocityKernel(adata).compute_transition_matrix(
     softmax_scale=4, show_progress_bar=False
 )

@@ -13,7 +13,7 @@ adata = cr.datasets.pancreas_preprocessed("../example.h5ad")
 adata
 
 # %%
-# First, we prepare the kernel and the :class:`cellrank.tl.estimators.GPCCA` estimator.
+# First, we prepare the kernel and the :class:`cellrank.estimators.GPCCA` estimator.
 vk = cr._utils.kernels.VelocityKernel(adata).compute_transition_matrix(
     softmax_scale=4, show_progress_bar=False
 )
@@ -23,10 +23,10 @@ g = cr.estimators.GPCCA(k)
 
 # %%
 # We need to compute the absorption probabilities. In this example, we're using
-# :class:`cellrank.tl.estimators.GPCCA` estimator to estimate the terminal states of the process, but
-# :class:`cellrank.tl.estimators.CFLARE` can be used as well.
+# :class:`cellrank.estimators.GPCCA` estimator to estimate the terminal states of the process, but
+# :class:`cellrank.estimators.CFLARE` can be used as well.
 #
-# In detail guide for :class:`cellrank.tl.estimators.GPCCA` estimator can be found in
+# In detail guide for :class:`cellrank.estimators.GPCCA` estimator can be found in
 # :ref:`sphx_glr_auto_examples_estimators_compute_terminal_states_gpcca.py`.
 g.compute_schur(n_components=4)
 g.compute_macrostates(cluster_key="clusters")
@@ -36,7 +36,7 @@ g.absorption_probabilities
 
 # %%
 # To compute the potential driver genes, simply call the
-# :meth:`cellrank.tl.estimators.BaseEstimator.compute_lineage_drivers` method. By default, the these are computed for
+# :meth:`cellrank.estimators.BaseEstimator.compute_lineage_drivers` method. By default, the these are computed for
 # all lineages. We can restrict this computation to only a few clusters, using the ``cluster_key`` and ``clusters``
 # parameters.
 # We also compute the corrected p-values (qval) and the 95% confidence intervals for the correlations.

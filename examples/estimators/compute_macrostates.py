@@ -16,7 +16,7 @@ adata = cr.datasets.pancreas_preprocessed("../example.h5ad")
 adata
 
 # %%
-# First, we prepare the kernel and the :class:`cellrank.tl.estimators.GPCCA` estimator.
+# First, we prepare the kernel and the :class:`cellrank.estimators.GPCCA` estimator.
 vk = cr._utils.kernels.VelocityKernel(adata).compute_transition_matrix(
     softmax_scale=4, show_progress_bar=False
 )
@@ -58,5 +58,5 @@ g.plot_macrostates(discrete=True)
 g.plot_macrostates(same_plot=False)
 
 # %%
-# Method :meth:`cellrank.tl.estimators.GPCCA.compute_macrostates` also computes the coarse-grained transition
+# Method :meth:`cellrank.estimators.GPCCA.compute_macrostates` also computes the coarse-grained transition
 # matrix between the macrostates, see :ref:`sphx_glr_auto_examples_estimators_compute_coarse_T.py`.

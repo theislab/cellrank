@@ -2,9 +2,9 @@
 Lineage tricks
 --------------
 
-This example shows some niche, but useful functionalities of :class:`cellrank.tl.Lineage`.
+This example shows some niche, but useful functionalities of :class:`cellrank.Lineage`.
 
-:class:`cellrank.tl.Lineage` is a lightweight wrapper around :class:`numpy.ndarray` containing names and colors which
+:class:`cellrank.Lineage` is a lightweight wrapper around :class:`numpy.ndarray` containing names and colors which
 stores the data in columns and allows for :mod:`pandas`-like indexing. It also provides various methods, such as a
 method for plotting some aggregate information for each column.
 
@@ -33,7 +33,7 @@ lin /= lin.sum(1)
 
 # %%
 # In some cases, this behavior is not desirable or can have unintended consequences. To access the underlying
-# :class:`numpy` array, use the :attr:`cellrank.tl.Lineage.X` attribute.
+# :class:`numpy` array, use the :attr:`cellrank.Lineage.X` attribute.
 lin.X
 
 # %%
@@ -50,13 +50,13 @@ lin[["foo", "bar"]]
 lin[["bar, baz, quux"]]
 
 # %%
-# Most of the :mod:`numpy` methods are supported by the :class:`cellrank.tl.Lineage`. One can also calculate the
+# Most of the :mod:`numpy` methods are supported by the :class:`cellrank.Lineage`. One can also calculate the
 # entropy, which in :cite:`setty:19` is defined as the differentiation potential of cells.
 lin.entropy(axis=1)
 
 # %%
 # When subsetting the lineage and not selecting all of them, they will no longer sum to 1 and cannot be
-# interpreted as a probability distribution. We offer a method :attr:`cellrank.tl.Lineage.reduce` which
+# interpreted as a probability distribution. We offer a method :attr:`cellrank.Lineage.reduce` which
 # can be used to solve this issue. Below we show only one out of many normalization techniques.
 lin.reduce("foo, quux", "baz", normalize_weights="softmax")
 

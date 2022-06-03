@@ -1,10 +1,4 @@
-import cellrank.pl
-import cellrank.models
-import cellrank.kernels
-import cellrank.logging
-import cellrank.datasets
-import cellrank.external
-import cellrank.estimators
+from cellrank import pl, models, kernels, logging, datasets, external, estimators
 from cellrank.settings import settings
 from cellrank._utils._lineage import Lineage
 

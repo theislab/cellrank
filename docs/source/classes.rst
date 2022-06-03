@@ -6,14 +6,14 @@ Estimators
 
 GPCCA
 -----
-.. autoclass:: cellrank.tl.estimators.GPCCA
+.. autoclass:: cellrank.estimators.GPCCA
     :noindex:
     :members:
     :inherited-members:
 
 CFLARE
 ------
-.. autoclass:: cellrank.tl.estimators.CFLARE
+.. autoclass:: cellrank.estimators.CFLARE
     :noindex:
     :members:
     :inherited-members:
@@ -23,58 +23,58 @@ Kernels
 
 Velocity Kernel
 ---------------
-.. autoclass:: cellrank.tl.kernels.VelocityKernel
+.. autoclass:: cellrank.kernels.VelocityKernel
     :noindex:
     :members:
 
 Cosine Similarity Scheme
 ++++++++++++++++++++++++
-.. autoclass:: cellrank.tl.kernels.utils.Cosine
+.. autoclass:: cellrank.kernels.utils.Cosine
     :members: __call__, hessian
 
 Correlation Scheme
 ++++++++++++++++++
-.. autoclass:: cellrank.tl.kernels.utils.Correlation
+.. autoclass:: cellrank.kernels.utils.Correlation
     :members: __call__, hessian
 
 Dot Product Scheme
 ++++++++++++++++++
-.. autoclass:: cellrank.tl.kernels.utils.DotProduct
+.. autoclass:: cellrank.kernels.utils.DotProduct
     :members: __call__, hessian
 
 Connectivity Kernel
 -------------------
-.. autoclass:: cellrank.tl.kernels.ConnectivityKernel
+.. autoclass:: cellrank.kernels.ConnectivityKernel
     :noindex:
     :members:
 
 Pseudotime Kernel
 -----------------
-.. autoclass:: cellrank.tl.kernels.PseudotimeKernel
+.. autoclass:: cellrank.kernels.PseudotimeKernel
     :noindex:
     :members:
 
 Hard Threshold Scheme
 +++++++++++++++++++++
-.. autoclass:: cellrank.tl.kernels.utils.HardThresholdScheme
+.. autoclass:: cellrank.kernels.utils.HardThresholdScheme
     :members:
     :special-members: __call__
 
 Soft Threshold Scheme
 +++++++++++++++++++++
-.. autoclass:: cellrank.tl.kernels.utils.SoftThresholdScheme
+.. autoclass:: cellrank.kernels.utils.SoftThresholdScheme
     :members:
     :special-members: __call__
 
 CytoTRACE Kernel
 ----------------
-.. autoclass:: cellrank.tl.kernels.CytoTRACEKernel
+.. autoclass:: cellrank.kernels.CytoTRACEKernel
     :noindex:
     :members: compute_cytotrace, compute_transition_matrix
 
 Precomputed Kernel
 ------------------
-.. autoclass:: cellrank.tl.kernels.PrecomputedKernel
+.. autoclass:: cellrank.kernels.PrecomputedKernel
     :noindex:
     :members:
 
@@ -83,21 +83,21 @@ Models
 
 GAM
 ---
-.. autoclass:: cellrank.ul.models.GAM
+.. autoclass:: cellrank.models.GAM
     :noindex:
     :members:
     :inherited-members:
 
 SKLearnModel
 ------------
-.. autoclass:: cellrank.ul.models.SKLearnModel
+.. autoclass:: cellrank.models.SKLearnModel
     :noindex:
     :members:
     :inherited-members:
 
 GAMR
 ----
-.. autoclass:: cellrank.ul.models.GAMR
+.. autoclass:: cellrank.models.GAMR
     :noindex:
     :members:
     :inherited-members:
@@ -107,47 +107,47 @@ Base Classes
 
 BaseEstimator
 -------------
-.. autoclass:: cellrank.tl.estimators.BaseEstimator
+.. autoclass:: cellrank.estimators.BaseEstimator
     :members:
 
 Kernel
 ------
-.. autoclass:: cellrank.tl.kernels.Kernel
+.. autoclass:: cellrank.kernels.Kernel
     :members:
     :inherited-members:
 
 ExperimentalTime Kernel
 -----------------------
-.. autoclass:: cellrank.tl.kernels.ExperimentalTimeKernel
+.. autoclass:: cellrank.kernels.ExperimentalTimeKernel
     :members:
     :inherited-members:
 
 TransportMap Kernel
 -------------------
-.. autoclass:: cellrank.tl.kernels.TransportMapKernel
+.. autoclass:: cellrank.kernels.TransportMapKernel
     :members:
     :inherited-members:
 
 Similarity Scheme
 -----------------
-.. autoclass:: cellrank.tl.kernels.utils.SimilarityABC
+.. autoclass:: cellrank.kernels.utils.SimilarityABC
     :members:
     :special-members: __call__
     :inherited-members:
 
 Threshold Scheme
 ----------------
-.. autoclass:: cellrank.tl.kernels.utils.ThresholdSchemeABC
+.. autoclass:: cellrank.kernels.utils.ThresholdSchemeABC
     :members:
     :special-members: __call__
     :inherited-members:
 
 BaseModel
 ---------
-.. autoclass:: cellrank.ul.models.BaseModel
+.. autoclass:: cellrank.models.BaseModel
     :members:
 
 Lineage
 -------
-.. autoclass:: cellrank.tl.Lineage
+.. autoclass:: cellrank.Lineage
     :members: priming_degree, reduce, plot_pie, from_adata, X, T, view, names, colors

@@ -79,7 +79,6 @@ If after reading this, you still can't proceed with the installation, feel free 
 
 Jupyter Notebook
 ~~~~~~~~~~~~~~~~
-
 To run the tutorials in a notebook locally, please install::
 
    pip install notebook
@@ -89,7 +88,6 @@ use ``jupyter notebook --no-browser`` instead and open the url manually (or use 
 `bugfix <https://github.com/jupyter/notebook/issues/3746#issuecomment-444957821>`_). Alternatively,
 you can run all tutorials interactively directly in your browser using `binder`_. Just click the
 binder button at the top of each tutorial.
-
 
 If you run into issues, feel free to open a `GitHub issue`_ or send us an `email <mailto:info@cellrank.org>`_ .
 

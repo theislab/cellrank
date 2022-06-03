@@ -17,7 +17,7 @@ adata = cr.datasets.pancreas_preprocessed("../example.h5ad")
 adata
 
 # %%
-# First, we prepare the kernel and the :class:`cellrank.tl.estimators.GPCCA` estimator.
+# First, we prepare the kernel and the :class:`cellrank.estimators.GPCCA` estimator.
 vk = cr._utils.kernels.VelocityKernel(adata).compute_transition_matrix(
     softmax_scale=4, show_progress_bar=False
 )
@@ -33,7 +33,7 @@ g.compute_macrostates(cluster_key="clusters")
 g.set_terminal_states_from_macrostates(["Alpha", "Beta", "Epsilon"])
 
 # %%
-# :meth:`cellrank.tl.estimators.BaseEstimator.compute_absorption_probabilities` easily scales to 100k+ cells,
+# :meth:`cellrank.estimators.BaseEstimator.compute_absorption_probabilities` easily scales to 100k+ cells,
 # thanks to the linear solvers from :mod:`PETSc`.
 #
 # The computation of absorption probabilities may be restricted to a subset of the identified states via the ``keys``
@@ -43,7 +43,7 @@ g.compute_absorption_probabilities()
 
 # %%
 # The absorption probabilities can be inspected as seen below. Curious reader is encouraged to take a look at
-# some niche tricks for :class:`cellrank.tl.Lineage` in :ref:`sphx_glr_auto_examples_other_compute_lineage_tricks.py`.
+# some niche tricks for :class:`cellrank.Lineage` in :ref:`sphx_glr_auto_examples_other_compute_lineage_tricks.py`.
 g.absorption_probabilities
 
 # %%
@@ -53,7 +53,7 @@ g.absorption_probabilities
 g.plot_absorption_probabilities()
 
 # %%
-# :meth:`cellrank.tl.estimators.BaseEstimator.compute_absorption_probabilities` can also be used to compute the mean
+# :meth:`cellrank.estimators.BaseEstimator.compute_absorption_probabilities` can also be used to compute the mean
 # and the variance of time to absorption to all or just to a subset of terminal states.
 #
 # This can be specified by supplying ``time_to_absorption`` parameter. Below we compute only the mean time to
