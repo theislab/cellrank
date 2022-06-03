@@ -26,7 +26,7 @@ np.random.seed(42)
 # The constructor requires the underlying array and the lineage names, which must be unique. The colors are optional
 # and by default they are automatically generated.
 
-lin = cr._utils.Lineage(
+lin = cr.Lineage(
     np.abs(np.random.normal(size=(10, 4))), names=["foo", "bar", "baz", "quux"]
 )
 lin /= lin.sum(1)

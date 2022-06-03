@@ -1,3 +1,3 @@
 Estimators
 ----------
-Below are examples of :class:`cellrank.tl.estimators.GPCCA` and :class:`cellrank.tl.estimators.CFLARE`.
+Below are examples of :class:`cellrank.estimators.GPCCA` and :class:`cellrank.estimators.CFLARE`.
