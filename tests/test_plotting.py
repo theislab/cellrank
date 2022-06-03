@@ -516,11 +516,11 @@ class TestClusterFates:
         )
 
 
-class TestClusterLineage:
+class TestClusterTrends:
     @compare()
     def test_cluster_lineage(self, adata: AnnData, fpath: str):
         model = create_model(adata)
-        cr.pl.cluster_lineage(
+        cr.pl.cluster_trends(
             adata,
             model,
             GENES[:10],
@@ -534,7 +534,7 @@ class TestClusterLineage:
     @compare(kind="bwd")
     def test_cluster_lineage_bwd(self, adata: AnnData, fpath: str):
         model = create_model(adata)
-        cr.pl.cluster_lineage(
+        cr.pl.cluster_trends(
             adata,
             model,
             GENES[:10],
@@ -549,7 +549,7 @@ class TestClusterLineage:
     @compare()
     def test_cluster_lineage_raw(self, adata: AnnData, fpath: str):
         model = create_model(adata)
-        cr.pl.cluster_lineage(
+        cr.pl.cluster_trends(
             adata,
             model,
             RAW_GENES[:5],
@@ -564,7 +564,7 @@ class TestClusterLineage:
     @compare()
     def test_cluster_lineage_no_norm(self, adata: AnnData, fpath: str):
         model = create_model(adata)
-        cr.pl.cluster_lineage(
+        cr.pl.cluster_trends(
             adata,
             model,
             GENES[:10],
@@ -579,7 +579,7 @@ class TestClusterLineage:
     @compare()
     def test_cluster_lineage_data_key(self, adata: AnnData, fpath: str):
         model = create_model(adata)
-        cr.pl.cluster_lineage(
+        cr.pl.cluster_trends(
             adata,
             model,
             GENES[:10],
@@ -595,7 +595,7 @@ class TestClusterLineage:
     @compare()
     def test_cluster_lineage_random_state(self, adata: AnnData, fpath: str):
         model = create_model(adata)
-        cr.pl.cluster_lineage(
+        cr.pl.cluster_trends(
             adata,
             model,
             GENES[:10],
@@ -609,7 +609,7 @@ class TestClusterLineage:
     @compare()
     def test_cluster_lineage_leiden(self, adata: AnnData, fpath: str):
         model = create_model(adata)
-        cr.pl.cluster_lineage(
+        cr.pl.cluster_trends(
             adata,
             model,
             GENES[:10],
@@ -623,7 +623,7 @@ class TestClusterLineage:
     @compare()
     def test_cluster_lineage_2_failed_genes(self, adata: AnnData, fpath: str):
         fm = create_failed_model(adata)
-        cr.pl.cluster_lineage(
+        cr.pl.cluster_trends(
             adata,
             {GENES[0]: fm, GENES[5]: fm, "*": fm.model},
             GENES[:10],
@@ -640,7 +640,7 @@ class TestClusterLineage:
 
     def test_cluster_lineage_returns_fitted_models(self, adata_cflare: AnnData):
         fm = create_failed_model(adata_cflare)
-        models = cr.pl.cluster_lineage(
+        models = cr.pl.cluster_trends(
             adata_cflare,
             {GENES[0]: fm, "*": fm.model},
             GENES[:10],
@@ -663,7 +663,7 @@ class TestClusterLineage:
 
     def test_cluster_lineage_random_state_same_pca(self, adata_cflare: AnnData):
         model = create_model(adata_cflare)
-        cr.pl.cluster_lineage(
+        cr.pl.cluster_trends(
             adata_cflare,
             model,
             GENES[:10],
@@ -673,7 +673,7 @@ class TestClusterLineage:
             key="foo",
         )
 
-        cr.pl.cluster_lineage(
+        cr.pl.cluster_trends(
             adata_cflare,
             model,
             GENES[:10],
@@ -689,7 +689,7 @@ class TestClusterLineage:
 
     def test_cluster_lineage_writes(self, adata_cflare: AnnData):
         model = create_model(adata_cflare)
-        cr.pl.cluster_lineage(adata_cflare, model, GENES[:10], "0", n_test_points=200)
+        cr.pl.cluster_trends(adata_cflare, model, GENES[:10], "0", n_test_points=200)
 
         assert isinstance(adata_cflare.uns["lineage_0_trend"], AnnData)
         assert adata_cflare.uns["lineage_0_trend"].shape == (10, 200)
@@ -697,7 +697,7 @@ class TestClusterLineage:
 
     def test_cluster_lineage_key(self, adata_cflare: AnnData):
         model = create_model(adata_cflare)
-        cr.pl.cluster_lineage(
+        cr.pl.cluster_trends(
             adata_cflare, model, GENES[:10], "0", n_test_points=200, key="foobar"
         )
 
@@ -708,7 +708,7 @@ class TestClusterLineage:
     @compare()
     def test_cluster_lineage_covariates(self, adata: AnnData, fpath: str):
         model = create_model(adata)
-        cr.pl.cluster_lineage(
+        cr.pl.cluster_trends(
             adata,
             model,
             GENES[:10],
@@ -723,7 +723,7 @@ class TestClusterLineage:
     @compare()
     def test_cluster_lineage_covariates_cmap(self, adata: AnnData, fpath: str):
         model = create_model(adata)
-        cr.pl.cluster_lineage(
+        cr.pl.cluster_trends(
             adata,
             model,
             GENES[:10],
@@ -739,7 +739,7 @@ class TestClusterLineage:
     @compare()
     def test_cluster_lineage_covariates_ratio(self, adata: AnnData, fpath: str):
         model = create_model(adata)
-        cr.pl.cluster_lineage(
+        cr.pl.cluster_trends(
             adata,
             model,
             GENES[:10],
@@ -755,7 +755,7 @@ class TestClusterLineage:
     @compare()
     def test_cluster_lineage_gene_symbols(self, adata: AnnData, fpath: str):
         model = create_model(adata)
-        cr.pl.cluster_lineage(
+        cr.pl.cluster_trends(
             adata,
             model,
             [f"{g}:gs" for g in GENES[:10]],
@@ -2913,7 +2913,7 @@ class TestFittedModel:
             np.arange(100),
             np.random.normal(size=100),
         )
-        cr.pl.cluster_lineage(
+        cr.pl.cluster_trends(
             adata,
             model,
             GENES[:10],

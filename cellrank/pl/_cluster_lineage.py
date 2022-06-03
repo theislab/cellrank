@@ -35,12 +35,12 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, is_color_like
 from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
 
-__all__ = ["cluster_lineage"]
+__all__ = ["cluster_trends"]
 
 
 @d.dedent
 @_genesymbols
-def cluster_lineage(
+def cluster_trends(
     adata: AnnData,
     model: _input_model_type,
     genes: Sequence[str],
@@ -73,7 +73,7 @@ def cluster_lineage(
     **kwargs: Any,
 ) -> Optional[_return_model_type]:
     """
-    Cluster gene expression trends within a lineage and plot the clusters.
+    Cluster and plot gene expression trends within a lineage.
 
     This function is based on Palantir, see :cite:`setty:19`. It can be used to discover modules of genes that drive
     development along a given lineage. Consider running this function on a subset of genes which are potential
