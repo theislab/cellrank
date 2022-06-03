@@ -1,4 +1,5 @@
 from typing import Tuple, Union, Callable
+from typing_extensions import Literal
 
 import os
 import pytest
@@ -29,7 +30,6 @@ import matplotlib.pyplot as plt
 from matplotlib.testing import setup
 from matplotlib.testing.compare import compare_images
 
-# TODO(michalk8): move to sessionstart
 setup()
 
 HERE: str = Path(__file__).parent
@@ -64,6 +64,7 @@ RAW_GENES = [
     "Cdh9",
 ]
 
+# TODO(michalk8): move to sessionstart
 cr.settings.figdir = FIGS
 scv.settings.figdir = str(FIGS)
 scv.set_figure_params(transparent=True)
@@ -71,7 +72,9 @@ scv.set_figure_params(transparent=True)
 
 def compare(
     *,
-    kind: str = "adata",
+    kind: Literal[
+        "adata", "gpcca", "bwd", "gpcca_bwd", "cflare", "lineage", "gamr"
+    ] = "adata",
     dirname: Union[str, Path] = None,
     tol: int = TOL,
 ) -> Callable:
@@ -128,7 +131,7 @@ def compare(
             adata, gpcca = adata_gpcca_bwd
             fpath, path = _prepare_fname(func)
 
-            func(self, adata, path)
+            func(self, adata if kind == "bwd" else gpcca, path)
 
             _assert_equal(fpath)
 
@@ -160,22 +163,15 @@ def compare(
 
         return decorator
 
-    if kind not in ("adata", "cflare", "gpcca", "lineage", "bwd", "gamr"):
-        raise ValueError(
-            f"Invalid kind `{kind!r}`. Valid options are: `['adata', 'cflare', 'gpcca', 'lineage', 'bwd', 'gamr']`."
-        )
-
-    if kind == "adata":
+    if kind in ("adata", "gpcca"):
         # `kind='adata'` - don't changes this, otherwise some tests in `TestHighLvlStates` are meaningless
         return compare_gpcca_fwd
+    if kind in ("bwd", "gpcca_bwd"):
+        return compare_gpcca_bwd
     if kind == "cflare":
         return compare_cflare_fwd
-    if kind == "gpcca":
-        return compare_gpcca_fwd
     if kind == "lineage":
         return compare_lineage
-    if kind == "bwd":
-        return compare_gpcca_bwd
     if kind == "gamr":
         return compare_gamr
 
@@ -2708,26 +2704,25 @@ class TestLineage:
 
 
 class TestLineageDrivers:
-    @compare()
-    def test_drivers_n_genes(self, adata: AnnData, fpath: str):
-        cr.pl.lineage_drivers(adata, "0", n_genes=5, dpi=DPI, save=fpath)
+    @compare(kind="gpcca")
+    def test_drivers_n_genes(self, mc: GPCCA, fpath: str):
+        mc.plot_lineage_drivers("0", n_genes=5, dpi=DPI, save=fpath)
 
-    @compare()
-    def test_drivers_ascending(self, adata: AnnData, fpath: str):
-        cr.pl.lineage_drivers(adata, "0", ascending=True, dpi=DPI, save=fpath)
+    @compare(kind="gpcca")
+    def test_drivers_ascending(self, mc: GPCCA, fpath: str):
+        mc.plot_lineage_drivers("0", ascending=True, dpi=DPI, save=fpath)
 
-    @compare(kind="bwd")
-    def test_drivers_backward(self, adata: AnnData, fpath: str):
-        cr.pl.lineage_drivers(adata, "0", backward=True, ncols=2, dpi=DPI, save=fpath)
+    @compare(kind="gpcca_bwd")
+    def test_drivers_backward(self, mc: GPCCA, fpath: str):
+        mc.plot_lineage_drivers("0", backward=True, ncols=2, dpi=DPI, save=fpath)
 
-    @compare()
-    def test_drivers_cmap(self, adata: AnnData, fpath: str):
-        cr.pl.lineage_drivers(adata, "0", cmap="inferno", dpi=DPI, save=fpath)
+    @compare(kind="gpcca")
+    def test_drivers_cmap(self, mc: GPCCA, fpath: str):
+        mc.plot_lineage_drivers("0", cmap="inferno", dpi=DPI, save=fpath)
 
-    @compare()
-    def test_drivers_title_fmt(self, adata: AnnData, fpath: str):
-        cr.pl.lineage_drivers(
-            adata,
+    @compare(kind="gpcca")
+    def test_drivers_title_fmt(self, mc: GPCCA, fpath: str):
+        mc.plot_lineage_drivers(
             "0",
             cmap="inferno",
             title_fmt="{gene} qval={qval} corr={corr}",

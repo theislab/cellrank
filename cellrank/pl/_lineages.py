@@ -1,7 +1,6 @@
 from typing import Any, Union, Optional, Sequence
 from typing_extensions import Literal
 
-import cellrank.logging as logg
 from cellrank.pl._utils import AnnData
 from cellrank.estimators import CFLARE
 from cellrank._utils._key import Key
@@ -60,57 +59,5 @@ def lineages(
         color=color,
         mode=mode,
         time_key=time_key,
-        **kwargs,
-    )
-
-
-@d.dedent
-def lineage_drivers(
-    adata: AnnData,
-    lineage: str,
-    backward: bool = False,
-    n_genes: int = 8,
-    use_raw: bool = False,
-    ascending: bool = False,
-    ncols: Optional[int] = None,
-    title_fmt: str = "{gene} qval={qval:.4e}",
-    **kwargs: Any,
-) -> None:
-    """
-    Plot potential lineage drivers.
-
-    Parameters
-    ----------
-    %(adata)s
-    %(backward)s
-    %(plot_lineage_drivers.parameters)s
-
-    Returns
-    -------
-    %(just_plots)s
-    """
-
-    mc = CFLARE.from_adata(adata, obsp_key=Key.uns.kernel(backward))
-
-    if use_raw and adata.raw is None:
-        logg.warning("No raw attribute set. Using `use_raw=False`")
-        use_raw = False
-
-    key = Key.varm.lineage_drivers(backward)
-    haystack = (adata.raw if use_raw else adata).varm
-
-    if key not in haystack:
-        raise RuntimeError(
-            f"Unable to find lineage drivers in `{'adata.raw.varm' if use_raw else 'adata.varm'}[{key!r}]`."
-        )
-
-    mc._lineage_drivers = haystack[key]
-    mc.plot_lineage_drivers(
-        lineage,
-        n_genes=n_genes,
-        use_raw=use_raw,
-        ascending=ascending,
-        ncols=ncols,
-        title_fmt=title_fmt,
         **kwargs,
     )
