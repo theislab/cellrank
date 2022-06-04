@@ -49,22 +49,15 @@ The CellRank is structured as follows:
 
 - `cellrank <cellrank>`_: the root of the package.
 
+  - `cellrank/kernels <cellrank/kernels>`_: contains classes that create transition matrices based on
+    various input features, such as transcriptomic or spatial similarities, RNA velocity, pseudotime, etc.
+  - `cellrank/estimators <cellrank/estimators>`_: contains classes with perform computations on Markov chains
+    defined through the transition matrices obtained in the previous step through one or several kernels.
+    These computations usually involve high-level abstractions of the Markov chains, such as coarse-graining
+    into macrostates, finding initial and terminal states, estimating fate probabilities, etc.
+  - `cellrank/models <cellrank/models>`_: contains classes that compute smoothed gene expression trends.
   - `cellrank/datasets <cellrank/datasets>`__: contains datasets that are available for download.
   - `cellrank/external <cellrank/external>`_: contains all external kernels/estimators/models.
-  - `cellrank/pl <cellrank/pl>`_: the plotting module, containing high level plotting functions.
-  - `cellrank/tl <cellrank/tl>`_: the tools module, containing high-level tool functions, linear solvers, etc.
-
-    - `cellrank/tl/kernels <cellrank/tl/kernels>`_: contains classes that create transition matrices based on
-      various input features, such as transcriptomic or spatial similarities, RNA velocity, pseudotime, etc.
-    - `cellrank/tl/estimators <cellrank/tl/estimators>`_: contains classes with perform computations on Markov chains
-      defined through the transition matrices obtained in the previous step through one or several kernels.
-      These computations usually involve high-level abstractions of the Markov chains, such as coarse-graining
-      into macrostates, finding initial and terminal states, estimating fate probabilities, etc.
-
-  - `cellrank/ul <cellrank/ul>`_: the utilities modules, containing mostly models for gene trend smoothing,
-    parallelization, etc.
-
-    - `cellrank/ul/models <cellrank/ul/models>`_: contains classes that compute smoothed gene expression trends.
 
 - `tests <tests>`_: unit tests, see `Running tests`_ for more information.
 - `docs <docs>`_: documentation, see `Documentation`_ for more.
@@ -171,7 +164,7 @@ We use ``numpy``-style docstrings for the documentation with the following addit
 
 Below is an example of how a docstring should look like::
 
-    from cellrank.ul._docs import d
+    from cellrank._utils._docs import d
 
     @d.dedent  # using docrep to interpolate %(adata)s
     def some_function(adata: AnnData, key: str) -> float:
