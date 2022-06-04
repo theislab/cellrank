@@ -304,7 +304,9 @@ class TestLinearSolverPETSc:
             A = A.A
             B = B.A
 
-        np.testing.assert_allclose(((A @ X).squeeze()), B.squeeze(), rtol=1e-6)
+        np.testing.assert_allclose(
+            ((A @ X).squeeze()), B.squeeze(), rtol=1e-6, atol=1e-6
+        )
 
     @pytest.mark.parametrize(
         "seed,sparse", zip(range(10, 20), [False] * 5 + [True] * 5)
