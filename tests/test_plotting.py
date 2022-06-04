@@ -2343,7 +2343,7 @@ class TestLineageDrivers:
 
     @compare(kind="gpcca_bwd")
     def test_drivers_backward(self, mc: GPCCA, fpath: str):
-        mc.plot_lineage_drivers("0", backward=True, ncols=2, dpi=DPI, save=fpath)
+        mc.plot_lineage_drivers("0", ncols=2, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_drivers_cmap(self, mc: GPCCA, fpath: str):
